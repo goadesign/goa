@@ -376,7 +376,7 @@ func route(method, path string) *expr.RouteExpr {
 //        })
 //    })
 //
-func Header(name string, args ...interface{}) {
+func Header(name string, args ...any) {
 	h := headers(eval.Current())
 	if h == nil {
 		eval.IncompatibleDSL()
@@ -435,7 +435,7 @@ func Header(name string, args ...interface{}) {
 //        })
 //    })
 //
-func Cookie(name string, args ...interface{}) {
+func Cookie(name string, args ...any) {
 	h := cookies(eval.Current())
 	if h == nil {
 		eval.IncompatibleDSL()
@@ -614,7 +614,7 @@ func CookieHTTPOnly() {
 //         })
 //     })
 //
-func Params(args interface{}) {
+func Params(args any) {
 	p := params(eval.Current())
 	if p == nil {
 		eval.IncompatibleDSL()
@@ -671,7 +671,7 @@ func Params(args interface{}) {
 //        })
 //    })
 //
-func Param(name string, args ...interface{}) {
+func Param(name string, args ...any) {
 	p := params(eval.Current())
 	if p == nil {
 		eval.IncompatibleDSL()
@@ -719,7 +719,7 @@ func Param(name string, args ...interface{}) {
 //        })
 //    })
 //
-func MapParams(args ...interface{}) {
+func MapParams(args ...any) {
 	if len(args) > 1 {
 		eval.ReportError("too many arguments")
 	}
@@ -874,7 +874,7 @@ func SkipResponseBodyEncodeDecode() {
 //         })
 //     })
 //
-func Body(args ...interface{}) {
+func Body(args ...any) {
 	if len(args) == 0 {
 		eval.ReportError("not enough arguments, use Body(name), Body(type), Body(func()) or Body(type, func())")
 		return

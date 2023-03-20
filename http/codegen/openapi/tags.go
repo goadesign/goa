@@ -18,7 +18,7 @@ type Tag struct {
 	// ExternalDocs is additional external documentation for this tag.
 	ExternalDocs *ExternalDocs `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
 	// Extensions defines the OpenAPI extensions.
-	Extensions map[string]interface{} `json:"-" yaml:"-"`
+	Extensions map[string]any `json:"-" yaml:"-"`
 }
 
 // TagsFromExpr extracts the OpenAPI related metadata from the given expression.
@@ -94,6 +94,6 @@ func (t Tag) MarshalJSON() ([]byte, error) {
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
-func (t Tag) MarshalYAML() (interface{}, error) {
+func (t Tag) MarshalYAML() (any, error) {
 	return MarshalYAML(_tag(t), t.Extensions)
 }

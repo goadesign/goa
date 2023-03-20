@@ -47,7 +47,7 @@ const (
 	}
 	var (
 		endpoint goa.Endpoint
-		payload  interface{}
+		payload  any
 		err      error
 	)
 	{
@@ -157,7 +157,7 @@ func indent(s string) string {
 	}
 	var (
 		endpoint goa.Endpoint
-		payload  interface{}
+		payload  any
 		err      error
 	)
 	{
@@ -285,7 +285,7 @@ func indent(s string) string {
 	}
 	var (
 		endpoint goa.Endpoint
-		payload  interface{}
+		payload  any
 		err      error
 	)
 	{
@@ -404,7 +404,7 @@ func indent(s string) string {
 	}
 	var (
 		endpoint goa.Endpoint
-		payload  interface{}
+		payload  any
 		err      error
 	)
 	{
@@ -533,7 +533,7 @@ func indent(s string) string {
 	}
 	var (
 		endpoint goa.Endpoint
-		payload  interface{}
+		payload  any
 		err      error
 	)
 	{

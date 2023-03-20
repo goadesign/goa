@@ -3,7 +3,7 @@ package testdata
 const PayloadUserTypeRequestEncoderCode = `// EncodeMethodMessageUserTypeWithNestedUserTypesRequest encodes requests sent
 // to ServiceMessageUserTypeWithNestedUserTypes
 // MethodMessageUserTypeWithNestedUserTypes endpoint.
-func EncodeMethodMessageUserTypeWithNestedUserTypesRequest(ctx context.Context, v interface{}, md *metadata.MD) (interface{}, error) {
+func EncodeMethodMessageUserTypeWithNestedUserTypesRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
 	payload, ok := v.(*servicemessageusertypewithnestedusertypes.UT)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageUserTypeWithNestedUserTypes", "MethodMessageUserTypeWithNestedUserTypes", "*servicemessageusertypewithnestedusertypes.UT", v)
@@ -14,7 +14,7 @@ func EncodeMethodMessageUserTypeWithNestedUserTypesRequest(ctx context.Context, 
 
 const PayloadArrayRequestEncoderCode = `// EncodeMethodUnaryRPCNoResultRequest encodes requests sent to
 // ServiceUnaryRPCNoResult MethodUnaryRPCNoResult endpoint.
-func EncodeMethodUnaryRPCNoResultRequest(ctx context.Context, v interface{}, md *metadata.MD) (interface{}, error) {
+func EncodeMethodUnaryRPCNoResultRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
 	payload, ok := v.([]string)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoResult", "MethodUnaryRPCNoResult", "[]string", v)
@@ -25,7 +25,7 @@ func EncodeMethodUnaryRPCNoResultRequest(ctx context.Context, v interface{}, md 
 
 const PayloadMapRequestEncoderCode = `// EncodeMethodMessageMapRequest encodes requests sent to ServiceMessageMap
 // MethodMessageMap endpoint.
-func EncodeMethodMessageMapRequest(ctx context.Context, v interface{}, md *metadata.MD) (interface{}, error) {
+func EncodeMethodMessageMapRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
 	payload, ok := v.(map[int]*servicemessagemap.UT)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageMap", "MethodMessageMap", "map[int]*servicemessagemap.UT", v)
@@ -36,7 +36,7 @@ func EncodeMethodMessageMapRequest(ctx context.Context, v interface{}, md *metad
 
 const PayloadPrimitiveRequestEncoderCode = `// EncodeMethodServerStreamingRPCRequest encodes requests sent to
 // ServiceServerStreamingRPC MethodServerStreamingRPC endpoint.
-func EncodeMethodServerStreamingRPCRequest(ctx context.Context, v interface{}, md *metadata.MD) (interface{}, error) {
+func EncodeMethodServerStreamingRPCRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
 	payload, ok := v.(int)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceServerStreamingRPC", "MethodServerStreamingRPC", "int", v)
@@ -48,7 +48,7 @@ func EncodeMethodServerStreamingRPCRequest(ctx context.Context, v interface{}, m
 const PayloadPrimitiveWithStreamingPayloadRequestEncoderCode = `// EncodeMethodClientStreamingRPCWithPayloadRequest encodes requests sent to
 // ServiceClientStreamingRPCWithPayload MethodClientStreamingRPCWithPayload
 // endpoint.
-func EncodeMethodClientStreamingRPCWithPayloadRequest(ctx context.Context, v interface{}, md *metadata.MD) (interface{}, error) {
+func EncodeMethodClientStreamingRPCWithPayloadRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
 	payload, ok := v.(int)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceClientStreamingRPCWithPayload", "MethodClientStreamingRPCWithPayload", "int", v)
@@ -61,7 +61,7 @@ func EncodeMethodClientStreamingRPCWithPayloadRequest(ctx context.Context, v int
 const PayloadUserTypeWithStreamingPayloadRequestEncoderCode = `// EncodeMethodBidirectionalStreamingRPCWithPayloadRequest encodes requests
 // sent to ServiceBidirectionalStreamingRPCWithPayload
 // MethodBidirectionalStreamingRPCWithPayload endpoint.
-func EncodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context, v interface{}, md *metadata.MD) (interface{}, error) {
+func EncodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
 	payload, ok := v.(*servicebidirectionalstreamingrpcwithpayload.Payload)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceBidirectionalStreamingRPCWithPayload", "MethodBidirectionalStreamingRPCWithPayload", "*servicebidirectionalstreamingrpcwithpayload.Payload", v)
@@ -78,7 +78,7 @@ func EncodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context
 
 const PayloadWithMetadataRequestEncoderCode = `// EncodeMethodMessageWithMetadataRequest encodes requests sent to
 // ServiceMessageWithMetadata MethodMessageWithMetadata endpoint.
-func EncodeMethodMessageWithMetadataRequest(ctx context.Context, v interface{}, md *metadata.MD) (interface{}, error) {
+func EncodeMethodMessageWithMetadataRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
 	payload, ok := v.(*servicemessagewithmetadata.RequestUT)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageWithMetadata", "MethodMessageWithMetadata", "*servicemessagewithmetadata.RequestUT", v)
@@ -92,7 +92,7 @@ func EncodeMethodMessageWithMetadataRequest(ctx context.Context, v interface{}, 
 
 const PayloadWithValidateRequestEncoderCode = `// EncodeMethodMessageWithValidateRequest encodes requests sent to
 // ServiceMessageWithValidate MethodMessageWithValidate endpoint.
-func EncodeMethodMessageWithValidateRequest(ctx context.Context, v interface{}, md *metadata.MD) (interface{}, error) {
+func EncodeMethodMessageWithValidateRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
 	payload, ok := v.(*servicemessagewithvalidate.RequestUT)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageWithValidate", "MethodMessageWithValidate", "*servicemessagewithvalidate.RequestUT", v)
@@ -106,7 +106,7 @@ func EncodeMethodMessageWithValidateRequest(ctx context.Context, v interface{}, 
 
 const PayloadWithSecurityAttrsRequestEncoderCode = `// EncodeMethodMessageWithSecurityRequest encodes requests sent to
 // ServiceMessageWithSecurity MethodMessageWithSecurity endpoint.
-func EncodeMethodMessageWithSecurityRequest(ctx context.Context, v interface{}, md *metadata.MD) (interface{}, error) {
+func EncodeMethodMessageWithSecurityRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
 	payload, ok := v.(*servicemessagewithsecurity.RequestUT)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageWithSecurity", "MethodMessageWithSecurity", "*servicemessagewithsecurity.RequestUT", v)

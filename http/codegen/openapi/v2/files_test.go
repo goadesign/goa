@@ -14,7 +14,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi2"
 	"goa.design/goa/v3/codegen"
 	httpgen "goa.design/goa/v3/http/codegen"
-	openapi "goa.design/goa/v3/http/codegen/openapi"
+	"goa.design/goa/v3/http/codegen/openapi"
 	openapiv2 "goa.design/goa/v3/http/codegen/openapi/v2"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
@@ -105,7 +105,7 @@ func TestSections(t *testing.T) {
 }
 
 func prettifyJSON(t *testing.T, b []byte) string {
-	var v interface{}
+	var v any
 	if err := json.Unmarshal(b, &v); err != nil {
 		t.Errorf("failed to unmarshal swagger JSON: %s", err)
 	}

@@ -8,7 +8,7 @@ func ParseEndpoint(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
-) (goa.Endpoint, interface{}, error) {
+) (goa.Endpoint, any, error) {
 	var (
 		serviceMultiNoPayload1Flags = flag.NewFlagSet("service-multi-no-payload1", flag.ContinueOnError)
 
@@ -98,7 +98,7 @@ func ParseEndpoint(
 	}
 
 	var (
-		data     interface{}
+		data     any
 		endpoint goa.Endpoint
 		err      error
 	)
@@ -142,7 +142,7 @@ func ParseEndpoint(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
-) (goa.Endpoint, interface{}, error) {
+) (goa.Endpoint, any, error) {
 	var (
 		serviceMultiSimple1Flags = flag.NewFlagSet("service-multi-simple1", flag.ContinueOnError)
 
@@ -234,7 +234,7 @@ func ParseEndpoint(
 	}
 
 	var (
-		data     interface{}
+		data     any
 		endpoint goa.Endpoint
 		err      error
 	)
@@ -278,7 +278,7 @@ func ParseEndpoint(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
-) (goa.Endpoint, interface{}, error) {
+) (goa.Endpoint, any, error) {
 	var (
 		serviceMultiRequired1Flags = flag.NewFlagSet("service-multi-required1", flag.ContinueOnError)
 
@@ -364,7 +364,7 @@ func ParseEndpoint(
 	}
 
 	var (
-		data     interface{}
+		data     any
 		endpoint goa.Endpoint
 		err      error
 	)
@@ -405,7 +405,7 @@ func ParseEndpoint(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
-) (goa.Endpoint, interface{}, error) {
+) (goa.Endpoint, any, error) {
 	var (
 		serviceMultiFlags = flag.NewFlagSet("service-multi", flag.ContinueOnError)
 
@@ -476,7 +476,7 @@ func ParseEndpoint(
 	}
 
 	var (
-		data     interface{}
+		data     any
 		endpoint goa.Endpoint
 		err      error
 	)
@@ -513,7 +513,7 @@ func ParseEndpoint(
 	dialer goahttp.Dialer,
 	streamingServiceAConfigurer *streamingserviceac.ConnConfigurer,
 	streamingServiceBConfigurer *streamingservicebc.ConnConfigurer,
-) (goa.Endpoint, interface{}, error) {
+) (goa.Endpoint, any, error) {
 	var (
 		streamingServiceAFlags = flag.NewFlagSet("streaming-service-a", flag.ContinueOnError)
 
@@ -591,7 +591,7 @@ func ParseEndpoint(
 	}
 
 	var (
-		data     interface{}
+		data     any
 		endpoint goa.Endpoint
 		err      error
 	)
@@ -769,7 +769,7 @@ func ParseEndpoint(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
-) (goa.Endpoint, interface{}, error) {
+) (goa.Endpoint, any, error) {
 	var (
 		serviceBodyPrimitiveBoolValidateFlags = flag.NewFlagSet("service-body-primitive-bool-validate", flag.ContinueOnError)
 
@@ -832,7 +832,7 @@ func ParseEndpoint(
 	}
 
 	var (
-		data     interface{}
+		data     any
 		endpoint goa.Endpoint
 		err      error
 	)
@@ -867,7 +867,7 @@ func ParseEndpoint(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
-) (goa.Endpoint, interface{}, error) {
+) (goa.Endpoint, any, error) {
 	var (
 		serviceBodyPrimitiveArrayStringValidateFlags = flag.NewFlagSet("service-body-primitive-array-string-validate", flag.ContinueOnError)
 
@@ -930,7 +930,7 @@ func ParseEndpoint(
 	}
 
 	var (
-		data     interface{}
+		data     any
 		endpoint goa.Endpoint
 		err      error
 	)
@@ -1054,7 +1054,7 @@ func ParseEndpoint(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
-) (goa.Endpoint, interface{}, error) {
+) (goa.Endpoint, any, error) {
 	var (
 		serviceMapQueryPrimitiveArrayFlags = flag.NewFlagSet("service-map-query-primitive-array", flag.ContinueOnError)
 
@@ -1117,7 +1117,7 @@ func ParseEndpoint(
 	}
 
 	var (
-		data     interface{}
+		data     any
 		endpoint goa.Endpoint
 		err      error
 	)
@@ -1258,7 +1258,7 @@ func BuildMethodQueryStringValidatePayload(serviceQueryStringValidateMethodQuery
 	{
 		q = serviceQueryStringValidateMethodQueryStringValidateQ
 		if !(q == "val") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []interface{}{"val"}))
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []any{"val"}))
 		}
 		if err != nil {
 			return nil, err

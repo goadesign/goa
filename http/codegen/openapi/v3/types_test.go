@@ -36,7 +36,7 @@ var (
 	tarray  = typ{Type: "array"}
 )
 
-func tobj(attrs ...interface{}) typ {
+func tobj(attrs ...any) typ {
 	res := typ{Type: "object"}
 	if len(attrs) == 0 {
 		res.SkipProps = true

@@ -22,7 +22,7 @@ type (
 		// It takes a protocol buffer message type and returns a
 		// protocol buffer message type and any error when executing the
 		// RPC.
-		Handle(ctx context.Context, reqpb interface{}) (respb interface{}, err error)
+		Handle(ctx context.Context, reqpb any) (respb any, err error)
 	}
 
 	// StreamHandler handles a streaming RPC. The stream may be client-side,
@@ -32,11 +32,11 @@ type (
 		//
 		// input contains the endpoint payload (if any) and generated
 		// endpoint stream.
-		Handle(ctx context.Context, input interface{}) (err error)
+		Handle(ctx context.Context, input any) (err error)
 		// Decode decodes the protocol buffer message and metadata to
 		// the service type. For client-side and bidirectional streams,
 		// the message is nil.
-		Decode(ctx context.Context, reqpb interface{}) (req interface{}, err error)
+		Decode(ctx context.Context, reqpb any) (req any, err error)
 	}
 
 	unaryHandler struct {
@@ -69,9 +69,9 @@ func NewStreamHandler(e goa.Endpoint, dec RequestDecoder) StreamHandler {
 }
 
 // Handle serves a gRPC request.
-func (h *unaryHandler) Handle(ctx context.Context, reqpb interface{}) (interface{}, error) {
+func (h *unaryHandler) Handle(ctx context.Context, reqpb any) (any, error) {
 	var (
-		req interface{}
+		req any
 		err error
 	)
 	{
@@ -88,7 +88,7 @@ func (h *unaryHandler) Handle(ctx context.Context, reqpb interface{}) (interface
 	}
 
 	var (
-		resp interface{}
+		resp any
 	)
 	{
 		// Invoke goa endpoint
@@ -98,7 +98,7 @@ func (h *unaryHandler) Handle(ctx context.Context, reqpb interface{}) (interface
 	}
 
 	var (
-		respb interface{}
+		respb any
 
 		hdr  = metadata.MD{}
 		trlr = metadata.MD{}
@@ -133,9 +133,9 @@ func (h *unaryHandler) Handle(ctx context.Context, reqpb interface{}) (interface
 }
 
 // Decode decodes the request message and incoming metadata into goa type.
-func (h *streamHandler) Decode(ctx context.Context, reqpb interface{}) (interface{}, error) {
+func (h *streamHandler) Decode(ctx context.Context, reqpb any) (any, error) {
 	var (
-		req interface{}
+		req any
 		err error
 	)
 	{
@@ -153,7 +153,7 @@ func (h *streamHandler) Decode(ctx context.Context, reqpb interface{}) (interfac
 }
 
 // Handle serves a gRPC request.
-func (h *streamHandler) Handle(ctx context.Context, stream interface{}) error {
+func (h *streamHandler) Handle(ctx context.Context, stream any) error {
 	_, err := h.endpoint(ctx, stream)
 	return err
 }

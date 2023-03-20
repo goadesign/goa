@@ -569,127 +569,127 @@ func TestPrimitiveIsCompatible(t *testing.T) {
 	)
 	cases := map[string]struct {
 		p        Primitive
-		values   []interface{}
+		values   []any
 		expected bool
 	}{
 		"any": {
 			p:        Any,
-			values:   []interface{}{b},
+			values:   []any{b},
 			expected: true,
 		},
 		"boolean compatible": {
 			p:        Boolean,
-			values:   []interface{}{b},
+			values:   []any{b},
 			expected: true,
 		},
 		"boolean not compatible": {
 			p:        Boolean,
-			values:   []interface{}{i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64, f32, f64, s, bs},
+			values:   []any{i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64, f32, f64, s, bs},
 			expected: false,
 		},
 		"int compatible": {
 			p:        Int,
-			values:   []interface{}{i, i8, i16, i32, ui, ui8, ui16, ui32},
+			values:   []any{i, i8, i16, i32, ui, ui8, ui16, ui32},
 			expected: true,
 		},
 		"int not compatible": {
 			p:        Int,
-			values:   []interface{}{b, i64, ui64, f32, f64, s, bs},
+			values:   []any{b, i64, ui64, f32, f64, s, bs},
 			expected: false,
 		},
 		"int32 compatible": {
 			p:        Int32,
-			values:   []interface{}{i, i8, i16, i32, ui, ui8, ui16, ui32},
+			values:   []any{i, i8, i16, i32, ui, ui8, ui16, ui32},
 			expected: true,
 		},
 		"int32 not compatible": {
 			p:        Int32,
-			values:   []interface{}{b, i64, ui64, f32, f64, s, bs},
+			values:   []any{b, i64, ui64, f32, f64, s, bs},
 			expected: false,
 		},
 		"int64 compatible": {
 			p:        Int64,
-			values:   []interface{}{i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64},
+			values:   []any{i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64},
 			expected: true,
 		},
 		"int64 not compatible": {
 			p:        Int64,
-			values:   []interface{}{b, f32, f64, s, bs},
+			values:   []any{b, f32, f64, s, bs},
 			expected: false,
 		},
 		"uint compatible": {
 			p:        UInt,
-			values:   []interface{}{i, i8, i16, i32, ui, ui8, ui16, ui32},
+			values:   []any{i, i8, i16, i32, ui, ui8, ui16, ui32},
 			expected: true,
 		},
 		"uint not compatible": {
 			p:        UInt,
-			values:   []interface{}{b, i64, ui64, f32, f64, s, bs},
+			values:   []any{b, i64, ui64, f32, f64, s, bs},
 			expected: false,
 		},
 		"uint32 compatible": {
 			p:        UInt32,
-			values:   []interface{}{i, i8, i16, i32, ui, ui8, ui16, ui32},
+			values:   []any{i, i8, i16, i32, ui, ui8, ui16, ui32},
 			expected: true,
 		},
 		"uint32 not compatible": {
 			p:        UInt32,
-			values:   []interface{}{b, i64, ui64, f32, f64, s, bs},
+			values:   []any{b, i64, ui64, f32, f64, s, bs},
 			expected: false,
 		},
 		"uint64 compatible": {
 			p:        UInt64,
-			values:   []interface{}{i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64},
+			values:   []any{i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64},
 			expected: true,
 		},
 		"uint64 not compatible": {
 			p:        UInt64,
-			values:   []interface{}{b, f32, f64, s, bs},
+			values:   []any{b, f32, f64, s, bs},
 			expected: false,
 		},
 		"float32 compatible": {
 			p:        Float32,
-			values:   []interface{}{i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64, f32, f64},
+			values:   []any{i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64, f32, f64},
 			expected: true,
 		},
 		"float32 not compatible": {
 			p:        Float32,
-			values:   []interface{}{b, s, bs},
+			values:   []any{b, s, bs},
 			expected: false,
 		},
 		"float64 compatible": {
 			p:        Float64,
-			values:   []interface{}{i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64, f32, f64},
+			values:   []any{i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64, f32, f64},
 			expected: true,
 		},
 		"float64 not compatible": {
 			p:        Float64,
-			values:   []interface{}{b, s, bs},
+			values:   []any{b, s, bs},
 			expected: false,
 		},
 		"string compatible": {
 			p:        String,
-			values:   []interface{}{s},
+			values:   []any{s},
 			expected: true,
 		},
 		"string not compatible": {
 			p:        String,
-			values:   []interface{}{b, i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64, f32, f64, bs},
+			values:   []any{b, i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64, f32, f64, bs},
 			expected: false,
 		},
 		"bytes compatible": {
 			p:        Bytes,
-			values:   []interface{}{s, bs},
+			values:   []any{s, bs},
 			expected: true,
 		},
 		"bytes not compatible": {
 			p:        Bytes,
-			values:   []interface{}{b, i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64, f32, f64},
+			values:   []any{b, i, i8, i16, i32, ui, ui8, ui16, ui32, i64, ui64, f32, f64},
 			expected: false,
 		},
 		"not supported types": {
 			p:        Boolean,
-			values:   []interface{}{ss, is},
+			values:   []any{ss, is},
 			expected: false,
 		},
 	}
@@ -712,27 +712,27 @@ func TestArrayIsCompatible(t *testing.T) {
 	)
 	cases := map[string]struct {
 		typ      DataType
-		values   []interface{}
+		values   []any
 		expected bool
 	}{
 		"compatible": {
 			typ:      Int,
-			values:   []interface{}{ia, is},
+			values:   []any{ia, is},
 			expected: true,
 		},
 		"not array and slice": {
 			typ:      String,
-			values:   []interface{}{b, i},
+			values:   []any{b, i},
 			expected: false,
 		},
 		"array but not compatible": {
 			typ:      String,
-			values:   []interface{}{ia},
+			values:   []any{ia},
 			expected: false,
 		},
 		"slice but not compatible": {
 			typ:      String,
-			values:   []interface{}{is},
+			values:   []any{is},
 			expected: false,
 		},
 	}
@@ -804,15 +804,15 @@ func TestObjectIsCompatible(t *testing.T) {
 		m = map[int]string{}
 	)
 	cases := map[string]struct {
-		values   []interface{}
+		values   []any
 		expected bool
 	}{
 		"compatible": {
-			values:   []interface{}{s, m},
+			values:   []any{s, m},
 			expected: true,
 		},
 		"not comatible": {
-			values:   []interface{}{b, i},
+			values:   []any{b, i},
 			expected: false,
 		},
 	}
@@ -842,19 +842,19 @@ func TestMapIsCompatible(t *testing.T) {
 		}
 	)
 	cases := map[string]struct {
-		values   []interface{}
+		values   []any
 		expected bool
 	}{
 		"compatible": {
-			values:   []interface{}{ism},
+			values:   []any{ism},
 			expected: true,
 		},
 		"not comatible": {
-			values:   []interface{}{b, i},
+			values:   []any{b, i},
 			expected: false,
 		},
 		"map but not comatible": {
-			values:   []interface{}{ssm, iim},
+			values:   []any{ssm, iim},
 			expected: false,
 		},
 	}

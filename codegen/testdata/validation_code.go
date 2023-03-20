@@ -7,7 +7,7 @@ const (
 	}
 	if target.DefaultInteger != nil {
 		if !(*target.DefaultInteger == 1 || *target.DefaultInteger == 5 || *target.DefaultInteger == 10 || *target.DefaultInteger == 100) {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", *target.DefaultInteger, []interface{}{1, 5, 10, 100}))
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", *target.DefaultInteger, []any{1, 5, 10, 100}))
 		}
 	}
 	if target.Integer != nil {
@@ -39,7 +39,7 @@ const (
 	}
 	if target.DefaultInteger != nil {
 		if !(*target.DefaultInteger == 1 || *target.DefaultInteger == 5 || *target.DefaultInteger == 10 || *target.DefaultInteger == 100) {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", *target.DefaultInteger, []interface{}{1, 5, 10, 100}))
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", *target.DefaultInteger, []any{1, 5, 10, 100}))
 		}
 	}
 	if target.Integer != nil {
@@ -65,7 +65,7 @@ const (
 		err = goa.MergeErrors(err, goa.InvalidRangeError("target.required_integer", target.RequiredInteger, 1, true))
 	}
 	if !(target.DefaultInteger == 1 || target.DefaultInteger == 5 || target.DefaultInteger == 10 || target.DefaultInteger == 100) {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", target.DefaultInteger, []interface{}{1, 5, 10, 100}))
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", target.DefaultInteger, []any{1, 5, 10, 100}))
 	}
 	if target.Integer != nil {
 		if *target.Integer > 100 {
@@ -91,7 +91,7 @@ const (
 	}
 	if target.DefaultInteger != nil {
 		if !(*target.DefaultInteger == 1.2 || *target.DefaultInteger == 5 || *target.DefaultInteger == 10 || *target.DefaultInteger == 100.8) {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", *target.DefaultInteger, []interface{}{1.2, 5, 10, 100.8}))
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", *target.DefaultInteger, []any{1.2, 5, 10, 100.8}))
 		}
 	}
 	if target.Float64 != nil {
@@ -123,7 +123,7 @@ const (
 	}
 	if target.DefaultInteger != nil {
 		if !(*target.DefaultInteger == 1.2 || *target.DefaultInteger == 5 || *target.DefaultInteger == 10 || *target.DefaultInteger == 100.8) {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", *target.DefaultInteger, []interface{}{1.2, 5, 10, 100.8}))
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", *target.DefaultInteger, []any{1.2, 5, 10, 100.8}))
 		}
 	}
 	if target.Float64 != nil {
@@ -149,7 +149,7 @@ const (
 		err = goa.MergeErrors(err, goa.InvalidRangeError("target.required_float", target.RequiredFloat, 1, true))
 	}
 	if !(target.DefaultInteger == 1.2 || target.DefaultInteger == 5 || target.DefaultInteger == 10 || target.DefaultInteger == 100.8) {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", target.DefaultInteger, []interface{}{1.2, 5, 10, 100.8}))
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", target.DefaultInteger, []any{1.2, 5, 10, 100.8}))
 	}
 	if target.Float64 != nil {
 		if *target.Float64 > 100.1 {
@@ -179,7 +179,7 @@ const (
 	}
 	if target.DefaultString != nil {
 		if !(*target.DefaultString == "foo" || *target.DefaultString == "bar") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_string", *target.DefaultString, []interface{}{"foo", "bar"}))
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_string", *target.DefaultString, []any{"foo", "bar"}))
 		}
 	}
 	if target.String != nil {
@@ -207,7 +207,7 @@ const (
 	}
 	if target.DefaultString != nil {
 		if !(*target.DefaultString == "foo" || *target.DefaultString == "bar") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_string", *target.DefaultString, []interface{}{"foo", "bar"}))
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_string", *target.DefaultString, []any{"foo", "bar"}))
 		}
 	}
 	if target.String != nil {
@@ -225,7 +225,7 @@ const (
 		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_string", target.RequiredString, utf8.RuneCountInString(target.RequiredString), 10, false))
 	}
 	if !(target.DefaultString == "foo" || target.DefaultString == "bar") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_string", target.DefaultString, []interface{}{"foo", "bar"}))
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_string", target.DefaultString, []any{"foo", "bar"}))
 	}
 	if target.String != nil {
 		err = goa.MergeErrors(err, goa.ValidateFormat("target.string", *target.String, goa.FormatDateTime))
@@ -345,7 +345,7 @@ const (
 	}
 	for _, e := range target.Array {
 		if !(e == 0 || e == 1 || e == 1 || e == 2 || e == 3 || e == 5) {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.array[*]", e, []interface{}{0, 1, 1, 2, 3, 5}))
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.array[*]", e, []any{0, 1, 1, 2, 3, 5}))
 		}
 	}
 }
@@ -363,7 +363,7 @@ const (
 	}
 	for _, e := range target.Array {
 		if !(e == 0 || e == 1 || e == 1 || e == 2 || e == 3 || e == 5) {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.array[*]", e, []interface{}{0, 1, 1, 2, 3, 5}))
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.array[*]", e, []any{0, 1, 1, 2, 3, 5}))
 		}
 	}
 }
@@ -381,7 +381,7 @@ const (
 	}
 	for _, e := range target.Array {
 		if !(e == 0 || e == 1 || e == 1 || e == 2 || e == 3 || e == 5) {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.array[*]", e, []interface{}{0, 1, 1, 2, 3, 5}))
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.array[*]", e, []any{0, 1, 1, 2, 3, 5}))
 		}
 	}
 }

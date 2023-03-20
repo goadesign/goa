@@ -23,7 +23,7 @@ import (
 // The middleware logs the incoming requests gRPC method. It also logs the
 // response gRPC status code, message length (in bytes), and timing information.
 func UnaryServerLog(l middleware.Logger) grpc.UnaryServerInterceptor {
-	return grpc.UnaryServerInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	return grpc.UnaryServerInterceptor(func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		return unaryLog(ctx, req, info, handler, l)
 	})
 }
@@ -32,7 +32,7 @@ func UnaryServerLog(l middleware.Logger) grpc.UnaryServerInterceptor {
 // and outgoing responses similar to UnaryServerLog but uses the request context
 // to extract the logger.
 func UnaryServerLogContext(logFromCtx func(context.Context) middleware.Logger) grpc.UnaryServerInterceptor {
-	return grpc.UnaryServerInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	return grpc.UnaryServerInterceptor(func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		l := logFromCtx(ctx)
 		if l == nil {
 			return handler(ctx, req)
@@ -47,7 +47,7 @@ func UnaryServerLogContext(logFromCtx func(context.Context) middleware.Logger) g
 // each incoming request and logs it with the request and corresponding
 // response details.
 func StreamServerLog(l middleware.Logger) grpc.StreamServerInterceptor {
-	return grpc.StreamServerInterceptor(func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return grpc.StreamServerInterceptor(func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		return streamLog(srv, ss, info, handler, l)
 	})
 }
@@ -56,7 +56,7 @@ func StreamServerLog(l middleware.Logger) grpc.StreamServerInterceptor {
 // requests and responses similar to StreamServerLog but uses the stream context
 // to extract the logger.
 func StreamServerLogContext(logFromCtx func(context.Context) middleware.Logger) grpc.StreamServerInterceptor {
-	return grpc.StreamServerInterceptor(func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return grpc.StreamServerInterceptor(func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		l := logFromCtx(ss.Context())
 		if l == nil {
 			return handler(srv, ss)
@@ -66,7 +66,7 @@ func StreamServerLogContext(logFromCtx func(context.Context) middleware.Logger) 
 }
 
 // unaryLog does the actual logging given the logger for unary methods.
-func unaryLog(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler, l middleware.Logger) (resp interface{}, err error) {
+func unaryLog(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler, l middleware.Logger) (resp any, err error) {
 	var reqID string
 	{
 		md, ok := metadata.FromIncomingContext(ctx)
@@ -99,7 +99,7 @@ func unaryLog(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, 
 }
 
 // streamLog does the actual logging given the logger for streaming methods.
-func streamLog(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler, l middleware.Logger) error {
+func streamLog(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler, l middleware.Logger) error {
 	var reqID string
 	{
 		md, ok := metadata.FromIncomingContext(ss.Context())
@@ -139,7 +139,7 @@ func shortID() string {
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 
-func messageLength(msg interface{}) int64 {
+func messageLength(msg any) int64 {
 	var length int64
 	{
 		if m, ok := msg.(proto.Message); ok {

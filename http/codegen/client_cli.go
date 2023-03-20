@@ -148,7 +148,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 				cli.FlagsCode(cliData),
 				data,
 			},
-			FuncMap: map[string]interface{}{"streamingCmdExists": streamingCmdExists},
+			FuncMap: map[string]any{"streamingCmdExists": streamingCmdExists},
 		},
 	}
 	for _, cmd := range cliData {
@@ -315,10 +315,10 @@ func ParseEndpoint(
 		{{- end }}
 	{{- end }}
 	{{- end }}
-) (goa.Endpoint, interface{}, error) {
+) (goa.Endpoint, any, error) {
 	{{ .FlagsCode }}
     var (
-		data     interface{}
+		data     any
 		endpoint goa.Endpoint
 		err      error
 	)

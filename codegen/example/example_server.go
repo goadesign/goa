@@ -79,35 +79,35 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		{
 			Name:   "server-main-start",
 			Source: mainStartT,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"Server": svrdata,
 			},
-			FuncMap: map[string]interface{}{
+			FuncMap: map[string]any{
 				"join": strings.Join,
 			},
 		}, {
 			Name:   "server-main-logger",
 			Source: mainLoggerT,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"APIPkg": apiPkg,
 			},
 		}, {
 			Name:   "server-main-services",
 			Source: mainSvcsT,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"APIPkg":   apiPkg,
 				"Services": svcData,
 			},
-			FuncMap: map[string]interface{}{
+			FuncMap: map[string]any{
 				"mustInitServices": mustInitServices,
 			},
 		}, {
 			Name:   "server-main-endpoints",
 			Source: mainEndpointsT,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"Services": svcData,
 			},
-			FuncMap: map[string]interface{}{
+			FuncMap: map[string]any{
 				"mustInitServices": mustInitServices,
 			},
 		}, {
@@ -116,11 +116,11 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		}, {
 			Name:   "server-main-handler",
 			Source: mainServerHndlrT,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"Server":   svrdata,
 				"Services": svcData,
 			},
-			FuncMap: map[string]interface{}{
+			FuncMap: map[string]any{
 				"goify":   codegen.Goify,
 				"join":    strings.Join,
 				"toUpper": strings.ToUpper,

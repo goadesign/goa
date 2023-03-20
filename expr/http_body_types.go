@@ -295,7 +295,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 // unionToObject returns an object adequate to serialize the given union type.
 func unionToObject(att *AttributeExpr, name, suffix, svcName string) *AttributeExpr {
 	values := AsUnion(att.Type).Values
-	names := make([]interface{}, len(values))
+	names := make([]any, len(values))
 	vals := make([]string, len(values))
 	for i, nat := range values {
 		names[i] = nat.Attribute.Type.Name()
@@ -432,7 +432,7 @@ func removeAttribute(attr *MappedAttributeExpr, name string) {
 		attr.Validation.RemoveRequired(name)
 	}
 	for _, ex := range attr.UserExamples {
-		if m, ok := ex.Value.(map[string]interface{}); ok {
+		if m, ok := ex.Value.(map[string]any); ok {
 			delete(m, name)
 		}
 	}

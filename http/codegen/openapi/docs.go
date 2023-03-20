@@ -5,9 +5,9 @@ import "goa.design/goa/v3/expr"
 // ExternalDocs represents an OpenAPI External Documentation object as defined in
 // https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#externalDocumentationObject
 type ExternalDocs struct {
-	Description string                 `json:"description,omitempty"`
-	URL         string                 `json:"url,omitempty"`
-	Extensions  map[string]interface{} `json:"-" yaml:"-"`
+	Description string         `json:"description,omitempty"`
+	URL         string         `json:"url,omitempty"`
+	Extensions  map[string]any `json:"-" yaml:"-"`
 }
 
 // DocsFromExpr builds a ExternalDocs from the Goa docs expression.

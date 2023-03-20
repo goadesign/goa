@@ -111,7 +111,7 @@ import (
 //        Required("name", "age")            // List required attributes
 //    })
 //
-func Attribute(name string, args ...interface{}) {
+func Attribute(name string, args ...any) {
 	var parent *expr.AttributeExpr
 	{
 		switch def := eval.Current().(type) {
@@ -194,7 +194,7 @@ func Attribute(name string, args ...interface{}) {
 //         Pattern("[0-9]+")
 //     })
 //
-func Field(tag interface{}, name string, args ...interface{}) {
+func Field(tag any, name string, args ...any) {
 	fn := func() { Meta("rpc:tag", fmt.Sprintf("%v", tag)) }
 	if len(args) > 0 {
 		if d, ok := args[len(args)-1].(func()); ok {
@@ -223,7 +223,7 @@ func Field(tag interface{}, name string, args ...interface{}) {
 //        })
 //    })
 //
-func OneOf(name string, args ...interface{}) {
+func OneOf(name string, args ...any) {
 	if len(args) > 2 {
 		eval.ReportError("OneOf: wrong number of arguments")
 	}
@@ -246,7 +246,7 @@ func OneOf(name string, args ...interface{}) {
 // Default must appear in an Attribute DSL.
 //
 // Default takes one parameter: the default value.
-func Default(def interface{}) {
+func Default(def any) {
 	a, ok := eval.Current().(*expr.AttributeExpr)
 	if !ok {
 		eval.IncompatibleDSL()
@@ -299,7 +299,7 @@ func Default(def interface{}) {
 //        })
 //    })
 //
-func Example(args ...interface{}) {
+func Example(args ...any) {
 	if len(args) == 0 {
 		eval.ReportError("not enough arguments")
 		return
@@ -310,7 +310,7 @@ func Example(args ...interface{}) {
 	}
 	var (
 		summary string
-		arg     interface{}
+		arg     any
 	)
 	if len(args) == 1 {
 		summary = "default"
@@ -347,7 +347,7 @@ func Example(args ...interface{}) {
 	a.UserExamples = append(a.UserExamples, ex)
 }
 
-func parseAttributeArgs(baseAttr *expr.AttributeExpr, args ...interface{}) (expr.DataType, string, func()) {
+func parseAttributeArgs(baseAttr *expr.AttributeExpr, args ...any) (expr.DataType, string, func()) {
 	var (
 		dataType    expr.DataType
 		description string

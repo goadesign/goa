@@ -47,7 +47,7 @@ func TestUnaryServerTrace(t *testing.T) {
 	}
 	for k, c := range cases {
 		t.Run(k, func(t *testing.T) {
-			handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+			handler := func(ctx context.Context, req any) (any, error) {
 				var ctxTraceID, ctxSpanID, ctxParentID string
 				{
 					if traceID := ctx.Value(middleware.TraceIDKey); traceID != nil {
@@ -123,7 +123,7 @@ func TestStreamServerTrace(t *testing.T) {
 	}
 	for k, c := range cases {
 		t.Run(k, func(t *testing.T) {
-			handler := func(srv interface{}, stream grpc.ServerStream) error {
+			handler := func(srv any, stream grpc.ServerStream) error {
 				ctx := stream.Context()
 				var ctxTraceID, ctxSpanID, ctxParentID string
 				{
@@ -179,7 +179,7 @@ func TestUnaryClientTrace(t *testing.T) {
 		TraceID, SpanID string
 		Invoker         grpc.UnaryInvoker
 	}{
-		"no-trace": {"", "", func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
+		"no-trace": {"", "", func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
 			md, ok := metadata.FromOutgoingContext(ctx)
 			if !ok {
 				md = metadata.MD{}
@@ -192,7 +192,7 @@ func TestUnaryClientTrace(t *testing.T) {
 			}
 			return nil
 		}},
-		"with-trace": {traceID, spanID, func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
+		"with-trace": {traceID, spanID, func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
 			md, ok := metadata.FromOutgoingContext(ctx)
 			if !ok {
 				md = metadata.MD{}

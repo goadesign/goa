@@ -166,7 +166,7 @@ func MethodPathBoolSliceParamServicePathBoolSliceParamPath(a []bool) string {
 `
 
 var PathInterfaceSliceParamCode = `// MethodPathInterfaceSliceParamServicePathInterfaceSliceParamPath returns the URL path to the ServicePathInterfaceSliceParam service MethodPathInterfaceSliceParam HTTP endpoint.
-func MethodPathInterfaceSliceParamServicePathInterfaceSliceParamPath(a []interface{}) string {
+func MethodPathInterfaceSliceParamServicePathInterfaceSliceParamPath(a []any) string {
 	aSlice := make([]string, len(a))
 	for i, v := range a {
 		aSlice[i] = url.QueryEscape(fmt.Sprintf("%v", v))

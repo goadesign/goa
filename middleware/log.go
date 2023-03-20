@@ -13,7 +13,7 @@ type (
 	Logger interface {
 		// Log creates a log entry using a sequence of alternating keys
 		// and values.
-		Log(keyvals ...interface{}) error
+		Log(keyvals ...any) error
 	}
 
 	// adapter is a thin wrapper around the stdlib logger that adapts it to
@@ -28,13 +28,13 @@ func NewLogger(l *log.Logger) Logger {
 	return &adapter{l}
 }
 
-func (a *adapter) Log(keyvals ...interface{}) error {
+func (a *adapter) Log(keyvals ...any) error {
 	n := (len(keyvals) + 1) / 2
 	if len(keyvals)%2 != 0 {
 		keyvals = append(keyvals, "MISSING")
 	}
 	var fm bytes.Buffer
-	vals := make([]interface{}, n)
+	vals := make([]any, n)
 	for i := 0; i < len(keyvals); i += 2 {
 		k := keyvals[i]
 		v := keyvals[i+1]

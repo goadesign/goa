@@ -73,13 +73,13 @@ func NewServiceError(err error, name string, timeout, temporary, fault bool) *Se
 
 // Fault creates an error given a format and values a la fmt.Printf. The error
 // has the Fault field set to true.
-func Fault(format string, v ...interface{}) *ServiceError {
+func Fault(format string, v ...any) *ServiceError {
 	return newError("fault", false, false, true, format, v...)
 }
 
 // PermanentError creates an error given a name and a format and values a la
 // fmt.Printf.
-func PermanentError(name, format string, v ...interface{}) *ServiceError {
+func PermanentError(name, format string, v ...any) *ServiceError {
 	return newError(name, false, false, false, format, v...)
 }
 
@@ -87,20 +87,20 @@ func PermanentError(name, format string, v ...interface{}) *ServiceError {
 // and that retrying the request may be successful. TemporaryError creates an
 // error given a name and a format and values a la fmt.Printf. The error has the
 // Temporary field set to true.
-func TemporaryError(name, format string, v ...interface{}) *ServiceError {
+func TemporaryError(name, format string, v ...any) *ServiceError {
 	return newError(name, false, true, false, format, v...)
 }
 
 // PermanentTimeoutError creates an error given a name and a format and values a
 // la fmt.Printf. The error has the Timeout field set to true.
-func PermanentTimeoutError(name, format string, v ...interface{}) *ServiceError {
+func PermanentTimeoutError(name, format string, v ...any) *ServiceError {
 	return newError(name, true, false, false, format, v...)
 }
 
 // TemporaryTimeoutError creates an error given a name and a format and values a
 // la fmt.Printf. The error has both the Timeout and Temporary fields set to
 // true.
-func TemporaryTimeoutError(name, format string, v ...interface{}) *ServiceError {
+func TemporaryTimeoutError(name, format string, v ...any) *ServiceError {
 	return newError(name, true, true, false, format, v...)
 }
 
@@ -118,7 +118,7 @@ func DecodePayloadError(msg string) error {
 
 // InvalidFieldTypeError is the error produced by the generated code when the
 // type of a payload field does not match the type defined in the design.
-func InvalidFieldTypeError(name string, val interface{}, expected string) error {
+func InvalidFieldTypeError(name string, val any, expected string) error {
 	return withField(name, PermanentError(
 		InvalidFieldType, "invalid value %#v for %q, must be a %s", val, name, expected))
 }
@@ -133,7 +133,7 @@ func MissingFieldError(name, context string) error {
 // InvalidEnumValueError is the error produced by the generated code when the
 // value of a payload field does not match one the values defined in the design
 // Enum validation.
-func InvalidEnumValueError(name string, val interface{}, allowed []interface{}) error {
+func InvalidEnumValueError(name string, val any, allowed []any) error {
 	elems := make([]string, len(allowed))
 	for i, a := range allowed {
 		elems[i] = fmt.Sprintf("%#v", a)
@@ -161,7 +161,7 @@ func InvalidPatternError(name, target string, pattern string) error {
 // InvalidRangeError is the error produced by the generated code when the value
 // of a payload field does not match the range validation defined in the design.
 // value may be an int or a float64.
-func InvalidRangeError(name string, target interface{}, value interface{}, min bool) error {
+func InvalidRangeError(name string, target any, value any, min bool) error {
 	comp := "greater or equal"
 	if !min {
 		comp = "lesser or equal"
@@ -173,7 +173,7 @@ func InvalidRangeError(name string, target interface{}, value interface{}, min b
 // InvalidLengthError is the error produced by the generated code when the value
 // of a payload field does not match the length validation defined in the
 // design.
-func InvalidLengthError(name string, target interface{}, ln, value int, min bool) error {
+func InvalidLengthError(name string, target any, ln, value int, min bool) error {
 	comp := "greater or equal"
 	if !min {
 		comp = "lesser or equal"
@@ -264,7 +264,7 @@ func withField(field string, err *ServiceError) *ServiceError {
 	return err
 }
 
-func newError(name string, timeout, temporary, fault bool, format string, v ...interface{}) *ServiceError {
+func newError(name string, timeout, temporary, fault bool, format string, v ...any) *ServiceError {
 	return &ServiceError{
 		Name:      name,
 		ID:        NewErrorID(),

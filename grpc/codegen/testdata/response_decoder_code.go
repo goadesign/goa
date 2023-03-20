@@ -2,7 +2,7 @@ package testdata
 
 const ResultWithViewsResponseDecoderCode = `// DecodeMethodMessageResultTypeWithViewsResponse decodes responses from the
 // ServiceMessageResultTypeWithViews MethodMessageResultTypeWithViews endpoint.
-func DecodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+func DecodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
 	var view string
 	{
 		if vals := hdr.Get("goa-view"); len(vals) > 0 {
@@ -25,7 +25,7 @@ func DecodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v inter
 const ResultWithExplicitViewResponseDecoderCode = `// DecodeMethodMessageResultTypeWithExplicitViewResponse decodes responses from
 // the ServiceMessageResultTypeWithExplicitView
 // MethodMessageResultTypeWithExplicitView endpoint.
-func DecodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+func DecodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
 	var view string
 	{
 		if vals := hdr.Get("goa-view"); len(vals) > 0 {
@@ -47,7 +47,7 @@ func DecodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, 
 
 const ResultArrayResponseDecoderCode = `// DecodeMethodMessageArrayResponse decodes responses from the
 // ServiceMessageArray MethodMessageArray endpoint.
-func DecodeMethodMessageArrayResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+func DecodeMethodMessageArrayResponse(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
 	message, ok := v.(*service_message_arraypb.MethodMessageArrayResponse)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageArray", "MethodMessageArray", "*service_message_arraypb.MethodMessageArrayResponse", v)
@@ -62,7 +62,7 @@ func DecodeMethodMessageArrayResponse(ctx context.Context, v interface{}, hdr, t
 
 const ResultPrimitiveResponseDecoderCode = `// DecodeMethodUnaryRPCNoPayloadResponse decodes responses from the
 // ServiceUnaryRPCNoPayload MethodUnaryRPCNoPayload endpoint.
-func DecodeMethodUnaryRPCNoPayloadResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+func DecodeMethodUnaryRPCNoPayloadResponse(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
 	message, ok := v.(*service_unary_rpc_no_payloadpb.MethodUnaryRPCNoPayloadResponse)
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoPayload", "MethodUnaryRPCNoPayload", "*service_unary_rpc_no_payloadpb.MethodUnaryRPCNoPayloadResponse", v)
@@ -74,7 +74,7 @@ func DecodeMethodUnaryRPCNoPayloadResponse(ctx context.Context, v interface{}, h
 
 const ResultWithMetadataResponseDecoderCode = `// DecodeMethodMessageWithMetadataResponse decodes responses from the
 // ServiceMessageWithMetadata MethodMessageWithMetadata endpoint.
-func DecodeMethodMessageWithMetadataResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+func DecodeMethodMessageWithMetadataResponse(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
 	var (
 		inHeader  *int
 		inTrailer *bool
@@ -117,7 +117,7 @@ func DecodeMethodMessageWithMetadataResponse(ctx context.Context, v interface{},
 
 const ResultWithValidateResponseDecoderCode = `// DecodeMethodMessageWithValidateResponse decodes responses from the
 // ServiceMessageWithValidate MethodMessageWithValidate endpoint.
-func DecodeMethodMessageWithValidateResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+func DecodeMethodMessageWithValidateResponse(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
 	var (
 		inHeader  *int
 		inTrailer *bool
@@ -152,7 +152,7 @@ func DecodeMethodMessageWithValidateResponse(ctx context.Context, v interface{},
 		}
 		if inTrailer != nil {
 			if !(*inTrailer == true) {
-				err = goa.MergeErrors(err, goa.InvalidEnumValueError("inTrailer", *inTrailer, []interface{}{true}))
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("inTrailer", *inTrailer, []any{true}))
 			}
 		}
 	}
@@ -174,7 +174,7 @@ func DecodeMethodMessageWithValidateResponse(ctx context.Context, v interface{},
 const ResultCollectionResponseDecoderCode = `// DecodeMethodMessageUserTypeWithNestedUserTypesResponse decodes responses
 // from the ServiceMessageUserTypeWithNestedUserTypes
 // MethodMessageUserTypeWithNestedUserTypes endpoint.
-func DecodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+func DecodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
 	var view string
 	{
 		if vals := hdr.Get("goa-view"); len(vals) > 0 {
@@ -196,7 +196,7 @@ func DecodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context,
 
 const ServerStreamingResponseDecoderCode = `// DecodeMethodServerStreamingUserTypeRPCResponse decodes responses from the
 // ServiceServerStreamingUserTypeRPC MethodServerStreamingUserTypeRPC endpoint.
-func DecodeMethodServerStreamingUserTypeRPCResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+func DecodeMethodServerStreamingUserTypeRPCResponse(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
 	return &MethodServerStreamingUserTypeRPCClientStream{
 		stream: v.(service_server_streaming_user_type_rpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient),
 	}, nil
@@ -205,7 +205,7 @@ func DecodeMethodServerStreamingUserTypeRPCResponse(ctx context.Context, v inter
 
 const ServerStreamingResultWithViewsResponseDecoderCode = `// DecodeMethodServerStreamingUserTypeRPCResponse decodes responses from the
 // ServiceServerStreamingUserTypeRPC MethodServerStreamingUserTypeRPC endpoint.
-func DecodeMethodServerStreamingUserTypeRPCResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+func DecodeMethodServerStreamingUserTypeRPCResponse(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
 	var view string
 	{
 		if vals := hdr.Get("goa-view"); len(vals) > 0 {
@@ -221,7 +221,7 @@ func DecodeMethodServerStreamingUserTypeRPCResponse(ctx context.Context, v inter
 
 const ClientStreamingResponseDecoderCode = `// DecodeMethodClientStreamingRPCResponse decodes responses from the
 // ServiceClientStreamingRPC MethodClientStreamingRPC endpoint.
-func DecodeMethodClientStreamingRPCResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+func DecodeMethodClientStreamingRPCResponse(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
 	return &MethodClientStreamingRPCClientStream{
 		stream: v.(service_client_streaming_rpcpb.ServiceClientStreamingRPC_MethodClientStreamingRPCClient),
 	}, nil
@@ -230,7 +230,7 @@ func DecodeMethodClientStreamingRPCResponse(ctx context.Context, v interface{}, 
 
 const BidirectionalStreamingResponseDecoderCode = `// DecodeMethodBidirectionalStreamingRPCResponse decodes responses from the
 // ServiceBidirectionalStreamingRPC MethodBidirectionalStreamingRPC endpoint.
-func DecodeMethodBidirectionalStreamingRPCResponse(ctx context.Context, v interface{}, hdr, trlr metadata.MD) (interface{}, error) {
+func DecodeMethodBidirectionalStreamingRPCResponse(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
 	var view string
 	{
 		if vals := hdr.Get("goa-view"); len(vals) > 0 {

@@ -30,19 +30,19 @@ type (
 	// request and response bodies.
 	Decoder interface {
 		// Decode decodes into v.
-		Decode(v interface{}) error
+		Decode(v any) error
 	}
 
 	// Encoder provides the actual encoding algorithm used to write HTTP
 	// request and response bodies.
 	Encoder interface {
 		// Encode encodes v.
-		Encode(v interface{}) error
+		Encode(v any) error
 	}
 
 	// EncodingFunc allows a function with appropriate signature to act as a
 	// Decoder/Encoder.
-	EncodingFunc func(v interface{}) error
+	EncodingFunc func(v any) error
 
 	// private type used to define context keys.
 	contextKey int
@@ -228,10 +228,10 @@ func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder, fo
 }
 
 // Decode implements the Decoder interface. It simply calls f(v).
-func (f EncodingFunc) Decode(v interface{}) error { return f(v) }
+func (f EncodingFunc) Decode(v any) error { return f(v) }
 
 // Encode implements the Encoder interface. It simply calls f(v).
-func (f EncodingFunc) Encode(v interface{}) error { return f(v) }
+func (f EncodingFunc) Encode(v any) error { return f(v) }
 
 // SetContentType initializes the response Content-Type header given a MIME
 // type. If the Content-Type header is already set and the MIME type is
@@ -268,7 +268,7 @@ type textEncoder struct {
 	ct string
 }
 
-func (e *textEncoder) Encode(v interface{}) (err error) {
+func (e *textEncoder) Encode(v any) (err error) {
 	switch c := v.(type) {
 	case string:
 		_, err = e.w.Write([]byte(c))
@@ -291,7 +291,7 @@ type textDecoder struct {
 	ct string
 }
 
-func (e *textDecoder) Decode(v interface{}) error {
+func (e *textDecoder) Decode(v any) error {
 	b, err := io.ReadAll(e.r)
 	if err != nil {
 		return err

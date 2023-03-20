@@ -108,7 +108,7 @@ func Files(genpkg string, service *expr.ServiceExpr, userTypePkgs map[string][]s
 		addTypeDefSection(pathWithDefault(et.Loc, svcPath), key, &codegen.SectionTemplate{
 			Name:    "service-error",
 			Source:  errorT,
-			FuncMap: map[string]interface{}{"errorName": errorName},
+			FuncMap: map[string]any{"errorName": errorName},
 			Data:    et,
 		})
 	}
@@ -174,7 +174,7 @@ func Files(genpkg string, service *expr.ServiceExpr, userTypePkgs map[string][]s
 		Name:    "service",
 		Source:  serviceT,
 		Data:    svc,
-		FuncMap: map[string]interface{}{"streamInterfaceFor": streamInterfaceFor},
+		FuncMap: map[string]any{"streamInterfaceFor": streamInterfaceFor},
 	}
 
 	// service.go
@@ -274,8 +274,8 @@ func errorName(et *UserTypeData) string {
 
 // streamInterfaceFor builds the data to generate the client and server stream
 // interfaces for the given endpoint.
-func streamInterfaceFor(typ string, m *MethodData, stream *StreamData) map[string]interface{} {
-	return map[string]interface{}{
+func streamInterfaceFor(typ string, m *MethodData, stream *StreamData) map[string]any {
+	return map[string]any{
 		"Type":     typ,
 		"Endpoint": m.Name,
 		"Stream":   stream,

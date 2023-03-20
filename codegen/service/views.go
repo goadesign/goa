@@ -86,7 +86,7 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "viewed-type-map",
 			Source: viewedMapT,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"ViewedTypes": rtdata,
 			},
 		})
@@ -121,7 +121,7 @@ func {{ .Name }}(result {{ .Ref }}) (err error) {
 }
 `
 
-// input: map[string]interface{}{"ViewedTypes": []*viewedType}
+// input: map[string]any{"ViewedTypes": []*viewedType}
 const viewedMapT = `var (
 {{- range .ViewedTypes }}
 	{{ printf "%sMap is a map indexing the attribute names of %s by view name." .Name .Name | comment }}

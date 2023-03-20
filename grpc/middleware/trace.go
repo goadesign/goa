@@ -36,7 +36,7 @@ const (
 //    middleware.SamplingPercent(100)))
 func UnaryServerTrace(opts ...middleware.TraceOption) grpc.UnaryServerInterceptor {
 	o := middleware.NewTraceOptions(opts...)
-	return grpc.UnaryServerInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+	return grpc.UnaryServerInterceptor(func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 		ctx = withTrace(ctx, info.FullMethod, o)
 		return handler(ctx, req)
 	})
@@ -55,7 +55,7 @@ func UnaryServerTrace(opts ...middleware.TraceOption) grpc.UnaryServerIntercepto
 //    middleware.MaxSamplingRate(50)))
 func StreamServerTrace(opts ...middleware.TraceOption) grpc.StreamServerInterceptor {
 	o := middleware.NewTraceOptions(opts...)
-	return grpc.StreamServerInterceptor(func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+	return grpc.StreamServerInterceptor(func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		ctx := withTrace(ss.Context(), info.FullMethod, o)
 		wss := NewWrappedServerStream(ctx, ss)
 		return handler(srv, wss)
@@ -69,7 +69,7 @@ func StreamServerTrace(opts ...middleware.TraceOption) grpc.StreamServerIntercep
 // Example:
 //  conn, err := grpc.Dial(url, grpc.WithUnaryInterceptor(UnaryClientTrace()))
 func UnaryClientTrace() grpc.UnaryClientInterceptor {
-	return grpc.UnaryClientInterceptor(func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	return grpc.UnaryClientInterceptor(func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		ctx = setTrace(ctx)
 		return invoker(ctx, method, req, reply, cc, opts...)
 	})

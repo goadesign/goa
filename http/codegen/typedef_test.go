@@ -90,11 +90,11 @@ var (
 	Default *int ` + "`" + `form:"default,omitempty" json:"default,omitempty" xml:"default,omitempty"` + "`" + `
 	Optional *float32 ` + "`" + `form:"optional,omitempty" json:"optional,omitempty" xml:"optional,omitempty"` + "`" + `
 	Bytes []byte ` + "`" + `form:"bytes,omitempty" json:"bytes,omitempty" xml:"bytes,omitempty"` + "`" + `
-	Any interface{} ` + "`" + `form:"any,omitempty" json:"any,omitempty" xml:"any,omitempty"` + "`" + `
+	Any any ` + "`" + `form:"any,omitempty" json:"any,omitempty" xml:"any,omitempty"` + "`" + `
 	RequiredBytes []byte ` + "`" + `form:"required_bytes" json:"required_bytes" xml:"required_bytes"` + "`" + `
-	RequiredAny interface{} ` + "`" + `form:"required_any" json:"required_any" xml:"required_any"` + "`" + `
+	RequiredAny any ` + "`" + `form:"required_any" json:"required_any" xml:"required_any"` + "`" + `
 	DefaultBytes []byte ` + "`" + `form:"default_bytes,omitempty" json:"default_bytes,omitempty" xml:"default_bytes,omitempty"` + "`" + `
-	DefaultAny interface{} ` + "`" + `form:"default_any,omitempty" json:"default_any,omitempty" xml:"default_any,omitempty"` + "`" + `
+	DefaultAny any ` + "`" + `form:"default_any,omitempty" json:"default_any,omitempty" xml:"default_any,omitempty"` + "`" + `
 	CustomType *pkg.String ` + "`" + `form:"custom_type,omitempty" json:"custom_type,omitempty" xml:"custom_type,omitempty"` + "`" + `
 	CustomTag *string ` + "`" + `foo:"bar"` + "`" + `
 }`
@@ -104,11 +104,11 @@ var (
 	Default int ` + "`" + `form:"default" json:"default" xml:"default"` + "`" + `
 	Optional *float32 ` + "`" + `form:"optional,omitempty" json:"optional,omitempty" xml:"optional,omitempty"` + "`" + `
 	Bytes []byte ` + "`" + `form:"bytes,omitempty" json:"bytes,omitempty" xml:"bytes,omitempty"` + "`" + `
-	Any interface{} ` + "`" + `form:"any,omitempty" json:"any,omitempty" xml:"any,omitempty"` + "`" + `
+	Any any ` + "`" + `form:"any,omitempty" json:"any,omitempty" xml:"any,omitempty"` + "`" + `
 	RequiredBytes []byte ` + "`" + `form:"required_bytes" json:"required_bytes" xml:"required_bytes"` + "`" + `
-	RequiredAny interface{} ` + "`" + `form:"required_any" json:"required_any" xml:"required_any"` + "`" + `
+	RequiredAny any ` + "`" + `form:"required_any" json:"required_any" xml:"required_any"` + "`" + `
 	DefaultBytes []byte ` + "`" + `form:"default_bytes" json:"default_bytes" xml:"default_bytes"` + "`" + `
-	DefaultAny interface{} ` + "`" + `form:"default_any" json:"default_any" xml:"default_any"` + "`" + `
+	DefaultAny any ` + "`" + `form:"default_any" json:"default_any" xml:"default_any"` + "`" + `
 	CustomType *pkg.String ` + "`" + `form:"custom_type,omitempty" json:"custom_type,omitempty" xml:"custom_type,omitempty"` + "`" + `
 	CustomTag *string ` + "`" + `foo:"bar"` + "`" + `
 }`
@@ -118,11 +118,11 @@ var (
 	Default *int ` + "`" + `form:"default,omitempty" json:"default,omitempty" xml:"default,omitempty"` + "`" + `
 	Optional *float32 ` + "`" + `form:"optional,omitempty" json:"optional,omitempty" xml:"optional,omitempty"` + "`" + `
 	Bytes []byte ` + "`" + `form:"bytes,omitempty" json:"bytes,omitempty" xml:"bytes,omitempty"` + "`" + `
-	Any interface{} ` + "`" + `form:"any,omitempty" json:"any,omitempty" xml:"any,omitempty"` + "`" + `
+	Any any ` + "`" + `form:"any,omitempty" json:"any,omitempty" xml:"any,omitempty"` + "`" + `
 	RequiredBytes []byte ` + "`" + `form:"required_bytes,omitempty" json:"required_bytes,omitempty" xml:"required_bytes,omitempty"` + "`" + `
-	RequiredAny interface{} ` + "`" + `form:"required_any,omitempty" json:"required_any,omitempty" xml:"required_any,omitempty"` + "`" + `
+	RequiredAny any ` + "`" + `form:"required_any,omitempty" json:"required_any,omitempty" xml:"required_any,omitempty"` + "`" + `
 	DefaultBytes []byte ` + "`" + `form:"default_bytes,omitempty" json:"default_bytes,omitempty" xml:"default_bytes,omitempty"` + "`" + `
-	DefaultAny interface{} ` + "`" + `form:"default_any,omitempty" json:"default_any,omitempty" xml:"default_any,omitempty"` + "`" + `
+	DefaultAny any ` + "`" + `form:"default_any,omitempty" json:"default_any,omitempty" xml:"default_any,omitempty"` + "`" + `
 	CustomType *pkg.String ` + "`" + `form:"custom_type,omitempty" json:"custom_type,omitempty" xml:"custom_type,omitempty"` + "`" + `
 	CustomTag *string ` + "`" + `foo:"bar"` + "`" + `
 }`

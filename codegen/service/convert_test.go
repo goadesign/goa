@@ -92,7 +92,7 @@ func TestDesignType(t *testing.T) {
 	var f bool
 	cases := []struct {
 		Name         string
-		From         interface{}
+		From         any
 		ExpectedType expr.DataType
 		ExpectedErr  string
 	}{
@@ -151,7 +151,7 @@ func TestCompatible(t *testing.T) {
 	cases := []struct {
 		Name        string
 		From        expr.DataType
-		To          interface{}
+		To          any
 		ExpectedErr string
 	}{
 		{"bool", expr.Boolean, false, ""},
@@ -167,7 +167,7 @@ func TestCompatible(t *testing.T) {
 		{"bytes", expr.Bytes, []byte{}, ""},
 		{"array", dsl.ArrayOf(expr.String), []string{}, ""},
 		{"map", dsl.MapOf(expr.String, expr.String), map[string]string{}, ""},
-		{"map-interface", dsl.MapOf(expr.String, expr.Any), map[string]interface{}{}, ""},
+		{"map-interface", dsl.MapOf(expr.String, expr.Any), map[string]any{}, ""},
 		{"object", obj, objT{}, ""},
 		{"object-mapped", objMapped, objT{}, ""},
 		{"object-ignored", objIgnored, objT{}, ""},

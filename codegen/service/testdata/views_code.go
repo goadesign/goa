@@ -37,7 +37,7 @@ func ValidateResultType(result *ResultType) (err error) {
 	case "tiny":
 		err = ValidateResultTypeViewTiny(result.Projected)
 	default:
-		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
+		err = goa.InvalidEnumValueError("view", result.View, []any{"default", "tiny"})
 	}
 	return
 }
@@ -116,7 +116,7 @@ func ValidateResultTypeCollection(result ResultTypeCollection) (err error) {
 	case "tiny":
 		err = ValidateResultTypeCollectionViewTiny(result.Projected)
 	default:
-		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
+		err = goa.InvalidEnumValueError("view", result.View, []any{"default", "tiny"})
 	}
 	return
 }
@@ -207,7 +207,7 @@ func ValidateResultType(result *ResultType) (err error) {
 	case "tiny":
 		err = ValidateResultTypeViewTiny(result.Projected)
 	default:
-		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
+		err = goa.InvalidEnumValueError("view", result.View, []any{"default", "tiny"})
 	}
 	return
 }
@@ -319,7 +319,7 @@ func ValidateRT(result *RT) (err error) {
 	case "tiny":
 		err = ValidateRTViewTiny(result.Projected)
 	default:
-		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
+		err = goa.InvalidEnumValueError("view", result.View, []any{"default", "tiny"})
 	}
 	return
 }
@@ -452,7 +452,7 @@ func ValidateRT(result *RT) (err error) {
 	case "tiny":
 		err = ValidateRTViewTiny(result.Projected)
 	default:
-		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
+		err = goa.InvalidEnumValueError("view", result.View, []any{"default", "tiny"})
 	}
 	return
 }
@@ -521,7 +521,7 @@ func ValidateRT(result *RT) (err error) {
 	case "tiny":
 		err = ValidateRTViewTiny(result.Projected)
 	default:
-		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
+		err = goa.InvalidEnumValueError("view", result.View, []any{"default", "tiny"})
 	}
 	return
 }
@@ -625,7 +625,7 @@ func ValidateSomeRT(result *SomeRT) (err error) {
 	case "tiny":
 		err = ValidateSomeRTViewTiny(result.Projected)
 	default:
-		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default", "tiny"})
+		err = goa.InvalidEnumValueError("view", result.View, []any{"default", "tiny"})
 	}
 	return
 }
@@ -637,7 +637,7 @@ func ValidateAnotherResult(result *AnotherResult) (err error) {
 	case "default", "":
 		err = ValidateAnotherResultView(result.Projected)
 	default:
-		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default"})
+		err = goa.InvalidEnumValueError("view", result.View, []any{"default"})
 	}
 	return
 }
@@ -740,7 +740,7 @@ func ValidateRT(result *RT) (err error) {
 	case "default", "":
 		err = ValidateRTView(result.Projected)
 	default:
-		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default"})
+		err = goa.InvalidEnumValueError("view", result.View, []any{"default"})
 	}
 	return
 }
@@ -784,7 +784,7 @@ func ValidateResult(result *Result) (err error) {
 	case "default", "":
 		err = ValidateResultView(result.Projected)
 	default:
-		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default"})
+		err = goa.InvalidEnumValueError("view", result.View, []any{"default"})
 	}
 	return
 }
@@ -794,7 +794,7 @@ func ValidateResult(result *Result) (err error) {
 func ValidateResultView(result *ResultView) (err error) {
 	for _, e := range result.T {
 		if !(string(e) == "a" || string(e) == "b") {
-			err = goa.MergeErrors(err, goa.InvalidEnumValueError("result.t[*]", string(e), []interface{}{"a", "b"}))
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("result.t[*]", string(e), []any{"a", "b"}))
 		}
 	}
 	return
@@ -803,7 +803,7 @@ func ValidateResultView(result *ResultView) (err error) {
 // ValidateUserTypeView runs the validations defined on UserTypeView.
 func ValidateUserTypeView(result UserTypeView) (err error) {
 	if !(string(result) == "a" || string(result) == "b") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("result", string(result), []interface{}{"a", "b"}))
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("result", string(result), []any{"a", "b"}))
 	}
 	return
 }
@@ -842,7 +842,7 @@ func ValidateRT(result *RT) (err error) {
 	case "default", "":
 		err = ValidateRTView(result.Projected)
 	default:
-		err = goa.InvalidEnumValueError("view", result.View, []interface{}{"default"})
+		err = goa.InvalidEnumValueError("view", result.View, []any{"default"})
 	}
 	return
 }

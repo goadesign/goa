@@ -27,7 +27,7 @@ func TestBuildPathFromFileServer(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.path, func(t *testing.T) {
 			s := &V2{
-				Paths: make(map[string]interface{}),
+				Paths: make(map[string]any),
 			}
 			root := &expr.RootExpr{
 				API: &expr.APIExpr{
@@ -81,7 +81,7 @@ func TestBuildPathFromExpr(t *testing.T) {
 		t.Run(k, func(t *testing.T) {
 			s := &V2{
 				Consumes: []string{"application/json"},
-				Paths:    make(map[string]interface{}),
+				Paths:    make(map[string]any),
 			}
 			root := &expr.RootExpr{
 				API: &expr.APIExpr{},

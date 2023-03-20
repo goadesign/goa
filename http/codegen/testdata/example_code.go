@@ -511,7 +511,7 @@ func errorHandler(logger *log.Logger) func(context.Context, http.ResponseWriter,
 }
 `
 
-	ExampleCLICode = `func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
+	ExampleCLICode = `func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, error) {
 	var (
 		doer goahttp.Doer
 	)
@@ -541,7 +541,7 @@ func httpUsageExamples() string {
 }
 `
 
-	StreamingExampleCLICode = `func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
+	StreamingExampleCLICode = `func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, error) {
 	var (
 		doer goahttp.Doer
 	)
@@ -580,7 +580,7 @@ func httpUsageExamples() string {
 }
 `
 
-	StreamingMultipleServicesExampleCLICode = `func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, interface{}, error) {
+	StreamingMultipleServicesExampleCLICode = `func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, error) {
 	var (
 		doer goahttp.Doer
 	)

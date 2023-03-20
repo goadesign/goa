@@ -51,7 +51,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 		},
 		Host:                host,
 		BasePath:            basePath,
-		Paths:               make(map[string]interface{}),
+		Paths:               make(map[string]any),
 		Consumes:            root.API.HTTP.Consumes,
 		Produces:            root.API.HTTP.Produces,
 		Parameters:          paramMap,
@@ -495,7 +495,7 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 		if key == "" {
 			key = "/"
 		}
-		var path interface{}
+		var path any
 		var ok bool
 		if path, ok = s.Paths[key]; !ok {
 			path = new(Path)
@@ -663,7 +663,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		if bp != "/" {
 			key = strings.TrimPrefix(key, bp)
 		}
-		var path interface{}
+		var path any
 		var ok bool
 		if path, ok = s.Paths[key]; !ok {
 			path = new(Path)
@@ -690,7 +690,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 	}
 }
 
-func initEnumValidation(def interface{}, values []interface{}) {
+func initEnumValidation(def any, values []any) {
 	switch actual := def.(type) {
 	case *Parameter:
 		actual.Enum = values
@@ -701,7 +701,7 @@ func initEnumValidation(def interface{}, values []interface{}) {
 	}
 }
 
-func initFormatValidation(def interface{}, format string) {
+func initFormatValidation(def any, format string) {
 	switch actual := def.(type) {
 	case *Parameter:
 		actual.Format = format
@@ -712,7 +712,7 @@ func initFormatValidation(def interface{}, format string) {
 	}
 }
 
-func initPatternValidation(def interface{}, pattern string) {
+func initPatternValidation(def any, pattern string) {
 	switch actual := def.(type) {
 	case *Parameter:
 		actual.Pattern = pattern
@@ -723,7 +723,7 @@ func initPatternValidation(def interface{}, pattern string) {
 	}
 }
 
-func initExclusiveMinimumValidation(def interface{}, exclMin *float64) {
+func initExclusiveMinimumValidation(def any, exclMin *float64) {
 	switch actual := def.(type) {
 	case *Parameter:
 		actual.Minimum = exclMin
@@ -737,7 +737,7 @@ func initExclusiveMinimumValidation(def interface{}, exclMin *float64) {
 	}
 }
 
-func initMinimumValidation(def interface{}, min *float64) {
+func initMinimumValidation(def any, min *float64) {
 	switch actual := def.(type) {
 	case *Parameter:
 		actual.Minimum = min
@@ -751,7 +751,7 @@ func initMinimumValidation(def interface{}, min *float64) {
 	}
 }
 
-func initExclusiveMaximumValidation(def interface{}, exclMax *float64) {
+func initExclusiveMaximumValidation(def any, exclMax *float64) {
 	switch actual := def.(type) {
 	case *Parameter:
 		actual.Maximum = exclMax
@@ -765,7 +765,7 @@ func initExclusiveMaximumValidation(def interface{}, exclMax *float64) {
 	}
 }
 
-func initMaximumValidation(def interface{}, max *float64) {
+func initMaximumValidation(def any, max *float64) {
 	switch actual := def.(type) {
 	case *Parameter:
 		actual.Maximum = max
@@ -779,7 +779,7 @@ func initMaximumValidation(def interface{}, max *float64) {
 	}
 }
 
-func initMinLengthValidation(def interface{}, isArray bool, min *int) {
+func initMinLengthValidation(def any, isArray bool, min *int) {
 	switch actual := def.(type) {
 	case *Parameter:
 		if isArray {
@@ -794,7 +794,7 @@ func initMinLengthValidation(def interface{}, isArray bool, min *int) {
 	}
 }
 
-func initMaxLengthValidation(def interface{}, isArray bool, max *int) {
+func initMaxLengthValidation(def any, isArray bool, max *int) {
 	switch actual := def.(type) {
 	case *Parameter:
 		if isArray {
@@ -809,7 +809,7 @@ func initMaxLengthValidation(def interface{}, isArray bool, max *int) {
 	}
 }
 
-func initValidations(attr *expr.AttributeExpr, def interface{}) {
+func initValidations(attr *expr.AttributeExpr, def any) {
 	val := attr.Validation
 	if val == nil {
 		return

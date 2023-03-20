@@ -765,7 +765,7 @@ const (
 		}
 	}
 	{
-		var zero interface{}
+		var zero any
 		if target.Any == zero {
 			target.Any = "something"
 		}

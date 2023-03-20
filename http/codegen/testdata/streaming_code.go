@@ -140,7 +140,7 @@ func (s *StreamingResultWithViewsMethodServerStream) Send(v *streamingresultwith
 		return err
 	}
 	res := streamingresultwithviewsservice.NewViewedUsertype(v, s.view)
-	var body interface{}
+	var body any
 	switch s.view {
 	case "tiny":
 		body = NewStreamingResultWithViewsMethodResponseBodyTiny(res.Projected)
@@ -215,7 +215,7 @@ func (c *Client) StreamingResultMethod() goa.Endpoint {
 	var (
 		decodeResponse = DecodeStreamingResultMethodResponse(c.decoder, c.RestoreResponseBody)
 	)
-	return func(ctx context.Context, v interface{}) (interface{}, error) {
+	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildStreamingResultMethodRequest(ctx, v)
 		if err != nil {
 			return nil, err
@@ -293,7 +293,7 @@ func (c *Client) StreamingResultWithViewsMethod() goa.Endpoint {
 	var (
 		decodeResponse = DecodeStreamingResultWithViewsMethodResponse(c.decoder, c.RestoreResponseBody)
 	)
-	return func(ctx context.Context, v interface{}) (interface{}, error) {
+	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildStreamingResultWithViewsMethodRequest(ctx, v)
 		if err != nil {
 			return nil, err
@@ -366,7 +366,7 @@ func (c *Client) StreamingResultWithExplicitViewMethod() goa.Endpoint {
 	var (
 		decodeResponse = DecodeStreamingResultWithExplicitViewMethodResponse(c.decoder, c.RestoreResponseBody)
 	)
-	return func(ctx context.Context, v interface{}) (interface{}, error) {
+	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildStreamingResultWithExplicitViewMethodRequest(ctx, v)
 		if err != nil {
 			return nil, err
@@ -476,7 +476,7 @@ func (s *StreamingResultCollectionWithViewsMethodServerStream) Send(v streamingr
 		return err
 	}
 	res := streamingresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, s.view)
-	var body interface{}
+	var body any
 	switch s.view {
 	case "tiny":
 		body = NewUsertypeResponseTinyCollection(res.Projected)
@@ -567,7 +567,7 @@ func (c *Client) StreamingResultCollectionWithExplicitViewMethod() goa.Endpoint 
 	var (
 		decodeResponse = DecodeStreamingResultCollectionWithExplicitViewMethodResponse(c.decoder, c.RestoreResponseBody)
 	)
-	return func(ctx context.Context, v interface{}) (interface{}, error) {
+	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildStreamingResultCollectionWithExplicitViewMethodRequest(ctx, v)
 		if err != nil {
 			return nil, err
@@ -869,7 +869,7 @@ func (c *Client) StreamingResultNoPayloadMethod() goa.Endpoint {
 	var (
 		decodeResponse = DecodeStreamingResultNoPayloadMethodResponse(c.decoder, c.RestoreResponseBody)
 	)
-	return func(ctx context.Context, v interface{}) (interface{}, error) {
+	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildStreamingResultNoPayloadMethodRequest(ctx, v)
 		if err != nil {
 			return nil, err
@@ -1010,7 +1010,7 @@ func (c *Client) StreamingPayloadMethod() goa.Endpoint {
 		encodeRequest  = EncodeStreamingPayloadMethodRequest(c.encoder)
 		decodeResponse = DecodeStreamingPayloadMethodResponse(c.decoder, c.RestoreResponseBody)
 	)
-	return func(ctx context.Context, v interface{}) (interface{}, error) {
+	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildStreamingPayloadMethodRequest(ctx, v)
 		if err != nil {
 			return nil, err
@@ -1127,7 +1127,7 @@ func (c *Client) StreamingPayloadNoPayloadMethod() goa.Endpoint {
 	var (
 		decodeResponse = DecodeStreamingPayloadNoPayloadMethodResponse(c.decoder, c.RestoreResponseBody)
 	)
-	return func(ctx context.Context, v interface{}) (interface{}, error) {
+	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildStreamingPayloadNoPayloadMethodRequest(ctx, v)
 		if err != nil {
 			return nil, err
@@ -1264,7 +1264,7 @@ var StreamingPayloadResultWithViewsServerStreamSendCode = `// SendAndClose strea
 func (s *StreamingPayloadResultWithViewsMethodServerStream) SendAndClose(v *streamingpayloadresultwithviewsservice.Usertype) error {
 	defer s.conn.Close()
 	res := streamingpayloadresultwithviewsservice.NewViewedUsertype(v, s.view)
-	var body interface{}
+	var body any
 	switch s.view {
 	case "tiny":
 		body = NewStreamingPayloadResultWithViewsMethodResponseBodyTiny(res.Projected)
@@ -1459,7 +1459,7 @@ var StreamingPayloadResultCollectionWithViewsServerStreamSendCode = `// SendAndC
 func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) SendAndClose(v streamingpayloadresultcollectionwithviewsservice.UsertypeCollection) error {
 	defer s.conn.Close()
 	res := streamingpayloadresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, s.view)
-	var body interface{}
+	var body any
 	switch s.view {
 	case "tiny":
 		body = NewUsertypeResponseTinyCollection(res.Projected)
@@ -1472,13 +1472,13 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) SendAndClo
 }
 `
 
-var StreamingPayloadResultCollectionWithViewsServerStreamRecvCode = `// Recv reads instances of "interface{}" from the
+var StreamingPayloadResultCollectionWithViewsServerStreamRecvCode = `// Recv reads instances of "any" from the
 // "StreamingPayloadResultCollectionWithViewsMethod" endpoint websocket
 // connection.
-func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) Recv() (interface{}, error) {
+func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) Recv() (any, error) {
 	var (
-		rv  interface{}
-		msg *interface{}
+		rv  any
+		msg *any
 		err error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
@@ -1517,10 +1517,10 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) SetView(vi
 }
 `
 
-var StreamingPayloadResultCollectionWithViewsClientStreamSendCode = `// Send streams instances of "interface{}" to the
+var StreamingPayloadResultCollectionWithViewsClientStreamSendCode = `// Send streams instances of "any" to the
 // "StreamingPayloadResultCollectionWithViewsMethod" endpoint websocket
 // connection.
-func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) Send(v interface{}) error {
+func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) Send(v any) error {
 	return s.conn.WriteJSON(v)
 }
 `
@@ -1558,7 +1558,7 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) CloseAndRe
 }
 `
 
-var StreamingPayloadResultCollectionWithViewsClientStreamSetViewCode = `// SetView sets the view to render the interface{} type before sending to the
+var StreamingPayloadResultCollectionWithViewsClientStreamSetViewCode = `// SetView sets the view to render the any type before sending to the
 // "StreamingPayloadResultCollectionWithViewsMethod" endpoint websocket
 // connection.
 func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) SetView(view string) {
@@ -1578,13 +1578,13 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) Sen
 }
 `
 
-var StreamingPayloadResultCollectionWithExplicitViewServerStreamRecvCode = `// Recv reads instances of "interface{}" from the
+var StreamingPayloadResultCollectionWithExplicitViewServerStreamRecvCode = `// Recv reads instances of "any" from the
 // "StreamingPayloadResultCollectionWithExplicitViewMethod" endpoint websocket
 // connection.
-func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) Recv() (interface{}, error) {
+func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) Recv() (any, error) {
 	var (
-		rv  interface{}
-		msg *interface{}
+		rv  any
+		msg *any
 		err error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
@@ -1614,10 +1614,10 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) Rec
 }
 `
 
-var StreamingPayloadResultCollectionWithExplicitViewClientStreamSendCode = `// Send streams instances of "interface{}" to the
+var StreamingPayloadResultCollectionWithExplicitViewClientStreamSendCode = `// Send streams instances of "any" to the
 // "StreamingPayloadResultCollectionWithExplicitViewMethod" endpoint websocket
 // connection.
-func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) Send(v interface{}) error {
+func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) Send(v any) error {
 	return s.conn.WriteJSON(v)
 }
 `
@@ -2195,7 +2195,7 @@ func (c *Client) BidirectionalStreamingMethod() goa.Endpoint {
 		encodeRequest  = EncodeBidirectionalStreamingMethodRequest(c.encoder)
 		decodeResponse = DecodeBidirectionalStreamingMethodResponse(c.decoder, c.RestoreResponseBody)
 	)
-	return func(ctx context.Context, v interface{}) (interface{}, error) {
+	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildBidirectionalStreamingMethodRequest(ctx, v)
 		if err != nil {
 			return nil, err
@@ -2336,7 +2336,7 @@ func (c *Client) BidirectionalStreamingNoPayloadMethod() goa.Endpoint {
 	var (
 		decodeResponse = DecodeBidirectionalStreamingNoPayloadMethodResponse(c.decoder, c.RestoreResponseBody)
 	)
-	return func(ctx context.Context, v interface{}) (interface{}, error) {
+	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.BuildBidirectionalStreamingNoPayloadMethodRequest(ctx, v)
 		if err != nil {
 			return nil, err
@@ -2425,7 +2425,7 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Send(v *bidire
 		return err
 	}
 	res := bidirectionalstreamingresultwithviewsservice.NewViewedUsertype(v, s.view)
-	var body interface{}
+	var body any
 	switch s.view {
 	case "tiny":
 		body = NewBidirectionalStreamingResultWithViewsMethodResponseBodyTiny(res.Projected)
@@ -2676,7 +2676,7 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 		return err
 	}
 	res := bidirectionalstreamingresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, s.view)
-	var body interface{}
+	var body any
 	switch s.view {
 	case "tiny":
 		body = NewUsertypeResponseTinyCollection(res.Projected)
@@ -2689,13 +2689,13 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 }
 `
 
-var BidirectionalStreamingResultCollectionWithViewsServerStreamRecvCode = `// Recv reads instances of "interface{}" from the
+var BidirectionalStreamingResultCollectionWithViewsServerStreamRecvCode = `// Recv reads instances of "any" from the
 // "BidirectionalStreamingResultCollectionWithViewsMethod" endpoint websocket
 // connection.
-func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Recv() (interface{}, error) {
+func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Recv() (any, error) {
 	var (
-		rv  interface{}
-		msg *interface{}
+		rv  any
+		msg *any
 		err error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
@@ -2735,10 +2735,10 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) SetV
 }
 `
 
-var BidirectionalStreamingResultCollectionWithViewsClientStreamSendCode = `// Send streams instances of "interface{}" to the
+var BidirectionalStreamingResultCollectionWithViewsClientStreamSendCode = `// Send streams instances of "any" to the
 // "BidirectionalStreamingResultCollectionWithViewsMethod" endpoint websocket
 // connection.
-func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) Send(v interface{}) error {
+func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) Send(v any) error {
 	return s.conn.WriteJSON(v)
 }
 `
@@ -2769,7 +2769,7 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) Recv
 }
 `
 
-var BidirectionalStreamingResultCollectionWithViewsClientStreamSetViewCode = `// SetView sets the view to render the interface{} type before sending to the
+var BidirectionalStreamingResultCollectionWithViewsClientStreamSetViewCode = `// SetView sets the view to render the any type before sending to the
 // "BidirectionalStreamingResultCollectionWithViewsMethod" endpoint websocket
 // connection.
 func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) SetView(view string) {
@@ -2806,13 +2806,13 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 }
 `
 
-var BidirectionalStreamingResultCollectionWithExplicitViewServerStreamRecvCode = `// Recv reads instances of "interface{}" from the
+var BidirectionalStreamingResultCollectionWithExplicitViewServerStreamRecvCode = `// Recv reads instances of "any" from the
 // "BidirectionalStreamingResultCollectionWithExplicitViewMethod" endpoint
 // websocket connection.
-func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStream) Recv() (interface{}, error) {
+func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStream) Recv() (any, error) {
 	var (
-		rv  interface{}
-		msg *interface{}
+		rv  any
+		msg *any
 		err error
 	)
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
@@ -2842,10 +2842,10 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 }
 `
 
-var BidirectionalStreamingResultCollectionWithExplicitViewClientStreamSendCode = `// Send streams instances of "interface{}" to the
+var BidirectionalStreamingResultCollectionWithExplicitViewClientStreamSendCode = `// Send streams instances of "any" to the
 // "BidirectionalStreamingResultCollectionWithExplicitViewMethod" endpoint
 // websocket connection.
-func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStream) Send(v interface{}) error {
+func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStream) Send(v any) error {
 	return s.conn.WriteJSON(v)
 }
 `

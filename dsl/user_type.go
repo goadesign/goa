@@ -57,7 +57,7 @@ var (
 //         Required("b", "c")
 //     })
 //
-func Type(name string, args ...interface{}) expr.UserType {
+func Type(name string, args ...any) expr.UserType {
 	if len(args) > 2 {
 		eval.ReportError("too many arguments")
 		return nil
@@ -78,7 +78,7 @@ func Type(name string, args ...interface{}) expr.UserType {
 	)
 	if len(args) == 0 {
 		// Make Type behave like Attribute
-		args = []interface{}{expr.String}
+		args = []any{expr.String}
 	}
 	switch a := args[0].(type) {
 	case expr.DataType:
@@ -135,7 +135,7 @@ func Type(name string, args ...interface{}) expr.UserType {
 // a result type where ArrayOf returns a user type. In general you want to use
 // CollectionOf if the argument is a result type and ArrayOf if it is a user
 // type.
-func ArrayOf(v interface{}, fn ...func()) *expr.Array {
+func ArrayOf(v any, fn ...func()) *expr.Array {
 	var t expr.DataType
 	var ok bool
 	t, ok = v.(expr.DataType)
@@ -176,7 +176,7 @@ func ArrayOf(v interface{}, fn ...func()) *expr.Array {
 //        })
 //    })
 //
-func MapOf(k, v interface{}, fn ...func()) *expr.Map {
+func MapOf(k, v any, fn ...func()) *expr.Map {
 	var tk, tv expr.DataType
 	var ok bool
 	tk, ok = k.(expr.DataType)

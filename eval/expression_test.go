@@ -11,12 +11,12 @@ func (e Expr) EvalName() string { return "test expression" }
 func TestToExpressionSet(t *testing.T) {
 	cases := []struct {
 		Name        string
-		Slice       []interface{}
+		Slice       []any
 		ExpectPanic bool
 	}{
-		{"simple", []interface{}{Expr(42)}, false},
+		{"simple", []any{Expr(42)}, false},
 		{"nil", nil, false},
-		{"invalid", []interface{}{42}, true},
+		{"invalid", []any{42}, true},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

@@ -95,7 +95,7 @@ func Current() Expression {
 
 // ReportError records a DSL error for reporting post DSL execution. It accepts
 // a format and values a la fmt.Printf.
-func ReportError(fm string, vals ...interface{}) {
+func ReportError(fm string, vals ...any) {
 	var suffix string
 	if cur := Context.Stack.Current(); cur != nil {
 		if name := cur.EvalName(); name != "" {
@@ -122,7 +122,7 @@ func IncompatibleDSL() {
 
 // InvalidArgError records an invalid argument error. It is used by DSL
 // functions that take dynamic arguments.
-func InvalidArgError(expected string, actual interface{}) {
+func InvalidArgError(expected string, actual any) {
 	ReportError("cannot use %#v (type %s) as type %s", actual, reflect.TypeOf(actual), expected)
 }
 
@@ -151,7 +151,7 @@ func (verr *ValidationErrors) Merge(err *ValidationErrors) {
 }
 
 // Add adds a validation error to the target.
-func (verr *ValidationErrors) Add(def Expression, format string, vals ...interface{}) {
+func (verr *ValidationErrors) Add(def Expression, format string, vals ...any) {
 	verr.AddError(def, fmt.Errorf(format, vals...))
 }
 

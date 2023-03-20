@@ -86,7 +86,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		{
 			Name:   "server-http-start",
 			Source: httpSvrStartT,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"Services": svcdata,
 			},
 		},
@@ -96,17 +96,17 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		{
 			Name:   "server-http-init",
 			Source: httpSvrInitT,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"Services": svcdata,
 				"APIPkg":   apiPkg,
 			},
-			FuncMap: map[string]interface{}{"needStream": needStream, "hasWebSocket": hasWebSocket},
+			FuncMap: map[string]any{"needStream": needStream, "hasWebSocket": hasWebSocket},
 		},
 		{Name: "server-http-middleware", Source: httpSvrMiddlewareT},
 		{
 			Name:   "server-http-end",
 			Source: httpSvrEndT,
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"Services": svcdata,
 			},
 		},
@@ -198,7 +198,7 @@ func {{ .FuncName }}(mw *multipart.Writer, p {{ .Payload.Ref }}) error {
 }
 `
 
-	// input: map[string]interface{}{"Services":[]*ServiceData}
+	// input: map[string]any{"Services":[]*ServiceData}
 	httpSvrStartT = `{{ comment "handleHTTPServer starts configures and starts a HTTP server on the given URL. It shuts down the server if any error is received in the error channel." }}
 func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if .Service.Methods }}, {{ .Service.VarName }}Endpoints *{{ .Service.PkgName }}.Endpoints{{ end }}{{ end }}, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
 `
@@ -233,7 +233,7 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	}
 `
 
-	// input: map[string]interface{}{"APIPkg":string, "Services":[]*ServiceData}
+	// input: map[string]any{"APIPkg":string, "Services":[]*ServiceData}
 	httpSvrInitT = `
 	// Wrap the endpoints with the transport specific layers. The generated
 	// server packages contains code generated from the design which maps
@@ -283,7 +283,7 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	}
 `
 
-	// input: map[string]interface{}{"Services":[]*ServiceData}
+	// input: map[string]any{"Services":[]*ServiceData}
 	httpSvrEndT = `
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.

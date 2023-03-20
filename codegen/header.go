@@ -9,7 +9,7 @@ func Header(title, pack string, imports []*ImportSpec) *SectionTemplate {
 	return &SectionTemplate{
 		Name:   "source-header",
 		Source: headerT,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"Title":       title,
 			"ToolVersion": goa.Version(),
 			"Pkg":         pack,
@@ -25,7 +25,7 @@ func AddImport(section *SectionTemplate, imprts ...*ImportSpec) {
 		return
 	}
 	var specs []*ImportSpec
-	if data, ok := section.Data.(map[string]interface{}); ok {
+	if data, ok := section.Data.(map[string]any); ok {
 		if imports, ok := data["Imports"]; ok {
 			specs = imports.([]*ImportSpec)
 		}

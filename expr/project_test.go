@@ -83,7 +83,7 @@ func TestProject(t *testing.T) {
 // by the view. name may use the format "name:view" in which case view is the
 // name of the view used to render the attribute (when its type is a result
 // type).
-func view(name string, params ...interface{}) *ViewExpr {
+func view(name string, params ...any) *ViewExpr {
 	var obj Object = make([]*NamedAttributeExpr, len(params)/2)
 	for i := 0; i < len(params); i += 2 {
 		var (
@@ -114,7 +114,7 @@ func view(name string, params ...interface{}) *ViewExpr {
 //
 //    resultType("attr1", String, "attr2", Int, view1, view2)
 //
-func resultType(params ...interface{}) *ResultTypeExpr {
+func resultType(params ...any) *ResultTypeExpr {
 	var (
 		views []*ViewExpr
 		obj   Object
@@ -157,7 +157,7 @@ func collection(elemType *ResultTypeExpr) *ResultTypeExpr {
 	}
 }
 
-func resultRecursive(params ...interface{}) *ResultTypeExpr {
+func resultRecursive(params ...any) *ResultTypeExpr {
 	rt := resultType(params...)
 	recAtt := &NamedAttributeExpr{Name: "rec", Attribute: &AttributeExpr{Type: rt, Description: "desc rec"}}
 	obj := AsObject(rt)

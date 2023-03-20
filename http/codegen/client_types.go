@@ -189,7 +189,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 					Name:    "client-result-init",
 					Source:  clientTypeInitT,
 					Data:    init,
-					FuncMap: map[string]interface{}{"fieldCode": fieldCode},
+					FuncMap: map[string]any{"fieldCode": fieldCode},
 				})
 			}
 		}
@@ -202,7 +202,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 						Name:    "client-error-result-init",
 						Source:  clientTypeInitT,
 						Data:    init,
-						FuncMap: map[string]interface{}{"fieldCode": fieldCode},
+						FuncMap: map[string]any{"fieldCode": fieldCode},
 					})
 				}
 			}

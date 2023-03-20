@@ -75,7 +75,7 @@ type (
 		// Example returns a JSON serialized example value.
 		Example string
 		// Default returns the default value if any.
-		Default interface{}
+		Default any
 	}
 
 	// BuildFunctionData contains the data needed to generate a constructor
@@ -264,7 +264,7 @@ func FlagsCode(data []*CommandData) string {
 		Name:    "parse-endpoint-flags",
 		Source:  parseFlagsT,
 		Data:    data,
-		FuncMap: map[string]interface{}{"printDescription": printDescription},
+		FuncMap: map[string]any{"printDescription": printDescription},
 	}
 	var flagsCode bytes.Buffer
 	err := section.Write(&flagsCode)
@@ -282,7 +282,7 @@ func CommandUsage(data *CommandData) *codegen.SectionTemplate {
 		Name:    "cli-command-usage",
 		Source:  commandUsageT,
 		Data:    data,
-		FuncMap: map[string]interface{}{"printDescription": printDescription},
+		FuncMap: map[string]any{"printDescription": printDescription},
 	}
 }
 
@@ -293,7 +293,7 @@ func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTem
 		Name:   "cli-build-payload",
 		Source: buildPayloadT,
 		Data:   buildFunction,
-		FuncMap: map[string]interface{}{
+		FuncMap: map[string]any{
 			"fieldCode": fieldCode,
 		},
 	}
@@ -308,7 +308,7 @@ func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTem
 // description is the flag description
 // required determines if the flag is required
 // example is an example value for the flag
-func NewFlagData(svcn, en, name, typeName, description string, required bool, example, def interface{}) *FlagData {
+func NewFlagData(svcn, en, name, typeName, description string, required bool, example, def any) *FlagData {
 	ex := jsonExample(example)
 	fn := goifyTerms(svcn, en, name)
 	return &FlagData{
@@ -326,7 +326,7 @@ func NewFlagData(svcn, en, name, typeName, description string, required bool, ex
 // FieldLoadCode returns the code used in the build payload function that
 // initializes one of the payload object fields. It returns the initialization
 // code and a boolean indicating whether the code requires an "err" variable.
-func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultValue interface{}, payload expr.DataType, payloadRef string) (string, bool) {
+func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultValue any, payload expr.DataType, payloadRef string) (string, bool) {
 	var (
 		code    string
 		declErr bool
@@ -410,13 +410,13 @@ func flagType(tname string) string {
 }
 
 // jsonExample generates a json example
-func jsonExample(v interface{}) string {
+func jsonExample(v any) string {
 	// In JSON, keys must be a string. But goa allows map keys to be anything.
 	r := reflect.ValueOf(v)
 	if r.Kind() == reflect.Map {
 		keys := r.MapKeys()
 		if keys[0].Kind() != reflect.String {
-			a := make(map[string]interface{}, len(keys))
+			a := make(map[string]any, len(keys))
 			var kstr string
 			for _, k := range keys {
 				switch t := k.Interface().(type) {

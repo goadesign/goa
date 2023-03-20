@@ -284,9 +284,9 @@ func NewMethodExplicitBodyUserResultObjectMultipleViewResulttypemultipleviewsOK(
 const MixedPayloadInBodyClientTypesFile = `// MethodARequestBody is the type of the "ServiceMixedPayloadInBody" service
 // "MethodA" endpoint HTTP request body.
 type MethodARequestBody struct {
-	Any    interface{}          ` + "`" + `form:"any,omitempty" json:"any,omitempty" xml:"any,omitempty"` + "`" + `
+	Any    any                  ` + "`" + `form:"any,omitempty" json:"any,omitempty" xml:"any,omitempty"` + "`" + `
 	Array  []float32            ` + "`" + `form:"array" json:"array" xml:"array"` + "`" + `
-	Map    map[uint]interface{} ` + "`" + `form:"map,omitempty" json:"map,omitempty" xml:"map,omitempty"` + "`" + `
+	Map    map[uint]any         ` + "`" + `form:"map,omitempty" json:"map,omitempty" xml:"map,omitempty"` + "`" + `
 	Object *BPayloadRequestBody ` + "`" + `form:"object" json:"object" xml:"object"` + "`" + `
 	DupObj *BPayloadRequestBody ` + "`" + `form:"dup_obj,omitempty" json:"dup_obj,omitempty" xml:"dup_obj,omitempty"` + "`" + `
 }
@@ -310,7 +310,7 @@ func NewMethodARequestBody(p *servicemixedpayloadinbody.APayload) *MethodAReques
 		}
 	}
 	if p.Map != nil {
-		body.Map = make(map[uint]interface{}, len(p.Map))
+		body.Map = make(map[uint]any, len(p.Map))
 		for key, val := range p.Map {
 			tk := key
 			tv := val

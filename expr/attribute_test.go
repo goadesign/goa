@@ -838,7 +838,7 @@ func TestAttributeExprHasDefaultValue(t *testing.T) {
 
 func TestValidationExprHasRequiredOnly(t *testing.T) {
 	var (
-		values           = []interface{}{"foo"}
+		values           = []any{"foo"}
 		pattern          = "^foo$"
 		exclusiveMinimum = 1.1
 		minimum          = 1.1
@@ -848,7 +848,7 @@ func TestValidationExprHasRequiredOnly(t *testing.T) {
 		maxLength        = 3
 	)
 	cases := map[string]struct {
-		values           []interface{}
+		values           []any
 		format           ValidationFormat
 		pattern          string
 		exclusiveMinimum *float64

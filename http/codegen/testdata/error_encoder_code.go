@@ -89,7 +89,7 @@ func EncodeMethodAPIPrimitiveErrorResponseError(encoder func(context.Context, ht
 			var res *goa.ServiceError
 			errors.As(v, &res)
 			enc := encoder(ctx, w)
-			var body interface{}
+			var body any
 			if formatter != nil {
 				body = formatter(ctx, res)
 			} else {
@@ -127,7 +127,7 @@ func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.Re
 			var res *goa.ServiceError
 			errors.As(v, &res)
 			enc := encoder(ctx, w)
-			var body interface{}
+			var body any
 			if formatter != nil {
 				body = formatter(ctx, res)
 			} else {
@@ -158,7 +158,7 @@ func EncodeMethodDefaultErrorResponseError(encoder func(context.Context, http.Re
 			errors.As(v, &res)
 			ctx = context.WithValue(ctx, goahttp.ContentTypeKey, "application/xml")
 			enc := encoder(ctx, w)
-			var body interface{}
+			var body any
 			if formatter != nil {
 				body = formatter(ctx, res)
 			} else {
@@ -188,7 +188,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 			var res *goa.ServiceError
 			errors.As(v, &res)
 			enc := encoder(ctx, w)
-			var body interface{}
+			var body any
 			if formatter != nil {
 				body = formatter(ctx, res)
 			} else {
@@ -201,7 +201,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 			var res *goa.ServiceError
 			errors.As(v, &res)
 			enc := encoder(ctx, w)
-			var body interface{}
+			var body any
 			if formatter != nil {
 				body = formatter(ctx, res)
 			} else {
@@ -231,7 +231,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 			var res *goa.ServiceError
 			errors.As(v, &res)
 			enc := encoder(ctx, w)
-			var body interface{}
+			var body any
 			if formatter != nil {
 				body = formatter(ctx, res)
 			} else {
@@ -245,7 +245,7 @@ func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.Re
 			errors.As(v, &res)
 			ctx = context.WithValue(ctx, goahttp.ContentTypeKey, "application/xml")
 			enc := encoder(ctx, w)
-			var body interface{}
+			var body any
 			if formatter != nil {
 				body = formatter(ctx, res)
 			} else {

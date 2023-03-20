@@ -45,7 +45,7 @@ type (
 		User UserType
 
 		// External is an instance of the type being converted from or to.
-		External interface{}
+		External any
 	}
 )
 

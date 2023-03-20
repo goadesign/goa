@@ -21,4 +21,4 @@ type (
 
 // Endpoint exposes service methods to remote clients independently of the
 // underlying transport.
-type Endpoint func(ctx context.Context, request interface{}) (response interface{}, err error)
+type Endpoint func(ctx context.Context, request any) (response any, err error)

@@ -62,7 +62,7 @@ var resultTypeCount int
 //	        Attribute("origin")
 //	    })
 //	 })
-func ResultType(identifier string, args ...interface{}) *expr.ResultTypeExpr {
+func ResultType(identifier string, args ...any) *expr.ResultTypeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
 		return nil
@@ -292,7 +292,7 @@ func View(name string, adsl ...func()) {
 //	        })
 //	    })
 //	})
-func CollectionOf(v interface{}, adsl ...func()) *expr.ResultTypeExpr {
+func CollectionOf(v any, adsl ...func()) *expr.ResultTypeExpr {
 	var m *expr.ResultTypeExpr
 	var ok bool
 	m, ok = v.(*expr.ResultTypeExpr)

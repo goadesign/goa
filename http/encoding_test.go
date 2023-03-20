@@ -149,7 +149,7 @@ func TestResponseDecoder(t *testing.T) {
 func TestTextEncoder_Encode(t *testing.T) {
 	cases := []struct {
 		name  string
-		value interface{}
+		value any
 		error error
 	}{
 		{"string", testString, nil},

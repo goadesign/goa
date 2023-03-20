@@ -22,8 +22,8 @@ type (
 		Properties   map[string]*Schema `json:"properties,omitempty" yaml:"properties,omitempty"`
 		Definitions  map[string]*Schema `json:"definitions,omitempty" yaml:"definitions,omitempty"`
 		Description  string             `json:"description,omitempty" yaml:"description,omitempty"`
-		DefaultValue interface{}        `json:"default,omitempty" yaml:"default,omitempty"`
-		Example      interface{}        `json:"example,omitempty" yaml:"example,omitempty"`
+		DefaultValue any                `json:"default,omitempty" yaml:"default,omitempty"`
+		Example      any                `json:"example,omitempty" yaml:"example,omitempty"`
 
 		// Hyper schema
 		Media     *Media  `json:"media,omitempty" yaml:"media,omitempty"`
@@ -33,25 +33,25 @@ type (
 		Ref       string  `json:"$ref,omitempty" yaml:"$ref,omitempty"`
 
 		// Validation
-		Enum                 []interface{} `json:"enum,omitempty" yaml:"enum,omitempty"`
-		Format               string        `json:"format,omitempty" yaml:"format,omitempty"`
-		Pattern              string        `json:"pattern,omitempty" yaml:"pattern,omitempty"`
-		ExclusiveMinimum     *float64      `json:"exclusiveMinimum,omitempty" yaml:"exclusiveMinimum,omitempty"`
-		Minimum              *float64      `json:"minimum,omitempty" yaml:"minimum,omitempty"`
-		ExclusiveMaximum     *float64      `json:"exclusiveMaximum,omitempty" yaml:"exclusiveMaximum,omitempty"`
-		Maximum              *float64      `json:"maximum,omitempty" yaml:"maximum,omitempty"`
-		MinLength            *int          `json:"minLength,omitempty" yaml:"minLength,omitempty"`
-		MaxLength            *int          `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
-		MinItems             *int          `json:"minItems,omitempty" yaml:"minItems,omitempty"`
-		MaxItems             *int          `json:"maxItems,omitempty" yaml:"maxItems,omitempty"`
-		Required             []string      `json:"required,omitempty" yaml:"required,omitempty"`
-		AdditionalProperties interface{}   `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
+		Enum                 []any    `json:"enum,omitempty" yaml:"enum,omitempty"`
+		Format               string   `json:"format,omitempty" yaml:"format,omitempty"`
+		Pattern              string   `json:"pattern,omitempty" yaml:"pattern,omitempty"`
+		ExclusiveMinimum     *float64 `json:"exclusiveMinimum,omitempty" yaml:"exclusiveMinimum,omitempty"`
+		Minimum              *float64 `json:"minimum,omitempty" yaml:"minimum,omitempty"`
+		ExclusiveMaximum     *float64 `json:"exclusiveMaximum,omitempty" yaml:"exclusiveMaximum,omitempty"`
+		Maximum              *float64 `json:"maximum,omitempty" yaml:"maximum,omitempty"`
+		MinLength            *int     `json:"minLength,omitempty" yaml:"minLength,omitempty"`
+		MaxLength            *int     `json:"maxLength,omitempty" yaml:"maxLength,omitempty"`
+		MinItems             *int     `json:"minItems,omitempty" yaml:"minItems,omitempty"`
+		MaxItems             *int     `json:"maxItems,omitempty" yaml:"maxItems,omitempty"`
+		Required             []string `json:"required,omitempty" yaml:"required,omitempty"`
+		AdditionalProperties any      `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
 
 		// Union
 		AnyOf []*Schema `json:"anyOf,omitempty" yaml:"anyOf,omitempty"`
 
 		// Extensions defines the OpenAPI extensions.
-		Extensions map[string]interface{} `json:"-" yaml:"-"`
+		Extensions map[string]any `json:"-" yaml:"-"`
 	}
 
 	// Type is the JSON type enum.
@@ -371,7 +371,7 @@ func AttributeTypeSchemaWithPrefix(api *expr.APIExpr, at *expr.AttributeExpr, pr
 }
 
 // ToString returns the string representation of the given type.
-func ToString(val interface{}) string {
+func ToString(val any) string {
 	switch actual := val.(type) {
 	case string:
 		return actual
@@ -386,18 +386,18 @@ func ToString(val interface{}) string {
 	}
 }
 
-// ToStringMap converts map[interface{}]interface{} to a map[string]interface{}
+// ToStringMap converts map[any]any to a map[string]any
 // when possible.
-func ToStringMap(val interface{}) interface{} {
+func ToStringMap(val any) any {
 	switch actual := val.(type) {
-	case map[interface{}]interface{}:
-		m := make(map[string]interface{})
+	case map[any]any:
+		m := make(map[string]any)
 		for k, v := range actual {
 			m[ToString(k)] = ToStringMap(v)
 		}
 		return m
-	case []interface{}:
-		mapSlice := make([]interface{}, len(actual))
+	case []any:
+		mapSlice := make([]any, len(actual))
 		for i, e := range actual {
 			mapSlice[i] = ToStringMap(e)
 		}
@@ -413,7 +413,7 @@ func (s *Schema) MarshalJSON() ([]byte, error) {
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
-func (s *Schema) MarshalYAML() (interface{}, error) {
+func (s *Schema) MarshalYAML() (any, error) {
 	return MarshalYAML((*_Schema)(s), s.Extensions)
 }
 
@@ -517,7 +517,7 @@ func toSchemaHrefs(r *expr.RouteExpr) []string {
 	res := make([]string, len(paths))
 	for i, path := range paths {
 		params := expr.ExtractHTTPWildcards(path)
-		args := make([]interface{}, len(params))
+		args := make([]any, len(params))
 		for j, p := range params {
 			args[j] = fmt.Sprintf("/{%s}", p)
 		}

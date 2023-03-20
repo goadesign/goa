@@ -16,7 +16,7 @@ func RequestContext(ctx context.Context) func(http.Handler) http.Handler {
 
 // RequestContextKeyVals returns a middleware which adds the given key/value pairs to the
 // request context.
-func RequestContextKeyVals(keyvals ...interface{}) func(http.Handler) http.Handler {
+func RequestContextKeyVals(keyvals ...any) func(http.Handler) http.Handler {
 	if len(keyvals)%2 != 0 {
 		panic("initctx: invalid number of key/value elements, must be an even number")
 	}
