@@ -25,7 +25,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 
 	// Initialize gRPC server with the middleware.
 	srv := grpc.NewServer(
-		grpcmiddleware.WithUnaryServerChain(
+		grpc.ChainUnaryInterceptor(
 			grpcmdlwr.UnaryRequestID(),
 			grpcmdlwr.UnaryServerLog(adapter),
 		),
@@ -90,7 +90,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 
 	// Initialize gRPC server with the middleware.
 	srv := grpc.NewServer(
-		grpcmiddleware.WithUnaryServerChain(
+		grpc.ChainUnaryInterceptor(
 			grpcmdlwr.UnaryRequestID(),
 			grpcmdlwr.UnaryServerLog(adapter),
 		),
@@ -157,7 +157,7 @@ func handleGRPCServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 
 	// Initialize gRPC server with the middleware.
 	srv := grpc.NewServer(
-		grpcmiddleware.WithUnaryServerChain(
+		grpc.ChainUnaryInterceptor(
 			grpcmdlwr.UnaryRequestID(),
 			grpcmdlwr.UnaryServerLog(adapter),
 		),
