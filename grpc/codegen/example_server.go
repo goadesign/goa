@@ -54,7 +54,6 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			codegen.GoaNamedImport("grpc/middleware", "grpcmdlwr"),
 			{Path: "google.golang.org/grpc"},
 			{Path: "google.golang.org/grpc/reflection"},
-			{Path: "github.com/grpc-ecosystem/go-grpc-middleware", Name: "grpcmiddleware"},
 		}
 		for _, svc := range root.API.GRPC.Services {
 			sd := GRPCServices.Get(svc.Name())
@@ -193,12 +192,12 @@ func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	grpcRegisterSvrT = `
 	// Initialize gRPC server with the middleware.
 	srv := grpc.NewServer(
-		grpcmiddleware.WithUnaryServerChain(
+		grpc.ChainUnaryInterceptor(
 			grpcmdlwr.UnaryRequestID(),
 			grpcmdlwr.UnaryServerLog(adapter),
 		),
 	{{- if needStream .Services }}
-		grpcmiddleware.WithStreamServerChain(
+		grpc.ChainStreamInterceptor(
 			grpcmdlwr.StreamRequestID(),
 			grpcmdlwr.StreamServerLog(adapter),
 		),
