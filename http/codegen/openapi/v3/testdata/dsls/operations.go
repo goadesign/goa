@@ -159,6 +159,20 @@ var ResponseRecursiveArrayUserType = func(svc, met string) func() {
 	}
 }
 
+var ResponseSkipResponseBodyEncodeDecode = func(svc, met string) func() {
+	return func() {
+		var _ = Service(svc, func() {
+			Method(met, func() {
+				Result(Empty)
+				HTTP(func() {
+					GET("/")
+					SkipResponseBodyEncodeDecode()
+				})
+			})
+		})
+	}
+}
+
 var OperationIDStatic = func(svc, met string) func() {
 	return func() {
 		var _ = Service(svc, func() {

@@ -687,3 +687,26 @@ var TypenameDSL = func() {
 		})
 	})
 }
+
+var SkipResponseBodyEncodeDecodeDSL = func() {
+	Service("testService", func() {
+		Method("empty", func() {
+			Payload(Empty)
+			Result(Empty)
+			HTTP(func() {
+				GET("/empty")
+			})
+		})
+		Method("binary", func() {
+			Payload(Empty)
+			Result(Empty)
+			HTTP(func() {
+				GET("/binary")
+				SkipResponseBodyEncodeDecode()
+				Response(StatusOK, func() {
+					ContentType("image/png")
+				})
+			})
+		})
+	})
+}

@@ -48,6 +48,7 @@ func TestFiles(t *testing.T) {
 		// TestEndpoints
 		{"endpoint", testdata.ExtensionDSL},
 		{"endpoint-swagger", testdata.ExtensionSwaggerDSL},
+		{"skip-response-body-encode-decode", testdata.SkipResponseBodyEncodeDecodeDSL},
 		// TestValidations
 		{"string", testdata.StringValidationDSL},
 		{"integer", testdata.IntValidationDSL},
