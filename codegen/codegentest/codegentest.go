@@ -1,5 +1,5 @@
 // Package codegentest provides utilities to assist writing unit test for
-// codegen pacakges.
+// codegen packages.
 package codegentest
 
 import (
