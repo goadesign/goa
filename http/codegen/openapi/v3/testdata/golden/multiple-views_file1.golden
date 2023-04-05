@@ -18,9 +18,7 @@ paths:
                     content:
                         application/custom+json:
                             schema:
-                                anyOf:
-                                    - $ref: '#/components/schemas/TestEndpointDefaultResponseBody'
-                                    - $ref: '#/components/schemas/TestEndpointDefaultResponseBodyTiny'
+                                $ref: '#/components/schemas/Result'
                             example:
                                 int: 1
                                 string: ""
@@ -36,12 +34,12 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/TestEndpointDefaultResponseBodyTiny'
+                                $ref: '#/components/schemas/TestEndpointTinyResponseBodyTiny'
                             example:
                                 string: ""
 components:
     schemas:
-        TestEndpointDefaultResponseBody:
+        Result:
             type: object
             properties:
                 int:
@@ -51,17 +49,16 @@ components:
                 string:
                     type: string
                     example: ""
-            description: TestEndpointDefaultResponseBody result type (default view)
             example:
                 int: 1
                 string: ""
-        TestEndpointDefaultResponseBodyTiny:
+        TestEndpointTinyResponseBodyTiny:
             type: object
             properties:
                 string:
                     type: string
                     example: ""
-            description: TestEndpointDefaultResponseBody result type (tiny view)
+            description: TestEndpointTinyResponseBody result type (tiny view)
             example:
                 string: ""
 tags:

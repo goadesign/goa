@@ -235,23 +235,11 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			} else if n, ok := t.Attribute().Meta["name:original"]; ok {
 				name = n[0]
 			}
-			if rt, ok := t.(*expr.ResultTypeExpr); ok && rt.HasMultipleViews() {
-				// For result types with multiple views, we generate
-				// a AnyOf schema with a schema for each view.
-				s.AnyOf = make([]*openapi.Schema, len(rt.Views))
-				for i, v := range rt.Views {
-					pr, err := expr.Project(rt, v.Name)
-					if err != nil {
-						panic(fmt.Sprintf("failed to project %q with view %q", rt.Name(), v.Name)) // bug, DSL should have performed validations
-					}
-					s.AnyOf[i] = sf.schemafy(&expr.AttributeExpr{Type: pr})
-				}
-			} else {
-				typeName := sf.uniquify(codegen.Goify(name, true))
-				s.Ref = toRef(typeName)
-				sf.hashes[h] = append(sf.hashes[h], s.Ref)
-				sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
-			}
+
+			typeName := sf.uniquify(codegen.Goify(name, true))
+			s.Ref = toRef(typeName)
+			sf.hashes[h] = append(sf.hashes[h], s.Ref)
+			sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
 			return s // All other schema properties are set in the reference
 		}
 		// Alias primitive type
