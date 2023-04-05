@@ -308,6 +308,8 @@ func NewMethodARequestBody(p *servicemixedpayloadinbody.APayload) *MethodAReques
 		for i, val := range p.Array {
 			body.Array[i] = val
 		}
+	} else {
+		body.Array = []float32{}
 	}
 	if p.Map != nil {
 		body.Map = make(map[uint]any, len(p.Map))

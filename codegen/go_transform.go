@@ -252,7 +252,12 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			checkNil = isRef || marshalNonPrimitive
 		}
 		if code != "" && checkNil {
-			code = fmt.Sprintf("if %s != nil {\n\t%s}\n", srcVar, code)
+			code = fmt.Sprintf("if %s != nil {\n\t%s}", srcVar, code)
+			if expr.IsArray(srcc.Type) && srcMatt.IsRequired(n) {
+				code += fmt.Sprintf("else {\n\t%s = []%s{}\n}\n", tgtVar, ta.TargetCtx.Scope.Ref(expr.AsArray(tgtc.Type).ElemType, ta.TargetCtx.Pkg(expr.AsArray(tgtc.Type).ElemType)))
+			} else {
+				code += "\n"
+			}
 		}
 
 		// Default value handling. We need to handle default values if the target

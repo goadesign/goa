@@ -483,6 +483,8 @@ const (
 		for i, val := range source.StringArray {
 			target.StringArray[i] = val
 		}
+	} else {
+		target.StringArray = []string{}
 	}
 }
 `
@@ -519,6 +521,8 @@ const (
 		for i, val := range source.StringArray {
 			target.StringArray[i] = val
 		}
+	} else {
+		target.StringArray = []string{}
 	}
 }
 `
@@ -667,6 +671,8 @@ const (
 		for i, val := range source.MyArray {
 			target.Array[i] = val
 		}
+	} else {
+		target.Array = []string{}
 	}
 }
 `
@@ -784,6 +790,8 @@ const (
 		for i, val := range source.RequiredArray {
 			target.RequiredArray[i] = val
 		}
+	} else {
+		target.RequiredArray = []string{}
 	}
 	if source.Map != nil {
 		target.Map = make(map[int]string, len(source.Map))
