@@ -53,6 +53,8 @@ func TestFiles(t *testing.T) {
 		{"string", testdata.StringValidationDSL},
 		{"integer", testdata.IntValidationDSL},
 		{"array", testdata.ArrayValidationDSL},
+		// Error examples
+		{"error-examples", testdata.ErrorExamplesDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

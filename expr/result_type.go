@@ -53,15 +53,7 @@ var (
 			AttributeExpr: &AttributeExpr{
 				Type:        errorResultType,
 				Description: "Error response result type",
-				UserExamples: []*ExampleExpr{{
-					Summary: "BadRequest",
-					Value: Val{
-						"name":    "bad_request",
-						"id":      "3F1FKVRR",
-						"message": "Value of ID must be an integer",
-					},
-				}},
-				Validation: &ValidationExpr{Required: []string{"name", "id", "message", "temporary", "timeout", "fault"}},
+				Validation:  &ValidationExpr{Required: []string{"name", "id", "message", "temporary", "timeout", "fault"}},
 			},
 			TypeName: "error",
 		},

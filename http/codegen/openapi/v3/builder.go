@@ -289,8 +289,10 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 				desc += ": " + *resp.Description
 			}
 			resp.Description = &desc
-			for _, content := range resp.Content {
-				content.Example = nil
+			if er.Type == expr.ErrorResult && len(er.Response.Body.ExtractUserExamples()) == 0 {
+				for _, content := range resp.Content {
+					content.Example = nil
+				}
 			}
 			responses[strconv.Itoa(er.Response.StatusCode)] = &ResponseRef{Value: resp}
 		}
