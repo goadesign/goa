@@ -216,3 +216,41 @@ var NoBodyErrorResponseWithContentTypeDSL = func() {
 		})
 	})
 }
+
+var ErrorExamplesDSL = func() {
+	var customType = ResultType("application/vnd.goa.custom-error", func() {
+		TypeName("CustomError")
+		Attribute("message", String, func() {
+			Example("error message")
+		})
+		ErrorName("name", String, func() {
+			Example("custom")
+		})
+		Required("name", "message")
+	})
+
+	var _ = Service("Errors", func() {
+		Method("Error", func() {
+			Error("not_found") // default example
+			Error("bad_request", func() {
+				Example("BadRequest example", func() {
+					Value(Val{
+						"id":        "foo",
+						"name":      "bad_request",
+						"message":   "request is invalid",
+						"fault":     false,
+						"timeout":   false,
+						"temporary": false,
+					})
+				})
+			})
+			Error("custom", customType)
+			HTTP(func() {
+				GET("/")
+				Response("not_found", StatusNotFound)
+				Response("bad_request", StatusBadRequest)
+				Response("custom", StatusConflict)
+			})
+		})
+	})
+}
