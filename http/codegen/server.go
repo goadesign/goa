@@ -704,7 +704,7 @@ const requestElementsT = `{{- define "request_elements" }}
 		{{ .VarName }}Raw := r.URL.Query()["{{ .Name }}"]
 		{{- if .Required }}
 		if {{ .VarName }}Raw == nil {
-			return nil, goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
+			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
 		{{- else if .DefaultValue }}
 		if {{ .VarName }}Raw == nil {
