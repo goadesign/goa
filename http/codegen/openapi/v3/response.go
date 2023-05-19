@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
 )
@@ -45,7 +46,8 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 				Extensions: openapi.ExtensionsFromExpr(r.Body.Meta),
 			}
 			initExamples(content[ct], r.Body, rand)
-		} else if r.StatusCode != expr.StatusNoContent {
+		} else if r.StatusCode != expr.StatusNoContent &&
+			isSkipResponseBodyEncodeDecode(r.Parent) {
 			// When SkipResponseBodyEncodeDecode is declared, the response type
 			// is Empty, but the response code is not 204 and has content.
 			content = make(map[string]*MediaType)
@@ -68,4 +70,9 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 		Content:     content,
 		Extensions:  openapi.ExtensionsFromExpr(r.Meta),
 	}
+}
+
+func isSkipResponseBodyEncodeDecode(parent eval.Expression) bool {
+	ee, ok := parent.(*expr.HTTPEndpointExpr)
+	return ok && ee.SkipResponseBodyEncodeDecode
 }
