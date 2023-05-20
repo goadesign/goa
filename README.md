@@ -3,7 +3,6 @@
 ## Overview
 
 [![GoDev](https://img.shields.io/badge/go-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/goa.design/goa/v3@v3.11.3/dsl?tab=doc)
-[![Foresight](https://api-public.service.runforesight.com/api/v1/badge/test?repoId=67defc2e-b3f8-4043-bac7-a4e215518ed3)](http://goa.app.runforesight.com/)
 [![Go Report Card](https://goreportcard.com/badge/goadesign/goa)](https://goreportcard.com/report/goadesign/goa)
 [![Slack](https://img.shields.io/badge/Goa-gray.svg?longCache=true&logo=slack&colorB=red)](https://gophers.slack.com/messages/goa)
 [![Signup](https://img.shields.io/badge/Signup-gray.svg?longCache=true&logo=slack&colorB=red)](https://invite.slack.golangbridge.org/)
