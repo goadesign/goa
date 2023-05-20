@@ -29,6 +29,15 @@ paths:
             responses:
                 "204":
                     description: No Content response.
+    /empty/ok:
+        get:
+            tags:
+                - testService
+            summary: empty_ok testService
+            operationId: testService#empty_ok
+            responses:
+                "200":
+                    description: OK response.
 components: {}
 tags:
     - name: testService

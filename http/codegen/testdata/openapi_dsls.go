@@ -697,6 +697,14 @@ var SkipResponseBodyEncodeDecodeDSL = func() {
 				GET("/empty")
 			})
 		})
+		Method("empty_ok", func() {
+			Payload(Empty)
+			Result(Empty)
+			HTTP(func() {
+				GET("/empty/ok")
+				Response(StatusOK)
+			})
+		})
 		Method("binary", func() {
 			Payload(Empty)
 			Result(Empty)
