@@ -220,8 +220,6 @@ func (c *Client) StreamingResultMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -230,6 +228,8 @@ func (c *Client) StreamingResultMethod() goa.Endpoint {
 			return nil, goahttp.ErrRequestError("StreamingResultService", "StreamingResultMethod", err)
 		}
 		if c.configurer.StreamingResultMethodFn != nil {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithCancel(ctx)
 			conn = c.configurer.StreamingResultMethodFn(conn, cancel)
 		}
 		go func() {
@@ -298,8 +298,6 @@ func (c *Client) StreamingResultWithViewsMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -308,6 +306,8 @@ func (c *Client) StreamingResultWithViewsMethod() goa.Endpoint {
 			return nil, goahttp.ErrRequestError("StreamingResultWithViewsService", "StreamingResultWithViewsMethod", err)
 		}
 		if c.configurer.StreamingResultWithViewsMethodFn != nil {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithCancel(ctx)
 			conn = c.configurer.StreamingResultWithViewsMethodFn(conn, cancel)
 		}
 		go func() {
@@ -371,8 +371,6 @@ func (c *Client) StreamingResultWithExplicitViewMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -381,6 +379,8 @@ func (c *Client) StreamingResultWithExplicitViewMethod() goa.Endpoint {
 			return nil, goahttp.ErrRequestError("StreamingResultWithExplicitViewService", "StreamingResultWithExplicitViewMethod", err)
 		}
 		if c.configurer.StreamingResultWithExplicitViewMethodFn != nil {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithCancel(ctx)
 			conn = c.configurer.StreamingResultWithExplicitViewMethodFn(conn, cancel)
 		}
 		go func() {
@@ -572,8 +572,6 @@ func (c *Client) StreamingResultCollectionWithExplicitViewMethod() goa.Endpoint 
 		if err != nil {
 			return nil, err
 		}
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -582,6 +580,8 @@ func (c *Client) StreamingResultCollectionWithExplicitViewMethod() goa.Endpoint 
 			return nil, goahttp.ErrRequestError("StreamingResultCollectionWithExplicitViewService", "StreamingResultCollectionWithExplicitViewMethod", err)
 		}
 		if c.configurer.StreamingResultCollectionWithExplicitViewMethodFn != nil {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithCancel(ctx)
 			conn = c.configurer.StreamingResultCollectionWithExplicitViewMethodFn(conn, cancel)
 		}
 		go func() {
@@ -874,8 +874,6 @@ func (c *Client) StreamingResultNoPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -884,6 +882,8 @@ func (c *Client) StreamingResultNoPayloadMethod() goa.Endpoint {
 			return nil, goahttp.ErrRequestError("StreamingResultNoPayloadService", "StreamingResultNoPayloadMethod", err)
 		}
 		if c.configurer.StreamingResultNoPayloadMethodFn != nil {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithCancel(ctx)
 			conn = c.configurer.StreamingResultNoPayloadMethodFn(conn, cancel)
 		}
 		go func() {
@@ -1019,8 +1019,6 @@ func (c *Client) StreamingPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -1029,6 +1027,8 @@ func (c *Client) StreamingPayloadMethod() goa.Endpoint {
 			return nil, goahttp.ErrRequestError("StreamingPayloadService", "StreamingPayloadMethod", err)
 		}
 		if c.configurer.StreamingPayloadMethodFn != nil {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithCancel(ctx)
 			conn = c.configurer.StreamingPayloadMethodFn(conn, cancel)
 		}
 		stream := &StreamingPayloadMethodClientStream{conn: conn}
@@ -1132,8 +1132,6 @@ func (c *Client) StreamingPayloadNoPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -1142,6 +1140,8 @@ func (c *Client) StreamingPayloadNoPayloadMethod() goa.Endpoint {
 			return nil, goahttp.ErrRequestError("StreamingPayloadNoPayloadService", "StreamingPayloadNoPayloadMethod", err)
 		}
 		if c.configurer.StreamingPayloadNoPayloadMethodFn != nil {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithCancel(ctx)
 			conn = c.configurer.StreamingPayloadNoPayloadMethodFn(conn, cancel)
 		}
 		stream := &StreamingPayloadNoPayloadMethodClientStream{conn: conn}
@@ -2204,8 +2204,6 @@ func (c *Client) BidirectionalStreamingMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -2214,6 +2212,8 @@ func (c *Client) BidirectionalStreamingMethod() goa.Endpoint {
 			return nil, goahttp.ErrRequestError("BidirectionalStreamingService", "BidirectionalStreamingMethod", err)
 		}
 		if c.configurer.BidirectionalStreamingMethodFn != nil {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithCancel(ctx)
 			conn = c.configurer.BidirectionalStreamingMethodFn(conn, cancel)
 		}
 		stream := &BidirectionalStreamingMethodClientStream{conn: conn}
@@ -2341,8 +2341,6 @@ func (c *Client) BidirectionalStreamingNoPayloadMethod() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -2351,6 +2349,8 @@ func (c *Client) BidirectionalStreamingNoPayloadMethod() goa.Endpoint {
 			return nil, goahttp.ErrRequestError("BidirectionalStreamingNoPayloadService", "BidirectionalStreamingNoPayloadMethod", err)
 		}
 		if c.configurer.BidirectionalStreamingNoPayloadMethodFn != nil {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithCancel(ctx)
 			conn = c.configurer.BidirectionalStreamingNoPayloadMethodFn(conn, cancel)
 		}
 		stream := &BidirectionalStreamingNoPayloadMethodClientStream{conn: conn}

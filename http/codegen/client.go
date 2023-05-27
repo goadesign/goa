@@ -341,8 +341,6 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 	{{- end }}
 
 	{{- if isWebSocketEndpoint . }}
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithCancel(ctx)
 		conn, resp, err := c.dialer.DialContext(ctx, req.URL.String(), req.Header)
 		if err != nil {
 			if resp != nil {
@@ -351,6 +349,8 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
 		if c.configurer.{{ .Method.VarName }}Fn != nil {
+			var cancel context.CancelFunc
+			ctx, cancel = context.WithCancel(ctx)
 			conn = c.configurer.{{ .Method.VarName }}Fn(conn, cancel)
 		}
 		{{- if eq .ClientWebSocket.SendName "" }}
