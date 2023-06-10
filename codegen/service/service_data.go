@@ -700,9 +700,10 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	}
 
 	var (
-		ms []*UnionValueMethodData
+		unionMethods []*UnionValueMethodData
 	)
 	{
+		var ms []*UnionValueMethodData
 		seen := make(map[string]struct{})
 		for _, t := range types {
 			ms = append(ms, collectUnionMethods(&expr.AttributeExpr{Type: t.Type}, scope, t.Loc, seen)...)
@@ -721,6 +722,15 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		sort.Slice(ms, func(i, j int) bool {
 			return ms[i].Name < ms[j].Name
 		})
+		pkgs := make(map[string]struct{})
+		for _, m := range ms {
+			key := m.TypeRef + "::" + m.Name + "::" + m.Loc.PackageName()
+			if _, ok := pkgs[key]; ok {
+				continue
+			}
+			pkgs[key] = struct{}{}
+			unionMethods = append(unionMethods, m)
+		}
 	}
 
 	var (
@@ -752,7 +762,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		projectedTypes:     projTypes,
 		viewedUnionMethods: viewedUnionMeths,
 		viewedResultTypes:  viewedRTs,
-		unionValueMethods:  ms,
+		unionValueMethods:  unionMethods,
 	}
 	d[service.Name] = data
 
