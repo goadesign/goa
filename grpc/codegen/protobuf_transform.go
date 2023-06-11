@@ -107,9 +107,10 @@ func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar 
 	return strings.TrimRight(code, "\n"), funcs, nil
 }
 
-// removeMeta removes the meta attributes from the given attribute. This is
-// needed to make sure that any field name overridding is removed when
-// generating protobuf types (as protogen itself won't honor these overrides).
+// removeMeta removes meta attributes from the given attribute that cannot be
+// honored. This is needed to make sure that any field name overridding is
+// removed when generating protobuf types (as protogen itself won't honor these
+// overrides).
 func removeMeta(att *expr.AttributeExpr) {
 	_ = codegen.Walk(att, func(a *expr.AttributeExpr) error {
 		delete(a.Meta, "struct:field:name")
@@ -905,6 +906,20 @@ func transformHelperName(source, target *expr.AttributeExpr, ta *transformAttrs)
 		prefix string
 	)
 	{
+		// Do not consider package overrides for protogen generated types
+		if ta.proto {
+			target = expr.DupAtt(target)
+			codegen.Walk(target, func(att *expr.AttributeExpr) error {
+				delete(att.Meta, "struct:pkg:path")
+				return nil
+			})
+		} else {
+			source = expr.DupAtt(source)
+			codegen.Walk(source, func(att *expr.AttributeExpr) error {
+				delete(att.Meta, "struct:pkg:path")
+				return nil
+			})
+		}
 		sname = codegen.Goify(ta.SourceCtx.Scope.Name(source, ta.SourceCtx.Pkg(source), ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault), true)
 		tname = codegen.Goify(ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg(target), ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault), true)
 		prefix = ta.Prefix

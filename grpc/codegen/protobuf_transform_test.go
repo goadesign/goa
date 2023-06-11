@@ -45,10 +45,12 @@ func TestProtoBufTransform(t *testing.T) {
 		embeddedOneOf  = root.UserType("EmbeddedOneOf")
 		recursiveOneOf = root.UserType("RecursiveOneOf")
 
+		pkgOverride = root.UserType("CompositePkgOverride")
+
 		// attribute contexts used in test cases
-		svcCtx = serviceTypeContext("", sd.Scope)
-		ptrCtx = pointerContext("", sd.Scope)
-		pbCtx  = protoBufTypeContext("", sd.Scope, true)
+		svcCtx = serviceTypeContext("proto", sd.Scope)
+		ptrCtx = pointerContext("proto", sd.Scope)
+		pbCtx  = protoBufTypeContext("proto", sd.Scope, true)
 	)
 
 	// gRPC does not support any
@@ -107,6 +109,9 @@ func TestProtoBufTransform(t *testing.T) {
 			{"oneof-to-oneof", simpleOneOf, simpleOneOf, true, svcCtx, oneOfSvcToOneOfProtoCode},
 			{"embedded-oneof-to-embedded-oneof", embeddedOneOf, embeddedOneOf, true, svcCtx, embeddedOneOfSvcToEmbeddedOneOfProtoCode},
 			{"recursive-oneof-to-recursive-oneof", recursiveOneOf, recursiveOneOf, true, svcCtx, recursiveOneOfSvcToRecursiveOneOfProtoCode},
+
+			// package override
+			{"pkg-override-to-pkg-override", pkgOverride, pkgOverride, true, svcCtx, pkgOverrideSvcToPkgOverrideProtoCode},
 		},
 
 		// test cases to transform protocol buffer type to service type
@@ -146,6 +151,9 @@ func TestProtoBufTransform(t *testing.T) {
 			{"oneof-to-oneof", simpleOneOf, simpleOneOf, false, svcCtx, oneOfProtoToOneOfSvcCode},
 			{"embedded-oneof-to-embedded-oneof", embeddedOneOf, embeddedOneOf, false, svcCtx, embeddedOneOfProtoToEmbeddedOneOfSvcCode},
 			{"recursive-oneof-to-recursive-oneof", recursiveOneOf, recursiveOneOf, false, svcCtx, recursiveOneOfProtoToRecursiveOneOfSvcCode},
+
+			// package override
+			{"pkg-override-to-pkg-override", pkgOverride, pkgOverride, false, svcCtx, pkgOverrideProtoToPkgOverrideSvcCode},
 		},
 	}
 	for name, cases := range tc {
@@ -183,13 +191,13 @@ func pointerContext(pkg string, scope *codegen.NameScope) *codegen.AttributeCont
 
 const (
 	primitiveSvcToPrimitiveProtoCode = `func transform() {
-	target := &Int{}
+	target := &proto.Int{}
 	target.Field = int32(source)
 }
 `
 
 	simpleSvcToSimpleProtoCode = `func transform() {
-	target := &Simple{
+	target := &proto.Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
@@ -207,7 +215,7 @@ const (
 `
 
 	simpleSvcToRequiredProtoCode = `func transform() {
-	target := &Required{
+	target := &proto.Required{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
@@ -223,7 +231,7 @@ const (
 }
 `
 	requiredSvcToSimpleProtoCode = `func transform() {
-	target := &Simple{
+	target := &proto.Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
@@ -233,7 +241,7 @@ const (
 `
 
 	simpleSvcToDefaultProtoCode = `func transform() {
-	target := &Default{
+	target := &proto.Default{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
@@ -253,7 +261,7 @@ const (
 `
 
 	defaultSvcToSimpleProtoCode = `func transform() {
-	target := &Simple{
+	target := &proto.Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
@@ -269,7 +277,7 @@ const (
 `
 
 	requiredPtrSvcToSimpleProtoCode = `func transform() {
-	target := &Simple{
+	target := &proto.Simple{
 		RequiredString: *source.RequiredString,
 		DefaultBool:    *source.DefaultBool,
 	}
@@ -279,7 +287,7 @@ const (
 `
 
 	customSvcToSimpleProtoCode = `func transform() {
-	target := &Simple{
+	target := &proto.Simple{
 		RequiredString: string(source.RequiredString),
 		DefaultBool:    bool(source.DefaultBool),
 	}
@@ -297,7 +305,7 @@ const (
 `
 
 	simpleProtoToCustomSvcCode = `func transform() {
-	target := &CustomTypes{
+	target := &proto.CustomTypes{
 		RequiredString: tdtypes.CustomString(source.RequiredString),
 		DefaultBool:    tdtypes.CustomBool(source.DefaultBool),
 	}
@@ -315,7 +323,7 @@ const (
 `
 
 	customSvcToCustomProtoCode = `func transform() {
-	target := &CustomTypes{
+	target := &proto.CustomTypes{
 		RequiredString: string(source.RequiredString),
 		DefaultBool:    bool(source.DefaultBool),
 	}
@@ -333,7 +341,7 @@ const (
 `
 
 	customProtoToCustomSvcCode = `func transform() {
-	target := &CustomTypes{
+	target := &proto.CustomTypes{
 		RequiredString: tdtypes.CustomString(source.RequiredString),
 		DefaultBool:    tdtypes.CustomBool(source.DefaultBool),
 	}
@@ -351,7 +359,7 @@ const (
 `
 
 	simpleMapSvcToSimpleMapProtoCode = `func transform() {
-	target := &SimpleMap{}
+	target := &proto.SimpleMap{}
 	if source.Simple != nil {
 		target.Simple = make(map[string]int32, len(source.Simple))
 		for key, val := range source.Simple {
@@ -364,16 +372,16 @@ const (
 `
 
 	nestedMapSvcToNestedMapProtoCode = `func transform() {
-	target := &NestedMap{}
+	target := &proto.NestedMap{}
 	if source.NestedMap != nil {
-		target.NestedMap = make(map[float64]*MapOfSint32MapOfDoubleUint64, len(source.NestedMap))
+		target.NestedMap = make(map[float64]*proto.MapOfSint32MapOfDoubleUint64, len(source.NestedMap))
 		for key, val := range source.NestedMap {
 			tk := key
-			tvc := &MapOfSint32MapOfDoubleUint64{}
-			tvc.Field = make(map[int32]*MapOfDoubleUint64, len(val))
+			tvc := &proto.MapOfSint32MapOfDoubleUint64{}
+			tvc.Field = make(map[int32]*proto.MapOfDoubleUint64, len(val))
 			for key, val := range val {
 				tk := int32(key)
-				tvb := &MapOfDoubleUint64{}
+				tvb := &proto.MapOfDoubleUint64{}
 				tvb.Field = make(map[float64]uint64, len(val))
 				for key, val := range val {
 					tk := key
@@ -389,12 +397,12 @@ const (
 `
 
 	arrayMapSvcToArrayMapProtoCode = `func transform() {
-	target := &ArrayMap{}
+	target := &proto.ArrayMap{}
 	if source.ArrayMap != nil {
-		target.ArrayMap = make(map[uint32]*ArrayOfFloat, len(source.ArrayMap))
+		target.ArrayMap = make(map[uint32]*proto.ArrayOfFloat, len(source.ArrayMap))
 		for key, val := range source.ArrayMap {
 			tk := key
-			tv := &ArrayOfFloat{}
+			tv := &proto.ArrayOfFloat{}
 			tv.Field = make([]float32, len(val))
 			for i, val := range val {
 				tv.Field[i] = val
@@ -406,7 +414,7 @@ const (
 `
 
 	defaultMapSvcToDefaultMapProtoCode = `func transform() {
-	target := &DefaultMap{}
+	target := &proto.DefaultMap{}
 	if source.Simple != nil {
 		target.Simple = make(map[string]int32, len(source.Simple))
 		for key, val := range source.Simple {
@@ -422,7 +430,7 @@ const (
 `
 
 	simpleArraySvcToSimpleArrayProtoCode = `func transform() {
-	target := &SimpleArray{}
+	target := &proto.SimpleArray{}
 	if source.StringArray != nil {
 		target.StringArray = make([]string, len(source.StringArray))
 		for i, val := range source.StringArray {
@@ -433,14 +441,14 @@ const (
 `
 
 	nestedArraySvcToNestedArrayProtoCode = `func transform() {
-	target := &NestedArray{}
+	target := &proto.NestedArray{}
 	if source.NestedArray != nil {
-		target.NestedArray = make([]*ArrayOfArrayOfDouble, len(source.NestedArray))
+		target.NestedArray = make([]*proto.ArrayOfArrayOfDouble, len(source.NestedArray))
 		for i, val := range source.NestedArray {
-			target.NestedArray[i] = &ArrayOfArrayOfDouble{}
-			target.NestedArray[i].Field = make([]*ArrayOfDouble, len(val))
+			target.NestedArray[i] = &proto.ArrayOfArrayOfDouble{}
+			target.NestedArray[i].Field = make([]*proto.ArrayOfDouble, len(val))
 			for j, val := range val {
-				target.NestedArray[i].Field[j] = &ArrayOfDouble{}
+				target.NestedArray[i].Field[j] = &proto.ArrayOfDouble{}
 				target.NestedArray[i].Field[j].Field = make([]float64, len(val))
 				for k, val := range val {
 					target.NestedArray[i].Field[j].Field[k] = val
@@ -452,11 +460,11 @@ const (
 `
 
 	typeArraySvcToTypeArrayProtoCode = `func transform() {
-	target := &TypeArray{}
+	target := &proto.TypeArray{}
 	if source.TypeArray != nil {
-		target.TypeArray = make([]*SimpleArray, len(source.TypeArray))
+		target.TypeArray = make([]*proto.SimpleArray, len(source.TypeArray))
 		for i, val := range source.TypeArray {
-			target.TypeArray[i] = &SimpleArray{}
+			target.TypeArray[i] = &proto.SimpleArray{}
 			if val.StringArray != nil {
 				target.TypeArray[i].StringArray = make([]string, len(val.StringArray))
 				for j, val := range val.StringArray {
@@ -469,11 +477,11 @@ const (
 `
 
 	mapArraySvcToMapArrayProtoCode = `func transform() {
-	target := &MapArray{}
+	target := &proto.MapArray{}
 	if source.MapArray != nil {
-		target.MapArray = make([]*MapOfSint32String, len(source.MapArray))
+		target.MapArray = make([]*proto.MapOfSint32String, len(source.MapArray))
 		for i, val := range source.MapArray {
-			target.MapArray[i] = &MapOfSint32String{}
+			target.MapArray[i] = &proto.MapOfSint32String{}
 			target.MapArray[i].Field = make(map[int32]string, len(val))
 			for key, val := range val {
 				tk := int32(key)
@@ -486,7 +494,7 @@ const (
 `
 
 	defaultArraySvcToDefaultArrayProtoCode = `func transform() {
-	target := &DefaultArray{}
+	target := &proto.DefaultArray{}
 	if source.StringArray != nil {
 		target.StringArray = make([]string, len(source.StringArray))
 		for i, val := range source.StringArray {
@@ -500,17 +508,17 @@ const (
 `
 
 	recursiveSvcToRecursiveProtoCode = `func transform() {
-	target := &Recursive{
+	target := &proto.Recursive{
 		RequiredString: source.RequiredString,
 	}
 	if source.Recursive != nil {
-		target.Recursive = svcRecursiveToRecursive(source.Recursive)
+		target.Recursive = svcProtoRecursiveToProtoRecursive(source.Recursive)
 	}
 }
 `
 
 	compositeSvcToCustomFieldProtoCode = `func transform() {
-	target := &CompositeWithCustomField{}
+	target := &proto.CompositeWithCustomField{}
 	if source.RequiredString != nil {
 		target.RequiredString = *source.RequiredString
 	}
@@ -521,7 +529,7 @@ const (
 		target.DefaultInt = 100
 	}
 	if source.Type != nil {
-		target.Type = svcSimpleToSimple(source.Type)
+		target.Type = svcProtoSimpleToProtoSimple(source.Type)
 	}
 	if source.Map != nil {
 		target.Map_ = make(map[int32]string, len(source.Map))
@@ -541,13 +549,13 @@ const (
 `
 
 	customFieldSvcToCompositeProtoCode = `func transform() {
-	target := &Composite{
+	target := &proto.Composite{
 		RequiredString: &source.MyString,
 	}
 	defaultInt := int32(source.MyInt)
 	target.DefaultInt = &defaultInt
 	if source.MyType != nil {
-		target.Type = svcSimpleToSimple(source.MyType)
+		target.Type = svcProtoSimpleToProtoSimple(source.MyType)
 	}
 	if source.MyMap != nil {
 		target.Map_ = make(map[int32]string, len(source.MyMap))
@@ -567,7 +575,7 @@ const (
 `
 
 	resultTypeSvcToResultTypeProtoCode = `func transform() {
-	target := &ResultType{}
+	target := &proto.ResultType{}
 	if source.Int != nil {
 		int_ := int32(*source.Int)
 		target.Int = &int_
@@ -584,12 +592,12 @@ const (
 `
 
 	rtColSvcToRTColProtoCode = `func transform() {
-	target := &ResultTypeCollection{}
+	target := &proto.ResultTypeCollection{}
 	if source.Collection != nil {
-		target.Collection = &ResultTypeCollection{}
-		target.Collection.Field = make([]*ResultType, len(source.Collection))
+		target.Collection = &proto.ResultTypeCollection{}
+		target.Collection.Field = make([]*proto.ResultType, len(source.Collection))
 		for i, val := range source.Collection {
-			target.Collection.Field[i] = &ResultType{}
+			target.Collection.Field[i] = &proto.ResultType{}
 			if val.Int != nil {
 				int_ := int32(*val.Int)
 				target.Collection.Field[i].Int = &int_
@@ -608,7 +616,7 @@ const (
 `
 
 	optionalSvcToOptionalProtoCode = `func transform() {
-	target := &Optional{
+	target := &proto.Optional{
 		Float_:  source.Float,
 		String_: source.String,
 		Bytes_:  source.Bytes,
@@ -637,13 +645,13 @@ const (
 		}
 	}
 	if source.UserType != nil {
-		target.UserType = svcOptionalToOptional(source.UserType)
+		target.UserType = svcProtoOptionalToProtoOptional(source.UserType)
 	}
 }
 `
 
 	defaultsSvcToDefaultsProtoCode = `func transform() {
-	target := &WithDefaults{
+	target := &proto.WithDefaults{
 		Int:            int32(source.Int),
 		RawJson:        string(source.RawJSON),
 		RequiredInt:    int32(source.RequiredInt),
@@ -722,54 +730,62 @@ const (
 `
 
 	oneOfSvcToOneOfProtoCode = `func transform() {
-	target := &SimpleOneOf{}
+	target := &proto.SimpleOneOf{}
 	if source.SimpleOneOf != nil {
 		switch src := source.SimpleOneOf.(type) {
-		case SimpleOneOfString:
-			target.SimpleOneOf = &SimpleOneOf_String_{String_: string(src)}
-		case SimpleOneOfInteger:
-			target.SimpleOneOf = &SimpleOneOf_Integer{Integer: int32(src)}
+		case proto.SimpleOneOfString:
+			target.SimpleOneOf = &proto.SimpleOneOf_String_{String_: string(src)}
+		case proto.SimpleOneOfInteger:
+			target.SimpleOneOf = &proto.SimpleOneOf_Integer{Integer: int32(src)}
 		}
 	}
 }
 `
 
 	embeddedOneOfSvcToEmbeddedOneOfProtoCode = `func transform() {
-	target := &EmbeddedOneOf{
+	target := &proto.EmbeddedOneOf{
 		String_: source.String,
 	}
 	if source.EmbeddedOneOf != nil {
 		switch src := source.EmbeddedOneOf.(type) {
-		case EmbeddedOneOfString:
-			target.EmbeddedOneOf = &EmbeddedOneOf_String_{String_: string(src)}
-		case EmbeddedOneOfInteger:
-			target.EmbeddedOneOf = &EmbeddedOneOf_Integer{Integer: int32(src)}
-		case EmbeddedOneOfBoolean:
-			target.EmbeddedOneOf = &EmbeddedOneOf_Boolean{Boolean: bool(src)}
-		case EmbeddedOneOfNumber:
-			target.EmbeddedOneOf = &EmbeddedOneOf_Number{Number: int32(src)}
-		case EmbeddedOneOfArray:
-			target.EmbeddedOneOf = &EmbeddedOneOf_Array{Array: svcEmbeddedOneOfArrayToEmbeddedOneOfArray(src)}
-		case EmbeddedOneOfMap:
-			target.EmbeddedOneOf = &EmbeddedOneOf_Map_{Map_: svcEmbeddedOneOfMapToEmbeddedOneOfMap(src)}
-		case *SimpleOneOf:
-			target.EmbeddedOneOf = &EmbeddedOneOf_UserType{UserType: svcSimpleOneOfToSimpleOneOf(src)}
+		case proto.EmbeddedOneOfString:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_String_{String_: string(src)}
+		case proto.EmbeddedOneOfInteger:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Integer{Integer: int32(src)}
+		case proto.EmbeddedOneOfBoolean:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Boolean{Boolean: bool(src)}
+		case proto.EmbeddedOneOfNumber:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Number{Number: int32(src)}
+		case proto.EmbeddedOneOfArray:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Array{Array: svcProtoEmbeddedOneOfArrayToProtoEmbeddedOneOfArray(src)}
+		case proto.EmbeddedOneOfMap:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Map_{Map_: svcProtoEmbeddedOneOfMapToProtoEmbeddedOneOfMap(src)}
+		case *proto.SimpleOneOf:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_UserType{UserType: svcProtoSimpleOneOfToProtoSimpleOneOf(src)}
 		}
 	}
 }
 `
 
 	recursiveOneOfSvcToRecursiveOneOfProtoCode = `func transform() {
-	target := &RecursiveOneOf{
+	target := &proto.RecursiveOneOf{
 		String_: source.String,
 	}
 	if source.RecursiveOneOf != nil {
 		switch src := source.RecursiveOneOf.(type) {
-		case RecursiveOneOfInteger:
-			target.RecursiveOneOf = &RecursiveOneOf_Integer{Integer: int32(src)}
-		case *RecursiveOneOf:
-			target.RecursiveOneOf = &RecursiveOneOf_Recurse{Recurse: svcRecursiveOneOfToRecursiveOneOf(src)}
+		case proto.RecursiveOneOfInteger:
+			target.RecursiveOneOf = &proto.RecursiveOneOf_Integer{Integer: int32(src)}
+		case *proto.RecursiveOneOf:
+			target.RecursiveOneOf = &proto.RecursiveOneOf_Recurse{Recurse: svcProtoRecursiveOneOfToProtoRecursiveOneOf(src)}
 		}
+	}
+}
+`
+
+	pkgOverrideSvcToPkgOverrideProtoCode = `func transform() {
+	target := &proto.CompositePkgOverride{}
+	if source.WithOverride != nil {
+		target.WithOverride = svcTypesWithOverrideToProtoWithOverride(source.WithOverride)
 	}
 }
 `
@@ -780,7 +796,7 @@ const (
 `
 
 	simpleProtoToSimpleSvcCode = `func transform() {
-	target := &Simple{
+	target := &proto.Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
@@ -798,7 +814,7 @@ const (
 `
 
 	simpleProtoToRequiredSvcCode = `func transform() {
-	target := &Required{
+	target := &proto.Required{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
@@ -815,7 +831,7 @@ const (
 `
 
 	requiredProtoToSimpleSvcCode = `func transform() {
-	target := &Simple{
+	target := &proto.Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
@@ -825,7 +841,7 @@ const (
 `
 
 	simpleProtoToDefaultSvcCode = `func transform() {
-	target := &Default{
+	target := &proto.Default{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
@@ -845,7 +861,7 @@ const (
 `
 
 	defaultProtoToSimpleSvcCode = `func transform() {
-	target := &Simple{
+	target := &proto.Simple{
 		RequiredString: source.RequiredString,
 		DefaultBool:    source.DefaultBool,
 	}
@@ -861,7 +877,7 @@ const (
 `
 
 	simpleProtoToRequiredPtrSvcCode = `func transform() {
-	target := &Required{
+	target := &proto.Required{
 		RequiredString: &source.RequiredString,
 		DefaultBool:    &source.DefaultBool,
 	}
@@ -873,7 +889,7 @@ const (
 `
 
 	simpleMapProtoToSimpleMapSvcCode = `func transform() {
-	target := &SimpleMap{}
+	target := &proto.SimpleMap{}
 	if source.Simple != nil {
 		target.Simple = make(map[string]int, len(source.Simple))
 		for key, val := range source.Simple {
@@ -886,7 +902,7 @@ const (
 `
 
 	nestedMapProtoToNestedMapSvcCode = `func transform() {
-	target := &NestedMap{}
+	target := &proto.NestedMap{}
 	if source.NestedMap != nil {
 		target.NestedMap = make(map[float64]map[int]map[float64]uint64, len(source.NestedMap))
 		for key, val := range source.NestedMap {
@@ -909,7 +925,7 @@ const (
 `
 
 	arrayMapProtoToArrayMapSvcCode = `func transform() {
-	target := &ArrayMap{}
+	target := &proto.ArrayMap{}
 	if source.ArrayMap != nil {
 		target.ArrayMap = make(map[uint32][]float32, len(source.ArrayMap))
 		for key, val := range source.ArrayMap {
@@ -925,7 +941,7 @@ const (
 `
 
 	defaultMapProtoToDefaultMapSvcCode = `func transform() {
-	target := &DefaultMap{}
+	target := &proto.DefaultMap{}
 	if source.Simple != nil {
 		target.Simple = make(map[string]int, len(source.Simple))
 		for key, val := range source.Simple {
@@ -941,7 +957,7 @@ const (
 `
 
 	simpleArrayProtoToSimpleArraySvcCode = `func transform() {
-	target := &SimpleArray{}
+	target := &proto.SimpleArray{}
 	if source.StringArray != nil {
 		target.StringArray = make([]string, len(source.StringArray))
 		for i, val := range source.StringArray {
@@ -952,7 +968,7 @@ const (
 `
 
 	nestedArrayProtoToNestedArraySvcCode = `func transform() {
-	target := &NestedArray{}
+	target := &proto.NestedArray{}
 	if source.NestedArray != nil {
 		target.NestedArray = make([][][]float64, len(source.NestedArray))
 		for i, val := range source.NestedArray {
@@ -969,11 +985,11 @@ const (
 `
 
 	typeArrayProtoToTypeArraySvcCode = `func transform() {
-	target := &TypeArray{}
+	target := &proto.TypeArray{}
 	if source.TypeArray != nil {
-		target.TypeArray = make([]*SimpleArray, len(source.TypeArray))
+		target.TypeArray = make([]*proto.SimpleArray, len(source.TypeArray))
 		for i, val := range source.TypeArray {
-			target.TypeArray[i] = &SimpleArray{}
+			target.TypeArray[i] = &proto.SimpleArray{}
 			if val.StringArray != nil {
 				target.TypeArray[i].StringArray = make([]string, len(val.StringArray))
 				for j, val := range val.StringArray {
@@ -986,7 +1002,7 @@ const (
 `
 
 	mapArrayProtoToMapArraySvcCode = `func transform() {
-	target := &MapArray{}
+	target := &proto.MapArray{}
 	if source.MapArray != nil {
 		target.MapArray = make([]map[int]string, len(source.MapArray))
 		for i, val := range source.MapArray {
@@ -1002,7 +1018,7 @@ const (
 `
 
 	defaultArrayProtoToDefaultArraySvcCode = `func transform() {
-	target := &DefaultArray{}
+	target := &proto.DefaultArray{}
 	if source.StringArray != nil {
 		target.StringArray = make([]string, len(source.StringArray))
 		for i, val := range source.StringArray {
@@ -1016,17 +1032,17 @@ const (
 `
 
 	recursiveProtoToRecursiveSvcCode = `func transform() {
-	target := &Recursive{
+	target := &proto.Recursive{
 		RequiredString: source.RequiredString,
 	}
 	if source.Recursive != nil {
-		target.Recursive = protobufRecursiveToRecursive(source.Recursive)
+		target.Recursive = protobufProtoRecursiveToProtoRecursive(source.Recursive)
 	}
 }
 `
 
 	compositeProtoToCustomFieldSvcCode = `func transform() {
-	target := &CompositeWithCustomField{}
+	target := &proto.CompositeWithCustomField{}
 	if source.RequiredString != nil {
 		target.MyString = *source.RequiredString
 	}
@@ -1037,7 +1053,7 @@ const (
 		target.MyInt = 100
 	}
 	if source.Type != nil {
-		target.MyType = protobufSimpleToSimple(source.Type)
+		target.MyType = protobufProtoSimpleToProtoSimple(source.Type)
 	}
 	if source.Map_ != nil {
 		target.MyMap = make(map[int]string, len(source.Map_))
@@ -1057,13 +1073,13 @@ const (
 `
 
 	customFieldProtoToCompositeSvcCode = `func transform() {
-	target := &Composite{
+	target := &proto.Composite{
 		RequiredString: &source.RequiredString,
 	}
 	defaultInt := int(source.DefaultInt)
 	target.DefaultInt = &defaultInt
 	if source.Type != nil {
-		target.Type = protobufSimpleToSimple(source.Type)
+		target.Type = protobufProtoSimpleToProtoSimple(source.Type)
 	}
 	if source.Map_ != nil {
 		target.Map = make(map[int]string, len(source.Map_))
@@ -1083,7 +1099,7 @@ const (
 `
 
 	resultTypeProtoToResultTypeSvcCode = `func transform() {
-	target := &ResultType{}
+	target := &proto.ResultType{}
 	if source.Int != nil {
 		int_ := int(*source.Int)
 		target.Int = &int_
@@ -1100,11 +1116,11 @@ const (
 `
 
 	rtColProtoToRTColSvcCode = `func transform() {
-	target := &ResultTypeCollection{}
+	target := &proto.ResultTypeCollection{}
 	if source.Collection != nil {
-		target.Collection = make([]*ResultType, len(source.Collection.Field))
+		target.Collection = make([]*proto.ResultType, len(source.Collection.Field))
 		for i, val := range source.Collection.Field {
-			target.Collection[i] = &ResultType{}
+			target.Collection[i] = &proto.ResultType{}
 			if val.Int != nil {
 				int_ := int(*val.Int)
 				target.Collection[i].Int = &int_
@@ -1123,7 +1139,7 @@ const (
 `
 
 	optionalProtoToOptionalSvcCode = `func transform() {
-	target := &Optional{
+	target := &proto.Optional{
 		Float:  source.Float_,
 		String: source.String_,
 		Bytes:  source.Bytes_,
@@ -1152,13 +1168,13 @@ const (
 		}
 	}
 	if source.UserType != nil {
-		target.UserType = protobufOptionalToOptional(source.UserType)
+		target.UserType = protobufProtoOptionalToProtoOptional(source.UserType)
 	}
 }
 `
 
 	defaultsProtoToDefaultsSvcCode = `func transform() {
-	target := &WithDefaults{
+	target := &proto.WithDefaults{
 		Int:            int(source.Int),
 		RawJSON:        json.RawMessage(source.RawJson),
 		RequiredInt:    int(source.RequiredInt),
@@ -1237,54 +1253,62 @@ const (
 `
 
 	oneOfProtoToOneOfSvcCode = `func transform() {
-	target := &SimpleOneOf{}
+	target := &proto.SimpleOneOf{}
 	if source.SimpleOneOf != nil {
 		switch val := source.SimpleOneOf.(type) {
-		case *SimpleOneOf_String_:
-			target.SimpleOneOf = SimpleOneOfString(val.String_)
-		case *SimpleOneOf_Integer:
-			target.SimpleOneOf = SimpleOneOfInteger(val.Integer)
+		case *proto.SimpleOneOf_String_:
+			target.SimpleOneOf = proto.SimpleOneOfString(val.String_)
+		case *proto.SimpleOneOf_Integer:
+			target.SimpleOneOf = proto.SimpleOneOfInteger(val.Integer)
 		}
 	}
 }
 `
 
 	embeddedOneOfProtoToEmbeddedOneOfSvcCode = `func transform() {
-	target := &EmbeddedOneOf{
+	target := &proto.EmbeddedOneOf{
 		String: source.String_,
 	}
 	if source.EmbeddedOneOf != nil {
 		switch val := source.EmbeddedOneOf.(type) {
-		case *EmbeddedOneOf_String_:
-			target.EmbeddedOneOf = EmbeddedOneOfString(val.String_)
-		case *EmbeddedOneOf_Integer:
-			target.EmbeddedOneOf = EmbeddedOneOfInteger(val.Integer)
-		case *EmbeddedOneOf_Boolean:
-			target.EmbeddedOneOf = EmbeddedOneOfBoolean(val.Boolean)
-		case *EmbeddedOneOf_Number:
-			target.EmbeddedOneOf = EmbeddedOneOfNumber(val.Number)
-		case *EmbeddedOneOf_Array:
-			target.EmbeddedOneOf = protobufEmbeddedOneOfArrayToEmbeddedOneOfArray(val.Array)
-		case *EmbeddedOneOf_Map_:
-			target.EmbeddedOneOf = protobufEmbeddedOneOfMapToEmbeddedOneOfMap(val.Map_)
-		case *EmbeddedOneOf_UserType:
-			target.EmbeddedOneOf = protobufSimpleOneOfToSimpleOneOf(val.UserType)
+		case *proto.EmbeddedOneOf_String_:
+			target.EmbeddedOneOf = proto.EmbeddedOneOfString(val.String_)
+		case *proto.EmbeddedOneOf_Integer:
+			target.EmbeddedOneOf = proto.EmbeddedOneOfInteger(val.Integer)
+		case *proto.EmbeddedOneOf_Boolean:
+			target.EmbeddedOneOf = proto.EmbeddedOneOfBoolean(val.Boolean)
+		case *proto.EmbeddedOneOf_Number:
+			target.EmbeddedOneOf = proto.EmbeddedOneOfNumber(val.Number)
+		case *proto.EmbeddedOneOf_Array:
+			target.EmbeddedOneOf = protobufProtoEmbeddedOneOfArrayToProtoEmbeddedOneOfArray(val.Array)
+		case *proto.EmbeddedOneOf_Map_:
+			target.EmbeddedOneOf = protobufProtoEmbeddedOneOfMapToProtoEmbeddedOneOfMap(val.Map_)
+		case *proto.EmbeddedOneOf_UserType:
+			target.EmbeddedOneOf = protobufProtoSimpleOneOfToProtoSimpleOneOf(val.UserType)
 		}
 	}
 }
 `
 
 	recursiveOneOfProtoToRecursiveOneOfSvcCode = `func transform() {
-	target := &RecursiveOneOf{
+	target := &proto.RecursiveOneOf{
 		String: source.String_,
 	}
 	if source.RecursiveOneOf != nil {
 		switch val := source.RecursiveOneOf.(type) {
-		case *RecursiveOneOf_Integer:
-			target.RecursiveOneOf = RecursiveOneOfInteger(val.Integer)
-		case *RecursiveOneOf_Recurse:
-			target.RecursiveOneOf = protobufRecursiveOneOfToRecursiveOneOf(val.Recurse)
+		case *proto.RecursiveOneOf_Integer:
+			target.RecursiveOneOf = proto.RecursiveOneOfInteger(val.Integer)
+		case *proto.RecursiveOneOf_Recurse:
+			target.RecursiveOneOf = protobufProtoRecursiveOneOfToProtoRecursiveOneOf(val.Recurse)
 		}
+	}
+}
+`
+
+	pkgOverrideProtoToPkgOverrideSvcCode = `func transform() {
+	target := &types.CompositePkgOverride{}
+	if source.WithOverride != nil {
+		target.WithOverride = protobufProtoWithOverrideToTypesWithOverride(source.WithOverride)
 	}
 }
 `

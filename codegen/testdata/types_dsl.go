@@ -288,5 +288,15 @@ var TestTypesDSL = func() {
 				Attribute("recurse", "RecursiveOneOf")
 			})
 		})
+
+		WithOverride = Type("WithOverride", func() {
+			Attribute("string", String)
+			Meta("struct:pkg:path", "types")
+		})
+
+		_ = Type("CompositePkgOverride", func() {
+			Attribute("withOverride", WithOverride)
+			Meta("struct:pkg:path", "types")
+		})
 	)
 }
