@@ -625,7 +625,7 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			{
 				requiredRaw := resp.Header.Get("X-Request-Id")
 				if requiredRaw == "" {
-					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlock", "MethodA", goa.MissingFieldError("X-Request-ID", "header"))
+					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlock", "MethodA", goa.MissingFieldError("required", "header"))
 				}
 				v, err2 := strconv.ParseInt(requiredRaw, 10, strconv.IntSize)
 				if err2 != nil {
@@ -647,11 +647,11 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			{
 				optionalButRequiredRaw := resp.Header.Get("Location")
 				if optionalButRequiredRaw == "" {
-					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlock", "MethodA", goa.MissingFieldError("Location", "header"))
+					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlock", "MethodA", goa.MissingFieldError("optional_but_required", "header"))
 				}
 				v, err2 := strconv.ParseUint(optionalButRequiredRaw, 10, strconv.IntSize)
 				if err2 != nil {
-					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optionalButRequired", optionalButRequiredRaw, "unsigned integer"))
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optional_but_required", optionalButRequiredRaw, "unsigned integer"))
 				}
 				optionalButRequired = uint(v)
 			}
@@ -696,7 +696,7 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			{
 				requiredRaw := resp.Header.Get("X-Request-Id")
 				if requiredRaw == "" {
-					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", goa.MissingFieldError("X-Request-ID", "header"))
+					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", goa.MissingFieldError("required", "header"))
 				}
 				v, err2 := strconv.ParseInt(requiredRaw, 10, strconv.IntSize)
 				if err2 != nil {
@@ -718,11 +718,11 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			{
 				optionalButRequiredRaw := resp.Header.Get("Location")
 				if optionalButRequiredRaw == "" {
-					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", goa.MissingFieldError("Location", "header"))
+					return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", goa.MissingFieldError("optional_but_required", "header"))
 				}
 				v, err2 := strconv.ParseUint(optionalButRequiredRaw, 10, strconv.IntSize)
 				if err2 != nil {
-					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optionalButRequired", optionalButRequiredRaw, "unsigned integer"))
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("optional_but_required", optionalButRequiredRaw, "unsigned integer"))
 				}
 				optionalButRequired = uint(v)
 			}
@@ -771,7 +771,7 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			{
 				requiredRaw := resp.Header.Get("X-Request-Id")
 				if requiredRaw == "" {
-					return nil, goahttp.ErrValidationError("ValidateErrorResponseType", "MethodA", goa.MissingFieldError("X-Request-ID", "header"))
+					return nil, goahttp.ErrValidationError("ValidateErrorResponseType", "MethodA", goa.MissingFieldError("required", "header"))
 				}
 				v, err2 := strconv.ParseInt(requiredRaw, 10, strconv.IntSize)
 				if err2 != nil {
@@ -795,7 +795,7 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			)
 			errorRaw := resp.Header.Get("X-Application-Error")
 			if errorRaw == "" {
-				err = goa.MergeErrors(err, goa.MissingFieldError("X-Application-Error", "header"))
+				err = goa.MergeErrors(err, goa.MissingFieldError("error", "header"))
 			}
 			error = errorRaw
 			{
@@ -803,7 +803,7 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 				if numOccurRaw != "" {
 					v, err2 := strconv.ParseInt(numOccurRaw, 10, strconv.IntSize)
 					if err2 != nil {
-						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("numOccur", numOccurRaw, "integer"))
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("num_occur", numOccurRaw, "integer"))
 					}
 					pv := int(v)
 					numOccur = &pv
@@ -811,7 +811,7 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			}
 			if numOccur != nil {
 				if *numOccur < 1 {
-					err = goa.MergeErrors(err, goa.InvalidRangeError("numOccur", *numOccur, 1, true))
+					err = goa.MergeErrors(err, goa.InvalidRangeError("num_occur", *numOccur, 1, true))
 				}
 			}
 			if err != nil {
@@ -863,23 +863,23 @@ func DecodeMethodEmptyErrorResponseBodyResponse(decoder func(*http.Response) goa
 			)
 			nameRaw := resp.Header.Get("Error-Name")
 			if nameRaw == "" {
-				err = goa.MergeErrors(err, goa.MissingFieldError("Error-Name", "header"))
+				err = goa.MergeErrors(err, goa.MissingFieldError("name", "header"))
 			}
 			name = nameRaw
 			idRaw := resp.Header.Get("Goa-Attribute-Id")
 			if idRaw == "" {
-				err = goa.MergeErrors(err, goa.MissingFieldError("goa-attribute-id", "header"))
+				err = goa.MergeErrors(err, goa.MissingFieldError("id", "header"))
 			}
 			id = idRaw
 			messageRaw := resp.Header.Get("Goa-Attribute-Message")
 			if messageRaw == "" {
-				err = goa.MergeErrors(err, goa.MissingFieldError("goa-attribute-message", "header"))
+				err = goa.MergeErrors(err, goa.MissingFieldError("message", "header"))
 			}
 			message = messageRaw
 			{
 				temporaryRaw := resp.Header.Get("Goa-Attribute-Temporary")
 				if temporaryRaw == "" {
-					return nil, goahttp.ErrValidationError("ServiceEmptyErrorResponseBody", "MethodEmptyErrorResponseBody", goa.MissingFieldError("goa-attribute-temporary", "header"))
+					return nil, goahttp.ErrValidationError("ServiceEmptyErrorResponseBody", "MethodEmptyErrorResponseBody", goa.MissingFieldError("temporary", "header"))
 				}
 				v, err2 := strconv.ParseBool(temporaryRaw)
 				if err2 != nil {
@@ -890,7 +890,7 @@ func DecodeMethodEmptyErrorResponseBodyResponse(decoder func(*http.Response) goa
 			{
 				timeoutRaw := resp.Header.Get("Goa-Attribute-Timeout")
 				if timeoutRaw == "" {
-					return nil, goahttp.ErrValidationError("ServiceEmptyErrorResponseBody", "MethodEmptyErrorResponseBody", goa.MissingFieldError("goa-attribute-timeout", "header"))
+					return nil, goahttp.ErrValidationError("ServiceEmptyErrorResponseBody", "MethodEmptyErrorResponseBody", goa.MissingFieldError("timeout", "header"))
 				}
 				v, err2 := strconv.ParseBool(timeoutRaw)
 				if err2 != nil {
@@ -901,7 +901,7 @@ func DecodeMethodEmptyErrorResponseBodyResponse(decoder func(*http.Response) goa
 			{
 				faultRaw := resp.Header.Get("Goa-Attribute-Fault")
 				if faultRaw == "" {
-					return nil, goahttp.ErrValidationError("ServiceEmptyErrorResponseBody", "MethodEmptyErrorResponseBody", goa.MissingFieldError("goa-attribute-fault", "header"))
+					return nil, goahttp.ErrValidationError("ServiceEmptyErrorResponseBody", "MethodEmptyErrorResponseBody", goa.MissingFieldError("fault", "header"))
 				}
 				v, err2 := strconv.ParseBool(faultRaw)
 				if err2 != nil {

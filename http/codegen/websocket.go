@@ -134,6 +134,7 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 						serverArgs = []*InitArgData{{
 							Ref: ref,
 							AttributeData: &AttributeData{
+								Name:     "payload",
 								VarName:  "body",
 								TypeName: sd.Scope.GoTypeName(e.StreamingBody),
 								TypeRef:  sd.Scope.GoTypeRef(e.StreamingBody),

@@ -210,7 +210,7 @@ func DecodeMethodMessageWithValidateRequest(ctx context.Context, v any, md metad
 		}
 		if inMetadata != nil {
 			if *inMetadata > 100 {
-				err = goa.MergeErrors(err, goa.InvalidRangeError("inMetadata", *inMetadata, 100, false))
+				err = goa.MergeErrors(err, goa.InvalidRangeError("InMetadata", *inMetadata, 100, false))
 			}
 		}
 	}

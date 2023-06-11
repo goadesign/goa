@@ -137,7 +137,7 @@ func DecodeMethodMessageWithValidateResponse(ctx context.Context, v any, hdr, tr
 		}
 		if inHeader != nil {
 			if *inHeader < 1 {
-				err = goa.MergeErrors(err, goa.InvalidRangeError("inHeader", *inHeader, 1, true))
+				err = goa.MergeErrors(err, goa.InvalidRangeError("InHeader", *inHeader, 1, true))
 			}
 		}
 
@@ -152,7 +152,7 @@ func DecodeMethodMessageWithValidateResponse(ctx context.Context, v any, hdr, tr
 		}
 		if inTrailer != nil {
 			if !(*inTrailer == true) {
-				err = goa.MergeErrors(err, goa.InvalidEnumValueError("inTrailer", *inTrailer, []any{true}))
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("InTrailer", *inTrailer, []any{true}))
 			}
 		}
 	}

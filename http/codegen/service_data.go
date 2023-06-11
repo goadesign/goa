@@ -405,6 +405,8 @@ type (
 	// AttributeData contains the information needed to generate the code
 	// related to a specific payload or result attribute.
 	AttributeData struct {
+		// Name is the name of the attribute.
+		Name string
 		// VarName is the name of the variable that holds the attribute value.
 		VarName string
 		// Pointer is true if the attribute value is a pointer.
@@ -458,9 +460,9 @@ type (
 	// response elements including headers, parameters and cookies.
 	Element struct {
 		*AttributeData
-		// Name is the name of the HTTP element (header name, query string name
+		// HTTPName is the name of the HTTP element (header name, query string name
 		// or cookie name)
-		Name string
+		HTTPName string
 		// AttributeName is the name of the corresponding attribute.
 		AttributeName string
 		// StringSlice is true if the attribute type is array of strings.
@@ -664,11 +666,12 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 						var vcode string
 						if att.Validation != nil {
 							ctx := httpContext("", rd.Scope, true, false)
-							vcode = codegen.ValidationCode(att, nil, ctx, true, expr.IsAlias(att.Type), name)
+							vcode = codegen.AttributeValidationCode(att, nil, ctx, true, expr.IsAlias(att.Type), name, arg)
 						}
 						initArgs[j] = &InitArgData{
 							Ref: name,
 							AttributeData: &AttributeData{
+								Name:        arg,
 								VarName:     name,
 								Description: att.Description,
 								FieldName:   codegen.Goify(arg, true),
@@ -796,7 +799,7 @@ func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			if err := requestInitTmpl.Execute(&buf, data); err != nil {
 				panic(err) // bug
 			}
-			clientArgs := []*InitArgData{{Ref: "v", AttributeData: &AttributeData{VarName: "v", TypeRef: "any"}}}
+			clientArgs := []*InitArgData{{Ref: "v", AttributeData: &AttributeData{Name: "payload", VarName: "v", TypeRef: "any"}}}
 			requestInit = &InitData{
 				Name:        name,
 				Description: fmt.Sprintf("%s instantiates a HTTP request object with method and path set to call the %q service %q endpoint", name, svc.Name, ep.Name),
@@ -1049,8 +1052,9 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 					MapQueryParams: e.MapQueryParams,
 					Map:            expr.AsMap(payload.Type) != nil,
 					Element: &Element{
-						Name: name,
+						HTTPName: name,
 						AttributeData: &AttributeData{
+							Name:         name,
 							VarName:      varn,
 							FieldName:    fieldName,
 							FieldType:    pAtt.Type,
@@ -1058,7 +1062,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							Type:         pAtt.Type,
 							TypeName:     sd.Scope.GoTypeName(pAtt),
 							TypeRef:      sd.Scope.GoTypeRef(pAtt),
-							Validate:     codegen.ValidationCode(pAtt, nil, httpsvrctx, required, expr.IsAlias(pAtt.Type), varn),
+							Validate:     codegen.AttributeValidationCode(pAtt, nil, httpsvrctx, required, expr.IsAlias(pAtt.Type), varn, name),
 							DefaultValue: pAtt.DefaultValue,
 							Example:      pAtt.Example(expr.Root.API.ExampleGenerator),
 						},
@@ -1165,6 +1169,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			serverArgs = []*InitArgData{{
 				Ref: sd.Scope.GoVar("body", body),
 				AttributeData: &AttributeData{
+					Name:     "body",
 					VarName:  "body",
 					TypeName: sd.Scope.GoTypeName(e.Body),
 					TypeRef:  sd.Scope.GoTypeRef(e.Body),
@@ -1177,6 +1182,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			clientArgs = []*InitArgData{{
 				Ref: sd.Scope.GoVar("body", body),
 				AttributeData: &AttributeData{
+					Name:     "body",
 					VarName:  "body",
 					TypeName: sd.Scope.GoTypeNameWithDefaults(e.Body),
 					TypeRef:  sd.Scope.GoTypeRefWithDefaults(e.Body),
@@ -1192,6 +1198,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			args = append(args, &InitArgData{
 				Ref: p.VarName,
 				AttributeData: &AttributeData{
+					Name:         p.Name,
 					VarName:      p.VarName,
 					Description:  p.Description,
 					FieldName:    p.FieldName,
@@ -1211,6 +1218,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			args = append(args, &InitArgData{
 				Ref: p.VarName,
 				AttributeData: &AttributeData{
+					Name:         p.Name,
 					VarName:      p.VarName,
 					FieldName:    p.FieldName,
 					FieldPointer: p.FieldPointer,
@@ -1230,6 +1238,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			args = append(args, &InitArgData{
 				Ref: h.VarName,
 				AttributeData: &AttributeData{
+					Name:         h.Name,
 					VarName:      h.VarName,
 					FieldName:    h.FieldName,
 					FieldPointer: h.FieldPointer,
@@ -1249,6 +1258,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			args = append(args, &InitArgData{
 				Ref: c.VarName,
 				AttributeData: &AttributeData{
+					Name:         c.Name,
 					VarName:      c.VarName,
 					FieldName:    c.FieldName,
 					FieldPointer: c.FieldPointer,
@@ -1282,6 +1292,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 					uarg := &InitArgData{
 						Ref: sc.UsernameAttr,
 						AttributeData: &AttributeData{
+							Name:         sc.UsernameAttr,
 							VarName:      sc.UsernameAttr,
 							FieldName:    sc.UsernameField,
 							FieldPointer: sc.UsernamePointer,
@@ -1304,6 +1315,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 					parg := &InitArgData{
 						Ref: sc.PasswordAttr,
 						AttributeData: &AttributeData{
+							Name:         sc.PasswordAttr,
 							VarName:      sc.PasswordAttr,
 							FieldName:    sc.PasswordField,
 							FieldPointer: sc.PasswordPointer,
@@ -1634,6 +1646,7 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 							clientArgs = []*InitArgData{{
 								Ref: ref,
 								AttributeData: &AttributeData{
+									Name:     "body",
 									VarName:  "body",
 									TypeRef:  sd.Scope.GoTypeRef(resp.Body),
 									Validate: vcode,
@@ -1668,6 +1681,7 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 							clientArgs = append(clientArgs, &InitArgData{
 								Ref: h.VarName,
 								AttributeData: &AttributeData{
+									Name:         h.Name,
 									VarName:      h.VarName,
 									FieldName:    h.FieldName,
 									FieldPointer: h.FieldPointer,
@@ -1685,6 +1699,7 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 							clientArgs = append(clientArgs, &InitArgData{
 								Ref: c.VarName,
 								AttributeData: &AttributeData{
+									Name:         c.Name,
 									VarName:      c.VarName,
 									FieldName:    c.FieldName,
 									FieldPointer: c.FieldPointer,
@@ -1792,13 +1807,14 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 					}
 					args = []*InitArgData{{
 						Ref:           ref,
-						AttributeData: &AttributeData{VarName: "body", TypeRef: sd.Scope.GoTypeRef(v.Response.Body)},
+						AttributeData: &AttributeData{Name: "body", VarName: "body", TypeRef: sd.Scope.GoTypeRef(v.Response.Body)},
 					}}
 				}
 				for _, h := range extractHeaders(v.Response.Headers, v.ErrorExpr.AttributeExpr, errctx, sd.Scope) {
 					args = append(args, &InitArgData{
 						Ref: h.VarName,
 						AttributeData: &AttributeData{
+							Name:         h.Name,
 							VarName:      h.VarName,
 							FieldName:    h.FieldName,
 							FieldPointer: false,
@@ -1814,6 +1830,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 					args = append(args, &InitArgData{
 						Ref: c.VarName,
 						AttributeData: &AttributeData{
+							Name:         c.Name,
 							VarName:      c.VarName,
 							FieldName:    c.FieldName,
 							FieldPointer: false,
@@ -2070,6 +2087,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 			arg := InitArgData{
 				Ref: sourceVar,
 				AttributeData: &AttributeData{
+					Name:     "payload",
 					VarName:  sourceVar,
 					TypeRef:  svc.Scope.GoFullTypeRef(att, pkg),
 					Type:     att.Type,
@@ -2262,6 +2280,7 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location,
 			arg := InitArgData{
 				Ref: ref,
 				AttributeData: &AttributeData{
+					Name:     "result",
 					VarName:  sourceVar,
 					TypeRef:  tref,
 					Type:     att.Type,
@@ -2322,11 +2341,12 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 			Map:            false,
 			MapStringSlice: false,
 			Element: &Element{
-				Name:          elem,
+				HTTPName:      elem,
 				AttributeName: name,
 				Slice:         arr != nil,
 				StringSlice:   stringSlice,
 				AttributeData: &AttributeData{
+					Name:         name,
 					Description:  c.Description,
 					FieldName:    fieldName,
 					FieldPointer: fptr,
@@ -2337,7 +2357,7 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 					TypeName:     scope.GoTypeName(c),
 					TypeRef:      scope.GoTypeRef(c),
 					Pointer:      false,
-					Validate:     codegen.ValidationCode(c, nil, ctx, true, expr.IsAlias(c.Type), varn),
+					Validate:     codegen.AttributeValidationCode(c, nil, ctx, true, expr.IsAlias(c.Type), varn, name),
 					DefaultValue: c.DefaultValue,
 					Example:      c.Example(expr.Root.API.ExampleGenerator),
 				},
@@ -2389,9 +2409,10 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 			Element: &Element{
 				Slice:         arr != nil,
 				StringSlice:   stringSlice,
-				Name:          elem,
+				HTTPName:      elem,
 				AttributeName: name,
 				AttributeData: &AttributeData{
+					Name:         name,
 					Description:  c.Description,
 					FieldName:    fieldName,
 					FieldPointer: fptr,
@@ -2402,7 +2423,7 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 					TypeName:     scope.GoTypeName(c),
 					TypeRef:      typeRef,
 					Pointer:      pointer,
-					Validate:     codegen.ValidationCode(c, nil, ctx, required, expr.IsAlias(c.Type), varn),
+					Validate:     codegen.AttributeValidationCode(c, nil, ctx, required, expr.IsAlias(c.Type), varn, name),
 					DefaultValue: c.DefaultValue,
 					Example:      c.Example(expr.Root.API.ExampleGenerator),
 				},
@@ -2454,11 +2475,12 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 		headers = append(headers, &HeaderData{
 			CanonicalName: http.CanonicalHeaderKey(elem),
 			Element: &Element{
-				Name:          elem,
+				HTTPName:      elem,
 				Slice:         arr != nil,
 				StringSlice:   stringSlice,
 				AttributeName: name,
 				AttributeData: &AttributeData{
+					Name:         name,
 					Description:  hattr.Description,
 					FieldName:    fieldName,
 					FieldPointer: fptr,
@@ -2469,7 +2491,7 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 					Required:     required,
 					Pointer:      pointer,
 					Type:         hattr.Type,
-					Validate:     codegen.ValidationCode(hattr, nil, svcCtx, required, expr.IsAlias(hattr.Type), varn),
+					Validate:     codegen.AttributeValidationCode(hattr, nil, svcCtx, required, expr.IsAlias(hattr.Type), varn, name),
 					DefaultValue: hattr.DefaultValue,
 					Example:      hattr.Example(expr.Root.API.ExampleGenerator),
 				},
@@ -2512,9 +2534,10 @@ func extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 		}
 		c := &CookieData{
 			Element: &Element{
-				Name:          elem,
+				HTTPName:      elem,
 				AttributeName: name,
 				AttributeData: &AttributeData{
+					Name:         name,
 					Description:  hattr.Description,
 					FieldName:    fieldName,
 					FieldPointer: fptr,
@@ -2525,7 +2548,7 @@ func extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 					Required:     required,
 					Pointer:      pointer,
 					Type:         hattr.Type,
-					Validate:     codegen.ValidationCode(hattr, nil, svcCtx, required, expr.IsAlias(hattr.Type), varn),
+					Validate:     codegen.AttributeValidationCode(hattr, nil, svcCtx, required, expr.IsAlias(hattr.Type), varn, name),
 					DefaultValue: hattr.DefaultValue,
 					Example:      hattr.Example(expr.Root.API.ExampleGenerator),
 				},
