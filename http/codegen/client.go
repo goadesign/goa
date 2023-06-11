@@ -423,31 +423,31 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			{
 			{{- end }}
 			head := {{ if .FieldPointer }}*{{ end }}p.{{ .FieldName }}
-			{{- if (and (eq .Name "Authorization") (isBearer $.HeaderSchemes)) }}
+			{{- if (and (eq .HTTPName "Authorization") (isBearer $.HeaderSchemes)) }}
 		if !strings.Contains(head, " ") {
-			req.Header.Set({{ printf "%q" .Name }}, "Bearer "+head)
+			req.Header.Set({{ printf "%q" .HTTPName }}, "Bearer "+head)
 		} else {
 			{{- end }}
 			{{- if eq .Type.Name "array" }}
 			for _, val := range head {
 				{{- if eq .Type.ElemType.Type.Name "string" }}
-				req.Header.Add({{ printf "%q" .Name }}, val)
+				req.Header.Add({{ printf "%q" .HTTPName }}, val)
 				{{- else if (and (isAlias .Type.ElemType.Type) (eq (underlyingType .Type.ElemType.Type).Name "string")) }}
-				req.Header.Set({{ printf "%q" .Name }}, string(val))
+				req.Header.Set({{ printf "%q" .HTTPName }}, string(val))
 				{{- else }}
 				{{ template "type_conversion" (typeConversionData .Type.ElemType.Type (aliasedType .FieldType).ElemType.Type "valStr" "val") }}
-				req.Header.Add({{ printf "%q" .Name }}, valStr)
+				req.Header.Add({{ printf "%q" .HTTPName }}, valStr)
 				{{- end }}
 			}
 			{{- else if (and (isAlias .FieldType) (eq (underlyingType .FieldType).Name "string")) }}
-			req.Header.Set({{ printf "%q" .Name }}, string(head))
+			req.Header.Set({{ printf "%q" .HTTPName }}, string(head))
 			{{- else if eq .Type.Name "string" }}
-			req.Header.Set({{ printf "%q" .Name }}, head)
+			req.Header.Set({{ printf "%q" .HTTPName }}, head)
 			{{- else }}
 			{{ template "type_conversion" (typeConversionData .Type .FieldType "headStr" "head") }}
-			req.Header.Set({{ printf "%q" .Name }}, headStr)
+			req.Header.Set({{ printf "%q" .HTTPName }}, headStr)
 			{{- end }}
-			{{- if (and (eq .Name "Authorization") (isBearer $.HeaderSchemes)) }}
+			{{- if (and (eq .HTTPName "Authorization") (isBearer $.HeaderSchemes)) }}
 		}
 			{{- end }}
 		}
@@ -465,7 +465,7 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			{{ template "type_conversion" (typeConversionData .Type .FieldType "vraw" "v") }}
 			{{- end }}
 			req.AddCookie(&http.Cookie{
-				Name: {{ printf "%q" .Name }},
+				Name: {{ printf "%q" .HTTPName }},
 				Value: v,
 				{{- if .MaxAge }}
 				MaxAge: {{ .MaxAge }},
@@ -505,20 +505,20 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
     }
 		{{- else if .StringSlice }}
 			for _, value := range p{{ if .FieldName }}.{{ .FieldName }}{{ end }} {
-				values.Add("{{ .Name }}", value)
+				values.Add("{{ .HTTPName }}", value)
 			}
 		{{- else if .Slice }}
 			for _, value := range p{{ if .FieldName }}.{{ .FieldName }}{{ end }} {
 				{{ template "type_conversion" (typeConversionData .Type.ElemType.Type (aliasedType .FieldType).ElemType.Type "valueStr" "value") }}
-				values.Add("{{ .Name }}", valueStr)
+				values.Add("{{ .HTTPName }}", valueStr)
 			}
 		{{- else if .Map }}
-			{{- template "map_conversion" (mapConversionData .Type .FieldType .Name "p" .FieldName true) }}
+			{{- template "map_conversion" (mapConversionData .Type .FieldType .HTTPName "p" .FieldName true) }}
 		{{- else if .FieldName }}
 			{{- if .FieldPointer }}
 		if p.{{ .FieldName }} != nil {
 			{{- end }}
-		values.Add("{{ .Name }}",
+		values.Add("{{ .HTTPName }}",
 			{{- if or (eq .Type.Name "bytes") (and (isAlias .FieldType) (eq (underlyingType .FieldType).Name "string")) }} string(
 			{{- else if not (eq .Type.Name "string") }} fmt.Sprintf("%v",
 			{{- end }}
@@ -530,12 +530,12 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 			{{- end }}
 		{{- else }}
 			{{- if eq .Type.Name "string" }}
-				values.Add("{{ .Name }}", p)
+				values.Add("{{ .HTTPName }}", p)
 			{{- else if (and (isAlias .Type) (eq (underlyingType .Type).Name "string")) }}
-				values.Add("{{ .Name }}", string(p))
+				values.Add("{{ .HTTPName }}", string(p))
 			{{- else }}
 				{{ template "type_conversion" (typeConversionData .Type .FieldType "pStr" "p") }}
-				values.Add("{{ .Name }}", pStr)
+				values.Add("{{ .HTTPName }}", pStr)
 			{{- end }}
 		{{- end }}
 	{{- end }}
@@ -877,7 +877,7 @@ const singleResponseT = ` {{- if .ClientBody }}
         for _, c := range cookies {
 			switch c.Name {
 		{{- range .Cookies }}
-			case {{ printf "%q" .Name }}:
+			case {{ printf "%q" .HTTPName }}:
 				{{ .VarName }}Raw = c.Value
 		{{- end }}
 			}

@@ -44,6 +44,15 @@ func init() {
 	userValT = template.Must(template.New("user").Funcs(fm).Parse(userValTmpl))
 }
 
+// AttributeValidationCode produces Go code that runs the validations defined
+// in the given attribute against the value held by the variable named target.
+//
+// See ValidationCode for a description of the arguments.
+func AttributeValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias bool, target, attName string) string {
+	seen := make(map[string]*bytes.Buffer)
+	return recurseValidationCode(att, put, attCtx, req, alias, target, attName, seen).String()
+}
+
 // ValidationCode produces Go code that runs the validations defined in the
 // given attribute and its children recursively against the value held by the
 // variable named target.
