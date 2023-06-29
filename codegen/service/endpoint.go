@@ -10,9 +10,9 @@ import (
 )
 
 type (
-	// endpointsData contains the data necessary to render the
+	// EndpointsData contains the data necessary to render the
 	// service endpoints struct template.
-	endpointsData struct {
+	EndpointsData struct {
 		// Name is the service name.
 		Name string
 		// Description is the service description.
@@ -24,7 +24,7 @@ type (
 		// ServiceVarName is the service interface name.
 		ServiceVarName string
 		// Methods lists the endpoint struct methods.
-		Methods []*endpointMethodData
+		Methods []*EndpointMethodData
 		// ClientInitArgs lists the arguments needed to instantiate the client.
 		ClientInitArgs string
 		// Schemes contains the security schemes types used by the
@@ -32,8 +32,8 @@ type (
 		Schemes SchemesData
 	}
 
-	// endpointMethodData describes a single endpoint method.
-	endpointMethodData struct {
+	// EndpointMethodData describes a single endpoint method.
+	EndpointMethodData struct {
 		*MethodData
 		// ArgName is the name of the argument used to initialize the client
 		// struct method field.
@@ -128,12 +128,12 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-func endpointData(service *expr.ServiceExpr) *endpointsData {
+func endpointData(service *expr.ServiceExpr) *EndpointsData {
 	svc := Services.Get(service.Name)
-	methods := make([]*endpointMethodData, len(svc.Methods))
+	methods := make([]*EndpointMethodData, len(svc.Methods))
 	names := make([]string, len(svc.Methods))
 	for i, m := range svc.Methods {
-		methods[i] = &endpointMethodData{
+		methods[i] = &EndpointMethodData{
 			MethodData:     m,
 			ArgName:        codegen.Goify(m.VarName, false),
 			ServiceName:    svc.Name,
@@ -143,7 +143,7 @@ func endpointData(service *expr.ServiceExpr) *endpointsData {
 		names[i] = codegen.Goify(m.VarName, false)
 	}
 	desc := fmt.Sprintf("%s wraps the %q service endpoints.", endpointsStructName, service.Name)
-	return &endpointsData{
+	return &EndpointsData{
 		Name:           service.Name,
 		Description:    desc,
 		VarName:        endpointsStructName,
@@ -155,7 +155,7 @@ func endpointData(service *expr.ServiceExpr) *endpointsData {
 	}
 }
 
-func payloadVar(e *endpointMethodData) string {
+func payloadVar(e *EndpointMethodData) string {
 	if e.ServerStream != nil || e.SkipRequestBodyEncodeDecode {
 		return "ep.Payload"
 	}
