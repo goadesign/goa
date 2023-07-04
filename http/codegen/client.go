@@ -349,9 +349,13 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
 		if c.configurer.{{ .Method.VarName }}Fn != nil {
+			{{- if eq .ClientWebSocket.SendName "" }}
 			var cancel context.CancelFunc
 			ctx, cancel = context.WithCancel(ctx)
 			conn = c.configurer.{{ .Method.VarName }}Fn(conn, cancel)
+			{{- else }}
+			conn = c.configurer.{{ .Method.VarName }}Fn(conn, nil)
+			{{- end }}
 		}
 		{{- if eq .ClientWebSocket.SendName "" }}
 		go func() {
