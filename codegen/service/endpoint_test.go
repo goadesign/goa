@@ -17,20 +17,20 @@ func TestEndpoint(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
-		{"single", testdata.SingleEndpointDSL, testdata.SingleEndpoint},
-		{"use", testdata.UseEndpointDSL, testdata.UseEndpoint},
-		{"multiple", testdata.MultipleEndpointsDSL, testdata.MultipleEndpoints},
-		{"no-payload", testdata.NoPayloadEndpointDSL, testdata.NoPayloadEndpoint},
-		{"with-result", testdata.WithResultEndpointDSL, testdata.WithResultEndpoint},
-		{"with-result-multiple-views", testdata.WithResultMultipleViewsEndpointDSL, testdata.WithResultMultipleViewsEndpoint},
-		{"streaming-result", testdata.StreamingResultEndpointDSL, testdata.StreamingResultMethodEndpoint},
-		{"streaming-result-no-payload", testdata.StreamingResultNoPayloadEndpointDSL, testdata.StreamingResultNoPayloadMethodEndpoint},
-		{"streaming-result-with-views", testdata.StreamingResultWithViewsMethodDSL, testdata.StreamingResultWithViewsMethodEndpoint},
-		{"streaming-payload", testdata.StreamingPayloadEndpointDSL, testdata.StreamingPayloadMethodEndpoint},
-		{"streaming-payload-no-payload", testdata.StreamingPayloadNoPayloadMethodDSL, testdata.StreamingPayloadNoPayloadMethodEndpoint},
-		{"streaming-payload-no-result", testdata.StreamingPayloadNoResultMethodDSL, testdata.StreamingPayloadNoResultMethodEndpoint},
-		{"bidirectional-streaming", testdata.BidirectionalStreamingEndpointDSL, testdata.BidirectionalStreamingMethodEndpoint},
-		{"bidirectional-streaming-no-payload", testdata.BidirectionalStreamingNoPayloadMethodDSL, testdata.BidirectionalStreamingNoPayloadMethodEndpoint},
+		{"endpoint-single", testdata.SingleEndpointDSL, testdata.SingleEndpoint},
+		{"endpoint-use", testdata.UseEndpointDSL, testdata.UseEndpoint},
+		{"endpoint-multiple", testdata.MultipleEndpointsDSL, testdata.MultipleEndpoints},
+		{"endpoint-no-payload", testdata.NoPayloadEndpointDSL, testdata.NoPayloadEndpoint},
+		{"endpoint-with-result", testdata.WithResultEndpointDSL, testdata.WithResultEndpoint},
+		{"endpoint-with-result-multiple-views", testdata.WithResultMultipleViewsEndpointDSL, testdata.WithResultMultipleViewsEndpoint},
+		{"endpoint-streaming-result", testdata.StreamingResultEndpointDSL, testdata.StreamingResultMethodEndpoint},
+		{"endpoint-streaming-result-no-payload", testdata.StreamingResultNoPayloadEndpointDSL, testdata.StreamingResultNoPayloadMethodEndpoint},
+		{"endpoint-streaming-result-with-views", testdata.StreamingResultWithViewsMethodDSL, testdata.StreamingResultWithViewsMethodEndpoint},
+		{"endpoint-streaming-payload", testdata.StreamingPayloadEndpointDSL, testdata.StreamingPayloadMethodEndpoint},
+		{"endpoint-streaming-payload-no-payload", testdata.StreamingPayloadNoPayloadMethodDSL, testdata.StreamingPayloadNoPayloadMethodEndpoint},
+		{"endpoint-streaming-payload-no-result", testdata.StreamingPayloadNoResultMethodDSL, testdata.StreamingPayloadNoResultMethodEndpoint},
+		{"endpoint-bidirectional-streaming", testdata.BidirectionalStreamingEndpointDSL, testdata.BidirectionalStreamingMethodEndpoint},
+		{"endpoint-bidirectional-streaming-no-payload", testdata.BidirectionalStreamingNoPayloadMethodDSL, testdata.BidirectionalStreamingNoPayloadMethodEndpoint},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

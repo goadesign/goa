@@ -1027,9 +1027,7 @@ func (c *Client) StreamingPayloadMethod() goa.Endpoint {
 			return nil, goahttp.ErrRequestError("StreamingPayloadService", "StreamingPayloadMethod", err)
 		}
 		if c.configurer.StreamingPayloadMethodFn != nil {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithCancel(ctx)
-			conn = c.configurer.StreamingPayloadMethodFn(conn, cancel)
+			conn = c.configurer.StreamingPayloadMethodFn(conn, nil)
 		}
 		stream := &StreamingPayloadMethodClientStream{conn: conn}
 		return stream, nil
@@ -1140,9 +1138,7 @@ func (c *Client) StreamingPayloadNoPayloadMethod() goa.Endpoint {
 			return nil, goahttp.ErrRequestError("StreamingPayloadNoPayloadService", "StreamingPayloadNoPayloadMethod", err)
 		}
 		if c.configurer.StreamingPayloadNoPayloadMethodFn != nil {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithCancel(ctx)
-			conn = c.configurer.StreamingPayloadNoPayloadMethodFn(conn, cancel)
+			conn = c.configurer.StreamingPayloadNoPayloadMethodFn(conn, nil)
 		}
 		stream := &StreamingPayloadNoPayloadMethodClientStream{conn: conn}
 		return stream, nil
@@ -2212,9 +2208,7 @@ func (c *Client) BidirectionalStreamingMethod() goa.Endpoint {
 			return nil, goahttp.ErrRequestError("BidirectionalStreamingService", "BidirectionalStreamingMethod", err)
 		}
 		if c.configurer.BidirectionalStreamingMethodFn != nil {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithCancel(ctx)
-			conn = c.configurer.BidirectionalStreamingMethodFn(conn, cancel)
+			conn = c.configurer.BidirectionalStreamingMethodFn(conn, nil)
 		}
 		stream := &BidirectionalStreamingMethodClientStream{conn: conn}
 		return stream, nil
@@ -2349,9 +2343,7 @@ func (c *Client) BidirectionalStreamingNoPayloadMethod() goa.Endpoint {
 			return nil, goahttp.ErrRequestError("BidirectionalStreamingNoPayloadService", "BidirectionalStreamingNoPayloadMethod", err)
 		}
 		if c.configurer.BidirectionalStreamingNoPayloadMethodFn != nil {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithCancel(ctx)
-			conn = c.configurer.BidirectionalStreamingNoPayloadMethodFn(conn, cancel)
+			conn = c.configurer.BidirectionalStreamingNoPayloadMethodFn(conn, nil)
 		}
 		stream := &BidirectionalStreamingNoPayloadMethodClientStream{conn: conn}
 		return stream, nil
