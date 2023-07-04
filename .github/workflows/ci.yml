@@ -7,10 +7,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
 
-    - name: Collect Workflow Telemetry
-      uses: runforesight/foresight-workflow-kit-action@v1
-      if: success() || failure()
-
     - name: Set up Go 1.20
       uses: actions/setup-go@v4.0.1
       with:
@@ -32,29 +28,12 @@ jobs:
       run: make ci
       env:
         GOA_BRANCH: ${{ steps.extract_branch.outputs.branch }}
-
-    - name: Compute code coverage
-      run: go test -v -json -coverprofile=coverage.out ./... > ./test-report.json || true 
-
-    - name: Analyze Test and/or Coverage Results
-      uses: runforesight/foresight-test-kit-action@v1
-      if: success() || failure()
-      with:
-        test_format: JSON
-        test_framework: GOLANG
-        test_path: "./test-report.json"
-        coverage_format: GOLANG
-        coverage_path: ./coverage.out
 
   Windows:
     name: Windows
     runs-on: windows-latest
     steps:
 
-    - name: Collect Workflow Telemetry
-      uses: runforesight/foresight-workflow-kit-action@v1
-      if: success() || failure()
-
     - name: Set up Go 1.20
       uses: actions/setup-go@v4.0.1
       with:
@@ -78,16 +57,3 @@ jobs:
       run: make ci
       env:
         GOA_BRANCH: ${{ steps.extract_branch.outputs.branch }}
-
-    - name: Compute code coverage
-      run: go test -v -json -coverprofile=coverage ./... > test-report.json
-
-    - name: Analyze Test and/or Coverage Results
-      uses: runforesight/foresight-test-kit-action@v1
-      if: success() || failure()
-      with:
-        test_format: JSON
-        test_framework: GOLANG
-        test_path: test-report.json
-        coverage_format: GOLANG
-        coverage_path: .\coverage
