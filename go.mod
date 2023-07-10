@@ -13,7 +13,7 @@ require (
 	github.com/sergi/go-diff v1.3.1
 	github.com/zach-klippenstein/goregen v0.0.0-20160303162051-795b5e3961ea
 	golang.org/x/text v0.11.0
-	golang.org/x/tools v0.10.0
+	golang.org/x/tools v0.11.0
 	google.golang.org/grpc v1.56.1
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -32,7 +32,7 @@ require (
 	github.com/perimeterx/marshmallow v1.1.4 // indirect
 	github.com/smartystreets/goconvey v1.7.2 // indirect
 	golang.org/x/mod v0.12.0 // indirect
-	golang.org/x/net v0.11.0 // indirect
+	golang.org/x/net v0.12.0 // indirect
 	golang.org/x/sys v0.10.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230629202037-9506855d4529 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
