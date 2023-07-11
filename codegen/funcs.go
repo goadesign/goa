@@ -403,6 +403,7 @@ var (
 		"RAM":   true,
 		"RHS":   true,
 		"RPC":   true,
+		"SDK":   true,
 		"SLA":   true,
 		"SMTP":  true,
 		"SQL":   true,
