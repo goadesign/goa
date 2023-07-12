@@ -279,7 +279,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				// (the field is not a pointer in this case)
 				code += "{\n\t"
 				if typeName, _ := GetMetaType(tgtc); typeName != "" {
-					if !metaTypeIsMapOrSlice(typeName) {
+					if !typeStringIsNilable(typeName) {
 						code += fmt.Sprintf("var zero %s\n\t", typeName)
 					}
 				} else if _, ok := tgtc.Type.(expr.UserType); ok {
@@ -288,7 +288,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				} else {
 					code += fmt.Sprintf("var zero %s\n\t", GoNativeTypeName(tgtc.Type))
 				}
-				if typeName, _ := GetMetaType(tgtc); typeName != "" && metaTypeIsMapOrSlice(typeName) {
+				if typeName, _ := GetMetaType(tgtc); typeName != "" && typeStringIsNilable(typeName) {
 					code += fmt.Sprintf("if %s == nil ", tgtVar)
 				} else {
 					code += fmt.Sprintf("if %s == zero ", tgtVar)
