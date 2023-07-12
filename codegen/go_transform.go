@@ -307,7 +307,9 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 	return buffer.String(), nil
 }
 
-func metaTypeIsMapOrSlice(typeName string) bool {
+// typeStringIsNilable takes a go type as a string and checks for a '[]' or
+// 'map[' prefix to see if it's a nilable primitive type.
+func typeStringIsNilable(typeName string) bool {
 	return strings.HasPrefix(typeName, "[]") || strings.HasPrefix(typeName, "map[")
 }
 
