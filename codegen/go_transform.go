@@ -288,7 +288,6 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				} else {
 					code += fmt.Sprintf("var zero %s\n\t", GoNativeTypeName(tgtc.Type))
 				}
-
 				if typeName, _ := GetMetaType(tgtc); typeName != "" && metaTypeIsMapOrSlice(typeName) {
 					code += fmt.Sprintf("if %s == nil ", tgtVar)
 				} else {
