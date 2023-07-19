@@ -15,6 +15,14 @@ func TestDecode(t *testing.T) {
 		DSL  func()
 		Code string
 	}{
+		{"decode-path-custom-float32", testdata.PayloadPathCustomFloat32DSL, testdata.PayloadPathCustomFloat32DecodeCode},
+		{"decode-path-custom-float64", testdata.PayloadPathCustomFloat64DSL, testdata.PayloadPathCustomFloat64DecodeCode},
+		{"decode-path-custom-int", testdata.PayloadPathCustomIntDSL, testdata.PayloadPathCustomIntDecodeCode},
+		{"decode-path-custom-int32", testdata.PayloadPathCustomInt32DSL, testdata.PayloadPathCustomInt32DecodeCode},
+		{"decode-path-custom-int64", testdata.PayloadPathCustomInt64DSL, testdata.PayloadPathCustomInt64DecodeCode},
+		{"decode-path-custom-uint", testdata.PayloadPathCustomUIntDSL, testdata.PayloadPathCustomUIntDecodeCode},
+		{"decode-path-custom-uint32", testdata.PayloadPathCustomUInt32DSL, testdata.PayloadPathCustomUInt32DecodeCode},
+		{"decode-path-custom-uint64", testdata.PayloadPathCustomUInt64DSL, testdata.PayloadPathCustomUInt64DecodeCode},
 		{"decode-query-bool", testdata.PayloadQueryBoolDSL, testdata.PayloadQueryBoolDecodeCode},
 		{"decode-query-bool-validate", testdata.PayloadQueryBoolValidateDSL, testdata.PayloadQueryBoolValidateDecodeCode},
 		{"decode-query-int", testdata.PayloadQueryIntDSL, testdata.PayloadQueryIntDecodeCode},
