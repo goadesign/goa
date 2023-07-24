@@ -2,7 +2,7 @@
 
 ## Overview
 
-[![GoDev](https://img.shields.io/badge/go-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/goa.design/goa/v3@v3.12.1/dsl?tab=doc)
+[![GoDev](https://img.shields.io/badge/go-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/goa.design/goa/v3@v3.12.2/dsl?tab=doc)
 [![Go Report Card](https://goreportcard.com/badge/goadesign/goa)](https://goreportcard.com/report/goadesign/goa)
 [![Slack](https://img.shields.io/badge/Goa-gray.svg?longCache=true&logo=slack&colorB=red)](https://gophers.slack.com/messages/goa)
 [![Signup](https://img.shields.io/badge/Signup-gray.svg?longCache=true&logo=slack&colorB=red)](https://invite.slack.golangbridge.org/)
@@ -67,7 +67,7 @@ invoking the client code.
 go install goa.design/goa/v3/cmd/goa@v3
 ```
 
-Current Release: `v3.12.1`
+Current Release: `v3.12.2`
 
 ## Teaser
 
@@ -333,7 +333,7 @@ In particular the page
 explains how to leverage the generated code to implement an HTTP or gRPC
 service.
 
-The [![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.12.1/dsl?tab=doc)
+The [![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.12.2/dsl?tab=doc)
 contains a fully documented reference of all the DSL functions.
 
 ### Instrumentation and System Example
