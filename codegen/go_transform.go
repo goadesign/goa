@@ -279,14 +279,21 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				// (the field is not a pointer in this case)
 				code += "{\n\t"
 				if typeName, _ := GetMetaType(tgtc); typeName != "" {
-					code += fmt.Sprintf("var zero %s\n\t", typeName)
+					if !typeStringIsNilable(typeName) {
+						code += fmt.Sprintf("var zero %s\n\t", typeName)
+					}
 				} else if _, ok := tgtc.Type.(expr.UserType); ok {
 					// aliased primitive
 					code += fmt.Sprintf("var zero %s\n\t", ta.TargetCtx.Scope.Ref(tgtc, ta.TargetCtx.Pkg(tgtc)))
 				} else {
 					code += fmt.Sprintf("var zero %s\n\t", GoNativeTypeName(tgtc.Type))
 				}
-				code += fmt.Sprintf("if %s == zero {\n\t%s = %#v\n}\n", tgtVar, tgtVar, tdef)
+				if typeName, _ := GetMetaType(tgtc); typeName != "" && typeStringIsNilable(typeName) {
+					code += fmt.Sprintf("if %s == nil ", tgtVar)
+				} else {
+					code += fmt.Sprintf("if %s == zero ", tgtVar)
+				}
+				code += fmt.Sprintf("{\n\t%s = %#v\n}\n", tgtVar, tdef)
 				code += "}\n"
 			}
 		}
@@ -297,6 +304,12 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 	}
 
 	return buffer.String(), nil
+}
+
+// typeStringIsNilable takes a go type as a string and checks for a '[]' or
+// 'map[' prefix to see if it's a nilable primitive type.
+func typeStringIsNilable(typeName string) bool {
+	return strings.HasPrefix(typeName, "[]") || strings.HasPrefix(typeName, "map[")
 }
 
 // transformArray generates Go code to transform source array to target array.
