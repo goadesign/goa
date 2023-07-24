@@ -3380,3 +3380,123 @@ var QueryArrayNestedAliasValidateDSL = func() {
 		})
 	})
 }
+
+var PayloadPathCustomFloat32DSL = func() {
+	Service("ServicePathCustomFloat32", func() {
+		Method("MethodPathCustomFloat32", func() {
+			Payload(func() {
+				Attribute("p", Float32, func() {
+					Meta("struct:field:type", "hide.Float32", "github.com/c2h5oh/hide")
+				})
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadPathCustomFloat64DSL = func() {
+	Service("ServicePathCustomFloat64", func() {
+		Method("MethodPathCustomFloat64", func() {
+			Payload(func() {
+				Attribute("p", Float64, func() {
+					Meta("struct:field:type", "hide.Float64", "github.com/c2h5oh/hide")
+				})
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadPathCustomIntDSL = func() {
+	Service("ServicePathCustomInt", func() {
+		Method("MethodPathCustomInt", func() {
+			Payload(func() {
+				Attribute("p", Int, func() {
+					Meta("struct:field:type", "hide.Int", "github.com/c2h5oh/hide")
+				})
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadPathCustomInt32DSL = func() {
+	Service("ServicePathCustomInt32", func() {
+		Method("MethodPathCustomInt32", func() {
+			Payload(func() {
+				Attribute("p", Int32, func() {
+					Meta("struct:field:type", "hide.Int32", "github.com/c2h5oh/hide")
+				})
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadPathCustomInt64DSL = func() {
+	Service("ServicePathCustomInt64", func() {
+		Method("MethodPathCustomInt64", func() {
+			Payload(func() {
+				Attribute("p", Int64, func() {
+					Meta("struct:field:type", "hide.Int64", "github.com/c2h5oh/hide")
+				})
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadPathCustomUIntDSL = func() {
+	Service("ServicePathCustomUInt", func() {
+		Method("MethodPathCustomUInt", func() {
+			Payload(func() {
+				Attribute("p", UInt, func() {
+					Meta("struct:field:type", "hide.Uint", "github.com/c2h5oh/hide")
+				})
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadPathCustomUInt32DSL = func() {
+	Service("ServicePathCustomUInt32", func() {
+		Method("MethodPathCustomUInt32", func() {
+			Payload(func() {
+				Attribute("p", UInt32, func() {
+					Meta("struct:field:type", "hide.Uint32", "github.com/c2h5oh/hide")
+				})
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadPathCustomUInt64DSL = func() {
+	Service("ServicePathCustomUInt64", func() {
+		Method("MethodPathCustomUInt64", func() {
+			Payload(func() {
+				Attribute("p", UInt64, func() {
+					Meta("struct:field:type", "hide.Uint64", "github.com/c2h5oh/hide")
+				})
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}

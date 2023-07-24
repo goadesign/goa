@@ -5497,3 +5497,223 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 	}
 }
 `
+
+var PayloadPathCustomFloat32DecodeCode = `// DecodeMethodPathCustomFloat32Request returns a decoder for requests sent to
+// the ServicePathCustomFloat32 MethodPathCustomFloat32 endpoint.
+func DecodeMethodPathCustomFloat32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			p   hide.Float32
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			v, err2 := strconv.ParseFloat(pRaw, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "float"))
+			}
+			p = hide.Float32(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodPathCustomFloat32Payload(p)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadPathCustomFloat64DecodeCode = `// DecodeMethodPathCustomFloat64Request returns a decoder for requests sent to
+// the ServicePathCustomFloat64 MethodPathCustomFloat64 endpoint.
+func DecodeMethodPathCustomFloat64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			p   hide.Float64
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			v, err2 := strconv.ParseFloat(pRaw, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "float"))
+			}
+			p = (hide.Float64)(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodPathCustomFloat64Payload(p)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadPathCustomIntDecodeCode = `// DecodeMethodPathCustomIntRequest returns a decoder for requests sent to the
+// ServicePathCustomInt MethodPathCustomInt endpoint.
+func DecodeMethodPathCustomIntRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			p   hide.Int
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			v, err2 := strconv.ParseInt(pRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "integer"))
+			}
+			p = hide.Int(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodPathCustomIntPayload(p)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadPathCustomInt32DecodeCode = `// DecodeMethodPathCustomInt32Request returns a decoder for requests sent to
+// the ServicePathCustomInt32 MethodPathCustomInt32 endpoint.
+func DecodeMethodPathCustomInt32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			p   hide.Int32
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			v, err2 := strconv.ParseInt(pRaw, 10, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "integer"))
+			}
+			p = hide.Int32(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodPathCustomInt32Payload(p)
+
+		return payload, nil
+	}
+}
+`
+var PayloadPathCustomInt64DecodeCode = `// DecodeMethodPathCustomInt64Request returns a decoder for requests sent to
+// the ServicePathCustomInt64 MethodPathCustomInt64 endpoint.
+func DecodeMethodPathCustomInt64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			p   hide.Int64
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			v, err2 := strconv.ParseInt(pRaw, 10, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "integer"))
+			}
+			p = (hide.Int64)(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodPathCustomInt64Payload(p)
+
+		return payload, nil
+	}
+}
+`
+var PayloadPathCustomUIntDecodeCode = `// DecodeMethodPathCustomUIntRequest returns a decoder for requests sent to the
+// ServicePathCustomUInt MethodPathCustomUInt endpoint.
+func DecodeMethodPathCustomUIntRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			p   hide.Uint
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			v, err2 := strconv.ParseUint(pRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "unsigned integer"))
+			}
+			p = hide.Uint(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodPathCustomUIntPayload(p)
+
+		return payload, nil
+	}
+}
+`
+var PayloadPathCustomUInt32DecodeCode = `// DecodeMethodPathCustomUInt32Request returns a decoder for requests sent to
+// the ServicePathCustomUInt32 MethodPathCustomUInt32 endpoint.
+func DecodeMethodPathCustomUInt32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			p   hide.Uint32
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			v, err2 := strconv.ParseUint(pRaw, 10, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "unsigned integer"))
+			}
+			p = hide.Uint32(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodPathCustomUInt32Payload(p)
+
+		return payload, nil
+	}
+}
+`
+var PayloadPathCustomUInt64DecodeCode = `// DecodeMethodPathCustomUInt64Request returns a decoder for requests sent to
+// the ServicePathCustomUInt64 MethodPathCustomUInt64 endpoint.
+func DecodeMethodPathCustomUInt64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			p   hide.Uint64
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			v, err2 := strconv.ParseUint(pRaw, 10, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "unsigned integer"))
+			}
+			p = (hide.Uint64)(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodPathCustomUInt64Payload(p)
+
+		return payload, nil
+	}
+}
+`
