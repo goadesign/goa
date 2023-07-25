@@ -45,7 +45,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
-			{Path: "bytes"},
+			{Path: "bufio"},
 			{Path: "context"},
 			{Path: "fmt"},
 			{Path: "io"},
@@ -513,8 +513,8 @@ func {{ .HandlerInit }}(
 		o := res.(*{{ .ServicePkgName }}.{{ .Method.ResponseStruct }})
 		defer o.Body.Close()
 		// handle immediate read error like a returned error
-		buf := &bytes.Buffer{}
-		if _, err = buf.ReadFrom(io.LimitReader(o.Body, 8*1024)); err != nil{
+		buf := bufio.NewReader(o.Body)
+		if _, err := buf.Peek(1); err != nil && err != io.EOF {
 			if err := encodeError(ctx, w, err); err != nil {
 				errhandler(ctx, w, err)
 			}
@@ -530,7 +530,7 @@ func {{ .HandlerInit }}(
 		}
 	{{- end }}
 	{{- if .Method.SkipResponseBodyEncodeDecode }}
-		if _, err := io.Copy(w, io.MultiReader(buf, o.Body)); err != nil {
+		if _, err := io.Copy(w, buf); err != nil {
 			panic(http.ErrAbortHandler) // too late to write an error
 		}
 	{{- end }}

@@ -268,3 +268,17 @@ var ServerSimpleRoutingWithRedirectDSL = func() {
 		})
 	})
 }
+
+var ServerSkipResponseBodyEncodeDecodeDSL = func() {
+	Service("ServiceSkipResponseBodyEncodeDecode", func() {
+		Method("MethodSkipResponseBodyEncodeDecode", func() {
+			Error("internal_error", ErrorResult, "Fault while processing download.")
+			HTTP(func() {
+				GET("/")
+				SkipResponseBodyEncodeDecode()
+				Response(StatusOK)
+				Response("internal_error", StatusInternalServerError)
+			})
+		})
+	})
+}

@@ -24,6 +24,7 @@ func TestHandlerInit(t *testing.T) {
 		{"no payload result", testdata.ServerNoPayloadResultDSL, testdata.ServerNoPayloadResultHandlerConstructorCode},
 		{"payload result", testdata.ServerPayloadResultDSL, testdata.ServerPayloadResultHandlerConstructorCode},
 		{"payload result error", testdata.ServerPayloadResultErrorDSL, testdata.ServerPayloadResultErrorHandlerConstructorCode},
+		{"skip response body encode decode", testdata.ServerSkipResponseBodyEncodeDecodeDSL, testdata.ServerSkipResponseBodyEncodeDecodeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
