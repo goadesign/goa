@@ -531,6 +531,9 @@ func {{ .HandlerInit }}(
 	{{- end }}
 	{{- if .Method.SkipResponseBodyEncodeDecode }}
 		if _, err := io.Copy(w, buf); err != nil {
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush()
+			}
 			panic(http.ErrAbortHandler) // too late to write an error
 		}
 	{{- end }}
