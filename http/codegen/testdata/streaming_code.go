@@ -58,7 +58,7 @@ func NewStreamingResultMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+			if v.Stream.(*StreamingResultMethodServerStream).conn != nil {
 				// Response writer has been hijacked, do not encode the error
 				errhandler(ctx, w, err)
 				return
@@ -195,7 +195,7 @@ func NewStreamingResultNoPayloadMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+			if v.Stream.(*StreamingResultNoPayloadMethodServerStream).conn != nil {
 				// Response writer has been hijacked, do not encode the error
 				errhandler(ctx, w, err)
 				return
@@ -943,7 +943,7 @@ func NewStreamingPayloadMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+			if v.Stream.(*StreamingPayloadMethodServerStream).conn != nil {
 				// Response writer has been hijacked, do not encode the error
 				errhandler(ctx, w, err)
 				return
@@ -1104,7 +1104,7 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+			if v.Stream.(*StreamingPayloadNoPayloadMethodServerStream).conn != nil {
 				// Response writer has been hijacked, do not encode the error
 				errhandler(ctx, w, err)
 				return
@@ -2089,7 +2089,7 @@ func NewBidirectionalStreamingMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+			if v.Stream.(*BidirectionalStreamingMethodServerStream).conn != nil {
 				// Response writer has been hijacked, do not encode the error
 				errhandler(ctx, w, err)
 				return
@@ -2291,7 +2291,7 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+			if v.Stream.(*BidirectionalStreamingNoPayloadMethodServerStream).conn != nil {
 				// Response writer has been hijacked, do not encode the error
 				errhandler(ctx, w, err)
 				return
