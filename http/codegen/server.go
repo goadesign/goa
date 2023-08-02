@@ -496,7 +496,7 @@ func {{ .HandlerInit }}(
 	{{- if not .Redirect }}
 		if err != nil {
 			{{- if isWebSocketEndpoint . }}
-			if _, werr := w.Write(nil); werr == http.ErrHijacked {
+			if v.Stream.(*{{ .ServerWebSocket.VarName }}).conn != nil {
 				// Response writer has been hijacked, do not encode the error
 				errhandler(ctx, w, err)
 				return
