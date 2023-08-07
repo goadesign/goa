@@ -12,7 +12,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/sergi/go-diff v1.3.1
 	github.com/zach-klippenstein/goregen v0.0.0-20160303162051-795b5e3961ea
-	golang.org/x/text v0.11.0
+	golang.org/x/text v0.12.0
 	golang.org/x/tools v0.11.0
 	google.golang.org/grpc v1.57.0
 	google.golang.org/protobuf v1.31.0
