@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"time"
 
+	regen "github.com/AnatolyRugalev/goregen"
 	googleuuid "github.com/google/uuid"
-	regen "github.com/zach-klippenstein/goregen"
 )
 
 const (
