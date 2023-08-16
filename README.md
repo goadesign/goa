@@ -37,7 +37,7 @@ promoting reuse and standardization across services.
         <td>
             <img width="1000" height="0" />
             <a href="https://www.incident.io">
-                <img src="https://incident.io/static/5446bb1376cd3180ade3fefe74859e4b/288ca/logo-social-dark.png" alt="incident.io" width="260" align="right" />
+                <img src="https://incident.io/_next/static/media/logo-social-dark.6a523ace.png" alt="incident.io" width="260" align="right" />
             </a>
             <h3>incident.io: Bounce back stronger after every incident</h3>
             <p>
