@@ -45,6 +45,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", []*codegen.ImportSpec{
+			{Path: "bufio"},
 			{Path: "context"},
 			{Path: "fmt"},
 			{Path: "io"},
@@ -511,6 +512,14 @@ func {{ .HandlerInit }}(
 	{{- if .Method.SkipResponseBodyEncodeDecode }}
 		o := res.(*{{ .ServicePkgName }}.{{ .Method.ResponseStruct }})
 		defer o.Body.Close()
+		// handle immediate read error like a returned error
+		buf := bufio.NewReader(o.Body)
+		if _, err := buf.Peek(1); err != nil && err != io.EOF {
+			if err := encodeError(ctx, w, err); err != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
 	{{- end }}
 	{{- if not (or .Redirect (isWebSocketEndpoint .)) }}
 		if err := encodeResponse(ctx, w, {{ if and .Method.SkipResponseBodyEncodeDecode .Result.Ref }}o.Result{{ else }}res{{ end }}); err != nil {
@@ -521,10 +530,11 @@ func {{ .HandlerInit }}(
 		}
 	{{- end }}
 	{{- if .Method.SkipResponseBodyEncodeDecode }}
-		if _, err := io.Copy(w, o.Body); err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
-				errhandler(ctx, w, err)
+		if _, err := io.Copy(w, buf); err != nil {
+			if f, ok := w.(http.Flusher); ok {
+				f.Flush()
 			}
+			panic(http.ErrAbortHandler) // too late to write an error
 		}
 	{{- end }}
 	})
