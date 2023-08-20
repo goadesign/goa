@@ -30,6 +30,14 @@ func New(root *expr.RootExpr) *OpenAPI {
 		return nil
 	}
 
+	m, ok := root.API.Meta.Last("openapi:example")
+	if !ok {
+		m, ok = root.API.Meta.Last("swagger:example")
+	}
+	if ok && m == "false" {
+		root.API.ExampleGenerator.Randomizer = nil
+	}
+
 	var (
 		bodies, types = buildBodyTypes(root.API)
 

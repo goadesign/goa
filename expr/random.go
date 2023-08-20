@@ -14,6 +14,8 @@ import (
 //
 // The random values should be consistent in that given the same seed the same
 // random values get generated.
+//
+// Setting the randomizer to nil disables example generation.
 type Randomizer interface {
 	// ArrayLength decides how long an example array will be
 	ArrayLength() int
