@@ -1,12 +1,23 @@
-![Goa logo](https://goa.design/img/goa-banner.png "Goa")
+<p align="center">
+  <p align="center">
+    <img alt="Goa" src="https://goa.design/img/goa-banner.png">
+  </p>
+  <h1 align="center"><b>Design First!</b></h1>
+  <p align="center">
+    <a href="https://github.com/goadesign/goa/releases/latest"><img alt="Release" src="https://img.shields.io/github/release/goadesign/goa.svg?style=for-the-badge"></a>
+    <a href="https://pkg.go.dev/goa.design/goa/v3@v3.12.4/dsl?tab=doc"><img alt="Go Doc" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=for-the-badge"></a>
+    <a href="https://github.com/goadesign/goa/actions/workflows/ci.yml"><img alt="GitHub Action: Build" src="https://img.shields.io/github/actions/workflow/status/goadesign/goa/ci.yml?branch=v3&style=for-the-badge"></a>
+    <a href="https://goreportcard.com/report/github.com/goadesign/goa"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/goadesign/goa?style=for-the-badge"></a>
+    <a href="/LICENSE"><img alt="Software License" src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge"></a>
+    </br>
+    <a href="https://gophers.slack.com/messages/goa"><img alt="Slack: Goa" src="https://img.shields.io/badge/Goa-gray.svg?longCache=true&logo=slack&colorB=red&style=for-the-badge"></a>
+    <a href="https://invite.slack.golangbridge.org/"><img alt="Slack: Sign-up" src="https://img.shields.io/badge/Signup-gray.svg?longCache=true&logo=slack&colorB=red&style=for-the-badge"></a>
+    <!-- <a href="https://twitter.com/goadesign?ref_src=twsrc%5Etfw" class="twitter-follow-button" data-show-count="false">Follow @goadesign</a><script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script> -->
+    <a href="https://twitter.com/goadesign"><img alt="Twitter: @goadesign" src="https://img.shields.io/badge/@goadesign-gray.svg?logo=twitter&colorB=blue&style=for-the-badge"></a>
+  </p>
+</p>
 
-## Overview
-
-[![GoDev](https://img.shields.io/badge/go-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/goa.design/goa/v3@v3.12.4/dsl?tab=doc)
-[![Go Report Card](https://goreportcard.com/badge/goadesign/goa)](https://goreportcard.com/report/goadesign/goa)
-[![Slack](https://img.shields.io/badge/Goa-gray.svg?longCache=true&logo=slack&colorB=red)](https://gophers.slack.com/messages/goa)
-[![Signup](https://img.shields.io/badge/Signup-gray.svg?longCache=true&logo=slack&colorB=red)](https://invite.slack.golangbridge.org/)
-[![Twitter](https://img.shields.io/twitter/url/https/twitter.com/goadesign.svg?style=social)](https://twitter.com/goadesign)
+# Overview
 
 Goa takes a different approach to building services by making it possible to
 describe the *design* of the service API using a simple Go DSL. Goa uses the
@@ -30,7 +41,7 @@ repetition and promote standards. The design code itself can easily be shared
 across multiple services by simply importing the corresponding Go package again
 promoting reuse and standardization across services.
 
-## Sponsors
+# Sponsors
 
 <table width="100%">
     <tr>
@@ -50,7 +61,7 @@ promoting reuse and standardization across services.
     </tr>
 </table>
 
-## Code Generation
+# Code Generation
 
 The Goa tool accepts the Go design package import path as input and produces the
 interface as well as the glue that binds the service and client code with the
@@ -61,7 +72,7 @@ generated code takes care of validating the incoming request payload prior to
 invoking the service method on the server, and validating the response prior to
 invoking the client code.
 
-## Installation
+# Installation
 
 ```bash
 go install goa.design/goa/v3/cmd/goa@v3
@@ -69,9 +80,9 @@ go install goa.design/goa/v3/cmd/goa@v3
 
 Current Release: `v3.12.4`
 
-## Teaser
+# Getting Started
 
-### 1. Design
+## 1. Design
 
 Create a new Goa project:
 
@@ -132,7 +143,7 @@ This file contains the design for a `calc` service which accepts HTTP GET
 requests to `/multiply/{a}/{b}` where `{a}` and `{b}` are placeholders for integer
 values. The API returns the product of `a` multiplied by `b` in the HTTP response body.
 
-### 2. Implement
+## 2. Implement
 
 Now that the design is done, let's run `goa` on the design package.
 In the `calcsvc` directory run:
@@ -215,7 +226,7 @@ func (s *calcsrvc) Multiply(ctx context.Context, p *calc.MultiplyPayload) (res i
 That's it! we have now a full-fledged HTTP service with a corresponding OpenAPI
 specification and a client tool.
 
-### 3. Run
+## 3. Run
 
 Now let's compile and run the service:
 
@@ -265,7 +276,7 @@ The generated code validates the command line arguments against the types
 defined in the design. The server also validates the types when decoding
 incoming requests so that your code only has to deal with the business logic.
 
-### 4. Document
+## 4. Document
 
 The `http` directory contains OpenAPI 2.0 and 3.0 specifications in both YAML
 and JSON format.
@@ -321,9 +332,9 @@ curl localhost:8088/openapi.json
 {"openapi":"3.0.3","info":{"title":"Calculator Service","description":...
 ```
 
-## Resources
+# Resources
 
-### Docs
+## Docs
 
 The [goa.design](https://goa.design) website provides a high level overview of
 Goa and the DSL.
@@ -333,10 +344,10 @@ In particular the page
 explains how to leverage the generated code to implement an HTTP or gRPC
 service.
 
-The [![DSL GoDoc](https://img.shields.io/badge/godoc-DSL-blue)](https://pkg.go.dev/goa.design/goa/v3@v3.12.4/dsl?tab=doc)
+The [DSL Go Doc](https://pkg.go.dev/goa.design/goa/v3@v3.12.4/dsl?tab=doc)
 contains a fully documented reference of all the DSL functions.
 
-### Instrumentation and System Example
+## Instrumentation and System Example
 
 The [clue](https://github.com/goadesign/clue) project provides observability
 packages that work in tandem with Goa. The packages cover
@@ -349,7 +360,7 @@ and service client
 [example](https://github.com/goadesign/clue/tree/main/example/weather)
 consisting of three instrumented Goa microservices that communicate with each other.
 
-### Getting Started Guides
+## Getting Started Guides
 
 A couple of Getting Started guides produced by the community.
 
@@ -364,12 +375,12 @@ Gleidson Nascimento goes through how to create a complete service that using bot
 
 [![API Development in Go Using Goa](https://bs-uploads.toptal.io/blackfish-uploads/uploaded_file/file/275966/image-1592349920607-734c25f64461bf3c482bac1d73c26432.png)](https://www.toptal.com/go/goa-api-development)
 
-### Examples
+## Examples
 
 The [examples](https://github.com/goadesign/examples) directory
 contains simple examples illustrating basic concepts.
 
-### Troubleshooting
+## Troubleshooting
 
 Q: I'm seeing an error that says:
 
@@ -386,6 +397,6 @@ To fix, ensure that `goa.design/goa/v3/codegen/generator` is being imported some
 in any file or you can use a dedicated `tools.go` file (see [Manage Go tools via Go modules](https://marcofranssen.nl/manage-go-tools-via-go-modules) and [golang/go/issues/25922](https://github.com/golang/go/issues/25922) for more details.) Finally, run `go mod vendor` to ensure
 the imported packages are properly vendored.
 
-## Contributing
+# Contributing
 
 See [CONTRIBUTING](https://github.com/goadesign/goa/blob/v3/CONTRIBUTING.md).
