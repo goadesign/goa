@@ -6,7 +6,7 @@ import (
 
 type Expr int
 
-func (e Expr) EvalName() string { return "test expression" }
+func (Expr) EvalName() string { return "test expression" }
 
 func TestToExpressionSet(t *testing.T) {
 	cases := []struct {

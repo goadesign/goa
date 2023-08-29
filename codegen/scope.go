@@ -175,7 +175,7 @@ func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg
 
 // GoVar returns the Go code that returns the address of a variable of the Go type
 // which matches the given attribute type.
-func (s *NameScope) GoVar(varName string, dt expr.DataType) string {
+func (*NameScope) GoVar(varName string, dt expr.DataType) string {
 	// For a raw struct, no need to indirecting
 	if isRawStruct(dt) {
 		return varName

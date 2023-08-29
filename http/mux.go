@@ -87,7 +87,7 @@ func (m *mux) Handle(method, pattern string, handler http.HandlerFunc) {
 }
 
 // Vars extracts the path variables from the request context.
-func (m *mux) Vars(r *http.Request) map[string]string {
+func (*mux) Vars(r *http.Request) map[string]string {
 	return httptreemux.ContextParams(r.Context())
 }
 

@@ -130,10 +130,10 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 }
 
 // DependsOn returns nil, the core DSL has no dependency.
-func (r *RootExpr) DependsOn() []eval.Root { return nil }
+func (*RootExpr) DependsOn() []eval.Root { return nil }
 
 // Packages returns the Go import path to this and the dsl packages.
-func (r *RootExpr) Packages() []string {
+func (*RootExpr) Packages() []string {
 	return []string{
 		"goa.design/goa/v3/expr",
 		"goa.design/goa/v3/dsl",
@@ -213,7 +213,7 @@ func (r *RootExpr) HTTPServiceFor(s *ServiceExpr) *HTTPServiceExpr {
 }
 
 // EvalName is the name of the DSL.
-func (r *RootExpr) EvalName() string {
+func (*RootExpr) EvalName() string {
 	return "design"
 }
 

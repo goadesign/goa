@@ -426,7 +426,7 @@ func (sd *ServiceData) HasStreamingEndpoint() bool {
 }
 
 // analyze creates the data necessary to render the code of the given service.
-func (d ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
+func (ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 	var (
 		sd             *ServiceData
 		seen, imported map[string]struct{}
