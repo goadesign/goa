@@ -70,7 +70,7 @@ ifneq ($(GOOS),windows)
 endif
 
 test:
-	go test ./...
+	go test ./... --coverprofile=cover.out
 
 release: release-goa release-examples release-plugins
 

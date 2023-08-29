@@ -13,3 +13,7 @@ cmd/goa/goa
 *~
 *.orig
 *.swp
+
+# DeepSource cruft
+cover.out
+bin/
