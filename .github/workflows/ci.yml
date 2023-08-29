@@ -32,7 +32,7 @@ jobs:
     - name: Report test-coverage to DeepSource
       run: |
         curl https://deepsource.io/cli | sh
-        ./bin/deepsource report --analyzer test-coverage --key go --value-file cover.out
+        ./bin/deepsource report --analyzer test-coverage --key go --value-file ./cover.out
       env:
         DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
 
