@@ -34,7 +34,7 @@ jobs:
         curl https://deepsource.io/cli | sh
         ./bin/deepsource report --analyzer test-coverage --key go --value-file cover.out
       env:
-        DEEPSOURCE_TOKEN: ${{ secrets.DEEPSOURCE_TOKEN }}
+        DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}
 
   Windows:
     name: Windows
