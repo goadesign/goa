@@ -390,7 +390,7 @@ func itemsFromExpr(at *expr.AttributeExpr) *Items {
 	return items
 }
 
-func responseSpecFromExpr(s *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, typeNamePrefix string) *Response {
+func responseSpecFromExpr(_ *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, typeNamePrefix string) *Response {
 	var schema *openapi.Schema
 	if mt, ok := r.Body.Type.(*expr.ResultTypeExpr); ok {
 		view := expr.DefaultView

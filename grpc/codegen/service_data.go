@@ -1000,7 +1000,7 @@ func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *code
 // svcCtx is the attribute context for service type
 // proto if true indicates the target type is a protocol buffer type
 // svr if true indicates the code is generated for conversion server side
-func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar string, svcCtx *codegen.AttributeContext, proto, svr, usesrc bool, sd *ServiceData) *InitData {
+func buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar string, svcCtx *codegen.AttributeContext, proto, _, usesrc bool, sd *ServiceData) *InitData {
 	var (
 		name     string
 		isStruct bool

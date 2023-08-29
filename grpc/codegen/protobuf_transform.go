@@ -638,7 +638,7 @@ func convertType(src, tgt *expr.AttributeExpr, srcPtr bool, tgtPtr bool, srcVar 
 // representation to another.
 // NOTE: For Int and UInt kinds, protocol buffer Go compiler generates
 // int32 and uint32 respectively whereas Goa generates int and uint.
-func convertPrimitiveToProto(src, tgt *expr.AttributeExpr, srcPtr, tgtPtr bool, srcVar string, ta *transformAttrs) string {
+func convertPrimitiveToProto(_, tgt *expr.AttributeExpr, srcPtr, _ bool, srcVar string, _ *transformAttrs) string {
 	tgtType := protoBufNativeGoTypeName(tgt.Type)
 	if srcPtr {
 		srcVar = "*" + srcVar
@@ -646,7 +646,7 @@ func convertPrimitiveToProto(src, tgt *expr.AttributeExpr, srcPtr, tgtPtr bool, 
 	return fmt.Sprintf("%s(%s)", tgtType, srcVar)
 }
 
-func convertPrimitiveFromProto(src, tgt *expr.AttributeExpr, srcPtr, tgtPtr bool, srcVar string, ta *transformAttrs) string {
+func convertPrimitiveFromProto(_, tgt *expr.AttributeExpr, srcPtr, _ bool, srcVar string, ta *transformAttrs) string {
 	tgtType, _ := codegen.GetMetaType(tgt)
 	if tgtType == "" {
 		tgtType = ta.TargetCtx.Scope.Ref(tgt, ta.TargetCtx.Pkg(tgt))

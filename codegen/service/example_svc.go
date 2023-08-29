@@ -58,7 +58,7 @@ func ExampleServiceFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 }
 
 // exampleServiceFile returns a basic implementation of the given service.
-func exampleServiceFile(genpkg string, root *expr.RootExpr, svc *expr.ServiceExpr, apipkg string) *codegen.File {
+func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, apipkg string) *codegen.File {
 	data := Services.Get(svc.Name)
 	svcName := data.PathName
 	fpath := svcName + ".go"

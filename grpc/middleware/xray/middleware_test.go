@@ -493,7 +493,7 @@ func (cs *mockClientStream) Header() (metadata.MD, error) {
 	return nil, cs.err
 }
 
-func (cs *mockClientStream) SendMsg(m any) error {
+func (cs *mockClientStream) SendMsg(_ any) error {
 	return cs.err
 }
 
@@ -501,7 +501,7 @@ func (cs *mockClientStream) CloseSend() error {
 	return cs.err
 }
 
-func (cs *mockClientStream) RecvMsg(m any) error {
+func (cs *mockClientStream) RecvMsg(_ any) error {
 	return cs.err
 }
 
