@@ -31,7 +31,6 @@ jobs:
 
     - name: Report test-coverage to DeepSource
       run: |
-        go test ./... --coverprofile=cover.out
         curl https://deepsource.io/cli | sh
         ./bin/deepsource report --analyzer test-coverage --key go --value-file ./cover.out
       env:
