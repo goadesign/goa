@@ -98,7 +98,7 @@ func NewGenerator(cmd string, path, output string) *Generator {
 }
 
 // Write writes the main file.
-func (g *Generator) Write(debug bool) error {
+func (g *Generator) Write(_ bool) error {
 	var tmpDir string
 	{
 		wd := "."

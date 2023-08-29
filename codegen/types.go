@@ -42,7 +42,7 @@ func GoNativeTypeName(t expr.DataType) string {
 }
 
 // AttributeTags computes the struct field tags from its metadata if any.
-func AttributeTags(parent, att *expr.AttributeExpr) string {
+func AttributeTags(_, att *expr.AttributeExpr) string {
 	var elems []string
 	keys := make([]string, len(att.Meta))
 	i := 0

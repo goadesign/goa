@@ -11,8 +11,8 @@ import (
 // ServerTypeFiles returns the types file for every gRPC service that contain
 // constructors to transform:
 //
-//   * protocol buffer request message types into service payload types
-//   * service result types into protocol buffer response message types
+//   - protocol buffer request message types into service payload types
+//   - service result types into protocol buffer response message types
 func ServerTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	fw := make([]*codegen.File, len(root.API.GRPC.Services))
 	seen := make(map[string]struct{})
@@ -28,7 +28,7 @@ func ServerTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 //
 // seen keeps track of the constructor names that have already been generated
 // to prevent duplicate code generation.
-func serverType(genpkg string, svc *expr.GRPCServiceExpr, seen map[string]struct{}) *codegen.File {
+func serverType(genpkg string, svc *expr.GRPCServiceExpr, _ map[string]struct{}) *codegen.File {
 	var (
 		initData []*InitData
 
