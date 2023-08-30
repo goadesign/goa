@@ -26,6 +26,10 @@ func (a *AttributeExpr) Example(r *ExampleGenerator) any {
 		return ex[len(ex)-1].Value
 	}
 
+	if r.Randomizer == nil {
+		return nil
+	}
+
 	value, ok := a.Meta.Last("openapi:example")
 	if !ok {
 		value, ok = a.Meta.Last("swagger:example")
