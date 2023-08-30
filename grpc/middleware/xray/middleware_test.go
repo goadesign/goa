@@ -628,7 +628,7 @@ func TestStreamClient(t *testing.T) {
 	}
 }
 
-func (m *mockAddr) Network() string {
+func (*mockAddr) Network() string {
 	return ""
 }
 

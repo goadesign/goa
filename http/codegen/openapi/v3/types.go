@@ -362,7 +362,7 @@ func toString(val any) string {
 // structurally equivalent element types, maps with structurally equivalent key
 // and value types or object with identical attribute names and structurally
 // equivalent types and identical set of required attributes.
-func (sf *schemafier) hashAttribute(att *expr.AttributeExpr, h hash.Hash64) uint64 {
+func (*schemafier) hashAttribute(att *expr.AttributeExpr, h hash.Hash64) uint64 {
 	return *hashAttribute(att, h, make(map[string]*uint64))
 }
 

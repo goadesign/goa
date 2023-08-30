@@ -126,7 +126,7 @@ func CanonicalIdentifier(identifier string) string {
 }
 
 // Kind implements DataKind.
-func (m *ResultTypeExpr) Kind() Kind { return ResultTypeKind }
+func (*ResultTypeExpr) Kind() Kind { return ResultTypeKind }
 
 // Dup creates a deep copy of the result type given a deep copy of its attribute.
 func (m *ResultTypeExpr) Dup(att *AttributeExpr) UserType {

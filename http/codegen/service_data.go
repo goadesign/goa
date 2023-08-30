@@ -580,7 +580,7 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
-func (d ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
+func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 	svc := service.Services.Get(hs.ServiceExpr.Name)
 	scope := codegen.NewNameScope()
 	scope.Unique("c") // 'c' is reserved as the client's receiver name.

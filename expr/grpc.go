@@ -34,6 +34,6 @@ func (g *GRPCExpr) ServiceFor(s *ServiceExpr) *GRPCServiceExpr {
 }
 
 // EvalName returns the name printed in case of evaluation error.
-func (g *GRPCExpr) EvalName() string {
+func (*GRPCExpr) EvalName() string {
 	return "API GRPC"
 }

@@ -71,7 +71,7 @@ func (h *HTTPExpr) ServiceFor(s *ServiceExpr) *HTTPServiceExpr {
 }
 
 // EvalName returns the name printed in case of evaluation error.
-func (h *HTTPExpr) EvalName() string {
+func (*HTTPExpr) EvalName() string {
 	return "API HTTP"
 }
 

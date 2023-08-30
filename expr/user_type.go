@@ -26,7 +26,7 @@ func (u *UserTypeExpr) ID() string {
 }
 
 // Kind implements DataKind.
-func (u *UserTypeExpr) Kind() Kind { return UserTypeKind }
+func (*UserTypeExpr) Kind() Kind { return UserTypeKind }
 
 // Name returns the type name.
 func (u *UserTypeExpr) Name() string {

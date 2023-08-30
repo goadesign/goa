@@ -149,7 +149,7 @@ const (
 )
 
 // EvalName returns the name used by the DSL evaluation.
-func (a *AttributeExpr) EvalName() string {
+func (*AttributeExpr) EvalName() string {
 	return "attribute"
 }
 
@@ -925,7 +925,7 @@ func (v *ValidationExpr) Debug(title, prefix, indent string) {
 }
 
 // IsSupportedValidationFormat checks if the validation format is supported by goa.
-func (a *AttributeExpr) IsSupportedValidationFormat(vf ValidationFormat) bool {
+func (*AttributeExpr) IsSupportedValidationFormat(vf ValidationFormat) bool {
 	switch vf {
 	case FormatDate:
 		return true

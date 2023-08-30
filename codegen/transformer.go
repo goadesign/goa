@@ -251,7 +251,7 @@ func (a *AttributeScope) Ref(att *expr.AttributeExpr, pkg string) string {
 }
 
 // Field returns a valid Go struct field name.
-func (a *AttributeScope) Field(att *expr.AttributeExpr, name string, firstUpper bool) string {
+func (*AttributeScope) Field(att *expr.AttributeExpr, name string, firstUpper bool) string {
 	return GoifyAtt(att, name, firstUpper)
 }
 

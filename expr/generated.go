@@ -9,7 +9,7 @@ type (
 )
 
 // EvalName is the name of the expression used by eval.
-func (r *GeneratedRoot) EvalName() string {
+func (*GeneratedRoot) EvalName() string {
 	return "generated result types"
 }
 
@@ -28,12 +28,12 @@ func (r *GeneratedRoot) WalkSets(w eval.SetWalker) {
 }
 
 // DependsOn ensures that Root executes first.
-func (r *GeneratedRoot) DependsOn() []eval.Root {
+func (*GeneratedRoot) DependsOn() []eval.Root {
 	return []eval.Root{Root}
 }
 
 // Packages returns the Go import path to this and the dsl packages.
-func (r *GeneratedRoot) Packages() []string {
+func (*GeneratedRoot) Packages() []string {
 	return []string{
 		"goa.design/goa/v3/expr",
 		"goa.design/goa/v3/dsl",
