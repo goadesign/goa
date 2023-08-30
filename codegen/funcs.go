@@ -183,7 +183,7 @@ func CamelCase(name string, firstUpper bool, acronym bool) string {
 func SnakeCase(name string) string {
 	// Special handling for single "words" starting with multiple upper case letters
 	for u, l := range toLower {
-		name = strings.Replace(name, u, l, -1)
+		name = strings.ReplaceAll(name, u, l)
 	}
 
 	// Remove leading and trailing blank spaces and replace any blank spaces in
@@ -191,7 +191,7 @@ func SnakeCase(name string) string {
 	name = strings.Join(strings.Fields(name), "_")
 
 	// Special handling for dashes to convert them into underscores
-	name = strings.Replace(name, "-", "_", -1)
+	name = strings.ReplaceAll(name, "-", "_")
 
 	var b bytes.Buffer
 	ln := len(name)
@@ -229,7 +229,7 @@ func KebabCase(name string) string {
 	if name[ln-1] == '_' {
 		name = name[:ln-1]
 	}
-	return strings.Replace(name, "_", "-", -1)
+	return strings.ReplaceAll(name, "_", "-")
 }
 
 // WrapText produces lines with text capped at maxChars

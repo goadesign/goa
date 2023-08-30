@@ -105,7 +105,7 @@ func Diff(t *testing.T, s1, s2 string) string {
 	defer os.Remove(right)
 	cmd := exec.Command("diff", left, right)
 	diffb, _ := cmd.CombinedOutput()
-	return strings.Replace(string(diffb), "\t", " ␉ ", -1)
+	return strings.ReplaceAll(string(diffb), "\t", " ␉ ")
 }
 
 // CreateTempFile creates a temporary file and writes the given content.

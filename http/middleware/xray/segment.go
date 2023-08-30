@@ -147,7 +147,7 @@ func getIP(req *http.Request) string {
 			if len(ip) == 0 {
 				continue
 			}
-			realIP := net.ParseIP(strings.Replace(ip, " ", "", -1))
+			realIP := net.ParseIP(strings.ReplaceAll(ip, " ", ""))
 			return realIP.String()
 		}
 	}
