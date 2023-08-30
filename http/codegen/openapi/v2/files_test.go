@@ -82,7 +82,7 @@ func TestSections(t *testing.T) {
 					}
 
 					want, err := os.ReadFile(golden)
-					want = bytes.Replace(want, []byte{'\r', '\n'}, []byte{'\n'}, -1)
+					want = bytes.ReplaceAll(want, []byte{'\r', '\n'}, []byte{'\n'})
 					if err != nil {
 						t.Fatalf("failed to read golden file: %s", err)
 					}
@@ -172,7 +172,7 @@ func TestValidations(t *testing.T) {
 					}
 
 					want, err := os.ReadFile(golden)
-					want = bytes.Replace(want, []byte{'\r', '\n'}, []byte{'\n'}, -1)
+					want = bytes.ReplaceAll(want, []byte{'\r', '\n'}, []byte{'\n'})
 					if err != nil {
 						t.Fatalf("failed to read golden file: %s", err)
 					}
@@ -239,7 +239,7 @@ func TestExtensions(t *testing.T) {
 					}
 
 					want, err := os.ReadFile(golden)
-					want = bytes.Replace(want, []byte{'\r', '\n'}, []byte{'\n'}, -1)
+					want = bytes.ReplaceAll(want, []byte{'\r', '\n'}, []byte{'\n'})
 					if err != nil {
 						t.Fatalf("failed to read golden file: %s", err)
 					}

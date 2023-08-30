@@ -226,7 +226,7 @@ func TestDecode(t *testing.T) {
 			code := codegen.SectionCode(t, sections[2])
 			if golden != nil {
 				name := codegen.Goify(c.Name, true)
-				name = strings.Replace(name, "Uint", "UInt", -1)
+				name = strings.ReplaceAll(name, "Uint", "UInt")
 				code = "\nvar Payload" + name + "DecodeCode = `" + code + "`"
 				golden.WriteString(code + "\n")
 			} else if code != c.Code {

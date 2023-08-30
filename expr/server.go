@@ -247,7 +247,7 @@ func (h *HostExpr) URIString(u URIExpr) (string, error) {
 				if def == nil {
 					def = v.Attribute.Validation.Values[0]
 				}
-				uri = strings.Replace(uri, fmt.Sprintf("{%s}", p), fmt.Sprintf("%v", def), -1)
+				uri = strings.ReplaceAll(uri, fmt.Sprintf("{%s}", p), fmt.Sprintf("%v", def))
 			}
 		}
 	}
