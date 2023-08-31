@@ -37,10 +37,8 @@ func TestFormat(t *testing.T) {
 		}
 		if expr.Validation == nil {
 			t.Errorf("%s: Format not initialized Validation in %+v", k, expr)
-		} else {
-			if expr.Validation.Format != tc.Format {
-				t.Errorf("%s: Format not set on %+v, expected %s, got %+v", k, expr, tc.Format, expr.Validation.Format)
-			}
+		} else if expr.Validation.Format != tc.Format {
+			t.Errorf("%s: Format not set on %+v, expected %s, got %+v", k, expr, tc.Format, expr.Validation.Format)
 		}
 	}
 }

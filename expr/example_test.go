@@ -79,10 +79,8 @@ func TestExample(t *testing.T) {
 			} else {
 				if err := expr.RunInvalidDSL(t, k.DSL); err == nil {
 					t.Error("the expected error was not returned")
-				} else {
-					if !strings.Contains(err.Error(), k.Error) {
-						t.Errorf("invalid error: got %q, expected %q", err.Error(), k.Error)
-					}
+				} else if !strings.Contains(err.Error(), k.Error) {
+					t.Errorf("invalid error: got %q, expected %q", err.Error(), k.Error)
 				}
 			}
 		})

@@ -196,10 +196,8 @@ service "Service" HTTP endpoint "MethodC": HTTP endpoint request body must be em
 				}
 				if len(errors) > 1 || len(errors) == 0 {
 					t.Errorf("got %d errors, expected 1", len(errors))
-				} else {
-					if errors[0].Error() != c.Error {
-						t.Errorf("got `%s`, expected `%s`", err.Error(), c.Error)
-					}
+				} else if errors[0].Error() != c.Error {
+					t.Errorf("got `%s`, expected `%s`", err.Error(), c.Error)
 				}
 			}
 		})
