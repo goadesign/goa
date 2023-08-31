@@ -33,7 +33,8 @@ func paramsFromPath(params *expr.MappedAttributeExpr, path string, rand *expr.Ex
 // paramsFromHeadersAndCookies computes the OpenAPI spec parameters for the
 // given endpoint HTTP headers and cookies.
 func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.ExampleGenerator) []*Parameter {
-	params := []*Parameter{}
+	var params []*Parameter
+
 	expr.WalkMappedAttr(endpoint.Headers, func(name, elem string, att *expr.AttributeExpr) error {
 		if strings.ToLower(elem) == "authorization" {
 			// Headers named "Authorization" are ignored by OpenAPI v3.

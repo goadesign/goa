@@ -131,7 +131,8 @@ func mustGenerate(meta expr.MetaExpr) bool {
 // addScopeDescription generates and adds required scopes to the scheme's description.
 func addScopeDescription(scopes []*expr.ScopeExpr, sd *SecurityDefinition) {
 	// Generate scopes to add to description
-	lines := []string{}
+	var lines []string
+
 	for _, scope := range scopes {
 		lines = append(lines, fmt.Sprintf("  * `%s`: %s", scope.Name, scope.Description))
 	}
@@ -291,7 +292,8 @@ func paramsFromExpr(params *expr.MappedAttributeExpr, path string) []*Parameter 
 }
 
 func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr) []*Parameter {
-	params := []*Parameter{}
+	var params []*Parameter
+
 	var (
 		rma = endpoint.Service.Params
 		ma  = endpoint.Headers
@@ -521,7 +523,8 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		key = expr.HTTPWildcardRegex.ReplaceAllString(key, "/{$1}")
 		params := paramsFromExpr(endpoint.Params, key)
 		params = append(params, paramsFromHeaders(endpoint)...)
-		produces := []string{}
+		var produces []string
+
 		responses := make(map[string]*Response, len(endpoint.Responses))
 		for _, r := range endpoint.Responses {
 			if endpoint.MethodExpr.IsStreaming() {

@@ -268,7 +268,8 @@ func cleanupDirs(cmd, output string) []string {
 		if err != nil {
 			return []string{gendirPath}
 		}
-		dirs := []string{}
+		var dirs []string
+
 		for _, fi := range finfos {
 			if fi.IsDir() {
 				dirs = append(dirs, filepath.Join(gendirPath, fi.Name()))
