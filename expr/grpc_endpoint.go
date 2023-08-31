@@ -215,10 +215,8 @@ func (e *GRPCEndpointExpr) Validate() error {
 				verr.Merge(validateRPCTags(msgFields, e))
 			}
 		}
-	} else {
-		if hasMessage && hasMetadata {
-			verr.Add(e, "Both request message and metadata are defined, but payload is not an object. Define either metadata or message or make payload an object type.")
-		}
+	} else if hasMessage && hasMetadata {
+		verr.Add(e, "Both request message and metadata are defined, but payload is not an object. Define either metadata or message or make payload an object type.")
 	}
 
 	// Validate response

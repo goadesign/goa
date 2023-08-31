@@ -138,10 +138,8 @@ func TestDesignType(t *testing.T) {
 				if err == nil {
 					// but got none
 					t.Errorf("got no error, expected %q", c.ExpectedErr)
-				} else {
-					if err.Error() != c.ExpectedErr {
-						t.Errorf("got error %q, expected %q", err, c.ExpectedErr)
-					}
+				} else if err.Error() != c.ExpectedErr {
+					t.Errorf("got error %q, expected %q", err, c.ExpectedErr)
 				}
 			}
 		})
@@ -198,10 +196,8 @@ func TestCompatible(t *testing.T) {
 			} else {
 				if c.ExpectedErr == "" {
 					t.Errorf("got error %q, expected none", err)
-				} else {
-					if err.Error() != c.ExpectedErr {
-						t.Errorf("got error %q, expected %q", err, c.ExpectedErr)
-					}
+				} else if err.Error() != c.ExpectedErr {
+					t.Errorf("got error %q, expected %q", err, c.ExpectedErr)
 				}
 			}
 		})

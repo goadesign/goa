@@ -34,10 +34,8 @@ func TestServiceErrorUnwrap(t *testing.T) {
 						t.Errorf("got %#v, want %#v", got, tc.want)
 					}
 				}
-			} else {
-				if !errors.Is(got, tc.want) {
-					t.Errorf("got %#v, want %#v", got, tc.want)
-				}
+			} else if !errors.Is(got, tc.want) {
+				t.Errorf("got %#v, want %#v", got, tc.want)
 			}
 		})
 	}
