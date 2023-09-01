@@ -35,7 +35,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "http", svcName, "server", "server.go")
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	funcs := map[string]any{
-		"join":                    func(ss []string, s string) string { return strings.Join(ss, s) },
+		"join":                    strings.Join,
 		"hasWebSocket":            hasWebSocket,
 		"isWebSocketEndpoint":     isWebSocketEndpoint,
 		"viewedServerBody":        viewedServerBody,
