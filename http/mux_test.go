@@ -13,14 +13,14 @@ func TestMuxRegexp(t *testing.T) {
 		{"no capture", "a", "a"},
 		{"no capture 2", "/a", "/a"},
 		{"no capture 3", "/a/b", "/a/b"},
-		{"no capture 4", "{a}", "{a}"},
-		{"no capture 5", "{*a}", "{*a}"},
-		{"segment", "/{a}", "/:a"},
-		{"segment 2", "/a/{b}", "/a/:b"},
-		{"segment 3", "/{a}/b", "/:a/b"},
-		{"segment 4", "/a/{b}/c", "/a/:b/c"},
-		{"path", "/{*a}", "/*a"},
-		{"path 2", "/a/{*b}", "/a/*b"},
+		{"no capture 4", ":a", ":a"},
+		{"no capture 5", ":*a", ":*a"},
+		{"segment", "/{a}", "/{a}"},
+		{"segment 2", "/a/{b}", "/a/{b}"},
+		{"segment 3", "/{a}/b", "/{a}/b"},
+		{"segment 4", "/a/{b}/c", "/a/{b}/c"},
+		{"path", "/{*a}", "/{a:.*}"},
+		{"path 2", "/a/{*b}", "/a/{b:.*}"},
 	}
 	for _, c := range cases {
 		actual := wildPath.ReplaceAllString(c.Pattern, "/{$1:.*}")
