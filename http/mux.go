@@ -78,7 +78,7 @@ func (m *muxer) Handle(method, pattern string, handler http.HandlerFunc) {
 }
 
 // Vars extracts the path variables from the request context.
-func (m *muxer) Vars(r *http.Request) map[string]string {
+func (*muxer) Vars(r *http.Request) map[string]string {
 	return mux.Vars(r)
 }
 
