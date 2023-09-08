@@ -1,12 +1,10 @@
 package http
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 	"regexp"
 
-	"github.com/dimfeld/httptreemux/v5"
+	"github.com/gorilla/mux"
 )
 
 type (
@@ -59,49 +57,33 @@ type (
 		Use(func(http.Handler) http.Handler)
 	}
 
-	// mux is the default Muxer implementation. It leverages the
-	// httptreemux router and simply substitutes the syntax used to define
-	// wildcards from ":wildcard" and "*wildcard" to "{wildcard}" and
-	// "{*wildcard}" respectively.
-	mux struct {
-		*httptreemux.ContextMux
+	// muxer is the default Muxer implementation.
+	muxer struct {
+		*mux.Router
 	}
 )
 
-// NewMuxer returns a Muxer implementation based on the httptreemux router.
+// NewMuxer returns a Muxer implementation based on Gorilla mux.
 func NewMuxer() MiddlewareMuxer {
-	r := httptreemux.NewContextMux()
-	r.EscapeAddedRoutes = true
-	r.NotFoundHandler = func(w http.ResponseWriter, req *http.Request) {
-		ctx := context.WithValue(req.Context(), AcceptTypeKey, req.Header.Get("Accept"))
-		enc := ResponseEncoder(ctx, w)
-		w.WriteHeader(http.StatusNotFound)
-		enc.Encode(NewErrorResponse(ctx, fmt.Errorf("404 page not found")))
-	}
-	return &mux{r}
+	r := mux.NewRouter()
+	return &muxer{r}
 }
 
-// Handle maps the wildcard format used by goa to the one used by httptreemux.
-func (m *mux) Handle(method, pattern string, handler http.HandlerFunc) {
-	m.ContextMux.Handle(method, treemuxify(pattern), handler)
+var wildPath = regexp.MustCompile(`/{\*([a-zA-Z0-9_]+)}`)
+
+// Handle registers the handler function for the given method and pattern.
+func (m *muxer) Handle(method, pattern string, handler http.HandlerFunc) {
+	pattern = wildPath.ReplaceAllString(pattern, "/{$1:.*}")
+	m.Methods(method).Path(pattern).Handler(handler)
 }
 
 // Vars extracts the path variables from the request context.
-func (*mux) Vars(r *http.Request) map[string]string {
-	return httptreemux.ContextParams(r.Context())
+func (m *muxer) Vars(r *http.Request) map[string]string {
+	return mux.Vars(r)
 }
 
 // Use appends a middleware to the list of middlewares to be applied
 // downstream the Muxer.
-func (m *mux) Use(f func(http.Handler) http.Handler) {
-	m.ContextMux.UseHandler(f)
-}
-
-var wildSeg = regexp.MustCompile(`/{([a-zA-Z0-9_]+)}`)
-var wildPath = regexp.MustCompile(`/{\*([a-zA-Z0-9_]+)}`)
-
-func treemuxify(pattern string) string {
-	pattern = wildSeg.ReplaceAllString(pattern, "/:$1")
-	pattern = wildPath.ReplaceAllString(pattern, "/*$1")
-	return pattern
+func (m *muxer) Use(f func(http.Handler) http.Handler) {
+	m.Router.Use(f)
 }

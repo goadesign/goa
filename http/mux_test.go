@@ -23,7 +23,7 @@ func TestMuxRegexp(t *testing.T) {
 		{"path 2", "/a/{*b}", "/a/*b"},
 	}
 	for _, c := range cases {
-		actual := treemuxify(c.Pattern)
+		actual := wildPath.ReplaceAllString(c.Pattern, "/{$1:.*}")
 		if actual != c.Expected {
 			t.Errorf("%s: expected %#v, got %#v", c.Name, c.Expected, actual)
 		}
@@ -57,7 +57,7 @@ func TestMiddlewares(t *testing.T) {
 		for _, mw := range c.Middlewares {
 			m.Use(mw)
 		}
-		m.Handle("GET", "/", func(w http.ResponseWriter, r *http.Request) {
+		m.Handle("GET", "/", func(w http.ResponseWriter, _ *http.Request) {
 			w.Write([]byte("hello"))
 		})
 		r, _ := http.NewRequest("GET", "/", nil)
