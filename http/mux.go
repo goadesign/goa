@@ -1,10 +1,12 @@
 package http
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"regexp"
 
-	"github.com/gorilla/mux"
+	chi "github.com/go-chi/chi/v5"
 )
 
 type (
@@ -57,33 +59,59 @@ type (
 		Use(func(http.Handler) http.Handler)
 	}
 
-	// muxer is the default Muxer implementation.
-	muxer struct {
-		*mux.Router
+	// mux is the default Muxer implementation.
+	mux struct {
+		chi.Router
+		wildcard string
 	}
 )
 
-// NewMuxer returns a Muxer implementation based on Gorilla mux.
+// NewMuxer returns a Muxer implementation based on a Chi router.
 func NewMuxer() MiddlewareMuxer {
-	r := mux.NewRouter()
-	return &muxer{r}
+	r := chi.NewRouter()
+	r.NotFound(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		ctx := context.WithValue(req.Context(), AcceptTypeKey, req.Header.Get("Accept"))
+		enc := ResponseEncoder(ctx, w)
+		w.WriteHeader(http.StatusNotFound)
+		enc.Encode(NewErrorResponse(ctx, fmt.Errorf("404 page not found"))) // nolint:errcheck
+	}))
+	return &mux{Router: r}
 }
 
+// wildPath matches a wildcard path segment.
 var wildPath = regexp.MustCompile(`/{\*([a-zA-Z0-9_]+)}`)
 
 // Handle registers the handler function for the given method and pattern.
-func (m *muxer) Handle(method, pattern string, handler http.HandlerFunc) {
-	pattern = wildPath.ReplaceAllString(pattern, "/{$1:.*}")
-	m.Methods(method).Path(pattern).Handler(handler)
+func (m *mux) Handle(method, pattern string, handler http.HandlerFunc) {
+	if wildcards := wildPath.FindStringSubmatch(pattern); len(wildcards) > 0 {
+		if len(wildcards) > 2 {
+			panic("too many wildcards")
+		}
+		m.wildcard = wildcards[1]
+		pattern = wildPath.ReplaceAllString(pattern, "/*")
+	}
+	m.Method(method, pattern, handler)
 }
 
 // Vars extracts the path variables from the request context.
-func (*muxer) Vars(r *http.Request) map[string]string {
-	return mux.Vars(r)
+func (m *mux) Vars(r *http.Request) map[string]string {
+	params := chi.RouteContext(r.Context()).URLParams
+	if len(params.Keys) == 0 {
+		return nil
+	}
+	vars := make(map[string]string, len(params.Keys))
+	for i, k := range params.Keys {
+		if k == "*" {
+			vars[m.wildcard] = params.Values[i]
+			continue
+		}
+		vars[k] = params.Values[i]
+	}
+	return vars
 }
 
 // Use appends a middleware to the list of middlewares to be applied
 // downstream the Muxer.
-func (m *muxer) Use(f func(http.Handler) http.Handler) {
+func (m *mux) Use(f func(http.Handler) http.Handler) {
 	m.Router.Use(f)
 }
