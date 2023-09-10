@@ -229,7 +229,7 @@ func fieldCode(init *InitData, typ string) string {
 	// because the headers and params cannot be user types.
 	c, _, err := codegen.InitStructFields(initArgs, varn, "", init.ReturnTypePkg)
 	if err != nil {
-		panic(err) //bug
+		panic(err) // bug
 	}
 	return c
 }

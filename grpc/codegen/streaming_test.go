@@ -30,7 +30,6 @@ type (
 )
 
 func TestStreaming(t *testing.T) {
-	//var empty string
 	cases := []*testCase{
 		// streaming result
 		{"server-streaming", testdata.ServerStreamingUserTypeDSL, []*sectionExpectation{

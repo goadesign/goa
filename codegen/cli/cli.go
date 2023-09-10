@@ -580,7 +580,7 @@ func fieldCode(init *PayloadInitData) string {
 	// because the args cannot be user types.
 	c, _, err := codegen.InitStructFields(init.Args, varn, "", init.ReturnTypePkg)
 	if err != nil {
-		panic(err) //bug
+		panic(err) // bug
 	}
 	return c
 }
