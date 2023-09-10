@@ -51,7 +51,10 @@ func main() {
 		fset.BoolVar(&debug, "debug", false, "Print debug information")
 
 		fset.Usage = usage
-		fset.Parse(os.Args[offset+1:])
+		if err := fset.Parse(os.Args[offset+1:]); err != nil {
+			fmt.Fprintln(os.Stderr, err.Error())
+			os.Exit(1)
+		}
 
 		output = *o
 		if output == "" {

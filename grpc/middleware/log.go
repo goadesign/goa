@@ -82,7 +82,7 @@ func unaryLog(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler 
 	started := time.Now()
 
 	// before executing rpc
-	l.Log("id", reqID,
+	l.Log("id", reqID, // nolint: errcheck
 		"method", info.FullMethod,
 		"bytes", messageLength(req))
 
@@ -91,7 +91,7 @@ func unaryLog(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler 
 
 	// after executing rpc
 	s, _ := status.FromError(err)
-	l.Log("id", reqID,
+	l.Log("id", reqID, // nolint: errcheck
 		"status", s.Code(),
 		"bytes", messageLength(resp),
 		"time", time.Since(started).String())
@@ -115,7 +115,7 @@ func streamLog(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handl
 	started := time.Now()
 
 	// before executing rpc
-	l.Log("id", reqID,
+	l.Log("id", reqID, // nolint: errcheck
 		"method", info.FullMethod,
 		"msg", "started stream")
 
@@ -124,7 +124,7 @@ func streamLog(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handl
 
 	// after executing rpc
 	s, _ := status.FromError(err)
-	l.Log("id", reqID,
+	l.Log("id", reqID, // nolint: errcheck
 		"status", s.Code(),
 		"msg", "completed stream",
 		"time", time.Since(started).String())
@@ -135,7 +135,7 @@ func streamLog(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handl
 // Do not use as a reliable way to get unique IDs, instead use for things like logging.
 func shortID() string {
 	b := make([]byte, 6)
-	io.ReadFull(rand.Reader, b)
+	io.ReadFull(rand.Reader, b) // nolint: errcheck
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 

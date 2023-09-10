@@ -29,8 +29,10 @@ func ReadUDP(t *testing.T, udplisten string, expectedMessages int, sender func()
 	}
 
 	go func() {
-		listener.SetReadDeadline(time.Now().Add(time.Second))
-		listener.SetReadDeadline(time.Now().Add(500 * time.Millisecond))
+		defer close(readChan)
+		if err := listener.SetReadDeadline(time.Now().Add(100 * time.Millisecond)); err != nil {
+			t.Error(err)
+		}
 		var messages []string
 		for {
 			n, _, err := listener.ReadFrom(msg)
@@ -41,6 +43,9 @@ func ReadUDP(t *testing.T, udplisten string, expectedMessages int, sender func()
 				break // we're done
 			}
 			messages = append(messages, string(msg[0:n]))
+			if len(messages) == expectedMessages {
+				break
+			}
 		}
 		if len(messages) != expectedMessages {
 			t.Errorf("unexpected number of messages, expected %d got %d. All messages:\n%s",
@@ -51,13 +56,13 @@ func ReadUDP(t *testing.T, udplisten string, expectedMessages int, sender func()
 
 	sender()
 
-	defer func() {
-		if err := listener.Close(); err != nil {
-			t.Fatal(err)
-		}
-	}()
+	res := <-readChan
 
-	return <-readChan
+	if err := listener.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	return res
 }
 
 // ExtractSegment returns the unmarshalled segment JSON from a ReadUDP response.

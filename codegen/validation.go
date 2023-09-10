@@ -365,7 +365,7 @@ func hasValidations(attCtx *AttributeContext, ut expr.UserType) bool {
 	// generated to avoid infinite recursions.
 	res := false
 	done := errors.New("done")
-	Walk(ut.Attribute(), func(a *expr.AttributeExpr) error {
+	Walk(ut.Attribute(), func(a *expr.AttributeExpr) error { // nolint: errcheck
 		if a.Validation == nil {
 			return nil
 		}

@@ -200,7 +200,7 @@ func SnakeCase(name string) string {
 	}
 	n := rune(name[0])
 	b.WriteRune(unicode.ToLower(n))
-	lastLower, isLower, lastUnder, isUnder := false, true, false, false
+	var lastLower, isLower, lastUnder, isUnder bool
 	for i := 1; i < ln; i++ {
 		r := rune(name[i])
 		isLower = unicode.IsLower(r) && unicode.IsLetter(r) || unicode.IsDigit(r)

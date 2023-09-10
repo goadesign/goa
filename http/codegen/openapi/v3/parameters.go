@@ -15,7 +15,7 @@ func paramsFromPath(params *expr.MappedAttributeExpr, path string, rand *expr.Ex
 		res       []*Parameter
 		wildcards = expr.ExtractHTTPWildcards(path)
 	)
-	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *expr.AttributeExpr) error {
+	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *expr.AttributeExpr) error { // nolint: errcheck
 		in := "query"
 		for _, w := range wildcards {
 			if n == w {
@@ -35,7 +35,7 @@ func paramsFromPath(params *expr.MappedAttributeExpr, path string, rand *expr.Ex
 func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.ExampleGenerator) []*Parameter {
 	var params []*Parameter
 
-	expr.WalkMappedAttr(endpoint.Headers, func(name, elem string, att *expr.AttributeExpr) error {
+	expr.WalkMappedAttr(endpoint.Headers, func(name, elem string, att *expr.AttributeExpr) error { // nolint: errcheck
 		if strings.ToLower(elem) == "authorization" {
 			// Headers named "Authorization" are ignored by OpenAPI v3.
 			// Instead it uses the security and securitySchemes sections to
@@ -46,7 +46,7 @@ func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.Exa
 		params = append(params, paramFor(att, elem, "header", required, rand))
 		return nil
 	})
-	expr.WalkMappedAttr(endpoint.Cookies, func(name, elem string, att *expr.AttributeExpr) error {
+	expr.WalkMappedAttr(endpoint.Cookies, func(name, elem string, att *expr.AttributeExpr) error { // nolint: errcheck
 		required := endpoint.Cookies.IsRequiredNoDefault(name)
 		params = append(params, paramFor(att, elem, "cookie", required, rand))
 		return nil

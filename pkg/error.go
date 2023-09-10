@@ -191,7 +191,7 @@ func NewErrorID() string {
 	// trade-off between probability of clashes and length of ID (6 * 4/3 =
 	// 8 chars) since clashes are not catastrophic.
 	b := make([]byte, 6)
-	io.ReadFull(rand.Reader, b)
+	io.ReadFull(rand.Reader, b) // nolint: errcheck
 	return base64.RawURLEncoding.EncodeToString(b)
 }
 

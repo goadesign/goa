@@ -92,7 +92,7 @@ package testpackage
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
 		s := Header(tc.Title, "testpackage", tc.Imports)
-		s.Write(buf)
+		s.Write(buf) // nolint: errcheck
 		actual := buf.String()
 		if actual != tc.Expected {
 			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.Expected)

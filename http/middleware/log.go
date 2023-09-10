@@ -51,14 +51,14 @@ func log(l middleware.Logger, r *http.Request, w http.ResponseWriter, next http.
 	}
 	started := time.Now()
 
-	l.Log("id", reqID,
+	l.Log("id", reqID, // nolint: errcheck
 		"req", r.Method+" "+r.URL.String(),
 		"from", from(r))
 
 	rw := CaptureResponse(w)
 	next.ServeHTTP(rw, r)
 
-	l.Log("id", reqID,
+	l.Log("id", reqID, // nolint: errcheck
 		"status", rw.StatusCode,
 		"bytes", rw.ContentLength,
 		"time", time.Since(started).String())

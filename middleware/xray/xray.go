@@ -68,7 +68,7 @@ func Connect(ctx context.Context, renewPeriod time.Duration, dial func() (net.Co
 // compatible with AWS X-Ray.
 func NewID() string {
 	b := make([]byte, 8)
-	rand.Read(b)
+	rand.Read(b) // nolint: errcheck
 	return fmt.Sprintf("%x", b)
 }
 
@@ -76,6 +76,6 @@ func NewID() string {
 // compatible with AWS X-Ray.
 func NewTraceID() string {
 	b := make([]byte, 12)
-	rand.Read(b)
+	rand.Read(b) // nolint: errcheck
 	return fmt.Sprintf("%d-%x-%s", 1, time.Now().Unix(), fmt.Sprintf("%x", b))
 }

@@ -30,7 +30,9 @@ func TestTransportExample(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(rw http.ResponseWriter, req *http.Request) {
 			rw.WriteHeader(http.StatusOK)
-			rw.Write([]byte(responseBody))
+			if _, err := rw.Write([]byte(responseBody)); err != nil {
+				t.Fatalf("failed to write response body - %s", err)
+			}
 		}))
 	defer server.Close()
 

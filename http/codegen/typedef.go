@@ -12,11 +12,11 @@ import (
 // It differs from the function defined in the codegen package in the following
 // ways:
 //
-//    - It defines marshaler tags on each fields using the HTTP element names.
+//   - It defines marshaler tags on each fields using the HTTP element names.
 //
-//    - It produced fields with pointers even if the corresponding attribute is
-//      required when ptr is true so that the generated code may validate
-//      explicitly.
+//   - It produced fields with pointers even if the corresponding attribute is
+//     required when ptr is true so that the generated code may validate
+//     explicitly.
 //
 // useDefault directs whether fields holding primitive types with default values
 // should hold pointers when ptr is false. If it is true then the fields are
@@ -51,7 +51,7 @@ func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefaul
 		ss = append(ss, "struct {")
 		ma := expr.NewMappedAttributeExpr(att)
 		mat := ma.Attribute()
-		codegen.WalkMappedAttr(ma, func(name, elem string, required bool, at *expr.AttributeExpr) error {
+		codegen.WalkMappedAttr(ma, func(name, elem string, _ bool, at *expr.AttributeExpr) error { // nolint: errcheck
 			var (
 				fn   string
 				tdef string
