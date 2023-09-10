@@ -19,7 +19,7 @@ func TestCmdLine(t *testing.T) {
 	)
 
 	usage = func() { usageCalled = true }
-	gen = func(c string, p, o string, d bool) { cmd, path, output, debug = c, p, o, d }
+	gen = func(c string, p, o string, d bool) error { cmd, path, output, debug = c, p, o, d; return nil }
 	defer func() {
 		usage = help
 		gen = generate

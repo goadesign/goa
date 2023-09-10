@@ -178,8 +178,8 @@ func safelyGetMetaTypeImports(att *expr.AttributeExpr, seen map[string]struct{})
 	}
 	for imp := range uniqueImports {
 		// Copy loop variable into body so next iteration doesn't overwrite its address https://stackoverflow.com/questions/27610039/golang-appending-leaves-only-last-element
-		copy := imp
-		imports = append(imports, &copy)
+		cp := imp
+		imports = append(imports, &cp)
 	}
 	return imports
 }

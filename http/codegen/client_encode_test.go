@@ -175,7 +175,12 @@ func TestClientEncode(t *testing.T) {
 		if _, err := golden.WriteString("package testdata\n"); err != nil {
 			t.Fatal(err)
 		}
-		defer golden.Close()
+		defer func() {
+			err := golden.Close()
+			if err != nil {
+				t.Fatal(err)
+			}
+		}()
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

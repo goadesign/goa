@@ -82,14 +82,14 @@ func (f *File) Render(dir string) (string, error) {
 		}
 	}
 
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
 		return "", err
 	}
 
 	file, err := os.OpenFile(
 		path,
 		os.O_CREATE|os.O_APPEND|os.O_WRONLY,
-		0644,
+		0600,
 	)
 	if err != nil {
 		return "", err

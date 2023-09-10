@@ -263,7 +263,12 @@ func cleanupDirs(cmd, output string) []string {
 		if err != nil {
 			return nil
 		}
-		defer gendir.Close()
+		defer func() {
+			err := gendir.Close()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "failed to close gendir: %s", err)
+			}
+		}()
 		finfos, err := gendir.Readdir(-1)
 		if err != nil {
 			return []string{gendirPath}

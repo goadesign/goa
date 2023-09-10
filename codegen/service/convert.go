@@ -342,7 +342,7 @@ type dtRec struct {
 	seen map[string]expr.DataType
 }
 
-func (r dtRec) append(p string) dtRec {
+func appendPath(r dtRec, p string) dtRec {
 	r.path += p
 	return r
 }
@@ -414,7 +414,7 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 			eref = expr.AsArray(ref).ElemType.Type
 		}
 		var elem expr.DataType
-		if err := buildDesignType(&elem, e, eref, rec.append("[0]")); err != nil {
+		if err := buildDesignType(&elem, e, eref, appendPath(rec, "[0]")); err != nil {
 			return fmt.Errorf("%s", err)
 		}
 		*dt = &expr.Array{ElemType: &expr.AttributeExpr{Type: elem}}
@@ -427,11 +427,11 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 			vref = m.ElemType.Type
 		}
 		var kt expr.DataType
-		if err := buildDesignType(&kt, t.Key(), kref, rec.append(".key")); err != nil {
+		if err := buildDesignType(&kt, t.Key(), kref, appendPath(rec, ".key")); err != nil {
 			return fmt.Errorf("%s", err)
 		}
 		var vt expr.DataType
-		if err := buildDesignType(&vt, t.Elem(), vref, rec.append(".value")); err != nil {
+		if err := buildDesignType(&vt, t.Elem(), vref, appendPath(rec, ".value")); err != nil {
 			return fmt.Errorf("%s", err)
 		}
 		*dt = &expr.Map{KeyType: &expr.AttributeExpr{Type: kt}, ElemType: &expr.AttributeExpr{Type: vt}}
@@ -475,7 +475,7 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 		rec.seen[t.Name()] = ut
 		var required []string
 		for i, f := range fields {
-			recf := rec.append("." + f.Name)
+			recf := appendPath(rec, "."+f.Name)
 			atn, fn := attributeName(oref, f.Name)
 			var aref expr.DataType
 			if oref != nil {
@@ -500,7 +500,7 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 				if isPrimitive(f.Type) {
 					required = append(required, atn)
 				}
-				if err := buildDesignType(&fdt, f.Type, aref, rec.append("."+f.Name)); err != nil {
+				if err := buildDesignType(&fdt, f.Type, aref, appendPath(rec, "."+f.Name)); err != nil {
 					return fmt.Errorf("%q.%s: %s", t.Name(), f.Name, err)
 				}
 			}
@@ -625,7 +625,7 @@ type compRec struct {
 	seen map[string]struct{}
 }
 
-func (r compRec) append(p string) compRec {
+func appendCompPath(r compRec, p string) compRec {
 	r.path += p
 	return r
 }
@@ -662,7 +662,7 @@ func compatible(from expr.DataType, to reflect.Type, recs ...compRec) error {
 		return compatible(
 			expr.AsArray(from).ElemType.Type,
 			to.Elem(),
-			rec.append("[0]"),
+			appendCompPath(rec, "[0]"),
 		)
 	}
 
@@ -673,14 +673,14 @@ func compatible(from expr.DataType, to reflect.Type, recs ...compRec) error {
 		if err := compatible(
 			expr.AsMap(from).ElemType.Type,
 			to.Elem(),
-			rec.append(".value"),
+			appendCompPath(rec, ".value"),
 		); err != nil {
 			return err
 		}
 		return compatible(
 			expr.AsMap(from).KeyType.Type,
 			to.Key(),
-			rec.append(".key"),
+			appendCompPath(rec, ".key"),
 		)
 	}
 
@@ -722,7 +722,7 @@ func compatible(from expr.DataType, to reflect.Type, recs ...compRec) error {
 			err := compatible(
 				nat.Attribute.Type,
 				field.Type,
-				rec.append("."+fname),
+				appendCompPath(rec, "."+fname),
 			)
 			if err != nil {
 				return err

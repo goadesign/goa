@@ -2390,7 +2390,8 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 			pointer bool
 			fptr    bool
 		)
-		if pointer = a.IsPrimitivePointer(name, true); pointer {
+		pointer = a.IsPrimitivePointer(name, true)
+		if pointer {
 			typeRef = "*" + typeRef
 		}
 		fieldName := codegen.Goify(name, true)

@@ -148,7 +148,7 @@ func (dd *debugDoer) Fprint(w io.Writer) {
 }
 
 // Error builds an error message.
-func (c *ClientError) Error() string {
+func (c ClientError) Error() string {
 	return fmt.Sprintf("[%s %s]: %s", c.Service, c.Method, c.Message)
 }
 

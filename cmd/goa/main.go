@@ -62,7 +62,10 @@ func main() {
 		}
 	}
 
-	gen(cmd, path, output, debug)
+	if err := gen(cmd, path, output, debug); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(1)
+	}
 }
 
 // help with tests
@@ -71,7 +74,7 @@ var (
 	gen   = generate
 )
 
-func generate(cmd, path, output string, debug bool) {
+func generate(cmd, path, output string, debug bool) error {
 	var (
 		files []string
 		err   error
@@ -83,9 +86,6 @@ func generate(cmd, path, output string, debug bool) {
 	}
 
 	tmp = NewGenerator(cmd, path, output)
-	if !debug {
-		defer tmp.Remove()
-	}
 
 	if err = tmp.Write(debug); err != nil {
 		goto fail
@@ -100,13 +100,15 @@ func generate(cmd, path, output string, debug bool) {
 	}
 
 	fmt.Println(strings.Join(files, "\n"))
-	return
+	if !debug {
+		tmp.Remove()
+	}
+	return nil
 fail:
-	fmt.Fprintln(os.Stderr, err.Error())
 	if !debug && tmp != nil {
 		tmp.Remove()
 	}
-	os.Exit(1)
+	return err
 }
 
 func help() {
@@ -142,5 +144,4 @@ Example:
   goa gen goa.design/examples/cellar/design -o gendir
 
 `)
-	os.Exit(1)
 }
