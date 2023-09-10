@@ -92,7 +92,7 @@ func TestMethod(t *testing.T) {
 			},
 		},
 	}
-	//Run our tests
+	// Run our tests
 	for k, tc := range cases {
 		t.Run(k, func(t *testing.T) {
 			eval.Context = &eval.DSLContext{}

@@ -169,7 +169,7 @@ func CamelCase(name string, firstUpper bool, acronym bool) string {
 		if w == 0 && !firstUpper {
 			runes[w] = unicode.ToLower(runes[w])
 		}
-		//advance to next word
+		// advance to next word
 		w = i
 	}
 
