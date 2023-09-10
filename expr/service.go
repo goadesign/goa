@@ -100,7 +100,7 @@ func (s *ServiceExpr) Finalize() {
 func (e *ErrorExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
 	var errField string
-	walkAttribute(e.AttributeExpr, func(name string, att *AttributeExpr) error {
+	walkAttribute(e.AttributeExpr, func(name string, att *AttributeExpr) error { // nolint: errcheck
 		if _, ok := att.Meta["struct:error:name"]; ok {
 			if errField != "" {
 				verr.Add(e, "duplicate error names in type %q", e.AttributeExpr.Type.Name())

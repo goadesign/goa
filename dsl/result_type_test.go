@@ -13,8 +13,8 @@ func TestView(t *testing.T) {
 		UserTypeExpr: &expr.UserTypeExpr{
 			AttributeExpr: &expr.AttributeExpr{
 				Type: &expr.Object{
-					{"att", &expr.AttributeExpr{Type: expr.String}},
-					{"att2", &expr.AttributeExpr{Type: expr.String}},
+					{Name: "att", Attribute: &expr.AttributeExpr{Type: expr.String}},
+					{Name: "att2", Attribute: &expr.AttributeExpr{Type: expr.String}},
 				},
 			},
 			TypeName: "test",

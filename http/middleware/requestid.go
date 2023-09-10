@@ -32,7 +32,7 @@ func RequestID(options ...middleware.RequestIDOption) func(http.Handler) http.Ha
 			ctx := r.Context()
 			if useReqID {
 				if id := r.Header.Get(reqIDHeader); id != "" {
-					ctx = context.WithValue(ctx, middleware.RequestIDKey, id)
+					ctx = context.WithValue(ctx, middleware.RequestIDKey, id) // nolint: staticcheck
 				}
 			}
 			ctx = middleware.GenerateRequestID(ctx, o)

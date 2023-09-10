@@ -100,7 +100,7 @@ func Debug(mux goahttp.Muxer, w io.Writer) func(http.Handler) http.Handler {
 				}
 			}
 			buf.WriteByte('\n')
-			w.Write(buf.Bytes())
+			w.Write(buf.Bytes()) // nolint: errcheck
 		})
 	}
 }
@@ -129,6 +129,6 @@ func (r *responseDupper) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 // Do not use as a reliable way to get unique IDs, instead use for things like logging.
 func shortID() string {
 	b := make([]byte, 6)
-	io.ReadFull(rand.Reader, b)
+	io.ReadFull(rand.Reader, b) // nolint: errcheck
 	return base64.RawURLEncoding.EncodeToString(b)
 }

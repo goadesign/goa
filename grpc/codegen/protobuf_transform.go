@@ -909,13 +909,13 @@ func transformHelperName(source, target *expr.AttributeExpr, ta *transformAttrs)
 		// Do not consider package overrides for protogen generated types
 		if ta.proto {
 			target = expr.DupAtt(target)
-			codegen.Walk(target, func(att *expr.AttributeExpr) error {
+			codegen.Walk(target, func(att *expr.AttributeExpr) error { // nolint: errcheck
 				delete(att.Meta, "struct:pkg:path")
 				return nil
 			})
 		} else {
 			source = expr.DupAtt(source)
-			codegen.Walk(source, func(att *expr.AttributeExpr) error {
+			codegen.Walk(source, func(att *expr.AttributeExpr) error { // nolint: errcheck
 				delete(att.Meta, "struct:pkg:path")
 				return nil
 			})

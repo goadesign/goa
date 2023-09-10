@@ -244,7 +244,7 @@ func byMinMax(a *AttributeExpr, r *ExampleGenerator) any {
 		return nil
 	}
 	var (
-		min  = math.Inf(-1)
+		min  float64
 		max  = math.Inf(1)
 		sign = 1
 	)

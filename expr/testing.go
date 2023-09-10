@@ -95,8 +95,12 @@ func setupDSLRun() {
 	eval.Reset()
 	Root = new(RootExpr)
 	Root.GeneratedTypes = &GeneratedRoot{}
-	eval.Register(Root)
-	eval.Register(Root.GeneratedTypes)
+	if err := eval.Register(Root); err != nil {
+		panic(err)
+	}
+	if err := eval.Register(Root.GeneratedTypes); err != nil {
+		panic(err)
+	}
 	Root.API = NewAPIExpr("test api", func() {})
 	Root.API.Servers = []*ServerExpr{Root.API.DefaultServer()}
 }

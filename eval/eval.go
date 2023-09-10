@@ -169,7 +169,7 @@ func (verr *ValidationErrors) AddError(def Expression, err error) {
 
 // runSet executes the DSL for all expressions in the given set. The expression
 // DSLs may append to the set as they execute.
-func runSet(set ExpressionSet) error {
+func runSet(set ExpressionSet) {
 	executed := 0
 	recursed := 0
 	for executed < len(set) {
@@ -184,15 +184,15 @@ func runSet(set ExpressionSet) error {
 			}
 		}
 		if recursed > 100 {
-			return fmt.Errorf("too many generated expressions, infinite loop?")
+			Context.Record(&Error{GoError: fmt.Errorf("too many generated expressions, infinite loop?")})
+			return
 		}
 	}
-	return nil
 }
 
 // prepareSet runs the pre validation steps on all the set expressions that
 // define one.
-func prepareSet(set ExpressionSet) error {
+func prepareSet(set ExpressionSet) {
 	for _, def := range set {
 		if def == nil {
 			continue
@@ -201,11 +201,10 @@ func prepareSet(set ExpressionSet) error {
 			p.Prepare()
 		}
 	}
-	return nil
 }
 
 // validateSet runs the validation on all the set expressions that define one.
-func validateSet(set ExpressionSet) error {
+func validateSet(set ExpressionSet) {
 	errors := &ValidationErrors{}
 	for _, def := range set {
 		if def == nil {
@@ -220,11 +219,10 @@ func validateSet(set ExpressionSet) error {
 	if len(errors.Errors) > 0 {
 		Context.Record(&Error{GoError: errors})
 	}
-	return Context.Errors
 }
 
 // finalizeSet runs the finalizer on all the set expressions that define one.
-func finalizeSet(set ExpressionSet) error {
+func finalizeSet(set ExpressionSet) {
 	for _, def := range set {
 		if def == nil {
 			continue
@@ -233,7 +231,6 @@ func finalizeSet(set ExpressionSet) error {
 			f.Finalize()
 		}
 	}
-	return nil
 }
 
 // caller returns the name of calling function.

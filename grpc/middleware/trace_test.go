@@ -179,7 +179,7 @@ func TestUnaryClientTrace(t *testing.T) {
 		TraceID, SpanID string
 		Invoker         grpc.UnaryInvoker
 	}{
-		"no-trace": {"", "", func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
+		"no-trace": {"", "", func(ctx context.Context, _ string, _, _ any, _ *grpc.ClientConn, _ ...grpc.CallOption) error {
 			md, ok := metadata.FromOutgoingContext(ctx)
 			if !ok {
 				md = metadata.MD{}
@@ -192,7 +192,7 @@ func TestUnaryClientTrace(t *testing.T) {
 			}
 			return nil
 		}},
-		"with-trace": {traceID, spanID, func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
+		"with-trace": {traceID, spanID, func(ctx context.Context, _ string, _, _ any, _ *grpc.ClientConn, _ ...grpc.CallOption) error {
 			md, ok := metadata.FromOutgoingContext(ctx)
 			if !ok {
 				md = metadata.MD{}
@@ -210,8 +210,8 @@ func TestUnaryClientTrace(t *testing.T) {
 		t.Run(k, func(t *testing.T) {
 			ctx := context.Background()
 			if c.TraceID != "" {
-				ctx = context.WithValue(ctx, middleware.TraceIDKey, c.TraceID)
-				ctx = context.WithValue(ctx, middleware.TraceSpanIDKey, c.SpanID)
+				ctx = context.WithValue(ctx, middleware.TraceIDKey, c.TraceID)    // nolint: staticcheck
+				ctx = context.WithValue(ctx, middleware.TraceSpanIDKey, c.SpanID) // nolint: staticcheck
 			}
 			if err := grpcm.UnaryClientTrace()(ctx, "Test.Test", nil, nil, nil, c.Invoker); err != nil {
 				t.Errorf("UnaryClientTrace error: %v", err)
@@ -225,7 +225,7 @@ func TestStreamClientTrace(t *testing.T) {
 		TraceID, SpanID string
 		Streamer        grpc.Streamer
 	}{
-		"no-trace": {"", "", func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+		"no-trace": {"", "", func(ctx context.Context, _ *grpc.StreamDesc, _ *grpc.ClientConn, _ string, _ ...grpc.CallOption) (grpc.ClientStream, error) {
 			md, ok := metadata.FromOutgoingContext(ctx)
 			if !ok {
 				md = metadata.MD{}
@@ -238,7 +238,7 @@ func TestStreamClientTrace(t *testing.T) {
 			}
 			return nil, nil
 		}},
-		"with-trace": {traceID, spanID, func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+		"with-trace": {traceID, spanID, func(ctx context.Context, _ *grpc.StreamDesc, _ *grpc.ClientConn, _ string, _ ...grpc.CallOption) (grpc.ClientStream, error) {
 			md, ok := metadata.FromOutgoingContext(ctx)
 			if !ok {
 				md = metadata.MD{}
@@ -256,8 +256,8 @@ func TestStreamClientTrace(t *testing.T) {
 		t.Run(k, func(t *testing.T) {
 			ctx := context.Background()
 			if c.TraceID != "" {
-				ctx = context.WithValue(ctx, middleware.TraceIDKey, c.TraceID)
-				ctx = context.WithValue(ctx, middleware.TraceSpanIDKey, c.SpanID)
+				ctx = context.WithValue(ctx, middleware.TraceIDKey, c.TraceID)    // nolint: staticcheck
+				ctx = context.WithValue(ctx, middleware.TraceSpanIDKey, c.SpanID) // nolint: staticcheck
 			}
 			if _, err := grpcm.StreamClientTrace()(ctx, nil, nil, "Test.Test", c.Streamer); err != nil {
 				t.Errorf("UnaryClientTrace error: %v", err)

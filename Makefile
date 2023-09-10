@@ -24,8 +24,7 @@ GOPATH=$(shell go env GOPATH)
 # Standard dependencies are installed via go get
 DEPEND=\
 	google.golang.org/protobuf/cmd/protoc-gen-go@latest \
-	google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest \
-	honnef.co/go/tools/cmd/staticcheck@latest
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest 
 
 all: lint test
 
@@ -52,6 +51,7 @@ depend:
 	@echo INSTALLING DEPENDENCIES...
 	@go mod download
 	@for package in $(DEPEND); do go install $$package; done
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin latest 
 	@go mod tidy -compat=1.17
 	@echo INSTALLING PROTOC...
 	@mkdir $(PROTOC)
@@ -64,8 +64,8 @@ depend:
 
 lint:
 ifneq ($(GOOS),windows)
-	@if [ "`staticcheck ./... | grep -v ".pb.go" | tee /dev/stderr`" ]; then \
-		echo "^ - staticcheck errors!" && echo && exit 1; \
+	@if [ "`golangci-lint run ./... | grep -v ".pb.go" | tee /dev/stderr`" ]; then \
+		echo "^ - lint errors!" && echo && exit 1; \
 	fi
 endif
 

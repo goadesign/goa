@@ -275,7 +275,7 @@ func paramsFromExpr(params *expr.MappedAttributeExpr, path string) []*Parameter 
 		res       []*Parameter
 		wildcards = expr.ExtractHTTPWildcards(path)
 	)
-	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *expr.AttributeExpr) error {
+	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *expr.AttributeExpr) error { // nolint: errcheck
 		in := "query"
 		for _, w := range wildcards {
 			if n == w {
@@ -425,7 +425,7 @@ func headersFromExpr(headers *expr.MappedAttributeExpr) map[string]*Header {
 		return nil
 	}
 	res := make(map[string]*Header)
-	codegen.WalkMappedAttr(headers, func(_, n string, required bool, at *expr.AttributeExpr) error {
+	codegen.WalkMappedAttr(headers, func(_, n string, _ bool, at *expr.AttributeExpr) error { // nolint: errcheck
 		header := &Header{
 			Default:     at.DefaultValue,
 			Description: at.Description,

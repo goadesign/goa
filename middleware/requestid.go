@@ -53,7 +53,7 @@ func GenerateRequestID(ctx context.Context, o *RequestIDOptions) context.Context
 			id = shortID()
 		}
 	}
-	return context.WithValue(ctx, RequestIDKey, id)
+	return context.WithValue(ctx, RequestIDKey, id) // nolint: staticcheck
 }
 
 // UseRequestIDOption enables/disables using RequestID context key to store
@@ -99,6 +99,6 @@ func (o *RequestIDOptions) RequestIDHeader() string {
 // Do not use as a reliable way to get unique IDs, instead use for things like logging.
 func shortID() string {
 	b := make([]byte, 6)
-	io.ReadFull(rand.Reader, b)
+	io.ReadFull(rand.Reader, b) // nolint: errcheck
 	return base64.RawURLEncoding.EncodeToString(b)
 }

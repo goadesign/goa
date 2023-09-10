@@ -210,7 +210,9 @@ func TestDecode(t *testing.T) {
 	}
 	golden := makeGolden(t, "testdata/payload_decode_functions.go")
 	if golden != nil {
-		golden.WriteString("package testdata\n")
+		if _, err := golden.WriteString("package testdata\n"); err != nil {
+			t.Fatal(err)
+		}
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -228,7 +230,9 @@ func TestDecode(t *testing.T) {
 				name := codegen.Goify(c.Name, true)
 				name = strings.ReplaceAll(name, "Uint", "UInt")
 				code = "\nvar Payload" + name + "DecodeCode = `" + code + "`"
-				golden.WriteString(code + "\n")
+				if _, err := golden.WriteString(code + "\n"); err != nil {
+					t.Fatal(err)
+				}
 			} else if code != c.Code {
 				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
 			}

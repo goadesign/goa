@@ -156,10 +156,10 @@ func DiscardFromTrace(discard *regexp.Regexp) TraceOption {
 // IDs.
 func WithSpan(ctx context.Context, traceID, spanID, parentID string) context.Context {
 	if parentID != "" {
-		ctx = context.WithValue(ctx, TraceParentSpanIDKey, parentID)
+		ctx = context.WithValue(ctx, TraceParentSpanIDKey, parentID) // nolint: staticcheck
 	}
-	ctx = context.WithValue(ctx, TraceIDKey, traceID)
-	ctx = context.WithValue(ctx, TraceSpanIDKey, spanID)
+	ctx = context.WithValue(ctx, TraceIDKey, traceID)    // nolint: staticcheck
+	ctx = context.WithValue(ctx, TraceSpanIDKey, spanID) // nolint: staticcheck
 	return ctx
 }
 
@@ -172,10 +172,10 @@ func WrapLogger(l Logger, traceID string) Logger {
 // Log logs the trace ID when present then the values passed as argument.
 func (l *tracedLogger) Log(keyvals ...any) error {
 	if l.traceID == "" {
-		l.logger.Log(keyvals...)
+		l.logger.Log(keyvals...) // nolint: errcheck
 		return nil
 	}
 	keyvals = append([]any{"trace", l.traceID}, keyvals...)
-	l.logger.Log(keyvals)
+	l.logger.Log(keyvals) // nolint: errcheck
 	return nil
 }

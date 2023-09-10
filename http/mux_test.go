@@ -35,13 +35,13 @@ func TestMuxRegexp(t *testing.T) {
 func TestMiddlewares(t *testing.T) {
 	m1 := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("m1"))
+			w.Write([]byte("m1")) // nolint: errcheck
 			h.ServeHTTP(w, r)
 		})
 	}
 	m2 := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Write([]byte("m2"))
+			w.Write([]byte("m2")) // nolint: errcheck
 			h.ServeHTTP(w, r)
 		})
 	}
@@ -61,7 +61,7 @@ func TestMiddlewares(t *testing.T) {
 				m.Use(mw)
 			}
 			m.Handle("GET", "/", func(w http.ResponseWriter, _ *http.Request) {
-				w.Write([]byte("hello"))
+				w.Write([]byte("hello")) // nolint: errcheck
 			})
 			r, _ := http.NewRequest("GET", "/", nil)
 			w := httptest.NewRecorder()

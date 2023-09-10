@@ -36,6 +36,7 @@ type (
 	}
 
 	testCase struct {
+		Name     string
 		Trace    Tra
 		Request  Req
 		Response Res
@@ -58,15 +59,16 @@ const (
 )
 
 func TestNewUnaryServer(t *testing.T) {
-	cases := map[string]struct {
+	cases := []struct {
+		Name    string
 		Daemon  string
 		Success bool
 	}{
-		"ok":     {udplisten, true},
-		"not-ok": {"foo:bar", false},
+		{"ok", udplisten, true},
+		{"not-ok", "foo:bar", false},
 	}
-	for k, c := range cases {
-		t.Run(k, func(t *testing.T) {
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
 			m, err := NewUnaryServer("", c.Daemon)
 			if err == nil && !c.Success {
 				t.Error("expected failure but err is nil")
@@ -82,15 +84,16 @@ func TestNewUnaryServer(t *testing.T) {
 }
 
 func TestNewStreamServer(t *testing.T) {
-	cases := map[string]struct {
+	cases := []struct {
+		Name    string
 		Daemon  string
 		Success bool
 	}{
-		"ok":     {udplisten, true},
-		"not-ok": {"foo:bar", false},
+		{"ok", udplisten, true},
+		{"not-ok", "foo:bar", false},
 	}
-	for k, c := range cases {
-		t.Run(k, func(t *testing.T) {
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
 			m, err := NewStreamServer("", c.Daemon)
 			if err == nil && !c.Success {
 				t.Error("expected failure but err is nil")
@@ -115,45 +118,50 @@ func TestUnaryServerMiddleware(t *testing.T) {
 		agent      = "user agent"
 		unary      = &grpc.UnaryServerInfo{FullMethod: "Test.Test"}
 	)
-	cases := map[string]*testCase{
-		"no-trace": {
+	cases := []*testCase{
+		{
+			Name:     "no-trace",
 			Trace:    Tra{"", "", ""},
 			Request:  Req{"", "", ""},
 			Response: Res{codes.OK},
 			Segment:  Seg{nil, false},
 		},
-		"basic": {
+		{
+			Name:     "basic",
 			Trace:    Tra{traceID, spanID, ""},
 			Request:  Req{remoteAddr, clientIP, agent},
 			Response: Res{codes.OK},
 			Segment:  Seg{nil, false},
 		},
-		"with-parent": {
+		{
+			Name:     "with-parent",
 			Trace:    Tra{traceID, spanID, parentID},
 			Request:  Req{remoteAddr, clientIP, agent},
 			Response: Res{codes.OK},
 			Segment:  Seg{nil, false},
 		},
-		"error": {
+		{
+			Name:     "error",
 			Trace:    Tra{traceID, spanID, ""},
 			Request:  Req{remoteAddr, clientIP, agent},
 			Response: Res{codes.Unknown},
 			Segment:  Seg{status.Error(codes.Unknown, "error"), true},
 		},
-		"fault": {
+		{
+			Name:     "fault",
 			Trace:    Tra{traceID, spanID, ""},
 			Request:  Req{remoteAddr, clientIP, agent},
 			Response: Res{codes.InvalidArgument},
 			Segment:  Seg{status.Error(codes.InvalidArgument, "error"), true},
 		},
 	}
-	for k, c := range cases {
-		t.Run(k, func(t *testing.T) {
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
 			m, err := NewUnaryServer("service", udplisten)
 			if err != nil {
 				t.Fatalf("failed to create middleware: %s", err)
 			}
-			handler := func(ctx context.Context, req any) (any, error) {
+			handler := func(_ context.Context, _ any) (any, error) {
 				if c.Segment.Error {
 					return nil, c.Segment.Exception
 				}
@@ -176,7 +184,9 @@ func TestUnaryServerMiddleware(t *testing.T) {
 			}
 
 			messages := xraytest.ReadUDP(t, udplisten, expMsgs, func() {
-				m(ctx, &wrapperspb.StringValue{Value: "request"}, unary, handler)
+				if _, err := m(ctx, &wrapperspb.StringValue{Value: "request"}, unary, handler); err != nil && !c.Segment.Error {
+					t.Fatalf("unexpected error %s", err)
+				}
 			})
 			if expMsgs == 0 {
 				return
@@ -260,45 +270,50 @@ func TestStreamServerMiddleware(t *testing.T) {
 		agent      = "user agent"
 		streamInfo = &grpc.StreamServerInfo{FullMethod: "Test.Test"}
 	)
-	cases := map[string]*testCase{
-		"no-trace": {
+	cases := []*testCase{
+		{
+			Name:     "no-trace",
 			Trace:    Tra{"", "", ""},
 			Request:  Req{"", "", ""},
 			Response: Res{codes.OK},
 			Segment:  Seg{nil, false},
 		},
-		"basic": {
+		{
+			Name:     "basic",
 			Trace:    Tra{traceID, spanID, ""},
 			Request:  Req{remoteAddr, clientIP, agent},
 			Response: Res{codes.OK},
 			Segment:  Seg{nil, false},
 		},
-		"with-parent": {
+		{
+			Name:     "with-parent",
 			Trace:    Tra{traceID, spanID, parentID},
 			Request:  Req{remoteAddr, clientIP, agent},
 			Response: Res{codes.OK},
 			Segment:  Seg{nil, false},
 		},
-		"error": {
+		{
+			Name:     "error",
 			Trace:    Tra{traceID, spanID, ""},
 			Request:  Req{remoteAddr, clientIP, agent},
 			Response: Res{codes.Unknown},
 			Segment:  Seg{status.Error(codes.Unknown, "error"), true},
 		},
-		"fault": {
+		{
+			Name:     "fault",
 			Trace:    Tra{traceID, spanID, ""},
 			Request:  Req{remoteAddr, clientIP, agent},
 			Response: Res{codes.InvalidArgument},
 			Segment:  Seg{status.Error(codes.InvalidArgument, "error"), true},
 		},
 	}
-	for k, c := range cases {
-		t.Run(k, func(t *testing.T) {
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
 			m, err := NewStreamServer("service", udplisten)
 			if err != nil {
 				t.Fatalf("failed to create middleware: %s", err)
 			}
-			handler := func(srv any, stream grpc.ServerStream) error {
+			handler := func(_ any, _ grpc.ServerStream) error {
 				if c.Segment.Error {
 					return c.Segment.Exception
 				}
@@ -322,7 +337,9 @@ func TestStreamServerMiddleware(t *testing.T) {
 			wss := grpcm.NewWrappedServerStream(ctx, &testServerStream{})
 
 			messages := xraytest.ReadUDP(t, udplisten, expMsgs, func() {
-				m(nil, wss, streamInfo, handler)
+				if err := m(nil, wss, streamInfo, handler); err != nil && !c.Segment.Error {
+					t.Fatalf("unexpected error %s", err)
+				}
 			})
 			if expMsgs == 0 {
 				return
@@ -418,7 +435,7 @@ func TestUnaryClient(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			invoker := func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
+			invoker := func(_ context.Context, _ string, _, _ any, _ *grpc.ClientConn, _ ...grpc.CallOption) error {
 				if tc.Error {
 					return status.Error(tc.StatusCode, "error")
 				}
@@ -433,13 +450,16 @@ func TestUnaryClient(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error creating xray daemon connection: %v", err)
 				}
+				defer xrayConn.Close()
 				segment := xray.NewSegment(segmentName, traceID, spanID, xrayConn)
 				// add an xray segment to the context
 				ctx = context.WithValue(ctx, xray.SegKey, segment)
 			}
 
 			messages := xraytest.ReadUDP(t, udplisten, expMsgs, func() {
-				UnaryClient(host)(ctx, "Test.Test", req, resp, nil, invoker)
+				if err := UnaryClient(host)(ctx, "Test.Test", req, resp, nil, invoker); err != nil && !tc.Error {
+					t.Fatalf("unexpected error %s", err)
+				}
 			})
 			if expMsgs == 0 {
 				return
@@ -531,7 +551,7 @@ func TestStreamClient(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
-			streamer := func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, opts ...grpc.CallOption) (grpc.ClientStream, error) {
+			streamer := func(_ context.Context, _ *grpc.StreamDesc, _ *grpc.ClientConn, _ string, _ ...grpc.CallOption) (grpc.ClientStream, error) {
 				if tc.RequestError {
 					return nil, status.Error(tc.StatusCode, "error")
 				}
@@ -552,6 +572,7 @@ func TestStreamClient(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error creating xray daemon connection: %v", err)
 				}
+				defer xrayConn.Close()
 				segment := xray.NewSegment(segmentName, traceID, spanID, xrayConn)
 				// add an xray segment to the context
 				ctx = context.WithValue(ctx, xray.SegKey, segment)

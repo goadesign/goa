@@ -283,7 +283,9 @@ func runDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	Services = make(ServicesData)
 	eval.Reset()
 	expr.Root = new(expr.RootExpr)
-	eval.Register(expr.Root)
+	if err := eval.Register(expr.Root); err != nil {
+		t.Fatal(err)
+	}
 	expr.Root.API = expr.NewAPIExpr("test api", func() {})
 	expr.Root.API.Servers = []*expr.ServerExpr{expr.Root.API.DefaultServer()}
 

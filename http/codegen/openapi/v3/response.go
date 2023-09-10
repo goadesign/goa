@@ -23,7 +23,7 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 	o := expr.AsObject(r.Headers.Type)
 	if len(*o) > 0 {
 		headers = make(map[string]*HeaderRef, len(*o))
-		expr.WalkMappedAttr(r.Headers, func(name, elem string, attr *expr.AttributeExpr) error {
+		expr.WalkMappedAttr(r.Headers, func(name, elem string, attr *expr.AttributeExpr) error { // nolint: errcheck
 			header := &Header{
 				Description: attr.Description,
 				Required:    r.Headers.IsRequiredNoDefault(name),

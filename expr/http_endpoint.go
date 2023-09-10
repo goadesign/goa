@@ -216,7 +216,7 @@ func (e *HTTPEndpointExpr) Prepare() {
 				params.Merge(cpp)
 
 				// Inherit attributes for path params from parent service
-				WalkMappedAttr(cpp, func(name, _ string, _ *AttributeExpr) error {
+				WalkMappedAttr(cpp, func(name, _ string, _ *AttributeExpr) error { // nolint: errcheck
 					if att := c.MethodExpr.Payload.Find(name); att != nil {
 						if e.MethodExpr.Payload.Type == Empty {
 							e.MethodExpr.Payload.Type = &Object{}
@@ -745,7 +745,7 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 		verr.Add(e, "path parameter %s cannot be an object, path parameter types must be primitive, array or map (query string only)", name)
 	}
 	verr := new(eval.ValidationErrors)
-	WalkMappedAttr(pparams, func(name, _ string, a *AttributeExpr) error {
+	WalkMappedAttr(pparams, func(name, _ string, a *AttributeExpr) error { // nolint: errcheck
 		switch {
 		case IsObject(a.Type), IsMap(a.Type), IsUnion(a.Type):
 			invalidTypeErr(verr, e, name)
@@ -760,7 +760,7 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 		}
 		return nil
 	})
-	WalkMappedAttr(qparams, func(name, _ string, a *AttributeExpr) error {
+	WalkMappedAttr(qparams, func(name, _ string, a *AttributeExpr) error { // nolint: errcheck
 		switch {
 		case IsObject(a.Type), IsUnion(a.Type):
 			invalidTypeErr(verr, e, name)
@@ -778,13 +778,13 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 	if e.MethodExpr.Payload != nil {
 		switch e.MethodExpr.Payload.Type.(type) {
 		case *Object, UserType:
-			WalkMappedAttr(pparams, func(name, _ string, a *AttributeExpr) error {
+			WalkMappedAttr(pparams, func(name, _ string, _ *AttributeExpr) error { // nolint: errcheck
 				if e.MethodExpr.Payload.Find(name) == nil {
 					verr.Add(e, "Path parameter %q not found in payload.", name)
 				}
 				return nil
 			})
-			WalkMappedAttr(qparams, func(name, _ string, a *AttributeExpr) error {
+			WalkMappedAttr(qparams, func(name, _ string, _ *AttributeExpr) error { // nolint: errcheck
 				if e.MethodExpr.Payload.Find(name) == nil {
 					verr.Add(e, "Query string parameter %q not found in payload.", name)
 				}
@@ -815,7 +815,7 @@ func (e *HTTPEndpointExpr) validateHeadersAndCookies() *eval.ValidationErrors {
 	cookies := DupMappedAtt(e.Cookies)
 	initAttr(headers, e.MethodExpr.Payload)
 	initAttr(cookies, e.MethodExpr.Payload)
-	WalkMappedAttr(headers, func(name, _ string, a *AttributeExpr) error {
+	WalkMappedAttr(headers, func(name, _ string, a *AttributeExpr) error { // nolint: errcheck
 		switch {
 		case IsObject(a.Type), IsUnion(a.Type):
 			verr.Add(e, "header %q must be primitive or array", name)
@@ -830,7 +830,7 @@ func (e *HTTPEndpointExpr) validateHeadersAndCookies() *eval.ValidationErrors {
 		}
 		return nil
 	})
-	WalkMappedAttr(cookies, func(name, _ string, a *AttributeExpr) error {
+	WalkMappedAttr(cookies, func(name, _ string, a *AttributeExpr) error { // nolint: errcheck
 		switch {
 		case IsObject(a.Type), IsUnion(a.Type), IsArray(a.Type):
 			verr.Add(e, "cookie %q must be primitive", name)
@@ -843,7 +843,7 @@ func (e *HTTPEndpointExpr) validateHeadersAndCookies() *eval.ValidationErrors {
 	switch e.MethodExpr.Payload.Type.(type) {
 	case *Object, UserType:
 		hasBasicAuth := TaggedAttribute(e.MethodExpr.Payload, "security:username") != ""
-		WalkMappedAttr(headers, func(name, elem string, a *AttributeExpr) error {
+		WalkMappedAttr(headers, func(name, elem string, _ *AttributeExpr) error { // nolint: errcheck
 			if e.MethodExpr.Payload.Find(name) == nil {
 				verr.Add(e, "header %q not found in payload.", name)
 			}
@@ -855,7 +855,7 @@ func (e *HTTPEndpointExpr) validateHeadersAndCookies() *eval.ValidationErrors {
 			}
 			return nil
 		})
-		WalkMappedAttr(cookies, func(name, elem string, a *AttributeExpr) error {
+		WalkMappedAttr(cookies, func(name, _ string, _ *AttributeExpr) error { // nolint: errcheck
 			if e.MethodExpr.Payload.Find(name) == nil {
 				verr.Add(e, "cookie %q not found in payload.", name)
 			}

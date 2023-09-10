@@ -64,6 +64,10 @@ func TestSegment_SubmitInProgress(t *testing.T) {
 			segment.Close()
 		})
 
+		if err := conn.Close(); err != nil {
+			t.Fatal(err)
+		}
+
 		// verify the In-Progress segment
 		s := xraytest.ExtractSegment(t, messages[0])
 		if !s.InProgress {
@@ -98,6 +102,10 @@ func TestSegment_SubmitInProgress(t *testing.T) {
 			segment.Namespace = "2"
 			segment.SubmitInProgress() // should have no effect
 		})
+
+		if err := conn.Close(); err != nil {
+			t.Fatal(err)
+		}
 
 		// verify the In-Progress segment
 		s := xraytest.ExtractSegment(t, messages[0])

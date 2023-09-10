@@ -84,7 +84,7 @@ type (
 
 	// SetWalker is the function signature used to iterate over expression sets
 	// with WalkSets.
-	SetWalker func(s ExpressionSet) error
+	SetWalker func(s ExpressionSet)
 )
 
 // Top is the expression returned by Current when the execution stack is empty.
