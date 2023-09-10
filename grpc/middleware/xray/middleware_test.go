@@ -450,7 +450,13 @@ func TestUnaryClient(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error creating xray daemon connection: %v", err)
 				}
-				defer xrayConn.Close()
+				defer func() {
+					err := xrayConn.Close()
+					if err != nil {
+						t.Fatalf("error closing xray daemon connection: %v", err)
+					}
+				}()
+
 				segment := xray.NewSegment(segmentName, traceID, spanID, xrayConn)
 				// add an xray segment to the context
 				ctx = context.WithValue(ctx, xray.SegKey, segment)
@@ -572,7 +578,12 @@ func TestStreamClient(t *testing.T) {
 				if err != nil {
 					t.Fatalf("error creating xray daemon connection: %v", err)
 				}
-				defer xrayConn.Close()
+				defer func() {
+					err := xrayConn.Close()
+					if err != nil {
+						t.Fatalf("error closing xray daemon connection: %v", err)
+					}
+				}()
 				segment := xray.NewSegment(segmentName, traceID, spanID, xrayConn)
 				// add an xray segment to the context
 				ctx = context.WithValue(ctx, xray.SegKey, segment)
