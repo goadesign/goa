@@ -30,7 +30,7 @@ func Generate(dir, cmd string) (outputs []string, err1 error) {
 			return nil, err
 		}
 		path := filepath.Join(base, codegen.Gendir)
-		if err := os.MkdirAll(path, 0777); err != nil {
+		if err := os.MkdirAll(path, 0750); err != nil {
 			return nil, err
 		}
 

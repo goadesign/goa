@@ -284,8 +284,8 @@ func (o Operation) MarshalJSON() ([]byte, error) {
 }
 
 // MarshalJSON returns the JSON encoding of p.
-func (p Parameter) MarshalJSON() ([]byte, error) {
-	return openapi.MarshalJSON(_Parameter(p), p.Extensions)
+func (p *Parameter) MarshalJSON() ([]byte, error) {
+	return openapi.MarshalJSON((*_Parameter)(p), p.Extensions)
 }
 
 // MarshalJSON returns the JSON encoding of r.
@@ -314,8 +314,8 @@ func (o Operation) MarshalYAML() (any, error) {
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
-func (p Parameter) MarshalYAML() (any, error) {
-	return openapi.MarshalYAML(_Parameter(p), p.Extensions)
+func (p *Parameter) MarshalYAML() (any, error) {
+	return openapi.MarshalYAML((*_Parameter)(p), p.Extensions)
 }
 
 // MarshalYAML returns value which marshaled in place of the original value

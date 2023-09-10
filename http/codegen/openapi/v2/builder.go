@@ -374,9 +374,9 @@ func paramFor(at *expr.AttributeExpr, name, in string, required bool) *Parameter
 
 func itemsFromExpr(at *expr.AttributeExpr) *Items {
 	items := &Items{Type: at.Type.Name()}
-	switch actual := at.Type.(type) {
-	case expr.Primitive:
-		switch actual.Kind() {
+	p, ok := at.Type.(expr.Primitive)
+	if ok {
+		switch p.Kind() {
 		case expr.IntKind, expr.Int64Kind, expr.UIntKind, expr.UInt64Kind, expr.Int32Kind, expr.UInt32Kind:
 			items.Type = "integer"
 		case expr.Float32Kind, expr.Float64Kind:

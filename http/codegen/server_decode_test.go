@@ -197,7 +197,6 @@ func TestDecode(t *testing.T) {
 		{"decode-multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL, testdata.PayloadMultipartMapTypeDecodeCode},
 		{"decode-with-params-and-headers-dsl", testdata.WithParamsAndHeadersBlockDSL, testdata.WithParamsAndHeadersBlockDecodeCode},
 
-		//decode- aliases
 		{"decode-query-int-alias", testdata.QueryIntAliasDSL, testdata.QueryIntAliasDecodeCode},
 		{"decode-query-int-alias-validate", testdata.QueryIntAliasValidateDSL, testdata.QueryIntAliasValidateDecodeCode},
 		{"decode-query-array-alias", testdata.QueryArrayAliasDSL, testdata.QueryArrayAliasDecodeCode},
