@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -14,6 +15,9 @@ import (
 const (
 	// ProtoVersion is the protocol buffer version used to generate .proto files
 	ProtoVersion = "proto3"
+
+	// ProtoPrefix is the prefix added to the proto package name.
+	ProtoPrefix = "goagen"
 )
 
 // ProtoFiles returns a *.proto file for each gRPC service.
@@ -28,7 +32,16 @@ func ProtoFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 	data := GRPCServices.Get(svc.Name())
 	svcName := data.Service.PathName
-	path := filepath.Join(codegen.Gendir, "grpc", svcName, pbPkgName, "goadesign_goagen_"+svcName+".proto")
+	parts := strings.Split(genpkg, "/")
+	var repoName string
+	if len(parts) > 1 {
+		repoName = parts[len(parts)-2]
+	} else {
+		repoName = parts[0]
+	}
+	// the filename is used by protoc to set the namespace so try to make it unique
+	fname := fmt.Sprintf("%s_%s_%s.proto", ProtoPrefix, repoName, svcName)
+	path := filepath.Join(codegen.Gendir, "grpc", svcName, pbPkgName, fname)
 
 	sections := []*codegen.SectionTemplate{
 		// header comments
