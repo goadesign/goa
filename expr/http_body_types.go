@@ -17,11 +17,21 @@ import (
 // single "Authorization" header is used to compute both the username and
 // password attributes).
 func defaultRequestHeaderAttributes(e *HTTPEndpointExpr) map[string]bool {
-	if len(e.MethodExpr.Requirements) == 0 {
+	var requirements []*SecurityExpr
+	if e.MethodExpr.Requirements != nil {
+		requirements = e.MethodExpr.Requirements
+	}
+	if e.Service.ServiceExpr.Requirements != nil {
+		requirements = append(requirements, e.Service.ServiceExpr.Requirements...)
+	}
+	if Root.API.Requirements != nil {
+		requirements = append(requirements, Root.API.Requirements...)
+	}
+	if len(requirements) == 0 {
 		return nil
 	}
 	headers := make(map[string]bool)
-	for _, req := range e.MethodExpr.Requirements {
+	for _, req := range requirements {
 		for _, sch := range req.Schemes {
 			var field string
 			switch sch.Kind {
@@ -343,7 +353,6 @@ func unionToObject(att *AttributeExpr, name, suffix, svcName string) *AttributeE
 // 3) If the first string is a single word or camelcased, the rest of the
 // strings are concatenated to form a valid upper camelcase.
 // e.g. concat("myEndpoint", "streaming", "Body") => "MyEndpointStreamingBody"
-//
 func concat(strs ...string) string {
 	if len(strs) == 1 {
 		return strs[0]
