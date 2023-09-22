@@ -27,7 +27,7 @@ jobs:
         env:
           GOA_BRANCH: ${{ steps.extract_branch.outputs.branch }}
       - name: Report test-coverage to DeepSource
-        if: ${{ matrix.os == 'ubuntu-latest' }}
+        if: github.event_name == 'push' && matrix.os == 'ubuntu-latest'
         run: |
           curl https://deepsource.io/cli | sh
           ./bin/deepsource report --analyzer test-coverage --key go --value-file ./cover.out
