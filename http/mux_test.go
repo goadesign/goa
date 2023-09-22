@@ -128,3 +128,88 @@ func TestVars(t *testing.T) {
 		})
 	}
 }
+
+func TestResolvePattern(t *testing.T) {
+	cases := []struct {
+		Name     string
+		Patterns []string
+		URL      string
+		Expected string
+	}{
+		{
+			Name:     "simple",
+			Patterns: []string{"/users/{id}"},
+			URL:      "/users/123",
+			Expected: "/users/{id}",
+		},
+		{
+			Name:     "multiple",
+			Patterns: []string{"/users/{id}/posts/{post_id}"},
+			URL:      "/users/123/posts/456",
+			Expected: "/users/{id}/posts/{post_id}",
+		},
+		{
+			Name:     "two patterns",
+			Patterns: []string{"/users/{id}/posts/{post_id}", "/users/{id}/posts/{post_id}/comments/{comment_id}"},
+			URL:      "/users/123/posts/456",
+			Expected: "/users/{id}/posts/{post_id}",
+		},
+		{
+			Name:     "two patterns deep",
+			Patterns: []string{"/users/{id}/posts/{post_id}", "/users/{id}/posts/{post_id}/comments/{comment_id}"},
+			URL:      "/users/123/posts/456/comments/789",
+			Expected: "/users/{id}/posts/{post_id}/comments/{comment_id}",
+		},
+		{
+			Name:     "wildcard",
+			Patterns: []string{"/users/{id}/posts/{*post_id}"},
+			URL:      "/users/123/posts/456/789",
+			Expected: "/users/{id}/posts/{*post_id}",
+		},
+		{
+			Name:     "two wildcards",
+			Patterns: []string{"/users/{id}/posts/{*post_id}", "/users/{id}/posts/{post_id}/comments/{*comment_id}"},
+			URL:      "/users/123/posts/456/789",
+			Expected: "/users/{id}/posts/{*post_id}",
+		},
+		{
+			Name:     "two wildcards deep",
+			Patterns: []string{"/users/{id}/posts/{*post_id}", "/users/{id}/posts/{post_id}/comments/{*comment_id}"},
+			URL:      "/users/123/posts/456/comments/abc",
+			Expected: "/users/{id}/posts/{post_id}/comments/{*comment_id}",
+		},
+		{
+			Name:     "no var",
+			Patterns: []string{"/users"},
+			URL:      "/users",
+			Expected: "/users",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			var called bool
+			mux := NewMuxer()
+			handler := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+				pattern := mux.ResolvePattern(r)
+				assert.Equal(t, c.Expected, pattern)
+				called = true
+			})
+			// Make sure resolver works with middlewares.
+			handler = func(next http.HandlerFunc) http.HandlerFunc {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					pattern := mux.ResolvePattern(r)
+					assert.Equal(t, c.Expected, pattern)
+					next.ServeHTTP(w, r)
+				})
+			}(handler)
+			for _, p := range c.Patterns {
+				mux.Handle("GET", p, handler)
+			}
+			req, _ := http.NewRequest("GET", c.URL, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			assert.True(t, called)
+		})
+	}
+}
