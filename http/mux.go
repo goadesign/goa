@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 
 	chi "github.com/go-chi/chi/v5"
@@ -113,12 +114,20 @@ func (m *mux) Vars(r *http.Request) map[string]string {
 	for i, k := range params.Keys {
 		if k == "*" {
 			wildcard := m.wildcards[r.Method+"::"+rctx.RoutePattern()]
-			vars[wildcard] = params.Values[i]
+			vars[wildcard] = unescape(params.Values[i])
 			continue
 		}
-		vars[k] = params.Values[i]
+		vars[k] = unescape(params.Values[i])
 	}
 	return vars
+}
+
+func unescape(s string) string {
+	u, err := url.PathUnescape(s)
+	if err != nil {
+		return s
+	}
+	return u
 }
 
 // Use appends a middleware to the list of middlewares to be applied
