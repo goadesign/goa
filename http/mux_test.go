@@ -105,6 +105,23 @@ func TestVars(t *testing.T) {
 			},
 		},
 		{
+			Name:    "escaped",
+			Pattern: "/users/{id}",
+			URL:     "/users/%40123",
+			Expected: map[string]string{
+				"id": "@123",
+			},
+		},
+		{
+			Name:    "escaped wildcard",
+			Pattern: "/users/{id}/posts/{*post_id}",
+			URL:     "/users/%40123/posts/456/789%24",
+			Expected: map[string]string{
+				"id":      "@123",
+				"post_id": "456/789$",
+			},
+		},
+		{
 			Name:     "no var",
 			Pattern:  "/users",
 			URL:      "/users",
