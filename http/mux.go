@@ -8,6 +8,7 @@ import (
 	"regexp"
 
 	chi "github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type (
@@ -85,6 +86,7 @@ func NewMuxer() ResolverMuxer {
 		w.WriteHeader(http.StatusNotFound)
 		enc.Encode(NewErrorResponse(ctx, fmt.Errorf("404 page not found"))) // nolint:errcheck
 	}))
+	r.Use(middleware.RedirectSlashes)
 	return &mux{Router: r, wildcards: make(map[string]string)}
 }
 
