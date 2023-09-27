@@ -80,13 +80,15 @@ type (
 // NewMuxer returns a Muxer implementation based on a Chi router.
 func NewMuxer() ResolverMuxer {
 	r := chi.NewRouter()
+	// RedirectSlashes must be mounted at the top level of the router.
+	// See. https://github.com/go-chi/chi/blob/1129e362d6cce6e3805e3bc8dfbaeb34b5129789/middleware/strip_test.go#L105-L107
+	r.Use(middleware.RedirectSlashes)
 	r.NotFound(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		ctx := context.WithValue(req.Context(), AcceptTypeKey, req.Header.Get("Accept"))
 		enc := ResponseEncoder(ctx, w)
 		w.WriteHeader(http.StatusNotFound)
 		enc.Encode(NewErrorResponse(ctx, fmt.Errorf("404 page not found"))) // nolint:errcheck
 	}))
-	r.Use(middleware.RedirectSlashes)
 	return &mux{Router: r, wildcards: make(map[string]string)}
 }
 
