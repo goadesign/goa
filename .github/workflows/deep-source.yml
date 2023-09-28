@@ -1,7 +1,8 @@
 name: Report Test Coverage
 on: 
   workflow_run:
-    workflows: [Run Tests and Static Analysis]
+    workflows: 
+      - Run Tests and Static Analysis
     types: [completed]
 
 jobs:
