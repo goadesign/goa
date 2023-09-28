@@ -1,5 +1,12 @@
 name: build
-on: [pull_request]
+on:
+  push:
+    branches:
+      - v3
+  pull_request:
+    branches:
+      - v3
+
 jobs:
   ci:
     strategy:
