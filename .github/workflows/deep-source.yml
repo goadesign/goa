@@ -1,4 +1,4 @@
-name: deepsource
+name: deep-source
 on: 
   workflow_run:
     workflows: [build]
@@ -12,8 +12,7 @@ jobs:
       - name: Download test coverage
         uses: actions/download-artifact@v3
         with:
-          name: coverage
-          path: cover.out
+          path: ./
       - name: Report analysis to DeepSource
         run: |
           curl https://deepsource.io/cli | sh
