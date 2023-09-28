@@ -19,8 +19,8 @@ jobs:
       - name: Build
         run: make ci
       - name: Upload test coverage for deep source
+        if: matrix.go == '1.21' && matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v3
         with:
           name: coverage
           path: cover.out
-
