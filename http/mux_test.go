@@ -227,6 +227,16 @@ func TestResolvePattern(t *testing.T) {
 			w := httptest.NewRecorder()
 			mux.ServeHTTP(w, req)
 			assert.True(t, called)
+			// Make sure the URL with a trailing slash is redirected.
+			called = false // Reset.
+			req, _ = http.NewRequest("GET", c.URL+"/", nil)
+			w = httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			assert.Equal(t, http.StatusMovedPermanently, w.Code)
+			req, _ = http.NewRequest("GET", w.Header().Get("Location"), nil)
+			w = httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			assert.True(t, called)
 		})
 	}
 }
