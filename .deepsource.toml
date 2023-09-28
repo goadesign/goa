@@ -6,4 +6,4 @@ enabled = true
 name = "go"
 
   [analyzers.meta]
-  import_root = "github.com/goadesign/goa"
+  import_root = "goa.design/goa/v3"
