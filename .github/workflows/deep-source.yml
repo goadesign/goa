@@ -1,0 +1,22 @@
+name: deepsource
+on: 
+  workflow_run:
+    workflows: [build]
+    types: [completed]
+
+jobs:
+  on-success:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Download test coverage
+        uses: actions/download-artifact@v3
+        with:
+          name: coverage
+          path: cover.out
+      - name: Report analysis to DeepSource
+        run: |
+          curl https://deepsource.io/cli | sh
+          ./bin/deepsource report --analyzer test-coverage --key go --value-file ./cover.out
+        env:
+          DEEPSOURCE_DSN: ${{ secrets.DEEPSOURCE_DSN }}

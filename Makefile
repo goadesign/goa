@@ -73,6 +73,7 @@ test:
 	go test ./... --coverprofile=cover.out
 
 release: release-goa release-examples release-plugins
+	@echo "Release v$(MAJOR).$(MINOR).$(BUILD) complete"
 
 release-goa:
 	# First make sure all is clean
@@ -85,7 +86,7 @@ release-goa:
 		git checkout v$(MAJOR) && \
 		git pull origin v$(MAJOR) && \
 		git diff-index --quiet HEAD
-	go mod tidy -compat=1.17
+	go mod tidy 
 	# Bump version number, commit and push
 	sed 's/Major = .*/Major = $(MAJOR)/' pkg/version.go > _tmp && mv _tmp pkg/version.go
 	sed 's/Minor = .*/Minor = $(MINOR)/' pkg/version.go > _tmp && mv _tmp pkg/version.go
@@ -118,5 +119,4 @@ release-plugins:
 		git tag v$(MAJOR).$(MINOR).$(BUILD) && \
 		git push origin v$(MAJOR) && \
 		git push origin v$(MAJOR).$(MINOR).$(BUILD)
-	echo DONE RELEASING v$(MAJOR).$(MINOR).$(BUILD)!
 
