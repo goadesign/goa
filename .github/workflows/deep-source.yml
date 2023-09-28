@@ -9,6 +9,8 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion == 'success'
     steps:
+      - name: Check out code
+        uses: actions/checkout@v4
       - name: Download test coverage
         uses: actions/download-artifact@v3
         with:
