@@ -1,11 +1,11 @@
-name: deep-source
+name: Report Test Coverage
 on: 
   workflow_run:
-    workflows: [build]
+    workflows: [Run Tests and Static Analysis]
     types: [completed]
 
 jobs:
-  on-success:
+  upload:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion == 'success'
     steps:
@@ -14,7 +14,8 @@ jobs:
       - name: Download test coverage
         uses: actions/download-artifact@v3
         with:
-          path: ./
+          name: coverage
+          path: cover.out
       - name: Report analysis to DeepSource
         run: |
           curl https://deepsource.io/cli | sh
