@@ -235,7 +235,7 @@ func (s *Server) Mount(mux goahttp.Muxer) {
 var ServerMultipleFilesMounterCode = `// MountPathToFolder configures the mux to serve GET request made to "/".
 func MountPathToFolder(mux goahttp.Muxer, h http.Handler) {
 	mux.Handle("GET", "/", h.ServeHTTP)
-	mux.Handle("GET", "/*wildcard", h.ServeHTTP)
+	mux.Handle("GET", "/{*wildcard}", h.ServeHTTP)
 }
 `
 
@@ -243,7 +243,7 @@ var ServerMultipleFilesWithPrefixPathMounterCode = `// MountPathToFolder configu
 // "/server_file_server".
 func MountPathToFolder(mux goahttp.Muxer, h http.Handler) {
 	mux.Handle("GET", "/server_file_server/", h.ServeHTTP)
-	mux.Handle("GET", "/server_file_server/*wildcard", h.ServeHTTP)
+	mux.Handle("GET", "/server_file_server/{*wildcard}", h.ServeHTTP)
 }
 `
 
