@@ -1,4 +1,5 @@
-name: build
+name: Run Static Checks and Tests
+
 on:
   push:
     branches:
@@ -17,16 +18,20 @@ jobs:
         os: ['ubuntu-latest']
         # os: ['ubuntu-latest', 'windows-latest']
     runs-on: ${{ matrix.os }}
+
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+
       - name: Set up Go ${{ matrix.go }}
         uses: actions/setup-go@v4
         with:
           go-version: ${{ matrix.go }}
         id: go
+
       - name: Build
         run: make ci
+
       - name: Upload test coverage for deep source
         if: matrix.go == '1.21' && matrix.os == 'ubuntu-latest'
         uses: actions/upload-artifact@v3

@@ -1,22 +1,26 @@
 name: Report Test Coverage
-on: 
+
+on:
   workflow_run:
-    workflows: 
-      - build
-    types: [completed]
+    workflows: ["Run Static Checks and Tests"]
+    types:
+      - completed
 
 jobs:
   report:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion == 'success'
+
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+
       - name: Download test coverage
         uses: actions/download-artifact@v3
         with:
           name: coverage
           path: cover.out
+
       - name: Report analysis to DeepSource
         run: |
           curl https://deepsource.io/cli | sh
