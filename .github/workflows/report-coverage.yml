@@ -2,9 +2,8 @@ name: Report Test Coverage
 
 on:
   workflow_run:
-    workflows: ["Run Static Checks and Tests"]
-    types:
-      - completed
+    workflows: [build]
+    types: [completed]
 
 jobs:
   report:
