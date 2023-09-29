@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: Download test coverage
         uses: actions/download-artifact@v3
