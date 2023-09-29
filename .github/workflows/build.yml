@@ -1,4 +1,4 @@
-name: Run Tests and Static Analysis
+name: build
 on:
   push:
     branches:
