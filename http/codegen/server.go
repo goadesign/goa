@@ -415,7 +415,7 @@ func {{ .MountHandler }}(mux goahttp.Muxer, h http.Handler) {
 	{{- if .IsDir }}
 		{{- range .RequestPaths }}
 	mux.Handle("GET", "{{ . }}{{if ne . "/"}}/{{end}}", h.ServeHTTP)
-	mux.Handle("GET", "{{ . }}{{if ne . "/"}}/{{end}}*{{ $.PathParam }}", h.ServeHTTP)
+	mux.Handle("GET", "{{ . }}{{if ne . "/"}}/{{end}}{*{{ $.PathParam }}}", h.ServeHTTP)
 		{{- end }}
 	{{- else }}
 		{{- range .RequestPaths }}
