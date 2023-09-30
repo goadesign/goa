@@ -207,43 +207,42 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			s.AnyOf = append(s.AnyOf, sf.schemafy(val.Attribute))
 		}
 	case expr.UserType:
-		if !expr.IsAlias(t) {
-			h := sf.hashAttribute(attr, fnv.New64())
+		if expr.IsAlias(t) {
+			return sf.schemafy(t.Attribute())
+		}
+		h := sf.hashAttribute(attr, fnv.New64())
 
-			var metaName string
-			if n, ok := t.Attribute().Meta["openapi:typename"]; ok {
-				metaName = codegen.Goify(n[0], true)
-			}
-			metaRef := toRef(metaName)
+		var metaName string
+		if n, ok := t.Attribute().Meta["openapi:typename"]; ok {
+			metaName = codegen.Goify(n[0], true)
+		}
+		metaRef := toRef(metaName)
 
-			// If it is named, it refers to the same structure and name.
-			// If it is not named, it refers to the same structure.
-			refs, ok := sf.hashes[h]
-			if len(noref) == 0 && ok {
-				for _, ref := range refs {
-					if ref == metaRef || metaName == "" {
-						s.Ref = ref
-						return s
-					}
+		// If it is named, it refers to the same structure and name.
+		// If it is not named, it refers to the same structure.
+		refs, ok := sf.hashes[h]
+		if len(noref) == 0 && ok {
+			for _, ref := range refs {
+				if ref == metaRef || metaName == "" {
+					s.Ref = ref
+					return s
 				}
 			}
-
-			// There is no type to refer to, generate a new one.
-			name := t.Name()
-			if metaName != "" {
-				name = metaName
-			} else if n, ok := t.Attribute().Meta["name:original"]; ok {
-				name = n[0]
-			}
-
-			typeName := sf.uniquify(codegen.Goify(name, true))
-			s.Ref = toRef(typeName)
-			sf.hashes[h] = append(sf.hashes[h], s.Ref)
-			sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
-			return s // All other schema properties are set in the reference
 		}
-		// Alias primitive type
-		s = sf.schemafy(t.Attribute())
+
+		// There is no type to refer to, generate a new one.
+		name := t.Name()
+		if metaName != "" {
+			name = metaName
+		} else if n, ok := t.Attribute().Meta["name:original"]; ok {
+			name = n[0]
+		}
+
+		typeName := sf.uniquify(codegen.Goify(name, true))
+		s.Ref = toRef(typeName)
+		sf.hashes[h] = append(sf.hashes[h], s.Ref)
+		sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
+		return s // All other schema properties are set in the reference
 	default:
 		panic(fmt.Sprintf("unknown type %T", t)) // bug
 	}
