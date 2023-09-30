@@ -964,40 +964,7 @@ func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[string]struct{}) *e
 		}
 		att.Type = &obj
 	case *expr.Union:
-		values := expr.AsUnion(dt).Values
-		names := make([]any, len(values))
-		vals := make([]string, len(values))
-		bases := make([]expr.DataType, len(values))
-		for i, nat := range values {
-			names[i] = nat.Name
-			vals[i] = fmt.Sprintf("- %q", nat.Name)
-			bases[i] = nat.Attribute.Type
-		}
-		obj := expr.Object([]*expr.NamedAttributeExpr{
-			{Name: "Type", Attribute: &expr.AttributeExpr{
-				Type:        expr.String,
-				Description: "Union type name, one of:\n" + strings.Join(vals, "\n"),
-				Validation:  &expr.ValidationExpr{Values: names},
-				Meta: expr.MetaExpr{
-					"struct:tag:form": {"Type"},
-					"struct:tag:json": {"Type"},
-					"struct:tag:xml":  {"Type"},
-				},
-			}},
-			{Name: "Value", Attribute: &expr.AttributeExpr{
-				Type:         expr.String,
-				Description:  "JSON formatted union value",
-				UserExamples: []*expr.ExampleExpr{{Value: `"JSON"`}},
-				Bases:        bases, // For OpenAPI generation
-				Meta: expr.MetaExpr{
-					"struct:tag:form": {"Value"},
-					"struct:tag:json": {"Value"},
-					"struct:tag:xml":  {"Value"},
-				},
-			}},
-		})
-		att.Type = &obj
-		att.Validation = &expr.ValidationExpr{Required: []string{"Type", "Value"}}
+		att = expr.UnionToObject(att)
 	}
 	return att
 }
