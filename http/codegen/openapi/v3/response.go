@@ -9,6 +9,27 @@ import (
 	"goa.design/goa/v3/http/codegen/openapi"
 )
 
+func headersFromAttr(attr *expr.MappedAttributeExpr, rand *expr.ExampleGenerator) map[string]*HeaderRef {
+	o := expr.AsObject(attr.Type)
+	if len(*o) == 0 {
+		return nil
+	}
+	headers := make(map[string]*HeaderRef, len(*o))
+	expr.WalkMappedAttr(attr, func(name, elem string, attr *expr.AttributeExpr) error { // nolint: errcheck
+		header := &Header{
+			Description: attr.Description,
+			Required:    attr.IsRequiredNoDefault(name),
+			Schema:      newSchemafier(rand).schemafy(attr),
+			Example:     attr.Example(rand),
+			Extensions:  openapi.ExtensionsFromExpr(attr.Meta),
+		}
+		initExamples(header, attr, rand)
+		headers[elem] = &HeaderRef{Value: header}
+		return nil
+	})
+	return headers
+}
+
 func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema, rand *expr.ExampleGenerator) *Response {
 	ct := r.ContentType
 	rt, ok := r.Body.Type.(*expr.ResultTypeExpr)
@@ -19,22 +40,28 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 		// Default to application/json
 		ct = "application/json"
 	}
-	var headers map[string]*HeaderRef
-	o := expr.AsObject(r.Headers.Type)
-	if len(*o) > 0 {
-		headers = make(map[string]*HeaderRef, len(*o))
-		expr.WalkMappedAttr(r.Headers, func(name, elem string, attr *expr.AttributeExpr) error { // nolint: errcheck
-			header := &Header{
-				Description: attr.Description,
-				Required:    r.Headers.IsRequiredNoDefault(name),
-				Schema:      newSchemafier(rand).schemafy(attr),
-				Example:     attr.Example(rand),
-				Extensions:  openapi.ExtensionsFromExpr(attr.Meta),
+	headers := headersFromAttr(r.Headers, rand)
+	cookies := headersFromAttr(r.Cookies, rand)
+	if len(cookies) > 0 {
+		if headers == nil {
+			headers = make(map[string]*HeaderRef)
+		}
+		if len(cookies) == 1 {
+			for _, v := range cookies {
+				headers["Set-Cookie"] = v
 			}
-			initExamples(header, attr, rand)
-			headers[elem] = &HeaderRef{Value: header}
-			return nil
-		})
+		} else {
+			// Generic cookies header
+			headers["Set-Cookie"] = &HeaderRef{
+				Value: &Header{
+					Description: "Cookies set by the server",
+					Required:    true,
+					Schema: &openapi.Schema{
+						Type: "string",
+					},
+				},
+			}
+		}
 	}
 
 	var content map[string]*MediaType

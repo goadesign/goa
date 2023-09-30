@@ -121,6 +121,12 @@ func TestBuildBodyTypes(t *testing.T) {
 		ExpectedType:          tempty,
 		ExpectedResponseTypes: rt{200: tobj("name", tstring, "age", tint)},
 	}, {
+		Name: "multi_cookie_response_body",
+		DSL:  dsls.MultiCookieResponseBodyDSL(svcName, "multi_cookie_response_body"),
+
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{200: tobj("name", tstring)},
+	}, {
 		Name: "string_streaming_response_body",
 		DSL:  dsls.StringStreamingResponseBodyDSL(svcName, "string_streaming_response_body"),
 

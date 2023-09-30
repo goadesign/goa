@@ -91,6 +91,33 @@ func ObjectResponseBodyDSL(svcName, metName string) func() {
 	}
 }
 
+func MultiCookieResponseBodyDSL(svcName, metName string) func() {
+	return func() {
+		var U = Type("U", func() {
+			Attribute("name")
+			Attribute("cookie")
+		})
+		var T = Type("T", func() {
+			Attribute("name")
+		})
+		var _ = Service(svcName, func() {
+			Method("other", func() {
+				Result(U)
+				HTTP(func() {
+					GET("/cookie")
+					Response(StatusOK, func() { Cookie("cookie") })
+				})
+			})
+			Method(metName, func() {
+				Result(T)
+				HTTP(func() {
+					GET("/")
+				})
+			})
+		})
+	}
+}
+
 func StringStreamingResponseBodyDSL(svcName, metName string) func() {
 	return func() {
 		var _ = Service(svcName, func() {
