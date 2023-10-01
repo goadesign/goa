@@ -109,15 +109,18 @@ func (m *mux) Handle(method, pattern string, handler http.HandlerFunc) {
 
 // Vars extracts the path variables from the request context.
 func (m *mux) Vars(r *http.Request) map[string]string {
-	rctx := chi.RouteContext(r.Context())
-	params := rctx.URLParams
+	ctx := m.ensureContext(r)
+	if ctx == nil {
+		return nil
+	}
+	params := ctx.URLParams
 	if len(params.Keys) == 0 {
 		return nil
 	}
 	vars := make(map[string]string, len(params.Keys))
 	for i, k := range params.Keys {
 		if k == "*" {
-			wildcard := m.wildcards[r.Method+"::"+rctx.RoutePattern()]
+			wildcard := m.wildcards[r.Method+"::"+ctx.RoutePattern()]
 			vars[wildcard] = unescape(params.Values[i])
 			continue
 		}
@@ -143,11 +146,8 @@ func (m *mux) Use(f func(http.Handler) http.Handler) {
 // ResolvePattern returns the route pattern used to register the handler for the
 // given method and path.
 func (m *mux) ResolvePattern(r *http.Request) string {
-	ctx := chi.RouteContext(r.Context())
-	if ctx.RoutePattern() != "" {
-		return m.resolveWildcard(r.Method, ctx.RoutePattern())
-	}
-	if !m.Router.Match(ctx, r.Method, r.URL.Path) {
+	ctx := m.ensureContext(r)
+	if ctx == nil {
 		return ""
 	}
 	return m.resolveWildcard(r.Method, ctx.RoutePattern())
@@ -160,4 +160,20 @@ func (m *mux) resolveWildcard(method, pattern string) string {
 		return pattern[:len(pattern)-2] + "/{*" + wildcard + "}"
 	}
 	return pattern
+}
+
+// ensureContext makes sure chi has initialized the request context if it
+// handles it, otherwise it returns nil.
+func (m *mux) ensureContext(r *http.Request) *chi.Context {
+	ctx := chi.RouteContext(r.Context())
+	if ctx == nil {
+		return nil // request not handled by chi
+	}
+	if ctx.RoutePattern() != "" {
+		return ctx // already initialized
+	}
+	if !m.Router.Match(ctx, r.Method, r.URL.Path) {
+		return nil // route not handled by chi
+	}
+	return ctx
 }
