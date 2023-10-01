@@ -45,6 +45,22 @@ var RequestObjectBody = func(svc, met string) func() {
 	}
 }
 
+var RequestMapParams = func(svc, met string) func() {
+	return func() {
+		var _ = Service(svc, func() {
+			Method(met, func() {
+				Payload(func() {
+					Attribute("param", MapOf(String, String))
+				})
+				HTTP(func() {
+					POST("/")
+					MapParams("param")
+				})
+			})
+		})
+	}
+}
+
 var RequestStreamingStringBody = func(svc, met string) func() {
 	return func() {
 		var _ = Service(svc, func() {

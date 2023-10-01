@@ -150,6 +150,12 @@ func TestBuildOperation(t *testing.T) {
 		ExpectedRequestBody: &requestBody{"", tobj("name", tstring), true},
 		ExpectedResponses:   responses{"204": {Description: "No Content response."}},
 	}, {
+		Name: "request_map_params",
+		DSL:  dsls.RequestMapParams(svcName, "request_map_params"),
+
+		ExpectedParameters: []param{{Name: "param", In: "query", Description: "Query parameters", Style: "deepObject", Type: tobj()}},
+		ExpectedResponses:  responses{"204": {Description: "No Content response."}},
+	}, {
 		Name: "response_array_of_string",
 		DSL:  dsls.ResponseArrayOfString(svcName, "response_array_of_string"),
 
