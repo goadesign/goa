@@ -261,6 +261,23 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	{
 		ps := paramsFromPath(e.Params, key, rand)
 		ps = append(ps, paramsFromHeadersAndCookies(e, rand)...)
+		if e.MapQueryParams != nil {
+			name := *e.MapQueryParams
+			if name == "" {
+				name = "payload"
+			}
+			ps = append(ps, &Parameter{
+				Name:        name,
+				Description: "Query parameters",
+				In:          "query",
+				Required:    name == "payload" || e.MethodExpr.Payload.IsRequired(name),
+				Schema: &openapi.Schema{
+					Type:                 "object",
+					AdditionalProperties: true,
+				},
+				Style: "deepObject",
+			})
+		}
 		params = make([]*ParameterRef, len(ps))
 		for i, p := range ps {
 			params[i] = &ParameterRef{Value: p}
