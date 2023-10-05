@@ -85,7 +85,7 @@ const serviceClientMethodT = `
 {{- if .ClientStream }}
 	{{- $resultType = .ClientStream.Interface }}
 {{- end }}
-func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context, {{ if .PayloadRef }}p {{ .PayloadRef }}{{ end }}{{ if .MethodData.SkipRequestBodyEncodeDecode}}, req io.ReadCloser{{ end }}) ({{ if $resultType }}res {{ $resultType }}, {{ end }}{{ if .MethodData.SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}err error) {
+func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context{{ if .PayloadRef }}, p {{ .PayloadRef }}{{ end }}{{ if .MethodData.SkipRequestBodyEncodeDecode}}, req io.ReadCloser{{ end }}) ({{ if $resultType }}res {{ $resultType }}, {{ end }}{{ if .MethodData.SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}err error) {
 	{{- if or $resultType .MethodData.SkipResponseBodyEncodeDecode }}
 	var ires any
 	{{- end }}
