@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -201,6 +203,12 @@ func TestResolvePattern(t *testing.T) {
 			URL:      "/users",
 			Expected: "/users",
 		},
+		{
+			Name:     "query",
+			Patterns: []string{"/users"},
+			URL:      "/users?name=foo",
+			Expected: "/users",
+		},
 	}
 
 	for _, c := range cases {
@@ -227,15 +235,22 @@ func TestResolvePattern(t *testing.T) {
 			w := httptest.NewRecorder()
 			mux.ServeHTTP(w, req)
 			assert.True(t, called)
-			// Make sure the URL with a trailing slash is redirected.
+			// Test the URL with a trailing slash.
 			called = false // Reset.
-			req, _ = http.NewRequest("GET", c.URL+"/", nil)
+			u, err := url.Parse(c.URL)
+			assert.NoError(t, err)
+			u.Path += "/"
+			req, _ = http.NewRequest("GET", u.String(), nil)
 			w = httptest.NewRecorder()
 			mux.ServeHTTP(w, req)
-			assert.Equal(t, http.StatusMovedPermanently, w.Code)
-			req, _ = http.NewRequest("GET", w.Header().Get("Location"), nil)
-			w = httptest.NewRecorder()
-			mux.ServeHTTP(w, req)
+			if strings.Contains(c.Name, "wildcard") {
+				assert.Equal(t, http.StatusOK, w.Code)
+			} else {
+				assert.Equal(t, http.StatusMovedPermanently, w.Code)
+				req, _ = http.NewRequest("GET", w.Header().Get("Location"), nil)
+				w = httptest.NewRecorder()
+				mux.ServeHTTP(w, req)
+			}
 			assert.True(t, called)
 		})
 	}
