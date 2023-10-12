@@ -156,25 +156,25 @@ This produces a `gen` directory with the following directory structure:
 ``` text
 gen
 ├── calc
-│   ├── client.go
-│   ├── endpoints.go
-│   └── service.go
+│   ├── client.go
+│   ├── endpoints.go
+│   └── service.go
 └── http
     ├── calc
-    │   ├── client
-    │   │   ├── cli.go
-    │   │   ├── client.go
-    │   │   ├── encode_decode.go
-    │   │   ├── paths.go
-    │   │   └── types.go
-    │   └── server
-    │       ├── encode_decode.go
-    │       ├── paths.go
-    │       ├── server.go
-    │       └── types.go
+    │   ├── client
+    │   │   ├── cli.go
+    │   │   ├── client.go
+    │   │   ├── encode_decode.go
+    │   │   ├── paths.go
+    │   │   └── types.go
+    │   └── server
+    │       ├── encode_decode.go
+    │       ├── paths.go
+    │       ├── server.go
+    │       └── types.go
     ├── cli
-    │   └── calc
-    │       └── cli.go
+    │   └── calc
+    │       └── cli.go
     ├── openapi.json
     └── openapi.yaml
 
@@ -274,6 +274,49 @@ run './calccli --help' for detailed usage.
 The generated code validates the command line arguments against the types
 defined in the design. The server also validates the types when decoding
 incoming requests so that your code only has to deal with the business logic.
+
+The service now returns an integer, but most OpenAPI services expect JSON.
+Lets fix that now!
+
+In `design.go`, change `Result(Int)` so it reads like this:
+
+```go
+Result(func() {
+    Attribute("result", Int)
+    Required("result")
+})
+```
+
+Inside of `calc.go`, replace the `func` block:
+
+```go
+func (s *calcsrvc) Multiply(ctx context.Context, p *calc.MultiplyPayload) (res *calc.MultiplyResult, err error) {
+	return &calc.MultiplyResult{Result: p.A * p.B}, nil
+}
+```
+
+Finally rebuild the app by running the build parts again:
+
+```bash
+goa gen calcsvc/design
+cd cmd/calc
+go build
+./calc
+```
+
+You can now test and verify that your service is returning JSON:
+
+```bash
+curl -X 'GET' 'http://localhost:8088/multiply/10/10' -H 'accept: application/json' | jq .
+```
+
+If all goes well, you should see:
+
+```json
+{
+  "result": 100
+}
+```
 
 ## 4. Document
 
