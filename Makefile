@@ -102,8 +102,7 @@ release-goa:
 
 release-examples:
 	cd $(GOPATH)/src/goa.design/examples && \
-		sed 's/goa.design\/goa\/v.*/goa.design\/goa\/v$(MAJOR) v$(MAJOR).$(MINOR).$(BUILD)/' go.mod > _tmp && mv _tmp go.mod && \
-		make && \
+		make GOA_VERSION=v$(MAJOR).$(MINOR).$(BUILD)&& \
 		git add . && \
 		git commit -m "Release v$(MAJOR).$(MINOR).$(BUILD)" && \
 		git tag v$(MAJOR).$(MINOR).$(BUILD) && \
