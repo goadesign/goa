@@ -45,10 +45,8 @@ paths:
                   basic_header_Authorization: []
                   jwt_header_X-Authorization:
                     - api:read
-                    - api:write
                   oauth2_header_Token:
                     - api:read
-                    - api:write
         post:
             tags:
                 - testService
