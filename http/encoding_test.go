@@ -3,10 +3,15 @@ package http
 import (
 	"bytes"
 	"context"
+	"encoding/xml"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+
+	goa "goa.design/goa/v3/pkg"
 )
 
 var (
@@ -99,6 +104,46 @@ func TestResponseEncoder(t *testing.T) {
 			encoder := ResponseEncoder(ctx, w)
 			if c.encoderType != fmt.Sprintf("%T", encoder) {
 				t.Errorf("got encoder type %s, expected %s", fmt.Sprintf("%T", encoder), c.encoderType)
+			}
+		})
+	}
+}
+
+func TestResponseEncoder_Encode_ErrorResponse(t *testing.T) {
+	var (
+		serviceError              = goa.NewServiceError(errors.New("foo"), "foo", false, false, false)
+		defaultXMLName            = ErrorResponseXMLName
+		backwardCompatibleXMLName = xml.Name{Local: "ErrorResponse"} // Compatible with v3.13.2 and earlier.
+	)
+
+	cases := []struct {
+		acceptType string
+		xmlName    xml.Name
+		encoded    string
+	}{
+		{"application/json", defaultXMLName, fmt.Sprintf(`{"name":"foo","id":"%s","message":"foo","temporary":false,"timeout":false,"fault":false}`, serviceError.ID)},
+		{"application/json", backwardCompatibleXMLName, fmt.Sprintf(`{"name":"foo","id":"%s","message":"foo","temporary":false,"timeout":false,"fault":false}`, serviceError.ID)},
+		{"application/xml", defaultXMLName, fmt.Sprintf(`<error><name>foo</name><id>%s</id><message>foo</message><temporary>false</temporary><timeout>false</timeout><fault>false</fault></error>`, serviceError.ID)},
+		{"application/xml", backwardCompatibleXMLName, fmt.Sprintf(`<ErrorResponse><name>foo</name><id>%s</id><message>foo</message><temporary>false</temporary><timeout>false</timeout><fault>false</fault></ErrorResponse>`, serviceError.ID)},
+	}
+
+	for _, c := range cases {
+		name := c.acceptType
+		if c.xmlName.Local != "" {
+			name += "/" + c.xmlName.Local
+		}
+		t.Run(name, func(t *testing.T) {
+			ctx := context.Background()
+			ctx = context.WithValue(ctx, AcceptTypeKey, c.acceptType)
+			w := httptest.NewRecorder()
+			ErrorResponseXMLName = c.xmlName
+			encoder := ResponseEncoder(ctx, w)
+			if err := encoder.Encode(NewErrorResponse(ctx, serviceError)); err != nil {
+				t.Error(err)
+			}
+			body := strings.TrimSpace(w.Body.String())
+			if body != c.encoded {
+				t.Errorf("got %s, expected %s", body, c.encoded)
 			}
 		})
 	}
