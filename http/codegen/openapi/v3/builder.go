@@ -549,11 +549,7 @@ func buildSecurityRequirements(reqs []*expr.SecurityExpr) []map[string][]string 
 			case expr.BasicAuthKind, expr.APIKeyKind:
 				sr[sch.Hash()] = []string{}
 			case expr.OAuth2Kind, expr.JWTKind:
-				scopes := make([]string, len(sch.Scopes))
-				for i, scope := range sch.Scopes {
-					scopes[i] = scope.Name
-				}
-				sr[sch.Hash()] = scopes
+				sr[sch.Hash()] = req.Scopes
 			}
 		}
 		srs[i] = sr
