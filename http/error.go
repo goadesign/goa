@@ -56,7 +56,7 @@ func NewErrorResponse(ctx context.Context, err error) Statuser {
 	return NewErrorResponse(ctx, goa.Fault(err.Error()))
 }
 
-func (resp ErrorResponse) MarshalXML(e *xml.Encoder, start xml.StartElement) error {
+func (resp *ErrorResponse) MarshalXML(e *xml.Encoder, _ xml.StartElement) error {
 	return e.Encode(struct {
 		XMLName   xml.Name
 		Name      string `xml:"name"`
