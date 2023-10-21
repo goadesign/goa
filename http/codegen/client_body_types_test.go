@@ -77,7 +77,9 @@ func TestClientTypes(t *testing.T) {
 		{"client-payload-extend-validate", testdata.PayloadExtendedValidateDSL, PayloadExtendedValidateClientTypesFile},
 		{"client-result-type-validate", testdata.ResultTypeValidateDSL, ResultTypeValidateClientTypesFile},
 		{"client-with-result-collection", testdata.ResultWithResultCollectionDSL, WithResultCollectionClientTypesFile},
+		{"client-with-result-view", testdata.ResultWithResultViewDSL, ResultWithResultViewClientTypesFile},
 		{"client-empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, EmptyErrorResponseBodyClientTypesFile},
+		{"client-with-error-custom-pkg", testdata.WithErrorCustomPkgDSL, WithErrorCustomPkgClientTypesFile},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -711,6 +713,34 @@ func ValidateRtResponseBody(body *RtResponseBody) (err error) {
 }
 `
 
+const ResultWithResultViewClientTypesFile = `// MethodResultWithResultViewResponseBody is the type of the
+// "ServiceResultWithResultView" service "MethodResultWithResultView" endpoint
+// HTTP response body.
+type MethodResultWithResultViewResponseBody struct {
+	Name *string         ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+	Rt   *RtResponseBody ` + "`" + `form:"rt,omitempty" json:"rt,omitempty" xml:"rt,omitempty"` + "`" + `
+}
+
+// RtResponseBody is used to define fields on response body types.
+type RtResponseBody struct {
+	X *string ` + "`" + `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"` + "`" + `
+}
+
+// NewMethodResultWithResultViewResulttypeOK builds a
+// "ServiceResultWithResultView" service "MethodResultWithResultView" endpoint
+// result from a HTTP "OK" response.
+func NewMethodResultWithResultViewResulttypeOK(body *MethodResultWithResultViewResponseBody) *serviceresultwithresultviewviews.ResulttypeView {
+	v := &serviceresultwithresultviewviews.ResulttypeView{
+		Name: body.Name,
+	}
+	if body.Rt != nil {
+		v.Rt = unmarshalRtResponseBodyToServiceresultwithresultviewviewsRtView(body.Rt)
+	}
+
+	return v
+}
+`
+
 const EmptyErrorResponseBodyClientTypesFile = `// NewMethodEmptyErrorResponseBodyInternalError builds a
 // ServiceEmptyErrorResponseBody service MethodEmptyErrorResponseBody endpoint
 // internal_error error.
@@ -733,5 +763,31 @@ func NewMethodEmptyErrorResponseBodyNotFound(inHeader string) serviceemptyerrorr
 	v := serviceemptyerrorresponsebody.NotFound(inHeader)
 
 	return v
+}
+`
+const WithErrorCustomPkgClientTypesFile = `// MethodWithErrorCustomPkgErrorNameResponseBody is the type of the
+// "ServiceWithErrorCustomPkg" service "MethodWithErrorCustomPkg" endpoint HTTP
+// response body for the "error_name" error.
+type MethodWithErrorCustomPkgErrorNameResponseBody struct {
+	Name *string ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+}
+
+// NewMethodWithErrorCustomPkgErrorName builds a ServiceWithErrorCustomPkg
+// service MethodWithErrorCustomPkg endpoint error_name error.
+func NewMethodWithErrorCustomPkgErrorName(body *MethodWithErrorCustomPkgErrorNameResponseBody) *custom.CustomError {
+	v := &custom.CustomError{
+		Name: *body.Name,
+	}
+
+	return v
+}
+
+// ValidateMethodWithErrorCustomPkgErrorNameResponseBody runs the validations
+// defined on MethodWithErrorCustomPkg_error_name_Response_Body
+func ValidateMethodWithErrorCustomPkgErrorNameResponseBody(body *MethodWithErrorCustomPkgErrorNameResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	return
 }
 `
