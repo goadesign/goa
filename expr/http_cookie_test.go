@@ -23,6 +23,7 @@ func TestHTTPResponseCookie(t *testing.T) {
 		{"path", testdata.CookiePathDSL, Props{"cookie:path": testdata.CookiePathValue}},
 		{"secure", testdata.CookieSecureDSL, Props{"cookie:secure": "Secure"}},
 		{"http-only", testdata.CookieHTTPOnlyDSL, Props{"cookie:http-only": "HttpOnly"}},
+		{"same-site", testdata.CookieSameSiteDSL, Props{"cookie:same-site": testdata.CookieSameSiteValue}},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
