@@ -1353,7 +1353,7 @@ const responseT = `{{ define "response" -}}
 			HttpOnly: true,
 			{{- end }}
 			{{- if .SameSite }}
-			SameSite: {{ printf "%q" .SameSite }},
+			SameSite: {{ .SameSite }},
 			{{- end }}
 		})
 		{{- if or $checkNil $initDef }}
