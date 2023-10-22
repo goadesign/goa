@@ -592,31 +592,31 @@ func CookieHTTPOnly() {
 }
 
 // CookieSameSite initializes the "same-site" attribute of a HTTP response
-// cookie with "Strict", "Lax", or "None".
+// cookie with "CookieSameSiteStrict", "CookieSameSiteLax", "CookieSameSiteNone",
+// or "CookieSameSiteDefault".
 //
 // CookieSameSite must appear in a Cookie expression.
 //
 // Example:
 //
-//    var _ = Service("account", func() {
-//        Method("create", func() {
-//            Result(Account)
-//            HTTP(func() {
-//                Response(StatusCreated, func() {
-//                    Cookie("session:SID", String)
-//                    CookieSameSite("Strict")
-//                })
-//            })
-//        })
-//    })
-//
-func CookieSameSite(s string) {
+//	var _ = Service("account", func() {
+//	    Method("create", func() {
+//	        Result(Account)
+//	        HTTP(func() {
+//	            Response(StatusCreated, func() {
+//	                Cookie("session:SID", String)
+//	                CookieSameSite(CookieSameSiteStrict)
+//	            })
+//	        })
+//	    })
+//	})
+func CookieSameSite(s expr.CookieSameSiteValue) {
 	_, ok := eval.Current().(*expr.HTTPResponseExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 		return
 	}
-	cookieAttribute("same-site", s)
+	cookieAttribute("same-site", string(s))
 }
 
 // Params groups a set of Param expressions. It makes it possible to list

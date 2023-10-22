@@ -2,6 +2,7 @@ package testdata
 
 import (
 	. "goa.design/goa/v3/dsl"
+	"goa.design/goa/v3/expr"
 )
 
 var CookieObjectResultDSL = func() {
@@ -125,7 +126,7 @@ var CookieHTTPOnlyDSL = func() {
 	})
 }
 
-const CookieSameSiteValue = "Strict"
+const CookieSameSiteValue = expr.CookieSameSiteStrict
 
 var CookieSameSiteDSL = func() {
 	Service("CookieSvc", func() {

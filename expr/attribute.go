@@ -102,6 +102,10 @@ type (
 	// ValidationFormat is the type used to enumerate the possible string
 	// formats.
 	ValidationFormat string
+
+	// CookieSameSiteValue is the type used to enumerate the possible cookie
+	// SameSite values.
+	CookieSameSiteValue string
 )
 
 const (
@@ -146,6 +150,13 @@ const (
 
 	// FormatRFC1123 describes RFC1123 date time values.
 	FormatRFC1123 = "rfc1123"
+)
+
+const (
+	CookieSameSiteStrict  CookieSameSiteValue = "strict"
+	CookieSameSiteLax     CookieSameSiteValue = "lax"
+	CookieSameSiteNone    CookieSameSiteValue = "none"
+	CookieSameSiteDefault CookieSameSiteValue = "default"
 )
 
 // EvalName returns the name used by the DSL evaluation.
