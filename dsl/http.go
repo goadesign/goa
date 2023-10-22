@@ -76,6 +76,13 @@ const (
 	StatusNetworkAuthenticationRequired = expr.StatusNetworkAuthenticationRequired
 )
 
+const (
+	CookieSameSiteStrict   = expr.CookieSameSiteStrict
+	CookieSameSiteLax      = expr.CookieSameSiteLax
+	CookieSameSiteNone     = expr.CookieSameSiteNone
+	CookieSameSiteDefault  = expr.CookieSameSiteDefault
+)
+
 // HTTP defines the HTTP transport specific properties of an API, a service or a
 // single method. The function maps the method payload and result types to HTTP
 // properties such as parameters (via path wildcards or query strings), request
