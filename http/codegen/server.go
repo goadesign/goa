@@ -43,22 +43,24 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		"addLeadingSlash":         addLeadingSlash,
 		"removeTrailingIndexHTML": removeTrailingIndexHTML,
 	}
+	imports := []*codegen.ImportSpec{
+		{Path: "bufio"},
+		{Path: "context"},
+		{Path: "fmt"},
+		{Path: "io"},
+		{Path: "mime/multipart"},
+		{Path: "net/http"},
+		{Path: "path"},
+		{Path: "strings"},
+		{Path: "github.com/gorilla/websocket"},
+		codegen.GoaImport(""),
+		codegen.GoaNamedImport("http", "goahttp"),
+		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
+	}
+	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "server", []*codegen.ImportSpec{
-			{Path: "bufio"},
-			{Path: "context"},
-			{Path: "fmt"},
-			{Path: "io"},
-			{Path: "mime/multipart"},
-			{Path: "net/http"},
-			{Path: "path"},
-			{Path: "strings"},
-			{Path: "github.com/gorilla/websocket"},
-			codegen.GoaImport(""),
-			codegen.GoaNamedImport("http", "goahttp"),
-			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-		}),
+		codegen.Header(title, "server", imports),
 	}
 
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-struct", Source: serverStructT, Data: data})
