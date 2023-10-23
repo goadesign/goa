@@ -231,18 +231,20 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File
 	}
 	svcName := data.Service.PathName
 	title := fmt.Sprintf("%s WebSocket server streaming", svc.Name())
+	imports := []*codegen.ImportSpec{
+		{Path: "context"},
+		{Path: "io"},
+		{Path: "net/http"},
+		{Path: "sync"},
+		{Path: "time"},
+		{Path: "github.com/gorilla/websocket"},
+		codegen.GoaImport(""),
+		codegen.GoaNamedImport("http", "goahttp"),
+		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+	}
+	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "server", []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "io"},
-			{Path: "net/http"},
-			{Path: "sync"},
-			{Path: "time"},
-			{Path: "github.com/gorilla/websocket"},
-			codegen.GoaImport(""),
-			codegen.GoaNamedImport("http", "goahttp"),
-			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-		}),
+		codegen.Header(title, "server", imports),
 	}
 	sections = append(sections, serverStructWSSections(data)...)
 	sections = append(sections, serverWSSections(data)...)
@@ -262,19 +264,21 @@ func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File
 	}
 	svcName := data.Service.PathName
 	title := fmt.Sprintf("%s WebSocket client streaming", svc.Name())
+	imports := []*codegen.ImportSpec{
+		{Path: "context"},
+		{Path: "io"},
+		{Path: "net/http"},
+		{Path: "sync"},
+		{Path: "time"},
+		{Path: "github.com/gorilla/websocket"},
+		codegen.GoaImport(""),
+		codegen.GoaNamedImport("http", "goahttp"),
+		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
+		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+	}
+	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "io"},
-			{Path: "net/http"},
-			{Path: "sync"},
-			{Path: "time"},
-			{Path: "github.com/gorilla/websocket"},
-			codegen.GoaImport(""),
-			codegen.GoaNamedImport("http", "goahttp"),
-			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-		}),
+		codegen.Header(title, "client", imports),
 	}
 	sections = append(sections, clientStructWSSections(data)...)
 	sections = append(sections, clientWSSections(data)...)
