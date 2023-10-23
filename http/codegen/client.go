@@ -486,6 +486,9 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 				{{- if .HTTPOnly }}
 				HttpOnly: true,
 				{{- end }}
+				{{- if .SameSite }}
+				SameSite: {{ .SameSite }},
+				{{- end }}
 			})
 		}
 		{{- end }}

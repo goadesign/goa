@@ -76,6 +76,13 @@ const (
 	StatusNetworkAuthenticationRequired = expr.StatusNetworkAuthenticationRequired
 )
 
+const (
+	CookieSameSiteStrict   = expr.CookieSameSiteStrict
+	CookieSameSiteLax      = expr.CookieSameSiteLax
+	CookieSameSiteNone     = expr.CookieSameSiteNone
+	CookieSameSiteDefault  = expr.CookieSameSiteDefault
+)
+
 // HTTP defines the HTTP transport specific properties of an API, a service or a
 // single method. The function maps the method payload and result types to HTTP
 // properties such as parameters (via path wildcards or query strings), request
@@ -589,6 +596,34 @@ func CookieHTTPOnly() {
 		return
 	}
 	cookieAttribute("http-only", "HttpOnly")
+}
+
+// CookieSameSite initializes the "same-site" attribute of a HTTP response
+// cookie with "CookieSameSiteStrict", "CookieSameSiteLax", "CookieSameSiteNone",
+// or "CookieSameSiteDefault".
+//
+// CookieSameSite must appear in a Cookie expression.
+//
+// Example:
+//
+//	var _ = Service("account", func() {
+//	    Method("create", func() {
+//	        Result(Account)
+//	        HTTP(func() {
+//	            Response(StatusCreated, func() {
+//	                Cookie("session:SID", String)
+//	                CookieSameSite(CookieSameSiteStrict)
+//	            })
+//	        })
+//	    })
+//	})
+func CookieSameSite(s expr.CookieSameSiteValue) {
+	_, ok := eval.Current().(*expr.HTTPResponseExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	cookieAttribute("same-site", string(s))
 }
 
 // Params groups a set of Param expressions. It makes it possible to list

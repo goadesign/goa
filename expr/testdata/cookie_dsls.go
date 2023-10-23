@@ -124,3 +124,22 @@ var CookieHTTPOnlyDSL = func() {
 		})
 	})
 }
+
+const CookieSameSiteValue = CookieSameSiteStrict
+
+var CookieSameSiteDSL = func() {
+	Service("CookieSvc", func() {
+		Method("Method", func() {
+			Result(func() {
+				Attribute("cookie", String)
+			})
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Cookie("cookie")
+					CookieSameSite(CookieSameSiteValue)
+				})
+			})
+		})
+	})
+}
