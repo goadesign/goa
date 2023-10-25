@@ -24,6 +24,11 @@ func TestServerTypes(t *testing.T) {
 		{"server-with-result-view", testdata.ResultWithResultViewDSL, ResultWithResultViewServerTypesFile},
 		{"server-empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, ""},
 		{"server-with-error-custom-pkg", testdata.WithErrorCustomPkgDSL, WithErrorCustomPkgServerTypesFile},
+		{"server-body-custom-name", testdata.PayloadBodyCustomNameDSL, BodyCustomNameServerTypesFile},
+		{"server-path-custom-name", testdata.PayloadPathCustomNameDSL, PathCustomNameServerTypesFile},
+		{"server-query-custom-name", testdata.PayloadQueryCustomNameDSL, QueryCustomNameServerTypesFile},
+		{"server-header-custom-name", testdata.PayloadHeaderCustomNameDSL, HeaderCustomNameServerTypesFile},
+		{"server-cookie-custom-name", testdata.PayloadCookieCustomNameDSL, CookieCustomNameServerTypesFile},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -319,5 +324,60 @@ func NewMethodWithErrorCustomPkgErrorNameResponseBody(res *custom.CustomError) *
 		Name: res.Name,
 	}
 	return body
+}
+`
+
+const BodyCustomNameServerTypesFile = `// MethodBodyCustomNameRequestBody is the type of the "ServiceBodyCustomName"
+// service "MethodBodyCustomName" endpoint HTTP request body.
+type MethodBodyCustomNameRequestBody struct {
+	Body *string ` + "`" + `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"` + "`" + `
+}
+
+// NewMethodBodyCustomNamePayload builds a ServiceBodyCustomName service
+// MethodBodyCustomName endpoint payload.
+func NewMethodBodyCustomNamePayload(body *MethodBodyCustomNameRequestBody) *servicebodycustomname.MethodBodyCustomNamePayload {
+	v := &servicebodycustomname.MethodBodyCustomNamePayload{
+		Body: body.Body,
+	}
+
+	return v
+}
+`
+const PathCustomNameServerTypesFile = `// NewMethodPathCustomNamePayload builds a ServicePathCustomName service
+// MethodPathCustomName endpoint payload.
+func NewMethodPathCustomNamePayload(p string) *servicepathcustomname.MethodPathCustomNamePayload {
+	v := &servicepathcustomname.MethodPathCustomNamePayload{}
+	v.Path = p
+
+	return v
+}
+`
+const QueryCustomNameServerTypesFile = `// NewMethodQueryCustomNamePayload builds a ServiceQueryCustomName service
+// MethodQueryCustomName endpoint payload.
+func NewMethodQueryCustomNamePayload(q *string) *servicequerycustomname.MethodQueryCustomNamePayload {
+	v := &servicequerycustomname.MethodQueryCustomNamePayload{}
+	v.Query = q
+
+	return v
+}
+`
+
+const HeaderCustomNameServerTypesFile = `// NewMethodHeaderCustomNamePayload builds a ServiceHeaderCustomName service
+// MethodHeaderCustomName endpoint payload.
+func NewMethodHeaderCustomNamePayload(h *string) *serviceheadercustomname.MethodHeaderCustomNamePayload {
+	v := &serviceheadercustomname.MethodHeaderCustomNamePayload{}
+	v.Header = h
+
+	return v
+}
+`
+
+const CookieCustomNameServerTypesFile = `// NewMethodCookieCustomNamePayload builds a ServiceCookieCustomName service
+// MethodCookieCustomName endpoint payload.
+func NewMethodCookieCustomNamePayload(c2 *string) *servicecookiecustomname.MethodCookieCustomNamePayload {
+	v := &servicecookiecustomname.MethodCookieCustomNamePayload{}
+	v.Cookie = c2
+
+	return v
 }
 `

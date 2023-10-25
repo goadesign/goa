@@ -2613,3 +2613,75 @@ func EncodeMethodARequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 	}
 }
 `
+
+var PayloadBodyCustomNameEncodeCode = `// EncodeMethodBodyCustomNameRequest returns an encoder for requests sent to
+// the ServiceBodyCustomName MethodBodyCustomName server.
+func EncodeMethodBodyCustomNameRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicebodycustomname.MethodBodyCustomNamePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceBodyCustomName", "MethodBodyCustomName", "*servicebodycustomname.MethodBodyCustomNamePayload", v)
+		}
+		body := NewMethodBodyCustomNameRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("ServiceBodyCustomName", "MethodBodyCustomName", err)
+		}
+		return nil
+	}
+}
+`
+
+var PayloadQueryCustomNameEncodeCode = `// EncodeMethodQueryCustomNameRequest returns an encoder for requests sent to
+// the ServiceQueryCustomName MethodQueryCustomName server.
+func EncodeMethodQueryCustomNameRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicequerycustomname.MethodQueryCustomNamePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryCustomName", "MethodQueryCustomName", "*servicequerycustomname.MethodQueryCustomNamePayload", v)
+		}
+		values := req.URL.Query()
+		if p.Query != nil {
+			values.Add("q", *p.Query)
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}
+`
+
+var PayloadHeaderCustomNameEncodeCode = `// EncodeMethodHeaderCustomNameRequest returns an encoder for requests sent to
+// the ServiceHeaderCustomName MethodHeaderCustomName server.
+func EncodeMethodHeaderCustomNameRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*serviceheadercustomname.MethodHeaderCustomNamePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceHeaderCustomName", "MethodHeaderCustomName", "*serviceheadercustomname.MethodHeaderCustomNamePayload", v)
+		}
+		if p.Header != nil {
+			head := *p.Header
+			req.Header.Set("h", head)
+		}
+		return nil
+	}
+}
+`
+
+var PayloadCookieCustomNameEncodeCode = `// EncodeMethodCookieCustomNameRequest returns an encoder for requests sent to
+// the ServiceCookieCustomName MethodCookieCustomName server.
+func EncodeMethodCookieCustomNameRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicecookiecustomname.MethodCookieCustomNamePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceCookieCustomName", "MethodCookieCustomName", "*servicecookiecustomname.MethodCookieCustomNamePayload", v)
+		}
+		if p.Cookie != nil {
+			v := *p.Cookie
+			req.AddCookie(&http.Cookie{
+				Name:  "c",
+				Value: v,
+			})
+		}
+		return nil
+	}
+}
+`

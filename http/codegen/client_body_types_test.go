@@ -80,6 +80,11 @@ func TestClientTypes(t *testing.T) {
 		{"client-with-result-view", testdata.ResultWithResultViewDSL, ResultWithResultViewClientTypesFile},
 		{"client-empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, EmptyErrorResponseBodyClientTypesFile},
 		{"client-with-error-custom-pkg", testdata.WithErrorCustomPkgDSL, WithErrorCustomPkgClientTypesFile},
+		{"client-body-custom-name", testdata.PayloadBodyCustomNameDSL, BodyCustomNameClientTypesFile},
+		{"client-path-custom-name", testdata.PayloadPathCustomNameDSL, ""},
+		{"client-query-custom-name", testdata.PayloadQueryCustomNameDSL, ""},
+		{"client-header-custom-name", testdata.PayloadHeaderCustomNameDSL, ""},
+		{"client-cookie-custom-name", testdata.PayloadCookieCustomNameDSL, ""},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -789,5 +794,22 @@ func ValidateMethodWithErrorCustomPkgErrorNameResponseBody(body *MethodWithError
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
 	}
 	return
+}
+`
+
+const BodyCustomNameClientTypesFile = `// MethodBodyCustomNameRequestBody is the type of the "ServiceBodyCustomName"
+// service "MethodBodyCustomName" endpoint HTTP request body.
+type MethodBodyCustomNameRequestBody struct {
+	Body *string ` + "`" + `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"` + "`" + `
+}
+
+// NewMethodBodyCustomNameRequestBody builds the HTTP request body from the
+// payload of the "MethodBodyCustomName" endpoint of the
+// "ServiceBodyCustomName" service.
+func NewMethodBodyCustomNameRequestBody(p *servicebodycustomname.MethodBodyCustomNamePayload) *MethodBodyCustomNameRequestBody {
+	body := &MethodBodyCustomNameRequestBody{
+		Body: p.Body,
+	}
+	return body
 }
 `
