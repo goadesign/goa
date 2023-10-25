@@ -169,6 +169,12 @@ func TestClientEncode(t *testing.T) {
 		{"query-map-alias", testdata.QueryMapAliasDSL, testdata.QueryMapAliasEncodeCode},
 		{"query-map-alias-validate", testdata.QueryMapAliasValidateDSL, testdata.QueryMapAliasValidateEncodeCode},
 		{"query-array-nested-alias-validate", testdata.QueryArrayNestedAliasValidateDSL, testdata.QueryArrayNestedAliasValidateEncodeCode},
+
+		{"body-custom-name", testdata.PayloadBodyCustomNameDSL, testdata.PayloadBodyCustomNameEncodeCode},
+		// path-custom-name is not needed because no encoder is created.
+		{"query-custom-name", testdata.PayloadQueryCustomNameDSL, testdata.PayloadQueryCustomNameEncodeCode},
+		{"header-custom-name", testdata.PayloadHeaderCustomNameDSL, testdata.PayloadHeaderCustomNameEncodeCode},
+		{"cookie-custom-name", testdata.PayloadCookieCustomNameDSL, testdata.PayloadCookieCustomNameEncodeCode},
 	}
 	golden := makeGolden(t, "testdata/payload_encode_functions.go")
 	if golden != nil {

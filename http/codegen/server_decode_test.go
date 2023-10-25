@@ -206,6 +206,12 @@ func TestDecode(t *testing.T) {
 		{"decode-query-array-nested-alias-validate", testdata.QueryArrayNestedAliasValidateDSL, testdata.QueryArrayNestedAliasValidateDecodeCode},
 		{"decode-header-int-alias", testdata.HeaderIntAliasDSL, testdata.HeaderIntAliasDecodeCode},
 		{"decode-path-int-alias", testdata.PathIntAliasDSL, testdata.PathIntAliasDecodeCode},
+
+		{"decode-body-custom-name", testdata.PayloadBodyCustomNameDSL, testdata.PayloadBodyCustomNameDecodeCode},
+		{"decode-path-custom-name", testdata.PayloadPathCustomNameDSL, testdata.PayloadPathCustomNameDecodeCode},
+		{"decode-query-custom-name", testdata.PayloadQueryCustomNameDSL, testdata.PayloadQueryCustomNameDecodeCode},
+		{"decode-header-custom-name", testdata.PayloadHeaderCustomNameDSL, testdata.PayloadHeaderCustomNameDecodeCode},
+		{"decode-cookie-custom-name", testdata.PayloadCookieCustomNameDSL, testdata.PayloadCookieCustomNameDecodeCode},
 	}
 	golden := makeGolden(t, "testdata/payload_decode_functions.go")
 	if golden != nil {

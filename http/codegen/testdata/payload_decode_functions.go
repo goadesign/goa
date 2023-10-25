@@ -5717,3 +5717,101 @@ func DecodeMethodPathCustomUInt64Request(mux goahttp.Muxer, decoder func(*http.R
 	}
 }
 `
+
+var PayloadBodyCustomNameDecodeCode = `// DecodeMethodBodyCustomNameRequest returns a decoder for requests sent to the
+// ServiceBodyCustomName MethodBodyCustomName endpoint.
+func DecodeMethodBodyCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			body MethodBodyCustomNameRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, goa.MissingPayloadError()
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		payload := NewMethodBodyCustomNamePayload(&body)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadPathCustomNameDecodeCode = `// DecodeMethodPathCustomNameRequest returns a decoder for requests sent to the
+// ServicePathCustomName MethodPathCustomName endpoint.
+func DecodeMethodPathCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			p string
+
+			params = mux.Vars(r)
+		)
+		p = params["p"]
+		payload := NewMethodPathCustomNamePayload(p)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadQueryCustomNameDecodeCode = `// DecodeMethodQueryCustomNameRequest returns a decoder for requests sent to
+// the ServiceQueryCustomName MethodQueryCustomName endpoint.
+func DecodeMethodQueryCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			q *string
+		)
+		qRaw := r.URL.Query().Get("q")
+		if qRaw != "" {
+			q = &qRaw
+		}
+		payload := NewMethodQueryCustomNamePayload(q)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadHeaderCustomNameDecodeCode = `// DecodeMethodHeaderCustomNameRequest returns a decoder for requests sent to
+// the ServiceHeaderCustomName MethodHeaderCustomName endpoint.
+func DecodeMethodHeaderCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			h *string
+		)
+		hRaw := r.Header.Get("h")
+		if hRaw != "" {
+			h = &hRaw
+		}
+		payload := NewMethodHeaderCustomNamePayload(h)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadCookieCustomNameDecodeCode = `// DecodeMethodCookieCustomNameRequest returns a decoder for requests sent to
+// the ServiceCookieCustomName MethodCookieCustomName endpoint.
+func DecodeMethodCookieCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			c2 *string
+			c  *http.Cookie
+		)
+		c, _ = r.Cookie("c")
+		var c2Raw string
+		if c != nil {
+			c2Raw = c.Value
+		}
+		if c2Raw != "" {
+			c2 = &c2Raw
+		}
+		payload := NewMethodCookieCustomNamePayload(c2)
+
+		return payload, nil
+	}
+}
+`

@@ -3500,3 +3500,86 @@ var PayloadPathCustomUInt64DSL = func() {
 		})
 	})
 }
+
+var PayloadBodyCustomNameDSL = func() {
+	Service("ServiceBodyCustomName", func() {
+		Method("MethodBodyCustomName", func() {
+			Payload(func() {
+				Attribute("b", String, func() {
+					Meta("struct:field:name", "Body")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var PayloadPathCustomNameDSL = func() {
+	Service("ServicePathCustomName", func() {
+		Method("MethodPathCustomName", func() {
+			Payload(func() {
+				Attribute("p", String, func() {
+					Meta("struct:field:name", "Path")
+				})
+				Required("p")
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadQueryCustomNameDSL = func() {
+	Service("ServiceQueryCustomName", func() {
+		Method("MethodQueryCustomName", func() {
+			Payload(func() {
+				Attribute("q", String, func() {
+					Meta("struct:field:name", "Query")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Params(func() {
+					Param("q")
+				})
+			})
+		})
+	})
+}
+
+var PayloadHeaderCustomNameDSL = func() {
+	Service("ServiceHeaderCustomName", func() {
+		Method("MethodHeaderCustomName", func() {
+			Payload(func() {
+				Attribute("h", String, func() {
+					Meta("struct:field:name", "Header")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Headers(func() {
+					Header("h")
+				})
+			})
+		})
+	})
+}
+
+var PayloadCookieCustomNameDSL = func() {
+	Service("ServiceCookieCustomName", func() {
+		Method("MethodCookieCustomName", func() {
+			Payload(func() {
+				Attribute("c", String, func() {
+					Meta("struct:field:name", "Cookie")
+				})
+			})
+			HTTP(func() {
+				GET("/")
+				Cookie("c")
+			})
+		})
+	})
+}

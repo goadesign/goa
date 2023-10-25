@@ -1374,3 +1374,84 @@ func BuildMethodAPayload(serviceWithParamsAndHeadersBlockMethodABody string, ser
 	return v, nil
 }
 `
+
+var PayloadBodyCustomNameBuildCode = `// BuildMethodBodyCustomNamePayload builds the payload for the
+// ServiceBodyCustomName MethodBodyCustomName endpoint from CLI flags.
+func BuildMethodBodyCustomNamePayload(serviceBodyCustomNameMethodBodyCustomNameBody string) (*servicebodycustomname.MethodBodyCustomNamePayload, error) {
+	var err error
+	var body MethodBodyCustomNameRequestBody
+	{
+		err = json.Unmarshal([]byte(serviceBodyCustomNameMethodBodyCustomNameBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"b\": \"Doloribus qui quia.\"\n   }'")
+		}
+	}
+	v := &servicebodycustomname.MethodBodyCustomNamePayload{
+		Body: body.Body,
+	}
+
+	return v, nil
+}
+`
+
+var PayloadPathCustomNameBuildCode = `// BuildMethodPathCustomNamePayload builds the payload for the
+// ServicePathCustomName MethodPathCustomName endpoint from CLI flags.
+func BuildMethodPathCustomNamePayload(servicePathCustomNameMethodPathCustomNameP string) (*servicepathcustomname.MethodPathCustomNamePayload, error) {
+	var p string
+	{
+		p = servicePathCustomNameMethodPathCustomNameP
+	}
+	v := &servicepathcustomname.MethodPathCustomNamePayload{}
+	v.Path = p
+
+	return v, nil
+}
+`
+
+var PayloadQueryCustomNameBuildCode = `// BuildMethodQueryCustomNamePayload builds the payload for the
+// ServiceQueryCustomName MethodQueryCustomName endpoint from CLI flags.
+func BuildMethodQueryCustomNamePayload(serviceQueryCustomNameMethodQueryCustomNameQ string) (*servicequerycustomname.MethodQueryCustomNamePayload, error) {
+	var q *string
+	{
+		if serviceQueryCustomNameMethodQueryCustomNameQ != "" {
+			q = &serviceQueryCustomNameMethodQueryCustomNameQ
+		}
+	}
+	v := &servicequerycustomname.MethodQueryCustomNamePayload{}
+	v.Query = q
+
+	return v, nil
+}
+`
+
+var PayloadHeaderCustomNameBuildCode = `// BuildMethodHeaderCustomNamePayload builds the payload for the
+// ServiceHeaderCustomName MethodHeaderCustomName endpoint from CLI flags.
+func BuildMethodHeaderCustomNamePayload(serviceHeaderCustomNameMethodHeaderCustomNameH string) (*serviceheadercustomname.MethodHeaderCustomNamePayload, error) {
+	var h *string
+	{
+		if serviceHeaderCustomNameMethodHeaderCustomNameH != "" {
+			h = &serviceHeaderCustomNameMethodHeaderCustomNameH
+		}
+	}
+	v := &serviceheadercustomname.MethodHeaderCustomNamePayload{}
+	v.Header = h
+
+	return v, nil
+}
+`
+
+var PayloadCookieCustomNameBuildCode = `// BuildMethodCookieCustomNamePayload builds the payload for the
+// ServiceCookieCustomName MethodCookieCustomName endpoint from CLI flags.
+func BuildMethodCookieCustomNamePayload(serviceCookieCustomNameMethodCookieCustomNameC2 string) (*servicecookiecustomname.MethodCookieCustomNamePayload, error) {
+	var c2 *string
+	{
+		if serviceCookieCustomNameMethodCookieCustomNameC2 != "" {
+			c2 = &serviceCookieCustomNameMethodCookieCustomNameC2
+		}
+	}
+	v := &servicecookiecustomname.MethodCookieCustomNamePayload{}
+	v.Cookie = c2
+
+	return v, nil
+}
+`

@@ -42,6 +42,11 @@ func TestClientCLIFiles(t *testing.T) {
 		{"map-query-object", testdata.PayloadMapQueryObjectDSL, testdata.MapQueryObjectBuildCode, 1, 1},
 		{"empty-body-build", testdata.PayloadBodyPrimitiveFieldEmptyDSL, testdata.EmptyBodyBuildCode, 1, 1},
 		{"with-params-and-headers-dsl", testdata.WithParamsAndHeadersBlockDSL, testdata.WithParamsAndHeadersBlockBuildCode, 1, 1},
+		{"body-custom-name", testdata.PayloadBodyCustomNameDSL, testdata.PayloadBodyCustomNameBuildCode, 1, 1},
+		{"path-custom-name", testdata.PayloadPathCustomNameDSL, testdata.PayloadPathCustomNameBuildCode, 1, 1},
+		{"query-custom-name", testdata.PayloadQueryCustomNameDSL, testdata.PayloadQueryCustomNameBuildCode, 1, 1},
+		{"header-custom-name", testdata.PayloadHeaderCustomNameDSL, testdata.PayloadHeaderCustomNameBuildCode, 1, 1},
+		{"cookie-custom-name", testdata.PayloadCookieCustomNameDSL, testdata.PayloadCookieCustomNameBuildCode, 1, 1},
 	}
 
 	for _, c := range cases {
