@@ -2299,7 +2299,7 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 
 			fptr bool
 		)
-		fieldName := codegen.Goify(name, true)
+		fieldName := codegen.GoifyAtt(c, name, true)
 		if !expr.IsObject(service.Type) {
 			fieldName = ""
 		} else {
@@ -2363,7 +2363,7 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 		if pointer {
 			typeRef = "*" + typeRef
 		}
-		fieldName := codegen.Goify(name, true)
+		fieldName := codegen.GoifyAtt(c, name, true)
 		if !expr.IsObject(service.Type) {
 			fieldName = ""
 		} else {
@@ -2435,7 +2435,7 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 		{
 			pointer = a.IsPrimitivePointer(name, true)
 			if expr.IsObject(svcAtt.Type) {
-				fieldName = codegen.Goify(name, true)
+				fieldName = codegen.GoifyAtt(attr, name, true)
 				fptr = svcCtx.IsPrimitivePointer(name, svcAtt)
 			}
 			if pointer {
@@ -2494,7 +2494,7 @@ func extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 		{
 			pointer = a.IsPrimitivePointer(name, true)
 			if expr.IsObject(svcAtt.Type) {
-				fieldName = codegen.Goify(name, true)
+				fieldName = codegen.GoifyAtt(hattr, name, true)
 				fptr = svcCtx.IsPrimitivePointer(name, svcAtt)
 				ft = svcAtt.Find(name).Type
 			}
