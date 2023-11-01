@@ -41,6 +41,7 @@ func TestSections(t *testing.T) {
 		{"with-map", testdata.WithMapDSL},
 		{"path-with-wildcards", testdata.PathWithWildcardDSL},
 		{"not-generate-server", testdata.NotGenerateServerDSL},
+		{"not-generate-host", testdata.NotGenerateHostDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

@@ -737,3 +737,22 @@ var NotGenerateServerDSL = func() {
 		})
 	})
 }
+
+var NotGenerateHostDSL = func() {
+	var _ = API("test", func() {
+		Server("test", func() {
+			Host("localhost", func() {
+				URI("https://goa.design")
+				Meta("openapi:generate", "false")
+			})
+		})
+	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			Result(String)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}

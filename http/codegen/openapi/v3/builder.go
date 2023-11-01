@@ -490,6 +490,10 @@ func buildServers(servers []*expr.ServerExpr) []*Server {
 		}
 		var server *Server
 		for _, host := range svr.Hosts {
+			if !mustGenerate(host.Meta) {
+				continue
+			}
+
 			var (
 				serverVariable   = make(map[string]*ServerVariable)
 				defaultValue     any
