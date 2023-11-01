@@ -45,6 +45,7 @@ func TestFiles(t *testing.T) {
 		{"with-tags", testdata.WithTagsDSL},
 		{"with-tags-swagger", testdata.WithTagsSwaggerDSL},
 		{"typename", testdata.TypenameDSL},
+		{"not-generate-server", testdata.NotGenerateServerDSL},
 		// TestEndpoints
 		{"endpoint", testdata.ExtensionDSL},
 		{"endpoint-swagger", testdata.ExtensionSwaggerDSL},

@@ -25,6 +25,8 @@ type (
 		Services []string
 		// Hosts list the server hosts.
 		Hosts []*HostExpr
+		// Meta is a set of key/value pairs.
+		Meta MetaExpr
 	}
 
 	// HostExpr describes a server host.

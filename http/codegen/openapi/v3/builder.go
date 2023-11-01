@@ -485,6 +485,9 @@ func parseOperationIDTemplate(template, service, method string, routeIndex int) 
 func buildServers(servers []*expr.ServerExpr) []*Server {
 	var svrs []*Server
 	for _, svr := range servers {
+		if !mustGenerate(svr.Meta) {
+			continue
+		}
 		var server *Server
 		for _, host := range svr.Hosts {
 			var (
