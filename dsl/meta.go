@@ -130,7 +130,7 @@ import (
 // - "swagger:generate" DEPRECATED, use "openapi:generate" instead.
 //
 // - "openapi:generate" specifies whether OpenAPI specification should be
-// generated. Defaults to true. Applicable to Server, services, methods and file
+// generated. Defaults to true. Applicable to Server, Host, services, methods and file
 // servers.
 //
 //	var _ = Service("MyService", func() {
@@ -235,6 +235,8 @@ func Meta(name string, value ...string) {
 	case *expr.APIExpr:
 		e.Meta = appendMeta(e.Meta, name, value...)
 	case *expr.ServerExpr:
+		e.Meta = appendMeta(e.Meta, name, value...)
+	case *expr.HostExpr:
 		e.Meta = appendMeta(e.Meta, name, value...)
 	case *expr.AttributeExpr:
 		e.Meta = appendMeta(e.Meta, name, value...)

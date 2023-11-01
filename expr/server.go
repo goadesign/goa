@@ -42,6 +42,8 @@ type (
 		URIs []URIExpr
 		// Variables defines the URI variables if any.
 		Variables *AttributeExpr
+		// Meta is a set of key/value pairs.
+		Meta MetaExpr
 	}
 
 	// URIExpr represents a parameterized URI.

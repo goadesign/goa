@@ -1,0 +1,26 @@
+swagger: "2.0"
+info:
+    title: ""
+    version: ""
+consumes:
+    - application/json
+    - application/xml
+    - application/gob
+produces:
+    - application/json
+    - application/xml
+    - application/gob
+paths:
+    /:
+        get:
+            tags:
+                - testService
+            summary: testEndpoint testService
+            operationId: testService#testEndpoint
+            responses:
+                "200":
+                    description: OK response.
+                    schema:
+                        type: string
+            schemes:
+                - https

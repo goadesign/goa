@@ -25,7 +25,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 		return nil, fmt.Errorf("failed to parse server URL: %s", err)
 	}
 	host := u.Host
-	if !mustGenerate(root.API.Servers[0].Meta) {
+	if !mustGenerate(root.API.Servers[0].Meta) || !mustGenerate(h.Meta) {
 		host = ""
 	}
 
