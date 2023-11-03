@@ -17,6 +17,7 @@ MINOR=14
 BUILD=0
 
 GOOS=$(shell go env GOOS)
+GOARCH=$(shell go env GOARCH)
 GO_FILES=$(shell find . -type f -name '*.go')
 GOPATH=$(shell go env GOPATH)
 
@@ -38,8 +39,13 @@ ifeq ($(GOOS),linux)
 	PROTOC_EXEC=$(PROTOC)/bin/protoc
 endif
 ifeq ($(GOOS),darwin)
-	PROTOC=protoc-$(PROTOC_VERSION)-osx-x86_64
-	PROTOC_EXEC=$(PROTOC)/bin/protoc
+	ifeq ($(GOARCH),arm64)
+		PROTOC=protoc-$(PROTOC_VERSION)-osx-aarch_64
+		PROTOC_EXEC=$(PROTOC)/bin/protoc
+	else
+		PROTOC=protoc-$(PROTOC_VERSION)-osx-x86_64
+		PROTOC_EXEC=$(PROTOC)/bin/protoc
+	endif
 endif
 ifeq ($(GOOS),windows)
 	PROTOC=protoc-$(PROTOC_VERSION)-win32
