@@ -25,6 +25,8 @@ type (
 		Services []string
 		// Hosts list the server hosts.
 		Hosts []*HostExpr
+		// Meta is a set of key/value pairs.
+		Meta MetaExpr
 	}
 
 	// HostExpr describes a server host.
@@ -40,6 +42,8 @@ type (
 		URIs []URIExpr
 		// Variables defines the URI variables if any.
 		Variables *AttributeExpr
+		// Meta is a set of key/value pairs.
+		Meta MetaExpr
 	}
 
 	// URIExpr represents a parameterized URI.
