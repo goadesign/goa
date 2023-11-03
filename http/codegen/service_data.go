@@ -506,6 +506,8 @@ type (
 		Secure bool
 		// HTTPOnly sets the cookie "http-only" attribute to "HttpOnly" if true.
 		HTTPOnly bool
+		// SameSite is the cookie "same-site" attribute.
+		SameSite string
 	}
 
 	// TypeData contains the data needed to render a type definition.
@@ -2534,6 +2536,8 @@ func extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 				c.Secure = v[0] == "Secure"
 			case "cookie:http-only":
 				c.HTTPOnly = v[0] == "HttpOnly"
+			case "cookie:same-site":
+				c.SameSite = v[0]
 			}
 		}
 		cookies = append(cookies, c)
