@@ -491,6 +491,49 @@ func NewProtoMethodResponse(result *usingmetatypes.MethodResult) *using_meta_typ
 }
 `
 
+const StructFieldNameMetaTypeServerTypesCode = `// NewMethodPayload builds the payload of the "Method" endpoint of the
+// "UsingMetaTypes" service from the gRPC request type.
+func NewMethodPayload(message *using_meta_typespb.MethodRequest) *usingmetatypes.MethodPayload {
+	v := &usingmetatypes.MethodPayload{}
+	if message.A != nil {
+		v.Foo = *message.A
+	}
+	if message.A == nil {
+		v.Foo = 1
+	}
+	if message.B != nil {
+		v.Bar = make([]int64, len(message.B))
+		for i, val := range message.B {
+			v.Bar[i] = val
+		}
+	}
+	return v
+}
+
+// NewProtoMethodResponse builds the gRPC response type from the result of the
+// "Method" endpoint of the "UsingMetaTypes" service.
+func NewProtoMethodResponse(result *usingmetatypes.MethodResult) *using_meta_typespb.MethodResponse {
+	message := &using_meta_typespb.MethodResponse{
+		A: &result.Foo,
+	}
+	if result.Bar != nil {
+		message.B = make([]int64, len(result.Bar))
+		for i, val := range result.Bar {
+			message.B[i] = val
+		}
+	}
+	return message
+}
+
+// ValidateMethodRequest runs the validations defined on MethodRequest.
+func ValidateMethodRequest(message *using_meta_typespb.MethodRequest) (err error) {
+	if message.B == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("b", "message"))
+	}
+	return
+}
+`
+
 const DefaultFieldsServerTypeCode = `// NewMethodPayload builds the payload of the "Method" endpoint of the
 // "DefaultFields" service from the gRPC request type.
 func NewMethodPayload(message *default_fieldspb.MethodRequest) *defaultfields.MethodPayload {
