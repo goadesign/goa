@@ -744,6 +744,7 @@ func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req
 		}
 	}
 	vtx := protoBufTypeContext(sd.PkgName, sd.Scope, false)
+	removeMeta(att)
 	if def := codegen.ValidationCode(att, ut, vtx, true, expr.IsAlias(att.Type), attName); def != "" {
 		v := &ValidationData{
 			Name:    "Validate" + name,
