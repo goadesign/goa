@@ -8,7 +8,7 @@ require (
 	github.com/getkin/kin-openapi v0.120.0
 	github.com/go-chi/chi/v5 v5.0.10
 	github.com/google/uuid v1.4.0
-	github.com/gorilla/websocket v1.5.0
+	github.com/gorilla/websocket v1.5.1
 	github.com/manveru/faker v0.0.0-20171103152722-9fbc68a78c4d
 	github.com/pkg/errors v0.9.1
 	github.com/sergi/go-diff v1.3.1
