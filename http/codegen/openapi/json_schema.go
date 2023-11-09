@@ -235,8 +235,18 @@ func ResultTypeRefWithPrefix(api *expr.APIExpr, mt *expr.ResultTypeExpr, view st
 	if err != nil {
 		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
 	}
+	var metaName string
+	if n, ok := mt.Meta["openapi:typename"]; ok {
+		metaName = codegen.Goify(n[0], true)
+	}
+	if metaName != "" {
+		projected.TypeName = metaName
+	}
 	if _, ok := Definitions[projected.TypeName]; !ok {
 		projected.TypeName = codegen.Goify(prefix, true) + codegen.Goify(projected.TypeName, true)
+		if metaName != "" {
+			projected.TypeName = metaName
+		}
 		GenerateResultTypeDefinition(api, projected, "default")
 	}
 	return fmt.Sprintf("#/definitions/%s", projected.TypeName)
@@ -253,6 +263,9 @@ func TypeRefWithPrefix(api *expr.APIExpr, ut *expr.UserTypeExpr, prefix string) 
 	typeName := ut.TypeName
 	if prefix != "" {
 		typeName = codegen.Goify(prefix, true) + codegen.Goify(ut.TypeName, true)
+	}
+	if n, ok := ut.Meta["openapi:typename"]; ok {
+		typeName = codegen.Goify(n[0], true)
 	}
 	if _, ok := Definitions[typeName]; !ok {
 		GenerateTypeDefinitionWithName(api, ut, typeName)
