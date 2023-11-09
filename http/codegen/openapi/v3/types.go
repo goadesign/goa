@@ -187,6 +187,9 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		s.Type = openapi.Object
 		var itemNotes []string
 		for _, nat := range *t {
+			if !mustGenerate(nat.Attribute.Meta) {
+				continue
+			}
 			s.Properties[nat.Name] = sf.schemafy(nat.Attribute)
 		}
 		if len(itemNotes) > 0 {
