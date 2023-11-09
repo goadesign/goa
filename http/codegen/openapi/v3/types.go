@@ -384,6 +384,9 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64, seen map[string]*uint
 	case expr.ObjectKind:
 		o := expr.AsObject(t)
 		for _, m := range *o {
+			if !mustGenerate(m.Attribute.Meta) {
+				continue
+			}
 			kh := hashString(m.Name, h)
 			vh := hashAttribute(m.Attribute, h, seen)
 			*res = *res ^ orderedHash(kh, *vh, h)
