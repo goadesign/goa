@@ -756,3 +756,38 @@ var NotGenerateHostDSL = func() {
 		})
 	})
 }
+
+var NotGenerateAttributeDSL = func() {
+	var _ = API("test", func() {
+		Server("test", func() {
+			Host("localhost", func() {
+				URI("https://goa.design")
+			})
+		})
+	})
+	var PayloadT = Type("Payload", func() {
+		Attribute("int", Int, func() {
+			Meta("openapi:generate", "false")
+		})
+		Attribute("string", String, func() {
+			Example("")
+		})
+	})
+	var ResultT = Type("Result", func() {
+		Attribute("int", Int, func() {
+			Example(0)
+		})
+		Attribute("string", String, func() {
+			Meta("openapi:generate", "false")
+		})
+	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			Payload(PayloadT)
+			Result(ResultT)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
