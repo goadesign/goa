@@ -77,8 +77,12 @@ type (
 )
 
 // NewMuxer returns a Muxer implementation based on a Chi router.
-func NewMuxer() ResolverMuxer {
+// The middlewares will be mounted at the top level of the router.
+func NewMuxer(middlewares ...func(http.Handler) http.Handler) ResolverMuxer {
 	r := chi.NewRouter()
+	for _, middleware := range middlewares {
+		r.Use(middleware)
+	}
 	r.NotFound(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		ctx := context.WithValue(req.Context(), AcceptTypeKey, req.Header.Get("Accept"))
 		enc := ResponseEncoder(ctx, w)
