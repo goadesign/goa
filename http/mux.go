@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sync"
 
 	chi "github.com/go-chi/chi/v5"
 )
@@ -72,7 +73,7 @@ type (
 		chi.Router
 		// wildcards maps a method and a pattern to the name of the wildcard
 		// this is needed because chi does not expose the name of the wildcard
-		wildcards map[string]string
+		wildcards sync.Map
 	}
 )
 
@@ -85,7 +86,7 @@ func NewMuxer() ResolverMuxer {
 		w.WriteHeader(http.StatusNotFound)
 		enc.Encode(NewErrorResponse(ctx, fmt.Errorf("404 page not found"))) // nolint:errcheck
 	}))
-	return &mux{Router: r, wildcards: make(map[string]string)}
+	return &mux{Router: r, wildcards: sync.Map{}}
 }
 
 // wildPath matches a wildcard path segment.
@@ -98,7 +99,7 @@ func (m *mux) Handle(method, pattern string, handler http.HandlerFunc) {
 			panic("too many wildcards")
 		}
 		pattern = wildPath.ReplaceAllString(pattern, "/*")
-		m.wildcards[method+"::"+pattern] = wildcards[1]
+		m.wildcards.Store(method+"::"+pattern, wildcards[1])
 	}
 	m.Method(method, pattern, handler)
 }
@@ -116,8 +117,9 @@ func (m *mux) Vars(r *http.Request) map[string]string {
 	vars := make(map[string]string, len(params.Keys))
 	for i, k := range params.Keys {
 		if k == "*" {
-			wildcard := m.wildcards[r.Method+"::"+ctx.RoutePattern()]
-			vars[wildcard] = unescape(params.Values[i])
+			if wildcard, ok := m.wildcards.Load(r.Method + "::" + ctx.RoutePattern()); ok {
+				vars[wildcard.(string)] = unescape(params.Values[i])
+			}
 			continue
 		}
 		vars[k] = unescape(params.Values[i])
@@ -152,8 +154,8 @@ func (m *mux) ResolvePattern(r *http.Request) string {
 // resolveWildcard returns the route pattern with the wildcard replaced by the
 // name of the wildcard.
 func (m *mux) resolveWildcard(method, pattern string) string {
-	if wildcard, ok := m.wildcards[method+"::"+pattern]; ok {
-		return pattern[:len(pattern)-2] + "/{*" + wildcard + "}"
+	if wildcard, ok := m.wildcards.Load(method + "::" + pattern); ok {
+		return pattern[:len(pattern)-2] + "/{*" + wildcard.(string) + "}"
 	}
 	return pattern
 }
