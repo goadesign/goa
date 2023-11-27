@@ -71,22 +71,23 @@ type (
 	// mux is the default Muxer implementation.
 	mux struct {
 		chi.Router
+		// protect access to middlewares and handlers
+		mu sync.Mutex
+		// middlewares to be registered before handlers
+		middlewares []func(http.Handler) http.Handler
 		// wildcards maps a method and a pattern to the name of the wildcard
 		// this is needed because chi does not expose the name of the wildcard
-		wildcards sync.Map
+		wildcards map[string]string
 	}
 )
 
 // NewMuxer returns a Muxer implementation based on a Chi router.
 func NewMuxer() ResolverMuxer {
-	r := chi.NewRouter()
-	r.NotFound(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		ctx := context.WithValue(req.Context(), AcceptTypeKey, req.Header.Get("Accept"))
-		enc := ResponseEncoder(ctx, w)
-		w.WriteHeader(http.StatusNotFound)
-		enc.Encode(NewErrorResponse(ctx, fmt.Errorf("404 page not found"))) // nolint:errcheck
-	}))
-	return &mux{Router: r, wildcards: sync.Map{}}
+	return &mux{
+		Router:      chi.NewRouter(),
+		wildcards:   make(map[string]string),
+		middlewares: []func(http.Handler) http.Handler{},
+	}
 }
 
 // wildPath matches a wildcard path segment.
@@ -94,12 +95,26 @@ var wildPath = regexp.MustCompile(`/{\*([a-zA-Z0-9_]+)}`)
 
 // Handle registers the handler function for the given method and pattern.
 func (m *mux) Handle(method, pattern string, handler http.HandlerFunc) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.middlewares != nil {
+		for _, middleware := range m.middlewares {
+			m.Router.Use(middleware)
+		}
+		m.NotFound(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			ctx := context.WithValue(req.Context(), AcceptTypeKey, req.Header.Get("Accept"))
+			enc := ResponseEncoder(ctx, w)
+			w.WriteHeader(http.StatusNotFound)
+			enc.Encode(NewErrorResponse(ctx, fmt.Errorf("404 page not found"))) // nolint:errcheck
+		}))
+		m.middlewares = nil
+	}
 	if wildcards := wildPath.FindStringSubmatch(pattern); len(wildcards) > 0 {
 		if len(wildcards) > 2 {
 			panic("too many wildcards")
 		}
 		pattern = wildPath.ReplaceAllString(pattern, "/*")
-		m.wildcards.Store(method+"::"+pattern, wildcards[1])
+		m.wildcards[method+"::"+pattern] = wildcards[1]
 	}
 	m.Method(method, pattern, handler)
 }
@@ -117,9 +132,8 @@ func (m *mux) Vars(r *http.Request) map[string]string {
 	vars := make(map[string]string, len(params.Keys))
 	for i, k := range params.Keys {
 		if k == "*" {
-			if wildcard, ok := m.wildcards.Load(r.Method + "::" + ctx.RoutePattern()); ok {
-				vars[wildcard.(string)] = unescape(params.Values[i])
-			}
+			wildcard := m.wildcards[r.Method+"::"+ctx.RoutePattern()]
+			vars[wildcard] = unescape(params.Values[i])
 			continue
 		}
 		vars[k] = unescape(params.Values[i])
@@ -138,6 +152,12 @@ func unescape(s string) string {
 // Use appends a middleware to the list of middlewares to be applied
 // downstream the Muxer.
 func (m *mux) Use(f func(http.Handler) http.Handler) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.middlewares != nil {
+		m.middlewares = append(m.middlewares, f)
+		return
+	}
 	m.Router.Use(f)
 }
 
@@ -154,8 +174,8 @@ func (m *mux) ResolvePattern(r *http.Request) string {
 // resolveWildcard returns the route pattern with the wildcard replaced by the
 // name of the wildcard.
 func (m *mux) resolveWildcard(method, pattern string) string {
-	if wildcard, ok := m.wildcards.Load(method + "::" + pattern); ok {
-		return pattern[:len(pattern)-2] + "/{*" + wildcard.(string) + "}"
+	if wildcard, ok := m.wildcards[method+"::"+pattern]; ok {
+		return pattern[:len(pattern)-2] + "/{*" + wildcard + "}"
 	}
 	return pattern
 }
