@@ -16,6 +16,27 @@
   </p>
 </p>
 
+# *New!* Introducing the Goa Design Wizard
+
+<table width="100%">
+    <tr>
+        <td width="210px">
+            <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
+                <img src="docs/Wizard.png" alt="Wizard Logo" />
+            </a>
+        </td>
+        <td align="top">
+            Use the <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">Goa Design Wizard</a> to:
+            <ul>
+              <li>Create Goa designs for new services in seconds</li>
+              <li>Review existing designs</li>
+              <li>Explore the Goa DSL</li>
+            </ul>
+            (requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)
+        </td>
+    </tr>
+</table>
+
 # Overview
 
 Goa takes a different approach to building services by making it possible to
