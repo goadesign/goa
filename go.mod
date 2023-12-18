@@ -15,7 +15,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/text v0.14.0
 	golang.org/x/tools v0.16.0
-	google.golang.org/grpc v1.59.0
+	google.golang.org/grpc v1.60.0
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/yaml.v3 v3.0.1
 )
