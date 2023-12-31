@@ -19,7 +19,7 @@ jobs:
           ref: ${{ github.event.workflow_run.head_branch }}
 
       - name: Download test coverage
-        uses: dawidd6/action-download-artifact@v2
+        uses: dawidd6/action-download-artifact@v3
         with:
           workflow: test.yml
           name: coverage
