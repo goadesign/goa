@@ -262,6 +262,11 @@ func TestHashAttribute(t *testing.T) {
 		h3 = uint64(7729867354446285276)
 		h4 = uint64(12938215553621425391)
 		h5 = uint64(590638987843676710)
+		h6 = uint64(2958992150570065940)
+		h7 = uint64(17427721879237743911)
+
+		metaNotGenerate = expr.MetaExpr{"openapi:generate": []string{"false"}}
+		metaEmpty       = expr.MetaExpr{}
 	)
 	cases := []struct {
 		Name string
@@ -286,8 +291,8 @@ func TestHashAttribute(t *testing.T) {
 		{"map-str-str", &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.String}}}, 10408036596908747853},
 		{"map-int-str", &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.Int}, ElemType: &expr.AttributeExpr{Type: expr.String}}}, 16377853221392883275},
 		{"map-int-int", &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.Int}, ElemType: &expr.AttributeExpr{Type: expr.Int}}}, 3290208366554661977},
-		{"obj-str-req", newObj("foo", expr.String, true), 2958992150570065940},
-		{"obj-str-noreq", newObj("foo", expr.String, false), 17427721879237743911},
+		{"obj-str-req", newObj("foo", expr.String, true), h6},
+		{"obj-str-noreq", newObj("foo", expr.String, false), h7},
 		{"obj-int-req", newObj("foo", expr.Int, true), 8915021286725901502},
 		{"obj-int-noreq", newObj("foo", expr.Int, false), 11777831908257753485},
 		{"obj-other", newObj("bar", expr.Int, false), 12868551315046025641},
@@ -295,6 +300,8 @@ func TestHashAttribute(t *testing.T) {
 		{"obj-str-str-req1", newObj2("foo", "bar", expr.String, expr.String, "foo"), h2},
 		{"obj-str-str-req2", newObj2("foo", "bar", expr.String, expr.String, "bar"), h3},
 		{"obj-str-str-req3", newObj2("foo", "bar", expr.String, expr.String, "foo", "bar"), h4},
+		{"obj-str-str-notgen-req", newObj2Meta("foo", "bar", expr.String, expr.String, metaEmpty, metaNotGenerate, "foo"), h6},
+		{"obj-str-str-notgen-noreq", newObj2Meta("foo", "bar", expr.String, expr.String, metaEmpty, metaNotGenerate), h7},
 		{"obj-int-str-noreq", newObj2("foo", "bar", expr.Int, expr.String), 16228531529443692022},
 		{"obj1-str-str-noreq", newObj2("bar", "foo", expr.String, expr.String), h1},
 		{"obj1-str-str-req1", newObj2("bar", "foo", expr.String, expr.String, "foo"), h2},
@@ -332,6 +339,18 @@ func newObj2(n, o string, t, u expr.DataType, reqs ...string) *expr.AttributeExp
 		Type: &expr.Object{
 			{Name: n, Attribute: &expr.AttributeExpr{Type: t}},
 			{Name: o, Attribute: &expr.AttributeExpr{Type: u}},
+		},
+		Validation: &expr.ValidationExpr{},
+	}
+	attr.Validation.Required = append(attr.Validation.Required, reqs...)
+	return attr
+}
+
+func newObj2Meta(n, o string, t, u expr.DataType, l, m expr.MetaExpr, reqs ...string) *expr.AttributeExpr {
+	attr := &expr.AttributeExpr{
+		Type: &expr.Object{
+			{Name: n, Attribute: &expr.AttributeExpr{Type: t, Meta: l}},
+			{Name: o, Attribute: &expr.AttributeExpr{Type: u, Meta: m}},
 		},
 		Validation: &expr.ValidationExpr{},
 	}

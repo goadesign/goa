@@ -47,6 +47,7 @@ func TestFiles(t *testing.T) {
 		{"typename", testdata.TypenameDSL},
 		{"not-generate-server", testdata.NotGenerateServerDSL},
 		{"not-generate-host", testdata.NotGenerateHostDSL},
+		{"not-generate-attribute", testdata.NotGenerateAttributeDSL},
 		// TestEndpoints
 		{"endpoint", testdata.ExtensionDSL},
 		{"endpoint-swagger", testdata.ExtensionSwaggerDSL},

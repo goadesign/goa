@@ -344,6 +344,9 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 	case *expr.Object:
 		s.Type = Object
 		for _, nat := range *actual {
+			if !mustGenerate(nat.Attribute.Meta) {
+				continue
+			}
 			prop := NewSchema()
 			buildAttributeSchema(api, prop, nat.Attribute)
 			s.Properties[nat.Name] = prop
@@ -564,4 +567,17 @@ func buildResultTypeSchema(api *expr.APIExpr, mt *expr.ResultTypeExpr, view stri
 		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
 	}
 	buildAttributeSchema(api, s, projected.AttributeExpr)
+}
+
+// mustGenerate returns true if the meta indicates that a OpenAPI specification should be
+// generated, false otherwise.
+func mustGenerate(meta expr.MetaExpr) bool {
+	m, ok := meta.Last("openapi:generate")
+	if !ok {
+		m, ok = meta.Last("swagger:generate")
+	}
+	if ok && m == "false" {
+		return false
+	}
+	return true
 }
