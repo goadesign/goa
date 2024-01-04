@@ -43,6 +43,7 @@ func TestSections(t *testing.T) {
 		{"typename", testdata.TypenameDSL},
 		{"not-generate-server", testdata.NotGenerateServerDSL},
 		{"not-generate-host", testdata.NotGenerateHostDSL},
+		{"not-generate-attribute", testdata.NotGenerateAttributeDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

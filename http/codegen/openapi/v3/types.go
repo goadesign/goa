@@ -187,6 +187,9 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		s.Type = openapi.Object
 		var itemNotes []string
 		for _, nat := range *t {
+			if !mustGenerate(nat.Attribute.Meta) {
+				continue
+			}
 			s.Properties[nat.Name] = sf.schemafy(nat.Attribute)
 		}
 		if len(itemNotes) > 0 {
@@ -381,6 +384,9 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64, seen map[string]*uint
 	case expr.ObjectKind:
 		o := expr.AsObject(t)
 		for _, m := range *o {
+			if !mustGenerate(m.Attribute.Meta) {
+				continue
+			}
 			kh := hashString(m.Name, h)
 			vh := hashAttribute(m.Attribute, h, seen)
 			*res = *res ^ orderedHash(kh, *vh, h)
