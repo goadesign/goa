@@ -62,10 +62,6 @@ func New(root *expr.RootExpr) *OpenAPI {
 
 // buildInfo builds the OpenAPI Info object.
 func buildInfo(api *expr.APIExpr) *Info {
-	ver := api.Version
-	if ver == "" {
-		ver = "1.0" // cannot be empty as per OpenAPI spec
-	}
 	title := api.Title
 	if title == "" {
 		title = "Goa API" // cannot be empty as per OpenAPI spec
@@ -74,7 +70,7 @@ func buildInfo(api *expr.APIExpr) *Info {
 		Title:          title,
 		Description:    api.Description,
 		TermsOfService: api.TermsOfService,
-		Version:        ver,
+		Version:        api.Version,
 		Extensions:     openapi.ExtensionsFromExpr(api.Meta),
 	}
 	if c := api.Contact; c != nil {
