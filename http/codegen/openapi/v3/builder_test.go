@@ -81,12 +81,8 @@ func TestBuildInfo(t *testing.T) {
 				t.Errorf("got API terms of service %q, expected %q", info.TermsOfService, c.TermsOfService)
 			}
 
-			expectedVer := c.Version
-			if api.Version == "" {
-				expectedVer = "1.0"
-			}
-			if info.Version != expectedVer {
-				t.Errorf("got API version %q, expected %q", info.Version, expectedVer)
+			if info.Version != c.Version {
+				t.Errorf("got API version %q, expected %q", info.Version, c.Version)
 			}
 		})
 	}

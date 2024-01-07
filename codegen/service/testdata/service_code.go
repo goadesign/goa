@@ -12,6 +12,9 @@ type Service interface {
 // key.
 const ServiceName = "Service With Spaces"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -73,6 +76,9 @@ type Service interface {
 // key.
 const ServiceName = "SingleMethod"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -110,6 +116,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "MultipleMethods"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -177,6 +186,9 @@ type Service interface {
 // key.
 const ServiceName = "UnionService"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -215,6 +227,9 @@ type Service interface {
 // key.
 const ServiceName = "MultiUnionService"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -251,6 +266,9 @@ type Service interface {
 // key.
 const ServiceName = "WithDefault"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -285,6 +303,9 @@ type Service interface {
 // key.
 const ServiceName = "Empty"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -302,6 +323,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "EmptyResult"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -330,6 +354,9 @@ type Service interface {
 // key.
 const ServiceName = "EmptyPayload"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -357,6 +384,9 @@ type Service interface {
 // key.
 const ServiceName = "ServiceError"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -379,6 +409,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "CustomErrors"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -465,6 +498,9 @@ type Service interface {
 // key.
 const ServiceName = "CustomErrorsCustomFields"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -508,6 +544,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "MultipleMethodsResultMultipleViews"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -654,6 +693,9 @@ type Service interface {
 // key.
 const ServiceName = "WithExplicitAndDefaultViews"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -751,6 +793,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "ResultCollectionMultipleViewsMethod"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -893,6 +938,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "ResultWithOtherResult"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1043,6 +1091,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "ResultWithResultTypeCollection"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1291,6 +1342,9 @@ type Service interface {
 // key.
 const ServiceName = "ResultWithDashedMimeType"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -1354,6 +1408,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "ResultWithOneOfType"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1534,6 +1591,9 @@ type Service interface {
 // key.
 const ServiceName = "ResultWithInlineValidation"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -1600,6 +1660,9 @@ type Service interface {
 // key.
 const ServiceName = "ForceGenerateType"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -1622,6 +1685,9 @@ type Service interface {
 // key.
 const ServiceName = "ForceGenerateTypeExplicit"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -1643,6 +1709,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingResultService"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1700,6 +1769,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingResultWithViewsService"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1811,6 +1883,9 @@ type Service interface {
 // key.
 const ServiceName = "StreamingResultWithExplicitViewService"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -1919,6 +1994,9 @@ type Service interface {
 // key.
 const ServiceName = "StreamingResultNoPayloadService"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -1962,6 +2040,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingPayloadService"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2040,6 +2121,9 @@ type Service interface {
 // key.
 const ServiceName = "StreamingPayloadNoPayloadService"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -2076,6 +2160,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingPayloadNoResultService"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2116,6 +2203,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingPayloadResultWithViewsService"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2243,6 +2333,9 @@ type Service interface {
 // key.
 const ServiceName = "StreamingPayloadResultWithExplicitViewService"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -2356,6 +2449,9 @@ type Service interface {
 // key.
 const ServiceName = "BidirectionalStreamingService"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -2437,6 +2533,9 @@ type Service interface {
 // key.
 const ServiceName = "BidirectionalStreamingNoPayloadService"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -2481,6 +2580,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "BidirectionalStreamingResultWithViewsService"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2613,6 +2715,9 @@ type Service interface {
 // key.
 const ServiceName = "BidirectionalStreamingResultWithExplicitViewService"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -2729,6 +2834,9 @@ type Service interface {
 // key.
 const ServiceName = "PkgPathMethod"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -2747,6 +2855,9 @@ type Service interface {
 // key.
 const ServiceName = "PkgPathArrayMethod"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -2764,6 +2875,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "PkgPathRecursiveMethod"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2786,6 +2900,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "MultiplePkgPathMethod"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2854,6 +2971,9 @@ type Service interface {
 // key.
 const ServiceName = "NoDirMethod"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -2878,6 +2998,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "PkgPathDupeMethod"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2905,6 +3028,9 @@ type Service interface {
 // key.
 const ServiceName = "PkgPathDupeMethod2"
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
@@ -2922,6 +3048,9 @@ type Service interface {
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "PkgPathPayloadAttributeDSL"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the

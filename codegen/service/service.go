@@ -334,6 +334,9 @@ type Auther interface {
 // key.
 const ServiceName = {{ printf "%q" .Name }}
 
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = {{ printf "%q" .APIVersion }}
+
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
