@@ -2726,17 +2726,28 @@ func needConversion(dt expr.DataType) bool {
 
 // AddMarshalTags adds JSON, XML and Form tags to all inline object attributes recursively.
 func AddMarshalTags(att *expr.AttributeExpr, seen map[string]struct{}) {
-	if !expr.IsObject(att.Type) {
-		return
-	}
 	if ut, ok := att.Type.(expr.UserType); ok {
 		if _, ok := seen[ut.Hash()]; ok {
 			return // avoid infinite recursions
 		}
 		seen[ut.Hash()] = struct{}{}
-		for _, att := range *(expr.AsObject(att.Type)) {
-			AddMarshalTags(att.Attribute, seen)
+		if expr.IsObject(ut.Attribute().Type) {
+			for _, att := range *(expr.AsObject(att.Type)) {
+				AddMarshalTags(att.Attribute, seen)
+			}
 		}
+		return
+	}
+	if expr.IsArray(att.Type) {
+		AddMarshalTags(expr.AsArray(att.Type).ElemType, seen)
+		return
+	}
+	if expr.IsMap(att.Type) {
+		AddMarshalTags(expr.AsMap(att.Type).KeyType, seen)
+		AddMarshalTags(expr.AsMap(att.Type).ElemType, seen)
+		return
+	}
+	if !expr.IsObject(att.Type) {
 		return
 	}
 	// inline object
