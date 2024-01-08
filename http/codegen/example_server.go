@@ -102,7 +102,6 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			},
 			FuncMap: map[string]any{"needStream": needStream, "hasWebSocket": hasWebSocket},
 		},
-		{Name: "server-http-middleware", Source: httpSvrMiddlewareT},
 		{
 			Name:   "server-http-end",
 			Source: httpSvrEndT,
@@ -273,21 +272,11 @@ func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if
 	{{- end }}
 `
 
-	httpSvrMiddlewareT = `
-	// Wrap the multiplexer with additional middlewares. Middlewares mounted
-	// here apply to all the service endpoints.
-	var handler http.Handler = mux
-	{
-		handler = httpmdlwr.Log(adapter)(handler)
-		handler = httpmdlwr.RequestID()(handler)
-	}
-`
-
 	// input: map[string]any{"Services":[]*ServiceData}
 	httpSvrEndT = `
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
-	srv := &http.Server{Addr: u.Host, Handler: handler, ReadHeaderTimeout: time.Second * 60}
+	srv := &http.Server{Addr: u.Host, Handler: mux, ReadHeaderTimeout: time.Second * 60}
 
 	{{- range .Services }}
 		for _, m := range {{ .Service.VarName }}Server.Mounts {

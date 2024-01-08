@@ -49,17 +49,9 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	// Configure the mux.
 	servicesvr.Mount(mux, serviceServer)
 
-	// Wrap the multiplexer with additional middlewares. Middlewares mounted
-	// here apply to all the service endpoints.
-	var handler http.Handler = mux
-	{
-		handler = httpmdlwr.Log(adapter)(handler)
-		handler = httpmdlwr.RequestID()(handler)
-	}
-
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
-	srv := &http.Server{Addr: u.Host, Handler: handler, ReadHeaderTimeout: time.Second * 60}
+	srv := &http.Server{Addr: u.Host, Handler: mux, ReadHeaderTimeout: time.Second * 60}
 	for _, m := range serviceServer.Mounts {
 		logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 	}
@@ -148,17 +140,9 @@ func handleHTTPServer(ctx context.Context, u *url.URL, wg *sync.WaitGroup, errc 
 	// Configure the mux.
 	servicesvr.Mount(mux, serviceServer)
 
-	// Wrap the multiplexer with additional middlewares. Middlewares mounted
-	// here apply to all the service endpoints.
-	var handler http.Handler = mux
-	{
-		handler = httpmdlwr.Log(adapter)(handler)
-		handler = httpmdlwr.RequestID()(handler)
-	}
-
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
-	srv := &http.Server{Addr: u.Host, Handler: handler, ReadHeaderTimeout: time.Second * 60}
+	srv := &http.Server{Addr: u.Host, Handler: mux, ReadHeaderTimeout: time.Second * 60}
 	for _, m := range serviceServer.Mounts {
 		logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 	}
@@ -247,17 +231,9 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	// Configure the mux.
 	servicesvr.Mount(mux, serviceServer)
 
-	// Wrap the multiplexer with additional middlewares. Middlewares mounted
-	// here apply to all the service endpoints.
-	var handler http.Handler = mux
-	{
-		handler = httpmdlwr.Log(adapter)(handler)
-		handler = httpmdlwr.RequestID()(handler)
-	}
-
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
-	srv := &http.Server{Addr: u.Host, Handler: handler, ReadHeaderTimeout: time.Second * 60}
+	srv := &http.Server{Addr: u.Host, Handler: mux, ReadHeaderTimeout: time.Second * 60}
 	for _, m := range serviceServer.Mounts {
 		logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 	}
@@ -350,17 +326,9 @@ func handleHTTPServer(ctx context.Context, u *url.URL, serviceEndpoints *service
 	servicesvr.Mount(mux, serviceServer)
 	anotherservicesvr.Mount(mux, anotherServiceServer)
 
-	// Wrap the multiplexer with additional middlewares. Middlewares mounted
-	// here apply to all the service endpoints.
-	var handler http.Handler = mux
-	{
-		handler = httpmdlwr.Log(adapter)(handler)
-		handler = httpmdlwr.RequestID()(handler)
-	}
-
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
-	srv := &http.Server{Addr: u.Host, Handler: handler, ReadHeaderTimeout: time.Second * 60}
+	srv := &http.Server{Addr: u.Host, Handler: mux, ReadHeaderTimeout: time.Second * 60}
 	for _, m := range serviceServer.Mounts {
 		logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 	}
@@ -457,17 +425,9 @@ func handleHTTPServer(ctx context.Context, u *url.URL, streamingServiceAEndpoint
 	streamingserviceasvr.Mount(mux, streamingServiceAServer)
 	streamingservicebsvr.Mount(mux, streamingServiceBServer)
 
-	// Wrap the multiplexer with additional middlewares. Middlewares mounted
-	// here apply to all the service endpoints.
-	var handler http.Handler = mux
-	{
-		handler = httpmdlwr.Log(adapter)(handler)
-		handler = httpmdlwr.RequestID()(handler)
-	}
-
 	// Start HTTP server using default configuration, change the code to
 	// configure the server as required by your service.
-	srv := &http.Server{Addr: u.Host, Handler: handler, ReadHeaderTimeout: time.Second * 60}
+	srv := &http.Server{Addr: u.Host, Handler: mux, ReadHeaderTimeout: time.Second * 60}
 	for _, m := range streamingServiceAServer.Mounts {
 		logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 	}
