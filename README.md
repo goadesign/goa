@@ -16,20 +16,19 @@
   </p>
 </p>
 
-<table width="100%" style="border-collapse:collapse;">
+<table width="100%" style="border-collapse:collapse; border: none;">
     <tr>
         <td rowspan="2" width="200px" style="border: none; padding-right: 10px;">
             <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
-                <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
+                <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto; border: none;"/>
             </a>
         </td>
-        <td style="border: none; padding: 0; margin: 0;">
+        <td style="border: none; text-align: center; vertical-align: middle;">
             <h1>Goa Design Wizard</h1>
-            Use the <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">Goa Design Wizard</a> to:
         </td>
     </tr>
     <tr>
-        <td style="border: none; vertical-align: top;">
+        <td style="border: none; padding: 0; margin: 0;">
             <ul>
                 <li>Create Goa designs for new services in seconds</li>
                 <li>Review existing designs</li>
