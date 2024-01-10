@@ -75,7 +75,7 @@ promoting reuse and standardization across services.
                 Use our platform to empower your team to run incidents end-to-end. Rapidly fix and
                 learn from incidents, so you can build more resilient products.
             </p>
-            [Learn more](https://incident.io/)
+            <a href="https://incident.io">Learn more</a>
         </td>
     </tr>
     <tr>
@@ -89,7 +89,7 @@ promoting reuse and standardization across services.
                 Our platform makes it easy to create feature-rich production ready SDKs.
                 Speed up integrations and reduce errors by giving your API the DevEx it deserves.
             </p>
-            [Integrate with Goa](https://www.speakeasyapi.dev/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship)
+            <a href="https://www.speakeasyapi.dev/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">Integrate with Goa</a>
         </td>
     </tr>
 </table>
