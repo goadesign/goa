@@ -17,13 +17,17 @@
 </p>
 
 <div style="display: flex; width: 100%; border: none;">
-    <div style="flex: 0 0 200px; padding-right: 10px; border: none;">
-        <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
-            <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
-        </a>
-    </div>
+    <table style="border: none; padding-right: 10px; width: 210px;">
+        <tr>
+            <td style="border: none;">
+                <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
+                    <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
+                </a>
+            </td>
+        </tr>
+    </table>
     <div style="flex-grow: 1; border: none;">
-        <h1> Goa Design Wizard</h1>
+        <h1>Goa Design Wizard</h1>
         <ul>
             <li>Create Goa designs for new services in seconds</li>
             <li>Review existing designs</li>
