@@ -75,8 +75,21 @@ promoting reuse and standardization across services.
                 Use our platform to empower your team to run incidents end-to-end. Rapidly fix and
                 learn from incidents, so you can build more resilient products.
             </p>
-
-[Learn more](https://incident.io/)
+            [Learn more](https://incident.io/)
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img width="1000" height="0" />
+            <a href="https://www.incident.io">
+                <img src="docs/speakeasy.png" alt="Speakeasy" width="260" align="right" />
+            </a>
+            <h3>Speakeasy: Enterprise DevEx for your API</h3>
+            <p>
+                Our platform makes it easy to create feature-rich production ready SDKs.
+                Speed up integrations and reduce errors by giving your API the DevEx it deserves.
+            </p>
+            [Integrate with Goa](https://www.speakeasyapi.dev/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship)
         </td>
     </tr>
 </table>
