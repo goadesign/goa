@@ -16,28 +16,22 @@
   </p>
 </p>
 
-<table width="100%" style="border-collapse:collapse; border: none;">
-    <tr>
-        <td rowspan="2" width="200px" style="border: none; padding-right: 10px;">
-            <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
-                <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto; border: none;"/>
-            </a>
-        </td>
-        <td style="border: none; text-align: center; vertical-align: middle;">
-            <h1>Goa Design Wizard</h1>
-        </td>
-    </tr>
-    <tr>
-        <td style="border: none; padding: 0; margin: 0;">
-            <ul>
-                <li>Create Goa designs for new services in seconds</li>
-                <li>Review existing designs</li>
-                <li>Explore the Goa DSL</li>
-            </ul>
-            (requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)
-        </td>
-    </tr>
-</table>
+<div style="display: flex; width: 100%; border: none;">
+    <div style="flex: 0 0 200px; padding-right: 10px; border: none;">
+        <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
+            <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
+        </a>
+    </div>
+    <div style="flex-grow: 1; border: none;">
+        <h1> Goa Design Wizard</h1>
+        <ul>
+            <li>Create Goa designs for new services in seconds</li>
+            <li>Review existing designs</li>
+            <li>Explore the Goa DSL</li>
+        </ul>
+        <p>(requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)</p>
+    </div>
+</div>
 
 # Overview
 
