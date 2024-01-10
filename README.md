@@ -16,23 +16,21 @@
   </p>
 </p>
 
-# *New!* Introducing the Goa Design Wizard
-
-<table width="100%">
+<table style="border-collapse: collapse; width: 100%;">
     <tr>
-        <td width="210px">
+        <td style="border: none; width: 200px;">
             <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
-                <img src="docs/Wizard.png" alt="Wizard Logo" />
+                <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
             </a>
         </td>
-        <td align="top">
-            Use the <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">Goa Design Wizard</a> to:
+        <td style="border: none;">
+            <h1>Goa Design Wizard</h1>
             <ul>
-              <li>Create Goa designs for new services in seconds</li>
-              <li>Review existing designs</li>
-              <li>Explore the Goa DSL</li>
+                <li>Create Goa designs for new services in seconds</li>
+                <li>Review existing designs</li>
+                <li>Explore the Goa DSL</li>
             </ul>
-            (requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)
+            <p>(requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)</p>
         </td>
     </tr>
 </table>
@@ -75,8 +73,21 @@ promoting reuse and standardization across services.
                 Use our platform to empower your team to run incidents end-to-end. Rapidly fix and
                 learn from incidents, so you can build more resilient products.
             </p>
-
-[Learn more](https://incident.io/)
+            <a href="https://incident.io">Learn more</a>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img width="1000" height="0" />
+            <a href="https://www.speakeasyapi.dev/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">
+                <img src="docs/speakeasy.png" alt="Speakeasy" width="260" align="right" />
+            </a>
+            <h3>Speakeasy: Enterprise DevEx for your API</h3>
+            <p>
+                Our platform makes it easy to create feature-rich production ready SDKs.
+                Speed up integrations and reduce errors by giving your API the DevEx it deserves.
+            </p>
+            <a href="https://www.speakeasyapi.dev/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">Integrate with Goa</a>
         </td>
     </tr>
 </table>
