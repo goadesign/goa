@@ -16,21 +16,24 @@
   </p>
 </p>
 
-# *New!* Introducing the Goa Design Wizard
-
-<table width="100%">
+<table width="100%" style="border-collapse:collapse;">
     <tr>
-        <td width="210px">
+        <td rowspan="2" width="200px" style="border: none; padding-right: 10px;">
             <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
-                <img src="docs/Wizard.png" alt="Wizard Logo" />
+                <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
             </a>
         </td>
-        <td align="top">
+        <td style="border: none; padding: 0; margin: 0;">
+            <h1>Goa Design Wizard</h1>
             Use the <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">Goa Design Wizard</a> to:
+        </td>
+    </tr>
+    <tr>
+        <td style="border: none; vertical-align: top;">
             <ul>
-              <li>Create Goa designs for new services in seconds</li>
-              <li>Review existing designs</li>
-              <li>Explore the Goa DSL</li>
+                <li>Create Goa designs for new services in seconds</li>
+                <li>Review existing designs</li>
+                <li>Explore the Goa DSL</li>
             </ul>
             (requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)
         </td>
