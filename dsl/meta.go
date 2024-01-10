@@ -130,8 +130,8 @@ import (
 // - "swagger:generate" DEPRECATED, use "openapi:generate" instead.
 //
 // - "openapi:generate" specifies whether OpenAPI specification should be
-// generated. Defaults to true. Applicable to Server, Host, services, methods and file
-// servers.
+// generated. Defaults to true. Applicable to Server, Host, services, methods,
+// file servers and attributes.
 //
 //	var _ = Service("MyService", func() {
 //	    Meta("openapi:generate", "false")
