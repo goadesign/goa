@@ -81,7 +81,7 @@ promoting reuse and standardization across services.
     <tr>
         <td>
             <img width="1000" height="0" />
-            <a href="https://www.incident.io">
+            <a href="https://www.speakeasyapi.dev/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">
                 <img src="docs/speakeasy.png" alt="Speakeasy" width="260" align="right" />
             </a>
             <h3>Speakeasy: Enterprise DevEx for your API</h3>
