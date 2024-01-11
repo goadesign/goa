@@ -24,6 +24,7 @@ paths:
                   required: true
                   schema:
                     type: integer
+                    format: int64
                     minimum: 0
                     maximum: 42
             responses:
@@ -31,6 +32,7 @@ paths:
                     description: OK response.
                     schema:
                         type: integer
+                        format: int64
                         minimum: 0
                         maximum: 42
             schemes:

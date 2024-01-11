@@ -495,7 +495,9 @@ func initAttributeValidation(s *Schema, at *expr.AttributeExpr) {
 		return
 	}
 	s.Enum = val.Values
-	s.Format = string(val.Format)
+	if val.Format != "" {
+		s.Format = string(val.Format)
+	}
 	s.Pattern = val.Pattern
 	if val.ExclusiveMinimum != nil {
 		s.ExclusiveMinimum = val.ExclusiveMinimum
