@@ -25,6 +25,7 @@
         </td>
         <td style="border: none;">
             <h1>Goa Design Wizard</h1>
+            Use the <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">Goa Design Wizard</a> to:
             <ul>
                 <li>Create Goa designs for new services in seconds</li>
                 <li>Review existing designs</li>
