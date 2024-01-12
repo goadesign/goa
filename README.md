@@ -18,7 +18,7 @@
 
 <div align="center">
 <table style="border-collapse: collapse; width: 500px;">
-    <tr style="padding-bottom: 1em;">
+    <tr style="padding-bottom: 10px;">
         <td style="border: none; width: 200px;">
             <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
                 <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
