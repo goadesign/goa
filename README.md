@@ -24,13 +24,13 @@
                 <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
             </a>
         </td>
-        <td style="border: none;">
+        <td style="border: none; padding-bottom:1em;">
             <div style="text-align:center">
             <h1>Goa Design Wizard</h1>
             </div>
             Use the <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">Goa Design Wizard</a> to:
             <ul>
-                <li>Create Goa designs for new services in seconds</li>
+                <li>Create Goa designs in seconds</li>
                 <li>Review existing designs</li>
                 <li>Explore the Goa DSL</li>
             </ul>
