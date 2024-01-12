@@ -18,13 +18,13 @@
 
 <div align="center">
 <table style="border-collapse: collapse; width: 500px;">
-    <tr>
+    <tr style="padding-bottom: 1em;">
         <td style="border: none; width: 200px;">
             <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
                 <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
             </a>
         </td>
-        <td style="border: none; padding-bottom: 10px;">
+        <td style="border: none;">
             <div style="text-align:center">
             <h1>Goa Design Wizard</h1>
             </div>
