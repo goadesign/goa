@@ -16,7 +16,8 @@
   </p>
 </p>
 
-<table style="border-collapse: collapse; width: 100%;">
+<div align="center">
+<table style="border-collapse: collapse; width: 500px;">
     <tr>
         <td style="border: none; width: 200px;">
             <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
@@ -24,7 +25,9 @@
             </a>
         </td>
         <td style="border: none;">
+            <div style="text-align:center">
             <h1>Goa Design Wizard</h1>
+            </div>
             Use the <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">Goa Design Wizard</a> to:
             <ul>
                 <li>Create Goa designs for new services in seconds</li>
@@ -35,6 +38,7 @@
         </td>
     </tr>
 </table>
+</div>
 
 # Overview
 
