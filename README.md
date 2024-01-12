@@ -37,6 +37,7 @@
             <p>
                 (requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)
                 <br/>
+                <br/>
             </p>
         </td>
     </tr>
