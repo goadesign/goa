@@ -41,6 +41,8 @@ type (
 		Name string
 		// Description is the service description.
 		Description string
+		// APIName is the name of the API the service belongs to.
+		APIName string
 		// APIVersion is the API version.
 		APIVersion string
 		// StructName is the service struct name.
@@ -749,6 +751,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	data := &Data{
 		Name:               service.Name,
 		Description:        desc,
+		APIName:            expr.Root.API.Name,
 		APIVersion:         expr.Root.API.Version,
 		VarName:            varName,
 		PathName:           codegen.SnakeCase(varName),
