@@ -16,7 +16,8 @@
   </p>
 </p>
 
-<table style="border-collapse: collapse; width: 100%;">
+<div align="center">
+<table style="border-collapse: collapse; width: 500px;">
     <tr>
         <td style="border: none; width: 200px;">
             <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
@@ -24,17 +25,24 @@
             </a>
         </td>
         <td style="border: none;">
+            <div style="text-align:center">
             <h1>Goa Design Wizard</h1>
+            </div>
+            <p>
             Use the <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">Goa Design Wizard</a> to:
+            </p>
             <ul>
-                <li>Create Goa designs for new services in seconds</li>
+                <li>Create Goa designs in seconds</li>
                 <li>Review existing designs</li>
                 <li>Explore the Goa DSL</li>
             </ul>
-            <p>(requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)</p>
+            <p>
+            (requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)<br/><br/>
+            </p>
         </td>
     </tr>
 </table>
+</div>
 
 # Overview
 

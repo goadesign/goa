@@ -779,9 +779,7 @@ const requestElementsT = `{{- define "request_elements" }}
 		if len({{ .VarName }}Raw) != 0 {
 		{{- end }}
 		for keyRaw, valRaw := range {{ .VarName }}Raw {
-			if strings.HasPrefix(keyRaw, "{{ .HTTPName }}[") {
-				{{- template "map_conversion" (mapQueryDecodeData .Type .VarName 0) }}
-			}
+			{{- template "map_conversion" (mapQueryDecodeData .Type .VarName 0) }}
 		}
 		{{- if or .DefaultValue (not .Required) }}
 		}
