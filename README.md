@@ -24,7 +24,7 @@
                 <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
             </a>
         </td>
-        <td style="border: none; padding-bottom:1em;">
+        <td style="border: none; padding-bottom: 10px;">
             <div style="text-align:center">
             <h1>Goa Design Wizard</h1>
             </div>
