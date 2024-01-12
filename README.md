@@ -28,7 +28,9 @@
             <div style="text-align:center">
             <h1>Goa Design Wizard</h1>
             </div>
+            <p>
             Use the <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">Goa Design Wizard</a> to:
+            </p>
             <ul>
                 <li>Create Goa designs in seconds</li>
                 <li>Review existing designs</li>
