@@ -18,6 +18,7 @@ paths:
                         schema:
                             type: integer
                             example: 1
+                            format: int64
                             minimum: 0
                             maximum: 42
                         example: 1
@@ -29,6 +30,7 @@ paths:
                             schema:
                                 type: integer
                                 example: 1
+                                format: int64
                                 minimum: 0
                                 maximum: 42
                             example: 1

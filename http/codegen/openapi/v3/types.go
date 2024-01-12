@@ -265,7 +265,9 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		return s
 	}
 	s.Enum = val.Values
-	s.Format = string(val.Format)
+	if val.Format != "" {
+		s.Format = string(val.Format)
+	}
 	s.Pattern = val.Pattern
 	if val.ExclusiveMinimum != nil {
 		s.ExclusiveMinimum = val.ExclusiveMinimum
