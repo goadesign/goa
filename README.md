@@ -18,7 +18,7 @@
 
 <div align="center">
 <table style="border-collapse: collapse; width: 500px;">
-    <tr style="padding-bottom: 10px;">
+    <tr>
         <td style="border: none; width: 200px;">
             <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
                 <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
@@ -34,7 +34,10 @@
                 <li>Review existing designs</li>
                 <li>Explore the Goa DSL</li>
             </ul>
-            <p>(requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)</p>
+            <p>
+                (requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)
+                <br/>
+            </p>
         </td>
     </tr>
 </table>
