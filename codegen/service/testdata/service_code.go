@@ -7,13 +7,16 @@ type Service interface {
 	MethodWithSpaces(context.Context, *PayloadWithSpace) (res *ResultWithSpace, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "API With Spaces"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "Service With Spaces"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -71,13 +74,16 @@ type Service interface {
 	A(context.Context, *APayload) (res *AResult, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "SingleMethod"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -112,13 +118,16 @@ type Service interface {
 	B(context.Context, *BPayload) (res *BResult, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "MultipleMethods"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -181,13 +190,16 @@ type Service interface {
 	A(context.Context, *AUnion) (res *AUnion, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "UnionService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -222,13 +234,16 @@ type Service interface {
 	MultiUnion(context.Context, *Union) (res *Union, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "MultiUnionService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -261,13 +276,16 @@ type Service interface {
 	A(context.Context, *APayload) (res *AResult, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "WithDefault"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -298,13 +316,16 @@ type Service interface {
 	Empty(context.Context) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "Empty"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -319,13 +340,16 @@ type Service interface {
 	EmptyResult(context.Context, *APayload) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "EmptyResult"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -349,13 +373,16 @@ type Service interface {
 	EmptyPayload(context.Context) (res *AResult, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "EmptyPayload"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -379,13 +406,16 @@ type Service interface {
 	A(context.Context) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "ServiceError"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -405,13 +435,16 @@ type Service interface {
 	A(context.Context) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "CustomErrors"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -493,13 +526,16 @@ type Service interface {
 	A(context.Context) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "CustomErrorsCustomFields"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -540,13 +576,16 @@ type Service interface {
 	B(context.Context) (res *SingleView, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "MultipleMethodsResultMultipleViews"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -688,13 +727,16 @@ type Service interface {
 	AEndpoint(context.Context) (res *MultipleViews, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "WithExplicitAndDefaultViews"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -789,13 +831,16 @@ type Service interface {
 	A(context.Context) (res MultipleViewsCollection, view string, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "ResultCollectionMultipleViewsMethod"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -934,13 +979,16 @@ type Service interface {
 	A(context.Context) (res *MultipleViews, view string, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "ResultWithOtherResult"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1087,13 +1135,16 @@ type Service interface {
 	A(context.Context) (res *RT, view string, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "ResultWithResultTypeCollection"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1337,13 +1388,16 @@ type Service interface {
 	List(context.Context) (res *ListResult, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "ResultWithDashedMimeType"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1404,13 +1458,16 @@ type Service interface {
 	A(context.Context) (res *ResultOneof, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "ResultWithOneOfType"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1586,13 +1643,16 @@ type Service interface {
 	B(context.Context) (res *ResultInlineValidationBResult, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "ResultWithInlineValidation"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1655,13 +1715,16 @@ type Service interface {
 	A(context.Context) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "ForceGenerateType"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1680,13 +1743,16 @@ type Service interface {
 	A(context.Context) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "ForceGenerateTypeExplicit"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1705,13 +1771,16 @@ type Service interface {
 	StreamingResultMethod(context.Context, *APayload, StreamingResultMethodServerStream) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingResultService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1765,13 +1834,16 @@ type Service interface {
 	StreamingResultWithViewsMethod(context.Context, string, StreamingResultWithViewsMethodServerStream) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingResultWithViewsService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1878,13 +1950,16 @@ type Service interface {
 	StreamingResultWithExplicitViewMethod(context.Context, []int32, StreamingResultWithExplicitViewMethodServerStream) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingResultWithExplicitViewService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -1989,13 +2064,16 @@ type Service interface {
 	StreamingResultNoPayloadMethod(context.Context, StreamingResultNoPayloadMethodServerStream) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingResultNoPayloadService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2036,13 +2114,16 @@ type Service interface {
 	StreamingPayloadMethod(context.Context, *BPayload, StreamingPayloadMethodServerStream) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingPayloadService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2116,13 +2197,16 @@ type Service interface {
 	StreamingPayloadNoPayloadMethod(context.Context, StreamingPayloadNoPayloadMethodServerStream) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingPayloadNoPayloadService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2156,13 +2240,16 @@ type Service interface {
 	StreamingPayloadNoResultMethod(context.Context, StreamingPayloadNoResultMethodServerStream) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingPayloadNoResultService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2199,13 +2286,16 @@ type Service interface {
 	StreamingPayloadResultWithViewsMethod(context.Context, StreamingPayloadResultWithViewsMethodServerStream) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingPayloadResultWithViewsService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2328,13 +2418,16 @@ type Service interface {
 	StreamingPayloadResultWithExplicitViewMethod(context.Context, StreamingPayloadResultWithExplicitViewMethodServerStream) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "StreamingPayloadResultWithExplicitViewService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2444,13 +2537,16 @@ type Service interface {
 	BidirectionalStreamingMethod(context.Context, *BPayload, BidirectionalStreamingMethodServerStream) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "BidirectionalStreamingService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2528,13 +2624,16 @@ type Service interface {
 	BidirectionalStreamingNoPayloadMethod(context.Context, BidirectionalStreamingNoPayloadMethodServerStream) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "BidirectionalStreamingNoPayloadService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2576,13 +2675,16 @@ type Service interface {
 	BidirectionalStreamingResultWithViewsMethod(context.Context, BidirectionalStreamingResultWithViewsMethodServerStream) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "BidirectionalStreamingResultWithViewsService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2710,13 +2812,16 @@ type Service interface {
 	BidirectionalStreamingResultWithExplicitViewMethod(context.Context, BidirectionalStreamingResultWithExplicitViewMethodServerStream) (err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "BidirectionalStreamingResultWithExplicitViewService"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2829,13 +2934,16 @@ type Service interface {
 	A(context.Context, *foo.Foo) (res *foo.Foo, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "PkgPathMethod"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2850,13 +2958,16 @@ type Service interface {
 	A(context.Context, []*foo.Foo) (res []*foo.Foo, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "PkgPathArrayMethod"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2871,13 +2982,16 @@ type Service interface {
 	A(context.Context, *foo.RecursiveFoo) (res *foo.RecursiveFoo, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "PkgPathRecursiveMethod"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2896,13 +3010,16 @@ type Service interface {
 	EnvelopedB(context.Context, *EnvelopedBPayload) (res *EnvelopedBResult, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "MultiplePkgPathMethod"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2966,13 +3083,16 @@ type Service interface {
 	A(context.Context, *NoDir) (res *NoDir, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "NoDirMethod"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -2994,13 +3114,16 @@ type Service interface {
 	B(context.Context, *foo.Foo) (res *foo.Foo, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "PkgPathDupeMethod"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -3023,13 +3146,16 @@ type Service interface {
 	B(context.Context, *foo.Foo) (res *foo.Foo, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "PkgPathDupeMethod2"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
@@ -3044,13 +3170,16 @@ type Service interface {
 	FooEndpoint(context.Context, *Bar) (res *Bar, err error)
 }
 
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
 const ServiceName = "PkgPathPayloadAttributeDSL"
-
-// APIVersion is the version of the API as defined in the design.
-const APIVersion = "0.0.1"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
