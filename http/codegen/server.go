@@ -778,8 +778,38 @@ const requestElementsT = `{{- define "request_elements" }}
 		{{- else if not .Required }}
 		if len({{ .VarName }}Raw) != 0 {
 		{{- end }}
+		if {{ .VarName }} == nil {
+			{{ .VarName }} = make({{ goTypeRef .Type }})
+		}
 		for keyRaw, valRaw := range {{ .VarName }}Raw {
-			{{- template "map_conversion" (mapQueryDecodeData .Type .VarName 0) }}
+			var key {{ goTypeRef .Type.KeyType.Type }}
+			{{- if eq .Type.KeyType.Type.Name "string" }}
+			key = keyRaw
+			{{- else }}
+				{{- template "type_conversion" (conversionData "key" "query" .Type.KeyType.Type) }}
+			{{- end }}
+			{{- if eq .Type.ElemType.Type.Name "string" }}
+				{{ .VarName }}[key] = valRaw[0]
+			{{- else if eq .Type.ElemType.Type.Name "array" }}
+				{{- if eq .Type.ElemType.Type.ElemType.Type.Name "string" }}
+					{{ .VarName }}[key] = valRaw
+				{{- else }}
+					var val {{ goTypeRef .Type.ElemType.Type }}
+					{
+						{{- template "slice_conversion" (conversionData "val" "query" .Type.ElemType.Type) }}
+					}
+					{{ .VarName }}[key] = val
+				{{- end }}
+			{{- else if eq .Type.ElemType.Type.Name "map" }}
+				{{- template "map_conversion" (mapQueryDecodeData .Type.ElemType.Type (printf "%s[key]" .VarName) 1) }}
+			{{- else }}
+				var val{{ .Loop }} {{ goTypeRef .Type.ElemType.Type }}
+				{
+					val{{ .Loop }}Raw := valRaw[0]
+					{{- template "type_conversion" (conversionData (printf "val%s" .Loop) "query" .Type.ElemType.Type) }}
+				}
+				{{ .VarName }}[key] = val{{ .Loop }}
+			{{- end }}
 		}
 		{{- if or .DefaultValue (not .Required) }}
 		}
