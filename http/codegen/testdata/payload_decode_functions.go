@@ -4909,7 +4909,13 @@ func DecodeMethodMapQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 				c = make(map[int][]string)
 			}
 			for keyRaw, valRaw := range cRaw {
-				c[keyRaw] = valRaw
+				var key int
+				v, err2 := strconv.ParseInt(keyRaw, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", keyRaw, "integer"))
+				}
+				key = int(v)
+				c[key] = valRaw
 			}
 		}
 		if err != nil {
