@@ -527,7 +527,14 @@ func initAttributeValidation(s *Schema, at *expr.AttributeExpr) {
 			s.MaxLength = val.MaxLength
 		}
 	}
-	s.Required = val.Required
+	for _, v := range val.Required {
+		if a := at.Find(v); a != nil {
+			if !mustGenerate(a.Meta) {
+				continue
+			}
+		}
+		s.Required = append(s.Required, v)
+	}
 }
 
 // toSchemaHrefs produces hrefs that replace the path wildcards with JSON
