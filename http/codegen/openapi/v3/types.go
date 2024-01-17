@@ -295,7 +295,14 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			s.MaxLength = val.MaxLength
 		}
 	}
-	s.Required = val.Required
+	for _, v := range val.Required {
+		if a := attr.Find(v); a != nil {
+			if !mustGenerate(a.Meta) {
+				continue
+			}
+		}
+		s.Required = append(s.Required, v)
+	}
 
 	return s
 }
