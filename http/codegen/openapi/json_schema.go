@@ -164,7 +164,7 @@ func APISchema(api *expr.APIExpr, r *expr.RootExpr) *Schema {
 }
 
 // GenerateServiceDefinition produces the JSON schema corresponding to the given
-// service. It stores the results in cachedSchema.
+// service. It stores the results in Definitions.
 func GenerateServiceDefinition(api *expr.APIExpr, res *expr.HTTPServiceExpr) {
 	s := NewSchema()
 	s.Description = res.Description()
@@ -322,6 +322,8 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 			s.Format = "binary"
 		case expr.IntKind, expr.Int64Kind,
 			expr.UIntKind, expr.UInt64Kind:
+			// Use int64 format for IntKind and UIntKind because the OpenAPI
+			// generator produced int32 by default.
 			s.Type = Type("integer")
 			s.Format = "int64"
 		case expr.Int32Kind, expr.UInt32Kind:
