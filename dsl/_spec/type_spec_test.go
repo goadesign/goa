@@ -3,7 +3,6 @@ package dsl_test
 
 import (
 	. "goa.design/goa/v3/dsl"
-	. "goa.design/goa/v3/expr"
 )
 
 // BasicType shows the basic usage for Type.
@@ -74,6 +73,10 @@ var AllTypes = Type("AllTypes", func() {
 	Attribute("any", Any)
 	Attribute("array", ArrayOf(String))
 	Attribute("map", MapOf(String, String))
+	OneOf("union", func() {
+		Attribute("string", String)
+		Attribute("bytes", Bytes)
+	})
 	Attribute("object", func() {
 		Description("Inner type")
 		Attribute("inner_attribute", String)
@@ -81,7 +84,6 @@ var AllTypes = Type("AllTypes", func() {
 	})
 	Attribute("user", AUserType)
 	Attribute("result", AResultType)
-	Attribute("collection", CollectionOf(AResultType))
 })
 
 // AUserType is a type used to define an attribute in AllTypes.
@@ -98,6 +100,7 @@ var AResultType = ResultType("ResultType", func() {
 	Attributes(func() {
 		Attribute("optional", String)
 		Attribute("required", String)
+		Attribute("collection", CollectionOf("AResultType"))
 		Required("required")
 	})
 	View("default", func() {
@@ -208,11 +211,23 @@ var Validations = Type("Validations", func() {
 		MinLength(2)
 		MaxLength(10)
 		Enum([]string{"a", "b"}, []string{"c", "d"})
+		Elem(func() {
+			// Validate elements
+			Pattern("^[a-zA-Z]+$")
+		})
 	})
 
-	Attribute("map", ArrayOf(String), func() {
+	Attribute("map", MapOf(String, String), func() {
 		MinLength(5)
 		MaxLength(10)
+		Key(func() {
+			// Validate keys
+			Pattern("^[a-zA-Z]+$")
+		})
+		Elem(func() {
+			// Validate elements
+			Pattern("^[a-zA-Z]+$")
+		})
 	})
 })
 

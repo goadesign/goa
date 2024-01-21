@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
     title: Goa API
-    version: "1.0"
+    version: 0.0.1
 servers:
     - url: http://localhost:80
       description: Default server for test api
@@ -103,6 +103,7 @@ components:
                     additionalProperties:
                         type: integer
                         example: 1
+                        format: int64
             example:
                 int_map:
                     "": 1
@@ -133,6 +134,7 @@ components:
                     additionalProperties:
                         type: integer
                         example: 1
+                        format: int32
                 uint64_map:
                     type: object
                     example:
@@ -140,6 +142,7 @@ components:
                     additionalProperties:
                         type: integer
                         example: 1
+                        format: int64
             example:
                 resulttype_map:
                     "":
