@@ -1,4 +1,5 @@
-/*Package xray contains middleware that creates AWS X-Ray segments from the
+/*
+Package xray contains middleware that creates AWS X-Ray segments from the
 HTTP requests and responses and send the segments to an AWS X-ray daemon.
 
 The server middleware works by extracting the trace information from the
@@ -10,5 +11,9 @@ version or record an error.
 The client middleware wraps the client Doer and works by extracing the
 segment from the request context. It creates a new sub-segment and updates
 the request context with the latest segment before making the request.
+
+Deprecated: use OpenTelemetry instead, see for example
+https://github.com/goadesign/clue. This package will be removed in a future
+version of Goa.
 */
 package xray

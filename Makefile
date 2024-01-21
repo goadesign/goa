@@ -14,7 +14,7 @@
 #
 MAJOR=3
 MINOR=14
-BUILD=1
+BUILD=6
 
 GOOS=$(shell go env GOOS)
 GOARCH=$(shell go env GOARCH)

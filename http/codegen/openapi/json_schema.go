@@ -164,7 +164,7 @@ func APISchema(api *expr.APIExpr, r *expr.RootExpr) *Schema {
 }
 
 // GenerateServiceDefinition produces the JSON schema corresponding to the given
-// service. It stores the results in cachedSchema.
+// service. It stores the results in Definitions.
 func GenerateServiceDefinition(api *expr.APIExpr, res *expr.HTTPServiceExpr) {
 	s := NewSchema()
 	s.Description = res.Description()
@@ -322,6 +322,8 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 			s.Format = "binary"
 		case expr.IntKind, expr.Int64Kind,
 			expr.UIntKind, expr.UInt64Kind:
+			// Use int64 format for IntKind and UIntKind because the OpenAPI
+			// generator produced int32 by default.
 			s.Type = Type("integer")
 			s.Format = "int64"
 		case expr.Int32Kind, expr.UInt32Kind:
@@ -344,6 +346,9 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 	case *expr.Object:
 		s.Type = Object
 		for _, nat := range *actual {
+			if !MustGenerate(nat.Attribute.Meta) {
+				continue
+			}
 			prop := NewSchema()
 			buildAttributeSchema(api, prop, nat.Attribute)
 			s.Properties[nat.Name] = prop
@@ -492,7 +497,9 @@ func initAttributeValidation(s *Schema, at *expr.AttributeExpr) {
 		return
 	}
 	s.Enum = val.Values
-	s.Format = string(val.Format)
+	if val.Format != "" {
+		s.Format = string(val.Format)
+	}
 	s.Pattern = val.Pattern
 	if val.ExclusiveMinimum != nil {
 		s.ExclusiveMinimum = val.ExclusiveMinimum
@@ -520,7 +527,14 @@ func initAttributeValidation(s *Schema, at *expr.AttributeExpr) {
 			s.MaxLength = val.MaxLength
 		}
 	}
-	s.Required = val.Required
+	for _, v := range val.Required {
+		if a := at.Find(v); a != nil {
+			if !MustGenerate(a.Meta) {
+				continue
+			}
+		}
+		s.Required = append(s.Required, v)
+	}
 }
 
 // toSchemaHrefs produces hrefs that replace the path wildcards with JSON
@@ -564,4 +578,17 @@ func buildResultTypeSchema(api *expr.APIExpr, mt *expr.ResultTypeExpr, view stri
 		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
 	}
 	buildAttributeSchema(api, s, projected.AttributeExpr)
+}
+
+// MustGenerate returns true if the meta indicates that a OpenAPI specification should be
+// generated, false otherwise.
+func MustGenerate(meta expr.MetaExpr) bool {
+	m, ok := meta.Last("openapi:generate")
+	if !ok {
+		m, ok = meta.Last("swagger:generate")
+	}
+	if ok && m == "false" {
+		return false
+	}
+	return true
 }

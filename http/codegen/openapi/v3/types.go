@@ -78,13 +78,13 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 	}
 
 	for _, s := range api.HTTP.Services {
-		if !mustGenerate(s.Meta) || !mustGenerate(s.ServiceExpr.Meta) {
+		if !openapi.MustGenerate(s.Meta) || !openapi.MustGenerate(s.ServiceExpr.Meta) {
 			continue
 		}
 
 		sbodies := make(map[string]*EndpointBodies, len(s.HTTPEndpoints))
 		for _, e := range s.HTTPEndpoints {
-			if !mustGenerate(e.Meta) || !mustGenerate(e.MethodExpr.Meta) {
+			if !openapi.MustGenerate(e.Meta) || !openapi.MustGenerate(e.MethodExpr.Meta) {
 				continue
 			}
 
@@ -152,12 +152,12 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	switch t := attr.Type.(type) {
 	case expr.Primitive:
 		switch t.Kind() {
-		case expr.UIntKind, expr.UInt64Kind, expr.UInt32Kind:
-			s.Type = openapi.Type("integer")
-		case expr.IntKind, expr.Int64Kind:
+		case expr.IntKind, expr.UIntKind, expr.Int64Kind, expr.UInt64Kind:
+			// Use int64 format for IntKind and UIntKind because the OpenAPI
+			// generator produced int32 by default.
 			s.Type = openapi.Type("integer")
 			s.Format = "int64"
-		case expr.Int32Kind:
+		case expr.Int32Kind, expr.UInt32Kind:
 			s.Type = openapi.Type("integer")
 			s.Format = "int32"
 		case expr.Float32Kind:
@@ -187,6 +187,9 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		s.Type = openapi.Object
 		var itemNotes []string
 		for _, nat := range *t {
+			if !openapi.MustGenerate(nat.Attribute.Meta) {
+				continue
+			}
 			s.Properties[nat.Name] = sf.schemafy(nat.Attribute)
 		}
 		if len(itemNotes) > 0 {
@@ -262,7 +265,9 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		return s
 	}
 	s.Enum = val.Values
-	s.Format = string(val.Format)
+	if val.Format != "" {
+		s.Format = string(val.Format)
+	}
 	s.Pattern = val.Pattern
 	if val.ExclusiveMinimum != nil {
 		s.ExclusiveMinimum = val.ExclusiveMinimum
@@ -290,7 +295,14 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			s.MaxLength = val.MaxLength
 		}
 	}
-	s.Required = val.Required
+	for _, v := range val.Required {
+		if a := attr.Find(v); a != nil {
+			if !openapi.MustGenerate(a.Meta) {
+				continue
+			}
+		}
+		s.Required = append(s.Required, v)
+	}
 
 	return s
 }
@@ -381,6 +393,9 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64, seen map[string]*uint
 	case expr.ObjectKind:
 		o := expr.AsObject(t)
 		for _, m := range *o {
+			if !openapi.MustGenerate(m.Attribute.Meta) {
+				continue
+			}
 			kh := hashString(m.Name, h)
 			vh := hashAttribute(m.Attribute, h, seen)
 			*res = *res ^ orderedHash(kh, *vh, h)

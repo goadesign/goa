@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
     title: ""
-    version: ""
+    version: 0.0.1
 host: localhost:80
 consumes:
     - application/json
