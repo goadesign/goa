@@ -10,6 +10,9 @@ import (
 
 // ResponseCapture is a http.ResponseWriter which captures the response status
 // code and content length.
+//
+// Deprecated: this type is deprecated and will be removed in a future version
+// of Goa.
 type ResponseCapture struct {
 	http.ResponseWriter
 	StatusCode    int
@@ -17,6 +20,10 @@ type ResponseCapture struct {
 }
 
 // CaptureResponse creates a ResponseCapture that wraps the given ResponseWriter.
+//
+// Deprecated: Use OpenTelemetry instead, see for example
+// github.com/goadesign/clue. This function will be removed in a future version
+// of Goa.
 func CaptureResponse(w http.ResponseWriter) *ResponseCapture {
 	return &ResponseCapture{ResponseWriter: w}
 }

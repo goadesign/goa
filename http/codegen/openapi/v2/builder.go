@@ -25,7 +25,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 		return nil, fmt.Errorf("failed to parse server URL: %s", err)
 	}
 	host := u.Host
-	if !mustGenerate(root.API.Servers[0].Meta) || !mustGenerate(h.Meta) {
+	if !openapi.MustGenerate(root.API.Servers[0].Meta) || !openapi.MustGenerate(h.Meta) {
 		host = ""
 	}
 
@@ -63,20 +63,20 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 		ExternalDocs:        openapi.DocsFromExpr(root.API.Docs, root.API.Meta),
 	}
 	for _, res := range root.API.HTTP.Services {
-		if !mustGenerate(res.Meta) || !mustGenerate(res.ServiceExpr.Meta) {
+		if !openapi.MustGenerate(res.Meta) || !openapi.MustGenerate(res.ServiceExpr.Meta) {
 			continue
 		}
 		for k, v := range openapi.ExtensionsFromExpr(res.Meta) {
 			s.Paths[k] = v
 		}
 		for _, fs := range res.FileServers {
-			if !mustGenerate(fs.Meta) || !mustGenerate(fs.Service.Meta) {
+			if !openapi.MustGenerate(fs.Meta) || !openapi.MustGenerate(fs.Service.Meta) {
 				continue
 			}
 			buildPathFromFileServer(s, root, fs)
 		}
 		for _, a := range res.HTTPEndpoints {
-			if !mustGenerate(a.Meta) || !mustGenerate(a.MethodExpr.Meta) {
+			if !openapi.MustGenerate(a.Meta) || !openapi.MustGenerate(a.MethodExpr.Meta) {
 				continue
 			}
 			for _, route := range a.Routes {
@@ -116,19 +116,6 @@ func defaultURI(h *expr.HostExpr) string {
 		panic(err) // should never hit this!
 	}
 	return uri
-}
-
-// mustGenerate returns true if the meta indicates that a OpenAPI specification should be
-// generated, false otherwise.
-func mustGenerate(meta expr.MetaExpr) bool {
-	m, ok := meta.Last("openapi:generate")
-	if !ok {
-		m, ok = meta.Last("swagger:generate")
-	}
-	if ok && m == "false" {
-		return false
-	}
-	return true
 }
 
 // addScopeDescription generates and adds required scopes to the scheme's description.
@@ -216,18 +203,18 @@ func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
 func hasAbsoluteRoutes(root *expr.RootExpr) bool {
 	hasAbsoluteRoutes := false
 	for _, res := range root.API.HTTP.Services {
-		if !mustGenerate(res.Meta) || !mustGenerate(res.ServiceExpr.Meta) {
+		if !openapi.MustGenerate(res.Meta) || !openapi.MustGenerate(res.ServiceExpr.Meta) {
 			continue
 		}
 		for _, fs := range res.FileServers {
-			if !mustGenerate(fs.Meta) || !mustGenerate(fs.Service.Meta) {
+			if !openapi.MustGenerate(fs.Meta) || !openapi.MustGenerate(fs.Service.Meta) {
 				continue
 			}
 			hasAbsoluteRoutes = true
 			break
 		}
 		for _, a := range res.HTTPEndpoints {
-			if !mustGenerate(a.Meta) || !mustGenerate(a.MethodExpr.Meta) {
+			if !openapi.MustGenerate(a.Meta) || !openapi.MustGenerate(a.MethodExpr.Meta) {
 				continue
 			}
 			for _, ro := range a.Routes {
@@ -254,6 +241,16 @@ func summaryFromExpr(name string, e *expr.HTTPEndpointExpr) string {
 		}
 	}
 	for n, mdata := range e.MethodExpr.Meta {
+		if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
+			return mdata[0]
+		}
+	}
+	for n, mdata := range e.Service.ServiceExpr.Meta {
+		if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
+			return mdata[0]
+		}
+	}
+	for n, mdata := range expr.Root.API.Meta {
 		if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
 			return mdata[0]
 		}
@@ -623,7 +620,9 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 				requirement[s.Hash()] = []string{}
 				switch s.Kind {
 				case expr.OAuth2Kind:
-					requirement[s.Hash()] = append(requirement[s.Hash()], req.Scopes...)
+					if len(req.Scopes) > 0 {
+						requirement[s.Hash()] = req.Scopes
+					}
 				case expr.BasicAuthKind, expr.APIKeyKind, expr.JWTKind:
 					lines := make([]string, 0, len(req.Scopes))
 					for _, scope := range req.Scopes {

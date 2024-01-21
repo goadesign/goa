@@ -18,6 +18,7 @@ paths:
                         schema:
                             $ref: '#/components/schemas/TestEndpointRequestBody'
                         example:
+                            required_string: ""
                             string: ""
             responses:
                 "200":
@@ -25,18 +26,41 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/TestEndpointRequestBody'
+                                $ref: '#/components/schemas/Result'
                             example:
-                                string: ""
+                                int: 0
+                                required_int: 0
 components:
     schemas:
+        Result:
+            type: object
+            properties:
+                int:
+                    type: integer
+                    example: 0
+                    format: int64
+                required_int:
+                    type: integer
+                    example: 0
+                    format: int64
+            example:
+                int: 0
+                required_int: 0
+            required:
+                - required_int
         TestEndpointRequestBody:
             type: object
             properties:
+                required_string:
+                    type: string
+                    example: ""
                 string:
                     type: string
                     example: ""
             example:
+                required_string: ""
                 string: ""
+            required:
+                - required_string
 tags:
     - name: testService

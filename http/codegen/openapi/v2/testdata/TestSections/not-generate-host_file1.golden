@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
     title: ""
-    version: ""
+    version: 0.0.1
 consumes:
     - application/json
     - application/xml
