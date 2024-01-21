@@ -78,13 +78,13 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 	}
 
 	for _, s := range api.HTTP.Services {
-		if !mustGenerate(s.Meta) || !mustGenerate(s.ServiceExpr.Meta) {
+		if !openapi.MustGenerate(s.Meta) || !openapi.MustGenerate(s.ServiceExpr.Meta) {
 			continue
 		}
 
 		sbodies := make(map[string]*EndpointBodies, len(s.HTTPEndpoints))
 		for _, e := range s.HTTPEndpoints {
-			if !mustGenerate(e.Meta) || !mustGenerate(e.MethodExpr.Meta) {
+			if !openapi.MustGenerate(e.Meta) || !openapi.MustGenerate(e.MethodExpr.Meta) {
 				continue
 			}
 
@@ -187,7 +187,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		s.Type = openapi.Object
 		var itemNotes []string
 		for _, nat := range *t {
-			if !mustGenerate(nat.Attribute.Meta) {
+			if !openapi.MustGenerate(nat.Attribute.Meta) {
 				continue
 			}
 			s.Properties[nat.Name] = sf.schemafy(nat.Attribute)
@@ -297,7 +297,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	}
 	for _, v := range val.Required {
 		if a := attr.Find(v); a != nil {
-			if !mustGenerate(a.Meta) {
+			if !openapi.MustGenerate(a.Meta) {
 				continue
 			}
 		}
@@ -393,7 +393,7 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64, seen map[string]*uint
 	case expr.ObjectKind:
 		o := expr.AsObject(t)
 		for _, m := range *o {
-			if !mustGenerate(m.Attribute.Meta) {
+			if !openapi.MustGenerate(m.Attribute.Meta) {
 				continue
 			}
 			kh := hashString(m.Name, h)

@@ -346,7 +346,7 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 	case *expr.Object:
 		s.Type = Object
 		for _, nat := range *actual {
-			if !mustGenerate(nat.Attribute.Meta) {
+			if !MustGenerate(nat.Attribute.Meta) {
 				continue
 			}
 			prop := NewSchema()
@@ -529,7 +529,7 @@ func initAttributeValidation(s *Schema, at *expr.AttributeExpr) {
 	}
 	for _, v := range val.Required {
 		if a := at.Find(v); a != nil {
-			if !mustGenerate(a.Meta) {
+			if !MustGenerate(a.Meta) {
 				continue
 			}
 		}
@@ -580,9 +580,9 @@ func buildResultTypeSchema(api *expr.APIExpr, mt *expr.ResultTypeExpr, view stri
 	buildAttributeSchema(api, s, projected.AttributeExpr)
 }
 
-// mustGenerate returns true if the meta indicates that a OpenAPI specification should be
+// MustGenerate returns true if the meta indicates that a OpenAPI specification should be
 // generated, false otherwise.
-func mustGenerate(meta expr.MetaExpr) bool {
+func MustGenerate(meta expr.MetaExpr) bool {
 	m, ok := meta.Last("openapi:generate")
 	if !ok {
 		m, ok = meta.Last("swagger:generate")
