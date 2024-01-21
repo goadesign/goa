@@ -23,6 +23,10 @@ import (
 //
 //	// enable options for using "Custom-Id" header.
 //	service.Use(middleware.RequestID(middleware.RequestIDHeaderOption("Custom-Id"))
+//
+// Deprecated: use OpenTelemetry instead, see for example
+// github.com/goadesign/clue. This function will be removed in a future version
+// of Goa.
 func RequestID(options ...middleware.RequestIDOption) func(http.Handler) http.Handler {
 	o := middleware.NewRequestIDOptions(options...)
 	useReqID := o.IsUseRequestID()

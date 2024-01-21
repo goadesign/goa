@@ -142,6 +142,9 @@ func (a *APIExpr) Finalize() {
 	if len(a.Servers) == 0 {
 		a.Servers = []*ServerExpr{a.DefaultServer()}
 	}
+	if a.Version == "" {
+		a.Version = "0.0.1"
+	}
 }
 
 // EvalName is the qualified name of the expression.

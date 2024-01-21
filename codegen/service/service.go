@@ -329,6 +329,12 @@ type Auther interface {
 }
 {{- end }}
 
+// APIName is the name of the API as defined in the design.
+const APIName = {{ printf "%q" .APIName }}
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = {{ printf "%q" .APIVersion }}
+
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.

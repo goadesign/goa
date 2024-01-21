@@ -5,7 +5,7 @@
   <h1 align="center"><b>Design First!</b></h1>
   <p align="center">
     <a href="https://github.com/goadesign/goa/releases/latest"><img alt="Release" src="https://img.shields.io/github/release/goadesign/goa.svg?style=for-the-badge"></a>
-    <a href="https://pkg.go.dev/goa.design/goa/v3@v3.14.1/dsl?tab=doc"><img alt="Go Doc" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=for-the-badge"></a>
+    <a href="https://pkg.go.dev/goa.design/goa/v3@v3.14.6/dsl?tab=doc"><img alt="Go Doc" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=for-the-badge"></a>
     <a href="https://github.com/goadesign/goa/actions/workflows/ci.yml"><img alt="GitHub Action: Test" src="https://img.shields.io/github/actions/workflow/status/goadesign/goa/test.yml?branch=v3&style=for-the-badge"></a>
     <a href="https://goreportcard.com/report/github.com/goadesign/goa"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/goadesign/goa?style=for-the-badge"></a>
     <a href="/LICENSE"><img alt="Software License" src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge"></a>
@@ -16,26 +16,33 @@
   </p>
 </p>
 
-# *New!* Introducing the Goa Design Wizard
-
-<table width="100%">
+<div align="center">
+<table style="border-collapse: collapse; width: 500px;">
     <tr>
-        <td width="210px">
+        <td style="border: none; width: 200px;">
             <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
-                <img src="docs/Wizard.png" alt="Wizard Logo" />
+                <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
             </a>
         </td>
-        <td align="top">
+        <td style="border: none;">
+            <div style="text-align:center">
+            <h1>Goa Design Wizard</h1>
+            </div>
+            <p>
             Use the <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">Goa Design Wizard</a> to:
+            </p>
             <ul>
-              <li>Create Goa designs for new services in seconds</li>
-              <li>Review existing designs</li>
-              <li>Explore the Goa DSL</li>
+                <li>Create Goa designs in seconds</li>
+                <li>Review existing designs</li>
+                <li>Explore the Goa DSL</li>
             </ul>
-            (requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)
+            <p>
+            (requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)<br/><br/>
+            </p>
         </td>
     </tr>
 </table>
+</div>
 
 # Overview
 
@@ -75,8 +82,21 @@ promoting reuse and standardization across services.
                 Use our platform to empower your team to run incidents end-to-end. Rapidly fix and
                 learn from incidents, so you can build more resilient products.
             </p>
-
-[Learn more](https://incident.io/)
+            <a href="https://incident.io">Learn more</a>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img width="1000" height="0" />
+            <a href="https://www.speakeasyapi.dev/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">
+                <img src="docs/speakeasy.png" alt="Speakeasy" width="260" align="right" />
+            </a>
+            <h3>Speakeasy: Enterprise DevEx for your API</h3>
+            <p>
+                Our platform makes it easy to create feature-rich production ready SDKs.
+                Speed up integrations and reduce errors by giving your API the DevEx it deserves.
+            </p>
+            <a href="https://www.speakeasyapi.dev/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">Integrate with Goa</a>
         </td>
     </tr>
 </table>
@@ -98,7 +118,7 @@ invoking the client code.
 go install goa.design/goa/v3/cmd/goa@v3
 ```
 
-Current Release: `v3.14.1`
+Current Release: `v3.14.6`
 
 # Getting Started
 
@@ -407,7 +427,7 @@ In particular the page
 explains how to leverage the generated code to implement an HTTP or gRPC
 service.
 
-The [DSL Go Doc](https://pkg.go.dev/goa.design/goa/v3@v3.14.1/dsl?tab=doc)
+The [DSL Go Doc](https://pkg.go.dev/goa.design/goa/v3@v3.14.6/dsl?tab=doc)
 contains a fully documented reference of all the DSL functions.
 
 ## Instrumentation and System Example
