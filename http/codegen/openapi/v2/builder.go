@@ -245,6 +245,16 @@ func summaryFromExpr(name string, e *expr.HTTPEndpointExpr) string {
 			return mdata[0]
 		}
 	}
+	for n, mdata := range e.Service.ServiceExpr.Meta {
+		if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
+			return mdata[0]
+		}
+	}
+	for n, mdata := range expr.Root.API.Meta {
+		if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
+			return mdata[0]
+		}
+	}
 	return name
 }
 
@@ -610,7 +620,9 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 				requirement[s.Hash()] = []string{}
 				switch s.Kind {
 				case expr.OAuth2Kind:
-					requirement[s.Hash()] = append(requirement[s.Hash()], req.Scopes...)
+					if len(req.Scopes) > 0 {
+						requirement[s.Hash()] = req.Scopes
+					}
 				case expr.BasicAuthKind, expr.APIKeyKind, expr.JWTKind:
 					lines := make([]string, 0, len(req.Scopes))
 					for _, scope := range req.Scopes {

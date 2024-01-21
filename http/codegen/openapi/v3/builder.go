@@ -213,6 +213,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	{
 		summary = fmt.Sprintf("%s %s", e.Name(), svc.Name())
 		setSummary(expr.Root.API.Meta)
+		setSummary(svc.ServiceExpr.Meta)
 		setSummary(r.Endpoint.Meta)
 		setSummary(m.Meta)
 	}
@@ -548,12 +549,14 @@ func buildSecurityRequirements(reqs []*expr.SecurityExpr) []map[string][]string 
 	for i, req := range reqs {
 		sr := make(map[string][]string, len(req.Schemes))
 		for _, sch := range req.Schemes {
+			scopes := []string{}
 			switch sch.Kind {
-			case expr.BasicAuthKind, expr.APIKeyKind:
-				sr[sch.Hash()] = []string{}
 			case expr.OAuth2Kind, expr.JWTKind:
-				sr[sch.Hash()] = req.Scopes
+				if len(req.Scopes) > 0 {
+					scopes = req.Scopes
+				}
 			}
+			sr[sch.Hash()] = scopes
 		}
 		srs[i] = sr
 	}
