@@ -119,7 +119,7 @@ func buildComponents(root *expr.RootExpr, types map[string]*openapi.Schema) *Com
 func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, api *expr.APIExpr) map[string]*PathItem {
 	var paths = make(map[string]*PathItem)
 	for _, svc := range h.Services {
-		if !mustGenerate(svc.Meta) || !mustGenerate(svc.ServiceExpr.Meta) {
+		if !openapi.MustGenerate(svc.Meta) || !openapi.MustGenerate(svc.ServiceExpr.Meta) {
 			continue
 		}
 
@@ -128,7 +128,7 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 
 		// endpoints
 		for _, e := range svc.HTTPEndpoints {
-			if !mustGenerate(e.Meta) || !mustGenerate(e.MethodExpr.Meta) {
+			if !openapi.MustGenerate(e.Meta) || !openapi.MustGenerate(e.MethodExpr.Meta) {
 				continue
 			}
 
@@ -172,7 +172,7 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 
 		// file servers
 		for _, f := range svc.FileServers {
-			if !mustGenerate(f.Meta) || !mustGenerate(f.Service.Meta) {
+			if !openapi.MustGenerate(f.Meta) || !openapi.MustGenerate(f.Service.Meta) {
 				continue
 			}
 
@@ -482,12 +482,12 @@ func parseOperationIDTemplate(template, service, method string, routeIndex int) 
 func buildServers(servers []*expr.ServerExpr) []*Server {
 	var svrs []*Server
 	for _, svr := range servers {
-		if !mustGenerate(svr.Meta) {
+		if !openapi.MustGenerate(svr.Meta) {
 			continue
 		}
 		var server *Server
 		for _, host := range svr.Hosts {
-			if !mustGenerate(host.Meta) {
+			if !openapi.MustGenerate(host.Meta) {
 				continue
 			}
 
@@ -642,7 +642,7 @@ func buildTags(api *expr.APIExpr) []*openapi.Tag {
 		m[t.Name] = t
 	}
 	for _, s := range api.HTTP.Services {
-		if !mustGenerate(s.Meta) || !mustGenerate(s.ServiceExpr.Meta) {
+		if !openapi.MustGenerate(s.Meta) || !openapi.MustGenerate(s.ServiceExpr.Meta) {
 			continue
 		}
 		for _, t := range openapi.TagsFromExpr(s.Meta) {
@@ -667,7 +667,7 @@ func buildTags(api *expr.APIExpr) []*openapi.Tag {
 			// add service name and description to the tags since we tag every
 			// operation with service name when no custom tag is defined
 			for _, s := range api.HTTP.Services {
-				if !mustGenerate(s.Meta) || !mustGenerate(s.ServiceExpr.Meta) {
+				if !openapi.MustGenerate(s.Meta) || !openapi.MustGenerate(s.ServiceExpr.Meta) {
 					continue
 				}
 				tags = append(tags, &openapi.Tag{
@@ -678,17 +678,4 @@ func buildTags(api *expr.APIExpr) []*openapi.Tag {
 		}
 	}
 	return tags
-}
-
-// mustGenerate returns true if the meta indicates that a OpenAPI specification should be
-// generated, false otherwise.
-func mustGenerate(meta expr.MetaExpr) bool {
-	m, ok := meta.Last("openapi:generate")
-	if !ok {
-		m, ok = meta.Last("swagger:generate")
-	}
-	if ok && m == "false" {
-		return false
-	}
-	return true
 }
