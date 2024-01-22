@@ -4,10 +4,12 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example/testdata"
 	"goa.design/goa/v3/codegen/service"
-	ctestdata "goa.design/goa/v3/codegen/service/testdata"
 	"goa.design/goa/v3/expr"
 )
 
@@ -26,7 +28,7 @@ func TestExampleServerFiles(t *testing.T) {
 		{"server-hosting-multiple-services", testdata.ServerHostingMultipleServicesDSL, testdata.ServerHostingMultipleServicesServerMainCode},
 		{"single-server-multiple-hosts", testdata.SingleServerMultipleHostsDSL, testdata.SingleServerMultipleHostsServerMainCode},
 		{"single-server-multiple-hosts-with-variables", testdata.SingleServerMultipleHostsWithVariablesDSL, testdata.SingleServerMultipleHostsWithVariablesServerMainCode},
-		{"service-name-with-spaces", ctestdata.NamesWithSpacesDSL, testdata.NamesWithSpacesServerMainCode},
+		{"service-name-with-spaces", testdata.NamesWithSpacesDSL, testdata.NamesWithSpacesServerMainCode},
 		{"service-for-only-http", testdata.ServiceForOnlyHTTPDSL, testdata.ServiceForOnlyHTTPServerMainCode},
 		{"sercice-for-only-grpc", testdata.ServiceForOnlyGRPCDSL, testdata.ServiceForOnlyGRPCServerMainCode},
 		{"service-for-http-and-part-of-grpc", testdata.ServiceForHTTPAndPartOfGRPCDSL, testdata.ServiceForHTTPAndPartOfGRPCServerMainCode},
@@ -38,22 +40,14 @@ func TestExampleServerFiles(t *testing.T) {
 			Servers = make(ServersData)
 			codegen.RunDSL(t, c.DSL)
 			fs := ServerFiles("", expr.Root)
-			if len(fs) == 0 {
-				t.Fatalf("got 0 files, expected 1")
-			}
-			if len(fs[0].SectionTemplates) == 0 {
-				t.Fatalf("got 0 sections, expected at least 1")
-			}
+			require.Len(t, fs, 1)
+			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer
 			for _, s := range fs[0].SectionTemplates[1:] {
-				if err := s.Write(&buf); err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, s.Write(&buf))
 			}
 			code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
-			if code != c.Code {
-				t.Errorf("invalid code for %s: got\n%s\ngot vs. expected:\n%s", fs[0].Path, code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }
