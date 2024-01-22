@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -36,14 +39,10 @@ func TestServerTypes(t *testing.T) {
 			fs := serverType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
 			var buf bytes.Buffer
 			for _, s := range fs.SectionTemplates[1:] {
-				if err := s.Write(&buf); err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, s.Write(&buf))
 			}
 			code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }

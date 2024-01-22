@@ -72,7 +72,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{})
 			if data.Def != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "request-body-type-decl",
-					Source: typeDeclT,
+					Source: readTemplate("type_decl"),
 					Data:   data,
 				})
 			}
@@ -85,7 +85,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{})
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "request-stream-payload-type-decl",
-						Source: typeDeclT,
+						Source: readTemplate("type_decl"),
 						Data:   data,
 					})
 				}
@@ -105,7 +105,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{})
 					if tdata.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "response-server-body",
-							Source: typeDeclT,
+							Source: readTemplate("type_decl"),
 							Data:   tdata,
 						})
 					}
@@ -130,7 +130,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{})
 					if data.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "error-body-type-decl",
-							Source: typeDeclT,
+							Source: readTemplate("type_decl"),
 							Data:   data,
 						})
 					}
@@ -150,7 +150,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{})
 		if tdata.Def != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-body-attributes",
-				Source: typeDeclT,
+				Source: readTemplate("type_decl"),
 				Data:   tdata,
 			})
 		}
@@ -164,7 +164,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{})
 	for _, init := range initData {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-body-init",
-			Source: serverBodyInitT,
+			Source: readTemplate("server_body_init"),
 			Data:   init,
 		})
 	}
@@ -174,7 +174,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{})
 		if init := adata.Payload.Request.PayloadInit; init != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "server-payload-init",
-				Source:  serverTypeInitT,
+				Source:  readTemplate("server_type_init"),
 				Data:    init,
 				FuncMap: map[string]any{"fieldCode": fieldCode},
 			})
@@ -183,7 +183,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{})
 			if init := adata.ServerWebSocket.Payload.Init; init != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "server-payload-init",
-					Source:  serverTypeInitT,
+					Source:  readTemplate("server_type_init"),
 					Data:    init,
 					FuncMap: map[string]any{"fieldCode": fieldCode},
 				})
@@ -195,7 +195,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{})
 	for _, data := range validatedTypes {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-validate",
-			Source: validateT,
+			Source: readTemplate("validate"),
 			Data:   data,
 		})
 	}
@@ -233,45 +233,3 @@ func fieldCode(init *InitData, typ string) string {
 	}
 	return c
 }
-
-// input: TypeData
-const typeDeclT = `{{ comment .Description }}
-type {{ .VarName }} {{ .Def }}
-`
-
-// input: InitData
-const serverTypeInitT = `{{ comment .Description }}
-func {{ .Name }}({{- range .ServerArgs }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
-{{- if .ServerCode }}
-	{{ .ServerCode }}
-	{{- if .ReturnTypeAttribute }}
-		res := &{{ .ReturnTypeName }}{
-			{{ .ReturnTypeAttribute }}: {{ if .ReturnIsPrimitivePointer }}&{{ end }}v,
-		}
-	{{- end }}
-{{- end }}
-{{- if .ReturnIsStruct }}
-	{{- if not .ServerCode }}
-	{{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }} := &{{ .ReturnTypeName }}{}
-	{{- end }}
-	{{ fieldCode . "server" }}
-{{- end }}
-	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}
-}
-`
-
-// input: InitData
-const serverBodyInitT = `{{ comment .Description }}
-func {{ .Name }}({{ range .ServerArgs }}{{ .VarName }} {{.TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
-	{{ .ServerCode }}
-	return body
-}
-`
-
-// input: TypeData
-const validateT = `{{ printf "Validate%s runs the validations defined on %s" .VarName .Name | comment }}
-func Validate{{ .VarName }}(body {{ .Ref }}) (err error) {
-	{{ .ValidateDef }}
-	return 
-}
-`

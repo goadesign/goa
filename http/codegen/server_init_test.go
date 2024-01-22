@@ -3,6 +3,9 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -29,17 +32,11 @@ func TestServerInit(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ServerFiles(genpkg, expr.Root)
-			if len(fs) != c.FileCount {
-				t.Fatalf("got %d files, expected %v", len(fs), c.FileCount)
-			}
+			require.Len(t, fs, c.FileCount)
 			sections := fs[0].SectionTemplates
-			if len(sections) < 6 {
-				t.Fatalf("got %d sections, expected at least 6", len(sections))
-			}
+			require.Greater(t, len(sections), c.SectionNum)
 			code := codegen.SectionCode(t, sections[c.SectionNum])
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }

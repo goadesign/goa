@@ -1,7 +1,4 @@
-package service
-
-// data: Data
-const dummyAuthFuncsT = `{{ range .Schemes }}
+{{ range .Schemes }}
 {{ printf "%sAuth implements the authorization logic for service %q for the %q security scheme." .Type $.Name .SchemeName | comment }}
 func (s *{{ $.VarName }}srvc) {{ .Type }}Auth(ctx context.Context, {{ if eq .Type "Basic" }}user, pass{{ else if eq .Type "APIKey" }}key{{ else }}token{{ end }} string, scheme *security.{{ .Type }}Scheme) (context.Context, error) {
 	//
@@ -21,4 +18,3 @@ func (s *{{ $.VarName }}srvc) {{ .Type }}Auth(ctx context.Context, {{ if eq .Typ
 	return ctx, fmt.Errorf("not implemented")
 }
 {{- end }}
-`

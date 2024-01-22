@@ -3,6 +3,9 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -33,17 +36,11 @@ func TestEncodeError(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ServerFiles("", expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected two", len(fs))
-			}
+			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
-			if len(sections) < 2 {
-				t.Fatalf("got %d sections, expected at least 2", len(sections))
-			}
+			require.Greater(t, len(sections), 1)
 			code := codegen.SectionCode(t, sections[2])
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }

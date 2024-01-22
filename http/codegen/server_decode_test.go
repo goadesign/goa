@@ -4,6 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -215,32 +218,26 @@ func TestDecode(t *testing.T) {
 	}
 	golden := makeGolden(t, "testdata/payload_decode_functions.go")
 	if golden != nil {
-		if _, err := golden.WriteString("package testdata\n"); err != nil {
-			t.Fatal(err)
-		}
+		_, err := golden.WriteString("package testdata\n")
+		require.NoError(t, err)
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ServerFiles("", expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected two", len(fs))
-			}
+			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
-			if len(sections) < 3 {
-				t.Fatalf("got %d sections, expected at least 3", len(sections))
-			}
+			require.Greater(t, len(sections), 2)
 			code := codegen.SectionCode(t, sections[2])
 			if golden != nil {
 				name := codegen.Goify(c.Name, true)
 				name = strings.ReplaceAll(name, "Uint", "UInt")
 				code = "\nvar Payload" + name + "DecodeCode = `" + code + "`"
-				if _, err := golden.WriteString(code + "\n"); err != nil {
-					t.Fatal(err)
-				}
-			} else if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
+				_, err := golden.WriteString(code + "\n")
+				require.NoError(t, err)
+				return
 			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }

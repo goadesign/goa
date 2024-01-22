@@ -3,6 +3,8 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 )
@@ -77,9 +79,7 @@ func TestGoTypeDef(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			def := goTypeDef(codegen.NewNameScope(), c.Attr, c.UsePtr, c.UseDefault)
-			if def != c.Def {
-				t.Errorf("invalid type definition:\ngot:\n%s\n\nexpected:\n%s\n\ndiff:\n%s\n", def, c.Def, codegen.Diff(t, def, c.Def))
-			}
+			assert.Equal(t, c.Def, def)
 		})
 	}
 }

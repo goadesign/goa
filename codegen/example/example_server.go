@@ -78,7 +78,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		codegen.Header("", "main", specs),
 		{
 			Name:   "server-main-start",
-			Source: template("server_start"),
+			Source: readTemplate("server_start"),
 			Data: map[string]any{
 				"Server": svrdata,
 			},
@@ -87,13 +87,13 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 			},
 		}, {
 			Name:   "server-main-logger",
-			Source: template("server_logger"),
+			Source: readTemplate("server_logger"),
 			Data: map[string]any{
 				"APIPkg": apiPkg,
 			},
 		}, {
 			Name:   "server-main-services",
-			Source: template("server_services"),
+			Source: readTemplate("server_services"),
 			Data: map[string]any{
 				"APIPkg":   apiPkg,
 				"Services": svcData,
@@ -103,7 +103,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 			},
 		}, {
 			Name:   "server-main-endpoints",
-			Source: template("server_endpoints"),
+			Source: readTemplate("server_endpoints"),
 			Data: map[string]any{
 				"Services": svcData,
 			},
@@ -112,10 +112,10 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 			},
 		}, {
 			Name:   "server-main-interrupts",
-			Source: template("server_interrupts"),
+			Source: readTemplate("server_interrupts"),
 		}, {
 			Name:   "server-main-handler",
-			Source: template("server_handler"),
+			Source: readTemplate("server_handler"),
 			Data: map[string]any{
 				"Server":   svrdata,
 				"Services": svcData,
@@ -128,7 +128,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		},
 		{
 			Name:   "server-main-end",
-			Source: template("server_end"),
+			Source: readTemplate("server_end"),
 		},
 	}
 

@@ -4,6 +4,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/codegentest"
 	"goa.design/goa/v3/expr"
@@ -26,13 +29,9 @@ func TestServerHandler(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ServerFiles(genpkg, expr.Root)
 			sections := codegentest.Sections(fs, filepath.Join("", "server.go"), "server-handler")
-			if len(sections) == 0 {
-				t.Fatal("section not found")
-			}
+			require.Greater(t, len(sections), 0)
 			code := codegen.SectionCode(t, sections[0])
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }

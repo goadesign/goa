@@ -3,6 +3,9 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -23,10 +26,9 @@ func TestTransformHelperServer(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			f := serverEncodeDecodeFile("", expr.Root.API.HTTP.Services[0])
 			sections := f.SectionTemplates
+			require.Greater(t, len(sections), c.Offset)
 			code := codegen.SectionCode(t, sections[len(sections)-c.Offset])
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }
@@ -48,10 +50,9 @@ func TestTransformHelperCLI(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			f := clientEncodeDecodeFile("", expr.Root.API.HTTP.Services[0])
 			sections := f.SectionTemplates
+			require.Greater(t, len(sections), c.Offset)
 			code := codegen.SectionCode(t, sections[len(sections)-c.Offset])
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }
