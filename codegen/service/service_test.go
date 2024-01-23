@@ -2,10 +2,12 @@ package service
 
 import (
 	"bytes"
-	"fmt"
 	"go/format"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
@@ -57,13 +59,9 @@ func TestService(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			codegen.RunDSL(t, c.DSL)
-			if len(expr.Root.Services) != 1 {
-				t.Fatalf("got %d services, expected 1", len(expr.Root.Services))
-			}
+			require.Len(t, expr.Root.Services, 1)
 			files := Files("goa.design/goa/example", expr.Root.Services[0], make(map[string][]string))
-			if len(files) == 0 {
-				t.Fatalf("got no file, expected one")
-			}
+			require.Greater(t, len(files), 0)
 			validateFile(t, files[0], files[0].Path, c.Code)
 		})
 	}
@@ -107,9 +105,7 @@ func TestStructPkgPath(t *testing.T) {
 			}
 			if len(c.SvcCodes) > 1 {
 				files = Files("goa.design/goa/example", expr.Root.Services[1], userTypePkgs)
-				if len(files) != 1 {
-					t.Fatalf("got %d files, expected 1", len(files))
-				}
+				require.Len(t, files, 1)
 				validateFile(t, files[0], files[0].Path, c.SvcCodes[1])
 			}
 		})
@@ -122,17 +118,10 @@ func validateFile(t *testing.T, f *codegen.File, path, code string) {
 	}
 	buf := new(bytes.Buffer)
 	for _, s := range f.SectionTemplates[1:] {
-		if err := s.Write(buf); err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, s.Write(buf))
 	}
 	bs, err := format.Source(buf.Bytes())
-	if err != nil {
-		fmt.Println(buf.String())
-		t.Fatal(err)
-	}
+	require.NoError(t, err, buf.String())
 	actual := string(bs)
-	if actual != code {
-		t.Errorf("got\n%s\ngot vs. expected:\n%s", actual, codegen.Diff(t, actual, code))
-	}
+	assert.Equal(t, code, actual)
 }
