@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"go/format"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -123,5 +124,6 @@ func validateFile(t *testing.T, f *codegen.File, path, code string) {
 	bs, err := format.Source(buf.Bytes())
 	require.NoError(t, err, buf.String())
 	actual := string(bs)
+	actual = strings.ReplaceAll(actual, "\r\n", "\n")
 	assert.Equal(t, code, actual)
 }

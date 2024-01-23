@@ -4,6 +4,7 @@ import (
 	"go/build"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -246,6 +247,7 @@ func TestConvertFile(t *testing.T) {
 				} else {
 					code = codegen.SectionCode(t, sections[c.SectionIndex])
 				}
+				code = strings.ReplaceAll(code, "\r\n", "\n")
 
 				assert.Equal(t, c.Code, code)
 			}

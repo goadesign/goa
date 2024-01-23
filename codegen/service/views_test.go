@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"go/format"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,6 +44,7 @@ func TestViews(t *testing.T) {
 			bs, err := format.Source(buf.Bytes())
 			require.NoError(t, err, buf.String())
 			code := string(bs)
+			code = strings.ReplaceAll(code, "\r\n", "\n")
 			assert.Equal(t, c.Code, code)
 		})
 	}
