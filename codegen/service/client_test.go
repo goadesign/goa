@@ -2,9 +2,11 @@ package service
 
 import (
 	"bytes"
-	"fmt"
 	"go/format"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
@@ -33,28 +35,17 @@ func TestClient(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			codegen.RunDSL(t, c.DSL)
-			if len(expr.Root.Services) != 1 {
-				t.Fatalf("got %d services, expected 1", len(expr.Root.Services))
-			}
+			require.Len(t, expr.Root.Services, 1)
 			fs := ClientFile("test/gen", expr.Root.Services[0])
-			if fs == nil {
-				t.Fatalf("got nil file, expected not nil")
-			}
+			require.NotNil(t, fs)
 			buf := new(bytes.Buffer)
 			for _, s := range fs.SectionTemplates[1:] {
-				if err := s.Write(buf); err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, s.Write(buf))
 			}
 			bs, err := format.Source(buf.Bytes())
-			if err != nil {
-				fmt.Println(buf.String())
-				t.Fatal(err)
-			}
+			require.NoError(t, err, buf.String())
 			code := string(bs)
-			if code != c.Code {
-				t.Errorf("%s: got\n%s\ngot vs expected\n:%s", c.Name, code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }

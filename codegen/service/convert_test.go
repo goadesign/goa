@@ -7,6 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
 	"goa.design/goa/v3/dsl"
@@ -52,9 +55,7 @@ func TestCommonPath(t *testing.T) {
 	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			cp := commonPath('/', tc.Paths...)
-			if cp != tc.ExpectedCommonPath {
-				t.Errorf("got %s expected %s", cp, tc.ExpectedCommonPath)
-			}
+			assert.Equal(t, tc.ExpectedCommonPath, cp)
 		})
 	}
 }
@@ -81,9 +82,7 @@ func TestPkgImport(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			pkgImport := getPkgImport(tc.Pkg, tc.Cwd)
-			if pkgImport != tc.ExpectedImport {
-				t.Errorf("got %s, expected %s", pkgImport, tc.ExpectedImport)
-			}
+			assert.Equal(t, tc.ExpectedImport, pkgImport)
 		})
 	}
 }
@@ -123,24 +122,14 @@ func TestDesignType(t *testing.T) {
 			var dt expr.DataType
 			err := buildDesignType(&dt, reflect.TypeOf(c.From), nil)
 
-			// We didn't expect an error
 			if c.ExpectedErr == "" {
-				if err != nil {
-					// but got one
-					t.Errorf("got error %s, expected none", err)
-				} else if !expr.Equal(dt, c.ExpectedType) {
-					t.Errorf("got %v expected %v", dt, c.ExpectedType)
-				}
+				assert.NoError(t, err)
+				assert.Equal(t, c.ExpectedType, dt)
 			}
 
-			// We expected an error
 			if c.ExpectedErr != "" {
-				if err == nil {
-					// but got none
-					t.Errorf("got no error, expected %q", c.ExpectedErr)
-				} else if err.Error() != c.ExpectedErr {
-					t.Errorf("got error %q, expected %q", err, c.ExpectedErr)
-				}
+				assert.Error(t, err)
+				assert.Equal(t, c.ExpectedErr, err.Error())
 			}
 		})
 	}
@@ -189,16 +178,12 @@ func TestCompatible(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			err := compatible(c.From, reflect.TypeOf(c.To))
-			if err == nil {
-				if c.ExpectedErr != "" {
-					t.Errorf("got no error, expected %q", c.ExpectedErr)
-				}
-			} else {
-				if c.ExpectedErr == "" {
-					t.Errorf("got error %q, expected none", err)
-				} else if err.Error() != c.ExpectedErr {
-					t.Errorf("got error %q, expected %q", err, c.ExpectedErr)
-				}
+			if c.ExpectedErr == "" {
+				assert.NoError(t, err)
+			}
+			if c.ExpectedErr != "" {
+				assert.Error(t, err)
+				assert.Equal(t, c.ExpectedErr, err.Error())
 			}
 		})
 	}
@@ -249,19 +234,12 @@ func TestConvertFile(t *testing.T) {
 			root := runDSL(t, c.DSL)
 			for _, svc := range root.Services {
 				f, err := ConvertFile(root, svc)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if f == nil {
-					t.Fatal("no file produced")
-				}
+				require.NoError(t, err)
+				require.NotNil(t, f)
 				sections := f.SectionTemplates
-				if len(sections) <= c.SectionIndex {
-					t.Fatalf("got %d sections, expected at least %d", len(sections), c.SectionIndex+1)
-				}
+				require.Greater(t, len(sections), c.SectionIndex)
 
 				var code string
-
 				if c.SectionIndex == 0 {
 					methodSection := sections[1]
 					code = codegen.SectionCodeFromImportsAndMethods(t, sections[c.SectionIndex], methodSection)
@@ -269,9 +247,7 @@ func TestConvertFile(t *testing.T) {
 					code = codegen.SectionCode(t, sections[c.SectionIndex])
 				}
 
-				if code != c.Code {
-					t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-				}
+				assert.Equal(t, c.Code, code)
 			}
 		})
 	}
@@ -283,21 +259,17 @@ func runDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	Services = make(ServicesData)
 	eval.Reset()
 	expr.Root = new(expr.RootExpr)
-	if err := eval.Register(expr.Root); err != nil {
-		t.Fatal(err)
-	}
+	err := eval.Register(expr.Root)
+	require.NoError(t, err)
 	expr.Root.API = expr.NewAPIExpr("test api", func() {})
 	expr.Root.API.Servers = []*expr.ServerExpr{expr.Root.API.DefaultServer()}
 
 	// run DSL (first pass)
-	if !eval.Execute(dsl, nil) {
-		t.Fatal(eval.Context.Error())
-	}
+	require.True(t, eval.Execute(dsl, nil))
 
 	// run DSL (second pass)
-	if err := eval.RunDSL(); err != nil {
-		t.Fatal(err)
-	}
+	err = eval.RunDSL()
+	require.NoError(t, err)
 
 	// return generated root
 	return expr.Root
@@ -314,8 +286,12 @@ var obj = &expr.UserTypeExpr{
 			{Name: "Goo", Attribute: &expr.AttributeExpr{Type: expr.Float32}},
 			{Name: "Goo2", Attribute: &expr.AttributeExpr{Type: expr.UInt}},
 		},
+		Validation: &expr.ValidationExpr{
+			Required: []string{"Foo", "Bar", "Baz", "Goo", "Goo2"},
+		},
 	},
 	TypeName: "objT",
+	UID:      "goa.design/goa/v3/codegen/service#objT",
 }
 
 var objMapped = &expr.UserTypeExpr{
