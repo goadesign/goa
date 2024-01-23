@@ -12,17 +12,11 @@ jobs:
     if: github.event.workflow_run.conclusion == 'success'
 
     steps:
-      - name: Set ref for PR
-        if: github.event_name == 'pull_request'
-        run: echo "REF=${{ github.head_ref }}" >> $GITHUB_ENV
-      - name: Set ref for Push
-        if: github.event_name == 'push'
-        run: echo "REF=${{ github.ref }}" >> $GITHUB_ENV
       - name: Check out code
         uses: actions/checkout@v4
         with:
           repository: ${{ github.event.workflow_run.head_repository.full_name }}
-          ref: $REF
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
 
       - name: Download test coverage
         uses: dawidd6/action-download-artifact@v3
