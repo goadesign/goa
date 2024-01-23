@@ -85,32 +85,47 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		codegen.Header("", "main", specs),
 		{
 			Name:   "server-http-start",
-			Source: httpSvrStartT,
+			Source: readTemplate("server_start"),
 			Data: map[string]any{
 				"Services": svcdata,
 			},
 		},
-		{Name: "server-http-logger", Source: httpSvrLoggerT},
-		{Name: "server-http-encoding", Source: httpSvrEncodingT},
-		{Name: "server-http-mux", Source: httpSvrMuxT},
+		{
+			Name:   "server-http-logger",
+			Source: readTemplate("server_logger"),
+		},
+		{
+			Name:   "server-http-encoding",
+			Source: readTemplate("server_encoding"),
+		},
+		{
+			Name:   "server-http-mux",
+			Source: readTemplate("server_mux"),
+		},
 		{
 			Name:   "server-http-init",
-			Source: httpSvrInitT,
+			Source: readTemplate("server_configure"),
 			Data: map[string]any{
 				"Services": svcdata,
 				"APIPkg":   apiPkg,
 			},
 			FuncMap: map[string]any{"needStream": needStream, "hasWebSocket": hasWebSocket},
 		},
-		{Name: "server-http-middleware", Source: httpSvrMiddlewareT},
+		{
+			Name:   "server-http-middleware",
+			Source: readTemplate("server_middleware"),
+		},
 		{
 			Name:   "server-http-end",
-			Source: httpSvrEndT,
+			Source: readTemplate("server_end"),
 			Data: map[string]any{
 				"Services": svcdata,
 			},
 		},
-		{Name: "server-http-errorhandler", Source: httpSvrErrorHandlerT},
+		{
+			Name:   "server-http-errorhandler",
+			Source: readTemplate("server_error_handler"),
+		},
 	}
 
 	return &codegen.File{Path: fpath, SectionTemplates: sections, SkipExist: true}
@@ -157,7 +172,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 				mustGen = true
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "dummy-multipart-request-decoder",
-					Source: dummyMultipartRequestDecoderImplT,
+					Source: readTemplate("dummy_multipart_request_decoder"),
 					Data:   e.MultipartRequestDecoder,
 				})
 			}
@@ -165,7 +180,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 				mustGen = true
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "dummy-multipart-request-encoder",
-					Source: dummyMultipartRequestEncoderImplT,
+					Source: readTemplate("dummy_multipart_request_encoder"),
 					Data:   e.MultipartRequestEncoder,
 				})
 			}
@@ -180,156 +195,3 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 		SkipExist:        true,
 	}
 }
-
-const (
-	// input: MultipartData
-	dummyMultipartRequestDecoderImplT = `{{ printf "%s implements the multipart decoder for service %q endpoint %q. The decoder must populate the argument p after encoding." .FuncName .ServiceName .MethodName | comment }}
-func {{ .FuncName }}(mr *multipart.Reader, p *{{ .Payload.Ref }}) error {
-	// Add multipart request decoder logic here
-	return nil
-}
-`
-
-	// input: MultipartData
-	dummyMultipartRequestEncoderImplT = `{{ printf "%s implements the multipart encoder for service %q endpoint %q." .FuncName .ServiceName .MethodName | comment }}
-func {{ .FuncName }}(mw *multipart.Writer, p {{ .Payload.Ref }}) error {
-	// Add multipart request encoder logic here
-	return nil
-}
-`
-
-	// input: map[string]any{"Services":[]*ServiceData}
-	httpSvrStartT = `{{ comment "handleHTTPServer starts configures and starts a HTTP server on the given URL. It shuts down the server if any error is received in the error channel." }}
-func handleHTTPServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if .Service.Methods }}, {{ .Service.VarName }}Endpoints *{{ .Service.PkgName }}.Endpoints{{ end }}{{ end }}, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
-`
-
-	httpSvrLoggerT = `
-	// Setup goa log adapter.
-	var (
-		adapter middleware.Logger
-	)
-	{
-		adapter = middleware.NewLogger(logger)
-	}
-	`
-
-	httpSvrEncodingT = `
-	// Provide the transport specific request decoder and response encoder.
-	// The goa http package has built-in support for JSON, XML and gob.
-	// Other encodings can be used by providing the corresponding functions,
-	// see goa.design/implement/encoding.
-	var (
-		dec = goahttp.RequestDecoder
-		enc = goahttp.ResponseEncoder
-	)
-`
-
-	httpSvrMuxT = `
-	// Build the service HTTP request multiplexer and configure it to serve
-	// HTTP requests to the service endpoints.
-	var mux goahttp.Muxer
-	{
-		mux = goahttp.NewMuxer()
-	}
-`
-
-	// input: map[string]any{"APIPkg":string, "Services":[]*ServiceData}
-	httpSvrInitT = `
-	// Wrap the endpoints with the transport specific layers. The generated
-	// server packages contains code generated from the design which maps
-	// the service input and output data structures to HTTP requests and
-	// responses.
-	var (
-	{{- range .Services }}
-		{{ .Service.VarName }}Server *{{.Service.PkgName}}svr.Server
-	{{- end }}
-	)
-	{
-		eh := errorHandler(logger)
-	{{- if needStream .Services }}
-		upgrader := &websocket.Upgrader{}
-	{{- end }}
-	{{- range $svc := .Services }}
-		{{-  if .Endpoints }}
-		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.VarName }}Endpoints, mux, dec, enc, eh, nil{{ if hasWebSocket $svc }}, upgrader, nil{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }}{{ range .FileServers }}, nil{{ end }})
-		{{-  else }}
-		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, eh, nil{{ range .FileServers }}, nil{{ end }})
-		{{-  end }}
-	{{- end }}
-	{{- if .Services }}
-		if debug {
-			servers := goahttp.Servers{
-				{{- range $svc := .Services }}
-				{{ .Service.VarName }}Server,
-				{{- end }}
-			}
-			servers.Use(httpmdlwr.Debug(mux, os.Stdout))
-		}
-	{{- end }}
-	}
-	// Configure the mux.
-	{{- range .Services }}
-		{{ .Service.PkgName }}svr.Mount(mux, {{ .Service.VarName }}Server)
-	{{- end }}
-`
-
-	httpSvrMiddlewareT = `
-	// Wrap the multiplexer with additional middlewares. Middlewares mounted
-	// here apply to all the service endpoints.
-	var handler http.Handler = mux
-	{
-		handler = httpmdlwr.Log(adapter)(handler)
-		handler = httpmdlwr.RequestID()(handler)
-	}
-`
-
-	// input: map[string]any{"Services":[]*ServiceData}
-	httpSvrEndT = `
-	// Start HTTP server using default configuration, change the code to
-	// configure the server as required by your service.
-	srv := &http.Server{Addr: u.Host, Handler: handler, ReadHeaderTimeout: time.Second * 60}
-
-	{{- range .Services }}
-		for _, m := range {{ .Service.VarName }}Server.Mounts {
-			logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-		}
-	{{- end }}
-
-	(*wg).Add(1)
-	go func() {
-		defer (*wg).Done()
-
-		{{ comment "Start HTTP server in a separate goroutine." }}
-		go func() {
-			logger.Printf("HTTP server listening on %q", u.Host)
-			errc <- srv.ListenAndServe()
-		}()
-
-		<-ctx.Done()
-		logger.Printf("shutting down HTTP server at %q", u.Host)
-
-		{{ comment "Shutdown gracefully with a 30s timeout." }}
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
-
-		err := srv.Shutdown(ctx)
-		if err != nil {
-			logger.Printf("failed to shutdown: %v", err)
-		}
-	}()
-}
-`
-
-	httpSvrErrorHandlerT = `
-// errorHandler returns a function that writes and logs the given error.
-// The function also writes and logs the error unique ID so that it's possible
-// to correlate.
-func errorHandler(logger *log.Logger) func(context.Context, http.ResponseWriter, error) {
-	return func(ctx context.Context, w http.ResponseWriter, err error) {
-		id := ctx.Value(middleware.RequestIDKey).(string)
-		_, _ = w.Write([]byte("[" + id + "] encoding: " + err.Error()))
-		logger.Printf("[%s] ERROR: %s", id, err.Error())
-	}
-}
-`
-)

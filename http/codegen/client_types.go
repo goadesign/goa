@@ -25,22 +25,21 @@ func ClientTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // slices, maps or objects always use pointers either implicitly - slices and
 // maps - or explicitly - objects.
 //
-//   * The payload struct fields (if a struct) hold pointers when not required
+//   - The payload struct fields (if a struct) hold pointers when not required
 //     and have no default value.
 //
-//   * Request and response body fields (if the body is a struct) always hold
+//   - Request and response body fields (if the body is a struct) always hold
 //     pointers to allow for explicit validation.
 //
-//   * Request header, path and query string parameter variables hold pointers
+//   - Request header, path and query string parameter variables hold pointers
 //     when not required. Request header, body fields and param variables that
 //     have default values are never required (enforced by DSL engine).
 //
-//   * The result struct fields (if a struct) hold pointers when not required
+//   - The result struct fields (if a struct) hold pointers when not required
 //     or have a default value (so generated code can set when null).
 //
-//   * Response header variables hold pointers when not required and have no
+//   - Response header variables hold pointers when not required and have no
 //     default value.
-//
 func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct{}) *codegen.File {
 	var (
 		path    string
@@ -76,7 +75,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 			if data.Def != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "client-request-body",
-					Source: typeDeclT,
+					Source: readTemplate("type_decl"),
 					Data:   data,
 				})
 			}
@@ -96,7 +95,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-request-body",
-						Source: typeDeclT,
+						Source: readTemplate("type_decl"),
 						Data:   data,
 					})
 				}
@@ -122,7 +121,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-response-body",
-						Source: typeDeclT,
+						Source: readTemplate("type_decl"),
 						Data:   data,
 					})
 				}
@@ -146,7 +145,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 					if data.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "client-error-body",
-							Source: typeDeclT,
+							Source: readTemplate("type_decl"),
 							Data:   data,
 						})
 					}
@@ -162,7 +161,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		if data.Def != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-body-attributes",
-				Source: typeDeclT,
+				Source: readTemplate("type_decl"),
 				Data:   data,
 			})
 		}
@@ -176,7 +175,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	for _, init := range initData {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-body-init",
-			Source: clientBodyInitT,
+			Source: readTemplate("client_body_init"),
 			Data:   init,
 		})
 	}
@@ -187,7 +186,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 			if init := resp.ResultInit; init != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "client-result-init",
-					Source:  clientTypeInitT,
+					Source:  readTemplate("client_type_init"),
 					Data:    init,
 					FuncMap: map[string]any{"fieldCode": fieldCode},
 				})
@@ -200,7 +199,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 				if init := herr.Response.ResultInit; init != nil {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:    "client-error-result-init",
-						Source:  clientTypeInitT,
+						Source:  readTemplate("client_type_init"),
 						Data:    init,
 						FuncMap: map[string]any{"fieldCode": fieldCode},
 					})
@@ -214,38 +213,9 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	for _, data := range validatedTypes {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-validate",
-			Source: validateT,
+			Source: readTemplate("validate"),
 			Data:   data,
 		})
 	}
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
-
-// input: InitData
-const clientBodyInitT = `{{ comment .Description }}
-func {{ .Name }}({{ range .ClientArgs }}{{ .VarName }} {{.TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
-	{{ .ClientCode }}
-	return body
-}
-`
-
-// input: InitData
-const clientTypeInitT = `{{ comment .Description }}
-func {{ .Name }}({{- range .ClientArgs }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
-{{- if .ClientCode }}
-	{{ .ClientCode }}
-	{{- if .ReturnTypeAttribute }}
-		res := &{{ .ReturnTypeName }}{
-			{{ .ReturnTypeAttribute }}: {{ if .ReturnIsPrimitivePointer }}&{{ end }}v,
-		}
-	{{- end }}
-{{- end }}
-{{- if .ReturnIsStruct }}
-	{{- if not .ClientCode }}
-	{{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }} := &{{ .ReturnTypeName }}{}
-	{{- end }}
-{{- end }}
-	{{ fieldCode . "client" }}
-	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}
-}
-`

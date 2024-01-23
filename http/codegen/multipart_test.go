@@ -3,6 +3,9 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -24,17 +27,11 @@ func TestServerMultipartFuncType(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ServerFiles(genpkg, expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected two", len(fs))
-			}
+			require.Len(t, fs, 2)
 			sections := fs[0].SectionTemplates
-			if len(sections) < 6 {
-				t.Fatalf("got %d sections, expected at least 6", len(sections))
-			}
+			require.Greater(t, len(sections), 5)
 			code := codegen.SectionCode(t, sections[3])
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }
@@ -55,17 +52,11 @@ func TestClientMultipartFuncType(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ClientFiles(genpkg, expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected two", len(fs))
-			}
+			require.Len(t, fs, 2)
 			sections := fs[0].SectionTemplates
-			if len(sections) < 5 {
-				t.Fatalf("got %d sections, expected at least 5", len(sections))
-			}
+			require.Greater(t, len(sections), 4)
 			code := codegen.SectionCode(t, sections[2])
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }
@@ -88,17 +79,11 @@ func TestServerMultipartNewFunc(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ServerFiles(genpkg, expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected two", len(fs))
-			}
+			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
-			if len(sections) < 4 {
-				t.Fatalf("got %d sections, expected at least 4", len(sections))
-			}
+			require.Greater(t, len(sections), 3)
 			code := codegen.SectionCode(t, sections[3])
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }
@@ -121,17 +106,11 @@ func TestClientMultipartNewFunc(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ClientFiles(genpkg, expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected two", len(fs))
-			}
+			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
-			if len(sections) < 4 {
-				t.Fatalf("got %d sections, expected at least 4", len(sections))
-			}
+			require.Greater(t, len(sections), 3)
 			code := codegen.SectionCode(t, sections[3])
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }

@@ -8,6 +8,9 @@ import (
 	"net"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	grpcm "goa.design/goa/v3/grpc/middleware"
 	"goa.design/goa/v3/middleware"
 	"goa.design/goa/v3/middleware/xray"
@@ -72,15 +75,8 @@ func TestNewUnaryServer(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			m, err := NewUnaryServer("", c.Daemon)
-			if err == nil && !c.Success {
-				t.Error("expected failure but err is nil")
-			}
-			if err != nil && c.Success {
-				t.Errorf("unexpected error %s", err)
-			}
-			if m == nil && c.Success {
-				t.Error("middleware is nil")
-			}
+			assert.Equal(t, c.Success, err == nil)
+			assert.NotEqual(t, c.Success, m == nil)
 		})
 	}
 }
@@ -97,15 +93,8 @@ func TestNewStreamServer(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			m, err := NewStreamServer("", c.Daemon)
-			if err == nil && !c.Success {
-				t.Error("expected failure but err is nil")
-			}
-			if err != nil && c.Success {
-				t.Errorf("unexpected error %s", err)
-			}
-			if m == nil && c.Success {
-				t.Error("middleware is nil")
-			}
+			assert.Equal(t, c.Success, err == nil)
+			assert.NotEqual(t, c.Success, m == nil)
 		})
 	}
 }
@@ -160,9 +149,7 @@ func TestUnaryServerMiddleware(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			m, err := NewUnaryServer("service", udplisten)
-			if err != nil {
-				t.Fatalf("failed to create middleware: %s", err)
-			}
+			require.NoError(t, err)
 			handler := func(_ context.Context, _ any) (any, error) {
 				if c.Segment.Error {
 					return nil, c.Segment.Exception
@@ -186,8 +173,9 @@ func TestUnaryServerMiddleware(t *testing.T) {
 			}
 
 			messages := xraytest.ReadUDP(t, udplisten, expMsgs, func() {
-				if _, err := m(ctx, &wrapperspb.StringValue{Value: "request"}, unary, handler); err != nil && !c.Segment.Error {
-					t.Fatalf("unexpected error %s", err)
+				_, err := m(ctx, &wrapperspb.StringValue{Value: "request"}, unary, handler)
+				if !c.Segment.Error {
+					assert.NoError(t, err)
 				}
 			})
 			if expMsgs == 0 {
@@ -196,68 +184,31 @@ func TestUnaryServerMiddleware(t *testing.T) {
 
 			// expect the first message is InProgress
 			s := xraytest.ExtractSegment(t, messages[0])
-			if !s.InProgress {
-				t.Fatal("expected first segment to be InProgress but it was not")
-			}
+			assert.True(t, s.InProgress)
 
 			// second message
 			s = xraytest.ExtractSegment(t, messages[1])
-			if s.Name != "service" {
-				t.Errorf("unexpected segment name, expected \"service\" - got %q", s.Name)
-			}
-			if s.Type != "" {
-				t.Errorf("expected Type to be empty but got %q", s.Type)
-			}
-			if s.ID != c.Trace.SpanID {
-				t.Errorf("unexpected segment ID, expected %q - got %q", c.Trace.SpanID, s.ID)
-			}
-			if s.TraceID != c.Trace.TraceID {
-				t.Errorf("unexpected trace ID, expected %q - got %q", c.Trace.TraceID, s.TraceID)
-			}
-			if s.ParentID != c.Trace.ParentID {
-				t.Errorf("unexpected parent ID, expected %q - got %q", c.Trace.ParentID, s.ParentID)
-			}
-			if s.StartTime == 0 {
-				t.Error("StartTime is 0")
-			}
-			if s.EndTime == 0 {
-				t.Error("EndTime is 0")
-			}
-			if s.StartTime > s.EndTime {
-				t.Errorf("StartTime (%v) is after EndTime (%v)", s.StartTime, s.EndTime)
-			}
-			if s.HTTP == nil {
-				t.Fatal("HTTP field is nil")
-			}
-			if s.HTTP.Request == nil {
-				t.Fatal("HTTP Request field is nil")
-			}
-			if s.HTTP.Request.ClientIP != c.Request.ClientIP {
-				t.Errorf("HTTP Request ClientIP is invalid, expected IP %q got %q", c.Request.ClientIP, s.HTTP.Request.ClientIP)
-			}
-			if s.HTTP.Request.UserAgent != c.Request.UserAgent {
-				t.Errorf("HTTP Request UserAgent is invalid, expected %q got %q", c.Request.UserAgent, s.HTTP.Request.UserAgent)
-			}
+			assert.Equal(t, "service", s.Name)
+			assert.Equal(t, "", s.Type)
+			assert.Equal(t, c.Trace.SpanID, s.ID)
+			assert.Equal(t, c.Trace.TraceID, s.TraceID)
+			assert.Equal(t, c.Trace.ParentID, s.ParentID)
+			assert.NotZero(t, s.StartTime)
+			assert.NotZero(t, s.EndTime)
+			assert.True(t, s.StartTime <= s.EndTime)
+			require.NotNil(t, s.HTTP)
+			require.NotNil(t, s.HTTP.Request)
+			assert.Equal(t, c.Request.ClientIP, s.HTTP.Request.ClientIP)
+			assert.Equal(t, c.Request.UserAgent, s.HTTP.Request.UserAgent)
 			if c.Segment.Exception == nil {
-				if s.HTTP.Response == nil {
-					t.Fatal("HTTP Response field is nil")
-				}
-				if s.HTTP.Response.Status != int(c.Response.Status) {
-					t.Fatalf("HTTP Response is invalid, expected %d, got %d", s.HTTP.Response.Status, int(c.Response.Status))
-				}
-				if s.HTTP.Response.ContentLength == 0 {
-					t.Fatal("HTTP Response Content Length is invalid, expected greater than zero, got zero")
-				}
+				require.NotNil(t, s.HTTP.Response)
+				assert.Equal(t, int(c.Response.Status), s.HTTP.Response.Status)
+				assert.NotZero(t, s.HTTP.Response.ContentLength)
 			}
 			if s.Cause == nil && c.Segment.Exception != nil {
-				t.Errorf("Exception is invalid, expected %q but got nil Cause", c.Segment.Exception.Error())
+				assert.Equal(t, c.Segment.Exception.Error(), s.Cause.Exceptions[0].Message)
 			}
-			if s.Cause != nil && s.Cause.Exceptions[0].Message != c.Segment.Exception.Error() {
-				t.Errorf("Exception is invalid, expected %q got %q", c.Segment.Exception.Error(), s.Cause.Exceptions[0].Message)
-			}
-			if s.Error != c.Segment.Error {
-				t.Errorf("Error is invalid, expected %v got %v", c.Segment.Error, s.Error)
-			}
+			assert.Equal(t, c.Segment.Error, s.Error)
 		})
 	}
 }

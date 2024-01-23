@@ -20,17 +20,25 @@ var HTTPServices = make(ServicesData)
 
 var (
 	// pathInitTmpl is the template used to render path constructors code.
-	pathInitTmpl = template.Must(template.New("path-init").Funcs(template.FuncMap{"goify": codegen.Goify}).Parse(pathInitT))
+	pathInitTmpl = template.Must(
+		template.New("path-init").
+			Funcs(template.FuncMap{"goify": codegen.Goify}).
+			Parse(readTemplate("path_init", "query_slice_conversion")),
+	)
 	// requestInitTmpl is the template used to render request constructors.
-	requestInitTmpl = template.Must(template.New("request-init").Funcs(template.FuncMap{
-		"goTypeRef": func(dt expr.DataType, svc string) string {
-			return service.Services.Get(svc).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
-		},
-		"isAliased": func(dt expr.DataType) bool {
-			_, ok := dt.(expr.UserType)
-			return ok
-		},
-	}).Parse(requestInitT))
+	requestInitTmpl = template.Must(
+		template.New("request-init").
+			Funcs(template.FuncMap{
+				"goTypeRef": func(dt expr.DataType, svc string) string {
+					return service.Services.Get(svc).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+				},
+				"isAliased": func(dt expr.DataType) bool {
+					_, ok := dt.(expr.UserType)
+					return ok
+				},
+			}).
+			Parse(readTemplate("request_init")),
+	)
 )
 
 type (
@@ -2809,108 +2817,3 @@ func needStream(data []*ServiceData) bool {
 	}
 	return false
 }
-
-const (
-	// pathInitT is the template used to render the code of path constructors.
-	pathInitT = `
-{{- if .Args }}
-	{{- range $i, $arg := .Args }}
-		{{- $typ := (index $.PathParams $i).Attribute.Type }}
-		{{- if eq $typ.Name "array" }}
-	{{ .VarName }}Slice := make([]string, len({{ .VarName }}))
-	for i, v := range {{ .VarName }} {
-		{{ .VarName }}Slice[i] = {{ template "slice_conversion" $typ.ElemType.Type.Name }}
-	}
-		{{- end }}
-	{{- end }}
-	return fmt.Sprintf("{{ .PathFormat }}", {{ range $i, $arg := .Args }}
-	{{- if eq (index $.PathParams $i).Attribute.Type.Name "array" }}strings.Join({{ .VarName }}Slice, ",")
-	{{- else }}{{ .VarName }}
-	{{- end }}, {{ end }})
-{{- else }}
-	return "{{ .PathFormat }}"
-{{- end }}
-
-{{- define "slice_conversion" }}
-	{{- if eq . "string" }} url.QueryEscape(v)
-	{{- else if eq . "int" "int32" }} strconv.FormatInt(int64(v), 10)
-	{{- else if eq . "int64" }} strconv.FormatInt(v, 10)
-	{{- else if eq . "uint" "uint32" }} strconv.FormatUint(uint64(v), 10)
-	{{- else if eq . "uint64" }} strconv.FormatUint(v, 10)
-	{{- else if eq . "float32" }} strconv.FormatFloat(float64(v), 'f', -1, 32)
-	{{- else if eq . "float64" }} strconv.FormatFloat(v, 'f', -1, 64)
-	{{- else if eq . "boolean" }} strconv.FormatBool(v)
-	{{- else if eq . "bytes" }} url.QueryEscape(string(v))
-	{{- else }} url.QueryEscape(fmt.Sprintf("%v", v))
-	{{- end }}
-{{- end }}`
-
-	// requestInitT is the template used to render the code of HTTP
-	// request constructors.
-	requestInitT = `
-{{- if or .Args .RequestStruct }}
-	var (
-	{{- range .Args }}
-		{{ .VarName }} {{ .TypeRef }}
-	{{- end }}
-	{{- if .RequestStruct }}
-		body io.Reader
-	{{- end }}
-	)
-{{- end }}
-{{- if and .PayloadRef .Args }}
-	{
-	{{- if .RequestStruct }}
-		rd, ok := v.(*{{ .RequestStruct }})
-		if !ok {
-			return nil, goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .EndpointName }}", "{{ .RequestStruct }}", v)
-		}
-		p := rd.Payload
-		body = rd.Body
-	{{- else }}
-		p, ok := v.({{ .PayloadRef }})
-		if !ok {
-			return nil, goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .EndpointName }}", "{{ .PayloadRef }}", v)
-		}
-	{{- end }}
-	{{- range .Args }}
-		{{- if .Pointer }}
-		if p{{ if $.HasFields }}.{{ .FieldName }}{{ end }} != nil {
-		{{- end }}
-			{{- if (isAliased .FieldType) }}
-			{{ .VarName }} = {{ goTypeRef .Type $.ServiceName }}({{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }})
-			{{- else }}
-			{{ .VarName }} = {{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }}
-			{{- end }}
-		{{- if .Pointer }}
-		}
-		{{- end }}
-	{{- end }}
-	}
-{{- else if .RequestStruct }}
-		rd, ok := v.(*{{ .RequestStruct }})
-		if !ok {
-			return nil, goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .EndpointName }}", "{{ .RequestStruct }}", v)
-		}
-		body = rd.Body
-{{- end }}
-	{{- if .IsStreaming }}
-		scheme := c.scheme
-		switch c.scheme {
-		case "http":
-			scheme = "ws"
-		case "https":
-			scheme = "wss"
-		}
-	{{- end }}
-	u := &url.URL{Scheme: {{ if .IsStreaming }}scheme{{ else }}c.scheme{{ end }}, Host: c.host, Path: {{ .PathInit.Name }}({{ range .Args }}{{ .Ref }}, {{ end }})}
-	req, err := http.NewRequest("{{ .Verb }}", u.String(), {{ if .RequestStruct }}body{{ else }}nil{{ end }})
-	if err != nil {
-		return nil, goahttp.ErrInvalidURL("{{ .ServiceName }}", "{{ .EndpointName }}", u.String(), err)
-	}
-	if ctx != nil {
-		req = req.WithContext(ctx)
-	}
-
-	return req, nil`
-)

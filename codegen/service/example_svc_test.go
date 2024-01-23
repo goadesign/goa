@@ -2,8 +2,10 @@ package service
 
 import (
 	"bytes"
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
@@ -32,26 +34,17 @@ func TestExampleServiceFiles(t *testing.T) {
 			t.Run(c.Name, func(t *testing.T) {
 				codegen.RunDSL(t, c.DSL)
 				expr.Root.GeneratedTypes = &expr.GeneratedRoot{}
-				if len(expr.Root.Services) != 3 {
-					t.Fatalf("got %d services, expected 3", len(expr.Root.Services))
-				}
+				require.Len(t, expr.Root.Services, 3)
 				fs := ExampleServiceFiles("", expr.Root)
-				if len(fs) != 3 {
-					t.Fatalf("got %d example file services, expected 3", len(fs))
-				}
+				require.Len(t, fs, 3)
 				for _, f := range fs {
-					if len(f.SectionTemplates) == 0 {
-						t.Fatalf("got empty templates, expected not empty")
-					}
+					require.Greater(t, len(f.SectionTemplates), 0)
 					var b bytes.Buffer
-					if err := f.SectionTemplates[0].Write(&b); err != nil {
-						t.Fatal(err)
-					}
-					if line, err := b.ReadBytes('\n'); err != nil {
-						t.Fatal(err)
-					} else if got := string(bytes.TrimRight(line, "\n")); !reflect.DeepEqual(got, c.Expected) {
-						t.Fatalf("got %s, expected %s", got, c.Expected)
-					}
+					require.NoError(t, f.SectionTemplates[0].Write(&b))
+					line, err := b.ReadBytes('\n')
+					require.NoError(t, err)
+					got := string(bytes.TrimRight(line, "\n"))
+					assert.Equal(t, c.Expected, got)
 				}
 			})
 		}

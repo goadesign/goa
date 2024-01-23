@@ -44,7 +44,7 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 		codegen.Header("", "main", specs),
 		{
 			Name:   "cli-main-start",
-			Source: template("client_start"),
+			Source: readTemplate("client_start"),
 			Data: map[string]any{
 				"Server": svrdata,
 			},
@@ -53,7 +53,7 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 			},
 		}, {
 			Name:   "cli-main-var-init",
-			Source: template("client_var_init"),
+			Source: readTemplate("client_var_init"),
 			Data: map[string]any{
 				"Server": svrdata,
 			},
@@ -62,7 +62,7 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 			},
 		}, {
 			Name:   "cli-main-endpoint-init",
-			Source: template("client_endpoint_init"),
+			Source: readTemplate("client_endpoint_init"),
 			Data: map[string]any{
 				"Server": svrdata,
 			},
@@ -72,10 +72,10 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 			},
 		}, {
 			Name:   "cli-main-end",
-			Source: template("client_end"),
+			Source: readTemplate("client_end"),
 		}, {
 			Name:   "cli-main-usage",
-			Source: template("client_usage"),
+			Source: readTemplate("client_usage"),
 			Data: map[string]any{
 				"APIName": root.API.Name,
 				"Server":  svrdata,

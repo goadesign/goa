@@ -295,7 +295,7 @@ func serverStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 	var sections []*codegen.SectionTemplate
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "server-websocket-conn-configurer-struct",
-		Source:  webSocketConnConfigurerStructT,
+		Source:  readTemplate("websocket_conn_configurer_struct"),
 		Data:    data,
 		FuncMap: map[string]any{"isWebSocketEndpoint": isWebSocketEndpoint},
 	})
@@ -303,7 +303,7 @@ func serverStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 		if e.ServerWebSocket != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-websocket-struct-type",
-				Source: webSocketStructTypeT,
+				Source: readTemplate("websocket_struct_type"),
 				Data:   e.ServerWebSocket,
 			})
 		}
@@ -318,7 +318,7 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 	var sections []*codegen.SectionTemplate
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "server-websocket-conn-configurer-struct-init",
-		Source:  webSocketConnConfigurerStructInitT,
+		Source:  readTemplate("websocket_conn_configurer_struct_init"),
 		Data:    data,
 		FuncMap: map[string]any{"isWebSocketEndpoint": isWebSocketEndpoint},
 	})
@@ -327,7 +327,7 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			if e.ServerWebSocket.SendTypeRef != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "server-websocket-send",
-					Source: webSocketSendT,
+					Source: readTemplate("websocket_send", "websocket_upgrade"),
 					Data:   e.ServerWebSocket,
 					FuncMap: map[string]any{
 						"upgradeParams":    upgradeParams,
@@ -339,7 +339,7 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			case expr.ClientStreamKind, expr.BidirectionalStreamKind:
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "server-websocket-recv",
-					Source:  webSocketRecvT,
+					Source:  readTemplate("websocket_recv", "websocket_upgrade"),
 					Data:    e.ServerWebSocket,
 					FuncMap: map[string]any{"upgradeParams": upgradeParams},
 				})
@@ -347,7 +347,7 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			if e.ServerWebSocket.MustClose {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "server-websocket-close",
-					Source:  webSocketCloseT,
+					Source:  readTemplate("websocket_close"),
 					Data:    e.ServerWebSocket,
 					FuncMap: map[string]any{"upgradeParams": upgradeParams},
 				})
@@ -355,7 +355,7 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "server-websocket-set-view",
-					Source: webSocketSetViewT,
+					Source: readTemplate("websocket_set_view"),
 					Data:   e.ServerWebSocket,
 				})
 			}
@@ -370,7 +370,7 @@ func clientStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 	var sections []*codegen.SectionTemplate
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "client-websocket-conn-configurer-struct",
-		Source:  webSocketConnConfigurerStructT,
+		Source:  readTemplate("websocket_conn_configurer_struct"),
 		Data:    data,
 		FuncMap: map[string]any{"isWebSocketEndpoint": isWebSocketEndpoint},
 	})
@@ -378,7 +378,7 @@ func clientStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 		if e.ClientWebSocket != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-websocket-struct-type",
-				Source: webSocketStructTypeT,
+				Source: readTemplate("websocket_struct_type"),
 				Data:   e.ClientWebSocket,
 			})
 		}
@@ -392,7 +392,7 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 	var sections []*codegen.SectionTemplate
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "client-websocket-conn-configurer-struct-init",
-		Source:  webSocketConnConfigurerStructInitT,
+		Source:  readTemplate("websocket_conn_configurer_struct_init"),
 		Data:    data,
 		FuncMap: map[string]any{"isWebSocketEndpoint": isWebSocketEndpoint},
 	})
@@ -401,7 +401,7 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			if e.ClientWebSocket.RecvTypeRef != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "client-websocket-recv",
-					Source:  webSocketRecvT,
+					Source:  readTemplate("websocket_recv", "websocket_upgrade"),
 					Data:    e.ClientWebSocket,
 					FuncMap: map[string]any{"upgradeParams": upgradeParams},
 				})
@@ -410,7 +410,7 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			case expr.ClientStreamKind, expr.BidirectionalStreamKind:
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "client-websocket-send",
-					Source: webSocketSendT,
+					Source: readTemplate("websocket_send", "websocket_upgrade"),
 					Data:   e.ClientWebSocket,
 					FuncMap: map[string]any{
 						"upgradeParams":    upgradeParams,
@@ -421,7 +421,7 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			if e.ClientWebSocket.MustClose {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "client-websocket-close",
-					Source:  webSocketCloseT,
+					Source:  readTemplate("websocket_close"),
 					Data:    e.ClientWebSocket,
 					FuncMap: map[string]any{"upgradeParams": upgradeParams},
 				})
@@ -429,7 +429,7 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "client-websocket-set-view",
-					Source: webSocketSetViewT,
+					Source: readTemplate("websocket_set_view"),
 					Data:   e.ClientWebSocket,
 				})
 			}
@@ -454,287 +454,3 @@ func hasWebSocket(sd *ServiceData) bool {
 func isWebSocketEndpoint(ed *EndpointData) bool {
 	return ed.ServerWebSocket != nil || ed.ClientWebSocket != nil
 }
-
-const (
-	// webSocketStructTypeT renders the server and client struct types that
-	// implements the client and server stream interfaces. The data to render
-	// input: WebSocketData
-	webSocketStructTypeT = `{{ printf "%s implements the %s interface." .VarName .Interface | comment }}
-type {{ .VarName }} struct {
-{{- if eq .Type "server" }}
-	once sync.Once
-	{{ comment "upgrader is the websocket connection upgrader." }}
-	upgrader goahttp.Upgrader
-	{{ comment "configurer is the websocket connection configurer." }}
-	configurer goahttp.ConnConfigureFunc
-	{{ comment "cancel is the context cancellation function which cancels the request context when invoked." }}
-	cancel context.CancelFunc
-	{{ comment "w is the HTTP response writer used in upgrading the connection." }}
-	w http.ResponseWriter
-	{{ comment "r is the HTTP request." }}
-	r *http.Request
-{{- end }}
-	{{ comment "conn is the underlying websocket connection." }}
-	conn *websocket.Conn
-	{{- if .Endpoint.Method.ViewedResult }}
-		{{- if not .Endpoint.Method.ViewedResult.ViewName }}
-	{{ printf "view is the view to render %s result type before sending to the websocket connection." .SendTypeName | comment }}
-	view string
-		{{- end }}
-	{{- end }}
-}
-`
-
-	// webSocketConnConfigurerStructT generates the struct type that holds the
-	// websocket connection configurers for all the streaming endpoints in the
-	// service.
-	// input: ServiceData
-	webSocketConnConfigurerStructT = `{{ printf "ConnConfigurer holds the websocket connection configurer functions for the streaming endpoints in %q service." .Service.Name | comment }}
-type ConnConfigurer struct {
-{{- range .Endpoints }}
-	{{- if isWebSocketEndpoint . }}
-		{{ .Method.VarName }}Fn goahttp.ConnConfigureFunc
-	{{- end }}
-{{- end }}
-}
-`
-
-	// webSocketConnConfigurerStructInitT generates the constructor function to
-	// initialize the websocket connection configurer struct.
-	// input: ServiceData
-	webSocketConnConfigurerStructInitT = `{{ printf "NewConnConfigurer initializes the websocket connection configurer function with fn for all the streaming endpoints in %q service." .Service.Name | comment }}
-func NewConnConfigurer(fn goahttp.ConnConfigureFunc) *ConnConfigurer {
-	return &ConnConfigurer{
-{{- range .Endpoints }}
-	{{- if isWebSocketEndpoint . }}
-		{{ .Method.VarName}}Fn: fn,
-	{{- end }}
-{{- end }}
-	}
-}
-`
-
-	// webSocketSendT renders the function implementing the Send method in
-	// stream interface.
-	// input: WebSocketData
-	webSocketSendT = `{{ comment .SendDesc }}
-func (s *{{ .VarName }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
-{{- if eq .Type "server" }}
-	{{- if eq .SendName "Send" }}
-		var err error
-		{{- template "websocket_upgrade" (upgradeParams .Endpoint .SendName) }}
-	{{- else }} {{/* SendAndClose */}}
-		defer s.conn.Close()
-	{{- end }}
-	{{- if .Endpoint.Method.ViewedResult }}
-		{{- if .Endpoint.Method.ViewedResult.ViewName }}
-			res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, {{ printf "%q" .Endpoint.Method.ViewedResult.ViewName }})
-		{{- else }}
-			res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, s.view)
-		{{- end }}
-	{{- else }}
-	res := v
-	{{- end }}
-	{{- $servBodyLen := len .Response.ServerBody }}
-	{{- if gt $servBodyLen 0 }}
-		{{- if (index .Response.ServerBody 0).Init }}
-			{{- if .Endpoint.Method.ViewedResult }}
-				{{- if .Endpoint.Method.ViewedResult.ViewName }}
-					{{- $vsb := (viewedServerBody $.Response.ServerBody .Endpoint.Method.ViewedResult.ViewName) }}
-					body := {{ $vsb.Init.Name }}({{ range $vsb.Init.ServerArgs }}{{ .Ref }}, {{ end }})
-				{{- else }}
-					var body any
-					switch s.view {
-					{{- range .Endpoint.Method.ViewedResult.Views }}
-						case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
-						{{- $vsb := (viewedServerBody $.Response.ServerBody .Name) }}
-							body = {{ $vsb.Init.Name }}({{ range $vsb.Init.ServerArgs }}{{ .Ref }}, {{ end }})
-						{{- end }}
-					}
-				{{- end }}
-			{{- else }}
-				body := {{ (index .Response.ServerBody 0).Init.Name }}({{ range (index .Response.ServerBody 0).Init.ServerArgs }}{{ .Ref }}, {{ end }})
-			{{- end }}
-			return s.conn.WriteJSON(body)
-		{{- else }}
-			return s.conn.WriteJSON(res)
-		{{- end }}
-	{{- else }}
-		return s.conn.WriteJSON(res)
-	{{- end }}
-{{- else }}
-	{{- if .Payload.Init }}
-		body := {{ .Payload.Init.Name }}(v)
-		return s.conn.WriteJSON(body)
-	{{- else }}
-		return s.conn.WriteJSON(v)
-	{{- end }}
-{{- end }}
-}
-` + upgradeT
-
-	// webSocketRecvT renders the function implementing the Recv method in
-	// stream interface.
-	// input: WebSocketData
-	webSocketRecvT = `{{ comment .RecvDesc }}
-func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
-	var (
-		rv {{ .RecvTypeRef }}
-	{{- if eq .Type "server" }}
-		{{- if .RecvTypeIsPointer }}
-		body {{ .Payload.VarName }}
-		{{- else }}
-		msg *{{ .Payload.VarName }}
-		{{- end }}
-	{{- else }}
-		body {{ .Response.ClientBody.VarName }}
-	{{- end }}
-		err error
-	)
-{{- if eq .Type "server" }}
-	{{- template "websocket_upgrade" (upgradeParams .Endpoint .RecvName) }}
-	{{- if .RecvTypeIsPointer }}
-	if err = s.conn.ReadJSON(&body); err != nil {
-	{{- else }}
-	if err = s.conn.ReadJSON(&msg); err != nil {
-	{{- end }}
-		return rv, err
-	}
-	{{- if .RecvTypeIsPointer }}
-	if body == nil {
-	{{- else }}
-	if msg == nil {
-	{{- end }}
-		return rv, io.EOF
-	}
-	{{- if .Payload.ValidateRef }}
-		{{- if not .RecvTypeIsPointer }}
-	body := *msg
-		{{- end }}
-		{{ .Payload.ValidateRef }}
-		if err != nil {
-			return rv, err
-		}
-	{{- end }}
-	{{- if .Payload.Init }}
-		return {{ .Payload.Init.Name }}({{ if .RecvTypeIsPointer }}body{{ else }}msg{{ end }}), nil
-	{{- else }}
-		return {{ if .RecvTypeIsPointer }}body{{ else }}*msg{{ end }}, nil
-	{{- end }}
-{{- else }} {{/* client side code */}}
-	{{- if eq .RecvName "CloseAndRecv" }}
-		defer s.conn.Close()
-		{{ comment "Send a nil payload to the server implying end of message" }}
-		if err = s.conn.WriteJSON(nil); err != nil {
-			return rv, err
-		}
-	{{- end }}
-	err = s.conn.ReadJSON(&body)
-	if websocket.IsCloseError(err, websocket.CloseNormalClosure) {
-		{{- if not .MustClose }}
-			s.conn.Close()
-		{{- end }}
-		return rv, io.EOF
-	}
-	if err != nil {
-		return rv, err
-	}
-	{{- if and .Response.ClientBody.ValidateRef (not .Endpoint.Method.ViewedResult) }}
-	{{ .Response.ClientBody.ValidateRef }}
-	if err != nil {
-		return rv, err
-	}
-	{{- end }}
-	{{- if .Response.ResultInit }}
-		res := {{ .Response.ResultInit.Name }}({{ range .Response.ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
-		{{- if .Endpoint.Method.ViewedResult }}{{ with .Endpoint.Method.ViewedResult }}
-			vres := {{ if not .IsCollection }}&{{ end }}{{ .ViewsPkg }}.{{ .VarName }}{res, {{ if .ViewName }}{{ printf "%q" .ViewName }}{{ else }}s.view{{ end }} }
-			if err := {{ .ViewsPkg }}.Validate{{ $.Endpoint.Method.Result }}(vres); err != nil {
-				return rv, goahttp.ErrValidationError("{{ $.Endpoint.ServiceName }}", "{{ $.Endpoint.Method.Name }}", err)
-			}
-			return {{ $.PkgName }}.{{ .ResultInit.Name }}(vres){{ end }}, nil
-		{{- else }}
-			return res, nil
-		{{- end }}
-	{{- else }}
-		return body, nil
-	{{- end }}
-{{- end }}
-}
-` + upgradeT
-
-	// upgradeT renders the code to upgrade the HTTP connection to a gorilla
-	// websocket connection.
-	upgradeT = `{{- define "websocket_upgrade" }}
-	{{ printf "Upgrade the HTTP connection to a websocket connection only once. Connection upgrade is done here so that authorization logic in the endpoint is executed before calling the actual service method which may call %s()." .Function | comment }}
-	s.once.Do(func() {
-	{{- if and .ViewedResult (eq .Function "Send") }}
-		{{- if not .ViewedResult.ViewName }}
-			respHdr := make(http.Header)
-			respHdr.Add("goa-view", s.view)
-		{{- end }}
-	{{- end }}
-		var conn *websocket.Conn
-		{{- if eq .Function "Send" }}
-			{{- if .ViewedResult }}
-				{{- if not .ViewedResult.ViewName }}
-					conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
-				{{- else }}
-					conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
-				{{- end }}
-			{{- else }}
-				conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
-			{{- end }}
-		{{- else }}
-			conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
-		{{- end }}
-		if err != nil {
-			return
-		}
-		if s.configurer != nil {
-			conn = s.configurer(conn, s.cancel)
-		}
-		s.conn = conn
-	})
-	if err != nil {
-		return {{ if eq .Function "Recv" }}rv, {{ end }}err
-	}
-{{- end }}
-`
-
-	// webSocketCloseT renders the function implementing the Close method in
-	// stream interface.
-	// input: WebSocketData
-	webSocketCloseT = `{{ printf "Close closes the %q endpoint websocket connection." .Endpoint.Method.Name | comment }}
-func (s *{{ .VarName }}) Close() error {
-	var err error
-{{- if eq .Type "server" }}
-	if s.conn == nil {
-		return nil
-	}
-	if err = s.conn.WriteControl(
-		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
-		time.Now().Add(time.Second),
-	); err != nil {
-		return err
-	}
-{{- else }} {{/* client side code */}}
-	{{ comment "Send a nil payload to the server implying client closing connection." }}
-  if err = s.conn.WriteJSON(nil); err != nil {
-    return err
-  }
-{{- end }}
-	return s.conn.Close()
-}
-` + upgradeT
-
-	// webSocketSetViewT renders the function implementing the SetView method in
-	// server stream interface.
-	// input: WebSocketData
-	webSocketSetViewT = `{{ printf "SetView sets the view to render the %s type before sending to the %q endpoint websocket connection." .SendTypeName .Endpoint.Method.Name | comment }}
-func (s *{{ .VarName }}) SetView(view string) {
-	s.view = view
-}
-`
-)

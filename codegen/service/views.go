@@ -37,14 +37,14 @@ func ViewsFile(_ string, service *expr.ServiceExpr) *codegen.File {
 		for _, t := range svc.viewedResultTypes {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "viewed-result-type",
-				Source: userTypeT,
+				Source: readTemplate("user_type"),
 				Data:   t.UserTypeData,
 			})
 		}
 		for _, t := range svc.projectedTypes {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "projected-type",
-				Source: userTypeT,
+				Source: readTemplate("user_type"),
 				Data:   t.UserTypeData,
 			})
 		}
@@ -53,7 +53,7 @@ func ViewsFile(_ string, service *expr.ServiceExpr) *codegen.File {
 		for _, m := range svc.viewedUnionMethods {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "viewed-union-value-method",
-				Source: unionValueMethodT,
+				Source: readTemplate("union_value_method"),
 				Data:   m,
 			})
 		}
@@ -85,7 +85,7 @@ func ViewsFile(_ string, service *expr.ServiceExpr) *codegen.File {
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "viewed-type-map",
-			Source: viewedMapT,
+			Source: readTemplate("viewed_type_map"),
 			Data: map[string]any{
 				"ViewedTypes": rtdata,
 			},
@@ -95,7 +95,7 @@ func ViewsFile(_ string, service *expr.ServiceExpr) *codegen.File {
 		for _, t := range svc.viewedResultTypes {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "validate-viewed-result-type",
-				Source: validateT,
+				Source: readTemplate("validate"),
 				Data:   t.Validate,
 			})
 		}
@@ -103,7 +103,7 @@ func ViewsFile(_ string, service *expr.ServiceExpr) *codegen.File {
 			for _, v := range t.Validations {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "validate-projected-type",
-					Source: validateT,
+					Source: readTemplate("validate"),
 					Data:   v,
 				})
 			}
@@ -112,28 +112,3 @@ func ViewsFile(_ string, service *expr.ServiceExpr) *codegen.File {
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
-
-// input: ValidateData
-const validateT = `{{ comment .Description }}
-func {{ .Name }}(result {{ .Ref }}) (err error) {
-	{{ .Validate }}
-  return
-}
-`
-
-// input: map[string]any{"ViewedTypes": []*viewedType}
-const viewedMapT = `var (
-{{- range .ViewedTypes }}
-	{{ printf "%sMap is a map indexing the attribute names of %s by view name." .Name .Name | comment }}
-	{{ .Name }}Map = map[string][]string{
-	{{- range .Views }}
-		"{{ .Name }}": {
-			{{- range $n := .Attributes }}
-				"{{ $n }}",
-			{{- end }}
-		},
-	{{- end }}
-	}
-{{- end }}
-)
-`

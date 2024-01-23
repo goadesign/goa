@@ -3,6 +3,9 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -387,9 +390,7 @@ func runTests(t *testing.T, cases []*testCase, filesFn func() []*codegen.File) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := filesFn()
-			if len(fs) < 2 {
-				t.Fatalf("got %d files, expected 2", len(fs))
-			}
+			require.Greater(t, len(fs), 1)
 			for _, s := range c.Sections {
 				var code string
 				var f *codegen.File
@@ -415,9 +416,7 @@ func runTests(t *testing.T, cases []*testCase, filesFn func() []*codegen.File) {
 					// Test failed: section exists in file, but no code expected.
 					t.Errorf("invalid code for %s: got %d %s sections, expected 0.\n%s", f.Path, seclen, s.Name, code)
 				default:
-					if code != *s.Code {
-						t.Errorf("invalid code for %s %s section, got:\n%s\ngot vs. expected:\n%s", f.Path, s.Name, code, codegen.Diff(t, code, *s.Code))
-					}
+					assert.Equal(t, *s.Code, code)
 				}
 			}
 		})

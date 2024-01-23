@@ -260,7 +260,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "convert-to",
-			Source: convertT,
+			Source: readTemplate("convert"),
 			Data:   data,
 		})
 	}
@@ -298,7 +298,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "create-from",
-			Source: createT,
+			Source: readTemplate("create"),
 			Data:   data,
 		})
 	}
@@ -312,7 +312,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		seen[tf.Name] = struct{}{}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "convert-create-helper",
-			Source: transformHelperT,
+			Source: readTemplate("transform_helper"),
 			Data:   tf,
 		})
 	}
@@ -743,27 +743,3 @@ func compatible(from expr.DataType, to reflect.Type, recs ...compRec) error {
 
 	return fmt.Errorf("types don't match: type of %s is %s but type of corresponding attribute is %s", rec.path, toName, from.Name())
 }
-
-// input: convertData
-const convertT = `{{ printf "%s creates an instance of %s initialized from t." .Name .TypeName | comment }}
-func (t {{ .ReceiverTypeRef }}) {{ .Name }}() {{ .TypeRef }} {
-    {{ .Code }}
-    return v
-}
-`
-
-// input: convertData
-const createT = `{{ printf "%s initializes t from the fields of v" .Name | comment }}
-func (t {{ .ReceiverTypeRef }}) {{ .Name }}(v {{ .TypeRef }}) {
-	{{ .Code }}
-	*t = *temp
-}
-`
-
-// input: TransformFunctionData
-const transformHelperT = `{{ printf "%s builds a value of type %s from a value of type %s." .Name .ResultTypeRef .ParamTypeRef | comment }}
-func {{ .Name }}(v {{ .ParamTypeRef }}) {{ .ResultTypeRef }} {
-        {{ .Code }}
-        return res
-}
-`

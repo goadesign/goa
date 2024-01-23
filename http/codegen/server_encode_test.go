@@ -3,6 +3,9 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -89,17 +92,11 @@ func TestEncode(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ServerFiles("", expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected two", len(fs))
-			}
+			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
-			if len(sections) < 2 {
-				t.Fatalf("got %d sections, expected at least 2", len(sections))
-			}
+			require.Greater(t, len(sections), 1)
 			code := codegen.SectionCode(t, sections[1])
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }
@@ -128,19 +125,13 @@ func TestEncodeMarshallingAndUnmarshalling(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunHTTPDSL(t, c.DSL)
 			fs := ServerFiles("", expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected two", len(fs))
-			}
+			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			totalSectionsExpected := c.SectionsOffset + len(c.Code)
-			if len(sections) != totalSectionsExpected {
-				t.Fatalf("got %d sections, expected %d", len(sections), totalSectionsExpected)
-			}
+			require.Len(t, sections, totalSectionsExpected)
 			for i := 0; i < len(c.Code); i++ {
 				code := codegen.SectionCode(t, sections[c.SectionsOffset+i])
-				if code != c.Code[i] {
-					t.Errorf("%s %d invalid code, got:\n%s\ngot vs. expected:\n%s", sections[c.SectionsOffset+i].Name, i, code, codegen.Diff(t, code, c.Code[i]))
-				}
+				assert.Equal(t, c.Code[i], code)
 			}
 		})
 	}

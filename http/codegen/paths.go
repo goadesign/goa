@@ -50,17 +50,10 @@ func pathSections(svc *expr.HTTPServiceExpr, pkg string) []*codegen.SectionTempl
 	for _, e := range svc.HTTPEndpoints {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "path",
-			Source: pathT,
+			Source: readTemplate("path"),
 			Data:   sdata.Endpoint(e.Name()),
 		})
 	}
 
 	return sections
 }
-
-// input: EndpointData
-const pathT = `{{ range .Routes }}// {{ .PathInit.Description }}
-func {{ .PathInit.Name }}({{ range .PathInit.ServerArgs }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) {{ .PathInit.ReturnTypeRef }} {
-{{- .PathInit.ServerCode }}
-}
-{{ end }}`

@@ -2,6 +2,8 @@ package codegen
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestStatusCodeToHttpConst(t *testing.T) {
@@ -12,12 +14,8 @@ func TestStatusCodeToHttpConst(t *testing.T) {
 		"know-status-code":   {Code: 200, Expected: "http.StatusOK"},
 		"unknow-status-code": {Code: 700, Expected: "700"},
 	}
-
 	for k, tc := range cases {
-
 		actual := statusCodeToHTTPConst(tc.Code)
-		if actual != tc.Expected {
-			t.Errorf("%s: got `%s`, expected `%s`", k, actual, tc.Expected)
-		}
+		assert.Equal(t, tc.Expected, actual, k)
 	}
 }

@@ -76,13 +76,20 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", apipkg, specs),
-		{Name: "basic-service-struct", Source: svcStructT, Data: data},
-		{Name: "basic-service-init", Source: svcInitT, Data: data},
+		{
+			Name:   "basic-service-struct",
+			Source: readTemplate("service_struct"),
+			Data:   data,
+		}, {
+			Name:   "basic-service-init",
+			Source: readTemplate("service_init"),
+			Data:   data,
+		},
 	}
 	if len(data.Schemes) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "security-authfuncs",
-			Source: dummyAuthFuncsT,
+			Source: readTemplate("security_authfuncs"),
 			Data:   data,
 		})
 	}
@@ -125,55 +132,7 @@ func basicEndpointSection(m *expr.MethodExpr, svcData *Data) *codegen.SectionTem
 	}
 	return &codegen.SectionTemplate{
 		Name:   "basic-endpoint",
-		Source: endpointT,
+		Source: readTemplate("endpoint"),
 		Data:   ed,
 	}
 }
-
-const (
-	// input: service.Data
-	svcStructT = `{{ printf "%s service example implementation.\nThe example methods log the requests and return zero values." .Name | comment }}
-type {{ .VarName }}srvc struct {
-	logger *log.Logger
-}
-`
-
-	// input: service.Data
-	svcInitT = `{{ printf "New%s returns the %s service implementation." .StructName .Name | comment }}
-func New{{ .StructName }}(logger *log.Logger) {{ .PkgName }}.Service {
-	return &{{ .VarName }}srvc{logger}
-}
-`
-
-	// input: basicEndpointData
-	endpointT = `{{ comment .Description }}
-{{- if .ServerStream }}
-func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}, stream {{ .StreamInterface }}) (err error) {
-{{- else }}
-func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}{{ if .SkipRequestBodyEncodeDecode }}, req io.ReadCloser{{ end }}) ({{ if .ResultFullRef }}res {{ .ResultFullRef }}, {{ end }}{{ if .SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}{{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}err error) {
-{{- end }}
-{{- if .SkipRequestBodyEncodeDecode }}
-	// req is the HTTP request body stream.
-	defer req.Close()
-{{- end }}
-{{- if and (and .ResultFullRef .ResultIsStruct) (not .ServerStream) }}
-	res = &{{ .ResultFullName }}{}
-{{- end }}
-{{- if .SkipResponseBodyEncodeDecode }}
-	// resp is the HTTP response body stream.
-	resp = io.NopCloser(strings.NewReader("{{ .Name }}"))
-{{- end }}
-{{- if .ViewedResult }}
-	{{- if not .ViewedResult.ViewName }}
-		{{- if .ServerStream }}
-			stream.SetView({{ printf "%q" .ResultView }})
-		{{- else }}
-			view = {{ printf "%q" .ResultView }}
-		{{- end }}
-	{{- end }}
-{{- end }}
-	s.logger.Print("{{ .ServiceVarName }}.{{ .Name }}")
-	return
-}
-`
-)

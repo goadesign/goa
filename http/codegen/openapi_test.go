@@ -4,6 +4,9 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	openapi "goa.design/goa/v3/http/codegen/openapi"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
@@ -21,15 +24,8 @@ func TestOpenAPI(t *testing.T) {
 		openapi.Definitions = make(map[string]*openapi.Schema)
 		root := RunHTTPDSL(t, c.DSL)
 		spec, err := OpenAPIFiles(root)
-		if err != nil {
-			t.Fatalf("OpenAPI failed with %s", err)
-		}
-		if spec == nil && !c.NilSpec {
-			t.Errorf("%s: unexpected specs: got nil, expected non-nil", k)
-		}
-		if spec != nil && c.NilSpec {
-			t.Errorf("%s: unexpected specs: got non-nil, expected nil", k)
-		}
+		require.NoError(t, err)
+		assert.Equal(t, c.NilSpec, spec == nil, k)
 	}
 }
 
@@ -38,23 +34,11 @@ func TestOutputPath(t *testing.T) {
 	openapi.Definitions = make(map[string]*openapi.Schema)
 	root := RunHTTPDSL(t, testdata.SimpleDSL)
 	o, err := OpenAPIFiles(root)
-	if err != nil {
-		t.Fatalf("OpenAPI failed with %s", err)
-	}
+	require.NoError(t, err)
 	c := 4 // number of files we expect
-	if len(o) != c {
-		t.Fatalf("unexpected number of OpenAPI files %d instead of %d", len(o), c)
-	}
-	if o[0].Path != filepath.Join("gen", "http", "openapi.json") {
-		t.Errorf("invalid output path %#v", o[0].Path)
-	}
-	if o[1].Path != filepath.Join("gen", "http", "openapi.yaml") {
-		t.Errorf("invalid output path %#v", o[1].Path)
-	}
-	if o[2].Path != filepath.Join("gen", "http", "openapi3.json") {
-		t.Errorf("invalid output path %#v", o[2].Path)
-	}
-	if o[3].Path != filepath.Join("gen", "http", "openapi3.yaml") {
-		t.Errorf("invalid output path %#v", o[3].Path)
-	}
+	require.Len(t, o, c)
+	assert.Equal(t, filepath.Join("gen", "http", "openapi.json"), o[0].Path)
+	assert.Equal(t, filepath.Join("gen", "http", "openapi.yaml"), o[1].Path)
+	assert.Equal(t, filepath.Join("gen", "http", "openapi3.json"), o[2].Path)
+	assert.Equal(t, filepath.Join("gen", "http", "openapi3.yaml"), o[3].Path)
 }

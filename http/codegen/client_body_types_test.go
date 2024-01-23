@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -26,9 +29,7 @@ func TestBodyTypeDecl(t *testing.T) {
 			fs := clientType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
 			section := fs.SectionTemplates[1]
 			code := codegen.SectionCode(t, section)
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }
@@ -58,9 +59,7 @@ func TestBodyTypeInit(t *testing.T) {
 			fs := clientType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
 			section := fs.SectionTemplates[c.SectionIndex]
 			code := codegen.SectionCode(t, section)
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }
@@ -92,14 +91,10 @@ func TestClientTypes(t *testing.T) {
 			fs := clientType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
 			var buf bytes.Buffer
 			for _, s := range fs.SectionTemplates[1:] {
-				if err := s.Write(&buf); err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, s.Write(&buf))
 			}
 			code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }
@@ -120,14 +115,10 @@ func TestClientTypeFiles(t *testing.T) {
 			for i, fs := range fw {
 				var buf bytes.Buffer
 				for _, s := range fs.SectionTemplates[1:] {
-					if err := s.Write(&buf); err != nil {
-						t.Fatal(err)
-					}
+					require.NoError(t, s.Write(&buf))
 				}
 				code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
-				if code != c.Codes[i] {
-					t.Errorf("invalid code at index %d, got:\n%s\ngot vs. expected:\n%s", i, code, codegen.Diff(t, code, c.Codes[i]))
-				}
+				assert.Equal(t, c.Codes[i], code)
 			}
 		})
 	}
