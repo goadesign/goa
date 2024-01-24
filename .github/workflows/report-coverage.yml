@@ -16,7 +16,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ github.event.workflow_run.head_repository.full_name }}
-          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+          ref: ${{ github.event_name == 'pull_request' && github.ref || github.head_ref }}
 
       - name: Download test coverage
         uses: dawidd6/action-download-artifact@v3
