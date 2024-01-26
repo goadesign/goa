@@ -1,9 +1,28 @@
 package middleware
 
 import (
+	"math/rand"
 	"testing"
 	"time"
 )
+
+type (
+	deterministicGenerator struct {
+		*rand.Rand
+	}
+)
+
+func newDeterministicGenerator() randomizer {
+	r := rand.New(rand.NewSource(1))
+	r.Seed(123) // make the random generator deterministic
+	return &deterministicGenerator{
+		Rand: r,
+	}
+}
+
+func (d *deterministicGenerator) Int64(bound int64) int64 {
+	return int64(d.Intn(int(bound)))
+}
 
 func TestFixedSampler(t *testing.T) {
 	// 0 %
@@ -22,8 +41,8 @@ func TestFixedSampler(t *testing.T) {
 		}
 	}
 
+	rnd = newDeterministicGenerator()
 	// 50 %
-	rnd.Seed(123) // set seed for reproducibility.
 	trueCount := 0
 	subject = NewFixedSampler(33)
 	for i := 0; i < 100; i++ {
@@ -59,7 +78,7 @@ func TestAdaptiveSampler(t *testing.T) {
 
 	// change start time to 1s ago for a more predictable result.
 	trueCount := 0
-	rnd.Seed(123) // set seed for reproducibility.
+	rnd = newDeterministicGenerator()
 	now := time.Now()
 	subject.(*adaptiveSampler).start = now.Add(-time.Second)
 	for i := 99; i < 199; i++ {
