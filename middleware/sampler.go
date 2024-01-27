@@ -1,8 +1,7 @@
 package middleware
 
 import (
-	"crypto/rand"
-	"math/big"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -13,16 +12,6 @@ type (
 	Sampler interface {
 		// Sample returns true if the caller should sample now.
 		Sample() bool
-	}
-
-	// randomizer is an interface for generating random numbers.
-	randomizer interface {
-		// Int64 returns a random int64 in the range [0, bound).
-		Int64(bound int64) int64
-	}
-
-	// randomGenerator is a randomizer that uses crypto/rand.
-	randomGenerator struct {
 	}
 
 	adaptiveSampler struct {
@@ -39,11 +28,11 @@ type (
 
 const (
 	// adaptive upper bound has granularity in case caller becomes extremely busy.
-	adaptiveUpperBoundInt   = int64(10000)
+	adaptiveUpperBoundInt   = 10000
 	adaptiveUpperBoundFloat = float64(adaptiveUpperBoundInt)
 )
 
-var rnd randomizer = newRandomizer()
+var rnd = rand.New(rand.NewSource(1))
 
 // NewAdaptiveSampler computes the interval for sampling for tracing middleware.
 // it can also be used by non-web go routines to trace internal API calls.
@@ -79,14 +68,14 @@ func NewFixedSampler(samplingPercent int) Sampler {
 // Sample implementation for adaptive rate
 func (s *adaptiveSampler) Sample() bool {
 	// adjust sampling rate whenever sample size is reached.
-	var currentRate int64
+	var currentRate int
 	if atomic.AddUint32(&s.counter, 1) == s.sampleSize { // exact match prevents
 		atomic.StoreUint32(&s.counter, 0) // race is ok
 		s.Lock()
 		{
 			d := time.Since(s.start).Seconds()
 			r := float64(s.sampleSize) / d
-			currentRate = int64((float64(s.maxSamplingRate) * adaptiveUpperBoundFloat) / r)
+			currentRate = int((float64(s.maxSamplingRate) * adaptiveUpperBoundFloat) / r)
 			if currentRate > adaptiveUpperBoundInt {
 				currentRate = adaptiveUpperBoundInt
 			} else if currentRate < 1 {
@@ -97,27 +86,15 @@ func (s *adaptiveSampler) Sample() bool {
 		s.Unlock()
 		atomic.StoreInt64(&s.lastRate, int64(currentRate))
 	} else {
-		currentRate = int64(atomic.LoadInt64(&s.lastRate))
+		currentRate = int(atomic.LoadInt64(&s.lastRate))
 	}
 
 	// currentRate is never zero.
-	return currentRate == adaptiveUpperBoundInt || rnd.Int64(adaptiveUpperBoundInt) < currentRate
+	return currentRate == adaptiveUpperBoundInt || rnd.Intn(adaptiveUpperBoundInt) < currentRate
 }
 
 // Sample implementation for fixed percentage
 func (s fixedSampler) Sample() bool {
-	samplingPercent := int64(s)
-	return samplingPercent > 0 && (samplingPercent == 100 || rnd.Int64(100) < samplingPercent)
-}
-
-// newRandomizer returns a randomizer.
-func newRandomizer() randomizer {
-	return &randomGenerator{}
-}
-
-// Int64 returns a random int64 in the range [0, bound).
-func (r *randomGenerator) Int64(bound int64) int64 {
-	// can we ignore the error?
-	rnd, _ := rand.Int(rand.Reader, big.NewInt(bound))
-	return rnd.Int64()
+	samplingPercent := int(s)
+	return samplingPercent > 0 && (samplingPercent == 100 || rnd.Intn(100) < samplingPercent)
 }
