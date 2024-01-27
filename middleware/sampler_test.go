@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"math/rand"
 	"testing"
 	"time"
 )
@@ -23,7 +24,16 @@ func TestFixedSampler(t *testing.T) {
 	}
 
 	// 50 %
-	rnd.Seed(123) // set seed for reproducibility.
+
+	// set seed for reproducibility.
+	rnd := rand.New(rand.NewSource(123))
+	intn = func(n int) int {
+		return rnd.Intn(n)
+	}
+	defer func() {
+		intn = rand.Intn
+	}()
+
 	trueCount := 0
 	subject = NewFixedSampler(33)
 	for i := 0; i < 100; i++ {
@@ -57,9 +67,17 @@ func TestAdaptiveSampler(t *testing.T) {
 		}
 	}
 
+	// set seed for reproducibility.
+	rnd := rand.New(rand.NewSource(123))
+	intn = func(n int) int {
+		return rnd.Intn(n)
+	}
+	defer func() {
+		intn = rand.Intn
+	}()
+
 	// change start time to 1s ago for a more predictable result.
 	trueCount := 0
-	rnd.Seed(123) // set seed for reproducibility.
 	now := time.Now()
 	subject.(*adaptiveSampler).start = now.Add(-time.Second)
 	for i := 99; i < 199; i++ {

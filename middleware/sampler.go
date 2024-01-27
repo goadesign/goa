@@ -26,13 +26,14 @@ type (
 	fixedSampler int
 )
 
+// Let tests override the random number generator.
+var intn = rand.Intn
+
 const (
 	// adaptive upper bound has granularity in case caller becomes extremely busy.
 	adaptiveUpperBoundInt   = 10000
 	adaptiveUpperBoundFloat = float64(adaptiveUpperBoundInt)
 )
-
-var rnd = rand.New(rand.NewSource(1))
 
 // NewAdaptiveSampler computes the interval for sampling for tracing middleware.
 // it can also be used by non-web go routines to trace internal API calls.
@@ -90,11 +91,11 @@ func (s *adaptiveSampler) Sample() bool {
 	}
 
 	// currentRate is never zero.
-	return currentRate == adaptiveUpperBoundInt || rnd.Intn(adaptiveUpperBoundInt) < currentRate
+	return currentRate == adaptiveUpperBoundInt || intn(adaptiveUpperBoundInt) < currentRate
 }
 
 // Sample implementation for fixed percentage
 func (s fixedSampler) Sample() bool {
 	samplingPercent := int(s)
-	return samplingPercent > 0 && (samplingPercent == 100 || rnd.Intn(100) < samplingPercent)
+	return samplingPercent > 0 && (samplingPercent == 100 || intn(100) < samplingPercent)
 }
