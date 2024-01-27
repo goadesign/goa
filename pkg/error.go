@@ -29,7 +29,7 @@ type (
 		Fault bool
 		// History tracks all the individual errors that were built into this error, should
 		// this error have been merged.
-		history []ServiceError
+		history []*ServiceError
 		// err holds the original error if exists.
 		err error
 	}
@@ -238,12 +238,12 @@ func MergeErrors(err, other error) error {
 }
 
 // History returns the history of error revisions, ignoring the result of any merges.
-func (e ServiceError) History() []ServiceError {
+func (e *ServiceError) History() []*ServiceError {
 	if len(e.history) > 0 {
 		return e.history
 	}
 
-	return []ServiceError{e}
+	return []*ServiceError{e}
 }
 
 // Error returns the error message.
