@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -100,7 +101,7 @@ func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, ptr, useDefault bool) str
 	if loc := UserTypeLocation(att.Type); loc != nil {
 		pkg = loc.PackageName()
 	} else if p, ok := att.Meta.Last("struct:pkg:path"); ok && p != "" {
-		pkg = p
+		pkg = Goify(filepath.Base(p), false)
 	}
 	return s.goTypeDef(att, ptr, useDefault, pkg)
 }
