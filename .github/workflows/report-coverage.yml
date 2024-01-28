@@ -13,9 +13,9 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
         with:
-          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Download test coverage
         uses: dawidd6/action-download-artifact@v3
