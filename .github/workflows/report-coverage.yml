@@ -15,7 +15,6 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
         with:
-          repository: ${{ github.event.workflow_run.head_repository.full_name }}
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref }}
 
       - name: Download test coverage
