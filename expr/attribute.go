@@ -267,6 +267,9 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 
 func (a *AttributeExpr) validatePkgPath(pkgPath string, t DataType) *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
+	if ar := AsArray(t); ar != nil {
+		verr.Merge(a.validatePkgPath(pkgPath, ar.ElemType.Type))
+	}
 	if ut, ok := t.(UserType); pkgPath != "" && ok {
 		// This check ensures we error if a sub-type has a different custom package type set
 		// or if two user types have different custom packages but share a sub-type (field that's a user type)
