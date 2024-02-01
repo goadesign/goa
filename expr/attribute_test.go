@@ -403,6 +403,114 @@ func TestAttributeExprValidate(t *testing.T) {
 			},
 			expected: &eval.ValidationErrors{Errors: []error{errConflictingTypes}},
 		},
+		"conflicting custom packages between sub-type in array and parent": {
+			typ: &UserTypeExpr{
+				TypeName: "FirstType",
+				AttributeExpr: &AttributeExpr{
+					Meta: MetaExpr{"struct:pkg:path": []string{"types"}},
+					Type: &Object{
+						&NamedAttributeExpr{
+							Name: "thing",
+							Attribute: &AttributeExpr{
+								Type: &Array{
+									ElemType: &AttributeExpr{
+										Type: &UserTypeExpr{
+											AttributeExpr: &AttributeExpr{
+												Meta: MetaExpr{"struct:pkg:path": []string{"types2"}},
+												Type: &Object{
+													&NamedAttributeExpr{
+														Name: "Description",
+														Attribute: &AttributeExpr{
+															Type: String,
+														},
+													},
+												},
+											},
+											TypeName: "SecondType",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &eval.ValidationErrors{Errors: []error{errConflictingTypes}},
+		},
+		"conflicting custom packages between sub-type in map key and parent": {
+			typ: &UserTypeExpr{
+				TypeName: "FirstType",
+				AttributeExpr: &AttributeExpr{
+					Meta: MetaExpr{"struct:pkg:path": []string{"types"}},
+					Type: &Object{
+						&NamedAttributeExpr{
+							Name: "thing",
+							Attribute: &AttributeExpr{
+								Type: &Map{
+									KeyType: &AttributeExpr{
+										Type: &UserTypeExpr{
+											AttributeExpr: &AttributeExpr{
+												Meta: MetaExpr{"struct:pkg:path": []string{"types2"}},
+												Type: &Object{
+													&NamedAttributeExpr{
+														Name: "Description",
+														Attribute: &AttributeExpr{
+															Type: String,
+														},
+													},
+												},
+											},
+											TypeName: "SecondType",
+										},
+									},
+									ElemType: &AttributeExpr{
+										Type: String,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &eval.ValidationErrors{Errors: []error{errConflictingTypes}},
+		},
+		"conflicting custom packages between sub-type in map element and parent": {
+			typ: &UserTypeExpr{
+				TypeName: "FirstType",
+				AttributeExpr: &AttributeExpr{
+					Meta: MetaExpr{"struct:pkg:path": []string{"types"}},
+					Type: &Object{
+						&NamedAttributeExpr{
+							Name: "thing",
+							Attribute: &AttributeExpr{
+								Type: &Map{
+									KeyType: &AttributeExpr{
+										Type: String,
+									},
+									ElemType: &AttributeExpr{
+										Type: &UserTypeExpr{
+											AttributeExpr: &AttributeExpr{
+												Meta: MetaExpr{"struct:pkg:path": []string{"types2"}},
+												Type: &Object{
+													&NamedAttributeExpr{
+														Name: "Description",
+														Attribute: &AttributeExpr{
+															Type: String,
+														},
+													},
+												},
+											},
+											TypeName: "SecondType",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &eval.ValidationErrors{Errors: []error{errConflictingTypes}},
+		},
 	}
 
 	for k, tc := range cases {
