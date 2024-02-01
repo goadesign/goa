@@ -522,7 +522,9 @@ func TestAttributeExprValidate(t *testing.T) {
 		if actual := attribute.Validate(ctx, nil); tc.expected != actual {
 			if len(tc.expected.Errors) != len(actual.Errors) {
 				t.Errorf("%s: expected the number of error values to match %d got %d ", k, len(tc.expected.Errors), len(actual.Errors))
-				t.Errorf("%#v", actual.Errors[0])
+				if len(actual.Errors) > 0 {
+					t.Errorf("%#v", actual.Errors[0])
+				}
 			} else {
 				for i, err := range actual.Errors {
 					if err.Error() != tc.expected.Errors[i].Error() {
