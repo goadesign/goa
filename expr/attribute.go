@@ -272,6 +272,7 @@ func (a *AttributeExpr) validatePkgPath(pkgPath string, t DataType) *eval.Valida
 	}
 	if mp := AsMap(t); mp != nil {
 		verr.Merge(a.validatePkgPath(pkgPath, mp.KeyType.Type))
+		verr.Merge(a.validatePkgPath(pkgPath, mp.ElemType.Type))
 	}
 	if ut, ok := t.(UserType); pkgPath != "" && ok {
 		// This check ensures we error if a sub-type has a different custom package type set
