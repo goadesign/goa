@@ -225,17 +225,7 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 			}
 		}
 		for _, nat := range *o {
-			if ut, ok := nat.Attribute.Type.(UserType); pkgPath != "" && ok {
-				// This check ensures we error if a sub-type has a different custom package type set
-				// or if two user types have different custom packages but share a sub-type (field that's a user type)
-				if ut.Attribute().Meta != nil &&
-					ut.Attribute().Meta["struct:pkg:path"] != nil &&
-					ut.Attribute().Meta["struct:pkg:path"][0] != pkgPath {
-					verr.Add(a, "type \"%s\" has conflicting packages %s and %s", ut.Name(), ut.Attribute().Meta["struct:pkg:path"][0], pkgPath)
-				}
-
-				ut.Attribute().AddMeta("struct:pkg:path", pkgPath)
-			}
+			verr.Merge(a.validatePkgPath(pkgPath, nat.Attribute.Type))
 			ctx = fmt.Sprintf("field %s", nat.Name)
 			verr.Merge(nat.Attribute.Validate(ctx, parent))
 		}
@@ -273,6 +263,31 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	}
 
 	return verr
+}
+
+func (a *AttributeExpr) validatePkgPath(pkgPath string, t DataType) *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+	if ar := AsArray(t); ar != nil {
+		verr.Merge(a.validatePkgPath(pkgPath, ar.ElemType.Type))
+	}
+	if mp := AsMap(t); mp != nil {
+		verr.Merge(a.validatePkgPath(pkgPath, mp.KeyType.Type))
+		verr.Merge(a.validatePkgPath(pkgPath, mp.ElemType.Type))
+	}
+	if ut, ok := t.(UserType); pkgPath != "" && ok {
+		// This check ensures we error if a sub-type has a different custom package type set
+		// or if two user types have different custom packages but share a sub-type (field that's a user type)
+		if ut.Attribute().Meta != nil &&
+			ut.Attribute().Meta["struct:pkg:path"] != nil &&
+			ut.Attribute().Meta["struct:pkg:path"][0] != pkgPath {
+			verr.Add(a, "type \"%s\" has conflicting packages %s and %s", ut.Name(), ut.Attribute().Meta["struct:pkg:path"][0], pkgPath)
+		}
+		ut.Attribute().AddMeta("struct:pkg:path", pkgPath)
+	}
+	if len(verr.Errors) > 0 {
+		return verr
+	}
+	return nil
 }
 
 // Finalize merges base and reference type attributes and finalizes the Type
