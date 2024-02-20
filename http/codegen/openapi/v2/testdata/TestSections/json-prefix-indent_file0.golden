@@ -1,0 +1,60 @@
+{
+   "swagger": "2.0",
+   "info": {
+     "title": "",
+     "version": "0.0.1"
+   },
+   "host": "goa.design",
+   "consumes": [
+     "application/json",
+     "application/xml",
+     "application/gob"
+   ],
+   "produces": [
+     "application/json",
+     "application/xml",
+     "application/gob"
+   ],
+   "paths": {
+     "/path1": {
+       "get": {
+         "tags": [
+           "service-name"
+         ],
+         "summary": "Download filename",
+         "operationId": "service-name#/path1",
+         "responses": {
+           "200": {
+             "description": "File downloaded",
+             "schema": {
+               "type": "file"
+             }
+           }
+         },
+         "schemes": [
+           "https"
+         ]
+       }
+     },
+     "/path2": {
+       "get": {
+         "tags": [
+           "user-tag"
+         ],
+         "summary": "Download filename",
+         "operationId": "service-name#/path2",
+         "responses": {
+           "200": {
+             "description": "File downloaded",
+             "schema": {
+               "type": "file"
+             }
+           }
+         },
+         "schemes": [
+           "https"
+         ]
+       }
+     }
+   }
+ }

@@ -44,6 +44,9 @@ func TestSections(t *testing.T) {
 		{"not-generate-server", testdata.NotGenerateServerDSL},
 		{"not-generate-host", testdata.NotGenerateHostDSL},
 		{"not-generate-attribute", testdata.NotGenerateAttributeDSL},
+		{"json-prefix", testdata.JSONPrefixDSL},
+		{"json-indent", testdata.JSONIndentDSL},
+		{"json-prefix-indent", testdata.JSONPrefixIndentDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
