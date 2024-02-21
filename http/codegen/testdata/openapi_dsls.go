@@ -805,3 +805,55 @@ var NotGenerateAttributeDSL = func() {
 		})
 	})
 }
+
+var JSONPrefixDSL = func() {
+	var _ = API("test", func() {
+		Server("test", func() {
+			Host("localhost", func() {
+				URI("https://goa.design")
+			})
+		})
+		Meta("openapi:json:prefix", "  ")
+	})
+	var _ = Service("service-name", func() {
+		Files("path1", "filename")
+		Files("path2", "filename", func() {
+			Meta("openapi:tag:user-tag")
+		})
+	})
+}
+
+var JSONIndentDSL = func() {
+	var _ = API("test", func() {
+		Server("test", func() {
+			Host("localhost", func() {
+				URI("https://goa.design")
+			})
+		})
+		Meta("openapi:json:indent", "  ")
+	})
+	var _ = Service("service-name", func() {
+		Files("path1", "filename")
+		Files("path2", "filename", func() {
+			Meta("openapi:tag:user-tag")
+		})
+	})
+}
+
+var JSONPrefixIndentDSL = func() {
+	var _ = API("test", func() {
+		Server("test", func() {
+			Host("localhost", func() {
+				URI("https://goa.design")
+			})
+		})
+		Meta("openapi:json:prefix", " ")
+		Meta("openapi:json:indent", "  ")
+	})
+	var _ = Service("service-name", func() {
+		Files("path1", "filename")
+		Files("path2", "filename", func() {
+			Meta("openapi:tag:user-tag")
+		})
+	})
+}

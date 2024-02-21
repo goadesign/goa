@@ -137,6 +137,22 @@ import (
 //	    Meta("openapi:generate", "false")
 //	})
 //
+// - "openapi:json:prefix" specifies the prefix used to format the OpenAPI
+// specification encoded in JSON. It can be used with "openapi:json:indent".
+// Applicable to API only.
+//
+//	var _ = API("MyAPI", func() {
+//	    Meta("openapi:json:prefix", "  ")
+//	})
+//
+// - "openapi:json:indent" specifies the indent used to format the OpenAPI
+// specification encoded in JSON. It can be used with "openapi:json:prefix".
+// Applicable to API only.
+//
+//	var _ = API("MyAPI", func() {
+//	    Meta("openapi:json:indent", "  ")
+//	})
+//
 // - "swagger:summary" DEPRECATED, use "openapi:summary" instead
 //
 // - "openapi:summary" sets the OpenAPI operation summary field. The special
