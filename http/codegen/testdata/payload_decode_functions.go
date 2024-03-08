@@ -1538,6 +1538,9 @@ func DecodeMethodQueryMapStringStringRequest(mux goahttp.Muxer, decoder func(*ht
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+							}
 							keya = keyRaw[openIdx+1 : closeIdx]
 						}
 						q[keya] = valRaw[0]
@@ -1575,6 +1578,9 @@ func DecodeMethodQueryMapStringStringValidateRequest(mux goahttp.Muxer, decoder 
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keya = keyRaw[openIdx+1 : closeIdx]
 					}
 					q[keya] = valRaw[0]
@@ -1622,6 +1628,9 @@ func DecodeMethodQueryMapStringBoolRequest(mux goahttp.Muxer, decoder func(*http
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+							}
 							keya = keyRaw[openIdx+1 : closeIdx]
 						}
 						var vala bool
@@ -1671,6 +1680,9 @@ func DecodeMethodQueryMapStringBoolValidateRequest(mux goahttp.Muxer, decoder fu
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keya = keyRaw[openIdx+1 : closeIdx]
 					}
 					var vala bool
@@ -1727,6 +1739,9 @@ func DecodeMethodQueryMapBoolStringRequest(mux goahttp.Muxer, decoder func(*http
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+							}
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseBool(keyaRaw)
 							if err2 != nil {
@@ -1772,6 +1787,9 @@ func DecodeMethodQueryMapBoolStringValidateRequest(mux goahttp.Muxer, decoder fu
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keyaRaw := keyRaw[openIdx+1 : closeIdx]
 						v, err2 := strconv.ParseBool(keyaRaw)
 						if err2 != nil {
@@ -1824,6 +1842,9 @@ func DecodeMethodQueryMapBoolBoolRequest(mux goahttp.Muxer, decoder func(*http.R
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+							}
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseBool(keyaRaw)
 							if err2 != nil {
@@ -1878,6 +1899,9 @@ func DecodeMethodQueryMapBoolBoolValidateRequest(mux goahttp.Muxer, decoder func
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keyaRaw := keyRaw[openIdx+1 : closeIdx]
 						v, err2 := strconv.ParseBool(keyaRaw)
 						if err2 != nil {
@@ -1939,6 +1963,9 @@ func DecodeMethodQueryMapStringArrayStringRequest(mux goahttp.Muxer, decoder fun
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+							}
 							keya = keyRaw[openIdx+1 : closeIdx]
 						}
 						q[keya] = valRaw
@@ -1976,6 +2003,9 @@ func DecodeMethodQueryMapStringArrayStringValidateRequest(mux goahttp.Muxer, dec
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keya = keyRaw[openIdx+1 : closeIdx]
 					}
 					q[keya] = valRaw
@@ -2024,6 +2054,9 @@ func DecodeMethodQueryMapStringArrayBoolRequest(mux goahttp.Muxer, decoder func(
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+							}
 							keya = keyRaw[openIdx+1 : closeIdx]
 						}
 						var val []bool
@@ -2075,6 +2108,9 @@ func DecodeMethodQueryMapStringArrayBoolValidateRequest(mux goahttp.Muxer, decod
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keya = keyRaw[openIdx+1 : closeIdx]
 					}
 					var val []bool
@@ -2134,6 +2170,9 @@ func DecodeMethodQueryMapBoolArrayStringRequest(mux goahttp.Muxer, decoder func(
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+							}
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseBool(keyaRaw)
 							if err2 != nil {
@@ -2177,6 +2216,9 @@ func DecodeMethodQueryMapBoolArrayStringValidateRequest(mux goahttp.Muxer, decod
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+							}
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseBool(keyaRaw)
 							if err2 != nil {
@@ -2230,6 +2272,9 @@ func DecodeMethodQueryMapBoolArrayBoolRequest(mux goahttp.Muxer, decoder func(*h
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+							}
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseBool(keyaRaw)
 							if err2 != nil {
@@ -2286,6 +2331,9 @@ func DecodeMethodQueryMapBoolArrayBoolValidateRequest(mux goahttp.Muxer, decoder
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keyaRaw := keyRaw[openIdx+1 : closeIdx]
 						v, err2 := strconv.ParseBool(keyaRaw)
 						if err2 != nil {
@@ -2484,6 +2532,9 @@ func DecodeMethodQueryPrimitiveMapStringArrayStringValidateRequest(mux goahttp.M
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keya = keyRaw[openIdx+1 : closeIdx]
 					}
 					q[keya] = valRaw
@@ -2535,6 +2586,9 @@ func DecodeMethodQueryPrimitiveMapStringBoolValidateRequest(mux goahttp.Muxer, d
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keya = keyRaw[openIdx+1 : closeIdx]
 					}
 					var vala bool
@@ -2592,6 +2646,9 @@ func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(mux goahttp.Muxer
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keyaRaw := keyRaw[openIdx+1 : closeIdx]
 						v, err2 := strconv.ParseBool(keyaRaw)
 						if err2 != nil {
@@ -2663,6 +2720,9 @@ func DecodeMethodQueryMapStringMapIntStringValidateRequest(mux goahttp.Muxer, de
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keya = keyRaw[openIdx+1 : closeIdx]
 						keyRaw = keyRaw[closeIdx+1:]
 					}
@@ -2673,6 +2733,9 @@ func DecodeMethodQueryMapStringMapIntStringValidateRequest(mux goahttp.Muxer, de
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keybRaw := keyRaw[openIdx+1 : closeIdx]
 						v, err2 := strconv.ParseInt(keybRaw, 10, strconv.IntSize)
 						if err2 != nil {
@@ -2722,6 +2785,9 @@ func DecodeMethodQueryMapIntMapStringArrayIntValidateRequest(mux goahttp.Muxer, 
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keyaRaw := keyRaw[openIdx+1 : closeIdx]
 						v, err2 := strconv.ParseInt(keyaRaw, 10, strconv.IntSize)
 						if err2 != nil {
@@ -2737,6 +2803,9 @@ func DecodeMethodQueryMapIntMapStringArrayIntValidateRequest(mux goahttp.Muxer, 
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keyb = keyRaw[openIdx+1 : closeIdx]
 					}
 					var val []int
@@ -4807,6 +4876,9 @@ func DecodeMapQueryPrimitivePrimitiveRequest(mux goahttp.Muxer, decoder func(*ht
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keya = keyRaw[openIdx+1 : closeIdx]
 					}
 					query[keya] = valRaw[0]
@@ -4845,6 +4917,9 @@ func DecodeMapQueryPrimitiveArrayRequest(mux goahttp.Muxer, decoder func(*http.R
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+						}
 						keya = keyRaw[openIdx+1 : closeIdx]
 					}
 					var val []uint
@@ -5272,6 +5347,9 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+							}
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseFloat(keyaRaw, 32)
 							if err2 != nil {
@@ -5323,6 +5401,9 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+							}
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseFloat(keyaRaw, 32)
 							if err2 != nil {

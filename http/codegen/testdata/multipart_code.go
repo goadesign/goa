@@ -161,6 +161,9 @@ func NewServiceMultipartWithParamMethodMultipartWithParamDecoder(mux goahttp.Mux
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+							}
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseInt(keyaRaw, 10, strconv.IntSize)
 							if err2 != nil {
@@ -221,6 +224,9 @@ func NewServiceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersD
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								return nil, goa.DecodePayloadError("invalid query string: missing closing bracket")
+							}
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseInt(keyaRaw, 10, strconv.IntSize)
 							if err2 != nil {
