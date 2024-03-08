@@ -1139,8 +1139,8 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			)
 			if ut, ok := body.(expr.UserType); ok {
 				if val := ut.Attribute().Validation; val != nil {
-					svcode = codegen.ValidationCode(ut.Attribute(), ut, httpsvrctx, true, expr.IsAlias(ut), "body")
-					cvcode = codegen.ValidationCode(ut.Attribute(), ut, httpclictx, true, expr.IsAlias(ut), "body")
+					svcode = codegen.ValidationCode(ut.Attribute(), ut, httpsvrctx, true, expr.IsAlias(ut), false, "body")
+					cvcode = codegen.ValidationCode(ut.Attribute(), ut, httpclictx, true, expr.IsAlias(ut), false, "body")
 				}
 			}
 			serverArgs = []*InitArgData{{
@@ -1280,7 +1280,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							TypeRef:      uref,
 							Type:         uatt.Type,
 							Pointer:      sc.UsernamePointer,
-							Validate:     codegen.ValidationCode(uatt, nil, httpsvrctx, sc.UsernameRequired, expr.IsAlias(uatt.Type), sc.UsernameAttr),
+							Validate:     codegen.ValidationCode(uatt, nil, httpsvrctx, sc.UsernameRequired, expr.IsAlias(uatt.Type), false, sc.UsernameAttr),
 							Example:      uatt.Example(expr.Root.API.ExampleGenerator),
 						},
 					}
@@ -1303,7 +1303,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							TypeRef:      pref,
 							Type:         patt.Type,
 							Pointer:      sc.PasswordPointer,
-							Validate:     codegen.ValidationCode(patt, nil, httpsvrctx, sc.PasswordRequired, expr.IsAlias(patt.Type), sc.PasswordAttr),
+							Validate:     codegen.ValidationCode(patt, nil, httpsvrctx, sc.PasswordRequired, expr.IsAlias(patt.Type), false, sc.PasswordAttr),
 							Example:      patt.Example(expr.Root.API.ExampleGenerator),
 						},
 					}
@@ -1617,7 +1617,7 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 							var vcode string
 							if ut, ok := resp.Body.Type.(expr.UserType); ok {
 								if val := ut.Attribute().Validation; val != nil {
-									vcode = codegen.ValidationCode(ut.Attribute(), ut, httpclictx, true, expr.IsAlias(ut), "body")
+									vcode = codegen.ValidationCode(ut.Attribute(), ut, httpclictx, true, expr.IsAlias(ut), false, "body")
 								}
 							}
 							clientArgs = []*InitArgData{{
@@ -2008,7 +2008,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 				varname, svc.Name, e.Name())
 			if svr {
 				// generate validation code for unmarshaled type (server-side).
-				validateDef = codegen.ValidationCode(ut.Attribute(), ut, httpctx, true, expr.IsAlias(ut), "body")
+				validateDef = codegen.ValidationCode(ut.Attribute(), ut, httpctx, true, expr.IsAlias(ut), false, "body")
 				if validateDef != "" {
 					validateRef = fmt.Sprintf("err = Validate%s(&body)", varname)
 				}
@@ -2023,7 +2023,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 			}
 			varname = sd.Scope.GoTypeRef(body)
 			ctx := codegen.NewAttributeContext(false, false, !svr, "", sd.Scope)
-			validateRef = codegen.ValidationCode(body, nil, ctx, true, expr.IsAlias(body.Type), "body")
+			validateRef = codegen.ValidationCode(body, nil, ctx, true, expr.IsAlias(body.Type), false, "body")
 			desc = body.Description
 		}
 	}
@@ -2158,7 +2158,7 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location,
 				varname, svc.Name, e.Name())
 			if !svr && view == nil {
 				// generate validation code for unmarshaled type (client-side).
-				validateDef = codegen.ValidationCode(body, ut, httpctx, true, expr.IsAlias(body.Type), "body")
+				validateDef = codegen.ValidationCode(body, ut, httpctx, true, expr.IsAlias(body.Type), false, "body")
 				if validateDef != "" {
 					target := "&body"
 					if expr.IsArray(ut) {
@@ -2175,12 +2175,12 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location,
 			desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
 				varname, svc.Name, e.Name())
 			def = goTypeDef(sd.Scope, body, !svr, svr)
-			validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), "body")
+			validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), false, "body")
 		} else {
 			// response body is a primitive type. They are used as non-pointers when
 			// encoding/decoding responses.
 			httpctx = httpContext("", sd.Scope, false, true)
-			validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), "body")
+			validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), false, "body")
 			varname = sd.Scope.GoTypeRef(body)
 			desc = body.Description
 		}
@@ -2627,7 +2627,7 @@ func attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData)
 		if req || !req && !server {
 			// generate validations for responses client-side and for
 			// requests server-side and CLI
-			validate = codegen.ValidationCode(ut.Attribute(), ut, hctx, true, expr.IsAlias(ut), "body")
+			validate = codegen.ValidationCode(ut.Attribute(), ut, hctx, true, expr.IsAlias(ut), false, "body")
 		}
 		if validate != "" {
 			validateRef = fmt.Sprintf("err = Validate%s(v)", name)

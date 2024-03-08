@@ -50,7 +50,7 @@ func init() {
 // See ValidationCode for a description of the arguments.
 func AttributeValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias bool, target, attName string) string {
 	seen := make(map[string]*bytes.Buffer)
-	return recurseValidationCode(att, put, attCtx, req, alias, target, attName, seen).String()
+	return recurseValidationCode(att, put, attCtx, req, alias, false, target, attName, seen).String()
 }
 
 // ValidationCode produces Go code that runs the validations defined in the
@@ -66,15 +66,19 @@ func AttributeValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx 
 //
 // alias indicates whether the attribute is an alias user type attribute.
 //
+// view indicates whether the attribute is a view type attribute.
+// This only matters for union types: generated Goa view union types have a
+// different layout than proto generated union types.
+//
 // target is the variable name against which the validation code is generated
 //
 // context is used to produce helpful messages in case of error.
-func ValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias bool, target string) string {
+func ValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target string) string {
 	seen := make(map[string]*bytes.Buffer)
-	return recurseValidationCode(att, put, attCtx, req, alias, target, target, seen).String()
+	return recurseValidationCode(att, put, attCtx, req, alias, view, target, target, seen).String()
 }
 
-func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias bool, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
+func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
 	var (
 		buf      = new(bytes.Buffer)
 		first    = true
@@ -115,7 +119,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		for _, nat := range *(expr.AsObject(att.Type)) {
 			tgt := fmt.Sprintf("%s.%s", target, attCtx.Scope.Field(nat.Attribute, nat.Name, true))
 			ctx := fmt.Sprintf("%s.%s", context, nat.Name)
-			val := validateAttribute(attCtx, nat.Attribute, put, tgt, ctx, att.IsRequired(nat.Name))
+			val := validateAttribute(attCtx, nat.Attribute, put, tgt, ctx, att.IsRequired(nat.Name), view)
 			if val != "" {
 				newline()
 				buf.WriteString(val)
@@ -129,7 +133,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 			ctx = attCtx.Dup()
 			ctx.Pointer = false
 		}
-		val := validateAttribute(ctx, elem, put, "e", context+"[*]", true)
+		val := validateAttribute(ctx, elem, put, "e", context+"[*]", true, view)
 		if val != "" {
 			newline()
 			data := map[string]any{"target": target, "validation": val}
@@ -141,11 +145,11 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		m := expr.AsMap(att.Type)
 		ctx := attCtx.Dup()
 		ctx.Pointer = false
-		keyVal := validateAttribute(ctx, m.KeyType, put, "k", context+".key", true)
+		keyVal := validateAttribute(ctx, m.KeyType, put, "k", context+".key", true, view)
 		if keyVal != "" {
 			keyVal = "\n" + keyVal
 		}
-		valueVal := validateAttribute(ctx, m.ElemType, put, "v", context+"[key]", true)
+		valueVal := validateAttribute(ctx, m.ElemType, put, "v", context+"[key]", true, view)
 		if valueVal != "" {
 			valueVal = "\n" + valueVal
 		}
@@ -158,19 +162,27 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		}
 	case expr.IsUnion(att.Type):
 		// NOTE: the only time we validate a union is when we are
-		// validating a proto-generated type since the HTTP
+		// validating a proto-generated type or view types since the HTTP
 		// serialization transforms unions into objects.
 		u := expr.AsUnion(att.Type)
-		tref := attCtx.Scope.Ref(&expr.AttributeExpr{Type: put}, attCtx.DefaultPkg)
 		var vals []string
 		var types []string
 		for _, v := range u.Values {
 			vatt := v.Attribute
-			fieldName := attCtx.Scope.Field(vatt, v.Name, true)
-			val := validateAttribute(attCtx, vatt, put, "v."+fieldName, context+".value", true)
-			if val != "" {
-				types = append(types, tref+"_"+fieldName)
-				vals = append(vals, val)
+			if view {
+				val := validateAttribute(attCtx, vatt, put, "v", context+".value", true, view)
+				if val != "" {
+					types = append(types, attCtx.Scope.Ref(vatt, attCtx.DefaultPkg))
+					vals = append(vals, val)
+				}
+			} else {
+				fieldName := attCtx.Scope.Field(vatt, v.Name, true)
+				val := validateAttribute(attCtx, vatt, put, "v."+fieldName, context+".value", true, view)
+				if val != "" {
+					tref := attCtx.Scope.Ref(&expr.AttributeExpr{Type: put}, attCtx.DefaultPkg)
+					types = append(types, tref+"_"+fieldName)
+					vals = append(vals, val)
+				}
 			}
 		}
 		if len(vals) > 0 {
@@ -189,10 +201,10 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 	return buf
 }
 
-func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.UserType, target, context string, req bool) string {
+func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.UserType, target, context string, req, view bool) string {
 	ut, isUT := att.Type.(expr.UserType)
 	if !isUT {
-		code := recurseValidationCode(att, put, ctx, req, false, target, context, nil).String()
+		code := recurseValidationCode(att, put, ctx, req, false, view, target, context, nil).String()
 		if code == "" {
 			return ""
 		}
@@ -209,7 +221,7 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 		return fmt.Sprintf("%s%s\n}", cond, code)
 	}
 	if expr.IsAlias(ut) {
-		return recurseValidationCode(ut.Attribute(), put, ctx, req, true, target, context, nil).String()
+		return recurseValidationCode(ut.Attribute(), put, ctx, req, true, view, target, context, nil).String()
 	}
 	if !hasValidations(ctx, ut) {
 		return ""
@@ -234,6 +246,10 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 // req indicates whether the attribute is required (true) or optional (false)
 //
 // alias indicates whether the attribute is an alias user type attribute.
+//
+// view indicates whether the attribute is a view type attribute.
+// This only matters for union types: generated Goa view union types have a
+// different layout than proto generated union types.
 //
 // target is the variable name against which the validation code is generated
 //
