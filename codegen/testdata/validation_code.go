@@ -494,6 +494,57 @@ const (
 }
 `
 
+	UnionWithViewValidationCode = `func Validate() (err error) {
+	if target.RequiredUnion == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_union", "target"))
+	}
+	switch v := target.RequiredUnion.(type) {
+	case *Integer:
+		if v != nil {
+			if err2 := ValidateInteger(v); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+
+	case *Float:
+		if v != nil {
+			if err2 := ValidateFloat(v); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+
+	case *String:
+		if v != nil {
+			if err2 := ValidateString(v); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+	switch v := target.Union.(type) {
+	case *Integer:
+		if v != nil {
+			if err2 := ValidateInteger(v); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+
+	case *Float:
+		if v != nil {
+			if err2 := ValidateFloat(v); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+
+	case *String:
+		if v != nil {
+			if err2 := ValidateString(v); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+}
+`
+
 	ResultTypePointerValidationCode = `func Validate() (err error) {
 	if target.Required != nil {
 		if *target.Required < 10 {

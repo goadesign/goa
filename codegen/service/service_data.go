@@ -1688,7 +1688,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 					})
 					ctx = projectedTypeContext("", !expr.IsPrimitive(projected.Type), scope)
 				}
-				data["Validate"] = codegen.ValidationCode(&expr.AttributeExpr{Type: o, Validation: rt.Validation}, rt, ctx, true, false, "result")
+				data["Validate"] = codegen.ValidationCode(&expr.AttributeExpr{Type: o, Validation: rt.Validation}, rt, ctx, true, false, true, "result")
 				data["Fields"] = fields
 			}
 
@@ -1713,7 +1713,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 			Name:        name,
 			Description: fmt.Sprintf("%s runs the validations defined on %s.", name, tname),
 			Ref:         scope.GoTypeRef(projected),
-			Validate:    codegen.ValidationCode(ut.Attribute(), ut, ctx, true, expr.IsAlias(ut), "result"),
+			Validate:    codegen.ValidationCode(ut.Attribute(), ut, ctx, true, expr.IsAlias(ut), true, "result"),
 		})
 	}
 	return validations
