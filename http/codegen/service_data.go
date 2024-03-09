@@ -1067,7 +1067,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			}
 			if !mustValidate {
 				for _, q := range queryData {
-					if q.Validate != "" || q.Required || needConversion(q.Type) {
+					if q.Map || q.Validate != "" || q.Required || needConversion(q.Type) {
 						mustValidate = true
 						break
 					}

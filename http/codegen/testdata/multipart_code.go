@@ -161,12 +161,16 @@ func NewServiceMultipartWithParamMethodMultipartWithParamDecoder(mux goahttp.Mux
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							keyaRaw := keyRaw[openIdx+1 : closeIdx]
-							v, err2 := strconv.ParseInt(keyaRaw, 10, strconv.IntSize)
-							if err2 != nil {
-								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", keyaRaw, "integer"))
+							if closeIdx == -1 {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							} else {
+								keyaRaw := keyRaw[openIdx+1 : closeIdx]
+								v, err2 := strconv.ParseInt(keyaRaw, 10, strconv.IntSize)
+								if err2 != nil {
+									err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", keyaRaw, "integer"))
+								}
+								keya = int(v)
 							}
-							keya = int(v)
 						}
 						c2[keya] = valRaw
 					}
@@ -221,12 +225,16 @@ func NewServiceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersD
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							keyaRaw := keyRaw[openIdx+1 : closeIdx]
-							v, err2 := strconv.ParseInt(keyaRaw, 10, strconv.IntSize)
-							if err2 != nil {
-								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", keyaRaw, "integer"))
+							if closeIdx == -1 {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							} else {
+								keyaRaw := keyRaw[openIdx+1 : closeIdx]
+								v, err2 := strconv.ParseInt(keyaRaw, 10, strconv.IntSize)
+								if err2 != nil {
+									err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", keyaRaw, "integer"))
+								}
+								keya = int(v)
 							}
-							keya = int(v)
 						}
 						c2[keya] = valRaw
 					}
