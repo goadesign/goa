@@ -1009,6 +1009,10 @@ func NewMethodBodyInlineMapUserMapKeyTypeElemType(body map[*KeyTypeRequestBody]*
 	v := make(map[*servicebodyinlinemapuser.KeyType]*servicebodyinlinemapuser.ElemType, len(body))
 	for key, val := range body {
 		tk := unmarshalKeyTypeRequestBodyToServicebodyinlinemapuserKeyType(val)
+		if val == nil {
+			v[tk] = nil
+			continue
+		}
 		v[tk] = unmarshalElemTypeRequestBodyToServicebodyinlinemapuserElemType(val)
 	}
 	return v
