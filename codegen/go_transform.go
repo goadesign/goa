@@ -392,6 +392,10 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	for i, st := range srcUnion.Values {
 		sourceTypeRefs[i] = ta.TargetCtx.Scope.Ref(st.Attribute, ta.SourceCtx.Pkg(st.Attribute))
 	}
+	targetTypeRefs := make([]string, len(tgtUnion.Values))
+	for i, tt := range tgtUnion.Values {
+		targetTypeRefs[i] = ta.TargetCtx.Scope.Ref(tt.Attribute, ta.TargetCtx.Pkg(tt.Attribute))
+	}
 	targetTypeNames := make([]string, len(tgtUnion.Values))
 	for i, tt := range tgtUnion.Values {
 		targetTypeNames[i] = ta.TargetCtx.Scope.Name(tt.Attribute, ta.TargetCtx.Pkg(tt.Attribute), ta.TargetCtx.Pointer, ta.TargetCtx.Pointer)
@@ -403,6 +407,7 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	data := map[string]any{
 		"SourceTypeRefs": sourceTypeRefs,
 		"SourceTypes":    srcUnion.Values,
+		"TargetTypeRefs": targetTypeRefs,
 		"TargetTypes":    tgtUnion.Values,
 		"SourceVar":      sourceVar,
 		"TargetVar":      targetVar,
@@ -698,7 +703,8 @@ for key, val := range {{ .SourceVar }} {
 {{ end }}switch actual := {{ .SourceVar }}.(type) {
 	{{- range $i, $ref := .SourceTypeRefs }}
 	case {{ $ref }}:
-		{{- transformAttribute (index $.SourceTypes $i).Attribute (index $.TargetTypes $i).Attribute "actual" $.TargetVar false $.TransformAttrs -}}
+		{{- transformAttribute (index $.SourceTypes $i).Attribute (index $.TargetTypes $i).Attribute "actual" "obj" true $.TransformAttrs -}}
+		{{ $.TargetVar }} = obj
 	{{- end }}
 }
 `

@@ -1516,16 +1516,16 @@ func newResultOneof(vres *resultwithoneoftypeviews.ResultOneofView) *ResultOneof
 	if vres.Result != nil {
 		switch actual := vres.Result.(type) {
 		case *resultwithoneoftypeviews.TView:
-			res.Result = &T{
+			obj := &T{
 				Message: actual.Message,
 			}
-
+			res.Result = obj
 		case *resultwithoneoftypeviews.UView:
-			res.Result = &U{}
+			obj := &U{}
 			if actual.Item != nil {
-				res.Result.(*U).Item = transformResultwithoneoftypeviewsItemViewToItem(actual.Item)
+				obj.(*U).Item = transformResultwithoneoftypeviewsItemViewToItem(actual.Item)
 			}
-
+			res.Result = obj
 		}
 	}
 	return res
@@ -1538,16 +1538,16 @@ func newResultOneofView(res *ResultOneof) *resultwithoneoftypeviews.ResultOneofV
 	if res.Result != nil {
 		switch actual := res.Result.(type) {
 		case *T:
-			vres.Result = &resultwithoneoftypeviews.TView{
+			obj := &resultwithoneoftypeviews.TView{
 				Message: actual.Message,
 			}
-
+			vres.Result = obj
 		case *U:
-			vres.Result = &resultwithoneoftypeviews.UView{}
+			obj := &resultwithoneoftypeviews.UView{}
 			if actual.Item != nil {
-				vres.Result.(*resultwithoneoftypeviews.UView).Item = transformItemToResultwithoneoftypeviewsItemView(actual.Item)
+				obj.(*resultwithoneoftypeviews.UView).Item = transformItemToResultwithoneoftypeviewsItemView(actual.Item)
 			}
-
+			vres.Result = obj
 		}
 	}
 	return vres
