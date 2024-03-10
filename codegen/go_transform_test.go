@@ -432,6 +432,10 @@ const (
 		target.TypeMap = make(map[string]*SimpleMap, len(source.TypeMap))
 		for key, val := range source.TypeMap {
 			tk := key
+			if val == nil {
+				target.TypeMap[tk] = nil
+				continue
+			}
 			target.TypeMap[tk] = transformSimpleMapToSimpleMap(val)
 		}
 	}
@@ -613,6 +617,10 @@ const (
 		target.Recursive = make(map[string]*RecursiveMap, len(source.Recursive))
 		for key, val := range source.Recursive {
 			tk := key
+			if val == nil {
+				target.Recursive[tk] = nil
+				continue
+			}
 			target.Recursive[tk] = transformRecursiveMapToRecursiveMap(val)
 		}
 	}

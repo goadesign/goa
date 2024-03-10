@@ -72,24 +72,6 @@ func GoTransform(source, target *expr.AttributeExpr, sourceVar, targetVar string
 	return strings.TrimRight(code, "\n"), funcs, nil
 }
 
-// transformPrimitive returns the code to transform source primtive type to
-// target primitive type. It returns an error if source and target are not
-// compatible for transformation.
-func transformPrimitive(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
-	if err := IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
-		return "", err
-	}
-	assign := "="
-	if newVar {
-		assign = ":="
-	}
-	if source.Type.Name() != target.Type.Name() {
-		cast := ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target))
-		return fmt.Sprintf("%s %s %s(%s)\n", targetVar, assign, cast, sourceVar), nil
-	}
-	return fmt.Sprintf("%s %s %s\n", targetVar, assign, sourceVar), nil
-}
-
 // transformAttribute returns the code to transform source attribute to target
 // attribute. It returns an error if source and target are not compatible for
 // transformation.
@@ -110,6 +92,24 @@ func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 		code, err = transformPrimitive(source, target, sourceVar, targetVar, newVar, ta)
 	}
 	return
+}
+
+// transformPrimitive returns the code to transform source primtive type to
+// target primitive type. It returns an error if source and target are not
+// compatible for transformation.
+func transformPrimitive(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
+	if err := IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
+		return "", err
+	}
+	assign := "="
+	if newVar {
+		assign = ":="
+	}
+	if source.Type.Name() != target.Type.Name() {
+		cast := ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target))
+		return fmt.Sprintf("%s %s %s(%s)\n", targetVar, assign, cast, sourceVar), nil
+	}
+	return fmt.Sprintf("%s %s %s\n", targetVar, assign, sourceVar), nil
 }
 
 // transformObject generates Go code to transform source object to target
@@ -682,6 +682,10 @@ for key, val := range {{ .SourceVar }} {
   {{ transformAttribute .SourceKey .TargetKey "key" "tk" true .TransformAttrs -}}
 {{ end -}}
 {{ if .IsElemStruct -}}
+	if val == nil {
+		{{ .TargetVar }}[tk] = nil
+		continue
+	}
 	{{ .TargetVar }}[tk] = {{ transformHelperName .SourceElem .TargetElem .TransformAttrs -}}(val)
 {{ else -}}
 	{{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .LoopVar) true .TransformAttrs -}}
