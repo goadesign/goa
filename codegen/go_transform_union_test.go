@@ -91,8 +91,8 @@ const unionToUnionCode = `func transform() {
 	var target *UnionString2
 	switch actual := source.(type) {
 	case UnionStringString:
-		target = UnionString2String(actual)
-
+		obj := UnionString2String(actual)
+		target = obj
 	}
 }
 `
@@ -101,11 +101,11 @@ const unionMultiToUnionMultiCode = `func transform() {
 	var target *UnionStringInt2
 	switch actual := source.(type) {
 	case UnionStringIntString:
-		target = UnionStringInt2String(actual)
-
+		obj := UnionStringInt2String(actual)
+		target = obj
 	case UnionStringIntInt:
-		target = UnionStringInt2Int(actual)
-
+		obj := UnionStringInt2Int(actual)
+		target = obj
 	}
 }
 `
