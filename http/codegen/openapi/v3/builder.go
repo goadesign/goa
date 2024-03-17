@@ -122,16 +122,15 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 		if !openapi.MustGenerate(svc.Meta) || !openapi.MustGenerate(svc.ServiceExpr.Meta) {
 			continue
 		}
-
 		exts := openapi.ExtensionsFromExpr(svc.Meta)
 		sbod := bodies[svc.Name()]
 
 		// endpoints
 		for _, e := range svc.HTTPEndpoints {
+
 			if !openapi.MustGenerate(e.Meta) || !openapi.MustGenerate(e.MethodExpr.Meta) {
 				continue
 			}
-
 			for _, r := range e.Routes {
 				for _, key := range r.FullPaths() {
 					// Remove any wildcards that is defined in path as a workaround to
@@ -339,7 +338,9 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 			break
 		}
 	}
-
+	
+	// An endpoint may be marked as deprecated. if the openapi:deprecated tag is present, we populate it to true
+	_, is_deprecated := e.Meta.Last("openapi:deprecated")
 	return &Operation{
 		Tags:         tagNames,
 		Summary:      summary,
@@ -349,7 +350,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		RequestBody:  requestBody,
 		Responses:    responses,
 		Security:     buildSecurityRequirements(e.Requirements),
-		Deprecated:   false,
+		Deprecated:   is_deprecated,
 		ExternalDocs: openapi.DocsFromExpr(m.Docs, m.Meta),
 		Extensions:   openapi.ExtensionsFromExpr(m.Meta),
 	}
