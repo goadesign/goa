@@ -37,16 +37,16 @@ func Method(name string, fn func()) {
 	s.Methods = append(s.Methods, ep)
 }
 
-// Deprecated must appear in a Method expression.
+// Deprecated marks HTTP routes as deprecated in the generated OpenAPI specifications.
 //
-// Method takes no arguments. If called, it assumes that
-// the route is to be marked as deprecated.
-//
+// Deprecated must appear in a Method HTTP expression.
+// 
+// Deprecated takes no argument.
 // Example:
 //
 //	   Method("add", func() {
 //	    HTTP(func() {
-//				GET("/")
+//			GET("/")
 //				Deprecated()
 //			})
 //	   })
