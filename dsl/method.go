@@ -44,12 +44,12 @@ func Method(name string, fn func()) {
 // Deprecated takes no argument.
 // Example:
 //
-//	   Method("add", func() {
-//	    HTTP(func() {
-//			GET("/")
-//				Deprecated()
-//			})
-//	   })
+//    Method("add", func() {
+//        HTTP(func() {
+//            GET("/")
+//            Deprecated()
+//        })
+//    )
 func Deprecated() {
 	_, ok := eval.Current().(*expr.HTTPEndpointExpr)
 	if !ok {
