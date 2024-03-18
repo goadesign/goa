@@ -49,7 +49,7 @@ func Method(name string, fn func()) {
 //            GET("/")
 //            Deprecated()
 //        })
-//    )
+//    })
 func Deprecated() {
 	_, ok := eval.Current().(*expr.HTTPEndpointExpr)
 	if !ok {
