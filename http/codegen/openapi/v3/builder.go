@@ -340,7 +340,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	}
 	
 	// An endpoint may be marked as deprecated. if the openapi:deprecated tag is present, we populate it to true
-	_, isDeprecated := e.Meta.Last("openapi:deprecated")
+	_, deprecated := e.Meta.Last("openapi:deprecated")
 	return &Operation{
 		Tags:         tagNames,
 		Summary:      summary,
@@ -350,7 +350,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		RequestBody:  requestBody,
 		Responses:    responses,
 		Security:     buildSecurityRequirements(e.Requirements),
-		Deprecated:   isDeprecated,
+		Deprecated:   deprecated,
 		ExternalDocs: openapi.DocsFromExpr(m.Docs, m.Meta),
 		Extensions:   openapi.ExtensionsFromExpr(m.Meta),
 	}
