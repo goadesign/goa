@@ -118,6 +118,7 @@ func TestBuildOperation(t *testing.T) {
 		DSL  func()
 
 		ExpectedDescription string
+		ExpectedDeprecated bool
 		ExpectedParameters  []param
 		ExpectedRequestBody *requestBody
 		ExpectedResponses   map[string]response
@@ -126,50 +127,64 @@ func TestBuildOperation(t *testing.T) {
 		DSL:  dsls.DescOnly(svcName, "desc_only", "desc"),
 
 		ExpectedDescription: "desc",
+		ExpectedDeprecated: false,
+		ExpectedResponses:   responses{"204": {Description: "No Content response."}},
+	}, {
+		Name: "deprecated_only",
+		DSL: dsls.DeprecatedOnly(svcName, "deprecated_only"),
+		ExpectedDeprecated: true,
 		ExpectedResponses:   responses{"204": {Description: "No Content response."}},
 	}, {
 		Name: "request_string_body",
 		DSL:  dsls.RequestStringBody(svcName, "request_string_body"),
 
+		ExpectedDeprecated: false,
 		ExpectedRequestBody: &requestBody{"body", tstring, true},
 		ExpectedResponses:   responses{"204": {Description: "No Content response."}},
 	}, {
 		Name: "request_object_body",
 		DSL:  dsls.RequestObjectBody(svcName, "request_object_body"),
 
+		ExpectedDeprecated: false,
 		ExpectedRequestBody: &requestBody{"", tobj("name", tstring), true},
 		ExpectedResponses:   responses{"204": {Description: "No Content response."}},
 	}, {
 		Name: "request_streaming_string_body",
 		DSL:  dsls.RequestObjectBody(svcName, "request_streaming_string_body"),
 
+		ExpectedDeprecated: false,
 		ExpectedRequestBody: &requestBody{"", tobj("name", tstring), true},
 		ExpectedResponses:   responses{"204": {Description: "No Content response."}},
 	}, {
 		Name: "request_map_params",
 		DSL:  dsls.RequestMapParams(svcName, "request_map_params"),
 
+		ExpectedDeprecated: false,
 		ExpectedParameters: []param{{Name: "param", In: "query", Description: "Query parameters", Style: "deepObject", Type: tobj()}},
 		ExpectedResponses:  responses{"204": {Description: "No Content response."}},
 	}, {
 		Name: "response_array_of_string",
 		DSL:  dsls.ResponseArrayOfString(svcName, "response_array_of_string"),
-
+		
+		ExpectedDeprecated: false,
 		ExpectedResponses: responses{"200": {"OK response.", tobj("result", tobj("children", tarray)), nil}},
 	}, {
 		Name: "response_recursive_user_type",
 		DSL:  dsls.ResponseRecursiveUserType(svcName, "response_recursive_user_type"),
 
+		ExpectedDeprecated: false,
 		ExpectedResponses: responses{"200": {"OK response.", tobj("recursive", tobj()), nil}},
 	}, {
 		Name: "response_recursive_array_user_type",
 		DSL:  dsls.ResponseRecursiveArrayUserType(svcName, "response_recursive_array_user_type"),
 
+		ExpectedDeprecated: false,
 		ExpectedResponses: responses{"200": {"OK response.", tobj("result", tobj("children", tarray)), nil}},
 	}, {
 		Name: "response_skip_response_body_encode_decode",
 		DSL:  dsls.ResponseSkipResponseBodyEncodeDecode(svcName, "response_skip_response_body_encode_decode"),
 
+		ExpectedDeprecated: false,
 		ExpectedResponses: responses{"200": {"OK response.", tbinary, nil}},
 	}}
 	for _, c := range cases {
@@ -223,6 +238,11 @@ func TestBuildOperation(t *testing.T) {
 				t.Errorf("got %d parameters, expected %d", len(op.Parameters), len(c.ExpectedParameters))
 				return
 			}
+
+			if op.Deprecated != c.ExpectedDeprecated {
+				t.Errorf("got %t deprecated, expected %t", op.Deprecated, c.ExpectedDeprecated)
+			}
+
 			for i, p := range op.Parameters {
 				matchesParameter(t, p, types, c.ExpectedParameters[i])
 			}

@@ -15,6 +15,19 @@ var DescOnly = func(svc, met, desc string) func() {
 	}
 }
 
+var DeprecatedOnly = func(svc, met string) func() {
+	return func() {
+		var _ = Service(svc, func() {
+			Method(met, func() {
+				HTTP(func() {
+					GET("/")
+					Deprecated()
+				})
+			})
+		})
+	}
+}
+
 var RequestStringBody = func(svc, met string) func() {
 	return func() {
 		var _ = Service(svc, func() {

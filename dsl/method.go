@@ -36,3 +36,25 @@ func Method(name string, fn func()) {
 	ep := &expr.MethodExpr{Name: name, Service: s, DSLFunc: fn}
 	s.Methods = append(s.Methods, ep)
 }
+
+// Deprecated marks HTTP routes as deprecated in the generated OpenAPI specifications.
+//
+// Deprecated must appear in a Method HTTP expression.
+// 
+// Deprecated takes no argument.
+// Example:
+//
+//    Method("add", func() {
+//        HTTP(func() {
+//            GET("/")
+//            Deprecated()
+//        })
+//    })
+func Deprecated() {
+	_, ok := eval.Current().(*expr.HTTPEndpointExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	Meta("openapi:deprecated", "true")
+}
