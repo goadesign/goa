@@ -550,7 +550,7 @@ func buildSecurityRequirements(reqs []*expr.SecurityExpr) []map[string][]string 
 	for i, req := range reqs {
 		sr := make(map[string][]string, len(req.Schemes))
 		for _, sch := range req.Schemes {
-			scopes := []string{}
+			scopes := make([]string, 0) 
 			switch sch.Kind {
 			case expr.OAuth2Kind, expr.JWTKind:
 				if len(req.Scopes) > 0 {
