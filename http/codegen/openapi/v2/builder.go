@@ -639,7 +639,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			}
 			requirements[i] = requirement
 		}
-		_, is_deprecated := endpoint.MethodExpr.Meta.Last("openapi:deprecated")
+		_, isDeprecated := endpoint.MethodExpr.Meta.Last("openapi:deprecated")
 		operation := &Operation{
 			Tags:         tagNames,
 			Description:  description,
@@ -651,7 +651,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			Produces:     produces,
 			Responses:    responses,
 			Schemes:      schemes,
-			Deprecated:   is_deprecated,
+			Deprecated:   isDeprecated,
 			Extensions:   openapi.ExtensionsFromExpr(endpoint.MethodExpr.Meta),
 			Security:     requirements,
 		}
