@@ -504,3 +504,24 @@ message MethodRequest {
 message MethodResponse {
 }
 `
+
+const CustomMessageNamePackageCode = `
+syntax = "proto3";
+
+package custom_message_name;
+
+option go_package = "/custom_message_namepb";
+
+// Service is the CustomMessageName service interface.
+service CustomMessageName {
+	// Unary implements Unary.
+	rpc Unary (CustomType) returns (CustomType);
+	// Stream implements Stream.
+	rpc Stream (stream CustomType) returns (stream CustomType);
+}
+
+message CustomType {
+	optional sint32 a = 1;
+	optional string b = 2;
+}
+`

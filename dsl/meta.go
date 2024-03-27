@@ -103,6 +103,15 @@ import (
 //	    })
 //	})
 //
+// - "struct:name:proto" overrides the generated protobuf message name. Applicable
+// to Type and ResultType only.
+//
+//	var MyType = Type("MyType", func() {
+//	    Meta("struct:name:proto", "MyProtoType")
+//	    Field(1, "name", String)
+//	    Field(2, "age", Int32)
+//	})
+//
 // - "struct:tag:xxx" sets a generated Go struct field tag and overrides tags
 // that Goa would otherwise set. If the metadata value is a slice then the
 // strings are joined with the space character as separator. Applicable to
