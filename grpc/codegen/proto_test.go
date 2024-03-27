@@ -27,6 +27,7 @@ func TestProtoFiles(t *testing.T) {
 		{"protofiles-custom-package-name", testdata.ServiceWithPackageDSL, testdata.ServiceWithPackageCode},
 		{"protofiles-struct-meta-type", testdata.StructMetaTypeDSL, testdata.StructMetaTypePackageCode},
 		{"protofiles-default-fields", testdata.DefaultFieldsDSL, testdata.DefaultFieldsPackageCode},
+		{"protofiles-custom-message-name", testdata.CustomMessageNameDSL, testdata.CustomMessageNamePackageCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
