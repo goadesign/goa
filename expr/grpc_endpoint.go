@@ -333,7 +333,7 @@ func (e *GRPCEndpointExpr) Finalize() {
 			}
 		}
 		if ut, ok := e.MethodExpr.Payload.Type.(UserType); ok {
-			// merge Meta defined in the method result type with the response
+			// merge Meta defined in the method payload type with the request
 			if ut.Attribute().Meta != nil {
 				if e.Request.Meta == nil {
 					e.Request.Meta = ut.Attribute().Meta
