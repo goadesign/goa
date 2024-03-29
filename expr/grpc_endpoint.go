@@ -332,6 +332,16 @@ func (e *GRPCEndpointExpr) Finalize() {
 				nat.Attribute.Meta.Merge(patt.Meta)
 			}
 		}
+		if ut, ok := e.MethodExpr.Payload.Type.(UserType); ok {
+			// merge Meta defined in the method payload type with the request
+			if ut.Attribute().Meta != nil {
+				if e.Request.Meta == nil {
+					e.Request.Meta = ut.Attribute().Meta
+				} else {
+					e.Request.Meta.Merge(ut.Attribute().Meta)
+				}
+			}
+		}
 	} else {
 		// method payload is not an object type.
 		if e.MethodExpr.StreamingPayload.Type != Empty {

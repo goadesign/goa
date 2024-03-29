@@ -487,8 +487,12 @@ func (ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			}
 			// lookup message in sd.Messages
 			if ut, ok := att.Type.(expr.UserType); ok {
+				name := ut.Name()
+				if n := att.Meta["struct:name:proto"]; n != nil {
+					name = n[0]
+				}
 				for _, t := range sd.Messages {
-					if t.Name == ut.Name() {
+					if t.Name == name {
 						return t
 					}
 				}
@@ -678,19 +682,23 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 	}
 	switch dt := at.Type.(type) {
 	case expr.UserType:
-		if _, ok := seen[dt.Name()]; ok {
+		name := dt.Name()
+		if n := at.Meta["struct:name:proto"]; n != nil {
+			name = n[0]
+		}
+		if _, ok := seen[name]; ok {
 			return
 		}
 		att := userTypeAttribute(dt)
 		data = append(data, &service.UserTypeData{
-			Name:        dt.Name(),
+			Name:        name,
 			VarName:     protoBufMessageName(at, sd.Scope),
 			Description: dt.Attribute().Description,
 			Def:         protoBufMessageDef(att, sd),
 			Ref:         protoBufGoFullTypeRef(at, sd.PkgName, sd.Scope),
 			Type:        dt,
 		})
-		seen[dt.Name()] = struct{}{}
+		seen[name] = struct{}{}
 		d, i := collect(att)
 		data, imports = append(data, d...), append(imports, i...)
 	case *expr.Object:

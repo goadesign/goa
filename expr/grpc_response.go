@@ -186,6 +186,16 @@ func (r *GRPCResponseExpr) Finalize(a *GRPCEndpointExpr, svcAtt *AttributeExpr) 
 				nat.Attribute.Meta.Merge(svcAtt.Meta)
 			}
 		}
+		if ut, ok := svcAtt.Type.(UserType); ok {
+			// merge Meta defined in the method result type with the response
+			if ut.Attribute().Meta != nil {
+				if r.Message.Meta == nil {
+					r.Message.Meta = ut.Attribute().Meta
+				} else {
+					r.Message.Meta.Merge(ut.Attribute().Meta)
+				}
+			}
+		}
 	} else {
 		// method result is not an object type. Initialize response header or
 		// trailer metadata if defined or else initialize response message.
