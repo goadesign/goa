@@ -52,6 +52,14 @@ var DisallowResponseBodyHeadDSL = func() {
 	})
 }
 
+var InvalidRouteDSL = func() {
+	Service("InvalidRoute", func() {
+		HTTP(func() {
+			POST("/{id}")
+		})
+	})
+}
+
 var EndpointWithParentDSL = func() {
 	Service("Parent", func() {
 		Method("show", func() {
