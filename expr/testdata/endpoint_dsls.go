@@ -22,7 +22,7 @@ var ValidRouteDSL = func() {
 }
 
 var DuplicateWCRouteDSL = func() {
-	Service("InvalidRoute", func() {
+	Service("DuplicateWCRoute", func() {
 		HTTP(func() {
 			Path("/{id}")
 		})

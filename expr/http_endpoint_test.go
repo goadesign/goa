@@ -15,7 +15,7 @@ func TestHTTPRouteValidation(t *testing.T) {
 		Error string
 	}{
 		{"valid", testdata.ValidRouteDSL, ""},
-		{"invalid", testdata.DuplicateWCRouteDSL, `route POST "/{id}" of service "InvalidRoute" HTTP endpoint "Method": Wildcard "id" appears multiple times in full path "/{id}/{id}"`},
+		{"duplicate-wc-route", testdata.DuplicateWCRouteDSL, `route POST "/{id}" of service "DuplicateWCRoute" HTTP endpoint "Method": Wildcard "id" appears multiple times in full path "/{id}/{id}"`},
 		{"disallow-response-body", testdata.DisallowResponseBodyHeadDSL, `route HEAD "/" of service "DisallowResponseBody" HTTP endpoint "Method": HTTP status 200: Response body defined for HEAD method which does not allow response body.
 route HEAD "/" of service "DisallowResponseBody" HTTP endpoint "Method": HTTP status 404: Response body defined for HEAD method which does not allow response body.`,
 		},
