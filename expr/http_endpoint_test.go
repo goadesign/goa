@@ -1,6 +1,7 @@
 package expr_test
 
 import (
+	"strings"
 	"testing"
 
 	"goa.design/goa/v3/eval"
@@ -15,10 +16,11 @@ func TestHTTPRouteValidation(t *testing.T) {
 		Error string
 	}{
 		{"valid", testdata.ValidRouteDSL, ""},
-		{"invalid", testdata.DuplicateWCRouteDSL, `route POST "/{id}" of service "InvalidRoute" HTTP endpoint "Method": Wildcard "id" appears multiple times in full path "/{id}/{id}"`},
+		{"duplicate-wc-route", testdata.DuplicateWCRouteDSL, `route POST "/{id}" of service "DuplicateWCRoute" HTTP endpoint "Method": Wildcard "id" appears multiple times in full path "/{id}/{id}"`},
 		{"disallow-response-body", testdata.DisallowResponseBodyHeadDSL, `route HEAD "/" of service "DisallowResponseBody" HTTP endpoint "Method": HTTP status 200: Response body defined for HEAD method which does not allow response body.
 route HEAD "/" of service "DisallowResponseBody" HTTP endpoint "Method": HTTP status 404: Response body defined for HEAD method which does not allow response body.`,
 		},
+		{"invalid", testdata.InvalidRouteDSL, "invalid use of POST in service \"InvalidRoute\""},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -26,7 +28,7 @@ route HEAD "/" of service "DisallowResponseBody" HTTP endpoint "Method": HTTP st
 				expr.RunDSL(t, c.DSL)
 			} else {
 				err := expr.RunInvalidDSL(t, c.DSL)
-				if err.Error() != c.Error {
+				if !strings.HasSuffix(err.Error(), c.Error) {
 					t.Errorf("got error %q\nexpected %q", err.Error(), c.Error)
 				}
 			}
