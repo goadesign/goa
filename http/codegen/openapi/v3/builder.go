@@ -356,7 +356,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	}
 }
 
-// buildOperation builds the OpenAPI Operation object for the given file server.
+// buildFileServerOperation builds the OpenAPI Operation object for the given file server.
 func buildFileServerOperation(key string, fs *expr.HTTPFileServerExpr, api *expr.APIExpr) *Operation {
 	wildcards := expr.ExtractHTTPWildcards(key)
 	svc := fs.Service

@@ -480,7 +480,7 @@ func removeAttribute(attr *MappedAttributeExpr, name string) {
 	}
 }
 
-// extendedBodyAttribute returns an attribute describing the HTTP
+// extendBodyAttribute returns an attribute describing the HTTP
 // request/response body type by merging any Bases and References to the parent
 // attribute. This must be invoked during validation or to determine the actual
 // body type by removing any headers/params/cookies.
