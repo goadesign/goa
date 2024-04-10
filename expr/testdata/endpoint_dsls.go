@@ -22,7 +22,7 @@ var ValidRouteDSL = func() {
 }
 
 var DuplicateWCRouteDSL = func() {
-	Service("InvalidRoute", func() {
+	Service("DuplicateWCRoute", func() {
 		HTTP(func() {
 			Path("/{id}")
 		})
@@ -48,6 +48,14 @@ var DisallowResponseBodyHeadDSL = func() {
 				HEAD("/")
 				Response("not_found", StatusNotFound)
 			})
+		})
+	})
+}
+
+var InvalidRouteDSL = func() {
+	Service("InvalidRoute", func() {
+		HTTP(func() {
+			POST("/{id}")
 		})
 	})
 }
