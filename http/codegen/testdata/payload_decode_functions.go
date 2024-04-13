@@ -3688,6 +3688,7 @@ func DecodeMethodCookieStringDefaultValidateRequest(mux goahttp.Muxer, decoder f
 	}
 }
 `
+
 var PayloadCookiePrimitiveStringDefaultDecodeCode = `// DecodeMethodCookiePrimitiveStringDefaultRequest returns a decoder for
 // requests sent to the ServiceCookiePrimitiveStringDefault
 // MethodCookiePrimitiveStringDefault endpoint.
@@ -5125,8 +5126,9 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 			}
 			path = uint(v)
 		}
+		qp := r.URL.Query()
 		{
-			optionalRaw := r.URL.Query().Get("optional")
+			optionalRaw := qp.Get("optional")
 			if optionalRaw != "" {
 				v, err2 := strconv.ParseInt(optionalRaw, 10, strconv.IntSize)
 				if err2 != nil {
@@ -5137,7 +5139,7 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 			}
 		}
 		{
-			optionalButRequiredParamRaw := r.URL.Query().Get("optional_but_required_param")
+			optionalButRequiredParamRaw := qp.Get("optional_but_required_param")
 			if optionalButRequiredParamRaw == "" {
 				err = goa.MergeErrors(err, goa.MissingFieldError("optional_but_required_param", "query string"))
 			}
@@ -5182,8 +5184,9 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 			int64_ *int64
 			err    error
 		)
+		qp := r.URL.Query()
 		{
-			int_Raw := r.URL.Query().Get("int")
+			int_Raw := qp.Get("int")
 			if int_Raw != "" {
 				v, err2 := strconv.ParseInt(int_Raw, 10, strconv.IntSize)
 				if err2 != nil {
@@ -5194,7 +5197,7 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 			}
 		}
 		{
-			int32_Raw := r.URL.Query().Get("int32")
+			int32_Raw := qp.Get("int32")
 			if int32_Raw != "" {
 				v, err2 := strconv.ParseInt(int32_Raw, 10, 32)
 				if err2 != nil {
@@ -5205,7 +5208,7 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 			}
 		}
 		{
-			int64_Raw := r.URL.Query().Get("int64")
+			int64_Raw := qp.Get("int64")
 			if int64_Raw != "" {
 				v, err2 := strconv.ParseInt(int64_Raw, 10, 64)
 				if err2 != nil {
@@ -5234,8 +5237,9 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 			int64_ *int64
 			err    error
 		)
+		qp := r.URL.Query()
 		{
-			int_Raw := r.URL.Query().Get("int")
+			int_Raw := qp.Get("int")
 			if int_Raw != "" {
 				v, err2 := strconv.ParseInt(int_Raw, 10, strconv.IntSize)
 				if err2 != nil {
@@ -5251,7 +5255,7 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 			}
 		}
 		{
-			int32_Raw := r.URL.Query().Get("int32")
+			int32_Raw := qp.Get("int32")
 			if int32_Raw != "" {
 				v, err2 := strconv.ParseInt(int32_Raw, 10, 32)
 				if err2 != nil {
@@ -5267,7 +5271,7 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 			}
 		}
 		{
-			int64_Raw := r.URL.Query().Get("int64")
+			int64_Raw := qp.Get("int64")
 			if int64_Raw != "" {
 				v, err2 := strconv.ParseInt(int64_Raw, 10, 64)
 				if err2 != nil {
@@ -5360,6 +5364,7 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 	}
 }
 `
+
 var QueryMapAliasDecodeCode = `// DecodeMethodARequest returns a decoder for requests sent to the
 // ServiceQueryMapAlias MethodA endpoint.
 func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
@@ -5718,6 +5723,7 @@ func DecodeMethodPathCustomInt32Request(mux goahttp.Muxer, decoder func(*http.Re
 	}
 }
 `
+
 var PayloadPathCustomInt64DecodeCode = `// DecodeMethodPathCustomInt64Request returns a decoder for requests sent to
 // the ServicePathCustomInt64 MethodPathCustomInt64 endpoint.
 func DecodeMethodPathCustomInt64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
@@ -5745,6 +5751,7 @@ func DecodeMethodPathCustomInt64Request(mux goahttp.Muxer, decoder func(*http.Re
 	}
 }
 `
+
 var PayloadPathCustomUIntDecodeCode = `// DecodeMethodPathCustomUIntRequest returns a decoder for requests sent to the
 // ServicePathCustomUInt MethodPathCustomUInt endpoint.
 func DecodeMethodPathCustomUIntRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
@@ -5772,6 +5779,7 @@ func DecodeMethodPathCustomUIntRequest(mux goahttp.Muxer, decoder func(*http.Req
 	}
 }
 `
+
 var PayloadPathCustomUInt32DecodeCode = `// DecodeMethodPathCustomUInt32Request returns a decoder for requests sent to
 // the ServicePathCustomUInt32 MethodPathCustomUInt32 endpoint.
 func DecodeMethodPathCustomUInt32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
@@ -5799,6 +5807,7 @@ func DecodeMethodPathCustomUInt32Request(mux goahttp.Muxer, decoder func(*http.R
 	}
 }
 `
+
 var PayloadPathCustomUInt64DecodeCode = `// DecodeMethodPathCustomUInt64Request returns a decoder for requests sent to
 // the ServicePathCustomUInt64 MethodPathCustomUInt64 endpoint.
 func DecodeMethodPathCustomUInt64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
