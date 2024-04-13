@@ -213,7 +213,7 @@ func protoBufFullMessageName(att *expr.AttributeExpr, pkg string, s *codegen.Nam
 	}
 }
 
-// protoBufGoFullTypeName returns the protocol buffer type name for the given
+// protoBufGoTypeName returns the protocol buffer type name for the given
 // attribute generated after compiling the proto file (in *.pb.go).
 func protoBufGoTypeName(att *expr.AttributeExpr, s *codegen.NameScope) string {
 	return protoBufGoFullTypeName(att, "", s)
