@@ -13,17 +13,16 @@ import (
 //
 // Example:
 //
-//    Method("add", func() {
-//        Description("The add method returns the sum of A and B")
-//        Docs(func() {
-//            Description("Add docs")
-//            URL("http//adder.goa.design/docs/endpoints/add")
-//        })
-//        Payload(Operands)
-//        Result(Sum)
-//        Error(ErrInvalidOperands)
-//    })
-//
+//	Method("add", func() {
+//	    Description("The add method returns the sum of A and B")
+//	    Docs(func() {
+//	        Description("Add docs")
+//	        URL("http//adder.goa.design/docs/endpoints/add")
+//	    })
+//	    Payload(Operands)
+//	    Result(Sum)
+//	    Error(ErrInvalidOperands)
+//	})
 func Method(name string, fn func()) {
 	if name == "" {
 		eval.ReportError("method name cannot be empty")
@@ -40,16 +39,16 @@ func Method(name string, fn func()) {
 // Deprecated marks HTTP routes as deprecated in the generated OpenAPI specifications.
 //
 // Deprecated must appear in a Method HTTP expression.
-// 
+//
 // Deprecated takes no argument.
 // Example:
 //
-//    Method("add", func() {
-//        HTTP(func() {
-//            GET("/")
-//            Deprecated()
-//        })
-//    })
+//	Method("add", func() {
+//	    HTTP(func() {
+//	        GET("/")
+//	        Deprecated()
+//	    })
+//	})
 func Deprecated() {
 	_, ok := eval.Current().(*expr.HTTPEndpointExpr)
 	if !ok {

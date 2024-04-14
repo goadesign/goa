@@ -14,10 +14,9 @@ import (
 //
 // Example:
 //
-//    API("adder", func() {
-//        Description("Adder API")
-//    })
-//
+//	API("adder", func() {
+//	    Description("Adder API")
+//	})
 func Description(d string) {
 	switch e := eval.Current().(type) {
 	case *expr.APIExpr:

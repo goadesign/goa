@@ -112,8 +112,7 @@ func view(name string, params ...any) *ViewExpr {
 // tests. The arguments is a list of attribute name and type pairs followed by a
 // list of view expressions, e.g.:
 //
-//    resultType("attr1", String, "attr2", Int, view1, view2)
-//
+//	resultType("attr1", String, "attr2", Int, view1, view2)
 func resultType(params ...any) *ResultTypeExpr {
 	var (
 		views []*ViewExpr

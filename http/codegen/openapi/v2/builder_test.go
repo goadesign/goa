@@ -55,12 +55,12 @@ func TestBuildPathFromFileServer(t *testing.T) {
 func TestBuildPathFromExpr(t *testing.T) {
 	cases := map[string]struct {
 		multipartRequest bool
-		deprecated bool
+		deprecated       bool
 		expected         Operation
 	}{
 		"multipart request": {
 			multipartRequest: true,
-			deprecated: false,
+			deprecated:       false,
 			expected: Operation{
 				Deprecated: false,
 				Consumes:   []string{"multipart/form-data"},
@@ -69,7 +69,7 @@ func TestBuildPathFromExpr(t *testing.T) {
 		},
 		"non multipart request": {
 			multipartRequest: false,
-			deprecated: true,
+			deprecated:       true,
 			expected: Operation{
 				Deprecated: true,
 				Consumes:   nil,
@@ -108,10 +108,10 @@ func TestBuildPathFromExpr(t *testing.T) {
 						Type: expr.String,
 					},
 					MultipartRequest: tc.multipartRequest,
-					Meta: expr.MetaExpr{},
+					Meta:             expr.MetaExpr{},
 				},
 			}
-			
+
 			if tc.deprecated {
 				route.Endpoint.Meta["openapi:deprecated"] = []string{"true"}
 			}

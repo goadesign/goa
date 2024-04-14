@@ -30,16 +30,16 @@ import (
 // the Close method once the request completes. The middleware takes care of
 // closing the top level segment. Typical usage:
 //
-//     if s := ctx.Value(SegKey); s != nil {
-//       segment := s.(*xray.Segment)
-//     }
-//     sub := segment.NewSubsegment("external-service")
-//     defer sub.Close()
-//     err := client.MakeRequest()
-//     if err != nil {
-//         sub.Error = xray.Wrap(err)
-//     }
-//     return
+//	if s := ctx.Value(SegKey); s != nil {
+//	  segment := s.(*xray.Segment)
+//	}
+//	sub := segment.NewSubsegment("external-service")
+//	defer sub.Close()
+//	err := client.MakeRequest()
+//	if err != nil {
+//	    sub.Error = xray.Wrap(err)
+//	}
+//	return
 //
 // An X-Ray trace is limited to 500 KB of segment data (JSON) being submitted
 // for it. See: https://aws.amazon.com/xray/pricing/

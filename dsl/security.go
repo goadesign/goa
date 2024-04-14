@@ -14,10 +14,9 @@ import (
 //
 // Example:
 //
-//     var Basic = BasicAuthSecurity("basicauth", func() {
-//         Description("Use your own password!")
-//     })
-//
+//	var Basic = BasicAuthSecurity("basicauth", func() {
+//	    Description("Use your own password!")
+//	})
 func BasicAuthSecurity(name string, fn ...func()) *expr.SchemeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
@@ -54,10 +53,9 @@ func BasicAuthSecurity(name string, fn ...func()) *expr.SchemeExpr {
 //
 // Example:
 //
-//    var APIKey = APIKeySecurity("key", func() {
-//          Description("Shared secret")
-//    })
-//
+//	var APIKey = APIKeySecurity("key", func() {
+//	      Description("Shared secret")
+//	})
 func APIKeySecurity(name string, fn ...func()) *expr.SchemeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
@@ -96,13 +94,12 @@ func APIKeySecurity(name string, fn ...func()) *expr.SchemeExpr {
 //
 // Example:
 //
-//    var OAuth2 = OAuth2Security("googauth", func() {
-//        ImplicitFlow("/authorization")
+//	var OAuth2 = OAuth2Security("googauth", func() {
+//	    ImplicitFlow("/authorization")
 //
-//        Scope("api:write", "Write acess")
-//        Scope("api:read", "Read access")
-//    })
-//
+//	    Scope("api:write", "Write acess")
+//	    Scope("api:read", "Read access")
+//	})
 func OAuth2Security(name string, fn ...func()) *expr.SchemeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
@@ -146,11 +143,10 @@ func OAuth2Security(name string, fn ...func()) *expr.SchemeExpr {
 //
 // Example:
 //
-//    var JWT = JWTSecurity("jwt", func() {
-//        Scope("system:write", "Write to the system")
-//        Scope("system:read", "Read anything in there")
-//    })
-//
+//	var JWT = JWTSecurity("jwt", func() {
+//	    Scope("system:write", "Write to the system")
+//	    Scope("system:read", "Read anything in there")
+//	})
 func JWTSecurity(name string, fn ...func()) *expr.SchemeExpr {
 	if _, ok := eval.Current().(eval.TopExpr); !ok {
 		eval.IncompatibleDSL()
@@ -198,39 +194,38 @@ func JWTSecurity(name string, fn ...func()) *expr.SchemeExpr {
 //
 // Examples:
 //
-//    var _ = Service("calculator", func() {
-//        // Override default API security requirements. Accept either basic
-//        // auth or OAuth2 access token with "api:read" scope.
-//        Security(BasicAuth)
-//        Security("oauth2", func() {
-//            Scope("api:read")
-//        })
+//	var _ = Service("calculator", func() {
+//	    // Override default API security requirements. Accept either basic
+//	    // auth or OAuth2 access token with "api:read" scope.
+//	    Security(BasicAuth)
+//	    Security("oauth2", func() {
+//	        Scope("api:read")
+//	    })
 //
-//        Method("add", func() {
-//            Description("Add two operands")
+//	    Method("add", func() {
+//	        Description("Add two operands")
 //
-//            // Override default service security requirements. Require
-//            // both basic auth and OAuth2 access token with "api:write"
-//            // scope.
-//            Security(BasicAuth, "oauth2", func() {
-//                Scope("api:write")
-//            })
+//	        // Override default service security requirements. Require
+//	        // both basic auth and OAuth2 access token with "api:write"
+//	        // scope.
+//	        Security(BasicAuth, "oauth2", func() {
+//	            Scope("api:write")
+//	        })
 //
-//            Payload(Operands)
-//            Error(ErrBadRequest, ErrorResult)
-//        })
+//	        Payload(Operands)
+//	        Error(ErrBadRequest, ErrorResult)
+//	    })
 //
-//        Method("health-check", func() {
-//            Description("Check health")
+//	    Method("health-check", func() {
+//	        Description("Check health")
 //
-//            // Remove need for authorization for this endpoint.
-//            NoSecurity()
+//	        // Remove need for authorization for this endpoint.
+//	        NoSecurity()
 //
-//            Payload(Operands)
-//            Error(ErrBadRequest, ErrorResult)
-//        })
-//    })
-//
+//	        Payload(Operands)
+//	        Error(ErrBadRequest, ErrorResult)
+//	    })
+//	})
 func Security(args ...any) {
 	var dsl func()
 	{
@@ -315,18 +310,17 @@ func NoSecurity() {
 //
 // Example:
 //
-//    Method("login", func() {
-//        Security(Basic)
-//        Payload(func() {
-//            Username("user", String)
-//            Password("pass", String)
-//        })
-//        HTTP(func() {
-//            // The "Authorization" header is defined implicitly.
-//            POST("/login")
-//        })
-//    })
-//
+//	Method("login", func() {
+//	    Security(Basic)
+//	    Payload(func() {
+//	        Username("user", String)
+//	        Password("pass", String)
+//	    })
+//	    HTTP(func() {
+//	        // The "Authorization" header is defined implicitly.
+//	        POST("/login")
+//	    })
+//	})
 func Username(name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:username") })
 	Attribute(name, args...)
@@ -337,7 +331,6 @@ func Username(name string, args ...any) {
 //
 // UsernameField takes the same arguments as Username with the addition of the
 // tag value as the first argument.
-//
 func UsernameField(tag any, name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:username") })
 	Field(tag, name, args...)
@@ -354,18 +347,17 @@ func UsernameField(tag any, name string, args ...any) {
 //
 // Example:
 //
-//    Method("login", func() {
-//        Security(Basic)
-//        Payload(func() {
-//            Username("user", String)
-//            Password("pass", String)
-//        })
-//        HTTP(func() {
-//            // The "Authorization" header is defined implicitly.
-//            POST("/login")
-//        })
-//    })
-//
+//	Method("login", func() {
+//	    Security(Basic)
+//	    Payload(func() {
+//	        Username("user", String)
+//	        Password("pass", String)
+//	    })
+//	    HTTP(func() {
+//	        // The "Authorization" header is defined implicitly.
+//	        POST("/login")
+//	    })
+//	})
 func Password(name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:password") })
 	Attribute(name, args...)
@@ -376,7 +368,6 @@ func Password(name string, args ...any) {
 //
 // PasswordField takes the same arguments as Password with the addition of the
 // tag value as the first argument.
-//
 func PasswordField(tag any, name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:password") })
 	Field(tag, name, args...)
@@ -394,32 +385,31 @@ func PasswordField(tag any, name string, args ...any) {
 //
 // Example:
 //
-//    Method("secured_read", func() {
-//        Security(APIKeyAuth)
-//        Payload(func() {
-//            APIKey("api_key", "key", String, "API key used to perform authorization")
-//            Required("key")
-//        })
-//        Result(String)
-//        HTTP(func() {
-//            GET("/")
-//            Param("key:k") // Provide the key as a query string param "k"
-//        })
-//    })
+//	Method("secured_read", func() {
+//	    Security(APIKeyAuth)
+//	    Payload(func() {
+//	        APIKey("api_key", "key", String, "API key used to perform authorization")
+//	        Required("key")
+//	    })
+//	    Result(String)
+//	    HTTP(func() {
+//	        GET("/")
+//	        Param("key:k") // Provide the key as a query string param "k"
+//	    })
+//	})
 //
-//    Method("secured_write", func() {
-//        Security(APIKeyAuth)
-//        Payload(func() {
-//            APIKey("api_key", "key", String, "API key used to perform authorization")
-//            Attribute("data", String, "Data to be written")
-//            Required("key", "data")
-//        })
-//        HTTP(func() {
-//            POST("/")
-//            Header("key:Authorization") // Provide the key in Authorization header (default)
-//        })
-//    })
-//
+//	Method("secured_write", func() {
+//	    Security(APIKeyAuth)
+//	    Payload(func() {
+//	        APIKey("api_key", "key", String, "API key used to perform authorization")
+//	        Attribute("data", String, "Data to be written")
+//	        Required("key", "data")
+//	    })
+//	    HTTP(func() {
+//	        POST("/")
+//	        Header("key:Authorization") // Provide the key in Authorization header (default)
+//	    })
+//	})
 func APIKey(scheme, name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:apikey:"+scheme, scheme) })
 	Attribute(name, args...)
@@ -430,7 +420,6 @@ func APIKey(scheme, name string, args ...any) {
 //
 // APIKeyField takes the same arguments as APIKey with the addition of the
 // tag value as the first argument.
-//
 func APIKeyField(tag any, scheme, name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:apikey:"+scheme, scheme) })
 	Field(tag, name, args...)
@@ -447,19 +436,18 @@ func APIKeyField(tag any, scheme, name string, args ...any) {
 //
 // Example:
 //
-//    Method("secured", func() {
-//        Security(OAuth2)
-//        Payload(func() {
-//            AccessToken("token", String, "OAuth2 access token used to perform authorization")
-//            Required("token")
-//        })
-//        Result(String)
-//        HTTP(func() {
-//            // The "Authorization" header is defined implicitly.
-//            GET("/")
-//        })
-//    })
-//
+//	Method("secured", func() {
+//	    Security(OAuth2)
+//	    Payload(func() {
+//	        AccessToken("token", String, "OAuth2 access token used to perform authorization")
+//	        Required("token")
+//	    })
+//	    Result(String)
+//	    HTTP(func() {
+//	        // The "Authorization" header is defined implicitly.
+//	        GET("/")
+//	    })
+//	})
 func AccessToken(name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:accesstoken") })
 	Attribute(name, args...)
@@ -470,7 +458,6 @@ func AccessToken(name string, args ...any) {
 //
 // AccessTokenField takes the same arguments as AccessToken with the addition of the
 // tag value as the first argument.
-//
 func AccessTokenField(tag any, name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:accesstoken") })
 	Field(tag, name, args...)
@@ -485,19 +472,18 @@ func AccessTokenField(tag any, name string, args ...any) {
 //
 // Example:
 //
-//    Method("secured", func() {
-//        Security(JWT)
-//        Payload(func() {
-//            Token("token", String, "JWT token used to perform authorization")
-//            Required("token")
-//        })
-//        Result(String)
-//        HTTP(func() {
-//            // The "Authorization" header is defined implicitly.
-//            GET("/")
-//        })
-//    })
-//
+//	Method("secured", func() {
+//	    Security(JWT)
+//	    Payload(func() {
+//	        Token("token", String, "JWT token used to perform authorization")
+//	        Required("token")
+//	    })
+//	    Result(String)
+//	    HTTP(func() {
+//	        // The "Authorization" header is defined implicitly.
+//	        GET("/")
+//	    })
+//	})
 func Token(name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:token") })
 	Attribute(name, args...)
@@ -508,7 +494,6 @@ func Token(name string, args ...any) {
 //
 // TokenField takes the same arguments as Token with the addition of the
 // tag value as the first argument.
-//
 func TokenField(tag any, name string, args ...any) {
 	args = useDSL(args, func() { Meta("security:token") })
 	Field(tag, name, args...)
@@ -525,17 +510,16 @@ func TokenField(tag any, name string, args ...any) {
 //
 // Example:
 //
-//    var JWT = JWTSecurity("JWT", func() {
-//        Scope("api:read", "Read access") // Defines a scope
-//        Scope("api:write", "Write access")
-//    })
+//	var JWT = JWTSecurity("JWT", func() {
+//	    Scope("api:read", "Read access") // Defines a scope
+//	    Scope("api:write", "Write access")
+//	})
 //
-//    Method("secured", func() {
-//        Security(JWT, func() {
-//            Scope("api:read") // Required scope for auth
-//        })
-//    })
-//
+//	Method("secured", func() {
+//	    Security(JWT, func() {
+//	        Scope("api:read") // Required scope for auth
+//	    })
+//	})
 func Scope(name string, desc ...string) {
 	switch current := eval.Current().(type) {
 	case *expr.SecurityExpr:

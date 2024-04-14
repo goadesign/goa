@@ -77,10 +77,10 @@ const (
 )
 
 const (
-	CookieSameSiteStrict   = expr.CookieSameSiteStrict
-	CookieSameSiteLax      = expr.CookieSameSiteLax
-	CookieSameSiteNone     = expr.CookieSameSiteNone
-	CookieSameSiteDefault  = expr.CookieSameSiteDefault
+	CookieSameSiteStrict  = expr.CookieSameSiteStrict
+	CookieSameSiteLax     = expr.CookieSameSiteLax
+	CookieSameSiteNone    = expr.CookieSameSiteNone
+	CookieSameSiteDefault = expr.CookieSameSiteDefault
 )
 
 // HTTP defines the HTTP transport specific properties of an API, a service or a
@@ -102,49 +102,48 @@ const (
 //
 // Example:
 //
-//    var _ = API("calc", func() {
-//        HTTP(func() {
-//            Path("/api") // Prefix to HTTP path of all requests.
-//        })
-//    })
+//	var _ = API("calc", func() {
+//	    HTTP(func() {
+//	        Path("/api") // Prefix to HTTP path of all requests.
+//	    })
+//	})
 //
 // Example:
 //
-//    var _ = Service("calculator", func() {
-//        Error("unauthorized")
+//	var _ = Service("calculator", func() {
+//	    Error("unauthorized")
 //
-//        HTTP(func() {
-//            Path("/calc")      // Prefix to all request paths
-//            Error("unauthorized", StatusUnauthorized) // Define "unauthorized"
-//                               // error HTTP response status code.
-//            Parent("account")  // Parent service, used to prefix request
-//                               // paths.
-//            CanonicalMethod("show") // Method whose path is used to prefix
-//                                    // the paths of child service.
-//        })
+//	    HTTP(func() {
+//	        Path("/calc")      // Prefix to all request paths
+//	        Error("unauthorized", StatusUnauthorized) // Define "unauthorized"
+//	                           // error HTTP response status code.
+//	        Parent("account")  // Parent service, used to prefix request
+//	                           // paths.
+//	        CanonicalMethod("show") // Method whose path is used to prefix
+//	                                // the paths of child service.
+//	    })
 //
-//        Method("div", func() {
-//            Description("Divide two operands.")
-//            Payload(Operands)
-//            Error("div_by_zero")
+//	    Method("div", func() {
+//	        Description("Divide two operands.")
+//	        Payload(Operands)
+//	        Error("div_by_zero")
 //
-//            HTTP(func() {
-//                GET("/div/{left}/{right}") // Define HTTP route. The "left"
-//                                           // and "right" parameter properties
-//                                           // are inherited from the
-//                                           // corresponding Operands attributes.
-//                Param("integer:int")       // Load "integer" attribute of
-//                                           // Operands from "int" query string.
-//                Header("requestID:X-RequestId")  // Load "requestID" attribute
-//                                                 // of Operands from
-//                                                 // X-RequestId header
-//                Response(StatusOK)               // Use status 200 on success
-//                Error("div_by_zero", BadRequest) // Use status code 400 for
-//                                                 // "div_by_zero" responses
-//            })
-//        })
-//    })
-//
+//	        HTTP(func() {
+//	            GET("/div/{left}/{right}") // Define HTTP route. The "left"
+//	                                       // and "right" parameter properties
+//	                                       // are inherited from the
+//	                                       // corresponding Operands attributes.
+//	            Param("integer:int")       // Load "integer" attribute of
+//	                                       // Operands from "int" query string.
+//	            Header("requestID:X-RequestId")  // Load "requestID" attribute
+//	                                             // of Operands from
+//	                                             // X-RequestId header
+//	            Response(StatusOK)               // Use status 200 on success
+//	            Error("div_by_zero", BadRequest) // Use status code 400 for
+//	                                             // "div_by_zero" responses
+//	        })
+//	    })
+//	})
 func HTTP(fns ...func()) {
 	if len(fns) > 1 {
 		eval.InvalidArgError("zero or one function", fmt.Sprintf("%d functions", len(fns)))
@@ -181,14 +180,13 @@ func HTTP(fns ...func()) {
 //
 // Example:
 //
-//    API("cellar", func() {
-//        // ...
-//        HTTP(func() {
-//            Consumes("application/json", "application/xml")
-//            // ...
-//        })
-//    })
-//
+//	API("cellar", func() {
+//	    // ...
+//	    HTTP(func() {
+//	        Consumes("application/json", "application/xml")
+//	        // ...
+//	    })
+//	})
 func Consumes(args ...string) {
 	switch e := eval.Current().(type) {
 	case *expr.RootExpr:
@@ -210,14 +208,13 @@ func Consumes(args ...string) {
 //
 // Example:
 //
-//    API("cellar", func() {
-//        // ...
-//        HTTP(func() {
-//            Produces("application/json", "application/xml")
-//            // ...
-//        })
-//    })
-//
+//	API("cellar", func() {
+//	    // ...
+//	    HTTP(func() {
+//	        Produces("application/json", "application/xml")
+//	        // ...
+//	    })
+//	})
 func Produces(args ...string) {
 	switch e := eval.Current().(type) {
 	case *expr.RootExpr:
@@ -282,16 +279,16 @@ func Path(val string) {
 //
 // Example:
 //
-//     var _ = Service("Manager", func() {
-//         Method("GetAccount", func() {
-//             Payload(GetAccount)
-//             Result(Account)
-//             HTTP(func() {
-//                 GET("/{accountID}/details")
-//                 GET("/{*accountPath}")
-//             })
-//         })
-//     })
+//	var _ = Service("Manager", func() {
+//	    Method("GetAccount", func() {
+//	        Payload(GetAccount)
+//	        Result(Account)
+//	        HTTP(func() {
+//	            GET("/{accountID}/details")
+//	            GET("/{*accountPath}")
+//	        })
+//	    })
+//	})
 func GET(path string) *expr.RouteExpr {
 	return route("GET", path)
 }
@@ -367,22 +364,21 @@ func route(method, path string) *expr.RouteExpr {
 //
 // Example:
 //
-//    var _ = Service("account", func() {
-//        Method("create", func() {
-//            Payload(CreatePayload)
-//            Result(Account)
-//            HTTP(func() {
-//                Header("auth:Authorization", String, "Auth token", func() {
-//                    Pattern("^Bearer [^ ]+$")
-//                })
-//                Response(StatusCreated, func() {
-//                    Header("href") // Inherits description, type, validations
-//                                   // etc. from Account href attribute
-//                })
-//            })
-//        })
-//    })
-//
+//	var _ = Service("account", func() {
+//	    Method("create", func() {
+//	        Payload(CreatePayload)
+//	        Result(Account)
+//	        HTTP(func() {
+//	            Header("auth:Authorization", String, "Auth token", func() {
+//	                Pattern("^Bearer [^ ]+$")
+//	            })
+//	            Response(StatusCreated, func() {
+//	                Header("href") // Inherits description, type, validations
+//	                               // etc. from Account href attribute
+//	            })
+//	        })
+//	    })
+//	})
 func Header(name string, args ...any) {
 	h := headers(eval.Current())
 	if h == nil {
@@ -411,37 +407,36 @@ func Header(name string, args ...any) {
 //
 // Example:
 //
-//    var _ = Service("account", func() {
-//        Method("create", func() {
-//            Payload(func() {
-//                Attribute("session", String, "ID of current session")
-//            })
-//            Result(Account)
-//            HTTP(func() {
-//                // Initialize payload's "session" attribute with the value of
-//                // the SID cookie after validating that's it's a valid GUID.
-//                Cookie("session:SID", String, func() {
-//                    Format(FormatGUID)
-//                })
-//                Response(StatusCreated, func() {
-//                    // Write the value of the result "session" attribute to
-//                    // the cookie named "SID" and initialize the cookie
-//                    // "max-age", "domain", "path", "secure" and "http-only"
-//                    // attributes. When reading the cookie value client
-//                    // side validate that's it is a GUID.
-//                    Cookie("session:SID", String, func() {
-//                        Format(FormatGUID)      // Cookie value validations
-//                    })
-//                    CookieMaxAge(3600)          // Cookie attributes
-//                    CookieDomain("goa.design")
-//                    CookiePath("/session")
-//                    CookieSecure()
-//                    CookieHTTPOnly()
-//                })
-//            })
-//        })
-//    })
-//
+//	var _ = Service("account", func() {
+//	    Method("create", func() {
+//	        Payload(func() {
+//	            Attribute("session", String, "ID of current session")
+//	        })
+//	        Result(Account)
+//	        HTTP(func() {
+//	            // Initialize payload's "session" attribute with the value of
+//	            // the SID cookie after validating that's it's a valid GUID.
+//	            Cookie("session:SID", String, func() {
+//	                Format(FormatGUID)
+//	            })
+//	            Response(StatusCreated, func() {
+//	                // Write the value of the result "session" attribute to
+//	                // the cookie named "SID" and initialize the cookie
+//	                // "max-age", "domain", "path", "secure" and "http-only"
+//	                // attributes. When reading the cookie value client
+//	                // side validate that's it is a GUID.
+//	                Cookie("session:SID", String, func() {
+//	                    Format(FormatGUID)      // Cookie value validations
+//	                })
+//	                CookieMaxAge(3600)          // Cookie attributes
+//	                CookieDomain("goa.design")
+//	                CookiePath("/session")
+//	                CookieSecure()
+//	                CookieHTTPOnly()
+//	            })
+//	        })
+//	    })
+//	})
 func Cookie(name string, args ...any) {
 	h := cookies(eval.Current())
 	if h == nil {
@@ -463,18 +458,17 @@ func Cookie(name string, args ...any) {
 //
 // Example:
 //
-//    var _ = Service("account", func() {
-//        Method("create", func() {
-//            Result(Account)
-//            HTTP(func() {
-//                Response(StatusCreated, func() {
-//                    Cookie("session:SID", String)
-//                    CookieMaxAge(3600)
-//                })
-//            })
-//        })
-//    })
-//
+//	var _ = Service("account", func() {
+//	    Method("create", func() {
+//	        Result(Account)
+//	        HTTP(func() {
+//	            Response(StatusCreated, func() {
+//	                Cookie("session:SID", String)
+//	                CookieMaxAge(3600)
+//	            })
+//	        })
+//	    })
+//	})
 func CookieMaxAge(n int) {
 	_, ok := eval.Current().(*expr.HTTPResponseExpr)
 	if !ok {
@@ -492,18 +486,17 @@ func CookieMaxAge(n int) {
 //
 // Example:
 //
-//    var _ = Service("account", func() {
-//        Method("create", func() {
-//            Result(Account)
-//            HTTP(func() {
-//                Response(StatusCreated, func() {
-//                    Cookie("session:SID", String)
-//                    CookieDomain("goa.design")
-//                })
-//            })
-//        })
-//    })
-//
+//	var _ = Service("account", func() {
+//	    Method("create", func() {
+//	        Result(Account)
+//	        HTTP(func() {
+//	            Response(StatusCreated, func() {
+//	                Cookie("session:SID", String)
+//	                CookieDomain("goa.design")
+//	            })
+//	        })
+//	    })
+//	})
 func CookieDomain(d string) {
 	_, ok := eval.Current().(*expr.HTTPResponseExpr)
 	if !ok {
@@ -521,18 +514,17 @@ func CookieDomain(d string) {
 //
 // Example:
 //
-//    var _ = Service("account", func() {
-//        Method("create", func() {
-//            Result(Account)
-//            HTTP(func() {
-//                Response(StatusCreated, func() {
-//                    Cookie("session:SID", String)
-//                    CookiePath("/session")
-//                })
-//            })
-//        })
-//    })
-//
+//	var _ = Service("account", func() {
+//	    Method("create", func() {
+//	        Result(Account)
+//	        HTTP(func() {
+//	            Response(StatusCreated, func() {
+//	                Cookie("session:SID", String)
+//	                CookiePath("/session")
+//	            })
+//	        })
+//	    })
+//	})
 func CookiePath(p string) {
 	_, ok := eval.Current().(*expr.HTTPResponseExpr)
 	if !ok {
@@ -549,18 +541,17 @@ func CookiePath(p string) {
 //
 // Example:
 //
-//    var _ = Service("account", func() {
-//        Method("create", func() {
-//            Result(Account)
-//            HTTP(func() {
-//                Response(StatusCreated, func() {
-//                    Cookie("session:SID", String)
-//                    CookieSecure()
-//                })
-//            })
-//        })
-//    })
-//
+//	var _ = Service("account", func() {
+//	    Method("create", func() {
+//	        Result(Account)
+//	        HTTP(func() {
+//	            Response(StatusCreated, func() {
+//	                Cookie("session:SID", String)
+//	                CookieSecure()
+//	            })
+//	        })
+//	    })
+//	})
 func CookieSecure() {
 	_, ok := eval.Current().(*expr.HTTPResponseExpr)
 	if !ok {
@@ -577,18 +568,17 @@ func CookieSecure() {
 //
 // Example:
 //
-//    var _ = Service("account", func() {
-//        Method("create", func() {
-//            Result(Account)
-//            HTTP(func() {
-//                Response(StatusCreated, func() {
-//                    Cookie("session:SID", String)
-//                    CookieHTTPOnly()
-//                })
-//            })
-//        })
-//    })
-//
+//	var _ = Service("account", func() {
+//	    Method("create", func() {
+//	        Result(Account)
+//	        HTTP(func() {
+//	            Response(StatusCreated, func() {
+//	                Cookie("session:SID", String)
+//	                CookieHTTPOnly()
+//	            })
+//	        })
+//	    })
+//	})
 func CookieHTTPOnly() {
 	_, ok := eval.Current().(*expr.HTTPResponseExpr)
 	if !ok {
@@ -638,17 +628,16 @@ func CookieSameSite(s expr.CookieSameSiteValue) {
 //
 // Example:
 //
-//     var _ = API("cellar", func() {
-//         HTTP(func() {
-//             Params(func() {
-//                 Param("version", String, "API version", func() {
-//                     Enum("1.0", "2.0")
-//                 })
-//                 Required("version")
-//             })
-//         })
-//     })
-//
+//	var _ = API("cellar", func() {
+//	    HTTP(func() {
+//	        Params(func() {
+//	            Param("version", String, "API version", func() {
+//	                Enum("1.0", "2.0")
+//	            })
+//	            Required("version")
+//	        })
+//	    })
+//	})
 func Params(args any) {
 	p := params(eval.Current())
 	if p == nil {
@@ -677,35 +666,34 @@ func Params(args any) {
 //
 // Example:
 //
-//    var ShowPayload = Type("ShowPayload", func() {
-//        Attribute("id", UInt64, "Account ID")
-//        Attribute("version", String, "Version", func() {
-//            Enum("1.0", "2.0")
-//        })
-//    })
+//	var ShowPayload = Type("ShowPayload", func() {
+//	    Attribute("id", UInt64, "Account ID")
+//	    Attribute("version", String, "Version", func() {
+//	        Enum("1.0", "2.0")
+//	    })
+//	})
 //
-//    var _ = Service("account", func() {
-//        HTTP(func() {
-//            Path("/{parentID}")
-//            Param("parentID", UInt64, "ID of parent account")
-//        })
-//        Method("show", func() {  // default response type.
-//            Payload(ShowPayload)
-//            Result(AccountResult)
-//            HTTP(func() {
-//                GET("/{id}")           // HTTP request uses ShowPayload "id"
-//                                       // attribute to define "id" parameter.
-//                Params(func() {        // Params makes it possible to group
-//                                       // Param expressions.
-//                    Param("version:v") // "version" of ShowPayload to define
-//                                       // path and query string parameters.
-//                                       // Query string "v" maps to attribute
-//                                       // "version" of ShowPayload.
-//                })
-//            })
-//        })
-//    })
-//
+//	var _ = Service("account", func() {
+//	    HTTP(func() {
+//	        Path("/{parentID}")
+//	        Param("parentID", UInt64, "ID of parent account")
+//	    })
+//	    Method("show", func() {  // default response type.
+//	        Payload(ShowPayload)
+//	        Result(AccountResult)
+//	        HTTP(func() {
+//	            GET("/{id}")           // HTTP request uses ShowPayload "id"
+//	                                   // attribute to define "id" parameter.
+//	            Params(func() {        // Params makes it possible to group
+//	                                   // Param expressions.
+//	                Param("version:v") // "version" of ShowPayload to define
+//	                                   // path and query string parameters.
+//	                                   // Query string "v" maps to attribute
+//	                                   // "version" of ShowPayload.
+//	            })
+//	        })
+//	    })
+//	})
 func Param(name string, args ...any) {
 	p := params(eval.Current())
 	if p == nil {
@@ -731,29 +719,28 @@ func Param(name string, args ...any) {
 //
 // Example:
 //
-//     var _ = Service("account", func() {
-//         Method("index", func() {
-//             Payload(MapOf(String, Int))
-//             HTTP(func() {
-//                 GET("/")
-//                 MapParams()
-//             })
-//         })
-//    })
+//	 var _ = Service("account", func() {
+//	     Method("index", func() {
+//	         Payload(MapOf(String, Int))
+//	         HTTP(func() {
+//	             GET("/")
+//	             MapParams()
+//	         })
+//	     })
+//	})
 //
-//    var _ = Service("account", func() {
-//        Method("show", func() {
-//            Payload(func() {
-//                Attribute("p", MapOf(String, String))
-//                Attribute("id", String)
-//            })
-//            HTTP(func() {
-//                GET("/{id}")
-//                MapParams("p")
-//            })
-//        })
-//    })
-//
+//	var _ = Service("account", func() {
+//	    Method("show", func() {
+//	        Payload(func() {
+//	            Attribute("p", MapOf(String, String))
+//	            Attribute("id", String)
+//	        })
+//	        HTTP(func() {
+//	            GET("/{id}")
+//	            MapParams("p")
+//	        })
+//	    })
+//	})
 func MapParams(args ...any) {
 	if len(args) > 1 {
 		eval.ReportError("too many arguments")
@@ -789,7 +776,6 @@ func MapParams(args ...any) {
 // as parameter. The user provided decoder is responsible for decoding the
 // multipart content into the payload. The example command generates a default
 // implementation for the user decoder and encoder.
-//
 func MultipartRequest() {
 	e, ok := eval.Current().(*expr.HTTPEndpointExpr)
 	if !ok {
@@ -811,19 +797,18 @@ func MultipartRequest() {
 //
 // Example:
 //
-//    var _ = Service("upload", func() {
-//        Method("upload", func() {
-//            Payload(func() {
-//                Attribute("id", String)
-//                Attribute("length", Int)
-//            })
-//            HTTP(func() {
-//                POST("/{id}")
-//                Header("length:Content-Length")
-//                SkipRequestBodyEncodeDecode()
-//            })
-//        })
-//
+//	var _ = Service("upload", func() {
+//	    Method("upload", func() {
+//	        Payload(func() {
+//	            Attribute("id", String)
+//	            Attribute("length", Int)
+//	        })
+//	        HTTP(func() {
+//	            POST("/{id}")
+//	            Header("length:Content-Length")
+//	            SkipRequestBodyEncodeDecode()
+//	        })
+//	    })
 func SkipRequestBodyEncodeDecode() {
 	e, ok := eval.Current().(*expr.HTTPEndpointExpr)
 	if !ok {
@@ -846,21 +831,20 @@ func SkipRequestBodyEncodeDecode() {
 //
 // Example:
 //
-//    var _ = Service("download", func() {
-//        Method("download", func() {
-//            Payload(String)
-//            Result(func() {
-//                Attribute("length", Int)
-//            })
-//            HTTP(func() {
-//                POST("/{id}")
-//                SkipResponseBodyEncodeDecode()
-//                Response(StatusOK, func() {
-//                    Header("length:Content-Length")
-//                })
-//            })
-//        })
-//
+//	var _ = Service("download", func() {
+//	    Method("download", func() {
+//	        Payload(String)
+//	        Result(func() {
+//	            Attribute("length", Int)
+//	        })
+//	        HTTP(func() {
+//	            POST("/{id}")
+//	            SkipResponseBodyEncodeDecode()
+//	            Response(StatusOK, func() {
+//	                Header("length:Content-Length")
+//	            })
+//	        })
+//	    })
 func SkipResponseBodyEncodeDecode() {
 	e, ok := eval.Current().(*expr.HTTPEndpointExpr)
 	if !ok {
@@ -879,36 +863,35 @@ func SkipResponseBodyEncodeDecode() {
 //
 // Body accepts one argument which describes the shape of the body, it can be:
 //
-//  - The name of an attribute of the request or response type. In this case the
-//    attribute type describes the shape of the body.
+//   - The name of an attribute of the request or response type. In this case the
+//     attribute type describes the shape of the body.
 //
-//  - A function listing the body attributes. The attributes inherit the
-//    properties (description, type, validations etc.) of the request or
-//    response type attributes with identical names.
+//   - A function listing the body attributes. The attributes inherit the
+//     properties (description, type, validations etc.) of the request or
+//     response type attributes with identical names.
 //
 // Assuming the type:
 //
-//     var CreatePayload = Type("CreatePayload", func() {
-//         Attribute("name", String, "Name of account")
-//     })
+//	var CreatePayload = Type("CreatePayload", func() {
+//	    Attribute("name", String, "Name of account")
+//	})
 //
 // The following:
 //
-//     Method("create", func() {
-//         Payload(CreatePayload)
-//     })
+//	Method("create", func() {
+//	    Payload(CreatePayload)
+//	})
 //
 // is equivalent to:
 //
-//     Method("create", func() {
-//         Payload(CreatePayload)
-//         HTTP(func() {
-//             Body(func() {
-//                 Attribute("name")
-//             })
-//         })
-//     })
-//
+//	Method("create", func() {
+//	    Payload(CreatePayload)
+//	    HTTP(func() {
+//	        Body(func() {
+//	            Attribute("name")
+//	        })
+//	    })
+//	})
 func Body(args ...any) {
 	if len(args) == 0 {
 		eval.ReportError("not enough arguments, use Body(name), Body(type), Body(func()) or Body(type, func())")
@@ -1066,24 +1049,23 @@ func CanonicalMethod(name string) {
 //
 // Example:
 //
-//    Method("create", func() {
-//        Result(CreateResult)
-//        HTTP(func() {
-//            Response(StatusCreated, func() {
-//                Tag("outcome", "created") // Assumes CreateResult has attribute
-//                                          // "outcome" which may be "created"
-//                                          // or "accepted"
-//            })
+//	Method("create", func() {
+//	    Result(CreateResult)
+//	    HTTP(func() {
+//	        Response(StatusCreated, func() {
+//	            Tag("outcome", "created") // Assumes CreateResult has attribute
+//	                                      // "outcome" which may be "created"
+//	                                      // or "accepted"
+//	        })
 //
-//            Response(StatusAccepted, func() {
-//                Tag("outcome", "accepted")
-//            })
+//	        Response(StatusAccepted, func() {
+//	            Tag("outcome", "accepted")
+//	        })
 //
-//            Response(StatusOK)            // Default response if "outcome" is
-//                                          // neither "created" nor "accepted"
-//        })
-//    })
-//
+//	        Response(StatusOK)            // Default response if "outcome" is
+//	                                      // neither "created" nor "accepted"
+//	    })
+//	})
 func Tag(name, value string) {
 	res, ok := eval.Current().(*expr.HTTPResponseExpr)
 	if !ok {
@@ -1098,14 +1080,13 @@ func Tag(name, value string) {
 // ContentType must appear in a Response expression.
 // ContentType accepts one argument: the mime type as defined by RFC 6838.
 //
-//    var _ = Method("add", func() {
-//	      HTTP(func() {
-//            Response(StatusOK, func() {
-//                ContentType("application/json")
-//            })
-//        })
-//    })
-//
+//	   var _ = Method("add", func() {
+//		      HTTP(func() {
+//	           Response(StatusOK, func() {
+//	               ContentType("application/json")
+//	           })
+//	       })
+//	   })
 func ContentType(typ string) {
 	switch actual := eval.Current().(type) {
 	case *expr.ResultTypeExpr:
