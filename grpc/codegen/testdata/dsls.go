@@ -628,6 +628,20 @@ var PayloadWithMultipleUseTypesDSL = func() {
 	})
 }
 
+var PayloadWithCustomTypePackageDSL = func() {
+	var CustomType = Type("CustomType", func() {
+		Field(1, "Field", Int)
+		Meta("struct:pkg:path", "types")
+	})
+	Service("ServicePayloadWithCustomTypePackage", func() {
+		Method("MethodPayloadWithCustomTypePackage", func() {
+			Payload(CustomType)
+			Result(CustomType)
+			GRPC(func() {})
+		})
+	})
+}
+
 var PayloadWithAliasTypeDSL = func() {
 	var IntAlias = Type("IntAlias", Int)
 	var PayloadAliasT = Type("PayloadAliasT", func() {

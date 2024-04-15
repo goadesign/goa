@@ -333,12 +333,13 @@ func (e *GRPCEndpointExpr) Finalize() {
 			}
 		}
 		if ut, ok := e.MethodExpr.Payload.Type.(UserType); ok {
-			// merge Meta defined in the method payload type with the request
-			if ut.Attribute().Meta != nil {
+			// propagate the user set protobuf struct name from the user type to
+			// the request message.
+			if proto, ok := ut.Attribute().Meta.Last("struct:name:proto"); ok {
 				if e.Request.Meta == nil {
 					e.Request.Meta = ut.Attribute().Meta
 				} else {
-					e.Request.Meta.Merge(ut.Attribute().Meta)
+					e.Request.Meta["struct:name:proto"] = []string{proto}
 				}
 			}
 		}

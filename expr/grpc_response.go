@@ -187,12 +187,13 @@ func (r *GRPCResponseExpr) Finalize(a *GRPCEndpointExpr, svcAtt *AttributeExpr) 
 			}
 		}
 		if ut, ok := svcAtt.Type.(UserType); ok {
-			// merge Meta defined in the method result type with the response
-			if ut.Attribute().Meta != nil {
+			// propagate the user set protobuf struct name from the user type to
+			// the request message.
+			if proto, ok := ut.Attribute().Meta.Last("struct:name:proto"); ok {
 				if r.Message.Meta == nil {
 					r.Message.Meta = ut.Attribute().Meta
 				} else {
-					r.Message.Meta.Merge(ut.Attribute().Meta)
+					r.Message.Meta["struct:name:proto"] = []string{proto}
 				}
 			}
 		}

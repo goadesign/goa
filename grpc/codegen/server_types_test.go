@@ -19,6 +19,7 @@ func TestServerTypeFiles(t *testing.T) {
 		{"server-payload-with-duplicate-use", testdata.PayloadWithMultipleUseTypesDSL, testdata.PayloadWithMultipleUseTypesServerTypeCode},
 		{"server-payload-with-alias-type", testdata.PayloadWithAliasTypeDSL, testdata.PayloadWithAliasTypeServerTypeCode},
 		{"server-payload-with-mixed-attributes", testdata.PayloadWithMixedAttributesDSL, testdata.PayloadWithMixedAttributesServerTypeCode},
+		{"server-payload-with-custom-type-package", testdata.PayloadWithCustomTypePackageDSL, testdata.PayloadWithCustomTypePackageServerTypeCode},
 		{"server-result-collection", testdata.ResultWithCollectionDSL, testdata.ResultWithCollectionServerTypeCode},
 		{"server-with-errors", testdata.UnaryRPCWithErrorsDSL, testdata.WithErrorsServerTypeCode},
 		{"server-elem-validation", testdata.ElemValidationDSL, testdata.ElemValidationServerTypesFile},

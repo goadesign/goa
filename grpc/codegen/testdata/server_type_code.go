@@ -315,6 +315,31 @@ func NewStreamingMethodStreamingRequestAPayload(v *service_payload_with_mixed_at
 }
 `
 
+const PayloadWithCustomTypePackageServerTypeCode = `// NewMethodPayloadWithCustomTypePackagePayload builds the payload of the
+// "MethodPayloadWithCustomTypePackage" endpoint of the
+// "ServicePayloadWithCustomTypePackage" service from the gRPC request type.
+func NewMethodPayloadWithCustomTypePackagePayload(message *service_payload_with_custom_type_packagepb.MethodPayloadWithCustomTypePackageRequest) *types.CustomType {
+	v := &types.CustomType{}
+	if message.Field != nil {
+		field := int(*message.Field)
+		v.Field = &field
+	}
+	return v
+}
+
+// NewProtoMethodPayloadWithCustomTypePackageResponse builds the gRPC response
+// type from the result of the "MethodPayloadWithCustomTypePackage" endpoint of
+// the "ServicePayloadWithCustomTypePackage" service.
+func NewProtoMethodPayloadWithCustomTypePackageResponse(result *types.CustomType) *service_payload_with_custom_type_packagepb.MethodPayloadWithCustomTypePackageResponse {
+	message := &service_payload_with_custom_type_packagepb.MethodPayloadWithCustomTypePackageResponse{}
+	if result.Field != nil {
+		field := int32(*result.Field)
+		message.Field = &field
+	}
+	return message
+}
+`
+
 const WithErrorsServerTypeCode = `// NewMethodUnaryRPCWithErrorsPayload builds the payload of the
 // "MethodUnaryRPCWithErrors" endpoint of the "ServiceUnaryRPCWithErrors"
 // service from the gRPC request type.
