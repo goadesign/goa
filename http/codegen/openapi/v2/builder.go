@@ -655,7 +655,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			Extensions:   openapi.ExtensionsFromExpr(endpoint.MethodExpr.Meta),
 			Security:     requirements,
 		}
-		
+
 		if key == "" {
 			key = "/"
 		}

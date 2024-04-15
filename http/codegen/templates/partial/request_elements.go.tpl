@@ -42,15 +42,20 @@
 		{{- end }}
 {{- end }}
 
+{{- $qpVar := "r.URL.Query()" }}
+{{- if gt (len .QueryParams) 1 }}
+{{- $qpVar = "qp" }}
+qp := r.URL.Query()
+{{- end }}
 {{- range .QueryParams }}
 	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
-		{{ .VarName }} = r.URL.Query().Get("{{ .HTTPName }}")
+		{{ .VarName }} = {{$qpVar}}.Get("{{ .HTTPName }}")
 		if {{ .VarName }} == "" {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
 
 	{{- else if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
-		{{ .VarName }}Raw := r.URL.Query().Get("{{ .HTTPName }}")
+		{{ .VarName }}Raw := {{$qpVar}}.Get("{{ .HTTPName }}")
 		if {{ .VarName }}Raw != "" {
 			{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 		}
@@ -60,7 +65,7 @@
 		{{- end }}
 
 	{{- else if .StringSlice }}
-		{{ .VarName }} = r.URL.Query()["{{ .HTTPName }}"]
+		{{ .VarName }} = {{$qpVar}}["{{ .HTTPName }}"]
 		{{- if .Required }}
 		if {{ .VarName }} == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
@@ -77,7 +82,7 @@
 
 	{{- else if .Slice }}
 	{
-		{{ .VarName }}Raw := r.URL.Query()["{{ .HTTPName }}"]
+		{{ .VarName }}Raw := {{$qpVar}}["{{ .HTTPName }}"]
 		{{- if .Required }}
 		if {{ .VarName }}Raw == nil {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
@@ -100,7 +105,7 @@
 
 	{{- else if .Map }}
 	{
-		{{ .VarName }}Raw := r.URL.Query()
+		{{ .VarName }}Raw := {{$qpVar}}
 		{{- if .Required }}
 		if len({{ .VarName }}Raw) == 0 {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
@@ -127,7 +132,7 @@
 
 	{{- else if .MapQueryParams }}
 	{
-		{{ .VarName }}Raw := r.URL.Query()
+		{{ .VarName }}Raw := {{$qpVar}}
 		{{- if .Required }}
 		if len({{ .VarName }}Raw) == 0 {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
@@ -182,7 +187,7 @@
 
 	{{- else }}{{/* not string, not any, not slice and not map */}}
 	{
-		{{ .VarName }}Raw := r.URL.Query().Get("{{ .HTTPName }}")
+		{{ .VarName }}Raw := {{$qpVar}}.Get("{{ .HTTPName }}")
 		{{- if .Required }}
 		if {{ .VarName }}Raw == "" {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
@@ -340,4 +345,4 @@
 		{{ .Validate }}
 	{{- end }}
 {{- end }}
-{{- end }}
+{{- end -}}

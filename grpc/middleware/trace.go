@@ -27,13 +27,14 @@ const (
 // trace informartion in the unary gRPC request context.
 //
 // Example:
-//  grpc.NewServer(grpc.UnaryInterceptor(middleware.UnaryServerTrace()))
 //
-//  // enable options
-//  grpc.NewServer(grpc.UnaryInterceptor(middleware.UnaryServerTrace(
-//    middleware.TraceIDFunc(myTraceIDFunc),
-//    middleware.SpanIDFunc(mySpanIDFunc),
-//    middleware.SamplingPercent(100)))
+//	grpc.NewServer(grpc.UnaryInterceptor(middleware.UnaryServerTrace()))
+//
+//	// enable options
+//	grpc.NewServer(grpc.UnaryInterceptor(middleware.UnaryServerTrace(
+//	  middleware.TraceIDFunc(myTraceIDFunc),
+//	  middleware.SpanIDFunc(mySpanIDFunc),
+//	  middleware.SamplingPercent(100)))
 func UnaryServerTrace(opts ...middleware.TraceOption) grpc.UnaryServerInterceptor {
 	o := middleware.NewTraceOptions(opts...)
 	return grpc.UnaryServerInterceptor(func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
@@ -46,13 +47,14 @@ func UnaryServerTrace(opts ...middleware.TraceOption) grpc.UnaryServerIntercepto
 // trace information in the streaming gRPC request context.
 //
 // Example:
-//  grpc.NewServer(grpc.StreamInterceptor(middleware.StreamServerTrace()))
 //
-//  // enable options
-//  grpc.NewServer(grpc.StreamInterceptor(middleware.StreamServerTrace(
-//    middleware.TraceIDFunc(myTraceIDFunc),
-//    middleware.SpanIDFunc(mySpanIDFunc),
-//    middleware.MaxSamplingRate(50)))
+//	grpc.NewServer(grpc.StreamInterceptor(middleware.StreamServerTrace()))
+//
+//	// enable options
+//	grpc.NewServer(grpc.StreamInterceptor(middleware.StreamServerTrace(
+//	  middleware.TraceIDFunc(myTraceIDFunc),
+//	  middleware.SpanIDFunc(mySpanIDFunc),
+//	  middleware.MaxSamplingRate(50)))
 func StreamServerTrace(opts ...middleware.TraceOption) grpc.StreamServerInterceptor {
 	o := middleware.NewTraceOptions(opts...)
 	return grpc.StreamServerInterceptor(func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
@@ -67,7 +69,8 @@ func StreamServerTrace(opts ...middleware.TraceOption) grpc.StreamServerIntercep
 // retrieve the parent span ID and trace ID.
 //
 // Example:
-//  conn, err := grpc.Dial(url, grpc.WithUnaryInterceptor(UnaryClientTrace()))
+//
+//	conn, err := grpc.Dial(url, grpc.WithUnaryInterceptor(UnaryClientTrace()))
 func UnaryClientTrace() grpc.UnaryClientInterceptor {
 	return grpc.UnaryClientInterceptor(func(ctx context.Context, method string, req, reply any, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 		ctx = setTrace(ctx)
@@ -80,7 +83,8 @@ func UnaryClientTrace() grpc.UnaryClientInterceptor {
 // retrieve the parent span ID and trace ID.
 //
 // Example:
-//  conn, err := grpc.Dial(url, grpc.WithStreamInterceptor(StreamClientTrace()))
+//
+//	conn, err := grpc.Dial(url, grpc.WithStreamInterceptor(StreamClientTrace()))
 func StreamClientTrace() grpc.StreamClientInterceptor {
 	return grpc.StreamClientInterceptor(func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
 		ctx = setTrace(ctx)

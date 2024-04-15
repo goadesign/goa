@@ -10,9 +10,9 @@ generate gRPC service and protocol buffer message definitions.
 
 In addition to the code generation logic, the grpc package contains:
 
-    * A customizable server and client handler interface to handle unary and streaming RPCs.
-    * Encoder and decoder interfaces to convert a protocol buffer type to a Goa type and vice versa.
-    * Error handlers to encode and decode error responses.
-    * Interceptors (a.k.a middlewares) to wrap additional functionality around unary and streaming RPCs.
+  - A customizable server and client handler interface to handle unary and streaming RPCs.
+  - Encoder and decoder interfaces to convert a protocol buffer type to a Goa type and vice versa.
+  - Error handlers to encode and decode error responses.
+  - Interceptors (a.k.a middlewares) to wrap additional functionality around unary and streaming RPCs.
 */
 package grpc

@@ -1625,7 +1625,7 @@ func buildProjections(projected, att *expr.AttributeExpr, viewspkg string, scope
 	return projections
 }
 
-// buildValidationData builds the data required to generate validations for the
+// buildValidations builds the data required to generate validations for the
 // projected types.
 func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) []*ValidateData {
 	var (

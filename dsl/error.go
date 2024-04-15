@@ -66,24 +66,23 @@ const (
 //
 // Example:
 //
-//    var _ = API("calc", func() {
-//        Error("invalid_argument") // Uses type ErrorResult
-//        HTTP(func() {
-//            Response("invalid_argument", StatusBadRequest)
-//        })
-//    })
+//	var _ = API("calc", func() {
+//	    Error("invalid_argument") // Uses type ErrorResult
+//	    HTTP(func() {
+//	        Response("invalid_argument", StatusBadRequest)
+//	    })
+//	})
 //
-//    var _ = Service("divider", func() {
-//        Error("invalid_arguments") // Refers to error defined above.
-//                                   // No need to define HTTP mapping again.
+//	var _ = Service("divider", func() {
+//	    Error("invalid_arguments") // Refers to error defined above.
+//	                               // No need to define HTTP mapping again.
 //
-//        // Method which uses the default type for its response.
-//        Method("divide", func() {
-//            Payload(DivideRequest)
-//            Error("div_by_zero", DivByZero, "Division by zero")
-//        })
-//    })
-//
+//	    // Method which uses the default type for its response.
+//	    Method("divide", func() {
+//	        Payload(DivideRequest)
+//	        Error("div_by_zero", DivByZero, "Division by zero")
+//	    })
+//	})
 func Error(name string, args ...any) {
 	if len(args) == 0 {
 		args = []any{expr.ErrorResult}
@@ -126,53 +125,52 @@ func Error(name string, args ...any) {
 //
 // Example design:
 //
-//    // All the methods exposed by service MyService can return the errors
-//    // "internal_error" and "bad_request". Both errors have the same type
-//    // CustomErrorType. "internal_error" is mapped to HTTP status 500 and
-//    // "bad_request" is mapped to HTTP status 400.
-//    var _ = Service("MyService", func() {
-//        Error("internal_error", CustomErrorType)
-//        Error("bad_request", CustomErrorType)
-//        HTTP(func() {
-//            Response("internal_error", StatusInternalServerError)
-//            Response("bad_request", StatusBadRequest)
-//        })
+//	   // All the methods exposed by service MyService can return the errors
+//	   // "internal_error" and "bad_request". Both errors have the same type
+//	   // CustomErrorType. "internal_error" is mapped to HTTP status 500 and
+//	   // "bad_request" is mapped to HTTP status 400.
+//	   var _ = Service("MyService", func() {
+//	       Error("internal_error", CustomErrorType)
+//	       Error("bad_request", CustomErrorType)
+//	       HTTP(func() {
+//	           Response("internal_error", StatusInternalServerError)
+//	           Response("bad_request", StatusBadRequest)
+//	       })
 //
-//        Method("Method", func() {
-//	      Payload(String)
-//            HTTP(func() {
-//                GET("/")
-//            })
-//        })
-//    })
+//	       Method("Method", func() {
+//		      Payload(String)
+//	           HTTP(func() {
+//	               GET("/")
+//	           })
+//	       })
+//	   })
 //
-//    var CustomErrorType = Type("CustomError", func() {
-//        // The "name" attribute is used to select the error response.
-//        // name should be set to either "internal_error" or "bad_request" by
-//        // the service method returning the error.
-//        ErrorName("name", String, "Name of error.")
-//        Attribute("message", String, "Message of error.")
-//        Attribute("occurred_at", String, "Time error occurred.", func() {
-//            Format(FormatDateTime)
-//        })
-//        Required("name", "message", "occurred_at")
-//    })
+//	   var CustomErrorType = Type("CustomError", func() {
+//	       // The "name" attribute is used to select the error response.
+//	       // name should be set to either "internal_error" or "bad_request" by
+//	       // the service method returning the error.
+//	       ErrorName("name", String, "Name of error.")
+//	       Attribute("message", String, "Message of error.")
+//	       Attribute("occurred_at", String, "Time error occurred.", func() {
+//	           Format(FormatDateTime)
+//	       })
+//	       Required("name", "message", "occurred_at")
+//	   })
 //
 // Example usage:
 //
-//    func (s *svc) Method(ctx context.Context, p string) error {
-//        // ...
-//        if err != nil {
-//             return &myservice.CustomError{
-//                 Name:       "internal_error", // HTTP response status is 500.
-//                 Message:    "Something went wrong",
-//                 OccurredAt: time.Now().Format(time.RFC3339),
-//             }
-//        }
-//        // ...
-//        return nil
-//    }
-//
+//	func (s *svc) Method(ctx context.Context, p string) error {
+//	    // ...
+//	    if err != nil {
+//	         return &myservice.CustomError{
+//	             Name:       "internal_error", // HTTP response status is 500.
+//	             Message:    "Something went wrong",
+//	             OccurredAt: time.Now().Format(time.RFC3339),
+//	         }
+//	    }
+//	    // ...
+//	    return nil
+//	}
 func ErrorName(args ...any) {
 	if len(args) == 0 {
 		eval.IncompatibleDSL()
@@ -217,11 +215,11 @@ func ErrorName(args ...any) {
 //
 // Example:
 //
-//    var _ = Service("divider", func() {
-//        Error("request_timeout", func() {
-//            Temporary()
-//        })
-//    })
+//	var _ = Service("divider", func() {
+//	    Error("request_timeout", func() {
+//	        Temporary()
+//	    })
+//	})
 func Temporary() {
 	attr, ok := eval.Current().(*expr.AttributeExpr)
 	if !ok {
@@ -239,11 +237,11 @@ func Temporary() {
 //
 // Example:
 //
-//    var _ = Service("divider", func() {
-//        Error("request_timeout", func() {
-//            Timeout()
-//        })
-//    })
+//	var _ = Service("divider", func() {
+//	    Error("request_timeout", func() {
+//	        Timeout()
+//	    })
+//	})
 func Timeout() {
 	attr, ok := eval.Current().(*expr.AttributeExpr)
 	if !ok {
@@ -262,11 +260,11 @@ func Timeout() {
 //
 // Example:
 //
-//    var _ = Service("divider", func() {
-//         Error("internal_error", func() {
-//                 Fault()
-//         })
-//    })
+//	var _ = Service("divider", func() {
+//	     Error("internal_error", func() {
+//	             Fault()
+//	     })
+//	})
 func Fault() {
 	attr, ok := eval.Current().(*expr.AttributeExpr)
 	if !ok {

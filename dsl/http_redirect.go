@@ -16,21 +16,20 @@ import (
 //
 // Example:
 //
-//    var _ = Service("service", func() {
-//        Method("method", func() {
-//            HTTP(func() {
-//                GET("/resources")
-//                Redirect("/redirect/dest", StatusMovedPermanently)
-//            })
-//        })
-//    })
+//	var _ = Service("service", func() {
+//	    Method("method", func() {
+//	        HTTP(func() {
+//	            GET("/resources")
+//	            Redirect("/redirect/dest", StatusMovedPermanently)
+//	        })
+//	    })
+//	})
 //
-//    var _ = Service("service", func() {
-//        Files("/file.json", "/path/to/file.json", func() {
-//            Redirect("/redirect/dest", StatusMovedPermanently)
-//        })
-//    })
-//
+//	var _ = Service("service", func() {
+//	    Files("/file.json", "/path/to/file.json", func() {
+//	        Redirect("/redirect/dest", StatusMovedPermanently)
+//	    })
+//	})
 func Redirect(url string, code int) {
 	redirect := &expr.HTTPRedirectExpr{
 		URL:        url,

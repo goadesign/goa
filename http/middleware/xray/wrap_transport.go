@@ -22,10 +22,9 @@ type xrayTransport struct {
 //
 // Example of how to wrap http.Client's transport:
 //
-// httpClient := &http.Client{
-//    Transport: WrapTransport(http.DefaultTransport),
-// }
-//
+//	httpClient := &http.Client{
+//	   Transport: WrapTransport(http.DefaultTransport),
+//	}
 func WrapTransport(rt http.RoundTripper) http.RoundTripper {
 	return &xrayTransport{rt}
 }

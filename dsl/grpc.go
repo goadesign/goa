@@ -64,32 +64,31 @@ const (
 //
 // Example:
 //
-//     var CreatePayload = Type("CreatePayload", func() {
-//         Field(1, "name", String, "Name of account")
-//         TokenField(2, "token", String, "JWT token for authentication")
-//     })
+//	var CreatePayload = Type("CreatePayload", func() {
+//	    Field(1, "name", String, "Name of account")
+//	    TokenField(2, "token", String, "JWT token for authentication")
+//	})
 //
-//     var CreateResult = ResultType("application/vnd.create", func() {
-//         Attributes(func() {
-//             Field(1, "name", String, "Name of the created resource")
-//             Field(2, "href", String, "Href of the created resource")
-//         })
-//     })
+//	var CreateResult = ResultType("application/vnd.create", func() {
+//	    Attributes(func() {
+//	        Field(1, "name", String, "Name of the created resource")
+//	        Field(2, "href", String, "Href of the created resource")
+//	    })
+//	})
 //
-//     Method("create", func() {
-//         Payload(CreatePayload)
-//         Result(CreateResult)
-//         Error("unauthenticated")
+//	Method("create", func() {
+//	    Payload(CreatePayload)
+//	    Result(CreateResult)
+//	    Error("unauthenticated")
 //
-//         GRPC(func() {              // gRPC endpoint to define gRPC service
-//             Message(func() {       // gRPC request message
-//                 Attribute("token")
-//             })
-//             Response(CodeOK)     // gRPC success response
-//             Response("unauthenticated", CodeUnauthenticated) // gRPC error
-//         })
-//     })
-//
+//	    GRPC(func() {              // gRPC endpoint to define gRPC service
+//	        Message(func() {       // gRPC request message
+//	            Attribute("token")
+//	        })
+//	        Response(CodeOK)     // gRPC success response
+//	        Response("unauthenticated", CodeUnauthenticated) // gRPC error
+//	    })
+//	})
 func GRPC(fn func()) {
 	switch actual := eval.Current().(type) {
 	case *expr.APIExpr:
@@ -115,19 +114,19 @@ func GRPC(fn func()) {
 //
 // Example:
 //
-//     var GRPCService = Service("my_grpc_service", func() {
-//         GRPC(func() {
-//             Package("svc")
-//         })
-//         Method("add", func() {
-//             Payload(func() {
-//                 Field(1, "a", Int)
-//                 Field(2, "b", Int)
-//             })
-//             Result(Int)
-//         })
-//         GRPC(func() {})
-//     })
+//	var GRPCService = Service("my_grpc_service", func() {
+//	    GRPC(func() {
+//	        Package("svc")
+//	    })
+//	    Method("add", func() {
+//	        Payload(func() {
+//	            Field(1, "a", Int)
+//	            Field(2, "b", Int)
+//	        })
+//	        Result(Int)
+//	    })
+//	    GRPC(func() {})
+//	})
 func Package(name string) {
 	switch actual := eval.Current().(type) {
 	case *expr.GRPCServiceExpr:
@@ -156,36 +155,36 @@ func Package(name string) {
 //
 // Example:
 //
-//     var CreatePayload = Type("CreatePayload", func() {
-//         Field(1, "name", String, "Name of account")
-//         TokenField(2, "token", String, "JWT token for authentication")
-//     })
+//	var CreatePayload = Type("CreatePayload", func() {
+//	    Field(1, "name", String, "Name of account")
+//	    TokenField(2, "token", String, "JWT token for authentication")
+//	})
 //
-//     var CreateResult = ResultType("application/vnd.create", func() {
-//         Attributes(func() {
-//             Field(1, "name", String, "Name of the created resource")
-//             Field(2, "href", String, "Href of the created resource")
-//         })
-//     })
+//	var CreateResult = ResultType("application/vnd.create", func() {
+//	    Attributes(func() {
+//	        Field(1, "name", String, "Name of the created resource")
+//	        Field(2, "href", String, "Href of the created resource")
+//	    })
+//	})
 //
-//     Method("create", func() {
-//         Payload(CreatePayload)
-//         Result(CreateResult)
-//         GRPC(func() {
-//             Message(func() {
-//                 Attribute("token") // "token" sent in the request message
-//                                    // along with "name"
-//             })
-//             Response(func() {
-//                 Code(CodeOK)
-//                 Message(func() {
-//                     Attribute("name") // "name" sent in the response
-//                                       // message along with "href"
-//                     Required("name")  // "name" is set to required
-//                 })
-//             })
-//         })
-//     })
+//	Method("create", func() {
+//	    Payload(CreatePayload)
+//	    Result(CreateResult)
+//	    GRPC(func() {
+//	        Message(func() {
+//	            Attribute("token") // "token" sent in the request message
+//	                               // along with "name"
+//	        })
+//	        Response(func() {
+//	            Code(CodeOK)
+//	            Message(func() {
+//	                Attribute("name") // "name" sent in the response
+//	                                  // message along with "href"
+//	                Required("name")  // "name" is set to required
+//	            })
+//	        })
+//	    })
+//	})
 //
 // If the method payload/result type is a primitive, array, or a map the
 // request/response message by default contains one attribute with name
@@ -195,20 +194,19 @@ func Package(name string) {
 //
 // Example:
 //
-//     Method("add", func() {
-//         Payload(Operands)
-//         Result(Int)      // method Result is a primitive
-//         GRPC(func() {
-//             Response(CodeOK, func()
-//                 Message(func() {
-//                     Attribute("sum") // Response message has one field with
-//                                      // name "sum" instead of the default
-//                                      // "field"
-//                 })
-//             })
-//         })
-//     })
-//
+//	Method("add", func() {
+//	    Payload(Operands)
+//	    Result(Int)      // method Result is a primitive
+//	    GRPC(func() {
+//	        Response(CodeOK, func()
+//	            Message(func() {
+//	                Attribute("sum") // Response message has one field with
+//	                                 // name "sum" instead of the default
+//	                                 // "field"
+//	            })
+//	        })
+//	    })
+//	})
 func Message(fn func()) {
 	var setter func(*expr.AttributeExpr)
 	{
@@ -258,32 +256,31 @@ func Message(fn func()) {
 //
 // Example:
 //
-//     var CreatePayload = Type("CreatePayload", func() {
-//         Field(1, "name", String, "Name of account")
-//         TokenField(2, "token", String, "JWT token for authentication")
-//     })
+//	var CreatePayload = Type("CreatePayload", func() {
+//	    Field(1, "name", String, "Name of account")
+//	    TokenField(2, "token", String, "JWT token for authentication")
+//	})
 //
-//     var CreateResult = ResultType("application/vnd.create", func() {
-//         Attributes(func() {
-//             Field(1, "name", String, "Name of the created resource")
-//             Field(2, "href", String, "Href of the created resource")
-//         })
-//     })
+//	var CreateResult = ResultType("application/vnd.create", func() {
+//	    Attributes(func() {
+//	        Field(1, "name", String, "Name of the created resource")
+//	        Field(2, "href", String, "Href of the created resource")
+//	    })
+//	})
 //
-//     Method("create", func() {
-//         Payload(CreatePayload)
-//         Result(CreateResult)
-//         GRPC(func() {
-//             Metadata(func() {
-//                 Attribute("name") // "name" sent in the request metadata
-//                                   // along with "token"
-//             })
-//             Response(func() {
-//                 Code(CodeOK)
-//             })
-//         })
-//     })
-//
+//	Method("create", func() {
+//	    Payload(CreatePayload)
+//	    Result(CreateResult)
+//	    GRPC(func() {
+//	        Metadata(func() {
+//	            Attribute("name") // "name" sent in the request metadata
+//	                              // along with "token"
+//	        })
+//	        Response(func() {
+//	            Code(CodeOK)
+//	        })
+//	    })
+//	})
 func Metadata(fn func()) {
 	switch e := eval.Current().(type) {
 	case *expr.GRPCEndpointExpr:
@@ -309,31 +306,30 @@ func Metadata(fn func()) {
 //
 // Example:
 //
-//     var CreatePayload = Type("CreatePayload", func() {
-//         Field(1, "name", String, "Name of account")
-//         TokenField(2, "token", String, "JWT token for authentication")
-//     })
+//	var CreatePayload = Type("CreatePayload", func() {
+//	    Field(1, "name", String, "Name of account")
+//	    TokenField(2, "token", String, "JWT token for authentication")
+//	})
 //
-//     var CreateResult = ResultType("application/vnd.create", func() {
-//         Attributes(func() {
-//             Field(1, "name", String, "Name of the created resource")
-//             Field(2, "href", String, "Href of the created resource")
-//         })
-//     })
+//	var CreateResult = ResultType("application/vnd.create", func() {
+//	    Attributes(func() {
+//	        Field(1, "name", String, "Name of the created resource")
+//	        Field(2, "href", String, "Href of the created resource")
+//	    })
+//	})
 //
-//     Method("create", func() {
-//         Payload(CreatePayload)
-//         Result(CreateResult)
-//         GRPC(func() {
-//             Response(func() {
-//                 Code(CodeOK)
-//                 Trailers(func() {
-//                     Attribute("name") // "name" sent in the trailer metadata
-//                 })
-//             })
-//         })
-//     })
-//
+//	Method("create", func() {
+//	    Payload(CreatePayload)
+//	    Result(CreateResult)
+//	    GRPC(func() {
+//	        Response(func() {
+//	            Code(CodeOK)
+//	            Trailers(func() {
+//	                Attribute("name") // "name" sent in the trailer metadata
+//	            })
+//	        })
+//	    })
+//	})
 func Trailers(fn func()) {
 	switch e := eval.Current().(type) {
 	case *expr.GRPCResponseExpr:

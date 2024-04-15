@@ -16,11 +16,10 @@ type Val expr.Val
 //
 // Example:
 //
-//    Example("A simple bottle", func() {
-//        Description("This bottle has an ID set to 1")
-//        Value(Val{"ID": 1})
-//    })
-//
+//	Example("A simple bottle", func() {
+//	    Description("This bottle has an ID set to 1")
+//	    Value(Val{"ID": 1})
+//	})
 func Value(val any) {
 	switch e := eval.Current().(type) {
 	case *expr.ExampleExpr:

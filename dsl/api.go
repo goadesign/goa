@@ -16,32 +16,31 @@ import (
 //
 // Example:
 //
-//    var _ = API("adder", func() {
-//        Title("title")                // Title used in documentation
-//        Description("description")    // Description used in documentation
-//        Version("2.0")                // Version of API
-//        TermsOfService("terms")       // Terms of use
-//        Contact(func() {              // Contact info
-//            Name("contact name")
-//            Email("contact email")
-//            URL("contact URL")
-//        })
-//        License(func() {              // License
-//            Name("license name")
-//            URL("license URL")
-//        })
-//        Docs(func() {                 // Documentation links
-//            Description("doc description")
-//            URL("doc URL")
-//        })
-//        Server("addersvr", func() {
-//            Host("development", func() {
-//                URI("http://localhost:80")
-//                URI("grpc://localhost:8080")
-//            })
-//        })
-//    }
-//
+//	var _ = API("adder", func() {
+//	    Title("title")                // Title used in documentation
+//	    Description("description")    // Description used in documentation
+//	    Version("2.0")                // Version of API
+//	    TermsOfService("terms")       // Terms of use
+//	    Contact(func() {              // Contact info
+//	        Name("contact name")
+//	        Email("contact email")
+//	        URL("contact URL")
+//	    })
+//	    License(func() {              // License
+//	        Name("license name")
+//	        URL("license URL")
+//	    })
+//	    Docs(func() {                 // Documentation links
+//	        Description("doc description")
+//	        URL("doc URL")
+//	    })
+//	    Server("addersvr", func() {
+//	        Host("development", func() {
+//	            URI("http://localhost:80")
+//	            URI("grpc://localhost:8080")
+//	        })
+//	    })
+//	}
 func API(name string, fn func()) *expr.APIExpr {
 	if name == "" {
 		eval.ReportError("API first argument cannot be empty")
@@ -63,10 +62,9 @@ func API(name string, fn func()) *expr.APIExpr {
 //
 // Example:
 //
-//    var _ = API("divider", func() {
-//        Title("divider API")
-//    })
-//
+//	var _ = API("divider", func() {
+//	    Title("divider API")
+//	})
 func Title(val string) {
 	if s, ok := eval.Current().(*expr.APIExpr); ok {
 		s.Title = val
@@ -83,10 +81,9 @@ func Title(val string) {
 //
 // Example:
 //
-//    var _ = API("divider", func() {
-//        Version("1.0")
-//    })
-//
+//	var _ = API("divider", func() {
+//	    Version("1.0")
+//	})
 func Version(ver string) {
 	if s, ok := eval.Current().(*expr.APIExpr); ok {
 		s.Version = ver
@@ -103,14 +100,13 @@ func Version(ver string) {
 //
 // Example:
 //
-//    var _ = API("divider", func() {
-//        Contact(func() {
-//            Name("support")
-//            Email("support@goa.design")
-//            URL("https://goa.design")
-//        })
-//    })
-//
+//	var _ = API("divider", func() {
+//	    Contact(func() {
+//	        Name("support")
+//	        Email("support@goa.design")
+//	        URL("https://goa.design")
+//	    })
+//	})
 func Contact(fn func()) {
 	contact := new(expr.ContactExpr)
 	if !eval.Execute(fn, contact) {
@@ -131,13 +127,12 @@ func Contact(fn func()) {
 //
 // Example:
 //
-//    var _ = API("divider", func() {
-//        License(func() {
-//            Name("MIT")
-//            URL("https://github.com/goadesign/goa/blob/master/LICENSE")
-//        })
-//    })
-//
+//	var _ = API("divider", func() {
+//	    License(func() {
+//	        Name("MIT")
+//	        URL("https://github.com/goadesign/goa/blob/master/LICENSE")
+//	    })
+//	})
 func License(fn func()) {
 	license := new(expr.LicenseExpr)
 	if !eval.Execute(fn, license) {
@@ -162,18 +157,18 @@ func License(fn func()) {
 //
 // Example:
 //
-//    var _ = API("divider", func() {
-//        Randomizer(expr.NewFakerRandomizer("different seed"))
-//    })
+//	var _ = API("divider", func() {
+//	    Randomizer(expr.NewFakerRandomizer("different seed"))
+//	})
 //
 // There's also a deterministic randomizer which will only generate one example
 // for each type, so all strings are "abc123", all ints are 1, etc.
 //
 // Example:
 //
-//    var _ = API("divider", func() {
-//        Randomizer(expr.NewDeterministicRandomizer())
-//    })
+//	var _ = API("divider", func() {
+//	    Randomizer(expr.NewDeterministicRandomizer())
+//	})
 func Randomizer(randomizer expr.Randomizer) {
 	if s, ok := eval.Current().(*expr.APIExpr); ok {
 		s.ExampleGenerator = &expr.ExampleGenerator{Randomizer: randomizer}
@@ -191,13 +186,12 @@ func Randomizer(randomizer expr.Randomizer) {
 //
 // Example:
 //
-//    var _ = API("cellar", func() {
-//        Docs(func() {
-//            Description("Additional documentation")
-//            URL("https://goa.design")
-//        })
-//    })
-//
+//	var _ = API("cellar", func() {
+//	    Docs(func() {
+//	        Description("Additional documentation")
+//	        URL("https://goa.design")
+//	    })
+//	})
 func Docs(fn func()) {
 	docs := new(expr.DocsExpr)
 	if !eval.Execute(fn, docs) {
@@ -227,10 +221,9 @@ func Docs(fn func()) {
 //
 // Example:
 //
-//    var _ = API("github", func() {
-//        TermsOfService("https://help.github.com/articles/github-terms-of-API/"
-//    })
-//
+//	var _ = API("github", func() {
+//	    TermsOfService("https://help.github.com/articles/github-terms-of-API/"
+//	})
 func TermsOfService(terms string) {
 	if s, ok := eval.Current().(*expr.APIExpr); ok {
 		s.TermsOfService = terms
@@ -247,13 +240,12 @@ func TermsOfService(terms string) {
 //
 // Example:
 //
-//    var _ = API("divider", func() {
-//        License(func() {
-//            Name("MIT")
-//            URL("https://github.com/goadesign/goa/blob/master/LICENSE")
-//        })
-//    })
-//
+//	var _ = API("divider", func() {
+//	    License(func() {
+//	        Name("MIT")
+//	        URL("https://github.com/goadesign/goa/blob/master/LICENSE")
+//	    })
+//	})
 func Name(name string) {
 	switch def := eval.Current().(type) {
 	case *expr.ContactExpr:
@@ -273,12 +265,11 @@ func Name(name string) {
 //
 // Example:
 //
-//    var _ = API("divider", func() {
-//        Contact(func() {
-//            Email("support@goa.design")
-//        })
-//    })
-//
+//	var _ = API("divider", func() {
+//	    Contact(func() {
+//	        Email("support@goa.design")
+//	    })
+//	})
 func Email(email string) {
 	if c, ok := eval.Current().(*expr.ContactExpr); ok {
 		c.Email = email
@@ -293,10 +284,9 @@ func Email(email string) {
 //
 // Example:
 //
-//    Docs(func() {
-//        URL("https://goa.design")
-//    })
-//
+//	Docs(func() {
+//	    URL("https://goa.design")
+//	})
 func URL(url string) {
 	switch def := eval.Current().(type) {
 	case *expr.ContactExpr:
