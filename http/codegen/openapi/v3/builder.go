@@ -338,7 +338,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 			break
 		}
 	}
-	
+
 	// An endpoint may be marked as deprecated. if the openapi:deprecated tag is present, we populate it to true
 	_, deprecated := e.Meta.Last("openapi:deprecated")
 	return &Operation{
@@ -550,7 +550,7 @@ func buildSecurityRequirements(reqs []*expr.SecurityExpr) []map[string][]string 
 	for i, req := range reqs {
 		sr := make(map[string][]string, len(req.Schemes))
 		for _, sch := range req.Schemes {
-			scopes := make([]string, 0) 
+			scopes := make([]string, 0)
 			switch sch.Kind {
 			case expr.OAuth2Kind, expr.JWTKind:
 				if len(req.Scopes) > 0 {

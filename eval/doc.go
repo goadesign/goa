@@ -6,11 +6,11 @@ upon execution.
 
 A DSL that allows describing a service and its methods could look like this:
 
-    var _ = Service("service name")       // Defines the service "service	name"
+	var _ = Service("service name")       // Defines the service "service	name"
 
-    var _ = Method("method name", func() {  // Defines the method "method name"
-        Description("some method description") // Sets the method description
-    })
+	var _ = Method("method name", func() {  // Defines the method "method name"
+	    Description("some method description") // Sets the method description
+	})
 
 DSL keywords are simply package functions that can be nested using anonymous
 functions as last argument. Upon execution the DSL functions create expression
@@ -23,39 +23,39 @@ package Expression and Root interfaces respectively.
 Keeping with the example above, Method creates instances of the following
 MethodExpression struct:
 
-    type MethodExpression struct {
-        Name string
-        DSLFunc func()
-    }
+	type MethodExpression struct {
+	    Name string
+	    DSLFunc func()
+	}
 
 where Name gets initialized with the first argument and DSLFunc with the
 second. ServiceExpression is the root expression that contains the instances
 of MethodExpression created by the Method function:
 
-    type ServiceExpression struct {
-        Name string
-        Methods []eval.Expression
-    }
+	type ServiceExpression struct {
+	    Name string
+	    Methods []eval.Expression
+	}
 
 The Method DSL function simply initializes a MethodExpression and stores it in
 the Methods field of the root ServiceExpression:
 
-    func Method(name string, fn func()) {
-        ep := &MethodExpression{Name: name, DSLFunc: fn}
-        Design.Methods = append(Design.Methods, ep)
-    }
+	func Method(name string, fn func()) {
+	    ep := &MethodExpression{Name: name, DSLFunc: fn}
+	    Design.Methods = append(Design.Methods, ep)
+	}
 
 where Design is a package variable holding the ServiceExpression root
 expression:
 
-    // Design is the DSL root expression.
-    var Design *ServiceExpression = &ServiceExpression{}
+	// Design is the DSL root expression.
+	var Design *ServiceExpression = &ServiceExpression{}
 
 The Service function simply sets the Name field of Service:
 
-    func Service(name string) {
-        Design.Name = name
-    }
+	func Service(name string) {
+	    Design.Name = name
+	}
 
 Once the process is loaded the Design package variable contains an instance of
 ServiceExpression which in turn contains all the instances of MethodExpression
@@ -71,9 +71,9 @@ over the sub-expressions that were initialized when the process loaded.
 In this example the ServiceExpression implementation of WalkSets simply passes
 the Methods field to the iterator:
 
-    func (se *ServiceExpression) WalkSets(it eval.SetWalker) {
-        it(se.Methods)
-    }
+	func (se *ServiceExpression) WalkSets(it eval.SetWalker) {
+	    it(se.Methods)
+	}
 
 Each expression in an expression set may optionally implement the Source,
 Preparer, Validator, and Finalizer interfaces:
@@ -91,9 +91,9 @@ Finalizer interface.
 In our example MethodExpression implements Source and return its DSLFunc member
 in the implementation of the Source interface DSL function:
 
-    func (ep *MethodExpression) Source() func() {
-        return ep.DSLFunc
-    }
+	func (ep *MethodExpression) Source() func() {
+	    return ep.DSLFunc
+	}
 
 MethodExpression could also implement the Validator Validate method to check
 that the name of the method is not empty for example.

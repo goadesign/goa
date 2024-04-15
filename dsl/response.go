@@ -50,49 +50,48 @@ import (
 //
 // By default (i.e. if Response only defines a status code) then:
 //
-//    - success HTTP responses use code 200 (OK) and error HTTP responses use code 400 (BadRequest)
-//    - success gRPC responses use code 0 (OK) and error gRPC response use code 2 (Unknown)
-//    - The result type attributes are all mapped to the HTTP response body or gRPC response message.
+//   - success HTTP responses use code 200 (OK) and error HTTP responses use code 400 (BadRequest)
+//   - success gRPC responses use code 0 (OK) and error gRPC response use code 2 (Unknown)
+//   - The result type attributes are all mapped to the HTTP response body or gRPC response message.
 //
 // Example:
 //
-//    Method("create", func() {
-//        Payload(CreatePayload)
-//        Result(CreateResult)
-//        Error("an_error")
+//	Method("create", func() {
+//	    Payload(CreatePayload)
+//	    Result(CreateResult)
+//	    Error("an_error")
 //
-//        HTTP(func() {
-//            Response(StatusAccepted, func() { // HTTP status code set using argument
-//                Description("Response used for async creations")
-//                Tag("outcome", "accepted") // Tag identifies a result type attribute and corresponding
-//                                           // value for this response to be selected.
-//                Header("taskHref")         // map "taskHref" attribute to header, all others to body
-//            })
+//	    HTTP(func() {
+//	        Response(StatusAccepted, func() { // HTTP status code set using argument
+//	            Description("Response used for async creations")
+//	            Tag("outcome", "accepted") // Tag identifies a result type attribute and corresponding
+//	                                       // value for this response to be selected.
+//	            Header("taskHref")         // map "taskHref" attribute to header, all others to body
+//	        })
 //
-//            Response(StatusCreated, func () {
-//                Tag("outcome", "created")  // CreateResult type to describe body
-//            })
+//	        Response(StatusCreated, func () {
+//	            Tag("outcome", "created")  // CreateResult type to describe body
+//	        })
 //
-//            Response(func() {
-//                Description("Response used when item already exists")
-//                Code(StatusNoContent) // HTTP status code set using Code
-//                Body(Empty)           // Override method result type
-//            })
+//	        Response(func() {
+//	            Description("Response used when item already exists")
+//	            Code(StatusNoContent) // HTTP status code set using Code
+//	            Body(Empty)           // Override method result type
+//	        })
 //
-//            Response("an_error", StatusConflict) // Override default of 400
-//        })
+//	        Response("an_error", StatusConflict) // Override default of 400
+//	    })
 //
-//        GRPC(func() {
-//            Response(CodeOK, func() {
-//                Metadata("taskHref") // map "taskHref" attribute to metadata, all others to message
-//            })
+//	    GRPC(func() {
+//	        Response(CodeOK, func() {
+//	            Metadata("taskHref") // map "taskHref" attribute to metadata, all others to message
+//	        })
 //
-//            Response("an_error", CodeInternal, func() {
-//                Description("Error returned for internal errors")
-//            })
-//        })
-//    })
-//
+//	        Response("an_error", CodeInternal, func() {
+//	            Description("Error returned for internal errors")
+//	        })
+//	    })
+//	})
 func Response(val any, args ...any) {
 	name, ok := val.(string)
 	if !ok && len(args) > 0 {

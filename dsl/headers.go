@@ -23,41 +23,40 @@ import (
 //
 // Example:
 //
-//     // HTTP headers
+//	// HTTP headers
 //
-//     var _ = Service("cellar", func() {
-//         HTTP(func() {
-//             Headers(func() {
-//                 Header("version:Api-Version", String, "API version", func() {
-//                     Enum("1.0", "2.0")
-//                 })
-//                 Required("version")
-//             })
-//         })
-//     })
+//	var _ = Service("cellar", func() {
+//	    HTTP(func() {
+//	        Headers(func() {
+//	            Header("version:Api-Version", String, "API version", func() {
+//	                Enum("1.0", "2.0")
+//	            })
+//	            Required("version")
+//	        })
+//	    })
+//	})
 //
-//     // gRPC response header metadata
+//	// gRPC response header metadata
 //
-//     var CreateResult = ResultType("application/vnd.create", func() {
-//         Attributes(func() {
-//             Field(1, "name", String, "Name of the created resource")
-//             Field(2, "href", String, "Href of the created resource")
-//         })
-//     })
+//	var CreateResult = ResultType("application/vnd.create", func() {
+//	    Attributes(func() {
+//	        Field(1, "name", String, "Name of the created resource")
+//	        Field(2, "href", String, "Href of the created resource")
+//	    })
+//	})
 //
-//     Method("create", func() {
-//         Payload(CreatePayload)
-//         Result(CreateResult)
-//         GRPC(func() {
-//             Response(func() {
-//                 Code(CodeOK)
-//                 Headers(func() {
-//                     Attribute("name") // "name" sent in the header metadata
-//                 })
-//             })
-//         })
-//     })
-//
+//	Method("create", func() {
+//	    Payload(CreatePayload)
+//	    Result(CreateResult)
+//	    GRPC(func() {
+//	        Response(func() {
+//	            Code(CodeOK)
+//	            Headers(func() {
+//	                Attribute("name") // "name" sent in the header metadata
+//	            })
+//	        })
+//	    })
+//	})
 func Headers(args any) {
 	fn, ok := args.(func())
 	if !ok {
