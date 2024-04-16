@@ -39,8 +39,9 @@ func main() {
 	}
 
 	var (
-		output = "."
-		debug  bool
+		output               = "."
+		debug                bool
+		disableVersionString bool
 	)
 	if len(os.Args) > offset+1 {
 		var (
@@ -49,6 +50,7 @@ func main() {
 			out  = fset.String("output", output, "output `directory`")
 		)
 		fset.BoolVar(&debug, "debug", false, "Print debug information")
+		fset.BoolVar(&disableVersionString, "disableVersionString", false, "Disable goa version string in generated code")
 
 		fset.Usage = usage
 		if err := fset.Parse(os.Args[offset+1:]); err != nil {
@@ -62,7 +64,7 @@ func main() {
 		}
 	}
 
-	if err := gen(cmd, path, output, debug); err != nil {
+	if err := gen(cmd, path, output, debug, disableVersionString); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
@@ -74,7 +76,7 @@ var (
 	gen   = generate
 )
 
-func generate(cmd, path, output string, debug bool) error {
+func generate(cmd, path, output string, debug bool, disableVersionString bool) error {
 	var (
 		files []string
 		err   error
@@ -85,7 +87,7 @@ func generate(cmd, path, output string, debug bool) error {
 		goto fail
 	}
 
-	tmp = NewGenerator(cmd, path, output)
+	tmp = NewGenerator(cmd, path, output, disableVersionString)
 
 	if err = tmp.Write(debug); err != nil {
 		goto fail
