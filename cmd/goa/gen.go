@@ -40,12 +40,11 @@ type Generator struct {
 	tmpDir string
 
 	// hasVendorDirectory is a flag to indicate whether the project uses vendoring
-	hasVendorDirectory   bool
-	disableVersionString bool
+	hasVendorDirectory bool
 }
 
 // NewGenerator creates a Generator.
-func NewGenerator(cmd string, path, output string, disableVersionString bool) *Generator {
+func NewGenerator(cmd string, path, output string) *Generator {
 	bin := "goa"
 	if runtime.GOOS == "windows" {
 		bin += ".exe"
@@ -89,13 +88,12 @@ func NewGenerator(cmd string, path, output string, disableVersionString bool) *G
 	}
 
 	return &Generator{
-		Command:              cmd,
-		DesignPath:           path,
-		Output:               output,
-		DesignVersion:        version,
-		hasVendorDirectory:   hasVendorDirectory,
-		bin:                  bin,
-		disableVersionString: disableVersionString,
+		Command:            cmd,
+		DesignPath:         path,
+		Output:             output,
+		DesignVersion:      version,
+		hasVendorDirectory: hasVendorDirectory,
+		bin:                bin,
 	}
 }
 
@@ -141,7 +139,7 @@ func (g *Generator) Write(_ bool) error {
 			codegen.NewImport("_", g.DesignPath),
 		}
 		sections = []*codegen.SectionTemplate{
-			codegen.Header("Code Generator", "main", imports, g.disableVersionString),
+			codegen.Header("Code Generator", "main", imports, false),
 			{
 				Name:   "main",
 				Source: mainT,
