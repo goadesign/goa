@@ -217,7 +217,7 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 	pkgs = append(pkgs, codegen.GoaImport(""))
 	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "convert.go")
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(service.Name+" service type conversion functions", svc.PkgName, pkgs),
+		codegen.Header(service.Name+" service type conversion functions", svc.PkgName, pkgs, false),
 	}
 
 	var (

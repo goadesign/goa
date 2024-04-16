@@ -55,7 +55,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		codegen.GoaImport(""),
 	}
 	imports = append(imports, data.Service.UserTypeImports...)
-	header := codegen.Header(svc.Name()+" HTTP client types", "client", imports)
+	header := codegen.Header(svc.Name()+" HTTP client types", "client", imports, false)
 
 	var (
 		initData       []*InitData

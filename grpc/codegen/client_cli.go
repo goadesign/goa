@@ -83,7 +83,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 	}
 
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "cli", specs),
+		codegen.Header(title, "cli", specs, false),
 		cli.UsageCommands(data),
 		cli.UsageExamples(data),
 		{
@@ -122,7 +122,7 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.Command
 	}
 	specs = append(specs, sd.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", specs),
+		codegen.Header(title, "client", specs, false),
 	}
 	for _, sub := range data.Subcommands {
 		if sub.BuildFunction != nil {

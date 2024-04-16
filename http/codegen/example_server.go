@@ -82,7 +82,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 	}
 
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", "main", specs),
+		codegen.Header("", "main", specs, false),
 		{
 			Name:   "server-http-start",
 			Source: readTemplate("server_start"),
@@ -166,7 +166,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 		})
 
 		apiPkg := scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
-		sections = []*codegen.SectionTemplate{codegen.Header("", apiPkg, specs)}
+		sections = []*codegen.SectionTemplate{codegen.Header("", apiPkg, specs, false)}
 		for _, e := range data.Endpoints {
 			if e.MultipartRequestDecoder != nil {
 				mustGen = true

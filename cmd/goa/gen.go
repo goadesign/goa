@@ -139,7 +139,7 @@ func (g *Generator) Write(_ bool) error {
 			codegen.NewImport("_", g.DesignPath),
 		}
 		sections = []*codegen.SectionTemplate{
-			codegen.Header("Code Generator", "main", imports),
+			codegen.Header("Code Generator", "main", imports, false),
 			{
 				Name:   "main",
 				Source: mainT,

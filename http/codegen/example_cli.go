@@ -69,7 +69,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 		}
 	}
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", "main", specs),
+		codegen.Header("", "main", specs, false),
 		{
 			Name:   "cli-http-start",
 			Source: readTemplate("cli_start"),

@@ -56,7 +56,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{})
 		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 	}
 	imports = append(imports, data.Service.UserTypeImports...)
-	header := codegen.Header(svc.Name()+" HTTP server types", "server", imports)
+	header := codegen.Header(svc.Name()+" HTTP server types", "server", imports, false)
 
 	var (
 		initData       []*InitData

@@ -26,11 +26,10 @@ func ViewsFile(_ string, service *expr.ServiceExpr) *codegen.File {
 		sections []*codegen.SectionTemplate
 	)
 	{
-		header := codegen.Header(service.Name+" views", "views",
-			[]*codegen.ImportSpec{
-				codegen.GoaImport(""),
-				{Path: "unicode/utf8"},
-			})
+		header := codegen.Header(service.Name+" views", "views", []*codegen.ImportSpec{
+			codegen.GoaImport(""),
+			{Path: "unicode/utf8"},
+		}, false)
 		sections = []*codegen.SectionTemplate{header}
 
 		// type definitions

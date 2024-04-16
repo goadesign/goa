@@ -41,7 +41,7 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 		codegen.GoaImport(""),
 	}
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", "main", specs),
+		codegen.Header("", "main", specs, false),
 		{
 			Name:   "cli-main-start",
 			Source: readTemplate("client_start"),

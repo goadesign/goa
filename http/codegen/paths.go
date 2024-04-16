@@ -44,7 +44,7 @@ func pathSections(svc *expr.HTTPServiceExpr, pkg string) []*codegen.SectionTempl
 			{Path: "net/url"},
 			{Path: "strconv"},
 			{Path: "strings"},
-		}),
+		}, false),
 	}
 	sdata := HTTPServices.Get(svc.Name())
 	for _, e := range svc.HTTPEndpoints {

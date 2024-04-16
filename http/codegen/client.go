@@ -47,7 +47,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			codegen.GoaNamedImport("http", "goahttp"),
 			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-		}),
+		}, false),
 	}
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "client-struct",
@@ -114,7 +114,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 	}
 	imports = append(imports, data.Service.UserTypeImports...)
-	sections := []*codegen.SectionTemplate{codegen.Header(title, "client", imports)}
+	sections := []*codegen.SectionTemplate{codegen.Header(title, "client", imports, false)}
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
