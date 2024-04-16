@@ -81,7 +81,9 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, _ map[string]struct{})
 		}
 		imports = append(imports, sd.Service.UserTypeImports...)
 		imports = append(imports, sd.Service.ProtoImports...)
-		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC server types", "server", imports, false)}
+		value, ok := svc.Meta.Last("goa:version:disable")
+		disableVersion := ok && value == "true"
+		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC server types", "server", imports, disableVersion)}
 		for _, init := range initData {
 			if _, ok := foundInits[init.Name]; ok {
 				continue

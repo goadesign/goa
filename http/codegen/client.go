@@ -32,6 +32,8 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "client.go")
 	title := fmt.Sprintf("%s client HTTP transport", svc.Name())
+	value, ok := svc.Meta.Last("goa:version:disable")
+	disableVersion := ok && value == "true"
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", []*codegen.ImportSpec{
 			{Path: "context"},
@@ -47,7 +49,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			codegen.GoaNamedImport("http", "goahttp"),
 			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-		}, false),
+		}, disableVersion),
 	}
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "client-struct",
@@ -114,7 +116,9 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 	}
 	imports = append(imports, data.Service.UserTypeImports...)
-	sections := []*codegen.SectionTemplate{codegen.Header(title, "client", imports, false)}
+	value, ok := svc.Meta.Last("goa:version:disable")
+	disableVersion := ok && value == "true"
+	sections := []*codegen.SectionTemplate{codegen.Header(title, "client", imports, disableVersion)}
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{

@@ -26,10 +26,12 @@ func ViewsFile(_ string, service *expr.ServiceExpr) *codegen.File {
 		sections []*codegen.SectionTemplate
 	)
 	{
+		value, ok := service.Meta.Last("goa:version:disable")
+		disableVersion := ok && value == "true"
 		header := codegen.Header(service.Name+" views", "views", []*codegen.ImportSpec{
 			codegen.GoaImport(""),
 			{Path: "unicode/utf8"},
-		}, false)
+		}, disableVersion)
 		sections = []*codegen.SectionTemplate{header}
 
 		// type definitions

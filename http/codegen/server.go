@@ -59,8 +59,10 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 	}
 	imports = append(imports, data.Service.UserTypeImports...)
+	value, ok := svc.Meta.Last("goa:version:disable")
+	disableVersion := ok && value == "true"
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "server", imports, false),
+		codegen.Header(title, "server", imports, disableVersion),
 	}
 
 	sections = append(sections, &codegen.SectionTemplate{Name: "server-struct", Source: readTemplate("server_struct"), Data: data})
@@ -117,7 +119,9 @@ func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 	}
 	imports = append(imports, data.Service.UserTypeImports...)
-	sections := []*codegen.SectionTemplate{codegen.Header(title, "server", imports, false)}
+	value, ok := svc.Meta.Last("goa:version:disable")
+	disableVersion := ok && value == "true"
+	sections := []*codegen.SectionTemplate{codegen.Header(title, "server", imports, disableVersion)}
 
 	for _, e := range data.Endpoints {
 		if e.Redirect == nil && !isWebSocketEndpoint(e) {

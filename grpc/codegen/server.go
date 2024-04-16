@@ -48,8 +48,10 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 		}
 		imports = append(imports, data.Service.UserTypeImports...)
+		value, ok := svc.Meta.Last("goa:version:disable")
+		disableVersion := ok && value == "true"
 		sections = []*codegen.SectionTemplate{
-			codegen.Header(svc.Name()+" gRPC server", "server", imports, false),
+			codegen.Header(svc.Name()+" gRPC server", "server", imports, disableVersion),
 			{Name: "server-struct", Source: serverStructT, Data: data},
 		}
 		for _, e := range data.Endpoints {
@@ -141,7 +143,9 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 		}
 		imports = append(imports, data.Service.UserTypeImports...)
-		sections = []*codegen.SectionTemplate{codegen.Header(title, "server", imports, false)}
+		value, ok := svc.Meta.Last("goa:version:disable")
+		disableVersion := ok && value == "true"
+		sections = []*codegen.SectionTemplate{codegen.Header(title, "server", imports, disableVersion)}
 
 		for _, e := range data.Endpoints {
 			if e.Response.ServerConvert != nil {

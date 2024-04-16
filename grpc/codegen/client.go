@@ -47,8 +47,10 @@ func client(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 		}
 		imports = append(imports, data.Service.UserTypeImports...)
+		value, ok := svc.Meta.Last("goa:version:disable")
+		disableVersion := ok && value == "true"
 		sections = []*codegen.SectionTemplate{
-			codegen.Header(svc.Name()+" gRPC client", "client", imports, false),
+			codegen.Header(svc.Name()+" gRPC client", "client", imports, disableVersion),
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-struct",
@@ -136,7 +138,9 @@ func clientEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 		}
 		imports = append(imports, data.Service.UserTypeImports...)
-		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client encoders and decoders", "client", imports, false)}
+		value, ok := svc.Meta.Last("goa:version:disable")
+		disableVersion := ok && value == "true"
+		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client encoders and decoders", "client", imports, disableVersion)}
 		fm := transTmplFuncs(svc)
 		fm["metadataEncodeDecodeData"] = metadataEncodeDecodeData
 		fm["typeConversionData"] = typeConversionData
