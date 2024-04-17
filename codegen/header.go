@@ -1,11 +1,14 @@
 package codegen
 
 import (
+	"goa.design/goa/v3/expr"
 	goa "goa.design/goa/v3/pkg"
 )
 
 // Header returns a Go source file header section template.
-func Header(title, pack string, imports []*ImportSpec, disableVersion bool) *SectionTemplate {
+func Header(title, pack string, imports []*ImportSpec, meta expr.MetaExpr) *SectionTemplate {
+	value, ok := meta.Last("goa:version:disable")
+	disableVersion := ok && value == "true"
 	return &SectionTemplate{
 		Name:   "source-header",
 		Source: headerT,

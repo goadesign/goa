@@ -78,7 +78,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 	)
 	{
 		sections = []*codegen.SectionTemplate{
-			codegen.Header("", "main", specs, false),
+			codegen.Header("", "main", specs, nil),
 			{Name: "do-grpc-cli", Source: grpcCLIDoT, Data: svrdata},
 		}
 	}

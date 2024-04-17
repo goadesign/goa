@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"goa.design/goa/v3/expr"
 	goa "goa.design/goa/v3/pkg"
 )
 
@@ -84,16 +85,18 @@ package testpackage
 		pathImports      = append(pathImport, &ImportSpec{Path: "other/import/with/slashes"})
 		pathNamedImport  = []*ImportSpec{{Name: "myname", Path: "import/with/slashes"}}
 		pathNamedImports = append(pathNamedImport, &ImportSpec{Name: "myothername", Path: "other/import/with/slashes"})
+
+		meta = expr.MetaExpr{"goa:version:disable": {"true"}}
 	)
 	cases := map[string]struct {
-		Title          string
-		Imports        []*ImportSpec
-		Expected       string
-		DisableVersion bool
+		Title    string
+		Imports  []*ImportSpec
+		Expected string
+		Meta     expr.MetaExpr
 	}{
 		"no-title":              {Expected: noTitleHeader},
 		"title":                 {Title: title, Expected: titleHeader},
-		"title-disable-version": {Title: title, DisableVersion: true, Expected: titleHeaderVersionDisabled},
+		"title-disable-version": {Title: title, Meta: meta, Expected: titleHeaderVersionDisabled},
 		"single-import":         {Imports: imprt, Expected: singleImportHeader},
 		"many-imports":          {Imports: imports, Expected: manyImportsHeader},
 		"path-import":           {Imports: pathImport, Expected: pathImportHeader},
@@ -103,7 +106,7 @@ package testpackage
 	}
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
-		s := Header(tc.Title, "testpackage", tc.Imports, tc.DisableVersion)
+		s := Header(tc.Title, "testpackage", tc.Imports, tc.Meta)
 		s.Write(buf) // nolint: errcheck
 		actual := buf.String()
 		if actual != tc.Expected {

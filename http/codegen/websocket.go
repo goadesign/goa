@@ -244,7 +244,7 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File
 	}
 	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "server", imports, false),
+		codegen.Header(title, "server", imports, nil),
 	}
 	sections = append(sections, serverStructWSSections(data)...)
 	sections = append(sections, serverWSSections(data)...)
@@ -277,10 +277,8 @@ func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File
 		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 	}
 	imports = append(imports, data.Service.UserTypeImports...)
-	value, ok := svc.Meta.Last("goa:version:disable")
-	disableVersion := ok && value == "true"
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", imports, disableVersion),
+		codegen.Header(title, "client", imports, svc.Meta),
 	}
 	sections = append(sections, clientStructWSSections(data)...)
 	sections = append(sections, clientWSSections(data)...)

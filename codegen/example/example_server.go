@@ -75,7 +75,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
 
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", "main", specs, false),
+		codegen.Header("", "main", specs, nil),
 		{
 			Name:   "server-main-start",
 			Source: readTemplate("server_start"),

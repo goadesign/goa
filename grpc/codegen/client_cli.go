@@ -82,10 +82,8 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		specs = append(specs, sd.Service.UserTypeImports...)
 	}
 
-	value, ok := svr.Meta.Last("goa:version:disable")
-	disableVersion := ok && value == "true"
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "cli", specs, disableVersion),
+		codegen.Header(title, "cli", specs, svr.Meta),
 		cli.UsageCommands(data),
 		cli.UsageExamples(data),
 		{
@@ -123,10 +121,8 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.Command
 		{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 	}
 	specs = append(specs, sd.Service.UserTypeImports...)
-	value, ok := svc.Meta.Last("goa:version:disable")
-	disableVersion := ok && value == "true"
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", specs, disableVersion),
+		codegen.Header(title, "client", specs, svc.Meta),
 	}
 	for _, sub := range data.Subcommands {
 		if sub.BuildFunction != nil {

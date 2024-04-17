@@ -99,7 +99,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			}
 		}
 		sections = []*codegen.SectionTemplate{
-			codegen.Header("", "main", specs, false),
+			codegen.Header("", "main", specs, nil),
 			{
 				Name:   "server-grpc-start",
 				Source: grpcSvrStartT,

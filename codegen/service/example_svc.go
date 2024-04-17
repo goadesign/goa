@@ -75,7 +75,7 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 		{Path: "goa.design/goa/v3/security"},
 	}
 	sections := []*codegen.SectionTemplate{
-		codegen.Header("", apipkg, specs, false),
+		codegen.Header("", apipkg, specs, nil),
 		{
 			Name:   "basic-service-struct",
 			Source: readTemplate("service_struct"),

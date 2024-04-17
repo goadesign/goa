@@ -55,9 +55,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		codegen.GoaImport(""),
 	}
 	imports = append(imports, data.Service.UserTypeImports...)
-	value, ok := svc.Meta.Last("goa:version:disable")
-	disableVersion := ok && value == "true"
-	header := codegen.Header(svc.Name()+" HTTP client types", "client", imports, disableVersion)
+	header := codegen.Header(svc.Name()+" HTTP client types", "client", imports, svc.Meta)
 
 	var (
 		initData       []*InitData

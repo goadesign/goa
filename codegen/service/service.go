@@ -169,9 +169,7 @@ func Files(genpkg string, service *expr.ServiceExpr, userTypePkgs map[string][]s
 		codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
 	}
 	imports = append(imports, svc.UserTypeImports...)
-	value, ok := service.Meta.Last("goa:version:disable")
-	disableVersion := ok && value == "true"
-	header := codegen.Header(service.Name+" service", svc.PkgName, imports, disableVersion)
+	header := codegen.Header(service.Name+" service", svc.PkgName, imports, service.Meta)
 	def := &codegen.SectionTemplate{
 		Name:    "service",
 		Source:  readTemplate("service"),
@@ -230,7 +228,7 @@ func Files(genpkg string, service *expr.ServiceExpr, userTypePkgs map[string][]s
 		}
 		fullRelPath := filepath.Join(codegen.Gendir, p)
 		dir, _ := filepath.Split(fullRelPath)
-		h := codegen.Header("User types", codegen.Goify(filepath.Base(dir), false), nil, false)
+		h := codegen.Header("User types", codegen.Goify(filepath.Base(dir), false), nil, nil)
 		sections := append([]*codegen.SectionTemplate{h}, secs...)
 		files = append(files, &codegen.File{Path: fullRelPath, SectionTemplates: sections})
 	}
