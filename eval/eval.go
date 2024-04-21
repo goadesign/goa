@@ -234,7 +234,7 @@ func finalizeSet(set ExpressionSet) {
 
 // caller returns the name of calling function.
 func caller() string {
-	for skip := 2; skip <= 3; skip++ {
+	for skip := 2; skip <= 4; skip++ {
 		pc, _, _, ok := runtime.Caller(skip)
 		if !ok {
 			break
