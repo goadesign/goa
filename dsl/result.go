@@ -72,7 +72,7 @@ import (
 //	})
 func Result(val any, args ...any) {
 	if len(args) > 2 {
-		eval.ReportError("too many arguments")
+		eval.TooManyArgError()
 		return
 	}
 	e, ok := eval.Current().(*expr.MethodExpr)
@@ -130,7 +130,7 @@ func Result(val any, args ...any) {
 //	})
 func StreamingResult(val any, args ...any) {
 	if len(args) > 2 {
-		eval.ReportError("too many arguments")
+		eval.TooManyArgError()
 		return
 	}
 	e, ok := eval.Current().(*expr.MethodExpr)

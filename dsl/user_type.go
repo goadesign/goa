@@ -58,7 +58,7 @@ var (
 //	})
 func Type(name string, args ...any) expr.UserType {
 	if len(args) > 2 {
-		eval.ReportError("too many arguments")
+		eval.TooManyArgError()
 		return nil
 	}
 	if t := expr.Root.UserType(name); t != nil {
@@ -149,7 +149,7 @@ func ArrayOf(v any, fn ...func()) *expr.Array {
 		return &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}
 	}
 	if len(fn) > 1 {
-		eval.ReportError("ArrayOf: too many arguments")
+		eval.TooManyArgError()
 		return &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}
 	}
 	at := expr.AttributeExpr{Type: t}
@@ -203,7 +203,7 @@ func MapOf(k, v any, fn ...func()) *expr.Map {
 		return &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.String}}
 	}
 	if len(fn) > 1 {
-		eval.ReportError("MapOf: too many arguments")
+		eval.TooManyArgError()
 		return &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.String}}
 	}
 	kat := expr.AttributeExpr{Type: tk}

@@ -524,13 +524,13 @@ func Scope(name string, desc ...string) {
 	switch current := eval.Current().(type) {
 	case *expr.SecurityExpr:
 		if len(desc) >= 1 {
-			eval.ReportError("too many arguments")
+			eval.TooManyArgError()
 			return
 		}
 		current.Scopes = append(current.Scopes, name)
 	case *expr.SchemeExpr:
 		if len(desc) > 1 {
-			eval.ReportError("too many arguments")
+			eval.TooManyArgError()
 			return
 		}
 		d := "no description"
