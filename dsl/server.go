@@ -58,7 +58,7 @@ import (
 //	})
 func Server(name string, fn ...func()) *expr.ServerExpr {
 	if len(fn) > 1 {
-		eval.ReportError("too many arguments given to Server")
+		eval.TooManyArgError()
 	}
 	api, ok := eval.Current().(*expr.APIExpr)
 	if !ok {

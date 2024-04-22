@@ -125,6 +125,12 @@ func InvalidArgError(expected string, actual any) {
 	ReportError("cannot use %#v (type %s) as type %s", actual, reflect.TypeOf(actual), expected)
 }
 
+// TooManyArgError records a too many arguments error. It is used by DSL
+// functions that take dynamic arguments.
+func TooManyArgError() {
+	ReportError("too many arguments given to %s", caller())
+}
+
 // ValidationErrors records the errors encountered when running Validate.
 type ValidationErrors struct {
 	Errors      []error
@@ -234,7 +240,7 @@ func finalizeSet(set ExpressionSet) {
 
 // caller returns the name of calling function.
 func caller() string {
-	for skip := 2; skip <= 3; skip++ {
+	for skip := 2; skip <= 4; skip++ {
 		pc, _, _, ok := runtime.Caller(skip)
 		if !ok {
 			break

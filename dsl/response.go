@@ -234,7 +234,7 @@ func parseResponseArgs(val any, args ...any) (code int, fn func()) {
 	case int:
 		code = t
 		if len(args) > 1 {
-			eval.ReportError("too many arguments given to Response (%d)", len(args)+1)
+			eval.TooManyArgError()
 			return
 		}
 		if len(args) == 1 {
