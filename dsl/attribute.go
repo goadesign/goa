@@ -301,7 +301,7 @@ func Example(args ...any) {
 		return
 	}
 	if len(args) > 2 {
-		eval.ReportError("too many arguments")
+		eval.TooManyArgError()
 		return
 	}
 	var (
@@ -400,7 +400,7 @@ func parseAttributeArgs(baseAttr *expr.AttributeExpr, args ...any) (expr.DataTyp
 		parseDescription("string", 1)
 		parseDSL(2, success, func() { eval.InvalidArgError("func()", args[2]) })
 	default:
-		eval.ReportError("too many arguments in call to Attribute")
+		eval.TooManyArgError()
 	}
 
 	return dataType, description, fn

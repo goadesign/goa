@@ -16,6 +16,7 @@ func TestFilesDSL(t *testing.T) {
 	}{
 		{Name: "valid", DSL: testdata.FilesValidDSL},
 		{Name: "incompatible", DSL: testdata.FilesIncompatibleDSL, Error: "invalid use of Files in API files-incompatile"},
+		{Name: "too many arg error", DSL: testdata.FilesTooManyArgErrorDSL, Error: "too many arguments given to Files in API files-too-many-arg-error"},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

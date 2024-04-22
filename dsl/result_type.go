@@ -98,7 +98,7 @@ func ResultType(identifier string, args ...any) *expr.ResultTypeExpr {
 					eval.InvalidArgError("function", args[1])
 				}
 				if len(args) > 2 {
-					eval.ReportError("too many arguments")
+					eval.TooManyArgError()
 				}
 			}
 		}

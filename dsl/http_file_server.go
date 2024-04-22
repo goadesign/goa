@@ -49,7 +49,7 @@ import (
 //	})
 func Files(path, filename string, fns ...func()) {
 	if len(fns) > 1 {
-		eval.ReportError("too many arguments given to Files")
+		eval.TooManyArgError()
 		return
 	}
 	// Make sure request path starts with a "/" so codegen can rely on it.
