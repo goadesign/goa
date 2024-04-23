@@ -86,7 +86,8 @@ package testpackage
 		pathNamedImport  = []*ImportSpec{{Name: "myname", Path: "import/with/slashes"}}
 		pathNamedImports = append(pathNamedImport, &ImportSpec{Name: "myothername", Path: "other/import/with/slashes"})
 
-		meta = expr.MetaExpr{"goa:version:generate": {"false"}}
+		metaGenerateVersion    = expr.MetaExpr{"goa:version:generate": {"true"}}
+		metaNotGenerateVersion = expr.MetaExpr{"goa:version:generate": {"false"}}
 	)
 	cases := map[string]struct {
 		Title    string
@@ -94,15 +95,16 @@ package testpackage
 		Expected string
 		Meta     expr.MetaExpr
 	}{
-		"no-title":              {Expected: noTitleHeader},
-		"title":                 {Title: title, Expected: titleHeader},
-		"title-disable-version": {Title: title, Meta: meta, Expected: titleHeaderVersionDisabled},
-		"single-import":         {Imports: imprt, Expected: singleImportHeader},
-		"many-imports":          {Imports: imports, Expected: manyImportsHeader},
-		"path-import":           {Imports: pathImport, Expected: pathImportHeader},
-		"path-imports":          {Imports: pathImports, Expected: pathImportsHeader},
-		"path-named-import":     {Imports: pathNamedImport, Expected: pathNamedImportHeader},
-		"path-named-imports":    {Imports: pathNamedImports, Expected: pathNamedImportsHeader},
+		"no-title":                   {Expected: noTitleHeader},
+		"title":                      {Title: title, Expected: titleHeader},
+		"title-generate-version":     {Title: title, Meta: metaGenerateVersion, Expected: titleHeader},
+		"title-not-generate-version": {Title: title, Meta: metaNotGenerateVersion, Expected: titleHeaderVersionDisabled},
+		"single-import":              {Imports: imprt, Expected: singleImportHeader},
+		"many-imports":               {Imports: imports, Expected: manyImportsHeader},
+		"path-import":                {Imports: pathImport, Expected: pathImportHeader},
+		"path-imports":               {Imports: pathImports, Expected: pathImportsHeader},
+		"path-named-import":          {Imports: pathNamedImport, Expected: pathNamedImportHeader},
+		"path-named-imports":         {Imports: pathNamedImports, Expected: pathNamedImportsHeader},
 	}
 	for k, tc := range cases {
 		buf := new(bytes.Buffer)
