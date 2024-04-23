@@ -244,7 +244,7 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File
 	}
 	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "server", imports, nil),
+		codegen.Header(title, "server", imports, svc.Meta),
 	}
 	sections = append(sections, serverStructWSSections(data)...)
 	sections = append(sections, serverWSSections(data)...)

@@ -228,7 +228,7 @@ func Files(genpkg string, service *expr.ServiceExpr, userTypePkgs map[string][]s
 		}
 		fullRelPath := filepath.Join(codegen.Gendir, p)
 		dir, _ := filepath.Split(fullRelPath)
-		h := codegen.Header("User types", codegen.Goify(filepath.Base(dir), false), nil, nil)
+		h := codegen.Header("User types", codegen.Goify(filepath.Base(dir), false), nil, service.Meta)
 		sections := append([]*codegen.SectionTemplate{h}, secs...)
 		files = append(files, &codegen.File{Path: fullRelPath, SectionTemplates: sections})
 	}
