@@ -70,7 +70,7 @@ import (
 //	})
 func Payload(val any, args ...any) {
 	if len(args) > 2 {
-		eval.ReportError("too many arguments")
+		eval.TooManyArgError()
 	}
 	e, ok := eval.Current().(*expr.MethodExpr)
 	if !ok {
@@ -124,7 +124,7 @@ func Payload(val any, args ...any) {
 //	})
 func StreamingPayload(val any, args ...any) {
 	if len(args) > 2 {
-		eval.ReportError("too many arguments")
+		eval.TooManyArgError()
 	}
 	e, ok := eval.Current().(*expr.MethodExpr)
 	if !ok {

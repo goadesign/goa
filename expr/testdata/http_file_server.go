@@ -15,3 +15,9 @@ var FilesIncompatibleDSL = func() {
 		Files("path", "filename")
 	})
 }
+
+var FilesTooManyArgErrorDSL = func() {
+	API("files-too-many-arg-error", func() {
+		Files("path", "filename", func() {}, func() {})
+	})
+}
