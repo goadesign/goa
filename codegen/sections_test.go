@@ -86,7 +86,7 @@ package testpackage
 		pathNamedImport  = []*ImportSpec{{Name: "myname", Path: "import/with/slashes"}}
 		pathNamedImports = append(pathNamedImport, &ImportSpec{Name: "myothername", Path: "other/import/with/slashes"})
 
-		meta = expr.MetaExpr{"goa:version:disable": {"true"}}
+		meta = expr.MetaExpr{"goa:version:generate": {"false"}}
 	)
 	cases := map[string]struct {
 		Title    string
