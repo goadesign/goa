@@ -7,7 +7,7 @@ import (
 
 // Header returns a Go source file header section template.
 func Header(title, pack string, imports []*ImportSpec, meta expr.MetaExpr) *SectionTemplate {
-	value, ok := meta.Last("goa:version:disable")
+	value, ok := meta.Last("goa:version:generate")
 	disableVersion := ok && value == "true"
 	return &SectionTemplate{
 		Name:   "source-header",
