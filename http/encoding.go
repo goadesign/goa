@@ -326,7 +326,7 @@ type unsupportedDecoder struct {
 	ct string
 }
 
-func (e *unsupportedDecoder) Decode(v any) error {
+func (e *unsupportedDecoder) Decode(_ any) error {
 	return &goa.ServiceError{
 		Name:    ErrUnsupportedMediaTypeName,
 		ID:      goa.NewErrorID(),
