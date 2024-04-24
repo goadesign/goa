@@ -11,6 +11,8 @@ import (
 	"mime"
 	"net/http"
 	"strings"
+
+	goa "goa.design/goa/v3/pkg"
 )
 
 const (
@@ -23,6 +25,13 @@ const (
 	// response Content-Type header when explicitly set in the DSL. The value
 	// may be used by encoders to set the header appropriately.
 	ContentTypeKey
+)
+
+const (
+	// ErrUnsupportedMediaTypeName is the name of the Goa service error returned
+	// by the built-in decoder when the content type of the request body is not
+	// supported.
+	ErrUnsupportedMediaTypeName = "ErrUnsupportedMediaType"
 )
 
 type (
@@ -80,7 +89,7 @@ func RequestDecoder(r *http.Request) Decoder {
 	case "text/html", "text/plain":
 		return newTextDecoder(r.Body, contentType)
 	default:
-		return json.NewDecoder(r.Body)
+		return newUnsupportedDecoder(contentType)
 	}
 }
 
@@ -305,4 +314,22 @@ func (e *textDecoder) Decode(v any) error {
 		return fmt.Errorf("can't decode %s to %T", e.ct, c)
 	}
 	return nil
+}
+
+// newUnsupportedDecoder returns a decoder that returns an error indicating that
+// the content type is not supported.
+func newUnsupportedDecoder(ct string) Decoder {
+	return &unsupportedDecoder{ct}
+}
+
+type unsupportedDecoder struct {
+	ct string
+}
+
+func (e *unsupportedDecoder) Decode(v any) error {
+	return &goa.ServiceError{
+		Name:    ErrUnsupportedMediaTypeName,
+		ID:      goa.NewErrorID(),
+		Message: fmt.Sprintf("unsupported media type %s", e.ct),
+	}
 }

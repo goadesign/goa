@@ -11,6 +11,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	goa "goa.design/goa/v3/pkg"
 )
 
@@ -36,23 +39,68 @@ func TestRequestEncoder(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			r := &http.Request{
-				Header: http.Header{},
-			}
+			r := &http.Request{Header: http.Header{}}
 			if c.requestCT != "" {
 				r.Header.Set(ct, c.requestCT)
 			}
 
 			encoder := RequestEncoder(r)
 
-			if gotT := fmt.Sprintf("%T", encoder); gotT != wantT {
-				t.Errorf("got encoder type %s, want %s", gotT, wantT)
-			}
-			if gotCT := r.Header.Get(ct); gotCT != c.wantCT {
-				t.Errorf("got Content-Type %q, want %q", gotCT, c.wantCT)
-			}
+			assert.Equal(t, wantT, fmt.Sprintf("%T", encoder))
+			assert.Equal(t, c.wantCT, r.Header.Get(ct))
 		})
 	}
+}
+
+func TestRequestDecoder(t *testing.T) {
+	const (
+		ct           = "Content-Type"
+		ctJSON       = "application/json"
+		ctXML        = "application/xml"
+		ctGob        = "application/gob"
+		unsupportedT = "*http.unsupportedDecoder"
+		jsonT        = "*json.Decoder"
+		xmlT         = "*xml.Decoder"
+		gobT         = "*gob.Decoder"
+	)
+	cases := []struct {
+		name      string
+		requestCT string
+		wantCT    string
+	}{
+		{"no ct", "", jsonT},
+		{"unsupported ct", "application/foo", unsupportedT},
+		{"json ct", ctJSON, jsonT},
+		{"xml ct", ctXML, xmlT},
+		{"gob ct", ctGob, gobT},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			r := &http.Request{Header: http.Header{}}
+			if c.requestCT != "" {
+				r.Header.Set(ct, c.requestCT)
+			}
+
+			decoder := RequestDecoder(r)
+
+			assert.Equal(t, c.wantCT, fmt.Sprintf("%T", decoder))
+		})
+	}
+}
+
+func TestUnsupportedDecoder(t *testing.T) {
+	// Write the response produced when writing the error returned the
+	// unsupported decoder to validate the response status code.
+	w := httptest.NewRecorder()
+	decoder := &unsupportedDecoder{"application/foo"}
+	err := decoder.Decode(nil)
+	require.Error(t, err)
+	encoder := ErrorEncoder(ResponseEncoder, nil)
+
+	err = encoder(context.Background(), w, err)
+
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusUnsupportedMediaType, w.Code)
 }
 
 func TestResponseEncoder(t *testing.T) {
@@ -101,10 +149,10 @@ func TestResponseEncoder(t *testing.T) {
 			ctx = context.WithValue(ctx, AcceptTypeKey, c.acceptType)
 			ctx = context.WithValue(ctx, ContentTypeKey, c.contentType)
 			w := httptest.NewRecorder()
+
 			encoder := ResponseEncoder(ctx, w)
-			if c.encoderType != fmt.Sprintf("%T", encoder) {
-				t.Errorf("got encoder type %s, expected %s", fmt.Sprintf("%T", encoder), c.encoderType)
-			}
+
+			assert.Equal(t, c.encoderType, fmt.Sprintf("%T", encoder))
 		})
 	}
 }
@@ -138,13 +186,12 @@ func TestResponseEncoder_Encode_ErrorResponse(t *testing.T) {
 			w := httptest.NewRecorder()
 			ErrorResponseXMLName = c.xmlName
 			encoder := ResponseEncoder(ctx, w)
-			if err := encoder.Encode(NewErrorResponse(ctx, serviceError)); err != nil {
-				t.Error(err)
-			}
+
+			err := encoder.Encode(NewErrorResponse(ctx, serviceError))
+
+			assert.NoError(t, err)
 			body := strings.TrimSpace(w.Body.String())
-			if body != c.encoded {
-				t.Errorf("got %s, expected %s", body, c.encoded)
-			}
+			assert.Equal(t, c.encoded, body)
 		})
 	}
 }
@@ -184,9 +231,8 @@ func TestResponseDecoder(t *testing.T) {
 				},
 			}
 			decoder := ResponseDecoder(r)
-			if c.decoderType != fmt.Sprintf("%T", decoder) {
-				t.Errorf("got decoder type %s, expected %s", fmt.Sprintf("%T", decoder), c.decoderType)
-			}
+
+			assert.Equal(t, c.decoderType, fmt.Sprintf("%T", decoder))
 		})
 	}
 }
@@ -211,57 +257,43 @@ func TestTextEncoder_Encode(t *testing.T) {
 			buffer.Reset()
 			err := encoder.Encode(c.value)
 			if c.error != nil {
-				if err == nil || c.error.Error() != err.Error() {
-					t.Errorf("got error %q, expected %q", err, c.error)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("got error %q, expected <nil>", err)
-				}
-				if buffer.String() != testString {
-					t.Errorf("got string %s, expected %s", buffer.String(), testString)
-				}
+				assert.Error(t, err, c.error)
+				return
 			}
+			require.NoError(t, err)
+			assert.Equal(t, testString, buffer.String())
 		})
 	}
 }
 
 func TestTextPlainDecoder_Decode_String(t *testing.T) {
 	decoder := makeTextDecoder()
-
 	var value string
+
 	err := decoder.Decode(&value)
-	if err != nil {
-		t.Errorf("got error %q, expected <nil>", err)
-	}
-	if testString != value {
-		t.Errorf("got string %s, expected %s", value, testString)
-	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, testString, value)
 }
 
 func TestTextPlainDecoder_Decode_Bytes(t *testing.T) {
 	decoder := makeTextDecoder()
-
 	var value []byte
+
 	err := decoder.Decode(&value)
-	if err != nil {
-		t.Errorf("got error %q, expected <nil>", err)
-	}
-	if testString != string(value) {
-		t.Errorf("got string %s, expected %s", value, testString)
-	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, testString, string(value))
 }
 
 func TestTextPlainDecoder_Decode_Other(t *testing.T) {
 	decoder := makeTextDecoder()
-
 	expectedErr := fmt.Errorf("can't decode content/type to *int")
-
 	var value int
+
 	err := decoder.Decode(&value)
-	if err == nil || err.Error() != expectedErr.Error() {
-		t.Errorf("got error %q, expectedErr %q", err, expectedErr)
-	}
+
+	assert.Error(t, err, expectedErr)
 }
 
 func makeTextDecoder() Decoder {
