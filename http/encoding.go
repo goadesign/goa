@@ -31,7 +31,7 @@ const (
 	// ErrUnsupportedMediaTypeName is the name of the Goa service error returned
 	// by the built-in decoder when the content type of the request body is not
 	// supported.
-	ErrUnsupportedMediaTypeName = "ErrUnsupportedMediaType"
+	ErrUnsupportedMediaTypeName = "unsupported_media_type"
 )
 
 type (

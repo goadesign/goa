@@ -4,6 +4,10 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 {{- if .MultipartRequestDecoder }}
 		var payload {{ .Payload.Ref }}
 		if err := decoder(r).Decode(&payload); err != nil {
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 {{- else if .Payload.Request.ServerBody }}
@@ -22,6 +26,10 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 				err = nil
 			} else {
 	{{- end }}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 	{{- if not .Payload.Request.MustHaveBody }}
 			}

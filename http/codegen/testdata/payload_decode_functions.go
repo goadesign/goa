@@ -3728,6 +3728,10 @@ func DecodeMethodBodyStringRequest(mux goahttp.Muxer, decoder func(*http.Request
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		payload := NewMethodBodyStringPayload(&body)
@@ -3749,6 +3753,10 @@ func DecodeMethodBodyStringValidateRequest(mux goahttp.Muxer, decoder func(*http
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -3776,6 +3784,10 @@ func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		payload := NewMethodBodyUserPayloadType(&body)
@@ -3797,6 +3809,10 @@ func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -3824,6 +3840,10 @@ func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 			if err == io.EOF {
 				err = nil
 			} else {
+				var gerr *goa.ServiceError
+				if errors.As(err, &gerr) {
+					return nil, gerr
+				}
 				return nil, goa.DecodePayloadError(err.Error())
 			}
 		}
@@ -3851,6 +3871,10 @@ func DecodeMethodBodyUserValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 			if err == io.EOF {
 				err = nil
 			} else {
+				var gerr *goa.ServiceError
+				if errors.As(err, &gerr) {
+					return nil, gerr
+				}
 				return nil, goa.DecodePayloadError(err.Error())
 			}
 		}
@@ -3880,6 +3904,10 @@ func DecodeMethodBodyObjectRequest(mux goahttp.Muxer, decoder func(*http.Request
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		payload := NewMethodBodyObjectPayload(body)
@@ -3904,6 +3932,10 @@ func DecodeMethodBodyObjectValidateRequest(mux goahttp.Muxer, decoder func(*http
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		payload := NewMethodBodyObjectValidatePayload(body)
@@ -3925,6 +3957,10 @@ func DecodeMethodBodyUnionRequest(mux goahttp.Muxer, decoder func(*http.Request)
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -3952,6 +3988,10 @@ func DecodeMethodBodyUnionValidateRequest(mux goahttp.Muxer, decoder func(*http.
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		err = ValidateMethodBodyUnionValidateRequestBody(&body)
@@ -3977,6 +4017,10 @@ func DecodeMethodBodyUnionUserRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4004,6 +4048,10 @@ func DecodeMethodBodyUnionUserValidateRequest(mux goahttp.Muxer, decoder func(*h
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		err = ValidateMethodBodyUnionUserValidateRequestBody(&body)
@@ -4030,6 +4078,10 @@ func DecodeMethodBodyArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Re
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		payload := NewMethodBodyArrayStringPayload(&body)
@@ -4052,6 +4104,10 @@ func DecodeMethodBodyArrayStringValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4079,6 +4135,10 @@ func DecodeMethodBodyArrayUserRequest(mux goahttp.Muxer, decoder func(*http.Requ
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		err = ValidateMethodBodyArrayUserRequestBody(&body)
@@ -4104,6 +4164,10 @@ func DecodeMethodBodyArrayUserValidateRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4131,6 +4195,10 @@ func DecodeMethodBodyMapStringRequest(mux goahttp.Muxer, decoder func(*http.Requ
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		payload := NewMethodBodyMapStringPayload(&body)
@@ -4152,6 +4220,10 @@ func DecodeMethodBodyMapStringValidateRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4179,6 +4251,10 @@ func DecodeMethodBodyMapUserRequest(mux goahttp.Muxer, decoder func(*http.Reques
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		err = ValidateMethodBodyMapUserRequestBody(&body)
@@ -4204,6 +4280,10 @@ func DecodeMethodBodyMapUserValidateRequest(mux goahttp.Muxer, decoder func(*htt
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4231,6 +4311,10 @@ func DecodeMethodBodyPrimitiveStringValidateRequest(mux goahttp.Muxer, decoder f
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4261,6 +4345,10 @@ func DecodeMethodBodyPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder fun
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		if !(body == true) {
@@ -4289,6 +4377,10 @@ func DecodeMethodBodyPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, deco
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4324,6 +4416,10 @@ func DecodeMethodBodyPrimitiveArrayBoolValidateRequest(mux goahttp.Muxer, decode
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		if len(body) < 1 {
@@ -4357,6 +4453,10 @@ func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux goahttp.Muxer, decode
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4394,6 +4494,10 @@ func DecodeMethodBodyPrimitiveArrayUserRequest(mux goahttp.Muxer, decoder func(*
 			if err == io.EOF {
 				err = nil
 			} else {
+				var gerr *goa.ServiceError
+				if errors.As(err, &gerr) {
+					return nil, gerr
+				}
 				return nil, goa.DecodePayloadError(err.Error())
 			}
 		}
@@ -4418,6 +4522,10 @@ func DecodeMethodBodyPrimitiveArrayUserRequest(mux goahttp.Muxer, decoder func(*
 			if err == io.EOF {
 				err = nil
 			} else {
+				var gerr *goa.ServiceError
+				if errors.As(err, &gerr) {
+					return nil, gerr
+				}
 				return nil, goa.DecodePayloadError(err.Error())
 			}
 		}
@@ -4441,6 +4549,10 @@ func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux goahttp.Muxer, decode
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4473,6 +4585,10 @@ func DecodeMethodBodyQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Re
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 
@@ -4503,6 +4619,10 @@ func DecodeMethodBodyQueryObjectValidateRequest(mux goahttp.Muxer, decoder func(
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4542,6 +4662,10 @@ func DecodeMethodBodyQueryUserRequest(mux goahttp.Muxer, decoder func(*http.Requ
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 
@@ -4571,6 +4695,10 @@ func DecodeMethodBodyQueryUserValidateRequest(mux goahttp.Muxer, decoder func(*h
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4610,6 +4738,10 @@ func DecodeMethodBodyPathObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 
@@ -4639,6 +4771,10 @@ func DecodeMethodBodyPathObjectValidateRequest(mux goahttp.Muxer, decoder func(*
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4677,6 +4813,10 @@ func DecodeMethodBodyPathUserRequest(mux goahttp.Muxer, decoder func(*http.Reque
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 
@@ -4705,6 +4845,10 @@ func DecodeMethodUserBodyPathValidateRequest(mux goahttp.Muxer, decoder func(*ht
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4743,6 +4887,10 @@ func DecodeMethodBodyQueryPathObjectRequest(mux goahttp.Muxer, decoder func(*htt
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 
@@ -4777,6 +4925,10 @@ func DecodeMethodBodyQueryPathObjectValidateRequest(mux goahttp.Muxer, decoder f
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4821,6 +4973,10 @@ func DecodeMethodBodyQueryPathUserRequest(mux goahttp.Muxer, decoder func(*http.
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 
@@ -4855,6 +5011,10 @@ func DecodeMethodBodyQueryPathUserValidateRequest(mux goahttp.Muxer, decoder fun
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -4994,6 +5154,10 @@ func DecodeMethodMapQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
 			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 		err = ValidateMethodMapQueryObjectRequestBody(&body)
@@ -5043,6 +5207,10 @@ func DecodeMethodMultipartPrimitiveRequest(mux goahttp.Muxer, decoder func(*http
 	return func(r *http.Request) (any, error) {
 		var payload string
 		if err := decoder(r).Decode(&payload); err != nil {
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 
@@ -5057,6 +5225,10 @@ func DecodeMethodMultipartUserTypeRequest(mux goahttp.Muxer, decoder func(*http.
 	return func(r *http.Request) (any, error) {
 		var payload *servicemultipartusertype.MethodMultipartUserTypePayload
 		if err := decoder(r).Decode(&payload); err != nil {
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 
@@ -5071,6 +5243,10 @@ func DecodeMethodMultipartArrayTypeRequest(mux goahttp.Muxer, decoder func(*http
 	return func(r *http.Request) (any, error) {
 		var payload []*servicemultipartarraytype.PayloadType
 		if err := decoder(r).Decode(&payload); err != nil {
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 
@@ -5085,6 +5261,10 @@ func DecodeMethodMultipartMapTypeRequest(mux goahttp.Muxer, decoder func(*http.R
 	return func(r *http.Request) (any, error) {
 		var payload map[string]int
 		if err := decoder(r).Decode(&payload); err != nil {
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
 
@@ -5105,6 +5285,10 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
@@ -5848,6 +6032,10 @@ func DecodeMethodBodyCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Req
 		if err != nil {
 			if err == io.EOF {
 				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
