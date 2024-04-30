@@ -27,13 +27,6 @@ const (
 	ContentTypeKey
 )
 
-const (
-	// ErrUnsupportedMediaTypeName is the name of the Goa service error returned
-	// by the built-in decoder when the content type of the request body is not
-	// supported.
-	ErrUnsupportedMediaTypeName = "unsupported_media_type"
-)
-
 type (
 	// Decoder provides the actual decoding algorithm used to load HTTP
 	// request and response bodies.
@@ -327,9 +320,5 @@ type unsupportedDecoder struct {
 }
 
 func (e *unsupportedDecoder) Decode(_ any) error {
-	return &goa.ServiceError{
-		Name:    ErrUnsupportedMediaTypeName,
-		ID:      goa.NewErrorID(),
-		Message: fmt.Sprintf("unsupported media type %s", e.ct),
-	}
+	return goa.UnsupportedMediaTypeError(e.ct)
 }
