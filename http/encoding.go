@@ -11,6 +11,8 @@ import (
 	"mime"
 	"net/http"
 	"strings"
+
+	goa "goa.design/goa/v3/pkg"
 )
 
 const (
@@ -80,7 +82,7 @@ func RequestDecoder(r *http.Request) Decoder {
 	case "text/html", "text/plain":
 		return newTextDecoder(r.Body, contentType)
 	default:
-		return json.NewDecoder(r.Body)
+		return newUnsupportedDecoder(contentType)
 	}
 }
 
@@ -305,4 +307,18 @@ func (e *textDecoder) Decode(v any) error {
 		return fmt.Errorf("can't decode %s to %T", e.ct, c)
 	}
 	return nil
+}
+
+// newUnsupportedDecoder returns a decoder that returns an error indicating that
+// the content type is not supported.
+func newUnsupportedDecoder(ct string) Decoder {
+	return &unsupportedDecoder{ct}
+}
+
+type unsupportedDecoder struct {
+	ct string
+}
+
+func (e *unsupportedDecoder) Decode(_ any) error {
+	return goa.UnsupportedMediaTypeError(e.ct)
 }

@@ -56,6 +56,9 @@ const (
 	InvalidRange = "invalid_range"
 	// InvalidLength is the error name for invalid length errors.
 	InvalidLength = "invalid_length"
+	// UnsupportedMediaType is the error name returned by the Goa decoder
+	// when the content type of the HTTP request body is not supported.
+	UnsupportedMediaType = "unsupported_media_type"
 )
 
 // NewServiceError creates an error.
@@ -114,6 +117,12 @@ func MissingPayloadError() error {
 // body cannot be decoded successfully.
 func DecodePayloadError(msg string) error {
 	return PermanentError("decode_payload", msg)
+}
+
+// UnsupportedMediaTypeError is the error produced by the Goa decoder when the
+// content type of the HTTP request body is not supported.
+func UnsupportedMediaTypeError(ct string) error {
+	return PermanentError(UnsupportedMediaType, "unsupported media type %s", ct)
 }
 
 // InvalidFieldTypeError is the error produced by the generated code when the

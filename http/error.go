@@ -81,6 +81,9 @@ func (resp *ErrorResponse) MarshalXML(e *xml.Encoder, _ xml.StartElement) error 
 // error. This method is used by the generated server code when the error is not
 // described explicitly in the design.
 func (resp *ErrorResponse) StatusCode() int {
+	if resp.Name == goa.UnsupportedMediaType {
+		return http.StatusUnsupportedMediaType
+	}
 	if resp.Fault {
 		return http.StatusInternalServerError
 	}
