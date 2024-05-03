@@ -535,6 +535,60 @@ var PathWithWildcardDSL = func() {
 	})
 }
 
+var PathWithMultipleWildcardDSL = func() {
+	Service("test service", func() {
+		Method("test endpoint", func() {
+			Payload(func() {
+				Attribute("foo", Int)
+				Attribute("bar", Int)
+			})
+			HTTP(func() {
+				POST("/{bar}")
+			})
+		})
+		HTTP(func() {
+			Path("/{foo}")
+		})
+	})
+}
+
+var PathWithMultipleExplicitWildcardDSL = func() {
+	Service("test service", func() {
+		Method("test endpoint", func() {
+			Payload(func() {
+				Attribute("foo", Int)
+				Attribute("bar", Int)
+			})
+			HTTP(func() {
+				POST("/{bar}")
+				Param("bar")
+			})
+		})
+		HTTP(func() {
+			Path("/{foo}")
+			Param("foo")
+		})
+	})
+}
+
+var HeadersDSL = func() {
+	Service("test service", func() {
+		Method("test endpoint", func() {
+			Payload(func() {
+				Attribute("foo", Int)
+				Attribute("bar", Int)
+			})
+			HTTP(func() {
+				POST("/")
+				Header("bar")
+			})
+		})
+		HTTP(func() {
+			Header("foo")
+		})
+	})
+}
+
 var WithTagsDSL = func() {
 	Service("test service", func() {
 		HTTP(func() {

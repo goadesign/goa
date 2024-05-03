@@ -1,0 +1,34 @@
+swagger: "2.0"
+info:
+    title: ""
+    version: 0.0.1
+host: localhost:80
+consumes:
+    - application/json
+    - application/xml
+    - application/gob
+produces:
+    - application/json
+    - application/xml
+    - application/gob
+paths:
+    /:
+        post:
+            tags:
+                - test service
+            summary: test endpoint test service
+            operationId: test service#test endpoint
+            parameters:
+                - name: foo
+                  in: header
+                  required: false
+                  type: integer
+                - name: bar
+                  in: header
+                  required: false
+                  type: integer
+            responses:
+                "204":
+                    description: No Content response.
+            schemes:
+                - http
