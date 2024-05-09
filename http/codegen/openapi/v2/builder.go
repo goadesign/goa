@@ -294,29 +294,11 @@ func paramsFromExpr(params *expr.MappedAttributeExpr, path string) []*Parameter 
 func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr) []*Parameter {
 	var params []*Parameter
 
-	var (
-		rma = endpoint.Service.Params
-		ma  = endpoint.Headers
-
-		merged *expr.MappedAttributeExpr
-	)
-	{
-		if rma == nil {
-			merged = ma
-		} else if ma == nil {
-			merged = rma
-		} else {
-			merged = expr.DupMappedAtt(rma)
-			merged.Merge(ma)
-		}
-	}
-
-	for _, n := range *expr.AsObject(merged.Type) {
-		header := n.Attribute
-		required := merged.IsRequiredNoDefault(n.Name)
-		p := paramFor(header, merged.ElemName(n.Name), "header", required)
-		params = append(params, p)
-	}
+	expr.WalkMappedAttr(endpoint.Headers, func(name, elem string, att *expr.AttributeExpr) error { // nolint: errcheck
+		required := endpoint.Headers.IsRequiredNoDefault(name)
+		params = append(params, paramFor(att, elem, "header", required))
+		return nil
+	})
 
 	// Add basic auth to headers
 	if att := expr.TaggedAttribute(endpoint.MethodExpr.Payload, "security:username"); att != "" {
