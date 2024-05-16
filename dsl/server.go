@@ -59,6 +59,7 @@ import (
 func Server(name string, fn ...func()) *expr.ServerExpr {
 	if len(fn) > 1 {
 		eval.TooManyArgError()
+		return nil
 	}
 	api, ok := eval.Current().(*expr.APIExpr)
 	if !ok {

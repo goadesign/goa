@@ -745,6 +745,7 @@ func Param(name string, args ...any) {
 func MapParams(args ...any) {
 	if len(args) > 1 {
 		eval.TooManyArgError()
+		return
 	}
 	e, ok := eval.Current().(*expr.HTTPEndpointExpr)
 	if !ok {
