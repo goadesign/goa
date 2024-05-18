@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"regexp/syntax"
+	"strings"
 	"time"
-
-	regen "github.com/AnatolyRugalev/goregen"
-	googleuuid "github.com/google/uuid"
 )
 
 const (
@@ -209,23 +208,17 @@ func byFormat(a *AttributeExpr, r *ExampleGenerator) any {
 		FormatIP:       r.IPv4Address().String(),
 		FormatURI:      r.URL(),
 		FormatMAC: func() string {
-			res, err := regen.Generate(`([0-9A-F]{2}-){5}[0-9A-F]{2}`)
+			res, err := syntax.Parse(`([0-9A-F]{2}-){5}[0-9A-F]{2}`, 0)
 			if err != nil {
 				return "12-34-56-78-9A-BC"
 			}
-			return res
+			return patgen(res, r)
 		}(),
 		FormatCIDR:    "192.168.100.14/24",
 		FormatRegexp:  r.Characters(3) + ".*",
 		FormatRFC1123: time.Unix(int64(r.Int())%1454957045, 0).UTC().Format(time.RFC1123), // to obtain a "fixed" rand
-		FormatUUID: func() string {
-			uuid, err := googleuuid.NewUUID()
-			if err != nil {
-				return "12345678-1234-1234-9232-123456789ABC"
-			}
-			return uuid.String()
-		}(),
-		FormatJSON: `{"name":"example","email":"mail@example.com"}`,
+		FormatUUID:    r.UUID(),
+		FormatJSON:    `{"name":"example","email":"mail@example.com"}`,
 	}[format]; ok {
 		return res
 	}
@@ -240,11 +233,67 @@ func byPattern(a *AttributeExpr, r *ExampleGenerator) any {
 		return false
 	}
 	pattern := a.Validation.Pattern
-	gen, err := regen.NewGenerator(pattern, &regen.GeneratorArgs{MaxUnboundedRepeatCount: 6})
+	re, err := syntax.Parse(pattern, syntax.Perl)
 	if err != nil {
 		return r.Name()
 	}
-	return gen.Generate()
+	return patgen(re.Simplify(), r)
+}
+
+func patgen(re *syntax.Regexp, r *ExampleGenerator) string {
+	switch re.Op {
+	case syntax.OpAlternate:
+		i := r.Int() % len(re.Sub)
+		return patgen(re.Sub[i], r)
+	case syntax.OpCapture:
+		return patgen(re.Sub[0], r)
+	case syntax.OpConcat:
+		var res strings.Builder
+		for _, sub := range re.Sub {
+			res.WriteString(patgen(sub, r))
+		}
+		return res.String()
+	case syntax.OpLiteral:
+		return string(re.Rune)
+	case syntax.OpStar:
+		var res strings.Builder
+		count := r.Int() % 3
+		for i := 0; i < count; i++ {
+			res.WriteString(patgen(re.Sub[0], r))
+		}
+		return res.String()
+	case syntax.OpPlus:
+		var res strings.Builder
+		count := r.Int()%2 + 1
+		for i := 0; i < count; i++ {
+			res.WriteString(patgen(re.Sub[0], r))
+		}
+		return res.String()
+	case syntax.OpQuest:
+		if r.Int()%2 == 0 {
+			return patgen(re.Sub[0], r)
+		}
+		return ""
+	case syntax.OpRepeat:
+		var res strings.Builder
+		for i := 0; i < re.Min; i++ {
+			res.WriteString(patgen(re.Sub[0], r))
+		}
+		return res.String()
+	case syntax.OpCharClass:
+		var chars []rune
+		for i := 0; i < len(re.Rune); i += 2 {
+			start, end := re.Rune[i], re.Rune[i+1]
+			for j := start; j <= end; j++ {
+				chars = append(chars, j)
+			}
+		}
+		return string(chars[r.Int()%len(chars)])
+	case syntax.OpAnyChar, syntax.OpAnyCharNotNL:
+		return r.Characters(1)
+	default:
+		return ""
+	}
 }
 
 func byMinMax(a *AttributeExpr, r *ExampleGenerator) any {

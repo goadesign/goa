@@ -3,6 +3,7 @@ package expr
 import (
 	"fmt"
 	"reflect"
+	"sort"
 
 	"goa.design/goa/v3/eval"
 )
@@ -591,8 +592,15 @@ func (m *Map) Example(r *ExampleGenerator) any {
 // which cannot be handled by json.Marshal.
 func (m *Map) MakeMap(raw map[any]any) any {
 	ma := reflect.MakeMap(toReflectType(m))
-	for key, value := range raw {
-		ma.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
+	keys := make([]any, 0, len(raw))
+	for key := range raw {
+		keys = append(keys, key)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return reflect.ValueOf(keys[i]).String() < reflect.ValueOf(keys[j]).String()
+	})
+	for _, key := range keys {
+		ma.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(raw[key]))
 	}
 	return ma.Interface()
 }

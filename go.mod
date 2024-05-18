@@ -3,7 +3,6 @@ module goa.design/goa/v3
 go 1.20
 
 require (
-	github.com/AnatolyRugalev/goregen v0.1.0
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598
 	github.com/getkin/kin-openapi v0.124.0
 	github.com/go-chi/chi/v5 v5.0.12
@@ -15,7 +14,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/text v0.15.0
 	golang.org/x/tools v0.21.0
-	google.golang.org/grpc v1.63.2
+	google.golang.org/grpc v1.64.0
 	google.golang.org/protobuf v1.34.1
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -35,5 +34,5 @@ require (
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.20.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240515191416-fc5f0ca64291 // indirect
 )
