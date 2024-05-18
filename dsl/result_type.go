@@ -99,6 +99,7 @@ func ResultType(identifier string, args ...any) *expr.ResultTypeExpr {
 				}
 				if len(args) > 2 {
 					eval.TooManyArgError()
+					return nil
 				}
 			}
 		}

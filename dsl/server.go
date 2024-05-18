@@ -57,14 +57,15 @@ import (
 //	    })
 //	})
 func Server(name string, fn ...func()) *expr.ServerExpr {
+	server := &expr.ServerExpr{Name: name}
 	if len(fn) > 1 {
 		eval.TooManyArgError()
+		return server
 	}
 	api, ok := eval.Current().(*expr.APIExpr)
 	if !ok {
 		eval.IncompatibleDSL()
 	}
-	server := &expr.ServerExpr{Name: name}
 	if len(fn) > 0 {
 		eval.Execute(fn[0], server)
 	}
