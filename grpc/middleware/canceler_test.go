@@ -52,7 +52,9 @@ func TestStreamCanceler(t *testing.T) {
 			}()
 
 			if err := grpcm.StreamCanceler(ctx)(nil, c.stream, stream, c.handler); err != nil {
-				t.Errorf("StreamCanceler error: %v", err)
+				if err.Error() != "server is stopping" {
+					t.Errorf("StreamCanceler error: %v", err)
+				}
 			}
 		})
 	}

@@ -3,6 +3,7 @@ package expr
 import (
 	"crypto/md5"
 	"encoding/binary"
+	"fmt"
 	"math/rand"
 	"net"
 	"strings"
@@ -53,6 +54,8 @@ type Randomizer interface {
 	URL() string
 	// Characters generates a n-character string example
 	Characters(n int) string
+	// UUID generates a random v4 UUID
+	UUID() string
 }
 
 // NewRandom returns a random value generator seeded from the given string
@@ -165,6 +168,13 @@ func (r *FakerRandomizer) URL() string {
 func (r *FakerRandomizer) Characters(n int) string {
 	return r.faker.Characters(n)
 }
+func (r *FakerRandomizer) UUID() string {
+	uuid := make([]byte, 16)
+	r.rand.Read(uuid)
+	uuid[6] = (uuid[6] & 0x0f) | 0x40
+	uuid[8] = (uuid[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
+}
 func (r *FakerRandomizer) Name() string {
 	return r.faker.Name()
 }
@@ -197,3 +207,4 @@ func (DeterministicRandomizer) IPv4Address() net.IP     { return net.IPv4zero }
 func (DeterministicRandomizer) IPv6Address() net.IP     { return net.IPv6zero }
 func (DeterministicRandomizer) URL() string             { return "https://example.com/foo" }
 func (DeterministicRandomizer) Characters(n int) string { return strings.Repeat("a", n) }
+func (DeterministicRandomizer) UUID() string            { return "550e8400-e29b-41d4-a716-446655440000" }

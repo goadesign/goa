@@ -18,7 +18,7 @@ func TestByPattern(t *testing.T) {
 		ExpectedMaxLen int
 	}{
 		{"not-a-regexp", "foo", 3},
-		{"max-len", "foo.*", 9},
+		{"max-len", "foo[a-z]+", 9},
 		{"max-len-2", "^/api/example/[0-9]+$", 19},
 	}
 	r := expr.NewRandom("test")
