@@ -30,9 +30,11 @@ func TestTooManyArgError(t *testing.T) {
 		"StreamingResult":  {func() { StreamingResult(String, 1, 2, 3) }, "too many arguments given to StreamingResult"},
 		"Type":             {func() { Type("name", 1, 2, 3) }, "too many arguments given to Type"},
 	}
-	for _, tc := range cases {
-		err := expr.RunInvalidDSL(t, tc.DSL)
-		assert.Len(t, strings.Split(err.Error(), "\n"), 1)
-		assert.Contains(t, err.Error(), tc.Error)
+	for k, tc := range cases {
+		t.Run(k, func(t *testing.T) {
+			err := expr.RunInvalidDSL(t, tc.DSL)
+			assert.Len(t, strings.Split(err.Error(), "\n"), 1)
+			assert.Contains(t, err.Error(), tc.Error)
+		})
 	}
 }
