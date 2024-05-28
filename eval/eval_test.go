@@ -10,31 +10,28 @@ import (
 )
 
 func TestTooManyArgError(t *testing.T) {
-	cases := map[string]struct {
-		DSL   func()
-		Error string
-	}{
-		"ArrayOf":          {func() { ArrayOf(String, func() {}, func() {}) }, "too many arguments given to ArrayOf"},
-		"Attribute":        {func() { Type("name", func() { Attribute("name", 1, 2, 3, 4) }) }, "too many arguments given to Attribute"},
-		"Example":          {func() { Example(1, 2, 3) }, "too many arguments given to Example"},
-		"Files":            {func() { Files("path", "filename", func() {}, func() {}) }, "too many arguments given to Files"},
-		"MapOf":            {func() { MapOf(String, String, func() {}, func() {}) }, "too many arguments given to MapOf"},
-		"MapParams":        {func() { MapParams(1, 2) }, "too many arguments given to MapParams"},
-		"Payload":          {func() { Payload(String, 1, 2, 3) }, "too many arguments given to Payload"},
-		"Response":         {func() { API("name", func() { HTTP(func() { Response(StatusOK, "name", 1, 2) }) }) }, "too many arguments given to Response"},
-		"Result":           {func() { Result(String, 1, 2, 3) }, "too many arguments given to Result"},
-		"ResultType":       {func() { ResultType("identifier", "name", func() {}, func() {}) }, "too many arguments given to ResultType"},
-		"Scope":            {func() { BasicAuthSecurity("name", func() { Scope("name", "1", "2") }) }, "too many arguments given to Scope"},
-		"Server":           {func() { Server("name", func() {}, func() {}) }, "too many arguments given to Server"},
-		"StreamingPayload": {func() { StreamingPayload(String, 1, 2, 3) }, "too many arguments given to StreamingPayload"},
-		"StreamingResult":  {func() { StreamingResult(String, 1, 2, 3) }, "too many arguments given to StreamingResult"},
-		"Type":             {func() { Type("name", 1, 2, 3) }, "too many arguments given to Type"},
+	dsls := map[string]func(){
+		"ArrayOf":          func() { ArrayOf(String, func() {}, func() {}) },
+		"Attribute":        func() { Type("name", func() { Attribute("name", 1, 2, 3, 4) }) },
+		"Example":          func() { Example(1, 2, 3) },
+		"Files":            func() { Files("path", "filename", func() {}, func() {}) },
+		"MapOf":            func() { MapOf(String, String, func() {}, func() {}) },
+		"MapParams":        func() { MapParams(1, 2) },
+		"Payload":          func() { Payload(String, 1, 2, 3) },
+		"Response":         func() { API("name", func() { HTTP(func() { Response(StatusOK, "name", 1, 2) }) }) },
+		"Result":           func() { Result(String, 1, 2, 3) },
+		"ResultType":       func() { ResultType("identifier", "name", func() {}, func() {}) },
+		"Scope":            func() { BasicAuthSecurity("name", func() { Scope("name", "1", "2") }) },
+		"Server":           func() { Server("name", func() {}, func() {}) },
+		"StreamingPayload": func() { StreamingPayload(String, 1, 2, 3) },
+		"StreamingResult":  func() { StreamingResult(String, 1, 2, 3) },
+		"Type":             func() { Type("name", 1, 2, 3) },
 	}
-	for k, tc := range cases {
-		t.Run(k, func(t *testing.T) {
-			err := expr.RunInvalidDSL(t, tc.DSL)
+	for name, dsl := range dsls {
+		t.Run(name, func(t *testing.T) {
+			err := expr.RunInvalidDSL(t, dsl)
 			assert.Len(t, strings.Split(err.Error(), "\n"), 1)
-			assert.Contains(t, err.Error(), tc.Error)
+			assert.Contains(t, err.Error(), "too many arguments given to "+name)
 		})
 	}
 }
