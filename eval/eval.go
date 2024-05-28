@@ -240,20 +240,26 @@ func finalizeSet(set ExpressionSet) {
 
 // caller returns the name of calling function.
 func caller() string {
-	for skip := 2; skip <= 4; skip++ {
+	var latest string
+	for skip := 2; skip <= 5; skip++ {
 		pc, _, _, ok := runtime.Caller(skip)
 		if !ok {
 			break
 		}
 		name := runtime.FuncForPC(pc).Name()
-		elems := strings.Split(name, ".")
-		caller := elems[len(elems)-1]
+		if !strings.HasPrefix(name, "goa.design/goa/v3/dsl.") {
+			break
+		}
+		caller := strings.Split(strings.TrimPrefix(name, "goa.design/goa/v3/dsl."), ".")[0]
 		for _, first := range caller {
 			if unicode.IsUpper(first) {
-				return caller
+				latest = caller
 			}
 			break
 		}
+	}
+	if latest != "" {
+		return latest
 	}
 	return "<unknown>"
 }
