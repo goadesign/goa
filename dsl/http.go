@@ -1,7 +1,6 @@
 package dsl
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -146,7 +145,7 @@ const (
 //	})
 func HTTP(fns ...func()) {
 	if len(fns) > 1 {
-		eval.InvalidArgError("zero or one function", fmt.Sprintf("%d functions", len(fns)))
+		eval.TooManyArgError()
 		return
 	}
 	fn := func() {}

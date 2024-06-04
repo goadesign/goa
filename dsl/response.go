@@ -247,7 +247,7 @@ func parseResponseArgs(val any, args ...any) (code int, fn func()) {
 		}
 	case func():
 		if len(args) > 0 {
-			eval.InvalidArgError("int (HTTP status code)", val)
+			eval.TooManyArgError()
 			return
 		}
 		fn = t
