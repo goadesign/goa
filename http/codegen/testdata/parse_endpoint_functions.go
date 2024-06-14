@@ -397,6 +397,100 @@ func ParseEndpoint(
 }
 `
 
+var SkipRequestBodyEncodeDecodeParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
+// line.
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+) (goa.Endpoint, any, error) {
+	var (
+		skipRequestBodyEncodeDecodeFlags = flag.NewFlagSet("skip-request-body-encode-decode", flag.ContinueOnError)
+
+		skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodFlags      = flag.NewFlagSet("skip-request-body-encode-decode-method", flag.ExitOnError)
+		skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodStreamFlag = skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodFlags.String("stream", "REQUIRED", "path to file containing the streamed request body")
+	)
+	skipRequestBodyEncodeDecodeFlags.Usage = skipRequestBodyEncodeDecodeUsage
+	skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodFlags.Usage = skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodUsage
+
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	if flag.NArg() < 2 { // two non flag args are required: SERVICE and ENDPOINT (aka COMMAND)
+		return nil, nil, fmt.Errorf("not enough arguments")
+	}
+
+	var (
+		svcn string
+		svcf *flag.FlagSet
+	)
+	{
+		svcn = flag.Arg(0)
+		switch svcn {
+		case "skip-request-body-encode-decode":
+			svcf = skipRequestBodyEncodeDecodeFlags
+		default:
+			return nil, nil, fmt.Errorf("unknown service %q", svcn)
+		}
+	}
+	if err := svcf.Parse(flag.Args()[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		epn string
+		epf *flag.FlagSet
+	)
+	{
+		epn = svcf.Arg(0)
+		switch svcn {
+		case "skip-request-body-encode-decode":
+			switch epn {
+			case "skip-request-body-encode-decode-method":
+				epf = skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodFlags
+
+			}
+
+		}
+	}
+	if epf == nil {
+		return nil, nil, fmt.Errorf("unknown %q endpoint %q", svcn, epn)
+	}
+
+	// Parse endpoint flags if any
+	if svcf.NArg() > 1 {
+		if err := epf.Parse(svcf.Args()[1:]); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var (
+		data     any
+		endpoint goa.Endpoint
+		err      error
+	)
+	{
+		switch svcn {
+		case "skip-request-body-encode-decode":
+			c := skiprequestbodyencodedecodec.NewClient(scheme, host, doer, enc, dec, restore)
+			switch epn {
+			case "skip-request-body-encode-decode-method":
+				endpoint = c.SkipRequestBodyEncodeDecodeMethod()
+				data, err = skiprequestbodyencodedecodec.BuildSkipRequestBodyEncodeDecodeMethodStreamPayload(*skipRequestBodyEncodeDecodeSkipRequestBodyEncodeDecodeMethodStreamFlag)
+			}
+		}
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return endpoint, data, nil
+}
+`
+
 var MultiParseCode = `// ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func ParseEndpoint(
@@ -602,14 +696,12 @@ func ParseEndpoint(
 			switch epn {
 			case "method":
 				endpoint = c.Method()
-				data = nil
 			}
 		case "streaming-service-b":
 			c := streamingservicebc.NewClient(scheme, host, doer, enc, dec, restore, dialer, streamingServiceBConfigurer)
 			switch epn {
 			case "method":
 				endpoint = c.Method()
-				data = nil
 			}
 		}
 	}
