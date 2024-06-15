@@ -41,8 +41,6 @@ func ParseEndpoint(
 				data, err = {{ $pkgName}}.{{ .BuildFunction.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
 			{{- else if .Conversion }}
 				{{ .Conversion }}
-			{{- else }}
-				data = nil
 			{{- end }}
 			{{- if .StreamFlag }}
 				{{- if .BuildFunction }}
