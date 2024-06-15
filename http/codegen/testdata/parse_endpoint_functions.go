@@ -109,20 +109,16 @@ func ParseEndpoint(
 			switch epn {
 			case "method-service-no-payload11":
 				endpoint = c.MethodServiceNoPayload11()
-				data = nil
 			case "method-service-no-payload12":
 				endpoint = c.MethodServiceNoPayload12()
-				data = nil
 			}
 		case "service-multi-no-payload2":
 			c := servicemultinopayload2c.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
 			case "method-service-no-payload21":
 				endpoint = c.MethodServiceNoPayload21()
-				data = nil
 			case "method-service-no-payload22":
 				endpoint = c.MethodServiceNoPayload22()
-				data = nil
 			}
 		}
 	}
@@ -245,7 +241,6 @@ func ParseEndpoint(
 			switch epn {
 			case "method-multi-simple-no-payload":
 				endpoint = c.MethodMultiSimpleNoPayload()
-				data = nil
 			case "method-multi-simple-payload":
 				endpoint = c.MethodMultiSimplePayload()
 				data, err = servicemultisimple1c.BuildMethodMultiSimplePayloadPayload(*serviceMultiSimple1MethodMultiSimplePayloadBodyFlag)
@@ -255,7 +250,6 @@ func ParseEndpoint(
 			switch epn {
 			case "method-multi-simple-no-payload":
 				endpoint = c.MethodMultiSimpleNoPayload()
-				data = nil
 			case "method-multi-simple-payload":
 				endpoint = c.MethodMultiSimplePayload()
 				data, err = servicemultisimple2c.BuildMethodMultiSimplePayloadPayload(*serviceMultiSimple2MethodMultiSimplePayloadBodyFlag)
@@ -382,7 +376,6 @@ func ParseEndpoint(
 			switch epn {
 			case "method-multi-required-no-payload":
 				endpoint = c.MethodMultiRequiredNoPayload()
-				data = nil
 			case "method-multi-required-payload":
 				endpoint = c.MethodMultiRequiredPayload()
 				data, err = servicemultirequired2c.BuildMethodMultiRequiredPayloadPayload(*serviceMultiRequired2MethodMultiRequiredPayloadAFlag)
@@ -581,7 +574,6 @@ func ParseEndpoint(
 			switch epn {
 			case "method-multi-no-payload":
 				endpoint = c.MethodMultiNoPayload()
-				data = nil
 			case "method-multi-payload":
 				endpoint = c.MethodMultiPayload()
 				data, err = servicemultic.BuildMethodMultiPayloadPayload(*serviceMultiMethodMultiPayloadBodyFlag, *serviceMultiMethodMultiPayloadBFlag, *serviceMultiMethodMultiPayloadAFlag)
