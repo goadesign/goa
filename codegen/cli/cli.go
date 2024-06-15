@@ -178,7 +178,7 @@ func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *B
 			description = fmt.Sprintf("Make request to the %q endpoint", m.Name)
 		}
 
-		if buildFunction == nil && len(flags) > 0 {
+		if m.Payload != "" && buildFunction == nil && len(flags) > 0 {
 			// No build function, just convert the arg to the body type
 			var convPre, convSuff string
 			target := "data"
