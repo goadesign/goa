@@ -23,6 +23,7 @@ func TestClientCLIFiles(t *testing.T) {
 		{"simple-parse", testdata.MultiSimpleDSL, testdata.MultiSimpleParseCode, 0, 3},
 		{"multi-parse", testdata.MultiDSL, testdata.MultiParseCode, 0, 3},
 		{"multi-required-payload", testdata.MultiRequiredPayloadDSL, testdata.MultiRequiredPayloadParseCode, 0, 3},
+		{"skip-request-body-encode-decode", testdata.SkipRequestBodyEncodeDecodeDSL, testdata.SkipRequestBodyEncodeDecodeParseCode, 0, 3},
 		{"streaming-parse", testdata.StreamingMultipleServicesDSL, testdata.StreamingParseCode, 0, 3},
 		{"simple-build", testdata.MultiSimpleDSL, testdata.MultiSimpleBuildCode, 1, 1},
 		{"multi-build", testdata.MultiDSL, testdata.MultiBuildCode, 1, 1},
