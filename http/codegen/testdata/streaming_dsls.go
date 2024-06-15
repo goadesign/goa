@@ -22,6 +22,18 @@ var MixedEndpointsDSL = func() {
 	})
 }
 
+var SkipRequestBodyEncodeDecodeDSL = func() {
+	Service("SkipRequestBodyEncodeDecode", func() {
+		Method("SkipRequestBodyEncodeDecodeMethod", func() {
+			HTTP(func() {
+				POST("/")
+				SkipRequestBodyEncodeDecode()
+				Response(StatusOK)
+			})
+		})
+	})
+}
+
 var StreamingMultipleServicesDSL = func() {
 	Service("StreamingServiceA", func() {
 		Method("Method", func() {
