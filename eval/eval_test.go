@@ -9,6 +9,32 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+func TestInvalidArgError(t *testing.T) {
+	dsls := map[string]struct {
+		dsl  func()
+		want string
+	}{
+		"Attribute":        {func() { Type("name", func() { Attribute("name", String, "description", 1) }) }, "cannot use 1 (type int) as type func()"},
+		"Body":             {func() { Service("s", func() { Method("m", func() { HTTP(func() { Body(1) }) }) }) }, "cannot use 1 (type int) as type attribute name, user type or DSL"},
+		"ErrorName (bool)": {func() { Type("name", func() { ErrorName(true) }) }, "cannot use true (type bool) as type name or position"},
+		"ErrorName (int)":  {func() { Type("name", func() { ErrorName(1, 2) }) }, "cannot use 2 (type int) as type name"},
+		"Example":          {func() { Example(1, 2) }, "cannot use 1 (type int) as type summary (string)"},
+		"Headers":          {func() { Headers(1) }, "cannot use 1 (type int) as type function"},
+		"Param":            {func() { API("name", func() { HTTP(func() { Params(1) }) }) }, "cannot use 1 (type int) as type function"},
+		"Response":         {func() { Service("s", func() { HTTP(func() { Response(1) }) }) }, "cannot use 1 (type int) as type name of error"},
+		"ResultType":       {func() { ResultType("identifier", 1) }, "cannot use 1 (type int) as type function or string"},
+		"Security":         {func() { Security(1) }, "cannot use 1 (type int) as type security scheme or security scheme name"},
+		"Type":             {func() { Type("name", 1) }, "cannot use 1 (type int) as type type or function"},
+	}
+	for name, tc := range dsls {
+		t.Run(name, func(t *testing.T) {
+			err := expr.RunInvalidDSL(t, tc.dsl)
+			assert.Len(t, strings.Split(err.Error(), "\n"), 1)
+			assert.Contains(t, err.Error(), tc.want)
+		})
+	}
+}
+
 func TestTooManyArgError(t *testing.T) {
 	dsls := map[string]func(){
 		"APIKey":           func() { Type("name", func() { APIKey("scheme", "name", 1, 2, 3) }) },
