@@ -24,7 +24,10 @@ func TestSkipResponseWriter(t *testing.T) {
 	}
 
 	var writerToBuffer bytes.Buffer
-	io.Copy(&writerToBuffer, responseWriter) // io.Copy uses WriterTo if implemented
+	_, err := io.Copy(&writerToBuffer, responseWriter) // io.Copy uses WriterTo if implemented
+	if err != nil {
+		t.Fatal(err)
+	}
 	if writerToBuffer.String() != input {
 		t.Errorf("WriteTo: expected=%q actual=%q", input, writerToBuffer.String())
 	}
