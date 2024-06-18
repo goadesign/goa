@@ -316,7 +316,7 @@ func Example(args ...any) {
 		var ok bool
 		summary, ok = args[0].(string)
 		if !ok {
-			eval.InvalidArgError("summary (string)", summary)
+			eval.InvalidArgError("summary (string)", args[0])
 			return
 		}
 		arg = args[1]
