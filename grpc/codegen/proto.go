@@ -102,7 +102,7 @@ func pkgName(svc *expr.GRPCServiceExpr, svcName string) string {
 
 func protoc(path string, includes []string) error {
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0777); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return err
 	}
 
