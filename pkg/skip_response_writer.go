@@ -23,9 +23,6 @@ type writerToReaderAdapter struct {
 }
 
 func (a *writerToReaderAdapter) initPipe() {
-	if a.pr != nil {
-		return
-	}
 	r, w := io.Pipe()
 	go func() {
 		_, err := a.WriteTo(w)
