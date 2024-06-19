@@ -102,22 +102,22 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 			codegen.Header("", "main", specs),
 			{
 				Name:   "server-grpc-start",
-				Source: grpcSvrStartT,
+				Source: readTemplate("server_grpc_start"),
 				Data: map[string]any{
 					"Services": svcdata,
 				},
 			}, {
 				Name:   "server-grpc-logger",
-				Source: grpcSvrLoggerT,
+				Source: readTemplate("server_grpc_logger"),
 			}, {
 				Name:   "server-grpc-init",
-				Source: grpcSvrInitT,
+				Source: readTemplate("server_grpc_init"),
 				Data: map[string]any{
 					"Services": svcdata,
 				},
 			}, {
 				Name:   "server-grpc-register",
-				Source: grpcRegisterSvrT,
+				Source: readTemplate("server_grpc_register"),
 				Data: map[string]any{
 					"Services": svcdata,
 				},
@@ -127,7 +127,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 				},
 			}, {
 				Name:   "server-grpc-end",
-				Source: grpcSvrEndT,
+				Source: readTemplate("server_grpc_end"),
 				Data: map[string]any{
 					"Services": svcdata,
 				},
@@ -149,97 +149,3 @@ func needStream(data []*ServiceData) bool {
 	}
 	return false
 }
-
-const (
-	// input: map[string]any{"Services":[]*ServiceData}
-	grpcSvrStartT = `{{ comment "handleGRPCServer starts configures and starts a gRPC server on the given URL. It shuts down the server if any error is received in the error channel." }}
-func handleGRPCServer(ctx context.Context, u *url.URL{{ range $.Services }}{{ if .Service.Methods }}, {{ .Service.VarName }}Endpoints *{{ .Service.PkgName }}.Endpoints{{ end }}{{ end }}, wg *sync.WaitGroup, errc chan error, logger *log.Logger, debug bool) {
-`
-
-	grpcSvrLoggerT = `
-	// Setup goa log adapter.
-  var (
-    adapter middleware.Logger
-  )
-  {
-    adapter = middleware.NewLogger(logger)
-  }
-	`
-
-	// input: map[string]any{"Services":[]*ServiceData}
-	grpcSvrInitT = `
-	// Wrap the endpoints with the transport specific layers. The generated
-	// server packages contains code generated from the design which maps
-	// the service input and output data structures to gRPC requests and
-	// responses.
-	var (
-	{{- range .Services }}
-		{{ .Service.VarName }}Server *{{.Service.PkgName}}svr.Server
-	{{- end }}
-	)
-	{
-	{{- range .Services }}
-		{{- if .Endpoints }}
-		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.VarName }}Endpoints{{ if .HasUnaryEndpoint }}, nil{{ end }}{{ if .HasStreamingEndpoint }}, nil{{ end }})
-		{{-  else }}
-		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New(nil{{ if .HasUnaryEndpoint }}, nil{{ end }}{{ if .HasStreamingEndpoint }}, nil{{ end }})
-		{{-  end }}
-	{{- end }}
-	}
-`
-
-	// input: map[string]any{"Services":[]*ServiceData}
-	grpcRegisterSvrT = `
-	// Initialize gRPC server with the middleware.
-	srv := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(
-			grpcmdlwr.UnaryRequestID(),
-			grpcmdlwr.UnaryServerLog(adapter),
-		),
-	{{- if needStream .Services }}
-		grpc.ChainStreamInterceptor(
-			grpcmdlwr.StreamRequestID(),
-			grpcmdlwr.StreamServerLog(adapter),
-		),
-	{{- end }}
-	)
-
-	// Register the servers.
-	{{- range .Services }}
-	{{ .PkgName }}.Register{{ goify .Service.VarName true }}Server(srv, {{ .Service.VarName }}Server)
-	{{- end }}
-
-	for svc, info := range srv.GetServiceInfo() {
-		for _, m := range info.Methods {
-			logger.Printf("serving gRPC method %s", svc + "/" + m.Name)
-		}
-	}
-
-	// Register the server reflection service on the server.
-	// See https://grpc.github.io/grpc/core/md_doc_server-reflection.html.
-	reflection.Register(srv)
-`
-
-	// input: map[string]any{"Services":[]*ServiceData}
-	grpcSvrEndT = `
-	(*wg).Add(1)
-	go func() {
-		defer (*wg).Done()
-
-		{{ comment "Start gRPC server in a separate goroutine." }}
-		go func() {
-			lis, err := net.Listen("tcp", u.Host)
-			if err != nil {
-				errc <- err
-			}
-			logger.Printf("gRPC server listening on %q", u.Host)
-			errc <- srv.Serve(lis)
-		}()
-
-		<-ctx.Done()
-		logger.Printf("shutting down gRPC server at %q", u.Host)
-		srv.Stop()
-  }()
-}
-`
-)

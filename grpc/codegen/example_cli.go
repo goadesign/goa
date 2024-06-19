@@ -79,30 +79,13 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 	{
 		sections = []*codegen.SectionTemplate{
 			codegen.Header("", "main", specs),
-			{Name: "do-grpc-cli", Source: grpcCLIDoT, Data: svrdata},
+			{
+				Name:   "do-grpc-cli",
+				Source: readTemplate("do_grpc_cli"),
+				Data:   svrdata,
+			},
 		}
 	}
 
 	return &codegen.File{Path: mainPath, SectionTemplates: sections, SkipExist: true}
 }
-
-const (
-	grpcCLIDoT = `func doGRPC(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, error) {
-	conn, err := grpc.Dial(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-    fmt.Fprintf(os.Stderr, "could not connect to gRPC server at %s: %v\n", host, err)
-  }
-	return cli.ParseEndpoint(conn)
-}
-
-{{ if eq .DefaultTransport.Type "grpc" }}
-func grpcUsageCommands() string {
-	return cli.UsageCommands()
-}
-
-func grpcUsageExamples() string {
-	return cli.UsageExamples()
-}
-{{- end }}
-`
-)
