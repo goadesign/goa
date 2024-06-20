@@ -3,6 +3,9 @@
 type Service interface {
 {{- range .Methods }}
 	{{ comment .Description }}
+	{{- if .SkipResponseBodyEncodeDecode }}
+	{{ comment "\nIf body implements [io.WriterTo], that implementation will be used instead. Consider [goa.design/goa/v3/pkg.SkipResponseWriter] to adapt existing implementations." }}
+	{{- end }}
 	{{- if .ViewedResult }}
 		{{- if not .ViewedResult.ViewName }}
 			{{ comment "The \"view\" return value must have one of the following views" }}
