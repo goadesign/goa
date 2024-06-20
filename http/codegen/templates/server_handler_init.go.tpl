@@ -84,6 +84,22 @@ func {{ .HandlerInit }}(
 	{{- if .Method.SkipResponseBodyEncodeDecode }}
 		o := res.(*{{ .ServicePkgName }}.{{ .Method.ResponseStruct }})
 		defer o.Body.Close()
+		if wt, ok := o.Body.(io.WriterTo); ok {
+			n, err := wt.WriteTo(w)
+			if err != nil {
+				if n == 0 {
+					if err := encodeError(ctx, w, err); err != nil {
+						errhandler(ctx, w, err)
+					}
+				} else {
+					if f, ok := w.(http.Flusher); ok {
+						f.Flush()
+					}
+					panic(http.ErrAbortHandler) // too late to write an error
+				}
+			}
+			return
+		}
 		// handle immediate read error like a returned error
 		buf := bufio.NewReader(o.Body)
 		if _, err := buf.Peek(1); err != nil && err != io.EOF {
