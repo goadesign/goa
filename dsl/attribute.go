@@ -222,7 +222,8 @@ func Field(tag any, name string, args ...any) {
 //	})
 func OneOf(name string, args ...any) {
 	if len(args) > 2 {
-		eval.ReportError("OneOf: wrong number of arguments")
+		eval.TooManyArgError()
+		return
 	}
 	fn, ok := args[len(args)-1].(func())
 	if !ok {
@@ -315,7 +316,7 @@ func Example(args ...any) {
 		var ok bool
 		summary, ok = args[0].(string)
 		if !ok {
-			eval.InvalidArgError("summary (string)", summary)
+			eval.InvalidArgError("summary (string)", args[0])
 			return
 		}
 		arg = args[1]

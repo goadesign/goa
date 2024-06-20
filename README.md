@@ -74,8 +74,26 @@ promoting reuse and standardization across services.
     <tr>
         <td>
             <img width="1000" height="0" />
+            <a href="https://zuplo.link/goa-web">
+            <picture>
+                <source media="(prefers-color-scheme: dark)" srcset="docs/zuplo-dark.png">
+                <img src="docs/zuplo.png" alt="Zuplo" width="260" align="right">
+            </picture>
+            </a>
+            <h3>Zuplo: Scale, Protect, and Productize your Goa API</h3>
+            <p>
+                Our API Gateway allows you to secure your API, scale it
+                globally, generate documentation from your OpenAPI, and add
+                monetization.
+            </p>
+            <a href="https://zuplo.link/goa-web">Start for Free</a>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img width="1000" height="0" />
             <a href="https://www.incident.io">
-                <img src="https://incident.io/_next/static/media/logo-social-dark.6a523ace.png" alt="incident.io" width="260" align="right" />
+                <img src="docs/incidentio.png" alt="incident.io" width="260" align="right" />
             </a>
             <h3>incident.io: Bounce back stronger after every incident</h3>
             <p>

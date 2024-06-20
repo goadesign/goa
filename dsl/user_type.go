@@ -94,7 +94,7 @@ func Type(name string, args ...any) expr.UserType {
 		base = &expr.Object{}
 		fn = a
 		if len(args) == 2 {
-			eval.ReportError("only one argument allowed when it is a function")
+			eval.TooManyArgError()
 			return nil
 		}
 	default:
