@@ -1,6 +1,8 @@
 package codegen
 
 import (
+	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,6 +44,9 @@ func TestProtoFiles(t *testing.T) {
 			sections := fs[0].SectionTemplates
 			require.GreaterOrEqual(t, len(sections), 3)
 			code := sectionCode(t, sections[1:]...)
+			if runtime.GOOS == "windows" {
+				c.Code = strings.ReplaceAll(c.Code, "\n", "\r\n")
+			}
 			assert.Equal(t, code, c.Code)
 			fpath := codegen.CreateTempFile(t, code)
 			assert.NoError(t, protoc(fpath, nil), "error occurred when compiling proto file %q", fpath)
