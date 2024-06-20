@@ -45,7 +45,7 @@ func TestProtoFiles(t *testing.T) {
 			require.GreaterOrEqual(t, len(sections), 3)
 			code := sectionCode(t, sections[1:]...)
 			if runtime.GOOS == "windows" {
-				c.Code = strings.ReplaceAll(c.Code, "\n", "\r\n")
+				code = strings.ReplaceAll(code, "\r\n", "\n")
 			}
 			assert.Equal(t, code, c.Code)
 			fpath := codegen.CreateTempFile(t, code)
