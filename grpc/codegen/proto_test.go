@@ -3,6 +3,9 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/grpc/codegen/testdata"
@@ -37,17 +40,11 @@ func TestProtoFiles(t *testing.T) {
 				t.Fatalf("got %d files, expected one", len(fs))
 			}
 			sections := fs[0].SectionTemplates
-			if len(sections) < 3 {
-				t.Fatalf("got %d sections, expected at least three", len(sections))
-			}
+			require.GreaterOrEqual(t, len(sections), 3)
 			code := sectionCode(t, sections[1:]...)
-			if code != c.Code {
-				t.Errorf("%s: got\n%s\ngot vs. expected:\n%s", c.Name, code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, code, c.Code)
 			fpath := codegen.CreateTempFile(t, code)
-			if err := protoc(fpath, nil); err != nil {
-				t.Fatalf("error occurred when compiling proto file %q: %s", fpath, err)
-			}
+			assert.NoError(t, protoc(fpath, nil), "error occurred when compiling proto file %q", fpath)
 		})
 	}
 }
@@ -73,22 +70,14 @@ func TestMessageDefSection(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunGRPCDSL(t, c.DSL)
 			fs := ProtoFiles("", expr.Root)
-			if len(fs) != 1 {
-				t.Fatalf("got %d files, expected one", len(fs))
-			}
+			require.Len(t, fs, 1)
 			sections := fs[0].SectionTemplates
-			if len(sections) < 3 {
-				t.Fatalf("got %d sections, expected at least three", len(sections))
-			}
+			require.GreaterOrEqual(t, len(sections), 3)
 			code := sectionCode(t, sections[:2]...)
 			msgCode := sectionCode(t, sections[3:]...)
-			if msgCode != c.Code {
-				t.Errorf("%s: got\n%s\ngot vs. expected:\n%s", c.Name, msgCode, codegen.Diff(t, msgCode, c.Code))
-			}
+			assert.Equal(t, c.Code, msgCode)
 			fpath := codegen.CreateTempFile(t, code+msgCode)
-			if err := protoc(fpath, nil); err != nil {
-				t.Fatalf("error occurred when compiling proto file %q: %s", fpath, err)
-			}
+			assert.NoError(t, protoc(fpath, nil), "error occurred when compiling proto file %q", fpath)
 		})
 	}
 }
