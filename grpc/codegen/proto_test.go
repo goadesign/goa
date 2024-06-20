@@ -80,6 +80,9 @@ func TestMessageDefSection(t *testing.T) {
 			require.GreaterOrEqual(t, len(sections), 3)
 			code := sectionCode(t, sections[:2]...)
 			msgCode := sectionCode(t, sections[3:]...)
+			if runtime.GOOS == "windows" {
+				msgCode = strings.ReplaceAll(msgCode, "\r\n", "\n")
+			}
 			assert.Equal(t, c.Code, msgCode)
 			fpath := codegen.CreateTempFile(t, code+msgCode)
 			assert.NoError(t, protoc(fpath, nil), "error occurred when compiling proto file %q", fpath)
