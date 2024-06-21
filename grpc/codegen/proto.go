@@ -47,7 +47,7 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 		// header comments
 		{
 			Name:   "proto-header",
-			Source: protoHeaderT,
+			Source: readTemplate("proto_header"),
 			Data: map[string]any{
 				"Title":       fmt.Sprintf("%s protocol buffer definition", svc.Name()),
 				"ToolVersion": goa.Version(),
@@ -56,7 +56,7 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 		// proto syntax and package
 		{
 			Name:   "proto-start",
-			Source: protoStartT,
+			Source: readTemplate("proto_start"),
 			Data: map[string]any{
 				"ProtoVersion": ProtoVersion,
 				"Pkg":          pkgName(svc, svcName),
@@ -66,14 +66,18 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 		// service definition
 		{
 			Name:   "grpc-service",
-			Source: serviceT,
+			Source: readTemplate("grpc_service"),
 			Data:   data,
 		},
 	}
 
 	// message definition
 	for _, m := range data.Messages {
-		sections = append(sections, &codegen.SectionTemplate{Name: "grpc-message", Source: messageT, Data: m})
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "grpc-message",
+			Source: readTemplate("grpc_message"),
+			Data:   m,
+		})
 	}
 
 	runProtoc := func(path string) error {
@@ -98,7 +102,7 @@ func pkgName(svc *expr.GRPCServiceExpr, svcName string) string {
 
 func protoc(path string, includes []string) error {
 	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0777); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return err
 	}
 
@@ -122,44 +126,3 @@ func protoc(path string, includes []string) error {
 
 	return nil
 }
-
-const (
-	protoHeaderT = `{{ if .Title -}}
-// Code generated with goa {{ .ToolVersion }}, DO NOT EDIT.
-//
-// {{ .Title }}
-//
-// Command:
-{{ comment commandLine }}
-{{- end }}
-`
-
-	protoStartT = `
-syntax = {{ printf "%q" .ProtoVersion }};
-
-package {{ .Pkg }};
-
-option go_package = "/{{ .Pkg }}pb";
-{{- range .Imports }}
-import "{{ . }}";
-{{- end }}
-`
-
-	// input: ServiceData
-	serviceT = `
-{{ .Description | comment }}
-service {{ .Name }} {
-	{{- range .Endpoints }}
-	{{ if .Method.Description }}{{ .Method.Description | comment }}{{ end }}
-	{{- $serverStream := or (eq .Method.StreamKind 3) (eq .Method.StreamKind 4) }}
-	{{- $clientStream := or (eq .Method.StreamKind 2) (eq .Method.StreamKind 4) }}
-	rpc {{ .Method.VarName }} ({{ if $clientStream }}stream {{ end }}{{ .Request.Message.VarName }}) returns ({{ if $serverStream }}stream {{ end }}{{ .Response.Message.VarName }});
-	{{- end }}
-}
-`
-
-	// input: service.UserTypeData
-	messageT = `{{ comment .Description }}
-message {{ .VarName }}{{ .Def }}
-`
-)

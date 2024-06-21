@@ -88,7 +88,7 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, _ map[string]struct{})
 			}
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-type-init",
-				Source: typeInitT,
+				Source: readTemplate("type_init"),
 				Data:   init,
 				FuncMap: map[string]any{
 					"isAlias": expr.IsAlias,
@@ -108,25 +108,17 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, _ map[string]struct{})
 			}
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-validate",
-				Source: validateT,
+				Source: readTemplate("validate"),
 				Data:   data,
 			})
 		}
 		for _, h := range sd.transformHelpers {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-transform-helper",
-				Source: transformHelperT,
+				Source: readTemplate("transform_helper"),
 				Data:   h,
 			})
 		}
 	}
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
-
-// input: TransformFunctionData
-const transformHelperT = `{{ printf "%s builds a value of type %s from a value of type %s." .Name .ResultTypeRef .ParamTypeRef | comment }}
-func {{ .Name }}(v {{ .ParamTypeRef }}) {{ .ResultTypeRef }} {
-  {{ .Code }}
-  return res
-}
-`
