@@ -2,9 +2,9 @@ package example
 
 import (
 	"bytes"
+	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
@@ -16,13 +16,12 @@ func TestExampleCLIFiles(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"no-server", testdata.NoServerDSL, testdata.NoServerCLIMainCode},
-		{"single-server-single-host", testdata.SingleServerSingleHostDSL, testdata.SingleServerSingleHostCLIMainCode},
-		{"single-server-single-host-with-variables", testdata.SingleServerSingleHostWithVariablesDSL, testdata.SingleServerSingleHostWithVariablesCLIMainCode},
-		{"single-server-multiple-hosts", testdata.SingleServerMultipleHostsDSL, testdata.SingleServerMultipleHostsCLIMainCode},
-		{"single-server-multiple-hosts-with-variables", testdata.SingleServerMultipleHostsWithVariablesDSL, testdata.SingleServerMultipleHostsWithVariablesCLIMainCode},
+		{"no-server", testdata.NoServerDSL},
+		{"single-server-single-host", testdata.SingleServerSingleHostDSL},
+		{"single-server-single-host-with-variables", testdata.SingleServerSingleHostWithVariablesDSL},
+		{"single-server-multiple-hosts", testdata.SingleServerMultipleHostsDSL},
+		{"single-server-multiple-hosts-with-variables", testdata.SingleServerMultipleHostsWithVariablesDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -37,7 +36,8 @@ func TestExampleCLIFiles(t *testing.T) {
 				require.NoError(t, s.Write(&buf))
 			}
 			code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
-			assert.Equal(t, c.Code, code)
+			golden := filepath.Join("testdata", "client-"+c.Name+".golden")
+			compareOrUpdateGolden(t, code, golden)
 		})
 	}
 }

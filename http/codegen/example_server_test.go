@@ -2,6 +2,9 @@ package codegen
 
 import (
 	"bytes"
+	"flag"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,6 +17,24 @@ import (
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
+
+var updateGolden = false
+
+func init() {
+	flag.BoolVar(&updateGolden, "w", false, "update golden files")
+}
+
+func compareOrUpdateGolden(t *testing.T, code, golden string) {
+	t.Helper()
+	if updateGolden {
+		require.NoError(t, os.MkdirAll(filepath.Dir(golden), 0755))
+		require.NoError(t, os.WriteFile(golden, []byte(code), 0644))
+		return
+	}
+	data, err := os.ReadFile(golden)
+	require.NoError(t, err)
+	assert.Equal(t, string(data), code)
+}
 
 func TestExampleServerFiles(t *testing.T) {
 	t.Run("package name check", func(t *testing.T) {
@@ -59,13 +80,12 @@ func TestExampleServerFiles(t *testing.T) {
 		cases := []struct {
 			Name string
 			DSL  func()
-			Code string
 		}{
-			{"no-server", ctestdata.NoServerDSL, testdata.NoServerServerHandleCode},
-			{"server-hosting-service-with-file-server", ctestdata.ServerHostingServiceWithFileServerDSL, testdata.ServerHostingServiceWithFileServerHandlerCode},
-			{"server-hosting-service-subset", ctestdata.ServerHostingServiceSubsetDSL, testdata.ServerHostingServiceSubsetServerHandleCode},
-			{"server-hosting-multiple-services", ctestdata.ServerHostingMultipleServicesDSL, testdata.ServerHostingMultipleServicesServerHandleCode},
-			{"streaming", testdata.StreamingMultipleServicesDSL, testdata.StreamingServerHandleCode},
+			{"no-server", ctestdata.NoServerDSL},
+			{"server-hosting-service-with-file-server", ctestdata.ServerHostingServiceWithFileServerDSL},
+			{"server-hosting-service-subset", ctestdata.ServerHostingServiceSubsetDSL},
+			{"server-hosting-multiple-services", ctestdata.ServerHostingMultipleServicesDSL},
+			{"streaming", testdata.StreamingMultipleServicesDSL},
 		}
 		for _, c := range cases {
 			t.Run(c.Name, func(t *testing.T) {
@@ -82,7 +102,8 @@ func TestExampleServerFiles(t *testing.T) {
 					require.NoError(t, s.Write(&buf))
 				}
 				code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
-				assert.Equal(t, c.Code, code)
+				golden := filepath.Join("testdata", "server-"+c.Name+".golden")
+				compareOrUpdateGolden(t, code, golden)
 			})
 		}
 	})

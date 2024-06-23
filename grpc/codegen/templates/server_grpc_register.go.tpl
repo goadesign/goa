@@ -1,17 +1,19 @@
 
-	// Initialize gRPC server with the middleware.
-	srv := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(
-			grpcmdlwr.UnaryRequestID(),
-			grpcmdlwr.UnaryServerLog(adapter),
-		),
-	{{- if needStream .Services }}
-		grpc.ChainStreamInterceptor(
-			grpcmdlwr.StreamRequestID(),
-			grpcmdlwr.StreamServerLog(adapter),
-		),
+	// Create interceptor which sets up the logger in each request context.
+	chain := grpc.ChainUnaryInterceptor(log.UnaryServerInterceptor(ctx))
+	if dbg {
+		// Log request and response content if debug logs are enabled.
+		chain = grpc.ChainUnaryInterceptor(log.UnaryServerInterceptor(ctx), debug.UnaryServerInterceptor())
+	}
+	{{- if needStream .Services}}
+	streamchain := grpc.ChainStreamInterceptor(log.StreamServerInterceptor(ctx))
+	if dbg {
+		streamchain = grpc.ChainStreamInterceptor(log.StreamServerInterceptor(ctx), debug.StreamServerInterceptor())
+	}
 	{{- end }}
-	)
+
+	// Initialize gRPC server
+	srv := grpc.NewServer(chain{{ if needStream .Sevices }}, streamchain{{ end }})
 
 	// Register the servers.
 	{{- range .Services }}
@@ -20,7 +22,7 @@
 
 	for svc, info := range srv.GetServiceInfo() {
 		for _, m := range info.Methods {
-			logger.Printf("serving gRPC method %s", svc + "/" + m.Name)
+			log.Printf(ctx, "serving gRPC method %s", svc + "/" + m.Name)
 		}
 	}
 

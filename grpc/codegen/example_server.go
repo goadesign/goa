@@ -44,14 +44,13 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 	{
 		specs = []*codegen.ImportSpec{
 			{Path: "context"},
-			{Path: "log"},
+			{Path: "fmt"},
 			{Path: "net"},
 			{Path: "net/url"},
-			{Path: "os"},
 			{Path: "sync"},
-			codegen.GoaImport("middleware"),
 			codegen.GoaNamedImport("grpc", "goagrpc"),
-			codegen.GoaNamedImport("grpc/middleware", "grpcmdlwr"),
+			{Path: "goa.design/clue/debug"},
+			{Path: "goa.design/clue/log"},
 			{Path: "google.golang.org/grpc"},
 			{Path: "google.golang.org/grpc/reflection"},
 		}
@@ -106,9 +105,6 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 				Data: map[string]any{
 					"Services": svcdata,
 				},
-			}, {
-				Name:   "server-grpc-logger",
-				Source: readTemplate("server_grpc_logger"),
 			}, {
 				Name:   "server-grpc-init",
 				Source: readTemplate("server_grpc_init"),
