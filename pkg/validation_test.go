@@ -96,7 +96,7 @@ func TestValidateFormat(t *testing.T) {
 
 	for k, tc := range cases {
 		actual := ValidateFormat(tc.name, tc.val, tc.format)
-		if actual != tc.expected {
+		if !errors.Is(actual, tc.expected) {
 			// Compare only the messages because the error has always a new error ID.
 			if actual == nil || tc.expected == nil || actual.Error() != tc.expected.Error() {
 				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
@@ -124,7 +124,7 @@ func TestValidatePattern(t *testing.T) {
 
 	for k, tc := range cases {
 		actual := ValidatePattern(tc.name, tc.val, tc.pattern)
-		if actual != tc.expected {
+		if !errors.Is(actual, tc.expected) {
 			// Compare only the messages because the error has always a new error ID.
 			if actual.Error() != tc.expected.Error() {
 				t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)

@@ -4,6 +4,7 @@ package xray
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net"
 	"testing"
@@ -551,7 +552,7 @@ func TestStreamClient(t *testing.T) {
 				if err == nil {
 					var msg any
 					err2 := cs.RecvMsg(msg)
-					closed := err2 == io.EOF
+					closed := errors.Is(err2, io.EOF)
 					if tc.StreamClosed != closed {
 						t.Errorf("expected stream closed to be %v, got %v", tc.StreamClosed, closed)
 					}

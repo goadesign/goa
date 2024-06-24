@@ -2,6 +2,7 @@ package xray
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -232,7 +233,7 @@ func (c *xrayStreamClientWrapper) recordErrorAndClose(err error) {
 	defer c.mu.Unlock()
 	if !c.finished {
 		// io.EOF is normal grpc stream close, not error.
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			c.s.RecordResponse(nil)
 		} else {
 			c.s.RecordError(err)
