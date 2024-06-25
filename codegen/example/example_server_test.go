@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,12 +27,15 @@ func init() {
 func compareOrUpdateGolden(t *testing.T, code, golden string) {
 	t.Helper()
 	if updateGolden {
-		require.NoError(t, os.MkdirAll(filepath.Dir(golden), 0755))
-		require.NoError(t, os.WriteFile(golden, []byte(code), 0644))
+		require.NoError(t, os.MkdirAll(filepath.Dir(golden), 0750))
+		require.NoError(t, os.WriteFile(golden, []byte(code), 0640))
 		return
 	}
 	data, err := os.ReadFile(golden)
 	require.NoError(t, err)
+	if runtime.GOOS == "windows" {
+		data = bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n"))
+	}
 	assert.Equal(t, string(data), code)
 }
 
@@ -68,14 +72,7 @@ func TestExampleServerFiles(t *testing.T) {
 			}
 			code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
 			golden := filepath.Join("testdata", "server-"+c.Name+".golden")
-			if updateGolden {
-				require.NoError(t, os.MkdirAll(filepath.Dir(golden), 0755))
-				require.NoError(t, os.WriteFile(golden, []byte(code), 0644))
-				return
-			}
-			data, err := os.ReadFile(golden)
-			require.NoError(t, err)
-			assert.Equal(t, string(data), code)
+			compareOrUpdateGolden(t, code, golden)
 		})
 	}
 }

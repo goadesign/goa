@@ -47,7 +47,7 @@ func TestProtoFiles(t *testing.T) {
 			if runtime.GOOS == "windows" {
 				code = strings.ReplaceAll(code, "\r\n", "\n")
 			}
-			assert.Equal(t, code, c.Code)
+			assert.Equal(t, c.Code, code)
 			fpath := codegen.CreateTempFile(t, code)
 			assert.NoError(t, protoc(fpath, nil), "error occurred when compiling proto file %q", fpath)
 		})
