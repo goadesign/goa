@@ -42,7 +42,7 @@ func TestConnect(t *testing.T) {
 		_, err := Connect(context.Background(), time.Millisecond, func() (net.Conn, error) {
 			return nil, dialErr
 		})
-		if err != dialErr {
+		if !errors.Is(err, dialErr) {
 			t.Fatalf("Unexpected err, got %q, expected %q", err, dialErr)
 		}
 	})
