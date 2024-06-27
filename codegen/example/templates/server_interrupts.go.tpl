@@ -13,4 +13,4 @@
 	}()
 
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)

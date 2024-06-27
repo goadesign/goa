@@ -9,12 +9,15 @@
 			if err != nil {
 				errc <- err
 			}
+			if lis == nil {
+				errc <- fmt.Errorf("failed to listen on %q", u.Host)
+			}
 			logger.Printf("gRPC server listening on %q", u.Host)
 			errc <- srv.Serve(lis)
 		}()
 
 		<-ctx.Done()
-		logger.Printf("shutting down gRPC server at %q", u.Host)
+		log.Printf(ctx, "shutting down gRPC server at %q", u.Host)
 		srv.Stop()
   }()
 }

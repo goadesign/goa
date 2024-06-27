@@ -2,6 +2,10 @@ package example
 
 import (
 	"bytes"
+	"flag"
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,29 +17,49 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+// updateGolden is true when -w is passed to `go test`, e.g. `go test ./... -w`
+var updateGolden = false
+
+func init() {
+	flag.BoolVar(&updateGolden, "w", false, "update golden files")
+}
+
+func compareOrUpdateGolden(t *testing.T, code, golden string) {
+	t.Helper()
+	if updateGolden {
+		require.NoError(t, os.MkdirAll(filepath.Dir(golden), 0750))
+		require.NoError(t, os.WriteFile(golden, []byte(code), 0640))
+		return
+	}
+	data, err := os.ReadFile(golden)
+	require.NoError(t, err)
+	if runtime.GOOS == "windows" {
+		data = bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n"))
+	}
+	assert.Equal(t, string(data), code)
+}
+
 func TestExampleServerFiles(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"no-server", testdata.NoServerDSL, testdata.NoServerServerMainCode},
-		{"same-api-service-name", testdata.SameAPIServiceNameDSL, testdata.SameAPIServiceNameServerMainCode},
-		{"single-server-single-host", testdata.SingleServerSingleHostDSL, testdata.SingleServerSingleHostServerMainCode},
-		{"single-server-single-host-with-variables", testdata.SingleServerSingleHostWithVariablesDSL, testdata.SingleServerSingleHostWithVariablesServerMainCode},
-		{"server-hosting-service-with-file-server", testdata.ServerHostingServiceWithFileServerDSL, testdata.ServerHostingServiceWithFileServerServerMainCode},
-		{"server-hosting-service-subset", testdata.ServerHostingServiceSubsetDSL, testdata.ServerHostingServiceSubsetServerMainCode},
-		{"server-hosting-multiple-services", testdata.ServerHostingMultipleServicesDSL, testdata.ServerHostingMultipleServicesServerMainCode},
-		{"single-server-multiple-hosts", testdata.SingleServerMultipleHostsDSL, testdata.SingleServerMultipleHostsServerMainCode},
-		{"single-server-multiple-hosts-with-variables", testdata.SingleServerMultipleHostsWithVariablesDSL, testdata.SingleServerMultipleHostsWithVariablesServerMainCode},
-		{"service-name-with-spaces", testdata.NamesWithSpacesDSL, testdata.NamesWithSpacesServerMainCode},
-		{"service-for-only-http", testdata.ServiceForOnlyHTTPDSL, testdata.ServiceForOnlyHTTPServerMainCode},
-		{"sercice-for-only-grpc", testdata.ServiceForOnlyGRPCDSL, testdata.ServiceForOnlyGRPCServerMainCode},
-		{"service-for-http-and-part-of-grpc", testdata.ServiceForHTTPAndPartOfGRPCDSL, testdata.ServiceForHTTPAndPartOfGRPCServerMainCode},
+		{"no-server", testdata.NoServerDSL},
+		{"same-api-service-name", testdata.SameAPIServiceNameDSL},
+		{"single-server-single-host", testdata.SingleServerSingleHostDSL},
+		{"single-server-single-host-with-variables", testdata.SingleServerSingleHostWithVariablesDSL},
+		{"server-hosting-service-with-file-server", testdata.ServerHostingServiceWithFileServerDSL},
+		{"server-hosting-service-subset", testdata.ServerHostingServiceSubsetDSL},
+		{"server-hosting-multiple-services", testdata.ServerHostingMultipleServicesDSL},
+		{"single-server-multiple-hosts", testdata.SingleServerMultipleHostsDSL},
+		{"single-server-multiple-hosts-with-variables", testdata.SingleServerMultipleHostsWithVariablesDSL},
+		{"service-name-with-spaces", testdata.NamesWithSpacesDSL},
+		{"service-for-only-http", testdata.ServiceForOnlyHTTPDSL},
+		{"sercice-for-only-grpc", testdata.ServiceForOnlyGRPCDSL},
+		{"service-for-http-and-part-of-grpc", testdata.ServiceForHTTPAndPartOfGRPCDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// reset global variable
 			service.Services = make(service.ServicesData)
 			Servers = make(ServersData)
 			codegen.RunDSL(t, c.DSL)
@@ -47,7 +71,8 @@ func TestExampleServerFiles(t *testing.T) {
 				require.NoError(t, s.Write(&buf))
 			}
 			code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
-			assert.Equal(t, c.Code, code)
+			golden := filepath.Join("testdata", "server-"+c.Name+".golden")
+			compareOrUpdateGolden(t, code, golden)
 		})
 	}
 }

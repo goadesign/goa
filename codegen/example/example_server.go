@@ -35,7 +35,6 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		{Path: "context"},
 		{Path: "flag"},
 		{Path: "fmt"},
-		{Path: "log"},
 		{Path: "net"},
 		{Path: "net/url"},
 		{Path: "os"},
@@ -44,7 +43,8 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 		{Path: "sync"},
 		{Path: "syscall"},
 		{Path: "time"},
-		codegen.GoaImport("middleware"),
+		{Path: "goa.design/clue/debug"},
+		{Path: "goa.design/clue/log"},
 	}
 
 	// Iterate through services listed in the server expression.
