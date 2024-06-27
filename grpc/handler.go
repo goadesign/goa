@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -79,7 +80,8 @@ func (h *unaryHandler) Handle(ctx context.Context, reqpb any) (any, error) {
 			// Decode gRPC request message and incoming metadata
 			md, _ := metadata.FromIncomingContext(ctx)
 			if req, err = h.decoder(ctx, reqpb, md); err != nil {
-				if _, ok := err.(*goa.ServiceError); ok {
+				var e *goa.ServiceError
+				if errors.As(err, &e) {
 					return nil, err
 				}
 				return nil, status.Error(codes.InvalidArgument, err.Error())
@@ -107,7 +109,8 @@ func (h *unaryHandler) Handle(ctx context.Context, reqpb any) (any, error) {
 		if h.encoder != nil {
 			// Encode gRPC response
 			if respb, err = h.encoder(ctx, resp, &hdr, &trlr); err != nil {
-				if _, ok := err.(*goa.ServiceError); ok {
+				var e *goa.ServiceError
+				if errors.As(err, &e) {
 					return nil, err
 				}
 				return nil, status.Error(codes.Unknown, err.Error())
@@ -142,7 +145,8 @@ func (h *streamHandler) Decode(ctx context.Context, reqpb any) (any, error) {
 		if h.decoder != nil {
 			md, _ := metadata.FromIncomingContext(ctx)
 			if req, err = h.decoder(ctx, reqpb, md); err != nil {
-				if _, ok := err.(*goa.ServiceError); ok {
+				var e *goa.ServiceError
+				if errors.As(err, &e) {
 					return nil, err
 				}
 				return nil, status.Error(codes.InvalidArgument, err.Error())

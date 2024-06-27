@@ -1,6 +1,7 @@
 package expr_test
 
 import (
+	"errors"
 	"testing"
 
 	"goa.design/goa/v3/eval"
@@ -49,23 +50,24 @@ service "Service" gRPC endpoint "Method": field number 2 in attribute "key_dup_i
 			if c.Errors == nil || len(c.Errors) == 0 {
 				expr.RunDSL(t, c.DSL)
 			} else {
-				var errors []error
+				var errs []error
 
 				err := expr.RunInvalidDSL(t, c.DSL)
 				if err != nil {
-					if merr, ok := err.(eval.MultiError); ok {
+					var merr eval.MultiError
+					if errors.As(err, &merr) {
 						for _, e := range merr {
-							errors = append(errors, e.GoError)
+							errs = append(errs, e.GoError)
 						}
 					} else {
-						errors = append(errors, err)
+						errs = append(errs, err)
 					}
 				}
 
-				if len(c.Errors) != len(errors) {
-					t.Errorf("%s: got %d, expected the number of error values to match %d", name, len(errors), len(c.Errors))
+				if len(c.Errors) != len(errs) {
+					t.Errorf("%s: got %d, expected the number of error values to match %d", name, len(errs), len(c.Errors))
 				} else {
-					for i, err := range errors {
+					for i, err := range errs {
 						if err.Error() != c.Errors[i] {
 							t.Errorf("%s:\ngot \t%q,\nexpected\t%q at index %d", name, err.Error(), c.Errors[i], i)
 						}

@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"errors"
 	"fmt"
 )
 
@@ -134,7 +135,11 @@ func (c *DSLContext) Record(err *Error) {
 	if c.Errors == nil {
 		c.Errors = MultiError{err}
 	} else {
-		c.Errors = append(c.Errors.(MultiError), err)
+		var e MultiError
+		if errors.As(c.Errors, &e) {
+			e = append(e, err)
+			c.Errors = e
+		}
 	}
 }
 
