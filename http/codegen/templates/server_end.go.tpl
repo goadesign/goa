@@ -5,7 +5,7 @@
 
 	{{- range .Services }}
 		for _, m := range {{ .Service.VarName }}Server.Mounts {
-			logger.Printf("HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
+			log.Printf(ctx, "HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 		}
 	{{- end }}
 
@@ -15,12 +15,12 @@
 
 		{{ comment "Start HTTP server in a separate goroutine." }}
 		go func() {
-			logger.Printf("HTTP server listening on %q", u.Host)
+			log.Printf(ctx, "HTTP server listening on %q", u.Host)
 			errc <- srv.ListenAndServe()
 		}()
 
 		<-ctx.Done()
-		logger.Printf("shutting down HTTP server at %q", u.Host)
+		log.Printf(ctx, "shutting down HTTP server at %q", u.Host)
 
 		{{ comment "Shutdown gracefully with a 30s timeout." }}
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -28,7 +28,7 @@
 
 		err := srv.Shutdown(ctx)
 		if err != nil {
-			logger.Printf("failed to shutdown: %v", err)
+			log.Printf(ctx, "failed to shutdown: %v", err)
 		}
 	}()
 }
