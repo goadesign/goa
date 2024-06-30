@@ -72,20 +72,14 @@ func Execute(fn func(), def Expression) bool {
 	}
 	var startCount int
 	if Context.Errors != nil {
-		var e MultiError
-		if errors.As(Context.Errors, &e) {
-			startCount = len(e)
-		}
+		startCount = len(Context.Errors)
 	}
 	Context.Stack = append(Context.Stack, def)
 	fn()
 	Context.Stack = Context.Stack[:len(Context.Stack)-1]
 	var endCount int
 	if Context.Errors != nil {
-		var e MultiError
-		if errors.As(Context.Errors, &e) {
-			endCount = len(e)
-		}
+		endCount = len(Context.Errors)
 	}
 	return endCount <= startCount
 }

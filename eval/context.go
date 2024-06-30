@@ -1,7 +1,6 @@
 package eval
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -15,7 +14,7 @@ type (
 		Stack Stack
 		// Errors contains the DSL execution errors for the current expression set.
 		// Errors is an instance of MultiError.
-		Errors error
+		Errors MultiError
 
 		// roots is the list of DSL roots as registered by all loaded DSLs.
 		roots []Root
@@ -135,11 +134,7 @@ func (c *DSLContext) Record(err *Error) {
 	if c.Errors == nil {
 		c.Errors = MultiError{err}
 	} else {
-		var e MultiError
-		if errors.As(c.Errors, &e) {
-			e = append(e, err)
-			c.Errors = e
-		}
+		c.Errors = append(c.Errors, err)
 	}
 }
 
