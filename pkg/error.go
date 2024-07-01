@@ -285,8 +285,8 @@ func newError(name string, timeout, temporary, fault bool, format string, v ...a
 }
 
 func asError(err error) *ServiceError {
-	e, ok := err.(*ServiceError)
-	if !ok {
+	var e *ServiceError
+	if !errors.As(err, &e) {
 		return &ServiceError{
 			Name:    "error",
 			ID:      NewErrorID(),

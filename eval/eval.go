@@ -1,6 +1,7 @@
 package eval
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -71,14 +72,14 @@ func Execute(fn func(), def Expression) bool {
 	}
 	var startCount int
 	if Context.Errors != nil {
-		startCount = len(Context.Errors.(MultiError))
+		startCount = len(Context.Errors)
 	}
 	Context.Stack = append(Context.Stack, def)
 	fn()
 	Context.Stack = Context.Stack[:len(Context.Stack)-1]
 	var endCount int
 	if Context.Errors != nil {
-		endCount = len(Context.Errors.(MultiError))
+		endCount = len(Context.Errors)
 	}
 	return endCount <= startCount
 }
@@ -163,7 +164,8 @@ func (verr *ValidationErrors) Add(def Expression, format string, vals ...any) {
 // AddError adds a validation error to the target. It "flattens" validation
 // errors so that the recorded errors are never ValidationErrors themselves.
 func (verr *ValidationErrors) AddError(def Expression, err error) {
-	if v, ok := err.(*ValidationErrors); ok {
+	var v *ValidationErrors
+	if errors.As(err, &v) {
 		verr.Errors = append(verr.Errors, v.Errors...)
 		verr.Expressions = append(verr.Expressions, v.Expressions...)
 		return

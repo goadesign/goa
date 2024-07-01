@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -32,7 +33,8 @@ func TestRootExprValidate(t *testing.T) {
 		e := RootExpr{
 			API: tc.api,
 		}
-		if actual := e.Validate().(*eval.ValidationErrors); len(tc.expected.Errors) != len(actual.Errors) {
+		var actual *eval.ValidationErrors
+		if errors.As(e.Validate(), &actual); len(tc.expected.Errors) != len(actual.Errors) {
 			t.Errorf("%s: expected the number of error values to match %d got %d ", k, len(tc.expected.Errors), len(actual.Errors))
 		} else {
 			for i, err := range actual.Errors {

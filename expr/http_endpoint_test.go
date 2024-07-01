@@ -1,6 +1,7 @@
 package expr_test
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -185,20 +186,21 @@ service "Service" HTTP endpoint "MethodC": HTTP endpoint request body must be em
 			if c.Error == "" {
 				expr.RunDSL(t, c.DSL)
 			} else {
-				var errors []error
+				var errs []error
 				err := expr.RunInvalidDSL(t, c.DSL)
 				if err != nil {
-					if merr, ok := err.(eval.MultiError); ok {
+					var merr eval.MultiError
+					if errors.As(err, &merr) {
 						for _, e := range merr {
-							errors = append(errors, e.GoError)
+							errs = append(errs, e.GoError)
 						}
 					} else {
-						errors = append(errors, err)
+						errs = append(errs, err)
 					}
 				}
-				if len(errors) > 1 || len(errors) == 0 {
-					t.Errorf("got %d errors, expected 1", len(errors))
-				} else if errors[0].Error() != c.Error {
+				if len(errs) > 1 || len(errs) == 0 {
+					t.Errorf("got %d errors, expected 1", len(errs))
+				} else if errs[0].Error() != c.Error {
 					t.Errorf("got `%s`, expected `%s`", err.Error(), c.Error)
 				}
 			}

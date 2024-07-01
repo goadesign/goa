@@ -1,6 +1,7 @@
 package grpc
 
 import (
+	"errors"
 	"fmt"
 
 	goapb "goa.design/goa/v3/grpc/pb"
@@ -37,7 +38,8 @@ type (
 // characteristics. If the error is not a goa ServiceError, it creates an
 // ErrorResponse message with the Fault field set to true.
 func NewErrorResponse(err error) *goapb.ErrorResponse {
-	if gerr, ok := err.(*goa.ServiceError); ok {
+	var gerr *goa.ServiceError
+	if errors.As(err, &gerr) {
 		return &goapb.ErrorResponse{
 			Name:      gerr.Name,
 			Id:        gerr.ID,
@@ -86,7 +88,8 @@ func EncodeError(err error) error {
 		}
 		return st.Err()
 	}
-	if gerr, ok := err.(*goa.ServiceError); ok {
+	var gerr *goa.ServiceError
+	if errors.As(err, &gerr) {
 		// goa service error type. Compute the status code from the service error
 		// characteristics and create a new detailed gRPC status error.
 		var code codes.Code

@@ -14,7 +14,7 @@ type (
 		Stack Stack
 		// Errors contains the DSL execution errors for the current expression set.
 		// Errors is an instance of MultiError.
-		Errors error
+		Errors MultiError
 
 		// roots is the list of DSL roots as registered by all loaded DSLs.
 		roots []Root
@@ -134,7 +134,7 @@ func (c *DSLContext) Record(err *Error) {
 	if c.Errors == nil {
 		c.Errors = MultiError{err}
 	} else {
-		c.Errors = append(c.Errors.(MultiError), err)
+		c.Errors = append(c.Errors, err)
 	}
 }
 
