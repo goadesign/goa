@@ -171,7 +171,7 @@ func ValidatePattern(name, val, p string) error {
 func validateUUID(uuid string) error {
 	u, err := googleuuid.Parse(uuid)
 	if err != nil {
-		return fmt.Errorf("uuid: %s: %v", uuid, err)
+		return fmt.Errorf("uuid: %s: %w", uuid, err)
 	}
 
 	if u.Variant() != googleuuid.RFC4122 {

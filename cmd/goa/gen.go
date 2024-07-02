@@ -214,7 +214,7 @@ func (g *Generator) Run() ([]string, error) {
 	cmd := exec.Command(filepath.Join(g.tmpDir, g.bin), args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("%s\n%s", err, string(out))
+		return nil, fmt.Errorf("%w\n%s", err, string(out))
 	}
 	res := strings.Split(string(out), "\n")
 	for (len(res) > 0) && (res[len(res)-1] == "") {
@@ -249,7 +249,7 @@ func (g *Generator) runGoCmd(args ...string) error {
 		if len(out) > 0 {
 			return fmt.Errorf(string(out))
 		}
-		return fmt.Errorf("failed to compile generator: %s", err)
+		return fmt.Errorf("failed to compile generator: %w", err)
 	}
 	return nil
 }

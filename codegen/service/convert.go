@@ -355,7 +355,7 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 	// check compatibility
 	if ref != nil {
 		if err := compatible(ref, t); err != nil {
-			return fmt.Errorf("%q: %s", t.Name(), err)
+			return fmt.Errorf("%q: %w", t.Name(), err)
 		}
 	}
 
@@ -415,7 +415,7 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 		}
 		var elem expr.DataType
 		if err := buildDesignType(&elem, e, eref, appendPath(rec, "[0]")); err != nil {
-			return fmt.Errorf("%s", err)
+			return fmt.Errorf("%w", err)
 		}
 		*dt = &expr.Array{ElemType: &expr.AttributeExpr{Type: elem}}
 
@@ -428,11 +428,11 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 		}
 		var kt expr.DataType
 		if err := buildDesignType(&kt, t.Key(), kref, appendPath(rec, ".key")); err != nil {
-			return fmt.Errorf("%s", err)
+			return fmt.Errorf("%w", err)
 		}
 		var vt expr.DataType
 		if err := buildDesignType(&vt, t.Elem(), vref, appendPath(rec, ".value")); err != nil {
-			return fmt.Errorf("%s", err)
+			return fmt.Errorf("%w", err)
 		}
 		*dt = &expr.Map{KeyType: &expr.AttributeExpr{Type: kt}, ElemType: &expr.AttributeExpr{Type: vt}}
 
@@ -486,7 +486,7 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 			var fdt expr.DataType
 			if f.Type.Kind() == reflect.Ptr {
 				if err := buildDesignType(&fdt, f.Type.Elem(), aref, recf); err != nil {
-					return fmt.Errorf("%q.%s: %s", t.Name(), f.Name, err)
+					return fmt.Errorf("%q.%s: %w", t.Name(), f.Name, err)
 				}
 				if expr.IsArray(fdt) {
 					return fmt.Errorf("%s: field of type pointer to slice are not supported, use slice instead", rec.path)
@@ -501,7 +501,7 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 					required = append(required, atn)
 				}
 				if err := buildDesignType(&fdt, f.Type, aref, appendPath(rec, "."+f.Name)); err != nil {
-					return fmt.Errorf("%q.%s: %s", t.Name(), f.Name, err)
+					return fmt.Errorf("%q.%s: %w", t.Name(), f.Name, err)
 				}
 			}
 			name := atn

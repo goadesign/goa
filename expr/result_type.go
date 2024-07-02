@@ -316,7 +316,7 @@ func projectCollection(m *ResultTypeExpr, view string, seen map[string]*Attribut
 	e := m.Type.(*Array).ElemType.Type.(*ResultTypeExpr) // validation checked this cast would work
 	pe, err2 := project(e, view, seen)
 	if err2 != nil {
-		return nil, fmt.Errorf("collection element: %s", err2)
+		return nil, fmt.Errorf("collection element: %w", err2)
 	}
 
 	// Build the projected collection with the results
@@ -368,7 +368,7 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		seen[hashAttrAndView(at, view)] = at
 		pr, err := project(rt, view, seen)
 		if err != nil {
-			return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %s", view, vat.Name, err)
+			return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %w", view, vat.Name, err)
 		}
 		at.Type = pr
 		return at, nil
