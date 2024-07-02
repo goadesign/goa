@@ -62,7 +62,7 @@ func New(service, daemon string) (func(http.Handler) http.Handler, error) {
 		return net.Dial("udp", daemon)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("xray: failed to connect to daemon - %s", err)
+		return nil, fmt.Errorf("xray: failed to connect to daemon - %w", err)
 	}
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

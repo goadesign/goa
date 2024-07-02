@@ -72,7 +72,7 @@ func NewUnaryServer(service, daemon string) (grpc.UnaryServerInterceptor, error)
 		return net.Dial("udp", daemon)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("xray: failed to connect to daemon - %s", err)
+		return nil, fmt.Errorf("xray: failed to connect to daemon - %w", err)
 	}
 	return grpc.UnaryServerInterceptor(func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 		var (
@@ -109,7 +109,7 @@ func NewStreamServer(service, daemon string) (grpc.StreamServerInterceptor, erro
 		return net.Dial("udp", daemon)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("xray: failed to connect to daemon - %s", err)
+		return nil, fmt.Errorf("xray: failed to connect to daemon - %w", err)
 	}
 	return grpc.StreamServerInterceptor(func(srv any, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		var (

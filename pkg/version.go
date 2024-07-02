@@ -39,7 +39,7 @@ func Compatible(v string) (bool, error) {
 	}
 	mj, err := strconv.Atoi(matches[1])
 	if err != nil {
-		return false, fmt.Errorf("invalid major version number %#v, must be number, %v", matches[1], err)
+		return false, fmt.Errorf("invalid major version number %#v, must be number, %w", matches[1], err)
 	}
 	return mj == Major, nil
 }

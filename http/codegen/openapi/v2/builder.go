@@ -22,7 +22,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	if err != nil {
 		// This should never happen because server expression must have been
 		// validated. If it does, then we must fix server validation.
-		return nil, fmt.Errorf("failed to parse server URL: %s", err)
+		return nil, fmt.Errorf("failed to parse server URL: %w", err)
 	}
 	host := u.Host
 	if !openapi.MustGenerate(root.API.Servers[0].Meta) || !openapi.MustGenerate(h.Meta) {

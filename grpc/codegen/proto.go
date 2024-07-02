@@ -121,7 +121,7 @@ func protoc(path string, includes []string) error {
 	cmd.Dir = filepath.Dir(path)
 
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to run protoc: %s: %s", err, output)
+		return fmt.Errorf("failed to run protoc: %w: %s", err, output)
 	}
 
 	return nil
