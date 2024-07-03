@@ -70,7 +70,7 @@ func main() {
 			addr := "http://example:8090"
 			u, err := url.Parse(addr)
 			if err != nil {
-				log.Fatalf(ctx, "invalid URL %#v: %s\n", addr, err)
+				log.Fatalf(ctx, err, "invalid URL %#v\n", addr)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -81,7 +81,7 @@ func main() {
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					log.Fatalf(ctx, "invalid URL %#v: %s\n", u.Host, err)
+					log.Fatalf(ctx, err, "invalid URL %#v\n", u.Host)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -94,7 +94,7 @@ func main() {
 			addr := "grpc://localhost:8080"
 			u, err := url.Parse(addr)
 			if err != nil {
-				log.Fatalf(ctx, "invalid URL %#v: %s\n", addr, err)
+				log.Fatalf(ctx, err, "invalid URL %#v\n", addr)
 			}
 			if *secureF {
 				u.Scheme = "grpcs"
@@ -105,7 +105,7 @@ func main() {
 			if *grpcPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					log.Fatalf(ctx, "invalid URL %#v: %s\n", u.Host, err)
+					log.Fatalf(ctx, err, "invalid URL %#v\n", u.Host)
 				}
 				u.Host = net.JoinHostPort(h, *grpcPortF)
 			} else if u.Port() == "" {
@@ -115,7 +115,7 @@ func main() {
 		}
 
 	default:
-		log.Fatalf(ctx, "invalid host argument: %q (valid hosts: dev)\n", *hostF)
+		log.Fatal(ctx, fmt.Errorf("invalid host argument: %q (valid hosts: dev)\n", *hostF))
 	}
 
 	// Wait for signal.
