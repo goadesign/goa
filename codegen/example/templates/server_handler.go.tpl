@@ -20,14 +20,14 @@
 						}
 					}
 					if !{{ .VarName }}Seen {
-						log.Fatalf(ctx, "invalid value for URL '{{ .Name }}' variable: %q (valid values: {{ join .Values "," }})\n", *{{ .VarName }}F)
+						log.Fatal(ctx, fmt.Errorf("invalid value for URL '{{ .Name }}' variable: %q (valid values: {{ join .Values "," }})\n", *{{ .VarName }}F))
 					}
 				{{- end }}
 				addr = strings.Replace(addr, "{{ printf "{%s}" .Name }}", *{{ .VarName }}F, -1)
 			{{- end }}
 			u, err := url.Parse(addr)
 			if err != nil {
-				log.Fatalf(ctx, "invalid URL %#v: %s\n", addr, err)
+				log.Fatalf(ctx, err, "invalid URL %#v\n", addr)
 			}
 			if *secureF {
 				u.Scheme = "{{ $u.Transport.Type }}s"
@@ -38,7 +38,7 @@
 			if *{{ $u.Transport.Type }}PortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					log.Fatalf(ctx, "invalid URL %#v: %s\n", u.Host, err)
+					log.Fatalf(ctx, err, "invalid URL %#v\n", u.Host)
 				}
 				u.Host = net.JoinHostPort(h, *{{ $u.Transport.Type }}PortF)
 			} else if u.Port() == "" {
@@ -50,5 +50,5 @@
 	{{ end }}
 {{- end }}
 	default:
-		log.Fatalf(ctx, "invalid host argument: %q (valid hosts: {{ join .Server.AvailableHosts "|" }})\n", *hostF)
+		log.Fatal(ctx, fmt.Errorf("invalid host argument: %q (valid hosts: {{ join .Server.AvailableHosts "|" }})\n", *hostF))
 	}	

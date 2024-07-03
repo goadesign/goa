@@ -74,12 +74,12 @@ func main() {
 				}
 			}
 			if !versionSeen {
-				log.Fatalf(ctx, "invalid value for URL 'version' variable: %q (valid values: v1,v2)\n", *versionF)
+				log.Fatal(ctx, fmt.Errorf("invalid value for URL 'version' variable: %q (valid values: v1,v2)\n", *versionF))
 			}
 			addr = strings.Replace(addr, "{version}", *versionF, -1)
 			u, err := url.Parse(addr)
 			if err != nil {
-				log.Fatalf(ctx, "invalid URL %#v: %s\n", addr, err)
+				log.Fatalf(ctx, err, "invalid URL %#v\n", addr)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -90,7 +90,7 @@ func main() {
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					log.Fatalf(ctx, "invalid URL %#v: %s\n", u.Host, err)
+					log.Fatalf(ctx, err, "invalid URL %#v\n", u.Host)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -106,7 +106,7 @@ func main() {
 			addr = strings.Replace(addr, "{port}", *portF, -1)
 			u, err := url.Parse(addr)
 			if err != nil {
-				log.Fatalf(ctx, "invalid URL %#v: %s\n", addr, err)
+				log.Fatalf(ctx, err, "invalid URL %#v\n", addr)
 			}
 			if *secureF {
 				u.Scheme = "https"
@@ -117,7 +117,7 @@ func main() {
 			if *httpPortF != "" {
 				h, _, err := net.SplitHostPort(u.Host)
 				if err != nil {
-					log.Fatalf(ctx, "invalid URL %#v: %s\n", u.Host, err)
+					log.Fatalf(ctx, err, "invalid URL %#v\n", u.Host)
 				}
 				u.Host = net.JoinHostPort(h, *httpPortF)
 			} else if u.Port() == "" {
@@ -127,7 +127,7 @@ func main() {
 		}
 
 	default:
-		log.Fatalf(ctx, "invalid host argument: %q (valid hosts: dev|stage)\n", *hostF)
+		log.Fatal(ctx, fmt.Errorf("invalid host argument: %q (valid hosts: dev|stage)\n", *hostF))
 	}
 
 	// Wait for signal.
