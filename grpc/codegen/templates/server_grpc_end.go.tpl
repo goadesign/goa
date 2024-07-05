@@ -12,7 +12,7 @@
 			if lis == nil {
 				errc <- fmt.Errorf("failed to listen on %q", u.Host)
 			}
-			logger.Printf("gRPC server listening on %q", u.Host)
+			log.Printf(ctx, "gRPC server listening on %q", u.Host)
 			errc <- srv.Serve(lis)
 		}()
 
