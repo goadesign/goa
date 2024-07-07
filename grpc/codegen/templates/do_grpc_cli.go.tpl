@@ -1,5 +1,5 @@
-func doGRPC(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, error) {
-	conn, err := grpc.Dial(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func doGRPC(_, host string, _ int, _ bool) (goa.Endpoint, any, error) {
+	conn, err := grpc.NewClient(host, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
     fmt.Fprintf(os.Stderr, "could not connect to gRPC server at %s: %v\n", host, err)
   }
