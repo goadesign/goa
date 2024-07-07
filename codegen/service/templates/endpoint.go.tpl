@@ -24,6 +24,6 @@ func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .Pay
 		{{- end }}
 	{{- end }}
 {{- end }}
-	log.Print(ctx, "{{ .ServiceVarName }}.{{ .Name }}")
+	log.Printf(ctx, "{{ .ServiceVarName }}.{{ .Name }}")
 	return
 }
