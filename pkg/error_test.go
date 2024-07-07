@@ -44,7 +44,7 @@ func TestServiceErrorUnwrap(t *testing.T) {
 func TestAsError(t *testing.T) {
 	err := MissingFieldError("foo", "bar")
 	se := asError(err)
-	if err != se {
+	if !errors.Is(err, se) {
 		t.Errorf("got %#v, want %#v", se, err)
 	}
 }
