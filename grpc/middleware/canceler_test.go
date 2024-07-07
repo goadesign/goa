@@ -4,8 +4,10 @@ import (
 	"context"
 	"testing"
 
-	grpcm "goa.design/goa/v3/grpc/middleware"
+	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
+
+	grpcm "goa.design/goa/v3/grpc/middleware"
 )
 
 type (
@@ -46,15 +48,11 @@ func TestStreamCanceler(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
-
-			go func() {
-				cancel()
-			}()
-
-			if err := grpcm.StreamCanceler(ctx)(nil, c.stream, stream, c.handler); err != nil {
-				if err.Error() != "server is stopping" {
-					t.Errorf("StreamCanceler error: %v", err)
-				}
+			interceptor := grpcm.StreamCanceler(ctx)
+			cancel()
+			err := interceptor(nil, c.stream, stream, c.handler)
+			if err != nil {
+				assert.ErrorContains(t, err, "server is stopping")
 			}
 		})
 	}
