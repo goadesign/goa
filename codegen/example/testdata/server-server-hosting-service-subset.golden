@@ -109,7 +109,7 @@ func main() {
 		}
 
 	default:
-		log.Fatal(ctx, fmt.Errorf("invalid host argument: %q (valid hosts: dev)\n", *hostF))
+		log.Fatal(ctx, fmt.Errorf("invalid host argument: %q (valid hosts: dev)", *hostF))
 	}
 
 	// Wait for signal.
