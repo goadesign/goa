@@ -1534,11 +1534,15 @@ func buildTypeInits(projected, att *expr.AttributeExpr, viewspkg string, scope, 
 				code, helpers = buildConstructorCode(src, att, "vres", "res", srcCtx, tgtCtx, view.Name)
 			}
 
+			pkg := ""
+			if loc := codegen.UserTypeLocation(att.Type); loc != nil {
+				pkg = loc.PackageName()
+			}
 			init = append(init, &InitData{
 				Name:          name,
 				Description:   fmt.Sprintf("%s converts projected type %s to service type %s.", name, resvar, resvar),
 				Args:          []*InitArgData{{Name: "vres", Ref: viewScope.GoFullTypeRef(projected, viewspkg)}},
-				ReturnTypeRef: scope.GoTypeRef(att),
+				ReturnTypeRef: scope.GoFullTypeRef(att, pkg),
 				Code:          code,
 				Helpers:       helpers,
 			})
@@ -1613,10 +1617,14 @@ func buildProjections(projected, att *expr.AttributeExpr, viewspkg string, scope
 			code, helpers = buildConstructorCode(att, tgt, "res", "vres", srcCtx, tgtCtx, view.Name)
 		}
 
+		pkg := ""
+		if loc := codegen.UserTypeLocation(att.Type); loc != nil {
+			pkg = loc.PackageName()
+		}
 		projections = append(projections, &InitData{
 			Name:          name,
 			Description:   fmt.Sprintf("%s projects result type %s to projected type %s using the %q view.", name, scope.GoTypeName(att), tname, view.Name),
-			Args:          []*InitArgData{{Name: "res", Ref: scope.GoTypeRef(att)}},
+			Args:          []*InitArgData{{Name: "res", Ref: scope.GoFullTypeRef(att, pkg)}},
 			ReturnTypeRef: viewScope.GoFullTypeRef(projected, viewspkg),
 			Code:          code,
 			Helpers:       helpers,
