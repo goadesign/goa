@@ -50,5 +50,5 @@
 	{{ end }}
 {{- end }}
 	default:
-		log.Fatal(ctx, fmt.Errorf("invalid host argument: %q (valid hosts: {{ join .Server.AvailableHosts "|" }})\n", *hostF))
+		log.Fatal(ctx, fmt.Errorf("invalid host argument: %q (valid hosts: {{ join .Server.AvailableHosts "|" }})", *hostF))
 	}	
