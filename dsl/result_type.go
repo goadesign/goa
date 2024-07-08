@@ -206,17 +206,15 @@ func View(name string, adsl ...func()) {
 		}
 		at := &expr.AttributeExpr{}
 		ok := false
-		var a *expr.Array
 		if len(adsl) > 0 {
 			ok = eval.Execute(adsl[0], at)
-		} else if a, ok = e.Type.(*expr.Array); ok {
+		} else if a, ok := e.Type.(*expr.Array); ok {
 			// inherit view from collection element if present
 			if elem := a.ElemType; elem != nil {
 				if pa, ok2 := elem.Type.(*expr.ResultTypeExpr); ok2 {
-					print(pa)
-					print(pa.Views)
 					if v := pa.View(name); v != nil {
 						at = v.AttributeExpr
+						e = pa
 					} else {
 						eval.ReportError("unknown view %#v", name)
 						return
