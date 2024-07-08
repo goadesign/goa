@@ -1383,12 +1383,16 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 		if err := initTypeCodeTmpl.Execute(buf, data); err != nil {
 			panic(err) // bug
 		}
+		pkg := ""
+		if loc := codegen.UserTypeLocation(att.Type); loc != nil {
+			pkg = loc.PackageName()
+		}
 		name := "NewViewed" + resvar
 		init = &InitData{
 			Name:        name,
 			Description: fmt.Sprintf("%s initializes viewed result type %s from result type %s using the given view.", name, resvar, resvar),
 			Args: []*InitArgData{
-				{Name: "res", Ref: scope.GoTypeRef(att)},
+				{Name: "res", Ref: scope.GoFullTypeRef(att, pkg)},
 				{Name: "view", Ref: "string"},
 			},
 			ReturnTypeRef: vresref,
@@ -1399,6 +1403,9 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 	// build constructor to initialize result type from viewed result type
 	var resinit *InitData
 	{
+		if loc := codegen.UserTypeLocation(att.Type); loc != nil {
+			resref = scope.GoFullTypeRef(att, loc.PackageName())
+		}
 		data := map[string]any{
 			"ToResult":      true,
 			"ArgVar":        "vres",
