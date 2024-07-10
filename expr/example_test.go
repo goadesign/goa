@@ -63,7 +63,7 @@ func TestExample(t *testing.T) {
 		{"overriding-example", testdata.OverridingExampleDSL, map[string]any{"name": "overridden"}, ""},
 		{"with-extend", testdata.WithExtendExampleDSL, map[string]any{"name": "example"}, ""},
 		{"invalid-example-type", testdata.InvalidExampleTypeDSL, nil, "example value map[int]int{1:1} is incompatible with attribute of type map in attribute"},
-		{"empty-example", testdata.EmptyExampleDSL, nil, "not enough arguments in attribute"},
+		{"empty-example", testdata.EmptyExampleDSL, nil, "too few arguments given to Example in attribute"},
 		{"hiding-example", testdata.HidingExampleDSL, nil, ""},
 		{"overriding-hidden-examples", testdata.OverridingHiddenExamplesDSL, "example", ""},
 	}
