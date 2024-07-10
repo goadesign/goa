@@ -191,7 +191,7 @@ func ErrorName(args ...any) {
 	case string:
 		Attribute(actual, args[1:]...)
 	case int:
-		if len(args) == 1 {
+		if len(args) == 2 {
 			eval.TooFewArgError()
 			return
 		}
