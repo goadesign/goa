@@ -35,6 +35,24 @@ func TestInvalidArgError(t *testing.T) {
 	}
 }
 
+func TestTooFewArgError(t *testing.T) {
+	dsls := map[string]func(){
+		"Body":            func() { Body() },
+		"ErrorName":       func() { ErrorName() },
+		"ErrorName (int)": func() { Type("name", func() { ErrorName(1) }) },
+		"Example":         func() { Example() },
+		"Response (grpc)": func() { Service("s", func() { GRPC(func() { Response("name") }) }) },
+		"Response (http)": func() { Service("s", func() { HTTP(func() { Response("name") }) }) },
+	}
+	for name, dsl := range dsls {
+		t.Run(name, func(t *testing.T) {
+			err := expr.RunInvalidDSL(t, dsl)
+			assert.Len(t, strings.Split(err.Error(), "\n"), 1)
+			assert.Contains(t, err.Error(), "too few arguments given to "+strings.Split(name, " ")[0])
+		})
+	}
+}
+
 func TestTooManyArgError(t *testing.T) {
 	dsls := map[string]func(){
 		"APIKey":           func() { Type("name", func() { APIKey("scheme", "name", 1, 2, 3) }) },

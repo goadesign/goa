@@ -298,7 +298,7 @@ func Default(def any) {
 //	})
 func Example(args ...any) {
 	if len(args) == 0 {
-		eval.ReportError("not enough arguments")
+		eval.TooFewArgError()
 		return
 	}
 	if len(args) > 2 {
