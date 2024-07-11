@@ -68,7 +68,6 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 	specs := []*codegen.ImportSpec{
 		{Path: "io"},
 		{Path: "context"},
-		{Path: "log"},
 		{Path: "fmt"},
 		{Path: "strings"},
 		{Path: path.Join(genpkg, svcName), Name: data.PkgName},
