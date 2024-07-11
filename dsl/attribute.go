@@ -112,28 +112,26 @@ import (
 //	})
 func Attribute(name string, args ...any) {
 	var parent *expr.AttributeExpr
-	{
-		switch def := eval.Current().(type) {
-		case *expr.AttributeExpr:
-			parent = def
-		case expr.CompositeExpr:
-			parent = def.Attribute()
-		default:
-			eval.IncompatibleDSL()
+	switch def := eval.Current().(type) {
+	case *expr.AttributeExpr:
+		parent = def
+	case expr.CompositeExpr:
+		parent = def.Attribute()
+	default:
+		eval.IncompatibleDSL()
+		return
+	}
+	if parent == nil {
+		eval.ReportError("invalid syntax, attribute %#v has no parent", name)
+		return
+	}
+	if parent.Type == nil {
+		parent.Type = &expr.Object{}
+	}
+	if _, ok := parent.Type.(*expr.Object); !ok {
+		if _, ok := parent.Type.(*expr.Union); !ok {
+			eval.ReportError("can't define child attribute %#v on attribute of type %s %T", name, parent.Type.Name(), parent.Type)
 			return
-		}
-		if parent == nil {
-			eval.ReportError("invalid syntax, attribute %#v has no parent", name)
-			return
-		}
-		if parent.Type == nil {
-			parent.Type = &expr.Object{}
-		}
-		if _, ok := parent.Type.(*expr.Object); !ok {
-			if _, ok := parent.Type.(*expr.Union); !ok {
-				eval.ReportError("can't define child attribute %#v on attribute of type %s %T", name, parent.Type.Name(), parent.Type)
-				return
-			}
 		}
 	}
 
