@@ -126,6 +126,12 @@ func InvalidArgError(expected string, actual any) {
 	ReportError("cannot use %#v (type %s) as type %s", actual, reflect.TypeOf(actual), expected)
 }
 
+// TooFewArgError records a too few arguments error. It is used by DSL
+// functions that take dynamic arguments.
+func TooFewArgError() {
+	ReportError("too few arguments given to %s", caller())
+}
+
 // TooManyArgError records a too many arguments error. It is used by DSL
 // functions that take dynamic arguments.
 func TooManyArgError() {

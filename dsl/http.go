@@ -895,7 +895,7 @@ func SkipResponseBodyEncodeDecode() {
 //	})
 func Body(args ...any) {
 	if len(args) == 0 {
-		eval.ReportError("not enough arguments, use Body(name), Body(type), Body(func()) or Body(type, func())")
+		eval.TooFewArgError()
 		return
 	}
 
