@@ -959,8 +959,8 @@ func Body(args ...any) {
 		}
 		attr = expr.DupAtt(attr)
 		attr.AddMeta("origin:attribute", a)
-		if rt, ok := attr.Type.(*expr.ResultTypeExpr); ok {
-			// If the attribute type is a result type add the type to the
+		if rt, ok := attr.Type.(*expr.ResultTypeExpr); ok && expr.IsArray(rt.Type) {
+			// If the attribute type is a result type collection add the type to the
 			// GeneratedTypes so that the type's DSLFunc is executed.
 			*expr.Root.GeneratedTypes = append(*expr.Root.GeneratedTypes, rt)
 		}
