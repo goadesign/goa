@@ -426,6 +426,7 @@ func concat(strs ...string) string {
 }
 
 func renameType(att *AttributeExpr, name, suffix string) {
+	RemovePkgPath(att)
 	rt := att.Type
 	switch rtt := rt.(type) {
 	case UserType:
