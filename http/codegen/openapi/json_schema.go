@@ -318,8 +318,9 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 		s.Type = Type(actual.Name())
 		switch actual.Kind() {
 		case expr.AnyKind:
-			s.Type = Type("string")
-			s.Format = "binary"
+			// A schema without a type matches any data type.
+			// See https://swagger.io/docs/specification/data-models/data-types/#any.
+			s.Type = Type("")
 		case expr.IntKind, expr.Int64Kind,
 			expr.UIntKind, expr.UInt64Kind:
 			// Use int64 format for IntKind and UIntKind because the OpenAPI
