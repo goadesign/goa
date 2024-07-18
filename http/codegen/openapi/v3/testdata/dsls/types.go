@@ -82,6 +82,7 @@ func ObjectResponseBodyDSL(svcName, metName string) func() {
 				Result(func() {
 					Attribute("name")
 					Attribute("age", Int)
+					Attribute("misc", Any)
 				})
 				HTTP(func() {
 					POST("/")
