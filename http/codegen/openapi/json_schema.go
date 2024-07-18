@@ -230,7 +230,7 @@ func ResultTypeRef(api *expr.APIExpr, mt *expr.ResultTypeExpr, view string) stri
 
 // ResultTypeRefWithPrefix produces the JSON reference to the media type definition with
 // the given view and adds the provided prefix to the type name
-func ResultTypeRefWithPrefix(api *expr.APIExpr, mt *expr.ResultTypeExpr, view string, prefix string) string {
+func ResultTypeRefWithPrefix(api *expr.APIExpr, mt *expr.ResultTypeExpr, view, prefix string) string {
 	projected, err := expr.Project(mt, view)
 	if err != nil {
 		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
