@@ -106,7 +106,7 @@ promoting reuse and standardization across services.
     <tr>
         <td>
             <img width="1000" height="0" />
-            <a href="https://www.speakeasyapi.dev/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">
+            <a href="https://www.speakeasy.com/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">
                 <img src="docs/speakeasy.png" alt="Speakeasy" width="260" align="right" />
             </a>
             <h3>Speakeasy: Enterprise DevEx for your API</h3>
@@ -114,7 +114,7 @@ promoting reuse and standardization across services.
                 Our platform makes it easy to create feature-rich production ready SDKs.
                 Speed up integrations and reduce errors by giving your API the DevEx it deserves.
             </p>
-            <a href="https://www.speakeasyapi.dev/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">Integrate with Goa</a>
+            <a href="https://www.speakeasy.com/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">Integrate with Goa</a>
         </td>
     </tr>
 </table>
