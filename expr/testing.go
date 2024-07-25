@@ -2,11 +2,10 @@ package expr
 
 import (
 	"os"
-	"os/exec"
-	"strings"
 	"testing"
 
-	"github.com/sergi/go-diff/diffmatchpatch"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/eval"
 )
 
@@ -14,17 +13,13 @@ import (
 // Used only in tests.
 func RunDSL(t *testing.T, dsl func()) *RootExpr {
 	t.Helper()
-	setupDSLRun()
+	setupDSLRun(t)
 
 	// run DSL (first pass)
-	if !eval.Execute(dsl, nil) {
-		t.Fatal(eval.Context.Error())
-	}
+	require.True(t, eval.Execute(dsl, nil), eval.Context.Error())
 
 	// run DSL (second pass)
-	if err := eval.RunDSL(); err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, eval.RunDSL())
 
 	// return generated root
 	return Root
@@ -34,7 +29,7 @@ func RunDSL(t *testing.T, dsl func()) *RootExpr {
 // It is used only in tests.
 func RunInvalidDSL(t *testing.T, dsl func()) error {
 	t.Helper()
-	setupDSLRun()
+	setupDSLRun(t)
 
 	// run DSL (first pass)
 	if !eval.Execute(dsl, nil) {
@@ -50,25 +45,6 @@ func RunInvalidDSL(t *testing.T, dsl func()) error {
 	t.Fatal("expected a DSL evaluation error - got none")
 
 	return nil
-}
-
-// Diff returns a diff between s1 and s2. It uses the diff tool if installed
-// otherwise degrades to using the dmp package.
-func Diff(t *testing.T, s1, s2 string) string {
-	_, err := exec.LookPath("diff")
-	supportsDiff := (err == nil)
-	if !supportsDiff {
-		dmp := diffmatchpatch.New()
-		diffs := dmp.DiffMain(s1, s2, false)
-		return dmp.DiffPrettyText(diffs)
-	}
-	left := CreateTempFile(t, s1)
-	right := CreateTempFile(t, s2)
-	defer os.Remove(left)
-	defer os.Remove(right)
-	cmd := exec.Command("diff", left, right)
-	diffb, _ := cmd.CombinedOutput()
-	return strings.ReplaceAll(string(diffb), "\t", " ␉ ")
 }
 
 // CreateTempFile creates a temporary file and writes the given content.
@@ -90,17 +66,13 @@ func CreateTempFile(t *testing.T, content string) string {
 	return f.Name()
 }
 
-func setupDSLRun() {
+func setupDSLRun(t *testing.T) {
 	// reset all roots and codegen data structures
 	eval.Reset()
 	Root = new(RootExpr)
-	Root.GeneratedTypes = &GeneratedRoot{}
-	if err := eval.Register(Root); err != nil {
-		panic(err)
-	}
-	if err := eval.Register(Root.GeneratedTypes); err != nil {
-		panic(err)
-	}
+	GeneratedResultTypes = new(ResultTypesRoot)
+	require.NoError(t, eval.Register(Root))
+	require.NoError(t, eval.Register(GeneratedResultTypes))
 	Root.API = NewAPIExpr("test api", func() {})
 	Root.API.Servers = []*ServerExpr{Root.API.DefaultServer()}
 }

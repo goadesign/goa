@@ -1,6 +1,8 @@
 package expr
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // Dup creates a copy the given data type.
 func Dup(d DataType) DataType {
@@ -103,8 +105,8 @@ func (d *dupper) DupType(t DataType) DataType {
 		// the dup in the generated type list so that it gets properly
 		// eval'd.
 		if rt, ok := dp.(*ResultTypeExpr); ok {
-			if Root.GeneratedResultType(rt.Identifier) != nil {
-				*Root.GeneratedTypes = append(*Root.GeneratedTypes, dp.(*ResultTypeExpr))
+			if GeneratedResultType(rt.Identifier) != nil {
+				GeneratedResultTypes.Append(rt)
 			}
 		}
 

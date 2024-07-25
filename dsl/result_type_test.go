@@ -55,7 +55,7 @@ func TestView(t *testing.T) {
 		{"view", baseRT, viewDSL, []string{viewName}, map[string][]string{viewName: {"att"}}, ""},
 		{"view2", baseRT, view2DSL, []string{view2Name}, map[string][]string{view2Name: {"att2"}}, ""},
 		{"all views", baseRT, allViewsDSL, []string{viewName, view2Name}, map[string][]string{viewName: {"att"}, view2Name: {"att2"}}, ""},
-		{"duplicate view", baseRT, func() { viewDSL(); viewDSL() }, nil, nil, `[result_type_test.go:29] multiple expressions for view "test" in result type "test" in attribute`},
+		{"duplicate view", baseRT, func() { viewDSL(); viewDSL() }, nil, nil, `[result_type_test.go:29] view "test" is defined multiple times in result type "test" in attribute`},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

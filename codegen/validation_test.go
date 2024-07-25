@@ -3,6 +3,8 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"goa.design/goa/v3/codegen/testdata"
 	"goa.design/goa/v3/expr"
 )
@@ -66,9 +68,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 			ctx := NewAttributeContext(c.Pointer, false, c.UseDefault, "", scope)
 			code := ValidationCode(&expr.AttributeExpr{Type: c.Type}, nil, ctx, c.Required, expr.IsAlias(c.Type), false, "target")
 			code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
-			if code != c.Code {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 	// Special case of unions with views
@@ -76,8 +76,6 @@ func TestRecursiveValidationCode(t *testing.T) {
 		ctx := NewAttributeContext(false, false, false, "", scope)
 		code := ValidationCode(&expr.AttributeExpr{Type: unionT}, nil, ctx, true, false, true, "target")
 		code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
-		if code != testdata.UnionWithViewValidationCode {
-			t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, Diff(t, code, testdata.UnionWithViewValidationCode))
-		}
+		assert.Equal(t, testdata.UnionWithViewValidationCode, code)
 	})
 }

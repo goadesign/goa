@@ -3,6 +3,9 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/grpc/codegen/testdata"
@@ -30,17 +33,11 @@ func TestServerGRPCInterface(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunGRPCDSL(t, c.DSL)
 			fs := ServerFiles("", expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected two", len(fs))
-			}
+			require.Len(t, fs, 2)
 			sections := fs[0].Section("server-grpc-interface")
-			if len(sections) == 0 {
-				t.Fatalf("got zero sections, expected at least one")
-			}
+			require.NotEmpty(t, sections)
 			code := codegen.SectionsCode(t, sections)
-			if code != c.Code {
-				t.Errorf("%s: got\n%s\ngot vs. expected:\n%s", c.Name, code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }
@@ -64,17 +61,11 @@ func TestServerHandlerInit(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunGRPCDSL(t, c.DSL)
 			fs := ServerFiles("", expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected two", len(fs))
-			}
+			require.Len(t, fs, 2)
 			sections := fs[0].Section("grpc-handler-init")
-			if len(sections) == 0 {
-				t.Fatalf("got zero sections, expected at least one")
-			}
+			require.NotEmpty(t, sections)
 			code := codegen.SectionsCode(t, sections)
-			if code != c.Code {
-				t.Errorf("%s: got\n%s\ngot vs. expected:\n%s", c.Name, code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }
@@ -99,17 +90,11 @@ func TestRequestDecoder(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunGRPCDSL(t, c.DSL)
 			fs := ServerFiles("", expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected two", len(fs))
-			}
+			require.Len(t, fs, 2)
 			sections := fs[1].Section("request-decoder")
-			if len(sections) == 0 {
-				t.Fatalf("got zero sections, expected at least one")
-			}
+			require.NotEmpty(t, sections)
 			code := codegen.SectionsCode(t, sections)
-			if code != c.Code {
-				t.Errorf("%s: got\n%s\ngot vs. expected:\n%s", c.Name, code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }
@@ -133,17 +118,11 @@ func TestResponseEncoder(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunGRPCDSL(t, c.DSL)
 			fs := ServerFiles("", expr.Root)
-			if len(fs) != 2 {
-				t.Fatalf("got %d files, expected two", len(fs))
-			}
+			require.Len(t, fs, 2)
 			sections := fs[1].Section("response-encoder")
-			if len(sections) == 0 {
-				t.Fatalf("got zero sections, expected at least one")
-			}
+			require.NotEmpty(t, sections)
 			code := codegen.SectionsCode(t, sections)
-			if code != c.Code {
-				t.Errorf("%s: got\n%s\ngot vs. expected:\n%s", c.Name, code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }

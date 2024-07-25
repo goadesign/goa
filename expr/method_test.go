@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/expr/testdata"
 )
@@ -39,9 +41,7 @@ service "AnotherInvalidSecuritySchemesService" method "Method": payload of metho
 				expr.RunDSL(t, tc.DSL)
 			} else {
 				err := expr.RunInvalidDSL(t, tc.DSL)
-				if tc.Error != err.Error() {
-					t.Errorf("invalid error:\ngot:\n%s\n\ngot vs expected:\n%s", err.Error(), expr.Diff(t, err.Error(), tc.Error))
-				}
+				assert.EqualError(t, err, tc.Error)
 			}
 		})
 	}

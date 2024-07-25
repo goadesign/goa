@@ -261,8 +261,9 @@ func runDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	Services = make(ServicesData)
 	eval.Reset()
 	expr.Root = new(expr.RootExpr)
-	err := eval.Register(expr.Root)
-	require.NoError(t, err)
+	expr.GeneratedResultTypes = new(expr.ResultTypesRoot)
+	require.NoError(t, eval.Register(expr.Root))
+	require.NoError(t, eval.Register(expr.GeneratedResultTypes))
 	expr.Root.API = expr.NewAPIExpr("test api", func() {})
 	expr.Root.API.Servers = []*expr.ServerExpr{expr.Root.API.DefaultServer()}
 
@@ -270,8 +271,7 @@ func runDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	require.True(t, eval.Execute(dsl, nil))
 
 	// run DSL (second pass)
-	err = eval.RunDSL()
-	require.NoError(t, err)
+	require.NoError(t, eval.RunDSL())
 
 	// return generated root
 	return expr.Root

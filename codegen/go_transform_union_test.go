@@ -3,6 +3,9 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen/testdata"
 	"goa.design/goa/v3/expr"
 )
@@ -41,14 +44,9 @@ func TestGoTransformUnion(t *testing.T) {
 	for _, c := range tc {
 		t.Run(c.Name, func(t *testing.T) {
 			code, _, err := GoTransform(c.Source, c.Target, "source", "target", defaultCtx, defaultCtx, "", true)
-			if err != nil {
-				t.Errorf("unexpected error %s", err)
-				return
-			}
+			require.NoError(t, err)
 			code = FormatTestCode(t, "package foo\nfunc transform(){\n"+code+"}")
-			if code != c.Expected {
-				t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, Diff(t, code, c.Expected))
-			}
+			assert.Equal(t, c.Expected, code)
 		})
 	}
 }

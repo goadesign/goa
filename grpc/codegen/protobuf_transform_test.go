@@ -3,6 +3,9 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	ctestdata "goa.design/goa/v3/codegen/testdata"
 	"goa.design/goa/v3/expr"
@@ -172,13 +175,9 @@ func TestProtoBufTransform(t *testing.T) {
 						srcCtx = pbCtx
 					}
 					code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto, true)
-					if err != nil {
-						t.Fatal(err)
-					}
+					require.NoError(t, err)
 					code = codegen.FormatTestCode(t, "package foo\nfunc transform(){\n"+code+"}")
-					if code != c.Code {
-						t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-					}
+					assert.Equal(t, c.Code, code)
 				})
 			}
 		})

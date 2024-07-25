@@ -962,7 +962,7 @@ func Body(args ...any) {
 		if rt, ok := attr.Type.(*expr.ResultTypeExpr); ok && expr.IsArray(rt.Type) {
 			// If the attribute type is a result type collection add the type to the
 			// GeneratedTypes so that the type's DSLFunc is executed.
-			*expr.Root.GeneratedTypes = append(*expr.Root.GeneratedTypes, rt)
+			expr.GeneratedResultTypes.Append(rt)
 		}
 		if len(args) > 1 {
 			var ok bool

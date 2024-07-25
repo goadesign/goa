@@ -38,7 +38,6 @@ func TestEndpoint(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			codegen.RunDSL(t, c.DSL)
-			expr.Root.GeneratedTypes = &expr.GeneratedRoot{}
 			require.Len(t, expr.Root.Services, 1)
 			fs := EndpointFile("goa.design/goa/example", expr.Root.Services[0])
 			require.NotNil(t, fs)
