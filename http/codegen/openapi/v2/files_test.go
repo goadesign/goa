@@ -40,6 +40,7 @@ func TestSections(t *testing.T) {
 		{"server-host-with-variables", testdata.ServerHostWithVariablesDSL},
 		{"with-spaces", testdata.WithSpacesDSL},
 		{"with-map", testdata.WithMapDSL},
+		{"with-any", testdata.WithAnyDSL},
 		{"path-with-wildcards", testdata.PathWithWildcardDSL},
 		{"path-with-multiple-wildcards", testdata.PathWithMultipleWildcardDSL},
 		{"path-with-multiple-explicit-wildcards", testdata.PathWithMultipleExplicitWildcardDSL},
