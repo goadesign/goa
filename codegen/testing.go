@@ -42,7 +42,7 @@ func SectionsCode(t *testing.T, sections []*SectionTemplate) string {
 }
 
 // SectionCodeFromImportsAndMethods generates and formats the code for given import and method definition sections.
-func SectionCodeFromImportsAndMethods(t *testing.T, importSection *SectionTemplate, methodSection *SectionTemplate) string {
+func SectionCodeFromImportsAndMethods(t *testing.T, importSection, methodSection *SectionTemplate) string {
 	t.Helper()
 	var code bytes.Buffer
 	require.NoError(t, importSection.Write(&code))

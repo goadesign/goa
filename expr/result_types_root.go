@@ -10,7 +10,7 @@ type (
 	ResultTypesRoot []*ResultTypeExpr
 )
 
-// GeneratedResulTypes records the generated result types and is a DSL
+// GeneratedResultTypes records the generated result types and is a DSL
 // root evaluated after Root.
 var GeneratedResultTypes = new(ResultTypesRoot)
 
