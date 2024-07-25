@@ -522,6 +522,40 @@ var WithMapDSL = func() {
 	})
 }
 
+var WithAnyDSL = func() {
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			Payload(func() {
+				Attribute("any", Any, func() {
+					Example("")
+				})
+				Attribute("any_array", ArrayOf(Any, func() {
+					Example("")
+				}))
+				Attribute("any_map", MapOf(String, Any), func() {
+					Key(func() { Example("") })
+					Elem(func() { Example("") })
+				})
+			})
+			Result(func() {
+				Attribute("any", Any, func() {
+					Example("")
+				})
+				Attribute("any_array", ArrayOf(Any, func() {
+					Example("")
+				}))
+				Attribute("any_map", MapOf(String, Any), func() {
+					Key(func() { Example("") })
+					Elem(func() { Example("") })
+				})
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
 var PathWithWildcardDSL = func() {
 	Service("test service", func() {
 		Method("test endpoint", func() {

@@ -166,7 +166,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		case expr.Float64Kind:
 			s.Type = openapi.Type("number")
 			s.Format = "double"
-		case expr.BytesKind, expr.AnyKind:
+		case expr.BytesKind:
 			if bases := attr.Bases; len(bases) > 0 {
 				for _, b := range bases {
 					// Union type
@@ -177,6 +177,10 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 				s.Type = openapi.Type("string")
 				s.Format = "binary"
 			}
+		case expr.AnyKind:
+			// A schema without a type matches any data type.
+			// See https://swagger.io/docs/specification/data-models/data-types/#any.
+			s.Type = openapi.Type("")
 		default:
 			s.Type = openapi.Type(t.Name())
 		}
