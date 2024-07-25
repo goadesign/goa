@@ -10,7 +10,6 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/manveru/faker v0.0.0-20171103152722-9fbc68a78c4d
 	github.com/pkg/errors v0.9.1
-	github.com/sergi/go-diff v1.3.1
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/text v0.16.0
 	golang.org/x/tools v0.23.0
@@ -34,5 +33,5 @@ require (
 	golang.org/x/net v0.27.0 // indirect
 	golang.org/x/sync v0.7.0 // indirect
 	golang.org/x/sys v0.22.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240701130421-f6361c86f094 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240723171418-e6d459c13d2a // indirect
 )

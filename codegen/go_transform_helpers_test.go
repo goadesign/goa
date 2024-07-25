@@ -3,6 +3,9 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen/testdata"
 	"goa.design/goa/v3/expr"
 )
@@ -29,40 +32,27 @@ func TestGoTransformHelpers(t *testing.T) {
 		Type        expr.DataType
 		HelperNames []string
 	}{
-		{"simple", simple, []string{}},
+		{"simple", simple, nil},
 		{"recursive", recursive, []string{"transformRecursiveToRecursive"}},
 		{"composite", composite, []string{"transformSimpleToSimple"}},
 		{"deep", deep, []string{"transformCompositeToComposite", "transformSimpleToSimple"}},
 		{"deep-array", deepArray, []string{"transformCompositeToComposite", "transformSimpleToSimple"}},
-		{"simple-alias", simpleAlias, []string{}},
-		{"nested-map-alias", mapAlias, []string{}},
-		{"array-map-alias", arrayMapAlias, []string{}},
+		{"simple-alias", simpleAlias, nil},
+		{"nested-map-alias", mapAlias, nil},
+		{"array-map-alias", arrayMapAlias, nil},
 		{"result-type-collection", collection, []string{"transformResultTypeToResultType"}},
 	}
 	for _, c := range tc {
 		t.Run(c.Name, func(t *testing.T) {
-			if c.Type == nil {
-				t.Fatal("source type not found in testdata")
-			}
+			require.NotNil(t, c.Type, "source type not found in testdata")
 			_, funcs, err := GoTransform(&expr.AttributeExpr{Type: c.Type}, &expr.AttributeExpr{Type: c.Type}, "source", "target", defaultCtx, defaultCtx, "", true)
-			if err != nil {
-				t.Fatal(err)
+			require.NoError(t, err)
+			assert.Equal(t, len(c.HelperNames), len(funcs), "invalid helpers count")
+			var actual []string
+			for _, f := range funcs {
+				actual = append(actual, f.Name)
 			}
-			if len(funcs) != len(c.HelperNames) {
-				t.Errorf("invalid helpers count, got: %d, expected %d", len(funcs), len(c.HelperNames))
-			} else {
-				var diffs []string
-				actual := make([]string, len(funcs))
-				for i, f := range funcs {
-					actual[i] = f.Name
-					if c.HelperNames[i] != f.Name {
-						diffs = append(diffs, f.Name)
-					}
-				}
-				if len(diffs) > 0 {
-					t.Errorf("invalid helper names, got: %v, expected: %v", actual, c.HelperNames)
-				}
-			}
+			assert.Equal(t, c.HelperNames, actual, "invalid helper names")
 		})
 	}
 }

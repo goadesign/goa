@@ -12,7 +12,8 @@ import (
 	"text/template"
 
 	"github.com/getkin/kin-openapi/openapi2"
-	"goa.design/goa/v3/codegen"
+	"github.com/stretchr/testify/assert"
+
 	httpgen "goa.design/goa/v3/http/codegen"
 	"goa.design/goa/v3/http/codegen/openapi"
 	openapiv2 "goa.design/goa/v3/http/codegen/openapi/v2"
@@ -106,8 +107,7 @@ func TestSections(t *testing.T) {
 							left = buf.String()
 							right = string(want)
 						}
-						diff := codegen.Diff(t, left, right)
-						t.Errorf("result does not match the golden file, diff:\n%s\n", diff)
+						assert.Equal(t, left, right)
 					}
 				})
 			}

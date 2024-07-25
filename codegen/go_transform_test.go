@@ -3,6 +3,9 @@ package codegen
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen/testdata"
 	"goa.design/goa/v3/expr"
 )
@@ -182,20 +185,12 @@ func TestGoTransform(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			for _, c := range cases {
 				t.Run(c.Name, func(t *testing.T) {
-					if c.Source == nil {
-						t.Fatal("source type not found in testdata")
-					}
-					if c.Target == nil {
-						t.Fatal("target type not found in testdata")
-					}
+					require.NotNil(t, c.Source)
+					require.NotNil(t, c.Target)
 					code, _, err := GoTransform(&expr.AttributeExpr{Type: c.Source}, &expr.AttributeExpr{Type: c.Target}, "source", "target", c.SourceCtx, c.TargetCtx, "", true)
-					if err != nil {
-						t.Fatal(err)
-					}
+					require.NoError(t, err)
 					code = FormatTestCode(t, "package foo\nfunc transform(){\n"+code+"}")
-					if code != c.Code {
-						t.Errorf("invalid code, got:\n%s\ngot vs. expected:\n%s", code, Diff(t, code, c.Code))
-					}
+					assert.Equal(t, c.Code, code)
 				})
 			}
 		})

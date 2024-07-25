@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/grpc/codegen/testdata"
@@ -23,22 +26,14 @@ func TestClientCLIFiles(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			RunGRPCDSL(t, c.DSL)
 			fs := ClientCLIFiles("", expr.Root)
-			if len(fs) == 0 {
-				t.Fatalf("got 0 files, expected 1")
-			}
-			if len(fs[1].SectionTemplates) == 0 {
-				t.Fatalf("got 0 sections, expected at least 1")
-			}
+			require.Greater(t, len(fs), 1, "expected at least 2 files")
+			require.NotEmpty(t, fs[1].SectionTemplates)
 			var buf bytes.Buffer
 			for _, s := range fs[1].SectionTemplates {
-				if err := s.Write(&buf); err != nil {
-					t.Fatal(err)
-				}
+				require.NoError(t, s.Write(&buf))
 			}
 			code := codegen.FormatTestCode(t, buf.String())
-			if code != c.Code {
-				t.Errorf("invalid code: got\n%s\ngot vs. expected:\n%s", code, codegen.Diff(t, code, c.Code))
-			}
+			assert.Equal(t, c.Code, code)
 		})
 	}
 }

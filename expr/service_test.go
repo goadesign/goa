@@ -3,6 +3,8 @@ package expr_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/expr/testdata"
 )
@@ -99,9 +101,7 @@ func TestServiceExprValidate(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
 			err := expr.RunInvalidDSL(t, tc.DSL)
-			if tc.Error != err.Error() {
-				t.Errorf("invalid error:\ngot:\n%s\n\ngot vs expected:\n%s", err.Error(), expr.Diff(t, err.Error(), tc.Error))
-			}
+			assert.EqualError(t, err, tc.Error)
 		})
 	}
 }
@@ -128,9 +128,7 @@ attribute: type "ErrorType" is used to define multiple errors and must identify 
 				expr.RunDSL(t, tc.DSL)
 			} else {
 				err := expr.RunInvalidDSL(t, tc.DSL)
-				if tc.Error != err.Error() {
-					t.Errorf("invalid error:\ngot:\n%s\n\ngot vs expected:\n%s", err.Error(), expr.Diff(t, err.Error(), tc.Error))
-				}
+				assert.EqualError(t, err, tc.Error)
 			}
 		})
 	}

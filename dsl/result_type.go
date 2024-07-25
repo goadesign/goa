@@ -106,19 +106,19 @@ func ResultType(identifier string, args ...any) *expr.ResultTypeExpr {
 	}
 	canonicalID := expr.CanonicalIdentifier(identifier)
 	// Validate that result type identifier doesn't clash
-	for _, rt := range expr.Root.ResultTypes {
-		if re := rt.(*expr.ResultTypeExpr); re.Identifier == canonicalID {
+	for _, rt := range *expr.GeneratedResultTypes {
+		if rt.Identifier == canonicalID {
 			eval.ReportError(
 				"result type %#v with canonical identifier %#v is defined twice",
 				identifier, canonicalID)
 			return nil
 		}
 	}
-	// Now save the type in the API result types map
-	mt := expr.NewResultTypeExpr(typeName, identifier, fn)
-	expr.Root.ResultTypes = append(expr.Root.ResultTypes, mt)
+	// Add the type to the generated types root for later evaluation.
+	rt := expr.NewResultTypeExpr(typeName, identifier, fn)
+	expr.Root.ResultTypes = append(expr.Root.ResultTypes, rt)
 
-	return mt
+	return rt
 }
 
 // TypeName makes it possible to set the Go struct name for a type or result
@@ -201,7 +201,7 @@ func View(name string, adsl ...func()) {
 	switch e := eval.Current().(type) {
 	case *expr.ResultTypeExpr:
 		if e.View(name) != nil {
-			eval.ReportError("multiple expressions for view %#v in result type %#v", name, e.TypeName)
+			eval.ReportError("view %q is defined multiple times in result type %q", name, e.TypeName)
 			return
 		}
 		at := &expr.AttributeExpr{}
@@ -340,11 +340,11 @@ func CollectionOf(v any, adsl ...func()) *expr.ResultTypeExpr {
 	}
 	id = mime.FormatMediaType(rtype, params)
 	canonical := expr.CanonicalIdentifier(id)
-	if mt := expr.Root.GeneratedResultType(canonical); mt != nil {
+	if mt := expr.GeneratedResultType(canonical); mt != nil {
 		// Already have a type for this collection, reuse it.
 		return mt
 	}
-	mt := expr.NewResultTypeExpr("", id, func() {
+	rt := expr.NewResultTypeExpr("", id, func() {
 		rt, ok := eval.Current().(*expr.ResultTypeExpr)
 		if !ok {
 			eval.IncompatibleDSL()
@@ -371,8 +371,8 @@ func CollectionOf(v any, adsl ...func()) *expr.ResultTypeExpr {
 	})
 	// do not execute the DSL right away, will be done last to make sure
 	// the element DSL has run first.
-	*expr.Root.GeneratedTypes = append(*expr.Root.GeneratedTypes, mt)
-	return mt
+	expr.GeneratedResultTypes.Append(rt)
+	return rt
 }
 
 // Reference sets a type or result type reference. The value itself can be a

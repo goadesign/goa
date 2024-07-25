@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/grpc/codegen/testdata"
@@ -140,9 +142,7 @@ func TestStreaming(t *testing.T) {
 					t.Errorf("invalid code for %s: got %d %s sections, expected 0.\n%s", path, seclen, s.Name, code)
 				default:
 					gen := strings.Join(code, "\n")
-					if gen != *s.Code {
-						t.Errorf("invalid code for %s %s section, got:\n%s\ngot vs. expected:\n%s", path, s.Name, gen, codegen.Diff(t, gen, *s.Code))
-					}
+					assert.Equal(t, *s.Code, gen, "invalid code for %s %s section", path, s.Name)
 				}
 			}
 		})
