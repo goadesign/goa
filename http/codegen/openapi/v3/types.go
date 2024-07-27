@@ -117,8 +117,8 @@ func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, m
 			}
 			for _, resp := range resps {
 				var view string
-				if vs, ok := resp.Body.Meta["view"]; ok {
-					view = vs[0]
+				if v, ok := resp.Body.Meta.Last(expr.ViewMetaKey); ok {
+					view = v
 				}
 				body := resp.Body
 				if view != "" {
@@ -432,8 +432,8 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64, seen map[string]*uint
 		// the computation of the hash.
 		rt := t.(*expr.ResultTypeExpr)
 		*res = hashString(rt.Identifier, h)
-		if view := rt.AttributeExpr.Meta["view"]; len(view) > 0 {
-			*res = orderedHash(*res, hashString(view[0], h), h)
+		if view, ok := rt.AttributeExpr.Meta.Last(expr.ViewMetaKey); ok {
+			*res = orderedHash(*res, hashString(view, h), h)
 		}
 
 	default: // Primitives or Any

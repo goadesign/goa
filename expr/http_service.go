@@ -82,12 +82,12 @@ func (svc *HTTPServiceExpr) EndpointFor(name string, m *MethodExpr) *HTTPEndpoin
 	if a := svc.Endpoint(name); a != nil {
 		return a
 	}
-	a := &HTTPEndpointExpr{
+	httpEndpoint := &HTTPEndpointExpr{
 		MethodExpr: m,
 		Service:    svc,
 	}
-	svc.HTTPEndpoints = append(svc.HTTPEndpoints, a)
-	return a
+	svc.HTTPEndpoints = append(svc.HTTPEndpoints, httpEndpoint)
+	return httpEndpoint
 }
 
 // CanonicalEndpoint returns the canonical endpoint of the service if any.

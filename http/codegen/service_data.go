@@ -590,8 +590,8 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
-func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
-	svc := service.Services.Get(hs.ServiceExpr.Name)
+func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
+	svc := service.Services.Get(httpSvc.ServiceExpr.Name)
 	scope := codegen.NewNameScope()
 	scope.Unique("c") // 'c' is reserved as the client's receiver name.
 	scope.Unique("v") // 'v' is reserved as the request builder payload argument name.
@@ -608,7 +608,7 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		Scope:            scope,
 	}
 
-	for _, s := range hs.FileServers {
+	for _, s := range httpSvc.FileServers {
 		paths := make([]string, len(s.RequestPaths))
 		for i, p := range s.RequestPaths {
 			idx := strings.LastIndex(p, "/{")
@@ -644,12 +644,12 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		rd.FileServers = append(rd.FileServers, data)
 	}
 
-	for _, a := range hs.HTTPEndpoints {
-		ep := svc.Method(a.MethodExpr.Name)
+	for _, httpEndpoint := range httpSvc.HTTPEndpoints {
+		method := svc.Method(httpEndpoint.MethodExpr.Name)
 
 		var routes []*RouteData
 		i := 0
-		for _, r := range a.Routes {
+		for _, r := range httpEndpoint.Routes {
 			for _, rpath := range r.FullPaths() {
 				params := expr.ExtractHTTPWildcards(rpath)
 				var (
@@ -657,20 +657,20 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 				)
 				{
 					initArgs := make([]*InitArgData, len(params))
-					pathParamsObj := expr.AsObject(a.PathParams().Type)
+					pathParamsObj := expr.AsObject(httpEndpoint.PathParams().Type)
 					suffix := ""
 					if i > 0 {
 						suffix = strconv.Itoa(i + 1)
 					}
 					i++
-					name := fmt.Sprintf("%s%sPath%s", ep.VarName, svc.StructName, suffix)
+					name := fmt.Sprintf("%s%sPath%s", method.VarName, svc.StructName, suffix)
 					for j, arg := range params {
 						patt := pathParamsObj.Attribute(arg)
 						att := makeHTTPType(patt)
-						pointer := a.Params.IsPrimitivePointer(arg, true)
-						if expr.IsObject(a.MethodExpr.Payload.Type) {
+						pointer := httpEndpoint.Params.IsPrimitivePointer(arg, true)
+						if expr.IsObject(httpEndpoint.MethodExpr.Payload.Type) {
 							// Path params may override requiredness, need to check payload.
-							pointer = a.MethodExpr.Payload.IsPrimitivePointer(arg, true)
+							pointer = httpEndpoint.MethodExpr.Payload.IsPrimitivePointer(arg, true)
 						}
 						name := rd.Scope.Name(codegen.Goify(arg, false))
 						var vcode string
@@ -709,7 +709,7 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 					}
 					init = &InitData{
 						Name:           name,
-						Description:    fmt.Sprintf("%s returns the URL path to the %s service %s HTTP endpoint. ", name, svc.Name, ep.Name),
+						Description:    fmt.Sprintf("%s returns the URL path to the %s service %s HTTP endpoint. ", name, svc.Name, method.Name),
 						ServerArgs:     initArgs,
 						ClientArgs:     initArgs,
 						ReturnTypeName: "string",
@@ -727,7 +727,7 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			}
 		}
 
-		payload := buildPayloadData(a, rd)
+		payload := buildPayloadData(httpEndpoint, rd)
 
 		var (
 			reqs  service.RequirementsData
@@ -738,10 +738,10 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		)
 		{
 
-			for _, req := range a.Requirements {
+			for _, req := range httpEndpoint.Requirements {
 				var rs service.SchemesData
 				for _, sch := range req.Schemes {
-					s := service.BuildSchemeData(sch, a.MethodExpr)
+					s := service.BuildSchemeData(sch, httpEndpoint.MethodExpr)
 					rs = rs.Append(s)
 					switch s.Type {
 					case "Basic":
@@ -764,7 +764,7 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		var requestEncoder string
 		{
 			if payload.Request.ClientBody != nil || len(payload.Request.Headers) > 0 || len(payload.Request.QueryParams) > 0 || len(payload.Request.Cookies) > 0 || basch != nil {
-				requestEncoder = fmt.Sprintf("Encode%sRequest", ep.VarName)
+				requestEncoder = fmt.Sprintf("Encode%sRequest", method.VarName)
 			}
 		}
 
@@ -777,7 +777,7 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 				pkg        string
 			)
 			{
-				name = fmt.Sprintf("Build%sRequest", ep.VarName)
+				name = fmt.Sprintf("Build%sRequest", method.VarName)
 				s := codegen.NewNameScope()
 				s.Unique("c") // 'c' is reserved as the client's receiver name.
 				for _, ca := range routes[0].PathInit.ClientArgs {
@@ -787,23 +787,23 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 						args = append(args, ca)
 					}
 				}
-				pkg = pkgWithDefault(ep.PayloadLoc, svc.PkgName)
-				if len(routes[0].PathInit.ClientArgs) > 0 && a.MethodExpr.Payload.Type != expr.Empty {
-					payloadRef = svc.Scope.GoFullTypeRef(a.MethodExpr.Payload, pkg)
+				pkg = pkgWithDefault(method.PayloadLoc, svc.PkgName)
+				if len(routes[0].PathInit.ClientArgs) > 0 && httpEndpoint.MethodExpr.Payload.Type != expr.Empty {
+					payloadRef = svc.Scope.GoFullTypeRef(httpEndpoint.MethodExpr.Payload, pkg)
 				}
 			}
 			data := map[string]any{
 				"PayloadRef":   payloadRef,
-				"HasFields":    expr.IsObject(a.MethodExpr.Payload.Type),
+				"HasFields":    expr.IsObject(httpEndpoint.MethodExpr.Payload.Type),
 				"ServiceName":  svc.Name,
-				"EndpointName": ep.Name,
+				"EndpointName": method.Name,
 				"Args":         args,
 				"PathInit":     routes[0].PathInit,
 				"Verb":         routes[0].Verb,
-				"IsStreaming":  a.MethodExpr.IsStreaming(),
+				"IsStreaming":  httpEndpoint.MethodExpr.IsStreaming(),
 			}
-			if a.SkipRequestBodyEncodeDecode {
-				data["RequestStruct"] = pkg + "." + ep.RequestStruct
+			if httpEndpoint.SkipRequestBodyEncodeDecode {
+				data["RequestStruct"] = pkg + "." + method.RequestStruct
 			}
 			var buf bytes.Buffer
 			if err := requestInitTmpl.Execute(&buf, data); err != nil {
@@ -812,75 +812,75 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			clientArgs := []*InitArgData{{Ref: "v", AttributeData: &AttributeData{Name: "payload", VarName: "v", TypeRef: "any"}}}
 			requestInit = &InitData{
 				Name:        name,
-				Description: fmt.Sprintf("%s instantiates a HTTP request object with method and path set to call the %q service %q endpoint", name, svc.Name, ep.Name),
+				Description: fmt.Sprintf("%s instantiates a HTTP request object with method and path set to call the %q service %q endpoint", name, svc.Name, method.Name),
 				ClientCode:  buf.String(),
 				ClientArgs:  clientArgs,
 			}
 		}
 
-		ad := &EndpointData{
-			Method:          ep,
+		ed := &EndpointData{
+			Method:          method,
 			ServiceName:     svc.Name,
 			ServiceVarName:  svc.VarName,
 			ServicePkgName:  svc.PkgName,
 			Payload:         payload,
-			Result:          buildResultData(a, rd),
-			Errors:          buildErrorsData(a, rd),
+			Result:          buildResultData(httpEndpoint, rd),
+			Errors:          buildErrorsData(httpEndpoint, rd),
 			HeaderSchemes:   hsch,
 			BodySchemes:     bosch,
 			QuerySchemes:    qsch,
 			BasicScheme:     basch,
 			Routes:          routes,
-			MountHandler:    fmt.Sprintf("Mount%sHandler", ep.VarName),
-			HandlerInit:     fmt.Sprintf("New%sHandler", ep.VarName),
-			RequestDecoder:  fmt.Sprintf("Decode%sRequest", ep.VarName),
-			ResponseEncoder: fmt.Sprintf("Encode%sResponse", ep.VarName),
-			ErrorEncoder:    fmt.Sprintf("Encode%sError", ep.VarName),
+			MountHandler:    fmt.Sprintf("Mount%sHandler", method.VarName),
+			HandlerInit:     fmt.Sprintf("New%sHandler", method.VarName),
+			RequestDecoder:  fmt.Sprintf("Decode%sRequest", method.VarName),
+			ResponseEncoder: fmt.Sprintf("Encode%sResponse", method.VarName),
+			ErrorEncoder:    fmt.Sprintf("Encode%sError", method.VarName),
 			ClientStruct:    "Client",
-			EndpointInit:    ep.VarName,
+			EndpointInit:    method.VarName,
 			RequestInit:     requestInit,
 			RequestEncoder:  requestEncoder,
-			ResponseDecoder: fmt.Sprintf("Decode%sResponse", ep.VarName),
+			ResponseDecoder: fmt.Sprintf("Decode%sResponse", method.VarName),
 			Requirements:    reqs,
 		}
-		if a.MethodExpr.IsStreaming() {
-			initWebSocketData(ad, a, rd)
+		if httpEndpoint.MethodExpr.IsStreaming() {
+			initWebSocketData(ed, httpEndpoint, rd)
 		}
 
-		if a.MultipartRequest {
-			ad.MultipartRequestDecoder = &MultipartData{
-				FuncName:    fmt.Sprintf("%s%sDecoderFunc", svc.StructName, ep.VarName),
-				InitName:    fmt.Sprintf("New%s%sDecoder", svc.StructName, ep.VarName),
-				VarName:     fmt.Sprintf("%s%sDecoderFn", svc.VarName, ep.VarName),
+		if httpEndpoint.MultipartRequest {
+			ed.MultipartRequestDecoder = &MultipartData{
+				FuncName:    fmt.Sprintf("%s%sDecoderFunc", svc.StructName, method.VarName),
+				InitName:    fmt.Sprintf("New%s%sDecoder", svc.StructName, method.VarName),
+				VarName:     fmt.Sprintf("%s%sDecoderFn", svc.VarName, method.VarName),
 				ServiceName: svc.Name,
-				MethodName:  ep.Name,
-				Payload:     ad.Payload,
+				MethodName:  method.Name,
+				Payload:     ed.Payload,
 			}
-			ad.MultipartRequestEncoder = &MultipartData{
-				FuncName:    fmt.Sprintf("%s%sEncoderFunc", svc.StructName, ep.VarName),
-				InitName:    fmt.Sprintf("New%s%sEncoder", svc.StructName, ep.VarName),
-				VarName:     fmt.Sprintf("%s%sEncoderFn", svc.VarName, ep.VarName),
+			ed.MultipartRequestEncoder = &MultipartData{
+				FuncName:    fmt.Sprintf("%s%sEncoderFunc", svc.StructName, method.VarName),
+				InitName:    fmt.Sprintf("New%s%sEncoder", svc.StructName, method.VarName),
+				VarName:     fmt.Sprintf("%s%sEncoderFn", svc.VarName, method.VarName),
 				ServiceName: svc.Name,
-				MethodName:  ep.Name,
-				Payload:     ad.Payload,
+				MethodName:  method.Name,
+				Payload:     ed.Payload,
 			}
 		}
 
-		if a.SkipRequestBodyEncodeDecode {
-			ad.BuildStreamPayload = scope.Unique("Build" + codegen.Goify(ep.Name, true) + "StreamPayload")
+		if httpEndpoint.SkipRequestBodyEncodeDecode {
+			ed.BuildStreamPayload = scope.Unique("Build" + codegen.Goify(method.Name, true) + "StreamPayload")
 		}
 
-		if a.Redirect != nil {
-			ad.Redirect = &RedirectData{
-				URL:        a.Redirect.URL,
-				StatusCode: statusCodeToHTTPConst(a.Redirect.StatusCode),
+		if httpEndpoint.Redirect != nil {
+			ed.Redirect = &RedirectData{
+				URL:        httpEndpoint.Redirect.URL,
+				StatusCode: statusCodeToHTTPConst(httpEndpoint.Redirect.StatusCode),
 			}
 		}
 
-		rd.Endpoints = append(rd.Endpoints, ad)
+		rd.Endpoints = append(rd.Endpoints, ed)
 	}
 
-	for _, a := range hs.HTTPEndpoints {
+	for _, a := range httpSvc.HTTPEndpoints {
 		collectUserTypes(a.Body.Type, func(ut expr.UserType) {
 			if d := attributeTypeData(ut, true, true, true, rd); d != nil {
 				rd.ServerBodyAttributeTypes = append(rd.ServerBodyAttributeTypes, d)
@@ -1428,9 +1428,9 @@ func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 		view string
 	)
 	{
-		view = "default"
-		if v, ok := result.Meta["view"]; ok {
-			view = v[0]
+		view = expr.DefaultView
+		if v, ok := result.Meta.Last(expr.ViewMetaKey); ok {
+			view = v
 		}
 		if result.Type != expr.Empty {
 			name = svc.Scope.GoFullTypeName(result, pkg)
@@ -1528,11 +1528,11 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 						if sbd := buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &vname, sd); sbd != nil {
 							serverBodyData = append(serverBodyData, sbd)
 						}
-					} else if v, ok := e.MethodExpr.Result.Meta["view"]; ok && len(v) > 0 {
+					} else if v, ok := e.MethodExpr.Result.Meta.Last(expr.ViewMetaKey); ok {
 						// Design explicitly sets the view to render the result.
 						// We generate only one server body type which will be rendered
 						// using the specified view.
-						if sbd := buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &v[0], sd); sbd != nil {
+						if sbd := buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &v, sd); sbd != nil {
 							serverBodyData = append(serverBodyData, sbd)
 						}
 					} else {

@@ -11,6 +11,9 @@ import (
 const (
 	// DefaultView is the name of the default result type view.
 	DefaultView = "default"
+
+	// ViewMetaKey is the key used to store the view name in the attribute meta.
+	ViewMetaKey = "view"
 )
 
 type (
@@ -94,7 +97,7 @@ var (
 
 	errorResultView = &ViewExpr{
 		AttributeExpr: &AttributeExpr{Type: errorResultType},
-		Name:          "default",
+		Name:          DefaultView,
 	}
 )
 
@@ -173,7 +176,7 @@ func (m *ResultTypeExpr) ViewHasAttribute(view, attr string) bool {
 // Finalize builds the default view if not explicitly defined and finalizes
 // the underlying UserTypeExpr.
 func (m *ResultTypeExpr) Finalize() {
-	if m.View("default") == nil {
+	if m.View(DefaultView) == nil {
 		m.ensureDefaultView()
 	}
 	m.UserTypeExpr.Finalize()
@@ -191,14 +194,14 @@ func (m *ResultTypeExpr) Finalize() {
 
 // ensureDefaultView builds the default view if not explicitly defined.
 func (m *ResultTypeExpr) ensureDefaultView() {
-	if m.View("default") == nil {
+	if m.View(DefaultView) == nil {
 		att := DupAtt(m.AttributeExpr)
 		if arr := AsArray(att.Type); arr != nil {
 			att.Type = AsObject(arr.ElemType.Type)
 		}
 		v := &ViewExpr{
 			AttributeExpr: att,
-			Name:          "default",
+			Name:          DefaultView,
 			Parent:        m,
 		}
 		m.Views = append(m.Views, v)
@@ -261,7 +264,7 @@ func projectSingle(m *ResultTypeExpr, view string, seen map[string]*AttributeExp
 
 	// Compute type name
 	typeName := m.TypeName
-	if view != "default" {
+	if view != DefaultView {
 		typeName += Title(view)
 	}
 
@@ -292,7 +295,7 @@ func projectSingle(m *ResultTypeExpr, view string, seen map[string]*AttributeExp
 		UserTypeExpr: ut,
 	}
 	projected.Views = []*ViewExpr{{
-		Name:          "default",
+		Name:          DefaultView,
 		AttributeExpr: DupAtt(v.AttributeExpr),
 		Parent:        projected,
 	}}
@@ -333,8 +336,8 @@ func projectCollection(m *ResultTypeExpr, view string, seen map[string]*Attribut
 			UID:      id,
 		},
 		Views: []*ViewExpr{{
-			AttributeExpr: DupAtt(pe.View("default").AttributeExpr),
-			Name:          "default",
+			AttributeExpr: DupAtt(pe.View(DefaultView).AttributeExpr),
+			Name:          DefaultView,
 			Parent:        pe,
 		}},
 	}
@@ -355,15 +358,13 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 
 	if rt, ok := at.Type.(*ResultTypeExpr); ok {
 		vatt := vat.Attribute
-		var view string
-		if len(vatt.Meta["view"]) > 0 {
-			view = vatt.Meta["view"][0]
-		}
-		if view == "" && len(at.Meta["view"]) > 0 {
-			view = at.Meta["view"][0]
-		}
-		if view == "" {
-			view = DefaultView
+		view, ok := vatt.Meta.Last(ViewMetaKey)
+		if !ok {
+			if v, ok := at.Meta.Last(ViewMetaKey); ok {
+				view = v
+			} else {
+				view = DefaultView
+			}
 		}
 		seen[hashAttrAndView(at, view)] = at
 		pr, err := project(rt, view, seen)
