@@ -297,8 +297,12 @@ func (a *AttributeExpr) Finalize() {
 		return // Avoid infinite recursion.
 	}
 	a.finalized = true
+	var pkgPath string
 	if ut, ok := a.Type.(UserType); ok {
 		ut.Finalize()
+		if meta, ok := ut.Attribute().Meta["struct:pkg:path"]; ok {
+			pkgPath = meta[0]
+		}
 	}
 	switch {
 	case IsObject(a.Type):
@@ -315,12 +319,6 @@ func (a *AttributeExpr) Finalize() {
 				continue
 			}
 			a.Merge(ru.Attribute())
-		}
-		var pkgPath string
-		if ut, ok := a.Type.(UserType); ok {
-			if meta, ok := ut.Attribute().Meta["struct:pkg:path"]; ok {
-				pkgPath = meta[0]
-			}
 		}
 		for _, nat := range *AsObject(a.Type) {
 			if pkgPath != "" {

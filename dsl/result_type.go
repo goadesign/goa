@@ -198,44 +198,51 @@ func TypeName(name string) {
 //	    })
 //	})
 func View(name string, adsl ...func()) {
-	switch e := eval.Current().(type) {
-	case *expr.ResultTypeExpr:
-		if e.View(name) != nil {
-			eval.ReportError("view %q is defined multiple times in result type %q", name, e.TypeName)
-			return
+	if adsl == nil {
+		switch e := eval.Current().(type) {
+		case *expr.ResultTypeExpr:
+			e.AddMeta(expr.ViewMetaKey, name)
+		case *expr.AttributeExpr:
+			e.AddMeta(expr.ViewMetaKey, name)
+		default:
+			eval.IncompatibleDSL()
 		}
-		at := &expr.AttributeExpr{}
-		ok := false
-		if len(adsl) > 0 {
-			ok = eval.Execute(adsl[0], at)
-		} else if a, ok := e.Type.(*expr.Array); ok {
-			// inherit view from collection element if present
-			if elem := a.ElemType; elem != nil {
-				if pa, ok2 := elem.Type.(*expr.ResultTypeExpr); ok2 {
-					if v := pa.View(name); v != nil {
-						at = v.AttributeExpr
-						e = pa
-					} else {
-						eval.ReportError("unknown view %#v", name)
-						return
-					}
+		return
+	}
+	rt, ok := eval.Current().(*expr.ResultTypeExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	if rt.View(name) != nil {
+		eval.ReportError("view %q is defined multiple times in result type %q", name, rt.TypeName)
+		return
+	}
+	at := &expr.AttributeExpr{}
+	ok = false
+	if len(adsl) > 0 {
+		ok = eval.Execute(adsl[0], at)
+	} else if a, ok := rt.Type.(*expr.Array); ok {
+		// inherit view from collection element if present
+		if elem := a.ElemType; elem != nil {
+			if pa, ok2 := elem.Type.(*expr.ResultTypeExpr); ok2 {
+				if v := pa.View(name); v != nil {
+					at = v.AttributeExpr
+					rt = pa
+				} else {
+					eval.ReportError("unknown view %#v", name)
+					return
 				}
 			}
 		}
-		if ok {
-			view, err := buildView(name, e, at)
-			if err != nil {
-				eval.ReportError(err.Error())
-				return
-			}
-			e.Views = append(e.Views, view)
+	}
+	if ok {
+		view, err := buildView(name, rt, at)
+		if err != nil {
+			eval.ReportError(err.Error())
+			return
 		}
-
-	case *expr.AttributeExpr:
-		e.AddMeta("view", name)
-
-	default:
-		eval.IncompatibleDSL()
+		rt.Views = append(rt.Views, view)
 	}
 }
 
@@ -519,8 +526,8 @@ func buildView(name string, mt *expr.ResultTypeExpr, at *expr.AttributeExpr) (*e
 		cat := nat.Attribute
 		if existing := mt.Find(n); existing != nil {
 			dup := expr.DupAtt(existing)
-			if _, ok := cat.Meta["view"]; ok {
-				dup.AddMeta("view", cat.Meta["view"]...)
+			if v, ok := cat.Meta.Last(expr.ViewMetaKey); ok {
+				dup.AddMeta("view", v)
 			}
 			o.Set(n, dup)
 		} else if n != "links" {

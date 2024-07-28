@@ -152,7 +152,7 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 			return nil
 		}
 		if isrt {
-			if view, ok := e.MethodExpr.Result.Meta.Last("view"); ok {
+			if view, ok := e.MethodExpr.Result.Meta.Last(ViewMetaKey); ok {
 				v := rt.View(view)
 				if v == nil {
 					return nil

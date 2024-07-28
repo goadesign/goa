@@ -709,10 +709,10 @@ func ValidateRtResponseBody(body *RtResponseBody) (err error) {
 }
 `
 
-const ResultWithResultViewClientTypesFile = `// MethodResultWithResultViewResponseBody is the type of the
+const ResultWithResultViewClientTypesFile = `// MethodResultWithResultViewResponseBodyFull is the type of the
 // "ServiceResultWithResultView" service "MethodResultWithResultView" endpoint
 // HTTP response body.
-type MethodResultWithResultViewResponseBody struct {
+type MethodResultWithResultViewResponseBodyFull struct {
 	Name *string         ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
 	Rt   *RtResponseBody ` + "`" + `form:"rt,omitempty" json:"rt,omitempty" xml:"rt,omitempty"` + "`" + `
 }
@@ -725,7 +725,7 @@ type RtResponseBody struct {
 // NewMethodResultWithResultViewResulttypeOK builds a
 // "ServiceResultWithResultView" service "MethodResultWithResultView" endpoint
 // result from a HTTP "OK" response.
-func NewMethodResultWithResultViewResulttypeOK(body *MethodResultWithResultViewResponseBody) *serviceresultwithresultviewviews.ResulttypeView {
+func NewMethodResultWithResultViewResulttypeOK(body *MethodResultWithResultViewResponseBodyFull) *serviceresultwithresultviewviews.ResulttypeView {
 	v := &serviceresultwithresultviewviews.ResulttypeView{
 		Name: body.Name,
 	}
