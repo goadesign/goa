@@ -346,11 +346,9 @@ func (r *HTTPResponseExpr) mapUnmappedAttrs(svcAtt *AttributeExpr) {
 		// not mapped explicitly.
 
 		var originAttr string
-		{
-			if r.Body != nil {
-				if o, ok := r.Body.Meta["origin:attribute"]; ok {
-					originAttr = o[0]
-				}
+		if r.Body != nil {
+			if o, ok := r.Body.Meta["origin:attribute"]; ok {
+				originAttr = o[0]
 			}
 		}
 		// if response body was mapped explicitly using Body(<attribute name>) then
