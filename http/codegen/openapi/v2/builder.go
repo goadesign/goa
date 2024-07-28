@@ -378,8 +378,8 @@ func responseSpecFromExpr(_ *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 	var schema *openapi.Schema
 	if mt, ok := r.Body.Type.(*expr.ResultTypeExpr); ok {
 		view := expr.DefaultView
-		if v, ok := r.Body.Meta["view"]; ok {
-			view = v[0]
+		if v, ok := r.Body.Meta.Last(expr.ViewMetaKey); ok {
+			view = v
 		}
 		schema = openapi.NewSchema()
 		schema.Ref = openapi.ResultTypeRefWithPrefix(root.API, mt, view, typeNamePrefix)

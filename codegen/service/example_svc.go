@@ -120,9 +120,9 @@ func basicEndpointSection(m *expr.MethodExpr, svcData *Data) *codegen.SectionTem
 		ed.ResultFullRef = svcData.Scope.GoFullTypeRef(m.Result, svcData.PkgName)
 		ed.ResultIsStruct = expr.IsObject(m.Result.Type)
 		if md.ViewedResult != nil {
-			view := "default"
-			if v, ok := m.Result.Meta["view"]; ok {
-				view = v[0]
+			view := expr.DefaultView
+			if v, ok := m.Result.Meta.Last(expr.ViewMetaKey); ok {
+				view = v
 			}
 			ed.ResultView = view
 		}

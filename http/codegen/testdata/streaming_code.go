@@ -404,7 +404,7 @@ var StreamingResultWithExplicitViewClientStreamRecvCode = `// Recv reads instanc
 func (s *StreamingResultWithExplicitViewMethodClientStream) Recv() (*streamingresultwithexplicitviewservice.Usertype, error) {
 	var (
 		rv   *streamingresultwithexplicitviewservice.Usertype
-		body StreamingResultWithExplicitViewMethodResponseBody
+		body StreamingResultWithExplicitViewMethodResponseBodyExtended
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -1423,7 +1423,7 @@ var StreamingPayloadResultWithExplicitViewClientStreamRecvCode = `// CloseAndRec
 func (s *StreamingPayloadResultWithExplicitViewMethodClientStream) CloseAndRecv() (*streamingpayloadresultwithexplicitviewservice.Usertype, error) {
 	var (
 		rv   *streamingpayloadresultwithexplicitviewservice.Usertype
-		body StreamingPayloadResultWithExplicitViewMethodResponseBody
+		body StreamingPayloadResultWithExplicitViewMethodResponseBodyExtended
 		err  error
 	)
 	defer s.conn.Close()
@@ -2623,7 +2623,7 @@ var BidirectionalStreamingResultWithExplicitViewClientStreamRecvCode = `// Recv 
 func (s *BidirectionalStreamingResultWithExplicitViewMethodClientStream) Recv() (*bidirectionalstreamingresultwithexplicitviewservice.Usertype, error) {
 	var (
 		rv   *bidirectionalstreamingresultwithexplicitviewservice.Usertype
-		body BidirectionalStreamingResultWithExplicitViewMethodResponseBody
+		body BidirectionalStreamingResultWithExplicitViewMethodResponseBodyExtended
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)

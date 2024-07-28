@@ -1449,6 +1449,28 @@ func newApplicationDashedTypeView(res *ApplicationDashedType) *resultwithdashedm
 	}
 	return vres
 }
+
+// newApplicationDashedTypeCollection converts projected type
+// ApplicationDashedTypeCollection to service type
+// ApplicationDashedTypeCollection.
+func newApplicationDashedTypeCollection(vres resultwithdashedmimetypeviews.ApplicationDashedTypeCollectionView) ApplicationDashedTypeCollection {
+	res := make(ApplicationDashedTypeCollection, len(vres))
+	for i, n := range vres {
+		res[i] = newApplicationDashedType(n)
+	}
+	return res
+}
+
+// newApplicationDashedTypeCollectionView projects result type
+// ApplicationDashedTypeCollection to projected type
+// ApplicationDashedTypeCollectionView using the "default" view.
+func newApplicationDashedTypeCollectionView(res ApplicationDashedTypeCollection) resultwithdashedmimetypeviews.ApplicationDashedTypeCollectionView {
+	vres := make(resultwithdashedmimetypeviews.ApplicationDashedTypeCollectionView, len(res))
+	for i, n := range res {
+		vres[i] = newApplicationDashedTypeView(n)
+	}
+	return vres
+}
 `
 
 const ResultWithOneOfTypeMethod = `

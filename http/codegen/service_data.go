@@ -590,8 +590,8 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
-func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
-	svc := service.Services.Get(hs.ServiceExpr.Name)
+func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
+	svc := service.Services.Get(httpSvc.ServiceExpr.Name)
 	scope := codegen.NewNameScope()
 	scope.Unique("c") // 'c' is reserved as the client's receiver name.
 	scope.Unique("v") // 'v' is reserved as the request builder payload argument name.
@@ -608,7 +608,7 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		Scope:            scope,
 	}
 
-	for _, s := range hs.FileServers {
+	for _, s := range httpSvc.FileServers {
 		paths := make([]string, len(s.RequestPaths))
 		for i, p := range s.RequestPaths {
 			idx := strings.LastIndex(p, "/{")
@@ -644,12 +644,12 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 		rd.FileServers = append(rd.FileServers, data)
 	}
 
-	for _, a := range hs.HTTPEndpoints {
-		ep := svc.Method(a.MethodExpr.Name)
+	for _, httpEndpoint := range httpSvc.HTTPEndpoints {
+		method := svc.Method(httpEndpoint.MethodExpr.Name)
 
 		var routes []*RouteData
 		i := 0
-		for _, r := range a.Routes {
+		for _, r := range httpEndpoint.Routes {
 			for _, rpath := range r.FullPaths() {
 				params := expr.ExtractHTTPWildcards(rpath)
 				var (
@@ -657,20 +657,20 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 				)
 				{
 					initArgs := make([]*InitArgData, len(params))
-					pathParamsObj := expr.AsObject(a.PathParams().Type)
+					pathParamsObj := expr.AsObject(httpEndpoint.PathParams().Type)
 					suffix := ""
 					if i > 0 {
 						suffix = strconv.Itoa(i + 1)
 					}
 					i++
-					name := fmt.Sprintf("%s%sPath%s", ep.VarName, svc.StructName, suffix)
+					name := fmt.Sprintf("%s%sPath%s", method.VarName, svc.StructName, suffix)
 					for j, arg := range params {
 						patt := pathParamsObj.Attribute(arg)
 						att := makeHTTPType(patt)
-						pointer := a.Params.IsPrimitivePointer(arg, true)
-						if expr.IsObject(a.MethodExpr.Payload.Type) {
+						pointer := httpEndpoint.Params.IsPrimitivePointer(arg, true)
+						if expr.IsObject(httpEndpoint.MethodExpr.Payload.Type) {
 							// Path params may override requiredness, need to check payload.
-							pointer = a.MethodExpr.Payload.IsPrimitivePointer(arg, true)
+							pointer = httpEndpoint.MethodExpr.Payload.IsPrimitivePointer(arg, true)
 						}
 						name := rd.Scope.Name(codegen.Goify(arg, false))
 						var vcode string
@@ -709,7 +709,7 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 					}
 					init = &InitData{
 						Name:           name,
-						Description:    fmt.Sprintf("%s returns the URL path to the %s service %s HTTP endpoint. ", name, svc.Name, ep.Name),
+						Description:    fmt.Sprintf("%s returns the URL path to the %s service %s HTTP endpoint. ", name, svc.Name, method.Name),
 						ServerArgs:     initArgs,
 						ClientArgs:     initArgs,
 						ReturnTypeName: "string",
@@ -727,7 +727,7 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			}
 		}
 
-		payload := buildPayloadData(a, rd)
+		payload := buildPayloadData(httpEndpoint, rd)
 
 		var (
 			reqs  service.RequirementsData
@@ -736,151 +736,144 @@ func (ServicesData) analyze(hs *expr.HTTPServiceExpr) *ServiceData {
 			qsch  service.SchemesData
 			basch *service.SchemeData
 		)
-		{
-
-			for _, req := range a.Requirements {
-				var rs service.SchemesData
-				for _, sch := range req.Schemes {
-					s := service.BuildSchemeData(sch, a.MethodExpr)
-					rs = rs.Append(s)
-					switch s.Type {
-					case "Basic":
-						basch = s
+		for _, req := range httpEndpoint.Requirements {
+			var rs service.SchemesData
+			for _, sch := range req.Schemes {
+				s := service.BuildSchemeData(sch, httpEndpoint.MethodExpr)
+				rs = rs.Append(s)
+				switch s.Type {
+				case "Basic":
+					basch = s
+				default:
+					switch s.In {
+					case "query":
+						qsch = qsch.Append(s)
+					case "header":
+						hsch = hsch.Append(s)
 					default:
-						switch s.In {
-						case "query":
-							qsch = qsch.Append(s)
-						case "header":
-							hsch = hsch.Append(s)
-						default:
-							bosch = bosch.Append(s)
-						}
+						bosch = bosch.Append(s)
 					}
 				}
-				reqs = append(reqs, &service.RequirementData{Schemes: rs, Scopes: req.Scopes})
 			}
+			reqs = append(reqs, &service.RequirementData{Schemes: rs, Scopes: req.Scopes})
 		}
 
 		var requestEncoder string
-		{
-			if payload.Request.ClientBody != nil || len(payload.Request.Headers) > 0 || len(payload.Request.QueryParams) > 0 || len(payload.Request.Cookies) > 0 || basch != nil {
-				requestEncoder = fmt.Sprintf("Encode%sRequest", ep.VarName)
-			}
+		if payload.Request.ClientBody != nil || len(payload.Request.Headers) > 0 || len(payload.Request.QueryParams) > 0 || len(payload.Request.Cookies) > 0 || basch != nil {
+			requestEncoder = fmt.Sprintf("Encode%sRequest", method.VarName)
 		}
 
 		var requestInit *InitData
+		var (
+			name       string
+			args       []*InitArgData
+			payloadRef string
+			pkg        string
+		)
 		{
-			var (
-				name       string
-				args       []*InitArgData
-				payloadRef string
-				pkg        string
-			)
-			{
-				name = fmt.Sprintf("Build%sRequest", ep.VarName)
-				s := codegen.NewNameScope()
-				s.Unique("c") // 'c' is reserved as the client's receiver name.
-				for _, ca := range routes[0].PathInit.ClientArgs {
-					if ca.FieldName != "" {
-						ca.VarName = s.Unique(ca.VarName)
-						ca.Ref = ca.VarName
-						args = append(args, ca)
-					}
-				}
-				pkg = pkgWithDefault(ep.PayloadLoc, svc.PkgName)
-				if len(routes[0].PathInit.ClientArgs) > 0 && a.MethodExpr.Payload.Type != expr.Empty {
-					payloadRef = svc.Scope.GoFullTypeRef(a.MethodExpr.Payload, pkg)
+			name = fmt.Sprintf("Build%sRequest", method.VarName)
+			s := codegen.NewNameScope()
+			s.Unique("c") // 'c' is reserved as the client's receiver name.
+			for _, ca := range routes[0].PathInit.ClientArgs {
+				if ca.FieldName != "" {
+					ca.VarName = s.Unique(ca.VarName)
+					ca.Ref = ca.VarName
+					args = append(args, ca)
 				}
 			}
-			data := map[string]any{
-				"PayloadRef":   payloadRef,
-				"HasFields":    expr.IsObject(a.MethodExpr.Payload.Type),
-				"ServiceName":  svc.Name,
-				"EndpointName": ep.Name,
-				"Args":         args,
-				"PathInit":     routes[0].PathInit,
-				"Verb":         routes[0].Verb,
-				"IsStreaming":  a.MethodExpr.IsStreaming(),
-			}
-			if a.SkipRequestBodyEncodeDecode {
-				data["RequestStruct"] = pkg + "." + ep.RequestStruct
-			}
-			var buf bytes.Buffer
-			if err := requestInitTmpl.Execute(&buf, data); err != nil {
-				panic(err) // bug
-			}
-			clientArgs := []*InitArgData{{Ref: "v", AttributeData: &AttributeData{Name: "payload", VarName: "v", TypeRef: "any"}}}
-			requestInit = &InitData{
-				Name:        name,
-				Description: fmt.Sprintf("%s instantiates a HTTP request object with method and path set to call the %q service %q endpoint", name, svc.Name, ep.Name),
-				ClientCode:  buf.String(),
-				ClientArgs:  clientArgs,
+			pkg = pkgWithDefault(method.PayloadLoc, svc.PkgName)
+			if len(routes[0].PathInit.ClientArgs) > 0 && httpEndpoint.MethodExpr.Payload.Type != expr.Empty {
+				payloadRef = svc.Scope.GoFullTypeRef(httpEndpoint.MethodExpr.Payload, pkg)
 			}
 		}
+		data := map[string]any{
+			"PayloadRef":   payloadRef,
+			"HasFields":    expr.IsObject(httpEndpoint.MethodExpr.Payload.Type),
+			"ServiceName":  svc.Name,
+			"EndpointName": method.Name,
+			"Args":         args,
+			"PathInit":     routes[0].PathInit,
+			"Verb":         routes[0].Verb,
+			"IsStreaming":  httpEndpoint.MethodExpr.IsStreaming(),
+		}
+		if httpEndpoint.SkipRequestBodyEncodeDecode {
+			data["RequestStruct"] = pkg + "." + method.RequestStruct
+		}
+		var buf bytes.Buffer
+		if err := requestInitTmpl.Execute(&buf, data); err != nil {
+			panic(err) // bug
+		}
+		clientArgs := []*InitArgData{{Ref: "v", AttributeData: &AttributeData{Name: "payload", VarName: "v", TypeRef: "any"}}}
+		requestInit = &InitData{
+			Name:        name,
+			Description: fmt.Sprintf("%s instantiates a HTTP request object with method and path set to call the %q service %q endpoint", name, svc.Name, method.Name),
+			ClientCode:  buf.String(),
+			ClientArgs:  clientArgs,
+		}
 
-		ad := &EndpointData{
-			Method:          ep,
+		ed := &EndpointData{
+			Method:          method,
 			ServiceName:     svc.Name,
 			ServiceVarName:  svc.VarName,
 			ServicePkgName:  svc.PkgName,
 			Payload:         payload,
-			Result:          buildResultData(a, rd),
-			Errors:          buildErrorsData(a, rd),
+			Result:          buildResultData(httpEndpoint, rd),
+			Errors:          buildErrorsData(httpEndpoint, rd),
 			HeaderSchemes:   hsch,
 			BodySchemes:     bosch,
 			QuerySchemes:    qsch,
 			BasicScheme:     basch,
 			Routes:          routes,
-			MountHandler:    fmt.Sprintf("Mount%sHandler", ep.VarName),
-			HandlerInit:     fmt.Sprintf("New%sHandler", ep.VarName),
-			RequestDecoder:  fmt.Sprintf("Decode%sRequest", ep.VarName),
-			ResponseEncoder: fmt.Sprintf("Encode%sResponse", ep.VarName),
-			ErrorEncoder:    fmt.Sprintf("Encode%sError", ep.VarName),
+			MountHandler:    fmt.Sprintf("Mount%sHandler", method.VarName),
+			HandlerInit:     fmt.Sprintf("New%sHandler", method.VarName),
+			RequestDecoder:  fmt.Sprintf("Decode%sRequest", method.VarName),
+			ResponseEncoder: fmt.Sprintf("Encode%sResponse", method.VarName),
+			ErrorEncoder:    fmt.Sprintf("Encode%sError", method.VarName),
 			ClientStruct:    "Client",
-			EndpointInit:    ep.VarName,
+			EndpointInit:    method.VarName,
 			RequestInit:     requestInit,
 			RequestEncoder:  requestEncoder,
-			ResponseDecoder: fmt.Sprintf("Decode%sResponse", ep.VarName),
+			ResponseDecoder: fmt.Sprintf("Decode%sResponse", method.VarName),
 			Requirements:    reqs,
 		}
-		if a.MethodExpr.IsStreaming() {
-			initWebSocketData(ad, a, rd)
+		if httpEndpoint.MethodExpr.IsStreaming() {
+			initWebSocketData(ed, httpEndpoint, rd)
 		}
 
-		if a.MultipartRequest {
-			ad.MultipartRequestDecoder = &MultipartData{
-				FuncName:    fmt.Sprintf("%s%sDecoderFunc", svc.StructName, ep.VarName),
-				InitName:    fmt.Sprintf("New%s%sDecoder", svc.StructName, ep.VarName),
-				VarName:     fmt.Sprintf("%s%sDecoderFn", svc.VarName, ep.VarName),
+		if httpEndpoint.MultipartRequest {
+			ed.MultipartRequestDecoder = &MultipartData{
+				FuncName:    fmt.Sprintf("%s%sDecoderFunc", svc.StructName, method.VarName),
+				InitName:    fmt.Sprintf("New%s%sDecoder", svc.StructName, method.VarName),
+				VarName:     fmt.Sprintf("%s%sDecoderFn", svc.VarName, method.VarName),
 				ServiceName: svc.Name,
-				MethodName:  ep.Name,
-				Payload:     ad.Payload,
+				MethodName:  method.Name,
+				Payload:     ed.Payload,
 			}
-			ad.MultipartRequestEncoder = &MultipartData{
-				FuncName:    fmt.Sprintf("%s%sEncoderFunc", svc.StructName, ep.VarName),
-				InitName:    fmt.Sprintf("New%s%sEncoder", svc.StructName, ep.VarName),
-				VarName:     fmt.Sprintf("%s%sEncoderFn", svc.VarName, ep.VarName),
+			ed.MultipartRequestEncoder = &MultipartData{
+				FuncName:    fmt.Sprintf("%s%sEncoderFunc", svc.StructName, method.VarName),
+				InitName:    fmt.Sprintf("New%s%sEncoder", svc.StructName, method.VarName),
+				VarName:     fmt.Sprintf("%s%sEncoderFn", svc.VarName, method.VarName),
 				ServiceName: svc.Name,
-				MethodName:  ep.Name,
-				Payload:     ad.Payload,
+				MethodName:  method.Name,
+				Payload:     ed.Payload,
 			}
 		}
 
-		if a.SkipRequestBodyEncodeDecode {
-			ad.BuildStreamPayload = scope.Unique("Build" + codegen.Goify(ep.Name, true) + "StreamPayload")
+		if httpEndpoint.SkipRequestBodyEncodeDecode {
+			ed.BuildStreamPayload = scope.Unique("Build" + codegen.Goify(method.Name, true) + "StreamPayload")
 		}
 
-		if a.Redirect != nil {
-			ad.Redirect = &RedirectData{
-				URL:        a.Redirect.URL,
-				StatusCode: statusCodeToHTTPConst(a.Redirect.StatusCode),
+		if httpEndpoint.Redirect != nil {
+			ed.Redirect = &RedirectData{
+				URL:        httpEndpoint.Redirect.URL,
+				StatusCode: statusCodeToHTTPConst(httpEndpoint.Redirect.StatusCode),
 			}
 		}
 
-		rd.Endpoints = append(rd.Endpoints, ad)
+		rd.Endpoints = append(rd.Endpoints, ed)
 	}
 
-	for _, a := range hs.HTTPEndpoints {
+	for _, a := range httpSvc.HTTPEndpoints {
 		collectUserTypes(a.Body.Type, func(ut expr.UserType) {
 			if d := attributeTypeData(ut, true, true, true, rd); d != nil {
 				rd.ServerBodyAttributeTypes = append(rd.ServerBodyAttributeTypes, d)
@@ -1010,86 +1003,84 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 			mustValidate bool
 			mustHaveBody = true
 		)
-		{
-			if e.MapQueryParams != nil {
-				var (
-					fieldName string
-					name      = "query"
-					required  = true
-					pAtt      = payload
-				)
-				if n := *e.MapQueryParams; n != "" {
-					pAtt = expr.AsObject(payload.Type).Attribute(n)
-					required = payload.IsRequired(n)
-					name = n
-					fieldName = codegen.Goify(name, true)
-				}
-				varn := codegen.Goify(name, false)
-				mapQueryParam = &ParamData{
-					MapQueryParams: e.MapQueryParams,
-					Map:            expr.AsMap(payload.Type) != nil,
-					Element: &Element{
-						HTTPName: name,
-						AttributeData: &AttributeData{
-							Name:         name,
-							VarName:      varn,
-							FieldName:    fieldName,
-							FieldType:    pAtt.Type,
-							Required:     required,
-							Type:         pAtt.Type,
-							TypeName:     sd.Scope.GoTypeName(pAtt),
-							TypeRef:      sd.Scope.GoTypeRef(pAtt),
-							Validate:     codegen.AttributeValidationCode(pAtt, nil, httpsvrctx, required, expr.IsAlias(pAtt.Type), varn, name),
-							DefaultValue: pAtt.DefaultValue,
-							Example:      pAtt.Example(expr.Root.API.ExampleGenerator),
-						},
+		if e.MapQueryParams != nil {
+			var (
+				fieldName string
+				name      = "query"
+				required  = true
+				pAtt      = payload
+			)
+			if n := *e.MapQueryParams; n != "" {
+				pAtt = expr.AsObject(payload.Type).Attribute(n)
+				required = payload.IsRequired(n)
+				name = n
+				fieldName = codegen.Goify(name, true)
+			}
+			varn := codegen.Goify(name, false)
+			mapQueryParam = &ParamData{
+				MapQueryParams: e.MapQueryParams,
+				Map:            expr.AsMap(payload.Type) != nil,
+				Element: &Element{
+					HTTPName: name,
+					AttributeData: &AttributeData{
+						Name:         name,
+						VarName:      varn,
+						FieldName:    fieldName,
+						FieldType:    pAtt.Type,
+						Required:     required,
+						Type:         pAtt.Type,
+						TypeName:     sd.Scope.GoTypeName(pAtt),
+						TypeRef:      sd.Scope.GoTypeRef(pAtt),
+						Validate:     codegen.AttributeValidationCode(pAtt, nil, httpsvrctx, required, expr.IsAlias(pAtt.Type), varn, name),
+						DefaultValue: pAtt.DefaultValue,
+						Example:      pAtt.Example(expr.Root.API.ExampleGenerator),
 					},
-				}
-				queryData = append(queryData, mapQueryParam)
+				},
 			}
-			if serverBodyData != nil {
-				sd.ServerTypeNames[serverBodyData.Name] = false
-				sd.ClientTypeNames[serverBodyData.Name] = false
+			queryData = append(queryData, mapQueryParam)
+		}
+		if serverBodyData != nil {
+			sd.ServerTypeNames[serverBodyData.Name] = false
+			sd.ClientTypeNames[serverBodyData.Name] = false
+		}
+		for _, p := range cookiesData {
+			if p.Required || p.Validate != "" || needConversion(p.Type) {
+				mustValidate = true
+				break
 			}
-			for _, p := range cookiesData {
-				if p.Required || p.Validate != "" || needConversion(p.Type) {
+		}
+		if !mustValidate {
+			for _, p := range paramsData {
+				if p.Validate != "" || needConversion(p.Type) {
 					mustValidate = true
 					break
 				}
 			}
-			if !mustValidate {
-				for _, p := range paramsData {
-					if p.Validate != "" || needConversion(p.Type) {
-						mustValidate = true
-						break
-					}
+		}
+		if !mustValidate {
+			for _, q := range queryData {
+				if q.Map || q.Validate != "" || q.Required || needConversion(q.Type) {
+					mustValidate = true
+					break
 				}
 			}
-			if !mustValidate {
-				for _, q := range queryData {
-					if q.Map || q.Validate != "" || q.Required || needConversion(q.Type) {
-						mustValidate = true
-						break
-					}
+		}
+		if !mustValidate {
+			for _, h := range headersData {
+				if h.Validate != "" || h.Required || needConversion(h.Type) {
+					mustValidate = true
+					break
 				}
 			}
-			if !mustValidate {
-				for _, h := range headersData {
-					if h.Validate != "" || h.Required || needConversion(h.Type) {
-						mustValidate = true
-						break
-					}
-				}
-			}
-			if e.Body.Type != expr.Empty {
-				// If design uses Body("name") syntax we need to use the
-				// corresponding attribute in the result type for body
-				// transformation.
-				if o, ok := e.Body.Meta["origin:attribute"]; ok {
-					origin = o[0]
-					if !payload.IsRequired(o[0]) {
-						mustHaveBody = false
-					}
+		}
+		if e.Body.Type != expr.Empty {
+			// If design uses Body("name") syntax we need to use the
+			// corresponding attribute in the result type for body
+			// transformation.
+			if o, ok := e.Body.Meta["origin:attribute"]; ok {
+				origin = o[0]
+				if !payload.IsRequired(o[0]) {
+					mustHaveBody = false
 				}
 			}
 		}
@@ -1389,21 +1380,19 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 		name        string
 		ref         string
 	)
-	{
-		if payload.Type != expr.Empty {
-			name = svc.Scope.GoFullTypeName(payload, pkg)
-			ref = svc.Scope.GoFullTypeRef(payload, pkg)
-		}
-		if init == nil {
-			if o := expr.AsObject(e.Params.Type); o != nil && len(*o) > 0 {
-				returnValue = codegen.Goify((*o)[0].Name, false)
-			} else if o := expr.AsObject(e.Headers.Type); o != nil && len(*o) > 0 {
-				returnValue = codegen.Goify((*o)[0].Name, false)
-			} else if o := expr.AsObject(e.Cookies.Type); o != nil && len(*o) > 0 {
-				returnValue = codegen.Goify((*o)[0].Name, false)
-			} else if e.MapQueryParams != nil && *e.MapQueryParams == "" {
-				returnValue = mapQueryParam.VarName
-			}
+	if payload.Type != expr.Empty {
+		name = svc.Scope.GoFullTypeName(payload, pkg)
+		ref = svc.Scope.GoFullTypeRef(payload, pkg)
+	}
+	if init == nil {
+		if o := expr.AsObject(e.Params.Type); o != nil && len(*o) > 0 {
+			returnValue = codegen.Goify((*o)[0].Name, false)
+		} else if o := expr.AsObject(e.Headers.Type); o != nil && len(*o) > 0 {
+			returnValue = codegen.Goify((*o)[0].Name, false)
+		} else if o := expr.AsObject(e.Cookies.Type); o != nil && len(*o) > 0 {
+			returnValue = codegen.Goify((*o)[0].Name, false)
+		} else if e.MapQueryParams != nil && *e.MapQueryParams == "" {
+			returnValue = mapQueryParam.VarName
 		}
 	}
 
@@ -1427,15 +1416,13 @@ func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 		ref  string
 		view string
 	)
-	{
-		view = "default"
-		if v, ok := result.Meta["view"]; ok {
-			view = v[0]
-		}
-		if result.Type != expr.Empty {
-			name = svc.Scope.GoFullTypeName(result, pkg)
-			ref = svc.Scope.GoFullTypeRef(result, pkg)
-		}
+	view = expr.DefaultView
+	if v, ok := result.Meta.Last(expr.ViewMetaKey); ok {
+		view = v
+	}
+	if result.Type != expr.Empty {
+		name = svc.Scope.GoFullTypeName(result, pkg)
+		ref = svc.Scope.GoFullTypeRef(result, pkg)
 	}
 
 	var (
@@ -1528,11 +1515,11 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 						if sbd := buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &vname, sd); sbd != nil {
 							serverBodyData = append(serverBodyData, sbd)
 						}
-					} else if v, ok := e.MethodExpr.Result.Meta["view"]; ok && len(v) > 0 {
+					} else if v, ok := e.MethodExpr.Result.Meta.Last(expr.ViewMetaKey); ok {
 						// Design explicitly sets the view to render the result.
 						// We generate only one server body type which will be rendered
 						// using the specified view.
-						if sbd := buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &v[0], sd); sbd != nil {
+						if sbd := buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &v, sd); sbd != nil {
 							serverBodyData = append(serverBodyData, sbd)
 						}
 					} else {
@@ -1710,12 +1697,10 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 					tagVal  string
 					tagPtr  bool
 				)
-				{
-					if resp.Tag[0] != "" {
-						tagName = codegen.Goify(resp.Tag[0], true)
-						tagVal = resp.Tag[1]
-						tagPtr = viewed || result.IsPrimitivePointer(resp.Tag[0], true)
-					}
+				if resp.Tag[0] != "" {
+					tagName = codegen.Goify(resp.Tag[0], true)
+					tagVal = resp.Tag[1]
+					tagPtr = viewed || result.IsPrimitivePointer(resp.Tag[0], true)
 				}
 				responses = append(responses, &ResponseData{
 					StatusCode:   statusCodeToHTTPConst(resp.StatusCode),
@@ -1772,53 +1757,51 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 				isObject bool
 				args     []*InitArgData
 			)
-			{
-				name = fmt.Sprintf("New%s%s", codegen.Goify(ep.Name, true), codegen.Goify(v.ErrorExpr.Name, true))
-				desc = fmt.Sprintf("%s builds a %s service %s endpoint %s error.",
-					name, svc.Name, e.Name(), v.ErrorExpr.Name)
-				if body != expr.Empty {
-					isObject = expr.IsObject(body)
-					ref := "body"
-					if isObject {
-						ref = "&body"
-					}
-					args = []*InitArgData{{
-						Ref:           ref,
-						AttributeData: &AttributeData{Name: "body", VarName: "body", TypeRef: sd.Scope.GoTypeRef(v.Response.Body)},
-					}}
+			name = fmt.Sprintf("New%s%s", codegen.Goify(ep.Name, true), codegen.Goify(v.ErrorExpr.Name, true))
+			desc = fmt.Sprintf("%s builds a %s service %s endpoint %s error.",
+				name, svc.Name, e.Name(), v.ErrorExpr.Name)
+			if body != expr.Empty {
+				isObject = expr.IsObject(body)
+				ref := "body"
+				if isObject {
+					ref = "&body"
 				}
-				for _, h := range extractHeaders(v.Response.Headers, v.ErrorExpr.AttributeExpr, errctx, sd.Scope) {
-					args = append(args, &InitArgData{
-						Ref: h.VarName,
-						AttributeData: &AttributeData{
-							Name:         h.Name,
-							VarName:      h.VarName,
-							FieldName:    h.FieldName,
-							FieldPointer: false,
-							FieldType:    h.FieldType,
-							TypeRef:      h.TypeRef,
-							Type:         h.Type,
-							Validate:     h.Validate,
-							Example:      h.Example,
-						},
-					})
-				}
-				for _, c := range extractCookies(v.Response.Cookies, v.ErrorExpr.AttributeExpr, errctx, sd.Scope) {
-					args = append(args, &InitArgData{
-						Ref: c.VarName,
-						AttributeData: &AttributeData{
-							Name:         c.Name,
-							VarName:      c.VarName,
-							FieldName:    c.FieldName,
-							FieldPointer: false,
-							FieldType:    c.FieldType,
-							TypeRef:      c.TypeRef,
-							Type:         c.Type,
-							Validate:     c.Validate,
-							Example:      c.Example,
-						},
-					})
-				}
+				args = []*InitArgData{{
+					Ref:           ref,
+					AttributeData: &AttributeData{Name: "body", VarName: "body", TypeRef: sd.Scope.GoTypeRef(v.Response.Body)},
+				}}
+			}
+			for _, h := range extractHeaders(v.Response.Headers, v.ErrorExpr.AttributeExpr, errctx, sd.Scope) {
+				args = append(args, &InitArgData{
+					Ref: h.VarName,
+					AttributeData: &AttributeData{
+						Name:         h.Name,
+						VarName:      h.VarName,
+						FieldName:    h.FieldName,
+						FieldPointer: false,
+						FieldType:    h.FieldType,
+						TypeRef:      h.TypeRef,
+						Type:         h.Type,
+						Validate:     h.Validate,
+						Example:      h.Example,
+					},
+				})
+			}
+			for _, c := range extractCookies(v.Response.Cookies, v.ErrorExpr.AttributeExpr, errctx, sd.Scope) {
+				args = append(args, &InitArgData{
+					Ref: c.VarName,
+					AttributeData: &AttributeData{
+						Name:         c.Name,
+						VarName:      c.VarName,
+						FieldName:    c.FieldName,
+						FieldPointer: false,
+						FieldType:    c.FieldType,
+						TypeRef:      c.TypeRef,
+						Type:         c.Type,
+						Validate:     c.Validate,
+						Example:      c.Example,
+					},
+				})
 			}
 
 			var (
@@ -1826,33 +1809,31 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 				origin string
 				err    error
 			)
-			{
-				if body != expr.Empty {
-					eAtt := v.ErrorExpr.AttributeExpr
-					// If design uses Body("name") syntax then need to use payload
-					// attribute to transform.
-					if o, ok := v.Response.Body.Meta["origin:attribute"]; ok {
-						origin = o[0]
-						eAtt = expr.AsObject(v.ErrorExpr.Type).Attribute(origin)
-					}
+			if body != expr.Empty {
+				eAtt := v.ErrorExpr.AttributeExpr
+				// If design uses Body("name") syntax then need to use payload
+				// attribute to transform.
+				if o, ok := v.Response.Body.Meta["origin:attribute"]; ok {
+					origin = o[0]
+					eAtt = expr.AsObject(v.ErrorExpr.Type).Attribute(origin)
+				}
 
+				var helpers []*codegen.TransformFunctionData
+				code, helpers, err = unmarshal(v.Response.Body, eAtt, "body", "v", httpclictx, errctx)
+				if err == nil {
+					sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
+				}
+			} else if expr.IsArray(v.ErrorExpr.Type) || expr.IsMap(v.ErrorExpr.Type) {
+				if params := expr.AsObject(e.QueryParams().Type); len(*params) > 0 {
 					var helpers []*codegen.TransformFunctionData
-					code, helpers, err = unmarshal(v.Response.Body, eAtt, "body", "v", httpclictx, errctx)
+					code, helpers, err = unmarshal((*params)[0].Attribute, v.ErrorExpr.AttributeExpr, codegen.Goify((*params)[0].Name, false), "v", httpclictx, errctx)
 					if err == nil {
 						sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 					}
-				} else if expr.IsArray(v.ErrorExpr.Type) || expr.IsMap(v.ErrorExpr.Type) {
-					if params := expr.AsObject(e.QueryParams().Type); len(*params) > 0 {
-						var helpers []*codegen.TransformFunctionData
-						code, helpers, err = unmarshal((*params)[0].Attribute, v.ErrorExpr.AttributeExpr, codegen.Goify((*params)[0].Name, false), "v", httpclictx, errctx)
-						if err == nil {
-							sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
-						}
-					}
 				}
-				if err != nil {
-					fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
-				}
+			}
+			if err != nil {
+				fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 			}
 
 			init = &InitData{
@@ -1894,18 +1875,16 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 			headers := extractHeaders(v.Response.Headers, v.ErrorExpr.AttributeExpr, errctx, sd.Scope)
 			cookies := extractCookies(v.Response.Cookies, v.ErrorExpr.AttributeExpr, errctx, sd.Scope)
 			var mustValidate bool
-			{
-				for _, h := range headers {
-					if h.Validate != "" || h.Required || needConversion(h.Type) {
-						mustValidate = true
-						break
-					}
+			for _, h := range headers {
+				if h.Validate != "" || h.Required || needConversion(h.Type) {
+					mustValidate = true
+					break
 				}
-				for _, c := range cookies {
-					if c.Validate != "" || c.Required || needConversion(c.Type) {
-						mustValidate = true
-						break
-					}
+			}
+			for _, c := range cookies {
+				if c.Validate != "" || c.Required || needConversion(c.Type) {
+					mustValidate = true
+					break
 				}
 			}
 			var contentType string
@@ -1995,91 +1974,87 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 		pkg     = pkgWithDefault(ep.PayloadLoc, sd.Service.PkgName)
 		svcctx  = serviceContext(pkg, sd.Service.Scope)
 	)
-	{
-		name = body.Type.Name()
-		ref = sd.Scope.GoTypeRef(body)
+	name = body.Type.Name()
+	ref = sd.Scope.GoTypeRef(body)
 
-		AddMarshalTags(body, make(map[string]struct{}))
+	AddMarshalTags(body, make(map[string]struct{}))
 
-		if ut, ok := body.Type.(expr.UserType); ok {
-			varname = codegen.Goify(ut.Name(), true)
-			def = goTypeDef(sd.Scope, ut.Attribute(), svr, !svr)
-			desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP request body.",
-				varname, svc.Name, e.Name())
-			if svr {
-				// generate validation code for unmarshaled type (server-side).
-				validateDef = codegen.ValidationCode(ut.Attribute(), ut, httpctx, true, expr.IsAlias(ut), false, "body")
-				if validateDef != "" {
-					validateRef = fmt.Sprintf("err = Validate%s(&body)", varname)
-				}
+	if ut, ok := body.Type.(expr.UserType); ok {
+		varname = codegen.Goify(ut.Name(), true)
+		def = goTypeDef(sd.Scope, ut.Attribute(), svr, !svr)
+		desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP request body.",
+			varname, svc.Name, e.Name())
+		if svr {
+			// generate validation code for unmarshaled type (server-side).
+			validateDef = codegen.ValidationCode(ut.Attribute(), ut, httpctx, true, expr.IsAlias(ut), false, "body")
+			if validateDef != "" {
+				validateRef = fmt.Sprintf("err = Validate%s(&body)", varname)
 			}
-		} else {
-			if svr && expr.IsObject(body.Type) {
-				// Body is an explicit object described in the design and in
-				// this case the GoTypeRef is an inline struct definition. We
-				// want to force all attributes to be pointers because we are
-				// generating the server body type pre-validation.
-				body.Validation = nil
-			}
-			varname = sd.Scope.GoTypeRef(body)
-			ctx := codegen.NewAttributeContext(false, false, !svr, "", sd.Scope)
-			validateRef = codegen.ValidationCode(body, nil, ctx, true, expr.IsAlias(body.Type), false, "body")
-			desc = body.Description
 		}
+	} else {
+		if svr && expr.IsObject(body.Type) {
+			// Body is an explicit object described in the design and in
+			// this case the GoTypeRef is an inline struct definition. We
+			// want to force all attributes to be pointers because we are
+			// generating the server body type pre-validation.
+			body.Validation = nil
+		}
+		varname = sd.Scope.GoTypeRef(body)
+		ctx := codegen.NewAttributeContext(false, false, !svr, "", sd.Scope)
+		validateRef = codegen.ValidationCode(body, nil, ctx, true, expr.IsAlias(body.Type), false, "body")
+		desc = body.Description
 	}
 	var init *InitData
-	{
-		if !svr && att.Type != expr.Empty && needInit(body.Type) {
-			var (
-				name    string
-				desc    string
-				code    string
-				origin  string
-				err     error
-				helpers []*codegen.TransformFunctionData
+	if !svr && att.Type != expr.Empty && needInit(body.Type) {
+		var (
+			name    string
+			desc    string
+			code    string
+			origin  string
+			err     error
+			helpers []*codegen.TransformFunctionData
 
-				sourceVar = "p"
-				svc       = sd.Service
-			)
-			{
-				name = fmt.Sprintf("New%s", codegen.Goify(sd.Scope.GoTypeName(body), true))
-				desc = fmt.Sprintf("%s builds the HTTP request body from the payload of the %q endpoint of the %q service.",
-					name, e.Name(), svc.Name)
-				src := sourceVar
-				srcAtt := att
-				// If design uses Body("name") syntax then need to use payload attribute
-				// to transform.
-				if o, ok := body.Meta["origin:attribute"]; ok {
-					srcObj := expr.AsObject(att.Type)
-					origin = o[0]
-					srcAtt = srcObj.Attribute(origin)
-					src += "." + codegen.Goify(origin, true)
-				}
-				code, helpers, err = marshal(srcAtt, body, src, "body", svcctx, httpctx)
-				if err != nil {
-					fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
-				}
-				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
+			sourceVar = "p"
+			svc       = sd.Service
+		)
+		{
+			name = fmt.Sprintf("New%s", codegen.Goify(sd.Scope.GoTypeName(body), true))
+			desc = fmt.Sprintf("%s builds the HTTP request body from the payload of the %q endpoint of the %q service.",
+				name, e.Name(), svc.Name)
+			src := sourceVar
+			srcAtt := att
+			// If design uses Body("name") syntax then need to use payload attribute
+			// to transform.
+			if o, ok := body.Meta["origin:attribute"]; ok {
+				srcObj := expr.AsObject(att.Type)
+				origin = o[0]
+				srcAtt = srcObj.Attribute(origin)
+				src += "." + codegen.Goify(origin, true)
 			}
-			arg := InitArgData{
-				Ref: sourceVar,
-				AttributeData: &AttributeData{
-					Name:     "payload",
-					VarName:  sourceVar,
-					TypeRef:  svc.Scope.GoFullTypeRef(att, pkg),
-					Type:     att.Type,
-					Validate: validateDef,
-					Example:  att.Example(expr.Root.API.ExampleGenerator),
-				},
+			code, helpers, err = marshal(srcAtt, body, src, "body", svcctx, httpctx)
+			if err != nil {
+				fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
 			}
-			init = &InitData{
-				Name:                name,
-				Description:         desc,
-				ReturnTypeRef:       sd.Scope.GoTypeRef(body),
-				ReturnTypeAttribute: codegen.Goify(origin, true),
-				ClientCode:          code,
-				ClientArgs:          []*InitArgData{&arg},
-			}
+			sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
+		}
+		arg := InitArgData{
+			Ref: sourceVar,
+			AttributeData: &AttributeData{
+				Name:     "payload",
+				VarName:  sourceVar,
+				TypeRef:  svc.Scope.GoFullTypeRef(att, pkg),
+				Type:     att.Type,
+				Validate: validateDef,
+				Example:  att.Example(expr.Root.API.ExampleGenerator),
+			},
+		}
+		init = &InitData{
+			Name:                name,
+			Description:         desc,
+			ReturnTypeRef:       sd.Scope.GoTypeRef(body),
+			ReturnTypeAttribute: codegen.Goify(origin, true),
+			ClientCode:          code,
+			ClientArgs:          []*InitArgData{&arg},
 		}
 	}
 	return &TypeData{
@@ -2126,64 +2101,62 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location,
 		pkg     = pkgWithDefault(loc, sd.Service.PkgName)
 		svcctx  = serviceContext(pkg, sd.Service.Scope)
 	)
-	{
-		// For server code, we project the response body type if the type is a result
-		// type and generate a type for each view in the result type. This makes it
-		// possible to return only the attributes in the view in the server response.
-		if svr && view != nil && *view != "" {
-			viewName = *view
-			body = expr.DupAtt(body)
-			if rt, ok := body.Type.(*expr.ResultTypeExpr); ok {
-				var err error
-				rt, err = expr.Project(rt, *view)
-				if err != nil {
-					panic(err)
+	// For server code, we project the response body type if the type is a result
+	// type and generate a type for each view in the result type. This makes it
+	// possible to return only the attributes in the view in the server response.
+	if svr && view != nil && *view != "" {
+		viewName = *view
+		body = expr.DupAtt(body)
+		if rt, ok := body.Type.(*expr.ResultTypeExpr); ok {
+			var err error
+			rt, err = expr.Project(rt, *view)
+			if err != nil {
+				panic(err)
+			}
+			body.Type = rt
+			sd.ServerTypeNames[rt.Name()] = false
+		}
+	}
+
+	name = body.Type.Name()
+	ref = sd.Scope.GoTypeRef(body)
+	mustInit = att.Type != expr.Empty && needInit(body.Type)
+
+	AddMarshalTags(body, make(map[string]struct{}))
+
+	if ut, ok := body.Type.(expr.UserType); ok {
+		// response body is a user type.
+		varname = codegen.Goify(ut.Name(), true)
+		def = goTypeDef(sd.Scope, ut.Attribute(), !svr, svr)
+		desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
+			varname, svc.Name, e.Name())
+		if !svr && view == nil {
+			// generate validation code for unmarshaled type (client-side).
+			validateDef = codegen.ValidationCode(body, ut, httpctx, true, expr.IsAlias(body.Type), false, "body")
+			if validateDef != "" {
+				target := "&body"
+				if expr.IsArray(ut) {
+					// result type collection
+					target = "body"
 				}
-				body.Type = rt
-				sd.ServerTypeNames[rt.Name()] = false
+				validateRef = fmt.Sprintf("err = Validate%s(%s)", varname, target)
 			}
 		}
-
-		name = body.Type.Name()
-		ref = sd.Scope.GoTypeRef(body)
-		mustInit = att.Type != expr.Empty && needInit(body.Type)
-
-		AddMarshalTags(body, make(map[string]struct{}))
-
-		if ut, ok := body.Type.(expr.UserType); ok {
-			// response body is a user type.
-			varname = codegen.Goify(ut.Name(), true)
-			def = goTypeDef(sd.Scope, ut.Attribute(), !svr, svr)
-			desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
-				varname, svc.Name, e.Name())
-			if !svr && view == nil {
-				// generate validation code for unmarshaled type (client-side).
-				validateDef = codegen.ValidationCode(body, ut, httpctx, true, expr.IsAlias(body.Type), false, "body")
-				if validateDef != "" {
-					target := "&body"
-					if expr.IsArray(ut) {
-						// result type collection
-						target = "body"
-					}
-					validateRef = fmt.Sprintf("err = Validate%s(%s)", varname, target)
-				}
-			}
-		} else if !expr.IsPrimitive(body.Type) && mustInit {
-			// response body is an array or map type.
-			name = codegen.Goify(e.Name(), true) + "ResponseBody"
-			varname = name
-			desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
-				varname, svc.Name, e.Name())
-			def = goTypeDef(sd.Scope, body, !svr, svr)
-			validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), false, "body")
-		} else {
-			// response body is a primitive type. They are used as non-pointers when
-			// encoding/decoding responses.
-			httpctx = httpContext("", sd.Scope, false, true)
-			validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), false, "body")
-			varname = sd.Scope.GoTypeRef(body)
-			desc = body.Description
-		}
+	} else if !expr.IsPrimitive(body.Type) && mustInit {
+		// response body is an array or map type.
+		name = codegen.Goify(e.Name(), true) + "ResponseBody"
+		varname = name
+		desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
+			varname, svc.Name, e.Name())
+		def = goTypeDef(sd.Scope, body, !svr, svr)
+		validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), false, "body")
+	} else {
+		// response body is a primitive type. They are used as non-pointers when
+		// encoding/decoding responses.
+		httpctx = httpContext("", sd.Scope, false, true)
+		validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), false, "body")
+		varname = sd.Scope.GoTypeRef(body)
+		desc = body.Description
 	}
 	if svr {
 		sd.ServerTypeNames[name] = false
@@ -2197,82 +2170,79 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location,
 				sd.ServerBodyAttributeTypes = append(sd.ServerBodyAttributeTypes, d)
 			}
 		})
-
 	}
 
 	var init *InitData
-	{
-		if svr && mustInit {
-			var (
-				name    string
-				desc    string
-				rtref   string
-				code    string
-				origin  string
-				err     error
-				helpers []*codegen.TransformFunctionData
+	if svr && mustInit {
+		var (
+			name    string
+			desc    string
+			rtref   string
+			code    string
+			origin  string
+			err     error
+			helpers []*codegen.TransformFunctionData
 
-				sourceVar = "res"
-				svc       = sd.Service
-			)
-			{
-				var rtname string
-				if _, ok := body.Type.(expr.UserType); !ok && !expr.IsPrimitive(body.Type) {
-					rtname = codegen.Goify(e.Name(), true) + "ResponseBody"
-					rtref = rtname
-				} else {
-					rtname = codegen.Goify(sd.Scope.GoTypeName(body), true)
-					rtref = sd.Scope.GoTypeRef(body)
-				}
-				name = fmt.Sprintf("New%s", rtname)
-				desc = fmt.Sprintf("%s builds the HTTP response body from the result of the %q endpoint of the %q service.",
-					name, e.Name(), svc.Name)
-				if view != nil {
-					svcctx = viewContext(sd.Service.ViewsPkg, sd.Service.ViewScope)
-				}
-				src := sourceVar
-				srcAtt := att
-				// If design uses Body("name") syntax then need to use result attribute
-				// to transform.
-				if o, ok := body.Meta["origin:attribute"]; ok {
-					srcObj := expr.AsObject(att.Type)
-					origin = o[0]
-					srcAtt = srcObj.Attribute(origin)
-					src += "." + codegen.Goify(origin, true)
-				}
-				code, helpers, err = marshal(srcAtt, body, src, "body", svcctx, httpctx)
-				if err != nil {
-					panic(err) // bug
-				}
-				sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
+			sourceVar = "res"
+			svc       = sd.Service
+		)
+		{
+			var rtname string
+			if _, ok := body.Type.(expr.UserType); !ok && !expr.IsPrimitive(body.Type) {
+				rtname = codegen.Goify(e.Name(), true) + "ResponseBody"
+				rtref = rtname
+			} else {
+				rtname = codegen.Goify(sd.Scope.GoTypeName(body), true)
+				rtref = sd.Scope.GoTypeRef(body)
 			}
-			ref := sourceVar
+			name = fmt.Sprintf("New%s", rtname)
+			desc = fmt.Sprintf("%s builds the HTTP response body from the result of the %q endpoint of the %q service.",
+				name, e.Name(), svc.Name)
 			if view != nil {
-				ref += ".Projected"
+				svcctx = viewContext(sd.Service.ViewsPkg, sd.Service.ViewScope)
 			}
-			tref := svc.Scope.GoFullTypeRef(att, pkg)
-			if view != nil {
-				tref = svc.ViewScope.GoFullTypeRef(att, svc.ViewsPkg)
+			src := sourceVar
+			srcAtt := att
+			// If design uses Body("name") syntax then need to use result attribute
+			// to transform.
+			if o, ok := body.Meta["origin:attribute"]; ok {
+				srcObj := expr.AsObject(att.Type)
+				origin = o[0]
+				srcAtt = srcObj.Attribute(origin)
+				src += "." + codegen.Goify(origin, true)
 			}
-			arg := InitArgData{
-				Ref: ref,
-				AttributeData: &AttributeData{
-					Name:     "result",
-					VarName:  sourceVar,
-					TypeRef:  tref,
-					Type:     att.Type,
-					Validate: validateDef,
-					Example:  att.Example(expr.Root.API.ExampleGenerator),
-				},
+			code, helpers, err = marshal(srcAtt, body, src, "body", svcctx, httpctx)
+			if err != nil {
+				panic(err) // bug
 			}
-			init = &InitData{
-				Name:                name,
-				Description:         desc,
-				ReturnTypeRef:       rtref,
-				ReturnTypeAttribute: codegen.Goify(origin, true),
-				ServerCode:          code,
-				ServerArgs:          []*InitArgData{&arg},
-			}
+			sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
+		}
+		ref := sourceVar
+		if view != nil {
+			ref += ".Projected"
+		}
+		tref := svc.Scope.GoFullTypeRef(att, pkg)
+		if view != nil {
+			tref = svc.ViewScope.GoFullTypeRef(att, svc.ViewsPkg)
+		}
+		arg := InitArgData{
+			Ref: ref,
+			AttributeData: &AttributeData{
+				Name:     "result",
+				VarName:  sourceVar,
+				TypeRef:  tref,
+				Type:     att.Type,
+				Validate: validateDef,
+				Example:  att.Example(expr.Root.API.ExampleGenerator),
+			},
+		}
+		init = &InitData{
+			Name:                name,
+			Description:         desc,
+			ReturnTypeRef:       rtref,
+			ReturnTypeAttribute: codegen.Goify(origin, true),
+			ServerCode:          code,
+			ServerArgs:          []*InitArgData{&arg},
 		}
 	}
 	return &TypeData{
@@ -2422,14 +2392,12 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 		}
 		var hattr *expr.AttributeExpr
 		var stringSlice bool
-		{
-			// The StringSlice field of ParamData must be false for aliased primitive types
-			if arr := expr.AsArray(attr.Type); arr != nil {
-				stringSlice = arr.ElemType.Type.Kind() == expr.StringKind
-			}
-
-			hattr = makeHTTPType(attr)
+		// The StringSlice field of ParamData must be false for aliased primitive types
+		if arr := expr.AsArray(attr.Type); arr != nil {
+			stringSlice = arr.ElemType.Type.Kind() == expr.StringKind
 		}
+
+		hattr = makeHTTPType(attr)
 		var (
 			varn    = scope.Name(codegen.Goify(name, false))
 			arr     = expr.AsArray(hattr.Type)
@@ -2440,15 +2408,13 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 			pointer   bool
 			fptr      bool
 		)
-		{
-			pointer = a.IsPrimitivePointer(name, true)
-			if expr.IsObject(svcAtt.Type) {
-				fieldName = codegen.GoifyAtt(attr, name, true)
-				fptr = svcCtx.IsPrimitivePointer(name, svcAtt)
-			}
-			if pointer {
-				typeRef = "*" + typeRef
-			}
+		pointer = a.IsPrimitivePointer(name, true)
+		if expr.IsObject(svcAtt.Type) {
+			fieldName = codegen.GoifyAtt(attr, name, true)
+			fptr = svcCtx.IsPrimitivePointer(name, svcAtt)
+		}
+		if pointer {
+			typeRef = "*" + typeRef
 		}
 		headers = append(headers, &HeaderData{
 			CanonicalName: http.CanonicalHeaderKey(elem),
@@ -2484,12 +2450,10 @@ func extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 	var cookies []*CookieData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, _ *expr.AttributeExpr) error { // nolint: errcheck
 		var hattr *expr.AttributeExpr
-		{
-			if hattr = svcAtt.Find(name); hattr == nil {
-				hattr = svcAtt
-			}
-			hattr = makeHTTPType(hattr)
+		if hattr = svcAtt.Find(name); hattr == nil {
+			hattr = svcAtt
 		}
+		hattr = makeHTTPType(hattr)
 		var (
 			varn    = scope.Name(codegen.Goify(name, false))
 			typeRef = scope.GoTypeRef(hattr)
@@ -2499,16 +2463,14 @@ func extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 			pointer   bool
 			fptr      bool
 		)
-		{
-			pointer = a.IsPrimitivePointer(name, true)
-			if expr.IsObject(svcAtt.Type) {
-				fieldName = codegen.GoifyAtt(hattr, name, true)
-				fptr = svcCtx.IsPrimitivePointer(name, svcAtt)
-				ft = svcAtt.Find(name).Type
-			}
-			if pointer {
-				typeRef = "*" + typeRef
-			}
+		pointer = a.IsPrimitivePointer(name, true)
+		if expr.IsObject(svcAtt.Type) {
+			fieldName = codegen.GoifyAtt(hattr, name, true)
+			fptr = svcCtx.IsPrimitivePointer(name, svcAtt)
+			ft = svcAtt.Find(name).Type
+		}
+		if pointer {
+			typeRef = "*" + typeRef
 		}
 		c := &CookieData{
 			Element: &Element{
@@ -2617,21 +2579,19 @@ func attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData)
 		att  = &expr.AttributeExpr{Type: ut}
 		hctx = httpContext("", rd.Scope, req, server)
 	)
-	{
-		name = rd.Scope.GoTypeName(att)
-		ctx := "request"
-		if !req {
-			ctx = "response"
-		}
-		desc = name + " is used to define fields on " + ctx + " body types."
-		if req || !req && !server {
-			// generate validations for responses client-side and for
-			// requests server-side and CLI
-			validate = codegen.ValidationCode(ut.Attribute(), ut, hctx, true, expr.IsAlias(ut), false, "body")
-		}
-		if validate != "" {
-			validateRef = fmt.Sprintf("err = Validate%s(v)", name)
-		}
+	name = rd.Scope.GoTypeName(att)
+	ctx := "request"
+	if !req {
+		ctx = "response"
+	}
+	desc = name + " is used to define fields on " + ctx + " body types."
+	if req || !req && !server {
+		// generate validations for responses client-side and for
+		// requests server-side and CLI
+		validate = codegen.ValidationCode(ut.Attribute(), ut, hctx, true, expr.IsAlias(ut), false, "body")
+	}
+	if validate != "" {
+		validateRef = fmt.Sprintf("err = Validate%s(v)", name)
 	}
 	return &TypeData{
 		Name:        ut.Name(),

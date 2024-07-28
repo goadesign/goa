@@ -247,7 +247,7 @@ func ResultTypeRefWithPrefix(api *expr.APIExpr, mt *expr.ResultTypeExpr, view, p
 		if metaName != "" {
 			projected.TypeName = metaName
 		}
-		GenerateResultTypeDefinition(api, projected, "default")
+		GenerateResultTypeDefinition(api, projected, expr.DefaultView)
 	}
 	return fmt.Sprintf("#/definitions/%s", projected.TypeName)
 }

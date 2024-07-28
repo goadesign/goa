@@ -243,21 +243,21 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 		}
 	}
 
-	if views, ok := a.Meta["view"]; ok {
+	if view, ok := a.Meta.Last(ViewMetaKey); ok {
 		rt, ok := a.Type.(*ResultTypeExpr)
 		if !ok {
-			verr.Add(parent, "%s uses view %q but %q is not a result type", ctx, views[0], a.Type.Name())
+			verr.Add(parent, "%s uses view %q but %q is not a result type", ctx, view, a.Type.Name())
 		}
-		if name := views[0]; name != "default" && rt != nil {
+		if view != DefaultView && rt != nil {
 			found := false
 			for _, v := range rt.Views {
-				if v.Name == name {
+				if v.Name == view {
 					found = true
 					break
 				}
 			}
 			if !found {
-				verr.Add(parent, "%s: type %q does not define view %q", ctx, a.Type.Name(), name)
+				verr.Add(parent, "%s: type %q does not define view %q", ctx, a.Type.Name(), view)
 			}
 		}
 	}
@@ -297,8 +297,12 @@ func (a *AttributeExpr) Finalize() {
 		return // Avoid infinite recursion.
 	}
 	a.finalized = true
+	var pkgPath string
 	if ut, ok := a.Type.(UserType); ok {
 		ut.Finalize()
+		if meta, ok := ut.Attribute().Meta["struct:pkg:path"]; ok {
+			pkgPath = meta[0]
+		}
 	}
 	switch {
 	case IsObject(a.Type):
@@ -315,12 +319,6 @@ func (a *AttributeExpr) Finalize() {
 				continue
 			}
 			a.Merge(ru.Attribute())
-		}
-		var pkgPath string
-		if ut, ok := a.Type.(UserType); ok {
-			if meta, ok := ut.Attribute().Meta["struct:pkg:path"]; ok {
-				pkgPath = meta[0]
-			}
 		}
 		for _, nat := range *AsObject(a.Type) {
 			if pkgPath != "" {
