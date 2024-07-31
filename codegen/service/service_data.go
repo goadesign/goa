@@ -1189,11 +1189,11 @@ func BuildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 // just result types - because user types make contain result types and thus may
 // need to be marshalled in different ways depending on the view being used.
 func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, scope, viewScope *codegen.NameScope, seen map[string]*ProjectedTypeData) (data []*ProjectedTypeData, umeths []*UnionValueMethodData) {
-	collect := func(projected, att *expr.AttributeExpr) ([]*ProjectedTypeData, []*UnionValueMethodData) {
-		return collectProjectedTypes(projected, att, viewspkg, scope, viewScope, seen)
-	}
 	if !hasResultType(att) {
 		return
+	}
+	collect := func(projected, att *expr.AttributeExpr) ([]*ProjectedTypeData, []*UnionValueMethodData) {
+		return collectProjectedTypes(projected, att, viewspkg, scope, viewScope, seen)
 	}
 	switch pt := projected.Type.(type) {
 	case expr.UserType:
