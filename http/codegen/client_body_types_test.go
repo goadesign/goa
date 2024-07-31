@@ -236,7 +236,7 @@ const ExplicitBodyUserResultMultipleViewsInitCode = `// NewMethodExplicitBodyUse
 // "MethodExplicitBodyUserResultMultipleView" endpoint result from a HTTP "OK"
 // response.
 func NewMethodExplicitBodyUserResultMultipleViewResulttypemultipleviewsOK(body *MethodExplicitBodyUserResultMultipleViewResponseBody, c *string) *serviceexplicitbodyuserresultmultipleviewviews.ResulttypemultipleviewsView {
-	v := &serviceexplicitbodyuserresultmultipleviewviews.UserTypeView{
+	v := &serviceexplicitbodyuserresultmultipleviewviews.UserType{
 		X: body.X,
 		Y: body.Y,
 	}
@@ -256,7 +256,7 @@ const ExplicitBodyObjectInitCode = `// NewMethodExplicitBodyUserResultObjectResu
 func NewMethodExplicitBodyUserResultObjectResulttypeOK(body *MethodExplicitBodyUserResultObjectResponseBody, c *string, b *string) *serviceexplicitbodyuserresultobjectviews.ResulttypeView {
 	v := &serviceexplicitbodyuserresultobjectviews.ResulttypeView{}
 	if body.A != nil {
-		v.A = unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectviewsUserTypeView(body.A)
+		v.A = unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectviewsUserType(body.A)
 	}
 	v.C = c
 	v.B = b
@@ -272,7 +272,7 @@ const ExplicitBodyObjectViewsInitCode = `// NewMethodExplicitBodyUserResultObjec
 func NewMethodExplicitBodyUserResultObjectMultipleViewResulttypemultipleviewsOK(body *MethodExplicitBodyUserResultObjectMultipleViewResponseBody, c *string) *serviceexplicitbodyuserresultobjectmultipleviewviews.ResulttypemultipleviewsView {
 	v := &serviceexplicitbodyuserresultobjectmultipleviewviews.ResulttypemultipleviewsView{}
 	if body.A != nil {
-		v.A = unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectmultipleviewviewsUserTypeView(body.A)
+		v.A = unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectmultipleviewviewsUserType(body.A)
 	}
 	v.C = c
 
