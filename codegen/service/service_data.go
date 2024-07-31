@@ -1189,6 +1189,9 @@ func BuildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 // just result types - because user types make contain result types and thus may
 // need to be marshalled in different ways depending on the view being used.
 func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, scope, viewScope *codegen.NameScope, seen map[string]*ProjectedTypeData) (data []*ProjectedTypeData, umeths []*UnionValueMethodData) {
+	if !hasResultType(att) {
+		return
+	}
 	collect := func(projected, att *expr.AttributeExpr) ([]*ProjectedTypeData, []*UnionValueMethodData) {
 		return collectProjectedTypes(projected, att, viewspkg, scope, viewScope, seen)
 	}
@@ -1251,6 +1254,44 @@ func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, 
 		}
 	}
 	return
+}
+
+// hasResultType returns true if the given attribute has a result type recursively.
+func hasResultType(att *expr.AttributeExpr, seens ...map[string]struct{}) bool {
+	if _, ok := att.Type.(*expr.ResultTypeExpr); ok {
+		return true
+	}
+	var seen map[string]struct{}
+	if len(seens) > 0 {
+		seen = seens[0]
+	} else {
+		seen = make(map[string]struct{})
+	}
+	switch a := att.Type.(type) {
+	case expr.UserType:
+		if _, ok := seen[a.ID()]; ok {
+			return false
+		}
+		seen[a.ID()] = struct{}{}
+		return hasResultType(a.Attribute(), seen)
+	case *expr.Array:
+		return hasResultType(a.ElemType, seen)
+	case *expr.Map:
+		return hasResultType(a.KeyType, seen) || hasResultType(a.ElemType, seen)
+	case *expr.Object:
+		for _, nat := range *a {
+			if hasResultType(nat.Attribute, seen) {
+				return true
+			}
+		}
+	case *expr.Union:
+		for _, nat := range a.Values {
+			if hasResultType(nat.Attribute, seen) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // buildProjectedType builds projected type for the given user type.

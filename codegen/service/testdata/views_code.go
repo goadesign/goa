@@ -175,13 +175,8 @@ type ResultType struct {
 
 // ResultTypeView is a type that runs validations on a projected type.
 type ResultTypeView struct {
-	A *UserTypeView
+	A *UserType
 	B *string
-}
-
-// UserTypeView is a type that runs validations on a projected type.
-type UserTypeView struct {
-	A *string
 }
 
 var (
@@ -229,12 +224,6 @@ func ValidateResultTypeViewTiny(result *ResultTypeView) (err error) {
 	}
 	return
 }
-
-// ValidateUserTypeView runs the validations defined on UserTypeView.
-func ValidateUserTypeView(result *UserTypeView) (err error) {
-
-	return
-}
 `
 
 const ResultWithResultTypeCode = `// RT is the viewed result type that is projected based on a view.
@@ -255,19 +244,14 @@ type RTView struct {
 // RT2View is a type that runs validations on a projected type.
 type RT2View struct {
 	C *string
-	D *UserTypeView
+	D *UserType
 	E *string
-}
-
-// UserTypeView is a type that runs validations on a projected type.
-type UserTypeView struct {
-	P *string
 }
 
 // RT3View is a type that runs validations on a projected type.
 type RT3View struct {
 	X []string
-	Y map[int]*UserTypeView
+	Y map[int]*UserType
 	Z *string
 }
 
@@ -388,12 +372,6 @@ func ValidateRT2ViewTiny(result *RT2View) (err error) {
 	if result.D == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("d", "result"))
 	}
-	return
-}
-
-// ValidateUserTypeView runs the validations defined on UserTypeView.
-func ValidateUserTypeView(result *UserTypeView) (err error) {
-
 	return
 }
 
@@ -763,11 +741,8 @@ type Result struct {
 
 // ResultView is a type that runs validations on a projected type.
 type ResultView struct {
-	T []UserTypeView
+	T []UserType
 }
-
-// UserTypeView is a type that runs validations on a projected type.
-type UserTypeView string
 
 var (
 	// ResultMap is a map indexing the attribute names of Result by view name.
@@ -799,14 +774,6 @@ func ValidateResultView(result *ResultView) (err error) {
 	}
 	return
 }
-
-// ValidateUserTypeView runs the validations defined on UserTypeView.
-func ValidateUserTypeView(result UserTypeView) (err error) {
-	if !(string(result) == "a" || string(result) == "b") {
-		err = goa.MergeErrors(err, goa.InvalidEnumValueError("result", string(result), []any{"a", "b"}))
-	}
-	return
-}
 `
 
 const ResultWithPkgPathCode = `// RT is the viewed result type that is projected based on a view.
@@ -819,12 +786,7 @@ type RT struct {
 
 // RTView is a type that runs validations on a projected type.
 type RTView struct {
-	A *UserTypeView
-}
-
-// UserTypeView is a type that runs validations on a projected type.
-type UserTypeView struct {
-	A *string
+	A *UserType
 }
 
 var (
@@ -850,12 +812,6 @@ func ValidateRT(result *RT) (err error) {
 // ValidateRTView runs the validations defined on RTView using the "default"
 // view.
 func ValidateRTView(result *RTView) (err error) {
-
-	return
-}
-
-// ValidateUserTypeView runs the validations defined on UserTypeView.
-func ValidateUserTypeView(result *UserTypeView) (err error) {
 
 	return
 }
