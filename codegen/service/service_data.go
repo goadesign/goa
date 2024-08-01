@@ -613,9 +613,11 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 			collectUserTypes(m.StreamingPayload)
 			collectUserTypes(m.Result)
 			// Collect projected types
-			types, umeths := collectProjectedTypes(expr.DupAtt(m.Result), m.Result, viewspkg, scope, viewScope, seenProj)
-			projTypes = append(projTypes, types...)
-			viewedUnionMeths = append(viewedUnionMeths, umeths...)
+			if hasResultType(m.Result) {
+				types, umeths := collectProjectedTypes(expr.DupAtt(m.Result), m.Result, viewspkg, scope, viewScope, seenProj)
+				projTypes = append(projTypes, types...)
+				viewedUnionMeths = append(viewedUnionMeths, umeths...)
+			}
 			for _, er := range m.Errors {
 				recordError(er)
 			}
@@ -1189,9 +1191,6 @@ func BuildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 // just result types - because user types make contain result types and thus may
 // need to be marshalled in different ways depending on the view being used.
 func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, scope, viewScope *codegen.NameScope, seen map[string]*ProjectedTypeData) (data []*ProjectedTypeData, umeths []*UnionValueMethodData) {
-	if !hasResultType(att) {
-		return
-	}
 	collect := func(projected, att *expr.AttributeExpr) ([]*ProjectedTypeData, []*UnionValueMethodData) {
 		return collectProjectedTypes(projected, att, viewspkg, scope, viewScope, seen)
 	}
