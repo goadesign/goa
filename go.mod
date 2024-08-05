@@ -4,7 +4,7 @@ go 1.21.0
 
 require (
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598
-	github.com/getkin/kin-openapi v0.126.0
+	github.com/getkin/kin-openapi v0.127.0
 	github.com/go-chi/chi/v5 v5.1.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
