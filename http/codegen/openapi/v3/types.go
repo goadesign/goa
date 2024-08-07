@@ -230,11 +230,10 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			name = n[0]
 		}
 		goName := codegen.Goify(name, true)
-		typeName := sf.uniquify(goName)
-		metaRef := toRef(metaName)
+		uniqueName := sf.uniquify(goName)
 
 		// We'll use this as a hash to identify similar types.
-		h := typeName
+		h := uniqueName
 
 		// If this type was named in the design, we don't want to use a unique
 		// name every time we see it.
@@ -243,6 +242,8 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 				h = goName
 			}
 		}
+
+		metaRef := toRef(metaName)
 
 		// If it is named, it refers to the same structure and name.
 		// If it is not named, it refers to the same structure.
@@ -255,9 +256,9 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 				}
 			}
 		}
-		s.Ref = toRef(typeName)
+		s.Ref = toRef(uniqueName)
 		sf.hashes[h] = append(sf.hashes[h], s.Ref)
-		sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
+		sf.schemas[uniqueName] = sf.schemafy(t.Attribute(), true)
 		return s // All other schema properties are set in the reference
 	default:
 		panic(fmt.Sprintf("unknown type %T", t)) // bug
