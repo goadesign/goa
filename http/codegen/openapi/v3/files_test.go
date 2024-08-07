@@ -32,6 +32,7 @@ func TestFiles(t *testing.T) {
 		DSL  func()
 	}{
 		// TestSections
+		{"aliased-types-service", testdata.AliasedTypesDSL},
 		{"file-service", testdata.FileServiceDSL},
 		{"file-service-swagger", testdata.FileServiceSwaggerDSL},
 		{"valid", testdata.SimpleDSL},

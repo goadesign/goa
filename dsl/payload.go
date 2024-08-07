@@ -1,8 +1,6 @@
 package dsl
 
 import (
-	"fmt"
-
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 )
@@ -81,13 +79,6 @@ func Payload(val any, args ...any) {
 		return
 	}
 
-	// Set the result openapi:typename key explicitly from the method name
-	if v, ok := val.(expr.UserType); ok {
-		if v.Attribute().Meta == nil {
-			v.Attribute().Meta = make(expr.MetaExpr)
-		}
-		v.Attribute().Meta.Merge(expr.MetaExpr{"openapi:typename": []string{fmt.Sprintf("%sRequestBody", e.Name)}})
-	}
 	e.Payload = methodDSL(e, "Payload", val, args...)
 
 }

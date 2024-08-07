@@ -17,7 +17,7 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/TestEndpointRequestBody'
+                            $ref: '#/components/schemas/Bar'
                         example:
                             string: ""
             responses:
@@ -47,13 +47,21 @@ paths:
                                 foo: ""
 components:
     schemas:
+        Bar:
+            type: object
+            properties:
+                string:
+                    type: string
+                    example: ""
+            example:
+                string: ""
         FooBar:
             type: object
             properties:
                 bar:
                     type: array
                     items:
-                        $ref: '#/components/schemas/TestEndpointRequestBody'
+                        $ref: '#/components/schemas/Bar'
                     example:
                         - string: ""
                         - string: ""
@@ -67,13 +75,5 @@ components:
                     - string: ""
                     - string: ""
                 foo: ""
-        TestEndpointRequestBody:
-            type: object
-            properties:
-                string:
-                    type: string
-                    example: ""
-            example:
-                string: ""
 tags:
     - name: test service

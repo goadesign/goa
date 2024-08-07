@@ -1,1 +1,105 @@
-{"openapi":"3.0.3","info":{"title":"Goa API","version":"0.0.1"},"servers":[{"url":"http://localhost:80","description":"Default server for test api"}],"paths":{"/":{"get":{"tags":["testService"],"summary":"testEndpointDefault testService","operationId":"testService#testEndpointDefault","responses":{"200":{"description":"OK response.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TestEndpointDefaultResponseBody"},"example":{"int":1,"string":""}}}}}}},"/tiny":{"get":{"tags":["testService"],"summary":"testEndpointTiny testService","operationId":"testService#testEndpointTiny","responses":{"200":{"description":"OK response.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/TestEndpointTinyResponseBodyTiny"},"example":{"string":""}}}}}}}},"components":{"schemas":{"TestEndpointDefaultResponseBody":{"type":"object","properties":{"int":{"type":"integer","example":1,"format":"int64"},"string":{"type":"string","example":""}},"description":"TestEndpointDefaultResponseBody result type (default view)","example":{"int":1,"string":""}},"TestEndpointTinyResponseBodyTiny":{"type":"object","properties":{"string":{"type":"string","example":""}},"description":"TestEndpointTinyResponseBody result type (tiny view)","example":{"string":""}}}},"tags":[{"name":"testService"}]}
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:80",
+      "description": "Default server for test api"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [
+          "testService"
+        ],
+        "summary": "testEndpointDefault testService",
+        "operationId": "testService#testEndpointDefault",
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestEndpointDefaultResponseBody"
+                },
+                "example": {
+                  "int": 1,
+                  "string": ""
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/tiny": {
+      "get": {
+        "tags": [
+          "testService"
+        ],
+        "summary": "testEndpointTiny testService",
+        "operationId": "testService#testEndpointTiny",
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestEndpointTinyResponseBodyTiny"
+                },
+                "example": {
+                  "string": ""
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "TestEndpointDefaultResponseBody": {
+        "type": "object",
+        "properties": {
+          "int": {
+            "type": "integer",
+            "example": 1,
+            "format": "int64"
+          },
+          "string": {
+            "type": "string",
+            "example": ""
+          }
+        },
+        "description": "TestEndpointDefaultResponseBody result type (default view)",
+        "example": {
+          "int": 1,
+          "string": ""
+        }
+      },
+      "TestEndpointTinyResponseBodyTiny": {
+        "type": "object",
+        "properties": {
+          "string": {
+            "type": "string",
+            "example": ""
+          }
+        },
+        "description": "TestEndpointTinyResponseBody result type (tiny view)",
+        "example": {
+          "string": ""
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "testService"
+    }
+  ]
+}

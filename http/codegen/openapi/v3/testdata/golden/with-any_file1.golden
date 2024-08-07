@@ -33,11 +33,10 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/TestEndpointRequestBody'
+                                $ref: '#/components/schemas/TestEndpointResponseBody'
                             example:
                                 any: ""
                                 any_array:
-                                    - ""
                                     - ""
                                     - ""
                                 any_map:
@@ -66,6 +65,33 @@ components:
             example:
                 any: ""
                 any_array:
+                    - ""
+                    - ""
+                any_map:
+                    "": ""
+        TestEndpointResponseBody:
+            type: object
+            properties:
+                any:
+                    example: ""
+                any_array:
+                    type: array
+                    items:
+                        example: ""
+                    example:
+                        - ""
+                        - ""
+                        - ""
+                        - ""
+                any_map:
+                    type: object
+                    example:
+                        "": ""
+                    additionalProperties: true
+            example:
+                any: ""
+                any_array:
+                    - ""
                     - ""
                     - ""
                 any_map:

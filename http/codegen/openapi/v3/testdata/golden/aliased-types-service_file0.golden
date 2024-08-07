@@ -1,0 +1,145 @@
+{
+  "components": {
+    "schemas": {
+      "Result1": {
+        "example": {
+          "baz": "Consequatur delectus accusantium quaerat earum ratione."
+        },
+        "properties": {
+          "baz": {
+            "example": "Qui rem qui earum.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Result2": {
+        "example": {
+          "foobar": "Eum laboriosam."
+        },
+        "properties": {
+          "foobar": {
+            "example": "Nostrum et eum et labore veritatis similique.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Payload1": {
+        "example": {
+          "foo": "Aut sed ducimus repudiandae sit explicabo asperiores."
+        },
+        "properties": {
+          "foo": {
+            "example": "Beatae non id consequatur.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Payload2": {
+        "example": {
+          "bar": "Vitae magni repellat minus minus dolor repellat."
+        },
+        "properties": {
+          "bar": {
+            "example": "Quas aut maxime aut non enim ullam.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/one": {
+      "get": {
+        "operationId": "testService#testEndpoint1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "foo": "Dicta sunt officia."
+              },
+              "schema": {
+                "$ref": "#/components/schemas/Payload1"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "baz": "Voluptas sed et esse quod eligendi ut."
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Result1"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "testEndpoint1 testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    },
+    "/two": {
+      "get": {
+        "operationId": "testService#testEndpoint2",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "bar": "Culpa cumque repudiandae asperiores assumenda."
+              },
+              "schema": {
+                "$ref": "#/components/schemas/Payload2"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "foobar": "Exercitationem quos accusamus sunt vel sed reprehenderit."
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Result2"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "testEndpoint2 testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://goa.design"
+    }
+  ],
+  "tags": [
+    {
+      "name": "testService"
+    }
+  ]
+}

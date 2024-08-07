@@ -194,6 +194,8 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		if m, ok := t.Attribute().Meta["openapi:typename"]; ok {
 			ut.AttributeExpr.AddMeta("openapi:typename", m...)
 		}
+		// If it's a user type we want to remember the original name so we can use it in the OpenAPI spec.
+		ut.AttributeExpr.AddMeta("name:original", t.Name())
 	}
 
 	return &AttributeExpr{

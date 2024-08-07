@@ -15,7 +15,7 @@ paths:
                         example:
                             string: ""
                         schema:
-                            $ref: '#/components/schemas/TestEndpointRequestBody'
+                            $ref: '#/components/schemas/Payload'
                 required: true
             responses:
                 "200":
@@ -24,7 +24,7 @@ paths:
                             example:
                                 string: ""
                             schema:
-                                $ref: '#/components/schemas/TestEndpointRequestBody'
+                                $ref: '#/components/schemas/Result'
                     description: OK response.
             summary: testEndpoint testService
             tags:
@@ -33,13 +33,22 @@ paths:
         x-test-foo: bar
 components:
     schemas:
-        TestEndpointRequestBody:
+        Payload:
             type: object
             properties:
                 string:
                     example: ""
                     type: string
                     x-test-schema: Payload
+            example:
+                string: ""
+        Result:
+            type: object
+            properties:
+                string:
+                    example: ""
+                    type: string
+                    x-test-schema: Result
             example:
                 string: ""
 tags:

@@ -1,8 +1,6 @@
 package dsl
 
 import (
-	"fmt"
-
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 )
@@ -82,13 +80,7 @@ func Result(val any, args ...any) {
 		eval.IncompatibleDSL()
 		return
 	}
-	// Set the result openapi:typename key explicitly from the method name
-	if v, ok := val.(expr.UserType); ok {
-		if v.Attribute().Meta == nil {
-			v.Attribute().Meta = make(expr.MetaExpr)
-		}
-		v.Attribute().Meta.Merge(expr.MetaExpr{"openapi:typename": []string{fmt.Sprintf("%sRequestBody", e.Name)}})
-	}
+
 	e.Result = methodDSL(e, "Result", val, args...)
 }
 

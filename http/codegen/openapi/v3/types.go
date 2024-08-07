@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"hash"
-	"hash/fnv"
 	"strconv"
 	"strings"
 
@@ -33,7 +32,7 @@ type (
 		// type schemas indexed by ref
 		schemas map[string]*openapi.Schema
 		// type names indexed by hashes
-		hashes map[uint64][]string
+		hashes map[string][]string
 		rand   *expr.ExampleGenerator
 	}
 )
@@ -42,7 +41,7 @@ type (
 func newSchemafier(rand *expr.ExampleGenerator) *schemafier {
 	return &schemafier{
 		schemas: make(map[string]*openapi.Schema),
-		hashes:  make(map[uint64][]string),
+		hashes:  make(map[string][]string),
 		rand:    rand,
 	}
 }
@@ -217,13 +216,33 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		if expr.IsAlias(t) {
 			return sf.schemafy(t.Attribute())
 		}
-		h := sf.hashAttribute(attr, fnv.New64())
 
 		var metaName string
 		if n, ok := t.Attribute().Meta["openapi:typename"]; ok {
 			metaName = codegen.Goify(n[0], true)
 		}
+
+		// There is no type to refer to, generate a new one.
+		name := t.Name()
+		if metaName != "" {
+			name = metaName
+		} else if n, ok := t.Attribute().Meta["name:original"]; ok {
+			name = n[0]
+		}
+		goName := codegen.Goify(name, true)
+		typeName := sf.uniquify(goName)
 		metaRef := toRef(metaName)
+
+		// We'll use this as a hash to identify similar types.
+		h := typeName
+
+		// If this type was named in the design, we don't want to use a unique
+		// name every time we see it.
+		if t.Attribute().Meta != nil {
+			if _, ok := t.Attribute().Meta.Last("name:original"); ok {
+				h = goName
+			}
+		}
 
 		// If it is named, it refers to the same structure and name.
 		// If it is not named, it refers to the same structure.
@@ -236,16 +255,6 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 				}
 			}
 		}
-
-		// There is no type to refer to, generate a new one.
-		name := t.Name()
-		if metaName != "" {
-			name = metaName
-		} else if n, ok := t.Attribute().Meta["name:original"]; ok {
-			name = n[0]
-		}
-
-		typeName := sf.uniquify(codegen.Goify(name, true))
 		s.Ref = toRef(typeName)
 		sf.hashes[h] = append(sf.hashes[h], s.Ref)
 		sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)

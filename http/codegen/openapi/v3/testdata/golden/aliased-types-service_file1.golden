@@ -1,0 +1,89 @@
+openapi: 3.0.3
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: https://goa.design
+paths:
+    /one:
+        get:
+            tags:
+                - testService
+            summary: testEndpoint1 testService
+            operationId: testService#testEndpoint1
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/Payload1'
+                        example:
+                            foo: Dicta sunt officia.
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Result1'
+                            example:
+                                baz: Voluptas sed et esse quod eligendi ut.
+    /two:
+        get:
+            tags:
+                - testService
+            summary: testEndpoint2 testService
+            operationId: testService#testEndpoint2
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/Payload2'
+                        example:
+                            bar: Culpa cumque repudiandae asperiores assumenda.
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Result2'
+                            example:
+                                foobar: Exercitationem quos accusamus sunt vel sed reprehenderit.
+components:
+    schemas:
+        Payload1:
+            type: object
+            properties:
+                foo:
+                    type: string
+                    example: Beatae non id consequatur.
+            example:
+                foo: Aut sed ducimus repudiandae sit explicabo asperiores.
+        Payload2:
+            type: object
+            properties:
+                bar:
+                    type: string
+                    example: Quas aut maxime aut non enim ullam.
+            example:
+                bar: Vitae magni repellat minus minus dolor repellat.
+        Result1:
+            type: object
+            properties:
+                baz:
+                    type: string
+                    example: Qui rem qui earum.
+            example:
+                baz: Consequatur delectus accusantium quaerat earum ratione.
+        Result2:
+            type: object
+            properties:
+                foobar:
+                    type: string
+                    example: Nostrum et eum et labore veritatis similique.
+            example:
+                foobar: Eum laboriosam.
+tags:
+    - name: testService

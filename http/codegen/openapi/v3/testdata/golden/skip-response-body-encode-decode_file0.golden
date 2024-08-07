@@ -1,1 +1,71 @@
-{"openapi":"3.0.3","info":{"title":"Goa API","version":"0.0.1"},"servers":[{"url":"http://localhost:80","description":"Default server for test api"}],"paths":{"/binary":{"get":{"tags":["testService"],"summary":"binary testService","operationId":"testService#binary","responses":{"200":{"description":"OK response.","content":{"image/png":{"schema":{"type":"string","format":"binary"}}}}}}},"/empty":{"get":{"tags":["testService"],"summary":"empty testService","operationId":"testService#empty","responses":{"204":{"description":"No Content response."}}}},"/empty/ok":{"get":{"tags":["testService"],"summary":"empty_ok testService","operationId":"testService#empty_ok","responses":{"200":{"description":"OK response."}}}}},"components":{},"tags":[{"name":"testService"}]}
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:80",
+      "description": "Default server for test api"
+    }
+  ],
+  "paths": {
+    "/binary": {
+      "get": {
+        "tags": [
+          "testService"
+        ],
+        "summary": "binary testService",
+        "operationId": "testService#binary",
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/empty": {
+      "get": {
+        "tags": [
+          "testService"
+        ],
+        "summary": "empty testService",
+        "operationId": "testService#empty",
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        }
+      }
+    },
+    "/empty/ok": {
+      "get": {
+        "tags": [
+          "testService"
+        ],
+        "summary": "empty_ok testService",
+        "operationId": "testService#empty_ok",
+        "responses": {
+          "200": {
+            "description": "OK response."
+          }
+        }
+      }
+    }
+  },
+  "components": {},
+  "tags": [
+    {
+      "name": "testService"
+    }
+  ]
+}

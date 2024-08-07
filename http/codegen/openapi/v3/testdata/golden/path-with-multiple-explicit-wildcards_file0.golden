@@ -1,1 +1,59 @@
-{"openapi":"3.0.3","info":{"title":"Goa API","version":"0.0.1"},"servers":[{"url":"http://localhost:80","description":"Default server for test api"}],"paths":{"/{foo}/{bar}":{"post":{"tags":["test service"],"summary":"test endpoint test service","operationId":"test service#test endpoint","parameters":[{"name":"foo","in":"path","required":true,"schema":{"type":"integer","example":9176544974339886224,"format":"int64"},"example":1933576090881074823},{"name":"bar","in":"path","required":true,"schema":{"type":"integer","example":2166276375441812184,"format":"int64"},"example":7595816812588075382}],"responses":{"204":{"description":"No Content response."}}}}},"components":{},"tags":[{"name":"test service"}]}
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:80",
+      "description": "Default server for test api"
+    }
+  ],
+  "paths": {
+    "/{foo}/{bar}": {
+      "post": {
+        "tags": [
+          "test service"
+        ],
+        "summary": "test endpoint test service",
+        "operationId": "test service#test endpoint",
+        "parameters": [
+          {
+            "name": "foo",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 9176544974339886224,
+              "format": "int64"
+            },
+            "example": 1933576090881074823
+          },
+          {
+            "name": "bar",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "example": 2166276375441812184,
+              "format": "int64"
+            },
+            "example": 7595816812588075382
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        }
+      }
+    }
+  },
+  "components": {},
+  "tags": [
+    {
+      "name": "test service"
+    }
+  ]
+}
