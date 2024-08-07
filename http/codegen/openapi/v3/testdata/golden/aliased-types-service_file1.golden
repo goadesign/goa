@@ -27,7 +27,7 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/Result1'
                             example:
-                                baz: Voluptas sed et esse quod eligendi ut.
+                                bar: Voluptas sed et esse quod eligendi ut.
     /two:
         get:
             tags:
@@ -41,7 +41,7 @@ paths:
                         schema:
                             $ref: '#/components/schemas/Payload2'
                         example:
-                            bar: Culpa cumque repudiandae asperiores assumenda.
+                            foo: Culpa cumque repudiandae asperiores assumenda.
             responses:
                 "200":
                     description: OK response.
@@ -50,7 +50,7 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/Result2'
                             example:
-                                foobar: Exercitationem quos accusamus sunt vel sed reprehenderit.
+                                bar: Exercitationem quos accusamus sunt vel sed reprehenderit.
 components:
     schemas:
         Payload1:
@@ -64,26 +64,26 @@ components:
         Payload2:
             type: object
             properties:
-                bar:
+                foo:
                     type: string
                     example: Quas aut maxime aut non enim ullam.
             example:
-                bar: Vitae magni repellat minus minus dolor repellat.
+                foo: Vitae magni repellat minus minus dolor repellat.
         Result1:
             type: object
             properties:
-                baz:
+                bar:
                     type: string
                     example: Qui rem qui earum.
             example:
-                baz: Consequatur delectus accusantium quaerat earum ratione.
+                bar: Consequatur delectus accusantium quaerat earum ratione.
         Result2:
             type: object
             properties:
-                foobar:
+                bar:
                     type: string
                     example: Nostrum et eum et labore veritatis similique.
             example:
-                foobar: Eum laboriosam.
+                bar: Eum laboriosam.
 tags:
     - name: testService

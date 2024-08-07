@@ -3,10 +3,10 @@
     "schemas": {
       "Result1": {
         "example": {
-          "baz": "Consequatur delectus accusantium quaerat earum ratione."
+          "bar": "Consequatur delectus accusantium quaerat earum ratione."
         },
         "properties": {
-          "baz": {
+          "bar": {
             "example": "Qui rem qui earum.",
             "type": "string"
           }
@@ -15,10 +15,10 @@
       },
       "Result2": {
         "example": {
-          "foobar": "Eum laboriosam."
+          "bar": "Eum laboriosam."
         },
         "properties": {
-          "foobar": {
+          "bar": {
             "example": "Nostrum et eum et labore veritatis similique.",
             "type": "string"
           }
@@ -39,10 +39,10 @@
       },
       "Payload2": {
         "example": {
-          "bar": "Vitae magni repellat minus minus dolor repellat."
+          "foo": "Vitae magni repellat minus minus dolor repellat."
         },
         "properties": {
-          "bar": {
+          "foo": {
             "example": "Quas aut maxime aut non enim ullam.",
             "type": "string"
           }
@@ -78,7 +78,7 @@
             "content": {
               "application/json": {
                 "example": {
-                  "baz": "Voluptas sed et esse quod eligendi ut."
+                  "bar": "Voluptas sed et esse quod eligendi ut."
                 },
                 "schema": {
                   "$ref": "#/components/schemas/Result1"
@@ -101,7 +101,7 @@
           "content": {
             "application/json": {
               "example": {
-                "bar": "Culpa cumque repudiandae asperiores assumenda."
+                "foo": "Culpa cumque repudiandae asperiores assumenda."
               },
               "schema": {
                 "$ref": "#/components/schemas/Payload2"
@@ -115,7 +115,7 @@
             "content": {
               "application/json": {
                 "example": {
-                  "foobar": "Exercitationem quos accusamus sunt vel sed reprehenderit."
+                  "bar": "Exercitationem quos accusamus sunt vel sed reprehenderit."
                 },
                 "schema": {
                   "$ref": "#/components/schemas/Result2"

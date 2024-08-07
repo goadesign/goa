@@ -951,13 +951,13 @@ var AliasedTypesDSL = func() {
 		Attribute("foo", String)
 	})
 	var payload2 = Type("Payload2", func() {
-		Attribute("bar", String)
+		Attribute("foo", String)
 	})
 	var result1 = Type("Result1", func() {
-		Attribute("baz", String)
+		Attribute("bar", String)
 	})
 	var result2 = Type("Result2", func() {
-		Attribute("foobar", String)
+		Attribute("bar", String)
 	})
 	var _ = API("test", func() {
 		Server("test", func() {
