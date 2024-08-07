@@ -31,44 +31,6 @@ var SimpleDSL = func() {
 	})
 }
 
-var AliasedTypesDSL = func() {
-	var payload1 = Type("Payload1", func() {
-		Attribute("foo", String)
-	})
-	var payload2 = Type("Payload2", func() {
-		Attribute("bar", String)
-	})
-	var result1 = Type("Result1", func() {
-		Attribute("baz", String)
-	})
-	var result2 = Type("Result2", func() {
-		Attribute("foobar", String)
-	})
-	var _ = API("test", func() {
-		Server("test", func() {
-			Host("localhost", func() {
-				URI("https://goa.design")
-			})
-		})
-	})
-	Service("testService", func() {
-		Method("testEndpoint1", func() {
-			Payload(payload1)
-			Result(result1)
-			HTTP(func() {
-				GET("/one")
-			})
-		})
-		Method("testEndpoint2", func() {
-			Payload(payload2)
-			Result(result2)
-			HTTP(func() {
-				GET("/two")
-			})
-		})
-	})
-}
-
 var MultipleServicesDSL = func() {
 	var PayloadT = Type("Payload", func() {
 		Attribute("string", String, func() {
@@ -980,6 +942,44 @@ var JSONPrefixIndentDSL = func() {
 		Files("path1", "filename")
 		Files("path2", "filename", func() {
 			Meta("openapi:tag:user-tag")
+		})
+	})
+}
+
+var AliasedTypesDSL = func() {
+	var payload1 = Type("Payload1", func() {
+		Attribute("foo", String)
+	})
+	var payload2 = Type("Payload2", func() {
+		Attribute("bar", String)
+	})
+	var result1 = Type("Result1", func() {
+		Attribute("baz", String)
+	})
+	var result2 = Type("Result2", func() {
+		Attribute("foobar", String)
+	})
+	var _ = API("test", func() {
+		Server("test", func() {
+			Host("localhost", func() {
+				URI("https://goa.design")
+			})
+		})
+	})
+	Service("testService", func() {
+		Method("testEndpoint1", func() {
+			Payload(payload1)
+			Result(result1)
+			HTTP(func() {
+				GET("/one")
+			})
+		})
+		Method("testEndpoint2", func() {
+			Payload(payload2)
+			Result(result2)
+			HTTP(func() {
+				GET("/two")
+			})
 		})
 	})
 }

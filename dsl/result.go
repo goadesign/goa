@@ -80,7 +80,6 @@ func Result(val any, args ...any) {
 		eval.IncompatibleDSL()
 		return
 	}
-
 	e.Result = methodDSL(e, "Result", val, args...)
 }
 

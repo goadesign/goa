@@ -78,9 +78,7 @@ func Payload(val any, args ...any) {
 		eval.IncompatibleDSL()
 		return
 	}
-
 	e.Payload = methodDSL(e, "Payload", val, args...)
-
 }
 
 // StreamingPayload defines a method that accepts a stream of instances of the

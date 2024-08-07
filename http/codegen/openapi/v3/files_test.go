@@ -32,7 +32,6 @@ func TestFiles(t *testing.T) {
 		DSL  func()
 	}{
 		// TestSections
-		{"aliased-types-service", testdata.AliasedTypesDSL},
 		{"file-service", testdata.FileServiceDSL},
 		{"file-service-swagger", testdata.FileServiceSwaggerDSL},
 		{"valid", testdata.SimpleDSL},
@@ -57,6 +56,7 @@ func TestFiles(t *testing.T) {
 		{"json-prefix", testdata.JSONPrefixDSL},
 		{"json-indent", testdata.JSONIndentDSL},
 		{"json-prefix-indent", testdata.JSONPrefixIndentDSL},
+		{"aliased-types-service", testdata.AliasedTypesDSL},
 		// TestEndpoints
 		{"endpoint", testdata.ExtensionDSL},
 		{"endpoint-swagger", testdata.ExtensionSwaggerDSL},
