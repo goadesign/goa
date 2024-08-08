@@ -13,6 +13,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	httpgen "goa.design/goa/v3/http/codegen"
 	"goa.design/goa/v3/http/codegen/openapi"
@@ -99,15 +100,15 @@ func TestSections(t *testing.T) {
 						t.Fatalf("failed to read golden file: %s", err)
 					}
 					if !bytes.Equal(buf.Bytes(), want) {
-						var left, right string
+						var got, expected string
 						if filepath.Ext(o.Path) == ".json" {
-							left = prettifyJSON(t, buf.Bytes())
-							right = prettifyJSON(t, want)
+							got = prettifyJSON(t, buf.Bytes())
+							expected = prettifyJSON(t, want)
 						} else {
-							left = buf.String()
-							right = string(want)
+							got = buf.String()
+							expected = string(want)
 						}
-						assert.Equal(t, left, right)
+						assert.Equal(t, expected, got)
 					}
 				})
 			}
@@ -145,51 +146,32 @@ func TestValidations(t *testing.T) {
 			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := httpgen.RunHTTPDSL(t, c.DSL)
 			oFiles, err := openapiv2.Files(root)
-			if err != nil {
-				t.Fatalf("OpenAPI failed with %s", err)
-			}
-			if len(oFiles) == 0 {
-				t.Fatalf("No swagger files")
-			}
+			require.NoError(t, err, "OpenAPI failed")
+			require.NotEmpty(t, oFiles, "No swagger files")
 			for i, o := range oFiles {
 				tname := fmt.Sprintf("file%d", i)
 				s := o.SectionTemplates
 				t.Run(tname, func(t *testing.T) {
-					if len(s) != 1 {
-						t.Fatalf("expected 1 section, got %d", len(s))
-					}
-					if s[0].Source == "" {
-						t.Fatalf("empty section template")
-					}
-					if s[0].Data == nil {
-						t.Fatalf("nil data")
-					}
+					require.Len(t, s, 1, "expected 1 section, got %d", len(s))
+					require.NotEmpty(t, s[0].Source, "empty section template")
+					require.NotNil(t, s[0].Data, "nil data")
 					var buf bytes.Buffer
 					tmpl := template.Must(template.New("openapi").Funcs(s[0].FuncMap).Parse(s[0].Source))
-					if err := tmpl.Execute(&buf, s[0].Data); err != nil {
-						t.Fatalf("failed to render template: %s", err)
-					}
+					require.NoError(t, tmpl.Execute(&buf, s[0].Data), "failed to render template")
 					if filepath.Ext(o.Path) == ".json" {
-						if err := validateSwagger(buf.Bytes()); err != nil {
-							t.Fatalf("invalid swagger: %s", err)
-						}
+						require.NoError(t, validateSwagger(buf.Bytes()), "invalid swagger")
 					}
 
 					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
 					if *update {
-						if err := os.WriteFile(golden, buf.Bytes(), 0644); err != nil {
-							t.Fatalf("failed to update golden file: %s", err)
-						}
+						require.NoError(t, os.WriteFile(golden, buf.Bytes(), 0644), "failed to update golden file")
+						return
 					}
 
 					want, err := os.ReadFile(golden)
+					require.NoError(t, err, "failed to read golden file")
 					want = bytes.ReplaceAll(want, []byte{'\r', '\n'}, []byte{'\n'})
-					if err != nil {
-						t.Fatalf("failed to read golden file: %s", err)
-					}
-					if !bytes.Equal(buf.Bytes(), want) {
-						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", buf.Bytes())
-					}
+					assert.Equal(t, string(want), buf.String())
 				})
 			}
 		})
@@ -212,51 +194,32 @@ func TestExtensions(t *testing.T) {
 			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := httpgen.RunHTTPDSL(t, c.DSL)
 			oFiles, err := openapiv2.Files(root)
-			if err != nil {
-				t.Fatalf("OpenAPI failed with %s", err)
-			}
-			if len(oFiles) == 0 {
-				t.Fatalf("No swagger files")
-			}
+			require.NoError(t, err, "OpenAPI failed")
+			require.NotEmpty(t, oFiles, "No swagger files")
 			for i, o := range oFiles {
 				tname := fmt.Sprintf("file%d", i)
 				s := o.SectionTemplates
 				t.Run(tname, func(t *testing.T) {
-					if len(s) != 1 {
-						t.Fatalf("expected 1 section, got %d", len(s))
-					}
-					if s[0].Source == "" {
-						t.Fatalf("empty section template")
-					}
-					if s[0].Data == nil {
-						t.Fatalf("nil data")
-					}
+					require.Len(t, s, 1, "expected 1 section, got %d", len(s))
+					require.NotEmpty(t, s[0].Source, "empty section template")
+					require.NotNil(t, s[0].Data, "nil data")
 					var buf bytes.Buffer
 					tmpl := template.Must(template.New("openapi").Funcs(s[0].FuncMap).Parse(s[0].Source))
-					if err := tmpl.Execute(&buf, s[0].Data); err != nil {
-						t.Fatalf("failed to render template: %s", err)
-					}
+					require.NoError(t, tmpl.Execute(&buf, s[0].Data), "failed to render template")
 					if filepath.Ext(o.Path) == ".json" {
-						if err := validateSwagger(buf.Bytes()); err != nil {
-							t.Fatalf("invalid swagger: %s", err)
-						}
+						require.NoError(t, validateSwagger(buf.Bytes()), "invalid swagger")
 					}
 
 					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
 					if *update {
-						if err := os.WriteFile(golden, buf.Bytes(), 0644); err != nil {
-							t.Fatalf("failed to update golden file: %s", err)
-						}
+						require.NoError(t, os.WriteFile(golden, buf.Bytes(), 0644), "failed to update golden file")
+						return
 					}
 
 					want, err := os.ReadFile(golden)
 					want = bytes.ReplaceAll(want, []byte{'\r', '\n'}, []byte{'\n'})
-					if err != nil {
-						t.Fatalf("failed to read golden file: %s", err)
-					}
-					if !bytes.Equal(buf.Bytes(), want) {
-						t.Errorf("result do not match the golden file:\n--BEGIN--\n%s\n--END--\n", buf.Bytes())
-					}
+					require.NoError(t, err, "failed to read golden file")
+					assert.Equal(t, string(want), buf.String())
 				})
 			}
 		})

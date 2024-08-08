@@ -25,7 +25,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/BarResult'
+                                $ref: '#/components/schemas/GoaExampleBar'
                             example:
                                 value: ""
     /baz:
@@ -62,7 +62,7 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/FooPayload'
+                            $ref: '#/components/schemas/Foo'
                         example:
                             value: ""
             responses:
@@ -77,14 +77,6 @@ paths:
 components:
     schemas:
         BarPayload:
-            type: object
-            properties:
-                value:
-                    type: string
-                    example: ""
-            example:
-                value: ""
-        BarResult:
             type: object
             properties:
                 value:
@@ -108,7 +100,7 @@ components:
                     example: ""
             example:
                 value: ""
-        FooPayload:
+        Foo:
             type: object
             properties:
                 value:
@@ -117,6 +109,14 @@ components:
             example:
                 value: ""
         FooResult:
+            type: object
+            properties:
+                value:
+                    type: string
+                    example: ""
+            example:
+                value: ""
+        GoaExampleBar:
             type: object
             properties:
                 value:

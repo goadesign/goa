@@ -24,7 +24,7 @@ paths:
                 "200":
                     description: OK response.
                     schema:
-                        $ref: '#/definitions/TestServiceTestEndpointDefaultResponseBody'
+                        $ref: '#/definitions/JSON'
             schemes:
                 - http
     /tiny:
@@ -41,7 +41,7 @@ paths:
             schemes:
                 - http
 definitions:
-    TestServiceTestEndpointDefaultResponseBody:
+    JSON:
         title: 'Mediatype identifier: application/json; view=default'
         type: object
         properties:

@@ -16,7 +16,7 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/TestEndpointRequestBody'
+                            $ref: '#/components/schemas/Payload'
                         example:
                             string: ""
             responses:
@@ -25,7 +25,7 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/TestEndpointRequestBody'
+                                $ref: '#/components/schemas/Result'
                             example:
                                 string: ""
         post:
@@ -38,7 +38,7 @@ paths:
                 content:
                     application/json:
                         schema:
-                            $ref: '#/components/schemas/TestEndpointRequestBody'
+                            $ref: '#/components/schemas/Payload'
                         example:
                             string: ""
             responses:
@@ -47,12 +47,20 @@ paths:
                     content:
                         application/json:
                             schema:
-                                $ref: '#/components/schemas/TestEndpointRequestBody'
+                                $ref: '#/components/schemas/Result'
                             example:
                                 string: ""
 components:
     schemas:
-        TestEndpointRequestBody:
+        Payload:
+            type: object
+            properties:
+                string:
+                    type: string
+                    example: ""
+            example:
+                string: ""
+        Result:
             type: object
             properties:
                 string:

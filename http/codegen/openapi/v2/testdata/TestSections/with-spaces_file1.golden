@@ -23,49 +23,36 @@ paths:
                   in: body
                   required: true
                   schema:
-                    $ref: '#/definitions/TestServiceTestEndpointRequestBody'
+                    $ref: '#/definitions/Bar'
             responses:
                 "200":
                     description: OK response.
                     schema:
-                        $ref: '#/definitions/TestServiceTestEndpointOKResponseBody'
+                        $ref: '#/definitions/GoaFoobar'
                 "404":
                     description: Not Found response.
                     schema:
-                        $ref: '#/definitions/TestServiceTestEndpointNotFoundResponseBody'
+                        $ref: '#/definitions/GoaFoobar'
             schemes:
                 - http
 definitions:
-    TestServiceTestEndpointNotFoundResponseBody:
-        title: 'Mediatype identifier: application/vnd.goa.foobar; view=default'
+    Bar:
+        title: Bar
         type: object
         properties:
-            bar:
-                type: array
-                items:
-                    $ref: '#/definitions/barResponseBody'
-                example:
-                    - string: ""
-                    - string: ""
-            foo:
+            string:
                 type: string
                 example: ""
-        description: Test EndpointNot FoundResponseBody result type (default view)
         example:
-            bar:
-                - string: ""
-                - string: ""
-                - string: ""
-                - string: ""
-            foo: ""
-    TestServiceTestEndpointOKResponseBody:
+            string: ""
+    GoaFoobar:
         title: 'Mediatype identifier: application/vnd.goa.foobar; view=default'
         type: object
         properties:
             bar:
                 type: array
                 items:
-                    $ref: '#/definitions/barResponseBody'
+                    $ref: '#/definitions/Bar'
                 example:
                     - string: ""
                     - string: ""
@@ -80,21 +67,3 @@ definitions:
                 - string: ""
                 - string: ""
             foo: ""
-    TestServiceTestEndpointRequestBody:
-        title: TestServiceTestEndpointRequestBody
-        type: object
-        properties:
-            string:
-                type: string
-                example: ""
-        example:
-            string: ""
-    barResponseBody:
-        title: barResponseBody
-        type: object
-        properties:
-            string:
-                type: string
-                example: ""
-        example:
-            string: ""
