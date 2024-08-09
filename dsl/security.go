@@ -228,35 +228,34 @@ func JWTSecurity(name string, fn ...func()) *expr.SchemeExpr {
 //	})
 func Security(args ...any) {
 	var dsl func()
-	{
-		if d, ok := args[len(args)-1].(func()); ok {
-			args = args[:len(args)-1]
-			dsl = d
-		}
+	if d, ok := args[len(args)-1].(func()); ok {
+		args = args[:len(args)-1]
+		dsl = d
 	}
 
-	var schemes []*expr.SchemeExpr
-	{
-		schemes = make([]*expr.SchemeExpr, len(args))
-		for i, arg := range args {
-			switch val := arg.(type) {
-			case string:
-				for _, s := range expr.Root.Schemes {
-					if s.SchemeName == val {
-						schemes[i] = expr.DupScheme(s)
-						break
-					}
+	schemes := make([]*expr.SchemeExpr, len(args))
+	for i, arg := range args {
+		switch val := arg.(type) {
+		case string:
+			for _, s := range expr.Root.Schemes {
+				if s.SchemeName == val {
+					schemes[i] = expr.DupScheme(s)
+					break
 				}
-				if schemes[i] == nil {
-					eval.ReportError("security scheme %q not found", val)
-					return
-				}
-			case *expr.SchemeExpr:
-				schemes[i] = expr.DupScheme(val)
-			default:
-				eval.InvalidArgError("security scheme or security scheme name", val)
+			}
+			if schemes[i] == nil {
+				eval.ReportError("security scheme %q not found", val)
 				return
 			}
+		case *expr.SchemeExpr:
+			if val == nil {
+				eval.InvalidArgError("security scheme", val)
+				return
+			}
+			schemes[i] = expr.DupScheme(val)
+		default:
+			eval.InvalidArgError("security scheme or security scheme name", val)
+			return
 		}
 	}
 
