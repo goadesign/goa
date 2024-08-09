@@ -252,6 +252,10 @@ func Security(args ...any) {
 					return
 				}
 			case *expr.SchemeExpr:
+				if val == nil {
+					eval.InvalidArgError("security scheme", val)
+					return
+				}
 				schemes[i] = expr.DupScheme(val)
 			default:
 				eval.InvalidArgError("security scheme or security scheme name", val)
