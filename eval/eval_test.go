@@ -42,6 +42,7 @@ func TestTooFewArgError(t *testing.T) {
 		"ErrorName":       func() { ErrorName() },
 		"ErrorName (int)": func() { Type("name", func() { ErrorName(1) }) },
 		"Example":         func() { Example() },
+		"OneOf":           func() { OneOf("name") },
 		"Response (grpc)": func() { Service("s", func() { GRPC(func() { Response("name") }) }) },
 		"Response (http)": func() { Service("s", func() { HTTP(func() { Response("name") }) }) },
 	}

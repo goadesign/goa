@@ -219,6 +219,10 @@ func Field(tag any, name string, args ...any) {
 //	    })
 //	})
 func OneOf(name string, args ...any) {
+	if len(args) == 0 {
+		eval.TooFewArgError()
+		return
+	}
 	if len(args) > 2 {
 		eval.TooManyArgError()
 		return
