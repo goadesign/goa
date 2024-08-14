@@ -55,7 +55,7 @@ func NewErrorResponse(ctx context.Context, err error) Statuser {
 			Fault:     gerr.Fault,
 		}
 	}
-	return NewErrorResponse(ctx, goa.Fault(err.Error()))
+	return NewErrorResponse(ctx, goa.Fault("%s", err.Error()))
 }
 
 func (resp *ErrorResponse) MarshalXML(e *xml.Encoder, _ xml.StartElement) error {
