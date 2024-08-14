@@ -44,7 +44,7 @@ type Generator struct {
 }
 
 // NewGenerator creates a Generator.
-func NewGenerator(cmd string, path, output string) *Generator {
+func NewGenerator(cmd, path, output string) *Generator {
 	bin := "goa"
 	if runtime.GOOS == "windows" {
 		bin += ".exe"
