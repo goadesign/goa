@@ -18,7 +18,7 @@ paths:
                     content:
                         application/custom+json:
                             schema:
-                                $ref: '#/components/schemas/Result'
+                                $ref: '#/components/schemas/JSON'
                             example:
                                 int: 1
                                 string: ""
@@ -39,7 +39,7 @@ paths:
                                 string: ""
 components:
     schemas:
-        Result:
+        JSON:
             type: object
             properties:
                 int:

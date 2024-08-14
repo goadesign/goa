@@ -25,7 +25,7 @@ paths:
                   schema:
                     type: array
                     items:
-                        $ref: '#/definitions/foobarRequestBody'
+                        $ref: '#/definitions/Foobar'
             responses:
                 "200":
                     description: OK response.
@@ -36,8 +36,8 @@ paths:
             schemes:
                 - https
 definitions:
-    barRequestBody:
-        title: barRequestBody
+    Bar:
+        title: Bar
         type: object
         properties:
             string:
@@ -47,14 +47,14 @@ definitions:
                 maxLength: 42
         example:
             string: ""
-    foobarRequestBody:
-        title: foobarRequestBody
+    Foobar:
+        title: Foobar
         type: object
         properties:
             bar:
                 type: array
                 items:
-                    $ref: '#/definitions/barRequestBody'
+                    $ref: '#/definitions/Bar'
                 example:
                     - string: ""
                     - string: ""

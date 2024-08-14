@@ -39,27 +39,12 @@ paths:
                     content:
                         application/vnd.goa.custom-error:
                             schema:
-                                $ref: '#/components/schemas/CustomError'
+                                $ref: '#/components/schemas/GoaCustomError'
                             example:
                                 message: error message
                                 name: custom
 components:
     schemas:
-        CustomError:
-            type: object
-            properties:
-                message:
-                    type: string
-                    example: error message
-                name:
-                    type: string
-                    example: custom
-            example:
-                message: error message
-                name: custom
-            required:
-                - name
-                - message
         Error:
             type: object
             properties:
@@ -101,5 +86,20 @@ components:
                 - temporary
                 - timeout
                 - fault
+        GoaCustomError:
+            type: object
+            properties:
+                message:
+                    type: string
+                    example: error message
+                name:
+                    type: string
+                    example: custom
+            example:
+                message: error message
+                name: custom
+            required:
+                - name
+                - message
 tags:
     - name: Errors

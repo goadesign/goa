@@ -28,7 +28,7 @@ paths:
                 "200":
                     description: OK response.
                     schema:
-                        $ref: '#/definitions/BarResult'
+                        $ref: '#/definitions/GoaExampleBar'
             schemes:
                 - https
     /baz:
@@ -61,7 +61,7 @@ paths:
                   in: body
                   required: true
                   schema:
-                    $ref: '#/definitions/FooPayload'
+                    $ref: '#/definitions/Foo'
             responses:
                 "200":
                     description: OK response.
@@ -77,16 +77,6 @@ definitions:
             value:
                 type: string
                 example: ""
-        example:
-            value: ""
-    BarResult:
-        title: 'Mediatype identifier: application/vnd.goa.example.bar; view=default'
-        type: object
-        properties:
-            value:
-                type: string
-                example: ""
-        description: BarResponseBody result type (default view)
         example:
             value: ""
     BazPayload:
@@ -107,8 +97,8 @@ definitions:
                 example: ""
         example:
             value: ""
-    FooPayload:
-        title: FooPayload
+    Foo:
+        title: Foo
         type: object
         properties:
             value:
@@ -124,5 +114,15 @@ definitions:
                 type: string
                 example: ""
         description: FooResponseBody result type (default view)
+        example:
+            value: ""
+    GoaExampleBar:
+        title: 'Mediatype identifier: application/vnd.goa.example.bar; view=default'
+        type: object
+        properties:
+            value:
+                type: string
+                example: ""
+        description: BarResponseBody result type (default view)
         example:
             value: ""

@@ -23,12 +23,12 @@ paths:
                   in: body
                   required: true
                   schema:
-                    $ref: '#/definitions/TestServiceTestEndpointRequestBody'
+                    $ref: '#/definitions/Payload'
             responses:
                 "200":
                     description: OK response.
                     schema:
-                        $ref: '#/definitions/TestServiceTestEndpointResponseBody'
+                        $ref: '#/definitions/Result'
             schemes:
                 - https
         post:
@@ -41,17 +41,17 @@ paths:
                   in: body
                   required: true
                   schema:
-                    $ref: '#/definitions/AnotherTestServiceTestEndpointRequestBody'
+                    $ref: '#/definitions/Payload'
             responses:
                 "200":
                     description: OK response.
                     schema:
-                        $ref: '#/definitions/AnotherTestServiceTestEndpointResponseBody'
+                        $ref: '#/definitions/Result'
             schemes:
                 - https
 definitions:
-    AnotherTestServiceTestEndpointRequestBody:
-        title: AnotherTestServiceTestEndpointRequestBody
+    Payload:
+        title: Payload
         type: object
         properties:
             string:
@@ -59,26 +59,8 @@ definitions:
                 example: ""
         example:
             string: ""
-    AnotherTestServiceTestEndpointResponseBody:
-        title: AnotherTestServiceTestEndpointResponseBody
-        type: object
-        properties:
-            string:
-                type: string
-                example: ""
-        example:
-            string: ""
-    TestServiceTestEndpointRequestBody:
-        title: TestServiceTestEndpointRequestBody
-        type: object
-        properties:
-            string:
-                type: string
-                example: ""
-        example:
-            string: ""
-    TestServiceTestEndpointResponseBody:
-        title: TestServiceTestEndpointResponseBody
+    Result:
+        title: Result
         type: object
         properties:
             string:
