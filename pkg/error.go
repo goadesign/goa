@@ -116,7 +116,7 @@ func MissingPayloadError() error {
 // DecodePayloadError is the error produced by the generated code when a request
 // body cannot be decoded successfully.
 func DecodePayloadError(msg string) error {
-	return PermanentError("decode_payload", msg)
+	return PermanentError("decode_payload", "%s", msg)
 }
 
 // UnsupportedMediaTypeError is the error produced by the Goa decoder when the

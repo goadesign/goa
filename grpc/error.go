@@ -49,7 +49,7 @@ func NewErrorResponse(err error) *goapb.ErrorResponse {
 			Fault:     gerr.Fault,
 		}
 	}
-	return NewErrorResponse(goa.Fault(err.Error()))
+	return NewErrorResponse(goa.Fault("%s", err.Error()))
 }
 
 // NewServiceError returns a goa ServiceError type for the given ErrorResponse

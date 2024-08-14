@@ -247,7 +247,7 @@ func (g *Generator) runGoCmd(args ...string) error {
 	out, err := c.CombinedOutput()
 	if err != nil {
 		if len(out) > 0 {
-			return fmt.Errorf(string(out))
+			return fmt.Errorf("%s", out)
 		}
 		return fmt.Errorf("failed to compile generator: %w", err)
 	}

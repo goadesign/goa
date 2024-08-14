@@ -85,6 +85,12 @@ func {{ .HandlerInit }}(
 		o := res.(*{{ .ServicePkgName }}.{{ .Method.ResponseStruct }})
 		defer o.Body.Close()
 		if wt, ok := o.Body.(io.WriterTo); ok {
+			{{- if not (or .Redirect (isWebSocketEndpoint .)) }}
+			if err := encodeResponse(ctx, w, {{ if and .Method.SkipResponseBodyEncodeDecode .Result.Ref }}o.Result{{ else }}res{{ end }}); err != nil {
+				errhandler(ctx, w, err)
+				return
+			}
+			{{- end }}
 			n, err := wt.WriteTo(w)
 			if err != nil {
 				if n == 0 {
