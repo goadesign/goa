@@ -39,6 +39,19 @@ paths:
                                 string: ""
 components:
     schemas:
+        JSON:
+            type: object
+            properties:
+                int:
+                    type: integer
+                    example: 1
+                    format: int64
+                string:
+                    type: string
+                    example: ""
+            example:
+                int: 1
+                string: ""
         TestEndpointDefaultResponseBody:
             type: object
             properties:

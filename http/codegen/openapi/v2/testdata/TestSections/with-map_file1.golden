@@ -32,14 +32,23 @@ paths:
             schemes:
                 - http
 definitions:
-    FooBarResponseBody:
+    Bar:
+        title: Bar
+        type: object
+        properties:
+            string:
+                type: string
+                example: ""
+        example:
+            string: ""
+    GoaFoobar:
         title: 'Mediatype identifier: application/vnd.goa.foobar; view=default'
         type: object
         properties:
             bar:
                 type: array
                 items:
-                    $ref: '#/definitions/barResponseBody'
+                    $ref: '#/definitions/Bar'
                 example:
                     - string: ""
                     - string: ""
@@ -72,7 +81,7 @@ definitions:
                     "":
                         string: ""
                 additionalProperties:
-                    $ref: '#/definitions/barRequestBody'
+                    $ref: '#/definitions/Bar'
             uint_map:
                 type: object
                 example:
@@ -102,7 +111,7 @@ definitions:
                             - string: ""
                         foo: ""
                 additionalProperties:
-                    $ref: '#/definitions/FooBarResponseBody'
+                    $ref: '#/definitions/GoaFoobar'
             uint32_map:
                 type: object
                 example:
@@ -130,21 +139,3 @@ definitions:
                 "": 1
             uint64_map:
                 "": 1
-    barRequestBody:
-        title: barRequestBody
-        type: object
-        properties:
-            string:
-                type: string
-                example: ""
-        example:
-            string: ""
-    barResponseBody:
-        title: barResponseBody
-        type: object
-        properties:
-            string:
-                type: string
-                example: ""
-        example:
-            string: ""

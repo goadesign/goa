@@ -139,10 +139,10 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 	// an explicit conflict with the content-type and response.
 	if (r.ContentType == "text/html" || r.ContentType == "text/plain") && !e.SkipRequestBodyEncodeDecode {
 		if e.MethodExpr.Result.Type != nil && e.MethodExpr.Result.Type != String && e.MethodExpr.Result.Type != Bytes && r.Body == nil {
-			verr.Add(r, fmt.Sprintf("Result type must be String or Bytes when ContentType is '%s'", r.ContentType))
+			verr.Add(r, "Result type must be String or Bytes when ContentType is '%s'", r.ContentType)
 		}
 		if r.Body != nil && r.Body.Type != String && r.Body.Type != Bytes {
-			verr.Add(r, fmt.Sprintf("Result type must be String or Bytes when ContentType is '%s'", r.ContentType))
+			verr.Add(r, "Result type must be String or Bytes when ContentType is '%s'", r.ContentType)
 		}
 	}
 
