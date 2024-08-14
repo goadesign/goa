@@ -44,7 +44,7 @@ type Generator struct {
 }
 
 // NewGenerator creates a Generator.
-func NewGenerator(cmd string, path, output string) *Generator {
+func NewGenerator(cmd, path, output string) *Generator {
 	bin := "goa"
 	if runtime.GOOS == "windows" {
 		bin += ".exe"
@@ -247,7 +247,7 @@ func (g *Generator) runGoCmd(args ...string) error {
 	out, err := c.CombinedOutput()
 	if err != nil {
 		if len(out) > 0 {
-			return fmt.Errorf(string(out))
+			return fmt.Errorf("%s", out)
 		}
 		return fmt.Errorf("failed to compile generator: %w", err)
 	}

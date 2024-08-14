@@ -116,6 +116,7 @@ func ResultType(identifier string, args ...any) *expr.ResultTypeExpr {
 	}
 	// Add the type to the generated types root for later evaluation.
 	rt := expr.NewResultTypeExpr(typeName, identifier, fn)
+	rt.Meta = expr.MetaExpr{"openapi:typename": []string{typeName}}
 	expr.Root.ResultTypes = append(expr.Root.ResultTypes, rt)
 
 	return rt

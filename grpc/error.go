@@ -49,7 +49,7 @@ func NewErrorResponse(err error) *goapb.ErrorResponse {
 			Fault:     gerr.Fault,
 		}
 	}
-	return NewErrorResponse(goa.Fault(err.Error()))
+	return NewErrorResponse(goa.Fault("%s", err.Error()))
 }
 
 // NewServiceError returns a goa ServiceError type for the given ErrorResponse
@@ -92,18 +92,15 @@ func EncodeError(err error) error {
 	if errors.As(err, &gerr) {
 		// goa service error type. Compute the status code from the service error
 		// characteristics and create a new detailed gRPC status error.
-		var code codes.Code
-		{
-			code = codes.Unknown
-			if gerr.Fault {
-				code = codes.Internal
-			}
-			if gerr.Timeout {
-				code = codes.DeadlineExceeded
-			}
-			if gerr.Temporary {
-				code = codes.Unavailable
-			}
+		code := codes.Unknown
+		if gerr.Fault {
+			code = codes.Internal
+		}
+		if gerr.Timeout {
+			code = codes.DeadlineExceeded
+		}
+		if gerr.Temporary {
+			code = codes.Unavailable
 		}
 		return NewStatusError(code, err, NewErrorResponse(err))
 	}
