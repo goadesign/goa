@@ -47,7 +47,7 @@ service "Service" gRPC endpoint "Method": field number 2 in attribute "key_dup_i
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
-			if c.Errors == nil || len(c.Errors) == 0 {
+			if len(c.Errors) == 0 {
 				expr.RunDSL(t, c.DSL)
 			} else {
 				var errs []error
