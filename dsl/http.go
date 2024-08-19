@@ -948,6 +948,10 @@ func Body(args ...any) {
 	)
 	switch a := args[0].(type) {
 	case string:
+		if ref == nil {
+			eval.ReportError("Body is set but %s is not defined", kind)
+			return
+		}
 		if !expr.IsObject(ref.Type) {
 			eval.ReportError("%s type must be an object with an attribute with name %#v, got %T", kind, a, ref.Type)
 			return
