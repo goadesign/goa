@@ -1992,6 +1992,9 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 			}
 		}
 	} else {
+		// Generate validation code first because inline struct validation is removed.
+		ctx := codegen.NewAttributeContext(!expr.IsPrimitive(body.Type), false, !svr, "", sd.Scope)
+		validateRef = codegen.ValidationCode(body, nil, ctx, true, expr.IsAlias(body.Type), false, "body")
 		if svr && expr.IsObject(body.Type) {
 			// Body is an explicit object described in the design and in
 			// this case the GoTypeRef is an inline struct definition. We
@@ -2000,8 +2003,6 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 			body.Validation = nil
 		}
 		varname = sd.Scope.GoTypeRef(body)
-		ctx := codegen.NewAttributeContext(false, false, !svr, "", sd.Scope)
-		validateRef = codegen.ValidationCode(body, nil, ctx, true, expr.IsAlias(body.Type), false, "body")
 		desc = body.Description
 	}
 	var init *InitData

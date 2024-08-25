@@ -3938,6 +3938,12 @@ func DecodeMethodBodyObjectRequiredRequest(mux goahttp.Muxer, decoder func(*http
 			}
 			return nil, goa.DecodePayloadError(err.Error())
 		}
+		if body.B == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("b", "body"))
+		}
+		if err != nil {
+			return nil, err
+		}
 		payload := NewMethodBodyObjectRequiredPayload(body)
 
 		return payload, nil
@@ -4493,6 +4499,16 @@ func DecodeMethodBodyPrimitiveArrayUserRequiredRequest(mux goahttp.Muxer, decode
 				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
+		}
+		for _, e := range body {
+			if e != nil {
+				if err2 := ValidatePayloadTypeRequestBody(e); err2 != nil {
+					err = goa.MergeErrors(err, err2)
+				}
+			}
+		}
+		if err != nil {
+			return nil, err
 		}
 		payload := NewMethodBodyPrimitiveArrayUserRequiredPayloadType(body)
 
