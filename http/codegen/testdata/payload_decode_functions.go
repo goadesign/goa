@@ -3917,6 +3917,40 @@ func DecodeMethodBodyObjectRequest(mux goahttp.Muxer, decoder func(*http.Request
 }
 `
 
+var PayloadBodyObjectRequiredDecodeCode = `// DecodeMethodBodyObjectRequiredRequest returns a decoder for requests sent to
+// the ServiceBodyObjectRequired MethodBodyObjectRequired endpoint.
+func DecodeMethodBodyObjectRequiredRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			body struct {
+				B *string ` + "`" + `form:"b" json:"b" xml:"b"` + "`" + `
+			}
+			err error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		if body.B == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("b", "body"))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyObjectRequiredPayload(body)
+
+		return payload, nil
+	}
+}
+`
+
 var PayloadBodyObjectValidateDecodeCode = `// DecodeMethodBodyObjectValidateRequest returns a decoder for requests sent to
 // the ServiceBodyObjectValidate MethodBodyObjectValidate endpoint.
 func DecodeMethodBodyObjectValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
@@ -3937,6 +3971,12 @@ func DecodeMethodBodyObjectValidateRequest(mux goahttp.Muxer, decoder func(*http
 				return nil, gerr
 			}
 			return nil, goa.DecodePayloadError(err.Error())
+		}
+		if body.B != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.b", *body.B, "pattern"))
+		}
+		if err != nil {
+			return nil, err
 		}
 		payload := NewMethodBodyObjectValidatePayload(body)
 
@@ -4434,6 +4474,43 @@ func DecodeMethodBodyPrimitiveArrayBoolValidateRequest(mux goahttp.Muxer, decode
 			return nil, err
 		}
 		payload := body
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadBodyPrimitiveArrayUserRequiredDecodeCode = `// DecodeMethodBodyPrimitiveArrayUserRequiredRequest returns a decoder for
+// requests sent to the ServiceBodyPrimitiveArrayUserRequired
+// MethodBodyPrimitiveArrayUserRequired endpoint.
+func DecodeMethodBodyPrimitiveArrayUserRequiredRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			body []*PayloadTypeRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if err == io.EOF {
+				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		for _, e := range body {
+			if e != nil {
+				if err2 := ValidatePayloadTypeRequestBody(e); err2 != nil {
+					err = goa.MergeErrors(err, err2)
+				}
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyPrimitiveArrayUserRequiredPayloadType(body)
 
 		return payload, nil
 	}

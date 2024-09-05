@@ -1947,7 +1947,6 @@ var PayloadBodyStringValidateDSL = func() {
 				Attribute("b", String, func() {
 					Pattern("pattern")
 				})
-				Required("b")
 			})
 			HTTP(func() {
 				POST("/")
@@ -2039,9 +2038,9 @@ var PayloadBodyObjectDSL = func() {
 	})
 }
 
-var PayloadBodyObjectValidateDSL = func() {
-	Service("ServiceBodyObjectValidate", func() {
-		Method("MethodBodyObjectValidate", func() {
+var PayloadBodyObjectRequiredDSL = func() {
+	Service("ServiceBodyObjectRequired", func() {
+		Method("MethodBodyObjectRequired", func() {
 			Payload(func() {
 				Attribute("b", String)
 				Required("b")
@@ -2051,6 +2050,24 @@ var PayloadBodyObjectValidateDSL = func() {
 				Body(func() {
 					Attribute("b", String)
 					Required("b")
+				})
+			})
+		})
+	})
+}
+
+var PayloadBodyObjectValidateDSL = func() {
+	Service("ServiceBodyObjectValidate", func() {
+		Method("MethodBodyObjectValidate", func() {
+			Payload(func() {
+				Attribute("b", String, func() {
+					Pattern("pattern")
+				})
+			})
+			HTTP(func() {
+				POST("/")
+				Body(func() {
+					Attribute("b", String)
 				})
 			})
 		})
@@ -2342,12 +2359,26 @@ var PayloadBodyPrimitiveArrayBoolValidateDSL = func() {
 	})
 }
 
+var PayloadBodyPrimitiveArrayUserRequiredDSL = func() {
+	var PayloadType = Type("PayloadType", func() {
+		Attribute("a", String)
+		Required("a")
+	})
+	Service("ServiceBodyPrimitiveArrayUserRequired", func() {
+		Method("MethodBodyPrimitiveArrayUserRequired", func() {
+			Payload(ArrayOf(PayloadType))
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
 var PayloadBodyPrimitiveArrayUserValidateDSL = func() {
 	var PayloadType = Type("PayloadType", func() {
 		Attribute("a", String, func() {
 			Pattern("pattern")
 		})
-		Required("a")
 	})
 	Service("ServiceBodyPrimitiveArrayUserValidate", func() {
 		Method("MethodBodyPrimitiveArrayUserValidate", func() {

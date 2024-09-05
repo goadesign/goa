@@ -151,6 +151,7 @@ func TestDecode(t *testing.T) {
 		{"decode-body-user-nested", testdata.PayloadBodyNestedUserDSL, testdata.PayloadBodyNestedUserDecodeCode},
 		{"decode-body-user-validate", testdata.PayloadBodyUserValidateDSL, testdata.PayloadBodyUserValidateDecodeCode},
 		{"decode-body-object", testdata.PayloadBodyObjectDSL, testdata.PayloadBodyObjectDecodeCode},
+		{"decode-body-object-required", testdata.PayloadBodyObjectRequiredDSL, testdata.PayloadBodyObjectRequiredDecodeCode},
 		{"decode-body-object-validate", testdata.PayloadBodyObjectValidateDSL, testdata.PayloadBodyObjectValidateDecodeCode},
 		{"decode-body-union", testdata.PayloadBodyUnionDSL, testdata.PayloadBodyUnionDecodeCode},
 		{"decode-body-union-validate", testdata.PayloadBodyUnionValidateDSL, testdata.PayloadBodyUnionValidateDecodeCode},
@@ -170,6 +171,7 @@ func TestDecode(t *testing.T) {
 		{"decode-body-primitive-array-string-validate", testdata.PayloadBodyPrimitiveArrayStringValidateDSL, testdata.PayloadBodyPrimitiveArrayStringValidateDecodeCode},
 		{"decode-body-primitive-array-bool-validate", testdata.PayloadBodyPrimitiveArrayBoolValidateDSL, testdata.PayloadBodyPrimitiveArrayBoolValidateDecodeCode},
 
+		{"decode-body-primitive-array-user-required", testdata.PayloadBodyPrimitiveArrayUserRequiredDSL, testdata.PayloadBodyPrimitiveArrayUserRequiredDecodeCode},
 		{"decode-body-primitive-array-user-validate", testdata.PayloadBodyPrimitiveArrayUserValidateDSL, testdata.PayloadBodyPrimitiveArrayUserValidateDecodeCode},
 		{"decode-body-primitive-field-array-user", testdata.PayloadBodyPrimitiveFieldArrayUserDSL, testdata.PayloadBodyPrimitiveFieldArrayUserDecodeCode},
 		{"decode-body-extend-primitive-field-array-user", testdata.PayloadExtendBodyPrimitiveFieldArrayUserDSL, testdata.PayloadBodyPrimitiveFieldArrayUserDecodeCode},
