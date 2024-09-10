@@ -5,7 +5,7 @@
   <h1 align="center"><b>Design First!</b></h1>
   <p align="center">
     <a href="https://github.com/goadesign/goa/releases/latest"><img alt="Release" src="https://img.shields.io/github/release/goadesign/goa.svg?style=for-the-badge"></a>
-    <a href="https://pkg.go.dev/goa.design/goa/v3@v3.18.2/dsl?tab=doc"><img alt="Go Doc" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=for-the-badge"></a>
+    <a href="https://pkg.go.dev/goa.design/goa/v3@v3.19.0/dsl?tab=doc"><img alt="Go Doc" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=for-the-badge"></a>
     <a href="https://github.com/goadesign/goa/actions/workflows/ci.yml"><img alt="GitHub Action: Test" src="https://img.shields.io/github/actions/workflow/status/goadesign/goa/test.yml?branch=v3&style=for-the-badge"></a>
     <a href="https://goreportcard.com/report/github.com/goadesign/goa"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/goadesign/goa?style=for-the-badge"></a>
     <a href="/LICENSE"><img alt="Software License" src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge"></a>
@@ -136,7 +136,7 @@ invoking the client code.
 go install goa.design/goa/v3/cmd/goa@v3
 ```
 
-Current Release: `v3.18.2`
+Current Release: `v3.19.0`
 
 # Getting Started
 
@@ -445,7 +445,7 @@ In particular the page
 explains how to leverage the generated code to implement an HTTP or gRPC
 service.
 
-The [DSL Go Doc](https://pkg.go.dev/goa.design/goa/v3@v3.18.2/dsl?tab=doc)
+The [DSL Go Doc](https://pkg.go.dev/goa.design/goa/v3@v3.19.0/dsl?tab=doc)
 contains a fully documented reference of all the DSL functions.
 
 ## Instrumentation and System Example
