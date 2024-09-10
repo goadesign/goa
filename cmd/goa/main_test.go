@@ -35,9 +35,9 @@ func TestCmdLine(t *testing.T) {
 	}{
 		"gen": {"gen " + testPkg, false, "gen", testPkg, ".", false},
 
-		"invalid":     {"invalid " + testPkg, true, "", "", ".", false},
-		"empty":       {"", true, "", "", ".", false},
-		"invalid gen": {"invalid gen" + testPkg, true, "", "", ".", false},
+		"invalid":     {"invalid " + testPkg, true, "", "", "", false},
+		"empty":       {"", true, "", "", "", false},
+		"invalid gen": {"invalid gen" + testPkg, true, "", "", "", false},
 
 		"output":       {"gen " + testPkg + " -output " + testOutput, false, "gen", testPkg, testOutput, false},
 		"output short": {"gen " + testPkg + " -o " + testOutput, false, "gen", testPkg, testOutput, false},
