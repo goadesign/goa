@@ -28,6 +28,13 @@ func {{ .ServerInit }}(
 	if {{ .ArgName }} == nil {
 		{{ .ArgName }} = http.Dir(".")
 	}
+		{{- $prefix := addLeadingSlash .FilePath }}
+		{{- if not .IsDir }}
+			{{- $prefix = dir $prefix }}
+		{{- end }}
+		{{- if ne $prefix "/" }}
+	{{ .ArgName }} = appendPrefix({{ .ArgName }}, "{{ $prefix }}")
+		{{- end }}
 	{{- end }}
 	return &{{ .ServerStruct }}{
 		Mounts: []*{{ .MountPointStruct }}{
@@ -39,7 +46,7 @@ func {{ .ServerInit }}(
 			{{- range .FileServers }}
 				{{- $filepath := .FilePath }}
 				{{- range .RequestPaths }}
-			{"{{ $filepath }}", "GET", "{{ . }}"},
+			{"Serve {{ $filepath }}", "GET", "{{ . }}"},
 				{{- end }}
 			{{- end }}
 		},
