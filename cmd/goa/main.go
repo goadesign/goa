@@ -17,25 +17,26 @@ func main() {
 		path   string
 		offset int
 	)
-	{
-		if len(os.Args) == 1 {
-			usage()
-		}
+	if len(os.Args) == 1 {
+		usage()
+		return
+	}
 
-		switch os.Args[1] {
-		case "version":
-			fmt.Println("Goa version " + goa.Version())
-			os.Exit(0)
-		case "gen", "example":
-			if len(os.Args) == 2 {
-				usage()
-			}
-			cmd = os.Args[1]
-			path = os.Args[2]
-			offset = 2
-		default:
+	switch os.Args[1] {
+	case "version":
+		fmt.Println("Goa version " + goa.Version())
+		os.Exit(0)
+	case "gen", "example":
+		if len(os.Args) == 2 {
 			usage()
+			return
 		}
+		cmd = os.Args[1]
+		path = os.Args[2]
+		offset = 2
+	default:
+		usage()
+		return
 	}
 
 	var (
