@@ -8,6 +8,12 @@ type appendFS struct {
 // Open opens the named file, appending the prefix to the file path before
 // passing it to the underlying fs.FS.
 func (s appendFS) Open(name string) (http.File, error) {
+	switch name {
+	{{- range $requested, $embedded := . }}
+	case {{ printf "%q" $requested }}:
+		name = {{ printf "%q" $embedded }}
+	{{- end }}
+	}
 	return s.fs.Open(path.Join(s.prefix, name))
 }
 
