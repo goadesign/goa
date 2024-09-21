@@ -88,7 +88,20 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-handler-init", Source: readTemplate("server_handler_init"), FuncMap: funcs, Data: e})
 	}
 	if len(data.FileServers) > 0 {
-		sections = append(sections, &codegen.SectionTemplate{Name: "append-fs", Source: readTemplate("append_fs"), FuncMap: funcs, Data: data})
+		mappedFiles := make(map[string]string)
+		for _, fs := range data.FileServers {
+			if !fs.IsDir {
+				for _, p := range fs.RequestPaths {
+					baseFilePath := "/" + filepath.Base(fs.FilePath)
+					baseRequestPath := "/" + filepath.Base(p)
+					if baseFilePath == baseRequestPath {
+						continue
+					}
+					mappedFiles[baseRequestPath] = baseFilePath
+				}
+			}
+		}
+		sections = append(sections, &codegen.SectionTemplate{Name: "append-fs", Source: readTemplate("append_fs"), FuncMap: funcs, Data: mappedFiles})
 	}
 	for _, s := range data.FileServers {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-files", Source: readTemplate("file_server"), FuncMap: funcs, Data: s})
