@@ -128,6 +128,9 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	if a.Body != nil {
 		a.Body = DupAtt(a.Body)
 		renameType(a.Body, name, suffix)
+		if ut, ok := a.Body.Type.(*UserTypeExpr); ok {
+			ut.UID = a.Service.Name() + "#" + name
+		}
 		return a.Body
 	}
 
@@ -222,7 +225,7 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 	ut := &UserTypeExpr{
 		AttributeExpr: DupAtt(att),
 		TypeName:      concat(e.Name(), "Streaming", "Body"),
-		UID:           concat(e.Service.Name(), e.Name(), "Streaming", "Body"),
+		UID:           e.Service.Name() + "#" + e.Name() + "StreamingBody",
 	}
 	appendSuffix(ut.Attribute().Type, suffix)
 
@@ -282,6 +285,12 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		}
 		att := DupAtt(resp.Body)
 		renameType(att, name, suffix)
+		if ut, ok := att.Type.(*UserTypeExpr); ok {
+			ut.UID = svc.Name() + "#" + name
+		}
+		if rt, ok := att.Type.(*ResultTypeExpr); ok {
+			rt.UID = svc.Name() + "#" + name
+		}
 		return att
 	}
 
