@@ -789,15 +789,15 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			return res, nil
 		case http.StatusBadRequest:
 			var (
-				error    string
+				error_   string
 				numOccur *int
 				err      error
 			)
-			errorRaw := resp.Header.Get("X-Application-Error")
-			if errorRaw == "" {
+			error_Raw := resp.Header.Get("X-Application-Error")
+			if error_Raw == "" {
 				err = goa.MergeErrors(err, goa.MissingFieldError("error", "header"))
 			}
-			error = errorRaw
+			error_ = error_Raw
 			{
 				numOccurRaw := resp.Header.Get("X-Occur")
 				if numOccurRaw != "" {
@@ -817,7 +817,7 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			if err != nil {
 				return nil, goahttp.ErrValidationError("ValidateErrorResponseType", "MethodA", err)
 			}
-			return nil, NewMethodASomeError(error, numOccur)
+			return nil, NewMethodASomeError(error_, numOccur)
 		default:
 			body, _ := io.ReadAll(resp.Body)
 			return nil, goahttp.ErrInvalidResponse("ValidateErrorResponseType", "MethodA", resp.StatusCode, string(body))
