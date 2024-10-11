@@ -16,6 +16,7 @@ func TestFixReservedGo(t *testing.T) {
 		"predeclared zero value":     {w: "nil", want: "nil_"},
 		"predeclared function":       {w: "append", want: "append_"},
 		"non predeclared identifier": {w: "foo", want: "foo"},
+		"package":                    {w: "fmt", want: "fmt_"},
 	}
 	for k, tc := range cases {
 		t.Run(k, func(t *testing.T) {

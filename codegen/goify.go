@@ -56,8 +56,20 @@ func UnionValTypeName(unionName string) string {
 
 // fixReservedGo appends an underscore on to Go reserved keywords.
 func fixReservedGo(w string) string {
-	if doc.IsPredeclared(w) || token.IsKeyword(w) {
+	if doc.IsPredeclared(w) || token.IsKeyword(w) || isPackage[w] {
 		w += "_"
 	}
 	return w
 }
+
+var (
+	isPackage = map[string]bool{
+		// stdlib and goa packages used by generated code
+		"fmt":  true,
+		"http": true,
+		"json": true,
+		"os":   true,
+		"url":  true,
+		"time": true,
+	}
+)
