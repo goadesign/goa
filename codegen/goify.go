@@ -1,6 +1,8 @@
 package codegen
 
 import (
+	"go/doc"
+	"go/token"
 	"strings"
 
 	"goa.design/goa/v3/expr"
@@ -54,70 +56,14 @@ func UnionValTypeName(unionName string) string {
 
 // fixReservedGo appends an underscore on to Go reserved keywords.
 func fixReservedGo(w string) string {
-	if reservedGo[w] {
+	if doc.IsPredeclared(w) || token.IsKeyword(w) || isPackage[w] {
 		w += "_"
 	}
 	return w
 }
 
 var (
-	// reserved golang keywords and package names
-	reservedGo = map[string]bool{
-		// predeclared types
-		"bool":       true,
-		"byte":       true,
-		"complex128": true,
-		"complex64":  true,
-		"float32":    true,
-		"float64":    true,
-		"int":        true,
-		"int16":      true,
-		"int32":      true,
-		"int64":      true,
-		"int8":       true,
-		"rune":       true,
-		"string":     true,
-		"uint":       true,
-		"uint16":     true,
-		"uint32":     true,
-		"uint64":     true,
-		"uint8":      true,
-		"uintptr":    true,
-
-		// reserved keywords
-		"break":       true,
-		"case":        true,
-		"chan":        true,
-		"const":       true,
-		"continue":    true,
-		"default":     true,
-		"defer":       true,
-		"delete":      true,
-		"else":        true,
-		"fallthrough": true,
-		"for":         true,
-		"func":        true,
-		"go":          true,
-		"goto":        true,
-		"if":          true,
-		"import":      true,
-		"interface":   true,
-		"map":         true,
-		"package":     true,
-		"range":       true,
-		"return":      true,
-		"select":      true,
-		"struct":      true,
-		"switch":      true,
-		"type":        true,
-		"var":         true,
-
-		// predeclared constants
-		"true":  true,
-		"false": true,
-		"iota":  true,
-		"nil":   true,
-
+	isPackage = map[string]bool{
 		// stdlib and goa packages used by generated code
 		"fmt":  true,
 		"http": true,
