@@ -33,7 +33,7 @@
 		{{- end }}
 
 		{{- if and (eq .Type.Name "string") (not (isAliased .FieldType)) }}
-	w.Header().Set("{{ .CanonicalName }}", {{ if or .FieldPointer $.ViewedResult }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
+	w.Header().Add("{{ .CanonicalName }}", {{ if or .FieldPointer $.ViewedResult }}*{{ end }}res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }})
 		{{- else }}
 {{- if not $checkNil }}
 {
@@ -45,7 +45,7 @@
 	val := res{{ if $.ViewedResult }}.Projected{{ end }}{{ if .FieldName }}.{{ .FieldName }}{{ end }}
 	{{ template "partial_header_conversion" (headerConversionData .Type (printf "%ss" .VarName) (not .FieldPointer) "val") }}
 			{{- end }}
-	w.Header().Set("{{ .CanonicalName }}", {{ .VarName }}s)
+	w.Header().Add("{{ .CanonicalName }}", {{ .VarName }}s)
 {{- if not $checkNil }}
 }
 {{- end }}
@@ -53,7 +53,7 @@
 
 		{{- if $initDef }}
 	{{ if $checkNil }} } else { {{ else }}if res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .FieldName }} == nil { {{ end }}
-		w.Header().Set("{{ .CanonicalName }}", "{{ printValue .Type .DefaultValue }}")
+		w.Header().Add("{{ .CanonicalName }}", "{{ printValue .Type .DefaultValue }}")
 		{{- end }}
 
 		{{- if or $checkNil $initDef }}
