@@ -106,6 +106,18 @@ var CreateExternalNamePointerRequiredDSL = func() {
 	})
 }
 
+var CreateExternalNameWithInitialismDSL = func() {
+	var ExternalNameWithInitialismType = Type("ExternalNameWithInitialismType", func() {
+		CreateFrom(ApiNameT{})
+		Attribute("string", String)
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(ExternalNameWithInitialismType)
+		})
+	})
+}
+
 var CreateArrayStringDSL = func() {
 	var ArrayStringType = Type("ArrayStringType", func() {
 		CreateFrom(ArrayStringT{})

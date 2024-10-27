@@ -80,6 +80,16 @@ func (t *ExternalNamePointerType) ConvertToExternalNamePointerT() *testdata.Exte
 }
 `
 
+var ConvertExternalNameWithInitialismCode = `// ConvertToApiNameT creates an instance of ApiNameT initialized from t.
+func (t *ExternalNameWithInitialismType) ConvertToApiNameT() *testdata.ApiNameT {
+	v := &testdata.APINameT{}
+	if t.String != nil {
+		v.String = *t.String
+	}
+	return v
+}
+`
+
 var ConvertArrayStringCode = `// ConvertToArrayStringT creates an instance of ArrayStringT initialized from t.
 func (t *ArrayStringType) ConvertToArrayStringT() *testdata.ArrayStringT {
 	v := &testdata.ArrayStringT{}

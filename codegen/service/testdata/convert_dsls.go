@@ -106,6 +106,18 @@ var ConvertExternalNamePointerRequiredDSL = func() {
 	})
 }
 
+var ConvertExternalNameWithInitialismDSL = func() {
+	var ExternalNameWithInitialismType = Type("ExternalNameWithInitialismType", func() {
+		ConvertTo(ApiNameT{})
+		Attribute("string", String)
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(ExternalNameWithInitialismType)
+		})
+	})
+}
+
 var ConvertArrayStringDSL = func() {
 	var ArrayStringType = Type("ArrayStringType", func() {
 		ConvertTo(ArrayStringT{})

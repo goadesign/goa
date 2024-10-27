@@ -74,6 +74,15 @@ func (t *ExternalNamePointerType) CreateFromExternalNamePointerT(v *testdata.Ext
 }
 `
 
+var CreateExternalNameWithInitialismCode = `// CreateFromApiNameT initializes t from the fields of v
+func (t *ExternalNameWithInitialismType) CreateFromApiNameT(v *testdata.ApiNameT) {
+	temp := &ExternalNameWithInitialismType{
+		String: &v.String,
+	}
+	*t = *temp
+}
+`
+
 var CreateArrayStringCode = `// CreateFromArrayStringT initializes t from the fields of v
 func (t *ArrayStringType) CreateFromArrayStringT(v *testdata.ArrayStringT) {
 	temp := &ArrayStringType{}

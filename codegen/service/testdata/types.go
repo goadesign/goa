@@ -18,6 +18,10 @@ type ExternalNamePointerT struct {
 	String *string
 }
 
+type ApiNameT struct {
+	String string
+}
+
 type ArrayStringT struct {
 	ArrayString []string
 }
