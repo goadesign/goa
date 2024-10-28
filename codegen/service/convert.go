@@ -697,24 +697,22 @@ func compatible(from expr.DataType, to reflect.Type, recs ...compRec) error {
 				ok    bool
 				field reflect.StructField
 			)
-			{
-				if ef, k := nat.Attribute.Meta["struct:field:external"]; k {
-					fname = ef[0]
-					if fname == "-" {
-						continue
-					}
-					field, ok = to.FieldByName(ef[0])
-				} else if ef, k := nat.Attribute.Meta["struct.field.external"]; k { // Deprecated syntax. Only present for backward compatibility.
-					fname = ef[0]
-					if fname == "-" {
-						continue
-					}
-					field, ok = to.FieldByName(ef[0])
-				} else {
-					ef := codegen.Goify(ma.ElemName(nat.Name), true)
-					fname = ef
-					field, ok = to.FieldByName(ef)
+			if ef, k := nat.Attribute.Meta["struct:field:external"]; k {
+				fname = ef[0]
+				if fname == "-" {
+					continue
 				}
+				field, ok = to.FieldByName(ef[0])
+			} else if ef, k := nat.Attribute.Meta["struct.field.external"]; k { // Deprecated syntax. Only present for backward compatibility.
+				fname = ef[0]
+				if fname == "-" {
+					continue
+				}
+				field, ok = to.FieldByName(ef[0])
+			} else {
+				ef := codegen.Goify(ma.ElemName(nat.Name), true)
+				fname = ef
+				field, ok = to.FieldByName(ef)
 			}
 			if !ok {
 				return fmt.Errorf("types don't match: could not find field %q of external type %q matching attribute %q of type %q",
