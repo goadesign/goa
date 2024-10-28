@@ -238,8 +238,10 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File,
 		srcCtx := typeContext("", svc.Scope)
 		tgtCtx := codegen.NewAttributeContext(false, false, false, tgtPkg, codegen.NewNameScope())
 		srcAtt := &expr.AttributeExpr{Type: c.User}
+		tgtAtt := &expr.AttributeExpr{Type: dt}
+		tgtAtt.AddMeta("struct:type:name", dt.Name()) // Used by transformer to generate the correct type name.
 		code, tf, err := codegen.GoTransform(
-			srcAtt, &expr.AttributeExpr{Type: dt},
+			srcAtt, tgtAtt,
 			"t", "v", srcCtx, tgtCtx, "transform", true)
 		if err != nil {
 			return nil, err

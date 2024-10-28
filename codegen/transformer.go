@@ -242,6 +242,14 @@ func (a *AttributeScope) Name(att *expr.AttributeExpr, pkg string, ptr, useDefau
 		// GoTransform algorithm does not allow for an override.
 		return a.scope.GoTypeDef(att, ptr, useDefault)
 	}
+	if n, ok := att.Meta["struct:type:name"]; ok {
+		// If the attribute has a "struct:type:name" meta then use it as the
+		// type name.
+		if pkg == "" {
+			return n[0]
+		}
+		return pkg + "." + n[0]
+	}
 	return a.scope.GoFullTypeName(att, pkg)
 }
 
