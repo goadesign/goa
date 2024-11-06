@@ -320,6 +320,12 @@ func (a *AttributeExpr) Finalize() {
 			}
 			a.Merge(ru.Attribute())
 		}
+
+		// Now that we've merged the bases, we can clear them.  This
+		// avoids issues where the bases are dupped and modifications
+		// made to the originals are not reflected in the dups.
+		a.Bases = nil
+
 		for _, nat := range *AsObject(a.Type) {
 			if pkgPath != "" {
 				if u := AsUnion(nat.Attribute.Type); u != nil {

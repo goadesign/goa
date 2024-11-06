@@ -2301,6 +2301,40 @@ var PayloadBodyMapUserValidateDSL = func() {
 	})
 }
 
+var PayloadDeepUserDSL = func() {
+	var DeepChild = ResultType("DeepChild", func() {
+		Attribute("name", String)
+	})
+	var ImmediateChild = ResultType("ImmediateChild", func() {
+		Attributes(func() {
+			Attribute("deep_child", DeepChild)
+		})
+		View("other", func() {
+			Attribute("deep_child")
+		})
+	})
+	var ImmediateChildExtender = ResultType("ImmediateChildExtender", func() {
+		Extend(ImmediateChild)
+		Attributes(func() {
+			Attribute("deep_child", DeepChild)
+		})
+		View("other", func() {
+			Attribute("deep_child")
+		})
+	})
+	var TopLevel = ResultType("TopLevel", func() {
+		Attributes(func() {
+			Attribute("immediate_child", ImmediateChildExtender)
+		})
+	})
+	Service("ServiceDeepUser", func() {
+		Method("MethodDeepUser", func() {
+			Result(TopLevel)
+			HTTP(func() { GET("/") })
+		})
+	})
+}
+
 var PayloadBodyPrimitiveStringValidateDSL = func() {
 	Service("ServiceBodyPrimitiveStringValidate", func() {
 		Method("MethodBodyPrimitiveStringValidate", func() {

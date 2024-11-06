@@ -4338,6 +4338,22 @@ func DecodeMethodBodyMapUserValidateRequest(mux goahttp.Muxer, decoder func(*htt
 }
 `
 
+var PayloadDeepUserDecodeCode = `// marshalServicedeepuserviewsImmediatechildextenderViewToImmediatechildextenderResponseBody
+// builds a value of type *ImmediatechildextenderResponseBody from a value of
+// type *servicedeepuserviews.ImmediatechildextenderView.
+func marshalServicedeepuserviewsImmediatechildextenderViewToImmediatechildextenderResponseBody(v *servicedeepuserviews.ImmediatechildextenderView) *ImmediatechildextenderResponseBody {
+	if v == nil {
+		return nil
+	}
+	res := &ImmediatechildextenderResponseBody{}
+	if v.DeepChild != nil {
+		res.DeepChild = marshalServicedeepuserviewsDeepchildViewToDeepchildResponseBody(v.DeepChild)
+	}
+
+	return res
+}
+`
+
 var PayloadBodyPrimitiveStringValidateDecodeCode = `// DecodeMethodBodyPrimitiveStringValidateRequest returns a decoder for
 // requests sent to the ServiceBodyPrimitiveStringValidate
 // MethodBodyPrimitiveStringValidate endpoint.
