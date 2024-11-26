@@ -14,7 +14,6 @@
     <a href="https://gophers.slack.com/messages/goa"><img alt="Slack: Goa" src="https://img.shields.io/badge/Goa-gray.svg?longCache=true&logo=slack&colorB=red&style=for-the-badge"></a>
     <a href="https://invite.slack.golangbridge.org/"><img alt="Slack: Sign-up" src="https://img.shields.io/badge/Signup-gray.svg?longCache=true&logo=slack&colorB=red&style=for-the-badge"></a>
     <a href="https://bsky.app/profile/goadesign.bsky.social"><img alt="BSky: Goa" src="https://img.shields.io/badge/Bluesky-0285FF?longCache=true&logo=bluesky&logoColor=fff&style=for-the-badge"></a>
-    <a href="https://twitter.com/goadesign"><img alt="Twitter: @goadesign" src="https://img.shields.io/badge/@goadesign-gray.svg?logo=twitter&colorB=blue&style=for-the-badge"></a>
   </p>
 </p>
 
