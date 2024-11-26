@@ -551,7 +551,7 @@ func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoin
 	return endpoint
 }
 
-// wrapLogging applies the Logging interceptor to endpoints.
+// wrapLogging applies the logging interceptor to endpoints.
 func wrapLogging(endpoint goa.Endpoint, i ServerInterceptors, method string) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &LoggingInfo{
@@ -605,7 +605,7 @@ func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoin
 	return endpoint
 }
 
-// wrapLogging applies the Logging interceptor to endpoints.
+// wrapLogging applies the logging interceptor to endpoints.
 func wrapLogging(endpoint goa.Endpoint, i ServerInterceptors, method string) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &LoggingInfo{
@@ -621,7 +621,7 @@ func wrapLogging(endpoint goa.Endpoint, i ServerInterceptors, method string) goa
 	}
 }
 
-// wrapMetrics applies the Metrics interceptor to endpoints.
+// wrapMetrics applies the metrics interceptor to endpoints.
 func wrapMetrics(endpoint goa.Endpoint, i ServerInterceptors, method string) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &MetricsInfo{
@@ -679,7 +679,7 @@ func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoin
 	return endpoint
 }
 
-// wrapLogging applies the Logging interceptor to endpoints.
+// wrapLogging applies the logging interceptor to endpoints.
 func wrapLogging(endpoint goa.Endpoint, i ServerInterceptors, method string) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &LoggingInfo{

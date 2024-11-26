@@ -33,6 +33,7 @@ type (
 	// InterceptorData describes a single interceptor.
 	InterceptorData struct {
 		Name                    string
+		DesignName              string
 		UnexportedName          string
 		Description             string
 		PayloadRef              string
@@ -150,6 +151,7 @@ func buildMethodInterceptors(m *expr.MethodExpr, scope *codegen.NameScope) ([]*I
 
 		return &InterceptorData{
 			Name:                    codegen.Goify(intr.Name, true),
+			DesignName:              intr.Name,
 			UnexportedName:          codegen.Goify(intr.Name, false),
 			Description:             intr.Description,
 			PayloadRef:              methodData.PayloadRef,

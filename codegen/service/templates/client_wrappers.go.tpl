@@ -7,7 +7,7 @@ func Wrap{{ .MethodVarName }}ClientEndpoint(endpoint goa.Endpoint, i ClientInter
 }
 
 {{- range .ClientInterceptors }}
-{{ comment (printf "wrapClient%s applies the %s interceptor to endpoints." .Name .Name) }}
+{{ comment (printf "wrapClient%s applies the %s interceptor to endpoints." .Name .DesignName) }}
 func wrapClient{{ .Name }}(endpoint goa.Endpoint, i ClientInterceptors, method string) goa.Endpoint {
     return func(ctx context.Context, req any) (any, error) {
         info := &{{ .Name }}Info{
