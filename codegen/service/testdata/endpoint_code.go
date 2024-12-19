@@ -543,29 +543,7 @@ func NewMethodEndpoint(s Service) goa.Endpoint {
 		return s.Method(ctx, p)
 	}
 }
-
-// WrapMethodEndpoint wraps the Method endpoint with the server-side
-// interceptors defined in the design.
-func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
-	endpoint = wrapLogging(endpoint, i, "Method")
-	return endpoint
-}
-
-// wrapLogging applies the logging interceptor to endpoints.
-func wrapLogging(endpoint goa.Endpoint, i ServerInterceptors, method string) goa.Endpoint {
-	return func(ctx context.Context, req any) (any, error) {
-		info := &LoggingInfo{
-			Service:    "ServiceWithServerInterceptor",
-			Method:     method,
-			Endpoint:   endpoint,
-			RawPayload: req,
-		}
-		next := func(ctx context.Context) (any, error) {
-			return endpoint(ctx, req)
-		}
-		return i.Logging(ctx, info, next)
-	}
-}`
+`
 
 var EndpointWithMultipleInterceptors = `// Endpoints wraps the "ServiceWithMultipleInterceptors" service endpoints.
 type Endpoints struct {
@@ -596,46 +574,7 @@ func NewMethodEndpoint(s Service) goa.Endpoint {
 		return s.Method(ctx, p)
 	}
 }
-
-// WrapMethodEndpoint wraps the Method endpoint with the server-side
-// interceptors defined in the design.
-func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
-	endpoint = wrapLogging(endpoint, i, "Method")
-	endpoint = wrapMetrics(endpoint, i, "Method")
-	return endpoint
-}
-
-// wrapLogging applies the logging interceptor to endpoints.
-func wrapLogging(endpoint goa.Endpoint, i ServerInterceptors, method string) goa.Endpoint {
-	return func(ctx context.Context, req any) (any, error) {
-		info := &LoggingInfo{
-			Service:    "ServiceWithMultipleInterceptors",
-			Method:     method,
-			Endpoint:   endpoint,
-			RawPayload: req,
-		}
-		next := func(ctx context.Context) (any, error) {
-			return endpoint(ctx, req)
-		}
-		return i.Logging(ctx, info, next)
-	}
-}
-
-// wrapMetrics applies the metrics interceptor to endpoints.
-func wrapMetrics(endpoint goa.Endpoint, i ServerInterceptors, method string) goa.Endpoint {
-	return func(ctx context.Context, req any) (any, error) {
-		info := &MetricsInfo{
-			Service:    "ServiceWithMultipleInterceptors",
-			Method:     method,
-			Endpoint:   endpoint,
-			RawPayload: req,
-		}
-		next := func(ctx context.Context) (any, error) {
-			return endpoint(ctx, req)
-		}
-		return i.Metrics(ctx, info, next)
-	}
-}`
+`
 
 var EndpointStreamingWithInterceptor = `// Endpoints wraps the "ServiceStreamingWithInterceptor" service endpoints.
 type Endpoints struct {
@@ -671,26 +610,4 @@ func NewMethodEndpoint(s Service) goa.Endpoint {
 		return nil, s.Method(ctx, ep.Stream)
 	}
 }
-
-// WrapMethodEndpoint wraps the Method endpoint with the server-side
-// interceptors defined in the design.
-func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
-	endpoint = wrapLogging(endpoint, i, "Method")
-	return endpoint
-}
-
-// wrapLogging applies the logging interceptor to endpoints.
-func wrapLogging(endpoint goa.Endpoint, i ServerInterceptors, method string) goa.Endpoint {
-	return func(ctx context.Context, req any) (any, error) {
-		info := &LoggingInfo{
-			Service:    "ServiceStreamingWithInterceptor",
-			Method:     method,
-			Endpoint:   endpoint,
-			RawPayload: req.(*MethodEndpointInput).Payload,
-		}
-		next := func(ctx context.Context) (any, error) {
-			return endpoint(ctx, req)
-		}
-		return i.Logging(ctx, info, next)
-	}
-}`
+`

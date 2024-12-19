@@ -25,6 +25,11 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 			files = append(files, fs...)
 		}
 
+		// example interceptors implementation
+		if fs := service.ExampleInterceptorsFiles(genpkg, r); len(fs) != 0 {
+			files = append(files, fs...)
+		}
+
 		// server main
 		if fs := example.ServerFiles(genpkg, r); len(fs) != 0 {
 			files = append(files, fs...)
@@ -54,6 +59,8 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				files = append(files, fs...)
 			}
 		}
+
+		// Add imports defined via struct:field:type
 		for _, f := range files {
 			if len(f.SectionTemplates) > 0 {
 				for _, s := range r.Services {

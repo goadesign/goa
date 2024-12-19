@@ -78,18 +78,18 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 		codegen.Header("", apipkg, specs),
 		{
 			Name:   "basic-service-struct",
-			Source: readTemplate("service_struct"),
+			Source: readTemplate("example_service_struct"),
 			Data:   data,
 		}, {
 			Name:   "basic-service-init",
-			Source: readTemplate("service_init"),
+			Source: readTemplate("example_service_init"),
 			Data:   data,
 		},
 	}
 	if len(data.Schemes) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "security-authfuncs",
-			Source: readTemplate("security_authfuncs"),
+			Source: readTemplate("example_security_authfuncs"),
 			Data:   data,
 		})
 	}

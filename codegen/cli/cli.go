@@ -34,6 +34,8 @@ type (
 		// PkgName is the service HTTP client package import name,
 		// e.g. "storagec".
 		PkgName string
+		// Interceptors contains the data for client interceptors if any.
+		Interceptors *InterceptorData
 	}
 
 	// SubcommandData contains the data needed to render a sub-command.
@@ -56,6 +58,14 @@ type (
 		Conversion string
 		// Example is a valid command invocation, starting with the command name.
 		Example string
+	}
+
+	// InterceptorData contains the data needed to generate interceptor code.
+	InterceptorData struct {
+		// VarName is the name of the interceptor variable.
+		VarName string
+		// PkgName is the package name containing the interceptor type.
+		PkgName string
 	}
 
 	// FlagData contains the data needed to render a command-line flag.
@@ -151,11 +161,21 @@ func BuildCommandData(data *service.Data) *CommandData {
 	if description == "" {
 		description = fmt.Sprintf("Make requests to the %q service", data.Name)
 	}
+
+	var interceptors *InterceptorData
+	if len(data.ClientInterceptors) > 0 {
+		interceptors = &InterceptorData{
+			VarName: "inter",
+			PkgName: data.PkgName,
+		}
+	}
+
 	return &CommandData{
-		Name:        codegen.KebabCase(data.Name),
-		VarName:     codegen.Goify(data.Name, false),
-		Description: description,
-		PkgName:     data.PkgName + "c",
+		Name:         codegen.KebabCase(data.Name),
+		VarName:      codegen.Goify(data.Name, false),
+		Description:  description,
+		PkgName:      data.PkgName + "c",
+		Interceptors: interceptors,
 	}
 }
 

@@ -1,32 +1,7 @@
-{{- if .ServerInterceptors -}}
-// ServerInterceptors defines the interface for all server-side interceptors.
-// Server interceptors execute after the request is decoded and before the payload 
-// is sent to the service (request interceptors) or after the service returns and
-// before the response is encoded (response interceptors).
-type ServerInterceptors interface {
-{{- range .ServerInterceptors }}
-	{{ comment .Description }}
-	{{ .Name }}(context.Context, *{{ .Name }}Info, goa.NextFunc) (any, error)
-{{- end }}
-}
-{{- end }}
-
-{{- if .ClientInterceptors -}}
-// ClientInterceptors defines the interface for all client-side interceptors.
-// Client interceptors execute after the payload is encoded and before the request
-// is sent to the server (request interceptors) or after the response is decoded
-// and before the result is returned to the client (response interceptors).
-type ClientInterceptors interface {
-{{- range .ClientInterceptors }}
-	{{ comment .Description }}
-	{{ .Name }}(context.Context, *{{ .Name }}Info, goa.NextFunc) (any, error)
-{{- end }}
-}
-{{- end }}
 
 // Access interfaces for interceptor payloads and results
 type (
-{{- range .AllInterceptors }}
+{{- range . }}
 	// {{ .Name }}Info provides metadata about the current interception.
 	// It includes service name, method name, and access to the endpoint.
 	{{ .Name }}Info goa.InterceptorInfo
@@ -61,11 +36,11 @@ type (
 {{- end }}
 )
 
-{{- if .HasPrivateImplementationTypes }}
+{{- if hasPrivateImplementationTypes . }}
 
 // Private implementation types
 type (
-	{{- range .AllInterceptors }}
+	{{- range . }}
 	{{- if or .ReadPayload .WritePayload }}
 	{{ .UnexportedName }}PayloadAccess struct {
 		payload {{ .PayloadRef }}
@@ -81,7 +56,7 @@ type (
 )
 
 // Public accessor methods for Info types
-{{- range .AllInterceptors }}
+{{- range . }}
 	{{- if or .ReadPayload .WritePayload }}
 // Payload returns a type-safe accessor for the method payload.
 func (info *{{ .Name }}Info) Payload() {{ .Name }}PayloadAccess {
@@ -98,7 +73,7 @@ func (info *{{ .Name }}Info) Result(res any) {{ .Name }}ResultAccess {
 {{- end }}
 
 // Private implementation methods
-{{- range .AllInterceptors }}
+{{- range . }}
 	{{- $interceptor := . }}
 	{{- range .ReadPayload }}
 func (p *{{ $interceptor.UnexportedName }}PayloadAccess) {{ .Name }}() {{ .TypeRef }} {

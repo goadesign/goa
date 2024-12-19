@@ -307,26 +307,4 @@ func (c *Client) Method(ctx context.Context, p string) (res string, err error) {
 	}
 	return ires.(string), nil
 }
-
-// WrapMethodClientEndpoint wraps the Method endpoint with the client
-// interceptors defined in the design.
-func WrapMethodClientEndpoint(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
-	endpoint = wrapClientTracing(endpoint, i, "Method")
-	return endpoint
-}
-
-// wrapClientTracing applies the tracing interceptor to endpoints.
-func wrapClientTracing(endpoint goa.Endpoint, i ClientInterceptors, method string) goa.Endpoint {
-	return func(ctx context.Context, req any) (any, error) {
-		info := &TracingInfo{
-			Service:    "ServiceWithClientInterceptor",
-			Method:     method,
-			Endpoint:   endpoint,
-			RawPayload: req,
-		}
-		next := func(ctx context.Context) (any, error) {
-			return endpoint(ctx, req)
-		}
-		return i.Tracing(ctx, info, next)
-	}
-}`
+`

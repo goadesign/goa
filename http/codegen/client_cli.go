@@ -127,6 +127,13 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 			Path: genpkg + "/http/" + sd.Service.PathName + "/client",
 			Name: sd.Service.PkgName + "c",
 		})
+		// Add interceptors import if service has client interceptors
+		if len(sd.Service.ClientInterceptors) > 0 {
+			specs = append(specs, &codegen.ImportSpec{
+				Path: genpkg + "/" + sd.Service.PathName,
+				Name: sd.Service.PkgName,
+			})
+		}
 	}
 
 	cliData := make([]*cli.CommandData, len(data))

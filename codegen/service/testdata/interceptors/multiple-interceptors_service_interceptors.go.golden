@@ -1,0 +1,26 @@
+// ServerInterceptors defines the interface for all server-side interceptors.
+// Server interceptors execute after the request is decoded and before the
+// payload is sent to the service. The implementation is responsible for calling
+// next to complete the request.
+type ServerInterceptors interface {
+	Test(ctx context.Context, info *TestInfo, next goa.Endpoint) (any, error)
+	Test3(ctx context.Context, info *Test3Info, next goa.Endpoint) (any, error)
+}
+
+// Access interfaces for interceptor payloads and results
+type (
+	// TestInfo provides metadata about the current interception.
+	// It includes service name, method name, and access to the endpoint.
+	TestInfo goa.InterceptorInfo
+	// Test3Info provides metadata about the current interception.
+	// It includes service name, method name, and access to the endpoint.
+	Test3Info goa.InterceptorInfo
+)
+
+// WrapMethodEndpoint wraps the Method endpoint with the server-side
+// interceptors defined in the design.
+func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	endpoint = wrapTest(endpoint, i, "Method")
+	endpoint = wrapTest3(endpoint, i, "Method")
+	return endpoint
+}

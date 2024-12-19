@@ -26,49 +26,46 @@ func init() {
 
 func TestInterceptors(t *testing.T) {
 	cases := []struct {
-		Name string
-		DSL  func()
+		Name              string
+		DSL               func()
+		expectedFileCount int
 	}{
-		{"no-interceptors", testdata.NoInterceptorsDSL},
-		{"single-api-server-interceptor", testdata.SingleAPIServerInterceptorDSL},
-		{"single-service-server-interceptor", testdata.SingleServiceServerInterceptorDSL},
-		{"single-method-server-interceptor", testdata.SingleMethodServerInterceptorDSL},
-		{"single-client-interceptor", testdata.SingleClientInterceptorDSL},
-		{"multiple-interceptors", testdata.MultipleInterceptorsDSL},
-		{"interceptor-with-read-payload", testdata.InterceptorWithReadPayloadDSL},
-		{"interceptor-with-write-payload", testdata.InterceptorWithWritePayloadDSL},
-		{"interceptor-with-read-write-payload", testdata.InterceptorWithReadWritePayloadDSL},
-		{"interceptor-with-read-result", testdata.InterceptorWithReadResultDSL},
-		{"interceptor-with-write-result", testdata.InterceptorWithWriteResultDSL},
-		{"interceptor-with-read-write-result", testdata.InterceptorWithReadWriteResultDSL},
-		{"streaming-interceptors", testdata.StreamingInterceptorsDSL},
-		{"streaming-interceptors-with-read-payload", testdata.StreamingInterceptorsWithReadPayloadDSL},
-		{"streaming-interceptors-with-read-result", testdata.StreamingInterceptorsWithReadResultDSL},
+		{"no-interceptors", testdata.NoInterceptorsDSL, 0},
+		{"single-api-server-interceptor", testdata.SingleAPIServerInterceptorDSL, 2},
+		{"single-service-server-interceptor", testdata.SingleServiceServerInterceptorDSL, 2},
+		{"single-method-server-interceptor", testdata.SingleMethodServerInterceptorDSL, 2},
+		{"single-client-interceptor", testdata.SingleClientInterceptorDSL, 2},
+		{"multiple-interceptors", testdata.MultipleInterceptorsExampleDSL, 3},
+		{"interceptor-with-read-payload", testdata.InterceptorWithReadPayloadDSL, 3},
+		{"interceptor-with-write-payload", testdata.InterceptorWithWritePayloadDSL, 3},
+		{"interceptor-with-read-write-payload", testdata.InterceptorWithReadWritePayloadDSL, 3},
+		{"interceptor-with-read-result", testdata.InterceptorWithReadResultDSL, 3},
+		{"interceptor-with-write-result", testdata.InterceptorWithWriteResultDSL, 3},
+		{"interceptor-with-read-write-result", testdata.InterceptorWithReadWriteResultDSL, 3},
+		{"streaming-interceptors", testdata.StreamingInterceptorsDSL, 2},
+		{"streaming-interceptors-with-read-payload", testdata.StreamingInterceptorsWithReadPayloadDSL, 2},
+		{"streaming-interceptors-with-read-result", testdata.StreamingInterceptorsWithReadResultDSL, 2},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := runDSL(t, c.DSL)
 			require.Len(t, root.Services, 1)
 
-			fs := InterceptorsFile("goa.design/goa/example", root.Services[0])
+			fs := InterceptorsFiles("goa.design/goa/example", root.Services[0])
 
-			if c.Name == "no-interceptors" {
-				assert.Nil(t, fs)
-				return
+			require.Len(t, fs, c.expectedFileCount)
+			for _, f := range fs {
+				buf := new(bytes.Buffer)
+				for _, s := range f.SectionTemplates[1:] {
+					require.NoError(t, s.Write(buf))
+				}
+				bs, err := format.Source(buf.Bytes())
+				require.NoError(t, err, buf.String())
+				code := strings.ReplaceAll(string(bs), "\r\n", "\n")
+
+				golden := filepath.Join("testdata", "interceptors", c.Name+"_"+filepath.Base(f.Path)+".golden")
+				compareOrUpdateGolden(t, code, golden)
 			}
-
-			require.NotNil(t, fs)
-
-			buf := new(bytes.Buffer)
-			for _, s := range fs.SectionTemplates[1:] {
-				require.NoError(t, s.Write(buf))
-			}
-			bs, err := format.Source(buf.Bytes())
-			require.NoError(t, err, buf.String())
-			code := strings.ReplaceAll(string(bs), "\r\n", "\n")
-
-			golden := filepath.Join("testdata", "interceptors", c.Name+".golden")
-			compareOrUpdateGolden(t, code, golden)
 		})
 	}
 }

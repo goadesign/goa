@@ -215,8 +215,8 @@ func TestHTTPEndpointParentRequired(t *testing.T) {
 		t.Fatal(`unexpected error, service "Child" not found`)
 	}
 	m := svc.Method("Method")
-	if m == nil {
-		t.Fatal(`unexpected error, method "Method" not found`)
+	if m == nil || m.Payload == nil {
+		t.Fatal(`unexpected error, method "Method" or its payload not found`)
 	}
 	if !m.Payload.IsRequired("ancestor_id") {
 		t.Errorf(`expected "ancestor_id" is required, but not so`)

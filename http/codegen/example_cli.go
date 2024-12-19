@@ -7,6 +7,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
+	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 )
 
@@ -30,20 +31,10 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
-	var (
-		rootPath string
-		apiPkg   string
-
-		scope = codegen.NewNameScope()
-	)
-	{
-		// genpkg is created by path.Join so the separator is / regardless of operating system
-		idx := strings.LastIndex(genpkg, string("/"))
-		rootPath = "."
-		if idx > 0 {
-			rootPath = genpkg[:idx]
-		}
-		apiPkg = scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
+	idx := strings.LastIndex(genpkg, string("/"))
+	rootPath := "."
+	if idx > 0 {
+		rootPath = genpkg[:idx]
 	}
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
@@ -59,8 +50,17 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
 		{Path: genpkg + "/http/cli/" + svrdata.Dir, Name: "cli"},
-		{Path: rootPath, Name: apiPkg},
 	}
+	importScope := codegen.NewNameScope()
+	for _, svc := range root.Services {
+		data := service.Services.Get(svc.Name)
+		specs = append(specs, &codegen.ImportSpec{Path: genpkg + "/" + data.PkgName})
+		importScope.Unique(data.PkgName)
+	}
+	interceptorsPkg := importScope.Unique("interceptors", "ex")
+	specs = append(specs, &codegen.ImportSpec{Path: rootPath + "/interceptors", Name: interceptorsPkg})
+	apiPkg := importScope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
+	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
 
 	var svcData []*ServiceData
 	for _, svc := range svr.Services {
@@ -73,6 +73,10 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 		{
 			Name:   "cli-http-start",
 			Source: readTemplate("cli_start"),
+			Data: map[string]any{
+				"Services":        svcData,
+				"InterceptorsPkg": interceptorsPkg,
+			},
 		},
 		{
 			Name:   "cli-http-streaming",

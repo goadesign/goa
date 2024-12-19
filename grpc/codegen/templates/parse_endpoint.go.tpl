@@ -1,6 +1,12 @@
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
-func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, any, error) {
+func ParseEndpoint(
+	cc *grpc.ClientConn,
+	{{- if .Interceptors }}
+	{{ .Interceptors.VarName }} {{ .Interceptors.PkgName }}.ClientInterceptors,
+	{{- end }}
+	opts ...grpc.CallOption,
+) (goa.Endpoint, any, error) {
 	{{ .FlagsCode }}
 	var (
 		data     any
@@ -13,9 +19,14 @@ func ParseEndpoint(cc *grpc.ClientConn, opts ...grpc.CallOption) (goa.Endpoint, 
 		case "{{ .Name }}":
 			c := {{ .PkgName }}.NewClient(cc, opts...)
 			switch epn {
-		{{- $pkgName := .PkgName }}{{ range .Subcommands }}
+		{{- $pkgName := .PkgName }}
+		{{- $interceptors := .Interceptors }}
+		{{ range .Subcommands }}
 			case "{{ .Name }}":
 				endpoint = c.{{ .MethodVarName }}()
+			{{- if $interceptors }}
+				endpoint = {{ $interceptors.PkgName }}.Wrap{{ .MethodVarName }}ClientEndpoint(endpoint, {{ $interceptors.VarName }})
+			{{- end }}
 			{{- if .BuildFunction }}
 				data, err = {{ $pkgName}}.{{ .BuildFunction.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
 			{{- else if .Conversion }}

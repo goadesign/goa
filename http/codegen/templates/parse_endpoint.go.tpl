@@ -14,11 +14,14 @@ func ParseEndpoint(
 			{{- end }}
 		{{- end }}
 	{{- end }}
-	{{- range $c := .Commands }}
+	{{- range $i, $c := .Commands }}
 	{{- range .Subcommands }}
 		{{- if .MultipartVarName }}
 	{{ .MultipartVarName }} {{ $c.PkgName }}.{{ .MultipartFuncName }},
 		{{- end }}
+	{{- end }}
+	{{- if .Interceptors }}
+	{{ .Interceptors.VarName }} {{ .Interceptors.PkgName }}.ClientInterceptors,
 	{{- end }}
 	{{- end }}
 ) (goa.Endpoint, any, error) {
@@ -34,11 +37,16 @@ func ParseEndpoint(
 		case "{{ .Name }}":
 			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedStream }}, dialer, {{ .VarName }}Configurer{{ end }})
 			switch epn {
-		{{- $pkgName := .PkgName }}{{ range .Subcommands }}
+		{{- $pkgName := .PkgName }}
+		{{- $interceptors := .Interceptors }}
+		{{- range .Subcommands }}
 			case "{{ .Name }}":
 				endpoint = c.{{ .MethodVarName }}({{ if .MultipartVarName }}{{ .MultipartVarName }}{{ end }})
+			{{- if $interceptors }}
+				endpoint = {{ $interceptors.PkgName }}.Wrap{{ .MethodVarName }}ClientEndpoint(endpoint, {{ $interceptors.VarName }})
+			{{- end }}
 			{{- if .BuildFunction }}
-				data, err = {{ $pkgName}}.{{ .BuildFunction.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
+				data, err = {{ $pkgName }}.{{ .BuildFunction.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
 			{{- else if .Conversion }}
 				{{ .Conversion }}
 			{{- end }}

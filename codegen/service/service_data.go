@@ -37,12 +37,6 @@ type (
 	// ServicesData encapsulates the data computed from the service designs.
 	ServicesData map[string]*Data
 
-	// RequirementsData is the list of security requirements.
-	RequirementsData []*RequirementData
-
-	// SchemesData is the list of security schemes.
-	SchemesData []*SchemeData
-
 	// Data contains the data used to render the code related to a single
 	// service.
 	Data struct {
@@ -70,6 +64,12 @@ type (
 		Methods []*MethodData
 		// Schemes is the list of security schemes required by the service methods.
 		Schemes SchemesData
+		// ServerInterceptors is the union of the server interceptors defined
+		// at the methods, service and the API level.
+		ServerInterceptors []*InterceptorData
+		// ClientInterceptors is the union of the client interceptors defined
+		// at the methods, service and the API level.
+		ClientInterceptors []*InterceptorData
 		// Scope initialized with all the service types.
 		Scope *codegen.NameScope
 		// ViewScope initialized with all the viewed types.
@@ -97,38 +97,6 @@ type (
 		viewedResultTypes []*ViewedResultTypeData
 		// unionValueMethods lists the methods used to define union types.
 		unionValueMethods []*UnionValueMethodData
-	}
-
-	// UnionValueMethodData describes a method used on a union value type.
-	UnionValueMethodData struct {
-		// Name is the name of the function.
-		Name string
-		// TypeRef is a reference on the target union value type.
-		TypeRef string
-		// Loc defines the file and Go package of the method if
-		// overridden in corresponding union type via Meta.
-		Loc *codegen.Location
-	}
-
-	// ErrorInitData describes an error returned by a service method of type
-	// ErrorResult.
-	ErrorInitData struct {
-		// Name is the name of the init function.
-		Name string
-		// Description is the error description.
-		Description string
-		// ErrName is the name of the error.
-		ErrName string
-		// TypeName is the error struct type name.
-		TypeName string
-		// TypeRef is the reference to the error type.
-		TypeRef string
-		// Temporary indicates whether the error is temporary.
-		Temporary bool
-		// Timeout indicates whether the error is due to timeouts.
-		Timeout bool
-		// Fault indicates whether the error is server-side fault.
-		Fault bool
 	}
 
 	// MethodData describes a single service method.
@@ -188,6 +156,12 @@ type (
 		// Schemes contains the security schemes types used by the
 		// method.
 		Schemes SchemesData
+		// ServerInterceptors list the server interceptors that apply to this
+		// method.
+		ServerInterceptors []*InterceptorData
+		// ClientInterceptors list the client interceptors that apply to this
+		// method.
+		ClientInterceptors []*InterceptorData
 		// ViewedResult contains the data required to generate the code handling
 		// views if any.
 		ViewedResult *ViewedResultTypeData
@@ -252,6 +226,81 @@ type (
 		Kind expr.StreamKind
 	}
 
+	// ErrorInitData describes an error returned by a service method of type
+	// ErrorResult.
+	ErrorInitData struct {
+		// Name is the name of the init function.
+		Name string
+		// Description is the error description.
+		Description string
+		// ErrName is the name of the error.
+		ErrName string
+		// TypeName is the error struct type name.
+		TypeName string
+		// TypeRef is the reference to the error type.
+		TypeRef string
+		// Temporary indicates whether the error is temporary.
+		Temporary bool
+		// Timeout indicates whether the error is due to timeouts.
+		Timeout bool
+		// Fault indicates whether the error is server-side fault.
+		Fault bool
+	}
+
+	// InterceptorData describes a single interceptor that can read and write
+	// payload and result attributes.
+	InterceptorData struct {
+		// Name is the name of the interceptor used in the generated code.
+		Name string
+		// DesignName is the name of the interceptor as defined in the design.
+		DesignName string
+		// UnexportedName is the private version of the interceptor name used in
+		// generated code.
+		UnexportedName string
+		// Description is the description of the interceptor from the design.
+		Description string
+		// PayloadRef is the reference to the payload type that the interceptor
+		// can access.
+		PayloadRef string
+		// ResultRef is the reference to the result type that the interceptor
+		// can access.
+		ResultRef string
+		// ReadPayload lists the payload attributes that the interceptor can
+		// read.  These are defined using ReadPayload() in the design DSL.
+		ReadPayload []*AttributeData
+		// WritePayload lists the payload attributes that the interceptor can
+		// write.  These are defined using WritePayload() in the design DSL.
+		WritePayload []*AttributeData
+		// ReadResult lists the result attributes that the interceptor can read.
+		// These are defined using ReadResult() in the design DSL.
+		ReadResult []*AttributeData
+		// WriteResult lists the result attributes that the interceptor can
+		// write.  These are defined using WriteResult() in the design DSL.
+		WriteResult []*AttributeData
+		// ServerStreamInputStruct is the name of the server stream input struct
+		// type used when the interceptor is applied to a streaming endpoint.
+		ServerStreamInputStruct string
+		// ClientStreamInputStruct is the name of the client stream input struct
+		// type used when the interceptor is applied to a streaming endpoint.
+		ClientStreamInputStruct string
+	}
+
+	// AttributeData describes a single attribute.
+	AttributeData struct {
+		// Name is the name of the attribute.
+		Name string
+		// TypeRef is the reference to the attribute type.
+		TypeRef string
+		// FieldPointer is true if the attribute is a pointer.
+		FieldPointer bool
+	}
+
+	// RequirementsData is the list of security requirements.
+	RequirementsData []*RequirementData
+
+	// SchemesData is the list of security schemes.
+	SchemesData []*SchemeData
+
 	// RequirementData lists the schemes and scopes defined by a single
 	// security requirement.
 	RequirementData struct {
@@ -278,6 +327,17 @@ type (
 		Loc *codegen.Location
 		// Type is the underlying type.
 		Type expr.UserType
+	}
+
+	// UnionValueMethodData describes a method used on a union value type.
+	UnionValueMethodData struct {
+		// Name is the name of the function.
+		Name string
+		// TypeRef is a reference on the target union value type.
+		TypeRef string
+		// Loc defines the file and Go package of the method if
+		// overridden in corresponding union type via Meta.
+		Loc *codegen.Location
 	}
 
 	// SchemeData describes a single security scheme.
@@ -747,6 +807,17 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	}
 
 	var (
+		serverInterceptors []*InterceptorData
+		clientInterceptors []*InterceptorData
+		seenServer         = make(map[string]struct{})
+		seenClient         = make(map[string]struct{})
+	)
+	for _, m := range methods {
+		serverInterceptors = append(serverInterceptors, collectInterceptors(m.ServerInterceptors, seenServer)...)
+		clientInterceptors = append(clientInterceptors, collectInterceptors(m.ClientInterceptors, seenClient)...)
+	}
+
+	var (
 		desc string
 	)
 	{
@@ -769,6 +840,8 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		ViewsPkg:           viewspkg,
 		Methods:            methods,
 		Schemes:            schemes,
+		ServerInterceptors: serverInterceptors,
+		ClientInterceptors: clientInterceptors,
 		Scope:              scope,
 		ViewScope:          viewScope,
 		errorTypes:         errTypes,
@@ -872,6 +945,18 @@ func collectUnionMethods(att *expr.AttributeExpr, scope *codegen.NameScope, loc 
 		for _, nat := range dt.Values {
 			data = append(data, collect(nat.Attribute, loc)...)
 		}
+	}
+	return
+}
+
+// collectInterceptors traverses the interceptors to build a unique set.
+func collectInterceptors(interceptors []*InterceptorData, seen map[string]struct{}) (data []*InterceptorData) {
+	for _, i := range interceptors {
+		if _, ok := seen[i.Name]; ok {
+			continue
+		}
+		seen[i.Name] = struct{}{}
+		data = append(data, i)
 	}
 	return
 }
@@ -1001,14 +1086,16 @@ func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 		RequestStruct:                vname + "RequestData",
 		ResponseStruct:               vname + "ResponseData",
 	}
-	if m.IsStreaming() {
-		initStreamData(data, m, vname, rname, resultRef, scope)
-	}
+	initStreamData(data, m, vname, rname, resultRef, scope)
+	initInterceptorsData(data, m, payloadRef, resultRef, scope)
 	return data
 }
 
 // initStreamData initializes the streaming payload data structures and methods.
 func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRef string, scope *codegen.NameScope) {
+	if !m.IsStreaming() {
+		return
+	}
 	var (
 		spayloadName string
 		spayloadRef  string
@@ -1080,6 +1167,41 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 	data.StreamingPayloadRef = spayloadDef
 	data.StreamingPayloadDesc = spayloadDesc
 	data.StreamingPayloadEx = spayloadEx
+}
+
+func initInterceptorsData(data *MethodData, m *expr.MethodExpr, payloadRef, resultRef string, scope *codegen.NameScope) {
+	if len(m.ServerInterceptors) == 0 && len(m.ClientInterceptors) == 0 {
+		return
+	}
+	buildInterceptorData := func(i *expr.InterceptorExpr, serverStreamStruct, clientStreamStruct string, scope *codegen.NameScope) *InterceptorData {
+		return &InterceptorData{
+			Name:                    codegen.Goify(i.Name, true),
+			DesignName:              i.Name,
+			UnexportedName:          codegen.Goify(i.Name, false),
+			Description:             i.Description,
+			PayloadRef:              payloadRef,
+			ResultRef:               resultRef,
+			ServerStreamInputStruct: serverStreamStruct,
+			ClientStreamInputStruct: clientStreamStruct,
+			ReadPayload:             collectAttributes(i.ReadPayload, m.Payload, scope),
+			WritePayload:            collectAttributes(i.WritePayload, m.Payload, scope),
+			ReadResult:              collectAttributes(i.ReadResult, m.Result, scope),
+			WriteResult:             collectAttributes(i.WriteResult, m.Result, scope),
+		}
+	}
+	var serverEndpointStruct, clientEndpointStruct string
+	if data.ServerStream != nil {
+		serverEndpointStruct = data.ServerStream.EndpointStruct
+	}
+	if data.ClientStream != nil {
+		clientEndpointStruct = data.ClientStream.EndpointStruct
+	}
+	for _, i := range m.ServerInterceptors {
+		data.ServerInterceptors = append(data.ServerInterceptors, buildInterceptorData(i, serverEndpointStruct, clientEndpointStruct, scope))
+	}
+	for _, i := range m.ClientInterceptors {
+		data.ClientInterceptors = append(data.ClientInterceptors, buildInterceptorData(i, serverEndpointStruct, clientEndpointStruct, scope))
+	}
 }
 
 // BuildSchemeData builds the scheme data for the given scheme and method expr.
@@ -1182,6 +1304,30 @@ func BuildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 		}
 	}
 	return nil
+}
+
+// collectAttributes builds AttributeData from an AttributeExpr
+func collectAttributes(attrNames, parent *expr.AttributeExpr, scope *codegen.NameScope) []*AttributeData {
+	if attrNames == nil {
+		return nil
+	}
+	obj := expr.AsObject(attrNames.Type)
+	if obj == nil {
+		return nil
+	}
+	data := make([]*AttributeData, len(*obj))
+	for i, nat := range *obj {
+		parentAttr := parent.Find(nat.Name)
+		if parentAttr == nil {
+			continue
+		}
+		data[i] = &AttributeData{
+			Name:         codegen.Goify(nat.Name, true),
+			TypeRef:      scope.GoTypeRef(parentAttr),
+			FieldPointer: parent.IsPrimitivePointer(nat.Name, true),
+		}
+	}
+	return data
 }
 
 // collectProjectedTypes builds a projected type for every user type found

@@ -24,9 +24,10 @@ func ExampleCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // exampleCLI returns an example client tool HTTP implementation for the given
 // server expression.
-func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
+func exampleCLI(genpkg string, _ *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
 	var (
 		mainPath string
+		rootPath string
 
 		svrdata = example.Servers.Get(svr)
 	)
@@ -35,22 +36,11 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 		if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
 			return nil // file already exists, skip it.
 		}
-	}
-
-	var (
-		rootPath string
-		apiPkg   string
-
-		scope = codegen.NewNameScope()
-	)
-	{
-		// genpkg is created by path.Join so the separator is / regardless of operating system
 		idx := strings.LastIndex(genpkg, string("/"))
 		rootPath = "."
 		if idx > 0 {
 			rootPath = genpkg[:idx]
 		}
-		apiPkg = scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
 	}
 
 	var (
@@ -68,8 +58,15 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 			{Path: "time"},
 			codegen.GoaImport(""),
 			codegen.GoaNamedImport("grpc", "goagrpc"),
-			{Path: rootPath, Name: apiPkg},
+			{Path: rootPath + "/interceptors"},
 			{Path: path.Join(genpkg, "grpc", "cli", svrdata.Dir), Name: "cli"},
+		}
+	}
+
+	var svcData []*ServiceData
+	for _, svc := range svr.Services {
+		if data := GRPCServices.Get(svc); data != nil {
+			svcData = append(svcData, data)
 		}
 	}
 
@@ -82,7 +79,11 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 			{
 				Name:   "do-grpc-cli",
 				Source: readTemplate("do_grpc_cli"),
-				Data:   svrdata,
+				Data: map[string]any{
+					"DefaultTransport": svrdata.DefaultTransport(),
+					"Services":         svcData,
+					"InterceptorsPkg":  "interceptors",
+				},
 			},
 		}
 	}

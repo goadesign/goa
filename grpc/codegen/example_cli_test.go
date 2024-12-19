@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"bytes"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,6 +10,7 @@ import (
 	"goa.design/goa/v3/codegen/example"
 	ctestdata "goa.design/goa/v3/codegen/example/testdata"
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/grpc/codegen/testdata"
 )
 
 func TestExampleCLIFiles(t *testing.T) {
@@ -23,6 +25,7 @@ func TestExampleCLIFiles(t *testing.T) {
 		{"no-server-pkgpath", ctestdata.NoServerDSL, "my/pkg/path"},
 		{"server-hosting-service-subset-pkgpath", ctestdata.ServerHostingServiceSubsetDSL, "my/pkg/path"},
 		{"server-hosting-multiple-services-pkgpath", ctestdata.ServerHostingMultipleServicesDSL, "my/pkg/path"},
+		{"interceptors", testdata.InterceptorsDSL, ""},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -37,7 +40,8 @@ func TestExampleCLIFiles(t *testing.T) {
 				require.NoError(t, s.Write(&buf))
 			}
 			code := codegen.FormatTestCode(t, buf.String())
-			compareOrUpdateGolden(t, code, "client-"+c.Name+".golden")
+			golden := filepath.Join("testdata", "client-"+c.Name+".golden")
+			compareOrUpdateGolden(t, code, golden)
 		})
 	}
 }

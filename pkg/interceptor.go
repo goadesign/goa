@@ -1,7 +1,5 @@
 package goa
 
-import "context"
-
 type (
 	// InterceptorInfo contains information about the request shared between
 	// all interceptors in the service chain. It provides access to the service name,
@@ -16,7 +14,4 @@ type (
 		// Payload of request
 		RawPayload any
 	}
-
-	// NextFunc is a function that will continue the request processing chain.
-	NextFunc func(ctx context.Context) (any, error)
 )
