@@ -20,6 +20,8 @@ func TestInvalidArgError(t *testing.T) {
 		"ErrorName (int)":      {func() { Type("name", func() { ErrorName(1, 2) }) }, "cannot use 2 (type int) as type name"},
 		"Example":              {func() { Example(1, 2) }, "cannot use 1 (type int) as type summary (string)"},
 		"Headers":              {func() { Headers(1) }, "cannot use 1 (type int) as type function"},
+		"OneOf (function)":     {func() { Type("name", func() { OneOf("name", "description", 1) }) }, "cannot use 1 (type int) as type function"},
+		"OneOf (string)":       {func() { Type("name", func() { OneOf("name", 1, func() {}) }) }, "cannot use 1 (type int) as type string"},
 		"Param":                {func() { API("name", func() { HTTP(func() { Params(1) }) }) }, "cannot use 1 (type int) as type function"},
 		"Response":             {func() { Service("s", func() { HTTP(func() { Response(1) }) }) }, "cannot use 1 (type int) as type name of error"},
 		"ResultType":           {func() { ResultType("identifier", 1) }, "cannot use 1 (type int) as type function or string"},

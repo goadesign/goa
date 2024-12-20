@@ -229,13 +229,13 @@ func OneOf(name string, args ...any) {
 	}
 	fn, ok := args[len(args)-1].(func())
 	if !ok {
-		eval.ReportError("OneOf: last argument must be a function")
+		eval.InvalidArgError("function", args[len(args)-1])
 	}
 	var desc string
 	if len(args) > 1 {
 		desc, ok = args[0].(string)
 		if !ok {
-			eval.ReportError("OneOf: description must be a string")
+			eval.InvalidArgError("string", args[0])
 		}
 	}
 	Attribute(name, &expr.Union{TypeName: name}, desc, fn)
