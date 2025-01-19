@@ -755,7 +755,7 @@ func MapParams(args ...any) {
 	if len(args) > 0 {
 		mapName, ok = args[0].(string)
 		if !ok {
-			eval.ReportError("argument must be a string")
+			eval.InvalidArgError("string", args[0])
 		}
 	}
 	e.MapQueryParams = &mapName
