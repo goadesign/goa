@@ -595,7 +595,7 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	scope := codegen.NewNameScope()
 	scope.Unique("c") // 'c' is reserved as the client's receiver name.
 	scope.Unique("v") // 'v' is reserved as the request builder payload argument name.
-	rd := &ServiceData{
+	sd := &ServiceData{
 		Service:          svc,
 		ServerStruct:     "Server",
 		MountPointStruct: "MountPoint",
@@ -641,7 +641,7 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			VarName:      scope.Unique(codegen.Goify(s.FilePath, true)),
 			ArgName:      scope.Unique(fmt.Sprintf("fileSystem%s", codegen.Goify(s.FilePath, true))),
 		}
-		rd.FileServers = append(rd.FileServers, data)
+		sd.FileServers = append(sd.FileServers, data)
 	}
 
 	for _, httpEndpoint := range httpSvc.HTTPEndpoints {
@@ -672,10 +672,10 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 							// Path params may override requiredness, need to check payload.
 							pointer = httpEndpoint.MethodExpr.Payload.IsPrimitivePointer(arg, true)
 						}
-						name := rd.Scope.Name(codegen.Goify(arg, false))
+						name := sd.Scope.Name(codegen.Goify(arg, false))
 						var vcode string
 						if att.Validation != nil {
-							ctx := httpContext("", rd.Scope, true, false)
+							ctx := httpContext("", sd.Scope, true, false)
 							vcode = codegen.AttributeValidationCode(att, nil, ctx, true, expr.IsAlias(att.Type), name, arg)
 						}
 						initArgs[j] = &InitArgData{
@@ -686,8 +686,8 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 								Description: att.Description,
 								FieldName:   codegen.Goify(arg, true),
 								FieldType:   patt.Type,
-								TypeName:    rd.Scope.GoTypeName(att),
-								TypeRef:     rd.Scope.GoTypeRef(att),
+								TypeName:    sd.Scope.GoTypeName(att),
+								TypeRef:     sd.Scope.GoTypeRef(att),
 								Type:        att.Type,
 								Pointer:     pointer,
 								Required:    true,
@@ -727,7 +727,7 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			}
 		}
 
-		payload := buildPayloadData(httpEndpoint, rd)
+		payload := buildPayloadData(httpEndpoint, sd)
 
 		var (
 			reqs  service.RequirementsData
@@ -817,8 +817,8 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			ServiceVarName:  svc.VarName,
 			ServicePkgName:  svc.PkgName,
 			Payload:         payload,
-			Result:          buildResultData(httpEndpoint, rd),
-			Errors:          buildErrorsData(httpEndpoint, rd),
+			Result:          buildResultData(httpEndpoint, sd),
+			Errors:          buildErrorsData(httpEndpoint, sd),
 			HeaderSchemes:   hsch,
 			BodySchemes:     bosch,
 			QuerySchemes:    qsch,
@@ -837,7 +837,7 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			Requirements:    reqs,
 		}
 		if httpEndpoint.MethodExpr.IsStreaming() {
-			initWebSocketData(ed, httpEndpoint, rd)
+			initWebSocketData(ed, httpEndpoint, sd)
 		}
 
 		if httpEndpoint.MultipartRequest {
@@ -870,26 +870,26 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			}
 		}
 
-		rd.Endpoints = append(rd.Endpoints, ed)
+		sd.Endpoints = append(sd.Endpoints, ed)
 	}
 
 	for _, a := range httpSvc.HTTPEndpoints {
 		collectUserTypes(a.Body.Type, func(ut expr.UserType) {
-			if d := attributeTypeData(ut, true, true, true, rd); d != nil {
-				rd.ServerBodyAttributeTypes = append(rd.ServerBodyAttributeTypes, d)
+			if d := attributeTypeData(ut, true, true, true, sd); d != nil {
+				sd.ServerBodyAttributeTypes = append(sd.ServerBodyAttributeTypes, d)
 			}
-			if d := attributeTypeData(ut, true, false, false, rd); d != nil {
-				rd.ClientBodyAttributeTypes = append(rd.ClientBodyAttributeTypes, d)
+			if d := attributeTypeData(ut, true, false, false, sd); d != nil {
+				sd.ClientBodyAttributeTypes = append(sd.ClientBodyAttributeTypes, d)
 			}
 		})
 
 		if a.MethodExpr.StreamingPayload.Type != expr.Empty {
 			collectUserTypes(a.StreamingBody.Type, func(ut expr.UserType) {
-				if d := attributeTypeData(ut, true, true, true, rd); d != nil {
-					rd.ServerBodyAttributeTypes = append(rd.ServerBodyAttributeTypes, d)
+				if d := attributeTypeData(ut, true, true, true, sd); d != nil {
+					sd.ServerBodyAttributeTypes = append(sd.ServerBodyAttributeTypes, d)
 				}
-				if d := attributeTypeData(ut, true, false, false, rd); d != nil {
-					rd.ClientBodyAttributeTypes = append(rd.ClientBodyAttributeTypes, d)
+				if d := attributeTypeData(ut, true, false, false, sd); d != nil {
+					sd.ClientBodyAttributeTypes = append(sd.ClientBodyAttributeTypes, d)
 				}
 			})
 		}
@@ -900,8 +900,8 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 					// NOTE: ServerBodyAttributeTypes for response body types are
 					// collected in buildResponseBodyType because we have to generate
 					// body types for each view in a result type.
-					if d := attributeTypeData(ut, false, true, false, rd); d != nil {
-						rd.ClientBodyAttributeTypes = append(rd.ClientBodyAttributeTypes, d)
+					if d := attributeTypeData(ut, false, true, false, sd); d != nil {
+						sd.ClientBodyAttributeTypes = append(sd.ClientBodyAttributeTypes, d)
 					}
 				})
 			}
@@ -912,14 +912,14 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 				// NOTE: ServerBodyAttributeTypes for error response body types are
 				// collected in buildResponseBodyType because we have to generate
 				// body types for each view in a result type.
-				if d := attributeTypeData(ut, false, true, false, rd); d != nil {
-					rd.ClientBodyAttributeTypes = append(rd.ClientBodyAttributeTypes, d)
+				if d := attributeTypeData(ut, false, true, false, sd); d != nil {
+					sd.ClientBodyAttributeTypes = append(sd.ClientBodyAttributeTypes, d)
 				}
 			})
 		}
 	}
 
-	return rd
+	return sd
 }
 
 // makeHTTPType traverses the attribute recursively and performs these actions:

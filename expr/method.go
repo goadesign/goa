@@ -32,6 +32,10 @@ type (
 		// schemes. Incoming requests must validate at least one
 		// requirement to be authorized.
 		Requirements []*SecurityExpr
+		// ClientInterceptors is the list of client interceptors.
+		ClientInterceptors []*InterceptorExpr
+		// ServerInterceptors is the list of server interceptors.
+		ServerInterceptors []*InterceptorExpr
 		// Service that owns method.
 		Service *ServiceExpr
 		// Meta is an arbitrary set of key/value pairs, see dsl.Meta
@@ -84,7 +88,8 @@ func (m *MethodExpr) EvalName() string {
 }
 
 // Prepare makes sure the payload and result types are initialized (to the Empty
-// type if nil).
+// type if nil) and merges the method interceptors with the API and service level
+// interceptors.
 func (m *MethodExpr) Prepare() {
 	if m.Payload == nil {
 		m.Payload = &AttributeExpr{Type: Empty}
@@ -95,13 +100,57 @@ func (m *MethodExpr) Prepare() {
 	if m.Result == nil {
 		m.Result = &AttributeExpr{Type: Empty}
 	}
+
+	m.ClientInterceptors = mergeInterceptors(m.ClientInterceptors, m.Service.ClientInterceptors, Root.API.ClientInterceptors)
+	m.ServerInterceptors = mergeInterceptors(m.ServerInterceptors, m.Service.ServerInterceptors, Root.API.ServerInterceptors)
 }
 
-// Validate validates the method payloads, results, and errors (if any).
+// mergeInterceptors merges interceptors from different levels (method, service, API)
+// while avoiding duplicates. The order of precedence is: method > service > API.
+func mergeInterceptors(methodLevel, serviceLevel, apiLevel []*InterceptorExpr) []*InterceptorExpr {
+	existing := make(map[string]struct{})
+	result := make([]*InterceptorExpr, 0, len(methodLevel)+len(serviceLevel)+len(apiLevel))
+
+	// Add method-level interceptors
+	for _, i := range methodLevel {
+		existing[i.Name] = struct{}{}
+		result = append(result, i)
+	}
+
+	// Add service-level interceptors
+	for _, i := range serviceLevel {
+		if _, ok := existing[i.Name]; !ok {
+			result = append(result, i)
+			existing[i.Name] = struct{}{}
+		}
+	}
+
+	// Add API-level interceptors
+	for _, i := range apiLevel {
+		if _, ok := existing[i.Name]; !ok {
+			result = append(result, i)
+		}
+	}
+
+	return result
+}
+
+// Validate validates the method payloads, results, errors, security
+// requirements, and interceptors.
 func (m *MethodExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
 	verr.Merge(m.Payload.Validate("payload", m))
-	// validate security scheme requirements
+	verr.Merge(m.StreamingPayload.Validate("streaming_payload", m))
+	verr.Merge(m.Result.Validate("result", m))
+	verr.Merge(m.validateRequirements())
+	verr.Merge(m.validateErrors())
+	verr.Merge(m.validateInterceptors())
+	return verr
+}
+
+// validateRequirements validates the security requirements.
+func (m *MethodExpr) validateRequirements() *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
 	var requirements []*SecurityExpr
 	if len(m.Requirements) > 0 {
 		requirements = m.Requirements
@@ -185,12 +234,12 @@ func (m *MethodExpr) Validate() error {
 			verr.Add(m, "payload of method %q of service %q defines a OAuth2 access token attribute, but no OAuth2 security scheme exist", m.Name, m.Service.Name)
 		}
 	}
-	if m.StreamingPayload.Type != Empty {
-		verr.Merge(m.StreamingPayload.Validate("streaming_payload", m))
-	}
-	if m.Result.Type != Empty {
-		verr.Merge(m.Result.Validate("result", m))
-	}
+	return verr
+}
+
+// validateErrors validates the method errors.
+func (m *MethodExpr) validateErrors() *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
 	for i, e := range m.Errors {
 		if err := e.Validate(); err != nil {
 			var verrs *eval.ValidationErrors
@@ -216,6 +265,18 @@ func (m *MethodExpr) Validate() error {
 				}
 			}
 		}
+	}
+	return verr
+}
+
+// validateInterceptors validates the method interceptors.
+func (m *MethodExpr) validateInterceptors() *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+	for _, i := range m.ClientInterceptors {
+		verr.Merge(i.validate(m))
+	}
+	for _, i := range m.ServerInterceptors {
+		verr.Merge(i.validate(m))
 	}
 	return verr
 }

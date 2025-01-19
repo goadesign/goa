@@ -14,7 +14,6 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
 	"goa.design/goa/v3/dsl"
-	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 )
 
@@ -257,30 +256,7 @@ func TestConvertFile(t *testing.T) {
 	}
 }
 
-// runDSL returns the DSL root resulting from running the given DSL.
-func runDSL(t *testing.T, dsl func()) *expr.RootExpr {
-	// reset all roots and codegen data structures
-	Services = make(ServicesData)
-	eval.Reset()
-	expr.Root = new(expr.RootExpr)
-	expr.GeneratedResultTypes = new(expr.ResultTypesRoot)
-	require.NoError(t, eval.Register(expr.Root))
-	require.NoError(t, eval.Register(expr.GeneratedResultTypes))
-	expr.Root.API = expr.NewAPIExpr("test api", func() {})
-	expr.Root.API.Servers = []*expr.ServerExpr{expr.Root.API.DefaultServer()}
-
-	// run DSL (first pass)
-	require.True(t, eval.Execute(dsl, nil))
-
-	// run DSL (second pass)
-	require.NoError(t, eval.RunDSL())
-
-	// return generated root
-	return expr.Root
-}
-
 // Test fixtures
-
 var obj = &expr.UserTypeExpr{
 	AttributeExpr: &expr.AttributeExpr{
 		Type: &expr.Object{

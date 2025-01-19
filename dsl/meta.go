@@ -288,3 +288,42 @@ func Meta(name string, value ...string) {
 		eval.IncompatibleDSL()
 	}
 }
+
+// RemoveMeta removes a meta key from an object.
+//
+// RemoveMeta may appear where Meta can appear.
+//
+// RemoveMeta takes a single argument, the name of the meta key to remove.
+func RemoveMeta(name string) {
+	switch e := eval.Current().(type) {
+	case *expr.APIExpr:
+		delete(e.Meta, name)
+	case *expr.ServerExpr:
+		delete(e.Meta, name)
+	case *expr.HostExpr:
+		delete(e.Meta, name)
+	case *expr.AttributeExpr:
+		delete(e.Meta, name)
+	case *expr.ResultTypeExpr:
+		delete(e.Meta, name)
+	case *expr.MethodExpr:
+		delete(e.Meta, name)
+	case *expr.ServiceExpr:
+		delete(e.Meta, name)
+	case *expr.HTTPServiceExpr:
+		delete(e.Meta, name)
+	case *expr.HTTPEndpointExpr:
+		delete(e.Meta, name)
+	case *expr.RouteExpr:
+		delete(e.Meta, name)
+	case *expr.HTTPFileServerExpr:
+		delete(e.Meta, name)
+	case *expr.HTTPResponseExpr:
+		delete(e.Meta, name)
+	case expr.CompositeExpr:
+		att := e.Attribute()
+		delete(att.Meta, name)
+	default:
+		eval.IncompatibleDSL()
+	}
+}

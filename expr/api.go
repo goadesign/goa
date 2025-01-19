@@ -36,6 +36,10 @@ type (
 		// potentially multiple schemes. Incoming requests must validate
 		// at least one requirement to be authorized.
 		Requirements []*SecurityExpr
+		// ClientInterceptors is the list of API client interceptors.
+		ClientInterceptors []*InterceptorExpr
+		// ServerInterceptors is the list of API server interceptors.
+		ServerInterceptors []*InterceptorExpr
 		// HTTP contains the HTTP specific API level expressions.
 		HTTP *HTTPExpr
 		// GRPC contains the gRPC specific API level expressions.

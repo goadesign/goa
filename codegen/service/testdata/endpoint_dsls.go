@@ -181,3 +181,47 @@ var BidirectionalStreamingEndpointDSL = func() {
 		})
 	})
 }
+
+var EndpointWithServerInterceptorDSL = func() {
+	Interceptor("logging")
+	Service("ServiceWithServerInterceptor", func() {
+		Method("Method", func() {
+			ServerInterceptor("logging")
+			Payload(String)
+			Result(String)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var EndpointWithMultipleInterceptorsDSL = func() {
+	Interceptor("logging")
+	Interceptor("metrics")
+	Service("ServiceWithMultipleInterceptors", func() {
+		Method("Method", func() {
+			ServerInterceptor("logging")
+			ServerInterceptor("metrics")
+			Payload(String)
+			Result(String)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var EndpointStreamingWithInterceptorDSL = func() {
+	Interceptor("logging")
+	Service("ServiceStreamingWithInterceptor", func() {
+		Method("Method", func() {
+			ServerInterceptor("logging")
+			StreamingPayload(String)
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}

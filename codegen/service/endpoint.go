@@ -25,6 +25,10 @@ type (
 		ServiceVarName string
 		// Methods lists the endpoint struct methods.
 		Methods []*EndpointMethodData
+		// HasServerInterceptors indicates if the service has server interceptors.
+		HasServerInterceptors bool
+		// HasClientInterceptors indicates if the service has client interceptors.
+		HasClientInterceptors bool
 		// ClientInitArgs lists the arguments needed to instantiate the client.
 		ClientInitArgs string
 		// Schemes contains the security schemes types used by the
@@ -44,6 +48,10 @@ type (
 		ServiceName string
 		// ServiceVarName is the name of the owner service Go interface.
 		ServiceVarName string
+		// ServerInterceptors contains the server-side interceptors for this method
+		ServerInterceptors []*InterceptorData
+		// ClientInterceptors contains the client-side interceptors for this method
+		ClientInterceptors []*InterceptorData
 	}
 )
 
@@ -122,6 +130,18 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 				Data:    m,
 				FuncMap: map[string]any{"payloadVar": payloadVar},
 			})
+			if len(m.ServerInterceptors) > 0 {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "endpoint-wrapper",
+					Source: readTemplate("endpoint_wrappers"),
+					Data: map[string]interface{}{
+						"MethodVarName":      codegen.Goify(m.Name, true),
+						"Method":             m.Name,
+						"Service":            svc.Name,
+						"ServerInterceptors": m.ServerInterceptors,
+					},
+				})
+			}
 		}
 	}
 
@@ -133,25 +153,45 @@ func endpointData(service *expr.ServiceExpr) *EndpointsData {
 	methods := make([]*EndpointMethodData, len(svc.Methods))
 	names := make([]string, len(svc.Methods))
 	for i, m := range svc.Methods {
+		serverInts, clientInts := buildMethodInterceptors(service.Method(m.Name), svc.Scope)
 		methods[i] = &EndpointMethodData{
-			MethodData:     m,
-			ArgName:        codegen.Goify(m.VarName, false),
-			ServiceName:    svc.Name,
-			ServiceVarName: serviceInterfaceName,
-			ClientVarName:  clientStructName,
+			MethodData:         m,
+			ArgName:            codegen.Goify(m.VarName, false),
+			ServiceName:        svc.Name,
+			ServiceVarName:     serviceInterfaceName,
+			ClientVarName:      clientStructName,
+			ServerInterceptors: serverInts,
+			ClientInterceptors: clientInts,
 		}
 		names[i] = codegen.Goify(m.VarName, false)
 	}
 	desc := fmt.Sprintf("%s wraps the %q service endpoints.", endpointsStructName, service.Name)
+	var hasServerInterceptors, hasClientInterceptors bool
+	for _, m := range methods {
+		if len(m.ServerInterceptors) > 0 {
+			hasServerInterceptors = true
+			if hasClientInterceptors {
+				break
+			}
+		}
+		if len(m.ClientInterceptors) > 0 {
+			hasClientInterceptors = true
+			if hasServerInterceptors {
+				break
+			}
+		}
+	}
 	return &EndpointsData{
-		Name:           service.Name,
-		Description:    desc,
-		VarName:        endpointsStructName,
-		ClientVarName:  clientStructName,
-		ServiceVarName: serviceInterfaceName,
-		ClientInitArgs: strings.Join(names, ", "),
-		Methods:        methods,
-		Schemes:        svc.Schemes,
+		Name:                  service.Name,
+		Description:           desc,
+		VarName:               endpointsStructName,
+		ClientVarName:         clientStructName,
+		ServiceVarName:        serviceInterfaceName,
+		ClientInitArgs:        strings.Join(names, ", "),
+		Methods:               methods,
+		HasServerInterceptors: hasServerInterceptors,
+		HasClientInterceptors: hasClientInterceptors,
+		Schemes:               svc.Schemes,
 	}
 }
 

@@ -27,6 +27,10 @@ type (
 		// potentially multiple schemes. Incoming requests must validate
 		// at least one requirement to be authorized.
 		Requirements []*SecurityExpr
+		// ClientInterceptors is the list of client interceptors.
+		ClientInterceptors []*InterceptorExpr
+		// ServerInterceptors is the list of server interceptors.
+		ServerInterceptors []*InterceptorExpr
 		// Meta is a set of key/value pairs with semantic that is
 		// specific to each generator.
 		Meta MetaExpr

@@ -18,6 +18,8 @@ type (
 		API *APIExpr
 		// Services contains the list of services exposed by the API.
 		Services []*ServiceExpr
+		// Interceptors contains the list of interceptors.
+		Interceptors []*InterceptorExpr
 		// Errors contains the list of errors returned by all the API
 		// methods.
 		Errors []*ErrorExpr

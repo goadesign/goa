@@ -45,6 +45,18 @@ func ClientFile(_ string, service *expr.ServiceExpr) *codegen.File {
 				Source: readTemplate("service_client_method"),
 				Data:   m,
 			})
+			if len(m.ClientInterceptors) > 0 {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "client-wrapper",
+					Source: readTemplate("client_wrappers"),
+					Data: map[string]interface{}{
+						"Method":             m.Name,
+						"MethodVarName":      codegen.Goify(m.Name, true),
+						"Service":            svc.Name,
+						"ClientInterceptors": m.ClientInterceptors,
+					},
+				})
+			}
 		}
 	}
 

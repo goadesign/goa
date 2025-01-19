@@ -1,0 +1,45 @@
+// ServerInterceptors defines the interface for all server-side interceptors.
+// Server interceptors execute after the request is decoded and before the payload
+// is sent to the service (request interceptors) or after the service returns and
+// before the response is encoded (response interceptors).
+type ServerInterceptors interface {
+	Caching(context.Context, *CachingInfo, goa.NextFunc) (any, error)
+}
+
+// Access interfaces for interceptor payloads and results
+type (
+	// CachingInfo provides metadata about the current interception.
+	// It includes service name, method name, and access to the endpoint.
+	CachingInfo goa.InterceptorInfo
+
+	// CachingResultAccess provides type-safe access to the method result.
+	// It allows reading and writing specific fields of the result as defined
+	// in the design.
+	CachingResultAccess interface {
+		Data() string
+		SetData(string)
+	}
+)
+
+// Private implementation types
+type (
+	cachingResultAccess struct {
+		result *MethodResult
+	}
+)
+
+// Public accessor methods for Info types
+// Result returns a type-safe accessor for the method result.
+func (info *CachingInfo) Result(res any) CachingResultAccess {
+	return &cachingResultAccess{result: res.(*MethodResult)}
+}
+
+// Private implementation methods
+func (r *cachingResultAccess) Data() string {
+	return r.result.Data
+}
+func (r *cachingResultAccess) SetData(v string) {
+	r.result.Data = v
+}
+
+

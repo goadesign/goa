@@ -45,6 +45,8 @@ func Description(d string) {
 		e.Description = d
 	case *expr.GRPCResponseExpr:
 		e.Description = d
+	case *expr.InterceptorExpr:
+		e.Description = d
 	default:
 		eval.IncompatibleDSL()
 	}

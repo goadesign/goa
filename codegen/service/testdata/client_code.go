@@ -283,3 +283,50 @@ func (c *Client) BidirectionalStreamingNoPayloadMethod(ctx context.Context) (res
 	return ires.(BidirectionalStreamingNoPayloadMethodClientStream), nil
 }
 `
+
+const InterceptorClient = `// Client is the "ServiceWithClientInterceptor" service client.
+type Client struct {
+	MethodEndpoint goa.Endpoint
+}
+
+// NewClient initializes a "ServiceWithClientInterceptor" service client given
+// the endpoints.
+func NewClient(method goa.Endpoint, ci ClientInterceptors) *Client {
+	return &Client{
+		MethodEndpoint: WrapMethodClientEndpoint(method, ci),
+	}
+}
+
+// Method calls the "Method" endpoint of the "ServiceWithClientInterceptor"
+// service.
+func (c *Client) Method(ctx context.Context, p string) (res string, err error) {
+	var ires any
+	ires, err = c.MethodEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(string), nil
+}
+
+// WrapMethodClientEndpoint wraps the Method endpoint with the client
+// interceptors defined in the design.
+func WrapMethodClientEndpoint(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
+	endpoint = wrapClientTracing(endpoint, i, "Method")
+	return endpoint
+}
+
+// wrapClientTracing applies the Tracing interceptor to endpoints.
+func wrapClientTracing(endpoint goa.Endpoint, i ClientInterceptors, method string) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		info := &TracingInfo{
+			Service:    "ServiceWithClientInterceptor",
+			Method:     method,
+			Endpoint:   endpoint,
+			RawPayload: req,
+		}
+		next := func(ctx context.Context) (any, error) {
+			return endpoint(ctx, req)
+		}
+		return i.Tracing(ctx, info, next)
+	}
+}`

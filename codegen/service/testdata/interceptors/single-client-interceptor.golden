@@ -1,0 +1,16 @@
+// ClientInterceptors defines the interface for all client-side interceptors.
+// Client interceptors execute after the payload is encoded and before the request
+// is sent to the server (request interceptors) or after the response is decoded
+// and before the result is returned to the client (response interceptors).
+type ClientInterceptors interface {
+	Tracing(context.Context, *TracingInfo, goa.NextFunc) (any, error)
+}
+
+// Access interfaces for interceptor payloads and results
+type (
+	// TracingInfo provides metadata about the current interception.
+	// It includes service name, method name, and access to the endpoint.
+	TracingInfo goa.InterceptorInfo
+)
+
+
