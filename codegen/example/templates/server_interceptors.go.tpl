@@ -8,16 +8,12 @@
 			{{- end }}
 		{{- end }}
 	)
-	{{- end }}
-	{{- if .HasInterceptors }}
 	{
-	{{- end }}
 	{{- range .Services }}
 		{{- if and .Methods .ServerInterceptors }}
 		{{ .VarName }}Interceptors = {{ $.InterPkg }}.New{{ .StructName }}ServerInterceptors()
 		{{- end }}
 	{{- end }}
-	{{- if .HasInterceptors }}
 	}
 	{{- end }}
 {{- end }}

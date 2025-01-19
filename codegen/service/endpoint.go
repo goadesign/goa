@@ -50,10 +50,6 @@ type (
 		ServiceName string
 		// ServiceVarName is the name of the owner service Go interface.
 		ServiceVarName string
-		// ServerInterceptors contains the server-side interceptors for this method
-		ServerInterceptors []*InterceptorData
-		// ClientInterceptors contains the client-side interceptors for this method
-		ClientInterceptors []*InterceptorData
 	}
 )
 
@@ -71,7 +67,7 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	svc := Services.Get(service.Name)
 	svcName := svc.PathName
 	path := filepath.Join(codegen.Gendir, svcName, "endpoints.go")
-	data := endpointData(service)
+	data := endpointData(svc)
 	var (
 		sections []*codegen.SectionTemplate
 	)
@@ -138,25 +134,22 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr) *codegen.File {
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-func endpointData(service *expr.ServiceExpr) *EndpointsData {
-	svc := Services.Get(service.Name)
+func endpointData(svc *Data) *EndpointsData {
 	methods := make([]*EndpointMethodData, len(svc.Methods))
 	names := make([]string, len(svc.Methods))
 	for i, m := range svc.Methods {
 		methods[i] = &EndpointMethodData{
-			MethodData:         m,
-			ArgName:            codegen.Goify(m.VarName, false),
-			ServiceName:        svc.Name,
-			ServiceVarName:     serviceInterfaceName,
-			ClientVarName:      clientStructName,
-			ServerInterceptors: m.ServerInterceptors,
-			ClientInterceptors: m.ClientInterceptors,
+			MethodData:     m,
+			ArgName:        codegen.Goify(m.VarName, false),
+			ServiceName:    svc.Name,
+			ServiceVarName: serviceInterfaceName,
+			ClientVarName:  clientStructName,
 		}
 		names[i] = codegen.Goify(m.VarName, false)
 	}
-	desc := fmt.Sprintf("%s wraps the %q service endpoints.", endpointsStructName, service.Name)
+	desc := fmt.Sprintf("%s wraps the %q service endpoints.", endpointsStructName, svc.Name)
 	return &EndpointsData{
-		Name:                  service.Name,
+		Name:                  svc.Name,
 		Description:           desc,
 		VarName:               endpointsStructName,
 		ClientVarName:         clientStructName,

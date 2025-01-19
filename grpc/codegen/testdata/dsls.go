@@ -1018,6 +1018,13 @@ var InterceptorsDSL = func() {
 		Description("Collects metrics for the operation")
 	})
 
+	API("TestAPI", func() {
+		Title("Test API")
+		Server("Test", func() {
+			Description("Test server")
+		})
+	})
+
 	Service("ServiceWithInterceptors", func() {
 		ClientInterceptor(LogInterceptor)
 		Method("MethodA", func() {

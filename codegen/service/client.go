@@ -15,7 +15,7 @@ const (
 // ClientFile returns the client file for the given service.
 func ClientFile(_ string, service *expr.ServiceExpr) *codegen.File {
 	svc := Services.Get(service.Name)
-	data := endpointData(service)
+	data := endpointData(svc)
 	path := filepath.Join(codegen.Gendir, svc.PathName, "client.go")
 	var (
 		sections []*codegen.SectionTemplate

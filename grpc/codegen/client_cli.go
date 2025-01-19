@@ -80,6 +80,13 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 			Name: svcName + pbPkgName,
 		})
 		specs = append(specs, sd.Service.UserTypeImports...)
+		// Add interceptors import if service has client interceptors
+		if len(sd.Service.ClientInterceptors) > 0 {
+			specs = append(specs, &codegen.ImportSpec{
+				Path: genpkg + "/" + sd.Service.PathName,
+				Name: sd.Service.PkgName,
+			})
+		}
 	}
 
 	sections := []*codegen.SectionTemplate{
@@ -87,7 +94,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		cli.UsageCommands(data),
 		cli.UsageExamples(data),
 		{
-			Name:   "parse-endpoint",
+			Name:   "parse-endpoint-grpc",
 			Source: readTemplate("parse_endpoint"),
 			Data: struct {
 				FlagsCode string

@@ -1,10 +1,13 @@
 {{- range .ClientInterceptors }}
-{{ comment (printf "wrapClient%s applies the %s interceptor to endpoints." .Name .DesignName) }}
-func wrapClient{{ .Name }}(endpoint goa.Endpoint, i ClientInterceptors, method string) goa.Endpoint {
+{{-  $interceptor := . }}
+{{- range .Methods }}
+
+{{ comment (printf "wrapClient%s%s applies the %s client interceptor to endpoints." $interceptor.Name .MethodName $interceptor.DesignName) }}
+func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
     return func(ctx context.Context, req any) (any, error) {
-        info := &{{ .Name }}Info{
+        info := &{{ $interceptor.Name }}Info{
             Service:    "{{ $.Service }}",
-            Method:     method,
+            Method:     "{{ .MethodName }}",
             Endpoint:   endpoint,
             {{- if .ClientStreamInputStruct }}
             RawPayload: req.(*{{ .ClientStreamInputStruct }}).Payload,
@@ -15,4 +18,5 @@ func wrapClient{{ .Name }}(endpoint goa.Endpoint, i ClientInterceptors, method s
         return i.{{ .Name }}(ctx, info, endpoint)
     }
 }
+{{ end }}
 {{- end }}

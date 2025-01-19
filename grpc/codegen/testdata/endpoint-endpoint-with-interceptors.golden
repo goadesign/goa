@@ -1,0 +1,178 @@
+// Test gRPC client CLI support package
+//
+// Command:
+// goa
+
+package cli
+
+import (
+	servicewithinterceptors "/service_with_interceptors"
+	"flag"
+	"fmt"
+	servicewithinterceptorsc "grpc/service_with_interceptors/client"
+	"os"
+
+	goa "goa.design/goa/v3/pkg"
+	grpc "google.golang.org/grpc"
+)
+
+// UsageCommands returns the set of commands and sub-commands using the format
+//
+//	command (subcommand1|subcommand2|...)
+func UsageCommands() string {
+	return `service-with-interceptors (method-a|method-b)
+`
+}
+
+// UsageExamples produces an example of a valid invocation of the CLI tool.
+func UsageExamples() string {
+	return os.Args[0] + ` service-with-interceptors method-a --message '{
+      "field": "Sapiente est."
+   }'` + "\n" +
+		""
+}
+
+// ParseEndpoint returns the endpoint and payload as specified on the command
+// line.
+func ParseEndpoint(
+	cc *grpc.ClientConn,
+	inter servicewithinterceptors.ClientInterceptors,
+	opts ...grpc.CallOption,
+) (goa.Endpoint, any, error) {
+	var (
+		serviceWithInterceptorsFlags = flag.NewFlagSet("service-with-interceptors", flag.ContinueOnError)
+
+		serviceWithInterceptorsMethodAFlags       = flag.NewFlagSet("method-a", flag.ExitOnError)
+		serviceWithInterceptorsMethodAMessageFlag = serviceWithInterceptorsMethodAFlags.String("message", "", "")
+
+		serviceWithInterceptorsMethodBFlags       = flag.NewFlagSet("method-b", flag.ExitOnError)
+		serviceWithInterceptorsMethodBMessageFlag = serviceWithInterceptorsMethodBFlags.String("message", "", "")
+	)
+	serviceWithInterceptorsFlags.Usage = serviceWithInterceptorsUsage
+	serviceWithInterceptorsMethodAFlags.Usage = serviceWithInterceptorsMethodAUsage
+	serviceWithInterceptorsMethodBFlags.Usage = serviceWithInterceptorsMethodBUsage
+
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	if flag.NArg() < 2 { // two non flag args are required: SERVICE and ENDPOINT (aka COMMAND)
+		return nil, nil, fmt.Errorf("not enough arguments")
+	}
+
+	var (
+		svcn string
+		svcf *flag.FlagSet
+	)
+	{
+		svcn = flag.Arg(0)
+		switch svcn {
+		case "service-with-interceptors":
+			svcf = serviceWithInterceptorsFlags
+		default:
+			return nil, nil, fmt.Errorf("unknown service %q", svcn)
+		}
+	}
+	if err := svcf.Parse(flag.Args()[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		epn string
+		epf *flag.FlagSet
+	)
+	{
+		epn = svcf.Arg(0)
+		switch svcn {
+		case "service-with-interceptors":
+			switch epn {
+			case "method-a":
+				epf = serviceWithInterceptorsMethodAFlags
+
+			case "method-b":
+				epf = serviceWithInterceptorsMethodBFlags
+
+			}
+
+		}
+	}
+	if epf == nil {
+		return nil, nil, fmt.Errorf("unknown %q endpoint %q", svcn, epn)
+	}
+
+	// Parse endpoint flags if any
+	if svcf.NArg() > 1 {
+		if err := epf.Parse(svcf.Args()[1:]); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var (
+		data     any
+		endpoint goa.Endpoint
+		err      error
+	)
+	{
+		switch svcn {
+		case "service-with-interceptors":
+			c := servicewithinterceptorsc.NewClient(cc, opts...)
+			switch epn {
+
+			case "method-a":
+				endpoint = c.MethodA()
+				endpoint = servicewithinterceptors.WrapMethodAClientEndpoint(endpoint, inter)
+				data, err = servicewithinterceptorsc.BuildMethodAPayload(*serviceWithInterceptorsMethodAMessageFlag)
+			case "method-b":
+				endpoint = c.MethodB()
+				endpoint = servicewithinterceptors.WrapMethodBClientEndpoint(endpoint, inter)
+				data, err = servicewithinterceptorsc.BuildMethodBPayload(*serviceWithInterceptorsMethodBMessageFlag)
+			}
+		}
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return endpoint, data, nil
+}
+
+// serviceWithInterceptorsUsage displays the usage of the
+// service-with-interceptors command and its subcommands.
+func serviceWithInterceptorsUsage() {
+	fmt.Fprintf(os.Stderr, `Service is the ServiceWithInterceptors service interface.
+Usage:
+    %[1]s [globalflags] service-with-interceptors COMMAND [flags]
+
+COMMAND:
+    method-a: MethodA implements MethodA.
+    method-b: MethodB implements MethodB.
+
+Additional help:
+    %[1]s service-with-interceptors COMMAND --help
+`, os.Args[0])
+}
+func serviceWithInterceptorsMethodAUsage() {
+	fmt.Fprintf(os.Stderr, `%[1]s [flags] service-with-interceptors method-a -message JSON
+
+MethodA implements MethodA.
+    -message JSON: 
+
+Example:
+    %[1]s service-with-interceptors method-a --message '{
+      "field": "Sapiente est."
+   }'
+`, os.Args[0])
+}
+
+func serviceWithInterceptorsMethodBUsage() {
+	fmt.Fprintf(os.Stderr, `%[1]s [flags] service-with-interceptors method-b -message JSON
+
+MethodB implements MethodB.
+    -message JSON: 
+
+Example:
+    %[1]s service-with-interceptors method-b --message '{
+      "field": 3141052981090487272
+   }'
+`, os.Args[0])
+}

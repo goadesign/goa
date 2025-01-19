@@ -197,7 +197,7 @@ func Files(genpkg string, service *expr.ServiceExpr, userTypePkgs map[string][]s
 
 	// service and client interceptors
 	files = append(files, InterceptorsFiles(genpkg, service)...)
-	
+
 	// user types
 	paths := make([]string, len(typeDefSections))
 	i := 0

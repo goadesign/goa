@@ -65,7 +65,7 @@ func client(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 			}
 		}
 		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "client-init",
+			Name:   "grpc-client-init",
 			Source: readTemplate("client_init"),
 			Data:   data,
 		})

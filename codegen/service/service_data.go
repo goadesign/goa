@@ -64,11 +64,11 @@ type (
 		Methods []*MethodData
 		// Schemes is the list of security schemes required by the service methods.
 		Schemes SchemesData
-		// ServerInterceptors is the union of the server interceptors defined
-		// at the methods, service and the API level.
+		// ServerInterceptors contains the data needed to render the server-side
+		// interceptors code.
 		ServerInterceptors []*InterceptorData
-		// ClientInterceptors is the union of the client interceptors defined
-		// at the methods, service and the API level.
+		// ClientInterceptors contains the data needed to render the client-side
+		// interceptors code.
 		ClientInterceptors []*InterceptorData
 		// Scope initialized with all the service types.
 		Scope *codegen.NameScope
@@ -158,10 +158,10 @@ type (
 		Schemes SchemesData
 		// ServerInterceptors list the server interceptors that apply to this
 		// method.
-		ServerInterceptors []*InterceptorData
+		ServerInterceptors []string
 		// ClientInterceptors list the client interceptors that apply to this
 		// method.
-		ClientInterceptors []*InterceptorData
+		ClientInterceptors []string
 		// ViewedResult contains the data required to generate the code handling
 		// views if any.
 		ViewedResult *ViewedResultTypeData
@@ -247,41 +247,56 @@ type (
 		Fault bool
 	}
 
-	// InterceptorData describes a single interceptor that can read and write
-	// payload and result attributes.
+	// InterceptorData contains the data required to render the service-level
+	// interceptor code. interceptors.go.tpl
 	InterceptorData struct {
 		// Name is the name of the interceptor used in the generated code.
 		Name string
 		// DesignName is the name of the interceptor as defined in the design.
 		DesignName string
-		// UnexportedName is the private version of the interceptor name used in
-		// generated code.
-		UnexportedName string
 		// Description is the description of the interceptor from the design.
 		Description string
-		// PayloadRef is the reference to the payload type that the interceptor
-		// can access.
-		PayloadRef string
-		// ResultRef is the reference to the result type that the interceptor
-		// can access.
-		ResultRef string
-		// ReadPayload lists the payload attributes that the interceptor can
-		// read.  These are defined using ReadPayload() in the design DSL.
+		// Methods
+		Methods []*MethodInterceptorData
+		// ReadPayload contains payload attributes that the interceptor can
+		// read.
 		ReadPayload []*AttributeData
-		// WritePayload lists the payload attributes that the interceptor can
-		// write.  These are defined using WritePayload() in the design DSL.
+		// WritePayload contains payload attributes that the interceptor can
+		// write.
 		WritePayload []*AttributeData
-		// ReadResult lists the result attributes that the interceptor can read.
-		// These are defined using ReadResult() in the design DSL.
+		// ReadResult contains result attributes that the interceptor can read.
 		ReadResult []*AttributeData
-		// WriteResult lists the result attributes that the interceptor can
-		// write.  These are defined using WriteResult() in the design DSL.
+		// WriteResult contains result attributes that the interceptor can
+		// write.
 		WriteResult []*AttributeData
-		// ServerStreamInputStruct is the name of the server stream input struct
-		// type used when the interceptor is applied to a streaming endpoint.
+		// HasPayloadAccess indicates that the interceptor info object has a
+		// payload access interface.
+		HasPayloadAccess bool
+		// HasResultAccess indicates that the interceptor info object has a
+		// result access interface.
+		HasResultAccess bool
+	}
+
+	// MethodInterceptorData contains the data required to render the
+	// method-level interceptor code.
+	MethodInterceptorData struct {
+		// Name is the name of the interceptor.
+		Name string
+		// MethodName is the name of the method.
+		MethodName string
+		// PayloadAccess is the name of the payload access struct.
+		PayloadAccess string
+		// ResultAccess is the name of the result access struct.
+		ResultAccess string
+		// PayloadRef is the reference to the method payload type.
+		PayloadRef string
+		// ResultRef is the reference to the method result type.
+		ResultRef string
+		// ServerStreamInputStruct is the name of the server stream input
+		// struct if the endpoint defines a server stream.
 		ServerStreamInputStruct string
-		// ClientStreamInputStruct is the name of the client stream input struct
-		// type used when the interceptor is applied to a streaming endpoint.
+		// ClientStreamInputStruct is the name of the client stream input
+		// struct if the endpoint defines a client stream.
 		ClientStreamInputStruct string
 	}
 
@@ -291,8 +306,8 @@ type (
 		Name string
 		// TypeRef is the reference to the attribute type.
 		TypeRef string
-		// FieldPointer is true if the attribute is a pointer.
-		FieldPointer bool
+		// Pointer is true if the attribute is a pointer.
+		Pointer bool
 	}
 
 	// RequirementsData is the list of security requirements.
@@ -807,17 +822,6 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	}
 
 	var (
-		serverInterceptors []*InterceptorData
-		clientInterceptors []*InterceptorData
-		seenServer         = make(map[string]struct{})
-		seenClient         = make(map[string]struct{})
-	)
-	for _, m := range methods {
-		serverInterceptors = append(serverInterceptors, collectInterceptors(m.ServerInterceptors, seenServer)...)
-		clientInterceptors = append(clientInterceptors, collectInterceptors(m.ClientInterceptors, seenClient)...)
-	}
-
-	var (
 		desc string
 	)
 	{
@@ -840,8 +844,8 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		ViewsPkg:           viewspkg,
 		Methods:            methods,
 		Schemes:            schemes,
-		ServerInterceptors: serverInterceptors,
-		ClientInterceptors: clientInterceptors,
+		ServerInterceptors: collectInterceptors(service, methods, scope, true),
+		ClientInterceptors: collectInterceptors(service, methods, scope, false),
 		Scope:              scope,
 		ViewScope:          viewScope,
 		errorTypes:         errTypes,
@@ -852,9 +856,45 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		viewedResultTypes:  viewedRTs,
 		unionValueMethods:  unionMethods,
 	}
+
 	d[service.Name] = data
 
 	return data
+}
+
+// collectInterceptors returns the set of interceptors defined on the given
+// service including any interceptor defined on specific service methods or API.
+func collectInterceptors(svc *expr.ServiceExpr, methods []*MethodData, scope *codegen.NameScope, server bool) []*InterceptorData {
+	var ints []*expr.InterceptorExpr
+	if server {
+		ints = expr.Root.API.ServerInterceptors
+		ints = append(ints, svc.ServerInterceptors...)
+		for _, m := range svc.Methods {
+			ints = append(ints, m.ServerInterceptors...)
+		}
+	} else {
+		ints = expr.Root.API.ClientInterceptors
+		ints = append(ints, svc.ClientInterceptors...)
+		for _, m := range svc.Methods {
+			ints = append(ints, m.ClientInterceptors...)
+		}
+	}
+	// remove duplicate interceptors
+	sort.Slice(ints, func(i, j int) bool {
+		return ints[i].Name < ints[j].Name
+	})
+	for i := 1; i < len(ints); i++ {
+		if ints[i-1].Name == ints[i].Name {
+			ints = append(ints[:i], ints[i+1:]...)
+			i--
+		}
+	}
+
+	res := make([]*InterceptorData, 0, len(ints))
+	for _, i := range ints {
+		res = append(res, buildInterceptorData(svc, methods, i, scope, server))
+	}
+	return res
 }
 
 // typeContext returns a contextual attribute for service types. Service types
@@ -945,18 +985,6 @@ func collectUnionMethods(att *expr.AttributeExpr, scope *codegen.NameScope, loc 
 		for _, nat := range dt.Values {
 			data = append(data, collect(nat.Attribute, loc)...)
 		}
-	}
-	return
-}
-
-// collectInterceptors traverses the interceptors to build a unique set.
-func collectInterceptors(interceptors []*InterceptorData, seen map[string]struct{}) (data []*InterceptorData) {
-	for _, i := range interceptors {
-		if _, ok := seen[i.Name]; ok {
-			continue
-		}
-		seen[i.Name] = struct{}{}
-		data = append(data, i)
 	}
 	return
 }
@@ -1087,7 +1115,6 @@ func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 		ResponseStruct:               vname + "ResponseData",
 	}
 	initStreamData(data, m, vname, rname, resultRef, scope)
-	initInterceptorsData(data, m, payloadRef, resultRef, scope)
 	return data
 }
 
@@ -1169,38 +1196,77 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 	data.StreamingPayloadEx = spayloadEx
 }
 
-func initInterceptorsData(data *MethodData, m *expr.MethodExpr, payloadRef, resultRef string, scope *codegen.NameScope) {
-	if len(m.ServerInterceptors) == 0 && len(m.ClientInterceptors) == 0 {
-		return
+// buildInterceptorData creates the data needed to generate interceptor code.
+func buildInterceptorData(svc *expr.ServiceExpr, methods []*MethodData, i *expr.InterceptorExpr, scope *codegen.NameScope, server bool) *InterceptorData {
+	data := &InterceptorData{
+		Name:        codegen.Goify(i.Name, true),
+		DesignName:  i.Name,
+		Description: i.Description,
 	}
-	buildInterceptorData := func(i *expr.InterceptorExpr, serverStreamStruct, clientStreamStruct string, scope *codegen.NameScope) *InterceptorData {
-		return &InterceptorData{
-			Name:                    codegen.Goify(i.Name, true),
-			DesignName:              i.Name,
-			UnexportedName:          codegen.Goify(i.Name, false),
-			Description:             i.Description,
-			PayloadRef:              payloadRef,
-			ResultRef:               resultRef,
-			ServerStreamInputStruct: serverStreamStruct,
-			ClientStreamInputStruct: clientStreamStruct,
-			ReadPayload:             collectAttributes(i.ReadPayload, m.Payload, scope),
-			WritePayload:            collectAttributes(i.WritePayload, m.Payload, scope),
-			ReadResult:              collectAttributes(i.ReadResult, m.Result, scope),
-			WriteResult:             collectAttributes(i.WriteResult, m.Result, scope),
+	if len(svc.Methods) > 0 {
+		payload, result := svc.Methods[0].Payload, svc.Methods[0].Result
+		data.ReadPayload = collectAttributes(i.ReadPayload, payload, scope)
+		data.WritePayload = collectAttributes(i.WritePayload, payload, scope)
+		data.ReadResult = collectAttributes(i.ReadResult, result, scope)
+		data.WriteResult = collectAttributes(i.WriteResult, result, scope)
+		if len(data.ReadPayload) > 0 || len(data.WritePayload) > 0 {
+			data.HasPayloadAccess = true
+		}
+		if len(data.ReadResult) > 0 || len(data.WriteResult) > 0 {
+			data.HasResultAccess = true
+		}
+		for _, m := range svc.Methods {
+			applies := false
+			intExprs := m.ServerInterceptors
+			if !server {
+				intExprs = m.ClientInterceptors
+			}
+			for _, in := range intExprs {
+				if in.Name == i.Name {
+					applies = true
+					break
+				}
+			}
+			if !applies {
+				continue
+			}
+			var md *MethodData
+			for _, mt := range methods {
+				if m.Name == mt.Name {
+					md = mt
+					break
+				}
+			}
+			data.Methods = append(data.Methods, buildInterceptorMethodData(i, md))
+			if server {
+				md.ServerInterceptors = append(md.ServerInterceptors, i.Name)
+			} else {
+				md.ClientInterceptors = append(md.ClientInterceptors, i.Name)
+			}
 		}
 	}
-	var serverEndpointStruct, clientEndpointStruct string
-	if data.ServerStream != nil {
-		serverEndpointStruct = data.ServerStream.EndpointStruct
+	return data
+}
+
+// buildIntercetorMethodData creates the data needed to generate interceptor
+// method code.
+func buildInterceptorMethodData(i *expr.InterceptorExpr, md *MethodData) *MethodInterceptorData {
+	var serverStream, clientStream string
+	if md.ServerStream != nil {
+		serverStream = md.ServerStream.VarName
 	}
-	if data.ClientStream != nil {
-		clientEndpointStruct = data.ClientStream.EndpointStruct
+	if md.ClientStream != nil {
+		clientStream = md.ClientStream.VarName
 	}
-	for _, i := range m.ServerInterceptors {
-		data.ServerInterceptors = append(data.ServerInterceptors, buildInterceptorData(i, serverEndpointStruct, clientEndpointStruct, scope))
-	}
-	for _, i := range m.ClientInterceptors {
-		data.ClientInterceptors = append(data.ClientInterceptors, buildInterceptorData(i, serverEndpointStruct, clientEndpointStruct, scope))
+	return &MethodInterceptorData{
+		Name:                    i.Name,
+		MethodName:              md.VarName,
+		PayloadAccess:           codegen.Goify(i.Name, false) + md.VarName + "Payload",
+		ResultAccess:            codegen.Goify(i.Name, false) + md.VarName + "Result",
+		PayloadRef:              md.PayloadRef,
+		ResultRef:               md.ResultRef,
+		ClientStreamInputStruct: clientStream,
+		ServerStreamInputStruct: serverStream,
 	}
 }
 
@@ -1322,9 +1388,9 @@ func collectAttributes(attrNames, parent *expr.AttributeExpr, scope *codegen.Nam
 			continue
 		}
 		data[i] = &AttributeData{
-			Name:         codegen.Goify(nat.Name, true),
-			TypeRef:      scope.GoTypeRef(parentAttr),
-			FieldPointer: parent.IsPrimitivePointer(nat.Name, true),
+			Name:    codegen.Goify(nat.Name, true),
+			TypeRef: scope.GoTypeRef(parentAttr),
+			Pointer: parent.IsPrimitivePointer(nat.Name, true),
 		}
 	}
 	return data

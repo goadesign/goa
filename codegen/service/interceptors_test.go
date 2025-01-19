@@ -125,7 +125,7 @@ func TestCollectAttributes(t *testing.T) {
 				Validation: &expr.ValidationExpr{Required: []string{"name"}},
 			},
 			want: []*AttributeData{
-				{Name: "Name", TypeRef: "string", FieldPointer: false},
+				{Name: "Name", TypeRef: "string", Pointer: false},
 			},
 		},
 		{
@@ -141,7 +141,7 @@ func TestCollectAttributes(t *testing.T) {
 				},
 			},
 			want: []*AttributeData{
-				{Name: "Age", TypeRef: "int", FieldPointer: true},
+				{Name: "Age", TypeRef: "int", Pointer: true},
 			},
 		},
 		{
@@ -160,8 +160,8 @@ func TestCollectAttributes(t *testing.T) {
 				Validation: &expr.ValidationExpr{Required: []string{"name"}},
 			},
 			want: []*AttributeData{
-				{Name: "Name", TypeRef: "string", FieldPointer: false},
-				{Name: "Age", TypeRef: "int", FieldPointer: true},
+				{Name: "Name", TypeRef: "string", Pointer: false},
+				{Name: "Age", TypeRef: "int", Pointer: true},
 			},
 		},
 		{

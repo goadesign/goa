@@ -1,6 +1,6 @@
 import (
 	"fmt"
-	cli "grpc/cli/test_api"
+	cli "grpc/cli/test"
 	"os"
 
 	"./interceptors"

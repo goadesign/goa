@@ -155,102 +155,30 @@ func TestMethodExprIsPayloadStreaming(t *testing.T) {
 	}
 }
 
-func TestMethodExprPrepare(t *testing.T) {
-	var (
-		apiInterceptor = &expr.InterceptorExpr{Name: "api"}
-		svcInterceptor = &expr.InterceptorExpr{Name: "service"}
-		mtdInterceptor = &expr.InterceptorExpr{Name: "method"}
-	)
-
-	cases := map[string]struct {
-		api            *expr.APIExpr
-		service        *expr.ServiceExpr
-		method         *expr.MethodExpr
-		expectedServer []*expr.InterceptorExpr
-		expectedClient []*expr.InterceptorExpr
+func TestMethodExprValidateInterceptors(t *testing.T) {
+	cases := []struct {
+		Name  string
+		DSL   func()
+		Error string
 	}{
-		"no-interceptors": {
-			api:            &expr.APIExpr{},
-			service:        &expr.ServiceExpr{},
-			method:         &expr.MethodExpr{},
-			expectedServer: []*expr.InterceptorExpr{},
-			expectedClient: []*expr.InterceptorExpr{},
-		},
-		"api-only": {
-			api: &expr.APIExpr{
-				ServerInterceptors: []*expr.InterceptorExpr{apiInterceptor},
-				ClientInterceptors: []*expr.InterceptorExpr{apiInterceptor},
-			},
-			service:        &expr.ServiceExpr{},
-			method:         &expr.MethodExpr{},
-			expectedServer: []*expr.InterceptorExpr{apiInterceptor},
-			expectedClient: []*expr.InterceptorExpr{apiInterceptor},
-		},
-		"service-only": {
-			api: &expr.APIExpr{},
-			service: &expr.ServiceExpr{
-				ServerInterceptors: []*expr.InterceptorExpr{svcInterceptor},
-				ClientInterceptors: []*expr.InterceptorExpr{svcInterceptor},
-			},
-			method:         &expr.MethodExpr{},
-			expectedServer: []*expr.InterceptorExpr{svcInterceptor},
-			expectedClient: []*expr.InterceptorExpr{svcInterceptor},
-		},
-		"method-only": {
-			api:     &expr.APIExpr{},
-			service: &expr.ServiceExpr{},
-			method: &expr.MethodExpr{
-				ServerInterceptors: []*expr.InterceptorExpr{mtdInterceptor},
-				ClientInterceptors: []*expr.InterceptorExpr{mtdInterceptor},
-			},
-			expectedServer: []*expr.InterceptorExpr{mtdInterceptor},
-			expectedClient: []*expr.InterceptorExpr{mtdInterceptor},
-		},
-		"chained-interceptors": {
-			api: &expr.APIExpr{
-				ServerInterceptors: []*expr.InterceptorExpr{apiInterceptor},
-				ClientInterceptors: []*expr.InterceptorExpr{apiInterceptor},
-			},
-			service: &expr.ServiceExpr{
-				ServerInterceptors: []*expr.InterceptorExpr{svcInterceptor},
-				ClientInterceptors: []*expr.InterceptorExpr{svcInterceptor},
-			},
-			method: &expr.MethodExpr{
-				ServerInterceptors: []*expr.InterceptorExpr{mtdInterceptor},
-				ClientInterceptors: []*expr.InterceptorExpr{mtdInterceptor},
-			},
-			expectedServer: []*expr.InterceptorExpr{mtdInterceptor, svcInterceptor, apiInterceptor},
-			expectedClient: []*expr.InterceptorExpr{mtdInterceptor, svcInterceptor, apiInterceptor},
-		},
-		"duplicate-interceptors": {
-			api: &expr.APIExpr{
-				ServerInterceptors: []*expr.InterceptorExpr{apiInterceptor},
-				ClientInterceptors: []*expr.InterceptorExpr{apiInterceptor},
-			},
-			service: &expr.ServiceExpr{
-				ServerInterceptors: []*expr.InterceptorExpr{apiInterceptor}, // Same as API
-				ClientInterceptors: []*expr.InterceptorExpr{apiInterceptor},
-			},
-			method: &expr.MethodExpr{
-				ServerInterceptors: []*expr.InterceptorExpr{apiInterceptor}, // Same as API
-				ClientInterceptors: []*expr.InterceptorExpr{apiInterceptor},
-			},
-			expectedServer: []*expr.InterceptorExpr{apiInterceptor}, // Only one copy
-			expectedClient: []*expr.InterceptorExpr{apiInterceptor},
-		},
+		{"no-interceptors", testdata.NoInterceptorsDSL, ""},
+		{"valid-interceptors", testdata.ValidInterceptorsDSL, ""},
+		{"duplicate-interceptors", testdata.DuplicateInterceptorsDSL, ""}, // Duplicates are handled by merging
+		{"mixed-interceptors", testdata.MixedInterceptorsDSL, ""},
+		{"undefined-interceptor", testdata.UndefinedInterceptorDSL,
+			`ServerInterceptor: interceptor "undefined" not found in service "Service" method "Method"`},
+		{"empty-interceptor-name", testdata.EmptyInterceptorNameDSL,
+			`ServerInterceptor: interceptor name cannot be empty`},
 	}
 
-	for name, tc := range cases {
-		t.Run(name, func(t *testing.T) {
-			expr.Root.API = tc.api
-			tc.method.Service = tc.service
-			tc.method.Prepare()
-
-			assert.Equal(t, tc.expectedServer, tc.method.ServerInterceptors)
-			assert.Equal(t, tc.expectedClient, tc.method.ClientInterceptors)
-			assert.NotNil(t, tc.method.Payload)
-			assert.NotNil(t, tc.method.StreamingPayload)
-			assert.NotNil(t, tc.method.Result)
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			if c.Error == "" {
+				expr.RunDSL(t, c.DSL)
+				return
+			}
+			err := expr.RunInvalidDSL(t, c.DSL)
+			assert.Contains(t, err.Error(), c.Error)
 		})
 	}
 }

@@ -29,35 +29,41 @@ func InterceptorsFiles(genpkg string, service *expr.ServiceExpr) []*codegen.File
 }
 
 // interceptorFile returns the file defining the interceptors.
+// This method is called twice, once for the server and once for the client.
 func interceptorFile(svc *Data, server bool) *codegen.File {
 	filename := "client_interceptors.go"
 	template := "client_interceptors"
-	section := "client-interceptors"
+	section := "client-interceptors-type"
 	desc := "Client Interceptors"
-	var data []*InterceptorData
 	if server {
 		filename = "service_interceptors.go"
 		template = "server_interceptors"
-		section = "server-interceptors"
+		section = "server-interceptors-type"
 		desc = "Server Interceptors"
-		data = svc.ServerInterceptors
 	}
 	desc = svc.Name + desc
 	path := filepath.Join(codegen.Gendir, svc.PathName, filename)
 
+	interceptors := svc.ServerInterceptors
 	if !server {
-		// We don't want to generate duplicate interceptor info data structures for
-		// interceptors that are both server and client side.
-		serverInterceptors := make(map[string]struct{}, len(svc.ServerInterceptors))
-		for _, intr := range svc.ServerInterceptors {
-			serverInterceptors[intr.Name] = struct{}{}
+		interceptors = svc.ClientInterceptors
+	}
+
+	// We don't want to generate duplicate interceptor info data structures for
+	// interceptors that are both server and client side so remove interceptors
+	// that are both server and client side when generating the client.
+	if !server {
+		names := make(map[string]struct{}, len(svc.ServerInterceptors))
+		for _, sin := range svc.ServerInterceptors {
+			names[sin.Name] = struct{}{}
 		}
-		for _, intr := range svc.ClientInterceptors {
-			if _, ok := serverInterceptors[intr.Name]; ok {
-				continue
+		filtered := make([]*InterceptorData, 0, len(interceptors))
+		for _, in := range interceptors {
+			if _, ok := names[in.Name]; !ok {
+				filtered = append(filtered, in)
 			}
-			data = append(data, intr)
 		}
+		interceptors = filtered
 	}
 
 	sections := []*codegen.SectionTemplate{
@@ -66,45 +72,59 @@ func interceptorFile(svc *Data, server bool) *codegen.File {
 			codegen.GoaImport(""),
 		}),
 		{
-			Name:   "section" + "-struct",
+			Name:   section,
 			Source: readTemplate(template),
 			Data:   svc,
 		},
 	}
-	if len(data) > 0 {
+	if len(interceptors) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
-			Name:   section,
-			Source: readTemplate("interceptors"),
-			Data:   data,
+			Name:   "interceptor-types",
+			Source: readTemplate("interceptors_types"),
+			Data:   interceptors,
 			FuncMap: map[string]any{
 				"hasPrivateImplementationTypes": hasPrivateImplementationTypes,
 			},
 		})
 	}
 
-	// Add wrapper sections for each method that has interceptors
+	template = "endpoint_wrappers"
+	section = "endpoint-wrapper"
+	if !server {
+		template = "client_wrappers"
+		section = "client-wrapper"
+	}
 	for _, m := range svc.Methods {
-		if server && len(m.ServerInterceptors) == 0 || !server && len(m.ClientInterceptors) == 0 {
+		ints := m.ServerInterceptors
+		if !server {
+			ints = m.ClientInterceptors
+		}
+		if len(ints) == 0 {
 			continue
 		}
-		template := "endpoint_wrappers"
-		templateName := "endpoint-wrapper"
-		if !server {
-			template = "client_wrappers"
-			templateName = "client-wrapper"
-		}
 		sections = append(sections, &codegen.SectionTemplate{
-			Name:   templateName,
+			Name:   section,
 			Source: readTemplate(template),
 			Data: map[string]interface{}{
-				"MethodVarName":      codegen.Goify(m.Name, true),
-				"Method":             m.Name,
-				"Service":            svc.Name,
-				"ServerInterceptors": m.ServerInterceptors,
-				"ClientInterceptors": m.ClientInterceptors,
+				"MethodVarName": m.VarName,
+				"Method":        m.Name,
+				"Service":       svc.Name,
+				"Interceptors":  ints,
 			},
 		})
 	}
+
+	if len(interceptors) > 0 {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "interceptors",
+			Source: readTemplate("interceptors"),
+			Data:   interceptors,
+			FuncMap: map[string]any{
+				"hasPrivateImplementationTypes": hasPrivateImplementationTypes,
+			},
+		})
+	}
+
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 

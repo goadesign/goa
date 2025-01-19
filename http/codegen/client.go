@@ -67,7 +67,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	}
 
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "client-init",
+		Name:    "http-client-init",
 		Source:  readTemplate("client_init"),
 		Data:    data,
 		FuncMap: map[string]any{"hasWebSocket": hasWebSocket},

@@ -2,9 +2,11 @@
 // line.
 func ParseEndpoint(
 	cc *grpc.ClientConn,
+{{-  range .Commands }}
 	{{- if .Interceptors }}
 	{{ .Interceptors.VarName }} {{ .Interceptors.PkgName }}.ClientInterceptors,
 	{{- end }}
+{{- end }}
 	opts ...grpc.CallOption,
 ) (goa.Endpoint, any, error) {
 	{{ .FlagsCode }}

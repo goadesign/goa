@@ -1,128 +1,96 @@
-
-// Access interfaces for interceptor payloads and results
-type (
-{{- range . }}
-	// {{ .Name }}Info provides metadata about the current interception.
-	// It includes service name, method name, and access to the endpoint.
-	{{ .Name }}Info goa.InterceptorInfo
-	{{- if or .ReadPayload .WritePayload }}
-
-	// {{ .Name }}PayloadAccess provides type-safe access to the method payload.
-	// It allows reading and writing specific fields of the payload as defined
-	// in the design.
-	{{ .Name }}PayloadAccess interface {
-		{{- range .ReadPayload }}
-		{{ .Name }}() {{ .TypeRef }}
-		{{- end }}
-		{{- range .WritePayload }}
-		Set{{ .Name }}({{ .TypeRef }})
-		{{- end }}
-	}
-	{{- end }}
-	{{- if or .ReadResult .WriteResult }}
-
-	// {{ .Name }}ResultAccess provides type-safe access to the method result.
-	// It allows reading and writing specific fields of the result as defined
-	// in the design.
-	{{ .Name }}ResultAccess interface {
-		{{- range .ReadResult }}
-		{{ .Name }}() {{ .TypeRef }}
-		{{- end }}
-		{{- range .WriteResult }}
-		Set{{ .Name }}({{ .TypeRef }})
-		{{- end }}
-	}
-	{{- end }}
-{{- end }}
-)
-
 {{- if hasPrivateImplementationTypes . }}
-
-// Private implementation types
-type (
-	{{- range . }}
-	{{- if or .ReadPayload .WritePayload }}
-	{{ .UnexportedName }}PayloadAccess struct {
-		payload {{ .PayloadRef }}
-	}
-	{{- end }}
-
-	{{- if or .ReadResult .WriteResult }}
-	{{ .UnexportedName }}ResultAccess struct {
-		result {{ .ResultRef }}
-	}
-	{{- end }}
-	{{- end }}
-)
-
 // Public accessor methods for Info types
 {{- range . }}
-	{{- if or .ReadPayload .WritePayload }}
+	{{- if .HasPayloadAccess }}
+
 // Payload returns a type-safe accessor for the method payload.
-func (info *{{ .Name }}Info) Payload() {{ .Name }}PayloadAccess {
-	return &{{ .UnexportedName }}PayloadAccess{payload: info.RawPayload.({{ .PayloadRef }})}
+func (info *{{ .Name }}Info) Payload() {{ .Name }}Payload {
+		{{- if gt (len .Methods) 1 }}
+		switch info.Method {
+			{{- range .Methods }}
+		case "{{ .MethodName }}":
+			return &{{ .PayloadAccess }}{payload: info.RawPayload.({{ .PayloadRef }})}
+			{{- end }}
+		default:
+			return nil
+		}
+		{{- else }}
+	return &{{ (index .Methods 0).PayloadAccess }}{payload: info.RawPayload.({{ (index .Methods 0).PayloadRef }})}
+		{{- end }}
 }
 	{{- end }}
 
-	{{- if or .ReadResult .WriteResult }}
+	{{- if .HasResultAccess }}
 // Result returns a type-safe accessor for the method result.
-func (info *{{ .Name }}Info) Result(res any) {{ .Name }}ResultAccess {
-	return &{{ .UnexportedName }}ResultAccess{result: res.({{ .ResultRef }})}
+func (info *{{ .Name }}Info) Result(res any) {{ .Name }}Result {
+		{{- if gt (len .Methods) 1 }}
+	switch info.Method {
+			{{- range .Methods }}
+	case "{{ .MethodName }}":
+		return &{{ .ResultAccess }}{result: res.({{ .ResultRef }})}
+			{{- end }}
+	default:
+		return nil
+	}
+		{{- else }}
+	return &{{ (index .Methods 0).ResultAccess }}{result: res.({{ (index .Methods 0).ResultRef }})}
+		{{- end }}
 }
 	{{- end }}
 {{- end }}
 
 // Private implementation methods
 {{- range . }}
-	{{- $interceptor := . }}
-	{{- range .ReadPayload }}
-func (p *{{ $interceptor.UnexportedName }}PayloadAccess) {{ .Name }}() {{ .TypeRef }} {
-	{{- if .FieldPointer }}
+	{{ $interceptor := . }}
+	{{- range .Methods }}
+		{{- $method := . }}
+		{{- range $interceptor.ReadPayload }}
+func (p *{{ $method.PayloadAccess }}) {{ .Name }}() {{ .TypeRef }} {
+			{{- if .Pointer }}
 	if p.payload.{{ .Name }} == nil {
 		var zero {{ .TypeRef }}
 		return zero
 	}
 	return *p.payload.{{ .Name }}
-	{{- else }}
+			{{- else }}
 	return p.payload.{{ .Name }}
-	{{- end }}
+			{{- end }}
 }
-	{{- end }}
+		{{- end }}
 
-	{{- range .WritePayload }}
-func (p *{{ $interceptor.UnexportedName }}PayloadAccess) Set{{ .Name }}(v {{ .TypeRef }}) {
-	{{- if .FieldPointer }}
+		{{- range $interceptor.WritePayload }}
+func (p *{{ $method.PayloadAccess }}) Set{{ .Name }}(v {{ .TypeRef }}) {
+			{{- if .Pointer }}
 	p.payload.{{ .Name }} = &v
-	{{- else }}
+			{{- else }}
 	p.payload.{{ .Name }} = v
-	{{- end }}
+			{{- end }}
 }
-	{{- end }}
+		{{- end }}
 
-	{{- range .ReadResult }}
-func (r *{{ $interceptor.UnexportedName }}ResultAccess) {{ .Name }}() {{ .TypeRef }} {
-	{{- if .FieldPointer }}
+		{{- range $interceptor.ReadResult }}
+func (r *{{ $method.ResultAccess }}) {{ .Name }}() {{ .TypeRef }} {
+			{{- if .Pointer }}
 	if r.result.{{ .Name }} == nil {
 		var zero {{ .TypeRef }}
 		return zero
 	}
 	return *r.result.{{ .Name }}
-	{{- else }}
+			{{- else }}
 	return r.result.{{ .Name }}
-	{{- end }}
+			{{- end }}
 }
-	{{- end }}
+		{{- end }}
 
-	{{- range .WriteResult }}
-func (r *{{ $interceptor.UnexportedName }}ResultAccess) Set{{ .Name }}(v {{ .TypeRef }}) {
-	{{- if .FieldPointer }}
+		{{- range $interceptor.WriteResult }}
+func (r *{{ $method.ResultAccess }}) Set{{ .Name }}(v {{ .TypeRef }}) {
+			{{- if .Pointer }}
 	r.result.{{ .Name }} = &v
-	{{- else }}
+			{{- else }}
 	r.result.{{ .Name }} = v
-	{{- end }}
+			{{- end }}
 }
+		{{- end }}
 	{{- end }}
 {{- end }}
 {{- end }}
-
-

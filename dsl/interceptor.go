@@ -251,6 +251,10 @@ func addInterceptors(interceptors []any, client bool) {
 		case *expr.InterceptorExpr:
 			ints = append(ints, i)
 		case string:
+			if i == "" {
+				eval.ReportError("%s: interceptor name cannot be empty", kind)
+				return
+			}
 			var found bool
 			for _, in := range expr.Root.Interceptors {
 				if in.Name == i {

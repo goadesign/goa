@@ -4,9 +4,9 @@
 // next to complete the request.
 type ServerInterceptors interface {
 {{- range .ServerInterceptors }}
-{{- if .Description }}
+	{{- if .Description }}
 	{{ comment .Description }}
-{{- end }}
+	{{- end }}
 	{{ .Name }}(ctx context.Context, info *{{ .Name }}Info, next goa.Endpoint) (any, error)
 {{- end }}
 }

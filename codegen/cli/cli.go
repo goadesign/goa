@@ -702,7 +702,8 @@ const parseFlagsT = `var (
 `
 
 // input: commandData
-const commandUsageT = `{{ printf "%sUsage displays the usage of the %s command and its subcommands." .Name .Name | comment }}
+const commandUsageT = `
+{{ printf "%sUsage displays the usage of the %s command and its subcommands." .VarName .Name | comment }}
 func {{ .VarName }}Usage() {
 	fmt.Fprintf(os.Stderr, ` + "`" + `{{ printDescription .Description }}
 Usage:

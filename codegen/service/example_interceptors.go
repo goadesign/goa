@@ -49,7 +49,7 @@ func exampleInterceptorsFile(genpkg string, svc *expr.ServiceExpr) []*codegen.Fi
 						{Path: path.Join(genpkg, sdata.PathName), Name: sdata.PkgName},
 					}),
 					{
-						Name:   "server-interceptor",
+						Name:   "exmaple-server-interceptor",
 						Source: readTemplate("example_server_interceptor"),
 						Data:   data,
 					},
@@ -73,7 +73,7 @@ func exampleInterceptorsFile(genpkg string, svc *expr.ServiceExpr) []*codegen.Fi
 						{Path: path.Join(genpkg, sdata.PathName), Name: sdata.PkgName},
 					}),
 					{
-						Name:   "client-interceptor",
+						Name:   "example-client-interceptor",
 						Source: readTemplate("example_client_interceptor"),
 						Data:   data,
 					},

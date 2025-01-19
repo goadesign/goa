@@ -100,39 +100,6 @@ func (m *MethodExpr) Prepare() {
 	if m.Result == nil {
 		m.Result = &AttributeExpr{Type: Empty}
 	}
-
-	m.ClientInterceptors = mergeInterceptors(m.ClientInterceptors, m.Service.ClientInterceptors, Root.API.ClientInterceptors)
-	m.ServerInterceptors = mergeInterceptors(m.ServerInterceptors, m.Service.ServerInterceptors, Root.API.ServerInterceptors)
-}
-
-// mergeInterceptors merges interceptors from different levels (method, service, API)
-// while avoiding duplicates. The order of precedence is: method > service > API.
-func mergeInterceptors(methodLevel, serviceLevel, apiLevel []*InterceptorExpr) []*InterceptorExpr {
-	existing := make(map[string]struct{})
-	result := make([]*InterceptorExpr, 0, len(methodLevel)+len(serviceLevel)+len(apiLevel))
-
-	// Add method-level interceptors
-	for _, i := range methodLevel {
-		existing[i.Name] = struct{}{}
-		result = append(result, i)
-	}
-
-	// Add service-level interceptors
-	for _, i := range serviceLevel {
-		if _, ok := existing[i.Name]; !ok {
-			result = append(result, i)
-			existing[i.Name] = struct{}{}
-		}
-	}
-
-	// Add API-level interceptors
-	for _, i := range apiLevel {
-		if _, ok := existing[i.Name]; !ok {
-			result = append(result, i)
-		}
-	}
-
-	return result
 }
 
 // Validate validates the method payloads, results, errors, security
@@ -272,13 +239,39 @@ func (m *MethodExpr) validateErrors() *eval.ValidationErrors {
 // validateInterceptors validates the method interceptors.
 func (m *MethodExpr) validateInterceptors() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
+	m.ClientInterceptors = mergeInterceptors(m.ClientInterceptors, m.Service.ClientInterceptors, Root.API.ClientInterceptors)
 	for _, i := range m.ClientInterceptors {
 		verr.Merge(i.validate(m))
 	}
+	m.ServerInterceptors = mergeInterceptors(m.ServerInterceptors, m.Service.ServerInterceptors, Root.API.ServerInterceptors)
 	for _, i := range m.ServerInterceptors {
 		verr.Merge(i.validate(m))
 	}
 	return verr
+}
+
+// mergeInterceptors merges interceptors from different levels (method, service, API)
+// while avoiding duplicates. The order of precedence is: method > service > API.
+func mergeInterceptors(methodLevel, serviceLevel, apiLevel []*InterceptorExpr) []*InterceptorExpr {
+	existing := make(map[string]struct{})
+	result := make([]*InterceptorExpr, 0, len(methodLevel)+len(serviceLevel)+len(apiLevel))
+
+	for _, i := range methodLevel {
+		existing[i.Name] = struct{}{}
+		result = append(result, i)
+	}
+	for _, i := range serviceLevel {
+		if _, ok := existing[i.Name]; !ok {
+			result = append(result, i)
+			existing[i.Name] = struct{}{}
+		}
+	}
+	for _, i := range apiLevel {
+		if _, ok := existing[i.Name]; !ok {
+			result = append(result, i)
+		}
+	}
+	return result
 }
 
 // hasTag is a helper function that traverses the given attribute and all its
