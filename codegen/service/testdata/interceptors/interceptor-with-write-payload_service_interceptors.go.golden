@@ -12,35 +12,37 @@ type (
 	// It includes service name, method name, and access to the endpoint.
 	ValidationInfo goa.InterceptorInfo
 
-	// ValidationPayloadAccess provides type-safe access to the method payload.
+	// ValidationPayload provides type-safe access to the method payload.
 	// It allows reading and writing specific fields of the payload as defined
 	// in the design.
-	ValidationPayloadAccess interface {
+	ValidationPayload interface {
 		SetName(string)
 	}
 )
 
 // Private implementation types
 type (
-	validationPayloadAccess struct {
+	validationMethodPayload struct {
 		payload *MethodPayload
 	}
 )
 
-// Public accessor methods for Info types
-// Payload returns a type-safe accessor for the method payload.
-func (info *ValidationInfo) Payload() ValidationPayloadAccess {
-	return &validationPayloadAccess{payload: info.RawPayload.(*MethodPayload)}
-}
-
-// Private implementation methods
-func (p *validationPayloadAccess) SetName(v string) {
-	p.payload.Name = v
-}
-
 // WrapMethodEndpoint wraps the Method endpoint with the server-side
 // interceptors defined in the design.
 func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
-	endpoint = wrapValidation(endpoint, i, "Method")
+	endpoint = wrapMethodvalidation(endpoint, i)
 	return endpoint
+}
+
+// Public accessor methods for Info types
+
+// Payload returns a type-safe accessor for the method payload.
+func (info *ValidationInfo) Payload() ValidationPayload {
+	return &validationMethodPayload{payload: info.RawPayload.(*MethodPayload)}
+}
+
+// Private implementation methods
+
+func (p *validationMethodPayload) SetName(v string) {
+	p.payload.Name = v
 }

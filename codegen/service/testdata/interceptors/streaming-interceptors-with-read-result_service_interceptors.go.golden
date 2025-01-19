@@ -12,39 +12,40 @@ type (
 	// It includes service name, method name, and access to the endpoint.
 	LoggingInfo goa.InterceptorInfo
 
-	// LoggingResultAccess provides type-safe access to the method result.
+	// LoggingResult provides type-safe access to the method result.
 	// It allows reading and writing specific fields of the result as defined
 	// in the design.
-	LoggingResultAccess interface {
+	LoggingResult interface {
 		Data() string
 	}
 )
 
 // Private implementation types
 type (
-	loggingResultAccess struct {
+	loggingMethodResult struct {
 		result *MethodResult
 	}
 )
 
+// WrapMethodEndpoint wraps the Method endpoint with the server-side
+// interceptors defined in the design.
+func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	endpoint = wrapMethodlogging(endpoint, i)
+	return endpoint
+}
+
 // Public accessor methods for Info types
 // Result returns a type-safe accessor for the method result.
-func (info *LoggingInfo) Result(res any) LoggingResultAccess {
-	return &loggingResultAccess{result: res.(*MethodResult)}
+func (info *LoggingInfo) Result(res any) LoggingResult {
+	return &loggingMethodResult{result: res.(*MethodResult)}
 }
 
 // Private implementation methods
-func (r *loggingResultAccess) Data() string {
+
+func (r *loggingMethodResult) Data() string {
 	if r.result.Data == nil {
 		var zero string
 		return zero
 	}
 	return *r.result.Data
-}
-
-// WrapMethodEndpoint wraps the Method endpoint with the server-side
-// interceptors defined in the design.
-func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
-	endpoint = wrapLogging(endpoint, i, "Method")
-	return endpoint
 }

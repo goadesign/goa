@@ -1,13 +1,15 @@
 
-// wrapClientTracing applies the tracing interceptor to endpoints.
-func wrapClientTracing(endpoint goa.Endpoint, i ClientInterceptors, method string) goa.Endpoint {
+
+// wrapClientTracingMethod applies the tracing client interceptor to endpoints.
+func wrapClientMethodTracing(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &TracingInfo{
 			Service:    "SingleClientInterceptor",
-			Method:     method,
+			Method:     "Method",
 			Endpoint:   endpoint,
 			RawPayload: req,
 		}
 		return i.Tracing(ctx, info, endpoint)
 	}
 }
+

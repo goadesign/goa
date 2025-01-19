@@ -280,8 +280,6 @@ type (
 	// MethodInterceptorData contains the data required to render the
 	// method-level interceptor code.
 	MethodInterceptorData struct {
-		// Name is the name of the interceptor.
-		Name string
 		// MethodName is the name of the method.
 		MethodName string
 		// PayloadAccess is the name of the payload access struct.
@@ -1203,46 +1201,47 @@ func buildInterceptorData(svc *expr.ServiceExpr, methods []*MethodData, i *expr.
 		DesignName:  i.Name,
 		Description: i.Description,
 	}
-	if len(svc.Methods) > 0 {
-		payload, result := svc.Methods[0].Payload, svc.Methods[0].Result
-		data.ReadPayload = collectAttributes(i.ReadPayload, payload, scope)
-		data.WritePayload = collectAttributes(i.WritePayload, payload, scope)
-		data.ReadResult = collectAttributes(i.ReadResult, result, scope)
-		data.WriteResult = collectAttributes(i.WriteResult, result, scope)
-		if len(data.ReadPayload) > 0 || len(data.WritePayload) > 0 {
-			data.HasPayloadAccess = true
+	if len(svc.Methods) == 0 {
+		return data
+	}
+	payload, result := svc.Methods[0].Payload, svc.Methods[0].Result
+	data.ReadPayload = collectAttributes(i.ReadPayload, payload, scope)
+	data.WritePayload = collectAttributes(i.WritePayload, payload, scope)
+	data.ReadResult = collectAttributes(i.ReadResult, result, scope)
+	data.WriteResult = collectAttributes(i.WriteResult, result, scope)
+	if len(data.ReadPayload) > 0 || len(data.WritePayload) > 0 {
+		data.HasPayloadAccess = true
+	}
+	if len(data.ReadResult) > 0 || len(data.WriteResult) > 0 {
+		data.HasResultAccess = true
+	}
+	for _, m := range svc.Methods {
+		applies := false
+		intExprs := m.ServerInterceptors
+		if !server {
+			intExprs = m.ClientInterceptors
 		}
-		if len(data.ReadResult) > 0 || len(data.WriteResult) > 0 {
-			data.HasResultAccess = true
+		for _, in := range intExprs {
+			if in.Name == i.Name {
+				applies = true
+				break
+			}
 		}
-		for _, m := range svc.Methods {
-			applies := false
-			intExprs := m.ServerInterceptors
-			if !server {
-				intExprs = m.ClientInterceptors
+		if !applies {
+			continue
+		}
+		var md *MethodData
+		for _, mt := range methods {
+			if m.Name == mt.Name {
+				md = mt
+				break
 			}
-			for _, in := range intExprs {
-				if in.Name == i.Name {
-					applies = true
-					break
-				}
-			}
-			if !applies {
-				continue
-			}
-			var md *MethodData
-			for _, mt := range methods {
-				if m.Name == mt.Name {
-					md = mt
-					break
-				}
-			}
-			data.Methods = append(data.Methods, buildInterceptorMethodData(i, md))
-			if server {
-				md.ServerInterceptors = append(md.ServerInterceptors, i.Name)
-			} else {
-				md.ClientInterceptors = append(md.ClientInterceptors, i.Name)
-			}
+		}
+		data.Methods = append(data.Methods, buildInterceptorMethodData(i, md))
+		if server {
+			md.ServerInterceptors = append(md.ServerInterceptors, i.Name)
+		} else {
+			md.ClientInterceptors = append(md.ClientInterceptors, i.Name)
 		}
 	}
 	return data
@@ -1258,11 +1257,17 @@ func buildInterceptorMethodData(i *expr.InterceptorExpr, md *MethodData) *Method
 	if md.ClientStream != nil {
 		clientStream = md.ClientStream.VarName
 	}
+	var payloadAccess, resultAccess string
+	if i.ReadPayload != nil || i.WritePayload != nil {
+		payloadAccess = codegen.Goify(i.Name, false) + md.VarName + "Payload"
+	}
+	if i.ReadResult != nil || i.WriteResult != nil {
+		resultAccess = codegen.Goify(i.Name, false) + md.VarName + "Result"
+	}
 	return &MethodInterceptorData{
-		Name:                    i.Name,
 		MethodName:              md.VarName,
-		PayloadAccess:           codegen.Goify(i.Name, false) + md.VarName + "Payload",
-		ResultAccess:            codegen.Goify(i.Name, false) + md.VarName + "Result",
+		PayloadAccess:           payloadAccess,
+		ResultAccess:            resultAccess,
 		PayloadRef:              md.PayloadRef,
 		ResultRef:               md.ResultRef,
 		ClientStreamInputStruct: clientStream,

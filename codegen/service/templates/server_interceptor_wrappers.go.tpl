@@ -15,7 +15,7 @@ func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i Serve
 			RawPayload: req,
 			{{- end }}
 		}
-		return i.{{ .Name }}(ctx, info, endpoint)
+		return i.{{ $interceptor.Name }}(ctx, info, endpoint)
 	}
 }
 {{- end }}
