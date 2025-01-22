@@ -29,6 +29,7 @@ func TestInvalidArgError(t *testing.T) {
 		"Security":             {func() { Security(1) }, "cannot use 1 (type int) as type security scheme or security scheme name"},
 		"Security (typed nil)": {func() { Security((*expr.SchemeExpr)(nil)) }, "cannot use (*expr.SchemeExpr)(nil) (type *expr.SchemeExpr) as type security scheme"},
 		"Type":                 {func() { Type("name", 1) }, "cannot use 1 (type int) as type type or function"},
+		"Type (DataType)":      {func() { Type("name", String, 1) }, "cannot use 1 (type int) as type function"},
 	}
 	for name, tc := range dsls {
 		t.Run(name, func(t *testing.T) {

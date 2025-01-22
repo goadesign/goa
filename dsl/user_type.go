@@ -85,7 +85,7 @@ func Type(name string, args ...any) expr.UserType {
 		if len(args) == 2 {
 			d, ok := args[1].(func())
 			if !ok {
-				eval.ReportError("third argument must be a function")
+				eval.InvalidArgError("function", args[1])
 				return nil
 			}
 			fn = d
