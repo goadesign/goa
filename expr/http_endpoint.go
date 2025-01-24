@@ -740,7 +740,7 @@ func (e *HTTPEndpointExpr) validateParams() *eval.ValidationErrors {
 	// We have to figure out the actual type for the params because the actual
 	// type is initialized only during the finalize phase. In the validation
 	// phase, all param types are string type by default unless specified
-	// expliclty.
+	// explicitly.
 	initAttr(pparams, e.MethodExpr.Payload)
 	initAttr(qparams, e.MethodExpr.Payload)
 

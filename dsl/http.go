@@ -233,7 +233,7 @@ func Produces(args ...string) {
 // As a special case, if you want to generate a path with a trailing slash, you can use
 // GET("/./") to generate a path such as '/foo/'.
 //
-// Path must appear in a API HTTP expression or a Service HTTP expression.
+// Path must appear in an API HTTP expression or a Service HTTP expression.
 //
 // Path accepts one argument: the HTTP path prefix.
 func Path(val string) {
@@ -1166,7 +1166,7 @@ func cookies(exp eval.Expression) *expr.MappedAttributeExpr {
 }
 
 // params returns the mapped attribute containing the path and query params for
-// the given expression if it's either the root, a API server, a service or an
+// the given expression if it's either the root, an API server, a service or an
 // endpoint - nil otherwise.
 func params(exp eval.Expression) *expr.MappedAttributeExpr {
 	switch e := exp.(type) {

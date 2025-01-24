@@ -56,7 +56,7 @@ func API(name string, fn func()) *expr.APIExpr {
 
 // Title sets the API title. It is used by the generated OpenAPI specification.
 //
-// Title must appear in a API expression.
+// Title must appear in an API expression.
 //
 // Title accepts a single string argument.
 //
@@ -75,7 +75,7 @@ func Title(val string) {
 
 // Version specifies the API version. One design describes one version.
 //
-// Version must appear in a API expression.
+// Version must appear in an API expression.
 //
 // Version accepts a single string argument.
 //
@@ -94,7 +94,7 @@ func Version(ver string) {
 
 // Contact sets the API contact information.
 //
-// Contact must appear in a API expression.
+// Contact must appear in an API expression.
 //
 // Contact takes a single argument which is the defining DSL.
 //
@@ -121,7 +121,7 @@ func Contact(fn func()) {
 
 // License sets the API license information.
 //
-// License must appear in a API expression.
+// License must appear in an API expression.
 //
 // License takes a single argument which is the defining DSL.
 //
@@ -147,7 +147,7 @@ func License(fn func()) {
 
 // Randomizer sets the API example randomizer.
 //
-// Randomizer must appear in a API expression.
+// Randomizer must appear in an API expression.
 //
 // Randomizer takes a single argument which is an implementation of
 // expr.Randomizer.
@@ -215,7 +215,7 @@ func Docs(fn func()) {
 
 // TermsOfService describes the API terms of services or links to them.
 //
-// TermsOfService must appear in a API expression.
+// TermsOfService must appear in an API expression.
 //
 // TermsOfService takes a single argument which is the TOS text or URL.
 //

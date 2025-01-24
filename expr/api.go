@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	// APIExpr contains the global properties for a API expression.
+	// APIExpr contains the global properties for an API expression.
 	APIExpr struct {
 		// DSLFunc contains the DSL used to initialize the expression.
 		eval.DSLFunc

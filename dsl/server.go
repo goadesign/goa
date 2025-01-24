@@ -18,7 +18,7 @@ import (
 // the first host is used to set the OpenAPI v2 specification 'host' and
 // 'basePath' values.
 //
-// Server must appear in a API expression.
+// Server must appear in an API expression.
 //
 // Server takes two arguments: the name of the server and the defining DSL.
 //

@@ -25,6 +25,14 @@ type (
 		ReadResult *AttributeExpr
 		// WriteResult lists the result attribute names written by the interceptor
 		WriteResult *AttributeExpr
+		// ReadStreamingPayload lists the streaming payload attribute names read by the interceptor
+		ReadStreamingPayload *AttributeExpr
+		// WriteStreamingPayload lists the streaming payload attribute names written by the interceptor
+		WriteStreamingPayload *AttributeExpr
+		// ReadStreamingResult lists the streaming result attribute names read by the interceptor
+		ReadStreamingResult *AttributeExpr
+		// WriteStreamingResult lists the streaming result attribute names written by the interceptor
+		WriteStreamingResult *AttributeExpr
 	}
 )
 

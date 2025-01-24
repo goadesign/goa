@@ -8,7 +8,7 @@ import (
 // Interceptor defines a request interceptor. Interceptors provide a type-safe way
 // to read and write from and to the request and response.
 //
-// Interceptor must appear in a API, Service or Method expression.
+// Interceptor must appear in an API, Service or Method expression.
 //
 // Interceptor accepts two arguments: the name of the interceptor and the
 // defining DSL.
@@ -143,10 +143,102 @@ func WriteResult(arg any) {
 	})
 }
 
+// ReadStreamingPayload defines the streaming payload attributes read by the interceptor.
+//
+// ReadStreamingPayload must appear in an interceptor DSL.
+//
+// ReadStreamingPayload takes a function as argument which can use the Attribute DSL to
+// define the attributes read by the interceptor.
+//
+// Example:
+//
+//	ReadStreamingPayload(func() {
+//	   Attribute("id")
+//	})
+//
+// ReadStreamingPayload also accepts user defined types:
+//
+//	// Interceptor can read any streaming payload field
+//	ReadStreamingPayload(MethodStreamingPayload)
+func ReadStreamingPayload(arg any) {
+	setInterceptorAttribute(arg, func(i *expr.InterceptorExpr, attr *expr.AttributeExpr) {
+		i.ReadStreamingPayload = attr
+	})
+}
+
+// WriteStreamingPayload defines the streaming payload attributes written by the interceptor.
+//
+// WriteStreamingPayload must appear in an interceptor DSL.
+//
+// WriteStreamingPayload takes a function as argument which can use the Attribute DSL to
+// define the attributes written by the interceptor.
+//
+// Example:
+//
+//	WriteStreamingPayload(func() {
+//	   Attribute("id")
+//	})
+//
+// WriteStreamingPayload also accepts user defined types:
+//
+//	// Interceptor can write any streaming payload field
+//	WriteStreamingPayload(MethodStreamingPayload)
+func WriteStreamingPayload(arg any) {
+	setInterceptorAttribute(arg, func(i *expr.InterceptorExpr, attr *expr.AttributeExpr) {
+		i.WriteStreamingPayload = attr
+	})
+}
+
+// ReadStreamingResult defines the streaming result attributes read by the interceptor.
+//
+// ReadStreamingResult must appear in an interceptor DSL.
+//
+// ReadStreamingResult takes a function as argument which can use the Attribute DSL to
+// define the attributes read by the interceptor.
+//
+// Example:
+//
+//	ReadStreamingResult(func() {
+//	   Attribute("cachedAt")
+//	})
+//
+// ReadStreamingResult also accepts user defined types:
+//
+//	// Interceptor can read any streaming result field
+//	ReadStreamingResult(MethodStreamingResult)
+func ReadStreamingResult(arg any) {
+	setInterceptorAttribute(arg, func(i *expr.InterceptorExpr, attr *expr.AttributeExpr) {
+		i.ReadStreamingResult = attr
+	})
+}
+
+// WriteStreamingResult defines the streaming result attributes written by the interceptor.
+//
+// WriteStreamingResult must appear in an interceptor DSL.
+//
+// WriteStreamingResult takes a function as argument which can use the Attribute DSL to
+// define the attributes written by the interceptor.
+//
+// Example:
+//
+//	WriteStreamingResult(func() {
+//	   Attribute("cachedAt")
+//	})
+//
+// WriteStreamingResult also accepts user defined types:
+//
+//	// Interceptor can write any streaming result field
+//	WriteStreamingResult(MethodStreamingResult)
+func WriteStreamingResult(arg any) {
+	setInterceptorAttribute(arg, func(i *expr.InterceptorExpr, attr *expr.AttributeExpr) {
+		i.WriteStreamingResult = attr
+	})
+}
+
 // ServerInterceptor lists the server-side interceptors that apply to all the
 // API endpoints, all the service endpoints or a specific endpoint.
 //
-// ServerInterceptor must appear in a API, Service or Method expression.
+// ServerInterceptor must appear in an API, Service or Method expression.
 //
 // ServerInterceptor accepts one or more interceptor or interceptor names as
 // arguments. ServerInterceptor can appear multiple times in the same DSL.
@@ -176,7 +268,7 @@ func ServerInterceptor(interceptors ...any) {
 // ClientInterceptor lists the client-side interceptors that apply to all the
 // API endpoints, all the service endpoints or a specific endpoint.
 //
-// ClientInterceptor must appear in a API, Service or Method expression.
+// ClientInterceptor must appear in an API, Service or Method expression.
 //
 // ClientInterceptor accepts one or more interceptor or interceptor names as
 // arguments. ClientInterceptor can appear multiple times in the same DSL.
@@ -207,7 +299,7 @@ func ClientInterceptor(interceptors ...any) {
 }
 
 // setInterceptorAttribute is a helper function that handles the common logic for
-// setting interceptor attributes (ReadPayload, WritePayload, ReadResult, WriteResult).
+// setting interceptor attributes (ReadPayload, WritePayload, ReadResult, WriteResult, ReadStreamingPayload, WriteStreamingPayload, ReadStreamingResult, WriteStreamingResult).
 func setInterceptorAttribute(arg any, setter func(i *expr.InterceptorExpr, attr *expr.AttributeExpr)) {
 	i, ok := eval.Current().(*expr.InterceptorExpr)
 	if !ok {

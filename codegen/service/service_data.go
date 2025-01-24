@@ -2093,7 +2093,7 @@ func walkViewAttrs(obj *expr.Object, view *expr.ViewExpr, walker func(name strin
 }
 
 // removeMeta removes the meta attributes from the given attribute. This is
-// needed to make sure that any field name overridding is removed when
+// needed to make sure that any field name overriding is removed when
 // generating protobuf types (as protogen itself won't honor these overrides).
 func removeMeta(att *expr.AttributeExpr) {
 	_ = codegen.Walk(att, func(a *expr.AttributeExpr) error {
