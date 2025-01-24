@@ -74,6 +74,38 @@ func (i *InterceptorExpr) validate(m *MethodExpr) *eval.ValidationErrors {
 		}
 	}
 
+	if i.ReadStreamingPayload != nil || i.WriteStreamingPayload != nil {
+		if !m.IsPayloadStreaming() {
+			verr.Add(m, "interceptor %q cannot be applied because the method payload is not streaming", i.Name)
+		}
+		payloadObj := AsObject(m.StreamingPayload.Type)
+		if payloadObj == nil {
+			verr.Add(m, "interceptor %q cannot be applied because the method payload is not an object", i.Name)
+		}
+		if i.ReadStreamingPayload != nil {
+			i.validateAttributeAccess(m, "read streaming payload", verr, payloadObj, i.ReadStreamingPayload)
+		}
+		if i.WriteStreamingPayload != nil {
+			i.validateAttributeAccess(m, "write streaming payload", verr, payloadObj, i.WriteStreamingPayload)
+		}
+	}
+
+	if i.ReadStreamingResult != nil || i.WriteStreamingResult != nil {
+		if !m.IsResultStreaming() {
+			verr.Add(m, "interceptor %q cannot be applied because the method result is not streaming", i.Name)
+		}
+		resultObj := AsObject(m.Result.Type)
+		if resultObj == nil {
+			verr.Add(m, "interceptor %q cannot be applied because the method result is not an object", i.Name)
+		}
+		if i.ReadStreamingResult != nil {
+			i.validateAttributeAccess(m, "read streaming result", verr, resultObj, i.ReadStreamingResult)
+		}
+		if i.WriteStreamingResult != nil {
+			i.validateAttributeAccess(m, "write streaming result", verr, resultObj, i.WriteStreamingResult)
+		}
+	}
+
 	return verr
 }
 

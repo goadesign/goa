@@ -269,12 +269,26 @@ type (
 		// WriteResult contains result attributes that the interceptor can
 		// write.
 		WriteResult []*AttributeData
+		// ReadStreamingPayload contains streaming payload attributes that the interceptor can read.
+		ReadStreamingPayload []*AttributeData
+		// WriteStreamingPayload contains streaming payload attributes that the interceptor can write.
+		WriteStreamingPayload []*AttributeData
+		// ReadStreamingResult contains streaming result attributes that the interceptor can read.
+		ReadStreamingResult []*AttributeData
+		// WriteStreamingResult contains streaming result attributes that the interceptor can write.
+		WriteStreamingResult []*AttributeData
 		// HasPayloadAccess indicates that the interceptor info object has a
 		// payload access interface.
 		HasPayloadAccess bool
 		// HasResultAccess indicates that the interceptor info object has a
 		// result access interface.
 		HasResultAccess bool
+		// HasStreamingPayloadAccess indicates that the interceptor info object has a
+		// streaming payload access interface.
+		HasStreamingPayloadAccess bool
+		// HasStreamingResultAccess indicates that the interceptor info object has a
+		// streaming result access interface.
+		HasStreamingResultAccess bool
 	}
 
 	// MethodInterceptorData contains the data required to render the
@@ -286,10 +300,18 @@ type (
 		PayloadAccess string
 		// ResultAccess is the name of the result access struct.
 		ResultAccess string
+		// StreamingPayloadAccess is the name of the streaming payload access struct.
+		StreamingPayloadAccess string
+		// StreamingResultAccess is the name of the streaming result access struct.
+		StreamingResultAccess string
 		// PayloadRef is the reference to the method payload type.
 		PayloadRef string
 		// ResultRef is the reference to the method result type.
 		ResultRef string
+		// StreamingPayloadRef is the reference to the streaming payload type.
+		StreamingPayloadRef string
+		// StreamingResultRef is the reference to the streaming result type.
+		StreamingResultRef string
 		// ServerStreamInputStruct is the name of the server stream input
 		// struct if the endpoint defines a server stream.
 		ServerStreamInputStruct string
@@ -1204,16 +1226,26 @@ func buildInterceptorData(svc *expr.ServiceExpr, methods []*MethodData, i *expr.
 	if len(svc.Methods) == 0 {
 		return data
 	}
-	payload, result := svc.Methods[0].Payload, svc.Methods[0].Result
+	payload, result, streamingPayload := svc.Methods[0].Payload, svc.Methods[0].Result, svc.Methods[0].StreamingPayload
 	data.ReadPayload = collectAttributes(i.ReadPayload, payload, scope)
 	data.WritePayload = collectAttributes(i.WritePayload, payload, scope)
 	data.ReadResult = collectAttributes(i.ReadResult, result, scope)
 	data.WriteResult = collectAttributes(i.WriteResult, result, scope)
+	data.ReadStreamingPayload = collectAttributes(i.ReadStreamingPayload, streamingPayload, scope)
+	data.WriteStreamingPayload = collectAttributes(i.WriteStreamingPayload, streamingPayload, scope)
+	data.ReadStreamingResult = collectAttributes(i.ReadStreamingResult, result, scope)
+	data.WriteStreamingResult = collectAttributes(i.WriteStreamingResult, result, scope)
 	if len(data.ReadPayload) > 0 || len(data.WritePayload) > 0 {
 		data.HasPayloadAccess = true
 	}
 	if len(data.ReadResult) > 0 || len(data.WriteResult) > 0 {
 		data.HasResultAccess = true
+	}
+	if len(data.ReadStreamingPayload) > 0 || len(data.WriteStreamingPayload) > 0 {
+		data.HasStreamingPayloadAccess = true
+	}
+	if len(data.ReadStreamingResult) > 0 || len(data.WriteStreamingResult) > 0 {
+		data.HasStreamingResultAccess = true
 	}
 	for _, m := range svc.Methods {
 		applies := false
@@ -1247,7 +1279,7 @@ func buildInterceptorData(svc *expr.ServiceExpr, methods []*MethodData, i *expr.
 	return data
 }
 
-// buildIntercetorMethodData creates the data needed to generate interceptor
+// buildInterceptorMethodData creates the data needed to generate interceptor
 // method code.
 func buildInterceptorMethodData(i *expr.InterceptorExpr, md *MethodData) *MethodInterceptorData {
 	var serverStream, clientStream string
@@ -1257,12 +1289,18 @@ func buildInterceptorMethodData(i *expr.InterceptorExpr, md *MethodData) *Method
 	if md.ClientStream != nil {
 		clientStream = md.ClientStream.VarName
 	}
-	var payloadAccess, resultAccess string
+	var payloadAccess, resultAccess, streamingPayloadAccess, streamingResultAccess string
 	if i.ReadPayload != nil || i.WritePayload != nil {
 		payloadAccess = codegen.Goify(i.Name, false) + md.VarName + "Payload"
 	}
 	if i.ReadResult != nil || i.WriteResult != nil {
 		resultAccess = codegen.Goify(i.Name, false) + md.VarName + "Result"
+	}
+	if i.ReadStreamingPayload != nil || i.WriteStreamingPayload != nil {
+		streamingPayloadAccess = codegen.Goify(i.Name, false) + md.VarName + "StreamingPayload"
+	}
+	if i.ReadStreamingResult != nil || i.WriteStreamingResult != nil {
+		streamingResultAccess = codegen.Goify(i.Name, false) + md.VarName + "StreamingResult"
 	}
 	return &MethodInterceptorData{
 		MethodName:              md.VarName,
@@ -1270,6 +1308,10 @@ func buildInterceptorMethodData(i *expr.InterceptorExpr, md *MethodData) *Method
 		ResultAccess:            resultAccess,
 		PayloadRef:              md.PayloadRef,
 		ResultRef:               md.ResultRef,
+		StreamingPayloadAccess:  streamingPayloadAccess,
+		StreamingPayloadRef:     md.StreamingPayloadRef,
+		StreamingResultAccess:   streamingResultAccess,
+		StreamingResultRef:      md.ResultRef,
 		ClientStreamInputStruct: clientStream,
 		ServerStreamInputStruct: serverStream,
 	}

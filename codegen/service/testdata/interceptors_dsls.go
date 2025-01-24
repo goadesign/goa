@@ -214,7 +214,20 @@ var InterceptorWithReadWriteResultDSL = func() {
 }
 
 var StreamingInterceptorsDSL = func() {
-	Interceptor("logging")
+	Interceptor("logging", func() {
+		ReadStreamingPayload(func() {
+			Attribute("chunk")
+		})
+		WriteStreamingPayload(func() {
+			Attribute("chunk")
+		})
+		ReadStreamingResult(func() {
+			Attribute("data")
+		})
+		WriteStreamingResult(func() {
+			Attribute("data")
+		})
+	})
 	Service("StreamingInterceptors", func() {
 		ServerInterceptor("logging")
 		Method("Method", func() {

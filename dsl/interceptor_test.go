@@ -69,6 +69,65 @@ func TestInterceptor(t *testing.T) {
 				assert.NotNil(t, wr.Attribute("qux"), "WriteResult should have a qux attribute")
 			},
 		},
+		"valid-streaming": {
+			func() {
+				Interceptor("streaming", func() {
+					Description("test streaming interceptor")
+					ReadPayload(func() {
+						Attribute("foo", String)
+					})
+					WritePayload(func() {
+						Attribute("bar", String)
+					})
+					ReadStreamingPayload(func() {
+						Attribute("foo", String)
+					})
+					WriteStreamingPayload(func() {
+						Attribute("bar", String)
+					})
+					ReadStreamingResult(func() {
+						Attribute("baz", String)
+					})
+					WriteStreamingResult(func() {
+						Attribute("qux", String)
+					})
+				})
+			},
+			func(t *testing.T, intr *expr.InterceptorExpr) {
+				require.NotNil(t, intr, "interceptor should not be nil")
+				assert.Equal(t, "test streaming interceptor", intr.Description)
+
+				require.NotNil(t, intr.ReadPayload, "ReadPayload should not be nil")
+				rp := expr.AsObject(intr.ReadPayload.Type)
+				require.NotNil(t, rp, "ReadPayload should be an object")
+				assert.NotNil(t, rp.Attribute("foo"), "ReadPayload should have a foo attribute")
+
+				require.NotNil(t, intr.WritePayload, "WritePayload should not be nil")
+				wp := expr.AsObject(intr.WritePayload.Type)
+				require.NotNil(t, wp, "WritePayload should be an object")
+				assert.NotNil(t, wp.Attribute("bar"), "WritePayload should have a bar attribute")
+
+				require.NotNil(t, intr.ReadStreamingPayload, "ReadStreamingPayload should not be nil")
+				rs := expr.AsObject(intr.ReadStreamingPayload.Type)
+				require.NotNil(t, rs, "ReadStreamingPayload should be an object")
+				assert.NotNil(t, rs.Attribute("foo"), "ReadStreamingPayload should have a foo attribute")
+
+				require.NotNil(t, intr.WriteStreamingPayload, "WriteStreamingPayload should not be nil")
+				ws := expr.AsObject(intr.WriteStreamingPayload.Type)
+				require.NotNil(t, ws, "WriteStreamingPayload should be an object")
+				assert.NotNil(t, ws.Attribute("bar"), "WriteStreamingPayload should have a bar attribute")
+
+				require.NotNil(t, intr.ReadStreamingResult, "ReadStreamingResult should not be nil")
+				rsr := expr.AsObject(intr.ReadStreamingResult.Type)
+				require.NotNil(t, rsr, "ReadStreamingResult should be an object")
+				assert.NotNil(t, rsr.Attribute("baz"), "ReadStreamingResult should have a baz attribute")
+
+				require.NotNil(t, intr.WriteStreamingResult, "WriteStreamingResult should not be nil")
+				wsr := expr.AsObject(intr.WriteStreamingResult.Type)
+				require.NotNil(t, wsr, "WriteStreamingResult should be an object")
+				assert.NotNil(t, wsr.Attribute("qux"), "WriteStreamingResult should have a qux attribute")
+			},
+		},
 		"empty-name": {
 			func() {
 				Interceptor("", func() {})

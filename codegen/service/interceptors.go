@@ -171,7 +171,7 @@ func wrapperFile(svc *Data) *codegen.File {
 // private implementation types.
 func hasPrivateImplementationTypes(interceptors []*InterceptorData) bool {
 	for _, intr := range interceptors {
-		if intr.ReadPayload != nil || intr.WritePayload != nil || intr.ReadResult != nil || intr.WriteResult != nil {
+		if intr.ReadPayload != nil || intr.WritePayload != nil || intr.ReadResult != nil || intr.WriteResult != nil || intr.ReadStreamingPayload != nil || intr.WriteStreamingPayload != nil || intr.ReadStreamingResult != nil || intr.WriteStreamingResult != nil {
 			return true
 		}
 	}

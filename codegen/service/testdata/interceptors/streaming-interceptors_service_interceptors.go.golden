@@ -11,6 +11,34 @@ type (
 	// LoggingInfo provides metadata about the current interception.
 	// It includes service name, method name, and access to the endpoint.
 	LoggingInfo goa.InterceptorInfo
+
+	// LoggingStreamingPayload provides type-safe access to the method streaming payload.
+	// It allows reading and writing specific fields of the streaming payload as defined
+	// in the design.
+	LoggingStreamingPayload interface {
+		Chunk() string
+		SetChunk(string)
+	}
+
+	// LoggingStreamingResult provides type-safe access to the method streaming result.
+	// It allows reading and writing specific fields of the streaming result as defined
+	// in the design.
+	LoggingStreamingResult interface {
+		Data() string
+		SetData(string)
+	}
+)
+
+// Private implementation types
+type (
+	loggingMethodStreamingPayload struct {
+		payload struct {
+			Chunk *string
+		}
+	}
+	loggingMethodStreamingResult struct {
+		result *MethodResult
+	}
 )
 
 // WrapMethodEndpoint wraps the Method endpoint with the server-side
@@ -20,3 +48,38 @@ func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoin
 	return endpoint
 }
 
+// Public accessor methods for Info types
+// StreamingPayload returns a type-safe accessor for the method streaming payload.
+func (info *LoggingInfo) StreamingPayload() LoggingStreamingPayload {
+	return &loggingMethodStreamingPayload{payload: info.RawPayload.(struct {
+		Chunk *string
+	})}
+}
+
+// StreamingResult returns a type-safe accessor for the method streaming result.
+func (info *LoggingInfo) StreamingResult() LoggingStreamingResult {
+	return &loggingMethodStreamingResult{result: info.RawResult.(*MethodResult)}
+}
+
+// Private implementation methods
+
+func (p *loggingMethodStreamingPayload) Chunk() string {
+	if p.payload.Chunk == nil {
+		var zero string
+		return zero
+	}
+	return *p.payload.Chunk
+}
+func (p *loggingMethodStreamingPayload) SetChunk(v string) {
+	p.payload.Chunk = &v
+}
+func (r *loggingMethodStreamingResult) Data() string {
+	if r.result.Data == nil {
+		var zero string
+		return zero
+	}
+	return *r.result.Data
+}
+func (r *loggingMethodStreamingResult) SetData(v string) {
+	r.result.Data = &v
+}
