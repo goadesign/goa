@@ -9,11 +9,7 @@ func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i Serve
 			Service:    "{{ $.Service }}",
 			Method:     "{{ .MethodName }}",
 			Endpoint:   endpoint,
-			{{- if .ServerStreamInputStruct }}
-			RawPayload: req.(*{{ .ServerStreamInputStruct }}).Payload,
-			{{- else }}
 			RawPayload: req,
-			{{- end }}
 		}
 		return i.{{ $interceptor.Name }}(ctx, info, endpoint)
 	}
