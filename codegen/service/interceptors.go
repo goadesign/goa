@@ -78,6 +78,7 @@ func interceptorFile(svc *Data, server bool) *codegen.File {
 		},
 	}
 	if len(interceptors) > 0 {
+		codegen.AddImport(sections[0], svc.UserTypeImports...)
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "interceptor-types",
 			Source: readTemplate("interceptors_types"),

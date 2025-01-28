@@ -1226,27 +1226,7 @@ func buildInterceptorData(svc *expr.ServiceExpr, methods []*MethodData, i *expr.
 	if len(svc.Methods) == 0 {
 		return data
 	}
-	payload, result, streamingPayload := svc.Methods[0].Payload, svc.Methods[0].Result, svc.Methods[0].StreamingPayload
-	data.ReadPayload = collectAttributes(i.ReadPayload, payload, scope)
-	data.WritePayload = collectAttributes(i.WritePayload, payload, scope)
-	data.ReadResult = collectAttributes(i.ReadResult, result, scope)
-	data.WriteResult = collectAttributes(i.WriteResult, result, scope)
-	data.ReadStreamingPayload = collectAttributes(i.ReadStreamingPayload, streamingPayload, scope)
-	data.WriteStreamingPayload = collectAttributes(i.WriteStreamingPayload, streamingPayload, scope)
-	data.ReadStreamingResult = collectAttributes(i.ReadStreamingResult, result, scope)
-	data.WriteStreamingResult = collectAttributes(i.WriteStreamingResult, result, scope)
-	if len(data.ReadPayload) > 0 || len(data.WritePayload) > 0 {
-		data.HasPayloadAccess = true
-	}
-	if len(data.ReadResult) > 0 || len(data.WriteResult) > 0 {
-		data.HasResultAccess = true
-	}
-	if len(data.ReadStreamingPayload) > 0 || len(data.WriteStreamingPayload) > 0 {
-		data.HasStreamingPayloadAccess = true
-	}
-	if len(data.ReadStreamingResult) > 0 || len(data.WriteStreamingResult) > 0 {
-		data.HasStreamingResultAccess = true
-	}
+	attributesCollected := false
 	for _, m := range svc.Methods {
 		applies := false
 		intExprs := m.ServerInterceptors
@@ -1255,6 +1235,30 @@ func buildInterceptorData(svc *expr.ServiceExpr, methods []*MethodData, i *expr.
 		}
 		for _, in := range intExprs {
 			if in.Name == i.Name {
+				if !attributesCollected {
+					payload, result, streamingPayload := m.Payload, m.Result, m.StreamingPayload
+					data.ReadPayload = collectAttributes(i.ReadPayload, payload, scope)
+					data.WritePayload = collectAttributes(i.WritePayload, payload, scope)
+					data.ReadResult = collectAttributes(i.ReadResult, result, scope)
+					data.WriteResult = collectAttributes(i.WriteResult, result, scope)
+					data.ReadStreamingPayload = collectAttributes(i.ReadStreamingPayload, streamingPayload, scope)
+					data.WriteStreamingPayload = collectAttributes(i.WriteStreamingPayload, streamingPayload, scope)
+					data.ReadStreamingResult = collectAttributes(i.ReadStreamingResult, result, scope)
+					data.WriteStreamingResult = collectAttributes(i.WriteStreamingResult, result, scope)
+					if len(data.ReadPayload) > 0 || len(data.WritePayload) > 0 {
+						data.HasPayloadAccess = true
+					}
+					if len(data.ReadResult) > 0 || len(data.WriteResult) > 0 {
+						data.HasResultAccess = true
+					}
+					if len(data.ReadStreamingPayload) > 0 || len(data.WriteStreamingPayload) > 0 {
+						data.HasStreamingPayloadAccess = true
+					}
+					if len(data.ReadStreamingResult) > 0 || len(data.WriteStreamingResult) > 0 {
+						data.HasStreamingResultAccess = true
+					}
+					attributesCollected = true
+				}
 				applies = true
 				break
 			}
