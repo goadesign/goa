@@ -57,8 +57,8 @@ func (info *LoggingInfo) StreamingPayload() LoggingStreamingPayload {
 }
 
 // StreamingResult returns a type-safe accessor for the method streaming result.
-func (info *LoggingInfo) StreamingResult() LoggingStreamingResult {
-	return &loggingMethodStreamingResult{result: info.RawResult.(*MethodResult)}
+func (info *LoggingInfo) StreamingResult(res any) LoggingStreamingResult {
+	return &loggingMethodStreamingResult{result: res.(*MethodResult)}
 }
 
 // Private implementation methods

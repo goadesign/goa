@@ -58,18 +58,18 @@ func (info *{{ .Name }}Info) StreamingPayload() {{ .Name }}StreamingPayload {
 
 	{{- if .HasStreamingResultAccess }}
 // StreamingResult returns a type-safe accessor for the method streaming result.
-func (info *{{ .Name }}Info) StreamingResult() {{ .Name }}StreamingResult {
+func (info *{{ .Name }}Info) StreamingResult(res any) {{ .Name }}StreamingResult {
 		{{- if gt (len .Methods) 1 }}
 	switch info.Method {
 			{{- range .Methods }}
 	case "{{ .MethodName }}":
-		return &{{ .StreamingResultAccess }}{result: info.RawResult.({{ .StreamingResultRef }})}
+		return &{{ .StreamingResultAccess }}{result: res.({{ .StreamingResultRef }})}
 			{{- end }}
 	default:
 		return nil
 	}
 		{{- else }}
-	return &{{ (index .Methods 0).StreamingResultAccess }}{result: info.RawResult.({{ (index .Methods 0).StreamingResultRef }})}
+	return &{{ (index .Methods 0).StreamingResultAccess }}{result: res.({{ (index .Methods 0).StreamingResultRef }})}
 		{{- end }}
 }
 	{{- end }}
