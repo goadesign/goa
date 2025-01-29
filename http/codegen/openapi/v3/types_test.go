@@ -1,6 +1,7 @@
 package openapiv3
 
 import (
+	"encoding/json"
 	"hash/fnv"
 	"strings"
 	"testing"
@@ -252,6 +253,36 @@ func matchesSchemaWithPrefix(t *testing.T, ctx string, s *openapi.Schema, types 
 			}
 			matchesSchemaWithPrefix(t, ctx, v, types, p, n+": ")
 		}
+	}
+}
+
+func TestTypesOnlyDifferByEnum(t *testing.T) {
+	api := codegen.RunDSL(t, dsls.StringEnumBodyDSL()).API
+
+	bodies, types := buildBodyTypes(api)
+
+	svc1, ok := bodies["svc_enum_1"]
+	if !ok {
+		t.Errorf("bodies does not contain details for service %q", "svc_enum_1")
+		return
+	}
+	svc2, ok := bodies["svc_enum_2"]
+	if !ok {
+		t.Errorf("bodies does not contain details for service %q", "svc_enum_2")
+		return
+	}
+
+	svc1MethodRB := svc1["method_enum"].RequestBody.Ref
+	svc2MethodRB := svc2["method_enum"].RequestBody.Ref
+
+	if svc1MethodRB == svc2MethodRB {
+		t.Errorf("expected different refs, got %q", svc1MethodRB)
+
+		name := nameFromRef(svc1MethodRB)
+		derefed := types[name]
+		jsoned, _ := json.Marshal(derefed)
+		t.Errorf("shared referenced type (%s) was: %v", name, string(jsoned))
+		return
 	}
 }
 
