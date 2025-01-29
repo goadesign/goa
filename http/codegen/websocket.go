@@ -32,6 +32,10 @@ type (
 		SendName string
 		// SendDesc is the description for the send function.
 		SendDesc string
+		// SendWithContextName is the name of the send function with context.
+		SendWithContextName string
+		// SendWithContextDesc is the description for the send function with context.
+		SendWithContextDesc string
 		// SendTypeName is the fully qualified type name sent through
 		// the stream.
 		SendTypeName string
@@ -42,6 +46,10 @@ type (
 		RecvName string
 		// RecvDesc is the description for the recv function.
 		RecvDesc string
+		// RecvWithContextName is the name of the receive function with context.
+		RecvWithContextName string
+		// RecvWithContextDesc is the description for the recv function with context.
+		RecvWithContextDesc string
 		// RecvTypeName is the fully qualified type name received from
 		// the stream.
 		RecvTypeName string
@@ -67,16 +75,20 @@ type (
 // initWebSocketData initializes the WebSocket related data in ed.
 func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 	var (
-		svrSendTypeName string
-		svrSendTypeRef  string
-		svrRecvTypeName string
-		svrRecvTypeRef  string
-		svrSendDesc     string
-		svrRecvDesc     string
-		svrPayload      *TypeData
-		cliSendDesc     string
-		cliRecvDesc     string
-		cliPayload      *TypeData
+		svrSendTypeName        string
+		svrSendTypeRef         string
+		svrRecvTypeName        string
+		svrRecvTypeRef         string
+		svrSendDesc            string
+		svrSendWithContextDesc string
+		svrRecvDesc            string
+		svrRecvWithContextDesc string
+		svrPayload             *TypeData
+		cliSendDesc            string
+		cliSendWithContextDesc string
+		cliRecvDesc            string
+		cliRecvWithContextDesc string
+		cliPayload             *TypeData
 
 		md     = ed.Method
 		svc    = sd.Service
@@ -86,7 +98,9 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 		svrSendTypeName = ed.Result.Name
 		svrSendTypeRef = ed.Result.Ref
 		svrSendDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection.", md.ServerStream.SendName, svrSendTypeName, md.Name)
+		svrSendWithContextDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection with context.", md.ServerStream.SendWithContextName, svrSendTypeName, md.Name)
 		cliRecvDesc = fmt.Sprintf("%s reads instances of %q from the %q endpoint websocket connection.", md.ClientStream.RecvName, svrSendTypeName, md.Name)
+		cliRecvWithContextDesc = fmt.Sprintf("%s reads instances of %q from the %q endpoint websocket connection with context.", md.ClientStream.RecvWithContextName, svrSendTypeName, md.Name)
 		if e.MethodExpr.Stream == expr.ClientStreamKind || e.MethodExpr.Stream == expr.BidirectionalStreamKind {
 			svrRecvTypeName = sd.Scope.GoFullTypeName(e.MethodExpr.StreamingPayload, svc.PkgName)
 			svrRecvTypeRef = sd.Scope.GoFullTypeRef(e.MethodExpr.StreamingPayload, svc.PkgName)
@@ -175,50 +189,62 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 			}
 			if e.MethodExpr.Stream == expr.ClientStreamKind {
 				svrSendDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection and closes the connection.", md.ServerStream.SendName, svrSendTypeName, md.Name)
+				svrSendWithContextDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection with context and closes the connection.", md.ServerStream.SendWithContextName, svrSendTypeName, md.Name)
 				cliRecvDesc = fmt.Sprintf("%s stops sending messages to the %q endpoint websocket connection and reads instances of %q from the connection.", md.ClientStream.RecvName, md.Name, svrSendTypeName)
+				cliRecvWithContextDesc = fmt.Sprintf("%s stops sending messages to the %q endpoint websocket connection with context and reads instances of %q from the connection.", md.ClientStream.RecvWithContextName, md.Name, svrSendTypeName)
 			}
 			svrRecvDesc = fmt.Sprintf("%s reads instances of %q from the %q endpoint websocket connection.", md.ServerStream.RecvName, svrRecvTypeName, md.Name)
+			svrRecvWithContextDesc = fmt.Sprintf("%s reads instances of %q from the %q endpoint websocket connection with context.", md.ServerStream.RecvWithContextName, svrRecvTypeName, md.Name)
 			cliSendDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection.", md.ClientStream.SendName, svrRecvTypeName, md.Name)
+			cliSendWithContextDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection with context.", md.ClientStream.SendWithContextName, svrRecvTypeName, md.Name)
 		}
 	}
 	ed.ServerWebSocket = &WebSocketData{
-		VarName:           md.ServerStream.VarName,
-		Interface:         fmt.Sprintf("%s.%s", svc.PkgName, md.ServerStream.Interface),
-		Endpoint:          ed,
-		Payload:           svrPayload,
-		Response:          ed.Result.Responses[0],
-		PkgName:           svc.PkgName,
-		Type:              "server",
-		Kind:              md.ServerStream.Kind,
-		SendName:          md.ServerStream.SendName,
-		SendDesc:          svrSendDesc,
-		SendTypeName:      svrSendTypeName,
-		SendTypeRef:       svrSendTypeRef,
-		RecvName:          md.ServerStream.RecvName,
-		RecvDesc:          svrRecvDesc,
-		RecvTypeName:      svrRecvTypeName,
-		RecvTypeRef:       svrRecvTypeRef,
-		RecvTypeIsPointer: expr.IsArray(e.MethodExpr.StreamingPayload.Type) || expr.IsMap(e.MethodExpr.StreamingPayload.Type),
-		MustClose:         md.ServerStream.MustClose,
+		VarName:             md.ServerStream.VarName,
+		Interface:           fmt.Sprintf("%s.%s", svc.PkgName, md.ServerStream.Interface),
+		Endpoint:            ed,
+		Payload:             svrPayload,
+		Response:            ed.Result.Responses[0],
+		PkgName:             svc.PkgName,
+		Type:                "server",
+		Kind:                md.ServerStream.Kind,
+		SendName:            md.ServerStream.SendName,
+		SendDesc:            svrSendDesc,
+		SendWithContextName: md.ServerStream.SendWithContextName,
+		SendWithContextDesc: svrSendWithContextDesc,
+		SendTypeName:        svrSendTypeName,
+		SendTypeRef:         svrSendTypeRef,
+		RecvName:            md.ServerStream.RecvName,
+		RecvDesc:            svrRecvDesc,
+		RecvWithContextName: md.ServerStream.RecvWithContextName,
+		RecvWithContextDesc: svrRecvWithContextDesc,
+		RecvTypeName:        svrRecvTypeName,
+		RecvTypeRef:         svrRecvTypeRef,
+		RecvTypeIsPointer:   expr.IsArray(e.MethodExpr.StreamingPayload.Type) || expr.IsMap(e.MethodExpr.StreamingPayload.Type),
+		MustClose:           md.ServerStream.MustClose,
 	}
 	ed.ClientWebSocket = &WebSocketData{
-		VarName:      md.ClientStream.VarName,
-		Interface:    fmt.Sprintf("%s.%s", svc.PkgName, md.ClientStream.Interface),
-		Endpoint:     ed,
-		Payload:      cliPayload,
-		Response:     ed.Result.Responses[0],
-		PkgName:      svc.PkgName,
-		Type:         "client",
-		Kind:         md.ClientStream.Kind,
-		SendName:     md.ClientStream.SendName,
-		SendDesc:     cliSendDesc,
-		SendTypeName: svrRecvTypeName,
-		SendTypeRef:  svrRecvTypeRef,
-		RecvName:     md.ClientStream.RecvName,
-		RecvDesc:     cliRecvDesc,
-		RecvTypeName: svrSendTypeName,
-		RecvTypeRef:  svrSendTypeRef,
-		MustClose:    md.ClientStream.MustClose,
+		VarName:             md.ClientStream.VarName,
+		Interface:           fmt.Sprintf("%s.%s", svc.PkgName, md.ClientStream.Interface),
+		Endpoint:            ed,
+		Payload:             cliPayload,
+		Response:            ed.Result.Responses[0],
+		PkgName:             svc.PkgName,
+		Type:                "client",
+		Kind:                md.ClientStream.Kind,
+		SendName:            md.ClientStream.SendName,
+		SendDesc:            cliSendDesc,
+		SendWithContextName: md.ClientStream.SendWithContextName,
+		SendWithContextDesc: cliSendWithContextDesc,
+		SendTypeName:        svrRecvTypeName,
+		SendTypeRef:         svrRecvTypeRef,
+		RecvName:            md.ClientStream.RecvName,
+		RecvDesc:            cliRecvDesc,
+		RecvWithContextName: md.ClientStream.RecvWithContextName,
+		RecvWithContextDesc: cliRecvWithContextDesc,
+		RecvTypeName:        svrSendTypeName,
+		RecvTypeRef:         svrSendTypeRef,
+		MustClose:           md.ClientStream.MustClose,
 	}
 }
 

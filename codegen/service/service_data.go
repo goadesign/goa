@@ -203,6 +203,10 @@ type (
 		SendName string
 		// SendDesc is the description for the send function.
 		SendDesc string
+		// SendWithContextName is the name of the send function with context.
+		SendWithContextName string
+		// SendWithContextDesc is the description for the send function with context.
+		SendWithContextDesc string
 		// SendTypeName is the type name sent through the stream.
 		SendTypeName string
 		// SendTypeRef is the reference to the type sent through the stream.
@@ -211,6 +215,10 @@ type (
 		RecvName string
 		// RecvDesc is the description for the recv function.
 		RecvDesc string
+		// RecvWithContextName is the name of the receive function with context.
+		RecvWithContextName string
+		// RecvWithContextDesc is the description for the recv function with context.
+		RecvWithContextDesc string
 		// RecvTypeName is the type name received from the stream.
 		RecvTypeName string
 		// RecvTypeRef is the reference to the type received from the stream.
@@ -1164,24 +1172,28 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 		spayloadEx = m.StreamingPayload.Example(expr.Root.API.ExampleGenerator)
 	}
 	svrStream := &StreamData{
-		Interface:      vname + "ServerStream",
-		VarName:        scope.Unique(codegen.Goify(m.Name, true), "ServerStream"),
-		EndpointStruct: vname + "EndpointInput",
-		Kind:           m.Stream,
-		SendName:       "Send",
-		SendDesc:       fmt.Sprintf("Send streams instances of %q.", rname),
-		SendTypeName:   rname,
-		SendTypeRef:    resultRef,
-		MustClose:      true,
+		Interface:           vname + "ServerStream",
+		VarName:             scope.Unique(codegen.Goify(m.Name, true), "ServerStream"),
+		EndpointStruct:      vname + "EndpointInput",
+		Kind:                m.Stream,
+		SendName:            "Send",
+		SendDesc:            fmt.Sprintf("Send streams instances of %q.", rname),
+		SendWithContextName: "SendWithContext",
+		SendWithContextDesc: fmt.Sprintf("SendWithContext streams instances of %q with context.", rname),
+		SendTypeName:        rname,
+		SendTypeRef:         resultRef,
+		MustClose:           true,
 	}
 	cliStream := &StreamData{
-		Interface:    vname + "ClientStream",
-		VarName:      scope.Unique(codegen.Goify(m.Name, true), "ClientStream"),
-		Kind:         m.Stream,
-		RecvName:     "Recv",
-		RecvDesc:     fmt.Sprintf("Recv reads instances of %q from the stream.", rname),
-		RecvTypeName: rname,
-		RecvTypeRef:  resultRef,
+		Interface:           vname + "ClientStream",
+		VarName:             scope.Unique(codegen.Goify(m.Name, true), "ClientStream"),
+		Kind:                m.Stream,
+		RecvName:            "Recv",
+		RecvDesc:            fmt.Sprintf("Recv reads instances of %q from the stream.", rname),
+		RecvWithContextName: "RecvWithContext",
+		RecvWithContextDesc: fmt.Sprintf("RecvWithContext reads instances of %q from the stream with context.", rname),
+		RecvTypeName:        rname,
+		RecvTypeRef:         resultRef,
 	}
 	if m.Stream == expr.ClientStreamKind || m.Stream == expr.BidirectionalStreamKind {
 		switch m.Stream {
@@ -1189,9 +1201,13 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 			if resultRef != "" {
 				svrStream.SendName = "SendAndClose"
 				svrStream.SendDesc = fmt.Sprintf("SendAndClose streams instances of %q and closes the stream.", rname)
+				svrStream.SendWithContextName = "SendAndCloseWithContext"
+				svrStream.SendWithContextDesc = fmt.Sprintf("SendAndCloseWithContext streams instances of %q and closes the stream with context.", rname)
 				svrStream.MustClose = false
 				cliStream.RecvName = "CloseAndRecv"
 				cliStream.RecvDesc = fmt.Sprintf("CloseAndRecv stops sending messages to the stream and reads instances of %q from the stream.", rname)
+				cliStream.RecvWithContextName = "CloseAndRecvWithContext"
+				cliStream.RecvWithContextDesc = fmt.Sprintf("CloseAndRecvWithContext stops sending messages to the stream and reads instances of %q from the stream with context.", rname)
 			} else {
 				cliStream.MustClose = true
 			}
@@ -1200,10 +1216,14 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 		}
 		svrStream.RecvName = "Recv"
 		svrStream.RecvDesc = fmt.Sprintf("Recv reads instances of %q from the stream.", spayloadName)
+		svrStream.RecvWithContextName = "RecvWithContext"
+		svrStream.RecvWithContextDesc = fmt.Sprintf("RecvWithContext reads instances of %q from the stream with context.", spayloadName)
 		svrStream.RecvTypeName = spayloadName
 		svrStream.RecvTypeRef = spayloadRef
 		cliStream.SendName = "Send"
 		cliStream.SendDesc = fmt.Sprintf("Send streams instances of %q.", spayloadName)
+		cliStream.SendWithContextName = "SendWithContext"
+		cliStream.SendWithContextDesc = fmt.Sprintf("SendWithContext streams instances of %q with context.", spayloadName)
 		cliStream.SendTypeName = spayloadName
 		cliStream.SendTypeRef = spayloadRef
 	}

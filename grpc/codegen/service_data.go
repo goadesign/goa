@@ -332,6 +332,10 @@ type (
 		SendName string
 		// SendDesc is the description for the send function.
 		SendDesc string
+		// SendWithContextName is the name of the send function with context.
+		SendWithContextName string
+		// SendWithContextDesc is the description for the send function with context.
+		SendWithContextDesc string
 		// SendRef is the fully	qualified reference to the type sent across the
 		// stream.
 		SendRef string
@@ -347,6 +351,10 @@ type (
 		RecvName string
 		// RecvDesc is the description for the recv function.
 		RecvDesc string
+		// RecvWithContextName is the name of the receive function with context.
+		RecvWithContextName string
+		// RecvWithContextDesc is the description for the recv function with context.
+		RecvWithContextDesc string
 		// RecvRef is the fully	qualified reference to the type received from the
 		// stream.
 		RecvRef string
@@ -393,7 +401,7 @@ func (d ServicesData) Get(name string) *ServiceData {
 	return d[name]
 }
 
-// Endpoint returns the endoint data for the endpoint with the given name, nil
+// Endpoint returns the endpoint data for the endpoint with the given name, nil
 // if there isn't one.
 func (sd *ServiceData) Endpoint(name string) *EndpointData {
 	for _, ed := range sd.Endpoints {
@@ -779,7 +787,7 @@ func collectValidations(att *expr.AttributeExpr, attName string, ctx *codegen.At
 	switch dt := att.Type.(type) {
 	case expr.UserType:
 		if expr.IsPrimitive(dt) {
-			// Alias type - validation is generatd inline in parent type validation code.
+			// Alias type - validation is generate inline in parent type validation code.
 			return
 		}
 		vtx := protoBufTypeContext(sd.PkgName, sd.Scope, false)
@@ -1151,19 +1159,23 @@ func buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRPCEndpointExpr, sd 
 // svr param indicates that the stream data is built for the server.
 func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *StreamData {
 	var (
-		varn        string
-		intName     string
-		svcInt      string
-		sendName    string
-		sendDesc    string
-		sendRef     string
-		sendConvert *ConvertData
-		recvName    string
-		recvDesc    string
-		recvRef     string
-		recvConvert *ConvertData
-		mustClose   bool
-		typ         string
+		varn                string
+		intName             string
+		svcInt              string
+		sendName            string
+		sendDesc            string
+		sendWithContextName string
+		sendWithContextDesc string
+		sendRef             string
+		sendConvert         *ConvertData
+		recvName            string
+		recvDesc            string
+		recvWithContextName string
+		recvWithContextDesc string
+		recvRef             string
+		recvConvert         *ConvertData
+		mustClose           bool
+		typ                 string
 
 		svc            = sd.Service
 		ed             = sd.Endpoint(e.Name())
@@ -1184,6 +1196,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 			if e.MethodExpr.Result.Type != expr.Empty {
 				sendName = md.ServerStream.SendName
 				sendRef = ed.ResultRef
+				sendWithContextName = md.ServerStream.SendWithContextName
 				sendConvert = &ConvertData{
 					SrcName: resCtx.Scope.Name(result, resCtx.Pkg(result), resCtx.Pointer, resCtx.UseDefault),
 					SrcRef:  resCtx.Scope.Ref(result, resCtx.Pkg(result)),
@@ -1194,6 +1207,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 			}
 			if e.MethodExpr.StreamingPayload.Type != expr.Empty {
 				recvName = md.ServerStream.RecvName
+				recvWithContextName = md.ServerStream.RecvWithContextName
 				recvRef = svcCtx.Scope.Ref(e.MethodExpr.StreamingPayload, svcCtx.Pkg(e.MethodExpr.StreamingPayload))
 				recvConvert = &ConvertData{
 					SrcName:    protoBufGoFullTypeName(e.StreamingRequest, sd.PkgName, sd.Scope),
@@ -1212,6 +1226,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 			svcInt = fmt.Sprintf("%s.%s", svc.PkgName, md.ClientStream.Interface)
 			if e.MethodExpr.StreamingPayload.Type != expr.Empty {
 				sendName = md.ClientStream.SendName
+				sendWithContextName = md.ClientStream.SendWithContextName
 				sendRef = svcCtx.Scope.Ref(e.MethodExpr.StreamingPayload, svcCtx.Pkg(e.MethodExpr.StreamingPayload))
 				sendConvert = &ConvertData{
 					SrcName: svcCtx.Scope.Name(e.MethodExpr.StreamingPayload, svcCtx.Pkg(e.MethodExpr.StreamingPayload), svcCtx.Pointer, svcCtx.UseDefault),
@@ -1223,6 +1238,7 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 			}
 			if e.MethodExpr.Result.Type != expr.Empty {
 				recvName = md.ClientStream.RecvName
+				recvWithContextName = md.ClientStream.RecvWithContextName
 				recvRef = ed.ResultRef
 				recvConvert = &ConvertData{
 					SrcName:    protoBufGoFullTypeName(e.Response.Message, sd.PkgName, sd.Scope),
@@ -1237,26 +1253,32 @@ func buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *Strea
 		}
 		if sendConvert != nil {
 			sendDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint gRPC stream.", sendName, sendConvert.TgtName, md.Name)
+			sendWithContextDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint gRPC stream with context.", sendWithContextName, sendConvert.TgtName, md.Name)
 		}
 		if recvConvert != nil {
 			recvDesc = fmt.Sprintf("%s reads instances of %q from the %q endpoint gRPC stream.", recvName, recvConvert.SrcName, md.Name)
+			recvWithContextDesc = fmt.Sprintf("%s reads instances of %q from the %q endpoint gRPC stream with context.", recvWithContextName, recvConvert.SrcName, md.Name)
 		}
 	}
 	return &StreamData{
-		VarName:          varn,
-		Type:             typ,
-		Interface:        intName,
-		ServiceInterface: svcInt,
-		Endpoint:         ed,
-		SendName:         sendName,
-		SendDesc:         sendDesc,
-		SendRef:          sendRef,
-		SendConvert:      sendConvert,
-		RecvName:         recvName,
-		RecvDesc:         recvDesc,
-		RecvRef:          recvRef,
-		RecvConvert:      recvConvert,
-		MustClose:        mustClose,
+		VarName:             varn,
+		Type:                typ,
+		Interface:           intName,
+		ServiceInterface:    svcInt,
+		Endpoint:            ed,
+		SendName:            sendName,
+		SendDesc:            sendDesc,
+		SendWithContextName: sendWithContextName,
+		SendWithContextDesc: sendWithContextDesc,
+		SendRef:             sendRef,
+		SendConvert:         sendConvert,
+		RecvName:            recvName,
+		RecvDesc:            recvDesc,
+		RecvWithContextName: recvWithContextName,
+		RecvWithContextDesc: recvWithContextDesc,
+		RecvRef:             recvRef,
+		RecvConvert:         recvConvert,
+		MustClose:           mustClose,
 	}
 }
 
