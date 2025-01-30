@@ -320,12 +320,31 @@ type (
 		StreamingPayloadRef string
 		// StreamingResultRef is the reference to the streaming result type.
 		StreamingResultRef string
-		// ServerStreamInputStruct is the name of the server stream input
-		// struct if the endpoint defines a server stream.
-		ServerStreamInputStruct string
-		// ClientStreamInputStruct is the name of the client stream input
-		// struct if the endpoint defines a client stream.
-		ClientStreamInputStruct string
+		// ServerStream is the stream data if the endpoint defines a server stream.
+		ServerStream *StreamInterceptorData
+		// ClientStream is the stream data if the endpoint defines a client stream.
+		ClientStream *StreamInterceptorData
+	}
+
+	// StreamInterceptorData is the stream data for an interceptor.
+	StreamInterceptorData struct {
+		// Interface is the name of the stream interface.
+		Interface string
+		// SendName is the name of the send function.
+		SendName string
+		// SendWithContextName is the name of the send function with context.
+		SendWithContextName string
+		// SendTypeRef is the reference to the type sent through the stream.
+		SendTypeRef string
+		// RecvName is the name of the recv function.
+		RecvName string
+		// RecvWithContextName is the name of the recv function with context.
+		RecvWithContextName string
+		// RecvTypeRef is the reference to the type received from the stream.
+		RecvTypeRef string
+		// MustClose indicates whether the stream should implement the Close()
+		// function.
+		MustClose bool
 	}
 
 	// AttributeData describes a single attribute.
@@ -1306,12 +1325,30 @@ func buildInterceptorData(svc *expr.ServiceExpr, methods []*MethodData, i *expr.
 // buildInterceptorMethodData creates the data needed to generate interceptor
 // method code.
 func buildInterceptorMethodData(i *expr.InterceptorExpr, md *MethodData) *MethodInterceptorData {
-	var serverStream, clientStream string
+	var serverStream, clientStream *StreamInterceptorData
 	if md.ServerStream != nil {
-		serverStream = md.ServerStream.VarName
+		serverStream = &StreamInterceptorData{
+			Interface:           md.ServerStream.Interface,
+			SendName:            md.ServerStream.SendName,
+			SendWithContextName: md.ServerStream.SendWithContextName,
+			SendTypeRef:         md.ServerStream.SendTypeRef,
+			RecvName:            md.ServerStream.RecvName,
+			RecvWithContextName: md.ServerStream.RecvWithContextName,
+			RecvTypeRef:         md.ServerStream.RecvTypeRef,
+			MustClose:           md.ServerStream.MustClose,
+		}
 	}
 	if md.ClientStream != nil {
-		clientStream = md.ClientStream.VarName
+		clientStream = &StreamInterceptorData{
+			Interface:           md.ClientStream.Interface,
+			SendName:            md.ClientStream.SendName,
+			SendWithContextName: md.ClientStream.SendWithContextName,
+			SendTypeRef:         md.ClientStream.SendTypeRef,
+			RecvName:            md.ClientStream.RecvName,
+			RecvWithContextName: md.ClientStream.RecvWithContextName,
+			RecvTypeRef:         md.ClientStream.RecvTypeRef,
+			MustClose:           md.ClientStream.MustClose,
+		}
 	}
 	var payloadAccess, resultAccess, streamingPayloadAccess, streamingResultAccess string
 	if i.ReadPayload != nil || i.WritePayload != nil {
@@ -1327,17 +1364,17 @@ func buildInterceptorMethodData(i *expr.InterceptorExpr, md *MethodData) *Method
 		streamingResultAccess = codegen.Goify(i.Name, false) + md.VarName + "StreamingResult"
 	}
 	return &MethodInterceptorData{
-		MethodName:              md.VarName,
-		PayloadAccess:           payloadAccess,
-		ResultAccess:            resultAccess,
-		PayloadRef:              md.PayloadRef,
-		ResultRef:               md.ResultRef,
-		StreamingPayloadAccess:  streamingPayloadAccess,
-		StreamingPayloadRef:     md.StreamingPayloadRef,
-		StreamingResultAccess:   streamingResultAccess,
-		StreamingResultRef:      md.ResultRef,
-		ClientStreamInputStruct: clientStream,
-		ServerStreamInputStruct: serverStream,
+		MethodName:             md.VarName,
+		PayloadAccess:          payloadAccess,
+		ResultAccess:           resultAccess,
+		PayloadRef:             md.PayloadRef,
+		ResultRef:              md.ResultRef,
+		StreamingPayloadAccess: streamingPayloadAccess,
+		StreamingPayloadRef:    md.StreamingPayloadRef,
+		StreamingResultAccess:  streamingResultAccess,
+		StreamingResultRef:     md.ResultRef,
+		ClientStream:           clientStream,
+		ServerStream:           serverStream,
 	}
 }
 

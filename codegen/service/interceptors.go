@@ -146,8 +146,9 @@ func wrapperFile(svc *Data) *codegen.File {
 			Name:   "server-interceptor-wrappers",
 			Source: readTemplate("server_interceptor_wrappers"),
 			Data: map[string]interface{}{
-				"Service":            svc.Name,
-				"ServerInterceptors": svc.ServerInterceptors,
+				"Service":              svc.Name,
+				"ServerInterceptors":   svc.ServerInterceptors,
+				"WrappedServerStreams": collectWrappedStreams(svc.ServerInterceptors, true),
 			},
 		})
 	}
@@ -156,8 +157,9 @@ func wrapperFile(svc *Data) *codegen.File {
 			Name:   "client-interceptor-wrappers",
 			Source: readTemplate("client_interceptor_wrappers"),
 			Data: map[string]interface{}{
-				"Service":            svc.Name,
-				"ClientInterceptors": svc.ClientInterceptors,
+				"Service":              svc.Name,
+				"ClientInterceptors":   svc.ClientInterceptors,
+				"WrappedClientStreams": collectWrappedStreams(svc.ClientInterceptors, false),
 			},
 		})
 	}
@@ -177,4 +179,30 @@ func hasPrivateImplementationTypes(interceptors []*InterceptorData) bool {
 		}
 	}
 	return false
+}
+
+// collectWrappedStreams returns a slice of streams to be wrapped by interceptor wrapper functions.
+func collectWrappedStreams(interceptors []*InterceptorData, server bool) []*StreamInterceptorData {
+	var (
+		streams     []*StreamInterceptorData
+		streamNames = make(map[string]struct{})
+	)
+	for _, intr := range interceptors {
+		if intr.HasStreamingPayloadAccess || intr.HasStreamingResultAccess {
+			for _, method := range intr.Methods {
+				if server {
+					if _, ok := streamNames[method.ServerStream.Interface]; !ok {
+						streams = append(streams, method.ServerStream)
+						streamNames[method.ServerStream.Interface] = struct{}{}
+					}
+				} else {
+					if _, ok := streamNames[method.ClientStream.Interface]; !ok {
+						streams = append(streams, method.ClientStream)
+						streamNames[method.ClientStream.Interface] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+	return streams
 }

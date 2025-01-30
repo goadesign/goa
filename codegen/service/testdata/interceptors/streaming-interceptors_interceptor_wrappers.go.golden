@@ -3,12 +3,32 @@
 // wrapLoggingMethod applies the logging server interceptor to endpoints.
 func wrapMethodLogging(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		info := &LoggingInfo{
-			Service:    "StreamingInterceptors",
-			Method:     "Method",
-			Endpoint:   endpoint,
-			RawPayload: req,
+		res, err := endpoint(ctx, req)
+		if err != nil {
+			return nil, err
 		}
-		return i.Logging(ctx, info, endpoint)
+		stream := res.(MethodServerStream)
+		return &wrappedMethodServerStream{
+			ctx: ctx,
+			sendEndpoint: func(ctx context.Context, req any) (any, error) {
+				info := &LoggingInfo{
+					Service:    "StreamingInterceptors",
+					Method:     "Method.SendWithContext",
+					Endpoint:   endpoint,
+					RawPayload: req,
+				}
+				return i.Logging(ctx, info, endpoint)
+			},
+			recvEndpoint: func(ctx context.Context) (any, error) {
+				info := &LoggingInfo{
+					Service:    "StreamingInterceptors",
+					Method:     "Method.RecvWithContext",
+					Endpoint:   endpoint,
+					RawPayload: nil,
+				}
+				return i.Logging(ctx, info, endpoint)
+			},
+			stream: stream,
+		}, nil
 	}
 }
