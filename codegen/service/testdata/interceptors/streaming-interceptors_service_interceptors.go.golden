@@ -32,9 +32,7 @@ type (
 // Private implementation types
 type (
 	loggingMethodStreamingPayload struct {
-		payload struct {
-			Chunk *string
-		}
+		payload *MethodStreamingPayload
 	}
 	loggingMethodStreamingResult struct {
 		result *MethodResult
@@ -51,9 +49,7 @@ func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoin
 // Public accessor methods for Info types
 // StreamingPayload returns a type-safe accessor for the method streaming payload.
 func (info *LoggingInfo) StreamingPayload() LoggingStreamingPayload {
-	return &loggingMethodStreamingPayload{payload: info.RawPayload.(struct {
-		Chunk *string
-	})}
+	return &loggingMethodStreamingPayload{payload: info.RawPayload.(*MethodStreamingPayload)}
 }
 
 // StreamingResult returns a type-safe accessor for the method streaming result.

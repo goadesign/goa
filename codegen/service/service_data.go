@@ -1250,7 +1250,7 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 	data.ServerStream = svrStream
 	data.StreamingPayload = spayloadName
 	data.StreamingPayloadDef = spayloadDef
-	data.StreamingPayloadRef = spayloadDef
+	data.StreamingPayloadRef = spayloadRef
 	data.StreamingPayloadDesc = spayloadDesc
 	data.StreamingPayloadEx = spayloadEx
 }

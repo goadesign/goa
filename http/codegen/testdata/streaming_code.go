@@ -3249,6 +3249,15 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Send(v map[string]
 	body := NewBidirectionalStreamingUserTypeMapMethodResponseBody(res)
 	return s.conn.WriteJSON(body)
 }
+
+// RecvWithContext reads instances of
+// "map[string]*bidirectionalstreamingusertypemapservice.RequestType" from the
+// "BidirectionalStreamingUserTypeMapMethod" endpoint websocket connection with
+// context.
+func (s *BidirectionalStreamingUserTypeMapMethodServerStream) RecvWithContext(ctx context.Context) (map[string]*bidirectionalstreamingusertypemapservice.RequestType, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
+}
 `
 
 var BidirectionalStreamingUserTypeMapServerStreamRecvCode = `// Recv reads instances of
@@ -3285,6 +3294,15 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Recv() (map[string
 	}
 	return NewBidirectionalStreamingUserTypeMapMethodMap(body), nil
 }
+
+// RecvWithContext reads instances of
+// "map[string]*bidirectionalstreamingusertypemapservice.RequestType" from the
+// "BidirectionalStreamingUserTypeMapMethod" endpoint websocket connection with
+// context.
+func (s *BidirectionalStreamingUserTypeMapMethodServerStream) RecvWithContext(ctx context.Context) (map[string]*bidirectionalstreamingusertypemapservice.RequestType, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
+}
 `
 
 var BidirectionalStreamingUserTypeMapClientStreamSendCode = `// Send streams instances of
@@ -3293,6 +3311,14 @@ var BidirectionalStreamingUserTypeMapClientStreamSendCode = `// Send streams ins
 func (s *BidirectionalStreamingUserTypeMapMethodClientStream) Send(v map[string]*bidirectionalstreamingusertypemapservice.RequestType) error {
 	body := NewMapStringRequestType(v)
 	return s.conn.WriteJSON(body)
+}
+
+// SendWithContext streams instances of
+// "map[string]*bidirectionalstreamingusertypemapservice.RequestType" to the
+// "BidirectionalStreamingUserTypeMapMethod" endpoint websocket connection with
+// context.
+func (s *BidirectionalStreamingUserTypeMapMethodClientStream) SendWithContext(ctx context.Context, v map[string]*bidirectionalstreamingusertypemapservice.RequestType) (context.Context, error) {
+	return ctx, s.Send(v)
 }
 `
 
@@ -3314,5 +3340,14 @@ func (s *BidirectionalStreamingUserTypeMapMethodClientStream) Recv() (map[string
 	}
 	res := NewBidirectionalStreamingUserTypeMapMethodMapStringResultTypeOK(body)
 	return res, nil
+}
+
+// RecvWithContext reads instances of
+// "map[string]*bidirectionalstreamingusertypemapservice.ResultType" from the
+// "BidirectionalStreamingUserTypeMapMethod" endpoint websocket connection with
+// context.
+func (s *BidirectionalStreamingUserTypeMapMethodClientStream) RecvWithContext(ctx context.Context) (map[string]*bidirectionalstreamingusertypemapservice.ResultType, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
 }
 `

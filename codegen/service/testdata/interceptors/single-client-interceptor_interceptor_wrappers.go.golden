@@ -6,7 +6,6 @@ func wrapClientMethodTracing(endpoint goa.Endpoint, i ClientInterceptors) goa.En
 		info := &TracingInfo{
 			Service:    "SingleClientInterceptor",
 			Method:     "Method",
-			Endpoint:   endpoint,
 			RawPayload: req,
 		}
 		return i.Tracing(ctx, info, endpoint)

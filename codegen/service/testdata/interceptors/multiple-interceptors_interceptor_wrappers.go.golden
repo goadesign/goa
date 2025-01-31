@@ -6,7 +6,6 @@ func wrapMethodTest(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 		info := &TestInfo{
 			Service:    "MultipleInterceptorsService",
 			Method:     "Method",
-			Endpoint:   endpoint,
 			RawPayload: req,
 		}
 		return i.Test(ctx, info, endpoint)
@@ -19,7 +18,6 @@ func wrapMethodTest3(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 		info := &Test3Info{
 			Service:    "MultipleInterceptorsService",
 			Method:     "Method",
-			Endpoint:   endpoint,
 			RawPayload: req,
 		}
 		return i.Test3(ctx, info, endpoint)
@@ -32,7 +30,6 @@ func wrapClientMethodTest2(endpoint goa.Endpoint, i ClientInterceptors) goa.Endp
 		info := &Test2Info{
 			Service:    "MultipleInterceptorsService",
 			Method:     "Method",
-			Endpoint:   endpoint,
 			RawPayload: req,
 		}
 		return i.Test2(ctx, info, endpoint)
@@ -45,7 +42,6 @@ func wrapClientMethodTest4(endpoint goa.Endpoint, i ClientInterceptors) goa.Endp
 		info := &Test4Info{
 			Service:    "MultipleInterceptorsService",
 			Method:     "Method",
-			Endpoint:   endpoint,
 			RawPayload: req,
 		}
 		return i.Test4(ctx, info, endpoint)

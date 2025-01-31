@@ -6,7 +6,6 @@ func wrapMethodLogging(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint
 		info := &LoggingInfo{
 			Service:    "SingleMethodServerInterceptor",
 			Method:     "Method",
-			Endpoint:   endpoint,
 			RawPayload: req,
 		}
 		return i.Logging(ctx, info, endpoint)
