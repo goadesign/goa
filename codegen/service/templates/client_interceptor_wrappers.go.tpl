@@ -10,7 +10,6 @@ func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i
 		info := &{{ $interceptor.Name }}Info{
 			Service:    "{{ $.Service }}",
 			Method:     "{{ .MethodName }}",
-			Endpoint:   endpoint,
 			RawPayload: req,
 		}
 		res, err := i.{{ $interceptor.Name }}(ctx, info, endpoint)
@@ -24,25 +23,38 @@ func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i
 		return &wrapped{{ .ClientStream.Interface }}{
 			ctx: ctx,
 		{{- if $interceptor.HasStreamingPayloadAccess }}
-			sendEndpoint: func(ctx context.Context, req any) (any, error) {
+			sendWithContext: func(ctx context.Context, req {{ .ClientStream.SendTypeRef }}) (context.Context, error) {
 				info := &{{ $interceptor.Name }}Info{
 					Service:    "{{ $.Service }}",
 					Method:     "{{ .MethodName }}.{{ .ClientStream.SendWithContextName }}",
-					Endpoint:   endpoint,
 					RawPayload: req,
 				}
-				return i.{{ $interceptor.Name }}(ctx, info, endpoint)
+				var rCtx context.Context
+				_, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, req any) (any, error) {
+					var err error
+					rCtx, err = stream.{{ .ClientStream.SendWithContextName }}(ctx, req.({{ .ClientStream.SendTypeRef }}))
+					return nil, err
+				})
+				return rCtx, err
 			},
 		{{- end }}
 		{{- if $interceptor.HasStreamingResultAccess }}
-			recvEndpoint: func(ctx context.Context, req any) (any, error) {
+			recvWithContext: func(ctx context.Context) ({{ .ClientStream.RecvTypeRef }}, context.Context, error) {
 				info := &{{ $interceptor.Name }}Info{
 					Service:    "{{ $.Service }}",
 					Method:     "{{ .MethodName }}.{{ .ClientStream.RecvWithContextName }}",
-					Endpoint:   endpoint,
 					RawPayload: req,
 				}
-				return i.{{ $interceptor.Name }}(ctx, info, endpoint)
+				var rCtx context.Context
+				res, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, req any) (any, error) {
+					var (
+						res {{ .ClientStream.RecvTypeRef }}
+						err error
+					)
+					res, rCtx, err = stream.{{ .ClientStream.RecvWithContextName }}(ctx)
+					return res, err
+				})
+				return res.({{ .ClientStream.RecvTypeRef }}), rCtx, err
 			},
 		{{- end }}
 			stream: stream,
@@ -51,7 +63,6 @@ func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i
 		info := &{{ $interceptor.Name }}Info{
 			Service:    "{{ $.Service }}",
 			Method:     "{{ .MethodName }}",
-			Endpoint:   endpoint,
 			RawPayload: req,
 		}
 		return i.{{ $interceptor.Name }}(ctx, info, endpoint)
@@ -65,13 +76,42 @@ func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i
 {{ comment (printf "wrapped%s is a client interceptor wrapper for the %s stream." .Interface .Interface) }}
 type wrapped{{ .Interface }} struct {
 	ctx context.Context
-	sendEndpoint, recvEndpoint goa.Endpoint
+	sendWithContext func(context.Context, {{ .SendTypeRef }}) (context.Context, error)
+	recvWithContext func(context.Context) ({{ .RecvTypeRef }}, context.Context, error)
 	stream {{ .Interface }}
 }
+{{- if ne .SendWithContextName "" }}
 
-{{ if .MustClose }}
+func (w *wrapped{{ .Interface }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
+	_, err := w.SendWithContext(w.ctx, v)
+	return err
+}
+
+func (w *wrapped{{ .Interface }}) {{ .SendWithContextName }}(ctx context.Context, v {{ .SendTypeRef }}) (context.Context, error) {
+	if w.sendWithContext == nil {
+		return w.stream.{{ .SendWithContextName }}(ctx, v)
+	}
+	return w.sendWithContext(ctx, v)
+}
+{{- end }}
+{{- if ne .RecvWithContextName "" }}
+
+func (w *wrapped{{ .Interface }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
+	res, _, err := w.RecvWithContext(w.ctx)
+	return res, err
+}
+
+func (w *wrapped{{ .Interface }}) {{ .RecvWithContextName }}(ctx context.Context) ({{ .RecvTypeRef }}, context.Context, error) {
+	if w.recvWithContext == nil {
+		return w.stream.{{ .RecvWithContextName }}(ctx)
+	}
+	return w.recvWithContext(ctx)
+}
+{{- end }}
+{{- if .MustClose }}
+
 func (w *wrapped{{ .Interface }}) Close() error {
 	return w.stream.Close()
 }
-{{ end }}
+{{- end }}
 {{- end }}

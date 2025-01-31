@@ -12,6 +12,6 @@ func (s *{{ .VarName }}) {{ .SendName }}(res {{ .SendRef }}) error {
 }
 
 {{ comment .SendWithContextDesc }}
-func (s *{{ .VarName }}) {{ .SendWithContextName }}(_ context.Context, res {{ .SendRef }}) error {
-	return s.{{ .SendName }}(res)
+func (s *{{ .VarName }}) {{ .SendWithContextName }}(ctx context.Context, res {{ .SendRef }}) (context.Context, error) {
+	return ctx, s.{{ .SendName }}(res)
 }

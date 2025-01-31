@@ -9,8 +9,6 @@ type (
 		Service string
 		// Name of method handling request
 		Method string
-		// Endpoint of request, can be used for retrying
-		Endpoint Endpoint
 		// Payload of request
 		RawPayload any
 	}
