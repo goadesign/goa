@@ -38,12 +38,11 @@ func ParseEndpoint(
 			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedStream }}, dialer, {{ .VarName }}Configurer{{ end }})
 			switch epn {
 		{{- $pkgName := .PkgName }}
-		{{- $interceptors := .Interceptors }}
 		{{- range .Subcommands }}
 			case "{{ .Name }}":
 				endpoint = c.{{ .MethodVarName }}({{ if .MultipartVarName }}{{ .MultipartVarName }}{{ end }})
-			{{- if $interceptors }}
-				endpoint = {{ $interceptors.PkgName }}.Wrap{{ .MethodVarName }}ClientEndpoint(endpoint, {{ $interceptors.VarName }})
+			{{- if .Interceptors }}
+				endpoint = {{ .Interceptors.PkgName }}.Wrap{{ .MethodVarName }}ClientEndpoint(endpoint, {{ .Interceptors.VarName }})
 			{{- end }}
 			{{- if .BuildFunction }}
 				data, err = {{ $pkgName }}.{{ .BuildFunction.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})

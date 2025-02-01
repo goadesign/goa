@@ -22,12 +22,11 @@ func ParseEndpoint(
 			c := {{ .PkgName }}.NewClient(cc, opts...)
 			switch epn {
 		{{- $pkgName := .PkgName }}
-		{{- $interceptors := .Interceptors }}
 		{{ range .Subcommands }}
 			case "{{ .Name }}":
 				endpoint = c.{{ .MethodVarName }}()
-			{{- if $interceptors }}
-				endpoint = {{ $interceptors.PkgName }}.Wrap{{ .MethodVarName }}ClientEndpoint(endpoint, {{ $interceptors.VarName }})
+			{{- if .Interceptors }}
+				endpoint = {{ .Interceptors.PkgName }}.Wrap{{ .MethodVarName }}ClientEndpoint(endpoint, {{ .Interceptors.VarName }})
 			{{- end }}
 			{{- if .BuildFunction }}
 				data, err = {{ $pkgName}}.{{ .BuildFunction.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})

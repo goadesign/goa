@@ -24,7 +24,7 @@ type subcommandData struct {
 	// MultipartFuncName is the name of the function used to render a multipart
 	// request encoder.
 	MultipartFuncName string
-	// MultipartFuncName is the name of the variabl used to render a multipart
+	// MultipartFuncName is the name of the variable used to render a multipart
 	// request encoder.
 	MultipartVarName string
 	// StreamFlag is the flag used to identify the file to be streamed when
@@ -87,7 +87,7 @@ func buildSubcommandData(sd *ServiceData, e *EndpointData) *subcommandData {
 	flags, buildFunction := buildFlags(sd, e)
 
 	sub := &subcommandData{
-		SubcommandData: cli.BuildSubcommandData(sd.Service.Name, e.Method, buildFunction, flags),
+		SubcommandData: cli.BuildSubcommandData(sd.Service, e.Method, buildFunction, flags),
 	}
 	if e.MultipartRequestEncoder != nil {
 		sub.MultipartVarName = e.MultipartRequestEncoder.VarName
