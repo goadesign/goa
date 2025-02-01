@@ -15,6 +15,13 @@ func (s *MethodServerStreamingUserTypeRPCServerStream) Send(res *serviceserverst
 	v := NewProtoUserTypeMethodServerStreamingUserTypeRPCResponse(res)
 	return s.stream.Send(v)
 }
+
+// SendWithContext streams instances of
+// "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
+// to the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream with context.
+func (s *MethodServerStreamingUserTypeRPCServerStream) SendWithContext(ctx context.Context, res *serviceserverstreamingusertyperpc.UserType) (context.Context, error) {
+	return ctx, s.Send(res)
+}
 `
 
 var ServerStreamingServerCloseCode = `func (s *MethodServerStreamingUserTypeRPCServerStream) Close() error {
@@ -42,6 +49,15 @@ func (s *MethodServerStreamingUserTypeRPCClientStream) Recv() (*serviceserverstr
 	}
 	return NewMethodServerStreamingUserTypeRPCResponseUserType(v), nil
 }
+
+// RecvWithContext reads instances of
+// "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
+// from the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream with
+// context.
+func (s *MethodServerStreamingUserTypeRPCClientStream) RecvWithContext(ctx context.Context) (*serviceserverstreamingusertyperpc.UserType, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
+}
 `
 
 var ServerStreamingResultWithViewsServerStructCode = `// MethodServerStreamingUserTypeRPCServerStream implements the
@@ -60,6 +76,13 @@ func (s *MethodServerStreamingUserTypeRPCServerStream) Send(res *serviceserverst
 	vres := serviceserverstreamingusertyperpc.NewViewedResultType(res, s.view)
 	v := NewProtoResultTypeViewMethodServerStreamingUserTypeRPCResponse(vres.Projected)
 	return s.stream.Send(v)
+}
+
+// SendWithContext streams instances of
+// "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
+// to the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream with context.
+func (s *MethodServerStreamingUserTypeRPCServerStream) SendWithContext(ctx context.Context, res *serviceserverstreamingusertyperpc.ResultType) (context.Context, error) {
+	return ctx, s.Send(res)
 }
 `
 
@@ -94,6 +117,15 @@ func (s *MethodServerStreamingUserTypeRPCClientStream) Recv() (*serviceserverstr
 	}
 	return serviceserverstreamingusertyperpc.NewResultType(vres), nil
 }
+
+// RecvWithContext reads instances of
+// "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
+// from the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream with
+// context.
+func (s *MethodServerStreamingUserTypeRPCClientStream) RecvWithContext(ctx context.Context) (*serviceserverstreamingusertyperpc.ResultType, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
+}
 `
 
 var ServerStreamingResultWithViewsClientSetViewCode = `// SetView sets the view.
@@ -110,6 +142,14 @@ func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewServerStream) 
 	vres := serviceserverstreamingresulttypecollectionwithexplicitview.NewViewedResultTypeCollection(res, "tiny")
 	v := NewProtoResultTypeCollectionViewResultTypeCollection(vres.Projected)
 	return s.stream.Send(v)
+}
+
+// SendWithContext streams instances of
+// "service_server_streaming_result_type_collection_with_explicit_viewpb.ResultTypeCollection"
+// to the "MethodServerStreamingResultTypeCollectionWithExplicitView" endpoint
+// gRPC stream with context.
+func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewServerStream) SendWithContext(ctx context.Context, res serviceserverstreamingresulttypecollectionwithexplicitview.ResultTypeCollection) (context.Context, error) {
+	return ctx, s.Send(res)
 }
 `
 
@@ -130,6 +170,15 @@ func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewClientStream) 
 	}
 	return serviceserverstreamingresulttypecollectionwithexplicitview.NewResultTypeCollection(vres), nil
 }
+
+// RecvWithContext reads instances of
+// "service_server_streaming_result_type_collection_with_explicit_viewpb.ResultTypeCollection"
+// from the "MethodServerStreamingResultTypeCollectionWithExplicitView"
+// endpoint gRPC stream with context.
+func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewClientStream) RecvWithContext(ctx context.Context) (serviceserverstreamingresulttypecollectionwithexplicitview.ResultTypeCollection, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
+}
 `
 
 var ServerStreamingPrimitiveServerSendCode = `// Send streams instances of
@@ -138,6 +187,13 @@ var ServerStreamingPrimitiveServerSendCode = `// Send streams instances of
 func (s *MethodServerStreamingRPCServerStream) Send(res string) error {
 	v := NewProtoMethodServerStreamingRPCResponse(res)
 	return s.stream.Send(v)
+}
+
+// SendWithContext streams instances of
+// "service_server_streaming_rpcpb.MethodServerStreamingRPCResponse" to the
+// "MethodServerStreamingRPC" endpoint gRPC stream with context.
+func (s *MethodServerStreamingRPCServerStream) SendWithContext(ctx context.Context, res string) (context.Context, error) {
+	return ctx, s.Send(res)
 }
 `
 
@@ -152,6 +208,14 @@ func (s *MethodServerStreamingRPCClientStream) Recv() (string, error) {
 	}
 	return NewMethodServerStreamingRPCResponseMethodServerStreamingRPCResponse(v), nil
 }
+
+// RecvWithContext reads instances of
+// "service_server_streaming_rpcpb.MethodServerStreamingRPCResponse" from the
+// "MethodServerStreamingRPC" endpoint gRPC stream with context.
+func (s *MethodServerStreamingRPCClientStream) RecvWithContext(ctx context.Context) (string, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
+}
 `
 
 var ServerStreamingArrayServerSendCode = `// Send streams instances of
@@ -160,6 +224,13 @@ var ServerStreamingArrayServerSendCode = `// Send streams instances of
 func (s *MethodServerStreamingArrayServerStream) Send(res []int) error {
 	v := NewProtoMethodServerStreamingArrayResponse(res)
 	return s.stream.Send(v)
+}
+
+// SendWithContext streams instances of
+// "service_server_streaming_arraypb.MethodServerStreamingArrayResponse" to the
+// "MethodServerStreamingArray" endpoint gRPC stream with context.
+func (s *MethodServerStreamingArrayServerStream) SendWithContext(ctx context.Context, res []int) (context.Context, error) {
+	return ctx, s.Send(res)
 }
 `
 
@@ -174,6 +245,14 @@ func (s *MethodServerStreamingArrayClientStream) Recv() ([]int, error) {
 	}
 	return NewMethodServerStreamingArrayResponseMethodServerStreamingArrayResponse(v), nil
 }
+
+// RecvWithContext reads instances of
+// "service_server_streaming_arraypb.MethodServerStreamingArrayResponse" from
+// the "MethodServerStreamingArray" endpoint gRPC stream with context.
+func (s *MethodServerStreamingArrayClientStream) RecvWithContext(ctx context.Context) ([]int, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
+}
 `
 
 var ServerStreamingMapServerSendCode = `// Send streams instances of
@@ -182,6 +261,13 @@ var ServerStreamingMapServerSendCode = `// Send streams instances of
 func (s *MethodServerStreamingMapServerStream) Send(res map[string]*serviceserverstreamingmap.UserType) error {
 	v := NewProtoMethodServerStreamingMapResponse(res)
 	return s.stream.Send(v)
+}
+
+// SendWithContext streams instances of
+// "service_server_streaming_mappb.MethodServerStreamingMapResponse" to the
+// "MethodServerStreamingMap" endpoint gRPC stream with context.
+func (s *MethodServerStreamingMapServerStream) SendWithContext(ctx context.Context, res map[string]*serviceserverstreamingmap.UserType) (context.Context, error) {
+	return ctx, s.Send(res)
 }
 `
 
@@ -195,6 +281,14 @@ func (s *MethodServerStreamingMapClientStream) Recv() (map[string]*serviceserver
 		return res, err
 	}
 	return NewMethodServerStreamingMapResponseMethodServerStreamingMapResponse(v), nil
+}
+
+// RecvWithContext reads instances of
+// "service_server_streaming_mappb.MethodServerStreamingMapResponse" from the
+// "MethodServerStreamingMap" endpoint gRPC stream with context.
+func (s *MethodServerStreamingMapClientStream) RecvWithContext(ctx context.Context) (map[string]*serviceserverstreamingmap.UserType, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
 }
 `
 
@@ -210,6 +304,14 @@ func (s *MethodServerStreamingRPCClientStream) Recv() (*serviceserverstreamingrp
 	return NewMethodServerStreamingRPCResponseUserType(v), nil
 }
 
+// RecvWithContext reads instances of
+// "service_server_streaming_rpcpb.MethodServerStreamingRPCResponse" from the
+// "MethodServerStreamingRPC" endpoint gRPC stream with context.
+func (s *MethodServerStreamingRPCClientStream) RecvWithContext(ctx context.Context) (*serviceserverstreamingrpc.UserType, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
+}
+
 // Recv reads instances of
 // "service_server_streaming_rpcpb.OtherMethodServerStreamingRPCResponse" from
 // the "OtherMethodServerStreamingRPC" endpoint gRPC stream.
@@ -220,6 +322,14 @@ func (s *OtherMethodServerStreamingRPCClientStream) Recv() (*serviceserverstream
 		return res, err
 	}
 	return NewOtherMethodServerStreamingRPCResponseUserType(v), nil
+}
+
+// RecvWithContext reads instances of
+// "service_server_streaming_rpcpb.OtherMethodServerStreamingRPCResponse" from
+// the "OtherMethodServerStreamingRPC" endpoint gRPC stream with context.
+func (s *OtherMethodServerStreamingRPCClientStream) RecvWithContext(ctx context.Context) (*serviceserverstreamingrpc.UserType, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
 }
 `
 
@@ -237,6 +347,13 @@ func (s *MethodClientStreamingRPCServerStream) SendAndClose(res string) error {
 	v := NewProtoMethodClientStreamingRPCResponse(res)
 	return s.stream.SendAndClose(v)
 }
+
+// SendAndCloseWithContext streams instances of
+// "service_client_streaming_rpcpb.MethodClientStreamingRPCResponse" to the
+// "MethodClientStreamingRPC" endpoint gRPC stream with context.
+func (s *MethodClientStreamingRPCServerStream) SendAndCloseWithContext(ctx context.Context, res string) (context.Context, error) {
+	return ctx, s.SendAndClose(res)
+}
 `
 
 var ClientStreamingServerRecvCode = `// Recv reads instances of
@@ -249,6 +366,14 @@ func (s *MethodClientStreamingRPCServerStream) Recv() (int, error) {
 		return res, err
 	}
 	return NewMethodClientStreamingRPCStreamingRequestMethodClientStreamingRPCStreamingRequest(v), nil
+}
+
+// RecvWithContext reads instances of
+// "service_client_streaming_rpcpb.MethodClientStreamingRPCStreamingRequest"
+// from the "MethodClientStreamingRPC" endpoint gRPC stream with context.
+func (s *MethodClientStreamingRPCServerStream) RecvWithContext(ctx context.Context) (int, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
 }
 `
 
@@ -266,6 +391,13 @@ func (s *MethodClientStreamingRPCClientStream) Send(res int) error {
 	v := NewProtoMethodClientStreamingRPCStreamingRequest(res)
 	return s.stream.Send(v)
 }
+
+// SendWithContext streams instances of
+// "service_client_streaming_rpcpb.MethodClientStreamingRPCStreamingRequest" to
+// the "MethodClientStreamingRPC" endpoint gRPC stream with context.
+func (s *MethodClientStreamingRPCClientStream) SendWithContext(ctx context.Context, res int) (context.Context, error) {
+	return ctx, s.Send(res)
+}
 `
 
 var ClientStreamingClientRecvCode = `// CloseAndRecv reads instances of
@@ -278,6 +410,14 @@ func (s *MethodClientStreamingRPCClientStream) CloseAndRecv() (string, error) {
 		return res, err
 	}
 	return NewMethodClientStreamingRPCResponseMethodClientStreamingRPCResponse(v), nil
+}
+
+// CloseAndRecvWithContext reads instances of
+// "service_client_streaming_rpcpb.MethodClientStreamingRPCResponse" from the
+// "MethodClientStreamingRPC" endpoint gRPC stream with context.
+func (s *MethodClientStreamingRPCClientStream) CloseAndRecvWithContext(ctx context.Context) (string, context.Context, error) {
+	res, err := s.CloseAndRecv()
+	return res, ctx, err
 }
 `
 
@@ -311,6 +451,13 @@ func (s *MethodBidirectionalStreamingRPCServerStream) Send(res *servicebidirecti
 	v := NewProtoIDViewMethodBidirectionalStreamingRPCResponse(vres.Projected)
 	return s.stream.Send(v)
 }
+
+// SendWithContext streams instances of
+// "service_bidirectional_streaming_rpcpb.MethodBidirectionalStreamingRPCResponse"
+// to the "MethodBidirectionalStreamingRPC" endpoint gRPC stream with context.
+func (s *MethodBidirectionalStreamingRPCServerStream) SendWithContext(ctx context.Context, res *servicebidirectionalstreamingrpc.ID) (context.Context, error) {
+	return ctx, s.Send(res)
+}
 `
 
 var BidirectionalStreamingServerRecvCode = `// Recv reads instances of
@@ -323,6 +470,14 @@ func (s *MethodBidirectionalStreamingRPCServerStream) Recv() (int, error) {
 		return res, err
 	}
 	return NewMethodBidirectionalStreamingRPCStreamingRequestMethodBidirectionalStreamingRPCStreamingRequest(v), nil
+}
+
+// RecvWithContext reads instances of
+// "service_bidirectional_streaming_rpcpb.MethodBidirectionalStreamingRPCStreamingRequest"
+// from the "MethodBidirectionalStreamingRPC" endpoint gRPC stream with context.
+func (s *MethodBidirectionalStreamingRPCServerStream) RecvWithContext(ctx context.Context) (int, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
 }
 `
 
@@ -348,6 +503,13 @@ func (s *MethodBidirectionalStreamingRPCClientStream) Send(res int) error {
 	v := NewProtoMethodBidirectionalStreamingRPCStreamingRequest(res)
 	return s.stream.Send(v)
 }
+
+// SendWithContext streams instances of
+// "service_bidirectional_streaming_rpcpb.MethodBidirectionalStreamingRPCStreamingRequest"
+// to the "MethodBidirectionalStreamingRPC" endpoint gRPC stream with context.
+func (s *MethodBidirectionalStreamingRPCClientStream) SendWithContext(ctx context.Context, res int) (context.Context, error) {
+	return ctx, s.Send(res)
+}
 `
 
 var BidirectionalStreamingClientRecvCode = `// Recv reads instances of
@@ -365,6 +527,14 @@ func (s *MethodBidirectionalStreamingRPCClientStream) Recv() (*servicebidirectio
 		return nil, err
 	}
 	return servicebidirectionalstreamingrpc.NewID(vres), nil
+}
+
+// RecvWithContext reads instances of
+// "service_bidirectional_streaming_rpcpb.MethodBidirectionalStreamingRPCResponse"
+// from the "MethodBidirectionalStreamingRPC" endpoint gRPC stream with context.
+func (s *MethodBidirectionalStreamingRPCClientStream) RecvWithContext(ctx context.Context) (*servicebidirectionalstreamingrpc.ID, context.Context, error) {
+	res, err := s.Recv()
+	return res, ctx, err
 }
 `
 
