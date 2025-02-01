@@ -230,6 +230,7 @@ var StreamingInterceptorsDSL = func() {
 	})
 	Service("StreamingInterceptors", func() {
 		ServerInterceptor("logging")
+		ClientInterceptor("logging")
 		Method("Method", func() {
 			StreamingPayload(func() {
 				Attribute("chunk", String)
@@ -238,6 +239,48 @@ var StreamingInterceptorsDSL = func() {
 				Attribute("data", String)
 			})
 			HTTP(func() { GET("/stream") })
+		})
+	})
+}
+
+var StreamingInterceptorsWithReadPayloadAndReadStreamingPayloadDSL = func() {
+	Interceptor("logging", func() {
+		ReadPayload(func() {
+			Attribute("chunk")
+		})
+		ReadStreamingPayload(func() {
+			Attribute("chunk")
+		})
+	})
+	Service("StreamingInterceptorsWithReadPayloadAndReadStreamingPayload", func() {
+		ServerInterceptor("logging")
+		ClientInterceptor("logging")
+		Method("Method", func() {
+			Payload(func() {
+				Field(1, "chunk", String)
+			})
+			StreamingPayload(func() {
+				Field(1, "chunk", String)
+			})
+			GRPC(func() {})
+		})
+	})
+}
+
+var StreamingInterceptorsWithReadStreamingResultDSL = func() {
+	Interceptor("logging", func() {
+		ReadStreamingResult(func() {
+			Attribute("data")
+		})
+	})
+	Service("StreamingInterceptorsWithReadStreamingResult", func() {
+		ServerInterceptor("logging")
+		ClientInterceptor("logging")
+		Method("Method", func() {
+			StreamingResult(func() {
+				Field(1, "data", String)
+			})
+			GRPC(func() {})
 		})
 	})
 }

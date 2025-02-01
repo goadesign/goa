@@ -1,0 +1,51 @@
+// ServerInterceptors defines the interface for all server-side interceptors.
+// Server interceptors execute after the request is decoded and before the
+// payload is sent to the service. The implementation is responsible for calling
+// next to complete the request.
+type ServerInterceptors interface {
+	Logging(ctx context.Context, info *LoggingInfo, next goa.Endpoint) (any, error)
+}
+
+// Access interfaces for interceptor payloads and results
+type (
+	// LoggingInfo provides metadata about the current interception.
+	// It includes service name, method name, and access to the endpoint.
+	LoggingInfo goa.InterceptorInfo
+
+	// LoggingStreamingResult provides type-safe access to the method streaming result.
+	// It allows reading and writing specific fields of the streaming result as defined
+	// in the design.
+	LoggingStreamingResult interface {
+		Data() string
+	}
+)
+
+// Private implementation types
+type (
+	loggingMethodStreamingResult struct {
+		result *MethodResult
+	}
+)
+
+// WrapMethodEndpoint wraps the Method endpoint with the server-side
+// interceptors defined in the design.
+func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	endpoint = wrapMethodlogging(endpoint, i)
+	return endpoint
+}
+
+// Public accessor methods for Info types
+// StreamingResult returns a type-safe accessor for the method streaming result.
+func (info *LoggingInfo) StreamingResult(res any) LoggingStreamingResult {
+	return &loggingMethodStreamingResult{result: res.(*MethodResult)}
+}
+
+// Private implementation methods
+
+func (r *loggingMethodStreamingResult) Data() string {
+	if r.result.Data == nil {
+		var zero string
+		return zero
+	}
+	return *r.result.Data
+}

@@ -42,7 +42,9 @@ func TestInterceptors(t *testing.T) {
 		{"interceptor-with-read-result", testdata.InterceptorWithReadResultDSL, 3},
 		{"interceptor-with-write-result", testdata.InterceptorWithWriteResultDSL, 3},
 		{"interceptor-with-read-write-result", testdata.InterceptorWithReadWriteResultDSL, 3},
-		{"streaming-interceptors", testdata.StreamingInterceptorsDSL, 2},
+		{"streaming-interceptors", testdata.StreamingInterceptorsDSL, 3},
+		{"streaming-interceptors-with-read-payload-and-read-streaming-payload", testdata.StreamingInterceptorsWithReadPayloadAndReadStreamingPayloadDSL, 3},
+		{"streaming-interceptors-with-read-streaming-result", testdata.StreamingInterceptorsWithReadStreamingResultDSL, 3},
 		{"streaming-interceptors-with-read-payload", testdata.StreamingInterceptorsWithReadPayloadDSL, 2},
 		{"streaming-interceptors-with-read-result", testdata.StreamingInterceptorsWithReadResultDSL, 2},
 	}

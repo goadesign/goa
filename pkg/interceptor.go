@@ -9,6 +9,10 @@ type (
 		Service string
 		// Name of method handling request
 		Method string
+		// Send is true if the request is a streaming Send
+		Send bool
+		// Recv is true if the request is a streaming Recv
+		Recv bool
 		// Payload of request
 		RawPayload any
 	}

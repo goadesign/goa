@@ -3,31 +3,21 @@
 // wrapLoggingMethod applies the logging server interceptor to endpoints.
 func wrapMethodLogging(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		res, err := endpoint(ctx, req)
+		info := &LoggingInfo{
+			Service:    "StreamingInterceptorsWithReadPayloadAndReadStreamingPayload",
+			Method:     "Method",
+			RawPayload: req,
+		}
+		res, err := i.Logging(ctx, info, endpoint)
 		if err != nil {
 			return nil, err
 		}
 		stream := res.(MethodServerStream)
 		return &wrappedMethodServerStream{
 			ctx: ctx,
-			sendWithContext: func(ctx context.Context, req *MethodResult) (context.Context, error) {
-				info := &LoggingInfo{
-					Service:    "StreamingInterceptors",
-					Method:     "Method",
-					Send:       true,
-					RawPayload: req,
-				}
-				var rCtx context.Context
-				_, err := i.Logging(ctx, info, func(ctx context.Context, req any) (any, error) {
-					var err error
-					rCtx, err = stream.SendWithContext(ctx, req.(*MethodResult))
-					return nil, err
-				})
-				return rCtx, err
-			},
 			recvWithContext: func(ctx context.Context) (*MethodStreamingPayload, context.Context, error) {
 				info := &LoggingInfo{
-					Service:    "StreamingInterceptors",
+					Service:    "StreamingInterceptorsWithReadPayloadAndReadStreamingPayload",
 					Method:     "Method",
 					Recv:       true,
 					RawPayload: req,
@@ -52,25 +42,8 @@ func wrapMethodLogging(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint
 // MethodServerStream stream.
 type wrappedMethodServerStream struct {
 	ctx             context.Context
-	sendWithContext func(context.Context, *MethodResult) (context.Context, error)
 	recvWithContext func(context.Context) (*MethodStreamingPayload, context.Context, error)
 	stream          MethodServerStream
-}
-
-// Send streams instances of "MethodServerStream" after executing the applied
-// interceptor.
-func (w *wrappedMethodServerStream) Send(v *MethodResult) error {
-	_, err := w.SendWithContext(w.ctx, v)
-	return err
-}
-
-// SendWithContext streams instances of "MethodServerStream" after executing
-// the applied interceptor with context.
-func (w *wrappedMethodServerStream) SendWithContext(ctx context.Context, v *MethodResult) (context.Context, error) {
-	if w.sendWithContext == nil {
-		return w.stream.SendWithContext(ctx, v)
-	}
-	return w.sendWithContext(ctx, v)
 }
 
 // Recv reads instances of "MethodServerStream" from the stream after executing
@@ -97,7 +70,12 @@ func (w *wrappedMethodServerStream) Close() error {
 // wrapClientLoggingMethod applies the logging client interceptor to endpoints.
 func wrapClientMethodLogging(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-		res, err := endpoint(ctx, req)
+		info := &LoggingInfo{
+			Service:    "StreamingInterceptorsWithReadPayloadAndReadStreamingPayload",
+			Method:     "Method",
+			RawPayload: req,
+		}
+		res, err := i.Logging(ctx, info, endpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -106,7 +84,7 @@ func wrapClientMethodLogging(endpoint goa.Endpoint, i ClientInterceptors) goa.En
 			ctx: ctx,
 			sendWithContext: func(ctx context.Context, req *MethodStreamingPayload) (context.Context, error) {
 				info := &LoggingInfo{
-					Service:    "StreamingInterceptors",
+					Service:    "StreamingInterceptorsWithReadPayloadAndReadStreamingPayload",
 					Method:     "Method",
 					Send:       true,
 					RawPayload: req,
@@ -119,24 +97,6 @@ func wrapClientMethodLogging(endpoint goa.Endpoint, i ClientInterceptors) goa.En
 				})
 				return rCtx, err
 			},
-			recvWithContext: func(ctx context.Context) (*MethodResult, context.Context, error) {
-				info := &LoggingInfo{
-					Service:    "StreamingInterceptors",
-					Method:     "Method",
-					Recv:       true,
-					RawPayload: req,
-				}
-				var rCtx context.Context
-				res, err := i.Logging(ctx, info, func(ctx context.Context, req any) (any, error) {
-					var (
-						res *MethodResult
-						err error
-					)
-					res, rCtx, err = stream.RecvWithContext(ctx)
-					return res, err
-				})
-				return res.(*MethodResult), rCtx, err
-			},
 			stream: stream,
 		}, nil
 	}
@@ -147,7 +107,6 @@ func wrapClientMethodLogging(endpoint goa.Endpoint, i ClientInterceptors) goa.En
 type wrappedMethodClientStream struct {
 	ctx             context.Context
 	sendWithContext func(context.Context, *MethodStreamingPayload) (context.Context, error)
-	recvWithContext func(context.Context) (*MethodResult, context.Context, error)
 	stream          MethodClientStream
 }
 
@@ -165,22 +124,6 @@ func (w *wrappedMethodClientStream) SendWithContext(ctx context.Context, v *Meth
 		return w.stream.SendWithContext(ctx, v)
 	}
 	return w.sendWithContext(ctx, v)
-}
-
-// Recv reads instances of "MethodClientStream" from the stream after executing
-// the applied interceptor.
-func (w *wrappedMethodClientStream) Recv() (*MethodResult, error) {
-	res, _, err := w.RecvWithContext(w.ctx)
-	return res, err
-}
-
-// RecvWithContext reads instances of "MethodClientStream" from the stream
-// after executing the applied interceptor with context.
-func (w *wrappedMethodClientStream) RecvWithContext(ctx context.Context) (*MethodResult, context.Context, error) {
-	if w.recvWithContext == nil {
-		return w.stream.RecvWithContext(ctx)
-	}
-	return w.recvWithContext(ctx)
 }
 
 // Close closes the stream.

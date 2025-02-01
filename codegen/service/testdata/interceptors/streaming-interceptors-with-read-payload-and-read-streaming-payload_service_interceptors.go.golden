@@ -1,0 +1,74 @@
+// ServerInterceptors defines the interface for all server-side interceptors.
+// Server interceptors execute after the request is decoded and before the
+// payload is sent to the service. The implementation is responsible for calling
+// next to complete the request.
+type ServerInterceptors interface {
+	Logging(ctx context.Context, info *LoggingInfo, next goa.Endpoint) (any, error)
+}
+
+// Access interfaces for interceptor payloads and results
+type (
+	// LoggingInfo provides metadata about the current interception.
+	// It includes service name, method name, and access to the endpoint.
+	LoggingInfo goa.InterceptorInfo
+
+	// LoggingPayload provides type-safe access to the method payload.
+	// It allows reading and writing specific fields of the payload as defined
+	// in the design.
+	LoggingPayload interface {
+		Chunk() string
+	}
+
+	// LoggingStreamingPayload provides type-safe access to the method streaming payload.
+	// It allows reading and writing specific fields of the streaming payload as defined
+	// in the design.
+	LoggingStreamingPayload interface {
+		Chunk() string
+	}
+)
+
+// Private implementation types
+type (
+	loggingMethodPayload struct {
+		payload *MethodPayload
+	}
+	loggingMethodStreamingPayload struct {
+		payload *MethodStreamingPayload
+	}
+)
+
+// WrapMethodEndpoint wraps the Method endpoint with the server-side
+// interceptors defined in the design.
+func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	endpoint = wrapMethodlogging(endpoint, i)
+	return endpoint
+}
+
+// Public accessor methods for Info types
+
+// Payload returns a type-safe accessor for the method payload.
+func (info *LoggingInfo) Payload() LoggingPayload {
+	return &loggingMethodPayload{payload: info.RawPayload.(*MethodPayload)}
+}
+
+// StreamingPayload returns a type-safe accessor for the method streaming payload.
+func (info *LoggingInfo) StreamingPayload() LoggingStreamingPayload {
+	return &loggingMethodStreamingPayload{payload: info.RawPayload.(*MethodStreamingPayload)}
+}
+
+// Private implementation methods
+
+func (p *loggingMethodPayload) Chunk() string {
+	if p.payload.Chunk == nil {
+		var zero string
+		return zero
+	}
+	return *p.payload.Chunk
+}
+func (p *loggingMethodStreamingPayload) Chunk() string {
+	if p.payload.Chunk == nil {
+		var zero string
+		return zero
+	}
+	return *p.payload.Chunk
+}
