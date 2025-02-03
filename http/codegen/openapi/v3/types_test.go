@@ -1,6 +1,7 @@
 package openapiv3
 
 import (
+	"encoding/json"
 	"hash/fnv"
 	"strings"
 	"testing"
@@ -255,69 +256,180 @@ func matchesSchemaWithPrefix(t *testing.T, ctx string, s *openapi.Schema, types 
 	}
 }
 
-func TestHashAttribute(t *testing.T) {
-	var (
-		h1 = uint64(12943244719806607708)
-		h2 = uint64(7733915756259492975)
-		h3 = uint64(7729867354446285276)
-		h4 = uint64(12938215553621425391)
-		h5 = uint64(590638987843676710)
-		h6 = uint64(2958992150570065940)
-		h7 = uint64(17427721879237743911)
+func TestTypesOnlyDifferByEnum(t *testing.T) {
+	api := codegen.RunDSL(t, dsls.StringEnumBodyDSL()).API
 
+	bodies, types := buildBodyTypes(api)
+
+	svc1, ok := bodies["svc_enum_1"]
+	if !ok {
+		t.Errorf("bodies does not contain details for service %q", "svc_enum_1")
+		return
+	}
+	svc2, ok := bodies["svc_enum_2"]
+	if !ok {
+		t.Errorf("bodies does not contain details for service %q", "svc_enum_2")
+		return
+	}
+
+	svc1MethodRB := svc1["method_enum"].RequestBody.Ref
+	svc2MethodRB := svc2["method_enum"].RequestBody.Ref
+
+	if svc1MethodRB == svc2MethodRB {
+		t.Errorf("expected different refs, got %q", svc1MethodRB)
+
+		name := nameFromRef(svc1MethodRB)
+		derefed := types[name]
+		jsoned, _ := json.Marshal(derefed)
+		t.Errorf("shared referenced type (%s) was: %v", name, string(jsoned))
+		return
+	}
+}
+
+func TestHashAttribute(t *testing.T) {
+	type (
+		testAttr struct {
+			name string
+			att  *expr.AttributeExpr
+		}
+
+		hashBehavior int
+
+		testGroup struct {
+			name     string
+			attrs    []testAttr
+			behavior hashBehavior
+		}
+	)
+
+	const (
+		uniqueHashes hashBehavior = iota
+		identicalHashes
+	)
+
+	var (
 		metaNotGenerate = expr.MetaExpr{"openapi:generate": []string{"false"}}
 		metaEmpty       = expr.MetaExpr{}
 	)
-	cases := []struct {
-		Name string
-		att  *expr.AttributeExpr
-		h    uint64
-	}{
-		{"bool", &expr.AttributeExpr{Type: expr.Boolean}, 1200285950329868815},
-		{"int", &expr.AttributeExpr{Type: expr.Int}, 15618947606512183472},
-		{"int32", &expr.AttributeExpr{Type: expr.Int32}, 9710406772214674507},
-		{"int64", &expr.AttributeExpr{Type: expr.Int64}, 9710410070749559206},
-		{"uint", &expr.AttributeExpr{Type: expr.UInt}, 9334303408231097877},
-		{"uint32", &expr.AttributeExpr{Type: expr.UInt32}, 14693036559411812390},
-		{"uint64", &expr.AttributeExpr{Type: expr.UInt64}, 14693033260876927695},
-		{"float32", &expr.AttributeExpr{Type: expr.Float32}, 3496747786213902106},
-		{"float64", &expr.AttributeExpr{Type: expr.Float64}, 3496753283772043155},
-		{"string", &expr.AttributeExpr{Type: expr.String}, 11035750783128163470},
-		{"bytes", &expr.AttributeExpr{Type: expr.Bytes}, 9376284137219620846},
-		{"any", &expr.AttributeExpr{Type: expr.Any}, 15626582615256966821},
-		{"array-bool", &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.Boolean}}}, 11710318443436489022},
-		{"array-int", &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.Int}}}, 16304700464423429033},
-		{"map-str-int", &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.Int}}}, 957614225485715479},
-		{"map-str-str", &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.String}}}, 10408036596908747853},
-		{"map-int-str", &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.Int}, ElemType: &expr.AttributeExpr{Type: expr.String}}}, 16377853221392883275},
-		{"map-int-int", &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.Int}, ElemType: &expr.AttributeExpr{Type: expr.Int}}}, 3290208366554661977},
-		{"obj-str-req", newObj("foo", expr.String, true), h6},
-		{"obj-str-noreq", newObj("foo", expr.String, false), h7},
-		{"obj-int-req", newObj("foo", expr.Int, true), 8915021286725901502},
-		{"obj-int-noreq", newObj("foo", expr.Int, false), 11777831908257753485},
-		{"obj-other", newObj("bar", expr.Int, false), 12868551315046025641},
-		{"obj-str-str-noreq", newObj2("foo", "bar", expr.String, expr.String), h1},
-		{"obj-str-str-req1", newObj2("foo", "bar", expr.String, expr.String, "foo"), h2},
-		{"obj-str-str-req2", newObj2("foo", "bar", expr.String, expr.String, "bar"), h3},
-		{"obj-str-str-req3", newObj2("foo", "bar", expr.String, expr.String, "foo", "bar"), h4},
-		{"obj-str-str-notgen-req", newObj2Meta("foo", "bar", expr.String, expr.String, metaEmpty, metaNotGenerate, "foo"), h6},
-		{"obj-str-str-notgen-noreq", newObj2Meta("foo", "bar", expr.String, expr.String, metaEmpty, metaNotGenerate), h7},
-		{"obj-int-str-noreq", newObj2("foo", "bar", expr.Int, expr.String), 16228531529443692022},
-		{"obj1-str-str-noreq", newObj2("bar", "foo", expr.String, expr.String), h1},
-		{"obj1-str-str-req1", newObj2("bar", "foo", expr.String, expr.String, "foo"), h2},
-		{"obj1-str-str-req2", newObj2("bar", "foo", expr.String, expr.String, "bar"), h3},
-		{"obj1-str-str-req3", newObj2("bar", "foo", expr.String, expr.String, "bar", "foo"), h4},
-		{"result", newRT("id", newObj("foo", expr.String, true)), h5},
-		{"result-diff", newRT("id2", newObj("foo", expr.String, true)), 15618941009442414240},
-		{"result-same", newRT("id", newObj("foo", expr.Int, true)), h5},
+
+	cases := []testGroup{
+		{
+			name:     "Primitive types",
+			behavior: uniqueHashes,
+			attrs: []testAttr{
+				{name: "bool", att: &expr.AttributeExpr{Type: expr.Boolean}},
+				{name: "int", att: &expr.AttributeExpr{Type: expr.Int}},
+				{name: "int32", att: &expr.AttributeExpr{Type: expr.Int32}},
+				{name: "int64", att: &expr.AttributeExpr{Type: expr.Int64}},
+				{name: "uint", att: &expr.AttributeExpr{Type: expr.UInt}},
+				{name: "uint32", att: &expr.AttributeExpr{Type: expr.UInt32}},
+				{name: "uint64", att: &expr.AttributeExpr{Type: expr.UInt64}},
+				{name: "float32", att: &expr.AttributeExpr{Type: expr.Float32}},
+				{name: "float64", att: &expr.AttributeExpr{Type: expr.Float64}},
+				{name: "string", att: &expr.AttributeExpr{Type: expr.String}},
+				{name: "bytes", att: &expr.AttributeExpr{Type: expr.Bytes}},
+				{name: "any", att: &expr.AttributeExpr{Type: expr.Any}},
+			},
+		}, {
+			name:     "Collection types",
+			behavior: uniqueHashes,
+			attrs: []testAttr{
+				{name: "array-bool", att: &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.Boolean}}}},
+				{name: "array-int", att: &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.Int}}}},
+				{name: "map-str-int", att: &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.Int}}}},
+				{name: "map-str-str", att: &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.String}}}},
+			},
+		}, {
+			name:     "Objects with validation rules",
+			behavior: uniqueHashes,
+			attrs: []testAttr{
+				{name: "no-validation", att: newObj("foo", expr.String, false)},
+				{name: "required-validation", att: newObj("foo", expr.String, true)},
+				{name: "pattern-validation", att: &expr.AttributeExpr{
+					Type: expr.String,
+					Validation: &expr.ValidationExpr{
+						Pattern: "^[a-z]+$",
+					},
+				}},
+				{name: "enum-validation", att: &expr.AttributeExpr{
+					Type: expr.String,
+					Validation: &expr.ValidationExpr{
+						Values: []any{"foo", "bar"},
+					},
+				}},
+			},
+		}, {
+			name:     "Result types with different views",
+			behavior: uniqueHashes,
+			attrs: []testAttr{
+				{name: "no-view", att: newRT("id", newObj("foo", expr.String, true))},
+				{name: "default-view", att: newRTWithView("id", newObj("foo", expr.String, true), "default")},
+				{name: "tiny-view", att: newRTWithView("id", newObj("foo", expr.String, true), "tiny")},
+			},
+		}, {
+			name:     "Objects with openapi:generate:false metadata",
+			behavior: identicalHashes,
+			attrs: []testAttr{
+				{name: "obj-with-skipped-field", att: newObj2Meta("foo", "bar", expr.String, expr.String, metaEmpty, metaNotGenerate)},
+				{name: "obj-without-skipped-field", att: newObj("foo", expr.String, false)},
+			},
+		}, {
+			name:     "Complex map types",
+			behavior: uniqueHashes,
+			attrs: []testAttr{
+				{name: "map-int-array", att: &expr.AttributeExpr{Type: &expr.Map{
+					KeyType:  &expr.AttributeExpr{Type: expr.Int},
+					ElemType: &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}},
+				}}},
+				{name: "map-array-int", att: &expr.AttributeExpr{Type: &expr.Map{
+					KeyType:  &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}},
+					ElemType: &expr.AttributeExpr{Type: expr.Int},
+				}}},
+			},
+		}, {
+			name:     "Nested user types",
+			behavior: uniqueHashes,
+			attrs: []testAttr{
+				{name: "single-nest", att: newUserType("foo", newObj("bar", expr.String, false))},
+				{name: "double-nest", att: newUserType("foo", newUserType("bar", newObj("baz", expr.String, false)))},
+			},
+		}, {
+			name:     "Recursive types",
+			behavior: identicalHashes,
+			attrs: []testAttr{
+				{name: "recursive-1", att: newRecursiveType("foo")},
+				{name: "recursive-2", att: newRecursiveType("foo")},
+			},
+		},
 	}
+
 	h := fnv.New64()
 	sf := newSchemafier(expr.NewRandom("test"))
-	for _, c := range cases {
-		t.Run(c.Name, func(t *testing.T) {
-			got := sf.hashAttribute(c.att, h)
-			if got != c.h {
-				t.Errorf("got %v, expected %v", got, c.h)
+
+	for _, group := range cases {
+		t.Run(group.name, func(t *testing.T) {
+			seen := make(map[uint64][]string)
+
+			// Collect all hashes in this group
+			for _, attr := range group.attrs {
+				hash := sf.hashAttribute(attr.att, h)
+				seen[hash] = append(seen[hash], attr.name)
+			}
+
+			switch group.behavior {
+			case uniqueHashes:
+				// Verify all hashes are different
+				for hash, names := range seen {
+					if len(names) > 1 {
+						t.Errorf("expected unique hashes but got collision between %v (hash: %d)",
+							names, hash)
+					}
+				}
+			case identicalHashes:
+				// Verify all hashes are the same
+				if len(seen) > 1 {
+					t.Errorf("expected identical hashes but got different ones: %v", seen)
+				}
 			}
 		})
 	}
@@ -331,18 +443,6 @@ func newObj(n string, t expr.DataType, req bool) *expr.AttributeExpr {
 	if req {
 		attr.Validation.Required = []string{n}
 	}
-	return attr
-}
-
-func newObj2(n, o string, t, u expr.DataType, reqs ...string) *expr.AttributeExpr {
-	attr := &expr.AttributeExpr{
-		Type: &expr.Object{
-			{Name: n, Attribute: &expr.AttributeExpr{Type: t}},
-			{Name: o, Attribute: &expr.AttributeExpr{Type: u}},
-		},
-		Validation: &expr.ValidationExpr{},
-	}
-	attr.Validation.Required = append(attr.Validation.Required, reqs...)
 	return attr
 }
 
@@ -367,6 +467,45 @@ func newRT(id string, att *expr.AttributeExpr) *expr.AttributeExpr {
 			},
 		},
 	}
+}
+
+// Helper function for result types with views
+func newRTWithView(id string, att *expr.AttributeExpr, view string) *expr.AttributeExpr {
+	rt := newRT(id, att)
+	rt.Type.(*expr.ResultTypeExpr).AttributeExpr.Meta = expr.MetaExpr{
+		expr.ViewMetaKey: []string{view},
+	}
+	return rt
+}
+
+// Helper function for user types
+func newUserType(name string, att *expr.AttributeExpr) *expr.AttributeExpr {
+	return &expr.AttributeExpr{
+		Type: &expr.UserTypeExpr{
+			AttributeExpr: att,
+			TypeName:      name,
+		},
+	}
+}
+
+// Helper function for recursive types
+func newRecursiveType(name string) *expr.AttributeExpr {
+	// Create a user type that references itself
+	ut := &expr.UserTypeExpr{
+		TypeName: name,
+	}
+	att := &expr.AttributeExpr{
+		Type: &expr.Object{
+			&expr.NamedAttributeExpr{
+				Name: "self",
+				Attribute: &expr.AttributeExpr{
+					Type: ut,
+				},
+			},
+		},
+	}
+	ut.AttributeExpr = att
+	return &expr.AttributeExpr{Type: ut}
 }
 
 // nameFromRef does the reverse of toRef: it returns the type name from its

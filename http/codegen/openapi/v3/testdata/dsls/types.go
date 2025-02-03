@@ -15,6 +15,49 @@ func StringBodyDSL(svcName, metName string) func() {
 	}
 }
 
+func StringEnumBodyDSL() func() {
+	return func() {
+		var T1 = Type("T1", func() {
+			Attribute("my_attr", String, func() {
+				Enum("a", "b", "c")
+			})
+		})
+
+		var T2 = Type("T2", func() {
+			Attribute("my_attr", String, func() {
+				Enum("d", "e")
+			})
+		})
+
+		var _ = Service("svc_enum_1", func() {
+			Method("method_enum", func() {
+				Payload(func() {
+					Reference(T1)
+					Attribute("my_attr")
+					Required("my_attr")
+				})
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+
+		var _ = Service("svc_enum_2", func() {
+			Method("method_enum", func() {
+				Payload(func() {
+					Reference(T2)
+					Attribute("my_attr")
+					Required("my_attr")
+				})
+
+				HTTP(func() {
+					POST("/other")
+				})
+			})
+		})
+	}
+}
+
 func AliasStringBodyDSL(svcName, metName string) func() {
 	return func() {
 		var UUID = Type("UUID", String, func() {
