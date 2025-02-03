@@ -53,6 +53,9 @@ func TestSections(t *testing.T) {
 		{"json-prefix", testdata.JSONPrefixDSL},
 		{"json-indent", testdata.JSONIndentDSL},
 		{"json-prefix-indent", testdata.JSONPrefixIndentDSL},
+		{"additional-properties-type", testdata.AdditionalPropertiesTypeDSL},
+		{"additional-properties-payload-result", testdata.AdditionalPropertiesPayloadResultDSL},
+		{"additional-properties-embedded-payload-result", testdata.AdditionalPropertiesPayloadResultDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

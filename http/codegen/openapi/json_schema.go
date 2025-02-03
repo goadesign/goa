@@ -486,6 +486,9 @@ func buildAttributeSchema(api *expr.APIExpr, s *Schema, at *expr.AttributeExpr) 
 	s.Description = at.Description
 	s.Example = at.Example(api.ExampleGenerator)
 	s.Extensions = ExtensionsFromExpr(at.Meta)
+	if ap := AdditionalPropertiesFromExpr(at.Meta); ap != nil {
+		s.AdditionalProperties = ap
+	}
 	initAttributeValidation(s, at)
 
 	return s

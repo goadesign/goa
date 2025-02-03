@@ -266,6 +266,9 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	s.Extensions = openapi.ExtensionsFromExpr(attr.Meta)
 
 	// Validations
+	if ap := openapi.AdditionalPropertiesFromExpr(attr.Meta); ap != nil {
+		s.AdditionalProperties = ap
+	}
 	val := attr.Validation
 	if val == nil {
 		return s
