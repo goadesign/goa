@@ -10,6 +10,7 @@ func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i Serve
 		info := &{{ $interceptor.Name }}Info{
 			Service:    "{{ $.Service }}",
 			Method:     "{{ .MethodName }}",
+			CallType:   goa.InterceptorUnary,
 			RawPayload: req,
 		}
 		res, err := i.{{ $interceptor.Name }}(ctx, info, endpoint)
@@ -27,7 +28,7 @@ func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i Serve
 				info := &{{ $interceptor.Name }}Info{
 					Service:    "{{ $.Service }}",
 					Method:     "{{ .MethodName }}",
-					Send:       true,
+					CallType:   goa.InterceptorStreamingSend,
 					RawPayload: req,
 				}
 				var rCtx context.Context
@@ -44,7 +45,7 @@ func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i Serve
 				info := &{{ $interceptor.Name }}Info{
 					Service:    "{{ $.Service }}",
 					Method:     "{{ .MethodName }}",
-					Recv:       true,
+					CallType:   goa.InterceptorStreamingRecv,
 					RawPayload: req,
 				}
 				var rCtx context.Context
@@ -65,6 +66,7 @@ func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i Serve
 		info := &{{ $interceptor.Name }}Info{
 			Service:    "{{ $.Service }}",
 			Method:     "{{ .MethodName }}",
+			CallType:   goa.InterceptorUnary,
 			RawPayload: req,
 		}
 		return i.{{ $interceptor.Name }}(ctx, info, endpoint)
@@ -72,57 +74,4 @@ func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i Serve
 	}
 }
 {{- end }}
-{{- end }}
-{{- range .WrappedServerStreams }}
-
-{{ comment (printf "wrapped%s is a server interceptor wrapper for the %s stream." .Interface .Interface) }}
-type wrapped{{ .Interface }} struct {
-	ctx context.Context
-	{{- if ne .SendTypeRef "" }}
-	sendWithContext func(context.Context, {{ .SendTypeRef }}) (context.Context, error)
-	{{- end }}
-	{{- if ne .RecvTypeRef "" }}
-	recvWithContext func(context.Context) ({{ .RecvTypeRef }}, context.Context, error)
-	{{- end }}
-	stream {{ .Interface }}
-}
-	{{- if ne .SendTypeRef "" }}
-
-{{ comment (printf "%s streams instances of \"%s\" after executing the applied interceptor." .SendName .Interface) }}
-func (w *wrapped{{ .Interface }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
-	_, err := w.SendWithContext(w.ctx, v)
-	return err
-}
-
-{{ comment (printf "%s streams instances of \"%s\" after executing the applied interceptor with context." .SendWithContextName .Interface) }}
-func (w *wrapped{{ .Interface }}) {{ .SendWithContextName }}(ctx context.Context, v {{ .SendTypeRef }}) (context.Context, error) {
-	if w.sendWithContext == nil {
-		return w.stream.{{ .SendWithContextName }}(ctx, v)
-	}
-	return w.sendWithContext(ctx, v)
-}
-	{{- end }}
-	{{- if ne .RecvTypeRef "" }}
-
-{{ comment (printf "%s reads instances of \"%s\" from the stream after executing the applied interceptor." .RecvName .Interface) }}
-func (w *wrapped{{ .Interface }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
-	res, _, err := w.RecvWithContext(w.ctx)
-	return res, err
-}
-
-{{ comment (printf "%s reads instances of \"%s\" from the stream after executing the applied interceptor with context." .RecvWithContextName .Interface) }}
-func (w *wrapped{{ .Interface }}) {{ .RecvWithContextName }}(ctx context.Context) ({{ .RecvTypeRef }}, context.Context, error) {
-	if w.recvWithContext == nil {
-		return w.stream.{{ .RecvWithContextName }}(ctx)
-	}
-	return w.recvWithContext(ctx)
-}
-	{{- end }}
-	{{- if .MustClose }}
-
-// Close closes the stream.
-func (w *wrapped{{ .Interface }}) Close() error {
-	return w.stream.Close()
-}
-	{{- end }}
 {{- end }}

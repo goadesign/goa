@@ -3,17 +3,28 @@ package goa
 type (
 	// InterceptorInfo contains information about the request shared between
 	// all interceptors in the service chain. It provides access to the service name,
-	// method name, endpoint function, and request payload.
+	// method name, the type of call the interceptor is handling (unary, streaming send,
+	// or streaming recv), and the request payload.
 	InterceptorInfo struct {
 		// Name of service handling request
 		Service string
 		// Name of method handling request
 		Method string
-		// Send is true if the request is a streaming Send
-		Send bool
-		// Recv is true if the request is a streaming Recv
-		Recv bool
+		// CallType is the type of call the interceptor is handling
+		CallType InterceptorCallType
 		// Payload of request
 		RawPayload any
 	}
+
+	// InterceptorCallType is the type of call the interceptor is handling
+	InterceptorCallType int
+)
+
+const (
+	// InterceptorUnary indicates the interceptor is handling a unary call
+	InterceptorUnary InterceptorCallType = iota
+	// InterceptorStreamingSend indicates the interceptor is handling a streaming Send
+	InterceptorStreamingSend
+	// InterceptorStreamingRecv indicates the interceptor is handling a streaming Recv
+	InterceptorStreamingRecv
 )

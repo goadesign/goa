@@ -140,15 +140,41 @@ func wrapperFile(svc *Data) *codegen.File {
 		codegen.GoaImport(""),
 	}))
 
-	// Generate the interceptor wrapper functions first (only once)
+	// Generate any interceptor stream wrapper struct types first
+	var wrappedServerStreams, wrappedClientStreams []*StreamInterceptorData
+	if len(svc.ServerInterceptors) > 0 {
+		wrappedServerStreams = collectWrappedStreams(svc.ServerInterceptors, true)
+		if len(wrappedServerStreams) > 0 {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "server-interceptor-stream-wrapper-types",
+				Source: readTemplate("server_interceptor_stream_wrapper_types"),
+				Data: map[string]interface{}{
+					"WrappedServerStreams": wrappedServerStreams,
+				},
+			})
+		}
+	}
+	if len(svc.ClientInterceptors) > 0 {
+		wrappedClientStreams = collectWrappedStreams(svc.ClientInterceptors, false)
+		if len(wrappedClientStreams) > 0 {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "client-interceptor-stream-wrapper-types",
+				Source: readTemplate("client_interceptor_stream_wrapper_types"),
+				Data: map[string]interface{}{
+					"WrappedClientStreams": wrappedClientStreams,
+				},
+			})
+		}
+	}
+
+	// Generate the interceptor wrapper functions next (only once)
 	if len(svc.ServerInterceptors) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-interceptor-wrappers",
 			Source: readTemplate("server_interceptor_wrappers"),
 			Data: map[string]interface{}{
-				"Service":              svc.Name,
-				"ServerInterceptors":   svc.ServerInterceptors,
-				"WrappedServerStreams": collectWrappedStreams(svc.ServerInterceptors, true),
+				"Service":            svc.Name,
+				"ServerInterceptors": svc.ServerInterceptors,
 			},
 		})
 	}
@@ -157,9 +183,28 @@ func wrapperFile(svc *Data) *codegen.File {
 			Name:   "client-interceptor-wrappers",
 			Source: readTemplate("client_interceptor_wrappers"),
 			Data: map[string]interface{}{
-				"Service":              svc.Name,
-				"ClientInterceptors":   svc.ClientInterceptors,
-				"WrappedClientStreams": collectWrappedStreams(svc.ClientInterceptors, false),
+				"Service":            svc.Name,
+				"ClientInterceptors": svc.ClientInterceptors,
+			},
+		})
+	}
+
+	// Generate any interceptor stream wrapper struct methods last
+	if len(wrappedServerStreams) > 0 {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "server-interceptor-stream-wrappers",
+			Source: readTemplate("server_interceptor_stream_wrappers"),
+			Data: map[string]interface{}{
+				"WrappedServerStreams": wrappedServerStreams,
+			},
+		})
+	}
+	if len(wrappedClientStreams) > 0 {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "client-interceptor-stream-wrappers",
+			Source: readTemplate("client_interceptor_stream_wrappers"),
+			Data: map[string]interface{}{
+				"WrappedClientStreams": wrappedClientStreams,
 			},
 		})
 	}
