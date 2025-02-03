@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gohugoio/hashstructure"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
@@ -376,7 +378,7 @@ func toString(val any) string {
 // identifiers. Structurally identical means same primitive types, arrays with
 // structurally equivalent element types, maps with structurally equivalent key
 // and value types or object with identical attribute names and structurally
-// equivalent types and identical set of required attributes.
+// equivalent types and identical set of validation rules.
 func (*schemafier) hashAttribute(att *expr.AttributeExpr, h hash.Hash64) uint64 {
 	return *hashAttribute(att, h, make(map[string]*uint64))
 }
@@ -393,6 +395,7 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64, seen map[string]*uint
 	}
 	seen[t.Hash()] = res
 
+	hv := hashValidation(att.Validation, h)
 	switch t.Kind() {
 	case expr.ObjectKind:
 		o := expr.AsObject(t)
@@ -404,25 +407,26 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64, seen map[string]*uint
 			vh := hashAttribute(m.Attribute, h, seen)
 			*res = *res ^ orderedHash(kh, *vh, h)
 		}
-		// Objects with a different set of required attributes should produce
-		// different hashes.
-		if att.Validation != nil {
-			for _, req := range att.Validation.Required {
-				rh := hashString(req, h)
-				*res = *res ^ rh
-			}
+		if hv != 0 {
+			*res = orderedHash(*res, hv, h)
 		}
 
 	case expr.ArrayKind:
 		kh := hashString("[]", h)
 		vh := hashAttribute(expr.AsArray(t).ElemType, h, seen)
 		*res = orderedHash(kh, *vh, h)
+		if hv != 0 {
+			*res = orderedHash(*res, hv, h)
+		}
 
 	case expr.MapKind:
 		m := expr.AsMap(t)
 		kh := hashAttribute(m.KeyType, h, seen)
 		vh := hashAttribute(m.ElemType, h, seen)
 		*res = orderedHash(*kh, *vh, h)
+		if hv != 0 {
+			*res = orderedHash(*res, hv, h)
+		}
 
 	case expr.UserTypeKind:
 		*res = *hashAttribute(t.(expr.UserType).Attribute(), h, seen)
@@ -438,88 +442,30 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64, seen map[string]*uint
 
 	default: // Primitives or Any
 		*res = hashString(t.Name(), h)
-	}
-
-	// Validations can change the type of an attribute: just because two things
-	// are strings, if they have different validation rules, we cannot treat them
-	// as the same type.
-	hv := hashValidation(att.Validation, h)
-	if hv != 0 {
-		*res = orderedHash(*res, hv, h)
+		if hv != 0 {
+			*res = orderedHash(*res, hv, h)
+		}
 	}
 
 	return res
 }
 
 func hashValidation(val *expr.ValidationExpr, h hash.Hash64) uint64 {
-	h.Reset()
+	// Note: we can't use hashstructure for attributes because it doesn't
+	// handle recursive structures.
 	if val == nil {
 		return 0
 	}
-	var parts []uint64
-	if val.Format != "" {
-		parts = append(parts, hashString(string(val.Format), h))
-	}
-	if val.Pattern != "" {
-		parts = append(parts, hashString(val.Pattern, h))
-	}
-	if val.MinLength != nil {
-		parts = append(parts, hashString(strconv.Itoa(*val.MinLength), h))
-	}
-	if val.MaxLength != nil {
-		parts = append(parts, hashString(strconv.Itoa(*val.MaxLength), h))
-	}
-	if val.Minimum != nil {
-		parts = append(parts, hashString(strconv.FormatFloat(*val.Minimum, 'f', -1, 64), h))
-	}
-	if val.Maximum != nil {
-		parts = append(parts, hashString(strconv.FormatFloat(*val.Maximum, 'f', -1, 64), h))
-	}
-	if val.ExclusiveMinimum != nil {
-		parts = append(parts, hashString(strconv.FormatFloat(*val.ExclusiveMinimum, 'f', -1, 64), h))
-	}
-	if val.ExclusiveMaximum != nil {
-		parts = append(parts, hashString(strconv.FormatFloat(*val.ExclusiveMaximum, 'f', -1, 64), h))
-	}
-	for _, v := range val.Values {
-		// Try to handle as many types as Goa supports
-		switch v := v.(type) {
-		case string:
-			parts = append(parts, hashString(v, h))
-		case int:
-			parts = append(parts, hashString(strconv.Itoa(v), h))
-		case int64:
-			parts = append(parts, hashString(strconv.FormatInt(v, 10), h))
-		case int32:
-			parts = append(parts, hashString(strconv.FormatInt(int64(v), 10), h))
-		case float64:
-			parts = append(parts, hashString(strconv.FormatFloat(v, 'f', -1, 64), h))
-		case float32:
-			parts = append(parts, hashString(strconv.FormatFloat(float64(v), 'f', -1, 64), h))
-		case bool:
-			parts = append(parts, hashString(strconv.FormatBool(v), h))
-		case uint:
-			parts = append(parts, hashString(strconv.FormatUint(uint64(v), 10), h))
-		case uint64:
-			parts = append(parts, hashString(strconv.FormatUint(v, 10), h))
-		case uint32:
-			parts = append(parts, hashString(strconv.FormatUint(uint64(v), 10), h))
-		case uint16:
-			parts = append(parts, hashString(strconv.FormatUint(uint64(v), 10), h))
-		case uint8:
-			parts = append(parts, hashString(strconv.FormatUint(uint64(v), 10), h))
-		case []byte:
-			parts = append(parts, hashString(string(v), h))
-		}
-	}
 
-	var res uint64
-	for _, part := range parts {
-		if res == 0 {
-			res = part
-		} else {
-			res = orderedHash(res, part, h)
-		}
+	res, err := hashstructure.Hash(val, &hashstructure.HashOptions{
+		Hasher:          h,
+		ZeroNil:         false,
+		IgnoreZeroValue: true,
+		SlicesAsSets:    true,
+	})
+	if err != nil {
+		// should really never happen (OOM maybe)
+		return 0
 	}
 	return res
 }
