@@ -83,7 +83,19 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 	runProtoc := func(path string) error {
 		includes := svc.ServiceExpr.Meta["protoc:include"]
 		includes = append(includes, expr.Root.API.Meta["protoc:include"]...)
-		return protoc(path, includes)
+
+		cmd := defaultProtocCmd
+		if c, ok := expr.Root.API.Meta["protoc:cmd"]; ok {
+			cmd = c
+		}
+		if c, ok := svc.ServiceExpr.Meta["protoc:cmd"]; ok {
+			cmd = c
+		}
+		if len(cmd) == 0 {
+			return fmt.Errorf(`Meta("protoc:cmd"): must be given arguments`)
+		}
+
+		return protoc(cmd, path, includes)
 	}
 
 	return &codegen.File{
@@ -100,7 +112,9 @@ func pkgName(svc *expr.GRPCServiceExpr, svcName string) string {
 	return codegen.SnakeCase(svcName)
 }
 
-func protoc(path string, includes []string) error {
+var defaultProtocCmd = []string{expr.DefaultProtoc}
+
+func protoc(protocCmd []string, path string, includes []string) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0750); err != nil {
 		return err
@@ -117,7 +131,7 @@ func protoc(path string, includes []string) error {
 	for _, include := range includes {
 		args = append(args, "-I", include)
 	}
-	cmd := exec.Command("protoc", args...)
+	cmd := exec.Command(protocCmd[0], append(protocCmd[1:len(protocCmd):len(protocCmd)], args...)...)
 	cmd.Dir = filepath.Dir(path)
 
 	if output, err := cmd.CombinedOutput(); err != nil {

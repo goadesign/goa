@@ -5,6 +5,12 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+// DefaultProtoc is the default command to be invoked for generating code from protobuf schemas.
+// You may use this to prepend arguments/flags to the command or revert to the default command.
+//
+// See also [Meta]; this is useful with the "protoc:cmd" key.
+const DefaultProtoc = expr.DefaultProtoc
+
 // Meta defines a set of key/value pairs that can be assigned to an object. Each
 // value consists of a slice of strings so that multiple invocation of the Meta
 // function on the same target using the same key builds up the slice.
@@ -122,6 +128,32 @@ import (
 //	        Meta("struct:tag:json", "SSN,omitempty")
 //	        Meta("struct:tag:xml", "SSN,omitempty")
 //	    })
+//	})
+//
+// - "protoc:cmd" provides an alternate command to execute for protoc with
+// optional arguments. Applicable to API and service definitions only. If used
+// on an API definition the include paths are used for all services, unless
+// specified otherwise for specific services. The first value will be used as
+// the command, and the following values will be used as initial arguments to
+// that command. The given command will have additional arguments appended and
+// is expected to behave similar to protoc.
+//
+// Can be used to specify custom options or alternate implementations. The
+// default command can be specified using DefaultProtoc.
+//
+//	// Use Go run to run a drop-in replacement for protoc.
+//	var _ = API("myapi", func() {
+//	    Meta("protoc:cmd", "go", "run", "github.com/duckbrain/goprotoc")
+//	})
+//
+//	// Specify the full path to protoc and turn on fatal warnings.
+//	var _ = Service("service1", func() {
+//	    Meta("protoc:cmd", "/usr/bin/protoc", "--fatal_warnings")
+//	})
+//
+//	// Restore defaults for a specific service.
+//	var _ = Service("service2", func() {
+//	    Meta("protoc:cmd", DefaultProtoc)
 //	})
 //
 // - "protoc:include" provides the list of import paths used to invoke protoc.

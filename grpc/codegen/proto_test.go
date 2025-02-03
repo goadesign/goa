@@ -1,6 +1,9 @@
 package codegen
 
 import (
+	"os"
+	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
@@ -49,7 +52,7 @@ func TestProtoFiles(t *testing.T) {
 			}
 			assert.Equal(t, c.Code, code)
 			fpath := codegen.CreateTempFile(t, code)
-			assert.NoError(t, protoc(fpath, nil), "error occurred when compiling proto file %q", fpath)
+			assert.NoError(t, protoc(defaultProtocCmd, fpath, nil), "error occurred when compiling proto file %q", fpath)
 		})
 	}
 }
@@ -85,7 +88,51 @@ func TestMessageDefSection(t *testing.T) {
 			}
 			assert.Equal(t, c.Code, msgCode)
 			fpath := codegen.CreateTempFile(t, code+msgCode)
-			assert.NoError(t, protoc(fpath, nil), "error occurred when compiling proto file %q", fpath)
+			assert.NoError(t, protoc(defaultProtocCmd, fpath, nil), "error occurred when compiling proto file %q", fpath)
+		})
+	}
+}
+
+func TestProtoc(t *testing.T) {
+	const code = testdata.UnaryRPCsProtoCode
+
+	fakeBin := filepath.Join(os.TempDir(), t.Name()+"-fakeprotoc")
+	if runtime.GOOS == "windows" {
+		fakeBin += ".exe"
+	}
+	out, err := exec.Command("go", "build", "-o", fakeBin, "./testdata/protoc").CombinedOutput()
+	t.Log("go build output: ", string(out))
+	require.NoError(t, err, "compile a fake protoc that requires a prefix")
+	t.Cleanup(func() { assert.NoError(t, os.Remove(fakeBin)) })
+
+	cases := []struct {
+		Name string
+		Cmd  []string
+	}{
+		{"protoc", defaultProtocCmd},
+		{"fakepc", []string{fakeBin, "required-ignored-arg"}},
+	}
+
+	var firstOutput string
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			dir, err := os.MkdirTemp("", strings.ReplaceAll(t.Name(), "/", "-"))
+			require.NoError(t, err)
+			t.Cleanup(func() { assert.NoError(t, os.RemoveAll(dir)) })
+			fpath := filepath.Join(dir, "schema")
+			require.NoError(t, os.WriteFile(fpath, []byte(code), 0o600), "error occured writing proto schema")
+			require.NoError(t, protoc(c.Cmd, fpath, nil), "error occurred when compiling proto file with the standard protoc %q", fpath)
+
+			fcontents, err := os.ReadFile(fpath + ".pb.go")
+			require.NoError(t, err)
+
+			if firstOutput == "" {
+				firstOutput = string(fcontents)
+				return
+			}
+
+			assert.Equal(t, firstOutput, string(fcontents))
 		})
 	}
 }
