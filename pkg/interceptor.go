@@ -14,11 +14,14 @@ type (
 		Method string
 		// CallType is the type of call the interceptor is handling
 		CallType InterceptorCallType
-		// ReturnContext is the context returned by the interceptor for streaming calls
-		ReturnContext context.Context
 		// Payload of request
 		RawPayload any
 	}
+
+	// InterceptorEndpoint is the endpoint function interface that interceptors call. It differs from the
+	// Endpoint function interface in that it also returns a context that allows streaming interceptors to
+	// return a context to the SendWithContext or RecvWithContext methods.
+	InterceptorEndpoint func(ctx context.Context, request any) (response any, returnCtx context.Context, err error)
 
 	// InterceptorCallType is the type of call the interceptor is handling
 	InterceptorCallType int

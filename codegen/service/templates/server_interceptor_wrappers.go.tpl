@@ -3,8 +3,8 @@
 {{- range .Methods }}
 
 {{ comment (printf "wrap%s%s applies the %s server interceptor to endpoints." $interceptor.Name .MethodName $interceptor.DesignName) }}
-func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
-	return func(ctx context.Context, req any) (any, error) {
+func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.InterceptorEndpoint, i ServerInterceptors) goa.InterceptorEndpoint {
+	return func(ctx context.Context, req any) (any, context.Context, error) {
 	{{- if or $interceptor.HasStreamingPayloadAccess $interceptor.HasStreamingResultAccess }}
 		{{- if $interceptor.HasPayloadAccess }}
 		info := &{{ $interceptor.Name }}Info{
@@ -13,12 +13,12 @@ func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i Serve
 			CallType:   goa.InterceptorUnary,
 			RawPayload: req,
 		}
-		res, err := i.{{ $interceptor.Name }}(ctx, info, endpoint)
+		res, ctx, err := i.{{ $interceptor.Name }}(ctx, info, endpoint)
 		{{- else }}
-		res, err := endpoint(ctx, req)
+		res, ctx, err := endpoint(ctx, req)
 		{{- end }}
 		if err != nil {
-			return nil, err
+			return res, ctx, err
 		}
 		stream := res.({{ .ServerStream.Interface }})
 		return &wrapped{{ .ServerStream.Interface }}{
@@ -31,12 +31,12 @@ func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i Serve
 					CallType:   goa.InterceptorStreamingSend,
 					RawPayload: req,
 				}
-				_, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, req any) (any, error) {
-					var err error
-					info.ReturnContext, err = stream.{{ .ServerStream.SendWithContextName }}(ctx, req.({{ .ServerStream.SendTypeRef }}))
-					return nil, err
+				_, ctx, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, req any) (any, context.Context, error) {
+					castReq, _ := req.({{ .ServerStream.SendTypeRef }})
+					ctx, err := stream.{{ .ServerStream.SendWithContextName }}(ctx, castReq)
+					return nil, ctx, err
 				})
-				return info.ReturnContext, err
+				return ctx, err
 			},
 		{{- end }}
 		{{- if $interceptor.HasStreamingPayloadAccess }}
@@ -45,21 +45,16 @@ func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i Serve
 					Service:    "{{ $.Service }}",
 					Method:     "{{ .MethodName }}",
 					CallType:   goa.InterceptorStreamingRecv,
-					RawPayload: req,
 				}
-				res, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, req any) (any, error) {
-					var (
-						res {{ .ServerStream.RecvTypeRef }}
-						err error
-					)
-					res, info.ReturnContext, err = stream.{{ .ServerStream.RecvWithContextName }}(ctx)
-					return res, err
+				res, ctx, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, _ any) (any, context.Context, error) {
+					return stream.{{ .ServerStream.RecvWithContextName }}(ctx)
 				})
-				return res.({{ .ServerStream.RecvTypeRef }}), info.ReturnContext, err
+				castRes, _ := res.({{ .ServerStream.RecvTypeRef }})
+				return castRes, ctx, err
 			},
 		{{- end }}
 			stream: stream,
-		}, nil
+		}, ctx, nil
 	{{- else }}
 		info := &{{ $interceptor.Name }}Info{
 			Service:    "{{ $.Service }}",
