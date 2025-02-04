@@ -450,6 +450,11 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64, seen map[string]*uint
 		}
 	}
 
+	// Add description to the hash, since different descriptions must not be deduplicated
+	if att.Description != "" {
+		*res = orderedHash(*res, hashString(att.Description, h), h)
+	}
+
 	return res
 }
 

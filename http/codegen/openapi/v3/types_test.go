@@ -282,7 +282,12 @@ func TestTypesOnlyDifferByEnum(t *testing.T) {
 		derefed := types[name]
 		jsoned, _ := json.Marshal(derefed)
 		t.Errorf("shared referenced type (%s) was: %v", name, string(jsoned))
-		return
+	}
+
+	type3 := types["T3"]
+	t3AttrDesc := type3.Properties["my_attr"].Description
+	if t3AttrDesc != "Description 3" {
+		t.Errorf("expected description on referenc attribute, got %q", t3AttrDesc)
 	}
 }
 

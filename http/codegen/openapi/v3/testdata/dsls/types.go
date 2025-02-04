@@ -24,9 +24,14 @@ func StringEnumBodyDSL() func() {
 		})
 
 		var T2 = Type("T2", func() {
-			Attribute("my_attr", String, func() {
+			Attribute("my_attr", String, "Description 2", func() {
 				Enum("d", "e")
 			})
+		})
+
+		var T3 = Type("T3", func() {
+			Attribute("my_attr", T2, "Description 3")
+			Required("my_attr")
 		})
 
 		var _ = Service("svc_enum_1", func() {
@@ -52,6 +57,14 @@ func StringEnumBodyDSL() func() {
 
 				HTTP(func() {
 					POST("/other")
+				})
+			})
+
+			Method("method_enum_3", func() {
+				Payload(T3)
+
+				HTTP(func() {
+					POST("/third_one")
 				})
 			})
 		})
