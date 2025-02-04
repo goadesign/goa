@@ -3,7 +3,7 @@
 // payload is sent to the service. The implementation is responsible for calling
 // next to complete the request.
 type ServerInterceptors interface {
-	Logging(ctx context.Context, info *LoggingInfo, next goa.Endpoint) (any, error)
+	Logging(ctx context.Context, info *LoggingInfo, next goa.InterceptorEndpoint) (any, context.Context, error)
 }
 
 // Access interfaces for interceptor payloads and results
@@ -30,8 +30,15 @@ type (
 // WrapMethodEndpoint wraps the Method endpoint with the server-side
 // interceptors defined in the design.
 func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
-	endpoint = wrapMethodlogging(endpoint, i)
-	return endpoint
+	var interceptorEndpoint goa.InterceptorEndpoint = func(ctx context.Context, request any) (any, context.Context, error) {
+		response, err := endpoint(ctx, request)
+		return response, ctx, err
+	}
+	interceptorEndpoint = wrapMethodlogging(interceptorEndpoint, i)
+	return func(ctx context.Context, request any) (any, error) {
+		response, _, err := interceptorEndpoint(ctx, request)
+		return response, err
+	}
 }
 
 // Public accessor methods for Info types
