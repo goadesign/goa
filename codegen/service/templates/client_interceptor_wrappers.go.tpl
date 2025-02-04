@@ -31,13 +31,12 @@ func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i
 					CallType:   goa.InterceptorStreamingSend,
 					RawPayload: req,
 				}
-				var rCtx context.Context
 				_, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, req any) (any, error) {
 					var err error
-					rCtx, err = stream.{{ .ClientStream.SendWithContextName }}(ctx, req.({{ .ClientStream.SendTypeRef }}))
+					info.ReturnContext, err = stream.{{ .ClientStream.SendWithContextName }}(ctx, req.({{ .ClientStream.SendTypeRef }}))
 					return nil, err
 				})
-				return rCtx, err
+				return info.ReturnContext, err
 			},
 		{{- end }}
 		{{- if $interceptor.HasStreamingResultAccess }}
@@ -48,16 +47,15 @@ func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i
 					CallType:   goa.InterceptorStreamingRecv,
 					RawPayload: req,
 				}
-				var rCtx context.Context
 				res, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, req any) (any, error) {
 					var (
 						res {{ .ClientStream.RecvTypeRef }}
 						err error
 					)
-					res, rCtx, err = stream.{{ .ClientStream.RecvWithContextName }}(ctx)
+					res, info.ReturnContext, err = stream.{{ .ClientStream.RecvWithContextName }}(ctx)
 					return res, err
 				})
-				return res.({{ .ClientStream.RecvTypeRef }}), rCtx, err
+				return res.({{ .ClientStream.RecvTypeRef }}), info.ReturnContext, err
 			},
 		{{- end }}
 			stream: stream,

@@ -1,5 +1,7 @@
 package goa
 
+import "context"
+
 type (
 	// InterceptorInfo contains information about the request shared between
 	// all interceptors in the service chain. It provides access to the service name,
@@ -12,6 +14,8 @@ type (
 		Method string
 		// CallType is the type of call the interceptor is handling
 		CallType InterceptorCallType
+		// ReturnContext is the context returned by the interceptor for streaming calls
+		ReturnContext context.Context
 		// Payload of request
 		RawPayload any
 	}
