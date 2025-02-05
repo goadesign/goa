@@ -11,7 +11,7 @@ func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Interceptor
 			service:    "{{ $.Service }}",
 			method:     "{{ .MethodName }}",
 			callType:   goa.InterceptorUnary,
-			payload: req,
+			rawPayload: req,
 		}
 		res, ctx, err := i.{{ $interceptor.Name }}(ctx, info, endpoint)
 		{{- else }}
@@ -29,7 +29,7 @@ func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Interceptor
 					service:    "{{ $.Service }}",
 					method:     "{{ .MethodName }}",
 					callType:   goa.InterceptorStreamingSend,
-					payload: req,
+					rawPayload: req,
 				}
 				_, ctx, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, req any) (any, context.Context, error) {
 					castReq, _ := req.({{ .ClientStream.SendTypeRef }})
@@ -60,7 +60,7 @@ func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Interceptor
 			service:    "{{ $.Service }}",
 			method:     "{{ .MethodName }}",
 			callType:   goa.InterceptorUnary,
-			payload: req,
+			rawPayload: req,
 		}
 		return i.{{ $interceptor.Name }}(ctx, info, endpoint)
 	{{- end }}

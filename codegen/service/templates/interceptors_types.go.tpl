@@ -5,10 +5,10 @@ type (
 	// {{ .Name }}Info provides metadata about the current interception.
 	// It includes service name, method name, and access to the endpoint.
 	{{ .Name }}Info struct {
-		service string
-		method string
-		callType goa.InterceptorCallType
-		payload any
+		service    string
+		method     string
+		callType   goa.InterceptorCallType
+		rawPayload any
 	}
 	{{- if .HasPayloadAccess }}
 

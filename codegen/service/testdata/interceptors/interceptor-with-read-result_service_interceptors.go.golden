@@ -11,10 +11,10 @@ type (
 	// CachingInfo provides metadata about the current interception.
 	// It includes service name, method name, and access to the endpoint.
 	CachingInfo struct {
-		service  string
-		method   string
-		callType goa.InterceptorCallType
-		payload  any
+		service    string
+		method     string
+		callType   goa.InterceptorCallType
+		rawPayload any
 	}
 
 	// CachingResult provides type-safe access to the method result.
@@ -65,7 +65,7 @@ func (info *CachingInfo) CallType() goa.InterceptorCallType {
 
 // RawPayload returns the raw payload of the request.
 func (info *CachingInfo) RawPayload() any {
-	return info.payload
+	return info.rawPayload
 }
 
 // Result returns a type-safe accessor for the method result.

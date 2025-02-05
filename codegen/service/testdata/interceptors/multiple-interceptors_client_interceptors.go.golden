@@ -12,18 +12,18 @@ type (
 	// Test2Info provides metadata about the current interception.
 	// It includes service name, method name, and access to the endpoint.
 	Test2Info struct {
-		service  string
-		method   string
-		callType goa.InterceptorCallType
-		payload  any
+		service    string
+		method     string
+		callType   goa.InterceptorCallType
+		rawPayload any
 	}
 	// Test4Info provides metadata about the current interception.
 	// It includes service name, method name, and access to the endpoint.
 	Test4Info struct {
-		service  string
-		method   string
-		callType goa.InterceptorCallType
-		payload  any
+		service    string
+		method     string
+		callType   goa.InterceptorCallType
+		rawPayload any
 	}
 )
 

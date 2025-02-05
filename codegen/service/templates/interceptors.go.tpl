@@ -19,7 +19,7 @@ func (info *{{ .Name }}Info) CallType() goa.InterceptorCallType {
 
 // RawPayload returns the raw payload of the request.
 func (info *{{ .Name }}Info) RawPayload() any {
-	return info.payload
+	return info.rawPayload
 }
 	{{- if .HasPayloadAccess }}
 
@@ -59,8 +59,8 @@ func (info *{{ .Name }}Info) Result(res any) {{ .Name }}Result {
 	{{- end }}
 
 	{{- if .HasStreamingPayloadAccess }}
-// StreamingPayload returns a type-safe accessor for the method streaming payload.
-func (info *{{ .Name }}Info) StreamingPayload() {{ .Name }}StreamingPayload {
+// ClientStreamingPayload returns a type-safe accessor for the method streaming payload for a client-side interceptor.
+func (info *{{ .Name }}Info) ClientStreamingPayload() {{ .Name }}StreamingPayload {
 		{{- if gt (len .Methods) 1 }}
 	switch info.Method() {
 			{{- range .Methods }}
@@ -77,8 +77,8 @@ func (info *{{ .Name }}Info) StreamingPayload() {{ .Name }}StreamingPayload {
 	{{- end }}
 
 	{{- if .HasStreamingResultAccess }}
-// StreamingResult returns a type-safe accessor for the method streaming result.
-func (info *{{ .Name }}Info) StreamingResult(res any) {{ .Name }}StreamingResult {
+// ClientStreamingResult returns a type-safe accessor for the method streaming result for a client-side interceptor.
+func (info *{{ .Name }}Info) ClientStreamingResult(res any) {{ .Name }}StreamingResult {
 		{{- if gt (len .Methods) 1 }}
 	switch info.Method() {
 			{{- range .Methods }}
@@ -90,6 +90,42 @@ func (info *{{ .Name }}Info) StreamingResult(res any) {{ .Name }}StreamingResult
 	}
 		{{- else }}
 	return &{{ (index .Methods 0).StreamingResultAccess }}{result: res.({{ (index .Methods 0).StreamingResultRef }})}
+		{{- end }}
+}
+	{{- end }}
+
+	{{- if .HasStreamingPayloadAccess }}
+// ServerStreamingPayload returns a type-safe accessor for the method streaming payload for a server-side interceptor.
+func (info *{{ .Name }}Info) ServerStreamingPayload(pay any) {{ .Name }}StreamingPayload {
+		{{- if gt (len .Methods) 1 }}
+	switch info.Method() {
+			{{- range .Methods }}
+	case "{{ .MethodName }}":
+		return &{{ .StreamingPayloadAccess }}{payload: pay.({{ .StreamingPayloadRef }})}
+			{{- end }}
+	default:
+		return nil
+	}
+		{{- else }}
+	return &{{ (index .Methods 0).StreamingPayloadAccess }}{payload: pay.({{ (index .Methods 0).StreamingPayloadRef }})}
+		{{- end }}
+}
+	{{- end }}
+
+	{{- if .HasStreamingResultAccess }}
+// ServerStreamingResult returns a type-safe accessor for the method streaming result for a server-side interceptor.
+func (info *{{ .Name }}Info) ServerStreamingResult() {{ .Name }}StreamingResult {
+		{{- if gt (len .Methods) 1 }}
+	switch info.Method() {
+			{{- range .Methods }}
+	case "{{ .MethodName }}":
+		return &{{ .StreamingResultAccess }}{result: info.RawPayload().({{ .StreamingResultRef }})}
+			{{- end }}
+	default:
+		return nil
+	}
+		{{- else }}
+	return &{{ (index .Methods 0).StreamingResultAccess }}{result: info.RawPayload().({{ (index .Methods 0).StreamingResultRef }})}
 		{{- end }}
 }
 	{{- end }}

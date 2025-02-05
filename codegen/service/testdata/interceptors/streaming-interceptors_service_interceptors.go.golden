@@ -11,10 +11,10 @@ type (
 	// LoggingInfo provides metadata about the current interception.
 	// It includes service name, method name, and access to the endpoint.
 	LoggingInfo struct {
-		service  string
-		method   string
-		callType goa.InterceptorCallType
-		payload  any
+		service    string
+		method     string
+		callType   goa.InterceptorCallType
+		rawPayload any
 	}
 
 	// LoggingStreamingPayload provides type-safe access to the method streaming payload.
@@ -77,17 +77,27 @@ func (info *LoggingInfo) CallType() goa.InterceptorCallType {
 
 // RawPayload returns the raw payload of the request.
 func (info *LoggingInfo) RawPayload() any {
-	return info.payload
+	return info.rawPayload
 }
 
-// StreamingPayload returns a type-safe accessor for the method streaming payload.
-func (info *LoggingInfo) StreamingPayload() LoggingStreamingPayload {
+// ClientStreamingPayload returns a type-safe accessor for the method streaming payload for a client-side interceptor.
+func (info *LoggingInfo) ClientStreamingPayload() LoggingStreamingPayload {
 	return &loggingMethodStreamingPayload{payload: info.RawPayload().(*MethodStreamingPayload)}
 }
 
-// StreamingResult returns a type-safe accessor for the method streaming result.
-func (info *LoggingInfo) StreamingResult(res any) LoggingStreamingResult {
+// ClientStreamingResult returns a type-safe accessor for the method streaming result for a client-side interceptor.
+func (info *LoggingInfo) ClientStreamingResult(res any) LoggingStreamingResult {
 	return &loggingMethodStreamingResult{result: res.(*MethodResult)}
+}
+
+// ServerStreamingPayload returns a type-safe accessor for the method streaming payload for a server-side interceptor.
+func (info *LoggingInfo) ServerStreamingPayload(pay any) LoggingStreamingPayload {
+	return &loggingMethodStreamingPayload{payload: pay.(*MethodStreamingPayload)}
+}
+
+// ServerStreamingResult returns a type-safe accessor for the method streaming result for a server-side interceptor.
+func (info *LoggingInfo) ServerStreamingResult() LoggingStreamingResult {
+	return &loggingMethodStreamingResult{result: info.RawPayload().(*MethodResult)}
 }
 
 // Private implementation methods

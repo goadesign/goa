@@ -11,10 +11,10 @@ type (
 	// LoggingInfo provides metadata about the current interception.
 	// It includes service name, method name, and access to the endpoint.
 	LoggingInfo struct {
-		service  string
-		method   string
-		callType goa.InterceptorCallType
-		payload  any
+		service    string
+		method     string
+		callType   goa.InterceptorCallType
+		rawPayload any
 	}
 
 	// LoggingPayload provides type-safe access to the method payload.
@@ -75,7 +75,7 @@ func (info *LoggingInfo) CallType() goa.InterceptorCallType {
 
 // RawPayload returns the raw payload of the request.
 func (info *LoggingInfo) RawPayload() any {
-	return info.payload
+	return info.rawPayload
 }
 
 // Payload returns a type-safe accessor for the method payload.
@@ -83,9 +83,14 @@ func (info *LoggingInfo) Payload() LoggingPayload {
 	return &loggingMethodPayload{payload: info.RawPayload().(*MethodPayload)}
 }
 
-// StreamingPayload returns a type-safe accessor for the method streaming payload.
-func (info *LoggingInfo) StreamingPayload() LoggingStreamingPayload {
+// ClientStreamingPayload returns a type-safe accessor for the method streaming payload for a client-side interceptor.
+func (info *LoggingInfo) ClientStreamingPayload() LoggingStreamingPayload {
 	return &loggingMethodStreamingPayload{payload: info.RawPayload().(*MethodStreamingPayload)}
+}
+
+// ServerStreamingPayload returns a type-safe accessor for the method streaming payload for a server-side interceptor.
+func (info *LoggingInfo) ServerStreamingPayload(pay any) LoggingStreamingPayload {
+	return &loggingMethodStreamingPayload{payload: pay.(*MethodStreamingPayload)}
 }
 
 // Private implementation methods
