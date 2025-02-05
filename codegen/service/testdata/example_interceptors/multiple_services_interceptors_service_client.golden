@@ -23,23 +23,23 @@ type MultipleServicesInterceptorsServiceClientInterceptors struct {
 func NewMultipleServicesInterceptorsServiceClientInterceptors() *MultipleServicesInterceptorsServiceClientInterceptors {
 	return &MultipleServicesInterceptorsServiceClientInterceptors{}
 }
-func (i *MultipleServicesInterceptorsServiceClientInterceptors) Test2(ctx context.Context, info *interceptors.Test2Info, next goa.Endpoint) (any, error) {
-	log.Printf(ctx, "[Test2] Sending request: %v", info.RawPayload)
-	resp, err := next(ctx, info.RawPayload)
+func (i *MultipleServicesInterceptorsServiceClientInterceptors) Test2(ctx context.Context, info *interceptors.Test2Info, next goa.InterceptorEndpoint) (any, context.Context, error) {
+	log.Printf(ctx, "[Test2] Sending request: %v", info.RawPayload())
+	resp, ctx, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[Test2] Error: %v", err)
-		return nil, err
+		return nil, ctx, err
 	}
 	log.Printf(ctx, "[Test2] Received response: %v", resp)
-	return resp, nil
+	return resp, ctx, nil
 }
-func (i *MultipleServicesInterceptorsServiceClientInterceptors) Test4(ctx context.Context, info *interceptors.Test4Info, next goa.Endpoint) (any, error) {
-	log.Printf(ctx, "[Test4] Sending request: %v", info.RawPayload)
-	resp, err := next(ctx, info.RawPayload)
+func (i *MultipleServicesInterceptorsServiceClientInterceptors) Test4(ctx context.Context, info *interceptors.Test4Info, next goa.InterceptorEndpoint) (any, context.Context, error) {
+	log.Printf(ctx, "[Test4] Sending request: %v", info.RawPayload())
+	resp, ctx, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[Test4] Error: %v", err)
-		return nil, err
+		return nil, ctx, err
 	}
 	log.Printf(ctx, "[Test4] Received response: %v", resp)
-	return resp, nil
+	return resp, ctx, nil
 }

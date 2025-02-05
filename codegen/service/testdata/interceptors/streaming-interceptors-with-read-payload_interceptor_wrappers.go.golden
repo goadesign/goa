@@ -4,10 +4,10 @@
 func wrapMethodLogging(endpoint goa.InterceptorEndpoint, i ServerInterceptors) goa.InterceptorEndpoint {
 	return func(ctx context.Context, req any) (any, context.Context, error) {
 		info := &LoggingInfo{
-			Service:    "StreamingInterceptorsWithReadPayload",
-			Method:     "Method",
-			CallType:   goa.InterceptorUnary,
-			RawPayload: req,
+			service:  "StreamingInterceptorsWithReadPayload",
+			method:   "Method",
+			callType: goa.InterceptorUnary,
+			payload:  req,
 		}
 		return i.Logging(ctx, info, endpoint)
 	}

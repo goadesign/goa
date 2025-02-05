@@ -23,13 +23,13 @@ type ServerInterceptorServiceServerInterceptors struct {
 func NewServerInterceptorServiceServerInterceptors() *ServerInterceptorServiceServerInterceptors {
 	return &ServerInterceptorServiceServerInterceptors{}
 }
-func (i *ServerInterceptorServiceServerInterceptors) Test(ctx context.Context, info *interceptors.TestInfo, next goa.Endpoint) (any, error) {
-	log.Printf(ctx, "[Test] Processing request: %v", info.RawPayload)
-	resp, err := next(ctx, info.RawPayload)
+func (i *ServerInterceptorServiceServerInterceptors) Test(ctx context.Context, info *interceptors.TestInfo, next goa.InterceptorEndpoint) (any, context.Context, error) {
+	log.Printf(ctx, "[Test] Processing request: %v", info.RawPayload())
+	resp, ctx, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[Test] Error: %v", err)
-		return nil, err
+		return nil, ctx, err
 	}
 	log.Printf(ctx, "[Test] Response: %v", resp)
-	return resp, nil
+	return resp, ctx, nil
 }

@@ -1,21 +1,41 @@
 {{- if hasPrivateImplementationTypes . }}
 // Public accessor methods for Info types
 {{- range . }}
+
+// Service returns the name of the service handling the request.
+func (info *{{ .Name }}Info) Service() string {
+	return info.service
+}
+
+// Method returns the name of the method handling the request.
+func (info *{{ .Name }}Info) Method() string {
+	return info.method
+}
+
+// CallType returns the type of call the interceptor is handling.
+func (info *{{ .Name }}Info) CallType() goa.InterceptorCallType {
+	return info.callType
+}
+
+// RawPayload returns the raw payload of the request.
+func (info *{{ .Name }}Info) RawPayload() any {
+	return info.payload
+}
 	{{- if .HasPayloadAccess }}
 
 // Payload returns a type-safe accessor for the method payload.
 func (info *{{ .Name }}Info) Payload() {{ .Name }}Payload {
 		{{- if gt (len .Methods) 1 }}
-		switch info.Method {
+		switch info.Method() {
 			{{- range .Methods }}
 		case "{{ .MethodName }}":
-			return &{{ .PayloadAccess }}{payload: info.RawPayload.({{ .PayloadRef }})}
+			return &{{ .PayloadAccess }}{payload: info.RawPayload().({{ .PayloadRef }})}
 			{{- end }}
 		default:
 			return nil
 		}
 		{{- else }}
-	return &{{ (index .Methods 0).PayloadAccess }}{payload: info.RawPayload.({{ (index .Methods 0).PayloadRef }})}
+	return &{{ (index .Methods 0).PayloadAccess }}{payload: info.RawPayload().({{ (index .Methods 0).PayloadRef }})}
 		{{- end }}
 }
 	{{- end }}
@@ -24,7 +44,7 @@ func (info *{{ .Name }}Info) Payload() {{ .Name }}Payload {
 // Result returns a type-safe accessor for the method result.
 func (info *{{ .Name }}Info) Result(res any) {{ .Name }}Result {
 		{{- if gt (len .Methods) 1 }}
-	switch info.Method {
+	switch info.Method() {
 			{{- range .Methods }}
 	case "{{ .MethodName }}":
 		return &{{ .ResultAccess }}{result: res.({{ .ResultRef }})}
@@ -42,16 +62,16 @@ func (info *{{ .Name }}Info) Result(res any) {{ .Name }}Result {
 // StreamingPayload returns a type-safe accessor for the method streaming payload.
 func (info *{{ .Name }}Info) StreamingPayload() {{ .Name }}StreamingPayload {
 		{{- if gt (len .Methods) 1 }}
-	switch info.Method {
+	switch info.Method() {
 			{{- range .Methods }}
 	case "{{ .MethodName }}":
-		return &{{ .StreamingPayloadAccess }}{payload: info.RawPayload.({{ .StreamingPayloadRef }})}
+		return &{{ .StreamingPayloadAccess }}{payload: info.RawPayload().({{ .StreamingPayloadRef }})}
 			{{- end }}
 	default:
 		return nil
 	}
 		{{- else }}
-	return &{{ (index .Methods 0).StreamingPayloadAccess }}{payload: info.RawPayload.({{ (index .Methods 0).StreamingPayloadRef }})}
+	return &{{ (index .Methods 0).StreamingPayloadAccess }}{payload: info.RawPayload().({{ (index .Methods 0).StreamingPayloadRef }})}
 		{{- end }}
 }
 	{{- end }}
@@ -60,7 +80,7 @@ func (info *{{ .Name }}Info) StreamingPayload() {{ .Name }}StreamingPayload {
 // StreamingResult returns a type-safe accessor for the method streaming result.
 func (info *{{ .Name }}Info) StreamingResult(res any) {{ .Name }}StreamingResult {
 		{{- if gt (len .Methods) 1 }}
-	switch info.Method {
+	switch info.Method() {
 			{{- range .Methods }}
 	case "{{ .MethodName }}":
 		return &{{ .StreamingResultAccess }}{result: res.({{ .StreamingResultRef }})}

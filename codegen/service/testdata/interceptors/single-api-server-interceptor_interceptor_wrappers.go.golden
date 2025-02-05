@@ -4,10 +4,10 @@
 func wrapMethodLogging(endpoint goa.InterceptorEndpoint, i ServerInterceptors) goa.InterceptorEndpoint {
 	return func(ctx context.Context, req any) (any, context.Context, error) {
 		info := &LoggingInfo{
-			Service:    "SingleAPIServerInterceptor",
-			Method:     "Method",
-			CallType:   goa.InterceptorUnary,
-			RawPayload: req,
+			service:  "SingleAPIServerInterceptor",
+			method:   "Method",
+			callType: goa.InterceptorUnary,
+			payload:  req,
 		}
 		return i.Logging(ctx, info, endpoint)
 	}
@@ -17,10 +17,10 @@ func wrapMethodLogging(endpoint goa.InterceptorEndpoint, i ServerInterceptors) g
 func wrapMethod2Logging(endpoint goa.InterceptorEndpoint, i ServerInterceptors) goa.InterceptorEndpoint {
 	return func(ctx context.Context, req any) (any, context.Context, error) {
 		info := &LoggingInfo{
-			Service:    "SingleAPIServerInterceptor",
-			Method:     "Method2",
-			CallType:   goa.InterceptorUnary,
-			RawPayload: req,
+			service:  "SingleAPIServerInterceptor",
+			method:   "Method2",
+			callType: goa.InterceptorUnary,
+			payload:  req,
 		}
 		return i.Logging(ctx, info, endpoint)
 	}

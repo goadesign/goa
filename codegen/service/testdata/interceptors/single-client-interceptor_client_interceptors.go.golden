@@ -10,7 +10,12 @@ type ClientInterceptors interface {
 type (
 	// TracingInfo provides metadata about the current interception.
 	// It includes service name, method name, and access to the endpoint.
-	TracingInfo goa.InterceptorInfo
+	TracingInfo struct {
+		service  string
+		method   string
+		callType goa.InterceptorCallType
+		payload  any
+	}
 )
 
 // WrapMethodClientEndpoint wraps the Method endpoint with the client

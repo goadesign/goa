@@ -11,14 +11,14 @@ func New{{ .StructName }}ServerInterceptors() *{{ .StructName }}ServerIntercepto
 {{- if .Description }}
 {{ comment .Description }}
 {{- end }}
-func (i *{{ $.StructName }}ServerInterceptors) {{ .Name }}(ctx context.Context, info *{{ $.PkgName }}.{{ .Name }}Info, next goa.Endpoint) (any, error) {
-	log.Printf(ctx, "[{{ .Name }}] Processing request: %v", info.RawPayload)
-	resp, err := next(ctx, info.RawPayload)
+func (i *{{ $.StructName }}ServerInterceptors) {{ .Name }}(ctx context.Context, info *{{ $.PkgName }}.{{ .Name }}Info, next goa.InterceptorEndpoint) (any, context.Context, error) {
+	log.Printf(ctx, "[{{ .Name }}] Processing request: %v", info.RawPayload())
+	resp, ctx, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[{{ .Name }}] Error: %v", err)
-		return nil, err
+		return nil, ctx, err
 	}
 	log.Printf(ctx, "[{{ .Name }}] Response: %v", resp)
-	return resp, nil
+	return resp, ctx, nil
 }
 {{- end }}

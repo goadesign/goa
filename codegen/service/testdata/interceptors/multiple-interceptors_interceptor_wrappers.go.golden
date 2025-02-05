@@ -4,10 +4,10 @@
 func wrapMethodTest(endpoint goa.InterceptorEndpoint, i ServerInterceptors) goa.InterceptorEndpoint {
 	return func(ctx context.Context, req any) (any, context.Context, error) {
 		info := &TestInfo{
-			Service:    "MultipleInterceptorsService",
-			Method:     "Method",
-			CallType:   goa.InterceptorUnary,
-			RawPayload: req,
+			service:  "MultipleInterceptorsService",
+			method:   "Method",
+			callType: goa.InterceptorUnary,
+			payload:  req,
 		}
 		return i.Test(ctx, info, endpoint)
 	}
@@ -17,10 +17,10 @@ func wrapMethodTest(endpoint goa.InterceptorEndpoint, i ServerInterceptors) goa.
 func wrapMethodTest3(endpoint goa.InterceptorEndpoint, i ServerInterceptors) goa.InterceptorEndpoint {
 	return func(ctx context.Context, req any) (any, context.Context, error) {
 		info := &Test3Info{
-			Service:    "MultipleInterceptorsService",
-			Method:     "Method",
-			CallType:   goa.InterceptorUnary,
-			RawPayload: req,
+			service:  "MultipleInterceptorsService",
+			method:   "Method",
+			callType: goa.InterceptorUnary,
+			payload:  req,
 		}
 		return i.Test3(ctx, info, endpoint)
 	}
@@ -30,10 +30,10 @@ func wrapMethodTest3(endpoint goa.InterceptorEndpoint, i ServerInterceptors) goa
 func wrapClientMethodTest2(endpoint goa.InterceptorEndpoint, i ClientInterceptors) goa.InterceptorEndpoint {
 	return func(ctx context.Context, req any) (any, context.Context, error) {
 		info := &Test2Info{
-			Service:    "MultipleInterceptorsService",
-			Method:     "Method",
-			CallType:   goa.InterceptorUnary,
-			RawPayload: req,
+			service:  "MultipleInterceptorsService",
+			method:   "Method",
+			callType: goa.InterceptorUnary,
+			payload:  req,
 		}
 		return i.Test2(ctx, info, endpoint)
 	}
@@ -43,10 +43,10 @@ func wrapClientMethodTest2(endpoint goa.InterceptorEndpoint, i ClientInterceptor
 func wrapClientMethodTest4(endpoint goa.InterceptorEndpoint, i ClientInterceptors) goa.InterceptorEndpoint {
 	return func(ctx context.Context, req any) (any, context.Context, error) {
 		info := &Test4Info{
-			Service:    "MultipleInterceptorsService",
-			Method:     "Method",
-			CallType:   goa.InterceptorUnary,
-			RawPayload: req,
+			service:  "MultipleInterceptorsService",
+			method:   "Method",
+			callType: goa.InterceptorUnary,
+			payload:  req,
 		}
 		return i.Test4(ctx, info, endpoint)
 	}

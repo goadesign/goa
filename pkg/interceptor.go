@@ -7,15 +7,15 @@ type (
 	// all interceptors in the service chain. It provides access to the service name,
 	// method name, the type of call the interceptor is handling (unary, streaming send,
 	// or streaming recv), and the request payload.
-	InterceptorInfo struct {
-		// Name of service handling request
-		Service string
-		// Name of method handling request
-		Method string
-		// CallType is the type of call the interceptor is handling
-		CallType InterceptorCallType
-		// Payload of request
-		RawPayload any
+	InterceptorInfo interface {
+		// Service returns the name of the service handling the request.
+		Service() string
+		// Method returns the name of the method handling the request.
+		Method() string
+		// CallType returns the type of call the interceptor is handling.
+		CallType() InterceptorCallType
+		// RawPayload returns the raw payload of the request.
+		RawPayload() any
 	}
 
 	// InterceptorEndpoint is the endpoint function interface that interceptors call. It differs from the
