@@ -945,3 +945,96 @@ var JSONPrefixIndentDSL = func() {
 		})
 	})
 }
+
+var AdditionalPropertiesTypeDSL = func() {
+	var PayloadT = Type("Payload", func() {
+		Attribute("string", String, func() {
+			Example("")
+		})
+		Meta("openapi:additionalProperties", "false")
+	})
+	var ResultT = Type("Result", func() {
+		Attribute("string", String, func() {
+			Example("")
+		})
+		Meta("openapi:additionalProperties", "false")
+	})
+	var _ = API("test", func() {
+		Server("test", func() {
+			Host("localhost", func() {
+				URI("https://goa.design")
+			})
+		})
+	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			Payload(PayloadT)
+			Result(ResultT)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var AdditionalPropertiesPayloadResultDSL = func() {
+	var PayloadT = Type("Payload", func() {
+		Attribute("string", String, func() {
+			Example("")
+		})
+	})
+	var ResultT = Type("Result", func() {
+		Attribute("string", String, func() {
+			Example("")
+		})
+	})
+	var _ = API("test", func() {
+		Server("test", func() {
+			Host("localhost", func() {
+				URI("https://goa.design")
+			})
+		})
+	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			Payload(PayloadT, func() {
+				Meta("openapi:additionalProperties", "false")
+			})
+			Result(ResultT, func() {
+				Meta("openapi:additionalProperties", "false")
+			})
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var AdditionalPropertiesEmbeddedPayloadResultDSL = func() {
+	var _ = API("test", func() {
+		Server("test", func() {
+			Host("localhost", func() {
+				URI("https://goa.design")
+			})
+		})
+	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			Payload(func() {
+				Attribute("string", String, func() {
+					Example("")
+				})
+				Meta("openapi:additionalProperties", "false")
+			})
+			Result(func() {
+				Attribute("string", String, func() {
+					Example("")
+				})
+				Meta("openapi:additionalProperties", "false")
+			})
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
