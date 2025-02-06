@@ -272,6 +272,25 @@ const DefaultProtoc = expr.DefaultProtoc
 //	    Meta("openapi:extension:x-api", `{"foo":"bar"}`)
 //	})
 //
+// - "openapi:additionalProperties" sets the OpenAPI additionalProperties field.
+// The value can be true or false. Defaults to true. Applicable to types (including
+// embedded Payload and Result definitions).
+//
+//	var Foo = Type("Foo", func() {
+//	    Attribute("name", String)
+//	    Meta("openapi:additionalProperties", "false")
+//	})
+//
+//	Payload(Bar, func() {
+//	    Attribute("name", String)
+//	    Meta("openapi:additionalProperties", "false")
+//	})
+//
+//	Result(func() {
+//	    Attribute("name", String)
+//	    Meta("openapi:additionalProperties", "false")
+//	})
+//
 // - "openapi:typename" overrides the name of the type generated in the OpenAPI specification.
 // Applicable to types (including embedded Payload and Result definitions).
 //

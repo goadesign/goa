@@ -192,10 +192,15 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	}
 	appendSuffix(ut.Attribute().Type, suffix)
 
-	// Remember openapi typename for example to generate friendly OpenAPI specs.
 	if t, ok := payload.Type.(UserType); ok {
+		// Remember openapi typename for example to generate friendly OpenAPI specs.
 		if m, ok := t.Attribute().Meta["openapi:typename"]; ok {
 			ut.AttributeExpr.AddMeta("openapi:typename", m...)
+		}
+
+		// Remember additionalProperties.
+		if m, ok := t.Attribute().Meta["openapi:additionalProperties"]; ok {
+			ut.AttributeExpr.AddMeta("openapi:additionalProperties", m...)
 		}
 	}
 
@@ -334,12 +339,17 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		UID:           concat(svc.Name(), "#", name),
 	}
 
-	// Remember original type name and openapi typename for example
-	// to generate friendly OpenAPI specs.
 	if t, ok := attr.Type.(UserType); ok {
+		// Remember original type name and openapi typename for example
+		// to generate friendly OpenAPI specs.
 		userType.AttributeExpr.AddMeta("name:original", t.Name())
 		if m, ok := t.Attribute().Meta["openapi:typename"]; ok {
 			userType.AttributeExpr.AddMeta("openapi:typename", m...)
+		}
+
+		// Remember additionalProperties.
+		if m, ok := t.Attribute().Meta["openapi:additionalProperties"]; ok {
+			userType.AttributeExpr.AddMeta("openapi:additionalProperties", m...)
 		}
 	}
 
