@@ -3,8 +3,8 @@
 {{- range .Methods }}
 
 {{ comment (printf "wrapClient%s%s applies the %s client interceptor to endpoints." $interceptor.Name .MethodName $interceptor.DesignName) }}
-func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.InterceptorEndpoint, i ClientInterceptors) goa.InterceptorEndpoint {
-	return func(ctx context.Context, req any) (any, context.Context, error) {
+func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
 	{{- if or $interceptor.HasStreamingPayloadAccess $interceptor.HasStreamingResultAccess }}
 		{{- if $interceptor.HasPayloadAccess }}
 		info := &{{ $interceptor.Name }}Info{
@@ -13,48 +13,47 @@ func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Interceptor
 			callType:   goa.InterceptorUnary,
 			rawPayload: req,
 		}
-		res, ctx, err := i.{{ $interceptor.Name }}(ctx, info, endpoint)
+		res, err := i.{{ $interceptor.Name }}(ctx, info, endpoint)
 		{{- else }}
-		res, ctx, err := endpoint(ctx, req)
+		res, err := endpoint(ctx, req)
 		{{- end }}
 		if err != nil {
-			return res, ctx, err
+			return res, err
 		}
 		stream := res.({{ .ClientStream.Interface }})
 		return &wrapped{{ .ClientStream.Interface }}{
 			ctx: ctx,
 		{{- if $interceptor.HasStreamingPayloadAccess }}
-			sendWithContext: func(ctx context.Context, req {{ .ClientStream.SendTypeRef }}) (context.Context, error) {
+			sendWithContext: func(ctx context.Context, req {{ .ClientStream.SendTypeRef }}) error {
 				info := &{{ $interceptor.Name }}Info{
 					service:    "{{ $.Service }}",
 					method:     "{{ .MethodName }}",
 					callType:   goa.InterceptorStreamingSend,
 					rawPayload: req,
 				}
-				_, ctx, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, req any) (any, context.Context, error) {
+				_, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, req any) (any, error) {
 					castReq, _ := req.({{ .ClientStream.SendTypeRef }})
-					ctx, err = stream.{{ .ClientStream.SendWithContextName }}(ctx, castReq)
-					return nil, ctx, err
+					return nil, stream.{{ .ClientStream.SendWithContextName }}(ctx, castReq)
 				})
-				return ctx, err
+				return err
 			},
 		{{- end }}
 		{{- if $interceptor.HasStreamingResultAccess }}
-			recvWithContext: func(ctx context.Context) ({{ .ClientStream.RecvTypeRef }}, context.Context, error) {
+			recvWithContext: func(ctx context.Context) ({{ .ClientStream.RecvTypeRef }}, error) {
 				info := &{{ $interceptor.Name }}Info{
 					service:    "{{ $.Service }}",
 					method:     "{{ .MethodName }}",
 					callType:   goa.InterceptorStreamingRecv,
 				}
-				res, ctx, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, _ any) (any, context.Context, error) {
+				res, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, _ any) (any, error) {
 					return stream.{{ .ClientStream.RecvWithContextName }}(ctx)
 				})
 				castRes, _ := res.({{ .ClientStream.RecvTypeRef }})
-				return castRes, ctx, err
+				return castRes, err
 			},
 		{{- end }}
 			stream: stream,
-		}, ctx, nil
+		}, nil
 	{{- else }}
 		info := &{{ $interceptor.Name }}Info{
 			service:    "{{ $.Service }}",

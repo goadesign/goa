@@ -1,8 +1,8 @@
 
 
 // wrapValidationMethod applies the validation server interceptor to endpoints.
-func wrapMethodValidation(endpoint goa.InterceptorEndpoint, i ServerInterceptors) goa.InterceptorEndpoint {
-	return func(ctx context.Context, req any) (any, context.Context, error) {
+func wrapMethodValidation(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
 		info := &ValidationInfo{
 			service:    "InterceptorWithWritePayload",
 			method:     "Method",
@@ -15,8 +15,8 @@ func wrapMethodValidation(endpoint goa.InterceptorEndpoint, i ServerInterceptors
 
 // wrapClientValidationMethod applies the validation client interceptor to
 // endpoints.
-func wrapClientMethodValidation(endpoint goa.InterceptorEndpoint, i ClientInterceptors) goa.InterceptorEndpoint {
-	return func(ctx context.Context, req any) (any, context.Context, error) {
+func wrapClientMethodValidation(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
 		info := &ValidationInfo{
 			service:    "InterceptorWithWritePayload",
 			method:     "Method",

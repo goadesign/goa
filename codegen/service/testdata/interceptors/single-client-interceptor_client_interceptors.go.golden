@@ -3,7 +3,7 @@
 // is sent to the server. The implementation is responsible for calling next to
 // complete the request.
 type ClientInterceptors interface {
-	Tracing(ctx context.Context, info *TracingInfo, next goa.InterceptorEndpoint) (any, context.Context, error)
+	Tracing(ctx context.Context, info *TracingInfo, next goa.Endpoint) (any, error)
 }
 
 // Access interfaces for interceptor payloads and results
@@ -21,14 +21,7 @@ type (
 // WrapMethodClientEndpoint wraps the Method endpoint with the client
 // interceptors defined in the design.
 func WrapMethodClientEndpoint(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
-	var interceptorEndpoint goa.InterceptorEndpoint = func(ctx context.Context, request any) (any, context.Context, error) {
-		response, err := endpoint(ctx, request)
-		return response, ctx, err
-	}
-	interceptorEndpoint = wrapClientMethodtracing(interceptorEndpoint, i)
-	return func(ctx context.Context, request any) (any, error) {
-		response, _, err := interceptorEndpoint(ctx, request)
-		return response, err
-	}
+	endpoint = wrapClientMethodtracing(endpoint, i)
+	return endpoint
 }
 

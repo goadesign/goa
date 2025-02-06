@@ -1,8 +1,8 @@
 
 
 // wrapTestMethod applies the test server interceptor to endpoints.
-func wrapMethodTest(endpoint goa.InterceptorEndpoint, i ServerInterceptors) goa.InterceptorEndpoint {
-	return func(ctx context.Context, req any) (any, context.Context, error) {
+func wrapMethodTest(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
 		info := &TestInfo{
 			service:    "MultipleInterceptorsService",
 			method:     "Method",
@@ -14,8 +14,8 @@ func wrapMethodTest(endpoint goa.InterceptorEndpoint, i ServerInterceptors) goa.
 }
 
 // wrapTest3Method applies the test3 server interceptor to endpoints.
-func wrapMethodTest3(endpoint goa.InterceptorEndpoint, i ServerInterceptors) goa.InterceptorEndpoint {
-	return func(ctx context.Context, req any) (any, context.Context, error) {
+func wrapMethodTest3(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
 		info := &Test3Info{
 			service:    "MultipleInterceptorsService",
 			method:     "Method",
@@ -27,8 +27,8 @@ func wrapMethodTest3(endpoint goa.InterceptorEndpoint, i ServerInterceptors) goa
 }
 
 // wrapClientTest2Method applies the test2 client interceptor to endpoints.
-func wrapClientMethodTest2(endpoint goa.InterceptorEndpoint, i ClientInterceptors) goa.InterceptorEndpoint {
-	return func(ctx context.Context, req any) (any, context.Context, error) {
+func wrapClientMethodTest2(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
 		info := &Test2Info{
 			service:    "MultipleInterceptorsService",
 			method:     "Method",
@@ -40,8 +40,8 @@ func wrapClientMethodTest2(endpoint goa.InterceptorEndpoint, i ClientInterceptor
 }
 
 // wrapClientTest4Method applies the test4 client interceptor to endpoints.
-func wrapClientMethodTest4(endpoint goa.InterceptorEndpoint, i ClientInterceptors) goa.InterceptorEndpoint {
-	return func(ctx context.Context, req any) (any, context.Context, error) {
+func wrapClientMethodTest4(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
 		info := &Test4Info{
 			service:    "MultipleInterceptorsService",
 			method:     "Method",

@@ -7,6 +7,6 @@ type ClientInterceptors interface {
 {{- if .Description }}
 	{{ comment .Description }}
 {{- end }}
-	{{ .Name }}(ctx context.Context, info *{{ .Name }}Info, next goa.InterceptorEndpoint) (any, context.Context, error)
+	{{ .Name }}(ctx context.Context, info *{{ .Name }}Info, next goa.Endpoint) (any, error)
 {{- end }}
 }

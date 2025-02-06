@@ -4,12 +4,11 @@
 
 {{ comment (printf "%s streams instances of \"%s\" after executing the applied interceptor." .SendName .Interface) }}
 func (w *wrapped{{ .Interface }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
-	_, err := w.SendWithContext(w.ctx, v)
-	return err
+	return w.SendWithContext(w.ctx, v)
 }
 
 {{ comment (printf "%s streams instances of \"%s\" after executing the applied interceptor with context." .SendWithContextName .Interface) }}
-func (w *wrapped{{ .Interface }}) {{ .SendWithContextName }}(ctx context.Context, v {{ .SendTypeRef }}) (context.Context, error) {
+func (w *wrapped{{ .Interface }}) {{ .SendWithContextName }}(ctx context.Context, v {{ .SendTypeRef }}) error {
 	if w.sendWithContext == nil {
 		return w.stream.{{ .SendWithContextName }}(ctx, v)
 	}
@@ -20,12 +19,11 @@ func (w *wrapped{{ .Interface }}) {{ .SendWithContextName }}(ctx context.Context
 
 {{ comment (printf "%s reads instances of \"%s\" from the stream after executing the applied interceptor." .RecvName .Interface) }}
 func (w *wrapped{{ .Interface }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
-	res, _, err := w.RecvWithContext(w.ctx)
-	return res, err
+	return w.RecvWithContext(w.ctx)
 }
 
 {{ comment (printf "%s reads instances of \"%s\" from the stream after executing the applied interceptor with context." .RecvWithContextName .Interface) }}
-func (w *wrapped{{ .Interface }}) {{ .RecvWithContextName }}(ctx context.Context) ({{ .RecvTypeRef }}, context.Context, error) {
+func (w *wrapped{{ .Interface }}) {{ .RecvWithContextName }}(ctx context.Context) ({{ .RecvTypeRef }}, error) {
 	if w.recvWithContext == nil {
 		return w.stream.{{ .RecvWithContextName }}(ctx)
 	}

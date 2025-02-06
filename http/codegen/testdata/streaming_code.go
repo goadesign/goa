@@ -100,8 +100,8 @@ func (s *StreamingResultMethodServerStream) Send(v *streamingresultservice.UserT
 
 // SendWithContext streams instances of "streamingresultservice.UserType" to
 // the "StreamingResultMethod" endpoint websocket connection with context.
-func (s *StreamingResultMethodServerStream) SendWithContext(ctx context.Context, v *streamingresultservice.UserType) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingResultMethodServerStream) SendWithContext(ctx context.Context, v *streamingresultservice.UserType) error {
+	return s.Send(v)
 }
 `
 
@@ -161,8 +161,8 @@ func (s *StreamingResultWithViewsMethodServerStream) Send(v *streamingresultwith
 // SendWithContext streams instances of
 // "streamingresultwithviewsservice.Usertype" to the
 // "StreamingResultWithViewsMethod" endpoint websocket connection with context.
-func (s *StreamingResultWithViewsMethodServerStream) SendWithContext(ctx context.Context, v *streamingresultwithviewsservice.Usertype) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingResultWithViewsMethodServerStream) SendWithContext(ctx context.Context, v *streamingresultwithviewsservice.Usertype) error {
+	return s.Send(v)
 }
 `
 
@@ -300,9 +300,8 @@ func (s *StreamingResultMethodClientStream) Recv() (*streamingresultservice.User
 
 // RecvWithContext reads instances of "streamingresultservice.UserType" from
 // the "StreamingResultMethod" endpoint websocket connection with context.
-func (s *StreamingResultMethodClientStream) RecvWithContext(ctx context.Context) (*streamingresultservice.UserType, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingResultMethodClientStream) RecvWithContext(ctx context.Context) (*streamingresultservice.UserType, error) {
+	return s.Recv()
 }
 `
 
@@ -374,9 +373,8 @@ func (s *StreamingResultWithViewsMethodClientStream) Recv() (*streamingresultwit
 // RecvWithContext reads instances of
 // "streamingresultwithviewsservice.Usertype" from the
 // "StreamingResultWithViewsMethod" endpoint websocket connection with context.
-func (s *StreamingResultWithViewsMethodClientStream) RecvWithContext(ctx context.Context) (*streamingresultwithviewsservice.Usertype, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingResultWithViewsMethodClientStream) RecvWithContext(ctx context.Context) (*streamingresultwithviewsservice.Usertype, error) {
+	return s.Recv()
 }
 `
 
@@ -455,9 +453,8 @@ func (s *StreamingResultWithExplicitViewMethodClientStream) Recv() (*streamingre
 // "streamingresultwithexplicitviewservice.Usertype" from the
 // "StreamingResultWithExplicitViewMethod" endpoint websocket connection with
 // context.
-func (s *StreamingResultWithExplicitViewMethodClientStream) RecvWithContext(ctx context.Context) (*streamingresultwithexplicitviewservice.Usertype, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingResultWithExplicitViewMethodClientStream) RecvWithContext(ctx context.Context) (*streamingresultwithexplicitviewservice.Usertype, error) {
+	return s.Recv()
 }
 `
 
@@ -491,8 +488,8 @@ func (s *StreamingResultWithExplicitViewMethodServerStream) Send(v *streamingres
 // "streamingresultwithexplicitviewservice.Usertype" to the
 // "StreamingResultWithExplicitViewMethod" endpoint websocket connection with
 // context.
-func (s *StreamingResultWithExplicitViewMethodServerStream) SendWithContext(ctx context.Context, v *streamingresultwithexplicitviewservice.Usertype) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingResultWithExplicitViewMethodServerStream) SendWithContext(ctx context.Context, v *streamingresultwithexplicitviewservice.Usertype) error {
+	return s.Send(v)
 }
 `
 
@@ -537,8 +534,8 @@ func (s *StreamingResultCollectionWithViewsMethodServerStream) Send(v streamingr
 // "streamingresultcollectionwithviewsservice.UsertypeCollection" to the
 // "StreamingResultCollectionWithViewsMethod" endpoint websocket connection
 // with context.
-func (s *StreamingResultCollectionWithViewsMethodServerStream) SendWithContext(ctx context.Context, v streamingresultcollectionwithviewsservice.UsertypeCollection) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingResultCollectionWithViewsMethodServerStream) SendWithContext(ctx context.Context, v streamingresultcollectionwithviewsservice.UsertypeCollection) error {
+	return s.Send(v)
 }
 `
 
@@ -580,9 +577,8 @@ func (s *StreamingResultCollectionWithViewsMethodClientStream) Recv() (streaming
 // "streamingresultcollectionwithviewsservice.UsertypeCollection" from the
 // "StreamingResultCollectionWithViewsMethod" endpoint websocket connection
 // with context.
-func (s *StreamingResultCollectionWithViewsMethodClientStream) RecvWithContext(ctx context.Context) (streamingresultcollectionwithviewsservice.UsertypeCollection, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingResultCollectionWithViewsMethodClientStream) RecvWithContext(ctx context.Context) (streamingresultcollectionwithviewsservice.UsertypeCollection, error) {
+	return s.Recv()
 }
 `
 
@@ -625,8 +621,8 @@ func (s *StreamingResultCollectionWithExplicitViewMethodServerStream) Send(v str
 // "streamingresultcollectionwithexplicitviewservice.UsertypeCollection" to the
 // "StreamingResultCollectionWithExplicitViewMethod" endpoint websocket
 // connection with context.
-func (s *StreamingResultCollectionWithExplicitViewMethodServerStream) SendWithContext(ctx context.Context, v streamingresultcollectionwithexplicitviewservice.UsertypeCollection) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingResultCollectionWithExplicitViewMethodServerStream) SendWithContext(ctx context.Context, v streamingresultcollectionwithexplicitviewservice.UsertypeCollection) error {
+	return s.Send(v)
 }
 `
 var StreamingResultCollectionWithExplicitViewClientEndpointCode = `// StreamingResultCollectionWithExplicitViewMethod returns an endpoint that
@@ -698,9 +694,8 @@ func (s *StreamingResultCollectionWithExplicitViewMethodClientStream) Recv() (st
 // "streamingresultcollectionwithexplicitviewservice.UsertypeCollection" from
 // the "StreamingResultCollectionWithExplicitViewMethod" endpoint websocket
 // connection with context.
-func (s *StreamingResultCollectionWithExplicitViewMethodClientStream) RecvWithContext(ctx context.Context) (streamingresultcollectionwithexplicitviewservice.UsertypeCollection, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingResultCollectionWithExplicitViewMethodClientStream) RecvWithContext(ctx context.Context) (streamingresultcollectionwithexplicitviewservice.UsertypeCollection, error) {
+	return s.Recv()
 }
 `
 
@@ -731,8 +726,8 @@ func (s *StreamingResultPrimitiveMethodServerStream) Send(v string) error {
 
 // SendWithContext streams instances of "string" to the
 // "StreamingResultPrimitiveMethod" endpoint websocket connection with context.
-func (s *StreamingResultPrimitiveMethodServerStream) SendWithContext(ctx context.Context, v string) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingResultPrimitiveMethodServerStream) SendWithContext(ctx context.Context, v string) error {
+	return s.Send(v)
 }
 `
 
@@ -757,9 +752,8 @@ func (s *StreamingResultPrimitiveMethodClientStream) Recv() (string, error) {
 
 // RecvWithContext reads instances of "string" from the
 // "StreamingResultPrimitiveMethod" endpoint websocket connection with context.
-func (s *StreamingResultPrimitiveMethodClientStream) RecvWithContext(ctx context.Context) (string, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingResultPrimitiveMethodClientStream) RecvWithContext(ctx context.Context) (string, error) {
+	return s.Recv()
 }
 `
 
@@ -791,8 +785,8 @@ func (s *StreamingResultPrimitiveArrayMethodServerStream) Send(v []int32) error 
 // SendWithContext streams instances of "[]int32" to the
 // "StreamingResultPrimitiveArrayMethod" endpoint websocket connection with
 // context.
-func (s *StreamingResultPrimitiveArrayMethodServerStream) SendWithContext(ctx context.Context, v []int32) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingResultPrimitiveArrayMethodServerStream) SendWithContext(ctx context.Context, v []int32) error {
+	return s.Send(v)
 }
 `
 
@@ -818,9 +812,8 @@ func (s *StreamingResultPrimitiveArrayMethodClientStream) Recv() ([]int32, error
 // RecvWithContext reads instances of "[]int32" from the
 // "StreamingResultPrimitiveArrayMethod" endpoint websocket connection with
 // context.
-func (s *StreamingResultPrimitiveArrayMethodClientStream) RecvWithContext(ctx context.Context) ([]int32, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingResultPrimitiveArrayMethodClientStream) RecvWithContext(ctx context.Context) ([]int32, error) {
+	return s.Recv()
 }
 `
 
@@ -852,8 +845,8 @@ func (s *StreamingResultPrimitiveMapMethodServerStream) Send(v map[int32]string)
 // SendWithContext streams instances of "map[int32]string" to the
 // "StreamingResultPrimitiveMapMethod" endpoint websocket connection with
 // context.
-func (s *StreamingResultPrimitiveMapMethodServerStream) SendWithContext(ctx context.Context, v map[int32]string) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingResultPrimitiveMapMethodServerStream) SendWithContext(ctx context.Context, v map[int32]string) error {
+	return s.Send(v)
 }
 `
 
@@ -879,9 +872,8 @@ func (s *StreamingResultPrimitiveMapMethodClientStream) Recv() (map[int32]string
 // RecvWithContext reads instances of "map[int32]string" from the
 // "StreamingResultPrimitiveMapMethod" endpoint websocket connection with
 // context.
-func (s *StreamingResultPrimitiveMapMethodClientStream) RecvWithContext(ctx context.Context) (map[int32]string, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingResultPrimitiveMapMethodClientStream) RecvWithContext(ctx context.Context) (map[int32]string, error) {
+	return s.Recv()
 }
 `
 
@@ -915,8 +907,8 @@ func (s *StreamingResultUserTypeArrayMethodServerStream) Send(v []*streamingresu
 // "[]*streamingresultusertypearrayservice.UserType" to the
 // "StreamingResultUserTypeArrayMethod" endpoint websocket connection with
 // context.
-func (s *StreamingResultUserTypeArrayMethodServerStream) SendWithContext(ctx context.Context, v []*streamingresultusertypearrayservice.UserType) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingResultUserTypeArrayMethodServerStream) SendWithContext(ctx context.Context, v []*streamingresultusertypearrayservice.UserType) error {
+	return s.Send(v)
 }
 `
 
@@ -944,9 +936,8 @@ func (s *StreamingResultUserTypeArrayMethodClientStream) Recv() ([]*streamingres
 // "[]*streamingresultusertypearrayservice.UserType" from the
 // "StreamingResultUserTypeArrayMethod" endpoint websocket connection with
 // context.
-func (s *StreamingResultUserTypeArrayMethodClientStream) RecvWithContext(ctx context.Context) ([]*streamingresultusertypearrayservice.UserType, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingResultUserTypeArrayMethodClientStream) RecvWithContext(ctx context.Context) ([]*streamingresultusertypearrayservice.UserType, error) {
+	return s.Recv()
 }
 `
 
@@ -981,8 +972,8 @@ func (s *StreamingResultUserTypeMapMethodServerStream) Send(v map[string]*stream
 // "map[string]*streamingresultusertypemapservice.UserType" to the
 // "StreamingResultUserTypeMapMethod" endpoint websocket connection with
 // context.
-func (s *StreamingResultUserTypeMapMethodServerStream) SendWithContext(ctx context.Context, v map[string]*streamingresultusertypemapservice.UserType) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingResultUserTypeMapMethodServerStream) SendWithContext(ctx context.Context, v map[string]*streamingresultusertypemapservice.UserType) error {
+	return s.Send(v)
 }
 `
 
@@ -1011,9 +1002,8 @@ func (s *StreamingResultUserTypeMapMethodClientStream) Recv() (map[string]*strea
 // "map[string]*streamingresultusertypemapservice.UserType" from the
 // "StreamingResultUserTypeMapMethod" endpoint websocket connection with
 // context.
-func (s *StreamingResultUserTypeMapMethodClientStream) RecvWithContext(ctx context.Context) (map[string]*streamingresultusertypemapservice.UserType, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingResultUserTypeMapMethodClientStream) RecvWithContext(ctx context.Context) (map[string]*streamingresultusertypemapservice.UserType, error) {
+	return s.Recv()
 }
 `
 
@@ -1125,8 +1115,8 @@ func (s *StreamingPayloadMethodServerStream) SendAndClose(v *streamingpayloadser
 // SendAndCloseWithContext streams instances of
 // "streamingpayloadservice.UserType" to the "StreamingPayloadMethod" endpoint
 // websocket connection with context and closes the connection.
-func (s *StreamingPayloadMethodServerStream) SendAndCloseWithContext(ctx context.Context, v *streamingpayloadservice.UserType) (context.Context, error) {
-	return ctx, s.SendAndClose(v)
+func (s *StreamingPayloadMethodServerStream) SendAndCloseWithContext(ctx context.Context, v *streamingpayloadservice.UserType) error {
+	return s.SendAndClose(v)
 }
 `
 
@@ -1166,9 +1156,8 @@ func (s *StreamingPayloadMethodServerStream) Recv() (*streamingpayloadservice.Re
 
 // RecvWithContext reads instances of "streamingpayloadservice.Request" from
 // the "StreamingPayloadMethod" endpoint websocket connection with context.
-func (s *StreamingPayloadMethodServerStream) RecvWithContext(ctx context.Context) (*streamingpayloadservice.Request, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingPayloadMethodServerStream) RecvWithContext(ctx context.Context) (*streamingpayloadservice.Request, error) {
+	return s.Recv()
 }
 `
 
@@ -1213,8 +1202,8 @@ func (s *StreamingPayloadMethodClientStream) Send(v *streamingpayloadservice.Req
 
 // SendWithContext streams instances of "streamingpayloadservice.Request" to
 // the "StreamingPayloadMethod" endpoint websocket connection with context.
-func (s *StreamingPayloadMethodClientStream) SendWithContext(ctx context.Context, v *streamingpayloadservice.Request) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingPayloadMethodClientStream) SendWithContext(ctx context.Context, v *streamingpayloadservice.Request) error {
+	return s.Send(v)
 }
 `
 
@@ -1247,9 +1236,8 @@ func (s *StreamingPayloadMethodClientStream) CloseAndRecv() (*streamingpayloadse
 // CloseAndRecvWithContext stops sending messages to the
 // "StreamingPayloadMethod" endpoint websocket connection and reads instances
 // of "streamingpayloadservice.UserType" from the connection with context.
-func (s *StreamingPayloadMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (*streamingpayloadservice.UserType, context.Context, error) {
-	res, err := s.CloseAndRecv()
-	return res, ctx, err
+func (s *StreamingPayloadMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (*streamingpayloadservice.UserType, error) {
+	return s.CloseAndRecv()
 }
 `
 
@@ -1339,8 +1327,8 @@ func (s *StreamingPayloadNoPayloadMethodClientStream) Send(v *streamingpayloadno
 // SendWithContext streams instances of
 // "streamingpayloadnopayloadservice.Request" to the
 // "StreamingPayloadNoPayloadMethod" endpoint websocket connection with context.
-func (s *StreamingPayloadNoPayloadMethodClientStream) SendWithContext(ctx context.Context, v *streamingpayloadnopayloadservice.Request) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingPayloadNoPayloadMethodClientStream) SendWithContext(ctx context.Context, v *streamingpayloadnopayloadservice.Request) error {
+	return s.Send(v)
 }
 `
 
@@ -1374,9 +1362,8 @@ func (s *StreamingPayloadNoPayloadMethodClientStream) CloseAndRecv() (*streaming
 // "StreamingPayloadNoPayloadMethod" endpoint websocket connection and reads
 // instances of "streamingpayloadnopayloadservice.UserType" from the connection
 // with context.
-func (s *StreamingPayloadNoPayloadMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (*streamingpayloadnopayloadservice.UserType, context.Context, error) {
-	res, err := s.CloseAndRecv()
-	return res, ctx, err
+func (s *StreamingPayloadNoPayloadMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (*streamingpayloadnopayloadservice.UserType, error) {
+	return s.CloseAndRecv()
 }
 `
 
@@ -1416,9 +1403,8 @@ func (s *StreamingPayloadNoResultMethodServerStream) Recv() (string, error) {
 
 // RecvWithContext reads instances of "string" from the
 // "StreamingPayloadNoResultMethod" endpoint websocket connection with context.
-func (s *StreamingPayloadNoResultMethodServerStream) RecvWithContext(ctx context.Context) (string, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingPayloadNoResultMethodServerStream) RecvWithContext(ctx context.Context) (string, error) {
+	return s.Recv()
 }
 `
 
@@ -1448,8 +1434,8 @@ func (s *StreamingPayloadNoResultMethodClientStream) Send(v string) error {
 
 // SendWithContext streams instances of "string" to the
 // "StreamingPayloadNoResultMethod" endpoint websocket connection with context.
-func (s *StreamingPayloadNoResultMethodClientStream) SendWithContext(ctx context.Context, v string) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingPayloadNoResultMethodClientStream) SendWithContext(ctx context.Context, v string) error {
+	return s.Send(v)
 }
 `
 
@@ -1488,8 +1474,8 @@ func (s *StreamingPayloadResultWithViewsMethodServerStream) SendAndClose(v *stre
 // "streamingpayloadresultwithviewsservice.Usertype" to the
 // "StreamingPayloadResultWithViewsMethod" endpoint websocket connection with
 // context and closes the connection.
-func (s *StreamingPayloadResultWithViewsMethodServerStream) SendAndCloseWithContext(ctx context.Context, v *streamingpayloadresultwithviewsservice.Usertype) (context.Context, error) {
-	return ctx, s.SendAndClose(v)
+func (s *StreamingPayloadResultWithViewsMethodServerStream) SendAndCloseWithContext(ctx context.Context, v *streamingpayloadresultwithviewsservice.Usertype) error {
+	return s.SendAndClose(v)
 }
 `
 
@@ -1530,9 +1516,8 @@ func (s *StreamingPayloadResultWithViewsMethodServerStream) Recv() (float32, err
 // RecvWithContext reads instances of "float32" from the
 // "StreamingPayloadResultWithViewsMethod" endpoint websocket connection with
 // context.
-func (s *StreamingPayloadResultWithViewsMethodServerStream) RecvWithContext(ctx context.Context) (float32, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingPayloadResultWithViewsMethodServerStream) RecvWithContext(ctx context.Context) (float32, error) {
+	return s.Recv()
 }
 `
 
@@ -1553,8 +1538,8 @@ func (s *StreamingPayloadResultWithViewsMethodClientStream) Send(v float32) erro
 // SendWithContext streams instances of "float32" to the
 // "StreamingPayloadResultWithViewsMethod" endpoint websocket connection with
 // context.
-func (s *StreamingPayloadResultWithViewsMethodClientStream) SendWithContext(ctx context.Context, v float32) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingPayloadResultWithViewsMethodClientStream) SendWithContext(ctx context.Context, v float32) error {
+	return s.Send(v)
 }
 `
 
@@ -1593,9 +1578,8 @@ func (s *StreamingPayloadResultWithViewsMethodClientStream) CloseAndRecv() (*str
 // "StreamingPayloadResultWithViewsMethod" endpoint websocket connection and
 // reads instances of "streamingpayloadresultwithviewsservice.Usertype" from
 // the connection with context.
-func (s *StreamingPayloadResultWithViewsMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (*streamingpayloadresultwithviewsservice.Usertype, context.Context, error) {
-	res, err := s.CloseAndRecv()
-	return res, ctx, err
+func (s *StreamingPayloadResultWithViewsMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (*streamingpayloadresultwithviewsservice.Usertype, error) {
+	return s.CloseAndRecv()
 }
 `
 
@@ -1621,8 +1605,8 @@ func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) SendAndClose(
 // "streamingpayloadresultwithexplicitviewservice.Usertype" to the
 // "StreamingPayloadResultWithExplicitViewMethod" endpoint websocket connection
 // with context and closes the connection.
-func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) SendAndCloseWithContext(ctx context.Context, v *streamingpayloadresultwithexplicitviewservice.Usertype) (context.Context, error) {
-	return ctx, s.SendAndClose(v)
+func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) SendAndCloseWithContext(ctx context.Context, v *streamingpayloadresultwithexplicitviewservice.Usertype) error {
+	return s.SendAndClose(v)
 }
 `
 
@@ -1663,9 +1647,8 @@ func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) Recv() (float
 // RecvWithContext reads instances of "float32" from the
 // "StreamingPayloadResultWithExplicitViewMethod" endpoint websocket connection
 // with context.
-func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) RecvWithContext(ctx context.Context) (float32, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) RecvWithContext(ctx context.Context) (float32, error) {
+	return s.Recv()
 }
 `
 
@@ -1678,8 +1661,8 @@ func (s *StreamingPayloadResultWithExplicitViewMethodClientStream) Send(v float3
 // SendWithContext streams instances of "float32" to the
 // "StreamingPayloadResultWithExplicitViewMethod" endpoint websocket connection
 // with context.
-func (s *StreamingPayloadResultWithExplicitViewMethodClientStream) SendWithContext(ctx context.Context, v float32) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingPayloadResultWithExplicitViewMethodClientStream) SendWithContext(ctx context.Context, v float32) error {
+	return s.Send(v)
 }
 `
 
@@ -1719,9 +1702,8 @@ func (s *StreamingPayloadResultWithExplicitViewMethodClientStream) CloseAndRecv(
 // and reads instances of
 // "streamingpayloadresultwithexplicitviewservice.Usertype" from the connection
 // with context.
-func (s *StreamingPayloadResultWithExplicitViewMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (*streamingpayloadresultwithexplicitviewservice.Usertype, context.Context, error) {
-	res, err := s.CloseAndRecv()
-	return res, ctx, err
+func (s *StreamingPayloadResultWithExplicitViewMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (*streamingpayloadresultwithexplicitviewservice.Usertype, error) {
+	return s.CloseAndRecv()
 }
 `
 
@@ -1748,8 +1730,8 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) SendAndClo
 // "streamingpayloadresultcollectionwithviewsservice.UsertypeCollection" to the
 // "StreamingPayloadResultCollectionWithViewsMethod" endpoint websocket
 // connection with context and closes the connection.
-func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) SendAndCloseWithContext(ctx context.Context, v streamingpayloadresultcollectionwithviewsservice.UsertypeCollection) (context.Context, error) {
-	return ctx, s.SendAndClose(v)
+func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) SendAndCloseWithContext(ctx context.Context, v streamingpayloadresultcollectionwithviewsservice.UsertypeCollection) error {
+	return s.SendAndClose(v)
 }
 `
 
@@ -1791,9 +1773,8 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) Recv() (an
 // RecvWithContext reads instances of "any" from the
 // "StreamingPayloadResultCollectionWithViewsMethod" endpoint websocket
 // connection with context.
-func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) RecvWithContext(ctx context.Context) (any, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) RecvWithContext(ctx context.Context) (any, error) {
+	return s.Recv()
 }
 `
 
@@ -1816,8 +1797,8 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) Send(v any
 // SendWithContext streams instances of "any" to the
 // "StreamingPayloadResultCollectionWithViewsMethod" endpoint websocket
 // connection with context.
-func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) SendWithContext(ctx context.Context, v any) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) SendWithContext(ctx context.Context, v any) error {
+	return s.Send(v)
 }
 `
 
@@ -1858,9 +1839,8 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) CloseAndRe
 // connection and reads instances of
 // "streamingpayloadresultcollectionwithviewsservice.UsertypeCollection" from
 // the connection with context.
-func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (streamingpayloadresultcollectionwithviewsservice.UsertypeCollection, context.Context, error) {
-	res, err := s.CloseAndRecv()
-	return res, ctx, err
+func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (streamingpayloadresultcollectionwithviewsservice.UsertypeCollection, error) {
+	return s.CloseAndRecv()
 }
 `
 
@@ -1887,8 +1867,8 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) Sen
 // "streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection"
 // to the "StreamingPayloadResultCollectionWithExplicitViewMethod" endpoint
 // websocket connection with context and closes the connection.
-func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) SendAndCloseWithContext(ctx context.Context, v streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection) (context.Context, error) {
-	return ctx, s.SendAndClose(v)
+func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) SendAndCloseWithContext(ctx context.Context, v streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection) error {
+	return s.SendAndClose(v)
 }
 `
 
@@ -1930,9 +1910,8 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) Rec
 // RecvWithContext reads instances of "any" from the
 // "StreamingPayloadResultCollectionWithExplicitViewMethod" endpoint websocket
 // connection with context.
-func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) RecvWithContext(ctx context.Context) (any, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) RecvWithContext(ctx context.Context) (any, error) {
+	return s.Recv()
 }
 `
 
@@ -1946,8 +1925,8 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) Sen
 // SendWithContext streams instances of "any" to the
 // "StreamingPayloadResultCollectionWithExplicitViewMethod" endpoint websocket
 // connection with context.
-func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) SendWithContext(ctx context.Context, v any) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) SendWithContext(ctx context.Context, v any) error {
+	return s.Send(v)
 }
 `
 
@@ -1988,9 +1967,8 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) Clo
 // connection and reads instances of
 // "streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection"
 // from the connection with context.
-func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection, context.Context, error) {
-	res, err := s.CloseAndRecv()
-	return res, ctx, err
+func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection, error) {
+	return s.CloseAndRecv()
 }
 `
 
@@ -2006,8 +1984,8 @@ func (s *StreamingPayloadPrimitiveMethodServerStream) SendAndClose(v string) err
 // SendAndCloseWithContext streams instances of "string" to the
 // "StreamingPayloadPrimitiveMethod" endpoint websocket connection with context
 // and closes the connection.
-func (s *StreamingPayloadPrimitiveMethodServerStream) SendAndCloseWithContext(ctx context.Context, v string) (context.Context, error) {
-	return ctx, s.SendAndClose(v)
+func (s *StreamingPayloadPrimitiveMethodServerStream) SendAndCloseWithContext(ctx context.Context, v string) error {
+	return s.SendAndClose(v)
 }
 `
 
@@ -2047,9 +2025,8 @@ func (s *StreamingPayloadPrimitiveMethodServerStream) Recv() (string, error) {
 
 // RecvWithContext reads instances of "string" from the
 // "StreamingPayloadPrimitiveMethod" endpoint websocket connection with context.
-func (s *StreamingPayloadPrimitiveMethodServerStream) RecvWithContext(ctx context.Context) (string, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingPayloadPrimitiveMethodServerStream) RecvWithContext(ctx context.Context) (string, error) {
+	return s.Recv()
 }
 `
 
@@ -2061,8 +2038,8 @@ func (s *StreamingPayloadPrimitiveMethodClientStream) Send(v string) error {
 
 // SendWithContext streams instances of "string" to the
 // "StreamingPayloadPrimitiveMethod" endpoint websocket connection with context.
-func (s *StreamingPayloadPrimitiveMethodClientStream) SendWithContext(ctx context.Context, v string) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingPayloadPrimitiveMethodClientStream) SendWithContext(ctx context.Context, v string) error {
+	return s.Send(v)
 }
 `
 
@@ -2094,9 +2071,8 @@ func (s *StreamingPayloadPrimitiveMethodClientStream) CloseAndRecv() (string, er
 // CloseAndRecvWithContext stops sending messages to the
 // "StreamingPayloadPrimitiveMethod" endpoint websocket connection and reads
 // instances of "string" from the connection with context.
-func (s *StreamingPayloadPrimitiveMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (string, context.Context, error) {
-	res, err := s.CloseAndRecv()
-	return res, ctx, err
+func (s *StreamingPayloadPrimitiveMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (string, error) {
+	return s.CloseAndRecv()
 }
 `
 
@@ -2112,8 +2088,8 @@ func (s *StreamingPayloadPrimitiveArrayMethodServerStream) SendAndClose(v []stri
 // SendAndCloseWithContext streams instances of "[]string" to the
 // "StreamingPayloadPrimitiveArrayMethod" endpoint websocket connection with
 // context and closes the connection.
-func (s *StreamingPayloadPrimitiveArrayMethodServerStream) SendAndCloseWithContext(ctx context.Context, v []string) (context.Context, error) {
-	return ctx, s.SendAndClose(v)
+func (s *StreamingPayloadPrimitiveArrayMethodServerStream) SendAndCloseWithContext(ctx context.Context, v []string) error {
+	return s.SendAndClose(v)
 }
 `
 
@@ -2154,9 +2130,8 @@ func (s *StreamingPayloadPrimitiveArrayMethodServerStream) Recv() ([]int32, erro
 // RecvWithContext reads instances of "[]int32" from the
 // "StreamingPayloadPrimitiveArrayMethod" endpoint websocket connection with
 // context.
-func (s *StreamingPayloadPrimitiveArrayMethodServerStream) RecvWithContext(ctx context.Context) ([]int32, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingPayloadPrimitiveArrayMethodServerStream) RecvWithContext(ctx context.Context) ([]int32, error) {
+	return s.Recv()
 }
 `
 
@@ -2169,8 +2144,8 @@ func (s *StreamingPayloadPrimitiveArrayMethodClientStream) Send(v []int32) error
 // SendWithContext streams instances of "[]int32" to the
 // "StreamingPayloadPrimitiveArrayMethod" endpoint websocket connection with
 // context.
-func (s *StreamingPayloadPrimitiveArrayMethodClientStream) SendWithContext(ctx context.Context, v []int32) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingPayloadPrimitiveArrayMethodClientStream) SendWithContext(ctx context.Context, v []int32) error {
+	return s.Send(v)
 }
 `
 
@@ -2202,9 +2177,8 @@ func (s *StreamingPayloadPrimitiveArrayMethodClientStream) CloseAndRecv() ([]str
 // CloseAndRecvWithContext stops sending messages to the
 // "StreamingPayloadPrimitiveArrayMethod" endpoint websocket connection and
 // reads instances of "[]string" from the connection with context.
-func (s *StreamingPayloadPrimitiveArrayMethodClientStream) CloseAndRecvWithContext(ctx context.Context) ([]string, context.Context, error) {
-	res, err := s.CloseAndRecv()
-	return res, ctx, err
+func (s *StreamingPayloadPrimitiveArrayMethodClientStream) CloseAndRecvWithContext(ctx context.Context) ([]string, error) {
+	return s.CloseAndRecv()
 }
 `
 
@@ -2220,8 +2194,8 @@ func (s *StreamingPayloadPrimitiveMapMethodServerStream) SendAndClose(v map[int]
 // SendAndCloseWithContext streams instances of "map[int]int" to the
 // "StreamingPayloadPrimitiveMapMethod" endpoint websocket connection with
 // context and closes the connection.
-func (s *StreamingPayloadPrimitiveMapMethodServerStream) SendAndCloseWithContext(ctx context.Context, v map[int]int) (context.Context, error) {
-	return ctx, s.SendAndClose(v)
+func (s *StreamingPayloadPrimitiveMapMethodServerStream) SendAndCloseWithContext(ctx context.Context, v map[int]int) error {
+	return s.SendAndClose(v)
 }
 `
 
@@ -2262,9 +2236,8 @@ func (s *StreamingPayloadPrimitiveMapMethodServerStream) Recv() (map[string]int3
 // RecvWithContext reads instances of "map[string]int32" from the
 // "StreamingPayloadPrimitiveMapMethod" endpoint websocket connection with
 // context.
-func (s *StreamingPayloadPrimitiveMapMethodServerStream) RecvWithContext(ctx context.Context) (map[string]int32, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingPayloadPrimitiveMapMethodServerStream) RecvWithContext(ctx context.Context) (map[string]int32, error) {
+	return s.Recv()
 }
 `
 
@@ -2277,8 +2250,8 @@ func (s *StreamingPayloadPrimitiveMapMethodClientStream) Send(v map[string]int32
 // SendWithContext streams instances of "map[string]int32" to the
 // "StreamingPayloadPrimitiveMapMethod" endpoint websocket connection with
 // context.
-func (s *StreamingPayloadPrimitiveMapMethodClientStream) SendWithContext(ctx context.Context, v map[string]int32) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingPayloadPrimitiveMapMethodClientStream) SendWithContext(ctx context.Context, v map[string]int32) error {
+	return s.Send(v)
 }
 `
 
@@ -2310,9 +2283,8 @@ func (s *StreamingPayloadPrimitiveMapMethodClientStream) CloseAndRecv() (map[int
 // CloseAndRecvWithContext stops sending messages to the
 // "StreamingPayloadPrimitiveMapMethod" endpoint websocket connection and reads
 // instances of "map[int]int" from the connection with context.
-func (s *StreamingPayloadPrimitiveMapMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (map[int]int, context.Context, error) {
-	res, err := s.CloseAndRecv()
-	return res, ctx, err
+func (s *StreamingPayloadPrimitiveMapMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (map[int]int, error) {
+	return s.CloseAndRecv()
 }
 `
 
@@ -2328,8 +2300,8 @@ func (s *StreamingPayloadUserTypeArrayMethodServerStream) SendAndClose(v string)
 // SendAndCloseWithContext streams instances of "string" to the
 // "StreamingPayloadUserTypeArrayMethod" endpoint websocket connection with
 // context and closes the connection.
-func (s *StreamingPayloadUserTypeArrayMethodServerStream) SendAndCloseWithContext(ctx context.Context, v string) (context.Context, error) {
-	return ctx, s.SendAndClose(v)
+func (s *StreamingPayloadUserTypeArrayMethodServerStream) SendAndCloseWithContext(ctx context.Context, v string) error {
+	return s.SendAndClose(v)
 }
 `
 
@@ -2372,9 +2344,8 @@ func (s *StreamingPayloadUserTypeArrayMethodServerStream) Recv() ([]*streamingpa
 // "[]*streamingpayloadusertypearrayservice.RequestType" from the
 // "StreamingPayloadUserTypeArrayMethod" endpoint websocket connection with
 // context.
-func (s *StreamingPayloadUserTypeArrayMethodServerStream) RecvWithContext(ctx context.Context) ([]*streamingpayloadusertypearrayservice.RequestType, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingPayloadUserTypeArrayMethodServerStream) RecvWithContext(ctx context.Context) ([]*streamingpayloadusertypearrayservice.RequestType, error) {
+	return s.Recv()
 }
 `
 
@@ -2390,8 +2361,8 @@ func (s *StreamingPayloadUserTypeArrayMethodClientStream) Send(v []*streamingpay
 // "[]*streamingpayloadusertypearrayservice.RequestType" to the
 // "StreamingPayloadUserTypeArrayMethod" endpoint websocket connection with
 // context.
-func (s *StreamingPayloadUserTypeArrayMethodClientStream) SendWithContext(ctx context.Context, v []*streamingpayloadusertypearrayservice.RequestType) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingPayloadUserTypeArrayMethodClientStream) SendWithContext(ctx context.Context, v []*streamingpayloadusertypearrayservice.RequestType) error {
+	return s.Send(v)
 }
 `
 
@@ -2423,9 +2394,8 @@ func (s *StreamingPayloadUserTypeArrayMethodClientStream) CloseAndRecv() (string
 // CloseAndRecvWithContext stops sending messages to the
 // "StreamingPayloadUserTypeArrayMethod" endpoint websocket connection and
 // reads instances of "string" from the connection with context.
-func (s *StreamingPayloadUserTypeArrayMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (string, context.Context, error) {
-	res, err := s.CloseAndRecv()
-	return res, ctx, err
+func (s *StreamingPayloadUserTypeArrayMethodClientStream) CloseAndRecvWithContext(ctx context.Context) (string, error) {
+	return s.CloseAndRecv()
 }
 `
 
@@ -2441,8 +2411,8 @@ func (s *StreamingPayloadUserTypeMapMethodServerStream) SendAndClose(v []string)
 // SendAndCloseWithContext streams instances of "[]string" to the
 // "StreamingPayloadUserTypeMapMethod" endpoint websocket connection with
 // context and closes the connection.
-func (s *StreamingPayloadUserTypeMapMethodServerStream) SendAndCloseWithContext(ctx context.Context, v []string) (context.Context, error) {
-	return ctx, s.SendAndClose(v)
+func (s *StreamingPayloadUserTypeMapMethodServerStream) SendAndCloseWithContext(ctx context.Context, v []string) error {
+	return s.SendAndClose(v)
 }
 `
 
@@ -2485,9 +2455,8 @@ func (s *StreamingPayloadUserTypeMapMethodServerStream) Recv() (map[string]*stre
 // "map[string]*streamingpayloadusertypemapservice.RequestType" from the
 // "StreamingPayloadUserTypeMapMethod" endpoint websocket connection with
 // context.
-func (s *StreamingPayloadUserTypeMapMethodServerStream) RecvWithContext(ctx context.Context) (map[string]*streamingpayloadusertypemapservice.RequestType, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *StreamingPayloadUserTypeMapMethodServerStream) RecvWithContext(ctx context.Context) (map[string]*streamingpayloadusertypemapservice.RequestType, error) {
+	return s.Recv()
 }
 `
 
@@ -2503,8 +2472,8 @@ func (s *StreamingPayloadUserTypeMapMethodClientStream) Send(v map[string]*strea
 // "map[string]*streamingpayloadusertypemapservice.RequestType" to the
 // "StreamingPayloadUserTypeMapMethod" endpoint websocket connection with
 // context.
-func (s *StreamingPayloadUserTypeMapMethodClientStream) SendWithContext(ctx context.Context, v map[string]*streamingpayloadusertypemapservice.RequestType) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *StreamingPayloadUserTypeMapMethodClientStream) SendWithContext(ctx context.Context, v map[string]*streamingpayloadusertypemapservice.RequestType) error {
+	return s.Send(v)
 }
 `
 
@@ -2536,9 +2505,8 @@ func (s *StreamingPayloadUserTypeMapMethodClientStream) CloseAndRecv() ([]string
 // CloseAndRecvWithContext stops sending messages to the
 // "StreamingPayloadUserTypeMapMethod" endpoint websocket connection and reads
 // instances of "[]string" from the connection with context.
-func (s *StreamingPayloadUserTypeMapMethodClientStream) CloseAndRecvWithContext(ctx context.Context) ([]string, context.Context, error) {
-	res, err := s.CloseAndRecv()
-	return res, ctx, err
+func (s *StreamingPayloadUserTypeMapMethodClientStream) CloseAndRecvWithContext(ctx context.Context) ([]string, error) {
+	return s.CloseAndRecv()
 }
 `
 
@@ -2627,8 +2595,8 @@ func (s *BidirectionalStreamingMethodServerStream) Send(v *bidirectionalstreamin
 // SendWithContext streams instances of
 // "bidirectionalstreamingservice.UserType" to the
 // "BidirectionalStreamingMethod" endpoint websocket connection with context.
-func (s *BidirectionalStreamingMethodServerStream) SendWithContext(ctx context.Context, v *bidirectionalstreamingservice.UserType) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingMethodServerStream) SendWithContext(ctx context.Context, v *bidirectionalstreamingservice.UserType) error {
+	return s.Send(v)
 }
 `
 
@@ -2669,9 +2637,8 @@ func (s *BidirectionalStreamingMethodServerStream) Recv() (*bidirectionalstreami
 // RecvWithContext reads instances of "bidirectionalstreamingservice.Request"
 // from the "BidirectionalStreamingMethod" endpoint websocket connection with
 // context.
-func (s *BidirectionalStreamingMethodServerStream) RecvWithContext(ctx context.Context) (*bidirectionalstreamingservice.Request, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingMethodServerStream) RecvWithContext(ctx context.Context) (*bidirectionalstreamingservice.Request, error) {
+	return s.Recv()
 }
 `
 
@@ -2736,8 +2703,8 @@ func (s *BidirectionalStreamingMethodClientStream) Send(v *bidirectionalstreamin
 // SendWithContext streams instances of "bidirectionalstreamingservice.Request"
 // to the "BidirectionalStreamingMethod" endpoint websocket connection with
 // context.
-func (s *BidirectionalStreamingMethodClientStream) SendWithContext(ctx context.Context, v *bidirectionalstreamingservice.Request) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingMethodClientStream) SendWithContext(ctx context.Context, v *bidirectionalstreamingservice.Request) error {
+	return s.Send(v)
 }
 `
 
@@ -2763,9 +2730,8 @@ func (s *BidirectionalStreamingMethodClientStream) Recv() (*bidirectionalstreami
 // RecvWithContext reads instances of "bidirectionalstreamingservice.UserType"
 // from the "BidirectionalStreamingMethod" endpoint websocket connection with
 // context.
-func (s *BidirectionalStreamingMethodClientStream) RecvWithContext(ctx context.Context) (*bidirectionalstreamingservice.UserType, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingMethodClientStream) RecvWithContext(ctx context.Context) (*bidirectionalstreamingservice.UserType, error) {
+	return s.Recv()
 }
 `
 
@@ -2887,8 +2853,8 @@ func (s *BidirectionalStreamingNoPayloadMethodClientStream) Send(v *bidirectiona
 // "bidirectionalstreamingnopayloadservice.Request" to the
 // "BidirectionalStreamingNoPayloadMethod" endpoint websocket connection with
 // context.
-func (s *BidirectionalStreamingNoPayloadMethodClientStream) SendWithContext(ctx context.Context, v *bidirectionalstreamingnopayloadservice.Request) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingNoPayloadMethodClientStream) SendWithContext(ctx context.Context, v *bidirectionalstreamingnopayloadservice.Request) error {
+	return s.Send(v)
 }
 `
 
@@ -2916,9 +2882,8 @@ func (s *BidirectionalStreamingNoPayloadMethodClientStream) Recv() (*bidirection
 // "bidirectionalstreamingnopayloadservice.UserType" from the
 // "BidirectionalStreamingNoPayloadMethod" endpoint websocket connection with
 // context.
-func (s *BidirectionalStreamingNoPayloadMethodClientStream) RecvWithContext(ctx context.Context) (*bidirectionalstreamingnopayloadservice.UserType, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingNoPayloadMethodClientStream) RecvWithContext(ctx context.Context) (*bidirectionalstreamingnopayloadservice.UserType, error) {
+	return s.Recv()
 }
 `
 
@@ -2975,8 +2940,8 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Send(v *bidire
 // "bidirectionalstreamingresultwithviewsservice.Usertype" to the
 // "BidirectionalStreamingResultWithViewsMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingResultWithViewsMethodServerStream) SendWithContext(ctx context.Context, v *bidirectionalstreamingresultwithviewsservice.Usertype) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingResultWithViewsMethodServerStream) SendWithContext(ctx context.Context, v *bidirectionalstreamingresultwithviewsservice.Usertype) error {
+	return s.Send(v)
 }
 `
 
@@ -3017,9 +2982,8 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Recv() (float3
 // RecvWithContext reads instances of "float32" from the
 // "BidirectionalStreamingResultWithViewsMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingResultWithViewsMethodServerStream) RecvWithContext(ctx context.Context) (float32, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingResultWithViewsMethodServerStream) RecvWithContext(ctx context.Context) (float32, error) {
+	return s.Recv()
 }
 `
 
@@ -3059,8 +3023,8 @@ func (s *BidirectionalStreamingResultWithViewsMethodClientStream) Send(v float32
 // SendWithContext streams instances of "float32" to the
 // "BidirectionalStreamingResultWithViewsMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingResultWithViewsMethodClientStream) SendWithContext(ctx context.Context, v float32) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingResultWithViewsMethodClientStream) SendWithContext(ctx context.Context, v float32) error {
+	return s.Send(v)
 }
 `
 
@@ -3092,9 +3056,8 @@ func (s *BidirectionalStreamingResultWithViewsMethodClientStream) Recv() (*bidir
 // "bidirectionalstreamingresultwithviewsservice.Usertype" from the
 // "BidirectionalStreamingResultWithViewsMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingResultWithViewsMethodClientStream) RecvWithContext(ctx context.Context) (*bidirectionalstreamingresultwithviewsservice.Usertype, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingResultWithViewsMethodClientStream) RecvWithContext(ctx context.Context) (*bidirectionalstreamingresultwithviewsservice.Usertype, error) {
+	return s.Recv()
 }
 `
 
@@ -3149,8 +3112,8 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Send(v 
 // "bidirectionalstreamingresultwithexplicitviewservice.Usertype" to the
 // "BidirectionalStreamingResultWithExplicitViewMethod" endpoint websocket
 // connection with context.
-func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) SendWithContext(ctx context.Context, v *bidirectionalstreamingresultwithexplicitviewservice.Usertype) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) SendWithContext(ctx context.Context, v *bidirectionalstreamingresultwithexplicitviewservice.Usertype) error {
+	return s.Send(v)
 }
 `
 
@@ -3192,9 +3155,8 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Recv() 
 // RecvWithContext reads instances of "float32" from the
 // "BidirectionalStreamingResultWithExplicitViewMethod" endpoint websocket
 // connection with context.
-func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) RecvWithContext(ctx context.Context) (float32, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) RecvWithContext(ctx context.Context) (float32, error) {
+	return s.Recv()
 }
 `
 
@@ -3208,8 +3170,8 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodClientStream) Send(v 
 // SendWithContext streams instances of "float32" to the
 // "BidirectionalStreamingResultWithExplicitViewMethod" endpoint websocket
 // connection with context.
-func (s *BidirectionalStreamingResultWithExplicitViewMethodClientStream) SendWithContext(ctx context.Context, v float32) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingResultWithExplicitViewMethodClientStream) SendWithContext(ctx context.Context, v float32) error {
+	return s.Send(v)
 }
 `
 
@@ -3242,9 +3204,8 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodClientStream) Recv() 
 // "bidirectionalstreamingresultwithexplicitviewservice.Usertype" from the
 // "BidirectionalStreamingResultWithExplicitViewMethod" endpoint websocket
 // connection with context.
-func (s *BidirectionalStreamingResultWithExplicitViewMethodClientStream) RecvWithContext(ctx context.Context) (*bidirectionalstreamingresultwithexplicitviewservice.Usertype, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingResultWithExplicitViewMethodClientStream) RecvWithContext(ctx context.Context) (*bidirectionalstreamingresultwithexplicitviewservice.Usertype, error) {
+	return s.Recv()
 }
 `
 
@@ -3290,8 +3251,8 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 // "bidirectionalstreamingresultcollectionwithviewsservice.UsertypeCollection"
 // to the "BidirectionalStreamingResultCollectionWithViewsMethod" endpoint
 // websocket connection with context.
-func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) SendWithContext(ctx context.Context, v bidirectionalstreamingresultcollectionwithviewsservice.UsertypeCollection) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) SendWithContext(ctx context.Context, v bidirectionalstreamingresultcollectionwithviewsservice.UsertypeCollection) error {
+	return s.Send(v)
 }
 `
 
@@ -3333,9 +3294,8 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Recv
 // RecvWithContext reads instances of "any" from the
 // "BidirectionalStreamingResultCollectionWithViewsMethod" endpoint websocket
 // connection with context.
-func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) RecvWithContext(ctx context.Context) (any, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) RecvWithContext(ctx context.Context) (any, error) {
+	return s.Recv()
 }
 `
 
@@ -3359,8 +3319,8 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) Send
 // SendWithContext streams instances of "any" to the
 // "BidirectionalStreamingResultCollectionWithViewsMethod" endpoint websocket
 // connection with context.
-func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) SendWithContext(ctx context.Context, v any) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) SendWithContext(ctx context.Context, v any) error {
+	return s.Send(v)
 }
 `
 
@@ -3393,9 +3353,8 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) Recv
 // "bidirectionalstreamingresultcollectionwithviewsservice.UsertypeCollection"
 // from the "BidirectionalStreamingResultCollectionWithViewsMethod" endpoint
 // websocket connection with context.
-func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) RecvWithContext(ctx context.Context) (bidirectionalstreamingresultcollectionwithviewsservice.UsertypeCollection, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) RecvWithContext(ctx context.Context) (bidirectionalstreamingresultcollectionwithviewsservice.UsertypeCollection, error) {
+	return s.Recv()
 }
 `
 
@@ -3439,8 +3398,8 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 // "bidirectionalstreamingresultcollectionwithexplicitviewservice.UsertypeCollection"
 // to the "BidirectionalStreamingResultCollectionWithExplicitViewMethod"
 // endpoint websocket connection with context.
-func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStream) SendWithContext(ctx context.Context, v bidirectionalstreamingresultcollectionwithexplicitviewservice.UsertypeCollection) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStream) SendWithContext(ctx context.Context, v bidirectionalstreamingresultcollectionwithexplicitviewservice.UsertypeCollection) error {
+	return s.Send(v)
 }
 `
 
@@ -3482,9 +3441,8 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 // RecvWithContext reads instances of "any" from the
 // "BidirectionalStreamingResultCollectionWithExplicitViewMethod" endpoint
 // websocket connection with context.
-func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStream) RecvWithContext(ctx context.Context) (any, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStream) RecvWithContext(ctx context.Context) (any, error) {
+	return s.Recv()
 }
 `
 
@@ -3498,8 +3456,8 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStrea
 // SendWithContext streams instances of "any" to the
 // "BidirectionalStreamingResultCollectionWithExplicitViewMethod" endpoint
 // websocket connection with context.
-func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStream) SendWithContext(ctx context.Context, v any) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStream) SendWithContext(ctx context.Context, v any) error {
+	return s.Send(v)
 }
 `
 
@@ -3532,9 +3490,8 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStrea
 // "bidirectionalstreamingresultcollectionwithexplicitviewservice.UsertypeCollection"
 // from the "BidirectionalStreamingResultCollectionWithExplicitViewMethod"
 // endpoint websocket connection with context.
-func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStream) RecvWithContext(ctx context.Context) (bidirectionalstreamingresultcollectionwithexplicitviewservice.UsertypeCollection, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStream) RecvWithContext(ctx context.Context) (bidirectionalstreamingresultcollectionwithexplicitviewservice.UsertypeCollection, error) {
+	return s.Recv()
 }
 `
 
@@ -3566,8 +3523,8 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Send(v string) error
 // SendWithContext streams instances of "string" to the
 // "BidirectionalStreamingPrimitiveMethod" endpoint websocket connection with
 // context.
-func (s *BidirectionalStreamingPrimitiveMethodServerStream) SendWithContext(ctx context.Context, v string) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingPrimitiveMethodServerStream) SendWithContext(ctx context.Context, v string) error {
+	return s.Send(v)
 }
 `
 
@@ -3608,9 +3565,8 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Recv() (string, erro
 // RecvWithContext reads instances of "string" from the
 // "BidirectionalStreamingPrimitiveMethod" endpoint websocket connection with
 // context.
-func (s *BidirectionalStreamingPrimitiveMethodServerStream) RecvWithContext(ctx context.Context) (string, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingPrimitiveMethodServerStream) RecvWithContext(ctx context.Context) (string, error) {
+	return s.Recv()
 }
 `
 
@@ -3623,8 +3579,8 @@ func (s *BidirectionalStreamingPrimitiveMethodClientStream) Send(v string) error
 // SendWithContext streams instances of "string" to the
 // "BidirectionalStreamingPrimitiveMethod" endpoint websocket connection with
 // context.
-func (s *BidirectionalStreamingPrimitiveMethodClientStream) SendWithContext(ctx context.Context, v string) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingPrimitiveMethodClientStream) SendWithContext(ctx context.Context, v string) error {
+	return s.Send(v)
 }
 `
 
@@ -3649,9 +3605,8 @@ func (s *BidirectionalStreamingPrimitiveMethodClientStream) Recv() (string, erro
 // RecvWithContext reads instances of "string" from the
 // "BidirectionalStreamingPrimitiveMethod" endpoint websocket connection with
 // context.
-func (s *BidirectionalStreamingPrimitiveMethodClientStream) RecvWithContext(ctx context.Context) (string, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingPrimitiveMethodClientStream) RecvWithContext(ctx context.Context) (string, error) {
+	return s.Recv()
 }
 `
 
@@ -3683,8 +3638,8 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Send(v []string
 // SendWithContext streams instances of "[]string" to the
 // "BidirectionalStreamingPrimitiveArrayMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) SendWithContext(ctx context.Context, v []string) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) SendWithContext(ctx context.Context, v []string) error {
+	return s.Send(v)
 }
 `
 
@@ -3725,9 +3680,8 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Recv() ([]int32
 // RecvWithContext reads instances of "[]int32" from the
 // "BidirectionalStreamingPrimitiveArrayMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) RecvWithContext(ctx context.Context) ([]int32, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) RecvWithContext(ctx context.Context) ([]int32, error) {
+	return s.Recv()
 }
 `
 
@@ -3740,8 +3694,8 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodClientStream) Send(v []int32)
 // SendWithContext streams instances of "[]int32" to the
 // "BidirectionalStreamingPrimitiveArrayMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingPrimitiveArrayMethodClientStream) SendWithContext(ctx context.Context, v []int32) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingPrimitiveArrayMethodClientStream) SendWithContext(ctx context.Context, v []int32) error {
+	return s.Send(v)
 }
 `
 
@@ -3766,9 +3720,8 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodClientStream) Recv() ([]strin
 // RecvWithContext reads instances of "[]string" from the
 // "BidirectionalStreamingPrimitiveArrayMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingPrimitiveArrayMethodClientStream) RecvWithContext(ctx context.Context) ([]string, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingPrimitiveArrayMethodClientStream) RecvWithContext(ctx context.Context) ([]string, error) {
+	return s.Recv()
 }
 `
 
@@ -3800,8 +3753,8 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Send(v map[int]in
 // SendWithContext streams instances of "map[int]int" to the
 // "BidirectionalStreamingPrimitiveMapMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) SendWithContext(ctx context.Context, v map[int]int) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) SendWithContext(ctx context.Context, v map[int]int) error {
+	return s.Send(v)
 }
 `
 
@@ -3842,9 +3795,8 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Recv() (map[strin
 // RecvWithContext reads instances of "map[string]int32" from the
 // "BidirectionalStreamingPrimitiveMapMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) RecvWithContext(ctx context.Context) (map[string]int32, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) RecvWithContext(ctx context.Context) (map[string]int32, error) {
+	return s.Recv()
 }
 `
 
@@ -3857,8 +3809,8 @@ func (s *BidirectionalStreamingPrimitiveMapMethodClientStream) Send(v map[string
 // SendWithContext streams instances of "map[string]int32" to the
 // "BidirectionalStreamingPrimitiveMapMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingPrimitiveMapMethodClientStream) SendWithContext(ctx context.Context, v map[string]int32) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingPrimitiveMapMethodClientStream) SendWithContext(ctx context.Context, v map[string]int32) error {
+	return s.Send(v)
 }
 `
 
@@ -3883,9 +3835,8 @@ func (s *BidirectionalStreamingPrimitiveMapMethodClientStream) Recv() (map[int]i
 // RecvWithContext reads instances of "map[int]int" from the
 // "BidirectionalStreamingPrimitiveMapMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingPrimitiveMapMethodClientStream) RecvWithContext(ctx context.Context) (map[int]int, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingPrimitiveMapMethodClientStream) RecvWithContext(ctx context.Context) (map[int]int, error) {
+	return s.Recv()
 }
 `
 
@@ -3920,8 +3871,8 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Send(v []*bidire
 // "[]*bidirectionalstreamingusertypearrayservice.ResultType" to the
 // "BidirectionalStreamingUserTypeArrayMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) SendWithContext(ctx context.Context, v []*bidirectionalstreamingusertypearrayservice.ResultType) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) SendWithContext(ctx context.Context, v []*bidirectionalstreamingusertypearrayservice.ResultType) error {
+	return s.Send(v)
 }
 `
 
@@ -3964,9 +3915,8 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Recv() ([]*bidir
 // "[]*bidirectionalstreamingusertypearrayservice.RequestType" from the
 // "BidirectionalStreamingUserTypeArrayMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) RecvWithContext(ctx context.Context) ([]*bidirectionalstreamingusertypearrayservice.RequestType, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) RecvWithContext(ctx context.Context) ([]*bidirectionalstreamingusertypearrayservice.RequestType, error) {
+	return s.Recv()
 }
 `
 
@@ -3982,8 +3932,8 @@ func (s *BidirectionalStreamingUserTypeArrayMethodClientStream) Send(v []*bidire
 // "[]*bidirectionalstreamingusertypearrayservice.RequestType" to the
 // "BidirectionalStreamingUserTypeArrayMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingUserTypeArrayMethodClientStream) SendWithContext(ctx context.Context, v []*bidirectionalstreamingusertypearrayservice.RequestType) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingUserTypeArrayMethodClientStream) SendWithContext(ctx context.Context, v []*bidirectionalstreamingusertypearrayservice.RequestType) error {
+	return s.Send(v)
 }
 `
 
@@ -4011,9 +3961,8 @@ func (s *BidirectionalStreamingUserTypeArrayMethodClientStream) Recv() ([]*bidir
 // "[]*bidirectionalstreamingusertypearrayservice.ResultType" from the
 // "BidirectionalStreamingUserTypeArrayMethod" endpoint websocket connection
 // with context.
-func (s *BidirectionalStreamingUserTypeArrayMethodClientStream) RecvWithContext(ctx context.Context) ([]*bidirectionalstreamingusertypearrayservice.ResultType, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingUserTypeArrayMethodClientStream) RecvWithContext(ctx context.Context) ([]*bidirectionalstreamingusertypearrayservice.ResultType, error) {
+	return s.Recv()
 }
 `
 
@@ -4048,8 +3997,8 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Send(v map[string]
 // "map[string]*bidirectionalstreamingusertypemapservice.ResultType" to the
 // "BidirectionalStreamingUserTypeMapMethod" endpoint websocket connection with
 // context.
-func (s *BidirectionalStreamingUserTypeMapMethodServerStream) SendWithContext(ctx context.Context, v map[string]*bidirectionalstreamingusertypemapservice.ResultType) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingUserTypeMapMethodServerStream) SendWithContext(ctx context.Context, v map[string]*bidirectionalstreamingusertypemapservice.ResultType) error {
+	return s.Send(v)
 }
 `
 
@@ -4092,9 +4041,8 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Recv() (map[string
 // "map[string]*bidirectionalstreamingusertypemapservice.RequestType" from the
 // "BidirectionalStreamingUserTypeMapMethod" endpoint websocket connection with
 // context.
-func (s *BidirectionalStreamingUserTypeMapMethodServerStream) RecvWithContext(ctx context.Context) (map[string]*bidirectionalstreamingusertypemapservice.RequestType, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingUserTypeMapMethodServerStream) RecvWithContext(ctx context.Context) (map[string]*bidirectionalstreamingusertypemapservice.RequestType, error) {
+	return s.Recv()
 }
 `
 
@@ -4110,8 +4058,8 @@ func (s *BidirectionalStreamingUserTypeMapMethodClientStream) Send(v map[string]
 // "map[string]*bidirectionalstreamingusertypemapservice.RequestType" to the
 // "BidirectionalStreamingUserTypeMapMethod" endpoint websocket connection with
 // context.
-func (s *BidirectionalStreamingUserTypeMapMethodClientStream) SendWithContext(ctx context.Context, v map[string]*bidirectionalstreamingusertypemapservice.RequestType) (context.Context, error) {
-	return ctx, s.Send(v)
+func (s *BidirectionalStreamingUserTypeMapMethodClientStream) SendWithContext(ctx context.Context, v map[string]*bidirectionalstreamingusertypemapservice.RequestType) error {
+	return s.Send(v)
 }
 `
 
@@ -4139,8 +4087,7 @@ func (s *BidirectionalStreamingUserTypeMapMethodClientStream) Recv() (map[string
 // "map[string]*bidirectionalstreamingusertypemapservice.ResultType" from the
 // "BidirectionalStreamingUserTypeMapMethod" endpoint websocket connection with
 // context.
-func (s *BidirectionalStreamingUserTypeMapMethodClientStream) RecvWithContext(ctx context.Context) (map[string]*bidirectionalstreamingusertypemapservice.ResultType, context.Context, error) {
-	res, err := s.Recv()
-	return res, ctx, err
+func (s *BidirectionalStreamingUserTypeMapMethodClientStream) RecvWithContext(ctx context.Context) (map[string]*bidirectionalstreamingusertypemapservice.ResultType, error) {
+	return s.Recv()
 }
 `

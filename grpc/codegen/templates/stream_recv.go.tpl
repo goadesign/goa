@@ -23,7 +23,6 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvRef }}, error) {
 }
 
 {{ comment .RecvWithContextDesc }}
-func (s *{{ .VarName }}) {{ .RecvWithContextName }}(ctx context.Context) ({{ .RecvRef }}, context.Context, error) {
-	res, err := s.{{ .RecvName }}()
-	return res, ctx, err
+func (s *{{ .VarName }}) {{ .RecvWithContextName }}(ctx context.Context) ({{ .RecvRef }}, error) {
+	return s.{{ .RecvName }}()
 }

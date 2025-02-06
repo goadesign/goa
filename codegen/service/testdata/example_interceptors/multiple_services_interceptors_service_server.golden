@@ -23,23 +23,23 @@ type MultipleServicesInterceptorsServiceServerInterceptors struct {
 func NewMultipleServicesInterceptorsServiceServerInterceptors() *MultipleServicesInterceptorsServiceServerInterceptors {
 	return &MultipleServicesInterceptorsServiceServerInterceptors{}
 }
-func (i *MultipleServicesInterceptorsServiceServerInterceptors) Test(ctx context.Context, info *interceptors.TestInfo, next goa.InterceptorEndpoint) (any, context.Context, error) {
+func (i *MultipleServicesInterceptorsServiceServerInterceptors) Test(ctx context.Context, info *interceptors.TestInfo, next goa.Endpoint) (any, error) {
 	log.Printf(ctx, "[Test] Processing request: %v", info.RawPayload())
-	resp, ctx, err := next(ctx, info.RawPayload())
+	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[Test] Error: %v", err)
-		return nil, ctx, err
+		return nil, err
 	}
 	log.Printf(ctx, "[Test] Response: %v", resp)
-	return resp, ctx, nil
+	return resp, nil
 }
-func (i *MultipleServicesInterceptorsServiceServerInterceptors) Test3(ctx context.Context, info *interceptors.Test3Info, next goa.InterceptorEndpoint) (any, context.Context, error) {
+func (i *MultipleServicesInterceptorsServiceServerInterceptors) Test3(ctx context.Context, info *interceptors.Test3Info, next goa.Endpoint) (any, error) {
 	log.Printf(ctx, "[Test3] Processing request: %v", info.RawPayload())
-	resp, ctx, err := next(ctx, info.RawPayload())
+	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[Test3] Error: %v", err)
-		return nil, ctx, err
+		return nil, err
 	}
 	log.Printf(ctx, "[Test3] Response: %v", resp)
-	return resp, ctx, nil
+	return resp, nil
 }

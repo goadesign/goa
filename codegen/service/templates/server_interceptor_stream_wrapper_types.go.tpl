@@ -4,10 +4,10 @@
 type wrapped{{ .Interface }} struct {
 	ctx context.Context
 	{{- if ne .SendTypeRef "" }}
-	sendWithContext func(context.Context, {{ .SendTypeRef }}) (context.Context, error)
+	sendWithContext func(context.Context, {{ .SendTypeRef }}) error
 	{{- end }}
 	{{- if ne .RecvTypeRef "" }}
-	recvWithContext func(context.Context) ({{ .RecvTypeRef }}, context.Context, error)
+	recvWithContext func(context.Context) ({{ .RecvTypeRef }}, error)
 	{{- end }}
 	stream {{ .Interface }}
 }

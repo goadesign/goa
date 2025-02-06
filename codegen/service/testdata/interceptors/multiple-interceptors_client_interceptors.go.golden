@@ -3,8 +3,8 @@
 // is sent to the server. The implementation is responsible for calling next to
 // complete the request.
 type ClientInterceptors interface {
-	Test2(ctx context.Context, info *Test2Info, next goa.InterceptorEndpoint) (any, context.Context, error)
-	Test4(ctx context.Context, info *Test4Info, next goa.InterceptorEndpoint) (any, context.Context, error)
+	Test2(ctx context.Context, info *Test2Info, next goa.Endpoint) (any, error)
+	Test4(ctx context.Context, info *Test4Info, next goa.Endpoint) (any, error)
 }
 
 // Access interfaces for interceptor payloads and results
@@ -30,15 +30,8 @@ type (
 // WrapMethodClientEndpoint wraps the Method endpoint with the client
 // interceptors defined in the design.
 func WrapMethodClientEndpoint(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
-	var interceptorEndpoint goa.InterceptorEndpoint = func(ctx context.Context, request any) (any, context.Context, error) {
-		response, err := endpoint(ctx, request)
-		return response, ctx, err
-	}
-	interceptorEndpoint = wrapClientMethodtest2(interceptorEndpoint, i)
-	interceptorEndpoint = wrapClientMethodtest4(interceptorEndpoint, i)
-	return func(ctx context.Context, request any) (any, error) {
-		response, _, err := interceptorEndpoint(ctx, request)
-		return response, err
-	}
+	endpoint = wrapClientMethodtest2(endpoint, i)
+	endpoint = wrapClientMethodtest4(endpoint, i)
+	return endpoint
 }
 

@@ -65,13 +65,13 @@ type {{ .Stream.Interface }} interface {
 		{{ comment .Stream.SendDesc }}
 		{{ .Stream.SendName }}({{ .Stream.SendTypeRef }}) error
 		{{ comment .Stream.SendWithContextDesc }}
-		{{ .Stream.SendWithContextName }}(context.Context, {{ .Stream.SendTypeRef }}) (context.Context, error)
+		{{ .Stream.SendWithContextName }}(context.Context, {{ .Stream.SendTypeRef }}) error
 	{{- end }}
 	{{- if .Stream.RecvTypeRef }}
 		{{ comment .Stream.RecvDesc }}
 		{{ .Stream.RecvName }}() ({{ .Stream.RecvTypeRef }}, error)
 		{{ comment .Stream.RecvWithContextDesc }}
-		{{ .Stream.RecvWithContextName }}(context.Context) ({{ .Stream.RecvTypeRef }}, context.Context, error)
+		{{ .Stream.RecvWithContextName }}(context.Context) ({{ .Stream.RecvTypeRef }}, error)
 	{{- end }}
 	{{- if .Stream.MustClose }}
 		{{ comment "Close closes the stream." }}
