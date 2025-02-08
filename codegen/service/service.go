@@ -122,16 +122,9 @@ func Files(genpkg string, service *expr.ServiceExpr, userTypePkgs map[string][]s
 
 	// transform result type functions
 	for _, t := range svc.viewedResultTypes {
-		svcSections = append(svcSections, &codegen.SectionTemplate{
-			Name:   "viewed-result-type-to-service-result-type",
-			Source: readTemplate("type_init"),
-			Data:   t.ResultInit,
-		})
-		svcSections = append(svcSections, &codegen.SectionTemplate{
-			Name:   "service-result-type-to-viewed-result-type",
-			Source: readTemplate("type_init"),
-			Data:   t.Init,
-		})
+		svcSections = append(svcSections,
+			&codegen.SectionTemplate{Name: "viewed-result-type-to-service-result-type", Source: readTemplate("type_init"), Data: t.ResultInit},
+			&codegen.SectionTemplate{Name: "service-result-type-to-viewed-result-type", Source: readTemplate("type_init"), Data: t.Init})
 	}
 	var projh []*codegen.TransformFunctionData
 	for _, t := range svc.projectedTypes {

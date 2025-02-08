@@ -454,7 +454,6 @@ func (ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		Scope:               scope,
 	}
 	seen, imported := make(map[string]struct{}), make(map[string]struct{})
-
 	for _, e := range gs.GRPCEndpoints {
 		// convert request and response types to protocol buffer message types
 		e.Request = makeProtoBufMessage(e.Request, protoBufify(e.Name()+"_request", true, true), sd)
@@ -897,11 +896,9 @@ func buildResponseConvertData(response, result *expr.AttributeExpr, svcCtx *code
 	if !svr && (e.MethodExpr.IsStreaming() || isEmpty(e.MethodExpr.Result.Type)) {
 		return nil
 	}
-
 	svc := sd.Service
 	if svr {
 		// server side
-
 		data := buildInitData(result, response, "result", "message", svcCtx, true, svr, false, sd)
 		data.Description = fmt.Sprintf("%s builds the gRPC response type from the result of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 		return &ConvertData{
@@ -1046,7 +1043,6 @@ func buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRPCEndpointExpr, sd 
 	}
 	svc := sd.Service
 	svcCtx := serviceTypeContext(svc.PkgName, svc.Scope)
-
 	if svr {
 		// server side
 		data := buildInitData(ge.ErrorExpr.AttributeExpr, ge.Response.Message, "er", "message", svcCtx, true, svr, false, sd)
