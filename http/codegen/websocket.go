@@ -120,20 +120,15 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 			}
 			desc = fmt.Sprintf("%s builds a %s service %s endpoint payload.", name, svc.Name, e.MethodExpr.Name)
 			if body != expr.Empty {
-				var (
-					ref    string
-					svcode string
-				)
-				{
-					ref = "body"
-					if expr.IsObject(body) {
-						ref = "&body"
-					}
-					if ut, ok := body.(expr.UserType); ok {
-						if val := ut.Attribute().Validation; val != nil {
-							httpctx := httpContext("", sd.Scope, true, true)
-							svcode = codegen.ValidationCode(ut.Attribute(), ut, httpctx, true, expr.IsAlias(ut), false, "body")
-						}
+				ref := "body"
+				if expr.IsObject(body) {
+					ref = "&body"
+				}
+				var svcode string
+				if ut, ok := body.(expr.UserType); ok {
+					if val := ut.Attribute().Validation; val != nil {
+						httpctx := httpContext("", sd.Scope, true, true)
+						svcode = codegen.ValidationCode(ut.Attribute(), ut, httpctx, true, expr.IsAlias(ut), false, "body")
 					}
 				}
 				serverArgs = []*InitArgData{{
