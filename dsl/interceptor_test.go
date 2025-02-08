@@ -205,7 +205,7 @@ func TestClientInterceptor(t *testing.T) {
 					ClientInterceptor(42) // Invalid type
 				})
 			},
-			func(t *testing.T, svc *expr.ServiceExpr, err error) {
+			func(t *testing.T, _ *expr.ServiceExpr, err error) {
 				require.Error(t, err)
 			},
 		},
@@ -215,7 +215,7 @@ func TestClientInterceptor(t *testing.T) {
 					ClientInterceptor("invalid")
 				})
 			},
-			func(t *testing.T, svc *expr.ServiceExpr, err error) {
+			func(t *testing.T, _ *expr.ServiceExpr, err error) {
 				require.Error(t, err)
 			},
 		},

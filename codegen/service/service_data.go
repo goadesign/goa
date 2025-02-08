@@ -1715,65 +1715,62 @@ func buildTypeInits(projected, att *expr.AttributeExpr, viewspkg string, scope, 
 
 	// For every view defined in the result type, build a constructor function
 	// to create the result type from a projected type based on the view.
-	var init []*InitData
-	{
-		init = make([]*InitData, 0, len(prt.Views))
-		for _, view := range prt.Views {
-			var typ expr.DataType
-			obj := &expr.Object{}
-			walkViewAttrs(pobj, view, func(name string, att, _ *expr.AttributeExpr) {
-				obj.Set(name, att)
-			})
-			typ = obj
-			if parr != nil {
-				typ = &expr.Array{ElemType: &expr.AttributeExpr{
-					Type: &expr.ResultTypeExpr{
-						UserTypeExpr: &expr.UserTypeExpr{
-							AttributeExpr: &expr.AttributeExpr{Type: obj},
-							TypeName:      scope.GoTypeName(parr.ElemType),
-						},
-					},
-				}}
-			}
-			src := &expr.AttributeExpr{
+	init := make([]*InitData, 0, len(prt.Views))
+	for _, view := range prt.Views {
+		var typ expr.DataType
+		obj := &expr.Object{}
+		walkViewAttrs(pobj, view, func(name string, att, _ *expr.AttributeExpr) {
+			obj.Set(name, att)
+		})
+		typ = obj
+		if parr != nil {
+			typ = &expr.Array{ElemType: &expr.AttributeExpr{
 				Type: &expr.ResultTypeExpr{
 					UserTypeExpr: &expr.UserTypeExpr{
-						AttributeExpr: &expr.AttributeExpr{Type: typ},
-						TypeName:      scope.GoTypeName(projected),
+						AttributeExpr: &expr.AttributeExpr{Type: obj},
+						TypeName:      scope.GoTypeName(parr.ElemType),
 					},
-					Views:      prt.Views,
-					Identifier: prt.Identifier,
 				},
-			}
-
-			var (
-				name    string
-				code    string
-				helpers []*codegen.TransformFunctionData
-			)
-
-			srcCtx := projectedTypeContext(viewspkg, true, viewScope)
-			tgtCtx := typeContext("", scope)
-			resvar := scope.GoTypeName(att)
-			name = "new" + resvar
-			if view.Name != expr.DefaultView {
-				name += codegen.Goify(view.Name, true)
-			}
-			code, helpers = buildConstructorCode(src, att, "vres", "res", srcCtx, tgtCtx, view.Name)
-
-			pkg := ""
-			if loc := codegen.UserTypeLocation(att.Type); loc != nil {
-				pkg = loc.PackageName()
-			}
-			init = append(init, &InitData{
-				Name:          name,
-				Description:   fmt.Sprintf("%s converts projected type %s to service type %s.", name, resvar, resvar),
-				Args:          []*InitArgData{{Name: "vres", Ref: viewScope.GoFullTypeRef(projected, viewspkg)}},
-				ReturnTypeRef: scope.GoFullTypeRef(att, pkg),
-				Code:          code,
-				Helpers:       helpers,
-			})
+			}}
 		}
+		src := &expr.AttributeExpr{
+			Type: &expr.ResultTypeExpr{
+				UserTypeExpr: &expr.UserTypeExpr{
+					AttributeExpr: &expr.AttributeExpr{Type: typ},
+					TypeName:      scope.GoTypeName(projected),
+				},
+				Views:      prt.Views,
+				Identifier: prt.Identifier,
+			},
+		}
+
+		var (
+			name    string
+			code    string
+			helpers []*codegen.TransformFunctionData
+		)
+
+		srcCtx := projectedTypeContext(viewspkg, true, viewScope)
+		tgtCtx := typeContext("", scope)
+		resvar := scope.GoTypeName(att)
+		name = "new" + resvar
+		if view.Name != expr.DefaultView {
+			name += codegen.Goify(view.Name, true)
+		}
+		code, helpers = buildConstructorCode(src, att, "vres", "res", srcCtx, tgtCtx, view.Name)
+
+		pkg := ""
+		if loc := codegen.UserTypeLocation(att.Type); loc != nil {
+			pkg = loc.PackageName()
+		}
+		init = append(init, &InitData{
+			Name:          name,
+			Description:   fmt.Sprintf("%s converts projected type %s to service type %s.", name, resvar, resvar),
+			Args:          []*InitArgData{{Name: "vres", Ref: viewScope.GoFullTypeRef(projected, viewspkg)}},
+			ReturnTypeRef: scope.GoFullTypeRef(att, pkg),
+			Code:          code,
+			Helpers:       helpers,
+		})
 	}
 	return init
 }

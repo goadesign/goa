@@ -1037,14 +1037,11 @@ func buildErrorsData(e *expr.GRPCEndpointExpr, sd *ServiceData) []*ErrorData {
 	svc := sd.Service
 	errors = make([]*ErrorData, 0, len(e.GRPCErrors))
 	for _, v := range e.GRPCErrors {
-		var responseData *ResponseData
-		{
-			responseData = &ResponseData{
-				StatusCode:    statusCodeToGRPCConst(v.Response.StatusCode),
-				Description:   v.Response.Description,
-				ServerConvert: buildErrorConvertData(v, e, sd, true),
-				ClientConvert: buildErrorConvertData(v, e, sd, false),
-			}
+		responseData := &ResponseData{
+			StatusCode:    statusCodeToGRPCConst(v.Response.StatusCode),
+			Description:   v.Response.Description,
+			ServerConvert: buildErrorConvertData(v, e, sd, true),
+			ClientConvert: buildErrorConvertData(v, e, sd, false),
 		}
 		errorLoc := svc.Method(e.MethodExpr.Name).ErrorLocs[v.Name]
 		errors = append(errors, &ErrorData{
