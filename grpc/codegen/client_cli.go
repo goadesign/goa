@@ -19,31 +19,27 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 		data []*cli.CommandData
 		svcs []*expr.GRPCServiceExpr
 	)
-	{
-		for _, svc := range root.API.GRPC.Services {
-			if len(svc.GRPCEndpoints) == 0 {
-				continue
-			}
-			sd := GRPCServices.Get(svc.Name())
-			command := cli.BuildCommandData(sd.Service)
-			for _, e := range sd.Endpoints {
-				flags, buildFunction := buildFlags(e)
-				subcmd := cli.BuildSubcommandData(sd.Service.Name, e.Method, buildFunction, flags)
-				command.Subcommands = append(command.Subcommands, subcmd)
-			}
-			command.Example = command.Subcommands[0].Example
-			data = append(data, command)
-			svcs = append(svcs, svc)
+	for _, svc := range root.API.GRPC.Services {
+		if len(svc.GRPCEndpoints) == 0 {
+			continue
 		}
+		sd := GRPCServices.Get(svc.Name())
+		command := cli.BuildCommandData(sd.Service)
+		for _, e := range sd.Endpoints {
+			flags, buildFunction := buildFlags(e)
+			subcmd := cli.BuildSubcommandData(sd.Service.Name, e.Method, buildFunction, flags)
+			command.Subcommands = append(command.Subcommands, subcmd)
+		}
+		command.Example = command.Subcommands[0].Example
+		data = append(data, command)
+		svcs = append(svcs, svc)
 	}
 	var files []*codegen.File
-	{
-		for _, svr := range root.API.Servers {
-			files = append(files, endpointParser(genpkg, root, svr, data))
-		}
-		for i, svc := range svcs {
-			files = append(files, payloadBuilders(genpkg, svc, data[i]))
-		}
+	for _, svr := range root.API.Servers {
+		files = append(files, endpointParser(genpkg, root, svr, data))
+	}
+	for i, svc := range svcs {
+		files = append(files, payloadBuilders(genpkg, svc, data[i]))
 	}
 	return files
 }
@@ -71,14 +67,9 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 			continue
 		}
 		svcName := sd.Service.PathName
-		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, "grpc", svcName, "client"),
-			Name: sd.Service.PkgName + "c",
-		})
-		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, "grpc", svcName, pbPkgName),
-			Name: svcName + pbPkgName,
-		})
+		specs = append(specs,
+			&codegen.ImportSpec{Path: path.Join(genpkg, "grpc", svcName, "client"), Name: sd.Service.PkgName + "c"},
+			&codegen.ImportSpec{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: svcName + pbPkgName})
 		specs = append(specs, sd.Service.UserTypeImports...)
 		// Add interceptors import if service has client interceptors
 		if len(sd.Service.ClientInterceptors) > 0 {
