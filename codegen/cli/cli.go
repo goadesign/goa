@@ -189,43 +189,41 @@ func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *B
 
 		conversion string
 	)
-	{
-		en := m.Name
-		name = codegen.KebabCase(en)
-		fullName = goifyTerms(svcName, en)
-		description = m.Description
-		if description == "" {
-			description = fmt.Sprintf("Make request to the %q endpoint", m.Name)
-		}
+	en := m.Name
+	name = codegen.KebabCase(en)
+	fullName = goifyTerms(svcName, en)
+	description = m.Description
+	if description == "" {
+		description = fmt.Sprintf("Make request to the %q endpoint", m.Name)
+	}
 
-		if m.Payload != "" && buildFunction == nil && len(flags) > 0 {
-			// No build function, just convert the arg to the body type
-			var convPre, convSuff string
-			target := "data"
+	if m.Payload != "" && buildFunction == nil && len(flags) > 0 {
+		// No build function, just convert the arg to the body type
+		var convPre, convSuff string
+		target := "data"
+		if flagType(m.Payload) == "JSON" {
+			target = "val"
+			convPre = fmt.Sprintf("var val %s\n", m.Payload)
+			convSuff = "\ndata = val"
+		}
+		conv, _, check := conversionCode(
+			"*"+flags[0].FullName+"Flag",
+			target,
+			m.Payload,
+			false,
+		)
+		conversion = convPre + conv + convSuff
+		if check {
+			conversion = "var err error\n" + conversion
+			conversion += "\nif err != nil {\n"
 			if flagType(m.Payload) == "JSON" {
-				target = "val"
-				convPre = fmt.Sprintf("var val %s\n", m.Payload)
-				convSuff = "\ndata = val"
+				conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", err, %q)`,
+					flags[0].FullName+"Flag", flags[0].Example)
+			} else {
+				conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid value for %s, must be %s")`,
+					flags[0].FullName+"Flag", flags[0].Type)
 			}
-			conv, _, check := conversionCode(
-				"*"+flags[0].FullName+"Flag",
-				target,
-				m.Payload,
-				false,
-			)
-			conversion = convPre + conv + convSuff
-			if check {
-				conversion = "var err error\n" + conversion
-				conversion += "\nif err != nil {\n"
-				if flagType(m.Payload) == "JSON" {
-					conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", err, %q)`,
-						flags[0].FullName+"Flag", flags[0].Example)
-				} else {
-					conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid value for %s, must be %s")`,
-						flags[0].FullName+"Flag", flags[0].Type)
-				}
-				conversion += "\n}"
-			}
+			conversion += "\n}"
 		}
 	}
 	sub := &SubcommandData{
@@ -353,66 +351,64 @@ func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultVa
 		startIf string
 		endIf   string
 	)
-	{
-		if !f.Required {
-			startIf = fmt.Sprintf("if %s != \"\" {\n", f.FullName)
-			endIf = "\n}"
+	if !f.Required {
+		startIf = fmt.Sprintf("if %s != \"\" {\n", f.FullName)
+		endIf = "\n}"
+	}
+	if argTypeName == codegen.GoNativeTypeName(expr.String) {
+		ref := "&"
+		if f.Required || defaultValue != nil {
+			ref = ""
 		}
-		if argTypeName == codegen.GoNativeTypeName(expr.String) {
-			ref := "&"
-			if f.Required || defaultValue != nil {
-				ref = ""
-			}
-			code = argName + " = " + ref + f.FullName
-			declErr = validate != ""
-		} else {
-			var checkErr bool
-			code, declErr, checkErr = conversionCode(f.FullName, argName, argTypeName, !f.Required && defaultValue == nil)
-			if checkErr {
-				code += "\nif err != nil {\n"
-				nilVal := "nil"
-				if expr.IsPrimitive(payload) {
-					code += fmt.Sprintf("var zero %s\n", payloadRef)
-					nilVal = "zero"
-				}
-				if flagType(argTypeName) == "JSON" {
-					code += fmt.Sprintf(`return %s, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", err, %q)`,
-						nilVal, argName, f.Example)
-				} else {
-					code += fmt.Sprintf(`return %s, fmt.Errorf("invalid value for %s, must be %s")`,
-						nilVal, argName, f.Type)
-				}
-				code += "\n}"
-			}
-		}
-		if validate != "" {
-			nilCheck := "if " + argName + " != nil {"
-			if strings.HasPrefix(validate, nilCheck) {
-				// hackety hack... the validation code is generated for the client and needs to
-				// account for the fact that the field could be nil in this case. We are reusing
-				// that code to validate a CLI flag which can never be nil.  Lint tools complain
-				// about that so remove the if statements. Ideally we'd have a better way to do
-				// this but that requires a lot of changes and the added complexity might not be
-				// worth it.
-				var lines []string
-				ls := strings.Split(validate, "\n")
-				for i := 1; i < len(ls)-1; i++ {
-					if ls[i+1] == nilCheck {
-						i++ // skip both closing brace on previous line and check
-						continue
-					}
-					lines = append(lines, ls[i])
-				}
-				validate = strings.Join(lines, "\n")
-			}
-			code += "\n" + validate + "\n"
+		code = argName + " = " + ref + f.FullName
+		declErr = validate != ""
+	} else {
+		var checkErr bool
+		code, declErr, checkErr = conversionCode(f.FullName, argName, argTypeName, !f.Required && defaultValue == nil)
+		if checkErr {
+			code += "\nif err != nil {\n"
 			nilVal := "nil"
 			if expr.IsPrimitive(payload) {
 				code += fmt.Sprintf("var zero %s\n", payloadRef)
 				nilVal = "zero"
 			}
-			code += fmt.Sprintf("if err != nil {\n\treturn %s, err\n}", nilVal)
+			if flagType(argTypeName) == "JSON" {
+				code += fmt.Sprintf(`return %s, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", err, %q)`,
+					nilVal, argName, f.Example)
+			} else {
+				code += fmt.Sprintf(`return %s, fmt.Errorf("invalid value for %s, must be %s")`,
+					nilVal, argName, f.Type)
+			}
+			code += "\n}"
 		}
+	}
+	if validate != "" {
+		nilCheck := "if " + argName + " != nil {"
+		if strings.HasPrefix(validate, nilCheck) {
+			// hackety hack... the validation code is generated for the client and needs to
+			// account for the fact that the field could be nil in this case. We are reusing
+			// that code to validate a CLI flag which can never be nil.  Lint tools complain
+			// about that so remove the if statements. Ideally we'd have a better way to do
+			// this but that requires a lot of changes and the added complexity might not be
+			// worth it.
+			var lines []string
+			ls := strings.Split(validate, "\n")
+			for i := 1; i < len(ls)-1; i++ {
+				if ls[i+1] == nilCheck {
+					i++ // skip both closing brace on previous line and check
+					continue
+				}
+				lines = append(lines, ls[i])
+			}
+			validate = strings.Join(lines, "\n")
+		}
+		code += "\n" + validate + "\n"
+		nilVal := "nil"
+		if expr.IsPrimitive(payload) {
+			code += fmt.Sprintf("var zero %s\n", payloadRef)
+			nilVal = "zero"
+		}
+		code += fmt.Sprintf("if err != nil {\n\treturn %s, err\n}", nilVal)
 	}
 	return fmt.Sprintf("%s%s%s", startIf, code, endIf), declErr
 }

@@ -8,7 +8,7 @@ import (
 )
 
 // InterceptorsFiles returns the interceptors files for the given service.
-func InterceptorsFiles(genpkg string, service *expr.ServiceExpr) []*codegen.File {
+func InterceptorsFiles(_ string, service *expr.ServiceExpr) []*codegen.File {
 	var files []*codegen.File
 	svc := Services.Get(service.Name)
 

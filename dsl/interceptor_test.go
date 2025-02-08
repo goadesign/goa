@@ -15,7 +15,7 @@ import (
 func TestInterceptor(t *testing.T) {
 	cases := map[string]struct {
 		DSL    func()
-		Assert func(t *testing.T, intr *expr.InterceptorExpr)
+		Assert func(*testing.T, *expr.InterceptorExpr)
 	}{
 		"valid-minimal": {
 			func() {
@@ -73,7 +73,7 @@ func TestInterceptor(t *testing.T) {
 			func() {
 				Interceptor("", func() {})
 			},
-			func(t *testing.T, intr *expr.InterceptorExpr) {
+			func(t *testing.T, _ *expr.InterceptorExpr) {
 				assert.NotNil(t, eval.Context.Errors, "expected a validation error")
 			},
 		},
@@ -82,7 +82,7 @@ func TestInterceptor(t *testing.T) {
 				Interceptor("duplicate", func() {})
 				Interceptor("duplicate", func() {})
 			},
-			func(t *testing.T, intr *expr.InterceptorExpr) {
+			func(t *testing.T, _ *expr.InterceptorExpr) {
 				if eval.Context.Errors == nil {
 					t.Error("expected a validation error, got none")
 				}
@@ -105,7 +105,7 @@ func TestInterceptor(t *testing.T) {
 func TestServerInterceptor(t *testing.T) {
 	cases := map[string]struct {
 		DSL    func()
-		Assert func(t *testing.T, svc *expr.ServiceExpr, err error)
+		Assert func(*testing.T, *expr.ServiceExpr, error)
 	}{
 		"valid-reference": {
 			func() {
@@ -141,7 +141,7 @@ func TestServerInterceptor(t *testing.T) {
 					ServerInterceptor(42) // Invalid type
 				})
 			},
-			func(t *testing.T, svc *expr.ServiceExpr, err error) {
+			func(t *testing.T, _ *expr.ServiceExpr, err error) {
 				require.Error(t, err)
 			},
 		},
@@ -151,7 +151,7 @@ func TestServerInterceptor(t *testing.T) {
 					ServerInterceptor("invalid")
 				})
 			},
-			func(t *testing.T, svc *expr.ServiceExpr, err error) {
+			func(t *testing.T, _ *expr.ServiceExpr, err error) {
 				require.Error(t, err)
 			},
 		},
@@ -171,7 +171,7 @@ func TestServerInterceptor(t *testing.T) {
 func TestClientInterceptor(t *testing.T) {
 	cases := map[string]struct {
 		DSL    func()
-		Assert func(t *testing.T, svc *expr.ServiceExpr, err error)
+		Assert func(*testing.T, *expr.ServiceExpr, error)
 	}{
 		"valid-reference": {
 			func() {

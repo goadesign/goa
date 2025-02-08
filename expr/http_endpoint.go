@@ -878,7 +878,7 @@ func (e *HTTPEndpointExpr) validateHeadersAndCookies() *eval.ValidationErrors {
 
 // EvalName returns the generic definition name used in error messages.
 func (r *RouteExpr) EvalName() string {
-	return fmt.Sprintf(`route %s "%s" of %s`, r.Method, r.Path, r.Endpoint.EvalName())
+	return fmt.Sprintf(`route %s %q of %s`, r.Method, r.Path, r.Endpoint.EvalName())
 }
 
 // Validate validates a route expression by ensuring that the route parameters
