@@ -64,8 +64,9 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		codegen.Header(title, "server", imports),
 	}
 
-	sections = append(sections, &codegen.SectionTemplate{Name: "server-struct", Source: readTemplate("server_struct"), Data: data})
-	sections = append(sections, &codegen.SectionTemplate{Name: "server-mountpoint", Source: readTemplate("mount_point_struct"), Data: data})
+	sections = append(sections,
+		&codegen.SectionTemplate{Name: "server-struct", Source: readTemplate("server_struct"), Data: data},
+		&codegen.SectionTemplate{Name: "server-mountpoint", Source: readTemplate("mount_point_struct"), Data: data})
 
 	for _, e := range data.Endpoints {
 		if e.MultipartRequestDecoder != nil {
@@ -77,15 +78,17 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		}
 	}
 
-	sections = append(sections, &codegen.SectionTemplate{Name: "server-init", Source: readTemplate("server_init"), Data: data, FuncMap: funcs})
-	sections = append(sections, &codegen.SectionTemplate{Name: "server-service", Source: readTemplate("server_service"), Data: data})
-	sections = append(sections, &codegen.SectionTemplate{Name: "server-use", Source: readTemplate("server_use"), Data: data})
-	sections = append(sections, &codegen.SectionTemplate{Name: "server-method-names", Source: readTemplate("server_method_names"), Data: data})
-	sections = append(sections, &codegen.SectionTemplate{Name: "server-mount", Source: readTemplate("server_mount"), Data: data, FuncMap: funcs})
+	sections = append(sections,
+		&codegen.SectionTemplate{Name: "server-init", Source: readTemplate("server_init"), Data: data, FuncMap: funcs},
+		&codegen.SectionTemplate{Name: "server-service", Source: readTemplate("server_service"), Data: data},
+		&codegen.SectionTemplate{Name: "server-use", Source: readTemplate("server_use"), Data: data},
+		&codegen.SectionTemplate{Name: "server-method-names", Source: readTemplate("server_method_names"), Data: data},
+		&codegen.SectionTemplate{Name: "server-mount", Source: readTemplate("server_mount"), Data: data, FuncMap: funcs})
 
 	for _, e := range data.Endpoints {
-		sections = append(sections, &codegen.SectionTemplate{Name: "server-handler", Source: readTemplate("server_handler"), Data: e})
-		sections = append(sections, &codegen.SectionTemplate{Name: "server-handler-init", Source: readTemplate("server_handler_init"), FuncMap: funcs, Data: e})
+		sections = append(sections,
+			&codegen.SectionTemplate{Name: "server-handler", Source: readTemplate("server_handler"), Data: e},
+			&codegen.SectionTemplate{Name: "server-handler-init", Source: readTemplate("server_handler_init"), FuncMap: funcs, Data: e})
 	}
 	if len(data.FileServers) > 0 {
 		mappedFiles := make(map[string]string)
