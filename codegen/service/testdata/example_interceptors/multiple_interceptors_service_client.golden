@@ -24,8 +24,8 @@ func NewMultipleInterceptorsServiceClientInterceptors() *MultipleInterceptorsSer
 	return &MultipleInterceptorsServiceClientInterceptors{}
 }
 func (i *MultipleInterceptorsServiceClientInterceptors) Test2(ctx context.Context, info *interceptors.Test2Info, next goa.Endpoint) (any, error) {
-	log.Printf(ctx, "[Test2] Sending request: %v", info.RawPayload)
-	resp, err := next(ctx, info.RawPayload)
+	log.Printf(ctx, "[Test2] Sending request: %v", info.RawPayload())
+	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[Test2] Error: %v", err)
 		return nil, err
@@ -34,8 +34,8 @@ func (i *MultipleInterceptorsServiceClientInterceptors) Test2(ctx context.Contex
 	return resp, nil
 }
 func (i *MultipleInterceptorsServiceClientInterceptors) Test4(ctx context.Context, info *interceptors.Test4Info, next goa.Endpoint) (any, error) {
-	log.Printf(ctx, "[Test4] Sending request: %v", info.RawPayload)
-	resp, err := next(ctx, info.RawPayload)
+	log.Printf(ctx, "[Test4] Sending request: %v", info.RawPayload())
+	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[Test4] Error: %v", err)
 		return nil, err

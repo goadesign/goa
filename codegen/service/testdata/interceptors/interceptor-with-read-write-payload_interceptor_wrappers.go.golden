@@ -4,10 +4,10 @@
 func wrapMethodValidation(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &ValidationInfo{
-			Service:    "InterceptorWithReadWritePayload",
-			Method:     "Method",
-			Endpoint:   endpoint,
-			RawPayload: req,
+			service:    "InterceptorWithReadWritePayload",
+			method:     "Method",
+			callType:   goa.InterceptorUnary,
+			rawPayload: req,
 		}
 		return i.Validation(ctx, info, endpoint)
 	}
@@ -18,12 +18,11 @@ func wrapMethodValidation(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpo
 func wrapClientMethodValidation(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &ValidationInfo{
-			Service:    "InterceptorWithReadWritePayload",
-			Method:     "Method",
-			Endpoint:   endpoint,
-			RawPayload: req,
+			service:    "InterceptorWithReadWritePayload",
+			method:     "Method",
+			callType:   goa.InterceptorUnary,
+			rawPayload: req,
 		}
 		return i.Validation(ctx, info, endpoint)
 	}
 }
-

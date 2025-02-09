@@ -58,6 +58,8 @@ type (
 		Conversion string
 		// Example is a valid command invocation, starting with the command name.
 		Example string
+		// Interceptors contains the data for client interceptors if any apply to the endpoint method.
+		Interceptors *InterceptorData
 	}
 
 	// InterceptorData contains the data needed to generate interceptor code.
@@ -181,22 +183,16 @@ func BuildCommandData(data *service.Data) *CommandData {
 
 // BuildSubcommandData builds the data needed by CLI code generators to render
 // the CLI parsing of the service sub-command.
-func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *BuildFunctionData, flags []*FlagData) *SubcommandData {
-	var (
-		name        string
-		fullName    string
-		description string
-
-		conversion string
-	)
+func BuildSubcommandData(data *service.Data, m *service.MethodData, buildFunction *BuildFunctionData, flags []*FlagData) *SubcommandData {
 	en := m.Name
-	name = codegen.KebabCase(en)
-	fullName = goifyTerms(svcName, en)
-	description = m.Description
+	name := codegen.KebabCase(en)
+	fullName := goifyTerms(data.Name, en)
+	description := m.Description
 	if description == "" {
 		description = fmt.Sprintf("Make request to the %q endpoint", m.Name)
 	}
 
+	var conversion string
 	if m.Payload != "" && buildFunction == nil && len(flags) > 0 {
 		// No build function, just convert the arg to the body type
 		var convPre, convSuff string
@@ -226,6 +222,14 @@ func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *B
 			conversion += "\n}"
 		}
 	}
+
+	var interceptors *InterceptorData
+	if len(m.ClientInterceptors) > 0 {
+		interceptors = &InterceptorData{
+			VarName: "inter",
+			PkgName: data.PkgName,
+		}
+	}
 	sub := &SubcommandData{
 		Name:          name,
 		FullName:      fullName,
@@ -234,8 +238,9 @@ func BuildSubcommandData(svcName string, m *service.MethodData, buildFunction *B
 		MethodVarName: m.VarName,
 		BuildFunction: buildFunction,
 		Conversion:    conversion,
+		Interceptors:  interceptors,
 	}
-	generateExample(sub, svcName)
+	generateExample(sub, data.Name)
 
 	return sub
 }

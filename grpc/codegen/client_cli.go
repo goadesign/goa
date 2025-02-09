@@ -27,7 +27,7 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 		command := cli.BuildCommandData(sd.Service)
 		for _, e := range sd.Endpoints {
 			flags, buildFunction := buildFlags(e)
-			subcmd := cli.BuildSubcommandData(sd.Service.Name, e.Method, buildFunction, flags)
+			subcmd := cli.BuildSubcommandData(sd.Service, e.Method, buildFunction, flags)
 			command.Subcommands = append(command.Subcommands, subcmd)
 		}
 		command.Example = command.Subcommands[0].Example

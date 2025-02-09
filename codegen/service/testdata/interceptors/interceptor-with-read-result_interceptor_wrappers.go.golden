@@ -4,10 +4,10 @@
 func wrapMethodCaching(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &CachingInfo{
-			Service:    "InterceptorWithReadResult",
-			Method:     "Method",
-			Endpoint:   endpoint,
-			RawPayload: req,
+			service:    "InterceptorWithReadResult",
+			method:     "Method",
+			callType:   goa.InterceptorUnary,
+			rawPayload: req,
 		}
 		return i.Caching(ctx, info, endpoint)
 	}
@@ -17,12 +17,11 @@ func wrapMethodCaching(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint
 func wrapClientMethodCaching(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &CachingInfo{
-			Service:    "InterceptorWithReadResult",
-			Method:     "Method",
-			Endpoint:   endpoint,
-			RawPayload: req,
+			service:    "InterceptorWithReadResult",
+			method:     "Method",
+			callType:   goa.InterceptorUnary,
+			rawPayload: req,
 		}
 		return i.Caching(ctx, info, endpoint)
 	}
 }
-

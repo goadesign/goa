@@ -52,3 +52,8 @@ func (s *{{ .VarName }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
 	{{- end }}
 {{- end }}
 }
+
+{{ comment .SendWithContextDesc }}
+func (s *{{ .VarName }}) {{ .SendWithContextName }}(ctx context.Context, v {{ .SendTypeRef }}) error {
+	return s.{{ .SendName }}(v)
+}

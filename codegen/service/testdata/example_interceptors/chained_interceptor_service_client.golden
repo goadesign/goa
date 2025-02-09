@@ -24,8 +24,8 @@ func NewChainedInterceptorServiceClientInterceptors() *ChainedInterceptorService
 	return &ChainedInterceptorServiceClientInterceptors{}
 }
 func (i *ChainedInterceptorServiceClientInterceptors) API(ctx context.Context, info *interceptors.APIInfo, next goa.Endpoint) (any, error) {
-	log.Printf(ctx, "[API] Sending request: %v", info.RawPayload)
-	resp, err := next(ctx, info.RawPayload)
+	log.Printf(ctx, "[API] Sending request: %v", info.RawPayload())
+	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[API] Error: %v", err)
 		return nil, err
@@ -34,8 +34,8 @@ func (i *ChainedInterceptorServiceClientInterceptors) API(ctx context.Context, i
 	return resp, nil
 }
 func (i *ChainedInterceptorServiceClientInterceptors) Method(ctx context.Context, info *interceptors.MethodInfo, next goa.Endpoint) (any, error) {
-	log.Printf(ctx, "[Method] Sending request: %v", info.RawPayload)
-	resp, err := next(ctx, info.RawPayload)
+	log.Printf(ctx, "[Method] Sending request: %v", info.RawPayload())
+	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[Method] Error: %v", err)
 		return nil, err
@@ -44,8 +44,8 @@ func (i *ChainedInterceptorServiceClientInterceptors) Method(ctx context.Context
 	return resp, nil
 }
 func (i *ChainedInterceptorServiceClientInterceptors) Service(ctx context.Context, info *interceptors.ServiceInfo, next goa.Endpoint) (any, error) {
-	log.Printf(ctx, "[Service] Sending request: %v", info.RawPayload)
-	resp, err := next(ctx, info.RawPayload)
+	log.Printf(ctx, "[Service] Sending request: %v", info.RawPayload())
+	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[Service] Error: %v", err)
 		return nil, err

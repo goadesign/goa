@@ -10,3 +10,8 @@ func (s *{{ .VarName }}) {{ .SendName }}(res {{ .SendRef }}) error {
 	v := {{ .SendConvert.Init.Name }}({{ if and .Endpoint.Method.ViewedResult (eq .Type "server") }}vres.Projected{{ else }}res{{ end }})
 	return s.stream.{{ .SendName }}(v)
 }
+
+{{ comment .SendWithContextDesc }}
+func (s *{{ .VarName }}) {{ .SendWithContextName }}(ctx context.Context, res {{ .SendRef }}) error {
+	return s.{{ .SendName }}(res)
+}

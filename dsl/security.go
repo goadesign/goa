@@ -186,7 +186,7 @@ func JWTSecurity(name string, fn ...func()) *expr.SchemeExpr {
 // in the same scope in which case the client may validate any one of the
 // requirements for the request to be authorized.
 //
-// Security must appear in a API, Service or Method expression.
+// Security must appear in an API, Service or Method expression.
 //
 // Security accepts an arbitrary number of security schemes as argument
 // specified by name or by reference and an optional DSL function as last

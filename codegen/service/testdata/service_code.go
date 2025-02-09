@@ -1814,6 +1814,8 @@ var MethodNames = [1]string{"StreamingResultMethod"}
 type StreamingResultMethodServerStream interface {
 	// Send streams instances of "AResult".
 	Send(*AResult) error
+	// SendWithContext streams instances of "AResult" with context.
+	SendWithContext(context.Context, *AResult) error
 	// Close closes the stream.
 	Close() error
 }
@@ -1823,6 +1825,8 @@ type StreamingResultMethodServerStream interface {
 type StreamingResultMethodClientStream interface {
 	// Recv reads instances of "AResult" from the stream.
 	Recv() (*AResult, error)
+	// RecvWithContext reads instances of "AResult" from the stream with context.
+	RecvWithContext(context.Context) (*AResult, error)
 }
 
 // APayload is the payload type of the StreamingResultService service
@@ -1877,6 +1881,8 @@ var MethodNames = [1]string{"StreamingResultWithViewsMethod"}
 type StreamingResultWithViewsMethodServerStream interface {
 	// Send streams instances of "MultipleViews".
 	Send(*MultipleViews) error
+	// SendWithContext streams instances of "MultipleViews" with context.
+	SendWithContext(context.Context, *MultipleViews) error
 	// Close closes the stream.
 	Close() error
 	// SetView sets the view used to render the result before streaming.
@@ -1888,6 +1894,9 @@ type StreamingResultWithViewsMethodServerStream interface {
 type StreamingResultWithViewsMethodClientStream interface {
 	// Recv reads instances of "MultipleViews" from the stream.
 	Recv() (*MultipleViews, error)
+	// RecvWithContext reads instances of "MultipleViews" from the stream with
+	// context.
+	RecvWithContext(context.Context) (*MultipleViews, error)
 }
 
 // MultipleViews is the result type of the StreamingResultWithViewsService
@@ -1993,6 +2002,8 @@ var MethodNames = [1]string{"StreamingResultWithExplicitViewMethod"}
 type StreamingResultWithExplicitViewMethodServerStream interface {
 	// Send streams instances of "MultipleViews".
 	Send(*MultipleViews) error
+	// SendWithContext streams instances of "MultipleViews" with context.
+	SendWithContext(context.Context, *MultipleViews) error
 	// Close closes the stream.
 	Close() error
 }
@@ -2002,6 +2013,9 @@ type StreamingResultWithExplicitViewMethodServerStream interface {
 type StreamingResultWithExplicitViewMethodClientStream interface {
 	// Recv reads instances of "MultipleViews" from the stream.
 	Recv() (*MultipleViews, error)
+	// RecvWithContext reads instances of "MultipleViews" from the stream with
+	// context.
+	RecvWithContext(context.Context) (*MultipleViews, error)
 }
 
 // MultipleViews is the result type of the
@@ -2107,6 +2121,8 @@ var MethodNames = [1]string{"StreamingResultNoPayloadMethod"}
 type StreamingResultNoPayloadMethodServerStream interface {
 	// Send streams instances of "AResult".
 	Send(*AResult) error
+	// SendWithContext streams instances of "AResult" with context.
+	SendWithContext(context.Context, *AResult) error
 	// Close closes the stream.
 	Close() error
 }
@@ -2116,6 +2132,8 @@ type StreamingResultNoPayloadMethodServerStream interface {
 type StreamingResultNoPayloadMethodClientStream interface {
 	// Recv reads instances of "AResult" from the stream.
 	Recv() (*AResult, error)
+	// RecvWithContext reads instances of "AResult" from the stream with context.
+	RecvWithContext(context.Context) (*AResult, error)
 }
 
 // AResult is the result type of the StreamingResultNoPayloadService service
@@ -2157,8 +2175,13 @@ var MethodNames = [1]string{"StreamingPayloadMethod"}
 type StreamingPayloadMethodServerStream interface {
 	// SendAndClose streams instances of "AResult" and closes the stream.
 	SendAndClose(*AResult) error
+	// SendAndCloseWithContext streams instances of "AResult" and closes the stream
+	// with context.
+	SendAndCloseWithContext(context.Context, *AResult) error
 	// Recv reads instances of "APayload" from the stream.
 	Recv() (*APayload, error)
+	// RecvWithContext reads instances of "APayload" from the stream with context.
+	RecvWithContext(context.Context) (*APayload, error)
 }
 
 // StreamingPayloadMethodClientStream is the interface a
@@ -2166,9 +2189,14 @@ type StreamingPayloadMethodServerStream interface {
 type StreamingPayloadMethodClientStream interface {
 	// Send streams instances of "APayload".
 	Send(*APayload) error
+	// SendWithContext streams instances of "APayload" with context.
+	SendWithContext(context.Context, *APayload) error
 	// CloseAndRecv stops sending messages to the stream and reads instances of
 	// "AResult" from the stream.
 	CloseAndRecv() (*AResult, error)
+	// CloseAndRecvWithContext stops sending messages to the stream and reads
+	// instances of "AResult" from the stream with context.
+	CloseAndRecvWithContext(context.Context) (*AResult, error)
 }
 
 // APayload is the streaming payload type of the StreamingPayloadService
@@ -2240,8 +2268,13 @@ var MethodNames = [1]string{"StreamingPayloadNoPayloadMethod"}
 type StreamingPayloadNoPayloadMethodServerStream interface {
 	// SendAndClose streams instances of "string" and closes the stream.
 	SendAndClose(string) error
+	// SendAndCloseWithContext streams instances of "string" and closes the stream
+	// with context.
+	SendAndCloseWithContext(context.Context, string) error
 	// Recv reads instances of "any" from the stream.
 	Recv() (any, error)
+	// RecvWithContext reads instances of "any" from the stream with context.
+	RecvWithContext(context.Context) (any, error)
 }
 
 // StreamingPayloadNoPayloadMethodClientStream is the interface a
@@ -2249,9 +2282,14 @@ type StreamingPayloadNoPayloadMethodServerStream interface {
 type StreamingPayloadNoPayloadMethodClientStream interface {
 	// Send streams instances of "any".
 	Send(any) error
+	// SendWithContext streams instances of "any" with context.
+	SendWithContext(context.Context, any) error
 	// CloseAndRecv stops sending messages to the stream and reads instances of
 	// "string" from the stream.
 	CloseAndRecv() (string, error)
+	// CloseAndRecvWithContext stops sending messages to the stream and reads
+	// instances of "string" from the stream with context.
+	CloseAndRecvWithContext(context.Context) (string, error)
 }
 `
 
@@ -2283,6 +2321,8 @@ var MethodNames = [1]string{"StreamingPayloadNoResultMethod"}
 type StreamingPayloadNoResultMethodServerStream interface {
 	// Recv reads instances of "int" from the stream.
 	Recv() (int, error)
+	// RecvWithContext reads instances of "int" from the stream with context.
+	RecvWithContext(context.Context) (int, error)
 	// Close closes the stream.
 	Close() error
 }
@@ -2292,6 +2332,8 @@ type StreamingPayloadNoResultMethodServerStream interface {
 type StreamingPayloadNoResultMethodClientStream interface {
 	// Send streams instances of "int".
 	Send(int) error
+	// SendWithContext streams instances of "int" with context.
+	SendWithContext(context.Context, int) error
 	// Close closes the stream.
 	Close() error
 }
@@ -2329,8 +2371,13 @@ var MethodNames = [1]string{"StreamingPayloadResultWithViewsMethod"}
 type StreamingPayloadResultWithViewsMethodServerStream interface {
 	// SendAndClose streams instances of "MultipleViews" and closes the stream.
 	SendAndClose(*MultipleViews) error
+	// SendAndCloseWithContext streams instances of "MultipleViews" and closes the
+	// stream with context.
+	SendAndCloseWithContext(context.Context, *MultipleViews) error
 	// Recv reads instances of "APayload" from the stream.
 	Recv() (*APayload, error)
+	// RecvWithContext reads instances of "APayload" from the stream with context.
+	RecvWithContext(context.Context) (*APayload, error)
 	// SetView sets the view used to render the result before streaming.
 	SetView(view string)
 }
@@ -2340,9 +2387,14 @@ type StreamingPayloadResultWithViewsMethodServerStream interface {
 type StreamingPayloadResultWithViewsMethodClientStream interface {
 	// Send streams instances of "APayload".
 	Send(*APayload) error
+	// SendWithContext streams instances of "APayload" with context.
+	SendWithContext(context.Context, *APayload) error
 	// CloseAndRecv stops sending messages to the stream and reads instances of
 	// "MultipleViews" from the stream.
 	CloseAndRecv() (*MultipleViews, error)
+	// CloseAndRecvWithContext stops sending messages to the stream and reads
+	// instances of "MultipleViews" from the stream with context.
+	CloseAndRecvWithContext(context.Context) (*MultipleViews, error)
 }
 
 // APayload is the streaming payload type of the
@@ -2462,8 +2514,13 @@ var MethodNames = [1]string{"StreamingPayloadResultWithExplicitViewMethod"}
 type StreamingPayloadResultWithExplicitViewMethodServerStream interface {
 	// SendAndClose streams instances of "MultipleViews" and closes the stream.
 	SendAndClose(*MultipleViews) error
+	// SendAndCloseWithContext streams instances of "MultipleViews" and closes the
+	// stream with context.
+	SendAndCloseWithContext(context.Context, *MultipleViews) error
 	// Recv reads instances of "[]string" from the stream.
 	Recv() ([]string, error)
+	// RecvWithContext reads instances of "[]string" from the stream with context.
+	RecvWithContext(context.Context) ([]string, error)
 }
 
 // StreamingPayloadResultWithExplicitViewMethodClientStream is the interface a
@@ -2472,9 +2529,14 @@ type StreamingPayloadResultWithExplicitViewMethodServerStream interface {
 type StreamingPayloadResultWithExplicitViewMethodClientStream interface {
 	// Send streams instances of "[]string".
 	Send([]string) error
+	// SendWithContext streams instances of "[]string" with context.
+	SendWithContext(context.Context, []string) error
 	// CloseAndRecv stops sending messages to the stream and reads instances of
 	// "MultipleViews" from the stream.
 	CloseAndRecv() (*MultipleViews, error)
+	// CloseAndRecvWithContext stops sending messages to the stream and reads
+	// instances of "MultipleViews" from the stream with context.
+	CloseAndRecvWithContext(context.Context) (*MultipleViews, error)
 }
 
 // MultipleViews is the result type of the
@@ -2580,8 +2642,12 @@ var MethodNames = [1]string{"BidirectionalStreamingMethod"}
 type BidirectionalStreamingMethodServerStream interface {
 	// Send streams instances of "AResult".
 	Send(*AResult) error
+	// SendWithContext streams instances of "AResult" with context.
+	SendWithContext(context.Context, *AResult) error
 	// Recv reads instances of "APayload" from the stream.
 	Recv() (*APayload, error)
+	// RecvWithContext reads instances of "APayload" from the stream with context.
+	RecvWithContext(context.Context) (*APayload, error)
 	// Close closes the stream.
 	Close() error
 }
@@ -2591,8 +2657,12 @@ type BidirectionalStreamingMethodServerStream interface {
 type BidirectionalStreamingMethodClientStream interface {
 	// Send streams instances of "APayload".
 	Send(*APayload) error
+	// SendWithContext streams instances of "APayload" with context.
+	SendWithContext(context.Context, *APayload) error
 	// Recv reads instances of "AResult" from the stream.
 	Recv() (*AResult, error)
+	// RecvWithContext reads instances of "AResult" from the stream with context.
+	RecvWithContext(context.Context) (*AResult, error)
 	// Close closes the stream.
 	Close() error
 }
@@ -2667,8 +2737,12 @@ var MethodNames = [1]string{"BidirectionalStreamingNoPayloadMethod"}
 type BidirectionalStreamingNoPayloadMethodServerStream interface {
 	// Send streams instances of "int".
 	Send(int) error
+	// SendWithContext streams instances of "int" with context.
+	SendWithContext(context.Context, int) error
 	// Recv reads instances of "string" from the stream.
 	Recv() (string, error)
+	// RecvWithContext reads instances of "string" from the stream with context.
+	RecvWithContext(context.Context) (string, error)
 	// Close closes the stream.
 	Close() error
 }
@@ -2678,8 +2752,12 @@ type BidirectionalStreamingNoPayloadMethodServerStream interface {
 type BidirectionalStreamingNoPayloadMethodClientStream interface {
 	// Send streams instances of "string".
 	Send(string) error
+	// SendWithContext streams instances of "string" with context.
+	SendWithContext(context.Context, string) error
 	// Recv reads instances of "int" from the stream.
 	Recv() (int, error)
+	// RecvWithContext reads instances of "int" from the stream with context.
+	RecvWithContext(context.Context) (int, error)
 	// Close closes the stream.
 	Close() error
 }
@@ -2719,8 +2797,12 @@ var MethodNames = [1]string{"BidirectionalStreamingResultWithViewsMethod"}
 type BidirectionalStreamingResultWithViewsMethodServerStream interface {
 	// Send streams instances of "MultipleViews".
 	Send(*MultipleViews) error
+	// SendWithContext streams instances of "MultipleViews" with context.
+	SendWithContext(context.Context, *MultipleViews) error
 	// Recv reads instances of "APayload" from the stream.
 	Recv() (*APayload, error)
+	// RecvWithContext reads instances of "APayload" from the stream with context.
+	RecvWithContext(context.Context) (*APayload, error)
 	// Close closes the stream.
 	Close() error
 	// SetView sets the view used to render the result before streaming.
@@ -2733,8 +2815,13 @@ type BidirectionalStreamingResultWithViewsMethodServerStream interface {
 type BidirectionalStreamingResultWithViewsMethodClientStream interface {
 	// Send streams instances of "APayload".
 	Send(*APayload) error
+	// SendWithContext streams instances of "APayload" with context.
+	SendWithContext(context.Context, *APayload) error
 	// Recv reads instances of "MultipleViews" from the stream.
 	Recv() (*MultipleViews, error)
+	// RecvWithContext reads instances of "MultipleViews" from the stream with
+	// context.
+	RecvWithContext(context.Context) (*MultipleViews, error)
 	// Close closes the stream.
 	Close() error
 }
@@ -2856,8 +2943,12 @@ var MethodNames = [1]string{"BidirectionalStreamingResultWithExplicitViewMethod"
 type BidirectionalStreamingResultWithExplicitViewMethodServerStream interface {
 	// Send streams instances of "MultipleViews".
 	Send(*MultipleViews) error
+	// SendWithContext streams instances of "MultipleViews" with context.
+	SendWithContext(context.Context, *MultipleViews) error
 	// Recv reads instances of "[][]byte" from the stream.
 	Recv() ([][]byte, error)
+	// RecvWithContext reads instances of "[][]byte" from the stream with context.
+	RecvWithContext(context.Context) ([][]byte, error)
 	// Close closes the stream.
 	Close() error
 }
@@ -2868,8 +2959,13 @@ type BidirectionalStreamingResultWithExplicitViewMethodServerStream interface {
 type BidirectionalStreamingResultWithExplicitViewMethodClientStream interface {
 	// Send streams instances of "[][]byte".
 	Send([][]byte) error
+	// SendWithContext streams instances of "[][]byte" with context.
+	SendWithContext(context.Context, [][]byte) error
 	// Recv reads instances of "MultipleViews" from the stream.
 	Recv() (*MultipleViews, error)
+	// RecvWithContext reads instances of "MultipleViews" from the stream with
+	// context.
+	RecvWithContext(context.Context) (*MultipleViews, error)
 	// Close closes the stream.
 	Close() error
 }

@@ -78,6 +78,7 @@ func interceptorFile(svc *Data, server bool) *codegen.File {
 		},
 	}
 	if len(interceptors) > 0 {
+		codegen.AddImport(sections[0], svc.UserTypeImports...)
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "interceptor-types",
 			Source: readTemplate("interceptors_types"),
@@ -139,7 +140,34 @@ func wrapperFile(svc *Data) *codegen.File {
 		codegen.GoaImport(""),
 	}))
 
-	// Generate the interceptor wrapper functions first (only once)
+	// Generate any interceptor stream wrapper struct types first
+	var wrappedServerStreams, wrappedClientStreams []*StreamInterceptorData
+	if len(svc.ServerInterceptors) > 0 {
+		wrappedServerStreams = collectWrappedStreams(svc.ServerInterceptors, true)
+		if len(wrappedServerStreams) > 0 {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "server-interceptor-stream-wrapper-types",
+				Source: readTemplate("server_interceptor_stream_wrapper_types"),
+				Data: map[string]interface{}{
+					"WrappedServerStreams": wrappedServerStreams,
+				},
+			})
+		}
+	}
+	if len(svc.ClientInterceptors) > 0 {
+		wrappedClientStreams = collectWrappedStreams(svc.ClientInterceptors, false)
+		if len(wrappedClientStreams) > 0 {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "client-interceptor-stream-wrapper-types",
+				Source: readTemplate("client_interceptor_stream_wrapper_types"),
+				Data: map[string]interface{}{
+					"WrappedClientStreams": wrappedClientStreams,
+				},
+			})
+		}
+	}
+
+	// Generate the interceptor wrapper functions next (only once)
 	if len(svc.ServerInterceptors) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-interceptor-wrappers",
@@ -161,6 +189,26 @@ func wrapperFile(svc *Data) *codegen.File {
 		})
 	}
 
+	// Generate any interceptor stream wrapper struct methods last
+	if len(wrappedServerStreams) > 0 {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "server-interceptor-stream-wrappers",
+			Source: readTemplate("server_interceptor_stream_wrappers"),
+			Data: map[string]interface{}{
+				"WrappedServerStreams": wrappedServerStreams,
+			},
+		})
+	}
+	if len(wrappedClientStreams) > 0 {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "client-interceptor-stream-wrappers",
+			Source: readTemplate("client_interceptor_stream_wrappers"),
+			Data: map[string]interface{}{
+				"WrappedClientStreams": wrappedClientStreams,
+			},
+		})
+	}
+
 	return &codegen.File{
 		Path:             path,
 		SectionTemplates: sections,
@@ -171,9 +219,35 @@ func wrapperFile(svc *Data) *codegen.File {
 // private implementation types.
 func hasPrivateImplementationTypes(interceptors []*InterceptorData) bool {
 	for _, intr := range interceptors {
-		if intr.ReadPayload != nil || intr.WritePayload != nil || intr.ReadResult != nil || intr.WriteResult != nil {
+		if intr.ReadPayload != nil || intr.WritePayload != nil || intr.ReadResult != nil || intr.WriteResult != nil || intr.ReadStreamingPayload != nil || intr.WriteStreamingPayload != nil || intr.ReadStreamingResult != nil || intr.WriteStreamingResult != nil {
 			return true
 		}
 	}
 	return false
+}
+
+// collectWrappedStreams returns a slice of streams to be wrapped by interceptor wrapper functions.
+func collectWrappedStreams(interceptors []*InterceptorData, server bool) []*StreamInterceptorData {
+	var (
+		streams     []*StreamInterceptorData
+		streamNames = make(map[string]struct{})
+	)
+	for _, intr := range interceptors {
+		if intr.HasStreamingPayloadAccess || intr.HasStreamingResultAccess {
+			for _, method := range intr.Methods {
+				if server {
+					if _, ok := streamNames[method.ServerStream.Interface]; !ok {
+						streams = append(streams, method.ServerStream)
+						streamNames[method.ServerStream.Interface] = struct{}{}
+					}
+				} else {
+					if _, ok := streamNames[method.ClientStream.Interface]; !ok {
+						streams = append(streams, method.ClientStream)
+						streamNames[method.ClientStream.Interface] = struct{}{}
+					}
+				}
+			}
+		}
+	}
+	return streams
 }

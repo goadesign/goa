@@ -24,8 +24,8 @@ func NewMultipleServicesInterceptorsService2ServerInterceptors() *MultipleServic
 	return &MultipleServicesInterceptorsService2ServerInterceptors{}
 }
 func (i *MultipleServicesInterceptorsService2ServerInterceptors) Test(ctx context.Context, info *interceptors.TestInfo, next goa.Endpoint) (any, error) {
-	log.Printf(ctx, "[Test] Processing request: %v", info.RawPayload)
-	resp, err := next(ctx, info.RawPayload)
+	log.Printf(ctx, "[Test] Processing request: %v", info.RawPayload())
+	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[Test] Error: %v", err)
 		return nil, err
@@ -34,8 +34,8 @@ func (i *MultipleServicesInterceptorsService2ServerInterceptors) Test(ctx contex
 	return resp, nil
 }
 func (i *MultipleServicesInterceptorsService2ServerInterceptors) Test3(ctx context.Context, info *interceptors.Test3Info, next goa.Endpoint) (any, error) {
-	log.Printf(ctx, "[Test3] Processing request: %v", info.RawPayload)
-	resp, err := next(ctx, info.RawPayload)
+	log.Printf(ctx, "[Test3] Processing request: %v", info.RawPayload())
+	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[Test3] Error: %v", err)
 		return nil, err

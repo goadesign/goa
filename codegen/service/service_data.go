@@ -203,6 +203,10 @@ type (
 		SendName string
 		// SendDesc is the description for the send function.
 		SendDesc string
+		// SendWithContextName is the name of the send function with context.
+		SendWithContextName string
+		// SendWithContextDesc is the description for the send function with context.
+		SendWithContextDesc string
 		// SendTypeName is the type name sent through the stream.
 		SendTypeName string
 		// SendTypeRef is the reference to the type sent through the stream.
@@ -211,6 +215,10 @@ type (
 		RecvName string
 		// RecvDesc is the description for the recv function.
 		RecvDesc string
+		// RecvWithContextName is the name of the receive function with context.
+		RecvWithContextName string
+		// RecvWithContextDesc is the description for the recv function with context.
+		RecvWithContextDesc string
 		// RecvTypeName is the type name received from the stream.
 		RecvTypeName string
 		// RecvTypeRef is the reference to the type received from the stream.
@@ -269,12 +277,26 @@ type (
 		// WriteResult contains result attributes that the interceptor can
 		// write.
 		WriteResult []*AttributeData
+		// ReadStreamingPayload contains streaming payload attributes that the interceptor can read.
+		ReadStreamingPayload []*AttributeData
+		// WriteStreamingPayload contains streaming payload attributes that the interceptor can write.
+		WriteStreamingPayload []*AttributeData
+		// ReadStreamingResult contains streaming result attributes that the interceptor can read.
+		ReadStreamingResult []*AttributeData
+		// WriteStreamingResult contains streaming result attributes that the interceptor can write.
+		WriteStreamingResult []*AttributeData
 		// HasPayloadAccess indicates that the interceptor info object has a
 		// payload access interface.
 		HasPayloadAccess bool
 		// HasResultAccess indicates that the interceptor info object has a
 		// result access interface.
 		HasResultAccess bool
+		// HasStreamingPayloadAccess indicates that the interceptor info object has a
+		// streaming payload access interface.
+		HasStreamingPayloadAccess bool
+		// HasStreamingResultAccess indicates that the interceptor info object has a
+		// streaming result access interface.
+		HasStreamingResultAccess bool
 	}
 
 	// MethodInterceptorData contains the data required to render the
@@ -286,16 +308,43 @@ type (
 		PayloadAccess string
 		// ResultAccess is the name of the result access struct.
 		ResultAccess string
+		// StreamingPayloadAccess is the name of the streaming payload access struct.
+		StreamingPayloadAccess string
+		// StreamingResultAccess is the name of the streaming result access struct.
+		StreamingResultAccess string
 		// PayloadRef is the reference to the method payload type.
 		PayloadRef string
 		// ResultRef is the reference to the method result type.
 		ResultRef string
-		// ServerStreamInputStruct is the name of the server stream input
-		// struct if the endpoint defines a server stream.
-		ServerStreamInputStruct string
-		// ClientStreamInputStruct is the name of the client stream input
-		// struct if the endpoint defines a client stream.
-		ClientStreamInputStruct string
+		// StreamingPayloadRef is the reference to the streaming payload type.
+		StreamingPayloadRef string
+		// StreamingResultRef is the reference to the streaming result type.
+		StreamingResultRef string
+		// ServerStream is the stream data if the endpoint defines a server stream.
+		ServerStream *StreamInterceptorData
+		// ClientStream is the stream data if the endpoint defines a client stream.
+		ClientStream *StreamInterceptorData
+	}
+
+	// StreamInterceptorData is the stream data for an interceptor.
+	StreamInterceptorData struct {
+		// Interface is the name of the stream interface.
+		Interface string
+		// SendName is the name of the send function.
+		SendName string
+		// SendWithContextName is the name of the send function with context.
+		SendWithContextName string
+		// SendTypeRef is the reference to the type sent through the stream.
+		SendTypeRef string
+		// RecvName is the name of the recv function.
+		RecvName string
+		// RecvWithContextName is the name of the recv function with context.
+		RecvWithContextName string
+		// RecvTypeRef is the reference to the type received from the stream.
+		RecvTypeRef string
+		// MustClose indicates whether the stream should implement the Close()
+		// function.
+		MustClose bool
 	}
 
 	// AttributeData describes a single attribute.
@@ -632,30 +681,22 @@ func (s SchemesData) Append(d *SchemeData) SchemesData {
 // It records the user types needed by the service definition in userTypes.
 func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	var (
-		scope            *codegen.NameScope
-		viewScope        *codegen.NameScope
-		pkgName          string
-		viewspkg         string
 		types            []*UserTypeData
 		errTypes         []*UserTypeData
 		errorInits       []*ErrorInitData
 		projTypes        []*ProjectedTypeData
 		viewedUnionMeths []*UnionValueMethodData
 		viewedRTs        []*ViewedResultTypeData
-		seenErrors       map[string]struct{}
-		seen             map[string]struct{}
-		seenProj         map[string]*ProjectedTypeData
-		seenViewed       map[string]*ViewedResultTypeData
 	)
-	scope = codegen.NewNameScope()
+	scope := codegen.NewNameScope()
 	scope.Unique("Use") // Reserve "Use" for Endpoints struct Use method.
-	viewScope = codegen.NewNameScope()
-	pkgName = scope.HashedUnique(service, strings.ToLower(codegen.Goify(service.Name, false)), "svc")
-	viewspkg = pkgName + "views"
-	seen = make(map[string]struct{})
-	seenErrors = make(map[string]struct{})
-	seenProj = make(map[string]*ProjectedTypeData)
-	seenViewed = make(map[string]*ViewedResultTypeData)
+	viewScope := codegen.NewNameScope()
+	pkgName := scope.HashedUnique(service, strings.ToLower(codegen.Goify(service.Name, false)), "svc")
+	viewspkg := pkgName + "views"
+	seen := make(map[string]struct{})
+	seenErrors := make(map[string]struct{})
+	seenProj := make(map[string]*ProjectedTypeData)
+	seenViewed := make(map[string]*ViewedResultTypeData)
 
 	// A function to collect user types from an error expression
 	recordError := func(er *expr.ErrorExpr) {
@@ -780,10 +821,8 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		seenViewed[vrt.Name+"::"+view] = vrt
 	}
 
-	var (
-		unionMethods []*UnionValueMethodData
-		ms           []*UnionValueMethodData
-	)
+	var unionMethods []*UnionValueMethodData
+	var ms []*UnionValueMethodData
 	seen = make(map[string]struct{})
 	for _, t := range types {
 		ms = append(ms, collectUnionMethods(&expr.AttributeExpr{Type: t.Type}, scope, t.Loc, seen)...)
@@ -1130,24 +1169,28 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 		spayloadEx = m.StreamingPayload.Example(expr.Root.API.ExampleGenerator)
 	}
 	svrStream := &StreamData{
-		Interface:      vname + "ServerStream",
-		VarName:        scope.Unique(codegen.Goify(m.Name, true), "ServerStream"),
-		EndpointStruct: vname + "EndpointInput",
-		Kind:           m.Stream,
-		SendName:       "Send",
-		SendDesc:       fmt.Sprintf("Send streams instances of %q.", rname),
-		SendTypeName:   rname,
-		SendTypeRef:    resultRef,
-		MustClose:      true,
+		Interface:           vname + "ServerStream",
+		VarName:             scope.Unique(codegen.Goify(m.Name, true), "ServerStream"),
+		EndpointStruct:      vname + "EndpointInput",
+		Kind:                m.Stream,
+		SendName:            "Send",
+		SendDesc:            fmt.Sprintf("Send streams instances of %q.", rname),
+		SendWithContextName: "SendWithContext",
+		SendWithContextDesc: fmt.Sprintf("SendWithContext streams instances of %q with context.", rname),
+		SendTypeName:        rname,
+		SendTypeRef:         resultRef,
+		MustClose:           true,
 	}
 	cliStream := &StreamData{
-		Interface:    vname + "ClientStream",
-		VarName:      scope.Unique(codegen.Goify(m.Name, true), "ClientStream"),
-		Kind:         m.Stream,
-		RecvName:     "Recv",
-		RecvDesc:     fmt.Sprintf("Recv reads instances of %q from the stream.", rname),
-		RecvTypeName: rname,
-		RecvTypeRef:  resultRef,
+		Interface:           vname + "ClientStream",
+		VarName:             scope.Unique(codegen.Goify(m.Name, true), "ClientStream"),
+		Kind:                m.Stream,
+		RecvName:            "Recv",
+		RecvDesc:            fmt.Sprintf("Recv reads instances of %q from the stream.", rname),
+		RecvWithContextName: "RecvWithContext",
+		RecvWithContextDesc: fmt.Sprintf("RecvWithContext reads instances of %q from the stream with context.", rname),
+		RecvTypeName:        rname,
+		RecvTypeRef:         resultRef,
 	}
 	if m.Stream == expr.ClientStreamKind || m.Stream == expr.BidirectionalStreamKind {
 		switch m.Stream {
@@ -1155,9 +1198,13 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 			if resultRef != "" {
 				svrStream.SendName = "SendAndClose"
 				svrStream.SendDesc = fmt.Sprintf("SendAndClose streams instances of %q and closes the stream.", rname)
+				svrStream.SendWithContextName = "SendAndCloseWithContext"
+				svrStream.SendWithContextDesc = fmt.Sprintf("SendAndCloseWithContext streams instances of %q and closes the stream with context.", rname)
 				svrStream.MustClose = false
 				cliStream.RecvName = "CloseAndRecv"
 				cliStream.RecvDesc = fmt.Sprintf("CloseAndRecv stops sending messages to the stream and reads instances of %q from the stream.", rname)
+				cliStream.RecvWithContextName = "CloseAndRecvWithContext"
+				cliStream.RecvWithContextDesc = fmt.Sprintf("CloseAndRecvWithContext stops sending messages to the stream and reads instances of %q from the stream with context.", rname)
 			} else {
 				cliStream.MustClose = true
 			}
@@ -1166,10 +1213,14 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 		}
 		svrStream.RecvName = "Recv"
 		svrStream.RecvDesc = fmt.Sprintf("Recv reads instances of %q from the stream.", spayloadName)
+		svrStream.RecvWithContextName = "RecvWithContext"
+		svrStream.RecvWithContextDesc = fmt.Sprintf("RecvWithContext reads instances of %q from the stream with context.", spayloadName)
 		svrStream.RecvTypeName = spayloadName
 		svrStream.RecvTypeRef = spayloadRef
 		cliStream.SendName = "Send"
 		cliStream.SendDesc = fmt.Sprintf("Send streams instances of %q.", spayloadName)
+		cliStream.SendWithContextName = "SendWithContext"
+		cliStream.SendWithContextDesc = fmt.Sprintf("SendWithContext streams instances of %q with context.", spayloadName)
 		cliStream.SendTypeName = spayloadName
 		cliStream.SendTypeRef = spayloadRef
 	}
@@ -1177,7 +1228,7 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 	data.ServerStream = svrStream
 	data.StreamingPayload = spayloadName
 	data.StreamingPayloadDef = spayloadDef
-	data.StreamingPayloadRef = spayloadDef
+	data.StreamingPayloadRef = spayloadRef
 	data.StreamingPayloadDesc = spayloadDesc
 	data.StreamingPayloadEx = spayloadEx
 }
@@ -1192,17 +1243,7 @@ func buildInterceptorData(svc *expr.ServiceExpr, methods []*MethodData, i *expr.
 	if len(svc.Methods) == 0 {
 		return data
 	}
-	payload, result := svc.Methods[0].Payload, svc.Methods[0].Result
-	data.ReadPayload = collectAttributes(i.ReadPayload, payload, scope)
-	data.WritePayload = collectAttributes(i.WritePayload, payload, scope)
-	data.ReadResult = collectAttributes(i.ReadResult, result, scope)
-	data.WriteResult = collectAttributes(i.WriteResult, result, scope)
-	if len(data.ReadPayload) > 0 || len(data.WritePayload) > 0 {
-		data.HasPayloadAccess = true
-	}
-	if len(data.ReadResult) > 0 || len(data.WriteResult) > 0 {
-		data.HasResultAccess = true
-	}
+	attributesCollected := false
 	for _, m := range svc.Methods {
 		applies := false
 		intExprs := m.ServerInterceptors
@@ -1211,6 +1252,30 @@ func buildInterceptorData(svc *expr.ServiceExpr, methods []*MethodData, i *expr.
 		}
 		for _, in := range intExprs {
 			if in.Name == i.Name {
+				if !attributesCollected {
+					payload, result, streamingPayload := m.Payload, m.Result, m.StreamingPayload
+					data.ReadPayload = collectAttributes(i.ReadPayload, payload, scope)
+					data.WritePayload = collectAttributes(i.WritePayload, payload, scope)
+					data.ReadResult = collectAttributes(i.ReadResult, result, scope)
+					data.WriteResult = collectAttributes(i.WriteResult, result, scope)
+					data.ReadStreamingPayload = collectAttributes(i.ReadStreamingPayload, streamingPayload, scope)
+					data.WriteStreamingPayload = collectAttributes(i.WriteStreamingPayload, streamingPayload, scope)
+					data.ReadStreamingResult = collectAttributes(i.ReadStreamingResult, result, scope)
+					data.WriteStreamingResult = collectAttributes(i.WriteStreamingResult, result, scope)
+					if len(data.ReadPayload) > 0 || len(data.WritePayload) > 0 {
+						data.HasPayloadAccess = true
+					}
+					if len(data.ReadResult) > 0 || len(data.WriteResult) > 0 {
+						data.HasResultAccess = true
+					}
+					if len(data.ReadStreamingPayload) > 0 || len(data.WriteStreamingPayload) > 0 {
+						data.HasStreamingPayloadAccess = true
+					}
+					if len(data.ReadStreamingResult) > 0 || len(data.WriteStreamingResult) > 0 {
+						data.HasStreamingResultAccess = true
+					}
+					attributesCollected = true
+				}
 				applies = true
 				break
 			}
@@ -1235,31 +1300,59 @@ func buildInterceptorData(svc *expr.ServiceExpr, methods []*MethodData, i *expr.
 	return data
 }
 
-// buildIntercetorMethodData creates the data needed to generate interceptor
+// buildInterceptorMethodData creates the data needed to generate interceptor
 // method code.
 func buildInterceptorMethodData(i *expr.InterceptorExpr, md *MethodData) *MethodInterceptorData {
-	var serverStream, clientStream string
+	var serverStream, clientStream *StreamInterceptorData
 	if md.ServerStream != nil {
-		serverStream = md.ServerStream.VarName
+		serverStream = &StreamInterceptorData{
+			Interface:           md.ServerStream.Interface,
+			SendName:            md.ServerStream.SendName,
+			SendWithContextName: md.ServerStream.SendWithContextName,
+			SendTypeRef:         md.ServerStream.SendTypeRef,
+			RecvName:            md.ServerStream.RecvName,
+			RecvWithContextName: md.ServerStream.RecvWithContextName,
+			RecvTypeRef:         md.ServerStream.RecvTypeRef,
+			MustClose:           md.ServerStream.MustClose,
+		}
 	}
 	if md.ClientStream != nil {
-		clientStream = md.ClientStream.VarName
+		clientStream = &StreamInterceptorData{
+			Interface:           md.ClientStream.Interface,
+			SendName:            md.ClientStream.SendName,
+			SendWithContextName: md.ClientStream.SendWithContextName,
+			SendTypeRef:         md.ClientStream.SendTypeRef,
+			RecvName:            md.ClientStream.RecvName,
+			RecvWithContextName: md.ClientStream.RecvWithContextName,
+			RecvTypeRef:         md.ClientStream.RecvTypeRef,
+			MustClose:           md.ClientStream.MustClose,
+		}
 	}
-	var payloadAccess, resultAccess string
+	var payloadAccess, resultAccess, streamingPayloadAccess, streamingResultAccess string
 	if i.ReadPayload != nil || i.WritePayload != nil {
 		payloadAccess = codegen.Goify(i.Name, false) + md.VarName + "Payload"
 	}
 	if i.ReadResult != nil || i.WriteResult != nil {
 		resultAccess = codegen.Goify(i.Name, false) + md.VarName + "Result"
 	}
+	if i.ReadStreamingPayload != nil || i.WriteStreamingPayload != nil {
+		streamingPayloadAccess = codegen.Goify(i.Name, false) + md.VarName + "StreamingPayload"
+	}
+	if i.ReadStreamingResult != nil || i.WriteStreamingResult != nil {
+		streamingResultAccess = codegen.Goify(i.Name, false) + md.VarName + "StreamingResult"
+	}
 	return &MethodInterceptorData{
-		MethodName:              md.VarName,
-		PayloadAccess:           payloadAccess,
-		ResultAccess:            resultAccess,
-		PayloadRef:              md.PayloadRef,
-		ResultRef:               md.ResultRef,
-		ClientStreamInputStruct: clientStream,
-		ServerStreamInputStruct: serverStream,
+		MethodName:             md.VarName,
+		PayloadAccess:          payloadAccess,
+		ResultAccess:           resultAccess,
+		PayloadRef:             md.PayloadRef,
+		ResultRef:              md.ResultRef,
+		StreamingPayloadAccess: streamingPayloadAccess,
+		StreamingPayloadRef:    md.StreamingPayloadRef,
+		StreamingResultAccess:  streamingResultAccess,
+		StreamingResultRef:     md.ResultRef,
+		ClientStream:           clientStream,
+		ServerStream:           serverStream,
 	}
 }
 
@@ -1505,7 +1598,6 @@ func buildProjectedType(projected, att *expr.AttributeExpr, viewspkg string, sco
 	var (
 		projections []*InitData
 		typeInits   []*InitData
-		validations []*ValidateData
 		views       []*ViewData
 
 		varname = viewScope.GoTypeName(projected)
@@ -1516,7 +1608,7 @@ func buildProjectedType(projected, att *expr.AttributeExpr, viewspkg string, sco
 		projections = buildProjections(projected, att, viewspkg, scope, viewScope)
 		views = buildViews(att.Type.(*expr.ResultTypeExpr), viewScope)
 	}
-	validations = buildValidations(projected, viewScope)
+	validations := buildValidations(projected, viewScope)
 	removeMeta(projected)
 	return &ProjectedTypeData{
 		UserTypeData: &UserTypeData{
@@ -1558,23 +1650,18 @@ func buildViews(rt *expr.ResultTypeExpr, viewScope *codegen.NameScope) []*ViewDa
 // and projected type.
 func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, scope, viewScope *codegen.NameScope) *ViewedResultTypeData {
 	// collect result type views
-	var (
-		viewName string
-		views    []*ViewData
-	)
-
 	rt := att.Type.(*expr.ResultTypeExpr)
 	isarr := expr.IsArray(att.Type)
+	var viewName string
 	if !rt.HasMultipleViews() {
 		viewName = expr.DefaultView
 	}
 	if v, ok := att.Meta.Last(expr.ViewMetaKey); ok {
 		viewName = v
 	}
-	views = buildViews(rt, viewScope)
+	views := buildViews(rt, viewScope)
 
 	// build validation data
-	var validate *ValidateData
 	resvar := scope.GoTypeName(att)
 	resref := scope.GoTypeRef(att)
 	data := map[string]any{
@@ -1589,7 +1676,7 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 		panic(err) // bug
 	}
 	name := "Validate" + resvar
-	validate = &ValidateData{
+	validate := &ValidateData{
 		Name:        name,
 		Description: fmt.Sprintf("%s runs the validations defined on the viewed result type %s.", name, resvar),
 		Ref:         resref,
@@ -1597,7 +1684,6 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 	}
 
 	// build constructor to initialize viewed result type from result type
-	var init *InitData
 	vresref := viewScope.GoFullTypeRef(att, viewspkg)
 	data = map[string]any{
 		"ToViewed":      true,
@@ -1618,7 +1704,7 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 		pkg = loc.PackageName()
 	}
 	name = "NewViewed" + resvar
-	init = &InitData{
+	init := &InitData{
 		Name:        name,
 		Description: fmt.Sprintf("%s initializes viewed result type %s from result type %s using the given view.", name, resvar, resvar),
 		Args: []*InitArgData{
@@ -1630,7 +1716,6 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 	}
 
 	// build constructor to initialize result type from viewed result type
-	var resinit *InitData
 	if loc := codegen.UserTypeLocation(att.Type); loc != nil {
 		resref = scope.GoFullTypeRef(att, loc.PackageName())
 	}
@@ -1647,7 +1732,7 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 		panic(err) // bug
 	}
 	name = "New" + resvar
-	resinit = &InitData{
+	resinit := &InitData{
 		Name:          name,
 		Description:   fmt.Sprintf("%s initializes result type %s from viewed result type %s.", name, resvar, resvar),
 		Args:          []*InitArgData{{Name: "vres", Ref: scope.GoFullTypeRef(att, viewspkg)}},
@@ -1744,20 +1829,14 @@ func buildTypeInits(projected, att *expr.AttributeExpr, viewspkg string, scope, 
 			},
 		}
 
-		var (
-			name    string
-			code    string
-			helpers []*codegen.TransformFunctionData
-		)
-
 		srcCtx := projectedTypeContext(viewspkg, true, viewScope)
 		tgtCtx := typeContext("", scope)
 		resvar := scope.GoTypeName(att)
-		name = "new" + resvar
+		name := "new" + resvar
 		if view.Name != expr.DefaultView {
 			name += codegen.Goify(view.Name, true)
 		}
-		code, helpers = buildConstructorCode(src, att, "vres", "res", srcCtx, tgtCtx, view.Name)
+		code, helpers := buildConstructorCode(src, att, "vres", "res", srcCtx, tgtCtx, view.Name)
 
 		pkg := ""
 		if loc := codegen.UserTypeLocation(att.Type); loc != nil {
@@ -1778,9 +1857,8 @@ func buildTypeInits(projected, att *expr.AttributeExpr, viewspkg string, scope, 
 // buildProjections builds the data to generate the constructor code to
 // project a result type to a projected type based on a view.
 func buildProjections(projected, att *expr.AttributeExpr, viewspkg string, scope, viewScope *codegen.NameScope) []*InitData {
-	var projections []*InitData
 	rt := att.Type.(*expr.ResultTypeExpr)
-	projections = make([]*InitData, 0, len(rt.Views))
+	projections := make([]*InitData, 0, len(rt.Views))
 	for _, view := range rt.Views {
 		var typ expr.DataType
 		obj := &expr.Object{}
@@ -1815,19 +1893,14 @@ func buildProjections(projected, att *expr.AttributeExpr, viewspkg string, scope
 			},
 		}
 
-		var (
-			name    string
-			code    string
-			helpers []*codegen.TransformFunctionData
-		)
 		srcCtx := typeContext("", scope)
 		tgtCtx := projectedTypeContext(viewspkg, true, viewScope)
 		tname := scope.GoTypeName(projected)
-		name = "new" + tname
+		name := "new" + tname
 		if view.Name != expr.DefaultView {
 			name += codegen.Goify(view.Name, true)
 		}
-		code, helpers = buildConstructorCode(att, tgt, "res", "vres", srcCtx, tgtCtx, view.Name)
+		code, helpers := buildConstructorCode(att, tgt, "res", "vres", srcCtx, tgtCtx, view.Name)
 
 		pkg := ""
 		if loc := codegen.UserTypeLocation(att.Type); loc != nil {
@@ -1848,9 +1921,9 @@ func buildProjections(projected, att *expr.AttributeExpr, viewspkg string, scope
 // buildValidations builds the data required to generate validations for the
 // projected types.
 func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) []*ValidateData {
-	var validations []*ValidateData
 	ut := projected.Type.(expr.UserType)
 	tname := scope.GoTypeName(projected)
+	var validations []*ValidateData
 	if rt, isrt := ut.(*expr.ResultTypeExpr); isrt {
 		// for result types we create a validation function containing view
 		// specific validation logic for each view
@@ -1862,11 +1935,8 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 				"Source":       "result",
 				"IsCollection": arr != nil,
 			}
-			var (
-				name string
-				vn   string
-			)
-			name = "Validate" + tname
+			var vn string
+			name := "Validate" + tname
 			if view.Name != expr.DefaultView {
 				vn = codegen.Goify(view.Name, true)
 				name += vn
@@ -1877,10 +1947,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 				data["Source"] = "item"
 				data["ValidateVar"] = "Validate" + scope.GoTypeName(arr.ElemType) + vn
 			} else {
-				var (
-					ctx    *codegen.AttributeContext
-					fields []map[string]any
-				)
+				var fields []map[string]any
 				o := &expr.Object{}
 				walkViewAttrs(expr.AsObject(projected.Type), view, func(name string, attr, vatt *expr.AttributeExpr) {
 					if rt, ok := attr.Type.(*expr.ResultTypeExpr); ok {
@@ -1899,7 +1966,7 @@ func buildValidations(projected *expr.AttributeExpr, scope *codegen.NameScope) [
 						o.Set(name, attr)
 					}
 				})
-				ctx = projectedTypeContext("", !expr.IsPrimitive(projected.Type), scope)
+				ctx := projectedTypeContext("", !expr.IsPrimitive(projected.Type), scope)
 				data["Validate"] = codegen.ValidationCode(&expr.AttributeExpr{Type: o, Validation: rt.Validation}, rt, ctx, true, false, true, "result")
 				data["Fields"] = fields
 			}
@@ -2030,7 +2097,7 @@ func walkViewAttrs(obj *expr.Object, view *expr.ViewExpr, walker func(name strin
 }
 
 // removeMeta removes the meta attributes from the given attribute. This is
-// needed to make sure that any field name overridding is removed when
+// needed to make sure that any field name overriding is removed when
 // generating protobuf types (as protogen itself won't honor these overrides).
 func removeMeta(att *expr.AttributeExpr) {
 	_ = codegen.Walk(att, func(a *expr.AttributeExpr) error {

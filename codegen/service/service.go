@@ -47,7 +47,7 @@ func Files(genpkg string, service *expr.ServiceExpr, userTypePkgs map[string][]s
 		if m.StreamingPayloadDef != "" {
 			if _, ok := seen[m.StreamingPayload]; !ok {
 				addTypeDefSection(payloadPath, m.StreamingPayload, &codegen.SectionTemplate{
-					Name:   "service-streamig-payload",
+					Name:   "service-streaming-payload",
 					Source: readTemplate("streaming_payload"),
 					Data:   m,
 				})

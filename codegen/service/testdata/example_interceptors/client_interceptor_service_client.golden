@@ -24,8 +24,8 @@ func NewClientInterceptorServiceClientInterceptors() *ClientInterceptorServiceCl
 	return &ClientInterceptorServiceClientInterceptors{}
 }
 func (i *ClientInterceptorServiceClientInterceptors) Test(ctx context.Context, info *interceptors.TestInfo, next goa.Endpoint) (any, error) {
-	log.Printf(ctx, "[Test] Sending request: %v", info.RawPayload)
-	resp, err := next(ctx, info.RawPayload)
+	log.Printf(ctx, "[Test] Sending request: %v", info.RawPayload())
+	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[Test] Error: %v", err)
 		return nil, err

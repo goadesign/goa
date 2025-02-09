@@ -83,3 +83,8 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 	{{- end }}
 {{- end }}
 }
+
+{{ comment .RecvWithContextDesc }}
+func (s *{{ .VarName }}) {{ .RecvWithContextName }}(ctx context.Context) ({{ .RecvTypeRef }}, error) {
+	return s.{{ .RecvName }}()
+}

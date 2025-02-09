@@ -21,3 +21,8 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvRef }}, error) {
 	return {{ .RecvConvert.Init.Name }}({{ range .RecvConvert.Init.Args }}{{ .Name }}, {{ end }}), nil
 {{- end }}
 }
+
+{{ comment .RecvWithContextDesc }}
+func (s *{{ .VarName }}) {{ .RecvWithContextName }}(ctx context.Context) ({{ .RecvRef }}, error) {
+	return s.{{ .RecvName }}()
+}

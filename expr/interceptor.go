@@ -25,6 +25,14 @@ type (
 		ReadResult *AttributeExpr
 		// WriteResult lists the result attribute names written by the interceptor
 		WriteResult *AttributeExpr
+		// ReadStreamingPayload lists the streaming payload attribute names read by the interceptor
+		ReadStreamingPayload *AttributeExpr
+		// WriteStreamingPayload lists the streaming payload attribute names written by the interceptor
+		WriteStreamingPayload *AttributeExpr
+		// ReadStreamingResult lists the streaming result attribute names read by the interceptor
+		ReadStreamingResult *AttributeExpr
+		// WriteStreamingResult lists the streaming result attribute names written by the interceptor
+		WriteStreamingResult *AttributeExpr
 	}
 )
 
@@ -63,6 +71,38 @@ func (i *InterceptorExpr) validate(m *MethodExpr) *eval.ValidationErrors {
 		}
 		if i.WriteResult != nil {
 			i.validateAttributeAccess(m, "write result", verr, resultObj, i.WriteResult)
+		}
+	}
+
+	if i.ReadStreamingPayload != nil || i.WriteStreamingPayload != nil {
+		if !m.IsPayloadStreaming() {
+			verr.Add(m, "interceptor %q cannot be applied because the method payload is not streaming", i.Name)
+		}
+		payloadObj := AsObject(m.StreamingPayload.Type)
+		if payloadObj == nil {
+			verr.Add(m, "interceptor %q cannot be applied because the method payload is not an object", i.Name)
+		}
+		if i.ReadStreamingPayload != nil {
+			i.validateAttributeAccess(m, "read streaming payload", verr, payloadObj, i.ReadStreamingPayload)
+		}
+		if i.WriteStreamingPayload != nil {
+			i.validateAttributeAccess(m, "write streaming payload", verr, payloadObj, i.WriteStreamingPayload)
+		}
+	}
+
+	if i.ReadStreamingResult != nil || i.WriteStreamingResult != nil {
+		if !m.IsResultStreaming() {
+			verr.Add(m, "interceptor %q cannot be applied because the method result is not streaming", i.Name)
+		}
+		resultObj := AsObject(m.Result.Type)
+		if resultObj == nil {
+			verr.Add(m, "interceptor %q cannot be applied because the method result is not an object", i.Name)
+		}
+		if i.ReadStreamingResult != nil {
+			i.validateAttributeAccess(m, "read streaming result", verr, resultObj, i.ReadStreamingResult)
+		}
+		if i.WriteStreamingResult != nil {
+			i.validateAttributeAccess(m, "write streaming result", verr, resultObj, i.WriteStreamingResult)
 		}
 	}
 

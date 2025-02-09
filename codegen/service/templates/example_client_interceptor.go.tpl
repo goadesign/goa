@@ -12,8 +12,8 @@ func New{{ .StructName }}ClientInterceptors() *{{ .StructName }}ClientIntercepto
 {{ comment .Description }}
 {{- end }}
 func (i *{{ $.StructName }}ClientInterceptors) {{ .Name }}(ctx context.Context, info *{{ $.PkgName }}.{{ .Name }}Info, next goa.Endpoint) (any, error) {
-	log.Printf(ctx, "[{{ .Name }}] Sending request: %v", info.RawPayload)
-	resp, err := next(ctx, info.RawPayload)
+	log.Printf(ctx, "[{{ .Name }}] Sending request: %v", info.RawPayload())
+	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
 		log.Printf(ctx, "[{{ .Name }}] Error: %v", err)
 		return nil, err

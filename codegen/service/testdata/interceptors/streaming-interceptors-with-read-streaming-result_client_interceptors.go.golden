@@ -3,25 +3,12 @@
 // is sent to the server. The implementation is responsible for calling next to
 // complete the request.
 type ClientInterceptors interface {
-	Tracing(ctx context.Context, info *TracingInfo, next goa.Endpoint) (any, error)
+	Logging(ctx context.Context, info *LoggingInfo, next goa.Endpoint) (any, error)
 }
-
-// Access interfaces for interceptor payloads and results
-type (
-	// TracingInfo provides metadata about the current interception.
-	// It includes service name, method name, and access to the endpoint.
-	TracingInfo struct {
-		service    string
-		method     string
-		callType   goa.InterceptorCallType
-		rawPayload any
-	}
-)
 
 // WrapMethodClientEndpoint wraps the Method endpoint with the client
 // interceptors defined in the design.
 func WrapMethodClientEndpoint(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
-	endpoint = wrapClientMethodtracing(endpoint, i)
+	endpoint = wrapClientMethodlogging(endpoint, i)
 	return endpoint
 }
-

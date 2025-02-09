@@ -17,28 +17,16 @@ type (
 		rawPayload any
 	}
 
-	// LoggingStreamingPayload provides type-safe access to the method streaming payload.
-	// It allows reading and writing specific fields of the streaming payload as defined
-	// in the design.
-	LoggingStreamingPayload interface {
-		Chunk() string
-		SetChunk(string)
-	}
-
 	// LoggingStreamingResult provides type-safe access to the method streaming result.
 	// It allows reading and writing specific fields of the streaming result as defined
 	// in the design.
 	LoggingStreamingResult interface {
 		Data() string
-		SetData(string)
 	}
 )
 
 // Private implementation types
 type (
-	loggingMethodStreamingPayload struct {
-		payload *MethodStreamingPayload
-	}
 	loggingMethodStreamingResult struct {
 		result *MethodResult
 	}
@@ -73,19 +61,9 @@ func (info *LoggingInfo) RawPayload() any {
 	return info.rawPayload
 }
 
-// ClientStreamingPayload returns a type-safe accessor for the method streaming payload for a client-side interceptor.
-func (info *LoggingInfo) ClientStreamingPayload() LoggingStreamingPayload {
-	return &loggingMethodStreamingPayload{payload: info.RawPayload().(*MethodStreamingPayload)}
-}
-
 // ClientStreamingResult returns a type-safe accessor for the method streaming result for a client-side interceptor.
 func (info *LoggingInfo) ClientStreamingResult(res any) LoggingStreamingResult {
 	return &loggingMethodStreamingResult{result: res.(*MethodResult)}
-}
-
-// ServerStreamingPayload returns a type-safe accessor for the method streaming payload for a server-side interceptor.
-func (info *LoggingInfo) ServerStreamingPayload(pay any) LoggingStreamingPayload {
-	return &loggingMethodStreamingPayload{payload: pay.(*MethodStreamingPayload)}
 }
 
 // ServerStreamingResult returns a type-safe accessor for the method streaming result for a server-side interceptor.
@@ -95,23 +73,10 @@ func (info *LoggingInfo) ServerStreamingResult() LoggingStreamingResult {
 
 // Private implementation methods
 
-func (p *loggingMethodStreamingPayload) Chunk() string {
-	if p.payload.Chunk == nil {
-		var zero string
-		return zero
-	}
-	return *p.payload.Chunk
-}
-func (p *loggingMethodStreamingPayload) SetChunk(v string) {
-	p.payload.Chunk = &v
-}
 func (r *loggingMethodStreamingResult) Data() string {
 	if r.result.Data == nil {
 		var zero string
 		return zero
 	}
 	return *r.result.Data
-}
-func (r *loggingMethodStreamingResult) SetData(v string) {
-	r.result.Data = &v
 }
