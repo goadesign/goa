@@ -3648,3 +3648,21 @@ var PayloadCookieCustomNameDSL = func() {
 		})
 	})
 }
+
+var PayloadWithValidatedAliasDSL = func() {
+	var ValidatedString = Type("ValidatedString", String, func() {
+		MinLength(10)
+		Pattern("^[a-zA-Z]+$")
+	})
+
+	Service("ServicePayloadValidatedAlias", func() {
+		Method("Method", func() {
+			StreamingPayload(func() {
+				Attribute("name", ValidatedString)
+			})
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}

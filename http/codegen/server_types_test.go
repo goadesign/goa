@@ -32,6 +32,7 @@ func TestServerTypes(t *testing.T) {
 		{"server-query-custom-name", testdata.PayloadQueryCustomNameDSL, QueryCustomNameServerTypesFile},
 		{"server-header-custom-name", testdata.PayloadHeaderCustomNameDSL, HeaderCustomNameServerTypesFile},
 		{"server-cookie-custom-name", testdata.PayloadCookieCustomNameDSL, CookieCustomNameServerTypesFile},
+		{"server-payload-with-validated-alias", testdata.PayloadWithValidatedAliasDSL, PayloadWithValidatedAliasServerTypeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -378,5 +379,41 @@ func NewMethodCookieCustomNamePayload(c2 *string) *servicecookiecustomname.Metho
 	v.Cookie = c2
 
 	return v
+}
+`
+
+const PayloadWithValidatedAliasServerTypeCode = `// MethodStreamingBody is the type of the "ServicePayloadValidatedAlias"
+// service "Method" endpoint HTTP request body.
+type MethodStreamingBody struct {
+	Name *ValidatedStringStreamingBody ` + "`" + `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"` + "`" + `
+}
+
+// ValidatedStringStreamingBody is used to define fields on request body types.
+type ValidatedStringStreamingBody string
+
+// NewMethodStreamingBody builds a ServicePayloadValidatedAlias service Method
+// endpoint payload.
+func NewMethodStreamingBody(body *MethodStreamingBody) *servicepayloadvalidatedalias.MethodStreamingPayload {
+	v := &servicepayloadvalidatedalias.MethodStreamingPayload{}
+	if body.Name != nil {
+		name := servicepayloadvalidatedalias.ValidatedString(*body.Name)
+		v.Name = &name
+	}
+
+	return v
+}
+
+// ValidateMethodStreamingBody runs the validations defined on
+// MethodStreamingBody
+func ValidateMethodStreamingBody(body *MethodStreamingBody) (err error) {
+	if body.Name != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.name", string(*body.Name), "^[a-zA-Z]+$"))
+	}
+	if body.Name != nil {
+		if utf8.RuneCountInString(string(*body.Name)) < 10 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", string(*body.Name), utf8.RuneCountInString(string(*body.Name)), 10, true))
+		}
+	}
+	return
 }
 `
