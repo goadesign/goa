@@ -269,7 +269,13 @@ specification and a client tool.
 
 ## 3. Run
 
-Now let's compile and run the service:
+First let's make sure that all package dependencies are downloaded:
+
+```bash
+go mod tidy
+```
+
+Next, let's compile and run the service:
 
 ```bash
 cd cmd/calc
