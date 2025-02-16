@@ -2586,9 +2586,10 @@ func attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData)
 		ctx = "response"
 	}
 	desc = name + " is used to define fields on " + ctx + " body types."
-	if req || !req && !server {
-		// generate validations for responses client-side and for
-		// requests server-side and CLI
+	if (req || !req && !server) && !expr.IsAlias(ut) {
+		// Generate validations for responses client-side and for
+		// requests server-side and CLI.
+		// Alias types are validated inline in the parent type
 		validate = codegen.ValidationCode(ut.Attribute(), ut, hctx, true, expr.IsAlias(ut), false, "body")
 	}
 	if validate != "" {
