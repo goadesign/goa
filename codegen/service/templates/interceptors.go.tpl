@@ -29,13 +29,31 @@ func (info *{{ .Name }}Info) Payload() {{ .Name }}Payload {
 		switch info.Method() {
 			{{- range .Methods }}
 		case "{{ .MethodName }}":
+				{{- if hasEndpointStruct . }}
+			switch pay := info.RawPayload().(type) {
+			case *{{ .ServerStream.EndpointStruct }}:
+				return &{{ .PayloadAccess }}{payload: pay.Payload}
+			default:
+				return &{{ .PayloadAccess }}{payload: pay.({{ .PayloadRef }})}
+			}
+				{{- else }}
 			return &{{ .PayloadAccess }}{payload: info.RawPayload().({{ .PayloadRef }})}
+				{{- end }}
 			{{- end }}
 		default:
 			return nil
 		}
 		{{- else }}
+			{{- if hasEndpointStruct (index .Methods 0) }}
+	switch pay := info.RawPayload().(type) {
+	case *{{ (index .Methods 0).ServerStream.EndpointStruct }}:
+		return &{{ (index .Methods 0).PayloadAccess }}{payload: pay.Payload}
+	default:
+		return &{{ (index .Methods 0).PayloadAccess }}{payload: pay.({{ (index .Methods 0).PayloadRef }})}
+	}
+			{{- else }}
 	return &{{ (index .Methods 0).PayloadAccess }}{payload: info.RawPayload().({{ (index .Methods 0).PayloadRef }})}
+			{{- end }}
 		{{- end }}
 }
 	{{- end }}

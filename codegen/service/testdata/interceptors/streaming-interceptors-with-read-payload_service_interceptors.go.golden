@@ -63,7 +63,12 @@ func (info *LoggingInfo) RawPayload() any {
 
 // Payload returns a type-safe accessor for the method payload.
 func (info *LoggingInfo) Payload() LoggingPayload {
-	return &loggingMethodPayload{payload: info.RawPayload().(*MethodPayload)}
+	switch pay := info.RawPayload().(type) {
+	case *MethodEndpointInput:
+		return &loggingMethodPayload{payload: pay.Payload}
+	default:
+		return &loggingMethodPayload{payload: pay.(*MethodPayload)}
+	}
 }
 
 // Private implementation methods
