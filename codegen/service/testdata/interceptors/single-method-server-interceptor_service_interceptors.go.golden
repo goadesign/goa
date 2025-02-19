@@ -25,3 +25,24 @@ func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoin
 	return endpoint
 }
 
+// Public accessor methods for Info types
+
+// Service returns the name of the service handling the request.
+func (info *LoggingInfo) Service() string {
+	return info.service
+}
+
+// Method returns the name of the method handling the request.
+func (info *LoggingInfo) Method() string {
+	return info.method
+}
+
+// CallType returns the type of call the interceptor is handling.
+func (info *LoggingInfo) CallType() goa.InterceptorCallType {
+	return info.callType
+}
+
+// RawPayload returns the raw payload of the request.
+func (info *LoggingInfo) RawPayload() any {
+	return info.rawPayload
+}

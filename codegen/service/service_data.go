@@ -227,8 +227,7 @@ type (
 		// function.
 		MustClose bool
 		// EndpointStruct is the name of the endpoint struct that holds a payload
-		// reference (if any) and the endpoint server stream. It is set only if the
-		// client sends a normal payload and server streams a result.
+		// reference (if any) and the endpoint server stream.
 		EndpointStruct string
 		// Kind is the kind of the stream (payload, result or bidirectional).
 		Kind expr.StreamKind
@@ -345,6 +344,9 @@ type (
 		// MustClose indicates whether the stream should implement the Close()
 		// function.
 		MustClose bool
+		// EndpointStruct is the name of the endpoint struct that holds a payload
+		// reference (if any) and the endpoint server stream.
+		EndpointStruct string
 	}
 
 	// AttributeData describes a single attribute.
@@ -1314,6 +1316,7 @@ func buildInterceptorMethodData(i *expr.InterceptorExpr, md *MethodData) *Method
 			RecvWithContextName: md.ServerStream.RecvWithContextName,
 			RecvTypeRef:         md.ServerStream.RecvTypeRef,
 			MustClose:           md.ServerStream.MustClose,
+			EndpointStruct:      md.ServerStream.EndpointStruct,
 		}
 	}
 	if md.ClientStream != nil {

@@ -6,22 +6,8 @@
 func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 	{{- if or $interceptor.HasStreamingPayloadAccess $interceptor.HasStreamingResultAccess }}
-		{{- if $interceptor.HasPayloadAccess }}
-		info := &{{ $interceptor.Name }}Info{
-			service:    "{{ $.Service }}",
-			method:     "{{ .MethodName }}",
-			callType:   goa.InterceptorUnary,
-			rawPayload: req,
-		}
-		res, err := i.{{ $interceptor.Name }}(ctx, info, endpoint)
-		{{- else }}
-		res, err := endpoint(ctx, req)
-		{{- end }}
-		if err != nil {
-			return res, err
-		}
-		stream := res.({{ .ServerStream.Interface }})
-		return &wrapped{{ .ServerStream.Interface }}{
+		stream := req.(*{{ .ServerStream.EndpointStruct }}).Stream
+		req.(*{{ .ServerStream.EndpointStruct }}).Stream = &wrapped{{ .ServerStream.Interface }}{
 			ctx:     ctx,
 		{{- if $interceptor.HasStreamingResultAccess }}
 			sendWithContext: func(ctx context.Context, req {{ .ServerStream.SendTypeRef }}) error {
@@ -53,7 +39,18 @@ func wrap{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i Serve
 			},
 		{{- end }}
 			stream: stream,
-		}, nil
+		}
+		{{- if $interceptor.HasPayloadAccess }}
+		info := &{{ $interceptor.Name }}Info{
+			service:    "{{ $.Service }}",
+			method:     "{{ .MethodName }}",
+			callType:   goa.InterceptorUnary,
+			rawPayload: req,
+		}
+		return i.{{ $interceptor.Name }}(ctx, info, endpoint)
+		{{- else }}
+		return endpoint(ctx, req)
+		{{- end }}
 	{{- else }}
 		info := &{{ $interceptor.Name }}Info{
 			service:    "{{ $.Service }}",

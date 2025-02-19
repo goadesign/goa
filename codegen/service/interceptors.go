@@ -122,6 +122,7 @@ func interceptorFile(svc *Data, server bool) *codegen.File {
 			Data:   interceptors,
 			FuncMap: map[string]any{
 				"hasPrivateImplementationTypes": hasPrivateImplementationTypes,
+				"hasEndpointStruct":             hasEndpointStruct(server),
 			},
 		})
 	}
@@ -224,6 +225,17 @@ func hasPrivateImplementationTypes(interceptors []*InterceptorData) bool {
 		}
 	}
 	return false
+}
+
+// hasEndpointStruct returns a function that returns true if the method has an endpoint struct
+// if server is true, otherwise it returns false.
+func hasEndpointStruct(server bool) func(*MethodInterceptorData) bool {
+	if !server {
+		return func(*MethodInterceptorData) bool { return false }
+	}
+	return func(m *MethodInterceptorData) bool {
+		return m.ServerStream != nil && m.ServerStream.EndpointStruct != ""
+	}
 }
 
 // collectWrappedStreams returns a slice of streams to be wrapped by interceptor wrapper functions.
