@@ -1,4 +1,3 @@
-{{- if hasPrivateImplementationTypes . }}
 // Public accessor methods for Info types
 {{- range . }}
 
@@ -149,6 +148,7 @@ func (info *{{ .Name }}Info) ServerStreamingResult() {{ .Name }}StreamingResult 
 	{{- end }}
 {{- end }}
 
+{{- if hasPrivateImplementationTypes . }}
 // Private implementation methods
 {{- range . }}
 	{{ $interceptor := . }}
