@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"go/format"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -106,6 +107,9 @@ func TestExampleInterceptorsFiles(t *testing.T) {
 				bs, err := format.Source(buf.Bytes())
 				require.NoError(t, err, buf.String())
 				code := string(bs)
+
+				// Remove the first line so the version of Goa is not part of the golden file
+				code = strings.SplitN(code, "\n", 2)[1]
 
 				// Use the base name of the generated file without extension for the golden file
 				baseName := filepath.Base(f.Path)
