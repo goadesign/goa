@@ -24,10 +24,10 @@ func (c *{{ .ClientStruct }}) {{ .Method.VarName }}() goa.Endpoint {
 			case *goapb.ErrorResponse:
 				return nil, goagrpc.NewServiceError(message)
 			default:
-				return nil, goa.Fault(err.Error())
+				return nil, goa.Fault("%s", err.Error())
 			}
 		{{- else }}
-			return nil, goa.Fault(err.Error())
+			return nil, goa.Fault("%s", err.Error())
 		{{- end }}
 		}
 		return res, nil
