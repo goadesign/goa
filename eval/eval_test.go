@@ -10,12 +10,18 @@ import (
 )
 
 func TestInvalidArgError(t *testing.T) {
+	var (
+		p  = func() { Attribute("a") }
+		ut = Type("ut", func() { Attribute("a") })
+	)
 	dsls := map[string]struct {
 		dsl  func()
 		want string
 	}{
 		"Attribute":            {func() { Type("name", func() { Attribute("name", String, "description", 1) }) }, "cannot use 1 (type int) as type func()"},
 		"Body":                 {func() { Service("s", func() { Method("m", func() { HTTP(func() { Body(1) }) }) }) }, "cannot use 1 (type int) as type attribute name, user type or DSL"},
+		"Body (string)":        {func() { Service("s", func() { Method("m", func() { Payload(p); HTTP(func() { Body("a", 1) }) }) }) }, "cannot use 1 (type int) as type function"},
+		"Body (UserType)":      {func() { Service("s", func() { Method("m", func() { HTTP(func() { Body(ut, 1) }) }) }) }, "cannot use 1 (type int) as type function"},
 		"ErrorName (bool)":     {func() { Type("name", func() { ErrorName(true) }) }, "cannot use true (type bool) as type name or position"},
 		"ErrorName (int)":      {func() { Type("name", func() { ErrorName(1, 2) }) }, "cannot use 2 (type int) as type name"},
 		"Example":              {func() { Example(1, 2) }, "cannot use 1 (type int) as type summary (string)"},

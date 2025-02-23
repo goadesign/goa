@@ -972,7 +972,8 @@ func Body(args ...any) {
 			var ok bool
 			fn, ok = args[1].(func())
 			if !ok {
-				eval.ReportError("second argument must be a function")
+				eval.InvalidArgError("function", args[1])
+				return
 			}
 		}
 	case expr.UserType:
@@ -981,7 +982,8 @@ func Body(args ...any) {
 			var ok bool
 			fn, ok = args[1].(func())
 			if !ok {
-				eval.ReportError("second argument must be a function")
+				eval.InvalidArgError("function", args[1])
+				return
 			}
 		}
 	case func():
