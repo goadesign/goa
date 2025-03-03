@@ -1,6 +1,8 @@
 <p align="center">
   <p align="center">
-    <img alt="Goa" src="https://goa.design/img/social/goa-banner.png">
+    <a href="https://goa.design">
+      <img alt="Goa" src="https://goa.design/img/social/goa-banner.png">
+    </a>
   </p>
   <p align="center">
     <a href="https://github.com/goadesign/goa/releases/latest"><img alt="Release" src="https://img.shields.io/github/release/goadesign/goa.svg?style=for-the-badge"></a>
