@@ -1476,9 +1476,13 @@ func collectAttributes(attrNames, parent *expr.AttributeExpr, scope *codegen.Nam
 		if parentAttr == nil {
 			continue
 		}
+		var pkg string
+		if loc := codegen.UserTypeLocation(parentAttr.Type); loc != nil {
+			pkg = loc.PackageName()
+		}
 		data[i] = &AttributeData{
 			Name:    codegen.Goify(nat.Name, true),
-			TypeRef: scope.GoTypeRef(parentAttr),
+			TypeRef: scope.GoFullTypeRef(parentAttr, pkg),
 			Pointer: parent.IsPrimitivePointer(nat.Name, true),
 		}
 	}
