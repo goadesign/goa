@@ -181,6 +181,34 @@ func TestCollectAttributes(t *testing.T) {
 			},
 			want: []*AttributeData{nil},
 		},
+		{
+			name: "user-type-with-package",
+			attrNames: &expr.AttributeExpr{
+				Type: &expr.Object{
+					{Name: "user", Attribute: &expr.AttributeExpr{Type: expr.String}},
+				},
+			},
+			parent: &expr.AttributeExpr{
+				Type: &expr.Object{
+					{Name: "user", Attribute: &expr.AttributeExpr{
+						Type: &expr.UserTypeExpr{
+							AttributeExpr: &expr.AttributeExpr{
+								Type: &expr.Object{
+									{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.Primitive(expr.StringKind)}},
+								},
+								Meta: map[string][]string{
+									"struct:pkg:path": {"goa.design/goa/example/user"},
+								},
+							},
+							TypeName: "User",
+						},
+					}},
+				},
+			},
+			want: []*AttributeData{
+				{Name: "User", TypeRef: "*user.User", Pointer: false},
+			},
+		},
 	}
 
 	for _, tc := range cases {
