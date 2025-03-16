@@ -24,6 +24,7 @@ func TestServerInit(t *testing.T) {
 		{"multiple bases", testdata.ServerMultiBasesDSL, testdata.ServerMultiBasesConstructorCode, 2, 3},
 		{"file server", testdata.ServerFileServerDSL, testdata.ServerFileServerConstructorCode, 1, 3},
 		{"file server with a redirect", testdata.ServerFileServerWithRedirectDSL, testdata.ServerFileServerConstructorCode, 1, 3},
+		{"file server with root path", testdata.ServerFileServerRootPathDSL, testdata.ServerFileServerRootPathConstructorCode, 1, 3},
 		{"mixed", testdata.ServerMixedDSL, testdata.ServerMixedConstructorCode, 2, 3},
 		{"multipart", testdata.ServerMultipartDSL, testdata.ServerMultipartConstructorCode, 2, 4},
 		{"streaming", testdata.StreamingResultDSL, testdata.ServerStreamingConstructorCode, 3, 3},
