@@ -54,6 +54,39 @@ Goa transforms how you build APIs and microservices in Go with its powerful desi
 
 The result? Dramatically reduced development time, consistent APIs, and the elimination of the documentation-code drift that plagues traditional development.
 
+## Sponsors
+
+<table width="100%">
+    <tr>
+        <td>
+            <img width="1000" height="0" />
+            <a href="https://www.incident.io">
+                <img src="docs/incidentio.png" alt="incident.io" width="260" align="right" />
+            </a>
+            <h3>incident.io: Bounce back stronger after every incident</h3>
+            <p>
+                Use our platform to empower your team to run incidents end-to-end. Rapidly fix and
+                learn from incidents, so you can build more resilient products.
+            </p>
+            <a href="https://incident.io">Learn more</a>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <img width="1000" height="0" />
+            <a href="https://www.speakeasy.com/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">
+                <img src="docs/speakeasy.png" alt="Speakeasy" width="260" align="right" />
+            </a>
+            <h3>Speakeasy: Enterprise DevEx for your API</h3>
+            <p>
+                Our platform makes it easy to create feature-rich production ready SDKs.
+                Speed up integrations and reduce errors by giving your API the DevEx it deserves.
+            </p>
+            <a href="https://www.speakeasy.com/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">Integrate with Goa</a>
+        </td>
+    </tr>
+</table>
+
 ## Why Goa?
 
 Traditional API development suffers from:
