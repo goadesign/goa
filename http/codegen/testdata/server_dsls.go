@@ -168,6 +168,18 @@ var ServerFileServerWithRedirectDSL = func() {
 	})
 }
 
+var ServerFileServerRootPathDSL = func() {
+	Service("ServiceFileServer", func() {
+		HTTP(func() {
+			Path("/")
+		})
+		Files("/file1.json", "file1.json")
+		Files("/path/to/file1.json", "file1.json")
+		Files("/file2.json", "file1.json")
+		Files("/path/to/file2.json", "file1.json")
+	})
+}
+
 var ServerMixedDSL = func() {
 	Service("ServerMixed", func() {
 		Method("MethodMixed1", func() {
