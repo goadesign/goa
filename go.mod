@@ -17,7 +17,7 @@ require (
 	golang.org/x/text v0.23.0
 	golang.org/x/tools v0.31.0
 	google.golang.org/grpc v1.71.0
-	google.golang.org/protobuf v1.36.5
+	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
 )
 
