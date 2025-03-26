@@ -6,7 +6,7 @@ toolchain go1.23.6
 
 require (
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598
-	github.com/getkin/kin-openapi v0.130.0
+	github.com/getkin/kin-openapi v0.131.0
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/gohugoio/hashstructure v0.5.0
 	github.com/google/uuid v1.6.0
@@ -17,7 +17,7 @@ require (
 	golang.org/x/text v0.23.0
 	golang.org/x/tools v0.31.0
 	google.golang.org/grpc v1.71.0
-	google.golang.org/protobuf v1.36.5
+	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
 )
 
