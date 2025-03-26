@@ -36,11 +36,11 @@ func main() {
 					fmt.Fprintf(os.Stderr, "invalid value for URL 'version' variable: %q (valid values: v1,v2)\n", *versionF)
 					os.Exit(1)
 				}
-				addr = strings.Replace(addr, "{version}", *versionF, -1)
+				addr = strings.ReplaceAll(addr, "{version}", *versionF)
 			case "stage":
 				addr = "https://example-{domain}:{port}"
-				addr = strings.Replace(addr, "{domain}", *domainF, -1)
-				addr = strings.Replace(addr, "{port}", *portF, -1)
+				addr = strings.ReplaceAll(addr, "{domain}", *domainF)
+				addr = strings.ReplaceAll(addr, "{port}", *portF)
 			default:
 				fmt.Fprintf(os.Stderr, "invalid host argument: %q (valid hosts: dev|stage)\n", *hostF)
 				os.Exit(1)
@@ -126,5 +126,5 @@ func indent(s string) string {
 	if s == "" {
 		return ""
 	}
-	return "    " + strings.Replace(s, "\n", "\n    ", -1)
+	return "    " + strings.ReplaceAll(s, "\n", "\n    ")
 }

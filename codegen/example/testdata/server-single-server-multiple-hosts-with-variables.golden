@@ -76,7 +76,7 @@ func main() {
 			if !versionSeen {
 				log.Fatal(ctx, fmt.Errorf("invalid value for URL 'version' variable: %q (valid values: v1,v2)\n", *versionF))
 			}
-			addr = strings.Replace(addr, "{version}", *versionF, -1)
+			addr = strings.ReplaceAll(addr, "{version}", *versionF)
 			u, err := url.Parse(addr)
 			if err != nil {
 				log.Fatalf(ctx, err, "invalid URL %#v\n", addr)
@@ -102,8 +102,8 @@ func main() {
 	case "stage":
 		{
 			addr := "https://example-{domain}:{port}"
-			addr = strings.Replace(addr, "{domain}", *domainF, -1)
-			addr = strings.Replace(addr, "{port}", *portF, -1)
+			addr = strings.ReplaceAll(addr, "{domain}", *domainF)
+			addr = strings.ReplaceAll(addr, "{port}", *portF)
 			u, err := url.Parse(addr)
 			if err != nil {
 				log.Fatalf(ctx, err, "invalid URL %#v\n", addr)

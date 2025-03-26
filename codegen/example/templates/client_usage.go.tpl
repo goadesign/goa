@@ -28,5 +28,5 @@ func indent(s string) string {
 	if s == "" {
 		return ""
 	}
-	return "    " + strings.Replace(s, "\n", "\n    ", -1)
+	return "    " + strings.ReplaceAll(s, "\n", "\n    ")
 }
