@@ -56,8 +56,10 @@ package dsl
 
 import (
 	// The imports below add dependencies needed by the generated temporary
-	// code generation tool. Go cannot detect these dependencies so we must
-	// add them explicitly.
+	// code generation tool which reuses the project's go.mod. Go cannot detect
+	// these dependencies since they are not used by the DSL. We must add them
+	// explicitly so that `go mod tidy` adds them to the go.mod file.
+	_ "github.com/gohugoio/hashstructure"
 	_ "golang.org/x/tools/go/ast/astutil"
 	_ "golang.org/x/tools/go/packages"
 	_ "golang.org/x/tools/imports"
