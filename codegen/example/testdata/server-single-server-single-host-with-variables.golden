@@ -70,15 +70,15 @@ func main() {
 	case "dev":
 		{
 			addr := "http://example-{int}-{uint}-{float32}:8090"
-			addr = strings.Replace(addr, "{int}", *int_F, -1)
-			addr = strings.Replace(addr, "{uint}", *uint_F, -1)
-			addr = strings.Replace(addr, "{float32}", *float32_F, -1)
-			addr = strings.Replace(addr, "{int32}", *int32_F, -1)
-			addr = strings.Replace(addr, "{int64}", *int64_F, -1)
-			addr = strings.Replace(addr, "{uint32}", *uint32_F, -1)
-			addr = strings.Replace(addr, "{uint64}", *uint64_F, -1)
-			addr = strings.Replace(addr, "{float64}", *float64_F, -1)
-			addr = strings.Replace(addr, "{bool}", *bool_F, -1)
+			addr = strings.ReplaceAll(addr, "{int}", *int_F)
+			addr = strings.ReplaceAll(addr, "{uint}", *uint_F)
+			addr = strings.ReplaceAll(addr, "{float32}", *float32_F)
+			addr = strings.ReplaceAll(addr, "{int32}", *int32_F)
+			addr = strings.ReplaceAll(addr, "{int64}", *int64_F)
+			addr = strings.ReplaceAll(addr, "{uint32}", *uint32_F)
+			addr = strings.ReplaceAll(addr, "{uint64}", *uint64_F)
+			addr = strings.ReplaceAll(addr, "{float64}", *float64_F)
+			addr = strings.ReplaceAll(addr, "{bool}", *bool_F)
 			u, err := url.Parse(addr)
 			if err != nil {
 				log.Fatalf(ctx, err, "invalid URL %#v\n", addr)
@@ -103,15 +103,15 @@ func main() {
 
 		{
 			addr := "https://example-{int32}-{int64}-{uint32}-{uint64}-{float64}:80/{bool}"
-			addr = strings.Replace(addr, "{int}", *int_F, -1)
-			addr = strings.Replace(addr, "{uint}", *uint_F, -1)
-			addr = strings.Replace(addr, "{float32}", *float32_F, -1)
-			addr = strings.Replace(addr, "{int32}", *int32_F, -1)
-			addr = strings.Replace(addr, "{int64}", *int64_F, -1)
-			addr = strings.Replace(addr, "{uint32}", *uint32_F, -1)
-			addr = strings.Replace(addr, "{uint64}", *uint64_F, -1)
-			addr = strings.Replace(addr, "{float64}", *float64_F, -1)
-			addr = strings.Replace(addr, "{bool}", *bool_F, -1)
+			addr = strings.ReplaceAll(addr, "{int}", *int_F)
+			addr = strings.ReplaceAll(addr, "{uint}", *uint_F)
+			addr = strings.ReplaceAll(addr, "{float32}", *float32_F)
+			addr = strings.ReplaceAll(addr, "{int32}", *int32_F)
+			addr = strings.ReplaceAll(addr, "{int64}", *int64_F)
+			addr = strings.ReplaceAll(addr, "{uint32}", *uint32_F)
+			addr = strings.ReplaceAll(addr, "{uint64}", *uint64_F)
+			addr = strings.ReplaceAll(addr, "{float64}", *float64_F)
+			addr = strings.ReplaceAll(addr, "{bool}", *bool_F)
 			u, err := url.Parse(addr)
 			if err != nil {
 				log.Fatalf(ctx, err, "invalid URL %#v\n", addr)

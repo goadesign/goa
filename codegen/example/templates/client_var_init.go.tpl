@@ -27,7 +27,7 @@ var (
 						os.Exit(1)
 					}
 				{{- end }}
-				addr = strings.Replace(addr, "{{ printf "{%s}" .Name }}", *{{ .VarName }}F, -1)
+				addr = strings.ReplaceAll(addr, "{{ printf "{%s}" .Name }}", *{{ .VarName }}F)
 			{{- end }}
 		{{- end }}
 			default:

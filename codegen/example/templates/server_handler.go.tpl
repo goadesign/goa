@@ -23,7 +23,7 @@
 						log.Fatal(ctx, fmt.Errorf("invalid value for URL '{{ .Name }}' variable: %q (valid values: {{ join .Values "," }})\n", *{{ .VarName }}F))
 					}
 				{{- end }}
-				addr = strings.Replace(addr, "{{ printf "{%s}" .Name }}", *{{ .VarName }}F, -1)
+				addr = strings.ReplaceAll(addr, "{{ printf "{%s}" .Name }}", *{{ .VarName }}F)
 			{{- end }}
 			u, err := url.Parse(addr)
 			if err != nil {
