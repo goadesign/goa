@@ -949,6 +949,7 @@ func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[string]struct{}) *e
 				}
 			}
 			att.DefaultValue = dt.Attribute().DefaultValue
+			att.UserExamples = dt.Attribute().UserExamples
 		}
 		if _, ok := seen[dt.ID()]; ok {
 			return att
