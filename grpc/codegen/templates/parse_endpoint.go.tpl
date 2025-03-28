@@ -22,7 +22,7 @@ func ParseEndpoint(
 			c := {{ .PkgName }}.NewClient(cc, opts...)
 			switch epn {
 		{{- $pkgName := .PkgName }}
-		{{ range .Subcommands }}
+		{{- range .Subcommands }}
 			case "{{ .Name }}":
 				endpoint = c.{{ .MethodVarName }}()
 			{{- if .Interceptors }}
