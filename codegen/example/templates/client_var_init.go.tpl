@@ -51,4 +51,4 @@ var (
 		}
 		scheme = u.Scheme
 		host = u.Host
-	}	
+	}

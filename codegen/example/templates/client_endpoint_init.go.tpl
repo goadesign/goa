@@ -1,5 +1,5 @@
 
-var(
+	var(
 		endpoint goa.Endpoint
 		payload any
 		err error
@@ -22,4 +22,4 @@ var(
 		fmt.Fprintln(os.Stderr, err.Error())
 		fmt.Fprintln(os.Stderr, "run '"+os.Args[0]+" --help' for detailed usage.")
 		os.Exit(1)
-}	
+	}
