@@ -15,4 +15,4 @@
 	{{- end }}, {{ end }})
 {{- else }}
 	return "{{ .PathFormat }}"
-{{- end }}
+{{- end -}}

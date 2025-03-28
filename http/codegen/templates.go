@@ -21,7 +21,7 @@ func readTemplate(name string, partials ...string) string {
 				panic("failed to read partial template " + partial + ": " + err.Error()) // Should never happen, bug if it does
 			}
 			partialDefs = append(partialDefs,
-				fmt.Sprintf("{{ define \"partial_%s\" }}\n%s{{ end }}", partial, string(tmpl)))
+				fmt.Sprintf("{{- define \"partial_%s\" }}\n%s{{- end }}", partial, string(tmpl)))
 		}
 		prefix = strings.Join(partialDefs, "\n")
 	}
