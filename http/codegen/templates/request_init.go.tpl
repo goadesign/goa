@@ -64,3 +64,4 @@
 	}
 
 	return req, nil
+{{- /* strip extra newline */ -}}

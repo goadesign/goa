@@ -37,4 +37,4 @@
 		}
 	{{- end }}
 	return {{ .ReturnVar }}
-{{- end }}
+{{- end -}}

@@ -9,6 +9,7 @@ func main() {
 	)
 	flag.Usage = usage
 	flag.Parse()
+
 	var (
 		addr    string
 		timeout int
@@ -42,6 +43,7 @@ func main() {
 		scheme = u.Scheme
 		host = u.Host
 	}
+
 	var (
 		endpoint goa.Endpoint
 		payload  any
