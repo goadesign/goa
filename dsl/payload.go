@@ -176,13 +176,13 @@ func methodDSL(m *expr.MethodExpr, suffix string, p any, args ...any) *expr.Attr
 	case expr.DataType:
 		att = &expr.AttributeExpr{Type: actual}
 	default:
-		eval.ReportError("invalid %s argument, must be a type or a function", suffix)
+		eval.InvalidArgError("type or function", p)
 		return nil
 	}
 	if len(args) >= 1 {
 		if f, ok := args[len(args)-1].(func()); ok {
 			if fn != nil {
-				eval.ReportError("invalid arguments in %s call, must be (type), (func), (type, func), (type, desc) or (type, desc, func)", suffix)
+				eval.InvalidArgError("(type), (func), (type, func), (type, desc) or (type, desc, func)", f)
 			}
 			fn = f
 		}
