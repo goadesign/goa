@@ -679,6 +679,21 @@ func (s SchemesData) Append(d *SchemeData) SchemesData {
 	return append(s, d)
 }
 
+// DedupeByType returns a new SchemesData slice that is deduplicated by scheme
+// type.
+func (s SchemesData) DedupeByType() SchemesData {
+	seen := make(map[string]struct{})
+	uniqueSchemes := SchemesData{}
+	for _, s := range s {
+		if _, ok := seen[s.Type]; !ok {
+			seen[s.Type] = struct{}{}
+			uniqueSchemes = append(uniqueSchemes, s)
+		}
+	}
+
+	return uniqueSchemes
+}
+
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
 func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
