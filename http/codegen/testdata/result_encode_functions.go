@@ -1036,6 +1036,16 @@ func EncodeMethodEmptyServerResponseWithTagsResponse(encoder func(context.Contex
 }
 `
 
+var ResponseEncoderSkipResponseBodyEncodeDecodeCode = `// EncodeMethodResponseEncoderSkipResponse returns an encoder for responses
+// returned by the ServiceResponseEncoderSkip MethodResponseEncoderSkip
+// endpoint.
+func EncodeMethodResponseEncoderSkipResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		return nil
+	}
+}
+`
+
 var ResultWithCustomPkgTypeEncodeCode = `// EncodeMethodResultWithCustomPkgTypeDSLResponse returns an encoder for
 // responses returned by the ServiceResultWithCustomPkgTypeDSL
 // MethodResultWithCustomPkgTypeDSL endpoint.
