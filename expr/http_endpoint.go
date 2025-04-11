@@ -66,6 +66,10 @@ type (
 		MultipartRequest bool
 		// Redirect defines a redirect for the endpoint.
 		Redirect *HTTPRedirectExpr
+		// SSE defines the Server-Sent Events configuration for this endpoint if it's
+		// a streaming endpoint. If nil, the endpoint uses WebSockets by default or
+		// inherits the service-level SSE configuration if defined.
+		SSE *HTTPSSEExpr
 		// Meta is a set of key/value pairs with semantic that is
 		// specific to each generator, see dsl.Meta.
 		Meta MetaExpr
@@ -274,6 +278,15 @@ func (e *HTTPEndpointExpr) Prepare() {
 		e.Responses = []*HTTPResponseExpr{{StatusCode: status}}
 	}
 
+	// Inherit SSE configuration from service or API level for streaming endpoints
+	if e.MethodExpr.Stream == ServerStreamKind && e.SSE == nil {
+		if e.Service.SSE != nil {
+			e.SSE = e.Service.SSE
+		} else if Root.API.HTTP.SSE != nil {
+			e.SSE = Root.API.HTTP.SSE
+		}
+	}
+
 	// Error -> ResponseError
 	methodErrors := map[string]struct{}{}
 	for _, v := range e.HTTPErrors {
@@ -374,6 +387,23 @@ func (e *HTTPEndpointExpr) Validate() error {
 			if len(rt.Views) > 1 {
 				verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method result type defines multiple views.")
 			}
+		}
+	}
+
+	// Validate streaming endpoints for SSE compatibility
+	if e.MethodExpr.Stream == ServerStreamKind {
+		// Prepare already handles inheriting SSE from service or API level
+		if e.SSE != nil {
+			verr.Merge(e.SSE.Validate(e).(*eval.ValidationErrors))
+		}
+	} else if e.SSE != nil {
+		// Error if SSE is defined but endpoint is not server streaming
+		if e.MethodExpr.Stream == BidirectionalStreamKind {
+			verr.Add(e, "Server-Sent Events cannot be used with bidirectional streaming endpoints")
+		} else if e.MethodExpr.Stream == ClientStreamKind {
+			verr.Add(e, "Server-Sent Events cannot be used with client-to-server streaming endpoints")
+		} else {
+			verr.Add(e, "Server-Sent Events can only be used with endpoints that have a streaming result")
 		}
 	}
 
