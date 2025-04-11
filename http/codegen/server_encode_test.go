@@ -85,6 +85,8 @@ func TestEncode(t *testing.T) {
 		{"empty-server-response", testdata.EmptyServerResponseDSL, testdata.EmptyServerResponseEncodeCode},
 		{"empty-server-response-with-tags", testdata.EmptyServerResponseWithTagsDSL, testdata.EmptyServerResponseWithTagsEncodeCode},
 
+		{"skip-response-body-encode-decode", testdata.ResponseEncoderSkipResponseBodyEncodeDecodeDSL, testdata.ResponseEncoderSkipResponseBodyEncodeDecodeCode},
+
 		{"result-with-custom-pkg-type", testdata.ResultWithCustomPkgTypeDSL, testdata.ResultWithCustomPkgTypeEncodeCode},
 		{"result-with-embedded-custom-pkg-type", testdata.EmbeddedCustomPkgTypeDSL, testdata.ResultWithEmbeddedCustomPkgTypeEncodeCode},
 	}

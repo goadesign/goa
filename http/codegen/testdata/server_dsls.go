@@ -294,3 +294,15 @@ var ServerSkipResponseBodyEncodeDecodeDSL = func() {
 		})
 	})
 }
+
+var ResponseEncoderSkipResponseBodyEncodeDecodeDSL = func() {
+	Service("ServiceResponseEncoderSkip", func() {
+		Method("MethodResponseEncoderSkip", func() {
+			HTTP(func() {
+				GET("/")
+				SkipResponseBodyEncodeDecode()
+				Response(StatusOK)
+			})
+		})
+	})
+}

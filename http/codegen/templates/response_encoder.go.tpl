@@ -33,7 +33,9 @@ func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) g
 		{{- end }}
 	{{- else }}
 		{{- with (index .Result.Responses 0) }}
-			w.WriteHeader({{ .StatusCode }})
+			{{- if not $.Method.SkipResponseBodyEncodeDecode }}
+				w.WriteHeader({{ .StatusCode }})
+			{{- end }}
 			return nil
 		{{- end }}
 	{{- end }}
