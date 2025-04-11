@@ -226,7 +226,7 @@ func (g *Generator) Run() ([]string, error) {
 // Remove deletes the package files.
 func (g *Generator) Remove() {
 	if g.tmpDir != "" {
-		os.RemoveAll(g.tmpDir)
+		_ = os.RemoveAll(g.tmpDir)
 		g.tmpDir = ""
 	}
 }
@@ -237,7 +237,7 @@ func (g *Generator) runGoCmd(args ...string) error {
 		return fmt.Errorf(`failed to find a go compiler, looked in "%s"`, os.Getenv("PATH"))
 	}
 	if g.DesignVersion > 2 {
-		os.Setenv("GO111MODULE", "on")
+		_ = os.Setenv("GO111MODULE", "on")
 	}
 	c := exec.Cmd{
 		Path: gobin,

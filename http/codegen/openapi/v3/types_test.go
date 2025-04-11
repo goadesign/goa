@@ -472,7 +472,7 @@ func newRT(id string, att *expr.AttributeExpr) *expr.AttributeExpr {
 // Helper function for result types with views
 func newRTWithView(id string, att *expr.AttributeExpr, view string) *expr.AttributeExpr {
 	rt := newRT(id, att)
-	rt.Type.(*expr.ResultTypeExpr).AttributeExpr.Meta = expr.MetaExpr{
+	rt.Type.(*expr.ResultTypeExpr).Meta = expr.MetaExpr{
 		expr.ViewMetaKey: []string{view},
 	}
 	return rt

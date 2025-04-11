@@ -914,7 +914,7 @@ func Body(args ...any) {
 		}
 		kind = "Request"
 	case *expr.HTTPErrorExpr:
-		ref = e.ErrorExpr.AttributeExpr
+		ref = e.AttributeExpr
 		setter = func(att *expr.AttributeExpr) {
 			if e.Response == nil {
 				e.Response = &expr.HTTPResponseExpr{}

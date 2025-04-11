@@ -59,13 +59,13 @@ func TestProject(t *testing.T) {
 				t.Fatal(err)
 			}
 			if !Equal(projected, k.Expected) {
-				projected.AttributeExpr.Debug("got")
-				k.Expected.AttributeExpr.Debug("expected")
+				projected.Debug("got")
+				k.Expected.Debug("expected")
 				t.Errorf("got: %s, expected: %s\n", Hash(projected, false, true, true), Hash(k.Expected, false, true, true))
 			}
-			if pobj := AsObject(projected.AttributeExpr.Type); pobj != nil {
+			if pobj := AsObject(projected.Type); pobj != nil {
 				for _, att := range *pobj {
-					att2 := k.Expected.AttributeExpr.Find(att.Name)
+					att2 := k.Expected.Find(att.Name)
 					if att2 == nil {
 						continue
 					}

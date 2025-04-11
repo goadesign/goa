@@ -462,7 +462,7 @@ func (ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		}
 		e.Response.Message = makeProtoBufMessage(e.Response.Message, protoBufify(e.Name()+"_response", true, true), sd)
 		for _, er := range e.GRPCErrors {
-			if er.ErrorExpr.Type == expr.ErrorResult || !expr.IsObject(er.ErrorExpr.Type) {
+			if er.Type == expr.ErrorResult || !expr.IsObject(er.Type) {
 				continue
 			}
 			er.Response.Message = makeProtoBufMessage(er.Response.Message, protoBufify(e.Name()+"_"+er.Name+"_error", true, true), sd)
@@ -519,7 +519,7 @@ func (ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		}
 		errors := buildErrorsData(e, sd)
 		for _, er := range e.GRPCErrors {
-			if er.ErrorExpr.Type == expr.ErrorResult || !expr.IsObject(er.ErrorExpr.Type) {
+			if er.Type == expr.ErrorResult || !expr.IsObject(er.Type) {
 				continue
 			}
 			collect(er.Response.Message)
@@ -1028,7 +1028,7 @@ func buildErrorsData(e *expr.GRPCEndpointExpr, sd *ServiceData) []*ErrorData {
 		errorLoc := svc.Method(e.MethodExpr.Name).ErrorLocs[v.Name]
 		errors = append(errors, &ErrorData{
 			Name:     v.Name,
-			Ref:      svc.Scope.GoFullTypeRef(v.ErrorExpr.AttributeExpr, pkgWithDefault(errorLoc, svc.PkgName)),
+			Ref:      svc.Scope.GoFullTypeRef(v.AttributeExpr, pkgWithDefault(errorLoc, svc.PkgName)),
 			Response: responseData,
 		})
 	}
@@ -1038,19 +1038,19 @@ func buildErrorsData(e *expr.GRPCEndpointExpr, sd *ServiceData) []*ErrorData {
 func buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *ConvertData {
 	// No need to build transformation functions for default error or non-object
 	// types.
-	if ge.ErrorExpr.Type == expr.ErrorResult || !expr.IsObject(ge.ErrorExpr.Type) {
+	if ge.Type == expr.ErrorResult || !expr.IsObject(ge.Type) {
 		return nil
 	}
 	svc := sd.Service
 	svcCtx := serviceTypeContext(svc.PkgName, svc.Scope)
 	if svr {
 		// server side
-		data := buildInitData(ge.ErrorExpr.AttributeExpr, ge.Response.Message, "er", "message", svcCtx, true, svr, false, sd)
+		data := buildInitData(ge.AttributeExpr, ge.Response.Message, "er", "message", svcCtx, true, svr, false, sd)
 		data.Name = fmt.Sprintf("New%s%sError", codegen.Goify(e.Name(), true), codegen.Goify(ge.Name, true))
 		data.Description = fmt.Sprintf("%s builds the gRPC error response type from the error of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 		return &ConvertData{
-			SrcName: svcCtx.Scope.Name(ge.ErrorExpr.AttributeExpr, svcCtx.Pkg(ge.ErrorExpr.AttributeExpr), svcCtx.Pointer, svcCtx.UseDefault),
-			SrcRef:  svcCtx.Scope.Ref(ge.ErrorExpr.AttributeExpr, svcCtx.Pkg(ge.ErrorExpr.AttributeExpr)),
+			SrcName: svcCtx.Scope.Name(ge.AttributeExpr, svcCtx.Pkg(ge.AttributeExpr), svcCtx.Pointer, svcCtx.UseDefault),
+			SrcRef:  svcCtx.Scope.Ref(ge.AttributeExpr, svcCtx.Pkg(ge.AttributeExpr)),
 			TgtName: protoBufGoFullTypeName(ge.Response.Message, sd.PkgName, sd.Scope),
 			TgtRef:  protoBufGoFullTypeRef(ge.Response.Message, sd.PkgName, sd.Scope),
 			Init:    data,
@@ -1058,14 +1058,14 @@ func buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRPCEndpointExpr, sd 
 	}
 
 	// client side
-	data := buildInitData(ge.Response.Message, ge.ErrorExpr.AttributeExpr, "message", "er", svcCtx, false, svr, false, sd)
+	data := buildInitData(ge.Response.Message, ge.AttributeExpr, "message", "er", svcCtx, false, svr, false, sd)
 	data.Name = fmt.Sprintf("New%s%sError", codegen.Goify(e.Name(), true), codegen.Goify(ge.Name, true))
 	data.Description = fmt.Sprintf("%s builds the error type of the %q endpoint of the %q service from the gRPC error response type.", data.Name, e.Name(), svc.Name)
 	return &ConvertData{
 		SrcName:    protoBufGoFullTypeName(ge.Response.Message, sd.PkgName, sd.Scope),
 		SrcRef:     protoBufGoFullTypeRef(ge.Response.Message, sd.PkgName, sd.Scope),
-		TgtName:    svcCtx.Scope.Name(ge.ErrorExpr.AttributeExpr, svcCtx.Pkg(ge.ErrorExpr.AttributeExpr), svcCtx.Pointer, svcCtx.UseDefault),
-		TgtRef:     svcCtx.Scope.Ref(ge.ErrorExpr.AttributeExpr, svcCtx.Pkg(ge.ErrorExpr.AttributeExpr)),
+		TgtName:    svcCtx.Scope.Name(ge.AttributeExpr, svcCtx.Pkg(ge.AttributeExpr), svcCtx.Pointer, svcCtx.UseDefault),
+		TgtRef:     svcCtx.Scope.Ref(ge.AttributeExpr, svcCtx.Pkg(ge.AttributeExpr)),
 		Init:       data,
 		Validation: addValidation(ge.Response.Message, "errmsg", sd, false),
 	}

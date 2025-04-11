@@ -308,7 +308,7 @@ func objRecursive() *expr.UserTypeExpr {
 		},
 		TypeName: "objRecursiveT",
 	}
-	obj := res.AttributeExpr.Type.(*expr.Object)
+	obj := res.Type.(*expr.Object)
 	*obj = append(*obj, &expr.NamedAttributeExpr{
 		Name:      "Rec",
 		Attribute: &expr.AttributeExpr{Type: res}})

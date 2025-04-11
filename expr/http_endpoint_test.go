@@ -72,7 +72,7 @@ func TestHTTPEndpointPrepare(t *testing.T) {
 				root := expr.RunDSL(t, c.DSL)
 				e := root.API.HTTP.Services[len(root.API.HTTP.Services)-1].HTTPEndpoints[0]
 
-				ht := expr.AsObject(e.Headers.AttributeExpr.Type)
+				ht := expr.AsObject(e.Headers.Type)
 				if len(*ht) != len(c.Headers) {
 					t.Errorf("got %d headers, expected %d", len(*ht), len(c.Headers))
 				} else {
@@ -83,7 +83,7 @@ func TestHTTPEndpointPrepare(t *testing.T) {
 					}
 				}
 
-				ct := expr.AsObject(e.Cookies.AttributeExpr.Type)
+				ct := expr.AsObject(e.Cookies.Type)
 				if len(*ct) != len(c.Cookies) {
 					t.Errorf("got %d cookies, expected %d", len(*ct), len(c.Cookies))
 				} else {
@@ -94,7 +94,7 @@ func TestHTTPEndpointPrepare(t *testing.T) {
 					}
 				}
 
-				pt := expr.AsObject(e.Params.AttributeExpr.Type)
+				pt := expr.AsObject(e.Params.Type)
 				if len(*pt) != len(c.Params) {
 					t.Errorf("got %d params, expected %d", len(*pt), len(c.Params))
 				} else {

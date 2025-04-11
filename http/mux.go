@@ -190,7 +190,7 @@ func (m *mux) ensureContext(r *http.Request) *chi.Context {
 	if ctx.RoutePattern() != "" {
 		return ctx // already initialized
 	}
-	if !m.Router.Match(ctx, r.Method, r.URL.Path) {
+	if !m.Match(ctx, r.Method, r.URL.Path) {
 		return nil // route not handled by chi
 	}
 	return ctx

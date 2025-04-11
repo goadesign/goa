@@ -70,9 +70,7 @@ depend:
 
 lint:
 ifneq ($(GOOS),windows)
-	@if [ "`golangci-lint run ./... | grep -v ".pb.go" | tee /dev/stderr`" ]; then \
-		echo "^ - lint errors!" && echo && exit 1; \
-	fi
+	@golangci-lint run ./... || (echo "^ - lint errors!" && echo && exit 1)
 endif
 
 test:

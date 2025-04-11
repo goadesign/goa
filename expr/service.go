@@ -109,14 +109,14 @@ func (e *ErrorExpr) Validate() error {
 	walkAttribute(e.AttributeExpr, func(name string, att *AttributeExpr) error { // nolint: errcheck
 		if _, ok := att.Meta["struct:error:name"]; ok {
 			if errField != "" {
-				verr.Add(e, "duplicate error names in type %q", e.AttributeExpr.Type.Name())
+				verr.Add(e, "duplicate error names in type %q", e.Type.Name())
 			}
 			errField = name
 			if att.Type != String {
-				verr.Add(e, "error name %q must be a string in type %q", name, e.AttributeExpr.Type.Name())
+				verr.Add(e, "error name %q must be a string in type %q", name, e.Type.Name())
 			}
-			if !e.AttributeExpr.IsRequired(name) {
-				verr.Add(e, "error name %q must be required in type %q", name, e.AttributeExpr.Type.Name())
+			if !e.IsRequired(name) {
+				verr.Add(e, "error name %q must be required in type %q", name, e.Type.Name())
 			}
 		}
 		return nil

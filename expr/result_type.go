@@ -170,7 +170,7 @@ func (rt *ResultTypeExpr) ViewHasAttribute(view, attr string) bool {
 	if v == nil {
 		return false
 	}
-	return v.AttributeExpr.Find(attr) != nil
+	return v.Find(attr) != nil
 }
 
 // Finalize builds the default view if not explicitly defined and finalizes
@@ -195,7 +195,7 @@ func (rt *ResultTypeExpr) Finalize() {
 // useExplicitView projects the result type using the view explicitly set on the
 // attribute if any.
 func (rt *ResultTypeExpr) useExplicitView() {
-	if view, ok := rt.AttributeExpr.Meta.Last(ViewMetaKey); ok {
+	if view, ok := rt.Meta.Last(ViewMetaKey); ok {
 		p, err := Project(rt, view)
 		if err != nil {
 			panic(err) // bug - presence of view meta should have been validated before
@@ -300,8 +300,8 @@ func projectSingle(rt *ResultTypeExpr, view string, seen map[string]*AttributeEx
 	}
 	ut.TypeName = typeName
 	ut.UID = id
-	ut.AttributeExpr.Type = Dup(v.Type)
-	ut.AttributeExpr.UserExamples = v.UserExamples
+	ut.Type = Dup(v.Type)
+	ut.UserExamples = v.UserExamples
 	projected := &ResultTypeExpr{
 		Identifier:   id,
 		UserTypeExpr: ut,

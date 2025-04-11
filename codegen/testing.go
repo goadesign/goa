@@ -66,7 +66,7 @@ func sectionCodeWithPrefix(t *testing.T, section *SectionTemplate, prefix string
 func FormatTestCode(t *testing.T, code string) string {
 	t.Helper()
 	tmp := CreateTempFile(t, code)
-	defer os.Remove(tmp)
+	defer func() { _ = os.Remove(tmp) }()
 	require.NoError(t, finalizeGoSource(tmp))
 	content, err := os.ReadFile(tmp)
 	require.NoError(t, err)
@@ -81,7 +81,7 @@ func CreateTempFile(t *testing.T, content string) string {
 	require.NoError(t, err)
 	_, err = f.WriteString(content)
 	if err != nil {
-		os.Remove(f.Name())
+		require.NoError(t, os.Remove(f.Name()))
 		t.Fatal(err)
 	}
 	require.NoError(t, f.Close())

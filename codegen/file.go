@@ -165,7 +165,9 @@ func finalizeGoSource(path string) error {
 	if err := format.Node(w, fset, file); err != nil {
 		return err
 	}
-	w.Close()
+	if err := w.Close(); err != nil {
+		return err
+	}
 
 	// Format code using goimport standard
 	bs, err := os.ReadFile(path)

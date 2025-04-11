@@ -197,7 +197,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 		assign = ":="
 	}
 	name := ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg(target), ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault)
-	buffer.WriteString(fmt.Sprintf("%s %s %s%s{%s}\n", targetVar, assign, deref, name, initCode))
+	fmt.Fprintf(buffer, "%s %s %s%s{%s}\n", targetVar, assign, deref, name, initCode)
 	buffer.WriteString(postInitCode)
 
 	// iterate through attributes to initialize rest of the struct fields and
