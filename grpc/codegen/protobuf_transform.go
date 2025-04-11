@@ -85,12 +85,12 @@ func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar 
 	if proto {
 		target = expr.DupAtt(target)
 		removeMeta(target)
-		ta.TransformAttrs.Prefix = "svc"
+		ta.Prefix = "svc"
 		ta.proto = true
 	} else {
 		source = expr.DupAtt(source)
 		removeMeta(source)
-		ta.TransformAttrs.Prefix = "protobuf"
+		ta.Prefix = "protobuf"
 		ta.proto = false
 	}
 
@@ -268,7 +268,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 		assign = ":="
 	}
 	tname := ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg(target), ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault)
-	buffer.WriteString(fmt.Sprintf("%s %s %s%s{%s}\n", targetVar, assign, deref, tname, initCode))
+	fmt.Fprintf(buffer, "%s %s %s%s{%s}\n", targetVar, assign, deref, tname, initCode)
 	buffer.WriteString(postInitCode)
 
 	// iterate through attributes to initialize rest of the struct fields and

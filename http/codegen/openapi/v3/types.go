@@ -439,7 +439,7 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64, seen map[string]*uint
 		// the computation of the hash.
 		rt := t.(*expr.ResultTypeExpr)
 		*res = hashString(rt.Identifier, h)
-		if view, ok := rt.AttributeExpr.Meta.Last(expr.ViewMetaKey); ok {
+		if view, ok := rt.Meta.Last(expr.ViewMetaKey); ok {
 			*res = orderedHash(*res, hashString(view, h), h)
 		}
 

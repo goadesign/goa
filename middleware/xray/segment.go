@@ -191,7 +191,7 @@ func (s *Segment) RecordError(e error) {
 	//
 	// first check if the other flags have already been set in case these methods are being
 	// called directly instead of using xray.WrapClient(), etc.
-	if !(s.Fault || s.Throttle) {
+	if !s.Fault && !s.Throttle {
 		s.Error = true
 	}
 	if s.Cause == nil {

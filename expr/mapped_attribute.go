@@ -77,7 +77,7 @@ func (ma *MappedAttributeExpr) Remap() {
 	}
 
 	// Conserve examples defined on user type
-	ma.AttributeExpr.UserExamples = ma.ExtractUserExamples()
+	ma.UserExamples = ma.ExtractUserExamples()
 
 	ma.Type = n
 }

@@ -195,12 +195,12 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	if t, ok := payload.Type.(UserType); ok {
 		// Remember openapi typename for example to generate friendly OpenAPI specs.
 		if m, ok := t.Attribute().Meta["openapi:typename"]; ok {
-			ut.AttributeExpr.AddMeta("openapi:typename", m...)
+			ut.AddMeta("openapi:typename", m...)
 		}
 
 		// Remember additionalProperties.
 		if m, ok := t.Attribute().Meta["openapi:additionalProperties"]; ok {
-			ut.AttributeExpr.AddMeta("openapi:additionalProperties", m...)
+			ut.AddMeta("openapi:additionalProperties", m...)
 		}
 	}
 
@@ -262,7 +262,7 @@ func httpResponseBody(a *HTTPEndpointExpr, resp *HTTPResponseExpr) *AttributeExp
 // parameters.
 func httpErrorResponseBody(e *HTTPEndpointExpr, v *HTTPErrorExpr) *AttributeExpr {
 	name := e.Name() + "_" + v.ErrorExpr.Name
-	return buildHTTPResponseBody(name, v.ErrorExpr.AttributeExpr, v.Response, e.Service)
+	return buildHTTPResponseBody(name, v.AttributeExpr, v.Response, e.Service)
 }
 
 func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseExpr, svc *HTTPServiceExpr) *AttributeExpr {
@@ -342,14 +342,14 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	if t, ok := attr.Type.(UserType); ok {
 		// Remember original type name and openapi typename for example
 		// to generate friendly OpenAPI specs.
-		userType.AttributeExpr.AddMeta("name:original", t.Name())
+		userType.AddMeta("name:original", t.Name())
 		if m, ok := t.Attribute().Meta["openapi:typename"]; ok {
-			userType.AttributeExpr.AddMeta("openapi:typename", m...)
+			userType.AddMeta("openapi:typename", m...)
 		}
 
 		// Remember additionalProperties.
 		if m, ok := t.Attribute().Meta["openapi:additionalProperties"]; ok {
-			userType.AttributeExpr.AddMeta("openapi:additionalProperties", m...)
+			userType.AddMeta("openapi:additionalProperties", m...)
 		}
 	}
 

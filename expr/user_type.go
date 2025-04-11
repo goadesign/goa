@@ -33,7 +33,7 @@ func (u *UserTypeExpr) Name() string {
 	if u.AttributeExpr == nil {
 		return u.TypeName
 	}
-	if n, ok := u.AttributeExpr.Meta["struct:type:name"]; ok {
+	if n, ok := u.Meta["struct:type:name"]; ok {
 		return n[0]
 	}
 	return u.TypeName
@@ -42,8 +42,8 @@ func (u *UserTypeExpr) Name() string {
 // Rename changes the type name to the given value.
 func (u *UserTypeExpr) Rename(n string) {
 	// Remember original name for example to generate friendly docs.
-	u.AttributeExpr.AddMeta("name:original", u.TypeName)
-	delete(u.AttributeExpr.Meta, "struct:type:name")
+	u.AddMeta("name:original", u.TypeName)
+	delete(u.Meta, "struct:type:name")
 	u.TypeName = n
 }
 

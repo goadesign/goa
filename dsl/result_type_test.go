@@ -84,7 +84,7 @@ func TestView(t *testing.T) {
 						found = true
 						for _, attr := range c.expectedViewAttrs[view] {
 							found2 := false
-							for _, attr2 := range *v.AttributeExpr.Type.(*expr.Object) {
+							for _, attr2 := range *v.Type.(*expr.Object) {
 								if attr2.Name == attr {
 									found2 = true
 									break

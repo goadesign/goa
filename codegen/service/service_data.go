@@ -1018,11 +1018,11 @@ func collectUnionMethods(att *expr.AttributeExpr, scope *codegen.NameScope, loc 
 
 // buildErrorInitData creates the data needed to generate code around endpoint error return values.
 func buildErrorInitData(er *expr.ErrorExpr, scope *codegen.NameScope) *ErrorInitData {
-	_, temporary := er.AttributeExpr.Meta["goa:error:temporary"]
-	_, timeout := er.AttributeExpr.Meta["goa:error:timeout"]
-	_, fault := er.AttributeExpr.Meta["goa:error:fault"]
+	_, temporary := er.Meta["goa:error:temporary"]
+	_, timeout := er.Meta["goa:error:timeout"]
+	_, fault := er.Meta["goa:error:fault"]
 	var pkg string
-	if ut, ok := er.AttributeExpr.Type.(expr.UserType); ok {
+	if ut, ok := er.Type.(expr.UserType); ok {
 		pkg = codegen.UserTypeLocation(ut).PackageName()
 	}
 	return &ErrorInitData{
@@ -1098,7 +1098,7 @@ func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 		errorLocs = make(map[string]*codegen.Location, len(m.Errors))
 		for i, er := range m.Errors {
 			errors[i] = buildErrorInitData(er, scope)
-			errorLocs[er.Name] = codegen.UserTypeLocation(er.AttributeExpr.Type)
+			errorLocs[er.Name] = codegen.UserTypeLocation(er.Type)
 		}
 	}
 	for _, req := range m.Requirements {
@@ -1638,7 +1638,7 @@ func buildProjectedType(projected, att *expr.AttributeExpr, viewspkg string, sco
 func buildViews(rt *expr.ResultTypeExpr, viewScope *codegen.NameScope) []*ViewData {
 	views := make([]*ViewData, len(rt.Views))
 	for i, view := range rt.Views {
-		vatt := expr.AsObject(view.AttributeExpr.Type)
+		vatt := expr.AsObject(view.Type)
 		attrs := make([]string, len(*vatt))
 		for j, nat := range *vatt {
 			attrs[j] = nat.Name
@@ -2072,7 +2072,7 @@ func buildConstructorCode(src, tgt *expr.AttributeExpr, sourceVar, targetVar str
 		finit := "new" + targetCtx.Scope.Name(nat.Attribute, "", targetCtx.Pointer, targetCtx.UseDefault)
 		if view != "" {
 			v := ""
-			if vatt := rt.View(view).AttributeExpr.Find(nat.Name); vatt != nil {
+			if vatt := rt.View(view).Find(nat.Name); vatt != nil {
 				if attv, ok := vatt.Meta.Last(expr.ViewMetaKey); ok && attv != expr.DefaultView {
 					// view is explicitly set for the result type on the attribute
 					v = attv
