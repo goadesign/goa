@@ -106,7 +106,7 @@ func TestExampleServerFiles(t *testing.T) {
 					require.NoError(t, s.Write(&buf))
 				}
 				code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
-				golden := filepath.Join("testdata", "server-"+c.Name+".golden")
+				golden := filepath.Join("testdata", "golden", "server-"+c.Name+".golden")
 				compareOrUpdateGolden(t, code, golden)
 			})
 		}

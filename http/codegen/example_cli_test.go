@@ -38,7 +38,7 @@ func TestExampleCLIFiles(t *testing.T) {
 				require.NoError(t, s.Write(&buf))
 			}
 			code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
-			golden := filepath.Join("testdata", "client-"+c.Name+".golden")
+			golden := filepath.Join("testdata", "golden", "client-"+c.Name+".golden")
 			compareOrUpdateGolden(t, code, golden)
 		})
 	}

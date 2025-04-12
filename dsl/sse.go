@@ -7,11 +7,16 @@ import (
 
 // ServerSentEvents specifies that a streaming endpoint should use the
 // Server-Sent Events protocol for streaming instead of WebSockets. It can be
-// used in three ways:
+// used in four ways:
 //
-// 1. ServerSentEvents() - StreamingResult type is used directly as the "data" field
-// 2. ServerSentEvents("attributeName") - The specified attribute is used as the "data" field
-// 3. ServerSentEvents(func() { ... }) - Custom mapping of attributes to SSE fields
+//  1. ServerSentEvents(): StreamingResult type is used directly as the event
+//     "data" field (serialized into JSON if not a primitive type)
+//  2. ServerSentEvents("attributeName"): The specified attribute is used as the
+//     event "data" field (serialized into JSON if not a primitive type)
+//  3. ServerSentEvents(func() { ... }): Custom mapping of attributes to event
+//     fields
+//  4. ServerSentEvents("attributeName", func() { ... }): Define attribute name
+//     used as the "data" field and custom mapping for others.
 //
 // ServerSentEvents can appear in an API HTTP expression (to specify SSE for all streaming
 // methods in the API), in a Service HTTP expression (to specify SSE for all streaming
@@ -19,13 +24,14 @@ import (
 // API or service level, any method with a StreamingPayload will fall back to using WebSockets
 // as SSE only supports server-to-client streaming.
 //
-// See SSEData, SSEID, SSEType, SSERetry for more details on mapping result attributes
-// to SSE fields.
+// See SSEEventData, SSEEventID, SSEEventType, SSEEventRetry for more details on
+// mapping result attributes to event fields. See SSERequestID for more details on
+// mapping payload attributes to the Last-Event-ID request header.
 //
 // Example:
 //
 //	var Notification = Type("Notification", func() {
-//	    Attribute("message", String)message
+//	    Attribute("message", String)
 //	    Attribute("timestamp", String)
 //	    Required("message", "timestamp")
 //	})
@@ -69,20 +75,40 @@ import (
 //	        })
 //	    })
 //	})
-func ServerSentEvents(val any) {
+func ServerSentEvents(args ...any) {
+	if len(args) > 2 {
+		eval.TooManyArgError()
+		return
+	}
+	if len(args) == 2 {
+		if _, ok := args[1].(func()); !ok {
+			eval.InvalidArgError("function", args[1])
+			return
+		}
+	}
+
 	var fn func()
 	var dataField string
-
-	switch actual := val.(type) {
-	case func():
-		fn = actual
-	case string:
-		dataField = actual
-	case nil:
-		// Use the entire result as data field
-	default:
-		eval.InvalidArgError("function or string", val)
-		return
+	if len(args) > 0 {
+		switch actual := args[0].(type) {
+		case func():
+			fn = actual
+		case string:
+			dataField = actual
+		case nil:
+			// Use the entire result as data field
+		default:
+			eval.InvalidArgError("function or string", args[0])
+			return
+		}
+		if len(args) == 2 {
+			var ok bool
+			fn, ok = args[1].(func())
+			if !ok {
+				eval.InvalidArgError("function", args[1])
+				return
+			}
+		}
 	}
 
 	sse := &expr.HTTPSSEExpr{

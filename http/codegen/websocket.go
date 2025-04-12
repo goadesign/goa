@@ -74,6 +74,9 @@ type (
 
 // initWebSocketData initializes the WebSocket related data in ed.
 func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
+	if e.SSE != nil {
+		return
+	}
 	var (
 		svrRecvTypeName        string
 		svrRecvTypeRef         string

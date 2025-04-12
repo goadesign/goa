@@ -11,19 +11,19 @@ func {{ .HandlerInit }}(
 	configurer goahttp.ConnConfigureFunc,
 	{{- end }}
 ) http.Handler {
-	{{- if (or (mustDecodeRequest .) (not (or .Redirect (isWebSocketEndpoint .))) (not .Redirect) .Method.SkipResponseBodyEncodeDecode) }}
+	{{- if (or (mustDecodeRequest .) (not (or .Redirect (isWebSocketEndpoint .) (isSSEEndpoint .))) (not .Redirect) .Method.SkipResponseBodyEncodeDecode) }}
 	var (
 	{{- end }}
 		{{- if mustDecodeRequest . }}
 		decodeRequest  = {{ .RequestDecoder }}(mux, decoder)
 		{{- end }}
-		{{- if not (or .Redirect (isWebSocketEndpoint .)) }}
+		{{- if not (or .Redirect (isWebSocketEndpoint .) (isSSEEndpoint .)) }}
 		encodeResponse = {{ .ResponseEncoder }}(encoder)
 		{{- end }}
 		{{- if (or (mustDecodeRequest .) (not .Redirect) .Method.SkipResponseBodyEncodeDecode) }}
 		encodeError    = {{ if .Errors }}{{ .ErrorEncoder }}{{ else }}goahttp.ErrorEncoder{{ end }}(encoder, formatter)
 		{{- end }}
-	{{- if (or (mustDecodeRequest .) (not (or .Redirect (isWebSocketEndpoint .))) (not .Redirect) .Method.SkipResponseBodyEncodeDecode) }}
+	{{- if (or (mustDecodeRequest .) (not (or .Redirect (isWebSocketEndpoint .) (isSSEEndpoint .))) (not .Redirect) .Method.SkipResponseBodyEncodeDecode) }}
 	)
 	{{- end }}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +58,30 @@ func {{ .HandlerInit }}(
 		{{- end }}
 		}
 		_, err = endpoint(ctx, v)
+	{{- else if isSSEEndpoint . }}
+		{{- if .SSE.SSEConfig.RequestIDField }}
+		// Set Last-Event-ID header if present
+		if lastEventID := r.Header.Get("Last-Event-ID"); lastEventID != "" {
+			ctx = context.WithValue(ctx, "last-event-id", lastEventID)
+			{{- if .Payload.Ref }}
+			{{- if eq .Method.Payload.Type.Name "Object" }}
+			p := payload.({{ .Payload.Ref }})
+			p.{{ .SSE.SSEConfig.RequestIDField }} = lastEventID
+			payload = p
+			{{- end }}
+			{{- end }}
+		}
+		{{- end }}
+		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
+			Stream: &{{ .SSE.VarName }}{
+				w: w,
+				r: r,
+			},
+		{{- if .Payload.Ref }}
+			Payload: payload.({{ .Payload.Ref }}),
+		{{- end }}
+		}
+		_, err = endpoint(ctx, v)
 	{{- else if .Method.SkipRequestBodyEncodeDecode }}
 		data := &{{ .ServicePkgName }}.{{ .Method.RequestStruct }}{ {{ if .Payload.Ref }}Payload: payload.({{ .Payload.Ref }}), {{ end }}Body: r.Body }
 		res, err := endpoint(ctx, data)
@@ -74,6 +98,10 @@ func {{ .HandlerInit }}(
 				errhandler(ctx, w, err)
 				return
 			}
+			{{- end }}
+			{{- if isSSEEndpoint . }}
+			// For SSE, we need to set appropriate error headers
+			w.Header().Set("Content-Type", "application/json")
 			{{- end }}
 			if err := encodeError(ctx, w, err); err != nil {
 				errhandler(ctx, w, err)
@@ -115,7 +143,7 @@ func {{ .HandlerInit }}(
 			return
 		}
 	{{- end }}
-	{{- if not (or .Redirect (isWebSocketEndpoint .)) }}
+	{{- if not (or .Redirect (isWebSocketEndpoint .) (isSSEEndpoint .)) }}
 		if err := encodeResponse(ctx, w, {{ if and .Method.SkipResponseBodyEncodeDecode .Result.Ref }}o.Result{{ else }}res{{ end }}); err != nil {
 			errhandler(ctx, w, err)
 			{{- if .Method.SkipResponseBodyEncodeDecode }}

@@ -152,6 +152,9 @@ type (
 		// ServerWebSocket holds the data to render the server struct which
 		// implements the server stream interface.
 		ServerWebSocket *WebSocketData
+		// SSE holds the data to render the server struct which implements the
+		// server stream interface for SSE.
+		SSE *SSEData
 		// Redirect defines a redirect for the endpoint.
 		Redirect *RedirectData
 
@@ -838,6 +841,7 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		}
 		if httpEndpoint.MethodExpr.IsStreaming() {
 			initWebSocketData(ed, httpEndpoint, sd)
+			initSSEData(ed, httpEndpoint, sd)
 		}
 
 		if httpEndpoint.MultipartRequest {
