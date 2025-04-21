@@ -3,6 +3,7 @@ package codegen
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -454,12 +455,7 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 // hasWebSocket returns true if at least one of the endpoints in the service
 // defines a streaming payload or result.
 func hasWebSocket(sd *ServiceData) bool {
-	for _, e := range sd.Endpoints {
-		if isWebSocketEndpoint(e) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(sd.Endpoints, isWebSocketEndpoint)
 }
 
 // isWebSocketEndpoint returns true if the endpoint defines a streaming payload

@@ -22,7 +22,6 @@ func (s *SSEAllFieldsMethodServerStream) Send(v *sseallfieldsservice.SSEAllField
 // endpoint SSE connection with context.
 func (s *SSEAllFieldsMethodServerStream) SendWithContext(ctx context.Context, v *sseallfieldsservice.SSEAllFieldsMethodResult) error {
 	s.once.Do(func() {
-		// Set default SSE headers if not already set
 		header := s.w.Header()
 		if header.Get("Content-Type") == "" {
 			header.Set("Content-Type", "text/event-stream")
@@ -34,24 +33,16 @@ func (s *SSEAllFieldsMethodServerStream) SendWithContext(ctx context.Context, v 
 			header.Set("Connection", "keep-alive")
 		}
 		s.w.WriteHeader(http.StatusOK)
-		if f, ok := s.w.(http.Flusher); ok {
-			f.Flush()
-		}
 	})
 	res := v
 
-	id := res.id
-	if id != "" {
+	if id := res.id; id != "" {
 		fmt.Fprintf(s.w, "id: %s\n", id)
 	}
-
-	eventType := res.event
-	if eventType != "" {
-		fmt.Fprintf(s.w, "event: %s\n", eventType)
+	if event := res.event; event != "" {
+		fmt.Fprintf(s.w, "event: %s\n", event)
 	}
-
-	retry := res.retry
-	if retry > 0 {
+	if retry := res.retry; retry > 0 {
 		fmt.Fprintf(s.w, "retry: %d\n", retry)
 	}
 
@@ -67,11 +58,11 @@ func (s *SSEAllFieldsMethodServerStream) SendWithContext(ctx context.Context, v 
 	if f, ok := s.w.(http.Flusher); ok {
 		f.Flush()
 	}
-
 	return nil
 }
 
-// WriteHeader writes the given header to the HTTP response.
-func (s *SSEAllFieldsMethodServerStream) WriteHeader(key, value string) {
-	s.w.Header().Set(key, value)
+// Close is a no-op for SSE. We keep the method for compatibility with other
+// stream types.
+func (s *SSEAllFieldsMethodServerStream) Close() error {
+	return nil
 }

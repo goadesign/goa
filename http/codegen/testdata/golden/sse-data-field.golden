@@ -22,7 +22,6 @@ func (s *SSEDataFieldMethodServerStream) Send(v *ssedatafieldservice.SSEDataFiel
 // endpoint SSE connection with context.
 func (s *SSEDataFieldMethodServerStream) SendWithContext(ctx context.Context, v *ssedatafieldservice.SSEDataFieldMethodResult) error {
 	s.once.Do(func() {
-		// Set default SSE headers if not already set
 		header := s.w.Header()
 		if header.Get("Content-Type") == "" {
 			header.Set("Content-Type", "text/event-stream")
@@ -34,9 +33,6 @@ func (s *SSEDataFieldMethodServerStream) SendWithContext(ctx context.Context, v 
 			header.Set("Connection", "keep-alive")
 		}
 		s.w.WriteHeader(http.StatusOK)
-		if f, ok := s.w.(http.Flusher); ok {
-			f.Flush()
-		}
 	})
 	res := v
 
@@ -52,11 +48,11 @@ func (s *SSEDataFieldMethodServerStream) SendWithContext(ctx context.Context, v 
 	if f, ok := s.w.(http.Flusher); ok {
 		f.Flush()
 	}
-
 	return nil
 }
 
-// WriteHeader writes the given header to the HTTP response.
-func (s *SSEDataFieldMethodServerStream) WriteHeader(key, value string) {
-	s.w.Header().Set(key, value)
+// Close is a no-op for SSE. We keep the method for compatibility with other
+// stream types.
+func (s *SSEDataFieldMethodServerStream) Close() error {
+	return nil
 }

@@ -45,7 +45,7 @@
 		}
 		body = rd.Body
 {{- end }}
-	{{- if .IsStreaming }}
+	{{- if .IsWebSocket }}
 		scheme := c.scheme
 		switch c.scheme {
 		case "http":
@@ -54,7 +54,7 @@
 			scheme = "wss"
 		}
 	{{- end }}
-	u := &url.URL{Scheme: {{ if .IsStreaming }}scheme{{ else }}c.scheme{{ end }}, Host: c.host, Path: {{ .PathInit.Name }}({{ range .Args }}{{ .Ref }}, {{ end }})}
+	u := &url.URL{Scheme: {{ if .IsWebSocket }}scheme{{ else }}c.scheme{{ end }}, Host: c.host, Path: {{ .PathInit.Name }}({{ range .Args }}{{ .Ref }}, {{ end }})}
 	req, err := http.NewRequest("{{ .Verb }}", u.String(), {{ if .RequestStruct }}body{{ else }}nil{{ end }})
 	if err != nil {
 		return nil, goahttp.ErrInvalidURL("{{ .ServiceName }}", "{{ .EndpointName }}", u.String(), err)

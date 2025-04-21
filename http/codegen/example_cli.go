@@ -85,7 +85,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 				"Services": svcData,
 			},
 			FuncMap: map[string]any{
-				"needStream": needStream,
+				"needDialer": needDialer,
 			},
 		},
 		{
@@ -96,7 +96,7 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 				"APIPkg":   apiPkg,
 			},
 			FuncMap: map[string]any{
-				"needStream":   needStream,
+				"needDialer":   needDialer,
 				"hasWebSocket": hasWebSocket,
 			},
 		},

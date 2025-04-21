@@ -59,21 +59,21 @@ func {{ .HandlerInit }}(
 		}
 		_, err = endpoint(ctx, v)
 	{{- else if isSSEEndpoint . }}
-		{{- if .SSE.SSEConfig.RequestIDField }}
+		{{- if .SSE.RequestIDField }}
 		// Set Last-Event-ID header if present
 		if lastEventID := r.Header.Get("Last-Event-ID"); lastEventID != "" {
 			ctx = context.WithValue(ctx, "last-event-id", lastEventID)
 			{{- if .Payload.Ref }}
 			{{- if eq .Method.Payload.Type.Name "Object" }}
 			p := payload.({{ .Payload.Ref }})
-			p.{{ .SSE.SSEConfig.RequestIDField }} = lastEventID
+			p.{{ .SSE.RequestIDField }} = lastEventID
 			payload = p
 			{{- end }}
 			{{- end }}
 		}
 		{{- end }}
 		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
-			Stream: &{{ .SSE.VarName }}{
+			Stream: &{{ .SSE.StructName }}{
 				w: w,
 				r: r,
 			},
@@ -98,10 +98,6 @@ func {{ .HandlerInit }}(
 				errhandler(ctx, w, err)
 				return
 			}
-			{{- end }}
-			{{- if isSSEEndpoint . }}
-			// For SSE, we need to set appropriate error headers
-			w.Header().Set("Content-Type", "application/json")
 			{{- end }}
 			if err := encodeError(ctx, w, err); err != nil {
 				errhandler(ctx, w, err)

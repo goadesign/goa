@@ -17,6 +17,9 @@ func ClientFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 		if f := websocketClientFile(genpkg, svc); f != nil {
 			files = append(files, f)
 		}
+		if f := sseClientFile(genpkg, svc); f != nil {
+			files = append(files, f)
+		}
 	}
 	for _, svc := range root.API.HTTP.Services {
 		if f := clientEncodeDecodeFile(genpkg, svc); f != nil {
@@ -50,10 +53,13 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		}),
 	}
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "client-struct",
-		Source:  readTemplate("client_struct"),
-		Data:    data,
-		FuncMap: map[string]any{"hasWebSocket": hasWebSocket},
+		Name:   "client-struct",
+		Source: readTemplate("client_struct"),
+		Data:   data,
+		FuncMap: map[string]any{
+			"hasWebSocket": hasWebSocket,
+			"hasSSE":       hasSSE,
+		},
 	})
 
 	for _, e := range data.Endpoints {
@@ -67,10 +73,13 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 	}
 
 	sections = append(sections, &codegen.SectionTemplate{
-		Name:    "http-client-init",
-		Source:  readTemplate("client_init"),
-		Data:    data,
-		FuncMap: map[string]any{"hasWebSocket": hasWebSocket},
+		Name:   "http-client-init",
+		Source: readTemplate("client_init"),
+		Data:   data,
+		FuncMap: map[string]any{
+			"hasWebSocket": hasWebSocket,
+			"hasSSE":       hasSSE,
+		},
 	})
 
 	for _, e := range data.Endpoints {
@@ -80,6 +89,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 			Data:   e,
 			FuncMap: map[string]any{
 				"isWebSocketEndpoint": isWebSocketEndpoint,
+				"isSSEEndpoint":       isSSEEndpoint,
 				"responseStructPkg":   responseStructPkg,
 			},
 		})

@@ -1,16 +1,16 @@
-{{- if eq .Type.Name "string" }}
+{{- if eq .TypeRef "string" }}
 	data = {{ .VarName }}
-{{- else if eq .Type.Name "boolean" }}
+{{- else if eq .TypeRef "boolean" }}
 	if {{ .VarName }} {
 		data = "true"
 	} else {
 		data = "false"
 	}
-{{- else if eq .Type.Name "bytes" }}
+{{- else if eq .TypeRef "bytes" }}
 	data = string({{ .VarName }})
-{{- else if or (eq .Type.Name "int") (eq .Type.Name "int32") (eq .Type.Name "int64") (eq .Type.Name "uint") (eq .Type.Name "uint32") (eq .Type.Name "uint64") }}
+{{- else if or (eq .TypeRef "int") (eq .TypeRef "int32") (eq .TypeRef "int64") (eq .TypeRef "uint") (eq .TypeRef "uint32") (eq .TypeRef "uint64") }}
 	data = fmt.Sprintf("%d", {{ .VarName }})
-{{- else if or (eq .Type.Name "float32") (eq .Type.Name "float64") }}
+{{- else if or (eq .TypeRef "float32") (eq .TypeRef "float64") }}
 	data = fmt.Sprintf("%g", {{ .VarName }})
 {{- else }}
 	byts, err := json.Marshal({{ .VarName }})

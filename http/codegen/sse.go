@@ -4,24 +4,22 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"slices"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 )
 
 type (
 	// SSEData contains the data needed to render struct type that
-	// implements the server stream interface for SSE.
+	// implements the server and client stream interface for SSE.
 	SSEData struct {
-		// VarName is the name of the struct.
-		VarName string
+		// StructName is the name of the generated struct which encapsulates the
+		// server implementation.
+		StructName string
 		// Interface is the fully qualified name of the interface that
 		// the struct implements.
 		Interface string
-		// Endpoint is endpoint data that defines streaming result.
-		Endpoint *EndpointData
-		// Response is the successful response data for the streaming
-		// endpoint.
-		Response *ResponseData
 		// SendName is the name of the send function.
 		SendName string
 		// SendDesc is the description for the send function.
@@ -30,27 +28,33 @@ type (
 		SendWithContextName string
 		// SendWithContextDesc is the description for the send function with context.
 		SendWithContextDesc string
-		// SendTypeName is the fully qualified type name sent through
-		// the stream.
-		SendTypeName string
-		// SendTypeRef is the fully qualified type ref sent through the
-		// stream.
-		SendTypeRef string
-
-		// PkgName is the service package name.
-		PkgName string
-		// SSEConfig contains the SSE configuration for this endpoint.
-		SSEConfig *expr.HTTPSSEExpr
-		// WriteHeaderName is the name of the WriteHeader function.
-		WriteHeaderName string
-		// WriteHeaderDesc is the description for the WriteHeader function.
-		WriteHeaderDesc string
-
-		// DataFieldType is the type of the data field if SSEConfig.DataField is set.
-		// It's computed during initialization to avoid complex template logic.
-		DataFieldType expr.DataType
-		// ResultType is the type of the result.
-		ResultType expr.DataType
+		// RecvName is the name of the client method to connect to the SSE endpoint.
+		RecvName string
+		// RecvDesc is the description for the client method.
+		RecvDesc string
+		// EventTypeRef is the fully qualified type ref for the event type.
+		EventTypeRef string
+		// EventTypeName is the name of the event type without package qualifier.
+		EventTypeName string
+		// EventIsStruct indicates whether the SSE method return type is a struct.
+		EventIsStruct bool
+		// DataFieldTypeRef is the fully qualified type ref for the data field if any.
+		DataFieldTypeRef string
+		// DataField is the name of the result type event data attribute if any.
+		// If empty, the entire result type is used as the data field.
+		DataField string
+		// IDField is the name of the result type event ID attribute if any.
+		// If empty, no id field is included in the event.
+		IDField string
+		// EventField is the name of the result type event field if any.
+		// If empty, no event field is included in the event.
+		EventField string
+		// RetryField is the name of the result type event retry field if any.
+		// If empty, no retry field is included in the event.
+		RetryField string
+		// RequestIDField is the name of the payload field that maps to the Last-Event-ID header if any.
+		// If empty, no last event id is included in the request.
+		RequestIDField string
 	}
 )
 
@@ -62,55 +66,42 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 
 	md := ed.Method
 	svc := sd.Service
-	svrSendTypeName := ed.Result.Name
-	svrSendTypeRef := ed.Result.Ref
-	svrSendDesc := fmt.Sprintf("%s streams instances of %q to the %q endpoint SSE connection.", md.ServerStream.SendName, svrSendTypeName, md.Name)
-	svrSendWithContextDesc := fmt.Sprintf("%s streams instances of %q to the %q endpoint SSE connection with context.", md.ServerStream.SendWithContextName, svrSendTypeName, md.Name)
-	writeHeaderDesc := fmt.Sprintf("%s writes the given header to the HTTP response.", "WriteHeader")
+	sendDesc := fmt.Sprintf("%s streams instances of %q to the %q endpoint SSE connection.", md.ServerStream.SendName, ed.Result.Name, md.Name)
+	sendWithContextDesc := fmt.Sprintf("%s streams instances of %q to the %q endpoint SSE connection with context.", md.ServerStream.SendWithContextName, ed.Result.Name, md.Name)
+	recvDesc := fmt.Sprintf("%s connects to the %q SSE endpoint and streams events.", md.ServerStream.RecvName, md.Name)
 
-	// Set the result type for use in the template
-	var resultType expr.DataType
-	if e.MethodExpr != nil && e.MethodExpr.Result != nil {
-		resultType = e.MethodExpr.Result.Type
-	}
-
-	// Compute the data field type if a data field is specified
-	var dataFieldType expr.DataType
-	if e.SSE.DataField != "" && resultType != nil {
-		// If the result type is an object and has the data field, extract its type
-		if obj, ok := resultType.(*expr.Object); ok {
+	var dataFieldTypeRef string
+	if e.SSE.DataField != "" {
+		if obj, ok := e.MethodExpr.Result.Type.(*expr.Object); ok {
 			for _, nat := range *obj {
 				if nat.Name == e.SSE.DataField {
-					dataFieldType = nat.Attribute.Type
+					dataFieldTypeRef = sd.Service.Scope.GoFullTypeRef(nat.Attribute, svc.PkgName)
 					break
 				}
 			}
 		}
 	}
 
-	// Create SSE data for server
 	ed.SSE = &SSEData{
-		VarName:             md.ServerStream.VarName,
+		StructName:          md.ServerStream.VarName,
 		Interface:           fmt.Sprintf("%s.%s", svc.PkgName, md.ServerStream.Interface),
-		Endpoint:            ed,
-		Response:            ed.Result.Responses[0],
-		PkgName:             svc.PkgName,
 		SendName:            md.ServerStream.SendName,
-		SendDesc:            svrSendDesc,
+		SendDesc:            sendDesc,
 		SendWithContextName: md.ServerStream.SendWithContextName,
-		SendWithContextDesc: svrSendWithContextDesc,
-		SendTypeName:        svrSendTypeName,
-		SendTypeRef:         svrSendTypeRef,
-		SSEConfig:           e.SSE,
-		WriteHeaderName:     "WriteHeader",
-		WriteHeaderDesc:     writeHeaderDesc,
-		DataFieldType:       dataFieldType,
-		ResultType:          resultType,
+		SendWithContextDesc: sendWithContextDesc,
+		RecvName:            md.ClientStream.RecvName,
+		RecvDesc:            recvDesc,
+		EventTypeRef:        ed.Result.Ref,
+		EventTypeName:       ed.Result.Name,
+		EventIsStruct:       ed.Result.IsStruct,
+		DataFieldTypeRef:    dataFieldTypeRef,
+		DataField:           e.SSE.DataField,
+		IDField:             e.SSE.IDField,
+		EventField:          e.SSE.EventField,
+		RetryField:          e.SSE.RetryField,
+		RequestIDField:      e.SSE.RequestIDField,
 	}
 }
-
-// We don't need the getPrimitiveFormatString function anymore
-// since we're using a partial template for formatting
 
 // sseServerFile returns the file implementing the SSE server
 // streaming implementation if any.
@@ -145,7 +136,6 @@ func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 				{Path: "time"},
 				{Path: "encoding/json"},
 				{Path: "fmt"},
-				{Path: "goa.design/goa/v3/http"},
 				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name())},
 				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/views"},
 			},
@@ -164,12 +154,11 @@ func sseTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 		}
 		// Create a map of template functions needed for the SSE template
 		funcs := map[string]interface{}{
-			"add": func(a, b int) int { return a + b },
-			"dict": func(values ...interface{}) (map[string]interface{}, error) {
+			"dict": func(values ...any) (map[string]any, error) {
 				if len(values)%2 != 0 {
 					return nil, fmt.Errorf("odd number of arguments")
 				}
-				dict := make(map[string]interface{}, len(values)/2)
+				dict := make(map[string]any, len(values)/2)
 				for i := 0; i < len(values); i += 2 {
 					key, ok := values[i].(string)
 					if !ok {
@@ -179,24 +168,11 @@ func sseTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 				}
 				return dict, nil
 			},
-			"AsObject": func(dt expr.DataType) map[string]interface{} {
-				if obj, ok := dt.(*expr.Object); ok {
-					result := make(map[string]interface{})
-					for _, nat := range *obj {
-						result[nat.Name] = map[string]interface{}{
-							"Attribute": nat.Attribute,
-							"Name":      nat.Name,
-						}
-					}
-					return result
-				}
-				return nil
-			},
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:    "server-sse",
 			Source:  readTemplate("server_sse", "sse_format"),
-			Data:    ed.SSE,
+			Data:    ed,
 			FuncMap: funcs,
 		})
 	}
@@ -207,4 +183,9 @@ func sseTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 // with SSE.
 func isSSEEndpoint(ed *EndpointData) bool {
 	return ed.SSE != nil
+}
+
+// hasSSE returns true if at least one endpoint in the service uses SSE.
+func hasSSE(data *ServiceData) bool {
+	return slices.ContainsFunc(data.Endpoints, isSSEEndpoint)
 }

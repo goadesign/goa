@@ -19,7 +19,6 @@ func (s *SSEIntMethodServerStream) Send(v int) error {
 // "SSEIntMethod" endpoint SSE connection with context.
 func (s *SSEIntMethodServerStream) SendWithContext(ctx context.Context, v int) error {
 	s.once.Do(func() {
-		// Set default SSE headers if not already set
 		header := s.w.Header()
 		if header.Get("Content-Type") == "" {
 			header.Set("Content-Type", "text/event-stream")
@@ -31,9 +30,6 @@ func (s *SSEIntMethodServerStream) SendWithContext(ctx context.Context, v int) e
 			header.Set("Connection", "keep-alive")
 		}
 		s.w.WriteHeader(http.StatusOK)
-		if f, ok := s.w.(http.Flusher); ok {
-			f.Flush()
-		}
 	})
 	res := v
 
@@ -44,11 +40,11 @@ func (s *SSEIntMethodServerStream) SendWithContext(ctx context.Context, v int) e
 	if f, ok := s.w.(http.Flusher); ok {
 		f.Flush()
 	}
-
 	return nil
 }
 
-// WriteHeader writes the given header to the HTTP response.
-func (s *SSEIntMethodServerStream) WriteHeader(key, value string) {
-	s.w.Header().Set(key, value)
+// Close is a no-op for SSE. We keep the method for compatibility with other
+// stream types.
+func (s *SSEIntMethodServerStream) Close() error {
+	return nil
 }
