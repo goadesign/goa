@@ -80,12 +80,6 @@ func ServerSentEvents(args ...any) {
 		eval.TooManyArgError()
 		return
 	}
-	if len(args) == 2 {
-		if _, ok := args[1].(func()); !ok {
-			eval.InvalidArgError("function", args[1])
-			return
-		}
-	}
 
 	var fn func()
 	var dataField string
@@ -102,6 +96,10 @@ func ServerSentEvents(args ...any) {
 			return
 		}
 		if len(args) == 2 {
+			if fn != nil {
+				eval.TooManyArgError()
+				return
+			}
 			var ok bool
 			fn, ok = args[1].(func())
 			if !ok {
