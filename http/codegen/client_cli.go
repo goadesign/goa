@@ -14,8 +14,8 @@ type commandData struct {
 	*cli.CommandData
 	// Subcommands is the list of endpoint commands.
 	Subcommands []*subcommandData
-	// NeedStream if true initializes the websocket dialer.
-	NeedStream bool
+	// NeedDialer if true initializes the websocket dialer.
+	NeedDialer bool
 }
 
 // commandData wraps the common SubcommandData and adds HTTP-specific fields.
@@ -50,7 +50,7 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 		if len(sd.Endpoints) > 0 {
 			command := &commandData{
 				CommandData: cli.BuildCommandData(sd.Service),
-				NeedStream:  hasWebSocket(sd),
+				NeedDialer:  hasWebSocket(sd),
 			}
 
 			for _, e := range sd.Endpoints {
@@ -292,7 +292,7 @@ func streamFlag(svcn, en string) *cli.FlagData {
 // uses stream for sending payload/result.
 func streamingCmdExists(data []*commandData) bool {
 	for _, c := range data {
-		if c.NeedStream {
+		if c.NeedDialer {
 			return true
 		}
 	}

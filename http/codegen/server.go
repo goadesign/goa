@@ -20,6 +20,9 @@ func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 		if f := websocketServerFile(genpkg, svc); f != nil {
 			files = append(files, f)
 		}
+		if f := sseServerFile(genpkg, svc); f != nil {
+			files = append(files, f)
+		}
 	}
 	for _, svc := range root.API.HTTP.Services {
 		if f := serverEncodeDecodeFile(genpkg, svc); f != nil {
@@ -39,6 +42,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 		"join":                strings.Join,
 		"hasWebSocket":        hasWebSocket,
 		"isWebSocketEndpoint": isWebSocketEndpoint,
+		"isSSEEndpoint":       isSSEEndpoint,
 		"viewedServerBody":    viewedServerBody,
 		"mustDecodeRequest":   mustDecodeRequest,
 		"addLeadingSlash":     addLeadingSlash,
@@ -266,10 +270,10 @@ func viewedServerBody(sbd []*TypeData, view string) *TypeData {
 }
 
 func addLeadingSlash(s string) string {
-	if strings.HasPrefix(s, "/") {
-		return s
+	if s == "" || s[0] != '/' {
+		return "/" + s
 	}
-	return "/" + s
+	return s
 }
 
 func mapQueryDecodeData(dt expr.DataType, varName string, inc int) map[string]any {

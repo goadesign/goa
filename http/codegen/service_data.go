@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -36,6 +37,7 @@ var (
 					_, ok := dt.(expr.UserType)
 					return ok
 				},
+				"isWebSocketEndpoint": isWebSocketEndpoint,
 			}).
 			Parse(readTemplate("request_init")),
 	)
@@ -152,6 +154,9 @@ type (
 		// ServerWebSocket holds the data to render the server struct which
 		// implements the server stream interface.
 		ServerWebSocket *WebSocketData
+		// SSE holds the data to render the server struct which implements the
+		// server stream interface for SSE.
+		SSE *SSEData
 		// Redirect defines a redirect for the endpoint.
 		Redirect *RedirectData
 
@@ -794,7 +799,7 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			"Args":         args,
 			"PathInit":     routes[0].PathInit,
 			"Verb":         routes[0].Verb,
-			"IsStreaming":  httpEndpoint.MethodExpr.IsStreaming(),
+			"IsWebSocket":  httpEndpoint.MethodExpr.IsStreaming() && httpEndpoint.SSE == nil,
 		}
 		if httpEndpoint.SkipRequestBodyEncodeDecode {
 			data["RequestStruct"] = pkg + "." + method.RequestStruct
@@ -838,6 +843,7 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		}
 		if httpEndpoint.MethodExpr.IsStreaming() {
 			initWebSocketData(ed, httpEndpoint, sd)
+			initSSEData(ed, httpEndpoint, sd)
 		}
 
 		if httpEndpoint.MultipartRequest {
@@ -2770,13 +2776,8 @@ func upgradeParams(e *EndpointData, fn string) map[string]any {
 	}
 }
 
-// needStream returns true if at least one method in the defined services
-// uses stream for sending payload/result.
-func needStream(data []*ServiceData) bool {
-	for _, svc := range data {
-		if hasWebSocket(svc) {
-			return true
-		}
-	}
-	return false
+// needDialer returns true if at least one method in the defined services
+// uses WebSocket for sending payload or result.
+func needDialer(data []*ServiceData) bool {
+	return slices.ContainsFunc(data, hasWebSocket)
 }

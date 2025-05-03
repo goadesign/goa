@@ -1,0 +1,62 @@
+// SSEDataIDFieldMethodServerStream implements the
+// ssedataidfieldservice.SSEDataIDFieldMethodServerStream interface using
+// Server-Sent Events.
+type SSEDataIDFieldMethodServerStream struct {
+	// once ensures the headers are written once.
+	once sync.Once
+	// w is the HTTP response writer used to send the SSE events.
+	w http.ResponseWriter
+	// r is the HTTP request.
+	r *http.Request
+}
+
+// Send Send streams instances of
+// "ssedataidfieldservice.SSEDataIDFieldMethodResult" to the
+// "SSEDataIDFieldMethod" endpoint SSE connection.
+func (s *SSEDataIDFieldMethodServerStream) Send(v *ssedataidfieldservice.SSEDataIDFieldMethodResult) error {
+	return s.SendWithContext(context.Background(), v)
+}
+
+// SendWithContext SendWithContext streams instances of
+// "ssedataidfieldservice.SSEDataIDFieldMethodResult" to the
+// "SSEDataIDFieldMethod" endpoint SSE connection with context.
+func (s *SSEDataIDFieldMethodServerStream) SendWithContext(ctx context.Context, v *ssedataidfieldservice.SSEDataIDFieldMethodResult) error {
+	s.once.Do(func() {
+		header := s.w.Header()
+		if header.Get("Content-Type") == "" {
+			header.Set("Content-Type", "text/event-stream")
+		}
+		if header.Get("Cache-Control") == "" {
+			header.Set("Cache-Control", "no-cache")
+		}
+		if header.Get("Connection") == "" {
+			header.Set("Connection", "keep-alive")
+		}
+		s.w.WriteHeader(http.StatusOK)
+	})
+	res := v
+
+	if id := res.id; id != "" {
+		fmt.Fprintf(s.w, "id: %s\n", id)
+	}
+
+	var data string
+	dataField := res.data
+	byts, err := json.Marshal(dataField)
+	if err != nil {
+		return err
+	}
+	data = string(byts)
+	fmt.Fprintf(s.w, "data: %s\n\n", data)
+
+	if f, ok := s.w.(http.Flusher); ok {
+		f.Flush()
+	}
+	return nil
+}
+
+// Close is a no-op for SSE. We keep the method for compatibility with other
+// stream types.
+func (s *SSEDataIDFieldMethodServerStream) Close() error {
+	return nil
+}

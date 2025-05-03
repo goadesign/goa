@@ -105,7 +105,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 				"Services": svcdata,
 				"APIPkg":   apiPkg,
 			},
-			FuncMap: map[string]any{"needStream": needStream, "hasWebSocket": hasWebSocket},
+			FuncMap: map[string]any{"needDialer": needDialer, "hasWebSocket": hasWebSocket},
 		},
 		{
 			Name:   "server-http-middleware",
