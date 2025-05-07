@@ -2,8 +2,6 @@ module goa.design/goa/v3
 
 go 1.23.0
 
-toolchain go1.23.6
-
 require (
 	github.com/dimfeld/httppath v0.0.0-20170720192232-ee938bf73598
 	github.com/getkin/kin-openapi v0.132.0
