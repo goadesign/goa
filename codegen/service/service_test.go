@@ -56,6 +56,8 @@ func TestService(t *testing.T) {
 		{"service-bidirectional-streaming-no-payload", testdata.BidirectionalStreamingNoPayloadMethodDSL, testdata.BidirectionalStreamingNoPayloadMethod},
 		{"service-bidirectional-streaming-result-with-views", testdata.BidirectionalStreamingResultWithViewsMethodDSL, testdata.BidirectionalStreamingResultWithViewsMethod},
 		{"service-bidirectional-streaming-result-with-explicit-view", testdata.BidirectionalStreamingResultWithExplicitViewMethodDSL, testdata.BidirectionalStreamingResultWithExplicitViewMethod},
+		{"service-multiple-api-key-security", testdata.MultipleAPIKeySecurityDSL, testdata.MultipleAPIKeySecurity},
+		{"service-mixed-and-multiple-api-key-security", testdata.MixedAndMultipleAPIKeySecurityDSL, testdata.MixedAndMultipleAPIKeySecurity},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
