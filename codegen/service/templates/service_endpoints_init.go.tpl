@@ -11,7 +11,7 @@ func New{{ .VarName }}(s {{ .ServiceVarName }}{{ if .HasServerInterceptors }}, s
 	return &{{ .VarName }}{
 {{- end }}
 {{- range .Methods }}
-		{{ .VarName }}: New{{ .VarName }}Endpoint(s{{ range .Schemes }}, a.{{ .Type }}Auth{{ end }}),
+		{{ .VarName }}: New{{ .VarName }}Endpoint(s{{ range .Schemes.DedupeByType }}, a.{{ .Type }}Auth{{ end }}),
 {{- end }}
 	}
 {{- if .HasServerInterceptors }}
