@@ -74,7 +74,7 @@ The result? Dramatically reduced development time, consistent APIs, and the elim
     <tr>
         <td>
             <img width="1000" height="0" />
-            <a href="https://www.speakeasy.com/docs/api-frameworks/goa?utm_source=goa+repo&utm_medium=github+sponsorship">
+            <a href="https://www.speakeasy.com/editor?utm_source=goa+repo&utm_medium=github+sponsorship">
                 <img src="docs/speakeasy.png" alt="Speakeasy" width="260" align="right" />
             </a>
             <h3>Speakeasy: Enterprise DevEx for your API</h3>
