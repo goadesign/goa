@@ -227,12 +227,14 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 		return DupAtt(att)
 	}
 	const suffix = "StreamingBody"
+	dupped := DupAtt(att)
+	RemovePkgPath(dupped)
+	appendSuffix(dupped.Type, suffix)
 	ut := &UserTypeExpr{
-		AttributeExpr: DupAtt(att),
+		AttributeExpr: dupped,
 		TypeName:      concat(e.Name(), "Streaming", "Body"),
 		UID:           e.Service.Name() + "#" + e.Name() + "StreamingBody",
 	}
-	appendSuffix(ut.Attribute().Type, suffix)
 
 	return &AttributeExpr{
 		Type:         ut,
