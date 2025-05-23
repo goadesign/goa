@@ -52,6 +52,7 @@ func TestBodyTypeInit(t *testing.T) {
 		{"result-explicit-body-user-type", testdata.ExplicitBodyUserResultMultipleViewsDSL, 3, ExplicitBodyUserResultMultipleViewsInitCode},
 		{"result-explicit-body-object", testdata.ExplicitBodyUserResultObjectDSL, 3, ExplicitBodyObjectInitCode},
 		{"result-explicit-body-object-views", testdata.ExplicitBodyUserResultObjectMultipleViewDSL, 3, ExplicitBodyObjectViewsInitCode},
+		{"body-streaming-aliased-array", testdata.StreamingAliasedArrayDSL, 4, StreamingAliasedArrayBodyInitCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -279,6 +280,21 @@ func NewMethodExplicitBodyUserResultObjectMultipleViewResulttypemultipleviewsOK(
 	return v
 }
 `
+
+const StreamingAliasedArrayBodyInitCode = `// NewStreamStreamingBody builds the HTTP request body from the payload of the
+// "Stream" endpoint of the "StreamingAliasedArray" service.
+func NewStreamStreamingBody(p *streamingaliasedarray.PayloadType) *StreamStreamingBody {
+	body := &StreamStreamingBody{}
+	if p.Values != nil {
+		body.Values = make([]CustomIntStreamingBody, len(p.Values))
+		for i, val := range p.Values {
+			body.Values[i] = CustomIntStreamingBody(val)
+		}
+	}
+	return body
+}
+`
+
 const MixedPayloadInBodyClientTypesFile = `// MethodARequestBody is the type of the "ServiceMixedPayloadInBody" service
 // "MethodA" endpoint HTTP request body.
 type MethodARequestBody struct {
