@@ -37,7 +37,7 @@ type (
 
 // HTTPWildcardRegex is the regular expression used to capture path
 // parameters.
-var HTTPWildcardRegex = regexp.MustCompile(`/{\*?([a-zA-Z0-9_]+)}`)
+var HTTPWildcardRegex = regexp.MustCompile(`{\*?([a-zA-Z0-9_]+)}`)
 
 // ExtractHTTPWildcards returns the names of the wildcards that appear in
 // a HTTP path.

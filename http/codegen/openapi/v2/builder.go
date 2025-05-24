@@ -475,7 +475,7 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 			Tags:         tagNames,
 		}
 
-		key := expr.HTTPWildcardRegex.ReplaceAllString(path, "/{$1}")
+		key := expr.HTTPWildcardRegex.ReplaceAllString(path, "{$1}")
 		if key == "" {
 			key = "/"
 		}
@@ -502,7 +502,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 	for _, key := range route.FullPaths() {
 		// Remove any wildcards that is defined in path as a workaround to
 		// https://github.com/OAI/OpenAPI-Specification/issues/291
-		key = expr.HTTPWildcardRegex.ReplaceAllString(key, "/{$1}")
+		key = expr.HTTPWildcardRegex.ReplaceAllString(key, "{$1}")
 		params := paramsFromExpr(endpoint.Params, key)
 		params = append(params, paramsFromHeaders(endpoint)...)
 		var produces []string
@@ -644,7 +644,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		bp := expr.HTTPWildcardRegex.ReplaceAllStringFunc(
 			basePath,
 			func(w string) string {
-				return fmt.Sprintf("/{%s}", w[2:])
+				return fmt.Sprintf("{%s}", w[2:])
 			},
 		)
 		if bp != "/" {

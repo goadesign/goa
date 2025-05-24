@@ -135,7 +135,7 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 				for _, key := range r.FullPaths() {
 					// Remove any wildcards that is defined in path as a workaround to
 					// https://github.com/OAI/OpenAPI-Specification/issues/291
-					key = expr.HTTPWildcardRegex.ReplaceAllString(key, "/{$1}")
+					key = expr.HTTPWildcardRegex.ReplaceAllString(key, "{$1}")
 					operation := buildOperation(key, r, sbod[e.Name()], api.ExampleGenerator)
 					path, ok := paths[key]
 					if !ok {
