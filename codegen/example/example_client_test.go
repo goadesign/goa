@@ -9,7 +9,6 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example/testdata"
-	"goa.design/goa/v3/expr"
 )
 
 func TestExampleCLIFiles(t *testing.T) {
@@ -27,8 +26,8 @@ func TestExampleCLIFiles(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			// reset global variable
 			Servers = make(ServersData)
-			codegen.RunDSL(t, c.DSL)
-			fs := CLIFiles("", expr.Root)
+			root := codegen.RunDSL(t, c.DSL)
+			fs := CLIFiles("", root)
 			require.Len(t, fs, 1)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer

@@ -61,18 +61,18 @@ func newSchemafier(rand *expr.ExampleGenerator) *schemafier {
 // value indexed by type name.
 //
 // NOTE: entries are nil when the corresponding type is Empty.
-func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
+func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*expr.ResultTypeExpr) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
 	bodies := make(map[string]map[string]*EndpointBodies)
 	sf := newSchemafier(api.ExampleGenerator)
 
 	// Generates the types referenced from the endpoints.
-	for _, t := range expr.Root.Types {
+	for _, t := range types {
 		if !mustGenerateType(t.Attribute().Meta) {
 			continue
 		}
 		sf.schemafy(&expr.AttributeExpr{Type: t})
 	}
-	for _, t := range expr.Root.ResultTypes {
+	for _, t := range resultTypes {
 		if !mustGenerateType(t.Attribute().Meta) {
 			continue
 		}

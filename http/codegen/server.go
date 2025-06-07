@@ -8,24 +8,24 @@ import (
 	"strings"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 )
 
 // ServerFiles returns the generated HTTP server files.
-func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+func ServerFiles(genpkg string, services *ServicesData) []*codegen.File {
+	root := services.Root
 	var files []*codegen.File
 	for _, svc := range root.API.HTTP.Services {
-		files = append(files, serverFile(genpkg, svc))
-		if f := websocketServerFile(genpkg, svc); f != nil {
+		files = append(files, serverFile(genpkg, svc, services))
+		if f := websocketServerFile(genpkg, svc, services); f != nil {
 			files = append(files, f)
 		}
-		if f := sseServerFile(genpkg, svc); f != nil {
+		if f := sseServerFile(genpkg, svc, services); f != nil {
 			files = append(files, f)
 		}
 	}
 	for _, svc := range root.API.HTTP.Services {
-		if f := serverEncodeDecodeFile(genpkg, svc); f != nil {
+		if f := serverEncodeDecodeFile(genpkg, svc, services); f != nil {
 			files = append(files, f)
 		}
 	}
@@ -33,8 +33,8 @@ func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 }
 
 // server returns the file implementing the HTTP server.
-func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	data := HTTPServices.Get(svc.Name())
+func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	fpath := filepath.Join(codegen.Gendir, "http", svcName, "server", "server.go")
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
@@ -119,8 +119,8 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 
 // serverEncodeDecodeFile returns the file defining the HTTP server encoding and
 // decoding logic.
-func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	data := HTTPServices.Get(svc.Name())
+func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "http", svcName, "server", "encode_decode.go")
 	title := fmt.Sprintf("%s HTTP server encoders and decoders", svc.Name())
@@ -147,13 +147,13 @@ func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 		if e.Redirect == nil && !isWebSocketEndpoint(e) {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "response-encoder",
-				FuncMap: transTmplFuncs(svc),
+				FuncMap: transTmplFuncs(svc, services),
 				Source:  readTemplate("response_encoder", "response", "header_conversion"),
 				Data:    e,
 			})
 		}
 		if mustDecodeRequest(e) {
-			fm := transTmplFuncs(svc)
+			fm := transTmplFuncs(svc, services)
 			fm["mapQueryDecodeData"] = mapQueryDecodeData
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "request-decoder",
@@ -163,7 +163,7 @@ func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 			})
 		}
 		if e.MultipartRequestDecoder != nil {
-			fm := transTmplFuncs(svc)
+			fm := transTmplFuncs(svc, services)
 			fm["mapQueryDecodeData"] = mapQueryDecodeData
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "multipart-request-decoder",
@@ -176,7 +176,7 @@ func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "error-encoder",
 				Source:  readTemplate("error_encoder", "response", "header_conversion"),
-				FuncMap: transTmplFuncs(svc),
+				FuncMap: transTmplFuncs(svc, services),
 				Data:    e,
 			})
 		}
@@ -198,10 +198,10 @@ func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-func transTmplFuncs(s *expr.HTTPServiceExpr) map[string]any {
+func transTmplFuncs(s *expr.HTTPServiceExpr, services *ServicesData) map[string]any {
 	return map[string]any{
 		"goTypeRef": func(dt expr.DataType) string {
-			return service.Services.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+			return services.ServicesData.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 		},
 		"isAliased": func(dt expr.DataType) bool {
 			_, ok := dt.(expr.UserType)

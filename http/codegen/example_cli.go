@@ -7,16 +7,15 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
-	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 )
 
 // ExampleCLIFiles returns an example client tool HTTP implementation for each
 // server expression.
-func ExampleCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+func ExampleCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
 	var files []*codegen.File
-	for _, svr := range root.API.Servers {
-		if f := exampleCLI(genpkg, root, svr); f != nil {
+	for _, svr := range services.Root.API.Servers {
+		if f := exampleCLI(genpkg, svr, services); f != nil {
 			files = append(files, f)
 		}
 	}
@@ -25,8 +24,8 @@ func ExampleCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // exampleCLI returns an example client tool HTTP implementation for the given
 // server expression.
-func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
-	svrdata := example.Servers.Get(svr)
+func exampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *codegen.File {
+	svrdata := example.Servers.Get(svr, services.Root)
 	path := filepath.Join("cmd", svrdata.Dir+"-cli", "http.go")
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
@@ -52,19 +51,19 @@ func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codeg
 		{Path: genpkg + "/http/cli/" + svrdata.Dir, Name: "cli"},
 	}
 	importScope := codegen.NewNameScope()
-	for _, svc := range root.Services {
-		data := service.Services.Get(svc.Name)
+	for _, svc := range services.Root.Services {
+		data := services.ServicesData.Get(svc.Name)
 		specs = append(specs, &codegen.ImportSpec{Path: genpkg + "/" + data.PkgName})
 		importScope.Unique(data.PkgName)
 	}
 	interceptorsPkg := importScope.Unique("interceptors", "ex")
 	specs = append(specs, &codegen.ImportSpec{Path: rootPath + "/interceptors", Name: interceptorsPkg})
-	apiPkg := importScope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
+	apiPkg := importScope.Unique(strings.ToLower(codegen.Goify(services.Root.API.Name, false)), "api")
 	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
 
 	var svcData []*ServiceData
 	for _, svc := range svr.Services {
-		if data := HTTPServices.Get(svc); data != nil {
+		if data := services.Get(svc); data != nil {
 			svcData = append(svcData, data)
 		}
 	}

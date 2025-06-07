@@ -12,15 +12,15 @@ import (
 )
 
 // ExampleServerFiles returns an example http service implementation.
-func ExampleServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+func ExampleServerFiles(genpkg string, services *ServicesData) []*codegen.File {
 	var fw []*codegen.File
-	for _, svr := range root.API.Servers {
-		if m := exampleServer(genpkg, root, svr); m != nil {
+	for _, svr := range services.Root.API.Servers {
+		if m := exampleServer(genpkg, services.Root, svr, services); m != nil {
 			fw = append(fw, m)
 		}
 	}
-	for _, svc := range root.API.HTTP.Services {
-		if f := dummyMultipartFile(genpkg, root, svc); f != nil {
+	for _, svc := range services.Root.API.HTTP.Services {
+		if f := dummyMultipartFile(genpkg, services.Root, svc, services); f != nil {
 			fw = append(fw, f)
 		}
 	}
@@ -28,8 +28,8 @@ func ExampleServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 }
 
 // exampleServer returns an example HTTP server implementation.
-func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
-	svrdata := example.Servers.Get(svr)
+func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, services *ServicesData) *codegen.File {
+	svrdata := example.Servers.Get(svr, root)
 	fpath := filepath.Join("cmd", svrdata.Dir, "http.go")
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
@@ -47,16 +47,17 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 
 	scope := codegen.NewNameScope()
 	for _, svc := range root.API.HTTP.Services {
-		sd := HTTPServices.Get(svc.Name())
+		sd := services.Get(svc.Name())
 		svcName := sd.Service.PathName
-		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, "http", svcName, "server"),
-			Name: scope.Unique(sd.Service.PkgName + "svr"),
-		})
-		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, svcName),
-			Name: scope.Unique(sd.Service.PkgName),
-		})
+		specs = append(specs,
+			&codegen.ImportSpec{
+				Path: path.Join(genpkg, "http", svcName, "server"),
+				Name: scope.Unique(sd.Service.PkgName + "svr"),
+			},
+			&codegen.ImportSpec{
+				Path: path.Join(genpkg, svcName),
+				Name: scope.Unique(sd.Service.PkgName),
+			})
 	}
 
 	var (
@@ -70,13 +71,13 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 		if idx > 0 {
 			rootPath = genpkg[:idx]
 		}
-		apiPkg = scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
+		apiPkg = scope.Unique(strings.ToLower(codegen.Goify(services.Root.API.Name, false)), "api")
 	}
 	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
 
 	var svcdata []*ServiceData
 	for _, svc := range svr.Services {
-		if data := HTTPServices.Get(svc); data != nil {
+		if data := services.Get(svc); data != nil {
 			svcdata = append(svcdata, data)
 		}
 	}
@@ -129,7 +130,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 
 // dummyMultipartFile returns a dummy implementation of the multipart decoders
 // and encoders.
-func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServiceExpr) *codegen.File {
+func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	mpath := "multipart.go"
 	if _, err := os.Stat(mpath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
@@ -142,7 +143,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 	)
 	// determine the unique API package name different from the service names
 	for _, svc := range root.Services {
-		s := HTTPServices.Get(svc.Name)
+		s := services.Get(svc.Name)
 		if s == nil {
 			panic("unknown http service, " + svc.Name) // bug
 		}
@@ -155,7 +156,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 		specs := []*codegen.ImportSpec{
 			{Path: "mime/multipart"},
 		}
-		data := HTTPServices.Get(svc.Name())
+		data := services.Get(svc.Name())
 		specs = append(specs, &codegen.ImportSpec{
 			Path: path.Join(genpkg, data.Service.PathName),
 			Name: scope.Unique(data.Service.PkgName, "svc"),

@@ -20,17 +20,18 @@ const (
 	ProtoPrefix = "goagen"
 )
 
-// ProtoFiles returns a *.proto file for each gRPC service.
-func ProtoFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
-	fw := make([]*codegen.File, len(root.API.GRPC.Services))
-	for i, svc := range root.API.GRPC.Services {
-		fw[i] = protoFile(genpkg, svc)
+// ProtoFiles returns the protobuf file for every gRPC service.
+func ProtoFiles(genpkg string, services *ServicesData) []*codegen.File {
+	fw := make([]*codegen.File, len(services.Root.API.GRPC.Services))
+	for i, svc := range services.Root.API.GRPC.Services {
+		fw[i] = protoFile(genpkg, svc, services)
 	}
 	return fw
 }
 
-func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
-	data := GRPCServices.Get(svc.Name())
+// protoFile returns the protobuf file defining the specified service.
+func protoFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
+	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	parts := strings.Split(genpkg, "/")
 	var repoName string
@@ -82,10 +83,10 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 
 	runProtoc := func(path string) error {
 		includes := svc.ServiceExpr.Meta["protoc:include"]
-		includes = append(includes, expr.Root.API.Meta["protoc:include"]...)
+		includes = append(includes, services.Root.API.Meta["protoc:include"]...)
 
 		cmd := defaultProtocCmd
-		if c, ok := expr.Root.API.Meta["protoc:cmd"]; ok {
+		if c, ok := services.Root.API.Meta["protoc:cmd"]; ok {
 			cmd = c
 		}
 		if c, ok := svc.ServiceExpr.Meta["protoc:cmd"]; ok {

@@ -12,7 +12,6 @@ import (
 // initDSL initializes the DSL environment and returns the root.
 func initDSL(t *testing.T) *expr.RootExpr {
 	// reset all roots and codegen data structures
-	Services = make(ServicesData)
 	eval.Reset()
 	expr.Root = new(expr.RootExpr)
 	expr.GeneratedResultTypes = new(expr.ResultTypesRoot)

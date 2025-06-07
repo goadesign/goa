@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/grpc/codegen/testdata"
 )
 
@@ -105,12 +104,13 @@ func TestStreaming(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunGRPCDSL(t, c.DSL)
-			serverfs := ServerFiles("", expr.Root)
+			root := RunGRPCDSL(t, c.DSL)
+			services := CreateGRPCServices(root)
+			serverfs := ServerFiles("", services)
 			if len(serverfs) < 2 {
 				t.Fatalf("got %d server files, expected 2", len(serverfs))
 			}
-			clientfs := ClientFiles("", expr.Root)
+			clientfs := ClientFiles("", services)
 			if len(clientfs) < 2 {
 				t.Fatalf("got %d client files, expected 2", len(clientfs))
 			}

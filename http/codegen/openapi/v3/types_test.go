@@ -169,9 +169,9 @@ func TestBuildBodyTypes(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			api := codegen.RunDSL(t, c.DSL).API
+			root := codegen.RunDSL(t, c.DSL)
 
-			bodies, types := buildBodyTypes(api)
+			bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes)
 
 			svc, ok := bodies[svcName]
 			if !ok {
@@ -257,9 +257,9 @@ func matchesSchemaWithPrefix(t *testing.T, ctx string, s *openapi.Schema, types 
 }
 
 func TestTypesOnlyDifferByEnum(t *testing.T) {
-	api := codegen.RunDSL(t, dsls.StringEnumBodyDSL()).API
+	root := codegen.RunDSL(t, dsls.StringEnumBodyDSL())
 
-	bodies, types := buildBodyTypes(api)
+	bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes)
 
 	svc1, ok := bodies["svc_enum_1"]
 	if !ok {

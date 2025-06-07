@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/grpc/codegen/testdata"
 )
 
@@ -39,8 +38,9 @@ func TestProtoFiles(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunGRPCDSL(t, c.DSL)
-			fs := ProtoFiles("", expr.Root)
+			root := RunGRPCDSL(t, c.DSL)
+			services := CreateGRPCServices(root)
+			fs := ProtoFiles("", services)
 			if len(fs) != 1 {
 				t.Fatalf("got %d files, expected one", len(fs))
 			}
@@ -76,8 +76,9 @@ func TestMessageDefSection(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunGRPCDSL(t, c.DSL)
-			fs := ProtoFiles("", expr.Root)
+			root := RunGRPCDSL(t, c.DSL)
+			services := CreateGRPCServices(root)
+			fs := ProtoFiles("", services)
 			require.Len(t, fs, 1)
 			sections := fs[0].SectionTemplates
 			require.GreaterOrEqual(t, len(sections), 3)

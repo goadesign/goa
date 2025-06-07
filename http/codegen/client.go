@@ -10,19 +10,20 @@ import (
 )
 
 // ClientFiles returns the generated HTTP client files.
-func ClientFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+func ClientFiles(genpkg string, services *ServicesData) []*codegen.File {
+	root := services.Root
 	var files []*codegen.File
 	for _, svc := range root.API.HTTP.Services {
-		files = append(files, clientFile(genpkg, svc))
-		if f := websocketClientFile(genpkg, svc); f != nil {
+		files = append(files, clientFile(genpkg, svc, services))
+		if f := websocketClientFile(genpkg, svc, services); f != nil {
 			files = append(files, f)
 		}
-		if f := sseClientFile(genpkg, svc); f != nil {
+		if f := sseClientFile(genpkg, svc, services); f != nil {
 			files = append(files, f)
 		}
 	}
 	for _, svc := range root.API.HTTP.Services {
-		if f := clientEncodeDecodeFile(genpkg, svc); f != nil {
+		if f := clientEncodeDecodeFile(genpkg, svc, services); f != nil {
 			files = append(files, f)
 		}
 	}
@@ -30,8 +31,8 @@ func ClientFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 }
 
 // clientFile returns the client HTTP transport file
-func clientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	data := HTTPServices.Get(svc.Name())
+func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "client.go")
 	title := fmt.Sprintf("%s client HTTP transport", svc.Name())
@@ -100,8 +101,8 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
 
 // clientEncodeDecodeFile returns the file containing the HTTP client encoding
 // and decoding logic.
-func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	data := HTTPServices.Get(svc.Name())
+func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "encode_decode.go")
 	title := fmt.Sprintf("%s HTTP client encoders and decoders", svc.Name())
@@ -140,7 +141,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 					"typeConversionData": typeConversionData,
 					"mapConversionData":  mapConversionData,
 					"goTypeRef": func(dt expr.DataType) string {
-						return service.Services.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+						return services.ServicesData.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 					},
 					"isBearer":    isBearer,
 					"aliasedType": fieldType,
@@ -173,7 +174,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 				Data:   e,
 				FuncMap: map[string]any{
 					"goTypeRef": func(dt expr.DataType) string {
-						return service.Services.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+						return services.ServicesData.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 					},
 					"buildResponseData": buildResponseData,
 				},
@@ -203,7 +204,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.F
 
 // typeConversionData produces the template data suitable for executing the
 // "header_conversion" template.
-func typeConversionData(dt, ft expr.DataType, varName string, target string) map[string]any {
+func typeConversionData(dt, ft expr.DataType, varName, target string) map[string]any {
 	ut, isut := ft.(expr.UserType)
 	if isut {
 		ft = ut.Attribute().Type

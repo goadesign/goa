@@ -13,10 +13,10 @@ import (
 
 // ServerFiles returns an example server main implementation for every server
 // expression in the service design.
-func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+func ServerFiles(genpkg string, root *expr.RootExpr, services *service.ServicesData) []*codegen.File {
 	var fw []*codegen.File
 	for _, svr := range root.API.Servers {
-		if m := exampleSvrMain(genpkg, root, svr); m != nil {
+		if m := exampleSvrMain(genpkg, root, svr, services); m != nil {
 			fw = append(fw, m)
 		}
 	}
@@ -25,8 +25,8 @@ func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // exampleSvrMain returns the default main function for the given server
 // expression.
-func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
-	svrdata := Servers.Get(svr)
+func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, services *service.ServicesData) *codegen.File {
+	svrdata := Servers.Get(svr, root)
 	mainPath := filepath.Join("cmd", svrdata.Dir, "main.go")
 	if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
@@ -52,7 +52,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *c
 	scope := codegen.NewNameScope()
 	hasInterceptors := false
 	for i, svc := range svr.Services {
-		sd := service.Services.Get(svc)
+		sd := services.Get(svc)
 		svcData[i] = sd
 		specs = append(specs, &codegen.ImportSpec{
 			Path: path.Join(genpkg, sd.PathName),
