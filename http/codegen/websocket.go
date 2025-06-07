@@ -74,7 +74,7 @@ type (
 )
 
 // initWebSocketData initializes the WebSocket related data in ed.
-func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
+func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 	if e.SSE != nil {
 		return
 	}
@@ -100,7 +100,7 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 	if e.MethodExpr.Stream == expr.ClientStreamKind || e.MethodExpr.Stream == expr.BidirectionalStreamKind {
 		svrRecvTypeName = sd.Scope.GoFullTypeName(e.MethodExpr.StreamingPayload, svc.PkgName)
 		svrRecvTypeRef = sd.Scope.GoFullTypeRef(e.MethodExpr.StreamingPayload, svc.PkgName)
-		svrPayload = buildRequestBodyType(e.StreamingBody, e.MethodExpr.StreamingPayload, e, true, sd)
+		svrPayload = sds.buildRequestBodyType(e.StreamingBody, e.MethodExpr.StreamingPayload, e, true, sd)
 		if needInit(e.MethodExpr.StreamingPayload.Type) {
 			makeHTTPType(e.StreamingBody)
 			body := e.StreamingBody.Type
@@ -144,7 +144,7 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 						TypeRef:  sd.Scope.GoTypeRef(e.StreamingBody),
 						Type:     e.StreamingBody.Type,
 						Required: true,
-						Example:  e.Body.Example(expr.Root.API.ExampleGenerator),
+						Example:  e.Body.Example(sds.Root.API.ExampleGenerator),
 						Validate: svcode,
 					},
 				}}
@@ -171,7 +171,7 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 				ServerCode:     serverCode,
 			}
 		}
-		cliPayload = buildRequestBodyType(e.StreamingBody, e.MethodExpr.StreamingPayload, e, false, sd)
+		cliPayload = sds.buildRequestBodyType(e.StreamingBody, e.MethodExpr.StreamingPayload, e, false, sd)
 		if cliPayload != nil {
 			sd.ClientTypeNames[cliPayload.Name] = false
 			sd.ServerTypeNames[cliPayload.Name] = false

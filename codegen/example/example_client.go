@@ -24,7 +24,7 @@ func CLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 // exampleCLIMain returns an example client tool main implementation for the
 // given server expression.
 func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
-	svrdata := Servers.Get(svr)
+	svrdata := Servers.Get(svr, root)
 
 	path := filepath.Join("cmd", svrdata.Dir+"-cli", "main.go")
 	if _, err := os.Stat(path); !os.IsNotExist(err) {

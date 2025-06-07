@@ -11,9 +11,10 @@ import (
 // RunHTTPDSL returns the HTTP DSL root resulting from running the given DSL.
 func RunHTTPDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	// reset all roots and codegen data structures
-	service.Services = make(service.ServicesData)
-	HTTPServices = make(ServicesData)
-	return expr.RunDSL(t, dsl)
+	root := expr.RunDSL(t, dsl)
+	service.Services = service.ServicesData{Services: make(map[string]*service.Data), Root: root}
+	HTTPServices = ServicesData{Services: make(map[string]*ServiceData), Root: root}
+	return root
 }
 
 // makeGolden returns a file object used to write test expectations. If

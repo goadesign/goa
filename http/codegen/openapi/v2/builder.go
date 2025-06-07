@@ -234,7 +234,7 @@ func hasAbsoluteRoutes(root *expr.RootExpr) bool {
 	return hasAbsoluteRoutes
 }
 
-func summaryFromExpr(name string, e *expr.HTTPEndpointExpr) string {
+func summaryFromExpr(name string, e *expr.HTTPEndpointExpr, meta expr.MetaExpr) string {
 	for n, mdata := range e.Meta {
 		if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
 			return mdata[0]
@@ -250,7 +250,7 @@ func summaryFromExpr(name string, e *expr.HTTPEndpointExpr) string {
 			return mdata[0]
 		}
 	}
-	for n, mdata := range expr.Root.API.Meta {
+	for n, mdata := range meta {
 		if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
 			return mdata[0]
 		}
@@ -625,7 +625,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		operation := &Operation{
 			Tags:         tagNames,
 			Description:  description,
-			Summary:      summaryFromExpr(endpoint.Name()+" "+endpoint.Service.Name(), endpoint),
+			Summary:      summaryFromExpr(endpoint.Name()+" "+endpoint.Service.Name(), endpoint, root.API.Meta),
 			ExternalDocs: openapi.DocsFromExpr(endpoint.MethodExpr.Docs, endpoint.MethodExpr.Meta),
 			OperationID:  operationID,
 			Parameters:   params,

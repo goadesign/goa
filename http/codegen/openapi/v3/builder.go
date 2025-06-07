@@ -39,7 +39,7 @@ func New(root *expr.RootExpr) *OpenAPI {
 	}
 
 	var (
-		bodies, types = buildBodyTypes(root.API)
+		bodies, types = buildBodyTypes(root.API, root.Types, root.ResultTypes)
 
 		info     = buildInfo(root.API)
 		comps    = buildComponents(root, types)
@@ -136,7 +136,7 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 					// Remove any wildcards that is defined in path as a workaround to
 					// https://github.com/OAI/OpenAPI-Specification/issues/291
 					key = expr.HTTPWildcardRegex.ReplaceAllString(key, "/{$1}")
-					operation := buildOperation(key, r, sbod[e.Name()], api.ExampleGenerator)
+					operation := buildOperation(key, r, sbod[e.Name()], api.ExampleGenerator, api.Meta)
 					path, ok := paths[key]
 					if !ok {
 						path = new(PathItem)
@@ -190,7 +190,7 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 }
 
 // buildOperation builds the OpenAPI Operation object for the given path.
-func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand *expr.ExampleGenerator) *Operation {
+func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand *expr.ExampleGenerator, meta expr.MetaExpr) *Operation {
 	e := r.Endpoint
 	m := e.MethodExpr
 	svc := e.Service
@@ -211,7 +211,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 
 	{
 		summary = fmt.Sprintf("%s %s", e.Name(), svc.Name())
-		setSummary(expr.Root.API.Meta)
+		setSummary(meta)
 		setSummary(svc.ServiceExpr.Meta)
 		setSummary(r.Endpoint.Meta)
 		setSummary(m.Meta)
@@ -229,7 +229,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 
 	{
 		operationIDFormat = defaultOperationIDFormat
-		setOperationIDFormat(expr.Root.API.Meta)
+		setOperationIDFormat(meta)
 		setOperationIDFormat(m.Service.Meta)
 		setOperationIDFormat(r.Endpoint.Meta)
 		setOperationIDFormat(m.Meta)

@@ -13,7 +13,7 @@ import (
 
 // Services holds the data computed from the design needed to generate the code
 // of the services.
-var Services = make(ServicesData)
+var Services = ServicesData{Services: make(map[string]*Data)}
 
 var (
 	// initTypeTmpl is the template used to render the code that initializes a
@@ -35,7 +35,10 @@ var (
 
 type (
 	// ServicesData encapsulates the data computed from the service designs.
-	ServicesData map[string]*Data
+	ServicesData struct {
+		Root     *expr.RootExpr
+		Services map[string]*Data
+	}
 
 	// Data contains the data used to render the code related to a single
 	// service.
@@ -570,15 +573,15 @@ type (
 // Get retrieves the data for the service with the given name computing it if
 // needed. It returns nil if there is no service with the given name.
 func (d ServicesData) Get(name string) *Data {
-	if data, ok := d[name]; ok {
+	if data, ok := d.Services[name]; ok {
 		return data
 	}
-	service := expr.Root.Service(name)
+	service := d.Root.Service(name)
 	if service == nil {
 		return nil
 	}
-	d[name] = d.analyze(service)
-	return d[name]
+	d.Services[name] = d.analyze(service)
+	return d.Services[name]
 }
 
 // Method returns the service method data for the method with the given name,
@@ -778,7 +781,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	}
 
 	// Add forced types
-	for _, t := range expr.Root.Types {
+	for _, t := range d.Root.Types {
 		svcs, ok := t.Attribute().Meta["type:generate:force"]
 		if !ok {
 			continue
@@ -804,7 +807,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	)
 	methods = make([]*MethodData, len(service.Methods))
 	for i, e := range service.Methods {
-		m := buildMethodData(e, scope)
+		m := d.buildMethodData(e, scope)
 		methods[i] = m
 		for _, s := range m.Schemes {
 			schemes = schemes.Append(s)
@@ -877,8 +880,8 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	data := &Data{
 		Name:               service.Name,
 		Description:        desc,
-		APIName:            expr.Root.API.Name,
-		APIVersion:         expr.Root.API.Version,
+		APIName:            d.Root.API.Name,
+		APIVersion:         d.Root.API.Version,
 		VarName:            varName,
 		PathName:           codegen.SnakeCase(varName),
 		StructName:         codegen.Goify(service.Name, true),
@@ -886,8 +889,8 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		ViewsPkg:           viewspkg,
 		Methods:            methods,
 		Schemes:            schemes,
-		ServerInterceptors: collectInterceptors(service, methods, scope, true),
-		ClientInterceptors: collectInterceptors(service, methods, scope, false),
+		ServerInterceptors: d.collectInterceptors(service, methods, scope, true),
+		ClientInterceptors: d.collectInterceptors(service, methods, scope, false),
 		Scope:              scope,
 		ViewScope:          viewScope,
 		errorTypes:         errTypes,
@@ -899,23 +902,23 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		unionValueMethods:  unionMethods,
 	}
 
-	d[service.Name] = data
+	d.Services[service.Name] = data
 
 	return data
 }
 
 // collectInterceptors returns the set of interceptors defined on the given
 // service including any interceptor defined on specific service methods or API.
-func collectInterceptors(svc *expr.ServiceExpr, methods []*MethodData, scope *codegen.NameScope, server bool) []*InterceptorData {
+func (d ServicesData) collectInterceptors(svc *expr.ServiceExpr, methods []*MethodData, scope *codegen.NameScope, server bool) []*InterceptorData {
 	var ints []*expr.InterceptorExpr
 	if server {
-		ints = expr.Root.API.ServerInterceptors
+		ints = d.Root.API.ServerInterceptors
 		ints = append(ints, svc.ServerInterceptors...)
 		for _, m := range svc.Methods {
 			ints = append(ints, m.ServerInterceptors...)
 		}
 	} else {
-		ints = expr.Root.API.ClientInterceptors
+		ints = d.Root.API.ClientInterceptors
 		ints = append(ints, svc.ClientInterceptors...)
 		for _, m := range svc.Methods {
 			ints = append(ints, m.ClientInterceptors...)
@@ -1054,7 +1057,7 @@ func buildErrorInitData(er *expr.ErrorExpr, scope *codegen.NameScope) *ErrorInit
 
 // buildMethodData creates the data needed to render the given endpoint. It
 // records the user types needed by the service definition in userTypes.
-func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
+func (d ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 	var (
 		vname       string
 		desc        string
@@ -1092,7 +1095,7 @@ func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 			payloadDesc = fmt.Sprintf("%s is the payload type of the %s service %s method.",
 				payloadName, m.Service.Name, m.Name)
 		}
-		payloadEx = m.Payload.Example(expr.Root.API.ExampleGenerator)
+		payloadEx = m.Payload.Example(d.Root.API.ExampleGenerator)
 	}
 	if m.Result.Type != expr.Empty {
 		rname = scope.GoTypeName(m.Result)
@@ -1106,7 +1109,7 @@ func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 			resultDesc = fmt.Sprintf("%s is the result type of the %s service %s method.",
 				rname, m.Service.Name, m.Name)
 		}
-		resultEx = m.Result.Example(expr.Root.API.ExampleGenerator)
+		resultEx = m.Result.Example(d.Root.API.ExampleGenerator)
 	}
 	if len(m.Errors) > 0 {
 		errors = make([]*ErrorInitData, len(m.Errors))
@@ -1126,7 +1129,7 @@ func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 		reqs = append(reqs, &RequirementData{Schemes: rs, Scopes: req.Scopes})
 	}
 	var httpMet *expr.HTTPEndpointExpr
-	if httpSvc := expr.Root.HTTPService(m.Service.Name); httpSvc != nil {
+	if httpSvc := d.Root.HTTPService(m.Service.Name); httpSvc != nil {
 		httpMet = httpSvc.Endpoint(m.Name)
 	}
 	data := &MethodData{
@@ -1156,12 +1159,12 @@ func buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 		RequestStruct:                vname + "RequestData",
 		ResponseStruct:               vname + "ResponseData",
 	}
-	initStreamData(data, m, vname, rname, resultRef, scope)
+	d.initStreamData(data, m, vname, rname, resultRef, scope)
 	return data
 }
 
 // initStreamData initializes the streaming payload data structures and methods.
-func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRef string, scope *codegen.NameScope) {
+func (d ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRef string, scope *codegen.NameScope) {
 	if !m.IsStreaming() {
 		return
 	}
@@ -1183,7 +1186,7 @@ func initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRe
 			spayloadDesc = fmt.Sprintf("%s is the streaming payload type of the %s service %s method.",
 				spayloadName, m.Service.Name, m.Name)
 		}
-		spayloadEx = m.StreamingPayload.Example(expr.Root.API.ExampleGenerator)
+		spayloadEx = m.StreamingPayload.Example(d.Root.API.ExampleGenerator)
 	}
 	svrStream := &StreamData{
 		Interface:           vname + "ServerStream",

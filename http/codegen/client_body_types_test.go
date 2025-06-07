@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -25,8 +24,8 @@ func TestBodyTypeDecl(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			fs := clientType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
+			root := RunHTTPDSL(t, c.DSL)
+			fs := clientType(genpkg, root.API.HTTP.Services[0], make(map[string]struct{}))
 			section := fs.SectionTemplates[1]
 			code := codegen.SectionCode(t, section)
 			assert.Equal(t, c.Code, code)
@@ -56,8 +55,8 @@ func TestBodyTypeInit(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			fs := clientType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
+			root := RunHTTPDSL(t, c.DSL)
+			fs := clientType(genpkg, root.API.HTTP.Services[0], make(map[string]struct{}))
 			section := fs.SectionTemplates[c.SectionIndex]
 			code := codegen.SectionCode(t, section)
 			assert.Equal(t, c.Code, code)
@@ -88,8 +87,8 @@ func TestClientTypes(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			fs := clientType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
+			root := RunHTTPDSL(t, c.DSL)
+			fs := clientType(genpkg, root.API.HTTP.Services[0], make(map[string]struct{}))
 			var buf bytes.Buffer
 			for _, s := range fs.SectionTemplates[1:] {
 				require.NoError(t, s.Write(&buf))
@@ -111,8 +110,8 @@ func TestClientTypeFiles(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			fw := ClientTypeFiles(genpkg, expr.Root)
+			root := RunHTTPDSL(t, c.DSL)
+			fw := ClientTypeFiles(genpkg, root)
 			for i, fs := range fw {
 				var buf bytes.Buffer
 				for _, s := range fs.SectionTemplates[1:] {

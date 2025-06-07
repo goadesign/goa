@@ -85,6 +85,7 @@ func TestExampleInterceptorsFiles(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			// Run DSL
 			root := expr.RunDSL(t, c.DSL)
+			Services = ServicesData{Services: make(map[string]*Data), Root: root}
 			require.NotNil(t, root)
 
 			// Generate files

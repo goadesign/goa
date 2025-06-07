@@ -27,7 +27,7 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *co
 	var (
 		mainPath string
 
-		svrdata = example.Servers.Get(svr)
+		svrdata = example.Servers.Get(svr, root)
 	)
 	{
 		mainPath = filepath.Join("cmd", svrdata.Dir, "grpc.go")

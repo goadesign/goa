@@ -51,6 +51,7 @@ func TestInterceptors(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := runDSL(t, c.DSL)
+			Services = ServicesData{Services: make(map[string]*Data), Root: root}
 			require.Len(t, root.Services, 1)
 
 			fs := InterceptorsFiles("goa.design/goa/example", root.Services[0])

@@ -17,7 +17,7 @@ import (
 
 // HTTPServices holds the data computed from the design needed to generate the
 // transport code of the services.
-var HTTPServices = make(ServicesData)
+var HTTPServices = ServicesData{Services: make(map[string]*ServiceData)}
 
 var (
 	// pathInitTmpl is the template used to render path constructors code.
@@ -45,7 +45,10 @@ var (
 
 type (
 	// ServicesData encapsulates the data computed from the design.
-	ServicesData map[string]*ServiceData
+	ServicesData struct {
+		Root     *expr.RootExpr
+		Services map[string]*ServiceData
+	}
 
 	// ServiceData contains the data used to render the code related to a
 	// single service.
@@ -571,15 +574,15 @@ type (
 // computing it if needed. It returns nil if there is no service with the given
 // name.
 func (d ServicesData) Get(name string) *ServiceData {
-	if data, ok := d[name]; ok {
+	if data, ok := d.Services[name]; ok {
 		return data
 	}
-	service := expr.Root.API.HTTP.Service(name)
+	service := d.Root.API.HTTP.Service(name)
 	if service == nil {
 		return nil
 	}
-	d[name] = d.analyze(service)
-	return d[name]
+	d.Services[name] = d.analyze(service)
+	return d.Services[name]
 }
 
 // Endpoint returns the service method transport data for the endpoint with the
@@ -595,7 +598,7 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
-func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
+func (sds ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	svc := service.Services.Get(httpSvc.ServiceExpr.Name)
 	scope := codegen.NewNameScope()
 	scope.Unique("c") // 'c' is reserved as the client's receiver name.
@@ -696,7 +699,7 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 								Type:        att.Type,
 								Pointer:     pointer,
 								Required:    true,
-								Example:     att.Example(expr.Root.API.ExampleGenerator),
+								Example:     att.Example(sds.Root.API.ExampleGenerator),
 								Validate:    vcode,
 							},
 						}
@@ -732,7 +735,7 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			}
 		}
 
-		payload := buildPayloadData(httpEndpoint, sd)
+		payload := sds.buildPayloadData(httpEndpoint, sd)
 
 		var (
 			reqs  service.RequirementsData
@@ -822,8 +825,8 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			ServiceVarName:  svc.VarName,
 			ServicePkgName:  svc.PkgName,
 			Payload:         payload,
-			Result:          buildResultData(httpEndpoint, sd),
-			Errors:          buildErrorsData(httpEndpoint, sd),
+			Result:          sds.buildResultData(httpEndpoint, sd),
+			Errors:          sds.buildErrorsData(httpEndpoint, sd),
 			HeaderSchemes:   hsch,
 			BodySchemes:     bosch,
 			QuerySchemes:    qsch,
@@ -842,7 +845,7 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			Requirements:    reqs,
 		}
 		if httpEndpoint.MethodExpr.IsStreaming() {
-			initWebSocketData(ed, httpEndpoint, sd)
+			sds.initWebSocketData(ed, httpEndpoint, sd)
 			initSSEData(ed, httpEndpoint, sd)
 		}
 
@@ -881,20 +884,20 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 
 	for _, a := range httpSvc.HTTPEndpoints {
 		collectUserTypes(a.Body.Type, func(ut expr.UserType) {
-			if d := attributeTypeData(ut, true, true, true, sd); d != nil {
+			if d := sds.attributeTypeData(ut, true, true, true, sd); d != nil {
 				sd.ServerBodyAttributeTypes = append(sd.ServerBodyAttributeTypes, d)
 			}
-			if d := attributeTypeData(ut, true, false, false, sd); d != nil {
+			if d := sds.attributeTypeData(ut, true, false, false, sd); d != nil {
 				sd.ClientBodyAttributeTypes = append(sd.ClientBodyAttributeTypes, d)
 			}
 		})
 
 		if a.MethodExpr.StreamingPayload.Type != expr.Empty {
 			collectUserTypes(a.StreamingBody.Type, func(ut expr.UserType) {
-				if d := attributeTypeData(ut, true, true, true, sd); d != nil {
+				if d := sds.attributeTypeData(ut, true, true, true, sd); d != nil {
 					sd.ServerBodyAttributeTypes = append(sd.ServerBodyAttributeTypes, d)
 				}
-				if d := attributeTypeData(ut, true, false, false, sd); d != nil {
+				if d := sds.attributeTypeData(ut, true, false, false, sd); d != nil {
 					sd.ClientBodyAttributeTypes = append(sd.ClientBodyAttributeTypes, d)
 				}
 			})
@@ -906,7 +909,7 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 					// NOTE: ServerBodyAttributeTypes for response body types are
 					// collected in buildResponseBodyType because we have to generate
 					// body types for each view in a result type.
-					if d := attributeTypeData(ut, false, true, false, sd); d != nil {
+					if d := sds.attributeTypeData(ut, false, true, false, sd); d != nil {
 						sd.ClientBodyAttributeTypes = append(sd.ClientBodyAttributeTypes, d)
 					}
 				})
@@ -918,7 +921,7 @@ func (ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 				// NOTE: ServerBodyAttributeTypes for error response body types are
 				// collected in buildResponseBodyType because we have to generate
 				// body types for each view in a result type.
-				if d := attributeTypeData(ut, false, true, false, sd); d != nil {
+				if d := sds.attributeTypeData(ut, false, true, false, sd); d != nil {
 					sd.ClientBodyAttributeTypes = append(sd.ClientBodyAttributeTypes, d)
 				}
 			})
@@ -982,7 +985,7 @@ func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[string]struct{}) *e
 // buildPayloadData returns the data structure used to describe the endpoint
 // payload including the HTTP request details. It also returns the user types
 // used by the request body type recursively if any.
-func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
+func (sds ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 	e.Body = makeHTTPType(e.Body)
 	var (
 		payload    = e.MethodExpr.Payload
@@ -999,12 +1002,12 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 	)
 	{
 		var (
-			serverBodyData = buildRequestBodyType(e.Body, payload, e, true, sd)
-			clientBodyData = buildRequestBodyType(e.Body, payload, e, false, sd)
-			paramsData     = extractPathParams(e.PathParams(), payload, sd.Scope)
-			queryData      = extractQueryParams(e.QueryParams(), payload, sd.Scope)
-			headersData    = extractHeaders(e.Headers, payload, svcctx, sd.Scope)
-			cookiesData    = extractCookies(e.Cookies, payload, svcctx, sd.Scope)
+			serverBodyData = sds.buildRequestBodyType(e.Body, payload, e, true, sd)
+			clientBodyData = sds.buildRequestBodyType(e.Body, payload, e, false, sd)
+			paramsData     = sds.extractPathParams(e.PathParams(), payload, sd.Scope)
+			queryData      = sds.extractQueryParams(e.QueryParams(), payload, sd.Scope)
+			headersData    = sds.extractHeaders(e.Headers, payload, svcctx, sd.Scope)
+			cookiesData    = sds.extractCookies(e.Cookies, payload, svcctx, sd.Scope)
 			origin         string
 
 			mustValidate bool
@@ -1040,7 +1043,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 						TypeRef:      sd.Scope.GoTypeRef(pAtt),
 						Validate:     codegen.AttributeValidationCode(pAtt, nil, httpsvrctx, required, expr.IsAlias(pAtt.Type), varn, name),
 						DefaultValue: pAtt.DefaultValue,
-						Example:      pAtt.Example(expr.Root.API.ExampleGenerator),
+						Example:      pAtt.Example(sds.Root.API.ExampleGenerator),
 					},
 				},
 			}
@@ -1150,7 +1153,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 					TypeRef:  sd.Scope.GoTypeRef(e.Body),
 					Type:     body,
 					Required: true,
-					Example:  e.Body.Example(expr.Root.API.ExampleGenerator),
+					Example:  e.Body.Example(sds.Root.API.ExampleGenerator),
 					Validate: svcode,
 				},
 			}}
@@ -1163,7 +1166,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 					TypeRef:  sd.Scope.GoTypeRefWithDefaults(e.Body),
 					Type:     body,
 					Required: true,
-					Example:  e.Body.Example(expr.Root.API.ExampleGenerator),
+					Example:  e.Body.Example(sds.Root.API.ExampleGenerator),
 					Validate: cvcode,
 				},
 			}}
@@ -1279,7 +1282,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							Type:         uatt.Type,
 							Pointer:      sc.UsernamePointer,
 							Validate:     codegen.ValidationCode(uatt, nil, httpsvrctx, sc.UsernameRequired, expr.IsAlias(uatt.Type), false, sc.UsernameAttr),
-							Example:      uatt.Example(expr.Root.API.ExampleGenerator),
+							Example:      uatt.Example(sds.Root.API.ExampleGenerator),
 						},
 					}
 					patt := e.MethodExpr.Payload.Find(sc.PasswordAttr)
@@ -1302,7 +1305,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 							Type:         patt.Type,
 							Pointer:      sc.PasswordPointer,
 							Validate:     codegen.ValidationCode(patt, nil, httpsvrctx, sc.PasswordRequired, expr.IsAlias(patt.Type), false, sc.PasswordAttr),
-							Example:      patt.Example(expr.Root.API.ExampleGenerator),
+							Example:      patt.Example(sds.Root.API.ExampleGenerator),
 						},
 					}
 					cliArgs = []*InitArgData{uarg, parg}
@@ -1412,7 +1415,7 @@ func buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 }
 
 // buildResultData builds the result data for the given service endpoint.
-func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
+func (sds ServicesData) buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 	var (
 		svc    = sd.Service
 		ep     = svc.Method(e.MethodExpr.Name)
@@ -1442,7 +1445,7 @@ func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 			result = expr.AsObject(ep.ViewedResult.Type).Attribute("projected")
 			viewed = true
 		}
-		responses = buildResponses(e, result, viewed, sd)
+		responses = sds.buildResponses(e, result, viewed, sd)
 		for _, r := range responses {
 			// response has a body, headers, cookies or tag
 			if len(r.ServerBody) > 0 || len(r.Headers) > 0 || len(r.Cookies) > 0 || r.TagName != "" {
@@ -1465,7 +1468,7 @@ func buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 // inferred from the method's result expression if not specified explicitly.
 //
 // viewed parameter indicates if the method result uses views.
-func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed bool, sd *ServiceData) []*ResponseData {
+func (sds ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed bool, sd *ServiceData) []*ResponseData {
 	var (
 		responses []*ResponseData
 
@@ -1503,8 +1506,8 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 				resAttr = result
 			)
 			{
-				headersData = extractHeaders(resp.Headers, result, svcctx, scope)
-				cookiesData = extractCookies(resp.Cookies, result, svcctx, scope)
+				headersData = sds.extractHeaders(resp.Headers, result, svcctx, scope)
+				cookiesData = sds.extractCookies(resp.Cookies, result, svcctx, scope)
 				if resp.Body.Type != expr.Empty {
 					// If design uses Body("name") syntax we need to use the
 					// corresponding attribute in the result type for body
@@ -1519,14 +1522,14 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 					if origin != "" {
 						// Response body is explicitly set to an attribute in the method
 						// result type. No need to do any view-based projections server side.
-						if sbd := buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &vname, sd); sbd != nil {
+						if sbd := sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &vname, sd); sbd != nil {
 							serverBodyData = append(serverBodyData, sbd)
 						}
 					} else if v, ok := e.MethodExpr.Result.Meta.Last(expr.ViewMetaKey); ok {
 						// Design explicitly sets the view to render the result.
 						// We generate only one server body type which will be rendered
 						// using the specified view.
-						if sbd := buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &v, sd); sbd != nil {
+						if sbd := sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &v, sd); sbd != nil {
 							serverBodyData = append(serverBodyData, sbd)
 						}
 					} else {
@@ -1539,17 +1542,17 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 						// attributes defined in the view in the response (NOTE: a required
 						// attribute in the result type may not be present in all its views)
 						for _, view := range md.ViewedResult.Views {
-							if sbd := buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &view.Name, sd); sbd != nil {
+							if sbd := sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &view.Name, sd); sbd != nil {
 								serverBodyData = append(serverBodyData, sbd)
 							}
 						}
 					}
-					clientBodyData = buildResponseBodyType(resp.Body, result, md.ResultLoc, e, false, &vname, sd)
+					clientBodyData = sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, false, &vname, sd)
 				} else {
-					if sbd := buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, nil, sd); sbd != nil {
+					if sbd := sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, nil, sd); sbd != nil {
 						serverBodyData = append(serverBodyData, sbd)
 					}
-					clientBodyData = buildResponseBodyType(resp.Body, result, md.ResultLoc, e, false, nil, sd)
+					clientBodyData = sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, false, nil, sd)
 				}
 				if clientBodyData != nil {
 					sd.ClientTypeNames[clientBodyData.Name] = false
@@ -1739,7 +1742,7 @@ func buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed
 // buildErrorsData builds the error data for all the error responses in the
 // endpoint expression. The response headers, cookies and body for each response
 // are inferred from the method's error expression if not specified explicitly.
-func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupData {
+func (sds ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupData {
 	var (
 		svc        = sd.Service
 		ep         = svc.Method(e.MethodExpr.Name)
@@ -1778,7 +1781,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 					AttributeData: &AttributeData{Name: "body", VarName: "body", TypeRef: sd.Scope.GoTypeRef(v.Response.Body)},
 				}}
 			}
-			for _, h := range extractHeaders(v.Response.Headers, v.AttributeExpr, errctx, sd.Scope) {
+			for _, h := range sds.extractHeaders(v.Response.Headers, v.AttributeExpr, errctx, sd.Scope) {
 				args = append(args, &InitArgData{
 					Ref: h.VarName,
 					AttributeData: &AttributeData{
@@ -1794,7 +1797,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 					},
 				})
 			}
-			for _, c := range extractCookies(v.Response.Cookies, v.AttributeExpr, errctx, sd.Scope) {
+			for _, c := range sds.extractCookies(v.Response.Cookies, v.AttributeExpr, errctx, sd.Scope) {
 				args = append(args, &InitArgData{
 					Ref: c.VarName,
 					AttributeData: &AttributeData{
@@ -1866,10 +1869,10 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 			)
 			{
 				errorLoc := ep.ErrorLocs[v.ErrorExpr.Name]
-				if sbd := buildResponseBodyType(v.Response.Body, v.AttributeExpr, errorLoc, e, true, nil, sd); sbd != nil {
+				if sbd := sds.buildResponseBodyType(v.Response.Body, v.AttributeExpr, errorLoc, e, true, nil, sd); sbd != nil {
 					serverBodyData = append(serverBodyData, sbd)
 				}
-				clientBodyData = buildResponseBodyType(v.Response.Body, v.AttributeExpr, errorLoc, e, false, nil, sd)
+				clientBodyData = sds.buildResponseBodyType(v.Response.Body, v.AttributeExpr, errorLoc, e, false, nil, sd)
 				if clientBodyData != nil {
 					sd.ClientTypeNames[clientBodyData.Name] = false
 					clientBodyData.Description = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body for the %q error.",
@@ -1879,8 +1882,8 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 				}
 			}
 
-			headers := extractHeaders(v.Response.Headers, v.AttributeExpr, errctx, sd.Scope)
-			cookies := extractCookies(v.Response.Cookies, v.AttributeExpr, errctx, sd.Scope)
+			headers := sds.extractHeaders(v.Response.Headers, v.AttributeExpr, errctx, sd.Scope)
+			cookies := sds.extractCookies(v.Response.Cookies, v.AttributeExpr, errctx, sd.Scope)
 			var mustValidate bool
 			for _, h := range headers {
 				if h.Validate != "" || h.Required || needConversion(h.Type) {
@@ -1962,7 +1965,7 @@ func buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupDat
 // svr is true if the function is generated for server side code.
 //
 // sd is the service data
-func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExpr, svr bool, sd *ServiceData) *TypeData {
+func (sds ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExpr, svr bool, sd *ServiceData) *TypeData {
 	if body.Type == expr.Empty {
 		return nil
 	}
@@ -2053,7 +2056,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 				TypeRef:  svc.Scope.GoFullTypeRef(att, pkg),
 				Type:     att.Type,
 				Validate: validateDef,
-				Example:  att.Example(expr.Root.API.ExampleGenerator),
+				Example:  att.Example(sds.Root.API.ExampleGenerator),
 			},
 		}
 		init = &InitData{
@@ -2074,7 +2077,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 		Init:        init,
 		ValidateDef: validateDef,
 		ValidateRef: validateRef,
-		Example:     body.Example(expr.Root.API.ExampleGenerator),
+		Example:     body.Example(sds.Root.API.ExampleGenerator),
 	}
 }
 
@@ -2089,7 +2092,7 @@ func buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExp
 // svr is true if the function is generated for server side code
 //
 // view is the view name to add as a suffix to the type name.
-func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location, e *expr.HTTPEndpointExpr, svr bool, view *string, sd *ServiceData) *TypeData {
+func (sds ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location, e *expr.HTTPEndpointExpr, svr bool, view *string, sd *ServiceData) *TypeData {
 	if body.Type == expr.Empty {
 		return nil
 	}
@@ -2174,7 +2177,7 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location,
 		// For client side, we don't have to generate a separate body type per
 		// view. Hence the client types are collected in "analyze" function.
 		collectUserTypes(body.Type, func(ut expr.UserType) {
-			if d := attributeTypeData(ut, false, false, true, sd); d != nil {
+			if d := sds.attributeTypeData(ut, false, false, true, sd); d != nil {
 				sd.ServerBodyAttributeTypes = append(sd.ServerBodyAttributeTypes, d)
 			}
 		})
@@ -2241,7 +2244,7 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location,
 				TypeRef:  tref,
 				Type:     att.Type,
 				Validate: validateDef,
-				Example:  att.Example(expr.Root.API.ExampleGenerator),
+				Example:  att.Example(sds.Root.API.ExampleGenerator),
 			},
 		}
 		init = &InitData{
@@ -2262,12 +2265,12 @@ func buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location,
 		Init:        init,
 		ValidateDef: validateDef,
 		ValidateRef: validateRef,
-		Example:     body.Example(expr.Root.API.ExampleGenerator),
+		Example:     body.Example(sds.Root.API.ExampleGenerator),
 		View:        viewName,
 	}
 }
 
-func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, scope *codegen.NameScope) []*ParamData {
+func (sds ServicesData) extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, scope *codegen.NameScope) []*ParamData {
 	var params []*ParamData
 	codegen.WalkMappedAttr(a, func(name, elem string, _ bool, c *expr.AttributeExpr) error { // nolint: errcheck
 		// The StringSlice field of ParamData must be false for aliased primitive types
@@ -2314,7 +2317,7 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 					Pointer:      false,
 					Validate:     codegen.AttributeValidationCode(c, nil, ctx, true, expr.IsAlias(c.Type), varn, name),
 					DefaultValue: c.DefaultValue,
-					Example:      c.Example(expr.Root.API.ExampleGenerator),
+					Example:      c.Example(sds.Root.API.ExampleGenerator),
 				},
 			},
 		})
@@ -2324,7 +2327,7 @@ func extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr,
 	return params
 }
 
-func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, scope *codegen.NameScope) []*ParamData {
+func (sds ServicesData) extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, scope *codegen.NameScope) []*ParamData {
 	var params []*ParamData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, c *expr.AttributeExpr) error { // nolint: errcheck
 		// The StringSlice field of ParamData must be false for aliased primitive types
@@ -2381,7 +2384,7 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 					Pointer:      pointer,
 					Validate:     codegen.AttributeValidationCode(c, nil, ctx, required, expr.IsAlias(c.Type), varn, name),
 					DefaultValue: c.DefaultValue,
-					Example:      c.Example(expr.Root.API.ExampleGenerator),
+					Example:      c.Example(sds.Root.API.ExampleGenerator),
 				},
 			},
 		})
@@ -2391,7 +2394,7 @@ func extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr
 	return params
 }
 
-func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope) []*HeaderData {
+func (sds ServicesData) extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope) []*HeaderData {
 	var headers []*HeaderData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, _ *expr.AttributeExpr) error { // nolint: errcheck
 		var attr *expr.AttributeExpr
@@ -2445,7 +2448,7 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 					Type:         hattr.Type,
 					Validate:     codegen.AttributeValidationCode(hattr, nil, svcCtx, required, expr.IsAlias(hattr.Type), varn, name),
 					DefaultValue: hattr.DefaultValue,
-					Example:      hattr.Example(expr.Root.API.ExampleGenerator),
+					Example:      hattr.Example(sds.Root.API.ExampleGenerator),
 				},
 			},
 		})
@@ -2454,7 +2457,7 @@ func extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 	return headers
 }
 
-func extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope) []*CookieData {
+func (sds ServicesData) extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope) []*CookieData {
 	var cookies []*CookieData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, _ *expr.AttributeExpr) error { // nolint: errcheck
 		var hattr *expr.AttributeExpr
@@ -2498,7 +2501,7 @@ func extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svc
 					Type:         hattr.Type,
 					Validate:     codegen.AttributeValidationCode(hattr, nil, svcCtx, required, expr.IsAlias(hattr.Type), varn, name),
 					DefaultValue: hattr.DefaultValue,
-					Example:      hattr.Example(expr.Root.API.ExampleGenerator),
+					Example:      hattr.Example(sds.Root.API.ExampleGenerator),
 				},
 			},
 		}
@@ -2565,7 +2568,7 @@ func collectUserTypes(dt expr.DataType, cb func(expr.UserType), seen ...map[stri
 	}
 }
 
-func attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData) *TypeData {
+func (sds ServicesData) attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData) *TypeData {
 	if ut == expr.Empty {
 		return nil
 	}
@@ -2610,7 +2613,7 @@ func attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData)
 		Ref:         rd.Scope.GoTypeRef(att),
 		ValidateDef: validate,
 		ValidateRef: validateRef,
-		Example:     att.Example(expr.Root.API.ExampleGenerator),
+		Example:     att.Example(sds.Root.API.ExampleGenerator),
 	}
 }
 

@@ -24,12 +24,12 @@ const (
 func ProtoFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 	fw := make([]*codegen.File, len(root.API.GRPC.Services))
 	for i, svc := range root.API.GRPC.Services {
-		fw[i] = protoFile(genpkg, svc)
+		fw[i] = protoFile(genpkg, svc, root)
 	}
 	return fw
 }
 
-func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
+func protoFile(genpkg string, svc *expr.GRPCServiceExpr, root *expr.RootExpr) *codegen.File {
 	data := GRPCServices.Get(svc.Name())
 	svcName := data.Service.PathName
 	parts := strings.Split(genpkg, "/")
@@ -82,10 +82,10 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 
 	runProtoc := func(path string) error {
 		includes := svc.ServiceExpr.Meta["protoc:include"]
-		includes = append(includes, expr.Root.API.Meta["protoc:include"]...)
+		includes = append(includes, root.API.Meta["protoc:include"]...)
 
 		cmd := defaultProtocCmd
-		if c, ok := expr.Root.API.Meta["protoc:cmd"]; ok {
+		if c, ok := root.API.Meta["protoc:cmd"]; ok {
 			cmd = c
 		}
 		if c, ok := svc.ServiceExpr.Meta["protoc:cmd"]; ok {

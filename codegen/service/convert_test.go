@@ -234,6 +234,7 @@ func TestConvertFile(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := runDSL(t, c.DSL)
+			Services = ServicesData{Services: make(map[string]*Data), Root: root}
 			for _, svc := range root.Services {
 				f, err := ConvertFile(root, svc)
 				require.NoError(t, err)

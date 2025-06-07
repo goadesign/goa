@@ -24,12 +24,12 @@ func ExampleCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // exampleCLI returns an example client tool HTTP implementation for the given
 // server expression.
-func exampleCLI(genpkg string, _ *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
+func exampleCLI(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
 	var (
 		mainPath string
 		rootPath string
 
-		svrdata = example.Servers.Get(svr)
+		svrdata = example.Servers.Get(svr, root)
 	)
 	{
 		mainPath = filepath.Join("cmd", svrdata.Dir+"-cli", "grpc.go")

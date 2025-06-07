@@ -109,11 +109,11 @@ const (
 
 // Get returns the server data for the given server expression. It builds the
 // server data if the server name does not exist in the map.
-func (d ServersData) Get(svr *expr.ServerExpr) *Data {
+func (d ServersData) Get(svr *expr.ServerExpr, root *expr.RootExpr) *Data {
 	if data, ok := d[svr.Name]; ok {
 		return data
 	}
-	sd := buildServerData(svr)
+	sd := buildServerData(svr, root)
 	d[svr.Name] = sd
 	return sd
 }
@@ -170,7 +170,7 @@ func (h *HostData) DefaultURL(transport Transport) string {
 }
 
 // buildServerData builds the server data for the given server expression.
-func buildServerData(svr *expr.ServerExpr) *Data {
+func buildServerData(svr *expr.ServerExpr, root *expr.RootExpr) *Data {
 	var (
 		hosts []*HostData
 	)
@@ -209,14 +209,14 @@ func buildServerData(svr *expr.ServerExpr) *Data {
 		for _, svc := range svr.Services {
 			_, seenHTTP := foundTrans[TransportHTTP]
 			_, seenGRPC := foundTrans[TransportGRPC]
-			if expr.Root.API.HTTP.Service(svc) != nil {
+			if root.API.HTTP.Service(svc) != nil {
 				httpServices = append(httpServices, svc)
 				if !seenHTTP {
 					transports = append(transports, newHTTPTransport())
 					foundTrans[TransportHTTP] = struct{}{}
 				}
 			}
-			if expr.Root.API.GRPC.Service(svc) != nil {
+			if root.API.GRPC.Service(svc) != nil {
 				grpcServices = append(grpcServices, svc)
 				if !seenGRPC {
 					transports = append(transports, newGRPCTransport())

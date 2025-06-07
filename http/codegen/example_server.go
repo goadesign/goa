@@ -29,7 +29,7 @@ func ExampleServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // exampleServer returns an example HTTP server implementation.
 func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
-	svrdata := example.Servers.Get(svr)
+	svrdata := example.Servers.Get(svr, root)
 	fpath := filepath.Join("cmd", svrdata.Dir, "http.go")
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},

@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -36,9 +35,9 @@ func TestPaths(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			require.Len(t, expr.Root.API.HTTP.Services, 1)
-			fs := serverPath(expr.Root.API.HTTP.Services[0])
+			root := RunHTTPDSL(t, c.DSL)
+			require.Len(t, root.API.HTTP.Services, 1)
+			fs := serverPath(root.API.HTTP.Services[0])
 			sections := fs.SectionTemplates
 			code := codegen.SectionCode(t, sections[1])
 			assert.Equal(t, c.Code, code)
@@ -62,9 +61,9 @@ func TestPathTrailingShash(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			require.Len(t, expr.Root.API.HTTP.Services, 1)
-			fs := serverPath(expr.Root.API.HTTP.Services[0])
+			root := RunHTTPDSL(t, c.DSL)
+			require.Len(t, root.API.HTTP.Services, 1)
+			fs := serverPath(root.API.HTTP.Services[0])
 			sections := fs.SectionTemplates
 			code := codegen.SectionCode(t, sections[1])
 			assert.Equal(t, c.Code, code)

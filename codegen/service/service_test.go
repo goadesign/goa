@@ -12,7 +12,6 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
-	"goa.design/goa/v3/expr"
 )
 
 func TestService(t *testing.T) {
@@ -61,9 +60,10 @@ func TestService(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			codegen.RunDSL(t, c.DSL)
-			require.Len(t, expr.Root.Services, 1)
-			files := Files("goa.design/goa/example", expr.Root.Services[0], make(map[string][]string))
+			root := codegen.RunDSL(t, c.DSL)
+			Services = ServicesData{Services: make(map[string]*Data), Root: root}
+			require.Len(t, root.Services, 1)
+			files := Files("goa.design/goa/example", root.Services[0], make(map[string][]string))
 			require.Greater(t, len(files), 0)
 			validateFile(t, files[0], files[0].Path, c.Code)
 		})
@@ -94,11 +94,12 @@ func TestStructPkgPath(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			userTypePkgs := make(map[string][]string)
-			codegen.RunDSL(t, c.DSL)
-			if len(expr.Root.Services) != len(c.SvcCodes) {
-				t.Fatalf("got %d services, expected %d", len(expr.Root.Services), len(c.SvcCodes))
+			root := codegen.RunDSL(t, c.DSL)
+			Services = ServicesData{Services: make(map[string]*Data), Root: root}
+			if len(root.Services) != len(c.SvcCodes) {
+				t.Fatalf("got %d services, expected %d", len(root.Services), len(c.SvcCodes))
 			}
-			files := Files("goa.design/goa/example", expr.Root.Services[0], userTypePkgs)
+			files := Files("goa.design/goa/example", root.Services[0], userTypePkgs)
 			if len(files) != len(c.TypeFiles)+1 {
 				t.Fatalf("got %d files, expected %d", len(files), len(c.TypeFiles)+1)
 			}
@@ -107,7 +108,7 @@ func TestStructPkgPath(t *testing.T) {
 				validateFile(t, files[i+1], f, c.TypeCodes[i])
 			}
 			if len(c.SvcCodes) > 1 {
-				files = Files("goa.design/goa/example", expr.Root.Services[1], userTypePkgs)
+				files = Files("goa.design/goa/example", root.Services[1], userTypePkgs)
 				require.Len(t, files, 1)
 				validateFile(t, files[0], files[0].Path, c.SvcCodes[1])
 			}

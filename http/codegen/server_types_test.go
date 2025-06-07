@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -36,8 +35,8 @@ func TestServerTypes(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			fs := serverType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
+			root := RunHTTPDSL(t, c.DSL)
+			fs := serverType(genpkg, root.API.HTTP.Services[0], make(map[string]struct{}))
 			var buf bytes.Buffer
 			for _, s := range fs.SectionTemplates[1:] {
 				require.NoError(t, s.Write(&buf))
