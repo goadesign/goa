@@ -39,9 +39,9 @@ func TestEndpoint(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := codegen.RunDSL(t, c.DSL)
-			Services = ServicesData{Services: make(map[string]*Data), Root: root}
+			services := NewServicesData(root)
 			require.Len(t, root.Services, 1)
-			fs := EndpointFile("goa.design/goa/example", root.Services[0])
+			fs := EndpointFile("goa.design/goa/example", root.Services[0], services)
 			require.NotNil(t, fs)
 			buf := new(bytes.Buffer)
 			for _, s := range fs.SectionTemplates[1:] {

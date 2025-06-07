@@ -12,9 +12,12 @@ import (
 func RunHTTPDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	// reset all roots and codegen data structures
 	root := expr.RunDSL(t, dsl)
-	service.Services = service.ServicesData{Services: make(map[string]*service.Data), Root: root}
-	HTTPServices = ServicesData{Services: make(map[string]*ServiceData), Root: root}
 	return root
+}
+
+// CreateHTTPServices creates a new ServicesData instance for testing.
+func CreateHTTPServices(root *expr.RootExpr) *ServicesData {
+	return NewServicesData(service.NewServicesData(root))
 }
 
 // makeGolden returns a file object used to write test expectations. If

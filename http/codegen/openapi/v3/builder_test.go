@@ -206,27 +206,25 @@ func TestBuildOperation(t *testing.T) {
 			}
 
 			var route *expr.RouteExpr
-			{
-				if len(root.API.HTTP.Services) == 0 {
-					t.Error("no HTTP service created from DSL")
-				}
-				for _, s := range root.API.HTTP.Services {
-					if s.Name() == svcName {
-						for _, e := range s.HTTPEndpoints {
-							if e.Name() == c.Name {
-								route = e.Routes[0]
-								break
-							}
+			if len(root.API.HTTP.Services) == 0 {
+				t.Error("no HTTP service created from DSL")
+			}
+			for _, s := range root.API.HTTP.Services {
+				if s.Name() == svcName {
+					for _, e := range s.HTTPEndpoints {
+						if e.Name() == c.Name {
+							route = e.Routes[0]
+							break
 						}
 					}
-					if route != nil {
-						break
-					}
 				}
-				if route == nil {
-					t.Error("could not find route")
-					return
+				if route != nil {
+					break
 				}
+			}
+			if route == nil {
+				t.Error("could not find route")
+				return
 			}
 
 			op := buildOperation(c.Name, route, bodies, expr.NewRandom(c.Name), root.API.Meta)

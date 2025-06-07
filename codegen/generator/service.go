@@ -18,21 +18,24 @@ func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		if !ok {
 			continue
 		}
+		// Create service data
+		services := service.NewServicesData(r)
+
 		for _, s := range r.Services {
 			// Make sure service is first so name scope is
 			// properly initialized.
-			files = append(files, service.Files(genpkg, s, userTypePkgs)...)
-			files = append(files, service.EndpointFile(genpkg, s))
-			files = append(files, service.ClientFile(genpkg, s))
-			if f := service.ViewsFile(genpkg, s); f != nil {
+			files = append(files, service.Files(genpkg, s, services, userTypePkgs)...)
+			files = append(files, service.EndpointFile(genpkg, s, services))
+			files = append(files, service.ClientFile(genpkg, s, services))
+			if f := service.ViewsFile(genpkg, s, services); f != nil {
 				files = append(files, f)
 			}
 			for _, f := range files {
 				if len(f.SectionTemplates) > 0 {
-					service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], s)
+					service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], s, services.Get(s.Name))
 				}
 			}
-			f, err := service.ConvertFile(r, s)
+			f, err := service.ConvertFile(r, s, services)
 			if err != nil {
 				return nil, err
 			}

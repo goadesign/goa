@@ -34,7 +34,8 @@ func TestEncodeError(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
-			fs := ServerFiles("", root)
+			services := CreateHTTPServices(root)
+			fs := ServerFiles("", services)
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 1)

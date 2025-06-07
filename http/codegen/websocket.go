@@ -238,8 +238,8 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 
 // websocketServerFile returns the file implementing the WebSocket server
 // streaming implementation if any.
-func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	data := HTTPServices.Get(svc.Name())
+func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+	data := services.Get(svc.Name())
 	if !hasWebSocket(data) {
 		return nil
 	}
@@ -271,8 +271,8 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File
 
 // websocketClientFile returns the file implementing the WebSocket client
 // streaming implementation if any.
-func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	data := HTTPServices.Get(svc.Name())
+func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+	data := services.Get(svc.Name())
 	if !hasWebSocket(data) {
 		return nil
 	}

@@ -34,7 +34,8 @@ func TestServerMount(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
-			fs := ServerFiles(genpkg, root)
+			services := CreateHTTPServices(root)
+			fs := ServerFiles(genpkg, services)
 			sections := codegentest.Sections(fs, filepath.Join("", "server.go"), c.SectionName)
 			require.Greater(t, len(sections), c.SectionNum)
 			code := codegen.SectionCode(t, sections[c.SectionNum])

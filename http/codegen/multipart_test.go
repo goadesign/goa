@@ -25,7 +25,8 @@ func TestServerMultipartFuncType(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
-			fs := ServerFiles(genpkg, root)
+			services := CreateHTTPServices(root)
+			fs := ServerFiles(genpkg, services)
 			require.Len(t, fs, 2)
 			sections := fs[0].SectionTemplates
 			require.Greater(t, len(sections), 5)
@@ -50,7 +51,8 @@ func TestClientMultipartFuncType(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
-			fs := ClientFiles(genpkg, root)
+			services := CreateHTTPServices(root)
+			fs := ClientFiles(genpkg, services)
 			require.Len(t, fs, 2)
 			sections := fs[0].SectionTemplates
 			require.Greater(t, len(sections), 4)
@@ -77,7 +79,8 @@ func TestServerMultipartNewFunc(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
-			fs := ServerFiles(genpkg, root)
+			services := CreateHTTPServices(root)
+			fs := ServerFiles(genpkg, services)
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 3)
@@ -104,7 +107,8 @@ func TestClientMultipartNewFunc(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
-			fs := ClientFiles(genpkg, root)
+			services := CreateHTTPServices(root)
+			fs := ClientFiles(genpkg, services)
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 3)

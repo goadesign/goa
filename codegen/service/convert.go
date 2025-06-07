@@ -132,10 +132,10 @@ func getExternalTypeInfo(external any) (string, string, error) {
 
 // ConvertFile returns the file containing the conversion and creation functions
 // if any.
-func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr) (*codegen.File, error) {
+func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr, services *ServicesData) (*codegen.File, error) {
 	// Filter conversion and creation functions that are relevant for this
 	// service
-	svc := Services.Get(service.Name)
+	svc := services.Get(service.Name)
 	var conversions, creations []*expr.TypeMap
 	for _, c := range root.Conversions {
 		for _, m := range service.Methods {

@@ -61,8 +61,8 @@ func TestExampleServerFiles(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			Servers = make(ServersData)
 			root := codegen.RunDSL(t, c.DSL)
-			service.Services = service.ServicesData{Services: make(map[string]*service.Data), Root: root}
-			fs := ServerFiles("", root)
+			services := service.NewServicesData(root)
+			fs := ServerFiles("", root, services)
 			require.Len(t, fs, 1)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer

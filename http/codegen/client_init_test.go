@@ -24,7 +24,8 @@ func TestClientInit(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
-			fs := ClientFiles("", root)
+			services := CreateHTTPServices(root)
+			fs := ClientFiles("", services)
 			require.Len(t, fs, c.FileCount)
 			sections := fs[0].SectionTemplates
 			require.Greater(t, len(sections), c.SectionNum)

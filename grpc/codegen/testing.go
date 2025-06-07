@@ -14,9 +14,12 @@ import (
 func RunGRPCDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	// reset all roots and codegen data structures
 	root := expr.RunDSL(t, dsl)
-	service.Services = service.ServicesData{Services: make(map[string]*service.Data), Root: root}
-	GRPCServices = ServicesData{Services: make(map[string]*ServiceData), Root: root}
 	return root
+}
+
+// CreateGRPCServices creates a new ServicesData instance for testing.
+func CreateGRPCServices(root *expr.RootExpr) *ServicesData {
+	return NewServicesData(service.NewServicesData(root))
 }
 
 func sectionCode(t *testing.T, section ...*codegen.SectionTemplate) string {

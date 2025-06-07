@@ -37,7 +37,8 @@ func TestPaths(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
 			require.Len(t, root.API.HTTP.Services, 1)
-			fs := serverPath(root.API.HTTP.Services[0])
+			services := CreateHTTPServices(root)
+			fs := serverPath(root.API.HTTP.Services[0], services)
 			sections := fs.SectionTemplates
 			code := codegen.SectionCode(t, sections[1])
 			assert.Equal(t, c.Code, code)
@@ -63,7 +64,8 @@ func TestPathTrailingShash(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
 			require.Len(t, root.API.HTTP.Services, 1)
-			fs := serverPath(root.API.HTTP.Services[0])
+			services := CreateHTTPServices(root)
+			fs := serverPath(root.API.HTTP.Services[0], services)
 			sections := fs.SectionTemplates
 			code := codegen.SectionCode(t, sections[1])
 			assert.Equal(t, c.Code, code)

@@ -105,11 +105,12 @@ func TestStreaming(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
-			serverfs := ServerFiles("", root)
+			services := CreateGRPCServices(root)
+			serverfs := ServerFiles("", services)
 			if len(serverfs) < 2 {
 				t.Fatalf("got %d server files, expected 2", len(serverfs))
 			}
-			clientfs := ClientFiles("", root)
+			clientfs := ClientFiles("", services)
 			if len(clientfs) < 2 {
 				t.Fatalf("got %d client files, expected 2", len(clientfs))
 			}

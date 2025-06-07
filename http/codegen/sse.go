@@ -105,8 +105,8 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 
 // sseServerFile returns the file implementing the SSE server
 // streaming implementation if any.
-func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	data := HTTPServices.Get(svc.Name())
+func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+	data := services.Get(svc.Name())
 	if data == nil {
 		return nil
 	}

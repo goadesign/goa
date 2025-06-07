@@ -16,8 +16,8 @@ type viewedType struct {
 
 // ViewsFile returns the views file for the given service which contains
 // logic to render result types using the defined views.
-func ViewsFile(_ string, service *expr.ServiceExpr) *codegen.File {
-	svc := Services.Get(service.Name)
+func ViewsFile(_ string, service *expr.ServiceExpr, services *ServicesData) *codegen.File {
+	svc := services.Get(service.Name)
 	if len(svc.projectedTypes) == 0 {
 		return nil
 	}

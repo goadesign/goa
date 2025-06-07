@@ -11,10 +11,6 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// Services holds the data computed from the design needed to generate the code
-// of the services.
-var Services = ServicesData{Services: make(map[string]*Data)}
-
 var (
 	// initTypeTmpl is the template used to render the code that initializes a
 	// projected type or viewed result type or a result type.
@@ -570,9 +566,17 @@ type (
 	}
 )
 
+// NewServicesData creates a new ServicesData instance for the given root.
+func NewServicesData(root *expr.RootExpr) *ServicesData {
+	return &ServicesData{
+		Services: make(map[string]*Data),
+		Root:     root,
+	}
+}
+
 // Get retrieves the data for the service with the given name computing it if
 // needed. It returns nil if there is no service with the given name.
-func (d ServicesData) Get(name string) *Data {
+func (d *ServicesData) Get(name string) *Data {
 	if data, ok := d.Services[name]; ok {
 		return data
 	}
@@ -699,7 +703,7 @@ func (s SchemesData) DedupeByType() SchemesData {
 
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
-func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
+func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	var (
 		types            []*UserTypeData
 		errTypes         []*UserTypeData
@@ -909,7 +913,7 @@ func (d ServicesData) analyze(service *expr.ServiceExpr) *Data {
 
 // collectInterceptors returns the set of interceptors defined on the given
 // service including any interceptor defined on specific service methods or API.
-func (d ServicesData) collectInterceptors(svc *expr.ServiceExpr, methods []*MethodData, scope *codegen.NameScope, server bool) []*InterceptorData {
+func (d *ServicesData) collectInterceptors(svc *expr.ServiceExpr, methods []*MethodData, scope *codegen.NameScope, server bool) []*InterceptorData {
 	var ints []*expr.InterceptorExpr
 	if server {
 		ints = d.Root.API.ServerInterceptors
@@ -1057,7 +1061,7 @@ func buildErrorInitData(er *expr.ErrorExpr, scope *codegen.NameScope) *ErrorInit
 
 // buildMethodData creates the data needed to render the given endpoint. It
 // records the user types needed by the service definition in userTypes.
-func (d ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
+func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
 	var (
 		vname       string
 		desc        string
@@ -1164,7 +1168,7 @@ func (d ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSco
 }
 
 // initStreamData initializes the streaming payload data structures and methods.
-func (d ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRef string, scope *codegen.NameScope) {
+func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRef string, scope *codegen.NameScope) {
 	if !m.IsStreaming() {
 		return
 	}

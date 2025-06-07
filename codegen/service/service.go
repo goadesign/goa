@@ -13,8 +13,8 @@ import (
 // indexing user type names by custom path as defined by the "struct:pkg:path"
 // metadata. The map is built over each invocation of Files to avoid duplicate
 // type definitions.
-func Files(genpkg string, service *expr.ServiceExpr, userTypePkgs map[string][]string) []*codegen.File {
-	svc := Services.Get(service.Name)
+func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, userTypePkgs map[string][]string) []*codegen.File {
+	svc := services.Get(service.Name)
 	svc.initUserTypeImports(genpkg)
 	svcName := svc.PathName
 	svcPath := filepath.Join(codegen.Gendir, svcName, "service.go")
@@ -189,7 +189,7 @@ func Files(genpkg string, service *expr.ServiceExpr, userTypePkgs map[string][]s
 	files := []*codegen.File{{Path: svcPath, SectionTemplates: sections}}
 
 	// service and client interceptors
-	files = append(files, InterceptorsFiles(genpkg, service)...)
+	files = append(files, InterceptorsFiles(genpkg, service, services)...)
 
 	// user types
 	paths := make([]string, len(typeDefSections))
@@ -233,19 +233,18 @@ func Files(genpkg string, service *expr.ServiceExpr, userTypePkgs map[string][]s
 }
 
 // AddServiceDataMetaTypeImports Adds all imports defined by struct:field:type from the service expr and the service data
-func AddServiceDataMetaTypeImports(header *codegen.SectionTemplate, serviceE *expr.ServiceExpr) {
-	codegen.AddServiceMetaTypeImports(header, serviceE)
-	svc := Services.Get(serviceE.Name)
-	for _, ut := range svc.userTypes {
+func AddServiceDataMetaTypeImports(header *codegen.SectionTemplate, svcExpr *expr.ServiceExpr, svcData *Data) {
+	codegen.AddServiceMetaTypeImports(header, svcExpr)
+	for _, ut := range svcData.userTypes {
 		codegen.AddImport(header, codegen.GetMetaTypeImports(ut.Type.Attribute())...)
 	}
-	for _, et := range svc.errorTypes {
+	for _, et := range svcData.errorTypes {
 		codegen.AddImport(header, codegen.GetMetaTypeImports(et.Type.Attribute())...)
 	}
-	for _, t := range svc.viewedResultTypes {
+	for _, t := range svcData.viewedResultTypes {
 		codegen.AddImport(header, codegen.GetMetaTypeImports(t.Type.Attribute())...)
 	}
-	for _, t := range svc.projectedTypes {
+	for _, t := range svcData.projectedTypes {
 		codegen.AddImport(header, codegen.GetMetaTypeImports(t.Type.Attribute())...)
 	}
 }

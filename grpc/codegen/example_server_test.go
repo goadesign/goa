@@ -51,9 +51,8 @@ func TestExampleServerFiles(t *testing.T) {
 			// reset global variable
 			example.Servers = make(example.ServersData)
 			root := codegen.RunDSL(t, c.DSL)
-			service.Services = service.ServicesData{Services: make(map[string]*service.Data), Root: root}
-			GRPCServices = ServicesData{Root: root, Services: make(map[string]*ServiceData)}
-			fs := ExampleServerFiles("", root)
+			services := NewServicesData(service.NewServicesData(root))
+			fs := ExampleServerFiles("", services)
 			require.Greater(t, len(fs), 0)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer

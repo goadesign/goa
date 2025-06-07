@@ -201,7 +201,10 @@ func TestServerStreaming(t *testing.T) {
 		}},
 	}
 
-	filesFn := func(root *expr.RootExpr) []*codegen.File { return ServerFiles("", root) }
+	filesFn := func(root *expr.RootExpr) []*codegen.File {
+		services := CreateHTTPServices(root)
+		return ServerFiles("", services)
+	}
 	runTests(t, cases, filesFn)
 }
 
@@ -381,7 +384,10 @@ func TestClientStreaming(t *testing.T) {
 			{"client-websocket-recv", &testdata.BidirectionalStreamingUserTypeMapClientStreamRecvCode},
 		}},
 	}
-	filesFn := func(root *expr.RootExpr) []*codegen.File { return ClientFiles("", root) }
+	filesFn := func(root *expr.RootExpr) []*codegen.File {
+		services := CreateHTTPServices(root)
+		return ClientFiles("", services)
+	}
 	runTests(t, cases, filesFn)
 }
 

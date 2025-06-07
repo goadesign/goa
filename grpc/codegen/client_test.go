@@ -32,7 +32,8 @@ func TestClientEndpointInit(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
-			fs := ClientFiles("", root)
+			services := CreateGRPCServices(root)
+			fs := ClientFiles("", services)
 			require.Len(t, fs, 2)
 			sections := fs[0].Section("client-endpoint-init")
 			if len(sections) == 0 {
@@ -63,7 +64,8 @@ func TestRequestEncoder(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
-			fs := ClientFiles("", root)
+			services := CreateGRPCServices(root)
+			fs := ClientFiles("", services)
 			require.Len(t, fs, 2)
 			sections := fs[1].Section("request-encoder")
 			require.NotEmpty(t, sections)
@@ -94,7 +96,8 @@ func TestResponseDecoder(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
-			fs := ClientFiles("", root)
+			services := CreateGRPCServices(root)
+			fs := ClientFiles("", services)
 			require.Len(t, fs, 2)
 			sections := fs[1].Section("response-decoder")
 			require.NotEmpty(t, sections)

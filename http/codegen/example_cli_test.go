@@ -30,9 +30,8 @@ func TestExampleCLIFiles(t *testing.T) {
 			// reset global variable
 			example.Servers = make(example.ServersData)
 			root := codegen.RunDSL(t, c.DSL)
-			service.Services = service.ServicesData{Services: make(map[string]*service.Data), Root: root}
-			HTTPServices = ServicesData{Root: root, Services: make(map[string]*ServiceData)}
-			fs := ExampleCLIFiles("", root)
+			httpServices := NewServicesData(service.NewServicesData(root))
+			fs := ExampleCLIFiles("", httpServices)
 			require.Len(t, fs, 1)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer

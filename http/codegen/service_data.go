@@ -15,10 +15,6 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// HTTPServices holds the data computed from the design needed to generate the
-// transport code of the services.
-var HTTPServices = ServicesData{Services: make(map[string]*ServiceData)}
-
 var (
 	// pathInitTmpl is the template used to render path constructors code.
 	pathInitTmpl = template.Must(
@@ -31,7 +27,8 @@ var (
 		template.New("request-init").
 			Funcs(template.FuncMap{
 				"goTypeRef": func(dt expr.DataType, svc string) string {
-					return service.Services.Get(svc).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+					// This will be overridden at execution time
+					return codegen.Goify(dt.Name(), true)
 				},
 				"isAliased": func(dt expr.DataType) bool {
 					_, ok := dt.(expr.UserType)
@@ -46,8 +43,8 @@ var (
 type (
 	// ServicesData encapsulates the data computed from the design.
 	ServicesData struct {
-		Root     *expr.RootExpr
-		Services map[string]*ServiceData
+		*service.ServicesData
+		HTTPServices map[string]*ServiceData
 	}
 
 	// ServiceData contains the data used to render the code related to a
@@ -570,19 +567,27 @@ type (
 	}
 )
 
+// NewServicesData creates a new ServicesData instance for the given service data.
+func NewServicesData(services *service.ServicesData) *ServicesData {
+	return &ServicesData{
+		ServicesData:  services,
+		HTTPServices: make(map[string]*ServiceData),
+	}
+}
+
 // Get retrieves the transport data for the service with the given name
 // computing it if needed. It returns nil if there is no service with the given
 // name.
-func (d ServicesData) Get(name string) *ServiceData {
-	if data, ok := d.Services[name]; ok {
+func (d *ServicesData) Get(name string) *ServiceData {
+	if data, ok := d.HTTPServices[name]; ok {
 		return data
 	}
-	service := d.Root.API.HTTP.Service(name)
-	if service == nil {
+	httpService := d.Root.API.HTTP.Service(name)
+	if httpService == nil {
 		return nil
 	}
-	d.Services[name] = d.analyze(service)
-	return d.Services[name]
+	d.HTTPServices[name] = d.analyze(httpService)
+	return d.HTTPServices[name]
 }
 
 // Endpoint returns the service method transport data for the endpoint with the
@@ -598,8 +603,8 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 
 // analyze creates the data necessary to render the code of the given service.
 // It records the user types needed by the service definition in userTypes.
-func (sds ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
-	svc := service.Services.Get(httpSvc.ServiceExpr.Name)
+func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
+	svc := sds.ServicesData.Get(httpSvc.ServiceExpr.Name)
 	scope := codegen.NewNameScope()
 	scope.Unique("c") // 'c' is reserved as the client's receiver name.
 	scope.Unique("v") // 'v' is reserved as the request builder payload argument name.
@@ -808,7 +813,21 @@ func (sds ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			data["RequestStruct"] = pkg + "." + method.RequestStruct
 		}
 		var buf bytes.Buffer
-		if err := requestInitTmpl.Execute(&buf, data); err != nil {
+		// Create a copy of the template with the proper goTypeRef function
+		tmpl, err := requestInitTmpl.Clone()
+		if err != nil {
+			panic(err) // bug
+		}
+		tmpl.Funcs(template.FuncMap{
+			"goTypeRef": func(dt expr.DataType, svc string) string {
+				if svcData := sds.ServicesData.Get(svc); svcData != nil {
+					return svcData.Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+				}
+				// Fallback if service data not found
+				return codegen.Goify(dt.Name(), true)
+			},
+		})
+		if err := tmpl.Execute(&buf, data); err != nil {
 			panic(err) // bug
 		}
 		clientArgs := []*InitArgData{{Ref: "v", AttributeData: &AttributeData{Name: "payload", VarName: "v", TypeRef: "any"}}}
@@ -985,7 +1004,7 @@ func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[string]struct{}) *e
 // buildPayloadData returns the data structure used to describe the endpoint
 // payload including the HTTP request details. It also returns the user types
 // used by the request body type recursively if any.
-func (sds ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
+func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
 	e.Body = makeHTTPType(e.Body)
 	var (
 		payload    = e.MethodExpr.Payload
@@ -1415,7 +1434,7 @@ func (sds ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 }
 
 // buildResultData builds the result data for the given service endpoint.
-func (sds ServicesData) buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
+func (sds *ServicesData) buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceData) *ResultData {
 	var (
 		svc    = sd.Service
 		ep     = svc.Method(e.MethodExpr.Name)
@@ -1468,7 +1487,7 @@ func (sds ServicesData) buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceDat
 // inferred from the method's result expression if not specified explicitly.
 //
 // viewed parameter indicates if the method result uses views.
-func (sds ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed bool, sd *ServiceData) []*ResponseData {
+func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.AttributeExpr, viewed bool, sd *ServiceData) []*ResponseData {
 	var (
 		responses []*ResponseData
 
@@ -1742,7 +1761,7 @@ func (sds ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.At
 // buildErrorsData builds the error data for all the error responses in the
 // endpoint expression. The response headers, cookies and body for each response
 // are inferred from the method's error expression if not specified explicitly.
-func (sds ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupData {
+func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupData {
 	var (
 		svc        = sd.Service
 		ep         = svc.Method(e.MethodExpr.Name)
@@ -1965,7 +1984,7 @@ func (sds ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDat
 // svr is true if the function is generated for server side code.
 //
 // sd is the service data
-func (sds ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExpr, svr bool, sd *ServiceData) *TypeData {
+func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *expr.HTTPEndpointExpr, svr bool, sd *ServiceData) *TypeData {
 	if body.Type == expr.Empty {
 		return nil
 	}
@@ -2092,7 +2111,7 @@ func (sds ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *e
 // svr is true if the function is generated for server side code
 //
 // view is the view name to add as a suffix to the type name.
-func (sds ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location, e *expr.HTTPEndpointExpr, svr bool, view *string, sd *ServiceData) *TypeData {
+func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, loc *codegen.Location, e *expr.HTTPEndpointExpr, svr bool, view *string, sd *ServiceData) *TypeData {
 	if body.Type == expr.Empty {
 		return nil
 	}
@@ -2270,7 +2289,7 @@ func (sds ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, loc
 	}
 }
 
-func (sds ServicesData) extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, scope *codegen.NameScope) []*ParamData {
+func (sds *ServicesData) extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, scope *codegen.NameScope) []*ParamData {
 	var params []*ParamData
 	codegen.WalkMappedAttr(a, func(name, elem string, _ bool, c *expr.AttributeExpr) error { // nolint: errcheck
 		// The StringSlice field of ParamData must be false for aliased primitive types
@@ -2327,7 +2346,7 @@ func (sds ServicesData) extractPathParams(a *expr.MappedAttributeExpr, service *
 	return params
 }
 
-func (sds ServicesData) extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, scope *codegen.NameScope) []*ParamData {
+func (sds *ServicesData) extractQueryParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, scope *codegen.NameScope) []*ParamData {
 	var params []*ParamData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, c *expr.AttributeExpr) error { // nolint: errcheck
 		// The StringSlice field of ParamData must be false for aliased primitive types
@@ -2394,7 +2413,7 @@ func (sds ServicesData) extractQueryParams(a *expr.MappedAttributeExpr, service 
 	return params
 }
 
-func (sds ServicesData) extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope) []*HeaderData {
+func (sds *ServicesData) extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope) []*HeaderData {
 	var headers []*HeaderData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, _ *expr.AttributeExpr) error { // nolint: errcheck
 		var attr *expr.AttributeExpr
@@ -2457,7 +2476,7 @@ func (sds ServicesData) extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr
 	return headers
 }
 
-func (sds ServicesData) extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope) []*CookieData {
+func (sds *ServicesData) extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope) []*CookieData {
 	var cookies []*CookieData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, _ *expr.AttributeExpr) error { // nolint: errcheck
 		var hattr *expr.AttributeExpr
@@ -2568,7 +2587,7 @@ func collectUserTypes(dt expr.DataType, cb func(expr.UserType), seen ...map[stri
 	}
 }
 
-func (sds ServicesData) attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData) *TypeData {
+func (sds *ServicesData) attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData) *TypeData {
 	if ut == expr.Empty {
 		return nil
 	}

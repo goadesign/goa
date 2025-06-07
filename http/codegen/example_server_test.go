@@ -57,10 +57,9 @@ func TestExampleServerFiles(t *testing.T) {
 				// reset global variable
 				example.Servers = make(example.ServersData)
 				root := codegen.RunDSL(t, c.DSL)
-				service.Services = service.ServicesData{Services: make(map[string]*service.Data), Root: root}
-				HTTPServices = ServicesData{Services: make(map[string]*ServiceData), Root: root}
 				require.Len(t, root.Services, 3)
-				fs := ExampleServerFiles("", root)
+				httpServices := NewServicesData(service.NewServicesData(root))
+				fs := ExampleServerFiles("", httpServices)
 				require.Len(t, fs, 2)
 				for i, f := range fs {
 					if i < len(fs)-1 {
@@ -95,9 +94,8 @@ func TestExampleServerFiles(t *testing.T) {
 				// reset global variable
 				example.Servers = make(example.ServersData)
 				root := codegen.RunDSL(t, c.DSL)
-				service.Services = service.ServicesData{Services: make(map[string]*service.Data), Root: root}
-				HTTPServices = ServicesData{Services: make(map[string]*ServiceData), Root: root}
-				fs := ExampleServerFiles("", root)
+				httpServices := NewServicesData(service.NewServicesData(root))
+				fs := ExampleServerFiles("", httpServices)
 				require.Len(t, fs, 1)
 				require.Greater(t, len(fs[0].SectionTemplates), 0)
 				var buf bytes.Buffer

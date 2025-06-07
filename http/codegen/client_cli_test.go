@@ -54,7 +54,8 @@ func TestClientCLIFiles(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
-			fs := ClientCLIFiles("", root)
+			services := CreateHTTPServices(root)
+			fs := ClientCLIFiles("", services)
 			sections := fs[c.FileIndex].SectionTemplates
 			code := codegen.SectionCode(t, sections[c.SectionIndex])
 			assert.Equal(t, c.Code, code)
