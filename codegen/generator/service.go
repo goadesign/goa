@@ -25,8 +25,7 @@ func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 			// Make sure service is first so name scope is
 			// properly initialized.
 			files = append(files, service.Files(genpkg, s, services, userTypePkgs)...)
-			files = append(files, service.EndpointFile(genpkg, s, services))
-			files = append(files, service.ClientFile(genpkg, s, services))
+			files = append(files, service.EndpointFile(genpkg, s, services), service.ClientFile(genpkg, s, services))
 			if f := service.ViewsFile(genpkg, s, services); f != nil {
 				files = append(files, f)
 			}

@@ -74,8 +74,7 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 				Name:   "grpc-handler-init",
 				Source: readTemplate("grpc_handler_init"),
 				Data:   e,
-			})
-			sections = append(sections, &codegen.SectionTemplate{
+			}, &codegen.SectionTemplate{
 				Name:   "server-grpc-interface",
 				Source: readTemplate("server_grpc_interface"),
 				Data:   e,
@@ -183,7 +182,7 @@ func transTmplFuncs(s *expr.GRPCServiceExpr, services *ServicesData) map[string]
 
 // typeConversionData produces the template data suitable for executing the
 // "type_conversion" template.
-func typeConversionData(dt expr.DataType, varName string, target string) map[string]any {
+func typeConversionData(dt expr.DataType, varName, target string) map[string]any {
 	return map[string]any{
 		"Type":    dt,
 		"VarName": varName,

@@ -1,4 +1,3 @@
-
 {{- if or .Args .RequestStruct }}
 	var (
 	{{- range .Args }}
@@ -28,8 +27,8 @@
 		{{- if .Pointer }}
 		if p{{ if $.HasFields }}.{{ .FieldName }}{{ end }} != nil {
 		{{- end }}
-			{{- if (isAliased .FieldType) }}
-			{{ .VarName }} = {{ goTypeRef .Type $.ServiceName }}({{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }})
+			{{- if .IsAliased }}
+			{{ .VarName }} = {{ .ServiceTypeRef }}({{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }})
 			{{- else }}
 			{{ .VarName }} = {{ if .Pointer }}*{{ end }}p{{ if $.HasFields }}.{{ .FieldName }}{{ end }}
 			{{- end }}

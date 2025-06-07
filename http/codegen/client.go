@@ -204,7 +204,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 
 // typeConversionData produces the template data suitable for executing the
 // "header_conversion" template.
-func typeConversionData(dt, ft expr.DataType, varName string, target string) map[string]any {
+func typeConversionData(dt, ft expr.DataType, varName, target string) map[string]any {
 	ut, isut := ft.(expr.UserType)
 	if isut {
 		ft = ut.Attribute().Type

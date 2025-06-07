@@ -26,19 +26,12 @@ var (
 	requestInitTmpl = template.Must(
 		template.New("request-init").
 			Funcs(template.FuncMap{
-				"goTypeRef": func(dt expr.DataType, svc string) string {
-					// This will be overridden at execution time
-					return codegen.Goify(dt.Name(), true)
-				},
-				"isAliased": func(dt expr.DataType) bool {
-					_, ok := dt.(expr.UserType)
-					return ok
-				},
 				"isWebSocketEndpoint": isWebSocketEndpoint,
 			}).
 			Parse(readTemplate("request_init")),
 	)
 )
+
 
 type (
 	// ServicesData encapsulates the data computed from the design.
@@ -449,6 +442,10 @@ type (
 		Validate string
 		// Example is an example attribute value
 		Example any
+		// IsAliased is true if the field type is a user-defined type (alias).
+		IsAliased bool
+		// ServiceTypeRef is the service-aware type reference for cross-service resolution.
+		ServiceTypeRef string
 	}
 
 	// InitArgData represents a single constructor argument.
@@ -570,7 +567,7 @@ type (
 // NewServicesData creates a new ServicesData instance for the given service data.
 func NewServicesData(services *service.ServicesData) *ServicesData {
 	return &ServicesData{
-		ServicesData:  services,
+		ServicesData: services,
 		HTTPServices: make(map[string]*ServiceData),
 	}
 }
@@ -578,16 +575,16 @@ func NewServicesData(services *service.ServicesData) *ServicesData {
 // Get retrieves the transport data for the service with the given name
 // computing it if needed. It returns nil if there is no service with the given
 // name.
-func (d *ServicesData) Get(name string) *ServiceData {
-	if data, ok := d.HTTPServices[name]; ok {
+func (sds *ServicesData) Get(name string) *ServiceData {
+	if data, ok := sds.HTTPServices[name]; ok {
 		return data
 	}
-	httpService := d.Root.API.HTTP.Service(name)
+	httpService := sds.Root.API.HTTP.Service(name)
 	if httpService == nil {
 		return nil
 	}
-	d.HTTPServices[name] = d.analyze(httpService)
-	return d.HTTPServices[name]
+	sds.HTTPServices[name] = sds.analyze(httpService)
+	return sds.HTTPServices[name]
 }
 
 // Endpoint returns the service method transport data for the endpoint with the
@@ -791,6 +788,15 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 				if ca.FieldName != "" {
 					ca.VarName = s.Unique(ca.VarName)
 					ca.Ref = ca.VarName
+					// Populate service-aware type resolution fields
+					_, ca.IsAliased = ca.FieldType.(expr.UserType)
+					if ca.IsAliased {
+						if svcData := sds.ServicesData.Get(svc.Name); svcData != nil {
+							ca.ServiceTypeRef = svcData.Scope.GoTypeRef(&expr.AttributeExpr{Type: ca.FieldType})
+						} else {
+							ca.ServiceTypeRef = codegen.Goify(ca.FieldType.Name(), true)
+						}
+					}
 					args = append(args, ca)
 				}
 			}
@@ -813,21 +819,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			data["RequestStruct"] = pkg + "." + method.RequestStruct
 		}
 		var buf bytes.Buffer
-		// Create a copy of the template with the proper goTypeRef function
-		tmpl, err := requestInitTmpl.Clone()
-		if err != nil {
-			panic(err) // bug
-		}
-		tmpl.Funcs(template.FuncMap{
-			"goTypeRef": func(dt expr.DataType, svc string) string {
-				if svcData := sds.ServicesData.Get(svc); svcData != nil {
-					return svcData.Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
-				}
-				// Fallback if service data not found
-				return codegen.Goify(dt.Name(), true)
-			},
-		})
-		if err := tmpl.Execute(&buf, data); err != nil {
+		if err := requestInitTmpl.Execute(&buf, data); err != nil {
 			panic(err) // bug
 		}
 		clientArgs := []*InitArgData{{Ref: "v", AttributeData: &AttributeData{Name: "payload", VarName: "v", TypeRef: "any"}}}

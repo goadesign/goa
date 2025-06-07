@@ -115,8 +115,7 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 			Name:   "endpoints-init",
 			Source: readTemplate("service_endpoints_init"),
 			Data:   data,
-		})
-		sections = append(sections, &codegen.SectionTemplate{
+		}, &codegen.SectionTemplate{
 			Name:   "endpoints-use",
 			Source: readTemplate("service_endpoints_use"),
 			Data:   data,
