@@ -203,13 +203,12 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		}
 	case *expr.Map:
 		s.Type = openapi.Object
-		// OpenAPI lets you define dictionaries where the keys are strings.
-		// See https://swagger.io/docs/specification/data-models/dictionaries/.
-		if t.KeyType.Type == expr.String && t.ElemType.Type != expr.Any {
-			// Use free-form objects when elements are of type "Any"
-			s.AdditionalProperties = sf.schemafy(t.ElemType)
-		} else if t.KeyType.Type != expr.Any {
+		if t.ElemType.Type == expr.Any {
+			// Use free-form objects when elements are of type "Any", otherwise, use full schema
+			// See https://swagger.io/docs/specification/data-models/dictionaries/.
 			s.AdditionalProperties = true
+		} else {
+			s.AdditionalProperties = sf.schemafy(t.ElemType)
 		}
 	case *expr.Union:
 		for _, val := range t.Values {
