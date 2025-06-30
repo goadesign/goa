@@ -321,6 +321,40 @@ var BidirectionalStreamingRPCWithErrorsDSL = func() {
 	})
 }
 
+var ServerStreamingWithCustomErrorsDSL = func() {
+	// Custom error types for testing error handling in streaming
+	var CustomError = Type("CustomError", func() {
+		ErrorName("name", String, "error name")
+		Attribute("message", String, "error message")
+		Attribute("code", Int, "error code")
+		Required("name", "message", "code")
+	})
+
+	var ValidationError = Type("ValidationError", func() {
+		ErrorName("name", String, "error name")
+		Attribute("field", String, "field that failed validation")
+		Attribute("reason", String, "validation failure reason")
+		Required("name", "field", "reason")
+	})
+
+	Service("StreamingErrorService", func() {
+		Method("ServerStream", func() {
+			Payload(String)
+			StreamingResult(String)
+			Error("custom_error", CustomError, "Custom application error")
+			Error("validation_error", ValidationError, "Validation error")
+			Error("internal_error", func() {
+				Description("Internal server error")
+			})
+			GRPC(func() {
+				Response("custom_error", CodeInvalidArgument)
+				Response("validation_error", CodeFailedPrecondition)
+				Response("internal_error", CodeInternal)
+			})
+		})
+	})
+}
+
 var BidirectionalStreamingRPCSameTypeDSL = func() {
 	var T = Type("UserType", func() {
 		Field(1, "a", Int)
