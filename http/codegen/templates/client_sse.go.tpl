@@ -29,7 +29,7 @@ func (s *{{ .Method.VarName }}StreamImpl) RecvWithContext(ctx context.Context) (
 	var byts []byte
 	byts, err = s.readEvent(ctx)
 	if err != nil {
-		if errors.Is(err, io.EOF) || error.Is(err, context.Canceled) || errors.If(err, context.DeadlineExceeded) {
+		if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 			// Clean up on EOF or context cancellation
 			s.Close()
 			if errors.Is(err, io.EOF) {
