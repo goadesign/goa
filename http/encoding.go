@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -175,9 +176,44 @@ func RequestEncoder(r *http.Request) Encoder {
 	if h := r.Header.Get(k); h == "" {
 		r.Header.Set(k, "application/json")
 	}
-	var buf bytes.Buffer
-	r.Body = io.NopCloser(&buf)
-	return json.NewEncoder(&buf)
+	enc := new(jsonEncoder)
+	r.Body = enc
+	r.GetBody = enc.GetBody
+	return enc
+}
+
+type jsonEncoder struct {
+	b []byte
+	r bytes.Reader
+}
+
+var errEncodeNotCalled = errors.New("RequestEncoder: Encode must be called prior to reading")
+
+func (je *jsonEncoder) Read(b []byte) (n int, err error) {
+	if len(je.b) == 0 {
+		return 0, errEncodeNotCalled
+	}
+	return je.r.Read(b)
+
+}
+
+func (je *jsonEncoder) Close() (err error) { return nil }
+
+func (je *jsonEncoder) Encode(v any) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+	je.b = b
+	je.r = *bytes.NewReader(b)
+	return nil
+}
+
+func (je *jsonEncoder) GetBody() (io.ReadCloser, error) {
+	if len(je.b) == 0 {
+		return nil, errEncodeNotCalled
+	}
+	return io.NopCloser(bytes.NewReader(je.b)), nil
 }
 
 // ResponseDecoder returns a HTTP response decoder.
