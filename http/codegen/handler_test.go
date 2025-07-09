@@ -9,7 +9,6 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/codegentest"
-	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -31,8 +30,9 @@ func TestHandlerInit(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			fs := ServerFiles(genpkg, expr.Root)
+			root := RunHTTPDSL(t, c.DSL)
+			services := CreateHTTPServices(root)
+			fs := ServerFiles(genpkg, services)
 			sections := codegentest.Sections(fs, filepath.Join("", "server.go"), "server-handler-init")
 			require.Greater(t, len(sections), 0)
 			code := codegen.SectionCode(t, sections[0])

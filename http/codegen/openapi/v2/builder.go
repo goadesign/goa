@@ -234,7 +234,7 @@ func hasAbsoluteRoutes(root *expr.RootExpr) bool {
 	return hasAbsoluteRoutes
 }
 
-func summaryFromExpr(name string, e *expr.HTTPEndpointExpr) string {
+func summaryFromExpr(name string, e *expr.HTTPEndpointExpr, meta expr.MetaExpr) string {
 	for n, mdata := range e.Meta {
 		if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
 			return mdata[0]
@@ -250,7 +250,7 @@ func summaryFromExpr(name string, e *expr.HTTPEndpointExpr) string {
 			return mdata[0]
 		}
 	}
-	for n, mdata := range expr.Root.API.Meta {
+	for n, mdata := range meta {
 		if (n == "openapi:summary" || n == "swagger:summary") && len(mdata) > 0 {
 			return mdata[0]
 		}
@@ -625,7 +625,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		operation := &Operation{
 			Tags:         tagNames,
 			Description:  description,
-			Summary:      summaryFromExpr(endpoint.Name()+" "+endpoint.Service.Name(), endpoint),
+			Summary:      summaryFromExpr(endpoint.Name()+" "+endpoint.Service.Name(), endpoint, root.API.Meta),
 			ExternalDocs: openapi.DocsFromExpr(endpoint.MethodExpr.Docs, endpoint.MethodExpr.Meta),
 			OperationID:  operationID,
 			Parameters:   params,
@@ -724,16 +724,16 @@ func initExclusiveMinimumValidation(def any, exclMin *float64) {
 	}
 }
 
-func initMinimumValidation(def any, min *float64) {
+func initMinimumValidation(def any, minimum *float64) {
 	switch actual := def.(type) {
 	case *Parameter:
-		actual.Minimum = min
+		actual.Minimum = minimum
 		actual.ExclusiveMinimum = false
 	case *Header:
-		actual.Minimum = min
+		actual.Minimum = minimum
 		actual.ExclusiveMinimum = false
 	case *Items:
-		actual.Minimum = min
+		actual.Minimum = minimum
 		actual.ExclusiveMinimum = false
 	}
 }
@@ -752,47 +752,47 @@ func initExclusiveMaximumValidation(def any, exclMax *float64) {
 	}
 }
 
-func initMaximumValidation(def any, max *float64) {
+func initMaximumValidation(def any, maximum *float64) {
 	switch actual := def.(type) {
 	case *Parameter:
-		actual.Maximum = max
+		actual.Maximum = maximum
 		actual.ExclusiveMaximum = false
 	case *Header:
-		actual.Maximum = max
+		actual.Maximum = maximum
 		actual.ExclusiveMaximum = false
 	case *Items:
-		actual.Maximum = max
+		actual.Maximum = maximum
 		actual.ExclusiveMaximum = false
 	}
 }
 
-func initMinLengthValidation(def any, isArray bool, min *int) {
+func initMinLengthValidation(def any, isArray bool, minLength *int) {
 	switch actual := def.(type) {
 	case *Parameter:
 		if isArray {
-			actual.MinItems = min
+			actual.MinItems = minLength
 		} else {
-			actual.MinLength = min
+			actual.MinLength = minLength
 		}
 	case *Header:
-		actual.MinLength = min
+		actual.MinLength = minLength
 	case *Items:
-		actual.MinLength = min
+		actual.MinLength = minLength
 	}
 }
 
-func initMaxLengthValidation(def any, isArray bool, max *int) {
+func initMaxLengthValidation(def any, isArray bool, maxLength *int) {
 	switch actual := def.(type) {
 	case *Parameter:
 		if isArray {
-			actual.MaxItems = max
+			actual.MaxItems = maxLength
 		} else {
-			actual.MaxLength = max
+			actual.MaxLength = maxLength
 		}
 	case *Header:
-		actual.MaxLength = max
+		actual.MaxLength = maxLength
 	case *Items:
-		actual.MaxLength = max
+		actual.MaxLength = maxLength
 	}
 }
 

@@ -11,7 +11,6 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
-	"goa.design/goa/v3/expr"
 )
 
 func TestClient(t *testing.T) {
@@ -36,9 +35,10 @@ func TestClient(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			codegen.RunDSL(t, c.DSL)
-			require.Len(t, expr.Root.Services, 1)
-			fs := ClientFile("test/gen", expr.Root.Services[0])
+			root := codegen.RunDSL(t, c.DSL)
+			services := NewServicesData(root)
+			require.Len(t, root.Services, 1)
+			fs := ClientFile("test/gen", root.Services[0], services)
 			require.NotNil(t, fs)
 			buf := new(bytes.Buffer)
 			for _, s := range fs.SectionTemplates[1:] {

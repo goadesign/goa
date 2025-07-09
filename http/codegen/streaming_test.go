@@ -201,7 +201,10 @@ func TestServerStreaming(t *testing.T) {
 		}},
 	}
 
-	filesFn := func() []*codegen.File { return ServerFiles("", expr.Root) }
+	filesFn := func(root *expr.RootExpr) []*codegen.File {
+		services := CreateHTTPServices(root)
+		return ServerFiles("", services)
+	}
 	runTests(t, cases, filesFn)
 }
 
@@ -381,15 +384,18 @@ func TestClientStreaming(t *testing.T) {
 			{"client-websocket-recv", &testdata.BidirectionalStreamingUserTypeMapClientStreamRecvCode},
 		}},
 	}
-	filesFn := func() []*codegen.File { return ClientFiles("", expr.Root) }
+	filesFn := func(root *expr.RootExpr) []*codegen.File {
+		services := CreateHTTPServices(root)
+		return ClientFiles("", services)
+	}
 	runTests(t, cases, filesFn)
 }
 
-func runTests(t *testing.T, cases []*testCase, filesFn func() []*codegen.File) {
+func runTests(t *testing.T, cases []*testCase, filesFn func(root *expr.RootExpr) []*codegen.File) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			fs := filesFn()
+			root := RunHTTPDSL(t, c.DSL)
+			fs := filesFn(root)
 			require.Greater(t, len(fs), 1)
 			for _, s := range c.Sections {
 				var code string

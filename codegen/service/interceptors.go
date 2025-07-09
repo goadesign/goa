@@ -8,9 +8,9 @@ import (
 )
 
 // InterceptorsFiles returns the interceptors files for the given service.
-func InterceptorsFiles(_ string, service *expr.ServiceExpr) []*codegen.File {
+func InterceptorsFiles(_ string, service *expr.ServiceExpr, services *ServicesData) []*codegen.File {
 	var files []*codegen.File
-	svc := Services.Get(service.Name)
+	svc := services.Get(service.Name)
 
 	// Generate service-specific interceptor files
 	if len(svc.ServerInterceptors) > 0 {

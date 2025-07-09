@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -23,8 +22,9 @@ func TestTransformHelperServer(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			f := serverEncodeDecodeFile("", expr.Root.API.HTTP.Services[0])
+			root := RunHTTPDSL(t, c.DSL)
+			services := CreateHTTPServices(root)
+			f := serverEncodeDecodeFile("", root.API.HTTP.Services[0], services)
 			sections := f.SectionTemplates
 			require.Greater(t, len(sections), c.Offset)
 			code := codegen.SectionCode(t, sections[len(sections)-c.Offset])
@@ -47,8 +47,9 @@ func TestTransformHelperCLI(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			f := clientEncodeDecodeFile("", expr.Root.API.HTTP.Services[0])
+			root := RunHTTPDSL(t, c.DSL)
+			services := CreateHTTPServices(root)
+			f := clientEncodeDecodeFile("", root.API.HTTP.Services[0], services)
 			sections := f.SectionTemplates
 			require.Greater(t, len(sections), c.Offset)
 			code := codegen.SectionCode(t, sections[len(sections)-c.Offset])

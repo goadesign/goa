@@ -35,12 +35,12 @@ type (
 
 // ExampleServiceFiles returns a basic service implementation for every
 // service expression.
-func ExampleServiceFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+func ExampleServiceFiles(genpkg string, root *expr.RootExpr, services *ServicesData) []*codegen.File {
 
 	// determine the unique API package name different from the service names
 	scope := codegen.NewNameScope()
 	for _, svc := range root.Services {
-		s := Services.Get(svc.Name)
+		s := services.Get(svc.Name)
 		if s == nil {
 			panic("unknown service, " + svc.Name) // bug
 		}
@@ -50,7 +50,7 @@ func ExampleServiceFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 	var fw []*codegen.File
 	for _, svc := range root.Services {
-		if f := exampleServiceFile(genpkg, root, svc, apipkg); f != nil {
+		if f := exampleServiceFile(genpkg, root, svc, services, apipkg); f != nil {
 			fw = append(fw, f)
 		}
 	}
@@ -58,8 +58,8 @@ func ExampleServiceFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 }
 
 // exampleServiceFile returns a basic implementation of the given service.
-func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, apipkg string) *codegen.File {
-	data := Services.Get(svc.Name)
+func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, services *ServicesData, apipkg string) *codegen.File {
+	data := services.Get(svc.Name)
 	svcName := data.PathName
 	fpath := svcName + ".go"
 	if _, err := os.Stat(fpath); !os.IsNotExist(err) {

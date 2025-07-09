@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -25,8 +24,9 @@ func TestBodyTypeDecl(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			fs := clientType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
+			root := RunHTTPDSL(t, c.DSL)
+			services := CreateHTTPServices(root)
+			fs := clientType(genpkg, root.API.HTTP.Services[0], make(map[string]struct{}), services)
 			section := fs.SectionTemplates[1]
 			code := codegen.SectionCode(t, section)
 			assert.Equal(t, c.Code, code)
@@ -52,11 +52,13 @@ func TestBodyTypeInit(t *testing.T) {
 		{"result-explicit-body-user-type", testdata.ExplicitBodyUserResultMultipleViewsDSL, 3, ExplicitBodyUserResultMultipleViewsInitCode},
 		{"result-explicit-body-object", testdata.ExplicitBodyUserResultObjectDSL, 3, ExplicitBodyObjectInitCode},
 		{"result-explicit-body-object-views", testdata.ExplicitBodyUserResultObjectMultipleViewDSL, 3, ExplicitBodyObjectViewsInitCode},
+		{"body-streaming-aliased-array", testdata.StreamingAliasedArrayDSL, 4, StreamingAliasedArrayBodyInitCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			fs := clientType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
+			root := RunHTTPDSL(t, c.DSL)
+			services := CreateHTTPServices(root)
+			fs := clientType(genpkg, root.API.HTTP.Services[0], make(map[string]struct{}), services)
 			section := fs.SectionTemplates[c.SectionIndex]
 			code := codegen.SectionCode(t, section)
 			assert.Equal(t, c.Code, code)
@@ -87,8 +89,9 @@ func TestClientTypes(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			fs := clientType(genpkg, expr.Root.API.HTTP.Services[0], make(map[string]struct{}))
+			root := RunHTTPDSL(t, c.DSL)
+			services := CreateHTTPServices(root)
+			fs := clientType(genpkg, root.API.HTTP.Services[0], make(map[string]struct{}), services)
 			var buf bytes.Buffer
 			for _, s := range fs.SectionTemplates[1:] {
 				require.NoError(t, s.Write(&buf))
@@ -110,8 +113,9 @@ func TestClientTypeFiles(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			fw := ClientTypeFiles(genpkg, expr.Root)
+			root := RunHTTPDSL(t, c.DSL)
+			services := CreateHTTPServices(root)
+			fw := ClientTypeFiles(genpkg, services)
 			for i, fs := range fw {
 				var buf bytes.Buffer
 				for _, s := range fs.SectionTemplates[1:] {
@@ -279,6 +283,21 @@ func NewMethodExplicitBodyUserResultObjectMultipleViewResulttypemultipleviewsOK(
 	return v
 }
 `
+
+const StreamingAliasedArrayBodyInitCode = `// NewStreamStreamingBody builds the HTTP request body from the payload of the
+// "Stream" endpoint of the "StreamingAliasedArray" service.
+func NewStreamStreamingBody(p *streamingaliasedarray.PayloadType) *StreamStreamingBody {
+	body := &StreamStreamingBody{}
+	if p.Values != nil {
+		body.Values = make([]CustomIntStreamingBody, len(p.Values))
+		for i, val := range p.Values {
+			body.Values[i] = CustomIntStreamingBody(val)
+		}
+	}
+	return body
+}
+`
+
 const MixedPayloadInBodyClientTypesFile = `// MethodARequestBody is the type of the "ServiceMixedPayloadInBody" service
 // "MethodA" endpoint HTTP request body.
 type MethodARequestBody struct {

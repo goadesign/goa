@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -92,8 +91,9 @@ func TestEncode(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			fs := ServerFiles("", expr.Root)
+			root := RunHTTPDSL(t, c.DSL)
+			services := CreateHTTPServices(root)
+			fs := ServerFiles("", services)
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 1)
@@ -125,8 +125,9 @@ func TestEncodeMarshallingAndUnmarshalling(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunHTTPDSL(t, c.DSL)
-			fs := ServerFiles("", expr.Root)
+			root := RunHTTPDSL(t, c.DSL)
+			services := CreateHTTPServices(root)
+			fs := ServerFiles("", services)
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			totalSectionsExpected := c.SectionsOffset + len(c.Code)

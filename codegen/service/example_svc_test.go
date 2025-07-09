@@ -9,7 +9,6 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
-	"goa.design/goa/v3/expr"
 )
 
 func TestExampleServiceFiles(t *testing.T) {
@@ -32,9 +31,10 @@ func TestExampleServiceFiles(t *testing.T) {
 		}
 		for _, c := range cases {
 			t.Run(c.Name, func(t *testing.T) {
-				codegen.RunDSL(t, c.DSL)
-				require.Len(t, expr.Root.Services, 3)
-				fs := ExampleServiceFiles("", expr.Root)
+				root := codegen.RunDSL(t, c.DSL)
+				services := NewServicesData(root)
+				require.Len(t, root.Services, 3)
+				fs := ExampleServiceFiles("", root, services)
 				require.Len(t, fs, 3)
 				for _, f := range fs {
 					require.Greater(t, len(f.SectionTemplates), 0)

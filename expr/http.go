@@ -29,6 +29,9 @@ type (
 		Services []*HTTPServiceExpr
 		// Errors lists the error HTTP responses.
 		Errors []*HTTPErrorExpr
+		// SSE contains the Server-Sent Events configuration for all
+		// streaming endpoints in the API.
+		SSE *HTTPSSEExpr
 	}
 )
 

@@ -51,9 +51,10 @@ func TestInterceptors(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := runDSL(t, c.DSL)
+			services := NewServicesData(root)
 			require.Len(t, root.Services, 1)
 
-			fs := InterceptorsFiles("goa.design/goa/example", root.Services[0])
+			fs := InterceptorsFiles("goa.design/goa/example", root.Services[0], services)
 
 			require.Len(t, fs, c.expectedFileCount)
 			for _, f := range fs {

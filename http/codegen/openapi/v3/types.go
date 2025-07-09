@@ -61,18 +61,18 @@ func newSchemafier(rand *expr.ExampleGenerator) *schemafier {
 // value indexed by type name.
 //
 // NOTE: entries are nil when the corresponding type is Empty.
-func buildBodyTypes(api *expr.APIExpr) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
+func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*expr.ResultTypeExpr) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
 	bodies := make(map[string]map[string]*EndpointBodies)
 	sf := newSchemafier(api.ExampleGenerator)
 
 	// Generates the types referenced from the endpoints.
-	for _, t := range expr.Root.Types {
+	for _, t := range types {
 		if !mustGenerateType(t.Attribute().Meta) {
 			continue
 		}
 		sf.schemafy(&expr.AttributeExpr{Type: t})
 	}
-	for _, t := range expr.Root.ResultTypes {
+	for _, t := range resultTypes {
 		if !mustGenerateType(t.Attribute().Meta) {
 			continue
 		}
@@ -203,13 +203,12 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		}
 	case *expr.Map:
 		s.Type = openapi.Object
-		// OpenAPI lets you define dictionaries where the keys are strings.
-		// See https://swagger.io/docs/specification/data-models/dictionaries/.
-		if t.KeyType.Type == expr.String && t.ElemType.Type != expr.Any {
-			// Use free-form objects when elements are of type "Any"
-			s.AdditionalProperties = sf.schemafy(t.ElemType)
-		} else if t.KeyType.Type != expr.Any {
+		if t.ElemType.Type == expr.Any {
+			// Use free-form objects when elements are of type "Any", otherwise, use full schema
+			// See https://swagger.io/docs/specification/data-models/dictionaries/.
 			s.AdditionalProperties = true
+		} else {
+			s.AdditionalProperties = sf.schemafy(t.ElemType)
 		}
 	case *expr.Union:
 		for _, val := range t.Values {
