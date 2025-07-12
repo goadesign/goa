@@ -18,7 +18,7 @@ var (
 	initTypeCodeTmpl = template.Must(
 		template.New("initTypeCode").
 			Funcs(template.FuncMap{"goify": codegen.Goify}).
-			Parse(readTemplate("return_type_init")),
+			Parse(serviceTemplates.Read(returnTypeInitT)),
 	)
 
 	// validateTypeCodeTmpl is the template used to render the code to
@@ -26,7 +26,7 @@ var (
 	validateTypeCodeTmpl = template.Must(
 		template.New("validateType").
 			Funcs(template.FuncMap{"goify": codegen.Goify}).
-			Parse(readTemplate("type_validate")),
+			Parse(serviceTemplates.Read(typeValidateT)),
 	)
 )
 
@@ -907,8 +907,8 @@ func (d *ServicesData) collectInterceptors(svc *expr.ServiceExpr, methods []*Met
 
 // typeContext returns a contextual attribute for service types. Service types
 // are Go types and uses non-pointers to hold attributes having default values.
-func typeContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
-	return codegen.NewAttributeContext(false, false, true, pkg, scope)
+func typeContext(scope *codegen.NameScope) *codegen.AttributeContext {
+	return codegen.NewAttributeContext(false, false, true, "", scope)
 }
 
 // projectedTypeContext returns a contextual attribute for a projected type.
@@ -1818,7 +1818,7 @@ func buildTypeInits(projected, att *expr.AttributeExpr, viewspkg string, scope, 
 		}
 
 		srcCtx := projectedTypeContext(viewspkg, true, viewScope)
-		tgtCtx := typeContext("", scope)
+		tgtCtx := typeContext(scope)
 		resvar := scope.GoTypeName(att)
 		name := "new" + resvar
 		if view.Name != expr.DefaultView {
@@ -1881,7 +1881,7 @@ func buildProjections(projected, att *expr.AttributeExpr, viewspkg string, scope
 			},
 		}
 
-		srcCtx := typeContext("", scope)
+		srcCtx := typeContext(scope)
 		tgtCtx := projectedTypeContext(viewspkg, true, viewScope)
 		tname := scope.GoTypeName(projected)
 		name := "new" + tname

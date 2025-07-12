@@ -33,14 +33,14 @@ func ViewsFile(_ string, service *expr.ServiceExpr, services *ServicesData) *cod
 	for _, t := range svc.viewedResultTypes {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "viewed-result-type",
-			Source: readTemplate("user_type"),
+			Source: serviceTemplates.Read(userTypeT),
 			Data:   t.UserTypeData,
 		})
 	}
 	for _, t := range svc.projectedTypes {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "projected-type",
-			Source: readTemplate("user_type"),
+			Source: serviceTemplates.Read(userTypeT),
 			Data:   t.UserTypeData,
 		})
 	}
@@ -49,7 +49,7 @@ func ViewsFile(_ string, service *expr.ServiceExpr, services *ServicesData) *cod
 	for _, m := range svc.viewedUnionMethods {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "viewed-union-value-method",
-			Source: readTemplate("union_value_method"),
+			Source: serviceTemplates.Read(unionValueMethodT),
 			Data:   m,
 		})
 	}
@@ -79,7 +79,7 @@ func ViewsFile(_ string, service *expr.ServiceExpr, services *ServicesData) *cod
 	}
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:   "viewed-type-map",
-		Source: readTemplate("viewed_type_map"),
+		Source: serviceTemplates.Read(viewedTypeMapT),
 		Data: map[string]any{
 			"ViewedTypes": rtdata,
 		},
@@ -89,7 +89,7 @@ func ViewsFile(_ string, service *expr.ServiceExpr, services *ServicesData) *cod
 	for _, t := range svc.viewedResultTypes {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "validate-viewed-result-type",
-			Source: readTemplate("validate"),
+			Source: serviceTemplates.Read(validateT),
 			Data:   t.Validate,
 		})
 	}
@@ -97,7 +97,7 @@ func ViewsFile(_ string, service *expr.ServiceExpr, services *ServicesData) *cod
 		for _, v := range t.Validations {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "validate-projected-type",
-				Source: readTemplate("validate"),
+				Source: serviceTemplates.Read(validateT),
 				Data:   v,
 			})
 		}

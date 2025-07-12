@@ -78,7 +78,7 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 			}
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-type-init",
-				Source: readTemplate("type_init"),
+				Source: grpcTemplates.Read(grpcTypeInitT),
 				Data:   init,
 				FuncMap: map[string]any{
 					"isAlias": expr.IsAlias,
@@ -98,14 +98,14 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 			}
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-validate",
-				Source: readTemplate("validate"),
+				Source: grpcTemplates.Read(grpcValidateT),
 				Data:   data,
 			})
 		}
 		for _, h := range sd.transformHelpers {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-transform-helper",
-				Source: readTemplate("transform_helper"),
+				Source: grpcTemplates.Read(grpcTransformHelperT),
 				Data:   h,
 			})
 		}

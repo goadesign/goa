@@ -95,19 +95,19 @@ func exampleServer(genpkg string, services *ServicesData, svr *expr.ServerExpr) 
 		codegen.Header("", "main", specs),
 		{
 			Name:   "server-grpc-start",
-			Source: readTemplate("server_grpc_start"),
+			Source: grpcTemplates.Read(grpcServerGRPCStartT),
 			Data: map[string]any{
 				"Services": svcdata,
 			},
 		}, {
 			Name:   "server-grpc-init",
-			Source: readTemplate("server_grpc_init"),
+			Source: grpcTemplates.Read(grpcServerGRPCInitT),
 			Data: map[string]any{
 				"Services": svcdata,
 			},
 		}, {
 			Name:   "server-grpc-register",
-			Source: readTemplate("server_grpc_register"),
+			Source: grpcTemplates.Read(grpcServerGRPCRegisterT),
 			Data: map[string]any{
 				"Services": svcdata,
 			},
@@ -117,7 +117,7 @@ func exampleServer(genpkg string, services *ServicesData, svr *expr.ServerExpr) 
 			},
 		}, {
 			Name:   "server-grpc-end",
-			Source: readTemplate("server_grpc_end"),
+			Source: grpcTemplates.Read(grpcServerGRPCEndT),
 			Data: map[string]any{
 				"Services": svcdata,
 			},

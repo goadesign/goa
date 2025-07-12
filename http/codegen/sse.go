@@ -70,14 +70,20 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 	sendWithContextDesc := fmt.Sprintf("%s streams instances of %q to the %q endpoint SSE connection with context.", md.ServerStream.SendWithContextName, ed.Result.Name, md.Name)
 	recvDesc := fmt.Sprintf("%s connects to the %q SSE endpoint and streams events.", md.ServerStream.RecvName, md.Name)
 
-	var dataFieldTypeRef string
-	if e.SSE.DataField != "" {
-		if obj, ok := e.MethodExpr.Result.Type.(*expr.Object); ok {
-			for _, nat := range *obj {
-				if nat.Name == e.SSE.DataField {
-					dataFieldTypeRef = sd.Service.Scope.GoFullTypeRef(nat.Attribute, svc.PkgName)
-					break
-				}
+	// Convert attribute names to Go field names
+	var dataFieldVar, dataFieldTypeRef, idFieldVar, eventFieldVar, retryFieldVar string
+	if obj := expr.AsObject(e.MethodExpr.Result.Type); obj != nil {
+		for _, nat := range *obj {
+			switch nat.Name {
+			case e.SSE.IDField:
+				idFieldVar = codegen.GoifyAtt(nat.Attribute, nat.Name, true)
+			case e.SSE.EventField:
+				eventFieldVar = codegen.GoifyAtt(nat.Attribute, nat.Name, true)
+			case e.SSE.RetryField:
+				retryFieldVar = codegen.GoifyAtt(nat.Attribute, nat.Name, true)
+			case e.SSE.DataField:
+				dataFieldVar = codegen.GoifyAtt(nat.Attribute, nat.Name, true)
+				dataFieldTypeRef = sd.Service.Scope.GoFullTypeRef(nat.Attribute, svc.PkgName)
 			}
 		}
 	}
@@ -95,10 +101,10 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 		EventTypeName:       ed.Result.Name,
 		EventIsStruct:       ed.Result.IsStruct,
 		DataFieldTypeRef:    dataFieldTypeRef,
-		DataField:           e.SSE.DataField,
-		IDField:             e.SSE.IDField,
-		EventField:          e.SSE.EventField,
-		RetryField:          e.SSE.RetryField,
+		DataField:           dataFieldVar,
+		IDField:             idFieldVar,
+		EventField:          eventFieldVar,
+		RetryField:          retryFieldVar,
 		RequestIDField:      e.SSE.RequestIDField,
 	}
 }
@@ -171,7 +177,7 @@ func sseTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:    "server-sse",
-			Source:  readTemplate("server_sse", "sse_format"),
+			Source:  HTTPTemplates.Read(serverSseT, sseFormatP),
 			Data:    ed,
 			FuncMap: funcs,
 		})

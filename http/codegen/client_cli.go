@@ -148,7 +148,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		cli.UsageExamples(cliData),
 		{
 			Name:   "parse-endpoint",
-			Source: readTemplate("parse_endpoint"),
+			Source: HTTPTemplates.Read(parseEndpointT),
 			Data: struct {
 				FlagsCode string
 				Commands  []*commandData
@@ -194,6 +194,7 @@ func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.Command
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
+// buildFlags builds the flag data and build function for an endpoint.
 func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildFunctionData) {
 	var (
 		flags         []*cli.FlagData
@@ -218,6 +219,7 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildF
 	return flags, buildFunction
 }
 
+// makeFlags creates flag data and build function from endpoint arguments.
 func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*cli.FlagData, *cli.BuildFunctionData) {
 	var (
 		fdata     []*cli.FieldData

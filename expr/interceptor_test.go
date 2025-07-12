@@ -11,15 +11,15 @@ func TestInterceptorExpr_Validate(t *testing.T) {
 		wantErrors []string
 	}{
 		"valid-payload": {
-			intercept: makeInterceptor(t, "test-interceptor", withReadPayload(t, namedAttr(t, "foo"))),
+			intercept: makeInterceptor(t, withReadPayload(t, namedAttr(t, "foo"))),
 			method:    makeMethod(t, withPayload(t, namedAttr(t, "foo"))),
 		},
 		"valid-write-payload": {
-			intercept: makeInterceptor(t, "test-interceptor", withWritePayload(t, namedAttr(t, "foo"))),
+			intercept: makeInterceptor(t, withWritePayload(t, namedAttr(t, "foo"))),
 			method:    makeMethod(t, withPayload(t, namedAttr(t, "foo"))),
 		},
 		"payload-with-base": {
-			intercept: makeInterceptor(t, "test-interceptor", withReadPayload(t, namedAttr(t, "bar"))),
+			intercept: makeInterceptor(t, withReadPayload(t, namedAttr(t, "bar"))),
 			method: makeMethod(t,
 				withPayload(t, namedAttr(t, "foo")),
 				withPayloadBases(t, &UserTypeExpr{
@@ -30,7 +30,7 @@ func TestInterceptorExpr_Validate(t *testing.T) {
 			),
 		},
 		"result-with-base": {
-			intercept: makeInterceptor(t, "test-interceptor", withReadResult(t, namedAttr(t, "bar"))),
+			intercept: makeInterceptor(t, withReadResult(t, namedAttr(t, "bar"))),
 			method: makeMethod(t,
 				withResult(t, namedAttr(t, "foo")),
 				withResultBases(t, &UserTypeExpr{
@@ -41,7 +41,7 @@ func TestInterceptorExpr_Validate(t *testing.T) {
 			),
 		},
 		"invalid-payload-not-object": {
-			intercept: makeInterceptor(t, "test-interceptor", withReadPayload(t, namedAttr(t, "foo"))),
+			intercept: makeInterceptor(t, withReadPayload(t, namedAttr(t, "foo"))),
 			method: makeMethod(t, func(m *MethodExpr) {
 				m.Payload = &AttributeExpr{
 					Type: String,
@@ -52,7 +52,7 @@ func TestInterceptorExpr_Validate(t *testing.T) {
 			},
 		},
 		"invalid-streaming-payload-not-streaming": {
-			intercept: makeInterceptor(t, "test-interceptor", withReadStreamingPayload(t, namedAttr(t, "foo"))),
+			intercept: makeInterceptor(t, withReadStreamingPayload(t, namedAttr(t, "foo"))),
 			method: makeMethod(t, func(m *MethodExpr) {
 				m.Payload = &AttributeExpr{Type: &Object{}}
 			}),
@@ -61,7 +61,7 @@ func TestInterceptorExpr_Validate(t *testing.T) {
 			},
 		},
 		"invalid-streaming-result-not-streaming": {
-			intercept: makeInterceptor(t, "test-interceptor", withReadStreamingResult(t, namedAttr(t, "foo"))),
+			intercept: makeInterceptor(t, withReadStreamingResult(t, namedAttr(t, "foo"))),
 			method: makeMethod(t, func(m *MethodExpr) {
 				m.Result = &AttributeExpr{Type: &Object{}}
 			}),
@@ -70,7 +70,7 @@ func TestInterceptorExpr_Validate(t *testing.T) {
 			},
 		},
 		"invalid-attribute-access": {
-			intercept: makeInterceptor(t, "test-interceptor", withReadPayload(t, namedAttr(t, "bar"))),
+			intercept: makeInterceptor(t, withReadPayload(t, namedAttr(t, "bar"))),
 			method:    makeMethod(t, withPayload(t, namedAttr(t, "foo"))),
 			wantErrors: []string{
 				`interceptor "test-interceptor" cannot read payload attribute "bar": attribute does not exist`,
@@ -114,9 +114,9 @@ func withResultBases(t *testing.T, bases ...DataType) func(*MethodExpr) {
 	}
 }
 
-func makeInterceptor(t *testing.T, name string, opts ...func(*InterceptorExpr)) *InterceptorExpr {
+func makeInterceptor(t *testing.T, opts ...func(*InterceptorExpr)) *InterceptorExpr {
 	t.Helper()
-	i := &InterceptorExpr{Name: name}
+	i := &InterceptorExpr{Name: "test-interceptor"}
 	for _, opt := range opts {
 		opt(i)
 	}

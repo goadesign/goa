@@ -55,7 +55,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 	}
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:   "client-struct",
-		Source: readTemplate("client_struct"),
+		Source: HTTPTemplates.Read(clientStructT),
 		Data:   data,
 		FuncMap: map[string]any{
 			"hasWebSocket": hasWebSocket,
@@ -67,7 +67,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 		if e.MultipartRequestEncoder != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "multipart-request-encoder-type",
-				Source: readTemplate("multipart_request_encoder_type"),
+				Source: HTTPTemplates.Read(multipartRequestEncoderTypeT),
 				Data:   e.MultipartRequestEncoder,
 			})
 		}
@@ -75,7 +75,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:   "http-client-init",
-		Source: readTemplate("client_init"),
+		Source: HTTPTemplates.Read(clientInitT),
 		Data:   data,
 		FuncMap: map[string]any{
 			"hasWebSocket": hasWebSocket,
@@ -86,7 +86,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-endpoint-init",
-			Source: readTemplate("endpoint_init"),
+			Source: HTTPTemplates.Read(endpointInitT),
 			Data:   e,
 			FuncMap: map[string]any{
 				"isWebSocketEndpoint": isWebSocketEndpoint,
@@ -129,13 +129,13 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "request-builder",
-			Source: readTemplate("request_builder"),
+			Source: HTTPTemplates.Read(requestBuilderT),
 			Data:   e,
 		})
 		if e.RequestEncoder != "" && e.Payload.Ref != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "request-encoder",
-				Source: readTemplate("request_encoder", "client_type_conversion", "client_map_conversion"),
+				Source: HTTPTemplates.Read(requestEncoderT, clientTypeConversionP, clientMapConversionP),
 				FuncMap: map[string]any{
 					"typeConversionData": typeConversionData,
 					"mapConversionData":  mapConversionData,
@@ -162,14 +162,14 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 		if e.MultipartRequestEncoder != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "multipart-request-encoder",
-				Source: readTemplate("multipart_request_encoder"),
+				Source: HTTPTemplates.Read(multipartRequestEncoderT),
 				Data:   e.MultipartRequestEncoder,
 			})
 		}
 		if e.Result != nil || len(e.Errors) > 0 {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "response-decoder",
-				Source: readTemplate("response_decoder", "single_response", "query_type_conversion", "element_slice_conversion", "slice_item_conversion"),
+				Source: HTTPTemplates.Read(responseDecoderT, singleResponseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP),
 				Data:   e,
 				FuncMap: map[string]any{
 					"goTypeRef": func(dt expr.DataType) string {
@@ -182,7 +182,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 		if e.Method.SkipRequestBodyEncodeDecode {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "build-stream-request",
-				Source: readTemplate("build_stream_request"),
+				Source: HTTPTemplates.Read(buildStreamRequestT),
 				Data:   e,
 				FuncMap: map[string]any{
 					"requestStructPkg": requestStructPkg,
@@ -193,7 +193,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 	for _, h := range data.ClientTransformHelpers {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-transform-helper",
-			Source: readTemplate("transform_helper"),
+			Source: HTTPTemplates.Read(transformHelperT),
 			Data:   h,
 		})
 	}

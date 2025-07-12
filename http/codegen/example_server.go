@@ -86,22 +86,22 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, ser
 		codegen.Header("", "main", specs),
 		{
 			Name:   "server-http-start",
-			Source: readTemplate("server_start"),
+			Source: HTTPTemplates.Read(serverStartT),
 			Data: map[string]any{
 				"Services": svcdata,
 			},
 		},
 		{
 			Name:   "server-http-encoding",
-			Source: readTemplate("server_encoding"),
+			Source: HTTPTemplates.Read(serverEncodingT),
 		},
 		{
 			Name:   "server-http-mux",
-			Source: readTemplate("server_mux"),
+			Source: HTTPTemplates.Read(serverMuxT),
 		},
 		{
 			Name:   "server-http-init",
-			Source: readTemplate("server_configure"),
+			Source: HTTPTemplates.Read(serverConfigureT),
 			Data: map[string]any{
 				"Services": svcdata,
 				"APIPkg":   apiPkg,
@@ -110,18 +110,18 @@ func exampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, ser
 		},
 		{
 			Name:   "server-http-middleware",
-			Source: readTemplate("server_middleware"),
+			Source: HTTPTemplates.Read(serverMiddlewareT),
 		},
 		{
 			Name:   "server-http-end",
-			Source: readTemplate("server_end"),
+			Source: HTTPTemplates.Read(serverEndT),
 			Data: map[string]any{
 				"Services": svcdata,
 			},
 		},
 		{
 			Name:   "server-http-errorhandler",
-			Source: readTemplate("server_error_handler"),
+			Source: HTTPTemplates.Read(serverErrorHandlerT),
 		},
 	}
 
@@ -169,7 +169,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 				mustGen = true
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "dummy-multipart-request-decoder",
-					Source: readTemplate("dummy_multipart_request_decoder"),
+					Source: HTTPTemplates.Read(dummyMultipartRequestDecoderT),
 					Data:   e.MultipartRequestDecoder,
 				})
 			}
@@ -177,7 +177,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 				mustGen = true
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "dummy-multipart-request-encoder",
-					Source: readTemplate("dummy_multipart_request_encoder"),
+					Source: HTTPTemplates.Read(dummyMultipartRequestEncoderT),
 					Data:   e.MultipartRequestEncoder,
 				})
 			}

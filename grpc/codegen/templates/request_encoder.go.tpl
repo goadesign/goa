@@ -11,7 +11,7 @@ func Encode{{ .Method.VarName }}Request(ctx context.Context, v any, md *metadata
 		}
 	{{- else if .Slice }}
 		for _, value := range payload{{ if .FieldName }}.{{ .FieldName }}{{ end }} {
-			{{ template "string_conversion" (typeConversionData .Type.ElemType.Type "valueStr" "value") }}
+			{{ template "partial_convert_type_to_string" (typeConversionData .Type.ElemType.Type "valueStr" "value") }}
 			(*md).Append({{ printf "%q" .Name }}, valueStr)
 		}
 	{{- else }}

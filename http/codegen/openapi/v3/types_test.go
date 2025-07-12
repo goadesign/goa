@@ -542,8 +542,8 @@ func TestHashAttribute(t *testing.T) {
 			name:     "Objects with validation rules",
 			behavior: uniqueHashes,
 			attrs: []testAttr{
-				{name: "no-validation", att: newObj("foo", expr.String, false)},
-				{name: "required-validation", att: newObj("foo", expr.String, true)},
+				{name: "no-validation", att: newObj("foo", false)},
+				{name: "required-validation", att: newObj("foo", true)},
 				{name: "pattern-validation", att: &expr.AttributeExpr{
 					Type: expr.String,
 					Validation: &expr.ValidationExpr{
@@ -561,16 +561,16 @@ func TestHashAttribute(t *testing.T) {
 			name:     "Result types with different views",
 			behavior: uniqueHashes,
 			attrs: []testAttr{
-				{name: "no-view", att: newRT("id", newObj("foo", expr.String, true))},
-				{name: "default-view", att: newRTWithView("id", newObj("foo", expr.String, true), "default")},
-				{name: "tiny-view", att: newRTWithView("id", newObj("foo", expr.String, true), "tiny")},
+				{name: "no-view", att: newRT("id", newObj("foo", true))},
+				{name: "default-view", att: newRTWithView("id", newObj("foo", true), "default")},
+				{name: "tiny-view", att: newRTWithView("id", newObj("foo", true), "tiny")},
 			},
 		}, {
 			name:     "Objects with openapi:generate:false metadata",
 			behavior: identicalHashes,
 			attrs: []testAttr{
 				{name: "obj-with-skipped-field", att: newObj2Meta("foo", "bar", expr.String, expr.String, metaEmpty, metaNotGenerate)},
-				{name: "obj-without-skipped-field", att: newObj("foo", expr.String, false)},
+				{name: "obj-without-skipped-field", att: newObj("foo", false)},
 			},
 		}, {
 			name:     "Complex map types",
@@ -589,8 +589,8 @@ func TestHashAttribute(t *testing.T) {
 			name:     "Nested user types",
 			behavior: uniqueHashes,
 			attrs: []testAttr{
-				{name: "single-nest", att: newUserType("foo", newObj("bar", expr.String, false))},
-				{name: "double-nest", att: newUserType("foo", newUserType("bar", newObj("baz", expr.String, false)))},
+				{name: "single-nest", att: newUserType("foo", newObj("bar", false))},
+				{name: "double-nest", att: newUserType("foo", newUserType("bar", newObj("baz", false)))},
 			},
 		}, {
 			name:     "Recursive types",
@@ -634,9 +634,9 @@ func TestHashAttribute(t *testing.T) {
 	}
 }
 
-func newObj(n string, t expr.DataType, req bool) *expr.AttributeExpr {
+func newObj(n string, req bool) *expr.AttributeExpr {
 	attr := &expr.AttributeExpr{
-		Type:       &expr.Object{{Name: n, Attribute: &expr.AttributeExpr{Type: t}}},
+		Type:       &expr.Object{{Name: n, Attribute: &expr.AttributeExpr{Type: expr.String}}},
 		Validation: &expr.ValidationExpr{},
 	}
 	if req {

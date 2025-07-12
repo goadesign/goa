@@ -11,16 +11,14 @@ import (
 func ServerTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
 	root := services.Root
 	fw := make([]*codegen.File, len(root.API.HTTP.Services))
-	seen := make(map[string]struct{})
 	for i, r := range root.API.HTTP.Services {
-		fw[i] = serverType(genpkg, r, seen, services)
+		fw[i] = serverType(genpkg, r, services)
 	}
 	return fw
 }
 
 // serverType return the file containing the type definitions used by the HTTP
-// transport for the given service server. seen keeps track of the names of the
-// types that have already been generated to prevent duplicate code generation.
+// transport for the given service server.
 //
 // Below are the rules governing whether values are pointers or not. Note that
 // the rules only applies to values that hold primitive types, values that hold
@@ -42,7 +40,7 @@ func ServerTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
 //
 //   - Response body fields (if the body is a struct) and header variables hold
 //     pointers when not required and have no default value.
-func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{}, services *ServicesData) *codegen.File {
+func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	var (
 		path    string
 		data    = services.Get(svc.Name())
@@ -72,7 +70,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{},
 			if data.Def != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "request-body-type-decl",
-					Source: readTemplate("type_decl"),
+					Source: HTTPTemplates.Read(typeDeclT),
 					Data:   data,
 				})
 			}
@@ -85,7 +83,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{},
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "request-stream-payload-type-decl",
-						Source: readTemplate("type_decl"),
+						Source: HTTPTemplates.Read(typeDeclT),
 						Data:   data,
 					})
 				}
@@ -105,7 +103,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{},
 					if tdata.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "response-server-body",
-							Source: readTemplate("type_decl"),
+							Source: HTTPTemplates.Read(typeDeclT),
 							Data:   tdata,
 						})
 					}
@@ -130,7 +128,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{},
 					if data.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "error-body-type-decl",
-							Source: readTemplate("type_decl"),
+							Source: HTTPTemplates.Read(typeDeclT),
 							Data:   data,
 						})
 					}
@@ -150,7 +148,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{},
 		if tdata.Def != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-body-attributes",
-				Source: readTemplate("type_decl"),
+				Source: HTTPTemplates.Read(typeDeclT),
 				Data:   tdata,
 			})
 		}
@@ -164,7 +162,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{},
 	for _, init := range initData {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-body-init",
-			Source: readTemplate("server_body_init"),
+			Source: HTTPTemplates.Read(serverBodyInitT),
 			Data:   init,
 		})
 	}
@@ -174,7 +172,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{},
 		if init := adata.Payload.Request.PayloadInit; init != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "server-payload-init",
-				Source:  readTemplate("server_type_init"),
+				Source:  HTTPTemplates.Read(serverTypeInitT),
 				Data:    init,
 				FuncMap: map[string]any{"fieldCode": fieldCode},
 			})
@@ -183,7 +181,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{},
 			if init := adata.ServerWebSocket.Payload.Init; init != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "server-payload-init",
-					Source:  readTemplate("server_type_init"),
+					Source:  HTTPTemplates.Read(serverTypeInitT),
 					Data:    init,
 					FuncMap: map[string]any{"fieldCode": fieldCode},
 				})
@@ -195,7 +193,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, _ map[string]struct{},
 	for _, data := range validatedTypes {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-validate",
-			Source: readTemplate("validate"),
+			Source: HTTPTemplates.Read(validateT),
 			Data:   data,
 		})
 	}

@@ -80,7 +80,7 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 		for _, init := range initData {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-type-init",
-				Source: readTemplate("type_init"),
+				Source: grpcTemplates.Read(grpcTypeInitT),
 				Data:   init,
 				FuncMap: map[string]any{
 					"isAlias": expr.IsAlias,
@@ -99,14 +99,14 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 			}
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-validate",
-				Source: readTemplate("validate"),
+				Source: grpcTemplates.Read(grpcValidateT),
 				Data:   data,
 			})
 		}
 		for _, h := range sd.transformHelpers {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-transform-helper",
-				Source: readTemplate("transform_helper"),
+				Source: grpcTemplates.Read(grpcTransformHelperT),
 				Data:   h,
 			})
 		}

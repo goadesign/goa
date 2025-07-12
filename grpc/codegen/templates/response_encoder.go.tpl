@@ -28,7 +28,7 @@ func Encode{{ .Method.VarName }}Response(ctx context.Context, v any, hdr, trlr *
 	{{ .VarName }}.Append({{ printf "%q" .Metadata.Name }}, res.{{ .Metadata.FieldName }}...)
 	{{- else if .Metadata.Slice }}
 		for _, value := range res.{{ .Metadata.FieldName }} {
-			{{ template "string_conversion" (typeConversionData .Metadata.Type.ElemType.Type "valueStr" "value") }}
+			{{ template "partial_convert_type_to_string" (typeConversionData .Metadata.Type.ElemType.Type "valueStr" "value") }}
 			{{ .VarName }}.Append({{ printf "%q" .Metadata.Name }}, valueStr)
 		}
 	{{- else }}

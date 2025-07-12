@@ -78,18 +78,18 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 		codegen.Header("", apipkg, specs),
 		{
 			Name:   "basic-service-struct",
-			Source: readTemplate("example_service_struct"),
+			Source: serviceTemplates.Read(exampleServiceStructT),
 			Data:   data,
 		}, {
 			Name:   "basic-service-init",
-			Source: readTemplate("example_service_init"),
+			Source: serviceTemplates.Read(exampleServiceInitT),
 			Data:   data,
 		},
 	}
 	if len(data.Schemes) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "security-authfuncs",
-			Source: readTemplate("example_security_authfuncs"),
+			Source: serviceTemplates.Read(exampleSecurityAuthfuncsT),
 			Data:   data,
 		})
 	}
@@ -132,7 +132,7 @@ func basicEndpointSection(m *expr.MethodExpr, svcData *Data) *codegen.SectionTem
 	}
 	return &codegen.SectionTemplate{
 		Name:   "basic-endpoint",
-		Source: readTemplate("endpoint"),
+		Source: serviceTemplates.Read(endpointT),
 		Data:   ed,
 	}
 }

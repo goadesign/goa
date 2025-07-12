@@ -29,19 +29,19 @@ func ClientFile(_ string, service *expr.ServiceExpr, services *ServicesData) *co
 		header := codegen.Header(service.Name+" client", svc.PkgName, imports)
 		def := &codegen.SectionTemplate{
 			Name:   "client-struct",
-			Source: readTemplate("service_client"),
+			Source: serviceTemplates.Read(serviceClientT),
 			Data:   data,
 		}
 		init := &codegen.SectionTemplate{
 			Name:   "client-init",
-			Source: readTemplate("service_client_init"),
+			Source: serviceTemplates.Read(serviceClientInitT),
 			Data:   data,
 		}
 		sections = []*codegen.SectionTemplate{header, def, init}
 		for _, m := range data.Methods {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-method",
-				Source: readTemplate("service_client_method"),
+				Source: serviceTemplates.Read(serviceClientMethodT),
 				Data:   m,
 			})
 		}

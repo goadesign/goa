@@ -38,7 +38,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			if _, ok := seen[m.Payload]; !ok {
 				addTypeDefSection(payloadPath, m.Payload, &codegen.SectionTemplate{
 					Name:   "service-payload",
-					Source: readTemplate("payload"),
+					Source: serviceTemplates.Read(payloadT),
 					Data:   m,
 				})
 			}
@@ -47,7 +47,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			if _, ok := seen[m.StreamingPayload]; !ok {
 				addTypeDefSection(payloadPath, m.StreamingPayload, &codegen.SectionTemplate{
 					Name:   "service-streaming-payload",
-					Source: readTemplate("streaming_payload"),
+					Source: serviceTemplates.Read(streamingPayloadT),
 					Data:   m,
 				})
 			}
@@ -56,7 +56,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			if _, ok := seen[m.Result]; !ok {
 				addTypeDefSection(resultPath, m.Result, &codegen.SectionTemplate{
 					Name:   "service-result",
-					Source: readTemplate("result"),
+					Source: serviceTemplates.Read(resultT),
 					Data:   m,
 				})
 			}
@@ -66,7 +66,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		if _, ok := seen[ut.VarName]; !ok {
 			addTypeDefSection(pathWithDefault(ut.Loc, svcPath), ut.VarName, &codegen.SectionTemplate{
 				Name:   "service-user-type",
-				Source: readTemplate("user_type"),
+				Source: serviceTemplates.Read(userTypeT),
 				Data:   ut,
 			})
 		}
@@ -83,7 +83,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			if _, ok := seen[et.Name]; !ok {
 				addTypeDefSection(pathWithDefault(et.Loc, svcPath), et.Name, &codegen.SectionTemplate{
 					Name:   "error-user-type",
-					Source: readTemplate("user_type"),
+					Source: serviceTemplates.Read(userTypeT),
 					Data:   et,
 				})
 			}
@@ -94,7 +94,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 	for _, m := range svc.unionValueMethods {
 		addTypeDefSection(pathWithDefault(m.Loc, svcPath), "~"+m.TypeRef+"."+m.Name, &codegen.SectionTemplate{
 			Name:   "service-union-value-method",
-			Source: readTemplate("union_value_method"),
+			Source: serviceTemplates.Read(unionValueMethodT),
 			Data:   m,
 		})
 	}
@@ -106,7 +106,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		key := "|" + et.Name
 		addTypeDefSection(pathWithDefault(et.Loc, svcPath), key, &codegen.SectionTemplate{
 			Name:    "service-error",
-			Source:  readTemplate("error"),
+			Source:  serviceTemplates.Read(errorT),
 			FuncMap: map[string]any{"errorName": errorName},
 			Data:    et,
 		})
@@ -114,7 +114,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 	for _, er := range svc.errorInits {
 		svcSections = append(svcSections, &codegen.SectionTemplate{
 			Name:   "error-init-func",
-			Source: readTemplate("error_init"),
+			Source: serviceTemplates.Read(errorInitT),
 			Data:   er,
 		})
 	}
@@ -122,8 +122,8 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 	// transform result type functions
 	for _, t := range svc.viewedResultTypes {
 		svcSections = append(svcSections,
-			&codegen.SectionTemplate{Name: "viewed-result-type-to-service-result-type", Source: readTemplate("type_init"), Data: t.ResultInit},
-			&codegen.SectionTemplate{Name: "service-result-type-to-viewed-result-type", Source: readTemplate("type_init"), Data: t.Init})
+			&codegen.SectionTemplate{Name: "viewed-result-type-to-service-result-type", Source: serviceTemplates.Read(typeInitT), Data: t.ResultInit},
+			&codegen.SectionTemplate{Name: "service-result-type-to-viewed-result-type", Source: serviceTemplates.Read(typeInitT), Data: t.Init})
 	}
 	var projh []*codegen.TransformFunctionData
 	for _, t := range svc.projectedTypes {
@@ -131,7 +131,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			projh = codegen.AppendHelpers(projh, i.Helpers)
 			svcSections = append(svcSections, &codegen.SectionTemplate{
 				Name:   "projected-type-to-service-type",
-				Source: readTemplate("type_init"),
+				Source: serviceTemplates.Read(typeInitT),
 				Data:   i,
 			})
 		}
@@ -139,7 +139,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			projh = codegen.AppendHelpers(projh, i.Helpers)
 			svcSections = append(svcSections, &codegen.SectionTemplate{
 				Name:   "service-type-to-projected-type",
-				Source: readTemplate("type_init"),
+				Source: serviceTemplates.Read(typeInitT),
 				Data:   i,
 			})
 		}
@@ -148,7 +148,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 	for _, h := range projh {
 		svcSections = append(svcSections, &codegen.SectionTemplate{
 			Name:   "transform-helpers",
-			Source: readTemplate("transform_helper"),
+			Source: serviceTemplates.Read(transformHelperT),
 			Data:   h,
 		})
 	}
@@ -163,7 +163,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 	header := codegen.Header(service.Name+" service", svc.PkgName, imports)
 	def := &codegen.SectionTemplate{
 		Name:    "service",
-		Source:  readTemplate("service"),
+		Source:  serviceTemplates.Read(serviceT),
 		Data:    svc,
 		FuncMap: map[string]any{"streamInterfaceFor": streamInterfaceFor},
 	}

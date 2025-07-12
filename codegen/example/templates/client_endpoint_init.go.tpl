@@ -1,5 +1,5 @@
 
-	var(
+	var (
 		endpoint goa.Endpoint
 		payload any
 		err error

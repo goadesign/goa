@@ -77,7 +77,7 @@ func sseClientTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:    "client-sse",
-			Source:  readTemplate("client_sse", "sse_parse"),
+			Source:  HTTPTemplates.Read(clientSseT, sseParseP),
 			Data:    ed,
 			FuncMap: funcs,
 		})

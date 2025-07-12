@@ -4,4 +4,11 @@ linters:
     - errorlint
     - errcheck
     - staticcheck
+    - unparam      # Detects unused parameters
+    - unused       # Detects unused constants, variables, functions and types
+    - ineffassign  # Detects ineffectual assignments
+  settings:
+    staticcheck:
+      checks:
+        - "-ST1001"
 

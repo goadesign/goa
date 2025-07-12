@@ -85,7 +85,7 @@ func endpointParser(genpkg string, services *ServicesData, svr *expr.ServerExpr,
 		cli.UsageExamples(data),
 		{
 			Name:   "parse-endpoint-grpc",
-			Source: readTemplate("parse_endpoint"),
+			Source: grpcTemplates.Read(grpcParseEndpointT),
 			Data: struct {
 				FlagsCode string
 				Commands  []*cli.CommandData

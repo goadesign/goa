@@ -37,7 +37,7 @@ func TestServerTypes(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
-			fs := serverType(genpkg, root.API.HTTP.Services[0], make(map[string]struct{}), services)
+			fs := serverType(genpkg, root.API.HTTP.Services[0], services)
 			var buf bytes.Buffer
 			for _, s := range fs.SectionTemplates[1:] {
 				require.NoError(t, s.Write(&buf))

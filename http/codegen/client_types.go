@@ -75,7 +75,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 			if data.Def != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "client-request-body",
-					Source: readTemplate("type_decl"),
+					Source: HTTPTemplates.Read(typeDeclT),
 					Data:   data,
 				})
 			}
@@ -95,7 +95,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-request-body",
-						Source: readTemplate("type_decl"),
+						Source: HTTPTemplates.Read(typeDeclT),
 						Data:   data,
 					})
 				}
@@ -121,7 +121,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-response-body",
-						Source: readTemplate("type_decl"),
+						Source: HTTPTemplates.Read(typeDeclT),
 						Data:   data,
 					})
 				}
@@ -145,7 +145,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 					if data.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "client-error-body",
-							Source: readTemplate("type_decl"),
+							Source: HTTPTemplates.Read(typeDeclT),
 							Data:   data,
 						})
 					}
@@ -161,7 +161,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		if data.Def != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-body-attributes",
-				Source: readTemplate("type_decl"),
+				Source: HTTPTemplates.Read(typeDeclT),
 				Data:   data,
 			})
 		}
@@ -175,7 +175,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	for _, init := range initData {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-body-init",
-			Source: readTemplate("client_body_init"),
+			Source: HTTPTemplates.Read(clientBodyInitT),
 			Data:   init,
 		})
 	}
@@ -186,7 +186,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 			if init := resp.ResultInit; init != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "client-result-init",
-					Source:  readTemplate("client_type_init"),
+					Source:  HTTPTemplates.Read(clientTypeInitT),
 					Data:    init,
 					FuncMap: map[string]any{"fieldCode": fieldCode},
 				})
@@ -199,7 +199,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 				if init := herr.Response.ResultInit; init != nil {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:    "client-error-result-init",
-						Source:  readTemplate("client_type_init"),
+						Source:  HTTPTemplates.Read(clientTypeInitT),
 						Data:    init,
 						FuncMap: map[string]any{"fieldCode": fieldCode},
 					})
@@ -213,7 +213,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	for _, data := range validatedTypes {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-validate",
-			Source: readTemplate("validate"),
+			Source: HTTPTemplates.Read(validateT),
 			Data:   data,
 		})
 	}

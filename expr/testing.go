@@ -13,7 +13,7 @@ import (
 // Used only in tests.
 func RunDSL(t *testing.T, dsl func()) *RootExpr {
 	t.Helper()
-	setupDSLRun(t)
+	ResetDSL(t)
 
 	// run DSL (first pass)
 	require.True(t, eval.Execute(dsl, nil), eval.Context.Error())
@@ -29,7 +29,7 @@ func RunDSL(t *testing.T, dsl func()) *RootExpr {
 // It is used only in tests.
 func RunInvalidDSL(t *testing.T, dsl func()) error {
 	t.Helper()
-	setupDSLRun(t)
+	ResetDSL(t)
 
 	// run DSL (first pass)
 	if !eval.Execute(dsl, nil) {
@@ -66,13 +66,36 @@ func CreateTempFile(t *testing.T, content string) string {
 	return f.Name()
 }
 
-func setupDSLRun(t *testing.T) {
+// ResetDSL resets the global expression state for testing and initializes
+// a default API. This function should be called before running any DSL that
+// modifies the global Root or GeneratedResultTypes variables.
+//
+// Usage in tests:
+//
+//	func TestMyDSL(t *testing.T) {
+//	    // Option 1: Use expr.RunDSL which calls ResetDSL automatically
+//	    root := expr.RunDSL(t, func() {
+//	        Service("my-service", func() { /* ... */ })
+//	    })
+//
+//	    // Option 2: Call ResetDSL manually when running DSL directly
+//	    expr.ResetDSL(t)
+//	    eval.Execute(myDSL, nil)
+//	    eval.RunDSL()
+//	}
+//
+// Note: RunDSL and RunInvalidDSL automatically call ResetDSL, so you
+// only need to call it manually when executing DSL code directly.
+func ResetDSL(t *testing.T) {
+	t.Helper()
 	// reset all roots and codegen data structures
 	eval.Reset()
 	Root = new(RootExpr)
 	GeneratedResultTypes = new(ResultTypesRoot)
 	require.NoError(t, eval.Register(Root))
 	require.NoError(t, eval.Register(GeneratedResultTypes))
+	
+	// Initialize default API for DSL execution
 	Root.API = NewAPIExpr("test api", func() {})
 	Root.API.Servers = []*ServerExpr{Root.API.DefaultServer()}
 }

@@ -94,11 +94,11 @@ func Decode{{ .Method.VarName }}Response(ctx context.Context, v any, hdr, trlr m
 			if {{ .Metadata.VarName }}Raw := {{ .VarName }}.Get({{ printf "%q" .Metadata.Name }}); len({{ .Metadata.VarName }}Raw) == 0 {
 				err = goa.MergeErrors(err, goa.MissingFieldError({{ printf "%q" .Metadata.Name }}, "metadata"))
 			} else {
-				{{- template "slice_conversion" .Metadata }}
+				{{- template "partial_slice_conversion" .Metadata }}
 			}
 		{{- else }}
 			if {{ .Metadata.VarName }}Raw := {{ .VarName }}.Get({{ printf "%q" .Metadata.Name }}); len({{ .Metadata.VarName }}Raw) > 0 {
-				{{- template "slice_conversion" .Metadata }}
+				{{- template "partial_slice_conversion" .Metadata }}
 			}
 		{{- end }}
 	{{- else }}
@@ -107,12 +107,12 @@ func Decode{{ .Method.VarName }}Response(ctx context.Context, v any, hdr, trlr m
 				err = goa.MergeErrors(err, goa.MissingFieldError({{ printf "%q" .Metadata.Name }}, "metadata"))
 			} else {
 				{{ .Metadata.VarName }}Raw = vals[0]
-				{{ template "type_conversion" .Metadata }}
+				{{ template "partial_type_conversion" .Metadata }}
 			}
 		{{- else }}
 			if vals := {{ .VarName }}.Get({{ printf "%q" .Metadata.Name }}); len(vals) > 0 {
 				{{ .Metadata.VarName }}Raw = vals[0]
-				{{ template "type_conversion" .Metadata }}
+				{{ template "partial_type_conversion" .Metadata }}
 			}
 		{{- end }}
 	{{- end }}

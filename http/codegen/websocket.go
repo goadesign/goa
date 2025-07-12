@@ -131,7 +131,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 				var svcode string
 				if ut, ok := body.(expr.UserType); ok {
 					if val := ut.Attribute().Validation; val != nil {
-						httpctx := httpContext("", sd.Scope, true, true)
+						httpctx := httpContext(sd.Scope, true, true)
 						svcode = codegen.ValidationCode(ut.Attribute(), ut, httpctx, true, expr.IsAlias(ut), false, "body")
 					}
 				}
@@ -151,7 +151,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 			}
 			if body != expr.Empty {
 				var helpers []*codegen.TransformFunctionData
-				httpctx := httpContext("", sd.Scope, true, true)
+				httpctx := httpContext(sd.Scope, true, true)
 				serverCode, helpers, err = marshal(e.StreamingBody, e.MethodExpr.StreamingPayload, "body", "v", httpctx, svcctx)
 				if err == nil {
 					sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
@@ -307,7 +307,7 @@ func serverStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 	var sections []*codegen.SectionTemplate
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "server-websocket-conn-configurer-struct",
-		Source:  readTemplate("websocket_conn_configurer_struct"),
+		Source:  HTTPTemplates.Read(websocketConnConfigurerStructT),
 		Data:    data,
 		FuncMap: map[string]any{"isWebSocketEndpoint": isWebSocketEndpoint},
 	})
@@ -315,7 +315,7 @@ func serverStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 		if e.ServerWebSocket != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-websocket-struct-type",
-				Source: readTemplate("websocket_struct_type"),
+				Source: HTTPTemplates.Read(websocketStructTypeT),
 				Data:   e.ServerWebSocket,
 			})
 		}
@@ -330,7 +330,7 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 	var sections []*codegen.SectionTemplate
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "server-websocket-conn-configurer-struct-init",
-		Source:  readTemplate("websocket_conn_configurer_struct_init"),
+		Source:  HTTPTemplates.Read(websocketConnConfigurerStructInitT),
 		Data:    data,
 		FuncMap: map[string]any{"isWebSocketEndpoint": isWebSocketEndpoint},
 	})
@@ -339,7 +339,7 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			if e.ServerWebSocket.SendTypeRef != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "server-websocket-send",
-					Source: readTemplate("websocket_send", "websocket_upgrade"),
+					Source: HTTPTemplates.Read(websocketSendT, websocketUpgradeP),
 					Data:   e.ServerWebSocket,
 					FuncMap: map[string]any{
 						"upgradeParams":    upgradeParams,
@@ -351,7 +351,7 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			case expr.ClientStreamKind, expr.BidirectionalStreamKind:
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "server-websocket-recv",
-					Source:  readTemplate("websocket_recv", "websocket_upgrade"),
+					Source:  HTTPTemplates.Read(websocketRecvT, websocketUpgradeP),
 					Data:    e.ServerWebSocket,
 					FuncMap: map[string]any{"upgradeParams": upgradeParams},
 				})
@@ -359,7 +359,7 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			if e.ServerWebSocket.MustClose {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "server-websocket-close",
-					Source:  readTemplate("websocket_close"),
+					Source:  HTTPTemplates.Read(websocketCloseT),
 					Data:    e.ServerWebSocket,
 					FuncMap: map[string]any{"upgradeParams": upgradeParams},
 				})
@@ -367,7 +367,7 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "server-websocket-set-view",
-					Source: readTemplate("websocket_set_view"),
+					Source: HTTPTemplates.Read(websocketSetViewT),
 					Data:   e.ServerWebSocket,
 				})
 			}
@@ -382,7 +382,7 @@ func clientStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 	var sections []*codegen.SectionTemplate
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "client-websocket-conn-configurer-struct",
-		Source:  readTemplate("websocket_conn_configurer_struct"),
+		Source:  HTTPTemplates.Read(websocketConnConfigurerStructT),
 		Data:    data,
 		FuncMap: map[string]any{"isWebSocketEndpoint": isWebSocketEndpoint},
 	})
@@ -390,7 +390,7 @@ func clientStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 		if e.ClientWebSocket != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-websocket-struct-type",
-				Source: readTemplate("websocket_struct_type"),
+				Source: HTTPTemplates.Read(websocketStructTypeT),
 				Data:   e.ClientWebSocket,
 			})
 		}
@@ -404,7 +404,7 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 	var sections []*codegen.SectionTemplate
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "client-websocket-conn-configurer-struct-init",
-		Source:  readTemplate("websocket_conn_configurer_struct_init"),
+		Source:  HTTPTemplates.Read(websocketConnConfigurerStructInitT),
 		Data:    data,
 		FuncMap: map[string]any{"isWebSocketEndpoint": isWebSocketEndpoint},
 	})
@@ -413,7 +413,7 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			if e.ClientWebSocket.RecvTypeRef != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "client-websocket-recv",
-					Source:  readTemplate("websocket_recv", "websocket_upgrade"),
+					Source:  HTTPTemplates.Read(websocketRecvT, websocketUpgradeP),
 					Data:    e.ClientWebSocket,
 					FuncMap: map[string]any{"upgradeParams": upgradeParams},
 				})
@@ -422,7 +422,7 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			case expr.ClientStreamKind, expr.BidirectionalStreamKind:
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "client-websocket-send",
-					Source: readTemplate("websocket_send", "websocket_upgrade"),
+					Source: HTTPTemplates.Read(websocketSendT, websocketUpgradeP),
 					Data:   e.ClientWebSocket,
 					FuncMap: map[string]any{
 						"upgradeParams":    upgradeParams,
@@ -433,7 +433,7 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			if e.ClientWebSocket.MustClose {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "client-websocket-close",
-					Source:  readTemplate("websocket_close"),
+					Source:  HTTPTemplates.Read(websocketCloseT),
 					Data:    e.ClientWebSocket,
 					FuncMap: map[string]any{"upgradeParams": upgradeParams},
 				})
@@ -441,7 +441,7 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "client-websocket-set-view",
-					Source: readTemplate("websocket_set_view"),
+					Source: HTTPTemplates.Read(websocketSetViewT),
 					Data:   e.ClientWebSocket,
 				})
 			}
