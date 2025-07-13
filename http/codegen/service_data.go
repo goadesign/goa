@@ -28,7 +28,8 @@ type (
 	// ServicesData encapsulates the data computed from the design.
 	ServicesData struct {
 		*service.ServicesData
-		HTTPServices map[string]*ServiceData
+		Expressions *expr.HTTPExpr
+		HTTPData    map[string]*ServiceData
 	}
 
 	// ServiceData contains the data used to render the code related to a
@@ -565,10 +566,11 @@ type (
 )
 
 // NewServicesData creates a new ServicesData instance for the given service data.
-func NewServicesData(services *service.ServicesData) *ServicesData {
+func NewServicesData(services *service.ServicesData, expressions *expr.HTTPExpr) *ServicesData {
 	return &ServicesData{
 		ServicesData: services,
-		HTTPServices: make(map[string]*ServiceData),
+		Expressions:  expressions,
+		HTTPData:     make(map[string]*ServiceData),
 	}
 }
 
@@ -576,15 +578,15 @@ func NewServicesData(services *service.ServicesData) *ServicesData {
 // computing it if needed. It returns nil if there is no service with the given
 // name.
 func (sds *ServicesData) Get(name string) *ServiceData {
-	if data, ok := sds.HTTPServices[name]; ok {
+	if data, ok := sds.HTTPData[name]; ok {
 		return data
 	}
-	svc := sds.Root.API.HTTP.Service(name)
+	svc := sds.Expressions.Service(name)
 	if svc == nil {
 		return nil
 	}
-	sds.HTTPServices[name] = sds.analyze(svc)
-	return sds.HTTPServices[name]
+	sds.HTTPData[name] = sds.analyze(svc)
+	return sds.HTTPData[name]
 }
 
 // Endpoint returns the service method transport data for the endpoint with the
@@ -1440,7 +1442,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		Ref:                ref,
 		Request:            request,
 		DecoderReturnValue: returnValue,
-		IDAttribute:        e.IDAttribute,
+		IDAttribute:        codegen.Goify(e.IDAttribute, true),
 		IsNotification:     e.IsNotification,
 	}
 }

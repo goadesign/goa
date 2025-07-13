@@ -169,24 +169,9 @@ func (r *RootExpr) Error(name string) *ErrorExpr {
 	return nil
 }
 
-// HTTPService returns the HTTP service with the given name if any.
-func (r *RootExpr) HTTPService(name string) *HTTPServiceExpr {
-	for _, res := range r.API.HTTP.Services {
-		if res.Name() == name {
-			return res
-		}
-	}
-	return nil
-}
-
 // EvalName is the name of the DSL.
 func (*RootExpr) EvalName() string {
 	return "design"
-}
-
-// Prepare prepares the JSON-RPC API by copying the HTTP API constructs.
-func (r *RootExpr) Prepare() {
-	r.API.JSONRPC.Prepare()
 }
 
 // Validate makes sure the root expression is valid for code generation.
@@ -216,13 +201,13 @@ func (r *RootExpr) Finalize() {
 
 // walkHTTPServices walks the HTTP services and endpoints.
 func (r *RootExpr) walkHTTPServices(svcs []*HTTPServiceExpr, walk eval.SetWalker) {
-	sort.SliceStable(r.API.HTTP.Services, func(i, j int) bool {
-		return r.API.HTTP.Services[j].ParentName == r.API.HTTP.Services[i].Name()
+	sort.SliceStable(svcs, func(i, j int) bool {
+		return svcs[j].ParentName == svcs[i].Name()
 	})
 	var httpepts eval.ExpressionSet
 	var httpsvrs eval.ExpressionSet
-	httpsvcs := make(eval.ExpressionSet, len(r.API.HTTP.Services))
-	for i, svc := range r.API.HTTP.Services {
+	httpsvcs := make(eval.ExpressionSet, len(svcs))
+	for i, svc := range svcs {
 		httpsvcs[i] = svc
 		for _, e := range svc.HTTPEndpoints {
 			httpepts = append(httpepts, e)

@@ -8,11 +8,10 @@ import (
 )
 
 // ClientTypeFiles returns the HTTP transport client types files.
-func ClientTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
-	root := services.Root
-	fw := make([]*codegen.File, len(root.API.HTTP.Services))
-	for i, svc := range root.API.HTTP.Services {
-		fw[i] = clientType(genpkg, svc, make(map[string]struct{}), services)
+func ClientTypeFiles(genpkg string, data *ServicesData) []*codegen.File {
+	fw := make([]*codegen.File, len(data.Expressions.Services))
+	for i, svc := range data.Expressions.Services {
+		fw[i] = clientType(genpkg, svc, make(map[string]struct{}), data)
 	}
 	return fw
 }
@@ -180,7 +179,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 			continue
 		}
 		seen[data.Name] = struct{}{}
-		
+
 		if data.Def != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-body-attributes",

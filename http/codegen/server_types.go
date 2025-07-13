@@ -8,11 +8,10 @@ import (
 )
 
 // ServerTypeFiles returns the HTTP transport type files.
-func ServerTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
-	root := services.Root
-	fw := make([]*codegen.File, len(root.API.HTTP.Services))
-	for i, r := range root.API.HTTP.Services {
-		fw[i] = serverType(genpkg, r, services)
+func ServerTypeFiles(genpkg string, data *ServicesData) []*codegen.File {
+	fw := make([]*codegen.File, len(data.Expressions.Services))
+	for i, r := range data.Expressions.Services {
+		fw[i] = serverType(genpkg, r, data)
 	}
 	return fw
 }
@@ -129,7 +128,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 					if generated, ok := data.ServerTypeNames[tdata.Name]; ok && generated {
 						continue
 					}
-					
+
 					if tdata.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "error-body-type-decl",

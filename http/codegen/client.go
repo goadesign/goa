@@ -10,20 +10,19 @@ import (
 )
 
 // ClientFiles returns the generated HTTP client files.
-func ClientFiles(genpkg string, services *ServicesData) []*codegen.File {
-	root := services.Root
+func ClientFiles(genpkg string, data *ServicesData) []*codegen.File {
 	var files []*codegen.File
-	for _, svc := range root.API.HTTP.Services {
-		files = append(files, clientFile(genpkg, svc, services))
-		if f := websocketClientFile(genpkg, svc, services); f != nil {
+	for _, svc := range data.Expressions.Services {
+		files = append(files, clientFile(genpkg, svc, data))
+		if f := websocketClientFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
-		if f := sseClientFile(genpkg, svc, services); f != nil {
+		if f := sseClientFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
 	}
-	for _, svc := range root.API.HTTP.Services {
-		if f := clientEncodeDecodeFile(genpkg, svc, services); f != nil {
+	for _, svc := range data.Expressions.Services {
+		if f := clientEncodeDecodeFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
 	}

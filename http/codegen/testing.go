@@ -17,7 +17,7 @@ func RunHTTPDSL(t *testing.T, dsl func()) *expr.RootExpr {
 
 // CreateHTTPServices creates a new ServicesData instance for testing.
 func CreateHTTPServices(root *expr.RootExpr) *ServicesData {
-	return NewServicesData(service.NewServicesData(root))
+	return NewServicesData(service.NewServicesData(root), root.API.HTTP)
 }
 
 // makeGolden returns a file object used to write test expectations. If

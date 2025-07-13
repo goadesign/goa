@@ -12,15 +12,15 @@ import (
 )
 
 // ExampleServerFiles returns an example http service implementation.
-func ExampleServerFiles(genpkg string, services *ServicesData) []*codegen.File {
+func ExampleServerFiles(genpkg string, data *ServicesData) []*codegen.File {
 	var fw []*codegen.File
-	for _, svr := range services.Root.API.Servers {
-		if m := exampleServer(genpkg, services.Root, svr, services); m != nil {
+	for _, svr := range data.Root.API.Servers {
+		if m := exampleServer(genpkg, data.Root, svr, data); m != nil {
 			fw = append(fw, m)
 		}
 	}
-	for _, svc := range services.Root.API.HTTP.Services {
-		if f := dummyMultipartFile(genpkg, services.Root, svc, services); f != nil {
+	for _, svc := range data.Expressions.Services {
+		if f := dummyMultipartFile(genpkg, data.Root, svc, data); f != nil {
 			fw = append(fw, f)
 		}
 	}

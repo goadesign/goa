@@ -89,7 +89,7 @@ func (s *ServerExpr) Finalize() {
 		}}
 	}
 	for _, svc := range s.Services {
-		hasHTTP := Root.API.HTTP.Service(svc) != nil
+		hasHTTP := Root.API.HTTP.Service(svc) != nil || Root.API.JSONRPC.Service(svc) != nil
 		hasGRPC := Root.API.GRPC.Service(svc) != nil
 		for _, h := range s.Hosts {
 			if hasHTTP && !h.HasHTTPScheme() {

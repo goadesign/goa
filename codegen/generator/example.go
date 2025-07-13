@@ -45,7 +45,7 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 
 		// HTTP
 		if len(r.API.HTTP.Services) > 0 {
-			httpServices := httpcodegen.NewServicesData(services)
+			httpServices := httpcodegen.NewServicesData(services, r.API.HTTP)
 			if fs := httpcodegen.ExampleServerFiles(genpkg, httpServices); len(fs) != 0 {
 				files = append(files, fs...)
 			}

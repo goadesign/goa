@@ -12,20 +12,19 @@ import (
 )
 
 // ServerFiles returns the generated HTTP server files.
-func ServerFiles(genpkg string, services *ServicesData) []*codegen.File {
-	root := services.Root
+func ServerFiles(genpkg string, data *ServicesData) []*codegen.File {
 	var files []*codegen.File
-	for _, svc := range root.API.HTTP.Services {
-		files = append(files, serverFile(genpkg, svc, services))
-		if f := websocketServerFile(genpkg, svc, services); f != nil {
+	for _, svc := range data.Expressions.Services {
+		files = append(files, serverFile(genpkg, svc, data))
+		if f := websocketServerFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
-		if f := sseServerFile(genpkg, svc, services); f != nil {
+		if f := sseServerFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
 	}
-	for _, svc := range root.API.HTTP.Services {
-		if f := ServerEncodeDecodeFile(genpkg, svc, services); f != nil {
+	for _, svc := range data.Expressions.Services {
+		if f := ServerEncodeDecodeFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
 	}

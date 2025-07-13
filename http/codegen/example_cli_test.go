@@ -30,7 +30,7 @@ func TestExampleCLIFiles(t *testing.T) {
 			// reset global variable
 			example.Servers = make(example.ServersData)
 			root := codegen.RunDSL(t, c.DSL)
-			httpServices := NewServicesData(service.NewServicesData(root))
+			httpServices := NewServicesData(service.NewServicesData(root), root.API.HTTP)
 			fs := ExampleCLIFiles("", httpServices)
 			require.Len(t, fs, 1)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)

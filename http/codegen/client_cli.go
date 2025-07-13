@@ -37,17 +37,16 @@ type subcommandData struct {
 }
 
 // ClientCLIFiles returns the client HTTP CLI support file.
-func ClientCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
-	root := services.Root
-	if len(root.API.HTTP.Services) == 0 {
+func ClientCLIFiles(genpkg string, data *ServicesData) []*codegen.File {
+	if len(data.Expressions.Services) == 0 {
 		return nil
 	}
 	var (
-		data []*commandData
+		cmds []*commandData
 		svcs []*expr.HTTPServiceExpr
 	)
-	for _, svc := range root.API.HTTP.Services {
-		sd := services.Get(svc.Name())
+	for _, svc := range data.Expressions.Services {
+		sd := data.Get(svc.Name())
 		if len(sd.Endpoints) > 0 {
 			command := &commandData{
 				CommandData: cli.BuildCommandData(sd.Service),
@@ -62,24 +61,24 @@ func ClientCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
 
 			command.Example = command.Subcommands[0].Example
 
-			data = append(data, command)
+			cmds = append(cmds, command)
 			svcs = append(svcs, svc)
 		}
 	}
 	var files []*codegen.File
-	for _, svr := range root.API.Servers {
+	for _, svr := range data.Root.API.Servers {
 		var svrData []*commandData
 		for _, name := range svr.Services {
 			for i, svc := range svcs {
 				if svc.Name() == name {
-					svrData = append(svrData, data[i])
+					svrData = append(svrData, cmds[i])
 				}
 			}
 		}
-		files = append(files, endpointParser(genpkg, root, svr, svrData, services))
+		files = append(files, endpointParser(genpkg, data.Root, svr, svrData, data))
 	}
 	for i, svc := range svcs {
-		files = append(files, payloadBuilders(genpkg, svc, data[i].CommandData, services))
+		files = append(files, payloadBuilders(genpkg, svc, cmds[i].CommandData, data))
 	}
 	return files
 }

@@ -1091,10 +1091,25 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		}
 		reqs = append(reqs, &RequirementData{Schemes: rs, Scopes: req.Scopes})
 	}
-	var httpMet *expr.HTTPEndpointExpr
-	if httpSvc := d.Root.HTTPService(m.Service.Name); httpSvc != nil {
-		httpMet = httpSvc.Endpoint(m.Name)
+
+	// Unfortunately we can't completely isolate the service codegen from
+	// the underlying transport when wanting to skip Goa's built-in decoding.
+	skipRequestBodyEncodeDecode := false
+	skipResponseBodyEncodeDecode := false
+	var httpSvc *expr.HTTPServiceExpr
+	for _, svc := range d.Root.API.HTTP.Services {
+		if svc.Name() == m.Service.Name {
+			httpSvc = svc
+			break
+		}
 	}
+	if httpSvc != nil {
+		if httpMet := httpSvc.Endpoint(m.Name); httpMet != nil {
+			skipRequestBodyEncodeDecode = httpMet.SkipRequestBodyEncodeDecode
+			skipResponseBodyEncodeDecode = httpMet.SkipResponseBodyEncodeDecode
+		}
+	}
+
 	data := &MethodData{
 		Name:                         m.Name,
 		VarName:                      vname,
@@ -1117,8 +1132,8 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		Requirements:                 reqs,
 		Schemes:                      schemes,
 		StreamKind:                   m.Stream,
-		SkipRequestBodyEncodeDecode:  httpMet != nil && httpMet.SkipRequestBodyEncodeDecode,
-		SkipResponseBodyEncodeDecode: httpMet != nil && httpMet.SkipResponseBodyEncodeDecode,
+		SkipRequestBodyEncodeDecode:  skipRequestBodyEncodeDecode,
+		SkipResponseBodyEncodeDecode: skipResponseBodyEncodeDecode,
 		RequestStruct:                vname + "RequestData",
 		ResponseStruct:               vname + "ResponseData",
 	}

@@ -316,7 +316,7 @@ func (e *HTTPEndpointExpr) Prepare() {
 			continue
 		}
 		// Lookup undefined HTTP errors in API.
-		for _, v := range Root.API.HTTP.Errors {
+		for _, v := range e.Service.Root.Errors {
 			if me.Name == v.Name {
 				e.HTTPErrors = append(e.HTTPErrors, v.Dup())
 			}

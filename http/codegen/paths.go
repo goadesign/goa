@@ -9,12 +9,11 @@ import (
 )
 
 // PathFiles returns the service path files.
-func PathFiles(services *ServicesData) []*codegen.File {
-	root := services.Root
-	fw := make([]*codegen.File, 2*len(root.API.HTTP.Services))
-	for i := 0; i < len(root.API.HTTP.Services); i++ {
-		fw[i*2] = serverPath(root.API.HTTP.Services[i], services)
-		fw[i*2+1] = clientPath(root.API.HTTP.Services[i], services)
+func PathFiles(data *ServicesData) []*codegen.File {
+	fw := make([]*codegen.File, 2*len(data.Expressions.Services))
+	for i := 0; i < len(data.Expressions.Services); i++ {
+		fw[i*2] = serverPath(data.Expressions.Services[i], data)
+		fw[i*2+1] = clientPath(data.Expressions.Services[i], data)
 	}
 	return fw
 }

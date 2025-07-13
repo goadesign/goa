@@ -121,6 +121,8 @@ func JSONRPC(dsl func()) {
 		svc := expr.Root.API.JSONRPC.ServiceFor(actual.Service, &expr.Root.API.JSONRPC.HTTPExpr)
 		e := svc.EndpointFor(actual)
 		e.DSLFunc = dsl
+		r := &expr.RouteExpr{Method: "POST", Path: "/", Endpoint: e}
+		e.Routes = []*expr.RouteExpr{r}
 	default:
 		eval.IncompatibleDSL()
 	}
