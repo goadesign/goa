@@ -7,6 +7,7 @@ import (
 	"goa.design/goa/v3/expr"
 	grpccodegen "goa.design/goa/v3/grpc/codegen"
 	httpcodegen "goa.design/goa/v3/http/codegen"
+	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
 )
 
 // Transport iterates through the roots and returns the files needed to render
@@ -39,6 +40,9 @@ func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		files = append(files, grpccodegen.ServerTypeFiles(genpkg, grpcServices)...)
 		files = append(files, grpccodegen.ClientTypeFiles(genpkg, grpcServices)...)
 		files = append(files, grpccodegen.ClientCLIFiles(genpkg, grpcServices)...)
+
+		// JSON-RPC
+		files = append(files, jsonrpccodegen.ServerFiles(genpkg, httpServices)...)
 
 		// Add service data meta type imports
 		for _, f := range files {

@@ -61,7 +61,7 @@ func Files(path, filename string, fns ...func()) {
 		eval.IncompatibleDSL()
 		return
 	}
-	r := expr.Root.API.HTTP.ServiceFor(s)
+	r := expr.Root.API.HTTP.ServiceFor(s, expr.Root.API.HTTP)
 	server := &expr.HTTPFileServerExpr{
 		Service:      r,
 		RequestPaths: []string{path},

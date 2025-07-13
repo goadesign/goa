@@ -20,15 +20,7 @@ var (
 	pathInitTmpl = template.Must(
 		template.New("path-init").
 			Funcs(template.FuncMap{"goify": codegen.Goify}).
-			Parse(readTemplate("path_init", "query_slice_conversion")),
-	)
-	// requestInitTmpl is the template used to render request constructors.
-	requestInitTmpl = template.Must(
-		template.New("request-init").
-			Funcs(template.FuncMap{
-				"isWebSocketEndpoint": isWebSocketEndpoint,
-			}).
-			Parse(readTemplate("request_init")),
+			Parse(HTTPTemplates.Read(pathInitT, querySliceConversionP)),
 	)
 )
 
@@ -46,6 +38,8 @@ type (
 		Service *service.Data
 		// Endpoints describes the endpoint data for this service.
 		Endpoints []*EndpointData
+		// HasJSONRPC indicates if the service has JSON-RPC endpoints.
+		HasJSONRPC bool
 		// FileServers lists the file servers for this service.
 		FileServers []*FileServerData
 		// ServerStruct is the name of the HTTP server struct.
@@ -103,6 +97,8 @@ type (
 		ServiceVarName string
 		// ServicePkgName is the name of the service package.
 		ServicePkgName string
+		// IsJSONRPC indicates if the endpoint is a JSON-RPC endpoint.
+		IsJSONRPC bool
 		// Payload describes the method HTTP payload.
 		Payload *PayloadData
 		// Result describes the method HTTP result.
@@ -684,7 +680,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 						name := sd.Scope.Name(codegen.Goify(arg, false))
 						var vcode string
 						if att.Validation != nil {
-							ctx := httpContext("", sd.Scope, true, false)
+							ctx := httpContext(sd.Scope, true, false)
 							vcode = codegen.AttributeValidationCode(att, nil, ctx, true, expr.IsAlias(att.Type), name, arg)
 						}
 						initArgs[j] = &InitArgData{
@@ -818,7 +814,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			data["RequestStruct"] = pkg + "." + method.RequestStruct
 		}
 		var buf bytes.Buffer
-		if err := requestInitTmpl.Execute(&buf, data); err != nil {
+		if err := requestInitTemplate(sd).Execute(&buf, data); err != nil {
 			panic(err) // bug
 		}
 		clientArgs := []*InitArgData{{Ref: "v", AttributeData: &AttributeData{Name: "payload", VarName: "v", TypeRef: "any"}}}
@@ -941,6 +937,24 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	return sd
 }
 
+// requestInitTemplate returns the template used to render request constructors.
+func requestInitTemplate(svcData *ServiceData) *template.Template {
+	return template.Must(
+		template.New("request-init").
+			Funcs(template.FuncMap{
+				"goTypeRef": func(dt expr.DataType, svc string) string {
+					return svcData.Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+				},
+				"isAliased": func(dt expr.DataType) bool {
+					_, ok := dt.(expr.UserType)
+					return ok
+				},
+				"isWebSocketEndpoint": isWebSocketEndpoint,
+			}).
+			Parse(HTTPTemplates.Read(requestInitT)),
+	)
+}
+
 // makeHTTPType traverses the attribute recursively and performs these actions:
 //
 // * removes aliased user type by replacing them with the underlying type.
@@ -1002,8 +1016,8 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		svc        = sd.Service
 		body       = e.Body.Type
 		ep         = svc.Method(e.MethodExpr.Name)
-		httpsvrctx = httpContext("", sd.Scope, true, true)
-		httpclictx = httpContext("", sd.Scope, true, false)
+		httpsvrctx = httpContext(sd.Scope, true, true)
+		httpclictx = httpContext(sd.Scope, true, false)
 		pkg        = pkgWithDefault(ep.PayloadLoc, svc.PkgName)
 		svcctx     = serviceContext(pkg, sd.Service.Scope)
 
@@ -1436,6 +1450,7 @@ func (sds *ServicesData) buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 		ref  string
 		view string
 	)
+
 	view = expr.DefaultView
 	if v, ok := result.Meta.Last(expr.ViewMetaKey); ok {
 		view = v
@@ -1485,7 +1500,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 		svc        = sd.Service
 		md         = svc.Method(e.Name())
 		pkg        = pkgWithDefault(md.ResultLoc, svc.PkgName)
-		httpclictx = httpContext("", sd.Scope, false, false)
+		httpclictx = httpContext(sd.Scope, false, false)
 		scope      = svc.Scope
 		svcctx     = serviceContext(pkg, sd.Service.Scope)
 	)
@@ -1756,7 +1771,7 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 	var (
 		svc        = sd.Service
 		ep         = svc.Method(e.MethodExpr.Name)
-		httpclictx = httpContext("", sd.Scope, false, false)
+		httpclictx = httpContext(sd.Scope, false, false)
 	)
 
 	data := make(map[string][]*ErrorData)
@@ -1989,7 +2004,7 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 		validateRef string
 
 		svc     = sd.Service
-		httpctx = httpContext("", sd.Scope, true, svr)
+		httpctx = httpContext(sd.Scope, true, svr)
 		ep      = sd.Service.Method(e.Name())
 		pkg     = pkgWithDefault(ep.PayloadLoc, sd.Service.PkgName)
 		svcctx  = serviceContext(pkg, sd.Service.Scope)
@@ -2118,7 +2133,7 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, lo
 		mustInit    bool
 
 		svc     = sd.Service
-		httpctx = httpContext("", sd.Scope, false, svr)
+		httpctx = httpContext(sd.Scope, false, svr)
 		pkg     = pkgWithDefault(loc, sd.Service.PkgName)
 		svcctx  = serviceContext(pkg, sd.Service.Scope)
 	)
@@ -2174,7 +2189,7 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, lo
 	} else {
 		// response body is a primitive type. They are used as non-pointers when
 		// encoding/decoding responses.
-		httpctx = httpContext("", sd.Scope, false, true)
+		httpctx = httpContext(sd.Scope, false, true)
 		validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), false, "body")
 		varname = sd.Scope.GoTypeRef(body)
 		desc = body.Description
@@ -2598,7 +2613,7 @@ func (sds *ServicesData) attributeTypeData(ut expr.UserType, req, ptr, server bo
 		validateRef string
 
 		att  = &expr.AttributeExpr{Type: ut}
-		hctx = httpContext("", rd.Scope, req, server)
+		hctx = httpContext(rd.Scope, req, server)
 	)
 	name = rd.Scope.GoTypeName(att)
 	ctx := "request"
@@ -2638,9 +2653,9 @@ func (sds *ServicesData) attributeTypeData(ut expr.UserType, req, ptr, server bo
 // type
 //
 // svr if true indicates that the type is a server type, else client type
-func httpContext(pkg string, scope *codegen.NameScope, request, svr bool) *codegen.AttributeContext {
+func httpContext(scope *codegen.NameScope, request, svr bool) *codegen.AttributeContext {
 	marshal := !request && svr || request && !svr
-	return codegen.NewAttributeContext(!marshal, false, marshal, pkg, scope)
+	return codegen.NewAttributeContext(!marshal, false, marshal, "", scope)
 }
 
 // serviceContext returns an attribute context for service types.

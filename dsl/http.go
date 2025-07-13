@@ -156,11 +156,11 @@ func HTTP(fns ...func()) {
 	case *expr.APIExpr:
 		eval.Execute(fn, expr.Root)
 	case *expr.ServiceExpr:
-		res := expr.Root.API.HTTP.ServiceFor(actual)
+		res := expr.Root.API.HTTP.ServiceFor(actual, expr.Root.API.HTTP)
 		res.DSLFunc = fn
 	case *expr.MethodExpr:
-		res := expr.Root.API.HTTP.ServiceFor(actual.Service)
-		act := res.EndpointFor(actual.Name, actual)
+		res := expr.Root.API.HTTP.ServiceFor(actual.Service, expr.Root.API.HTTP)
+		act := res.EndpointFor(actual)
 		act.DSLFunc = fn
 	default:
 		eval.IncompatibleDSL()
@@ -245,7 +245,7 @@ func Path(val string) {
 		expr.Root.API.HTTP.Path = val
 	case *expr.HTTPServiceExpr:
 		if !strings.HasPrefix(val, "//") {
-			rp := expr.Root.API.HTTP.Path
+			rp := def.Root.Path
 			awcs := expr.ExtractHTTPWildcards(rp)
 			wcs := expr.ExtractHTTPWildcards(val)
 			for _, awc := range awcs {
@@ -348,14 +348,14 @@ func route(method, path string) *expr.RouteExpr {
 // (description, type, validation etc.) of a header are inherited from the
 // request or response type attribute with the same name by default.
 //
-// Header must appear in the API HTTP expression (to define request headers
-// common to all the API endpoints), a service HTTP expression (to define
-// request headers common to all the service endpoints) a specific method HTTP
-// expression (to define request headers) or a Response expression (to define
-// the response headers). Header may also appear in a method GRPC expression (to
-// define headers sent in message metadata), or in a Response expression (to
-// define headers sent in result metadata). Finally Header may also appear in a
-// Headers expression.
+// Header must appear in the API HTTP or JSONRPC expression (to define request
+// headers common to all the API endpoints), a service HTTP or JSONRPC
+// expression (to define request headers common to all the service endpoints) a
+// specific method HTTP or JSONRPC expression (to define request headers) or a
+// Response expression (to define the response headers). Header may also appear
+// in a method GRPC expression (to define headers sent in message metadata), or
+// in a Response expression (to define headers sent in result metadata). Finally
+// Header may also appear in a Headers expression.
 //
 // Header accepts the same arguments as the Attribute function. The header name
 // may define a mapping between the attribute name and the HTTP header name when
@@ -394,11 +394,11 @@ func Header(name string, args ...any) {
 // Cookie identifies a HTTP cookie. When used within a Response the Cookie DSL
 // also makes it possible to define the cookie attributes.
 //
-// Cookie must appear in the API HTTP expression (to define request cookies
-// common to all the API endpoints), a service HTTP expression (to define
-// request cookies common to all the service endpoints) a specific method HTTP
-// expression (to define request cookies) or a Response expression (to define
-// the response cookies).
+// Cookie must appear in the API HTTP or JSONRPC expression (to define request
+// cookies common to all the API endpoints), a service HTTP or JSONRPC
+// expression (to define request cookies common to all the service endpoints) a
+// specific method HTTP or JSONRPC expression (to define request cookies) or a
+// Response expression (to define the response cookies).
 //
 // Cookie accepts the same arguments as the Attribute function. The cookie name
 // may define a mapping between the attribute name and the cookie name. The

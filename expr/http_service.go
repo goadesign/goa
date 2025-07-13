@@ -16,6 +16,8 @@ type (
 	// properties.
 	HTTPServiceExpr struct {
 		eval.DSLFunc
+		// Root is the root HTTP expression.
+		Root *HTTPExpr
 		// ServiceExpr is the service expression that backs this
 		// service.
 		ServiceExpr *ServiceExpr
@@ -81,16 +83,13 @@ func (svc *HTTPServiceExpr) Endpoint(name string) *HTTPEndpointExpr {
 }
 
 // EndpointFor builds the endpoint for the given method.
-func (svc *HTTPServiceExpr) EndpointFor(name string, m *MethodExpr) *HTTPEndpointExpr {
-	if a := svc.Endpoint(name); a != nil {
-		return a
+func (svc *HTTPServiceExpr) EndpointFor(m *MethodExpr) *HTTPEndpointExpr {
+	if e := svc.Endpoint(m.Name); e != nil {
+		return e
 	}
-	httpEndpoint := &HTTPEndpointExpr{
-		MethodExpr: m,
-		Service:    svc,
-	}
-	svc.HTTPEndpoints = append(svc.HTTPEndpoints, httpEndpoint)
-	return httpEndpoint
+	e := &HTTPEndpointExpr{MethodExpr: m, Service: svc}
+	svc.HTTPEndpoints = append(svc.HTTPEndpoints, e)
+	return e
 }
 
 // CanonicalEndpoint returns the canonical endpoint of the service if any.
@@ -107,7 +106,7 @@ func (svc *HTTPServiceExpr) CanonicalEndpoint() *HTTPEndpointExpr {
 // API and parent service base paths as needed.
 func (svc *HTTPServiceExpr) FullPaths() []string {
 	if len(svc.Paths) == 0 {
-		return []string{path.Join(Root.API.HTTP.Path)}
+		return []string{path.Join(svc.Root.Path)}
 	}
 	var paths []string
 	for _, p := range svc.Paths {
@@ -130,7 +129,7 @@ func (svc *HTTPServiceExpr) FullPaths() []string {
 				}
 			}
 		} else {
-			basePaths = []string{Root.API.HTTP.Path}
+			basePaths = []string{svc.Root.Path}
 		}
 		for _, base := range basePaths {
 			v := httppath.Clean(path.Join(base, p))
@@ -147,7 +146,7 @@ func (svc *HTTPServiceExpr) FullPaths() []string {
 // Parent returns the parent service if any, nil otherwise.
 func (svc *HTTPServiceExpr) Parent() *HTTPServiceExpr {
 	if svc.ParentName != "" {
-		if parent := Root.API.HTTP.Service(svc.ParentName); parent != nil {
+		if parent := svc.Root.Service(svc.ParentName); parent != nil {
 			return parent
 		}
 	}
@@ -184,7 +183,7 @@ func (svc *HTTPServiceExpr) Prepare() {
 			}
 		}
 		if !found {
-			for _, herr := range Root.API.HTTP.Errors {
+			for _, herr := range svc.Root.Errors {
 				if herr.Name == err.Name {
 					svc.HTTPErrors = append(svc.HTTPErrors, herr.Dup())
 				}
@@ -206,7 +205,7 @@ func (svc *HTTPServiceExpr) Validate() error {
 		verr.Merge(svc.Headers.Validate("headers", svc))
 	}
 	if n := svc.ParentName; n != "" {
-		if p := Root.API.HTTP.Service(n); p == nil {
+		if p := svc.Root.Service(n); p == nil {
 			verr.Add(svc, "Parent service %s not found", n)
 		} else {
 			if p.CanonicalEndpoint() == nil {
@@ -227,7 +226,7 @@ func (svc *HTTPServiceExpr) Validate() error {
 	for _, er := range svc.HTTPErrors {
 		verr.Merge(er.Validate())
 	}
-	for _, er := range Root.API.HTTP.Errors {
+	for _, er := range svc.Root.Errors {
 		// This may result in the same error being validated multiple
 		// times however service is the top level expression being
 		// walked and errors cannot be walked until all expressions have

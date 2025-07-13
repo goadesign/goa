@@ -99,25 +99,10 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	walk(methods)
 
 	// HTTP services and endpoints
-	httpsvcs := make(eval.ExpressionSet, len(r.API.HTTP.Services))
-	sort.SliceStable(r.API.HTTP.Services, func(i, j int) bool {
-		return r.API.HTTP.Services[j].ParentName == r.API.HTTP.Services[i].Name()
-	})
-	var httpepts eval.ExpressionSet
-	var httpsvrs eval.ExpressionSet
-	for i, svc := range r.API.HTTP.Services {
-		httpsvcs[i] = svc
-		for _, e := range svc.HTTPEndpoints {
-			httpepts = append(httpepts, e)
-		}
-		for _, s := range svc.FileServers {
-			httpsvrs = append(httpsvrs, s)
-		}
-	}
-	walk(eval.ExpressionSet{r.API.HTTP})
-	walk(httpsvcs)
-	walk(httpepts)
-	walk(httpsvrs)
+	r.walkHTTPServices(r.API.HTTP.Services, walk)
+
+	// JSON-RPC services and endpoints
+	r.walkHTTPServices(r.API.JSONRPC.Services, walk)
 
 	// GRPC services and endpoints
 	grpcsvcs := make(eval.ExpressionSet, len(r.API.GRPC.Services))
@@ -194,22 +179,14 @@ func (r *RootExpr) HTTPService(name string) *HTTPServiceExpr {
 	return nil
 }
 
-// HTTPServiceFor creates a new or returns the existing HTTP service definition
-// for the given service.
-func (r *RootExpr) HTTPServiceFor(s *ServiceExpr) *HTTPServiceExpr {
-	if res := r.HTTPService(s.Name); res != nil {
-		return res
-	}
-	res := &HTTPServiceExpr{
-		ServiceExpr: s,
-	}
-	r.API.HTTP.Services = append(r.API.HTTP.Services, res)
-	return res
-}
-
 // EvalName is the name of the DSL.
 func (*RootExpr) EvalName() string {
 	return "design"
+}
+
+// Prepare prepares the JSON-RPC API by copying the HTTP API constructs.
+func (r *RootExpr) Prepare() {
+	r.API.JSONRPC.Prepare()
 }
 
 // Validate makes sure the root expression is valid for code generation.
@@ -235,6 +212,29 @@ func (r *RootExpr) Finalize() {
 	for _, s := range r.API.Servers {
 		s.Finalize()
 	}
+}
+
+// walkHTTPServices walks the HTTP services and endpoints.
+func (r *RootExpr) walkHTTPServices(svcs []*HTTPServiceExpr, walk eval.SetWalker) {
+	sort.SliceStable(r.API.HTTP.Services, func(i, j int) bool {
+		return r.API.HTTP.Services[j].ParentName == r.API.HTTP.Services[i].Name()
+	})
+	var httpepts eval.ExpressionSet
+	var httpsvrs eval.ExpressionSet
+	httpsvcs := make(eval.ExpressionSet, len(r.API.HTTP.Services))
+	for i, svc := range r.API.HTTP.Services {
+		httpsvcs[i] = svc
+		for _, e := range svc.HTTPEndpoints {
+			httpepts = append(httpepts, e)
+		}
+		for _, s := range svc.FileServers {
+			httpsvrs = append(httpsvrs, s)
+		}
+	}
+	walk(eval.ExpressionSet{r.API.HTTP})
+	walk(httpsvcs)
+	walk(httpepts)
+	walk(httpsvrs)
 }
 
 // Dup creates a new map from the given expression.

@@ -47,6 +47,8 @@ type (
 		// StreamingBody describes the body transferred through the websocket
 		// stream.
 		StreamingBody *AttributeExpr
+		// IDAttribute is the name of the JSON-RPC request ID attribute.
+		IDAttribute string
 		// SkipRequestBodyEncodeDecode indicates that the service method accepts
 		// a reader and that the client provides a reader to stream the request
 		// body.
@@ -396,7 +398,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 	if e.MethodExpr.Stream == ServerStreamKind {
 		// Prepare already handles inheriting SSE from service or API level
 		if e.SSE != nil {
-			if err := e.SSE.Validate(e); err != nil {
+			if err := e.SSE.Validate(e.MethodExpr); err != nil {
 				var valErr *eval.ValidationErrors
 				if errors.As(err, &valErr) {
 					verr.Merge(valErr)
@@ -663,6 +665,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 	if e.SkipRequestBodyEncodeDecode && body.Type != Empty {
 		verr.Add(e, "HTTP endpoint request body must be empty when using SkipRequestBodyEncodeDecode but not all method payload attributes are mapped to headers and params. Make sure to define Headers and Params as needed.")
 	}
+
 	// For streaming endpoints, check if request body is allowed
 	if e.MethodExpr.IsStreaming() && body.Type != Empty {
 		// SSE endpoints can have request bodies, but WebSocket endpoints cannot

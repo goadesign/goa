@@ -153,13 +153,9 @@ func TestHTTPSSEExprValidation(t *testing.T) {
 				Result:  tc.Result,
 				Stream:  expr.ServerStreamKind, // Must be a streaming method for SSE
 			}
-			endpoint := &expr.HTTPEndpointExpr{
-				MethodExpr: methodExpr,
-				SSE:        tc.SSE,
-			}
 
 			// Run validation
-			err := tc.SSE.Validate(endpoint)
+			err := tc.SSE.Validate(methodExpr)
 
 			// Check results
 			if len(tc.ExpectedErrs) == 0 {

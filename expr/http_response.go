@@ -74,6 +74,14 @@ const (
 	StatusNetworkAuthenticationRequired = 511 // RFC 6585, 6
 )
 
+const (
+	RPCParseError     = -32700 // JSON-RPC 2.0, 5.1
+	RPCInvalidRequest = -32600
+	RPCMethodNotFound = -32601
+	RPCInvalidParams  = -32602
+	RPCInternalError  = -32603
+)
+
 type (
 	// HTTPResponseExpr defines a HTTP response including its status code,
 	// headers and result type.

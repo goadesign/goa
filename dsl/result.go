@@ -89,6 +89,12 @@ func Result(val any, args ...any) {
 //
 // The arguments to a StreamingResult DSL is same as the Result DSL.
 //
+// StreamingResult requires a transport that supports server-to-client streaming.
+// This includes gRPC, WebSockets, and Server-Sent Events (SSE). When using
+// HTTP transports, SSE (via POST endpoints) is recommended for server-to-client
+// only streaming, while WebSockets (via GET endpoints) are required for
+// bidirectional streaming.
+//
 // Examples:
 //
 //	// Method result is a stream of integers
@@ -126,6 +132,28 @@ func Result(val any, args ...any) {
 //	    StreamingResult(Sum, func() {
 //	        View("default")
 //	        Required("value")
+//	    })
+//	})
+//
+//	// Method with SSE streaming
+//	Method("events", func() {
+//	    Payload(func() {
+//	        Attribute("channel", String)
+//	        Required("channel")
+//	    })
+//	    StreamingResult(Event)
+//	    HTTP(func() {
+//	        POST("/events")
+//	        ServerSentEvents()
+//	    })
+//	})
+//
+//	// Method with WebSocket streaming (bidirectional)
+//	Method("chat", func() {
+//	    StreamingPayload(Message)
+//	    StreamingResult(Message)
+//	    HTTP(func() {
+//	        GET("/chat")
 //	    })
 //	})
 func StreamingResult(val any, args ...any) {
