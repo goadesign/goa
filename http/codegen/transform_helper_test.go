@@ -24,7 +24,7 @@ func TestTransformHelperServer(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
-			f := serverEncodeDecodeFile("", root.API.HTTP.Services[0], services)
+			f := ServerEncodeDecodeFile("", root.API.HTTP.Services[0], services)
 			sections := f.SectionTemplates
 			require.Greater(t, len(sections), c.Offset)
 			code := codegen.SectionCode(t, sections[len(sections)-c.Offset])

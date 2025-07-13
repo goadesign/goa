@@ -49,6 +49,9 @@ type (
 		StreamingBody *AttributeExpr
 		// IDAttribute is the name of the JSON-RPC request ID attribute.
 		IDAttribute string
+		// IsNotification indicates that the method is a JSON-RPC notification and
+		// does not expect a response.
+		IsNotification bool
 		// SkipRequestBodyEncodeDecode indicates that the service method accepts
 		// a reader and that the client provides a reader to stream the request
 		// body.

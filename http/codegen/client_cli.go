@@ -148,7 +148,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		cli.UsageExamples(cliData),
 		{
 			Name:   "parse-endpoint",
-			Source: HTTPTemplates.Read(parseEndpointT),
+			Source: httpTemplates.Read(parseEndpointT),
 			Data: struct {
 				FlagsCode string
 				Commands  []*commandData

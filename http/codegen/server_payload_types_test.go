@@ -127,7 +127,7 @@ func TestPayloadConstructor(t *testing.T) {
 			sections := fs.SectionTemplates
 			var section *codegen.SectionTemplate
 			for _, s := range sections {
-				if s.Source == HTTPTemplates.Read("server_type_init") {
+				if s.Source == httpTemplates.Read("server_type_init") {
 					section = s
 				}
 			}

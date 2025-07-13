@@ -111,5 +111,5 @@ const (
 //go:embed templates/*
 var templateFS embed.FS
 
-// HTTPTemplates is the shared template reader for the http codegen package.
-var HTTPTemplates = &template.TemplateReader{FS: templateFS}
+// httpTemplates is the shared template reader for the http codegen package.
+var httpTemplates = &template.TemplateReader{FS: templateFS}

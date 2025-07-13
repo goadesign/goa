@@ -168,3 +168,28 @@ func ID(name string) {
 	}
 	endpoint.IDAttribute = name
 }
+
+// Notification indicates that the method is a notification and does not
+// expect a response.
+//
+// Notification must appear in a JSONRPC expression within a Method.
+//
+// Example:
+//
+//	Method("notify", func() {
+//	    Payload(func() {
+//	        Attribute("message", String, "Notification message")
+//	        Required("message")
+//	    })
+//	    JSONRPC(func() {
+//	        Notification() // This method is a notification and does not expect a response
+//	    })
+//	})
+func Notification() {
+	endpoint, ok := eval.Current().(*expr.HTTPEndpointExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	endpoint.IsNotification = true
+}

@@ -20,7 +20,7 @@ var (
 	pathInitTmpl = template.Must(
 		template.New("path-init").
 			Funcs(template.FuncMap{"goify": codegen.Goify}).
-			Parse(HTTPTemplates.Read(pathInitT, querySliceConversionP)),
+			Parse(httpTemplates.Read(pathInitT, querySliceConversionP)),
 	)
 )
 
@@ -38,8 +38,6 @@ type (
 		Service *service.Data
 		// Endpoints describes the endpoint data for this service.
 		Endpoints []*EndpointData
-		// HasJSONRPC indicates if the service has JSON-RPC endpoints.
-		HasJSONRPC bool
 		// FileServers lists the file servers for this service.
 		FileServers []*FileServerData
 		// ServerStruct is the name of the HTTP server struct.
@@ -215,6 +213,11 @@ type (
 		// DecoderReturnValue is a reference to the decoder return value
 		// if there is no payload constructor (i.e. if Init is nil).
 		DecoderReturnValue string
+		// IDAttribute is the name of the attribute where the ID of the
+		// JSON-RPC request is stored.
+		IDAttribute string
+		// IsNotification indicates if the payload is a JSON-RPC notification.
+		IsNotification bool
 	}
 
 	// ResultData contains the result information required to generate the
@@ -308,6 +311,8 @@ type (
 	ResponseData struct {
 		// StatusCode is the return code of the response.
 		StatusCode string
+		// Code is the return code of the response.
+		Code int
 		// Description is the response description.
 		Description string
 		// Headers provides information about the HTTP response headers.
@@ -574,11 +579,11 @@ func (sds *ServicesData) Get(name string) *ServiceData {
 	if data, ok := sds.HTTPServices[name]; ok {
 		return data
 	}
-	httpService := sds.Root.API.HTTP.Service(name)
-	if httpService == nil {
+	svc := sds.Root.API.HTTP.Service(name)
+	if svc == nil {
 		return nil
 	}
-	sds.HTTPServices[name] = sds.analyze(httpService)
+	sds.HTTPServices[name] = sds.analyze(svc)
 	return sds.HTTPServices[name]
 }
 
@@ -951,7 +956,7 @@ func requestInitTemplate(svcData *ServiceData) *template.Template {
 				},
 				"isWebSocketEndpoint": isWebSocketEndpoint,
 			}).
-			Parse(HTTPTemplates.Read(requestInitT)),
+			Parse(httpTemplates.Read(requestInitT)),
 	)
 }
 
@@ -1435,6 +1440,8 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		Ref:                ref,
 		Request:            request,
 		DecoderReturnValue: returnValue,
+		IDAttribute:        e.IDAttribute,
+		IsNotification:     e.IsNotification,
 	}
 }
 
@@ -1928,6 +1935,7 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 			}
 			responseData = &ResponseData{
 				StatusCode:   statusCodeToHTTPConst(v.Response.StatusCode),
+				Code:         v.Response.StatusCode,
 				Headers:      headers,
 				ContentType:  contentType,
 				Cookies:      cookies,

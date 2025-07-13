@@ -42,7 +42,15 @@ func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		files = append(files, grpccodegen.ClientCLIFiles(genpkg, grpcServices)...)
 
 		// JSON-RPC
-		files = append(files, jsonrpccodegen.ServerFiles(genpkg, httpServices)...)
+
+		// Set the API's HTTP expression to the HTTPExpr embedded in the JSONRPCExpr.
+		// This allows the JSON-RPC code generation logic to reuse the
+		// HTTP transport codegen infrastructure.
+		r.API.HTTP = &r.API.JSONRPC.HTTPExpr
+
+		jsonrpcServices := httpcodegen.NewServicesData(services)
+		files = append(files, jsonrpccodegen.ServerFiles(genpkg, jsonrpcServices)...)
+		files = append(files, jsonrpccodegen.ServerTypeFiles(genpkg, jsonrpcServices)...)
 
 		// Add service data meta type imports
 		for _, f := range files {

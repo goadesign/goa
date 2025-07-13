@@ -70,7 +70,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 			if data.Def != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "request-body-type-decl",
-					Source: HTTPTemplates.Read(typeDeclT),
+					Source: httpTemplates.Read(typeDeclT),
 					Data:   data,
 				})
 			}
@@ -83,7 +83,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "request-stream-payload-type-decl",
-						Source: HTTPTemplates.Read(typeDeclT),
+						Source: httpTemplates.Read(typeDeclT),
 						Data:   data,
 					})
 				}
@@ -103,7 +103,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 					if tdata.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "response-server-body",
-							Source: HTTPTemplates.Read(typeDeclT),
+							Source: httpTemplates.Read(typeDeclT),
 							Data:   tdata,
 						})
 					}
@@ -124,19 +124,26 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 		adata := data.Endpoint(a.Name())
 		for _, gerr := range adata.Errors {
 			for _, herr := range gerr.Errors {
-				for _, data := range herr.Response.ServerBody {
-					if data.Def != "" {
+				for _, tdata := range herr.Response.ServerBody {
+					// Check if this error type has already been generated
+					if generated, ok := data.ServerTypeNames[tdata.Name]; ok && generated {
+						continue
+					}
+					
+					if tdata.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "error-body-type-decl",
-							Source: HTTPTemplates.Read(typeDeclT),
-							Data:   data,
+							Source: httpTemplates.Read(typeDeclT),
+							Data:   tdata,
 						})
+						// Mark this type as generated
+						data.ServerTypeNames[tdata.Name] = true
 					}
-					if data.Init != nil {
-						initData = append(initData, data.Init)
+					if tdata.Init != nil {
+						initData = append(initData, tdata.Init)
 					}
-					if data.ValidateDef != "" {
-						validatedTypes = append(validatedTypes, data)
+					if tdata.ValidateDef != "" {
+						validatedTypes = append(validatedTypes, tdata)
 					}
 				}
 			}
@@ -148,7 +155,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 		if tdata.Def != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-body-attributes",
-				Source: HTTPTemplates.Read(typeDeclT),
+				Source: httpTemplates.Read(typeDeclT),
 				Data:   tdata,
 			})
 		}
@@ -162,7 +169,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 	for _, init := range initData {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-body-init",
-			Source: HTTPTemplates.Read(serverBodyInitT),
+			Source: httpTemplates.Read(serverBodyInitT),
 			Data:   init,
 		})
 	}
@@ -172,7 +179,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 		if init := adata.Payload.Request.PayloadInit; init != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "server-payload-init",
-				Source:  HTTPTemplates.Read(serverTypeInitT),
+				Source:  httpTemplates.Read(serverTypeInitT),
 				Data:    init,
 				FuncMap: map[string]any{"fieldCode": fieldCode},
 			})
@@ -181,7 +188,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 			if init := adata.ServerWebSocket.Payload.Init; init != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "server-payload-init",
-					Source:  HTTPTemplates.Read(serverTypeInitT),
+					Source:  httpTemplates.Read(serverTypeInitT),
 					Data:    init,
 					FuncMap: map[string]any{"fieldCode": fieldCode},
 				})
@@ -193,7 +200,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 	for _, data := range validatedTypes {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-validate",
-			Source: HTTPTemplates.Read(validateT),
+			Source: httpTemplates.Read(validateT),
 			Data:   data,
 		})
 	}

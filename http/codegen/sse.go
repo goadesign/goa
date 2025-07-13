@@ -177,7 +177,7 @@ func sseTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:    "server-sse",
-			Source:  HTTPTemplates.Read(serverSseT, sseFormatP),
+			Source:  httpTemplates.Read(serverSseT, sseFormatP),
 			Data:    ed,
 			FuncMap: funcs,
 		})

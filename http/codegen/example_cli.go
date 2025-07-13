@@ -71,7 +71,7 @@ func exampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 		codegen.Header("", "main", specs),
 		{
 			Name:   "cli-http-start",
-			Source: HTTPTemplates.Read(cliStartT),
+			Source: httpTemplates.Read(cliStartT),
 			Data: map[string]any{
 				"Services":        svcData,
 				"InterceptorsPkg": interceptorsPkg,
@@ -79,7 +79,7 @@ func exampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 		},
 		{
 			Name:   "cli-http-streaming",
-			Source: HTTPTemplates.Read(cliStreamingT),
+			Source: httpTemplates.Read(cliStreamingT),
 			Data: map[string]any{
 				"Services": svcData,
 			},
@@ -89,7 +89,7 @@ func exampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 		},
 		{
 			Name:   "cli-http-end",
-			Source: HTTPTemplates.Read(cliEndT),
+			Source: httpTemplates.Read(cliEndT),
 			Data: map[string]any{
 				"Services": svcData,
 				"APIPkg":   apiPkg,
@@ -101,7 +101,7 @@ func exampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 		},
 		{
 			Name:   "cli-http-usage",
-			Source: HTTPTemplates.Read(cliUsageT),
+			Source: httpTemplates.Read(cliUsageT),
 		},
 	}
 	return &codegen.File{
