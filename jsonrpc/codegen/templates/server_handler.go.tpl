@@ -35,18 +35,18 @@ func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 // handleSingle handles a single JSON-RPC request.
 func (s *Server) handleSingle(w http.ResponseWriter, r *http.Request) {
 	var req jsonrpc.Request
-	if err := s.decoder(r).Decode(&req); err != nil {
+	if err := s.decoder(r.Body).Decode(&req); err != nil {
 		s.writeError(r.Context(), w, nil, jsonrpc.ParseError, fmt.Errorf("Failed to decode request: %w", err))
 		return
 	}
 
-	resp := s.processRequest(r.Context(), &req, r)
+	resp := s.processRequest(r.Context(), &req)
 	if resp == nil {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	if err := s.encoder(r.Context(), w).Encode(resp); err != nil {
+	if err := s.encoder(w).Encode(resp); err != nil {
 		s.writeError(r.Context(), w, req.ID, jsonrpc.InternalError, fmt.Errorf("Failed to encode response: %w", err))
 	}
 }
@@ -54,7 +54,7 @@ func (s *Server) handleSingle(w http.ResponseWriter, r *http.Request) {
 // handleBatch handles a batch of JSON-RPC requests.
 func (s *Server) handleBatch(w http.ResponseWriter, r *http.Request) {
 	var reqs []jsonrpc.Request
-	if err := s.decoder(r).Decode(&reqs); err != nil {
+	if err := s.decoder(r.Body).Decode(&reqs); err != nil {
 		s.writeError(r.Context(), w, nil, jsonrpc.ParseError, fmt.Errorf("Invalid JSON: %w", err))
 		return
 	}
@@ -66,18 +66,18 @@ func (s *Server) handleBatch(w http.ResponseWriter, r *http.Request) {
 
 	responses := make([]jsonrpc.Response, 0, len(reqs))
 	for _, req := range reqs {
-		if resp := s.processRequest(r.Context(), &req, r); resp != nil {
+		if resp := s.processRequest(r.Context(), &req); resp != nil {
 			responses = append(responses, *resp)
 		}
 	}
 
-	if err := s.encoder(r.Context(), w).Encode(responses); err != nil {
+	if err := s.encoder(w).Encode(responses); err != nil {
 		s.writeError(r.Context(), w, nil, jsonrpc.InternalError, fmt.Errorf("Failed to encode batch response: %w", err))
 	}
 }
 
 // ProcessRequest processes a single JSON-RPC request.
-func (s *Server) processRequest(ctx context.Context, req *jsonrpc.Request, r *http.Request) *jsonrpc.Response {
+func (s *Server) processRequest(ctx context.Context, req *jsonrpc.Request) *jsonrpc.Response {
 	if req.JSONRPC != "2.0" {
 		return jsonrpc.MakeErrorResponse(req.ID, jsonrpc.InvalidRequest, fmt.Sprintf("Invalid JSON-RPC version, must be 2.0, got %q", req.JSONRPC), nil)
 	}
@@ -90,7 +90,7 @@ func (s *Server) processRequest(ctx context.Context, req *jsonrpc.Request, r *ht
 	switch req.Method {
         {{- range .Endpoints }}
         case {{ printf "%q" .Method.Name }}:
-            resp = s.{{ .Method.VarName }}(ctx, req, r)
+            resp = s.{{ .Method.VarName }}(ctx, req)
         {{- end }}
 	default:
 		if req.ID != nil {
@@ -104,7 +104,7 @@ func (s *Server) processRequest(ctx context.Context, req *jsonrpc.Request, r *ht
 // writeError writes a JSON-RPC error response.
 func (s *{{ .ServerStruct }}) writeError(ctx context.Context, w http.ResponseWriter, reqID any, code jsonrpc.Code, err error) {
 	resp := jsonrpc.MakeErrorResponse(reqID, code, err.Error(), nil)
-	if err := s.encoder(ctx, w).Encode(resp); err != nil {
+	if err := s.encoder(w).Encode(resp); err != nil {
 		s.errhandler(ctx, w, err)
 	}
 }

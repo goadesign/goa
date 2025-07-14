@@ -10,6 +10,19 @@ import (
 	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
+const (
+	// httpRequestDecoderTemplate is the original HTTP request decoder template
+	// that needs to be replaced. It uses *http.Request and goahttp.Decoder.
+	httpRequestDecoderTemplate = `func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) ({{ .Payload.Ref }}, error) {
+	return func(r *http.Request) ({{ .Payload.Ref }}, error) {`
+
+	// jsonrpcRequestDecoderTemplate is the modified JSON-RPC request decoder template
+	// that replaces the HTTP version. It uses io.Reader and jsonrpc.Decoder to handle
+	// JSON-RPC requests instead of HTTP requests.
+	jsonrpcRequestDecoderTemplate = `func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(io.Reader) jsonrpc.Decoder) func(io.Reader) ({{ .Payload.Ref }}, error) {
+	return func(r io.Reader) ({{ .Payload.Ref }}, error) {`
+)
+
 // ServerFiles returns the generated JSON-RPC server files if any.
 func ServerFiles(genpkg string, services *httpcodegen.ServicesData) []*codegen.File {
 	var files []*codegen.File
@@ -21,6 +34,14 @@ func ServerFiles(genpkg string, services *httpcodegen.ServicesData) []*codegen.F
 		if f := httpcodegen.ServerEncodeDecodeFile(genpkg, svc, services); f != nil {
 			var sections []*codegen.SectionTemplate
 			for _, s := range f.SectionTemplates {
+				// Add the JSON-RPC imports.
+				if s.Name == "source-header" {
+					codegen.AddImport(s, codegen.GoaImport("jsonrpc"))
+				}
+				// Tweak the request decoder to use the JSON-RPC decoder.
+				if s.Name == "request-decoder" {
+					s.Source = strings.Replace(s.Source, httpRequestDecoderTemplate, jsonrpcRequestDecoderTemplate, 1)
+				}
 				// Remove the error encoder sections, JSON-RPC
 				// inlines the error encoding in each handler.
 				if s.Name != "error-encoder" {

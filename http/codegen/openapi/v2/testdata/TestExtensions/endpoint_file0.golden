@@ -1,1 +1,96 @@
-{"swagger":"2.0","info":{"title":"","version":"0.0.1","x-test-api":"API"},"host":"goa.design","consumes":["application/json","application/xml","application/gob"],"produces":["application/json","application/xml","application/gob"],"paths":{"/":{"post":{"operationId":"testService#testEndpoint","parameters":[{"in":"body","name":"TestEndpointRequestBody","required":true,"schema":{"$ref":"#/definitions/Payload"}}],"responses":{"200":{"description":"OK response.","schema":{"$ref":"#/definitions/Result"}}},"schemes":["https"],"summary":"testEndpoint testService","tags":["testService"],"x-test-operation":"Operation"},"x-test-foo":"bar"}},"definitions":{"Payload":{"title":"Payload","type":"object","properties":{"string":{"example":"","type":"string","x-test-schema":"Payload"}},"example":{"string":""}},"Result":{"title":"Result","type":"object","properties":{"string":{"example":"","type":"string","x-test-schema":"Result"}},"example":{"string":""}}},"tags":[{"description":"Description of Backend","externalDocs":{"description":"See more docs here","url":"http://example.com"},"name":"Backend","x-data":{"foo":"bar"}}]}
+{
+  "consumes": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "definitions": {
+    "Payload": {
+      "example": {
+        "string": ""
+      },
+      "properties": {
+        "string": {
+          "example": "",
+          "type": "string",
+          "x-test-schema": "Payload"
+        }
+      },
+      "title": "Payload",
+      "type": "object"
+    },
+    "Result": {
+      "example": {
+        "string": ""
+      },
+      "properties": {
+        "string": {
+          "example": "",
+          "type": "string",
+          "x-test-schema": "Result"
+        }
+      },
+      "title": "Result",
+      "type": "object"
+    }
+  },
+  "host": "goa.design",
+  "info": {
+    "title": "",
+    "version": "0.0.1",
+    "x-test-api": "API"
+  },
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "testService#testEndpoint",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "TestEndpointRequestBody",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Payload"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "schema": {
+              "$ref": "#/definitions/Result"
+            }
+          }
+        },
+        "schemes": [
+          "https"
+        ],
+        "summary": "testEndpoint testService",
+        "tags": [
+          "testService"
+        ],
+        "x-test-operation": "Operation"
+      },
+      "x-test-foo": "bar"
+    }
+  },
+  "produces": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "swagger": "2.0",
+  "tags": [
+    {
+      "description": "Description of Backend",
+      "externalDocs": {
+        "description": "See more docs here",
+        "url": "http://example.com"
+      },
+      "name": "Backend",
+      "x-data": {
+        "foo": "bar"
+      }
+    }
+  ]
+}

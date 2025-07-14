@@ -1,1 +1,118 @@
-{"swagger":"2.0","info":{"title":"","version":"0.0.1"},"host":"goa.design","consumes":["application/json","application/xml","application/gob"],"produces":["application/json","application/xml","application/gob"],"paths":{"/":{"post":{"tags":["testService"],"summary":"testEndpoint testService","operationId":"testService#testEndpoint","parameters":[{"name":"array","in":"body","required":true,"schema":{"type":"array","items":{"$ref":"#/definitions/Foobar"}}}],"responses":{"200":{"description":"OK response.","schema":{"type":"string","minLength":0,"maxLength":42}}},"schemes":["https"]}}},"definitions":{"Bar":{"title":"Bar","type":"object","properties":{"string":{"type":"string","example":"","minLength":0,"maxLength":42}},"example":{"string":""}},"Foobar":{"title":"Foobar","type":"object","properties":{"bar":{"type":"array","items":{"$ref":"#/definitions/Bar"},"example":[{"string":""},{"string":""}],"minItems":0,"maxItems":42},"foo":{"type":"array","items":{"type":"string","example":"Beatae non id consequatur."},"example":[],"minItems":0,"maxItems":42}},"example":{"bar":[{"string":""},{"string":""}],"foo":["Repudiandae sit.","Asperiores fuga qui rem qui earum eos."]}}}}
+{
+  "consumes": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "definitions": {
+    "Bar": {
+      "example": {
+        "string": ""
+      },
+      "properties": {
+        "string": {
+          "example": "",
+          "maxLength": 42,
+          "minLength": 0,
+          "type": "string"
+        }
+      },
+      "title": "Bar",
+      "type": "object"
+    },
+    "Foobar": {
+      "example": {
+        "bar": [
+          {
+            "string": ""
+          },
+          {
+            "string": ""
+          }
+        ],
+        "foo": [
+          "Repudiandae sit.",
+          "Asperiores fuga qui rem qui earum eos."
+        ]
+      },
+      "properties": {
+        "bar": {
+          "example": [
+            {
+              "string": ""
+            },
+            {
+              "string": ""
+            }
+          ],
+          "items": {
+            "$ref": "#/definitions/Bar"
+          },
+          "maxItems": 42,
+          "minItems": 0,
+          "type": "array"
+        },
+        "foo": {
+          "example": [],
+          "items": {
+            "example": "Beatae non id consequatur.",
+            "type": "string"
+          },
+          "maxItems": 42,
+          "minItems": 0,
+          "type": "array"
+        }
+      },
+      "title": "Foobar",
+      "type": "object"
+    }
+  },
+  "host": "goa.design",
+  "info": {
+    "title": "",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "testService#testEndpoint",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "array",
+            "required": true,
+            "schema": {
+              "items": {
+                "$ref": "#/definitions/Foobar"
+              },
+              "type": "array"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "schema": {
+              "maxLength": 42,
+              "minLength": 0,
+              "type": "string"
+            }
+          }
+        },
+        "schemes": [
+          "https"
+        ],
+        "summary": "testEndpoint testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "produces": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "swagger": "2.0"
+}

@@ -1,1 +1,161 @@
-{"swagger":"2.0","info":{"title":"","version":"0.0.1"},"host":"localhost:80","consumes":["application/json","application/xml","application/gob"],"produces":["application/json","application/xml","application/gob"],"paths":{"/":{"get":{"tags":["testService"],"summary":"testEndpointA testService","description":"\n**Required security scopes for basic**:\n  * `api:read`\n\n**Required security scopes for jwt**:\n  * `api:read`\n\n**Required security scopes for api_key**:\n  * `api:read`","operationId":"testService#testEndpointA","parameters":[{"name":"k","in":"query","required":true,"type":"string"},{"name":"Token","in":"header","required":true,"type":"string"},{"name":"X-Authorization","in":"header","required":true,"type":"string"},{"name":"Authorization","in":"header","description":"Basic Auth security using Basic scheme (https://tools.ietf.org/html/rfc7617)","required":true,"type":"string"}],"responses":{"204":{"description":"No Content response."}},"schemes":["http"],"security":[{"api_key_query_k":[],"basic_header_Authorization":[],"jwt_header_X-Authorization":[],"oauth2_header_Token":["api:read"]}]},"post":{"tags":["testService"],"summary":"testEndpointB testService","operationId":"testService#testEndpointB","parameters":[{"name":"auth","in":"query","required":true,"type":"string"},{"name":"Authorization","in":"header","required":true,"type":"string"}],"responses":{"204":{"description":"No Content response."}},"schemes":["http"],"security":[{"api_key_header_Authorization":[]},{"oauth2_query_auth":["api:read","api:write"]}]}}},"securityDefinitions":{"api_key_header_Authorization":{"type":"apiKey","description":"Secures endpoint by requiring an API key.","name":"Authorization","in":"header"},"api_key_query_k":{"type":"apiKey","description":"Secures endpoint by requiring an API key.","name":"k","in":"query"},"basic_header_Authorization":{"type":"basic","description":"Basic authentication used to authenticate security principal during signin"},"jwt_header_X-Authorization":{"type":"apiKey","description":"Secures endpoint by requiring a valid JWT token retrieved via the signin endpoint. Supports scopes \"api:read\" and \"api:write\".\n\n**Security Scopes**:\n  * `api:read`: Read-only access\n  * `api:write`: Read and write access","name":"X-Authorization","in":"header"},"oauth2_header_Token":{"type":"oauth2","description":"Secures endpoint by requiring a valid OAuth2 token retrieved via the signin endpoint. Supports scopes \"api:read\" and \"api:write\".","flow":"accessCode","authorizationUrl":"http://goa.design/authorization","tokenUrl":"http://goa.design/token","scopes":{"api:read":"Read-only access","api:write":"Read and write access"}},"oauth2_query_auth":{"type":"oauth2","description":"Secures endpoint by requiring a valid OAuth2 token retrieved via the signin endpoint. Supports scopes \"api:read\" and \"api:write\".","flow":"accessCode","authorizationUrl":"http://goa.design/authorization","tokenUrl":"http://goa.design/token","scopes":{"api:read":"Read-only access","api:write":"Read and write access"}}}}
+{
+  "consumes": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "host": "localhost:80",
+  "info": {
+    "title": "",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "description": "\n**Required security scopes for basic**:\n  * `api:read`\n\n**Required security scopes for jwt**:\n  * `api:read`\n\n**Required security scopes for api_key**:\n  * `api:read`",
+        "operationId": "testService#testEndpointA",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "k",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "header",
+            "name": "Token",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "header",
+            "name": "X-Authorization",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "description": "Basic Auth security using Basic scheme (https://tools.ietf.org/html/rfc7617)",
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        },
+        "schemes": [
+          "http"
+        ],
+        "security": [
+          {
+            "api_key_query_k": [],
+            "basic_header_Authorization": [],
+            "jwt_header_X-Authorization": [],
+            "oauth2_header_Token": [
+              "api:read"
+            ]
+          }
+        ],
+        "summary": "testEndpointA testService",
+        "tags": [
+          "testService"
+        ]
+      },
+      "post": {
+        "operationId": "testService#testEndpointB",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "auth",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        },
+        "schemes": [
+          "http"
+        ],
+        "security": [
+          {
+            "api_key_header_Authorization": []
+          },
+          {
+            "oauth2_query_auth": [
+              "api:read",
+              "api:write"
+            ]
+          }
+        ],
+        "summary": "testEndpointB testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "produces": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "securityDefinitions": {
+    "api_key_header_Authorization": {
+      "description": "Secures endpoint by requiring an API key.",
+      "in": "header",
+      "name": "Authorization",
+      "type": "apiKey"
+    },
+    "api_key_query_k": {
+      "description": "Secures endpoint by requiring an API key.",
+      "in": "query",
+      "name": "k",
+      "type": "apiKey"
+    },
+    "basic_header_Authorization": {
+      "description": "Basic authentication used to authenticate security principal during signin",
+      "type": "basic"
+    },
+    "jwt_header_X-Authorization": {
+      "description": "Secures endpoint by requiring a valid JWT token retrieved via the signin endpoint. Supports scopes \"api:read\" and \"api:write\".\n\n**Security Scopes**:\n  * `api:read`: Read-only access\n  * `api:write`: Read and write access",
+      "in": "header",
+      "name": "X-Authorization",
+      "type": "apiKey"
+    },
+    "oauth2_header_Token": {
+      "authorizationUrl": "http://goa.design/authorization",
+      "description": "Secures endpoint by requiring a valid OAuth2 token retrieved via the signin endpoint. Supports scopes \"api:read\" and \"api:write\".",
+      "flow": "accessCode",
+      "scopes": {
+        "api:read": "Read-only access",
+        "api:write": "Read and write access"
+      },
+      "tokenUrl": "http://goa.design/token",
+      "type": "oauth2"
+    },
+    "oauth2_query_auth": {
+      "authorizationUrl": "http://goa.design/authorization",
+      "description": "Secures endpoint by requiring a valid OAuth2 token retrieved via the signin endpoint. Supports scopes \"api:read\" and \"api:write\".",
+      "flow": "accessCode",
+      "scopes": {
+        "api:read": "Read-only access",
+        "api:write": "Read and write access"
+      },
+      "tokenUrl": "http://goa.design/token",
+      "type": "oauth2"
+    }
+  },
+  "swagger": "2.0"
+}

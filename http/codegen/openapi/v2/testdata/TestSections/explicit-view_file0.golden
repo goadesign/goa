@@ -1,1 +1,96 @@
-{"swagger":"2.0","info":{"title":"","version":"0.0.1"},"host":"localhost:80","consumes":["application/json","application/xml","application/gob"],"produces":["application/json","application/xml","application/gob"],"paths":{"/":{"get":{"tags":["testService"],"summary":"testEndpointDefault testService","operationId":"testService#testEndpointDefault","responses":{"200":{"description":"OK response.","schema":{"$ref":"#/definitions/TestServiceTestEndpointDefaultResponseBody"}}},"schemes":["http"]}},"/tiny":{"get":{"tags":["testService"],"summary":"testEndpointTiny testService","operationId":"testService#testEndpointTiny","responses":{"200":{"description":"OK response.","schema":{"$ref":"#/definitions/TestServiceTestEndpointTinyResponseBodyTiny"}}},"schemes":["http"]}}},"definitions":{"TestServiceTestEndpointDefaultResponseBody":{"title":"Mediatype identifier: application/json; view=default","type":"object","properties":{"int":{"type":"integer","example":1,"format":"int64"},"string":{"type":"string","example":""}},"description":"TestEndpointDefaultResponseBody result type (default view)","example":{"int":1,"string":""}},"TestServiceTestEndpointTinyResponseBodyTiny":{"title":"Mediatype identifier: application/json; view=tiny","type":"object","properties":{"string":{"type":"string","example":""}},"description":"TestEndpointTinyResponseBody result type (tiny view) (default view)","example":{"string":""}}}}
+{
+  "consumes": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "definitions": {
+    "TestServiceTestEndpointDefaultResponseBody": {
+      "description": "TestEndpointDefaultResponseBody result type (default view)",
+      "example": {
+        "int": 1,
+        "string": ""
+      },
+      "properties": {
+        "int": {
+          "example": 1,
+          "format": "int64",
+          "type": "integer"
+        },
+        "string": {
+          "example": "",
+          "type": "string"
+        }
+      },
+      "title": "Mediatype identifier: application/json; view=default",
+      "type": "object"
+    },
+    "TestServiceTestEndpointTinyResponseBodyTiny": {
+      "description": "TestEndpointTinyResponseBody result type (tiny view) (default view)",
+      "example": {
+        "string": ""
+      },
+      "properties": {
+        "string": {
+          "example": "",
+          "type": "string"
+        }
+      },
+      "title": "Mediatype identifier: application/json; view=tiny",
+      "type": "object"
+    }
+  },
+  "host": "localhost:80",
+  "info": {
+    "title": "",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "testService#testEndpointDefault",
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "schema": {
+              "$ref": "#/definitions/TestServiceTestEndpointDefaultResponseBody"
+            }
+          }
+        },
+        "schemes": [
+          "http"
+        ],
+        "summary": "testEndpointDefault testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    },
+    "/tiny": {
+      "get": {
+        "operationId": "testService#testEndpointTiny",
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "schema": {
+              "$ref": "#/definitions/TestServiceTestEndpointTinyResponseBodyTiny"
+            }
+          }
+        },
+        "schemes": [
+          "http"
+        ],
+        "summary": "testEndpointTiny testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "produces": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "swagger": "2.0"
+}

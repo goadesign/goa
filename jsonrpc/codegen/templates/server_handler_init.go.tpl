@@ -2,16 +2,16 @@
 func {{ .HandlerInit }}(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
-	decoder func(*http.Request) goahttp.Decoder,
-) func(context.Context, *jsonrpc.Request, *http.Request) *jsonrpc.Response {
-	decodeRequest := {{ .RequestDecoder }}(mux, decoder)
-	return func(ctx context.Context, req *jsonrpc.Request, r *http.Request) *jsonrpc.Response {
+	decoder func(io.Reader) jsonrpc.Decoder,
+) func(context.Context, *jsonrpc.Request) *jsonrpc.Response {
+	decodeParams := {{ .RequestDecoder }}(mux, decoder)
+	return func(ctx context.Context, req *jsonrpc.Request) *jsonrpc.Response {
 		ctx = context.WithValue(ctx, goa.MethodKey, {{ printf "%q" .Method.Name }})
 		ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
 
 		{{- if .Payload.Ref }}
-		r.Body = io.NopCloser(bytes.NewReader(req.Params))
-		payload, err := decodeRequest(r)
+
+		params, err := decodeParams(bytes.NewReader(req.Params))
 		if err != nil {
 			code := jsonrpc.InternalError
 			if goa.IsValidationError(err) {
@@ -21,15 +21,14 @@ func {{ .HandlerInit }}(
 		}
 			{{- if .Payload.IDAttribute }}
 		if req.ID != nil {
-			r.Body = io.NopCloser(bytes.NewReader(*req.ID))
-			if err := decoder(r).Decode(&payload.{{ .Payload.IDAttribute }}); err != nil {
+			if err := decoder(bytes.NewReader(*req.ID)).Decode(&params.{{ .Payload.IDAttribute }}); err != nil {
 				return jsonrpc.MakeErrorResponse(req.ID, jsonrpc.InvalidParams, fmt.Errorf("invalid id: %w", err).Error(), map[string]any{"id": req.ID})
 			}
 		}
 			{{- end }}
 		{{- end }}
 
-		res, err := endpoint(ctx, {{ if .Payload.Ref }}payload{{ else }}nil{{ end }})
+		res, err := endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
 
 		if err != nil {
 			var en goa.GoaErrorNamer
