@@ -1,0 +1,9 @@
+package errors
+
+import "errors"
+
+var ErrNotFound = errors.New("not found")
+
+func Find(id string) error {
+	return ErrNotFound
+}
