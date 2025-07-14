@@ -1,0 +1,12 @@
+// EncodeMethodHeaderPrimitiveArrayBoolValidateRequest returns an encoder for
+// requests sent to the ServiceHeaderPrimitiveArrayBoolValidate
+// MethodHeaderPrimitiveArrayBoolValidate server.
+func EncodeMethodHeaderPrimitiveArrayBoolValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.([]bool)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceHeaderPrimitiveArrayBoolValidate", "MethodHeaderPrimitiveArrayBoolValidate", "[]bool", v)
+		}
+		return nil
+	}
+}

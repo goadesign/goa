@@ -1,0 +1,22 @@
+// EncodeMethodHeaderArrayBoolDefaultResponse returns an encoder for responses
+// returned by the ServiceHeaderArrayBoolDefault MethodHeaderArrayBoolDefault
+// endpoint.
+func EncodeMethodHeaderArrayBoolDefaultResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*serviceheaderarraybooldefault.MethodHeaderArrayBoolDefaultResult)
+		if res.H != nil {
+			val := res.H
+			hsSlice := make([]string, len(val))
+			for i, e := range val {
+				es := strconv.FormatBool(e)
+				hsSlice[i] = es
+			}
+			hs := strings.Join(hsSlice, ", ")
+			w.Header().Set("H", hs)
+		} else {
+			w.Header().Set("H", "true, false")
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}

@@ -1,0 +1,9 @@
+func transform() {
+	target := &TypeArray{}
+	if source.TypeArray != nil {
+		target.TypeArray = make([]*SimpleArray, len(source.TypeArray))
+		for i, val := range source.TypeArray {
+			target.TypeArray[i] = transformSimpleArrayToSimpleArray(val)
+		}
+	}
+}

@@ -1,0 +1,30 @@
+// DecodeMethodQueryBoolValidateRequest returns a decoder for requests sent to
+// the ServiceQueryBoolValidate MethodQueryBoolValidate endpoint.
+func DecodeMethodQueryBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryboolvalidate.MethodQueryBoolValidatePayload, error) {
+	return func(r *http.Request) (*servicequeryboolvalidate.MethodQueryBoolValidatePayload, error) {
+		var (
+			q   bool
+			err error
+		)
+		{
+			qRaw := r.URL.Query().Get("q")
+			if qRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
+			}
+			v, err2 := strconv.ParseBool(qRaw)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "boolean"))
+			}
+			q = v
+		}
+		if !(q == true) {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []any{true}))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryBoolValidatePayload(q)
+
+		return payload, nil
+	}
+}

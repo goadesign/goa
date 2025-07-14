@@ -1,0 +1,18 @@
+// DecodeMethodHeaderStringDefaultRequest returns a decoder for requests sent
+// to the ServiceHeaderStringDefault MethodHeaderStringDefault endpoint.
+func DecodeMethodHeaderStringDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheaderstringdefault.MethodHeaderStringDefaultPayload, error) {
+	return func(r *http.Request) (*serviceheaderstringdefault.MethodHeaderStringDefaultPayload, error) {
+		var (
+			h string
+		)
+		hRaw := r.Header.Get("h")
+		if hRaw != "" {
+			h = hRaw
+		} else {
+			h = "def"
+		}
+		payload := NewMethodHeaderStringDefaultPayload(h)
+
+		return payload, nil
+	}
+}

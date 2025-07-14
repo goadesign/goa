@@ -1,0 +1,16 @@
+// MethodResultTypeValidateResponseBody is the type of the
+// "ServiceResultTypeValidate" service "MethodResultTypeValidate" endpoint HTTP
+// response body.
+type MethodResultTypeValidateResponseBody struct {
+	A *string `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+}
+
+// NewMethodResultTypeValidateResponseBody builds the HTTP response body from
+// the result of the "MethodResultTypeValidate" endpoint of the
+// "ServiceResultTypeValidate" service.
+func NewMethodResultTypeValidateResponseBody(res *serviceresulttypevalidate.ResultType) *MethodResultTypeValidateResponseBody {
+	body := &MethodResultTypeValidateResponseBody{
+		A: res.A,
+	}
+	return body
+}

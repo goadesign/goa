@@ -1,0 +1,4 @@
+// SlashWithBasePathNoTrailingBasePathNoTrailingPath returns the URL path to the BasePathNoTrailing service SlashWithBasePathNoTrailing HTTP endpoint.
+func SlashWithBasePathNoTrailingBasePathNoTrailingPath() string {
+	return "/foo"
+}

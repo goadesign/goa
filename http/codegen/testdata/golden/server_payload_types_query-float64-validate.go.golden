@@ -1,0 +1,8 @@
+// NewMethodQueryFloat64ValidatePayload builds a ServiceQueryFloat64Validate
+// service MethodQueryFloat64Validate endpoint payload.
+func NewMethodQueryFloat64ValidatePayload(q float64) *servicequeryfloat64validate.MethodQueryFloat64ValidatePayload {
+	v := &servicequeryfloat64validate.MethodQueryFloat64ValidatePayload{}
+	v.Q = q
+
+	return v
+}

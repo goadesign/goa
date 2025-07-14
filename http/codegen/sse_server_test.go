@@ -31,20 +31,8 @@ func TestSSE(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
 			fs := ServerFiles("", services)
-			// Simple types (string, int, bool) and request-id don't generate SSE-specific files
-			// because they have no fields to map to SSE attributes
-			expectedFiles := 2
-			if c.Name == "object" || c.Name == "data-field" || c.Name == "data-id-field" || c.Name == "all-fields" {
-				expectedFiles = 3
-			}
-			require.Len(t, fs, expectedFiles)
-			// For cases with SSE files, check the SSE file (index 2)
-			// For cases without SSE files, check the encode/decode file (index 1)
-			fileIndex := 1
-			if expectedFiles == 3 {
-				fileIndex = 2
-			}
-			sections := fs[fileIndex].SectionTemplates
+			require.Len(t, fs, 3)
+			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 1)
 			code := codegen.SectionCode(t, sections[1])
 			golden := filepath.Join("testdata", "golden", "sse-"+c.Name+".golden")

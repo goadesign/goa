@@ -1,0 +1,8 @@
+// NewMethodCookieCustomNamePayload builds a ServiceCookieCustomName service
+// MethodCookieCustomName endpoint payload.
+func NewMethodCookieCustomNamePayload(c2 *string) *servicecookiecustomname.MethodCookieCustomNamePayload {
+	v := &servicecookiecustomname.MethodCookieCustomNamePayload{}
+	v.Cookie = c2
+
+	return v
+}

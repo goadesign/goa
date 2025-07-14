@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"testing"
 
-	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/testutil"
 )
 
@@ -87,65 +86,6 @@ func main(){fmt.Println("unformatted")}`
 	testutil.AssertJSON(t, "testdata/golden/config.json.golden", jsonData)
 }
 
-// Example: Snapshot testing with generated files
-func TestSnapshotFiles(t *testing.T) {
-	// Generate codegen.File instances
-	files := []*codegen.File{
-		{
-			Path: "cmd/server/main.go",
-			SectionTemplates: []*codegen.SectionTemplate{
-				{
-					Name:   "main",
-					Source: "package main\n\nfunc main() {\n\t// Server implementation\n}\n",
-				},
-			},
-		},
-		{
-			Path: "internal/service/service.go",
-			SectionTemplates: []*codegen.SectionTemplate{
-				{
-					Name:   "service",
-					Source: "package service\n\ntype Service struct {\n\t// Service implementation\n}\n",
-				},
-			},
-		},
-	}
-
-	// Snapshot all files with a common prefix
-	testutil.SnapshotFiles(t, "my_service", files)
-}
-
-// Example: Service-oriented snapshot testing
-func TestServiceSnapshot(t *testing.T) {
-	snapshot := testutil.NewSnapshotService(t, "UserService")
-
-	// Generate different groups of files
-	serverFiles := generateServerFiles()
-	clientFiles := generateClientFiles()
-	protoFiles := generateProtoFiles()
-
-	// Add groups and compare
-	snapshot.
-		AddGroup("server", serverFiles).
-		AddGroup("client", clientFiles).
-		AddGroup("proto", protoFiles).
-		Compare()
-}
-
-// Example: Directory snapshot comparison
-func TestDirectorySnapshot(t *testing.T) {
-	// Assume we generated files to a directory
-	generatedDir := "./testdata/generated"
-	
-	// Compare entire directory structure
-	snapshot := testutil.NewDirSnapshot(t, generatedDir, "testdata/golden/snapshots/generated")
-	
-	// Ignore temporary and build files
-	snapshot.
-		Ignore("*.tmp", "*.test", "*.out").
-		Ignore("vendor", "node_modules").
-		Compare()
-}
 
 // Example: Legacy migration
 func TestLegacyMigration(t *testing.T) {
@@ -302,38 +242,6 @@ func generateComplexCode() string {
 	return generateServiceCode() + "\n" + generateTypesCode()
 }
 
-func generateServerFiles() []*codegen.File {
-	return []*codegen.File{
-		{
-			Path: "cmd/server/main.go",
-			SectionTemplates: []*codegen.SectionTemplate{
-				{Name: "main", Source: generateServerCode()},
-			},
-		},
-	}
-}
-
-func generateClientFiles() []*codegen.File {
-	return []*codegen.File{
-		{
-			Path: "client/client.go",
-			SectionTemplates: []*codegen.SectionTemplate{
-				{Name: "client", Source: generateClientCode()},
-			},
-		},
-	}
-}
-
-func generateProtoFiles() []*codegen.File {
-	return []*codegen.File{
-		{
-			Path: "api/service.proto",
-			SectionTemplates: []*codegen.SectionTemplate{
-				{Name: "proto", Source: "syntax = \"proto3\";\n\nservice UserService {\n  rpc GetUser(GetUserRequest) returns (User);\n}\n"},
-			},
-		},
-	}
-}
 
 func generateLegacyCode() string {
 	return "// Legacy code example\n" + generateSimpleCode()

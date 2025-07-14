@@ -1,0 +1,128 @@
+// ParseEndpoint returns the endpoint and payload as specified on the command
+// line.
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+) (goa.Endpoint, any, error) {
+	var (
+		serviceMultiNoPayload1Flags = flag.NewFlagSet("service-multi-no-payload1", flag.ContinueOnError)
+
+		serviceMultiNoPayload1MethodServiceNoPayload11Flags = flag.NewFlagSet("method-service-no-payload11", flag.ExitOnError)
+
+		serviceMultiNoPayload1MethodServiceNoPayload12Flags = flag.NewFlagSet("method-service-no-payload12", flag.ExitOnError)
+
+		serviceMultiNoPayload2Flags = flag.NewFlagSet("service-multi-no-payload2", flag.ContinueOnError)
+
+		serviceMultiNoPayload2MethodServiceNoPayload21Flags = flag.NewFlagSet("method-service-no-payload21", flag.ExitOnError)
+
+		serviceMultiNoPayload2MethodServiceNoPayload22Flags = flag.NewFlagSet("method-service-no-payload22", flag.ExitOnError)
+	)
+	serviceMultiNoPayload1Flags.Usage = serviceMultiNoPayload1Usage
+	serviceMultiNoPayload1MethodServiceNoPayload11Flags.Usage = serviceMultiNoPayload1MethodServiceNoPayload11Usage
+	serviceMultiNoPayload1MethodServiceNoPayload12Flags.Usage = serviceMultiNoPayload1MethodServiceNoPayload12Usage
+
+	serviceMultiNoPayload2Flags.Usage = serviceMultiNoPayload2Usage
+	serviceMultiNoPayload2MethodServiceNoPayload21Flags.Usage = serviceMultiNoPayload2MethodServiceNoPayload21Usage
+	serviceMultiNoPayload2MethodServiceNoPayload22Flags.Usage = serviceMultiNoPayload2MethodServiceNoPayload22Usage
+
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	if flag.NArg() < 2 { // two non flag args are required: SERVICE and ENDPOINT (aka COMMAND)
+		return nil, nil, fmt.Errorf("not enough arguments")
+	}
+
+	var (
+		svcn string
+		svcf *flag.FlagSet
+	)
+	{
+		svcn = flag.Arg(0)
+		switch svcn {
+		case "service-multi-no-payload1":
+			svcf = serviceMultiNoPayload1Flags
+		case "service-multi-no-payload2":
+			svcf = serviceMultiNoPayload2Flags
+		default:
+			return nil, nil, fmt.Errorf("unknown service %q", svcn)
+		}
+	}
+	if err := svcf.Parse(flag.Args()[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		epn string
+		epf *flag.FlagSet
+	)
+	{
+		epn = svcf.Arg(0)
+		switch svcn {
+		case "service-multi-no-payload1":
+			switch epn {
+			case "method-service-no-payload11":
+				epf = serviceMultiNoPayload1MethodServiceNoPayload11Flags
+
+			case "method-service-no-payload12":
+				epf = serviceMultiNoPayload1MethodServiceNoPayload12Flags
+
+			}
+
+		case "service-multi-no-payload2":
+			switch epn {
+			case "method-service-no-payload21":
+				epf = serviceMultiNoPayload2MethodServiceNoPayload21Flags
+
+			case "method-service-no-payload22":
+				epf = serviceMultiNoPayload2MethodServiceNoPayload22Flags
+
+			}
+
+		}
+	}
+	if epf == nil {
+		return nil, nil, fmt.Errorf("unknown %q endpoint %q", svcn, epn)
+	}
+
+	// Parse endpoint flags if any
+	if svcf.NArg() > 1 {
+		if err := epf.Parse(svcf.Args()[1:]); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var (
+		data     any
+		endpoint goa.Endpoint
+		err      error
+	)
+	{
+		switch svcn {
+		case "service-multi-no-payload1":
+			c := servicemultinopayload1c.NewClient(scheme, host, doer, enc, dec, restore)
+			switch epn {
+			case "method-service-no-payload11":
+				endpoint = c.MethodServiceNoPayload11()
+			case "method-service-no-payload12":
+				endpoint = c.MethodServiceNoPayload12()
+			}
+		case "service-multi-no-payload2":
+			c := servicemultinopayload2c.NewClient(scheme, host, doer, enc, dec, restore)
+			switch epn {
+			case "method-service-no-payload21":
+				endpoint = c.MethodServiceNoPayload21()
+			case "method-service-no-payload22":
+				endpoint = c.MethodServiceNoPayload22()
+			}
+		}
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return endpoint, data, nil
+}

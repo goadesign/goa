@@ -1,0 +1,14 @@
+func transform() {
+	target := &Required{
+		RequiredString: *source.RequiredString,
+	}
+	if source.DefaultBool != nil {
+		target.DefaultBool = *source.DefaultBool
+	}
+	if source.Integer != nil {
+		target.Integer = *source.Integer
+	}
+	if source.DefaultBool == nil {
+		target.DefaultBool = true
+	}
+}

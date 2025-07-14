@@ -1,0 +1,4 @@
+// TrailingWithBasePathNoTrailingBasePathNoTrailingPath returns the URL path to the BasePathNoTrailing service TrailingWithBasePathNoTrailing HTTP endpoint.
+func TrailingWithBasePathNoTrailingBasePathNoTrailingPath() string {
+	return "/foo/bar/"
+}

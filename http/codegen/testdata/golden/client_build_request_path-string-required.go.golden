@@ -1,0 +1,25 @@
+// BuildMethodPathStringValidateRequest instantiates a HTTP request object with
+// method and path set to call the "ServicePathStringValidate" service
+// "MethodPathStringValidate" endpoint
+func (c *Client) BuildMethodPathStringValidateRequest(ctx context.Context, v any) (*http.Request, error) {
+	var (
+		p string
+	)
+	{
+		p, ok := v.(*servicepathstringvalidate.MethodPathStringValidatePayload)
+		if !ok {
+			return nil, goahttp.ErrInvalidType("ServicePathStringValidate", "MethodPathStringValidate", "*servicepathstringvalidate.MethodPathStringValidatePayload", v)
+		}
+		p = p.P
+	}
+	u := &url.URL{Scheme: c.scheme, Host: c.host, Path: MethodPathStringValidateServicePathStringValidatePath(p)}
+	req, err := http.NewRequest("GET", u.String(), nil)
+	if err != nil {
+		return nil, goahttp.ErrInvalidURL("ServicePathStringValidate", "MethodPathStringValidate", u.String(), err)
+	}
+	if ctx != nil {
+		req = req.WithContext(ctx)
+	}
+
+	return req, nil
+}

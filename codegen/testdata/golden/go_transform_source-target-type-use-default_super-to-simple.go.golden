@@ -1,0 +1,13 @@
+func transform() {
+	target := &Simple{
+		RequiredString: source.RequiredString,
+		DefaultBool:    source.DefaultBool,
+		Integer:        source.Integer,
+	}
+	{
+		var zero bool
+		if target.DefaultBool == zero {
+			target.DefaultBool = true
+		}
+	}
+}

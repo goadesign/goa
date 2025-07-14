@@ -1,0 +1,19 @@
+// EncodeMethodHeaderArrayFloat64Response returns an encoder for responses
+// returned by the ServiceHeaderArrayFloat64 MethodHeaderArrayFloat64 endpoint.
+func EncodeMethodHeaderArrayFloat64Response(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*serviceheaderarrayfloat64.MethodHeaderArrayFloat64Result)
+		if res.H != nil {
+			val := res.H
+			hsSlice := make([]string, len(val))
+			for i, e := range val {
+				es := strconv.FormatFloat(e, 'f', -1, 64)
+				hsSlice[i] = es
+			}
+			hs := strings.Join(hsSlice, ", ")
+			w.Header().Set("H", hs)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}

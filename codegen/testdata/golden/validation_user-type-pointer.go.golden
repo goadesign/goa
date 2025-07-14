@@ -1,0 +1,20 @@
+func Validate() (err error) {
+	if target.RequiredInteger == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_integer", "target"))
+	}
+	if target.RequiredInteger != nil {
+		if err2 := ValidateInteger(target.RequiredInteger); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if target.DefaultString != nil {
+		if err2 := ValidateString(target.DefaultString); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	if target.Float != nil {
+		if err2 := ValidateFloat(target.Float); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+}

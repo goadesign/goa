@@ -1,0 +1,16 @@
+// EncodeMethodBodyPrimitiveArrayUserRequest returns an encoder for requests
+// sent to the ServiceBodyPrimitiveArrayUser MethodBodyPrimitiveArrayUser
+// server.
+func EncodeMethodBodyPrimitiveArrayUserRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicebodyprimitivearrayuser.PayloadType)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceBodyPrimitiveArrayUser", "MethodBodyPrimitiveArrayUser", "*servicebodyprimitivearrayuser.PayloadType", v)
+		}
+		body := p.A
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("ServiceBodyPrimitiveArrayUser", "MethodBodyPrimitiveArrayUser", err)
+		}
+		return nil
+	}
+}

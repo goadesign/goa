@@ -1,0 +1,10 @@
+// NewMethodBodyPathObjectPayload builds a ServiceBodyPathObject service
+// MethodBodyPathObject endpoint payload.
+func NewMethodBodyPathObjectPayload(body *MethodBodyPathObjectRequestBody, b string) *servicebodypathobject.MethodBodyPathObjectPayload {
+	v := &servicebodypathobject.MethodBodyPathObjectPayload{
+		A: body.A,
+	}
+	v.B = &b
+
+	return v
+}

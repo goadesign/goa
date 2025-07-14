@@ -1,0 +1,22 @@
+// DecodeMethodPathArrayStringRequest returns a decoder for requests sent to
+// the ServicePathArrayString MethodPathArrayString endpoint.
+func DecodeMethodPathArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicepatharraystring.MethodPathArrayStringPayload, error) {
+	return func(r *http.Request) (*servicepatharraystring.MethodPathArrayStringPayload, error) {
+		var (
+			p []string
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			pRawSlice := strings.Split(pRaw, ",")
+			p = make([]string, len(pRawSlice))
+			for i, rv := range pRawSlice {
+				p[i] = rv
+			}
+		}
+		payload := NewMethodPathArrayStringPayload(p)
+
+		return payload, nil
+	}
+}

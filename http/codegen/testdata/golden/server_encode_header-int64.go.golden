@@ -1,0 +1,14 @@
+// EncodeMethodHeaderInt64Response returns an encoder for responses returned by
+// the ServiceHeaderInt64 MethodHeaderInt64 endpoint.
+func EncodeMethodHeaderInt64Response(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*serviceheaderint64.MethodHeaderInt64Result)
+		if res.H != nil {
+			val := res.H
+			hs := strconv.FormatInt(*val, 10)
+			w.Header().Set("H", hs)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}

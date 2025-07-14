@@ -1,0 +1,16 @@
+func transform() {
+	target := &RecursiveMap{
+		RequiredString: source.RequiredString,
+	}
+	if source.Recursive != nil {
+		target.Recursive = make(map[string]*RecursiveMap, len(source.Recursive))
+		for key, val := range source.Recursive {
+			tk := key
+			if val == nil {
+				target.Recursive[tk] = nil
+				continue
+			}
+			target.Recursive[tk] = transformRecursiveMapToRecursiveMap(val)
+		}
+	}
+}

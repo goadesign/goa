@@ -1,0 +1,26 @@
+// DecodeMethodHeaderStringDefaultValidateRequest returns a decoder for
+// requests sent to the ServiceHeaderStringDefaultValidate
+// MethodHeaderStringDefaultValidate endpoint.
+func DecodeMethodHeaderStringDefaultValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheaderstringdefaultvalidate.MethodHeaderStringDefaultValidatePayload, error) {
+	return func(r *http.Request) (*serviceheaderstringdefaultvalidate.MethodHeaderStringDefaultValidatePayload, error) {
+		var (
+			h   string
+			err error
+		)
+		hRaw := r.Header.Get("h")
+		if hRaw != "" {
+			h = hRaw
+		} else {
+			h = "def"
+		}
+		if !(h == "def") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("h", h, []any{"def"}))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodHeaderStringDefaultValidatePayload(h)
+
+		return payload, nil
+	}
+}

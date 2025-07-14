@@ -1,0 +1,24 @@
+// DecodeMethodCookiePrimitiveStringDefaultRequest returns a decoder for
+// requests sent to the ServiceCookiePrimitiveStringDefault
+// MethodCookiePrimitiveStringDefault endpoint.
+func DecodeMethodCookiePrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (string, error) {
+	return func(r *http.Request) (string, error) {
+		var (
+			c2  string
+			err error
+			c   *http.Cookie
+		)
+		c, err = r.Cookie("c")
+		if errors.Is(err, http.ErrNoCookie) {
+			err = goa.MergeErrors(err, goa.MissingFieldError("c", "cookie"))
+		} else {
+			c2 = c.Value
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := c
+
+		return payload, nil
+	}
+}

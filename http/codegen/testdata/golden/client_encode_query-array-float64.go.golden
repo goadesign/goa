@@ -1,0 +1,17 @@
+// EncodeMethodQueryArrayFloat64Request returns an encoder for requests sent to
+// the ServiceQueryArrayFloat64 MethodQueryArrayFloat64 server.
+func EncodeMethodQueryArrayFloat64Request(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicequeryarrayfloat64.MethodQueryArrayFloat64Payload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryArrayFloat64", "MethodQueryArrayFloat64", "*servicequeryarrayfloat64.MethodQueryArrayFloat64Payload", v)
+		}
+		values := req.URL.Query()
+		for _, value := range p.Q {
+			valueStr := strconv.FormatFloat(value, 'f', -1, 64)
+			values.Add("q", valueStr)
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

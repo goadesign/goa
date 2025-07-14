@@ -1,0 +1,30 @@
+// MethodResultWithResultCollectionResponseBody is the type of the
+// "ServiceResultWithResultCollection" service
+// "MethodResultWithResultCollection" endpoint HTTP response body.
+type MethodResultWithResultCollectionResponseBody struct {
+	A *ResulttypeResponseBody `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+}
+
+// ResulttypeResponseBody is used to define fields on response body types.
+type ResulttypeResponseBody struct {
+	X RtCollectionResponseBody `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"`
+}
+
+// RtCollectionResponseBody is used to define fields on response body types.
+type RtCollectionResponseBody []*RtResponseBody
+
+// RtResponseBody is used to define fields on response body types.
+type RtResponseBody struct {
+	X *string `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"`
+}
+
+// NewMethodResultWithResultCollectionResponseBody builds the HTTP response
+// body from the result of the "MethodResultWithResultCollection" endpoint of
+// the "ServiceResultWithResultCollection" service.
+func NewMethodResultWithResultCollectionResponseBody(res *serviceresultwithresultcollection.MethodResultWithResultCollectionResult) *MethodResultWithResultCollectionResponseBody {
+	body := &MethodResultWithResultCollectionResponseBody{}
+	if res.A != nil {
+		body.A = marshalServiceresultwithresultcollectionResulttypeToResulttypeResponseBody(res.A)
+	}
+	return body
+}

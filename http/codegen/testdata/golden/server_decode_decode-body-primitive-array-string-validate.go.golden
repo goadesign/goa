@@ -1,0 +1,36 @@
+// DecodeMethodBodyPrimitiveArrayStringValidateRequest returns a decoder for
+// requests sent to the ServiceBodyPrimitiveArrayStringValidate
+// MethodBodyPrimitiveArrayStringValidate endpoint.
+func DecodeMethodBodyPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) ([]string, error) {
+	return func(r *http.Request) ([]string, error) {
+		var (
+			body []string
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		if len(body) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body", body, len(body), 1, true))
+		}
+		for _, e := range body {
+			if !(e == "val") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("body[*]", e, []any{"val"}))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := body
+
+		return payload, nil
+	}
+}

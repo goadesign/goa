@@ -1,0 +1,19 @@
+// EncodeMethodBodyQueryPathObjectValidateRequest returns an encoder for
+// requests sent to the ServiceBodyQueryPathObjectValidate
+// MethodBodyQueryPathObjectValidate server.
+func EncodeMethodBodyQueryPathObjectValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicebodyquerypathobjectvalidate.MethodBodyQueryPathObjectValidatePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceBodyQueryPathObjectValidate", "MethodBodyQueryPathObjectValidate", "*servicebodyquerypathobjectvalidate.MethodBodyQueryPathObjectValidatePayload", v)
+		}
+		values := req.URL.Query()
+		values.Add("b", p.B)
+		req.URL.RawQuery = values.Encode()
+		body := NewMethodBodyQueryPathObjectValidateRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("ServiceBodyQueryPathObjectValidate", "MethodBodyQueryPathObjectValidate", err)
+		}
+		return nil
+	}
+}

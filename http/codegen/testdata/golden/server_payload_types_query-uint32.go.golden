@@ -1,0 +1,8 @@
+// NewMethodQueryUInt32Payload builds a ServiceQueryUInt32 service
+// MethodQueryUInt32 endpoint payload.
+func NewMethodQueryUInt32Payload(q *uint32) *servicequeryuint32.MethodQueryUInt32Payload {
+	v := &servicequeryuint32.MethodQueryUInt32Payload{}
+	v.Q = q
+
+	return v
+}

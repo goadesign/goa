@@ -1,0 +1,15 @@
+// MethodBodyCustomNameRequestBody is the type of the "ServiceBodyCustomName"
+// service "MethodBodyCustomName" endpoint HTTP request body.
+type MethodBodyCustomNameRequestBody struct {
+	Body *string `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"`
+}
+
+// NewMethodBodyCustomNamePayload builds a ServiceBodyCustomName service
+// MethodBodyCustomName endpoint payload.
+func NewMethodBodyCustomNamePayload(body *MethodBodyCustomNameRequestBody) *servicebodycustomname.MethodBodyCustomNamePayload {
+	v := &servicebodycustomname.MethodBodyCustomNamePayload{
+		Body: body.Body,
+	}
+
+	return v
+}

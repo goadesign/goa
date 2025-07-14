@@ -1,0 +1,51 @@
+// DecodeMapQueryPrimitiveArrayRequest returns a decoder for requests sent to
+// the ServiceMapQueryPrimitiveArray MapQueryPrimitiveArray endpoint.
+func DecodeMapQueryPrimitiveArrayRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (map[string][]uint, error) {
+	return func(r *http.Request) (map[string][]uint, error) {
+		var (
+			query map[string][]uint
+			err   error
+		)
+		{
+			queryRaw := r.URL.Query()
+			if len(queryRaw) == 0 {
+				err = goa.MergeErrors(err, goa.MissingFieldError("query", "query string"))
+			}
+			for keyRaw, valRaw := range queryRaw {
+				if strings.HasPrefix(keyRaw, "query[") {
+					if query == nil {
+						query = make(map[string][]uint)
+					}
+					var keya string
+					{
+						openIdx := strings.IndexRune(keyRaw, '[')
+						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						} else {
+							keya = keyRaw[openIdx+1 : closeIdx]
+						}
+					}
+					var val []uint
+					{
+						val = make([]uint, len(valRaw))
+						for i, rv := range valRaw {
+							v, err2 := strconv.ParseUint(rv, 10, strconv.IntSize)
+							if err2 != nil {
+								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", valRaw, "array of unsigned integers"))
+							}
+							val[i] = uint(v)
+						}
+					}
+					query[keya] = val
+				}
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := query
+
+		return payload, nil
+	}
+}

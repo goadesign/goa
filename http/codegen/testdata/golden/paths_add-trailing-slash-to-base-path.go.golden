@@ -1,0 +1,4 @@
+// SpecialTrailingSlashBasePathPath returns the URL path to the BasePath service SpecialTrailingSlash HTTP endpoint.
+func SpecialTrailingSlashBasePathPath() string {
+	return "/foo/"
+}

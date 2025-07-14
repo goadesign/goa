@@ -1,0 +1,17 @@
+// EncodeMethodHeaderArrayStringRequest returns an encoder for requests sent to
+// the ServiceHeaderArrayString MethodHeaderArrayString server.
+func EncodeMethodHeaderArrayStringRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*serviceheaderarraystring.MethodHeaderArrayStringPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceHeaderArrayString", "MethodHeaderArrayString", "*serviceheaderarraystring.MethodHeaderArrayStringPayload", v)
+		}
+		{
+			head := p.H
+			for _, val := range head {
+				req.Header.Add("h", val)
+			}
+		}
+		return nil
+	}
+}

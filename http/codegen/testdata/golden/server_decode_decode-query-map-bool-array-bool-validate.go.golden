@@ -1,0 +1,68 @@
+// DecodeMethodQueryMapBoolArrayBoolValidateRequest returns a decoder for
+// requests sent to the ServiceQueryMapBoolArrayBoolValidate
+// MethodQueryMapBoolArrayBoolValidate endpoint.
+func DecodeMethodQueryMapBoolArrayBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerymapboolarrayboolvalidate.MethodQueryMapBoolArrayBoolValidatePayload, error) {
+	return func(r *http.Request) (*servicequerymapboolarrayboolvalidate.MethodQueryMapBoolArrayBoolValidatePayload, error) {
+		var (
+			q   map[bool][]bool
+			err error
+		)
+		{
+			qRaw := r.URL.Query()
+			if len(qRaw) == 0 {
+				err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
+			}
+			for keyRaw, valRaw := range qRaw {
+				if strings.HasPrefix(keyRaw, "q[") {
+					if q == nil {
+						q = make(map[bool][]bool)
+					}
+					var keya bool
+					{
+						openIdx := strings.IndexRune(keyRaw, '[')
+						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						} else {
+							keyaRaw := keyRaw[openIdx+1 : closeIdx]
+							v, err2 := strconv.ParseBool(keyaRaw)
+							if err2 != nil {
+								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", keyaRaw, "boolean"))
+							}
+							keya = v
+						}
+					}
+					var val []bool
+					{
+						val = make([]bool, len(valRaw))
+						for i, rv := range valRaw {
+							v, err2 := strconv.ParseBool(rv)
+							if err2 != nil {
+								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", valRaw, "array of booleans"))
+							}
+							val[i] = v
+						}
+					}
+					q[keya] = val
+				}
+			}
+		}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
+		}
+		for k, v := range q {
+			if !(k == true) {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q.key", k, []any{true}))
+			}
+			if len(v) < 2 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("q[key]", v, len(v), 2, true))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryMapBoolArrayBoolValidatePayload(q)
+
+		return payload, nil
+	}
+}

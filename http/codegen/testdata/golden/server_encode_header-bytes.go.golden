@@ -1,0 +1,14 @@
+// EncodeMethodHeaderBytesResponse returns an encoder for responses returned by
+// the ServiceHeaderBytes MethodHeaderBytes endpoint.
+func EncodeMethodHeaderBytesResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*serviceheaderbytes.MethodHeaderBytesResult)
+		if res.H != nil {
+			val := res.H
+			hs := string(val)
+			w.Header().Set("H", hs)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}

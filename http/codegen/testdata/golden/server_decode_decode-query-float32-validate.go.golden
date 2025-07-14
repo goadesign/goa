@@ -1,0 +1,30 @@
+// DecodeMethodQueryFloat32ValidateRequest returns a decoder for requests sent
+// to the ServiceQueryFloat32Validate MethodQueryFloat32Validate endpoint.
+func DecodeMethodQueryFloat32ValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryfloat32validate.MethodQueryFloat32ValidatePayload, error) {
+	return func(r *http.Request) (*servicequeryfloat32validate.MethodQueryFloat32ValidatePayload, error) {
+		var (
+			q   float32
+			err error
+		)
+		{
+			qRaw := r.URL.Query().Get("q")
+			if qRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
+			}
+			v, err2 := strconv.ParseFloat(qRaw, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "float"))
+			}
+			q = float32(v)
+		}
+		if q < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("q", q, 1, true))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryFloat32ValidatePayload(q)
+
+		return payload, nil
+	}
+}

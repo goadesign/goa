@@ -1,0 +1,4 @@
+// ServiceMultipartArrayTypeMethodMultipartArrayTypeDecoderFunc is the type to
+// decode multipart request for the "ServiceMultipartArrayType" service
+// "MethodMultipartArrayType" endpoint.
+type ServiceMultipartArrayTypeMethodMultipartArrayTypeDecoderFunc func(*multipart.Reader, *[]*servicemultipartarraytype.PayloadType) error

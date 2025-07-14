@@ -1,0 +1,16 @@
+// DecodeMethodQueryCustomNameRequest returns a decoder for requests sent to
+// the ServiceQueryCustomName MethodQueryCustomName endpoint.
+func DecodeMethodQueryCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerycustomname.MethodQueryCustomNamePayload, error) {
+	return func(r *http.Request) (*servicequerycustomname.MethodQueryCustomNamePayload, error) {
+		var (
+			q *string
+		)
+		qRaw := r.URL.Query().Get("q")
+		if qRaw != "" {
+			q = &qRaw
+		}
+		payload := NewMethodQueryCustomNamePayload(q)
+
+		return payload, nil
+	}
+}

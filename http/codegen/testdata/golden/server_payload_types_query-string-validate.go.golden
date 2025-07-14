@@ -1,0 +1,8 @@
+// NewMethodQueryStringValidatePayload builds a ServiceQueryStringValidate
+// service MethodQueryStringValidate endpoint payload.
+func NewMethodQueryStringValidatePayload(q string) *servicequerystringvalidate.MethodQueryStringValidatePayload {
+	v := &servicequerystringvalidate.MethodQueryStringValidatePayload{}
+	v.Q = q
+
+	return v
+}

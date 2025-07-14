@@ -36,17 +36,13 @@ func (s *SSEDataIDFieldMethodServerStream) SendWithContext(ctx context.Context, 
 	})
 	res := v
 
-	if id := res.id; id != "" {
+	if id := res.ID; id != "" {
 		fmt.Fprintf(s.w, "id: %s\n", id)
 	}
 
 	var data string
-	dataField := res.data
-	byts, err := json.Marshal(dataField)
-	if err != nil {
-		return err
-	}
-	data = string(byts)
+	dataField := res.Data
+	data = dataField
 	fmt.Fprintf(s.w, "data: %s\n\n", data)
 
 	if f, ok := s.w.(http.Flusher); ok {

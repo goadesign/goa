@@ -1,0 +1,10 @@
+// marshalFooserviceResultTypeToResultTypeResponse builds a value of type
+// *ResultTypeResponse from a value of type *fooservice.ResultType.
+func marshalFooserviceResultTypeToResultTypeResponse(v *fooservice.ResultType) *ResultTypeResponse {
+	res := &ResultTypeResponse{}
+	if v.Extension != nil {
+		res.Extension = marshalFooserviceExtensionToExtensionResponse(v.Extension)
+	}
+
+	return res
+}

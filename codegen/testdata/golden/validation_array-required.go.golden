@@ -1,0 +1,16 @@
+func Validate() (err error) {
+	if target.RequiredArray == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_array", "target"))
+	}
+	if len(target.RequiredArray) < 5 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_array", target.RequiredArray, len(target.RequiredArray), 5, true))
+	}
+	if len(target.DefaultArray) > 3 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("target.default_array", target.DefaultArray, len(target.DefaultArray), 3, false))
+	}
+	for _, e := range target.Array {
+		if !(e == 0 || e == 1 || e == 1 || e == 2 || e == 3 || e == 5) {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.array[*]", e, []any{0, 1, 1, 2, 3, 5}))
+		}
+	}
+}

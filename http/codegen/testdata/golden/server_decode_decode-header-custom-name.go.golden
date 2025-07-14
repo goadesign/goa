@@ -1,0 +1,16 @@
+// DecodeMethodHeaderCustomNameRequest returns a decoder for requests sent to
+// the ServiceHeaderCustomName MethodHeaderCustomName endpoint.
+func DecodeMethodHeaderCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheadercustomname.MethodHeaderCustomNamePayload, error) {
+	return func(r *http.Request) (*serviceheadercustomname.MethodHeaderCustomNamePayload, error) {
+		var (
+			h *string
+		)
+		hRaw := r.Header.Get("h")
+		if hRaw != "" {
+			h = &hRaw
+		}
+		payload := NewMethodHeaderCustomNamePayload(h)
+
+		return payload, nil
+	}
+}

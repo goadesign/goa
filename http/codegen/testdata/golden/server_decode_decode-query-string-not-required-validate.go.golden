@@ -1,0 +1,26 @@
+// DecodeMethodQueryStringNotRequiredValidateRequest returns a decoder for
+// requests sent to the ServiceQueryStringNotRequiredValidate
+// MethodQueryStringNotRequiredValidate endpoint.
+func DecodeMethodQueryStringNotRequiredValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerystringnotrequiredvalidate.MethodQueryStringNotRequiredValidatePayload, error) {
+	return func(r *http.Request) (*servicequerystringnotrequiredvalidate.MethodQueryStringNotRequiredValidatePayload, error) {
+		var (
+			q   *string
+			err error
+		)
+		qRaw := r.URL.Query().Get("q")
+		if qRaw != "" {
+			q = &qRaw
+		}
+		if q != nil {
+			if !(*q == "val") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", *q, []any{"val"}))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryStringNotRequiredValidatePayload(q)
+
+		return payload, nil
+	}
+}

@@ -77,12 +77,6 @@ func TestBuildPathFromExpr(t *testing.T) {
 			},
 		},
 	}
-	var root expr.RootExpr
-	root.API = &expr.APIExpr{
-		HTTP: &expr.HTTPExpr{
-			Path: "/",
-		},
-	}
 	for k, tc := range cases {
 		t.Run(k, func(t *testing.T) {
 			s := &V2{
@@ -105,6 +99,7 @@ func TestBuildPathFromExpr(t *testing.T) {
 						Payload: &expr.AttributeExpr{},
 					},
 					Service: &expr.HTTPServiceExpr{
+						Root:        root.API.HTTP,
 						ServiceExpr: &expr.ServiceExpr{},
 						Paths:       []string{"/foo"},
 						Params:      expr.NewEmptyMappedAttributeExpr(),

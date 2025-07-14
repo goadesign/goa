@@ -1,10 +1,10 @@
 package codegen
 
 import (
+	"goa.design/goa/v3/codegen/testutil"
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
@@ -17,11 +17,10 @@ func TestServerHandler(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"server simple routing", testdata.ServerSimpleRoutingDSL, testdata.ServerSimpleRoutingCode},
-		{"server trailing slash routing", testdata.ServerTrailingSlashRoutingDSL, testdata.ServerTrailingSlashRoutingCode},
-		{"server simple routing with a redirect", testdata.ServerSimpleRoutingWithRedirectDSL, testdata.ServerSimpleRoutingCode},
+		{"server simple routing", testdata.ServerSimpleRoutingDSL},
+		{"server trailing slash routing", testdata.ServerTrailingSlashRoutingDSL},
+		{"server simple routing with a redirect", testdata.ServerSimpleRoutingWithRedirectDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -31,7 +30,7 @@ func TestServerHandler(t *testing.T) {
 			sections := codegentest.Sections(fs, filepath.Join("", "server.go"), "server-handler")
 			require.Greater(t, len(sections), 0)
 			code := codegen.SectionCode(t, sections[0])
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/server_handler_"+c.Name+".go.golden", code)
 		})
 	}
 }

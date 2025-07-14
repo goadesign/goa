@@ -1,0 +1,79 @@
+// MethodARequestBody is the type of the "ServiceMultipleMethods" service
+// "MethodA" endpoint HTTP request body.
+type MethodARequestBody struct {
+	A *string `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+}
+
+// MethodBRequestBody is the type of the "ServiceMultipleMethods" service
+// "MethodB" endpoint HTTP request body.
+type MethodBRequestBody struct {
+	A *string              `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+	B *string              `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"`
+	C *APayloadRequestBody `form:"c,omitempty" json:"c,omitempty" xml:"c,omitempty"`
+}
+
+// APayloadRequestBody is used to define fields on request body types.
+type APayloadRequestBody struct {
+	A *string `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+}
+
+// NewMethodAAPayload builds a ServiceMultipleMethods service MethodA endpoint
+// payload.
+func NewMethodAAPayload(body *MethodARequestBody) *servicemultiplemethods.APayload {
+	v := &servicemultiplemethods.APayload{
+		A: body.A,
+	}
+
+	return v
+}
+
+// NewMethodBPayloadType builds a ServiceMultipleMethods service MethodB
+// endpoint payload.
+func NewMethodBPayloadType(body *MethodBRequestBody) *servicemultiplemethods.PayloadType {
+	v := &servicemultiplemethods.PayloadType{
+		A: *body.A,
+		B: body.B,
+	}
+	v.C = unmarshalAPayloadRequestBodyToServicemultiplemethodsAPayload(body.C)
+
+	return v
+}
+
+// ValidateMethodARequestBody runs the validations defined on MethodARequestBody
+func ValidateMethodARequestBody(body *MethodARequestBody) (err error) {
+	if body.A != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.a", *body.A, "patterna"))
+	}
+	return
+}
+
+// ValidateMethodBRequestBody runs the validations defined on MethodBRequestBody
+func ValidateMethodBRequestBody(body *MethodBRequestBody) (err error) {
+	if body.A == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("a", "body"))
+	}
+	if body.C == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("c", "body"))
+	}
+	if body.A != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.a", *body.A, "patterna"))
+	}
+	if body.B != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.b", *body.B, "patternb"))
+	}
+	if body.C != nil {
+		if err2 := ValidateAPayloadRequestBody(body.C); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateAPayloadRequestBody runs the validations defined on
+// APayloadRequestBody
+func ValidateAPayloadRequestBody(body *APayloadRequestBody) (err error) {
+	if body.A != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.a", *body.A, "patterna"))
+	}
+	return
+}

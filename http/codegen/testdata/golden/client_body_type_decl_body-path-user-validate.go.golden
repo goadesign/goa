@@ -1,0 +1,6 @@
+// MethodUserBodyPathValidateRequestBody is the type of the
+// "ServiceBodyPathUserValidate" service "MethodUserBodyPathValidate" endpoint
+// HTTP request body.
+type MethodUserBodyPathValidateRequestBody struct {
+	A string `form:"a" json:"a" xml:"a"`
+}

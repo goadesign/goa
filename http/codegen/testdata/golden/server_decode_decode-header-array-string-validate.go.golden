@@ -1,0 +1,23 @@
+// DecodeMethodHeaderArrayStringValidateRequest returns a decoder for requests
+// sent to the ServiceHeaderArrayStringValidate MethodHeaderArrayStringValidate
+// endpoint.
+func DecodeMethodHeaderArrayStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheaderarraystringvalidate.MethodHeaderArrayStringValidatePayload, error) {
+	return func(r *http.Request) (*serviceheaderarraystringvalidate.MethodHeaderArrayStringValidatePayload, error) {
+		var (
+			h   []string
+			err error
+		)
+		h = r.Header["H"]
+		for _, e := range h {
+			if !(e == "val") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("h[*]", e, []any{"val"}))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodHeaderArrayStringValidatePayload(h)
+
+		return payload, nil
+	}
+}

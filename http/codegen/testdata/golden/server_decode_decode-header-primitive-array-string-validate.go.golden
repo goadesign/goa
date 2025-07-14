@@ -1,0 +1,27 @@
+// DecodeMethodHeaderPrimitiveArrayStringValidateRequest returns a decoder for
+// requests sent to the ServiceHeaderPrimitiveArrayStringValidate
+// MethodHeaderPrimitiveArrayStringValidate endpoint.
+func DecodeMethodHeaderPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) ([]string, error) {
+	return func(r *http.Request) ([]string, error) {
+		var (
+			h   []string
+			err error
+		)
+		h = r.Header["H"]
+		if h == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("h", "header"))
+		}
+		if len(h) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("h", h, len(h), 1, true))
+		}
+		for _, e := range h {
+			err = goa.MergeErrors(err, goa.ValidatePattern("h[*]", e, "val"))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := h
+
+		return payload, nil
+	}
+}

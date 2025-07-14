@@ -1,0 +1,27 @@
+// DecodeMethodQueryInt32Request returns a decoder for requests sent to the
+// ServiceQueryInt32 MethodQueryInt32 endpoint.
+func DecodeMethodQueryInt32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryint32.MethodQueryInt32Payload, error) {
+	return func(r *http.Request) (*servicequeryint32.MethodQueryInt32Payload, error) {
+		var (
+			q   *int32
+			err error
+		)
+		{
+			qRaw := r.URL.Query().Get("q")
+			if qRaw != "" {
+				v, err2 := strconv.ParseInt(qRaw, 10, 32)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "integer"))
+				}
+				pv := int32(v)
+				q = &pv
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryInt32Payload(q)
+
+		return payload, nil
+	}
+}

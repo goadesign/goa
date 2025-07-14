@@ -1,0 +1,40 @@
+// DecodeMethodQueryMapStringArrayStringRequest returns a decoder for requests
+// sent to the ServiceQueryMapStringArrayString MethodQueryMapStringArrayString
+// endpoint.
+func DecodeMethodQueryMapStringArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerymapstringarraystring.MethodQueryMapStringArrayStringPayload, error) {
+	return func(r *http.Request) (*servicequerymapstringarraystring.MethodQueryMapStringArrayStringPayload, error) {
+		var (
+			q   map[string][]string
+			err error
+		)
+		{
+			qRaw := r.URL.Query()
+			if len(qRaw) != 0 {
+				for keyRaw, valRaw := range qRaw {
+					if strings.HasPrefix(keyRaw, "q[") {
+						if q == nil {
+							q = make(map[string][]string)
+						}
+						var keya string
+						{
+							openIdx := strings.IndexRune(keyRaw, '[')
+							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							} else {
+								keya = keyRaw[openIdx+1 : closeIdx]
+							}
+						}
+						q[keya] = valRaw
+					}
+				}
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryMapStringArrayStringPayload(q)
+
+		return payload, nil
+	}
+}

@@ -1,0 +1,8 @@
+// NewMethodPathArrayStringPayload builds a ServicePathArrayString service
+// MethodPathArrayString endpoint payload.
+func NewMethodPathArrayStringPayload(p []string) *servicepatharraystring.MethodPathArrayStringPayload {
+	v := &servicepatharraystring.MethodPathArrayStringPayload{}
+	v.P = p
+
+	return v
+}

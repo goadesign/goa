@@ -1,0 +1,16 @@
+// DecodeMethodMultipartPrimitiveRequest returns a decoder for requests sent to
+// the ServiceMultipartPrimitive MethodMultipartPrimitive endpoint.
+func DecodeMethodMultipartPrimitiveRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (string, error) {
+	return func(r *http.Request) (string, error) {
+		var payload string
+		if err := decoder(r).Decode(&payload); err != nil {
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+
+		return payload, nil
+	}
+}

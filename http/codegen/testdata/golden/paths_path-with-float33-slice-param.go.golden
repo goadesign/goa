@@ -1,0 +1,8 @@
+// MethodPathFloat32SliceParamServicePathFloat32SliceParamPath returns the URL path to the ServicePathFloat32SliceParam service MethodPathFloat32SliceParam HTTP endpoint.
+func MethodPathFloat32SliceParamServicePathFloat32SliceParamPath(a []float32) string {
+	aSlice := make([]string, len(a))
+	for i, v := range a {
+		aSlice[i] = strconv.FormatFloat(float64(v), 'f', -1, 32)
+	}
+	return fmt.Sprintf("/one/%v/two", strings.Join(aSlice, ","))
+}

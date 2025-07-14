@@ -1,0 +1,26 @@
+func Validate() (err error) {
+	if target.RequiredString == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_string", "target"))
+	}
+	if target.RequiredString != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("target.required_string", *target.RequiredString, "^[A-z].*[a-z]$"))
+	}
+	if target.RequiredString != nil {
+		if utf8.RuneCountInString(*target.RequiredString) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_string", *target.RequiredString, utf8.RuneCountInString(*target.RequiredString), 1, true))
+		}
+	}
+	if target.RequiredString != nil {
+		if utf8.RuneCountInString(*target.RequiredString) > 10 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_string", *target.RequiredString, utf8.RuneCountInString(*target.RequiredString), 10, false))
+		}
+	}
+	if target.DefaultString != nil {
+		if !(*target.DefaultString == "foo" || *target.DefaultString == "bar") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_string", *target.DefaultString, []any{"foo", "bar"}))
+		}
+	}
+	if target.String != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("target.string", *target.String, goa.FormatDateTime))
+	}
+}

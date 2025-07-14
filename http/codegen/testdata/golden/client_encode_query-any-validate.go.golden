@@ -1,0 +1,14 @@
+// EncodeMethodQueryAnyValidateRequest returns an encoder for requests sent to
+// the ServiceQueryAnyValidate MethodQueryAnyValidate server.
+func EncodeMethodQueryAnyValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicequeryanyvalidate.MethodQueryAnyValidatePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryAnyValidate", "MethodQueryAnyValidate", "*servicequeryanyvalidate.MethodQueryAnyValidatePayload", v)
+		}
+		values := req.URL.Query()
+		values.Add("q", fmt.Sprintf("%v", p.Q))
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

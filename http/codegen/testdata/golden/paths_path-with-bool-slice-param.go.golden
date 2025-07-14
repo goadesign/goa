@@ -1,0 +1,8 @@
+// MethodPathBoolSliceParamServicePathBoolSliceParamPath returns the URL path to the ServicePathBoolSliceParam service MethodPathBoolSliceParam HTTP endpoint.
+func MethodPathBoolSliceParamServicePathBoolSliceParamPath(a []bool) string {
+	aSlice := make([]string, len(a))
+	for i, v := range a {
+		aSlice[i] = strconv.FormatBool(v)
+	}
+	return fmt.Sprintf("/one/%v/two", strings.Join(aSlice, ","))
+}

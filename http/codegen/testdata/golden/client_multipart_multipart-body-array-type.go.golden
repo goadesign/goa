@@ -1,0 +1,4 @@
+// ServiceMultipartArrayTypeMethodMultipartArrayTypeEncoderFunc is the type to
+// encode multipart request for the "ServiceMultipartArrayType" service
+// "MethodMultipartArrayType" endpoint.
+type ServiceMultipartArrayTypeMethodMultipartArrayTypeEncoderFunc func(*multipart.Writer, []*servicemultipartarraytype.PayloadType) error

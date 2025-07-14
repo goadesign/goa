@@ -1,0 +1,56 @@
+// NewServiceMultipartWithParamMethodMultipartWithParamDecoder returns a
+// decoder to decode the multipart request for the "ServiceMultipartWithParam"
+// service "MethodMultipartWithParam" endpoint.
+func NewServiceMultipartWithParamMethodMultipartWithParamDecoder(mux goahttp.Muxer, serviceMultipartWithParamMethodMultipartWithParamDecoderFn ServiceMultipartWithParamMethodMultipartWithParamDecoderFunc) func(r *http.Request) goahttp.Decoder {
+	return func(r *http.Request) goahttp.Decoder {
+		return goahttp.EncodingFunc(func(v any) error {
+			mr, merr := r.MultipartReader()
+			if merr != nil {
+				return merr
+			}
+			p := v.(**servicemultipartwithparam.PayloadType)
+			if err := serviceMultipartWithParamMethodMultipartWithParamDecoderFn(mr, p); err != nil {
+				return err
+			}
+
+			var (
+				c2  map[int][]string
+				err error
+			)
+			{
+				c2Raw := r.URL.Query()
+				if len(c2Raw) == 0 {
+					err = goa.MergeErrors(err, goa.MissingFieldError("c", "query string"))
+				}
+				for keyRaw, valRaw := range c2Raw {
+					if strings.HasPrefix(keyRaw, "c[") {
+						if c2 == nil {
+							c2 = make(map[int][]string)
+						}
+						var keya int
+						{
+							openIdx := strings.IndexRune(keyRaw, '[')
+							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							} else {
+								keyaRaw := keyRaw[openIdx+1 : closeIdx]
+								v, err2 := strconv.ParseInt(keyaRaw, 10, strconv.IntSize)
+								if err2 != nil {
+									err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", keyaRaw, "integer"))
+								}
+								keya = int(v)
+							}
+						}
+						c2[keya] = valRaw
+					}
+				}
+			}
+			if err != nil {
+				return err
+			}
+			(*p).C = c2
+			return nil
+		})
+	}
+}

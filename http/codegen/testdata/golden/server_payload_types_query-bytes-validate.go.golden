@@ -1,0 +1,8 @@
+// NewMethodQueryBytesValidatePayload builds a ServiceQueryBytesValidate
+// service MethodQueryBytesValidate endpoint payload.
+func NewMethodQueryBytesValidatePayload(q []byte) *servicequerybytesvalidate.MethodQueryBytesValidatePayload {
+	v := &servicequerybytesvalidate.MethodQueryBytesValidatePayload{}
+	v.Q = q
+
+	return v
+}

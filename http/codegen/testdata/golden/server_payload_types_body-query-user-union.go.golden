@@ -1,0 +1,11 @@
+// NewMethodBodyQueryUserUnionPayloadType builds a ServiceBodyQueryUserUnion
+// service MethodBodyQueryUserUnion endpoint payload.
+func NewMethodBodyQueryUserUnionPayloadType(body *MethodBodyQueryUserUnionRequestBody, b *string) *servicebodyqueryuserunion.PayloadType {
+	v := &servicebodyqueryuserunion.PayloadType{}
+	if body.A != nil {
+		v.A = unmarshalUnionRequestBodyToServicebodyqueryuserunionUnion(body.A)
+	}
+	v.B = b
+
+	return v
+}

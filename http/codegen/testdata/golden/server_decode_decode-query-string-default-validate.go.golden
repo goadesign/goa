@@ -1,0 +1,26 @@
+// DecodeMethodQueryStringDefaultValidateRequest returns a decoder for requests
+// sent to the ServiceQueryStringDefaultValidate
+// MethodQueryStringDefaultValidate endpoint.
+func DecodeMethodQueryStringDefaultValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerystringdefaultvalidate.MethodQueryStringDefaultValidatePayload, error) {
+	return func(r *http.Request) (*servicequerystringdefaultvalidate.MethodQueryStringDefaultValidatePayload, error) {
+		var (
+			q   string
+			err error
+		)
+		qRaw := r.URL.Query().Get("q")
+		if qRaw != "" {
+			q = qRaw
+		} else {
+			q = "def"
+		}
+		if !(q == "def") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []any{"def"}))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryStringDefaultValidatePayload(q)
+
+		return payload, nil
+	}
+}

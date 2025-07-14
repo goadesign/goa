@@ -1,0 +1,11 @@
+func transform() {
+	target := &RecursiveArray{
+		RequiredString: source.RequiredString,
+	}
+	if source.Recursive != nil {
+		target.Recursive = make([]*RecursiveArray, len(source.Recursive))
+		for i, val := range source.Recursive {
+			target.Recursive[i] = transformRecursiveArrayToRecursiveArray(val)
+		}
+	}
+}

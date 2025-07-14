@@ -1,0 +1,8 @@
+// NewMethodQueryUIntValidatePayload builds a ServiceQueryUIntValidate service
+// MethodQueryUIntValidate endpoint payload.
+func NewMethodQueryUIntValidatePayload(q uint) *servicequeryuintvalidate.MethodQueryUIntValidatePayload {
+	v := &servicequeryuintvalidate.MethodQueryUIntValidatePayload{}
+	v.Q = q
+
+	return v
+}

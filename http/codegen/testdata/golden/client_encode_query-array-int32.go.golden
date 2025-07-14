@@ -1,0 +1,17 @@
+// EncodeMethodQueryArrayInt32Request returns an encoder for requests sent to
+// the ServiceQueryArrayInt32 MethodQueryArrayInt32 server.
+func EncodeMethodQueryArrayInt32Request(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicequeryarrayint32.MethodQueryArrayInt32Payload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryArrayInt32", "MethodQueryArrayInt32", "*servicequeryarrayint32.MethodQueryArrayInt32Payload", v)
+		}
+		values := req.URL.Query()
+		for _, value := range p.Q {
+			valueStr := strconv.FormatInt(int64(value), 10)
+			values.Add("q", valueStr)
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

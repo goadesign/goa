@@ -1,0 +1,8 @@
+// NewMethodQueryBytesPayload builds a ServiceQueryBytes service
+// MethodQueryBytes endpoint payload.
+func NewMethodQueryBytesPayload(q []byte) *servicequerybytes.MethodQueryBytesPayload {
+	v := &servicequerybytes.MethodQueryBytesPayload{}
+	v.Q = q
+
+	return v
+}

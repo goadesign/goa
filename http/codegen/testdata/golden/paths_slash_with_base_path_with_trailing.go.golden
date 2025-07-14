@@ -1,0 +1,4 @@
+// SlashWithBasePathWithTrailingBasePathWithTrailingPath returns the URL path to the BasePathWithTrailing service SlashWithBasePathWithTrailing HTTP endpoint.
+func SlashWithBasePathWithTrailingBasePathWithTrailingPath() string {
+	return "/foo/"
+}

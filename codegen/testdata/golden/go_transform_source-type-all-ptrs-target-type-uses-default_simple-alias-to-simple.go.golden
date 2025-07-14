@@ -1,0 +1,15 @@
+func transform() {
+	target := &Simple{
+		RequiredString: string(*source.RequiredString),
+	}
+	if source.DefaultBool != nil {
+		target.DefaultBool = bool(*source.DefaultBool)
+	}
+	if source.Integer != nil {
+		integer := int(*source.Integer)
+		target.Integer = &integer
+	}
+	if source.DefaultBool == nil {
+		target.DefaultBool = true
+	}
+}

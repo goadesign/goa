@@ -1,0 +1,10 @@
+// NewMethodBodyObjectHeaderResultOK builds a "ServiceBodyObjectHeader" service
+// "MethodBodyObjectHeader" endpoint result from a HTTP "OK" response.
+func NewMethodBodyObjectHeaderResultOK(body *MethodBodyObjectHeaderResponseBody, b *string) *servicebodyobjectheader.MethodBodyObjectHeaderResult {
+	v := &servicebodyobjectheader.MethodBodyObjectHeaderResult{
+		A: body.A,
+	}
+	v.B = b
+
+	return v
+}

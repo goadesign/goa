@@ -1,0 +1,40 @@
+// DecodeMapQueryPrimitivePrimitiveRequest returns a decoder for requests sent
+// to the ServiceMapQueryPrimitivePrimitive MapQueryPrimitivePrimitive endpoint.
+func DecodeMapQueryPrimitivePrimitiveRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (map[string]string, error) {
+	return func(r *http.Request) (map[string]string, error) {
+		var (
+			query map[string]string
+			err   error
+		)
+		{
+			queryRaw := r.URL.Query()
+			if len(queryRaw) == 0 {
+				err = goa.MergeErrors(err, goa.MissingFieldError("query", "query string"))
+			}
+			for keyRaw, valRaw := range queryRaw {
+				if strings.HasPrefix(keyRaw, "query[") {
+					if query == nil {
+						query = make(map[string]string)
+					}
+					var keya string
+					{
+						openIdx := strings.IndexRune(keyRaw, '[')
+						closeIdx := strings.IndexRune(keyRaw, ']')
+						if closeIdx == -1 {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						} else {
+							keya = keyRaw[openIdx+1 : closeIdx]
+						}
+					}
+					query[keya] = valRaw[0]
+				}
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := query
+
+		return payload, nil
+	}
+}

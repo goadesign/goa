@@ -1,0 +1,9 @@
+// MethodPathAlternativesServicePathAlternativesPath returns the URL path to the ServicePathAlternatives service MethodPathAlternatives HTTP endpoint.
+func MethodPathAlternativesServicePathAlternativesPath(a string, b string) string {
+	return fmt.Sprintf("/one/%v/two/%v/three", a, b)
+}
+
+// MethodPathAlternativesServicePathAlternativesPath2 returns the URL path to the ServicePathAlternatives service MethodPathAlternatives HTTP endpoint.
+func MethodPathAlternativesServicePathAlternativesPath2(b string, a string) string {
+	return fmt.Sprintf("/one/two/%v/three/%v", b, a)
+}

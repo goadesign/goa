@@ -1,0 +1,38 @@
+// EncodeMethodPrimitiveErrorInResponseHeaderError returns an encoder for
+// errors returned by the MethodPrimitiveErrorInResponseHeader
+// ServicePrimitiveErrorInResponseHeader endpoint.
+func EncodeMethodPrimitiveErrorInResponseHeaderError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "bad_request":
+			var res serviceprimitiveerrorinresponseheader.BadRequest
+			errors.As(v, &res)
+			{
+				val := string(res)
+				string_s := val
+				w.Header().Set("String", string_s)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return nil
+		case "internal_error":
+			var res serviceprimitiveerrorinresponseheader.InternalError
+			errors.As(v, &res)
+			{
+				val := int(res)
+				int_s := strconv.Itoa(val)
+				w.Header().Set("Int", int_s)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusInternalServerError)
+			return nil
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}

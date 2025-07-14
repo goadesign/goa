@@ -1,0 +1,18 @@
+// NewServiceMultipartArrayTypeMethodMultipartArrayTypeDecoder returns a
+// decoder to decode the multipart request for the "ServiceMultipartArrayType"
+// service "MethodMultipartArrayType" endpoint.
+func NewServiceMultipartArrayTypeMethodMultipartArrayTypeDecoder(mux goahttp.Muxer, serviceMultipartArrayTypeMethodMultipartArrayTypeDecoderFn ServiceMultipartArrayTypeMethodMultipartArrayTypeDecoderFunc) func(r *http.Request) goahttp.Decoder {
+	return func(r *http.Request) goahttp.Decoder {
+		return goahttp.EncodingFunc(func(v any) error {
+			mr, merr := r.MultipartReader()
+			if merr != nil {
+				return merr
+			}
+			p := v.(*[]*servicemultipartarraytype.PayloadType)
+			if err := serviceMultipartArrayTypeMethodMultipartArrayTypeDecoderFn(mr, p); err != nil {
+				return err
+			}
+			return nil
+		})
+	}
+}

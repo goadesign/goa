@@ -1,0 +1,11 @@
+func transform() {
+	var target *UnionStringInt2
+	switch actual := source.(type) {
+	case UnionStringIntString:
+		obj := UnionStringInt2String(actual)
+		target = obj
+	case UnionStringIntInt:
+		obj := UnionStringInt2Int(actual)
+		target = obj
+	}
+}

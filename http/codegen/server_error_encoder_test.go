@@ -1,9 +1,9 @@
 package codegen
 
 import (
+	"goa.design/goa/v3/codegen/testutil"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
@@ -14,22 +14,21 @@ func TestEncodeError(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"primitive-error-response", testdata.PrimitiveErrorResponseDSL, testdata.PrimitiveErrorResponseEncoderCode},
-		{"primitive-error-in-response-header", testdata.PrimitiveErrorInResponseHeaderDSL, testdata.PrimitiveErrorInResponseHeaderEncoderCode},
-		{"api-primitive-error-response", testdata.APIPrimitiveErrorResponseDSL, testdata.APIPrimitiveErrorResponseEncoderCode},
-		{"default-error-response", testdata.DefaultErrorResponseDSL, testdata.DefaultErrorResponseEncoderCode},
-		{"default-error-response-with-content-type", testdata.DefaultErrorResponseWithContentTypeDSL, testdata.DefaultErrorResponseWithContentTypeEncoderCode},
-		{"service-error-response", testdata.ServiceErrorResponseDSL, testdata.ServiceErrorResponseEncoderCode},
-		{"api-error-response", testdata.APIErrorResponseDSL, testdata.ServiceErrorResponseEncoderCode},
-		{"api-error-response-with-content-type", testdata.APIErrorResponseWithContentTypeDSL, testdata.ServiceErrorResponseWithContentTypeEncoderCode},
-		{"no-body-error-response", testdata.NoBodyErrorResponseDSL, testdata.NoBodyErrorResponseEncoderCode},
-		{"no-body-error-response-with-content-type", testdata.NoBodyErrorResponseWithContentTypeDSL, testdata.NoBodyErrorResponseWithContentTypeEncoderCode},
-		{"api-no-body-error-response", testdata.APINoBodyErrorResponseDSL, testdata.NoBodyErrorResponseEncoderCode},
-		{"api-no-body-error-response-with-content-type", testdata.APINoBodyErrorResponseWithContentTypeDSL, testdata.NoBodyErrorResponseWithContentTypeEncoderCode},
-		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL, testdata.EmptyErrorResponseBodyEncoderCode},
-		{"empty-custom-error-response-body", testdata.EmptyCustomErrorResponseBodyDSL, testdata.EmptyCustomErrorResponseBodyEncoderCode},
+		{"primitive-error-response", testdata.PrimitiveErrorResponseDSL},
+		{"primitive-error-in-response-header", testdata.PrimitiveErrorInResponseHeaderDSL},
+		{"api-primitive-error-response", testdata.APIPrimitiveErrorResponseDSL},
+		{"default-error-response", testdata.DefaultErrorResponseDSL},
+		{"default-error-response-with-content-type", testdata.DefaultErrorResponseWithContentTypeDSL},
+		{"service-error-response", testdata.ServiceErrorResponseDSL},
+		{"api-error-response", testdata.APIErrorResponseDSL},
+		{"api-error-response-with-content-type", testdata.APIErrorResponseWithContentTypeDSL},
+		{"no-body-error-response", testdata.NoBodyErrorResponseDSL},
+		{"no-body-error-response-with-content-type", testdata.NoBodyErrorResponseWithContentTypeDSL},
+		{"api-no-body-error-response", testdata.APINoBodyErrorResponseDSL},
+		{"api-no-body-error-response-with-content-type", testdata.APINoBodyErrorResponseWithContentTypeDSL},
+		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL},
+		{"empty-custom-error-response-body", testdata.EmptyCustomErrorResponseBodyDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -40,7 +39,7 @@ func TestEncodeError(t *testing.T) {
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 1)
 			code := codegen.SectionCode(t, sections[2])
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/server_error_encoder_"+c.Name+".go.golden", code)
 		})
 	}
 }

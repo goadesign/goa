@@ -1,0 +1,17 @@
+// MethodQueryStringExtendedValidatePayloadRequestBody is the type of the
+// "ServiceQueryStringExtendedValidatePayload" service
+// "MethodQueryStringExtendedValidatePayload" endpoint HTTP request body.
+type MethodQueryStringExtendedValidatePayloadRequestBody struct {
+	Body string `form:"body" json:"body" xml:"body"`
+}
+
+// NewMethodQueryStringExtendedValidatePayloadRequestBody builds the HTTP
+// request body from the payload of the
+// "MethodQueryStringExtendedValidatePayload" endpoint of the
+// "ServiceQueryStringExtendedValidatePayload" service.
+func NewMethodQueryStringExtendedValidatePayloadRequestBody(p *servicequerystringextendedvalidatepayload.MethodQueryStringExtendedValidatePayloadPayload) *MethodQueryStringExtendedValidatePayloadRequestBody {
+	body := &MethodQueryStringExtendedValidatePayloadRequestBody{
+		Body: p.Body,
+	}
+	return body
+}

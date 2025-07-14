@@ -1,0 +1,56 @@
+// DecodeMethodQueryMapBoolArrayStringValidateRequest returns a decoder for
+// requests sent to the ServiceQueryMapBoolArrayStringValidate
+// MethodQueryMapBoolArrayStringValidate endpoint.
+func DecodeMethodQueryMapBoolArrayStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerymapboolarraystringvalidate.MethodQueryMapBoolArrayStringValidatePayload, error) {
+	return func(r *http.Request) (*servicequerymapboolarraystringvalidate.MethodQueryMapBoolArrayStringValidatePayload, error) {
+		var (
+			q   map[bool][]string
+			err error
+		)
+		{
+			qRaw := r.URL.Query()
+			if len(qRaw) != 0 {
+				for keyRaw, valRaw := range qRaw {
+					if strings.HasPrefix(keyRaw, "q[") {
+						if q == nil {
+							q = make(map[bool][]string)
+						}
+						var keya bool
+						{
+							openIdx := strings.IndexRune(keyRaw, '[')
+							closeIdx := strings.IndexRune(keyRaw, ']')
+							if closeIdx == -1 {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							} else {
+								keyaRaw := keyRaw[openIdx+1 : closeIdx]
+								v, err2 := strconv.ParseBool(keyaRaw)
+								if err2 != nil {
+									err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", keyaRaw, "boolean"))
+								}
+								keya = v
+							}
+						}
+						q[keya] = valRaw
+					}
+				}
+			}
+		}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
+		}
+		for k, v := range q {
+			if !(k == true) {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q.key", k, []any{true}))
+			}
+			if len(v) < 2 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("q[key]", v, len(v), 2, true))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryMapBoolArrayStringValidatePayload(q)
+
+		return payload, nil
+	}
+}

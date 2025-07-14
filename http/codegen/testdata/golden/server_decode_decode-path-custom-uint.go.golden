@@ -1,0 +1,26 @@
+// DecodeMethodPathCustomUIntRequest returns a decoder for requests sent to the
+// ServicePathCustomUInt MethodPathCustomUInt endpoint.
+func DecodeMethodPathCustomUIntRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicepathcustomuint.MethodPathCustomUIntPayload, error) {
+	return func(r *http.Request) (*servicepathcustomuint.MethodPathCustomUIntPayload, error) {
+		var (
+			p   hide.Uint
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			v, err2 := strconv.ParseUint(pRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "unsigned integer"))
+			}
+			p = hide.Uint(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodPathCustomUIntPayload(p)
+
+		return payload, nil
+	}
+}

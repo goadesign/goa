@@ -1,0 +1,8 @@
+// NewMethodQueryCustomNamePayload builds a ServiceQueryCustomName service
+// MethodQueryCustomName endpoint payload.
+func NewMethodQueryCustomNamePayload(q *string) *servicequerycustomname.MethodQueryCustomNamePayload {
+	v := &servicequerycustomname.MethodQueryCustomNamePayload{}
+	v.Query = q
+
+	return v
+}

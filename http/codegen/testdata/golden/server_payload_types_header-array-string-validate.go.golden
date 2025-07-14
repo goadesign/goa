@@ -1,0 +1,9 @@
+// NewMethodHeaderArrayStringValidatePayload builds a
+// ServiceHeaderArrayStringValidate service MethodHeaderArrayStringValidate
+// endpoint payload.
+func NewMethodHeaderArrayStringValidatePayload(h []string) *serviceheaderarraystringvalidate.MethodHeaderArrayStringValidatePayload {
+	v := &serviceheaderarraystringvalidate.MethodHeaderArrayStringValidatePayload{}
+	v.H = h
+
+	return v
+}

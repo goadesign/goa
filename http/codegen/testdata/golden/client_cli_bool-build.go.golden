@@ -1,0 +1,20 @@
+// BuildMethodQueryBoolPayload builds the payload for the ServiceQueryBool
+// MethodQueryBool endpoint from CLI flags.
+func BuildMethodQueryBoolPayload(serviceQueryBoolMethodQueryBoolQ string) (*servicequerybool.MethodQueryBoolPayload, error) {
+	var err error
+	var q *bool
+	{
+		if serviceQueryBoolMethodQueryBoolQ != "" {
+			var val bool
+			val, err = strconv.ParseBool(serviceQueryBoolMethodQueryBoolQ)
+			q = &val
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for q, must be BOOL")
+			}
+		}
+	}
+	v := &servicequerybool.MethodQueryBoolPayload{}
+	v.Q = q
+
+	return v, nil
+}

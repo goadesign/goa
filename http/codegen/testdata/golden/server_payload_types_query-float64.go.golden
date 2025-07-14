@@ -1,0 +1,8 @@
+// NewMethodQueryFloat64Payload builds a ServiceQueryFloat64 service
+// MethodQueryFloat64 endpoint payload.
+func NewMethodQueryFloat64Payload(q *float64) *servicequeryfloat64.MethodQueryFloat64Payload {
+	v := &servicequeryfloat64.MethodQueryFloat64Payload{}
+	v.Q = q
+
+	return v
+}

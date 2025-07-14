@@ -1,0 +1,5 @@
+// MethodBodyUserInnerRequestBody is the type of the "ServiceBodyUserInner"
+// service "MethodBodyUserInner" endpoint HTTP request body.
+type MethodBodyUserInnerRequestBody struct {
+	Inner *InnerTypeRequestBody `form:"inner,omitempty" json:"inner,omitempty" xml:"inner,omitempty"`
+}

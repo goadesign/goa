@@ -1,0 +1,16 @@
+// DecodeMethodQueryStringMappedRequest returns a decoder for requests sent to
+// the ServiceQueryStringMapped MethodQueryStringMapped endpoint.
+func DecodeMethodQueryStringMappedRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerystringmapped.MethodQueryStringMappedPayload, error) {
+	return func(r *http.Request) (*servicequerystringmapped.MethodQueryStringMappedPayload, error) {
+		var (
+			query *string
+		)
+		queryRaw := r.URL.Query().Get("q")
+		if queryRaw != "" {
+			query = &queryRaw
+		}
+		payload := NewMethodQueryStringMappedPayload(query)
+
+		return payload, nil
+	}
+}

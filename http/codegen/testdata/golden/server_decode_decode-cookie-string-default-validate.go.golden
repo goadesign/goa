@@ -1,0 +1,31 @@
+// DecodeMethodCookieStringDefaultValidateRequest returns a decoder for
+// requests sent to the ServiceCookieStringDefaultValidate
+// MethodCookieStringDefaultValidate endpoint.
+func DecodeMethodCookieStringDefaultValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicecookiestringdefaultvalidate.MethodCookieStringDefaultValidatePayload, error) {
+	return func(r *http.Request) (*servicecookiestringdefaultvalidate.MethodCookieStringDefaultValidatePayload, error) {
+		var (
+			c2  string
+			err error
+			c   *http.Cookie
+		)
+		c, _ = r.Cookie("c")
+		var c2Raw string
+		if c != nil {
+			c2Raw = c.Value
+		}
+		if c2Raw != "" {
+			c2 = c2Raw
+		} else {
+			c2 = "def"
+		}
+		if !(c2 == "def") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("c", c2, []any{"def"}))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodCookieStringDefaultValidatePayload(c2)
+
+		return payload, nil
+	}
+}

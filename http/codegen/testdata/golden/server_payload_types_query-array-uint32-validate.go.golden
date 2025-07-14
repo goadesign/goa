@@ -1,0 +1,9 @@
+// NewMethodQueryArrayUInt32ValidatePayload builds a
+// ServiceQueryArrayUInt32Validate service MethodQueryArrayUInt32Validate
+// endpoint payload.
+func NewMethodQueryArrayUInt32ValidatePayload(q []uint32) *servicequeryarrayuint32validate.MethodQueryArrayUInt32ValidatePayload {
+	v := &servicequeryarrayuint32validate.MethodQueryArrayUInt32ValidatePayload{}
+	v.Q = q
+
+	return v
+}

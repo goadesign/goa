@@ -1,0 +1,4 @@
+// ServiceMultipartMapTypeMethodMultipartMapTypeDecoderFunc is the type to
+// decode multipart request for the "ServiceMultipartMapType" service
+// "MethodMultipartMapType" endpoint.
+type ServiceMultipartMapTypeMethodMultipartMapTypeDecoderFunc func(*multipart.Reader, *map[string]int) error

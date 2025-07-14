@@ -1,0 +1,11 @@
+// NewMethodBodyQueryPathObjectPayload builds a ServiceBodyQueryPathObject
+// service MethodBodyQueryPathObject endpoint payload.
+func NewMethodBodyQueryPathObjectPayload(body *MethodBodyQueryPathObjectRequestBody, c2 string, b *string) *servicebodyquerypathobject.MethodBodyQueryPathObjectPayload {
+	v := &servicebodyquerypathobject.MethodBodyQueryPathObjectPayload{
+		A: body.A,
+	}
+	v.C = &c2
+	v.B = b
+
+	return v
+}

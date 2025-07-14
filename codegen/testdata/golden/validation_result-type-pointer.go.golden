@@ -1,0 +1,7 @@
+func Validate() (err error) {
+	if target.Required != nil {
+		if *target.Required < 10 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("target.required", *target.Required, 10, true))
+		}
+	}
+}

@@ -1,0 +1,29 @@
+// BuildMethodBodyQueryPathObjectPayload builds the payload for the
+// ServiceBodyQueryPathObject MethodBodyQueryPathObject endpoint from CLI flags.
+func BuildMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectC2 string, serviceBodyQueryPathObjectMethodBodyQueryPathObjectB string) (*servicebodyquerypathobject.MethodBodyQueryPathObjectPayload, error) {
+	var err error
+	var body MethodBodyQueryPathObjectRequestBody
+	{
+		err = json.Unmarshal([]byte(serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": \"Ullam aut.\"\n   }'")
+		}
+	}
+	var c2 string
+	{
+		c2 = serviceBodyQueryPathObjectMethodBodyQueryPathObjectC2
+	}
+	var b *string
+	{
+		if serviceBodyQueryPathObjectMethodBodyQueryPathObjectB != "" {
+			b = &serviceBodyQueryPathObjectMethodBodyQueryPathObjectB
+		}
+	}
+	v := &servicebodyquerypathobject.MethodBodyQueryPathObjectPayload{
+		A: body.A,
+	}
+	v.C = &c2
+	v.B = b
+
+	return v, nil
+}
