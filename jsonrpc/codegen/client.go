@@ -35,6 +35,7 @@ func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 			if s.Name == "response-decoder" {
 				s.Source = jsonrpcTemplates.Read(responseDecoderT, singleResponseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP)
 			}
+			s.Name = "jsonrpc-" + s.Name
 			sections = append(sections, s)
 		}
 		f.SectionTemplates = sections
@@ -52,12 +53,14 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 	title := fmt.Sprintf("%s client JSON-RPC transport", svc.Name())
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", []*codegen.ImportSpec{
+			{Path: "bytes"},
 			{Path: "context"},
 			{Path: "fmt"},
 			{Path: "io"},
 			{Path: "net/http"},
 			{Path: "strconv"},
 			{Path: "strings"},
+			{Path: "sync"},
 			{Path: "time"},
 			codegen.GoaImport(""),
 			codegen.GoaNamedImport("http", "goahttp"),

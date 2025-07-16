@@ -1,5 +1,5 @@
 {{ printf "%s returns a decoder for responses returned by the %s service %s JSON-RPC method. restoreBody controls whether the response body should be restored after having been read." .ResponseDecoder .ServiceName .Method.Name | comment }}
-func {{ .ResponseDecoder }}(restoreBody bool) func(*http.Response) (any, error) {
+func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
@@ -26,15 +26,19 @@ func {{ .ResponseDecoder }}(restoreBody bool) func(*http.Response) (any, error) 
 		if jresp.Error != nil {
 			switch jresp.Error.Code {
 {{- range .Errors }}
+	{{- range .Errors }}
+		{{- with .Response }}
 			case {{ .StatusCode }}:
 				resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Error.Data))
 				{{- template "partial_single_response" (buildResponseData . $.ServiceName $.Method) }}
-	{{- if .ResultInit }}
+			{{- if .ResultInit }}
 				return nil, {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
-	{{- else if .ClientBody }}
+			{{- else if .ClientBody }}
 				return nil, body
-	{{- else }}
+			{{- else }}
 				return nil, nil
+			{{- end }}
+		{{- end }}
 	{{- end }}
 {{- end }}
 			default:
@@ -43,6 +47,7 @@ func {{ .ResponseDecoder }}(restoreBody bool) func(*http.Response) (any, error) 
 			}
 		}
 
+{{-  with index .Result.Responses 0 }}
 		resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Result))
 		{{- template "partial_single_response" (buildResponseData . $.ServiceName $.Method) }}
 {{- if .ResultInit }}
@@ -84,6 +89,7 @@ func {{ .ResponseDecoder }}(restoreBody bool) func(*http.Response) (any, error) 
 		return {{ (index .Cookies 0).VarName }}, nil
 {{- else }}
 		return nil, nil
+{{- end }}
 {{- end }}
 	}
 }

@@ -49,6 +49,7 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 			// Remove the error encoder sections, JSON-RPC
 			// inlines the error encoding in each handler.
 			if s.Name != "error-encoder" {
+				s.Name = "jsonrpc-" + s.Name
 				sections = append(sections, s)
 			}
 		}
