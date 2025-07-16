@@ -1,8 +1,9 @@
 package codegen
 
 import (
-	"goa.design/goa/v3/codegen/testutil"
 	"testing"
+
+	"goa.design/goa/v3/codegen/testutil"
 
 	"github.com/stretchr/testify/require"
 
@@ -47,7 +48,7 @@ func TestTransformHelperCLI(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
-			f := clientEncodeDecodeFile("", root.API.HTTP.Services[0], services)
+			f := ClientEncodeDecodeFile("", root.API.HTTP.Services[0], services)
 			sections := f.SectionTemplates
 			require.Greater(t, len(sections), c.Offset)
 			code := codegen.SectionCode(t, sections[len(sections)-c.Offset])

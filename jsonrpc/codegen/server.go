@@ -24,35 +24,37 @@ const (
 )
 
 // ServerFiles returns the generated JSON-RPC server files if any.
-func ServerFiles(genpkg string, services *httpcodegen.ServicesData) []*codegen.File {
+func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File {
 	var files []*codegen.File
-	jsvcs := services.Root.API.JSONRPC.Services
+	jsvcs := data.Root.API.JSONRPC.Services
 	for _, svc := range jsvcs {
-		files = append(files, serverFile(genpkg, svc, services))
+		files = append(files, serverFile(genpkg, svc, data))
 	}
 	for _, svc := range jsvcs {
-		if f := httpcodegen.ServerEncodeDecodeFile(genpkg, svc, services); f != nil {
-			var sections []*codegen.SectionTemplate
-			for _, s := range f.SectionTemplates {
-				// Add the JSON-RPC imports.
-				if s.Name == "source-header" {
-					codegen.AddImport(s, &codegen.ImportSpec{Path: "bytes"})
-					codegen.AddImport(s, codegen.GoaImport("jsonrpc"))
-				}
-				// Tweak the request decoder to use the JSON-RPC decoder.
-				if s.Name == "request-decoder" {
-					s.Source = strings.Replace(s.Source, httpRequestDecoderTemplate, jsonrpcRequestDecoderTemplate, 1)
-				}
-				// Remove the error encoder sections, JSON-RPC
-				// inlines the error encoding in each handler.
-				if s.Name != "error-encoder" {
-					sections = append(sections, s)
-				}
-			}
-			f.SectionTemplates = sections
-			f.Path = strings.Replace(f.Path, "/http/", "/jsonrpc/", 1)
-			files = append(files, f)
+		f := httpcodegen.ServerEncodeDecodeFile(genpkg, svc, data)
+		if f == nil {
+			continue
 		}
+		var sections []*codegen.SectionTemplate
+		for _, s := range f.SectionTemplates {
+			// Add the JSON-RPC imports.
+			if s.Name == "source-header" {
+				codegen.AddImport(s, &codegen.ImportSpec{Path: "bytes"})
+				codegen.AddImport(s, codegen.GoaImport("jsonrpc"))
+			}
+			// Tweak the request decoder to use the JSON-RPC decoder.
+			if s.Name == "request-decoder" {
+				s.Source = strings.Replace(s.Source, httpRequestDecoderTemplate, jsonrpcRequestDecoderTemplate, 1)
+			}
+			// Remove the error encoder sections, JSON-RPC
+			// inlines the error encoding in each handler.
+			if s.Name != "error-encoder" {
+				sections = append(sections, s)
+			}
+		}
+		f.SectionTemplates = sections
+		f.Path = strings.Replace(f.Path, "/http/", "/jsonrpc/", 1)
+		files = append(files, f)
 	}
 	return files
 }
@@ -87,18 +89,18 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 	}
 
 	sections = append(sections,
-		&codegen.SectionTemplate{Name: "server-struct", Source: jsonrpcTemplates.Read(serverStructT), Data: data},
-		&codegen.SectionTemplate{Name: "server-init", Source: jsonrpcTemplates.Read(serverInitT), Data: data, FuncMap: funcs},
-		&codegen.SectionTemplate{Name: "server-service", Source: jsonrpcTemplates.Read(serverServiceT), Data: data},
-		&codegen.SectionTemplate{Name: "server-use", Source: jsonrpcTemplates.Read(serverUseT), Data: data},
-		&codegen.SectionTemplate{Name: "server-method-names", Source: jsonrpcTemplates.Read(serverMethodNamesT), Data: data},
-		&codegen.SectionTemplate{Name: "server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), Data: data},
-		&codegen.SectionTemplate{Name: "server-mount", Source: jsonrpcTemplates.Read(serverMountT), Data: data},
+		&codegen.SectionTemplate{Name: "jsonrpc-server-struct", Source: jsonrpcTemplates.Read(serverStructT), Data: data},
+		&codegen.SectionTemplate{Name: "jsonrpc-server-init", Source: jsonrpcTemplates.Read(serverInitT), Data: data, FuncMap: funcs},
+		&codegen.SectionTemplate{Name: "jsonrpc-server-service", Source: jsonrpcTemplates.Read(serverServiceT), Data: data},
+		&codegen.SectionTemplate{Name: "jsonrpc-server-use", Source: jsonrpcTemplates.Read(serverUseT), Data: data},
+		&codegen.SectionTemplate{Name: "jsonrpc-server-method-names", Source: jsonrpcTemplates.Read(serverMethodNamesT), Data: data},
+		&codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), Data: data},
+		&codegen.SectionTemplate{Name: "jsonrpc-server-mount", Source: jsonrpcTemplates.Read(serverMountT), Data: data},
 	)
 
 	for _, e := range data.Endpoints {
 		sections = append(sections,
-			&codegen.SectionTemplate{Name: "server-handler-init", Source: jsonrpcTemplates.Read(serverHandlerInitT), FuncMap: funcs, Data: e})
+			&codegen.SectionTemplate{Name: "jsonrpc-server-handler-init", Source: jsonrpcTemplates.Read(serverHandlerInitT), FuncMap: funcs, Data: e})
 	}
 
 	return &codegen.File{Path: fpath, SectionTemplates: sections}

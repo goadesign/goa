@@ -16,6 +16,19 @@ const (
 	serverUseT         = "server_use"
 	serverMethodNamesT = "server_method_names"
 	serverMountT       = "server_mount"
+
+	clientStructT    = "client_struct"
+	clientInitT      = "client_init"
+	endpointInitT    = "endpoint_init"
+	responseDecoderT = "response_decoder"
+
+	// Partial templates
+	clientTypeConversionP   = "client_type_conversion"
+	clientMapConversionP    = "client_map_conversion"
+	singleResponseP         = "single_response"
+	queryTypeConversionP    = "query_type_conversion"
+	elementSliceConversionP = "element_slice_conversion"
+	sliceItemConversionP    = "slice_item_conversion"
 )
 
 //go:embed templates/*
