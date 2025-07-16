@@ -191,22 +191,6 @@ func InvalidLengthError(name string, target any, ln, value int, min bool) error 
 		InvalidLength, "length of %s must be %s than %d but got value %#v (len=%d)", name, comp, value, target, ln))
 }
 
-// IsValidationError returns true if the error is a validation error.
-func IsValidationError(err error) bool {
-	var gerr *ServiceError
-	if !errors.As(err, &gerr) {
-		return false
-	}
-
-	return gerr.Name == InvalidEnumValue ||
-		gerr.Name == InvalidFieldType ||
-		gerr.Name == InvalidFormat ||
-		gerr.Name == InvalidLength ||
-		gerr.Name == InvalidPattern ||
-		gerr.Name == InvalidRange ||
-		gerr.Name == MissingField
-}
-
 // NewErrorID creates a unique 8 character ID that is well suited to use as an
 // error identifier.
 func NewErrorID() string {

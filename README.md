@@ -101,7 +101,7 @@ Goa solves these problems by:
 - Supporting multiple transports (HTTP, gRPC, and JSON-RPC) from a single design
 - Maintaining a clean separation between business logic and transport details
 
-## 🌟 Key Features
+## Key Features
 
 - **Expressive Design Language**: Define your API with a clear, type-safe DSL that captures your intent
 - **Comprehensive Code Generation**:
@@ -115,7 +115,7 @@ Goa solves these problems by:
 - **Enterprise Ready**: Supports authentication, authorization, CORS, logging, and more
 - **Comprehensive Testing**: Includes extensive unit and integration test suites ensuring quality and reliability
 
-## 🔄 How It Works
+## How It Works
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────────────┐
@@ -129,7 +129,7 @@ Goa solves these problems by:
 3. **Implement**: Focus solely on writing your business logic in the generated interfaces
 4. **Evolve**: Update your design and regenerate code as your API evolves
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install Goa
@@ -180,20 +180,24 @@ The example above:
 
 ### JSON-RPC Alternative
 
-For a JSON-RPC service, simply add a `JSONRPC` expression to the method:
+For a JSON-RPC service, simply add a `JSONRPC` expression to the service and
+method:
 
 ```go
-Method("say_hello", func() {
-    Payload(func() {
-        Field(1, "name", String)
-        Required("name")
-    })
-    Result(String)
-
+var _ = Service("hello" , func() {
     JSONRPC(func() {
-        POST("/jsonrpc")
+        Path("/jsonrpc")
     })
-})
+    Method("say_hello", func() {
+        Payload(func() {
+            Field(1, "name", String)
+            Required("name")
+        })
+        Result(String)
+
+        JSONRPC(func() {})
+    })
+}
 ```
 
 Then test with:
@@ -205,7 +209,7 @@ curl -X POST http://localhost:8000/jsonrpc \
 
 ## Documentation
 
-Our completely redesigned documentation site at [goa.design](https://goa.design) provides comprehensive guides and references:
+Our documentation site at [goa.design](https://goa.design) provides comprehensive guides and references:
 
 - **[Introduction](https://goa.design/docs/1-introduction/)**: Understand Goa's philosophy and benefits
 - **[Getting Started](https://goa.design/docs/2-getting-started/)**: Build your first Goa service step-by-step
@@ -232,13 +236,7 @@ The [examples repository](https://github.com/goadesign/examples) contains comple
 - **Tracing**: Integrating with observability tools
 - **TUS**: Resumable file uploads implementation
 
-## 🏢 Success Stories
-
-*"Goa reduced our API development time by 40% while ensuring perfect consistency between our documentation and implementation. It's been a game-changer for our microservices architecture."* - Lead Engineer at FinTech Company
-
-*"We migrated 30+ services to Goa and eliminated documentation drift entirely. Our teams can now focus on business logic instead of maintaining OpenAPI specs by hand."* - CTO at SaaS Platform
-
-## 🤝 Community & Support
+## Community & Support
 
 - Join the [#goa](https://gophers.slack.com/messages/goa/) channel on Gophers Slack
 - Ask questions on [GitHub Discussions](https://github.com/goadesign/goa/discussions)
@@ -248,7 +246,7 @@ The [examples repository](https://github.com/goadesign/examples) contains comple
 
 ## What's New
 
-**June 2025:** Goa now includes comprehensive **JSON-RPC 2.0 support** as a
+**July 2025:** Goa now includes comprehensive **JSON-RPC 2.0 support** as a
 first-class transport alongside HTTP and gRPC! Generate complete JSON-RPC
 services with streaming support (WebSocket and SSE), client/server code, CLI
 tools, and full type safety - all from a single design.

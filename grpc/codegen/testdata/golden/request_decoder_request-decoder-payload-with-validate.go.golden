@@ -1,0 +1,45 @@
+// DecodeMethodMessageWithValidateRequest decodes requests sent to
+// "ServiceMessageWithValidate" service "MethodMessageWithValidate" endpoint.
+func DecodeMethodMessageWithValidateRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
+	var (
+		inMetadata *int
+		err        error
+	)
+	{
+		if vals := md.Get("Authorization"); len(vals) > 0 {
+			inMetadataRaw := vals[0]
+
+			v, err2 := strconv.ParseInt(inMetadataRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("inMetadata", inMetadataRaw, "integer"))
+			}
+			pv := int(v)
+			inMetadata = &pv
+		}
+		if inMetadata != nil {
+			if *inMetadata > 100 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("InMetadata", *inMetadata, 100, false))
+			}
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	var (
+		message *service_message_with_validatepb.MethodMessageWithValidateRequest
+		ok      bool
+	)
+	{
+		if message, ok = v.(*service_message_with_validatepb.MethodMessageWithValidateRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceMessageWithValidate", "MethodMessageWithValidate", "*service_message_with_validatepb.MethodMessageWithValidateRequest", v)
+		}
+		if err = ValidateMethodMessageWithValidateRequest(message); err != nil {
+			return nil, err
+		}
+	}
+	var payload *servicemessagewithvalidate.RequestUT
+	{
+		payload = NewMethodMessageWithValidatePayload(message, inMetadata)
+	}
+	return payload, nil
+}

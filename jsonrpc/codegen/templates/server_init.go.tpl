@@ -2,8 +2,8 @@
 func {{ .ServerInit }}(
 	endpoints *{{ .Service.PkgName }}.Endpoints,
 	mux goahttp.Muxer,
-	decoder func(io.Reader) jsonrpc.Decoder,
-	encoder func(io.Writer) jsonrpc.Encoder,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
 ) *{{ .ServerStruct }} {
 	s := &{{ .ServerStruct }}{

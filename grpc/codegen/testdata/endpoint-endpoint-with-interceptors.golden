@@ -154,7 +154,7 @@ func serviceWithInterceptorsMethodAUsage() {
 	fmt.Fprintf(os.Stderr, `%[1]s [flags] service-with-interceptors method-a -message JSON
 
 MethodA implements MethodA.
-    -message JSON: 
+    -message JSON:
 
 Example:
     %[1]s service-with-interceptors method-a --message '{
@@ -167,7 +167,7 @@ func serviceWithInterceptorsMethodBUsage() {
 	fmt.Fprintf(os.Stderr, `%[1]s [flags] service-with-interceptors method-b -message JSON
 
 MethodB implements MethodB.
-    -message JSON: 
+    -message JSON:
 
 Example:
     %[1]s service-with-interceptors method-b --message '{

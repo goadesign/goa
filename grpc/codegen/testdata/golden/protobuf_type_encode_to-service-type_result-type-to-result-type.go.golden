@@ -1,0 +1,15 @@
+func transform() {
+	target := &proto.ResultType{}
+	if source.Int != nil {
+		int_ := int(*source.Int)
+		target.Int = &int_
+	}
+	if source.Map_ != nil {
+		target.Map = make(map[int]string, len(source.Map_))
+		for key, val := range source.Map_ {
+			tk := int(key)
+			tv := val
+			target.Map[tk] = tv
+		}
+	}
+}

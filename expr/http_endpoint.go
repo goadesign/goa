@@ -664,6 +664,30 @@ func (e *HTTPEndpointExpr) Validate() error {
 		}
 	}
 
+	// Validate JSON-RPC attributes
+	if _, ok := e.Meta["jsonrpc"]; ok {
+		// Make sure that non-notification methods have an ID attribute
+		if !e.IsNotification && e.IDAttribute == "" {
+			verr.Add(e, "JSON-RPC method %q must have an ID attribute.", e.MethodExpr.Name)
+		}
+
+		// Make sure JSON-RPC notifications do not have an ID attribute
+		if e.IsNotification && e.IDAttribute != "" {
+			verr.Add(e, "JSON-RPC notification method %q must not have an ID attribute.", e.MethodExpr.Name)
+		}
+
+		// Make sure the JSON-RPC ID attribute exists in the payload and is of
+		// type string
+		if e.IDAttribute != "" {
+			att := e.MethodExpr.Payload.Find(e.IDAttribute)
+			if att == nil {
+				verr.Add(e, "JSON-RPC ID attribute %q is not found in Payload.", e.IDAttribute)
+			} else if att.Type != String {
+				verr.Add(e, "JSON-RPC ID attribute %q is not of type string.", e.IDAttribute)
+			}
+		}
+	}
+
 	body := httpRequestBody(e)
 	if e.SkipRequestBodyEncodeDecode && body.Type != Empty {
 		verr.Add(e, "HTTP endpoint request body must be empty when using SkipRequestBodyEncodeDecode but not all method payload attributes are mapped to headers and params. Make sure to define Headers and Params as needed.")

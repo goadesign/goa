@@ -3,9 +3,9 @@ type {{ .ServerStruct }} struct {
 	http.Handler
 	Methods []string
 	{{- range .Endpoints }}
-	{{ .Method.VarName }} func(context.Context, *jsonrpc.Request) *jsonrpc.Response
+	{{ .Method.VarName }} func(context.Context, *http.Request, *jsonrpc.RawRequest) *jsonrpc.Response
 	{{- end }}
-	decoder func(io.Reader) jsonrpc.Decoder
-	encoder func(io.Writer) jsonrpc.Encoder
+	decoder func(*http.Request) goahttp.Decoder
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder
 	errhandler func(context.Context, http.ResponseWriter, error)
 }

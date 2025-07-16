@@ -1,0 +1,27 @@
+// NewProtoMethodMessageUserTypeWithAliasRequest builds the gRPC request type
+// from the payload of the "MethodMessageUserTypeWithAlias" endpoint of the
+// "ServiceMessageUserTypeWithAlias" service.
+func NewProtoMethodMessageUserTypeWithAliasRequest(payload *servicemessageusertypewithalias.PayloadAliasT) *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasRequest {
+	message := &service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasRequest{
+		IntAliasField: int32(payload.IntAliasField),
+	}
+	if payload.OptionalIntAliasField != nil {
+		optionalIntAliasField := int32(*payload.OptionalIntAliasField)
+		message.OptionalIntAliasField = &optionalIntAliasField
+	}
+	return message
+}
+
+// NewMethodMessageUserTypeWithAliasResult builds the result type of the
+// "MethodMessageUserTypeWithAlias" endpoint of the
+// "ServiceMessageUserTypeWithAlias" service from the gRPC response type.
+func NewMethodMessageUserTypeWithAliasResult(message *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse) *servicemessageusertypewithalias.PayloadAliasT {
+	result := &servicemessageusertypewithalias.PayloadAliasT{
+		IntAliasField: servicemessageusertypewithalias.IntAlias(message.IntAliasField),
+	}
+	if message.OptionalIntAliasField != nil {
+		optionalIntAliasField := servicemessageusertypewithalias.IntAlias(*message.OptionalIntAliasField)
+		result.OptionalIntAliasField = &optionalIntAliasField
+	}
+	return result
+}

@@ -5,7 +5,7 @@ func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	peek, err := bufReader.Peek(1)
 	if err != nil && err != io.EOF {
 		r.Body.Close()
-		s.writeError(r.Context(), w, nil, jsonrpc.ParseError, fmt.Errorf("Failed to read request body: %w", err))
+		s.errhandler(r.Context(), w, fmt.Errorf("failed to read request body: %w", err))
 		return
 	}
 	
@@ -19,7 +19,7 @@ func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 	defer func(r *http.Request) {
 		if err := r.Body.Close(); err != nil {
-			s.writeError(r.Context(), w, nil, jsonrpc.InternalError, fmt.Errorf("Failed to close request body: %w", err))
+			s.errhandler(r.Context(), w, fmt.Errorf("failed to close request body: %w", err))
 		}
 	}(r)
 	
@@ -34,77 +34,71 @@ func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 
 // handleSingle handles a single JSON-RPC request.
 func (s *Server) handleSingle(w http.ResponseWriter, r *http.Request) {
-	var req jsonrpc.Request
-	if err := s.decoder(r.Body).Decode(&req); err != nil {
-		s.writeError(r.Context(), w, nil, jsonrpc.ParseError, fmt.Errorf("Failed to decode request: %w", err))
+	var req jsonrpc.RawRequest
+	if err := s.decoder(r).Decode(&req); err != nil {
+		s.errhandler(r.Context(), w, fmt.Errorf("failed to decode request: %w", err))
 		return
 	}
 
-	resp := s.processRequest(r.Context(), &req)
+	resp := s.processRequest(r.Context(), r, &req)
 	if resp == nil {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
-	if err := s.encoder(w).Encode(resp); err != nil {
-		s.writeError(r.Context(), w, req.ID, jsonrpc.InternalError, fmt.Errorf("Failed to encode response: %w", err))
+	if err := s.encoder(r.Context(), w).Encode(resp); err != nil {
+		s.errhandler(r.Context(), w, fmt.Errorf("failed to encode response: %w", err))
 	}
 }
 
 // handleBatch handles a batch of JSON-RPC requests.
 func (s *Server) handleBatch(w http.ResponseWriter, r *http.Request) {
-	var reqs []jsonrpc.Request
-	if err := s.decoder(r.Body).Decode(&reqs); err != nil {
-		s.writeError(r.Context(), w, nil, jsonrpc.ParseError, fmt.Errorf("Invalid JSON: %w", err))
+	var reqs []jsonrpc.RawRequest
+	if err := s.decoder(r).Decode(&reqs); err != nil {
+		s.errhandler(r.Context(), w, fmt.Errorf("failed to decode batch request: %w", err))
 		return
 	}
 
-	if len(reqs) == 0 {
-		s.writeError(r.Context(), w, nil, jsonrpc.InvalidRequest, fmt.Errorf("Empty batch request"))
-		return
-	}
-
-	responses := make([]jsonrpc.Response, 0, len(reqs))
+	resps := make([]jsonrpc.Response, 0, len(reqs))
 	for _, req := range reqs {
-		if resp := s.processRequest(r.Context(), &req); resp != nil {
-			responses = append(responses, *resp)
+		if resp := s.processRequest(r.Context(), r, &req); resp != nil {
+			resps = append(resps, *resp)
 		}
 	}
 
-	if err := s.encoder(w).Encode(responses); err != nil {
-		s.writeError(r.Context(), w, nil, jsonrpc.InternalError, fmt.Errorf("Failed to encode batch response: %w", err))
+	if err := s.encoder(r.Context(), w).Encode(resps); err != nil {
+		s.errhandler(r.Context(), w, fmt.Errorf("failed to encode batch response: %w", err))
 	}
 }
 
 // ProcessRequest processes a single JSON-RPC request.
-func (s *Server) processRequest(ctx context.Context, req *jsonrpc.Request) *jsonrpc.Response {
+func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest) *jsonrpc.Response {
 	if req.JSONRPC != "2.0" {
-		return jsonrpc.MakeErrorResponse(req.ID, jsonrpc.InvalidRequest, fmt.Sprintf("Invalid JSON-RPC version, must be 2.0, got %q", req.JSONRPC), nil)
+		if req.ID != nil {
+			return jsonrpc.MakeErrorResponse(*req.ID, jsonrpc.InvalidRequest, "", fmt.Sprintf("Invalid JSON-RPC version, must be 2.0, got %q", req.JSONRPC))
+		}
+		return nil
 	}
 
 	if req.Method == "" {
-		return jsonrpc.MakeErrorResponse(req.ID, jsonrpc.InvalidRequest, "Missing method field", nil)
+		if req.ID != nil {
+			return jsonrpc.MakeErrorResponse(*req.ID, jsonrpc.InvalidRequest, "", "Missing method field")
+		}
+		return nil
 	}
 
 	var resp *jsonrpc.Response
 	switch req.Method {
         {{- range .Endpoints }}
         case {{ printf "%q" .Method.Name }}:
-            resp = s.{{ .Method.VarName }}(ctx, req)
+            resp = s.{{ .Method.VarName }}(ctx, r, req)
         {{- end }}
 	default:
 		if req.ID != nil {
-			resp = jsonrpc.MakeErrorResponse(req.ID, jsonrpc.MethodNotFound, fmt.Sprintf("Method %q not found", req.Method), nil)
+			return jsonrpc.MakeErrorResponse(*req.ID, jsonrpc.MethodNotFound, "", fmt.Sprintf("Method %q not found", req.Method))
 		}
+		return nil
 	}
 
 	return resp
-}
-
-// writeError writes a JSON-RPC error response.
-func (s *{{ .ServerStruct }}) writeError(ctx context.Context, w http.ResponseWriter, reqID any, code jsonrpc.Code, err error) {
-	resp := jsonrpc.MakeErrorResponse(reqID, code, err.Error(), nil)
-	if err := s.encoder(w).Encode(resp); err != nil {
-		s.errhandler(ctx, w, err)
-	}
 }

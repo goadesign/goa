@@ -1,10 +1,10 @@
 package codegen
 
 import (
+	"goa.design/goa/v3/codegen/testutil"
 	"bytes"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
@@ -15,20 +15,19 @@ func TestServerTypeFiles(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"server-payload-with-nested-types", testdata.PayloadWithNestedTypesDSL, testdata.PayloadWithNestedTypesServerTypeCode},
-		{"server-payload-with-duplicate-use", testdata.PayloadWithMultipleUseTypesDSL, testdata.PayloadWithMultipleUseTypesServerTypeCode},
-		{"server-payload-with-alias-type", testdata.PayloadWithAliasTypeDSL, testdata.PayloadWithAliasTypeServerTypeCode},
-		{"server-payload-with-mixed-attributes", testdata.PayloadWithMixedAttributesDSL, testdata.PayloadWithMixedAttributesServerTypeCode},
-		{"server-payload-with-custom-type-package", testdata.PayloadWithCustomTypePackageDSL, testdata.PayloadWithCustomTypePackageServerTypeCode},
-		{"server-result-collection", testdata.ResultWithCollectionDSL, testdata.ResultWithCollectionServerTypeCode},
-		{"server-with-errors", testdata.UnaryRPCWithErrorsDSL, testdata.WithErrorsServerTypeCode},
-		{"server-elem-validation", testdata.ElemValidationDSL, testdata.ElemValidationServerTypesFile},
-		{"server-alias-validation", testdata.AliasValidationDSL, testdata.AliasValidationServerTypesFile},
-		{"server-struct-meta-type", testdata.StructMetaTypeDSL, testdata.StructMetaTypeServerTypeCode},
-		{"server-struct-field-name-meta-type", testdata.StructFieldNameMetaTypeDSL, testdata.StructFieldNameMetaTypeServerTypesCode},
-		{"server-default-fields", testdata.DefaultFieldsDSL, testdata.DefaultFieldsServerTypeCode},
+		{"server-payload-with-nested-types", testdata.PayloadWithNestedTypesDSL},
+		{"server-payload-with-duplicate-use", testdata.PayloadWithMultipleUseTypesDSL},
+		{"server-payload-with-alias-type", testdata.PayloadWithAliasTypeDSL},
+		{"server-payload-with-mixed-attributes", testdata.PayloadWithMixedAttributesDSL},
+		{"server-payload-with-custom-type-package", testdata.PayloadWithCustomTypePackageDSL},
+		{"server-result-collection", testdata.ResultWithCollectionDSL},
+		{"server-with-errors", testdata.UnaryRPCWithErrorsDSL},
+		{"server-elem-validation", testdata.ElemValidationDSL},
+		{"server-alias-validation", testdata.AliasValidationDSL},
+		{"server-struct-meta-type", testdata.StructMetaTypeDSL},
+		{"server-struct-field-name-meta-type", testdata.StructFieldNameMetaTypeDSL},
+		{"server-default-fields", testdata.DefaultFieldsDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -41,7 +40,7 @@ func TestServerTypeFiles(t *testing.T) {
 				require.NoError(t, s.Write(&buf))
 			}
 			code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/server_types_"+c.Name+".go.golden", code)
 		})
 	}
 }

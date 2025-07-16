@@ -1,0 +1,30 @@
+// DecodeMethodClientStreamingRPCWithPayloadRequest decodes requests sent to
+// "ServiceClientStreamingRPCWithPayload" service
+// "MethodClientStreamingRPCWithPayload" endpoint.
+func DecodeMethodClientStreamingRPCWithPayloadRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
+	var (
+		goaPayload int
+		err        error
+	)
+	{
+		if vals := md.Get("goa_payload"); len(vals) == 0 {
+			err = goa.MergeErrors(err, goa.MissingFieldError("goa_payload", "metadata"))
+		} else {
+			goaPayloadRaw := vals[0]
+
+			v, err2 := strconv.ParseInt(goaPayloadRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("goaPayload", goaPayloadRaw, "integer"))
+			}
+			goaPayload = int(v)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	var payload int
+	{
+		payload = goaPayload
+	}
+	return payload, nil
+}

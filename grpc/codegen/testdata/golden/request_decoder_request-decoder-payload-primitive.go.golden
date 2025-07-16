@@ -1,0 +1,18 @@
+// DecodeMethodServerStreamingRPCRequest decodes requests sent to
+// "ServiceServerStreamingRPC" service "MethodServerStreamingRPC" endpoint.
+func DecodeMethodServerStreamingRPCRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
+	var (
+		message *service_server_streaming_rpcpb.MethodServerStreamingRPCRequest
+		ok      bool
+	)
+	{
+		if message, ok = v.(*service_server_streaming_rpcpb.MethodServerStreamingRPCRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceServerStreamingRPC", "MethodServerStreamingRPC", "*service_server_streaming_rpcpb.MethodServerStreamingRPCRequest", v)
+		}
+	}
+	var payload int
+	{
+		payload = NewMethodServerStreamingRPCPayload(message)
+	}
+	return payload, nil
+}

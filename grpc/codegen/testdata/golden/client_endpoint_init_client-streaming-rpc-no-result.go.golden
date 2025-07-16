@@ -1,0 +1,17 @@
+// MethodClientStreamingNoResult calls the "MethodClientStreamingNoResult"
+// function in
+// service_client_streaming_no_resultpb.ServiceClientStreamingNoResultClient
+// interface.
+func (c *Client) MethodClientStreamingNoResult() goa.Endpoint {
+	return func(ctx context.Context, v any) (any, error) {
+		inv := goagrpc.NewInvoker(
+			BuildMethodClientStreamingNoResultFunc(c.grpccli, c.opts...),
+			nil,
+			DecodeMethodClientStreamingNoResultResponse)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			return nil, goa.Fault("%s", err.Error())
+		}
+		return res, nil
+	}
+}

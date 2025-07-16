@@ -1,0 +1,9 @@
+// EncodeMethodMessageMapRequest encodes requests sent to ServiceMessageMap
+// MethodMessageMap endpoint.
+func EncodeMethodMessageMapRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
+	payload, ok := v.(map[int]*servicemessagemap.UT)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceMessageMap", "MethodMessageMap", "map[int]*servicemessagemap.UT", v)
+	}
+	return NewProtoMethodMessageMapRequest(payload), nil
+}

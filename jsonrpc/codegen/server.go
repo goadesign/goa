@@ -12,15 +12,15 @@ import (
 
 const (
 	// httpRequestDecoderTemplate is the original HTTP request decoder template
-	// that needs to be replaced. It uses *http.Request and goahttp.Decoder.
+	// signature that needs to be replaced.
 	httpRequestDecoderTemplate = `func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) ({{ .Payload.Ref }}, error) {
 	return func(r *http.Request) ({{ .Payload.Ref }}, error) {`
 
 	// jsonrpcRequestDecoderTemplate is the modified JSON-RPC request decoder template
-	// that replaces the HTTP version. It uses io.Reader and jsonrpc.Decoder to handle
-	// JSON-RPC requests instead of HTTP requests.
-	jsonrpcRequestDecoderTemplate = `func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(io.Reader) jsonrpc.Decoder) func(io.Reader) ({{ .Payload.Ref }}, error) {
-	return func(r io.Reader) ({{ .Payload.Ref }}, error) {`
+	// that replaces the HTTP version.
+	jsonrpcRequestDecoderTemplate = `func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request, *jsonrpc.RawRequest) ({{ .Payload.Ref }}, error) {
+	return func(r *http.Request, req *jsonrpc.RawRequest) ({{ .Payload.Ref }}, error) {
+		r.Body = io.NopCloser(bytes.NewReader(req.Params))`
 )
 
 // ServerFiles returns the generated JSON-RPC server files if any.
@@ -36,6 +36,7 @@ func ServerFiles(genpkg string, services *httpcodegen.ServicesData) []*codegen.F
 			for _, s := range f.SectionTemplates {
 				// Add the JSON-RPC imports.
 				if s.Name == "source-header" {
+					codegen.AddImport(s, &codegen.ImportSpec{Path: "bytes"})
 					codegen.AddImport(s, codegen.GoaImport("jsonrpc"))
 				}
 				// Tweak the request decoder to use the JSON-RPC decoder.
@@ -92,6 +93,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		&codegen.SectionTemplate{Name: "server-use", Source: jsonrpcTemplates.Read(serverUseT), Data: data},
 		&codegen.SectionTemplate{Name: "server-method-names", Source: jsonrpcTemplates.Read(serverMethodNamesT), Data: data},
 		&codegen.SectionTemplate{Name: "server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), Data: data},
+		&codegen.SectionTemplate{Name: "server-mount", Source: jsonrpcTemplates.Read(serverMountT), Data: data},
 	)
 
 	for _, e := range data.Endpoints {

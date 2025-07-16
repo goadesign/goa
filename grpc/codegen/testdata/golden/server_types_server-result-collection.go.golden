@@ -1,0 +1,55 @@
+// NewProtoMethodResultWithCollectionResponse builds the gRPC response type
+// from the result of the "MethodResultWithCollection" endpoint of the
+// "ServiceResultWithCollection" service.
+func NewProtoMethodResultWithCollectionResponse(result *serviceresultwithcollection.MethodResultWithCollectionResult) *service_result_with_collectionpb.MethodResultWithCollectionResponse {
+	message := &service_result_with_collectionpb.MethodResultWithCollectionResponse{}
+	if result.Result != nil {
+		message.Result = svcServiceresultwithcollectionResultTToServiceResultWithCollectionpbResultT(result.Result)
+	}
+	return message
+}
+
+// svcServiceresultwithcollectionResultTToServiceResultWithCollectionpbResultT
+// builds a value of type *service_result_with_collectionpb.ResultT from a
+// value of type *serviceresultwithcollection.ResultT.
+func svcServiceresultwithcollectionResultTToServiceResultWithCollectionpbResultT(v *serviceresultwithcollection.ResultT) *service_result_with_collectionpb.ResultT {
+	if v == nil {
+		return nil
+	}
+	res := &service_result_with_collectionpb.ResultT{}
+	if v.CollectionField != nil {
+		res.CollectionField = &service_result_with_collectionpb.RTCollection{}
+		res.CollectionField.Field = make([]*service_result_with_collectionpb.RT, len(v.CollectionField))
+		for i, val := range v.CollectionField {
+			res.CollectionField.Field[i] = &service_result_with_collectionpb.RT{}
+			if val.IntField != nil {
+				intField := int32(*val.IntField)
+				res.CollectionField.Field[i].IntField = &intField
+			}
+		}
+	}
+
+	return res
+}
+
+// protobufServiceResultWithCollectionpbResultTToServiceresultwithcollectionResultT
+// builds a value of type *serviceresultwithcollection.ResultT from a value of
+// type *service_result_with_collectionpb.ResultT.
+func protobufServiceResultWithCollectionpbResultTToServiceresultwithcollectionResultT(v *service_result_with_collectionpb.ResultT) *serviceresultwithcollection.ResultT {
+	if v == nil {
+		return nil
+	}
+	res := &serviceresultwithcollection.ResultT{}
+	if v.CollectionField != nil {
+		res.CollectionField = make([]*serviceresultwithcollection.RT, len(v.CollectionField.Field))
+		for i, val := range v.CollectionField.Field {
+			res.CollectionField[i] = &serviceresultwithcollection.RT{}
+			if val.IntField != nil {
+				intField := int(*val.IntField)
+				res.CollectionField[i].IntField = &intField
+			}
+		}
+	}
+
+	return res
+}

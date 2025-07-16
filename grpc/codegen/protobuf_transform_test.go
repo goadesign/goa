@@ -1,9 +1,9 @@
 package codegen
 
 import (
+	"goa.design/goa/v3/codegen/testutil"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
@@ -73,90 +73,89 @@ func TestProtoBufTransform(t *testing.T) {
 		Target  expr.DataType
 		ToProto bool
 		Ctx     *codegen.AttributeContext
-		Code    string
 	}{
 		// test cases to transform service type to protocol buffer type
 		"to-protobuf-type": {
-			{"primitive-to-primitive", primitive, primitive, true, svcCtx, primitiveSvcToPrimitiveProtoCode},
-			{"simple-to-simple", simple, simple, true, svcCtx, simpleSvcToSimpleProtoCode},
-			{"simple-to-required", simple, required, true, svcCtx, simpleSvcToRequiredProtoCode},
-			{"required-to-simple", required, simple, true, svcCtx, requiredSvcToSimpleProtoCode},
-			{"simple-to-default", simple, defaultT, true, svcCtx, simpleSvcToDefaultProtoCode},
-			{"default-to-simple", defaultT, simple, true, svcCtx, defaultSvcToSimpleProtoCode},
-			{"required-ptr-to-simple", required, simple, true, ptrCtx, requiredPtrSvcToSimpleProtoCode},
-			{"simple-to-customtype", customtype, simple, true, svcCtx, customSvcToSimpleProtoCode},
-			{"customtype-to-customtype", customtype, customtype, true, svcCtx, customSvcToCustomProtoCode},
+			{"primitive-to-primitive", primitive, primitive, true, svcCtx},
+			{"simple-to-simple", simple, simple, true, svcCtx},
+			{"simple-to-required", simple, required, true, svcCtx},
+			{"required-to-simple", required, simple, true, svcCtx},
+			{"simple-to-default", simple, defaultT, true, svcCtx},
+			{"default-to-simple", defaultT, simple, true, svcCtx},
+			{"required-ptr-to-simple", required, simple, true, ptrCtx},
+			{"simple-to-customtype", customtype, simple, true, svcCtx},
+			{"customtype-to-customtype", customtype, customtype, true, svcCtx},
 
 			// maps
-			{"map-to-map", simpleMap, simpleMap, true, svcCtx, simpleMapSvcToSimpleMapProtoCode},
-			{"nested-map-to-nested-map", nestedMap, nestedMap, true, svcCtx, nestedMapSvcToNestedMapProtoCode},
-			{"array-map-to-array-map", arrayMap, arrayMap, true, svcCtx, arrayMapSvcToArrayMapProtoCode},
-			{"default-map-to-default-map", defaultMap, defaultMap, true, svcCtx, defaultMapSvcToDefaultMapProtoCode},
+			{"map-to-map", simpleMap, simpleMap, true, svcCtx},
+			{"nested-map-to-nested-map", nestedMap, nestedMap, true, svcCtx},
+			{"array-map-to-array-map", arrayMap, arrayMap, true, svcCtx},
+			{"default-map-to-default-map", defaultMap, defaultMap, true, svcCtx},
 
 			// arrays
-			{"array-to-array", simpleArray, simpleArray, true, svcCtx, simpleArraySvcToSimpleArrayProtoCode},
-			{"nested-array-to-nested-array", nestedArray, nestedArray, true, svcCtx, nestedArraySvcToNestedArrayProtoCode},
-			{"type-array-to-type-array", typeArray, typeArray, true, svcCtx, typeArraySvcToTypeArrayProtoCode},
-			{"map-array-to-map-array", mapArray, mapArray, true, svcCtx, mapArraySvcToMapArrayProtoCode},
-			{"default-array-to-default-array", defaultArray, defaultArray, true, svcCtx, defaultArraySvcToDefaultArrayProtoCode},
+			{"array-to-array", simpleArray, simpleArray, true, svcCtx},
+			{"nested-array-to-nested-array", nestedArray, nestedArray, true, svcCtx},
+			{"type-array-to-type-array", typeArray, typeArray, true, svcCtx},
+			{"map-array-to-map-array", mapArray, mapArray, true, svcCtx},
+			{"default-array-to-default-array", defaultArray, defaultArray, true, svcCtx},
 
-			{"recursive-to-recursive", recursive, recursive, true, svcCtx, recursiveSvcToRecursiveProtoCode},
-			{"composite-to-custom-field", composite, customField, true, svcCtx, compositeSvcToCustomFieldProtoCode},
-			{"custom-field-to-composite", customField, composite, true, svcCtx, customFieldSvcToCompositeProtoCode},
-			{"result-type-to-result-type", resultType, resultType, true, svcCtx, resultTypeSvcToResultTypeProtoCode},
-			{"result-type-collection-to-result-type-collection", rtCol, rtCol, true, svcCtx, rtColSvcToRTColProtoCode},
-			{"optional-to-optional", optional, optional, true, svcCtx, optionalSvcToOptionalProtoCode},
-			{"defaults-to-defaults", defaults, defaults, true, svcCtx, defaultsSvcToDefaultsProtoCode},
+			{"recursive-to-recursive", recursive, recursive, true, svcCtx},
+			{"composite-to-custom-field", composite, customField, true, svcCtx},
+			{"custom-field-to-composite", customField, composite, true, svcCtx},
+			{"result-type-to-result-type", resultType, resultType, true, svcCtx},
+			{"result-type-collection-to-result-type-collection", rtCol, rtCol, true, svcCtx},
+			{"optional-to-optional", optional, optional, true, svcCtx},
+			{"defaults-to-defaults", defaults, defaults, true, svcCtx},
 
 			// oneofs
-			{"oneof-to-oneof", simpleOneOf, simpleOneOf, true, svcCtx, oneOfSvcToOneOfProtoCode},
-			{"embedded-oneof-to-embedded-oneof", embeddedOneOf, embeddedOneOf, true, svcCtx, embeddedOneOfSvcToEmbeddedOneOfProtoCode},
-			{"recursive-oneof-to-recursive-oneof", recursiveOneOf, recursiveOneOf, true, svcCtx, recursiveOneOfSvcToRecursiveOneOfProtoCode},
+			{"oneof-to-oneof", simpleOneOf, simpleOneOf, true, svcCtx},
+			{"embedded-oneof-to-embedded-oneof", embeddedOneOf, embeddedOneOf, true, svcCtx},
+			{"recursive-oneof-to-recursive-oneof", recursiveOneOf, recursiveOneOf, true, svcCtx},
 
 			// package override
-			{"pkg-override-to-pkg-override", pkgOverride, pkgOverride, true, svcCtx, pkgOverrideSvcToPkgOverrideProtoCode},
+			{"pkg-override-to-pkg-override", pkgOverride, pkgOverride, true, svcCtx},
 		},
 
 		// test cases to transform protocol buffer type to service type
 		"to-service-type": {
-			{"primitive-to-primitive", primitive, primitive, false, svcCtx, primitiveProtoToPrimitiveSvcCode},
-			{"simple-to-simple", simple, simple, false, svcCtx, simpleProtoToSimpleSvcCode},
-			{"simple-to-required", simple, required, false, svcCtx, simpleProtoToRequiredSvcCode},
-			{"required-to-simple", required, simple, false, svcCtx, requiredProtoToSimpleSvcCode},
-			{"simple-to-default", simple, defaultT, false, svcCtx, simpleProtoToDefaultSvcCode},
-			{"default-to-simple", defaultT, simple, false, svcCtx, defaultProtoToSimpleSvcCode},
-			{"simple-to-required-ptr", simple, required, false, ptrCtx, simpleProtoToRequiredPtrSvcCode},
-			{"simple-to-customtype", simple, customtype, false, svcCtx, simpleProtoToCustomSvcCode},
-			{"customtype-to-customtype", customtype, customtype, false, svcCtx, customProtoToCustomSvcCode},
+			{"primitive-to-primitive", primitive, primitive, false, svcCtx},
+			{"simple-to-simple", simple, simple, false, svcCtx},
+			{"simple-to-required", simple, required, false, svcCtx},
+			{"required-to-simple", required, simple, false, svcCtx},
+			{"simple-to-default", simple, defaultT, false, svcCtx},
+			{"default-to-simple", defaultT, simple, false, svcCtx},
+			{"simple-to-required-ptr", simple, required, false, ptrCtx},
+			{"simple-to-customtype", simple, customtype, false, svcCtx},
+			{"customtype-to-customtype", customtype, customtype, false, svcCtx},
 
 			// maps
-			{"map-to-map", simpleMap, simpleMap, false, svcCtx, simpleMapProtoToSimpleMapSvcCode},
-			{"nested-map-to-nested-map", nestedMap, nestedMap, false, svcCtx, nestedMapProtoToNestedMapSvcCode},
-			{"array-map-to-array-map", arrayMap, arrayMap, false, svcCtx, arrayMapProtoToArrayMapSvcCode},
-			{"default-map-to-default-map", defaultMap, defaultMap, false, svcCtx, defaultMapProtoToDefaultMapSvcCode},
+			{"map-to-map", simpleMap, simpleMap, false, svcCtx},
+			{"nested-map-to-nested-map", nestedMap, nestedMap, false, svcCtx},
+			{"array-map-to-array-map", arrayMap, arrayMap, false, svcCtx},
+			{"default-map-to-default-map", defaultMap, defaultMap, false, svcCtx},
 
 			// arrays
-			{"array-to-array", simpleArray, simpleArray, false, svcCtx, simpleArrayProtoToSimpleArraySvcCode},
-			{"nested-array-to-nested-array", nestedArray, nestedArray, false, svcCtx, nestedArrayProtoToNestedArraySvcCode},
-			{"type-array-to-type-array", typeArray, typeArray, false, svcCtx, typeArrayProtoToTypeArraySvcCode},
-			{"map-array-to-map-array", mapArray, mapArray, false, svcCtx, mapArrayProtoToMapArraySvcCode},
-			{"default-array-to-default-array", defaultArray, defaultArray, false, svcCtx, defaultArrayProtoToDefaultArraySvcCode},
+			{"array-to-array", simpleArray, simpleArray, false, svcCtx},
+			{"nested-array-to-nested-array", nestedArray, nestedArray, false, svcCtx},
+			{"type-array-to-type-array", typeArray, typeArray, false, svcCtx},
+			{"map-array-to-map-array", mapArray, mapArray, false, svcCtx},
+			{"default-array-to-default-array", defaultArray, defaultArray, false, svcCtx},
 
-			{"recursive-to-recursive", recursive, recursive, false, svcCtx, recursiveProtoToRecursiveSvcCode},
-			{"composite-to-custom-field", composite, customField, false, svcCtx, compositeProtoToCustomFieldSvcCode},
-			{"custom-field-to-composite", customField, composite, false, svcCtx, customFieldProtoToCompositeSvcCode},
-			{"result-type-to-result-type", resultType, resultType, false, svcCtx, resultTypeProtoToResultTypeSvcCode},
-			{"result-type-collection-to-result-type-collection", rtCol, rtCol, false, svcCtx, rtColProtoToRTColSvcCode},
-			{"optional-to-optional", optional, optional, false, svcCtx, optionalProtoToOptionalSvcCode},
-			{"defaults-to-defaults", defaults, defaults, false, svcCtx, defaultsProtoToDefaultsSvcCode},
+			{"recursive-to-recursive", recursive, recursive, false, svcCtx},
+			{"composite-to-custom-field", composite, customField, false, svcCtx},
+			{"custom-field-to-composite", customField, composite, false, svcCtx},
+			{"result-type-to-result-type", resultType, resultType, false, svcCtx},
+			{"result-type-collection-to-result-type-collection", rtCol, rtCol, false, svcCtx},
+			{"optional-to-optional", optional, optional, false, svcCtx},
+			{"defaults-to-defaults", defaults, defaults, false, svcCtx},
 
 			// oneofs
-			{"oneof-to-oneof", simpleOneOf, simpleOneOf, false, svcCtx, oneOfProtoToOneOfSvcCode},
-			{"embedded-oneof-to-embedded-oneof", embeddedOneOf, embeddedOneOf, false, svcCtx, embeddedOneOfProtoToEmbeddedOneOfSvcCode},
-			{"recursive-oneof-to-recursive-oneof", recursiveOneOf, recursiveOneOf, false, svcCtx, recursiveOneOfProtoToRecursiveOneOfSvcCode},
+			{"oneof-to-oneof", simpleOneOf, simpleOneOf, false, svcCtx},
+			{"embedded-oneof-to-embedded-oneof", embeddedOneOf, embeddedOneOf, false, svcCtx},
+			{"recursive-oneof-to-recursive-oneof", recursiveOneOf, recursiveOneOf, false, svcCtx},
 
 			// package override
-			{"pkg-override-to-pkg-override", pkgOverride, pkgOverride, false, svcCtx, pkgOverrideProtoToPkgOverrideSvcCode},
+			{"pkg-override-to-pkg-override", pkgOverride, pkgOverride, false, svcCtx},
 		},
 	}
 	for name, cases := range tc {
@@ -177,7 +176,7 @@ func TestProtoBufTransform(t *testing.T) {
 					code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto, true)
 					require.NoError(t, err)
 					code = codegen.FormatTestCode(t, "package foo\nfunc transform(){\n"+code+"}")
-					assert.Equal(t, c.Code, code)
+					testutil.AssertGo(t, "testdata/golden/protobuf_type_encode_"+name+"_"+c.Name+".go.golden", code)
 				})
 			}
 		})

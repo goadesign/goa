@@ -120,6 +120,10 @@ func JSONRPC(dsl func()) {
 	case *expr.MethodExpr:
 		svc := expr.Root.API.JSONRPC.ServiceFor(actual.Service, &expr.Root.API.JSONRPC.HTTPExpr)
 		e := svc.EndpointFor(actual)
+		if e.Meta == nil {
+			e.Meta = expr.MetaExpr{}
+		}
+		e.Meta["jsonrpc"] = nil
 		e.DSLFunc = dsl
 		r := &expr.RouteExpr{Method: "POST", Path: "/", Endpoint: e}
 		e.Routes = []*expr.RouteExpr{r}
@@ -136,7 +140,8 @@ func JSONRPC(dsl func()) {
 //
 // The specified attribute must exist in the method payload and should be of
 // type String. If the attribute doesn't exist or ID is not specified,
-// the generated code will automatically generate request IDs on the client side.
+// the generated code will automatically generate request IDs on the client side
+// unless the method is a notification (see Notification).
 //
 // The JSON-RPC response ID is automatically set to match the request ID
 // according to the JSON-RPC specification.

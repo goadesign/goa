@@ -15,6 +15,7 @@ const (
 	serverServiceT     = "server_service"
 	serverUseT         = "server_use"
 	serverMethodNamesT = "server_method_names"
+	serverMountT       = "server_mount"
 )
 
 //go:embed templates/*

@@ -1,0 +1,20 @@
+// DecodeMethodMessageResultTypeWithViewsResponse decodes responses from the
+// ServiceMessageResultTypeWithViews MethodMessageResultTypeWithViews endpoint.
+func DecodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
+	var view string
+	{
+		if vals := hdr.Get("goa-view"); len(vals) > 0 {
+			view = vals[0]
+		}
+	}
+	message, ok := v.(*service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceMessageResultTypeWithViews", "MethodMessageResultTypeWithViews", "*service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse", v)
+	}
+	res := NewMethodMessageResultTypeWithViewsResult(message)
+	vres := &servicemessageresulttypewithviewsviews.RT{Projected: res, View: view}
+	if err := servicemessageresulttypewithviewsviews.ValidateRT(vres); err != nil {
+		return nil, err
+	}
+	return servicemessageresulttypewithviews.NewRT(vres), nil
+}

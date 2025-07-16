@@ -1,0 +1,17 @@
+func transform() {
+	target := &proto.NestedArray{}
+	if source.NestedArray != nil {
+		target.NestedArray = make([]*proto.ArrayOfArrayOfDouble, len(source.NestedArray))
+		for i, val := range source.NestedArray {
+			target.NestedArray[i] = &proto.ArrayOfArrayOfDouble{}
+			target.NestedArray[i].Field = make([]*proto.ArrayOfDouble, len(val))
+			for j, val := range val {
+				target.NestedArray[i].Field[j] = &proto.ArrayOfDouble{}
+				target.NestedArray[i].Field[j].Field = make([]float64, len(val))
+				for k, val := range val {
+					target.NestedArray[i].Field[j].Field[k] = val
+				}
+			}
+		}
+	}
+}

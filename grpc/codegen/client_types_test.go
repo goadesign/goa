@@ -1,10 +1,10 @@
 package codegen
 
 import (
+	"goa.design/goa/v3/codegen/testutil"
 	"bytes"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
@@ -15,18 +15,17 @@ func TestClientTypeFiles(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"client-payload-with-nested-types", testdata.PayloadWithNestedTypesDSL, testdata.PayloadWithNestedTypesClientTypeCode},
-		{"client-payload-with-duplicate-use", testdata.PayloadWithMultipleUseTypesDSL, testdata.PayloadWithMultipleUseTypesClientTypeCode},
-		{"client-payload-with-alias-type", testdata.PayloadWithAliasTypeDSL, testdata.PayloadWithAliasTypeClientTypeCode},
-		{"client-result-collection", testdata.ResultWithCollectionDSL, testdata.ResultWithCollectionClientTypeCode},
-		{"client-alias-validation", testdata.ResultWithAliasValidation, testdata.ResultWithAliasValidationClientTypeCode},
-		{"client-with-errors", testdata.UnaryRPCWithErrorsDSL, testdata.WithErrorsClientTypeCode},
-		{"client-bidirectional-streaming-same-type", testdata.BidirectionalStreamingRPCSameTypeDSL, testdata.BidirectionalStreamingRPCSameTypeClientTypeCode},
-		{"client-struct-meta-type", testdata.StructMetaTypeDSL, testdata.StructMetaTypeTypeCode},
-		{"client-struct-field-name-meta-type", testdata.StructFieldNameMetaTypeDSL, testdata.StructFieldNameMetaTypeClientTypesCode},
-		{"client-default-fields", testdata.DefaultFieldsDSL, testdata.DefaultFieldsTypeCode},
+		{"client-payload-with-nested-types", testdata.PayloadWithNestedTypesDSL},
+		{"client-payload-with-duplicate-use", testdata.PayloadWithMultipleUseTypesDSL},
+		{"client-payload-with-alias-type", testdata.PayloadWithAliasTypeDSL},
+		{"client-result-collection", testdata.ResultWithCollectionDSL},
+		{"client-alias-validation", testdata.ResultWithAliasValidation},
+		{"client-with-errors", testdata.UnaryRPCWithErrorsDSL},
+		{"client-bidirectional-streaming-same-type", testdata.BidirectionalStreamingRPCSameTypeDSL},
+		{"client-struct-meta-type", testdata.StructMetaTypeDSL},
+		{"client-struct-field-name-meta-type", testdata.StructFieldNameMetaTypeDSL},
+		{"client-default-fields", testdata.DefaultFieldsDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -39,7 +38,7 @@ func TestClientTypeFiles(t *testing.T) {
 				require.NoError(t, s.Write(&buf))
 			}
 			code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/client_types_"+c.Name+".go.golden", code)
 		})
 	}
 }

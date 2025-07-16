@@ -1,0 +1,22 @@
+// Code generated with goa v3.21.1, DO NOT EDIT.
+//
+// ServiceMessageUserTypeWithAlias protocol buffer definition
+//
+// Command:
+// goa
+
+syntax = "proto3";
+
+package service_message_user_type_with_alias;
+
+option go_package = "/service_message_user_type_with_aliaspb";
+
+message MethodMessageUserTypeWithAliasRequest {
+	sint32 int_alias_field = 1;
+	optional sint32 optional_int_alias_field = 2;
+}
+
+message MethodMessageUserTypeWithAliasResponse {
+	optional sint32 int_alias_field = 1;
+	optional sint32 optional_int_alias_field = 2;
+}

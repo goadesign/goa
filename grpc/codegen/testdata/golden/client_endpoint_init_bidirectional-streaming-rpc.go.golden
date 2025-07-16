@@ -1,0 +1,17 @@
+// MethodBidirectionalStreamingRPC calls the "MethodBidirectionalStreamingRPC"
+// function in
+// service_bidirectional_streaming_rpcpb.ServiceBidirectionalStreamingRPCClient
+// interface.
+func (c *Client) MethodBidirectionalStreamingRPC() goa.Endpoint {
+	return func(ctx context.Context, v any) (any, error) {
+		inv := goagrpc.NewInvoker(
+			BuildMethodBidirectionalStreamingRPCFunc(c.grpccli, c.opts...),
+			nil,
+			DecodeMethodBidirectionalStreamingRPCResponse)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			return nil, goa.Fault("%s", err.Error())
+		}
+		return res, nil
+	}
+}

@@ -1,0 +1,23 @@
+func transform() {
+	target := &proto.EmbeddedOneOf{
+		String_: source.String,
+	}
+	if source.EmbeddedOneOf != nil {
+		switch src := source.EmbeddedOneOf.(type) {
+		case proto.EmbeddedOneOfString:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_String_{String_: string(src)}
+		case proto.EmbeddedOneOfInteger:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Integer{Integer: int32(src)}
+		case proto.EmbeddedOneOfBoolean:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Boolean{Boolean: bool(src)}
+		case proto.EmbeddedOneOfNumber:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Number{Number: int32(src)}
+		case proto.EmbeddedOneOfArray:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Array{Array: svcProtoEmbeddedOneOfArrayToProtoEmbeddedOneOfArray(src)}
+		case proto.EmbeddedOneOfMap:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Map_{Map_: svcProtoEmbeddedOneOfMapToProtoEmbeddedOneOfMap(src)}
+		case *proto.SimpleOneOf:
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_UserType{UserType: svcProtoSimpleOneOfToProtoSimpleOneOf(src)}
+		}
+	}
+}

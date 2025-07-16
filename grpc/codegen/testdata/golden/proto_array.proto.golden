@@ -1,0 +1,42 @@
+// Code generated with goa v3.21.1, DO NOT EDIT.
+//
+// ServiceMessageArray protocol buffer definition
+//
+// Command:
+// goa
+
+syntax = "proto3";
+
+package service_message_array;
+
+option go_package = "/service_message_arraypb";
+
+message MethodMessageArrayRequest {
+	repeated uint32 array_of_primitives = 1;
+	repeated ArrayOfBytes two_d_array = 2;
+	repeated ArrayOfArrayOfBytes three_d_array = 3;
+	repeated MapOfStringDouble array_of_maps = 4;
+}
+
+message ArrayOfBytes {
+	repeated bytes field = 1;
+}
+
+message ArrayOfArrayOfBytes {
+	repeated ArrayOfBytes field = 1;
+}
+
+message MapOfStringDouble {
+	map<string, double> field = 1;
+}
+
+message MethodMessageArrayResponse {
+	repeated UT field = 1;
+}
+
+message UT {
+	repeated uint32 array_of_primitives = 1;
+	repeated ArrayOfBytes two_d_array = 2;
+	repeated ArrayOfArrayOfBytes three_d_array = 3;
+	repeated MapOfStringDouble array_of_maps = 4;
+}
