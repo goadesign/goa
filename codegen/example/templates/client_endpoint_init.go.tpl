@@ -16,7 +16,7 @@
 		}
 	}
 	if err != nil {
-		if errors.Is(err, flag.ErrHelp) {
+		if err == flag.ErrHelp {
 			os.Exit(0)
 		}
 		fmt.Fprintln(os.Stderr, err.Error())

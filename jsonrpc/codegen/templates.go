@@ -8,6 +8,7 @@ import (
 
 // Server template constants
 const (
+	// Server
 	serverHandlerT     = "server_handler"
 	serverHandlerInitT = "server_handler_init"
 	serverInitT        = "server_init"
@@ -17,6 +18,10 @@ const (
 	serverMethodNamesT = "server_method_names"
 	serverMountT       = "server_mount"
 
+	// Server example
+	serverConfigureT = "server_configure"
+
+	// Client
 	clientStructT    = "client_struct"
 	clientInitT      = "client_init"
 	endpointInitT    = "endpoint_init"
