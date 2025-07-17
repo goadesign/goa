@@ -61,6 +61,9 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 			if fs := jsonrpccodegen.ExampleServerFiles(genpkg, jsonrpcServices, files); len(fs) > 0 {
 				files = append(files, fs...)
 			}
+			if fs := jsonrpccodegen.ExampleCLIFiles(genpkg, jsonrpcServices, files); len(fs) > 0 {
+				files = append(files, fs...)
+			}
 		}
 
 		// GRPC

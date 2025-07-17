@@ -3,6 +3,7 @@ package codegen
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -24,15 +25,23 @@ func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 		}
 		var sections []*codegen.SectionTemplate
 		for _, s := range f.SectionTemplates {
-			// Add the JSON-RPC imports.
-			if s.Name == "source-header" {
+			switch s.Name {
+			case "source-header":
 				codegen.AddImport(s, &codegen.ImportSpec{Path: "bytes"})
 				codegen.AddImport(s, &codegen.ImportSpec{Path: "sync"})
 				codegen.AddImport(s, &codegen.ImportSpec{Path: "sync/atomic"})
+				codegen.AddImport(s, &codegen.ImportSpec{Path: "github.com/google/uuid"})
 				codegen.AddImport(s, codegen.GoaImport("jsonrpc"))
-			}
-			// Tweak the response decoder for JSON-RPC.
-			if s.Name == "response-decoder" {
+			case "request-encoder":
+				re := regexp.MustCompile(`body := (.*)\n`)
+				s.Source = re.ReplaceAllStringFunc(s.Source, func(match string) string {
+					matches := re.FindStringSubmatch(match)
+					if len(matches) < 2 {
+						return match
+					}
+					return strings.Replace(newJSONRPCBody, "{{ .NewBody }}", matches[1], 1)
+				})
+			case "response-decoder":
 				s.Source = jsonrpcTemplates.Read(responseDecoderT, singleResponseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP)
 			}
 			s.Name = "jsonrpc-" + s.Name
@@ -90,3 +99,19 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
+
+const newJSONRPCBody = `b := {{ .NewBody }}
+		body := &jsonrpc.Request{
+			JSONRPC: "2.0",
+			Method:  "{{ .Method.Name }}",
+			Params:  b,
+		}
+{{- if .Payload.IDAttribute }}
+		if p.{{ .Payload.IDAttribute }} != "" {
+			body.ID = &p.{{ .Payload.IDAttribute }}
+		} else {
+			id := uuid.New().String()
+			body.ID = &id
+		}
+{{- end }}
+`

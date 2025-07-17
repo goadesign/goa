@@ -15,16 +15,16 @@ import (
 func ExampleCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
 	var files []*codegen.File
 	for _, svr := range services.Root.API.Servers {
-		if f := exampleCLI(genpkg, svr, services); f != nil {
+		if f := ExampleCLI(genpkg, svr, services); f != nil {
 			files = append(files, f)
 		}
 	}
 	return files
 }
 
-// exampleCLI returns an example client tool HTTP implementation for the given
+// ExampleCLI returns an example client tool HTTP implementation for the given
 // server expression.
-func exampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *codegen.File {
+func ExampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 	svrdata := example.Servers.Get(svr, services.Root)
 	path := filepath.Join("cmd", svrdata.Dir+"-cli", "http.go")
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
