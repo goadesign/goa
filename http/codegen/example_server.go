@@ -71,7 +71,7 @@ func ExampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, ser
 		if idx > 0 {
 			rootPath = genpkg[:idx]
 		}
-		apiPkg = scope.Unique(strings.ToLower(codegen.Goify(services.Root.API.Name, false)), "api")
+		apiPkg = scope.Unique(strings.ToLower(codegen.Goify(services.Root.API.Name, false) + "api"))
 	}
 	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
 

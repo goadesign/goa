@@ -11,7 +11,7 @@ func usage() {
     usageCommands = append(usageCommands, jsonrpcUsageCommands()...)
 {{- end }}
     sort.Strings(usageCommands)
-    slices.Compact(usageCommands)
+    usageCommands = slices.Compact(usageCommands)
     fmt.Fprintf(os.Stderr, `%s is a command line client for the {{ .APIName }} API.
 
 Usage:

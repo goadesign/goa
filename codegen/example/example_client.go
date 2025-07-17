@@ -86,6 +86,7 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 				"APIName":    root.API.Name,
 				"Server":     svrdata,
 				"HasJSONRPC": hasJSONRPC(root, svr),
+				"HasHTTP":    hasHTTP(root, svr),
 			},
 			FuncMap: map[string]any{
 				"toUpper": strings.ToUpper,
@@ -100,6 +101,16 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 func hasJSONRPC(root *expr.RootExpr, svr *expr.ServerExpr) bool {
 	for _, s := range svr.Services {
 		if root.API.JSONRPC.Service(s) != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// hasHTTP returns true if the server expression has an HTTP server.
+func hasHTTP(root *expr.RootExpr, svr *expr.ServerExpr) bool {
+	for _, s := range svr.Services {
+		if root.API.HTTP.Service(s) != nil {
 			return true
 		}
 	}

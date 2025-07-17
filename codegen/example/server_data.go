@@ -2,6 +2,7 @@ package example
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -206,6 +207,16 @@ func buildServerData(svr *expr.ServerExpr, root *expr.RootExpr) *Data {
 		_, seenGRPC := foundTrans[TransportGRPC]
 		if root.API.HTTP.Service(svc) != nil {
 			httpServices = append(httpServices, svc)
+			if !seenHTTP {
+				transports = append(transports, newHTTPTransport())
+				foundTrans[TransportHTTP] = struct{}{}
+			}
+			seenHTTP = true
+		}
+		if root.API.JSONRPC.Service(svc) != nil {
+			if !slices.Contains(httpServices, svc) {
+				httpServices = append(httpServices, svc)
+			}
 			if !seenHTTP {
 				transports = append(transports, newHTTPTransport())
 				foundTrans[TransportHTTP] = struct{}{}

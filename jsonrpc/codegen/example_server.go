@@ -3,6 +3,7 @@ package codegen
 import (
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -41,13 +42,6 @@ func exampleServer(genpkg string, data *httpcodegen.ServicesData, svr *expr.Serv
 		updateHeader(file)
 	}
 
-	var svcdata []*httpcodegen.ServiceData
-	for _, svc := range svr.Services {
-		if data := data.Get(svc); data != nil {
-			svcdata = append(svcdata, data)
-		}
-	}
-
 	// Add JSON-RPC imports to the HTTP server file
 	header := file.SectionTemplates[0]
 	scope := codegen.NewNameScope()
@@ -55,17 +49,42 @@ func exampleServer(genpkg string, data *httpcodegen.ServicesData, svr *expr.Serv
 		sd := data.Get(svc.Name())
 		svcName := sd.Service.PathName
 		codegen.AddImport(header, &codegen.ImportSpec{
+			Path: path.Join(genpkg, svcName),
+			Name: scope.Unique(sd.Service.PkgName),
+		})
+		codegen.AddImport(header, &codegen.ImportSpec{
 			Path: path.Join(genpkg, "jsonrpc", svcName, "server"),
 			Name: scope.Unique(sd.Service.PkgName + "jssvr"),
 		})
 	}
 
 	// Add JSON-RPC to the HTTP server file
+	var svcdata []*httpcodegen.ServiceData
+	for _, svc := range svr.Services {
+		if d := data.Get(svc); d != nil {
+			svcdata = append(svcdata, d)
+		}
+	}
 	var sections []*codegen.SectionTemplate
 	for _, s := range file.SectionTemplates {
 		switch s.Name {
 		case "server-http-start":
-			updateData(s, svcdata, hasHTTP)
+			// Add JSON-RPC services to the HTTP server data so the
+			// generated handleHTTPServer signature includes all the
+			// necessary endpoints.
+			data := s.Data.(map[string]any)
+			httpServices := data["Services"].([]*httpcodegen.ServiceData)
+			httpServices = slices.DeleteFunc(httpServices, func(svc *httpcodegen.ServiceData) bool {
+				return len(svc.Service.Methods) == 0
+			})
+			for _, svc := range svcdata {
+				if !slices.ContainsFunc(httpServices, func(httpsvc *httpcodegen.ServiceData) bool {
+					return httpsvc.Service.Name == svc.Service.Name
+				}) {
+					httpServices = append(httpServices, svc)
+				}
+			}
+			data["Services"] = httpServices
 		case "server-http-end":
 			updateData(s, svcdata, hasHTTP)
 			mountCode := logJSONRPCMount
