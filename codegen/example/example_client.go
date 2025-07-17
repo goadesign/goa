@@ -38,6 +38,8 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 		{Path: "fmt"},
 		{Path: "net/url"},
 		{Path: "os"},
+		{Path: "sort"},
+		{Path: "slices"},
 		{Path: "strings"},
 		codegen.GoaImport(""),
 	}
@@ -47,7 +49,8 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 			Name:   "cli-main-start",
 			Source: exampleTemplates.Read(clientStartT),
 			Data: map[string]any{
-				"Server": svrdata,
+				"Server":     svrdata,
+				"HasJSONRPC": hasJSONRPC(root, svr),
 			},
 			FuncMap: map[string]any{
 				"join": strings.Join,
@@ -65,8 +68,9 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 			Name:   "cli-main-endpoint-init",
 			Source: exampleTemplates.Read(clientEndpointInitT),
 			Data: map[string]any{
-				"Server": svrdata,
-				"Root":   root,
+				"Server":     svrdata,
+				"Root":       root,
+				"HasJSONRPC": hasJSONRPC(root, svr),
 			},
 			FuncMap: map[string]any{
 				"join":    strings.Join,
@@ -79,8 +83,9 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 			Name:   "cli-main-usage",
 			Source: exampleTemplates.Read(clientUsageT),
 			Data: map[string]any{
-				"APIName": root.API.Name,
-				"Server":  svrdata,
+				"APIName":    root.API.Name,
+				"Server":     svrdata,
+				"HasJSONRPC": hasJSONRPC(root, svr),
 			},
 			FuncMap: map[string]any{
 				"toUpper": strings.ToUpper,
@@ -89,4 +94,14 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 		},
 	}
 	return &codegen.File{Path: path, SectionTemplates: sections, SkipExist: true}
+}
+
+// hasJSONRPC returns true if the server expression has a JSON-RPC server.
+func hasJSONRPC(root *expr.RootExpr, svr *expr.ServerExpr) bool {
+	for _, s := range svr.Services {
+		if root.API.JSONRPC.Service(s) != nil {
+			return true
+		}
+	}
+	return false
 }

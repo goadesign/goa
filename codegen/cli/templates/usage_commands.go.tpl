@@ -2,7 +2,9 @@
 //
 //    command (subcommand1|subcommand2|...)
 //
-func UsageCommands() string {
-	return `{{ range . }}{{ . }}
-{{ end }}`
+func UsageCommands() []string {
+	return []string{
+		{{ range . }}{{ printf "%q" . }},
+		{{ end }}
+	}
 }

@@ -8,7 +8,18 @@
 		switch scheme {
 	{{- range $t := .Server.Transports }}
 		case "{{ $t.Type }}", "{{ $t.Type }}s":
+		{{- if and (eq $t.Type  "http") $.HasJSONRPC }}
+			if *jsonrpcF || *jF {
+				endpoint, payload, err = doJSONRPC(scheme, host, timeout, debug)
+			} else {
+				endpoint, payload, err = doHTTP(scheme, host, timeout, debug)
+				if err != nil && strings.HasPrefix(err.Error(), "unknown") {
+					endpoint, payload, err = doJSONRPC(scheme, host, timeout, debug)
+				}
+			}
+		{{- else }}
 			endpoint, payload, err = do{{ toUpper $t.Name }}(scheme, host, timeout, debug)
+		{{- end }}
 	{{- end }}
 		default:
 			fmt.Fprintf(os.Stderr, "invalid scheme: %q (valid schemes: {{ join .Server.Schemes "|" }})\n", scheme)

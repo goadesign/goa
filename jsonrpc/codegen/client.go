@@ -23,6 +23,7 @@ func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 		if f == nil {
 			continue
 		}
+		updateHeader(f)
 		var sections []*codegen.SectionTemplate
 		for _, s := range f.SectionTemplates {
 			switch s.Name {
@@ -36,9 +37,6 @@ func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 				re := regexp.MustCompile(`body := (.*)\n`)
 				s.Source = re.ReplaceAllStringFunc(s.Source, func(match string) string {
 					matches := re.FindStringSubmatch(match)
-					if len(matches) < 2 {
-						return match
-					}
 					return strings.Replace(newJSONRPCBody, "{{ .NewBody }}", matches[1], 1)
 				})
 			case "response-decoder":

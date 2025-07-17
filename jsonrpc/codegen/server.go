@@ -35,6 +35,7 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 		if f == nil {
 			continue
 		}
+		updateHeader(f)
 		var sections []*codegen.SectionTemplate
 		for _, s := range f.SectionTemplates {
 			// Add the JSON-RPC imports.
