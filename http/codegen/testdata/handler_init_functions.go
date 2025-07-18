@@ -22,13 +22,15 @@ func NewMethodNoPayloadNoResultHandler(
 		var err error
 		res, err := endpoint(ctx, nil)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			errhandler(ctx, w, err)
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
 		}
 	})
 }
@@ -76,20 +78,22 @@ func NewMethodPayloadNoResultHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadNoResult")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
 		}
 		res, err := endpoint(ctx, payload)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			errhandler(ctx, w, err)
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
 		}
 	})
 }
@@ -116,7 +120,7 @@ func NewMethodPayloadNoResultHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadNoResult")
 		_, err := decodeRequest(r)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -148,13 +152,15 @@ func NewMethodNoPayloadResultHandler(
 		var err error
 		res, err := endpoint(ctx, nil)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			errhandler(ctx, w, err)
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
 		}
 	})
 }
@@ -182,20 +188,22 @@ func NewMethodPayloadResultHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadResult")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
 		}
 		res, err := endpoint(ctx, payload)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			errhandler(ctx, w, err)
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
 		}
 	})
 }
@@ -223,20 +231,22 @@ func NewMethodPayloadResultErrorHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadResultError")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
 		}
 		res, err := endpoint(ctx, payload)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			errhandler(ctx, w, err)
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
 		}
 	})
 }
@@ -264,7 +274,7 @@ func NewMethodSkipResponseBodyEncodeDecodeHandler(
 		var err error
 		res, err := endpoint(ctx, nil)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -273,13 +283,15 @@ func NewMethodSkipResponseBodyEncodeDecodeHandler(
 		defer o.Body.Close()
 		if wt, ok := o.Body.(io.WriterTo); ok {
 			if err := encodeResponse(ctx, w, res); err != nil {
-				errhandler(ctx, w, err)
+				if errhandler != nil {
+					errhandler(ctx, w, err)
+				}
 				return
 			}
 			n, err := wt.WriteTo(w)
 			if err != nil {
 				if n == 0 {
-					if err := encodeError(ctx, w, err); err != nil {
+					if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 						errhandler(ctx, w, err)
 					}
 				} else {
@@ -294,13 +306,15 @@ func NewMethodSkipResponseBodyEncodeDecodeHandler(
 		// handle immediate read error like a returned error
 		buf := bufio.NewReader(o.Body)
 		if _, err := buf.Peek(1); err != nil && err != io.EOF {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			errhandler(ctx, w, err)
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
 			return
 		}
 		if _, err := io.Copy(w, buf); err != nil {
