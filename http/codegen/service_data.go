@@ -32,7 +32,6 @@ var (
 	)
 )
 
-
 type (
 	// ServicesData encapsulates the data computed from the design.
 	ServicesData struct {

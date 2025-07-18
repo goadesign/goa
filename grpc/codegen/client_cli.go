@@ -70,7 +70,6 @@ func endpointParser(genpkg string, services *ServicesData, svr *expr.ServerExpr,
 		specs = append(specs,
 			&codegen.ImportSpec{Path: path.Join(genpkg, "grpc", svcName, "client"), Name: sd.Service.PkgName + "c"},
 			&codegen.ImportSpec{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: svcName + pbPkgName})
-		specs = append(specs, sd.Service.UserTypeImports...)
 		// Add interceptors import if service has client interceptors
 		if len(sd.Service.ClientInterceptors) > 0 {
 			specs = append(specs, &codegen.ImportSpec{
@@ -118,7 +117,6 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.Command
 		{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
 		{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 	}
-	specs = append(specs, sd.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", specs),
 	}

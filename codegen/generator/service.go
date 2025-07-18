@@ -31,7 +31,9 @@ func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 			}
 			for _, f := range files {
 				if len(f.SectionTemplates) > 0 {
-					service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], s, services.Get(s.Name))
+					d := services.Get(s.Name)
+					service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], s, d)
+					service.AddUserTypeImports(genpkg, f.SectionTemplates[0], d)
 				}
 			}
 			f, err := service.ConvertFile(r, s, services)

@@ -15,7 +15,6 @@ import (
 // type definitions.
 func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, userTypePkgs map[string][]string) []*codegen.File {
 	svc := services.Get(service.Name)
-	svc.initUserTypeImports(genpkg)
 	svcName := svc.PathName
 	svcPath := filepath.Join(codegen.Gendir, svcName, "service.go")
 	seen := make(map[string]struct{})
@@ -161,7 +160,6 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		codegen.GoaImport("security"),
 		codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
 	}
-	imports = append(imports, svc.UserTypeImports...)
 	header := codegen.Header(service.Name+" service", svc.PkgName, imports)
 	def := &codegen.SectionTemplate{
 		Name:    "service",
@@ -246,6 +244,38 @@ func AddServiceDataMetaTypeImports(header *codegen.SectionTemplate, svcExpr *exp
 	}
 	for _, t := range svcData.projectedTypes {
 		codegen.AddImport(header, codegen.GetMetaTypeImports(t.Type.Attribute())...)
+	}
+}
+
+// AddUserTypeImports sets the import paths for the user types defined in the
+// service.  User types may be declared in multiple packages when defined with
+// the Meta key "struct:pkg:path".
+func AddUserTypeImports(genpkg string, header *codegen.SectionTemplate, d *Data) {
+	importsByPath := make(map[string]*codegen.ImportSpec)
+
+	initLoc := func(loc *codegen.Location) {
+		if loc == nil {
+			return
+		}
+		importsByPath[loc.FilePath] = &codegen.ImportSpec{Name: loc.PackageName(), Path: genpkg + "/" + loc.RelImportPath}
+	}
+
+	for _, m := range d.Methods {
+		initLoc(m.PayloadLoc)
+		initLoc(m.ResultLoc)
+		for _, l := range m.ErrorLocs {
+			initLoc(l)
+		}
+		for _, ut := range d.userTypes {
+			initLoc(ut.Loc)
+		}
+		for _, et := range d.errorTypes {
+			initLoc(et.Loc)
+		}
+	}
+
+	for _, imp := range importsByPath { // Order does not matter, imports are sorted during formatting.
+		codegen.AddImport(header, imp)
 	}
 }
 
