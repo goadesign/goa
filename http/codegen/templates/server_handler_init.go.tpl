@@ -93,11 +93,13 @@ func {{ .HandlerInit }}(
 	{{- if not .Redirect }}
 		if err != nil {
 			{{- if isWebSocketEndpoint . }}
-			stream := v.Stream.(*{{ .ServerWebSocket.VarName }})
+			var stream *{{ .ServerWebSocket.VarName }}
 			if wrapper, ok := v.Stream.({{ .ServicePkgName }}.Unwrap); ok {
 				stream = wrapper.Unwrap().(*{{ .ServerWebSocket.VarName }})
+			} else {
+				stream = v.Stream.(*{{ .ServerWebSocket.VarName }})
 			}
-			if stream.conn != nil {
+			if stream != nil && stream.conn != nil {
 				// Response writer has been hijacked, do not encode the error
 				if errhandler != nil {
 					errhandler(ctx, w, err)
