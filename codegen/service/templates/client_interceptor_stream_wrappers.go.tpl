@@ -2,6 +2,11 @@
 
 	{{- if ne .SendTypeRef "" }}
 
+{{ comment (print "Unwrap returns the underlying stream type.") }}
+func (w *wrapped{{ .Interface }}) Unwrap() interface{} {
+       return w.stream
+}
+
 {{ comment (printf "%s streams instances of \"%s\" after executing the applied interceptor." .SendName .Interface) }}
 func (w *wrapped{{ .Interface }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
 	return w.SendWithContext(w.ctx, v)

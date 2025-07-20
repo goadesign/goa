@@ -256,7 +256,6 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *Ser
 		codegen.GoaNamedImport("http", "goahttp"),
 		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 	}
-	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),
 	}
@@ -290,7 +289,6 @@ func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *Ser
 		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 	}
-	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", imports),
 	}

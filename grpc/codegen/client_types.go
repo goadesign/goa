@@ -75,7 +75,6 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 			{Path: path.Join(genpkg, svcName, "views"), Name: sd.Service.ViewsPkg},
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 		}
-		imports = append(imports, sd.Service.UserTypeImports...)
 		imports = append(imports, sd.Service.ProtoImports...)
 		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client types", "client", imports)}
 		for _, init := range initData {

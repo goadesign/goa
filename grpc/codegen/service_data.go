@@ -370,7 +370,7 @@ type (
 // NewServicesData creates a new ServicesData instance for the given service data.
 func NewServicesData(services *service.ServicesData) *ServicesData {
 	return &ServicesData{
-		ServicesData:  services,
+		ServicesData: services,
 		GRPCServices: make(map[string]*ServiceData),
 	}
 }

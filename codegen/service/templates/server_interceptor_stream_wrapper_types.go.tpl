@@ -1,3 +1,9 @@
+{{- if .WrappedServerStreams }}
+type Unwrap interface {
+	Unwrap() interface{}
+}
+{{- end }}
+
 {{- range .WrappedServerStreams }}
 
 {{ comment (printf "wrapped%s is a server interceptor wrapper for the %s stream." .Interface .Interface) }}

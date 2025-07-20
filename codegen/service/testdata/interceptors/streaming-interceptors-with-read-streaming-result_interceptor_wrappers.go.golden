@@ -1,4 +1,7 @@
 
+type Unwrap interface {
+	Unwrap() interface{}
+}
 
 // wrappedMethodServerStream is a server interceptor wrapper for the
 // MethodServerStream stream.
@@ -66,6 +69,11 @@ func wrapClientMethodLogging(endpoint goa.Endpoint, i ClientInterceptors) goa.En
 			stream: stream,
 		}, nil
 	}
+}
+
+// Unwrap returns the underlying stream type.
+func (w *wrappedMethodServerStream) Unwrap() interface{} {
+	return w.stream
 }
 
 // Send streams instances of "MethodServerStream" after executing the applied
