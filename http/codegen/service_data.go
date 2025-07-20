@@ -791,7 +791,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 					_, ca.IsAliased = ca.FieldType.(expr.UserType)
 					if ca.IsAliased {
 						if svcData := sds.ServicesData.Get(svc.Name); svcData != nil {
-							ca.ServiceTypeRef = svcData.Scope.GoTypeRef(&expr.AttributeExpr{Type: ca.FieldType})
+							ca.ServiceTypeRef = svcData.Scope.GoTypeRef(&expr.AttributeExpr{Type: ca.Type})
 						} else {
 							ca.ServiceTypeRef = codegen.Goify(ca.FieldType.Name(), true)
 						}
