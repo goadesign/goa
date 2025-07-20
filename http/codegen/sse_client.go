@@ -35,6 +35,7 @@ func sseClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesD
 				{Path: "bytes"},
 				{Path: "context"},
 				{Path: "encoding/json"},
+				{Path: "errors"},
 				{Path: "io"},
 				{Path: "net/http"},
 				{Path: "fmt"},

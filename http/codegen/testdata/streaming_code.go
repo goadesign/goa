@@ -59,7 +59,7 @@ func NewStreamingResultMethodHandler(
 		_, err = endpoint(ctx, v)
 		if err != nil {
 			var stream *StreamingResultMethodServerStream
-			if wrapper, ok := v.Stream.(streamingresultservice.Unwrap); ok {
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
 				stream = wrapper.Unwrap().(*StreamingResultMethodServerStream)
 			} else {
 				stream = v.Stream.(*StreamingResultMethodServerStream)
@@ -217,7 +217,7 @@ func NewStreamingResultNoPayloadMethodHandler(
 		_, err = endpoint(ctx, v)
 		if err != nil {
 			var stream *StreamingResultNoPayloadMethodServerStream
-			if wrapper, ok := v.Stream.(streamingresultnopayloadservice.Unwrap); ok {
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
 				stream = wrapper.Unwrap().(*StreamingResultNoPayloadMethodServerStream)
 			} else {
 				stream = v.Stream.(*StreamingResultNoPayloadMethodServerStream)
@@ -1105,7 +1105,7 @@ func NewStreamingPayloadMethodHandler(
 		_, err = endpoint(ctx, v)
 		if err != nil {
 			var stream *StreamingPayloadMethodServerStream
-			if wrapper, ok := v.Stream.(streamingpayloadservice.Unwrap); ok {
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
 				stream = wrapper.Unwrap().(*StreamingPayloadMethodServerStream)
 			} else {
 				stream = v.Stream.(*StreamingPayloadMethodServerStream)
@@ -1300,7 +1300,7 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 		_, err = endpoint(ctx, v)
 		if err != nil {
 			var stream *StreamingPayloadNoPayloadMethodServerStream
-			if wrapper, ok := v.Stream.(streamingpayloadnopayloadservice.Unwrap); ok {
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
 				stream = wrapper.Unwrap().(*StreamingPayloadNoPayloadMethodServerStream)
 			} else {
 				stream = v.Stream.(*StreamingPayloadNoPayloadMethodServerStream)
@@ -2585,7 +2585,7 @@ func NewBidirectionalStreamingMethodHandler(
 		_, err = endpoint(ctx, v)
 		if err != nil {
 			var stream *BidirectionalStreamingMethodServerStream
-			if wrapper, ok := v.Stream.(bidirectionalstreamingservice.Unwrap); ok {
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
 				stream = wrapper.Unwrap().(*BidirectionalStreamingMethodServerStream)
 			} else {
 				stream = v.Stream.(*BidirectionalStreamingMethodServerStream)
@@ -2823,7 +2823,7 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 		_, err = endpoint(ctx, v)
 		if err != nil {
 			var stream *BidirectionalStreamingNoPayloadMethodServerStream
-			if wrapper, ok := v.Stream.(bidirectionalstreamingnopayloadservice.Unwrap); ok {
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
 				stream = wrapper.Unwrap().(*BidirectionalStreamingNoPayloadMethodServerStream)
 			} else {
 				stream = v.Stream.(*BidirectionalStreamingNoPayloadMethodServerStream)
