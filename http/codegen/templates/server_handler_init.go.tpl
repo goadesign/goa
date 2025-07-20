@@ -94,7 +94,7 @@ func {{ .HandlerInit }}(
 		if err != nil {
 			{{- if isWebSocketEndpoint . }}
 			var stream *{{ .ServerWebSocket.VarName }}
-			if wrapper, ok := v.Stream.({{ .ServicePkgName }}.Unwrap); ok {
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
 				stream = wrapper.Unwrap().(*{{ .ServerWebSocket.VarName }})
 			} else {
 				stream = v.Stream.(*{{ .ServerWebSocket.VarName }})

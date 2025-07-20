@@ -1,7 +1,7 @@
 {{- range .WrappedServerStreams }}
 
 {{ comment (print "Unwrap returns the underlying stream type.") }}
-func (w *wrapped{{ .Interface }}) Unwrap() interface{} {
+func (w *wrapped{{ .Interface }}) Unwrap() any {
 	return w.stream
 }
 
