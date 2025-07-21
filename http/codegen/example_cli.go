@@ -96,7 +96,7 @@ func ExampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 			},
 			FuncMap: map[string]any{
 				"needDialer":   needDialer,
-				"hasWebSocket": hasWebSocket,
+				"hasWebSocket": HasWebSocket,
 			},
 		},
 		{

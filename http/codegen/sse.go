@@ -185,13 +185,13 @@ func sseTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 	return sections
 }
 
-// isSSEEndpoint returns true if the endpoint defines a streaming result
+// IsSSEEndpoint returns true if the endpoint defines a streaming result
 // with SSE.
-func isSSEEndpoint(ed *EndpointData) bool {
+func IsSSEEndpoint(ed *EndpointData) bool {
 	return ed.SSE != nil
 }
 
 // hasSSE returns true if at least one endpoint in the service uses SSE.
 func hasSSE(data *ServiceData) bool {
-	return slices.ContainsFunc(data.Endpoints, isSSEEndpoint)
+	return slices.ContainsFunc(data.Endpoints, IsSSEEndpoint)
 }

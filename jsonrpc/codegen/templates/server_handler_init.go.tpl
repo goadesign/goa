@@ -3,55 +3,103 @@ func {{ .HandlerInit }}(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	decoder func(*http.Request) goahttp.Decoder,
-) func(context.Context, *http.Request, *jsonrpc.RawRequest) *jsonrpc.Response {
+{{- if not (isWebSocketEndpoint .) }}
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+{{- end }}
+) func(context.Context, *http.Request, *jsonrpc.RawRequest{{ if not (isWebSocketEndpoint .) }}, http.ResponseWriter{{ end }}){{ if isWebSocketEndpoint . }} error{{ end }} {
+{{- if (not (isSSEEndpoint .)) }}
 	decodeParams := {{ .RequestDecoder }}(mux, decoder)
-	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest) *jsonrpc.Response {
+{{- end }}
+	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest{{ if not (isWebSocketEndpoint .) }}, w http.ResponseWriter{{ end }}){{ if isWebSocketEndpoint . }}error{{ end }} {
 		ctx = context.WithValue(ctx, goa.MethodKey, {{ printf "%q" .Method.Name }})
 		ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
 
+{{- if isSSEEndpoint . }}
+	{{- if .SSE.RequestIDField }}
+		// Set Last-Event-ID header if present
+		if lastEventID := r.Header.Get("Last-Event-ID"); lastEventID != "" {
+			ctx = context.WithValue(ctx, "last-event-id", lastEventID)
 		{{- if .Payload.Ref }}
+			{{- if eq .Method.Payload.Type.Name "Object" }}
+			p := payload.({{ .Payload.Ref }})
+			p.{{ .SSE.RequestIDField }} = lastEventID
+			{{- end }}
+		{{- end }}
+		}
+	{{- end }}
+		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
+			Stream: &{{ .SSE.StructName }}{
+				w: w,
+				r: r,
+			},
+	{{- if .Payload.Ref }}
+			Payload: payload.({{ .Payload.Ref }}),
+	{{- end }}
+		}
+		_, err := endpoint(ctx, v)
+		return err
+{{- else }}
+	{{- if .Payload.Ref }}
 
 		params, err := decodeParams(r, req)
 		if err != nil {
-			{{- if .IsNotification }}
-			return nil
-			{{- else }}
+		{{- if isWebSocketEndpoint . }}
+			return err
+		{{- else if .IsNotification }}
+			errhandler(ctx, w, fmt.Errorf("failed to decode parameters: %w", err))
+			return
+		{{- else }}
 			code := jsonrpc.InternalError
 			if _, ok := err.(*goa.ServiceError); ok {
 				code = jsonrpc.InvalidParams
 			}
-			return jsonrpc.MakeErrorResponse(*req.ID, code, "", err.Error())
-			{{- end }}
-		}
+			encodeJSONRPCError(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
+			return
 		{{- end }}
-
-		res, err := endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
-
+		}
+	{{- end }}
+	{{ if or (isWebSocketEndpoint .) .IsNotification }}_{{ else }}res{{ end }}, err {{if not (and (or (isWebSocketEndpoint .) .IsNotification) .Payload.Ref)}}:{{end}}= endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
+	{{- if isWebSocketEndpoint . }}
+		return err
+	{{- else if .IsNotification }}
 		if err != nil {
-		{{- if .IsNotification }}
-			return nil
-		{{- else }}
+			errhandler(ctx, w, fmt.Errorf("failed to call endpoint: %w", err))
+		}
+	{{- else }}
+		if err != nil {
 			var en goa.GoaErrorNamer
 			if !errors.As(err, &en) {
-				return jsonrpc.MakeErrorResponse(*req.ID, jsonrpc.InternalError, err.Error(), map[string]any{"params": req.Params})
+				encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
+				return
 			}
 			switch en.GoaErrorName() {
 			{{- range $gerr := .Errors }}
 			{{- range $err := $gerr.Errors }}
 			case {{ printf "%q" .Name }}:
-				var res {{ $err.Ref }}
-				errors.As(err, &res)
 				{{- with .Response}}
-				return jsonrpc.MakeErrorResponse(*req.ID, {{ .Code }}, err.Error(), err)
+				encodeJSONRPCError(ctx, w, req, {{ .Code }}, err.Error(), err, encoder, errhandler)
 				{{- end }}
 			{{- end }}
 			{{- end }}
 			default:
-					return jsonrpc.MakeErrorResponse(*req.ID, jsonrpc.InternalError, "", err.Error())
+				encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
 			}
-		{{- end }}
+			return
 		}
 
-		return jsonrpc.MakeSuccessResponse(*req.ID, res)
+		var id string
+		actual := res.({{ .Result.Ref }})
+		if actual.{{ .Result.IDAttribute }} != "" {
+			id = actual.{{ .Result.IDAttribute }}
+		} else {
+			id = *req.ID
+		}
+		response := jsonrpc.MakeSuccessResponse(id, res)
+		if err := encoder(ctx, w).Encode(response); err != nil {
+			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
+		}
+	{{- end }}
+{{- end }}
 	}
 }

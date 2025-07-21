@@ -96,6 +96,8 @@ type (
 		ServiceVarName string
 		// ServicePkgName is the name of the service package.
 		ServicePkgName string
+		// IsJSONRPC indicates if the endpoint is a JSON-RPC endpoint.
+		IsJSONRPC bool
 		// IsNotification indicates if the endpoint is a JSON-RPC notification.
 		IsNotification bool
 		// Payload describes the method HTTP payload.
@@ -237,6 +239,9 @@ type (
 		// Responses contains the data for the corresponding HTTP
 		// responses.
 		Responses []*ResponseData
+		// IDAttribute is the name of the attribute where the ID of the
+		// JSON-RPC request is stored.
+		IDAttribute string
 		// View is the view used to render the result.
 		View string
 		// MustInit indicates if a variable holding the result type must be
@@ -834,6 +839,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 
 		ed := &EndpointData{
 			Method:          method,
+			IsJSONRPC:       httpEndpoint.IsJSONRPC(),
 			IsNotification:  httpEndpoint.IsNotification,
 			ServiceName:     svc.Name,
 			ServiceVarName:  svc.VarName,
@@ -957,7 +963,7 @@ func requestInitTemplate(svcData *ServiceData) *template.Template {
 					_, ok := dt.(expr.UserType)
 					return ok
 				},
-				"isWebSocketEndpoint": isWebSocketEndpoint,
+				"isWebSocketEndpoint": IsWebSocketEndpoint,
 			}).
 			Parse(httpTemplates.Read(requestInitT)),
 	)
@@ -1437,15 +1443,23 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			returnValue = mapQueryParam.VarName
 		}
 	}
-
-	return &PayloadData{
+	data := &PayloadData{
 		Name:               name,
 		Ref:                ref,
 		Request:            request,
 		DecoderReturnValue: returnValue,
-		IDAttribute:        codegen.Goify(e.IDAttribute, true),
 		IsNotification:     e.IsNotification,
 	}
+	if e.IsJSONRPC() {
+		obj := expr.AsObject(e.MethodExpr.Payload.Type)
+		for _, att := range *obj {
+			if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
+				data.IDAttribute = codegen.Goify(att.Name, true)
+				break
+			}
+		}
+	}
+	return data
 }
 
 // buildResultData builds the result data for the given service endpoint.
@@ -1488,7 +1502,7 @@ func (sds *ServicesData) buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 			}
 		}
 	}
-	return &ResultData{
+	data := &ResultData{
 		IsStruct:  expr.IsObject(result.Type),
 		Name:      name,
 		Ref:       ref,
@@ -1496,6 +1510,16 @@ func (sds *ServicesData) buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 		View:      view,
 		MustInit:  mustInit,
 	}
+	if e.IsJSONRPC() {
+		obj := expr.AsObject(e.MethodExpr.Result.Type)
+		for _, att := range *obj {
+			if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
+				data.IDAttribute = codegen.Goify(att.Name, true)
+				break
+			}
+		}
+	}
+	return data
 }
 
 // buildResponses builds the response data for all the responses in the endpoint
@@ -2023,7 +2047,7 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 	name = body.Type.Name()
 	ref = sd.Scope.GoTypeRef(body)
 
-	AddMarshalTags(body, make(map[string]struct{}))
+	addMarshalTags(body, make(map[string]struct{}))
 
 	if ut, ok := body.Type.(expr.UserType); ok {
 		varname = codegen.Goify(ut.Name(), true)
@@ -2169,7 +2193,7 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, lo
 	ref = sd.Scope.GoTypeRef(body)
 	mustInit = att.Type != expr.Empty && needInit(body.Type)
 
-	AddMarshalTags(body, make(map[string]struct{}))
+	addMarshalTags(body, make(map[string]struct{}))
 
 	if ut, ok := body.Type.(expr.UserType); ok {
 		// response body is a user type.
@@ -2740,8 +2764,8 @@ func needConversion(dt expr.DataType) bool {
 	}
 }
 
-// AddMarshalTags adds JSON, XML and Form tags to all inline object attributes recursively.
-func AddMarshalTags(att *expr.AttributeExpr, seen map[string]struct{}) {
+// addMarshalTags adds JSON, XML and Form tags to all inline object attributes recursively.
+func addMarshalTags(att *expr.AttributeExpr, seen map[string]struct{}) {
 	if ut, ok := att.Type.(expr.UserType); ok {
 		if _, ok := seen[ut.Hash()]; ok {
 			return // avoid infinite recursions
@@ -2749,18 +2773,18 @@ func AddMarshalTags(att *expr.AttributeExpr, seen map[string]struct{}) {
 		seen[ut.Hash()] = struct{}{}
 		if expr.IsObject(ut.Attribute().Type) {
 			for _, att := range *(expr.AsObject(att.Type)) {
-				AddMarshalTags(att.Attribute, seen)
+				addMarshalTags(att.Attribute, seen)
 			}
 		}
 		return
 	}
 	if expr.IsArray(att.Type) {
-		AddMarshalTags(expr.AsArray(att.Type).ElemType, seen)
+		addMarshalTags(expr.AsArray(att.Type).ElemType, seen)
 		return
 	}
 	if expr.IsMap(att.Type) {
-		AddMarshalTags(expr.AsMap(att.Type).KeyType, seen)
-		AddMarshalTags(expr.AsMap(att.Type).ElemType, seen)
+		addMarshalTags(expr.AsMap(att.Type).KeyType, seen)
+		addMarshalTags(expr.AsMap(att.Type).ElemType, seen)
 		return
 	}
 	if !expr.IsObject(att.Type) {
@@ -2818,5 +2842,5 @@ func upgradeParams(e *EndpointData, fn string) map[string]any {
 // needDialer returns true if at least one method in the defined services
 // uses WebSocket for sending payload or result.
 func needDialer(data []*ServiceData) bool {
-	return slices.ContainsFunc(data, hasWebSocket)
+	return slices.ContainsFunc(data, HasWebSocket)
 }

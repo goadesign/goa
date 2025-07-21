@@ -47,8 +47,12 @@ type (
 		// StreamingBody describes the body transferred through the websocket
 		// stream.
 		StreamingBody *AttributeExpr
-		// IDAttribute is the name of the JSON-RPC request ID attribute.
-		IDAttribute string
+		// PayloadIDAttribute is the name of the JSON-RPC request ID
+		// payload attribute.
+		PayloadIDAttribute string
+		// ResultIDAttribute is the name of the JSON-RPC result ID
+		// result attribute.
+		ResultIDAttribute string
 		// IsNotification indicates that the method is a JSON-RPC notification and
 		// does not expect a response.
 		IsNotification bool
@@ -121,6 +125,12 @@ func (e *HTTPEndpointExpr) EvalName() string {
 		prefix = e.Service.EvalName() + " "
 	}
 	return prefix + suffix
+}
+
+// IsJSONRPC returns true if the endpoint is a JSON-RPC endpoint.
+func (e *HTTPEndpointExpr) IsJSONRPC() bool {
+	_, ok := e.Meta["jsonrpc"]
+	return ok
 }
 
 // HasAbsoluteRoutes returns true if all the endpoint routes are absolute.
@@ -345,6 +355,12 @@ func (e *HTTPEndpointExpr) Prepare() {
 		}
 	}
 
+	// Make sure JSON-RPC HTTP verb is set to GET if the endpoint is a
+	// WebSocket endpoint
+	if e.MethodExpr.IsStreaming() && e.SSE == nil {
+		e.Routes[0].Method = "GET"
+	}
+
 	// Prepare responses
 	for _, r := range e.Responses {
 		r.Prepare()
@@ -399,7 +415,6 @@ func (e *HTTPEndpointExpr) Validate() error {
 
 	// Validate streaming endpoints for SSE compatibility
 	if e.MethodExpr.Stream == ServerStreamKind {
-		// Prepare already handles inheriting SSE from service or API level
 		if e.SSE != nil {
 			if err := e.SSE.Validate(e.MethodExpr); err != nil {
 				var valErr *eval.ValidationErrors
@@ -417,6 +432,13 @@ func (e *HTTPEndpointExpr) Validate() error {
 			verr.Add(e, "Server-Sent Events cannot be used with client-to-server streaming endpoints")
 		default:
 			verr.Add(e, "Server-Sent Events can only be used with endpoints that have a streaming result")
+		}
+	}
+
+	// JSON-RPC endpoints with a streaming payload must not define a payload
+	if e.IsJSONRPC() {
+		if e.MethodExpr.IsPayloadStreaming() && e.MethodExpr.Payload.Type != Empty {
+			verr.Add(e, "JSON-RPC endpoints with a streaming payload cannot define a payload")
 		}
 	}
 
@@ -531,6 +553,58 @@ func (e *HTTPEndpointExpr) Validate() error {
 				verr.Add(e, "The following HTTP request body attribute%s %s required but the corresponding method payload attribute%s %s not: %s. Use 'Required' to make the attribute%s required in the method payload as well.",
 					s, is, s, is, strings.Join(missing, ", "), s)
 			}
+		}
+	}
+
+	// Validate JSON-RPC ID attributes
+	if e.IsJSONRPC() && !e.IsNotification {
+		var payload *Object
+		if e.MethodExpr.IsPayloadStreaming() {
+			payload = AsObject(e.MethodExpr.StreamingPayload.Type)
+		} else {
+			payload = AsObject(e.MethodExpr.Payload.Type)
+		}
+		if payload == nil {
+			verr.Add(e, "JSON-RPC method %q payload must be an object (batch JSON-RPC request).", e.MethodExpr.Name)
+		}
+		var payloadRequestID string
+		for _, att := range *payload {
+			if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
+				payloadRequestID = att.Name
+				if att.Attribute.Type != String {
+					verr.Add(e, "JSON-RPC request id payload attribute %q must be of type string.", payloadRequestID)
+				}
+				break
+			}
+		}
+		if payloadRequestID == "" {
+			verr.Add(e, "JSON-RPC method %q payload must have an ID attribute.", e.MethodExpr.Name)
+		}
+		required := e.MethodExpr.IsPayloadStreaming() && e.MethodExpr.StreamingPayload.IsRequired(payloadRequestID) ||
+			!e.MethodExpr.IsPayloadStreaming() && e.MethodExpr.Payload.IsRequired(payloadRequestID)
+		if !required {
+			verr.Add(e, "JSON-RPC request id payload attribute %q must be required.", payloadRequestID)
+		}
+
+		result := AsObject(e.MethodExpr.Result.Type)
+		if result == nil {
+			verr.Add(e, "JSON-RPC method %q result must be an object.", e.MethodExpr.Name)
+		}
+		var resultRequestID string
+		for _, att := range *result {
+			if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
+				resultRequestID = att.Name
+				if att.Attribute.Type != String {
+					verr.Add(e, "JSON-RPC request id result attribute %q must be of type string.", resultRequestID)
+				}
+				break
+			}
+		}
+		if resultRequestID == "" {
+			verr.Add(e, "JSON-RPC method %q result must have an ID attribute.", e.MethodExpr.Name)
+		}
+		if !e.MethodExpr.Result.IsRequired(resultRequestID) {
+			verr.Add(e, "JSON-RPC request id result attribute %q must be required.", resultRequestID)
 		}
 	}
 
@@ -664,30 +738,6 @@ func (e *HTTPEndpointExpr) Validate() error {
 		}
 	}
 
-	// Validate JSON-RPC attributes
-	if _, ok := e.Meta["jsonrpc"]; ok {
-		// Make sure that non-notification methods have an ID attribute
-		if !e.IsNotification && e.IDAttribute == "" {
-			verr.Add(e, "JSON-RPC method %q must have an ID attribute.", e.MethodExpr.Name)
-		}
-
-		// Make sure JSON-RPC notifications do not have an ID attribute
-		if e.IsNotification && e.IDAttribute != "" {
-			verr.Add(e, "JSON-RPC notification method %q must not have an ID attribute.", e.MethodExpr.Name)
-		}
-
-		// Make sure the JSON-RPC ID attribute exists in the payload and is of
-		// type string
-		if e.IDAttribute != "" {
-			att := e.MethodExpr.Payload.Find(e.IDAttribute)
-			if att == nil {
-				verr.Add(e, "JSON-RPC ID attribute %q is not found in Payload.", e.IDAttribute)
-			} else if att.Type != String {
-				verr.Add(e, "JSON-RPC ID attribute %q is not of type string.", e.IDAttribute)
-			}
-		}
-	}
-
 	body := httpRequestBody(e)
 	if e.SkipRequestBodyEncodeDecode && body.Type != Empty {
 		verr.Add(e, "HTTP endpoint request body must be empty when using SkipRequestBodyEncodeDecode but not all method payload attributes are mapped to headers and params. Make sure to define Headers and Params as needed.")
@@ -764,6 +814,17 @@ func (e *HTTPEndpointExpr) Finalize() {
 	e.StreamingBody = httpStreamingBody(e)
 	if e.StreamingBody != nil {
 		e.StreamingBody.Finalize()
+	}
+
+	// For JSON-RPC, WebSocket handling is managed at the server level.
+	// Each endpoint is treated as a standard HTTP endpoint; the server is responsible
+	// for upgrading the connection, decoding incoming JSON-RPC requests, and dispatching
+	// them to the appropriate endpoint handlers.
+	if e.IsJSONRPC() {
+		if e.MethodExpr.IsPayloadStreaming() {
+			e.MethodExpr.Payload = e.MethodExpr.StreamingPayload
+			e.Body = e.StreamingBody
+		}
 	}
 
 	// Initialize responses parent, headers and body

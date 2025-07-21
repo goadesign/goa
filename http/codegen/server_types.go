@@ -77,7 +77,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 				validatedTypes = append(validatedTypes, data)
 			}
 		}
-		if adata.ServerWebSocket != nil {
+		if adata.ServerWebSocket != nil && !adata.IsJSONRPC {
 			if data := adata.ServerWebSocket.Payload; data != nil {
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
@@ -183,7 +183,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 				FuncMap: map[string]any{"fieldCode": fieldCode},
 			})
 		}
-		if isWebSocketEndpoint(adata) && adata.ServerWebSocket.Payload != nil {
+		if IsWebSocketEndpoint(adata) && adata.ServerWebSocket.Payload != nil {
 			if init := adata.ServerWebSocket.Payload.Init; init != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "server-payload-init",

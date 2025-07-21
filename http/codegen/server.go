@@ -39,9 +39,9 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	funcs := map[string]any{
 		"join":                strings.Join,
-		"hasWebSocket":        hasWebSocket,
-		"isWebSocketEndpoint": isWebSocketEndpoint,
-		"isSSEEndpoint":       isSSEEndpoint,
+		"hasWebSocket":        HasWebSocket,
+		"isWebSocketEndpoint": IsWebSocketEndpoint,
+		"isSSEEndpoint":       IsSSEEndpoint,
 		"viewedServerBody":    viewedServerBody,
 		"mustDecodeRequest":   mustDecodeRequest,
 		"addLeadingSlash":     addLeadingSlash,
@@ -141,7 +141,7 @@ func ServerEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 	sections := []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
 
 	for _, e := range data.Endpoints {
-		if e.Redirect == nil && !isWebSocketEndpoint(e) {
+		if e.Redirect == nil && (!IsWebSocketEndpoint(e) || e.IsJSONRPC) {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "response-encoder",
 				FuncMap: transTmplFuncs(svc, services),

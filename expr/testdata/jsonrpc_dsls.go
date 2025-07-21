@@ -60,13 +60,11 @@ var JSONRPCWithIDMappingDSL = func() {
 		})
 		Method("compute", func() {
 			Payload(func() {
-				Attribute("request_id", String)
+				ID("request_id", String)
 				Attribute("expression", String)
 			})
 			Result(Float64)
-			JSONRPC(func() {
-				ID("request_id")
-			})
+			JSONRPC(func() {})
 		})
 	})
 }
@@ -79,7 +77,7 @@ var JSONRPCWithSSEDSL = func() {
 		})
 		Method("stream", func() {
 			Payload(func() {
-				Attribute("client_id", String)
+				ID("client_id", String)
 				Attribute("last_event_id", String)
 			})
 			StreamingResult(func() {
@@ -87,7 +85,6 @@ var JSONRPCWithSSEDSL = func() {
 				Attribute("price", Float64)
 			})
 			JSONRPC(func() {
-				ID("client_id")
 				ServerSentEvents(func() {
 					SSERequestID("last_event_id")
 					SSEEventID("event_id")
@@ -132,8 +129,9 @@ var JSONRPCNotificationDSL = func() {
 				Attribute("event", String)
 				Attribute("data", Any)
 			})
-			// No ID mapping - this is a notification
-			JSONRPC(func() {})
+			JSONRPC(func() {
+				Notification()
+			})
 		})
 	})
 }
@@ -200,11 +198,10 @@ var JSONRPCInvalidIDAttributeDSL = func() {
 		Method("compute", func() {
 			Payload(func() {
 				Attribute("data", String)
+				ID("request_id", Int)
 			})
 			Result(Int)
-			JSONRPC(func() {
-				ID("request_id") // Attribute doesn't exist in payload
-			})
+			JSONRPC(func() {})
 		})
 	})
 }

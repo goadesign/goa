@@ -29,6 +29,9 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 	jsvcs := data.Root.API.JSONRPC.Services
 	for _, svc := range jsvcs {
 		files = append(files, serverFile(genpkg, svc, data))
+		if f := websocketServerFile(genpkg, svc, data); f != nil {
+			files = append(files, f)
+		}
 	}
 	for _, svc := range jsvcs {
 		f := httpcodegen.ServerEncodeDecodeFile(genpkg, svc, data)
@@ -67,7 +70,10 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 	svcName := data.Service.PathName
 	fpath := filepath.Join(codegen.Gendir, "jsonrpc", svcName, "server", "server.go")
 	title := fmt.Sprintf("%s JSON-RPC server", svc.Name())
-	funcs := map[string]any{}
+	funcs := map[string]any{
+		"isWebSocketEndpoint": httpcodegen.IsWebSocketEndpoint,
+		"isSSEEndpoint":       httpcodegen.IsSSEEndpoint,
+	}
 	imports := []*codegen.ImportSpec{
 		{Path: "bufio"},
 		{Path: "bytes"},
@@ -91,18 +97,22 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 	}
 
 	sections = append(sections,
-		&codegen.SectionTemplate{Name: "jsonrpc-server-struct", Source: jsonrpcTemplates.Read(serverStructT), Data: data},
+		&codegen.SectionTemplate{Name: "jsonrpc-server-struct", Source: jsonrpcTemplates.Read(serverStructT), FuncMap: funcs, Data: data},
 		&codegen.SectionTemplate{Name: "jsonrpc-server-init", Source: jsonrpcTemplates.Read(serverInitT), Data: data, FuncMap: funcs},
 		&codegen.SectionTemplate{Name: "jsonrpc-server-service", Source: jsonrpcTemplates.Read(serverServiceT), Data: data},
 		&codegen.SectionTemplate{Name: "jsonrpc-server-use", Source: jsonrpcTemplates.Read(serverUseT), Data: data},
 		&codegen.SectionTemplate{Name: "jsonrpc-server-method-names", Source: jsonrpcTemplates.Read(serverMethodNamesT), Data: data},
-		&codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), Data: data},
+		&codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), FuncMap: funcs, Data: data},
 		&codegen.SectionTemplate{Name: "jsonrpc-server-mount", Source: jsonrpcTemplates.Read(serverMountT), Data: data},
 	)
 
 	for _, e := range data.Endpoints {
 		sections = append(sections,
 			&codegen.SectionTemplate{Name: "jsonrpc-server-handler-init", Source: jsonrpcTemplates.Read(serverHandlerInitT), FuncMap: funcs, Data: e})
+	}
+
+	if !httpcodegen.HasWebSocket(data) {
+		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-encode-error", Source: jsonrpcTemplates.Read(serverEncodeErrorT)})
 	}
 
 	return &codegen.File{Path: fpath, SectionTemplates: sections}

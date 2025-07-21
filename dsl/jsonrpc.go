@@ -27,25 +27,43 @@ const (
 // JSONRPC configures a service or method to use JSON-RPC 2.0 transport.
 // The generated code handles JSON-RPC protocol details: request parsing, method dispatch,
 // response formatting, and batch processing. All service JSON-RPC methods share
-// a single HTTP endpoint.
+// a single HTTP endpoint and must use the same transport (HTTP, WebSocket or SSE).
 //
-// At API level, JSONRPC maps global errors to JSON-RPC error codes.
-// At service level, it configures the HTTP endpoint and common settings.
-// At method level, it configures request ID mapping and method-specific settings.
+// JSONRPC can be used at three levels:
+//
+//   - At the API level: JSONRPC maps service errors to standard JSON-RPC error
+//     codes.
+//   - At the service level: JSONRPC sets the HTTP endpoint path for all
+//     JSON-RPC methods in the service and allows you to define common errors
+//     and their error code mappings.
+//   - At the method level: JSONRPC configures how the request and response "id"
+//     fields are mapped to payload/result attributes, specifies whether the
+//     method is a notification (no "id" field), and allows you to define
+//     method-specific error code mappings.
 //
 // Request Handling:
-// The generated code unmarshals the JSON-RPC "params" field into the method payload.
-// Use ID("field") to map a payload attribute to the request "id" field, enabling
-// the method to distinguish between requests (with ID) and notifications (without ID).
-// Without ID mapping, all requests are treated as notifications.
+//
+// The generated code decodes the JSON-RPC "params" field into the method
+// payload and the "id" field to the payload attribute specified by the ID
+// function.  For non-streaming methods, if the result's ID attribute is not
+// already set, the generated code automatically copies the request ID from the
+// payload to the result's ID attribute.
+//
+// The generated code fully supports batch JSON-RPC requests: when the HTTP
+// request body contains an array of JSON-RPC request objects, it will unmarshal
+// the array, process each request independently (including error handling and
+// notifications), and marshal the responses into a single array of JSON-RPC
+// response objects in the HTTP response body.
 //
 // Streaming:
+//
 // Methods using StreamingResult() support either Server-Sent Events or WebSockets.
 // With SSE, each result element is sent as a JSON-RPC response in a separate event.
 // With WebSockets, methods can use StreamingPayload() for bidirectional streaming,
 // where each payload/result element is sent as a complete JSON-RPC message.
 //
 // Error Codes:
+//
 // Use the predefined constants for standard JSON-RPC errors:
 //   - RPCParseError (-32700): Invalid JSON
 //   - RPCInvalidRequest (-32600): Invalid Request object
@@ -65,47 +83,46 @@ const (
 //	        })
 //	    })
 //
-//	    Method("add", func() { // Notification method (no ID mapping)
+//	    Method("notify", func() { // Notification method (no ID mapping)
 //	        Payload(func() {
-//	            Attribute("a", Int, "First operand")
-//	            Attribute("b", Int, "Second operand")
-//	            Required("a", "b")
+//	            Attribute("message", String, "Notification message")
+//	            Required("message")
 //	        })
-//	        Result(Int)
-//	        JSONRPC(func() {}) // Generate JSON-RPC transport code for this method
+//	        JSONRPC(func() {
+//	            Notification() // This method is a notification and does not expect a response
+//	        })
 //	    })
 //
 //	    Method("divide", func() { // Request/response method
 //	        Payload(func() {
-//	            Attribute("req_id", String, "Request ID") // Will contain JSON-RPC request ID
+//	            ID("req_id")                           // Map request ID to payload field
 //	            Attribute("dividend", Int, "Dividend")
 //	            Attribute("divisor", Int, "Divisor")
 //	            Required("dividend", "divisor")
 //	        })
-//	        Result(Float64)
+//	        Result(func() {
+//	            ID("req_id")                           // Map request ID to result field
+//	            Attribute("result", Float64)
+//	        })
 //	        Error("div_zero", ErrorResult, "Division by zero")
-//
 //	        JSONRPC(func() {
-//	            ID("req_id")                           // Map request ID to payload field
 //	            Response("div_zero", RPCInvalidParams) // Map div_zero error to JSON-RPC code
 //	        })
 //	    })
 //
 //	    Method("updates", func() {                    // SSE streaming method
 //	        Payload(func() {
-//	            Attribute("req_id", String, "Request ID")
+//	            ID("id", String, "JSON-RPC request ID")
 //	            Attribute("last_event_id", String, "ID of last event received by client")
 //	        })
 //	        StreamingResult(func() {
-//	            Attribute("event_id", String, "Event ID")
+//	            ID("id", String, "JSON-RPC request ID")
 //	            Attribute("data", Data, "Event data")
 //	        })
-//
 //	        JSONRPC(func() {
-//	            ID("req_id")                       // Map JSON-RPC request ID to "req_id" payload attribute
-//	            ServerSentEvents(func() {          // Use SSE instead of WebSocket
-//	                SSERequestID("last_event_id")  // Map SSE Last-Event-ID header to payload "last_event_id" attribute
-//	                SSEEventID("event_id")         // Use "event_id" result attribute as SSE event ID
+//	            ServerSentEvents(func() {         // Use SSE instead of WebSocket
+//	                SSERequestID("last_event_id") // Map SSE Last-Event-ID header to payload "last_event_id" attribute
+//	                SSEEventID("id")              // Use "id" result attribute as SSE event ID
 //	            })
 //	        })
 //	    })
@@ -132,48 +149,39 @@ func JSONRPC(dsl func()) {
 	}
 }
 
-// ID maps a payload attribute to the JSON-RPC request ID field.
+// ID defines the payload or result attribute which is used as the JSON-RPC
+// request ID. It must be of type String. It is an error to omit ID on a
+// JSON-RPC endpoint payload or result unless the method is a notification (see
+// Notification).
 //
-// By default, Goa looks for an attribute named "id" in the payload to use as
-// the JSON-RPC request ID. ID allows overriding this default to use a
-// different attribute name.
+// Note: For non-streaming methods, the generated code will automatically copy
+// the request ID from the payload to the result's ID attribute, unless the
+// result's ID attribute is already set.
 //
-// The specified attribute must exist in the method payload and should be of
-// type String. If the attribute doesn't exist or ID is not specified,
-// the generated code will automatically generate request IDs on the client side
-// unless the method is a notification (see Notification).
+// ID must appear in a Payload or Result expression.
 //
-// The JSON-RPC response ID is automatically set to match the request ID
-// according to the JSON-RPC specification.
-//
-// ID must appear in a JSONRPC expression within a Method.
-//
-// ID accepts one argument: the name of the payload attribute.
+// ID accepts the same arguments as the Attribute DSL function.
 //
 // Example:
 //
 //	Method("calculate", func() {
 //	    Payload(func() {
-//	        Attribute("request_id", String, "Unique request identifier")
+//	        ID("request_id", String, "Unique request identifier")
 //	        Attribute("expression", String, "Mathematical expression")
 //	        Required("request_id", "expression")
 //	    })
 //	    Result(func() {
+//	        ID("request_id", String, "Unique request identifier")
 //	        Attribute("result", Float64)
-//	        Required("result")
+//	        Required("request_id", "result")
 //	    })
 //	    JSONRPC(func() {
 //	        POST("/")
-//	        ID("request_id") // Use "request_id" instead of default "id"
 //	    })
 //	})
-func ID(name string) {
-	endpoint, ok := eval.Current().(*expr.HTTPEndpointExpr)
-	if !ok {
-		eval.IncompatibleDSL()
-		return
-	}
-	endpoint.IDAttribute = name
+func ID(name string, args ...any) {
+	args = useDSL(args, func() { Meta("jsonrpc:id", "") })
+	Attribute(name, args...)
 }
 
 // Notification indicates that the method is a notification and does not

@@ -50,7 +50,7 @@ func ClientCLIFiles(genpkg string, data *ServicesData) []*codegen.File {
 		if len(sd.Endpoints) > 0 {
 			command := &commandData{
 				CommandData: cli.BuildCommandData(sd.Service),
-				NeedDialer:  hasWebSocket(sd),
+				NeedDialer:  HasWebSocket(sd),
 			}
 
 			for _, e := range sd.Endpoints {

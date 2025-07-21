@@ -236,6 +236,23 @@ func (svc *HTTPServiceExpr) Validate() error {
 		verr.Merge(er.Validate())
 	}
 
+	// Make sure all JSON-RPC endpoints use the same transport
+	hasHTTP, hasWS, hasSSE := false, false, false
+	for _, e := range svc.HTTPEndpoints {
+		if e.MethodExpr.IsStreaming() {
+			if e.SSE == nil {
+				hasWS = true
+			} else {
+				hasSSE = true
+			}
+		} else {
+			hasHTTP = true
+		}
+	}
+	if (hasHTTP && hasWS) || (hasHTTP && hasSSE) || (hasWS && hasSSE) {
+		verr.Add(svc, "All JSON-RPC endpoints of a given service must use the same transport (HTTP, WebSocket or SSE)")
+	}
+
 	return verr
 }
 

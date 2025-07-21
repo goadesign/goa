@@ -19,6 +19,7 @@ const (
 	serverUseT         = "server_use"
 	serverMethodNamesT = "server_method_names"
 	serverMountT       = "server_mount"
+	serverEncodeErrorT = "server_encode_error"
 
 	// Server example
 	serverConfigureT = "server_configure"
@@ -28,6 +29,15 @@ const (
 	clientInitT      = "client_init"
 	endpointInitT    = "endpoint_init"
 	responseDecoderT = "response_decoder"
+
+	// WebSocket templates
+	websocketConnConfigurerStructT     = "websocket_conn_configurer_struct"
+	websocketStructTypeT               = "websocket_struct_type"
+	websocketConnConfigurerStructInitT = "websocket_conn_configurer_struct_init"
+	websocketServerSendT               = "websocket_server_send"
+	websocketServerRecvT               = "websocket_server_recv"
+	websocketServerCloseT              = "websocket_server_close"
+	websocketSetViewT                  = "websocket_set_view"
 
 	// Partial templates
 	clientTypeConversionP   = "client_type_conversion"

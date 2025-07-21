@@ -240,7 +240,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 // streaming implementation if any.
 func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
-	if !hasWebSocket(data) {
+	if !HasWebSocket(data) {
 		return nil
 	}
 	svcName := data.Service.PathName
@@ -272,7 +272,7 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *Ser
 // streaming implementation if any.
 func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
-	if !hasWebSocket(data) {
+	if !HasWebSocket(data) {
 		return nil
 	}
 	svcName := data.Service.PathName
@@ -309,7 +309,7 @@ func serverStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 		Name:    "server-websocket-conn-configurer-struct",
 		Source:  httpTemplates.Read(websocketConnConfigurerStructT),
 		Data:    data,
-		FuncMap: map[string]any{"isWebSocketEndpoint": isWebSocketEndpoint},
+		FuncMap: map[string]any{"isWebSocketEndpoint": IsWebSocketEndpoint},
 	})
 	for _, e := range data.Endpoints {
 		if e.ServerWebSocket != nil {
@@ -332,7 +332,7 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 		Name:    "server-websocket-conn-configurer-struct-init",
 		Source:  httpTemplates.Read(websocketConnConfigurerStructInitT),
 		Data:    data,
-		FuncMap: map[string]any{"isWebSocketEndpoint": isWebSocketEndpoint},
+		FuncMap: map[string]any{"isWebSocketEndpoint": IsWebSocketEndpoint},
 	})
 	for _, e := range data.Endpoints {
 		if e.ServerWebSocket != nil {
@@ -384,7 +384,7 @@ func clientStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 		Name:    "client-websocket-conn-configurer-struct",
 		Source:  httpTemplates.Read(websocketConnConfigurerStructT),
 		Data:    data,
-		FuncMap: map[string]any{"isWebSocketEndpoint": isWebSocketEndpoint},
+		FuncMap: map[string]any{"isWebSocketEndpoint": IsWebSocketEndpoint},
 	})
 	for _, e := range data.Endpoints {
 		if e.ClientWebSocket != nil {
@@ -406,7 +406,7 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 		Name:    "client-websocket-conn-configurer-struct-init",
 		Source:  httpTemplates.Read(websocketConnConfigurerStructInitT),
 		Data:    data,
-		FuncMap: map[string]any{"isWebSocketEndpoint": isWebSocketEndpoint},
+		FuncMap: map[string]any{"isWebSocketEndpoint": IsWebSocketEndpoint},
 	})
 	for _, e := range data.Endpoints {
 		if e.ClientWebSocket != nil {
@@ -450,14 +450,14 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 	return sections
 }
 
-// hasWebSocket returns true if at least one of the endpoints in the service
+// HasWebSocket returns true if at least one of the endpoints in the service
 // defines a streaming payload or result.
-func hasWebSocket(sd *ServiceData) bool {
-	return slices.ContainsFunc(sd.Endpoints, isWebSocketEndpoint)
+func HasWebSocket(sd *ServiceData) bool {
+	return slices.ContainsFunc(sd.Endpoints, IsWebSocketEndpoint)
 }
 
-// isWebSocketEndpoint returns true if the endpoint defines a streaming payload
+// IsWebSocketEndpoint returns true if the endpoint defines a streaming payload
 // or result.
-func isWebSocketEndpoint(ed *EndpointData) bool {
+func IsWebSocketEndpoint(ed *EndpointData) bool {
 	return ed.ServerWebSocket != nil || ed.ClientWebSocket != nil
 }

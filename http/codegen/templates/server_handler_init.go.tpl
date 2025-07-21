@@ -54,7 +54,7 @@ func {{ .HandlerInit }}(
 				r: r,
 			},
 		{{- if .Payload.Ref }}
-			Payload: payload.({{ .Payload.Ref }}),
+			Payload: payload,
 		{{- end }}
 		}
 		_, err = endpoint(ctx, v)

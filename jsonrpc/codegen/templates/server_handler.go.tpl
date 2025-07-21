@@ -1,6 +1,29 @@
 // ServeHTTP handles JSON-RPC requests.
 func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-        // Peek at the first byte to determine request type
+{{- if isWebSocketEndpoint (index .Endpoints 0) }}
+	ctx, cancel := context.WithCancel(r.Context())
+	defer cancel()
+	
+	conn, err := s.upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		s.errhandler(r.Context(), w, fmt.Errorf("failed to upgrade to WebSocket: %w", err))
+		return
+	}
+	conn = s.configurer.ConfigFn(conn, cancel)
+	defer conn.Close()
+
+	stream := &{{ .Service.StructName }}Stream{
+	{{- range .Endpoints }}
+		{{ .Method.VarName }}: s.{{ .Method.VarName }},
+	{{- end }}
+		r: r,
+		w: w,
+		conn: conn,
+		cancel: cancel,
+	}
+	s.Stream(ctx, stream)
+{{- else }}
+	// Peek at the first byte to determine request type
 	bufReader := bufio.NewReader(r.Body)
 	peek, err := bufReader.Peek(1)
 	if err != nil && err != io.EOF {
@@ -39,16 +62,7 @@ func (s *Server) handleSingle(w http.ResponseWriter, r *http.Request) {
 		s.errhandler(r.Context(), w, fmt.Errorf("failed to decode request: %w", err))
 		return
 	}
-
-	resp := s.processRequest(r.Context(), r, &req)
-	if resp == nil {
-		w.WriteHeader(http.StatusOK)
-		return
-	}
-
-	if err := s.encoder(r.Context(), w).Encode(resp); err != nil {
-		s.errhandler(r.Context(), w, fmt.Errorf("failed to encode response: %w", err))
-	}
+	s.processRequest(r.Context(), r, &req, w)
 }
 
 // handleBatch handles a batch of JSON-RPC requests.
@@ -58,47 +72,30 @@ func (s *Server) handleBatch(w http.ResponseWriter, r *http.Request) {
 		s.errhandler(r.Context(), w, fmt.Errorf("failed to decode batch request: %w", err))
 		return
 	}
-
-	resps := make([]jsonrpc.Response, 0, len(reqs))
 	for _, req := range reqs {
-		if resp := s.processRequest(r.Context(), r, &req); resp != nil {
-			resps = append(resps, *resp)
-		}
-	}
-
-	if err := s.encoder(r.Context(), w).Encode(resps); err != nil {
-		s.errhandler(r.Context(), w, fmt.Errorf("failed to encode batch response: %w", err))
+		s.processRequest(r.Context(), r, &req, w)
 	}
 }
 
 // ProcessRequest processes a single JSON-RPC request.
-func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest) *jsonrpc.Response {
+func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) {
 	if req.JSONRPC != "2.0" {
-		if req.ID != nil {
-			return jsonrpc.MakeErrorResponse(*req.ID, jsonrpc.InvalidRequest, "", fmt.Sprintf("Invalid JSON-RPC version, must be 2.0, got %q", req.JSONRPC))
-		}
-		return nil
+		s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, fmt.Sprintf("Invalid JSON-RPC version, must be 2.0, got %q", req.JSONRPC), nil)
+		return
 	}
 
 	if req.Method == "" {
-		if req.ID != nil {
-			return jsonrpc.MakeErrorResponse(*req.ID, jsonrpc.InvalidRequest, "", "Missing method field")
-		}
-		return nil
+		s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Missing method field", nil)
+		return
 	}
 
-	var resp *jsonrpc.Response
 	switch req.Method {
-        {{- range .Endpoints }}
-        case {{ printf "%q" .Method.Name }}:
-            resp = s.{{ .Method.VarName }}(ctx, r, req)
-        {{- end }}
+	{{- range .Endpoints }}
+	case {{ printf "%q" .Method.Name }}:
+		s.{{ .Method.VarName }}(ctx, r, req, w)
+	{{- end }}
 	default:
-		if req.ID != nil {
-			return jsonrpc.MakeErrorResponse(*req.ID, jsonrpc.MethodNotFound, "", fmt.Sprintf("Method %q not found", req.Method))
-		}
-		return nil
+		s.encodeJSONRPCError(ctx, w, req, jsonrpc.MethodNotFound, fmt.Sprintf("Method %q not found", req.Method), nil)
 	}
-
-	return resp
+{{- end }}
 }

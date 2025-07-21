@@ -159,7 +159,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 		Source: httpTemplates.Read(clientStructT),
 		Data:   data,
 		FuncMap: map[string]any{
-			"hasWebSocket": hasWebSocket,
+			"hasWebSocket": HasWebSocket,
 			"hasSSE":       hasSSE,
 		},
 	})
@@ -179,7 +179,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 		Source: httpTemplates.Read(clientInitT),
 		Data:   data,
 		FuncMap: map[string]any{
-			"hasWebSocket": hasWebSocket,
+			"hasWebSocket": HasWebSocket,
 			"hasSSE":       hasSSE,
 		},
 	})
@@ -190,8 +190,8 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 			Source: httpTemplates.Read(endpointInitT),
 			Data:   e,
 			FuncMap: map[string]any{
-				"isWebSocketEndpoint": isWebSocketEndpoint,
-				"isSSEEndpoint":       isSSEEndpoint,
+				"isWebSocketEndpoint": IsWebSocketEndpoint,
+				"isSSEEndpoint":       IsSSEEndpoint,
 				"responseStructPkg":   responseStructPkg,
 			},
 		})
