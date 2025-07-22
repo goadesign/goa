@@ -10,7 +10,10 @@ type {{ .ClientStruct }} struct {
 	host       string
 	encoder    func(*http.Request) goahttp.Encoder
 	decoder    func(*http.Response) goahttp.Decoder
-	counter    uint64 // Counter for JSON-RPC request IDs
+	{{- if hasWebSocket . }}
+	dialer goahttp.Dialer
+	configurer *ConnConfigurer
+	{{- end }}
 }
 
 // bufferPool is a pool of bytes.Buffers for encoding requests.

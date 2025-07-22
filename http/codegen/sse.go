@@ -191,7 +191,7 @@ func IsSSEEndpoint(ed *EndpointData) bool {
 	return ed.SSE != nil
 }
 
-// hasSSE returns true if at least one endpoint in the service uses SSE.
-func hasSSE(data *ServiceData) bool {
+// HasSSE returns true if at least one endpoint in the service uses SSE.
+func HasSSE(data *ServiceData) bool {
 	return slices.ContainsFunc(data.Endpoints, IsSSEEndpoint)
 }

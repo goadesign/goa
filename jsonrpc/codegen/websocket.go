@@ -3,6 +3,7 @@ package codegen
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -71,6 +72,20 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 		Path:             filepath.Join(codegen.Gendir, "jsonrpc", svcName, "server", "websocket.go"),
 		SectionTemplates: sections,
 	}
+}
+
+func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
+	f := httpcodegen.WebsocketClientFile(genpkg, svc, services)
+	if f == nil {
+		return nil
+	}
+	sections := f.SectionTemplates
+	for _, s := range sections {
+		s.Name = "jsonrpc-" + s.Name
+	}
+	updateHeader(f)
+	f.Path = strings.Replace(f.Path, "/http/", "/jsonrpc/", 1)
+	return f
 }
 
 // allErrors returns all errors for the given service.

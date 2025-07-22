@@ -14,7 +14,7 @@ func ClientFiles(genpkg string, data *ServicesData) []*codegen.File {
 	var files []*codegen.File
 	for _, svc := range data.Expressions.Services {
 		files = append(files, clientFile(genpkg, svc, data))
-		if f := websocketClientFile(genpkg, svc, data); f != nil {
+		if f := WebsocketClientFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
 		if f := sseClientFile(genpkg, svc, data); f != nil {
@@ -160,7 +160,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 		Data:   data,
 		FuncMap: map[string]any{
 			"hasWebSocket": HasWebSocket,
-			"hasSSE":       hasSSE,
+			"hasSSE":       HasSSE,
 		},
 	})
 
@@ -180,14 +180,14 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 		Data:   data,
 		FuncMap: map[string]any{
 			"hasWebSocket": HasWebSocket,
-			"hasSSE":       hasSSE,
+			"hasSSE":       HasSSE,
 		},
 	})
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-endpoint-init",
-			Source: httpTemplates.Read(endpointInitT),
+			Source: httpTemplates.Read(clientEndpointInitT),
 			Data:   e,
 			FuncMap: map[string]any{
 				"isWebSocketEndpoint": IsWebSocketEndpoint,

@@ -268,9 +268,9 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *Ser
 	}
 }
 
-// websocketClientFile returns the file implementing the WebSocket client
+// WebsocketClientFile returns the file implementing the WebSocket client
 // streaming implementation if any.
-func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func WebsocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	if !HasWebSocket(data) {
 		return nil

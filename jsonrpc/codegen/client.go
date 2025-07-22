@@ -17,6 +17,9 @@ func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 	jsvcs := data.Root.API.JSONRPC.Services
 	for _, svc := range jsvcs {
 		files = append(files, clientFile(genpkg, svc, data))
+		if f := websocketClientFile(genpkg, svc, data); f != nil {
+			files = append(files, f)
+		}
 	}
 	for _, svc := range jsvcs {
 		f := httpcodegen.ClientEncodeDecodeFile(genpkg, svc, data)
@@ -69,6 +72,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 			{Path: "strings"},
 			{Path: "sync"},
 			{Path: "time"},
+			{Path: "github.com/gorilla/websocket"},
 			codegen.GoaImport(""),
 			codegen.GoaNamedImport("http", "goahttp"),
 			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
@@ -79,19 +83,31 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		Name:   "jsonrpc-client-struct",
 		Source: jsonrpcTemplates.Read(clientStructT),
 		Data:   data,
+		FuncMap: map[string]any{
+			"hasWebSocket": httpcodegen.HasWebSocket,
+			"hasSSE":       httpcodegen.HasSSE,
+		},
 	})
 
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:   "jsonrpc-client-init",
 		Source: jsonrpcTemplates.Read(clientInitT),
 		Data:   data,
+		FuncMap: map[string]any{
+			"hasWebSocket": httpcodegen.HasWebSocket,
+			"hasSSE":       httpcodegen.HasSSE,
+		},
 	})
 
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "jsonrpc-client-endpoint-init",
-			Source: jsonrpcTemplates.Read(endpointInitT),
+			Source: jsonrpcTemplates.Read(clientEndpointInitT),
 			Data:   e,
+			FuncMap: map[string]any{
+				"isWebSocketEndpoint": httpcodegen.IsWebSocketEndpoint,
+				"isSSEEndpoint":       httpcodegen.IsSSEEndpoint,
+			},
 		})
 	}
 

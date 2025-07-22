@@ -1,6 +1,9 @@
 package jsonrpc
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 type (
 	// Request represents a JSON-RPC request.
@@ -95,4 +98,14 @@ func MakeErrorResponse(id string, code Code, message string, data any) *Response
 		Error:   &ErrorResponse{Code: code, Message: message, Data: data},
 		ID:      id,
 	}
+}
+
+// Error returns a string representation of the error.
+func (e *ErrorResponse) Error() string {
+	return fmt.Sprintf("jsonrpc: code %d: %s", e.Code, e.Message)
+}
+
+// Error returns a string representation of the error.
+func (e *RawErrorResponse) Error() string {
+	return fmt.Sprintf("jsonrpc: code %d: %s", e.Code, e.Message)
 }

@@ -28,11 +28,12 @@ const (
 	serverTypeInitT     = "server_type_init"
 
 	// Client templates
-	clientStructT   = "client_struct"
-	clientInitT     = "client_init"
-	clientBodyInitT = "client_body_init"
-	clientTypeInitT = "client_type_init"
-	clientSseT      = "client_sse"
+	clientStructT       = "client_struct"
+	clientInitT         = "client_init"
+	clientEndpointInitT = "client_endpoint_init"
+	clientBodyInitT     = "client_body_init"
+	clientTypeInitT     = "client_type_init"
+	clientSseT          = "client_sse"
 
 	// Common templates
 	typeDeclT        = "type_decl"
@@ -43,7 +44,6 @@ const (
 	requestInitT     = "request_init"
 
 	// Endpoint templates
-	endpointInitT   = "endpoint_init"
 	parseEndpointT  = "parse_endpoint"
 	requestBuilderT = "request_builder"
 
@@ -63,13 +63,13 @@ const (
 	dummyMultipartRequestEncoderT = "dummy_multipart_request_encoder"
 
 	// WebSocket templates
-	websocketConnConfigurerStructT     = "websocket_conn_configurer_struct"
 	websocketStructTypeT               = "websocket_struct_type"
-	websocketConnConfigurerStructInitT = "websocket_conn_configurer_struct_init"
 	websocketSendT                     = "websocket_send"
 	websocketRecvT                     = "websocket_recv"
 	websocketCloseT                    = "websocket_close"
 	websocketSetViewT                  = "websocket_set_view"
+	websocketConnConfigurerStructT     = "websocket_conn_configurer_struct"
+	websocketConnConfigurerStructInitT = "websocket_conn_configurer_struct_init"
 
 	// SSE templates
 	serverSseT = "server_sse"
