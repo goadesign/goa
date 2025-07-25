@@ -78,4 +78,15 @@ func TestRecursiveValidationCode(t *testing.T) {
 		code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
 		assert.Equal(t, testdata.UnionWithViewValidationCode, code)
 	})
+
+	// Test case for OneOf with format validation in views (Issue #3747)
+	t.Run("union-with-format-validation", func(t *testing.T) {
+		// Test with pointer context (typical for views) to ensure union values are not treated as pointers
+		ctx := NewAttributeContext(true, false, true, "", scope)
+		root := RunDSL(t, testdata.UnionWithFormatValidationDSL)
+		oneofT := root.UserType("OneOfWithFormat")
+		code := ValidationCode(&expr.AttributeExpr{Type: oneofT}, nil, ctx, true, false, true, "target")
+		code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
+		assert.Equal(t, testdata.UnionWithFormatValidationCode, code)
+	})
 }
