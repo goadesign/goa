@@ -101,7 +101,8 @@ func ConvertFiles(root *expr.RootExpr, service *expr.ServiceExpr, services *Serv
 		var path string
 		if loc := codegen.UserTypeLocation(c.User); loc != nil {
 			// Custom package path - use directory containing the type file
-			path = filepath.Join(codegen.Gendir, loc.FilePath[:len(loc.FilePath)-len(filepath.Base(loc.FilePath))], "convert.go")
+			dir := filepath.Dir(loc.FilePath)
+			path = filepath.Join(codegen.Gendir, dir, "convert.go")
 		} else {
 			// Default to service package
 			path = filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "convert.go")
@@ -115,7 +116,8 @@ func ConvertFiles(root *expr.RootExpr, service *expr.ServiceExpr, services *Serv
 		var path string
 		if loc := codegen.UserTypeLocation(c.User); loc != nil {
 			// Custom package path - use directory containing the type file
-			path = filepath.Join(codegen.Gendir, loc.FilePath[:len(loc.FilePath)-len(filepath.Base(loc.FilePath))], "convert.go")
+			dir := filepath.Dir(loc.FilePath)
+			path = filepath.Join(codegen.Gendir, dir, "convert.go")
 		} else {
 			// Default to service package
 			path = filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "convert.go")

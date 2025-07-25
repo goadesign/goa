@@ -3,6 +3,7 @@ package service
 import (
 	"go/build"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -335,8 +336,10 @@ func TestConvertFiles(t *testing.T) {
 				// Verify each expected file
 				for expectedPath, expectedSections := range c.ExpectedFiles {
 					found := false
+					// Normalize expected path for cross-platform compatibility
+					normalizedExpected := filepath.FromSlash(expectedPath)
 					for _, file := range files {
-						if strings.HasSuffix(file.Path, expectedPath) {
+						if strings.HasSuffix(file.Path, normalizedExpected) {
 							found = true
 							require.Equal(t, expectedSections, len(file.SectionTemplates))
 							// First section should be header
