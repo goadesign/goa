@@ -329,8 +329,8 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 			res = append(res, val)
 		}
 	}
-	if min := validation.Minimum; min != nil {
-		data["min"] = *min
+	if minVal := validation.Minimum; minVal != nil {
+		data["min"] = *minVal
 		data["isMin"] = true
 		if val := runTemplate(minMaxValT, data); val != "" {
 			res = append(res, val)
@@ -343,8 +343,8 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 			res = append(res, val)
 		}
 	}
-	if max := validation.Maximum; max != nil {
-		data["max"] = *max
+	if maxVal := validation.Maximum; maxVal != nil {
+		data["max"] = *maxVal
 		data["isMin"] = false
 		if val := runTemplate(minMaxValT, data); val != "" {
 			res = append(res, val)
