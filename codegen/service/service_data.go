@@ -73,9 +73,6 @@ type (
 		Scope *codegen.NameScope
 		// ViewScope initialized with all the viewed types.
 		ViewScope *codegen.NameScope
-		// UserTypeImports lists the import specifications for the user
-		// types used by the service.
-		UserTypeImports []*codegen.ImportSpec
 		// ProtoImports lists the import specifications for the custom
 		// proto types used by the service.
 		ProtoImports []*codegen.ImportSpec
@@ -597,42 +594,6 @@ func (d *Data) Method(name string) *MethodData {
 		}
 	}
 	return nil
-}
-
-// initUserTypeImports sets the import paths for the user types defined in the
-// service.  User types may be declared in multiple packages when defined with
-// the Meta key "struct:pkg:path".
-func (d *Data) initUserTypeImports(genpkg string) {
-	importsByPath := make(map[string]*codegen.ImportSpec)
-
-	initLoc := func(loc *codegen.Location) {
-		if loc == nil {
-			return
-		}
-		importsByPath[loc.FilePath] = &codegen.ImportSpec{Name: loc.PackageName(), Path: genpkg + "/" + loc.RelImportPath}
-	}
-
-	for _, m := range d.Methods {
-		initLoc(m.PayloadLoc)
-		initLoc(m.ResultLoc)
-		for _, l := range m.ErrorLocs {
-			initLoc(l)
-		}
-		for _, ut := range d.userTypes {
-			initLoc(ut.Loc)
-		}
-		for _, et := range d.errorTypes {
-			initLoc(et.Loc)
-		}
-	}
-
-	imports := make([]*codegen.ImportSpec, len(importsByPath))
-	i := 0
-	for _, imp := range importsByPath { // Order does not matter, imports are sorted during formatting.
-		imports[i] = imp
-		i++
-	}
-	d.UserTypeImports = imports
 }
 
 // Scheme returns the scheme data with the given scheme name.

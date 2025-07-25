@@ -34,7 +34,7 @@ func {{ .HandlerInit }}(
 	{{- if mustDecodeRequest . }}
 		{{ if .Redirect }}_{{ else }}payload{{ end }}, err := decodeRequest(r)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -93,13 +93,21 @@ func {{ .HandlerInit }}(
 	{{- if not .Redirect }}
 		if err != nil {
 			{{- if isWebSocketEndpoint . }}
-			if v.Stream.(*{{ .ServerWebSocket.VarName }}).conn != nil {
+			var stream *{{ .ServerWebSocket.VarName }}
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
+				stream = wrapper.Unwrap().(*{{ .ServerWebSocket.VarName }})
+			} else {
+				stream = v.Stream.(*{{ .ServerWebSocket.VarName }})
+			}
+			if stream != nil && stream.conn != nil {
 				// Response writer has been hijacked, do not encode the error
-				errhandler(ctx, w, err)
+				if errhandler != nil {
+					errhandler(ctx, w, err)
+				}
 				return
 			}
 			{{- end }}
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -111,14 +119,16 @@ func {{ .HandlerInit }}(
 		if wt, ok := o.Body.(io.WriterTo); ok {
 			{{- if not (or .Redirect (isWebSocketEndpoint .)) }}
 			if err := encodeResponse(ctx, w, {{ if and .Method.SkipResponseBodyEncodeDecode .Result.Ref }}o.Result{{ else }}res{{ end }}); err != nil {
-				errhandler(ctx, w, err)
+				if errhandler != nil {
+					errhandler(ctx, w, err)
+				}
 				return
 			}
 			{{- end }}
 			n, err := wt.WriteTo(w)
 			if err != nil {
 				if n == 0 {
-					if err := encodeError(ctx, w, err); err != nil {
+					if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 						errhandler(ctx, w, err)
 					}
 				} else {
@@ -133,7 +143,7 @@ func {{ .HandlerInit }}(
 		// handle immediate read error like a returned error
 		buf := bufio.NewReader(o.Body)
 		if _, err := buf.Peek(1); err != nil && err != io.EOF {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -141,7 +151,9 @@ func {{ .HandlerInit }}(
 	{{- end }}
 	{{- if not (or .Redirect (isWebSocketEndpoint .) (isSSEEndpoint .)) }}
 		if err := encodeResponse(ctx, w, {{ if and .Method.SkipResponseBodyEncodeDecode .Result.Ref }}o.Result{{ else }}res{{ end }}); err != nil {
-			errhandler(ctx, w, err)
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
 			{{- if .Method.SkipResponseBodyEncodeDecode }}
 			return
 			{{- end }}

@@ -230,3 +230,98 @@ var ConvertAliasDSL = func() {
 		})
 	})
 }
+
+// Test cases for multiple package struct:pkg:path with ConvertTo/CreateFrom
+
+// Mock external types for testing
+type TestFilterConfig struct {
+	Name    string
+	Enabled bool
+	Value   int
+}
+
+type TestUserConfig struct {
+	Username string
+	Active   bool
+}
+
+// ConvertMultiPkgDSL tests conversion functions with different struct:pkg:path values
+var ConvertMultiPkgDSL = func() {
+	var FilterConfigType = Type("FilterConfig", func() {
+		Meta("struct:pkg:path", "types")
+		CreateFrom(TestFilterConfig{})
+		ConvertTo(TestFilterConfig{})
+		Attribute("name", String)
+		Attribute("enabled", Boolean)
+		Attribute("value", Int)
+		Required("name", "enabled", "value")
+	})
+
+	var UserConfigType = Type("UserConfig", func() {
+		Meta("struct:pkg:path", "models")
+		CreateFrom(TestUserConfig{})
+		ConvertTo(TestUserConfig{})
+		Attribute("username", String)
+		Attribute("active", Boolean)
+		Required("username", "active")
+	})
+
+	Service("MultiPkgService", func() {
+		Method("FilterMethod", func() {
+			Payload(FilterConfigType)
+			Result(FilterConfigType)
+		})
+		Method("UserMethod", func() {
+			Payload(UserConfigType)
+			Result(UserConfigType)
+		})
+	})
+}
+
+// ConvertSinglePkgDSL tests conversion functions with single custom package
+var ConvertSinglePkgDSL = func() {
+	var FilterConfigType = Type("FilterConfig", func() {
+		Meta("struct:pkg:path", "types")
+		CreateFrom(TestFilterConfig{})
+		ConvertTo(TestFilterConfig{})
+		Attribute("name", String)
+		Attribute("enabled", Boolean)
+		Attribute("value", Int)
+		Required("name", "enabled", "value")
+	})
+
+	Service("SinglePkgService", func() {
+		Method("FilterMethod", func() {
+			Payload(FilterConfigType)
+			Result(FilterConfigType)
+		})
+	})
+}
+
+// ConvertMixedPkgDSL tests mix of custom paths and default service package
+var ConvertMixedPkgDSL = func() {
+	var FilterConfigType = Type("FilterConfig", func() {
+		Meta("struct:pkg:path", "types")
+		CreateFrom(TestFilterConfig{})
+		ConvertTo(TestFilterConfig{})
+		Attribute("name", String)
+		Required("name")
+	})
+
+	var SystemConfigType = Type("SystemConfig", func() {
+		// No Meta - should go to service package
+		CreateFrom(TestUserConfig{})
+		ConvertTo(TestUserConfig{})
+		Attribute("username", String)
+		Required("username")
+	})
+
+	Service("MixedPkgService", func() {
+		Method("FilterMethod", func() {
+			Payload(FilterConfigType)
+		})
+		Method("SystemMethod", func() {
+			Payload(SystemConfigType)
+		})
+	})
+}
