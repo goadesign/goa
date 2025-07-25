@@ -36,13 +36,11 @@ func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 					service.AddUserTypeImports(genpkg, f.SectionTemplates[0], d)
 				}
 			}
-			f, err := service.ConvertFile(r, s, services)
+			convFiles, err := service.ConvertFiles(r, s, services)
 			if err != nil {
 				return nil, err
 			}
-			if f != nil {
-				files = append(files, f)
-			}
+			files = append(files, convFiles...)
 		}
 	}
 	return files, nil
