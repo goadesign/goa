@@ -584,4 +584,13 @@ const (
 	}
 }
 `
+
+	// UnionWithFormatValidationCode contains the expected validation code for Issue #3747
+	UnionWithFormatValidationCode = `func Validate() (err error) {
+	switch v := target.Response.(type) {
+	case ResponseTimestamp:
+		err = goa.MergeErrors(err, goa.ValidateFormat("target.response.value", string(v), goa.FormatDateTime))
+	}
+}
+`
 )
