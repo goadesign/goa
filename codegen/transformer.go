@@ -46,6 +46,9 @@ type (
 		// IsInterface is true if the attribute is an interface (union type).
 		// In this case assigning child attributes requires a type assertion.
 		IsInterface bool
+		// SamePackageConversion if true indicates that this context is being used
+		// for conversion code generation within the same package as the types.
+		SamePackageConversion bool
 	}
 
 	// AttributeScope contains the scope of an attribute. It implements the
@@ -97,6 +100,13 @@ func NewAttributeContext(pointer, reqIgnore, useDefault bool, pkg string, scope 
 		Scope:          NewAttributeScope(scope),
 		DefaultPkg:     pkg,
 	}
+}
+
+// NewAttributeContextForConversion initializes an attribute context for same-package conversion.
+func NewAttributeContextForConversion(pointer, reqIgnore, useDefault bool, pkg string, scope *NameScope) *AttributeContext {
+	ctx := NewAttributeContext(pointer, reqIgnore, useDefault, pkg, scope)
+	ctx.SamePackageConversion = true
+	return ctx
 }
 
 // NewAttributeScope initializes an attribute scope.
@@ -217,7 +227,13 @@ func (a *AttributeContext) IsPrimitivePointer(name string, att *expr.AttributeEx
 // Pkg returns the package name of the given type.
 func (a *AttributeContext) Pkg(att *expr.AttributeExpr) string {
 	if loc := UserTypeLocation(att.Type); loc != nil {
-		return loc.PackageName()
+		pkg := loc.PackageName()
+		// If this is same-package conversion and the type's package matches
+		// the context's default package, return empty string to avoid qualification
+		if a.SamePackageConversion && pkg == a.DefaultPkg {
+			return ""
+		}
+		return pkg
 	}
 	return a.DefaultPkg
 }
@@ -225,11 +241,12 @@ func (a *AttributeContext) Pkg(att *expr.AttributeExpr) string {
 // Dup creates a shallow copy of the AttributeContext.
 func (a *AttributeContext) Dup() *AttributeContext {
 	return &AttributeContext{
-		Pointer:        a.Pointer,
-		IgnoreRequired: a.IgnoreRequired,
-		UseDefault:     a.UseDefault,
-		Scope:          a.Scope,
-		DefaultPkg:     a.DefaultPkg,
+		Pointer:               a.Pointer,
+		IgnoreRequired:        a.IgnoreRequired,
+		UseDefault:            a.UseDefault,
+		Scope:                 a.Scope,
+		DefaultPkg:            a.DefaultPkg,
+		SamePackageConversion: a.SamePackageConversion,
 	}
 }
 
