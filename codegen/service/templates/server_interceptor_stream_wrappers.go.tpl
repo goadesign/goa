@@ -1,5 +1,10 @@
 {{- range .WrappedServerStreams }}
 
+{{ comment (print "Unwrap returns the underlying stream type.") }}
+func (w *wrapped{{ .Interface }}) Unwrap() any {
+	return w.stream
+}
+
 	{{- if ne .SendTypeRef "" }}
 
 {{ comment (printf "%s streams instances of \"%s\" after executing the applied interceptor." .SendName .Interface) }}

@@ -44,7 +44,6 @@ func clientFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 			{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 		}
-		imports = append(imports, data.Service.UserTypeImports...)
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC client", "client", imports),
 		}
@@ -135,7 +134,6 @@ func clientEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *Serv
 			{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 		}
-		imports = append(imports, data.Service.UserTypeImports...)
 		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client encoders and decoders", "client", imports)}
 		fm := transTmplFuncs(svc, services)
 		fm["metadataEncodeDecodeData"] = metadataEncodeDecodeData
