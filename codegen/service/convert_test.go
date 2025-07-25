@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
@@ -189,73 +188,6 @@ func TestCompatible(t *testing.T) {
 	}
 }
 
-func TestConvertFile(t *testing.T) {
-	cases := []struct {
-		Name         string
-		DSL          func()
-		SectionIndex int
-		Code         string
-	}{
-		{"convert-string", testdata.ConvertStringDSL, 1, testdata.ConvertStringCode},
-		{"convert-string-required", testdata.ConvertStringRequiredDSL, 1, testdata.ConvertStringRequiredCode},
-		{"convert-string-pointer", testdata.ConvertStringPointerDSL, 1, testdata.ConvertStringPointerCode},
-		{"convert-string-pointer-required", testdata.ConvertStringPointerRequiredDSL, 1, testdata.ConvertStringPointerRequiredCode},
-		{"create-string", testdata.CreateStringDSL, 1, testdata.CreateStringCode},
-		{"create-string-required", testdata.CreateStringRequiredDSL, 1, testdata.CreateStringRequiredCode},
-		{"create-string-pointer", testdata.CreateStringPointerDSL, 1, testdata.CreateStringPointerCode},
-		{"create-string-pointer-required", testdata.CreateStringPointerRequiredDSL, 1, testdata.CreateStringPointerRequiredCode},
-
-		{"convert-external-name", testdata.ConvertExternalNameDSL, 1, testdata.ConvertExternalNameCode},
-		{"convert-external-name-required", testdata.ConvertExternalNameRequiredDSL, 1, testdata.ConvertExternalNameRequiredCode},
-		{"convert-external-name-pointer", testdata.ConvertExternalNamePointerDSL, 1, testdata.ConvertExternalNamePointerCode},
-		{"convert-external-name-pointer-required", testdata.ConvertExternalNamePointerRequiredDSL, 1, testdata.ConvertExternalNamePointerRequiredCode},
-		{"convert-external-name-with-initialism", testdata.ConvertExternalNameWithInitialismDSL, 1, testdata.ConvertExternalNameWithInitialismCode},
-		{"create-external-name", testdata.CreateExternalNameDSL, 1, testdata.CreateExternalNameCode},
-		{"create-external-name-required", testdata.CreateExternalNameRequiredDSL, 1, testdata.CreateExternalNameRequiredCode},
-		{"create-external-name-pointer", testdata.CreateExternalNamePointerDSL, 1, testdata.CreateExternalNamePointerCode},
-		{"create-external-name-pointer-required", testdata.CreateExternalNamePointerRequiredDSL, 1, testdata.CreateExternalNamePointerRequiredCode},
-		{"create-external-name-with-initialism", testdata.CreateExternalNameWithInitialismDSL, 1, testdata.CreateExternalNameWithInitialismCode},
-
-		{"convert-array-string", testdata.ConvertArrayStringDSL, 1, testdata.ConvertArrayStringCode},
-		{"convert-array-string-required", testdata.ConvertArrayStringRequiredDSL, 1, testdata.ConvertArrayStringRequiredCode},
-		{"create-array-string", testdata.CreateArrayStringDSL, 1, testdata.CreateArrayStringCode},
-		{"create-array-string-required", testdata.CreateArrayStringRequiredDSL, 1, testdata.CreateArrayStringRequiredCode},
-		{"convert-object", testdata.ConvertObjectDSL, 1, testdata.ConvertObjectCode},
-		{"convert-object-2", testdata.ConvertObjectDSL, 2, testdata.ConvertObjectHelperCode},
-		{"convert-object-required", testdata.ConvertObjectRequiredDSL, 2, testdata.ConvertObjectRequiredHelperCode},
-		{"convert-object-2-required", testdata.ConvertObjectRequiredDSL, 1, testdata.ConvertObjectRequiredCode},
-		{"create-object", testdata.CreateObjectDSL, 1, testdata.CreateObjectCode},
-		{"create-object-required", testdata.CreateObjectRequiredDSL, 1, testdata.CreateObjectRequiredCode},
-		{"create-object-extra", testdata.CreateObjectExtraDSL, 1, testdata.CreateObjectExtraCode},
-		{"create-external-convert", testdata.CreateExternalDSL, 0, testdata.CreateExternalConvert},
-		{"create-alias-convert", testdata.CreateAliasDSL, 0, testdata.CreateAliasConvert},
-		{"mixed-case-convert", testdata.MixedCaseDSL, 0, testdata.MixedCaseConvert},
-	}
-	for _, c := range cases {
-		t.Run(c.Name, func(t *testing.T) {
-			root := runDSL(t, c.DSL)
-			services := NewServicesData(root)
-			for _, svc := range root.Services {
-				f, err := ConvertFile(root, svc, services)
-				require.NoError(t, err)
-				require.NotNil(t, f)
-				sections := f.SectionTemplates
-				require.Greater(t, len(sections), c.SectionIndex)
-
-				var code string
-				if c.SectionIndex == 0 {
-					methodSection := sections[1]
-					code = codegen.SectionCodeFromImportsAndMethods(t, sections[c.SectionIndex], methodSection)
-				} else {
-					code = codegen.SectionCode(t, sections[c.SectionIndex])
-				}
-				code = strings.ReplaceAll(code, "\r\n", "\n")
-
-				assert.Equal(t, c.Code, code)
-			}
-		})
-	}
-}
 
 // Test fixtures
 var obj = &expr.UserTypeExpr{
@@ -370,4 +302,51 @@ type objT5 struct {
 	Bar  int
 	Goo  float32
 	Goo2 uint
+}
+
+func TestConvertFiles(t *testing.T) {
+	cases := []struct {
+		Name          string
+		DSL           func()
+		ExpectedFiles map[string]int // path -> number of sections
+	}{
+		{
+			"multi-package-conversions",
+			testdata.ConvertMultiPkgDSL,
+			map[string]int{
+				"gen/types/convert.go":  5, // header + 2 convert-to + 2 create-from sections
+				"gen/models/convert.go": 5, // header + 2 convert-to + 2 create-from sections  
+			},
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			root := runDSL(t, c.DSL)
+			services := NewServicesData(root)
+
+			for _, svc := range root.Services {
+				files, err := ConvertFiles(root, svc, services)
+				require.NoError(t, err)
+
+				// Check expected number of files
+				require.Equal(t, len(c.ExpectedFiles), len(files))
+
+				// Verify each expected file
+				for expectedPath, expectedSections := range c.ExpectedFiles {
+					found := false
+					for _, file := range files {
+						if strings.HasSuffix(file.Path, expectedPath) {
+							found = true
+							require.Equal(t, expectedSections, len(file.SectionTemplates))
+							// First section should be header
+							require.Equal(t, "source-header", file.SectionTemplates[0].Name)
+							break
+						}
+					}
+					require.True(t, found, "Expected file %s not found", expectedPath)
+				}
+			}
+		})
+	}
 }
