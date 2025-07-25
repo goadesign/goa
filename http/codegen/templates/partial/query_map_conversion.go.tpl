@@ -5,8 +5,8 @@
 	{
 		openIdx := strings.IndexRune(keyRaw, '[')
 		closeIdx := strings.IndexRune(keyRaw, ']')
-		if closeIdx == -1 {
-			err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+		if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+			err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 		} else {
 	{{- if eq .Type.KeyType.Type.Name "string" }}
 		key{{ .Loop }} = keyRaw[openIdx+1 : closeIdx]
