@@ -3,15 +3,16 @@ package jsonrpc
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 )
 
 type (
 	// Request represents a JSON-RPC request.
 	Request struct {
-		JSONRPC string  `json:"jsonrpc"`
-		Method  string  `json:"method"`
-		Params  any     `json:"params,omitempty"`
-		ID      *string `json:"id,omitempty"`
+		JSONRPC string `json:"jsonrpc"`
+		Method  string `json:"method"`
+		Params  any    `json:"params,omitempty"`
+		ID      any    `json:"id,omitempty"`
 	}
 
 	// Response represents a JSON-RPC response.
@@ -19,7 +20,7 @@ type (
 		JSONRPC string         `json:"jsonrpc"`
 		Result  any            `json:"result,omitempty"`
 		Error   *ErrorResponse `json:"error,omitempty"`
-		ID      string         `json:"id"`
+		ID      any            `json:"id"`
 	}
 
 	// ErrorResponse represents a JSON-RPC error response.
@@ -34,7 +35,7 @@ type (
 		JSONRPC string          `json:"jsonrpc"`
 		Method  string          `json:"method"`
 		Params  json.RawMessage `json:"params,omitempty"`
-		ID      *string         `json:"id,omitempty"`
+		ID      any             `json:"id,omitempty"`
 	}
 
 	// RawResponse represents a JSON-RPC response with a marshalled result
@@ -67,7 +68,7 @@ const (
 )
 
 // MakeSuccessResponse creates a success response.
-func MakeSuccessResponse(id string, result any) *Response {
+func MakeSuccessResponse(id any, result any) *Response {
 	return &Response{
 		JSONRPC: "2.0",
 		Result:  result,
@@ -76,7 +77,7 @@ func MakeSuccessResponse(id string, result any) *Response {
 }
 
 // MakeErrorResponse creates an error response.
-func MakeErrorResponse(id string, code Code, message string, data any) *Response {
+func MakeErrorResponse(id any, code Code, message string, data any) *Response {
 	if message == "" {
 		switch code {
 		case ParseError:
@@ -108,4 +109,17 @@ func (e *ErrorResponse) Error() string {
 // Error returns a string representation of the error.
 func (e *RawErrorResponse) Error() string {
 	return fmt.Sprintf("jsonrpc: code %d: %s", e.Code, e.Message)
+}
+
+// IDToString converts a JSON-RPC ID to a string.
+// JSON unmarshaling produces string or float64 for numeric values.
+func IDToString(id any) string {
+	switch v := id.(type) {
+	case string:
+		return v
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
+	default:
+		return ""
+	}
 }

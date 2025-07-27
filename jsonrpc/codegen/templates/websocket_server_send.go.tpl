@@ -35,7 +35,7 @@ func (s *{{ lowerInitial $.Service.StructName }}Stream) send(id string, result a
 }
 
 {{ printf "sendError sends a JSON-RPC error response to the websocket connection." | comment }}
-func (s *{{ lowerInitial $.Service.StructName }}Stream) sendError(ctx context.Context, id string, code jsonrpc.Code, message string, data any) error {
+func (s *{{ lowerInitial $.Service.StructName }}Stream) sendError(ctx context.Context, id any, code jsonrpc.Code, message string, data any) error {
 	response := jsonrpc.MakeErrorResponse(id, code, "", message)
 	if data != nil {
 		response.Error.Message = message

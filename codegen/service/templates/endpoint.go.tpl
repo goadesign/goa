@@ -1,5 +1,5 @@
 {{ comment .Description }}
-{{- if .ServerStream }}
+{{- if and .ServerStream (not .IsJSONRPC) }}
 func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}, stream {{ .StreamInterface }}) (err error) {
 {{- else }}
 func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}{{ if .SkipRequestBodyEncodeDecode }}, req io.ReadCloser{{ end }}) ({{ if .ResultFullRef }}res {{ .ResultFullRef }}, {{ end }}{{ if .SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}{{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}err error) {
@@ -8,7 +8,7 @@ func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .Pay
 	// req is the HTTP request body stream.
 	defer req.Close()
 {{- end }}
-{{- if and (and .ResultFullRef .ResultIsStruct) (not .ServerStream) }}
+{{- if and (and .ResultFullRef .ResultIsStruct) (or (not .ServerStream) .IsJSONRPC) }}
 	res = &{{ .ResultFullName }}{}
 {{- end }}
 {{- if .SkipResponseBodyEncodeDecode }}
@@ -17,7 +17,7 @@ func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .Pay
 {{- end }}
 {{- if .ViewedResult }}
 	{{- if not .ViewedResult.ViewName }}
-		{{- if .ServerStream }}
+		{{- if and .ServerStream (not .IsJSONRPC) }}
 			stream.SetView({{ printf "%q" .ResultView }})
 		{{- else }}
 			view = {{ printf "%q" .ResultView }}

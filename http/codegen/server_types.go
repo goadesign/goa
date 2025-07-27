@@ -77,7 +77,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 				validatedTypes = append(validatedTypes, data)
 			}
 		}
-		if adata.ServerWebSocket != nil && !adata.IsJSONRPC {
+		if adata.ServerWebSocket != nil && !adata.Method.IsJSONRPC {
 			if data := adata.ServerWebSocket.Payload; data != nil {
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{

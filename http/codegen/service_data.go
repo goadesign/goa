@@ -96,8 +96,6 @@ type (
 		ServiceVarName string
 		// ServicePkgName is the name of the service package.
 		ServicePkgName string
-		// IsJSONRPC indicates if the endpoint is a JSON-RPC endpoint.
-		IsJSONRPC bool
 		// Payload describes the method HTTP payload.
 		Payload *PayloadData
 		// Result describes the method HTTP result.
@@ -835,7 +833,6 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 
 		ed := &EndpointData{
 			Method:          method,
-			IsJSONRPC:       httpEndpoint.IsJSONRPC(),
 			ServiceName:     svc.Name,
 			ServiceVarName:  svc.VarName,
 			ServicePkgName:  svc.PkgName,

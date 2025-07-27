@@ -3,7 +3,7 @@
 {{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
 func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeByType }}, auth{{ .Type }}Fn security.Auth{{ .Type }}Func{{ end }}) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-{{- if or .ServerStream }}
+{{- if and .ServerStream (not .IsJSONRPC) }}
 		ep := req.(*{{ .ServerStream.EndpointStruct }})
 {{- else if .SkipRequestBodyEncodeDecode }}
 		ep := req.(*{{ .RequestStruct }})
@@ -115,7 +115,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 			return nil, err
 		}
 {{- end }}
-{{- if .ServerStream }}
+{{- if and .ServerStream (not .IsJSONRPC) }}
 	return nil, s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
 {{- else if .SkipRequestBodyEncodeDecode }}
 	{{- if .SkipResponseBodyEncodeDecode }}

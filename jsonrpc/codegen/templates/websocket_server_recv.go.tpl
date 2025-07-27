@@ -10,14 +10,14 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) Recv(ctx context.Context)
 func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx context.Context, req *jsonrpc.RawRequest) error {
 	if req.JSONRPC != "2.0" {
 		if req.ID != nil {
-			return s.sendError(ctx, *req.ID, jsonrpc.InvalidRequest, fmt.Sprintf("Invalid JSON-RPC version, must be 2.0, got %q", req.JSONRPC), nil)
+			return s.sendError(ctx, req.ID, jsonrpc.InvalidRequest, fmt.Sprintf("Invalid JSON-RPC version, must be 2.0, got %q", req.JSONRPC), nil)
 		}
 		return nil
 	}
 
 	if req.Method == "" {
 		if req.ID != nil {
-			return s.sendError(ctx, *req.ID, jsonrpc.InvalidRequest, "Missing method field", nil)
+			return s.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Missing method field", nil)
 		}
 		return nil
 	}
@@ -29,7 +29,7 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx contex
 	{{- end }}
 	default:
 		if req.ID != nil {
-			return s.sendError(ctx, *req.ID, jsonrpc.MethodNotFound, fmt.Sprintf("Method %q not found", req.Method), nil)
+			return s.sendError(ctx, req.ID, jsonrpc.MethodNotFound, fmt.Sprintf("Method %q not found", req.Method), nil)
 		}
 		return nil
 	}

@@ -141,7 +141,7 @@ func ServerEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 	sections := []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
 
 	for _, e := range data.Endpoints {
-		if e.Redirect == nil && (!IsWebSocketEndpoint(e) || e.IsJSONRPC) {
+		if e.Redirect == nil && (!IsWebSocketEndpoint(e) || e.Method.IsJSONRPC) {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "response-encoder",
 				FuncMap: transTmplFuncs(svc, services),

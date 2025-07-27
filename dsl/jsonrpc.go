@@ -37,7 +37,7 @@ const (
 //     JSON-RPC methods in the service and defines common errors and their
 //     error code mappings.
 //   - At the method level: JSONRPC configures how the request and response "id"
-//     fields are mapped to payload/result attributes and allows you to define 
+//     fields are mapped to payload/result attributes and allows you to define
 //     method-specific error code mappings. Methods without Result() are automatically
 //     treated as notifications (no response expected).
 //
@@ -190,6 +190,10 @@ func JSONRPC(dsl func()) {
 			e.Meta = expr.MetaExpr{}
 		}
 		e.Meta["jsonrpc"] = nil
+		if actual.Meta == nil {
+			actual.Meta = expr.MetaExpr{}
+		}
+		actual.Meta["jsonrpc"] = nil
 		e.DSLFunc = dsl
 		r := &expr.RouteExpr{Method: "POST", Path: "/", Endpoint: e}
 		e.Routes = []*expr.RouteExpr{r}
@@ -232,4 +236,3 @@ func ID(name string, args ...any) {
 	args = useDSL(args, func() { Meta("jsonrpc:id", "") })
 	Attribute(name, args...)
 }
-

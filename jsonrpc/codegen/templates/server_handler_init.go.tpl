@@ -58,6 +58,9 @@ func {{ .HandlerInit }}(
 			return
 		{{- end }}
 		}
+		{{- if .Payload.IDAttribute }}
+		params.{{ .Payload.IDAttribute }} = jsonrpc.IDToString(req.ID)
+		{{- end }}
 	{{- end }}
 	{{ if or (isWebSocketEndpoint .) (isNotification .) }}_{{ else }}res{{ end }}, err {{if not (and (or (isWebSocketEndpoint .) (isNotification .)) .Payload.Ref)}}:{{end}}= endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
 	{{- if isWebSocketEndpoint . }}
@@ -88,12 +91,12 @@ func {{ .HandlerInit }}(
 			return
 		}
 
-		var id string
+		var id any
 		actual := res.({{ .Result.Ref }})
 		if actual.{{ .Result.IDAttribute }} != "" {
 			id = actual.{{ .Result.IDAttribute }}
 		} else {
-			id = *req.ID
+			id = req.ID
 		}
 		response := jsonrpc.MakeSuccessResponse(id, res)
 		if err := encoder(ctx, w).Encode(response); err != nil {

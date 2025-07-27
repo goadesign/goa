@@ -42,7 +42,7 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 		codegen.Header(title, "server", imports),
 		{
 			Name:    "jsonrpc-server-websocket-struct",
-			Source:  jsonrpcTemplates.Read(websocketServerStructT),
+			Source:  jsonrpcTemplates.Read(websocketServerStreamT),
 			Data:    data,
 			FuncMap: funcs,
 		},

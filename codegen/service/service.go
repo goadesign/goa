@@ -162,10 +162,13 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 	}
 	header := codegen.Header(service.Name+" service", svc.PkgName, imports)
 	def := &codegen.SectionTemplate{
-		Name:    "service",
-		Source:  serviceTemplates.Read(serviceT),
-		Data:    svc,
-		FuncMap: map[string]any{"streamInterfaceFor": streamInterfaceFor},
+		Name:   "service",
+		Source: serviceTemplates.Read(serviceT),
+		Data:   svc,
+		FuncMap: map[string]any{
+			"hasJSONRPCWebSocket": hasJSONRPCWebSocket,
+			"streamInterfaceFor":  streamInterfaceFor,
+		},
 	}
 
 	// service.go
@@ -295,6 +298,17 @@ func errorName(et *UserTypeData) string {
 		return fmt.Sprintf("%q", v[0])
 	}
 	return fmt.Sprintf("%q", et.Name)
+}
+
+// hasJSONRPCWebSocket returns true if the service has a JSON-RPC WebSocket
+// endpoint.
+func hasJSONRPCWebSocket(sd *Data) bool {
+	for _, m := range sd.Methods {
+		if m.IsJSONRPC && m.ServerStream != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // streamInterfaceFor builds the data to generate the client and server stream

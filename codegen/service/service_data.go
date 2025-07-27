@@ -147,6 +147,8 @@ type (
 		// ErrorLocs lists the file and Go package of the error type
 		// if overridden via Meta indexed by error name.
 		ErrorLocs map[string]*codegen.Location
+		// IsJSONRPC indicates if the endpoint is a JSON-RPC endpoint.
+		IsJSONRPC bool
 		// Requirements contains the security requirements for the
 		// method.
 		Requirements RequirementsData
@@ -1038,6 +1040,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		resultEx    any
 		errors      []*ErrorInitData
 		errorLocs   map[string]*codegen.Location
+		isJSONRPC   bool
 		reqs        RequirementsData
 		schemes     SchemesData
 	)
@@ -1082,6 +1085,9 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 			errorLocs[er.Name] = codegen.UserTypeLocation(er.Type)
 		}
 	}
+
+	_, isJSONRPC = m.Meta["jsonrpc"]
+
 	for _, req := range m.Requirements {
 		var rs SchemesData
 		for _, s := range req.Schemes {
@@ -1129,6 +1135,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		ResultEx:                     resultEx,
 		Errors:                       errors,
 		ErrorLocs:                    errorLocs,
+		IsJSONRPC:                    isJSONRPC,
 		Requirements:                 reqs,
 		Schemes:                      schemes,
 		StreamKind:                   m.Stream,

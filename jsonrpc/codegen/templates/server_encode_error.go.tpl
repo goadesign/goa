@@ -15,7 +15,7 @@ func encodeJSONRPCError(
 	errhandler func(context.Context, http.ResponseWriter, error),
 ) {
 	if req.ID != nil {
-		response := jsonrpc.MakeErrorResponse(*req.ID, code, "", message)
+		response := jsonrpc.MakeErrorResponse(req.ID, code, "", message)
 		if data != nil {
 			response.Error.Data = data
 		}

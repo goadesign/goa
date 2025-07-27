@@ -1,6 +1,10 @@
 
 {{ comment .Description }}
 type Service interface {
+{{- if hasJSONRPCWebSocket . }}
+	{{ comment "HandleStream handles the JSON-RPC WebSocket connection. Calling Recv() on the stream will dispatch the request to the appropriate method below." }}
+	HandleStream(context.Context, Stream) error
+{{- end }}
 {{- range .Methods }}
 	{{ comment .Description }}
 	{{- if .SkipResponseBodyEncodeDecode }}
@@ -18,7 +22,7 @@ type Service interface {
 			{{- end }}
 		{{- end }}
 	{{- end }}
-	{{- if .ServerStream }}
+	{{- if and .ServerStream (not .IsJSONRPC) }}
 		{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}, {{ .ServerStream.Interface }}) (err error)
 	{{- else }}
 		{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}{{ if .SkipRequestBodyEncodeDecode }}, io.ReadCloser{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ end }}{{ if .SkipResponseBodyEncodeDecode }}body io.ReadCloser, {{ end }}{{ if .Result }}{{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}{{ end }}err error)
@@ -36,6 +40,17 @@ type Auther interface {
 }
 {{- end }}
 
+{{- range .Methods }}
+	{{- if and .ServerStream (not .IsJSONRPC) }}
+		{{ template "stream_interface" (streamInterfaceFor "server" . .ServerStream) }}
+		{{ template "stream_interface" (streamInterfaceFor "client" . .ClientStream) }}
+	{{- end }}
+{{- end }}
+
+{{- if hasJSONRPCWebSocket . }}
+	{{ template "jsonrpc_websocket_stream" . }}
+{{- end }}
+
 // APIName is the name of the API as defined in the design.
 const APIName = {{ printf "%q" .APIName }}
 
@@ -51,12 +66,6 @@ const ServiceName = {{ printf "%q" .Name }}
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
 var MethodNames = [{{ len .Methods }}]string{ {{ range .Methods }}{{ printf "%q" .Name }}, {{ end }} }
-{{- range .Methods }}
-	{{- if .ServerStream }}
-		{{ template "stream_interface" (streamInterfaceFor "server" . .ServerStream) }}
-		{{ template "stream_interface" (streamInterfaceFor "client" . .ClientStream) }}
-	{{- end }}
-{{- end }}
 
 {{- define "stream_interface" }}
 {{ printf "%s is the interface a %q endpoint %s stream must satisfy." .Stream.Interface .Endpoint .Type | comment }}
@@ -83,3 +92,31 @@ type {{ .Stream.Interface }} interface {
 	{{- end }}
 }
 {{- end }}
+
+{{ define "jsonrpc_websocket_stream" }}
+{{ printf "Stream defines the interface for managing a streaming WebSocket connection in the %s server.  It allows sending results, sending errors, receiving requests, and closing the connection.  This interface is used by the service to interact with clients over WebSocket using JSON-RPC." .Name | comment }}
+type Stream interface {
+{{- $hasErrors := false }}
+{{- range .Methods }}
+	{{- if .Result }}
+	{{ printf "Send%s sends a JSON-RPC response for the %s method." .VarName .Name | comment }}
+	Send{{ .VarName }}(ctx context.Context, result {{ .ResultRef }}) error
+	{{- end }}
+	{{- if .Errors }}{{ $hasErrors = true }}{{ end }}
+{{- end }}
+{{- if $hasErrors }}
+	// SendError sends a JSON-RPC error response.
+	SendError(ctx context.Context, id string, err error) error
+{{- end }}
+{{- $hasStreamingPayload := false }}
+{{- range .Methods }}
+	{{- if .StreamingPayload }}{{ $hasStreamingPayload = true }}{{ end }}
+{{- end }}
+{{- if $hasStreamingPayload }}
+	{{ printf "Recv reads JSON-RPC requests from the %s service stream and dispatches them to the appropriate method." .Name | comment }}
+	Recv(ctx context.Context) error
+{{- end }}
+	{{ printf "Close closes the %s service websocket connection." .Name | comment }}
+	Close() error
+} 
+{{ end }}

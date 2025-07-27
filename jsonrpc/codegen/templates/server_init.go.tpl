@@ -16,6 +16,9 @@ func {{ .ServerInit }}(
 			{{ printf "%q" .Method.Name }},
 			{{- end }}
 		},
+{{- if isWebSocketEndpoint (index .Endpoints 0) }}
+		StreamHandler: endpoints.HandleStream,
+{{- end }}
 {{- range .Endpoints }}
 	{{- if isWebSocketEndpoint . }}
 		{{ lowerInitial .Method.VarName }}: {{ .HandlerInit }}(endpoints.{{ .Method.VarName }}, mux, decoder),

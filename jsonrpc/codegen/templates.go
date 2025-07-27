@@ -32,7 +32,7 @@ const (
 	responseDecoderT    = "response_decoder"
 
 	// WebSocket templates
-	websocketServerStructT  = "websocket_server_struct"
+	websocketServerStreamT  = "websocket_server_stream"
 	websocketServerHandlerT = "websocket_server_handler"
 	websocketServerSendT    = "websocket_server_send"
 	websocketServerRecvT    = "websocket_server_recv"
