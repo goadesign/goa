@@ -28,16 +28,21 @@ const (
 	clientStructT       = "client_struct"
 	clientInitT         = "client_init"
 	clientEndpointInitT = "client_endpoint_init"
+	requestBuilderT     = "request_builder"
 	responseDecoderT    = "response_decoder"
 
 	// WebSocket templates
-	websocketStructTypeT               = "websocket_struct_type"
-	websocketServerSendT               = "websocket_server_send"
-	websocketServerRecvT               = "websocket_server_recv"
-	websocketServerCloseT              = "websocket_server_close"
-	websocketSetViewT                  = "websocket_set_view"
-	websocketConnConfigurerStructT     = "websocket_conn_configurer_struct"
-	websocketConnConfigurerStructInitT = "websocket_conn_configurer_struct_init"
+	websocketServerStructT  = "websocket_server_struct"
+	websocketServerHandlerT = "websocket_server_handler"
+	websocketServerSendT    = "websocket_server_send"
+	websocketServerRecvT    = "websocket_server_recv"
+	websocketServerCloseT   = "websocket_server_close"
+
+	// JSON-RPC WebSocket client templates
+	websocketClientConnT     = "websocket_client_conn"
+	websocketClientEndpointT = "websocket_client_endpoint"
+	websocketClientStreamT   = "websocket_client_stream"
+	websocketClientTypesT    = "websocket_client_types"
 
 	// Partial templates
 	clientTypeConversionP   = "client_type_conversion"

@@ -7,14 +7,9 @@ func {{ .ServerInit }}(
 	errhandler func(context.Context, http.ResponseWriter, error),
 	{{- if isWebSocketEndpoint (index .Endpoints 0) }}
 	upgrader goahttp.Upgrader,
-	configurer *ConnConfigurer,
+	configfn goahttp.ConnConfigureFunc,
 	{{- end }}
 ) *{{ .ServerStruct }} {
-	{{- if isWebSocketEndpoint (index .Endpoints 0) }}
-	if configurer == nil {
-		configurer = &ConnConfigurer{}
-	}
-	{{- end }}
 	s := &{{ .ServerStruct }}{
 		Methods: []string{
 			{{- range .Endpoints }}
@@ -22,14 +17,18 @@ func {{ .ServerInit }}(
 			{{- end }}
 		},
 {{- range .Endpoints }}
-		{{ .Method.VarName }}: {{ .HandlerInit }}(endpoints.{{ .Method.VarName }}, mux, decoder{{ if not (isWebSocketEndpoint .)}}, encoder, errhandler{{ end }}),
+	{{- if isWebSocketEndpoint . }}
+		{{ lowerInitial .Method.VarName }}: {{ .HandlerInit }}(endpoints.{{ .Method.VarName }}, mux, decoder),
+	{{- else }}
+		{{ .Method.VarName }}: {{ .HandlerInit }}(endpoints.{{ .Method.VarName }}, mux, decoder, encoder, errhandler),
+	{{- end }}
 {{- end }}
 		decoder: decoder,
 		encoder: encoder,
 		errhandler: errhandler,
 		{{- if isWebSocketEndpoint (index .Endpoints 0) }}
 		upgrader: upgrader,
-		configurer: configurer,
+		configfn: configfn,
 		{{- end }}
 	}
 	s.Handler = s

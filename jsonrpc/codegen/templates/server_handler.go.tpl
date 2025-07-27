@@ -1,28 +1,5 @@
 // ServeHTTP handles JSON-RPC requests.
 func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-{{- if isWebSocketEndpoint (index .Endpoints 0) }}
-	ctx, cancel := context.WithCancel(r.Context())
-	defer cancel()
-	
-	conn, err := s.upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		s.errhandler(r.Context(), w, fmt.Errorf("failed to upgrade to WebSocket: %w", err))
-		return
-	}
-	conn = s.configurer.ConfigFn(conn, cancel)
-	defer conn.Close()
-
-	stream := &{{ .Service.StructName }}Stream{
-	{{- range .Endpoints }}
-		{{ .Method.VarName }}: s.{{ .Method.VarName }},
-	{{- end }}
-		r: r,
-		w: w,
-		conn: conn,
-		cancel: cancel,
-	}
-	s.Stream(ctx, stream)
-{{- else }}
 	// Peek at the first byte to determine request type
 	bufReader := bufio.NewReader(r.Body)
 	peek, err := bufReader.Peek(1)
@@ -53,7 +30,6 @@ func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 	s.handleSingle(w, r)
 }
-
 
 // handleSingle handles a single JSON-RPC request.
 func (s *Server) handleSingle(w http.ResponseWriter, r *http.Request) {
@@ -97,5 +73,4 @@ func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonr
 	default:
 		s.encodeJSONRPCError(ctx, w, req, jsonrpc.MethodNotFound, fmt.Sprintf("Method %q not found", req.Method), nil)
 	}
-{{- end }}
 }

@@ -53,9 +53,6 @@ type (
 		// ResultIDAttribute is the name of the JSON-RPC result ID
 		// result attribute.
 		ResultIDAttribute string
-		// IsNotification indicates that the method is a JSON-RPC notification and
-		// does not expect a response.
-		IsNotification bool
 		// SkipRequestBodyEncodeDecode indicates that the service method accepts
 		// a reader and that the client provides a reader to stream the request
 		// body.
@@ -556,8 +553,8 @@ func (e *HTTPEndpointExpr) Validate() error {
 		}
 	}
 
-	// Validate JSON-RPC ID attributes
-	if e.IsJSONRPC() && !e.IsNotification {
+	// Validate JSON-RPC ID attributes (only for non-notifications)
+	if e.IsJSONRPC() && e.MethodExpr.Result.Type != Empty {
 		var payload *Object
 		if e.MethodExpr.IsPayloadStreaming() {
 			payload = AsObject(e.MethodExpr.StreamingPayload.Type)

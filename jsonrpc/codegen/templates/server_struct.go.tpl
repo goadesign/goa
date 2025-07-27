@@ -1,19 +1,26 @@
 {{ printf "%s handles JSON-RPC requests for the %s service." .ServerStruct .Service.Name | comment }}
 type {{ .ServerStruct }} struct {
 	http.Handler
+	// Methods is the list of methods served by this server.
 	Methods []string
-	{{- if isWebSocketEndpoint (index .Endpoints 0) }}
-	Stream func(context.Context, *{{ .Service.StructName }}Stream) error
+{{- if isWebSocketEndpoint (index .Endpoints 0) }}
+	// StreamHandler is the handler for the streaming service.
+	StreamHandler func(context.Context, Stream) error
+{{- end }}
+{{ range .Endpoints }}
+	{{- if isWebSocketEndpoint . }}
+	{{ lowerInitial .Method.VarName }} func(context.Context, *http.Request, *jsonrpc.RawRequest) error
+	{{- else }}
+	{{ printf "%s is the handler for the %s method." .Method.VarName .Method.Name | comment }}
+	{{ .Method.VarName }} func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter)
 	{{- end }}
-	{{- range .Endpoints }}
-	{{ .Method.VarName }} func(context.Context, *http.Request, *jsonrpc.RawRequest{{ if not (isWebSocketEndpoint .) }}, http.ResponseWriter{{ end }}){{ if isWebSocketEndpoint . }} error{{ end }}
-	{{- end }}
+{{- end }}
+
 	decoder func(*http.Request) goahttp.Decoder
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder
 	errhandler func(context.Context, http.ResponseWriter, error)
-	{{- if isWebSocketEndpoint (index .Endpoints 0) }}
-	stream *{{ .Service.StructName }}Stream
+{{- if isWebSocketEndpoint (index .Endpoints 0) }}
 	upgrader goahttp.Upgrader
-	configurer *ConnConfigurer
-	{{- end }}
+	configfn goahttp.ConnConfigureFunc
+{{- end }}
 }

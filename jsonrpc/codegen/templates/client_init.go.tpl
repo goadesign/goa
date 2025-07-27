@@ -8,24 +8,21 @@ func New{{ .ClientStruct }}(
 	restoreBody bool,
 	{{- if hasWebSocket . }}
 	dialer goahttp.Dialer,
-	cfn *ConnConfigurer,
+	cfn goahttp.ConnConfigureFunc,
+	configurer *ConnConfigurer,
 	{{- end }}
 ) *{{ .ClientStruct }} {
-	{{- if hasWebSocket . }}
-	if cfn == nil {
-		cfn = &ConnConfigurer{}
-	}
-	{{- end }}
 	return &{{ .ClientStruct }}{
-		Doer: doer,
+		Doer:                doer,
 		RestoreResponseBody: restoreBody,
-		scheme:            scheme,
-		host:              host,
-		decoder:           dec,
-		encoder:           enc,
+		scheme:              scheme,
+		host:                host,
+		decoder:             dec,
+		encoder:             enc,
 		{{- if hasWebSocket . }}
-		dialer: dialer,
-		configurer: cfn,
+		dialer:              dialer,
+		configfn:            cfn,
+		configurer:          configurer,
 		{{- end }}
 	}
 }

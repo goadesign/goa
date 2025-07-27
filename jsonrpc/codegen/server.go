@@ -73,6 +73,8 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 	funcs := map[string]any{
 		"isWebSocketEndpoint": httpcodegen.IsWebSocketEndpoint,
 		"isSSEEndpoint":       httpcodegen.IsSSEEndpoint,
+		"isNotification":      func(e *httpcodegen.EndpointData) bool { return e.Method.Result == "" },
+		"lowerInitial":        lowerInitial,
 	}
 	imports := []*codegen.ImportSpec{
 		{Path: "bufio"},
@@ -102,7 +104,16 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		&codegen.SectionTemplate{Name: "jsonrpc-server-service", Source: jsonrpcTemplates.Read(serverServiceT), Data: data},
 		&codegen.SectionTemplate{Name: "jsonrpc-server-use", Source: jsonrpcTemplates.Read(serverUseT), Data: data},
 		&codegen.SectionTemplate{Name: "jsonrpc-server-method-names", Source: jsonrpcTemplates.Read(serverMethodNamesT), Data: data},
-		&codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), FuncMap: funcs, Data: data},
+	)
+
+	// Use WebSocket server handler for WebSocket endpoints, regular handler for HTTP endpoints
+	if httpcodegen.HasWebSocket(data) {
+		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-websocket-server-handler", Source: jsonrpcTemplates.Read(websocketServerHandlerT), FuncMap: funcs, Data: data})
+	} else {
+		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), FuncMap: funcs, Data: data})
+	}
+
+	sections = append(sections,
 		&codegen.SectionTemplate{Name: "jsonrpc-server-mount", Source: jsonrpcTemplates.Read(serverMountT), Data: data},
 	)
 
@@ -116,4 +127,9 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 	}
 
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
+}
+
+// lowerInitial returns the string with the first letter in lowercase.
+func lowerInitial(s string) string {
+	return strings.ToLower(s[:1]) + s[1:]
 }

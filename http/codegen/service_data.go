@@ -98,8 +98,6 @@ type (
 		ServicePkgName string
 		// IsJSONRPC indicates if the endpoint is a JSON-RPC endpoint.
 		IsJSONRPC bool
-		// IsNotification indicates if the endpoint is a JSON-RPC notification.
-		IsNotification bool
 		// Payload describes the method HTTP payload.
 		Payload *PayloadData
 		// Result describes the method HTTP result.
@@ -219,8 +217,6 @@ type (
 		// IDAttribute is the name of the attribute where the ID of the
 		// JSON-RPC request is stored.
 		IDAttribute string
-		// IsNotification indicates if the payload is a JSON-RPC notification.
-		IsNotification bool
 	}
 
 	// ResultData contains the result information required to generate the
@@ -840,7 +836,6 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		ed := &EndpointData{
 			Method:          method,
 			IsJSONRPC:       httpEndpoint.IsJSONRPC(),
-			IsNotification:  httpEndpoint.IsNotification,
 			ServiceName:     svc.Name,
 			ServiceVarName:  svc.VarName,
 			ServicePkgName:  svc.PkgName,
@@ -1448,7 +1443,6 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		Ref:                ref,
 		Request:            request,
 		DecoderReturnValue: returnValue,
-		IsNotification:     e.IsNotification,
 	}
 	if e.IsJSONRPC() {
 		obj := expr.AsObject(e.MethodExpr.Payload.Type)
@@ -1502,24 +1496,25 @@ func (sds *ServicesData) buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 			}
 		}
 	}
-	data := &ResultData{
-		IsStruct:  expr.IsObject(result.Type),
-		Name:      name,
-		Ref:       ref,
-		Responses: responses,
-		View:      view,
-		MustInit:  mustInit,
-	}
-	if e.IsJSONRPC() {
-		obj := expr.AsObject(e.MethodExpr.Result.Type)
+	idAtt := ""
+	if e.IsJSONRPC() && result.Type != expr.Empty {
+		obj := expr.AsObject(result.Type)
 		for _, att := range *obj {
 			if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
-				data.IDAttribute = codegen.Goify(att.Name, true)
+				idAtt = codegen.Goify(att.Name, true)
 				break
 			}
 		}
 	}
-	return data
+	return &ResultData{
+		IsStruct:    expr.IsObject(result.Type),
+		Name:        name,
+		Ref:         ref,
+		IDAttribute: idAtt,
+		Responses:   responses,
+		View:        view,
+		MustInit:    mustInit,
+	}
 }
 
 // buildResponses builds the response data for all the responses in the endpoint

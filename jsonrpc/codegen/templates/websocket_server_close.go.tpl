@@ -1,5 +1,5 @@
 {{ printf "Close closes the %s service websocket connection." .Service.Name | comment }}
-func (s *{{ .Service.StructName }}Stream) Close() error {
+func (s *{{ lowerInitial .Service.StructName }}Stream) Close() error {
 	var err error
 	if s.conn == nil {
 		return nil

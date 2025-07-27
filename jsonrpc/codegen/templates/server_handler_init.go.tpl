@@ -46,7 +46,7 @@ func {{ .HandlerInit }}(
 		if err != nil {
 		{{- if isWebSocketEndpoint . }}
 			return err
-		{{- else if .IsNotification }}
+		{{- else if isNotification . }}
 			errhandler(ctx, w, fmt.Errorf("failed to decode parameters: %w", err))
 			return
 		{{- else }}

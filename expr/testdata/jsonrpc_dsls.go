@@ -129,9 +129,8 @@ var JSONRPCNotificationDSL = func() {
 				Attribute("event", String)
 				Attribute("data", Any)
 			})
-			JSONRPC(func() {
-				Notification()
-			})
+			// No Result() - automatically a notification
+			JSONRPC(func() {})
 		})
 	})
 }

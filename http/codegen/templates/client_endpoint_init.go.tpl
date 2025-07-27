@@ -1,12 +1,8 @@
 {{ printf "%s returns an endpoint that makes HTTP requests to the %s service %s server." .EndpointInit .ServiceName .Method.Name | comment }}
 func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.VarName }} {{ .MultipartRequestEncoder.FuncName }}{{ end }}) goa.Endpoint {
 	var (
-		{{- if and .ClientWebSocket .RequestEncoder }}
+		{{- if .RequestEncoder }}
 		encodeRequest  = {{ .RequestEncoder }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.InitName }}({{ .MultipartRequestEncoder.VarName }}){{ else }}c.encoder{{ end }})
-		{{- else }}
-			{{- if .RequestEncoder }}
-		encodeRequest  = {{ .RequestEncoder }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.InitName }}({{ .MultipartRequestEncoder.VarName }}){{ else }}c.encoder{{ end }})
-			{{- end }}
 		{{- end }}
 		{{- if not (isSSEEndpoint .) }}
 		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)

@@ -1,5 +1,5 @@
 {{ printf "Recv reads JSON-RPC requests from the %s service stream." .Service.Name | comment }}
-func (s *{{ .Service.StructName }}Stream) Recv(ctx context.Context) error {
+func (s *{{ lowerInitial .Service.StructName }}Stream) Recv(ctx context.Context) error {
 	var req jsonrpc.RawRequest
 	if err := s.conn.ReadJSON(&req); err != nil {
 		return err
@@ -7,7 +7,7 @@ func (s *{{ .Service.StructName }}Stream) Recv(ctx context.Context) error {
 	return s.processRequest(ctx, &req)
 }
 
-func (s *{{ .Service.StructName }}Stream) processRequest(ctx context.Context, req *jsonrpc.RawRequest) error {
+func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx context.Context, req *jsonrpc.RawRequest) error {
 	if req.JSONRPC != "2.0" {
 		if req.ID != nil {
 			return s.sendError(ctx, *req.ID, jsonrpc.InvalidRequest, fmt.Sprintf("Invalid JSON-RPC version, must be 2.0, got %q", req.JSONRPC), nil)

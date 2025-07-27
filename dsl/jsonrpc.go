@@ -24,7 +24,7 @@ const (
 	RPCInternalError = expr.RPCInternalError
 )
 
-// JSONRPC configures a service or method to use JSON-RPC 2.0 transport.
+// JSONRPC configures a service to use JSON-RPC 2.0 transport.
 // The generated code handles JSON-RPC protocol details: request parsing, method dispatch,
 // response formatting, and batch processing. All service JSON-RPC methods share
 // a single HTTP endpoint and must use the same transport (HTTP, WebSocket or SSE).
@@ -34,20 +34,26 @@ const (
 //   - At the API level: JSONRPC maps service errors to standard JSON-RPC error
 //     codes.
 //   - At the service level: JSONRPC sets the HTTP endpoint path for all
-//     JSON-RPC methods in the service and allows you to define common errors
-//     and their error code mappings.
+//     JSON-RPC methods in the service and defines common errors and their
+//     error code mappings.
 //   - At the method level: JSONRPC configures how the request and response "id"
-//     fields are mapped to payload/result attributes, specifies whether the
-//     method is a notification (no "id" field), and allows you to define
-//     method-specific error code mappings.
+//     fields are mapped to payload/result attributes and allows you to define 
+//     method-specific error code mappings. Methods without Result() are automatically
+//     treated as notifications (no response expected).
 //
 // Request Handling:
 //
 // The generated code decodes the JSON-RPC "params" field into the method
 // payload and the "id" field to the payload attribute specified by the ID
-// function.  For non-streaming methods, if the result's ID attribute is not
+// function.
+//
+// Non-Streaming:
+//
+// For non-streaming methods, if the result's ID attribute is not
 // already set, the generated code automatically copies the request ID from the
 // payload to the result's ID attribute.
+//
+// Non-Streaming Batch Requests:
 //
 // The generated code fully supports batch JSON-RPC requests: when the HTTP
 // request body contains an array of JSON-RPC request objects, it will unmarshal
@@ -55,12 +61,32 @@ const (
 // notifications), and marshal the responses into a single array of JSON-RPC
 // response objects in the HTTP response body.
 //
-// Streaming:
+// WebSocket:
 //
-// Methods using StreamingResult() support either Server-Sent Events or WebSockets.
-// With SSE, each result element is sent as a JSON-RPC response in a separate event.
-// With WebSockets, methods can use StreamingPayload() for bidirectional streaming,
-// where each payload/result element is sent as a complete JSON-RPC message.
+// For WebSocket transport, methods that use StreamingPayload() and/or StreamingResult()
+// enable bidirectional streaming: each payload or result element is sent as a separate,
+// complete JSON-RPC message over the WebSocket connection. When using WebSockets, all
+// methods must use StreamingPayload() for their payload (if any) and StreamingResult()
+// for their result (if any), because a single WebSocket connection is shared by all
+// methods of a service and client. Non-streaming methods are not supported over WebSockets.
+//
+// Server-Sent Events:
+//
+// For Server-Sent Events (SSE), enable SSE by calling the ServerSentEvents() function
+// within the JSONRPC expression. In this mode, each element of the result is sent as a
+// separate JSON-RPC response within its own SSE event. The SSE id field is mapped to
+// the result's ID attribute. Because all methods for a given service and client
+// share the same HTTP endpoint, every method must use both StreamingResult() and
+// ServerSentEvents() to ensure correct streaming behavior.
+//
+// Using JSON-RPC with Other Transports:
+//
+// Goa allows you to expose a single service or method over multiple transports.
+// For example, a method can have both standard HTTP or gRPC endpoints in addition
+// to a JSON-RPC endpoint. However, when using WebSocket or Server-Sent Events (SSE)
+// transports, all methods in the service must use the same transport type—either
+// all use standard HTTP or all use JSON-RPC—because WebSocket and SSE require
+// consistent transport configuration across all methods.
 //
 // Error Codes:
 //
@@ -74,43 +100,66 @@ const (
 // Example - Complete service with request/notification handling and streaming:
 //
 //	Service("calc", func() {
-//	    Error("timeout", ErrTimeout, "Request timed out") // ErrTimeout must have a limit attribute
+//	    Error("timeout", ErrTimeout, "Request timed out") // Define an error that all service methods can return
 //
 //	    JSONRPC(func() {
-//	        POST("/rpc")                                    // All methods use this endpoint
-//	        Response("timeout", func() {                    // Custom error response
-//	            Code(5001)                                  // Application error code
+//	        Response("timeout", func() {  // Define JSON-RPC error code for timeout
+//	            Code(5001)
 //	        })
 //	    })
 //
-//	    Method("notify", func() { // Notification method (no ID mapping)
+//	    Method("divide", func() {
 //	        Payload(func() {
-//	            Attribute("message", String, "Notification message")
-//	            Required("message")
-//	        })
-//	        JSONRPC(func() {
-//	            Notification() // This method is a notification and does not expect a response
-//	        })
-//	    })
-//
-//	    Method("divide", func() { // Request/response method
-//	        Payload(func() {
-//	            ID("req_id")                           // Map request ID to payload field
+//	            ID("req_id") // Map request ID to payload field
 //	            Attribute("dividend", Int, "Dividend")
 //	            Attribute("divisor", Int, "Divisor")
 //	            Required("dividend", "divisor")
 //	        })
 //	        Result(func() {
-//	            ID("req_id")                           // Map request ID to result field
+//	            ID("req_id") // Map request ID to result field
 //	            Attribute("result", Float64)
 //	        })
-//	        Error("div_zero", ErrorResult, "Division by zero")
+//	        Error("div_zero", ErrorResult, "Division by zero") // Define method-specific error
 //	        JSONRPC(func() {
 //	            Response("div_zero", RPCInvalidParams) // Map div_zero error to JSON-RPC code
 //	        })
+//	        HTTP(func() {
+//	            POST("/divide") // Also define a standard HTTP endpoint
+//	        })
 //	    })
+//	})
 //
-//	    Method("updates", func() {                    // SSE streaming method
+// Example - WebSocket streaming service:
+//
+//	Service("chat", func() {
+//	    JSONRPC(func() {
+//	        GET("/ws") // Use GET for WebSocket endpoint
+//	    })
+//	    Method("send", func() {
+//	        StreamingPayload(func() {
+//	            Attribute("message", String, "Message to send")
+//	        })
+//	        JSONRPC(func() {
+//	            // Method without Result() is automatically a notification
+//	        })
+//	    })
+//	    Method("receive", func() {
+//	        StreamingResult(func() {
+//	            Attribute("message", String, "Message received")
+//	        })
+//	        JSONRPC(func() {
+//	            // Method with StreamingResult() is not a notification
+//	        })
+//	    })
+//	})
+//
+// Example - SSE streaming service:
+//
+//	Service("updater", func() {
+//	    JSONRPC(func() {
+//	        POST("/sse") // Use POST for SSE endpoint
+//	    })
+//	    Method("listen", func() {
 //	        Payload(func() {
 //	            ID("id", String, "JSON-RPC request ID")
 //	            Attribute("last_event_id", String, "ID of last event received by client")
@@ -184,27 +233,3 @@ func ID(name string, args ...any) {
 	Attribute(name, args...)
 }
 
-// Notification indicates that the method is a notification and does not
-// expect a response.
-//
-// Notification must appear in a JSONRPC expression within a Method.
-//
-// Example:
-//
-//	Method("notify", func() {
-//	    Payload(func() {
-//	        Attribute("message", String, "Notification message")
-//	        Required("message")
-//	    })
-//	    JSONRPC(func() {
-//	        Notification() // This method is a notification and does not expect a response
-//	    })
-//	})
-func Notification() {
-	endpoint, ok := eval.Current().(*expr.HTTPEndpointExpr)
-	if !ok {
-		eval.IncompatibleDSL()
-		return
-	}
-	endpoint.IsNotification = true
-}

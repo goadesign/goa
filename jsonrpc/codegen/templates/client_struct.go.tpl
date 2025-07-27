@@ -10,13 +10,18 @@ type {{ .ClientStruct }} struct {
 	host       string
 	encoder    func(*http.Request) goahttp.Encoder
 	decoder    func(*http.Response) goahttp.Decoder
-	{{- if hasWebSocket . }}
+	{{- if hasWebSocket .  }}
 	dialer goahttp.Dialer
+	configfn goahttp.ConnConfigureFunc
 	configurer *ConnConfigurer
+
+	connMu sync.RWMutex
+	conn *jsonrpc.WebSocketConn
 	{{- end }}
 }
-
+{{- if not (hasWebSocket .) }}
 // bufferPool is a pool of bytes.Buffers for encoding requests.
 var bufferPool = sync.Pool{
 	New: func() any { return new(bytes.Buffer) },
 }
+{{- end }}

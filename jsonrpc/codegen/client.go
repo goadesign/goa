@@ -74,6 +74,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 			{Path: "time"},
 			{Path: "github.com/gorilla/websocket"},
 			codegen.GoaImport(""),
+			codegen.GoaImport("jsonrpc"),
 			codegen.GoaNamedImport("http", "goahttp"),
 			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
@@ -108,6 +109,14 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 				"isWebSocketEndpoint": httpcodegen.IsWebSocketEndpoint,
 				"isSSEEndpoint":       httpcodegen.IsSSEEndpoint,
 			},
+		})
+	}
+
+	if httpcodegen.HasWebSocket(data) {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "jsonrpc-client-websocket-conn",
+			Source: jsonrpcTemplates.Read(websocketClientConnT),
+			Data:   data,
 		})
 	}
 
