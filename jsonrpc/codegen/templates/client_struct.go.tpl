@@ -13,7 +13,6 @@ type {{ .ClientStruct }} struct {
 	{{- if hasWebSocket .  }}
 	dialer goahttp.Dialer
 	configfn goahttp.ConnConfigureFunc
-	configurer *ConnConfigurer
 
 	connMu sync.RWMutex
 	conn *jsonrpc.WebSocketConn

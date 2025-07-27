@@ -22,13 +22,13 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 			}
 			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
-		if c.configurer.{{ .Method.VarName }}Fn != nil {
+		if c.configfn != nil {
 			{{- if eq .ClientWebSocket.SendName "" }}
 			var cancel context.CancelFunc
 			ctx, cancel = context.WithCancel(ctx)
-			conn = c.configurer.{{ .Method.VarName }}Fn(conn, cancel)
+			conn = c.configfn(conn, cancel)
 			{{- else }}
-			conn = c.configurer.{{ .Method.VarName }}Fn(conn, nil)
+			conn = c.configfn(conn, nil)
 			{{- end }}
 		}
 		{{- if eq .ClientWebSocket.SendName "" }}

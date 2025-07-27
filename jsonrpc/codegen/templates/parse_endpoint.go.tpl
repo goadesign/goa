@@ -8,11 +8,6 @@ func ParseEndpoint(
 	restore bool,
 	{{- if streamingCmdExists .Commands }}
 	dialer goahttp.Dialer,
-		{{- range .Commands }}
-			{{- if .NeedDialer }}
-				{{ .VarName }}Configurer *{{ .PkgName }}.ConnConfigurer,
-			{{- end }}
-		{{- end }}
 	{{- end }}
 	{{- range $i, $c := .Commands }}
 	{{- range .Subcommands }}
@@ -35,7 +30,7 @@ func ParseEndpoint(
 		switch svcn {
 	{{- range .Commands }}
 		case "{{ .Name }}":
-			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedDialer }}, dialer, nil, {{ .VarName }}Configurer{{ end }})
+			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedDialer }}, dialer, nil, nil{{ end }})
 			switch epn {
 		{{- $pkgName := .PkgName }}
 		{{- range .Subcommands }}

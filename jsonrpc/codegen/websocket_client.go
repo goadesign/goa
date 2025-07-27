@@ -61,14 +61,6 @@ func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 // 		},
 // 	})
 
-// 	// Add ConnConfigurer struct for WebSocket connections
-// 	sections = append(sections, &codegen.SectionTemplate{
-// 		Name:    "jsonrpc-websocket-conn-configurer-struct",
-// 		Source:  jsonrpcTemplates.Read(websocketConnConfigurerStructT),
-// 		Data:    data,
-// 		FuncMap: map[string]any{"isWebSocketEndpoint": httpcodegen.IsWebSocketEndpoint},
-// 	})
-
 // 	// Add request/response types for all WebSocket endpoints
 // 	for _, e := range data.Endpoints {
 // 		sections = append(sections, &codegen.SectionTemplate{
@@ -87,13 +79,6 @@ func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 // 			"hasWebSocket": httpcodegen.HasWebSocket,
 // 			"hasSSE":       httpcodegen.HasSSE,
 // 		},
-// 	})
-
-// 	sections = append(sections, &codegen.SectionTemplate{
-// 		Name:    "jsonrpc-websocket-conn-configurer-struct-init",
-// 		Source:  jsonrpcTemplates.Read(websocketConnConfigurerStructInitT),
-// 		Data:    data,
-// 		FuncMap: map[string]any{"isWebSocketEndpoint": httpcodegen.IsWebSocketEndpoint},
 // 	})
 
 // 	// Process only WebSocket endpoints - add methods

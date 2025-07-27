@@ -59,10 +59,10 @@ func {{ .HandlerInit }}(
 		{{- end }}
 		}
 	{{- end }}
-	{{ if or (isWebSocketEndpoint .) .IsNotification }}_{{ else }}res{{ end }}, err {{if not (and (or (isWebSocketEndpoint .) .IsNotification) .Payload.Ref)}}:{{end}}= endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
+	{{ if or (isWebSocketEndpoint .) (isNotification .) }}_{{ else }}res{{ end }}, err {{if not (and (or (isWebSocketEndpoint .) (isNotification .)) .Payload.Ref)}}:{{end}}= endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
 	{{- if isWebSocketEndpoint . }}
 		return err
-	{{- else if .IsNotification }}
+	{{- else if isNotification . }}
 		if err != nil {
 			errhandler(ctx, w, fmt.Errorf("failed to call endpoint: %w", err))
 		}

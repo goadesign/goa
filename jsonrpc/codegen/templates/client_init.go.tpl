@@ -9,7 +9,6 @@ func New{{ .ClientStruct }}(
 	{{- if hasWebSocket . }}
 	dialer goahttp.Dialer,
 	cfn goahttp.ConnConfigureFunc,
-	configurer *ConnConfigurer,
 	{{- end }}
 ) *{{ .ClientStruct }} {
 	return &{{ .ClientStruct }}{
@@ -22,7 +21,6 @@ func New{{ .ClientStruct }}(
 		{{- if hasWebSocket . }}
 		dialer:              dialer,
 		configfn:            cfn,
-		configurer:          configurer,
 		{{- end }}
 	}
 }

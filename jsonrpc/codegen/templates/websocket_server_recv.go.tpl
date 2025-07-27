@@ -25,7 +25,7 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx contex
 	switch req.Method {
 	{{- range .Endpoints }}
 		case {{ printf "%q" .Method.Name }}:
-			return s.{{ .Method.VarName }}(ctx, s.r, req)
+			return s.{{ lowerInitial .Method.VarName }}(ctx, s.r, req)
 	{{- end }}
 	default:
 		if req.ID != nil {
