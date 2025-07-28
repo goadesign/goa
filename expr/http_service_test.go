@@ -20,6 +20,7 @@ func TestHTTPServiceValidate(t *testing.T) {
 		{"jsonrpc websocket with cookies", jsonrpcWebSocketWithCookiesDSL, "", `JSON-RPC endpoint "method" using WebSocket cannot have cookie mappings`},
 		{"jsonrpc websocket with params", jsonrpcWebSocketWithParamsDSL, "", `JSON-RPC endpoint "method" using WebSocket cannot have parameter mappings`},
 		{"jsonrpc websocket with all mappings", jsonrpcWebSocketWithAllMappingsDSL, "", `JSON-RPC endpoint "method" using WebSocket cannot have header mappings`},
+		{"mixed jsonrpc and pure http websocket", mixedJSONRPCAndHTTPWebSocketDSL, "", `Service cannot mix JSON-RPC WebSocket endpoints with pure HTTP WebSocket endpoints`},
 	}
 
 	for _, tc := range cases {
@@ -147,6 +148,33 @@ var jsonrpcWebSocketWithAllMappingsDSL = func() {
 				Params(func() {
 					Param("id", String)
 				})
+			})
+		})
+	})
+}
+
+var mixedJSONRPCAndHTTPWebSocketDSL = func() {
+	Service("calc", func() {
+		// JSON-RPC WebSocket endpoint
+		Method("jsonrpc_method", func() {
+			StreamingPayload(func() {
+				ID("request_id", String)
+				Attribute("data", String)
+				Required("request_id")
+			})
+			StreamingResult(func() {
+				ID("response_id", String)
+				Attribute("value", String)
+				Required("response_id")
+			})
+			JSONRPC(func() {})
+		})
+
+		// Pure HTTP WebSocket endpoint
+		Method("http_method", func() {
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/stream")
 			})
 		})
 	})

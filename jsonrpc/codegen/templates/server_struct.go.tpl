@@ -5,7 +5,7 @@ type {{ .ServerStruct }} struct {
 	Methods []string
 {{- if isWebSocketEndpoint (index .Endpoints 0) }}
 	// StreamHandler is the handler for the streaming service.
-	StreamHandler func(context.Context, Stream) error
+	StreamHandler func(context.Context, {{ .Service.PkgName }}.Stream) error
 {{- end }}
 {{ range .Endpoints }}
 	{{- if isWebSocketEndpoint . }}

@@ -30,9 +30,6 @@ type (
 		// Schemes contains the security schemes types used by the
 		// all the endpoints.
 		Schemes SchemesData
-		// HasJSONRPCWebSocket indicates that the service has a JSON-RPC
-		// WebSocket endpoint.
-		HasJSONRPCWebSocket bool
 		// HasServerInterceptors indicates that the service has server-side
 		// interceptors.
 		HasServerInterceptors bool
@@ -88,9 +85,6 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 			Name:   "endpoints-struct",
 			Source: serviceTemplates.Read(serviceEndpointsT),
 			Data:   data,
-			FuncMap: map[string]any{
-				"hasJSONRPCWebSocket": hasJSONRPCWebSocket,
-			},
 		}
 		sections = []*codegen.SectionTemplate{header, def}
 		for _, m := range data.Methods {
@@ -163,7 +157,6 @@ func endpointData(svc *Data) *EndpointsData {
 		Schemes:               svc.Schemes,
 		HasServerInterceptors: len(svc.ServerInterceptors) > 0,
 		HasClientInterceptors: len(svc.ClientInterceptors) > 0,
-		HasJSONRPCWebSocket:   hasJSONRPCWebSocket(svc),
 	}
 }
 

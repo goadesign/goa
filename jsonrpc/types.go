@@ -101,6 +101,15 @@ func MakeErrorResponse(id any, code Code, message string, data any) *Response {
 	}
 }
 
+// MakeNotification creates a notification.
+func MakeNotification(method string, params any) *Request {
+	return &Request{
+		JSONRPC: "2.0",
+		Method:  method,
+		Params:  params,
+	}
+}
+
 // Error returns a string representation of the error.
 func (e *ErrorResponse) Error() string {
 	return fmt.Sprintf("jsonrpc: code %d: %s", e.Code, e.Message)

@@ -1,5 +1,8 @@
 {{ printf "%s creates a JSON-RPC server which loads HTTP requests and calls the %q service methods." .ServerInit .Service.Name | comment }}
 func {{ .ServerInit }}(
+{{- if isWebSocketEndpoint (index .Endpoints 0) }}
+	streamHandler func(context.Context, {{ .Service.PkgName }}.Stream) error,
+{{- end }}
 	endpoints *{{ .Service.PkgName }}.Endpoints,
 	mux goahttp.Muxer,
 	decoder func(*http.Request) goahttp.Decoder,
@@ -17,7 +20,7 @@ func {{ .ServerInit }}(
 			{{- end }}
 		},
 {{- if isWebSocketEndpoint (index .Endpoints 0) }}
-		StreamHandler: endpoints.HandleStream,
+		StreamHandler: streamHandler,
 {{- end }}
 {{- range .Endpoints }}
 	{{- if isWebSocketEndpoint . }}

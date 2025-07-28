@@ -92,10 +92,16 @@ const (
 //
 // Goa allows you to expose a single service or method over multiple transports.
 // For example, a method can have both standard HTTP or gRPC endpoints in addition
-// to a JSON-RPC endpoint. However, when using WebSocket or Server-Sent Events (SSE)
-// transports, all methods in the service must use the same transport type—either
-// all use standard HTTP or all use JSON-RPC—because WebSocket and SSE require
-// consistent transport configuration across all methods.
+// to a JSON-RPC endpoint.
+//
+// Important WebSocket Limitation:
+//
+// A service cannot mix JSON-RPC WebSocket endpoints with pure HTTP WebSocket endpoints.
+// This is because JSON-RPC WebSocket uses a single underlying WebSocket connection
+// for all methods in the service, with method dispatch happening at the protocol level
+// through JSON-RPC message routing. In contrast, pure HTTP WebSocket creates individual
+// connections per streaming endpoint. These two approaches are fundamentally incompatible
+// and cannot coexist in the same service.
 //
 // Error Codes:
 //

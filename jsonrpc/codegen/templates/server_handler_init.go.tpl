@@ -8,7 +8,7 @@ func {{ .HandlerInit }}(
 	errhandler func(context.Context, http.ResponseWriter, error),
 {{- end }}
 ) func(context.Context, *http.Request, *jsonrpc.RawRequest{{ if not (isWebSocketEndpoint .) }}, http.ResponseWriter{{ end }}){{ if isWebSocketEndpoint . }} error{{ end }} {
-{{- if (not (isSSEEndpoint .)) }}
+{{- if and (not (isSSEEndpoint .)) .Payload.Ref }}
 	decodeParams := {{ .RequestDecoder }}(mux, decoder)
 {{- end }}
 	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest{{ if not (isWebSocketEndpoint .) }}, w http.ResponseWriter{{ end }}){{ if isWebSocketEndpoint . }}error{{ end }} {

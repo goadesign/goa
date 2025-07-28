@@ -198,31 +198,66 @@ func (svc *HTTPServiceExpr) Prepare() {
 // Validate makes sure the service is valid.
 func (svc *HTTPServiceExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
+
+	// Validate attributes
+	svc.validateAttributes(verr)
+
+	// Validate parent service
+	svc.validateParent(verr)
+
+	// Validate canonical endpoint
+	svc.validateCanonicalEndpoint(verr)
+
+	// Validate errors
+	svc.validateErrors(verr)
+
+	// Validate transport compatibility
+	svc.validateTransports(verr)
+
+	return verr
+}
+
+// validateAttributes validates service parameters and headers
+func (svc *HTTPServiceExpr) validateAttributes(verr *eval.ValidationErrors) {
 	if svc.Params != nil {
 		verr.Merge(svc.Params.Validate("parameters", svc))
 	}
 	if svc.Headers != nil {
 		verr.Merge(svc.Headers.Validate("headers", svc))
 	}
-	if n := svc.ParentName; n != "" {
-		if p := svc.Root.Service(n); p == nil {
-			verr.Add(svc, "Parent service %s not found", n)
-		} else {
-			if p.CanonicalEndpoint() == nil {
-				verr.Add(svc, "Parent service %s has no canonical endpoint", n)
-			}
-			if p.ParentName == svc.Name() {
-				verr.Add(svc, "Parent service %s is also child", n)
-			}
-		}
-	}
-	if n := svc.CanonicalEndpointName; n != "" {
-		if a := svc.Endpoint(n); a == nil {
-			verr.Add(svc, "Unknown canonical endpoint %s", n)
-		}
+}
+
+// validateParent validates parent service configuration
+func (svc *HTTPServiceExpr) validateParent(verr *eval.ValidationErrors) {
+	n := svc.ParentName
+	if n == "" {
+		return
 	}
 
-	// Validate errors (have status codes and bodies are valid)
+	p := svc.Root.Service(n)
+	if p == nil {
+		verr.Add(svc, "Parent service %s not found", n)
+		return
+	}
+
+	if p.CanonicalEndpoint() == nil {
+		verr.Add(svc, "Parent service %s has no canonical endpoint", n)
+	}
+	if p.ParentName == svc.Name() {
+		verr.Add(svc, "Parent service %s is also child", n)
+	}
+}
+
+// validateCanonicalEndpoint validates canonical endpoint configuration
+func (svc *HTTPServiceExpr) validateCanonicalEndpoint(verr *eval.ValidationErrors) {
+	n := svc.CanonicalEndpointName
+	if n != "" && svc.Endpoint(n) == nil {
+		verr.Add(svc, "Unknown canonical endpoint %s", n)
+	}
+}
+
+// validateErrors validates HTTP errors
+func (svc *HTTPServiceExpr) validateErrors(verr *eval.ValidationErrors) {
 	for _, er := range svc.HTTPErrors {
 		verr.Merge(er.Validate())
 	}
@@ -235,43 +270,69 @@ func (svc *HTTPServiceExpr) Validate() error {
 		// things simple for now.
 		verr.Merge(er.Validate())
 	}
+}
 
-	// Make sure all JSON-RPC endpoints use the same transport
-	hasHTTP, hasWS, hasSSE := false, false, false
+// validateTransports validates transport compatibility and JSON-RPC constraints
+func (svc *HTTPServiceExpr) validateTransports(verr *eval.ValidationErrors) {
+	var (
+		hasJSONRPCWebSocket  bool
+		hasPureHTTPWebSocket bool
+		jsonrpcTransports    = make(map[string]bool)
+	)
+
+	// Analyze endpoints
 	for _, e := range svc.HTTPEndpoints {
-		if e.MethodExpr.IsStreaming() {
-			if e.SSE == nil {
-				hasWS = true
+		isStreaming := e.MethodExpr.IsStreaming()
+		usesWebSocket := isStreaming && e.SSE == nil
+
+		if e.IsJSONRPC() {
+			if usesWebSocket {
+				hasJSONRPCWebSocket = true
+				jsonrpcTransports["WebSocket"] = true
+			} else if isStreaming {
+				jsonrpcTransports["SSE"] = true
 			} else {
-				hasSSE = true
+				jsonrpcTransports["HTTP"] = true
 			}
-		} else {
-			hasHTTP = true
+		} else if usesWebSocket {
+			hasPureHTTPWebSocket = true
 		}
 	}
-	if (hasHTTP && hasWS) || (hasHTTP && hasSSE) || (hasWS && hasSSE) {
+
+	// Validate JSON-RPC and pure HTTP WebSocket mixing
+	if hasJSONRPCWebSocket && hasPureHTTPWebSocket {
+		verr.Add(svc, "Service cannot mix JSON-RPC WebSocket endpoints with pure HTTP WebSocket endpoints. JSON-RPC uses a single WebSocket connection for all methods, while pure HTTP WebSocket creates individual connections per endpoint.")
+	}
+
+	// Validate JSON-RPC transport consistency
+	if len(jsonrpcTransports) > 1 {
 		verr.Add(svc, "All JSON-RPC endpoints of a given service must use the same transport (HTTP, WebSocket or SSE)")
 	}
 
-	// For JSON-RPC services using WebSocket, ensure no header, param, or cookie mappings
-	if hasWS {
-		for _, e := range svc.HTTPEndpoints {
-			if !e.IsJSONRPC() {
-				continue
-			}
-			if !e.Headers.IsEmpty() {
-				verr.Add(e, "JSON-RPC endpoint %q using WebSocket cannot have header mappings", e.MethodExpr.Name)
-			}
-			if !e.Cookies.IsEmpty() {
-				verr.Add(e, "JSON-RPC endpoint %q using WebSocket cannot have cookie mappings", e.MethodExpr.Name)
-			}
-			if !e.Params.IsEmpty() {
-				verr.Add(e, "JSON-RPC endpoint %q using WebSocket cannot have parameter mappings", e.MethodExpr.Name)
-			}
+	// Validate JSON-RPC WebSocket constraints
+	if hasJSONRPCWebSocket {
+		svc.validateJSONRPCWebSocketConstraints(verr)
+	}
+}
+
+// validateJSONRPCWebSocketConstraints validates constraints for JSON-RPC WebSocket endpoints
+func (svc *HTTPServiceExpr) validateJSONRPCWebSocketConstraints(verr *eval.ValidationErrors) {
+	for _, e := range svc.HTTPEndpoints {
+		if !e.IsJSONRPC() {
+			continue
+		}
+
+		name := e.MethodExpr.Name
+		if !e.Headers.IsEmpty() {
+			verr.Add(e, "JSON-RPC endpoint %q using WebSocket cannot have header mappings", name)
+		}
+		if !e.Cookies.IsEmpty() {
+			verr.Add(e, "JSON-RPC endpoint %q using WebSocket cannot have cookie mappings", name)
+		}
+		if !e.Params.IsEmpty() {
+			verr.Add(e, "JSON-RPC endpoint %q using WebSocket cannot have parameter mappings", name)
 		}
 	}
-
-	return verr
 }
 
 // Finalize initializes the path if no path is set in design.

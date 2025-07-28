@@ -41,7 +41,7 @@ type Auther interface {
 {{- end }}
 
 {{- range .Methods }}
-	{{- if and .ServerStream (not .IsJSONRPC) }}
+	{{- if .ServerStream }}
 		{{ template "stream_interface" (streamInterfaceFor "server" . .ServerStream) }}
 		{{ template "stream_interface" (streamInterfaceFor "client" . .ClientStream) }}
 	{{- end }}
