@@ -1,11 +1,22 @@
 {{- range .Endpoints }}
 	{{- if .Result.Ref }}
+		{{- if .Payload.Ref }}
 {{ printf "Send%s sends a JSON-RPC response for the %s method." .Method.VarName .Method.Name | comment }}
 func (s *{{ lowerInitial $.Service.StructName }}Stream) Send{{ .Method.VarName }}(ctx context.Context, result {{ .Result.Ref }}) error {
+			{{- if .Result.IDAttribute }}
 	id := result.{{ .Result.IDAttribute }}
 	result.{{ .Result.IDAttribute }} = ""
+			{{- else }}
+	id := ""
+			{{- end }}
 	return s.send(id, result)
 }
+		{{- else }}
+{{ printf "Send%s sends a JSON-RPC notification for the %s method." .Method.VarName .Method.Name | comment }}
+func (s *{{ lowerInitial $.Service.StructName }}Stream) Send{{ .Method.VarName }}(ctx context.Context, params {{ .Result.Ref }}) error {
+	return s.conn.WriteJSON(jsonrpc.MakeNotification({{ printf "%q" .Method.Name }}, params))
+}
+		{{- end }}
 	{{- end }}
 {{- end }}
 

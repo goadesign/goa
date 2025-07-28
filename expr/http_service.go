@@ -253,6 +253,24 @@ func (svc *HTTPServiceExpr) Validate() error {
 		verr.Add(svc, "All JSON-RPC endpoints of a given service must use the same transport (HTTP, WebSocket or SSE)")
 	}
 
+	// For JSON-RPC services using WebSocket, ensure no header, param, or cookie mappings
+	if hasWS {
+		for _, e := range svc.HTTPEndpoints {
+			if !e.IsJSONRPC() {
+				continue
+			}
+			if !e.Headers.IsEmpty() {
+				verr.Add(e, "JSON-RPC endpoint %q using WebSocket cannot have header mappings", e.MethodExpr.Name)
+			}
+			if !e.Cookies.IsEmpty() {
+				verr.Add(e, "JSON-RPC endpoint %q using WebSocket cannot have cookie mappings", e.MethodExpr.Name)
+			}
+			if !e.Params.IsEmpty() {
+				verr.Add(e, "JSON-RPC endpoint %q using WebSocket cannot have parameter mappings", e.MethodExpr.Name)
+			}
+		}
+	}
+
 	return verr
 }
 

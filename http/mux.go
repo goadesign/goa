@@ -13,7 +13,7 @@ import (
 
 type (
 	// Muxer is the HTTP request multiplexer interface used by the generated
-	// code. ServerHTTP must match the HTTP method and URL of each incoming
+	// code. ServeHTTP must match the HTTP method and URL of each incoming
 	// request against the list of registered patterns and call the handler
 	// for the corresponding method and the pattern that most closely
 	// matches the URL.

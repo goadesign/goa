@@ -77,20 +77,21 @@ func {{ .HandlerInit }}(
 				return
 			}
 			switch en.GoaErrorName() {
-			{{- range $gerr := .Errors }}
+		{{- range $gerr := .Errors }}
 			{{- range $err := $gerr.Errors }}
 			case {{ printf "%q" .Name }}:
 				{{- with .Response}}
 				encodeJSONRPCError(ctx, w, req, {{ .Code }}, err.Error(), err, encoder, errhandler)
 				{{- end }}
 			{{- end }}
-			{{- end }}
+		{{- end }}
 			default:
 				encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
 			}
 			return
 		}
 
+		{{- if .Result.IDAttribute }}
 		var id any
 		actual := res.({{ .Result.Ref }})
 		if actual.{{ .Result.IDAttribute }} != "" {
@@ -98,6 +99,9 @@ func {{ .HandlerInit }}(
 		} else {
 			id = req.ID
 		}
+		{{- else }}
+		id := req.ID
+		{{- end }}
 		response := jsonrpc.MakeSuccessResponse(id, res)
 		if err := encoder(ctx, w).Encode(response); err != nil {
 			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))

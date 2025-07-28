@@ -70,6 +70,15 @@ const (
 // for their result (if any), because a single WebSocket connection is shared by all
 // methods of a service and client. Non-streaming methods are not supported over WebSockets.
 //
+// WebSocket methods can have three patterns:
+//   - StreamingPayload() only: Client-to-server notifications (no response)
+//   - StreamingResult() only: Server-to-client notifications (no request ID, sent without client request)
+//   - Both StreamingPayload() and StreamingResult(): Bidirectional request/response streaming
+//
+// Server-side notifications (methods with StreamingResult() but no StreamingPayload()) are
+// sent from the server to the client without an associated request ID, as they are not
+// responses to client requests but rather server-initiated messages.
+//
 // Server-Sent Events:
 //
 // For Server-Sent Events (SSE), enable SSE by calling the ServerSentEvents() function
@@ -140,15 +149,29 @@ const (
 //	            Attribute("message", String, "Message to send")
 //	        })
 //	        JSONRPC(func() {
-//	            // Method without Result() is automatically a notification
+//	            // Client-to-server notification (no response)
 //	        })
 //	    })
-//	    Method("receive", func() {
+//	    Method("notify", func() {
 //	        StreamingResult(func() {
-//	            Attribute("message", String, "Message received")
+//	            Attribute("event", String, "Server notification")
+//	            Attribute("data", Any, "Notification data")
 //	        })
 //	        JSONRPC(func() {
-//	            // Method with StreamingResult() is not a notification
+//	            // Server-to-client notification (no request ID, server-initiated)
+//	        })
+//	    })
+//	    Method("echo", func() {
+//	        StreamingPayload(func() {
+//	            ID("req_id", String, "Request ID")
+//	            Attribute("message", String, "Message to echo")
+//	        })
+//	        StreamingResult(func() {
+//	            ID("req_id", String, "Request ID")
+//	            Attribute("echo", String, "Echoed message")
+//	        })
+//	        JSONRPC(func() {
+//	            // Bidirectional request/response streaming
 //	        })
 //	    })
 //	})

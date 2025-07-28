@@ -554,18 +554,19 @@ func (e *HTTPEndpointExpr) Validate() error {
 	}
 
 	// Validate JSON-RPC ID attributes (only for non-notifications)
-	if e.IsJSONRPC() && e.MethodExpr.Result.Type != Empty {
-		var payload *Object
+	if e.IsJSONRPC() {
+		var payload *AttributeExpr
 		if e.MethodExpr.IsPayloadStreaming() {
-			payload = AsObject(e.MethodExpr.StreamingPayload.Type)
+			payload = e.MethodExpr.StreamingPayload
 		} else {
-			payload = AsObject(e.MethodExpr.Payload.Type)
+			payload = e.MethodExpr.Payload
 		}
-		if payload == nil {
+		obj := AsObject(payload.Type)
+		if obj == nil {
 			verr.Add(e, "JSON-RPC method %q payload must be an object (batch JSON-RPC request).", e.MethodExpr.Name)
 		}
 		var payloadRequestID string
-		for _, att := range *payload {
+		for _, att := range *obj {
 			if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
 				payloadRequestID = att.Name
 				if att.Attribute.Type != String {
@@ -574,12 +575,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 				break
 			}
 		}
-		if payloadRequestID == "" {
-			verr.Add(e, "JSON-RPC method %q payload must have an ID attribute.", e.MethodExpr.Name)
-		}
-		required := e.MethodExpr.IsPayloadStreaming() && e.MethodExpr.StreamingPayload.IsRequired(payloadRequestID) ||
-			!e.MethodExpr.IsPayloadStreaming() && e.MethodExpr.Payload.IsRequired(payloadRequestID)
-		if !required {
+		if payloadRequestID != "" && !payload.IsRequired(payloadRequestID) {
 			verr.Add(e, "JSON-RPC request id payload attribute %q must be required.", payloadRequestID)
 		}
 
@@ -597,10 +593,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 				break
 			}
 		}
-		if resultRequestID == "" {
-			verr.Add(e, "JSON-RPC method %q result must have an ID attribute.", e.MethodExpr.Name)
-		}
-		if !e.MethodExpr.Result.IsRequired(resultRequestID) {
+		if resultRequestID != "" && !e.MethodExpr.Result.IsRequired(resultRequestID) {
 			verr.Add(e, "JSON-RPC request id result attribute %q must be required.", resultRequestID)
 		}
 	}

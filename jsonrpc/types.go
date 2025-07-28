@@ -20,7 +20,7 @@ type (
 		JSONRPC string         `json:"jsonrpc"`
 		Result  any            `json:"result,omitempty"`
 		Error   *ErrorResponse `json:"error,omitempty"`
-		ID      any            `json:"id"`
+		ID      any            `json:"id,omitempty"`
 	}
 
 	// ErrorResponse represents a JSON-RPC error response.
@@ -44,7 +44,7 @@ type (
 		JSONRPC string            `json:"jsonrpc"`
 		Result  json.RawMessage   `json:"result,omitempty"`
 		Error   *RawErrorResponse `json:"error,omitempty"`
-		ID      string            `json:"id"`
+		ID      string            `json:"id,omitempty"`
 	}
 
 	// RawErrorResponse represents a JSON-RPC error response with marshalled
