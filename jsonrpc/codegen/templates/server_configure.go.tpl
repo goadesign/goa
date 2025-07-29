@@ -25,9 +25,9 @@
 	{{- end }}
 	{{- range $svc := .JSONRPCServices }}
 		{{-  if .Endpoints }}
-		{{ .Service.VarName }}JSONRPCServer = {{ .Service.PkgName }}jssvr.New({{ .Service.VarName }}Endpoints, mux, dec, enc, eh{{ if hasWebSocket $svc }}, upgrader, nil{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }}{{ range .FileServers }}, nil{{ end }})
+		{{ .Service.VarName }}JSONRPCServer = {{ .Service.PkgName }}jssvr.New({{ .Service.VarName }}Svc.HandleStream, {{ .Service.VarName }}Endpoints, mux, dec, enc, eh{{ if hasWebSocket $svc }}, upgrader, nil{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }}{{ range .FileServers }}, nil{{ end }})
 		{{-  else }}
-		{{ .Service.VarName }}JSONRPCServer = {{ .Service.PkgName }}jssvr.New(nil, mux, dec, enc, eh{{ range .FileServers }}, nil{{ end }})
+		{{ .Service.VarName }}JSONRPCServer = {{ .Service.PkgName }}jssvr.New({{ .Service.VarName }}Svc.HandleStream, nil, mux, dec, enc, eh{{ range .FileServers }}, nil{{ end }})
 		{{-  end }}
 	{{- end }}
 	}

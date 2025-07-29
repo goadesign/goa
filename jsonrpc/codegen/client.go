@@ -71,6 +71,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 			{Path: "strconv"},
 			{Path: "strings"},
 			{Path: "sync"},
+			{Path: "sync/atomic"},
 			{Path: "time"},
 			{Path: "github.com/gorilla/websocket"},
 			codegen.GoaImport(""),

@@ -39,10 +39,9 @@ const (
 	websocketServerCloseT   = "websocket_server_close"
 
 	// JSON-RPC WebSocket client templates
-	websocketClientConnT     = "websocket_client_conn"
-	websocketClientEndpointT = "websocket_client_endpoint"
-	websocketClientStreamT   = "websocket_client_stream"
-	websocketClientTypesT    = "websocket_client_types"
+	websocketClientConnT         = "websocket_client_conn"
+	websocketClientStreamT       = "websocket_client_stream"
+	websocketStreamErrorTypesT   = "websocket_stream_error_types"
 
 	// Partial templates
 	clientTypeConversionP   = "client_type_conversion"

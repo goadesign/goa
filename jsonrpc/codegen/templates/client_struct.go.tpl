@@ -15,7 +15,11 @@ type {{ .ClientStruct }} struct {
 	configfn goahttp.ConnConfigureFunc
 
 	connMu sync.RWMutex
-	conn *jsonrpc.WebSocketConn
+	conn   *websocket.Conn
+	closed atomic.Bool
+	
+	// Stream configuration (shared by all WebSocket streams)
+	streamConfig *jsonrpc.StreamConfig
 	{{- end }}
 }
 {{- if not (hasWebSocket .) }}

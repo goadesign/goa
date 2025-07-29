@@ -18,7 +18,6 @@ func (j *JSONRPCExpr) Prepare() {
 	j.Params = Root.API.HTTP.Params
 	j.Headers = Root.API.HTTP.Headers
 	j.Cookies = Root.API.HTTP.Cookies
-	j.Services = Root.API.HTTP.Services
 	j.Errors = Root.API.HTTP.Errors
 	j.SSE = Root.API.HTTP.SSE
 }

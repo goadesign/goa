@@ -9,8 +9,14 @@ func New{{ .ClientStruct }}(
 	{{- if hasWebSocket . }}
 	dialer goahttp.Dialer,
 	cfn goahttp.ConnConfigureFunc,
+	streamOpts ...jsonrpc.StreamConfigOption,
 	{{- end }}
 ) *{{ .ClientStruct }} {
+	{{- if hasWebSocket . }}
+	// Create stream configuration from options
+	streamConfig := jsonrpc.NewStreamConfig(streamOpts...)
+	{{- end }}
+	
 	return &{{ .ClientStruct }}{
 		Doer:                doer,
 		RestoreResponseBody: restoreBody,
@@ -21,6 +27,7 @@ func New{{ .ClientStruct }}(
 		{{- if hasWebSocket . }}
 		dialer:              dialer,
 		configfn:            cfn,
+		streamConfig:        streamConfig,
 		{{- end }}
 	}
 }

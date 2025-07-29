@@ -1,7 +1,8 @@
 package codegen
 
 import (
-	"strings"
+	"fmt"
+	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -9,107 +10,63 @@ import (
 )
 
 func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
-	f := httpcodegen.WebsocketClientFile(genpkg, svc, services)
-	if f == nil {
+	data := services.Get(svc.Name())
+	if !httpcodegen.HasWebSocket(data) {
 		return nil
 	}
-	updateHeader(f)
-	f.Path = strings.Replace(f.Path, "/http/", "/jsonrpc/", 1)
-	return f
+
+	svcName := data.Service.PathName
+	title := fmt.Sprintf("%s WebSocket JSON-RPC client", svc.Name())
+
+	// Build imports list for WebSocket clients
+	imports := []*codegen.ImportSpec{
+		{Path: "bytes"},
+		{Path: "context"},
+		{Path: "encoding/json"},
+		{Path: "fmt"},
+		{Path: "io"},
+		{Path: "net/http"},
+		{Path: "strconv"},
+		{Path: "sync"},
+		{Path: "sync/atomic"},
+		{Path: "time"},
+		{Path: "github.com/gorilla/websocket"},
+		codegen.GoaImport(""),
+		codegen.GoaImport("jsonrpc"),
+		codegen.GoaNamedImport("http", "goahttp"),
+		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+	}
+	imports = append(imports, data.Service.UserTypeImports...)
+
+	sections := []*codegen.SectionTemplate{
+		codegen.Header(title, "client", imports),
+	}
+
+	// Add common error handling types for all streams
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "jsonrpc-websocket-stream-error-types",
+		Source: jsonrpcTemplates.Read(websocketStreamErrorTypesT),
+	})
+
+	// Process only WebSocket endpoints and generate stream implementations only
+	for _, e := range data.Endpoints {
+		if !httpcodegen.IsWebSocketEndpoint(e) {
+			continue
+		}
+
+		// Add stream implementation (endpoint methods are in client.go)
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "jsonrpc-websocket-client-stream",
+			Source: jsonrpcTemplates.Read(websocketClientStreamT),
+			Data:   e.ClientWebSocket,
+		})
+	}
+
+	return &codegen.File{
+		Path:             filepath.Join(codegen.Gendir, "jsonrpc", svcName, "client", "websocket.go"),
+		SectionTemplates: sections,
+	}
 }
-
-// 	data := services.Get(svc.Name())
-// 	if !httpcodegen.HasWebSocket(data) {
-// 		return nil
-// 	}
-
-// 	svcName := data.Service.PathName
-// 	title := fmt.Sprintf("%s WebSocket JSON-RPC client streaming", svc.Name())
-// 	imports := []*codegen.ImportSpec{
-// 		{Path: "bytes"},
-// 		{Path: "context"},
-// 		{Path: "encoding/json"},
-// 		{Path: "fmt"},
-// 		{Path: "io"},
-// 		{Path: "net/http"},
-// 		{Path: "strconv"},
-// 		{Path: "strings"},
-// 		{Path: "sync"},
-// 		{Path: "sync/atomic"},
-// 		{Path: "time"},
-// 		{Path: "github.com/gorilla/websocket"},
-// 		codegen.GoaImport(""),
-// 		codegen.GoaImport("jsonrpc"),
-// 		codegen.GoaNamedImport("http", "goahttp"),
-// 		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-// 		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-// 	}
-// 	imports = append(imports, data.Service.UserTypeImports...)
-
-// 	sections := []*codegen.SectionTemplate{
-// 		codegen.Header(title, "client", imports),
-// 	}
-
-// 	// Add client struct
-// 	sections = append(sections, &codegen.SectionTemplate{
-// 		Name:   "jsonrpc-client-struct",
-// 		Source: jsonrpcTemplates.Read(clientStructT),
-// 		Data:   data,
-// 		FuncMap: map[string]any{
-// 			"hasWebSocket": httpcodegen.HasWebSocket,
-// 			"hasSSE":       httpcodegen.HasSSE,
-// 		},
-// 	})
-
-// 	// Add request/response types for all WebSocket endpoints
-// 	for _, e := range data.Endpoints {
-// 		sections = append(sections, &codegen.SectionTemplate{
-// 			Name:   "jsonrpc-websocket-client-types",
-// 			Source: jsonrpcTemplates.Read(websocketClientTypesT),
-// 			Data:   e,
-// 		})
-// 	}
-
-// 	// Add client init function
-// 	sections = append(sections, &codegen.SectionTemplate{
-// 		Name:   "jsonrpc-client-init",
-// 		Source: jsonrpcTemplates.Read(clientInitT),
-// 		Data:   data,
-// 		FuncMap: map[string]any{
-// 			"hasWebSocket": httpcodegen.HasWebSocket,
-// 			"hasSSE":       httpcodegen.HasSSE,
-// 		},
-// 	})
-
-// 	// Process only WebSocket endpoints - add methods
-// 	for _, e := range data.Endpoints {
-// 		// Add WebSocket endpoint method
-// 		sections = append(sections, &codegen.SectionTemplate{
-// 			Name:   "jsonrpc-websocket-client-endpoint",
-// 			Source: jsonrpcTemplates.Read(websocketClientEndpointT),
-// 			Data:   e,
-// 		})
-
-// 		// Add stream implementation
-// 		sections = append(sections, &codegen.SectionTemplate{
-// 			Name:   "jsonrpc-websocket-client-stream",
-// 			Source: jsonrpcTemplates.Read(websocketClientStreamT),
-// 			Data:   e,
-// 		})
-// 	}
-
-// 	// Add WebSocket connection management methods for the client
-// 	sections = append(sections, &codegen.SectionTemplate{
-// 		Name:   "jsonrpc-websocket-client-conn",
-// 		Source: jsonrpcTemplates.Read(websocketClientConnT),
-// 		Data:   data,
-// 	})
-
-// 	return &codegen.File{
-// 		Path:             filepath.Join(codegen.Gendir, "jsonrpc", svcName, "client", "client.go"),
-// 		SectionTemplates: sections,
-// 	}
-// }
 
 // allErrors returns all errors for the given service.
 func allErrors(data *httpcodegen.ServiceData) []*httpcodegen.ErrorData {
