@@ -137,7 +137,7 @@ func TestRecordRequest(t *testing.T) {
 
 	for k, c := range cases {
 		t.Run(k, func(t *testing.T) {
-			req, _ := http.NewRequest(method, c.Request.URL.String(), nil)
+			req, _ := http.NewRequest(method, c.Request.URL.String(), http.NoBody)
 			req.Header.Set("User-Agent", c.Request.UserAgent)
 			req.Header.Set("X-Forwarded-For", c.Request.IP)
 			req.RemoteAddr = c.Request.RemoteAddr
@@ -189,7 +189,7 @@ func TestRecordRequest(t *testing.T) {
 func TestRace(t *testing.T) {
 	var (
 		rErr   = errors.New("oh no")
-		req, _ = http.NewRequest("GET", "https://goa.design", nil)
+		req, _ = http.NewRequest("GET", "https://goa.design", http.NoBody)
 		resp   = httptest.NewRecorder().Result()
 	)
 
