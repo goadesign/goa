@@ -153,7 +153,7 @@ func sseTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 			continue
 		}
 		// Create a map of template functions needed for the SSE template
-		funcs := map[string]interface{}{
+		funcs := map[string]any{
 			"dict": func(values ...any) (map[string]any, error) {
 				if len(values)%2 != 0 {
 					return nil, fmt.Errorf("odd number of arguments")

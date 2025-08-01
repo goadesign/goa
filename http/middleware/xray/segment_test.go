@@ -225,7 +225,7 @@ func TestRace(t *testing.T) {
 		wg.Done()
 	}
 
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		wg.Add(1)
 		go raceFct()
 	}

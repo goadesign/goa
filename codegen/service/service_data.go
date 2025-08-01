@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"text/template"
@@ -754,11 +755,8 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		att := &expr.AttributeExpr{Type: t}
 		if len(svcs) > 0 {
 			// Force generate type only in the specified services
-			for _, svc := range svcs {
-				if svc == service.Name {
-					types = append(types, collectTypes(att, scope, seen)...)
-					break
-				}
+			if slices.Contains(svcs, service.Name) {
+				types = append(types, collectTypes(att, scope, seen)...)
 			}
 			continue
 		}

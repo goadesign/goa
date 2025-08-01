@@ -325,12 +325,9 @@ func exceptionData(e error) *Exception {
 	}
 	if s, ok := e.(stackTracer); ok {
 		st := s.StackTrace()
-		ln := len(st)
-		if ln > maxStackDepth {
-			ln = maxStackDepth
-		}
+		ln := min(len(st), maxStackDepth)
 		frames := make([]*StackEntry, ln)
-		for i := 0; i < ln; i++ {
+		for i := range ln {
 			f := st[i]
 			line, _ := strconv.Atoi(fmt.Sprintf("%d", f))
 			frames[i] = &StackEntry{

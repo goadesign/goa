@@ -1,6 +1,7 @@
 package openapiv3
 
 import (
+	"slices"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -17,12 +18,9 @@ func paramsFromPath(params *expr.MappedAttributeExpr, path string, rand *expr.Ex
 	)
 	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *expr.AttributeExpr) error { // nolint: errcheck
 		in := "query"
-		for _, w := range wildcards {
-			if n == w {
-				in = "path"
-				required = true
-				break
-			}
+		if slices.Contains(wildcards, n) {
+			in = "path"
+			required = true
 		}
 		res = append(res, paramFor(at, pn, in, required, rand))
 		return nil

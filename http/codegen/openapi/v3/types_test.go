@@ -400,7 +400,7 @@ func TestMapTypes(t *testing.T) {
 	}
 }
 
-func validateAdditionalProperties(t *testing.T, ctx string, addProps interface{}, types map[string]*openapi.Schema, expected *additionalPropsType, prefix string) {
+func validateAdditionalProperties(t *testing.T, ctx string, addProps any, types map[string]*openapi.Schema, expected *additionalPropsType, prefix string) {
 	if addProps == nil {
 		t.Errorf("%s: %sexpected additionalProperties to be set", ctx, prefix)
 		return

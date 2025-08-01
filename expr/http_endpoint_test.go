@@ -255,7 +255,7 @@ func TestHTTPEndpointFinalization(t *testing.T) {
 				if len(bodyObj) != len(expectedBodyObj) {
 					t.Errorf("got %d, expected %d attribute(s) in endpoint body", len(bodyObj), len(expectedBodyObj))
 				} else {
-					for i := 0; i < len(expectedBodyObj); i++ {
+					for i := range expectedBodyObj {
 						if bodyObj[i].Name != expectedBodyObj[i].Name {
 							t.Errorf("got %q, expected %q attribute in endpoint body", bodyObj[i].Name, expectedBodyObj[i].Name)
 						}

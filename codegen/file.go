@@ -9,6 +9,7 @@ import (
 	"go/scanner"
 	"go/token"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -123,9 +124,7 @@ func (f *File) Render(dir string) (string, error) {
 // Write writes the section to the given writer.
 func (s *SectionTemplate) Write(w io.Writer) error {
 	funcs := TemplateFuncs()
-	for k, v := range s.FuncMap {
-		funcs[k] = v
-	}
+	maps.Copy(funcs, s.FuncMap)
 	tmpl := template.Must(template.New(s.Name).Funcs(funcs).Parse(s.Source))
 	return tmpl.Execute(w, s.Data)
 }

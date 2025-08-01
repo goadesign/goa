@@ -372,7 +372,6 @@ func CollectionOf(v any, adsl ...func()) *expr.ResultTypeExpr {
 			// element.
 			rt.Views = make([]*expr.ViewExpr, len(m.Views))
 			for i, v := range m.Views {
-				v := v
 				rt.Views[i] = v
 			}
 		}

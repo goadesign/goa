@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/dimfeld/httppath"
@@ -441,25 +442,13 @@ func (e *HTTPEndpointExpr) Validate() error {
 		params := e.Routes[0].Params()
 		for _, r := range e.Routes[1:] {
 			for _, p := range params {
-				found := false
-				for _, p2 := range r.Params() {
-					if p == p2 {
-						found = true
-						break
-					}
-				}
+				found := slices.Contains(r.Params(), p)
 				if !found {
 					verr.Add(e, "Param %q does not appear in all routes", p)
 				}
 			}
 			for _, p2 := range r.Params() {
-				found := false
-				for _, p := range params {
-					if p == p2 {
-						found = true
-						break
-					}
-				}
+				found := slices.Contains(params, p2)
 				if !found {
 					verr.Add(e, "Param %q does not appear in all routes", p2)
 				}
@@ -522,13 +511,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 				preqs = e.MethodExpr.Payload.Validation.Required
 			}
 			for _, req := range v.Required {
-				found := false
-				for _, preq := range preqs {
-					if req == preq {
-						found = true
-						break
-					}
-				}
+				found := slices.Contains(preqs, req)
 				if !found {
 					missing = append(missing, req)
 				}
@@ -994,13 +977,7 @@ func (r *RouteExpr) Params() []string {
 	for _, p := range paths {
 		ws := ExtractHTTPWildcards(p)
 		for _, w := range ws {
-			found := false
-			for _, r := range res {
-				if r == w {
-					found = true
-					break
-				}
-			}
+			found := slices.Contains(res, w)
 			if !found {
 				res = append(res, w)
 			}

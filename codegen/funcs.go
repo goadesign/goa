@@ -342,7 +342,7 @@ func runeSpacePosRev(r []rune) int {
 }
 
 func runeSpacePos(r []rune) int {
-	for i := 0; i < len(r); i++ {
+	for i := range r {
 		if unicode.IsSpace(r[i]) {
 			return i
 		}

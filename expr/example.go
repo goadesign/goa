@@ -107,10 +107,7 @@ func NewLength(a *AttributeExpr, r *ExampleGenerator) int {
 		} else if math.IsInf(maxlength, -1) {
 			count = int(minlength) + (r.Int() % 3)
 		} else if minlength < maxlength {
-			diff := int(maxlength - minlength)
-			if diff > maxLength {
-				diff = maxLength
-			}
+			diff := min(int(maxlength-minlength), maxLength)
 			count = int(minlength) + (r.Int() % diff)
 		} else if minlength == maxlength {
 			count = int(minlength)
@@ -165,14 +162,14 @@ func byLength(a *AttributeExpr, r *ExampleGenerator) any {
 	case MapKind:
 		raw := make(map[any]any)
 		m := a.Type.(*Map)
-		for i := 0; i < count; i++ {
+		for range count {
 			raw[m.KeyType.Example(r)] = m.ElemType.Example(r)
 		}
 		return m.MakeMap(raw)
 	case ArrayKind:
 		raw := make([]any, count)
 		ar := a.Type.(*Array)
-		for i := 0; i < count; i++ {
+		for i := range count {
 			raw[i] = ar.ElemType.Example(r)
 		}
 		return ar.MakeSlice(raw)
@@ -258,14 +255,14 @@ func patgen(re *syntax.Regexp, r *ExampleGenerator) string {
 	case syntax.OpStar:
 		var res strings.Builder
 		count := r.Int() % 3
-		for i := 0; i < count; i++ {
+		for range count {
 			res.WriteString(patgen(re.Sub[0], r))
 		}
 		return res.String()
 	case syntax.OpPlus:
 		var res strings.Builder
 		count := r.Int()%2 + 1
-		for i := 0; i < count; i++ {
+		for range count {
 			res.WriteString(patgen(re.Sub[0], r))
 		}
 		return res.String()

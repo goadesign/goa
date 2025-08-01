@@ -2,6 +2,8 @@ package expr
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"sort"
 
 	"goa.design/goa/v3/eval"
@@ -238,9 +240,7 @@ func (r *RootExpr) Finalize() {
 // Dup creates a new map from the given expression.
 func (m MetaExpr) Dup() MetaExpr {
 	d := make(MetaExpr, len(m))
-	for k, v := range m {
-		d[k] = v
-	}
+	maps.Copy(d, m)
 	return d
 }
 
@@ -252,13 +252,7 @@ func (m MetaExpr) Merge(src MetaExpr) {
 		if mvals, ok := m[k]; ok {
 			var found bool
 			for _, v := range vals {
-				found = false
-				for _, mv := range mvals {
-					if mv == v {
-						found = true
-						break
-					}
-				}
+				found = slices.Contains(mvals, v)
 				if !found {
 					mvals = append(mvals, v)
 				}
