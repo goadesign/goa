@@ -11,24 +11,24 @@ import (
 // Server template constants
 const (
 	// Server
-	serverHandlerT     = "server_handler"
-	serverHandlerInitT = "server_handler_init"
-	serverInitT        = "server_init"
-	serverStructT      = "server_struct"
-	serverServiceT     = "server_service"
-	serverUseT         = "server_use"
-	serverMethodNamesT = "server_method_names"
-	serverMountT       = "server_mount"
-	serverEncodeErrorT = "server_encode_error"
+	serverHandlerT           = "server_handler"
+	serverHandlerInitT       = "server_handler_init"
+	serverInitT              = "server_init"
+	serverStructT            = "server_struct"
+	serverServiceT           = "server_service"
+	serverUseT               = "server_use"
+	serverMethodNamesT       = "server_method_names"
+	serverMountT             = "server_mount"
+	serverEncodeErrorT       = "server_encode_error"
 
 	// Server example
 	serverConfigureT = "server_configure"
+	serverHttpStartT = "server_http_start"
 
 	// Client
 	clientStructT       = "client_struct"
 	clientInitT         = "client_init"
 	clientEndpointInitT = "client_endpoint_init"
-	requestBuilderT     = "request_builder"
 	responseDecoderT    = "response_decoder"
 
 	// WebSocket templates
@@ -39,13 +39,11 @@ const (
 	websocketServerCloseT   = "websocket_server_close"
 
 	// JSON-RPC WebSocket client templates
-	websocketClientConnT         = "websocket_client_conn"
-	websocketClientStreamT       = "websocket_client_stream"
-	websocketStreamErrorTypesT   = "websocket_stream_error_types"
+	websocketClientConnT       = "websocket_client_conn"
+	websocketClientStreamT     = "websocket_client_stream"
+	websocketStreamErrorTypesT = "websocket_stream_error_types"
 
 	// Partial templates
-	clientTypeConversionP   = "client_type_conversion"
-	clientMapConversionP    = "client_map_conversion"
 	singleResponseP         = "single_response"
 	queryTypeConversionP    = "query_type_conversion"
 	elementSliceConversionP = "element_slice_conversion"

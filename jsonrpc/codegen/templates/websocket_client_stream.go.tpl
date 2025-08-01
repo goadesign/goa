@@ -105,7 +105,7 @@ func (s *{{ .VarName }}) {{ .SendName }}WithContext(ctx context.Context, v {{ .S
 	// Construct JSON-RPC request
 	request := &jsonrpc.Request{
 		JSONRPC: "2.0",
-		Method:  "{{ .Endpoint.ServiceVarName }}.{{ .Endpoint.Method.Name }}",
+		Method:  "{{ .Endpoint.Method.Name }}",
 		Params:  v,
 		ID:      &jsonrpcID,
 	}
@@ -113,7 +113,7 @@ func (s *{{ .VarName }}) {{ .SendName }}WithContext(ctx context.Context, v {{ .S
 	// For payload-only streaming, use notification (fire-and-forget)
 	request := &jsonrpc.Request{
 		JSONRPC: "2.0",
-		Method:  "{{ .Endpoint.ServiceVarName }}.{{ .Endpoint.Method.Name }}",
+		Method:  "{{ .Endpoint.Method.Name }}",
 		Params:  v,
 		// No ID field for notifications
 	}
@@ -199,7 +199,7 @@ func (s *{{ .VarName }}) {{ .RecvName }}WithContext(ctx context.Context) ({{ .Re
 	
 	request := &jsonrpc.Request{
 		JSONRPC: "2.0",
-		Method:  "{{ .Endpoint.ServiceVarName }}.{{ .Endpoint.Method.Name }}",
+		Method:  "{{ .Endpoint.Method.Name }}",
 		Params:  nil,
 		ID:      &jsonrpcID,
 	}

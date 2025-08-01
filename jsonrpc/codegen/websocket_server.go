@@ -29,6 +29,7 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 		{Path: "fmt"},
 		{Path: "io"},
 		{Path: "net/http"},
+		{Path: "strings"},
 		{Path: "sync"},
 		{Path: "time"},
 		{Path: "github.com/gorilla/websocket"},

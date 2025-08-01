@@ -2,7 +2,7 @@
 type {{ lowerInitial .Service.StructName }}Stream struct {
 {{- range .Endpoints }}
 	{{ printf "%s is the handler for the %s method." (lowerInitial .Method.VarName) .Method.Name | comment }}
-	{{ lowerInitial .Method.VarName }} func(context.Context, *http.Request, *jsonrpc.RawRequest) error
+	{{ lowerInitial .Method.VarName }} func(context.Context, *http.Request, *jsonrpc.RawRequest) (any, error)
 {{- end }}
 	{{ comment "cancel is the context cancellation function which cancels the request context when invoked." }}
 	cancel context.CancelFunc

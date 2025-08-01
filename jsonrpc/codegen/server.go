@@ -10,19 +10,6 @@ import (
 	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
-const (
-	// httpRequestDecoderTemplate is the original HTTP request decoder template
-	// signature that needs to be replaced.
-	httpRequestDecoderTemplate = `func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) ({{ .Payload.Ref }}, error) {
-	return func(r *http.Request) ({{ .Payload.Ref }}, error) {`
-
-	// jsonrpcRequestDecoderTemplate is the modified JSON-RPC request decoder template
-	// that replaces the HTTP version.
-	jsonrpcRequestDecoderTemplate = `func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request, *jsonrpc.RawRequest) ({{ .Payload.Ref }}, error) {
-	return func(r *http.Request, req *jsonrpc.RawRequest) ({{ .Payload.Ref }}, error) {
-		r.Body = io.NopCloser(bytes.NewReader(req.Params))`
-)
-
 // ServerFiles returns the generated JSON-RPC server files if any.
 func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File {
 	var files []*codegen.File
@@ -44,11 +31,31 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 			// Add the JSON-RPC imports.
 			if s.Name == "source-header" {
 				codegen.AddImport(s, &codegen.ImportSpec{Path: "bytes"})
+				codegen.AddImport(s, &codegen.ImportSpec{Path: "io"})
 				codegen.AddImport(s, codegen.GoaImport("jsonrpc"))
 			}
-			// Tweak the request decoder to use the JSON-RPC decoder.
+			// Replace HTTP request decoder with proper JSON-RPC version
 			if s.Name == "request-decoder" {
-				s.Source = strings.Replace(s.Source, httpRequestDecoderTemplate, jsonrpcRequestDecoderTemplate, 1)
+				// Surgical modification 1: Update function signatures for JSON-RPC
+				s.Source = strings.Replace(s.Source,
+					"func(*http.Request) (",
+					"func(*http.Request, *jsonrpc.RawRequest) (", 1)
+
+				// Surgical modification 2: Inject JSON-RPC body handling + signature
+				s.Source = strings.Replace(s.Source,
+					"return func(r *http.Request) ({{ .Payload.Ref }}, error) {",
+					`return func(r *http.Request, req *jsonrpc.RawRequest) ({{ .Payload.Ref }}, error) {
+		r.Body = io.NopCloser(bytes.NewReader(req.Params))`, 1)
+
+				// Surgical modification 3: Fix return values (nil -> zero values)
+				s.Source = strings.Replace(s.Source,
+					"return nil, ",
+					`var zero {{ .Payload.Ref }}
+		return zero, `, -1)
+
+				s.Name = "jsonrpc-request-decoder"
+				sections = append(sections, s)
+				continue
 			}
 			// Remove the error encoder sections, JSON-RPC
 			// inlines the error encoding in each handler.

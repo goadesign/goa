@@ -7,11 +7,11 @@ func {{ .HandlerInit }}(
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
 	errhandler func(context.Context, http.ResponseWriter, error),
 {{- end }}
-) func(context.Context, *http.Request, *jsonrpc.RawRequest{{ if not (isWebSocketEndpoint .) }}, http.ResponseWriter{{ end }}){{ if isWebSocketEndpoint . }} error{{ end }} {
+) func(context.Context, *http.Request, *jsonrpc.RawRequest{{ if not (isWebSocketEndpoint .) }}, http.ResponseWriter{{ end }}) {{ if isWebSocketEndpoint . }}(any, error){{ else }}error{{ end }} {
 {{- if and (not (isSSEEndpoint .)) .Payload.Ref }}
 	decodeParams := {{ .RequestDecoder }}(mux, decoder)
 {{- end }}
-	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest{{ if not (isWebSocketEndpoint .) }}, w http.ResponseWriter{{ end }}){{ if isWebSocketEndpoint . }}error{{ end }} {
+	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest{{ if not (isWebSocketEndpoint .) }}, w http.ResponseWriter{{ end }}) {{ if isWebSocketEndpoint . }}(any, error){{ else }}error{{ end }} {
 		ctx = context.WithValue(ctx, goa.MethodKey, {{ printf "%q" .Method.Name }})
 		ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
 
@@ -45,36 +45,41 @@ func {{ .HandlerInit }}(
 		params, err := decodeParams(r, req)
 		if err != nil {
 		{{- if isWebSocketEndpoint . }}
-			return err
+			return nil, err
 		{{- else if isNotification . }}
 			errhandler(ctx, w, fmt.Errorf("failed to decode parameters: %w", err))
-			return
+			return nil
 		{{- else }}
 			code := jsonrpc.InternalError
 			if _, ok := err.(*goa.ServiceError); ok {
 				code = jsonrpc.InvalidParams
 			}
 			encodeJSONRPCError(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
-			return
+			return nil
 		{{- end }}
 		}
 		{{- if .Payload.IDAttribute }}
 		params.{{ .Payload.IDAttribute }} = jsonrpc.IDToString(req.ID)
 		{{- end }}
 	{{- end }}
-	{{ if or (isWebSocketEndpoint .) (isNotification .) }}_{{ else }}res{{ end }}, err {{if not (and (or (isWebSocketEndpoint .) (isNotification .)) .Payload.Ref)}}:{{end}}= endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
+	{{- if isNotification . }}
+	_, err = endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
+	{{- else }}
+	{{ if isWebSocketEndpoint . }}stream{{ else }}res{{ end }}, err := endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
+	{{- end }}
 	{{- if isWebSocketEndpoint . }}
-		return err
+		return stream, err
 	{{- else if isNotification . }}
 		if err != nil {
 			errhandler(ctx, w, fmt.Errorf("failed to call endpoint: %w", err))
 		}
+		return nil
 	{{- else }}
 		if err != nil {
 			var en goa.GoaErrorNamer
 			if !errors.As(err, &en) {
 				encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
-				return
+				return nil
 			}
 			switch en.GoaErrorName() {
 		{{- range $gerr := .Errors }}
@@ -86,9 +91,13 @@ func {{ .HandlerInit }}(
 			{{- end }}
 		{{- end }}
 			default:
-				encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
+				code := jsonrpc.InternalError
+				if _, ok := err.(*goa.ServiceError); ok {
+					code = jsonrpc.InvalidParams
+				}
+				encodeJSONRPCError(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
 			}
-			return
+			return nil
 		}
 
 		{{- if .Result.IDAttribute }}
@@ -102,10 +111,23 @@ func {{ .HandlerInit }}(
 		{{- else }}
 		id := req.ID
 		{{- end }}
+
+		{{- if and .Result.Ref (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
+		// Convert result to response body with proper JSON tags
+		{{- if .Method.ViewedResult }}
+		actual := res.({{ .Method.ViewedResult.FullRef }})
+		body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(actual.Projected)
+		{{- else }}
+		body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(res.({{ .Result.Ref }}))
+		{{- end }}
+		response := jsonrpc.MakeSuccessResponse(id, body)
+		{{- else }}
 		response := jsonrpc.MakeSuccessResponse(id, res)
+		{{- end }}
 		if err := encoder(ctx, w).Encode(response); err != nil {
 			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
 		}
+		return nil
 	{{- end }}
 {{- end }}
 	}

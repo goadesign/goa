@@ -142,6 +142,9 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, se
 				"goify":   codegen.Goify,
 				"join":    strings.Join,
 				"toUpper": strings.ToUpper,
+				"hasJSONRPCEndpoints": func(svcData *service.Data) bool {
+					return hasJSONRPCEndpoints(root, svcData)
+				},
 			},
 		},
 		{
@@ -158,6 +161,16 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, se
 func mustInitServices(data []*service.Data) bool {
 	for _, svc := range data {
 		if len(svc.Methods) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// hasJSONRPCEndpoints returns true if the service has JSON-RPC endpoints.
+func hasJSONRPCEndpoints(root *expr.RootExpr, data *service.Data) bool {
+	for _, svc := range root.API.JSONRPC.Services {
+		if svc.Name() == data.Name {
 			return true
 		}
 	}

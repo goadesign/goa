@@ -1443,10 +1443,12 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 	}
 	if e.IsJSONRPC() {
 		obj := expr.AsObject(e.MethodExpr.Payload.Type)
-		for _, att := range *obj {
-			if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
-				data.IDAttribute = codegen.Goify(att.Name, true)
-				break
+		if obj != nil {
+			for _, att := range *obj {
+				if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
+					data.IDAttribute = codegen.Goify(att.Name, true)
+					break
+				}
 			}
 		}
 	}
@@ -1496,10 +1498,12 @@ func (sds *ServicesData) buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 	idAtt := ""
 	if e.IsJSONRPC() && result.Type != expr.Empty {
 		obj := expr.AsObject(result.Type)
-		for _, att := range *obj {
-			if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
-				idAtt = codegen.Goify(att.Name, true)
-				break
+		if obj != nil {
+			for _, att := range *obj {
+				if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
+					idAtt = codegen.Goify(att.Name, true)
+					break
+				}
 			}
 		}
 	}
@@ -2831,8 +2835,8 @@ func upgradeParams(e *EndpointData, fn string) map[string]any {
 	}
 }
 
-// needDialer returns true if at least one method in the defined services
+// NeedDialer returns true if at least one method in the defined services
 // uses WebSocket for sending payload or result.
-func needDialer(data []*ServiceData) bool {
+func NeedDialer(data []*ServiceData) bool {
 	return slices.ContainsFunc(data, HasWebSocket)
 }

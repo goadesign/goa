@@ -8,12 +8,12 @@
 		{{ .Service.VarName }}Server *{{.Service.PkgName}}svr.Server
 	{{- end }}
 	{{- range .JSONRPCServices }}
-		{{ .Service.VarName }}JSONRPCServer *{{.Service.PkgName}}jssvr.Server
+		{{ .Service.VarName }}JSONRPCServer *{{ .Service.PkgName }}jssvr.Server
 	{{- end }}
 	)
 	{
 		eh := errorHandler(ctx)
-	{{- if needDialer .Services }}
+	{{- if or (needDialer .Services) (needDialer .JSONRPCServices) }}
 		upgrader := &websocket.Upgrader{}
 	{{- end }}
 	{{- range $svc := .Services }}
@@ -23,11 +23,10 @@
 		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New(nil, mux, dec, enc, eh, nil{{ range .FileServers }}, nil{{ end }})
 		{{-  end }}
 	{{- end }}
-	{{- range $svc := .JSONRPCServices }}
+	{{- range $svcData := .JSONRPCServices }}
 		{{-  if .Endpoints }}
-		{{ .Service.VarName }}JSONRPCServer = {{ .Service.PkgName }}jssvr.New({{ .Service.VarName }}Svc.HandleStream, {{ .Service.VarName }}Endpoints, mux, dec, enc, eh{{ if hasWebSocket $svc }}, upgrader, nil{{ end }}{{ range .Endpoints }}{{ if .MultipartRequestDecoder }}, {{ $.APIPkg }}.{{ .MultipartRequestDecoder.FuncName }}{{ end }}{{ end }}{{ range .FileServers }}, nil{{ end }})
-		{{-  else }}
-		{{ .Service.VarName }}JSONRPCServer = {{ .Service.PkgName }}jssvr.New({{ .Service.VarName }}Svc.HandleStream, nil, mux, dec, enc, eh{{ range .FileServers }}, nil{{ end }})
+		{{- $svc := . }}
+		{{ .Service.VarName }}JSONRPCServer = {{ .Service.PkgName }}jssvr.New({{ if hasWebSocket $svc }}{{ .Service.VarName }}Svc.HandleStream, {{ end }}{{ .Service.VarName }}Endpoints, mux, dec, enc, eh{{ if hasWebSocket $svc }}, upgrader, nil{{ end }})
 		{{-  end }}
 	{{- end }}
 	}

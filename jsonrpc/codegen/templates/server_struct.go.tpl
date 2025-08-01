@@ -9,10 +9,10 @@ type {{ .ServerStruct }} struct {
 {{- end }}
 {{ range .Endpoints }}
 	{{- if isWebSocketEndpoint . }}
-	{{ lowerInitial .Method.VarName }} func(context.Context, *http.Request, *jsonrpc.RawRequest) error
+	{{ lowerInitial .Method.VarName }} func(context.Context, *http.Request, *jsonrpc.RawRequest) (any, error)
 	{{- else }}
 	{{ printf "%s is the handler for the %s method." .Method.VarName .Method.Name | comment }}
-	{{ .Method.VarName }} func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter)
+	{{ .Method.VarName }} func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error
 	{{- end }}
 {{- end }}
 

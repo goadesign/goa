@@ -20,12 +20,16 @@ func (s *{{ lowerInitial $.Service.StructName }}Stream) Send{{ .Method.VarName }
 	{{- end }}
 {{- end }}
 
-{{- if allErrors . }}
 {{ printf "SendError streams JSON-RPC errors." | comment }}
 func (s *{{ lowerInitial $.Service.StructName }}Stream) SendError(ctx context.Context, id string, err error) error {
+	{{- if allErrors . }}
 	var en goa.GoaErrorNamer
 	if !errors.As(err, &en) {
-		return s.sendError(ctx, id, jsonrpc.InternalError, err.Error(), nil)
+		code := jsonrpc.InternalError
+		if _, ok := err.(*goa.ServiceError); ok {
+			code = jsonrpc.InvalidParams
+		}
+		return s.sendError(ctx, id, code, err.Error(), nil)
 	}
 	switch en.GoaErrorName() {
 	{{- range allErrors . }}
@@ -35,10 +39,21 @@ func (s *{{ lowerInitial $.Service.StructName }}Stream) SendError(ctx context.Co
 		{{- end }}
 	{{- end }}
 	default:
-		return s.sendError(ctx, id, jsonrpc.InternalError, err.Error(), nil)
+		code := jsonrpc.InternalError
+		if _, ok := err.(*goa.ServiceError); ok {
+			code = jsonrpc.InvalidParams
+		}
+		return s.sendError(ctx, id, code, err.Error(), nil)
 	}
+	{{- else }}
+	// No custom errors defined - check if it's a validation error, otherwise use internal error
+	code := jsonrpc.InternalError
+	if _, ok := err.(*goa.ServiceError); ok {
+		code = jsonrpc.InvalidParams
+	}
+	return s.sendError(ctx, id, code, err.Error(), nil)
+	{{- end }}
 }
-{{- end }}
 
 {{ printf "send writes a JSON-RPC response to the websocket connection." | comment }}
 func (s *{{ lowerInitial $.Service.StructName }}Stream) send(id string, result any) error {

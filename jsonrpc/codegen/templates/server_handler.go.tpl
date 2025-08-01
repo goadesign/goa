@@ -48,8 +48,19 @@ func (s *Server) handleBatch(w http.ResponseWriter, r *http.Request) {
 		s.errhandler(r.Context(), w, fmt.Errorf("failed to decode batch request: %w", err))
 		return
 	}
+	
+	// Write responses
+	w.Header().Set("Content-Type", "application/json")
+	writer := &batchWriter{Writer: w}
+	
 	for _, req := range reqs {
-		s.processRequest(r.Context(), r, &req, w)
+		// Process the request with batch writer
+		s.processRequest(r.Context(), r, &req, writer)
+	}
+	
+	// Close the batch array
+	if writer.written {
+		writer.Writer.Write([]byte{']'})
 	}
 }
 
@@ -68,9 +79,43 @@ func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonr
 	switch req.Method {
 	{{- range .Endpoints }}
 	case {{ printf "%q" .Method.Name }}:
-		s.{{ .Method.VarName }}(ctx, r, req, w)
+		if err := s.{{ .Method.VarName }}(ctx, r, req, w); err != nil {
+			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", {{ printf "%q" .Method.Name }}, err))
+		}
 	{{- end }}
 	default:
 		s.encodeJSONRPCError(ctx, w, req, jsonrpc.MethodNotFound, fmt.Sprintf("Method %q not found", req.Method), nil)
 	}
+}
+
+// batchWriter is a helper type that implements http.ResponseWriter for writing multiple JSON-RPC responses
+type batchWriter struct {
+	io.Writer
+	header http.Header
+	statusCode int
+	written bool
+}
+
+func (rb *batchWriter) Header() http.Header {
+	if rb.header == nil {
+		rb.header = make(http.Header)
+	}
+	return rb.header
+}
+
+func (rb *batchWriter) WriteHeader(statusCode int) {
+	if rb.written {
+		return
+	}
+	rb.statusCode = statusCode
+}
+
+func (rb *batchWriter) Write(data []byte) (int, error) {
+	if !rb.written {
+		rb.written = true
+		rb.Writer.Write([]byte{'['})
+	} else {
+		rb.Writer.Write([]byte{','})
+	}
+	return rb.Writer.Write(data)
 }

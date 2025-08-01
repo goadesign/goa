@@ -43,10 +43,21 @@ func (c *{{ .ClientStruct }}) getConn(ctx context.Context) (*websocket.Conn, err
 		wsScheme = "wss"
 	}
 	
-	url := wsScheme + "://" + c.host + "/"
-	header := make(http.Header)
+	// Find the WebSocket path from the service endpoints
+	{{- $found := false }}
+	{{- range .Endpoints }}
+		{{- range .Routes }}
+			{{- if and (eq .Verb "GET") (ne .Path "/") (not $found) }}
+	url := wsScheme + "://" + c.host + {{ printf "%q" .Path }}
+				{{ $found = true }}
+			{{- end }}
+		{{- end }}
+	{{- end }}
+	{{- if not $found }}
+	url := wsScheme + "://" + c.host
+	{{- end }}
 	
-	ws, _, err := c.dialer.DialContext(ctx, url, header)
+	ws, _, err := c.dialer.DialContext(ctx, url, nil)
 	if err != nil {
 		return nil, goahttp.ErrRequestError("{{ .Service.Name }}", "connect", err)
 	}

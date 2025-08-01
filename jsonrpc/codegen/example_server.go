@@ -3,7 +3,6 @@ package codegen
 import (
 	"path"
 	"path/filepath"
-	"slices"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -69,22 +68,14 @@ func exampleServer(genpkg string, data *httpcodegen.ServicesData, svr *expr.Serv
 	for _, s := range file.SectionTemplates {
 		switch s.Name {
 		case "server-http-start":
-			// Add JSON-RPC services to the HTTP server data so the
-			// generated handleHTTPServer signature includes all the
-			// necessary endpoints.
+			// Check if the main template already has JSONRPCServices data
 			data := s.Data.(map[string]any)
-			httpServices := data["Services"].([]*httpcodegen.ServiceData)
-			httpServices = slices.DeleteFunc(httpServices, func(svc *httpcodegen.ServiceData) bool {
-				return len(svc.Service.Methods) == 0
-			})
-			for _, svc := range svcdata {
-				if !slices.ContainsFunc(httpServices, func(httpsvc *httpcodegen.ServiceData) bool {
-					return httpsvc.Service.Name == svc.Service.Name
-				}) {
-					httpServices = append(httpServices, svc)
-				}
+			if _, hasJSONRPCServices := data["JSONRPCServices"]; !hasJSONRPCServices {
+				// Main template doesn't have JSON-RPC services, so we need to add them
+				data["JSONRPCServices"] = svcdata
+				// Replace with JSON-RPC template that includes service parameters in function signature
+				s.Source = jsonrpcTemplates.Read(serverHttpStartT)
 			}
-			data["Services"] = httpServices
 		case "server-http-end":
 			updateData(s, svcdata, hasHTTP)
 			mountCode := logJSONRPCMount
@@ -95,6 +86,10 @@ func exampleServer(genpkg string, data *httpcodegen.ServicesData, svr *expr.Serv
 		case "server-http-init":
 			updateData(s, svcdata, hasHTTP)
 			s.Source = jsonrpcTemplates.Read(serverConfigureT)
+			s.FuncMap = map[string]any{
+				"needDialer":   httpcodegen.NeedDialer,
+				"hasWebSocket": httpcodegen.HasWebSocket,
+			}
 		}
 		sections = append(sections, s)
 	}
