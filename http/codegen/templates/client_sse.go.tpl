@@ -2,6 +2,7 @@ type (
 	// {{ .Method.VarName }}StreamImpl implements the {{ .ServiceName }}.{{ .Method.VarName }}ClientStream interface.
 	{{ .Method.VarName }}StreamImpl struct {
 		resp *http.Response
+		decoder func(*http.Response) goahttp.Decoder
 		buffer []byte // Buffer for unprocessed data
 		lock sync.Mutex
 		closed bool
@@ -12,9 +13,10 @@ type (
 var _ {{ .ServiceName }}.{{ .Method.VarName }}ClientStream = (*{{ .Method.VarName }}StreamImpl)(nil)
 
 // New{{ .Method.VarName }}Stream creates a new {{ .ServiceName }}.{{ .Method.VarName }}ClientStream.
-func New{{ .Method.VarName }}Stream(resp *http.Response) {{ .ServiceName }}.{{ .Method.VarName }}ClientStream {
+func New{{ .Method.VarName }}Stream(resp *http.Response, decoder func(*http.Response) goahttp.Decoder) {{ .ServiceName }}.{{ .Method.VarName }}ClientStream {
 	return &{{ .Method.VarName }}StreamImpl{
 		resp: resp,
+		decoder: decoder,
 		buffer: make([]byte, 0, 4096), // Pre-allocate buffer
 	}
 }

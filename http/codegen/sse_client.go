@@ -44,6 +44,7 @@ func sseClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesD
 				{Path: "sync"},
 				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name())},
 				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/views"},
+				{Path: "goa.design/goa/v3/http", Name: "goahttp"},
 			},
 		),
 	}

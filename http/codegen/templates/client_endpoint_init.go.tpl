@@ -74,7 +74,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 			return nil, fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
 		}
 		
-		return New{{ .Method.VarName }}Stream(resp), nil
+		return New{{ .Method.VarName }}Stream(resp, c.decoder), nil
 	{{- else }}
 		resp, err := c.{{ .Method.VarName }}Doer.Do(req)
 		if err != nil {

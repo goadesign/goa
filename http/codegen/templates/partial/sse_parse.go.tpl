@@ -46,7 +46,12 @@
 		return
 	}
 {{- else }}
-	err = json.Unmarshal([]byte(dataContent), &{{ .Target }})
+	// Use user-provided decoder for complex types
+	respBody := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewReader([]byte(dataContent))),
+	}
+	err = s.decoder(respBody).Decode(&{{ .Target }})
 	if err != nil {
 		return
 	}

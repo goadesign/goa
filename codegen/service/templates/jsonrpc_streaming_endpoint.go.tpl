@@ -1,6 +1,6 @@
 {{ comment .Description }}
-func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}) ({{ if .ResultFullRef }}res {{ .ResultFullRef }}, {{ end }}err error) {
-{{- if and .ResultFullRef .ResultIsStruct }}
+func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}) ({{ if .Result }}res {{ .ResultFullRef }}, {{ end }}err error) {
+{{- if and .Result .ResultIsStruct }}
 	res = &{{ .ResultFullName }}{}
 {{- end }}
 {{- if .ViewedResult }}
