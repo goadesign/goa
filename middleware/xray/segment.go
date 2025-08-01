@@ -223,7 +223,7 @@ func (s *Segment) Capture(name string, fn func()) {
 }
 
 // AddAnnotation adds a key-value pair that can be queried by AWS X-Ray.
-func (s *Segment) AddAnnotation(key string, value string) {
+func (s *Segment) AddAnnotation(key, value string) {
 	s.addAnnotation(key, value)
 }
 
@@ -251,7 +251,7 @@ func (s *Segment) addAnnotation(key string, value any) {
 
 // AddMetadata adds a key-value pair to the metadata.default attribute.
 // Metadata is not queryable, but is recorded.
-func (s *Segment) AddMetadata(key string, value string) {
+func (s *Segment) AddMetadata(key, value string) {
 	s.addMetadata(key, value)
 }
 

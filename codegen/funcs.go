@@ -98,7 +98,7 @@ var toLower = map[string]string{"OAuth": "oauth"}
 // If acronym is true and a part of the string is a common acronym
 // then it keeps the part capitalized (firstUpper = true)
 // (e.g. APIVersion) or lowercase (firstUpper = false) (e.g. apiVersion).
-func CamelCase(name string, firstUpper bool, acronym bool) string {
+func CamelCase(name string, firstUpper, acronym bool) string {
 	if name == "" {
 		return ""
 	}
