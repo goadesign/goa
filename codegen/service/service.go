@@ -156,7 +156,6 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 	imports := []*codegen.ImportSpec{
 		codegen.SimpleImport("context"),
 		codegen.SimpleImport("io"),
-		codegen.GoaImport(""),
 		codegen.GoaImport("security"),
 		codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
 	}
@@ -166,7 +165,8 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		Source: serviceTemplates.Read(serviceT),
 		Data:   svc,
 		FuncMap: map[string]any{
-			"hasJSONRPCWebSocket": hasJSONRPCWebSocket,
+			"hasJSONRPCStreaming": hasJSONRPCStreaming,
+			"isJSONRPCWebSocket":  func(sd *Data) bool { return hasJSONRPCStreaming(sd) && !isJSONRPCSSE(services, service) },
 			"streamInterfaceFor":  streamInterfaceFor,
 		},
 	}
@@ -300,14 +300,33 @@ func errorName(et *UserTypeData) string {
 	return fmt.Sprintf("%q", et.Name)
 }
 
-// hasJSONRPCWebSocket returns true if the service has a JSON-RPC WebSocket
-// endpoint.
-func hasJSONRPCWebSocket(sd *Data) bool {
+// hasJSONRPCStreaming returns true if the service has a JSON-RPC streaming
+// endpoint (WebSocket or SSE).
+func hasJSONRPCStreaming(sd *Data) bool {
 	for _, m := range sd.Methods {
 		if m.IsJSONRPC && m.ServerStream != nil {
 			return true
 		}
 	}
+	return false
+}
+
+// isJSONRPCSSE returns true if the service uses SSE for JSON-RPC streaming.
+// This requires checking the HTTP endpoints in the root expression.
+func isJSONRPCSSE(sd *ServicesData, svc *expr.ServiceExpr) bool {
+	// Check if service has JSON-RPC
+	httpSvc := sd.Root.API.JSONRPC.HTTPExpr.Service(svc.Name)
+	if httpSvc == nil {
+		return false
+	}
+
+	// Check if any JSON-RPC streaming endpoint uses SSE
+	for _, e := range httpSvc.HTTPEndpoints {
+		if e.MethodExpr.IsStreaming() && e.IsJSONRPC() && e.SSE != nil {
+			return true
+		}
+	}
+
 	return false
 }
 

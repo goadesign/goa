@@ -21,7 +21,7 @@ func doGRPC(_, host string, _ int, _ bool) (goa.Endpoint, any, error) {
 	)
 }
 
-func grpcUsageCommands() string {
+func grpcUsageCommands() []string {
 	return cli.UsageCommands()
 }
 

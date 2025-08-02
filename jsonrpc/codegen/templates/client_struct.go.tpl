@@ -2,6 +2,12 @@
 type {{ .ClientStruct }} struct {
 	{{ printf "Doer is the HTTP client used to make requests to the %s service." .Service.Name | comment }}
 	Doer goahttp.Doer
+	{{- range .Endpoints }}
+	{{- if isSSEEndpoint . }}
+	{{ printf "%s Doer is the HTTP client used to make requests to the %s endpoint." .Method.VarName .Method.Name | comment }}
+	{{ .Method.VarName }}Doer goahttp.Doer
+	{{- end }}
+	{{- end }}
 	// RestoreResponseBody controls whether the response bodies are reset after
 	// decoding so they can be read again.
 	RestoreResponseBody bool

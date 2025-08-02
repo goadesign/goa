@@ -19,6 +19,11 @@ func New{{ .ClientStruct }}(
 	
 	return &{{ .ClientStruct }}{
 		Doer:                doer,
+		{{- range .Endpoints }}
+		{{- if isSSEEndpoint . }}
+		{{ .Method.VarName }}Doer: doer,
+		{{- end }}
+		{{- end }}
 		RestoreResponseBody: restoreBody,
 		scheme:              scheme,
 		host:                host,

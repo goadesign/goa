@@ -19,7 +19,7 @@ Usage:
 
     -host HOST:  server host ({{ .Server.DefaultHost.Name }}). valid values: {{ (join .Server.AvailableHosts ", ") }}
     -url URL:    specify service URL overriding host URL (http://localhost:8080)
-{{- if .HasJSONRPC }}
+{{- if and .HasJSONRPC .HasHTTP }}
     -jsonrpc|-j: force JSON-RPC (false)
 {{- end }}
     -timeout:    maximum number of seconds to wait for response (30)
@@ -35,7 +35,7 @@ Additional help:
 
 Example:
 %s
-`, os.Args[0], os.Args[0], indent(strings.Join(usageCommands, "\n")), os.Args[0], indent({{ .Server.DefaultTransport.Type }}UsageExamples()))
+`, os.Args[0], os.Args[0], indent(strings.Join(usageCommands, "\n")), os.Args[0], indent({{ if and (eq .Server.DefaultTransport.Type "http") (not .HasHTTP) .HasJSONRPC }}jsonrpc{{ else }}{{ .Server.DefaultTransport.Type }}{{ end }}UsageExamples()))
 }
 
 func indent(s string) string {

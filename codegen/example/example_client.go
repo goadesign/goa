@@ -51,6 +51,7 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 			Data: map[string]any{
 				"Server":     svrdata,
 				"HasJSONRPC": hasJSONRPC(root, svr),
+				"HasHTTP":    hasHTTP(root, svr),
 			},
 			FuncMap: map[string]any{
 				"join": strings.Join,
@@ -71,6 +72,7 @@ func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codege
 				"Server":     svrdata,
 				"Root":       root,
 				"HasJSONRPC": hasJSONRPC(root, svr),
+				"HasHTTP":    hasHTTP(root, svr),
 			},
 			FuncMap: map[string]any{
 				"join":    strings.Join,

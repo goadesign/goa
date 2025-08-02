@@ -1,6 +1,14 @@
 {{ comment .Description }}
-{{- if and .ServerStream (not .IsJSONRPC) }}
+{{- if .ServerStream }}
+{{- if .IsJSONRPC }}
+func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context, input *{{ .ServerStream.EndpointStruct }}) (err error) {
+	stream := input.Stream
+	{{- if .PayloadFullRef }}
+	p := input.Payload
+	{{- end }}
+{{- else }}
 func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}, stream {{ .StreamInterface }}) (err error) {
+{{- end }}
 {{- else }}
 func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}{{ if .SkipRequestBodyEncodeDecode }}, req io.ReadCloser{{ end }}) ({{ if .Result }}res {{ .ResultFullRef }}, {{ end }}{{ if .SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}{{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}err error) {
 {{- end }}
@@ -25,5 +33,18 @@ func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .Pay
 	{{- end }}
 {{- end }}
 	log.Printf(ctx, "{{ .ServiceVarName }}.{{ .Name }}")
+{{- if and .ServerStream .IsJSONRPC }}
+	
+	// Example: Send notifications followed by final response
+	// for i := 0; i < 3; i++ {
+	//     notification := {{ if .ResultIsStruct }}&{{ .ResultFullName }}{/* populate fields */}{{ else }}{{ .ResultFullName }}("example value"){{ end }}
+	//     if err := stream.Send(notification); err != nil {
+	//         return err
+	//     }
+	// }
+	// 
+	// The final result is sent by returning normally.
+	// The JSON-RPC transport will automatically send the final response.
+{{- end }}
 	return
 }

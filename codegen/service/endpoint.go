@@ -88,7 +88,7 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 		}
 		sections = []*codegen.SectionTemplate{header, def}
 		for _, m := range data.Methods {
-			if m.ServerStream != nil && !m.IsJSONRPC {
+			if m.ServerStream != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "endpoint-input-struct",
 					Source: serviceTemplates.Read(serviceEndpointStreamStructT),
@@ -161,7 +161,7 @@ func endpointData(svc *Data) *EndpointsData {
 }
 
 func payloadVar(e *EndpointMethodData) string {
-	if (e.ServerStream != nil && !e.IsJSONRPC) || e.SkipRequestBodyEncodeDecode {
+	if e.ServerStream != nil || e.SkipRequestBodyEncodeDecode {
 		return "ep.Payload"
 	}
 	return "p"

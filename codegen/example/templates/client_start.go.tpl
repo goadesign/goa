@@ -6,7 +6,7 @@ func main() {
 	{{- range .Server.Variables }}
 		{{ .VarName }}F = flag.String({{ printf "%q" .Name }}, {{ printf "%q" .DefaultValue }}, {{ printf "%q" .Description }})
 	{{- end }}
-	{{- if .HasJSONRPC }}
+	{{- if and .HasJSONRPC .HasHTTP }}
 		jsonrpcF = flag.Bool("jsonrpc", false, "Force JSON-RPC transport")
 		jF = flag.Bool("j", false, "Force JSON-RPC transport")
 	{{- end }}

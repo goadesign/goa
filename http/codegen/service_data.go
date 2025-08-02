@@ -215,6 +215,8 @@ type (
 		// IDAttribute is the name of the attribute where the ID of the
 		// JSON-RPC request is stored.
 		IDAttribute string
+		// IDAttributeRequired is true if the ID attribute is required.
+		IDAttributeRequired bool
 	}
 
 	// ResultData contains the result information required to generate the
@@ -236,6 +238,8 @@ type (
 		// IDAttribute is the name of the attribute where the ID of the
 		// JSON-RPC request is stored.
 		IDAttribute string
+		// IDAttributeRequired is true if the ID attribute is required.
+		IDAttributeRequired bool
 		// View is the view used to render the result.
 		View string
 		// MustInit indicates if a variable holding the result type must be
@@ -1447,6 +1451,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			for _, att := range *obj {
 				if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
 					data.IDAttribute = codegen.Goify(att.Name, true)
+					data.IDAttributeRequired = e.MethodExpr.Payload.IsRequired(att.Name)
 					break
 				}
 			}
@@ -1496,25 +1501,28 @@ func (sds *ServicesData) buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 		}
 	}
 	idAtt := ""
+	idAttRequired := false
 	if e.IsJSONRPC() && result.Type != expr.Empty {
 		obj := expr.AsObject(result.Type)
 		if obj != nil {
 			for _, att := range *obj {
 				if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
 					idAtt = codegen.Goify(att.Name, true)
+					idAttRequired = result.IsRequired(att.Name)
 					break
 				}
 			}
 		}
 	}
 	return &ResultData{
-		IsStruct:    expr.IsObject(result.Type),
-		Name:        name,
-		Ref:         ref,
-		IDAttribute: idAtt,
-		Responses:   responses,
-		View:        view,
-		MustInit:    mustInit,
+		IsStruct:            expr.IsObject(result.Type),
+		Name:                name,
+		Ref:                 ref,
+		IDAttribute:         idAtt,
+		IDAttributeRequired: idAttRequired,
+		Responses:           responses,
+		View:                view,
+		MustInit:            mustInit,
 	}
 }
 

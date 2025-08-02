@@ -3,7 +3,9 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 {{- if not (isWebSocketEndpoint .) }}
 	var (
 		encodeRequest  = {{ .RequestEncoder }}(c.encoder)
+	{{- if not (isSSEEndpoint .) }}
 		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
+	{{- end }}
 	)
 {{- end }}
 	return func(ctx context.Context, v any) (any, error) {
@@ -48,15 +50,16 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 		
 		return stream, nil
 {{- else if isSSEEndpoint . }}
-		// For SSE endpoints, connect and return a stream
-		resp, err := c.{{ .Method.VarName }}Doer.Do(req)
+		// For SSE endpoints, send JSON-RPC request and establish stream
+		resp, err := c.Doer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
 		
 		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
 			resp.Body.Close()
-			return nil, fmt.Errorf("unexpected status from SSE endpoint: %d", resp.StatusCode)
+			return nil, goahttp.ErrInvalidResponse("{{ .ServiceName }}", "{{ .Method.Name }}", resp.StatusCode, string(body))
 		}
 		
 		contentType := resp.Header.Get("Content-Type")
@@ -65,7 +68,14 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 			return nil, fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
 		}
 		
-		return New{{ .Method.VarName }}Stream(resp), nil
+		// Create the SSE client stream
+		stream := &{{ .Method.VarName }}ClientStream{
+			resp:    resp,
+			reader:  bufio.NewReader(resp.Body),
+			decoder: c.decoder,
+		}
+		
+		return stream, nil
 {{- else }}
 		resp, err := c.Doer.Do(req)
 		if err != nil {

@@ -9,6 +9,7 @@
 	{{- range $t := .Server.Transports }}
 		case "{{ $t.Type }}", "{{ $t.Type }}s":
 		{{- if and (eq $t.Type  "http") $.HasJSONRPC }}
+			{{- if $.HasHTTP }}
 			if *jsonrpcF || *jF {
 				endpoint, payload, err = doJSONRPC(scheme, host, timeout, debug)
 			} else {
@@ -17,6 +18,9 @@
 					endpoint, payload, err = doJSONRPC(scheme, host, timeout, debug)
 				}
 			}
+			{{- else }}
+			endpoint, payload, err = doJSONRPC(scheme, host, timeout, debug)
+			{{- end }}
 		{{- else }}
 			endpoint, payload, err = do{{ toUpper $t.Name }}(scheme, host, timeout, debug)
 		{{- end }}

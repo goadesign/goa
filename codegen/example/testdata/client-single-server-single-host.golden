@@ -82,6 +82,10 @@ func main() {
 }
 
 func usage() {
+	var usageCommands []string
+	usageCommands = append(usageCommands, httpUsageCommands()...)
+	sort.Strings(usageCommands)
+	usageCommands = slices.Compact(usageCommands)
 	fmt.Fprintf(os.Stderr, `%s is a command line client for the SingleServerSingleHost API.
 
 Usage:
@@ -99,7 +103,7 @@ Additional help:
 
 Example:
 %s
-`, os.Args[0], os.Args[0], indent(httpUsageCommands()), os.Args[0], indent(httpUsageExamples()))
+`, os.Args[0], os.Args[0], indent(strings.Join(usageCommands, "\n")), os.Args[0], indent(httpUsageExamples()))
 }
 
 func indent(s string) string {

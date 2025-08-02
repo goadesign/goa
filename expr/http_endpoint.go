@@ -980,8 +980,9 @@ func (r *RouteExpr) Validate() *eval.ValidationErrors {
 		}
 	}
 
-	// For streaming endpoints, websockets does not support verbs other than GET
-	if r.Endpoint.MethodExpr.IsStreaming() && len(r.Endpoint.Responses) > 0 {
+	// For WebSocket streaming endpoints, only GET is supported
+	// SSE endpoints can use both GET and POST (JSON-RPC SSE uses POST)
+	if r.Endpoint.MethodExpr.IsStreaming() && len(r.Endpoint.Responses) > 0 && r.Endpoint.SSE == nil {
 		if r.Method != "GET" {
 			verr.Add(r, "WebSocket endpoint supports only \"GET\" method. Got %q.", r.Method)
 		}

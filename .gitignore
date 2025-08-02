@@ -19,3 +19,5 @@ cover.out
 
 # MacOS cruft
 **/.DS_Store
+
+jsonrpc/integration_tests/tests/testdata/runs/*

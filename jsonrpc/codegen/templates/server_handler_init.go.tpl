@@ -16,28 +16,56 @@ func {{ .HandlerInit }}(
 		ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
 
 {{- if isSSEEndpoint . }}
+	{{- if .Payload.Ref }}
+		decodeParams := {{ .RequestDecoder }}(mux, decoder)
+		params, err := decodeParams(r, req)
+		if err != nil {
+			code := jsonrpc.InternalError
+			if _, ok := err.(*goa.ServiceError); ok {
+				code = jsonrpc.InvalidParams
+			}
+			encodeJSONRPCError(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
+			return nil
+		}
+		{{- if .Payload.IDAttribute }}
+		{{- if .Payload.IDAttributeRequired }}
+		if req.ID != nil {
+			params.{{ .Payload.IDAttribute }} = jsonrpc.IDToString(req.ID)
+		}
+		{{- else }}
+		if req.ID != nil {
+			idStr := jsonrpc.IDToString(req.ID)
+			params.{{ .Payload.IDAttribute }} = &idStr
+		}
+		{{- end }}
+		{{- end }}
+	{{- end }}
 	{{- if .SSE.RequestIDField }}
 		// Set Last-Event-ID header if present
 		if lastEventID := r.Header.Get("Last-Event-ID"); lastEventID != "" {
 			ctx = context.WithValue(ctx, "last-event-id", lastEventID)
 		{{- if .Payload.Ref }}
-			{{- if eq .Method.Payload.Type.Name "Object" }}
-			p := payload.({{ .Payload.Ref }})
-			p.{{ .SSE.RequestIDField }} = lastEventID
+			{{- if .Payload.Request }}
+				{{- if eq .Payload.Request.PayloadType.Name "Object" }}
+			params.{{ .SSE.RequestIDField }} = lastEventID
+				{{- end }}
 			{{- end }}
 		{{- end }}
 		}
 	{{- end }}
-		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
-			Stream: &{{ .SSE.StructName }}{
-				w: w,
-				r: r,
-			},
-	{{- if .Payload.Ref }}
-			Payload: payload.({{ .Payload.Ref }}),
-	{{- end }}
+		strm := &{{ .SSE.StructName }}{
+			w:         w,
+			r:         r,
+			encoder:   encoder,
+			requestID: req.ID,
 		}
-		_, err := endpoint(ctx, v)
+		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
+			Stream: strm,
+		{{- if .Payload.Ref }}
+			Payload: params,
+		{{- end }}
+		}
+		_, err = endpoint(ctx, v)
 		return err
 {{- else }}
 	{{- if .Payload.Ref }}
@@ -59,7 +87,16 @@ func {{ .HandlerInit }}(
 		{{- end }}
 		}
 		{{- if .Payload.IDAttribute }}
-		params.{{ .Payload.IDAttribute }} = jsonrpc.IDToString(req.ID)
+		{{- if .Payload.IDAttributeRequired }}
+		if req.ID != nil {
+			params.{{ .Payload.IDAttribute }} = jsonrpc.IDToString(req.ID)
+		}
+		{{- else }}
+		if req.ID != nil {
+			idStr := jsonrpc.IDToString(req.ID)
+			params.{{ .Payload.IDAttribute }} = &idStr
+		}
+		{{- end }}
 		{{- end }}
 	{{- end }}
 	{{- if isNotification . }}
@@ -103,11 +140,19 @@ func {{ .HandlerInit }}(
 		{{- if .Result.IDAttribute }}
 		var id any
 		actual := res.({{ .Result.Ref }})
+		{{- if .Result.IDAttributeRequired }}
 		if actual.{{ .Result.IDAttribute }} != "" {
 			id = actual.{{ .Result.IDAttribute }}
 		} else {
 			id = req.ID
 		}
+		{{- else }}
+		if actual.{{ .Result.IDAttribute }} != nil && *actual.{{ .Result.IDAttribute }} != "" {
+			id = *actual.{{ .Result.IDAttribute }}
+		} else {
+			id = req.ID
+		}
+		{{- end }}
 		{{- else }}
 		id := req.ID
 		{{- end }}

@@ -22,14 +22,14 @@ var (
 	updateGolden = flag.Bool("update", false, "update golden files")
 	u            = flag.Bool("u", false, "update golden files (shorthand)")
 	w            = flag.Bool("w", false, "update golden files (legacy compatibility)")
-	
+
 	// Diff output control
 	verboseDiff = flag.Bool("golden.diff", false, "show detailed unified diffs for mismatches")
 	colorDiff   = flag.Bool("golden.color", true, "colorize diff output")
-	
+
 	// Parallel update control
 	parallelUpdate = flag.Bool("golden.parallel", true, "update golden files in parallel")
-	
+
 	// Global registry for tracking golden file operations
 	goldenRegistry = &registry{
 		files: make(map[string]bool),
@@ -84,25 +84,25 @@ const (
 type Options struct {
 	// BasePath is the base directory for golden files (default: "testdata/golden")
 	BasePath string
-	
+
 	// ContentType specifies the content type for formatting
 	ContentType ContentType
-	
+
 	// FormatCode formats Go code before comparison (default: true for .go files)
 	FormatCode bool
-	
+
 	// NormalizeWhitespace trims trailing whitespace and ensures consistent line endings
 	NormalizeWhitespace bool
-	
+
 	// CreateMissing creates golden files if they don't exist
 	CreateMissing bool
-	
+
 	// DiffContextLines controls the number of context lines in diffs (default: 3)
 	DiffContextLines int
-	
+
 	// FileMode controls file permissions (default: 0644)
 	FileMode os.FileMode
-	
+
 	// UpdateMode allows overriding the global update mode
 	UpdateMode *bool
 }
@@ -180,40 +180,40 @@ func (g *GoldenFile) Path(path string) *GoldenFile {
 // CompareContent performs the golden file comparison
 func (g *GoldenFile) CompareContent() {
 	g.t.Helper()
-	
+
 	if g.path == "" {
 		g.t.Fatal("golden file path not set")
 	}
 	if g.content == nil {
 		g.t.Fatal("content not set")
 	}
-	
+
 	// Determine the full path
 	goldenPath := g.path
 	if !filepath.IsAbs(g.path) && g.options.BasePath != "" {
 		goldenPath = filepath.Join(g.options.BasePath, g.path)
 	}
-	
+
 	// Register the file to prevent concurrent access
 	if !goldenRegistry.register(goldenPath) {
 		g.t.Fatalf("golden file %q is already being processed by another test", goldenPath)
 	}
 	defer goldenRegistry.unregister(goldenPath)
-	
+
 	// Prepare content
 	content := g.prepareContent()
-	
+
 	// Check update mode
 	updateMode := isUpdateMode()
 	if g.options.UpdateMode != nil {
 		updateMode = *g.options.UpdateMode
 	}
-	
+
 	if updateMode {
 		g.updateFile(content, goldenPath)
 		return
 	}
-	
+
 	// Check if file exists
 	if _, err := os.Stat(goldenPath); os.IsNotExist(err) {
 		if g.options.CreateMissing {
@@ -223,7 +223,7 @@ func (g *GoldenFile) CompareContent() {
 		}
 		g.t.Fatalf("golden file %q does not exist (run with -update to create)", goldenPath)
 	}
-	
+
 	g.compareContent(content, goldenPath)
 }
 
@@ -243,7 +243,7 @@ func (g *GoldenFile) CompareBytes(actual []byte, golden string) {
 // prepareContent applies transformations based on content type and options
 func (g *GoldenFile) prepareContent() []byte {
 	content := g.content
-	
+
 	// Detect content type if auto
 	contentType := g.options.ContentType
 	if contentType == ContentTypeAuto && g.path != "" {
@@ -258,7 +258,7 @@ func (g *GoldenFile) prepareContent() []byte {
 			contentType = ContentTypeText
 		}
 	}
-	
+
 	// Format based on content type
 	if g.options.FormatCode {
 		switch contentType {
@@ -267,7 +267,7 @@ func (g *GoldenFile) prepareContent() []byte {
 				content = formatted
 			}
 		case ContentTypeJSON:
-			var v interface{}
+			var v any
 			if err := json.Unmarshal(content, &v); err == nil {
 				if formatted, err := json.MarshalIndent(v, "", "  "); err == nil {
 					content = formatted
@@ -275,7 +275,7 @@ func (g *GoldenFile) prepareContent() []byte {
 			}
 		}
 	}
-	
+
 	// Normalize whitespace
 	if g.options.NormalizeWhitespace {
 		// Convert Windows line endings to Unix
@@ -291,37 +291,37 @@ func (g *GoldenFile) prepareContent() []byte {
 			content = append(content, '\n')
 		}
 	}
-	
+
 	return content
 }
 
 // updateFile writes content to the golden file
 func (g *GoldenFile) updateFile(content []byte, goldenPath string) {
 	g.t.Helper()
-	
+
 	// Create directory if it doesn't exist
 	dir := filepath.Dir(goldenPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		g.t.Fatalf("failed to create golden file directory %q: %v", dir, err)
 	}
-	
+
 	// Write the golden file
 	if err := os.WriteFile(goldenPath, content, g.options.FileMode); err != nil {
 		g.t.Fatalf("failed to update golden file %q: %v", goldenPath, err)
 	}
-	
+
 	g.t.Logf("Updated golden file: %s", goldenPath)
 }
 
 // compareContent reads the golden file and compares with content
 func (g *GoldenFile) compareContent(content []byte, goldenPath string) {
 	g.t.Helper()
-	
+
 	golden, err := os.ReadFile(goldenPath)
 	if err != nil {
 		g.t.Fatalf("failed to read golden file %q: %v", goldenPath, err)
 	}
-	
+
 	// Apply same transformations to golden content
 	if g.options.NormalizeWhitespace {
 		golden = bytes.ReplaceAll(golden, []byte("\r\n"), []byte("\n"))
@@ -334,7 +334,7 @@ func (g *GoldenFile) compareContent(content []byte, goldenPath string) {
 			golden = append(golden, '\n')
 		}
 	}
-	
+
 	if !bytes.Equal(content, golden) {
 		g.reportDifference(content, golden, goldenPath)
 	}
@@ -343,7 +343,7 @@ func (g *GoldenFile) compareContent(content []byte, goldenPath string) {
 // reportDifference reports the difference between content and golden
 func (g *GoldenFile) reportDifference(content, golden []byte, goldenPath string) {
 	g.t.Helper()
-	
+
 	if *verboseDiff {
 		// Show detailed unified diff
 		diff := difflib.UnifiedDiff{
@@ -353,16 +353,16 @@ func (g *GoldenFile) reportDifference(content, golden []byte, goldenPath string)
 			ToFile:   "generated",
 			Context:  g.options.DiffContextLines,
 		}
-		
+
 		diffStr, err := difflib.GetUnifiedDiffString(diff)
 		if err != nil {
 			g.t.Fatalf("failed to generate diff: %v", err)
 		}
-		
+
 		if *colorDiff {
 			diffStr = colorizeDiff(diffStr)
 		}
-		
+
 		g.t.Errorf("golden file mismatch for %q\n%s", goldenPath, diffStr)
 	} else {
 		// Use go-cmp for a more compact diff
@@ -370,7 +370,7 @@ func (g *GoldenFile) reportDifference(content, golden []byte, goldenPath string)
 			g.t.Errorf("golden file mismatch for %q (-want +got):\n%s", goldenPath, diff)
 		}
 	}
-	
+
 	g.t.Logf("Run with -update to update the golden file")
 }
 
@@ -382,7 +382,7 @@ func colorizeDiff(diff string) string {
 		cyan  = "\033[36m"
 		reset = "\033[0m"
 	)
-	
+
 	lines := strings.Split(diff, "\n")
 	for i, line := range lines {
 		switch {
@@ -418,7 +418,7 @@ func (g *GoldenFile) Exists(golden string) bool {
 	if !filepath.IsAbs(golden) {
 		goldenPath = filepath.Join(g.options.BasePath, golden)
 	}
-	
+
 	_, err := os.Stat(goldenPath)
 	return err == nil
 }
@@ -427,12 +427,12 @@ func (g *GoldenFile) Exists(golden string) bool {
 // or creates it if it doesn't exist (useful for initial test creation)
 func (g *GoldenFile) CompareOrCreate(actual string, golden string) {
 	g.t.Helper()
-	
+
 	// Temporarily enable CreateMissing
 	origCreateMissing := g.options.CreateMissing
 	g.options.CreateMissing = true
 	defer func() { g.options.CreateMissing = origCreateMissing }()
-	
+
 	g.StringContent(actual).Path(golden).CompareContent()
 }
 
@@ -440,7 +440,7 @@ func (g *GoldenFile) CompareOrCreate(actual string, golden string) {
 // The pairs parameter is a map where keys are golden file names and values are the actual content
 func (g *GoldenFile) CompareMultiple(pairs map[string]string) {
 	g.t.Helper()
-	
+
 	// Type assert to *testing.T to use Run method
 	t, ok := g.t.(*testing.T)
 	if !ok {
@@ -451,7 +451,7 @@ func (g *GoldenFile) CompareMultiple(pairs map[string]string) {
 		}
 		return
 	}
-	
+
 	if *parallelUpdate && isUpdateMode() {
 		// Update files in parallel
 		var wg sync.WaitGroup
@@ -516,7 +516,7 @@ func (b *Batch) AddString(path string, content string) *Batch {
 // Compare performs all comparisons in the batch
 func (b *Batch) Compare() {
 	b.t.Helper()
-	
+
 	if *parallelUpdate && isUpdateMode() {
 		// Update files in parallel
 		var wg sync.WaitGroup

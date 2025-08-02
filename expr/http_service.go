@@ -275,24 +275,20 @@ func (svc *HTTPServiceExpr) validateErrors(verr *eval.ValidationErrors) {
 // validateTransports validates transport compatibility and JSON-RPC constraints
 func (svc *HTTPServiceExpr) validateTransports(verr *eval.ValidationErrors) {
 	var (
-		hasJSONRPCWebSocket  bool
 		hasPureHTTPWebSocket bool
-		jsonrpcTransports    = make(map[string]bool)
+		hasJSONRPCWebSocket  bool
+		hasJSONRPCOther      bool // HTTP or SSE
 	)
 
 	// Analyze endpoints
 	for _, e := range svc.HTTPEndpoints {
-		isStreaming := e.MethodExpr.IsStreaming()
-		usesWebSocket := isStreaming && e.SSE == nil
+		usesWebSocket := e.MethodExpr.IsStreaming() && e.SSE == nil
 
 		if e.IsJSONRPC() {
 			if usesWebSocket {
 				hasJSONRPCWebSocket = true
-				jsonrpcTransports["WebSocket"] = true
-			} else if isStreaming {
-				jsonrpcTransports["SSE"] = true
 			} else {
-				jsonrpcTransports["HTTP"] = true
+				hasJSONRPCOther = true
 			}
 		} else if usesWebSocket {
 			hasPureHTTPWebSocket = true
@@ -304,9 +300,9 @@ func (svc *HTTPServiceExpr) validateTransports(verr *eval.ValidationErrors) {
 		verr.Add(svc, "Service cannot mix JSON-RPC WebSocket endpoints with pure HTTP WebSocket endpoints. JSON-RPC uses a single WebSocket connection for all methods, while pure HTTP WebSocket creates individual connections per endpoint.")
 	}
 
-	// Validate JSON-RPC transport consistency
-	if len(jsonrpcTransports) > 1 {
-		verr.Add(svc, "All JSON-RPC endpoints of a given service must use the same transport (HTTP, WebSocket or SSE)")
+	// WebSocket cannot mix with other JSON-RPC transports
+	if hasJSONRPCWebSocket && hasJSONRPCOther {
+		verr.Add(svc, "JSON-RPC WebSocket endpoints cannot be mixed with other JSON-RPC transports")
 	}
 
 	// Validate JSON-RPC WebSocket constraints
@@ -318,10 +314,6 @@ func (svc *HTTPServiceExpr) validateTransports(verr *eval.ValidationErrors) {
 // validateJSONRPCWebSocketConstraints validates constraints for JSON-RPC WebSocket endpoints
 func (svc *HTTPServiceExpr) validateJSONRPCWebSocketConstraints(verr *eval.ValidationErrors) {
 	for _, e := range svc.HTTPEndpoints {
-		if !e.IsJSONRPC() {
-			continue
-		}
-
 		name := e.MethodExpr.Name
 		if !e.Headers.IsEmpty() {
 			verr.Add(e, "JSON-RPC endpoint %q using WebSocket cannot have header mappings", name)

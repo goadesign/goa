@@ -4,12 +4,22 @@
 {{ printf "Send%s sends a JSON-RPC response for the %s method." .Method.VarName .Method.Name | comment }}
 func (s *{{ lowerInitial $.Service.StructName }}Stream) Send{{ .Method.VarName }}(ctx context.Context, result {{ .Result.Ref }}) error {
 			{{- if .Result.IDAttribute }}
+				{{- if .Result.IDAttributeRequired }}
 	id := result.{{ .Result.IDAttribute }}
 	result.{{ .Result.IDAttribute }} = ""
-			{{- else }}
-	id := ""
-			{{- end }}
+				{{- else }}
+	var id any
+	if result.{{ .Result.IDAttribute }} != nil {
+		id = *result.{{ .Result.IDAttribute }}
+		result.{{ .Result.IDAttribute }} = nil
+	} else {
+		id = ""
+	}
+				{{- end }}
 	return s.send(id, result)
+			{{- else }}
+	return s.send("", result)
+			{{- end }}
 }
 		{{- else }}
 {{ printf "Send%s sends a JSON-RPC notification for the %s method." .Method.VarName .Method.Name | comment }}

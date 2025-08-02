@@ -44,20 +44,7 @@
 			} else if u.Port() == "" {
 				u.Host = net.JoinHostPort(u.Host, "{{ $u.Port }}")
 			}
-			handle{{ toUpper $u.Transport.Name }}Server(ctx, u, 
-				{{- range $t := $.Server.Transports }}
-					{{- if eq $t.Type $u.Transport.Type }}
-						{{- range $s := $t.Services }}
-							{{- range $.Services }}
-								{{- if eq $s .Name }}
-									{{- if .Methods }}{{ .VarName }}Endpoints, {{ end }}
-									{{- if hasJSONRPCEndpoints . }}{{ .VarName }}Svc, {{ end }}
-								{{- end }}
-							{{- end }}
-						{{- end }}
-					{{- end }}
-				{{- end }}
-				&wg, errc, *dbgF)
+			handle{{ toUpper $u.Transport.Name }}Server(ctx, u, {{- range $t := $.Server.Transports }}{{- if eq $t.Type $u.Transport.Type }}{{- range $s := $t.Services }}{{- range $.Services }}{{- if eq $s .Name }}{{- if .Methods }}{{ .VarName }}Endpoints, {{ end }}{{- if hasJSONRPCEndpoints . }}{{ .VarName }}Svc, {{ end }}{{- end }}{{- end }}{{- end }}{{- end }}{{- end }}&wg, errc, *dbgF)
 		}
 	{{- end }}
 	{{ end }}

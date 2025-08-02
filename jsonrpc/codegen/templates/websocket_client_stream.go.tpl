@@ -157,7 +157,7 @@ func (s *{{ .VarName }}) {{ .RecvName }}WithContext(ctx context.Context) ({{ .Re
 	var oldestPending *{{ .VarName }}PendingRequest
 	var oldestKey string
 	
-	s.pending.Range(func(key, value interface{}) bool {
+	s.pending.Range(func(key, value any) bool {
 		pending := value.(*{{ .VarName }}PendingRequest)
 		if oldestPending == nil {
 			oldestPending = pending
@@ -376,7 +376,7 @@ func (s *{{ .VarName }}) getError() error {
 }
 
 func (s *{{ .VarName }}) cleanupPendingRequests(err error) {
-	s.pending.Range(func(key, value interface{}) bool {
+	s.pending.Range(func(key, value any) bool {
 		pending := value.(*{{ .VarName }}PendingRequest)
 		pending.timeout.Stop()
 		

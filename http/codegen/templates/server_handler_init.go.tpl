@@ -78,12 +78,12 @@ func {{ .HandlerInit }}(
 				r: r,
 			},
 		{{- if .Payload.Ref }}
-			Payload: payload.({{ .Payload.Ref }}),
+			Payload: payload,
 		{{- end }}
 		}
 		_, err = endpoint(ctx, v)
 	{{- else if .Method.SkipRequestBodyEncodeDecode }}
-		data := &{{ .ServicePkgName }}.{{ .Method.RequestStruct }}{ {{ if .Payload.Ref }}Payload: payload.({{ .Payload.Ref }}), {{ end }}Body: r.Body }
+		data := &{{ .ServicePkgName }}.{{ .Method.RequestStruct }}{ {{ if .Payload.Ref }}Payload: payload, {{ end }}Body: r.Body }
 		res, err := endpoint(ctx, data)
 	{{- else if .Redirect }}
 		http.Redirect(w, r, "{{ .Redirect.URL }}", {{ .Redirect.StatusCode }})

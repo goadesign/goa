@@ -20,6 +20,9 @@ func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 		if f := websocketClientFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
+		if f := sseClientFile(genpkg, svc, data); f != nil {
+			files = append(files, f)
+		}
 	}
 	for _, svc := range jsvcs {
 		f := httpcodegen.ClientEncodeDecodeFile(genpkg, svc, data)
@@ -31,6 +34,7 @@ func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 		for _, s := range f.SectionTemplates {
 			switch s.Name {
 			case "source-header":
+				codegen.AddImport(s, &codegen.ImportSpec{Path: "bufio"})
 				codegen.AddImport(s, &codegen.ImportSpec{Path: "bytes"})
 				codegen.AddImport(s, &codegen.ImportSpec{Path: "sync"})
 				codegen.AddImport(s, &codegen.ImportSpec{Path: "sync/atomic"})
@@ -63,6 +67,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 	title := fmt.Sprintf("%s client JSON-RPC transport", svc.Name())
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", []*codegen.ImportSpec{
+			{Path: "bufio"},
 			{Path: "bytes"},
 			{Path: "context"},
 			{Path: "fmt"},
@@ -86,8 +91,9 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		Source: jsonrpcTemplates.Read(clientStructT),
 		Data:   data,
 		FuncMap: map[string]any{
-			"hasWebSocket": httpcodegen.HasWebSocket,
-			"hasSSE":       httpcodegen.HasSSE,
+			"hasWebSocket":  httpcodegen.HasWebSocket,
+			"hasSSE":        httpcodegen.HasSSE,
+			"isSSEEndpoint": httpcodegen.IsSSEEndpoint,
 		},
 	})
 
@@ -96,8 +102,9 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		Source: jsonrpcTemplates.Read(clientInitT),
 		Data:   data,
 		FuncMap: map[string]any{
-			"hasWebSocket": httpcodegen.HasWebSocket,
-			"hasSSE":       httpcodegen.HasSSE,
+			"hasWebSocket":  httpcodegen.HasWebSocket,
+			"hasSSE":        httpcodegen.HasSSE,
+			"isSSEEndpoint": httpcodegen.IsSSEEndpoint,
 		},
 	})
 
@@ -131,11 +138,20 @@ const newJSONRPCBody = `b := {{ .NewBody }}
 			Params:  b,
 		}
 {{- if .Payload.IDAttribute }}
+	{{- if .Payload.IDAttributeRequired }}
 		if p.{{ .Payload.IDAttribute }} != "" {
 			body.ID = &p.{{ .Payload.IDAttribute }}
 		} else {
 			id := uuid.New().String()
 			body.ID = &id
 		}
+	{{- else }}
+		if p.{{ .Payload.IDAttribute }} != nil {
+			body.ID = p.{{ .Payload.IDAttribute }}
+		} else {
+			id := uuid.New().String()
+			body.ID = &id
+		}
+	{{- end }}
 {{- end }}
 `

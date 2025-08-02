@@ -43,6 +43,12 @@ const (
 	websocketClientStreamT     = "websocket_client_stream"
 	websocketStreamErrorTypesT = "websocket_stream_error_types"
 
+	// SSE templates
+	sseServerStreamT     = "sse_server_stream"
+	sseClientStreamT     = "sse_client_stream"
+	sseServerStreamImplT = "sse_server_stream_impl"
+	sseServerHandlerT    = "sse_server_handler"
+
 	// Partial templates
 	singleResponseP         = "single_response"
 	queryTypeConversionP    = "query_type_conversion"

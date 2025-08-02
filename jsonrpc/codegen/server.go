@@ -16,7 +16,12 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 	jsvcs := data.Root.API.JSONRPC.Services
 	for _, svc := range jsvcs {
 		files = append(files, serverFile(genpkg, svc, data))
-		if f := websocketServerFile(genpkg, svc, data); f != nil {
+		// Generate either WebSocket or SSE file based on transport type
+		if hasJSONRPCSSE(svc, data) {
+			if f := sseServerStreamFile(genpkg, svc, data); f != nil {
+				files = append(files, f)
+			}
+		} else if f := websocketServerFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
 	}
@@ -113,15 +118,26 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		&codegen.SectionTemplate{Name: "jsonrpc-server-method-names", Source: jsonrpcTemplates.Read(serverMethodNamesT), Data: data},
 	)
 
-	// Use WebSocket server handler for WebSocket endpoints, regular handler for HTTP endpoints
-	if httpcodegen.HasWebSocket(data) {
+	// Use appropriate server handler based on transport
+	if hasJSONRPCSSE(svc, services) {
+		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-sse-server-handler", Source: jsonrpcTemplates.Read(sseServerHandlerT), FuncMap: funcs, Data: data})
+	} else if httpcodegen.HasWebSocket(data) {
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-websocket-server-handler", Source: jsonrpcTemplates.Read(websocketServerHandlerT), FuncMap: funcs, Data: data})
 	} else {
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), FuncMap: funcs, Data: data})
 	}
 
+	// Add HasSSE flag to data
+	mountData := struct {
+		*httpcodegen.ServiceData
+		HasSSE bool
+	}{
+		ServiceData: data,
+		HasSSE:      hasJSONRPCSSE(svc, services),
+	}
+	
 	sections = append(sections,
-		&codegen.SectionTemplate{Name: "jsonrpc-server-mount", Source: jsonrpcTemplates.Read(serverMountT), Data: data},
+		&codegen.SectionTemplate{Name: "jsonrpc-server-mount", Source: jsonrpcTemplates.Read(serverMountT), Data: mountData},
 	)
 
 	for _, e := range data.Endpoints {
@@ -139,4 +155,21 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 // lowerInitial returns the string with the first letter in lowercase.
 func lowerInitial(s string) string {
 	return strings.ToLower(s[:1]) + s[1:]
+}
+
+// hasJSONRPCSSE returns true if the service uses SSE for JSON-RPC streaming.
+func hasJSONRPCSSE(svc *expr.HTTPServiceExpr, data *httpcodegen.ServicesData) bool {
+	svcData := data.Get(svc.Name())
+	if svcData == nil {
+		return false
+	}
+	
+	// Check if any JSON-RPC streaming endpoint uses SSE
+	for _, e := range svc.HTTPEndpoints {
+		if e.MethodExpr.IsStreaming() && e.IsJSONRPC() && e.SSE != nil {
+			return true
+		}
+	}
+	
+	return false
 }
