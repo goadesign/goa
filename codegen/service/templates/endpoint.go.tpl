@@ -1,14 +1,6 @@
 {{ comment .Description }}
-{{- if .ServerStream }}
-{{- if .IsJSONRPC }}
-func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context, input *{{ .ServerStream.EndpointStruct }}) (err error) {
-	stream := input.Stream
-	{{- if .PayloadFullRef }}
-	p := input.Payload
-	{{- end }}
-{{- else }}
+{{- if and .ServerStream (not .IsJSONRPC) }}
 func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}, stream {{ .StreamInterface }}) (err error) {
-{{- end }}
 {{- else }}
 func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}{{ if .SkipRequestBodyEncodeDecode }}, req io.ReadCloser{{ end }}) ({{ if .Result }}res {{ .ResultFullRef }}, {{ end }}{{ if .SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}{{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}err error) {
 {{- end }}
@@ -16,7 +8,7 @@ func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .Pay
 	// req is the HTTP request body stream.
 	defer req.Close()
 {{- end }}
-{{- if and (and .Result .ResultIsStruct) (or (not .ServerStream) .IsJSONRPC) }}
+{{- if and .Result .ResultIsStruct (or (not .ServerStream) .IsJSONRPC) }}
 	res = &{{ .ResultFullName }}{}
 {{- end }}
 {{- if .SkipResponseBodyEncodeDecode }}

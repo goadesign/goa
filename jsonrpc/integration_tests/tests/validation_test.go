@@ -418,6 +418,9 @@ func createRequiredFieldsDSLCode() string {
 	})
 	
 	Service("users", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("create_user", func() {
 			Payload(func() {
 				Attribute("name", String)
@@ -433,7 +436,6 @@ func createRequiredFieldsDSLCode() string {
 				Required("id", "created")
 			})
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`
@@ -445,6 +447,9 @@ func createFormatValidationDSLCode() string {
 	})
 	
 	Service("validation", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("validate_formats", func() {
 			Payload(func() {
 				Attribute("email", String, func() {
@@ -466,7 +471,6 @@ func createFormatValidationDSLCode() string {
 				Required("valid")
 			})
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`
@@ -478,6 +482,9 @@ func createRangeValidationDSLCode() string {
 	})
 	
 	Service("validation", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("validate_ranges", func() {
 			Payload(func() {
 				Attribute("age", Int, func() {
@@ -502,7 +509,6 @@ func createRangeValidationDSLCode() string {
 				Required("valid")
 			})
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`
@@ -514,6 +520,9 @@ func createStringValidationDSLCode() string {
 	})
 	
 	Service("validation", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("validate_strings", func() {
 			Payload(func() {
 				Attribute("username", String, func() {
@@ -538,7 +547,6 @@ func createStringValidationDSLCode() string {
 				Required("valid")
 			})
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`
@@ -550,6 +558,9 @@ func createEnumValidationDSLCode() string {
 	})
 	
 	Service("validation", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("validate_enums", func() {
 			Payload(func() {
 				Attribute("status", String, func() {
@@ -568,7 +579,6 @@ func createEnumValidationDSLCode() string {
 				Required("valid")
 			})
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`

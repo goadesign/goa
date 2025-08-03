@@ -45,6 +45,9 @@ type (
 		// SSE defines the Server-Sent Events configuration for all streaming endpoints
 		// in this service. If nil, streaming endpoints use WebSockets by default.
 		SSE *HTTPSSEExpr
+		// JSONRPCRoute is the route used for all JSON-RPC endpoints in this service.
+		// Only applicable to JSON-RPC services.
+		JSONRPCRoute *RouteExpr
 		// Meta is a set of key/value pairs with semantic that is
 		// specific to each generator.
 		Meta MetaExpr
@@ -173,6 +176,11 @@ func (svc *HTTPServiceExpr) EvalName() string {
 
 // Prepare initializes the error responses.
 func (svc *HTTPServiceExpr) Prepare() {
+	// Create routes for JSON-RPC endpoints if needed
+	if svc.ServiceExpr.Meta != nil && svc.ServiceExpr.Meta["jsonrpc:service"] != nil {
+		svc.prepareJSONRPCRoutes()
+	}
+	
 	// Lookup undefined HTTP errors in API.
 	for _, err := range svc.ServiceExpr.Errors {
 		found := false
@@ -309,6 +317,12 @@ func (svc *HTTPServiceExpr) validateTransports(verr *eval.ValidationErrors) {
 	if hasJSONRPCWebSocket {
 		svc.validateJSONRPCWebSocketConstraints(verr)
 	}
+	
+	// Validate JSON-RPC transport consistency
+	if svc.ServiceExpr.Meta != nil && svc.ServiceExpr.Meta["jsonrpc:service"] != nil {
+		svc.validateJSONRPCTransportConsistency(verr)
+		svc.validateJSONRPCRoutes(verr)
+	}
 }
 
 // validateJSONRPCWebSocketConstraints validates constraints for JSON-RPC WebSocket endpoints
@@ -331,5 +345,117 @@ func (svc *HTTPServiceExpr) validateJSONRPCWebSocketConstraints(verr *eval.Valid
 func (svc *HTTPServiceExpr) Finalize() {
 	if len(svc.Paths) == 0 {
 		svc.Paths = []string{"/"}
+	}
+}
+
+// prepareJSONRPCRoutes creates routes for all JSON-RPC endpoints.
+// All JSON-RPC methods share the same route.
+func (svc *HTTPServiceExpr) prepareJSONRPCRoutes() {
+	// Check if service has JSON-RPC endpoints
+	hasJSONRPC := false
+	for _, e := range svc.HTTPEndpoints {
+		if e.IsJSONRPC() {
+			hasJSONRPC = true
+			break
+		}
+	}
+	
+	if !hasJSONRPC {
+		return
+	}
+	
+	// Determine route from service-level configuration
+	var route *RouteExpr
+	
+	if svc.JSONRPCRoute != nil {
+		// Use explicitly defined JSON-RPC route
+		route = svc.JSONRPCRoute
+	} else {
+		// Create default route
+		path := "/"
+		if len(svc.Paths) > 0 {
+			path = svc.Paths[0]
+		}
+		
+		method := "POST" // default
+		
+		// If using WebSocket, force GET
+		for _, e := range svc.HTTPEndpoints {
+			if e.IsJSONRPC() && e.MethodExpr.IsStreaming() && e.SSE == nil {
+				method = "GET" // WebSocket requires GET
+				break
+			}
+		}
+		
+		route = &RouteExpr{
+			Method: method,
+			Path:   path,
+		}
+	}
+	
+	// Set the same route on all JSON-RPC endpoints
+	for _, e := range svc.HTTPEndpoints {
+		if e.IsJSONRPC() {
+			e.Routes = []*RouteExpr{{
+				Method:   route.Method,
+				Path:     route.Path,
+				Endpoint: e,
+			}}
+		}
+	}
+}
+
+// validateJSONRPCTransportConsistency validates that all JSON-RPC methods use the same transport.
+func (svc *HTTPServiceExpr) validateJSONRPCTransportConsistency(verr *eval.ValidationErrors) {
+	var hasWebSocket, hasSSE, hasRegular bool
+	
+	for _, e := range svc.HTTPEndpoints {
+		if e.IsJSONRPC() {
+			if e.MethodExpr.IsStreaming() {
+				if e.SSE != nil {
+					hasSSE = true
+				} else {
+					hasWebSocket = true
+				}
+			} else {
+				hasRegular = true
+			}
+		}
+	}
+	
+	transportCount := 0
+	if hasWebSocket {
+		transportCount++
+	}
+	if hasSSE {
+		transportCount++
+	}
+	if hasRegular {
+		transportCount++
+	}
+	
+	if transportCount > 1 {
+		verr.Add(svc, "JSON-RPC service %q cannot mix transport types (WebSocket, SSE, and regular HTTP)", svc.Name())
+	}
+}
+
+// validateJSONRPCRoutes validates that JSON-RPC routes use the correct HTTP method.
+func (svc *HTTPServiceExpr) validateJSONRPCRoutes(verr *eval.ValidationErrors) {
+	for _, e := range svc.HTTPEndpoints {
+		if e.IsJSONRPC() {
+			for _, r := range e.Routes {
+				// WebSocket requires GET
+				if e.MethodExpr.IsStreaming() && e.SSE == nil {
+					if r.Method != "GET" {
+						verr.Add(r, "JSON-RPC WebSocket endpoint must use GET method, got %q", r.Method)
+					}
+				} else {
+					// Regular JSON-RPC and SSE require POST
+					if r.Method != "POST" {
+						verr.Add(r, "JSON-RPC endpoint must use POST method, got %q", r.Method)
+					}
+				}
+			}
+		}
 	}
 }

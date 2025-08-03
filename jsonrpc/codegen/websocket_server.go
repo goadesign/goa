@@ -18,13 +18,15 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 		return nil
 	}
 	funcs := map[string]any{
-		"lowerInitial": lowerInitial,
-		"allErrors":    allErrors,
+		"lowerInitial":       lowerInitial,
+		"allErrors":          allErrors,
+		"isWebSocketEndpoint": httpcodegen.IsWebSocketEndpoint,
 	}
 	svcName := data.Service.PathName
 	title := fmt.Sprintf("%s WebSocket server streaming", svc.Name())
 	imports := []*codegen.ImportSpec{
 		{Path: "context"},
+		{Path: "encoding/json"},
 		{Path: "errors"},
 		{Path: "fmt"},
 		{Path: "io"},
@@ -44,6 +46,12 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 		{
 			Name:    "jsonrpc-server-websocket-struct",
 			Source:  jsonrpcTemplates.Read(websocketServerStreamT),
+			Data:    data,
+			FuncMap: funcs,
+		},
+		{
+			Name:    "jsonrpc-server-websocket-stream-wrapper",
+			Source:  jsonrpcTemplates.Read(websocketServerStreamWrapperT),
 			Data:    data,
 			FuncMap: funcs,
 		},

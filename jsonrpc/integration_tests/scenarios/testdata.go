@@ -14,16 +14,16 @@ func (s SSETestData) GenerateData(index int) any {
 	switch s.ResultType {
 	case DataTypePrimitive:
 		// Now wrapped in object for JSON-RPC streaming compliance
-		// Use uppercase field name to match Go struct JSON marshaling
+		// Use lowercase field name to match JSON marshaling
 		return map[string]any{
-			"Value": fmt.Sprintf("event %d", index),
+			"value": fmt.Sprintf("event %d", index),
 		}
 
 	case DataTypeArray:
 		// Now wrapped in object for JSON-RPC streaming compliance
-		// Use uppercase field name to match Go struct JSON marshaling
+		// Use lowercase field name to match JSON marshaling
 		return map[string]any{
-			"Items": []any{
+			"items": []any{
 				fmt.Sprintf("event-%d-a", index),
 				fmt.Sprintf("event-%d-b", index),
 				index,

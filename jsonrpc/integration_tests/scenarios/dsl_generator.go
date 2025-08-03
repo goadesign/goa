@@ -29,6 +29,9 @@ func GenerateDSLCode(payloadType, resultType DataType) string {
 
 	// Service definition
 	dsl.WriteString(`	Service("test", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("call", func() {
 `)
 
@@ -53,7 +56,6 @@ func GenerateDSLCode(payloadType, resultType DataType) string {
 
 	// JSON-RPC endpoint
 	dsl.WriteString(`			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`)
@@ -175,6 +177,9 @@ func GenerateNotificationDSL(payloadType DataType) string {
 	}
 
 	dsl.WriteString(`	Service("notifier", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("notify", func() {
 `)
 
@@ -185,7 +190,6 @@ func GenerateNotificationDSL(payloadType DataType) string {
 	// No Result for notifications
 	dsl.WriteString(`			
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`)
@@ -234,13 +238,24 @@ func GenerateWebSocketDSL(payloadType, resultType DataType, streaming StreamingT
 	}
 
 	dsl.WriteString(fmt.Sprintf(`	Service("streaming", func() {
+		JSONRPC(func() {
+			GET("/jsonrpc/ws")
+		})
 		Method("%s", func() {
 `, methodName))
 
 	// Streaming configuration
 	switch streaming {
 	case StreamingServer:
-		// Server streaming only has streaming results, no payload
+		// Server streaming: non-streaming payload, streaming results
+		dsl.WriteString(`			Payload(func() {
+				Attribute("id", String, func() {
+					Meta("jsonrpc:id")
+				})
+				Attribute("count", Int, "Number of messages to stream")
+				Required("id", "count")
+			})
+`)
 		dsl.WriteString(fmt.Sprintf("\t\t\tStreamingResult(%s)\n", generateJSONRPCStreamingTypeExpression(resultType)))
 
 	case StreamingClient:
@@ -254,8 +269,8 @@ func GenerateWebSocketDSL(payloadType, resultType DataType, streaming StreamingT
 			generateJSONRPCStreamingTypeExpression(payloadType), generateJSONRPCStreamingTypeExpression(resultType)))
 	}
 
-	// JSON-RPC method endpoint with WebSocket path
-	dsl.WriteString("\t\t\t\n\t\t\tJSONRPC(func() {\n\t\t\t\tGET(\"/jsonrpc/ws\")\n\t\t\t})\n\t\t})\n\t})")
+	// JSON-RPC method endpoint
+	dsl.WriteString("\t\t\t\n\t\t\tJSONRPC(func() {\n\t\t\t})\n\t\t})\n\t})")
 
 	return dsl.String()
 }
@@ -352,22 +367,24 @@ func GenerateSSEDSL(payloadType, resultType DataType) string {
 	}
 
 	dsl.WriteString(`	Service("events", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc/sse")
+			ServerSentEvents()
+		})
 		Method("subscribe", func() {
 `)
 
-	// For SSE (GET endpoints), we can't have a request body
-	// If payload is needed, it should be in path or query params
-	// For now, SSE will only support streaming results without payload
+	// For JSON-RPC SSE, we use POST and can send payload in the request body
+	// However, for now, SSE will only support streaming results without payload
+	// to keep the test scenarios simple
 
 	// Streaming result - JSON-RPC streaming requires object results
 	dsl.WriteString(fmt.Sprintf(`			StreamingResult(%s)
 `, generateStreamingResultExpression(resultType)))
 
-	// SSE endpoint - use GET method as required by ServerSentEvents
+	// JSON-RPC endpoint
 	dsl.WriteString(`			
-			HTTP(func() {
-				GET("/events")
-				ServerSentEvents()
+			JSONRPC(func() {
 			})
 		})
 	})`)
@@ -390,6 +407,9 @@ func GenerateErrorDSL(customErrors bool) string {
 	})
 
 	Service("errors", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 `)
 
 	if customErrors {
@@ -426,7 +446,6 @@ func GenerateErrorDSL(customErrors bool) string {
 
 	dsl.WriteString(`			
 			JSONRPC(func() {
-				POST("/jsonrpc")
 `)
 
 	if customErrors {
@@ -456,6 +475,9 @@ func GenerateValidationDSL(validationType string) string {
 	})
 
 	Service("validation", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("validate", func() {
 `)
 
@@ -497,7 +519,6 @@ func GenerateValidationDSL(validationType string) string {
 			})
 			
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`)
@@ -513,6 +534,9 @@ func GenerateBatchDSL() string {
 	})
 
 	Service("batch", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("add", func() {
 			Payload(func() {
 				Attribute("a", Int)
@@ -521,7 +545,6 @@ func GenerateBatchDSL() string {
 			})
 			Result(Int)
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 		
@@ -533,7 +556,6 @@ func GenerateBatchDSL() string {
 			})
 			Result(Int)
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`
@@ -571,6 +593,9 @@ func GenerateViewsDSL() string {
 	})
 
 	Service("users", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("get", func() {
 			Payload(func() {
 				Attribute("id", String)
@@ -579,7 +604,6 @@ func GenerateViewsDSL() string {
 			})
 			Result(User)
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`
@@ -610,11 +634,13 @@ func GenerateComplexDSL() string {
 	})
 
 	Service("complex", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("process", func() {
 			Payload(Level1)
 			Result(Level1)
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`
@@ -628,6 +654,9 @@ func GenerateLargePayloadDSL() string {
 	})
 
 	Service("large", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("process", func() {
 			Payload(func() {
 				Attribute("data", ArrayOf(String))
@@ -639,7 +668,6 @@ func GenerateLargePayloadDSL() string {
 				Required("count", "size")
 			})
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`
@@ -653,6 +681,9 @@ func GenerateUnicodeDSL() string {
 	})
 
 	Service("unicode", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("echo", func() {
 			Payload(func() {
 				Attribute("text", String)
@@ -666,7 +697,6 @@ func GenerateUnicodeDSL() string {
 				Required("echoed", "length")
 			})
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`

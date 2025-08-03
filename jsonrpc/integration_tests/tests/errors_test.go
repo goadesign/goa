@@ -2,6 +2,7 @@ package tests
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"goa.design/goa/v3/jsonrpc/integration_tests/harness"
@@ -40,7 +41,7 @@ func TestStandardJSONRPCErrors(t *testing.T) {
 					},
 				},
 			},
-			expectedCode: -32602,        // Invalid params for missing required payload
+			expectedCode: -32602,           // Invalid params for missing required payload
 			expectedMsg:  "Invalid params", // Standard JSON-RPC error message
 		},
 		{
@@ -86,7 +87,6 @@ func TestStandardJSONRPCErrors(t *testing.T) {
 		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel() // Run test cases in parallel
-			t.Logf("Starting test %s", tc.name)
 			// Add error validators
 			tc.scenario.Validators = []validators.Validator{
 				validators.ProtocolValidator(),
@@ -196,7 +196,7 @@ func TestErrorDataPropagation(t *testing.T) {
 			validators.CustomErrorValidator(harness.ErrorObject{
 				Code:    -32602,
 				Message: "Invalid params", // JSON-RPC standard error message
-				Data:    nil, // Goa's standard validation errors don't include custom data
+				Data:    nil,              // Goa's standard validation errors don't include custom data
 			}),
 		},
 	}
@@ -218,13 +218,22 @@ func TestTransportSpecificErrors(t *testing.T) {
 	h := harness.New(t)
 
 	testCases := []struct {
-		name      string
-		transport scenarios.Transport
-		scenario  scenarios.Scenario
+		name             string
+		transport        scenarios.Transport
+		scenario         scenarios.Scenario
+		expectError      bool
+		errorShouldMatch func(error) bool // Function to validate expected error
 	}{
 		{
-			name:      "http_timeout",
-			transport: scenarios.TransportHTTP,
+			name:        "http_timeout",
+			transport:   scenarios.TransportHTTP,
+			expectError: true,
+			errorShouldMatch: func(err error) bool {
+				// Check for timeout-related errors
+				return strings.Contains(strings.ToLower(err.Error()), "timeout") ||
+					strings.Contains(strings.ToLower(err.Error()), "context deadline exceeded") ||
+					strings.Contains(strings.ToLower(err.Error()), "i/o timeout")
+			},
 			scenario: scenarios.Scenario{
 				Name:      "http_timeout_error",
 				Transport: scenarios.TransportHTTP,
@@ -244,8 +253,18 @@ func TestTransportSpecificErrors(t *testing.T) {
 			},
 		},
 		{
-			name:      "websocket_disconnect",
-			transport: scenarios.TransportWebSocket,
+			name:        "websocket_disconnect",
+			transport:   scenarios.TransportWebSocket,
+			expectError: true,
+			errorShouldMatch: func(err error) bool {
+				// Check for WebSocket disconnect or connection errors
+				errStr := strings.ToLower(err.Error())
+				return strings.Contains(errStr, "websocket") ||
+					strings.Contains(errStr, "connection") ||
+					strings.Contains(errStr, "disconnect") ||
+					strings.Contains(errStr, "closed") ||
+					strings.Contains(errStr, "unexpected eof")
+			},
 			scenario: scenarios.Scenario{
 				Name:      "websocket_disconnect_error",
 				Transport: scenarios.TransportWebSocket,
@@ -272,15 +291,22 @@ func TestTransportSpecificErrors(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Skip if transport not being tested
-			if tc.transport == scenarios.TransportWebSocket {
-				t.Skip("WebSocket error handling requires special setup")
-			}
-
 			// Run scenario
-			if err := runner.Run(tc.scenario); err != nil {
-				// Some errors are expected
-				t.Logf("Transport error scenario completed with: %v", err)
+			err := runner.Run(tc.scenario)
+
+			if tc.expectError {
+				// We expect an error - validate it occurred and matches expectations
+				if err == nil {
+					t.Fatalf("Expected transport error for %s, but scenario completed successfully", tc.name)
+				}
+				if tc.errorShouldMatch != nil && !tc.errorShouldMatch(err) {
+					t.Fatalf("Transport error for %s doesn't match expected pattern: %v", tc.name, err)
+				}
+			} else {
+				// We don't expect an error - fail if one occurs
+				if err != nil {
+					t.Fatalf("Unexpected error in scenario %s: %v", tc.name, err)
+				}
 			}
 		})
 	}
@@ -295,6 +321,7 @@ func createBasicDSLCode() string {
 	
 	Service("basic", func() {
 		JSONRPC(func() {
+			POST("/jsonrpc")
 		})
 		Method("echo", func() {
 			Payload(func() {
@@ -303,7 +330,6 @@ func createBasicDSLCode() string {
 			})
 			Result(String)
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`
@@ -316,6 +342,7 @@ func createValidationDSLCode() string {
 	
 	Service("validation", func() {
 		JSONRPC(func() {
+			POST("/jsonrpc")
 		})
 		Method("validate", func() {
 			Payload(func() {
@@ -325,7 +352,6 @@ func createValidationDSLCode() string {
 			})
 			Result(Boolean)
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`
@@ -338,6 +364,7 @@ func createCustomErrorDSLCode() string {
 	
 	Service("errors", func() {
 		JSONRPC(func() {
+			POST("/jsonrpc")
 		})
 		
 		Error("Unauthorized", func() {
@@ -371,7 +398,6 @@ func createCustomErrorDSLCode() string {
 			Error("Conflict")
 			
 			JSONRPC(func() {
-				POST("/jsonrpc")
 				Response("Unauthorized", func() {
 					Code(-32001)
 				})
@@ -393,6 +419,7 @@ func createErrorWithDataDSLCode() string {
 	
 	Service("validation", func() {
 		JSONRPC(func() {
+			POST("/jsonrpc")
 		})
 		Method("validate_complex", func() {
 			Payload(func() {
@@ -409,7 +436,6 @@ func createErrorWithDataDSLCode() string {
 			})
 			Result(Boolean)
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`
@@ -422,6 +448,7 @@ func createTimeoutDSLCode() string {
 	
 	Service("slow", func() {
 		JSONRPC(func() {
+			POST("/jsonrpc")
 		})
 		Method("slow_operation", func() {
 			Payload(func() {
@@ -430,7 +457,6 @@ func createTimeoutDSLCode() string {
 			})
 			Result(String)
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`

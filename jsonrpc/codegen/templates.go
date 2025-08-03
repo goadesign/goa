@@ -32,11 +32,12 @@ const (
 	responseDecoderT    = "response_decoder"
 
 	// WebSocket templates
-	websocketServerStreamT  = "websocket_server_stream"
-	websocketServerHandlerT = "websocket_server_handler"
-	websocketServerSendT    = "websocket_server_send"
-	websocketServerRecvT    = "websocket_server_recv"
-	websocketServerCloseT   = "websocket_server_close"
+	websocketServerStreamT        = "websocket_server_stream"
+	websocketServerStreamWrapperT = "websocket_server_stream_wrapper"
+	websocketServerHandlerT       = "websocket_server_handler"
+	websocketServerSendT          = "websocket_server_send"
+	websocketServerRecvT          = "websocket_server_recv"
+	websocketServerCloseT         = "websocket_server_close"
 
 	// JSON-RPC WebSocket client templates
 	websocketClientConnT       = "websocket_client_conn"

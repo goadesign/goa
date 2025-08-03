@@ -30,6 +30,29 @@ func (s *{{ lowerInitial $.Service.StructName }}Stream) Send{{ .Method.VarName }
 	{{- end }}
 {{- end }}
 
+{{- $hasResults := false }}
+{{- range .Endpoints }}
+	{{- if .Result.Ref }}
+		{{- $hasResults = true }}
+	{{- end }}
+{{- end }}
+
+{{- if $hasResults }}
+{{ printf "Send sends an event to the client." | comment }}
+func (s *{{ lowerInitial $.Service.StructName }}Stream) Send(event {{ $.Service.PkgName }}.Event) error {
+	switch v := event.(type) {
+{{- range .Endpoints }}
+	{{- if .Result.Ref }}
+	case {{ .Result.Ref }}:
+		return s.Send{{ .Method.VarName }}(context.Background(), v)
+	{{- end }}
+{{- end }}
+	default:
+		return fmt.Errorf("unknown event type: %T", event)
+	}
+}
+{{- end }}
+
 {{ printf "SendError streams JSON-RPC errors." | comment }}
 func (s *{{ lowerInitial $.Service.StructName }}Stream) SendError(ctx context.Context, id string, err error) error {
 	{{- if allErrors . }}

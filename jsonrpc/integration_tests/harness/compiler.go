@@ -74,7 +74,7 @@ func runGoaCommand(ctx context.Context, dir, command, designPath string) error {
 
 	cmd := exec.CommandContext(cmdCtx, "goa", command, designPath, "-o", ".")
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GO111MODULE=on")
+	cmd.Env = append(os.Environ(), "GO111MODULE=on", "GOWORK=off")
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -101,6 +101,7 @@ func initGoModule(ctx context.Context, dir, name string) error {
 
 	cmd := exec.CommandContext(initCtx, "go", "mod", "init", name)
 	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOWORK=off")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		if ctx.Err() != nil {
 			return fmt.Errorf("module init canceled: %w", ctx.Err())
@@ -123,6 +124,7 @@ func runGoModTidy(ctx context.Context, dir string) error {
 
 	cmd := exec.CommandContext(tidyCtx, "go", "mod", "tidy")
 	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), "GOWORK=off")
 	if output, err := cmd.CombinedOutput(); err != nil {
 		if ctx.Err() != nil {
 			return fmt.Errorf("go mod tidy canceled: %w", ctx.Err())
@@ -214,7 +216,7 @@ func buildBinary(ctx context.Context, sourceDir, outputPath string) error {
 
 	cmd := exec.CommandContext(buildCtx, "go", "build", "-o", outputPath, ".")
 	cmd.Dir = mainPath
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GO111MODULE=on")
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GO111MODULE=on", "GOWORK=off")
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {

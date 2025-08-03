@@ -9,7 +9,9 @@ func {{ .HandlerInit }}(
 {{- end }}
 ) func(context.Context, *http.Request, *jsonrpc.RawRequest{{ if not (isWebSocketEndpoint .) }}, http.ResponseWriter{{ end }}) {{ if isWebSocketEndpoint . }}(any, error){{ else }}error{{ end }} {
 {{- if and (not (isSSEEndpoint .)) .Payload.Ref }}
+	{{- if not (and (isWebSocketEndpoint .) .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4))) }}
 	decodeParams := {{ .RequestDecoder }}(mux, decoder)
+	{{- end }}
 {{- end }}
 	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest{{ if not (isWebSocketEndpoint .) }}, w http.ResponseWriter{{ end }}) {{ if isWebSocketEndpoint . }}(any, error){{ else }}error{{ end }} {
 		ctx = context.WithValue(ctx, goa.MethodKey, {{ printf "%q" .Method.Name }})
@@ -65,11 +67,13 @@ func {{ .HandlerInit }}(
 			Payload: params,
 		{{- end }}
 		}
-		_, err = endpoint(ctx, v)
+		_, err := endpoint(ctx, v)
 		return err
 {{- else }}
 	{{- if .Payload.Ref }}
-
+		{{- if and (isWebSocketEndpoint .) .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4)) }}
+		decodeParams := {{ .RequestDecoder }}(mux, decoder)
+		{{- end }}
 		params, err := decodeParams(r, req)
 		if err != nil {
 		{{- if isWebSocketEndpoint . }}
@@ -102,10 +106,22 @@ func {{ .HandlerInit }}(
 	{{- if isNotification . }}
 	_, err = endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
 	{{- else }}
+	{{- if and (isWebSocketEndpoint .) .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4)) }}
+		// For {{ if eq .Method.ServerStream.Kind 3 }}server{{ else }}bidirectional{{ end }} streaming, we need to return the payload
+		// The actual streaming will be handled when the stream is passed to the endpoint
+		{{- if .Payload.Ref }}
+		return params, nil
+		{{- else }}
+		return nil, nil
+		{{- end }}
+	{{- else }}
 	{{ if isWebSocketEndpoint . }}stream{{ else }}res{{ end }}, err := endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
 	{{- end }}
+	{{- end }}
 	{{- if isWebSocketEndpoint . }}
+		{{- if not (and .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4))) }}
 		return stream, err
+		{{- end }}
 	{{- else if isNotification . }}
 		if err != nil {
 			errhandler(ctx, w, fmt.Errorf("failed to call endpoint: %w", err))

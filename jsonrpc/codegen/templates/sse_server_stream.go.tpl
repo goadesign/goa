@@ -43,11 +43,18 @@ func (s *{{ lowerInitial .SSE.StructName }}EventWriter) finish() {
 
 {{ printf "Send%sNotification sends a JSON-RPC notification for the %s method." .Method.VarName .Method.Name | comment }}
 func (s *{{ .SSE.StructName }}) Send{{ .Method.VarName }}Notification(ctx context.Context, result {{ .SSE.EventTypeRef }}) error {
+	{{- if and .Result (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
+	// Convert to response body type for proper JSON encoding
+	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
+	{{- else }}
+	body := result
+	{{- end }}
+	
 	// Send as notification (no ID)
 	notification := map[string]interface{}{
 		"jsonrpc": "2.0",
 		"method":  {{ printf "%q" .Method.Name }},
-		"params":  result,
+		"params":  body,
 	}
 	
 	return s.sendSSEEvent("notification", notification)
@@ -55,35 +62,35 @@ func (s *{{ .SSE.StructName }}) Send{{ .Method.VarName }}Notification(ctx contex
 
 {{ printf "Send%sResponse sends the final JSON-RPC response for the %s method." .Method.VarName .Method.Name | comment }}
 {{ comment "This method should be called at most once. No other methods should be called after SendResponse." }}
-func (s *{{ .SSE.StructName }}) Send{{ .Method.VarName }}Response(ctx context.Context, result {{ .SSE.EventTypeRef }}) error {
+func (s *{{ .SSE.StructName }}) Send{{ .Method.VarName }}Response(ctx context.Context, id string, result {{ .SSE.EventTypeRef }}) error {
 	{{- if .Result.IDAttribute }}
-	// Determine response ID
-	var id any
+	// Override the provided id if result contains an ID
 		{{- if .Result.IDAttributeRequired }}
 	if result.{{ .Result.IDAttribute }} != "" {
 		id = result.{{ .Result.IDAttribute }}
 		// Clear the ID field so it's not duplicated in the result
 		result.{{ .Result.IDAttribute }} = ""
-	} else {
-		id = s.requestID
 	}
 		{{- else }}
 	if result.{{ .Result.IDAttribute }} != nil && *result.{{ .Result.IDAttribute }} != "" {
 		id = *result.{{ .Result.IDAttribute }}
 		// Clear the ID field so it's not duplicated in the result
 		result.{{ .Result.IDAttribute }} = nil
-	} else {
-		id = s.requestID
 	}
 		{{- end }}
+	{{- end }}
+	
+	{{- if and .Result (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
+	// Convert to response body type for proper JSON encoding
+	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
 	{{- else }}
-	id := s.requestID
+	body := result
 	{{- end }}
 	
 	response := map[string]interface{}{
 		"jsonrpc": "2.0",
 		"id":      id,
-		"result":  result,
+		"result":  body,
 	}
 	
 	return s.sendSSEEvent("response", response)
@@ -120,10 +127,4 @@ func (s *{{ .SSE.StructName }}) Send(v {{ .SSE.EventTypeRef }}) error {
 // SendWithContext streams instances of {{ .SSE.EventTypeRef }} with context - implements the service stream interface.
 func (s *{{ .SSE.StructName }}) SendWithContext(ctx context.Context, v {{ .SSE.EventTypeRef }}) error {
 	return s.Send{{ .Method.VarName }}Notification(ctx, v)
-}
-
-// Close closes the SSE stream.
-func (s *{{ .SSE.StructName }}) Close() error {
-	// No-op - the stream is closed when the handler returns
-	return nil
 }

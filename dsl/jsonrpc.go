@@ -212,7 +212,18 @@ func JSONRPC(dsl func()) {
 	case *expr.ServiceExpr:
 		svc := expr.Root.API.JSONRPC.ServiceFor(actual, &expr.Root.API.JSONRPC.HTTPExpr)
 		svc.DSLFunc = dsl
+		// Mark service as JSON-RPC
+		if actual.Meta == nil {
+			actual.Meta = expr.MetaExpr{}
+		}
+		actual.Meta["jsonrpc:service"] = []string{}
 	case *expr.MethodExpr:
+		// Auto-enable JSON-RPC on service if not already enabled
+		if actual.Service.Meta == nil {
+			actual.Service.Meta = expr.MetaExpr{}
+		}
+		actual.Service.Meta["jsonrpc:service"] = []string{}
+
 		svc := expr.Root.API.JSONRPC.ServiceFor(actual.Service, &expr.Root.API.JSONRPC.HTTPExpr)
 		e := svc.EndpointFor(actual)
 		if e.Meta == nil {
@@ -222,10 +233,8 @@ func JSONRPC(dsl func()) {
 		if actual.Meta == nil {
 			actual.Meta = expr.MetaExpr{}
 		}
-		actual.Meta["jsonrpc"] = nil
+		actual.Meta["jsonrpc"] = []string{}
 		e.DSLFunc = dsl
-		r := &expr.RouteExpr{Method: "POST", Path: "/", Endpoint: e}
-		e.Routes = []*expr.RouteExpr{r}
 	default:
 		eval.IncompatibleDSL()
 	}

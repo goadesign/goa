@@ -354,7 +354,7 @@ func (e *HTTPEndpointExpr) Prepare() {
 
 	// Make sure JSON-RPC HTTP verb is set to GET if the endpoint is a
 	// WebSocket endpoint
-	if e.MethodExpr.IsStreaming() && e.SSE == nil {
+	if e.MethodExpr.IsStreaming() && e.SSE == nil && len(e.Routes) > 0 {
 		e.Routes[0].Method = "GET"
 	}
 
@@ -432,10 +432,33 @@ func (e *HTTPEndpointExpr) Validate() error {
 		}
 	}
 
-	// JSON-RPC endpoints with a streaming payload must not define a payload
+	// JSON-RPC validation
 	if e.IsJSONRPC() {
-		if e.MethodExpr.IsPayloadStreaming() && e.MethodExpr.Payload.Type != Empty {
-			verr.Add(e, "JSON-RPC endpoints with a streaming payload cannot define a payload")
+		// JSON-RPC WebSocket endpoints with server streaming cannot have both Payload and StreamingPayload
+		if e.MethodExpr.Stream == ServerStreamKind && e.SSE == nil {
+			if e.MethodExpr.Payload.Type != Empty && e.MethodExpr.StreamingPayload.Type != Empty {
+				verr.Add(e, "JSON-RPC WebSocket server streaming method %q cannot define both Payload and StreamingPayload. Use Payload for the request data", e.MethodExpr.Name)
+			}
+		}
+
+		// JSON-RPC WebSocket streaming ID field requirements:
+		// - Bidirectional streaming: ID required in both payload and result for correlation
+		// - Client streaming with result: ID required in payload
+		// - Server streaming: ID optional in result (allows notifications)
+		if e.MethodExpr.IsStreaming() && e.SSE == nil {
+			// Bidirectional streaming requires IDs for correlation
+			if e.MethodExpr.IsPayloadStreaming() && e.MethodExpr.IsResultStreaming() {
+				if !hasJSONRPCIDField(e.MethodExpr.StreamingPayload) {
+					verr.Add(e, "JSON-RPC WebSocket bidirectional streaming method %q must define an ID field in streaming payload", e.MethodExpr.Name)
+				}
+				if !hasJSONRPCIDField(e.MethodExpr.Result) {
+					verr.Add(e, "JSON-RPC WebSocket bidirectional streaming method %q must define an ID field in result", e.MethodExpr.Name)
+				}
+			} else if e.MethodExpr.IsPayloadStreaming() && e.MethodExpr.Result != nil && e.MethodExpr.Result.Type != Empty && !hasJSONRPCIDField(e.MethodExpr.StreamingPayload) {
+				// Client streaming with result needs ID in payload
+				verr.Add(e, "JSON-RPC WebSocket client streaming method %q with result must define an ID field in streaming payload", e.MethodExpr.Name)
+			}
+			// Server streaming: ID is optional in result (allows for notifications)
 		}
 	}
 
@@ -692,7 +715,10 @@ func (e *HTTPEndpointExpr) Validate() error {
 	if e.MethodExpr.IsStreaming() && body.Type != Empty {
 		// SSE endpoints can have request bodies, but WebSocket endpoints cannot
 		// Refer WebSocket protocol - https://tools.ietf.org/html/rfc6455
-		if e.SSE == nil { // Only apply this validation to non-SSE streaming endpoints
+		// Exception: JSON-RPC WebSocket endpoints can have payloads as they are sent
+		// as JSON-RPC messages after the WebSocket connection is established
+		_, isJSONRPC := e.MethodExpr.Meta["jsonrpc"]
+		if e.SSE == nil && !isJSONRPC { // Only apply this validation to non-SSE, non-JSON-RPC streaming endpoints
 			verr.Add(e, "HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.")
 		}
 	}
@@ -706,6 +732,20 @@ func (e *HTTPEndpointExpr) Validate() error {
 // types so that the response encoding code can properly use the type to infer
 // the response that it needs to build.
 func (e *HTTPEndpointExpr) Finalize() {
+	// For JSON-RPC WebSocket endpoints with server streaming and non-streaming payload,
+	// move the payload to streaming payload. This is because the payload is sent as
+	// JSON-RPC messages after the WebSocket connection is established, making it
+	// effectively a streaming payload from the transport perspective.
+	if _, isJSONRPC := e.MethodExpr.Meta["jsonrpc"]; isJSONRPC && e.MethodExpr.Stream == ServerStreamKind && e.SSE == nil {
+		if e.MethodExpr.Payload.Type != Empty && e.MethodExpr.StreamingPayload.Type == Empty {
+			// Move payload to streaming payload
+			e.MethodExpr.StreamingPayload = e.MethodExpr.Payload
+			e.MethodExpr.Payload = &AttributeExpr{Type: Empty}
+			// Change stream kind to bidirectional since we now have both streaming payload and result
+			e.MethodExpr.Stream = BidirectionalStreamKind
+		}
+	}
+	
 	// Compute security scheme attribute name and corresponding HTTP location
 	if reqLen := len(e.MethodExpr.Requirements); reqLen > 0 {
 		e.Requirements = make([]*SecurityExpr, 0, reqLen)
@@ -1126,4 +1166,35 @@ func isEmpty(a *AttributeExpr) bool {
 		}
 	}
 	return true
+}
+
+// hasJSONRPCIDField returns true if an attribute or any of its nested attributes
+// has the "jsonrpc:id" meta tag, indicating it's designated as the JSON-RPC ID field.
+func hasJSONRPCIDField(attr *AttributeExpr) bool {
+	if attr == nil || attr.Type == Empty {
+		return false
+	}
+
+	// Check if this attribute itself has the jsonrpc:id meta tag
+	if attr.Meta != nil {
+		if _, hasID := attr.Meta["jsonrpc:id"]; hasID {
+			return true
+		}
+	}
+
+	// For object types, check all nested attributes
+	if obj := AsObject(attr.Type); obj != nil {
+		for _, nat := range *obj {
+			if hasJSONRPCIDField(nat.Attribute) {
+				return true
+			}
+		}
+	}
+
+	// For user types, check the underlying attribute
+	if ut, ok := attr.Type.(UserType); ok {
+		return hasJSONRPCIDField(ut.Attribute())
+	}
+
+	return false
 }

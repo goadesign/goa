@@ -149,6 +149,8 @@ type (
 		ErrorLocs map[string]*codegen.Location
 		// IsJSONRPC indicates if the endpoint is a JSON-RPC endpoint.
 		IsJSONRPC bool
+		// IsJSONRPCSSE indicates if the JSON-RPC endpoint uses SSE transport.
+		IsJSONRPCSSE bool
 		// Requirements contains the security requirements for the
 		// method.
 		Requirements RequirementsData
@@ -1087,6 +1089,20 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 	}
 
 	_, isJSONRPC = m.Meta["jsonrpc"]
+	
+	// Check if this JSON-RPC method uses SSE
+	var isJSONRPCSSE bool
+	if isJSONRPC && m.IsStreaming() {
+		// Check if the JSON-RPC HTTP endpoint uses SSE
+		if httpJSONRPCSvc := d.Root.API.JSONRPC.HTTPExpr.Service(m.Service.Name); httpJSONRPCSvc != nil {
+			for _, e := range httpJSONRPCSvc.HTTPEndpoints {
+				if e.MethodExpr.Name == m.Name && e.SSE != nil {
+					isJSONRPCSSE = true
+					break
+				}
+			}
+		}
+	}
 
 	for _, req := range m.Requirements {
 		var rs SchemesData
@@ -1136,6 +1152,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		Errors:                       errors,
 		ErrorLocs:                    errorLocs,
 		IsJSONRPC:                    isJSONRPC,
+		IsJSONRPCSSE:                 isJSONRPCSSE,
 		Requirements:                 reqs,
 		Schemes:                      schemes,
 		StreamKind:                   m.Stream,
@@ -1173,10 +1190,17 @@ func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vnam
 		}
 		spayloadEx = m.StreamingPayload.Example(d.Root.API.ExampleGenerator)
 	}
+	// For JSON-RPC WebSocket:
+	// - Client streaming (no result streaming): no endpoint struct needed, just payload
+	// - Bidirectional streaming: endpoint struct needed for both payload and stream
+	endpointStruct := vname + "EndpointInput"
+	if data.IsJSONRPC && m.IsStreaming() && !data.IsJSONRPCSSE && m.Stream == expr.ClientStreamKind {
+		endpointStruct = ""
+	}
 	svrStream := &StreamData{
 		Interface:           vname + "ServerStream",
 		VarName:             scope.Unique(codegen.Goify(m.Name, true), "ServerStream"),
-		EndpointStruct:      vname + "EndpointInput",
+		EndpointStruct:      endpointStruct,
 		Kind:                m.Stream,
 		SendName:            "Send",
 		SendDesc:            fmt.Sprintf("Send streams instances of %q.", rname),

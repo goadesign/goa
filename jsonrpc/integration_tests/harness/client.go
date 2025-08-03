@@ -9,7 +9,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"time"
@@ -404,26 +403,43 @@ func (c *ClientProcess) ReceiveWebSocketMessage(ctx context.Context) (any, error
 
 // ConnectSSE establishes a Server-Sent Events connection
 func (c *ClientProcess) ConnectSSE(ctx context.Context, path string, params any) (*SSEClient, error) {
-	// Build URL with query parameters for GET request
+	// For JSON-RPC SSE, we use POST with request body
 	reqURL := c.config.ServerURL + path
+	
+	var body io.Reader
 	if params != nil {
-		// Convert params to query parameters
-		if paramMap, ok := params.(map[string]any); ok {
-			values := url.Values{}
-			for k, v := range paramMap {
-				values.Add(k, fmt.Sprintf("%v", v))
-			}
-			if len(values) > 0 {
-				reqURL += "?" + values.Encode()
-			}
+		// Create JSON-RPC request
+		reqBody := map[string]any{
+			"jsonrpc": "2.0",
+			"method":  "subscribe", // TODO: make this configurable
+			"params":  params,
+			"id":      "sse-1",
 		}
+		jsonBody, err := json.Marshal(reqBody)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal SSE request: %w", err)
+		}
+		body = bytes.NewReader(jsonBody)
+	} else {
+		// No params, still need JSON-RPC envelope
+		reqBody := map[string]any{
+			"jsonrpc": "2.0",
+			"method":  "subscribe", // TODO: make this configurable
+			"id":      "sse-1",
+		}
+		jsonBody, err := json.Marshal(reqBody)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal SSE request: %w", err)
+		}
+		body = bytes.NewReader(jsonBody)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "POST", reqURL, body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create SSE request: %w", err)
 	}
 	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

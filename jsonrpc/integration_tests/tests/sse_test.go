@@ -75,9 +75,9 @@ func TestSSENoPayload(t *testing.T) {
 				Method: "subscribe",
 				Params: nil,
 				StreamingMessages: []scenarios.StreamMessage{
-					{Direction: scenarios.DirectionReceive, Data: "event 1"},
-					{Direction: scenarios.DirectionReceive, Data: "event 2"},
-					{Direction: scenarios.DirectionReceive, Data: "event 3"},
+					{Direction: scenarios.DirectionReceive, Data: map[string]any{"value": "event 1"}},
+					{Direction: scenarios.DirectionReceive, Data: map[string]any{"value": "event 2"}},
+					{Direction: scenarios.DirectionReceive, Data: map[string]any{"value": "event 3"}},
 				},
 			},
 		},
@@ -173,13 +173,18 @@ func createSSENoPayloadDSLCode() string {
 	})
 
 	Service("events", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc/sse")
+			ServerSentEvents()
+		})
 		Method("subscribe", func() {
 			// No payload
-			StreamingResult(String)
+			StreamingResult(func() {
+				Attribute("value", String, "The streamed value")
+				Required("value")
+			})
 			
 			JSONRPC(func() {
-				POST("/events")
-				ServerSentEvents()
 			})
 		})
 	})`

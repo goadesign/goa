@@ -25,6 +25,9 @@ func {{ .ServerInit }}(
 {{- range .Endpoints }}
 	{{- if isWebSocketEndpoint . }}
 		{{ lowerInitial .Method.VarName }}: {{ .HandlerInit }}(endpoints.{{ .Method.VarName }}, mux, decoder),
+		{{- if and .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4)) }}
+		{{ lowerInitial .Method.VarName }}Endpoint: endpoints.{{ .Method.VarName }},
+		{{- end }}
 	{{- else }}
 		{{ .Method.VarName }}: {{ .HandlerInit }}(endpoints.{{ .Method.VarName }}, mux, decoder, encoder, errhandler),
 	{{- end }}

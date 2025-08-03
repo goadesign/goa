@@ -10,6 +10,9 @@ type {{ .ServerStruct }} struct {
 {{ range .Endpoints }}
 	{{- if isWebSocketEndpoint . }}
 	{{ lowerInitial .Method.VarName }} func(context.Context, *http.Request, *jsonrpc.RawRequest) (any, error)
+		{{- if and .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4)) }}
+	{{ lowerInitial .Method.VarName }}Endpoint goa.Endpoint
+		{{- end }}
 	{{- else }}
 	{{ printf "%s is the handler for the %s method." .Method.VarName .Method.Name | comment }}
 	{{ .Method.VarName }} func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error

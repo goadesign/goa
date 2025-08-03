@@ -512,8 +512,8 @@ validateResponses:
 func (r *ScenarioRunner) runSSEScenario(client *harness.ClientProcess, scenario Scenario) error {
 	for _, req := range scenario.Requests {
 		// Make SSE request
-		// For JSON-RPC SSE, the path is always /events based on our DSL convention
-		sse, err := client.ConnectSSE(context.Background(), "/events", req.Params)
+		// For JSON-RPC SSE, the path is always /jsonrpc/sse based on our DSL convention
+		sse, err := client.ConnectSSE(context.Background(), "/jsonrpc/sse", req.Params)
 		if err != nil {
 			return fmt.Errorf("SSE connection failed: %w", err)
 		}
@@ -542,6 +542,19 @@ func (r *ScenarioRunner) runSSEScenario(client *harness.ClientProcess, scenario 
 				return fmt.Errorf("failed to parse SSE event JSON: %w", err)
 			}
 
+			// Keep the original for validators
+			originalEventData := eventData
+
+			// For JSON-RPC notifications, extract the params for comparison
+			if eventMap, ok := eventData.(map[string]any); ok {
+				if eventMap["jsonrpc"] == "2.0" && eventMap["method"] != nil {
+					// This is a JSON-RPC notification, extract params
+					if params, ok := eventMap["params"]; ok {
+						eventData = params
+					}
+				}
+			}
+
 			// Validate the event content matches expected
 			if expectedMsg.Data != nil {
 				// Convert both to strings for comparison
@@ -552,9 +565,9 @@ func (r *ScenarioRunner) runSSEScenario(client *harness.ClientProcess, scenario 
 				}
 			}
 
-			// Run validators on the event data
+			// Run validators on the original event data (full JSON-RPC notification)
 			for _, validator := range scenario.Validators {
-				if err := validator.Validate(eventData); err != nil {
+				if err := validator.Validate(originalEventData); err != nil {
 					return fmt.Errorf("SSE validation failed: %w", err)
 				}
 			}
@@ -651,9 +664,6 @@ func (s *userssrvc) CreateUser(ctx context.Context, p *users.CreateUserPayload) 
 func (s *validationsrvc) %s(ctx context.Context, p *validation.%sPayload) (res *validation.%sResult, err error) {
 	log.Printf(ctx, "validation.%s")
 	
-	// Debug: log what we received  
-	log.Printf(ctx, "DEBUG: Email='%%s'", p.Email)
-	
 	// Check email format - simple validation without strings package
 	hasAt := false
 	for _, char := range p.Email {
@@ -663,7 +673,6 @@ func (s *validationsrvc) %s(ctx context.Context, p *validation.%sPayload) (res *
 		}
 	}
 	if p.Email != "" && !hasAt {
-		log.Printf(ctx, "DEBUG: Email format invalid, returning error")
 		// Return a goa validation error which will be mapped to -32602 Invalid params
 		return nil, goa.InvalidFieldTypeError("email", p.Email, "valid email address")
 	}
@@ -711,12 +720,6 @@ func (s *validationsrvc) %s(ctx context.Context, p *validation.%sPayload) (res *
 			implementation = fmt.Sprintf(`// %s implements %s.
 func (s *validationsrvc) %s(ctx context.Context, p *validation.%sPayload) (res *validation.%sResult, err error) {
 	log.Printf(ctx, "validation.%s")
-	
-	// Debug: log what we received (now handling pointer types)
-	reqField := ""
-	if p.RequiredField != nil {
-		reqField = *p.RequiredField
-	}
 	
 	// Check if required field is missing or empty - this should trigger a validation error
 	if p.RequiredField == nil || (p.RequiredField != nil && *p.RequiredField == "") {
@@ -912,20 +915,6 @@ func (r *ScenarioRunner) createWebSocketImplementations(scenario Scenario) []har
 	var implementations []harness.ServiceImplementation
 
 	switch scenario.Streaming {
-	case StreamingServer:
-		// For server streaming, override both the service method (no-op) and HandleStream (auto-streaming)
-		implementations = []harness.ServiceImplementation{
-			{
-				ServiceName:    serviceName,
-				MethodName:     methodName,
-				Implementation: implementation,
-			},
-			{
-				ServiceName:    serviceName,
-				MethodName:     "HandleStream",
-				Implementation: r.generateHandleStreamImplementation(serviceName, methodName, serviceStruct, methodCapitalized, scenario.ResultType),
-			},
-		}
 	case StreamingClient:
 		// For client streaming, override both the service method and HandleStream
 		// HandleStream needs proper error handling for stream establishment messages
@@ -939,6 +928,20 @@ func (r *ScenarioRunner) createWebSocketImplementations(scenario Scenario) []har
 				ServiceName:    serviceName,
 				MethodName:     "HandleStream",
 				Implementation: r.generateClientStreamingHandleStreamImplementation(serviceName, methodName, serviceStruct, methodCapitalized),
+			},
+		}
+	case StreamingServer:
+		// For server streaming, override both the service method and HandleStream
+		implementations = []harness.ServiceImplementation{
+			{
+				ServiceName:    serviceName,
+				MethodName:     methodName,
+				Implementation: implementation,
+			},
+			{
+				ServiceName:    serviceName,
+				MethodName:     "HandleStream",
+				Implementation: r.generateServerStreamingHandleStreamImplementation(serviceName, methodName, serviceStruct),
 			},
 		}
 	case StreamingBidirectional:
@@ -967,6 +970,32 @@ func (r *ScenarioRunner) createWebSocketImplementations(scenario Scenario) []har
 	}
 
 	return implementations
+}
+
+// generateServerStreamingHandleStreamImplementation generates HandleStream implementation for server streaming
+func (r *ScenarioRunner) generateServerStreamingHandleStreamImplementation(serviceName, methodName, serviceStruct string) string {
+	return fmt.Sprintf(`// HandleStream handles the JSON-RPC WebSocket connection for server streaming.
+func (s *%s) HandleStream(ctx context.Context, stream %s.Stream) error {
+	fmt.Println("%s.HandleStream")
+	
+	// Process incoming requests - the server_stream method will be called
+	// when a request is received, and it will handle the streaming
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			if err := stream.Recv(ctx); err != nil {
+				if err == io.EOF {
+					return nil
+				}
+				return err
+			}
+		}
+	}
+}`,
+		serviceStruct, serviceName, serviceName,
+	)
 }
 
 // createErrorImplementations creates test implementations for error handling methods.
@@ -1003,13 +1032,25 @@ func (r *ScenarioRunner) createErrorImplementations(scenario Scenario) []harness
 		serviceName, methodName, serviceStruct, methodCapitalized, hasCustomErrors,
 	)
 
-	return []harness.ServiceImplementation{
+	implementations := []harness.ServiceImplementation{
 		{
 			ServiceName:    serviceName,
 			MethodName:     methodName,
 			Implementation: implementation,
 		},
 	}
+
+	// If this is a streaming error method, also inject HandleStream
+	if methodName == "error_stream" {
+		handleStreamImpl := r.generateErrorHandleStreamImplementation(serviceName)
+		implementations = append(implementations, harness.ServiceImplementation{
+			ServiceName:    serviceName,
+			MethodName:     "HandleStream",
+			Implementation: handleStreamImpl,
+		})
+	}
+
+	return implementations
 }
 
 // generateErrorImplementation generates the error handling implementation
@@ -1018,24 +1059,23 @@ func (r *ScenarioRunner) generateErrorImplementation(serviceName, methodName, se
 	// Special handling for streaming error methods
 	if methodName == "error_stream" {
 		return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(ctx context.Context, p *errors_.%sPayload) (res *errors_.%sResult, err error) {
+func (s *%s) %s(ctx context.Context, p *errors_.%sPayload, stream errors_.%sServerStream) error {
 	log.Printf(ctx, "errors_.%s")
 	
-	// For JSON-RPC streaming methods, they have regular signatures
-	// The streaming is handled by HandleStream using the Stream interface
-	// This method gets called when stream.Recv() dispatches a request
+	// Bidirectional streaming method with stream parameter
+	// This method gets called for each incoming payload
 	
 	// Check if this should trigger an error
 	if p.Data == "trigger_error" {
 		// Return a simple error - the framework will handle JSON-RPC error mapping
-		return nil, fmt.Errorf("internal error")
+		return fmt.Errorf("internal error")
 	}
 	
-	// Return a normal result for non-error cases  
-	return &errors_.%sResult{
+	// Send response back through the stream
+	return stream.Send(&errors_.%sResult{
 		ID:   p.ID,
 		Data: "processed: " + p.Data,
-	}, nil
+	})
 }`,
 			methodCapitalized, methodName, serviceStruct, methodCapitalized,
 			methodCapitalized, methodCapitalized, methodName, methodCapitalized,
@@ -1133,27 +1173,57 @@ func (r *ScenarioRunner) generateSSEImplementation(serviceName, methodName, serv
 	// Use SSETestData to get the implementation code
 	testData := SSETestData{ResultType: resultType}
 
-	// Generate the implementation that sends data matching createSSEData
+	// For JSON-RPC SSE in the new architecture:
+	// 1. The service method returns a result (no stream parameter)
+	// 2. The endpoint receives a stream and calls the service method
+	// 3. The endpoint then uses the stream to send the result
+	// 4. For testing, we need to intercept at the endpoint level
+	//
+	// Since the test harness generates service implementations, we need to
+	// work with what the endpoint expects. However, the actual streaming
+	// happens in the endpoint, not the service.
+	//
+	// We'll generate a service that works with the generated code and
+	// provide a custom endpoint handler that does the streaming.
+
 	return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(ctx context.Context, stream %s.%sServerStream) (err error) {
+func (s *%s) %s(ctx context.Context) (res *%s.%sResult, err error) {
 	log.Printf(ctx, "%s.%s")
-	// Send 5 test events using the same data generator as the test expectations
-	for i := 1; i <= 5; i++ {
-		event := %s
-		if err := stream.Send(event); err != nil {
-			return err
+	// For JSON-RPC SSE, we just return a result
+	// The endpoint will handle streaming
+	res = %s
+	return
+}
+
+// NewSubscribeEndpoint returns a custom endpoint that streams test data.
+// This overrides the default endpoint to provide test-specific streaming behavior.
+func NewSubscribeEndpoint(s %s.Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		// Extract the stream from the endpoint input
+		input := req.(*%s.SubscribeEndpointInput)
+		stream := input.Stream
+		
+		// Send 5 test events
+		for i := 1; i <= 5; i++ {
+			event := %s
+			if err := stream.SendSubscribeNotification(ctx, event); err != nil {
+				return nil, err
+			}
+			// Small delay between events
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(10 * time.Millisecond):
+			}
 		}
-		// Small delay between events
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(10 * time.Millisecond):
-		}
+		
+		return nil, nil
 	}
-	return nil
 }`,
 		methodCapitalized, methodName, serviceStruct, methodCapitalized,
 		serviceName, methodCapitalized, serviceName, methodName,
+		testData.GenerateImplementationCode(serviceName),
+		serviceName, serviceName,
 		testData.GenerateImplementationCode(serviceName),
 	)
 }
@@ -1179,7 +1249,7 @@ func (r *ScenarioRunner) generateSSEImplementationWithPayload(serviceName, metho
 	// Send 5 test events using the same data generator as the test expectations
 	for i := 1; i <= 5; i++ {
 		event := %s
-		if err := stream.Send(event); err != nil {
+		if err := stream.Send%sNotification(ctx, event); err != nil {
 			return err
 		}
 		// Small delay between events
@@ -1192,7 +1262,7 @@ func (r *ScenarioRunner) generateSSEImplementationWithPayload(serviceName, metho
 	return nil
 }`,
 		methodCapitalized, methodName, methodSignature, serviceName, methodName,
-		testData.GenerateImplementationCode(serviceName),
+		testData.GenerateImplementationCode(serviceName), methodCapitalized,
 	)
 }
 
@@ -1209,101 +1279,99 @@ func toCamelCase(s string) string {
 
 // generateWebSocketServerStreamingImplementation generates server streaming service method implementation
 func (r *ScenarioRunner) generateWebSocketServerStreamingImplementation(serviceName, methodName, serviceStruct, methodCapitalized string, resultType DataType) string {
-	// For server streaming, the service method should be a no-op to avoid sending JSON-RPC response
-	// The actual streaming is handled by HandleStream method
-	return fmt.Sprintf(`// %s implements %s (no-op for server streaming).
-func (s *%s) %s(ctx context.Context) (res *%s.%sResult, err error) {
-	log.Printf(ctx, "%s.%s")
-	// No-op: server streaming is handled by HandleStream, not this method
-	// Returning nil prevents JSON-RPC response that would cause client disconnect
-	return nil, nil
+	// Generate result creation based on result type
+	var resultCreation string
+	switch resultType {
+	case DataTypePrimitive:
+		resultCreation = fmt.Sprintf(`&%s.%sResult{
+			ID:   fmt.Sprintf("req-%%d", i+1),
+			Data: fmt.Sprintf("message %%d", i+1),
+		}`, serviceName, methodCapitalized)
+	case DataTypeArray:
+		resultCreation = fmt.Sprintf(`&%s.%sResult{
+			ID:    fmt.Sprintf("req-%%d", i+1),
+			Items: []string{fmt.Sprintf("item%%d-1", i+1), fmt.Sprintf("item%%d-2", i+1)},
+		}`, serviceName, methodCapitalized)
+	case DataTypeObject:
+		resultCreation = fmt.Sprintf(`&%s.%sResult{
+			ID:     fmt.Sprintf("req-%%d", i+1),
+			Field1: fmt.Sprintf("Message %%d", i+1),
+			Field2: func() *int { v := i+1; return &v }(),
+			Field3: func() *bool { v := (i+1)%%2 == 0; return &v }(),
+		}`, serviceName, methodCapitalized)
+	case DataTypeUserType:
+		resultCreation = fmt.Sprintf(`&%s.%sResult{
+			ID:      fmt.Sprintf("req-%%d", i+1),
+			UserID:  fmt.Sprintf("user%%d", i+1),
+			Name:    fmt.Sprintf("Stream User %%d", i+1),
+			Email:   func() *string { s := fmt.Sprintf("stream%%d@example.com", i+1); return &s }(),
+		}`, serviceName, methodCapitalized)
+	case DataTypeComplex:
+		resultCreation = fmt.Sprintf(`&%s.%sResult{
+			ID:       fmt.Sprintf("req-%%d", i+1),
+			Sequence: i + 1,
+			Data: map[string]any{
+				"value": fmt.Sprintf("complex-%%d", i+1),
+			},
+			Metadata: map[string]any{
+				"index": i + 1,
+				"type":  "stream",
+			},
+		}`, serviceName, methodCapitalized)
+	default:
+		resultCreation = fmt.Sprintf(`&%s.%sResult{
+			ID:   fmt.Sprintf("req-%%d", i+1),
+			Data: fmt.Sprintf("data-%%d", i+1),
+		}`, serviceName, methodCapitalized)
+	}
+	
+	// For JSON-RPC WebSocket server streaming with non-streaming payload
+	// Method receives payload and stream for sending multiple results
+	return fmt.Sprintf(`// %s implements %s.
+func (s *%s) %s(ctx context.Context, p *%s.%sPayload, stream %s.%sServerStream) (err error) {
+	log.Printf(ctx, "%s.%s with count: %%d", p.Count)
+	
+	// Send multiple results based on the count requested
+	for i := 0; i < p.Count; i++ {
+		result := %s
+		if err := stream.Send(result); err != nil {
+			return err
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	return nil
 }`,
 		methodCapitalized, methodName, serviceStruct, methodCapitalized,
-		serviceName, methodCapitalized, serviceName, methodName,
+		serviceName, methodCapitalized, serviceName, methodCapitalized,
+		serviceName, methodName,
+		resultCreation,
 	)
 }
 
 // generateHandleStreamImplementation generates HandleStream implementation for server streaming
 func (r *ScenarioRunner) generateHandleStreamImplementation(serviceName, methodName, serviceStruct, methodCapitalized string, resultType DataType) string {
-	// Generate result data templates based on result type - using proper JSON-RPC object structure
-	var resultTemplates []string
-	switch resultType {
-	case DataTypePrimitive:
-		resultTemplates = []string{
-			fmt.Sprintf(`&%s.%sResult{ID: "test-1", Data: "message 1"}`, serviceName, methodCapitalized),
-			fmt.Sprintf(`&%s.%sResult{ID: "test-2", Data: "message 2"}`, serviceName, methodCapitalized),
-			fmt.Sprintf(`&%s.%sResult{ID: "test-3", Data: "message 3"}`, serviceName, methodCapitalized),
-		}
-	case DataTypeArray:
-		resultTemplates = []string{
-			fmt.Sprintf(`&%s.%sResult{ID: "test-1", Items: []string{"item1", "item2"}}`, serviceName, methodCapitalized),
-			fmt.Sprintf(`&%s.%sResult{ID: "test-2", Items: []string{"item3", "item4"}}`, serviceName, methodCapitalized),
-			fmt.Sprintf(`&%s.%sResult{ID: "test-3", Items: []string{"item5", "item6"}}`, serviceName, methodCapitalized),
-		}
-	case DataTypeObject:
-		resultTemplates = []string{
-			fmt.Sprintf(`&%s.%sResult{ID: "test-1", Field1: "value1", Field2: func() *int { i := 42; return &i }(), Field3: func() *bool { b := true; return &b }()}`, serviceName, methodCapitalized),
-			fmt.Sprintf(`&%s.%sResult{ID: "test-2", Field1: "value2", Field2: func() *int { i := 43; return &i }(), Field3: func() *bool { b := false; return &b }()}`, serviceName, methodCapitalized),
-			fmt.Sprintf(`&%s.%sResult{ID: "test-3", Field1: "value3", Field2: func() *int { i := 44; return &i }(), Field3: func() *bool { b := true; return &b }()}`, serviceName, methodCapitalized),
-		}
-	case DataTypeUserType:
-		resultTemplates = []string{
-			fmt.Sprintf(`&%s.%sResult{ID: "test-1", UserID: "user1", Name: "User 1", Email: func() *string { s := "user1@example.com"; return &s }()}`, serviceName, methodCapitalized),
-			fmt.Sprintf(`&%s.%sResult{ID: "test-2", UserID: "user2", Name: "User 2", Email: func() *string { s := "user2@example.com"; return &s }()}`, serviceName, methodCapitalized),
-			fmt.Sprintf(`&%s.%sResult{ID: "test-3", UserID: "user3", Name: "User 3", Email: func() *string { s := "user3@example.com"; return &s }()}`, serviceName, methodCapitalized),
-		}
-	case DataTypeComplex:
-		resultTemplates = []string{
-			fmt.Sprintf(`&%s.%sResult{ID: "test-1", Sequence: 1, Data: map[string]any{"key": "value1"}, Metadata: map[string]any{"meta": "data1"}}`, serviceName, methodCapitalized),
-			fmt.Sprintf(`&%s.%sResult{ID: "test-2", Sequence: 2, Data: map[string]any{"key": "value2"}, Metadata: map[string]any{"meta": "data2"}}`, serviceName, methodCapitalized),
-			fmt.Sprintf(`&%s.%sResult{ID: "test-3", Sequence: 3, Data: map[string]any{"key": "value3"}, Metadata: map[string]any{"meta": "data3"}}`, serviceName, methodCapitalized),
-		}
-	default:
-		resultTemplates = []string{
-			fmt.Sprintf(`&%s.%sResult{ID: "test-1", Data: "default test data 1"}`, serviceName, methodCapitalized),
-			fmt.Sprintf(`&%s.%sResult{ID: "test-2", Data: "default test data 2"}`, serviceName, methodCapitalized),
-			fmt.Sprintf(`&%s.%sResult{ID: "test-3", Data: "default test data 3"}`, serviceName, methodCapitalized),
-		}
-	}
-
-	// Generate HandleStream implementation that auto-initiates server streaming
-	return fmt.Sprintf(`// HandleStream handles the JSON-RPC WebSocket connection for server streaming.
+	// For server streaming with non-streaming payload, HandleStream just processes incoming requests
+	// The actual streaming happens in the service method when it receives the payload
+	return fmt.Sprintf(`// HandleStream handles the JSON-RPC WebSocket connection.
 func (s *%s) HandleStream(ctx context.Context, stream %s.Stream) error {
 	log.Printf(ctx, "%s.HandleStream")
-	defer stream.Close()
 	
-	// For server streaming with no payload, directly send streaming messages
-	// Send the 3 expected messages as defined by the test validator
-	messages := []*%s.%sResult{
-		%s,
-		%s,
-		%s,
-	}
-	
-	for i, msg := range messages {
-		log.Printf(ctx, "%s.HandleStream sending message %%d: %%+v", i+1, msg)
-		if err := stream.Send%s(ctx, msg); err != nil {
-			log.Printf(ctx, "%s.HandleStream send error: %%v", err)
-			return err
+	// Process incoming requests - the server_stream method will be called
+	// when a request is received, and it will handle the streaming
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			if err := stream.Recv(ctx); err != nil {
+				if err == io.EOF {
+					return nil
+				}
+				return err
+			}
 		}
-		// Small delay between messages to ensure proper ordering
-		time.Sleep(10 * time.Millisecond)
 	}
-	log.Printf(ctx, "%s.HandleStream completed sending all 3 messages")
-	
-	// Keep connection alive and wait for context cancellation
-	<-ctx.Done()
-	log.Printf(ctx, "%s.HandleStream context cancelled")
-	return ctx.Err()
-}`,
-		serviceStruct, serviceName, serviceName,
-		serviceName, methodCapitalized,
-		resultTemplates[0], resultTemplates[1], resultTemplates[2],
-		serviceName, methodCapitalized,
-		serviceName,
-		serviceName,
-		serviceName,
-	)
+}`, serviceStruct, serviceName, serviceName)
 }
 
 // generateBidirectionalHandleStreamImplementation generates a HandleStream implementation
@@ -1313,7 +1381,6 @@ func (r *ScenarioRunner) generateBidirectionalHandleStreamImplementation(service
 	return fmt.Sprintf(`// HandleStream handles the JSON-RPC WebSocket connection for bidirectional streaming.
 func (s *%s) HandleStream(ctx context.Context, stream %s.Stream) error {
 	log.Printf(ctx, "%s.HandleStream starting bidirectional processing")
-	defer stream.Close()
 	
 	// Process incoming requests via Recv which dispatches to the appropriate method
 	// For bidirectional streaming, each incoming message should trigger the BidirectionalStream method
@@ -1349,57 +1416,155 @@ func (s *%s) HandleStream(ctx context.Context, stream %s.Stream) error {
 
 // generateWebSocketClientStreamingImplementation generates client streaming implementation
 func (r *ScenarioRunner) generateWebSocketClientStreamingImplementation(serviceName, methodName, serviceStruct, methodCapitalized string, payloadType, resultType DataType) string {
-	// Generate result based on result type
-	var resultGen string
-	switch resultType {
-	case DataTypePrimitive:
-		resultGen = `"received 3 messages"`
-	case DataTypeArray:
-		resultGen = `[]string{"result1", "result2"}`
-	case DataTypeObject:
-		resultGen = fmt.Sprintf(`&%s.Result{Status: "completed"}`, serviceName)
-	default:
-		resultGen = `"done"`
+	// For JSON-RPC WebSocket client streaming, the service method takes only payload parameter
+	// No stream parameter - the method processes individual payloads and returns final result
+	// The method is called by stream.Recv() in HandleStream for each incoming payload
+	// All streaming methods use structured payloads (never raw primitives)
+	var payloadParam string
+	if payloadType == DataTypeNone {
+		payloadParam = ""
+	} else {
+		payloadParam = fmt.Sprintf("p *%s.%sPayload", serviceName, methodCapitalized)
 	}
-
-	// JSON-RPC client streaming methods use payload/result signatures (not stream)
-	// The stream handling is managed by the JSON-RPC transport layer
-	return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(ctx context.Context, p *%s.%sPayload) (res *%s.%sResult, err error) {
-	log.Printf(ctx, "%s.%s")
 	
-	// For client streaming, aggregate received payloads and return final result
-	// In real implementation, this would collect multiple streaming payloads
-	// For test purposes, return acknowledgment result
-	result := %s
-	return &%s.%sResult{
-		ID:   "ack-1",
-		Data: result,
-	}, nil
+	// Client streaming returns a final result
+	var resultReturn string
+	if resultType == DataTypeNone {
+		resultReturn = "nil, nil"
+	} else {
+		// Generate result based on type
+		// For client streaming, we accumulate payloads and return a final result
+		// The result structure depends on the result type, not the payload type
+		switch resultType {
+		case DataTypePrimitive:
+			// For primitive results, we need to access the appropriate field from payload
+			var dataAccess string
+			switch payloadType {
+			case DataTypePrimitive:
+				dataAccess = "p.Data"
+			case DataTypeArray:
+				dataAccess = `"accumulated"`
+			case DataTypeObject:
+				dataAccess = `"field1: " + p.Field1`
+			case DataTypeUserType:
+				dataAccess = `"user: " + p.Name`
+			case DataTypeComplex:
+				dataAccess = `"complex data"`
+			default:
+				dataAccess = `"final"`
+			}
+			resultReturn = fmt.Sprintf(`&%s.%sResult{ID: p.ID, Data: "final result: " + %s}, nil`, serviceName, methodCapitalized, dataAccess)
+		case DataTypeArray:
+			resultReturn = fmt.Sprintf(`&%s.%sResult{ID: p.ID, Items: []string{"final1", "final2"}}, nil`, serviceName, methodCapitalized)
+		case DataTypeObject:
+			resultReturn = fmt.Sprintf(`&%s.%sResult{ID: p.ID, Field1: "final"}, nil`, serviceName, methodCapitalized)
+		case DataTypeUserType:
+			resultReturn = fmt.Sprintf(`&%s.%sResult{ID: p.ID, UserID: "u123", Name: "Final User"}, nil`, serviceName, methodCapitalized)
+		case DataTypeComplex:
+			resultReturn = fmt.Sprintf(`&%s.%sResult{ID: p.ID, Sequence: 999}, nil`, serviceName, methodCapitalized)
+		default:
+			resultReturn = fmt.Sprintf(`&%s.%sResult{ID: p.ID, Data: "final"}, nil`, serviceName, methodCapitalized)
+		}
+	}
+	
+	return fmt.Sprintf(`// %s implements %s (client streaming).
+func (s *%s) %s(ctx context.Context, %s) (*%s.%sResult, error) {
+	log.Printf(ctx, "%s.%s")
+	// In a real implementation, you would accumulate payloads
+	// For testing, we just return a final result
+	return %s
 }`,
 		methodCapitalized, methodName, serviceStruct, methodCapitalized,
-		serviceName, methodCapitalized, serviceName, methodCapitalized, serviceName, methodName,
-		resultGen, serviceName, methodCapitalized,
+		payloadParam, serviceName, methodCapitalized, serviceName, methodName,
+		resultReturn,
 	)
 }
 
 // generateWebSocketBidirectionalImplementation generates bidirectional streaming implementation
 func (r *ScenarioRunner) generateWebSocketBidirectionalImplementation(serviceName, methodName, serviceStruct, methodCapitalized string, payloadType, resultType DataType) string {
-	// For JSON-RPC bidirectional streaming, use payload/result signature
-	// Each individual request gets processed and responds immediately
-	return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(ctx context.Context, p *%s.%sPayload) (res *%s.%sResult, err error) {
-	log.Printf(ctx, "%s.%s")
+	// For JSON-RPC WebSocket bidirectional streaming, the service method takes payload and stream parameters
+	// The method is called by stream.Recv() in HandleStream for each incoming payload
+	// The stream is used to send results back to the client
+	// All streaming methods use structured payloads (never raw primitives)
+	var payloadParam string
+	if payloadType == DataTypeNone {
+		payloadParam = ""
+	} else {
+		payloadParam = fmt.Sprintf("p *%s.%sPayload, ", serviceName, methodCapitalized)
+	}
 	
-	// Simple test implementation - echo the payload back in the result
+	streamParam := fmt.Sprintf("stream %s.%sServerStream", serviceName, methodCapitalized)
+
+	// For bidirectional streaming, we don't return a result directly - we send via stream
+	// Generate response based on result type
+	var sendCode string
+	switch resultType {
+	case DataTypePrimitive:
+		sendCode = fmt.Sprintf(`// Echo back the payload data
+	return stream.Send(&%s.%sResult{
+		ID:   p.ID,
+		Data: "echo: " + p.Data,
+	})`, serviceName, methodCapitalized)
+	case DataTypeArray:
+		sendCode = fmt.Sprintf(`// Send back array result
+	return stream.Send(&%s.%sResult{
+		ID:    p.ID,
+		Items: append([]string{"echo"}, p.Items...),
+	})`, serviceName, methodCapitalized)
+	case DataTypeObject:
+		sendCode = fmt.Sprintf(`// Send back object result
+	return stream.Send(&%s.%sResult{
+		ID:     p.ID,
+		Field1: "echo: " + p.Field1,
+		Field2: p.Field2,
+		Field3: p.Field3,
+	})`, serviceName, methodCapitalized)
+	case DataTypeUserType:
+		sendCode = fmt.Sprintf(`// Send back user type result
+	return stream.Send(&%s.%sResult{
+		ID:     p.ID,
+		UserID: p.UserID,
+		Name:   "echo: " + p.Name,
+	})`, serviceName, methodCapitalized)
+	case DataTypeComplex:
+		sendCode = fmt.Sprintf(`// Send back complex result
+	return stream.Send(&%s.%sResult{
+		ID:       p.ID,
+		Sequence: p.Sequence + 1000,
+		Data:     p.Data,
+	})`, serviceName, methodCapitalized)
+	default:
+		sendCode = fmt.Sprintf(`// Send back default result
+	return stream.Send(&%s.%sResult{
+		ID:   p.ID,
+		Data: "echo",
+	})`, serviceName, methodCapitalized)
+	}
+	
+	return fmt.Sprintf(`// %s implements %s (bidirectional streaming).
+func (s *%s) %s(ctx context.Context, %s%s) (err error) {
+	log.Printf(ctx, "%s.%s")
+	// For bidirectional streaming, echo back the payload
 	%s
-	return
 }`,
 		methodCapitalized, methodName, serviceStruct, methodCapitalized,
-		serviceName, methodCapitalized, serviceName, methodCapitalized,
-		serviceName, methodName,
-		r.generateBidirectionalPayloadResultResponse(serviceName, methodCapitalized, payloadType, resultType),
+		payloadParam, streamParam, serviceName, methodName,
+		sendCode,
 	)
+}
+
+// generateBidirectionalResultType generates the result type signature for bidirectional streaming
+func (r *ScenarioRunner) generateBidirectionalResultType(serviceName, methodCapitalized string, resultType DataType) string {
+	switch resultType {
+	case DataTypePrimitive:
+		return "string"
+	case DataTypeArray:
+		return "[]string"
+	case DataTypeObject, DataTypeUserType:
+		return fmt.Sprintf("*%s.BidirectionalStreamResult", serviceName)
+	default:
+		return "string"
+	}
 }
 
 // generateBidirectionalPayloadResultResponse generates response code for payload/result pattern
@@ -1483,13 +1648,36 @@ func (r *ScenarioRunner) generateBidirectionalResponse(serviceName, methodCapita
 	}
 }
 
+// generateErrorHandleStreamImplementation generates HandleStream implementation for error handling tests
+func (r *ScenarioRunner) generateErrorHandleStreamImplementation(serviceName string) string {
+	return fmt.Sprintf(`// HandleStream handles the JSON-RPC WebSocket connection for error handling tests.
+func (s *errors_srvc) HandleStream(ctx context.Context, stream %s.Stream) error {
+	log.Printf(ctx, "%s.HandleStream")
+	
+	// Simple HandleStream that processes incoming requests
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			// Recv automatically dispatches JSON-RPC requests to service methods
+			err := stream.Recv(ctx)
+			if err != nil {
+				return err
+			}
+		}
+	}
+}`,
+		serviceName, serviceName,
+	)
+}
+
 // generateClientStreamingHandleStreamImplementation generates HandleStream implementation for client streaming
 // with proper error handling for stream establishment messages
 func (r *ScenarioRunner) generateClientStreamingHandleStreamImplementation(serviceName, methodName, serviceStruct, methodCapitalized string) string {
 	return fmt.Sprintf(`// HandleStream handles the JSON-RPC WebSocket connection for client streaming.
 func (s *%s) HandleStream(ctx context.Context, stream %s.Stream) error {
 	log.Printf(ctx, "%s.HandleStream starting client streaming processing")
-	defer stream.Close()
 	
 	// Process incoming requests via Recv which dispatches to the appropriate method
 	// For client streaming, multiple incoming messages get processed by the %s method
@@ -1689,253 +1877,6 @@ func (r *ScenarioRunner) generateBasicImplementation(serviceName, methodName, se
 	}
 
 	return implementation
-
-	// Note: The strategy pattern above replaces this entire switch statement
-	// TODO: Remove this old code after full validation
-	switch methodName {
-	case "echo":
-		// Determine payload parameter based on type
-		var payloadParam string
-		var echoLogic string
-		if scenario.PayloadType == DataTypeNone {
-			payloadParam = "ctx context.Context"
-			echoLogic = `return "echo: <no payload>", nil`
-		} else if scenario.PayloadType == DataTypePrimitive {
-			payloadParam = "ctx context.Context, p string"
-			echoLogic = `return "echo: " + p, nil`
-		} else if scenario.PayloadType == DataTypeArray {
-			payloadParam = "ctx context.Context, p []string"
-			echoLogic = `return fmt.Sprintf("echo: %v", p), nil`
-		} else if scenario.PayloadType == DataTypeMap {
-			payloadParam = "ctx context.Context, p map[string]interface{}"
-			echoLogic = `return fmt.Sprintf("echo: %v", p), nil`
-		} else if scenario.PayloadType == DataTypeUserType {
-			payloadParam = fmt.Sprintf("ctx context.Context, p *%s.UserType", serviceName)
-			echoLogic = `return fmt.Sprintf("echo: %v", p), nil`
-		} else {
-			payloadParam = fmt.Sprintf("ctx context.Context, p *%s.%sPayload", serviceName, methodCapitalized)
-			echoLogic = `if p.Message != "" {
-		return "echo: " + p.Message, nil
-	}
-	return "echo: <empty>", nil`
-		}
-
-		if scenario.ResultType == DataTypeNone {
-			// Notification method - only return error
-			return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(%s) (err error) {
-	log.Printf(ctx, "%s.%s")
-	
-	// Echo notification - no result returned
-	return nil
-}`,
-				methodCapitalized, methodName, serviceStruct, methodCapitalized,
-				payloadParam, serviceName, methodName,
-			)
-		} else {
-			return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(%s) (res string, err error) {
-	log.Printf(ctx, "%s.%s")
-	
-	// Echo back the message from the payload
-	%s
-}`,
-				methodCapitalized, methodName, serviceStruct, methodCapitalized,
-				payloadParam, serviceName, methodName, echoLogic,
-			)
-		}
-	case "validate":
-		// Determine payload parameter based on type
-		var payloadParam string
-		var validationLogic string
-		if scenario.PayloadType == DataTypeNone {
-			payloadParam = "ctx context.Context"
-			validationLogic = `return true, nil`
-		} else if scenario.PayloadType == DataTypePrimitive {
-			payloadParam = "ctx context.Context, p string"
-			validationLogic = `return p != "", nil`
-		} else if scenario.PayloadType == DataTypeArray {
-			payloadParam = "ctx context.Context, p []string"
-			validationLogic = `return len(p) > 0, nil`
-		} else if scenario.PayloadType == DataTypeMap {
-			payloadParam = "ctx context.Context, p map[string]interface{}"
-			validationLogic = `return len(p) > 0, nil`
-		} else if scenario.PayloadType == DataTypeUserType {
-			payloadParam = fmt.Sprintf("ctx context.Context, p *%s.UserType", serviceName)
-			validationLogic = `return p != nil, nil`
-		} else {
-			payloadParam = fmt.Sprintf("ctx context.Context, p *%s.%sPayload", serviceName, methodCapitalized)
-			validationLogic = `return p.Required != "", nil`
-		}
-
-		if scenario.ResultType == DataTypeNone {
-			// Notification method - only return error
-			return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(%s) (err error) {
-	log.Printf(ctx, "%s.%s")
-	
-	// Validation notification - no result returned
-	return nil
-}`,
-				methodCapitalized, methodName, serviceStruct, methodCapitalized,
-				payloadParam, serviceName, methodName,
-			)
-		} else {
-			return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(%s) (res bool, err error) {
-	log.Printf(ctx, "%s.%s")
-	
-	// Simple validation - return true if required field is present
-	%s
-}`,
-				methodCapitalized, methodName, serviceStruct, methodCapitalized,
-				payloadParam, serviceName, methodName, validationLogic,
-			)
-		}
-	case "validate_complex":
-		return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(ctx context.Context, p *%s.%sPayload) (res bool, err error) {
-	log.Printf(ctx, "%s.%s")
-	
-	// Complex validation - check data structure
-	if p.Data == nil {
-		return false, nil
-	}
-	return true, nil
-}`,
-			methodCapitalized, methodName, serviceStruct, methodCapitalized,
-			serviceName, methodCapitalized, serviceName, methodName,
-		)
-	case "slow_operation":
-		// Determine payload parameter based on type
-		var payloadParam string
-		var delayLogic string
-		if scenario.PayloadType == DataTypeNone {
-			payloadParam = "ctx context.Context"
-			delayLogic = `// No delay parameter for no payload
-	time.Sleep(100 * time.Millisecond)`
-		} else if scenario.PayloadType == DataTypePrimitive {
-			payloadParam = "ctx context.Context, p string"
-			delayLogic = `// Primitive payload - no DelayMs field
-	time.Sleep(100 * time.Millisecond)`
-		} else if scenario.PayloadType == DataTypeArray {
-			payloadParam = "ctx context.Context, p []string"
-			delayLogic = `// Array payload - no DelayMs field
-	time.Sleep(100 * time.Millisecond)`
-		} else if scenario.PayloadType == DataTypeMap {
-			payloadParam = "ctx context.Context, p map[string]interface{}"
-			delayLogic = `// Check for delay in map
-	if delayVal, ok := p["delay_ms"]; ok {
-		if delayMs, ok := delayVal.(float64); ok && delayMs > 0 {
-			time.Sleep(time.Duration(delayMs) * time.Millisecond)
-		}
-	}`
-		} else if scenario.PayloadType == DataTypeUserType {
-			payloadParam = fmt.Sprintf("ctx context.Context, p *%s.UserType", serviceName)
-			delayLogic = `// UserType payload - no DelayMs field
-	time.Sleep(100 * time.Millisecond)`
-		} else {
-			payloadParam = fmt.Sprintf("ctx context.Context, p *%s.%sPayload", serviceName, methodCapitalized)
-			delayLogic = `if p.DelayMs > 0 {
-		time.Sleep(time.Duration(p.DelayMs) * time.Millisecond)
-	}`
-		}
-
-		if scenario.ResultType == DataTypeNone {
-			// Notification method - only return error
-			return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(%s) (err error) {
-	log.Printf(ctx, "%s.%s")
-	
-	// Simulate slow notification operation with delay
-	%s
-	return nil
-}`,
-				methodCapitalized, methodName, serviceStruct, methodCapitalized,
-				payloadParam, serviceName, methodName, delayLogic,
-			)
-		} else {
-			return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(%s) (res string, err error) {
-	log.Printf(ctx, "%s.%s")
-	
-	// Simulate slow operation with delay
-	%s
-	return "operation completed", nil
-}`,
-				methodCapitalized, methodName, serviceStruct, methodCapitalized,
-				payloadParam, serviceName, methodName, delayLogic,
-			)
-		}
-	case "process":
-		return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(ctx context.Context, p *%s.%sPayload) (res *%s.%sResult, err error) {
-	log.Printf(ctx, "%s.%s")
-	
-	// Process action and potentially return errors based on the action
-	switch p.Action {
-	case "unauthorized":
-		return nil, %s.MakeUnauthorized(fmt.Errorf("unauthorized"))
-	case "not_found":
-		return nil, %s.MakeNotFound(fmt.Errorf("resource not found"))
-	case "conflict":
-		return nil, %s.MakeConflict(fmt.Errorf("conflict"))
-	default:
-		return &%s.%sResult{Status: "success"}, nil
-	}
-}`,
-			methodCapitalized, methodName, serviceStruct, methodCapitalized,
-			serviceName, methodCapitalized, serviceName, methodCapitalized, serviceName, methodName,
-			serviceName, serviceName, serviceName, serviceName, methodCapitalized,
-		)
-	case "call":
-		// The call method signature varies based on payload and result types in the scenario
-		// We need to determine the correct signature from the scenario context
-		return r.generateCallImplementation(serviceName, methodName, serviceStruct, methodCapitalized, scenario)
-	default:
-		// Generic implementation for unknown methods
-		// Determine payload parameter based on type
-		var payloadParam string
-		if scenario.PayloadType == DataTypeNone {
-			payloadParam = "ctx context.Context"
-		} else if scenario.PayloadType == DataTypePrimitive {
-			payloadParam = "ctx context.Context, p string"
-		} else if scenario.PayloadType == DataTypeArray {
-			payloadParam = "ctx context.Context, p []string"
-		} else if scenario.PayloadType == DataTypeMap {
-			payloadParam = "ctx context.Context, p map[string]interface{}"
-		} else if scenario.PayloadType == DataTypeUserType {
-			payloadParam = fmt.Sprintf("ctx context.Context, p *%s.UserType", serviceName)
-		} else {
-			payloadParam = fmt.Sprintf("ctx context.Context, p *%s.%sPayload", serviceName, methodCapitalized)
-		}
-
-		if scenario.ResultType == DataTypeNone {
-			// Notification method - only return error
-			return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(%s) (err error) {
-	log.Printf(ctx, "%s.%s")
-	
-	// Generic notification implementation
-	return nil
-}`,
-				methodCapitalized, methodName, serviceStruct, methodCapitalized,
-				payloadParam, serviceName, methodName,
-			)
-		} else {
-			// Regular method - return result and error
-			return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(%s) (res string, err error) {
-	log.Printf(ctx, "%s.%s")
-	
-	// Generic implementation - return success message
-	return "method executed successfully", nil
-}`,
-				methodCapitalized, methodName, serviceStruct, methodCapitalized,
-				payloadParam, serviceName, methodName,
-			)
-		}
-	}
 }
 
 // generateCallImplementation generates implementation for the "call" method based on scenario data types

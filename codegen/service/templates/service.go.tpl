@@ -23,7 +23,16 @@ type Service interface {
 		{{- end }}
 	{{- end }}
 	{{- if .ServerStream }}
-		{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}, {{ .ServerStream.Interface }}) (err error)
+		{{- if and .IsJSONRPC (not .IsJSONRPCSSE) (eq .ServerStream.Kind 2) }}
+			{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ end }}err error)
+		{{- else }}
+			{{- if and .IsJSONRPC (not .IsJSONRPCSSE) (eq .ServerStream.Kind 3) .PayloadRef }}
+				{{- /* JSON-RPC WebSocket server streaming with non-streaming payload */ -}}
+				{{ .VarName }}(context.Context, {{ .PayloadRef }}, {{ .ServerStream.Interface }}) (err error)
+			{{- else }}
+				{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}, {{ .ServerStream.Interface }}) (err error)
+			{{- end }}
+		{{- end }}
 	{{- else }}
 		{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}{{ if .SkipRequestBodyEncodeDecode }}, io.ReadCloser{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ end }}{{ if .SkipResponseBodyEncodeDecode }}body io.ReadCloser, {{ end }}{{ if .Result }}{{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}{{ end }}err error)
 	{{- end }}
@@ -64,10 +73,28 @@ var MethodNames = [{{ len .Methods }}]string{ {{ range .Methods }}{{ printf "%q"
 {{- end }}
 
 {{- if hasJSONRPCStreaming . }}
+	{{- if isJSONRPCWebSocket . }}
 	{{ template "jsonrpc_websocket_stream" . }}
+	{{- else }}
+	{{ template "jsonrpc_sse_stream" . }}
+	{{- end }}
 {{- end }}
 
 {{- define "stream_interface" }}
+{{- if and .IsJSONRPCSSE (eq .Type "server") }}
+{{ printf "%s is the interface a %q endpoint %s stream must satisfy for JSON-RPC SSE." .Stream.Interface .Endpoint .Type | comment }}
+type {{ .Stream.Interface }} interface {
+	{{- if .Stream.SendTypeRef }}
+	{{ printf "Send%sNotification sends a JSON-RPC notification for the %s method." .MethodVarName .Endpoint | comment }}
+	Send{{ .MethodVarName }}Notification(ctx context.Context, result {{ .Stream.SendTypeRef }}) error
+	{{ printf "Send%sResponse sends the final JSON-RPC response for the %s method and closes the stream." .MethodVarName .Endpoint | comment }}
+	Send{{ .MethodVarName }}Response(ctx context.Context, id string, result {{ .Stream.SendTypeRef }}) error
+	{{- else }}
+	{{ printf "Send%sNotification sends a JSON-RPC notification for the %s method." .MethodVarName .Endpoint | comment }}
+	Send{{ .MethodVarName }}Notification(ctx context.Context) error
+	{{- end }}
+}
+{{- else }}
 {{ printf "%s is the interface a %q endpoint %s stream must satisfy." .Stream.Interface .Endpoint .Type | comment }}
 type {{ .Stream.Interface }} interface {
 	{{- if .Stream.SendTypeRef }}
@@ -92,9 +119,55 @@ type {{ .Stream.Interface }} interface {
 	{{- end }}
 }
 {{- end }}
+{{- end }}
 
 {{- define "jsonrpc_websocket_stream" }}
-{{ printf "Stream defines the interface for managing a streaming connection in the %s server. It allows sending results, sending errors, receiving requests (WebSocket only), and closing the connection. This interface is used by the service to interact with clients over streaming transports (WebSocket or SSE) using JSON-RPC." .Name | comment }}
+{{ printf "Stream defines the interface for managing a WebSocket streaming connection in the %s server. It allows sending results, sending errors, receiving requests, and closing the connection. This interface is used by the service to interact with clients over WebSocket using JSON-RPC." .Name | comment }}
+type Stream interface {
+{{- $hasErrors := false }}
+{{- $hasResults := false }}
+{{- $resultTypes := "" }}
+{{- range .Methods }}
+	{{- if .Result }}
+		{{- $hasResults = true }}
+		{{- if $resultTypes }}
+			{{- $resultTypes = printf "%s, %s" $resultTypes .ResultRef }}
+		{{- else }}
+			{{- $resultTypes = .ResultRef }}
+		{{- end }}
+	{{- end }}
+	{{- if .Errors }}{{ $hasErrors = true }}{{ end }}
+{{- end }}
+{{- if $hasResults }}
+	// Send sends an event to the client.
+	// Accepted types: {{ $resultTypes }}
+	Send(Event) error
+{{- end }}
+{{- if $hasErrors }}
+	// SendError sends a JSON-RPC error response.
+	SendError(ctx context.Context, id string, err error) error
+{{- end }}
+	{{ printf "Recv reads JSON-RPC requests from the %s service WebSocket stream and dispatches them to the appropriate method." .Name | comment }}
+	Recv(ctx context.Context) error
+}
+
+{{- if $hasResults }}
+{{ printf "Event is the interface implemented by all result types that can be sent via the %s Stream." .Name | comment }}
+type Event interface {
+	is{{ .VarName }}Event()
+}
+
+	{{- range .Methods }}
+		{{- if .Result }}
+// is{{ $.VarName }}Event implements the Event interface.
+func ({{ .ResultRef }}) is{{ $.VarName }}Event() {}
+		{{- end }}
+	{{- end }}
+{{- end }}
+{{- end }}
+
+{{- define "jsonrpc_sse_stream" }}
+{{ printf "Stream defines the interface for managing an SSE streaming connection in the %s server. It allows sending notifications and final responses. This interface is used by the service to interact with clients over SSE using JSON-RPC." .Name | comment }}
 type Stream interface {
 {{- $hasErrors := false }}
 	{{- range .Methods }}
@@ -106,17 +179,13 @@ type Stream interface {
 	{{- end }}
 	{{- range .Methods }}
 		{{- if .Result }}
-	{{ printf "Send%sResponse sends the final JSON-RPC response for the %s method. This method should be called at most once and no other methods should be called after. Used by SSE transport to send the final response after streaming notifications." .VarName .Name | comment }}
+	{{ printf "Send%sResponse sends the final JSON-RPC response for the %s method. This method should be called at most once and no other methods should be called after." .VarName .Name | comment }}
 	Send{{ .VarName }}Response(ctx context.Context, result {{ .ResultRef }}) error
 		{{- end }}
 	{{- end }}
 	{{- if $hasErrors }}
 	// SendError sends a JSON-RPC error response.
 	SendError(ctx context.Context, id string, err error) error
-	{{- end }}
-	{{- if isJSONRPCWebSocket . }}
-	{{ printf "Recv reads JSON-RPC requests from the %s service WebSocket stream and dispatches them to the appropriate method." .Name | comment }}
-	Recv(ctx context.Context) error
 	{{- end }}
 } 
 {{- end }}

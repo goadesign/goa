@@ -334,14 +334,32 @@ func PATCH(path string) *expr.RouteExpr {
 
 func route(method, path string) *expr.RouteExpr {
 	r := &expr.RouteExpr{Method: method, Path: path}
-	a, ok := eval.Current().(*expr.HTTPEndpointExpr)
-	if !ok {
+	
+	switch e := eval.Current().(type) {
+	case *expr.HTTPServiceExpr:
+		// Service-level route - only allowed for JSON-RPC services
+		if e.ServiceExpr.Meta == nil || e.ServiceExpr.Meta["jsonrpc:service"] == nil {
+			eval.ReportError("routes at the service level are only allowed for JSON-RPC services. Use method-level routes instead.")
+			return r
+		}
+		// For JSON-RPC services, store the route in the service
+		e.JSONRPCRoute = r
+		return r
+		
+	case *expr.HTTPEndpointExpr:
+		// Method-level route - not allowed for JSON-RPC endpoints
+		if e.IsJSONRPC() {
+			eval.ReportError("JSON-RPC endpoints cannot define routes at the method level. Define routes at the service level using JSONRPC(func() { GET(\"/path\") })")
+			return r
+		}
+		r.Endpoint = e
+		e.Routes = append(e.Routes, r)
+		return r
+		
+	default:
 		eval.IncompatibleDSL()
 		return r
 	}
-	r.Endpoint = a
-	a.Routes = append(a.Routes, r)
-	return r
 }
 
 // Header describes a single HTTP header or gRPC metadata header. The properties

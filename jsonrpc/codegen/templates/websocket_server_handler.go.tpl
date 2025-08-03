@@ -15,6 +15,9 @@ func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	stream := &{{ lowerInitial .Service.StructName }}Stream{
 	{{- range .Endpoints }}
 		{{ lowerInitial .Method.VarName }}: s.{{ lowerInitial .Method.VarName }},
+		{{- if and .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4)) }}
+		{{ lowerInitial .Method.VarName }}Endpoint: s.{{ lowerInitial .Method.VarName }}Endpoint,
+		{{- end }}
 	{{- end }}
 		r: r,
 		w: w,

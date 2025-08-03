@@ -9,13 +9,15 @@ var JSONRPCSSEStringDSL = func() {
 		JSONRPC(func() {})
 	})
 	Service("JSONRPCSSEStringService", func() {
+		JSONRPC(func() {
+			POST("/stream")
+		})
 		Method("Stream", func() {
 			Payload(func() {
 				ID("id", String, "Request ID")
 			})
 			StreamingResult(String)
 			JSONRPC(func() {
-				GET("/stream")
 				ServerSentEvents()
 			})
 		})
@@ -27,6 +29,9 @@ var JSONRPCSSEObjectDSL = func() {
 		JSONRPC(func() {})
 	})
 	Service("JSONRPCSSEObjectService", func() {
+		JSONRPC(func() {
+			POST("/stream")
+		})
 		Method("Stream", func() {
 			Payload(func() {
 				ID("id", String, "Request ID")
@@ -37,7 +42,6 @@ var JSONRPCSSEObjectDSL = func() {
 				Attribute("data", String, "Event data")
 			})
 			JSONRPC(func() {
-				POST("/stream")
 				ServerSentEvents(func() {
 					SSERequestID("last_event_id")
 					SSEEventID("id")

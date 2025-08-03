@@ -222,8 +222,8 @@ func createLifecycleDSLCode() string {
 	})
 	
 	Service("lifecycle", func() {
-		HTTP(func() {
-			Path("/api")  // HTTP path for service
+		JSONRPC(func() {
+			GET("/jsonrpc/ws")  // Service-level WebSocket endpoint
 		})
 		
 		Method("test_stream", func() {
@@ -245,7 +245,6 @@ func createLifecycleDSLCode() string {
 			})
 			
 			JSONRPC(func() {
-				GET("/jsonrpc/ws")  // Method-level WebSocket endpoint
 			})
 		})
 	})`
@@ -258,8 +257,8 @@ func createWebSocketErrorDSLCode() string {
 	})
 	
 	Service("errors", func() {
-		HTTP(func() {
-			Path("/api")  // HTTP path for service
+		JSONRPC(func() {
+			GET("/jsonrpc/ws")  // Service-level WebSocket endpoint
 		})
 		
 		Error("StreamError")
@@ -285,7 +284,6 @@ func createWebSocketErrorDSLCode() string {
 			Error("StreamError")
 			
 			JSONRPC(func() {
-				GET("/jsonrpc/ws")  // Method-level WebSocket endpoint
 			})
 		})
 	})`

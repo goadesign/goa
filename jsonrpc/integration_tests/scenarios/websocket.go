@@ -37,7 +37,14 @@ func createWebSocketDSL(streamingType StreamingType, dataType DataType) func() {
 			switch streamingType {
 			case StreamingServer:
 				dsl.Method("server_stream", func() {
-					// Server streaming: streaming results with request ID
+					// Server streaming: non-streaming payload, streaming results
+					dsl.Payload(func() {
+						dsl.Attribute("id", dsl.String, func() {
+							dsl.Meta("jsonrpc:id")
+						})
+						dsl.Attribute("count", dsl.Int, "Number of messages to stream")
+						dsl.Required("id", "count")
+					})
 					dsl.StreamingResult(createWebSocketStreamingType(dataType))
 
 					dsl.JSONRPC(func() {
@@ -133,7 +140,10 @@ func createWebSocketRequests(streamingType StreamingType, dataType DataType) []T
 		return []TestRequest{
 			{
 				Method: "server_stream", // JSON-RPC method name without service prefix
-				// No params for server streaming
+				Params: map[string]any{
+					"id":    "req-1",
+					"count": 3, // Request 3 streaming messages
+				},
 				StreamingMessages: []StreamMessage{
 					{Direction: DirectionReceive, Data: createStreamData(dataType, 1)},
 					{Direction: DirectionReceive, Data: createStreamData(dataType, 2)},

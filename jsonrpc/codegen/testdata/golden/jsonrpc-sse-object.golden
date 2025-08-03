@@ -44,11 +44,14 @@ func (s *streamServerStreamEventWriter) finish() {
 
 // SendStreamNotification sends a JSON-RPC notification for the Stream method.
 func (s *StreamServerStream) SendStreamNotification(ctx context.Context, result *jsonrpcsseobjectservice.StreamResult) error {
+	// Convert to response body type for proper JSON encoding
+	body := NewStreamResponseBody(result)
+
 	// Send as notification (no ID)
 	notification := map[string]interface{}{
 		"jsonrpc": "2.0",
 		"method":  "Stream",
-		"params":  result,
+		"params":  body,
 	}
 
 	return s.sendSSEEvent("notification", notification)
@@ -57,21 +60,20 @@ func (s *StreamServerStream) SendStreamNotification(ctx context.Context, result 
 // SendStreamResponse sends the final JSON-RPC response for the Stream method.
 // This method should be called at most once. No other methods should be called
 // after SendResponse.
-func (s *StreamServerStream) SendStreamResponse(ctx context.Context, result *jsonrpcsseobjectservice.StreamResult) error {
-	// Determine response ID
-	var id any
+func (s *StreamServerStream) SendStreamResponse(ctx context.Context, id string, result *jsonrpcsseobjectservice.StreamResult) error {
+	// Override the provided id if result contains an ID
 	if result.ID != nil && *result.ID != "" {
 		id = *result.ID
 		// Clear the ID field so it's not duplicated in the result
 		result.ID = nil
-	} else {
-		id = s.requestID
 	}
+	// Convert to response body type for proper JSON encoding
+	body := NewStreamResponseBody(result)
 
 	response := map[string]interface{}{
 		"jsonrpc": "2.0",
 		"id":      id,
-		"result":  result,
+		"result":  body,
 	}
 
 	return s.sendSSEEvent("response", response)

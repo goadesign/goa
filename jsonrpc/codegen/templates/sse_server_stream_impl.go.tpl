@@ -83,11 +83,18 @@ func (s *{{ lowerInitial .Service.StructName }}SSEStream) sendError(ctx context.
 		{{- if .Method.Result }}
 {{ printf "Send%sNotification sends a JSON-RPC notification for the %s method." .Method.VarName .Method.Name | comment }}
 func (s *{{ lowerInitial $.Service.StructName }}SSEStream) Send{{ .Method.VarName }}Notification(ctx context.Context, result {{ .SSE.EventTypeRef }}) error {
+	{{- if and .Result.Ref (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
+	// Convert to response body type for proper JSON encoding
+	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
+	{{- else }}
+	body := result
+	{{- end }}
+	
 	// Send as notification (no ID)
 	notification := map[string]any{
 		"jsonrpc": "2.0",
 		"method":  {{ printf "%q" .Method.Name }},
-		"params":  result,
+		"params":  body,
 	}
 	
 	return s.sendSSEEvent("notification", notification)
@@ -95,15 +102,22 @@ func (s *{{ lowerInitial $.Service.StructName }}SSEStream) Send{{ .Method.VarNam
 
 {{ printf "Send%sResponse sends the final JSON-RPC response for the %s method and closes the stream. Used by SSE transport to send the final response after streaming notifications." .Method.VarName .Method.Name | comment }}
 func (s *{{ lowerInitial $.Service.StructName }}SSEStream) Send{{ .Method.VarName }}Response(ctx context.Context, id string, result {{ .SSE.EventTypeRef }}) error {
+	{{- if and .Result.Ref (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
+	// Convert to response body type for proper JSON encoding
+	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
+	{{- else }}
+	body := result
+	{{- end }}
+	
 	// Send the final response
-	response := jsonrpc.MakeSuccessResponse(id, result)
+	response := jsonrpc.MakeSuccessResponse(id, body)
 	
 	if err := s.sendSSEEvent("response", response); err != nil {
 		return err
 	}
 	
-	// Close the stream
-	return s.Close()
+	// Stream is closed when the handler returns
+	return nil
 }
 		{{- else }}
 {{ printf "Send%sNotification sends a JSON-RPC notification for the %s method." .Method.VarName .Method.Name | comment }}
@@ -142,15 +156,3 @@ func (s *{{ lowerInitial .Service.StructName }}SSEStream) SendError(ctx context.
 	return s.sendError(ctx, id, code, message, data)
 }
 {{- end }}
-
-// Close closes the SSE stream.
-func (s *{{ lowerInitial .Service.StructName }}SSEStream) Close() error {
-	// Send close event
-	closeNotification := map[string]any{
-		"jsonrpc": "2.0",
-		"method":  "close",
-	}
-	s.sendSSEEvent("close", closeNotification)
-	
-	return nil
-}

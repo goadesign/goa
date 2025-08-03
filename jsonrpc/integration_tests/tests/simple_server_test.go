@@ -19,11 +19,13 @@ func TestSimpleServerStartup(t *testing.T) {
 		Title("Test API")
 	})
 	
-	Service("test", func() {		
+	Service("test", func() {
+		JSONRPC(func() {
+			POST("/jsonrpc")
+		})
 		Method("ping", func() {
 			Result(String)
 			JSONRPC(func() {
-				POST("/jsonrpc")
 			})
 		})
 	})`
@@ -33,7 +35,6 @@ func TestSimpleServerStartup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to generate code: %v", err)
 	}
-	t.Logf("Generated code in: %s", genDir)
 
 	// Allocate port
 	port, err := h.AllocatePort()
@@ -59,10 +60,10 @@ func TestSimpleServerStartup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to connect to server: %v", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
-	if resp.StatusCode != 405 {
-		t.Fatalf("Expected 405 (Method Not Allowed) for GET on POST-only root path, got %d", resp.StatusCode)
+	if resp.StatusCode != 404 {
+		t.Fatalf("Expected 404 (Not Found) for GET on root path, got %d", resp.StatusCode)
 	}
 
 	// Now try the JSON-RPC endpoint with an undefined method
@@ -74,7 +75,7 @@ func TestSimpleServerStartup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to call JSON-RPC: %v", err)
 	}
-	defer resp2.Body.Close()
+	defer resp2.Body.Close() //nolint:errcheck
 
 	body, _ := io.ReadAll(resp2.Body)
 
