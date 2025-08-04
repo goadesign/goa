@@ -82,17 +82,24 @@ var MethodNames = [{{ len .Methods }}]string{ {{ range .Methods }}{{ printf "%q"
 
 {{- define "stream_interface" }}
 {{- if and .IsJSONRPCSSE (eq .Type "server") }}
+{{ printf "%sEvent is the interface implemented by the result type for the %s method." .MethodVarName .Endpoint | comment }}
+type {{ .MethodVarName }}Event interface {
+	is{{ .MethodVarName }}Event()
+}
+
+{{ printf "is%sEvent implements the %sEvent interface." .MethodVarName .MethodVarName | comment }}
+func ({{ .Stream.SendTypeRef }}) is{{ .MethodVarName }}Event() {}
+
 {{ printf "%s is the interface a %q endpoint %s stream must satisfy for JSON-RPC SSE." .Stream.Interface .Endpoint .Type | comment }}
 type {{ .Stream.Interface }} interface {
 	{{- if .Stream.SendTypeRef }}
-	{{ printf "Send%sNotification sends a JSON-RPC notification for the %s method." .MethodVarName .Endpoint | comment }}
-	Send{{ .MethodVarName }}Notification(ctx context.Context, result {{ .Stream.SendTypeRef }}) error
-	{{ printf "Send%sResponse sends the final JSON-RPC response for the %s method and closes the stream." .MethodVarName .Endpoint | comment }}
-	Send{{ .MethodVarName }}Response(ctx context.Context, id string, result {{ .Stream.SendTypeRef }}) error
-	{{- else }}
-	{{ printf "Send%sNotification sends a JSON-RPC notification for the %s method." .MethodVarName .Endpoint | comment }}
-	Send{{ .MethodVarName }}Notification(ctx context.Context) error
+	{{ comment "Send sends an event (notification or response) to the client." }}
+	{{ comment "For notifications, the result should not have an ID field." }}
+	{{ comment "For responses, the result must have an ID field." }}
+	Send(ctx context.Context, event {{ .MethodVarName }}Event) error
 	{{- end }}
+	{{ comment "SendError sends a JSON-RPC error response." }}
+	SendError(ctx context.Context, id string, err error) error
 }
 {{- else }}
 {{ printf "%s is the interface a %q endpoint %s stream must satisfy." .Stream.Interface .Endpoint .Type | comment }}
@@ -167,25 +174,46 @@ func ({{ .ResultRef }}) is{{ $.VarName }}Event() {}
 {{- end }}
 
 {{- define "jsonrpc_sse_stream" }}
+{{- $hasResults := false }}
+{{- $hasErrors := false }}
+{{- $resultTypes := "" }}
+{{- range .Methods }}
+	{{- if .Result }}
+		{{- $hasResults = true }}
+		{{- if $resultTypes }}
+			{{- $resultTypes = printf "%s, %s" $resultTypes .ResultRef }}
+		{{- else }}
+			{{- $resultTypes = .ResultRef }}
+		{{- end }}
+	{{- end }}
+	{{- if .Errors }}{{ $hasErrors = true }}{{ end }}
+{{- end }}
 {{ printf "Stream defines the interface for managing an SSE streaming connection in the %s server. It allows sending notifications and final responses. This interface is used by the service to interact with clients over SSE using JSON-RPC." .Name | comment }}
 type Stream interface {
-{{- $hasErrors := false }}
-	{{- range .Methods }}
-		{{- if .Result }}
-	{{ printf "Send%sNotification sends a JSON-RPC notification for the %s method." .VarName .Name | comment }}
-	Send{{ .VarName }}Notification(ctx context.Context, result {{ .ResultRef }}) error
-		{{- end }}
-		{{- if .Errors }}{{ $hasErrors = true }}{{ end }}
-	{{- end }}
-	{{- range .Methods }}
-		{{- if .Result }}
-	{{ printf "Send%sResponse sends the final JSON-RPC response for the %s method. This method should be called at most once and no other methods should be called after." .VarName .Name | comment }}
-	Send{{ .VarName }}Response(ctx context.Context, result {{ .ResultRef }}) error
-		{{- end }}
-	{{- end }}
-	{{- if $hasErrors }}
-	// SendError sends a JSON-RPC error response.
+{{- if $hasResults }}
+	{{ comment Send sends an event (notification or response) to the client. }}
+	{{ comment "For notifications, the result should not have an ID field." }}
+	{{ comment "For responses, the result must have an ID field." }}
+	{{ printf "Accepted types: %s" $resultTypes | comment }}
+	Send(ctx context.Context, event Event) error
+{{- end }}
+{{- if $hasErrors }}
+	{{ comment "SendError sends a JSON-RPC error response." }}
 	SendError(ctx context.Context, id string, err error) error
+{{- end }}
+}
+
+{{- if $hasResults }}
+{{ printf "Event is the interface implemented by all result types that can be sent via the %s Stream." .Name | comment }}
+type Event interface {
+	is{{ .VarName }}Event()
+}
+
+	{{- range .Methods }}
+		{{- if .Result }}
+{{ printf "is%sEvent implements the Event interface." $.VarName | comment }}
+func ({{ .ResultRef }}) is{{ $.VarName }}Event() {}
+		{{- end }}
 	{{- end }}
-} 
+{{- end }}
 {{- end }}

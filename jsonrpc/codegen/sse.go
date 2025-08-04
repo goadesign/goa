@@ -49,9 +49,11 @@ func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodeg
 			"server",
 			[]*codegen.ImportSpec{
 				{Path: "context"},
+				{Path: "errors"},
 				{Path: "fmt"},
 				{Path: "net/http"},
 				{Path: "sync"},
+				codegen.GoaImport(""),
 				codegen.GoaImport("jsonrpc"),
 				codegen.GoaNamedImport("http", "goahttp"),
 				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},

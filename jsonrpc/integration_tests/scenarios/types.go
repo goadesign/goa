@@ -1206,7 +1206,7 @@ func NewSubscribeEndpoint(s %s.Service) goa.Endpoint {
 		// Send 5 test events
 		for i := 1; i <= 5; i++ {
 			event := %s
-			if err := stream.SendSubscribeNotification(ctx, event); err != nil {
+			if err := stream.Send(ctx, event); err != nil {
 				return nil, err
 			}
 			// Small delay between events
@@ -1223,8 +1223,7 @@ func NewSubscribeEndpoint(s %s.Service) goa.Endpoint {
 		methodCapitalized, methodName, serviceStruct, methodCapitalized,
 		serviceName, methodCapitalized, serviceName, methodName,
 		testData.GenerateImplementationCode(serviceName),
-		serviceName, serviceName,
-		testData.GenerateImplementationCode(serviceName),
+		serviceName, serviceName, testData.GenerateImplementationCode(serviceName),
 	)
 }
 
@@ -1249,7 +1248,7 @@ func (r *ScenarioRunner) generateSSEImplementationWithPayload(serviceName, metho
 	// Send 5 test events using the same data generator as the test expectations
 	for i := 1; i <= 5; i++ {
 		event := %s
-		if err := stream.Send%sNotification(ctx, event); err != nil {
+		if err := stream.Send(ctx, event); err != nil {
 			return err
 		}
 		// Small delay between events
@@ -1262,7 +1261,7 @@ func (r *ScenarioRunner) generateSSEImplementationWithPayload(serviceName, metho
 	return nil
 }`,
 		methodCapitalized, methodName, methodSignature, serviceName, methodName,
-		testData.GenerateImplementationCode(serviceName), methodCapitalized,
+		testData.GenerateImplementationCode(serviceName),
 	)
 }
 
@@ -1324,7 +1323,7 @@ func (r *ScenarioRunner) generateWebSocketServerStreamingImplementation(serviceN
 			Data: fmt.Sprintf("data-%%d", i+1),
 		}`, serviceName, methodCapitalized)
 	}
-	
+
 	// For JSON-RPC WebSocket server streaming with non-streaming payload
 	// Method receives payload and stream for sending multiple results
 	return fmt.Sprintf(`// %s implements %s.
@@ -1426,7 +1425,7 @@ func (r *ScenarioRunner) generateWebSocketClientStreamingImplementation(serviceN
 	} else {
 		payloadParam = fmt.Sprintf("p *%s.%sPayload", serviceName, methodCapitalized)
 	}
-	
+
 	// Client streaming returns a final result
 	var resultReturn string
 	if resultType == DataTypeNone {
@@ -1466,7 +1465,7 @@ func (r *ScenarioRunner) generateWebSocketClientStreamingImplementation(serviceN
 			resultReturn = fmt.Sprintf(`&%s.%sResult{ID: p.ID, Data: "final"}, nil`, serviceName, methodCapitalized)
 		}
 	}
-	
+
 	return fmt.Sprintf(`// %s implements %s (client streaming).
 func (s *%s) %s(ctx context.Context, %s) (*%s.%sResult, error) {
 	log.Printf(ctx, "%s.%s")
@@ -1492,7 +1491,7 @@ func (r *ScenarioRunner) generateWebSocketBidirectionalImplementation(serviceNam
 	} else {
 		payloadParam = fmt.Sprintf("p *%s.%sPayload, ", serviceName, methodCapitalized)
 	}
-	
+
 	streamParam := fmt.Sprintf("stream %s.%sServerStream", serviceName, methodCapitalized)
 
 	// For bidirectional streaming, we don't return a result directly - we send via stream
@@ -1540,7 +1539,7 @@ func (r *ScenarioRunner) generateWebSocketBidirectionalImplementation(serviceNam
 		Data: "echo",
 	})`, serviceName, methodCapitalized)
 	}
-	
+
 	return fmt.Sprintf(`// %s implements %s (bidirectional streaming).
 func (s *%s) %s(ctx context.Context, %s%s) (err error) {
 	log.Printf(ctx, "%s.%s")

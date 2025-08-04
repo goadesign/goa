@@ -1089,7 +1089,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 	}
 
 	_, isJSONRPC = m.Meta["jsonrpc"]
-	
+
 	// Check if this JSON-RPC method uses SSE
 	var isJSONRPCSSE bool
 	if isJSONRPC && m.IsStreaming() {

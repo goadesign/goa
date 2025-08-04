@@ -42,44 +42,75 @@ func (s *streamServerStreamEventWriter) finish() {
 	}
 }
 
-// SendStreamNotification sends a JSON-RPC notification for the Stream method.
-func (s *StreamServerStream) SendStreamNotification(ctx context.Context, result *jsonrpcsseobjectservice.StreamResult) error {
+// Send sends an event (notification or response) to the client.
+// For notifications, the result should not have an ID field.
+// For responses, the result must have an ID field.
+func (s *StreamServerStream) Send(ctx context.Context, event jsonrpcsseobjectservice.StreamEvent) error {
+	// Type assert to the specific result type
+	result, ok := event.(*jsonrpcsseobjectservice.StreamResult)
+	if !ok {
+		return fmt.Errorf("unexpected event type: %T", event)
+	}
 	// Convert to response body type for proper JSON encoding
 	body := NewStreamResponseBody(result)
 
-	// Send as notification (no ID)
-	notification := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"method":  "Stream",
-		"params":  body,
-	}
-
-	return s.sendSSEEvent("notification", notification)
-}
-
-// SendStreamResponse sends the final JSON-RPC response for the Stream method.
-// This method should be called at most once. No other methods should be called
-// after SendResponse.
-func (s *StreamServerStream) SendStreamResponse(ctx context.Context, id string, result *jsonrpcsseobjectservice.StreamResult) error {
-	// Override the provided id if result contains an ID
+	// Check if this is a notification or response by looking for ID field
+	var id string
+	var isResponse bool
 	if result.ID != nil && *result.ID != "" {
 		id = *result.ID
+		isResponse = true
 		// Clear the ID field so it's not duplicated in the result
 		result.ID = nil
 	}
-	// Convert to response body type for proper JSON encoding
-	body := NewStreamResponseBody(result)
 
-	response := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      id,
-		"result":  body,
+	var message map[string]interface{}
+	var eventType string
+
+	if isResponse {
+		// Send as response with ID
+		message = map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      id,
+			"result":  body,
+		}
+		eventType = "response"
+	} else {
+		// Send as notification (no ID)
+		message = map[string]interface{}{
+			"jsonrpc": "2.0",
+			"method":  "Stream",
+			"params":  body,
+		}
+		eventType = "notification"
 	}
 
-	return s.sendSSEEvent("response", response)
+	return s.sendSSEEvent(eventType, message)
 }
 
-// sendSSEEvent sends a single SSE event by creating an encoder that writes to the event writer
+// SendError sends a JSON-RPC error response.
+func (s *StreamServerStream) SendError(ctx context.Context, id string, err error) error {
+	// No custom errors defined - check if it's a validation error, otherwise use
+	// internal error
+	code := jsonrpc.InternalError
+	if _, ok := err.(*goa.ServiceError); ok {
+		code = jsonrpc.InvalidParams
+	}
+	return s.sendError(ctx, id, code, err.Error(), nil)
+}
+
+// sendError sends a JSON-RPC error response via SSE.
+func (s *StreamServerStream) sendError(ctx context.Context, id any, code jsonrpc.Code, message string, data any) error {
+	response := jsonrpc.MakeErrorResponse(id, code, "", message)
+	if data != nil {
+		response.Error.Message = message
+		response.Error.Data = data
+	}
+	return s.sendSSEEvent("error", response)
+}
+
+// sendSSEEvent sends a single SSE event by creating an encoder that writes to
+// the event writer
 func (s *StreamServerStream) sendSSEEvent(eventType string, v any) error {
 	// Ensure headers are sent once
 	s.once.Do(func() {
@@ -100,20 +131,4 @@ func (s *StreamServerStream) sendSSEEvent(eventType string, v any) error {
 	ew.finish()
 
 	return err
-}
-
-// Send streams instances of *jsonrpcsseobjectservice.StreamResult - implements the service stream interface.
-func (s *StreamServerStream) Send(v *jsonrpcsseobjectservice.StreamResult) error {
-	return s.SendStreamNotification(context.Background(), v)
-}
-
-// SendWithContext streams instances of *jsonrpcsseobjectservice.StreamResult with context - implements the service stream interface.
-func (s *StreamServerStream) SendWithContext(ctx context.Context, v *jsonrpcsseobjectservice.StreamResult) error {
-	return s.SendStreamNotification(ctx, v)
-}
-
-// Close closes the SSE stream.
-func (s *StreamServerStream) Close() error {
-	// No-op - the stream is closed when the handler returns
-	return nil
 }

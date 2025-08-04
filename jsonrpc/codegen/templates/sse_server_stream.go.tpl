@@ -41,64 +41,116 @@ func (s *{{ lowerInitial .SSE.StructName }}EventWriter) finish() {
 	}
 }
 
-{{ printf "Send%sNotification sends a JSON-RPC notification for the %s method." .Method.VarName .Method.Name | comment }}
-func (s *{{ .SSE.StructName }}) Send{{ .Method.VarName }}Notification(ctx context.Context, result {{ .SSE.EventTypeRef }}) error {
+{{ comment "Send sends an event (notification or response) to the client." }}
+{{ comment "For notifications, the result should not have an ID field." }}
+{{ comment "For responses, the result must have an ID field." }}
+func (s *{{ .SSE.StructName }}) Send(ctx context.Context, event {{ .ServicePkgName }}.{{ .Method.VarName }}Event) error {
+	{{ comment "Type assert to the specific result type" }}
+	result, ok := event.({{ .SSE.EventTypeRef }})
+	if !ok {
+		return fmt.Errorf("unexpected event type: %T", event)
+	}
+	
 	{{- if and .Result (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
-	// Convert to response body type for proper JSON encoding
+	{{ comment "Convert to response body type for proper JSON encoding" }}
 	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
 	{{- else }}
 	body := result
 	{{- end }}
 	
-	// Send as notification (no ID)
-	notification := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"method":  {{ printf "%q" .Method.Name }},
-		"params":  body,
-	}
-	
-	return s.sendSSEEvent("notification", notification)
-}
-
-{{ printf "Send%sResponse sends the final JSON-RPC response for the %s method." .Method.VarName .Method.Name | comment }}
-{{ comment "This method should be called at most once. No other methods should be called after SendResponse." }}
-func (s *{{ .SSE.StructName }}) Send{{ .Method.VarName }}Response(ctx context.Context, id string, result {{ .SSE.EventTypeRef }}) error {
+	{{ comment "Check if this is a notification or response by looking for ID field" }}
+	var id string
+	var isResponse bool
 	{{- if .Result.IDAttribute }}
-	// Override the provided id if result contains an ID
 		{{- if .Result.IDAttributeRequired }}
 	if result.{{ .Result.IDAttribute }} != "" {
 		id = result.{{ .Result.IDAttribute }}
-		// Clear the ID field so it's not duplicated in the result
+		isResponse = true
+		{{ comment "Clear the ID field so it's not duplicated in the result" }}
 		result.{{ .Result.IDAttribute }} = ""
 	}
 		{{- else }}
 	if result.{{ .Result.IDAttribute }} != nil && *result.{{ .Result.IDAttribute }} != "" {
 		id = *result.{{ .Result.IDAttribute }}
-		// Clear the ID field so it's not duplicated in the result
+		isResponse = true
+		{{ comment "Clear the ID field so it's not duplicated in the result" }}
 		result.{{ .Result.IDAttribute }} = nil
 	}
 		{{- end }}
 	{{- end }}
 	
-	{{- if and .Result (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
-	// Convert to response body type for proper JSON encoding
-	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
-	{{- else }}
-	body := result
-	{{- end }}
+	var message map[string]interface{}
+	var eventType string
 	
-	response := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      id,
-		"result":  body,
+	if isResponse {
+		{{ comment "Send as response with ID" }}
+		message = map[string]interface{}{
+			"jsonrpc": "2.0",
+			"id":      id,
+			"result":  body,
+		}
+		eventType = "response"
+	} else {
+		{{ comment "Send as notification (no ID)" }}
+		message = map[string]interface{}{
+			"jsonrpc": "2.0",
+			"method":  {{ printf "%q" .Method.Name }},
+			"params":  body,
+		}
+		eventType = "notification"
 	}
 	
-	return s.sendSSEEvent("response", response)
+	return s.sendSSEEvent(eventType, message)
 }
 
-// sendSSEEvent sends a single SSE event by creating an encoder that writes to the event writer
+{{ comment "SendError sends a JSON-RPC error response." }}
+func (s *{{ .SSE.StructName }}) SendError(ctx context.Context, id string, err error) error {
+	{{- if .Errors }}
+	var en goa.GoaErrorNamer
+	if !errors.As(err, &en) {
+		code := jsonrpc.InternalError
+		if _, ok := err.(*goa.ServiceError); ok {
+			code = jsonrpc.InvalidParams
+		}
+		return s.sendError(ctx, id, code, err.Error(), nil)
+	}
+	switch en.GoaErrorName() {
+	{{- range .Errors }}
+	case {{ printf "%q" .Name }}:
+		{{- with .Response}}
+		return s.sendError(ctx, id, {{ .Code }}, err.Error(), err)
+		{{- end }}
+	{{- end }}
+	default:
+		code := jsonrpc.InternalError
+		if _, ok := err.(*goa.ServiceError); ok {
+			code = jsonrpc.InvalidParams
+		}
+		return s.sendError(ctx, id, code, err.Error(), nil)
+	}
+	{{- else }}
+	{{ comment "No custom errors defined - check if it's a validation error, otherwise use internal error" }}
+	code := jsonrpc.InternalError
+	if _, ok := err.(*goa.ServiceError); ok {
+		code = jsonrpc.InvalidParams
+	}
+	return s.sendError(ctx, id, code, err.Error(), nil)
+	{{- end }}
+}
+
+{{ comment "sendError sends a JSON-RPC error response via SSE." }}
+func (s *{{ .SSE.StructName }}) sendError(ctx context.Context, id any, code jsonrpc.Code, message string, data any) error {
+	response := jsonrpc.MakeErrorResponse(id, code, "", message)
+	if data != nil {
+		response.Error.Message = message
+		response.Error.Data = data
+	}
+	return s.sendSSEEvent("error", response)
+}
+
+{{ comment "sendSSEEvent sends a single SSE event by creating an encoder that writes to the event writer" }}
 func (s *{{ .SSE.StructName }}) sendSSEEvent(eventType string, v any) error {
-	// Ensure headers are sent once
+	{{ comment "Ensure headers are sent once" }}
 	s.once.Do(func() {
 		s.w.Header().Set("Content-Type", "text/event-stream")
 		s.w.Header().Set("Cache-Control", "no-cache")
@@ -117,14 +169,4 @@ func (s *{{ .SSE.StructName }}) sendSSEEvent(eventType string, v any) error {
 	ew.finish()
 	
 	return err
-}
-
-// Send streams instances of {{ .SSE.EventTypeRef }} - implements the service stream interface.
-func (s *{{ .SSE.StructName }}) Send(v {{ .SSE.EventTypeRef }}) error {
-	return s.Send{{ .Method.VarName }}Notification(context.Background(), v)
-}
-
-// SendWithContext streams instances of {{ .SSE.EventTypeRef }} with context - implements the service stream interface.
-func (s *{{ .SSE.StructName }}) SendWithContext(ctx context.Context, v {{ .SSE.EventTypeRef }}) error {
-	return s.Send{{ .Method.VarName }}Notification(ctx, v)
 }
