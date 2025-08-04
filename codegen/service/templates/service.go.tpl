@@ -90,7 +90,7 @@ type {{ .MethodVarName }}Event interface {
 {{ printf "is%sEvent implements the %sEvent interface." .MethodVarName .MethodVarName | comment }}
 func ({{ .Stream.SendTypeRef }}) is{{ .MethodVarName }}Event() {}
 
-{{ printf "%s is the interface a %q endpoint %s stream must satisfy for JSON-RPC SSE." .Stream.Interface .Endpoint .Type | comment }}
+{{ printf "%s allows streaming instances of %s over SSE." .Stream.Interface .Stream.SendTypeRef | comment }}
 type {{ .Stream.Interface }} interface {
 	{{- if .Stream.SendTypeRef }}
 	{{ comment "Send sends an event (notification or response) to the client." }}
@@ -102,23 +102,11 @@ type {{ .Stream.Interface }} interface {
 	SendError(ctx context.Context, id string, err error) error
 }
 {{- else }}
-{{ printf "%s is the interface a %q endpoint %s stream must satisfy." .Stream.Interface .Endpoint .Type | comment }}
+{{ printf "%s allows streaming instances of %s to the client." .Stream.Interface .Stream.SendTypeRef | comment }}
 type {{ .Stream.Interface }} interface {
 	{{- if .Stream.SendTypeRef }}
 		{{ comment .Stream.SendDesc }}
-		{{ .Stream.SendName }}({{ .Stream.SendTypeRef }}) error
-		{{ comment .Stream.SendWithContextDesc }}
-		{{ .Stream.SendWithContextName }}(context.Context, {{ .Stream.SendTypeRef }}) error
-	{{- end }}
-	{{- if .Stream.RecvTypeRef }}
-		{{ comment .Stream.RecvDesc }}
-		{{ .Stream.RecvName }}() ({{ .Stream.RecvTypeRef }}, error)
-		{{ comment .Stream.RecvWithContextDesc }}
-		{{ .Stream.RecvWithContextName }}(context.Context) ({{ .Stream.RecvTypeRef }}, error)
-	{{- end }}
-	{{- if .Stream.MustClose }}
-		{{ comment "Close closes the stream." }}
-		Close() error
+		{{ .Stream.SendName }}(context.Context, {{ .Stream.SendTypeRef }}) error
 	{{- end }}
 	{{- if and .IsViewedResult (eq .Type "server") }}
 		{{ comment "SetView sets the view used to render the result before streaming." }}
@@ -156,6 +144,8 @@ type Stream interface {
 {{- end }}
 	{{ printf "Recv reads JSON-RPC requests from the %s service WebSocket stream and dispatches them to the appropriate method." .Name | comment }}
 	Recv(ctx context.Context) error
+	{{ comment "Close closes the stream." }}
+	Close() error
 }
 
 {{- if $hasResults }}

@@ -1,1071 +1,321 @@
-# JSON-RPC Integration Tests
+# Goa JSON-RPC Integration Test Framework
 
-[![Go](https://img.shields.io/badge/Go-1.19+-blue.svg)](https://golang.org)
-[![Goa](https://img.shields.io/badge/Goa-v3-green.svg)](https://goa.design)
-[![Tests](https://img.shields.io/badge/Coverage-Comprehensive-brightgreen.svg)](#test-coverage)
+A clean, data-driven integration test framework for testing Goa's JSON-RPC implementations.
 
-> **World-class integration testing framework for Goa JSON-RPC code generation**
-
-This package provides a comprehensive, production-grade integration testing framework for the Goa JSON-RPC implementation. Unlike unit tests that verify individual components in isolation, these tests validate the entire code generation and execution pipeline end-to-end, ensuring that generated code not only compiles but works correctly in real-world scenarios.
-
-## Table of Contents
-
-- [🚀 Quick Start](#-quick-start)
-- [🏗️ Architecture Overview](#️-architecture-overview)
-- [📋 What Tests Cover](#-what-tests-cover)
-- [🔄 How Integration Tests Work](#-how-integration-tests-work)
-- [🧩 Test Framework Components](#-test-framework-components)
-- [🎯 Test Matrix System](#-test-matrix-system)
-- [📝 Writing New Tests](#-writing-new-tests)
-- [🛠️ Extending the Framework](#️-extending-the-framework)
-- [🐛 Debugging & Troubleshooting](#-debugging--troubleshooting)
-- [⚡ Performance & Best Practices](#-performance--best-practices)
+This framework is designed to be simple and extensible. All test cases are defined in a single `YAML` file, allowing you to add new tests without writing any Go code. The core principle is **client-side testing**: every test is written from the perspective of a client sending a request and expecting a specific response.
 
 ## 🚀 Quick Start
 
-```bash
-# Run all integration tests
-make test-all
+### Running Existing Tests
 
-# Run quick smoke tests (~5 scenarios, < 30 seconds)
-make test-quick
-
-# Run specific transport tests
-make test-http          # HTTP transport only
-make test-websocket     # WebSocket streaming only
-make test-sse          # Server-Sent Events only
-
-# Run feature-specific tests
-make test-errors       # Error handling tests
-make test-validation   # Input validation tests
-make test-streaming    # All streaming tests
-
-# Run with detailed output
-make test VERBOSE=1
-
-# Run single test scenario
-go test -v -run "TestHTTPMatrix/http_primitive_notification"
-```
-
-### Environment Variables
+To run all integration tests, navigate to the `integration_tests` directory and use the standard `go test` command.
 
 ```bash
-KEEP_ARTIFACTS=1    # Preserve test artifacts for debugging
-DEBUG_TESTS=1       # Enable verbose debug output
-SHORT_TESTS=1       # Skip integration tests (for CI speed)
+# Run all tests in parallel with verbose output
+go test -v ./...
+
+# Run a single test by its name from the YAML file
+# The format is TestJSONRPC/<scenario_name>
+go test -v -run "TestJSONRPC/echo_string_request" ./...
+
+# Filter which tests to run using a regex pattern
+FILTER="^echo_.*" go test -v ./...
 ```
 
-## 🔄 How Integration Tests Work
+The `FILTER` environment variable is useful for running a specific group of tests (like all `echo` tests) without typing each full name. It matches the regular expression against the `name` field in your `scenarios.yaml` file.
 
-The integration tests follow a complete lifecycle that mirrors real-world usage:
+### Adding a New Test
 
-1. **DSL Definition** → A test defines a Goa service using the DSL
-2. **Code Generation** → The framework generates server and client code
-3. **Compilation** → Generated code is compiled into executables
-4. **Execution** → Server starts, client makes requests
-5. **Validation** → Responses are validated against expectations
-6. **Cleanup** → All resources are cleaned up automatically
+Adding a new test requires only a small addition to the scenarios file; no Go code is needed.
 
-This ensures that the generated code not only compiles but actually works
-correctly when executed.
+1.  **Open `scenarios/scenarios.yaml`**.
 
-## 🏗️ Architecture Overview
+2.  **Add your test case**. For example, to test a method that echoes a map payload:
 
-The integration test framework uses a **layered, strategy-based architecture** designed for maintainability, extensibility, and comprehensive coverage.
+    ```yaml
+    - name: "echo_map_request"
+      method: "echo_map"
+      transport: "http"
+      request:
+        id: "map-req-1"
+        params:
+          key1: "value1"
+          key2: 42
+      expect:
+        id: "map-req-1"
+        result:
+          key1: "value1"
+          key2: 42
+    ```
 
-```
-┌───────────────────────────────────────────────────────────┐
-│                    Test Definitions                       │
-│  tests/{http,websocket,sse,errors,validation}_test.go     │
-└─────────────────────┬─────────────────────────────────────┘
-                      │
-┌─────────────────────▼─────────────────────────────────────┐
-│                   Scenario Engine                         │
-│  scenarios/{matrix,types}.go + Strategy Pattern           │
-│  ┌─────────────────┬─────────────────┬─────────────────┐  │
-│  │ Method          │ Type            │ Transport       │  │
-│  │ Behaviors       │ Handlers        │ Strategies      │  │
-│  │ (Strategy)      │ (Strategy)      │ (Strategy)      │  │
-│  └─────────────────┴─────────────────┴─────────────────┘  │
-└─────────────────────┬─────────────────────────────────────┘
-                      │
-┌─────────────────────▼─────────────────────────────────────┐
-│                 Test Harness                              │
-│  harness/{harness,compiler,process,client}.go             │
-│  • Resource Management  • Process Control                 │
-│  • Code Generation     • Port Allocation                  │
-│  • Lifecycle Management                                   │
-└─────────────────────┬─────────────────────────────────────┘
-                      │
-┌─────────────────────▼─────────────────────────────────────┐
-│                Response Validation                        │
-│  validators/{protocol,data,errors,transport}.go           │
-│  • JSON-RPC 2.0 Compliance  • Data Integrity              │
-│  • Error Format Validation  • Transport Specifics         │
-└───────────────────────────────────────────────────────────┘
-```
+3.  **Run the tests**. The framework will automatically handle the rest.
 
-### 🎯 Design Principles
+When you run the test, the framework sees the `method: "echo_map"`. Based on the `echo` action in the name, it dynamically generates a server method that simply returns its input parameters. This is why the `expect.result` in the example is identical to the `request.params`.
 
-1. **Strategy Pattern**: Eliminates conditional complexity through composable behaviors
-2. **Separation of Concerns**: Each layer has a single, well-defined responsibility  
-3. **Comprehensive Coverage**: Systematic testing of all meaningful combinations
-4. **Resource Safety**: Automatic cleanup and isolation prevent test interference
-5. **Extensibility**: New features add through registration, not modification
-6. **Debuggability**: Rich artifacts and logging for effective troubleshooting
+## ✨ How It Works
 
-### Core Components
+The framework's power comes from dynamically generating a complete Goa service tailored to the tests you define. This ensures we are testing against real, compiled Goa code, not mocks.
 
-#### Test Harness (`harness/`)
+The execution flow for `go test` is:
 
-The harness is the execution engine that manages the lifecycle of each test. It
-handles:
+1.  **Scenario Discovery**: The test runner parses `scenarios.yaml`, collects all test cases, and compiles a unique list of all `method` names used (e.g., `echo_string`, `transform_object`). This list informs the next step.
 
-- **Resource Management**: Creates isolated directories for each test run
-- **Process Control**: Starts/stops server processes, manages client connections
-- **Port Allocation**: Dynamically assigns ports to avoid conflicts
-- **Cleanup**: Ensures all resources are cleaned up, even if tests panic
+2.  **Dynamic Code Generation**: A temporary directory is created to house a complete Goa service.
 
-#### Scenario Engine (`scenarios/`)
+      * A `design/design.go` file is generated containing a Goa DSL design for all discovered methods.
+      * The framework runs `goa gen` and `goa example` to scaffold the service, server, and client code.
+      * Crucially, it **injects service implementations** with predictable behavior based on their names. For example, a method named `transform_string` will be implemented to uppercase its string input. This removes the need for any manual service implementation.
 
-The **Scenario Engine** uses the **Strategy Pattern** to eliminate complex conditional logic and provide clean, composable test generation.
+3.  **Server Startup**: The generated Goa server is compiled and started on a random, available port. The test runner waits until the server is responsive before proceeding.
 
-**Key Features:**
-- **Method Behavior Strategies**: Each method pattern (echo, validate, etc.) is a focused strategy
-- **Type Handler Strategies**: Different data types have specialized parameter handling
-- **Transport Strategies**: Each transport (HTTP, WebSocket, SSE) has specific requirements
-- **Matrix Generation**: Systematic combination of all test dimensions
-- **Registry-Based**: New behaviors register without modifying existing code
+4.  **Test Execution**: For each scenario, the framework sends the defined `request` over the specified `transport`. It prioritizes using the **Goa-generated CLI** for this task to ensure tests closely mimic a real client's behavior. When a test requires sending a payload that the standard CLI cannot produce (e.g., a malformed request, an invalid JSON-RPC structure, or specific protocol-level edge cases), it falls back to a **custom JSON-RPC client** that allows for this fine-grained control. The client then asserts that the response from the server exactly matches the `expect` block in the scenario.
 
-**Strategy Pattern Benefits:**
-- ✅ **No if/else chains**: Eliminates 200+ lines of conditional logic
-- ✅ **Composable**: New types/behaviors add independently  
-- ✅ **Maintainable**: Each strategy has single responsibility
-- ✅ **Testable**: Components can be unit tested in isolation
-- ✅ **Type-safe**: Strong interfaces prevent runtime errors
+5.  **Cleanup**: Once all tests are complete, the server is shut down, and the temporary directory with all generated code is removed. To inspect the code, you can prevent this step (see **Debugging**).
 
-**Example Strategy:**
-```go
-type EchoBehavior struct{}
+## 🔧 Writing Test Scenarios
 
-func (b *EchoBehavior) GenerateImplementation(ctx ImplementationContext) (string, error) {
-    typeHandler := typeRegistry.Get(ctx.PayloadType)
-    payloadParam := typeHandler.GetParameterDeclaration(ctx.ServiceName, ctx.MethodName)
-    
-    if ctx.ResultType == DataTypeNone {
-        return generateNotificationMethod(ctx, payloadParam)
-    } else {
-        return generateEchoMethod(ctx, payloadParam)
-    }
-}
+All tests live in `scenarios/scenarios.yaml`. Each scenario defines a single client-server interaction or a sequence of interactions. For a complete reference of all YAML fields and structures, see the **[YAML Schema Reference](https://www.google.com/search?q=SCHEMA.md)**.
+
+### Basic Scenario Structure
+
+Each scenario defines a single request-response cycle. The `request` block describes the JSON-RPC payload the client sends, and the `expect` block describes the exact payload the client must receive back for the test to pass. The `method` field links this scenario to the corresponding generated server method.
+
+```yaml
+- name: "unique_test_case_name" # A descriptive name for the test. Used with `go test -run`.
+  method: "action_type_modifier" # Maps to a generated server method. See naming convention.
+  transport: "http"             # 'http', 'websocket', or 'sse'.
+  request:
+    id: "req-1"                 # JSON-RPC request ID. Omit for notifications.
+    params: ["hello"]           # The parameters for the method call.
+  expect:
+    id: "req-1"                 # The expected ID in the response.
+    result: "HELLO"             # The expected result payload.
 ```
 
-#### Validators (`validators/`)
+### Streaming Scenario Structure
 
-Validators verify that responses are correct. They check:
+For stateful protocols like WebSockets and Server-Sent Events (SSE), where multiple messages can be exchanged over a single connection, the `sequence` block is used. It defines an ordered list of actions the test client will perform.
 
-- **Protocol Compliance**: Proper JSON-RPC 2.0 format
-- **Data Integrity**: Type preservation, required fields
-- **Error Handling**: Correct error codes and messages
-- **Transport Specifics**: HTTP headers, WebSocket frames, SSE events
-
-#### Test Definitions (`tests/`)
-
-The actual test files compose scenarios and validators to create executable
-tests. Tests are organized by feature:
-
-- `http_test.go` - HTTP transport tests
-- `websocket_test.go` - WebSocket streaming tests
-- `sse_test.go` - Server-Sent Events tests
-- `errors_test.go` - Error handling tests
-- `validation_test.go` - Input validation tests
-
-## 📋 What Tests Cover
-
-### ✅ Core Functionality
-- **Code Generation**: DSL → Go code transformation
-- **Compilation**: Generated code builds without errors
-- **Runtime Execution**: Servers start, clients connect, requests succeed
-- **Protocol Compliance**: Full JSON-RPC 2.0 specification adherence
-- **Type Safety**: Proper marshaling/unmarshaling of all supported types
-
-### ✅ Transport Coverage
-- **HTTP**: Standard JSON-RPC over HTTP POST
-- **WebSocket**: Bidirectional streaming with persistent connections
-- **Server-Sent Events**: Server-to-client streaming with HTTP
-
-### ✅ Data Type Matrix
-| Payload Type | Result Type | Notification | Streaming | Error Handling |
-|--------------|-------------|--------------|-----------|----------------|
-| None         | ✅          | ✅           | ✅        | ✅             |
-| Primitive    | ✅          | ✅           | ✅        | ✅             |
-| Array        | ✅          | ✅           | ✅        | ✅             |
-| Object       | ✅          | ✅           | ✅        | ✅             |
-| Map          | ✅          | ✅           | ✅        | ✅             |
-| UserType     | ✅          | ✅           | ✅        | ✅             |
-| Complex      | ✅          | ✅           | ✅        | ✅             |
-
-### ✅ Advanced Features
-- **Error Propagation**: Service errors → JSON-RPC error codes
-- **Input Validation**: Constraint checking and format validation
-- **Batch Requests**: Multiple operations in single call
-- **Views**: Different data representations
-- **Streaming Patterns**: Server, client, and bidirectional streaming
-- **Connection Management**: WebSocket lifecycle, reconnection handling
-
-### ✅ Edge Cases & Robustness
-- **Large Payloads**: Multi-megabyte data handling
-- **Unicode Support**: International characters and emojis
-- **Concurrent Requests**: Multiple simultaneous connections
-- **Timeout Handling**: Network interruption recovery
-- **Memory Management**: No leaks under load
-
-## 🔄 Complete End-to-End Execution Flow
-
-This section traces through exactly what happens when you run an integration test, showing which packages, constructs, and methods get created and called in order.
-
-### Example: Running `go test -run "TestHTTPMatrix/http_primitive_notification"`
-
-#### Phase 1: Test Initialization
-```
-1. Go test runner starts
-   └── calls TestHTTPMatrix(t *testing.T)
-
-2. TestHTTPMatrix() creates test harness
-   └── h := harness.New(t)
-       ├── Creates TestHarness struct
-       ├── Allocates baseDir: testdata/runs/20240801_143052_TestHTTPMatrix/
-       ├── Initializes PortAllocator for dynamic port assignment  
-       ├── Creates CodeCache for reusing generated code
-       ├── Creates DSLLoader for loading DSL files
-       ├── Registers cleanup handlers with Go testing framework
-       └── Sets up signal handlers for graceful shutdown
-
-3. Test generates scenario matrix
-   └── matrix := scenarios.GenerateTestMatrix()
-       ├── Calls generateHTTPScenarios()
-       ├── Calls generateWebSocketScenarios() 
-       ├── Calls generateSSEScenarios()
-       └── Returns ~180 Scenario structs
+```yaml
+- name: "websocket_stream_and_collect"
+  method: "collect_string"
+  transport: "websocket"
+  sequence:
+    - type: "send" # Client sends a message to the server.
+      data:
+        id: "ws-req-1"
+        params: ["one", "two", "three"]
+    - type: "receive" # Client waits to receive a message from the server.
+      expect:
+        id: "ws-req-1"
+        result: "onetwothree"
+    - type: "close" # Client closes the connection.
 ```
 
-#### Phase 2: Scenario Selection & Setup
-```
-4. Generate complete test matrix and filter
-   └── matrix := scenarios.GenerateTestMatrix()
-       ├── Calls generateHTTPScenarios() → ~80 HTTP scenarios
-       ├── Calls generateWebSocketScenarios() → ~60 WebSocket scenarios  
-       ├── Calls generateSSEScenarios() → ~40 SSE scenarios
-       └── Returns ~180 total scenarios
-       
-   └── Filter loop in TestHTTPMatrix():
-       for _, scenario := range matrix {
-           if scenario.Transport != scenarios.TransportHTTP {
-               continue  // Skip WebSocket/SSE scenarios
-           }
-           
-           t.Run(scenario.Name, func(t *testing.T) {
-               // When Go's test runner executes -run "TestHTTPMatrix/http_primitive_notification"
-               // it will only execute the sub-test where scenario.Name == "http_primitive_notification"
-               
-               // This specific scenario has:
-               // ├── Transport: TransportHTTP
-               // ├── PayloadType: DataTypePrimitive  
-               // ├── ResultType: DataTypeNone
-               // ├── DSLCode: Generated DSL string defining service with Payload(String) and no result
-               // └── Requests: []TestRequest with test string values
-           })
-       }
+## 📜 Method Naming Convention
 
-5. Creates ScenarioRunner
-   └── runner := scenarios.NewScenarioRunner(h)
-       └── Embeds TestHarness reference
+Server behavior is determined entirely by the method name, which follows the pattern: `[action]_[type]_[modifier]`.
 
-6. Adds validators to scenario
-   └── scenario.Validators = getValidatorsForScenario(scenario)
-       ├── validators.ProtocolValidator()
-       ├── validators.DataIntegrityValidator()
-       └── Transport-specific validators
-```
+#### Actions
 
-#### Phase 3: Code Generation
-```
-7. ScenarioRunner.Run(scenario) starts
-   └── Creates context with 30-second timeout
+  * `echo`: Returns the `params` payload exactly as it was received.
+  * `transform`: Returns a predictably modified version of the `params`.
+  * `generate`: Ignores `params` and returns a fixed, predictable value.
+  * `stream`: (SSE/WebSocket) Sends a stream of messages to the client. Ideal for testing server-streaming RPC.
+  * `collect`: (WebSocket) Receives a stream of messages from a client and returns a single summary response after the stream is closed. Useful for testing client-streaming RPC.
+  * `broadcast`: (WebSocket) Tests the server's ability to send unsolicited messages to a client (server-initiated notifications).
 
-8. Code generation begins
-   └── genDir, err := r.harness.GenerateCode(ctx, scenario.Name, scenario.DSLCode)
-       
-       8a. Check code cache first
-           └── cacheKey := hash(scenario.DSLCode)
-           └── if cached: return existing genDir
-           
-       8b. Create generation directory
-           └── genDir := baseDir + "/generated/" + scenario.Name
-           └── os.MkdirAll(genDir, 0755)
-           
-       8c. Generate from DSL
-           └── GenerateFromDSL(ctx, genDir, scenario.DSLCode)
-               
-               8c1. Create design directory
-                   └── designDir := genDir + "/design"
-                   
-               8c2. Write DSL file
-                   └── writeDSLFile(designDir, scenario.DSLCode)
-                       └── Creates: design/design.go with package design
-                       
-               8c3. Initialize Go module
-                   └── initGoModule(ctx, genDir, "testapp")
-                       ├── go mod init testapp
-                       └── go mod tidy
-                       
-               8c4. Run goa gen
-                   └── runGoaCommand(ctx, genDir, "gen", "testapp/design")
-                       ├── Executes: goa gen testapp/design -o .
-                       ├── Generates: gen/notifier/service.go (interfaces)
-                       ├── Generates: gen/http/notifier/server/ (HTTP handlers)
-                       └── Generates: cmd/notifier/main.go (server binary)
-                       
-               8c5. Run goa example  
-                   └── runGoaCommand(ctx, genDir, "example", "testapp/design")
-                       └── Generates service implementations using strategy pattern:
-                           
-                           8c5a. ScenarioRunner.injectServiceImplementations()
-                                └── For each service method:
-                                    ├── registry := NewMethodBehaviorRegistry()
-                                    ├── behavior := registry.Get(methodName) // "notify" 
-                                    ├── typeHandler := typeRegistry.Get(PayloadType) // PrimitiveTypeHandler
-                                    ├── ctx := ImplementationContext{...}
-                                    ├── implementation := behavior.GenerateImplementation(ctx)
-                                    └── Writes: notifier.go with method implementations
-                                    
-               8c6. Final cleanup
-                   └── runGoModTidy(ctx, genDir)
-```
+#### Types
 
-#### Phase 4: Server Compilation & Startup
-```
-9. Allocate port for server
-   └── port, err := r.harness.AllocatePort()
-       └── Uses GetFreePort() to find available port
+  * `string`, `int`, `bool`
+  * `array`: An array of simple types.
+  * `object`: A structured JSON object.
+  * `map`: A key-value map.
+  * `user`: A Goa user-defined type with built-in validations.
 
-10. Start server process
-    └── server, err := r.harness.StartServer(ctx, scenario.Name, ServerConfig{...})
-        
-        10a. Create ServerProcess struct
-            ├── sourceDir := genDir + "/cmd/notifier"
-            ├── port := allocated port
-            └── workingDir := genDir
-            
-        10b. Compile server binary
-            └── NewServerProcess() calls buildServer()
-                ├── Executes: go build -o server ./cmd/notifier
-                ├── Sets environment variables (PORT, etc.)
-                └── Creates: server binary in working directory
-                
-        10c. Start server process
-            └── server.Start() 
-                ├── cmd := exec.Command("./server")
-                ├── cmd.Env = [...environment variables...]
-                ├── Redirects stdout/stderr to log files
-                ├── Starts process: cmd.Start()
-                └── Waits for ready signal: "HTTP server listening"
-                
-        10d. Health check
-            └── Verifies server responds on allocated port
-            
-        10e. Register cleanup
-            └── Adds server.Stop() to harness cleanup list
-```
+#### Modifiers (Optional)
 
-#### Phase 5: Client Request Execution  
-```
-11. Execute test requests
-    └── For each request in scenario.Requests:
-        
-        11a. Create HTTP client
-            └── client := &http.Client{Timeout: 5 * time.Second}
-            
-        11b. Build JSON-RPC request  
-            └── jsonReq := buildJSONRPCRequest(request)
-                ├── Method: "notify"
-                ├── Params: "test string" (primitive payload)
-                ├── ID: 1
-                └── JSONRPC: "2.0"
-                
-        11c. Send HTTP request
-            └── resp := client.Post(server.URL() + "/jsonrpc", "application/json", body)
-            
-        11d. Read response
-            └── responseBody := ioutil.ReadAll(resp.Body)
-            
-        11e. Log request/response
-            ├── Logs sent request to: client/requests.log
-            └── Logs received response to: client/responses.log
-```
+  * `_notify`: Indicates a JSON-RPC notification (no response expected).
+  * `_error`: The method is hardcoded to always return a predefined JSON-RPC error.
+  * `_validate`: The method includes Goa validation logic on the payload, which will return an error if the payload is invalid.
+  * `_final`: (SSE) The method sends several notifications before sending a final, ID-tagged response.
 
-#### Phase 6: Response Validation
-```
-12. Validate responses
-    └── For each validator in scenario.Validators:
-        
-        12a. Protocol validation
-            └── validators.ProtocolValidator().Validate(response)
-                ├── Checks JSON-RPC 2.0 format
-                ├── Validates required fields
-                └── Ensures no malformed JSON
-                
-        12b. Data integrity validation  
-            └── validators.DataIntegrityValidator().Validate(response)
-                ├── Checks type preservation
-                ├── Validates field completeness
-                └── Ensures no data corruption
-                
-        12c. Transport-specific validation
-            └── HTTP-specific response validation
-                ├── Validates HTTP status codes
-                ├── Checks Content-Type headers
-                └── Ensures proper HTTP semantics
-                
-        12d. Notification-specific validation
-            └── For notification methods (ResultType: DataTypeNone):
-                ├── Ensures no "result" field in response
-                ├── Validates that ID is null (per JSON-RPC spec)
-                └── Confirms response indicates success
-```
+## 🔬 Debugging
 
-#### Phase 7: Cleanup & Teardown
-```
-13. Automatic cleanup (even if test fails)
-    └── harness.Cleanup() - registered with t.Cleanup()
-        
-        13a. Stop server process
-            └── server.Stop()
-                ├── Sends SIGTERM to process
-                ├── Waits for graceful shutdown
-                ├── Forces SIGKILL if timeout
-                └── Closes log files
-                
-        13b. Release port
-            └── portAllocator.Release(port)
-            
-        13c. Clean up temporary files (unless KEEP_ARTIFACTS=1)
-            └── os.RemoveAll(baseDir)
-                ├── Removes: generated code
-                ├── Removes: server logs  
-                ├── Removes: client logs
-                └── Removes: temporary directories
-                
-        13d. Close any remaining resources
-            ├── Close file handles
-            ├── Cancel contexts
-            └── Clean up goroutines
-```
+When a test fails, you can use the following tools to diagnose the issue:
 
-### Object Lifecycle Summary
+  * **Keep Generated Code**: To inspect the dynamically generated Goa service, set the `KEEP_GENERATED` environment variable. The path to the generated code will be printed in the test logs.
 
-Here's when each major component gets created and destroyed:
+    ```bash
+    KEEP_GENERATED=true go test -v ./...
+    # Look for: "Generated code kept in: /tmp/jsonrpc-test-XXXXX"
+    ```
+
+    Once you have the code, inspect `design/design.go` to see how your method was translated into Goa DSL and `http/server/server.go` to see its actual Go implementation.
+
+  * **Verbose Output**: Always use the `-v` flag. It provides detailed logs showing the exact JSON payloads being sent and received, which is invaluable for debugging discrepancies between your `expect` block and the actual server response.
+
+## 🏗️ Framework Architecture
+
+The framework is organized into several packages, each with a clear responsibility.
 
 ```
-TestHarness ──────────────────────────────────────────────────── (lives for entire test)
-    │
-    ├── PortAllocator ─────────────────────────────────────────── (lives for entire test)
-    ├── CodeCache ────────────────────────────────────────────── (lives for entire test)  
-    ├── DSLLoader ────────────────────────────────────────────── (lives for entire test)
-    │
-    └── Per Scenario:
-            │
-            ScenarioRunner ───────────────────────────────────── (per scenario)
-                │
-                ├── MethodBehaviorRegistry ──────────────────── (per code generation)
-                ├── TypeHandlerRegistry ─────────────────────── (per code generation)
-                │
-                ServerProcess ───────────────────────────────── (per scenario)
-                    │
-                    └── Compiled Binary ─────────────────────── (per scenario)
-                            │
-                            └── HTTP Server ─────────────────── (per scenario)
-                                    │
-                                    └── Request Handlers ───── (per request)
+integration_tests/
+├── README.md
+├── SCHEMA.md       # Detailed reference for the scenarios.yaml file structure.
+├── go.mod
+├── framework/      # The core engine: discovers scenarios, orchestrates code generation, and runs tests.
+├── harness/        # The "physical" parts: a transport-aware client and server management code.
+├── scenarios/      # The data-driven heart of the framework. This is where you'll spend most of your time.
+└── tests/          # The Go test entrypoint (*_test.go) that kicks off the framework runner.
 ```
 
-### Key Insights
+# YAML Schema Reference
 
-1. **Strategy Pattern in Action**: During code generation (step 8c5a), the registry-based strategy pattern eliminates complex conditionals by delegating to focused behavior classes.
+This document provides a detailed reference for the structure and validation rules of the `scenarios.yaml` file used for JSON-RPC integration testing.
 
-2. **Resource Isolation**: Each scenario gets its own directory, port, and server process, preventing test interference.
+## 📂 Top-Level Structure
 
-3. **Caching Optimization**: Code generation results are cached by DSL hash, avoiding regeneration for identical scenarios.
+The `scenarios.yaml` file has two top-level keys: `scenarios` and `settings`.
 
-4. **Graceful Cleanup**: The cleanup system ensures resources are freed even if tests panic or are interrupted.
+```yaml
+scenarios:
+  - # A list of Scenario Objects, defined below.
+  - # ...
 
-5. **Parallel Safety**: Multiple scenarios can run concurrently because each has isolated resources (ports, directories, processes).
-
-This complete flow shows how the integration test framework orchestrates the entire lifecycle from DSL definition to response validation, with clear separation of concerns and robust resource management.
-
-## Understanding Test Categories
-
-Tests are organized into categories for easier management and selective execution:
-
-### Transport Categories
-- **HTTP Tests**: Test standard JSON-RPC over HTTP POST
-- **WebSocket Tests**: Test streaming with bidirectional communication
-- **SSE Tests**: Test server-to-client streaming with Server-Sent Events
-
-### Feature Categories
-- **Core Tests**: Basic request/response functionality
-- **Streaming Tests**: Server, client, and bidirectional streaming
-- **Error Tests**: Error propagation and handling
-- **Validation Tests**: Input validation and constraint checking
-
-### Running Specific Categories
-```bash
-make test-http        # Run only HTTP transport tests
-make test-websocket   # Run only WebSocket tests
-make test-errors      # Run only error handling tests
-make test-validation  # Run only validation tests
+settings:
+  # A map of global settings for the test run.
 ```
 
-## How the Test Matrix Works
+## 📝 The `Scenario` Object
 
-The test matrix is a powerful mechanism for achieving comprehensive test coverage
-without writing hundreds of individual test cases. It works by systematically
-generating test scenarios from combinations of key variables.
+Each item in the top-level `scenarios` list is a `Scenario` object. It defines a single, self-contained test case.
 
-### Matrix Dimensions
+| Key | Type | Required? | Description |
+| :--- | :--- | :--- | :--- |
+| **`name`** | `string` | **Yes** | A unique, human-readable name for the test. Used in test runner output. |
+| **`method`** | `string` | **Yes** | The name of the server method to test. Must follow the `action_type_modifier` convention. |
+| **`transport`** | `string` | **Yes** | The transport protocol. Must be one of `"http"`, `"websocket"`, or `"sse"`. |
+| `request` | `object` | Conditional | An object describing the request to send. **Required** for non-streaming (`http`) tests. |
+| `expect` | `object` | Conditional | An object describing the expected response. **Required** for non-streaming (`http`) tests. |
+| `sequence` | `list` | Conditional | A list of steps for stateful interactions. **Required** for streaming (`websocket`, `sse`) tests. |
 
-The test matrix combines multiple dimensions to create test scenarios:
+> A `Scenario` object must contain **either** a `request`/`expect` pair **or** a `sequence`, but not both.
 
-1. **Transport Types**
-   - HTTP (standard request/response)
-   - WebSocket (bidirectional streaming)
-   - SSE (server-to-client streaming)
+### The `request` Object
 
-2. **Data Types** (for both payload and result)
-   - None (no payload/result)
-   - Primitive (string, int, bool, float)
-   - Array (collections of values)
-   - Object (structured data)
-   - Map (key-value pairs)
-   - UserType (custom Goa types)
-   - Complex (deeply nested structures)
+Describes a single JSON-RPC request.
 
-3. **Streaming Patterns**
-   - None (simple request/response)
-   - Server streaming (server sends multiple responses)
-   - Client streaming (client sends multiple requests)
-   - Bidirectional (both client and server stream)
+| Key | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `any` | The JSON-RPC request ID. If omitted, the request is treated as a notification. |
+| `params` | `array` or `object` | The parameters for the method call. See **Parameter Structures** below. |
+| `method` | `string` | An optional override for the JSON-RPC `method` field in the payload. Defaults to the scenario's `method` value. |
 
-4. **Special Features**
-   - Errors (standard and custom error handling)
-   - Validation (input constraints and formats)
-   - Batch requests (multiple operations in one call)
-   - Views (different representations of the same data)
+### The `expect` Object
 
-### Matrix Generation
+Describes the expected outcome of a request.
 
-The `GenerateTestMatrix()` function in `scenarios/matrix.go` creates all
-meaningful combinations:
+| Key | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `any` | The expected ID in the response. Must match the `request.id`.
+| `result` | `any` | The expected `result` payload. Mutually exclusive with `error`. |
+| `error` | `object` | The expected `error` object. Mutually exclusive with `result`. Contains `code` (number), `message` (string), and optional `data` (any). |
+| `no_response` | `boolean` | If `true`, the framework asserts that no response is received. Used for notifications. |
 
-```go
-// Example: HTTP transport matrix generation
-for _, payloadType := range payloadTypes {
-    for _, resultType := range resultTypes {
-        scenario := Scenario{
-            Transport:   TransportHTTP,
-            PayloadType: payloadType,
-            ResultType:  resultType,
-            // ... other configuration
-        }
-        scenarios = append(scenarios, scenario)
-    }
-}
+### The `Sequence Step` Object
+
+Each item in a `sequence` list is a step object that defines a single action in a streaming test.
+
+| Key | Type | Required? | Description |
+| :--- | :--- | :--- | :--- |
+| **`type`** | `string` | **Yes** | The type of action. Must be one of `"send"`, `"receive"`, or `"close"`. |
+| `data` | `object` | Conditional | The JSON-RPC payload to send. **Required** for `type: "send"`. |
+| `expect`| `object` | Conditional | The expected JSON-RPC payload to receive. **Required** for `type: "receive"`. |
+| `delay` | `string` | No | A duration to wait before executing this step (e.g., `"100ms"`, `"1s"`). |
+
+## 🧩 Parameter Structures (`params`)
+
+The `params` field must follow one of the two standard JSON-RPC 2.0 formats.
+
+1.  **By-Position (`array`)**: Parameters are passed as a list of values.
+
+    ```yaml
+    # The server method receives these values in the specified order.
+    params: ["first_param", "second_param", 42]
+    ```
+
+2.  **By-Name (`object`)**: Parameters are passed as a map of key-value pairs.
+
+    ```yaml
+    # The server method receives these values by their key name.
+    params:
+      name: "example"
+      value: 123
+      is_active: true
+    ```
+
+## ✅ Semantic and Validation Rules
+
+In addition to the structure, the content of the YAML file must adhere to these rules.
+
+  * **Uniqueness**: The `name` of each scenario must be unique within the file.
+  * **Exclusivity**: A scenario cannot have both `request`/`expect` and `sequence` defined.
+  * **ID Matching**: If a `request.id` is present, the corresponding `expect.id` must be identical.
+  * **Result vs. Error**: An `expect` object cannot define both a `result` and an `error`.
+  * **Method Convention**: The `method` field must follow the `[action]_[type]_[modifier]` pattern, which determines the generated server's behavior.
+
+## 🌐 Complete Examples
+
+### HTTP Request with an Error Response
+
+```yaml
+scenarios:
+  - name: "generate_object_error_http"
+    method: "generate_object_error" # This method is designed to always fail
+    transport: "http"
+    request:
+      id: "err-req-01"
+      params: {} # Params can be empty
+    expect:
+      id: "err-req-01"
+      error:
+        code: -32000
+        message: "A simulated server error occurred"
 ```
 
-This generates scenarios like:
-- `http_primitive_payload_object_result`
-- `http_array_payload_map_result`
-- `http_object_payload_usertype_result`
-- And so on...
+### WebSocket Bidirectional Streaming
 
-### Leveraging the Test Matrix
+This example shows a client subscribing to a channel and then receiving a server-initiated broadcast.
 
-#### 1. Running the Full Matrix
-```bash
-make test-all  # Runs all ~100+ generated scenarios
+```yaml
+scenarios:
+  - name: "broadcast_websocket_interaction"
+    method: "broadcast_string"
+    transport: "websocket"
+    sequence:
+      # 1. Client sends a subscription request
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "broadcast_string" # Method to call on the server
+          params: { "channel": "news" }
+          id: "sub-1"
+
+      # 2. Client expects a confirmation response
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "sub-1"
+          result: { "status": "subscribed", "channel": "news" }
+
+      # 3. Client waits to receive an unsolicited broadcast from the server
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          method: "broadcast" # Note: This is a server-initiated method, not a response
+          params: { "message": "Server update!" }
 ```
 
-#### 2. Running Quick Tests
-For rapid feedback during development:
-```bash
-make test-quick  # Runs ~5 representative scenarios
-```
 
-The quick test set is carefully chosen to cover:
-- Basic HTTP request/response
-- WebSocket streaming
-- SSE streaming  
-- Error handling
-
-#### 3. Filtering Scenarios
-You can filter scenarios in your test code:
-
-```go
-func TestSpecificFeature(t *testing.T) {
-    matrix := scenarios.GenerateTestMatrix()
-    
-    // Filter for specific criteria
-    for _, scenario := range matrix {
-        if scenario.Transport == TransportHTTP && 
-           scenario.Features.Contains(FeatureValidation) {
-            // Run only HTTP validation tests
-            runner.Run(scenario)
-        }
-    }
-}
-```
-
-#### 4. Custom Scenario Selection
-Create custom test suites by selecting specific scenarios:
-
-```go
-func TestCriticalPath(t *testing.T) {
-    criticalScenarios := []string{
-        "http_object_payload_object_result",
-        "websocket_bidirectional_usertype",
-        "sse_none_payload_array_result",
-    }
-    
-    matrix := scenarios.GenerateTestMatrix()
-    for _, scenario := range matrix {
-        if contains(criticalScenarios, scenario.Name) {
-            runner.Run(scenario)
-        }
-    }
-}
-```
-
-### Understanding Matrix Coverage
-
-The matrix ensures comprehensive coverage by testing:
-
-1. **Type Compatibility**: Every payload type with every result type
-2. **Transport Behavior**: Each transport's unique characteristics
-3. **Edge Cases**: Empty payloads, large data, unicode, deeply nested structures
-4. **Protocol Compliance**: JSON-RPC 2.0 specification adherence
-5. **Error Paths**: Both success and failure scenarios
-
-### Extending the Matrix
-
-To add new test dimensions:
-
-1. **Add to the enum types** in `scenarios/types.go`:
-```go
-type DataType string
-const (
-    // ... existing types ...
-    DataTypeCustom DataType = "custom"
-)
-```
-
-2. **Update the matrix generator** in `scenarios/matrix.go`:
-```go
-func generateHTTPScenarios() []Scenario {
-    // Add your new type to the test combinations
-    payloadTypes = append(payloadTypes, DataTypeCustom)
-}
-```
-
-3. **Implement the DSL creator** in the appropriate file:
-```go
-func createCustomDSL() func() {
-    return func() {
-        // Define your custom DSL
-    }
-}
-```
-
-### Matrix Optimization
-
-The matrix is optimized to avoid redundant tests:
-
-- **Notification tests** only test different payload types (no result)
-- **SSE tests** only test server streaming (by protocol design)
-- **Parallel execution** is enabled for independent scenarios
-- **Resource-intensive tests** are marked to run sequentially
-
-### Debugging Matrix Tests
-
-When a matrix-generated test fails:
-
-1. **Identify the scenario**: The test name indicates the exact combination
-   - Example: `websocket_client_array` = WebSocket + client streaming + array data
-
-2. **Check the artifacts**: Each scenario creates isolated artifacts
-   - `testdata/runs/<timestamp>_<scenario_name>/`
-
-3. **Run individually**: Execute just the failing scenario
-   ```bash
-   go test -run TestWebSocket/websocket_client_array
-   ```
-
-4. **Examine the generated code**: The matrix generates real Goa services
-   - Check `generated/` in the test artifacts
-
-The test matrix provides confidence that the JSON-RPC implementation works
-correctly across all supported configurations without requiring manual
-maintenance of hundreds of test cases.
-
-## Test Organization
-
-### Directory Layout
-```
-jsonrpc/integration/
-├── harness/          # Test execution infrastructure
-│   ├── harness.go    # Main test orchestrator
-│   ├── process.go    # Server process management
-│   ├── client.go     # Client request execution
-│   └── cleanup.go    # Resource cleanup
-├── scenarios/        # Test scenario definitions
-│   ├── matrix.go     # Test matrix generation
-│   ├── http.go       # HTTP-specific scenarios
-│   ├── websocket.go  # WebSocket scenarios
-│   └── sse.go        # SSE scenarios
-├── validators/       # Response validation
-│   ├── protocol.go   # JSON-RPC protocol validation
-│   ├── data.go       # Data type validation
-│   └── errors.go     # Error response validation
-└── tests/           # Test implementations
-    ├── http_test.go
-    ├── websocket_test.go
-    └── ...
-```
-
-### Test Artifacts
-
-Each test run creates artifacts in `testdata/runs/<timestamp>_<test>/`:
-
-- `generated/` - The DSL-generated code
-- `server/` - Compiled server binary and logs
-- `client/` - Client execution logs
-- `logs/` - Combined test execution logs
-
-These artifacts are invaluable for debugging failed tests.
-
-## 📝 Writing New Tests
-
-### Step 1: Define Your Test Scenario
-
-```go
-// In scenarios/my_feature.go
-func CreateMyFeatureScenarios() []Scenario {
-    return []Scenario{
-        {
-            Name:        "my_custom_feature",
-            Description: "Tests my new JSON-RPC feature",
-            Transport:   TransportHTTP,
-            PayloadType: DataTypeObject,
-            ResultType:  DataTypeArray,
-            Features:    []Feature{FeatureCore, FeatureMyFeature},
-            DSLCode:     createMyFeatureDSL(),
-            Requests:    createMyFeatureRequests(),
-        },
-    }
-}
-```
-
-### Step 2: Create Custom Validators (if needed)
-
-```go
-// In validators/my_feature.go
-func MyFeatureValidator() Validator {
-    return ValidatorFunc(func(response any) error {
-        resp, err := AsJSONRPCResponse(response)
-        if err != nil {
-            return err
-        }
-        
-        // Custom validation logic
-        result, ok := resp.Result.([]interface{})
-        if !ok {
-            return fmt.Errorf("expected array result, got %T", resp.Result)
-        }
-        
-        if len(result) != 3 {
-            return fmt.Errorf("expected 3 elements, got %d", len(result))
-        }
-        
-        return nil
-    })
-}
-```
-
-### Step 3: Write the Test
-
-```go
-// In tests/my_feature_test.go  
-func TestMyFeature(t *testing.T) {
-    if testing.Short() {
-        t.Skip("Integration tests skipped in short mode")
-    }
-    
-    h := harness.New(t)
-    runner := scenarios.NewScenarioRunner(h)
-    
-    scenarios := CreateMyFeatureScenarios()
-    
-    for _, scenario := range scenarios {
-        t.Run(scenario.Name, func(t *testing.T) {
-            t.Parallel() // Enable parallel execution
-            
-            // Add validators
-            scenario.Validators = []Validator{
-                validators.StandardValidators()...,  // Basic validation
-                MyFeatureValidator(),                // Custom validation
-            }
-            
-            // Execute scenario
-            if err := runner.Run(scenario); err != nil {
-                t.Fatalf("Scenario %s failed: %v", scenario.Name, err)
-            }
-        })
-    }
-}
-```
-
-### Advanced: Custom Method Behavior
-
-If your feature requires custom method implementations:
-
-```go
-// In scenarios/my_behavior.go
-type MyFeatureBehavior struct {
-    typeRegistry *TypeHandlerRegistry
-}
-
-func (b *MyFeatureBehavior) GetName() string {
-    return "my_feature_method"
-}
-
-func (b *MyFeatureBehavior) GenerateImplementation(ctx ImplementationContext) (string, error) {
-    payloadHandler := b.typeRegistry.Get(ctx.PayloadType)
-    payloadParam := payloadHandler.GetParameterDeclaration(ctx.ServiceName, ctx.MethodCapitalized)
-    
-    return fmt.Sprintf(`// %s implements %s.
-func (s *%s) %s(%s) (res []string, err error) {
-    log.Printf(ctx, "%s.%s")
-    
-    // My custom feature logic
-    input := p.Input
-    result := strings.Split(input, " ")
-    result = append([]string{"processed"}, result...)
-    
-    return result, nil
-}`, ctx.MethodCapitalized, ctx.MethodName, ctx.ServiceStruct, ctx.MethodCapitalized,
-        payloadParam, ctx.ServiceName, ctx.MethodName), nil
-}
-
-// Register in method_behaviors.go
-registry.Register(&MyFeatureBehavior{})
-```
-
-## 🛠️ Extending the Framework
-
-### Adding New Method Behaviors
-
-1. **Define a Scenario** in `scenarios/`:
-```go
-scenario := Scenario{
-    Name:        "my_new_test",
-    Transport:   TransportHTTP,
-    PayloadType: DataTypeObject,
-    ResultType:  DataTypeArray,
-    DSL:         createMyDSL(),
-    Requests:    createMyRequests(),
-}
-```
-
-2. **Create Validators** if needed:
-
-```go
-validator := ValidatorFunc(func(response any) error {
-    // Validate the response
-    return nil
-})
-```
-
-3. **Write the Test** in `tests/`:
-
-```go
-func TestMyFeature(t *testing.T) {
-    h := harness.New(t)
-    runner := scenarios.NewScenarioRunner(h)
-    
-    scenario.Validators = []validators.Validator{
-        validators.ProtocolValidator(),
-        myCustomValidator,
-    }
-    
-    if err := runner.Run(scenario); err != nil {
-        t.Fatalf("Test failed: %v", err)
-    }
-}
-```
-
-## ⚡ Performance & Best Practices
-
-### Test Execution Performance
-
-#### Parallel Execution
-```go
-func TestParallelExecution(t *testing.T) {
-    scenarios := scenarios.QuickTestScenarios()
-    
-    for _, scenario := range scenarios {
-        scenario := scenario // Capture loop variable
-        t.Run(scenario.Name, func(t *testing.T) {
-            t.Parallel() // Enable parallel execution
-            
-            runner := scenarios.NewScenarioRunner(harness.New(t))
-            err := runner.Run(scenario)
-            require.NoError(t, err)
-        })
-    }
-}
-```
-
-### Best Practices
-
-#### 1. Test Organization
-```go
-// ✅ Good: Organized by feature
-func TestHTTPTransport(t *testing.T) { /* HTTP-specific tests */ }
-func TestWebSocketStreaming(t *testing.T) { /* WebSocket tests */ }
-func TestErrorHandling(t *testing.T) { /* Error scenarios */ }
-
-// ❌ Bad: Mixed concerns
-func TestEverything(t *testing.T) { /* All tests in one function */ }
-```
-
-#### 2. Scenario Design
-```go
-// ✅ Good: Focused scenarios
-scenario := Scenario{
-    Name:        "http_user_registration",  // Clear, specific name
-    Description: "Tests user registration with email validation",
-    Features:    []Feature{FeatureValidation, FeatureCore},
-    // ...
-}
-
-// ❌ Bad: Vague scenarios  
-scenario := Scenario{
-    Name: "test1",  // Non-descriptive
-    // Tests multiple unrelated things
-}
-```
-
-#### 3. Validation Strategy
-```go
-// ✅ Good: Composable validators
-validators := []Validator{
-    StandardValidators()...,        // Basic validation
-    EmailFormatValidator(),         // Specific validation
-    UserRegistrationValidator(),    // Business logic
-}
-
-// ❌ Bad: Monolithic validation
-func ValidateEverything(response any) error {
-    // Massive function checking everything
-}
-```
-
-### Performance Metrics
-
-The integration test framework is optimized for:
-
-- **Startup Time**: < 2 seconds per test scenario
-- **Memory Usage**: < 100MB per concurrent test
-- **Parallel Execution**: Up to 10 concurrent scenarios
-- **Cleanup Time**: < 1 second per test
-- **Artifact Generation**: < 50MB per test run
-
-### CI/CD Integration
-
-#### Makefile Targets
-```makefile
-.PHONY: test-quick test-all test-http test-websocket test-sse
-
-test-quick:
-	@echo "Running quick integration tests..."
-	go test -v -short ./tests -run "TestQuick"
-
-test-all:
-	@echo "Running full integration test matrix..."
-	go test -v ./tests -timeout 10m
-
-test-http:
-	go test -v ./tests -run "TestHTTP"
-
-clean:
-	rm -rf testdata/runs/*
-	go clean -testcache
-```
-
-## 🐛 Debugging & Troubleshooting
-
-### Common Issues & Solutions
-
-#### 1. Code Generation Failures
-**Symptom:** `goa gen failed: exit status 1`
-**Solution:** Check DSL syntax in `testdata/runs/*/generated/design/design.go`
-
-#### 2. Compilation Failures  
-**Symptom:** `build failed: exit status 1`
-**Solution:** Check `testdata/runs/*/server/build.log` for Go compilation errors
-
-#### 3. Server Startup Failures
-**Symptom:** `failed to start server: timeout`
-**Solution:** Check `testdata/runs/*/server/server.log` and verify port availability
-
-#### 4. Validation Failures
-**Symptom:** `validator failed: expected X, got Y`
-**Solution:** Check `testdata/runs/*/client/responses.log` for actual responses
-
-### Debug Configuration
-
-```bash
-# Maximum debugging
-export DEBUG_TESTS=1
-export KEEP_ARTIFACTS=1  
-export VERBOSE=1
-
-# Run single failing test
-go test -v -run "TestHTTPMatrix/http_specific_failing_case" -timeout 5m
-```
-
----
-
-## 🎯 Test Coverage
-
-The integration test framework provides **comprehensive coverage** across multiple dimensions:
-
-| Dimension | Coverage | Details |
-|-----------|----------|---------|
-| **Transports** | 100% | HTTP, WebSocket, SSE |
-| **Data Types** | 100% | All 7 supported types |
-| **Streaming** | 100% | None, Server, Client, Bidirectional |
-| **Features** | 100% | Core, Errors, Validation, Views, Batch |
-| **JSON-RPC Spec** | 100% | Full 2.0 specification compliance |
-| **Edge Cases** | 95%+ | Large data, unicode, concurrency, timeouts |
-
-**Total Scenarios Generated:** ~150 meaningful combinations  
-**Total Execution Time:** ~5 minutes (full matrix)  
-**Quick Test Time:** ~30 seconds (smoke tests)
-
-The framework ensures that Goa's JSON-RPC implementation produces **working, correct, production-ready code** across all supported scenarios and configurations.
-
----
-
-> **Built with ❤️ for the Goa community**  
-> *Contributing? See [CONTRIBUTING.md](../../CONTRIBUTING.md)*  
-> *Questions? Open an [issue](https://github.com/goadesign/goa/issues)*
+Review each file one by one and each function one by one and think of ways it can be streamlined, improved, simplify, made more tuitive and follow Go best practice. 

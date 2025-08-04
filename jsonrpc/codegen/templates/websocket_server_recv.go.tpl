@@ -46,6 +46,7 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx contex
 			// Create wrapper that implements the method-specific stream interface
 			streamWrapper := &{{ lowerInitial .Method.VarName }}StreamWrapper{
 				stream: s,
+				requestID: req.ID,
 			}
 			// Call the endpoint with payload and stream wrapper
 			endpointInput := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{

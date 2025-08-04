@@ -16,9 +16,11 @@ func (s *{{ lowerInitial $.Service.StructName }}Stream) Send{{ .Method.VarName }
 		id = ""
 	}
 				{{- end }}
-	return s.send(id, result)
+	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
+	return s.send(id, body)
 			{{- else }}
-	return s.send("", result)
+	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
+	return s.send("", body)
 			{{- end }}
 }
 		{{- else }}

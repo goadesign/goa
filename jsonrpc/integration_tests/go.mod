@@ -2,11 +2,12 @@ module goa.design/goa/v3/jsonrpc/integration_tests
 
 go 1.24.0
 
-toolchain go1.24.4
+toolchain go1.24.5
 
 require (
 	github.com/gorilla/websocket v1.5.3
 	goa.design/goa/v3 v3.0.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -21,7 +22,6 @@ require (
 	golang.org/x/sync v0.15.0 // indirect
 	golang.org/x/text v0.26.0 // indirect
 	golang.org/x/tools v0.34.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 replace goa.design/goa/v3 => ../..

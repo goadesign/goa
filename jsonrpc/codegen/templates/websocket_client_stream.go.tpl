@@ -311,6 +311,10 @@ func (s *{{ .VarName }}) handleResponse(response *jsonrpc.RawResponse) {
 			// Report parsing errors
 			s.handleError(jsonrpc.StreamErrorParsing, err, response)
 		} else {
+			// Set the ID from the JSON-RPC envelope into the result
+			if parsedResult.ID == "" {
+				parsedResult.ID = response.ID
+			}
 			result.result = parsedResult
 		}
 {{- end }}
@@ -340,10 +344,42 @@ func (s *{{ .VarName }}) handleError(errorType jsonrpc.StreamErrorType, err erro
 {{- if $hasRecv }}
 // decodeResponse decodes JSON-RPC response data using the user-provided decoder
 func (s *{{ .VarName }}) decodeResponse(data json.RawMessage) ({{ .RecvTypeRef }}, error) {
-	// Create minimal response with raw JSON data for user's decoder
+	// For WebSocket, we need to inject a dummy ID into the result data
+	// because the decoder expects it, but it actually comes from the envelope
+	
+	// First decode to check what we have
+	var temp map[string]json.RawMessage
+	if err := json.Unmarshal(data, &temp); err != nil {
+		return nil, fmt.Errorf("failed to pre-decode response: %w", err)
+	}
+	
+	// If there's no ID field, inject a dummy one for the decoder
+	if _, hasID := temp["id"]; !hasID {
+		temp["id"] = json.RawMessage(`""`) // Empty string as placeholder
+	}
+	
+	// Re-encode with the ID field
+	modifiedData, err := json.Marshal(temp)
+	if err != nil {
+		return nil, fmt.Errorf("failed to re-encode response: %w", err)
+	}
+	
+	// Create a minimal JSON-RPC response wrapper for the decoder
+	wrappedResponse := jsonrpc.RawResponse{
+		JSONRPC: "2.0",
+		Result:  modifiedData,
+	}
+	
+	// Marshal it back to JSON 
+	wrappedJSON, err := json.Marshal(wrappedResponse)
+	if err != nil {
+		return nil, fmt.Errorf("failed to wrap response: %w", err)
+	}
+	
+	// Create minimal HTTP response with the wrapped JSON for the decoder
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Body:       io.NopCloser(bytes.NewReader(data)),
+		Body:       io.NopCloser(bytes.NewReader(wrappedJSON)),
 	}
 	
 	// Use the pre-computed decoder function (contains user's decoder + validation logic)
