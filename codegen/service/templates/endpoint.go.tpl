@@ -1,5 +1,5 @@
 {{ comment .Description }}
-{{- if and .ServerStream (not .IsJSONRPC) }}
+{{- if .ServerStream }}
 func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}, stream {{ .StreamInterface }}) (err error) {
 {{- else }}
 func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}{{ if .SkipRequestBodyEncodeDecode }}, req io.ReadCloser{{ end }}) ({{ if .Result }}res {{ .ResultFullRef }}, {{ end }}{{ if .SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}{{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}err error) {
@@ -8,7 +8,7 @@ func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .Pay
 	// req is the HTTP request body stream.
 	defer req.Close()
 {{- end }}
-{{- if and .Result .ResultIsStruct (or (not .ServerStream) .IsJSONRPC) }}
+{{- if and .Result .ResultIsStruct (not .ServerStream) }}
 	res = &{{ .ResultFullName }}{}
 {{- end }}
 {{- if .SkipResponseBodyEncodeDecode }}
@@ -17,7 +17,7 @@ func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .Pay
 {{- end }}
 {{- if .ViewedResult }}
 	{{- if not .ViewedResult.ViewName }}
-		{{- if and .ServerStream (not .IsJSONRPC) }}
+		{{- if .ServerStream }}
 			stream.SetView({{ printf "%q" .ResultView }})
 		{{- else }}
 			view = {{ printf "%q" .ResultView }}
@@ -27,16 +27,17 @@ func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .Pay
 	log.Printf(ctx, "{{ .ServiceVarName }}.{{ .Name }}")
 {{- if and .ServerStream .IsJSONRPC }}
 	
-	// Example: Send notifications followed by final response
+	// Example: Send notifications (no ID) and final response (with ID)
 	// for i := 0; i < 3; i++ {
-	//     notification := {{ if .ResultIsStruct }}&{{ .ResultFullName }}{/* populate fields */}{{ else }}{{ .ResultFullName }}("example value"){{ end }}
-	//     if err := stream.Send(notification); err != nil {
+	//     notification := {{ if .ResultIsStruct }}&{{ .ResultFullName }}{/* populate fields but leave ID field empty */}{{ else }}{{ .ResultFullName }}("example value"){{ end }}
+	//     if err := stream.Send(ctx, notification); err != nil {
 	//         return err
 	//     }
 	// }
 	// 
-	// The final result is sent by returning normally.
-	// The JSON-RPC transport will automatically send the final response.
+	// Send final response with ID field to close the stream
+	// finalResponse := {{ if .ResultIsStruct }}&{{ .ResultFullName }}{/* populate fields including ID field */}{{ else }}{{ .ResultFullName }}("final value"){{ end }}
+	// return stream.Send(ctx, finalResponse)
 {{- end }}
 	return
 }

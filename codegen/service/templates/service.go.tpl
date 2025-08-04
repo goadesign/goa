@@ -191,7 +191,7 @@ func ({{ .ResultRef }}) is{{ $.VarName }}Event() {}
 {{ printf "Stream defines the interface for managing an SSE streaming connection in the %s server. It allows sending notifications and final responses. This interface is used by the service to interact with clients over SSE using JSON-RPC." .Name | comment }}
 type Stream interface {
 {{- if $hasResults }}
-	{{ comment Send sends an event (notification or response) to the client. }}
+	{{ comment "Send sends an event (notification or response) to the client." }}
 	{{ comment "For notifications, the result should not have an ID field." }}
 	{{ comment "For responses, the result must have an ID field." }}
 	{{ printf "Accepted types: %s" $resultTypes | comment }}

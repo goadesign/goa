@@ -67,8 +67,10 @@ func {{ .HandlerInit }}(
 			Payload: params,
 		{{- end }}
 		}
-		_, err := endpoint(ctx, v)
-		return err
+		if _, err := endpoint(ctx, v); err != nil {
+			return err
+		}
+		return nil
 {{- else }}
 	{{- if .Payload.Ref }}
 		{{- if and (isWebSocketEndpoint .) .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4)) }}
