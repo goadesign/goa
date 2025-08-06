@@ -79,7 +79,7 @@ test:
 	go test ./... --coverprofile=cover.out
 
 integration-test:
-	cd jsonrpc/integration_tests && go test -timeout 10m ./...
+	cd jsonrpc/integration_tests && go test -count=1 -timeout 10m ./...
 
 release: release-goa release-examples release-plugins
 	@echo "Release v$(MAJOR).$(MINOR).$(BUILD) complete"

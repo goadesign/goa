@@ -35,7 +35,11 @@ func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 func (s *Server) handleSingle(w http.ResponseWriter, r *http.Request) {
 	var req jsonrpc.RawRequest
 	if err := s.decoder(r).Decode(&req); err != nil {
-		s.errhandler(r.Context(), w, fmt.Errorf("failed to decode request: %w", err))
+		// Send JSON-RPC parse error response with error details
+		response := jsonrpc.MakeErrorResponse(nil, jsonrpc.ParseError, "Parse error", err.Error())
+		if encErr := s.encoder(r.Context(), w).Encode(response); encErr != nil {
+			s.errhandler(r.Context(), w, fmt.Errorf("failed to encode parse error response: %w", encErr))
+		}
 		return
 	}
 	s.processRequest(r.Context(), r, &req, w)
@@ -45,7 +49,11 @@ func (s *Server) handleSingle(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleBatch(w http.ResponseWriter, r *http.Request) {
 	var reqs []jsonrpc.RawRequest
 	if err := s.decoder(r).Decode(&reqs); err != nil {
-		s.errhandler(r.Context(), w, fmt.Errorf("failed to decode batch request: %w", err))
+		// Send JSON-RPC parse error response for batch with error details
+		response := jsonrpc.MakeErrorResponse(nil, jsonrpc.ParseError, "Parse error", err.Error())
+		if encErr := s.encoder(r.Context(), w).Encode(response); encErr != nil {
+			s.errhandler(r.Context(), w, fmt.Errorf("failed to encode parse error response: %w", encErr))
+		}
 		return
 	}
 	

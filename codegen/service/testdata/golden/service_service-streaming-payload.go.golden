@@ -1,0 +1,76 @@
+
+// Service is the StreamingPayloadService service interface.
+type Service interface {
+	// StreamingPayloadMethod implements StreamingPayloadMethod.
+	StreamingPayloadMethod(context.Context, *BPayload, StreamingPayloadMethodServerStream) (err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "StreamingPayloadService"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"StreamingPayloadMethod"}
+
+// StreamingPayloadMethodServerStream allows streaming instances of *AResult to
+// the client.
+type StreamingPayloadMethodServerStream interface {
+	// SendAndClose streams instances of "AResult" and closes the stream.
+	SendAndClose(context.Context, *AResult) error
+}
+
+// StreamingPayloadMethodClientStream allows streaming instances of *APayload
+// to the client.
+type StreamingPayloadMethodClientStream interface {
+	// Send streams instances of "APayload".
+	Send(context.Context, *APayload) error
+}
+
+// APayload is the streaming payload type of the StreamingPayloadService
+// service StreamingPayloadMethod method.
+type APayload struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
+
+// AResult is the result type of the StreamingPayloadService service
+// StreamingPayloadMethod method.
+type AResult struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
+
+// BPayload is the payload type of the StreamingPayloadService service
+// StreamingPayloadMethod method.
+type BPayload struct {
+	ArrayField  []bool
+	MapField    map[int]string
+	ObjectField *struct {
+		IntField    *int
+		StringField *string
+	}
+	UserTypeField *Parent
+}
+
+type Child struct {
+	P *Parent
+}
+
+type Parent struct {
+	C *Child
+}

@@ -85,7 +85,6 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 	funcs := map[string]any{
 		"isWebSocketEndpoint": httpcodegen.IsWebSocketEndpoint,
 		"isSSEEndpoint":       httpcodegen.IsSSEEndpoint,
-		"isNotification":      func(e *httpcodegen.EndpointData) bool { return e.Method.Result == "" },
 		"lowerInitial":        lowerInitial,
 	}
 	imports := []*codegen.ImportSpec{

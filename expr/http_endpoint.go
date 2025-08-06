@@ -441,25 +441,22 @@ func (e *HTTPEndpointExpr) Validate() error {
 			}
 		}
 
-		// JSON-RPC WebSocket streaming ID field requirements:
-		// - Bidirectional streaming: ID required in both payload and result for correlation
-		// - Client streaming with result: ID required in payload
-		// - Server streaming: ID optional in result (allows notifications)
-		if e.MethodExpr.IsStreaming() && e.SSE == nil {
-			// Bidirectional streaming requires IDs for correlation
-			if e.MethodExpr.IsPayloadStreaming() && e.MethodExpr.IsResultStreaming() {
-				if !hasJSONRPCIDField(e.MethodExpr.StreamingPayload) {
-					verr.Add(e, "JSON-RPC WebSocket bidirectional streaming method %q must define an ID field in streaming payload", e.MethodExpr.Name)
-				}
-				if !hasJSONRPCIDField(e.MethodExpr.Result) {
-					verr.Add(e, "JSON-RPC WebSocket bidirectional streaming method %q must define an ID field in result", e.MethodExpr.Name)
-				}
-			} else if e.MethodExpr.IsPayloadStreaming() && e.MethodExpr.Result != nil && e.MethodExpr.Result.Type != Empty && !hasJSONRPCIDField(e.MethodExpr.StreamingPayload) {
-				// Client streaming with result needs ID in payload
-				verr.Add(e, "JSON-RPC WebSocket client streaming method %q with result must define an ID field in streaming payload", e.MethodExpr.Name)
+		// JSON-RPC ID field validation:
+		// Result may only define an ID field if the corresponding request type (Payload or StreamingPayload) also defines one
+		if e.MethodExpr.Result != nil && e.MethodExpr.Result.Type != Empty && hasJSONRPCIDField(e.MethodExpr.Result) {
+			// Check if request has ID field
+			requestHasID := false
+			if e.MethodExpr.IsPayloadStreaming() {
+				requestHasID = hasJSONRPCIDField(e.MethodExpr.StreamingPayload)
+			} else {
+				requestHasID = hasJSONRPCIDField(e.MethodExpr.Payload)
 			}
-			// Server streaming: ID is optional in result (allows for notifications)
+			
+			if !requestHasID {
+				verr.Add(e, "JSON-RPC method %q result defines an ID field but the request (payload) does not. Result may only have ID field if request does", e.MethodExpr.Name)
+			}
 		}
+		
 	}
 
 	// Redirect is not compatible with Response.

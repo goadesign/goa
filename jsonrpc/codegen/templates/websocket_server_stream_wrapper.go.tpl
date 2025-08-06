@@ -6,20 +6,19 @@ type {{ lowerInitial .Method.VarName }}StreamWrapper struct {
 	requestID any // Store the JSON-RPC request ID for responses
 }
 
-// Send sends a result to the client.
-func (w *{{ lowerInitial .Method.VarName }}StreamWrapper) Send(ctx context.Context, res {{ .Result.Ref }}) error {
-		{{- if .Result.IDAttribute }}
-	if res.{{ .Result.IDAttribute }} == {{ if .Result.IDAttributeRequired }}""{{ else }}nil{{ end }} {
-			{{- if .Payload.IDAttributeRequired }}
-		res.{{ .Result.IDAttribute }} = fmt.Sprintf("%v", w.requestID)
-			{{- else }}
-		if w.requestID != nil {
-			res.{{ .Result.IDAttribute }} = fmt.Sprintf("%v", *w.requestID)
-		}
-			{{- end }}
-	}
-		{{- end }}
-	return w.stream.Send{{ .Method.VarName }}(ctx, res)
+// SendNotification sends a notification to the client (no response expected).
+func (w *{{ lowerInitial .Method.VarName }}StreamWrapper) SendNotification(ctx context.Context, res {{ .Result.Ref }}) error {
+	return w.stream.Send{{ .Method.VarName }}Notification(ctx, res)
+}
+
+// SendResponse sends a response to the client for the original request.
+func (w *{{ lowerInitial .Method.VarName }}StreamWrapper) SendResponse(ctx context.Context, res {{ .Result.Ref }}) error {
+	return w.stream.Send{{ .Method.VarName }}Response(ctx, w.requestID, res)
+}
+
+// SendError sends an error response to the client.
+func (w *{{ lowerInitial .Method.VarName }}StreamWrapper) SendError(ctx context.Context, err error) error {
+	return w.stream.SendError(ctx, w.requestID, err)
 }
 	{{- end }}
 {{- end }}

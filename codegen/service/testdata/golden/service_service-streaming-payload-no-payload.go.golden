@@ -1,0 +1,36 @@
+
+// Service is the StreamingPayloadNoPayloadService service interface.
+type Service interface {
+	// StreamingPayloadNoPayloadMethod implements StreamingPayloadNoPayloadMethod.
+	StreamingPayloadNoPayloadMethod(context.Context, StreamingPayloadNoPayloadMethodServerStream) (err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "StreamingPayloadNoPayloadService"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"StreamingPayloadNoPayloadMethod"}
+
+// StreamingPayloadNoPayloadMethodServerStream allows streaming instances of
+// string to the client.
+type StreamingPayloadNoPayloadMethodServerStream interface {
+	// SendAndClose streams instances of "string" and closes the stream.
+	SendAndClose(context.Context, string) error
+}
+
+// StreamingPayloadNoPayloadMethodClientStream allows streaming instances of
+// any to the client.
+type StreamingPayloadNoPayloadMethodClientStream interface {
+	// Send streams instances of "any".
+	Send(context.Context, any) error
+}

@@ -56,7 +56,17 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx contex
 				Stream: streamWrapper,
 			}
 			if _, err := s.{{ lowerInitial .Method.VarName }}Endpoint(ctx, endpointInput); err != nil {
-				return fmt.Errorf("endpoint error for %s: %w", {{ printf "%q" .Method.Name }}, err)
+				// For streaming endpoints, send error as JSON-RPC error response
+				if req.ID != nil {
+					// Send error response to client
+					if sendErr := streamWrapper.SendError(ctx, err); sendErr != nil {
+						return fmt.Errorf("failed to send error response: %w", sendErr)
+					}
+					// Continue processing other requests
+					return nil
+				}
+				// For notifications (no ID), just log and continue
+				return nil
 			}
 			return nil
 			{{- else }}

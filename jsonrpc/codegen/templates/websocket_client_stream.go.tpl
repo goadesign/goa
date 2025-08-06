@@ -280,8 +280,13 @@ func (s *{{ .VarName }}) responseHandler() {
 
 func (s *{{ .VarName }}) handleResponse(response *jsonrpc.RawResponse) {
 	if response.ID == "" {
-		// Ignore notifications - we only expect responses
-		s.handleError(jsonrpc.StreamErrorProtocol, fmt.Errorf("received notification with empty ID"), response)
+		// This is a server-initiated notification
+		// For now, just report it as an event via the error handler
+		// In the future, we could add a dedicated notification handler
+		if s.config.ErrorHandler != nil {
+			s.config.ErrorHandler(s.ctx, jsonrpc.StreamErrorNotification, 
+				fmt.Errorf("received server notification"), response)
+		}
 		return
 	}
 	
@@ -311,10 +316,12 @@ func (s *{{ .VarName }}) handleResponse(response *jsonrpc.RawResponse) {
 			// Report parsing errors
 			s.handleError(jsonrpc.StreamErrorParsing, err, response)
 		} else {
+			{{- if .Endpoint.Result.IDAttribute }}
 			// Set the ID from the JSON-RPC envelope into the result
-			if parsedResult.ID == "" {
-				parsedResult.ID = response.ID
+			if parsedResult.{{ .Endpoint.Result.IDAttribute }} == "" {
+				parsedResult.{{ .Endpoint.Result.IDAttribute }} = response.ID
 			}
+			{{- end }}
 			result.result = parsedResult
 		}
 {{- end }}

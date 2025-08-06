@@ -42,22 +42,22 @@ type MethodData struct {
 	Description string
 	// Info contains the parsed method information
 	Info MethodInfo
-	
+
 	// Type information
-	Payload          *TypeSpec  // Initial payload (if any)
-	StreamingPayload *TypeSpec  // Streaming payload (if any)
-	Result           *TypeSpec  // Result - can be regular or streaming
-	
+	Payload          *TypeSpec // Initial payload (if any)
+	StreamingPayload *TypeSpec // Streaming payload (if any)
+	Result           *TypeSpec // Result - can be regular or streaming
+
 	// Behavior flags
-	IsNotification bool     // No response expected
-	ReturnsError   bool     // Always returns error
-	HasValidation  bool     // Payload has validation rules
-	
+	IsNotification bool // No response expected
+	ReturnsError   bool // Always returns error
+	HasValidation  bool // Payload has validation rules
+
 	// Streaming information
-	IsStreaming    bool
-	StreamKind     string   // "payload", "result", "bidirectional"
-	Transport      string   // "http", "sse", "ws"
-	
+	IsStreaming bool
+	StreamKind  string // "payload", "result", "bidirectional"
+	Transport   string // "http", "sse", "ws"
+
 	// For SSE with final response
 	HasFinalResponse bool
 }
@@ -66,23 +66,20 @@ type MethodData struct {
 type TypeSpec struct {
 	// Kind is the type category: "primitive", "array", "object", "map", "any"
 	Kind string
-	
+
 	// For primitives
 	Primitive string // "String", "Int", "Boolean"
-	
+
 	// For arrays
 	ArrayElem *TypeSpec
-	
+
 	// For objects
 	Fields []FieldSpec
-	
+
 	// For maps
 	MapKey   *TypeSpec
 	MapValue *TypeSpec
-	
-	// Validation rules
-	Validations []ValidationSpec
-	
+
 	// Whether this type needs ID field (for bidirectional WebSocket)
 	NeedsID bool
 }
@@ -95,12 +92,6 @@ type FieldSpec struct {
 	Type        *TypeSpec
 	Description string
 	Required    bool
-}
-
-// ValidationSpec describes a validation rule
-type ValidationSpec struct {
-	Type  string // "MinLength", "MaxLength", "Pattern", etc.
-	Value interface{}
 }
 
 // ImplementationData holds the semantic data for generating service implementations
@@ -146,7 +137,7 @@ type ActionBehavior struct {
 	// Type being operated on (string, array, object, map)
 	Type string
 	// Additional context (e.g., for streaming methods)
-	Context map[string]interface{}
+	Context map[string]any
 }
 
 // Helper methods

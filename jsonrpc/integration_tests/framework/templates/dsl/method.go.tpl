@@ -7,14 +7,13 @@ Method("{{ .Name }}", func() {
 {{- if .StreamingPayload }}
 	StreamingPayload({{ template "inline_type" .StreamingPayload }})
 {{- end }}
-{{- if .StreamingResult }}
-	StreamingResult({{ template "inline_type" .StreamingResult }})
-{{- end }}
-{{- if and .Result (not .IsNotification) }}
+{{- if and .Result .IsStreaming (or (eq .StreamKind "result") (eq .StreamKind "bidirectional")) }}
+	StreamingResult({{ template "inline_type" .Result }})
+{{- else if and .Result (not .IsNotification) }}
 	Result({{ template "inline_type" .Result }})
 {{- end }}
 {{- if .ReturnsError }}
-	Error("test_error")
+	// Methods with error modifier return ServiceError
 {{- end }}
 	JSONRPC(func() {
 {{- if .IsSSE }}
@@ -27,20 +26,7 @@ Method("{{ .Name }}", func() {
 
 {{- define "inline_type" -}}
 {{- if eq .Kind "primitive" -}}
-{{- if .Validations -}}
-func() {
-	Attribute({{ .Primitive }})
-{{- range .Validations }}
-{{- if eq .Type "MinLength" }}
-	MinLength({{ .Value }})
-{{- else if eq .Type "MaxLength" }}
-	MaxLength({{ .Value }})
-{{- end }}
-{{- end }}
-}
-{{- else -}}
 {{- .Primitive -}}
-{{- end -}}
 {{- else if eq .Kind "array" -}}
 {{- if and .ArrayElem (eq .ArrayElem.Kind "primitive") -}}
 ArrayOf({{ .ArrayElem.Primitive }})
@@ -55,15 +41,6 @@ func() {
 {{- range .Fields }}
 {{- $fieldName := .Name }}
 	Field({{ .Position }}, "{{ .Name }}", {{ template "inline_type" .Type }}{{ if .Description }}, "{{ .Description }}"{{ end }})
-{{- end }}
-{{- if .Validations }}
-{{- range .Validations }}
-{{- if eq .Type "MinLength" }}
-	MinLength({{ .Value }})
-{{- else if eq .Type "MaxLength" }}
-	MaxLength({{ .Value }})
-{{- end }}
-{{- end }}
 {{- end }}
 {{- $required := collectRequired .Fields }}
 {{- if $required }}

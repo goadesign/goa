@@ -16,17 +16,10 @@ var _ = Service("{{ .Name }}", func() {
 		POST("{{ .JSONRPCPath }}")
 	})
 {{- range .Methods }}
-{{- if not .IsNotification }}
+{{- if or (not .IsNotification) (and .IsNotification .IsStreaming) }}
 
 	{{ template "partial_method" . }}
 {{- end }}
-{{- end }}
-{{- if .HasErrors }}
-
-	Error("test_error", func() {
-		Description("Test error")
-		Fault()
-	})
 {{- end }}
 })
 {{- end }}

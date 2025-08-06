@@ -78,57 +78,107 @@ Method("add", func() {
 })
 ```
 
-### 3. Notification Methods
+### 3. Methods Without Results  
 
-If a method has a Payload but no Result, Goa treats it as a JSON-RPC
-notification. The client sends the request but does not expect a response.
+Non-streaming methods that don't define a Result can still be called as either requests or
+notifications, depending on whether an ID is provided at runtime. When called
+with an ID, they return an empty success response. When called without an ID,
+they behave as notifications.
+
+**Note**: This runtime behavior applies to non-streaming methods only. WebSocket streaming
+methods use explicit `SendNotification`, `SendResponse`, and `SendError` methods to control
+message types (see WebSocket section below).
 
 ```go
 // design/design.go
 Method("log", func() {
-    Description("Logs a message and returns no response.")
-    Payload(String)
-    // No Result() makes this a notification.
+    Description("Logs a message.")
+    Payload(func() {
+        Field(1, "message", String)
+        Field(2, "id", String, "Optional ID")
+        Meta("jsonrpc:id", "2")
+    })
+    // No Result() - can be request or notification
     JSONRPC(func() {})
 })
 ```
 
-### 4. Handling Request IDs
+Note: This applies to non-streaming methods only. Streaming methods have different
+behavior based on their streaming pattern (see the Transports section below).
 
-The JSON-RPC protocol uses an `id` field to correlate requests and responses.
-Goa manages this for you automatically, but you can access or override it when
-needed using the `ID` function in your Payload and Result definitions.
+### 4. Request vs Notification: Runtime Determination
 
-Rule of thumb for ID attributes:
+In Goa's JSON-RPC implementation, whether a message is a request (expecting a response) or a notification (fire-and-forget) is determined at runtime by the presence of an ID:
 
-**WebSocket Services**: The requirement for ID depends on the streaming pattern:
+- **With ID**: The message is a request and expects a response
+- **Without ID or empty string ID**: The message is a notification and no response is sent
 
-- **Bidirectional Streaming** (StreamingPayload and StreamingResult): ID is
-**REQUIRED** in both payload and result. This is crucial for correlating
-responses to requests when multiple messages are in-flight on the same
-connection.
+This applies to ALL methods, regardless of whether they return a result. Even methods that only return errors will behave as notifications when called without an ID.
 
-- **Other Streaming Patterns** (e.g., server-streaming): ID is **OPTIONAL**.
-  This allows for server-initiated notifications that are not tied to a specific
-  request.
+#### Client-to-Server Messages
 
-**HTTP Services**: **OPTIONAL**.
+Any method can be called as either a request or notification by controlling the ID field:
 
-- Define an ID in the Payload only if your service logic needs to access the
-  request ID (e.g., for logging).
+```go
+// Design
+Method("process", func() {
+    Payload(func() {
+        Field(1, "data", String)
+        Field(2, "request_id", String, "Optional request ID")
+        Meta("jsonrpc:id", "2")  // Mark as JSON-RPC ID field
+    })
+    Result(String)
+    JSONRPC(func() {})
+})
 
-- You generally don't need an ID in the Result, as Goa automatically mirrors the
-  request ID in the response. Define one only if you need to explicitly override
-  the response ID.
+// Client usage
+// As request (expects response)
+err := client.Process(ctx, &ProcessPayload{
+    Data: "hello",
+    RequestID: "123",  // ID present = request
+})
 
-**SSE Services**: **OPTIONAL** but with special behavior.
+// As notification (no response expected)
+err := client.Process(ctx, &ProcessPayload{
+    Data: "hello",
+    // No RequestID = notification
+})
+```
 
-- If you define an ID field in the StreamingResult, the framework uses it to
-  distinguish between notifications and responses.
+#### Server-to-Client Messages (WebSocket/SSE)
 
-- Messages with an ID are treated as responses and close the stream after sending.
+For streaming methods, servers can send both responses and notifications:
 
-- Messages without an ID are treated as notifications and keep the stream open.
+```go
+// Design
+Method("updates", func() {
+    Payload(String)
+    StreamingResult(func() {
+        Field(1, "event", String)
+        Field(2, "id", String, "Optional ID for responses")
+        Meta("jsonrpc:id", "2")
+    })
+    JSONRPC(func() {})
+})
+
+// Server implementation
+func (s *svc) Updates(ctx context.Context, p string, stream Updates) error {
+    // Send as notification (no ID)
+    stream.Send(ctx, &UpdateResult{Event: "progress 50%"})
+    
+    // Send as response (with ID)
+    stream.Send(ctx, &UpdateResult{Event: "complete", ID: "123"})
+    
+    return nil
+}
+```
+
+#### ID Field Design Rules
+
+1. **Validation**: Result may only define an ID field if the corresponding Payload (or StreamingPayload) also defines one
+2. **Field Naming**: Use the `Meta("jsonrpc:id", "position")` tag to mark which field is the JSON-RPC ID
+3. **Field Type**: ID fields should be String type (required or optional via pointer)
+4. **Required vs Optional**: Control whether ID is required using standard Goa field definitions
 
 ```go
 // design/design.go
@@ -276,21 +326,23 @@ Notifications (messages without ID) keep the stream open for additional messages
 
 #### Client Usage
 
-The client calls the method to get a stream object, then receives messages in a
-loop until the stream is closed.
+For server-only streaming (SSE), the client initiates the stream at the service level,
+but the actual stream handling happens at the transport layer. The generated HTTP
+client provides access to the SSE stream.
 
 ```go
 // main.go
-client := processor.NewClient(
+// Use the HTTP client directly for SSE streaming
+httpClient := processorjsonrpc.NewClient(
     "http", "localhost:8080", http.DefaultClient,
     goahttp.RequestEncoder, goahttp.ResponseDecoder, false,
 )
 
-// 1. Call the endpoint to get the stream
-stream, err := client.ProcessFile(ctx, &processor.ProcessFilePayload{File: "my-data.csv"})
+// The HTTP client's method returns the SSE stream
+stream, err := httpClient.ProcessFile(ctx, &processor.ProcessFilePayload{File: "my-data.csv"})
 if err != nil { /* handle error */ }
 
-// 2. Loop to receive messages
+// Loop to receive messages from the SSE stream
 for {
     res, err := stream.Recv()
     if err == io.EOF {
@@ -302,7 +354,7 @@ for {
         log.Fatalf("receive error: %s", err)
     }
 
-    // 3. Process the received message
+    // Process the received message
     if p := res.Status.Progress; p != nil {
         log.Printf("Progress: %d%%", p.Percent)
     }
@@ -311,11 +363,26 @@ for {
     }
 }
 ```
+
+Note: The service-level client method only returns an error for server-only streaming,
+as the actual stream handling is a transport concern. Use the generated HTTP/JSON-RPC
+client to access the SSE stream functionality.
 ### WebSocket: Full Bidirectional Streaming
 
 WebSockets provide a persistent, full-duplex connection for true real-time
 communication. This is the most powerful transport, supporting client-streaming,
 server-streaming, and fully bidirectional interactions.
+
+#### Three-Method Pattern for WebSocket Streaming
+
+Unlike non-streaming methods that determine request/notification behavior at runtime,
+WebSocket streaming methods use three explicit methods to control message types:
+
+- **`SendNotification`**: Sends a JSON-RPC notification (no response expected)
+- **`SendResponse`**: Sends a JSON-RPC response with the original request ID
+- **`SendError`**: Sends a JSON-RPC error response
+
+This explicit control allows precise handling of the JSON-RPC protocol in streaming contexts.
 
 #### WebSocket Architecture
 
@@ -387,9 +454,17 @@ Service("chat", func() {
         JSONRPC(func() {})
     })
 
-    // Server-initiated broadcast (no payload)
-    Method("broadcast", func() {
-        StreamingResult(String)
+    // Server-side streaming (server can push messages anytime)
+    Method("subscribe", func() {
+        Payload(func() {
+            Attribute("topic", String)
+            Required("topic")
+        })
+        StreamingResult(func() {
+            Attribute("event", String)
+            Attribute("data", Any)
+            Required("event", "data")
+        })
         JSONRPC(func() {})
     })
 })
@@ -407,16 +482,7 @@ handle the logic.
 func (s *chatSvc) HandleStream(ctx context.Context, stream chat.Stream) error {
     defer stream.Close()
 
-    // Example: Start a goroutine for server-initiated broadcasts
-    go func() {
-        for {
-            time.Sleep(30 * time.Second)
-            // This sends a message without a client request
-            stream.Send(&chat.BroadcastResult{Message: "Server announcement!"})
-        }
-    }()
-
-    // Loop to receive and dispatch client messages to `echo`, etc.
+    // Loop to receive and dispatch client messages
     for {
         if _, err := stream.Recv(ctx); err != nil {
             return err // On error (e.g., connection closed), return to exit.
@@ -427,58 +493,98 @@ func (s *chatSvc) HandleStream(ctx context.Context, stream chat.Stream) error {
 // Echo implements the bidirectional "echo" method.
 func (s *chatSvc) Echo(ctx context.Context, p *chat.EchoPayload, stream chat.EchoServerStream) error {
     // Echo the message back to the client.
-    return stream.Send(&chat.EchoResult{
-        RequestID: p.RequestID,
-        Message: "You said: " + p.Message,
+    return stream.SendResponse(ctx, &chat.EchoResult{
+        ID: p.ID,
+        Response: "You said: " + p.Message,
     })
+}
+
+// Subscribe implements server-side streaming.
+// Once subscribed, the server can push messages at any time.
+func (s *chatSvc) Subscribe(ctx context.Context, p *chat.SubscribePayload, stream chat.SubscribeServerStream) error {
+    // Register this stream for the topic
+    s.registerSubscriber(p.Topic, stream)
+    defer s.unregisterSubscriber(p.Topic, stream)
+    
+    // Keep the stream alive
+    <-ctx.Done()
+    return nil
+}
+
+// In another part of your service, you can push messages to subscribers
+func (s *chatSvc) publishEvent(topic string, event string, data interface{}) {
+    subscribers := s.getSubscribers(topic)
+    for _, stream := range subscribers {
+        // Send notification to each subscriber
+        stream.SendNotification(ctx, &chat.SubscribeResult{
+            Event: event,
+            Data: data,
+        })
+    }
 }
 ```
 
 #### Client Usage
 
-The client gets a stream object that can both send and receive messages.
-Goroutines are commonly used to handle this concurrently.
+For WebSocket connections, the transport client manages the connection and provides
+different interfaces based on the streaming pattern:
+
+**Bidirectional Streaming** - Client gets a stream interface for both sending and receiving:
 
 ```go
 // main.go
-client := chat.NewClient(
+// Use the WebSocket transport client
+wsClient := chatws.NewClient(
     "ws", "localhost:8080", http.DefaultClient,
     goahttp.RequestEncoder, goahttp.ResponseDecoder, false,
     websocket.DefaultDialer, nil,
 )
 
-// 1. Call the endpoint to get the bidirectional stream
-stream, err := client.Echo(ctx)
+// For bidirectional streaming, get a stream object
+stream, err := wsClient.Echo(ctx)
 if err != nil { /* handle error */ }
 
-// 2. Start a goroutine to send messages to the server
+// Send and receive concurrently
 go func() {
     for i := 0; i < 5; i++ {
-        log.Printf("client: sending message %d", i)
         err := stream.Send(&chat.EchoPayload{
-            RequestID: fmt.Sprintf("req-%d", i),
+            ID: fmt.Sprintf("req-%d", i),
             Message: "hello",
         })
         if err != nil { /* handle error */ }
         time.Sleep(1 * time.Second)
     }
-    // Close the send direction of the stream.
     stream.Close()
 }()
 
-// 3. Loop on the main goroutine to receive messages from the server
 for {
     res, err := stream.Recv()
     if err == io.EOF {
-        break // Stream was closed.
+        break
     }
     if err != nil {
-        log.Fatalf("client: receive error: %v", err)
+        log.Fatalf("receive error: %v", err)
     }
-    // Received message could be an echo response or a server broadcast
-    log.Printf("client: received '%s'", res)
+    log.Printf("received: %s", res.Response)
 }
 ```
+
+**Server-Side Streaming** - Client initiates subscription, then receives pushed messages:
+
+```go
+// At the service level, the method just returns an error
+serviceClient := chat.NewClient(/* endpoints */)
+err := serviceClient.Subscribe(ctx, &chat.SubscribePayload{Topic: "news"})
+if err != nil { /* handle error */ }
+
+// The actual stream handling happens at the transport level
+// The WebSocket connection receives the pushed messages through the main stream
+// established by the transport client
+```
+
+Note: For server-only streaming over WebSocket, the service-level client method returns
+just an error, as receiving streamed messages is handled at the transport layer through
+the persistent WebSocket connection.
 
 ## Error Handling
 

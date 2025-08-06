@@ -17,6 +17,9 @@ func New{{ .Title }}() {{ .ServicePackage }}.Service {
 
 // HandleStream handles the JSON-RPC WebSocket streaming connection
 func (s *{{ .ServicePackage }}srvc) HandleStream(ctx context.Context, stream {{ .ServicePackage }}.Stream) error {
+	// For testing purposes, we only send broadcasts when explicitly called through the broadcast method
+	// In a real application, you might send broadcasts based on external events or timers
+	
 	// Loop to handle incoming requests
 	for {
 		// Recv reads and dispatches the next request
@@ -31,19 +34,19 @@ func (s *{{ .ServicePackage }}srvc) HandleStream(ctx context.Context, stream {{ 
 }
 {{- end }}
 {{- range .Methods }}
-{{- if not .IsNotification }}
+{{- if or (not .IsNotification) (and .IsNotification .IsStreaming) }}
 
 // {{ .GoName }} implements {{ .Name }}.
 {{ template "partial_method_signature" . }} {
 	log.Printf("{{ .GoName }} called")
-{{- if .ReturnsError }}
-{{ template "partial_error" . }}
-{{- else if .IsStreaming }}
+{{- if .IsStreaming }}
 {{- if .IsSSE }}
 {{ template "partial_streaming_sse" . }}
 {{- else if .IsWebSocket }}
 {{ template "partial_streaming_websocket" . }}
 {{- end }}
+{{- else if .ReturnsError }}
+{{ template "partial_error" . }}
 {{- else }}
 {{- if eq .Info.Action "echo" }}
 {{ template "partial_echo" . }}
@@ -53,7 +56,11 @@ func (s *{{ .ServicePackage }}srvc) HandleStream(ctx context.Context, stream {{ 
 {{ template "partial_generate" . }}
 {{- else }}
 	// Unknown action: {{ .Info.Action }}
+	{{- if .IsStreaming }}
+	return fmt.Errorf("not implemented")
+	{{- else }}
 	return {{ if .HasResult }}nil, {{ end }}fmt.Errorf("not implemented")
+	{{- end }}
 {{- end }}
 {{- end }}
 }

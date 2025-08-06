@@ -10,15 +10,15 @@ Method("{{ .Name }}", func() {
 {{- if .StreamingPayload }}
 	StreamingPayload({{ template "partial_type" .StreamingPayload }})
 {{- end }}
-{{- if and .Result (not .IsNotification) }}
+{{- if .Result }}
 {{- if or (eq .StreamKind "result") (eq .StreamKind "bidirectional") }}
 	StreamingResult({{ template "partial_type" .Result }})
-{{- else }}
+{{- else if not .IsNotification }}
 	Result({{ template "partial_type" .Result }})
 {{- end }}
 {{- end }}
 {{- if .ReturnsError }}
-	Error("test_error")
+	// Methods with error modifier return ServiceError
 {{- end }}
 	JSONRPC(func() {
 {{- if .IsSSE }}

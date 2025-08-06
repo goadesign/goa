@@ -9,7 +9,11 @@ type {{ .SSE.StructName }} struct {
 	// r is the HTTP request  
 	r *http.Request
 	// requestID is the JSON-RPC request ID for sending final response
-	requestID interface{}
+	requestID any
+	// closed indicates if the stream has been closed via SendAndClose
+	closed bool
+	// mu protects the closed flag
+	mu sync.Mutex
 }
 
 {{ comment "sseEventWriter wraps http.ResponseWriter to format output as SSE events." }}
@@ -41,10 +45,17 @@ func (s *{{ lowerInitial .SSE.StructName }}EventWriter) finish() {
 	}
 }
 
-{{ comment "Send sends an event (notification or response) to the client." }}
-{{ comment "For notifications, the result should not have an ID field." }}
-{{ comment "For responses, the result must have an ID field." }}
+{{ comment "Send sends a JSON-RPC notification to the client." }}
+{{ comment "Notifications do not expect a response from the client." }}
 func (s *{{ .SSE.StructName }}) Send(ctx context.Context, event {{ .ServicePkgName }}.{{ .Method.VarName }}Event) error {
+	{{ comment "Check if stream is closed" }}
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return fmt.Errorf("stream closed")
+	}
+	s.mu.Unlock()
+	
 	{{ comment "Type assert to the specific result type" }}
 	result, ok := event.({{ .SSE.EventTypeRef }})
 	if !ok {
@@ -58,49 +69,70 @@ func (s *{{ .SSE.StructName }}) Send(ctx context.Context, event {{ .ServicePkgNa
 	body := result
 	{{- end }}
 	
-	{{ comment "Check if this is a notification or response by looking for ID field" }}
-	var id string
-	var isResponse bool
+	{{ comment "Send as notification (no ID)" }}
+	message := map[string]any{
+		"jsonrpc": "2.0",
+		"method":  {{ printf "%q" .Method.Name }},
+		"params":  body,
+	}
+	
+	return s.sendSSEEvent("notification", message)
+}
+
+{{ comment "SendAndClose sends a final JSON-RPC response to the client and closes the stream." }}
+{{ comment "The response will include the original request ID unless the result has an ID field populated." }}
+{{ comment "After calling this method, no more events can be sent on this stream." }}
+func (s *{{ .SSE.StructName }}) SendAndClose(ctx context.Context, event {{ .ServicePkgName }}.{{ .Method.VarName }}Event) error {
+	{{ comment "Check if stream is already closed" }}
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return fmt.Errorf("stream already closed")
+	}
+	s.closed = true
+	s.mu.Unlock()
+	
+	{{ comment "Type assert to the specific result type" }}
+	result, ok := event.({{ .SSE.EventTypeRef }})
+	if !ok {
+		return fmt.Errorf("unexpected event type: %T", event)
+	}
+	
+	{{ comment "Determine the ID to use for the response" }}
+	var id any = s.requestID
 	{{- if .Result.IDAttribute }}
 		{{- if .Result.IDAttributeRequired }}
 	if result.{{ .Result.IDAttribute }} != "" {
+		{{ comment "Use the ID from the result if provided" }}
 		id = result.{{ .Result.IDAttribute }}
-		isResponse = true
 		{{ comment "Clear the ID field so it's not duplicated in the result" }}
 		result.{{ .Result.IDAttribute }} = ""
 	}
 		{{- else }}
 	if result.{{ .Result.IDAttribute }} != nil && *result.{{ .Result.IDAttribute }} != "" {
+		{{ comment "Use the ID from the result if provided" }}
 		id = *result.{{ .Result.IDAttribute }}
-		isResponse = true
 		{{ comment "Clear the ID field so it's not duplicated in the result" }}
 		result.{{ .Result.IDAttribute }} = nil
 	}
 		{{- end }}
 	{{- end }}
 	
-	var message map[string]interface{}
-	var eventType string
+	{{- if and .Result (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
+	{{ comment "Convert to response body type for proper JSON encoding" }}
+	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
+	{{- else }}
+	body := result
+	{{- end }}
 	
-	if isResponse {
-		{{ comment "Send as response with ID" }}
-		message = map[string]interface{}{
-			"jsonrpc": "2.0",
-			"id":      id,
-			"result":  body,
-		}
-		eventType = "response"
-	} else {
-		{{ comment "Send as notification (no ID)" }}
-		message = map[string]interface{}{
-			"jsonrpc": "2.0",
-			"method":  {{ printf "%q" .Method.Name }},
-			"params":  body,
-		}
-		eventType = "notification"
+	{{ comment "Send as response with ID" }}
+	message := map[string]any{
+		"jsonrpc": "2.0",
+		"id":      id,
+		"result":  body,
 	}
 	
-	return s.sendSSEEvent(eventType, message)
+	return s.sendSSEEvent("response", message)
 }
 
 {{ comment "SendError sends a JSON-RPC error response." }}
@@ -140,11 +172,7 @@ func (s *{{ .SSE.StructName }}) SendError(ctx context.Context, id string, err er
 
 {{ comment "sendError sends a JSON-RPC error response via SSE." }}
 func (s *{{ .SSE.StructName }}) sendError(ctx context.Context, id any, code jsonrpc.Code, message string, data any) error {
-	response := jsonrpc.MakeErrorResponse(id, code, "", message)
-	if data != nil {
-		response.Error.Message = message
-		response.Error.Data = data
-	}
+	response := jsonrpc.MakeErrorResponse(id, code, message, data)
 	return s.sendSSEEvent("error", response)
 }
 

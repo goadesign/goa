@@ -151,6 +151,8 @@ type (
 		IsJSONRPC bool
 		// IsJSONRPCSSE indicates if the JSON-RPC endpoint uses SSE transport.
 		IsJSONRPCSSE bool
+		// IsJSONRPCWebSocket indicates if the JSON-RPC endpoint uses WebSocket transport.
+		IsJSONRPCWebSocket bool
 		// Requirements contains the security requirements for the
 		// method.
 		Requirements RequirementsData
@@ -212,6 +214,14 @@ type (
 		SendTypeName string
 		// SendTypeRef is the reference to the type sent through the stream.
 		SendTypeRef string
+		// SendAndCloseName is the name of the send and close function (SSE only).
+		SendAndCloseName string
+		// SendAndCloseDesc is the description for the send and close function.
+		SendAndCloseDesc string
+		// SendAndCloseWithContextName is the name of the send and close function with context.
+		SendAndCloseWithContextName string
+		// SendAndCloseWithContextDesc is the description for the send and close function with context.
+		SendAndCloseWithContextDesc string
 		// RecvName is the name of the receive function.
 		RecvName string
 		// RecvDesc is the description for the recv function.
@@ -1090,14 +1100,20 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 
 	_, isJSONRPC = m.Meta["jsonrpc"]
 
-	// Check if this JSON-RPC method uses SSE
+	// Check if this JSON-RPC method uses SSE or WebSocket
 	var isJSONRPCSSE bool
+	var isJSONRPCWebSocket bool
 	if isJSONRPC && m.IsStreaming() {
-		// Check if the JSON-RPC HTTP endpoint uses SSE
+		// Check if the JSON-RPC HTTP endpoint uses SSE or WebSocket
 		if httpJSONRPCSvc := d.Root.API.JSONRPC.HTTPExpr.Service(m.Service.Name); httpJSONRPCSvc != nil {
 			for _, e := range httpJSONRPCSvc.HTTPEndpoints {
-				if e.MethodExpr.Name == m.Name && e.SSE != nil {
-					isJSONRPCSSE = true
+				if e.MethodExpr.Name == m.Name {
+					if e.SSE != nil {
+						isJSONRPCSSE = true
+					} else {
+						// Streaming without SSE means WebSocket
+						isJSONRPCWebSocket = true
+					}
 					break
 				}
 			}
@@ -1153,6 +1169,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		ErrorLocs:                    errorLocs,
 		IsJSONRPC:                    isJSONRPC,
 		IsJSONRPCSSE:                 isJSONRPCSSE,
+		IsJSONRPCWebSocket:           isJSONRPCWebSocket,
 		Requirements:                 reqs,
 		Schemes:                      schemes,
 		StreamKind:                   m.Stream,
@@ -1220,6 +1237,14 @@ func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vnam
 		RecvWithContextDesc: fmt.Sprintf("RecvWithContext reads instances of %q from the stream with context.", rname),
 		RecvTypeName:        rname,
 		RecvTypeRef:         resultRef,
+	}
+	// For SSE server streaming, we need both Send (for notifications) and SendAndClose (for final response)
+	if data.IsJSONRPCSSE && m.Stream == expr.ServerStreamKind && resultRef != "" {
+		svrStream.SendAndCloseName = "SendAndClose"
+		svrStream.SendAndCloseDesc = fmt.Sprintf("SendAndClose sends a final response with %q and closes the stream.", rname)
+		// For JSON-RPC, we don't generate WithContext versions - the default methods take context
+		// Update Send description to clarify it's for notifications only
+		svrStream.SendDesc = fmt.Sprintf("Send streams JSON-RPC notifications with %q. Notifications do not expect a response.", rname)
 	}
 	if m.Stream == expr.ClientStreamKind || m.Stream == expr.BidirectionalStreamKind {
 		switch m.Stream {

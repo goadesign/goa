@@ -17,9 +17,10 @@ import (
 
 // JSONRPCRequest represents a JSON-RPC 2.0 request
 type JSONRPCRequest struct {
-	Method string `json:"method"`
-	Params any    `json:"params,omitempty"`
-	ID     any    `json:"id,omitempty"`
+	JSONRPC *string `json:"jsonrpc,omitempty"` // Pointer to allow omitting the field entirely
+	Method  string  `json:"method"`
+	Params  any     `json:"params,omitempty"`
+	ID      any     `json:"id,omitempty"`
 }
 
 // Default values
@@ -148,9 +149,20 @@ func (c *Client) CallHTTPRaw(ctx context.Context, body []byte) (json.RawMessage,
 func (c *Client) CallHTTP(ctx context.Context, req JSONRPCRequest) (json.RawMessage, error) {
 	// Build JSON-RPC request envelope
 	envelope := map[string]any{
-		"jsonrpc": "2.0",
-		"method":  req.Method,
+		"method": req.Method,
 	}
+	
+	// Add jsonrpc field if provided, or default to "2.0"
+	if req.JSONRPC != nil {
+		if *req.JSONRPC != "" {
+			envelope["jsonrpc"] = *req.JSONRPC
+		}
+		// If JSONRPC is explicitly set to empty string, omit the field
+	} else {
+		// Default behavior: include "jsonrpc": "2.0"
+		envelope["jsonrpc"] = "2.0"
+	}
+	
 	if req.Params != nil {
 		envelope["params"] = req.Params
 	}
@@ -219,9 +231,6 @@ func (c *Client) CallSSE(ctx context.Context, req JSONRPCRequest) ([]json.RawMes
 	}
 
 	endpoint := c.baseURL.ResolveReference(&url.URL{Path: c.config.SSEPath})
-	// Debug logging
-	fmt.Printf("DEBUG: SSE endpoint: %s\n", endpoint.String())
-	fmt.Printf("DEBUG: SSE request: %s\n", string(data))
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", endpoint.String(), bytes.NewReader(data))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
@@ -252,14 +261,9 @@ func (c *Client) CallSSE(ctx context.Context, req JSONRPCRequest) ([]json.RawMes
 	if err != nil {
 		return nil, fmt.Errorf("failed to read SSE response: %w", err)
 	}
-	fmt.Printf("DEBUG: SSE raw response: %q\n", string(body))
 	
 	// Parse SSE events
 	events, err := c.parseSSEEvents(bytes.NewReader(body))
-	fmt.Printf("DEBUG: SSE events received: %d\n", len(events))
-	for i, event := range events {
-		fmt.Printf("DEBUG: SSE event %d: %s\n", i, string(event))
-	}
 	return events, err
 }
 
@@ -339,9 +343,20 @@ func (c *Client) SendWebSocket(ctx context.Context, req JSONRPCRequest) error {
 
 	// Build JSON-RPC request envelope
 	envelope := map[string]any{
-		"jsonrpc": "2.0",
-		"method":  req.Method,
+		"method": req.Method,
 	}
+	
+	// Add jsonrpc field if provided, or default to "2.0"
+	if req.JSONRPC != nil {
+		if *req.JSONRPC != "" {
+			envelope["jsonrpc"] = *req.JSONRPC
+		}
+		// If JSONRPC is explicitly set to empty string, omit the field
+	} else {
+		// Default behavior: include "jsonrpc": "2.0"
+		envelope["jsonrpc"] = "2.0"
+	}
+	
 	if req.Params != nil {
 		envelope["params"] = req.Params
 	}

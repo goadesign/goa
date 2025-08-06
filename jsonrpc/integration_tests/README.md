@@ -4,6 +4,8 @@ A clean, data-driven integration test framework for testing Goa's JSON-RPC imple
 
 This framework is designed to be simple and extensible. All test cases are defined in a single `YAML` file, allowing you to add new tests without writing any Go code. The core principle is **client-side testing**: every test is written from the perspective of a client sending a request and expecting a specific response.
 
+**📍 File Location**: All tests are defined in `integration_tests/scenarios/scenarios.yaml`
+
 ## 🚀 Quick Start
 
 ### Running Existing Tests
@@ -11,46 +13,136 @@ This framework is designed to be simple and extensible. All test cases are defin
 To run all integration tests, navigate to the `integration_tests` directory and use the standard `go test` command.
 
 ```bash
-# Run all tests in parallel with verbose output
-go test -v ./...
+# Run all tests in parallel with verbose output (bypasses test cache)
+go test -count=1 -v ./...
 
 # Run a single test by its name from the YAML file
 # The format is TestJSONRPC/<scenario_name>
-go test -v -run "TestJSONRPC/echo_string_request" ./...
+go test -count=1 -v -run "TestJSONRPC/echo_string_request" ./...
 
 # Filter which tests to run using a regex pattern
-FILTER="^echo_.*" go test -v ./...
+FILTER="^echo_.*" go test -count=1 -v ./...
 ```
 
 The `FILTER` environment variable is useful for running a specific group of tests (like all `echo` tests) without typing each full name. It matches the regular expression against the `name` field in your `scenarios.yaml` file.
 
-### Adding a New Test
+### Adding a New Test - Three Complete Examples
 
 Adding a new test requires only a small addition to the scenarios file; no Go code is needed.
 
-1.  **Open `scenarios/scenarios.yaml`**.
+1. **Open `integration_tests/scenarios/scenarios.yaml`** (from the project root)
 
-2.  **Add your test case**. For example, to test a method that echoes a map payload:
+2. **Add your test case** at the end of the `scenarios:` list
 
-    ```yaml
-    - name: "echo_map_request"
-      method: "echo_map"
-      transport: "http"
-      request:
-        id: "map-req-1"
-        params:
-          key1: "value1"
-          key2: 42
+3. **Run the tests** - the framework automatically handles the rest
+
+#### Example 1: Simple HTTP Test
+```yaml
+# Add this to scenarios.yaml
+- name: "my_echo_test"
+  method: "echo_string"  # action_type format
+  transport: "http"
+  request:
+    params: "hello world"  # What to send
+    id: 123                # Request ID (omit for notifications)
+  expect:
+    result: "hello world"  # Echo returns the same value
+    id: 123                # Response has same ID
+```
+
+#### Example 2: SSE Streaming Test
+```yaml
+# SSE uses request to initiate, then sequence for the stream
+- name: "my_stream_test"
+  method: "stream_string_sse"
+  transport: "sse"
+  request:
+    params: "hi"           # 2 characters = 2 notifications
+    id: "sse-1"
+  sequence:                 # What we expect to receive
+    - type: "receive"
       expect:
-        id: "map-req-1"
-        result:
-          key1: "value1"
-          key2: 42
-    ```
+        jsonrpc: "2.0"
+        method: "stream_string_sse"
+        params:
+          value: "Stream 1 of 2"
+    - type: "receive"
+      expect:
+        jsonrpc: "2.0"
+        method: "stream_string_sse"
+        params:
+          value: "Stream 2 of 2"
+```
 
-3.  **Run the tests**. The framework will automatically handle the rest.
+#### Example 3: Transform Test with Object
+```yaml
+# Objects have fixed field names: field1, field2, field3
+- name: "my_transform_test"
+  method: "transform_object"
+  transport: "http"
+  request:
+    params:
+      field1: "hello"      # Will be uppercased
+      field2: 10           # Will be doubled
+      field3: true         # Will be negated
+    id: "transform-1"
+  expect:
+    result:
+      field1: "HELLO"      # Uppercased
+      field2: 20           # Doubled
+      field3: false        # Negated
+    id: "transform-1"
+```
 
-When you run the test, the framework sees the `method: "echo_map"`. Based on the `echo` action in the name, it dynamically generates a server method that simply returns its input parameters. This is why the `expect.result` in the example is identical to the `request.params`.
+## 💡 Common Patterns and Pitfalls
+
+### Arrays Need Wrapper Objects
+Arrays aren't sent directly - they need an `items` wrapper:
+```yaml
+# ❌ Wrong
+params: ["one", "two"]
+
+# ✅ Correct
+params:
+  items: ["one", "two"]
+```
+
+### Object Fields Are Fixed
+The `object` type always uses these exact field names:
+- `field1` (string)
+- `field2` (integer) 
+- `field3` (boolean)
+
+```yaml
+params:
+  field1: "text"    # Must be field1, not myField
+  field2: 42         # Must be field2, not count
+  field3: true       # Must be field3, not enabled
+```
+
+### Maps Use a Data Wrapper
+Maps need a `data` field to hold the key-value pairs:
+```yaml
+params:
+  data:
+    any_key: "any_value"   # Keys are flexible
+    another: 123
+```
+
+### SSE Always Uses Request + Sequence
+SSE tests need both:
+- `request`: Initiates the SSE connection
+- `sequence`: Defines expected stream events
+
+### Notifications Have No ID
+For fire-and-forget messages:
+```yaml
+request:
+  params: "notification"
+  # No id field = notification
+expect:
+  no_response: true
+```
 
 ## ✨ How It Works
 
@@ -74,49 +166,87 @@ The execution flow for `go test` is:
 
 ## 🔧 Writing Test Scenarios
 
-All tests live in `scenarios/scenarios.yaml`. Each scenario defines a single client-server interaction or a sequence of interactions. For a complete reference of all YAML fields and structures, see the **[YAML Schema Reference](https://www.google.com/search?q=SCHEMA.md)**.
+All tests live in `integration_tests/scenarios/scenarios.yaml`. Each scenario defines a single client-server interaction or a sequence of interactions.
 
-### Basic Scenario Structure
+### Transport-Specific Patterns
 
-Each scenario defines a single request-response cycle. The `request` block describes the JSON-RPC payload the client sends, and the `expect` block describes the exact payload the client must receive back for the test to pass. The `method` field links this scenario to the corresponding generated server method.
-
+#### HTTP Tests (Request → Response)
+Use `request` and `expect` for single request-response:
 ```yaml
-- name: "unique_test_case_name" # A descriptive name for the test. Used with `go test -run`.
-  method: "action_type_modifier" # Maps to a generated server method. See naming convention.
-  transport: "http"             # 'http', 'websocket', or 'sse'.
-  request:
-    id: "req-1"                 # JSON-RPC request ID. Omit for notifications.
-    params: ["hello"]           # The parameters for the method call.
-  expect:
-    id: "req-1"                 # The expected ID in the response.
-    result: "HELLO"             # The expected result payload.
+- name: "http_test"
+  method: "echo_string"
+  transport: "http"
+  request:                  # What we send
+    params: "hello"
+    id: 1
+  expect:                   # What we receive
+    result: "hello"
+    id: 1
 ```
 
-### Streaming Scenario Structure
-
-For stateful protocols like WebSockets and Server-Sent Events (SSE), where multiple messages can be exchanged over a single connection, the `sequence` block is used. It defines an ordered list of actions the test client will perform.
-
+#### SSE Tests (Request → Stream of Events)
+Use `request` to initiate, `sequence` for the event stream:
 ```yaml
-- name: "websocket_stream_and_collect"
-  method: "collect_string"
-  transport: "websocket"
-  sequence:
-    - type: "send" # Client sends a message to the server.
-      data:
-        id: "ws-req-1"
-        params: ["one", "two", "three"]
-    - type: "receive" # Client waits to receive a message from the server.
+- name: "sse_test"
+  method: "stream_string_sse"
+  transport: "sse"
+  request:                  # Initiates SSE connection
+    params: "test"
+    id: "sse-1"
+  sequence:                 # Stream of events we expect
+    - type: "receive"
       expect:
-        id: "ws-req-1"
-        result: "onetwothree"
-    - type: "close" # Client closes the connection.
+        method: "stream_string_sse"  # Notifications include method
+        params:
+          value: "Stream 1 of 4"
+    # ... more events
+```
+
+#### WebSocket Tests (Bidirectional Messages)
+Use only `sequence` for back-and-forth communication:
+```yaml
+- name: "websocket_test"
+  method: "echo_string_ws"
+  transport: "websocket"
+  sequence:                 # Series of sends and receives
+    - type: "connect"      # Optional: explicit connection
+    - type: "send"
+      data:
+        method: "echo_string_ws"
+        params:
+          id: "ws-1"
+          value: "hello"
+        id: "ws-1"
+    - type: "receive"
+      expect:
+        id: "ws-1"
+        result:
+          value: "hello"
+    - type: "close"        # Close the connection
 ```
 
 ## 📜 Method Naming Convention
 
 Server behavior is determined entirely by the method name, which follows the pattern: `[action]_[type]_[modifier]`.
 
-#### Actions
+### Quick Reference Table
+
+| Action | Type | Input Example | Output Example |
+|--------|------|--------------|----------------|
+| **echo** | string | `"hello"` | `"hello"` |
+| **echo** | array | `{items: ["a", "b"]}` | `{items: ["a", "b"]}` |
+| **echo** | object | `{field1: "x", field2: 1, field3: true}` | Same as input |
+| **echo** | map | `{data: {k: "v"}}` | `{data: {k: "v"}}` |
+| **transform** | string | `"hello"` | `"HELLO"` |
+| **transform** | array | `{items: ["a", "b", "c"]}` | `{items: ["c", "b", "a"]}` |
+| **transform** | object | `{field1: "x", field2: 5, field3: true}` | `{field1: "X", field2: 10, field3: false}` |
+| **transform** | map | `{data: {key: "val"}}` | `{data: {transformed_key: "val"}}` |
+| **generate** | string | (ignored) | `"generated-string"` |
+| **generate** | array | (ignored) | `{items: ["item1", "item2", "item3"]}` |
+| **generate** | object | (ignored) | `{field1: "generated-value1", field2: 42, field3: true}` |
+| **generate** | map | (ignored) | `{data: {generated: true, count: 3, status: "ok"}}` |
+
+### Actions
 
   * `echo`: Returns the `params` payload exactly as it was received.
   * `transform`: Returns a predictably modified version of the `params`.
@@ -125,20 +255,259 @@ Server behavior is determined entirely by the method name, which follows the pat
   * `collect`: (WebSocket) Receives a stream of messages from a client and returns a single summary response after the stream is closed. Useful for testing client-streaming RPC.
   * `broadcast`: (WebSocket) Tests the server's ability to send unsolicited messages to a client (server-initiated notifications).
 
-#### Types
+### Types and Their Structure
 
-  * `string`, `int`, `bool`
-  * `array`: An array of simple types.
-  * `object`: A structured JSON object.
-  * `map`: A key-value map.
-  * `user`: A Goa user-defined type with built-in validations.
+#### Primitive Types
+  * `string`: Plain string value
+  * `int`: Integer value  
+  * `bool`: Boolean value
 
-#### Modifiers (Optional)
+#### Structured Types
+  * `array`: Must use `items` wrapper
+    ```yaml
+    params:
+      items: ["one", "two", "three"]
+    ```
+  
+  * `object`: Must use exactly these field names
+    ```yaml
+    params:
+      field1: "string value"   # string
+      field2: 42               # integer
+      field3: true             # boolean
+    ```
+  
+  * `map`: Must use `data` wrapper with flexible keys
+    ```yaml
+    params:
+      data:
+        any_key_name: "value"
+        another_key: 123
+    ```
+  
+  * `user`: A Goa user-defined type with built-in validations
+
+### Modifiers (Optional)
 
   * `_notify`: Indicates a JSON-RPC notification (no response expected).
   * `_error`: The method is hardcoded to always return a predefined JSON-RPC error.
   * `_validate`: The method includes Goa validation logic on the payload, which will return an error if the payload is invalid.
   * `_final`: (SSE) The method sends several notifications before sending a final, ID-tagged response.
+
+## 📊 Data-Driven Behavior
+
+The framework generates predictable server behavior based on the method name and **payload data**. This is crucial to understand when writing tests, especially for streaming scenarios.
+
+### Action Behaviors
+
+#### `echo` Action
+Returns the payload exactly as received. For SSE, sends the payload as a notification.
+
+```yaml
+# Example: echo_string_sse
+request:
+  params: "hello world"
+expect:
+  params:
+    value: "hello world"  # Exact echo
+```
+
+#### `transform` Action  
+Applies predictable transformations to the payload:
+- **string**: Converts to uppercase
+- **array**: Reverses the order
+- **object**: Uppercases field1, doubles field2, negates field3
+- **map**: Prefixes all keys with "transformed_"
+
+```yaml
+# Example: transform_string_sse
+request:
+  params: "hello"
+expect:
+  params:
+    value: "HELLO"  # Uppercase transformation
+```
+
+#### `generate` Action
+Ignores the payload and returns fixed values. For SSE, always sends 3 generated notifications.
+
+```yaml
+# Example: generate_string_sse
+request:
+  params: "ignored"  # Payload is ignored
+sequence:
+  - expect:
+      params:
+        value: "generated-1"  # Fixed sequence
+  - expect:
+      params:
+        value: "generated-2"
+  - expect:
+      params:
+        value: "generated-3"
+```
+
+#### `stream` Action (SSE/WebSocket)
+The payload data controls the streaming behavior:
+
+**For `string` type:**
+- Payload length determines the number of messages (max 10)
+- Empty string or no payload: sends 3 messages by default
+
+```yaml
+# Example: 5 characters = 5 messages
+request:
+  params: "12345"  # Length 5
+sequence:
+  - expect:
+      params:
+        value: "Stream 1 of 5"
+  # ... continues to "Stream 5 of 5"
+```
+
+**For `array` type:**
+- Each array item generates one notification
+- Empty array: sends single "empty" notification
+
+```yaml
+# Example: Each item is processed
+request:
+  params:
+    items: ["first", "second"]
+sequence:
+  - expect:
+      params:
+        items: ["Processing: first"]
+  - expect:
+      params:
+        items: ["Processing: second"]
+```
+
+**For `object` type:**
+- `field2` value controls the number of notifications (max 10)
+- Default is 3 if field2 is 0 or missing
+
+```yaml
+# Example: field2 controls count
+request:
+  params:
+    field1: "test"
+    field2: 2  # Will send 2 notifications
+    field3: false
+sequence:
+  - expect:
+      params:
+        field1: "test-1"
+        field2: 1
+        field3: false
+  - expect:
+      params:
+        field1: "test-2"
+        field2: 2
+        field3: true  # Last item is true
+```
+
+**For `map` type:**
+- Each key-value pair generates one notification
+- Empty map: sends single notification with `{"status": "empty"}`
+
+```yaml
+# Example: Each key-value becomes a notification
+request:
+  params:
+    data:
+      key1: "value1"
+      key2: "value2"
+sequence:
+  - expect:
+      params:
+        data:
+          key: "key1"
+          value: "value1"
+  - expect:
+      params:
+        data:
+          key: "key2"
+          value: "value2"
+```
+
+### Modifier Effects
+
+**`_final` modifier (SSE):**
+Sends notifications followed by a final response with the request ID:
+
+```yaml
+# Example: stream_string_final_sse
+request:
+  params: "ab"  # 2 characters = 2 notifications
+  id: "req-1"
+sequence:
+  - expect:  # Notification (no ID)
+      method: "stream_string_final_sse"
+      params:
+        value: "Stream 1 of 2"
+  - expect:  # Notification (no ID)
+      method: "stream_string_final_sse"
+      params:
+        value: "Stream 2 of 2"
+  - expect:  # Final response (with ID)
+      id: "req-1"
+      result:
+        value: "Final response"
+```
+
+**`_error` modifier:**
+For streaming, sends notifications then returns an error:
+
+```yaml
+# Example: stream_string_error_sse  
+sequence:
+  - expect:  # Some notifications first
+      params:
+        value: "Stream 1 of 2"
+  - expect:  # Then error with ID
+      id: "req-1"
+      error:
+        code: -32602
+        message: "Streaming error occurred"
+```
+
+### Writing Effective Tests
+
+#### SSE Tests - Key Points
+1. **Always use both `request` and `sequence`**: Request initiates the connection, sequence defines expected events
+2. **Method names determine behavior**: Use the right action for your test case
+3. **Payload data controls streaming**: The actual values in your request determine what gets streamed
+4. **No payload = defaults**: Methods without payloads send 3 default messages
+5. **Notifications vs responses**: Notifications have no ID, final responses include the request ID
+
+#### Common Test Patterns
+```yaml
+# Testing an error condition
+method: "echo_string_error"  # _error modifier
+expect:
+  error:
+    code: -32602
+    message: "Invalid params"
+
+# Testing a notification (no response)
+method: "echo_string_notify"  # _notify modifier
+request:
+  params: "fire and forget"
+  # No id field
+expect:
+  no_response: true
+
+# Testing validation
+method: "echo_string_validate"  # _validate modifier
+request:
+  params:
+    value: ""  # Empty string might fail validation
+expect:
+  error:
+    code: -32602
+    message: "validation error"
+```
 
 ## 🔬 Debugging
 
@@ -147,7 +516,7 @@ When a test fails, you can use the following tools to diagnose the issue:
   * **Keep Generated Code**: To inspect the dynamically generated Goa service, set the `KEEP_GENERATED` environment variable. The path to the generated code will be printed in the test logs.
 
     ```bash
-    KEEP_GENERATED=true go test -v ./...
+    KEEP_GENERATED=true go test -count=1 -v ./...
     # Look for: "Generated code kept in: /tmp/jsonrpc-test-XXXXX"
     ```
 

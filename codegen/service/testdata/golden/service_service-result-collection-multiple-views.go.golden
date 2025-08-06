@@ -1,0 +1,146 @@
+
+// Service is the ResultCollectionMultipleViewsMethod service interface.
+type Service interface {
+	// A implements A.
+	// The "view" return value must have one of the following views
+	//	- "default"
+	//	- "tiny"
+	A(context.Context) (res MultipleViewsCollection, view string, err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "ResultCollectionMultipleViewsMethod"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+type MultipleViews struct {
+	A string
+	B int
+}
+
+// MultipleViewsCollection is the result type of the
+// ResultCollectionMultipleViewsMethod service A method.
+type MultipleViewsCollection []*MultipleViews
+
+// NewMultipleViewsCollection initializes result type MultipleViewsCollection
+// from viewed result type MultipleViewsCollection.
+func NewMultipleViewsCollection(vres resultcollectionmultipleviewsmethodviews.MultipleViewsCollection) MultipleViewsCollection {
+	var res MultipleViewsCollection
+	switch vres.View {
+	case "default", "":
+		res = newMultipleViewsCollection(vres.Projected)
+	case "tiny":
+		res = newMultipleViewsCollectionTiny(vres.Projected)
+	}
+	return res
+}
+
+// NewViewedMultipleViewsCollection initializes viewed result type
+// MultipleViewsCollection from result type MultipleViewsCollection using the
+// given view.
+func NewViewedMultipleViewsCollection(res MultipleViewsCollection, view string) resultcollectionmultipleviewsmethodviews.MultipleViewsCollection {
+	var vres resultcollectionmultipleviewsmethodviews.MultipleViewsCollection
+	switch view {
+	case "default", "":
+		p := newMultipleViewsCollectionView(res)
+		vres = resultcollectionmultipleviewsmethodviews.MultipleViewsCollection{Projected: p, View: "default"}
+	case "tiny":
+		p := newMultipleViewsCollectionViewTiny(res)
+		vres = resultcollectionmultipleviewsmethodviews.MultipleViewsCollection{Projected: p, View: "tiny"}
+	}
+	return vres
+}
+
+// newMultipleViewsCollection converts projected type MultipleViewsCollection
+// to service type MultipleViewsCollection.
+func newMultipleViewsCollection(vres resultcollectionmultipleviewsmethodviews.MultipleViewsCollectionView) MultipleViewsCollection {
+	res := make(MultipleViewsCollection, len(vres))
+	for i, n := range vres {
+		res[i] = newMultipleViews(n)
+	}
+	return res
+}
+
+// newMultipleViewsCollectionTiny converts projected type
+// MultipleViewsCollection to service type MultipleViewsCollection.
+func newMultipleViewsCollectionTiny(vres resultcollectionmultipleviewsmethodviews.MultipleViewsCollectionView) MultipleViewsCollection {
+	res := make(MultipleViewsCollection, len(vres))
+	for i, n := range vres {
+		res[i] = newMultipleViewsTiny(n)
+	}
+	return res
+}
+
+// newMultipleViewsCollectionView projects result type MultipleViewsCollection
+// to projected type MultipleViewsCollectionView using the "default" view.
+func newMultipleViewsCollectionView(res MultipleViewsCollection) resultcollectionmultipleviewsmethodviews.MultipleViewsCollectionView {
+	vres := make(resultcollectionmultipleviewsmethodviews.MultipleViewsCollectionView, len(res))
+	for i, n := range res {
+		vres[i] = newMultipleViewsView(n)
+	}
+	return vres
+}
+
+// newMultipleViewsCollectionViewTiny projects result type
+// MultipleViewsCollection to projected type MultipleViewsCollectionView using
+// the "tiny" view.
+func newMultipleViewsCollectionViewTiny(res MultipleViewsCollection) resultcollectionmultipleviewsmethodviews.MultipleViewsCollectionView {
+	vres := make(resultcollectionmultipleviewsmethodviews.MultipleViewsCollectionView, len(res))
+	for i, n := range res {
+		vres[i] = newMultipleViewsViewTiny(n)
+	}
+	return vres
+}
+
+// newMultipleViews converts projected type MultipleViews to service type
+// MultipleViews.
+func newMultipleViews(vres *resultcollectionmultipleviewsmethodviews.MultipleViewsView) *MultipleViews {
+	res := &MultipleViews{}
+	if vres.A != nil {
+		res.A = *vres.A
+	}
+	if vres.B != nil {
+		res.B = *vres.B
+	}
+	return res
+}
+
+// newMultipleViewsTiny converts projected type MultipleViews to service type
+// MultipleViews.
+func newMultipleViewsTiny(vres *resultcollectionmultipleviewsmethodviews.MultipleViewsView) *MultipleViews {
+	res := &MultipleViews{}
+	if vres.A != nil {
+		res.A = *vres.A
+	}
+	return res
+}
+
+// newMultipleViewsView projects result type MultipleViews to projected type
+// MultipleViewsView using the "default" view.
+func newMultipleViewsView(res *MultipleViews) *resultcollectionmultipleviewsmethodviews.MultipleViewsView {
+	vres := &resultcollectionmultipleviewsmethodviews.MultipleViewsView{
+		A: &res.A,
+		B: &res.B,
+	}
+	return vres
+}
+
+// newMultipleViewsViewTiny projects result type MultipleViews to projected
+// type MultipleViewsView using the "tiny" view.
+func newMultipleViewsViewTiny(res *MultipleViews) *resultcollectionmultipleviewsmethodviews.MultipleViewsView {
+	vres := &resultcollectionmultipleviewsmethodviews.MultipleViewsView{
+		A: &res.A,
+	}
+	return vres
+}

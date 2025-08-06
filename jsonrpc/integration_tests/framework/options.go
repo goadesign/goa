@@ -114,6 +114,7 @@ type ExecutorOption func(*executorConfig)
 type executorConfig struct {
 	WebSocketTimeout time.Duration
 	Debug            bool
+	WorkDir          string
 }
 
 // WithWebSocketTimeout sets the WebSocket operation timeout
@@ -127,6 +128,13 @@ func WithWebSocketTimeout(d time.Duration) ExecutorOption {
 func WithExecutorDebug(debug bool) ExecutorOption {
 	return func(c *executorConfig) {
 		c.Debug = debug
+	}
+}
+
+// WithWorkDir sets the work directory for finding CLI binary
+func WithWorkDir(dir string) ExecutorOption {
+	return func(c *executorConfig) {
+		c.WorkDir = dir
 	}
 }
 

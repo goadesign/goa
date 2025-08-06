@@ -18,17 +18,6 @@ func() {
 	{{- range .Fields }}
 	Field({{ .Position }}, "{{ .Name }}", {{ template "type" .Type }}{{ if .Description }}, "{{ .Description }}"{{ end }})
 	{{- end }}
-	{{- if .Validations }}
-		{{- range .Validations }}
-			{{- if eq .Type "MinLength" }}
-	MinLength({{ .Value }})
-			{{- else if eq .Type "MaxLength" }}
-	MaxLength({{ .Value }})
-			{{- else if eq .Type "Pattern" }}
-	Pattern({{ printf "%q" .Value }})
-			{{- end }}
-		{{- end }}
-	{{- end }}
 	{{- $required := collectRequired .Fields }}
 	{{- if $required }}
 	Required({{ range $i, $f := $required }}{{ if $i }}, {{ end }}"{{ $f }}"{{ end }})

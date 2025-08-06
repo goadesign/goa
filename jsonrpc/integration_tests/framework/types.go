@@ -28,6 +28,8 @@ type Scenario struct {
 
 // Request represents the JSON-RPC request to send
 type Request struct {
+	// JSONRPC allows overriding the JSON-RPC version field (defaults to "2.0", empty string means omit)
+	JSONRPC string `yaml:"jsonrpc,omitempty"`
 	// Method overrides the scenario method if specified
 	Method string `yaml:"method,omitempty"`
 	Params any    `yaml:"params"`
@@ -197,11 +199,8 @@ func (info MethodInfo) HasStreamingPayload() bool {
 		return false // SSE doesn't support streaming payload
 	}
 	if info.IsWebSocket() {
-		// Server-initiated broadcasts don't have streaming payload
-		if info.Action == ActionBroadcast {
-			return false
-		}
-		// Client notifications and bidirectional methods have streaming payload
+		// All WebSocket methods have streaming payload for bidirectional support
+		// This allows them to receive requests and send responses/notifications
 		return true
 	}
 	return false

@@ -153,11 +153,6 @@ func (s *{{ .Method.VarName }}ClientStream) {{ .Method.ClientStream.RecvWithCont
 			}
 			return zero, fmt.Errorf("unexpected error response")
 			
-		case "close":
-			// Stream closed
-			s.closed = true
-			return zero, io.EOF
-			
 		default:
 			// Ignore unknown event types
 			continue

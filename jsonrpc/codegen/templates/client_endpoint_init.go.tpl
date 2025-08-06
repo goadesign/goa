@@ -2,7 +2,9 @@
 func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 {{- if not (isWebSocketEndpoint .) }}
 	var (
+	{{- if .RequestEncoder }}
 		encodeRequest  = {{ .RequestEncoder }}(c.encoder)
+	{{- end }}
 	{{- if not (isSSEEndpoint .) }}
 		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
 	{{- end }}
@@ -14,10 +16,11 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		err = encodeRequest(req, v)
-		if err != nil {
+	{{- if .RequestEncoder }}
+		if err := encodeRequest(req, v); err != nil {
 			return nil, err
 		}
+	{{- end }}
 {{- end }}
 {{- if isWebSocketEndpoint . }}
 	{{- if and .ClientWebSocket.RecvName .ClientWebSocket.RecvTypeRef }}

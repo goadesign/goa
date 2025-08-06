@@ -68,7 +68,11 @@ func {{ .HandlerInit }}(
 		{{- end }}
 		}
 		if _, err := endpoint(ctx, v); err != nil {
-			return err
+			// Send error response via SSE
+			if req.ID != nil && req.ID != "" {
+				strm.SendError(ctx, jsonrpc.IDToString(req.ID), err)
+			}
+			return nil
 		}
 		return nil
 {{- else }}
@@ -80,15 +84,18 @@ func {{ .HandlerInit }}(
 		if err != nil {
 		{{- if isWebSocketEndpoint . }}
 			return nil, err
-		{{- else if isNotification . }}
-			errhandler(ctx, w, fmt.Errorf("failed to decode parameters: %w", err))
-			return nil
 		{{- else }}
-			code := jsonrpc.InternalError
-			if _, ok := err.(*goa.ServiceError); ok {
-				code = jsonrpc.InvalidParams
+			// Only send error response if request has ID (not nil or empty string)
+			if req.ID != nil && req.ID != "" {
+				code := jsonrpc.InternalError
+				if _, ok := err.(*goa.ServiceError); ok {
+					code = jsonrpc.InvalidParams
+				}
+				encodeJSONRPCError(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
+			} else {
+				// No ID means notification - just log error
+				errhandler(ctx, w, fmt.Errorf("failed to decode parameters: %w", err))
 			}
-			encodeJSONRPCError(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
 			return nil
 		{{- end }}
 		}
@@ -105,9 +112,6 @@ func {{ .HandlerInit }}(
 		{{- end }}
 		{{- end }}
 	{{- end }}
-	{{- if isNotification . }}
-	_, err = endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
-	{{- else }}
 	{{- if and (isWebSocketEndpoint .) .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4)) }}
 		// For {{ if eq .Method.ServerStream.Kind 3 }}server{{ else }}bidirectional{{ end }} streaming, we need to return the payload
 		// The actual streaming will be handled when the stream is passed to the endpoint
@@ -117,6 +121,13 @@ func {{ .HandlerInit }}(
 		return nil, nil
 		{{- end }}
 	{{- else }}
+	{{- if not .Result.Ref }}
+		{{- if .Payload.Ref }}
+	_, err = endpoint(ctx, params)
+		{{- else }}
+	_, err := endpoint(ctx, nil)
+		{{- end }}
+	{{- else }}
 	{{ if isWebSocketEndpoint . }}stream{{ else }}res{{ end }}, err := endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
 	{{- end }}
 	{{- end }}
@@ -124,39 +135,56 @@ func {{ .HandlerInit }}(
 		{{- if not (and .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4))) }}
 		return stream, err
 		{{- end }}
-	{{- else if isNotification . }}
-		if err != nil {
-			errhandler(ctx, w, fmt.Errorf("failed to call endpoint: %w", err))
-		}
-		return nil
 	{{- else }}
 		if err != nil {
-			var en goa.GoaErrorNamer
-			if !errors.As(err, &en) {
-				encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
-				return nil
-			}
-			switch en.GoaErrorName() {
-		{{- range $gerr := .Errors }}
-			{{- range $err := $gerr.Errors }}
-			case {{ printf "%q" .Name }}:
-				{{- with .Response}}
-				encodeJSONRPCError(ctx, w, req, {{ .Code }}, err.Error(), err, encoder, errhandler)
+			// Only send error response if request has ID (not nil or empty string)
+			if req.ID != nil && req.ID != "" {
+				var en goa.GoaErrorNamer
+				if !errors.As(err, &en) {
+					encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
+					return nil
+				}
+				switch en.GoaErrorName() {
+			{{- range $gerr := .Errors }}
+				{{- range $err := $gerr.Errors }}
+				case {{ printf "%q" .Name }}:
+					{{- with .Response}}
+					encodeJSONRPCError(ctx, w, req, {{ .Code }}, err.Error(), err, encoder, errhandler)
+					{{- end }}
 				{{- end }}
 			{{- end }}
-		{{- end }}
-			default:
-				code := jsonrpc.InternalError
-				if _, ok := err.(*goa.ServiceError); ok {
-					code = jsonrpc.InvalidParams
+				default:
+					code := jsonrpc.InternalError
+					if _, ok := err.(*goa.ServiceError); ok {
+						code = jsonrpc.InvalidParams
+					}
+					encodeJSONRPCError(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
 				}
-				encodeJSONRPCError(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
+			} else {
+				// No ID means notification - just log error
+				errhandler(ctx, w, fmt.Errorf("endpoint error: %w", err))
 			}
 			return nil
 		}
+		
+		// For methods with no result, check if this is a notification
+		{{- if not .Result.Ref }}
+		if req.ID == nil || req.ID == "" {
+			// Notification - no response
+			return nil
+		}
+		// Request with no result - send empty success response
+		response := jsonrpc.MakeSuccessResponse(req.ID, nil)
+		if err := encoder(ctx, w).Encode(response); err != nil {
+			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
+		}
+		return nil
+		{{- else }}
 
-		{{- if .Result.IDAttribute }}
+		// For methods with results, determine the ID to use for the response
 		var id any
+		{{- if .Result.IDAttribute }}
+		// Result has an ID field - use it if set, otherwise fall back to request ID
 		actual := res.({{ .Result.Ref }})
 		{{- if .Result.IDAttributeRequired }}
 		if actual.{{ .Result.IDAttribute }} != "" {
@@ -172,14 +200,21 @@ func {{ .HandlerInit }}(
 		}
 		{{- end }}
 		{{- else }}
-		id := req.ID
+		// No ID field in result - use request ID
+		id = req.ID
 		{{- end }}
-
+		
+		if id == nil || id == "" {
+			// Notification - no response
+			return nil
+		}
+		
+		// Send response with the result
 		{{- if and .Result.Ref (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
 		// Convert result to response body with proper JSON tags
 		{{- if .Method.ViewedResult }}
-		actual := res.({{ .Method.ViewedResult.FullRef }})
-		body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(actual.Projected)
+		viewedRes := res.({{ .Method.ViewedResult.FullRef }})
+		body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(viewedRes.Projected)
 		{{- else }}
 		body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(res.({{ .Result.Ref }}))
 		{{- end }}
@@ -191,6 +226,7 @@ func {{ .HandlerInit }}(
 			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
 		}
 		return nil
+		{{- end }}
 	{{- end }}
 {{- end }}
 	}

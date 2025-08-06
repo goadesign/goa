@@ -1,62 +1,30 @@
 {{- range .Endpoints }}
 	{{- if .Result.Ref }}
-		{{- if .Payload.Ref }}
-{{ printf "Send%s sends a JSON-RPC response for the %s method." .Method.VarName .Method.Name | comment }}
-func (s *{{ lowerInitial $.Service.StructName }}Stream) Send{{ .Method.VarName }}(ctx context.Context, result {{ .Result.Ref }}) error {
-			{{- if .Result.IDAttribute }}
-				{{- if .Result.IDAttributeRequired }}
-	id := result.{{ .Result.IDAttribute }}
-	result.{{ .Result.IDAttribute }} = ""
-				{{- else }}
-	var id any
-	if result.{{ .Result.IDAttribute }} != nil {
-		id = *result.{{ .Result.IDAttribute }}
-		result.{{ .Result.IDAttribute }} = nil
-	} else {
-		id = ""
-	}
-				{{- end }}
+{{ printf "Send%sNotification sends a JSON-RPC notification for the %s method." .Method.VarName .Method.Name | comment }}
+func (s *{{ lowerInitial $.Service.StructName }}Stream) Send{{ .Method.VarName }}Notification(ctx context.Context, result {{ .Result.Ref }}) error {
+	{{- if and .Result (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
 	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
-	return s.send(id, body)
-			{{- else }}
+	{{- else }}
+	body := result
+	{{- end }}
+	return s.conn.WriteJSON(jsonrpc.MakeNotification({{ printf "%q" .Method.Name }}, body))
+}
+
+{{ printf "Send%sResponse sends a JSON-RPC response for the %s method." .Method.VarName .Method.Name | comment }}
+func (s *{{ lowerInitial $.Service.StructName }}Stream) Send{{ .Method.VarName }}Response(ctx context.Context, id any, result {{ .Result.Ref }}) error {
+	{{- if and .Result (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
 	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
-	return s.send("", body)
-			{{- end }}
+	{{- else }}
+	body := result
+	{{- end }}
+	return s.conn.WriteJSON(jsonrpc.MakeSuccessResponse(id, body))
 }
-		{{- else }}
-{{ printf "Send%s sends a JSON-RPC notification for the %s method." .Method.VarName .Method.Name | comment }}
-func (s *{{ lowerInitial $.Service.StructName }}Stream) Send{{ .Method.VarName }}(ctx context.Context, params {{ .Result.Ref }}) error {
-	return s.conn.WriteJSON(jsonrpc.MakeNotification({{ printf "%q" .Method.Name }}, params))
-}
-		{{- end }}
 	{{- end }}
 {{- end }}
 
-{{- $hasResults := false }}
-{{- range .Endpoints }}
-	{{- if .Result.Ref }}
-		{{- $hasResults = true }}
-	{{- end }}
-{{- end }}
-
-{{- if $hasResults }}
-{{ printf "Send sends an event to the client." | comment }}
-func (s *{{ lowerInitial $.Service.StructName }}Stream) Send(event {{ $.Service.PkgName }}.Event) error {
-	switch v := event.(type) {
-{{- range .Endpoints }}
-	{{- if .Result.Ref }}
-	case {{ .Result.Ref }}:
-		return s.Send{{ .Method.VarName }}(context.Background(), v)
-	{{- end }}
-{{- end }}
-	default:
-		return fmt.Errorf("unknown event type: %T", event)
-	}
-}
-{{- end }}
 
 {{ printf "SendError streams JSON-RPC errors." | comment }}
-func (s *{{ lowerInitial $.Service.StructName }}Stream) SendError(ctx context.Context, id string, err error) error {
+func (s *{{ lowerInitial $.Service.StructName }}Stream) SendError(ctx context.Context, id any, err error) error {
 	{{- if allErrors . }}
 	var en goa.GoaErrorNamer
 	if !errors.As(err, &en) {
@@ -91,16 +59,17 @@ func (s *{{ lowerInitial $.Service.StructName }}Stream) SendError(ctx context.Co
 }
 
 {{ printf "send writes a JSON-RPC response to the websocket connection." | comment }}
-func (s *{{ lowerInitial $.Service.StructName }}Stream) send(id string, result any) error {
+func (s *{{ lowerInitial $.Service.StructName }}Stream) send(id any, method string, result any) error {
+	// If there's no ID, send as a notification instead of a response
+	// A JSON-RPC result with no ID is invalid per the spec
+	if id == nil || id == "" {
+		return s.conn.WriteJSON(jsonrpc.MakeNotification(method, result))
+	}
 	return s.conn.WriteJSON(jsonrpc.MakeSuccessResponse(id, result))
 }
 
 {{ printf "sendError sends a JSON-RPC error response to the websocket connection." | comment }}
 func (s *{{ lowerInitial $.Service.StructName }}Stream) sendError(ctx context.Context, id any, code jsonrpc.Code, message string, data any) error {
-	response := jsonrpc.MakeErrorResponse(id, code, "", message)
-	if data != nil {
-		response.Error.Message = message
-		response.Error.Data = data
-	}
+	response := jsonrpc.MakeErrorResponse(id, code, message, data)
 	return s.conn.WriteJSON(response)
 }

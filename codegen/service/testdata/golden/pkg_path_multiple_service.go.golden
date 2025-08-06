@@ -1,0 +1,38 @@
+
+// Service is the MultiplePkgPathMethod service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context, *bar.Bar) (res *bar.Bar, err error)
+	// B implements B.
+	B(context.Context, *baz.Baz) (res *baz.Baz, err error)
+	// EnvelopedB implements EnvelopedB.
+	EnvelopedB(context.Context, *EnvelopedBPayload) (res *EnvelopedBResult, err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "MultiplePkgPathMethod"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [3]string{"A", "B", "EnvelopedB"}
+
+// EnvelopedBPayload is the payload type of the MultiplePkgPathMethod service
+// EnvelopedB method.
+type EnvelopedBPayload struct {
+	Baz *baz.Baz
+}
+
+// EnvelopedBResult is the result type of the MultiplePkgPathMethod service
+// EnvelopedB method.
+type EnvelopedBResult struct {
+	Baz *baz.Baz
+}

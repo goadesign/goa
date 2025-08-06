@@ -68,7 +68,10 @@ var MethodNames = [{{ len .Methods }}]string{ {{ range .Methods }}{{ printf "%q"
 {{- range .Methods }}
 	{{- if .ServerStream }}
 		{{ template "stream_interface" (streamInterfaceFor "server" . .ServerStream) }}
+		{{- /* Only generate client stream interface if it has Send methods (client or bidirectional streaming) */ -}}
+		{{- if and .ClientStream .ClientStream.SendTypeRef }}
 		{{ template "stream_interface" (streamInterfaceFor "client" . .ClientStream) }}
+		{{- end }}
 	{{- end }}
 {{- end }}
 
@@ -93,10 +96,15 @@ func ({{ .Stream.SendTypeRef }}) is{{ .MethodVarName }}Event() {}
 {{ printf "%s allows streaming instances of %s over SSE." .Stream.Interface .Stream.SendTypeRef | comment }}
 type {{ .Stream.Interface }} interface {
 	{{- if .Stream.SendTypeRef }}
-	{{ comment "Send sends an event (notification or response) to the client." }}
-	{{ comment "For notifications, the result should not have an ID field." }}
-	{{ comment "For responses, the result must have an ID field." }}
+	{{ comment .Stream.SendDesc }}
+	{{ comment "IMPORTANT: Send only sends JSON-RPC notifications. Use SendAndClose to send a final response." }}
 	Send(ctx context.Context, event {{ .MethodVarName }}Event) error
+	{{- if .Stream.SendAndCloseName }}
+	{{ comment .Stream.SendAndCloseDesc }}
+	{{ comment "The result will be sent as a JSON-RPC response with the original request ID." }}
+	{{ comment "If the result has an ID field populated, that ID will be used instead of the request ID." }}
+	{{ .Stream.SendAndCloseName }}(ctx context.Context, event {{ .MethodVarName }}Event) error
+	{{- end }}
 	{{- end }}
 	{{ comment "SendError sends a JSON-RPC error response." }}
 	SendError(ctx context.Context, id string, err error) error
@@ -105,8 +113,17 @@ type {{ .Stream.Interface }} interface {
 {{ printf "%s allows streaming instances of %s to the client." .Stream.Interface .Stream.SendTypeRef | comment }}
 type {{ .Stream.Interface }} interface {
 	{{- if .Stream.SendTypeRef }}
+		{{- if .IsJSONRPCWebSocket }}
+		{{ comment "SendNotification sends a JSON-RPC notification (no response expected)." }}
+		SendNotification(context.Context, {{ .Stream.SendTypeRef }}) error
+		{{ comment "SendResponse sends a JSON-RPC response with the original request ID." }}
+		SendResponse(context.Context, {{ .Stream.SendTypeRef }}) error
+		{{ comment "SendError sends a JSON-RPC error response." }}
+		SendError(context.Context, error) error
+		{{- else }}
 		{{ comment .Stream.SendDesc }}
 		{{ .Stream.SendName }}(context.Context, {{ .Stream.SendTypeRef }}) error
+		{{- end }}
 	{{- end }}
 	{{- if and .IsViewedResult (eq .Type "server") }}
 		{{ comment "SetView sets the view used to render the result before streaming." }}
@@ -119,48 +136,21 @@ type {{ .Stream.Interface }} interface {
 {{- define "jsonrpc_websocket_stream" }}
 {{ printf "Stream defines the interface for managing a WebSocket streaming connection in the %s server. It allows sending results, sending errors, receiving requests, and closing the connection. This interface is used by the service to interact with clients over WebSocket using JSON-RPC." .Name | comment }}
 type Stream interface {
-{{- $hasErrors := false }}
-{{- $hasResults := false }}
-{{- $resultTypes := "" }}
 {{- range .Methods }}
 	{{- if .Result }}
-		{{- $hasResults = true }}
-		{{- if $resultTypes }}
-			{{- $resultTypes = printf "%s, %s" $resultTypes .ResultRef }}
-		{{- else }}
-			{{- $resultTypes = .ResultRef }}
-		{{- end }}
+	{{ printf "Send%sNotification sends a JSON-RPC notification for the %s method (no response expected)." .VarName .Name | comment }}
+	Send{{ .VarName }}Notification(ctx context.Context, result {{ .ResultRef }}) error
+	{{ printf "Send%sResponse sends a JSON-RPC response for the %s method with the given ID." .VarName .Name | comment }}
+	Send{{ .VarName }}Response(ctx context.Context, id any, result {{ .ResultRef }}) error
 	{{- end }}
-	{{- if .Errors }}{{ $hasErrors = true }}{{ end }}
 {{- end }}
-{{- if $hasResults }}
-	// Send sends an event to the client.
-	// Accepted types: {{ $resultTypes }}
-	Send(Event) error
-{{- end }}
-{{- if $hasErrors }}
-	// SendError sends a JSON-RPC error response.
-	SendError(ctx context.Context, id string, err error) error
-{{- end }}
+	{{ comment "SendError sends a JSON-RPC error response." }}
+	SendError(ctx context.Context, id any, err error) error
 	{{ printf "Recv reads JSON-RPC requests from the %s service WebSocket stream and dispatches them to the appropriate method." .Name | comment }}
 	Recv(ctx context.Context) error
 	{{ comment "Close closes the stream." }}
 	Close() error
 }
-
-{{- if $hasResults }}
-{{ printf "Event is the interface implemented by all result types that can be sent via the %s Stream." .Name | comment }}
-type Event interface {
-	is{{ .VarName }}Event()
-}
-
-	{{- range .Methods }}
-		{{- if .Result }}
-// is{{ $.VarName }}Event implements the Event interface.
-func ({{ .ResultRef }}) is{{ $.VarName }}Event() {}
-		{{- end }}
-	{{- end }}
-{{- end }}
 {{- end }}
 
 {{- define "jsonrpc_sse_stream" }}

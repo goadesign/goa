@@ -96,7 +96,6 @@ func (r *Runner) Run(t *testing.T) {
 			t.Fatalf("Failed to create temp dir: %v", err)
 		}
 		r.testDir = tempDir
-		t.Logf("Generated code in: %s", tempDir)
 	} else {
 		r.testDir = t.TempDir()
 	}
@@ -164,7 +163,6 @@ func (r *Runner) generateCode(t *testing.T) error {
 	generator := NewGenerator(r.testDir, methods)
 	t.Logf("Generating code for %d methods", len(methods))
 	if err := generator.Generate(); err != nil {
-		t.Logf("Failed to generate code: %v", err)
 		return err
 	}
 	return nil
@@ -264,6 +262,12 @@ func (r *Runner) runScenario(t *testing.T, scenario Scenario) {
 	opts := []ExecutorOption{}
 	if r.config.Settings.Timeout > 0 {
 		opts = append(opts, WithWebSocketTimeout(r.config.Settings.Timeout))
+	}
+	opts = append(opts, WithWorkDir(r.testDir))
+	
+	// Enable debug if requested
+	if os.Getenv("DEBUG") == "true" {
+		opts = append(opts, WithExecutorDebug(true))
 	}
 	
 	var executor *Executor

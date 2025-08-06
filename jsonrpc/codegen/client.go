@@ -52,6 +52,22 @@ func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 			s.Name = "jsonrpc-" + s.Name
 			sections = append(sections, s)
 		}
+
+		// For JSON-RPC methods without request encoders, add one
+		for _, endpoint := range data.Get(svc.Name()).Endpoints {
+			if endpoint.RequestEncoder == "" {
+				// Add the encoder function
+				encoderSection := &codegen.SectionTemplate{
+					Name:   "jsonrpc-minimal-request-encoder",
+					Source: jsonrpcTemplates.Read("minimal_request_encoder"),
+					Data:   endpoint,
+				}
+				sections = append(sections, encoderSection)
+				// Update endpoint data to reference the encoder
+				endpoint.RequestEncoder = fmt.Sprintf("Encode%sRequest", endpoint.Method.VarName)
+			}
+		}
+
 		f.SectionTemplates = sections
 		f.Path = strings.Replace(f.Path, "/http/", "/jsonrpc/", 1)
 		files = append(files, f)
@@ -140,18 +156,18 @@ const newJSONRPCBody = `b := {{ .NewBody }}
 {{- if .Payload.IDAttribute }}
 	{{- if .Payload.IDAttributeRequired }}
 		if p.{{ .Payload.IDAttribute }} != "" {
-			body.ID = &p.{{ .Payload.IDAttribute }}
-		} else {
-			id := uuid.New().String()
-			body.ID = &id
-		}
-	{{- else }}
-		if p.{{ .Payload.IDAttribute }} != nil {
 			body.ID = p.{{ .Payload.IDAttribute }}
-		} else {
-			id := uuid.New().String()
-			body.ID = &id
 		}
+		// If ID is empty, this is a notification - no ID field
+	{{- else }}
+		if p.{{ .Payload.IDAttribute }} != nil && *p.{{ .Payload.IDAttribute }} != "" {
+			body.ID = p.{{ .Payload.IDAttribute }}
+		}
+		// If ID is nil or empty, this is a notification - no ID field
 	{{- end }}
+{{- else }}
+		// No ID field in payload - always send as a request with generated ID
+		id := uuid.New().String()
+		body.ID = id
 {{- end }}
 `

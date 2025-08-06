@@ -4,59 +4,57 @@ import (
 	"bytes"
 	"go/format"
 	"path/filepath"
-	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
+	"goa.design/goa/v3/codegen/testutil"
 )
 
 func TestService(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"service-name-with-spaces", testdata.NamesWithSpacesDSL, testdata.NamesWithSpaces},
-		{"service-single", testdata.SingleMethodDSL, testdata.SingleMethod},
-		{"service-multiple", testdata.MultipleMethodsDSL, testdata.MultipleMethods},
-		{"service-union", testdata.UnionMethodDSL, testdata.UnionMethod},
-		{"service-multi-union", testdata.MultiUnionMethodDSL, testdata.MultiUnionMethod},
-		{"service-no-payload-no-result", testdata.EmptyMethodDSL, testdata.EmptyMethod},
-		{"service-payload-no-result", testdata.EmptyResultMethodDSL, testdata.EmptyResultMethod},
-		{"service-no-payload-result", testdata.EmptyPayloadMethodDSL, testdata.EmptyPayloadMethod},
-		{"service-payload-result-with-default", testdata.WithDefaultDSL, testdata.WithDefault},
-		{"service-result-with-multiple-views", testdata.MultipleMethodsResultMultipleViewsDSL, testdata.MultipleMethodsResultMultipleViews},
-		{"service-result-with-explicit-and-default-views", testdata.WithExplicitAndDefaultViewsDSL, testdata.WithExplicitAndDefaultViews},
-		{"service-result-collection-multiple-views", testdata.ResultCollectionMultipleViewsMethodDSL, testdata.ResultCollectionMultipleViewsMethod},
-		{"service-result-with-other-result", testdata.ResultWithOtherResultMethodDSL, testdata.ResultWithOtherResultMethod},
-		{"service-result-with-result-collection", testdata.ResultWithResultCollectionMethodDSL, testdata.ResultWithResultCollectionMethod},
-		{"service-result-with-dashed-mime-type", testdata.ResultWithDashedMimeTypeMethodDSL, testdata.ResultWithDashedMimeTypeMethod},
-		{"service-result-with-one-of-type", testdata.ResultWithOneOfTypeMethodDSL, testdata.ResultWithOneOfTypeMethod},
-		{"service-result-with-inline-validation", testdata.ResultWithInlineValidationDSL, testdata.ResultWithInlineValidation},
-		{"service-service-level-error", testdata.ServiceErrorDSL, testdata.ServiceError},
-		{"service-custom-errors", testdata.CustomErrorsDSL, testdata.CustomErrors},
-		{"service-custom-errors-custom-field", testdata.CustomErrorsCustomFieldDSL, testdata.CustomErrorsCustomField},
-		{"service-force-generate-type", testdata.ForceGenerateTypeDSL, testdata.ForceGenerateType},
-		{"service-force-generate-type-explicit", testdata.ForceGenerateTypeExplicitDSL, testdata.ForceGenerateTypeExplicit},
-		{"service-streaming-result", testdata.StreamingResultMethodDSL, testdata.StreamingResultMethod},
-		{"service-streaming-result-with-views", testdata.StreamingResultWithViewsMethodDSL, testdata.StreamingResultWithViewsMethod},
-		{"service-streaming-result-with-explicit-view", testdata.StreamingResultWithExplicitViewMethodDSL, testdata.StreamingResultWithExplicitViewMethod},
-		{"service-streaming-result-no-payload", testdata.StreamingResultNoPayloadMethodDSL, testdata.StreamingResultNoPayloadMethod},
-		{"service-streaming-payload", testdata.StreamingPayloadMethodDSL, testdata.StreamingPayloadMethod},
-		{"service-streaming-payload-no-payload", testdata.StreamingPayloadNoPayloadMethodDSL, testdata.StreamingPayloadNoPayloadMethod},
-		{"service-streaming-payload-no-result", testdata.StreamingPayloadNoResultMethodDSL, testdata.StreamingPayloadNoResultMethod},
-		{"service-streaming-payload-result-with-views", testdata.StreamingPayloadResultWithViewsMethodDSL, testdata.StreamingPayloadResultWithViewsMethod},
-		{"service-streaming-payload-result-with-explicit-view", testdata.StreamingPayloadResultWithExplicitViewMethodDSL, testdata.StreamingPayloadResultWithExplicitViewMethod},
-		{"service-bidirectional-streaming", testdata.BidirectionalStreamingMethodDSL, testdata.BidirectionalStreamingMethod},
-		{"service-bidirectional-streaming-no-payload", testdata.BidirectionalStreamingNoPayloadMethodDSL, testdata.BidirectionalStreamingNoPayloadMethod},
-		{"service-bidirectional-streaming-result-with-views", testdata.BidirectionalStreamingResultWithViewsMethodDSL, testdata.BidirectionalStreamingResultWithViewsMethod},
-		{"service-bidirectional-streaming-result-with-explicit-view", testdata.BidirectionalStreamingResultWithExplicitViewMethodDSL, testdata.BidirectionalStreamingResultWithExplicitViewMethod},
-		{"service-multiple-api-key-security", testdata.MultipleAPIKeySecurityDSL, testdata.MultipleAPIKeySecurity},
-		{"service-mixed-and-multiple-api-key-security", testdata.MixedAndMultipleAPIKeySecurityDSL, testdata.MixedAndMultipleAPIKeySecurity},
+		{"service-name-with-spaces", testdata.NamesWithSpacesDSL},
+		{"service-single", testdata.SingleMethodDSL},
+		{"service-multiple", testdata.MultipleMethodsDSL},
+		{"service-union", testdata.UnionMethodDSL},
+		{"service-multi-union", testdata.MultiUnionMethodDSL},
+		{"service-no-payload-no-result", testdata.EmptyMethodDSL},
+		{"service-payload-no-result", testdata.EmptyResultMethodDSL},
+		{"service-no-payload-result", testdata.EmptyPayloadMethodDSL},
+		{"service-payload-result-with-default", testdata.WithDefaultDSL},
+		{"service-result-with-multiple-views", testdata.MultipleMethodsResultMultipleViewsDSL},
+		{"service-result-with-explicit-and-default-views", testdata.WithExplicitAndDefaultViewsDSL},
+		{"service-result-collection-multiple-views", testdata.ResultCollectionMultipleViewsMethodDSL},
+		{"service-result-with-other-result", testdata.ResultWithOtherResultMethodDSL},
+		{"service-result-with-result-collection", testdata.ResultWithResultCollectionMethodDSL},
+		{"service-result-with-dashed-mime-type", testdata.ResultWithDashedMimeTypeMethodDSL},
+		{"service-result-with-one-of-type", testdata.ResultWithOneOfTypeMethodDSL},
+		{"service-result-with-inline-validation", testdata.ResultWithInlineValidationDSL},
+		{"service-service-level-error", testdata.ServiceErrorDSL},
+		{"service-custom-errors", testdata.CustomErrorsDSL},
+		{"service-custom-errors-custom-field", testdata.CustomErrorsCustomFieldDSL},
+		{"service-force-generate-type", testdata.ForceGenerateTypeDSL},
+		{"service-force-generate-type-explicit", testdata.ForceGenerateTypeExplicitDSL},
+		{"service-streaming-result", testdata.StreamingResultMethodDSL},
+		{"service-streaming-result-with-views", testdata.StreamingResultWithViewsMethodDSL},
+		{"service-streaming-result-with-explicit-view", testdata.StreamingResultWithExplicitViewMethodDSL},
+		{"service-streaming-result-no-payload", testdata.StreamingResultNoPayloadMethodDSL},
+		{"service-streaming-payload", testdata.StreamingPayloadMethodDSL},
+		{"service-streaming-payload-no-payload", testdata.StreamingPayloadNoPayloadMethodDSL},
+		{"service-streaming-payload-no-result", testdata.StreamingPayloadNoResultMethodDSL},
+		{"service-streaming-payload-result-with-views", testdata.StreamingPayloadResultWithViewsMethodDSL},
+		{"service-streaming-payload-result-with-explicit-view", testdata.StreamingPayloadResultWithExplicitViewMethodDSL},
+		{"service-bidirectional-streaming", testdata.BidirectionalStreamingMethodDSL},
+		{"service-bidirectional-streaming-no-payload", testdata.BidirectionalStreamingNoPayloadMethodDSL},
+		{"service-bidirectional-streaming-result-with-views", testdata.BidirectionalStreamingResultWithViewsMethodDSL},
+		{"service-bidirectional-streaming-result-with-explicit-view", testdata.BidirectionalStreamingResultWithExplicitViewMethodDSL},
+		{"service-multiple-api-key-security", testdata.MultipleAPIKeySecurityDSL},
+		{"service-mixed-and-multiple-api-key-security", testdata.MixedAndMultipleAPIKeySecurityDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -65,7 +63,18 @@ func TestService(t *testing.T) {
 			require.Len(t, root.Services, 1)
 			files := Files("goa.design/goa/example", root.Services[0], services, make(map[string][]string))
 			require.Greater(t, len(files), 0)
-			validateFile(t, files[0], files[0].Path, c.Code)
+			
+			// Generate the code
+			buf := new(bytes.Buffer)
+			for _, s := range files[0].SectionTemplates[1:] {
+				require.NoError(t, s.Write(buf))
+			}
+			bs, err := format.Source(buf.Bytes())
+			require.NoError(t, err, buf.String())
+			code := string(bs)
+			
+			// Compare with golden file
+			testutil.AssertGo(t, "testdata/golden/service_"+c.Name+".go.golden", code)
 		})
 	}
 }
@@ -78,55 +87,62 @@ func TestStructPkgPath(t *testing.T) {
 	cases := []struct {
 		Name      string
 		DSL       func()
-		SvcCodes  []string
 		TypeFiles []string
-		TypeCodes []string
 	}{
-		{"none", testdata.SingleMethodDSL, []string{testdata.SingleMethod}, nil, nil},
-		{"single", testdata.PkgPathDSL, []string{testdata.PkgPath}, []string{fooPath}, []string{testdata.PkgPathFoo}},
-		{"array", testdata.PkgPathArrayDSL, []string{testdata.PkgPathArray}, []string{fooPath}, []string{testdata.PkgPathArrayFoo}},
-		{"recursive", testdata.PkgPathRecursiveDSL, []string{testdata.PkgPathRecursive}, []string{fooPath, recursiveFooPath}, []string{testdata.PkgPathRecursiveFooFoo, testdata.PkgPathRecursiveFoo}},
-		{"multiple", testdata.PkgPathMultipleDSL, []string{testdata.PkgPathMultiple}, []string{barPath, bazPath}, []string{testdata.PkgPathBar, testdata.PkgPathBaz}},
-		{"nopkg", testdata.PkgPathNoDirDSL, []string{testdata.PkgPathNoDir}, nil, nil},
-		{"dupes", testdata.PkgPathDupeDSL, []string{testdata.PkgPathDupe1, testdata.PkgPathDupe2}, []string{fooPath}, []string{testdata.PkgPathFooDupe}},
-		{"payload_attribute", testdata.PkgPathPayloadAttributeDSL, []string{testdata.PkgPathPayloadAttribute}, []string{fooPath}, []string{testdata.PkgPathPayloadAttributeFoo}},
+		{"none", testdata.SingleMethodDSL, nil},
+		{"single", testdata.PkgPathDSL, []string{fooPath}},
+		{"array", testdata.PkgPathArrayDSL, []string{fooPath}},
+		{"recursive", testdata.PkgPathRecursiveDSL, []string{fooPath, recursiveFooPath}},
+		{"multiple", testdata.PkgPathMultipleDSL, []string{barPath, bazPath}},
+		{"nopkg", testdata.PkgPathNoDirDSL, nil},
+		{"dupes", testdata.PkgPathDupeDSL, []string{fooPath}},
+		{"payload_attribute", testdata.PkgPathPayloadAttributeDSL, []string{fooPath}},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			userTypePkgs := make(map[string][]string)
 			root := codegen.RunDSL(t, c.DSL)
 			services := NewServicesData(root)
-			if len(root.Services) != len(c.SvcCodes) {
-				t.Fatalf("got %d services, expected %d", len(root.Services), len(c.SvcCodes))
-			}
 			files := Files("goa.design/goa/example", root.Services[0], services, userTypePkgs)
-			if len(files) != len(c.TypeFiles)+1 {
-				t.Fatalf("got %d files, expected %d", len(files), len(c.TypeFiles)+1)
+			
+			// Check file count
+			expectedFiles := len(c.TypeFiles) + 1
+			require.Len(t, files, expectedFiles, "unexpected number of files")
+			
+			// First file is always the service file
+			buf := new(bytes.Buffer)
+			for _, s := range files[0].SectionTemplates[1:] {
+				require.NoError(t, s.Write(buf))
 			}
-			validateFile(t, files[0], files[0].Path, c.SvcCodes[0])
-			for i, f := range c.TypeFiles {
-				validateFile(t, files[i+1], f, c.TypeCodes[i])
+			bs, err := format.Source(buf.Bytes())
+			require.NoError(t, err)
+			testutil.AssertGo(t, "testdata/golden/pkg_path_"+c.Name+"_service.go.golden", string(bs))
+			
+			// Type files
+			for i, typeFile := range c.TypeFiles {
+				buf := new(bytes.Buffer)
+				for _, s := range files[i+1].SectionTemplates[1:] {
+					require.NoError(t, s.Write(buf))
+				}
+				bs, err := format.Source(buf.Bytes())
+				require.NoError(t, err)
+				goldenName := filepath.Base(typeFile)
+				testutil.AssertGo(t, "testdata/golden/pkg_path_"+c.Name+"_"+goldenName+".golden", string(bs))
 			}
-			if len(c.SvcCodes) > 1 {
+			
+			// For dupes case, test the second service
+			if c.Name == "dupes" && len(root.Services) > 1 {
 				files = Files("goa.design/goa/example", root.Services[1], services, userTypePkgs)
 				require.Len(t, files, 1)
-				validateFile(t, files[0], files[0].Path, c.SvcCodes[1])
+				buf := new(bytes.Buffer)
+				for _, s := range files[0].SectionTemplates[1:] {
+					require.NoError(t, s.Write(buf))
+				}
+				bs, err := format.Source(buf.Bytes())
+				require.NoError(t, err)
+				testutil.AssertGo(t, "testdata/golden/pkg_path_"+c.Name+"_service2.go.golden", string(bs))
 			}
 		})
 	}
 }
 
-func validateFile(t *testing.T, f *codegen.File, path, code string) {
-	if f.Path != path {
-		t.Errorf("got %q, expected %q", f.Path, path)
-	}
-	buf := new(bytes.Buffer)
-	for _, s := range f.SectionTemplates[1:] {
-		require.NoError(t, s.Write(buf))
-	}
-	bs, err := format.Source(buf.Bytes())
-	require.NoError(t, err, buf.String())
-	actual := string(bs)
-	actual = strings.ReplaceAll(actual, "\r\n", "\n")
-	assert.Equal(t, code, actual)
-}
