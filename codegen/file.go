@@ -157,7 +157,7 @@ func finalizeGoSource(path string) error {
 		}
 	}
 	ast.SortImports(fset, file)
-	w, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	w, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
