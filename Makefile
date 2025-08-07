@@ -82,11 +82,7 @@ integration-test: build-goa
 	cd jsonrpc/integration_tests && go test -count=1 -timeout 10m ./...
 
 build-goa:
-	@echo "Building goa binary..."
-	@echo "GOOS=$(GOOS) GOARCH=$(GOARCH)"
-	@echo "GOPATH=$(GOPATH)"
 	cd cmd/goa && go install .
-	@echo "Goa binary installed successfully"
 
 release: release-goa release-examples release-plugins
 	@echo "Release v$(MAJOR).$(MINOR).$(BUILD) complete"
