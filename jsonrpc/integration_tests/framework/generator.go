@@ -476,6 +476,45 @@ func (g *Generator) getGoaPath() string {
 
 func (g *Generator) runPostGeneration() error {
 	goaBinary := g.getGoaBinary()
+	
+	// Debug logging for CI troubleshooting
+	fmt.Printf("DEBUG: Using goa binary: %s\n", goaBinary)
+	
+	// Verify the binary exists and is executable
+	if _, err := os.Stat(goaBinary); err != nil {
+		fmt.Printf("DEBUG: goa binary stat error: %v\n", err)
+		
+		// Try to find it with 'which' or 'where' command
+		var whichCmd *exec.Cmd
+		if runtime.GOOS == "windows" {
+			whichCmd = exec.Command("where", "goa")
+		} else {
+			whichCmd = exec.Command("which", "goa")
+		}
+		if output, err := whichCmd.Output(); err == nil {
+			foundPath := strings.TrimSpace(string(output))
+			fmt.Printf("DEBUG: Found goa in PATH: %s\n", foundPath)
+			goaBinary = foundPath
+		} else {
+			fmt.Printf("DEBUG: goa not found in PATH: %v\n", err)
+			
+			// Last resort: try to build goa binary directly
+			fmt.Printf("DEBUG: Attempting to build goa binary directly...\n")
+			goaSourcePath := "../../../cmd/goa"
+			if _, err := os.Stat(goaSourcePath); err == nil {
+				buildCmd := exec.Command("go", "install", ".")
+				buildCmd.Dir = goaSourcePath
+				if buildOutput, buildErr := buildCmd.CombinedOutput(); buildErr != nil {
+					fmt.Printf("DEBUG: Failed to build goa: %v\nOutput: %s\n", buildErr, buildOutput)
+				} else {
+					fmt.Printf("DEBUG: Successfully built goa binary\n")
+					// Try detection again
+					goaBinary = g.getGoaBinary()
+					fmt.Printf("DEBUG: After rebuild, using goa binary: %s\n", goaBinary)
+				}
+			}
+		}
+	}
 
 	// Run go mod tidy first
 	cmd := exec.Command("go", "mod", "tidy")
@@ -488,14 +527,14 @@ func (g *Generator) runPostGeneration() error {
 	cmd = exec.Command(goaBinary, "gen", "testservice/design", "-o", g.workDir)
 	cmd.Dir = g.workDir
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("goa gen failed: %w\nOutput: %s", err, output)
+		return fmt.Errorf("goa gen failed (binary: %s): %w\nOutput: %s", goaBinary, err, output)
 	}
 
 	// Run goa example
 	cmd = exec.Command(goaBinary, "example", "testservice/design", "-o", g.workDir)
 	cmd.Dir = g.workDir
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("goa example failed: %w\nOutput: %s", err, output)
+		return fmt.Errorf("goa example failed (binary: %s): %w\nOutput: %s", goaBinary, err, output)
 	}
 
 	// Run go mod tidy again to fix dependencies
@@ -511,45 +550,98 @@ func (g *Generator) runPostGeneration() error {
 // getGoaBinary returns the path to the goa binary
 // It checks for environment variables first, then falls back to system PATH
 func (g *Generator) getGoaBinary() string {
+	fmt.Printf("DEBUG: Starting goa binary detection\n")
+	
 	// Check for GOA_BINARY environment variable first
 	if goaBinary := os.Getenv("GOA_BINARY"); goaBinary != "" {
+		fmt.Printf("DEBUG: Using GOA_BINARY env var: %s\n", goaBinary)
 		return goaBinary
 	}
 
-	// Check for Go's installation directory (where go install puts binaries)
-	// This handles both GOPATH mode and module mode correctly
-	cmd := exec.Command("go", "env", "GOBIN")
-	if output, err := cmd.Output(); err == nil {
-		gobin := strings.TrimSpace(string(output))
-		if gobin != "" {
-			goaBinName := "goa"
-			if runtime.GOOS == "windows" {
-				goaBinName = "goa.exe"
-			}
-			goaBin := filepath.Join(gobin, goaBinName)
-			if _, err := os.Stat(goaBin); err == nil {
-				return goaBin
-			}
-		}
-	}
-
-	// Check for GOPATH/bin/goa (fallback for GOPATH mode)
-	if gopath := os.Getenv("GOPATH"); gopath != "" {
-		goaBinName := "goa"
-		if runtime.GOOS == "windows" {
-			goaBinName = "goa.exe"
-		}
-		goaBin := filepath.Join(gopath, "bin", goaBinName)
-		if _, err := os.Stat(goaBin); err == nil {
-			return goaBin
-		}
-	}
-
-	// Fall back to system PATH
 	goaBinName := "goa"
 	if runtime.GOOS == "windows" {
 		goaBinName = "goa.exe"
 	}
+	fmt.Printf("DEBUG: Looking for binary name: %s (OS: %s)\n", goaBinName, runtime.GOOS)
+
+	// Check for Go's installation directory (where go install puts binaries)
+	// First try GOBIN if set
+	cmd := exec.Command("go", "env", "GOBIN")
+	if output, err := cmd.Output(); err == nil {
+		gobin := strings.TrimSpace(string(output))
+		fmt.Printf("DEBUG: GOBIN from 'go env': '%s'\n", gobin)
+		if gobin != "" {
+			goaBin := filepath.Join(gobin, goaBinName)
+			fmt.Printf("DEBUG: Checking GOBIN path: %s\n", goaBin)
+			if _, err := os.Stat(goaBin); err == nil {
+				fmt.Printf("DEBUG: Found goa binary at: %s\n", goaBin)
+				return goaBin
+			}
+		}
+	} else {
+		fmt.Printf("DEBUG: Failed to get GOBIN: %v\n", err)
+	}
+
+	// If GOBIN is empty, Go uses GOPATH/bin
+	cmd = exec.Command("go", "env", "GOPATH")
+	if output, err := cmd.Output(); err == nil {
+		gopath := strings.TrimSpace(string(output))
+		fmt.Printf("DEBUG: GOPATH from 'go env': '%s'\n", gopath)
+		if gopath != "" {
+			goaBin := filepath.Join(gopath, "bin", goaBinName)
+			fmt.Printf("DEBUG: Checking GOPATH/bin: %s\n", goaBin)
+			if _, err := os.Stat(goaBin); err == nil {
+				fmt.Printf("DEBUG: Found goa binary at: %s\n", goaBin)
+				return goaBin
+			}
+		}
+	} else {
+		fmt.Printf("DEBUG: Failed to get GOPATH: %v\n", err)
+	}
+
+	// Fallback: check environment GOPATH variable directly
+	if gopath := os.Getenv("GOPATH"); gopath != "" {
+		goaBin := filepath.Join(gopath, "bin", goaBinName)
+		fmt.Printf("DEBUG: Checking env GOPATH/bin: %s\n", goaBin)
+		if _, err := os.Stat(goaBin); err == nil {
+			fmt.Printf("DEBUG: Found goa binary at: %s\n", goaBin)
+			return goaBin
+		}
+	}
+
+	// Last resort: try to find where 'go install' would put binaries
+	// by checking common default locations
+	homeDir, err := os.UserHomeDir()
+	if err == nil {
+		defaultGoPaths := []string{
+			filepath.Join(homeDir, "go", "bin"),
+		}
+		
+		// On Windows, also check AppData
+		if runtime.GOOS == "windows" {
+			if appData := os.Getenv("APPDATA"); appData != "" {
+				defaultGoPaths = append(defaultGoPaths, filepath.Join(appData, "go", "bin"))
+			}
+			if localAppData := os.Getenv("LOCALAPPDATA"); localAppData != "" {
+				defaultGoPaths = append(defaultGoPaths, filepath.Join(localAppData, "go", "bin"))
+			}
+		}
+
+		fmt.Printf("DEBUG: Checking default paths: %v\n", defaultGoPaths)
+		for _, path := range defaultGoPaths {
+			goaBin := filepath.Join(path, goaBinName)
+			fmt.Printf("DEBUG: Checking default path: %s\n", goaBin)
+			if _, err := os.Stat(goaBin); err == nil {
+				fmt.Printf("DEBUG: Found goa binary at: %s\n", goaBin)
+				return goaBin
+			}
+		}
+	} else {
+		fmt.Printf("DEBUG: Failed to get home directory: %v\n", err)
+	}
+
+	// Fall back to system PATH
+	fmt.Printf("DEBUG: Falling back to system PATH: %s\n", goaBinName)
 	return goaBinName
 }
 
