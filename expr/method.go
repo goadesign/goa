@@ -119,11 +119,12 @@ func (m *MethodExpr) Validate() error {
 func (m *MethodExpr) validateRequirements() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
 	var requirements []*SecurityExpr
-	if len(m.Requirements) > 0 {
+	switch {
+	case len(m.Requirements) > 0:
 		requirements = m.Requirements
-	} else if len(m.Service.Requirements) > 0 {
+	case len(m.Service.Requirements) > 0:
 		requirements = m.Service.Requirements
-	} else if len(Root.API.Requirements) > 0 {
+	case len(Root.API.Requirements) > 0:
 		requirements = Root.API.Requirements
 	}
 	var (

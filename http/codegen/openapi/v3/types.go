@@ -407,7 +407,7 @@ func hashAttribute(att *expr.AttributeExpr, h hash.Hash64, seen map[string]*uint
 			}
 			kh := hashString(m.Name, h)
 			vh := hashAttribute(m.Attribute, h, seen)
-			*res = *res ^ orderedHash(kh, *vh, h)
+			*res ^= orderedHash(kh, *vh, h)
 		}
 		if hv != 0 {
 			*res = orderedHash(*res, hv, h)

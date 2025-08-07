@@ -20,7 +20,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 	seen := make(map[string]struct{})
 	typeDefSections := make(map[string]map[string]*codegen.SectionTemplate)
 	typesByPath := make(map[string][]string)
-	var svcSections []*codegen.SectionTemplate
+	svcSections := make([]*codegen.SectionTemplate, 0, 10)
 
 	addTypeDefSection := func(path, name string, section *codegen.SectionTemplate) {
 		if typeDefSections[path] == nil {
@@ -168,7 +168,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		FuncMap: map[string]any{
 			"hasJSONRPCStreaming": hasJSONRPCStreaming,
 			"isJSONRPCWebSocket":  func(sd *Data) bool { return hasJSONRPCStreaming(sd) && !isJSONRPCSSE(services, service) },
-			"streamInterfaceFor": streamInterfaceFor,
+			"streamInterfaceFor":  streamInterfaceFor,
 		},
 	}
 
@@ -335,12 +335,12 @@ func isJSONRPCSSE(sd *ServicesData, svc *expr.ServiceExpr) bool {
 // interfaces for the given endpoint.
 func streamInterfaceFor(typ string, m *MethodData, stream *StreamData) map[string]any {
 	return map[string]any{
-		"Type":              typ,
-		"Endpoint":          m.Name,
-		"Stream":            stream,
-		"MethodVarName":     m.VarName,
-		"IsJSONRPC":         m.IsJSONRPC,
-		"IsJSONRPCSSE":      m.IsJSONRPCSSE && typ == "server",
+		"Type":               typ,
+		"Endpoint":           m.Name,
+		"Stream":             stream,
+		"MethodVarName":      m.VarName,
+		"IsJSONRPC":          m.IsJSONRPC,
+		"IsJSONRPCSSE":       m.IsJSONRPCSSE && typ == "server",
 		"IsJSONRPCWebSocket": m.IsJSONRPCWebSocket,
 		// If a view is explicitly set (ViewName is not empty) in the Result
 		// expression, we can use that view to render the result type instead

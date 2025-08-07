@@ -1,9 +1,9 @@
 package codegen
 
 import (
-	"goa.design/goa/v3/codegen/testutil"
-	"path/filepath"
 	"testing"
+
+	"goa.design/goa/v3/codegen/testutil"
 
 	"github.com/stretchr/testify/require"
 
@@ -27,7 +27,7 @@ func TestServerHandler(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
 			fs := ServerFiles(genpkg, services)
-			sections := codegentest.Sections(fs, filepath.Join("", "server.go"), "server-handler")
+			sections := codegentest.Sections(fs, "server.go", "server-handler")
 			require.Greater(t, len(sections), 0)
 			code := codegen.SectionCode(t, sections[0])
 			testutil.AssertGo(t, "testdata/golden/server_handler_"+c.Name+".go.golden", code)

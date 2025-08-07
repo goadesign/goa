@@ -36,7 +36,6 @@ type (
 // ExampleServiceFiles returns a basic service implementation for every
 // service expression.
 func ExampleServiceFiles(genpkg string, root *expr.RootExpr, services *ServicesData) []*codegen.File {
-
 	// determine the unique API package name different from the service names
 	scope := codegen.NewNameScope()
 	for _, svc := range root.Services {

@@ -157,7 +157,7 @@ func Format(f expr.ValidationFormat) {
 			if a.Validation == nil {
 				a.Validation = &expr.ValidationExpr{}
 			}
-			a.Validation.Format = expr.ValidationFormat(f)
+			a.Validation.Format = f
 		}
 	}
 }
@@ -203,7 +203,6 @@ func ExclusiveMinimum(val any) {
 			a.Type.Kind() != expr.Int32Kind && a.Type.Kind() != expr.UInt32Kind &&
 			a.Type.Kind() != expr.Int64Kind && a.Type.Kind() != expr.UInt64Kind &&
 			a.Type.Kind() != expr.Float32Kind && a.Type.Kind() != expr.Float64Kind {
-
 			incompatibleAttributeType("exclusiveMinimum", a.Type.Name(), "a number")
 		} else {
 			var f float64
@@ -244,7 +243,6 @@ func Minimum(val any) {
 			a.Type.Kind() != expr.Int32Kind && a.Type.Kind() != expr.UInt32Kind &&
 			a.Type.Kind() != expr.Int64Kind && a.Type.Kind() != expr.UInt64Kind &&
 			a.Type.Kind() != expr.Float32Kind && a.Type.Kind() != expr.Float64Kind {
-
 			incompatibleAttributeType("minimum", a.Type.Name(), "a number")
 		} else {
 			var f float64
@@ -285,7 +283,6 @@ func ExclusiveMaximum(val any) {
 			a.Type.Kind() != expr.Int32Kind && a.Type.Kind() != expr.UInt32Kind &&
 			a.Type.Kind() != expr.Int64Kind && a.Type.Kind() != expr.UInt64Kind &&
 			a.Type.Kind() != expr.Float32Kind && a.Type.Kind() != expr.Float64Kind {
-
 			incompatibleAttributeType("exclusiveMaximum", a.Type.Name(), "a number")
 		} else {
 			var f float64
@@ -326,7 +323,6 @@ func Maximum(val any) {
 			a.Type.Kind() != expr.Int32Kind && a.Type.Kind() != expr.UInt32Kind &&
 			a.Type.Kind() != expr.Int64Kind && a.Type.Kind() != expr.UInt64Kind &&
 			a.Type.Kind() != expr.Float32Kind && a.Type.Kind() != expr.Float64Kind {
-
 			incompatibleAttributeType("maximum", a.Type.Name(), "an integer or a number")
 		} else {
 			var f float64
@@ -374,7 +370,6 @@ func MinLength(val int) {
 				kind != expr.StringKind &&
 				kind != expr.ArrayKind &&
 				kind != expr.MapKind {
-
 				incompatibleAttributeType("minimum length", a.Type.Name(), "a string or an array")
 				return
 			}
@@ -405,7 +400,6 @@ func MaxLength(val int) {
 				kind != expr.StringKind &&
 				kind != expr.ArrayKind &&
 				kind != expr.MapKind {
-
 				incompatibleAttributeType("maximum length", a.Type.Name(), "a string or an array")
 				return
 			}

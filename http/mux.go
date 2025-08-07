@@ -86,7 +86,7 @@ func NewMuxer() ResolverMuxer {
 	return &mux{
 		Router:      chi.NewRouter(),
 		wildcards:   make(map[string]string),
-		middlewares: []func(http.Handler) http.Handler{},
+		middlewares: nil,
 	}
 }
 

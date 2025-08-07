@@ -627,11 +627,12 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		paths := make([]string, len(s.RequestPaths))
 		for i, p := range s.RequestPaths {
 			idx := strings.LastIndex(p, "/{")
-			if idx == 0 {
+			switch {
+			case idx == 0:
 				paths[i] = "/"
-			} else if idx > 0 {
+			case idx > 0:
 				paths[i] = p[:idx]
-			} else {
+			default:
 				paths[i] = p
 			}
 		}

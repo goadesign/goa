@@ -818,7 +818,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		seenViewed[vrt.Name+"::"+view] = vrt
 	}
 
-	var unionMethods []*UnionValueMethodData
+	unionMethods := make([]*UnionValueMethodData, 0, len(types)+len(errTypes)) // preallocate with estimated size
 	var ms []*UnionValueMethodData
 	seen = make(map[string]struct{})
 	for _, t := range types {
@@ -936,7 +936,7 @@ func projectedTypeContext(pkg string, ptr bool, scope *codegen.NameScope) *codeg
 // records them in userTypes.
 func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[string]struct{}) (data []*UserTypeData) {
 	if at == nil || at.Type == expr.Empty {
-		return
+		return data
 	}
 	collect := func(at *expr.AttributeExpr) []*UserTypeData { return collectTypes(at, scope, seen) }
 	switch dt := at.Type.(type) {
@@ -969,13 +969,13 @@ func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[str
 			data = append(data, collect(nat.Attribute)...)
 		}
 	}
-	return
+	return data
 }
 
 // collectUnionMethods traverses the attribute to gather all union value methods.
 func collectUnionMethods(att *expr.AttributeExpr, scope *codegen.NameScope, loc *codegen.Location, seen map[string]struct{}) (data []*UnionValueMethodData) {
 	if att == nil || att.Type == expr.Empty {
-		return
+		return data
 	}
 	collect := func(at *expr.AttributeExpr, loc *codegen.Location) []*UnionValueMethodData {
 		return collectUnionMethods(at, scope, loc, seen)
@@ -1008,7 +1008,7 @@ func collectUnionMethods(att *expr.AttributeExpr, scope *codegen.NameScope, loc 
 			data = append(data, collect(nat.Attribute, loc)...)
 		}
 	}
-	return
+	return data
 }
 
 // buildErrorInitData creates the data needed to generate code around endpoint error return values.
@@ -1053,7 +1053,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		errors      []*ErrorInitData
 		errorLocs   map[string]*codegen.Location
 		isJSONRPC   bool
-		reqs        RequirementsData
+		reqs        = make(RequirementsData, 0, len(m.Requirements))
 		schemes     SchemesData
 	)
 	vname = scope.Unique(codegen.Goify(m.Name, true), "Endpoint")
@@ -1563,7 +1563,7 @@ func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, 
 			if pd != nil {
 				projected.Type = pd.Type
 			}
-			return
+			return data, umeths
 		}
 		seen[dt.ID()] = nil
 		pt.Rename(pt.Name() + "View")
@@ -1609,7 +1609,7 @@ func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, 
 			})
 		}
 	}
-	return
+	return data, umeths
 }
 
 // hasResultType returns true if the given attribute has a result type recursively.

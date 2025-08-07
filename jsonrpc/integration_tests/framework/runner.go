@@ -123,8 +123,6 @@ func (r *Runner) Run(t *testing.T) {
 
 	// Execute scenarios
 	for _, scenario := range scenarios {
-		scenario := scenario // capture for parallel tests
-		
 		t.Run(scenario.Name, func(t *testing.T) {
 			if r.runnerConfig.Parallel {
 				t.Parallel()
@@ -154,10 +152,7 @@ func (r *Runner) generateCode(t *testing.T) error {
 	t.Helper()
 	
 	// Collect all unique methods
-	methods, err := r.collectMethods()
-	if err != nil {
-		return err
-	}
+	methods := r.collectMethods()
 
 	// Use generator with templates
 	generator := NewGenerator(r.testDir, methods)
@@ -169,7 +164,7 @@ func (r *Runner) generateCode(t *testing.T) error {
 }
 
 // collectMethods gets all unique methods from scenarios
-func (r *Runner) collectMethods() (map[string]MethodInfo, error) {
+func (r *Runner) collectMethods() map[string]MethodInfo {
 	methods := make(map[string]MethodInfo)
 
 	for _, scenario := range r.config.Scenarios {
@@ -208,7 +203,7 @@ func (r *Runner) collectMethods() (map[string]MethodInfo, error) {
 		methods[method] = info
 	}
 
-	return methods, nil
+	return methods
 }
 
 // startServers starts test servers for all transports
@@ -285,6 +280,6 @@ func (r *Runner) Cleanup() {
 	r.stopServers()
 	
 	if !r.runnerConfig.KeepGenerated && r.testDir != "" {
-		os.RemoveAll(r.testDir)
+		os.RemoveAll(r.testDir) //nolint:errcheck
 	}
 }

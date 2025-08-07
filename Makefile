@@ -27,7 +27,7 @@ DEPEND=\
 	google.golang.org/protobuf/cmd/protoc-gen-go@latest \
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest 
 
-all: lint test
+all: lint test integration-test
 
 all-tests: lint test integration-test
 

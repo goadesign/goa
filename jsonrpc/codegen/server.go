@@ -12,8 +12,8 @@ import (
 
 // ServerFiles returns the generated JSON-RPC server files if any.
 func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File {
-	var files []*codegen.File
 	jsvcs := data.Root.API.JSONRPC.Services
+	files := make([]*codegen.File, 0, len(jsvcs)*3)
 	for _, svc := range jsvcs {
 		files = append(files, serverFile(genpkg, svc, data))
 		// Generate either WebSocket or SSE file based on transport type
@@ -53,10 +53,10 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 		r.Body = io.NopCloser(bytes.NewReader(req.Params))`, 1)
 
 				// Surgical modification 3: Fix return values (nil -> zero values)
-				s.Source = strings.Replace(s.Source,
+				s.Source = strings.ReplaceAll(s.Source,
 					"return nil, ",
 					`var zero {{ .Payload.Ref }}
-		return zero, `, -1)
+		return zero, `)
 
 				s.Name = "jsonrpc-request-decoder"
 				sections = append(sections, s)
@@ -118,11 +118,12 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 	)
 
 	// Use appropriate server handler based on transport
-	if hasJSONRPCSSE(svc, services) {
+	switch {
+	case hasJSONRPCSSE(svc, services):
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-sse-server-handler", Source: jsonrpcTemplates.Read(sseServerHandlerT), FuncMap: funcs, Data: data})
-	} else if httpcodegen.HasWebSocket(data) {
+	case httpcodegen.HasWebSocket(data):
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-websocket-server-handler", Source: jsonrpcTemplates.Read(websocketServerHandlerT), FuncMap: funcs, Data: data})
-	} else {
+	default:
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), FuncMap: funcs, Data: data})
 	}
 

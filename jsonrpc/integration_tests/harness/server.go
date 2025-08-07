@@ -29,7 +29,7 @@ func StartServer(ctx context.Context, workDir string, port int) (*Server, error)
 			return nil, fmt.Errorf("failed to find free port: %w", err)
 		}
 		port = listener.Addr().(*net.TCPAddr).Port
-		listener.Close()
+		listener.Close() //nolint:errcheck
 	}
 
 	// Create log file
@@ -83,7 +83,7 @@ func StartServer(ctx context.Context, workDir string, port int) (*Server, error)
 
 	// Start server
 	if err := cmd.Start(); err != nil {
-		logFile.Close()
+		logFile.Close() //nolint:errcheck
 		return nil, fmt.Errorf("failed to start server: %w", err)
 	}
 
@@ -97,9 +97,9 @@ func StartServer(ctx context.Context, workDir string, port int) (*Server, error)
 	// Wait for server to be ready
 	if err := server.waitForReady(ctx); err != nil {
 		// Read log file for diagnostics
-		logFile.Seek(0, 0)
+		logFile.Seek(0, 0) //nolint:errcheck
 		logContent, _ := bufio.NewReader(logFile).ReadString('\x00')
-		server.Stop()
+		server.Stop() //nolint:errcheck
 		return nil, fmt.Errorf("%w\nServer log:\n%s", err, logContent)
 	}
 
@@ -114,12 +114,12 @@ func (s *Server) URL() string {
 // Stop stops the server
 func (s *Server) Stop() error {
 	if s.cmd != nil && s.cmd.Process != nil {
-		s.cmd.Process.Kill()
-		s.cmd.Wait()
+		s.cmd.Process.Kill() //nolint:errcheck
+		s.cmd.Wait() //nolint:errcheck
 	}
 	
 	if s.logFile != nil {
-		s.logFile.Close()
+		s.logFile.Close() //nolint:errcheck
 	}
 	
 	return nil
@@ -162,7 +162,7 @@ func (s *Server) waitForReady(ctx context.Context) error {
 			case <-ticker.C:
 				conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", s.port))
 				if err == nil {
-					conn.Close()
+					conn.Close() //nolint:errcheck
 					readyChan <- true
 					return
 				}

@@ -10,7 +10,6 @@ import (
 )
 
 func TestClientCLIFiles(t *testing.T) {
-
 	cases := []struct {
 		Name         string
 		DSL          func()

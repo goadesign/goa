@@ -410,12 +410,12 @@ func getPkgImport(pkg, cwd string) string {
 		return pkg
 	}
 
-	rootpkg := string(parentpath[len(gosrc)+1:])
+	rootpkg := parentpath[len(gosrc)+1:]
 
 	// check for vendored packages
 	vendorPrefix := path.Join(rootpkg, "vendor")
 	if strings.HasPrefix(pkg, vendorPrefix) {
-		return string(pkg[len(vendorPrefix)+1:])
+		return pkg[len(vendorPrefix)+1:]
 	}
 
 	return pkg
@@ -507,11 +507,9 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr, services *Servi
 		}
 		ppm[pkgImport] = alias
 	}
-	pkgs := make([]*codegen.ImportSpec, len(ppm))
-	i := 0
+	pkgs := make([]*codegen.ImportSpec, 0, len(ppm)+2)
 	for pp, alias := range ppm {
-		pkgs[i] = &codegen.ImportSpec{Name: alias, Path: pp}
-		i++
+		pkgs = append(pkgs, &codegen.ImportSpec{Name: alias, Path: pp})
 	}
 
 	// Build header section
@@ -535,7 +533,9 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr, services *Servi
 		}
 		t := reflect.TypeOf(c.External)
 		tgtPkg := t.String()
-		tgtPkg = tgtPkg[:strings.Index(tgtPkg, ".")]
+		if idx := strings.Index(tgtPkg, "."); idx != -1 {
+			tgtPkg = tgtPkg[:idx]
+		}
 		srcCtx := typeContext(svc.Scope)
 		tgtCtx := codegen.NewAttributeContext(false, false, false, tgtPkg, codegen.NewNameScope())
 		srcAtt := &expr.AttributeExpr{Type: c.User}
@@ -576,7 +576,9 @@ func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr, services *Servi
 		}
 		t := reflect.TypeOf(c.External)
 		srcPkg := t.String()
-		srcPkg = srcPkg[:strings.Index(srcPkg, ".")]
+		if idx := strings.Index(srcPkg, "."); idx != -1 {
+			srcPkg = srcPkg[:idx]
+		}
 		srcCtx := codegen.NewAttributeContext(false, false, false, srcPkg, codegen.NewNameScope())
 		tgtCtx := typeContext(svc.Scope)
 		tgtAtt := &expr.AttributeExpr{Type: c.User}
@@ -787,7 +789,8 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 				}
 			}
 			var fdt expr.DataType
-			if f.Type.Kind() == reflect.Ptr {
+			switch f.Type.Kind() {
+			case reflect.Ptr:
 				if err := buildDesignType(&fdt, f.Type.Elem(), aref, recf); err != nil {
 					return fmt.Errorf("%q.%s: %w", t.Name(), f.Name, err)
 				}
@@ -797,9 +800,9 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 				if expr.IsMap(fdt) {
 					return fmt.Errorf("%s: field of type pointer to map are not supported, use map instead", rec.path)
 				}
-			} else if f.Type.Kind() == reflect.Struct {
+			case reflect.Struct:
 				return fmt.Errorf("%s: fields of type struct must use pointers", recf.path)
-			} else {
+			default:
 				if isPrimitive(f.Type) {
 					required = append(required, atn)
 				}

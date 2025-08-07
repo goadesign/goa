@@ -121,7 +121,7 @@ func TestProtoc(t *testing.T) {
 			require.NoError(t, err)
 			t.Cleanup(func() { assert.NoError(t, os.RemoveAll(dir)) })
 			fpath := filepath.Join(dir, "schema")
-			require.NoError(t, os.WriteFile(fpath, []byte(code), 0o600), "error occured writing proto schema")
+			require.NoError(t, os.WriteFile(fpath, []byte(code), 0o600), "error occurred writing proto schema")
 			require.NoError(t, protoc(c.Cmd, fpath, nil), "error occurred when compiling proto file with the standard protoc %q", fpath)
 
 			fcontents, err := os.ReadFile(fpath + ".pb.go")

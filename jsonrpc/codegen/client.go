@@ -13,8 +13,8 @@ import (
 
 // ClientFiles returns the generated HTTP client files.
 func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File {
-	var files []*codegen.File
 	jsvcs := data.Root.API.JSONRPC.Services
+	files := make([]*codegen.File, 0, len(jsvcs)*3)
 	for _, svc := range jsvcs {
 		files = append(files, clientFile(genpkg, svc, data))
 		if f := websocketClientFile(genpkg, svc, data); f != nil {

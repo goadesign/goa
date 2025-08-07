@@ -49,7 +49,7 @@ func exampleInterceptorsFile(genpkg string, svc *expr.ServiceExpr, services *Ser
 						{Path: path.Join(genpkg, sdata.PathName), Name: sdata.PkgName},
 					}),
 					{
-						Name:   "exmaple-server-interceptor",
+						Name:   "example-server-interceptor",
 						Source: serviceTemplates.Read(exampleServerInterceptorT),
 						Data:   data,
 					},

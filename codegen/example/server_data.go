@@ -172,9 +172,7 @@ func (h *HostData) DefaultURL(transport Transport) string {
 
 // buildServerData builds the server data for the given server expression.
 func buildServerData(svr *expr.ServerExpr, root *expr.RootExpr) *Data {
-	var (
-		hosts []*HostData
-	)
+	hosts := make([]*HostData, 0, len(svr.Hosts))
 	for _, h := range svr.Hosts {
 		hosts = append(hosts, buildHostData(h))
 	}

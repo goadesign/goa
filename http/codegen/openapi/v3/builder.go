@@ -128,7 +128,6 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 
 		// endpoints
 		for _, e := range svc.HTTPEndpoints {
-
 			if !openapi.MustGenerate(e.Meta) || !openapi.MustGenerate(e.MethodExpr.Meta) {
 				continue
 			}
@@ -634,13 +633,13 @@ func buildTags(api *expr.APIExpr) []*openapi.Tag {
 	}
 
 	// sort tag names alphabetically
-	var keys []string
+	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
-	var tags []*openapi.Tag
+	tags := make([]*openapi.Tag, 0, len(keys))
 	for _, k := range keys {
 		tags = append(tags, m[k])
 	}

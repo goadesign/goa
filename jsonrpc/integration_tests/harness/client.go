@@ -120,7 +120,7 @@ func (c *Client) CallHTTPRaw(ctx context.Context, body []byte) (json.RawMessage,
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -191,7 +191,7 @@ func (c *Client) CallHTTP(ctx context.Context, req JSONRPCRequest) (json.RawMess
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -249,7 +249,7 @@ func (c *Client) CallSSE(ctx context.Context, req JSONRPCRequest) ([]json.RawMes
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint:errcheck
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
@@ -326,9 +326,12 @@ func (c *Client) ConnectWebSocket(ctx context.Context) error {
 		headers.Set(k, v)
 	}
 	
-	conn, _, err := c.wsDialer.DialContext(ctx, wsURL.String(), headers)
+	conn, resp, err := c.wsDialer.DialContext(ctx, wsURL.String(), headers)
 	if err != nil {
 		return fmt.Errorf("websocket dial failed: %w", err)
+	}
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close() //nolint:errcheck
 	}
 	
 	c.wsConn = conn

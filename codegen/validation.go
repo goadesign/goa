@@ -303,7 +303,7 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 		}
 		return buf.String()
 	}
-	var res []string
+	res := make([]string, 0, 8) // preallocate with typical validation count
 	if values := validation.Values; values != nil {
 		data["values"] = values
 		if val := runTemplate(enumValT, data); val != "" {

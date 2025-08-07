@@ -64,7 +64,7 @@ func exampleServer(genpkg string, data *httpcodegen.ServicesData, svr *expr.Serv
 			svcdata = append(svcdata, d)
 		}
 	}
-	var sections []*codegen.SectionTemplate
+	sections := make([]*codegen.SectionTemplate, 0, len(file.SectionTemplates)+2)
 	for _, s := range file.SectionTemplates {
 		switch s.Name {
 		case "server-http-start":

@@ -103,7 +103,7 @@ func TestWebSocketGoldenFiles(t *testing.T) {
 			// Create golden file if it doesn't exist (for initial creation)
 			if _, err := os.Stat(golden); os.IsNotExist(err) {
 				dir := filepath.Dir(golden)
-				require.NoError(t, os.MkdirAll(dir, 0755))
+				require.NoError(t, os.MkdirAll(dir, 0750))
 				require.NoError(t, os.WriteFile(golden, []byte(code), 0644))
 				t.Logf("Created golden file: %s", golden)
 				return

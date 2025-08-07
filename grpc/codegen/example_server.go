@@ -34,12 +34,9 @@ func exampleServer(genpkg string, services *ServicesData, svr *expr.ServerExpr) 
 		return nil // file already exists, skip it.
 	}
 
-	var (
-		specs []*codegen.ImportSpec
-
-		scope = codegen.NewNameScope()
-	)
-	specs = []*codegen.ImportSpec{
+	var scope = codegen.NewNameScope()
+	
+	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "fmt"},
 		{Path: "net"},

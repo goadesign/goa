@@ -13,7 +13,7 @@ import (
 
 // ServerFiles returns the generated HTTP server files.
 func ServerFiles(genpkg string, data *ServicesData) []*codegen.File {
-	var files []*codegen.File
+	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3)
 	for _, svc := range data.Expressions.Services {
 		files = append(files, serverFile(genpkg, svc, data))
 		if f := websocketServerFile(genpkg, svc, data); f != nil {

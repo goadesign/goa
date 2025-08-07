@@ -334,7 +334,7 @@ func PATCH(path string) *expr.RouteExpr {
 
 func route(method, path string) *expr.RouteExpr {
 	r := &expr.RouteExpr{Method: method, Path: path}
-	
+
 	switch e := eval.Current().(type) {
 	case *expr.HTTPServiceExpr:
 		// Service-level route - only allowed for JSON-RPC services
@@ -345,7 +345,7 @@ func route(method, path string) *expr.RouteExpr {
 		// For JSON-RPC services, store the route in the service
 		e.JSONRPCRoute = r
 		return r
-		
+
 	case *expr.HTTPEndpointExpr:
 		// Method-level route - not allowed for JSON-RPC endpoints
 		if e.IsJSONRPC() {
@@ -355,7 +355,7 @@ func route(method, path string) *expr.RouteExpr {
 		r.Endpoint = e
 		e.Routes = append(e.Routes, r)
 		return r
-		
+
 	default:
 		eval.IncompatibleDSL()
 		return r

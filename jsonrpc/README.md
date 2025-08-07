@@ -512,7 +512,7 @@ func (s *chatSvc) Subscribe(ctx context.Context, p *chat.SubscribePayload, strea
 }
 
 // In another part of your service, you can push messages to subscribers
-func (s *chatSvc) publishEvent(topic string, event string, data interface{}) {
+func (s *chatSvc) publishEvent(topic string, event string, data any) {
     subscribers := s.getSubscribers(topic)
     for _, stream := range subscribers {
         // Send notification to each subscriber

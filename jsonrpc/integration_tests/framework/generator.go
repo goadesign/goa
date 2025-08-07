@@ -149,18 +149,16 @@ func (g *Generator) buildMethodData(info MethodInfo) *MethodData {
 				})
 			}
 		}
-	} else {
+	} else if info.Modifier != ModifierNotify && info.Modifier != ModifierError {
 		// Non-streaming result
-		if info.Modifier != ModifierNotify && info.Modifier != ModifierError {
-			data.Result = g.buildTypeSpec(info.Type, info.Action, "")
-		}
+		data.Result = g.buildTypeSpec(info.Type, info.Action, "")
 	}
 
 	return data
 }
 
 // buildTypeSpec creates a TypeSpec based on the type string
-func (g *Generator) buildTypeSpec(typeStr, action, modifier string) *TypeSpec {
+func (g *Generator) buildTypeSpec(typeStr, _, modifier string) *TypeSpec {
 	switch typeStr {
 	case TypeString:
 		// For validated primitives, wrap in object for JSON-RPC
@@ -214,7 +212,7 @@ func (g *Generator) buildTypeSpec(typeStr, action, modifier string) *TypeSpec {
 }
 
 // buildStreamingTypeSpec creates a TypeSpec for streaming types
-func (g *Generator) buildStreamingTypeSpec(typeStr string, isPayload bool, isBidirectional bool) *TypeSpec {
+func (g *Generator) buildStreamingTypeSpec(typeStr string, _ bool, isBidirectional bool) *TypeSpec {
 	// For WebSocket bidirectional methods, we need ID fields
 	if isBidirectional {
 		switch typeStr {
@@ -336,7 +334,7 @@ func (g *Generator) buildMethodImplData(method *MethodData, serviceName string) 
 
 // Files returns the list of files to generate
 func (g *Generator) Files(design *DesignData, impl *ImplementationData) []*codegen.File {
-	var files []*codegen.File
+	files := make([]*codegen.File, 0, 3+len(impl.Services))
 
 	// go.mod file
 	files = append(files, &codegen.File{

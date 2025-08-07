@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/jsonrpc/codegen/testdata"
 )
 
@@ -26,7 +27,9 @@ func TestJSONRPCSSEIntegration(t *testing.T) {
 	sseFiles := SSEServerFiles("", services)
 
 	// Combine all files
-	allFiles := append(serverFiles, clientFiles...)
+	allFiles := make([]*codegen.File, 0, len(serverFiles)+len(clientFiles)+len(sseFiles))
+	allFiles = append(allFiles, serverFiles...)
+	allFiles = append(allFiles, clientFiles...)
 	allFiles = append(allFiles, sseFiles...)
 
 	// Create temp directory

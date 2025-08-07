@@ -229,7 +229,7 @@ func JSONRPC(dsl func()) {
 		if e.Meta == nil {
 			e.Meta = expr.MetaExpr{}
 		}
-		e.Meta["jsonrpc"] = nil
+		e.Meta["jsonrpc"] = []string{}
 		if actual.Meta == nil {
 			actual.Meta = expr.MetaExpr{}
 		}

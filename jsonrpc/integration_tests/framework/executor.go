@@ -41,13 +41,14 @@ func (e *Executor) Execute(t *testing.T, scenario Scenario) {
 
 
 	// Handle different scenario types
-	if len(scenario.Sequence) > 0 {
+	switch {
+	case len(scenario.Sequence) > 0:
 		e.executeStreaming(t, scenario)
-	} else if len(scenario.Batch) > 0 {
+	case len(scenario.Batch) > 0:
 		e.executeBatch(t, scenario)
-	} else if scenario.RawRequest != "" {
+	case scenario.RawRequest != "":
 		e.executeRaw(t, scenario)
-	} else {
+	default:
 		e.executeSimple(t, scenario)
 	}
 }
@@ -88,7 +89,6 @@ func (e *Executor) executeHTTP(ctx context.Context, t *testing.T, scenario Scena
 		cliClient, err := harness.NewCLIClient(e.config.WorkDir, e.serverURL)
 		if err != nil {
 		} else if cliClient.CanHandle(method, scenario.Request.Params) {
-
 			// For CLI, we need to separate service and method
 			// Default to "test" service if no dot in method name
 			service := "test"
@@ -114,7 +114,7 @@ func (e *Executor) executeHTTP(ctx context.Context, t *testing.T, scenario Scena
 				response := map[string]any{
 					"jsonrpc": "2.0",
 					"id":      scenario.Request.ID,
-					"result":  json.RawMessage(result),
+					"result":  result,
 				}
 				e.validateJSONRPCResponse(t, response, scenario.Expect)
 			} else if !scenario.Expect.NoResponse {
@@ -200,7 +200,7 @@ func (e *Executor) executeWebSocket(ctx context.Context, t *testing.T, scenario 
 }
 
 // executeSSE handles Server-Sent Events scenarios
-func (e *Executor) executeSSE(ctx context.Context, t *testing.T, scenario Scenario) {
+func (e *Executor) executeSSE(_ context.Context, t *testing.T, _ Scenario) {
 	t.Helper()
 
 	// SSE implementation would go here
@@ -373,7 +373,7 @@ func (e *Executor) executeBatch(t *testing.T, scenario Scenario) {
 	require.NoError(t, err, "Failed to create client")
 
 	// Build batch request
-	var batch []any
+	batch := make([]any, 0, len(scenario.Batch))
 	for _, req := range scenario.Batch {
 		method := req.GetMethod(scenario.Method)
 		jsonReq := map[string]any{
@@ -442,16 +442,6 @@ func (e *Executor) executeRaw(t *testing.T, scenario Scenario) {
 }
 
 // Validation methods
-
-func (e *Executor) validateResult(t *testing.T, result any, expect Expect) {
-	t.Helper()
-
-	// Parse result as JSON-RPC response
-	respMap, ok := result.(map[string]any)
-	require.Truef(t, ok, "Expected map response, got %T", result)
-
-	e.validateJSONRPCResponse(t, respMap, expect)
-}
 
 func (e *Executor) validateJSONRPCResponse(t *testing.T, response any, expect Expect) {
 	t.Helper()
@@ -532,14 +522,7 @@ func (e *Executor) compareJSONRPCMessages(t *testing.T, actual, expected map[str
 	}
 }
 
-func (e *Executor) validateWebSocketResponse(t *testing.T, response any, expect Expect) {
-	t.Helper()
-
-	// WebSocket responses are the same as JSON-RPC responses
-	e.validateJSONRPCResponse(t, response, expect)
-}
-
-func (e *Executor) validateBatchResponse(t *testing.T, index int, response map[string]any, expect Expect) {
+func (e *Executor) validateBatchResponse(t *testing.T, _ int, response map[string]any, expect Expect) {
 	t.Helper()
 
 	// Batch responses are validated the same way
@@ -564,7 +547,7 @@ func (e *Executor) validateRawResponse(t *testing.T, response any, expect Expect
 	}
 }
 
-func (e *Executor) validateError(t *testing.T, err error, expect *ExpectError) {
+func (e *Executor) validateError(t *testing.T, _ error, _ *ExpectError) {
 	t.Helper()
 
 	// For CLI errors, we need to extract the error details

@@ -46,6 +46,9 @@ func TestHTTPServiceValidate(t *testing.T) {
 
 var validJSONRPCWebSocketDSL = func() {
 	Service("calc", func() {
+		JSONRPC(func() {
+			GET("/ws")
+		})
 		Method("method", func() {
 			StreamingPayload(func() {
 				ID("request_id", String)
@@ -64,6 +67,9 @@ var validJSONRPCWebSocketDSL = func() {
 
 var jsonrpcWebSocketWithHeadersDSL = func() {
 	Service("calc", func() {
+		JSONRPC(func() {
+			GET("/ws")
+		})
 		Method("method", func() {
 			StreamingPayload(func() {
 				ID("request_id", String)
@@ -86,6 +92,9 @@ var jsonrpcWebSocketWithHeadersDSL = func() {
 
 var jsonrpcWebSocketWithCookiesDSL = func() {
 	Service("calc", func() {
+		JSONRPC(func() {
+			GET("/ws")
+		})
 		Method("method", func() {
 			StreamingPayload(func() {
 				ID("request_id", String)
@@ -106,6 +115,9 @@ var jsonrpcWebSocketWithCookiesDSL = func() {
 
 var jsonrpcWebSocketWithParamsDSL = func() {
 	Service("calc", func() {
+		JSONRPC(func() {
+			GET("/ws")
+		})
 		Method("method", func() {
 			StreamingPayload(func() {
 				ID("request_id", String)
@@ -128,6 +140,9 @@ var jsonrpcWebSocketWithParamsDSL = func() {
 
 var jsonrpcWebSocketWithAllMappingsDSL = func() {
 	Service("calc", func() {
+		JSONRPC(func() {
+			GET("/ws")
+		})
 		Method("method", func() {
 			StreamingPayload(func() {
 				ID("request_id", String)

@@ -521,7 +521,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 	case expr.IsUnion(source.Type):
 		tt := expr.AsUnion(target.Type)
 		if tt == nil {
-			return
+			return helpers, err
 		}
 		for i, st := range expr.AsUnion(source.Type).Values {
 			if other, err = collectHelpers(st.Attribute, tt.Values[i].Attribute, true, ta, seen); err == nil {
@@ -530,7 +530,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 		}
 	case expr.IsObject(source.Type):
 		if expr.IsUnion(target.Type) {
-			return
+			return helpers, err
 		}
 		walkMatches(source, target, func(srcMatt, _ *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
 			if err != nil {
@@ -541,7 +541,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 			}
 		})
 	}
-	return
+	return helpers, err
 }
 
 // collectHelpers recurses through the given attributes and returns the transform
@@ -552,7 +552,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformAttrs, seen map[string]*TransformFunctionData) (helpers []*TransformFunctionData, err error) {
 	name := transformHelperName(source, target, ta)
 	if _, ok := seen[name]; ok {
-		return
+		return helpers, err
 	}
 	if _, ok := source.Type.(expr.UserType); ok && expr.IsObject(source.Type) {
 		var h *TransformFunctionData
@@ -577,7 +577,7 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 	case expr.IsUnion(source.Type):
 		tt := expr.AsUnion(target.Type)
 		if tt == nil {
-			return
+			return helpers, err
 		}
 		for i, st := range expr.AsUnion(source.Type).Values {
 			if other, err = collectHelpers(st.Attribute, tt.Values[i].Attribute, req, ta, seen); err == nil {
@@ -586,7 +586,7 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 		}
 	case expr.IsObject(source.Type):
 		if expr.IsUnion(target.Type) {
-			return
+			return helpers, err
 		}
 		walkMatches(source, target, func(srcMatt, _ *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
 			if err != nil {
@@ -597,7 +597,7 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 			}
 		})
 	}
-	return
+	return helpers, err
 }
 
 // generateHelper generates the code that transform instances of source into

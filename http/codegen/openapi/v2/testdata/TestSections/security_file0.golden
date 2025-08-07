@@ -51,9 +51,9 @@
         ],
         "security": [
           {
-            "api_key_query_k": [],
-            "basic_header_Authorization": [],
-            "jwt_header_X-Authorization": [],
+            "api_key_query_k": null,
+            "basic_header_Authorization": null,
+            "jwt_header_X-Authorization": null,
             "oauth2_header_Token": [
               "api:read"
             ]
@@ -90,7 +90,7 @@
         ],
         "security": [
           {
-            "api_key_header_Authorization": []
+            "api_key_header_Authorization": null
           },
           {
             "oauth2_query_auth": [

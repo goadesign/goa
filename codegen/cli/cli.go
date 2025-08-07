@@ -559,7 +559,7 @@ func conversionCode(from, to, typeName string, pointer bool) (string, bool, bool
 		if pointer {
 			ref = "&"
 		}
-		parse = parse + fmt.Sprintf("\n%s = %s%s", to, ref, target)
+		parse += fmt.Sprintf("\n%s = %s%s", to, ref, target)
 	}
 	return parse, declErr, checkErr
 }

@@ -456,7 +456,6 @@ func (e *HTTPEndpointExpr) Validate() error {
 				verr.Add(e, "JSON-RPC method %q result defines an ID field but the request (payload) does not. Result may only have ID field if request does", e.MethodExpr.Name)
 			}
 		}
-		
 	}
 
 	// Redirect is not compatible with Response.

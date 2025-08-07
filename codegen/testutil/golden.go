@@ -301,7 +301,7 @@ func (g *GoldenFile) updateFile(content []byte, goldenPath string) {
 
 	// Create directory if it doesn't exist
 	dir := filepath.Dir(goldenPath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		g.t.Fatalf("failed to create golden file directory %q: %v", dir, err)
 	}
 

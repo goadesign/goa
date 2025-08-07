@@ -11,7 +11,7 @@ import (
 
 // ClientFiles returns the generated HTTP client files.
 func ClientFiles(genpkg string, data *ServicesData) []*codegen.File {
-	var files []*codegen.File
+	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3) // preallocate for client files
 	for _, svc := range data.Expressions.Services {
 		files = append(files, clientFile(genpkg, svc, data))
 		if f := WebsocketClientFile(genpkg, svc, data); f != nil {

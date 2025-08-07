@@ -65,7 +65,7 @@ func ClientCLIFiles(genpkg string, data *ServicesData) []*codegen.File {
 			svcs = append(svcs, svc)
 		}
 	}
-	var files []*codegen.File
+	files := make([]*codegen.File, 0, len(data.Root.API.Servers)*2) // preallocate for CLI files
 	for _, svr := range data.Root.API.Servers {
 		var svrData []*commandData
 		for _, name := range svr.Services {
@@ -221,7 +221,7 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildF
 // makeFlags creates flag data and build function from endpoint arguments.
 func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*cli.FlagData, *cli.BuildFunctionData) {
 	var (
-		fdata     []*cli.FieldData
+		fdata     = make([]*cli.FieldData, 0, len(args))  // preallocate
 		flags     = make([]*cli.FlagData, len(args))
 		params    = make([]string, len(args))
 		pInitArgs = make([]*codegen.InitArgData, len(args))

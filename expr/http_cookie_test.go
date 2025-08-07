@@ -35,11 +35,12 @@ func TestHTTPResponseCookie(t *testing.T) {
 			} else {
 				m := cookies.Meta
 				for n, v := range c.Props {
-					if len(m) != 1 {
+					switch {
+					case len(m) != 1:
 						t.Errorf("got cookies metadata with length %d, expected 1", len(m))
-					} else if len(m[n]) != 1 {
+					case len(m[n]) != 1:
 						t.Errorf("got cookies metadata %q with length %d, expected 1", n, len(m[n]))
-					} else if m[n][0] != fmt.Sprintf("%v", v) {
+					case m[n][0] != fmt.Sprintf("%v", v):
 						t.Errorf("got value %q for cookies metadata %q, expected %q", m[n][0], n, fmt.Sprintf("%v", v))
 					}
 				}
