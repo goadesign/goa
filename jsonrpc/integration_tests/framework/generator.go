@@ -492,6 +492,16 @@ func (g *Generator) runPostGeneration() error {
 	// Run goa gen
 	cmd = exec.Command(goaBinary, "gen", "testservice/design", "-o", g.workDir)
 	cmd.Dir = g.workDir
+	
+	// On Windows, set the command working directory explicitly
+	if runtime.GOOS == "windows" {
+		// Ensure paths are Windows-compatible
+		absWorkDir, err := filepath.Abs(g.workDir)
+		if err == nil {
+			cmd.Dir = absWorkDir
+		}
+	}
+	
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("goa gen failed (binary: %s): %w\nOutput: %s", goaBinary, err, output)
 	}
@@ -499,6 +509,16 @@ func (g *Generator) runPostGeneration() error {
 	// Run goa example
 	cmd = exec.Command(goaBinary, "example", "testservice/design", "-o", g.workDir)
 	cmd.Dir = g.workDir
+	
+	// On Windows, set the command working directory explicitly
+	if runtime.GOOS == "windows" {
+		// Ensure paths are Windows-compatible
+		absWorkDir, err := filepath.Abs(g.workDir)
+		if err == nil {
+			cmd.Dir = absWorkDir
+		}
+	}
+	
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("goa example failed (binary: %s): %w\nOutput: %s", goaBinary, err, output)
 	}
@@ -527,12 +547,21 @@ func (g *Generator) ensureGoaBinary() error {
 	// Try to find goa in PATH first
 	var whichCmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		whichCmd = exec.Command("where", "goa")
+		// On Windows, try both 'where' and 'where.exe'
+		whichCmd = exec.Command("where", "goa.exe")
 	} else {
 		whichCmd = exec.Command("which", "goa")
 	}
 	if _, err := whichCmd.Output(); err == nil {
 		return nil
+	}
+	
+	// On Windows, also try 'where goa' without .exe
+	if runtime.GOOS == "windows" {
+		whichCmd = exec.Command("where", "goa")
+		if _, err := whichCmd.Output(); err == nil {
+			return nil
+		}
 	}
 	
 	// No existing binary found, build it
@@ -541,10 +570,27 @@ func (g *Generator) ensureGoaBinary() error {
 		return fmt.Errorf("goa source directory not found at %s: %w", goaSourcePath, err)
 	}
 	
-	buildCmd := exec.Command("go", "install", ".")
+	// Build the binary with explicit output path to avoid Windows issues
+	var buildCmd *exec.Cmd
+	var targetBinary string
+	
+	// Get the target directory for the binary
+	if gobin := g.getGoBinDir(); gobin != "" {
+		// Use explicit output path
+		if runtime.GOOS == "windows" {
+			targetBinary = filepath.Join(gobin, "goa.exe")
+		} else {
+			targetBinary = filepath.Join(gobin, "goa")
+		}
+		buildCmd = exec.Command("go", "build", "-o", targetBinary, ".")
+	} else {
+		// Fall back to go install
+		buildCmd = exec.Command("go", "install", ".")
+	}
+	
 	buildCmd.Dir = goaSourcePath
 	
-	// Set environment to ensure binary goes to a predictable location
+	// Set environment for consistent behavior
 	env := os.Environ()
 	if gopath := os.Getenv("GOPATH"); gopath == "" {
 		// If GOPATH is not set, try to get it from go env
@@ -574,6 +620,50 @@ func (g *Generator) ensureGoaBinary() error {
 	}
 	
 	return nil
+}
+
+// getGoBinDir returns the directory where Go binaries should be installed
+func (g *Generator) getGoBinDir() string {
+	// Check GOBIN first
+	if gobin := os.Getenv("GOBIN"); gobin != "" {
+		return gobin
+	}
+	
+	// Try go env GOBIN
+	cmd := exec.Command("go", "env", "GOBIN")
+	if output, err := cmd.Output(); err == nil {
+		gobin := strings.TrimSpace(string(output))
+		if gobin != "" {
+			return gobin
+		}
+	}
+	
+	// Try go env GOPATH
+	cmd = exec.Command("go", "env", "GOPATH")
+	if output, err := cmd.Output(); err == nil {
+		gopath := strings.TrimSpace(string(output))
+		if gopath != "" {
+			return filepath.Join(gopath, "bin")
+		}
+	}
+	
+	// Fallback to environment GOPATH
+	if gopath := os.Getenv("GOPATH"); gopath != "" {
+		return filepath.Join(gopath, "bin")
+	}
+	
+	// Try default locations
+	homeDir, err := os.UserHomeDir()
+	if err == nil {
+		defaultGoPath := filepath.Join(homeDir, "go", "bin")
+		if _, err := os.Stat(filepath.Dir(defaultGoPath)); err == nil {
+			// Create bin directory if it doesn't exist
+			os.MkdirAll(defaultGoPath, 0755)
+			return defaultGoPath
+		}
+	}
+	
+	return ""
 }
 
 // getGoaBinary returns the path to the goa binary
