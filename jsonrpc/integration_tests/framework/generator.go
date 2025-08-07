@@ -492,16 +492,6 @@ func (g *Generator) runPostGeneration() error {
 	// Run goa gen
 	cmd = exec.Command(goaBinary, "gen", "testservice/design", "-o", g.workDir)
 	cmd.Dir = g.workDir
-	
-	// On Windows, set the command working directory explicitly
-	if runtime.GOOS == "windows" {
-		// Ensure paths are Windows-compatible
-		absWorkDir, err := filepath.Abs(g.workDir)
-		if err == nil {
-			cmd.Dir = absWorkDir
-		}
-	}
-	
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("goa gen failed (binary: %s): %w\nOutput: %s", goaBinary, err, output)
 	}
@@ -509,16 +499,6 @@ func (g *Generator) runPostGeneration() error {
 	// Run goa example
 	cmd = exec.Command(goaBinary, "example", "testservice/design", "-o", g.workDir)
 	cmd.Dir = g.workDir
-	
-	// On Windows, set the command working directory explicitly
-	if runtime.GOOS == "windows" {
-		// Ensure paths are Windows-compatible
-		absWorkDir, err := filepath.Abs(g.workDir)
-		if err == nil {
-			cmd.Dir = absWorkDir
-		}
-	}
-	
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("goa example failed (binary: %s): %w\nOutput: %s", goaBinary, err, output)
 	}
@@ -570,23 +550,8 @@ func (g *Generator) ensureGoaBinary() error {
 		return fmt.Errorf("goa source directory not found at %s: %w", goaSourcePath, err)
 	}
 	
-	// Build the binary with explicit output path to avoid Windows issues
-	var buildCmd *exec.Cmd
-	var targetBinary string
-	
-	// Get the target directory for the binary
-	if gobin := g.getGoBinDir(); gobin != "" {
-		// Use explicit output path
-		if runtime.GOOS == "windows" {
-			targetBinary = filepath.Join(gobin, "goa.exe")
-		} else {
-			targetBinary = filepath.Join(gobin, "goa")
-		}
-		buildCmd = exec.Command("go", "build", "-o", targetBinary, ".")
-	} else {
-		// Fall back to go install
-		buildCmd = exec.Command("go", "install", ".")
-	}
+	// Build the binary using go install (original approach)
+	buildCmd := exec.Command("go", "install", ".")
 	
 	buildCmd.Dir = goaSourcePath
 	
