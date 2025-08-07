@@ -11,13 +11,7 @@ type SSEIntMethodServerStream struct {
 
 // Send Send streams instances of "int" to the "SSEIntMethod" endpoint SSE
 // connection.
-func (s *SSEIntMethodServerStream) Send(v int) error {
-	return s.SendWithContext(context.Background(), v)
-}
-
-// SendWithContext SendWithContext streams instances of "int" to the
-// "SSEIntMethod" endpoint SSE connection with context.
-func (s *SSEIntMethodServerStream) SendWithContext(ctx context.Context, v int) error {
+func (s *SSEIntMethodServerStream) Send(ctx context.Context, v int) error {
 	s.once.Do(func() {
 		header := s.w.Header()
 		if header.Get("Content-Type") == "" {

@@ -17,13 +17,6 @@ func NewMethodPayloadNoResultHandler(
 		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
 		ctx = context.WithValue(ctx, goa.MethodKey, "MethodPayloadNoResult")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadNoResult")
-		_, err := decodeRequest(r)
-		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
-				errhandler(ctx, w, err)
-			}
-			return
-		}
 		http.Redirect(w, r, "/redirect/dest", http.StatusMovedPermanently)
 	})
 }
