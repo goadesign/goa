@@ -23,12 +23,12 @@ func TestServerMount(t *testing.T) {
 	}{
 		{"simple routing constructor", testdata.ServerSimpleRoutingDSL, 0, "server-mount"},
 		{"simple routing with a redirect constructor", testdata.ServerSimpleRoutingWithRedirectDSL, 0, "server-mount"},
-		{"multiple files constructor", testdata.ServerMultipleFilesDSL, 0, "server-mount"},
-		{"multiple files mounter", testdata.ServerMultipleFilesDSL, 3, "server-files"},
-		{"multiple files constructor /w prefix path", testdata.ServerMultipleFilesWithPrefixPathDSL, 0, "server-mount"},
-		{"multiple files mounter /w prefix path", testdata.ServerMultipleFilesWithPrefixPathDSL, 3, "server-files"},
-		{"multiple files with a redirect constructor", testdata.ServerMultipleFilesWithRedirectDSL, 0, "server-mount"},
-		{"multiple files with a redirect mounter", testdata.ServerMultipleFilesWithRedirectDSL, 3, "server-files"},
+		{"multiple_files_constructor", testdata.ServerMultipleFilesDSL, 0, "server-mount"},
+		{"multiple_files_mounter", testdata.ServerMultipleFilesDSL, 3, "server-files"},
+		{"multiple_files_constructor_w_prefix_path", testdata.ServerMultipleFilesWithPrefixPathDSL, 0, "server-mount"},
+		{"multiple_files_mounter_w_prefix_path", testdata.ServerMultipleFilesWithPrefixPathDSL, 3, "server-files"},
+		{"multiple_files_with_a_redirect_constructor", testdata.ServerMultipleFilesWithRedirectDSL, 0, "server-mount"},
+		{"multiple_files_with_a_redirect_mounter", testdata.ServerMultipleFilesWithRedirectDSL, 3, "server-files"},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

@@ -718,6 +718,9 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 
 	// A function to collect inner user types from an attribute expression
 	collectUserTypes := func(att *expr.AttributeExpr) {
+		if att == nil {
+			return
+		}
 		if ut, ok := att.Type.(expr.UserType); ok {
 			att = ut.Attribute()
 		}
@@ -741,6 +744,9 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 
 	// A function to convert raw object type to user type.
 	wrapObject := func(att *expr.AttributeExpr, name, id string) {
+		if att == nil {
+			return
+		}
 		if _, ok := att.Type.(*expr.Object); ok {
 			att.Type = &expr.UserTypeExpr{
 				AttributeExpr: expr.DupAtt(att),
@@ -831,9 +837,15 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		ms = append(ms, collectUnionMethods(&expr.AttributeExpr{Type: t.Type}, scope, t.Loc, seen)...)
 	}
 	for _, m := range service.Methods {
-		ms = append(ms, collectUnionMethods(m.Payload, scope, codegen.UserTypeLocation(m.Payload.Type), seen)...)
-		ms = append(ms, collectUnionMethods(m.StreamingPayload, scope, codegen.UserTypeLocation(m.StreamingPayload.Type), seen)...)
-		ms = append(ms, collectUnionMethods(m.Result, scope, codegen.UserTypeLocation(m.Result.Type), seen)...)
+		if m.Payload != nil {
+			ms = append(ms, collectUnionMethods(m.Payload, scope, codegen.UserTypeLocation(m.Payload.Type), seen)...)
+		}
+		if m.StreamingPayload != nil {
+			ms = append(ms, collectUnionMethods(m.StreamingPayload, scope, codegen.UserTypeLocation(m.StreamingPayload.Type), seen)...)
+		}
+		if m.Result != nil {
+			ms = append(ms, collectUnionMethods(m.Result, scope, codegen.UserTypeLocation(m.Result.Type), seen)...)
+		}
 		for _, e := range m.Errors {
 			ms = append(ms, collectUnionMethods(e.AttributeExpr, scope, codegen.UserTypeLocation(e.Type), seen)...)
 		}
