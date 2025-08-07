@@ -154,7 +154,15 @@ func {{ .HandlerInit }}(
 		{{- end }}
 		}
 	{{- else }}
-	{{- if not .Redirect }}
+	{{- if mustDecodeRequest . }}
+		{{ if .Redirect }}_{{ else }}payload{{ end }}, err := decodeRequest(r)
+		if err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+				errhandler(ctx, w, err)
+			}
+			return
+		}
+	{{- else if not .Redirect }}
 		var err error
 	{{- end }}
 	{{- if isWebSocketEndpoint . }}
