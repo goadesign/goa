@@ -2,6 +2,7 @@ package expr
 
 import (
 	"fmt"
+	"slices"
 
 	"goa.design/goa/v3/eval"
 )
@@ -197,13 +198,7 @@ func (e *GRPCEndpointExpr) Validate() error {
 				// security attributes
 				var found bool
 				for _, nat := range *pobj {
-					found = false
-					for _, n := range secAttrs {
-						if n == nat.Name {
-							found = true
-							break
-						}
-					}
+					found = slices.Contains(secAttrs, nat.Name)
 					if !found {
 						msgFields.Set(nat.Name, nat.Attribute)
 					}

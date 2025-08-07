@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"maps"
 	"strings"
 )
 
@@ -86,12 +87,8 @@ func (ma *MappedAttributeExpr) Remap() {
 func DupMappedAtt(ma *MappedAttributeExpr) *MappedAttributeExpr {
 	nameMap := make(map[string]string, len(ma.nameMap))
 	reverseMap := make(map[string]string, len(ma.reverseMap))
-	for k, v := range ma.nameMap {
-		nameMap[k] = v
-	}
-	for k, v := range ma.reverseMap {
-		reverseMap[k] = v
-	}
+	maps.Copy(nameMap, ma.nameMap)
+	maps.Copy(reverseMap, ma.reverseMap)
 	return &MappedAttributeExpr{
 		AttributeExpr: DupAtt(ma.AttributeExpr),
 		nameMap:       nameMap,

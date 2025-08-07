@@ -9,7 +9,7 @@ import (
 func TestFixedSampler(t *testing.T) {
 	// 0 %
 	subject := NewFixedSampler(0)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		if subject.Sample() {
 			t.Errorf("%d: Sample() returned true for 0%%", i)
 		}
@@ -17,7 +17,7 @@ func TestFixedSampler(t *testing.T) {
 
 	// 100 %
 	subject = NewFixedSampler(100)
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		if !subject.Sample() {
 			t.Errorf("%d: Sample() returned false for 100%%", i)
 		}
@@ -36,7 +36,7 @@ func TestFixedSampler(t *testing.T) {
 
 	trueCount := 0
 	subject = NewFixedSampler(33)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		if subject.Sample() {
 			trueCount++
 		}
@@ -48,7 +48,7 @@ func TestFixedSampler(t *testing.T) {
 	// 66 %
 	trueCount = 0
 	subject = NewFixedSampler(66)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		if subject.Sample() {
 			trueCount++
 		}
@@ -61,7 +61,7 @@ func TestFixedSampler(t *testing.T) {
 func TestAdaptiveSampler(t *testing.T) {
 	// initial sampling
 	subject := NewAdaptiveSampler(1, 100)
-	for i := 0; i < 99; i++ {
+	for i := range 99 {
 		if !subject.Sample() {
 			t.Errorf("%d: Sample() returned false before reaching sample size", i)
 		}

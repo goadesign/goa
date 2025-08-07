@@ -2,6 +2,7 @@ package openapi
 
 import (
 	"encoding/json"
+	"maps"
 	"strings"
 
 	"goa.design/goa/v3/expr"
@@ -18,9 +19,7 @@ func ExtensionsFromExpr(mdata expr.MetaExpr) map[string]any {
 	if open == nil {
 		return swag
 	}
-	for k, v := range open {
-		swag[k] = v
-	}
+	maps.Copy(swag, open)
 	return swag
 }
 

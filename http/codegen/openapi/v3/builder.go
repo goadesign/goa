@@ -2,6 +2,7 @@ package openapiv3
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"sort"
 	"strconv"
@@ -161,9 +162,7 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 					path.Extensions = openapi.ExtensionsFromExpr(r.Endpoint.Meta)
 					if len(exts) > 0 {
 						path.Extensions = make(map[string]any)
-						for k, v := range exts {
-							path.Extensions[k] = v
-						}
+						maps.Copy(path.Extensions, exts)
 					}
 				}
 			}

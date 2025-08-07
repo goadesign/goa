@@ -105,7 +105,7 @@ func interceptorFile(svc *Data, server bool) *codegen.File {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   section,
 			Source: readTemplate(template),
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"MethodVarName": m.VarName,
 				"Method":        m.Name,
 				"Service":       svc.Name,
@@ -148,7 +148,7 @@ func wrapperFile(svc *Data) *codegen.File {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-interceptor-stream-wrapper-types",
 				Source: readTemplate("server_interceptor_stream_wrapper_types"),
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"WrappedServerStreams": wrappedServerStreams,
 				},
 			})
@@ -160,7 +160,7 @@ func wrapperFile(svc *Data) *codegen.File {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-interceptor-stream-wrapper-types",
 				Source: readTemplate("client_interceptor_stream_wrapper_types"),
-				Data: map[string]interface{}{
+				Data: map[string]any{
 					"WrappedClientStreams": wrappedClientStreams,
 				},
 			})
@@ -172,7 +172,7 @@ func wrapperFile(svc *Data) *codegen.File {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-interceptor-wrappers",
 			Source: readTemplate("server_interceptor_wrappers"),
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"Service":            svc.Name,
 				"ServerInterceptors": svc.ServerInterceptors,
 			},
@@ -182,7 +182,7 @@ func wrapperFile(svc *Data) *codegen.File {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-interceptor-wrappers",
 			Source: readTemplate("client_interceptor_wrappers"),
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"Service":            svc.Name,
 				"ClientInterceptors": svc.ClientInterceptors,
 			},
@@ -194,7 +194,7 @@ func wrapperFile(svc *Data) *codegen.File {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-interceptor-stream-wrappers",
 			Source: readTemplate("server_interceptor_stream_wrappers"),
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"WrappedServerStreams": wrappedServerStreams,
 			},
 		})
@@ -203,7 +203,7 @@ func wrapperFile(svc *Data) *codegen.File {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-interceptor-stream-wrappers",
 			Source: readTemplate("client_interceptor_stream_wrappers"),
-			Data: map[string]interface{}{
+			Data: map[string]any{
 				"WrappedClientStreams": wrappedClientStreams,
 			},
 		})
