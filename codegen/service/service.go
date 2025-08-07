@@ -280,6 +280,7 @@ func AddUserTypeImports(genpkg string, header *codegen.SectionTemplate, d *Data)
 
 	for _, imp := range importsByPath { // Order does not matter, imports are sorted during formatting.
 		codegen.AddImport(header, imp)
+		d.UserTypeImports = append(d.UserTypeImports, imp)
 	}
 }
 

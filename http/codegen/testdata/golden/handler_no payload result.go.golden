@@ -20,13 +20,15 @@ func NewMethodNoPayloadResultHandler(
 		var err error
 		res, err := endpoint(ctx, nil)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			errhandler(ctx, w, err)
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
 		}
 	})
 }

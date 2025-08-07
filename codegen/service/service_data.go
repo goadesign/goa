@@ -77,6 +77,9 @@ type (
 		// ProtoImports lists the import specifications for the custom
 		// proto types used by the service.
 		ProtoImports []*codegen.ImportSpec
+		// UserTypeImports lists the import specifications for the user types
+		// used by the service.
+		UserTypeImports []*codegen.ImportSpec
 
 		// userTypes lists the type definitions that the service depends on.
 		userTypes []*UserTypeData

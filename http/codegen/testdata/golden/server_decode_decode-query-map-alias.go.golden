@@ -18,8 +18,8 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							if closeIdx == -1 {
-								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 							} else {
 								keyaRaw := keyRaw[openIdx+1 : closeIdx]
 								v, err2 := strconv.ParseFloat(keyaRaw, 32)

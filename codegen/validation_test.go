@@ -85,6 +85,6 @@ func TestRecursiveValidationCode(t *testing.T) {
 		oneofT := root.UserType("OneOfWithFormat")
 		code := ValidationCode(&expr.AttributeExpr{Type: oneofT}, nil, ctx, true, false, true, "target")
 		code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
-		assert.Equal(t, testdata.UnionWithFormatValidationCode, code)
+		testutil.AssertGo(t, "testdata/golden/validation_union-with-format-validation.go.golden", code)
 	})
 }

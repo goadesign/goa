@@ -192,11 +192,9 @@ func generateConvertFileForPath(
 		}
 		ppm[pkgImport] = alias
 	}
-	pkgs := make([]*codegen.ImportSpec, len(ppm))
-	i := 0
+	pkgs := make([]*codegen.ImportSpec, 0, len(ppm)+2)
 	for pp, alias := range ppm {
-		pkgs[i] = &codegen.ImportSpec{Name: alias, Path: pp}
-		i++
+		pkgs = append(pkgs, &codegen.ImportSpec{Name: alias, Path: pp})
 	}
 
 	// Build header section
@@ -218,7 +216,9 @@ func generateConvertFileForPath(
 		}
 		t := reflect.TypeOf(c.External)
 		tgtPkg := t.String()
-		tgtPkg = tgtPkg[:strings.Index(tgtPkg, ".")]
+		if idx := strings.Index(tgtPkg, "."); idx != -1 {
+			tgtPkg = tgtPkg[:idx]
+		}
 
 		// Use the correct source context based on where the conversion file will be generated
 		var srcCtx *codegen.AttributeContext
@@ -230,7 +230,7 @@ func generateConvertFileForPath(
 			// Use conversion context so types in the same package are not qualified
 			srcCtx = codegen.NewAttributeContextForConversion(false, false, true, convertPkgName, srcScope)
 		} else {
-			srcCtx = typeContext("", svc.Scope)
+			srcCtx = typeContext(svc.Scope)
 		}
 		tgtCtx := codegen.NewAttributeContext(false, false, false, tgtPkg, codegen.NewNameScope())
 		srcAtt := &expr.AttributeExpr{Type: c.User}
@@ -258,7 +258,7 @@ func generateConvertFileForPath(
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "convert-to",
-			Source: readTemplate("convert"),
+			Source: serviceTemplates.Read(convertT),
 			Data:   data,
 		})
 	}
@@ -271,7 +271,9 @@ func generateConvertFileForPath(
 		}
 		t := reflect.TypeOf(c.External)
 		srcPkg := t.String()
-		srcPkg = srcPkg[:strings.Index(srcPkg, ".")]
+		if idx := strings.Index(srcPkg, "."); idx != -1 {
+			srcPkg = srcPkg[:idx]
+		}
 		srcCtx := codegen.NewAttributeContext(false, false, false, srcPkg, codegen.NewNameScope())
 
 		// Use the correct target context based on where the conversion file will be generated
@@ -284,7 +286,7 @@ func generateConvertFileForPath(
 			// Use conversion context so types in the same package are not qualified
 			tgtCtx = codegen.NewAttributeContextForConversion(false, false, true, convertPkgName, tgtScope)
 		} else {
-			tgtCtx = typeContext("", svc.Scope)
+			tgtCtx = typeContext(svc.Scope)
 		}
 		tgtAtt := &expr.AttributeExpr{Type: c.User}
 		code, tf, err := codegen.GoTransform(
@@ -308,7 +310,7 @@ func generateConvertFileForPath(
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "create-from",
-			Source: readTemplate("create"),
+			Source: serviceTemplates.Read(createT),
 			Data:   data,
 		})
 	}
@@ -322,7 +324,7 @@ func generateConvertFileForPath(
 		seen[tf.Name] = struct{}{}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "convert-create-helper",
-			Source: readTemplate("transform_helper"),
+			Source: serviceTemplates.Read(transformHelperT),
 			Data:   tf,
 		})
 	}

@@ -19,7 +19,7 @@ func NewMethodPayloadNoResultHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "ServicePayloadNoResult")
 		_, err := decodeRequest(r)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return

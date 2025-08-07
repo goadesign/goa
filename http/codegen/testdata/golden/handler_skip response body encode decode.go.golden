@@ -20,7 +20,7 @@ func NewMethodSkipResponseBodyEncodeDecodeHandler(
 		var err error
 		res, err := endpoint(ctx, nil)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -29,13 +29,15 @@ func NewMethodSkipResponseBodyEncodeDecodeHandler(
 		defer o.Body.Close()
 		if wt, ok := o.Body.(io.WriterTo); ok {
 			if err := encodeResponse(ctx, w, res); err != nil {
-				errhandler(ctx, w, err)
+				if errhandler != nil {
+					errhandler(ctx, w, err)
+				}
 				return
 			}
 			n, err := wt.WriteTo(w)
 			if err != nil {
 				if n == 0 {
-					if err := encodeError(ctx, w, err); err != nil {
+					if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 						errhandler(ctx, w, err)
 					}
 				} else {
@@ -50,13 +52,15 @@ func NewMethodSkipResponseBodyEncodeDecodeHandler(
 		// handle immediate read error like a returned error
 		buf := bufio.NewReader(o.Body)
 		if _, err := buf.Peek(1); err != nil && err != io.EOF {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
 		}
 		if err := encodeResponse(ctx, w, res); err != nil {
-			errhandler(ctx, w, err)
+			if errhandler != nil {
+				errhandler(ctx, w, err)
+			}
 			return
 		}
 		if _, err := io.Copy(w, buf); err != nil {
