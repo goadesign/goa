@@ -1,6 +1,7 @@
 package expr_test
 
 import (
+	"errors"
 	"testing"
 
 	"goa.design/goa/v3/eval"
@@ -188,7 +189,8 @@ func TestJSONRPCTransportConsistency(t *testing.T) {
 			} else {
 				if err != nil {
 					// Check if it's a ValidationErrors with no actual errors
-					if verr, ok := err.(*eval.ValidationErrors); ok && len(verr.Errors) == 0 {
+					var verr *eval.ValidationErrors
+					if errors.As(err, &verr) && len(verr.Errors) == 0 {
 						// Empty validation errors, ignore
 					} else {
 						t.Logf("Error type: %T", err)
