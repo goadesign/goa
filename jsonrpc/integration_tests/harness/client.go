@@ -423,6 +423,14 @@ func (c *Client) CloseWebSocket() error {
 	closeErr := c.wsConn.Close()
 	c.wsConn = nil
 	
+	// Ignore "broken pipe" errors on close - the server may have already closed
+	if err != nil && strings.Contains(err.Error(), "broken pipe") {
+		err = nil
+	}
+	if closeErr != nil && strings.Contains(closeErr.Error(), "broken pipe") {
+		closeErr = nil
+	}
+	
 	// Return the first error
 	if err != nil {
 		return err
