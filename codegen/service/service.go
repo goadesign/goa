@@ -61,6 +61,20 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 				})
 			}
 		}
+		// Generate streaming result type if different from result
+		if m.StreamingResultDef != "" && m.StreamingResult != m.Result {
+			if _, ok := seen[m.StreamingResult]; !ok {
+				addTypeDefSection(resultPath, m.StreamingResult, &codegen.SectionTemplate{
+					Name:   "service-streaming-result",
+					Source: serviceTemplates.Read(resultT),
+					Data: map[string]any{
+						"Result":     m.StreamingResult,
+						"ResultDef":  m.StreamingResultDef,
+						"ResultDesc": m.StreamingResultDesc,
+					},
+				})
+			}
+		}
 	}
 	for _, ut := range svc.userTypes {
 		if _, ok := seen[ut.VarName]; !ok {

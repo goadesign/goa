@@ -66,13 +66,31 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 
 	md := ed.Method
 	svc := sd.Service
-	sendDesc := fmt.Sprintf("%s streams instances of %q to the %q endpoint SSE connection.", md.ServerStream.SendName, ed.Result.Name, md.Name)
-	sendWithContextDesc := fmt.Sprintf("%s streams instances of %q to the %q endpoint SSE connection with context.", md.ServerStream.SendWithContextName, ed.Result.Name, md.Name)
+	
+	// Use streaming result type if different from result
+	var eventType *ResultData
+	var eventAttr *expr.AttributeExpr
+	if e.MethodExpr.HasMixedResults() && e.MethodExpr.StreamingResult != nil {
+		// For mixed results, use StreamingResult for SSE events
+		eventAttr = e.MethodExpr.StreamingResult
+		eventType = &ResultData{
+			Name:     md.StreamingResult,
+			Ref:      sd.Service.Scope.GoFullTypeRef(eventAttr, svc.PkgName),
+			IsStruct: expr.IsObject(eventAttr.Type),
+		}
+	} else {
+		// Use Result for SSE events (backward compatibility)
+		eventType = ed.Result
+		eventAttr = e.MethodExpr.Result
+	}
+	
+	sendDesc := fmt.Sprintf("%s streams instances of %q to the %q endpoint SSE connection.", md.ServerStream.SendName, eventType.Name, md.Name)
+	sendWithContextDesc := fmt.Sprintf("%s streams instances of %q to the %q endpoint SSE connection with context.", md.ServerStream.SendWithContextName, eventType.Name, md.Name)
 	recvDesc := fmt.Sprintf("%s connects to the %q SSE endpoint and streams events.", md.ServerStream.RecvName, md.Name)
 
 	// Convert attribute names to Go field names
 	var dataFieldVar, dataFieldTypeRef, idFieldVar, eventFieldVar, retryFieldVar string
-	if obj := expr.AsObject(e.MethodExpr.Result.Type); obj != nil {
+	if obj := expr.AsObject(eventAttr.Type); obj != nil {
 		for _, nat := range *obj {
 			switch nat.Name {
 			case e.SSE.IDField:
@@ -97,9 +115,9 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 		SendWithContextDesc: sendWithContextDesc,
 		RecvName:            md.ClientStream.RecvName,
 		RecvDesc:            recvDesc,
-		EventTypeRef:        ed.Result.Ref,
-		EventTypeName:       ed.Result.Name,
-		EventIsStruct:       ed.Result.IsStruct,
+		EventTypeRef:        eventType.Ref,
+		EventTypeName:       eventType.Name,
+		EventIsStruct:       eventType.IsStruct,
 		DataFieldTypeRef:    dataFieldTypeRef,
 		DataField:           dataFieldVar,
 		IDField:             idFieldVar,
@@ -142,8 +160,8 @@ func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesD
 				{Path: "time"},
 				{Path: "encoding/json"},
 				{Path: "fmt"},
-				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name())},
-				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/views"},
+				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
+				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/views", Name: data.Service.ViewsPkg},
 			},
 		),
 	}

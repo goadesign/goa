@@ -17,9 +17,10 @@ often has a unique URL (`/users`, `/users/{id}`), a JSON-RPC service has one URL
 Goa uses the `method` field within the JSON-RPC payload to route incoming
 requests to the correct service method. This has a few important implications:
 
-- **Unified Transport**: All methods exposed via JSON-RPC *within a single
-  service* must use the same transport. You cannot mix HTTP, SSE, and WebSocket
-  JSON-RPC methods in the same service.
+- **Transport Flexibility**: JSON-RPC methods within a single service can use
+  different transports with some limitations. You can mix HTTP and SSE methods
+  using content negotiation based on the `Accept` header. WebSocket methods
+  require a dedicated service due to their persistent connection nature.
 
 - **Mixed Endpoints in One Service**: You can mix JSON-RPC methods and standard
   HTTP endpoints within the same service. A method is only exposed via JSON-RPC
@@ -104,7 +105,7 @@ Method("log", func() {
 ```
 
 Note: This applies to non-streaming methods only. Streaming methods have different
-behavior based on their streaming pattern (see the Transports section below).
+behavior based on their streaming pattern and transport (see the Transports section below).
 
 ### 4. Request vs Notification: Runtime Determination
 
@@ -145,7 +146,7 @@ err := client.Process(ctx, &ProcessPayload{
 })
 ```
 
-#### Server-to-Client Messages (WebSocket/SSE)
+#### Server-to-Client Messages (WebSocket/SSE/Mixed)
 
 For streaming methods, servers can send both responses and notifications:
 
@@ -201,7 +202,8 @@ Method("echo", func() {
 ## Transports
 
 Goa supports three transports for JSON-RPC services, each suited for different
-use cases.
+use cases. Additionally, you can combine HTTP and SSE transports within a single
+service using automatic content negotiation.
 
 ### HTTP: Classic Request-Response
 
@@ -585,6 +587,122 @@ if err != nil { /* handle error */ }
 Note: For server-only streaming over WebSocket, the service-level client method returns
 just an error, as receiving streamed messages is handled at the transport layer through
 the persistent WebSocket connection.
+
+### Mixed HTTP/SSE Transports
+
+As mentioned in the Key Concepts section, Goa supports mixed transports for services 
+that need both standard HTTP request-response and Server-Sent Events streaming for 
+different methods. This allows you to define some methods as regular HTTP JSON-RPC 
+calls and others as SSE streaming within the same service.
+
+The server automatically handles content negotiation based on the `Accept` header:
+- Requests with `Accept: text/event-stream` are routed to SSE handlers for streaming methods
+- All other requests are handled as standard HTTP JSON-RPC calls
+
+#### Design
+
+Define methods with both HTTP and SSE transport patterns in the same service:
+
+```go
+// design/design.go
+Service("processor", func() {
+    JSONRPC(func() { POST("/process") })
+
+    // Standard HTTP method - non-streaming
+    Method("validate", func() {
+        Payload(func() {
+            Attribute("data", String)
+            Required("data")
+        })
+        Result(func() {
+            Attribute("valid", Boolean)
+            Required("valid")
+        })
+        JSONRPC(func() {})
+    })
+
+    // SSE streaming method
+    Method("process", func() {
+        Payload(func() {
+            Attribute("file", String)
+            Required("file")
+        })
+        StreamingResult(func() {
+            OneOf("event", func() {
+                Attribute("progress", Progress)
+                Attribute("complete", Complete)
+            })
+            Required("event")
+        })
+        JSONRPC(func() {
+            ServerSentEvents(func() {
+                SSEEventType("event")
+            })
+        })
+    })
+})
+```
+
+#### Server Implementation
+
+Implement both types of methods normally. The framework handles the routing:
+
+```go
+// processor.go
+
+// Regular HTTP method
+func (s *processorSvc) Validate(ctx context.Context, p *processor.ValidatePayload) (*processor.ValidateResult, error) {
+    // Standard synchronous processing
+    valid := validateData(p.Data)
+    return &processor.ValidateResult{Valid: valid}, nil
+}
+
+// SSE streaming method
+func (s *processorSvc) Process(
+    ctx context.Context,
+    p *processor.ProcessPayload,
+    stream processor.ProcessServerStream,
+) error {
+    // Send progress updates via SSE
+    err := stream.Send(ctx, &processor.ProcessResult{
+        Event: &processor.ProcessEvent{Progress: &Progress{Percent: 50}},
+    })
+    if err != nil {
+        return err
+    }
+
+    // ... do work ...
+
+    // Send completion
+    return stream.Send(ctx, &processor.ProcessResult{
+        Event: &processor.ProcessEvent{Complete: &Complete{URL: "/result"}},
+    })
+}
+```
+
+#### Client Usage
+
+Use the appropriate client method for each transport:
+
+```go
+// Standard HTTP call - no special headers needed
+client := processor.NewClient(/* ... */)
+result, err := client.Validate(ctx, &processor.ValidatePayload{Data: "test"})
+
+// SSE streaming call - client sets Accept header automatically
+httpClient := processorjsonrpc.NewClient(/* ... */)
+stream, err := httpClient.Process(ctx, &processor.ProcessPayload{File: "data.csv"})
+for {
+    res, err := stream.Recv()
+    if err == io.EOF {
+        break
+    }
+    // Handle streaming response
+}
+```
+
+The generated client automatically sets the correct `Accept: text/event-stream` header
+for SSE streaming methods, while regular methods use standard JSON content negotiation.
 
 ## Error Handling
 

@@ -1166,6 +1166,50 @@ scenarios:
       result: "generated-string"
 
 
+  # Mixed Transport Tests - Service supporting both HTTP and SSE
+  
+  - name: "mixed_echo_string_http"
+    method: "echo_string"
+    transport: "http"
+    request:
+      params: "hello from mixed http"
+      id: "mixed-http-1"
+    expect:
+      id: "mixed-http-1"
+      result: "hello from mixed http"
+  
+  - name: "mixed_stream_string_sse"
+    method: "stream_string_sse"
+    transport: "sse"
+    request:
+      params: "test"  # 4 characters = 4 notifications
+      id: "mixed-sse-1"
+    sequence:
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          method: "stream_string_sse"
+          params:
+            value: "Stream 1 of 4"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          method: "stream_string_sse"
+          params:
+            value: "Stream 2 of 4"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          method: "stream_string_sse"
+          params:
+            value: "Stream 3 of 4"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          method: "stream_string_sse"
+          params:
+            value: "Stream 4 of 4"
+
 settings:
   timeout: "30s"
   base_url: ""  # Will use default from server

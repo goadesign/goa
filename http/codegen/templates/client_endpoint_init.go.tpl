@@ -58,6 +58,10 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 		return stream, nil
 	{{- else if isSSEEndpoint . }}
 		// For SSE endpoints, connect and return a stream
+		{{- if .HasMixedResults }}
+		// Set Accept header for content negotiation
+		req.Header.Set("Accept", "text/event-stream")
+		{{- end }}
 		resp, err := c.{{ .Method.VarName }}Doer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)

@@ -132,6 +132,16 @@ type (
 		StreamingPayloadDesc string
 		// StreamingPayloadEx is an example of a valid streaming payload value.
 		StreamingPayloadEx any
+		// StreamingResult is the name of the streaming result type if any (when different from Result).
+		StreamingResult string
+		// StreamingResultDef is the streaming result type definition if any.
+		StreamingResultDef string
+		// StreamingResultRef is the reference to the streaming result type if any.
+		StreamingResultRef string
+		// StreamingResultDesc is the streaming result type description if any.
+		StreamingResultDesc string
+		// StreamingResultEx is an example of a valid streaming result value.
+		StreamingResultEx any
 		// Result is the name of the result type if any.
 		Result string
 		// ResultLoc defines the file and Go package of the result type
@@ -731,6 +741,10 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		collectUserTypes(m.Payload)
 		collectUserTypes(m.StreamingPayload)
 		collectUserTypes(m.Result)
+		// Collect streaming result types if different from Result
+		if m.HasMixedResults() {
+			collectUserTypes(m.StreamingResult)
+		}
 		// Collect projected types
 		if hasResultType(m.Result) {
 			types, umeths := collectProjectedTypes(expr.DupAtt(m.Result), m.Result, viewspkg, scope, viewScope, seenProj)
@@ -767,6 +781,10 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		wrapObject(m.StreamingPayload, name+"StreamingPayload", service.Name+"#"+name+"StreamingPayload")
 		// Create user type for raw object results
 		wrapObject(m.Result, name+"Result", service.Name+"#"+name+"Result")
+		// Create user type for raw object streaming results (if different from Result)
+		if m.HasMixedResults() {
+			wrapObject(m.StreamingResult, name+"StreamingResult", service.Name+"#"+name+"StreamingResult")
+		}
 	}
 
 	// Add forced types
@@ -1199,7 +1217,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 
 // initStreamData initializes the streaming payload data structures and methods.
 func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRef string, scope *codegen.NameScope) {
-	if !m.IsStreaming() {
+	if !m.IsStreaming() && !m.HasMixedResults() {
 		return
 	}
 	var (
@@ -1208,7 +1226,27 @@ func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vnam
 		spayloadDef  string
 		spayloadDesc string
 		spayloadEx   any
+		srname       = rname     // streaming result name
+		srref        = resultRef // streaming result ref
 	)
+
+	// If StreamingResult is different from Result, use it for streaming
+	if m.HasMixedResults() && m.StreamingResult != nil && m.StreamingResult.Type != expr.Empty {
+		srname = scope.GoTypeName(m.StreamingResult)
+		srref = scope.GoTypeRef(m.StreamingResult)
+		data.StreamingResult = srname
+		data.StreamingResultRef = srref
+		if dt, ok := m.StreamingResult.Type.(expr.UserType); ok {
+			data.StreamingResultDef = scope.GoTypeDef(dt.Attribute(), false, true)
+		}
+		data.StreamingResultDesc = m.StreamingResult.Description
+		if data.StreamingResultDesc == "" {
+			data.StreamingResultDesc = fmt.Sprintf("%s is the streaming result type of the %s service %s method.",
+				srname, m.Service.Name, m.Name)
+		}
+		data.StreamingResultEx = m.StreamingResult.Example(d.Root.API.ExampleGenerator)
+	}
+
 	if m.StreamingPayload != nil && m.StreamingPayload.Type != expr.Empty {
 		spayloadName = scope.GoTypeName(m.StreamingPayload)
 		spayloadRef = scope.GoTypeRef(m.StreamingPayload)
@@ -1229,51 +1267,59 @@ func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vnam
 	if data.IsJSONRPC && m.IsStreaming() && !data.IsJSONRPCSSE && m.Stream == expr.ClientStreamKind {
 		endpointStruct = ""
 	}
+	// For mixed results with SSE, treat as server streaming
+	streamKind := m.Stream
+	if m.HasMixedResults() && !m.IsStreaming() {
+		// Mixed results with SSE should be treated as server streaming
+		streamKind = expr.ServerStreamKind
+	}
 	svrStream := &StreamData{
 		Interface:           vname + "ServerStream",
 		VarName:             scope.Unique(codegen.Goify(m.Name, true), "ServerStream"),
 		EndpointStruct:      endpointStruct,
-		Kind:                m.Stream,
+		Kind:                streamKind,
 		SendName:            "Send",
-		SendDesc:            fmt.Sprintf("Send streams instances of %q.", rname),
+		SendDesc:            fmt.Sprintf("Send streams instances of %q.", srname),
 		SendWithContextName: "SendWithContext",
-		SendWithContextDesc: fmt.Sprintf("SendWithContext streams instances of %q with context.", rname),
-		SendTypeName:        rname,
-		SendTypeRef:         resultRef,
+		SendWithContextDesc: fmt.Sprintf("SendWithContext streams instances of %q with context.", srname),
+		SendTypeName:        srname,
+		SendTypeRef:         srref,
 		MustClose:           true,
 	}
 	cliStream := &StreamData{
 		Interface:           vname + "ClientStream",
 		VarName:             scope.Unique(codegen.Goify(m.Name, true), "ClientStream"),
-		Kind:                m.Stream,
+		Kind:                streamKind,
 		RecvName:            "Recv",
-		RecvDesc:            fmt.Sprintf("Recv reads instances of %q from the stream.", rname),
+		RecvDesc:            fmt.Sprintf("Recv reads instances of %q from the stream.", srname),
 		RecvWithContextName: "RecvWithContext",
-		RecvWithContextDesc: fmt.Sprintf("RecvWithContext reads instances of %q from the stream with context.", rname),
-		RecvTypeName:        rname,
-		RecvTypeRef:         resultRef,
+		RecvWithContextDesc: fmt.Sprintf("RecvWithContext reads instances of %q from the stream with context.", srname),
+		RecvTypeName:        srname,
+		RecvTypeRef:         srref,
 	}
 	// For SSE server streaming, we need both Send (for notifications) and SendAndClose (for final response)
 	if data.IsJSONRPCSSE && m.Stream == expr.ServerStreamKind && resultRef != "" {
 		svrStream.SendAndCloseName = "SendAndClose"
-		svrStream.SendAndCloseDesc = fmt.Sprintf("SendAndClose sends a final response with %q and closes the stream.", rname)
-		// For JSON-RPC, we don't generate WithContext versions - the default methods take context
+		svrStream.SendAndCloseDesc = fmt.Sprintf("SendAndClose sends a final response with %q and closes the stream.", srname)
+		// For JSON-RPC SSE, methods take context directly; align names accordingly
+		svrStream.SendWithContextName = "Send"
+		svrStream.RecvWithContextName = "Recv"
 		// Update Send description to clarify it's for notifications only
-		svrStream.SendDesc = fmt.Sprintf("Send streams JSON-RPC notifications with %q. Notifications do not expect a response.", rname)
+		svrStream.SendDesc = fmt.Sprintf("Send streams JSON-RPC notifications with %q. Notifications do not expect a response.", srname)
 	}
-	if m.Stream == expr.ClientStreamKind || m.Stream == expr.BidirectionalStreamKind {
-		switch m.Stream {
+	if streamKind == expr.ClientStreamKind || streamKind == expr.BidirectionalStreamKind {
+		switch streamKind {
 		case expr.ClientStreamKind:
-			if resultRef != "" {
+			if srref != "" {
 				svrStream.SendName = "SendAndClose"
-				svrStream.SendDesc = fmt.Sprintf("SendAndClose streams instances of %q and closes the stream.", rname)
+				svrStream.SendDesc = fmt.Sprintf("SendAndClose streams instances of %q and closes the stream.", srname)
 				svrStream.SendWithContextName = "SendAndCloseWithContext"
-				svrStream.SendWithContextDesc = fmt.Sprintf("SendAndCloseWithContext streams instances of %q and closes the stream with context.", rname)
+				svrStream.SendWithContextDesc = fmt.Sprintf("SendAndCloseWithContext streams instances of %q and closes the stream with context.", srname)
 				svrStream.MustClose = false
 				cliStream.RecvName = "CloseAndRecv"
-				cliStream.RecvDesc = fmt.Sprintf("CloseAndRecv stops sending messages to the stream and reads instances of %q from the stream.", rname)
+				cliStream.RecvDesc = fmt.Sprintf("CloseAndRecv stops sending messages to the stream and reads instances of %q from the stream.", srname)
 				cliStream.RecvWithContextName = "CloseAndRecvWithContext"
-				cliStream.RecvWithContextDesc = fmt.Sprintf("CloseAndRecvWithContext stops sending messages to the stream and reads instances of %q from the stream with context.", rname)
+				cliStream.RecvWithContextDesc = fmt.Sprintf("CloseAndRecvWithContext stops sending messages to the stream and reads instances of %q from the stream with context.", srname)
 			} else {
 				cliStream.MustClose = true
 			}

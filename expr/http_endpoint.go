@@ -420,15 +420,31 @@ func (e *HTTPEndpointExpr) Validate() error {
 				}
 			}
 		}
+	}
+	
+	// Validate mixed results configuration
+	if e.MethodExpr.HasMixedResults() {
+		// Mixed results (different Result and StreamingResult types) requires SSE
+		if e.SSE == nil {
+			verr.Add(e, "Methods with both Result and StreamingResult defined with different types must use ServerSentEvents()")
+		}
+		// Cannot have bidirectional streaming with mixed results
+		if e.MethodExpr.IsPayloadStreaming() {
+			verr.Add(e, "Methods with both Result and StreamingResult cannot have StreamingPayload")
+		}
 	} else if e.SSE != nil {
-		// Error if SSE is defined but endpoint is not server streaming
+		// Error if SSE is defined but endpoint is not server streaming or mixed results
 		switch e.MethodExpr.Stream {
 		case BidirectionalStreamKind:
 			verr.Add(e, "Server-Sent Events cannot be used with bidirectional streaming endpoints")
 		case ClientStreamKind:
 			verr.Add(e, "Server-Sent Events cannot be used with client-to-server streaming endpoints")
-		default:
-			verr.Add(e, "Server-Sent Events can only be used with endpoints that have a streaming result")
+		case NoStreamKind:
+			// SSE requires either server streaming or mixed results
+			if !e.MethodExpr.HasMixedResults() {
+				verr.Add(e, "Server-Sent Events can only be used with endpoints that have a streaming result or mixed results")
+			}
+		// case ServerStreamKind is valid, no error
 		}
 	}
 

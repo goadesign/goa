@@ -166,7 +166,7 @@ func StreamingResult(val any, args ...any) {
 		eval.IncompatibleDSL()
 		return
 	}
-	e.Result = methodDSL(e, "Result", val, args...)
+	e.StreamingResult = methodDSL(e, "StreamingResult", val, args...)
 	if e.Stream == expr.ClientStreamKind {
 		e.Stream = expr.BidirectionalStreamKind
 	} else {

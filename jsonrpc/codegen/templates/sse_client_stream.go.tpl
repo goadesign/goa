@@ -49,12 +49,7 @@ func (s *{{ .Method.VarName }}ClientStream) parseSSEEvent() (eventType string, d
 }
 
 {{ comment .Method.ClientStream.RecvDesc }}
-func (s *{{ .Method.VarName }}ClientStream) {{ .Method.ClientStream.RecvName }}() ({{ .Result.Ref }}, error) {
-	return s.{{ .Method.ClientStream.RecvWithContextName }}(context.Background())
-}
-
-{{ comment .Method.ClientStream.RecvWithContextDesc }}
-func (s *{{ .Method.VarName }}ClientStream) {{ .Method.ClientStream.RecvWithContextName }}(ctx context.Context) ({{ .Result.Ref }}, error) {
+func (s *{{ .Method.VarName }}ClientStream) {{ .Method.ClientStream.RecvName }}(ctx context.Context) ({{ .Result.Ref }}, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	
@@ -180,18 +175,16 @@ func (s *{{ .Method.VarName }}ClientStream) decodeResult(data json.RawMessage) (
 }
 {{- end }}
 
-{{- if .Method.ClientStream.MustClose }}
 {{ comment "Close closes the stream." }}
 func (s *{{ .Method.VarName }}ClientStream) Close() error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	
-	if !s.closed {
-		s.closed = true
-		if s.resp != nil && s.resp.Body != nil {
-			return s.resp.Body.Close()
-		}
-	}
-	return nil
+    s.lock.Lock()
+    defer s.lock.Unlock()
+    
+    if !s.closed {
+        s.closed = true
+        if s.resp != nil && s.resp.Body != nil {
+            return s.resp.Body.Close()
+        }
+    }
+    return nil
 }
-{{- end }}

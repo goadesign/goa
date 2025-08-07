@@ -20,6 +20,7 @@ const (
 	serverMethodNamesT       = "server_method_names"
 	serverMountT             = "server_mount"
 	serverEncodeErrorT       = "server_encode_error"
+	mixedServerHandlerT      = "mixed_server_handler"
 
 	// Server example
 	serverConfigureT = "server_configure"

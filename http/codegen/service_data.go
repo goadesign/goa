@@ -144,6 +144,9 @@ type (
 		SSE *SSEData
 		// Redirect defines a redirect for the endpoint.
 		Redirect *RedirectData
+		// HasMixedResults indicates if the method has both Result and StreamingResult
+		// defined with different types, enabling content negotiation.
+		HasMixedResults bool
 
 		// client
 
@@ -857,6 +860,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			ClientStruct:    "Client",
 			EndpointInit:    method.VarName,
 			RequestInit:     requestInit,
+			HasMixedResults: httpEndpoint.MethodExpr.HasMixedResults(),
 			RequestEncoder:  requestEncoder,
 			ResponseDecoder: fmt.Sprintf("Decode%sResponse", method.VarName),
 			Requirements:    reqs,

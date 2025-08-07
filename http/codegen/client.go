@@ -185,16 +185,47 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 	})
 
 	for _, e := range data.Endpoints {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "client-endpoint-init",
-			Source: httpTemplates.Read(clientEndpointInitT),
-			Data:   e,
-			FuncMap: map[string]any{
-				"isWebSocketEndpoint": IsWebSocketEndpoint,
-				"isSSEEndpoint":       IsSSEEndpoint,
-				"responseStructPkg":   responseStructPkg,
-			},
-		})
+		// For mixed results, generate both standard and SSE endpoints
+		if e.HasMixedResults {
+			// Generate standard HTTP endpoint
+			standardEndpoint := *e
+			standardEndpoint.SSE = nil
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "client-endpoint-init",
+				Source: httpTemplates.Read(clientEndpointInitT),
+				Data:   &standardEndpoint,
+				FuncMap: map[string]any{
+					"isWebSocketEndpoint": IsWebSocketEndpoint,
+					"isSSEEndpoint":       IsSSEEndpoint,
+					"responseStructPkg":   responseStructPkg,
+				},
+			})
+			
+			// Generate SSE endpoint with "Stream" suffix
+			sseEndpoint := *e
+			sseEndpoint.EndpointInit = e.EndpointInit + "Stream"
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "client-endpoint-init",
+				Source: httpTemplates.Read(clientEndpointInitT),
+				Data:   &sseEndpoint,
+				FuncMap: map[string]any{
+					"isWebSocketEndpoint": IsWebSocketEndpoint,
+					"isSSEEndpoint":       IsSSEEndpoint,
+					"responseStructPkg":   responseStructPkg,
+				},
+			})
+		} else {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "client-endpoint-init",
+				Source: httpTemplates.Read(clientEndpointInitT),
+				Data:   e,
+				FuncMap: map[string]any{
+					"isWebSocketEndpoint": IsWebSocketEndpoint,
+					"isSSEEndpoint":       IsSSEEndpoint,
+					"responseStructPkg":   responseStructPkg,
+				},
+			})
+		}
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}

@@ -119,6 +119,13 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 
 	// Use appropriate server handler based on transport
 	switch {
+	case hasMixedJSONRPCTransports(svc, services):
+		// For mixed transports, we need a unified handler with content negotiation
+		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-mixed-server-handler", Source: jsonrpcTemplates.Read(mixedServerHandlerT), FuncMap: funcs, Data: data})
+		// Include the standard HTTP handlers that the mixed handler delegates to
+		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), FuncMap: funcs, Data: data})
+		// Also include SSE handler for SSE-specific logic
+		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-sse-server-handler", Source: jsonrpcTemplates.Read(sseServerHandlerT), FuncMap: funcs, Data: data})
 	case hasJSONRPCSSE(svc, services):
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-sse-server-handler", Source: jsonrpcTemplates.Read(sseServerHandlerT), FuncMap: funcs, Data: data})
 	case httpcodegen.HasWebSocket(data):
@@ -127,15 +134,17 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), FuncMap: funcs, Data: data})
 	}
 
-	// Add HasSSE flag to data
+	// Add transport flags to data
 	mountData := struct {
 		*httpcodegen.ServiceData
-		HasSSE bool
+		HasSSE   bool
+		HasMixed bool
 	}{
 		ServiceData: data,
 		HasSSE:      hasJSONRPCSSE(svc, services),
+		HasMixed:    hasMixedJSONRPCTransports(svc, services),
 	}
-	
+
 	sections = append(sections,
 		&codegen.SectionTemplate{Name: "jsonrpc-server-mount", Source: jsonrpcTemplates.Read(serverMountT), Data: mountData},
 	)
@@ -163,13 +172,28 @@ func hasJSONRPCSSE(svc *expr.HTTPServiceExpr, data *httpcodegen.ServicesData) bo
 	if svcData == nil {
 		return false
 	}
-	
+
 	// Check if any JSON-RPC streaming endpoint uses SSE
 	for _, e := range svc.HTTPEndpoints {
 		if e.MethodExpr.IsStreaming() && e.IsJSONRPC() && e.SSE != nil {
 			return true
 		}
 	}
-	
+
 	return false
+}
+
+// hasJSONRPCHTTP returns true if the service has non-streaming JSON-RPC endpoints.
+func hasJSONRPCHTTP(svc *expr.HTTPServiceExpr) bool {
+	for _, e := range svc.HTTPEndpoints {
+		if e.IsJSONRPC() && !e.MethodExpr.IsStreaming() {
+			return true
+		}
+	}
+	return false
+}
+
+// hasMixedJSONRPCTransports returns true if the service has both HTTP and SSE JSON-RPC endpoints.
+func hasMixedJSONRPCTransports(svc *expr.HTTPServiceExpr, data *httpcodegen.ServicesData) bool {
+	return hasJSONRPCHTTP(svc) && hasJSONRPCSSE(svc, data)
 }

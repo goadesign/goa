@@ -96,6 +96,7 @@ func (r *Runner) Run(t *testing.T) {
 			t.Fatalf("Failed to create temp dir: %v", err)
 		}
 		r.testDir = tempDir
+		t.Logf("KEEP_GENERATED: Test directory is %s", r.testDir)
 	} else {
 		r.testDir = t.TempDir()
 	}
