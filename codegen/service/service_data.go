@@ -1209,7 +1209,7 @@ func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vnam
 		spayloadDesc string
 		spayloadEx   any
 	)
-	if m.StreamingPayload.Type != expr.Empty {
+	if m.StreamingPayload != nil && m.StreamingPayload.Type != expr.Empty {
 		spayloadName = scope.GoTypeName(m.StreamingPayload)
 		spayloadRef = scope.GoTypeRef(m.StreamingPayload)
 		if dt, ok := m.StreamingPayload.Type.(expr.UserType); ok {

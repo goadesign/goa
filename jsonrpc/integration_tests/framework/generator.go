@@ -516,7 +516,24 @@ func (g *Generator) getGoaBinary() string {
 		return goaBinary
 	}
 
-	// Check for GOPATH/bin/goa (common CI location)
+	// Check for Go's installation directory (where go install puts binaries)
+	// This handles both GOPATH mode and module mode correctly
+	cmd := exec.Command("go", "env", "GOBIN")
+	if output, err := cmd.Output(); err == nil {
+		gobin := strings.TrimSpace(string(output))
+		if gobin != "" {
+			goaBinName := "goa"
+			if runtime.GOOS == "windows" {
+				goaBinName = "goa.exe"
+			}
+			goaBin := filepath.Join(gobin, goaBinName)
+			if _, err := os.Stat(goaBin); err == nil {
+				return goaBin
+			}
+		}
+	}
+
+	// Check for GOPATH/bin/goa (fallback for GOPATH mode)
 	if gopath := os.Getenv("GOPATH"); gopath != "" {
 		goaBinName := "goa"
 		if runtime.GOOS == "windows" {

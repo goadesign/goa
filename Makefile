@@ -82,7 +82,7 @@ integration-test: build-goa
 	cd jsonrpc/integration_tests && go test -count=1 -timeout 10m ./...
 
 build-goa:
-	cd cmd/goa && go build -o $(GOPATH)/bin/goa$(shell test "$(GOOS)" = "windows" && echo ".exe" || echo "") .
+	cd cmd/goa && go install .
 
 release: release-goa release-examples release-plugins
 	@echo "Release v$(MAJOR).$(MINOR).$(BUILD) complete"
