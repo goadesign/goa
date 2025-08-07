@@ -3,8 +3,10 @@ package framework
 import (
 	"embed"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"text/template"
 
@@ -473,6 +475,8 @@ func (g *Generator) getGoaPath() string {
 }
 
 func (g *Generator) runPostGeneration() error {
+	goaBinary := g.getGoaBinary()
+
 	// Run go mod tidy first
 	cmd := exec.Command("go", "mod", "tidy")
 	cmd.Dir = g.workDir
@@ -481,14 +485,14 @@ func (g *Generator) runPostGeneration() error {
 	}
 
 	// Run goa gen
-	cmd = exec.Command("goa", "gen", "testservice/design", "-o", g.workDir)
+	cmd = exec.Command(goaBinary, "gen", "testservice/design", "-o", g.workDir)
 	cmd.Dir = g.workDir
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("goa gen failed: %w\nOutput: %s", err, output)
 	}
 
 	// Run goa example
-	cmd = exec.Command("goa", "example", "testservice/design", "-o", g.workDir)
+	cmd = exec.Command(goaBinary, "example", "testservice/design", "-o", g.workDir)
 	cmd.Dir = g.workDir
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("goa example failed: %w\nOutput: %s", err, output)
@@ -502,6 +506,34 @@ func (g *Generator) runPostGeneration() error {
 	}
 
 	return nil
+}
+
+// getGoaBinary returns the path to the goa binary
+// It checks for environment variables first, then falls back to system PATH
+func (g *Generator) getGoaBinary() string {
+	// Check for GOA_BINARY environment variable first
+	if goaBinary := os.Getenv("GOA_BINARY"); goaBinary != "" {
+		return goaBinary
+	}
+
+	// Check for GOPATH/bin/goa (common CI location)
+	if gopath := os.Getenv("GOPATH"); gopath != "" {
+		goaBinName := "goa"
+		if runtime.GOOS == "windows" {
+			goaBinName = "goa.exe"
+		}
+		goaBin := filepath.Join(gopath, "bin", goaBinName)
+		if _, err := os.Stat(goaBin); err == nil {
+			return goaBin
+		}
+	}
+
+	// Fall back to system PATH
+	goaBinName := "goa"
+	if runtime.GOOS == "windows" {
+		goaBinName = "goa.exe"
+	}
+	return goaBinName
 }
 
 // goify converts a string to Go identifier
