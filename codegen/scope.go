@@ -106,7 +106,41 @@ func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, ptr, useDefault bool) str
 	return s.goTypeDef(att, ptr, useDefault, pkg)
 }
 
+// GoTypeDefWithTargetPkg returns the Go code that defines a Go type which matches the data
+// structure definition, with UserType references qualified for the target package.
+// This is used when generating inline struct definitions that may reference UserTypes
+// from other packages.
+//
+// targetPkg is the package where the generated code will be placed.
+func (s *NameScope) GoTypeDefWithTargetPkg(att *expr.AttributeExpr, ptr, useDefault bool, targetPkg string) string {
+	// For inline structs, we need to ensure UserTypes are qualified appropriately
+	// based on the target package where the code is being generated.
+	return s.goTypeDefForTargetPkg(att, ptr, useDefault, targetPkg)
+}
+
+// goTypeDefForTargetPkg is like goTypeDef but uses the target package for qualifying UserTypes.
+func (s *NameScope) goTypeDefForTargetPkg(att *expr.AttributeExpr, ptr, useDefault bool, targetPkg string) string {
+	namer := func(a *expr.AttributeExpr) string {
+		return s.GoFullTypeName(a, targetPkg)
+	}
+	return s.goTypeDefWithUserTypeNamer(att, ptr, useDefault, namer)
+}
+
 func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg string) string {
+	namer := func(a *expr.AttributeExpr) string {
+		// Qualify with declaring package only when different from the struct's package
+		if loc := UserTypeLocation(a.Type); loc != nil && loc.PackageName() != pkg {
+			return s.GoFullTypeName(a, loc.PackageName())
+		}
+		return s.GoFullTypeName(a, "")
+	}
+	return s.goTypeDefWithUserTypeNamer(att, ptr, useDefault, namer)
+}
+
+// goTypeDefWithUserTypeNamer is the shared implementation used by goTypeDef and
+// goTypeDefForTargetPkg. The nameForUserType function controls how user types
+// are qualified in the generated definition.
+func (s *NameScope) goTypeDefWithUserTypeNamer(att *expr.AttributeExpr, ptr, useDefault bool, nameForUserType func(*expr.AttributeExpr) string) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
 		if t, _ := GetMetaType(att); t != "" {
@@ -114,17 +148,17 @@ func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg
 		}
 		return GoNativeTypeName(actual)
 	case *expr.Array:
-		d := s.goTypeDef(actual.ElemType, ptr, useDefault, pkg)
+		d := s.goTypeDefWithUserTypeNamer(actual.ElemType, ptr, useDefault, nameForUserType)
 		if expr.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *expr.Map:
-		keyDef := s.goTypeDef(actual.KeyType, ptr, useDefault, pkg)
+		keyDef := s.goTypeDefWithUserTypeNamer(actual.KeyType, ptr, useDefault, nameForUserType)
 		if expr.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
-		elemDef := s.goTypeDef(actual.ElemType, ptr, useDefault, pkg)
+		elemDef := s.goTypeDefWithUserTypeNamer(actual.ElemType, ptr, useDefault, nameForUserType)
 		if expr.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
@@ -145,7 +179,7 @@ func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg
 			)
 			{
 				fn = GoifyAtt(at, name, true)
-				tdef = s.goTypeDef(at, ptr, useDefault, pkg)
+				tdef = s.goTypeDefWithUserTypeNamer(at, ptr, useDefault, nameForUserType)
 				if expr.IsObject(at.Type) ||
 					att.IsPrimitivePointer(name, useDefault) ||
 					(ptr && expr.IsPrimitive(at.Type) && at.Type.Kind() != expr.AnyKind && at.Type.Kind() != expr.BytesKind) {
@@ -164,11 +198,7 @@ func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg
 		if actual == expr.Empty {
 			return "struct {}"
 		}
-		var prefix string
-		if loc := UserTypeLocation(actual); loc != nil && loc.PackageName() != pkg {
-			prefix = loc.PackageName() + "."
-		}
-		return prefix + s.GoTypeName(att)
+		return nameForUserType(att)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}

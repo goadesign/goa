@@ -274,8 +274,63 @@ The `ID()` function marks which field receives the JSON-RPC message ID. Rules:
 
 1. ID fields must be String type
 2. Result can only have an ID if Payload has one
-3. For non-streaming methods, the ID is automatically copied from payload to result
+3. For non-streaming methods, the response ID defaults to the request ID, no
+   need to use ID in the result DSL definition. If the Result defines an ID and
+   you set it, that value is used. The framework does not mutate your result.
 4. Missing ID at runtime means the message is a notification
+
+### ID Semantics
+
+This section describes how IDs are treated across transports and shapes.
+
+- Design-time type
+  - Use `ID()` to mark the field that carries the JSON-RPC ID. It must be a
+    String in the design.
+  - Include `ID()` in the Payload to receive the request ID in handlers. Add it
+    to the Result only if you want your code to overwrite the ID in results.
+
+- Runtime type
+  - JSON-RPC permits string or number IDs. Goa accepts either on the wire and
+    normalizes to String when assigning to your `ID()` field.
+
+- HTTP (request/response)
+  - Client
+    - If the Payload has an ID field and it is non-empty, the client sends it
+      as `id` (request). If it is empty (or nil pointer), the client omits `id`
+      (notification).
+    - If the Payload has no ID field, the client generates a new String ID and
+      sends a request (never a notification).
+  - Server
+    - For non-streaming methods, the response `id` equals the Result ID if you
+      set it; otherwise it equals the request `id`.
+    - For notifications (no `id`), no response is sent.
+
+- SSE (server streaming)
+  - Send(ctx, event): emits a JSON-RPC notification (no `id`).
+  - SendAndClose(ctx, result): emits a JSON-RPC response. The `id` equals the
+    Result ID if you set it; otherwise it equals the original request `id`.
+  - You can map the `Last-Event-ID` header into a Payload field with
+    `SSERequestID()` and select a Result field as the SSE event id with
+    `SSEEventID()`.
+
+- WebSocket (streaming)
+  - Server
+    - Each client request carries an `id`; responses sent via the stream use
+      that `id` automatically. Use SendNotification for server-initiated
+      messages (no `id`).
+  - Client
+    - For bidirectional or recv-only patterns, the client generates a String
+      `id` for each request and correlates the response. If your Result has an
+      ID field and it is empty, the client populates it from the envelope `id`.
+    - For send-only patterns, the client sends notifications (no `id`).
+
+- When to use `ID()` in the DSL
+  - Non-streaming: put `ID()` in the Payload to receive request IDs in your
+    handler; add it to the Result only if you want to overwrite the ID in your
+    result type. The response envelope always carries an `id` for requests.
+  - Streaming (WebSocket bidirectional): include `ID()` in both streaming
+    Payload and Result to correlate messages at the type level.
+  - Notifications: omit `ID()` (no `id` is sent or expected).
 
 ## Transport Options
 
@@ -592,6 +647,12 @@ func (s *chatSvc) Echo(ctx context.Context, p *chat.EchoPayload,
 
 ### Mixed Transports: Content Negotiation
 
+Use mixed transports when the same method benefits from both synchronous
+responses and streaming updates. Clients select the behavior with the `Accept`
+header set by Goa according the method being called; define both `Result` and
+`StreamingResult` to enable switching at runtime. If only one is defined, the
+server falls back to the available behavior.
+
 Combine HTTP and SSE in a single service using automatic content negotiation:
 
 ```go
@@ -673,7 +734,8 @@ JSON-RPC supports sending multiple requests in a single HTTP call:
 ]
 ```
 
-The server processes each request independently and returns an array of responses:
+The server processes each request independently and returns an array of
+responses:
 
 ```json
 [
@@ -683,7 +745,10 @@ The server processes each request independently and returns an array of response
 ]
 ```
 
-Batch processing is automatic - no special configuration needed.
+Batch processing is automatic—no special configuration needed. Responses are
+written in the same order as the requests. Notifications (entries without `id`)
+are omitted from the response array. Consider bounding batch size and payload
+to avoid large memory usage and long single-request latencies.
 
 ### Error Handling
 
@@ -731,9 +796,24 @@ Standard error codes:
 - `-32603`: Internal error
 - `-32000` to `-32099`: Reserved for implementation
 
+Mapping precedence: method-level mappings override service-level mappings for
+the same error name. Unmapped errors default to `Internal error (-32603)`. When
+parameter decoding or validation fails, the server returns `Invalid params
+(-32602)`. Parse failures return `Parse error (-32700)`.
+
 ### Streaming Patterns
 
+Choose the pattern that fits the interaction: client streaming to upload or
+ingest data, server streaming to push updates, or bidirectional for live,
+correlated exchanges. In all cases, respect context cancellation, bound
+message sizes, and send periodic heartbeats or progress when helpful.
+
 #### Client Streaming (WebSocket only)
+
+Use when the client sends a sequence of messages that the server aggregates or
+processes incrementally (for example, uploads). Close the stream on context
+cancellation and handle backpressure by reading promptly.
+
 ```go
 Method("upload", func() {
     StreamingPayload(func() {
@@ -750,6 +830,11 @@ Method("upload", func() {
 ```
 
 #### Server Streaming (SSE or WebSocket)
+
+Use when the server pushes updates over time (for example, progress or live
+feeds). Send small, regular messages; close the stream when work completes or
+the context is canceled.
+
 ```go
 Method("download", func() {
     Payload(func() {
@@ -762,12 +847,17 @@ Method("download", func() {
         Required("chunk", "offset")
     })
     JSONRPC(func() {
-        ServerSentEvents(func() {})  // Or use WebSocket
+        ServerSentEvents(func() {})  // Or use WebSocket (default)
     })
 })
 ```
 
 #### Bidirectional Streaming (WebSocket only)
+
+Use for real-time interactions where both sides can send messages, often
+correlated via an `ID()` field. Keep each message small and prefer request
+coalescing over many tiny frames when possible.
+
 ```go
 Method("transform", func() {
     StreamingPayload(func() {
@@ -845,57 +935,30 @@ func (s *svc) ReportStream(ctx context.Context, p *ReportPayload,
 
 ## Best Practices
 
-### 1. Service Design
+Use these practical guidelines to keep designs simple and predictable.
 
-**DO:**
-- Group related methods in the same service
-- Use consistent naming conventions
-- Define clear error codes and messages
-- Document expected behavior
+- **Design**
+  - Keep services cohesive; group related methods and use consistent names.
+  - Choose transport per use case: HTTP for request/response, SSE for
+    server‑push, WebSocket for bidirectional. Mixing transports is supported;
+    prefer a single default unless content negotiation adds clear value.
 
-**DON'T:**
-- Mix WebSocket with HTTP endpoints in the same service
-- Use deeply nested payload structures
-- Rely on transport-specific features
+- **Errors**
+  - Define typed errors in the design and map them to JSON‑RPC codes once at
+    the service or method level.
+  - Return user‑facing messages; avoid leaking internals. Include error data
+    only when it helps clients recover.
 
-### 2. Error Handling
+- **Streaming**
+  - Bound message sizes, send periodic heartbeats/progress as needed, and
+    close on context cancellation.
 
-**DO:**
-- Map application errors to appropriate JSON-RPC codes
-- Provide meaningful error messages
-- Use standard codes when applicable
-- Include error data when helpful
+- **Performance**
+  - Reuse connections, use batching when it reduces latency, and measure.
+  - Avoid per‑request connection setup and oversized messages.
 
-**DON'T:**
-- Use reserved error code ranges
-- Return stack traces in production
-- Ignore validation errors
-
-### 3. Streaming
-
-**DO:**
-- Use SSE for server-push scenarios
-- Use WebSocket for bidirectional needs
-- Implement proper cleanup in stream handlers
-- Handle connection failures gracefully
-
-**DON'T:**
-- Keep streams open indefinitely
-- Send large payloads in single messages
-- Ignore backpressure
-
-### 4. Performance
-
-**DO:**
-- Use batch requests for multiple operations
-- Implement connection pooling for clients
-- Cache frequently accessed data
-- Monitor message sizes
-
-**DON'T:**
-- Create new connections per request
-- Send unnecessary notifications
-- Block stream handlers
+- **Compatibility**
+  - Keep wire shapes stable; version at the service level; document changes.
 
 ### Supporting Multiple Transports
 
@@ -903,30 +966,10 @@ Expose the same service over multiple protocols:
 
 ```go
 Service("universal", func() {
-    // JSON-RPC configuration
-    JSONRPC(func() {
-        POST("/rpc")
-    })
-    
+    JSONRPC(func() { POST("/rpc") })
     Method("process", func() {
-        Payload(func() {
-            Attribute("data", String)
-            Required("data")
-        })
-        Result(func() {
-            Attribute("output", String)
-            Required("output")
-        })
-        
-        // Available via JSON-RPC
         JSONRPC(func() {})
-        
-        // Also available via HTTP REST
-        HTTP(func() {
-            POST("/process")
-        })
-        
-        // And via gRPC
+        HTTP(func() { POST("/process") })
         GRPC(func() {})
     })
 })

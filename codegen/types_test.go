@@ -127,6 +127,117 @@ func TestGoTypeDef(t *testing.T) {
 	}
 }
 
+func TestGoTypeDefWithTargetPkg(t *testing.T) {
+	// Test that inline struct definitions properly qualify UserType references
+	// when generated for a different target package.
+	var (
+		// Create a UserType that would be defined in a service package
+		customType = &expr.UserTypeExpr{
+			AttributeExpr: &expr.AttributeExpr{
+				Type: &expr.Object{
+					{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.String}},
+					{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.Int}},
+				},
+			},
+			TypeName: "CustomType",
+		}
+		
+		// Create an inline struct that references the UserType in an array field
+		// This simulates the scenario where a payload has an inline struct with
+		// fields that reference UserTypes defined in the service package
+		inlineStruct = &expr.AttributeExpr{
+			Type: &expr.Object{
+				{Name: "Items", Attribute: &expr.AttributeExpr{
+					Type: &expr.Array{
+						ElemType: &expr.AttributeExpr{Type: customType},
+					},
+				}},
+				{Name: "Count", Attribute: &expr.AttributeExpr{Type: expr.Int}},
+				{Name: "Score", Attribute: &expr.AttributeExpr{Type: expr.Float64}},
+			},
+		}
+	)
+	
+	cases := map[string]struct {
+		att        *expr.AttributeExpr
+		targetPkg  string
+		expected   string
+	}{
+		// When target package is empty, UserType should be unqualified
+		"inline-struct-empty-pkg": {
+			inlineStruct, 
+			"", 
+			"struct {\n\tItems []*CustomType\n\tCount *int\n\tScore *float64\n}",
+		},
+		// When target package is "service", UserType should be qualified
+		"inline-struct-service-pkg": {
+			inlineStruct,
+			"service",
+			"struct {\n\tItems []*service.CustomType\n\tCount *int\n\tScore *float64\n}",
+		},
+	}
+	
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			scope := NewNameScope()
+			actual := scope.GoTypeDefWithTargetPkg(tc.att, false, true, tc.targetPkg)
+			if actual != tc.expected {
+				t.Errorf("got:\n%s\nexpected:\n%s", actual, tc.expected)
+			}
+		})
+	}
+}
+
+func TestAttributeScopeNameWithInlineStruct(t *testing.T) {
+	// Test that AttributeScope.Name properly qualifies UserTypes in inline structs
+	// This tests the actual code path used during transformation
+	var (
+		// Create a UserType that would be defined in a service package
+		myType = &expr.UserTypeExpr{
+			AttributeExpr: &expr.AttributeExpr{
+				Type: &expr.Object{
+					{Name: "field", Attribute: &expr.AttributeExpr{Type: expr.String}},
+				},
+			},
+			TypeName: "MyType",
+		}
+		
+		// Create an inline struct that references the UserType
+		// This tests the case where transformation generates inline structs
+		// with UserType references that need proper package qualification
+		inlineStruct = &expr.AttributeExpr{
+			Type: &expr.Object{
+				{Name: "Elements", Attribute: &expr.AttributeExpr{
+					Type: &expr.Array{
+						ElemType: &expr.AttributeExpr{Type: myType},
+					},
+				}},
+				{Name: "Total", Attribute: &expr.AttributeExpr{Type: expr.Int}},
+			},
+		}
+	)
+
+	// Test the AttributeScope.Name method which is used in transformation
+	// This is the actual code path that needs to handle package qualification
+	scope := NewAttributeScope(NewNameScope())
+	
+	// Without target package, UserType should be unqualified
+	result := scope.Name(inlineStruct, "", false, true)
+	expected := "struct {\n\tElements []*MyType\n\tTotal *int\n}"
+	if result != expected {
+		t.Errorf("without target package - got:\n%s\nexpected:\n%s", result, expected)
+	}
+	
+	// With target package "service", UserType should be qualified
+	// This tests that inline structs properly qualify UserTypes when
+	// generated for a different package during transformation
+	result = scope.Name(inlineStruct, "service", false, true)
+	expected = "struct {\n\tElements []*service.MyType\n\tTotal *int\n}"
+	if result != expected {
+		t.Errorf("with target package - got:\n%s\nexpected:\n%s", result, expected)
+	}
+}
+
 func TestGoNativeTypeName(t *testing.T) {
 	cases := map[string]struct {
 		dataType expr.DataType
