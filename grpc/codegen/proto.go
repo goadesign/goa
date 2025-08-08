@@ -5,7 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -122,7 +121,6 @@ func protoc(protocCmd []string, path string, includes []string) error {
 		return err
 	}
 
-	// Build args for protoc
 	args := []string{
 		path,
 		"--proto_path", dir,
@@ -134,117 +132,12 @@ func protoc(protocCmd []string, path string, includes []string) error {
 	for _, include := range includes {
 		args = append(args, "-I", include)
 	}
-
-	// Resolve plugins robustly across platforms
-	pluginArgs, env := resolveProtocPlugins()
-	args = append(args, pluginArgs...)
-
 	cmd := exec.Command(protocCmd[0], append(protocCmd[1:len(protocCmd):len(protocCmd)], args...)...)
 	cmd.Dir = filepath.Dir(path)
-	if len(env) > 0 {
-		cmd.Env = env
-	}
 
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run protoc: %w: %s", err, output)
 	}
 
 	return nil
-}
-
-// resolveProtocPlugins attempts to locate protoc plugins and augment PATH for cross-platform reliability.
-// It returns additional protoc arguments (e.g., --plugin=...) and an environment slice that includes an augmented PATH.
-func resolveProtocPlugins() (extraArgs []string, env []string) {
-	currentEnv := os.Environ()
-	pathEnv := os.Getenv("PATH")
-
-	// Gather potential bin directories
-	bins := make([]string, 0, 4)
-	if gobin := goEnv("GOBIN"); gobin != "" {
-		bins = append(bins, gobin)
-	}
-	if gopath := goEnv("GOPATH"); gopath != "" {
-		// GOPATH may be a list; take all
-		sep := ":"
-		if runtime.GOOS == "windows" {
-			sep = ";"
-		}
-		for _, p := range strings.Split(gopath, sep) {
-			if p == "" {
-				continue
-			}
-			bins = append(bins, filepath.Join(p, "bin"))
-		}
-	}
-	// Also add common locations
-	bins = append(bins, filepath.Join(os.Getenv("HOME"), "go", "bin"))
-
-	// Augment PATH
-	sep := ":"
-	if runtime.GOOS == "windows" {
-		sep = ";"
-	}
-	augmented := strings.Join(append([]string{pathEnv}, bins...), sep)
-
-	// Compose new env with augmented PATH
-	seenPath := false
-	for i, e := range currentEnv {
-		if strings.HasPrefix(e, "PATH=") || strings.HasPrefix(strings.ToUpper(e), "PATH=") {
-			currentEnv[i] = "PATH=" + augmented
-			seenPath = true
-			break
-		}
-	}
-	if !seenPath {
-		currentEnv = append(currentEnv, "PATH="+augmented)
-	}
-
-	// Try to resolve plugin paths explicitly and pass --plugin flags when available.
-	plugins := []struct{
-		name   string
-		flag   string
-	}{
-		{"protoc-gen-go", "protoc-gen-go"},
-		{"protoc-gen-go-grpc", "protoc-gen-go-grpc"},
-	}
-
-	for _, pl := range plugins {
-		path := lookPathCrossPlatform(pl.name, bins)
-		if path != "" {
-			extraArgs = append(extraArgs, "--plugin="+pl.flag+"="+path)
-		}
-	}
-
-	return extraArgs, currentEnv
-}
-
-// goEnv runs `go env KEY` and returns the trimmed output or empty string on error.
-func goEnv(key string) string {
-	out, err := exec.Command("go", "env", key).Output()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimSpace(string(out))
-}
-
-// lookPathCrossPlatform tries exec.LookPath first, then searches in provided bins with OS extension handling.
-func lookPathCrossPlatform(base string, bins []string) string {
-	// First try the environment PATH
-	if p, err := exec.LookPath(base); err == nil {
-		return p
-	}
-
-	exts := []string{""}
-	if runtime.GOOS == "windows" {
-		exts = []string{".exe", ".bat", ".cmd", ""}
-	}
-	for _, b := range bins {
-		for _, ext := range exts {
-			candidate := filepath.Join(b, base+ext)
-			if fi, err := os.Stat(candidate); err == nil && !fi.IsDir() {
-				return candidate
-			}
-		}
-	}
-	return ""
 }
