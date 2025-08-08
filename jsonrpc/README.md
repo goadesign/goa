@@ -1,755 +1,958 @@
-# JSON-RPC in Goa
+# JSON-RPC 2.0 in Goa
 
-Goa now provides first-class, type-safe support for JSON-RPC 2.0. You can build
-services over HTTP, Server-Sent Events (SSE), and WebSockets using the same Goa
-DSL you already know. The framework handles the protocol complexities, letting
-you focus on your business logic.
+Goa provides first-class, type-safe support for JSON-RPC 2.0, enabling you to build robust RPC services with the same powerful DSL used for REST and gRPC. This implementation handles all protocol complexities while preserving Goa's design-first philosophy.
 
-## Key Concepts
+## Table of Contents
 
-### Single Endpoint Multiplexing
+- [Quick Start](#quick-start)
+- [Core Concepts](#core-concepts)
+  - [Protocol Fundamentals](#protocol-fundamentals)
+  - [Single Endpoint Architecture](#single-endpoint-architecture)
+  - [Request vs Notification](#request-vs-notification)
+- [Defining Services](#defining-services)
+  - [Service Configuration](#service-configuration)
+  - [Method Configuration](#method-configuration)
+  - [ID Field Mapping](#id-field-mapping)
+- [Transport Options](#transport-options)
+  - [HTTP: Request-Response](#http-request-response)
+  - [Server-Sent Events: Server Streaming](#server-sent-events-server-streaming)
+  - [WebSocket: Bidirectional Streaming](#websocket-bidirectional-streaming)
+  - [Mixed Transports: Content Negotiation](#mixed-transports-content-negotiation)
+- [Advanced Features](#advanced-features)
+  - [Batch Processing](#batch-processing)
+  - [Error Handling](#error-handling)
+  - [Streaming Patterns](#streaming-patterns)
+  - [Mixed Results](#mixed-results)
+- [Best Practices](#best-practices)
 
-A core design principle of Goa's JSON-RPC support is that all methods in a
-service are multiplexed over a single endpoint. Unlike REST, where each action
-often has a unique URL (`/users`, `/users/{id}`), a JSON-RPC service has one URL
-(e.g., `/api/jsonrpc`).
+## Quick Start
 
-Goa uses the `method` field within the JSON-RPC payload to route incoming
-requests to the correct service method. This has a few important implications:
-
-- **Transport Flexibility**: JSON-RPC methods within a single service can use
-  different transports with some limitations. You can mix HTTP and SSE methods
-  using content negotiation based on the `Accept` header. WebSocket methods
-  require a dedicated service due to their persistent connection nature.
-
-- **Mixed Endpoints in One Service**: You can mix JSON-RPC methods and standard
-  HTTP endpoints within the same service. A method is only exposed via JSON-RPC
-  if you add a `JSONRPC()` block to its design, allowing other methods in the
-  same service to function as regular REST endpoints.
-
-- **Payload-Driven**: All parameters are passed inside the JSON payload.
-  Standard HTTP features like path parameters and query strings are not used for
-  routing method calls.
-
-- **Efficient Connections**: For WebSockets, this design allows multiple,
-  concurrent requests and responses to share a single, persistent connection.
-
-## Defining a JSON-RPC Service
-
-You enable JSON-RPC at the service level to define the shared endpoint and at
-the method level to expose a specific method.
-
-### 1. Service-Level Configuration
-
-Use the `JSONRPC` function inside a `Service` block to define the common
-endpoint for all its JSON-RPC methods.
+Define a simple JSON-RPC calculator service:
 
 ```go
 // design/design.go
-Service("calculator", func() {
-    Description("A service for basic arithmetic.")
-    // All methods in this service will be available over JSON-RPC
-    // at the `/jsonrpc` endpoint.
+package design
+
+import . "goa.design/goa/v3/dsl"
+
+var _ = API("calculator", func() {
+    Title("Calculator Service")
+    Description("A simple calculator exposed via JSON-RPC")
+})
+
+var _ = Service("calc", func() {
+    Description("The calc service performs basic arithmetic")
+    
+    // Enable JSON-RPC for this service at /rpc endpoint
     JSONRPC(func() {
-        POST("/jsonrpc")
+        POST("/rpc")
     })
-
-    // ... methods defined here
-})
-```
-
-### 2. Method-Level Configuration
-
-Within the service, enable each method by adding a `JSONRPC()` block. This block
-is often empty for simple cases but can also be used for mapping custom errors.
-
-```go
-// design/design.go
-Method("add", func() {
-    Description("Adds two integers.")
-    Payload(func() {
-        Attribute("a", Int, "Left-hand side")
-        Attribute("b", Int, "Right-hand side")
-        Required("a", "b")
-    })
-    Result(Int)
-
-    // Expose this method via JSON-RPC
-    JSONRPC(func() {})
-})
-```
-
-### 3. Methods Without Results  
-
-Non-streaming methods that don't define a Result can still be called as either requests or
-notifications, depending on whether an ID is provided at runtime. When called
-with an ID, they return an empty success response. When called without an ID,
-they behave as notifications.
-
-**Note**: This runtime behavior applies to non-streaming methods only. WebSocket streaming
-methods use explicit `SendNotification`, `SendResponse`, and `SendError` methods to control
-message types (see WebSocket section below).
-
-```go
-// design/design.go
-Method("log", func() {
-    Description("Logs a message.")
-    Payload(func() {
-        Field(1, "message", String)
-        Field(2, "id", String, "Optional ID")
-        Meta("jsonrpc:id", "2")
-    })
-    // No Result() - can be request or notification
-    JSONRPC(func() {})
-})
-```
-
-Note: This applies to non-streaming methods only. Streaming methods have different
-behavior based on their streaming pattern and transport (see the Transports section below).
-
-### 4. Request vs Notification: Runtime Determination
-
-In Goa's JSON-RPC implementation, whether a message is a request (expecting a response) or a notification (fire-and-forget) is determined at runtime by the presence of an ID:
-
-- **With ID**: The message is a request and expects a response
-- **Without ID or empty string ID**: The message is a notification and no response is sent
-
-This applies to ALL methods, regardless of whether they return a result. Even methods that only return errors will behave as notifications when called without an ID.
-
-#### Client-to-Server Messages
-
-Any method can be called as either a request or notification by controlling the ID field:
-
-```go
-// Design
-Method("process", func() {
-    Payload(func() {
-        Field(1, "data", String)
-        Field(2, "request_id", String, "Optional request ID")
-        Meta("jsonrpc:id", "2")  // Mark as JSON-RPC ID field
-    })
-    Result(String)
-    JSONRPC(func() {})
-})
-
-// Client usage
-// As request (expects response)
-err := client.Process(ctx, &ProcessPayload{
-    Data: "hello",
-    RequestID: "123",  // ID present = request
-})
-
-// As notification (no response expected)
-err := client.Process(ctx, &ProcessPayload{
-    Data: "hello",
-    // No RequestID = notification
-})
-```
-
-#### Server-to-Client Messages (WebSocket/SSE/Mixed)
-
-For streaming methods, servers can send both responses and notifications:
-
-```go
-// Design
-Method("updates", func() {
-    Payload(String)
-    StreamingResult(func() {
-        Field(1, "event", String)
-        Field(2, "id", String, "Optional ID for responses")
-        Meta("jsonrpc:id", "2")
-    })
-    JSONRPC(func() {})
-})
-
-// Server implementation
-func (s *svc) Updates(ctx context.Context, p string, stream Updates) error {
-    // Send as notification (no ID)
-    stream.Send(ctx, &UpdateResult{Event: "progress 50%"})
     
-    // Send as response (with ID)
-    stream.Send(ctx, &UpdateResult{Event: "complete", ID: "123"})
-    
-    return nil
-}
-```
-
-#### ID Field Design Rules
-
-1. **Validation**: Result may only define an ID field if the corresponding Payload (or StreamingPayload) also defines one
-2. **Field Naming**: Use the `Meta("jsonrpc:id", "position")` tag to mark which field is the JSON-RPC ID
-3. **Field Type**: ID fields should be String type (required or optional via pointer)
-4. **Required vs Optional**: Control whether ID is required using standard Goa field definitions
-
-```go
-// design/design.go
-// For a bidirectional WebSocket method, IDs are required in both.
-Method("echo", func() {
-    StreamingPayload(func() {
-        ID("request_id", String, "Request identifier for correlation")
-        Attribute("data", String)
-        Required("request_id", "data")
-    })
-    StreamingResult(func() {
-        ID("request_id", String, "Correlating request identifier")
-        Attribute("result", String)
-        Required("request_id", "result")
-    })
-    JSONRPC(func() {})
-})
-```
-
-## Transports
-
-Goa supports three transports for JSON-RPC services, each suited for different
-use cases. Additionally, you can combine HTTP and SSE transports within a single
-service using automatic content negotiation.
-
-### HTTP: Classic Request-Response
-
-This is the standard, stateless transport for JSON-RPC. It's ideal for simple,
-synchronous remote procedure calls.
-
-#### Design
-
-```go
-// design/design.go
-Service("calculator", func() {
-    JSONRPC(func() { POST("/jsonrpc") })
-
+    // Define an add method
     Method("add", func() {
+        Description("Add two numbers")
         Payload(func() {
-            Attribute("a", Int); Attribute("b", Int)
+            Attribute("a", Float64, "First operand")
+            Attribute("b", Float64, "Second operand")
             Required("a", "b")
         })
-        Result(Int)
+        Result(Float64)
+        
+        // Expose this method via JSON-RPC
         JSONRPC(func() {})
+    })
+    
+    // Define a divide method with error handling
+    Method("divide", func() {
+        Description("Divide two numbers")
+        Payload(func() {
+            Field(1, "dividend", Float64, "The dividend")
+            Field(2, "divisor", Float64, "The divisor")
+            Required("dividend", "divisor")
+        })
+        Result(Float64)
+        Error("division_by_zero")
+        
+        JSONRPC(func() {
+            Response("division_by_zero", func() {
+                Code(-32001) // Custom error code
+            })
+        })
     })
 })
 ```
 
-#### Server Implementation
+Generate the code:
 
-The implementation is straightforward. Goa handles the JSON-RPC protocol
-wrapping.
+```bash
+goa gen calculator/design
+```
+
+Implement the service:
 
 ```go
-// calculator.go
-func (s *calculatorSvc) Add(ctx context.Context, p *calculator.AddPayload) (res int, err error) {
+// calc.go
+package calcapi
+
+import (
+    "context"
+    calc "calculator/gen/calc"
+)
+
+type calcService struct{}
+
+func NewCalc() calc.Service {
+    return &calcService{}
+}
+
+func (s *calcService) Add(ctx context.Context, p *calc.AddPayload) (float64, error) {
     return p.A + p.B, nil
 }
+
+func (s *calcService) Divide(ctx context.Context, p *calc.DividePayload) (float64, error) {
+    if p.Divisor == 0 {
+        return 0, calc.MakeDivisionByZero("cannot divide by zero")
+    }
+    return p.Dividend / p.Divisor, nil
+}
 ```
 
-#### Client Usage
+## Core Concepts
 
-The generated client provides a simple, function-call interface.
+### Protocol Fundamentals
 
-```go
-// main.go
-client := calculator.NewClient(
-    "http", "localhost:8080", http.DefaultClient,
-    goahttp.RequestEncoder, goahttp.ResponseDecoder, false,
-)
-result, err := client.Add(ctx, &calculator.AddPayload{A: 10, B: 5})
-// result == 15
+JSON-RPC 2.0 is a stateless, lightweight remote procedure call protocol that
+uses JSON for encoding. Key characteristics:
+
+1. **Transport Agnostic**: While commonly used over HTTP, the protocol itself doesn't specify transport
+2. **Simple Message Format**: All communication uses a consistent JSON structure
+3. **Bidirectional**: Supports both client-to-server and server-to-client communication
+4. **Batch Support**: Multiple calls can be sent in a single request
+
+Message structure:
+```json
+// Request
+{
+    "jsonrpc": "2.0",
+    "method": "add",
+    "params": {"a": 5, "b": 3},
+    "id": 1
+}
+
+// Response
+{
+    "jsonrpc": "2.0",
+    "result": 8,
+    "id": 1
+}
 ```
 
-### Server-Sent Events (SSE): Server-to-Client Streaming
+### Single Endpoint Architecture
 
-SSE enables unidirectional streaming from the server to the client. This is
-perfect for progress updates, notifications, and real-time data feeds. The
-connection is initiated with a POST request to send the initial payload.
+Unlike REST where each resource has its own URL, JSON-RPC services multiplex all
+methods through a single endpoint:
 
-SSE in Goa's JSON-RPC implementation uses a unified `Send` method that can send
-both notifications and responses. The distinction is made automatically based on
-the presence of an ID field in the message.
+- **REST**: `/users` (GET), `/users/{id}` (GET/PUT/DELETE), `/products` (GET/POST)
+- **JSON-RPC**: `/rpc` (all methods)
 
-#### Design
+This design provides several benefits:
 
-Use `StreamingResult` to define the stream's data type. Here, we use `OneOf` to
-send different kinds of messages on the same stream: progress updates and a
-final completion event.
+1. **Simplified Routing**: No complex URL patterns to manage
+2. **Protocol Consistency**: All methods follow the same calling convention
+3. **Connection Efficiency**: WebSocket/SSE connections can handle multiple methods
+4. **Easy Versioning**: Version the entire API at once
+
+The `method` field in the JSON-RPC payload determines which service method to invoke:
+
+```json
+{"jsonrpc": "2.0", "method": "add", "params": {"a": 5, "b": 3}, "id": 1}
+{"jsonrpc": "2.0", "method": "divide", "params": {"dividend": 10, "divisor": 2}, "id": 2}
+```
+
+### Request vs Notification
+
+JSON-RPC distinguishes between two types of messages based on the presence of an ID:
+
+**Requests** (with ID) expect a response:
+```json
+{"jsonrpc": "2.0", "method": "process", "params": {"data": "hello"}, "id": "req-123"}
+// Server MUST send a response with matching ID
+```
+
+**Notifications** (without ID) are fire-and-forget:
+```json
+{"jsonrpc": "2.0", "method": "log", "params": {"message": "user logged in"}}
+// Server MUST NOT send a response
+```
+
+This behavior is determined at **runtime** by the client, not design time. The
+same method can be called as either a request or notification.
+
+## Defining Services
+
+### Service Configuration
+
+Enable JSON-RPC at the service level to define the shared endpoint:
 
 ```go
-// design/design.go
-Service("processor", func() {
-    JSONRPC(func() { POST("/process") }) // SSE uses POST
+Service("myservice", func() {
+    Description("A service exposed via JSON-RPC")
+    
+    // Define the JSON-RPC endpoint
+    JSONRPC(func() {
+        POST("/jsonrpc")  // For HTTP and SSE
+        // OR
+        GET("/ws")        // For WebSocket
+    })
+    
+    // Define error mappings for all methods
+    Error("unauthorized", func() {
+        Description("Unauthorized access")
+    })
+    
+    JSONRPC(func() {
+        Response("unauthorized", func() {
+            Code(-32000)  // Map to JSON-RPC error code
+        })
+    })
+})
+```
 
-    Method("process_file", func() {
-        Payload(func() { /* ... */ })
+### Method Configuration
+
+Each method needs its own `JSONRPC()` block to be exposed:
+
+```go
+Method("process", func() {
+    Description("Process data")
+    
+    Payload(func() {
+        Attribute("data", String, "Data to process")
+        Attribute("priority", Int, "Processing priority")
+        Required("data")
+    })
+    
+    Result(func() {
+        Attribute("output", String, "Processed output")
+        Attribute("duration", Int, "Processing time in ms")
+        Required("output", "duration")
+    })
+    
+    // Enable JSON-RPC for this method
+    JSONRPC(func() {
+        // Method-specific error mappings (optional)
+        Response("invalid_data", func() {
+            Code(-32002)
+        })
+    })
+})
+```
+
+### ID Field Mapping
+
+Control how JSON-RPC message IDs map to your payload and result types:
+
+```go
+Method("track", func() {
+    Payload(func() {
+        ID("request_id", String, "Tracking ID")  // Maps to JSON-RPC request ID
+        Attribute("action", String)
+        Required("request_id", "action")
+    })
+    
+    Result(func() {
+        ID("request_id", String, "Tracking ID")  // Automatically copied from payload
+        Attribute("status", String)
+        Required("request_id", "status")
+    })
+    
+    JSONRPC(func() {})
+})
+```
+
+The `ID()` function marks which field receives the JSON-RPC message ID. Rules:
+
+1. ID fields must be String type
+2. Result can only have an ID if Payload has one
+3. For non-streaming methods, the ID is automatically copied from payload to result
+4. Missing ID at runtime means the message is a notification
+
+## Transport Options
+
+### HTTP: Request-Response
+
+Standard synchronous RPC over HTTP. Best for:
+- Simple request-response patterns
+- Stateless operations
+- RESTful service migration
+
+```go
+Service("api", func() {
+    JSONRPC(func() {
+        POST("/rpc")
+    })
+    
+    Method("query", func() {
+        Payload(func() {
+            Attribute("sql", String)
+            Required("sql")
+        })
+        Result(ArrayOf(map[string]any))
+        JSONRPC(func() {})
+    })
+})
+```
+
+**Client usage:**
+```go
+client := api.NewClient("http", "localhost:8080", http.DefaultClient, 
+    goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
+
+result, err := client.Query(ctx, &api.QueryPayload{SQL: "SELECT * FROM users"})
+```
+
+**Wire format:**
+```http
+POST /rpc HTTP/1.1
+Content-Type: application/json
+
+{"jsonrpc":"2.0","method":"query","params":{"sql":"SELECT * FROM users"},"id":1}
+```
+
+**How it works internally:**
+
+- The generated server inspects the first byte of the body to route batch
+  (`[` starts a JSON array) vs single requests, then decodes a
+  `jsonrpc.RawRequest` and validates `jsonrpc:"2.0"`, `method`, and
+  `params`.
+- Dispatch is by the `method` field to the corresponding generated handler
+  for your service method. The handler decodes the typed payload, invokes
+  your implementation, and encodes a typed JSON-RPC response via
+  `MakeSuccessResponse(id, result)`.
+- If the incoming message has no `id` (a notification), the server does not
+  send a response, per the spec.
+- Batch requests are decoded to `[]jsonrpc.RawRequest` and each entry is
+  processed independently; responses are streamed into a JSON array.
+
+### Server-Sent Events: Server Streaming
+
+Unidirectional streaming from server to client. Perfect for:
+- Progress updates
+- Live notifications
+- Real-time feeds
+- Long-running operations
+
+```go
+Service("monitor", func() {
+    JSONRPC(func() {
+        POST("/events")  // SSE uses POST for initial payload
+    })
+    
+    Method("watch", func() {
+        Description("Watch system metrics")
+        
+        Payload(func() {
+            Attribute("metrics", ArrayOf(String), "Metrics to watch")
+            Required("metrics")
+        })
+        
         StreamingResult(func() {
-            // Optional: Define an ID field to enable response messages
-            ID("request_id", String, "Request ID for final response")
-            OneOf("status", func() {
-                Attribute("progress", Progress) // Progress notification
-                Attribute("complete", Complete) // Final result
+            Attribute("metric", String)
+            Attribute("value", Float64)
+            Attribute("timestamp", String, func() {
+                Format(FormatDateTime)
             })
-            Required("status")
+            Required("metric", "value", "timestamp")
         })
+        
         JSONRPC(func() {
-            ServerSentEvents(func() { SSEEventType("status") })
+            ServerSentEvents(func() {
+                SSEEventType("metric")  // SSE event type field
+            })
         })
     })
 })
 ```
 
-#### Server Implementation
-
-Your method receives a stream object with a unified `Send` method that handles
-both notifications and responses. The framework automatically determines whether
-a message is a notification or response based on the presence of an ID field.
+**Server implementation:**
 
 ```go
-// processor.go
-func (s *processorSvc) ProcessFile(
-    ctx context.Context,
-    p *processor.ProcessFilePayload,
-    stream processor.ProcessFileServerStream,
-) error {
-    // Send progress notifications (no ID field)
-    err := stream.Send(ctx, &processor.ProcessFileResult{
-        Status: &processor.ProcessFileStatus{Progress: &Progress{Percent: 50}},
-    })
-    if err != nil {
-        return err
-    }
-
-    // ... do more work ...
-
-    // Send the final response (with ID field if defined in the Result)
-    return stream.Send(ctx, &processor.ProcessFileResult{
-        Status: &processor.ProcessFileStatus{Complete: &Complete{URL: "/done.zip"}},
-    })
-}
-```
-
-Note: SSE streams automatically close after sending a response with an ID.
-Notifications (messages without ID) keep the stream open for additional messages.
-
-#### Client Usage
-
-For server-only streaming (SSE), the client initiates the stream at the service level,
-but the actual stream handling happens at the transport layer. The generated HTTP
-client provides access to the SSE stream.
-
-```go
-// main.go
-// Use the HTTP client directly for SSE streaming
-httpClient := processorjsonrpc.NewClient(
-    "http", "localhost:8080", http.DefaultClient,
-    goahttp.RequestEncoder, goahttp.ResponseDecoder, false,
-)
-
-// The HTTP client's method returns the SSE stream
-stream, err := httpClient.ProcessFile(ctx, &processor.ProcessFilePayload{File: "my-data.csv"})
-if err != nil { /* handle error */ }
-
-// Loop to receive messages from the SSE stream
-for {
-    res, err := stream.Recv()
-    if err == io.EOF {
-        // Stream was closed cleanly by the server.
-        break
-    }
-    if err != nil {
-        // An unexpected error occurred.
-        log.Fatalf("receive error: %s", err)
-    }
-
-    // Process the received message
-    if p := res.Status.Progress; p != nil {
-        log.Printf("Progress: %d%%", p.Percent)
-    }
-    if c := res.Status.Complete; c != nil {
-        log.Printf("Done! Result at %s", c.URL)
-    }
-}
-```
-
-Note: The service-level client method only returns an error for server-only streaming,
-as the actual stream handling is a transport concern. Use the generated HTTP/JSON-RPC
-client to access the SSE stream functionality.
-### WebSocket: Full Bidirectional Streaming
-
-WebSockets provide a persistent, full-duplex connection for true real-time
-communication. This is the most powerful transport, supporting client-streaming,
-server-streaming, and fully bidirectional interactions.
-
-#### Three-Method Pattern for WebSocket Streaming
-
-Unlike non-streaming methods that determine request/notification behavior at runtime,
-WebSocket streaming methods use three explicit methods to control message types:
-
-- **`SendNotification`**: Sends a JSON-RPC notification (no response expected)
-- **`SendResponse`**: Sends a JSON-RPC response with the original request ID
-- **`SendError`**: Sends a JSON-RPC error response
-
-This explicit control allows precise handling of the JSON-RPC protocol in streaming contexts.
-
-#### WebSocket Architecture
-
-- **HandleStream Method**: Every WebSocket service requires you to implement a
-  `HandleStream` method. This method manages the entire lifecycle of the
-  connection.
-
-- **stream.Recv()**: Inside `HandleStream`, you call `stream.Recv()` in a loop.
-  This call blocks, waits for an incoming client message, and automatically
-  dispatches it to the correct service method implementation (e.g., `subscribe`,
-  `echo`).
-
-- **Method Signatures**: The signature of your service methods changes based on
-  the streaming pattern defined in the DSL:
-
-  - **Non-streaming / Client-streaming**: `func(ctx, payload) (result, error)`
-
-  - **Server-streaming / Bidirectional**: `func(ctx, payload, stream) error`
-
-- **Server-Initiated Messages**: The stream object given to `HandleStream` can
-  also be used to send messages to the client at any time, not just in response
-  to a request.
-
-#### Design
-
-A single WebSocket service can contain methods for different streaming patterns.
-
-```go
-// design/design.go
-Service("chat", func() {
-    JSONRPC(func() { GET("/ws") }) // WebSocket connection starts with GET
-
-    // Notifications (client streaming)
-    Method("notify", func() {
-        StreamingPayload(func() {
-                Attribute("Event")
-                Attribute("Data")
-                Required("Event", "Data")
-        })
-        JSONRPC(func() {})
-    })
-
-    // Streaming Response
-    Method("listen", func() {
-        Payload(func() {
-                Attribute("Topic")
-                Required("Topic")
-        })
-        StreamingResult(func() {
-                ID("id")
-                Attribute("data")
-                Required("id", "response")
-        })
-        JSONRPC(func() {})
-    })
-
-    // Bidirectional streaming
-    Method("echo", func() {
-        StreamingPayload(func() {
-                ID("id")
-                Attribute("message")
-                Required("id", "message")
-        })
-        StreamingResult(func() {
-                ID("id")
-                Attribute("response")
-                Required("id", "response")
-        })
-        JSONRPC(func() {})
-    })
-
-    // Server-side streaming (server can push messages anytime)
-    Method("subscribe", func() {
-        Payload(func() {
-            Attribute("topic", String)
-            Required("topic")
-        })
-        StreamingResult(func() {
-            Attribute("event", String)
-            Attribute("data", Any)
-            Required("event", "data")
-        })
-        JSONRPC(func() {})
-    })
-})
-```
-
-#### Server Implementation
-
-Implement `HandleStream` to manage the connection and individual methods to
-handle the logic.
-
-```go
-// chat.go
-
-// HandleStream manages the connection lifecycle.
-func (s *chatSvc) HandleStream(ctx context.Context, stream chat.Stream) error {
-    defer stream.Close()
-
-    // Loop to receive and dispatch client messages
+func (s *monitorSvc) Watch(ctx context.Context, p *monitor.WatchPayload, 
+    stream monitor.WatchServerStream) error {
+    
+    ticker := time.NewTicker(1 * time.Second)
+    defer ticker.Stop()
+    
     for {
-        if _, err := stream.Recv(ctx); err != nil {
-            return err // On error (e.g., connection closed), return to exit.
+        select {
+        case <-ctx.Done():
+            return nil
+        case <-ticker.C:
+            for _, metric := range p.Metrics {
+                err := stream.Send(ctx, &monitor.WatchResult{
+                    Metric:    metric,
+                    Value:     getMetricValue(metric),
+                    Timestamp: time.Now().Format(time.RFC3339),
+                })
+                if err != nil {
+                    return err
+                }
+            }
         }
     }
 }
-
-// Echo implements the bidirectional "echo" method.
-func (s *chatSvc) Echo(ctx context.Context, p *chat.EchoPayload, stream chat.EchoServerStream) error {
-    // Echo the message back to the client.
-    return stream.SendResponse(ctx, &chat.EchoResult{
-        ID: p.ID,
-        Response: "You said: " + p.Message,
-    })
-}
-
-// Subscribe implements server-side streaming.
-// Once subscribed, the server can push messages at any time.
-func (s *chatSvc) Subscribe(ctx context.Context, p *chat.SubscribePayload, stream chat.SubscribeServerStream) error {
-    // Register this stream for the topic
-    s.registerSubscriber(p.Topic, stream)
-    defer s.unregisterSubscriber(p.Topic, stream)
-    
-    // Keep the stream alive
-    <-ctx.Done()
-    return nil
-}
-
-// In another part of your service, you can push messages to subscribers
-func (s *chatSvc) publishEvent(topic string, event string, data any) {
-    subscribers := s.getSubscribers(topic)
-    for _, stream := range subscribers {
-        // Send notification to each subscriber
-        stream.SendNotification(ctx, &chat.SubscribeResult{
-            Event: event,
-            Data: data,
-        })
-    }
-}
 ```
 
-#### Client Usage
-
-For WebSocket connections, the transport client manages the connection and provides
-different interfaces based on the streaming pattern:
-
-**Bidirectional Streaming** - Client gets a stream interface for both sending and receiving:
+**Client usage:**
 
 ```go
-// main.go
-// Use the WebSocket transport client
-wsClient := chatws.NewClient(
-    "ws", "localhost:8080", http.DefaultClient,
-    goahttp.RequestEncoder, goahttp.ResponseDecoder, false,
-    websocket.DefaultDialer, nil,
-)
-
-// For bidirectional streaming, get a stream object
-stream, err := wsClient.Echo(ctx)
-if err != nil { /* handle error */ }
-
-// Send and receive concurrently
-go func() {
-    for i := 0; i < 5; i++ {
-        err := stream.Send(&chat.EchoPayload{
-            ID: fmt.Sprintf("req-%d", i),
-            Message: "hello",
-        })
-        if err != nil { /* handle error */ }
-        time.Sleep(1 * time.Second)
-    }
-    stream.Close()
-}()
+httpClient := monitorjsonrpc.NewClient(/* ... */)
+stream, err := httpClient.Watch(ctx, &monitor.WatchPayload{
+    Metrics: []string{"cpu", "memory"},
+})
 
 for {
-    res, err := stream.Recv()
+    result, err := stream.Recv()
     if err == io.EOF {
         break
     }
-    if err != nil {
-        log.Fatalf("receive error: %v", err)
-    }
-    log.Printf("received: %s", res.Response)
+    log.Printf("%s: %f", result.Metric, result.Value)
 }
 ```
 
-**Server-Side Streaming** - Client initiates subscription, then receives pushed messages:
+**How it works internally:**
+
+- SSE uses a regular HTTP POST to deliver the initial JSON-RPC request. The
+  generated handler decodes a `jsonrpc.RawRequest`, validates it, and
+  dispatches to the method-specific SSE handler.
+- The SSE response is a long-lived HTTP response with
+  `Content-Type: text/event-stream`. The generated stream type writes events
+  using standard SSE framing (`id:`, `event:`, `data:`, blank line).
+- The server stream interface exposes:
+  - `Send(ctx, event)`: writes a JSON-RPC notification as an SSE event
+    (no response expected). Use this for progress or updates.
+  - `SendAndClose(ctx, result)`: when available, writes the final JSON-RPC
+    response and closes the stream. The JSON-RPC response ID is taken from the
+    original request `id`, or from the result `ID()` field when present in the
+    design.
+  - `SendError(ctx, id, err)`: writes a JSON-RPC error response.
+- Notifications vs responses:
+  - Notifications omit `id` per JSON-RPC and are represented as SSE events
+    with the `data:` being the result body.
+  - Final responses include a JSON-RPC envelope; the SSE `id:` field mirrors
+    the JSON-RPC response `id` when an ID is present.
+- Example on-the-wire SSE frame (simplified):
+
+  ```text
+  event: metric
+  id: 7
+  data: {"jsonrpc":"2.0","result":{"metric":"cpu","value":0.9},"id":"7"}
+
+  ```
+
+### WebSocket: Bidirectional Streaming
+
+Full-duplex, persistent connections for real-time communication. Ideal for:
+- Chat applications
+- Collaborative editing
+- Gaming
+- Live bidirectional data exchange
 
 ```go
-// At the service level, the method just returns an error
-serviceClient := chat.NewClient(/* endpoints */)
-err := serviceClient.Subscribe(ctx, &chat.SubscribePayload{Topic: "news"})
-if err != nil { /* handle error */ }
-
-// The actual stream handling happens at the transport level
-// The WebSocket connection receives the pushed messages through the main stream
-// established by the transport client
+Service("chat", func() {
+    JSONRPC(func() {
+        GET("/ws")  // WebSocket upgrade
+    })
+    
+    // Client-to-server notifications
+    Method("send", func() {
+        StreamingPayload(func() {
+            Attribute("message", String)
+            Required("message")
+        })
+        JSONRPC(func() {})
+    })
+    
+    // Server-to-client notifications
+    Method("broadcast", func() {
+        StreamingResult(func() {
+            Attribute("from", String)
+            Attribute("message", String)
+            Required("from", "message")
+        })
+        JSONRPC(func() {})
+    })
+    
+    // Bidirectional request-response
+    Method("echo", func() {
+        StreamingPayload(func() {
+            ID("msg_id", String)
+            Attribute("text", String)
+            Required("msg_id", "text")
+        })
+        StreamingResult(func() {
+            ID("msg_id", String)
+            Attribute("echo", String)
+            Required("msg_id", "echo")
+        })
+        JSONRPC(func() {})
+    })
+})
 ```
 
-Note: For server-only streaming over WebSocket, the service-level client method returns
-just an error, as receiving streamed messages is handled at the transport layer through
-the persistent WebSocket connection.
-
-### Mixed HTTP/SSE Transports
-
-As mentioned in the Key Concepts section, Goa supports mixed transports for services 
-that need both standard HTTP request-response and Server-Sent Events streaming for 
-different methods. This allows you to define some methods as regular HTTP JSON-RPC 
-calls and others as SSE streaming within the same service.
-
-The server automatically handles content negotiation based on the `Accept` header:
-- Requests with `Accept: text/event-stream` are routed to SSE handlers for streaming methods
-- All other requests are handled as standard HTTP JSON-RPC calls
-
-#### Design
-
-Define methods with both HTTP and SSE transport patterns in the same service:
+**Server implementation:**
 
 ```go
-// design/design.go
-Service("processor", func() {
-    JSONRPC(func() { POST("/process") })
+type chatSvc struct {
+    connections map[string]chat.BroadcastServerStream
+    mu          sync.RWMutex
+}
 
-    // Standard HTTP method - non-streaming
-    Method("validate", func() {
+func (s *chatSvc) HandleStream(ctx context.Context, stream chat.Stream) error {
+    // Register connection
+    connID := generateConnID()
+    s.mu.Lock()
+    s.connections[connID] = stream.(chat.BroadcastServerStream)
+    s.mu.Unlock()
+    
+    defer func() {
+        s.mu.Lock()
+        delete(s.connections, connID)
+        s.mu.Unlock()
+        stream.Close()
+    }()
+    
+    // Handle incoming messages
+    for {
+        _, err := stream.Recv(ctx)
+        if err != nil {
+            return err
+        }
+        // Messages are automatically dispatched to method handlers
+    }
+}
+
+func (s *chatSvc) Send(ctx context.Context, p *chat.SendPayload) error {
+    // Broadcast to all connections
+    s.mu.RLock()
+    defer s.mu.RUnlock()
+    
+    for _, conn := range s.connections {
+        conn.SendNotification(ctx, &chat.BroadcastResult{
+            From:    "user",
+            Message: p.Message,
+        })
+    }
+    return nil
+}
+
+func (s *chatSvc) Echo(ctx context.Context, p *chat.EchoPayload, 
+    stream chat.EchoServerStream) error {
+    
+    return stream.SendResponse(ctx, &chat.EchoResult{
+        MsgID: p.MsgID,
+        Echo:  "Echo: " + p.Text,
+    })
+}
+```
+
+**How it works internally:**
+
+- Connection lifecycle:
+  - The generated server upgrades the HTTP request to a WebSocket and
+    constructs a `Stream` implementation, then calls your
+    `HandleStream(ctx, stream)`.
+  - Your `HandleStream` should defer `stream.Close()` and typically loop on
+    `stream.Recv(ctx)`, which reads a JSON-RPC message and dispatches it to
+    the appropriate generated handler based on its `method`.
+- Dispatch and method invocation:
+  - For non-streaming methods, `Recv` decodes the payload, invokes your
+    method, and sends the typed JSON-RPC success response via the stream.
+  - For streaming methods, `Recv` creates a method-specific stream wrapper
+    that implements your generated `XServerStream` interface and calls your
+    method implementation with it.
+- Sending from your methods:
+  - In server or bidirectional streaming, your method receives a stream
+    wrapper providing:
+    - `SendNotification(ctx, result)`: sends a JSON-RPC notification (no id).
+    - `SendResponse(ctx, result)`: sends a JSON-RPC success response using the
+      original request `id`. You do not need to pass the id; the wrapper holds
+      it for you.
+    - `SendError(ctx, err)`: sends a JSON-RPC error response correlated to the
+      original request `id` when present.
+- Notifications and responses:
+  - Messages without `id` are notifications. Use `SendNotification` for
+    server-initiated messages that should not expect a response.
+  - When replying to a client request that had an `id`, use `SendResponse` to
+    correlate via that `id` automatically.
+- Error handling:
+  - Invalid messages (parse errors, missing method) trigger JSON-RPC error
+    responses when an `id` is present; otherwise they are ignored to keep the
+    connection alive.
+  - Unexpected WebSocket close codes abort the loop and close the connection.
+
+### Mixed Transports: Content Negotiation
+
+Combine HTTP and SSE in a single service using automatic content negotiation:
+
+```go
+Service("hybrid", func() {
+    JSONRPC(func() {
+        POST("/api")
+    })
+    
+    // Standard HTTP method
+    Method("status", func() {
+        Result(func() {
+            Attribute("healthy", Boolean)
+            Required("healthy")
+        })
+        JSONRPC(func() {})
+    })
+    
+    // SSE streaming method
+    Method("monitor", func() {
+        StreamingResult(func() {
+            Attribute("event", String)
+            Attribute("data", Any)
+        })
+        JSONRPC(func() {
+            ServerSentEvents(func() {
+                SSEEventType("update")
+            })
+        })
+    })
+    
+    // Mixed results with content negotiation
+    Method("flexible", func() {
+        Payload(func() {
+            Attribute("resource", String)
+            Required("resource")
+        })
+        
+        // Return simple result for HTTP
+        Result(func() {
+            Attribute("data", String)
+            Required("data")
+        })
+        
+        // Return stream for SSE
+        StreamingResult(func() {
+            Attribute("chunk", String)
+            Attribute("progress", Int)
+        })
+        
+        JSONRPC(func() {
+            ServerSentEvents(func() {
+                SSEEventType("progress")
+            })
+        })
+    })
+})
+```
+
+The server automatically routes based on the `Accept` header:
+- `Accept: application/json` → HTTP handler → `Result`
+- `Accept: text/event-stream` → SSE handler → `StreamingResult`
+
+Under the hood, the generated handler checks `Accept` at runtime and invokes
+the SSE stream only when `text/event-stream` is requested and the method has
+`StreamingResult` (including mixed-result shapes). Otherwise, the standard
+HTTP request-response path is used.
+
+## Advanced Features
+
+### Batch Processing
+
+JSON-RPC supports sending multiple requests in a single HTTP call:
+
+```json
+[
+    {"jsonrpc": "2.0", "method": "add", "params": {"a": 1, "b": 2}, "id": 1},
+    {"jsonrpc": "2.0", "method": "multiply", "params": {"a": 3, "b": 4}, "id": 2},
+    {"jsonrpc": "2.0", "method": "divide", "params": {"dividend": 10, "divisor": 2}, "id": 3}
+]
+```
+
+The server processes each request independently and returns an array of responses:
+
+```json
+[
+    {"jsonrpc": "2.0", "result": 3, "id": 1},
+    {"jsonrpc": "2.0", "result": 12, "id": 2},
+    {"jsonrpc": "2.0", "result": 5, "id": 3}
+]
+```
+
+Batch processing is automatic - no special configuration needed.
+
+Notes:
+
+- Batching is supported on HTTP. SSE and WebSocket handlers process one
+  JSON-RPC message at a time.
+- Each entry is handled independently; failures do not impact other entries.
+- Notifications (entries without `id`) produce no response element. If all
+  entries are notifications, the HTTP response body is empty.
+- Responses are written in request order.
+
+Mixed batch example (request + notification):
+
+```json
+[
+  {"jsonrpc":"2.0","method":"add","params":{"a":1,"b":2},"id":1},
+  {"jsonrpc":"2.0","method":"log","params":{"message":"hello"}}
+]
+```
+
+Response:
+
+```json
+[{"jsonrpc":"2.0","result":3,"id":1}]
+```
+
+### Error Handling
+
+Goa provides comprehensive error handling with standard JSON-RPC error codes:
+
+```go
+Service("api", func() {
+    // Define service-level errors
+    Error("unauthorized", func() {
+        Description("User is not authorized")
+    })
+    Error("rate_limited", func() {
+        Description("Too many requests")
+    })
+    
+    JSONRPC(func() {
+        // Map errors to JSON-RPC codes
+        Response("unauthorized", func() {
+            Code(-32001)  // Custom application code
+        })
+        Response("rate_limited", func() {
+            Code(-32002)
+        })
+    })
+    
+    Method("secure", func() {
+        // ... method definition ...
+        Error("unauthorized")  // Method can return this error
+        Error("invalid_token")  // Method-specific error
+        
+        JSONRPC(func() {
+            Response("invalid_token", func() {
+                Code(-32003)
+            })
+        })
+    })
+})
+```
+
+Standard error codes:
+- `-32700`: Parse error
+- `-32600`: Invalid request
+- `-32601`: Method not found
+- `-32602`: Invalid params
+- `-32603`: Internal error
+- `-32000` to `-32099`: Reserved for implementation
+
+### Streaming Patterns
+
+#### Client Streaming (WebSocket only)
+```go
+Method("upload", func() {
+    StreamingPayload(func() {
+        Attribute("chunk", Bytes)
+        Attribute("offset", Int64)
+        Required("chunk", "offset")
+    })
+    Result(func() {
+        Attribute("size", Int64)
+        Attribute("checksum", String)
+    })
+    JSONRPC(func() {})
+})
+```
+
+#### Server Streaming (SSE or WebSocket)
+```go
+Method("download", func() {
+    Payload(func() {
+        Attribute("file", String)
+        Required("file")
+    })
+    StreamingResult(func() {
+        Attribute("chunk", Bytes)
+        Attribute("offset", Int64)
+        Required("chunk", "offset")
+    })
+    JSONRPC(func() {
+        ServerSentEvents(func() {})  // Or use WebSocket
+    })
+})
+```
+
+#### Bidirectional Streaming (WebSocket only)
+```go
+Method("transform", func() {
+    StreamingPayload(func() {
+        ID("seq", String)
+        Attribute("input", String)
+        Required("seq", "input")
+    })
+    StreamingResult(func() {
+        ID("seq", String)
+        Attribute("output", String)
+        Required("seq", "output")
+    })
+    JSONRPC(func() {})
+})
+```
+
+### Mixed Results
+
+Support different response types based on content negotiation:
+
+```go
+Method("report", func() {
+    Payload(func() {
+        Attribute("query", String)
+        Required("query")
+    })
+    
+    // Simple result for synchronous HTTP
+    Result(func() {
+        Attribute("summary", String)
+        Attribute("count", Int)
+        Required("summary", "count")
+    })
+    
+    // Streaming result for SSE
+    StreamingResult(func() {
+        Attribute("row", Map(String, Any))
+        Attribute("progress", Float64)
+    })
+    
+    JSONRPC(func() {
+        ServerSentEvents(func() {
+            SSEEventType("row")
+        })
+    })
+})
+```
+
+Implementation:
+
+```go
+// Called for Accept: application/json
+func (s *svc) Report(ctx context.Context, p *ReportPayload) (*ReportResult, error) {
+    summary, count := generateReport(p.Query)
+    return &ReportResult{Summary: summary, Count: count}, nil
+}
+
+// Called for Accept: text/event-stream
+func (s *svc) ReportStream(ctx context.Context, p *ReportPayload, 
+    stream ReportServerStream) error {
+    
+    rows := queryRows(p.Query)
+    for i, row := range rows {
+        err := stream.Send(ctx, &ReportStreamingResult{
+            Row:      row,
+            Progress: float64(i) / float64(len(rows)),
+        })
+        if err != nil {
+            return err
+        }
+    }
+    return nil
+}
+```
+
+## Best Practices
+
+### 1. Service Design
+
+Keep services cohesive: group related methods together and use consistent
+names. Prefer one transport per service for clarity; avoid mixing WebSocket
+and HTTP endpoints in the same service. Keep payloads shallow and avoid
+transport-specific assumptions in business logic.
+
+### 2. Error Handling
+
+Map domain errors to JSON-RPC codes in the design, prefer standard codes, and
+return clear messages. Include error data when it genuinely helps clients.
+Avoid reserved ranges, leaking stack traces in production, or ignoring
+validation failures.
+
+### 3. Streaming
+
+Choose SSE for server-push and WebSocket for bidirectional flows. Ensure
+streams have explicit lifetimes and cleanup (close on context cancel). Send
+smaller chunks rather than large blobs and account for backpressure. Handle
+intermittent network failures gracefully and resume when appropriate.
+
+### 4. Performance
+
+Batch related calls into a single request when possible. Reuse connections on
+the client, cache hot data, and watch message sizes. Avoid opening a new
+connection per request, emitting unnecessary notifications, or blocking stream
+handlers with slow work—offload to goroutines and use context to cancel.
+
+### Supporting Multiple Transports
+
+Expose the same service over multiple protocols:
+
+```go
+Service("universal", func() {
+    // JSON-RPC configuration
+    JSONRPC(func() {
+        POST("/rpc")
+    })
+    
+    Method("process", func() {
         Payload(func() {
             Attribute("data", String)
             Required("data")
         })
         Result(func() {
-            Attribute("valid", Boolean)
-            Required("valid")
+            Attribute("output", String)
+            Required("output")
         })
+        
+        // Available via JSON-RPC
         JSONRPC(func() {})
-    })
-
-    // SSE streaming method
-    Method("process", func() {
-        Payload(func() {
-            Attribute("file", String)
-            Required("file")
+        
+        // Also available via HTTP REST
+        HTTP(func() {
+            POST("/process")
         })
-        StreamingResult(func() {
-            OneOf("event", func() {
-                Attribute("progress", Progress)
-                Attribute("complete", Complete)
-            })
-            Required("event")
-        })
-        JSONRPC(func() {
-            ServerSentEvents(func() {
-                SSEEventType("event")
-            })
-        })
+        
+        // And via gRPC
+        GRPC(func() {})
     })
 })
 ```
 
-#### Server Implementation
+## Additional Resources
 
-Implement both types of methods normally. The framework handles the routing:
+- [JSON-RPC 2.0 Specification](https://www.jsonrpc.org/specification)
+- [Goa Documentation](https://goa.design)
+- [Example Services](https://github.com/goadesign/examples)
+- [Integration Tests](../jsonrpc/integration_tests)
 
-```go
-// processor.go
+## Summary
 
-// Regular HTTP method
-func (s *processorSvc) Validate(ctx context.Context, p *processor.ValidatePayload) (*processor.ValidateResult, error) {
-    // Standard synchronous processing
-    valid := validateData(p.Data)
-    return &processor.ValidateResult{Valid: valid}, nil
-}
+Goa's JSON-RPC implementation provides:
 
-// SSE streaming method
-func (s *processorSvc) Process(
-    ctx context.Context,
-    p *processor.ProcessPayload,
-    stream processor.ProcessServerStream,
-) error {
-    // Send progress updates via SSE
-    err := stream.Send(ctx, &processor.ProcessResult{
-        Event: &processor.ProcessEvent{Progress: &Progress{Percent: 50}},
-    })
-    if err != nil {
-        return err
-    }
+- **Type Safety**: Full compile-time type checking
+- **Code Generation**: Automatic client/server code from DSL
+- **Protocol Compliance**: Complete JSON-RPC 2.0 support
+- **Transport Flexibility**: HTTP, SSE, and WebSocket options
+- **Streaming Support**: Unidirectional and bidirectional patterns
+- **Error Handling**: Comprehensive error mapping and codes
+- **Content Negotiation**: Mixed results based on Accept headers
+- **Batch Processing**: Automatic batch request handling
 
-    // ... do work ...
-
-    // Send completion
-    return stream.Send(ctx, &processor.ProcessResult{
-        Event: &processor.ProcessEvent{Complete: &Complete{URL: "/result"}},
-    })
-}
-```
-
-#### Client Usage
-
-Use the appropriate client method for each transport:
-
-```go
-// Standard HTTP call - no special headers needed
-client := processor.NewClient(/* ... */)
-result, err := client.Validate(ctx, &processor.ValidatePayload{Data: "test"})
-
-// SSE streaming call - client sets Accept header automatically
-httpClient := processorjsonrpc.NewClient(/* ... */)
-stream, err := httpClient.Process(ctx, &processor.ProcessPayload{File: "data.csv"})
-for {
-    res, err := stream.Recv()
-    if err == io.EOF {
-        break
-    }
-    // Handle streaming response
-}
-```
-
-The generated client automatically sets the correct `Accept: text/event-stream` header
-for SSE streaming methods, while regular methods use standard JSON content negotiation.
-
-## Error Handling
-
-Goa automatically handles standard JSON-RPC protocol errors (-32700, -32600,
-etc.). For your application-specific errors, define them in the DSL using the
-`Error` function.
-
-### Design
-
-You can optionally assign a custom `Code` to your error. If you do, avoid the
-reserved range from -32000 to -32768.
-
-```go
-// design/design.go
-Error("division_by_zero", func() {
-    Description("Returned when the divisor is zero.")
-    Code(-1001) // Custom application error code
-})
-```
-
-### Server Implementation
-
-Return an instance of the generated error struct from your service method.
-
-```go
-// calculator.go
-func (s *calculatorSvc) Divide(ctx context.Context, p *calculator.DividePayload) (float64, error) {
-    if p.B == 0 {
-        return 0, &calculator.DivisionByZero{Message: "Cannot divide by zero."}
-    }
-    return p.A / p.B, nil
-}
-```
-
-### Resulting JSON-RPC Error
-
-Goa will serialize the error into a valid JSON-RPC error response, which looks
-like this on the wire:
-
-```json
-{
-    "jsonrpc": "2.0",
-    "error": {
-        "code": -1001,
-        "message": "Cannot divide by zero.",
-        "data": null
-    },
-    "id": "some-request-id"
-}
-```
+The implementation seamlessly integrates with Goa's existing features while
+maintaining clean separation of concerns and enabling powerful real-time
+communication patterns.
