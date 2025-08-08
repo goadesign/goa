@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/testutil"
 	. "goa.design/goa/v3/dsl"
 )
 
@@ -109,12 +109,8 @@ func TestWebSocketGoldenFiles(t *testing.T) {
 				return
 			}
 
-			expected, err := os.ReadFile(golden)
-			if err != nil {
-				t.Fatalf("Failed to read golden file %s: %v", golden, err)
-			}
-
-			assert.Equal(t, string(expected), code, "Generated code does not match golden file")
+			// Use testutil for proper line ending normalization
+			testutil.AssertString(t, golden, code)
 		})
 	}
 }
