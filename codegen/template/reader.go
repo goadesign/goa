@@ -23,8 +23,10 @@ func (tr *TemplateReader) Read(name string, partials ...string) string {
 			if err != nil {
 				panic(fmt.Sprintf("failed to read partial template %s: %v", partial, err))
 			}
+			// Normalize line endings
+			contentStr := strings.ReplaceAll(string(content), "\r\n", "\n")
 			partialDefs = append(partialDefs,
-				fmt.Sprintf("{{- define \"partial_%s\" }}\n%s{{- end }}", partial, string(content)))
+				fmt.Sprintf("{{- define \"partial_%s\" }}\n%s{{- end }}", partial, contentStr))
 		}
 		prefix = strings.Join(partialDefs, "\n")
 	}
@@ -32,8 +34,10 @@ func (tr *TemplateReader) Read(name string, partials ...string) string {
 	if err != nil {
 		panic(fmt.Sprintf("failed to load template %s: %v", name, err))
 	}
+	// Normalize line endings to ensure consistent template parsing across platforms
+	contentStr := strings.ReplaceAll(string(content), "\r\n", "\n")
 	if prefix != "" {
-		return prefix + "\n" + string(content)
+		return prefix + "\n" + contentStr
 	}
-	return string(content)
+	return contentStr
 }
