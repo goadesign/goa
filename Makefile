@@ -79,7 +79,9 @@ test:
 	go test ./... --coverprofile=cover.out
 
 integration-test: build-goa
+ifneq ($(GOOS),windows)
 	cd jsonrpc/integration_tests && go test -count=1 -timeout 10m ./...
+endif
 
 build-goa:
 	cd cmd/goa && go install .
