@@ -431,10 +431,9 @@ for {
 - The server stream interface exposes:
   - `Send(ctx, event)`: writes a JSON-RPC notification as an SSE event
     (no response expected). Use this for progress or updates.
-  - `SendAndClose(ctx, result)`: when available, writes the final JSON-RPC
-    response and closes the stream. The JSON-RPC response ID is taken from the
-    original request `id`, or from the result `ID()` field when present in the
-    design.
+  - `SendAndClose(ctx, result)`: sends the final JSON-RPC response (with `id`)
+    and closes the stream. The response `id` is taken from the original
+    request `id`, or from a result `ID()` field if defined in the design.
   - `SendError(ctx, id, err)`: writes a JSON-RPC error response.
 - Notifications vs responses:
   - Notifications omit `id` per JSON-RPC and are represented as SSE events
@@ -686,30 +685,6 @@ The server processes each request independently and returns an array of response
 
 Batch processing is automatic - no special configuration needed.
 
-Notes:
-
-- Batching is supported on HTTP. SSE and WebSocket handlers process one
-  JSON-RPC message at a time.
-- Each entry is handled independently; failures do not impact other entries.
-- Notifications (entries without `id`) produce no response element. If all
-  entries are notifications, the HTTP response body is empty.
-- Responses are written in request order.
-
-Mixed batch example (request + notification):
-
-```json
-[
-  {"jsonrpc":"2.0","method":"add","params":{"a":1,"b":2},"id":1},
-  {"jsonrpc":"2.0","method":"log","params":{"message":"hello"}}
-]
-```
-
-Response:
-
-```json
-[{"jsonrpc":"2.0","result":3,"id":1}]
-```
-
 ### Error Handling
 
 Goa provides comprehensive error handling with standard JSON-RPC error codes:
@@ -872,31 +847,55 @@ func (s *svc) ReportStream(ctx context.Context, p *ReportPayload,
 
 ### 1. Service Design
 
-Keep services cohesive: group related methods together and use consistent
-names. Prefer one transport per service for clarity; avoid mixing WebSocket
-and HTTP endpoints in the same service. Keep payloads shallow and avoid
-transport-specific assumptions in business logic.
+**DO:**
+- Group related methods in the same service
+- Use consistent naming conventions
+- Define clear error codes and messages
+- Document expected behavior
+
+**DON'T:**
+- Mix WebSocket with HTTP endpoints in the same service
+- Use deeply nested payload structures
+- Rely on transport-specific features
 
 ### 2. Error Handling
 
-Map domain errors to JSON-RPC codes in the design, prefer standard codes, and
-return clear messages. Include error data when it genuinely helps clients.
-Avoid reserved ranges, leaking stack traces in production, or ignoring
-validation failures.
+**DO:**
+- Map application errors to appropriate JSON-RPC codes
+- Provide meaningful error messages
+- Use standard codes when applicable
+- Include error data when helpful
+
+**DON'T:**
+- Use reserved error code ranges
+- Return stack traces in production
+- Ignore validation errors
 
 ### 3. Streaming
 
-Choose SSE for server-push and WebSocket for bidirectional flows. Ensure
-streams have explicit lifetimes and cleanup (close on context cancel). Send
-smaller chunks rather than large blobs and account for backpressure. Handle
-intermittent network failures gracefully and resume when appropriate.
+**DO:**
+- Use SSE for server-push scenarios
+- Use WebSocket for bidirectional needs
+- Implement proper cleanup in stream handlers
+- Handle connection failures gracefully
+
+**DON'T:**
+- Keep streams open indefinitely
+- Send large payloads in single messages
+- Ignore backpressure
 
 ### 4. Performance
 
-Batch related calls into a single request when possible. Reuse connections on
-the client, cache hot data, and watch message sizes. Avoid opening a new
-connection per request, emitting unnecessary notifications, or blocking stream
-handlers with slow work—offload to goroutines and use context to cancel.
+**DO:**
+- Use batch requests for multiple operations
+- Implement connection pooling for clients
+- Cache frequently accessed data
+- Monitor message sizes
+
+**DON'T:**
+- Create new connections per request
+- Send unnecessary notifications
+- Block stream handlers
 
 ### Supporting Multiple Transports
 
