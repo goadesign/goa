@@ -1,0 +1,26 @@
+// DecodeMethodPathCustomInt64Request returns a decoder for requests sent to
+// the ServicePathCustomInt64 MethodPathCustomInt64 endpoint.
+func DecodeMethodPathCustomInt64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicepathcustomint64.MethodPathCustomInt64Payload, error) {
+	return func(r *http.Request) (*servicepathcustomint64.MethodPathCustomInt64Payload, error) {
+		var (
+			p   hide.Int64
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			v, err2 := strconv.ParseInt(pRaw, 10, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "integer"))
+			}
+			p = (hide.Int64)(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodPathCustomInt64Payload(p)
+
+		return payload, nil
+	}
+}

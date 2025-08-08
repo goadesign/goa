@@ -1,0 +1,31 @@
+// DecodeMethodHeaderPrimitiveBoolValidateRequest returns a decoder for
+// requests sent to the ServiceHeaderPrimitiveBoolValidate
+// MethodHeaderPrimitiveBoolValidate endpoint.
+func DecodeMethodHeaderPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (bool, error) {
+	return func(r *http.Request) (bool, error) {
+		var (
+			h   bool
+			err error
+		)
+		{
+			hRaw := r.Header.Get("h")
+			if hRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("h", "header"))
+			}
+			v, err2 := strconv.ParseBool(hRaw)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("h", hRaw, "boolean"))
+			}
+			h = v
+		}
+		if !(h == true) {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("h", h, []any{true}))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := h
+
+		return payload, nil
+	}
+}

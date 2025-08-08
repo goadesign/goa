@@ -1,0 +1,38 @@
+// Code generated with goa v3.21.5, DO NOT EDIT.
+//
+// ServiceMessageMap protocol buffer definition
+//
+// Command:
+// goa
+
+syntax = "proto3";
+
+package service_message_map;
+
+option go_package = "/service_message_mappb";
+
+message MethodMessageMapRequest {
+	map<sint32, UT> field = 1;
+}
+
+message UT {
+	map<uint32, bool> map_of_primitives = 1;
+	map<sint32, ArrayOfUTLevel1> map_of_primitive_ut_array = 2;
+}
+
+message ArrayOfUTLevel1 {
+	repeated UTLevel1 field = 1;
+}
+
+message UTLevel1 {
+	map<string, MapOfSint32Uint32> map_of_map_of_primitives = 1;
+}
+
+message MapOfSint32Uint32 {
+	map<sint32, uint32> field = 1;
+}
+
+message MethodMessageMapResponse {
+	map<uint32, bool> map_of_primitives = 1;
+	map<sint32, ArrayOfUTLevel1> map_of_primitive_ut_array = 2;
+}

@@ -1,13 +1,12 @@
 package codegen
 
 import (
-	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -15,196 +14,178 @@ func TestClientEncode(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"query-bool", testdata.PayloadQueryBoolDSL, testdata.PayloadQueryBoolEncodeCode},
-		{"query-bool-validate", testdata.PayloadQueryBoolValidateDSL, testdata.PayloadQueryBoolValidateEncodeCode},
-		{"query-int", testdata.PayloadQueryIntDSL, testdata.PayloadQueryIntEncodeCode},
-		{"query-int-validate", testdata.PayloadQueryIntValidateDSL, testdata.PayloadQueryIntValidateEncodeCode},
-		{"query-int32", testdata.PayloadQueryInt32DSL, testdata.PayloadQueryInt32EncodeCode},
-		{"query-int32-validate", testdata.PayloadQueryInt32ValidateDSL, testdata.PayloadQueryInt32ValidateEncodeCode},
-		{"query-int64", testdata.PayloadQueryInt64DSL, testdata.PayloadQueryInt64EncodeCode},
-		{"query-int64-validate", testdata.PayloadQueryInt64ValidateDSL, testdata.PayloadQueryInt64ValidateEncodeCode},
-		{"query-uint", testdata.PayloadQueryUIntDSL, testdata.PayloadQueryUIntEncodeCode},
-		{"query-uint-validate", testdata.PayloadQueryUIntValidateDSL, testdata.PayloadQueryUIntValidateEncodeCode},
-		{"query-uint32", testdata.PayloadQueryUInt32DSL, testdata.PayloadQueryUInt32EncodeCode},
-		{"query-uint32-validate", testdata.PayloadQueryUInt32ValidateDSL, testdata.PayloadQueryUInt32ValidateEncodeCode},
-		{"query-uint64", testdata.PayloadQueryUInt64DSL, testdata.PayloadQueryUInt64EncodeCode},
-		{"query-uint64-validate", testdata.PayloadQueryUInt64ValidateDSL, testdata.PayloadQueryUInt64ValidateEncodeCode},
-		{"query-float32", testdata.PayloadQueryFloat32DSL, testdata.PayloadQueryFloat32EncodeCode},
-		{"query-float32-validate", testdata.PayloadQueryFloat32ValidateDSL, testdata.PayloadQueryFloat32ValidateEncodeCode},
-		{"query-float64", testdata.PayloadQueryFloat64DSL, testdata.PayloadQueryFloat64EncodeCode},
-		{"query-float64-validate", testdata.PayloadQueryFloat64ValidateDSL, testdata.PayloadQueryFloat64ValidateEncodeCode},
-		{"query-string", testdata.PayloadQueryStringDSL, testdata.PayloadQueryStringEncodeCode},
-		{"query-string-validate", testdata.PayloadQueryStringValidateDSL, testdata.PayloadQueryStringValidateEncodeCode},
-		{"query-bytes", testdata.PayloadQueryBytesDSL, testdata.PayloadQueryBytesEncodeCode},
-		{"query-bytes-validate", testdata.PayloadQueryBytesValidateDSL, testdata.PayloadQueryBytesValidateEncodeCode},
-		{"query-any", testdata.PayloadQueryAnyDSL, testdata.PayloadQueryAnyEncodeCode},
-		{"query-any-validate", testdata.PayloadQueryAnyValidateDSL, testdata.PayloadQueryAnyValidateEncodeCode},
-		{"query-array-bool", testdata.PayloadQueryArrayBoolDSL, testdata.PayloadQueryArrayBoolEncodeCode},
-		{"query-array-bool-validate", testdata.PayloadQueryArrayBoolValidateDSL, testdata.PayloadQueryArrayBoolValidateEncodeCode},
-		{"query-array-int", testdata.PayloadQueryArrayIntDSL, testdata.PayloadQueryArrayIntEncodeCode},
-		{"query-array-int-validate", testdata.PayloadQueryArrayIntValidateDSL, testdata.PayloadQueryArrayIntValidateEncodeCode},
-		{"query-array-int32", testdata.PayloadQueryArrayInt32DSL, testdata.PayloadQueryArrayInt32EncodeCode},
-		{"query-array-int32-validate", testdata.PayloadQueryArrayInt32ValidateDSL, testdata.PayloadQueryArrayInt32ValidateEncodeCode},
-		{"query-array-int64", testdata.PayloadQueryArrayInt64DSL, testdata.PayloadQueryArrayInt64EncodeCode},
-		{"query-array-int64-validate", testdata.PayloadQueryArrayInt64ValidateDSL, testdata.PayloadQueryArrayInt64ValidateEncodeCode},
-		{"query-array-uint", testdata.PayloadQueryArrayUIntDSL, testdata.PayloadQueryArrayUIntEncodeCode},
-		{"query-array-uint-validate", testdata.PayloadQueryArrayUIntValidateDSL, testdata.PayloadQueryArrayUIntValidateEncodeCode},
-		{"query-array-uint32", testdata.PayloadQueryArrayUInt32DSL, testdata.PayloadQueryArrayUInt32EncodeCode},
-		{"query-array-uint32-validate", testdata.PayloadQueryArrayUInt32ValidateDSL, testdata.PayloadQueryArrayUInt32ValidateEncodeCode},
-		{"query-array-uint64", testdata.PayloadQueryArrayUInt64DSL, testdata.PayloadQueryArrayUInt64EncodeCode},
-		{"query-array-uint64-validate", testdata.PayloadQueryArrayUInt64ValidateDSL, testdata.PayloadQueryArrayUInt64ValidateEncodeCode},
-		{"query-array-float32", testdata.PayloadQueryArrayFloat32DSL, testdata.PayloadQueryArrayFloat32EncodeCode},
-		{"query-array-float32-validate", testdata.PayloadQueryArrayFloat32ValidateDSL, testdata.PayloadQueryArrayFloat32ValidateEncodeCode},
-		{"query-array-float64", testdata.PayloadQueryArrayFloat64DSL, testdata.PayloadQueryArrayFloat64EncodeCode},
-		{"query-array-float64-validate", testdata.PayloadQueryArrayFloat64ValidateDSL, testdata.PayloadQueryArrayFloat64ValidateEncodeCode},
-		{"query-array-string", testdata.PayloadQueryArrayStringDSL, testdata.PayloadQueryArrayStringEncodeCode},
-		{"query-array-string-validate", testdata.PayloadQueryArrayStringValidateDSL, testdata.PayloadQueryArrayStringValidateEncodeCode},
-		{"query-array-bytes", testdata.PayloadQueryArrayBytesDSL, testdata.PayloadQueryArrayBytesEncodeCode},
-		{"query-array-bytes-validate", testdata.PayloadQueryArrayBytesValidateDSL, testdata.PayloadQueryArrayBytesValidateEncodeCode},
-		{"query-array-any", testdata.PayloadQueryArrayAnyDSL, testdata.PayloadQueryArrayAnyEncodeCode},
-		{"query-array-any-validate", testdata.PayloadQueryArrayAnyValidateDSL, testdata.PayloadQueryArrayAnyValidateEncodeCode},
-		{"query-array-alias", testdata.PayloadQueryArrayAliasDSL, testdata.PayloadQueryArrayAliasEncodeCode},
-		{"query-map-string-string", testdata.PayloadQueryMapStringStringDSL, testdata.PayloadQueryMapStringStringEncodeCode},
-		{"query-map-string-string-validate", testdata.PayloadQueryMapStringStringValidateDSL, testdata.PayloadQueryMapStringStringValidateEncodeCode},
-		{"query-map-string-bool", testdata.PayloadQueryMapStringBoolDSL, testdata.PayloadQueryMapStringBoolEncodeCode},
-		{"query-map-string-bool-validate", testdata.PayloadQueryMapStringBoolValidateDSL, testdata.PayloadQueryMapStringBoolValidateEncodeCode},
-		{"query-map-bool-string", testdata.PayloadQueryMapBoolStringDSL, testdata.PayloadQueryMapBoolStringEncodeCode},
-		{"query-map-bool-string-validate", testdata.PayloadQueryMapBoolStringValidateDSL, testdata.PayloadQueryMapBoolStringValidateEncodeCode},
-		{"query-map-bool-bool", testdata.PayloadQueryMapBoolBoolDSL, testdata.PayloadQueryMapBoolBoolEncodeCode},
-		{"query-map-bool-bool-validate", testdata.PayloadQueryMapBoolBoolValidateDSL, testdata.PayloadQueryMapBoolBoolValidateEncodeCode},
-		{"query-map-string-array-string", testdata.PayloadQueryMapStringArrayStringDSL, testdata.PayloadQueryMapStringArrayStringEncodeCode},
-		{"query-map-string-array-string-validate", testdata.PayloadQueryMapStringArrayStringValidateDSL, testdata.PayloadQueryMapStringArrayStringValidateEncodeCode},
-		{"query-map-string-array-bool", testdata.PayloadQueryMapStringArrayBoolDSL, testdata.PayloadQueryMapStringArrayBoolEncodeCode},
-		{"query-map-string-array-bool-validate", testdata.PayloadQueryMapStringArrayBoolValidateDSL, testdata.PayloadQueryMapStringArrayBoolValidateEncodeCode},
-		{"query-map-bool-array-string", testdata.PayloadQueryMapBoolArrayStringDSL, testdata.PayloadQueryMapBoolArrayStringEncodeCode},
-		{"query-map-bool-array-string-validate", testdata.PayloadQueryMapBoolArrayStringValidateDSL, testdata.PayloadQueryMapBoolArrayStringValidateEncodeCode},
-		{"query-map-bool-array-bool", testdata.PayloadQueryMapBoolArrayBoolDSL, testdata.PayloadQueryMapBoolArrayBoolEncodeCode},
-		{"query-map-bool-array-bool-validate", testdata.PayloadQueryMapBoolArrayBoolValidateDSL, testdata.PayloadQueryMapBoolArrayBoolValidateEncodeCode},
+		{"query-bool", testdata.PayloadQueryBoolDSL},
+		{"query-bool-validate", testdata.PayloadQueryBoolValidateDSL},
+		{"query-int", testdata.PayloadQueryIntDSL},
+		{"query-int-validate", testdata.PayloadQueryIntValidateDSL},
+		{"query-int32", testdata.PayloadQueryInt32DSL},
+		{"query-int32-validate", testdata.PayloadQueryInt32ValidateDSL},
+		{"query-int64", testdata.PayloadQueryInt64DSL},
+		{"query-int64-validate", testdata.PayloadQueryInt64ValidateDSL},
+		{"query-uint", testdata.PayloadQueryUIntDSL},
+		{"query-uint-validate", testdata.PayloadQueryUIntValidateDSL},
+		{"query-uint32", testdata.PayloadQueryUInt32DSL},
+		{"query-uint32-validate", testdata.PayloadQueryUInt32ValidateDSL},
+		{"query-uint64", testdata.PayloadQueryUInt64DSL},
+		{"query-uint64-validate", testdata.PayloadQueryUInt64ValidateDSL},
+		{"query-float32", testdata.PayloadQueryFloat32DSL},
+		{"query-float32-validate", testdata.PayloadQueryFloat32ValidateDSL},
+		{"query-float64", testdata.PayloadQueryFloat64DSL},
+		{"query-float64-validate", testdata.PayloadQueryFloat64ValidateDSL},
+		{"query-string", testdata.PayloadQueryStringDSL},
+		{"query-string-validate", testdata.PayloadQueryStringValidateDSL},
+		{"query-bytes", testdata.PayloadQueryBytesDSL},
+		{"query-bytes-validate", testdata.PayloadQueryBytesValidateDSL},
+		{"query-any", testdata.PayloadQueryAnyDSL},
+		{"query-any-validate", testdata.PayloadQueryAnyValidateDSL},
+		{"query-array-bool", testdata.PayloadQueryArrayBoolDSL},
+		{"query-array-bool-validate", testdata.PayloadQueryArrayBoolValidateDSL},
+		{"query-array-int", testdata.PayloadQueryArrayIntDSL},
+		{"query-array-int-validate", testdata.PayloadQueryArrayIntValidateDSL},
+		{"query-array-int32", testdata.PayloadQueryArrayInt32DSL},
+		{"query-array-int32-validate", testdata.PayloadQueryArrayInt32ValidateDSL},
+		{"query-array-int64", testdata.PayloadQueryArrayInt64DSL},
+		{"query-array-int64-validate", testdata.PayloadQueryArrayInt64ValidateDSL},
+		{"query-array-uint", testdata.PayloadQueryArrayUIntDSL},
+		{"query-array-uint-validate", testdata.PayloadQueryArrayUIntValidateDSL},
+		{"query-array-uint32", testdata.PayloadQueryArrayUInt32DSL},
+		{"query-array-uint32-validate", testdata.PayloadQueryArrayUInt32ValidateDSL},
+		{"query-array-uint64", testdata.PayloadQueryArrayUInt64DSL},
+		{"query-array-uint64-validate", testdata.PayloadQueryArrayUInt64ValidateDSL},
+		{"query-array-float32", testdata.PayloadQueryArrayFloat32DSL},
+		{"query-array-float32-validate", testdata.PayloadQueryArrayFloat32ValidateDSL},
+		{"query-array-float64", testdata.PayloadQueryArrayFloat64DSL},
+		{"query-array-float64-validate", testdata.PayloadQueryArrayFloat64ValidateDSL},
+		{"query-array-string", testdata.PayloadQueryArrayStringDSL},
+		{"query-array-string-validate", testdata.PayloadQueryArrayStringValidateDSL},
+		{"query-array-bytes", testdata.PayloadQueryArrayBytesDSL},
+		{"query-array-bytes-validate", testdata.PayloadQueryArrayBytesValidateDSL},
+		{"query-array-any", testdata.PayloadQueryArrayAnyDSL},
+		{"query-array-any-validate", testdata.PayloadQueryArrayAnyValidateDSL},
+		{"query-array-alias", testdata.PayloadQueryArrayAliasDSL},
+		{"query-map-string-string", testdata.PayloadQueryMapStringStringDSL},
+		{"query-map-string-string-validate", testdata.PayloadQueryMapStringStringValidateDSL},
+		{"query-map-string-bool", testdata.PayloadQueryMapStringBoolDSL},
+		{"query-map-string-bool-validate", testdata.PayloadQueryMapStringBoolValidateDSL},
+		{"query-map-bool-string", testdata.PayloadQueryMapBoolStringDSL},
+		{"query-map-bool-string-validate", testdata.PayloadQueryMapBoolStringValidateDSL},
+		{"query-map-bool-bool", testdata.PayloadQueryMapBoolBoolDSL},
+		{"query-map-bool-bool-validate", testdata.PayloadQueryMapBoolBoolValidateDSL},
+		{"query-map-string-array-string", testdata.PayloadQueryMapStringArrayStringDSL},
+		{"query-map-string-array-string-validate", testdata.PayloadQueryMapStringArrayStringValidateDSL},
+		{"query-map-string-array-bool", testdata.PayloadQueryMapStringArrayBoolDSL},
+		{"query-map-string-array-bool-validate", testdata.PayloadQueryMapStringArrayBoolValidateDSL},
+		{"query-map-bool-array-string", testdata.PayloadQueryMapBoolArrayStringDSL},
+		{"query-map-bool-array-string-validate", testdata.PayloadQueryMapBoolArrayStringValidateDSL},
+		{"query-map-bool-array-bool", testdata.PayloadQueryMapBoolArrayBoolDSL},
+		{"query-map-bool-array-bool-validate", testdata.PayloadQueryMapBoolArrayBoolValidateDSL},
 
-		{"query-primitive-string-validate", testdata.PayloadQueryPrimitiveStringValidateDSL, testdata.PayloadQueryPrimitiveStringValidateEncodeCode},
-		{"query-primitive-bool-validate", testdata.PayloadQueryPrimitiveBoolValidateDSL, testdata.PayloadQueryPrimitiveBoolValidateEncodeCode},
-		{"query-primitive-array-string-validate", testdata.PayloadQueryPrimitiveArrayStringValidateDSL, testdata.PayloadQueryPrimitiveArrayStringValidateEncodeCode},
-		{"query-primitive-array-bool-validate", testdata.PayloadQueryPrimitiveArrayBoolValidateDSL, testdata.PayloadQueryPrimitiveArrayBoolValidateEncodeCode},
-		{"query-primitive-map-string-array-string-validate", testdata.PayloadQueryPrimitiveMapStringArrayStringValidateDSL, testdata.PayloadQueryPrimitiveMapStringArrayStringValidateEncodeCode},
-		{"query-primitive-map-string-bool-validate", testdata.PayloadQueryPrimitiveMapStringBoolValidateDSL, testdata.PayloadQueryPrimitiveMapStringBoolValidateEncodeCode},
-		{"query-primitive-map-bool-array-bool-validate", testdata.PayloadQueryPrimitiveMapBoolArrayBoolValidateDSL, testdata.PayloadQueryPrimitiveMapBoolArrayBoolValidateEncodeCode},
-		{"query-map-string-map-int-string-validate", testdata.PayloadQueryMapStringMapIntStringValidateDSL, testdata.PayloadQueryMapStringMapIntStringValidateEncodeCode},
-		{"query-map-int-map-string-array-int-validate", testdata.PayloadQueryMapIntMapStringArrayIntValidateDSL, testdata.PayloadQueryMapIntMapStringArrayIntValidateEncodeCode},
+		{"query-primitive-string-validate", testdata.PayloadQueryPrimitiveStringValidateDSL},
+		{"query-primitive-bool-validate", testdata.PayloadQueryPrimitiveBoolValidateDSL},
+		{"query-primitive-array-string-validate", testdata.PayloadQueryPrimitiveArrayStringValidateDSL},
+		{"query-primitive-array-bool-validate", testdata.PayloadQueryPrimitiveArrayBoolValidateDSL},
+		{"query-primitive-map-string-array-string-validate", testdata.PayloadQueryPrimitiveMapStringArrayStringValidateDSL},
+		{"query-primitive-map-string-bool-validate", testdata.PayloadQueryPrimitiveMapStringBoolValidateDSL},
+		{"query-primitive-map-bool-array-bool-validate", testdata.PayloadQueryPrimitiveMapBoolArrayBoolValidateDSL},
+		{"query-map-string-map-int-string-validate", testdata.PayloadQueryMapStringMapIntStringValidateDSL},
+		{"query-map-int-map-string-array-int-validate", testdata.PayloadQueryMapIntMapStringArrayIntValidateDSL},
 
-		{"query-string-mapped", testdata.PayloadQueryStringMappedDSL, testdata.PayloadQueryStringMappedEncodeCode},
+		{"query-string-mapped", testdata.PayloadQueryStringMappedDSL},
 
-		{"query-string-default", testdata.PayloadQueryStringDefaultDSL, testdata.PayloadQueryStringDefaultEncodeCode},
-		{"query-primitive-string-default", testdata.PayloadQueryPrimitiveStringDefaultDSL, testdata.PayloadQueryPrimitiveStringDefaultEncodeCode},
-		{"query-jwt-authorization", testdata.PayloadJWTAuthorizationQueryDSL, testdata.PayloadJWTAuthorizationQueryEncodeCode},
+		{"query-string-default", testdata.PayloadQueryStringDefaultDSL},
+		{"query-primitive-string-default", testdata.PayloadQueryPrimitiveStringDefaultDSL},
+		{"query-jwt-authorization", testdata.PayloadJWTAuthorizationQueryDSL},
 
-		{"header-string", testdata.PayloadHeaderStringDSL, testdata.PayloadHeaderStringEncodeCode},
-		{"header-string-validate", testdata.PayloadHeaderStringValidateDSL, testdata.PayloadHeaderStringValidateEncodeCode},
-		{"header-array-string", testdata.PayloadHeaderArrayStringDSL, testdata.PayloadHeaderArrayStringEncodeCode},
-		{"header-array-string-validate", testdata.PayloadHeaderArrayStringValidateDSL, testdata.PayloadHeaderArrayStringValidateEncodeCode},
-		{"header-int", testdata.PayloadHeaderIntDSL, testdata.PayloadHeaderIntEncodeCode},
-		{"header-int-validate", testdata.PayloadHeaderIntValidateDSL, testdata.PayloadHeaderIntValidateEncodeCode},
-		{"header-array-int", testdata.PayloadHeaderArrayIntDSL, testdata.PayloadHeaderArrayIntEncodeCode},
-		{"header-array-int-validate", testdata.PayloadHeaderArrayIntValidateDSL, testdata.PayloadHeaderArrayIntValidateEncodeCode},
+		{"header-string", testdata.PayloadHeaderStringDSL},
+		{"header-string-validate", testdata.PayloadHeaderStringValidateDSL},
+		{"header-array-string", testdata.PayloadHeaderArrayStringDSL},
+		{"header-array-string-validate", testdata.PayloadHeaderArrayStringValidateDSL},
+		{"header-int", testdata.PayloadHeaderIntDSL},
+		{"header-int-validate", testdata.PayloadHeaderIntValidateDSL},
+		{"header-array-int", testdata.PayloadHeaderArrayIntDSL},
+		{"header-array-int-validate", testdata.PayloadHeaderArrayIntValidateDSL},
 
-		{"header-primitive-string-validate", testdata.PayloadHeaderPrimitiveStringValidateDSL, testdata.PayloadHeaderPrimitiveStringValidateEncodeCode},
-		{"header-primitive-bool-validate", testdata.PayloadHeaderPrimitiveBoolValidateDSL, testdata.PayloadHeaderPrimitiveBoolValidateEncodeCode},
-		{"header-primitive-array-string-validate", testdata.PayloadHeaderPrimitiveArrayStringValidateDSL, testdata.PayloadHeaderPrimitiveArrayStringValidateEncodeCode},
-		{"header-primitive-array-bool-validate", testdata.PayloadHeaderPrimitiveArrayBoolValidateDSL, testdata.PayloadHeaderPrimitiveArrayBoolValidateEncodeCode},
+		{"header-primitive-string-validate", testdata.PayloadHeaderPrimitiveStringValidateDSL},
+		{"header-primitive-bool-validate", testdata.PayloadHeaderPrimitiveBoolValidateDSL},
+		{"header-primitive-array-string-validate", testdata.PayloadHeaderPrimitiveArrayStringValidateDSL},
+		{"header-primitive-array-bool-validate", testdata.PayloadHeaderPrimitiveArrayBoolValidateDSL},
 
-		{"header-string-default", testdata.PayloadHeaderStringDefaultDSL, testdata.PayloadHeaderStringDefaultEncodeCode},
-		{"header-primitive-string-default", testdata.PayloadHeaderPrimitiveStringDefaultDSL, testdata.PayloadHeaderPrimitiveStringDefaultEncodeCode},
-		{"header-jwt-authorization", testdata.PayloadJWTAuthorizationHeaderDSL, testdata.PayloadJWTAuthorizationHeaderEncodeCode},
-		{"header-jwt-custom-header", testdata.PayloadJWTAuthorizationCustomHeaderDSL, testdata.PayloadJWTAuthorizationCustomHeaderEncodeCode},
+		{"header-string-default", testdata.PayloadHeaderStringDefaultDSL},
+		{"header-primitive-string-default", testdata.PayloadHeaderPrimitiveStringDefaultDSL},
+		{"header-jwt-authorization", testdata.PayloadJWTAuthorizationHeaderDSL},
+		{"header-jwt-custom-header", testdata.PayloadJWTAuthorizationCustomHeaderDSL},
 
-		{"body-string", testdata.PayloadBodyStringDSL, testdata.PayloadBodyStringEncodeCode},
-		{"body-string-validate", testdata.PayloadBodyStringValidateDSL, testdata.PayloadBodyStringValidateEncodeCode},
-		{"body-user", testdata.PayloadBodyUserDSL, testdata.PayloadBodyUserEncodeCode},
-		{"body-user-validate", testdata.PayloadBodyUserValidateDSL, testdata.PayloadBodyUserValidateEncodeCode},
-		{"body-array-string", testdata.PayloadBodyArrayStringDSL, testdata.PayloadBodyArrayStringEncodeCode},
-		{"body-array-string-validate", testdata.PayloadBodyArrayStringValidateDSL, testdata.PayloadBodyArrayStringValidateEncodeCode},
-		{"body-array-user", testdata.PayloadBodyArrayUserDSL, testdata.PayloadBodyArrayUserEncodeCode},
-		{"body-array-user-validate", testdata.PayloadBodyArrayUserValidateDSL, testdata.PayloadBodyArrayUserValidateEncodeCode},
-		{"body-map-string", testdata.PayloadBodyMapStringDSL, testdata.PayloadBodyMapStringEncodeCode},
-		{"body-map-string-validate", testdata.PayloadBodyMapStringValidateDSL, testdata.PayloadBodyMapStringValidateEncodeCode},
-		{"body-map-user", testdata.PayloadBodyMapUserDSL, testdata.PayloadBodyMapUserEncodeCode},
-		{"body-map-user-validate", testdata.PayloadBodyMapUserValidateDSL, testdata.PayloadBodyMapUserValidateEncodeCode},
+		{"body-string", testdata.PayloadBodyStringDSL},
+		{"body-string-validate", testdata.PayloadBodyStringValidateDSL},
+		{"body-user", testdata.PayloadBodyUserDSL},
+		{"body-user-validate", testdata.PayloadBodyUserValidateDSL},
+		{"body-array-string", testdata.PayloadBodyArrayStringDSL},
+		{"body-array-string-validate", testdata.PayloadBodyArrayStringValidateDSL},
+		{"body-array-user", testdata.PayloadBodyArrayUserDSL},
+		{"body-array-user-validate", testdata.PayloadBodyArrayUserValidateDSL},
+		{"body-map-string", testdata.PayloadBodyMapStringDSL},
+		{"body-map-string-validate", testdata.PayloadBodyMapStringValidateDSL},
+		{"body-map-user", testdata.PayloadBodyMapUserDSL},
+		{"body-map-user-validate", testdata.PayloadBodyMapUserValidateDSL},
 
-		{"body-primitive-string-validate", testdata.PayloadBodyPrimitiveStringValidateDSL, testdata.PayloadBodyPrimitiveStringValidateEncodeCode},
-		{"body-primitive-bool-validate", testdata.PayloadBodyPrimitiveBoolValidateDSL, testdata.PayloadBodyPrimitiveBoolValidateEncodeCode},
-		{"body-primitive-array-string-validate", testdata.PayloadBodyPrimitiveArrayStringValidateDSL, testdata.PayloadBodyPrimitiveArrayStringValidateEncodeCode},
-		{"body-primitive-array-bool-validate", testdata.PayloadBodyPrimitiveArrayBoolValidateDSL, testdata.PayloadBodyPrimitiveArrayBoolValidateEncodeCode},
+		{"body-primitive-string-validate", testdata.PayloadBodyPrimitiveStringValidateDSL},
+		{"body-primitive-bool-validate", testdata.PayloadBodyPrimitiveBoolValidateDSL},
+		{"body-primitive-array-string-validate", testdata.PayloadBodyPrimitiveArrayStringValidateDSL},
+		{"body-primitive-array-bool-validate", testdata.PayloadBodyPrimitiveArrayBoolValidateDSL},
 
-		{"body-primitive-array-user-validate", testdata.PayloadBodyPrimitiveArrayUserValidateDSL, testdata.PayloadBodyPrimitiveArrayUserValidateEncodeCode},
-		{"body-primitive-field-array-user", testdata.PayloadBodyPrimitiveFieldArrayUserDSL, testdata.PayloadBodyPrimitiveFieldArrayUserEncodeCode},
-		{"body-primitive-field-array-user-validate", testdata.PayloadBodyPrimitiveFieldArrayUserValidateDSL, testdata.PayloadBodyPrimitiveFieldArrayUserValidateEncodeCode},
+		{"body-primitive-array-user-validate", testdata.PayloadBodyPrimitiveArrayUserValidateDSL},
+		{"body-primitive-field-array-user", testdata.PayloadBodyPrimitiveFieldArrayUserDSL},
+		{"body-primitive-field-array-user-validate", testdata.PayloadBodyPrimitiveFieldArrayUserValidateDSL},
 
-		{"body-query-object", testdata.PayloadBodyQueryObjectDSL, testdata.PayloadBodyQueryObjectEncodeCode},
-		{"body-query-object-validate", testdata.PayloadBodyQueryObjectValidateDSL, testdata.PayloadBodyQueryObjectValidateEncodeCode},
-		{"body-query-user", testdata.PayloadBodyQueryUserDSL, testdata.PayloadBodyQueryUserEncodeCode},
-		{"body-query-user-validate", testdata.PayloadBodyQueryUserValidateDSL, testdata.PayloadBodyQueryUserValidateEncodeCode},
+		{"body-query-object", testdata.PayloadBodyQueryObjectDSL},
+		{"body-query-object-validate", testdata.PayloadBodyQueryObjectValidateDSL},
+		{"body-query-user", testdata.PayloadBodyQueryUserDSL},
+		{"body-query-user-validate", testdata.PayloadBodyQueryUserValidateDSL},
 
-		{"body-path-object", testdata.PayloadBodyPathObjectDSL, testdata.PayloadBodyPathObjectEncodeCode},
-		{"body-path-object-validate", testdata.PayloadBodyPathObjectValidateDSL, testdata.PayloadBodyPathObjectValidateEncodeCode},
-		{"body-path-user", testdata.PayloadBodyPathUserDSL, testdata.PayloadBodyPathUserEncodeCode},
-		{"body-path-user-validate", testdata.PayloadBodyPathUserValidateDSL, testdata.PayloadBodyPathUserValidateEncodeCode},
+		{"body-path-object", testdata.PayloadBodyPathObjectDSL},
+		{"body-path-object-validate", testdata.PayloadBodyPathObjectValidateDSL},
+		{"body-path-user", testdata.PayloadBodyPathUserDSL},
+		{"body-path-user-validate", testdata.PayloadBodyPathUserValidateDSL},
 
-		{"body-query-path-object", testdata.PayloadBodyQueryPathObjectDSL, testdata.PayloadBodyQueryPathObjectEncodeCode},
-		{"body-query-path-object-validate", testdata.PayloadBodyQueryPathObjectValidateDSL, testdata.PayloadBodyQueryPathObjectValidateEncodeCode},
-		{"body-query-path-user", testdata.PayloadBodyQueryPathUserDSL, testdata.PayloadBodyQueryPathUserEncodeCode},
-		{"body-query-path-user-validate", testdata.PayloadBodyQueryPathUserValidateDSL, testdata.PayloadBodyQueryPathUserValidateEncodeCode},
+		{"body-query-path-object", testdata.PayloadBodyQueryPathObjectDSL},
+		{"body-query-path-object-validate", testdata.PayloadBodyQueryPathObjectValidateDSL},
+		{"body-query-path-user", testdata.PayloadBodyQueryPathUserDSL},
+		{"body-query-path-user-validate", testdata.PayloadBodyQueryPathUserValidateDSL},
 
-		{"map-query-primitive-primitive", testdata.PayloadMapQueryPrimitivePrimitiveDSL, testdata.PayloadMapQueryPrimitivePrimitiveEncodeCode},
-		{"map-query-primitive-array", testdata.PayloadMapQueryPrimitiveArrayDSL, testdata.PayloadMapQueryPrimitiveArrayEncodeCode},
-		{"map-query-object", testdata.PayloadMapQueryObjectDSL, testdata.PayloadMapQueryObjectEncodeCode},
-		{"multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL, testdata.PayloadMultipartBodyPrimitiveEncodeCode},
-		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL, testdata.PayloadMultipartBodyUserTypeEncodeCode},
-		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL, testdata.PayloadMultipartBodyArrayTypeEncodeCode},
-		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL, testdata.PayloadMultipartBodyMapTypeEncodeCode},
+		{"map-query-primitive-primitive", testdata.PayloadMapQueryPrimitivePrimitiveDSL},
+		{"map-query-primitive-array", testdata.PayloadMapQueryPrimitiveArrayDSL},
+		{"map-query-object", testdata.PayloadMapQueryObjectDSL},
+		{"multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL},
+		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL},
+		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL},
+		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL},
 
 		// aliases
-		{"query-int-alias", testdata.QueryIntAliasDSL, testdata.QueryIntAliasEncodeCode},
-		{"query-int-alias-validate", testdata.QueryIntAliasValidateDSL, testdata.QueryIntAliasValidateEncodeCode},
-		{"query-array-alias", testdata.QueryArrayAliasDSL, testdata.QueryArrayAliasEncodeCode},
-		{"query-array-alias-validate", testdata.QueryArrayAliasValidateDSL, testdata.QueryArrayAliasValidateEncodeCode},
-		{"query-map-alias", testdata.QueryMapAliasDSL, testdata.QueryMapAliasEncodeCode},
-		{"query-map-alias-validate", testdata.QueryMapAliasValidateDSL, testdata.QueryMapAliasValidateEncodeCode},
-		{"query-array-nested-alias-validate", testdata.QueryArrayNestedAliasValidateDSL, testdata.QueryArrayNestedAliasValidateEncodeCode},
+		{"query-int-alias", testdata.QueryIntAliasDSL},
+		{"query-int-alias-validate", testdata.QueryIntAliasValidateDSL},
+		{"query-array-alias-type", testdata.QueryArrayAliasDSL},
+		{"query-array-alias-validate", testdata.QueryArrayAliasValidateDSL},
+		{"query-map-alias", testdata.QueryMapAliasDSL},
+		{"query-map-alias-validate", testdata.QueryMapAliasValidateDSL},
+		{"query-array-nested-alias-validate", testdata.QueryArrayNestedAliasValidateDSL},
 
-		{"body-custom-name", testdata.PayloadBodyCustomNameDSL, testdata.PayloadBodyCustomNameEncodeCode},
+		{"body-custom-name", testdata.PayloadBodyCustomNameDSL},
 		// path-custom-name is not needed because no encoder is created.
-		{"query-custom-name", testdata.PayloadQueryCustomNameDSL, testdata.PayloadQueryCustomNameEncodeCode},
-		{"header-custom-name", testdata.PayloadHeaderCustomNameDSL, testdata.PayloadHeaderCustomNameEncodeCode},
-		{"cookie-custom-name", testdata.PayloadCookieCustomNameDSL, testdata.PayloadCookieCustomNameEncodeCode},
-	}
-	golden := makeGolden(t, "testdata/payload_encode_functions.go")
-	if golden != nil {
-		_, err := golden.WriteString("package testdata\n")
-		require.NoError(t, err)
-		defer func() {
-			assert.NoError(t, golden.Close())
-		}()
+		{"query-custom-name", testdata.PayloadQueryCustomNameDSL},
+		{"header-custom-name", testdata.PayloadHeaderCustomNameDSL},
+		{"cookie-custom-name", testdata.PayloadCookieCustomNameDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
 			fs := ClientFiles("", services)
-			assert.Len(t, fs, 2)
+			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
-			assert.Greater(t, len(sections), 2)
+			require.Greater(t, len(sections), 2)
 			code := codegen.SectionCode(t, sections[2])
-
-			if golden != nil {
-				name := codegen.Goify(c.Name, true)
-				name = strings.ReplaceAll(name, "Uint", "UInt")
-				code = "\nvar Payload" + name + "EncodeCode = `" + code + "`"
-				_, err := golden.WriteString(code + "\n")
-				require.NoError(t, err)
-			} else {
-				assert.Equal(t, c.Code, code)
-			}
+			testutil.AssertGo(t, "testdata/golden/client_encode_"+c.Name+".go.golden", code)
 		})
 	}
 }
@@ -213,12 +194,11 @@ func TestClientBuildRequest(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"path-string", testdata.PayloadPathStringDSL, testdata.PathStringRequestBuildCode},
-		{"path-string-required", testdata.PayloadPathStringValidateDSL, testdata.PathStringRequiredRequestBuildCode},
-		{"path-string-default", testdata.PayloadPathStringDefaultDSL, testdata.PathStringDefaultRequestBuildCode},
-		{"path-object", testdata.PayloadPathObjectDSL, testdata.PathObjectRequestBuildCode},
+		{"path-string", testdata.PayloadPathStringDSL},
+		{"path-string-required", testdata.PayloadPathStringValidateDSL},
+		{"path-string-default", testdata.PayloadPathStringDefaultDSL},
+		{"path-object", testdata.PayloadPathObjectDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -229,7 +209,7 @@ func TestClientBuildRequest(t *testing.T) {
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 2)
 			code := codegen.SectionCode(t, sections[1])
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/client_build_request_"+c.Name+".go.golden", code)
 		})
 	}
 }

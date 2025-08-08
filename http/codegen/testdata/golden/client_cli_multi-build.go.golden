@@ -1,0 +1,37 @@
+// BuildMethodMultiPayloadPayload builds the payload for the ServiceMulti
+// MethodMultiPayload endpoint from CLI flags.
+func BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, serviceMultiMethodMultiPayloadB string, serviceMultiMethodMultiPayloadA string) (*servicemulti.MethodMultiPayloadPayload, error) {
+	var err error
+	var body MethodMultiPayloadRequestBody
+	{
+		err = json.Unmarshal([]byte(serviceMultiMethodMultiPayloadBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"c\": {\n         \"att\": false,\n         \"att10\": \"Aspernatur quo error explicabo pariatur.\",\n         \"att11\": \"Q3VtcXVlIHZvbHVwdGF0ZW0u\",\n         \"att12\": \"Distinctio aliquam nihil blanditiis ut.\",\n         \"att13\": [\n            \"Nihil excepturi deserunt quasi omnis sed.\",\n            \"Sit maiores aperiam autem non ea rem.\"\n         ],\n         \"att14\": {\n            \"Excepturi totam.\": \"Ut aut facilis vel ipsam.\",\n            \"Minima et aut non sunt consequuntur.\": \"Et consequuntur porro quasi.\",\n            \"Quis voluptates quaerat et temporibus facere.\": \"Ipsam eaque sunt maxime suscipit.\"\n         },\n         \"att15\": {\n            \"inline\": \"Ea alias repellat nobis veritatis.\"\n         },\n         \"att2\": 3504438334001971349,\n         \"att3\": 2005839040,\n         \"att4\": 5845720715558772393,\n         \"att5\": 12124006045301819638,\n         \"att6\": 3731236027,\n         \"att7\": 10708117302649141570,\n         \"att8\": 0.11815318,\n         \"att9\": 0.30907290919538355\n      }\n   }'")
+		}
+	}
+	var b *string
+	{
+		if serviceMultiMethodMultiPayloadB != "" {
+			b = &serviceMultiMethodMultiPayloadB
+		}
+	}
+	var a *bool
+	{
+		if serviceMultiMethodMultiPayloadA != "" {
+			var val bool
+			val, err = strconv.ParseBool(serviceMultiMethodMultiPayloadA)
+			a = &val
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for a, must be BOOL")
+			}
+		}
+	}
+	v := &servicemulti.MethodMultiPayloadPayload{}
+	if body.C != nil {
+		v.C = marshalUserTypeRequestBodyToServicemultiUserType(body.C)
+	}
+	v.B = b
+	v.A = a
+
+	return v, nil
+}

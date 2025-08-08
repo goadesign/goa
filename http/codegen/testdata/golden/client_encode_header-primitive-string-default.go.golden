@@ -1,0 +1,12 @@
+// EncodeMethodHeaderPrimitiveStringDefaultRequest returns an encoder for
+// requests sent to the ServiceHeaderPrimitiveStringDefault
+// MethodHeaderPrimitiveStringDefault server.
+func EncodeMethodHeaderPrimitiveStringDefaultRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(string)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceHeaderPrimitiveStringDefault", "MethodHeaderPrimitiveStringDefault", "string", v)
+		}
+		return nil
+	}
+}

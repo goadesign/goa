@@ -8,11 +8,10 @@ import (
 )
 
 // ClientTypeFiles returns the HTTP transport client types files.
-func ClientTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
-	root := services.Root
-	fw := make([]*codegen.File, len(root.API.HTTP.Services))
-	for i, svc := range root.API.HTTP.Services {
-		fw[i] = clientType(genpkg, svc, make(map[string]struct{}), services)
+func ClientTypeFiles(genpkg string, data *ServicesData) []*codegen.File {
+	fw := make([]*codegen.File, len(data.Expressions.Services))
+	for i, svc := range data.Expressions.Services {
+		fw[i] = clientType(genpkg, svc, make(map[string]struct{}), data)
 	}
 	return fw
 }
@@ -60,6 +59,8 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	var (
 		initData       []*InitData
 		validatedTypes []*TypeData
+		seenValidated  = make(map[string]struct{}) // Track validated types to avoid duplicates
+		seenInit       = make(map[string]struct{}) // Track init functions to avoid duplicates
 
 		sections = []*codegen.SectionTemplate{header}
 	)
@@ -75,15 +76,21 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 			if data.Def != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "client-request-body",
-					Source: readTemplate("type_decl"),
+					Source: httpTemplates.Read(typeDeclT),
 					Data:   data,
 				})
 			}
 			if data.Init != nil {
-				initData = append(initData, data.Init)
+				if _, ok := seenInit[data.Init.Name]; !ok {
+					seenInit[data.Init.Name] = struct{}{}
+					initData = append(initData, data.Init)
+				}
 			}
 			if data.ValidateDef != "" {
-				validatedTypes = append(validatedTypes, data)
+				if _, ok := seenValidated[data.Name]; !ok {
+					seenValidated[data.Name] = struct{}{}
+					validatedTypes = append(validatedTypes, data)
+				}
 			}
 		}
 		if adata.ClientWebSocket != nil {
@@ -95,7 +102,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-request-body",
-						Source: readTemplate("type_decl"),
+						Source: httpTemplates.Read(typeDeclT),
 						Data:   data,
 					})
 				}
@@ -103,7 +110,10 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 					initData = append(initData, data.Init)
 				}
 				if data.ValidateDef != "" {
-					validatedTypes = append(validatedTypes, data)
+					if _, ok := seenValidated[data.Name]; !ok {
+						seenValidated[data.Name] = struct{}{}
+						validatedTypes = append(validatedTypes, data)
+					}
 				}
 			}
 		}
@@ -121,12 +131,15 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-response-body",
-						Source: readTemplate("type_decl"),
+						Source: httpTemplates.Read(typeDeclT),
 						Data:   data,
 					})
 				}
 				if data.ValidateDef != "" {
-					validatedTypes = append(validatedTypes, data)
+					if _, ok := seenValidated[data.Name]; !ok {
+						seenValidated[data.Name] = struct{}{}
+						validatedTypes = append(validatedTypes, data)
+					}
 				}
 			}
 		}
@@ -145,12 +158,15 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 					if data.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "client-error-body",
-							Source: readTemplate("type_decl"),
+							Source: httpTemplates.Read(typeDeclT),
 							Data:   data,
 						})
 					}
 					if data.ValidateDef != "" {
-						validatedTypes = append(validatedTypes, data)
+						if _, ok := seenValidated[data.Name]; !ok {
+							seenValidated[data.Name] = struct{}{}
+							validatedTypes = append(validatedTypes, data)
+						}
 					}
 				}
 			}
@@ -158,16 +174,25 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	}
 
 	for _, data := range data.ClientBodyAttributeTypes {
+		// Check if this type has already been added to avoid duplicates
+		if _, ok := seen[data.Name]; ok {
+			continue
+		}
+		seen[data.Name] = struct{}{}
+
 		if data.Def != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-body-attributes",
-				Source: readTemplate("type_decl"),
+				Source: httpTemplates.Read(typeDeclT),
 				Data:   data,
 			})
 		}
 
 		if data.ValidateDef != "" {
-			validatedTypes = append(validatedTypes, data)
+			if _, ok := seenValidated[data.Name]; !ok {
+				seenValidated[data.Name] = struct{}{}
+				validatedTypes = append(validatedTypes, data)
+			}
 		}
 	}
 
@@ -175,21 +200,27 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	for _, init := range initData {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-body-init",
-			Source: readTemplate("client_body_init"),
+			Source: httpTemplates.Read(clientBodyInitT),
 			Data:   init,
 		})
 	}
+
+	// Track generated init functions to avoid duplicates
+	seenInits := make(map[string]struct{})
 
 	for _, adata := range data.Endpoints {
 		// response to method result (client)
 		for _, resp := range adata.Result.Responses {
 			if init := resp.ResultInit; init != nil {
-				sections = append(sections, &codegen.SectionTemplate{
-					Name:    "client-result-init",
-					Source:  readTemplate("client_type_init"),
-					Data:    init,
-					FuncMap: map[string]any{"fieldCode": fieldCode},
-				})
+				if _, ok := seenInits[init.Name]; !ok {
+					seenInits[init.Name] = struct{}{}
+					sections = append(sections, &codegen.SectionTemplate{
+						Name:    "client-result-init",
+						Source:  httpTemplates.Read(clientTypeInitT),
+						Data:    init,
+						FuncMap: map[string]any{"fieldCode": fieldCode},
+					})
+				}
 			}
 		}
 
@@ -197,12 +228,15 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		for _, gerr := range adata.Errors {
 			for _, herr := range gerr.Errors {
 				if init := herr.Response.ResultInit; init != nil {
-					sections = append(sections, &codegen.SectionTemplate{
-						Name:    "client-error-result-init",
-						Source:  readTemplate("client_type_init"),
-						Data:    init,
-						FuncMap: map[string]any{"fieldCode": fieldCode},
-					})
+					if _, ok := seenInits[init.Name]; !ok {
+						seenInits[init.Name] = struct{}{}
+						sections = append(sections, &codegen.SectionTemplate{
+							Name:    "client-error-result-init",
+							Source:  httpTemplates.Read(clientTypeInitT),
+							Data:    init,
+							FuncMap: map[string]any{"fieldCode": fieldCode},
+						})
+					}
 				}
 			}
 		}
@@ -213,7 +247,7 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	for _, data := range validatedTypes {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-validate",
-			Source: readTemplate("validate"),
+			Source: httpTemplates.Read(validateT),
 			Data:   data,
 		})
 	}

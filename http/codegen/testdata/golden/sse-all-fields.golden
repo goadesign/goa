@@ -13,14 +13,7 @@ type SSEAllFieldsMethodServerStream struct {
 // Send Send streams instances of
 // "sseallfieldsservice.SSEAllFieldsMethodResult" to the "SSEAllFieldsMethod"
 // endpoint SSE connection.
-func (s *SSEAllFieldsMethodServerStream) Send(v *sseallfieldsservice.SSEAllFieldsMethodResult) error {
-	return s.SendWithContext(context.Background(), v)
-}
-
-// SendWithContext SendWithContext streams instances of
-// "sseallfieldsservice.SSEAllFieldsMethodResult" to the "SSEAllFieldsMethod"
-// endpoint SSE connection with context.
-func (s *SSEAllFieldsMethodServerStream) SendWithContext(ctx context.Context, v *sseallfieldsservice.SSEAllFieldsMethodResult) error {
+func (s *SSEAllFieldsMethodServerStream) Send(ctx context.Context, v *sseallfieldsservice.SSEAllFieldsMethodResult) error {
 	s.once.Do(func() {
 		header := s.w.Header()
 		if header.Get("Content-Type") == "" {
@@ -36,18 +29,18 @@ func (s *SSEAllFieldsMethodServerStream) SendWithContext(ctx context.Context, v 
 	})
 	res := v
 
-	if id := res.id; id != "" {
+	if id := res.ID; id != "" {
 		fmt.Fprintf(s.w, "id: %s\n", id)
 	}
-	if event := res.event; event != "" {
+	if event := res.Event; event != "" {
 		fmt.Fprintf(s.w, "event: %s\n", event)
 	}
-	if retry := res.retry; retry > 0 {
+	if retry := res.Retry; retry > 0 {
 		fmt.Fprintf(s.w, "retry: %d\n", retry)
 	}
 
 	var data string
-	dataField := res.data
+	dataField := res.Data
 	byts, err := json.Marshal(dataField)
 	if err != nil {
 		return err

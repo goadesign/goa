@@ -1,0 +1,12 @@
+// NewStreamStreamingBody builds the HTTP request body from the payload of the
+// "Stream" endpoint of the "StreamingAliasedArray" service.
+func NewStreamStreamingBody(p *streamingaliasedarray.PayloadType) *StreamStreamingBody {
+	body := &StreamStreamingBody{}
+	if p.Values != nil {
+		body.Values = make([]CustomIntStreamingBody, len(p.Values))
+		for i, val := range p.Values {
+			body.Values[i] = CustomIntStreamingBody(val)
+		}
+	}
+	return body
+}

@@ -1,0 +1,26 @@
+// DecodeMethodPathCustomFloat32Request returns a decoder for requests sent to
+// the ServicePathCustomFloat32 MethodPathCustomFloat32 endpoint.
+func DecodeMethodPathCustomFloat32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicepathcustomfloat32.MethodPathCustomFloat32Payload, error) {
+	return func(r *http.Request) (*servicepathcustomfloat32.MethodPathCustomFloat32Payload, error) {
+		var (
+			p   hide.Float32
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			v, err2 := strconv.ParseFloat(pRaw, 32)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "float"))
+			}
+			p = hide.Float32(v)
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodPathCustomFloat32Payload(p)
+
+		return payload, nil
+	}
+}

@@ -1,0 +1,9 @@
+func Validate() (err error) {
+	for _, e := range target {
+		if e != nil {
+			if err2 := ValidateResult(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+}

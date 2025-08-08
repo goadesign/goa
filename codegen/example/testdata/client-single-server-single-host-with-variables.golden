@@ -1,8 +1,7 @@
 func main() {
 	var (
-		hostF = flag.String("host", "dev", "Server host (valid values: dev)")
-		addrF = flag.String("url", "", "URL to service host")
-
+		hostF     = flag.String("host", "dev", "Server host (valid values: dev)")
+		addrF     = flag.String("url", "", "URL to service host")
 		int_F     = flag.String("int", "1", "")
 		uint_F    = flag.String("uint", "1", "")
 		float32_F = flag.String("float32", "1.1", "")
@@ -12,9 +11,10 @@ func main() {
 		uint64_F  = flag.String("uint64", "1", "")
 		float64_F = flag.String("float64", "1", "")
 		bool_F    = flag.String("bool", "true", "")
-		verboseF  = flag.Bool("verbose", false, "Print request and response details")
-		vF        = flag.Bool("v", false, "Print request and response details")
-		timeoutF  = flag.Int("timeout", 30, "Maximum number of seconds to wait for response")
+
+		verboseF = flag.Bool("verbose", false, "Print request and response details")
+		vF       = flag.Bool("v", false, "Print request and response details")
+		timeoutF = flag.Int("timeout", 30, "Maximum number of seconds to wait for response")
 	)
 	flag.Usage = usage
 	flag.Parse()
@@ -77,7 +77,7 @@ func main() {
 		}
 	}
 	if err != nil {
-		if errors.Is(err, flag.ErrHelp) {
+		if err == flag.ErrHelp {
 			os.Exit(0)
 		}
 		fmt.Fprintln(os.Stderr, err.Error())
@@ -98,6 +98,10 @@ func main() {
 }
 
 func usage() {
+	var usageCommands []string
+	usageCommands = append(usageCommands, httpUsageCommands()...)
+	sort.Strings(usageCommands)
+	usageCommands = slices.Compact(usageCommands)
 	fmt.Fprintf(os.Stderr, `%s is a command line client for the SingleServerSingleHostWithVariables API.
 
 Usage:
@@ -124,7 +128,7 @@ Additional help:
 
 Example:
 %s
-`, os.Args[0], os.Args[0], indent(httpUsageCommands()), os.Args[0], indent(httpUsageExamples()))
+`, os.Args[0], os.Args[0], indent(strings.Join(usageCommands, "\n")), os.Args[0], indent(httpUsageExamples()))
 }
 
 func indent(s string) string {

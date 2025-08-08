@@ -15,16 +15,16 @@ import (
 func ExampleCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
 	var files []*codegen.File
 	for _, svr := range services.Root.API.Servers {
-		if f := exampleCLI(genpkg, svr, services); f != nil {
+		if f := ExampleCLI(genpkg, svr, services); f != nil {
 			files = append(files, f)
 		}
 	}
 	return files
 }
 
-// exampleCLI returns an example client tool HTTP implementation for the given
+// ExampleCLI returns an example client tool HTTP implementation for the given
 // server expression.
-func exampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *codegen.File {
+func ExampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 	svrdata := example.Servers.Get(svr, services.Root)
 	path := filepath.Join("cmd", svrdata.Dir+"-cli", "http.go")
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -71,7 +71,7 @@ func exampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 		codegen.Header("", "main", specs),
 		{
 			Name:   "cli-http-start",
-			Source: readTemplate("cli_start"),
+			Source: httpTemplates.Read(cliStartT),
 			Data: map[string]any{
 				"Services":        svcData,
 				"InterceptorsPkg": interceptorsPkg,
@@ -79,29 +79,29 @@ func exampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 		},
 		{
 			Name:   "cli-http-streaming",
-			Source: readTemplate("cli_streaming"),
+			Source: httpTemplates.Read(cliStreamingT),
 			Data: map[string]any{
 				"Services": svcData,
 			},
 			FuncMap: map[string]any{
-				"needDialer": needDialer,
+				"needDialer": NeedDialer,
 			},
 		},
 		{
 			Name:   "cli-http-end",
-			Source: readTemplate("cli_end"),
+			Source: httpTemplates.Read(cliEndT),
 			Data: map[string]any{
 				"Services": svcData,
 				"APIPkg":   apiPkg,
 			},
 			FuncMap: map[string]any{
-				"needDialer":   needDialer,
-				"hasWebSocket": hasWebSocket,
+				"needDialer":   NeedDialer,
+				"hasWebSocket": HasWebSocket,
 			},
 		},
 		{
 			Name:   "cli-http-usage",
-			Source: readTemplate("cli_usage"),
+			Source: httpTemplates.Read(cliUsageT),
 		},
 	}
 	return &codegen.File{

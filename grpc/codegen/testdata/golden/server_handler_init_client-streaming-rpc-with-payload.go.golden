@@ -1,0 +1,9 @@
+// NewMethodClientStreamingRPCWithPayloadHandler creates a gRPC handler which
+// serves the "ServiceClientStreamingRPCWithPayload" service
+// "MethodClientStreamingRPCWithPayload" endpoint.
+func NewMethodClientStreamingRPCWithPayloadHandler(endpoint goa.Endpoint, h goagrpc.StreamHandler) goagrpc.StreamHandler {
+	if h == nil {
+		h = goagrpc.NewStreamHandler(endpoint, DecodeMethodClientStreamingRPCWithPayloadRequest)
+	}
+	return h
+}

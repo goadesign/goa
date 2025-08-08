@@ -1,0 +1,23 @@
+func transform() {
+	target := &CompositeWithCustomField{
+		MyString: source.RequiredString,
+		MyInt:    source.DefaultInt,
+	}
+	if source.Type != nil {
+		target.MyType = transformSimpleToSimple(source.Type)
+	}
+	if source.Map != nil {
+		target.MyMap = make(map[int]string, len(source.Map))
+		for key, val := range source.Map {
+			tk := key
+			tv := val
+			target.MyMap[tk] = tv
+		}
+	}
+	if source.Array != nil {
+		target.MyArray = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.MyArray[i] = val
+		}
+	}
+}

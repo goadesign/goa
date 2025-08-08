@@ -1,0 +1,23 @@
+
+syntax = "proto3";
+
+package my_name_conflicts;
+
+option go_package = "/my_name_conflictspb";
+
+// Service is the MyNameConflicts service interface.
+service MyNameConflicts {
+	// MyNameConflictsMethod implements MyNameConflictsMethod.
+	rpc MyNameConflictsMethod (MyNameConflictsMethodRequest) returns (MyNameConflictsMethodResponse);
+}
+
+message MyNameConflictsMethodRequest {
+	MyNameConflicts2 conflict = 1;
+}
+
+message MyNameConflicts2 {
+	optional bool boolean_field = 1;
+}
+
+message MyNameConflictsMethodResponse {
+}

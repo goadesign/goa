@@ -1,0 +1,11 @@
+// NewMethodBodyQueryObjectValidatePayload builds a
+// ServiceBodyQueryObjectValidate service MethodBodyQueryObjectValidate
+// endpoint payload.
+func NewMethodBodyQueryObjectValidatePayload(body *MethodBodyQueryObjectValidateRequestBody, b string) *servicebodyqueryobjectvalidate.MethodBodyQueryObjectValidatePayload {
+	v := &servicebodyqueryobjectvalidate.MethodBodyQueryObjectValidatePayload{
+		A: *body.A,
+	}
+	v.B = b
+
+	return v
+}

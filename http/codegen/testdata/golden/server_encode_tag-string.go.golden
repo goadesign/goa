@@ -1,0 +1,16 @@
+// EncodeMethodTagStringResponse returns an encoder for responses returned by
+// the ServiceTagString MethodTagString endpoint.
+func EncodeMethodTagStringResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*servicetagstring.MethodTagStringResult)
+		if res.H != nil && *res.H == "value" {
+			w.Header().Set("H", *res.H)
+			w.WriteHeader(http.StatusAccepted)
+			return nil
+		}
+		enc := encoder(ctx, w)
+		body := NewMethodTagStringOKResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}

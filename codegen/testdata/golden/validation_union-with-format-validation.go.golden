@@ -1,0 +1,6 @@
+func Validate() (err error) {
+	switch v := target.Response.(type) {
+	case ResponseTimestamp:
+		err = goa.MergeErrors(err, goa.ValidateFormat("target.response.value", string(v), goa.FormatDateTime))
+	}
+}

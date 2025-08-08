@@ -1,0 +1,23 @@
+// MethodUnaryRPCA implements the "MethodUnaryRPCA" method in
+// service_unary_rp_cspb.ServiceUnaryRPCsServer interface.
+func (s *Server) MethodUnaryRPCA(ctx context.Context, message *service_unary_rp_cspb.MethodUnaryRPCARequest) (*service_unary_rp_cspb.MethodUnaryRPCAResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "MethodUnaryRPCA")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceUnaryRPCs")
+	resp, err := s.MethodUnaryRPCAH.Handle(ctx, message)
+	if err != nil {
+		return nil, goagrpc.EncodeError(err)
+	}
+	return resp.(*service_unary_rp_cspb.MethodUnaryRPCAResponse), nil
+}
+
+// MethodUnaryRPCB implements the "MethodUnaryRPCB" method in
+// service_unary_rp_cspb.ServiceUnaryRPCsServer interface.
+func (s *Server) MethodUnaryRPCB(ctx context.Context, message *service_unary_rp_cspb.MethodUnaryRPCBRequest) (*service_unary_rp_cspb.MethodUnaryRPCBResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "MethodUnaryRPCB")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceUnaryRPCs")
+	resp, err := s.MethodUnaryRPCBH.Handle(ctx, message)
+	if err != nil {
+		return nil, goagrpc.EncodeError(err)
+	}
+	return resp.(*service_unary_rp_cspb.MethodUnaryRPCBResponse), nil
+}

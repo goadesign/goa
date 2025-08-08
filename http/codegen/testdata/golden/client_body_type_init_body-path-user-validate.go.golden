@@ -1,0 +1,9 @@
+// NewMethodUserBodyPathValidateRequestBody builds the HTTP request body from
+// the payload of the "MethodUserBodyPathValidate" endpoint of the
+// "ServiceBodyPathUserValidate" service.
+func NewMethodUserBodyPathValidateRequestBody(p *servicebodypathuservalidate.PayloadType) *MethodUserBodyPathValidateRequestBody {
+	body := &MethodUserBodyPathValidateRequestBody{
+		A: p.A,
+	}
+	return body
+}

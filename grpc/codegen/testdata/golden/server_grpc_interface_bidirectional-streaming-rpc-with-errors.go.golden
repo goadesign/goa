@@ -1,0 +1,43 @@
+// MethodBidirectionalStreamingRPCWithErrors implements the
+// "MethodBidirectionalStreamingRPCWithErrors" method in
+// service_bidirectional_streaming_rpc_with_errorspb.ServiceBidirectionalStreamingRPCWithErrorsServer
+// interface.
+func (s *Server) MethodBidirectionalStreamingRPCWithErrors(stream service_bidirectional_streaming_rpc_with_errorspb.ServiceBidirectionalStreamingRPCWithErrors_MethodBidirectionalStreamingRPCWithErrorsServer) error {
+	ctx := stream.Context()
+	ctx = context.WithValue(ctx, goa.MethodKey, "MethodBidirectionalStreamingRPCWithErrors")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceBidirectionalStreamingRPCWithErrors")
+	_, err := s.MethodBidirectionalStreamingRPCWithErrorsH.Decode(ctx, nil)
+	if err != nil {
+		var en goa.GoaErrorNamer
+		if errors.As(err, &en) {
+			switch en.GoaErrorName() {
+			case "timeout":
+				return goagrpc.NewStatusError(codes.Canceled, err, goagrpc.NewErrorResponse(err))
+			case "internal":
+				return goagrpc.NewStatusError(codes.Unknown, err, goagrpc.NewErrorResponse(err))
+			case "bad_request":
+				return goagrpc.NewStatusError(codes.InvalidArgument, err, goagrpc.NewErrorResponse(err))
+			}
+		}
+		return goagrpc.EncodeError(err)
+	}
+	ep := &servicebidirectionalstreamingrpcwitherrors.MethodBidirectionalStreamingRPCWithErrorsEndpointInput{
+		Stream: &MethodBidirectionalStreamingRPCWithErrorsServerStream{stream: stream},
+	}
+	err = s.MethodBidirectionalStreamingRPCWithErrorsH.Handle(ctx, ep)
+	if err != nil {
+		var en goa.GoaErrorNamer
+		if errors.As(err, &en) {
+			switch en.GoaErrorName() {
+			case "timeout":
+				return goagrpc.NewStatusError(codes.Canceled, err, goagrpc.NewErrorResponse(err))
+			case "internal":
+				return goagrpc.NewStatusError(codes.Unknown, err, goagrpc.NewErrorResponse(err))
+			case "bad_request":
+				return goagrpc.NewStatusError(codes.InvalidArgument, err, goagrpc.NewErrorResponse(err))
+			}
+		}
+		return goagrpc.EncodeError(err)
+	}
+	return nil
+}

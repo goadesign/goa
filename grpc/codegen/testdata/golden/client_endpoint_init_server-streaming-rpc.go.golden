@@ -1,0 +1,15 @@
+// MethodServerStreamingRPC calls the "MethodServerStreamingRPC" function in
+// service_server_streaming_rpcpb.ServiceServerStreamingRPCClient interface.
+func (c *Client) MethodServerStreamingRPC() goa.Endpoint {
+	return func(ctx context.Context, v any) (any, error) {
+		inv := goagrpc.NewInvoker(
+			BuildMethodServerStreamingRPCFunc(c.grpccli, c.opts...),
+			EncodeMethodServerStreamingRPCRequest,
+			DecodeMethodServerStreamingRPCResponse)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			return nil, goa.Fault("%s", err.Error())
+		}
+		return res, nil
+	}
+}

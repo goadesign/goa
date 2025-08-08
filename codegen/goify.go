@@ -65,11 +65,12 @@ func fixReservedGo(w string) string {
 var (
 	isPackage = map[string]bool{
 		// stdlib and goa packages used by generated code
-		"fmt":  true,
-		"http": true,
-		"json": true,
-		"os":   true,
-		"url":  true,
-		"time": true,
+		"errors": true,
+		"fmt":    true,
+		"http":   true,
+		"json":   true,
+		"os":     true,
+		"url":    true,
+		"time":   true,
 	}
 )

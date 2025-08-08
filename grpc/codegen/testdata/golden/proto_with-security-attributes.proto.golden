@@ -1,0 +1,20 @@
+// Code generated with goa v3.21.5, DO NOT EDIT.
+//
+// ServiceMessageWithSecurity protocol buffer definition
+//
+// Command:
+// goa
+
+syntax = "proto3";
+
+package service_message_with_security;
+
+option go_package = "/service_message_with_securitypb";
+
+message MethodMessageWithSecurityRequest {
+	optional string oauth_token = 3;
+	optional bool boolean_field = 1;
+}
+
+message MethodMessageWithSecurityResponse {
+}

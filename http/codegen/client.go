@@ -10,98 +10,28 @@ import (
 )
 
 // ClientFiles returns the generated HTTP client files.
-func ClientFiles(genpkg string, services *ServicesData) []*codegen.File {
-	root := services.Root
-	var files []*codegen.File
-	for _, svc := range root.API.HTTP.Services {
-		files = append(files, clientFile(genpkg, svc, services))
-		if f := websocketClientFile(genpkg, svc, services); f != nil {
+func ClientFiles(genpkg string, data *ServicesData) []*codegen.File {
+	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3) // preallocate for client files
+	for _, svc := range data.Expressions.Services {
+		files = append(files, clientFile(genpkg, svc, data))
+		if f := WebsocketClientFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
-		if f := sseClientFile(genpkg, svc, services); f != nil {
+		if f := sseClientFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
 	}
-	for _, svc := range root.API.HTTP.Services {
-		if f := clientEncodeDecodeFile(genpkg, svc, services); f != nil {
+	for _, svc := range data.Expressions.Services {
+		if f := ClientEncodeDecodeFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
 	}
 	return files
 }
 
-// clientFile returns the client HTTP transport file
-func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
-	data := services.Get(svc.Name())
-	svcName := data.Service.PathName
-	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "client.go")
-	title := fmt.Sprintf("%s client HTTP transport", svc.Name())
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "fmt"},
-			{Path: "io"},
-			{Path: "mime/multipart"},
-			{Path: "net/http"},
-			{Path: "strconv"},
-			{Path: "strings"},
-			{Path: "time"},
-			{Path: "github.com/gorilla/websocket"},
-			codegen.GoaImport(""),
-			codegen.GoaNamedImport("http", "goahttp"),
-			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-		}),
-	}
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:   "client-struct",
-		Source: readTemplate("client_struct"),
-		Data:   data,
-		FuncMap: map[string]any{
-			"hasWebSocket": hasWebSocket,
-			"hasSSE":       hasSSE,
-		},
-	})
-
-	for _, e := range data.Endpoints {
-		if e.MultipartRequestEncoder != nil {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "multipart-request-encoder-type",
-				Source: readTemplate("multipart_request_encoder_type"),
-				Data:   e.MultipartRequestEncoder,
-			})
-		}
-	}
-
-	sections = append(sections, &codegen.SectionTemplate{
-		Name:   "http-client-init",
-		Source: readTemplate("client_init"),
-		Data:   data,
-		FuncMap: map[string]any{
-			"hasWebSocket": hasWebSocket,
-			"hasSSE":       hasSSE,
-		},
-	})
-
-	for _, e := range data.Endpoints {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "client-endpoint-init",
-			Source: readTemplate("endpoint_init"),
-			Data:   e,
-			FuncMap: map[string]any{
-				"isWebSocketEndpoint": isWebSocketEndpoint,
-				"isSSEEndpoint":       isSSEEndpoint,
-				"responseStructPkg":   responseStructPkg,
-			},
-		})
-	}
-
-	return &codegen.File{Path: path, SectionTemplates: sections}
-}
-
-// clientEncodeDecodeFile returns the file containing the HTTP client encoding
+// ClientEncodeDecodeFile returns the file containing the HTTP client encoding
 // and decoding logic.
-func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "encode_decode.go")
@@ -129,13 +59,13 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 	for _, e := range data.Endpoints {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "request-builder",
-			Source: readTemplate("request_builder"),
+			Source: httpTemplates.Read(requestBuilderT),
 			Data:   e,
 		})
 		if e.RequestEncoder != "" && e.Payload.Ref != "" {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "request-encoder",
-				Source: readTemplate("request_encoder", "client_type_conversion", "client_map_conversion"),
+				Source: httpTemplates.Read(requestEncoderT, clientTypeConversionP, clientMapConversionP),
 				FuncMap: map[string]any{
 					"typeConversionData": typeConversionData,
 					"mapConversionData":  mapConversionData,
@@ -162,14 +92,14 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 		if e.MultipartRequestEncoder != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "multipart-request-encoder",
-				Source: readTemplate("multipart_request_encoder"),
+				Source: httpTemplates.Read(multipartRequestEncoderT),
 				Data:   e.MultipartRequestEncoder,
 			})
 		}
 		if e.Result != nil || len(e.Errors) > 0 {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "response-decoder",
-				Source: readTemplate("response_decoder", "single_response", "query_type_conversion", "element_slice_conversion", "slice_item_conversion"),
+				Source: httpTemplates.Read(responseDecoderT, singleResponseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP),
 				Data:   e,
 				FuncMap: map[string]any{
 					"goTypeRef": func(dt expr.DataType) string {
@@ -182,7 +112,7 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 		if e.Method.SkipRequestBodyEncodeDecode {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "build-stream-request",
-				Source: readTemplate("build_stream_request"),
+				Source: httpTemplates.Read(buildStreamRequestT),
 				Data:   e,
 				FuncMap: map[string]any{
 					"requestStructPkg": requestStructPkg,
@@ -193,9 +123,109 @@ func clientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 	for _, h := range data.ClientTransformHelpers {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-transform-helper",
-			Source: readTemplate("transform_helper"),
+			Source: httpTemplates.Read(transformHelperT),
 			Data:   h,
 		})
+	}
+
+	return &codegen.File{Path: path, SectionTemplates: sections}
+}
+
+// clientFile returns the client HTTP transport file
+func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+	data := services.Get(svc.Name())
+	svcName := data.Service.PathName
+	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "client.go")
+	title := fmt.Sprintf("%s client HTTP transport", svc.Name())
+	sections := []*codegen.SectionTemplate{
+		codegen.Header(title, "client", []*codegen.ImportSpec{
+			{Path: "context"},
+			{Path: "fmt"},
+			{Path: "io"},
+			{Path: "mime/multipart"},
+			{Path: "net/http"},
+			{Path: "strconv"},
+			{Path: "strings"},
+			{Path: "time"},
+			{Path: "github.com/gorilla/websocket"},
+			codegen.GoaImport(""),
+			codegen.GoaNamedImport("http", "goahttp"),
+			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
+		}),
+	}
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "client-struct",
+		Source: httpTemplates.Read(clientStructT),
+		Data:   data,
+		FuncMap: map[string]any{
+			"hasWebSocket": HasWebSocket,
+			"hasSSE":       HasSSE,
+		},
+	})
+
+	for _, e := range data.Endpoints {
+		if e.MultipartRequestEncoder != nil {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "multipart-request-encoder-type",
+				Source: httpTemplates.Read(multipartRequestEncoderTypeT),
+				Data:   e.MultipartRequestEncoder,
+			})
+		}
+	}
+
+	sections = append(sections, &codegen.SectionTemplate{
+		Name:   "http-client-init",
+		Source: httpTemplates.Read(clientInitT),
+		Data:   data,
+		FuncMap: map[string]any{
+			"hasWebSocket": HasWebSocket,
+			"hasSSE":       HasSSE,
+		},
+	})
+
+	for _, e := range data.Endpoints {
+		// For mixed results, generate both standard and SSE endpoints
+		if e.HasMixedResults {
+			// Generate standard HTTP endpoint
+			standardEndpoint := *e
+			standardEndpoint.SSE = nil
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "client-endpoint-init",
+				Source: httpTemplates.Read(clientEndpointInitT),
+				Data:   &standardEndpoint,
+				FuncMap: map[string]any{
+					"isWebSocketEndpoint": IsWebSocketEndpoint,
+					"isSSEEndpoint":       IsSSEEndpoint,
+					"responseStructPkg":   responseStructPkg,
+				},
+			})
+			
+			// Generate SSE endpoint with "Stream" suffix
+			sseEndpoint := *e
+			sseEndpoint.EndpointInit = e.EndpointInit + "Stream"
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "client-endpoint-init",
+				Source: httpTemplates.Read(clientEndpointInitT),
+				Data:   &sseEndpoint,
+				FuncMap: map[string]any{
+					"isWebSocketEndpoint": IsWebSocketEndpoint,
+					"isSSEEndpoint":       IsSSEEndpoint,
+					"responseStructPkg":   responseStructPkg,
+				},
+			})
+		} else {
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   "client-endpoint-init",
+				Source: httpTemplates.Read(clientEndpointInitT),
+				Data:   e,
+				FuncMap: map[string]any{
+					"isWebSocketEndpoint": IsWebSocketEndpoint,
+					"isSSEEndpoint":       IsSSEEndpoint,
+					"responseStructPkg":   responseStructPkg,
+				},
+			})
+		}
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}

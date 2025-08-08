@@ -1,0 +1,15 @@
+// MethodUnaryRPCNoResult calls the "MethodUnaryRPCNoResult" function in
+// service_unary_rpc_no_resultpb.ServiceUnaryRPCNoResultClient interface.
+func (c *Client) MethodUnaryRPCNoResult() goa.Endpoint {
+	return func(ctx context.Context, v any) (any, error) {
+		inv := goagrpc.NewInvoker(
+			BuildMethodUnaryRPCNoResultFunc(c.grpccli, c.opts...),
+			EncodeMethodUnaryRPCNoResultRequest,
+			nil)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			return nil, goa.Fault("%s", err.Error())
+		}
+		return res, nil
+	}
+}

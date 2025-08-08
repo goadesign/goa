@@ -3,8 +3,10 @@
 {{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
 func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeByType }}, auth{{ .Type }}Fn security.Auth{{ .Type }}Func{{ end }}) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
-{{- if or .ServerStream }}
+{{- if .ServerStream }}
+	{{- if .ServerStream.EndpointStruct }}
 		ep := req.(*{{ .ServerStream.EndpointStruct }})
+	{{- end }}
 {{- else if .SkipRequestBodyEncodeDecode }}
 		ep := req.(*{{ .RequestStruct }})
 {{- else if .PayloadRef }}
@@ -115,8 +117,27 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 			return nil, err
 		}
 {{- end }}
+
 {{- if .ServerStream }}
-	return nil, s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
+	{{- if .ServerStream.EndpointStruct }}
+		return nil, s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
+	{{- else }}
+		{{- /* JSON-RPC WebSocket client streaming: no stream parameter, just payload */ -}}
+		{{- if .PayloadRef }}
+			p := req.({{ .PayloadRef }})
+			{{- if .ResultRef }}
+				return s.{{ .VarName }}(ctx, p)
+			{{- else }}
+				return nil, s.{{ .VarName }}(ctx, p)
+			{{- end }}
+		{{- else }}
+			{{- if .ResultRef }}
+				return s.{{ .VarName }}(ctx)
+			{{- else }}
+				return nil, s.{{ .VarName }}(ctx)
+			{{- end }}
+		{{- end }}
+	{{- end }}
 {{- else if .SkipRequestBodyEncodeDecode }}
 	{{- if .SkipResponseBodyEncodeDecode }}
 	{{ if .ResultRef }}res, {{ end }}body, err := s.{{ .VarName }}(ctx, {{ if .PayloadRef }}ep.Payload, {{ end }}ep.Body)

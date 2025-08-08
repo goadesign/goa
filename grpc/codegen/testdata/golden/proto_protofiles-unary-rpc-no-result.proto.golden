@@ -1,0 +1,19 @@
+
+syntax = "proto3";
+
+package service_unary_rpc_no_result;
+
+option go_package = "/service_unary_rpc_no_resultpb";
+
+// Service is the ServiceUnaryRPCNoResult service interface.
+service ServiceUnaryRPCNoResult {
+	// MethodUnaryRPCNoResult implements MethodUnaryRPCNoResult.
+	rpc MethodUnaryRPCNoResult (MethodUnaryRPCNoResultRequest) returns (MethodUnaryRPCNoResultResponse);
+}
+
+message MethodUnaryRPCNoResultRequest {
+	repeated string field = 1;
+}
+
+message MethodUnaryRPCNoResultResponse {
+}

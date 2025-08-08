@@ -1,0 +1,8 @@
+// NewMethodQueryAnyValidatePayload builds a ServiceQueryAnyValidate service
+// MethodQueryAnyValidate endpoint payload.
+func NewMethodQueryAnyValidatePayload(q any) *servicequeryanyvalidate.MethodQueryAnyValidatePayload {
+	v := &servicequeryanyvalidate.MethodQueryAnyValidatePayload{}
+	v.Q = q
+
+	return v
+}

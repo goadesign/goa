@@ -640,7 +640,7 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 // collectMessages recurses through the attribute to gather all the messages.
 func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]struct{}) (data []*service.UserTypeData, imports []string) {
 	if at == nil {
-		return
+		return data, imports
 	}
 	if proto := at.Meta["struct:field:proto"]; len(proto) > 1 {
 		if len(proto) > 1 {
@@ -662,7 +662,7 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		}
 	}
 	if expr.IsPrimitive(at.Type) {
-		return
+		return data, imports
 	}
 	collect := func(at *expr.AttributeExpr) ([]*service.UserTypeData, []string) {
 		return collectMessages(at, sd, seen)
@@ -674,7 +674,7 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 			name = n[0]
 		}
 		if _, ok := seen[name]; ok {
-			return
+			return data, imports
 		}
 		att := userTypeAttribute(dt)
 		data = append(data, &service.UserTypeData{
@@ -687,27 +687,33 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		})
 		seen[name] = struct{}{}
 		d, i := collect(att)
-		data, imports = append(data, d...), append(imports, i...)
+		data = append(data, d...)
+		imports = append(imports, i...)
 	case *expr.Object:
 		for _, nat := range *dt {
 			d, i := collect(nat.Attribute)
-			data, imports = append(data, d...), append(imports, i...)
+			data = append(data, d...)
+			imports = append(imports, i...)
 		}
 	case *expr.Array:
 		d, i := collect(dt.ElemType)
-		data, imports = append(data, d...), append(imports, i...)
+		data = append(data, d...)
+		imports = append(imports, i...)
 	case *expr.Map:
 		dk, ik := collect(dt.KeyType)
-		data, imports = append(data, dk...), append(imports, ik...)
+		data = append(data, dk...)
+		imports = append(imports, ik...)
 		de, ie := collect(dt.ElemType)
-		data, imports = append(data, de...), append(imports, ie...)
+		data = append(data, de...)
+		imports = append(imports, ie...)
 	case *expr.Union:
 		for _, nat := range dt.Values {
 			d, i := collect(nat.Attribute)
-			data, imports = append(data, d...), append(imports, i...)
+			data = append(data, d...)
+			imports = append(imports, i...)
 		}
 	}
-	return
+	return data, imports
 }
 
 // addValidation adds a validation function (if any) for the given user type
@@ -728,12 +734,11 @@ func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req
 		kind = validateServer
 	}
 	att = userTypeAttribute(ut)
-	ctx := protoBufTypeContext("", sd.Scope, !req)
 	for _, n := range sd.validations {
 		if n.SrcName == name {
 			if n.Kind != kind {
 				n.Kind = validateBoth
-				collectValidations(att, attName, ctx, req, sd)
+				collectValidations(att, attName, req, sd)
 			}
 			return n
 		}
@@ -750,7 +755,7 @@ func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req
 			Kind:    kind,
 		}
 		sd.validations = append(sd.validations, v)
-		collectValidations(att, attName, ctx, req, sd)
+		collectValidations(att, attName, req, sd)
 		return v
 	}
 	return nil
@@ -761,7 +766,7 @@ func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req
 //
 // req if true indicates that the validations are generated for validating
 // request messages.
-func collectValidations(att *expr.AttributeExpr, attName string, ctx *codegen.AttributeContext, req bool, sd *ServiceData) {
+func collectValidations(att *expr.AttributeExpr, attName string, req bool, sd *ServiceData) {
 	gattName := codegen.Goify(attName, false)
 	switch dt := att.Type.(type) {
 	case expr.UserType:
@@ -797,19 +802,19 @@ func collectValidations(att *expr.AttributeExpr, attName string, ctx *codegen.At
 		}
 	collect:
 		att := userTypeAttribute(dt)
-		collectValidations(att, attName, ctx, req, sd)
+		collectValidations(att, attName, req, sd)
 	case *expr.Object:
 		for _, nat := range *dt {
-			collectValidations(nat.Attribute, nat.Name, ctx, req, sd)
+			collectValidations(nat.Attribute, nat.Name, req, sd)
 		}
 	case *expr.Array:
-		collectValidations(dt.ElemType, "elem", ctx, req, sd)
+		collectValidations(dt.ElemType, "elem", req, sd)
 	case *expr.Map:
-		collectValidations(dt.KeyType, "key", ctx, req, sd)
-		collectValidations(dt.ElemType, "val", ctx, req, sd)
+		collectValidations(dt.KeyType, "key", req, sd)
+		collectValidations(dt.ElemType, "val", req, sd)
 	case *expr.Union:
 		for _, nat := range dt.Values {
-			collectValidations(nat.Attribute, nat.Name, ctx, req, sd)
+			collectValidations(nat.Attribute, nat.Name, req, sd)
 		}
 	}
 }

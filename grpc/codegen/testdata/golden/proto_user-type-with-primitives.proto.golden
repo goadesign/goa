@@ -1,0 +1,29 @@
+// Code generated with goa v3.21.5, DO NOT EDIT.
+//
+// ServiceMessageUserTypeWithPrimitives protocol buffer definition
+//
+// Command:
+// goa
+
+syntax = "proto3";
+
+package service_message_user_type_with_primitives;
+
+option go_package = "/service_message_user_type_with_primitivespb";
+
+message MethodMessageUserTypeWithPrimitivesRequest {
+	optional bool boolean_field = 1;
+	optional sint32 int_field = 2;
+	optional sint32 int32_field = 3;
+	optional sint64 int64_field = 4;
+	optional uint32 u_int_field = 5;
+	optional uint32 u_int32_field = 6;
+	optional uint64 u_int64_field = 7;
+}
+
+message MethodMessageUserTypeWithPrimitivesResponse {
+	optional float float32_field = 1;
+	optional double float64_field = 2;
+	optional string string_field = 3;
+	optional bytes bytes_field = 4;
+}

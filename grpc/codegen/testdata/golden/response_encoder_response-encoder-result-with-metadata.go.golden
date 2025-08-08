@@ -1,0 +1,18 @@
+// EncodeMethodMessageWithMetadataResponse encodes responses from the
+// "ServiceMessageWithMetadata" service "MethodMessageWithMetadata" endpoint.
+func EncodeMethodMessageWithMetadataResponse(ctx context.Context, v any, hdr, trlr *metadata.MD) (any, error) {
+	result, ok := v.(*servicemessagewithmetadata.ResponseUT)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceMessageWithMetadata", "MethodMessageWithMetadata", "*servicemessagewithmetadata.ResponseUT", v)
+	}
+	resp := NewProtoMethodMessageWithMetadataResponse(result)
+
+	if res.InHeader != nil {
+		(*hdr).Append("Location", fmt.Sprintf("%v", *p.InHeader))
+	}
+
+	if res.InTrailer != nil {
+		(*trlr).Append("InTrailer", fmt.Sprintf("%v", *p.InTrailer))
+	}
+	return resp, nil
+}

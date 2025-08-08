@@ -1,0 +1,20 @@
+// EncodeMethodBodyQueryPathObjectRequest returns an encoder for requests sent
+// to the ServiceBodyQueryPathObject MethodBodyQueryPathObject server.
+func EncodeMethodBodyQueryPathObjectRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicebodyquerypathobject.MethodBodyQueryPathObjectPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceBodyQueryPathObject", "MethodBodyQueryPathObject", "*servicebodyquerypathobject.MethodBodyQueryPathObjectPayload", v)
+		}
+		values := req.URL.Query()
+		if p.B != nil {
+			values.Add("b", *p.B)
+		}
+		req.URL.RawQuery = values.Encode()
+		body := NewMethodBodyQueryPathObjectRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("ServiceBodyQueryPathObject", "MethodBodyQueryPathObject", err)
+		}
+		return nil
+	}
+}

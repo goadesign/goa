@@ -1,0 +1,21 @@
+// DecodeMethodCookieCustomNameRequest returns a decoder for requests sent to
+// the ServiceCookieCustomName MethodCookieCustomName endpoint.
+func DecodeMethodCookieCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicecookiecustomname.MethodCookieCustomNamePayload, error) {
+	return func(r *http.Request) (*servicecookiecustomname.MethodCookieCustomNamePayload, error) {
+		var (
+			c2 *string
+			c  *http.Cookie
+		)
+		c, _ = r.Cookie("c")
+		var c2Raw string
+		if c != nil {
+			c2Raw = c.Value
+		}
+		if c2Raw != "" {
+			c2 = &c2Raw
+		}
+		payload := NewMethodCookieCustomNamePayload(c2)
+
+		return payload, nil
+	}
+}

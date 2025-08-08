@@ -1,0 +1,23 @@
+// New instantiates HTTP handlers for all the ServiceMultiEndpoints service
+// endpoints using the provided encoder and decoder. The handlers are mounted
+// on the given mux using the HTTP verb and path defined in the design.
+// errhandler is called whenever a response fails to be encoded. formatter is
+// used to format errors returned by the service methods prior to encoding.
+// Both errhandler and formatter are optional and can be nil.
+func New(
+	e *servicemultiendpoints.Endpoints,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) *Server {
+	return &Server{
+		Mounts: []*MountPoint{
+			{"MethodMultiEndpoints1", "GET", "/server_multi_endpoints/{id}"},
+			{"MethodMultiEndpoints2", "POST", "/server_multi_endpoints"},
+		},
+		MethodMultiEndpoints1: NewMethodMultiEndpoints1Handler(e.MethodMultiEndpoints1, mux, decoder, encoder, errhandler, formatter),
+		MethodMultiEndpoints2: NewMethodMultiEndpoints2Handler(e.MethodMultiEndpoints2, mux, decoder, encoder, errhandler, formatter),
+	}
+}

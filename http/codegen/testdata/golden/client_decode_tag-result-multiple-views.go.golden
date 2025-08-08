@@ -1,0 +1,68 @@
+// DecodeMethodTagMultipleViewsResponse returns a decoder for responses
+// returned by the ServiceTagMultipleViews MethodTagMultipleViews endpoint.
+// restoreBody controls whether the response body should be restored after
+// having been read.
+func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
+		if restoreBody {
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusAccepted:
+			var (
+				body MethodTagMultipleViewsAcceptedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+			}
+			var (
+				c *string
+			)
+			cRaw := resp.Header.Get("C")
+			if cRaw != "" {
+				c = &cRaw
+			}
+			p := NewMethodTagMultipleViewsResulttypemultipleviewsAccepted(&body, c)
+			tmp := "value"
+			p.B = &tmp
+			view := resp.Header.Get("goa-view")
+			vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{Projected: p, View: view}
+			if err = servicetagmultipleviewsviews.ValidateResulttypemultipleviews(vres); err != nil {
+				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+			}
+			res := servicetagmultipleviews.NewResulttypemultipleviews(vres)
+			return res, nil
+		case http.StatusOK:
+			var (
+				body MethodTagMultipleViewsOKResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+			}
+			p := NewMethodTagMultipleViewsResulttypemultipleviewsOK(&body)
+			view := resp.Header.Get("goa-view")
+			vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{Projected: p, View: view}
+			if err = servicetagmultipleviewsviews.ValidateResulttypemultipleviews(vres); err != nil {
+				return nil, goahttp.ErrValidationError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
+			}
+			res := servicetagmultipleviews.NewResulttypemultipleviews(vres)
+			return res, nil
+		default:
+			body, _ := io.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceTagMultipleViews", "MethodTagMultipleViews", resp.StatusCode, string(body))
+		}
+	}
+}

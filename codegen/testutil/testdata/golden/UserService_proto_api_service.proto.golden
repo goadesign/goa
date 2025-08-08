@@ -1,0 +1,5 @@
+syntax = "proto3";
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (User);
+}

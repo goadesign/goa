@@ -1,0 +1,9 @@
+// NewMethodPathArrayStringValidatePayload builds a
+// ServicePathArrayStringValidate service MethodPathArrayStringValidate
+// endpoint payload.
+func NewMethodPathArrayStringValidatePayload(p []string) *servicepatharraystringvalidate.MethodPathArrayStringValidatePayload {
+	v := &servicepatharraystringvalidate.MethodPathArrayStringValidatePayload{}
+	v.P = p
+
+	return v
+}

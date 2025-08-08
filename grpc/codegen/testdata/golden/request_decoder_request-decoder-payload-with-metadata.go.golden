@@ -1,0 +1,37 @@
+// DecodeMethodMessageWithMetadataRequest decodes requests sent to
+// "ServiceMessageWithMetadata" service "MethodMessageWithMetadata" endpoint.
+func DecodeMethodMessageWithMetadataRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
+	var (
+		inMetadata *int
+		err        error
+	)
+	{
+		if vals := md.Get("Authorization"); len(vals) > 0 {
+			inMetadataRaw := vals[0]
+
+			v, err2 := strconv.ParseInt(inMetadataRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("inMetadata", inMetadataRaw, "integer"))
+			}
+			pv := int(v)
+			inMetadata = &pv
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	var (
+		message *service_message_with_metadatapb.MethodMessageWithMetadataRequest
+		ok      bool
+	)
+	{
+		if message, ok = v.(*service_message_with_metadatapb.MethodMessageWithMetadataRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceMessageWithMetadata", "MethodMessageWithMetadata", "*service_message_with_metadatapb.MethodMessageWithMetadataRequest", v)
+		}
+	}
+	var payload *servicemessagewithmetadata.RequestUT
+	{
+		payload = NewMethodMessageWithMetadataPayload(message, inMetadata)
+	}
+	return payload, nil
+}

@@ -1,0 +1,51 @@
+// EncodeMethodEmptyErrorResponseBodyError returns an encoder for errors
+// returned by the MethodEmptyErrorResponseBody ServiceEmptyErrorResponseBody
+// endpoint.
+func EncodeMethodEmptyErrorResponseBodyError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "internal_error":
+			var res *goa.ServiceError
+			errors.As(v, &res)
+			w.Header().Set("Error-Name", res.Name)
+			w.Header().Set("Goa-Attribute-Id", res.ID)
+			w.Header().Set("Goa-Attribute-Message", res.Message)
+			{
+				val := res.Temporary
+				temporarys := strconv.FormatBool(val)
+				w.Header().Set("Goa-Attribute-Temporary", temporarys)
+			}
+			{
+				val := res.Timeout
+				timeouts := strconv.FormatBool(val)
+				w.Header().Set("Goa-Attribute-Timeout", timeouts)
+			}
+			{
+				val := res.Fault
+				faults := strconv.FormatBool(val)
+				w.Header().Set("Goa-Attribute-Fault", faults)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusInternalServerError)
+			return nil
+		case "not_found":
+			var res serviceemptyerrorresponsebody.NotFound
+			errors.As(v, &res)
+			{
+				val := string(res)
+				inHeaders := val
+				w.Header().Set("In-Header", inHeaders)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusNotFound)
+			return nil
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}

@@ -8,6 +8,7 @@ import (
 	"goa.design/goa/v3/expr"
 	grpccodegen "goa.design/goa/v3/grpc/codegen"
 	httpcodegen "goa.design/goa/v3/http/codegen"
+	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
 )
 
 // Example iterates through the roots and returns files that implement an
@@ -45,11 +46,22 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 
 		// HTTP
 		if len(r.API.HTTP.Services) > 0 {
-			httpServices := httpcodegen.NewServicesData(services)
+			httpServices := httpcodegen.NewServicesData(services, r.API.HTTP)
 			if fs := httpcodegen.ExampleServerFiles(genpkg, httpServices); len(fs) != 0 {
 				files = append(files, fs...)
 			}
 			if fs := httpcodegen.ExampleCLIFiles(genpkg, httpServices); len(fs) != 0 {
+				files = append(files, fs...)
+			}
+		}
+
+		// JSON-RPC
+		if len(r.API.JSONRPC.Services) > 0 {
+			jsonrpcServices := httpcodegen.NewServicesData(services, &r.API.JSONRPC.HTTPExpr)
+			if fs := jsonrpccodegen.ExampleServerFiles(genpkg, jsonrpcServices, files); len(fs) > 0 {
+				files = append(files, fs...)
+			}
+			if fs := jsonrpccodegen.ExampleCLIFiles(genpkg, jsonrpcServices); len(fs) > 0 {
 				files = append(files, fs...)
 			}
 		}

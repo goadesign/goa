@@ -1,0 +1,16 @@
+// EncodeMethodQueryUInt64Request returns an encoder for requests sent to the
+// ServiceQueryUInt64 MethodQueryUInt64 server.
+func EncodeMethodQueryUInt64Request(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicequeryuint64.MethodQueryUInt64Payload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryUInt64", "MethodQueryUInt64", "*servicequeryuint64.MethodQueryUInt64Payload", v)
+		}
+		values := req.URL.Query()
+		if p.Q != nil {
+			values.Add("q", fmt.Sprintf("%v", *p.Q))
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

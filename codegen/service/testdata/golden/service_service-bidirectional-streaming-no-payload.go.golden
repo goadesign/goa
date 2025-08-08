@@ -1,0 +1,37 @@
+
+// Service is the BidirectionalStreamingNoPayloadService service interface.
+type Service interface {
+	// BidirectionalStreamingNoPayloadMethod implements
+	// BidirectionalStreamingNoPayloadMethod.
+	BidirectionalStreamingNoPayloadMethod(context.Context, BidirectionalStreamingNoPayloadMethodServerStream) (err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "BidirectionalStreamingNoPayloadService"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"BidirectionalStreamingNoPayloadMethod"}
+
+// BidirectionalStreamingNoPayloadMethodServerStream allows streaming instances
+// of int to the client.
+type BidirectionalStreamingNoPayloadMethodServerStream interface {
+	// Send streams instances of "int".
+	Send(context.Context, int) error
+}
+
+// BidirectionalStreamingNoPayloadMethodClientStream allows streaming instances
+// of string to the client.
+type BidirectionalStreamingNoPayloadMethodClientStream interface {
+	// Send streams instances of "string".
+	Send(context.Context, string) error
+}

@@ -1,1 +1,180 @@
-{"openapi":"3.0.3","info":{"title":"Goa API","version":"0.0.1"},"servers":[{"url":"https://goa.design"}],"paths":{"/":{"post":{"tags":["testService"],"summary":"testEndpoint testService","operationId":"testService#testEndpoint","requestBody":{"required":true,"content":{"application/json":{"schema":{"type":"array","items":{"$ref":"#/components/schemas/Foobar"},"example":[{"bar":[{"string":""}],"foo":[]},{"bar":[{"string":""}],"foo":[]},{"bar":[{"string":""}],"foo":[]}]},"example":[{"bar":[{"string":""}],"foo":[]},{"bar":[{"string":""}],"foo":[]},{"bar":[{"string":""}],"foo":[]},{"bar":[{"string":""}],"foo":[]}]}}},"responses":{"200":{"description":"OK response.","content":{"application/json":{"schema":{"type":"string","example":"","minLength":0,"maxLength":42},"example":""}}}}}}},"components":{"schemas":{"Bar":{"type":"object","properties":{"string":{"type":"string","example":"","minLength":0,"maxLength":42}},"example":{"string":""}},"Foobar":{"type":"object","properties":{"bar":{"type":"array","items":{"$ref":"#/components/schemas/Bar"},"example":[{"string":""},{"string":""}],"minItems":0,"maxItems":42},"foo":{"type":"array","items":{"type":"string","example":"Beatae non id consequatur."},"example":[],"minItems":0,"maxItems":42}},"example":{"bar":[{"string":""},{"string":""}],"foo":["Repudiandae sit.","Asperiores fuga qui rem qui earum eos."]}}}},"tags":[{"name":"testService"}]}
+{
+  "components": {
+    "schemas": {
+      "Bar": {
+        "example": {
+          "string": ""
+        },
+        "properties": {
+          "string": {
+            "example": "",
+            "maxLength": 42,
+            "minLength": 0,
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Foobar": {
+        "example": {
+          "bar": [
+            {
+              "string": ""
+            },
+            {
+              "string": ""
+            }
+          ],
+          "foo": [
+            "Repudiandae sit.",
+            "Asperiores fuga qui rem qui earum eos."
+          ]
+        },
+        "properties": {
+          "bar": {
+            "example": [
+              {
+                "string": ""
+              },
+              {
+                "string": ""
+              }
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Bar"
+            },
+            "maxItems": 42,
+            "minItems": 0,
+            "type": "array"
+          },
+          "foo": {
+            "example": [],
+            "items": {
+              "example": "Beatae non id consequatur.",
+              "type": "string"
+            },
+            "maxItems": 42,
+            "minItems": 0,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "testService#testEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": [
+                {
+                  "bar": [
+                    {
+                      "string": ""
+                    }
+                  ],
+                  "foo": []
+                },
+                {
+                  "bar": [
+                    {
+                      "string": ""
+                    }
+                  ],
+                  "foo": []
+                },
+                {
+                  "bar": [
+                    {
+                      "string": ""
+                    }
+                  ],
+                  "foo": []
+                },
+                {
+                  "bar": [
+                    {
+                      "string": ""
+                    }
+                  ],
+                  "foo": []
+                }
+              ],
+              "schema": {
+                "example": [
+                  {
+                    "bar": [
+                      {
+                        "string": ""
+                      }
+                    ],
+                    "foo": []
+                  },
+                  {
+                    "bar": [
+                      {
+                        "string": ""
+                      }
+                    ],
+                    "foo": []
+                  },
+                  {
+                    "bar": [
+                      {
+                        "string": ""
+                      }
+                    ],
+                    "foo": []
+                  }
+                ],
+                "items": {
+                  "$ref": "#/components/schemas/Foobar"
+                },
+                "type": "array"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": "",
+                "schema": {
+                  "example": "",
+                  "maxLength": 42,
+                  "minLength": 0,
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "testEndpoint testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://goa.design"
+    }
+  ],
+  "tags": [
+    {
+      "name": "testService"
+    }
+  ]
+}

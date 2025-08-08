@@ -1,0 +1,27 @@
+// MethodResultTypeValidateResponseBody is the type of the
+// "ServiceResultTypeValidate" service "MethodResultTypeValidate" endpoint HTTP
+// response body.
+type MethodResultTypeValidateResponseBody struct {
+	A *string `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+}
+
+// NewMethodResultTypeValidateResultTypeOK builds a "ServiceResultTypeValidate"
+// service "MethodResultTypeValidate" endpoint result from a HTTP "OK" response.
+func NewMethodResultTypeValidateResultTypeOK(body *MethodResultTypeValidateResponseBody) *serviceresulttypevalidate.ResultType {
+	v := &serviceresulttypevalidate.ResultType{
+		A: body.A,
+	}
+
+	return v
+}
+
+// ValidateMethodResultTypeValidateResponseBody runs the validations defined on
+// MethodResultTypeValidateResponseBody
+func ValidateMethodResultTypeValidateResponseBody(body *MethodResultTypeValidateResponseBody) (err error) {
+	if body.A != nil {
+		if utf8.RuneCountInString(*body.A) < 5 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.a", *body.A, utf8.RuneCountInString(*body.A), 5, true))
+		}
+	}
+	return
+}

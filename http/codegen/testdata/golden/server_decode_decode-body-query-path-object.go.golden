@@ -1,0 +1,36 @@
+// DecodeMethodBodyQueryPathObjectRequest returns a decoder for requests sent
+// to the ServiceBodyQueryPathObject MethodBodyQueryPathObject endpoint.
+func DecodeMethodBodyQueryPathObjectRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyquerypathobject.MethodBodyQueryPathObjectPayload, error) {
+	return func(r *http.Request) (*servicebodyquerypathobject.MethodBodyQueryPathObjectPayload, error) {
+		var (
+			body MethodBodyQueryPathObjectRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+
+		var (
+			c2 string
+			b  *string
+
+			params = mux.Vars(r)
+		)
+		c2 = params["c"]
+		bRaw := r.URL.Query().Get("b")
+		if bRaw != "" {
+			b = &bRaw
+		}
+		payload := NewMethodBodyQueryPathObjectPayload(&body, c2, b)
+
+		return payload, nil
+	}
+}

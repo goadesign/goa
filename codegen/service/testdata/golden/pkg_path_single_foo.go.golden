@@ -1,0 +1,4 @@
+// Foo is the payload type of the PkgPathMethod service A method.
+type Foo struct {
+	IntField *int
+}

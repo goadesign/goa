@@ -1,0 +1,26 @@
+// MethodResultWithResultViewResponseBodyFull is the type of the
+// "ServiceResultWithResultView" service "MethodResultWithResultView" endpoint
+// HTTP response body.
+type MethodResultWithResultViewResponseBodyFull struct {
+	Name *string         `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	Rt   *RtResponseBody `form:"rt,omitempty" json:"rt,omitempty" xml:"rt,omitempty"`
+}
+
+// RtResponseBody is used to define fields on response body types.
+type RtResponseBody struct {
+	X *string `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"`
+}
+
+// NewMethodResultWithResultViewResulttypeOK builds a
+// "ServiceResultWithResultView" service "MethodResultWithResultView" endpoint
+// result from a HTTP "OK" response.
+func NewMethodResultWithResultViewResulttypeOK(body *MethodResultWithResultViewResponseBodyFull) *serviceresultwithresultviewviews.ResulttypeView {
+	v := &serviceresultwithresultviewviews.ResulttypeView{
+		Name: body.Name,
+	}
+	if body.Rt != nil {
+		v.Rt = unmarshalRtResponseBodyToServiceresultwithresultviewviewsRtView(body.Rt)
+	}
+
+	return v
+}

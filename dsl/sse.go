@@ -6,8 +6,13 @@ import (
 )
 
 // ServerSentEvents specifies that a streaming endpoint should use the
-// Server-Sent Events protocol for streaming instead of WebSockets. It can be
-// used in four ways:
+// Server-Sent Events protocol for streaming instead of WebSockets.
+//
+// SSE is only suitable for server-to-client streaming. Methods using SSE
+// typically use POST endpoints. When multiple SSE endpoints exist in a service,
+// each should have a unique path to avoid conflicts.
+//
+// It can be used in four ways:
 //
 //  1. ServerSentEvents(): StreamingResult type is used directly as the event
 //     "data" field (serialized into JSON if not a primitive type)
@@ -18,10 +23,11 @@ import (
 //  4. ServerSentEvents("attributeName", func() { ... }): Define attribute name
 //     used as the "data" field and custom mapping for others.
 //
-// ServerSentEvents can appear in an API HTTP expression (to specify SSE for all streaming
-// methods in the API), in a Service HTTP expression (to specify SSE for all streaming
-// methods in the service), or in a Method HTTP expression. When specified at the
-// API or service level, any method with a StreamingPayload will fall back to using WebSockets
+// ServerSentEvents can appear in an API HTTP or JSONRPC expression (to specify
+// SSE for all streaming methods in the API), in a Service HTTP or JSONRPC
+// expression (to specify SSE for all streaming methods in the service), or in a
+// Method HTTP or JSONRPC expression. When specified at the API or service
+// level, any method with a StreamingPayload will fall back to using WebSockets
 // as SSE only supports server-to-client streaming.
 //
 // See SSEEventData, SSEEventID, SSEEventType, SSEEventRetry for more details on
@@ -59,19 +65,20 @@ import (
 //	        })
 //	    })
 //
-//	    // Method using SSE
+//	    // Method using SSE with custom event mapping
 //	    Method("stream", func() {
 //	        Payload(func() {
 //	            Attribute("id", String)
 //	        })
 //	        StreamingResult(Notification)
 //	        HTTP(func() {
-//	            ServerSentEvents(func() {   // Use SSE for this method
-//	                SSERequestID("id")      // Use payload "id" field to set "Last-Event-Id" request header
-//	                SSEEventID("timestamp") // Use result "timestamp" attribute for "id" event field
-//	                SSEEventData("message") // Use result "message" attribute for "data" event field
+//	            POST("/events")
+//	            ServerSentEvents(func() {
+//	                SSERequestID("id")      // Map payload "id" to Last-Event-Id header
+//	                SSEEventID("timestamp") // Use result "timestamp" for event ID
+//	                SSEEventData("message") // Use result "message" for event data
 //	            })
-//	            GET("/sse") // Messages are sent as {"id": <timestamp>, "data": <message>}
+//	            // Events are sent as: id: <timestamp>\ndata: <message>\n\n
 //	        })
 //	    })
 //	})
@@ -119,6 +126,8 @@ func ServerSentEvents(args ...any) {
 	case *expr.HTTPServiceExpr:
 		actual.SSE = sse
 	case *expr.HTTPEndpointExpr:
+		actual.SSE = sse
+	case *expr.JSONRPCExpr:
 		actual.SSE = sse
 	default:
 		eval.IncompatibleDSL()

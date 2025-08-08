@@ -1,31 +1,38 @@
+{{- if .HasMixedResults }}
+// {{ .Method.VarName }}ClientStream is the interface for reading Server-Sent Events.
+type {{ .Method.VarName }}ClientStream interface {
+    // Recv reads and returns the next event from the SSE stream.
+    Recv(context.Context) ({{ .SSE.EventTypeRef }}, error)
+	// Close closes the SSE stream and releases resources.
+	Close() error
+}
+{{- end }}
+
 type (
-	// {{ .Method.VarName }}StreamImpl implements the {{ .ServiceName }}.{{ .Method.VarName }}ClientStream interface.
+	// {{ .Method.VarName }}StreamImpl implements the {{ if .HasMixedResults }}{{ .Method.VarName }}ClientStream{{ else }}{{ .ServicePkgName }}.{{ .Method.VarName }}ClientStream{{ end }} interface.
 	{{ .Method.VarName }}StreamImpl struct {
 		resp *http.Response
+		decoder func(*http.Response) goahttp.Decoder
 		buffer []byte // Buffer for unprocessed data
 		lock sync.Mutex
 		closed bool
 	}
 )
 
-// {{ .Method.VarName }}StreamImpl implements the {{ .ServiceName }}.{{ .Method.VarName }}ClientStream interface.
-var _ {{ .ServiceName }}.{{ .Method.VarName }}ClientStream = (*{{ .Method.VarName }}StreamImpl)(nil)
+// {{ .Method.VarName }}StreamImpl implements the {{ if .HasMixedResults }}{{ .Method.VarName }}ClientStream{{ else }}{{ .ServicePkgName }}.{{ .Method.VarName }}ClientStream{{ end }} interface.
+var _ {{ if .HasMixedResults }}{{ .Method.VarName }}ClientStream{{ else }}{{ .ServicePkgName }}.{{ .Method.VarName }}ClientStream{{ end }} = (*{{ .Method.VarName }}StreamImpl)(nil)
 
-// New{{ .Method.VarName }}Stream creates a new {{ .ServiceName }}.{{ .Method.VarName }}ClientStream.
-func New{{ .Method.VarName }}Stream(resp *http.Response) {{ .ServiceName }}.{{ .Method.VarName }}ClientStream {
+// New{{ .Method.VarName }}Stream creates a new {{ if .HasMixedResults }}{{ .Method.VarName }}ClientStream{{ else }}{{ .ServicePkgName }}.{{ .Method.VarName }}ClientStream{{ end }}.
+func New{{ .Method.VarName }}Stream(resp *http.Response, decoder func(*http.Response) goahttp.Decoder) {{ if .HasMixedResults }}{{ .Method.VarName }}ClientStream{{ else }}{{ .ServicePkgName }}.{{ .Method.VarName }}ClientStream{{ end }} {
 	return &{{ .Method.VarName }}StreamImpl{
 		resp: resp,
+		decoder: decoder,
 		buffer: make([]byte, 0, 4096), // Pre-allocate buffer
 	}
 }
 
-// Recv reads and returns the next event from the SSE stream.
-func (s *{{ .Method.VarName }}StreamImpl) Recv() (event {{ .SSE.EventTypeRef }}, err error) {
-	return s.RecvWithContext(context.Background())
-}
-
-// RecvWithContext reads and returns the next event from the SSE stream, respecting context cancellation.
-func (s *{{ .Method.VarName }}StreamImpl) RecvWithContext(ctx context.Context) (event {{ .SSE.EventTypeRef }}, err error) {
+// Recv reads and returns the next event from the SSE stream, respecting context cancellation.
+func (s *{{ .Method.VarName }}StreamImpl) Recv(ctx context.Context) (event {{ .SSE.EventTypeRef }}, err error) {
 	var byts []byte
 	byts, err = s.readEvent(ctx)
 	if err != nil {
@@ -178,7 +185,11 @@ func (s *{{ .Method.VarName }}StreamImpl) Close() error {
 // processEvent processes a raw SSE event into the expected type
 func (s *{{ .Method.VarName }}StreamImpl) processEvent(eventData []byte) (event {{ .SSE.EventTypeRef }}, err error) {
 	{{- if .SSE.EventIsStruct }}
-	event = new({{ .SSE.EventTypeName }})
+	{{- if .HasMixedResults }}
+	event = &{{ .ServicePkgName }}.{{ .SSE.EventTypeName }}{}
+	{{- else }}
+	event = &{{ .SSE.EventTypeName }}{}
+	{{- end }}
 	{{- end }}
 	{{- if .SSE.IDField }}
 	var id string

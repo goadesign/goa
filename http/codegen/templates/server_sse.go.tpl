@@ -9,12 +9,7 @@ type {{ .SSE.StructName }} struct {
 }
 
 {{ printf "%s %s" .SSE.SendName .SSE.SendDesc | comment }}
-func (s *{{ .SSE.StructName }}) {{ .SSE.SendName }}(v {{ .SSE.EventTypeRef }}) error {
-	return s.{{ .SSE.SendWithContextName }}(context.Background(), v)
-}
-
-{{ printf "%s %s" .SSE.SendWithContextName .SSE.SendWithContextDesc | comment }}
-func (s *{{ .SSE.StructName }}) {{ .SSE.SendWithContextName }}(ctx context.Context, v {{ .SSE.EventTypeRef }}) error {
+func (s *{{ .SSE.StructName }}) {{ .SSE.SendName }}(ctx context.Context, v {{ .SSE.EventTypeRef }}) error {
 	s.once.Do(func() {
 		header := s.w.Header()
 		if header.Get("Content-Type") == "" {
@@ -69,7 +64,7 @@ func (s *{{ .SSE.StructName }}) {{ .SSE.SendWithContextName }}(ctx context.Conte
 	if f, ok := s.w.(http.Flusher); ok {
 		f.Flush()
 	}
-	return nil
+    return nil
 }
 
 {{ comment "Close is a no-op for SSE. We keep the method for compatibility with other stream types." }}

@@ -1,0 +1,16 @@
+// EncodeMethodQueryArrayStringRequest returns an encoder for requests sent to
+// the ServiceQueryArrayString MethodQueryArrayString server.
+func EncodeMethodQueryArrayStringRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicequeryarraystring.MethodQueryArrayStringPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryArrayString", "MethodQueryArrayString", "*servicequeryarraystring.MethodQueryArrayStringPayload", v)
+		}
+		values := req.URL.Query()
+		for _, value := range p.Q {
+			values.Add("q", value)
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

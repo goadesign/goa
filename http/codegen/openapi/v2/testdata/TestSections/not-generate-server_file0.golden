@@ -1,1 +1,39 @@
-{"swagger":"2.0","info":{"title":"","version":"0.0.1"},"consumes":["application/json","application/xml","application/gob"],"produces":["application/json","application/xml","application/gob"],"paths":{"/":{"get":{"tags":["testService"],"summary":"testEndpoint testService","operationId":"testService#testEndpoint","responses":{"200":{"description":"OK response.","schema":{"type":"string"}}},"schemes":["https"]}}}}
+{
+  "consumes": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "info": {
+    "title": "",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "testService#testEndpoint",
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        },
+        "schemes": [
+          "https"
+        ],
+        "summary": "testEndpoint testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "produces": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "swagger": "2.0"
+}

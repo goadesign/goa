@@ -1,0 +1,23 @@
+func transform() {
+	target := &proto.EmbeddedOneOf{
+		String: source.String_,
+	}
+	if source.EmbeddedOneOf != nil {
+		switch val := source.EmbeddedOneOf.(type) {
+		case *proto.EmbeddedOneOf_String_:
+			target.EmbeddedOneOf = proto.EmbeddedOneOfString(val.String_)
+		case *proto.EmbeddedOneOf_Integer:
+			target.EmbeddedOneOf = proto.EmbeddedOneOfInteger(val.Integer)
+		case *proto.EmbeddedOneOf_Boolean:
+			target.EmbeddedOneOf = proto.EmbeddedOneOfBoolean(val.Boolean)
+		case *proto.EmbeddedOneOf_Number:
+			target.EmbeddedOneOf = proto.EmbeddedOneOfNumber(val.Number)
+		case *proto.EmbeddedOneOf_Array:
+			target.EmbeddedOneOf = protobufProtoEmbeddedOneOfArrayToProtoEmbeddedOneOfArray(val.Array)
+		case *proto.EmbeddedOneOf_Map_:
+			target.EmbeddedOneOf = protobufProtoEmbeddedOneOfMapToProtoEmbeddedOneOfMap(val.Map_)
+		case *proto.EmbeddedOneOf_UserType:
+			target.EmbeddedOneOf = protobufProtoSimpleOneOfToProtoSimpleOneOf(val.UserType)
+		}
+	}
+}

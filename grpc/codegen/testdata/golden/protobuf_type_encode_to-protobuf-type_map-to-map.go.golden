@@ -1,0 +1,11 @@
+func transform() {
+	target := &proto.SimpleMap{}
+	if source.Simple != nil {
+		target.Simple = make(map[string]int32, len(source.Simple))
+		for key, val := range source.Simple {
+			tk := key
+			tv := int32(val)
+			target.Simple[tk] = tv
+		}
+	}
+}

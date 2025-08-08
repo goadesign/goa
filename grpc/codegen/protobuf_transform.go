@@ -55,11 +55,14 @@ var (
 
 // NOTE: can't initialize inline because https://github.com/golang/go/issues/1817
 func init() {
-	fm := template.FuncMap{"transformAttribute": transformAttribute, "convertType": convertType}
-	transformGoArrayT = template.Must(template.New("transformGoArray").Funcs(fm).Parse(readTemplate("transform_go_array")))
-	transformGoMapT = template.Must(template.New("transformGoMap").Funcs(fm).Parse(readTemplate("transform_go_map")))
-	transformGoUnionToProtoT = template.Must(template.New("transformGoUnionToProto").Funcs(fm).Parse(readTemplate("transform_go_union_to_proto")))
-	transformGoUnionFromProtoT = template.Must(template.New("transformGoUnionFromProto").Funcs(fm).Parse(readTemplate("transform_go_union_from_proto")))
+	fm := template.FuncMap{
+		"transformAttribute": transformAttribute,
+		"convertType":        convertType,
+	}
+	transformGoArrayT = template.Must(template.New("transformGoArray").Funcs(fm).Parse(grpcTemplates.Read(grpcTransformGoArrayT)))
+	transformGoMapT = template.Must(template.New("transformGoMap").Funcs(fm).Parse(grpcTemplates.Read(grpcTransformGoMapT)))
+	transformGoUnionToProtoT = template.Must(template.New("transformGoUnionToProto").Funcs(fm).Parse(grpcTemplates.Read(grpcTransformGoUnionToProtoT)))
+	transformGoUnionFromProtoT = template.Must(template.New("transformGoUnionFromProto").Funcs(fm).Parse(grpcTemplates.Read(grpcTransformGoUnionFromProtoT)))
 }
 
 // protoBufTransform produces Go code to initialize a data structure defined
@@ -184,6 +187,10 @@ func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 	}
 	if err != nil {
 		return "", err
+	}
+	// Ensure code ends with newline for proper formatting when used in templates
+	if code != "" && !strings.HasSuffix(code, "\n") {
+		code += "\n"
 	}
 	return initCode + code, nil
 }

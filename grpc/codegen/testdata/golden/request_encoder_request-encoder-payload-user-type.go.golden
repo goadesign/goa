@@ -1,0 +1,10 @@
+// EncodeMethodMessageUserTypeWithNestedUserTypesRequest encodes requests sent
+// to ServiceMessageUserTypeWithNestedUserTypes
+// MethodMessageUserTypeWithNestedUserTypes endpoint.
+func EncodeMethodMessageUserTypeWithNestedUserTypesRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
+	payload, ok := v.(*servicemessageusertypewithnestedusertypes.UT)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceMessageUserTypeWithNestedUserTypes", "MethodMessageUserTypeWithNestedUserTypes", "*servicemessageusertypewithnestedusertypes.UT", v)
+	}
+	return NewProtoMethodMessageUserTypeWithNestedUserTypesRequest(payload), nil
+}

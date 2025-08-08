@@ -1,0 +1,15 @@
+// EncodeMethodBodyArrayUserValidateRequest returns an encoder for requests
+// sent to the ServiceBodyArrayUserValidate MethodBodyArrayUserValidate server.
+func EncodeMethodBodyArrayUserValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicebodyarrayuservalidate.MethodBodyArrayUserValidatePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceBodyArrayUserValidate", "MethodBodyArrayUserValidate", "*servicebodyarrayuservalidate.MethodBodyArrayUserValidatePayload", v)
+		}
+		body := NewMethodBodyArrayUserValidateRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("ServiceBodyArrayUserValidate", "MethodBodyArrayUserValidate", err)
+		}
+		return nil
+	}
+}

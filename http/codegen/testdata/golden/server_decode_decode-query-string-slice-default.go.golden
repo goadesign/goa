@@ -1,0 +1,17 @@
+// DecodeMethodQueryStringSliceDefaultRequest returns a decoder for requests
+// sent to the ServiceQueryStringSliceDefault MethodQueryStringSliceDefault
+// endpoint.
+func DecodeMethodQueryStringSliceDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerystringslicedefault.MethodQueryStringSliceDefaultPayload, error) {
+	return func(r *http.Request) (*servicequerystringslicedefault.MethodQueryStringSliceDefaultPayload, error) {
+		var (
+			q []string
+		)
+		q = r.URL.Query()["q"]
+		if q == nil {
+			q = []string{"hello", "goodbye"}
+		}
+		payload := NewMethodQueryStringSliceDefaultPayload(q)
+
+		return payload, nil
+	}
+}

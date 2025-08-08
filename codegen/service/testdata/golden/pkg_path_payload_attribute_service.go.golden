@@ -1,0 +1,27 @@
+
+// Service is the PkgPathPayloadAttributeDSL service interface.
+type Service interface {
+	// Foo implements Foo.
+	FooEndpoint(context.Context, *Bar) (res *Bar, err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "PkgPathPayloadAttributeDSL"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"Foo"}
+
+// Bar is the payload type of the PkgPathPayloadAttributeDSL service Foo method.
+type Bar struct {
+	Foo *foo.Foo
+}

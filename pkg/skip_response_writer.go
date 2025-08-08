@@ -53,7 +53,7 @@ func (wc *writeCounter) Write(b []byte) (n int, err error) {
 	return
 }
 
-// WriterToFunc impelments [io.WriterTo]. The io.Writer passed to the function will be wrapped.
+// WriterToFunc implements [io.WriterTo]. The io.Writer passed to the function will be wrapped.
 type WriterToFunc func(w io.Writer) (err error)
 
 // WriteTo writes to w.

@@ -1,0 +1,9 @@
+func Validate() (err error) {
+	if target.Deep != nil {
+		if target.Deep.Integer != nil {
+			if err2 := ValidateInteger(target.Deep.Integer); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+}

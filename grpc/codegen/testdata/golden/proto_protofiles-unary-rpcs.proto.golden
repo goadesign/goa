@@ -1,0 +1,34 @@
+
+syntax = "proto3";
+
+package service_unary_rp_cs;
+
+option go_package = "/service_unary_rp_cspb";
+
+// Service is the ServiceUnaryRPCs service interface.
+service ServiceUnaryRPCs {
+	// MethodUnaryRPCA implements MethodUnaryRPCA.
+	rpc MethodUnaryRPCA (MethodUnaryRPCARequest) returns (MethodUnaryRPCAResponse);
+	// MethodUnaryRPCB implements MethodUnaryRPCB.
+	rpc MethodUnaryRPCB (MethodUnaryRPCBRequest) returns (MethodUnaryRPCBResponse);
+}
+
+message MethodUnaryRPCARequest {
+	optional sint32 int = 1;
+	optional string string_ = 2;
+}
+
+message MethodUnaryRPCAResponse {
+	repeated bool array_field = 1;
+	map<string, double> map_field = 2;
+}
+
+message MethodUnaryRPCBRequest {
+	optional uint32 u_int = 1;
+	optional float float32 = 2;
+}
+
+message MethodUnaryRPCBResponse {
+	repeated bool array_field = 1;
+	map<string, double> map_field = 2;
+}

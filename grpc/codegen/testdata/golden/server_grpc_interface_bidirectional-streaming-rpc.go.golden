@@ -1,0 +1,21 @@
+// MethodBidirectionalStreamingRPC implements the
+// "MethodBidirectionalStreamingRPC" method in
+// service_bidirectional_streaming_rpcpb.ServiceBidirectionalStreamingRPCServer
+// interface.
+func (s *Server) MethodBidirectionalStreamingRPC(stream service_bidirectional_streaming_rpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCServer) error {
+	ctx := stream.Context()
+	ctx = context.WithValue(ctx, goa.MethodKey, "MethodBidirectionalStreamingRPC")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceBidirectionalStreamingRPC")
+	_, err := s.MethodBidirectionalStreamingRPCH.Decode(ctx, nil)
+	if err != nil {
+		return goagrpc.EncodeError(err)
+	}
+	ep := &servicebidirectionalstreamingrpc.MethodBidirectionalStreamingRPCEndpointInput{
+		Stream: &MethodBidirectionalStreamingRPCServerStream{stream: stream},
+	}
+	err = s.MethodBidirectionalStreamingRPCH.Handle(ctx, ep)
+	if err != nil {
+		return goagrpc.EncodeError(err)
+	}
+	return nil
+}

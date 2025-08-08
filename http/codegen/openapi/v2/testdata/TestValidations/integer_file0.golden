@@ -1,1 +1,56 @@
-{"swagger":"2.0","info":{"title":"","version":"0.0.1"},"host":"goa.design","consumes":["application/json","application/xml","application/gob"],"produces":["application/json","application/xml","application/gob"],"paths":{"/":{"post":{"tags":["testService"],"summary":"testEndpoint testService","operationId":"testService#testEndpoint","parameters":[{"name":"int","in":"body","required":true,"schema":{"type":"integer","format":"int64","minimum":0,"maximum":42}}],"responses":{"200":{"description":"OK response.","schema":{"type":"integer","format":"int64","minimum":0,"maximum":42}}},"schemes":["https"]}}}}
+{
+  "consumes": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "host": "goa.design",
+  "info": {
+    "title": "",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "testService#testEndpoint",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "int",
+            "required": true,
+            "schema": {
+              "format": "int64",
+              "maximum": 42,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "schema": {
+              "format": "int64",
+              "maximum": 42,
+              "minimum": 0,
+              "type": "integer"
+            }
+          }
+        },
+        "schemes": [
+          "https"
+        ],
+        "summary": "testEndpoint testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "produces": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "swagger": "2.0"
+}

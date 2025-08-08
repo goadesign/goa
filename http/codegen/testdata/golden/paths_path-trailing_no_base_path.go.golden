@@ -1,0 +1,4 @@
+// TrailingNoBasePathNoBasePathPath returns the URL path to the NoBasePath service TrailingNoBasePath HTTP endpoint.
+func TrailingNoBasePathNoBasePathPath() string {
+	return "/foo/"
+}

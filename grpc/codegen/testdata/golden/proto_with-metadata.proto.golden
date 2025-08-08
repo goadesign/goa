@@ -1,0 +1,26 @@
+// Code generated with goa v3.21.5, DO NOT EDIT.
+//
+// ServiceMessageWithMetadata protocol buffer definition
+//
+// Command:
+// goa
+
+syntax = "proto3";
+
+package service_message_with_metadata;
+
+option go_package = "/service_message_with_metadatapb";
+
+message MethodMessageWithMetadataRequest {
+	optional bool boolean_field = 1;
+	UTLevel1 ut_level1 = 3;
+}
+
+message UTLevel1 {
+	optional sint32 int32_field = 1;
+	optional sint64 int64_field = 2;
+}
+
+message MethodMessageWithMetadataResponse {
+	UTLevel1 ut_level1 = 3;
+}

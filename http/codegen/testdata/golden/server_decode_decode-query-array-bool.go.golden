@@ -1,0 +1,29 @@
+// DecodeMethodQueryArrayBoolRequest returns a decoder for requests sent to the
+// ServiceQueryArrayBool MethodQueryArrayBool endpoint.
+func DecodeMethodQueryArrayBoolRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryarraybool.MethodQueryArrayBoolPayload, error) {
+	return func(r *http.Request) (*servicequeryarraybool.MethodQueryArrayBoolPayload, error) {
+		var (
+			q   []bool
+			err error
+		)
+		{
+			qRaw := r.URL.Query()["q"]
+			if qRaw != nil {
+				q = make([]bool, len(qRaw))
+				for i, rv := range qRaw {
+					v, err2 := strconv.ParseBool(rv)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of booleans"))
+					}
+					q[i] = v
+				}
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryArrayBoolPayload(q)
+
+		return payload, nil
+	}
+}

@@ -121,7 +121,7 @@ func defaultURI(h *expr.HostExpr) string {
 // addScopeDescription generates and adds required scopes to the scheme's description.
 func addScopeDescription(scopes []*expr.ScopeExpr, sd *SecurityDefinition) {
 	// Generate scopes to add to description
-	var lines []string
+	lines := make([]string, 0, len(scopes))
 
 	for _, scope := range scopes {
 		lines = append(lines, fmt.Sprintf("  * `%s`: %s", scope.Name, scope.Description))
@@ -590,7 +590,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		for i, req := range endpoint.Requirements {
 			requirement := make(map[string][]string)
 			for _, s := range req.Schemes {
-				requirement[s.Hash()] = []string{}
+				requirement[s.Hash()] = nil
 				switch s.Kind {
 				case expr.OAuth2Kind:
 					if len(req.Scopes) > 0 {

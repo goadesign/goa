@@ -1,0 +1,33 @@
+// MethodUnaryRPCWithErrors calls the "MethodUnaryRPCWithErrors" function in
+// service_unary_rpc_with_errorspb.ServiceUnaryRPCWithErrorsClient interface.
+func (c *Client) MethodUnaryRPCWithErrors() goa.Endpoint {
+	return func(ctx context.Context, v any) (any, error) {
+		inv := goagrpc.NewInvoker(
+			BuildMethodUnaryRPCWithErrorsFunc(c.grpccli, c.opts...),
+			EncodeMethodUnaryRPCWithErrorsRequest,
+			DecodeMethodUnaryRPCWithErrorsResponse)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			resp := goagrpc.DecodeError(err)
+			switch message := resp.(type) {
+			case *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError:
+				if err := ValidateMethodUnaryRPCWithErrorsInternalError(message); err != nil {
+					return nil, err
+				}
+				return nil, NewMethodUnaryRPCWithErrorsInternalError(message)
+			case *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError:
+				if err := ValidateMethodUnaryRPCWithErrorsBadRequestError(message); err != nil {
+					return nil, err
+				}
+				return nil, NewMethodUnaryRPCWithErrorsBadRequestError(message)
+			case *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError:
+				return nil, NewMethodUnaryRPCWithErrorsCustomErrorError(message)
+			case *goapb.ErrorResponse:
+				return nil, goagrpc.NewServiceError(message)
+			default:
+				return nil, goa.Fault("%s", err.Error())
+			}
+		}
+		return res, nil
+	}
+}

@@ -12,10 +12,11 @@
 package goapb
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -152,7 +153,7 @@ func file_goadesign_goa_error_proto_rawDescGZIP() []byte {
 }
 
 var file_goadesign_goa_error_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
-var file_goadesign_goa_error_proto_goTypes = []interface{}{
+var file_goadesign_goa_error_proto_goTypes = []any{
 	(*ErrorResponse)(nil), // 0: goapb.ErrorResponse
 }
 var file_goadesign_goa_error_proto_depIdxs = []int32{
@@ -169,7 +170,7 @@ func file_goadesign_goa_error_proto_init() {
 		return
 	}
 	if !protoimpl.UnsafeEnabled {
-		file_goadesign_goa_error_proto_msgTypes[0].Exporter = func(v interface{}, i int) interface{} {
+		file_goadesign_goa_error_proto_msgTypes[0].Exporter = func(v any, i int) any {
 			switch v := v.(*ErrorResponse); i {
 			case 0:
 				return &v.state

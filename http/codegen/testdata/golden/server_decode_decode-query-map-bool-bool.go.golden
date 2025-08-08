@@ -1,0 +1,53 @@
+// DecodeMethodQueryMapBoolBoolRequest returns a decoder for requests sent to
+// the ServiceQueryMapBoolBool MethodQueryMapBoolBool endpoint.
+func DecodeMethodQueryMapBoolBoolRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerymapboolbool.MethodQueryMapBoolBoolPayload, error) {
+	return func(r *http.Request) (*servicequerymapboolbool.MethodQueryMapBoolBoolPayload, error) {
+		var (
+			q   map[bool]bool
+			err error
+		)
+		{
+			qRaw := r.URL.Query()
+			if len(qRaw) != 0 {
+				for keyRaw, valRaw := range qRaw {
+					if strings.HasPrefix(keyRaw, "q[") {
+						if q == nil {
+							q = make(map[bool]bool)
+						}
+						var keya bool
+						{
+							openIdx := strings.IndexRune(keyRaw, '[')
+							closeIdx := strings.IndexRune(keyRaw, ']')
+							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
+							} else {
+								keyaRaw := keyRaw[openIdx+1 : closeIdx]
+								v, err2 := strconv.ParseBool(keyaRaw)
+								if err2 != nil {
+									err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", keyaRaw, "boolean"))
+								}
+								keya = v
+							}
+						}
+						var vala bool
+						{
+							valaRaw := valRaw[0]
+							v, err2 := strconv.ParseBool(valaRaw)
+							if err2 != nil {
+								err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", valaRaw, "boolean"))
+							}
+							vala = v
+						}
+						q[keya] = vala
+					}
+				}
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryMapBoolBoolPayload(q)
+
+		return payload, nil
+	}
+}

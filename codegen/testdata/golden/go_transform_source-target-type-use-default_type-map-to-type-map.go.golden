@@ -1,0 +1,14 @@
+func transform() {
+	target := &TypeMap{}
+	if source.TypeMap != nil {
+		target.TypeMap = make(map[string]*SimpleMap, len(source.TypeMap))
+		for key, val := range source.TypeMap {
+			tk := key
+			if val == nil {
+				target.TypeMap[tk] = nil
+				continue
+			}
+			target.TypeMap[tk] = transformSimpleMapToSimpleMap(val)
+		}
+	}
+}

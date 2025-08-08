@@ -1,0 +1,8 @@
+// NewMethodPathCustomNamePayload builds a ServicePathCustomName service
+// MethodPathCustomName endpoint payload.
+func NewMethodPathCustomNamePayload(p string) *servicepathcustomname.MethodPathCustomNamePayload {
+	v := &servicepathcustomname.MethodPathCustomNamePayload{}
+	v.Path = p
+
+	return v
+}

@@ -16,8 +16,8 @@ func ClientCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
 		return nil
 	}
 	var (
-		data []*cli.CommandData
-		svcs []*expr.GRPCServiceExpr
+		data = make([]*cli.CommandData, 0, len(services.Root.API.GRPC.Services))
+		svcs = make([]*expr.GRPCServiceExpr, 0, len(services.Root.API.GRPC.Services))
 	)
 	for _, svc := range services.Root.API.GRPC.Services {
 		if len(svc.GRPCEndpoints) == 0 {
@@ -34,7 +34,7 @@ func ClientCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
 		data = append(data, command)
 		svcs = append(svcs, svc)
 	}
-	var files []*codegen.File
+	files := make([]*codegen.File, 0, len(services.Root.API.Servers)+len(svcs))
 	for _, svr := range services.Root.API.Servers {
 		files = append(files, endpointParser(genpkg, services, svr, data))
 	}
@@ -85,7 +85,7 @@ func endpointParser(genpkg string, services *ServicesData, svr *expr.ServerExpr,
 		cli.UsageExamples(data),
 		{
 			Name:   "parse-endpoint-grpc",
-			Source: readTemplate("parse_endpoint"),
+			Source: grpcTemplates.Read(grpcParseEndpointT),
 			Data: struct {
 				FlagsCode string
 				Commands  []*cli.CommandData
@@ -137,7 +137,7 @@ func buildFlags(e *EndpointData) ([]*cli.FlagData, *cli.BuildFunctionData) {
 
 func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.BuildFunctionData) {
 	var (
-		fdata     []*cli.FieldData
+		fdata     = make([]*cli.FieldData, 0, len(args))
 		flags     = make([]*cli.FlagData, len(args))
 		params    = make([]string, len(args))
 		pInitArgs = make([]*codegen.InitArgData, len(args))

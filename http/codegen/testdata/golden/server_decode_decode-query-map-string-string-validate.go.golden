@@ -1,0 +1,52 @@
+// DecodeMethodQueryMapStringStringValidateRequest returns a decoder for
+// requests sent to the ServiceQueryMapStringStringValidate
+// MethodQueryMapStringStringValidate endpoint.
+func DecodeMethodQueryMapStringStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerymapstringstringvalidate.MethodQueryMapStringStringValidatePayload, error) {
+	return func(r *http.Request) (*servicequerymapstringstringvalidate.MethodQueryMapStringStringValidatePayload, error) {
+		var (
+			q   map[string]string
+			err error
+		)
+		{
+			qRaw := r.URL.Query()
+			if len(qRaw) == 0 {
+				err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
+			}
+			for keyRaw, valRaw := range qRaw {
+				if strings.HasPrefix(keyRaw, "q[") {
+					if q == nil {
+						q = make(map[string]string)
+					}
+					var keya string
+					{
+						openIdx := strings.IndexRune(keyRaw, '[')
+						closeIdx := strings.IndexRune(keyRaw, ']')
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
+						} else {
+							keya = keyRaw[openIdx+1 : closeIdx]
+						}
+					}
+					q[keya] = valRaw[0]
+				}
+			}
+		}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
+		}
+		for k, v := range q {
+			if !(k == "key") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q.key", k, []any{"key"}))
+			}
+			if !(v == "val") {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[key]", v, []any{"val"}))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryMapStringStringValidatePayload(q)
+
+		return payload, nil
+	}
+}

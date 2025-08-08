@@ -3,9 +3,8 @@ package codegen
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"goa.design/goa/v3/codegen/testdata"
+	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/expr"
 )
 
@@ -34,41 +33,40 @@ func TestRecursiveValidationCode(t *testing.T) {
 		Required   bool
 		Pointer    bool
 		UseDefault bool
-		Code       string
 	}{
-		{"integer-required", integerT, true, false, false, testdata.IntegerRequiredValidationCode},
-		{"integer-pointer", integerT, false, true, false, testdata.IntegerPointerValidationCode},
-		{"integer-use-default", integerT, false, false, true, testdata.IntegerUseDefaultValidationCode},
-		{"float-required", floatT, true, false, false, testdata.FloatRequiredValidationCode},
-		{"float-pointer", floatT, false, true, false, testdata.FloatPointerValidationCode},
-		{"float-use-default", floatT, false, false, true, testdata.FloatUseDefaultValidationCode},
-		{"string-required", stringT, true, false, false, testdata.StringRequiredValidationCode},
-		{"string-pointer", stringT, false, true, false, testdata.StringPointerValidationCode},
-		{"string-use-default", stringT, false, false, true, testdata.StringUseDefaultValidationCode},
-		{"alias-type", aliasT, true, false, false, testdata.AliasTypeValidationCode},
-		{"user-type-required", userT, true, false, false, testdata.UserTypeRequiredValidationCode},
-		{"user-type-pointer", userT, false, true, false, testdata.UserTypePointerValidationCode},
-		{"user-type-default", userT, false, false, true, testdata.UserTypeUseDefaultValidationCode},
-		{"user-type-array-required", arrayUT, true, true, false, testdata.UserTypeArrayValidationCode},
-		{"array-required", arrayT, true, false, false, testdata.ArrayRequiredValidationCode},
-		{"array-pointer", arrayT, false, true, false, testdata.ArrayPointerValidationCode},
-		{"array-use-default", arrayT, false, false, true, testdata.ArrayUseDefaultValidationCode},
-		{"map-required", mapT, true, false, false, testdata.MapRequiredValidationCode},
-		{"map-pointer", mapT, false, true, false, testdata.MapPointerValidationCode},
-		{"map-use-default", mapT, false, false, true, testdata.MapUseDefaultValidationCode},
-		{"union", unionT, true, false, false, testdata.UnionValidationCode},
-		{"result-type-pointer", rtT, false, true, false, testdata.ResultTypePointerValidationCode},
-		{"collection-required", rtcolT, true, false, false, testdata.ResultCollectionPointerValidationCode},
-		{"collection-pointer", rtcolT, false, true, false, testdata.ResultCollectionPointerValidationCode},
-		{"type-with-collection-pointer", colT, false, true, false, testdata.TypeWithCollectionPointerValidationCode},
-		{"type-with-embedded-type", deepT, false, true, false, testdata.TypeWithEmbeddedTypeValidationCode},
+		{"integer-required", integerT, true, false, false},
+		{"integer-pointer", integerT, false, true, false},
+		{"integer-use-default", integerT, false, false, true},
+		{"float-required", floatT, true, false, false},
+		{"float-pointer", floatT, false, true, false},
+		{"float-use-default", floatT, false, false, true},
+		{"string-required", stringT, true, false, false},
+		{"string-pointer", stringT, false, true, false},
+		{"string-use-default", stringT, false, false, true},
+		{"alias-type", aliasT, true, false, false},
+		{"user-type-required", userT, true, false, false},
+		{"user-type-pointer", userT, false, true, false},
+		{"user-type-default", userT, false, false, true},
+		{"user-type-array-required", arrayUT, true, true, false},
+		{"array-required", arrayT, true, false, false},
+		{"array-pointer", arrayT, false, true, false},
+		{"array-use-default", arrayT, false, false, true},
+		{"map-required", mapT, true, false, false},
+		{"map-pointer", mapT, false, true, false},
+		{"map-use-default", mapT, false, false, true},
+		{"union", unionT, true, false, false},
+		{"result-type-pointer", rtT, false, true, false},
+		{"collection-required", rtcolT, true, false, false},
+		{"collection-pointer", rtcolT, false, true, false},
+		{"type-with-collection-pointer", colT, false, true, false},
+		{"type-with-embedded-type", deepT, false, true, false},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			ctx := NewAttributeContext(c.Pointer, false, c.UseDefault, "", scope)
 			code := ValidationCode(&expr.AttributeExpr{Type: c.Type}, nil, ctx, c.Required, expr.IsAlias(c.Type), false, "target")
 			code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/validation_"+c.Name+".go.golden", code)
 		})
 	}
 	// Special case of unions with views
@@ -76,7 +74,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 		ctx := NewAttributeContext(false, false, false, "", scope)
 		code := ValidationCode(&expr.AttributeExpr{Type: unionT}, nil, ctx, true, false, true, "target")
 		code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
-		assert.Equal(t, testdata.UnionWithViewValidationCode, code)
+		testutil.AssertGo(t, "testdata/golden/validation_union-with-view.go.golden", code)
 	})
 
 	// Test case for OneOf with format validation in views (Issue #3747)
@@ -87,6 +85,6 @@ func TestRecursiveValidationCode(t *testing.T) {
 		oneofT := root.UserType("OneOfWithFormat")
 		code := ValidationCode(&expr.AttributeExpr{Type: oneofT}, nil, ctx, true, false, true, "target")
 		code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
-		assert.Equal(t, testdata.UnionWithFormatValidationCode, code)
+		testutil.AssertGo(t, "testdata/golden/validation_union-with-format-validation.go.golden", code)
 	})
 }

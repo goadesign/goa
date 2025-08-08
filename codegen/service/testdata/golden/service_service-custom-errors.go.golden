@@ -1,0 +1,89 @@
+
+// Service is the CustomErrors service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context) (err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "CustomErrors"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+type APayload struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
+
+type Result struct {
+	A *string
+	B string
+}
+
+// primitive error description
+type Primitive string
+
+// Error returns an error description.
+func (e *APayload) Error() string {
+	return ""
+}
+
+// ErrorName returns "APayload".
+//
+// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
+func (e *APayload) ErrorName() string {
+	return e.GoaErrorName()
+}
+
+// GoaErrorName returns "APayload".
+func (e *APayload) GoaErrorName() string {
+	return "user_type"
+}
+
+// Error returns an error description.
+func (e *Result) Error() string {
+	return ""
+}
+
+// ErrorName returns "Result".
+//
+// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
+func (e *Result) ErrorName() string {
+	return e.GoaErrorName()
+}
+
+// GoaErrorName returns "Result".
+func (e *Result) GoaErrorName() string {
+	return e.B
+}
+
+// Error returns an error description.
+func (e Primitive) Error() string {
+	return "primitive error description"
+}
+
+// ErrorName returns "primitive".
+//
+// Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
+func (e Primitive) ErrorName() string {
+	return e.GoaErrorName()
+}
+
+// GoaErrorName returns "primitive".
+func (e Primitive) GoaErrorName() string {
+	return "primitive"
+}

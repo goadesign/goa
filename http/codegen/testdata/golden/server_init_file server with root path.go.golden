@@ -1,0 +1,47 @@
+// New instantiates HTTP handlers for all the ServiceFileServer service
+// endpoints using the provided encoder and decoder. The handlers are mounted
+// on the given mux using the HTTP verb and path defined in the design.
+// errhandler is called whenever a response fails to be encoded. formatter is
+// used to format errors returned by the service methods prior to encoding.
+// Both errhandler and formatter are optional and can be nil.
+func New(
+	e *servicefileserver.Endpoints,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+	fileSystemFile1JSON http.FileSystem,
+	fileSystemFile1JSON2 http.FileSystem,
+	fileSystemFile1JSON3 http.FileSystem,
+	fileSystemFile1JSON4 http.FileSystem,
+) *Server {
+	if fileSystemFile1JSON == nil {
+		fileSystemFile1JSON = http.Dir(".")
+	}
+	fileSystemFile1JSON = appendPrefix(fileSystemFile1JSON, "/")
+	if fileSystemFile1JSON2 == nil {
+		fileSystemFile1JSON2 = http.Dir(".")
+	}
+	fileSystemFile1JSON2 = appendPrefix(fileSystemFile1JSON2, "/")
+	if fileSystemFile1JSON3 == nil {
+		fileSystemFile1JSON3 = http.Dir(".")
+	}
+	fileSystemFile1JSON3 = appendPrefix(fileSystemFile1JSON3, "/")
+	if fileSystemFile1JSON4 == nil {
+		fileSystemFile1JSON4 = http.Dir(".")
+	}
+	fileSystemFile1JSON4 = appendPrefix(fileSystemFile1JSON4, "/")
+	return &Server{
+		Mounts: []*MountPoint{
+			{"Serve file1.json", "GET", "/file1.json"},
+			{"Serve file1.json", "GET", "/path/to/file1.json"},
+			{"Serve file1.json", "GET", "/file2.json"},
+			{"Serve file1.json", "GET", "/path/to/file2.json"},
+		},
+		File1JSON:  http.FileServer(fileSystemFile1JSON),
+		File1JSON2: http.FileServer(fileSystemFile1JSON2),
+		File1JSON3: http.FileServer(fileSystemFile1JSON3),
+		File1JSON4: http.FileServer(fileSystemFile1JSON4),
+	}
+}

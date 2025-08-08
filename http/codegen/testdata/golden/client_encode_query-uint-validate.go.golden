@@ -1,0 +1,14 @@
+// EncodeMethodQueryUIntValidateRequest returns an encoder for requests sent to
+// the ServiceQueryUIntValidate MethodQueryUIntValidate server.
+func EncodeMethodQueryUIntValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicequeryuintvalidate.MethodQueryUIntValidatePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryUIntValidate", "MethodQueryUIntValidate", "*servicequeryuintvalidate.MethodQueryUIntValidatePayload", v)
+		}
+		values := req.URL.Query()
+		values.Add("q", fmt.Sprintf("%v", p.Q))
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

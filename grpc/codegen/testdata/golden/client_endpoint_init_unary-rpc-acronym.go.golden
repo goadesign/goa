@@ -1,0 +1,15 @@
+// MethodUnaryRPCAcronymJWT calls the "MethodUnaryRPCAcronymJWT" function in
+// service_unary_rpc_acronympb.ServiceUnaryRPCAcronymClient interface.
+func (c *Client) MethodUnaryRPCAcronymJWT() goa.Endpoint {
+	return func(ctx context.Context, v any) (any, error) {
+		inv := goagrpc.NewInvoker(
+			BuildMethodUnaryRPCAcronymJWTFunc(c.grpccli, c.opts...),
+			nil,
+			nil)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			return nil, goa.Fault("%s", err.Error())
+		}
+		return res, nil
+	}
+}

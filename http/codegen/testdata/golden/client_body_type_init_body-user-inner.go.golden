@@ -1,0 +1,10 @@
+// NewMethodBodyUserInnerRequestBody builds the HTTP request body from the
+// payload of the "MethodBodyUserInner" endpoint of the "ServiceBodyUserInner"
+// service.
+func NewMethodBodyUserInnerRequestBody(p *servicebodyuserinner.PayloadType) *MethodBodyUserInnerRequestBody {
+	body := &MethodBodyUserInnerRequestBody{}
+	if p.Inner != nil {
+		body.Inner = marshalServicebodyuserinnerInnerTypeToInnerTypeRequestBody(p.Inner)
+	}
+	return body
+}

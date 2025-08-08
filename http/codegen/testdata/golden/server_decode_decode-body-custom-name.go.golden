@@ -1,0 +1,24 @@
+// DecodeMethodBodyCustomNameRequest returns a decoder for requests sent to the
+// ServiceBodyCustomName MethodBodyCustomName endpoint.
+func DecodeMethodBodyCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodycustomname.MethodBodyCustomNamePayload, error) {
+	return func(r *http.Request) (*servicebodycustomname.MethodBodyCustomNamePayload, error) {
+		var (
+			body MethodBodyCustomNameRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		payload := NewMethodBodyCustomNamePayload(&body)
+
+		return payload, nil
+	}
+}

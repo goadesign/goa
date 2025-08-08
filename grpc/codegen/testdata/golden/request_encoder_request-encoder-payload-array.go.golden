@@ -1,0 +1,9 @@
+// EncodeMethodUnaryRPCNoResultRequest encodes requests sent to
+// ServiceUnaryRPCNoResult MethodUnaryRPCNoResult endpoint.
+func EncodeMethodUnaryRPCNoResultRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
+	payload, ok := v.([]string)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoResult", "MethodUnaryRPCNoResult", "[]string", v)
+	}
+	return NewProtoMethodUnaryRPCNoResultRequest(payload), nil
+}

@@ -1,0 +1,8 @@
+// NewMethodQueryMapStringStringPayload builds a ServiceQueryMapStringString
+// service MethodQueryMapStringString endpoint payload.
+func NewMethodQueryMapStringStringPayload(q map[string]string) *servicequerymapstringstring.MethodQueryMapStringStringPayload {
+	v := &servicequerymapstringstring.MethodQueryMapStringStringPayload{}
+	v.Q = q
+
+	return v
+}

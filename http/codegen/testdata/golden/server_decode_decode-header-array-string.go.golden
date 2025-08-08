@@ -1,0 +1,13 @@
+// DecodeMethodHeaderArrayStringRequest returns a decoder for requests sent to
+// the ServiceHeaderArrayString MethodHeaderArrayString endpoint.
+func DecodeMethodHeaderArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheaderarraystring.MethodHeaderArrayStringPayload, error) {
+	return func(r *http.Request) (*serviceheaderarraystring.MethodHeaderArrayStringPayload, error) {
+		var (
+			h []string
+		)
+		h = r.Header["H"]
+		payload := NewMethodHeaderArrayStringPayload(h)
+
+		return payload, nil
+	}
+}

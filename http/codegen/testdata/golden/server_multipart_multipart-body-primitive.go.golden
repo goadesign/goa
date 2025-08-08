@@ -1,0 +1,4 @@
+// ServiceMultipartPrimitiveMethodMultipartPrimitiveDecoderFunc is the type to
+// decode multipart request for the "ServiceMultipartPrimitive" service
+// "MethodMultipartPrimitive" endpoint.
+type ServiceMultipartPrimitiveMethodMultipartPrimitiveDecoderFunc func(*multipart.Reader, *string) error

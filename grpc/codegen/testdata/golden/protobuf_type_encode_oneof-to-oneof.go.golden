@@ -1,0 +1,11 @@
+func transform() {
+	target := &proto.SimpleOneOf{}
+	if source.SimpleOneOf != nil {
+		switch src := source.SimpleOneOf.(type) {
+		case proto.SimpleOneOfString:
+			target.SimpleOneOf = &proto.SimpleOneOf_String_{String_: string(src)}
+		case proto.SimpleOneOfInteger:
+			target.SimpleOneOf = &proto.SimpleOneOf_Integer{Integer: int32(src)}
+		}
+	}
+}

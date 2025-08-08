@@ -1,1 +1,173 @@
-{"openapi":"3.0.3","info":{"title":"Goa API","version":"0.0.1"},"servers":[{"url":"http://localhost:80","description":"Default server for test api"}],"paths":{"/":{"get":{"tags":["testService"],"summary":"testEndpointA testService","operationId":"testService#testEndpointA","parameters":[{"name":"k","in":"query","allowEmptyValue":true,"required":true,"schema":{"type":"string","example":"Quia molestias."},"example":"Doloribus qui quia."},{"name":"Token","in":"header","allowEmptyValue":true,"required":true,"schema":{"type":"string","example":"Et tempora et quae."},"example":"Itaque inventore optio."},{"name":"X-Authorization","in":"header","allowEmptyValue":true,"required":true,"schema":{"type":"string","example":"Ullam aut."},"example":"Iste perspiciatis."}],"responses":{"204":{"description":"No Content response."}},"security":[{"api_key_query_k":[],"basic_header_Authorization":[],"jwt_header_X-Authorization":["api:read"],"oauth2_header_Token":["api:read"]}]},"post":{"tags":["testService"],"summary":"testEndpointB testService","operationId":"testService#testEndpointB","parameters":[{"name":"auth","in":"query","allowEmptyValue":true,"required":true,"schema":{"type":"string","example":"Harum et."},"example":"Neque nisi quibusdam nisi sint sunt."}],"responses":{"204":{"description":"No Content response."}},"security":[{"api_key_header_Authorization":[]},{"oauth2_query_auth":["api:read","api:write"]}]}}},"components":{"securitySchemes":{"api_key_header_Authorization":{"type":"apiKey","description":"Secures endpoint by requiring an API key.","name":"Authorization","in":"header"},"api_key_query_k":{"type":"apiKey","description":"Secures endpoint by requiring an API key.","name":"k","in":"query"},"basic_header_Authorization":{"type":"http","description":"Basic authentication used to authenticate security principal during signin","scheme":"basic"},"jwt_header_X-Authorization":{"type":"http","description":"Secures endpoint by requiring a valid JWT token retrieved via the signin endpoint. Supports scopes \"api:read\" and \"api:write\".","scheme":"bearer"},"oauth2_header_Token":{"type":"oauth2","description":"Secures endpoint by requiring a valid OAuth2 token retrieved via the signin endpoint. Supports scopes \"api:read\" and \"api:write\".","flows":{"authorizationCode":{"authorizationUrl":"http://goa.design/authorization","tokenUrl":"http://goa.design/token","refreshUrl":"http://goa.design/refresh","scopes":{"api:read":"Read-only access","api:write":"Read and write access"}}}},"oauth2_query_auth":{"type":"oauth2","description":"Secures endpoint by requiring a valid OAuth2 token retrieved via the signin endpoint. Supports scopes \"api:read\" and \"api:write\".","flows":{"authorizationCode":{"authorizationUrl":"http://goa.design/authorization","tokenUrl":"http://goa.design/token","refreshUrl":"http://goa.design/refresh","scopes":{"api:read":"Read-only access","api:write":"Read and write access"}}}}}},"tags":[{"name":"testService"}]}
+{
+  "components": {
+    "securitySchemes": {
+      "api_key_header_Authorization": {
+        "description": "Secures endpoint by requiring an API key.",
+        "in": "header",
+        "name": "Authorization",
+        "type": "apiKey"
+      },
+      "api_key_query_k": {
+        "description": "Secures endpoint by requiring an API key.",
+        "in": "query",
+        "name": "k",
+        "type": "apiKey"
+      },
+      "basic_header_Authorization": {
+        "description": "Basic authentication used to authenticate security principal during signin",
+        "scheme": "basic",
+        "type": "http"
+      },
+      "jwt_header_X-Authorization": {
+        "description": "Secures endpoint by requiring a valid JWT token retrieved via the signin endpoint. Supports scopes \"api:read\" and \"api:write\".",
+        "scheme": "bearer",
+        "type": "http"
+      },
+      "oauth2_header_Token": {
+        "description": "Secures endpoint by requiring a valid OAuth2 token retrieved via the signin endpoint. Supports scopes \"api:read\" and \"api:write\".",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "http://goa.design/authorization",
+            "refreshUrl": "http://goa.design/refresh",
+            "scopes": {
+              "api:read": "Read-only access",
+              "api:write": "Read and write access"
+            },
+            "tokenUrl": "http://goa.design/token"
+          }
+        },
+        "type": "oauth2"
+      },
+      "oauth2_query_auth": {
+        "description": "Secures endpoint by requiring a valid OAuth2 token retrieved via the signin endpoint. Supports scopes \"api:read\" and \"api:write\".",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "http://goa.design/authorization",
+            "refreshUrl": "http://goa.design/refresh",
+            "scopes": {
+              "api:read": "Read-only access",
+              "api:write": "Read and write access"
+            },
+            "tokenUrl": "http://goa.design/token"
+          }
+        },
+        "type": "oauth2"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "testService#testEndpointA",
+        "parameters": [
+          {
+            "allowEmptyValue": true,
+            "example": "Doloribus qui quia.",
+            "in": "query",
+            "name": "k",
+            "required": true,
+            "schema": {
+              "example": "Quia molestias.",
+              "type": "string"
+            }
+          },
+          {
+            "allowEmptyValue": true,
+            "example": "Itaque inventore optio.",
+            "in": "header",
+            "name": "Token",
+            "required": true,
+            "schema": {
+              "example": "Et tempora et quae.",
+              "type": "string"
+            }
+          },
+          {
+            "allowEmptyValue": true,
+            "example": "Iste perspiciatis.",
+            "in": "header",
+            "name": "X-Authorization",
+            "required": true,
+            "schema": {
+              "example": "Ullam aut.",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        },
+        "security": [
+          {
+            "api_key_query_k": [],
+            "basic_header_Authorization": [],
+            "jwt_header_X-Authorization": [
+              "api:read"
+            ],
+            "oauth2_header_Token": [
+              "api:read"
+            ]
+          }
+        ],
+        "summary": "testEndpointA testService",
+        "tags": [
+          "testService"
+        ]
+      },
+      "post": {
+        "operationId": "testService#testEndpointB",
+        "parameters": [
+          {
+            "allowEmptyValue": true,
+            "example": "Neque nisi quibusdam nisi sint sunt.",
+            "in": "query",
+            "name": "auth",
+            "required": true,
+            "schema": {
+              "example": "Harum et.",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        },
+        "security": [
+          {
+            "api_key_header_Authorization": []
+          },
+          {
+            "oauth2_query_auth": [
+              "api:read",
+              "api:write"
+            ]
+          }
+        ],
+        "summary": "testEndpointB testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "testService"
+    }
+  ]
+}

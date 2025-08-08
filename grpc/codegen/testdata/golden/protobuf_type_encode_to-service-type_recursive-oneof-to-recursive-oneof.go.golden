@@ -1,0 +1,13 @@
+func transform() {
+	target := &proto.RecursiveOneOf{
+		String: source.String_,
+	}
+	if source.RecursiveOneOf != nil {
+		switch val := source.RecursiveOneOf.(type) {
+		case *proto.RecursiveOneOf_Integer:
+			target.RecursiveOneOf = proto.RecursiveOneOfInteger(val.Integer)
+		case *proto.RecursiveOneOf_Recurse:
+			target.RecursiveOneOf = protobufProtoRecursiveOneOfToProtoRecursiveOneOf(val.Recurse)
+		}
+	}
+}

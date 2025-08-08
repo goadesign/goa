@@ -21,7 +21,7 @@ func TestHTTPRouteValidation(t *testing.T) {
 		{"disallow-response-body", testdata.DisallowResponseBodyHeadDSL, `route HEAD "/" of service "DisallowResponseBody" HTTP endpoint "Method": HTTP status 200: Response body defined for HEAD method which does not allow response body.
 route HEAD "/" of service "DisallowResponseBody" HTTP endpoint "Method": HTTP status 404: Response body defined for HEAD method which does not allow response body.`,
 		},
-		{"invalid", testdata.InvalidRouteDSL, "invalid use of POST in service \"InvalidRoute\""},
+		{"invalid", testdata.InvalidRouteDSL, "routes at the service level are only allowed for JSON-RPC services. Use method-level routes instead. in service \"InvalidRoute\""},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

@@ -1,0 +1,17 @@
+// MethodClientStreamingRPCWithPayload calls the
+// "MethodClientStreamingRPCWithPayload" function in
+// service_client_streaming_rpc_with_payloadpb.ServiceClientStreamingRPCWithPayloadClient
+// interface.
+func (c *Client) MethodClientStreamingRPCWithPayload() goa.Endpoint {
+	return func(ctx context.Context, v any) (any, error) {
+		inv := goagrpc.NewInvoker(
+			BuildMethodClientStreamingRPCWithPayloadFunc(c.grpccli, c.opts...),
+			EncodeMethodClientStreamingRPCWithPayloadRequest,
+			DecodeMethodClientStreamingRPCWithPayloadResponse)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			return nil, goa.Fault("%s", err.Error())
+		}
+		return res, nil
+	}
+}

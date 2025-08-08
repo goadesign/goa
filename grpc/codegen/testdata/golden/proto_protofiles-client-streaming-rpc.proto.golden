@@ -1,0 +1,20 @@
+
+syntax = "proto3";
+
+package service_client_streaming_rpc;
+
+option go_package = "/service_client_streaming_rpcpb";
+
+// Service is the ServiceClientStreamingRPC service interface.
+service ServiceClientStreamingRPC {
+	// MethodClientStreamingRPC implements MethodClientStreamingRPC.
+	rpc MethodClientStreamingRPC (stream MethodClientStreamingRPCStreamingRequest) returns (MethodClientStreamingRPCResponse);
+}
+
+message MethodClientStreamingRPCStreamingRequest {
+	sint32 field = 1;
+}
+
+message MethodClientStreamingRPCResponse {
+	string field = 1;
+}

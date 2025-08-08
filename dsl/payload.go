@@ -88,6 +88,10 @@ func Payload(val any, args ...any) {
 //
 // The arguments to a StreamingPayload DSL is same as the Payload DSL.
 //
+// StreamingPayload requires a transport that supports client-to-server streaming
+// such as gRPC or WebSockets. When using HTTP or JSON-RPC transports, methods
+// with StreamingPayload must use WebSockets (via GET endpoints).
+//
 // Examples:
 //
 //	// Method payload is the JWT token and the method streaming payload is a
@@ -122,6 +126,19 @@ func Payload(val any, args ...any) {
 //	// Method payload is a stream of user type
 //	Method("add", func() {
 //	    StreamingPayload(Operands)
+//	})
+//
+//	// WebSocket method with bidirectional streaming
+//	Method("chat", func() {
+//	    StreamingPayload(func() {
+//	        Attribute("message", String)
+//	        Attribute("timestamp", String, Format(FormatDateTime))
+//	        Required("message", "timestamp")
+//	    })
+//	    StreamingResult(ChatMessage)
+//	    HTTP(func() {
+//	        GET("/chat/ws")
+//	    })
 //	})
 func StreamingPayload(val any, args ...any) {
 	if len(args) > 2 {

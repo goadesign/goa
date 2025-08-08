@@ -62,7 +62,11 @@ func TestWrapDoer(t *testing.T) {
 
 			doer := newTestDoer(t, tc.Segment, tc.StatusCode)
 			messages := xraytest.ReadUDP(t, udplisten, expMsgs, func() {
-				if _, err := WrapDoer(doer).Do(req); err != nil && !tc.Error {
+				resp, err := WrapDoer(doer).Do(req)
+				if resp != nil && resp.Body != nil {
+					defer func() { _ = resp.Body.Close() }()
+				}
+				if err != nil && !tc.Error {
 					t.Fatalf("error executing request: %v", err)
 				}
 			})

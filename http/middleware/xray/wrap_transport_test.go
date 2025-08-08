@@ -64,6 +64,7 @@ func TestTransportExample(t *testing.T) {
 		if err != nil {
 			t.Fatalf("failed to make request - %s", err)
 		}
+		defer resp.Body.Close() //nolint:errcheck
 		if resp.StatusCode != http.StatusOK {
 			t.Errorf("HTTP Response Status is invalid, expected %d got %d", http.StatusOK, resp.StatusCode)
 		}
@@ -103,6 +104,9 @@ func TestTransportNoSegmentInContext(t *testing.T) {
 	resp, err := WrapTransport(rt).RoundTrip(req)
 	if err != nil {
 		t.Errorf("expected no error got %s", err)
+	}
+	if resp != nil && resp.Body != nil {
+		defer func() { _ = resp.Body.Close() }()
 	}
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("response status is invalid, expected %d got %d", http.StatusOK, resp.StatusCode)
@@ -220,6 +224,9 @@ func TestTransport(t *testing.T) {
 
 			messages := xraytest.ReadUDP(t, udplisten, 2, func() {
 				resp, err := WrapTransport(rt).RoundTrip(req)
+				if resp != nil && resp.Body != nil {
+					defer func() { _ = resp.Body.Close() }()
+				}
 				if c.Segment.Exception == "" && err != nil {
 					t.Errorf("expected no error got %s", err)
 				}

@@ -1,0 +1,18 @@
+// EncodeMethodBodyQueryUserValidateRequest returns an encoder for requests
+// sent to the ServiceBodyQueryUserValidate MethodBodyQueryUserValidate server.
+func EncodeMethodBodyQueryUserValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicebodyqueryuservalidate.PayloadType)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceBodyQueryUserValidate", "MethodBodyQueryUserValidate", "*servicebodyqueryuservalidate.PayloadType", v)
+		}
+		values := req.URL.Query()
+		values.Add("b", p.B)
+		req.URL.RawQuery = values.Encode()
+		body := NewMethodBodyQueryUserValidateRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("ServiceBodyQueryUserValidate", "MethodBodyQueryUserValidate", err)
+		}
+		return nil
+	}
+}

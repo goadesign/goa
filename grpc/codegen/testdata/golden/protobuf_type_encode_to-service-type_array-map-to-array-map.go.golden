@@ -1,0 +1,14 @@
+func transform() {
+	target := &proto.ArrayMap{}
+	if source.ArrayMap != nil {
+		target.ArrayMap = make(map[uint32][]float32, len(source.ArrayMap))
+		for key, val := range source.ArrayMap {
+			tk := key
+			tv := make([]float32, len(val.Field))
+			for i, val := range val.Field {
+				tv[i] = val
+			}
+			target.ArrayMap[tk] = tv
+		}
+	}
+}

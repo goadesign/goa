@@ -1,0 +1,8 @@
+// NewMethodUnaryRPCNoResultHandler creates a gRPC handler which serves the
+// "ServiceUnaryRPCNoResult" service "MethodUnaryRPCNoResult" endpoint.
+func NewMethodUnaryRPCNoResultHandler(endpoint goa.Endpoint, h goagrpc.UnaryHandler) goagrpc.UnaryHandler {
+	if h == nil {
+		h = goagrpc.NewUnaryHandler(endpoint, DecodeMethodUnaryRPCNoResultRequest, EncodeMethodUnaryRPCNoResultResponse)
+	}
+	return h
+}

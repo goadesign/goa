@@ -1,0 +1,18 @@
+// DecodeMethodQueryStringDefaultRequest returns a decoder for requests sent to
+// the ServiceQueryStringDefault MethodQueryStringDefault endpoint.
+func DecodeMethodQueryStringDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerystringdefault.MethodQueryStringDefaultPayload, error) {
+	return func(r *http.Request) (*servicequerystringdefault.MethodQueryStringDefaultPayload, error) {
+		var (
+			q string
+		)
+		qRaw := r.URL.Query().Get("q")
+		if qRaw != "" {
+			q = qRaw
+		} else {
+			q = "def"
+		}
+		payload := NewMethodQueryStringDefaultPayload(q)
+
+		return payload, nil
+	}
+}

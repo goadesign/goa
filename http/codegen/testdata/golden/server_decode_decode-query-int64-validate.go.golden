@@ -1,0 +1,30 @@
+// DecodeMethodQueryInt64ValidateRequest returns a decoder for requests sent to
+// the ServiceQueryInt64Validate MethodQueryInt64Validate endpoint.
+func DecodeMethodQueryInt64ValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryint64validate.MethodQueryInt64ValidatePayload, error) {
+	return func(r *http.Request) (*servicequeryint64validate.MethodQueryInt64ValidatePayload, error) {
+		var (
+			q   int64
+			err error
+		)
+		{
+			qRaw := r.URL.Query().Get("q")
+			if qRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
+			}
+			v, err2 := strconv.ParseInt(qRaw, 10, 64)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "integer"))
+			}
+			q = v
+		}
+		if q < 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("q", q, 1, true))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryInt64ValidatePayload(q)
+
+		return payload, nil
+	}
+}

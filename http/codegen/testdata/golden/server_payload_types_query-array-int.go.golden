@@ -1,0 +1,8 @@
+// NewMethodQueryArrayIntPayload builds a ServiceQueryArrayInt service
+// MethodQueryArrayInt endpoint payload.
+func NewMethodQueryArrayIntPayload(q []int) *servicequeryarrayint.MethodQueryArrayIntPayload {
+	v := &servicequeryarrayint.MethodQueryArrayIntPayload{}
+	v.Q = q
+
+	return v
+}

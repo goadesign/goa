@@ -1,0 +1,7 @@
+func Validate() (err error) {
+	if target.Collection != nil {
+		if err2 := ValidateResultCollection(target.Collection); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+}

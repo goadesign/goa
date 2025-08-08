@@ -1,0 +1,30 @@
+// DecodeMethodPathPrimitiveBoolValidateRequest returns a decoder for requests
+// sent to the ServicePathPrimitiveBoolValidate MethodPathPrimitiveBoolValidate
+// endpoint.
+func DecodeMethodPathPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (bool, error) {
+	return func(r *http.Request) (bool, error) {
+		var (
+			p   bool
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			v, err2 := strconv.ParseBool(pRaw)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "boolean"))
+			}
+			p = v
+		}
+		if !(p == true) {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("p", p, []any{true}))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := p
+
+		return payload, nil
+	}
+}

@@ -1,0 +1,8 @@
+// NewMethodPathStringPayload builds a ServicePathString service
+// MethodPathString endpoint payload.
+func NewMethodPathStringPayload(p string) *servicepathstring.MethodPathStringPayload {
+	v := &servicepathstring.MethodPathStringPayload{}
+	v.P = &p
+
+	return v
+}

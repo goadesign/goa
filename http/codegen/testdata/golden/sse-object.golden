@@ -12,14 +12,7 @@ type SSEObjectMethodServerStream struct {
 
 // Send Send streams instances of "sseobjectservice.SSEObjectMethodResult" to
 // the "SSEObjectMethod" endpoint SSE connection.
-func (s *SSEObjectMethodServerStream) Send(v *sseobjectservice.SSEObjectMethodResult) error {
-	return s.SendWithContext(context.Background(), v)
-}
-
-// SendWithContext SendWithContext streams instances of
-// "sseobjectservice.SSEObjectMethodResult" to the "SSEObjectMethod" endpoint
-// SSE connection with context.
-func (s *SSEObjectMethodServerStream) SendWithContext(ctx context.Context, v *sseobjectservice.SSEObjectMethodResult) error {
+func (s *SSEObjectMethodServerStream) Send(ctx context.Context, v *sseobjectservice.SSEObjectMethodResult) error {
 	s.once.Do(func() {
 		header := s.w.Header()
 		if header.Get("Content-Type") == "" {

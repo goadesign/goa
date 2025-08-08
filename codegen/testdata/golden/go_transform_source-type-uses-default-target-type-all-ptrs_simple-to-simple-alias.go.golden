@@ -1,0 +1,11 @@
+func transform() {
+	target := &SimpleAlias{}
+	requiredString := StringAlias(source.RequiredString)
+	target.RequiredString = &requiredString
+	defaultBool := BoolAlias(source.DefaultBool)
+	target.DefaultBool = &defaultBool
+	if source.Integer != nil {
+		integer := IntAlias(*source.Integer)
+		target.Integer = &integer
+	}
+}

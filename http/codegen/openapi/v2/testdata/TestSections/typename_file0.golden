@@ -1,1 +1,192 @@
-{"swagger":"2.0","info":{"title":"","version":"0.0.1"},"host":"goa.design","consumes":["application/json","application/xml","application/gob"],"produces":["application/json","application/xml","application/gob"],"paths":{"/bar":{"post":{"tags":["testService"],"summary":"bar testService","operationId":"testService#bar","parameters":[{"name":"BarRequestBody","in":"body","required":true,"schema":{"$ref":"#/definitions/BarPayload"}}],"responses":{"200":{"description":"OK response.","schema":{"$ref":"#/definitions/GoaExampleBar"}}},"schemes":["https"]}},"/baz":{"post":{"tags":["testService"],"summary":"baz testService","operationId":"testService#baz","parameters":[{"name":"BazRequestBody","in":"body","required":true,"schema":{"$ref":"#/definitions/BazPayload"}}],"responses":{"200":{"description":"OK response.","schema":{"$ref":"#/definitions/BazResult"}}},"schemes":["https"]}},"/foo":{"post":{"tags":["testService"],"summary":"foo testService","operationId":"testService#foo","parameters":[{"name":"FooRequestBody","in":"body","required":true,"schema":{"$ref":"#/definitions/Foo"}}],"responses":{"200":{"description":"OK response.","schema":{"$ref":"#/definitions/FooResult"}}},"schemes":["https"]}}},"definitions":{"BarPayload":{"title":"BarPayload","type":"object","properties":{"value":{"type":"string","example":""}},"example":{"value":""}},"BazPayload":{"title":"BazPayload","type":"object","properties":{"value":{"type":"string","example":""}},"example":{"value":""}},"BazResult":{"title":"BazResult","type":"object","properties":{"value":{"type":"string","example":""}},"example":{"value":""}},"Foo":{"title":"Foo","type":"object","properties":{"value":{"type":"string","example":""}},"example":{"value":""}},"FooResult":{"title":"Mediatype identifier: application/vnd.goa.example.bar; view=default","type":"object","properties":{"value":{"type":"string","example":""}},"description":"FooResponseBody result type (default view)","example":{"value":""}},"GoaExampleBar":{"title":"Mediatype identifier: application/vnd.goa.example.bar; view=default","type":"object","properties":{"value":{"type":"string","example":""}},"description":"BarResponseBody result type (default view)","example":{"value":""}}}}
+{
+  "consumes": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "definitions": {
+    "BarPayload": {
+      "example": {
+        "value": ""
+      },
+      "properties": {
+        "value": {
+          "example": "",
+          "type": "string"
+        }
+      },
+      "title": "BarPayload",
+      "type": "object"
+    },
+    "BazPayload": {
+      "example": {
+        "value": ""
+      },
+      "properties": {
+        "value": {
+          "example": "",
+          "type": "string"
+        }
+      },
+      "title": "BazPayload",
+      "type": "object"
+    },
+    "BazResult": {
+      "example": {
+        "value": ""
+      },
+      "properties": {
+        "value": {
+          "example": "",
+          "type": "string"
+        }
+      },
+      "title": "BazResult",
+      "type": "object"
+    },
+    "Foo": {
+      "example": {
+        "value": ""
+      },
+      "properties": {
+        "value": {
+          "example": "",
+          "type": "string"
+        }
+      },
+      "title": "Foo",
+      "type": "object"
+    },
+    "FooResult": {
+      "description": "FooResponseBody result type (default view)",
+      "example": {
+        "value": ""
+      },
+      "properties": {
+        "value": {
+          "example": "",
+          "type": "string"
+        }
+      },
+      "title": "Mediatype identifier: application/vnd.goa.example.bar; view=default",
+      "type": "object"
+    },
+    "GoaExampleBar": {
+      "description": "BarResponseBody result type (default view)",
+      "example": {
+        "value": ""
+      },
+      "properties": {
+        "value": {
+          "example": "",
+          "type": "string"
+        }
+      },
+      "title": "Mediatype identifier: application/vnd.goa.example.bar; view=default",
+      "type": "object"
+    }
+  },
+  "host": "goa.design",
+  "info": {
+    "title": "",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/bar": {
+      "post": {
+        "operationId": "testService#bar",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "BarRequestBody",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BarPayload"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "schema": {
+              "$ref": "#/definitions/GoaExampleBar"
+            }
+          }
+        },
+        "schemes": [
+          "https"
+        ],
+        "summary": "bar testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    },
+    "/baz": {
+      "post": {
+        "operationId": "testService#baz",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "BazRequestBody",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/BazPayload"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "schema": {
+              "$ref": "#/definitions/BazResult"
+            }
+          }
+        },
+        "schemes": [
+          "https"
+        ],
+        "summary": "baz testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    },
+    "/foo": {
+      "post": {
+        "operationId": "testService#foo",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "FooRequestBody",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/Foo"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK response.",
+            "schema": {
+              "$ref": "#/definitions/FooResult"
+            }
+          }
+        },
+        "schemes": [
+          "https"
+        ],
+        "summary": "foo testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "produces": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "swagger": "2.0"
+}

@@ -1,0 +1,8 @@
+func transform() {
+	target := &Recursive{
+		RequiredString: &source.RequiredString,
+	}
+	if source.Recursive != nil {
+		target.Recursive = transformRecursiveToRecursive(source.Recursive)
+	}
+}

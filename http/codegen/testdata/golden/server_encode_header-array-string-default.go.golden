@@ -1,0 +1,17 @@
+// EncodeMethodHeaderArrayStringDefaultResponse returns an encoder for
+// responses returned by the ServiceHeaderArrayStringDefault
+// MethodHeaderArrayStringDefault endpoint.
+func EncodeMethodHeaderArrayStringDefaultResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*serviceheaderarraystringdefault.MethodHeaderArrayStringDefaultResult)
+		if res.H != nil {
+			val := res.H
+			hs := strings.Join(val, ", ")
+			w.Header().Set("H", hs)
+		} else {
+			w.Header().Set("H", "foo, bar")
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}

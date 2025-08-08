@@ -1,0 +1,49 @@
+// DecodeMethodBodyMultipleViewResponse returns a decoder for responses
+// returned by the ServiceBodyMultipleView MethodBodyMultipleView endpoint.
+// restoreBody controls whether the response body should be restored after
+// having been read.
+func DecodeMethodBodyMultipleViewResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
+		if restoreBody {
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body MethodBodyMultipleViewResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ServiceBodyMultipleView", "MethodBodyMultipleView", err)
+			}
+			var (
+				c *string
+			)
+			cRaw := resp.Header.Get("Location")
+			if cRaw != "" {
+				c = &cRaw
+			}
+			p := NewMethodBodyMultipleViewResulttypemultipleviewsOK(&body, c)
+			view := resp.Header.Get("goa-view")
+			vres := &servicebodymultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
+			if err = servicebodymultipleviewviews.ValidateResulttypemultipleviews(vres); err != nil {
+				return nil, goahttp.ErrValidationError("ServiceBodyMultipleView", "MethodBodyMultipleView", err)
+			}
+			res := servicebodymultipleview.NewResulttypemultipleviews(vres)
+			return res, nil
+		default:
+			body, _ := io.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceBodyMultipleView", "MethodBodyMultipleView", resp.StatusCode, string(body))
+		}
+	}
+}

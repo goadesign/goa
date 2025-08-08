@@ -1,0 +1,28 @@
+// DecodeMethodBodyUnionRequest returns a decoder for requests sent to the
+// ServiceBodyUnion MethodBodyUnion endpoint.
+func DecodeMethodBodyUnionRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyunion.Union, error) {
+	return func(r *http.Request) (*servicebodyunion.Union, error) {
+		var (
+			body MethodBodyUnionRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateMethodBodyUnionRequestBody(&body)
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyUnionUnion(&body)
+
+		return payload, nil
+	}
+}

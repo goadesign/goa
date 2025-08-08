@@ -1,0 +1,13 @@
+func transform() {
+	var target *UnionUserType
+	js, _ := json.Marshal(source)
+	var name string
+	switch source.(type) {
+	case *SomeType:
+		name = "SomeType"
+	}
+	target = &UnionUserType{
+		Type:  name,
+		Value: string(js),
+	}
+}

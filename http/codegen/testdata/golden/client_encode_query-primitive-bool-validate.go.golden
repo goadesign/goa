@@ -1,0 +1,16 @@
+// EncodeMethodQueryPrimitiveBoolValidateRequest returns an encoder for
+// requests sent to the ServiceQueryPrimitiveBoolValidate
+// MethodQueryPrimitiveBoolValidate server.
+func EncodeMethodQueryPrimitiveBoolValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(bool)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryPrimitiveBoolValidate", "MethodQueryPrimitiveBoolValidate", "bool", v)
+		}
+		values := req.URL.Query()
+		pStr := strconv.FormatBool(p)
+		values.Add("q", pStr)
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

@@ -1,0 +1,16 @@
+// EncodeMethodQueryBoolRequest returns an encoder for requests sent to the
+// ServiceQueryBool MethodQueryBool server.
+func EncodeMethodQueryBoolRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicequerybool.MethodQueryBoolPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryBool", "MethodQueryBool", "*servicequerybool.MethodQueryBoolPayload", v)
+		}
+		values := req.URL.Query()
+		if p.Q != nil {
+			values.Add("q", fmt.Sprintf("%v", *p.Q))
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

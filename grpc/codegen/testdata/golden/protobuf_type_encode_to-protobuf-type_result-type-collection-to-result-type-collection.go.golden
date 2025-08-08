@@ -1,0 +1,22 @@
+func transform() {
+	target := &proto.ResultTypeCollection{}
+	if source.Collection != nil {
+		target.Collection = &proto.ResultTypeCollection{}
+		target.Collection.Field = make([]*proto.ResultType, len(source.Collection))
+		for i, val := range source.Collection {
+			target.Collection.Field[i] = &proto.ResultType{}
+			if val.Int != nil {
+				int_ := int32(*val.Int)
+				target.Collection.Field[i].Int = &int_
+			}
+			if val.Map != nil {
+				target.Collection.Field[i].Map_ = make(map[int32]string, len(val.Map))
+				for key, val := range val.Map {
+					tk := int32(key)
+					tv := val
+					target.Collection.Field[i].Map_[tk] = tv
+				}
+			}
+		}
+	}
+}

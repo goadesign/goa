@@ -12,27 +12,26 @@ import (
 )
 
 // ServerFiles returns the generated HTTP server files.
-func ServerFiles(genpkg string, services *ServicesData) []*codegen.File {
-	root := services.Root
-	var files []*codegen.File
-	for _, svc := range root.API.HTTP.Services {
-		files = append(files, serverFile(genpkg, svc, services))
-		if f := websocketServerFile(genpkg, svc, services); f != nil {
+func ServerFiles(genpkg string, data *ServicesData) []*codegen.File {
+	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3)
+	for _, svc := range data.Expressions.Services {
+		files = append(files, serverFile(genpkg, svc, data))
+		if f := websocketServerFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
-		if f := sseServerFile(genpkg, svc, services); f != nil {
+		if f := sseServerFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
 	}
-	for _, svc := range root.API.HTTP.Services {
-		if f := serverEncodeDecodeFile(genpkg, svc, services); f != nil {
+	for _, svc := range data.Expressions.Services {
+		if f := ServerEncodeDecodeFile(genpkg, svc, data); f != nil {
 			files = append(files, f)
 		}
 	}
 	return files
 }
 
-// server returns the file implementing the HTTP server.
+// serverFile returns the file implementing the HTTP server.
 func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
@@ -40,9 +39,9 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	funcs := map[string]any{
 		"join":                strings.Join,
-		"hasWebSocket":        hasWebSocket,
-		"isWebSocketEndpoint": isWebSocketEndpoint,
-		"isSSEEndpoint":       isSSEEndpoint,
+		"hasWebSocket":        HasWebSocket,
+		"isWebSocketEndpoint": IsWebSocketEndpoint,
+		"isSSEEndpoint":       IsSSEEndpoint,
 		"viewedServerBody":    viewedServerBody,
 		"mustDecodeRequest":   mustDecodeRequest,
 		"addLeadingSlash":     addLeadingSlash,
@@ -68,30 +67,30 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 	}
 
 	sections = append(sections,
-		&codegen.SectionTemplate{Name: "server-struct", Source: readTemplate("server_struct"), Data: data},
-		&codegen.SectionTemplate{Name: "server-mountpoint", Source: readTemplate("mount_point_struct"), Data: data})
+		&codegen.SectionTemplate{Name: "server-struct", Source: httpTemplates.Read(serverStructT), Data: data},
+		&codegen.SectionTemplate{Name: "server-mountpoint", Source: httpTemplates.Read(mountPointStructT), Data: data})
 
 	for _, e := range data.Endpoints {
 		if e.MultipartRequestDecoder != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "multipart-request-decoder-type",
-				Source: readTemplate("multipart_request_decoder_type"),
+				Source: httpTemplates.Read(multipartRequestDecoderTypeT),
 				Data:   e.MultipartRequestDecoder,
 			})
 		}
 	}
 
 	sections = append(sections,
-		&codegen.SectionTemplate{Name: "server-init", Source: readTemplate("server_init"), Data: data, FuncMap: funcs},
-		&codegen.SectionTemplate{Name: "server-service", Source: readTemplate("server_service"), Data: data},
-		&codegen.SectionTemplate{Name: "server-use", Source: readTemplate("server_use"), Data: data},
-		&codegen.SectionTemplate{Name: "server-method-names", Source: readTemplate("server_method_names"), Data: data},
-		&codegen.SectionTemplate{Name: "server-mount", Source: readTemplate("server_mount"), Data: data, FuncMap: funcs})
+		&codegen.SectionTemplate{Name: "server-init", Source: httpTemplates.Read(serverInitT), Data: data, FuncMap: funcs},
+		&codegen.SectionTemplate{Name: "server-service", Source: httpTemplates.Read(serverServiceT), Data: data},
+		&codegen.SectionTemplate{Name: "server-use", Source: httpTemplates.Read(serverUseT), Data: data},
+		&codegen.SectionTemplate{Name: "server-method-names", Source: httpTemplates.Read(serverMethodNamesT), Data: data},
+		&codegen.SectionTemplate{Name: "server-mount", Source: httpTemplates.Read(serverMountT), Data: data, FuncMap: funcs})
 
 	for _, e := range data.Endpoints {
 		sections = append(sections,
-			&codegen.SectionTemplate{Name: "server-handler", Source: readTemplate("server_handler"), Data: e},
-			&codegen.SectionTemplate{Name: "server-handler-init", Source: readTemplate("server_handler_init"), FuncMap: funcs, Data: e})
+			&codegen.SectionTemplate{Name: "server-handler", Source: httpTemplates.Read(serverHandlerT), Data: e},
+			&codegen.SectionTemplate{Name: "server-handler-init", Source: httpTemplates.Read(serverHandlerInitT), FuncMap: funcs, Data: e})
 	}
 	if len(data.FileServers) > 0 {
 		mappedFiles := make(map[string]string)
@@ -107,18 +106,18 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 				}
 			}
 		}
-		sections = append(sections, &codegen.SectionTemplate{Name: "append-fs", Source: readTemplate("append_fs"), FuncMap: funcs, Data: mappedFiles})
+		sections = append(sections, &codegen.SectionTemplate{Name: "append-fs", Source: httpTemplates.Read(appendFsT), FuncMap: funcs, Data: mappedFiles})
 	}
 	for _, s := range data.FileServers {
-		sections = append(sections, &codegen.SectionTemplate{Name: "server-files", Source: readTemplate("file_server"), FuncMap: funcs, Data: s})
+		sections = append(sections, &codegen.SectionTemplate{Name: "server-files", Source: httpTemplates.Read(fileServerT), FuncMap: funcs, Data: s})
 	}
 
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
-// serverEncodeDecodeFile returns the file defining the HTTP server encoding and
+// ServerEncodeDecodeFile returns the file defining the HTTP server encoding and
 // decoding logic.
-func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func ServerEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "http", svcName, "server", "encode_decode.go")
@@ -142,11 +141,11 @@ func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 	sections := []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
 
 	for _, e := range data.Endpoints {
-		if e.Redirect == nil && !isWebSocketEndpoint(e) {
+		if e.Redirect == nil && (!IsWebSocketEndpoint(e) || e.Method.IsJSONRPC) {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "response-encoder",
 				FuncMap: transTmplFuncs(svc, services),
-				Source:  readTemplate("response_encoder", "response", "header_conversion"),
+				Source:  httpTemplates.Read(responseEncoderT, responseP, headerConversionP),
 				Data:    e,
 			})
 		}
@@ -155,7 +154,7 @@ func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 			fm["mapQueryDecodeData"] = mapQueryDecodeData
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "request-decoder",
-				Source:  readTemplate("request_decoder", "request_elements", "slice_item_conversion", "element_slice_conversion", "query_slice_conversion", "query_type_conversion", "query_map_conversion", "path_conversion"),
+				Source:  httpTemplates.Read(requestDecoderT, requestElementsP, sliceItemConversionP, elementSliceConversionP, querySliceConversionP, queryTypeConversionP, queryMapConversionP, pathConversionP),
 				FuncMap: fm,
 				Data:    e,
 			})
@@ -165,7 +164,7 @@ func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 			fm["mapQueryDecodeData"] = mapQueryDecodeData
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "multipart-request-decoder",
-				Source:  readTemplate("multipart_request_decoder", "request_elements", "slice_item_conversion", "element_slice_conversion", "query_slice_conversion", "query_type_conversion", "query_map_conversion", "path_conversion"),
+				Source:  httpTemplates.Read(multipartRequestDecoderT, requestElementsP, sliceItemConversionP, elementSliceConversionP, querySliceConversionP, queryTypeConversionP, queryMapConversionP, pathConversionP),
 				FuncMap: fm,
 				Data:    e.MultipartRequestDecoder,
 			})
@@ -173,7 +172,7 @@ func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 		if len(e.Errors) > 0 {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "error-encoder",
-				Source:  readTemplate("error_encoder", "response", "header_conversion"),
+				Source:  httpTemplates.Read(errorEncoderT, responseP, headerConversionP),
 				FuncMap: transTmplFuncs(svc, services),
 				Data:    e,
 			})
@@ -182,7 +181,7 @@ func serverEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 	for _, h := range data.ServerTransformHelpers {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-transform-helper",
-			Source: readTemplate("transform_helper"),
+			Source: httpTemplates.Read(transformHelperT),
 			Data:   h,
 		})
 	}

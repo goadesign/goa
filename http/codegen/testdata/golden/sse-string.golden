@@ -12,13 +12,7 @@ type SSEStringMethodServerStream struct {
 
 // Send Send streams instances of "string" to the "SSEStringMethod" endpoint
 // SSE connection.
-func (s *SSEStringMethodServerStream) Send(v string) error {
-	return s.SendWithContext(context.Background(), v)
-}
-
-// SendWithContext SendWithContext streams instances of "string" to the
-// "SSEStringMethod" endpoint SSE connection with context.
-func (s *SSEStringMethodServerStream) SendWithContext(ctx context.Context, v string) error {
+func (s *SSEStringMethodServerStream) Send(ctx context.Context, v string) error {
 	s.once.Do(func() {
 		header := s.w.Header()
 		if header.Get("Content-Type") == "" {

@@ -1,1 +1,71 @@
-{"openapi":"3.0.3","info":{"title":"Goa API","version":"0.0.1"},"servers":[{"url":"http://localhost:80","description":"Default server for test api"}],"paths":{"/binary":{"get":{"tags":["testService"],"summary":"binary testService","operationId":"testService#binary","responses":{"200":{"description":"OK response.","content":{"image/png":{"schema":{"type":"string","format":"binary"}}}}}}},"/empty":{"get":{"tags":["testService"],"summary":"empty testService","operationId":"testService#empty","responses":{"204":{"description":"No Content response."}}}},"/empty/ok":{"get":{"tags":["testService"],"summary":"empty_ok testService","operationId":"testService#empty_ok","responses":{"200":{"description":"OK response."}}}}},"components":{},"tags":[{"name":"testService"}]}
+{
+  "components": {},
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/binary": {
+      "get": {
+        "operationId": "testService#binary",
+        "responses": {
+          "200": {
+            "content": {
+              "image/png": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "binary testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    },
+    "/empty": {
+      "get": {
+        "operationId": "testService#empty",
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        },
+        "summary": "empty testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    },
+    "/empty/ok": {
+      "get": {
+        "operationId": "testService#empty_ok",
+        "responses": {
+          "200": {
+            "description": "OK response."
+          }
+        },
+        "summary": "empty_ok testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "testService"
+    }
+  ]
+}

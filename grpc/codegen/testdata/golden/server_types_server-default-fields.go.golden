@@ -1,0 +1,62 @@
+// NewMethodPayload builds the payload of the "Method" endpoint of the
+// "DefaultFields" service from the gRPC request type.
+func NewMethodPayload(message *default_fieldspb.MethodRequest) *defaultfields.MethodPayload {
+	v := &defaultfields.MethodPayload{
+		Req:  message.Req,
+		Opt:  message.Opt,
+		Reqs: message.Reqs,
+		Opts: message.Opts,
+		Rat:  message.Rat,
+		Flt:  message.Flt,
+	}
+	if message.Def0 != nil {
+		v.Def0 = *message.Def0
+	}
+	if message.Def1 != nil {
+		v.Def1 = *message.Def1
+	}
+	if message.Def2 != nil {
+		v.Def2 = *message.Def2
+	}
+	if message.Defs != nil {
+		v.Defs = *message.Defs
+	}
+	if message.Defe != nil {
+		v.Defe = *message.Defe
+	}
+	if message.Flt0 != nil {
+		v.Flt0 = *message.Flt0
+	}
+	if message.Flt1 != nil {
+		v.Flt1 = *message.Flt1
+	}
+	if message.Def0 == nil {
+		v.Def0 = 0
+	}
+	if message.Def1 == nil {
+		v.Def1 = 1
+	}
+	if message.Def2 == nil {
+		v.Def2 = 2
+	}
+	if message.Defs == nil {
+		v.Defs = "!"
+	}
+	if message.Defe == nil {
+		v.Defe = ""
+	}
+	if message.Flt0 == nil {
+		v.Flt0 = 0
+	}
+	if message.Flt1 == nil {
+		v.Flt1 = 1
+	}
+	return v
+}
+
+// NewProtoMethodResponse builds the gRPC response type from the result of the
+// "Method" endpoint of the "DefaultFields" service.
+func NewProtoMethodResponse() *default_fieldspb.MethodResponse {
+	message := &default_fieldspb.MethodResponse{}
+	return message
+}

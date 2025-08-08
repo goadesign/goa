@@ -1,0 +1,24 @@
+func transform() {
+	target := &proto.Composite{
+		RequiredString: &source.RequiredString,
+	}
+	defaultInt := int(source.DefaultInt)
+	target.DefaultInt = &defaultInt
+	if source.Type != nil {
+		target.Type = protobufProtoSimpleToProtoSimple(source.Type)
+	}
+	if source.Map_ != nil {
+		target.Map = make(map[int]string, len(source.Map_))
+		for key, val := range source.Map_ {
+			tk := int(key)
+			tv := val
+			target.Map[tk] = tv
+		}
+	}
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.Array[i] = val
+		}
+	}
+}

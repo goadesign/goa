@@ -1,0 +1,4 @@
+func transform() {
+	target := &proto.Int{}
+	target.Field = int32(source)
+}

@@ -1,0 +1,49 @@
+// NewProtoMethodRequest builds the gRPC request type from the payload of the
+// "Method" endpoint of the "UsingMetaTypes" service.
+func NewProtoMethodRequest(payload *usingmetatypes.MethodPayload) *using_meta_typespb.MethodRequest {
+	message := &using_meta_typespb.MethodRequest{}
+	a := int64(payload.A)
+	message.A = &a
+	b := int64(payload.B)
+	message.B = &b
+	if payload.D != nil {
+		d := int64(*payload.D)
+		message.D = &d
+	}
+	if payload.C != nil {
+		message.C = make([]int64, len(payload.C))
+		for i, val := range payload.C {
+			message.C[i] = int64(val)
+		}
+	}
+	return message
+}
+
+// NewMethodResult builds the result type of the "Method" endpoint of the
+// "UsingMetaTypes" service from the gRPC response type.
+func NewMethodResult(message *using_meta_typespb.MethodResponse) *usingmetatypes.MethodResult {
+	result := &usingmetatypes.MethodResult{}
+	if message.A != nil {
+		result.A = flag.ErrorHandling(*message.A)
+	}
+	if message.B != nil {
+		result.B = flag.ErrorHandling(*message.B)
+	}
+	if message.D != nil {
+		d := flag.ErrorHandling(*message.D)
+		result.D = &d
+	}
+	if message.A == nil {
+		result.A = 1
+	}
+	if message.B == nil {
+		result.B = 2
+	}
+	if message.C != nil {
+		result.C = make([]time.Duration, len(message.C))
+		for i, val := range message.C {
+			result.C[i] = time.Duration(val)
+		}
+	}
+	return result
+}

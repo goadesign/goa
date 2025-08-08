@@ -1,0 +1,29 @@
+// DecodeMethodBodyUserValidateRequest returns a decoder for requests sent to
+// the ServiceBodyUserValidate MethodBodyUserValidate endpoint.
+func DecodeMethodBodyUserValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyuservalidate.PayloadType, error) {
+	return func(r *http.Request) (*servicebodyuservalidate.PayloadType, error) {
+		var (
+			body string
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				err = nil
+			} else {
+				var gerr *goa.ServiceError
+				if errors.As(err, &gerr) {
+					return nil, gerr
+				}
+				return nil, goa.DecodePayloadError(err.Error())
+			}
+		}
+		err = goa.MergeErrors(err, goa.ValidatePattern("body", body, "apattern"))
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyUserValidatePayloadType(body)
+
+		return payload, nil
+	}
+}

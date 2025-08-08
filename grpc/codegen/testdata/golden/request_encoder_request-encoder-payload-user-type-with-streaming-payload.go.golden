@@ -1,0 +1,16 @@
+// EncodeMethodBidirectionalStreamingRPCWithPayloadRequest encodes requests
+// sent to ServiceBidirectionalStreamingRPCWithPayload
+// MethodBidirectionalStreamingRPCWithPayload endpoint.
+func EncodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
+	payload, ok := v.(*servicebidirectionalstreamingrpcwithpayload.Payload)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceBidirectionalStreamingRPCWithPayload", "MethodBidirectionalStreamingRPCWithPayload", "*servicebidirectionalstreamingrpcwithpayload.Payload", v)
+	}
+	if payload.A != nil {
+		(*md).Append("a", fmt.Sprintf("%v", *payload.A))
+	}
+	if payload.B != nil {
+		(*md).Append("b", *payload.B)
+	}
+	return nil, nil
+}

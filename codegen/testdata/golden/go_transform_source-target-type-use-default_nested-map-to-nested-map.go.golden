@@ -1,0 +1,21 @@
+func transform() {
+	target := &NestedMap{}
+	if source.NestedMap != nil {
+		target.NestedMap = make(map[float64]map[int]map[float64]uint64, len(source.NestedMap))
+		for key, val := range source.NestedMap {
+			tk := key
+			tvc := make(map[int]map[float64]uint64, len(val))
+			for key, val := range val {
+				tk := key
+				tvb := make(map[float64]uint64, len(val))
+				for key, val := range val {
+					tk := key
+					tv := val
+					tvb[tk] = tv
+				}
+				tvc[tk] = tvb
+			}
+			target.NestedMap[tk] = tvc
+		}
+	}
+}

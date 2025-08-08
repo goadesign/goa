@@ -1,0 +1,16 @@
+// EncodeMethodQueryFloat32Request returns an encoder for requests sent to the
+// ServiceQueryFloat32 MethodQueryFloat32 server.
+func EncodeMethodQueryFloat32Request(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicequeryfloat32.MethodQueryFloat32Payload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryFloat32", "MethodQueryFloat32", "*servicequeryfloat32.MethodQueryFloat32Payload", v)
+		}
+		values := req.URL.Query()
+		if p.Q != nil {
+			values.Add("q", fmt.Sprintf("%v", *p.Q))
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

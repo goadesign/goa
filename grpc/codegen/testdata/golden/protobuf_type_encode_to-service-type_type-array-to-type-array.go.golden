@@ -1,0 +1,15 @@
+func transform() {
+	target := &proto.TypeArray{}
+	if source.TypeArray != nil {
+		target.TypeArray = make([]*proto.SimpleArray, len(source.TypeArray))
+		for i, val := range source.TypeArray {
+			target.TypeArray[i] = &proto.SimpleArray{}
+			if val.StringArray != nil {
+				target.TypeArray[i].StringArray = make([]string, len(val.StringArray))
+				for j, val := range val.StringArray {
+					target.TypeArray[i].StringArray[j] = val
+				}
+			}
+		}
+	}
+}

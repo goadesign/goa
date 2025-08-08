@@ -1,0 +1,13 @@
+// EncodeMethodExplicitContentTypeResponseResponse returns an encoder for
+// responses returned by the ServiceExplicitContentTypeResponse
+// MethodExplicitContentTypeResponse endpoint.
+func EncodeMethodExplicitContentTypeResponseResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res := v.(*serviceexplicitcontenttyperesponseviews.Resulttype)
+		ctx = context.WithValue(ctx, goahttp.ContentTypeKey, "application/custom+json")
+		enc := encoder(ctx, w)
+		body := NewMethodExplicitContentTypeResponseResponseBody(res.Projected)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}

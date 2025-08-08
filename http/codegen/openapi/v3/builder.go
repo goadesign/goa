@@ -128,7 +128,6 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 
 		// endpoints
 		for _, e := range svc.HTTPEndpoints {
-
 			if !openapi.MustGenerate(e.Meta) || !openapi.MustGenerate(e.MethodExpr.Meta) {
 				continue
 			}
@@ -211,7 +210,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	summary = fmt.Sprintf("%s %s", e.Name(), svc.Name())
 	setSummary(meta)
 	setSummary(svc.ServiceExpr.Meta)
-	setSummary(r.Endpoint.Meta)
+	setSummary(e.Meta)
 	setSummary(m.Meta)
 
 	// OpenAPI operationId
@@ -227,7 +226,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	operationIDFormat = defaultOperationIDFormat
 	setOperationIDFormat(meta)
 	setOperationIDFormat(m.Service.Meta)
-	setOperationIDFormat(r.Endpoint.Meta)
+	setOperationIDFormat(e.Meta)
 	setOperationIDFormat(m.Meta)
 
 	// request body
@@ -316,7 +315,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	tagNames = openapi.TagNamesFromExpr(e.Meta)
 	if len(tagNames) == 0 {
 		// By default tag with service name
-		tagNames = []string{r.Endpoint.Service.Name()}
+		tagNames = []string{e.Service.Name()}
 	}
 
 	// An endpoint can have multiple routes, so we need to be able to build a unique
@@ -634,13 +633,13 @@ func buildTags(api *expr.APIExpr) []*openapi.Tag {
 	}
 
 	// sort tag names alphabetically
-	var keys []string
+	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
-	var tags []*openapi.Tag
+	tags := make([]*openapi.Tag, 0, len(keys))
 	for _, k := range keys {
 		tags = append(tags, m[k])
 	}

@@ -1,0 +1,8 @@
+// NewMethodQueryArrayFloat32Payload builds a ServiceQueryArrayFloat32 service
+// MethodQueryArrayFloat32 endpoint payload.
+func NewMethodQueryArrayFloat32Payload(q []float32) *servicequeryarrayfloat32.MethodQueryArrayFloat32Payload {
+	v := &servicequeryarrayfloat32.MethodQueryArrayFloat32Payload{}
+	v.Q = q
+
+	return v
+}

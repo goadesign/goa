@@ -1,0 +1,4 @@
+// MethodPathNoParamServicePathNoParamPath returns the URL path to the ServicePathNoParam service MethodPathNoParam HTTP endpoint.
+func MethodPathNoParamServicePathNoParamPath() string {
+	return "/one/two"
+}

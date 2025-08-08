@@ -13,14 +13,7 @@ type SSEDataIDFieldMethodServerStream struct {
 // Send Send streams instances of
 // "ssedataidfieldservice.SSEDataIDFieldMethodResult" to the
 // "SSEDataIDFieldMethod" endpoint SSE connection.
-func (s *SSEDataIDFieldMethodServerStream) Send(v *ssedataidfieldservice.SSEDataIDFieldMethodResult) error {
-	return s.SendWithContext(context.Background(), v)
-}
-
-// SendWithContext SendWithContext streams instances of
-// "ssedataidfieldservice.SSEDataIDFieldMethodResult" to the
-// "SSEDataIDFieldMethod" endpoint SSE connection with context.
-func (s *SSEDataIDFieldMethodServerStream) SendWithContext(ctx context.Context, v *ssedataidfieldservice.SSEDataIDFieldMethodResult) error {
+func (s *SSEDataIDFieldMethodServerStream) Send(ctx context.Context, v *ssedataidfieldservice.SSEDataIDFieldMethodResult) error {
 	s.once.Do(func() {
 		header := s.w.Header()
 		if header.Get("Content-Type") == "" {
@@ -36,17 +29,13 @@ func (s *SSEDataIDFieldMethodServerStream) SendWithContext(ctx context.Context, 
 	})
 	res := v
 
-	if id := res.id; id != "" {
+	if id := res.ID; id != "" {
 		fmt.Fprintf(s.w, "id: %s\n", id)
 	}
 
 	var data string
-	dataField := res.data
-	byts, err := json.Marshal(dataField)
-	if err != nil {
-		return err
-	}
-	data = string(byts)
+	dataField := res.Data
+	data = dataField
 	fmt.Fprintf(s.w, "data: %s\n\n", data)
 
 	if f, ok := s.w.(http.Flusher); ok {

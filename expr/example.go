@@ -102,16 +102,17 @@ func NewLength(a *AttributeExpr, r *ExampleGenerator) int {
 			maxlength = float64(*a.Validation.MaxLength)
 		}
 		count := 0
-		if math.IsInf(minlength, 1) {
+		switch {
+		case math.IsInf(minlength, 1):
 			count = int(maxlength) - (r.Int() % 3)
-		} else if math.IsInf(maxlength, -1) {
+		case math.IsInf(maxlength, -1):
 			count = int(minlength) + (r.Int() % 3)
-		} else if minlength < maxlength {
+		case minlength < maxlength:
 			diff := min(int(maxlength-minlength), maxLength)
 			count = int(minlength) + (r.Int() % diff)
-		} else if minlength == maxlength {
+		case minlength == maxlength:
 			count = int(minlength)
-		} else {
+		default:
 			panic("Validation: MinLength > MaxLength")
 		}
 		if count > maxLength {
@@ -307,11 +308,12 @@ func byMinMax(a *AttributeExpr, r *ExampleGenerator) any {
 	} else if a.Validation.Maximum != nil {
 		maximum = *a.Validation.Maximum
 	}
-	if a.Validation.ExclusiveMinimum != nil {
+	switch {
+	case a.Validation.ExclusiveMinimum != nil:
 		minimum = *a.Validation.ExclusiveMinimum
-	} else if a.Validation.Minimum != nil {
+	case a.Validation.Minimum != nil:
 		minimum = *a.Validation.Minimum
-	} else {
+	default:
 		sign = -1
 		minimum = maximum
 		maximum = math.Inf(1)

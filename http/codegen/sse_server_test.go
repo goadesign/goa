@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -35,7 +36,7 @@ func TestSSE(t *testing.T) {
 			require.Greater(t, len(sections), 1)
 			code := codegen.SectionCode(t, sections[1])
 			golden := filepath.Join("testdata", "golden", "sse-"+c.Name+".golden")
-			compareOrUpdateGolden(t, code, golden)
+			testutil.CompareOrUpdateGolden(t, code, golden)
 		})
 	}
 }

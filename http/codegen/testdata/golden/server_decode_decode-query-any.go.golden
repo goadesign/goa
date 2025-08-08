@@ -1,0 +1,16 @@
+// DecodeMethodQueryAnyRequest returns a decoder for requests sent to the
+// ServiceQueryAny MethodQueryAny endpoint.
+func DecodeMethodQueryAnyRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryany.MethodQueryAnyPayload, error) {
+	return func(r *http.Request) (*servicequeryany.MethodQueryAnyPayload, error) {
+		var (
+			q any
+		)
+		qRaw := r.URL.Query().Get("q")
+		if qRaw != "" {
+			q = qRaw
+		}
+		payload := NewMethodQueryAnyPayload(q)
+
+		return payload, nil
+	}
+}

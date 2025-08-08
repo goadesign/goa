@@ -1,9 +1,9 @@
 package codegen
 
 import (
+	"goa.design/goa/v3/codegen/testutil"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
@@ -14,20 +14,19 @@ func TestClientEndpointInit(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"unary-rpcs", testdata.UnaryRPCsDSL, testdata.UnaryRPCsClientEndpointInitCode},
-		{"unary-rpc-no-payload", testdata.UnaryRPCNoPayloadDSL, testdata.UnaryRPCNoPayloadClientEndpointInitCode},
-		{"unary-rpc-no-result", testdata.UnaryRPCNoResultDSL, testdata.UnaryRPCNoResultClientEndpointInitCode},
-		{"unary-rpc-with-errors", testdata.UnaryRPCWithErrorsDSL, testdata.UnaryRPCWithErrorsClientEndpointInitCode},
-		{"unary-rpc-acronym", testdata.UnaryRPCAcronymDSL, testdata.UnaryRPCAcronymClientEndpointInitCode},
-		{"server-streaming-rpc", testdata.ServerStreamingRPCDSL, testdata.ServerStreamingRPCClientEndpointInitCode},
-		{"client-streaming-rpc", testdata.ClientStreamingRPCDSL, testdata.ClientStreamingRPCClientEndpointInitCode},
-		{"client-streaming-rpc-no-result", testdata.ClientStreamingNoResultDSL, testdata.ClientStreamingNoResultClientEndpointInitCode},
-		{"client-streaming-rpc-with-payload", testdata.ClientStreamingRPCWithPayloadDSL, testdata.ClientStreamingRPCWithPayloadClientEndpointInitCode},
-		{"bidirectional-streaming-rpc", testdata.BidirectionalStreamingRPCDSL, testdata.BidirectionalStreamingRPCClientEndpointInitCode},
-		{"bidirectional-streaming-rpc-with-payload", testdata.BidirectionalStreamingRPCWithPayloadDSL, testdata.BidirectionalStreamingRPCWithPayloadClientEndpointInitCode},
-		{"bidirectional-streaming-rpc-with-errors", testdata.BidirectionalStreamingRPCWithErrorsDSL, testdata.BidirectionalStreamingRPCWithErrorsClientEndpointInitCode},
+		{"unary-rpcs", testdata.UnaryRPCsDSL},
+		{"unary-rpc-no-payload", testdata.UnaryRPCNoPayloadDSL},
+		{"unary-rpc-no-result", testdata.UnaryRPCNoResultDSL},
+		{"unary-rpc-with-errors", testdata.UnaryRPCWithErrorsDSL},
+		{"unary-rpc-acronym", testdata.UnaryRPCAcronymDSL},
+		{"server-streaming-rpc", testdata.ServerStreamingRPCDSL},
+		{"client-streaming-rpc", testdata.ClientStreamingRPCDSL},
+		{"client-streaming-rpc-no-result", testdata.ClientStreamingNoResultDSL},
+		{"client-streaming-rpc-with-payload", testdata.ClientStreamingRPCWithPayloadDSL},
+		{"bidirectional-streaming-rpc", testdata.BidirectionalStreamingRPCDSL},
+		{"bidirectional-streaming-rpc-with-payload", testdata.BidirectionalStreamingRPCWithPayloadDSL},
+		{"bidirectional-streaming-rpc-with-errors", testdata.BidirectionalStreamingRPCWithErrorsDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -40,7 +39,7 @@ func TestClientEndpointInit(t *testing.T) {
 				t.Fatalf("got zero sections, expected at least one")
 			}
 			code := codegen.SectionsCode(t, sections)
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/client_endpoint_init_"+c.Name+".go.golden", code)
 		})
 	}
 }
@@ -49,17 +48,16 @@ func TestRequestEncoder(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"request-encoder-payload-user-type", testdata.MessageUserTypeWithNestedUserTypesDSL, testdata.PayloadUserTypeRequestEncoderCode},
-		{"request-encoder-payload-array", testdata.UnaryRPCNoResultDSL, testdata.PayloadArrayRequestEncoderCode},
-		{"request-encoder-payload-map", testdata.MessageMapDSL, testdata.PayloadMapRequestEncoderCode},
-		{"request-encoder-payload-primitive", testdata.ServerStreamingRPCDSL, testdata.PayloadPrimitiveRequestEncoderCode},
-		{"request-encoder-payload-primitive-with-streaming-payload", testdata.ClientStreamingRPCWithPayloadDSL, testdata.PayloadPrimitiveWithStreamingPayloadRequestEncoderCode},
-		{"request-encoder-payload-user-type-with-streaming-payload", testdata.BidirectionalStreamingRPCWithPayloadDSL, testdata.PayloadUserTypeWithStreamingPayloadRequestEncoderCode},
-		{"request-encoder-payload-with-metadata", testdata.MessageWithMetadataDSL, testdata.PayloadWithMetadataRequestEncoderCode},
-		{"request-encoder-payload-with-validate", testdata.MessageWithValidateDSL, testdata.PayloadWithValidateRequestEncoderCode},
-		{"request-encoder-payload-with-security-attributes", testdata.MessageWithSecurityAttrsDSL, testdata.PayloadWithSecurityAttrsRequestEncoderCode},
+		{"request-encoder-payload-user-type", testdata.MessageUserTypeWithNestedUserTypesDSL},
+		{"request-encoder-payload-array", testdata.UnaryRPCNoResultDSL},
+		{"request-encoder-payload-map", testdata.MessageMapDSL},
+		{"request-encoder-payload-primitive", testdata.ServerStreamingRPCDSL},
+		{"request-encoder-payload-primitive-with-streaming-payload", testdata.ClientStreamingRPCWithPayloadDSL},
+		{"request-encoder-payload-user-type-with-streaming-payload", testdata.BidirectionalStreamingRPCWithPayloadDSL},
+		{"request-encoder-payload-with-metadata", testdata.MessageWithMetadataDSL},
+		{"request-encoder-payload-with-validate", testdata.MessageWithValidateDSL},
+		{"request-encoder-payload-with-security-attributes", testdata.MessageWithSecurityAttrsDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -70,7 +68,7 @@ func TestRequestEncoder(t *testing.T) {
 			sections := fs[1].Section("request-encoder")
 			require.NotEmpty(t, sections)
 			code := codegen.SectionsCode(t, sections)
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/request_encoder_"+c.Name+".go.golden", code)
 		})
 	}
 }
@@ -79,19 +77,18 @@ func TestResponseDecoder(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"response-decoder-result-with-views", testdata.MessageResultTypeWithViewsDSL, testdata.ResultWithViewsResponseDecoderCode},
-		{"response-decoder-result-with-explicit-view", testdata.MessageResultTypeWithExplicitViewDSL, testdata.ResultWithExplicitViewResponseDecoderCode},
-		{"response-decoder-result-array", testdata.MessageArrayDSL, testdata.ResultArrayResponseDecoderCode},
-		{"response-decoder-result-primitive", testdata.UnaryRPCNoPayloadDSL, testdata.ResultPrimitiveResponseDecoderCode},
-		{"response-decoder-result-with-metadata", testdata.MessageWithMetadataDSL, testdata.ResultWithMetadataResponseDecoderCode},
-		{"response-decoder-result-with-validate", testdata.MessageWithValidateDSL, testdata.ResultWithValidateResponseDecoderCode},
-		{"response-decoder-result-collection", testdata.MessageResultTypeCollectionDSL, testdata.ResultCollectionResponseDecoderCode},
-		{"response-decoder-server-streaming", testdata.ServerStreamingUserTypeDSL, testdata.ServerStreamingResponseDecoderCode},
-		{"response-decoder-server-streaming-result-with-views", testdata.ServerStreamingResultWithViewsDSL, testdata.ServerStreamingResultWithViewsResponseDecoderCode},
-		{"response-decoder-client-streaming", testdata.ClientStreamingRPCDSL, testdata.ClientStreamingResponseDecoderCode},
-		{"response-decoder-bidirectional-streaming", testdata.BidirectionalStreamingRPCDSL, testdata.BidirectionalStreamingResponseDecoderCode},
+		{"response-decoder-result-with-views", testdata.MessageResultTypeWithViewsDSL},
+		{"response-decoder-result-with-explicit-view", testdata.MessageResultTypeWithExplicitViewDSL},
+		{"response-decoder-result-array", testdata.MessageArrayDSL},
+		{"response-decoder-result-primitive", testdata.UnaryRPCNoPayloadDSL},
+		{"response-decoder-result-with-metadata", testdata.MessageWithMetadataDSL},
+		{"response-decoder-result-with-validate", testdata.MessageWithValidateDSL},
+		{"response-decoder-result-collection", testdata.MessageResultTypeCollectionDSL},
+		{"response-decoder-server-streaming", testdata.ServerStreamingUserTypeDSL},
+		{"response-decoder-server-streaming-result-with-views", testdata.ServerStreamingResultWithViewsDSL},
+		{"response-decoder-client-streaming", testdata.ClientStreamingRPCDSL},
+		{"response-decoder-bidirectional-streaming", testdata.BidirectionalStreamingRPCDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -102,7 +99,7 @@ func TestResponseDecoder(t *testing.T) {
 			sections := fs[1].Section("response-decoder")
 			require.NotEmpty(t, sections)
 			code := codegen.SectionsCode(t, sections)
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/response_decoder_"+c.Name+".go.golden", code)
 		})
 	}
 }

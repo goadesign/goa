@@ -1,0 +1,23 @@
+// NewMethodEmptyErrorResponseBodyInternalError builds a
+// ServiceEmptyErrorResponseBody service MethodEmptyErrorResponseBody endpoint
+// internal_error error.
+func NewMethodEmptyErrorResponseBodyInternalError(name string, id string, message string, temporary bool, timeout bool, fault bool) *goa.ServiceError {
+	v := &goa.ServiceError{}
+	v.Name = name
+	v.ID = id
+	v.Message = message
+	v.Temporary = temporary
+	v.Timeout = timeout
+	v.Fault = fault
+
+	return v
+}
+
+// NewMethodEmptyErrorResponseBodyNotFound builds a
+// ServiceEmptyErrorResponseBody service MethodEmptyErrorResponseBody endpoint
+// not_found error.
+func NewMethodEmptyErrorResponseBodyNotFound(inHeader string) serviceemptyerrorresponsebody.NotFound {
+	v := serviceemptyerrorresponsebody.NotFound(inHeader)
+
+	return v
+}

@@ -1,0 +1,11 @@
+func transform() {
+	target := &Simple{}
+	requiredString := string(source.RequiredString)
+	target.RequiredString = &requiredString
+	defaultBool := bool(source.DefaultBool)
+	target.DefaultBool = &defaultBool
+	if source.Integer != nil {
+		integer := int(*source.Integer)
+		target.Integer = &integer
+	}
+}

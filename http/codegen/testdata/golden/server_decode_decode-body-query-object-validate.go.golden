@@ -1,0 +1,41 @@
+// DecodeMethodBodyQueryObjectValidateRequest returns a decoder for requests
+// sent to the ServiceBodyQueryObjectValidate MethodBodyQueryObjectValidate
+// endpoint.
+func DecodeMethodBodyQueryObjectValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyqueryobjectvalidate.MethodBodyQueryObjectValidatePayload, error) {
+	return func(r *http.Request) (*servicebodyqueryobjectvalidate.MethodBodyQueryObjectValidatePayload, error) {
+		var (
+			body MethodBodyQueryObjectValidateRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateMethodBodyQueryObjectValidateRequestBody(&body)
+		if err != nil {
+			return nil, err
+		}
+
+		var (
+			b string
+		)
+		b = r.URL.Query().Get("b")
+		if b == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("b", "query string"))
+		}
+		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyQueryObjectValidatePayload(&body, b)
+
+		return payload, nil
+	}
+}

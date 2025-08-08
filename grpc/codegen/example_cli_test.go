@@ -10,6 +10,7 @@ import (
 	"goa.design/goa/v3/codegen/example"
 	ctestdata "goa.design/goa/v3/codegen/example/testdata"
 	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/grpc/codegen/testdata"
 )
 
@@ -42,7 +43,7 @@ func TestExampleCLIFiles(t *testing.T) {
 			}
 			code := codegen.FormatTestCode(t, buf.String())
 			golden := filepath.Join("testdata", "client-"+c.Name+".golden")
-			compareOrUpdateGolden(t, code, golden)
+			testutil.AssertGo(t, golden, code)
 		})
 	}
 }

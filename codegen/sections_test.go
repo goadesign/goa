@@ -3,10 +3,16 @@ package codegen
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 
 	goa "goa.design/goa/v3/pkg"
 )
+
+// normalizeLineEndings converts Windows line endings to Unix line endings
+func normalizeLineEndings(s string) string {
+	return strings.ReplaceAll(s, "\r\n", "\n")
+}
 
 func TestHeader(t *testing.T) {
 	const (
@@ -90,12 +96,17 @@ package testpackage
 		"path-named-imports": {Imports: pathNamedImports, Expected: pathNamedImportsHeader},
 	}
 	for k, tc := range cases {
-		buf := new(bytes.Buffer)
-		s := Header(tc.Title, "testpackage", tc.Imports)
-		s.Write(buf) // nolint: errcheck
-		actual := buf.String()
-		if actual != tc.Expected {
-			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.Expected)
-		}
+		t.Run(k, func(t *testing.T) {
+			buf := new(bytes.Buffer)
+			s := Header(tc.Title, "testpackage", tc.Imports)
+			s.Write(buf) // nolint: errcheck
+			actual := buf.String()
+			// Normalize line endings for cross-platform compatibility
+			actual = normalizeLineEndings(actual)
+			expected := normalizeLineEndings(tc.Expected)
+			if actual != expected {
+				t.Errorf("%s: got %#v, expected %#v", k, actual, expected)
+			}
+		})
 	}
 }
