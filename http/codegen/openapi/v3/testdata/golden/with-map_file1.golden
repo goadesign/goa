@@ -1,7 +1,8 @@
-openapi: 3.0.3
+openapi: 3.1.1
 info:
     title: Goa API
     version: 0.0.1
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 servers:
     - url: http://localhost:80
       description: Default server for test api
@@ -53,9 +54,10 @@ components:
             properties:
                 string:
                     type: string
-                    example: ""
-            example:
-                string: ""
+                    examples:
+                        - ""
+            examples:
+                - string: ""
         GoaFoobar:
             type: object
             properties:
@@ -63,60 +65,63 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/Bar'
-                    example:
-                        - string: ""
-                        - string: ""
-                        - string: ""
-                        - string: ""
+                    examples:
+                        - - string: ""
+                          - string: ""
+                          - string: ""
+                          - string: ""
                 foo:
                     type: string
-                    example: ""
-            example:
-                bar:
+                    examples:
+                        - ""
+            examples:
+                - bar:
                     - string: ""
                     - string: ""
-                foo: ""
+                  foo: ""
         TestEndpointRequestBody:
             type: object
             properties:
                 int_map:
                     type: object
-                    example:
-                        "": 1
+                    examples:
+                        - "": 1
                     additionalProperties:
                         type: integer
-                        example: 1
+                        examples:
+                            - 1
                         format: int64
                 type_map:
                     type: object
-                    example:
-                        "":
+                    examples:
+                        - "":
                             string: ""
                     additionalProperties:
                         $ref: '#/components/schemas/Bar'
                 uint_map:
                     type: object
-                    example:
-                        "": 1
+                    examples:
+                        - "": 1
                     additionalProperties:
                         type: integer
-                        example: 1
+                        examples:
+                            - 1
                         format: int64
-            example:
-                int_map:
+            examples:
+                - int_map:
                     "": 1
-                type_map:
+                  type_map:
                     "":
                         string: ""
-                uint_map:
+                  uint_map:
                     "": 1
         TestEndpointResponseBody:
             type: object
             properties:
                 resulttype_map:
                     type: object
-                    example:
-                        "":
+                    examples:
+                        - "":
                             bar:
                                 - string: ""
                                 - string: ""
@@ -127,22 +132,24 @@ components:
                         $ref: '#/components/schemas/GoaFoobar'
                 uint32_map:
                     type: object
-                    example:
-                        "": 1
+                    examples:
+                        - "": 1
                     additionalProperties:
                         type: integer
-                        example: 1
+                        examples:
+                            - 1
                         format: int32
                 uint64_map:
                     type: object
-                    example:
-                        "": 1
+                    examples:
+                        - "": 1
                     additionalProperties:
                         type: integer
-                        example: 1
+                        examples:
+                            - 1
                         format: int64
-            example:
-                resulttype_map:
+            examples:
+                - resulttype_map:
                     "":
                         bar:
                             - string: ""
@@ -150,9 +157,9 @@ components:
                             - string: ""
                             - string: ""
                         foo: ""
-                uint32_map:
+                  uint32_map:
                     "": 1
-                uint64_map:
+                  uint64_map:
                     "": 1
 tags:
     - name: test service

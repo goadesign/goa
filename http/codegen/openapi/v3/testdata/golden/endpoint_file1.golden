@@ -1,8 +1,9 @@
-openapi: 3.0.3
+openapi: 3.1.1
 info:
     title: Goa API
     version: 0.0.1
     x-test-api: API
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 servers:
     - url: https://goa.design
 paths:
@@ -37,20 +38,22 @@ components:
             type: object
             properties:
                 string:
-                    example: ""
+                    examples:
+                        - ""
                     type: string
                     x-test-schema: Payload
-            example:
-                string: ""
+            examples:
+                - string: ""
         Result:
             type: object
             properties:
                 string:
-                    example: ""
+                    examples:
+                        - ""
                     type: string
                     x-test-schema: Result
-            example:
-                string: ""
+            examples:
+                - string: ""
 tags:
     - description: Description of Backend
       externalDocs:

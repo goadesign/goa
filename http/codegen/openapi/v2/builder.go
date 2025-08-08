@@ -19,6 +19,12 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	if root == nil {
 		return nil, nil
 	}
+	
+	// Set flag to generate v2-compatible schemas
+	openapi.GenerateForOpenAPIv2 = true
+	defer func() {
+		openapi.GenerateForOpenAPIv2 = false // Reset after generation
+	}()
 	tags := openapi.TagsFromExpr(root.API.Meta)
 	u, err := url.Parse(defaultURI(h))
 	if err != nil {

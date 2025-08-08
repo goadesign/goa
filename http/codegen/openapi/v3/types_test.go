@@ -2,6 +2,7 @@ package openapiv3
 
 import (
 	"encoding/json"
+	"fmt"
 	"hash/fnv"
 	"strings"
 	"testing"
@@ -241,8 +242,18 @@ func matchesSchemaWithPrefix(t *testing.T, ctx string, s *openapi.Schema, types 
 			return
 		}
 	}
-	if tt.Type != string(s.Type) {
-		t.Errorf("%s: %sgot type %q, expected %q", ctx, prefix, s.Type, tt.Type)
+	// Handle Type which can be string or array
+	var typeStr string
+	switch ty := s.Type.(type) {
+	case string:
+		typeStr = ty
+	case openapi.Type:
+		typeStr = string(ty)
+	default:
+		typeStr = fmt.Sprintf("%v", ty)
+	}
+	if tt.Type != typeStr {
+		t.Errorf("%s: %sgot type %q, expected %q", ctx, prefix, typeStr, tt.Type)
 	}
 	if tt.Format != "" {
 		if s.Format != tt.Format {
@@ -440,9 +451,18 @@ func validateAdditionalPropsSchema(t *testing.T, ctx string, schema *openapi.Sch
 		schema = resolvedSchema
 	}
 
-	// Check type
-	if string(schema.Type) != expected.Type {
-		t.Errorf("%s: %sexpected type %s, got %s", ctx, prefix, expected.Type, schema.Type)
+	// Check type - handle Type which can be string or array
+	var typeStr string
+	switch ty := schema.Type.(type) {
+	case string:
+		typeStr = ty
+	case openapi.Type:
+		typeStr = string(ty)
+	default:
+		typeStr = fmt.Sprintf("%v", ty)
+	}
+	if typeStr != expected.Type {
+		t.Errorf("%s: %sexpected type %s, got %s", ctx, prefix, expected.Type, typeStr)
 	}
 
 	// Check array items if expected

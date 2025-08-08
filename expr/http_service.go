@@ -48,6 +48,8 @@ type (
 		// JSONRPCRoute is the route used for all JSON-RPC endpoints in this service.
 		// Only applicable to JSON-RPC services.
 		JSONRPCRoute *RouteExpr
+		// HTTPWebhooks is the list of HTTP webhooks
+		HTTPWebhooks []*HTTPWebhookExpr
 		// Meta is a set of key/value pairs with semantic that is
 		// specific to each generator.
 		Meta MetaExpr
@@ -166,6 +168,33 @@ func (svc *HTTPServiceExpr) HTTPError(name string) *HTTPErrorExpr {
 	return nil
 }
 
+// Webhook returns the webhook with the given name if any.
+func (svc *HTTPServiceExpr) Webhook(name string) *HTTPWebhookExpr {
+	for _, w := range svc.HTTPWebhooks {
+		if w.Parent != nil && w.Parent.Name == name {
+			return w
+		}
+	}
+	return nil
+}
+
+// WebhookFor creates or returns the HTTP webhook for the given webhook expression.
+func (svc *HTTPServiceExpr) WebhookFor(w *WebhookExpr) *HTTPWebhookExpr {
+	if hw := svc.Webhook(w.Name); hw != nil {
+		return hw
+	}
+	hw := w.HTTP
+	if hw == nil {
+		hw = &HTTPWebhookExpr{
+			Parent: w,
+			Method: "POST", // Default to POST
+			Path:   "/" + w.Name,
+		}
+	}
+	svc.HTTPWebhooks = append(svc.HTTPWebhooks, hw)
+	return hw
+}
+
 // EvalName returns the generic definition name used in error messages.
 func (svc *HTTPServiceExpr) EvalName() string {
 	if svc.Name() == "" {
@@ -174,11 +203,36 @@ func (svc *HTTPServiceExpr) EvalName() string {
 	return fmt.Sprintf("service %#v", svc.Name())
 }
 
-// Prepare initializes the error responses.
+// Prepare initializes the error responses and webhooks.
 func (svc *HTTPServiceExpr) Prepare() {
 	// Create routes for JSON-RPC endpoints if needed
 	if svc.ServiceExpr.Meta != nil && svc.ServiceExpr.Meta["jsonrpc:service"] != nil {
 		svc.prepareJSONRPCRoutes()
+	}
+
+	// Prepare webhooks - map service webhooks to HTTP webhooks
+	for _, w := range svc.ServiceExpr.Webhooks {
+		if w.HTTP != nil {
+			// If HTTP config was provided in DSL, use it
+			if w.HTTP.Parent == nil {
+				w.HTTP.Parent = w
+			}
+			svc.HTTPWebhooks = append(svc.HTTPWebhooks, w.HTTP)
+		} else {
+			// Create default HTTP webhook if not specified
+			hw := &HTTPWebhookExpr{
+				Parent: w,
+				Method: "POST",
+				Path:   "/" + w.Name,
+				Body:   w.Payload,
+			}
+			svc.HTTPWebhooks = append(svc.HTTPWebhooks, hw)
+		}
+	}
+
+	// Prepare webhooks
+	for _, w := range svc.HTTPWebhooks {
+		w.Prepare()
 	}
 
 	// Lookup undefined HTTP errors in API.
@@ -218,6 +272,9 @@ func (svc *HTTPServiceExpr) Validate() error {
 
 	// Validate errors
 	svc.validateErrors(verr)
+
+	// Validate webhooks
+	svc.validateWebhooks(verr)
 
 	// Validate transport compatibility
 	svc.validateTransports(verr)
@@ -277,6 +334,17 @@ func (svc *HTTPServiceExpr) validateErrors(verr *eval.ValidationErrors) {
 		// generated root that the eval engine would process after. Keep
 		// things simple for now.
 		verr.Merge(er.Validate())
+	}
+}
+
+// validateWebhooks validates webhooks
+func (svc *HTTPServiceExpr) validateWebhooks(verr *eval.ValidationErrors) {
+	for _, w := range svc.HTTPWebhooks {
+		if w.Parent == nil {
+			verr.Add(svc, "Webhook missing parent expression")
+			continue
+		}
+		verr.Merge(w.Validate("webhook "+w.Parent.Name, svc))
 	}
 }
 

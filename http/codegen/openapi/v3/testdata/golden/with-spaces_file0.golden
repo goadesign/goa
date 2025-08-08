@@ -2,38 +2,25 @@
   "components": {
     "schemas": {
       "Bar": {
-        "example": {
-          "string": ""
-        },
+        "examples": [
+          {
+            "string": ""
+          }
+        ],
         "properties": {
           "string": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string"
           }
         },
         "type": "object"
       },
       "GoaFoobar": {
-        "example": {
-          "bar": [
-            {
-              "string": ""
-            },
-            {
-              "string": ""
-            }
-          ],
-          "foo": ""
-        },
-        "properties": {
-          "bar": {
-            "example": [
-              {
-                "string": ""
-              },
-              {
-                "string": ""
-              },
+        "examples": [
+          {
+            "bar": [
               {
                 "string": ""
               },
@@ -41,13 +28,36 @@
                 "string": ""
               }
             ],
+            "foo": ""
+          }
+        ],
+        "properties": {
+          "bar": {
+            "examples": [
+              [
+                {
+                  "string": ""
+                },
+                {
+                  "string": ""
+                },
+                {
+                  "string": ""
+                },
+                {
+                  "string": ""
+                }
+              ]
+            ],
             "items": {
               "$ref": "#/components/schemas/Bar"
             },
             "type": "array"
           },
           "foo": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string"
           }
         },
@@ -59,7 +69,8 @@
     "title": "Goa API",
     "version": "0.0.1"
   },
-  "openapi": "3.0.3",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": "3.1.1",
   "paths": {
     "/": {
       "post": {

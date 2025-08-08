@@ -4,7 +4,8 @@
     "title": "Goa API",
     "version": "0.0.1"
   },
-  "openapi": "3.0.3",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": "3.1.1",
   "paths": {
     "/": {
       "post": {
@@ -14,7 +15,9 @@
             "application/json": {
               "example": "",
               "schema": {
-                "example": "",
+                "examples": [
+                  ""
+                ],
                 "maxLength": 42,
                 "minLength": 0,
                 "type": "string"
@@ -29,7 +32,9 @@
               "application/json": {
                 "example": "",
                 "schema": {
-                  "example": "",
+                  "examples": [
+                    ""
+                  ],
                   "maxLength": 42,
                   "minLength": 0,
                   "type": "string"

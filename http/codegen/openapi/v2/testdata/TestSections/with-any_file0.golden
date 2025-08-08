@@ -19,7 +19,8 @@
       },
       "properties": {
         "any": {
-          "example": ""
+          "example": "",
+          "type": ""
         },
         "any_array": {
           "example": [
@@ -29,7 +30,8 @@
             ""
           ],
           "items": {
-            "example": ""
+            "example": "",
+            "type": ""
           },
           "type": "array"
         },
@@ -57,7 +59,8 @@
       },
       "properties": {
         "any": {
-          "example": ""
+          "example": "",
+          "type": ""
         },
         "any_array": {
           "example": [
@@ -67,7 +70,8 @@
             ""
           ],
           "items": {
-            "example": ""
+            "example": "",
+            "type": ""
           },
           "type": "array"
         },

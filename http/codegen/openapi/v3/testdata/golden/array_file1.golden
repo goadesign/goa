@@ -1,7 +1,8 @@
-openapi: 3.0.3
+openapi: 3.1.1
 info:
     title: Goa API
     version: 0.0.1
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 servers:
     - url: https://goa.design
 paths:
@@ -19,16 +20,16 @@ paths:
                             type: array
                             items:
                                 $ref: '#/components/schemas/Foobar'
-                            example:
-                                - bar:
-                                    - string: ""
-                                  foo: []
-                                - bar:
-                                    - string: ""
-                                  foo: []
-                                - bar:
-                                    - string: ""
-                                  foo: []
+                            examples:
+                                - - bar:
+                                        - string: ""
+                                    foo: []
+                                  - bar:
+                                        - string: ""
+                                    foo: []
+                                  - bar:
+                                        - string: ""
+                                    foo: []
                         example:
                             - bar:
                                 - string: ""
@@ -49,7 +50,8 @@ paths:
                         application/json:
                             schema:
                                 type: string
-                                example: ""
+                                examples:
+                                    - ""
                                 minLength: 0
                                 maxLength: 42
                             example: ""
@@ -60,11 +62,12 @@ components:
             properties:
                 string:
                     type: string
-                    example: ""
+                    examples:
+                        - ""
                     minLength: 0
                     maxLength: 42
-            example:
-                string: ""
+            examples:
+                - string: ""
         Foobar:
             type: object
             properties:
@@ -72,24 +75,26 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/Bar'
-                    example:
-                        - string: ""
-                        - string: ""
+                    examples:
+                        - - string: ""
+                          - string: ""
                     minItems: 0
                     maxItems: 42
                 foo:
                     type: array
                     items:
                         type: string
-                        example: Beatae non id consequatur.
-                    example: []
+                        examples:
+                            - Beatae non id consequatur.
+                    examples:
+                        - []
                     minItems: 0
                     maxItems: 42
-            example:
-                bar:
+            examples:
+                - bar:
                     - string: ""
                     - string: ""
-                foo:
+                  foo:
                     - Repudiandae sit.
                     - Asperiores fuga qui rem qui earum eos.
 tags:

@@ -4,7 +4,8 @@
     "title": "Goa API",
     "version": "0.0.1"
   },
-  "openapi": "3.0.3",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": "3.1.1",
   "paths": {
     "/{foo}/{bar}": {
       "post": {
@@ -16,7 +17,9 @@
             "name": "foo",
             "required": true,
             "schema": {
-              "example": 9176544974339886000,
+              "examples": [
+                9176544974339886000
+              ],
               "format": "int64",
               "type": "integer"
             }
@@ -27,7 +30,9 @@
             "name": "bar",
             "required": true,
             "schema": {
-              "example": 2166276375441812200,
+              "examples": [
+                2166276375441812200
+              ],
               "format": "int64",
               "type": "integer"
             }

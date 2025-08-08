@@ -1,7 +1,8 @@
-openapi: 3.0.3
+openapi: 3.1.1
 info:
     title: Goa API
     version: 0.0.1
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 servers:
     - url: http://localhost:80
       description: Default server for test api
@@ -52,9 +53,10 @@ components:
             properties:
                 string:
                     type: string
-                    example: ""
-            example:
-                string: ""
+                    examples:
+                        - ""
+            examples:
+                - string: ""
         GoaFoobar:
             type: object
             properties:
@@ -62,18 +64,19 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/Bar'
-                    example:
-                        - string: ""
-                        - string: ""
-                        - string: ""
-                        - string: ""
+                    examples:
+                        - - string: ""
+                          - string: ""
+                          - string: ""
+                          - string: ""
                 foo:
                     type: string
-                    example: ""
-            example:
-                bar:
+                    examples:
+                        - ""
+            examples:
+                - bar:
                     - string: ""
                     - string: ""
-                foo: ""
+                  foo: ""
 tags:
     - name: test service

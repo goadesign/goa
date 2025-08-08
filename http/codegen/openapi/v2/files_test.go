@@ -54,8 +54,10 @@ func TestSections(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// Reset global variables
+			// Reset global variables and set v2 flag
 			openapi.Definitions = make(map[string]*openapi.Schema)
+			openapi.GenerateForOpenAPIv2 = true
+			defer func() { openapi.GenerateForOpenAPIv2 = false }()
 			root := httpgen.RunHTTPDSL(t, c.DSL)
 			oFiles, err := openapiv2.Files(root)
 			if err != nil {
@@ -111,8 +113,10 @@ func TestValidations(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// Reset global variables
+			// Reset global variables and set v2 flag
 			openapi.Definitions = make(map[string]*openapi.Schema)
+			openapi.GenerateForOpenAPIv2 = true
+			defer func() { openapi.GenerateForOpenAPIv2 = false }()
 			root := httpgen.RunHTTPDSL(t, c.DSL)
 			oFiles, err := openapiv2.Files(root)
 			require.NoError(t, err, "OpenAPI failed")
@@ -155,8 +159,10 @@ func TestExtensions(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// Reset global variables
+			// Reset global variables and set v2 flag
 			openapi.Definitions = make(map[string]*openapi.Schema)
+			openapi.GenerateForOpenAPIv2 = true
+			defer func() { openapi.GenerateForOpenAPIv2 = false }()
 			root := httpgen.RunHTTPDSL(t, c.DSL)
 			oFiles, err := openapiv2.Files(root)
 			require.NoError(t, err, "OpenAPI failed")

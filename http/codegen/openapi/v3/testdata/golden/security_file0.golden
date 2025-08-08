@@ -59,7 +59,8 @@
     "title": "Goa API",
     "version": "0.0.1"
   },
-  "openapi": "3.0.3",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": "3.1.1",
   "paths": {
     "/": {
       "get": {
@@ -72,7 +73,9 @@
             "name": "k",
             "required": true,
             "schema": {
-              "example": "Quia molestias.",
+              "examples": [
+                "Quia molestias."
+              ],
               "type": "string"
             }
           },
@@ -83,7 +86,9 @@
             "name": "Token",
             "required": true,
             "schema": {
-              "example": "Et tempora et quae.",
+              "examples": [
+                "Et tempora et quae."
+              ],
               "type": "string"
             }
           },
@@ -94,7 +99,9 @@
             "name": "X-Authorization",
             "required": true,
             "schema": {
-              "example": "Ullam aut.",
+              "examples": [
+                "Ullam aut."
+              ],
               "type": "string"
             }
           }
@@ -131,7 +138,9 @@
             "name": "auth",
             "required": true,
             "schema": {
-              "example": "Harum et.",
+              "examples": [
+                "Harum et."
+              ],
               "type": "string"
             }
           }

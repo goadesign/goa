@@ -44,7 +44,7 @@ func (s *Schema) createMergeItems(other *Schema) mergeItems {
 
 	return mergeItems{
 		{&s.ID, other.ID, s.ID == ""},
-		{&s.Type, other.Type, s.Type == ""},
+		{&s.Type, other.Type, s.Type == nil || s.Type == ""},
 		{&s.Ref, other.Ref, s.Ref == ""},
 		{&s.Items, other.Items, s.Items == nil},
 		{&s.DefaultValue, other.DefaultValue, s.DefaultValue == nil},

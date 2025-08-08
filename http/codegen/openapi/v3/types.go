@@ -97,7 +97,15 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 				if sreq.Ref != "" {
 					note = sreq.Ref
 				} else {
-					note = string(sreq.Type)
+					// Handle Type which can be string or array
+					switch t := sreq.Type.(type) {
+					case string:
+						note = t
+					case openapi.Type:
+						note = string(t)
+					default:
+						note = fmt.Sprintf("%v", t)
+					}
 				}
 				if req == nil {
 					req = sreq
@@ -143,6 +151,11 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 }
 
 func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi.Schema {
+	return sf.schemafyWithNullable(attr, false, noref...)
+}
+
+// schemafyWithNullable creates a schema with nullable support
+func (sf *schemafier) schemafyWithNullable(attr *expr.AttributeExpr, nullable bool, noref ...bool) *openapi.Schema {
 	if attr.Type == expr.Empty {
 		return nil
 	}
@@ -157,16 +170,32 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		case expr.IntKind, expr.UIntKind, expr.Int64Kind, expr.UInt64Kind:
 			// Use int64 format for IntKind and UIntKind because the OpenAPI
 			// generator produced int32 by default.
-			s.Type = openapi.Type("integer")
+			if nullable {
+				s.SetNullableType(openapi.Type("integer"))
+			} else {
+				s.SetType(openapi.Type("integer"))
+			}
 			s.Format = "int64"
 		case expr.Int32Kind, expr.UInt32Kind:
-			s.Type = openapi.Type("integer")
+			if nullable {
+				s.SetNullableType(openapi.Type("integer"))
+			} else {
+				s.SetType(openapi.Type("integer"))
+			}
 			s.Format = "int32"
 		case expr.Float32Kind:
-			s.Type = openapi.Type("number")
+			if nullable {
+				s.SetNullableType(openapi.Type("number"))
+			} else {
+				s.SetType(openapi.Type("number"))
+			}
 			s.Format = "float"
 		case expr.Float64Kind:
-			s.Type = openapi.Type("number")
+			if nullable {
+				s.SetNullableType(openapi.Type("number"))
+			} else {
+				s.SetType(openapi.Type("number"))
+			}
 			s.Format = "double"
 		case expr.BytesKind:
 			if bases := attr.Bases; len(bases) > 0 {
@@ -176,33 +205,47 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 					s.AnyOf = append(s.AnyOf, val)
 				}
 			} else {
-				s.Type = openapi.Type("string")
+				if nullable {
+					s.SetNullableType(openapi.Type("string"))
+				} else {
+					s.SetType(openapi.Type("string"))
+				}
 				s.Format = "binary"
 			}
 		case expr.AnyKind:
 			// A schema without a type matches any data type.
 			// See https://swagger.io/docs/specification/data-models/data-types/#any.
-			s.Type = openapi.Type("")
+			s.SetType(openapi.Type(""))
 		default:
-			s.Type = openapi.Type(t.Name())
+			if nullable {
+				s.SetNullableType(openapi.Type(t.Name()))
+			} else {
+				s.SetType(openapi.Type(t.Name()))
+			}
 		}
 	case *expr.Array:
-		s.Type = openapi.Array
+		s.SetType(openapi.Array)
 		s.Items = sf.schemafy(t.ElemType)
 	case *expr.Object:
-		s.Type = openapi.Object
+		s.SetType(openapi.Object)
 		var itemNotes []string
 		for _, nat := range *t {
 			if !openapi.MustGenerate(nat.Attribute.Meta) {
 				continue
 			}
-			s.Properties[nat.Name] = sf.schemafy(nat.Attribute)
+			// Check if this field should be nullable (not required and is a pointer type)
+			isNullable := false
+			if attr.Validation != nil && !attr.IsRequired(nat.Name) {
+				// Field is not required, so it can be null in OpenAPI 3.1
+				isNullable = true
+			}
+			s.Properties[nat.Name] = sf.schemafyWithNullable(nat.Attribute, isNullable)
 		}
 		if len(itemNotes) > 0 {
 			note = strings.Join(itemNotes, "\n")
 		}
 	case *expr.Map:
-		s.Type = openapi.Object
+		s.SetType(openapi.Object)
 		if t.ElemType.Type == expr.Any {
 			// Use free-form objects when elements are of type "Any", otherwise, use full schema
 			// See https://swagger.io/docs/specification/data-models/dictionaries/.
@@ -261,7 +304,11 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 
 	// Default value, example, extensions
 	s.DefaultValue = toStringMap(attr.DefaultValue)
-	s.Example = attr.Example(sf.rand)
+	// For OpenAPI 3.1, use Examples array only (not both example and examples)
+	if example := attr.Example(sf.rand); example != nil {
+		s.Examples = []any{example}
+		// Don't set Example field in OpenAPI 3.1 to avoid conflicts
+	}
 	s.Extensions = openapi.ExtensionsFromExpr(attr.Meta)
 
 	// Validations

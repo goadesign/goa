@@ -2,12 +2,16 @@
   "components": {
     "schemas": {
       "Payload": {
-        "example": {
-          "string": ""
-        },
+        "examples": [
+          {
+            "string": ""
+          }
+        ],
         "properties": {
           "string": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string",
             "x-test-schema": "Payload"
           }
@@ -15,12 +19,16 @@
         "type": "object"
       },
       "Result": {
-        "example": {
-          "string": ""
-        },
+        "examples": [
+          {
+            "string": ""
+          }
+        ],
         "properties": {
           "string": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string",
             "x-test-schema": "Result"
           }
@@ -34,7 +42,8 @@
     "version": "0.0.1",
     "x-test-api": "API"
   },
-  "openapi": "3.0.3",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": "3.1.1",
   "paths": {
     "/": {
       "post": {

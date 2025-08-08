@@ -37,10 +37,12 @@ definitions:
         type: object
         properties:
             any:
+                type: ""
                 example: ""
             any_array:
                 type: array
                 items:
+                    type: ""
                     example: ""
                 example:
                     - ""
@@ -65,10 +67,12 @@ definitions:
         type: object
         properties:
             any:
+                type: ""
                 example: ""
             any_array:
                 type: array
                 items:
+                    type: ""
                     example: ""
                 example:
                     - ""

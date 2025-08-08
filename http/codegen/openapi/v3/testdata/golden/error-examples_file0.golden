@@ -2,43 +2,57 @@
   "components": {
     "schemas": {
       "Error": {
-        "example": {
-          "fault": true,
-          "id": "123abc",
-          "message": "parameter 'p' must be an integer",
-          "name": "bad_request",
-          "temporary": true,
-          "timeout": true
-        },
+        "examples": [
+          {
+            "fault": true,
+            "id": "123abc",
+            "message": "parameter 'p' must be an integer",
+            "name": "bad_request",
+            "temporary": true,
+            "timeout": true
+          }
+        ],
         "properties": {
           "fault": {
             "description": "Is the error a server-side fault?",
-            "example": true,
+            "examples": [
+              true
+            ],
             "type": "boolean"
           },
           "id": {
             "description": "ID is a unique identifier for this particular occurrence of the problem.",
-            "example": "123abc",
+            "examples": [
+              "123abc"
+            ],
             "type": "string"
           },
           "message": {
             "description": "Message is a human-readable explanation specific to this occurrence of the problem.",
-            "example": "parameter 'p' must be an integer",
+            "examples": [
+              "parameter 'p' must be an integer"
+            ],
             "type": "string"
           },
           "name": {
             "description": "Name is the name of this class of errors.",
-            "example": "bad_request",
+            "examples": [
+              "bad_request"
+            ],
             "type": "string"
           },
           "temporary": {
             "description": "Is the error temporary?",
-            "example": true,
+            "examples": [
+              true
+            ],
             "type": "boolean"
           },
           "timeout": {
             "description": "Is the error a timeout?",
-            "example": false,
+            "examples": [
+              false
+            ],
             "type": "boolean"
           }
         },
@@ -53,17 +67,23 @@
         "type": "object"
       },
       "GoaCustomError": {
-        "example": {
-          "message": "error message",
-          "name": "custom"
-        },
+        "examples": [
+          {
+            "message": "error message",
+            "name": "custom"
+          }
+        ],
         "properties": {
           "message": {
-            "example": "error message",
+            "examples": [
+              "error message"
+            ],
             "type": "string"
           },
           "name": {
-            "example": "custom",
+            "examples": [
+              "custom"
+            ],
             "type": "string"
           }
         },
@@ -79,7 +99,8 @@
     "title": "Goa API",
     "version": "0.0.1"
   },
-  "openapi": "3.0.3",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": "3.1.1",
   "paths": {
     "/": {
       "get": {

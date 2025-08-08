@@ -2,18 +2,24 @@
   "components": {
     "schemas": {
       "JSON": {
-        "example": {
-          "int": 1,
-          "string": ""
-        },
+        "examples": [
+          {
+            "int": 1,
+            "string": ""
+          }
+        ],
         "properties": {
           "int": {
-            "example": 1,
+            "examples": [
+              1
+            ],
             "format": "int64",
             "type": "integer"
           },
           "string": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string"
           }
         },
@@ -21,12 +27,16 @@
       },
       "TestEndpointTinyResponseBodyTiny": {
         "description": "TestEndpointTinyResponseBody result type (tiny view)",
-        "example": {
-          "string": ""
-        },
+        "examples": [
+          {
+            "string": ""
+          }
+        ],
         "properties": {
           "string": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string"
           }
         },
@@ -38,7 +48,8 @@
     "title": "Goa API",
     "version": "0.0.1"
   },
-  "openapi": "3.0.3",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": "3.1.1",
   "paths": {
     "/": {
       "get": {

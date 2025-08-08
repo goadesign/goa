@@ -2,14 +2,13 @@ package openapiv3_test
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"path/filepath"
 	"strings"
 	"testing"
 	"text/template"
 
-	"github.com/getkin/kin-openapi/openapi3"
+	"github.com/pb33f/libopenapi"
 
 	"goa.design/goa/v3/codegen/testutil"
 	httpgen "goa.design/goa/v3/http/codegen"
@@ -106,11 +105,22 @@ func TestFiles(t *testing.T) {
 
 
 func validateSwagger(t *testing.T, b []byte) {
-	swagger, err := openapi3.NewLoader().LoadFromData(b)
-	if err == nil {
-		err = swagger.Validate(context.Background())
-	}
+	// Use libopenapi which supports OpenAPI 3.1
+	document, err := libopenapi.NewDocument(b)
 	if err != nil {
-		t.Errorf("invalid spec: %s\nspec:\n%s", err.Error(), string(b))
+		t.Errorf("failed to parse OpenAPI spec: %s\nspec:\n%s", err.Error(), string(b))
+		return
+	}
+	
+	// Check the version to determine which model to build
+	version := document.GetVersion()
+	if strings.HasPrefix(version, "3.1") || strings.HasPrefix(version, "3.0") {
+		// BuildV3Model handles both OpenAPI 3.0 and 3.1
+		_, errs := document.BuildV3Model()
+		if len(errs) > 0 {
+			t.Errorf("invalid OpenAPI %s spec: %v\nspec:\n%s", version, errs, string(b))
+		}
+	} else {
+		t.Errorf("unexpected OpenAPI version: %s", version)
 	}
 }

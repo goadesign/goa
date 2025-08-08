@@ -6,59 +6,59 @@ import (
 
 type (
 	// ParameterRef represents an OpenAPI reference to a Parameter object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#referenceObject
+	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.1.1.md#referenceObject
 	ParameterRef struct {
 		Ref   string
 		Value *Parameter
 	}
 
 	// ResponseRef represents an OpenAPI reference to a Response object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#referenceObject
+	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.1.1.md#referenceObject
 	ResponseRef struct {
 		Ref   string
 		Value *Response
 	}
 
 	// HeaderRef represents an OpenAPI reference to a Header object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#referenceObject
+	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.1.1.md#referenceObject
 	HeaderRef struct {
 		Ref   string
 		Value *Header
 	}
 
 	// CallbackRef represents an OpenAPI reference to a Callback object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#referenceObject
+	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.1.1.md#referenceObject
 	CallbackRef struct {
 		Ref   string
 		Value map[string]*PathItem
 	}
 
 	// ExampleRef represents an OpenAPI reference to a Example object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#referenceObject
+	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.1.1.md#referenceObject
 	ExampleRef struct {
 		Ref   string
 		Value *Example
 
 		// LinkRef represents an OpenAPI reference to a Link object as defined in
-		// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#referenceObject
+		// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.1.1.md#referenceObject
 	}
 
 	// LinkRef represents an OpenAPI reference to a Link object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#referenceObject
+	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.1.1.md#referenceObject
 	LinkRef struct {
 		Ref   string
 		Value *Link
 	}
 
 	// RequestBodyRef represents an OpenAPI reference to a RequestBody object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#referenceObject
+	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.1.1.md#referenceObject
 	RequestBodyRef struct {
 		Ref   string
 		Value *RequestBody
 	}
 
 	// SecuritySchemeRef represents an OpenAPI reference to a SecurityScheme object as defined in
-	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#referenceObject
+	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.1.1.md#referenceObject
 	SecuritySchemeRef struct {
 		Ref   string
 		Value *SecurityScheme

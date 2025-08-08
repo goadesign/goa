@@ -98,6 +98,15 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	}
 	walk(methods)
 
+	// Webhooks (must be done after services)
+	var webhooks eval.ExpressionSet
+	for _, s := range r.Services {
+		for _, w := range s.Webhooks {
+			webhooks = append(webhooks, w)
+		}
+	}
+	walk(webhooks)
+
 	// HTTP services and endpoints
 	r.walkHTTPServices(r.API.HTTP.Services, walk)
 

@@ -2,72 +2,96 @@
   "components": {
     "schemas": {
       "BarPayload": {
-        "example": {
-          "value": ""
-        },
+        "examples": [
+          {
+            "value": ""
+          }
+        ],
         "properties": {
           "value": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string"
           }
         },
         "type": "object"
       },
       "BazPayload": {
-        "example": {
-          "value": ""
-        },
+        "examples": [
+          {
+            "value": ""
+          }
+        ],
         "properties": {
           "value": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string"
           }
         },
         "type": "object"
       },
       "BazResult": {
-        "example": {
-          "value": ""
-        },
+        "examples": [
+          {
+            "value": ""
+          }
+        ],
         "properties": {
           "value": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string"
           }
         },
         "type": "object"
       },
       "Foo": {
-        "example": {
-          "value": ""
-        },
+        "examples": [
+          {
+            "value": ""
+          }
+        ],
         "properties": {
           "value": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string"
           }
         },
         "type": "object"
       },
       "FooResult": {
-        "example": {
-          "value": ""
-        },
+        "examples": [
+          {
+            "value": ""
+          }
+        ],
         "properties": {
           "value": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string"
           }
         },
         "type": "object"
       },
       "GoaExampleBar": {
-        "example": {
-          "value": ""
-        },
+        "examples": [
+          {
+            "value": ""
+          }
+        ],
         "properties": {
           "value": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string"
           }
         },
@@ -79,7 +103,8 @@
     "title": "Goa API",
     "version": "0.0.1"
   },
-  "openapi": "3.0.3",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": "3.1.1",
   "paths": {
     "/bar": {
       "post": {

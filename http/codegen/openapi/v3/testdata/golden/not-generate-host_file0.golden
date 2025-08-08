@@ -4,7 +4,8 @@
     "title": "Goa API",
     "version": "0.0.1"
   },
-  "openapi": "3.0.3",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": "3.1.1",
   "paths": {
     "/": {
       "get": {
@@ -15,7 +16,9 @@
               "application/json": {
                 "example": "Aut sed ducimus repudiandae sit explicabo asperiores.",
                 "schema": {
-                  "example": "Beatae non id consequatur.",
+                  "examples": [
+                    "Beatae non id consequatur."
+                  ],
                   "type": "string"
                 }
               }

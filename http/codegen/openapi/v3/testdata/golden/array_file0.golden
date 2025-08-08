@@ -2,12 +2,16 @@
   "components": {
     "schemas": {
       "Bar": {
-        "example": {
-          "string": ""
-        },
+        "examples": [
+          {
+            "string": ""
+          }
+        ],
         "properties": {
           "string": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "maxLength": 42,
             "minLength": 0,
             "type": "string"
@@ -16,29 +20,33 @@
         "type": "object"
       },
       "Foobar": {
-        "example": {
-          "bar": [
-            {
-              "string": ""
-            },
-            {
-              "string": ""
-            }
-          ],
-          "foo": [
-            "Repudiandae sit.",
-            "Asperiores fuga qui rem qui earum eos."
-          ]
-        },
-        "properties": {
-          "bar": {
-            "example": [
+        "examples": [
+          {
+            "bar": [
               {
                 "string": ""
               },
               {
                 "string": ""
               }
+            ],
+            "foo": [
+              "Repudiandae sit.",
+              "Asperiores fuga qui rem qui earum eos."
+            ]
+          }
+        ],
+        "properties": {
+          "bar": {
+            "examples": [
+              [
+                {
+                  "string": ""
+                },
+                {
+                  "string": ""
+                }
+              ]
             ],
             "items": {
               "$ref": "#/components/schemas/Bar"
@@ -48,9 +56,13 @@
             "type": "array"
           },
           "foo": {
-            "example": [],
+            "examples": [
+              []
+            ],
             "items": {
-              "example": "Beatae non id consequatur.",
+              "examples": [
+                "Beatae non id consequatur."
+              ],
               "type": "string"
             },
             "maxItems": 42,
@@ -66,7 +78,8 @@
     "title": "Goa API",
     "version": "0.0.1"
   },
-  "openapi": "3.0.3",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": "3.1.1",
   "paths": {
     "/": {
       "post": {
@@ -109,31 +122,33 @@
                 }
               ],
               "schema": {
-                "example": [
-                  {
-                    "bar": [
-                      {
-                        "string": ""
-                      }
-                    ],
-                    "foo": []
-                  },
-                  {
-                    "bar": [
-                      {
-                        "string": ""
-                      }
-                    ],
-                    "foo": []
-                  },
-                  {
-                    "bar": [
-                      {
-                        "string": ""
-                      }
-                    ],
-                    "foo": []
-                  }
+                "examples": [
+                  [
+                    {
+                      "bar": [
+                        {
+                          "string": ""
+                        }
+                      ],
+                      "foo": []
+                    },
+                    {
+                      "bar": [
+                        {
+                          "string": ""
+                        }
+                      ],
+                      "foo": []
+                    },
+                    {
+                      "bar": [
+                        {
+                          "string": ""
+                        }
+                      ],
+                      "foo": []
+                    }
+                  ]
                 ],
                 "items": {
                   "$ref": "#/components/schemas/Foobar"
@@ -150,7 +165,9 @@
               "application/json": {
                 "example": "",
                 "schema": {
-                  "example": "",
+                  "examples": [
+                    ""
+                  ],
                   "maxLength": 42,
                   "minLength": 0,
                   "type": "string"

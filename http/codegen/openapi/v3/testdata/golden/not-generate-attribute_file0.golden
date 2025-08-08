@@ -2,18 +2,27 @@
   "components": {
     "schemas": {
       "Payload": {
-        "example": {
-          "required_string": "",
-          "string": ""
-        },
+        "examples": [
+          {
+            "required_string": "",
+            "string": ""
+          }
+        ],
         "properties": {
           "required_string": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string"
           },
           "string": {
-            "example": "",
-            "type": "string"
+            "examples": [
+              ""
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
@@ -22,18 +31,27 @@
         "type": "object"
       },
       "Result": {
-        "example": {
-          "int": 0,
-          "required_int": 0
-        },
+        "examples": [
+          {
+            "int": 0,
+            "required_int": 0
+          }
+        ],
         "properties": {
           "int": {
-            "example": 0,
+            "examples": [
+              0
+            ],
             "format": "int64",
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "required_int": {
-            "example": 0,
+            "examples": [
+              0
+            ],
             "format": "int64",
             "type": "integer"
           }
@@ -49,7 +67,8 @@
     "title": "Goa API",
     "version": "0.0.1"
   },
-  "openapi": "3.0.3",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": "3.1.1",
   "paths": {
     "/": {
       "get": {

@@ -2,38 +2,25 @@
   "components": {
     "schemas": {
       "Bar": {
-        "example": {
-          "string": ""
-        },
+        "examples": [
+          {
+            "string": ""
+          }
+        ],
         "properties": {
           "string": {
-            "example": "",
+            "examples": [
+              ""
+            ],
             "type": "string"
           }
         },
         "type": "object"
       },
       "GoaFoobar": {
-        "example": {
-          "bar": [
-            {
-              "string": ""
-            },
-            {
-              "string": ""
-            }
-          ],
-          "foo": ""
-        },
-        "properties": {
-          "bar": {
-            "example": [
-              {
-                "string": ""
-              },
-              {
-                "string": ""
-              },
+        "examples": [
+          {
+            "bar": [
               {
                 "string": ""
               },
@@ -41,74 +28,13 @@
                 "string": ""
               }
             ],
-            "items": {
-              "$ref": "#/components/schemas/Bar"
-            },
-            "type": "array"
-          },
-          "foo": {
-            "example": "",
-            "type": "string"
+            "foo": ""
           }
-        },
-        "type": "object"
-      },
-      "TestEndpointRequestBody": {
-        "example": {
-          "int_map": {
-            "": 1
-          },
-          "type_map": {
-            "": {
-              "string": ""
-            }
-          },
-          "uint_map": {
-            "": 1
-          }
-        },
+        ],
         "properties": {
-          "int_map": {
-            "additionalProperties": {
-              "example": 1,
-              "format": "int64",
-              "type": "integer"
-            },
-            "example": {
-              "": 1
-            },
-            "type": "object"
-          },
-          "type_map": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/Bar"
-            },
-            "example": {
-              "": {
-                "string": ""
-              }
-            },
-            "type": "object"
-          },
-          "uint_map": {
-            "additionalProperties": {
-              "example": 1,
-              "format": "int64",
-              "type": "integer"
-            },
-            "example": {
-              "": 1
-            },
-            "type": "object"
-          }
-        },
-        "type": "object"
-      },
-      "TestEndpointResponseBody": {
-        "example": {
-          "resulttype_map": {
-            "": {
-              "bar": [
+          "bar": {
+            "examples": [
+              [
                 {
                   "string": ""
                 },
@@ -121,23 +47,89 @@
                 {
                   "string": ""
                 }
-              ],
-              "foo": ""
-            }
+              ]
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Bar"
+            },
+            "type": "array"
           },
-          "uint32_map": {
-            "": 1
-          },
-          "uint64_map": {
-            "": 1
+          "foo": {
+            "examples": [
+              ""
+            ],
+            "type": "string"
           }
         },
-        "properties": {
-          "resulttype_map": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/GoaFoobar"
+        "type": "object"
+      },
+      "TestEndpointRequestBody": {
+        "examples": [
+          {
+            "int_map": {
+              "": 1
             },
-            "example": {
+            "type_map": {
+              "": {
+                "string": ""
+              }
+            },
+            "uint_map": {
+              "": 1
+            }
+          }
+        ],
+        "properties": {
+          "int_map": {
+            "additionalProperties": {
+              "examples": [
+                1
+              ],
+              "format": "int64",
+              "type": "integer"
+            },
+            "examples": [
+              {
+                "": 1
+              }
+            ],
+            "type": "object"
+          },
+          "type_map": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Bar"
+            },
+            "examples": [
+              {
+                "": {
+                  "string": ""
+                }
+              }
+            ],
+            "type": "object"
+          },
+          "uint_map": {
+            "additionalProperties": {
+              "examples": [
+                1
+              ],
+              "format": "int64",
+              "type": "integer"
+            },
+            "examples": [
+              {
+                "": 1
+              }
+            ],
+            "type": "object"
+          }
+        },
+        "type": "object"
+      },
+      "TestEndpointResponseBody": {
+        "examples": [
+          {
+            "resulttype_map": {
               "": {
                 "bar": [
                   {
@@ -156,28 +148,70 @@
                 "foo": ""
               }
             },
+            "uint32_map": {
+              "": 1
+            },
+            "uint64_map": {
+              "": 1
+            }
+          }
+        ],
+        "properties": {
+          "resulttype_map": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/GoaFoobar"
+            },
+            "examples": [
+              {
+                "": {
+                  "bar": [
+                    {
+                      "string": ""
+                    },
+                    {
+                      "string": ""
+                    },
+                    {
+                      "string": ""
+                    },
+                    {
+                      "string": ""
+                    }
+                  ],
+                  "foo": ""
+                }
+              }
+            ],
             "type": "object"
           },
           "uint32_map": {
             "additionalProperties": {
-              "example": 1,
+              "examples": [
+                1
+              ],
               "format": "int32",
               "type": "integer"
             },
-            "example": {
-              "": 1
-            },
+            "examples": [
+              {
+                "": 1
+              }
+            ],
             "type": "object"
           },
           "uint64_map": {
             "additionalProperties": {
-              "example": 1,
+              "examples": [
+                1
+              ],
               "format": "int64",
               "type": "integer"
             },
-            "example": {
-              "": 1
-            },
+            "examples": [
+              {
+                "": 1
+              }
+            ],
             "type": "object"
           }
         },
@@ -189,7 +223,8 @@
     "title": "Goa API",
     "version": "0.0.1"
   },
-  "openapi": "3.0.3",
+  "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
+  "openapi": "3.1.1",
   "paths": {
     "/": {
       "post": {

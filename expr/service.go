@@ -20,6 +20,8 @@ type (
 		Docs *DocsExpr
 		// Methods is the list of service methods.
 		Methods []*MethodExpr
+		// Webhooks is the list of webhooks defined for this service.
+		Webhooks []*WebhookExpr
 		// Errors list the errors common to all the service methods.
 		Errors []*ErrorExpr
 		// Requirements contains the security requirements that apply to

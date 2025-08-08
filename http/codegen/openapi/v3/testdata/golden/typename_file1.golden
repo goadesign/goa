@@ -1,7 +1,8 @@
-openapi: 3.0.3
+openapi: 3.1.1
 info:
     title: Goa API
     version: 0.0.1
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 servers:
     - url: https://goa.design
 paths:
@@ -81,48 +82,54 @@ components:
             properties:
                 value:
                     type: string
-                    example: ""
-            example:
-                value: ""
+                    examples:
+                        - ""
+            examples:
+                - value: ""
         BazPayload:
             type: object
             properties:
                 value:
                     type: string
-                    example: ""
-            example:
-                value: ""
+                    examples:
+                        - ""
+            examples:
+                - value: ""
         BazResult:
             type: object
             properties:
                 value:
                     type: string
-                    example: ""
-            example:
-                value: ""
+                    examples:
+                        - ""
+            examples:
+                - value: ""
         Foo:
             type: object
             properties:
                 value:
                     type: string
-                    example: ""
-            example:
-                value: ""
+                    examples:
+                        - ""
+            examples:
+                - value: ""
         FooResult:
             type: object
             properties:
                 value:
                     type: string
-                    example: ""
-            example:
-                value: ""
+                    examples:
+                        - ""
+            examples:
+                - value: ""
         GoaExampleBar:
             type: object
             properties:
                 value:
                     type: string
-                    example: ""
-            example:
-                value: ""
+                    examples:
+                        - ""
+            examples:
+                - value: ""
 tags:
     - name: testService

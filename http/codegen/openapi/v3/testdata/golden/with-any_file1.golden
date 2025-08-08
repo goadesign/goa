@@ -1,7 +1,8 @@
-openapi: 3.0.3
+openapi: 3.1.1
 info:
     title: Goa API
     version: 0.0.1
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 servers:
     - url: http://localhost:80
       description: Default server for test api
@@ -48,27 +49,31 @@ components:
             type: object
             properties:
                 any:
-                    example: ""
+                    type: ""
+                    examples:
+                        - ""
                 any_array:
                     type: array
                     items:
-                        example: ""
-                    example:
-                        - ""
-                        - ""
-                        - ""
-                        - ""
+                        type: ""
+                        examples:
+                            - ""
+                    examples:
+                        - - ""
+                          - ""
+                          - ""
+                          - ""
                 any_map:
                     type: object
-                    example:
-                        "": ""
+                    examples:
+                        - "": ""
                     additionalProperties: true
-            example:
-                any: ""
-                any_array:
+            examples:
+                - any: ""
+                  any_array:
                     - ""
                     - ""
-                any_map:
+                  any_map:
                     "": ""
 tags:
     - name: testService

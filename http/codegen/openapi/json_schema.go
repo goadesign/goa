@@ -17,13 +17,14 @@ type (
 		// Core schema
 		ID           string             `json:"id,omitempty" yaml:"id,omitempty"`
 		Title        string             `json:"title,omitempty" yaml:"title,omitempty"`
-		Type         Type               `json:"type,omitempty" yaml:"type,omitempty"`
+		Type         any                `json:"type,omitempty" yaml:"type,omitempty"` // Can be string or []string for OpenAPI 3.1
 		Items        *Schema            `json:"items,omitempty" yaml:"items,omitempty"`
 		Properties   map[string]*Schema `json:"properties,omitempty" yaml:"properties,omitempty"`
 		Definitions  map[string]*Schema `json:"definitions,omitempty" yaml:"definitions,omitempty"`
 		Description  string             `json:"description,omitempty" yaml:"description,omitempty"`
 		DefaultValue any                `json:"default,omitempty" yaml:"default,omitempty"`
-		Example      any                `json:"example,omitempty" yaml:"example,omitempty"`
+		Examples     []any              `json:"examples,omitempty" yaml:"examples,omitempty"` // OpenAPI 3.1 uses examples array
+		Example      any                `json:"example,omitempty" yaml:"example,omitempty"`   // Keep for backward compatibility
 
 		// Hyper schema
 		Media     *Media  `json:"media,omitempty" yaml:"media,omitempty"`
@@ -50,6 +51,10 @@ type (
 		// Union
 		AnyOf []*Schema `json:"anyOf,omitempty" yaml:"anyOf,omitempty"`
 
+		// Content encoding and media type (OpenAPI 3.1)
+		ContentEncoding  string `json:"contentEncoding,omitempty" yaml:"contentEncoding,omitempty"`
+		ContentMediaType string `json:"contentMediaType,omitempty" yaml:"contentMediaType,omitempty"`
+
 		// Extensions defines the OpenAPI extensions.
 		Extensions map[string]any `json:"-" yaml:"-"`
 	}
@@ -75,10 +80,10 @@ type (
 		ResultType   string  `json:"mediaType,omitempty" yaml:"mediaType,omitempty"`
 		EncType      string  `json:"encType,omitempty" yaml:"encType,omitempty"`
 	}
-
-	// These types are used in marshalJSON() to avoid recursive call of json.Marshal().
-	_Schema Schema
 )
+
+// _Schema is a type alias used in marshalJSON() to avoid recursive call of json.Marshal().
+type _Schema Schema
 
 const (
 	// Array represents a JSON array.
@@ -100,16 +105,63 @@ const (
 )
 
 // SchemaRef is the JSON Hyper-schema standard href.
-const SchemaRef = "http://json-schema.org/draft-04/hyper-schema"
+// Updated to JSON Schema 2020-12 for OpenAPI 3.1 compatibility
+const SchemaRef = "https://json-schema.org/draft/2020-12/schema"
 
 var (
 	// Definitions contains the generated JSON schema definitions
 	Definitions map[string]*Schema
+	
+	// GenerateForOpenAPIv2 indicates whether we're generating for OpenAPI v2 (Swagger)
+	// When true, schemas will use v2 compatible format (single example, string type)
+	// When false, schemas will use v3.1 format (examples array, type arrays for nullable)
+	GenerateForOpenAPIv2 bool
 )
 
 // Initialize the global variables
 func init() {
 	Definitions = make(map[string]*Schema)
+	GenerateForOpenAPIv2 = false // Default to v3 behavior
+}
+
+// SetType sets the type of the schema. It handles both string and array types
+// for OpenAPI 3.1 compatibility.
+func (s *Schema) SetType(t Type) {
+	s.Type = string(t)
+}
+
+// SetNullableType sets the type to an array including "null" for OpenAPI 3.1 nullable support.
+// For example, SetNullableType(String) results in ["string", "null"].
+func (s *Schema) SetNullableType(t Type) {
+	s.Type = []any{string(t), "null"}
+}
+
+// AddType adds a type to the schema's type array. If Type is currently a string,
+// it converts it to an array first.
+func (s *Schema) AddType(t Type) {
+	switch current := s.Type.(type) {
+	case string:
+		s.Type = []any{current, string(t)}
+	case []any:
+		s.Type = append(current, string(t))
+	case nil:
+		s.Type = string(t)
+	default:
+		s.Type = []any{string(t)}
+	}
+}
+
+// IsNullable returns true if the schema allows null values.
+func (s *Schema) IsNullable() bool {
+	switch t := s.Type.(type) {
+	case []any:
+		for _, v := range t {
+			if v == "null" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // NewSchema instantiates a new JSON schema.
@@ -128,6 +180,80 @@ func (s *Schema) JSON() ([]byte, error) {
 		s.Schema = SchemaRef
 	}
 	return json.Marshal(s)
+}
+
+// MarshalJSON implements json.Marshaler to handle v2 vs v3 differences
+func (s *Schema) MarshalJSON() ([]byte, error) {
+	// For OpenAPI v2, we need to adjust the output
+	if GenerateForOpenAPIv2 {
+		// Make a copy to avoid modifying the original
+		copy := *s
+		
+		// Convert Type array back to string for v2
+		if typeArray, ok := copy.Type.([]any); ok && len(typeArray) > 0 {
+			// Get the first non-null type
+			for _, t := range typeArray {
+				if str, ok := t.(string); ok && str != "null" {
+					copy.Type = str
+					break
+				}
+			}
+		}
+		
+		// Convert Examples array to single Example for v2
+		if len(copy.Examples) > 0 && copy.Example == nil {
+			copy.Example = copy.Examples[0]
+			copy.Examples = nil
+		}
+		
+		return MarshalJSON((*_Schema)(&copy), copy.Extensions)
+	}
+	
+	// For v3, clear Example field if Examples is set
+	if len(s.Examples) > 0 {
+		copy := *s
+		copy.Example = nil // Don't output both example and examples in v3
+		return MarshalJSON((*_Schema)(&copy), copy.Extensions)
+	}
+	
+	return MarshalJSON((*_Schema)(s), s.Extensions)
+}
+
+// MarshalYAML implements yaml.Marshaler to handle v2 vs v3 differences
+func (s *Schema) MarshalYAML() (interface{}, error) {
+	// For OpenAPI v2, we need to adjust the output
+	if GenerateForOpenAPIv2 {
+		// Make a copy to avoid modifying the original
+		copy := *s
+		
+		// Convert Type array back to string for v2
+		if typeArray, ok := copy.Type.([]any); ok && len(typeArray) > 0 {
+			// Get the first non-null type
+			for _, t := range typeArray {
+				if str, ok := t.(string); ok && str != "null" {
+					copy.Type = str
+					break
+				}
+			}
+		}
+		
+		// Convert Examples array to single Example for v2
+		if len(copy.Examples) > 0 && copy.Example == nil {
+			copy.Example = copy.Examples[0]
+			copy.Examples = nil
+		}
+		
+		return MarshalYAML((*_Schema)(&copy), copy.Extensions)
+	}
+	
+	// For v3, clear Example field if Examples is set
+	if len(s.Examples) > 0 {
+		copy := *s
+		copy.Example = nil // Don't output both example and examples in v3
+		return MarshalYAML((*_Schema)(&copy), copy.Extensions)
+	}
+	
+	return MarshalYAML((*_Schema)(s), s.Extensions)
 }
 
 // APISchema produces the API JSON hyper schema.
@@ -155,11 +281,11 @@ func APISchema(api *expr.APIExpr, r *expr.RootExpr) *Schema {
 		ID:          fmt.Sprintf("%s/schema", href),
 		Title:       api.Title,
 		Description: api.Description,
-		Type:        Object,
 		Definitions: Definitions,
 		Properties:  propertiesFromDefs(Definitions, "#/definitions/"),
 		Links:       links,
 	}
+	s.SetType(Object)
 	return &s
 }
 
@@ -168,7 +294,7 @@ func APISchema(api *expr.APIExpr, r *expr.RootExpr) *Schema {
 func GenerateServiceDefinition(api *expr.APIExpr, res *expr.HTTPServiceExpr) {
 	s := NewSchema()
 	s.Description = res.Description()
-	s.Type = Object
+	s.SetType(Object)
 	s.Title = res.Name()
 	Definitions[res.Name()] = s
 	for _, a := range res.HTTPEndpoints {
@@ -316,37 +442,37 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 	s := NewSchema()
 	switch actual := t.(type) {
 	case expr.Primitive:
-		s.Type = Type(actual.Name())
+		s.SetType(Type(actual.Name()))
 		switch actual.Kind() {
 		case expr.AnyKind:
 			// A schema without a type matches any data type.
 			// See https://swagger.io/docs/specification/data-models/data-types/#any.
-			s.Type = Type("")
+			s.SetType(Type(""))
 		case expr.IntKind, expr.Int64Kind,
 			expr.UIntKind, expr.UInt64Kind:
 			// Use int64 format for IntKind and UIntKind because the OpenAPI
 			// generator produced int32 by default.
-			s.Type = Type("integer")
+			s.SetType(Type("integer"))
 			s.Format = "int64"
 		case expr.Int32Kind, expr.UInt32Kind:
-			s.Type = Type("integer")
+			s.SetType(Type("integer"))
 			s.Format = "int32"
 		case expr.Float32Kind:
-			s.Type = Type("number")
+			s.SetType(Type("number"))
 			s.Format = "float"
 		case expr.Float64Kind:
-			s.Type = Type("number")
+			s.SetType(Type("number"))
 			s.Format = "double"
 		case expr.BytesKind:
-			s.Type = Type("string")
+			s.SetType(Type("string"))
 			s.Format = "byte"
 		}
 	case *expr.Array:
-		s.Type = Array
+		s.SetType(Array)
 		s.Items = NewSchema()
 		buildAttributeSchema(api, s.Items, actual.ElemType)
 	case *expr.Object:
-		s.Type = Object
+		s.SetType(Object)
 		for _, nat := range *actual {
 			if !MustGenerate(nat.Attribute.Meta) {
 				continue
@@ -356,7 +482,7 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 			s.Properties[nat.Name] = prop
 		}
 	case *expr.Map:
-		s.Type = Object
+		s.SetType(Object)
 		if actual.KeyType.Type == expr.String && actual.ElemType.Type != expr.Any {
 			// Use free-form objects when elements are of type "Any"
 			additionalProperties := NewSchema()
@@ -427,15 +553,6 @@ func ToStringMap(val any) any {
 	}
 }
 
-// MarshalJSON returns the JSON encoding of s.
-func (s *Schema) MarshalJSON() ([]byte, error) {
-	return MarshalJSON((*_Schema)(s), s.Extensions)
-}
-
-// MarshalYAML returns value which marshaled in place of the original value
-func (s *Schema) MarshalYAML() (any, error) {
-	return MarshalYAML((*_Schema)(s), s.Extensions)
-}
 
 // Dup creates a shallow clone of the given schema.
 func (s *Schema) Dup() *Schema {
@@ -485,7 +602,16 @@ func buildAttributeSchema(api *expr.APIExpr, s *Schema, at *expr.AttributeExpr) 
 	}
 	s.DefaultValue = ToStringMap(at.DefaultValue)
 	s.Description = at.Description
-	s.Example = at.Example(api.ExampleGenerator)
+	// Handle examples based on OpenAPI version
+	if example := at.Example(api.ExampleGenerator); example != nil {
+		if GenerateForOpenAPIv2 {
+			// For v2, use single Example field
+			s.Example = example
+		} else {
+			// For v3.1, use Examples array
+			s.Examples = []any{example}
+		}
+	}
 	s.Extensions = ExtensionsFromExpr(at.Meta)
 	if ap := AdditionalPropertiesFromExpr(at.Meta); ap != nil {
 		s.AdditionalProperties = ap

@@ -1,7 +1,8 @@
-openapi: 3.0.3
+openapi: 3.1.1
 info:
     title: Goa API
     version: 0.0.1
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 servers:
     - url: http://localhost:80
       description: Default server for test api
@@ -18,7 +19,8 @@ paths:
                   required: true
                   schema:
                     type: integer
-                    example: 9176544974339886224
+                    examples:
+                        - 9176544974339886224
                     format: int64
                   example: 1933576090881074823
             responses:

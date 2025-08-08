@@ -1,7 +1,8 @@
-openapi: 3.0.3
+openapi: 3.1.1
 info:
     title: Goa API
     version: 0.0.1
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
 servers:
     - url: https://goa.design
 paths:
@@ -37,29 +38,37 @@ components:
             properties:
                 required_string:
                     type: string
-                    example: ""
+                    examples:
+                        - ""
                 string:
-                    type: string
-                    example: ""
-            example:
-                required_string: ""
-                string: ""
+                    type:
+                        - string
+                        - "null"
+                    examples:
+                        - ""
+            examples:
+                - required_string: ""
+                  string: ""
             required:
                 - required_string
         Result:
             type: object
             properties:
                 int:
-                    type: integer
-                    example: 0
+                    type:
+                        - integer
+                        - "null"
+                    examples:
+                        - 0
                     format: int64
                 required_int:
                     type: integer
-                    example: 0
+                    examples:
+                        - 0
                     format: int64
-            example:
-                int: 0
-                required_int: 0
+            examples:
+                - int: 0
+                  required_int: 0
             required:
                 - required_int
 tags:

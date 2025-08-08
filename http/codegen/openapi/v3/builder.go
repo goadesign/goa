@@ -13,7 +13,7 @@ import (
 )
 
 // OpenAPIVersion is the OpenAPI specification version targeted by this package.
-const OpenAPIVersion = "3.0.3"
+const OpenAPIVersion = "3.1.1"
 
 var (
 	routeIndexReplacementRegExp = regexp.MustCompile(`\((.*){routeIndex}\)`)
@@ -46,18 +46,21 @@ func New(root *expr.RootExpr) *OpenAPI {
 		comps    = buildComponents(root, types)
 		servers  = buildServers(root.API.Servers)
 		paths    = buildPaths(root.API.HTTP, bodies, root.API)
+		webhooks = buildWebhooks(root.API.HTTP, bodies, root.API)
 		security = buildSecurityRequirements(root.API.Requirements)
 		tags     = buildTags(root.API)
 	)
 
 	return &OpenAPI{
-		OpenAPI:    OpenAPIVersion,
-		Info:       info,
-		Components: comps,
-		Paths:      paths,
-		Servers:    servers,
-		Security:   security,
-		Tags:       tags,
+		OpenAPI:           OpenAPIVersion,
+		Info:              info,
+		JSONSchemaDialect: "https://json-schema.org/draft/2020-12/schema", // JSON Schema 2020-12 for OpenAPI 3.1
+		Components:        comps,
+		Paths:             paths,
+		Webhooks:          webhooks,
+		Servers:           servers,
+		Security:          security,
+		Tags:              tags,
 	}
 }
 
@@ -185,6 +188,155 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 		}
 	}
 	return paths
+}
+
+// buildWebhooks builds the OpenAPI webhooks from the HTTP service webhooks.
+func buildWebhooks(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, api *expr.APIExpr) map[string]*PathItem {
+	webhooks := make(map[string]*PathItem)
+	
+	for _, svc := range h.Services {
+		if !openapi.MustGenerate(svc.Meta) || !openapi.MustGenerate(svc.ServiceExpr.Meta) {
+			continue
+		}
+		
+		// Process webhooks for this service
+		for _, w := range svc.HTTPWebhooks {
+			if w.Parent == nil {
+				continue
+			}
+			
+			// Build webhook operation
+			operation := buildWebhookOperation(w, api.ExampleGenerator)
+			
+			// Create or get PathItem for this webhook
+			path, ok := webhooks[w.Parent.Name]
+			if !ok {
+				path = new(PathItem)
+				webhooks[w.Parent.Name] = path
+			}
+			
+			// Add operation to path based on method
+			switch w.Method {
+			case "GET":
+				path.Get = operation
+			case "PUT":
+				path.Put = operation
+			case "POST":
+				path.Post = operation
+			case "DELETE":
+				path.Delete = operation
+			case "OPTIONS":
+				path.Options = operation
+			case "HEAD":
+				path.Head = operation
+			case "PATCH":
+				path.Patch = operation
+			default:
+				// Default to POST if method not recognized
+				path.Post = operation
+			}
+			
+			// Add extensions from webhook metadata
+			if w.Parent.Meta != nil {
+				path.Extensions = openapi.ExtensionsFromExpr(w.Parent.Meta)
+			}
+		}
+	}
+	
+	return webhooks
+}
+
+// buildWebhookOperation builds the OpenAPI Operation object for a webhook.
+func buildWebhookOperation(w *expr.HTTPWebhookExpr, rand *expr.ExampleGenerator) *Operation {
+	if w == nil || w.Parent == nil {
+		return nil
+	}
+	webhook := w.Parent
+	
+	// Build operation ID
+	operationID := webhook.Name
+	
+	// Build request body if webhook has payload
+	var requestBody *RequestBodyRef
+	if webhook.Payload != nil && webhook.Payload.Type != expr.Empty {
+		schema := buildWebhookSchema(webhook.Payload, rand)
+		mt := &MediaType{Schema: schema}
+		
+		// Add examples if available
+		if example := webhook.Payload.Example(rand); example != nil {
+			mt.Examples = map[string]*ExampleRef{
+				"default": {Value: &Example{Value: example}},
+			}
+		}
+		
+		requestBody = &RequestBodyRef{Value: &RequestBody{
+			Description: webhook.Payload.Description,
+			Required:    true,
+			Content:     map[string]*MediaType{"application/json": mt},
+		}}
+	}
+	
+	// Build parameters from headers
+	var params []*ParameterRef
+	if w.Headers != nil {
+		if obj, ok := w.Headers.Type.(*expr.Object); ok {
+			for _, nat := range *obj {
+				p := &Parameter{
+					Name:        nat.Name,
+					Description: nat.Attribute.Description,
+					In:          "header",
+					Required:    w.Headers.IsRequired(nat.Name),
+					Schema:      buildWebhookSchema(nat.Attribute, rand),
+				}
+				params = append(params, &ParameterRef{Value: p})
+			}
+		}
+	}
+	
+	// Build responses
+	responses := make(map[string]*ResponseRef)
+	if len(w.Responses) == 0 {
+		// Default response if none specified
+		defaultDesc := "Webhook processed successfully"
+		responses["200"] = &ResponseRef{Value: &Response{
+			Description: &defaultDesc,
+		}}
+	} else {
+		for _, r := range w.Responses {
+			desc := r.Description
+			if desc == "" {
+				desc = "Response"
+			}
+			resp := &Response{
+				Description: &desc,
+			}
+			if r.Body != nil && r.Body.Type != expr.Empty {
+				schema := buildWebhookSchema(r.Body, rand)
+				mt := &MediaType{Schema: schema}
+				resp.Content = map[string]*MediaType{"application/json": mt}
+			}
+			responses[strconv.Itoa(r.StatusCode)] = &ResponseRef{Value: resp}
+		}
+	}
+	
+	// Build operation
+	operation := &Operation{
+		OperationID: operationID,
+		Summary:     webhook.Name,
+		Description: webhook.Description,
+		Parameters:  params,
+		RequestBody: requestBody,
+		Responses:   responses,
+		Extensions:  openapi.ExtensionsFromExpr(webhook.Meta),
+	}
+	
+	return operation
+}
+
+// buildWebhookSchema builds a simple schema for webhook payloads.
+func buildWebhookSchema(attr *expr.AttributeExpr, rand *expr.ExampleGenerator) *openapi.Schema {
+	sf := newSchemafier(rand)
+	return sf.schemafy(attr)
 }
 
 // buildOperation builds the OpenAPI Operation object for the given path.
