@@ -50,7 +50,15 @@ The general structure of the DSL is shown below (partial list):
 	                    │   ├── Error
 	                    │   ├── GRPC
 	                    │   └── HTTP
-	                    └── Files
+	                    ├── Files
+	                    └── Webhook
+	                        ├── WebhookDescription
+	                        ├── WebhookPayload
+	                        └── WebhookHTTP
+	                            ├── WebhookMethod/POST/GET/etc.
+	                            ├── WebhookPath
+	                            ├── WebhookHeaders
+	                            └── WebhookResponse
 */
 package dsl
 
