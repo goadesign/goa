@@ -1,6 +1,11 @@
 {{ printf "%s configures the mux to serve the JSON-RPC %s service methods." .MountServer .Service.Name | comment }}
 func {{ .MountServer }}(mux goahttp.Muxer, h *{{ .ServerStruct }}) {
-{{- if .HasSSE }}
+{{- if .HasMixed }}
+	// Mount ServeHTTP which handles both regular JSON-RPC and SSE based on Accept header
+	{{- range (index .Endpoints 0).Routes }}
+	mux.Handle("{{ .Verb }}", "{{ .Path }}", h.ServeHTTP)
+	{{- end }}
+{{- else if .HasSSE }}
 	// Mount SSE handler for all endpoint routes
 	{{- range .Endpoints }}
 		{{- range .Routes }}

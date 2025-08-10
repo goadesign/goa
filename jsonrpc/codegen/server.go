@@ -122,8 +122,11 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 	case hasMixedJSONRPCTransports(svc, services):
 		// For mixed transports, we need a unified handler with content negotiation
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-mixed-server-handler", Source: jsonrpcTemplates.Read(mixedServerHandlerT), FuncMap: funcs, Data: data})
-		// Include the standard HTTP handlers that the mixed handler delegates to
-		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), FuncMap: funcs, Data: data})
+		// Include the standard HTTP handler (but rename ServeHTTP to handleHTTP for mixed mode)
+		httpHandler := jsonrpcTemplates.Read(serverHandlerT)
+		httpHandler = strings.Replace(httpHandler, "func (s *{{ .ServerStruct }}) ServeHTTP(", "func (s *{{ .ServerStruct }}) handleHTTP(", 1)
+		httpHandler = strings.Replace(httpHandler, "// ServeHTTP handles JSON-RPC requests.", "// handleHTTP handles JSON-RPC requests.", 1)
+		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-http-handler", Source: httpHandler, FuncMap: funcs, Data: data})
 		// Also include SSE handler for SSE-specific logic
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-sse-server-handler", Source: jsonrpcTemplates.Read(sseServerHandlerT), FuncMap: funcs, Data: data})
 	case hasJSONRPCSSE(svc, services):
