@@ -271,9 +271,77 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			case ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr) || !expr.IsPrimitive(srcc.Type):
 				// source attribute is a primitive pointer or not a primitive
 				code += fmt.Sprintf("if %s == nil {\n\t", srcVar)
-				if ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr) && expr.IsPrimitive(tgtc.Type) {
+				switch {
+				case ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr) && expr.IsPrimitive(tgtc.Type):
 					code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", GoNativeTypeName(tgtc.Type), tdef, tgtVar)
-				} else {
+				case expr.IsArray(tgtc.Type):
+					arr := expr.AsArray(tgtc.Type)
+					if expr.IsAlias(arr.ElemType.Type) {
+						// Render typed array default literals for aliased element types,
+						// e.g. []pkg.EnumType{pkg.EnumType("val")}.
+						elemRef := ta.TargetCtx.Scope.Ref(arr.ElemType, ta.TargetCtx.Pkg(arr.ElemType))
+						var items []string
+						switch dv := tdef.(type) {
+						case expr.ArrayVal:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []any:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []string:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []int:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []int32:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []int64:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []uint:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []uint32:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []uint64:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []float32:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []float64:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []bool:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						default:
+							// Fallback to raw default if we don't recognize the element slice
+							code += fmt.Sprintf("%s = %#v\n", tgtVar, tdef)
+						}
+						if len(items) > 0 {
+							code += fmt.Sprintf("%s = []%s{%s}\n", tgtVar, elemRef, strings.Join(items, ", "))
+						}
+					} else {
+						// Non-alias element type: use raw default without casting elements
+						code += fmt.Sprintf("%s = %#v\n", tgtVar, tdef)
+					}
+				default:
 					code += fmt.Sprintf("%s = %#v\n", tgtVar, tdef)
 				}
 				code += "}\n"
