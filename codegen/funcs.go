@@ -191,8 +191,9 @@ func SnakeCase(name string) string {
 	// between with a single underscore
 	name = strings.Join(strings.Fields(name), "_")
 
-	// Special handling for dashes to convert them into underscores
+	// Special handling for dashes and slashes to convert them into underscores
 	name = strings.ReplaceAll(name, "-", "_")
+	name = strings.ReplaceAll(name, "/", "_")
 
 	var b bytes.Buffer
 	ln := len(name)
