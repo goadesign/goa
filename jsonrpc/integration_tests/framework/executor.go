@@ -39,7 +39,6 @@ func NewExecutor(serverURL string, opts ...ExecutorOption) *Executor {
 func (e *Executor) Execute(t *testing.T, scenario Scenario) {
 	t.Helper()
 
-
 	// Handle different scenario types
 	switch {
 	case len(scenario.Sequence) > 0:
@@ -257,7 +256,7 @@ func (e *Executor) executeWebSocketSequence(ctx context.Context, t *testing.T, s
 				Params: reqData["params"],
 				ID:     reqData["id"],
 			}
-			
+
 			// Handle custom jsonrpc field if specified
 			if jsonrpcVal, ok := reqData["jsonrpc"]; ok {
 				if jsonrpcStr, ok := jsonrpcVal.(string); ok {
@@ -282,7 +281,6 @@ func (e *Executor) executeWebSocketSequence(ctx context.Context, t *testing.T, s
 			var response map[string]any
 			err = json.Unmarshal(msg, &response)
 			require.NoErrorf(t, err, "Step %d: failed to unmarshal response", i)
-			
 
 			// Compare the response with expected
 			if expected, ok := step.Expect.(map[string]any); ok {
@@ -589,5 +587,3 @@ func (e *Executor) compareValues(t *testing.T, actual, expected any, path string
 		assert.EqualValues(t, expected, actual, "%s mismatch", path)
 	}
 }
-
-

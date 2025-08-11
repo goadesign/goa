@@ -257,7 +257,11 @@ func (a *AttributeScope) Name(att *expr.AttributeExpr, pkg string, ptr, useDefau
 		// in fact the struct typedef. In this case we need to force the
 		// generation of the fields as pointers if needed as the default
 		// GoTransform algorithm does not allow for an override.
-		return a.scope.GoTypeDef(att, ptr, useDefault)
+		// Use the target package context so that user types referenced inside
+		// the inline struct are qualified against the correct package (e.g.,
+		// use "types.UUID" instead of incorrectly qualifying with the service
+		// package alias).
+		return a.scope.GoTypeDefWithTargetPkg(att, ptr, useDefault, pkg)
 	}
 	if n, ok := att.Meta["struct:type:name"]; ok {
 		// If the attribute has a "struct:type:name" meta then use it as the

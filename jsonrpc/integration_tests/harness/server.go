@@ -14,10 +14,10 @@ import (
 
 // Server manages a test server process
 type Server struct {
-	cmd      *exec.Cmd
-	port     int
-	logFile  *os.File
-	workDir  string
+	cmd     *exec.Cmd
+	port    int
+	logFile *os.File
+	workDir string
 }
 
 // StartServer starts a test server
@@ -47,36 +47,36 @@ func StartServer(ctx context.Context, workDir string, port int) (*Server, error)
 		filepath.Join(workDir, "cmd", "test", "main.go"),
 		filepath.Join(workDir, "cmd", "api", "main.go"),
 	}
-	
+
 	for _, path := range candidates {
 		if _, err := os.Stat(path); err == nil {
 			serverPath = path
 			break
 		}
 	}
-	
+
 	if serverPath == "" {
 		return nil, fmt.Errorf("server main.go not found in any expected location")
 	}
-	
+
 	// Ensure dependencies are downloaded before running
 	downloadCmd := exec.Command("go", "mod", "download")
 	downloadCmd.Dir = workDir
-	downloadCmd.Env = append(os.Environ(), 
+	downloadCmd.Env = append(os.Environ(),
 		"GO111MODULE=on",
 		"GOWORK=off",
 	)
 	if output, err := downloadCmd.CombinedOutput(); err != nil {
 		return nil, fmt.Errorf("go mod download failed: %w\nOutput: %s", err, output)
 	}
-	
-	// Run all Go files in the cmd directory, not just main.go
+
+	// Run all files in the package so helpers generated alongside main.go are included
 	serverDir := filepath.Dir(serverPath)
 	cmd := exec.CommandContext(ctx, "go", "run", ".", "--http-port", fmt.Sprintf("%d", port))
 	cmd.Dir = serverDir
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
-	cmd.Env = append(os.Environ(), 
+	cmd.Env = append(os.Environ(),
 		"GO111MODULE=on",
 		"GOWORK=off",
 	)
@@ -115,13 +115,13 @@ func (s *Server) URL() string {
 func (s *Server) Stop() error {
 	if s.cmd != nil && s.cmd.Process != nil {
 		s.cmd.Process.Kill() //nolint:errcheck
-		s.cmd.Wait() //nolint:errcheck
+		s.cmd.Wait()         //nolint:errcheck
 	}
-	
+
 	if s.logFile != nil {
 		s.logFile.Close() //nolint:errcheck
 	}
-	
+
 	return nil
 }
 
@@ -135,8 +135,8 @@ func (s *Server) waitForReady(ctx context.Context) error {
 	go func() {
 		for logScanner.Scan() {
 			line := logScanner.Text()
-			if strings.Contains(line, "HTTP server listening") || 
-			   strings.Contains(line, fmt.Sprintf(":%d", s.port)) {
+			if strings.Contains(line, "HTTP server listening") ||
+				strings.Contains(line, fmt.Sprintf(":%d", s.port)) {
 				readyChan <- true
 				return
 			}
@@ -154,7 +154,7 @@ func (s *Server) waitForReady(ctx context.Context) error {
 	go func() {
 		ticker := time.NewTicker(100 * time.Millisecond)
 		defer ticker.Stop()
-		
+
 		for {
 			select {
 			case <-ctx.Done():
