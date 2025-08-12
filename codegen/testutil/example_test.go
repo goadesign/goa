@@ -21,89 +21,19 @@ func main() {
 	testutil.AssertString(t, "testdata/golden/hello_world.go.golden", code)
 }
 
-// Example: Using the fluent API
-func TestFluentAPI(t *testing.T) {
-	gf := testutil.NewGoldenFile(t, "testdata/golden")
-
-	// Generate code
-	code := generateServiceCode()
-
-	// Use fluent API for comparison
-	gf.StringContent(code).
-		Path("service.go.golden").
-		CompareContent()
-}
-
-// Example: Testing multiple files with batch operations
-func TestBatchOperations(t *testing.T) {
-	batch := testutil.NewBatch(t)
-
-	// Generate multiple files
-	serverCode := generateServerCode()
-	clientCode := generateClientCode()
-	typesCode := generateTypesCode()
-
-	// Add all files to batch and compare
-	batch.
-		AddString("server.go.golden", serverCode).
-		AddString("client.go.golden", clientCode).
-		AddString("types.go.golden", typesCode).
-		Compare()
-}
-
-// Example: Custom options for specific needs
-func TestCustomOptions(t *testing.T) {
-	opts := testutil.Options{
-		BasePath:            "testdata/custom",
-		ContentType:         testutil.ContentTypeGo,
-		FormatCode:          true,
-		NormalizeWhitespace: true,
-		CreateMissing:       true, // Create golden files if they don't exist
-		DiffContextLines:    5,    // Show 5 lines of context in diffs
-	}
-
-	gf := testutil.WithOptions(t, opts)
-	
-	code := generateComplexCode()
-	
-	gf.StringContent(code).
-		Path("complex.go.golden").
-		CompareContent()
-}
-
 // Example: Format-aware comparisons
 func TestFormatAwareComparisons(t *testing.T) {
-	// Test Go code - automatically formatted
+	// Test Go code - automatically formatted (auto-detected by .go.golden)
 	goCode := `package main
 import "fmt"
 func main(){fmt.Println("unformatted")}`
-	
+
 	testutil.AssertGo(t, "testdata/golden/formatted.go.golden", goCode)
 
-	// Test JSON - automatically pretty-printed
+	// Test JSON - automatically pretty-printed (auto-detected by .json.golden)
 	jsonData := []byte(`{"name":"test","value":42,"items":["a","b","c"]}`)
-	
+
 	testutil.AssertJSON(t, "testdata/golden/config.json.golden", jsonData)
-}
-
-
-// Example: Legacy migration
-func TestLegacyMigration(t *testing.T) {
-	code := generateLegacyCode()
-	
-	// This is a drop-in replacement for the old compareOrUpdateGolden function
-	testutil.CompareOrUpdateGolden(t, code, "testdata/golden/legacy.golden")
-}
-
-// Example: Conditional golden file creation
-func TestConditionalCreation(t *testing.T) {
-	code := generateOptionalFeature()
-	
-	// Only create/compare if feature is enabled
-	if code != "" {
-		gf := testutil.NewGoldenFile(t, "testdata/golden")
-		gf.CompareOrCreate(code, "optional_feature.golden")
-	}
 }
 
 // Example: Testing with subtests
@@ -143,15 +73,15 @@ func TestWithSubtests(t *testing.T) {
 // Example: Parallel golden file updates
 func TestParallelUpdates(t *testing.T) {
 	// When running with -update, files are updated in parallel by default
-	files := map[string]string{
-		"parallel1.golden": generateParallel1(),
-		"parallel2.golden": generateParallel2(),
-		"parallel3.golden": generateParallel3(),
-		"parallel4.golden": generateParallel4(),
+	files := map[string]string{}
+	for i := 1; i <= 4; i++ {
+		files[fmt.Sprintf("parallel%d.golden", i)] = generateParallel(i)
 	}
 
-	gf := testutil.NewGoldenFile(t, "testdata/golden")
-	gf.CompareMultiple(files)
+	for golden, actual := range files {
+		gf := testutil.NewGoldenFile(t, "testdata/golden")
+		gf.StringContent(actual).Path(golden).CompareContent()
+	}
 }
 
 // Helper functions for examples
@@ -178,45 +108,7 @@ func (s *serviceImpl) DoSomething(ctx context.Context) error {
 `
 }
 
-func generateServerCode() string {
-	return `package main
-
-import (
-	"log"
-	"net/http"
-)
-
-func main() {
-	http.HandleFunc("/", handler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
-}
-
-func handler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello, Server!"))
-}
-`
-}
-
-func generateClientCode() string {
-	return `package client
-
-import (
-	"net/http"
-)
-
-type Client struct {
-	baseURL string
-	http    *http.Client
-}
-
-func New(baseURL string) *Client {
-	return &Client{
-		baseURL: baseURL,
-		http:    &http.Client{},
-	}
-}
-`
-}
+// removed verbose server/client helpers to keep file concise
 
 func generateTypesCode() string {
 	return `package types
@@ -242,18 +134,7 @@ func generateComplexCode() string {
 	return generateServiceCode() + "\n" + generateTypesCode()
 }
 
-
-func generateLegacyCode() string {
-	return "// Legacy code example\n" + generateSimpleCode()
-}
-
-func generateOptionalFeature() string {
-	// Simulate optional feature generation
-	if testing.Short() {
-		return ""
-	}
-	return "// Optional feature code\n"
-}
+// removed legacy code generator
 
 func generateSimpleCode() string {
 	return `package simple
@@ -277,7 +158,6 @@ func Find(id string) error {
 `
 }
 
-func generateParallel1() string { return fmt.Sprintf("// Parallel 1\n%s", generateSimpleCode()) }
-func generateParallel2() string { return fmt.Sprintf("// Parallel 2\n%s", generateSimpleCode()) }
-func generateParallel3() string { return fmt.Sprintf("// Parallel 3\n%s", generateSimpleCode()) }
-func generateParallel4() string { return fmt.Sprintf("// Parallel 4\n%s", generateSimpleCode()) }
+func generateParallel(i int) string {
+	return fmt.Sprintf("// Parallel %d\n%s", i, generateSimpleCode())
+}

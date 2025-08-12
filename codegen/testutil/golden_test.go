@@ -49,17 +49,16 @@ func TestGoldenFile(t *testing.T) {
 	
 	t.Run("CompareOrCreate", func(t *testing.T) {
 		gf := testutil.NewGoldenFile(t, tmpDir)
-		
-		// Test creating new file
+		// Test creating new file (using update override)
 		newFile := "new_file.golden"
 		content := "new file content"
-		gf.CompareOrCreate(content, newFile)
-		
+		gf.SetUpdateMode(true)
+		gf.Compare(content, newFile)
 		// Verify file was created
 		assert.True(t, gf.Exists(newFile))
-		
-		// Test comparing existing file
-		gf.CompareOrCreate(content, newFile) // Should pass
+		// Now compare without update
+		gf.SetUpdateMode(false)
+		gf.Compare(content, newFile)
 		
 		// Test comparing with different content would fail the test
 		// We verify the file was created correctly above
@@ -75,8 +74,10 @@ func TestGoldenFile(t *testing.T) {
 			"file3.golden": "content 3",
 		}
 		
-		// Create files
-		gf.CompareMultiple(pairs)
+		// Create files (using update override)
+		for golden, actual := range pairs {
+			gf.Compare(actual, golden)
+		}
 		
 		// Verify all files were created
 		for golden, expected := range pairs {

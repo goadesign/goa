@@ -96,22 +96,6 @@ func TestWithFluentAPI(t *testing.T) {
 }
 ```
 
-### Custom Options
-
-```go
-func TestWithOptions(t *testing.T) {
-    opts := testutil.Options{
-        BasePath:         "testdata/custom",    // Base directory for golden files
-        FormatCode:       true,                 // Format Go code before comparison
-        CreateMissing:    true,                 // Create golden files if missing
-        DiffContextLines: 5,                    // Lines of context in diffs
-    }
-    
-    gf := testutil.WithOptions(t, opts)
-    gf.StringContent(code).Path("output.golden").CompareContent()
-}
-```
-
 ### Directory Comparison
 
 Compare entire directory structures:
@@ -132,12 +116,6 @@ func TestGeneratedDirectory(t *testing.T) {
 ```bash
 # Update golden files
 go test -update    # or -u or -w
-
-# Show detailed diffs
-go test -golden.diff
-
-# Disable colored output  
-go test -golden.color=false
 
 # Sequential updates (for debugging)
 go test -update -golden.parallel=false
@@ -179,9 +157,9 @@ mypackage/
 
 The package automatically detects and formats content based on file extensions:
 
-- `.go` files: Formatted with `go/format`
-- `.json` files: Pretty-printed with proper indentation
-- `.golden` files: Format detected from full filename (e.g., `server.go.golden` → Go)
+- `.go` or `.go.golden`: Formatted with `go/format`
+- `.json` or `.json.golden`: Pretty-printed with proper indentation
+- Other extensions: Treated as plain text
 - Other extensions: Treated as plain text
 
 ## Notes
