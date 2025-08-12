@@ -13,8 +13,8 @@
 # - "all" is the default target, it runs "lint" and "test"
 #
 MAJOR=3
-MINOR=21
-BUILD=5
+MINOR=22
+BUILD=0
 
 GOOS=$(shell go env GOOS)
 GOARCH=$(shell go env GOARCH)
