@@ -13,8 +13,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/pmezard/go-difflib/difflib"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -365,10 +365,8 @@ func (g *GoldenFile) reportDifference(content, golden []byte, goldenPath string)
 
 		g.t.Errorf("golden file mismatch for %q\n%s", goldenPath, diffStr)
 	} else {
-		// Use go-cmp for a more compact diff
-		if diff := cmp.Diff(string(golden), string(content)); diff != "" {
-			g.t.Errorf("golden file mismatch for %q (-want +got):\n%s", goldenPath, diff)
-		}
+		// Use testify for readable equality assertion
+		require.Equalf(g.t, string(golden), string(content), "golden file mismatch for %q", goldenPath)
 	}
 
 	g.t.Logf("Run with -update to update the golden file")
