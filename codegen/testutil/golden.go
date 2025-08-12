@@ -13,8 +13,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/pmezard/go-difflib/difflib"
-	"github.com/stretchr/testify/require"
+    "github.com/stretchr/testify/require"
 )
 
 var (
@@ -23,9 +22,7 @@ var (
 	u            = flag.Bool("u", false, "update golden files (shorthand)")
 	w            = flag.Bool("w", false, "update golden files (legacy compatibility)")
 
-	// Diff output control
-	verboseDiff = flag.Bool("golden.diff", false, "show detailed unified diffs for mismatches")
-	colorDiff   = flag.Bool("golden.color", true, "colorize diff output")
+    // Diff output flags removed; rely on test failure output
 
 	// Parallel update control
 	parallelUpdate = flag.Bool("golden.parallel", true, "update golden files in parallel")
@@ -344,58 +341,14 @@ func (g *GoldenFile) compareContent(content []byte, goldenPath string) {
 func (g *GoldenFile) reportDifference(content, golden []byte, goldenPath string) {
 	g.t.Helper()
 
-	if *verboseDiff {
-		// Show detailed unified diff
-		diff := difflib.UnifiedDiff{
-			A:        strings.Split(string(golden), "\n"),
-			B:        strings.Split(string(content), "\n"),
-			FromFile: goldenPath,
-			ToFile:   "generated",
-			Context:  g.options.DiffContextLines,
-		}
-
-		diffStr, err := difflib.GetUnifiedDiffString(diff)
-		if err != nil {
-			g.t.Fatalf("failed to generate diff: %v", err)
-		}
-
-		if *colorDiff {
-			diffStr = colorizeDiff(diffStr)
-		}
-
-		g.t.Errorf("golden file mismatch for %q\n%s", goldenPath, diffStr)
-	} else {
-		// Use testify for readable equality assertion
-		require.Equalf(g.t, string(golden), string(content), "golden file mismatch for %q", goldenPath)
-	}
+    // Use testify for readable equality assertion
+    require.Equalf(g.t, string(golden), string(content), "golden file mismatch for %q", goldenPath)
 
 	g.t.Logf("Run with -update to update the golden file")
 }
 
 // colorizeDiff adds ANSI color codes to diff output
-func colorizeDiff(diff string) string {
-	const (
-		red   = "\033[31m"
-		green = "\033[32m"
-		cyan  = "\033[36m"
-		reset = "\033[0m"
-	)
-
-	lines := strings.Split(diff, "\n")
-	for i, line := range lines {
-		switch {
-		case strings.HasPrefix(line, "---") || strings.HasPrefix(line, "+++"):
-			lines[i] = cyan + line + reset
-		case strings.HasPrefix(line, "-"):
-			lines[i] = red + line + reset
-		case strings.HasPrefix(line, "+"):
-			lines[i] = green + line + reset
-		case strings.HasPrefix(line, "@@"):
-			lines[i] = cyan + line + reset
-		}
-	}
-	return strings.Join(lines, "\n")
-}
+// unified diff colorization removed
 
 // IsUpdateMode returns true if golden file update mode is enabled
 func (g *GoldenFile) IsUpdateMode() bool {
