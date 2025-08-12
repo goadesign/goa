@@ -101,10 +101,9 @@ func TestWithFluentAPI(t *testing.T) {
 ```go
 func TestWithOptions(t *testing.T) {
     opts := testutil.Options{
-        BasePath:         "testdata/custom",    // Base directory for golden files
-        FormatCode:       true,                 // Format Go code before comparison
-        CreateMissing:    true,                 // Create golden files if missing
-        DiffContextLines: 5,                    // Lines of context in diffs
+        BasePath:      "testdata/custom", // Base directory for golden files
+        FormatCode:    true,               // Format Go code before comparison
+        CreateMissing: true,               // Create golden files if missing
     }
     
     gf := testutil.WithOptions(t, opts)
@@ -132,12 +131,6 @@ func TestGeneratedDirectory(t *testing.T) {
 ```bash
 # Update golden files
 go test -update    # or -u or -w
-
-# Show detailed diffs
-go test -golden.diff
-
-# Disable colored output  
-go test -golden.color=false
 
 # Sequential updates (for debugging)
 go test -update -golden.parallel=false

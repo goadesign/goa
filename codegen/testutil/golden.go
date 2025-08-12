@@ -13,7 +13,7 @@ import (
 	"sync"
 	"testing"
 
-    "github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -21,8 +21,6 @@ var (
 	updateGolden = flag.Bool("update", false, "update golden files")
 	u            = flag.Bool("u", false, "update golden files (shorthand)")
 	w            = flag.Bool("w", false, "update golden files (legacy compatibility)")
-
-    // Diff output flags removed; rely on test failure output
 
 	// Parallel update control
 	parallelUpdate = flag.Bool("golden.parallel", true, "update golden files in parallel")
@@ -94,8 +92,6 @@ type Options struct {
 	// CreateMissing creates golden files if they don't exist
 	CreateMissing bool
 
-	// DiffContextLines controls the number of context lines in diffs (default: 3)
-	DiffContextLines int
 
 	// FileMode controls file permissions (default: 0644)
 	FileMode os.FileMode
@@ -111,8 +107,7 @@ func DefaultOptions() Options {
 		ContentType:         ContentTypeAuto,
 		FormatCode:          true,
 		NormalizeWhitespace: true,
-		CreateMissing:       false,
-		DiffContextLines:    3,
+        CreateMissing:       false,
 		FileMode:            0644,
 	}
 }
@@ -144,9 +139,6 @@ func WithOptions(t testing.TB, opts Options) *GoldenFile {
 	// Fill in defaults for unset options
 	if opts.BasePath == "" {
 		opts.BasePath = DefaultOptions().BasePath
-	}
-	if opts.DiffContextLines == 0 {
-		opts.DiffContextLines = DefaultOptions().DiffContextLines
 	}
 	if opts.FileMode == 0 {
 		opts.FileMode = DefaultOptions().FileMode
@@ -333,22 +325,11 @@ func (g *GoldenFile) compareContent(content []byte, goldenPath string) {
 	}
 
 	if !bytes.Equal(content, golden) {
-		g.reportDifference(content, golden, goldenPath)
+		// Use testify for readable equality assertion
+		require.Equalf(g.t, string(golden), string(content), "golden file mismatch for %q", goldenPath)
+		g.t.Logf("Run with -update to update the golden file")
 	}
 }
-
-// reportDifference reports the difference between content and golden
-func (g *GoldenFile) reportDifference(content, golden []byte, goldenPath string) {
-	g.t.Helper()
-
-    // Use testify for readable equality assertion
-    require.Equalf(g.t, string(golden), string(content), "golden file mismatch for %q", goldenPath)
-
-	g.t.Logf("Run with -update to update the golden file")
-}
-
-// colorizeDiff adds ANSI color codes to diff output
-// unified diff colorization removed
 
 // IsUpdateMode returns true if golden file update mode is enabled
 func (g *GoldenFile) IsUpdateMode() bool {

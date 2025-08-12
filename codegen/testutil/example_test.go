@@ -58,8 +58,7 @@ func TestCustomOptions(t *testing.T) {
 		ContentType:         testutil.ContentTypeGo,
 		FormatCode:          true,
 		NormalizeWhitespace: true,
-		CreateMissing:       true, // Create golden files if they don't exist
-		DiffContextLines:    5,    // Show 5 lines of context in diffs
+        CreateMissing:       true, // Create golden files if they don't exist
 	}
 
 	gf := testutil.WithOptions(t, opts)
