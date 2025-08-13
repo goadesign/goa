@@ -13,7 +13,14 @@ type SSEDataFieldMethodServerStream struct {
 // Send Send streams instances of
 // "ssedatafieldservice.SSEDataFieldMethodResult" to the "SSEDataFieldMethod"
 // endpoint SSE connection.
-func (s *SSEDataFieldMethodServerStream) Send(ctx context.Context, v *ssedatafieldservice.SSEDataFieldMethodResult) error {
+func (s *SSEDataFieldMethodServerStream) Send(v *ssedatafieldservice.SSEDataFieldMethodResult) error {
+	return s.SendWithContext(context.Background(), v)
+}
+
+// SendWithContext SendWithContext streams instances of
+// "ssedatafieldservice.SSEDataFieldMethodResult" to the "SSEDataFieldMethod"
+// endpoint SSE connection with context.
+func (s *SSEDataFieldMethodServerStream) SendWithContext(ctx context.Context, v *ssedatafieldservice.SSEDataFieldMethodResult) error {
 	s.once.Do(func() {
 		header := s.w.Header()
 		if header.Get("Content-Type") == "" {

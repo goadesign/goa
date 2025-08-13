@@ -11,7 +11,13 @@ type SSEBoolMethodServerStream struct {
 
 // Send Send streams instances of "bool" to the "SSEBoolMethod" endpoint SSE
 // connection.
-func (s *SSEBoolMethodServerStream) Send(ctx context.Context, v bool) error {
+func (s *SSEBoolMethodServerStream) Send(v bool) error {
+	return s.SendWithContext(context.Background(), v)
+}
+
+// SendWithContext SendWithContext streams instances of "bool" to the
+// "SSEBoolMethod" endpoint SSE connection with context.
+func (s *SSEBoolMethodServerStream) SendWithContext(ctx context.Context, v bool) error {
 	s.once.Do(func() {
 		header := s.w.Header()
 		if header.Get("Content-Type") == "" {
