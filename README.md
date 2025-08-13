@@ -11,40 +11,15 @@
     <a href="https://goreportcard.com/report/github.com/goadesign/goa"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/goadesign/goa?style=for-the-badge"></a>
     <a href="/LICENSE"><img alt="Software License" src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge"></a>
     <a href="https://gurubase.io/g/goa"><img alt="Gurubase" src="https://img.shields.io/badge/Gurubase-Ask%20Goa%20Guru-006BFF?style=for-the-badge"></a>
+    <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard"><img alt="Goa Design Wizard" src="https://img.shields.io/badge/Goa%20Design%20Wizard-ChatGPT-00A67D?logo=openai&logoColor=white&style=for-the-badge"></a>
     </br>
-    <a href="https://gophers.slack.com/messages/goa"><img alt="Slack: Goa" src="https://img.shields.io/badge/Goa-gray.svg?longCache=true&logo=slack&colorB=red&style=for-the-badge"></a>
-    <a href="https://invite.slack.golangbridge.org/"><img alt="Slack: Sign-up" src="https://img.shields.io/badge/Signup-gray.svg?longCache=true&logo=slack&colorB=red&style=for-the-badge"></a>
-    <a href="https://bsky.app/profile/goadesign.bsky.social"><img alt="BSky: Goa" src="https://img.shields.io/badge/Bluesky-0285FF?longCache=true&logo=bluesky&logoColor=fff&style=for-the-badge"></a>
+    <a href="https://goadesign.substack.com/subscribe?params=%5Bobject%20Object%5D"><img alt="Substack: Design First" src="https://img.shields.io/badge/Design%20First-Substack-FF6719?logo=substack&logoColor=white&style=for-the-badge"></a>
+    <a href="https://gophers.slack.com/messages/goa"><img alt="Slack: Goa" src="https://img.shields.io/badge/Goa-Slack-4A154B?logo=slack&logoColor=white&style=for-the-badge"></a>
+    <a href="https://bsky.app/profile/goadesign.bsky.social"><img alt="Bluesky: Goa Design" src="https://img.shields.io/badge/Goa%20Design-Bluesky-0285FF?logo=bluesky&logoColor=white&style=for-the-badge"></a>
   </p>
 </p>
 
-<div align="center">
-<table border="0" cellspacing="0" cellpadding="0">
-    <tr>
-        <td align="center" width="200">
-            <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
-                <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
-            </a>
-        </td>
-        <td align="center">
-            <div>
-            <h1>Goa Design Wizard</h1>
-            </div>
-            <p>
-            Use the <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">Goa Design Wizard</a> to:
-            </p>
-            <ul>
-                <li>Create Goa designs in seconds</li>
-                <li>Review existing designs</li>
-                <li>Explore the Goa DSL</li>
-            </ul>
-            <p>
-            (requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)<br/><br/>
-            </p>
-        </td>
-    </tr>
-</table>
-</div>
+<!-- Removed card; Wizard is now a badge button above -->
 
 # Goa - Design First, Code With Confidence
 
@@ -243,6 +218,7 @@ The [examples repository](https://github.com/goadesign/examples) contains comple
 - Follow us on [Bluesky](https://goadesign.bsky.social)
 - Report issues on [GitHub](https://github.com/goadesign/goa/issues)
 - Find answers with the [Goa Guru](https://gurubase.io/g/goa) AI assistant
+- Subscribe to our Substack, “Design First”: [Design First](https://goadesign.substack.com/subscribe?params=%5Bobject%20Object%5D)
 
 ## What's New
 
