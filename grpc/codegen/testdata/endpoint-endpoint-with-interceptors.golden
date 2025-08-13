@@ -20,9 +20,9 @@ import (
 //
 //	command (subcommand1|subcommand2|...)
 func UsageCommands() []string {
-	return []string{
-		"service-with-interceptors (method-a|method-b)",
-	}
+    return []string{
+        "service-with-interceptors (method-a|method-b)",
+    }
 }
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.

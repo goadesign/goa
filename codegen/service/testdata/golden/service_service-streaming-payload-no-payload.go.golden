@@ -25,12 +25,18 @@ var MethodNames = [1]string{"StreamingPayloadNoPayloadMethod"}
 // string to the client.
 type StreamingPayloadNoPayloadMethodServerStream interface {
 	// SendAndClose streams instances of "string" and closes the stream.
-	SendAndClose(context.Context, string) error
+	SendAndClose(string) error
+	SendAndCloseWithContext(context.Context, string) error
+	Recv() (any, error)
+	RecvWithContext(context.Context) (any, error)
 }
 
 // StreamingPayloadNoPayloadMethodClientStream allows streaming instances of
 // any to the client.
 type StreamingPayloadNoPayloadMethodClientStream interface {
 	// Send streams instances of "any".
-	Send(context.Context, any) error
+	Send(any) error
+	SendWithContext(context.Context, any) error
+	CloseAndRecv() (string, error)
+	CloseAndRecvWithContext(context.Context) (string, error)
 }

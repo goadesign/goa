@@ -25,14 +25,24 @@ var MethodNames = [1]string{"BidirectionalStreamingMethod"}
 // *AResult to the client.
 type BidirectionalStreamingMethodServerStream interface {
 	// Send streams instances of "AResult".
-	Send(context.Context, *AResult) error
+	Send(*AResult) error
+	SendWithContext(context.Context, *AResult) error
+	Recv() (*APayload, error)
+	RecvWithContext(context.Context) (*APayload, error)
+	// Close closes the stream.
+	Close() error
 }
 
 // BidirectionalStreamingMethodClientStream allows streaming instances of
 // *APayload to the client.
 type BidirectionalStreamingMethodClientStream interface {
 	// Send streams instances of "APayload".
-	Send(context.Context, *APayload) error
+	Send(*APayload) error
+	SendWithContext(context.Context, *APayload) error
+	Recv() (*AResult, error)
+	RecvWithContext(context.Context) (*AResult, error)
+	// Close closes the stream.
+	Close() error
 }
 
 // APayload is the streaming payload type of the BidirectionalStreamingService

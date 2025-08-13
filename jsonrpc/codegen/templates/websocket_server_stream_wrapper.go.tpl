@@ -20,5 +20,10 @@ func (w *{{ lowerInitial .Method.VarName }}StreamWrapper) SendResponse(ctx conte
 func (w *{{ lowerInitial .Method.VarName }}StreamWrapper) SendError(ctx context.Context, err error) error {
 	return w.stream.SendError(ctx, w.requestID, err)
 }
+
+// Close closes the underlying JSON-RPC stream.
+func (w *{{ lowerInitial .Method.VarName }}StreamWrapper) Close() error {
+    return w.stream.Close()
+}
 	{{- end }}
 {{- end }}

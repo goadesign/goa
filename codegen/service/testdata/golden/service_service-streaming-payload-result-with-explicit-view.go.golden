@@ -27,14 +27,20 @@ var MethodNames = [1]string{"StreamingPayloadResultWithExplicitViewMethod"}
 // instances of *MultipleViews to the client.
 type StreamingPayloadResultWithExplicitViewMethodServerStream interface {
 	// SendAndClose streams instances of "MultipleViews" and closes the stream.
-	SendAndClose(context.Context, *MultipleViews) error
+	SendAndClose(*MultipleViews) error
+	SendAndCloseWithContext(context.Context, *MultipleViews) error
+	Recv() ([]string, error)
+	RecvWithContext(context.Context) ([]string, error)
 }
 
 // StreamingPayloadResultWithExplicitViewMethodClientStream allows streaming
 // instances of []string to the client.
 type StreamingPayloadResultWithExplicitViewMethodClientStream interface {
 	// Send streams instances of "[]string".
-	Send(context.Context, []string) error
+	Send([]string) error
+	SendWithContext(context.Context, []string) error
+	CloseAndRecv() (*MultipleViews, error)
+	CloseAndRecvWithContext(context.Context) (*MultipleViews, error)
 }
 
 // MultipleViews is the result type of the

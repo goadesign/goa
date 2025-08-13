@@ -24,11 +24,18 @@ var MethodNames = [1]string{"StreamingPayloadNoResultMethod"}
 // StreamingPayloadNoResultMethodServerStream allows streaming instances of  to
 // the client.
 type StreamingPayloadNoResultMethodServerStream interface {
+	Recv() (int, error)
+	RecvWithContext(context.Context) (int, error)
+	// Close closes the stream.
+	Close() error
 }
 
 // StreamingPayloadNoResultMethodClientStream allows streaming instances of int
 // to the client.
 type StreamingPayloadNoResultMethodClientStream interface {
 	// Send streams instances of "int".
-	Send(context.Context, int) error
+	Send(int) error
+	SendWithContext(context.Context, int) error
+	// Close closes the stream.
+	Close() error
 }

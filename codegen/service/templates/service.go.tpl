@@ -68,8 +68,12 @@ var MethodNames = [{{ len .Methods }}]string{ {{ range .Methods }}{{ printf "%q"
 {{- range .Methods }}
 	{{- if .ServerStream }}
 		{{ template "stream_interface" (streamInterfaceFor "server" . .ServerStream) }}
-		{{- /* Only generate client stream interface if it has Send methods (client or bidirectional streaming) */ -}}
-		{{- if and .ClientStream .ClientStream.SendTypeRef }}
+		{{- /* Emit client stream interface: for JSON-RPC keep conditional; for non-JSON-RPC always emit (HTTP WebSocket) */ -}}
+		{{- if .IsJSONRPC }}
+			{{- if and .ClientStream .ClientStream.SendTypeRef }}
+			{{ template "stream_interface" (streamInterfaceFor "client" . .ClientStream) }}
+			{{- end }}
+		{{- else }}
 		{{ template "stream_interface" (streamInterfaceFor "client" . .ClientStream) }}
 		{{- end }}
 	{{- end }}
@@ -99,12 +103,12 @@ type {{ .Stream.Interface }} interface {
 	{{ comment .Stream.SendDesc }}
 	{{ comment "IMPORTANT: Send only sends JSON-RPC notifications. Use SendAndClose to send a final response." }}
 	Send(ctx context.Context, event {{ .MethodVarName }}Event) error
-	{{- if .Stream.SendAndCloseName }}
+		{{- if .Stream.SendAndCloseName }}
 	{{ comment .Stream.SendAndCloseDesc }}
 	{{ comment "The result will be sent as a JSON-RPC response with the original request ID." }}
 	{{ comment "If the result has an ID field populated, that ID will be used instead of the request ID." }}
 	{{ .Stream.SendAndCloseName }}(ctx context.Context, event {{ .MethodVarName }}Event) error
-	{{- end }}
+		{{- end }}
 	{{- end }}
 	{{ comment "SendError sends a JSON-RPC error response." }}
 	SendError(ctx context.Context, id string, err error) error
@@ -122,10 +126,24 @@ type {{ .Stream.Interface }} interface {
 		SendError(context.Context, error) error
 		{{- else }}
 		{{ comment .Stream.SendDesc }}
-		{{ .Stream.SendName }}(context.Context, {{ .Stream.SendTypeRef }}) error
+		{{ .Stream.SendName }}({{ .Stream.SendTypeRef }}) error
+                {{ .Stream.SendWithContextName }}(context.Context, {{ .Stream.SendTypeRef }}) error
 		{{- end }}
 	{{- end }}
-	{{- if and .IsViewedResult (eq .Type "server") }}
+	{{- if and .Stream.RecvTypeRef (not .IsJSONRPCWebSocket) }}
+		{{ .Stream.RecvName }}() ({{ .Stream.RecvTypeRef }}, error)
+		{{ .Stream.RecvWithContextName }}(context.Context) ({{ .Stream.RecvTypeRef }}, error)
+	{{- end }}
+
+	{{- if .IsJSONRPCWebSocket }}
+	{{ comment "Close closes the stream." }}
+	Close() error
+	{{- else if .Stream.MustClose }}
+	{{ comment "Close closes the stream." }}
+	Close() error
+	{{- end }}
+
+        {{- if and .IsViewedResult (eq .Type "server") }}
 		{{ comment "SetView sets the view used to render the result before streaming." }}
 		SetView(view string)
 	{{- end }}

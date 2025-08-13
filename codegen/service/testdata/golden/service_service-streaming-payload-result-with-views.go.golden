@@ -29,7 +29,10 @@ var MethodNames = [1]string{"StreamingPayloadResultWithViewsMethod"}
 // of *MultipleViews to the client.
 type StreamingPayloadResultWithViewsMethodServerStream interface {
 	// SendAndClose streams instances of "MultipleViews" and closes the stream.
-	SendAndClose(context.Context, *MultipleViews) error
+	SendAndClose(*MultipleViews) error
+	SendAndCloseWithContext(context.Context, *MultipleViews) error
+	Recv() (*APayload, error)
+	RecvWithContext(context.Context) (*APayload, error)
 	// SetView sets the view used to render the result before streaming.
 	SetView(view string)
 }
@@ -38,7 +41,10 @@ type StreamingPayloadResultWithViewsMethodServerStream interface {
 // of *APayload to the client.
 type StreamingPayloadResultWithViewsMethodClientStream interface {
 	// Send streams instances of "APayload".
-	Send(context.Context, *APayload) error
+	Send(*APayload) error
+	SendWithContext(context.Context, *APayload) error
+	CloseAndRecv() (*MultipleViews, error)
+	CloseAndRecvWithContext(context.Context) (*MultipleViews, error)
 }
 
 // APayload is the streaming payload type of the

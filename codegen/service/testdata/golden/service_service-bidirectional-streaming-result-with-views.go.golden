@@ -30,7 +30,12 @@ var MethodNames = [1]string{"BidirectionalStreamingResultWithViewsMethod"}
 // instances of *MultipleViews to the client.
 type BidirectionalStreamingResultWithViewsMethodServerStream interface {
 	// Send streams instances of "MultipleViews".
-	Send(context.Context, *MultipleViews) error
+	Send(*MultipleViews) error
+	SendWithContext(context.Context, *MultipleViews) error
+	Recv() (*APayload, error)
+	RecvWithContext(context.Context) (*APayload, error)
+	// Close closes the stream.
+	Close() error
 	// SetView sets the view used to render the result before streaming.
 	SetView(view string)
 }
@@ -39,7 +44,12 @@ type BidirectionalStreamingResultWithViewsMethodServerStream interface {
 // instances of *APayload to the client.
 type BidirectionalStreamingResultWithViewsMethodClientStream interface {
 	// Send streams instances of "APayload".
-	Send(context.Context, *APayload) error
+	Send(*APayload) error
+	SendWithContext(context.Context, *APayload) error
+	Recv() (*MultipleViews, error)
+	RecvWithContext(context.Context) (*MultipleViews, error)
+	// Close closes the stream.
+	Close() error
 }
 
 // APayload is the streaming payload type of the
