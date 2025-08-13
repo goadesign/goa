@@ -2,7 +2,6 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-<<<<<<< HEAD
 ## About This Project
 
 Goa is a design-first API framework for Go that generates production-ready code
@@ -32,7 +31,7 @@ interfaces, client code, transport adapters, and documentation automatically.
 The Goa project favors short-ish files (ideally no more than 2,000 lines of code
 per file).  Each file should encapsulate one main construct and potentially
 smaller satellite constructs used by the main construct. A construct may consist
-of a strut, an interface and related factory functions and methods.
+of a struct, an interface and related factory functions and methods.
 
 Each file should be organized as follows:
 
@@ -82,6 +81,11 @@ Do not put markers between these sections, this is solely for organization.
   - Client and server stub generation
   - Streaming support
 
+- **`jsonrpc/`** - JSON‑RPC 2.0 transport implementation
+  - HTTP transport with batch requests and notifications
+  - Streaming over WebSocket and Server‑Sent Events (SSE)
+  - Client/server/CLI code generation and helpers in the `jsonrpc` package
+
 ### Supporting Packages
 - **`pkg/`** - Core runtime utilities (endpoint, error handling, validation)
 - **`middleware/`** - Common middleware implementations
@@ -109,6 +113,8 @@ The codebase uses extensive testing:
 - **DSL Testing** - Test files often contain example DSL definitions in `testdata/*_dsls.go`
 - **Cross-Package Testing** - Tests verify integration between DSL, expressions, and code generation
 - **Protocol Buffer Testing** - Special protoc-based tests for gRPC functionality
+ - JSON‑RPC integration tests live under `jsonrpc/integration_tests`; run with
+   `make integration-test` (Linux/macOS; skipped on Windows)
 
 ## Development Workflow
 
@@ -117,6 +123,8 @@ The codebase uses extensive testing:
 3. Run `make test` to verify all tests pass
 4. For template changes, verify golden files are updated correctly
 5. Test with real examples using `goa gen` and `goa example` commands
+6. Never edit generated code; fix the generators/templates instead
+7. Prefer `any` (Go 1.18+) over `interface{}` in new code
 
 ## Branch Naming Conventions
 
@@ -155,137 +163,3 @@ will include whatever change was made to its source code.
 NOTE2: The `goa gen` command will wipe out the `gen` folder but the
 `goa example` command will NOT override pre-existing files (the `cmd` folder and
 the top level service files).
-=======
-## Project Overview
-
-Goa is a design-first framework for building APIs and microservices in Go. It uses a Domain Specific Language (DSL) to define APIs, then generates production-ready code, documentation, and client libraries automatically.
-
-Key value proposition: Instead of writing boilerplate code, developers express their API's intent through a clear DSL, and Goa generates 30-50% of the codebase while ensuring perfect alignment between design, code, and documentation.
-
-## Essential Commands
-
-### Building and Testing
-```bash
-# Install dependencies and setup tooling
-make depend
-
-# Run linter and tests (default target)
-make all
-
-# Run linter only
-make lint
-
-# Run tests with coverage
-make test
-# or directly:
-go test ./... --coverprofile=cover.out
-
-# Build the goa command
-go install ./cmd/goa
-```
-
-### Code Generation Workflow
-```bash
-# Generate service interfaces, endpoints, and transport code from design
-# Takes the design Go package path as argument (NOT the file path)
-goa gen DESIGN_PACKAGE
-# For example
-goa gen goa.design/examples/basic/design
-
-# Generate example server and client implementations
-goa example DESIGN_PACKAGE
-
-# Common flags
-goa gen -o OUTPUT_DIR DESIGN_PACKAGE    # Specify output directory
-goa gen -debug DESIGN_PACKAGE           # Leave temporary files around for debugging
-```
-
-## Code Architecture
-
-### High-Level Structure
-
-**DSL → Expression Tree → Code Generation Pipeline → Generated Files**
-
-The framework follows a clean four-phase architecture:
-
-1. **DSL Phase**: Developers write declarative API designs using Goa's DSL
-2. **Expression Building**: DSL functions create an expression tree stored in a global Root
-3. **Evaluation Pipeline**: Four-phase execution (Prepare → Validate → Finalize → Generate)
-4. **Code Generation**: Specialized generators transform expressions into Go code using templates
-
-### Key Packages and Responsibilities
-
-**`/cmd/goa/`** - Main CLI command
-- `main.go` - Command parsing with three subcommands: `gen`, `example`, `version`
-- `gen.go` - Dynamic generator creation: builds temporary Go program, compiles it, runs it
-
-**`/dsl/`** - Domain Specific Language implementation
-- Defines all DSL functions: `API()`, `Service()`, `Method()`, `Type()`, `HTTP()`, `GRPC()`, etc.
-- Creates expression structs when DSL functions execute
-- Uses dot imports for clean design syntax: `import . "goa.design/goa/v3/dsl"`
-
-**`/eval/`** - DSL execution engine
-- Four-phase execution: Parse → Prepare → Validate → Finalize
-- Error reporting and context management
-- Orchestrates expression evaluation
-
-**`/expr/`** - Expression data structures  
-- All expression types: `APIExpr`, `ServiceExpr`, `MethodExpr`, `HTTPEndpointExpr`, etc.
-- `Root` expression holds entire design tree
-- Type system: primitives, arrays, maps, objects, user types
-
-**`/codegen/`** - Code generation infrastructure
-- `File` and `SectionTemplate` structures for organizing generated code
-- Template rendering with Go code formatting
-- Plugin system for extending generation
-- `/generator/` - Core generators (Service, Transport, OpenAPI, Example)
-- `/service/` - Service-specific code generation (interfaces, endpoints, clients)
-
-**Transport Packages** - Protocol-specific implementations
-- `/http/` - HTTP/REST transport with middleware, routing, encoding
-- `/grpc/` - gRPC transport with protobuf generation  
-- `/jsonrpc/` - JSON-RPC transport (work in progress)
-
-### Code Generation Flow
-
-1. **Dynamic Compilation**: Goa creates temporary Go program importing design + codegen libraries
-2. **Expression Tree**: DSL execution builds complete API expression tree in memory
-3. **Multi-Phase Processing**: Expressions are prepared, validated, and finalized
-4. **Specialized Generators**: Different generators handle services, transports, documentation
-5. **Template Rendering**: Go templates generate actual source code files
-6. **File Writing**: Generated code written to disk with proper formatting
-
-### Design Patterns
-
-**Expression-Based Architecture**: Everything is an expression that implements `Preparer`, `Validator`, `Finalizer` interfaces
-
-**Template-Driven Generation**: All code generated through Go templates in `/templates/` directories
-
-**Transport Abstraction**: Single DSL generates multiple transport implementations (HTTP + gRPC)
-
-**Plugin Architecture**: Extensible through pre/post generation plugins
-
-**Clean Separation**: Business logic stays separate from transport concerns
-
-### Testing Approach
-
-- Extensive golden file testing in `/testdata/` directories
-- DSL definitions in `*_dsls.go` files for test scenarios  
-- Generated code compared against `.golden` files
-- Coverage testing with `go test ./... --coverprofile=cover.out`
-- Use `make` to run both linting and tests
-
-## Thinking Approach
-
-- Be judicious, remember why you are doing what you are doing
-- Do not go for the quick fix / cheat
-
-### Goa Specific
-
-- Always fix the code generator - never edit generated code
-- Note: "goa example" does not override existing files - it only creates files that don't exist
-
-## Tools
-
-Take advantage of the Go language server MCP (mcp-gopls)
->>>>>>> b15f1721 (Add JSON-RPC SSE support and integration tests)
