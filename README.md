@@ -13,7 +13,7 @@
     <a href="https://gurubase.io/g/goa"><img alt="Gurubase" src="https://img.shields.io/badge/Gurubase-Ask%20Goa%20Guru-006BFF?style=for-the-badge"></a>
     <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard"><img alt="Goa Design Wizard" src="https://img.shields.io/badge/Goa%20Design%20Wizard-ChatGPT-00A67D?logo=openai&logoColor=white&style=for-the-badge"></a>
     </br>
-    <a href="https://goadesign.substack.com/subscribe?params=%5Bobject%20Object%5D"><img alt="Substack: Design First" src="https://img.shields.io/badge/Design%20First-Substack-FF6719?logo=substack&logoColor=white&style=for-the-badge"></a>
+    <a href="https://goadesign.substack.com"><img alt="Substack: Design First" src="https://img.shields.io/badge/Design%20First-Substack-FF6719?logo=substack&logoColor=white&style=for-the-badge"></a>
     <a href="https://gophers.slack.com/messages/goa"><img alt="Slack: Goa" src="https://img.shields.io/badge/Goa-Slack-4A154B?logo=slack&logoColor=white&style=for-the-badge"></a>
     <a href="https://bsky.app/profile/goadesign.bsky.social"><img alt="Bluesky: Goa Design" src="https://img.shields.io/badge/Goa%20Design-Bluesky-0285FF?logo=bluesky&logoColor=white&style=for-the-badge"></a>
   </p>
