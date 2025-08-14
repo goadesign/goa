@@ -41,9 +41,7 @@ func (s *SSEDataFieldMethodServerStream) SendWithContext(ctx context.Context, v 
 	data = dataField
 	fmt.Fprintf(s.w, "data: %s\n\n", data)
 
-	if f, ok := s.w.(http.Flusher); ok {
-		f.Flush()
-	}
+	http.NewResponseController(s.w).Flush()
 	return nil
 }
 

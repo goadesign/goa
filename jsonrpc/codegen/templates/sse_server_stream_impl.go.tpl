@@ -35,9 +35,7 @@ func (s *sseEventWriter) Write(data []byte) (int, error) {
 func (s *sseEventWriter) finish() {
 	if s.started {
 		s.w.Write([]byte("\n\n"))
-		if f, ok := s.w.(http.Flusher); ok {
-			f.Flush()
-		}
+		http.NewResponseController(s.w).Flush()
 	}
 }
 
@@ -56,16 +54,16 @@ func (s *{{ lowerInitial .Service.StructName }}SSEStream) initSSEHeaders() {
 // sendSSEEvent sends a single SSE event by creating an encoder that writes to the event writer
 func (s *{{ lowerInitial .Service.StructName }}SSEStream) sendSSEEvent(eventType string, v any) error {
 	s.initSSEHeaders()
-	
+
 	// Create SSE event writer that wraps the response writer
 	ew := &sseEventWriter{w: s.w, eventType: eventType}
-	
+
 	// Create encoder with the event writer and encode the value
 	err := s.encoder(context.Background(), ew).Encode(v)
-	
+
 	// Finish the SSE event (adds newlines and flushes)
 	ew.finish()
-	
+
 	return err
 }
 
@@ -100,7 +98,7 @@ func (s *{{ lowerInitial .Service.StructName }}SSEStream) Send(ctx context.Conte
 		{{- else }}
 		body := v
 		{{- end }}
-		
+
 		{{ comment "Check if this is a notification or response by looking for ID field" }}
 		var id string
 		var isResponse bool
@@ -121,10 +119,10 @@ func (s *{{ lowerInitial .Service.StructName }}SSEStream) Send(ctx context.Conte
 		}
 			{{- end }}
 		{{- end }}
-		
+
 		var message map[string]any
 		var eventType string
-		
+
 		if isResponse {
 			{{ comment "Send as response with ID" }}
 			resp := jsonrpc.MakeSuccessResponse(id, body)
@@ -143,7 +141,7 @@ func (s *{{ lowerInitial .Service.StructName }}SSEStream) Send(ctx context.Conte
 			}
 			eventType = "notification"
 		}
-		
+
 		return s.sendSSEEvent(eventType, message)
 	{{- end }}
 {{- end }}
@@ -160,7 +158,7 @@ func (s *{{ lowerInitial .Service.StructName }}SSEStream) SendError(ctx context.
 	code := jsonrpc.InternalError
 	message := err.Error()
 	var data any
-	
+
 	if errors.As(err, &en) {
 		switch en.GoaErrorName() {
 		case "invalid_params":
@@ -171,7 +169,7 @@ func (s *{{ lowerInitial .Service.StructName }}SSEStream) SendError(ctx context.
 			code = jsonrpc.InternalError
 		}
 	}
-	
+
 	return s.sendError(ctx, id, code, message, data)
 }
 {{- end }}
