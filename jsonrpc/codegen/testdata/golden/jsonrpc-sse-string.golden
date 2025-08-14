@@ -40,9 +40,7 @@ func (s *streamServerStreamEventWriter) Write(data []byte) (int, error) {
 func (s *streamServerStreamEventWriter) finish() {
 	if s.started {
 		s.w.Write([]byte("\n\n"))
-		if f, ok := s.w.(http.Flusher); ok {
-			f.Flush()
-		}
+		http.NewResponseController(s.w).Flush()
 	}
 }
 

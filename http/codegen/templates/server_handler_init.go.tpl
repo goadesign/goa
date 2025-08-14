@@ -117,9 +117,7 @@ func {{ .HandlerInit }}(
 							errhandler(ctx, w, err)
 						}
 					} else {
-						if f, ok := w.(http.Flusher); ok {
-							f.Flush()
-						}
+						http.NewResponseController(w).Flush()
 						panic(http.ErrAbortHandler) // too late to write an error
 					}
 				}
@@ -140,9 +138,7 @@ func {{ .HandlerInit }}(
 				return
 			}
 			if _, err := io.Copy(w, buf); err != nil {
-				if f, ok := w.(http.Flusher); ok {
-					f.Flush()
-				}
+				http.NewResponseController(w).Flush()
 				panic(http.ErrAbortHandler) // too late to write an error
 			}
 		{{- else }}
@@ -255,9 +251,7 @@ func {{ .HandlerInit }}(
 						errhandler(ctx, w, err)
 					}
 				} else {
-					if f, ok := w.(http.Flusher); ok {
-						f.Flush()
-					}
+					http.NewResponseController(w).Flush()
 					panic(http.ErrAbortHandler) // too late to write an error
 				}
 			}
@@ -284,9 +278,7 @@ func {{ .HandlerInit }}(
 	{{- end }}
 	{{- if .Method.SkipResponseBodyEncodeDecode }}
 		if _, err := io.Copy(w, buf); err != nil {
-			if f, ok := w.(http.Flusher); ok {
-				f.Flush()
-			}
+			http.NewResponseController(w).Flush()
 			panic(http.ErrAbortHandler) // too late to write an error
 		}
 	{{- end }}

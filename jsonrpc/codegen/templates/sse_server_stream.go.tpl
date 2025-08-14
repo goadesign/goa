@@ -6,7 +6,7 @@ type {{ .SSE.StructName }} struct {
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder
 	// w is the HTTP response writer
 	w http.ResponseWriter
-	// r is the HTTP request  
+	// r is the HTTP request
 	r *http.Request
 	// requestID is the JSON-RPC request ID for sending final response
 	requestID any
@@ -39,9 +39,7 @@ func (s *{{ lowerInitial .SSE.StructName }}EventWriter) Write(data []byte) (int,
 func (s *{{ lowerInitial .SSE.StructName }}EventWriter) finish() {
 	if s.started {
 		s.w.Write([]byte("\n\n"))
-		if f, ok := s.w.(http.Flusher); ok {
-			f.Flush()
-		}
+		http.NewResponseController(s.w).Flush()
 	}
 }
 
@@ -55,27 +53,27 @@ func (s *{{ .SSE.StructName }}) Send(ctx context.Context, event {{ .ServicePkgNa
 		return fmt.Errorf("stream closed")
 	}
 	s.mu.Unlock()
-	
+
 	{{ comment "Type assert to the specific result type" }}
 	result, ok := event.({{ .SSE.EventTypeRef }})
 	if !ok {
 		return fmt.Errorf("unexpected event type: %T", event)
 	}
-	
+
 	{{- if and .Result (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
 	{{ comment "Convert to response body type for proper JSON encoding" }}
 	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
 	{{- else }}
 	body := result
 	{{- end }}
-	
+
 	{{ comment "Send as notification (no ID)" }}
 	message := map[string]any{
 		"jsonrpc": "2.0",
 		"method":  {{ printf "%q" .Method.Name }},
 		"params":  body,
 	}
-	
+
 	return s.sendSSEEvent("notification", message)
 }
 
@@ -91,13 +89,13 @@ func (s *{{ .SSE.StructName }}) SendAndClose(ctx context.Context, event {{ .Serv
 	}
 	s.closed = true
 	s.mu.Unlock()
-	
+
 	{{ comment "Type assert to the specific result type" }}
 	result, ok := event.({{ .SSE.EventTypeRef }})
 	if !ok {
 		return fmt.Errorf("unexpected event type: %T", event)
 	}
-	
+
 	{{ comment "Determine the ID to use for the response" }}
 	var id any = s.requestID
 	{{- if .Result.IDAttribute }}
@@ -117,21 +115,21 @@ func (s *{{ .SSE.StructName }}) SendAndClose(ctx context.Context, event {{ .Serv
 	}
 		{{- end }}
 	{{- end }}
-	
+
 	{{- if and .Result (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
 	{{ comment "Convert to response body type for proper JSON encoding" }}
 	body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(result)
 	{{- else }}
 	body := result
 	{{- end }}
-	
+
 	{{ comment "Send as response with ID" }}
 	message := map[string]any{
 		"jsonrpc": "2.0",
 		"id":      id,
 		"result":  body,
 	}
-	
+
 	return s.sendSSEEvent("response", message)
 }
 
@@ -189,12 +187,12 @@ func (s *{{ .SSE.StructName }}) sendSSEEvent(eventType string, v any) error {
 
 	// Create SSE event writer that wraps the response writer
 	ew := &{{ lowerInitial .SSE.StructName }}EventWriter{w: s.w, eventType: eventType}
-	
+
 	// Create encoder with the event writer and encode the value
 	err := s.encoder(context.Background(), ew).Encode(v)
-	
+
 	// Finish the SSE event (adds newlines and flushes)
 	ew.finish()
-	
+
 	return err
 }

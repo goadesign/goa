@@ -38,7 +38,7 @@ func (s *{{ .SSE.StructName }}) {{ .SSE.SendWithContextName }}(ctx context.Conte
 	{{- else }}
 	res := v
 	{{- end }}
-	
+
 	{{ if .SSE.IDField }}
 	if id := res.{{ .SSE.IDField }}; id != "" {
 		fmt.Fprintf(s.w, "id: %s\n", id)
@@ -66,10 +66,8 @@ func (s *{{ .SSE.StructName }}) {{ .SSE.SendWithContextName }}(ctx context.Conte
 	{{- end }}
 	fmt.Fprintf(s.w, "data: %s\n\n", data)
 
-	if f, ok := s.w.(http.Flusher); ok {
-		f.Flush()
-	}
-    return nil
+	http.NewResponseController(s.w).Flush()
+	return nil
 }
 
 {{ comment "Close is a no-op for SSE. We keep the method for compatibility with other stream types." }}

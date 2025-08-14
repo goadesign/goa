@@ -55,9 +55,7 @@ func (s *SSEAllFieldsMethodServerStream) SendWithContext(ctx context.Context, v 
 	data = string(byts)
 	fmt.Fprintf(s.w, "data: %s\n\n", data)
 
-	if f, ok := s.w.(http.Flusher); ok {
-		f.Flush()
-	}
+	http.NewResponseController(s.w).Flush()
 	return nil
 }
 
