@@ -21,8 +21,8 @@ const ServiceName = "StreamingPayloadNoResultService"
 // MethodKey key.
 var MethodNames = [1]string{"StreamingPayloadNoResultMethod"}
 
-// StreamingPayloadNoResultMethodServerStream allows streaming instances of  to
-// the client.
+// StreamingPayloadNoResultMethodServerStream allows streaming instances of int
+// to the client.
 type StreamingPayloadNoResultMethodServerStream interface {
 	Recv() (int, error)
 	RecvWithContext(context.Context) (int, error)

@@ -123,9 +123,13 @@ func NewClient(streamingResultMethod goa.Endpoint) *Client {
 
 // StreamingResultMethod calls the "StreamingResultMethod" endpoint of the
 // "StreamingResultService" service.
-func (c *Client) StreamingResultMethod(ctx context.Context, p *APayload) (err error) {
-	_, err = c.StreamingResultMethodEndpoint(ctx, p)
-	return
+func (c *Client) StreamingResultMethod(ctx context.Context, p *APayload) (res StreamingResultMethodClientStream, err error) {
+	var ires any
+	ires, err = c.StreamingResultMethodEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(StreamingResultMethodClientStream), nil
 }
 `
 
@@ -144,9 +148,13 @@ func NewClient(streamingResultNoPayloadMethod goa.Endpoint) *Client {
 
 // StreamingResultNoPayloadMethod calls the "StreamingResultNoPayloadMethod"
 // endpoint of the "StreamingResultNoPayloadService" service.
-func (c *Client) StreamingResultNoPayloadMethod(ctx context.Context) (err error) {
-	_, err = c.StreamingResultNoPayloadMethodEndpoint(ctx, nil)
-	return
+func (c *Client) StreamingResultNoPayloadMethod(ctx context.Context) (res StreamingResultNoPayloadMethodClientStream, err error) {
+	var ires any
+	ires, err = c.StreamingResultNoPayloadMethodEndpoint(ctx, nil)
+	if err != nil {
+		return
+	}
+	return ires.(StreamingResultNoPayloadMethodClientStream), nil
 }
 `
 

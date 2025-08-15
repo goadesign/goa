@@ -31,8 +31,8 @@ type StreamingResultMethodServerStream interface {
 	Close() error
 }
 
-// StreamingResultMethodClientStream allows streaming instances of  to the
-// client.
+// StreamingResultMethodClientStream allows streaming instances of *AResult to
+// the client.
 type StreamingResultMethodClientStream interface {
 	Recv() (*AResult, error)
 	RecvWithContext(context.Context) (*AResult, error)

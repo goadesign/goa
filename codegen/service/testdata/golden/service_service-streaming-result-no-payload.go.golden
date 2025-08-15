@@ -31,8 +31,8 @@ type StreamingResultNoPayloadMethodServerStream interface {
 	Close() error
 }
 
-// StreamingResultNoPayloadMethodClientStream allows streaming instances of  to
-// the client.
+// StreamingResultNoPayloadMethodClientStream allows streaming instances of
+// *AResult to the client.
 type StreamingResultNoPayloadMethodClientStream interface {
 	Recv() (*AResult, error)
 	RecvWithContext(context.Context) (*AResult, error)

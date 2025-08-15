@@ -68,9 +68,9 @@ var MethodNames = [{{ len .Methods }}]string{ {{ range .Methods }}{{ printf "%q"
 {{- range .Methods }}
 	{{- if .ServerStream }}
 		{{ template "stream_interface" (streamInterfaceFor "server" . .ServerStream) }}
-		{{- /* Emit client stream interface: for JSON-RPC keep conditional; for non-JSON-RPC always emit (HTTP WebSocket) */ -}}
+		{{- /* Emit client stream interface */ -}}
 		{{- if .IsJSONRPC }}
-			{{- if and .ClientStream .ClientStream.SendTypeRef }}
+			{{- if .ClientStream }}
 			{{ template "stream_interface" (streamInterfaceFor "client" . .ClientStream) }}
 			{{- end }}
 		{{- else }}
