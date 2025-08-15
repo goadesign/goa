@@ -33,7 +33,7 @@ type StreamingResultWithExplicitViewMethodServerStream interface {
 }
 
 // StreamingResultWithExplicitViewMethodClientStream allows streaming instances
-// of  to the client.
+// of *MultipleViews to the client.
 type StreamingResultWithExplicitViewMethodClientStream interface {
 	Recv() (*MultipleViews, error)
 	RecvWithContext(context.Context) (*MultipleViews, error)

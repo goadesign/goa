@@ -68,9 +68,9 @@ var MethodNames = [{{ len .Methods }}]string{ {{ range .Methods }}{{ printf "%q"
 {{- range .Methods }}
 	{{- if .ServerStream }}
 		{{ template "stream_interface" (streamInterfaceFor "server" . .ServerStream) }}
-		{{- /* Emit client stream interface: for JSON-RPC keep conditional; for non-JSON-RPC always emit (HTTP WebSocket) */ -}}
+		{{- /* Emit client stream interface */ -}}
 		{{- if .IsJSONRPC }}
-			{{- if and .ClientStream .ClientStream.SendTypeRef }}
+			{{- if .ClientStream }}
 			{{ template "stream_interface" (streamInterfaceFor "client" . .ClientStream) }}
 			{{- end }}
 		{{- else }}
@@ -114,7 +114,9 @@ type {{ .Stream.Interface }} interface {
 	SendError(ctx context.Context, id string, err error) error
 }
 {{- else }}
-{{ printf "%s allows streaming instances of %s to the client." .Stream.Interface .Stream.SendTypeRef | comment }}
+{{- $elemType := .Stream.SendTypeRef -}}
+{{- if not $elemType }}{{- $elemType = .Stream.RecvTypeRef }}{{- end }}
+{{ printf "%s allows streaming instances of %s to the client." .Stream.Interface $elemType | comment }}
 type {{ .Stream.Interface }} interface {
 	{{- if .Stream.SendTypeRef }}
 		{{- if .IsJSONRPCWebSocket }}

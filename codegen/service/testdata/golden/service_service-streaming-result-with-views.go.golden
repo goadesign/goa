@@ -36,8 +36,8 @@ type StreamingResultWithViewsMethodServerStream interface {
 	SetView(view string)
 }
 
-// StreamingResultWithViewsMethodClientStream allows streaming instances of  to
-// the client.
+// StreamingResultWithViewsMethodClientStream allows streaming instances of
+// *MultipleViews to the client.
 type StreamingResultWithViewsMethodClientStream interface {
 	Recv() (*MultipleViews, error)
 	RecvWithContext(context.Context) (*MultipleViews, error)
