@@ -114,7 +114,9 @@ type {{ .Stream.Interface }} interface {
 	SendError(ctx context.Context, id string, err error) error
 }
 {{- else }}
-{{ printf "%s allows streaming instances of %s to the client." .Stream.Interface .Stream.SendTypeRef | comment }}
+{{- $elemType := .Stream.SendTypeRef -}}
+{{- if not $elemType }}{{- $elemType = .Stream.RecvTypeRef }}{{- end }}
+{{ printf "%s allows streaming instances of %s to the client." .Stream.Interface $elemType | comment }}
 type {{ .Stream.Interface }} interface {
 	{{- if .Stream.SendTypeRef }}
 		{{- if .IsJSONRPCWebSocket }}

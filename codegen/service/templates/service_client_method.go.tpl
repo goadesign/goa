@@ -9,12 +9,8 @@
 {{- end }}
 {{- $resultType := .ResultRef }}
 {{- if .ClientStream }}
-	{{- /* For server-only streaming (no SendTypeRef), don't return a stream */ -}}
-	{{- if .ClientStream.SendTypeRef }}
-		{{- $resultType = .ClientStream.Interface }}
-	{{- else }}
-		{{- $resultType = "" }}
-	{{- end }}
+	{{- /* When a client stream exists, always return it from the client method. */ -}}
+	{{- $resultType = .ClientStream.Interface }}
 {{- end }}
 func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context{{ if .PayloadRef }}, p {{ .PayloadRef }}{{ end }}{{ if .MethodData.SkipRequestBodyEncodeDecode}}, req io.ReadCloser{{ end }}) ({{ if $resultType }}res {{ $resultType }}, {{ end }}{{ if .MethodData.SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}err error) {
 	{{- if or $resultType .MethodData.SkipResponseBodyEncodeDecode }}

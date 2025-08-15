@@ -136,7 +136,7 @@ func (w *wrappedMethodServerStream) Close() error {
 }
 
 // Unwrap returns the underlying stream type.
-func (w *wrappedMethodClientStream) Unwrap() interface{} {
+func (w *wrappedMethodClientStream) Unwrap() any {
 	return w.stream
 }
 
