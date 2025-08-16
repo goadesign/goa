@@ -613,6 +613,8 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	scope := codegen.NewNameScope()
 	scope.Unique("c") // 'c' is reserved as the client's receiver name.
 	scope.Unique("v") // 'v' is reserved as the request builder payload argument name.
+	// Reserve the service package name to avoid collision with parameter names in generated code
+	scope.Unique(svc.PkgName)
 	sd := &ServiceData{
 		Service:          svc,
 		ServerStruct:     "Server",
