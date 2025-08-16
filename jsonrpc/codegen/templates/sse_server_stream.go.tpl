@@ -145,10 +145,12 @@ func (s *{{ .SSE.StructName }}) SendError(ctx context.Context, id string, err er
 		return s.sendError(ctx, id, code, err.Error(), nil)
 	}
 	switch en.GoaErrorName() {
-	{{- range .Errors }}
-	case {{ printf "%q" .Name }}:
-		{{- with .Response}}
+	{{- range $gerr := .Errors }}
+		{{- range $err := $gerr.Errors }}
+	case {{ printf "%q" $err.Name }}:
+			{{- with $err.Response}}
 		return s.sendError(ctx, id, {{ .Code }}, err.Error(), err)
+			{{- end }}
 		{{- end }}
 	{{- end }}
 	default:
