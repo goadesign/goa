@@ -22,6 +22,9 @@ Method("{{ .Name }}", func() {
 		ID("id")
 {{- end }}
 	})
+{{- if $.Settings.GenerateGRPC }}
+	GRPC(func() {})
+{{- end }}
 })
 
 {{- define "inline_type" -}}

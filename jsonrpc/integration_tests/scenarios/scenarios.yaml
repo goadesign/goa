@@ -1314,6 +1314,22 @@ scenarios:
       id: "mixed-direct-1"
       result: "hello from direct"
 
+  # Mixed JSON-RPC + gRPC service (example generation parity)
+  - name: "grpc_jsonrpc_mixed_process_http"
+    method: "process"
+    transport: "http"
+    request:
+      params:
+        data: "hi"
+      id: "mix-1"
+    expect:
+      id: "mix-1"
+      result:
+        output: "hi"
+
+  # Note: The gRPC call itself is validated via harness gRPC client parity checks
+  # (to be added in harness/runner extensions if we choose to assert both paths here).
+
   # Additional HTTP protocol edge cases
   - name: "http_invalid_version_notification"
     transport: "http"
@@ -1344,7 +1360,47 @@ scenarios:
         message: "Invalid request"
 
   # Additional WebSocket ID-type coverage
-  # TODO(ws): numeric and null id on WebSocket behavior under investigation
+  - name: "websocket_null_id"
+    method: "echo_string_ws"
+    transport: "websocket"
+    sequence:
+      - type: "connect"
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "echo_string_ws"
+          params:
+            id: null
+            value: "null id"
+          id: null
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: null
+          result:
+            value: "null id"
+      - type: "close"
+
+  - name: "websocket_numeric_id"
+    method: "echo_string_ws"
+    transport: "websocket"
+    sequence:
+      - type: "connect"
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "echo_string_ws"
+          params:
+            id: 42
+            value: "number id"
+          id: 42
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: 42
+          result:
+            value: "number id"
+      - type: "close"
 
   # Additional SSE protocol edge cases
   - name: "sse_invalid_version_with_id"

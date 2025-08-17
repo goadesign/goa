@@ -71,8 +71,9 @@ type Config struct {
 
 // Settings holds global test settings
 type Settings struct {
-	Timeout time.Duration `yaml:"timeout,omitempty"`
-	BaseURL string        `yaml:"base_url,omitempty"`
+	Timeout      time.Duration `yaml:"timeout,omitempty"`
+	BaseURL      string        `yaml:"base_url,omitempty"`
+	GenerateGRPC bool          `yaml:"generate_grpc,omitempty"`
 }
 
 // MethodInfo extracts information from a method name
