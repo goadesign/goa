@@ -78,13 +78,10 @@ endif
 test:
 	go test ./... --coverprofile=cover.out
 
-integration-test: build-goa
+integration-test:
 ifneq ($(GOOS),windows)
 	cd jsonrpc/integration_tests && go test -count=1 -timeout 10m ./...
 endif
-
-build-goa:
-	cd cmd/goa && go install .
 
 release: release-goa release-examples release-plugins
 	@echo "Release v$(MAJOR).$(MINOR).$(BUILD) complete"
