@@ -44,21 +44,7 @@
 			} else if u.Port() == "" {
 				u.Host = net.JoinHostPort(u.Host, "{{ $u.Port }}")
 			}
-			handle{{ toUpper $u.Transport.Name }}Server(
-				ctx,
-				u,
-			{{- range $u.HandlerArgs }}
-    				{{- if .Endpoint }}
-				{{ .Endpoint }},
-				{{- end }}
-				{{- if .Service }}
-				{{ .Service }},
-    				{{- end }}
-			{{- end }}
-				&wg,
-				errc,
-				*dbgF,
-			)
+			handle{{ toUpper $u.Transport.Name }}Server(ctx, u{{- range $u.HandlerArgs }}{{- if .Endpoint }}, {{ .Endpoint }}{{- end }}{{- if .Service }}, {{ .Service }}{{- end }}{{- end }}, &wg, errc, *dbgF)
 		}
 		{{- end }}
 	{{ end }}

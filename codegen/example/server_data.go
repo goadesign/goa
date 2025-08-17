@@ -382,7 +382,10 @@ func newGRPCTransport() *TransportData {
 
 // computeHandlerArgsForURI returns the ordered handler arguments for the given URI.
 func computeHandlerArgsForURI(uri *URIData, server *Data, root *expr.RootExpr) []HandlerArg {
-	var httpSvcNames, grpcSvcNames, jsonrpcSvcNames []string
+	capHint := len(server.Services)
+	httpSvcNames := make([]string, 0, capHint)
+	grpcSvcNames := make([]string, 0, capHint)
+	jsonrpcSvcNames := make([]string, 0, len(root.API.JSONRPC.Services))
 	for _, t := range server.Transports {
 		if t.Type == TransportHTTP {
 			httpSvcNames = append(httpSvcNames, t.Services...)
