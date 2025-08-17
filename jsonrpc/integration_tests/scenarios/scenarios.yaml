@@ -75,7 +75,10 @@ scenarios:
     expect:
       id: 5
       result:
-        items: ["c", "b", "a"]  # Reversed
+        items:
+          - "c"
+          - "b"
+          - "a"  # Reversed
 
   - name: "transform_object_http"
     method: "transform_object"
@@ -1146,7 +1149,6 @@ scenarios:
             items: ["first", "second"]
       - type: "send"
         data:
-          jsonrpc: "2.0"
           method: "collect_array_ws"
           params:
             id: "collect-3"
@@ -1316,7 +1318,7 @@ scenarios:
 
   # Mixed JSON-RPC + gRPC service (example generation parity)
   - name: "grpc_jsonrpc_mixed_process_http"
-    method: "process"
+    method: "grpc_process"
     transport: "http"
     request:
       params:
@@ -1442,7 +1444,3 @@ scenarios:
       # Missing method and no id (notification) -> no events
       params: "ignored"
     sequence: []
-
-settings:
-  timeout: "30s"
-  base_url: ""  # Will use default from server

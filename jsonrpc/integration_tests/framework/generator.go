@@ -432,6 +432,9 @@ func (g *Generator) templateFuncs() template.FuncMap {
 			}
 			return dict
 		},
+		"shouldGenerateGRPC": func(m *MethodImplData) bool {
+			return m.Info.GRPC
+		},
 	}
 }
 
@@ -479,7 +482,7 @@ func (g *Generator) runPostGeneration() error {
 	if err := g.ensureGoaBinary(); err != nil {
 		return fmt.Errorf("failed to ensure goa binary: %w", err)
 	}
-	
+
 	goaBinary := g.getGoaBinary()
 
 	// Run go mod tidy first
@@ -523,7 +526,7 @@ func (g *Generator) ensureGoaBinary() error {
 			return nil
 		}
 	}
-	
+
 	// Try to find goa in PATH first
 	var whichCmd *exec.Cmd
 	if runtime.GOOS == "windows" {
@@ -535,7 +538,7 @@ func (g *Generator) ensureGoaBinary() error {
 	if _, err := whichCmd.Output(); err == nil {
 		return nil
 	}
-	
+
 	// On Windows, also try 'where goa' without .exe
 	if runtime.GOOS == "windows" {
 		whichCmd = exec.Command("where", "goa")
@@ -543,18 +546,18 @@ func (g *Generator) ensureGoaBinary() error {
 			return nil
 		}
 	}
-	
+
 	// No existing binary found, build it
 	goaSourcePath := "../../../cmd/goa"
 	if _, err := os.Stat(goaSourcePath); err != nil {
 		return fmt.Errorf("goa source directory not found at %s: %w", goaSourcePath, err)
 	}
-	
+
 	// Build the binary using go install (original approach)
 	buildCmd := exec.Command("go", "install", ".")
-	
+
 	buildCmd.Dir = goaSourcePath
-	
+
 	// Set environment for consistent behavior
 	env := os.Environ()
 	if gopath := os.Getenv("GOPATH"); gopath == "" {
@@ -569,21 +572,21 @@ func (g *Generator) ensureGoaBinary() error {
 		}
 	}
 	buildCmd.Env = env
-	
+
 	if buildOutput, buildErr := buildCmd.CombinedOutput(); buildErr != nil {
 		return fmt.Errorf("failed to build goa binary: %w\nOutput: %s", buildErr, buildOutput)
 	}
-	
+
 	// Verify the binary was built successfully
 	newBinary := g.getGoaBinary()
 	if newBinary == "goa" || newBinary == "goa.exe" {
 		return fmt.Errorf("goa binary still not found after building")
 	}
-	
+
 	if _, err := os.Stat(newBinary); err != nil {
 		return fmt.Errorf("built goa binary not accessible at %s: %w", newBinary, err)
 	}
-	
+
 	return nil
 }
 
@@ -593,7 +596,7 @@ func (g *Generator) getGoBinDir() string {
 	if gobin := os.Getenv("GOBIN"); gobin != "" {
 		return gobin
 	}
-	
+
 	// Try go env GOBIN
 	cmd := exec.Command("go", "env", "GOBIN")
 	if output, err := cmd.Output(); err == nil {
@@ -602,7 +605,7 @@ func (g *Generator) getGoBinDir() string {
 			return gobin
 		}
 	}
-	
+
 	// Try go env GOPATH
 	cmd = exec.Command("go", "env", "GOPATH")
 	if output, err := cmd.Output(); err == nil {
@@ -611,12 +614,12 @@ func (g *Generator) getGoBinDir() string {
 			return filepath.Join(gopath, "bin")
 		}
 	}
-	
+
 	// Fallback to environment GOPATH
 	if gopath := os.Getenv("GOPATH"); gopath != "" {
 		return filepath.Join(gopath, "bin")
 	}
-	
+
 	// Try default locations
 	homeDir, err := os.UserHomeDir()
 	if err == nil {
@@ -627,7 +630,7 @@ func (g *Generator) getGoBinDir() string {
 			return defaultGoPath
 		}
 	}
-	
+
 	return ""
 }
 

@@ -22,7 +22,7 @@ Method("{{ .Name }}", func() {
 		ID("id")
 {{- end }}
 	})
-{{- if $.Settings.GenerateGRPC }}
+{{- if shouldGenerateGRPC . }}
 	GRPC(func() {})
 {{- end }}
 })

@@ -15,15 +15,15 @@ const (
 
 // Scenario represents a test scenario loaded from YAML
 type Scenario struct {
-	Name        string     `yaml:"name"`
-	Method      string     `yaml:"method"`
-	Transport   string     `yaml:"transport"`
-	Request     Request    `yaml:"request"`
-	RawRequest  string     `yaml:"raw_request,omitempty"`  // For testing invalid JSON
-	Batch       []Request  `yaml:"batch,omitempty"`        // For batch requests
-	Expect      Expect     `yaml:"expect"`
-	ExpectBatch []Expect   `yaml:"expect_batch,omitempty"` // For batch responses
-	Sequence    []Action   `yaml:"sequence,omitempty"`     // For streaming scenarios
+	Name        string    `yaml:"name"`
+	Method      string    `yaml:"method"`
+	Transport   string    `yaml:"transport"`
+	Request     Request   `yaml:"request"`
+	RawRequest  string    `yaml:"raw_request,omitempty"` // For testing invalid JSON
+	Batch       []Request `yaml:"batch,omitempty"`       // For batch requests
+	Expect      Expect    `yaml:"expect"`
+	ExpectBatch []Expect  `yaml:"expect_batch,omitempty"` // For batch responses
+	Sequence    []Action  `yaml:"sequence,omitempty"`     // For streaming scenarios
 }
 
 // Request represents the JSON-RPC request to send
@@ -38,9 +38,9 @@ type Request struct {
 
 // Expect represents what we expect in response
 type Expect struct {
-	ID      any          `yaml:"id,omitempty"`
-	Result  any          `yaml:"result,omitempty"`
-	Error   *ExpectError `yaml:"error,omitempty"`
+	ID     any          `yaml:"id,omitempty"`
+	Result any          `yaml:"result,omitempty"`
+	Error  *ExpectError `yaml:"error,omitempty"`
 	// NoResponse indicates we expect no response (for notifications)
 	NoResponse bool `yaml:"no_response,omitempty"`
 }
@@ -71,9 +71,8 @@ type Config struct {
 
 // Settings holds global test settings
 type Settings struct {
-	Timeout      time.Duration `yaml:"timeout,omitempty"`
-	BaseURL      string        `yaml:"base_url,omitempty"`
-	GenerateGRPC bool          `yaml:"generate_grpc,omitempty"`
+	Timeout time.Duration `yaml:"timeout,omitempty"`
+	BaseURL string        `yaml:"base_url,omitempty"`
 }
 
 // MethodInfo extracts information from a method name
@@ -82,6 +81,7 @@ type MethodInfo struct {
 	Type      string // string, array, object, etc.
 	Modifier  string // notify, error, validate, final
 	Transport string // sse, ws (extracted from method suffix)
+	GRPC      bool   // whether to emit GRPC endpoint (method name starts with grpc_)
 }
 
 // ParseMethod parses a method name into its components.
@@ -89,16 +89,24 @@ type MethodInfo struct {
 // Examples: echo_string, stream_object_final_sse, broadcast_string_ws
 // Returns error if the method name is invalid.
 func ParseMethod(method string) (MethodInfo, error) {
+	// Check for grpc_ prefix convention
+	grpc := false
+	if strings.HasPrefix(method, "grpc_") {
+		grpc = true
+		method = strings.TrimPrefix(method, "grpc_")
+	}
+
 	parts := strings.Split(method, "_")
 	if len(parts) < 2 {
 		return MethodInfo{}, fmt.Errorf("invalid method name %q: must have format action_type[_modifier][_transport]", method)
 	}
-	
+
 	info := MethodInfo{
 		Action: parts[0],
 		Type:   parts[1],
+		GRPC:   grpc,
 	}
-	
+
 	// Check if last part is a transport
 	if len(parts) > 2 {
 		lastPart := parts[len(parts)-1]
@@ -107,27 +115,27 @@ func ParseMethod(method string) (MethodInfo, error) {
 			parts = parts[:len(parts)-1] // Remove transport from parts
 		}
 	}
-	
+
 	// Validate action
 	validActions := map[string]bool{
 		ActionEcho: true, ActionTransform: true, ActionGenerate: true,
 		ActionStream: true, ActionCollect: true, ActionBroadcast: true,
 	}
 	if !validActions[info.Action] {
-		return MethodInfo{}, fmt.Errorf("invalid action %q in method %q: must be one of: %s", 
+		return MethodInfo{}, fmt.Errorf("invalid action %q in method %q: must be one of: %s",
 			info.Action, method, strings.Join(getMapKeys(validActions), ", "))
 	}
-	
+
 	// Validate type
 	validTypes := map[string]bool{
 		TypeString: true, TypeArray: true, TypeObject: true,
 		TypeMap: true, TypeUser: true, TypeInt: true, TypeBool: true,
 	}
 	if !validTypes[info.Type] {
-		return MethodInfo{}, fmt.Errorf("invalid type %q in method %q: must be one of: %s", 
+		return MethodInfo{}, fmt.Errorf("invalid type %q in method %q: must be one of: %s",
 			info.Type, method, strings.Join(getMapKeys(validTypes), ", "))
 	}
-	
+
 	// Check for modifier (3rd part after action and type)
 	if len(parts) >= 3 {
 		info.Modifier = parts[2]
@@ -136,11 +144,11 @@ func ParseMethod(method string) (MethodInfo, error) {
 			ModifierNotify: true, ModifierError: true, ModifierValidate: true, ModifierFinal: true,
 		}
 		if !validModifiers[info.Modifier] {
-			return MethodInfo{}, fmt.Errorf("invalid modifier %q in method %q: must be one of: %s", 
+			return MethodInfo{}, fmt.Errorf("invalid modifier %q in method %q: must be one of: %s",
 				info.Modifier, method, strings.Join(getMapKeys(validModifiers), ", "))
 		}
 	}
-	
+
 	return info, nil
 }
 
@@ -187,9 +195,9 @@ func (info MethodInfo) HasStreamingResult() bool {
 	}
 	if info.IsWebSocket() {
 		// WebSocket methods can stream results based on action
-		return info.Action == ActionStream || info.Action == ActionBroadcast || 
-			   info.Action == ActionEcho || info.Action == ActionTransform || info.Action == ActionGenerate ||
-			   info.Action == ActionCollect
+		return info.Action == ActionStream || info.Action == ActionBroadcast ||
+			info.Action == ActionEcho || info.Action == ActionTransform || info.Action == ActionGenerate ||
+			info.Action == ActionCollect
 	}
 	return false
 }
