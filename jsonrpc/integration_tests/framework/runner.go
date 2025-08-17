@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/yaml.v3"
 	"goa.design/goa/v3/jsonrpc/integration_tests/harness"
+	"gopkg.in/yaml.v3"
 )
 
 // RunnerConfig holds runner configuration
@@ -32,23 +32,23 @@ type RunnerConfig struct {
 
 // Runner executes JSON-RPC test scenarios
 type Runner struct {
-	config          Config
-	runnerConfig    RunnerConfig
+	config       Config
+	runnerConfig RunnerConfig
 	// generator field removed - created on demand
 	testDir         string
 	servers         map[string]*harness.Server
 	filterPattern   *regexp.Regexp
-	executorFactory func(string) *Executor
+	executorFactory func(string) *executor
 }
 
 // NewRunner creates a new test runner
 func NewRunner(scenariosPath string, opts ...RunnerOption) (*Runner, error) {
 	// Start with environment config
 	runnerConfig := LoadRunnerConfigFromEnv()
-	
+
 	// Apply options
 	ApplyOptions(&runnerConfig, opts...)
-	
+
 	data, err := os.ReadFile(scenariosPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read scenarios: %w", err)
@@ -78,7 +78,7 @@ func NewRunner(scenariosPath string, opts ...RunnerOption) (*Runner, error) {
 }
 
 // SetExecutorFactory sets a custom executor factory
-func (r *Runner) SetExecutorFactory(factory func(string) *Executor) {
+func (r *Runner) SetExecutorFactory(factory func(string) *executor) {
 	r.executorFactory = factory
 }
 
@@ -151,7 +151,7 @@ func (r *Runner) filterScenarios() []Scenario {
 // generateCode generates DSL and implementation for all methods
 func (r *Runner) generateCode(t *testing.T) error {
 	t.Helper()
-	
+
 	// Collect all unique methods
 	methods := r.collectMethods()
 
@@ -176,31 +176,31 @@ func (r *Runner) collectMethods() map[string]MethodInfo {
 				if method == "" {
 					continue // Skip notifications without methods
 				}
-				
+
 				info, err := ParseMethod(method)
 				if err != nil {
 					// Skip invalid methods (used for testing errors)
 					continue
 				}
-				
+
 				methods[method] = info
 			}
 			continue
 		}
-		
+
 		// Handle single requests
 		method := scenario.Request.GetMethod(scenario.Method)
 		if method == "" {
 			// Skip scenarios without methods (e.g., raw requests)
 			continue
 		}
-		
+
 		info, err := ParseMethod(method)
 		if err != nil {
 			// Skip invalid methods (used for testing errors)
 			continue
 		}
-		
+
 		methods[method] = info
 	}
 
@@ -210,7 +210,7 @@ func (r *Runner) collectMethods() map[string]MethodInfo {
 // startServers starts test servers for all transports
 func (r *Runner) startServers(t *testing.T) error {
 	t.Helper()
-	
+
 	ctx := context.Background()
 
 	// Start a single server that handles all transports
@@ -220,12 +220,12 @@ func (r *Runner) startServers(t *testing.T) error {
 	}
 
 	r.servers["main"] = server
-	
+
 	// Update base URL if not set
 	if r.runnerConfig.ServerURL == "" {
 		r.runnerConfig.ServerURL = server.URL()
 	}
-	
+
 	t.Logf("Server running at: %s", r.runnerConfig.ServerURL)
 	return nil
 }
@@ -244,7 +244,7 @@ func (r *Runner) stopServers() {
 // runScenario executes a single test scenario
 func (r *Runner) runScenario(t *testing.T, scenario Scenario) {
 	t.Helper()
-	
+
 	// Get server URL
 	serverURL := r.runnerConfig.ServerURL
 	if serverURL == "" && r.config.Settings.BaseURL != "" {
@@ -255,31 +255,30 @@ func (r *Runner) runScenario(t *testing.T, scenario Scenario) {
 	}
 
 	// Create executor with timeout from settings
-	opts := []ExecutorOption{}
+	opts := []executorOption{}
 	if r.config.Settings.Timeout > 0 {
-		opts = append(opts, WithWebSocketTimeout(r.config.Settings.Timeout))
+		opts = append(opts, withWebSocketTimeout(r.config.Settings.Timeout))
 	}
-	opts = append(opts, WithWorkDir(r.testDir))
-	
+	opts = append(opts, withWorkDir(r.testDir))
+
 	// Enable debug if requested
 	if os.Getenv("DEBUG") == "true" {
-		opts = append(opts, WithExecutorDebug(true))
+		opts = append(opts, withExecutorDebug(true))
 	}
-	
-	var executor *Executor
-	if r.executorFactory != nil {
-		executor = r.executorFactory(serverURL)
-	} else {
-		executor = NewExecutor(serverURL, opts...)
-	}
-	executor.Execute(t, scenario)
-}
 
+	var exec *executor
+	if r.executorFactory != nil {
+		exec = r.executorFactory(serverURL)
+	} else {
+		exec = newExecutor(serverURL, opts...)
+	}
+	exec.Execute(t, scenario)
+}
 
 // Cleanup performs any necessary cleanup
 func (r *Runner) Cleanup() {
 	r.stopServers()
-	
+
 	if !r.runnerConfig.KeepGenerated && r.testDir != "" {
 		os.RemoveAll(r.testDir) //nolint:errcheck
 	}
