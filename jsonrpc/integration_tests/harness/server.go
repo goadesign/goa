@@ -14,10 +14,11 @@ import (
 
 // Server manages a test server process
 type Server struct {
-	cmd     *exec.Cmd
-	port    int
-	logFile *os.File
-	workDir string
+	cmd      *exec.Cmd
+	port     int
+	grpcPort int
+	logFile  *os.File
+	workDir  string
 }
 
 // StartServer starts a test server
@@ -70,9 +71,30 @@ func StartServer(ctx context.Context, workDir string, port int) (*Server, error)
 		return nil, fmt.Errorf("go mod download failed: %w\nOutput: %s", err, output)
 	}
 
+	// Detect whether gRPC is generated (presence of gen/grpc directory)
+	hasGRPC := false
+	if _, err := os.Stat(filepath.Join(workDir, "gen", "grpc")); err == nil {
+		hasGRPC = true
+	}
+
+	// Allocate a gRPC port if needed
+	grpcPort := 0
+	if hasGRPC {
+		gl, err := net.Listen("tcp", ":0")
+		if err != nil {
+			return nil, fmt.Errorf("failed to find free gRPC port: %w", err)
+		}
+		grpcPort = gl.Addr().(*net.TCPAddr).Port
+		gl.Close() //nolint:errcheck
+	}
+
 	// Run all files in the package so helpers generated alongside main.go are included
 	serverDir := filepath.Dir(serverPath)
-	cmd := exec.CommandContext(ctx, "go", "run", ".", "--http-port", fmt.Sprintf("%d", port))
+	args := []string{"run", ".", "--http-port", fmt.Sprintf("%d", port)}
+	if hasGRPC {
+		args = append(args, "--grpc-port", fmt.Sprintf("%d", grpcPort))
+	}
+	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Dir = serverDir
 	cmd.Stdout = logFile
 	cmd.Stderr = logFile
@@ -88,10 +110,11 @@ func StartServer(ctx context.Context, workDir string, port int) (*Server, error)
 	}
 
 	server := &Server{
-		cmd:     cmd,
-		port:    port,
-		logFile: logFile,
-		workDir: workDir,
+		cmd:      cmd,
+		port:     port,
+		grpcPort: grpcPort,
+		logFile:  logFile,
+		workDir:  workDir,
 	}
 
 	// Wait for server to be ready
@@ -136,7 +159,9 @@ func (s *Server) waitForReady(ctx context.Context) error {
 		for logScanner.Scan() {
 			line := logScanner.Text()
 			if strings.Contains(line, "HTTP server listening") ||
-				strings.Contains(line, fmt.Sprintf(":%d", s.port)) {
+				strings.Contains(line, fmt.Sprintf(":%d", s.port)) ||
+				(s.grpcPort != 0 && strings.Contains(line, fmt.Sprintf(":%d", s.grpcPort))) ||
+				strings.Contains(line, "gRPC server listening") {
 				readyChan <- true
 				return
 			}
@@ -160,11 +185,19 @@ func (s *Server) waitForReady(ctx context.Context) error {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", s.port))
-				if err == nil {
+				// HTTP port
+				if conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", s.port)); err == nil {
 					conn.Close() //nolint:errcheck
 					readyChan <- true
 					return
+				}
+				// gRPC port (if present)
+				if s.grpcPort != 0 {
+					if conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", s.grpcPort)); err == nil {
+						conn.Close() //nolint:errcheck
+						readyChan <- true
+						return
+					}
 				}
 			}
 		}
