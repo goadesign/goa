@@ -397,6 +397,13 @@ func computeHandlerArgsForURI(uri *URIData, server *Data, root *expr.RootExpr) [
 	for _, j := range root.API.JSONRPC.Services {
 		jsonrpcSvcNames = append(jsonrpcSvcNames, j.Name())
 	}
+	// Track HTTP services that actually define endpoints (not just file servers)
+	hasHTTPMethods := make(map[string]bool, len(root.API.HTTP.Services))
+	for _, hs := range root.API.HTTP.Services {
+		if len(hs.HTTPEndpoints) > 0 {
+			hasHTTPMethods[hs.Name()] = true
+		}
+	}
 	var out []HandlerArg
 	if uri.Transport.Type == TransportGRPC {
 		for _, name := range grpcSvcNames {
@@ -406,7 +413,7 @@ func computeHandlerArgsForURI(uri *URIData, server *Data, root *expr.RootExpr) [
 	}
 	// Endpoints first for union(HTTP services, JSON-RPC services) in server.Services order
 	for _, svcName := range server.Services {
-		if slices.Contains(httpSvcNames, svcName) || slices.Contains(jsonrpcSvcNames, svcName) {
+		if (slices.Contains(httpSvcNames, svcName) && hasHTTPMethods[svcName]) || slices.Contains(jsonrpcSvcNames, svcName) {
 			out = append(out, HandlerArg{Endpoint: codegen.Goify(svcName, false) + "Endpoints"})
 		}
 	}

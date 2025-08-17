@@ -261,7 +261,8 @@ Method("track", func() {
     })
     
     Result(func() {
-        ID("request_id", String, "Tracking ID")  // Automatically copied from payload
+        ID("request_id", String, "Tracking ID")  // Optional; if empty the
+                                                   // response uses the request id
         Attribute("status", String)
         Required("request_id", "status")
     })
@@ -270,12 +271,60 @@ Method("track", func() {
 })
 ```
 
+
 The `ID()` function marks which field receives the JSON-RPC message ID. Rules:
 
 1. ID fields must be String type
 2. Result can only have an ID if Payload has one
-3. For non-streaming methods, the ID is automatically copied from payload to result
+3. For non-streaming methods, the response `id` defaults to the request `id`.
+   If the result ID is set, that value is used instead.
 4. Missing ID at runtime means the message is a notification
+
+### ID Semantics
+
+How IDs behave across transports and shapes:
+
+- Design-time type
+  - `ID()` marks the field that carries the JSON-RPC ID; it must be `String` in
+    the design.
+
+- Runtime type
+  - JSON-RPC allows string or number IDs. Goa accepts either on the wire and
+    normalizes to string when assigning to your `ID()` fields.
+
+- HTTP (request/response)
+  - Client
+    - If the payload has an ID field and it is non-empty, the client sends it
+      as `id` (request). If empty (or nil pointer), the client omits `id`
+      (notification).
+    - If the payload has no ID field, the client generates a string `id` and
+      sends a request (never a notification).
+  - Server
+    - The response envelope `id` equals the result ID if set; otherwise it
+      equals the request `id`. The server does not inject the request `id` into
+      your result struct.
+
+- SSE (server streaming)
+  - `Send(ctx, event)`: emits a JSON-RPC notification (no `id`).
+  - `SendAndClose(ctx, result)`: sends a JSON-RPC response. The `id` equals the
+    result ID if set; otherwise the original request `id`. To avoid duplicate
+    fields, the framework clears the result ID field when it is used for the
+    envelope.
+
+- WebSocket (streaming)
+  - Server replies use the original request `id` automatically. Use
+    `SendNotification` for server-initiated messages (no `id`).
+  - Client generates a string `id` per request in bidirectional or recv-only
+    patterns. When receiving, if your result has an ID field and it is empty,
+    the client populates it from the envelope `id` for convenience.
+
+- When to use `ID()` in the DSL
+  - Non-streaming: put `ID()` in the payload to receive request IDs in your
+    handler; add it to the result only if you need to surface the ID in your
+    result type.
+  - Streaming (WebSocket bidirectional): include `ID()` in both streaming
+    payload and result to correlate messages at the type level.
+  - Notifications: omit `ID()` (no `id` is sent or expected).
 
 ## Transport Options
 
