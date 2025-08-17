@@ -83,6 +83,7 @@ ifneq ($(GOOS),windows)
 	cd jsonrpc/integration_tests && go test -count=1 -timeout 10m ./...
 endif
 
+# Needed for CI to run integration tests
 build-goa:
 	cd cmd/goa && go install .
 
