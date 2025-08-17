@@ -24,7 +24,8 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 {{- end }}
 {{- if isWebSocketEndpoint . }}
 	{{- if and .ClientWebSocket.RecvName .ClientWebSocket.RecvTypeRef }}
-		decodeResponse := {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
+		// For WebSocket, pass the base decoder to the stream and decode inner results
+		decodeResponse := c.decoder
 	{{- end }}
 		
 		// Get direct WebSocket connection

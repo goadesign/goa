@@ -34,5 +34,5 @@ const (
 	ModifierError    = "error"    // Always returns error
 	ModifierValidate = "validate" // Includes validation
 	ModifierFinal    = "final"    // SSE: final response
+	ModifierIDMap    = "idmap"    // Map envelope ID to payload/result field
 )
-

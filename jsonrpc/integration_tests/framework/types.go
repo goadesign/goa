@@ -141,7 +141,7 @@ func ParseMethod(method string) (MethodInfo, error) {
 		info.Modifier = parts[2]
 		// Validate modifier
 		validModifiers := map[string]bool{
-			ModifierNotify: true, ModifierError: true, ModifierValidate: true, ModifierFinal: true,
+			ModifierNotify: true, ModifierError: true, ModifierValidate: true, ModifierFinal: true, ModifierIDMap: true,
 		}
 		if !validModifiers[info.Modifier] {
 			return MethodInfo{}, fmt.Errorf("invalid modifier %q in method %q: must be one of: %s",
@@ -215,12 +215,18 @@ func (info MethodInfo) HasStreamingPayload() bool {
 	return false
 }
 
-// GetMethod returns the effective method name for the request
+// GetMethod returns the effective JSON-RPC method name to use on the wire.
+// It strips the grpc_ prefix convention and preserves transport suffixes.
 func (r Request) GetMethod(fallback string) string {
-	if r.Method != "" {
-		return r.Method
+	base := r.Method
+	if base == "" {
+		base = fallback
 	}
-	return fallback
+	info, err := ParseMethod(base)
+	if err != nil {
+		return base
+	}
+	return info.Name()
 }
 
 // getMapKeys returns sorted keys from a map[string]bool

@@ -1318,16 +1318,15 @@ scenarios:
 
   # Mixed JSON-RPC + gRPC service (example generation parity)
   - name: "grpc_jsonrpc_mixed_process_http"
-    method: "grpc_process"
+    method: "grpc_echo_string"
     transport: "http"
     request:
-      params:
-        data: "hi"
+      jsonrpc: "2.0"
+      params: "hi"
       id: "mix-1"
     expect:
       id: "mix-1"
-      result:
-        output: "hi"
+      result: "hi"
 
   # Note: The gRPC call itself is validated via harness gRPC client parity checks
   # (to be added in harness/runner extensions if we choose to assert both paths here).
@@ -1444,3 +1443,96 @@ scenarios:
       # Missing method and no id (notification) -> no events
       params: "ignored"
     sequence: []
+
+  - name: "http_params_id_with_request_id_mapping"
+    method: "echo_string_idmap"
+    transport: "http"
+    request:
+      jsonrpc: "2.0"
+      params:
+        id: "12345"
+        request_id: "ignored-by-client" # mapping should come from envelope, not this field
+        value: "hello"
+      id: "env-1"
+    expect:
+      id: "env-1"
+      result: "hello"
+
+  - name: "http_params_id_with_request_id_mapping_numeric_env_id"
+    method: "echo_string_idmap"
+    transport: "http"
+    request:
+      jsonrpc: "2.0"
+      params:
+        id: "biz-123"
+        request_id: "ignored"
+        value: "hello-num"
+      id: 101
+    expect:
+      id: 101
+      result: "hello-num"
+
+  - name: "sse_params_id_with_request_id_mapping"
+    method: "stream_string_sse"
+    transport: "sse"
+    request:
+      jsonrpc: "2.0"
+      params: "ab"
+      id: "env-sse-1"
+    sequence:
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          method: "stream_string_sse"
+          params:
+            value: "Stream 1 of 2"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          method: "stream_string_sse"
+          params:
+            value: "Stream 2 of 2"
+
+  - name: "websocket_params_id_with_request_id_mapping"
+    method: "echo_string_idmap_ws"
+    transport: "websocket"
+    sequence:
+      - type: "connect"
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "echo_string_idmap_ws"
+          params:
+            id: "biz-42"        # business-level id as string
+            request_id: "foo"   # separate app field; mapping uses envelope id
+            value: "ws-hello"
+          id: "env-ws-1"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "env-ws-1"
+          result:
+            value: "ws-hello"
+      - type: "close"
+
+  - name: "websocket_params_id_with_request_id_mapping_numeric_env_id"
+    method: "echo_string_idmap_ws"
+    transport: "websocket"
+    sequence:
+      - type: "connect"
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "echo_string_idmap_ws"
+          params:
+            id: "biz-456"
+            request_id: "foo"
+            value: "ws-hello-num"
+          id: 202
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: 202
+          result:
+            value: "ws-hello-num"
+      - type: "close"

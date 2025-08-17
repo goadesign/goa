@@ -21,14 +21,14 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) Recv(ctx context.Context)
 
 func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx context.Context, req *jsonrpc.RawRequest) error {
 	if req.JSONRPC != "2.0" {
-		if req.ID != nil {
+		if req.HasID {
 			return s.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil)
 		}
 		return nil
 	}
 
 	if req.Method == "" {
-		if req.ID != nil {
+		if req.HasID {
 			return s.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil)
 		}
 		return nil
@@ -61,7 +61,7 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx contex
 			}
 			if _, err := s.{{ lowerInitial .Method.VarName }}Endpoint(ctx, endpointInput); err != nil {
 				// For streaming endpoints, send error as JSON-RPC error response
-				if req.ID != nil {
+				if req.HasID {
 					// Send error response to client
 					if sendErr := streamWrapper.SendError(ctx, err); sendErr != nil {
 						return fmt.Errorf("failed to send error response: %w", sendErr)
@@ -76,19 +76,32 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx contex
 			{{- else }}
 			res, err := s.{{ lowerInitial .Method.VarName }}(ctx, s.r, req)
 			if err != nil {
-				return fmt.Errorf("handler error for %s: %w", {{ printf "%q" .Method.Name }}, err)
+				// For non-streaming, send JSON-RPC error if request has an ID; otherwise continue
+				if req.HasID {
+					if sendErr := s.SendError(ctx, req.ID, err); sendErr != nil {
+						return fmt.Errorf("failed to send error response: %w", sendErr)
+					}
+				}
+				return nil
 			}
 			// Only send a response if the request has an ID (i.e., it's not a notification)
-			if req.ID != nil {
-				if err := s.Send{{ .Method.VarName }}Response(ctx, req.ID, res.({{ printf "*%s.%sResult" .ServicePkgName .Method.VarName }})); err != nil {
-					return fmt.Errorf("send response error for %s: %w", {{ printf "%q" .Method.Name }}, err)
+			if req.HasID {
+				if res == nil {
+					return s.sendError(ctx, req.ID, jsonrpc.InternalError, "Internal error", nil)
+				}
+				if r, ok := res.({{ printf "*%s.%sResult" .ServicePkgName .Method.VarName }}); ok {
+					if err := s.Send{{ .Method.VarName }}Response(ctx, req.ID, r); err != nil {
+						return fmt.Errorf("send response error for %s: %w", {{ printf "%q" .Method.Name }}, err)
+					}
+				} else {
+					return s.sendError(ctx, req.ID, jsonrpc.InternalError, "Internal error", nil)
 				}
 			}
 			return nil
 			{{- end }}
 	{{- end }}
 	default:
-		if req.ID != nil {
+		if req.HasID {
 			return s.sendError(ctx, req.ID, jsonrpc.MethodNotFound, "Method not found", nil)
 		}
 		return nil

@@ -18,8 +18,9 @@ Method("{{ .Name }}", func() {
 	JSONRPC(func() {
 {{- if .IsSSE }}
 		ServerSentEvents()
-{{- else if and .IsWebSocket .IsBidirectional }}
-		ID("id")
+{{- end }}
+{{- if eq .Info.Modifier "idmap" }}
+		ID("request_id")
 {{- end }}
 	})
 {{- if shouldGenerateGRPC . }}

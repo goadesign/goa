@@ -16,7 +16,7 @@ func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context{{ if .PayloadR
 	{{- if or $resultType .MethodData.SkipResponseBodyEncodeDecode }}
 	var ires any
 	{{- end }}
-	{{ if or $resultType .MethodData.SkipResponseBodyEncodeDecode }}ires{{ else }}_{{ end }}, err = c.{{ .VarName}}Endpoint(ctx, {{ if .MethodData.SkipRequestBodyEncodeDecode }}&{{ .RequestStruct }}{ {{ if .PayloadRef }}Payload: p, {{ end }}Body: req }{{ else if .PayloadRef }}p{{ else }}nil{{ end }})
+	{{ if or $resultType .MethodData.SkipResponseBodyEncodeDecode }}ires{{ else }}_{{ end }}, err = c.{{ .EndpointField }}(ctx, {{ if .MethodData.SkipRequestBodyEncodeDecode }}&{{ .RequestStruct }}{ {{ if .PayloadRef }}Payload: p, {{ end }}Body: req }{{ else if .PayloadRef }}p{{ else }}nil{{ end }})
 	{{- if not (or $resultType .MethodData.SkipResponseBodyEncodeDecode) }}
 	return
 	{{- else }}

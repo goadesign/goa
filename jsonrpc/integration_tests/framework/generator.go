@@ -6,12 +6,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"text/template"
 
 	"goa.design/goa/v3/codegen"
 	goatemplate "goa.design/goa/v3/codegen/template"
+
+	goast "go/ast"
+	goparser "go/parser"
+	gotoken "go/token"
 )
 
 //go:embed templates/*.tpl templates/dsl/*.tpl templates/impl/*.tpl templates/partial/*.tpl
@@ -21,6 +24,15 @@ var templateFS embed.FS
 var generatorTemplates = &goatemplate.TemplateReader{FS: templateFS}
 
 // Generator generates test service code using templates
+// Flow:
+//  1. Build design data from scenarios
+//  2. Render design (go.mod, design.go)
+//  3. Run goa gen/example
+//  4. Build implementation data (align method Go names with generated interface)
+//  5. Render implementations
+//
+// Keeping the phases explicit here makes the generator logic predictable and
+// easier to maintain/debug.
 type Generator struct {
 	workDir string
 	methods map[string]MethodInfo
@@ -28,78 +40,92 @@ type Generator struct {
 
 // NewGenerator creates a new generator
 func NewGenerator(workDir string, methods map[string]MethodInfo) *Generator {
-	return &Generator{
-		workDir: workDir,
-		methods: methods,
-	}
+	return &Generator{workDir: workDir, methods: methods}
 }
 
-// Generate creates the complete test service
+// Generate runs the full generation pipeline.
 func (g *Generator) Generate() error {
-	// Build semantic data
-	designData := g.buildDesignData()
-	implData := g.buildImplementationData(designData)
+	// 1. Build design data
+	design := g.buildDesignData()
+	// 2. Render design
+	if err := g.renderDesign(design); err != nil {
+		return err
+	}
+	// 3. Run goa gen/example
+	if err := g.runPostGeneration(); err != nil {
+		return fmt.Errorf("post generation: %w", err)
+	}
+	// 4. Build implementation data
+	impl := g.buildImplementationData(design)
+	// 5. Render implementations
+	if err := g.renderImplementation(impl); err != nil {
+		return err
+	}
+	return nil
+}
 
-	// Generate files
-	files := g.Files(designData, implData)
+// buildDesignData creates the semantic data for design generation.
+func (g *Generator) buildDesignData() *DesignData {
+	data := &DesignData{APIName: "TestAPI", APITitle: "JSON-RPC Integration Test API", APIDescription: "Auto-generated API for integration testing", Services: make([]*ServiceData, 0)}
+	serviceMap := make(map[string]*ServiceData)
+	for _, info := range g.methods {
+		serviceName := g.getServiceName(info)
+		if _, exists := serviceMap[serviceName]; !exists {
+			serviceMap[serviceName] = &ServiceData{Name: serviceName, Title: goify(serviceName), Description: fmt.Sprintf("Test service for %s", serviceName), JSONRPCPath: g.getJSONRPCPath(serviceName), Methods: make([]*MethodData, 0)}
+		}
+		md := g.buildMethodData(info)
+		serviceMap[serviceName].Methods = append(serviceMap[serviceName].Methods, md)
+		if md.ReturnsError {
+			serviceMap[serviceName].HasErrors = true
+		}
+	}
+	for _, service := range serviceMap {
+		data.Services = append(data.Services, service)
+	}
+	return data
+}
 
-	// Render all files
-	for _, f := range files {
+// renderDesign writes the design files required prior to running goa gen/example.
+func (g *Generator) renderDesign(design *DesignData) error {
+	// go.mod
+	gomod := &codegen.File{
+		Path: "go.mod",
+		SectionTemplates: []*codegen.SectionTemplate{{
+			Name:   "go-mod",
+			Source: generatorTemplates.Read("go_mod"),
+			Data:   map[string]string{"GoaPath": g.repoRootReplace()},
+		}},
+	}
+	if _, err := gomod.Render(g.workDir); err != nil {
+		return fmt.Errorf("render go.mod: %w", err)
+	}
+	// design.go
+	designFile := &codegen.File{
+		Path: filepath.Join("design", "design.go"),
+		SectionTemplates: []*codegen.SectionTemplate{{
+			Name:    "design",
+			Source:  generatorTemplates.Read("dsl/design", "method", "type"),
+			FuncMap: g.templateFuncs(),
+			Data:    design,
+		}},
+	}
+	if _, err := designFile.Render(g.workDir); err != nil {
+		return fmt.Errorf("render design.go: %w", err)
+	}
+	return nil
+}
+
+// renderImplementation writes the service implementation files.
+func (g *Generator) renderImplementation(impl *ImplementationData) error {
+	for _, f := range g.filesImpl(impl) {
 		if _, err := f.Render(g.workDir); err != nil {
 			return fmt.Errorf("render %s: %w", f.Path, err)
 		}
 	}
-
-	// Run post-generation commands
-	if err := g.runPostGeneration(); err != nil {
-		return fmt.Errorf("post generation: %w", err)
-	}
-
 	return nil
 }
 
-// buildDesignData creates the semantic data for design generation
-func (g *Generator) buildDesignData() *DesignData {
-	data := &DesignData{
-		APIName:        "TestAPI",
-		APITitle:       "JSON-RPC Integration Test API",
-		APIDescription: "Auto-generated API for integration testing",
-		Services:       make([]*ServiceData, 0),
-	}
-
-	// Group methods by service
-	serviceMap := make(map[string]*ServiceData)
-
-	for _, info := range g.methods {
-		serviceName := g.getServiceName(info)
-
-		if _, exists := serviceMap[serviceName]; !exists {
-			serviceMap[serviceName] = &ServiceData{
-				Name:        serviceName,
-				Title:       goify(serviceName),
-				Description: fmt.Sprintf("Test service for %s", serviceName),
-				JSONRPCPath: g.getJSONRPCPath(serviceName),
-				Methods:     make([]*MethodData, 0),
-			}
-		}
-
-		methodData := g.buildMethodData(info)
-		serviceMap[serviceName].Methods = append(serviceMap[serviceName].Methods, methodData)
-
-		if methodData.ReturnsError {
-			serviceMap[serviceName].HasErrors = true
-		}
-	}
-
-	// Convert map to slice
-	for _, service := range serviceMap {
-		data.Services = append(data.Services, service)
-	}
-
-	return data
-}
-
-// buildMethodData creates semantic data for a method
+// buildMethodData creates semantic data for a method.
 func (g *Generator) buildMethodData(info MethodInfo) *MethodData {
 	data := &MethodData{
 		Name:             info.Name(),
@@ -113,54 +139,69 @@ func (g *Generator) buildMethodData(info MethodInfo) *MethodData {
 		Transport:        info.Transport,
 		IsStreaming:      info.IsStreaming(),
 	}
-
-	// Set payload for non-notification methods that don't have streaming payload
-	// SSE methods can have regular payload since they don't support streaming payload
-	// Generate methods don't have payload
+	// Non-streaming payload
 	if info.Modifier != ModifierNotify && info.Action != ActionGenerate && (!info.HasStreamingPayload() || info.IsSSE()) {
-		data.Payload = g.buildTypeSpec(info.Type, info.Action, info.Modifier)
+		data.Payload = g.buildTypeSpec(info.Type, info.Modifier)
 	}
-
-	// Handle streaming
+	// Streaming
 	if info.IsStreaming() {
-		// Determine if bidirectional
-		isBidirectional := info.IsWebSocket() && info.HasStreamingPayload() && info.HasStreamingResult()
-
+		isBidi := info.IsWebSocket() && info.HasStreamingPayload() && info.HasStreamingResult()
 		if info.HasStreamingPayload() {
-			data.StreamingPayload = g.buildStreamingTypeSpec(info.Type, true, isBidirectional)
+			data.StreamingPayload = g.buildStreamingTypeSpec(info.Type, true, isBidi, info)
 			data.StreamKind = "payload"
 		}
-
 		if info.HasStreamingResult() {
-			data.Result = g.buildStreamingTypeSpec(info.Type, false, isBidirectional)
+			data.Result = g.buildStreamingTypeSpec(info.Type, false, isBidi, info)
 			if data.StreamKind == "payload" {
 				data.StreamKind = "bidirectional"
 			} else {
 				data.StreamKind = "result"
 			}
-
-			// For SSE with final modifier, add ID field to result
 			if info.IsSSE() && info.Modifier == ModifierFinal && data.Result != nil {
-				data.Result.Fields = append(data.Result.Fields, FieldSpec{
-					Position:    len(data.Result.Fields) + 1,
-					Name:        "id",
-					GoName:      "ID",
-					Type:        &TypeSpec{Kind: "primitive", Primitive: "String"},
-					Description: "Response ID (for final response)",
-					Required:    false,
-				})
+				data.Result.Fields = append(data.Result.Fields, FieldSpec{Position: len(data.Result.Fields) + 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Description: "Response ID (for final response)", Required: false})
 			}
 		}
 	} else if info.Modifier != ModifierNotify && info.Modifier != ModifierError {
-		// Non-streaming result
-		data.Result = g.buildTypeSpec(info.Type, info.Action, "")
+		data.Result = g.buildTypeSpec(info.Type, "")
 	}
-
 	return data
 }
 
-// buildTypeSpec creates a TypeSpec based on the type string
-func (g *Generator) buildTypeSpec(typeStr, _, modifier string) *TypeSpec {
+// buildTypeSpec creates a TypeSpec based on the type string and modifier.
+func (g *Generator) buildTypeSpec(typeStr, modifier string) *TypeSpec {
+	// Special handling for id mapping: force object with value + id + request_id (strings)
+	if modifier == ModifierIDMap {
+		wrap := func(val *TypeSpec) *TypeSpec {
+			return &TypeSpec{
+				Kind: "object",
+				Fields: []FieldSpec{
+					{Position: 1, Name: "value", GoName: "Value", Type: val, Required: true},
+					{Position: 2, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
+					{Position: 3, Name: "request_id", GoName: "RequestID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
+				},
+			}
+		}
+		switch typeStr {
+		case TypeString:
+			return wrap(&TypeSpec{Kind: "primitive", Primitive: "String"})
+		case TypeInt:
+			return wrap(&TypeSpec{Kind: "primitive", Primitive: "Int"})
+		case TypeBool:
+			return wrap(&TypeSpec{Kind: "primitive", Primitive: "Boolean"})
+		case TypeArray:
+			return wrap(&TypeSpec{Kind: "array", ArrayElem: &TypeSpec{Kind: "primitive", Primitive: "String"}})
+		case TypeObject:
+			return wrap(&TypeSpec{Kind: "object", Fields: []FieldSpec{
+				{Position: 1, Name: "field1", GoName: "Field1", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true},
+				{Position: 2, Name: "field2", GoName: "Field2", Type: &TypeSpec{Kind: "primitive", Primitive: "Int"}, Required: true},
+				{Position: 3, Name: "field3", GoName: "Field3", Type: &TypeSpec{Kind: "primitive", Primitive: "Boolean"}, Required: true},
+			}})
+		case TypeMap:
+			return wrap(&TypeSpec{Kind: "map", MapKey: &TypeSpec{Kind: "primitive", Primitive: "String"}, MapValue: &TypeSpec{Kind: "primitive", Primitive: "Any"}})
+		default:
+			return wrap(&TypeSpec{Kind: "any"})
+		}
+	}
 	switch typeStr {
 	case TypeString:
 		// For validated primitives, wrap in object for JSON-RPC
@@ -168,16 +209,7 @@ func (g *Generator) buildTypeSpec(typeStr, _, modifier string) *TypeSpec {
 			return &TypeSpec{
 				Kind: "object",
 				Fields: []FieldSpec{
-					{
-						Position: 1,
-						Name:     "value",
-						GoName:   "Value",
-						Type: &TypeSpec{
-							Kind:      "primitive",
-							Primitive: "String",
-						},
-						Required: true,
-					},
+					{Position: 1, Name: "value", GoName: "Value", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true},
 				},
 			}
 		}
@@ -214,99 +246,102 @@ func (g *Generator) buildTypeSpec(typeStr, _, modifier string) *TypeSpec {
 }
 
 // buildStreamingTypeSpec creates a TypeSpec for streaming types
-func (g *Generator) buildStreamingTypeSpec(typeStr string, _ bool, isBidirectional bool) *TypeSpec {
-	// For WebSocket bidirectional methods, we need ID fields
+func (g *Generator) buildStreamingTypeSpec(typeStr string, _ bool, isBidirectional bool, info MethodInfo) *TypeSpec {
+	// For WebSocket bidirectional methods, include mapping fields only when explicitly requested via idmap
 	if isBidirectional {
 		switch typeStr {
 		case TypeString:
-			return &TypeSpec{
-				Kind:    "object",
-				NeedsID: true,
-				Fields: []FieldSpec{
-					{Position: 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true, Description: "Request/Response ID"},
-					{Position: 2, Name: "value", GoName: "Value", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true, Description: "String value"},
-				},
+			if info.Modifier == ModifierIDMap {
+				return &TypeSpec{
+					Kind:    "object",
+					NeedsID: true,
+					Fields: []FieldSpec{
+						{Position: 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: false, Description: "Business-level ID"},
+						{Position: 2, Name: "request_id", GoName: "RequestID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: false, Description: "Mapped JSON-RPC envelope ID"},
+						{Position: 3, Name: "value", GoName: "Value", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true, Description: "String value"},
+					},
+				}
 			}
+			// No id mapping: only value field
+			return &TypeSpec{Kind: "object", Fields: []FieldSpec{{Position: 1, Name: "value", GoName: "Value", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true}}}
 		case TypeArray:
-			return &TypeSpec{
-				Kind:    "object",
-				NeedsID: true,
-				Fields: []FieldSpec{
-					{Position: 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true, Description: "Request/Response ID"},
-					{Position: 2, Name: "items", GoName: "Items", Type: &TypeSpec{Kind: "array", ArrayElem: &TypeSpec{Kind: "primitive", Primitive: "String"}}, Required: true},
-				},
+			if info.Modifier == ModifierIDMap {
+				return &TypeSpec{Kind: "object", NeedsID: true, Fields: []FieldSpec{
+					{Position: 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
+					{Position: 2, Name: "request_id", GoName: "RequestID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
+					{Position: 3, Name: "items", GoName: "Items", Type: &TypeSpec{Kind: "array", ArrayElem: &TypeSpec{Kind: "primitive", Primitive: "String"}}, Required: true},
+				}}
 			}
+			return &TypeSpec{Kind: "object", Fields: []FieldSpec{{Position: 1, Name: "items", GoName: "Items", Type: &TypeSpec{Kind: "array", ArrayElem: &TypeSpec{Kind: "primitive", Primitive: "String"}}, Required: true}}}
 		case TypeObject:
-			return &TypeSpec{
-				Kind:    "object",
-				NeedsID: true,
-				Fields: []FieldSpec{
-					{Position: 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true, Description: "Request/Response ID"},
-					{Position: 2, Name: "field1", GoName: "Field1", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true},
-					{Position: 3, Name: "field2", GoName: "Field2", Type: &TypeSpec{Kind: "primitive", Primitive: "Int"}, Required: true},
-					{Position: 4, Name: "field3", GoName: "Field3", Type: &TypeSpec{Kind: "primitive", Primitive: "Boolean"}, Required: true},
-				},
+			if info.Modifier == ModifierIDMap {
+				return &TypeSpec{Kind: "object", NeedsID: true, Fields: []FieldSpec{
+					{Position: 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
+					{Position: 2, Name: "request_id", GoName: "RequestID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
+					{Position: 3, Name: "field1", GoName: "Field1", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true},
+					{Position: 4, Name: "field2", GoName: "Field2", Type: &TypeSpec{Kind: "primitive", Primitive: "Int"}, Required: true},
+					{Position: 5, Name: "field3", GoName: "Field3", Type: &TypeSpec{Kind: "primitive", Primitive: "Boolean"}, Required: true},
+				}}
 			}
+			return &TypeSpec{Kind: "object", Fields: []FieldSpec{
+				{Position: 1, Name: "field1", GoName: "Field1", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true},
+				{Position: 2, Name: "field2", GoName: "Field2", Type: &TypeSpec{Kind: "primitive", Primitive: "Int"}, Required: true},
+				{Position: 3, Name: "field3", GoName: "Field3", Type: &TypeSpec{Kind: "primitive", Primitive: "Boolean"}, Required: true},
+			}}
 		default:
-			return &TypeSpec{
-				Kind:    "object",
-				NeedsID: true,
-				Fields: []FieldSpec{
-					{Position: 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true, Description: "Request/Response ID"},
-					{Position: 2, Name: "data", GoName: "Data", Type: &TypeSpec{Kind: "primitive", Primitive: "Any"}, Required: true},
-				},
+			if info.Modifier == ModifierIDMap {
+				return &TypeSpec{Kind: "object", NeedsID: true, Fields: []FieldSpec{
+					{Position: 1, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
+					{Position: 2, Name: "request_id", GoName: "RequestID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
+					{Position: 3, Name: "data", GoName: "Data", Type: &TypeSpec{Kind: "primitive", Primitive: "Any"}, Required: true},
+				}}
 			}
+			return &TypeSpec{Kind: "object", Fields: []FieldSpec{{Position: 1, Name: "data", GoName: "Data", Type: &TypeSpec{Kind: "primitive", Primitive: "Any"}, Required: true}}}
 		}
 	}
 
 	// For non-bidirectional streaming, wrap primitives in objects
-	spec := g.buildTypeSpec(typeStr, "", "")
+	spec := g.buildTypeSpec(typeStr, "")
 	if spec.Kind == "primitive" {
-		return &TypeSpec{
-			Kind: "object",
-			Fields: []FieldSpec{
-				{Position: 1, Name: "value", GoName: "Value", Type: spec, Required: true, Description: fmt.Sprintf("%s value", spec.Primitive)},
-			},
-		}
+		return &TypeSpec{Kind: "object", Fields: []FieldSpec{{Position: 1, Name: "value", GoName: "Value", Type: spec, Required: true, Description: fmt.Sprintf("%s value", spec.Primitive)}}}
 	}
 	return spec
 }
 
-// buildImplementationData creates the semantic data for implementation
+// buildImplementationData creates the semantic data for implementation.
+// Crucially, this method aligns GoName with the generated service interface
+// names so that duplicates are handled consistently.
 func (g *Generator) buildImplementationData(design *DesignData) *ImplementationData {
-	data := &ImplementationData{
-		PackageName: "testservice",
-		Services:    make([]*ServiceImplData, 0),
-	}
-
+	data := &ImplementationData{PackageName: "testservice", Services: make([]*ServiceImplData, 0)}
 	for _, service := range design.Services {
-		implService := &ServiceImplData{
-			ServiceData:    service,
-			ServicePackage: service.Name,
-			Methods:        make([]*MethodImplData, 0),
+		implService := &ServiceImplData{ServiceData: service, ServicePackage: service.Name, Methods: make([]*MethodImplData, 0)}
+		if pairs := g.parseServiceMethodPairs(service.Name); len(pairs) > 0 {
+			used := make([]bool, len(service.Methods))
+			for _, p := range pairs {
+				for j := 0; j < len(service.Methods); j++ {
+					if used[j] {
+						continue
+					}
+					if service.Methods[j].Name == p.dsl {
+						service.Methods[j].GoName = p.goName
+						used[j] = true
+						break
+					}
+				}
+			}
 		}
-
 		for _, method := range service.Methods {
 			implMethod := g.buildMethodImplData(method, service.Name)
 			implService.Methods = append(implService.Methods, implMethod)
 		}
-
 		data.Services = append(data.Services, implService)
 	}
-
 	return data
 }
 
 // buildMethodImplData creates implementation data for a method
 func (g *Generator) buildMethodImplData(method *MethodData, serviceName string) *MethodImplData {
-	data := &MethodImplData{
-		MethodData:     method,
-		ServicePackage: serviceName,
-		HasPayload:     method.Payload != nil || method.StreamingPayload != nil,
-		HasResult:      method.Result != nil,
-	}
-
-	// Set type references
+	data := &MethodImplData{MethodData: method, ServicePackage: serviceName, HasPayload: method.Payload != nil || method.StreamingPayload != nil, HasResult: method.Result != nil}
 	if method.Payload != nil {
 		if method.Payload.Kind == "primitive" {
 			data.PayloadRef = strings.ToLower(method.Payload.Primitive)
@@ -314,10 +349,8 @@ func (g *Generator) buildMethodImplData(method *MethodData, serviceName string) 
 			data.PayloadRef = fmt.Sprintf("*%s.%sPayload", serviceName, method.GoName)
 		}
 	} else if method.StreamingPayload != nil && data.StreamKind == "bidirectional" {
-		// For bidirectional methods with empty Payload(), Goa still generates a payload type
 		data.PayloadRef = fmt.Sprintf("*%s.%sPayload", serviceName, method.GoName)
 	}
-
 	if method.Result != nil {
 		if method.Result.Kind == "primitive" {
 			data.ResultRef = strings.ToLower(method.Result.Primitive)
@@ -325,79 +358,13 @@ func (g *Generator) buildMethodImplData(method *MethodData, serviceName string) 
 			data.ResultRef = fmt.Sprintf("*%s.%sResult", serviceName, method.GoName)
 		}
 	}
-
-	// Set stream interface
 	if method.IsStreaming {
 		data.StreamInterface = fmt.Sprintf("%sServerStream", method.GoName)
 	}
-
 	return data
 }
 
-// Files returns the list of files to generate
-func (g *Generator) Files(design *DesignData, impl *ImplementationData) []*codegen.File {
-	files := make([]*codegen.File, 0, 3+len(impl.Services))
-
-	// go.mod file
-	files = append(files, &codegen.File{
-		Path: "go.mod",
-		SectionTemplates: []*codegen.SectionTemplate{
-			{
-				Name:   "go-mod",
-				Source: generatorTemplates.Read("go_mod"),
-				Data:   map[string]string{"GoaPath": g.getGoaPath()},
-			},
-		},
-	})
-
-	// Design file
-	files = append(files, &codegen.File{
-		Path: filepath.Join("design", "design.go"),
-		SectionTemplates: []*codegen.SectionTemplate{
-			{
-				Name:    "design",
-				Source:  generatorTemplates.Read("dsl/design", "method", "type"),
-				FuncMap: g.templateFuncs(),
-				Data:    design,
-			},
-		},
-	})
-
-	// Service implementations
-	for _, service := range impl.Services {
-		// Build imports
-		imports := []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "log"},
-			{Path: "fmt"},
-			{Path: "time"},
-			{Path: "strings"},
-			{Path: "sort"},
-			{Path: "io"},
-			{Name: "goa", Path: "goa.design/goa/v3/pkg"},
-			{Name: service.ServicePackage, Path: fmt.Sprintf("testservice/gen/%s", service.ServicePackage)},
-		}
-
-		sections := []*codegen.SectionTemplate{
-			codegen.Header(fmt.Sprintf("%s service implementation", service.Title), "testservice", imports),
-			{
-				Name:    "service-impl",
-				Source:  generatorTemplates.Read("impl/service", "method_signature", "error", "echo", "transform", "generate", "streaming_sse", "streaming_websocket", "notify", "validate"),
-				FuncMap: g.templateFuncs(),
-				Data:    service,
-			},
-		}
-
-		files = append(files, &codegen.File{
-			Path:             fmt.Sprintf("%s.go", service.Name),
-			SectionTemplates: sections,
-		})
-	}
-
-	return files
-}
-
-// templateFuncs returns the template functions
+// templateFuncs returns the template functions used by templates.
 func (g *Generator) templateFuncs() template.FuncMap {
 	return template.FuncMap{
 		"goify": goify,
@@ -418,27 +385,10 @@ func (g *Generator) templateFuncs() template.FuncMap {
 			}
 			return required
 		},
-		"dict": func(values ...any) map[string]any {
-			if len(values)%2 != 0 {
-				panic("dict requires even number of arguments")
-			}
-			dict := make(map[string]any)
-			for i := 0; i < len(values); i += 2 {
-				key, ok := values[i].(string)
-				if !ok {
-					panic(fmt.Sprintf("dict keys must be strings, got %T", values[i]))
-				}
-				dict[key] = values[i+1]
-			}
-			return dict
-		},
-		"shouldGenerateGRPC": func(m *MethodImplData) bool {
-			return m.Info.GRPC
-		},
 	}
 }
 
-// Helper methods
+// getServiceName returns which service bucket a method belongs to.
 func (g *Generator) getServiceName(info MethodInfo) string {
 	if info.IsSSE() {
 		return "testsse"
@@ -449,6 +399,7 @@ func (g *Generator) getServiceName(info MethodInfo) string {
 	return "test"
 }
 
+// getJSONRPCPath returns the JSON-RPC base path for a service.
 func (g *Generator) getJSONRPCPath(serviceName string) string {
 	switch serviceName {
 	case "testsse":
@@ -460,6 +411,7 @@ func (g *Generator) getJSONRPCPath(serviceName string) string {
 	}
 }
 
+// getMethodDescription returns a human-friendly method description.
 func (g *Generator) getMethodDescription(info MethodInfo) string {
 	desc := fmt.Sprintf("%s %s", info.Action, info.Type)
 	if info.Modifier != "" {
@@ -468,8 +420,37 @@ func (g *Generator) getMethodDescription(info MethodInfo) string {
 	return desc
 }
 
-func (g *Generator) getGoaPath() string {
-	// Get absolute path to the Goa root directory
+// runPostGeneration runs goa gen and example assuming goa is in PATH.
+func (g *Generator) runPostGeneration() error {
+	cmd := exec.Command("go", "mod", "tidy")
+	cmd.Dir = g.workDir
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("go mod tidy failed: %w\nOutput: %s", err, output)
+	}
+	cmd = exec.Command("goa", "gen", "testservice/design", "-o", g.workDir)
+	cmd.Dir = g.workDir
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("goa gen failed: %w\nOutput: %s", err, output)
+	}
+	cmd = exec.Command("goa", "example", "testservice/design", "-o", g.workDir)
+	cmd.Dir = g.workDir
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("goa example failed: %w\nOutput: %s", err, output)
+	}
+	cmd = exec.Command("go", "mod", "tidy")
+	cmd.Dir = g.workDir
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("final go mod tidy failed: %w\nOutput: %s", err, output)
+	}
+	return nil
+}
+
+// repoRootReplace returns a path suitable for the replace directive in go.mod.
+// Prefer GOA_REPO env var for tests; otherwise fall back to relative path.
+func (g *Generator) repoRootReplace() string {
+	if p := os.Getenv("GOA_REPO"); p != "" {
+		return p
+	}
 	absPath, err := filepath.Abs("../../..")
 	if err != nil {
 		return "../../../.."
@@ -477,239 +458,102 @@ func (g *Generator) getGoaPath() string {
 	return absPath
 }
 
-func (g *Generator) runPostGeneration() error {
-	// Always ensure we have a goa binary by building it first
-	if err := g.ensureGoaBinary(); err != nil {
-		return fmt.Errorf("failed to ensure goa binary: %w", err)
-	}
+// goify converts a string to a Go identifier.
+func goify(s string) string { return codegen.Goify(s, true) }
 
-	goaBinary := g.getGoaBinary()
+// methodPair captures a DSL name and its corresponding Go name from the generated code.
+type methodPair struct{ dsl, goName string }
 
-	// Run go mod tidy first
-	cmd := exec.Command("go", "mod", "tidy")
-	cmd.Dir = g.workDir
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("go mod tidy failed: %w\nOutput: %s", err, output)
-	}
-
-	// Run goa gen
-	cmd = exec.Command(goaBinary, "gen", "testservice/design", "-o", g.workDir)
-	cmd.Dir = g.workDir
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("goa gen failed (binary: %s): %w\nOutput: %s", goaBinary, err, output)
-	}
-
-	// Run goa example
-	cmd = exec.Command(goaBinary, "example", "testservice/design", "-o", g.workDir)
-	cmd.Dir = g.workDir
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("goa example failed (binary: %s): %w\nOutput: %s", goaBinary, err, output)
-	}
-
-	// Run go mod tidy again to fix dependencies
-	cmd = exec.Command("go", "mod", "tidy")
-	cmd.Dir = g.workDir
-	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("final go mod tidy failed: %w\nOutput: %s", err, output)
-	}
-
-	return nil
-}
-
-// ensureGoaBinary builds the goa binary if it's not found
-func (g *Generator) ensureGoaBinary() error {
-	// First check if we already have a working goa binary
-	goaBinary := g.getGoaBinary()
-	if goaBinary != "goa" && goaBinary != "goa.exe" {
-		// We found a specific path, check if it exists
-		if _, err := os.Stat(goaBinary); err == nil {
-			return nil
-		}
-	}
-
-	// Try to find goa in PATH first
-	var whichCmd *exec.Cmd
-	if runtime.GOOS == "windows" {
-		// On Windows, try both 'where' and 'where.exe'
-		whichCmd = exec.Command("where", "goa.exe")
-	} else {
-		whichCmd = exec.Command("which", "goa")
-	}
-	if _, err := whichCmd.Output(); err == nil {
+// parseServiceMethodPairs parses gen/<service>/service.go and returns (dslName, goName) pairs.
+func (g *Generator) parseServiceMethodPairs(serviceName string) []methodPair {
+	path := filepath.Join(g.workDir, "gen", serviceName, "service.go")
+	fs := gotoken.NewFileSet()
+	af, err := goparser.ParseFile(fs, path, nil, goparser.ParseComments)
+	if err != nil {
 		return nil
 	}
-
-	// On Windows, also try 'where goa' without .exe
-	if runtime.GOOS == "windows" {
-		whichCmd = exec.Command("where", "goa")
-		if _, err := whichCmd.Output(); err == nil {
-			return nil
+	var goNames, dslNames []string
+	goast.Inspect(af, func(n goast.Node) bool {
+		ts, ok := n.(*goast.TypeSpec)
+		if !ok || ts.Name == nil || ts.Name.Name != "Service" {
+			return true
 		}
-	}
-
-	// No existing binary found, build it
-	goaSourcePath := "../../../cmd/goa"
-	if _, err := os.Stat(goaSourcePath); err != nil {
-		return fmt.Errorf("goa source directory not found at %s: %w", goaSourcePath, err)
-	}
-
-	// Build the binary using go install (original approach)
-	buildCmd := exec.Command("go", "install", ".")
-
-	buildCmd.Dir = goaSourcePath
-
-	// Set environment for consistent behavior
-	env := os.Environ()
-	if gopath := os.Getenv("GOPATH"); gopath == "" {
-		// If GOPATH is not set, try to get it from go env
-		if goEnvCmd := exec.Command("go", "env", "GOPATH"); goEnvCmd != nil {
-			if output, err := goEnvCmd.Output(); err == nil {
-				gopath = strings.TrimSpace(string(output))
-				if gopath != "" {
-					env = append(env, "GOPATH="+gopath)
+		it, ok := ts.Type.(*goast.InterfaceType)
+		if !ok || it.Methods == nil {
+			return false
+		}
+		for _, fld := range it.Methods.List {
+			if len(fld.Names) == 0 {
+				continue
+			}
+			name := fld.Names[0].Name
+			if name == "HandleStream" {
+				continue
+			}
+			goNames = append(goNames, name)
+		}
+		return false
+	})
+	goast.Inspect(af, func(n goast.Node) bool {
+		gen, ok := n.(*goast.GenDecl)
+		if !ok || gen.Tok != gotoken.VAR {
+			return true
+		}
+		for _, spec := range gen.Specs {
+			vs, ok := spec.(*goast.ValueSpec)
+			if !ok || len(vs.Names) == 0 || vs.Names[0].Name != "MethodNames" {
+				continue
+			}
+			if len(vs.Values) == 0 {
+				continue
+			}
+			cl, ok := vs.Values[0].(*goast.CompositeLit)
+			if !ok {
+				continue
+			}
+			for _, elt := range cl.Elts {
+				bl, ok := elt.(*goast.BasicLit)
+				if !ok || bl.Kind != gotoken.STRING {
+					continue
 				}
+				dslNames = append(dslNames, strings.Trim(bl.Value, "\""))
 			}
+			return false
 		}
+		return true
+	})
+	pairs := make([]methodPair, 0, len(goNames))
+	for i := 0; i < len(goNames) && i < len(dslNames); i++ {
+		pairs = append(pairs, methodPair{dsl: dslNames[i], goName: goNames[i]})
 	}
-	buildCmd.Env = env
-
-	if buildOutput, buildErr := buildCmd.CombinedOutput(); buildErr != nil {
-		return fmt.Errorf("failed to build goa binary: %w\nOutput: %s", buildErr, buildOutput)
-	}
-
-	// Verify the binary was built successfully
-	newBinary := g.getGoaBinary()
-	if newBinary == "goa" || newBinary == "goa.exe" {
-		return fmt.Errorf("goa binary still not found after building")
-	}
-
-	if _, err := os.Stat(newBinary); err != nil {
-		return fmt.Errorf("built goa binary not accessible at %s: %w", newBinary, err)
-	}
-
-	return nil
+	return pairs
 }
 
-// getGoBinDir returns the directory where Go binaries should be installed
-func (g *Generator) getGoBinDir() string {
-	// Check GOBIN first
-	if gobin := os.Getenv("GOBIN"); gobin != "" {
-		return gobin
-	}
-
-	// Try go env GOBIN
-	cmd := exec.Command("go", "env", "GOBIN")
-	if output, err := cmd.Output(); err == nil {
-		gobin := strings.TrimSpace(string(output))
-		if gobin != "" {
-			return gobin
+// filesImpl returns files needed after goa gen (service implementations)
+func (g *Generator) filesImpl(impl *ImplementationData) []*codegen.File {
+	files := make([]*codegen.File, 0, len(impl.Services))
+	for _, service := range impl.Services {
+		imports := []*codegen.ImportSpec{
+			{Path: "context"},
+			{Path: "log"},
+			{Path: "fmt"},
+			{Path: "time"},
+			{Path: "strings"},
+			{Path: "sort"},
+			{Path: "io"},
+			{Name: "goa", Path: "goa.design/goa/v3/pkg"},
+			{Name: service.ServicePackage, Path: fmt.Sprintf("testservice/gen/%s", service.ServicePackage)},
 		}
-	}
-
-	// Try go env GOPATH
-	cmd = exec.Command("go", "env", "GOPATH")
-	if output, err := cmd.Output(); err == nil {
-		gopath := strings.TrimSpace(string(output))
-		if gopath != "" {
-			return filepath.Join(gopath, "bin")
+		sections := []*codegen.SectionTemplate{
+			codegen.Header(fmt.Sprintf("%s service implementation", service.Title), "testservice", imports),
+			{
+				Name:    "service-impl",
+				Source:  generatorTemplates.Read("impl/service", "method_signature", "error", "echo", "transform", "generate", "streaming_sse", "streaming_websocket", "notify", "validate"),
+				FuncMap: g.templateFuncs(),
+				Data:    service,
+			},
 		}
+		files = append(files, &codegen.File{Path: fmt.Sprintf("%s.go", service.Name), SectionTemplates: sections})
 	}
-
-	// Fallback to environment GOPATH
-	if gopath := os.Getenv("GOPATH"); gopath != "" {
-		return filepath.Join(gopath, "bin")
-	}
-
-	// Try default locations
-	homeDir, err := os.UserHomeDir()
-	if err == nil {
-		defaultGoPath := filepath.Join(homeDir, "go", "bin")
-		if _, err := os.Stat(filepath.Dir(defaultGoPath)); err == nil {
-			// Create bin directory if it doesn't exist
-			os.MkdirAll(defaultGoPath, 0755)
-			return defaultGoPath
-		}
-	}
-
-	return ""
-}
-
-// getGoaBinary returns the path to the goa binary
-// It checks for environment variables first, then falls back to system PATH
-func (g *Generator) getGoaBinary() string {
-	// Check for GOA_BINARY environment variable first
-	if goaBinary := os.Getenv("GOA_BINARY"); goaBinary != "" {
-		return goaBinary
-	}
-
-	goaBinName := "goa"
-	if runtime.GOOS == "windows" {
-		goaBinName = "goa.exe"
-	}
-
-	// Check for Go's installation directory (where go install puts binaries)
-	// First try GOBIN if set
-	cmd := exec.Command("go", "env", "GOBIN")
-	if output, err := cmd.Output(); err == nil {
-		gobin := strings.TrimSpace(string(output))
-		if gobin != "" {
-			goaBin := filepath.Join(gobin, goaBinName)
-			if _, err := os.Stat(goaBin); err == nil {
-				return goaBin
-			}
-		}
-	}
-
-	// If GOBIN is empty, Go uses GOPATH/bin
-	cmd = exec.Command("go", "env", "GOPATH")
-	if output, err := cmd.Output(); err == nil {
-		gopath := strings.TrimSpace(string(output))
-		if gopath != "" {
-			goaBin := filepath.Join(gopath, "bin", goaBinName)
-			if _, err := os.Stat(goaBin); err == nil {
-				return goaBin
-			}
-		}
-	}
-
-	// Fallback: check environment GOPATH variable directly
-	if gopath := os.Getenv("GOPATH"); gopath != "" {
-		goaBin := filepath.Join(gopath, "bin", goaBinName)
-		if _, err := os.Stat(goaBin); err == nil {
-			return goaBin
-		}
-	}
-
-	// Check common default locations
-	homeDir, err := os.UserHomeDir()
-	if err == nil {
-		defaultGoPaths := []string{
-			filepath.Join(homeDir, "go", "bin"),
-		}
-		
-		// On Windows, also check AppData
-		if runtime.GOOS == "windows" {
-			if appData := os.Getenv("APPDATA"); appData != "" {
-				defaultGoPaths = append(defaultGoPaths, filepath.Join(appData, "go", "bin"))
-			}
-			if localAppData := os.Getenv("LOCALAPPDATA"); localAppData != "" {
-				defaultGoPaths = append(defaultGoPaths, filepath.Join(localAppData, "go", "bin"))
-			}
-		}
-
-		for _, path := range defaultGoPaths {
-			goaBin := filepath.Join(path, goaBinName)
-			if _, err := os.Stat(goaBin); err == nil {
-				return goaBin
-			}
-		}
-	}
-
-	// Fall back to system PATH
-	return goaBinName
-}
-
-// goify converts a string to Go identifier
-func goify(s string) string {
-	return codegen.Goify(s, true)
+	return files
 }

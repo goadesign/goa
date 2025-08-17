@@ -410,7 +410,15 @@ func (c *Client) ReceiveWebSocket(ctx context.Context) (json.RawMessage, error) 
 
 	messageType, data, err := c.wsConn.ReadMessage()
 	if err != nil {
-		return nil, err
+		// Retry once on abnormal closure to tolerate immediate server close after response
+		if websocket.IsUnexpectedCloseError(err, websocket.CloseAbnormalClosure) || strings.Contains(err.Error(), "unexpected EOF") {
+			// Briefly wait and retry a single read within the same deadline window
+			time.Sleep(10 * time.Millisecond)
+			messageType, data, err = c.wsConn.ReadMessage()
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if messageType != websocket.TextMessage {

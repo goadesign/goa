@@ -13,7 +13,7 @@
 	{{- end }}
 
 	// Initialize gRPC server
-	srv := grpc.NewServer(chain{{ if needStream .Sevices }}, streamchain{{ end }})
+	srv := grpc.NewServer(chain{{ if needStream .Services }}, streamchain{{ end }})
 
 	// Register the servers.
 	{{- range .Services }}
