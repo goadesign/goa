@@ -12,14 +12,14 @@ import (
 	"goa.design/goa/v3/jsonrpc/integration_tests/harness"
 )
 
-// Executor handles test scenario execution
-type Executor struct {
+// executor handles test scenario execution
+type executor struct {
 	serverURL string
 	config    executorConfig
 }
 
-// NewExecutor creates a new test executor
-func NewExecutor(serverURL string, opts ...ExecutorOption) *Executor {
+// newExecutor creates a new test executor
+func newExecutor(serverURL string, opts ...executorOption) *executor {
 	config := executorConfig{
 		WebSocketTimeout: 30 * time.Second,
 		Debug:            false,
@@ -29,14 +29,14 @@ func NewExecutor(serverURL string, opts ...ExecutorOption) *Executor {
 		opt(&config)
 	}
 
-	return &Executor{
+	return &executor{
 		serverURL: serverURL,
 		config:    config,
 	}
 }
 
 // Execute runs a test scenario
-func (e *Executor) Execute(t *testing.T, scenario Scenario) {
+func (e *executor) Execute(t *testing.T, scenario Scenario) {
 	t.Helper()
 
 	// Handle different scenario types
@@ -53,7 +53,7 @@ func (e *Executor) Execute(t *testing.T, scenario Scenario) {
 }
 
 // executeSimple handles basic request/response scenarios
-func (e *Executor) executeSimple(t *testing.T, scenario Scenario) {
+func (e *executor) executeSimple(t *testing.T, scenario Scenario) {
 	t.Helper()
 
 	ctx := context.Background()
@@ -72,7 +72,7 @@ func (e *Executor) executeSimple(t *testing.T, scenario Scenario) {
 }
 
 // executeHTTP handles HTTP transport scenarios
-func (e *Executor) executeHTTP(ctx context.Context, t *testing.T, scenario Scenario) {
+func (e *executor) executeHTTP(ctx context.Context, t *testing.T, scenario Scenario) {
 	t.Helper()
 
 	// Create client
@@ -170,7 +170,7 @@ func (e *Executor) executeHTTP(ctx context.Context, t *testing.T, scenario Scena
 }
 
 // executeWebSocket handles WebSocket transport scenarios
-func (e *Executor) executeWebSocket(ctx context.Context, t *testing.T, scenario Scenario) {
+func (e *executor) executeWebSocket(ctx context.Context, t *testing.T, scenario Scenario) {
 	t.Helper()
 
 	// WebSocket scenarios always use sequence
@@ -199,7 +199,7 @@ func (e *Executor) executeWebSocket(ctx context.Context, t *testing.T, scenario 
 }
 
 // executeSSE handles Server-Sent Events scenarios
-func (e *Executor) executeSSE(_ context.Context, t *testing.T, _ Scenario) {
+func (e *executor) executeSSE(_ context.Context, t *testing.T, _ Scenario) {
 	t.Helper()
 
 	// SSE implementation would go here
@@ -208,7 +208,7 @@ func (e *Executor) executeSSE(_ context.Context, t *testing.T, _ Scenario) {
 }
 
 // executeStreaming handles streaming scenarios with sequences
-func (e *Executor) executeStreaming(t *testing.T, scenario Scenario) {
+func (e *executor) executeStreaming(t *testing.T, scenario Scenario) {
 	t.Helper()
 
 	ctx := context.Background()
@@ -225,7 +225,7 @@ func (e *Executor) executeStreaming(t *testing.T, scenario Scenario) {
 }
 
 // executeWebSocketSequence handles WebSocket streaming sequences
-func (e *Executor) executeWebSocketSequence(ctx context.Context, t *testing.T, scenario Scenario) {
+func (e *executor) executeWebSocketSequence(ctx context.Context, t *testing.T, scenario Scenario) {
 	t.Helper()
 
 	client, err := harness.NewClient(e.serverURL, nil)
@@ -255,6 +255,11 @@ func (e *Executor) executeWebSocketSequence(ctx context.Context, t *testing.T, s
 				Method: reqData["method"].(string),
 				Params: reqData["params"],
 				ID:     reqData["id"],
+			}
+
+			// Mark HasID when id key present (even if it's null)
+			if _, hasID := reqData["id"]; hasID {
+				req.HasID = true
 			}
 
 			// Handle custom jsonrpc field if specified
@@ -305,7 +310,7 @@ func (e *Executor) executeWebSocketSequence(ctx context.Context, t *testing.T, s
 }
 
 // executeSSESequence handles SSE streaming sequences
-func (e *Executor) executeSSESequence(ctx context.Context, t *testing.T, scenario Scenario) {
+func (e *executor) executeSSESequence(ctx context.Context, t *testing.T, scenario Scenario) {
 	t.Helper()
 
 	// SSE only supports server-to-client streaming
@@ -360,7 +365,7 @@ func (e *Executor) executeSSESequence(ctx context.Context, t *testing.T, scenari
 }
 
 // executeBatch handles batch request scenarios
-func (e *Executor) executeBatch(t *testing.T, scenario Scenario) {
+func (e *executor) executeBatch(t *testing.T, scenario Scenario) {
 	t.Helper()
 
 	// Batch requests only work with HTTP
@@ -410,7 +415,7 @@ func (e *Executor) executeBatch(t *testing.T, scenario Scenario) {
 }
 
 // executeRaw handles raw request scenarios
-func (e *Executor) executeRaw(t *testing.T, scenario Scenario) {
+func (e *executor) executeRaw(t *testing.T, scenario Scenario) {
 	t.Helper()
 
 	// Raw requests only work with HTTP
@@ -441,7 +446,7 @@ func (e *Executor) executeRaw(t *testing.T, scenario Scenario) {
 
 // Validation methods
 
-func (e *Executor) validateJSONRPCResponse(t *testing.T, response any, expect Expect) {
+func (e *executor) validateJSONRPCResponse(t *testing.T, response any, expect Expect) {
 	t.Helper()
 
 	respMap, ok := response.(map[string]any)
@@ -476,7 +481,7 @@ func (e *Executor) validateJSONRPCResponse(t *testing.T, response any, expect Ex
 }
 
 // compareJSONRPCMessages compares two JSON-RPC messages (used for SSE/WebSocket validation)
-func (e *Executor) compareJSONRPCMessages(t *testing.T, actual, expected map[string]any) {
+func (e *executor) compareJSONRPCMessages(t *testing.T, actual, expected map[string]any) {
 	t.Helper()
 
 	// Compare jsonrpc version
@@ -485,8 +490,10 @@ func (e *Executor) compareJSONRPCMessages(t *testing.T, actual, expected map[str
 		require.Equal(t, expectedVersion, actualVersion, "JSON-RPC version mismatch")
 	}
 
-	// Compare method
-	if actualMethod, ok := actual["method"].(string); ok {
+	// Compare method only if explicitly expected
+	if _, expHas := expected["method"]; expHas {
+		actualMethod, ok := actual["method"].(string)
+		require.True(t, ok, "Expected method in response")
 		expectedMethod, _ := expected["method"].(string)
 		require.Equal(t, expectedMethod, actualMethod, "Method mismatch")
 	}
@@ -520,14 +527,14 @@ func (e *Executor) compareJSONRPCMessages(t *testing.T, actual, expected map[str
 	}
 }
 
-func (e *Executor) validateBatchResponse(t *testing.T, _ int, response map[string]any, expect Expect) {
+func (e *executor) validateBatchResponse(t *testing.T, _ int, response map[string]any, expect Expect) {
 	t.Helper()
 
 	// Batch responses are validated the same way
 	e.validateJSONRPCResponse(t, response, expect)
 }
 
-func (e *Executor) validateRawResponse(t *testing.T, response any, expect Expect) {
+func (e *executor) validateRawResponse(t *testing.T, response any, expect Expect) {
 	t.Helper()
 
 	// Raw responses might not be standard JSON-RPC
@@ -545,7 +552,7 @@ func (e *Executor) validateRawResponse(t *testing.T, response any, expect Expect
 	}
 }
 
-func (e *Executor) validateError(t *testing.T, _ error, _ *ExpectError) {
+func (e *executor) validateError(t *testing.T, _ error, _ *ExpectError) {
 	t.Helper()
 
 	// For CLI errors, we need to extract the error details
@@ -554,7 +561,7 @@ func (e *Executor) validateError(t *testing.T, _ error, _ *ExpectError) {
 	// TODO: Parse error and validate code/message
 }
 
-func (e *Executor) validateErrorObject(t *testing.T, errObj map[string]any, expect *ExpectError) {
+func (e *executor) validateErrorObject(t *testing.T, errObj map[string]any, expect *ExpectError) {
 	t.Helper()
 
 	// Check error code
@@ -574,7 +581,7 @@ func (e *Executor) validateErrorObject(t *testing.T, errObj map[string]any, expe
 }
 
 // compareValues compares two values, handling both simple and complex types
-func (e *Executor) compareValues(t *testing.T, actual, expected any, path string) {
+func (e *executor) compareValues(t *testing.T, actual, expected any, path string) {
 	t.Helper()
 
 	// Try JSON comparison first for complex types

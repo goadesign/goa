@@ -204,6 +204,10 @@ type (
 		// result and response body reader when SkipResponseBodyEncodeDecode is
 		// used.
 		ResponseStruct string
+		// EndpointField is the unique field name used in the generated client
+		// struct to store the goa.Endpoint for this method. It is computed with a
+		// scope that includes method names to avoid field/method name collisions.
+		EndpointField string
 	}
 
 	// StreamData is the data used to generate client and server interfaces that
@@ -845,7 +849,14 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		seenViewed[vrt.Name+"::"+view] = vrt
 	}
 
-	unionMethods := make([]*UnionValueMethodData, 0, len(types)+len(errTypes)) // preallocate with estimated size
+	// Compute unique EndpointField names using the service-level scope, after
+	// method names are set. This records field identifiers without changing
+	// existing method names.
+	for _, m := range methods {
+		m.EndpointField = scope.Unique(m.VarName+"Endpoint", "")
+	}
+
+	unionMethods := make([]*UnionValueMethodData, 0, len(types)+len(errTypes))
 	var ms []*UnionValueMethodData
 	seen = make(map[string]struct{})
 	for _, t := range types {
@@ -1137,14 +1148,12 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 	var isJSONRPCSSE bool
 	var isJSONRPCWebSocket bool
 	if isJSONRPC && m.IsStreaming() {
-		// Check if the JSON-RPC HTTP endpoint uses SSE or WebSocket
 		if httpJSONRPCSvc := d.Root.API.JSONRPC.HTTPExpr.Service(m.Service.Name); httpJSONRPCSvc != nil {
 			for _, e := range httpJSONRPCSvc.HTTPEndpoints {
 				if e.MethodExpr.Name == m.Name {
 					if e.SSE != nil {
 						isJSONRPCSSE = true
 					} else {
-						// Streaming without SSE means WebSocket
 						isJSONRPCWebSocket = true
 					}
 					break
@@ -1211,6 +1220,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		RequestStruct:                vname + "RequestData",
 		ResponseStruct:               vname + "ResponseData",
 	}
+
 	d.initStreamData(data, m, vname, rname, resultRef, scope)
 	return data
 }

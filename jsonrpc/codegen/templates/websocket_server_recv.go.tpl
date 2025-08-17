@@ -21,15 +21,15 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) Recv(ctx context.Context)
 
 func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx context.Context, req *jsonrpc.RawRequest) error {
 	if req.JSONRPC != "2.0" {
-		if req.ID != nil {
-			return s.sendError(ctx, req.ID, jsonrpc.InvalidRequest, fmt.Sprintf("Invalid JSON-RPC version, must be 2.0, got %q", req.JSONRPC), nil)
+		if req.HasID {
+			return s.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil)
 		}
 		return nil
 	}
 
 	if req.Method == "" {
-		if req.ID != nil {
-			return s.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Missing method field", nil)
+		if req.HasID {
+			return s.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil)
 		}
 		return nil
 	}
@@ -39,7 +39,11 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx contex
 		case {{ printf "%q" .Method.Name }}:
 			{{- if and .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4)) }}
 			// {{ if eq .Method.ServerStream.Kind 3 }}Server{{ else }}Bidirectional{{ end }} streaming: decode payload and create stream wrapper
+			{{- if .Payload.Ref }}
 			payload, err := s.{{ lowerInitial .Method.VarName }}(ctx, s.r, req)
+			{{- else }}
+			_, err := s.{{ lowerInitial .Method.VarName }}(ctx, s.r, req)
+			{{- end }}
 			if err != nil {
 				return fmt.Errorf("handler error for %s: %w", {{ printf "%q" .Method.Name }}, err)
 			}
@@ -57,7 +61,7 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx contex
 			}
 			if _, err := s.{{ lowerInitial .Method.VarName }}Endpoint(ctx, endpointInput); err != nil {
 				// For streaming endpoints, send error as JSON-RPC error response
-				if req.ID != nil {
+				if req.HasID {
 					// Send error response to client
 					if sendErr := streamWrapper.SendError(ctx, err); sendErr != nil {
 						return fmt.Errorf("failed to send error response: %w", sendErr)
@@ -72,17 +76,33 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx contex
 			{{- else }}
 			res, err := s.{{ lowerInitial .Method.VarName }}(ctx, s.r, req)
 			if err != nil {
-				return fmt.Errorf("handler error for %s: %w", {{ printf "%q" .Method.Name }}, err)
+				// For non-streaming, send JSON-RPC error if request has an ID; otherwise continue
+				if req.HasID {
+					if sendErr := s.SendError(ctx, req.ID, err); sendErr != nil {
+						return fmt.Errorf("failed to send error response: %w", sendErr)
+					}
+				}
+				return nil
 			}
-			if err := s.Send{{ .Method.VarName }}(ctx, res.({{ printf "*%s.%sResult" .ServicePkgName .Method.VarName }})); err != nil {
-				return fmt.Errorf("send error for %s: %w", {{ printf "%q" .Method.Name }}, err)
+			// Only send a response if the request has an ID (i.e., it's not a notification)
+			if req.HasID {
+				if res == nil {
+					return s.sendError(ctx, req.ID, jsonrpc.InternalError, "Internal error", nil)
+				}
+				if r, ok := res.({{ printf "*%s.%sResult" .ServicePkgName .Method.VarName }}); ok {
+					if err := s.Send{{ .Method.VarName }}Response(ctx, req.ID, r); err != nil {
+						return fmt.Errorf("send response error for %s: %w", {{ printf "%q" .Method.Name }}, err)
+					}
+				} else {
+					return s.sendError(ctx, req.ID, jsonrpc.InternalError, "Internal error", nil)
+				}
 			}
 			return nil
 			{{- end }}
 	{{- end }}
 	default:
-		if req.ID != nil {
-			return s.sendError(ctx, req.ID, jsonrpc.MethodNotFound, fmt.Sprintf("Method %q not found", req.Method), nil)
+		if req.HasID {
+			return s.sendError(ctx, req.ID, jsonrpc.MethodNotFound, "Method not found", nil)
 		}
 		return nil
 	}

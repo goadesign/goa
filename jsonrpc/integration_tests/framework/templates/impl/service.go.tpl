@@ -20,11 +20,17 @@ func (s *{{ .ServicePackage }}srvc) HandleStream(ctx context.Context, stream {{ 
 	// For testing purposes, we only send broadcasts when explicitly called through the broadcast method
 	// In a real application, you might send broadcasts based on external events or timers
 	
+	// Ensure the stream is closed on exit
+	defer func() {
+		_ = stream.Close()
+	}()
+	
 	// Loop to handle incoming requests
 	for {
 		// Recv reads and dispatches the next request
 		if err := stream.Recv(ctx); err != nil {
-			// Check if it's a normal close or an error
+			// Log the error type and value for diagnostics
+			log.Printf("HandleStream Recv error: %T %v", err, err)
 			if err == io.EOF {
 				return nil
 			}

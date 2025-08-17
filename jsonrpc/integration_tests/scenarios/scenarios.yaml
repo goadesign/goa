@@ -75,7 +75,10 @@ scenarios:
     expect:
       id: 5
       result:
-        items: ["c", "b", "a"]  # Reversed
+        items:
+          - "c"
+          - "b"
+          - "a"  # Reversed
 
   - name: "transform_object_http"
     method: "transform_object"
@@ -987,6 +990,86 @@ scenarios:
             message: "Streaming error occurred"
       - type: "close"
 
+  # WebSocket protocol compliance: request vs notification (JSON-RPC version and method presence)
+  - name: "websocket_invalid_version_request"
+    method: "echo_string_ws"
+    transport: "websocket"
+    sequence:
+      - type: "send"
+        data:
+          jsonrpc: "-"  # Omit version field
+          method: "echo_string_ws"
+          params:
+            id: "ws-invalid-1"
+            value: "ignore"
+          id: "ws-invalid-1"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "ws-invalid-1"
+          error:
+            code: -32600
+            message: "Invalid request"
+
+  - name: "websocket_invalid_version_notification"
+    method: "echo_string_ws"
+    transport: "websocket"
+    sequence:
+      - type: "send"
+        data:
+          jsonrpc: "-"  # Omit version field
+          method: "echo_string_ws"
+          params:
+            value: "notification without version"
+      # No receive expected for notifications with invalid request
+
+  - name: "websocket_missing_method_with_id"
+    transport: "websocket"
+    sequence:
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "-"  # Omit method field
+          params:
+            value: "test"
+          id: "ws-missing-method-1"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "ws-missing-method-1"
+          error:
+            code: -32600
+            message: "Invalid request"
+
+  - name: "websocket_missing_method_notification"
+    transport: "websocket"
+    sequence:
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "-"  # Omit method field
+          params:
+            value: "notification with missing method"
+      # No receive expected
+
+  - name: "websocket_method_not_found"
+    transport: "websocket"
+    sequence:
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "non_existent_method_ws"
+          params:
+            value: "test"
+          id: "ws-not-found-1"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "ws-not-found-1"
+          error:
+            code: -32601
+            message: "Method not found"
+
   # WebSocket notification tests (no response expected)
   - name: "echo_string_notify_websocket"
     method: "echo_string_notify_ws"
@@ -1066,7 +1149,6 @@ scenarios:
             items: ["first", "second"]
       - type: "send"
         data:
-          jsonrpc: "2.0"
           method: "collect_array_ws"
           params:
             id: "collect-3"
@@ -1210,6 +1292,247 @@ scenarios:
           params:
             value: "Stream 4 of 4"
 
-settings:
-  timeout: "30s"
-  base_url: ""  # Will use default from server
+  # Mixed HTTP (CLI) and JSON-RPC (direct) for the same method
+  - name: "mixed_http_cli_echo"
+    method: "echo_string"
+    transport: "http"
+    request:
+      params: "hello from cli"
+      id: "mixed-cli-1"
+      # No jsonrpc field -> executor uses CLI path
+    expect:
+      id: "mixed-cli-1"
+      result: "hello from cli"
+
+  - name: "mixed_http_jsonrpc_direct_echo"
+    method: "echo_string"
+    transport: "http"
+    request:
+      jsonrpc: "2.0"  # Force direct HTTP JSON-RPC (skip CLI)
+      id: "mixed-direct-1"
+      method: "echo_string"
+      params: "hello from direct"
+    expect:
+      id: "mixed-direct-1"
+      result: "hello from direct"
+
+  # Mixed JSON-RPC + gRPC service (example generation parity)
+  - name: "grpc_jsonrpc_mixed_process_http"
+    method: "grpc_echo_string"
+    transport: "http"
+    request:
+      jsonrpc: "2.0"
+      params: "hi"
+      id: "mix-1"
+    expect:
+      id: "mix-1"
+      result: "hi"
+
+  # Note: The gRPC call itself is validated via harness gRPC client parity checks
+  # (to be added in harness/runner extensions if we choose to assert both paths here).
+
+  # Additional HTTP protocol edge cases
+  - name: "http_invalid_version_notification"
+    transport: "http"
+    request:
+      jsonrpc: "-"  # Omit version field
+      method: "echo_string"
+      params: "notify"
+      # No id -> notification
+    expect:
+      no_response: true
+
+  - name: "http_missing_method_notification"
+    transport: "http"
+    request:
+      jsonrpc: "2.0"
+      # No method field (invalid request) but notification (no id)
+      params: "notify"
+    expect:
+      no_response: true
+
+  - name: "http_missing_method_with_id_raw"
+    transport: "http"
+    raw_request: '{"jsonrpc":"2.0","id":"missing-method-1"}'
+    expect:
+      id: "missing-method-1"
+      error:
+        code: -32600
+        message: "Invalid request"
+
+  # Additional WebSocket ID-type coverage
+  - name: "websocket_null_id"
+    method: "echo_string_ws"
+    transport: "websocket"
+    sequence:
+      - type: "connect"
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "echo_string_ws"
+          params:
+            id: null
+            value: "null id"
+          id: null
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: null
+          result:
+            value: "null id"
+      - type: "close"
+
+  - name: "websocket_numeric_id"
+    method: "echo_string_ws"
+    transport: "websocket"
+    sequence:
+      - type: "connect"
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "echo_string_ws"
+          params:
+            id: 42
+            value: "number id"
+          id: 42
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: 42
+          result:
+            value: "number id"
+      - type: "close"
+
+  # Additional SSE protocol edge cases
+  - name: "sse_invalid_version_with_id"
+    method: "echo_string_sse"
+    transport: "sse"
+    request:
+      jsonrpc: "-"  # Omit version
+      params: "ignored"
+      id: "sse-invalid-1"
+    sequence:
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "sse-invalid-1"
+          error:
+            code: -32600
+            message: "Invalid request"
+
+  - name: "sse_missing_method_with_id"
+    transport: "sse"
+    request:
+      jsonrpc: "2.0"
+      # Missing method
+      params: "ignored"
+      id: "sse-missing-method-1"
+    sequence:
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "sse-missing-method-1"
+          error:
+            code: -32600
+            message: "Invalid request"
+
+  - name: "sse_missing_method_notification"
+    transport: "sse"
+    request:
+      jsonrpc: "2.0"
+      # Missing method and no id (notification) -> no events
+      params: "ignored"
+    sequence: []
+
+  - name: "http_params_id_with_request_id_mapping"
+    method: "echo_string_idmap"
+    transport: "http"
+    request:
+      jsonrpc: "2.0"
+      params:
+        id: "12345"
+        request_id: "ignored-by-client" # mapping should come from envelope, not this field
+        value: "hello"
+      id: "env-1"
+    expect:
+      id: "env-1"
+      result: "hello"
+
+  - name: "http_params_id_with_request_id_mapping_numeric_env_id"
+    method: "echo_string_idmap"
+    transport: "http"
+    request:
+      jsonrpc: "2.0"
+      params:
+        id: "biz-123"
+        request_id: "ignored"
+        value: "hello-num"
+      id: 101
+    expect:
+      id: 101
+      result: "hello-num"
+
+  - name: "sse_params_id_with_request_id_mapping"
+    method: "stream_string_sse"
+    transport: "sse"
+    request:
+      jsonrpc: "2.0"
+      params: "ab"
+      id: "env-sse-1"
+    sequence:
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          method: "stream_string_sse"
+          params:
+            value: "Stream 1 of 2"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          method: "stream_string_sse"
+          params:
+            value: "Stream 2 of 2"
+
+  - name: "websocket_params_id_with_request_id_mapping"
+    method: "echo_string_idmap_ws"
+    transport: "websocket"
+    sequence:
+      - type: "connect"
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "echo_string_idmap_ws"
+          params:
+            id: "biz-42"        # business-level id as string
+            request_id: "foo"   # separate app field; mapping uses envelope id
+            value: "ws-hello"
+          id: "env-ws-1"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "env-ws-1"
+          result:
+            value: "ws-hello"
+      - type: "close"
+
+  - name: "websocket_params_id_with_request_id_mapping_numeric_env_id"
+    method: "echo_string_idmap_ws"
+    transport: "websocket"
+    sequence:
+      - type: "connect"
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "echo_string_idmap_ws"
+          params:
+            id: "biz-456"
+            request_id: "foo"
+            value: "ws-hello-num"
+          id: 202
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: 202
+          result:
+            value: "ws-hello-num"
+      - type: "close"

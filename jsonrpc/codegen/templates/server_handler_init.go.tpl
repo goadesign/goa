@@ -128,12 +128,12 @@ func {{ .HandlerInit }}(
 	_, err := endpoint(ctx, nil)
 		{{- end }}
 	{{- else }}
-	{{ if isWebSocketEndpoint . }}stream{{ else }}res{{ end }}, err := endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
+	res, err := endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
 	{{- end }}
 	{{- end }}
 	{{- if isWebSocketEndpoint . }}
 		{{- if not (and .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4))) }}
-		return stream, err
+		return res, err
 		{{- end }}
 	{{- else }}
 		if err != nil {

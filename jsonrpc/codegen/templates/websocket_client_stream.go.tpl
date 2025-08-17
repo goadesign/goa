@@ -47,7 +47,7 @@ type {{ .VarName }} struct {
 	// Stream configuration
 	config *jsonrpc.StreamConfig // Stream configuration options
 	{{- if $hasRecv }}
-	decoder        func(*http.Response) (any, error) // Pre-computed decoder for responses
+	decoder        func(*http.Response) goahttp.Decoder // User-provided decoder for result bodies
 	{{- end }}
 }
 
@@ -279,7 +279,7 @@ func (s *{{ .VarName }}) responseHandler() {
 }
 
 func (s *{{ .VarName }}) handleResponse(response *jsonrpc.RawResponse) {
-	if response.ID == "" {
+	if response.ID == nil {
 		// This is a server-initiated notification
 		// For now, just report it as an event via the error handler
 		// In the future, we could add a dedicated notification handler
@@ -317,10 +317,17 @@ func (s *{{ .VarName }}) handleResponse(response *jsonrpc.RawResponse) {
 			s.handleError(jsonrpc.StreamErrorParsing, err, response)
 		} else {
 			{{- if .Endpoint.Result.IDAttribute }}
-			// Set the ID from the JSON-RPC envelope into the result
+			// Backfill the result ID from the envelope when missing
+			{{- if .Endpoint.Result.IDAttributeRequired }}
 			if parsedResult.{{ .Endpoint.Result.IDAttribute }} == "" {
-				parsedResult.{{ .Endpoint.Result.IDAttribute }} = response.ID
+				parsedResult.{{ .Endpoint.Result.IDAttribute }} = jsonrpc.IDToString(response.ID)
 			}
+			{{- else }}
+			if parsedResult.{{ .Endpoint.Result.IDAttribute }} == nil || *parsedResult.{{ .Endpoint.Result.IDAttribute }} == "" {
+				idCopy := jsonrpc.IDToString(response.ID)
+				parsedResult.{{ .Endpoint.Result.IDAttribute }} = &idCopy
+			}
+			{{- end }}
 			{{- end }}
 			result.result = parsedResult
 		}
@@ -351,56 +358,19 @@ func (s *{{ .VarName }}) handleError(errorType jsonrpc.StreamErrorType, err erro
 {{- if $hasRecv }}
 // decodeResponse decodes JSON-RPC response data using the user-provided decoder
 func (s *{{ .VarName }}) decodeResponse(data json.RawMessage) ({{ .RecvTypeRef }}, error) {
-	// For WebSocket, we need to inject a dummy ID into the result data
-	// because the decoder expects it, but it actually comes from the envelope
-	
-	// First decode to check what we have
-	var temp map[string]json.RawMessage
-	if err := json.Unmarshal(data, &temp); err != nil {
-		return nil, fmt.Errorf("failed to pre-decode response: %w", err)
-	}
-	
-	// If there's no ID field, inject a dummy one for the decoder
-	if _, hasID := temp["id"]; !hasID {
-		temp["id"] = json.RawMessage(`""`) // Empty string as placeholder
-	}
-	
-	// Re-encode with the ID field
-	modifiedData, err := json.Marshal(temp)
-	if err != nil {
-		return nil, fmt.Errorf("failed to re-encode response: %w", err)
-	}
-	
-	// Create a minimal JSON-RPC response wrapper for the decoder
-	wrappedResponse := jsonrpc.RawResponse{
-		JSONRPC: "2.0",
-		Result:  modifiedData,
-	}
-	
-	// Marshal it back to JSON 
-	wrappedJSON, err := json.Marshal(wrappedResponse)
-	if err != nil {
-		return nil, fmt.Errorf("failed to wrap response: %w", err)
-	}
-	
-	// Create minimal HTTP response with the wrapped JSON for the decoder
+	// Create minimal HTTP response with raw JSON data for user's decoder
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
-		Body:       io.NopCloser(bytes.NewReader(wrappedJSON)),
+		Body:       io.NopCloser(bytes.NewReader(data)),
 	}
-	
-	// Use the pre-computed decoder function (contains user's decoder + validation logic)
-	decodedResult, err := s.decoder(resp)
-	if err != nil {
+
+	// Use user-provided decoder to decode the result (expects inner result JSON)
+	dec := s.decoder(resp)
+	var out {{ .RecvTypeRef }}
+	if err := dec.Decode(&out); err != nil {
 		return nil, err
 	}
-	
-	// Type assert to the expected result type
-	if result, ok := decodedResult.({{ .RecvTypeRef }}); ok {
-		return result, nil
-	}
-	
-	return nil, fmt.Errorf("unexpected response type: %T", decodedResult)
+	return out, nil
 }
 {{- end }}
 

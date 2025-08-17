@@ -64,40 +64,40 @@ func LoadRunnerConfigFromEnv() RunnerConfig {
 	config := RunnerConfig{
 		DefaultTimeout: 30 * time.Second,
 	}
-	
+
 	// JSONRPC_TEST_PARALLEL controls parallel execution
 	if val := os.Getenv("JSONRPC_TEST_PARALLEL"); val != "" {
 		config.Parallel, _ = strconv.ParseBool(val)
 	}
-	
+
 	// FILTER or JSONRPC_TEST_FILTER for test filtering
 	if val := os.Getenv("FILTER"); val != "" {
 		config.Filter = val
 	} else if val := os.Getenv("JSONRPC_TEST_FILTER"); val != "" {
 		config.Filter = val
 	}
-	
+
 	// JSONRPC_TEST_TIMEOUT for operation timeout
 	if val := os.Getenv("JSONRPC_TEST_TIMEOUT"); val != "" {
 		if d, err := time.ParseDuration(val); err == nil {
 			config.DefaultTimeout = d
 		}
 	}
-	
+
 	// KEEP_GENERATED to retain generated code
 	config.KeepGenerated = os.Getenv("KEEP_GENERATED") != ""
-	
+
 	// JSONRPC_TEST_DEBUG for debug output
 	if val := os.Getenv("JSONRPC_TEST_DEBUG"); val != "" {
 		config.Debug, _ = strconv.ParseBool(val)
 	}
-	
+
 	// JSONRPC_TEST_SERVER_URL to use existing server
 	if val := os.Getenv("JSONRPC_TEST_SERVER_URL"); val != "" {
 		config.ServerURL = val
 		config.SkipCodeGen = true // Don't generate if using external server
 	}
-	
+
 	return config
 }
 
@@ -108,8 +108,9 @@ func ApplyOptions(config *RunnerConfig, opts ...RunnerOption) {
 	}
 }
 
-// ExecutorOption configures test execution
-type ExecutorOption func(*executorConfig)
+// Unexported executor options
+
+type executorOption func(*executorConfig)
 
 type executorConfig struct {
 	WebSocketTimeout time.Duration
@@ -117,22 +118,19 @@ type executorConfig struct {
 	WorkDir          string
 }
 
-// WithWebSocketTimeout sets the WebSocket operation timeout
-func WithWebSocketTimeout(d time.Duration) ExecutorOption {
+func withWebSocketTimeout(d time.Duration) executorOption {
 	return func(c *executorConfig) {
 		c.WebSocketTimeout = d
 	}
 }
 
-// WithExecutorDebug enables debug output for executor
-func WithExecutorDebug(debug bool) ExecutorOption {
+func withExecutorDebug(debug bool) executorOption {
 	return func(c *executorConfig) {
 		c.Debug = debug
 	}
 }
 
-// WithWorkDir sets the work directory for finding CLI binary
-func WithWorkDir(dir string) ExecutorOption {
+func withWorkDir(dir string) executorOption {
 	return func(c *executorConfig) {
 		c.WorkDir = dir
 	}
