@@ -69,10 +69,7 @@ func (s *{{ lowerInitial .Service.StructName }}SSEStream) sendSSEEvent(eventType
 
 // sendError sends a JSON-RPC error response to the SSE stream
 func (s *{{ lowerInitial .Service.StructName }}SSEStream) sendError(ctx context.Context, id any, code jsonrpc.Code, message string, data any) error {
-	response := jsonrpc.MakeErrorResponse(id, code, "", message)
-	if data != nil {
-		response.Error.Data = data
-	}
+	response := jsonrpc.MakeErrorResponse(id, code, message, data)
 	return s.sendSSEEvent("error", response)
 }
 

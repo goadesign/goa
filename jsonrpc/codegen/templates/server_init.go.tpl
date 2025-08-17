@@ -40,6 +40,16 @@ func {{ .ServerInit }}(
 		configfn: configfn,
 		{{- end }}
 	}
-	s.Handler = s
+	// Default HTTP handler per transport kind
+	{{- if isWebSocketEndpoint (index .Endpoints 0) }}
+	// WebSocket services implement ServeHTTP for upgrade
+	s.Handler = http.HandlerFunc(s.ServeHTTP)
+	{{- else if isSSEEndpoint (index .Endpoints 0) }}
+	// SSE-only services route via handleSSE
+	s.Handler = http.HandlerFunc(s.handleSSE)
+	{{- else }}
+	// Plain HTTP JSON-RPC
+	s.Handler = http.HandlerFunc(s.ServeHTTP)
+	{{- end }}
 	return s
 }

@@ -257,6 +257,11 @@ func (e *Executor) executeWebSocketSequence(ctx context.Context, t *testing.T, s
 				ID:     reqData["id"],
 			}
 
+			// Mark HasID when id key present (even if it's null)
+			if _, hasID := reqData["id"]; hasID {
+				req.HasID = true
+			}
+
 			// Handle custom jsonrpc field if specified
 			if jsonrpcVal, ok := reqData["jsonrpc"]; ok {
 				if jsonrpcStr, ok := jsonrpcVal.(string); ok {
@@ -485,8 +490,10 @@ func (e *Executor) compareJSONRPCMessages(t *testing.T, actual, expected map[str
 		require.Equal(t, expectedVersion, actualVersion, "JSON-RPC version mismatch")
 	}
 
-	// Compare method
-	if actualMethod, ok := actual["method"].(string); ok {
+	// Compare method only if explicitly expected
+	if _, expHas := expected["method"]; expHas {
+		actualMethod, ok := actual["method"].(string)
+		require.True(t, ok, "Expected method in response")
 		expectedMethod, _ := expected["method"].(string)
 		require.Equal(t, expectedMethod, actualMethod, "Method mismatch")
 	}

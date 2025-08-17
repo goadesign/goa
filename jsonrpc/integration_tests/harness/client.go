@@ -21,6 +21,7 @@ type JSONRPCRequest struct {
 	Method  string  `json:"method"`
 	Params  any     `json:"params,omitempty"`
 	ID      any     `json:"id,omitempty"`
+	HasID   bool    `json:"-"` // true if the id key must be included even if null
 }
 
 // Default values
@@ -75,11 +76,11 @@ func NewClient(baseURL string, config *ClientConfig) (*Client, error) {
 	if err != nil {
 		return nil, fmt.Errorf("invalid base URL: %w", err)
 	}
-	
+
 	if config == nil {
 		config = DefaultConfig()
 	}
-	
+
 	// Create HTTP client if not provided
 	httpClient := config.HTTPClient
 	if httpClient == nil {
@@ -87,13 +88,13 @@ func NewClient(baseURL string, config *ClientConfig) (*Client, error) {
 			Timeout: config.HTTPTimeout,
 		}
 	}
-	
+
 	// Create WebSocket dialer if not provided
 	wsDialer := config.WSDialer
 	if wsDialer == nil {
 		wsDialer = websocket.DefaultDialer
 	}
-	
+
 	return &Client{
 		baseURL:    u,
 		config:     config,
@@ -109,7 +110,7 @@ func (c *Client) CallHTTPRaw(ctx context.Context, body []byte) (json.RawMessage,
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	// Set headers
 	httpReq.Header.Set("Content-Type", "application/json")
 	for k, v := range c.config.Headers {
@@ -131,7 +132,7 @@ func (c *Client) CallHTTPRaw(ctx context.Context, body []byte) (json.RawMessage,
 	if resp.StatusCode == http.StatusBadRequest {
 		return json.RawMessage(respBody), nil
 	}
-	
+
 	// Check status code
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNoContent {
 		return nil, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(respBody))
@@ -151,7 +152,7 @@ func (c *Client) CallHTTP(ctx context.Context, req JSONRPCRequest) (json.RawMess
 	envelope := map[string]any{
 		"method": req.Method,
 	}
-	
+
 	// Add jsonrpc field if provided, or default to "2.0"
 	if req.JSONRPC != nil {
 		if *req.JSONRPC != "" {
@@ -162,14 +163,14 @@ func (c *Client) CallHTTP(ctx context.Context, req JSONRPCRequest) (json.RawMess
 		// Default behavior: include "jsonrpc": "2.0"
 		envelope["jsonrpc"] = "2.0"
 	}
-	
+
 	if req.Params != nil {
 		envelope["params"] = req.Params
 	}
 	if req.ID != nil {
 		envelope["id"] = req.ID
 	}
-	
+
 	data, err := json.Marshal(envelope)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
@@ -180,7 +181,7 @@ func (c *Client) CallHTTP(ctx context.Context, req JSONRPCRequest) (json.RawMess
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	// Set headers
 	httpReq.Header.Set("Content-Type", "application/json")
 	for k, v := range c.config.Headers {
@@ -214,17 +215,24 @@ func (c *Client) CallHTTP(ctx context.Context, req JSONRPCRequest) (json.RawMess
 // CallSSE makes a JSON-RPC call over SSE and returns all events
 func (c *Client) CallSSE(ctx context.Context, req JSONRPCRequest) ([]json.RawMessage, error) {
 	// Build JSON-RPC request envelope
-	envelope := map[string]any{
-		"jsonrpc": "2.0",
-		"method":  req.Method,
+	envelope := map[string]any{}
+	// Set jsonrpc per request: nil -> default to "2.0"; non-nil empty -> omit; otherwise use value
+	if req.JSONRPC != nil {
+		if *req.JSONRPC != "" {
+			envelope["jsonrpc"] = *req.JSONRPC
+		}
+	} else {
+		envelope["jsonrpc"] = "2.0"
 	}
+	// Method
+	envelope["method"] = req.Method
 	if req.Params != nil {
 		envelope["params"] = req.Params
 	}
 	if req.ID != nil {
 		envelope["id"] = req.ID
 	}
-	
+
 	data, err := json.Marshal(envelope)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal request: %w", err)
@@ -235,7 +243,7 @@ func (c *Client) CallSSE(ctx context.Context, req JSONRPCRequest) ([]json.RawMes
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	
+
 	// Set headers
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "text/event-stream")
@@ -261,7 +269,7 @@ func (c *Client) CallSSE(ctx context.Context, req JSONRPCRequest) ([]json.RawMes
 	if err != nil {
 		return nil, fmt.Errorf("failed to read SSE response: %w", err)
 	}
-	
+
 	// Parse SSE events
 	events, err := c.parseSSEEvents(bytes.NewReader(body))
 	return events, err
@@ -271,12 +279,12 @@ func (c *Client) CallSSE(ctx context.Context, req JSONRPCRequest) ([]json.RawMes
 func (c *Client) parseSSEEvents(r io.Reader) ([]json.RawMessage, error) {
 	var events []json.RawMessage
 	scanner := bufio.NewScanner(r)
-	
+
 	var eventData strings.Builder
-	
+
 	for scanner.Scan() {
 		line := scanner.Text()
-		
+
 		if line == "" {
 			// Empty line signals end of event
 			if eventData.Len() > 0 {
@@ -285,7 +293,7 @@ func (c *Client) parseSSEEvents(r io.Reader) ([]json.RawMessage, error) {
 			}
 			continue
 		}
-		
+
 		if strings.HasPrefix(line, "data: ") {
 			data := strings.TrimPrefix(line, "data: ")
 			if eventData.Len() > 0 {
@@ -295,12 +303,12 @@ func (c *Client) parseSSEEvents(r io.Reader) ([]json.RawMessage, error) {
 		}
 		// Ignore other SSE fields like event:, id:, retry:
 	}
-	
+
 	// Handle last event if no trailing empty line
 	if eventData.Len() > 0 {
 		events = append(events, json.RawMessage(eventData.String()))
 	}
-	
+
 	return events, scanner.Err()
 }
 
@@ -309,7 +317,7 @@ func (c *Client) ConnectWebSocket(ctx context.Context) error {
 	// Build WebSocket URL
 	wsURL := *c.baseURL
 	wsURL.Path = c.config.WSPath
-	
+
 	// Convert scheme
 	switch wsURL.Scheme {
 	case "http":
@@ -319,13 +327,13 @@ func (c *Client) ConnectWebSocket(ctx context.Context) error {
 	default:
 		// Keep as is (might already be ws/wss)
 	}
-	
+
 	// Set headers
 	headers := http.Header{}
 	for k, v := range c.config.Headers {
 		headers.Set(k, v)
 	}
-	
+
 	conn, resp, err := c.wsDialer.DialContext(ctx, wsURL.String(), headers)
 	if err != nil {
 		return fmt.Errorf("websocket dial failed: %w", err)
@@ -333,7 +341,7 @@ func (c *Client) ConnectWebSocket(ctx context.Context) error {
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close() //nolint:errcheck
 	}
-	
+
 	c.wsConn = conn
 	return nil
 }
@@ -345,10 +353,12 @@ func (c *Client) SendWebSocket(ctx context.Context, req JSONRPCRequest) error {
 	}
 
 	// Build JSON-RPC request envelope
-	envelope := map[string]any{
-		"method": req.Method,
+	envelope := map[string]any{}
+	// Allow tests to omit the method by passing "-" (treated as missing field)
+	if req.Method != "-" && req.Method != "" {
+		envelope["method"] = req.Method
 	}
-	
+
 	// Add jsonrpc field if provided, or default to "2.0"
 	if req.JSONRPC != nil {
 		if *req.JSONRPC != "" {
@@ -359,11 +369,14 @@ func (c *Client) SendWebSocket(ctx context.Context, req JSONRPCRequest) error {
 		// Default behavior: include "jsonrpc": "2.0"
 		envelope["jsonrpc"] = "2.0"
 	}
-	
+
 	if req.Params != nil {
 		envelope["params"] = req.Params
 	}
-	if req.ID != nil {
+	// Preserve explicit id presence, even if null
+	if req.HasID {
+		envelope["id"] = req.ID
+	} else if req.ID != nil {
 		envelope["id"] = req.ID
 	}
 
@@ -382,7 +395,6 @@ func (c *Client) SendWebSocket(ctx context.Context, req JSONRPCRequest) error {
 	return c.wsConn.WriteMessage(websocket.TextMessage, data)
 }
 
-
 // ReceiveWebSocket receives a message from WebSocket
 func (c *Client) ReceiveWebSocket(ctx context.Context) (json.RawMessage, error) {
 	if c.wsConn == nil {
@@ -400,7 +412,7 @@ func (c *Client) ReceiveWebSocket(ctx context.Context) (json.RawMessage, error) 
 	if err != nil {
 		return nil, err
 	}
-	
+
 	if messageType != websocket.TextMessage {
 		return nil, fmt.Errorf("unexpected message type: %d", messageType)
 	}
@@ -413,16 +425,16 @@ func (c *Client) CloseWebSocket() error {
 	if c.wsConn == nil {
 		return nil
 	}
-	
+
 	// Send close message
 	deadline := time.Now().Add(5 * time.Second)
 	closeMsg := websocket.FormatCloseMessage(websocket.CloseNormalClosure, "")
 	err := c.wsConn.WriteControl(websocket.CloseMessage, closeMsg, deadline)
-	
+
 	// Always close the connection
 	closeErr := c.wsConn.Close()
 	c.wsConn = nil
-	
+
 	// Ignore "broken pipe" errors on close - the server may have already closed
 	if err != nil && strings.Contains(err.Error(), "broken pipe") {
 		err = nil
@@ -430,7 +442,7 @@ func (c *Client) CloseWebSocket() error {
 	if closeErr != nil && strings.Contains(closeErr.Error(), "broken pipe") {
 		closeErr = nil
 	}
-	
+
 	// Return the first error
 	if err != nil {
 		return err

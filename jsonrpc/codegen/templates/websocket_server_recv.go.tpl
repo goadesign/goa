@@ -22,14 +22,14 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) Recv(ctx context.Context)
 func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx context.Context, req *jsonrpc.RawRequest) error {
 	if req.JSONRPC != "2.0" {
 		if req.ID != nil {
-			return s.sendError(ctx, req.ID, jsonrpc.InvalidRequest, fmt.Sprintf("Invalid JSON-RPC version, must be 2.0, got %q", req.JSONRPC), nil)
+			return s.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil)
 		}
 		return nil
 	}
 
 	if req.Method == "" {
 		if req.ID != nil {
-			return s.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Missing method field", nil)
+			return s.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil)
 		}
 		return nil
 	}
@@ -39,7 +39,11 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx contex
 		case {{ printf "%q" .Method.Name }}:
 			{{- if and .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4)) }}
 			// {{ if eq .Method.ServerStream.Kind 3 }}Server{{ else }}Bidirectional{{ end }} streaming: decode payload and create stream wrapper
+			{{- if .Payload.Ref }}
 			payload, err := s.{{ lowerInitial .Method.VarName }}(ctx, s.r, req)
+			{{- else }}
+			_, err := s.{{ lowerInitial .Method.VarName }}(ctx, s.r, req)
+			{{- end }}
 			if err != nil {
 				return fmt.Errorf("handler error for %s: %w", {{ printf "%q" .Method.Name }}, err)
 			}
@@ -74,15 +78,18 @@ func (s *{{ lowerInitial .Service.StructName }}Stream) processRequest(ctx contex
 			if err != nil {
 				return fmt.Errorf("handler error for %s: %w", {{ printf "%q" .Method.Name }}, err)
 			}
-			if err := s.Send{{ .Method.VarName }}(ctx, res.({{ printf "*%s.%sResult" .ServicePkgName .Method.VarName }})); err != nil {
-				return fmt.Errorf("send error for %s: %w", {{ printf "%q" .Method.Name }}, err)
+			// Only send a response if the request has an ID (i.e., it's not a notification)
+			if req.ID != nil {
+				if err := s.Send{{ .Method.VarName }}Response(ctx, req.ID, res.({{ printf "*%s.%sResult" .ServicePkgName .Method.VarName }})); err != nil {
+					return fmt.Errorf("send response error for %s: %w", {{ printf "%q" .Method.Name }}, err)
+				}
 			}
 			return nil
 			{{- end }}
 	{{- end }}
 	default:
 		if req.ID != nil {
-			return s.sendError(ctx, req.ID, jsonrpc.MethodNotFound, fmt.Sprintf("Method %q not found", req.Method), nil)
+			return s.sendError(ctx, req.ID, jsonrpc.MethodNotFound, "Method not found", nil)
 		}
 		return nil
 	}

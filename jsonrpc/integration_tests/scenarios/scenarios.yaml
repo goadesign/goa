@@ -987,6 +987,86 @@ scenarios:
             message: "Streaming error occurred"
       - type: "close"
 
+  # WebSocket protocol compliance: request vs notification (JSON-RPC version and method presence)
+  - name: "websocket_invalid_version_request"
+    method: "echo_string_ws"
+    transport: "websocket"
+    sequence:
+      - type: "send"
+        data:
+          jsonrpc: "-"  # Omit version field
+          method: "echo_string_ws"
+          params:
+            id: "ws-invalid-1"
+            value: "ignore"
+          id: "ws-invalid-1"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "ws-invalid-1"
+          error:
+            code: -32600
+            message: "Invalid request"
+
+  - name: "websocket_invalid_version_notification"
+    method: "echo_string_ws"
+    transport: "websocket"
+    sequence:
+      - type: "send"
+        data:
+          jsonrpc: "-"  # Omit version field
+          method: "echo_string_ws"
+          params:
+            value: "notification without version"
+      # No receive expected for notifications with invalid request
+
+  - name: "websocket_missing_method_with_id"
+    transport: "websocket"
+    sequence:
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "-"  # Omit method field
+          params:
+            value: "test"
+          id: "ws-missing-method-1"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "ws-missing-method-1"
+          error:
+            code: -32600
+            message: "Invalid request"
+
+  - name: "websocket_missing_method_notification"
+    transport: "websocket"
+    sequence:
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "-"  # Omit method field
+          params:
+            value: "notification with missing method"
+      # No receive expected
+
+  - name: "websocket_method_not_found"
+    transport: "websocket"
+    sequence:
+      - type: "send"
+        data:
+          jsonrpc: "2.0"
+          method: "non_existent_method_ws"
+          params:
+            value: "test"
+          id: "ws-not-found-1"
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "ws-not-found-1"
+          error:
+            code: -32601
+            message: "Method not found"
+
   # WebSocket notification tests (no response expected)
   - name: "echo_string_notify_websocket"
     method: "echo_string_notify_ws"
@@ -1209,6 +1289,103 @@ scenarios:
           method: "stream_string_sse"
           params:
             value: "Stream 4 of 4"
+
+  # Mixed HTTP (CLI) and JSON-RPC (direct) for the same method
+  - name: "mixed_http_cli_echo"
+    method: "echo_string"
+    transport: "http"
+    request:
+      params: "hello from cli"
+      id: "mixed-cli-1"
+      # No jsonrpc field -> executor uses CLI path
+    expect:
+      id: "mixed-cli-1"
+      result: "hello from cli"
+
+  - name: "mixed_http_jsonrpc_direct_echo"
+    method: "echo_string"
+    transport: "http"
+    request:
+      jsonrpc: "2.0"  # Force direct HTTP JSON-RPC (skip CLI)
+      id: "mixed-direct-1"
+      method: "echo_string"
+      params: "hello from direct"
+    expect:
+      id: "mixed-direct-1"
+      result: "hello from direct"
+
+  # Additional HTTP protocol edge cases
+  - name: "http_invalid_version_notification"
+    transport: "http"
+    request:
+      jsonrpc: "-"  # Omit version field
+      method: "echo_string"
+      params: "notify"
+      # No id -> notification
+    expect:
+      no_response: true
+
+  - name: "http_missing_method_notification"
+    transport: "http"
+    request:
+      jsonrpc: "2.0"
+      # No method field (invalid request) but notification (no id)
+      params: "notify"
+    expect:
+      no_response: true
+
+  - name: "http_missing_method_with_id_raw"
+    transport: "http"
+    raw_request: '{"jsonrpc":"2.0","id":"missing-method-1"}'
+    expect:
+      id: "missing-method-1"
+      error:
+        code: -32600
+        message: "Invalid request"
+
+  # Additional WebSocket ID-type coverage
+  # TODO(ws): numeric and null id on WebSocket behavior under investigation
+
+  # Additional SSE protocol edge cases
+  - name: "sse_invalid_version_with_id"
+    method: "echo_string_sse"
+    transport: "sse"
+    request:
+      jsonrpc: "-"  # Omit version
+      params: "ignored"
+      id: "sse-invalid-1"
+    sequence:
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "sse-invalid-1"
+          error:
+            code: -32600
+            message: "Invalid request"
+
+  - name: "sse_missing_method_with_id"
+    transport: "sse"
+    request:
+      jsonrpc: "2.0"
+      # Missing method
+      params: "ignored"
+      id: "sse-missing-method-1"
+    sequence:
+      - type: "receive"
+        expect:
+          jsonrpc: "2.0"
+          id: "sse-missing-method-1"
+          error:
+            code: -32600
+            message: "Invalid request"
+
+  - name: "sse_missing_method_notification"
+    transport: "sse"
+    request:
+      jsonrpc: "2.0"
+      # Missing method and no id (notification) -> no events
+      params: "ignored"
+    sequence: []
 
 settings:
   timeout: "30s"
