@@ -706,7 +706,8 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		viewedRTs        []*ViewedResultTypeData
 	)
 	scope := codegen.NewNameScope()
-	scope.Unique("Use") // Reserve "Use" for Endpoints struct Use method.
+	scope.Unique("Use")       // Reserve "Use" for Endpoints struct Use method.
+	scope.Unique("websocket") // Reserve "websocket" to avoid collision with gorilla/websocket
 	viewScope := codegen.NewNameScope()
 	pkgName := scope.HashedUnique(service, strings.ToLower(codegen.Goify(service.Name, false)), "svc")
 	viewspkg := pkgName + "views"
