@@ -41,6 +41,7 @@ type U struct {
 }
 
 func (*T) resultVal() {}
+
 func (*U) resultVal() {}
 
 // NewResultOneof initializes result type ResultOneof from viewed result type

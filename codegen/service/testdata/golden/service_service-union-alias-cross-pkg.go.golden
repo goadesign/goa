@@ -1,8 +1,8 @@
 
-// Service is the MultiUnionService service interface.
+// Service is the UnionWithAliasCrossPkg service interface.
 type Service interface {
-	// MultiUnion implements MultiUnion.
-	MultiUnion(context.Context, *Union) (res *Union, err error)
+	// A implements A.
+	A(context.Context, *Scope) (res *Scope, err error)
 }
 
 // APIName is the name of the API as defined in the design.
@@ -14,28 +14,24 @@ const APIVersion = "0.0.1"
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
-const ServiceName = "MultiUnionService"
+const ServiceName = "UnionWithAliasCrossPkg"
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [1]string{"MultiUnion"}
+var MethodNames = [1]string{"A"}
 
-type TypeA struct {
-	A *int
-}
-
-type TypeB struct {
-	B *string
-}
-
-// Union is the payload type of the MultiUnionService service MultiUnion method.
-type Union struct {
+// Scope is the payload type of the UnionWithAliasCrossPkg service A method.
+type Scope struct {
 	Values interface {
 		valuesVal()
 	}
 }
 
-func (*TypeA) valuesVal() {}
+type ValuesDevice alias.Alias
 
-func (*TypeB) valuesVal() {}
+func (ValuesDevice) valuesVal() {}
+
+type ValuesMetric alias.Alias
+
+func (ValuesMetric) valuesVal() {}
