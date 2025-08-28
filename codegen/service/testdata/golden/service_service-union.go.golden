@@ -37,6 +37,9 @@ type ValuesInt int
 type ValuesString string
 
 func (ValuesBoolean) valuesVal() {}
-func (ValuesBytes) valuesVal()   {}
-func (ValuesInt) valuesVal()     {}
-func (ValuesString) valuesVal()  {}
+
+func (ValuesBytes) valuesVal() {}
+
+func (ValuesInt) valuesVal() {}
+
+func (ValuesString) valuesVal() {}

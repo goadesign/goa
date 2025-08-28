@@ -37,4 +37,5 @@ type Union struct {
 }
 
 func (*TypeA) valuesVal() {}
+
 func (*TypeB) valuesVal() {}
