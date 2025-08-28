@@ -1,4 +1,4 @@
-{{- if .UnderlyingRef -}}
+{{- if .UnderlyingRef }}
 type {{ .TypeRef }} {{ .UnderlyingRef }}
-{{- end -}}
+{{- end }}
 func ({{ .TypeRef }}) {{ .Name }}() {}

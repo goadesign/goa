@@ -23,6 +23,7 @@ func TestService(t *testing.T) {
 		{"service-multiple", testdata.MultipleMethodsDSL},
 		{"service-union", testdata.UnionMethodDSL},
 		{"service-multi-union", testdata.MultiUnionMethodDSL},
+		{"service-union-alias-cross-pkg", testdata.UnionWithAliasCrossPkgDSL},
 		{"service-no-payload-no-result", testdata.EmptyMethodDSL},
 		{"service-payload-no-result", testdata.EmptyResultMethodDSL},
 		{"service-no-payload-result", testdata.EmptyPayloadMethodDSL},
@@ -63,7 +64,7 @@ func TestService(t *testing.T) {
 			require.Len(t, root.Services, 1)
 			files := Files("goa.design/goa/example", root.Services[0], services, make(map[string][]string))
 			require.Greater(t, len(files), 0)
-			
+
 			// Generate the code
 			buf := new(bytes.Buffer)
 			for _, s := range files[0].SectionTemplates[1:] {
@@ -72,7 +73,7 @@ func TestService(t *testing.T) {
 			bs, err := format.Source(buf.Bytes())
 			require.NoError(t, err, buf.String())
 			code := string(bs)
-			
+
 			// Compare with golden file
 			testutil.AssertGo(t, "testdata/golden/service_"+c.Name+".go.golden", code)
 		})
@@ -104,11 +105,11 @@ func TestStructPkgPath(t *testing.T) {
 			root := codegen.RunDSL(t, c.DSL)
 			services := NewServicesData(root)
 			files := Files("goa.design/goa/example", root.Services[0], services, userTypePkgs)
-			
+
 			// Check file count
 			expectedFiles := len(c.TypeFiles) + 1
 			require.Len(t, files, expectedFiles, "unexpected number of files")
-			
+
 			// First file is always the service file
 			buf := new(bytes.Buffer)
 			for _, s := range files[0].SectionTemplates[1:] {
@@ -117,7 +118,7 @@ func TestStructPkgPath(t *testing.T) {
 			bs, err := format.Source(buf.Bytes())
 			require.NoError(t, err)
 			testutil.AssertGo(t, "testdata/golden/pkg_path_"+c.Name+"_service.go.golden", string(bs))
-			
+
 			// Type files
 			for i, typeFile := range c.TypeFiles {
 				buf := new(bytes.Buffer)
@@ -129,7 +130,7 @@ func TestStructPkgPath(t *testing.T) {
 				goldenName := filepath.Base(typeFile)
 				testutil.AssertGo(t, "testdata/golden/pkg_path_"+c.Name+"_"+goldenName+".golden", string(bs))
 			}
-			
+
 			// For dupes case, test the second service
 			if c.Name == "dupes" && len(root.Services) > 1 {
 				files = Files("goa.design/goa/example", root.Services[1], services, userTypePkgs)
@@ -145,4 +146,3 @@ func TestStructPkgPath(t *testing.T) {
 		})
 	}
 }
-
