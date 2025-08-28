@@ -120,6 +120,27 @@ var MultiUnionMethodDSL = func() {
 	})
 }
 
+// Union with alias user types placed in a custom package via struct:pkg:path.
+// The same alias type is used in multiple branches to exercise wrapper generation
+// for cross-package and duplicate underlying types.
+var UnionWithAliasCrossPkgDSL = func() {
+	var Alias = Type("Alias", String, func() {
+		Meta("struct:pkg:path", "alias")
+	})
+	var Scope = Type("Scope", func() {
+		OneOf("Values", func() {
+			Attribute("Device", Alias)
+			Attribute("Metric", Alias)
+		})
+	})
+	Service("UnionWithAliasCrossPkg", func() {
+		Method("A", func() {
+			Payload(Scope)
+			Result(Scope)
+		})
+	})
+}
+
 var WithDefaultDSL = func() {
 	Service("WithDefault", func() {
 		Method("A", func() {

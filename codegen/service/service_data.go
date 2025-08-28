@@ -430,6 +430,10 @@ type (
 		// Loc defines the file and Go package of the method if
 		// overridden in corresponding union type via Meta.
 		Loc *codegen.Location
+		// UnderlyingRef is the reference to the underlying concrete type for which
+		// a wrapper must be generated in the service package when the method is not
+		// emitted in the underlying type package.
+		UnderlyingRef string
 	}
 
 	// SchemeData describes a single security scheme.
@@ -1042,11 +1046,51 @@ func collectUnionMethods(att *expr.AttributeExpr, scope *codegen.NameScope, loc 
 		data = append(data, collect(dt.KeyType, loc)...)
 		data = append(data, collect(dt.ElemType, loc)...)
 	case *expr.Union:
+		// Detect duplicate underlying user types across union values.
+		utCounts := make(map[string]int)
+		for _, v := range dt.Values {
+			if ut, ok := v.Attribute.Type.(expr.UserType); ok {
+				utCounts[ut.ID()]++
+			}
+		}
 		for _, nat := range dt.Values {
+			mloc := loc
+			var (
+				underlyingRef string
+				wrapperName   string
+				typeRef       string
+			)
+			if ut, ok := nat.Attribute.Type.(expr.UserType); ok {
+				uloc := codegen.UserTypeLocation(ut)
+				// Need wrapper if member type is in a different package than the union,
+				// or if the same underlying user type appears in multiple branches.
+				if uloc != nil && (uloc.PackageName() != loc.PackageName() || utCounts[ut.ID()] > 1) {
+					// If wrapper is emitted in the same package as the underlying type,
+					// use unqualified name to avoid self-import cycles.
+					if uloc.PackageName() == mloc.PackageName() {
+						underlyingRef = scope.GoTypeName(nat.Attribute)
+					} else {
+						underlyingRef = scope.GoFullTypeName(nat.Attribute, uloc.PackageName())
+					}
+					wrapperName = scope.Unique(codegen.Goify(dt.Name(), true)+codegen.Goify(nat.Name, true), "")
+					typeRef = wrapperName // wrappers use value receivers
+				} else {
+					// Same package and unique: attach marker directly to the member type.
+					mloc = uloc
+					wrapperName = scope.GoTypeName(nat.Attribute)
+					typeRef = scope.GoTypeRef(nat.Attribute) // preserve pointer/value semantics
+				}
+			} else {
+				// Non-user types always get per-branch wrappers for uniqueness.
+				underlyingRef = scope.GoTypeName(nat.Attribute)
+				wrapperName = scope.Unique(codegen.Goify(dt.Name(), true)+codegen.Goify(nat.Name, true), "")
+				typeRef = wrapperName // wrappers use value receivers
+			}
 			data = append(data, &UnionValueMethodData{
-				Name:    codegen.UnionValTypeName(dt.Name()),
-				TypeRef: scope.GoTypeRef(nat.Attribute),
-				Loc:     loc,
+				Name:          codegen.UnionValTypeName(dt.Name()),
+				TypeRef:       typeRef,
+				Loc:           mloc,
+				UnderlyingRef: underlyingRef,
 			})
 		}
 		for _, nat := range dt.Values {
