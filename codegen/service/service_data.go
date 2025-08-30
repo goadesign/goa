@@ -1063,16 +1063,22 @@ func collectUnionMethods(att *expr.AttributeExpr, scope *codegen.NameScope, loc 
 			if ut, ok := nat.Attribute.Type.(expr.UserType); ok {
 				uloc := codegen.UserTypeLocation(ut)
 				// Need wrapper if member type is in a different package than the union,
-				// or if the same underlying user type appears in multiple branches.
-				if uloc != nil && (uloc.PackageName() != loc.PackageName() || utCounts[ut.ID()] > 1) {
+				// or if the same underlying user type appears in multiple branches,
+				// or if the underlying type is AnyKind (cannot attach methods to interface types).
+				if uloc != nil && (uloc.PackageName() != loc.PackageName() || utCounts[ut.ID()] > 1 || ut.Attribute().Type.Kind() == expr.AnyKind) {
 					// If wrapper is emitted in the same package as the underlying type,
 					// use unqualified name to avoid self-import cycles.
-					if uloc.PackageName() == mloc.PackageName() {
-						underlyingRef = scope.GoTypeName(nat.Attribute)
+					if ut.Attribute().Type.Kind() == expr.AnyKind {
+						// Use []byte for Any to ensure we attach a method to a concrete type
+						underlyingRef = "[]byte"
 					} else {
-						underlyingRef = scope.GoFullTypeName(nat.Attribute, uloc.PackageName())
+						if uloc.PackageName() == mloc.PackageName() {
+							underlyingRef = scope.GoTypeName(nat.Attribute)
+						} else {
+							underlyingRef = scope.GoFullTypeName(nat.Attribute, uloc.PackageName())
+						}
 					}
-					wrapperName = scope.Unique(codegen.Goify(dt.Name(), true)+codegen.Goify(nat.Name, true), "")
+					wrapperName = scope.Unique(codegen.Goify(dt.Name(), true)+codegen.Goify(nat.Name, true), "Wrap")
 					typeRef = wrapperName // wrappers use value receivers
 				} else {
 					// Same package and unique: attach marker directly to the member type.
@@ -1082,8 +1088,14 @@ func collectUnionMethods(att *expr.AttributeExpr, scope *codegen.NameScope, loc 
 				}
 			} else {
 				// Non-user types always get per-branch wrappers for uniqueness.
-				underlyingRef = scope.GoTypeName(nat.Attribute)
-				wrapperName = scope.Unique(codegen.Goify(dt.Name(), true)+codegen.Goify(nat.Name, true), "")
+				// Special-case AnyKind to avoid defining a method on an interface type
+				// by using a []byte wrapper which compiles with a value receiver.
+				if nat.Attribute.Type.Kind() == expr.AnyKind {
+					underlyingRef = "[]byte"
+				} else {
+					underlyingRef = scope.GoTypeName(nat.Attribute)
+				}
+				wrapperName = scope.Unique(codegen.Goify(dt.Name(), true)+codegen.Goify(nat.Name, true), "Wrap")
 				typeRef = wrapperName // wrappers use value receivers
 			}
 			data = append(data, &UnionValueMethodData{

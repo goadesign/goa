@@ -33,6 +33,19 @@ func (p *protoBufScope) Ref(att *expr.AttributeExpr, pkg string) string {
 // NOTE: protoc does not care about common initialisms like api -> API so we
 // first transform the name into snake case to end up with Api.
 func (*protoBufScope) Field(att *expr.AttributeExpr, name string, firstUpper bool) string {
+	// Special handling for union fields: if the container field name would
+	// collide with a member field name, protoc appends "_oneof" to the
+	// container name. Reflect that here so generated code references match.
+	if u, ok := att.Type.(*expr.Union); ok {
+		base := codegen.SnakeCase(protoBufify(name, false, false))
+		for _, nat := range u.Values {
+			fn := codegen.SnakeCase(protoBufify(nat.Name, false, false))
+			if fn == base {
+				return protoBufifyAtt(att, base+"_oneof", firstUpper)
+			}
+		}
+		return protoBufifyAtt(att, base, firstUpper)
+	}
 	return protoBufifyAtt(att, codegen.SnakeCase(name), firstUpper)
 }
 

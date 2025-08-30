@@ -40,6 +40,10 @@ type unionData struct {
 	// TargetWrapperRefs holds wrapper type refs used when assigning from
 	// protobuf to Go union (proto -> Go). Empty string means no wrapper.
 	TargetWrapperRefs []string
+	// TargetAssignExprs holds precomputed right-hand-side assignment expressions
+	// for protobuf -> Go union conversion. Each entry is a valid Go expression
+	// that initializes the target branch value from the protobuf oneof value.
+	TargetAssignExprs []string
 }
 
 var (
@@ -293,6 +297,13 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			srcVar = sourceVar + "." + ta.SourceCtx.Scope.Field(srcc, srcMatt.ElemName(n), true)
 			tgtVar = targetVar + "." + ta.TargetCtx.Scope.Field(tgtc, tgtMatt.ElemName(n), true)
 		)
+		// If converting from protobuf (source is pb message) and the source field is a union,
+		// use the generated oneof getter (Get<FieldName>()) so downstream type switches see
+		// the interface oneof value rather than the container.
+		if !ta.proto && expr.IsUnion(srcc.Type) {
+			fname := ta.SourceCtx.Scope.Field(srcc, srcMatt.ElemName(n), true)
+			srcVar = sourceVar + ".Get" + fname + "()"
+		}
 		{
 			if err = codegen.IsCompatible(srcc.Type, tgtc.Type, "", ""); err != nil {
 				if ta.proto {
@@ -606,6 +617,7 @@ func transformUnionFromProto(source, target *expr.AttributeExpr, sourceVar, targ
 		"TargetValues":        tdata.TargetValues,
 		"TransformAttrs":      ta,
 		"TargetWrapperRefs":   tdata.TargetWrapperRefs,
+		"TargetAssignExprs":   tdata.TargetAssignExprs,
 	}
 	var buf bytes.Buffer
 	if err := transformGoUnionFromProtoT.Execute(&buf, data); err != nil {
@@ -660,6 +672,17 @@ func convertPrimitiveToProto(_, tgt *expr.AttributeExpr, srcPtr, _ bool, srcVar 
 func convertPrimitiveFromProto(_, tgt *expr.AttributeExpr, srcPtr, _ bool, srcVar string, ta *transformAttrs) string {
 	tgtType, _ := codegen.GetMetaType(tgt)
 	if tgtType == "" {
+		// Avoid converting to a user type whose underlying type is Any (interface).
+		// Returning the source value directly allows callers to wrap bytes into
+		// concrete wrapper aliases without requiring an interface assertion.
+		if ut, ok := tgt.Type.(expr.UserType); ok {
+			if ut.Attribute().Type.Kind() == expr.AnyKind {
+				if srcPtr {
+					srcVar = "*" + srcVar
+				}
+				return srcVar
+			}
+		}
 		tgtType = ta.TargetCtx.Scope.Ref(tgt, ta.TargetCtx.Pkg(tgt))
 	}
 	if srcPtr {
@@ -679,6 +702,7 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 
 	sourceValueTypeRefs := make([]string, len(src.Values))
 	targetWrapperRefs := make([]string, len(src.Values))
+	targetAssignExprs := make([]string, len(src.Values))
 	if ta.proto {
 		// Go -> protobuf: switch on Go union member types. Use per-branch wrappers
 		// when needed (duplicate underlying types or cross-package members).
@@ -720,12 +744,16 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 						useWrapper = true
 					}
 				}
+				if ut.Attribute().Type.Kind() == expr.AnyKind {
+					useWrapper = true
+				}
 			} else {
 				// Non-user types are represented via per-branch defined types.
 				useWrapper = true
 			}
 			if useWrapper {
-				w := codegen.Goify(src.Name(), true) + codegen.Goify(v.Name, true)
+				w := codegen.Goify(src.Name(), true) + codegen.Goify(v.Name, true) + "Wrap"
+				// Use union package for wrappers; if all members share a common package use it; otherwise fallback to member package only if union is empty.
 				pkg := unionPkg
 				if samePkg && commonPkg != "" {
 					pkg = commonPkg
@@ -746,13 +774,32 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 		// value into Go-side wrappers when required.
 		for i, v := range src.Values {
 			fieldName := ta.SourceCtx.Scope.Field(v.Attribute, v.Name, true)
+			// Prefer the oneof type name (Message_Field) which matches generated code
 			sourceValueTypeRefs[i] = ta.message + "_" + fieldName
+		}
+		// Align target values to source order by matching names
+		aligned := make([]*expr.NamedAttributeExpr, len(src.Values))
+		for i, sv := range src.Values {
+			idx := -1
+			for j, tv := range tgt.Values {
+				if tv.Name == sv.Name {
+					idx = j
+					break
+				}
+			}
+			if idx >= 0 {
+				aligned[i] = tgt.Values[idx]
+			} else if i < len(tgt.Values) {
+				aligned[i] = tgt.Values[i]
+			} else {
+				aligned[i] = tgt.Values[len(tgt.Values)-1]
+			}
 		}
 		unionPkg := ta.TargetCtx.Pkg(target)
 		// Prefer a common member package for wrappers if all target values share it (e.g., shared user-type unions).
 		samePkg := true
 		commonPkg := ""
-		for _, tv := range tgt.Values {
+		for _, tv := range aligned {
 			ut, ok := tv.Attribute.Type.(expr.UserType)
 			if !ok {
 				samePkg = false
@@ -771,22 +818,25 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 			}
 		}
 		counts := make(map[string]int)
-		for _, tv := range tgt.Values {
+		for _, tv := range aligned {
 			r := ta.TargetCtx.Scope.Ref(tv.Attribute, ta.TargetCtx.Pkg(tv.Attribute))
 			counts[r]++
 		}
-		for i, tv := range tgt.Values {
+		for i, tv := range aligned {
 			baseRef := ta.TargetCtx.Scope.Ref(tv.Attribute, ta.TargetCtx.Pkg(tv.Attribute))
 			useWrapper := counts[baseRef] > 1
 			if ut, ok := tv.Attribute.Type.(expr.UserType); ok {
 				if loc := codegen.UserTypeLocation(ut); loc != nil && loc.PackageName() != unionPkg {
 					useWrapper = true
 				}
+				if ut.Attribute().Type.Kind() == expr.AnyKind {
+					useWrapper = true
+				}
 			} else {
 				useWrapper = true
 			}
 			if useWrapper {
-				w := codegen.Goify(tgt.Name(), true) + codegen.Goify(tv.Name, true)
+				w := codegen.Goify(tgt.Name(), true) + codegen.Goify(tv.Name, true) + "Wrap"
 				pkg := unionPkg
 				if samePkg && commonPkg != "" {
 					pkg = commonPkg
@@ -798,6 +848,21 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 				}
 			}
 		}
+		// Override tgtValues with aligned order so templates index correctly
+		tgtValues = aligned
+		// Override targetAssignExprs with precomputed ones
+		targetAssignExprs = make([]string, len(aligned))
+		for i, tv := range aligned {
+			// Build expression converting from protobuf branch field to target branch type.
+			fieldName := ta.SourceCtx.Scope.Field(src.Values[i].Attribute, src.Values[i].Name, true)
+			fieldExpr := "val." + fieldName
+			conv := convertType(src.Values[i].Attribute, tv.Attribute, false, false, fieldExpr, ta)
+			if targetWrapperRefs[i] != "" {
+				targetAssignExprs[i] = targetWrapperRefs[i] + "(" + conv + ")"
+			} else {
+				targetAssignExprs[i] = conv
+			}
+		}
 	}
 	return &unionData{
 		Source:              src,
@@ -806,6 +871,7 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 		TargetValues:        tgtValues,
 		SourceValueTypeRefs: sourceValueTypeRefs,
 		TargetWrapperRefs:   targetWrapperRefs,
+		TargetAssignExprs:   targetAssignExprs,
 	}
 }
 
