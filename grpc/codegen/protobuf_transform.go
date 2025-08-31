@@ -297,13 +297,6 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			srcVar = sourceVar + "." + ta.SourceCtx.Scope.Field(srcc, srcMatt.ElemName(n), true)
 			tgtVar = targetVar + "." + ta.TargetCtx.Scope.Field(tgtc, tgtMatt.ElemName(n), true)
 		)
-		// If converting from protobuf (source is pb message) and the source field is a union,
-		// use the generated oneof getter (Get<FieldName>()) so downstream type switches see
-		// the interface oneof value rather than the container.
-		if !ta.proto && expr.IsUnion(srcc.Type) {
-			fname := ta.SourceCtx.Scope.Field(srcc, srcMatt.ElemName(n), true)
-			srcVar = sourceVar + ".Get" + fname + "()"
-		}
 		{
 			if err = codegen.IsCompatible(srcc.Type, tgtc.Type, "", ""); err != nil {
 				if ta.proto {
@@ -704,69 +697,24 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 	targetWrapperRefs := make([]string, len(src.Values))
 	targetAssignExprs := make([]string, len(src.Values))
 	if ta.proto {
-		// Go -> protobuf: switch on Go union member types. Use per-branch wrappers
-		// when needed (duplicate underlying types or cross-package members).
-		unionPkg := ta.SourceCtx.Pkg(source)
-		// Prefer a common member package if all member user types share one (e.g., shared unions).
-		samePkg := true
-		commonPkg := ""
-		for _, v := range src.Values {
-			ut, ok := v.Attribute.Type.(expr.UserType)
-			if !ok {
-				samePkg = false
-				break
+		// Go -> protobuf: switch on Go types corresponding to protobuf oneof variants.
+		ns := ta.TargetCtx.Scope.Scope()
+		for i := range tgt.Values {
+			tv := tgt.Values[i]
+			bn := codegen.Goify(tv.Name, true)
+			// Non-pointer wrappers for scalar/collection wrappers
+			switch bn {
+			case "String", "Integer", "Boolean", "Number", "Array", "Map":
+				sourceValueTypeRefs[i] = ta.message + bn
+				continue
 			}
-			if loc := codegen.UserTypeLocation(ut); loc != nil {
-				if commonPkg == "" {
-					commonPkg = loc.PackageName()
-				} else if commonPkg != loc.PackageName() {
-					samePkg = false
-					break
-				}
+			if _, ok := tv.Attribute.Type.(expr.UserType); ok {
+				// User-type branch maps to a protobuf message type (pointer)
+				pbName := protoBufGoFullTypeName(tv.Attribute, ta.TargetCtx.Pkg(tv.Attribute), ns)
+				sourceValueTypeRefs[i] = "*" + pbName
 			} else {
-				samePkg = false
-				break
-			}
-		}
-		counts := make(map[string]int)
-		for _, v := range src.Values {
-			ref := ta.SourceCtx.Scope.Ref(v.Attribute, ta.SourceCtx.Pkg(v.Attribute))
-			counts[ref]++
-		}
-		for i, v := range src.Values {
-			baseRef := ta.SourceCtx.Scope.Ref(v.Attribute, ta.SourceCtx.Pkg(v.Attribute))
-			useWrapper := counts[baseRef] > 1
-			memberPkg := ""
-			if ut, ok := v.Attribute.Type.(expr.UserType); ok {
-				if loc := codegen.UserTypeLocation(ut); loc != nil {
-					memberPkg = loc.PackageName()
-					if memberPkg != unionPkg {
-						useWrapper = true
-					}
-				}
-				if ut.Attribute().Type.Kind() == expr.AnyKind {
-					useWrapper = true
-				}
-			} else {
-				// Non-user types are represented via per-branch defined types.
-				useWrapper = true
-			}
-			if useWrapper {
-				w := codegen.Goify(src.Name(), true) + codegen.Goify(v.Name, true) + "Wrap"
-				// Use union package for wrappers; if all members share a common package use it; otherwise fallback to member package only if union is empty.
-				pkg := unionPkg
-				if samePkg && commonPkg != "" {
-					pkg = commonPkg
-				} else if pkg == "" {
-					pkg = memberPkg
-				}
-				if pkg != "" {
-					sourceValueTypeRefs[i] = pkg + "." + w
-				} else {
-					sourceValueTypeRefs[i] = w
-				}
-			} else {
-				sourceValueTypeRefs[i] = baseRef
+				// Fallback to case type based on field name
+				sourceValueTypeRefs[i] = ta.message + bn
 			}
 		}
 	} else {
@@ -787,60 +735,39 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 					break
 				}
 			}
-			if idx >= 0 {
+			switch {
+			case idx >= 0:
 				aligned[i] = tgt.Values[idx]
-			} else if i < len(tgt.Values) {
+			case i < len(tgt.Values):
 				aligned[i] = tgt.Values[i]
-			} else {
+			default:
 				aligned[i] = tgt.Values[len(tgt.Values)-1]
 			}
 		}
 		unionPkg := ta.TargetCtx.Pkg(target)
-		// Prefer a common member package for wrappers if all target values share it (e.g., shared user-type unions).
-		samePkg := true
-		commonPkg := ""
+		// Build user type ID counts for target values to detect duplicate underlying UTs
+		utCounts := make(map[string]int)
 		for _, tv := range aligned {
-			ut, ok := tv.Attribute.Type.(expr.UserType)
-			if !ok {
-				samePkg = false
-				break
-			}
-			if loc := codegen.UserTypeLocation(ut); loc != nil {
-				if commonPkg == "" {
-					commonPkg = loc.PackageName()
-				} else if commonPkg != loc.PackageName() {
-					samePkg = false
-					break
-				}
-			} else {
-				samePkg = false
-				break
-			}
-		}
-		counts := make(map[string]int)
-		for _, tv := range aligned {
-			r := ta.TargetCtx.Scope.Ref(tv.Attribute, ta.TargetCtx.Pkg(tv.Attribute))
-			counts[r]++
-		}
-		for i, tv := range aligned {
-			baseRef := ta.TargetCtx.Scope.Ref(tv.Attribute, ta.TargetCtx.Pkg(tv.Attribute))
-			useWrapper := counts[baseRef] > 1
 			if ut, ok := tv.Attribute.Type.(expr.UserType); ok {
-				if loc := codegen.UserTypeLocation(ut); loc != nil && loc.PackageName() != unionPkg {
-					useWrapper = true
-				}
-				if ut.Attribute().Type.Kind() == expr.AnyKind {
-					useWrapper = true
+				utCounts[ut.ID()]++
+			}
+		}
+		// Decide wrappers using same criteria as service generator
+		for i, tv := range aligned {
+			useWrapper := false
+			if ut, ok := tv.Attribute.Type.(expr.UserType); ok {
+				if loc := codegen.UserTypeLocation(ut); loc != nil {
+					if loc.PackageName() != unionPkg || utCounts[ut.ID()] > 1 || ut.Attribute().Type.Kind() == expr.AnyKind {
+						useWrapper = true
+					}
 				}
 			} else {
+				// Non-user types are represented via per-branch defined types.
 				useWrapper = true
 			}
 			if useWrapper {
-				w := codegen.Goify(tgt.Name(), true) + codegen.Goify(tv.Name, true) + "Wrap"
+				w := codegen.Goify(tgt.Name(), true) + codegen.Goify(tv.Name, true)
 				pkg := unionPkg
-				if samePkg && commonPkg != "" {
-					pkg = commonPkg
-				}
 				if pkg != "" {
 					targetWrapperRefs[i] = pkg + "." + w
 				} else {

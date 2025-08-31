@@ -1078,7 +1078,7 @@ func collectUnionMethods(att *expr.AttributeExpr, scope *codegen.NameScope, loc 
 							underlyingRef = scope.GoFullTypeName(nat.Attribute, uloc.PackageName())
 						}
 					}
-					wrapperName = scope.Unique(codegen.Goify(dt.Name(), true)+codegen.Goify(nat.Name, true), "Wrap")
+					wrapperName = scope.Unique(codegen.Goify(dt.Name(), true)+codegen.Goify(nat.Name, true), "")
 					typeRef = wrapperName // wrappers use value receivers
 				} else {
 					// Same package and unique: attach marker directly to the member type.
@@ -1095,7 +1095,7 @@ func collectUnionMethods(att *expr.AttributeExpr, scope *codegen.NameScope, loc 
 				} else {
 					underlyingRef = scope.GoTypeName(nat.Attribute)
 				}
-				wrapperName = scope.Unique(codegen.Goify(dt.Name(), true)+codegen.Goify(nat.Name, true), "Wrap")
+				wrapperName = scope.Unique(codegen.Goify(dt.Name(), true)+codegen.Goify(nat.Name, true), "")
 				typeRef = wrapperName // wrappers use value receivers
 			}
 			data = append(data, &UnionValueMethodData{
