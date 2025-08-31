@@ -577,6 +577,16 @@ func (e *GRPCEndpointExpr) hasAnyType(a *AttributeExpr, typ string, seen ...map[
 			}
 			verr.Merge(e.hasAnyType(nat.Attribute, typ, seen...))
 		}
+	case *Union:
+		for _, nat := range actual.Values {
+			if IsPrimitive(nat.Attribute.Type) {
+				if nat.Attribute.Type == Any {
+					verr.Add(e, "Union member %q is Any type which is not supported in gRPC", nat.Name)
+				}
+				continue
+			}
+			verr.Merge(e.hasAnyType(nat.Attribute, typ, seen...))
+		}
 	}
 	return verr
 }
