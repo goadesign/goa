@@ -440,9 +440,6 @@ func protoNativeType(t expr.DataType) string {
 		return "string"
 	case expr.BytesKind:
 		return "bytes"
-	case expr.AnyKind:
-		// Treat Goa Any as bytes in protobuf to avoid panic and ensure stability
-		return "bytes"
 	default:
 		panic(fmt.Sprintf("cannot compute native protocol buffer type for %T", t)) // bug
 	}
@@ -474,9 +471,6 @@ func protoBufNativeGoTypeName(t expr.DataType) string {
 	case expr.StringKind:
 		return "string"
 	case expr.BytesKind:
-		return "[]byte"
-	case expr.AnyKind:
-		// Map Goa Any to []byte for Go type compiled from protobuf
 		return "[]byte"
 	default:
 		panic(fmt.Sprintf("cannot compute native protocol buffer type for %T %v", t, t)) // bug
