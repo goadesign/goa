@@ -48,6 +48,14 @@ service "Service" gRPC endpoint "Method": field number 2 in attribute "key_dup_i
 			DSL:    testdata.GRPCEndpointWithInheritErrorDSL,
 			Errors: []string{},
 		},
+		"endpoint-union-containing-any": {
+			DSL: testdata.GRPCEndpointWithUnionContainingAny,
+			Errors: []string{
+				`service "Service" method "MethodUnion": union type choice has array elements, not supported by gRPC
+service "Service" method "MethodUnion": union type choice has map elements, not supported by gRPC`,
+				`service "Service" gRPC endpoint "MethodUnion": Attribute "value" is Any type which is not supported in gRPC`,
+			},
+		},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {
