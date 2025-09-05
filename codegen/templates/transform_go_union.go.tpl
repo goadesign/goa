@@ -2,7 +2,7 @@
 {{ end }}switch actual := {{ .SourceVar }}.(type) {
 	{{- range $i, $ref := .SourceTypeRefs }}
 	case {{ $ref }}:
-		{{ transformAttribute (index $.SourceTypes $i).Attribute (index $.TargetTypes $i).Attribute "actual" "obj" true $.TransformAttrs -}}
-		{{ $.TargetVar }} = obj
+		{{ transformAttribute (index $.SourceTypes $i).Attribute (index $.TargetTypes $i).Attribute "actual" $.TempVarName true $.TransformAttrs -}}
+		{{ $.TargetVar }} = {{ $.TempVarName }}
 	{{- end }}
 }

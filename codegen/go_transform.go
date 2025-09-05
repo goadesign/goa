@@ -471,6 +471,13 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	// Need to type assert targetVar before assigning field values.
 	ta.TargetCtx.IsInterface = true
 
+	base := "obj"
+	if strings.HasPrefix(targetVar, "obj.") {
+		base = "tmp"
+	}
+	// Use deterministic temp var: 'obj' at top-level, 'tmp' for nested assignments.
+	tmp := base
+
 	data := map[string]any{
 		"SourceTypeRefs": sourceTypeRefs,
 		"SourceTypes":    srcUnion.Values,
@@ -481,6 +488,7 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 		"TypeRef":        ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target)),
 		"TargetTypeName": ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg(target), ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault),
 		"TransformAttrs": ta,
+		"TempVarName":    tmp,
 	}
 	var buf bytes.Buffer
 	if err := transformGoUnionT.Execute(&buf, data); err != nil {
