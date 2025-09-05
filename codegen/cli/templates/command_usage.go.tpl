@@ -16,15 +16,14 @@ Additional help:
 
 {{- range .Subcommands }}
 func {{ .FullName }}Usage() {
-	fmt.Fprintf(os.Stderr, `%[1]s [flags] {{ $.Name }} {{ .Name }}{{range .Flags }} -{{ .Name }} {{ .Type }}{{ end }}
-
-{{ printDescription .Description}}
+	fmt.Fprintf(os.Stderr, "%s [flags] {{ $.Name }} {{ .Name }}{{range .Flags }} -{{ .Name }} {{ .Type }}{{ end }}\n\n", os.Args[0])
+	fmt.Fprint(os.Stderr, `{{ printDescription .Description}}
 	{{- range .Flags }}
     -{{ .Name }} {{ .Type }}: {{ .Description }}
 	{{- end }}
 
 Example:
-    %[1]s {{ .Example }}
-`, os.Args[0])
+    `)
+	fmt.Fprintf(os.Stderr, "%s %s\n", os.Args[0], `{{ .Example }}`)
 }
 {{ end }}
