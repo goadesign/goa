@@ -56,7 +56,15 @@ func Generate(dir, cmd string) (outputs []string, err1 error) {
 		if err != nil {
 			return nil, err
 		}
-		genpkg = pkgs[0].PkgPath
+		// In temporary workspaces (e.g., tests) and on Windows, PkgPath may resolve
+		// to an absolute filesystem path which is not a valid Go import path and
+		// would produce invalid imports (e.g., backslashes). Fall back to the
+		// relative generated package import path in that case.
+		if filepath.IsAbs(pkgs[0].PkgPath) {
+			genpkg = codegen.Gendir
+		} else {
+			genpkg = pkgs[0].PkgPath
+		}
 	}
 
 	// 3. Retrieve goa generators for given command.
