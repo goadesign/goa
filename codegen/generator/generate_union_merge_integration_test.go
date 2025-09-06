@@ -1,0 +1,74 @@
+package generator
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	cg "goa.design/goa/v3/codegen"
+	d "goa.design/goa/v3/dsl"
+)
+
+// TestGenerateUnionUserTypeSamePathMerged exercises the real service codegen path
+// for unions and user types across two services targeting the same user type
+// file. It asserts the generated file contains both the struct definition and
+// the union marker method for the union branch type. This mirrors the original
+// failure mode where only the union method remained and the struct was lost.
+func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(cmd string) ([]Genfunc, error) { return []Genfunc{Service, Transport, OpenAPI}, nil }
+
+	dsl := func() {
+		d.API("test", func() {})
+
+		var Summary = d.Type("Summary", func() {
+			d.Meta("struct:pkg:path", "types")
+			d.Attribute("message", d.String)
+		})
+
+		var MyUnion = d.Type("MyUnion", func() {
+			d.OneOf("MyUnion", func() {
+				d.Attribute("sum", Summary)
+			})
+		})
+
+		var Container = d.Type("Container", func() {
+			d.Meta("struct:pkg:path", "types")
+			d.Attribute("u", MyUnion)
+		})
+
+		d.Service("S1", func() {
+			d.Method("M", func() {
+				d.Payload(Container)
+			})
+		})
+
+		d.Service("S2", func() {
+			d.Method("M", func() {
+				d.Payload(Container)
+			})
+		})
+	}
+
+	_ = cg.RunDSL(t, dsl)
+
+	dir := t.TempDir()
+	if _, err := Generate(dir, "gen"); err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	// Verify generated types/summary.go contains both struct and union marker.
+	p := filepath.Join(dir, cg.Gendir, "types", cg.SnakeCase("Summary")+".go")
+	bs, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatalf("failed reading generated file: %v", err)
+	}
+	content := string(bs)
+	if !strings.Contains(content, "type Summary struct") {
+		t.Fatalf("missing struct definition in %s:\n%s", p, content)
+	}
+	if !strings.Contains(content, "myUnionVal()") {
+		t.Fatalf("missing union marker method in %s:\n%s", p, content)
+	}
+}
