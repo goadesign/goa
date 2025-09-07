@@ -55,6 +55,8 @@ type (
 		// RequestIDField is the name of the payload field that maps to the Last-Event-ID header if any.
 		// If empty, no last event id is included in the request.
 		RequestIDField string
+		// RequestIDPointer indicates whether the RequestIDField is a pointer (i.e., optional primitive).
+		RequestIDPointer bool
 	}
 )
 
@@ -66,7 +68,7 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 
 	md := ed.Method
 	svc := sd.Service
-	
+
 	// Use streaming result type if different from result
 	var eventType *ResultData
 	var eventAttr *expr.AttributeExpr
@@ -83,7 +85,7 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 		eventType = ed.Result
 		eventAttr = e.MethodExpr.Result
 	}
-	
+
 	sendDesc := fmt.Sprintf("%s streams instances of %q to the %q endpoint SSE connection.", md.ServerStream.SendName, eventType.Name, md.Name)
 	sendWithContextDesc := fmt.Sprintf("%s streams instances of %q to the %q endpoint SSE connection with context.", md.ServerStream.SendWithContextName, eventType.Name, md.Name)
 	recvDesc := fmt.Sprintf("%s connects to the %q SSE endpoint and streams events.", md.ServerStream.RecvName, md.Name)
@@ -106,6 +108,12 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 		}
 	}
 
+	// Determine if the Last-Event-ID mapped payload attribute is a primitive pointer
+	ridPtr := false
+	if e.SSE.RequestIDField != "" {
+		ridPtr = e.MethodExpr.Payload.IsPrimitivePointer(e.SSE.RequestIDField, true)
+	}
+
 	ed.SSE = &SSEData{
 		StructName:          md.ServerStream.VarName,
 		Interface:           fmt.Sprintf("%s.%s", svc.PkgName, md.ServerStream.Interface),
@@ -124,6 +132,7 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 		EventField:          eventFieldVar,
 		RetryField:          retryFieldVar,
 		RequestIDField:      e.SSE.RequestIDField,
+		RequestIDPointer:    ridPtr,
 	}
 }
 
