@@ -52,10 +52,12 @@ func {{ .HandlerInit }}(
 			if lastEventID := r.Header.Get("Last-Event-ID"); lastEventID != "" {
 				ctx = context.WithValue(ctx, "last-event-id", lastEventID)
 			{{- if .Payload.Ref }}
-			{{- if eq .Method.Payload.Type.Name "Object" }}
-				p := payload.({{ .Payload.Ref }})
-				p.{{ .SSE.RequestIDField }} = lastEventID
-				payload = p
+			{{- if isObject .Payload.Request.PayloadType }}
+				{{- if .SSE.RequestIDPointer }}
+				payload.{{ .SSE.RequestIDField }} = &lastEventID
+				{{- else }}
+				payload.{{ .SSE.RequestIDField }} = lastEventID
+				{{- end }}
 			{{- end }}
 			{{- end }}
 			}
@@ -183,10 +185,12 @@ func {{ .HandlerInit }}(
 		if lastEventID := r.Header.Get("Last-Event-ID"); lastEventID != "" {
 			ctx = context.WithValue(ctx, "last-event-id", lastEventID)
 			{{- if .Payload.Ref }}
-			{{- if eq .Method.Payload.Type.Name "Object" }}
-			p := payload.({{ .Payload.Ref }})
-			p.{{ .SSE.RequestIDField }} = lastEventID
-			payload = p
+			{{- if isObject .Payload.Request.PayloadType }}
+				{{- if .SSE.RequestIDPointer }}
+				payload.{{ .SSE.RequestIDField }} = &lastEventID
+				{{- else }}
+				payload.{{ .SSE.RequestIDField }} = lastEventID
+				{{- end }}
 			{{- end }}
 			{{- end }}
 		}

@@ -46,6 +46,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 		"mustDecodeRequest":   mustDecodeRequest,
 		"addLeadingSlash":     addLeadingSlash,
 		"dir":                 path.Dir,
+		"isObject":            expr.IsObject,
 	}
 	imports := []*codegen.ImportSpec{
 		{Path: "bufio"},
