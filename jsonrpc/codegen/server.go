@@ -86,6 +86,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		"isWebSocketEndpoint": httpcodegen.IsWebSocketEndpoint,
 		"isSSEEndpoint":       httpcodegen.IsSSEEndpoint,
 		"lowerInitial":        lowerInitial,
+		"hasMixedTransports":  func() bool { return hasMixedJSONRPCTransports(svc, services) },
 	}
 	imports := []*codegen.ImportSpec{
 		{Path: "bufio"},

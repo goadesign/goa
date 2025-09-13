@@ -1,4 +1,4 @@
-{{- if not (isWebSocketEndpoint (index .Endpoints 0)) }}
+{{- if and (not (isWebSocketEndpoint (index .Endpoints 0))) (not (hasMixedTransports)) }}
 // ServeHTTP handles JSON-RPC requests.
 func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.handleHTTP(w, r)
