@@ -18,17 +18,23 @@ func {{ .HandlerInit }}(
 		ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
 
 {{- if isSSEEndpoint . }}
-	{{- if .Payload.Ref }}
-		decodeParams := {{ .RequestDecoder }}(mux, decoder)
-		params, err := decodeParams(r, req)
-		if err != nil {
-			code := jsonrpc.InternalError
-			if _, ok := err.(*goa.ServiceError); ok {
-				code = jsonrpc.InvalidParams
-			}
-			encodeJSONRPCError(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
-			return nil
-		}
+        // Initialize SSE stream early so decode errors can be sent as SSE error events
+        strm := &{{ .SSE.StructName }}{
+            w:         w,
+            r:         r,
+            encoder:   encoder,
+            requestID: req.ID,
+        }
+    {{- if .Payload.Ref }}
+        decodeParams := {{ .RequestDecoder }}(mux, decoder)
+        params, err := decodeParams(r, req)
+        if err != nil {
+            // Send error via SSE (JSON-RPC error event) to match SSE transport semantics
+            if req.ID != nil && req.ID != "" {
+                strm.SendError(ctx, jsonrpc.IDToString(req.ID), err)
+            }
+            return nil
+        }
 		{{- if .Payload.IDAttribute }}
 		{{- if .Payload.IDAttributeRequired }}
 		if req.ID != nil {
@@ -55,17 +61,11 @@ func {{ .HandlerInit }}(
 		{{- end }}
 		}
 	{{- end }}
-		strm := &{{ .SSE.StructName }}{
-			w:         w,
-			r:         r,
-			encoder:   encoder,
-			requestID: req.ID,
-		}
-		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
-			Stream: strm,
-		{{- if .Payload.Ref }}
-			Payload: params,
-		{{- end }}
+        v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
+            Stream: strm,
+        {{- if .Payload.Ref }}
+            Payload: params,
+        {{- end }}
 		}
 		if _, err := endpoint(ctx, v); err != nil {
 			// Send error response via SSE
