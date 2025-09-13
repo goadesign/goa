@@ -24,20 +24,17 @@ func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .Pay
 		{{- end }}
 	{{- end }}
 {{- end }}
-	log.Printf(ctx, "{{ .ServiceVarName }}.{{ .Name }}")
-{{- if and .ServerStream .IsJSONRPC }}
-	
-	// Example: Send notifications (no ID) and final response (with ID)
-	// for i := 0; i < 3; i++ {
-	//     notification := {{ if .ResultIsStruct }}&{{ .ResultFullName }}{/* populate fields but leave ID field empty */}{{ else }}{{ .ResultFullName }}("example value"){{ end }}
-	//     if err := stream.Send(ctx, notification); err != nil {
-	//         return err
-	//     }
-	// }
-	// 
-	// Send final response with ID field to close the stream
-	// finalResponse := {{ if .ResultIsStruct }}&{{ .ResultFullName }}{/* populate fields including ID field */}{{ else }}{{ .ResultFullName }}("final value"){{ end }}
-	// return stream.Send(ctx, finalResponse)
+    log.Printf(ctx, "{{ .ServiceVarName }}.{{ .Name }}")
+{{- if and .ServerStream .IsJSONRPC .ResultFullName }}
+    // Minimal example: emit one progress notification and one final response
+    {
+        // Progress notification (no ID)
+        notif := {{ if .ResultIsStruct }}&{{ .ResultFullName }}{}{{ else }}{{ .ResultFullName }}({{ if eq .ResultFullName "string" }}"progress"{{ else }}0{{ end }}){{ end }}
+        if err := stream.Send(ctx, notif); err != nil { return err }
+        // Final response
+        final := {{ if .ResultIsStruct }}&{{ .ResultFullName }}{}{{ else }}{{ .ResultFullName }}({{ if eq .ResultFullName "string" }}"done"{{ else }}0{{ end }}){{ end }}
+        return stream.SendAndClose(ctx, final)
+    }
 {{- end }}
-	return
+    return
 }
