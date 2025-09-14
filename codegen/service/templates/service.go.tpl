@@ -177,7 +177,7 @@ type Stream interface {
 {{- $hasResults := false }}
 {{- $hasErrors := false }}
 {{- $resultTypes := "" }}
-{{- range .Methods }}
+{{- range (dedupeByResult .Methods) }}
 	{{- if .Result }}
 		{{- $hasResults = true }}
 		{{- if $resultTypes }}
@@ -186,6 +186,8 @@ type Stream interface {
 			{{- $resultTypes = .ResultRef }}
 		{{- end }}
 	{{- end }}
+{{- end }}
+{{- range .Methods }}
 	{{- if .Errors }}{{ $hasErrors = true }}{{ end }}
 {{- end }}
 {{ printf "Stream defines the interface for managing an SSE streaming connection in the %s server. It allows sending notifications and final responses. This interface is used by the service to interact with clients over SSE using JSON-RPC." .Name | comment }}
@@ -206,14 +208,14 @@ type Stream interface {
 {{- if $hasResults }}
 {{ printf "Event is the interface implemented by all result types that can be sent via the %s Stream." .Name | comment }}
 type Event interface {
-	is{{ .VarName }}Event()
+    is{{ .VarName }}Event()
 }
 
-	{{- range .Methods }}
-		{{- if .Result }}
+    {{- range (dedupeByResult .Methods) }}
+        {{- if .Result }}
 {{ printf "is%sEvent implements the Event interface." $.VarName | comment }}
 func ({{ .ResultRef }}) is{{ $.VarName }}Event() {}
-		{{- end }}
-	{{- end }}
+        {{- end }}
+    {{- end }}
 {{- end }}
 {{- end }}

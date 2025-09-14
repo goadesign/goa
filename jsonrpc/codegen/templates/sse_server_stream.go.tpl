@@ -160,14 +160,14 @@ func (s *{{ .SSE.StructName }}) SendError(ctx context.Context, id string, err er
 		}
 		return s.sendError(ctx, id, code, err.Error(), nil)
 	}
-	{{- else }}
-	{{ comment "No custom errors defined - check if it's a validation error, otherwise use internal error" }}
-	code := jsonrpc.InternalError
-	if _, ok := err.(*goa.ServiceError); ok {
-		code = jsonrpc.InvalidParams
-	}
-	return s.sendError(ctx, id, code, err.Error(), nil)
-	{{- end }}
+    {{- else }}
+    {{ comment "No custom errors defined - check if it's a validation error, otherwise use internal error" }}
+    code := jsonrpc.InternalError
+    if _, ok := err.(*goa.ServiceError); ok {
+        code = jsonrpc.InvalidParams
+    }
+    return s.sendError(ctx, id, code, err.Error(), nil)
+    {{- end }}
 }
 
 {{ comment "sendError sends a JSON-RPC error response via SSE." }}
