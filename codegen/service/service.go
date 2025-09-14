@@ -183,6 +183,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			"hasJSONRPCStreaming": hasJSONRPCStreaming,
 			"isJSONRPCWebSocket":  func(sd *Data) bool { return hasJSONRPCStreaming(sd) && !isJSONRPCSSE(services, service) },
 			"streamInterfaceFor":  streamInterfaceFor,
+			"dedupeByResult":      dedupeByResult,
 		},
 	}
 
@@ -246,6 +247,29 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 	}
 
 	return files
+}
+
+// dedupeByResult returns a slice of methods where only a single representative
+// per unique ResultRef is kept (first occurrence wins). Methods without a
+// ResultRef are ignored.
+func dedupeByResult(ms []*MethodData) []*MethodData {
+	seen := make(map[string]struct{})
+	out := make([]*MethodData, 0, len(ms))
+	for _, m := range ms {
+		key := m.Result
+		if key == "" {
+			key = m.StreamingResult
+		}
+		if key == "" {
+			continue
+		}
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		out = append(out, m)
+	}
+	return out
 }
 
 // AddServiceDataMetaTypeImports Adds all imports defined by struct:field:type from the service expr and the service data
