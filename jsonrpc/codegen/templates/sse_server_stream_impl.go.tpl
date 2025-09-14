@@ -85,10 +85,10 @@ func (s *{{ lowerInitial .Service.StructName }}SSEStream) sendError(ctx context.
 {{ comment "For notifications, the result should not have an ID field." }}
 {{ comment "For responses, the result must have an ID field." }}
 func (s *{{ lowerInitial .Service.StructName }}SSEStream) Send(ctx context.Context, event {{ .Service.PkgName }}.Event) error {
-	switch v := event.(type) {
-{{- range .Endpoints }}
-	{{- if and .Method.ServerStream .Method.Result }}
-	case {{ .SSE.EventTypeRef }}:
+    switch v := event.(type) {
+{{- range (dedupeBySSEEvent .Endpoints) }}
+    {{- if and .Method.ServerStream .Method.Result }}
+    case {{ .SSE.EventTypeRef }}:
 		{{- if and .Result.Ref (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
 		{{ comment "Convert to response body type for proper JSON encoding" }}
 		body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(v)

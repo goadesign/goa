@@ -16,7 +16,7 @@ func sseServerStreamFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 	if data == nil {
 		return nil
 	}
-	
+
 	// Check if service has streaming methods
 	hasStreaming := false
 	for _, m := range data.Service.Methods {
@@ -28,7 +28,7 @@ func sseServerStreamFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 	if !hasStreaming {
 		return nil
 	}
-	
+
 	funcs := map[string]any{
 		"lowerInitial": lowerInitial,
 		"allErrors":    allErrors,
@@ -47,6 +47,22 @@ func sseServerStreamFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 				}
 			}
 			return false
+		},
+		// dedupeBySSEEvent returns endpoints with unique SSE event type
+		"dedupeBySSEEvent": func(eds []*httpcodegen.EndpointData) []*httpcodegen.EndpointData {
+			seen := make(map[string]struct{})
+			out := make([]*httpcodegen.EndpointData, 0, len(eds))
+			for _, e := range eds {
+				if e == nil || e.SSE == nil || e.SSE.EventTypeRef == "" {
+					continue
+				}
+				if _, ok := seen[e.SSE.EventTypeRef]; ok {
+					continue
+				}
+				seen[e.SSE.EventTypeRef] = struct{}{}
+				out = append(out, e)
+			}
+			return out
 		},
 	}
 	svcName := data.Service.PathName
