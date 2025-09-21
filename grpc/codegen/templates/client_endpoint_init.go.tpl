@@ -27,6 +27,11 @@ func (c *{{ .ClientStruct }}) {{ .Method.VarName }}() goa.Endpoint {
 				return nil, goa.Fault("%s", err.Error())
 			}
 		{{- else }}
+			// Try to decode a Goa error response detail before falling back to Fault.
+			resp := goagrpc.DecodeError(err)
+			if eresp, ok := resp.(*goapb.ErrorResponse); ok {
+				return nil, goagrpc.NewServiceError(eresp)
+			}
 			return nil, goa.Fault("%s", err.Error())
 		{{- end }}
 		}
