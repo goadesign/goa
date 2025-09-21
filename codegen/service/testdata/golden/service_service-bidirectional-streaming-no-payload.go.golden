@@ -27,8 +27,11 @@ var MethodNames = [1]string{"BidirectionalStreamingNoPayloadMethod"}
 type BidirectionalStreamingNoPayloadMethodServerStream interface {
 	// Send streams instances of "int".
 	Send(int) error
+	// SendWithContext streams instances of "int" with context.
 	SendWithContext(context.Context, int) error
+	// Recv reads instances of "string" from the stream.
 	Recv() (string, error)
+	// RecvWithContext reads instances of "string" from the stream with context.
 	RecvWithContext(context.Context) (string, error)
 	// Close closes the stream.
 	Close() error
@@ -39,8 +42,11 @@ type BidirectionalStreamingNoPayloadMethodServerStream interface {
 type BidirectionalStreamingNoPayloadMethodClientStream interface {
 	// Send streams instances of "string".
 	Send(string) error
+	// SendWithContext streams instances of "string" with context.
 	SendWithContext(context.Context, string) error
+	// Recv reads instances of "int" from the stream.
 	Recv() (int, error)
+	// RecvWithContext reads instances of "int" from the stream with context.
 	RecvWithContext(context.Context) (int, error)
 	// Close closes the stream.
 	Close() error

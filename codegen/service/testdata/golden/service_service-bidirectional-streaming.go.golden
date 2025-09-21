@@ -26,8 +26,11 @@ var MethodNames = [1]string{"BidirectionalStreamingMethod"}
 type BidirectionalStreamingMethodServerStream interface {
 	// Send streams instances of "AResult".
 	Send(*AResult) error
+	// SendWithContext streams instances of "AResult" with context.
 	SendWithContext(context.Context, *AResult) error
+	// Recv reads instances of "APayload" from the stream.
 	Recv() (*APayload, error)
+	// RecvWithContext reads instances of "APayload" from the stream with context.
 	RecvWithContext(context.Context) (*APayload, error)
 	// Close closes the stream.
 	Close() error
@@ -38,8 +41,11 @@ type BidirectionalStreamingMethodServerStream interface {
 type BidirectionalStreamingMethodClientStream interface {
 	// Send streams instances of "APayload".
 	Send(*APayload) error
+	// SendWithContext streams instances of "APayload" with context.
 	SendWithContext(context.Context, *APayload) error
+	// Recv reads instances of "AResult" from the stream.
 	Recv() (*AResult, error)
+	// RecvWithContext reads instances of "AResult" from the stream with context.
 	RecvWithContext(context.Context) (*AResult, error)
 	// Close closes the stream.
 	Close() error

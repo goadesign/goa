@@ -28,8 +28,11 @@ var MethodNames = [1]string{"BidirectionalStreamingResultWithExplicitViewMethod"
 type BidirectionalStreamingResultWithExplicitViewMethodServerStream interface {
 	// Send streams instances of "MultipleViews".
 	Send(*MultipleViews) error
+	// SendWithContext streams instances of "MultipleViews" with context.
 	SendWithContext(context.Context, *MultipleViews) error
+	// Recv reads instances of "[][]byte" from the stream.
 	Recv() ([][]byte, error)
+	// RecvWithContext reads instances of "[][]byte" from the stream with context.
 	RecvWithContext(context.Context) ([][]byte, error)
 	// Close closes the stream.
 	Close() error
@@ -40,8 +43,12 @@ type BidirectionalStreamingResultWithExplicitViewMethodServerStream interface {
 type BidirectionalStreamingResultWithExplicitViewMethodClientStream interface {
 	// Send streams instances of "[][]byte".
 	Send([][]byte) error
+	// SendWithContext streams instances of "[][]byte" with context.
 	SendWithContext(context.Context, [][]byte) error
+	// Recv reads instances of "MultipleViews" from the stream.
 	Recv() (*MultipleViews, error)
+	// RecvWithContext reads instances of "MultipleViews" from the stream with
+	// context.
 	RecvWithContext(context.Context) (*MultipleViews, error)
 	// Close closes the stream.
 	Close() error

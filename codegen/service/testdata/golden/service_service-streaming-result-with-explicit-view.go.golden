@@ -27,6 +27,7 @@ var MethodNames = [1]string{"StreamingResultWithExplicitViewMethod"}
 type StreamingResultWithExplicitViewMethodServerStream interface {
 	// Send streams instances of "MultipleViews".
 	Send(*MultipleViews) error
+	// SendWithContext streams instances of "MultipleViews" with context.
 	SendWithContext(context.Context, *MultipleViews) error
 	// Close closes the stream.
 	Close() error
@@ -35,7 +36,10 @@ type StreamingResultWithExplicitViewMethodServerStream interface {
 // StreamingResultWithExplicitViewMethodClientStream allows streaming instances
 // of *MultipleViews to the client.
 type StreamingResultWithExplicitViewMethodClientStream interface {
+	// Recv reads instances of "MultipleViews" from the stream.
 	Recv() (*MultipleViews, error)
+	// RecvWithContext reads instances of "MultipleViews" from the stream with
+	// context.
 	RecvWithContext(context.Context) (*MultipleViews, error)
 }
 
