@@ -680,10 +680,10 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 	sourceValueTypeRefs := make([]string, len(src.Values))
 	targetWrapperRefs := make([]string, len(src.Values))
 	if ta.proto {
-		// Go -> protobuf: switch on Go union member types. Use per-branch wrappers
-		// when needed (duplicate underlying types or cross-package members).
+		// Go -> protobuf: when union members are user types, switch on the
+		// actual user type rather than synthetic wrapper types. Only non-user
+		// types (primitives, maps, arrays) require per-branch wrapper types.
 		unionPkg := ta.SourceCtx.Pkg(source)
-		// Prefer a common member package if all member user types share one (e.g., shared unions).
 		samePkg := true
 		commonPkg := ""
 		for _, v := range src.Values {
@@ -704,41 +704,21 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 				break
 			}
 		}
-		counts := make(map[string]int)
-		for _, v := range src.Values {
-			ref := ta.SourceCtx.Scope.Ref(v.Attribute, ta.SourceCtx.Pkg(v.Attribute))
-			counts[ref]++
-		}
 		for i, v := range src.Values {
-			baseRef := ta.SourceCtx.Scope.Ref(v.Attribute, ta.SourceCtx.Pkg(v.Attribute))
-			useWrapper := counts[baseRef] > 1
-			memberPkg := ""
-			if ut, ok := v.Attribute.Type.(expr.UserType); ok {
-				if loc := codegen.UserTypeLocation(ut); loc != nil {
-					memberPkg = loc.PackageName()
-					if memberPkg != unionPkg {
-						useWrapper = true
-					}
-				}
-			} else {
-				// Non-user types are represented via per-branch defined types.
-				useWrapper = true
+			if _, ok := v.Attribute.Type.(expr.UserType); ok {
+				sourceValueTypeRefs[i] = ta.SourceCtx.Scope.Ref(v.Attribute, ta.SourceCtx.Pkg(v.Attribute))
+				continue
 			}
-			if useWrapper {
-				w := codegen.Goify(src.Name(), true) + codegen.Goify(v.Name, true)
-				pkg := unionPkg
-				if samePkg && commonPkg != "" {
-					pkg = commonPkg
-				} else if pkg == "" {
-					pkg = memberPkg
-				}
-				if pkg != "" {
-					sourceValueTypeRefs[i] = pkg + "." + w
-				} else {
-					sourceValueTypeRefs[i] = w
-				}
+			// Non-user types are represented via per-branch defined wrapper types.
+			w := codegen.Goify(src.Name(), true) + codegen.Goify(v.Name, true)
+			pkg := unionPkg
+			if samePkg && commonPkg != "" {
+				pkg = commonPkg
+			}
+			if pkg != "" {
+				sourceValueTypeRefs[i] = pkg + "." + w
 			} else {
-				sourceValueTypeRefs[i] = baseRef
+				sourceValueTypeRefs[i] = w
 			}
 		}
 	} else {
@@ -748,6 +728,11 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 			fieldName := ta.SourceCtx.Scope.Field(v.Attribute, v.Name, true)
 			sourceValueTypeRefs[i] = ta.message + "_" + fieldName
 		}
+		// Determine the union package for the target side. For anonymous
+		// unions embedded in objects the package may be empty. In that case
+		// we must not force per-branch wrappers solely based on package
+		// comparison; instead rely on duplicate-type detection and whether
+		// the member is a non-user type.
 		unionPkg := ta.TargetCtx.Pkg(target)
 		// Prefer a common member package for wrappers if all target values share it (e.g., shared user-type unions).
 		samePkg := true
@@ -770,19 +755,15 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 				break
 			}
 		}
-		counts := make(map[string]int)
-		for _, tv := range tgt.Values {
-			r := ta.TargetCtx.Scope.Ref(tv.Attribute, ta.TargetCtx.Pkg(tv.Attribute))
-			counts[r]++
-		}
+		// For protobuf -> Go transforms, when union members are user types,
+		// prefer assigning the converted user type directly to the union
+		// interface. This avoids generating synthetic per-branch wrapper
+		// types (e.g., DetailsFoo) which do not exist in the target package
+		// unless transport-agnostic codegen created them. Only non-user types
+		// require wrappers.
 		for i, tv := range tgt.Values {
-			baseRef := ta.TargetCtx.Scope.Ref(tv.Attribute, ta.TargetCtx.Pkg(tv.Attribute))
-			useWrapper := counts[baseRef] > 1
-			if ut, ok := tv.Attribute.Type.(expr.UserType); ok {
-				if loc := codegen.UserTypeLocation(ut); loc != nil && loc.PackageName() != unionPkg {
-					useWrapper = true
-				}
-			} else {
+			useWrapper := false
+			if _, ok := tv.Attribute.Type.(expr.UserType); !ok {
 				useWrapper = true
 			}
 			if useWrapper {
