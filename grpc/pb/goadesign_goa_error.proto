@@ -25,4 +25,18 @@ message ErrorResponse {
   bool timeout = 5;
   // fault indicates whether the error is a server-side fault.
   bool fault = 6;
+  // history contains individual error entries when the error is a merge of
+  // multiple validation errors (e.g., per-field issues). Optional; older
+  // servers/clients may omit/ignore.
+  repeated ErrorField history = 7;
+}
+
+// ErrorField captures a single validation issue.
+message ErrorField {
+  // name is the canonical error name (e.g., invalid_format, missing_field).
+  string name = 1;
+  // field is the field path associated with the error (e.g., "message.from").
+  string field = 2;
+  // msg is the human-readable error for the specific field.
+  string msg = 3;
 }

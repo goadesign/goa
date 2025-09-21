@@ -40,7 +40,7 @@ type (
 func NewErrorResponse(err error) *goapb.ErrorResponse {
 	var gerr *goa.ServiceError
 	if errors.As(err, &gerr) {
-		return &goapb.ErrorResponse{
+		er := &goapb.ErrorResponse{
 			Name:      gerr.Name,
 			Id:        gerr.ID,
 			Msg:       gerr.Message,
@@ -48,6 +48,22 @@ func NewErrorResponse(err error) *goapb.ErrorResponse {
 			Temporary: gerr.Temporary,
 			Fault:     gerr.Fault,
 		}
+		// Include history entries when available for richer client-side reconstruction.
+		// Only include history for merged errors (multiple entries)
+		history := gerr.History()
+		if len(history) > 1 {
+			for _, h := range history {
+				if h == nil {
+					continue
+				}
+				ef := &goapb.ErrorField{Name: h.Name, Msg: h.Message}
+				if h.Field != nil {
+					ef.Field = *h.Field
+				}
+				er.History = append(er.History, ef)
+			}
+		}
+		return er
 	}
 	return NewErrorResponse(goa.Fault("%s", err.Error()))
 }
@@ -93,14 +109,30 @@ func EncodeError(err error) error {
 		// goa service error type. Compute the status code from the service error
 		// characteristics and create a new detailed gRPC status error.
 		code := codes.Unknown
-		if gerr.Fault {
-			code = codes.Internal
-		}
-		if gerr.Timeout {
-			code = codes.DeadlineExceeded
-		}
-		if gerr.Temporary {
-			code = codes.Unavailable
+		// Prefer well-known validation names for InvalidArgument mapping.
+		switch gerr.Name {
+		case goa.InvalidFieldType,
+			goa.MissingField,
+			goa.InvalidFormat,
+			goa.InvalidLength,
+			goa.InvalidRange,
+			goa.InvalidEnumValue,
+			goa.InvalidPattern:
+
+			code = codes.InvalidArgument
+		case goa.DecodePayload,
+			goa.MissingPayload:
+
+			code = codes.InvalidArgument
+		default:
+			switch {
+			case gerr.Timeout:
+				code = codes.DeadlineExceeded
+			case gerr.Fault:
+				code = codes.Internal
+			case gerr.Temporary:
+				code = codes.Unavailable
+			}
 		}
 		return NewStatusError(code, err, NewErrorResponse(err))
 	}
