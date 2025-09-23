@@ -440,6 +440,8 @@ func protoNativeType(t expr.DataType) string {
 		return "string"
 	case expr.BytesKind:
 		return "bytes"
+	case expr.AnyKind:
+		return "google.protobuf.Any"
 	default:
 		panic(fmt.Sprintf("cannot compute native protocol buffer type for %T", t)) // bug
 	}
@@ -472,6 +474,8 @@ func protoBufNativeGoTypeName(t expr.DataType) string {
 		return "string"
 	case expr.BytesKind:
 		return "[]byte"
+	case expr.AnyKind:
+		return "*anypb.Any"
 	default:
 		panic(fmt.Sprintf("cannot compute native protocol buffer type for %T %v", t, t)) // bug
 	}

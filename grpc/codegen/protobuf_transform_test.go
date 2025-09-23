@@ -184,6 +184,47 @@ func TestProtoBufTransform(t *testing.T) {
 	}
 }
 
+func TestProtoBufTransformAnyType(t *testing.T) {
+	var (
+		sd     = &ServiceData{Name: "Service", Scope: codegen.NewNameScope()}
+		svcCtx = codegen.NewAttributeContext(false, false, true, "", sd.Scope)
+		pbCtx  = protoBufTypeContext("", sd.Scope, false)
+	)
+
+	cases := []struct {
+		Name    string
+		ToProto bool
+		Ctx     *codegen.AttributeContext
+	}{
+		{"any-to-proto", true, svcCtx},
+		{"proto-to-any", false, svcCtx},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			source := &expr.AttributeExpr{Type: expr.Any}
+			target := &expr.AttributeExpr{Type: expr.Any}
+			srcCtx := c.Ctx
+			tgtCtx := c.Ctx
+			if c.ToProto {
+				tgtCtx = pbCtx
+			} else {
+				srcCtx = pbCtx
+			}
+			code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto, true)
+			require.NoError(t, err)
+			t.Logf("Generated code: %s", code)
+			
+			// Check if transformation contains Any type conversion logic
+			if c.ToProto {
+				require.Contains(t, code, "func() *anypb.Any", "To proto conversion should generate Any type conversion function")
+			} else {
+				require.Contains(t, code, "func() any", "From proto conversion should generate any type conversion function")
+			}
+		})
+	}
+}
+
 func pointerContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
 	return codegen.NewAttributeContext(true, false, true, pkg, scope)
 }

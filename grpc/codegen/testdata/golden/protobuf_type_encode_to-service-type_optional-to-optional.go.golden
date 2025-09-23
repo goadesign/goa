@@ -3,7 +3,20 @@ func transform() {
 		Float:  source.Float_,
 		String: source.String_,
 		Bytes:  source.Bytes_,
-		Any:    source.Any,
+		Any: func() any {
+			if source.Any != nil {
+				var value structpb.Value
+				if err := source.Any.UnmarshalTo(&value); err == nil {
+					if str := value.GetStringValue(); str != "" {
+						var result any
+						if err := json.Unmarshal([]byte(str), &result); err == nil {
+							return result
+						}
+					}
+				}
+			}
+			return nil
+		}(),
 	}
 	if source.Int != nil {
 		int_ := int(*source.Int)
