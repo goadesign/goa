@@ -194,10 +194,13 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 	cases := []struct {
 		Name    string
 		ToProto bool
+		NewVar  bool
 		Ctx     *codegen.AttributeContext
 	}{
-		{"any-to-proto", true, svcCtx},
-		{"proto-to-any", false, svcCtx},
+		{"any-to-proto-new-var", true, true, svcCtx},
+		{"proto-to-any-new-var", false, true, svcCtx},
+		{"any-to-proto-assign-var", true, false, svcCtx},
+		{"proto-to-any-assign-var", false, false, svcCtx},
 	}
 
 	for _, c := range cases {
@@ -211,15 +214,23 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 			} else {
 				srcCtx = pbCtx
 			}
-			code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto, true)
+			code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto, c.NewVar)
 			require.NoError(t, err)
 			t.Logf("Generated code: %s", code)
-			
+
 			// Check if transformation contains Any type conversion logic
 			if c.ToProto {
 				require.Contains(t, code, "func() *anypb.Any", "To proto conversion should generate Any type conversion function")
 			} else {
 				require.Contains(t, code, "func() any", "From proto conversion should generate any type conversion function")
+			}
+
+			// Check the assignment operator used based on newVar parameter
+			if c.NewVar {
+				require.Contains(t, code, "target :=", "New variable should use := operator")
+			} else {
+				require.Contains(t, code, "target =", "Assignment should use = operator")
+				require.NotContains(t, code, "target :=", "Assignment should not use := operator")
 			}
 		})
 	}
