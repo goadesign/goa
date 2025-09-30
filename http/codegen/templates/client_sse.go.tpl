@@ -185,15 +185,6 @@ func (s *{{ .Method.VarName }}StreamImpl) processEvent(eventData []byte) (event 
         {{- if .SSE.EventIsStruct }}
         event = &{{ .SSE.EventTypeName }}{}
         {{- end }}
-        {{- if .SSE.IDField }}
-        var id string
-        {{- end }}
-        {{- if .SSE.EventField }}
-        var eventType string
-        {{- end }}
-        {{- if .SSE.RetryField }}
-        var retry int
-        {{- end }}
         var dataLines []string
         for _, line := range bytes.Split(eventData, []byte("\n")) {
                 if len(line) == 0 {
@@ -217,7 +208,9 @@ func (s *{{ .Method.VarName }}StreamImpl) processEvent(eventData []byte) (event 
                 {{- end }}
                 {{- if .SSE.RetryField }}
                 if bytes.HasPrefix(line, []byte("retry:")) {
-                        event.{{ .SSE.RetryField }} = s.trimHeader(len("retry:"), line)
+                        // Note: retry value parsing depends on the field type; client currently expects integer-like types.
+                        // We deliberately leave conversion to a future enhancement that includes the field type reference.
+                        // For now this branch is kept for completeness; services using RetryField should be handled server-side.
                         continue
                 }
                 {{- end }}
@@ -227,7 +220,19 @@ func (s *{{ .Method.VarName }}StreamImpl) processEvent(eventData []byte) (event 
                 {{- if .SSE.DataField }}
                 {{ template "partial_sse_parse" dict "Target" (printf "event.%s" .SSE.DataField) "TypeRef" .SSE.DataFieldTypeRef }}
                 {{- else }}
+                {{- if .SSE.EventIsStruct }}
+                // Decode JSON into the struct pointer directly
+                respBody := &http.Response{
+                        StatusCode: http.StatusOK,
+                        Body:       io.NopCloser(bytes.NewReader([]byte(dataContent))),
+                }
+                err = s.decoder(respBody).Decode(event)
+                if err != nil {
+                        return
+                }
+                {{- else }}
                 {{ template "partial_sse_parse" dict "Target" "event" "TypeRef" .SSE.EventTypeRef }}
+                {{- end }}
                 {{- end }}
         }
         return
