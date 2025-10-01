@@ -49,3 +49,55 @@ type ArrayOfBool struct {
   Field []bool
 }
 ```
+
+# How does goa handle the Any type in gRPC?
+
+Goa supports the `Any` type in gRPC by mapping it to `google.protobuf.Any`. The conversion between Go's `any` type and protobuf's `Any` is done using JSON marshaling/unmarshaling.
+
+## Conversion Process
+
+- **Go to Protobuf**: When converting from Go `any` to `*anypb.Any`, the value is JSON-marshaled and wrapped in a `structpb.Value`.
+- **Protobuf to Go**: When converting from `*anypb.Any` to Go `any`, the value is unwrapped and JSON-unmarshaled.
+
+## Example Usage
+
+In your Goa design:
+```go
+Method("echo", func() {
+    Payload(func() {
+        Field(1, "data", Any, "Any type of data")
+    })
+    Result(func() {
+        Field(1, "data", Any, "Echoed data")
+    })
+    GRPC(func() {
+        Response(CodeOK)
+    })
+})
+```
+
+This generates the following protobuf:
+```proto
+import "google/protobuf/any.proto";
+
+message EchoRequest {
+    optional google.protobuf.Any data = 1;
+}
+
+message EchoResponse {
+    optional google.protobuf.Any data = 1;
+}
+```
+
+## Supported Patterns
+
+- Direct Any fields: `Field(1, "data", Any)`
+- Maps with Any values: `MapOf(String, Any)`
+- Arrays of Any: `ArrayOf(Any)`
+- Nested structures containing Any
+
+## Limitations
+
+- The JSON conversion means that complex Go types may not roundtrip perfectly
+- Only JSON-serializable values are supported
+- Type information is lost during conversion

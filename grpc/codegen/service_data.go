@@ -662,6 +662,19 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		}
 	}
 	if expr.IsPrimitive(at.Type) {
+		// Add google.protobuf.Any import when Any type is used
+		if at.Type.Kind() == expr.AnyKind {
+			found := false
+			for _, imp := range imports {
+				if imp == "google/protobuf/any.proto" {
+					found = true
+					break
+				}
+			}
+			if !found {
+				imports = append(imports, "google/protobuf/any.proto")
+			}
+		}
 		return data, imports
 	}
 	collect := func(at *expr.AttributeExpr) ([]*service.UserTypeData, []string) {
@@ -1315,6 +1328,37 @@ func isEmpty(dt expr.DataType) bool {
 	}
 	if o := expr.AsObject(dt); o != nil && len(*o) == 0 {
 		return true
+	}
+	return false
+}
+
+// hasAnyType recursively checks if the given attribute uses the Any type.
+func hasAnyType(att *expr.AttributeExpr) bool {
+	if att == nil {
+		return false
+	}
+	if att.Type.Kind() == expr.AnyKind {
+		return true
+	}
+	switch dt := att.Type.(type) {
+	case expr.UserType:
+		return hasAnyType(dt.Attribute())
+	case *expr.Object:
+		for _, nat := range *dt {
+			if hasAnyType(nat.Attribute) {
+				return true
+			}
+		}
+	case *expr.Array:
+		return hasAnyType(dt.ElemType)
+	case *expr.Map:
+		return hasAnyType(dt.KeyType) || hasAnyType(dt.ElemType)
+	case *expr.Union:
+		for _, nat := range dt.Values {
+			if hasAnyType(nat.Attribute) {
+				return true
+			}
+		}
 	}
 	return false
 }
