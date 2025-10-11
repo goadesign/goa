@@ -18,7 +18,6 @@ import (
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
-
 func TestFiles(t *testing.T) {
 	var (
 		goldenPath = filepath.Join("testdata", "golden")
@@ -30,6 +29,7 @@ func TestFiles(t *testing.T) {
 		// TestSections
 		{"file-service", testdata.FileServiceDSL},
 		{"file-service-swagger", testdata.FileServiceSwaggerDSL},
+		{"file-service-wildcard", testdata.FileServiceWildcardDSL},
 		{"valid", testdata.SimpleDSL},
 		{"multiple-services", testdata.MultipleServicesDSL},
 		{"multiple-views", testdata.MultipleViewsDSL},
@@ -103,7 +103,6 @@ func TestFiles(t *testing.T) {
 		})
 	}
 }
-
 
 func validateSwagger(t *testing.T, b []byte) {
 	swagger, err := openapi3.NewLoader().LoadFromData(b)
