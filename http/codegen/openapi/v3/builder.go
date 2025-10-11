@@ -174,6 +174,9 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 			}
 
 			for _, key := range f.RequestPaths {
+				// Replace wildcards in the path to OpenAPI path parameter form
+				// e.g. "/ui/{*filepath}" -> "/ui/{filepath}"
+				key = expr.HTTPWildcardRegex.ReplaceAllString(key, "/{$1}")
 				operation := buildFileServerOperation(key, f, api)
 				path, ok := paths[key]
 				if !ok {
@@ -355,10 +358,17 @@ func buildFileServerOperation(key string, fs *expr.HTTPFileServerExpr, api *expr
 	if len(wildcards) > 0 {
 		pref := ParameterRef{
 			Value: &Parameter{
+				// Use the literal wildcard (including leading '*') as name to match path if needed
+				// Note: HTTPWildcardRegex already strips '*' in ExtractHTTPWildcards; however
+				// the path key has been normalized to "/{name}" so the correct parameter name
+				// is the bare wildcard identifier.
 				Name:        wildcards[0],
 				Description: "Relative file path",
 				In:          "path",
 				Required:    true,
+				Schema: &openapi.Schema{ // string schema makes validators happy
+					Type: openapi.String,
+				},
 			},
 		}
 		params = []*ParameterRef{&pref}
@@ -367,20 +377,20 @@ func buildFileServerOperation(key string, fs *expr.HTTPFileServerExpr, api *expr
 	// responses
 	var responses map[string]*ResponseRef
 	{
-		desc := "File downloaded"
+		desc200 := "File downloaded"
 		rref := ResponseRef{
 			Value: &Response{
-				Description: &desc,
+				Description: &desc200,
 			},
 		}
 		responses = map[string]*ResponseRef{
 			"200": &rref,
 		}
 		if len(wildcards) > 0 {
-			desc = "File not found"
+			desc404 := "File not found"
 			responses["404"] = &ResponseRef{
 				Value: &Response{
-					Description: &desc,
+					Description: &desc404,
 				},
 			}
 		}
