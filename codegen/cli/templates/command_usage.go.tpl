@@ -29,9 +29,8 @@ func {{ .FullName }}Usage() {
 	fmt.Fprintln(os.Stderr, `    -{{ .Name }} {{ .Type }}: {{ .Description }}`)
 {{- end }}
 
-	// Example block: pass example as parameter to avoid format parsing of % characters
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], `{{ .Example }}`)
+        fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], {{ printf "%q" .Example }})
 }
 {{ end }}
