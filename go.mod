@@ -14,7 +14,7 @@ require (
 	github.com/manveru/faker v0.0.0-20171103152722-9fbc68a78c4d
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.11.1
-	golang.org/x/text v0.29.0
+	golang.org/x/text v0.30.0
 	golang.org/x/tools v0.37.0
 	google.golang.org/grpc v1.75.1
 	google.golang.org/protobuf v1.36.9
