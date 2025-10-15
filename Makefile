@@ -13,8 +13,8 @@
 # - "all" is the default target, it runs "lint" and "test"
 #
 MAJOR=3
-MINOR=20
-BUILD=1
+MINOR=21
+BUILD=5
 
 GOOS=$(shell go env GOOS)
 GOARCH=$(shell go env GOARCH)
@@ -83,8 +83,8 @@ release-goa:
 	# First make sure all is clean
 	git diff-index --quiet HEAD
 	cd $(GOPATH)/src/goa.design/examples && \
-		git checkout master && \
-		git pull origin master && \
+		git checkout main && \
+		git pull origin main && \
 		git diff-index --quiet HEAD
 	cd $(GOPATH)/src/goa.design/plugins && \
 		git checkout v$(MAJOR) && \
@@ -110,7 +110,7 @@ release-examples:
 		git add . && \
 		git commit -m "Release v$(MAJOR).$(MINOR).$(BUILD)" && \
 		git tag v$(MAJOR).$(MINOR).$(BUILD) && \
-		git push origin master && \
+		git push origin main && \
 		git push origin v$(MAJOR).$(MINOR).$(BUILD)
 
 release-plugins:

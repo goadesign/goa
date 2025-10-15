@@ -16,4 +16,6 @@ cmd/goa/goa
 
 # DeepSource cruft
 cover.out
-bin/
+
+# MacOS cruft
+**/.DS_Store

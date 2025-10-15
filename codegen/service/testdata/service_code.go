@@ -3315,3 +3315,79 @@ type Foo struct {
 	IntField *int
 }
 `
+
+const MultipleAPIKeySecurity = `
+// Service is the MultipleAPIKeySecurity service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context, *APayload) (err error)
+}
+
+// Auther defines the authorization functions to be implemented by the service.
+type Auther interface {
+	// APIKeyAuth implements the authorization logic for the APIKey security scheme.
+	APIKeyAuth(ctx context.Context, key string, schema *security.APIKeyScheme) (context.Context, error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "MultipleAPIKeySecurity"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+// APayload is the payload type of the MultipleAPIKeySecurity service A method.
+type APayload struct {
+	APIKey   string
+	TenantID string
+}
+`
+
+const MixedAndMultipleAPIKeySecurity = `
+// Service is the MixedAndMultipleAPIKeySecurity service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context, *APayload) (err error)
+}
+
+// Auther defines the authorization functions to be implemented by the service.
+type Auther interface {
+	// JWTAuth implements the authorization logic for the JWT security scheme.
+	JWTAuth(ctx context.Context, token string, schema *security.JWTScheme) (context.Context, error)
+	// APIKeyAuth implements the authorization logic for the APIKey security scheme.
+	APIKeyAuth(ctx context.Context, key string, schema *security.APIKeyScheme) (context.Context, error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "MixedAndMultipleAPIKeySecurity"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"A"}
+
+// APayload is the payload type of the MixedAndMultipleAPIKeySecurity service A
+// method.
+type APayload struct {
+	JWT      *string
+	APIKey   *string
+	TenantID *string
+}
+`

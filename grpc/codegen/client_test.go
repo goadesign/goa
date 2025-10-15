@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/grpc/codegen/testdata"
 )
 
@@ -32,8 +31,9 @@ func TestClientEndpointInit(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunGRPCDSL(t, c.DSL)
-			fs := ClientFiles("", expr.Root)
+			root := RunGRPCDSL(t, c.DSL)
+			services := CreateGRPCServices(root)
+			fs := ClientFiles("", services)
 			require.Len(t, fs, 2)
 			sections := fs[0].Section("client-endpoint-init")
 			if len(sections) == 0 {
@@ -63,8 +63,9 @@ func TestRequestEncoder(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunGRPCDSL(t, c.DSL)
-			fs := ClientFiles("", expr.Root)
+			root := RunGRPCDSL(t, c.DSL)
+			services := CreateGRPCServices(root)
+			fs := ClientFiles("", services)
 			require.Len(t, fs, 2)
 			sections := fs[1].Section("request-encoder")
 			require.NotEmpty(t, sections)
@@ -94,8 +95,9 @@ func TestResponseDecoder(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunGRPCDSL(t, c.DSL)
-			fs := ClientFiles("", expr.Root)
+			root := RunGRPCDSL(t, c.DSL)
+			services := CreateGRPCServices(root)
+			fs := ClientFiles("", services)
 			require.Len(t, fs, 2)
 			sections := fs[1].Section("response-decoder")
 			require.NotEmpty(t, sections)

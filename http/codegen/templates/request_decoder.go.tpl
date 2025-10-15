@@ -18,11 +18,11 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		err = decoder(r).Decode(&body)
 		if err != nil {
 	{{- if .Payload.Request.MustHaveBody }}
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 	{{- else }}
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				err = nil
 			} else {
 	{{- end }}

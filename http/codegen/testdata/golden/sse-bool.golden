@@ -1,0 +1,54 @@
+// SSEBoolMethodServerStream implements the
+// sseboolservice.SSEBoolMethodServerStream interface using Server-Sent Events.
+type SSEBoolMethodServerStream struct {
+	// once ensures the headers are written once.
+	once sync.Once
+	// w is the HTTP response writer used to send the SSE events.
+	w http.ResponseWriter
+	// r is the HTTP request.
+	r *http.Request
+}
+
+// Send Send streams instances of "bool" to the "SSEBoolMethod" endpoint SSE
+// connection.
+func (s *SSEBoolMethodServerStream) Send(v bool) error {
+	return s.SendWithContext(context.Background(), v)
+}
+
+// SendWithContext SendWithContext streams instances of "bool" to the
+// "SSEBoolMethod" endpoint SSE connection with context.
+func (s *SSEBoolMethodServerStream) SendWithContext(ctx context.Context, v bool) error {
+	s.once.Do(func() {
+		header := s.w.Header()
+		if header.Get("Content-Type") == "" {
+			header.Set("Content-Type", "text/event-stream")
+		}
+		if header.Get("Cache-Control") == "" {
+			header.Set("Cache-Control", "no-cache")
+		}
+		if header.Get("Connection") == "" {
+			header.Set("Connection", "keep-alive")
+		}
+		s.w.WriteHeader(http.StatusOK)
+	})
+	res := v
+
+	var data string
+	byts, err := json.Marshal(res)
+	if err != nil {
+		return err
+	}
+	data = string(byts)
+	fmt.Fprintf(s.w, "data: %s\n\n", data)
+
+	if f, ok := s.w.(http.Flusher); ok {
+		f.Flush()
+	}
+	return nil
+}
+
+// Close is a no-op for SSE. We keep the method for compatibility with other
+// stream types.
+func (s *SSEBoolMethodServerStream) Close() error {
+	return nil
+}

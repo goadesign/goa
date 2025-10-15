@@ -19,26 +19,34 @@ func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 			continue // could be a plugin root expression
 		}
 
+		// Create service data
+		services := service.NewServicesData(r)
+
 		// HTTP
-		files = append(files, httpcodegen.ServerFiles(genpkg, r)...)
-		files = append(files, httpcodegen.ClientFiles(genpkg, r)...)
-		files = append(files, httpcodegen.ServerTypeFiles(genpkg, r)...)
-		files = append(files, httpcodegen.ClientTypeFiles(genpkg, r)...)
-		files = append(files, httpcodegen.PathFiles(r)...)
-		files = append(files, httpcodegen.ClientCLIFiles(genpkg, r)...)
+		httpServices := httpcodegen.NewServicesData(services)
+		files = append(files, httpcodegen.ServerFiles(genpkg, httpServices)...)
+		files = append(files, httpcodegen.ClientFiles(genpkg, httpServices)...)
+		files = append(files, httpcodegen.ServerTypeFiles(genpkg, httpServices)...)
+		files = append(files, httpcodegen.ClientTypeFiles(genpkg, httpServices)...)
+		files = append(files, httpcodegen.PathFiles(httpServices)...)
+		files = append(files, httpcodegen.ClientCLIFiles(genpkg, httpServices)...)
 
 		// GRPC
-		files = append(files, grpccodegen.ProtoFiles(genpkg, r)...)
-		files = append(files, grpccodegen.ServerFiles(genpkg, r)...)
-		files = append(files, grpccodegen.ClientFiles(genpkg, r)...)
-		files = append(files, grpccodegen.ServerTypeFiles(genpkg, r)...)
-		files = append(files, grpccodegen.ClientTypeFiles(genpkg, r)...)
-		files = append(files, grpccodegen.ClientCLIFiles(genpkg, r)...)
+		grpcServices := grpccodegen.NewServicesData(services)
+		files = append(files, grpccodegen.ProtoFiles(genpkg, grpcServices)...)
+		files = append(files, grpccodegen.ServerFiles(genpkg, grpcServices)...)
+		files = append(files, grpccodegen.ClientFiles(genpkg, grpcServices)...)
+		files = append(files, grpccodegen.ServerTypeFiles(genpkg, grpcServices)...)
+		files = append(files, grpccodegen.ClientTypeFiles(genpkg, grpcServices)...)
+		files = append(files, grpccodegen.ClientCLIFiles(genpkg, grpcServices)...)
 
+		// Add service data meta type imports
 		for _, f := range files {
 			if len(f.SectionTemplates) > 0 {
 				for _, s := range r.Services {
-					service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], s)
+					d := services.Get(s.Name)
+					service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], s, d)
+					service.AddUserTypeImports(genpkg, f.SectionTemplates[0], d)
 				}
 			}
 		}

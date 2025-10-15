@@ -15,7 +15,6 @@ import (
 	"goa.design/goa/v3/codegen/example"
 	ctestdata "goa.design/goa/v3/codegen/example/testdata"
 	"goa.design/goa/v3/codegen/service"
-	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -56,12 +55,11 @@ func TestExampleServerFiles(t *testing.T) {
 		for _, c := range cases {
 			t.Run(c.Name, func(t *testing.T) {
 				// reset global variable
-				HTTPServices = make(ServicesData)
-				service.Services = make(service.ServicesData)
 				example.Servers = make(example.ServersData)
-				codegen.RunDSL(t, c.DSL)
-				require.Len(t, expr.Root.Services, 3)
-				fs := ExampleServerFiles("", expr.Root)
+				root := codegen.RunDSL(t, c.DSL)
+				require.Len(t, root.Services, 3)
+				httpServices := NewServicesData(service.NewServicesData(root))
+				fs := ExampleServerFiles("", httpServices)
 				require.Len(t, fs, 2)
 				for i, f := range fs {
 					if i < len(fs)-1 {
@@ -94,11 +92,10 @@ func TestExampleServerFiles(t *testing.T) {
 		for _, c := range cases {
 			t.Run(c.Name, func(t *testing.T) {
 				// reset global variable
-				HTTPServices = make(ServicesData)
-				service.Services = make(service.ServicesData)
 				example.Servers = make(example.ServersData)
-				codegen.RunDSL(t, c.DSL)
-				fs := ExampleServerFiles("", expr.Root)
+				root := codegen.RunDSL(t, c.DSL)
+				httpServices := NewServicesData(service.NewServicesData(root))
+				fs := ExampleServerFiles("", httpServices)
 				require.Len(t, fs, 1)
 				require.Greater(t, len(fs[0].SectionTemplates), 0)
 				var buf bytes.Buffer
@@ -106,7 +103,7 @@ func TestExampleServerFiles(t *testing.T) {
 					require.NoError(t, s.Write(&buf))
 				}
 				code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
-				golden := filepath.Join("testdata", "server-"+c.Name+".golden")
+				golden := filepath.Join("testdata", "golden", "server-"+c.Name+".golden")
 				compareOrUpdateGolden(t, code, golden)
 			})
 		}

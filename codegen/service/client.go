@@ -13,8 +13,8 @@ const (
 )
 
 // ClientFile returns the client file for the given service.
-func ClientFile(_ string, service *expr.ServiceExpr) *codegen.File {
-	svc := Services.Get(service.Name)
+func ClientFile(_ string, service *expr.ServiceExpr, services *ServicesData) *codegen.File {
+	svc := services.Get(service.Name)
 	data := endpointData(svc)
 	path := filepath.Join(codegen.Gendir, svc.PathName, "client.go")
 	var (
@@ -26,7 +26,6 @@ func ClientFile(_ string, service *expr.ServiceExpr) *codegen.File {
 			{Path: "io"},
 			codegen.GoaImport(""),
 		}
-		imports = append(imports, svc.UserTypeImports...)
 		header := codegen.Header(service.Name+" client", svc.PkgName, imports)
 		def := &codegen.SectionTemplate{
 			Name:   "client-struct",

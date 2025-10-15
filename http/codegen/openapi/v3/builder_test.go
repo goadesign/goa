@@ -189,13 +189,13 @@ func TestBuildOperation(t *testing.T) {
 	}}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			api := codegen.RunDSL(t, c.DSL).API
+			root := codegen.RunDSL(t, c.DSL)
 
 			var bodies *EndpointBodies
 			var types map[string]*openapi.Schema
 			{
 				var bds map[string]map[string]*EndpointBodies
-				bds, types = buildBodyTypes(api)
+				bds, types = buildBodyTypes(root.API, root.Types, root.ResultTypes)
 				if svc, ok := bds[svcName]; ok {
 					bodies, ok = svc[c.Name]
 					if !ok {
@@ -206,30 +206,28 @@ func TestBuildOperation(t *testing.T) {
 			}
 
 			var route *expr.RouteExpr
-			{
-				if len(api.HTTP.Services) == 0 {
-					t.Error("no HTTP service created from DSL")
-				}
-				for _, s := range api.HTTP.Services {
-					if s.Name() == svcName {
-						for _, e := range s.HTTPEndpoints {
-							if e.Name() == c.Name {
-								route = e.Routes[0]
-								break
-							}
+			if len(root.API.HTTP.Services) == 0 {
+				t.Error("no HTTP service created from DSL")
+			}
+			for _, s := range root.API.HTTP.Services {
+				if s.Name() == svcName {
+					for _, e := range s.HTTPEndpoints {
+						if e.Name() == c.Name {
+							route = e.Routes[0]
+							break
 						}
 					}
-					if route != nil {
-						break
-					}
 				}
-				if route == nil {
-					t.Error("could not find route")
-					return
+				if route != nil {
+					break
 				}
 			}
+			if route == nil {
+				t.Error("could not find route")
+				return
+			}
 
-			op := buildOperation(c.Name, route, bodies, expr.NewRandom(c.Name))
+			op := buildOperation(c.Name, route, bodies, expr.NewRandom(c.Name), root.API.Meta)
 
 			if op.Description != c.ExpectedDescription {
 				t.Errorf("got description %q for method %q, expected %q", op.Description, c.Name, c.ExpectedDescription)
@@ -318,7 +316,7 @@ func TestBuildOperationID(t *testing.T) {
 				if s.Name() == svcName {
 					for _, e := range s.HTTPEndpoints {
 						for i, r := range e.Routes {
-							op := buildOperation(c.Name, r, &EndpointBodies{}, expr.NewRandom(c.Name))
+							op := buildOperation(c.Name, r, &EndpointBodies{}, expr.NewRandom(c.Name), api.Meta)
 
 							if len(c.ExpectedOperationIDs) == 0 {
 								t.Error("no expected operation IDs")

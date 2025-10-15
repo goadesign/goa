@@ -8,7 +8,6 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
-	"goa.design/goa/v3/expr"
 )
 
 func TestSecureEndpointInit(t *testing.T) {
@@ -24,9 +23,10 @@ func TestSecureEndpointInit(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			codegen.RunDSL(t, c.DSL)
-			require.Len(t, expr.Root.Services, 1)
-			fs := EndpointFile("", expr.Root.Services[0])
+			root := codegen.RunDSL(t, c.DSL)
+			services := NewServicesData(root)
+			require.Len(t, root.Services, 1)
+			fs := EndpointFile("", root.Services[0], services)
 			require.NotNil(t, fs)
 			sections := fs.SectionTemplates
 			require.Greater(t, len(sections), 1)
@@ -49,9 +49,10 @@ func TestSecureEndpoint(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			codegen.RunDSL(t, c.DSL)
-			require.Len(t, expr.Root.Services, 1)
-			fs := EndpointFile("", expr.Root.Services[0])
+			root := codegen.RunDSL(t, c.DSL)
+			services := NewServicesData(root)
+			require.Len(t, root.Services, 1)
+			fs := EndpointFile("", root.Services[0], services)
 			require.NotNil(t, fs)
 			sections := fs.SectionTemplates
 			code := codegen.SectionCode(t, sections[4])
@@ -70,9 +71,10 @@ func TestSecureWithSkipRequestBodyEncodeDecode(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			codegen.RunDSL(t, c.DSL)
-			require.Len(t, expr.Root.Services, 1)
-			fs := EndpointFile("", expr.Root.Services[0])
+			root := codegen.RunDSL(t, c.DSL)
+			services := NewServicesData(root)
+			require.Len(t, root.Services, 1)
+			fs := EndpointFile("", root.Services[0], services)
 			require.NotNil(t, fs)
 			sections := fs.SectionTemplates
 			code := codegen.SectionCode(t, sections[5])

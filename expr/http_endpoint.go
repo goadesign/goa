@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"strings"
@@ -66,6 +67,10 @@ type (
 		MultipartRequest bool
 		// Redirect defines a redirect for the endpoint.
 		Redirect *HTTPRedirectExpr
+		// SSE defines the Server-Sent Events configuration for this endpoint if it's
+		// a streaming endpoint. If nil, the endpoint uses WebSockets by default or
+		// inherits the service-level SSE configuration if defined.
+		SSE *HTTPSSEExpr
 		// Meta is a set of key/value pairs with semantic that is
 		// specific to each generator, see dsl.Meta.
 		Meta MetaExpr
@@ -274,6 +279,15 @@ func (e *HTTPEndpointExpr) Prepare() {
 		e.Responses = []*HTTPResponseExpr{{StatusCode: status}}
 	}
 
+	// Inherit SSE configuration from service or API level for streaming endpoints
+	if e.MethodExpr.Stream == ServerStreamKind && e.SSE == nil {
+		if e.Service.SSE != nil {
+			e.SSE = e.Service.SSE
+		} else if Root.API.HTTP.SSE != nil {
+			e.SSE = Root.API.HTTP.SSE
+		}
+	}
+
 	// Error -> ResponseError
 	methodErrors := map[string]struct{}{}
 	for _, v := range e.HTTPErrors {
@@ -374,6 +388,29 @@ func (e *HTTPEndpointExpr) Validate() error {
 			if len(rt.Views) > 1 {
 				verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method result type defines multiple views.")
 			}
+		}
+	}
+
+	// Validate streaming endpoints for SSE compatibility
+	if e.MethodExpr.Stream == ServerStreamKind {
+		// Prepare already handles inheriting SSE from service or API level
+		if e.SSE != nil {
+			if err := e.SSE.Validate(e); err != nil {
+				var valErr *eval.ValidationErrors
+				if errors.As(err, &valErr) {
+					verr.Merge(valErr)
+				}
+			}
+		}
+	} else if e.SSE != nil {
+		// Error if SSE is defined but endpoint is not server streaming
+		switch e.MethodExpr.Stream {
+		case BidirectionalStreamKind:
+			verr.Add(e, "Server-Sent Events cannot be used with bidirectional streaming endpoints")
+		case ClientStreamKind:
+			verr.Add(e, "Server-Sent Events cannot be used with client-to-server streaming endpoints")
+		default:
+			verr.Add(e, "Server-Sent Events can only be used with endpoints that have a streaming result")
 		}
 	}
 
@@ -643,10 +680,13 @@ func (e *HTTPEndpointExpr) Validate() error {
 	if e.SkipRequestBodyEncodeDecode && body.Type != Empty {
 		verr.Add(e, "HTTP endpoint request body must be empty when using SkipRequestBodyEncodeDecode but not all method payload attributes are mapped to headers and params. Make sure to define Headers and Params as needed.")
 	}
+	// For streaming endpoints, check if request body is allowed
 	if e.MethodExpr.IsStreaming() && body.Type != Empty {
-		// Refer Websocket protocol - https://tools.ietf.org/html/rfc6455
-		// Protocol does not allow HTTP request body to be passed.
-		verr.Add(e, "HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.")
+		// SSE endpoints can have request bodies, but WebSocket endpoints cannot
+		// Refer WebSocket protocol - https://tools.ietf.org/html/rfc6455
+		if e.SSE == nil { // Only apply this validation to non-SSE streaming endpoints
+			verr.Add(e, "HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.")
+		}
 	}
 
 	return verr

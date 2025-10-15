@@ -255,3 +255,128 @@ func ForcedResultTypeDSL(svcName, metName string) func() {
 		})
 	}
 }
+
+func MapIntKeyBodyDSL(svcName, metName string) func() {
+	return func() {
+		_ = Service(svcName, func() {
+			Method(metName, func() {
+				Payload(func() {
+					Attribute("intmap", MapOf(Int, ArrayOf(String)))
+				})
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}
+
+func MapIntKeyObjectBodyDSL(svcName, metName string) func() {
+	return func() {
+		MapData := Type("MapData", func() {
+			Attribute("id", String)
+			Attribute("value", String)
+		})
+
+		_ = Service(svcName, func() {
+			Method(metName, func() {
+				Payload(func() {
+					Attribute("intmap", MapOf(Int, ArrayOf(MapData)))
+				})
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}
+
+func MapIntKeyStringBodyDSL(svcName, metName string) func() {
+	return func() {
+		_ = Service(svcName, func() {
+			Method(metName, func() {
+				Payload(func() {
+					Attribute("intmap", MapOf(Int, String))
+				})
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}
+
+func MapIntKeyObjectDirectBodyDSL(svcName, metName string) func() {
+	return func() {
+		MapData := Type("MapData", func() {
+			Attribute("id", String)
+			Attribute("value", String)
+		})
+
+		_ = Service(svcName, func() {
+			Method(metName, func() {
+				Payload(func() {
+					Attribute("intmap", MapOf(Int, MapData))
+				})
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}
+
+func MapStringKeyIntBodyDSL(svcName, metName string) func() {
+	return func() {
+		_ = Service(svcName, func() {
+			Method(metName, func() {
+				Payload(func() {
+					Attribute("stringmap", MapOf(String, Int))
+				})
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}
+
+func MapStringKeyObjectDirectBodyDSL(svcName, metName string) func() {
+	return func() {
+		MapData := Type("MapData", func() {
+			Attribute("id", String)
+			Attribute("value", String)
+		})
+
+		_ = Service(svcName, func() {
+			Method(metName, func() {
+				Payload(func() {
+					Attribute("stringmap", MapOf(String, MapData))
+				})
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}
+
+func MapStringKeyArrayObjectBodyDSL(svcName, metName string) func() {
+	return func() {
+		MapData := Type("MapData", func() {
+			Attribute("id", String)
+			Attribute("value", String)
+		})
+
+		_ = Service(svcName, func() {
+			Method(metName, func() {
+				Payload(func() {
+					Attribute("stringmap", MapOf(String, ArrayOf(MapData)))
+				})
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}

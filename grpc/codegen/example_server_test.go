@@ -14,7 +14,6 @@ import (
 	"goa.design/goa/v3/codegen/example"
 	ctestdata "goa.design/goa/v3/codegen/example/testdata"
 	"goa.design/goa/v3/codegen/service"
-	"goa.design/goa/v3/expr"
 )
 
 var updateGolden = false
@@ -50,11 +49,10 @@ func TestExampleServerFiles(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			// reset global variable
-			GRPCServices = make(ServicesData)
-			service.Services = make(service.ServicesData)
 			example.Servers = make(example.ServersData)
-			codegen.RunDSL(t, c.DSL)
-			fs := ExampleServerFiles("", expr.Root)
+			root := codegen.RunDSL(t, c.DSL)
+			services := NewServicesData(service.NewServicesData(root))
+			fs := ExampleServerFiles("", services)
 			require.Greater(t, len(fs), 0)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer

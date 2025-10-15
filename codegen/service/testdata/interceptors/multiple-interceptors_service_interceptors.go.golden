@@ -30,8 +30,10 @@ type (
 // WrapMethodEndpoint wraps the Method endpoint with the server-side
 // interceptors defined in the design.
 func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
-	endpoint = wrapMethodtest(endpoint, i)
-	endpoint = wrapMethodtest3(endpoint, i)
+	if i != nil {
+		endpoint = wrapMethodtest(endpoint, i)
+		endpoint = wrapMethodtest3(endpoint, i)
+	}
 	return endpoint
 }
 

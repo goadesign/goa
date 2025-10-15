@@ -3,6 +3,7 @@ package codegen
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -73,7 +74,10 @@ type (
 )
 
 // initWebSocketData initializes the WebSocket related data in ed.
-func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
+func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
+	if e.SSE != nil {
+		return
+	}
 	var (
 		svrRecvTypeName        string
 		svrRecvTypeRef         string
@@ -96,7 +100,7 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 	if e.MethodExpr.Stream == expr.ClientStreamKind || e.MethodExpr.Stream == expr.BidirectionalStreamKind {
 		svrRecvTypeName = sd.Scope.GoFullTypeName(e.MethodExpr.StreamingPayload, svc.PkgName)
 		svrRecvTypeRef = sd.Scope.GoFullTypeRef(e.MethodExpr.StreamingPayload, svc.PkgName)
-		svrPayload = buildRequestBodyType(e.StreamingBody, e.MethodExpr.StreamingPayload, e, true, sd)
+		svrPayload = sds.buildRequestBodyType(e.StreamingBody, e.MethodExpr.StreamingPayload, e, true, sd)
 		if needInit(e.MethodExpr.StreamingPayload.Type) {
 			makeHTTPType(e.StreamingBody)
 			body := e.StreamingBody.Type
@@ -140,7 +144,7 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 						TypeRef:  sd.Scope.GoTypeRef(e.StreamingBody),
 						Type:     e.StreamingBody.Type,
 						Required: true,
-						Example:  e.Body.Example(expr.Root.API.ExampleGenerator),
+						Example:  e.Body.Example(sds.Root.API.ExampleGenerator),
 						Validate: svcode,
 					},
 				}}
@@ -167,7 +171,7 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 				ServerCode:     serverCode,
 			}
 		}
-		cliPayload = buildRequestBodyType(e.StreamingBody, e.MethodExpr.StreamingPayload, e, false, sd)
+		cliPayload = sds.buildRequestBodyType(e.StreamingBody, e.MethodExpr.StreamingPayload, e, false, sd)
 		if cliPayload != nil {
 			sd.ClientTypeNames[cliPayload.Name] = false
 			sd.ServerTypeNames[cliPayload.Name] = false
@@ -234,8 +238,8 @@ func initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceDa
 
 // websocketServerFile returns the file implementing the WebSocket server
 // streaming implementation if any.
-func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	data := HTTPServices.Get(svc.Name())
+func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+	data := services.Get(svc.Name())
 	if !hasWebSocket(data) {
 		return nil
 	}
@@ -252,7 +256,6 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File
 		codegen.GoaNamedImport("http", "goahttp"),
 		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 	}
-	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),
 	}
@@ -267,8 +270,8 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File
 
 // websocketClientFile returns the file implementing the WebSocket client
 // streaming implementation if any.
-func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File {
-	data := HTTPServices.Get(svc.Name())
+func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+	data := services.Get(svc.Name())
 	if !hasWebSocket(data) {
 		return nil
 	}
@@ -286,7 +289,6 @@ func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr) *codegen.File
 		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 	}
-	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", imports),
 	}
@@ -451,12 +453,7 @@ func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
 // hasWebSocket returns true if at least one of the endpoints in the service
 // defines a streaming payload or result.
 func hasWebSocket(sd *ServiceData) bool {
-	for _, e := range sd.Endpoints {
-		if isWebSocketEndpoint(e) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(sd.Endpoints, isWebSocketEndpoint)
 }
 
 // isWebSocketEndpoint returns true if the endpoint defines a streaming payload

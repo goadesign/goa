@@ -8,7 +8,9 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 		encodeRequest  = {{ .RequestEncoder }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.InitName }}({{ .MultipartRequestEncoder.VarName }}){{ else }}c.encoder{{ end }})
 			{{- end }}
 		{{- end }}
+		{{- if not (isSSEEndpoint .) }}
 		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
+		{{- end }}
 	)
 	return func(ctx context.Context, v any) (any, error) {
 		req, err := c.{{ .RequestInit.Name }}(ctx, {{ range .RequestInit.ClientArgs }}{{ .Ref }}, {{ end }})
@@ -58,6 +60,25 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 			{{- end }}
 		{{- end }}
 		return stream, nil
+	{{- else if isSSEEndpoint . }}
+		// For SSE endpoints, connect and return a stream
+		resp, err := c.{{ .Method.VarName }}Doer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+		}
+		
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			return nil, fmt.Errorf("unexpected status from SSE endpoint: %d", resp.StatusCode)
+		}
+		
+		contentType := resp.Header.Get("Content-Type")
+		if contentType != "" && !strings.HasPrefix(contentType, "text/event-stream") {
+			resp.Body.Close()
+			return nil, fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
+		}
+		
+		return New{{ .Method.VarName }}Stream(resp), nil
 	{{- else }}
 		resp, err := c.{{ .Method.VarName }}Doer.Do(req)
 		if err != nil {

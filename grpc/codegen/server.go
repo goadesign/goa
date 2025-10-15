@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 )
 
@@ -14,25 +13,25 @@ import (
 // contain the server which implements the generated gRPC server interface and
 // encoders and decoders to transform protocol buffer types and gRPC metadata
 // into goa types and vice versa.
-func ServerFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
-	svcLen := len(root.API.GRPC.Services)
+func ServerFiles(genpkg string, services *ServicesData) []*codegen.File {
+	svcLen := len(services.Root.API.GRPC.Services)
 	fw := make([]*codegen.File, 2*svcLen)
-	for i, svc := range root.API.GRPC.Services {
-		fw[i] = serverFile(genpkg, svc)
+	for i, svc := range services.Root.API.GRPC.Services {
+		fw[i] = serverFile(genpkg, svc, services)
 	}
-	for i, svc := range root.API.GRPC.Services {
-		fw[i+svcLen] = serverEncodeDecode(genpkg, svc)
+	for i, svc := range services.Root.API.GRPC.Services {
+		fw[i+svcLen] = serverEncodeDecode(genpkg, svc, services)
 	}
 	return fw
 }
 
 // serverFile returns the files defining the gRPC server.
-func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
+func serverFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
 	var (
 		fpath    string
 		sections []*codegen.SectionTemplate
 
-		data = GRPCServices.Get(svc.Name())
+		data = services.Get(svc.Name())
 	)
 	{
 		svcName := data.Service.PathName
@@ -47,7 +46,6 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 			{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 		}
-		imports = append(imports, data.Service.UserTypeImports...)
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC server", "server", imports),
 			{
@@ -75,8 +73,7 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 				Name:   "grpc-handler-init",
 				Source: readTemplate("grpc_handler_init"),
 				Data:   e,
-			})
-			sections = append(sections, &codegen.SectionTemplate{
+			}, &codegen.SectionTemplate{
 				Name:   "server-grpc-interface",
 				Source: readTemplate("server_grpc_interface"),
 				Data:   e,
@@ -120,12 +117,12 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 
 // serverEncodeDecode returns the file defining the gRPC server encoding and
 // decoding logic.
-func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
+func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
 	var (
 		fpath    string
 		sections []*codegen.SectionTemplate
 
-		data = GRPCServices.Get(svc.Name())
+		data = services.Get(svc.Name())
 	)
 	{
 		svcName := data.Service.PathName
@@ -144,7 +141,6 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 			{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 		}
-		imports = append(imports, data.Service.UserTypeImports...)
 		sections = []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
 
 		for _, e := range data.Endpoints {
@@ -160,7 +156,7 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 				})
 			}
 			if e.PayloadRef != "" {
-				fm := transTmplFuncs(svc)
+				fm := transTmplFuncs(svc, services)
 				fm["isEmpty"] = isEmpty
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "request-decoder",
@@ -174,17 +170,17 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
-func transTmplFuncs(s *expr.GRPCServiceExpr) map[string]any {
+func transTmplFuncs(s *expr.GRPCServiceExpr, services *ServicesData) map[string]any {
 	return map[string]any{
 		"goTypeRef": func(dt expr.DataType) string {
-			return service.Services.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+			return services.ServicesData.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 		},
 	}
 }
 
 // typeConversionData produces the template data suitable for executing the
 // "type_conversion" template.
-func typeConversionData(dt expr.DataType, varName string, target string) map[string]any {
+func typeConversionData(dt expr.DataType, varName, target string) map[string]any {
 	return map[string]any{
 		"Type":    dt,
 		"VarName": varName,

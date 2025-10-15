@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/grpc/codegen/testdata"
 )
 
@@ -33,8 +32,9 @@ func TestServerTypeFiles(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			RunGRPCDSL(t, c.DSL)
-			fs := ServerTypeFiles("", expr.Root)
+			root := RunGRPCDSL(t, c.DSL)
+			services := CreateGRPCServices(root)
+			fs := ServerTypeFiles("", services)
 			require.Len(t, fs, 1)
 			var buf bytes.Buffer
 			for _, s := range fs[0].SectionTemplates[1:] {

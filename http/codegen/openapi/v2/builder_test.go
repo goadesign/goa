@@ -77,7 +77,8 @@ func TestBuildPathFromExpr(t *testing.T) {
 			},
 		},
 	}
-	expr.Root.API = &expr.APIExpr{
+	var root expr.RootExpr
+	root.API = &expr.APIExpr{
 		HTTP: &expr.HTTPExpr{
 			Path: "/",
 		},
@@ -89,8 +90,13 @@ func TestBuildPathFromExpr(t *testing.T) {
 				Paths:    make(map[string]any),
 			}
 			root := &expr.RootExpr{
-				API: &expr.APIExpr{},
+				API: &expr.APIExpr{
+					HTTP: &expr.HTTPExpr{
+						Path: "/",
+					},
+				},
 			}
+			expr.Root = root
 			h := &expr.HostExpr{}
 			route := &expr.RouteExpr{
 				Method: "POST",

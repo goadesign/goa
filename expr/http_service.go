@@ -40,6 +40,9 @@ type (
 		HTTPErrors []*HTTPErrorExpr
 		// FileServers is the list of static asset serving endpoints
 		FileServers []*HTTPFileServerExpr
+		// SSE defines the Server-Sent Events configuration for all streaming endpoints
+		// in this service. If nil, streaming endpoints use WebSockets by default.
+		SSE *HTTPSSEExpr
 		// Meta is a set of key/value pairs with semantic that is
 		// specific to each generator.
 		Meta MetaExpr

@@ -29,7 +29,7 @@ type Service interface {
 {{- if .Schemes }}
 // Auther defines the authorization functions to be implemented by the service.
 type Auther interface {
-	{{- range .Schemes }}
+	{{- range .Schemes.DedupeByType }}
 	{{ printf "%sAuth implements the authorization logic for the %s security scheme." .Type .Type | comment }}
 	{{ .Type }}Auth(ctx context.Context, {{ if eq .Type "Basic" }}user, pass{{ else if eq .Type "APIKey" }}key{{ else }}token{{ end }} string, schema *security.{{ .Type }}Scheme) (context.Context, error)
 	{{- end }}

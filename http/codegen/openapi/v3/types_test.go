@@ -14,10 +14,18 @@ import (
 
 // describes a type for comparison in tests.
 type typ struct {
-	Type      string
-	Format    string
-	Props     []attr
-	SkipProps bool
+	Type                 string
+	Format               string
+	Props                []attr
+	SkipProps            bool
+	AdditionalProperties *additionalPropsType // nil means no additionalProperties check
+}
+
+// additionalPropsType describes additionalProperties for testing
+type additionalPropsType struct {
+	Type  string               // "string", "array", "object", "" (for reference)
+	Items *additionalPropsType // for array items
+	Ref   string               // for references like "#/components/schemas/MapData"
 }
 
 type attr struct {
@@ -169,9 +177,9 @@ func TestBuildBodyTypes(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			api := codegen.RunDSL(t, c.DSL).API
+			root := codegen.RunDSL(t, c.DSL)
 
-			bodies, types := buildBodyTypes(api)
+			bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes)
 
 			svc, ok := bodies[svcName]
 			if !ok {
@@ -253,13 +261,204 @@ func matchesSchemaWithPrefix(t *testing.T, ctx string, s *openapi.Schema, types 
 			}
 			matchesSchemaWithPrefix(t, ctx, v, types, p, n+": ")
 		}
+
+		// Check additionalProperties
+		if tt.AdditionalProperties != nil {
+			validateAdditionalProperties(t, ctx, s.AdditionalProperties, types, tt.AdditionalProperties, prefix)
+		}
+	}
+}
+
+func TestMapTypes(t *testing.T) {
+	svcName := "test-service"
+
+	testCases := []struct {
+		Name     string
+		DSL      func()
+		Expected typ
+	}{
+		{
+			Name: "map_int_array_string",
+			DSL:  dsls.MapIntKeyBodyDSL(svcName, "map_int_array_string"),
+			Expected: typ{
+				Type: "object",
+				Props: []attr{{Name: "intmap", Val: typ{
+					Type: "object",
+					AdditionalProperties: &additionalPropsType{
+						Type:  "array",
+						Items: &additionalPropsType{Type: "string"},
+					},
+				}}},
+			},
+		},
+		{
+			Name: "map_int_array_object",
+			DSL:  dsls.MapIntKeyObjectBodyDSL(svcName, "map_int_array_object"),
+			Expected: typ{
+				Type: "object",
+				Props: []attr{{Name: "intmap", Val: typ{
+					Type: "object",
+					AdditionalProperties: &additionalPropsType{
+						Type:  "array",
+						Items: &additionalPropsType{Ref: "#/components/schemas/MapData"},
+					},
+				}}},
+			},
+		},
+		{
+			Name: "map_int_string",
+			DSL:  dsls.MapIntKeyStringBodyDSL(svcName, "map_int_string"),
+			Expected: typ{
+				Type: "object",
+				Props: []attr{{Name: "intmap", Val: typ{
+					Type:                 "object",
+					AdditionalProperties: &additionalPropsType{Type: "string"},
+				}}},
+			},
+		},
+		{
+			Name: "map_int_object_direct",
+			DSL:  dsls.MapIntKeyObjectDirectBodyDSL(svcName, "map_int_object_direct"),
+			Expected: typ{
+				Type: "object",
+				Props: []attr{{Name: "intmap", Val: typ{
+					Type:                 "object",
+					AdditionalProperties: &additionalPropsType{Ref: "#/components/schemas/MapData"},
+				}}},
+			},
+		},
+		{
+			Name: "map_string_int",
+			DSL:  dsls.MapStringKeyIntBodyDSL(svcName, "map_string_int"),
+			Expected: typ{
+				Type: "object",
+				Props: []attr{{Name: "stringmap", Val: typ{
+					Type:                 "object",
+					AdditionalProperties: &additionalPropsType{Type: "integer"},
+				}}},
+			},
+		},
+		{
+			Name: "map_string_object_direct",
+			DSL:  dsls.MapStringKeyObjectDirectBodyDSL(svcName, "map_string_object_direct"),
+			Expected: typ{
+				Type: "object",
+				Props: []attr{{Name: "stringmap", Val: typ{
+					Type:                 "object",
+					AdditionalProperties: &additionalPropsType{Ref: "#/components/schemas/MapData"},
+				}}},
+			},
+		},
+		{
+			Name: "map_string_array_object",
+			DSL:  dsls.MapStringKeyArrayObjectBodyDSL(svcName, "map_string_array_object"),
+			Expected: typ{
+				Type: "object",
+				Props: []attr{{Name: "stringmap", Val: typ{
+					Type: "object",
+					AdditionalProperties: &additionalPropsType{
+						Type:  "array",
+						Items: &additionalPropsType{Ref: "#/components/schemas/MapData"},
+					},
+				}}},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.Name, func(t *testing.T) {
+			// Build the OpenAPI spec
+			root := codegen.RunDSL(t, tc.DSL)
+			bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes)
+
+			// Find the service and method
+			svcBodies, ok := bodies[svcName]
+			if !ok {
+				t.Fatalf("Could not find service %s in bodies", svcName)
+			}
+
+			methodBody, ok := svcBodies[tc.Name]
+			if !ok {
+				t.Fatalf("Could not find method %s in service bodies", tc.Name)
+			}
+
+			// Get the request body schema
+			requestBodyRef := methodBody.RequestBody.Ref
+			if requestBodyRef == "" {
+				t.Fatal("Expected request body reference")
+			}
+
+			requestBodyTypeName := nameFromRef(requestBodyRef)
+			requestBodySchema, ok := types[requestBodyTypeName]
+			if !ok {
+				t.Fatalf("Could not find request body type %s", requestBodyTypeName)
+			}
+
+			// Validate the schema
+			matchesSchema(t, tc.Name, requestBodySchema, types, tc.Expected)
+		})
+	}
+}
+
+func validateAdditionalProperties(t *testing.T, ctx string, addProps interface{}, types map[string]*openapi.Schema, expected *additionalPropsType, prefix string) {
+	if addProps == nil {
+		t.Errorf("%s: %sexpected additionalProperties to be set", ctx, prefix)
+		return
+	}
+
+	// Check if additionalProperties is a schema
+	schema, ok := addProps.(*openapi.Schema)
+	if !ok {
+		t.Errorf("%s: %sexpected additionalProperties to be schema, got %T", ctx, prefix, addProps)
+		return
+	}
+
+	validateAdditionalPropsSchema(t, ctx, schema, types, expected, prefix+"additionalProperties: ")
+}
+
+func validateAdditionalPropsSchema(t *testing.T, ctx string, schema *openapi.Schema, types map[string]*openapi.Schema, expected *additionalPropsType, prefix string) {
+	// Handle reference case
+	if expected.Ref != "" {
+		if schema.Ref == "" {
+			t.Errorf("%s: %sexpected reference to %s, but got inline schema", ctx, prefix, expected.Ref)
+			return
+		}
+		if schema.Ref != expected.Ref {
+			t.Errorf("%s: %sexpected reference %s, got %s", ctx, prefix, expected.Ref, schema.Ref)
+		}
+		return
+	}
+
+	// Resolve reference if present
+	if schema.Ref != "" {
+		typeName := nameFromRef(schema.Ref)
+		resolvedSchema, ok := types[typeName]
+		if !ok {
+			t.Errorf("%s: %scould not resolve reference %s", ctx, prefix, schema.Ref)
+			return
+		}
+		schema = resolvedSchema
+	}
+
+	// Check type
+	if string(schema.Type) != expected.Type {
+		t.Errorf("%s: %sexpected type %s, got %s", ctx, prefix, expected.Type, schema.Type)
+	}
+
+	// Check array items if expected
+	if expected.Items != nil {
+		if schema.Items == nil {
+			t.Errorf("%s: %sexpected array items to be set", ctx, prefix)
+		} else {
+			validateAdditionalPropsSchema(t, ctx, schema.Items, types, expected.Items, prefix+"items: ")
+		}
 	}
 }
 
 func TestTypesOnlyDifferByEnum(t *testing.T) {
-	api := codegen.RunDSL(t, dsls.StringEnumBodyDSL()).API
+	root := codegen.RunDSL(t, dsls.StringEnumBodyDSL())
 
-	bodies, types := buildBodyTypes(api)
+	bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes)
 
 	svc1, ok := bodies["svc_enum_1"]
 	if !ok {

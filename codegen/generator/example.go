@@ -20,18 +20,21 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 			continue // could be a plugin root expression
 		}
 
+		// Create service data
+		services := service.NewServicesData(r)
+
 		// example service implementation
-		if fs := service.ExampleServiceFiles(genpkg, r); len(fs) != 0 {
+		if fs := service.ExampleServiceFiles(genpkg, r, services); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 
 		// example interceptors implementation
-		if fs := service.ExampleInterceptorsFiles(genpkg, r); len(fs) != 0 {
+		if fs := service.ExampleInterceptorsFiles(genpkg, r, services); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 
 		// server main
-		if fs := example.ServerFiles(genpkg, r); len(fs) != 0 {
+		if fs := example.ServerFiles(genpkg, r, services); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 
@@ -42,20 +45,22 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 
 		// HTTP
 		if len(r.API.HTTP.Services) > 0 {
-			if fs := httpcodegen.ExampleServerFiles(genpkg, r); len(fs) != 0 {
+			httpServices := httpcodegen.NewServicesData(services)
+			if fs := httpcodegen.ExampleServerFiles(genpkg, httpServices); len(fs) != 0 {
 				files = append(files, fs...)
 			}
-			if fs := httpcodegen.ExampleCLIFiles(genpkg, r); len(fs) != 0 {
+			if fs := httpcodegen.ExampleCLIFiles(genpkg, httpServices); len(fs) != 0 {
 				files = append(files, fs...)
 			}
 		}
 
 		// GRPC
 		if len(r.API.GRPC.Services) > 0 {
-			if fs := grpccodegen.ExampleServerFiles(genpkg, r); len(fs) > 0 {
+			grpcServices := grpccodegen.NewServicesData(services)
+			if fs := grpccodegen.ExampleServerFiles(genpkg, grpcServices); len(fs) > 0 {
 				files = append(files, fs...)
 			}
-			if fs := grpccodegen.ExampleCLIFiles(genpkg, r); len(fs) > 0 {
+			if fs := grpccodegen.ExampleCLIFiles(genpkg, grpcServices); len(fs) > 0 {
 				files = append(files, fs...)
 			}
 		}
@@ -64,7 +69,7 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		for _, f := range files {
 			if len(f.SectionTemplates) > 0 {
 				for _, s := range r.Services {
-					service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], s)
+					service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], s, services.Get(s.Name))
 				}
 			}
 		}

@@ -981,3 +981,55 @@ var EndpointWithClientInterceptorDSL = func() {
 		})
 	})
 }
+
+var MultipleAPIKeySecurityDSL = func() {
+	var APIKeyAuth = APIKeySecurity("api_key")
+	var TenantKeyAuth = APIKeySecurity("tenant")
+
+	Service("MultipleAPIKeySecurity", func() {
+		Security(APIKeyAuth, TenantKeyAuth)
+		Method("A", func() {
+			Payload(func() {
+				APIKey("api_key", "api_key", String)
+				APIKey("tenant", "tenant_id", String)
+				Required("api_key", "tenant_id")
+			})
+
+			HTTP(func() {
+				POST("/")
+				Header("api_key:X-API-Key")
+				Header("tenant_id:X-Tenant")
+			})
+		})
+	})
+}
+
+var MixedAndMultipleAPIKeySecurityDSL = func() {
+	var Signature = JWTSecurity("jwt", func() {
+		Scope("api:read", "Read access to API")
+	})
+	var APIKeyAuth = APIKeySecurity("api_key")
+	var TenantKeyAuth = APIKeySecurity("tenant")
+
+	Service("MixedAndMultipleAPIKeySecurity", func() {
+		Security(Signature, func() {
+			Scope("api:read")
+		})
+		Security(APIKeyAuth, TenantKeyAuth)
+
+		Method("A", func() {
+			Payload(func() {
+				Token("jwt", String)
+				APIKey("api_key", "api_key", String)
+				APIKey("tenant", "tenant_id", String)
+			})
+
+			HTTP(func() {
+				POST("/")
+				Header("api_key:X-API-Key")
+				Header("tenant_id:X-Tenant")
+				Header("jwt:Authorization")
+			})
+		})
+	})
+}

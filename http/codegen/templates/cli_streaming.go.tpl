@@ -1,4 +1,4 @@
-{{- if needStream .Services }}
+{{- if needDialer .Services }}
 	var (
     dialer *websocket.Dialer
   )

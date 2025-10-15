@@ -1539,8 +1539,8 @@ func DecodeMethodQueryMapStringStringRequest(mux goahttp.Muxer, decoder func(*ht
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							if closeIdx == -1 {
-								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 							} else {
 								keya = keyRaw[openIdx+1 : closeIdx]
 							}
@@ -1583,8 +1583,8 @@ func DecodeMethodQueryMapStringStringValidateRequest(mux goahttp.Muxer, decoder 
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keya = keyRaw[openIdx+1 : closeIdx]
 						}
@@ -1634,8 +1634,8 @@ func DecodeMethodQueryMapStringBoolRequest(mux goahttp.Muxer, decoder func(*http
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							if closeIdx == -1 {
-								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 							} else {
 								keya = keyRaw[openIdx+1 : closeIdx]
 							}
@@ -1687,8 +1687,8 @@ func DecodeMethodQueryMapStringBoolValidateRequest(mux goahttp.Muxer, decoder fu
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keya = keyRaw[openIdx+1 : closeIdx]
 						}
@@ -1747,8 +1747,8 @@ func DecodeMethodQueryMapBoolStringRequest(mux goahttp.Muxer, decoder func(*http
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							if closeIdx == -1 {
-								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 							} else {
 								keyaRaw := keyRaw[openIdx+1 : closeIdx]
 								v, err2 := strconv.ParseBool(keyaRaw)
@@ -1796,8 +1796,8 @@ func DecodeMethodQueryMapBoolStringValidateRequest(mux goahttp.Muxer, decoder fu
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseBool(keyaRaw)
@@ -1852,8 +1852,8 @@ func DecodeMethodQueryMapBoolBoolRequest(mux goahttp.Muxer, decoder func(*http.R
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							if closeIdx == -1 {
-								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 							} else {
 								keyaRaw := keyRaw[openIdx+1 : closeIdx]
 								v, err2 := strconv.ParseBool(keyaRaw)
@@ -1910,8 +1910,8 @@ func DecodeMethodQueryMapBoolBoolValidateRequest(mux goahttp.Muxer, decoder func
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseBool(keyaRaw)
@@ -1976,8 +1976,8 @@ func DecodeMethodQueryMapStringArrayStringRequest(mux goahttp.Muxer, decoder fun
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							if closeIdx == -1 {
-								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 							} else {
 								keya = keyRaw[openIdx+1 : closeIdx]
 							}
@@ -2020,8 +2020,8 @@ func DecodeMethodQueryMapStringArrayStringValidateRequest(mux goahttp.Muxer, dec
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keya = keyRaw[openIdx+1 : closeIdx]
 						}
@@ -2072,8 +2072,8 @@ func DecodeMethodQueryMapStringArrayBoolRequest(mux goahttp.Muxer, decoder func(
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							if closeIdx == -1 {
-								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 							} else {
 								keya = keyRaw[openIdx+1 : closeIdx]
 							}
@@ -2127,8 +2127,8 @@ func DecodeMethodQueryMapStringArrayBoolValidateRequest(mux goahttp.Muxer, decod
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keya = keyRaw[openIdx+1 : closeIdx]
 						}
@@ -2190,8 +2190,8 @@ func DecodeMethodQueryMapBoolArrayStringRequest(mux goahttp.Muxer, decoder func(
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							if closeIdx == -1 {
-								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 							} else {
 								keyaRaw := keyRaw[openIdx+1 : closeIdx]
 								v, err2 := strconv.ParseBool(keyaRaw)
@@ -2237,8 +2237,8 @@ func DecodeMethodQueryMapBoolArrayStringValidateRequest(mux goahttp.Muxer, decod
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							if closeIdx == -1 {
-								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 							} else {
 								keyaRaw := keyRaw[openIdx+1 : closeIdx]
 								v, err2 := strconv.ParseBool(keyaRaw)
@@ -2294,8 +2294,8 @@ func DecodeMethodQueryMapBoolArrayBoolRequest(mux goahttp.Muxer, decoder func(*h
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							if closeIdx == -1 {
-								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 							} else {
 								keyaRaw := keyRaw[openIdx+1 : closeIdx]
 								v, err2 := strconv.ParseBool(keyaRaw)
@@ -2354,8 +2354,8 @@ func DecodeMethodQueryMapBoolArrayBoolValidateRequest(mux goahttp.Muxer, decoder
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseBool(keyaRaw)
@@ -2556,8 +2556,8 @@ func DecodeMethodQueryPrimitiveMapStringArrayStringValidateRequest(mux goahttp.M
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keya = keyRaw[openIdx+1 : closeIdx]
 						}
@@ -2611,8 +2611,8 @@ func DecodeMethodQueryPrimitiveMapStringBoolValidateRequest(mux goahttp.Muxer, d
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keya = keyRaw[openIdx+1 : closeIdx]
 						}
@@ -2672,8 +2672,8 @@ func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(mux goahttp.Muxer
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseBool(keyaRaw)
@@ -2747,8 +2747,8 @@ func DecodeMethodQueryMapStringMapIntStringValidateRequest(mux goahttp.Muxer, de
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keya = keyRaw[openIdx+1 : closeIdx]
 							keyRaw = keyRaw[closeIdx+1:]
@@ -2761,8 +2761,8 @@ func DecodeMethodQueryMapStringMapIntStringValidateRequest(mux goahttp.Muxer, de
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keybRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseInt(keybRaw, 10, strconv.IntSize)
@@ -2814,8 +2814,8 @@ func DecodeMethodQueryMapIntMapStringArrayIntValidateRequest(mux goahttp.Muxer, 
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keyaRaw := keyRaw[openIdx+1 : closeIdx]
 							v, err2 := strconv.ParseInt(keyaRaw, 10, strconv.IntSize)
@@ -2833,8 +2833,8 @@ func DecodeMethodQueryMapIntMapStringArrayIntValidateRequest(mux goahttp.Muxer, 
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keyb = keyRaw[openIdx+1 : closeIdx]
 						}
@@ -3575,7 +3575,7 @@ func DecodeMethodCookiePrimitiveStringValidateRequest(mux goahttp.Muxer, decoder
 			c   *http.Cookie
 		)
 		c, err = r.Cookie("c")
-		if err == http.ErrNoCookie {
+		if errors.Is(err, http.ErrNoCookie) {
 			err = goa.MergeErrors(err, goa.MissingFieldError("c", "cookie"))
 		} else {
 			c2 = c.Value
@@ -3700,7 +3700,7 @@ func DecodeMethodCookiePrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder 
 			c   *http.Cookie
 		)
 		c, err = r.Cookie("c")
-		if err == http.ErrNoCookie {
+		if errors.Is(err, http.ErrNoCookie) {
 			err = goa.MergeErrors(err, goa.MissingFieldError("c", "cookie"))
 		} else {
 			c2 = c.Value
@@ -3725,7 +3725,7 @@ func DecodeMethodBodyStringRequest(mux goahttp.Muxer, decoder func(*http.Request
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -3751,7 +3751,7 @@ func DecodeMethodBodyStringValidateRequest(mux goahttp.Muxer, decoder func(*http
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -3781,7 +3781,7 @@ func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -3807,7 +3807,7 @@ func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -3837,7 +3837,7 @@ func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				err = nil
 			} else {
 				var gerr *goa.ServiceError
@@ -3868,7 +3868,7 @@ func DecodeMethodBodyUserValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				err = nil
 			} else {
 				var gerr *goa.ServiceError
@@ -3901,7 +3901,7 @@ func DecodeMethodBodyObjectRequest(mux goahttp.Muxer, decoder func(*http.Request
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -3929,7 +3929,7 @@ func DecodeMethodBodyObjectRequiredRequest(mux goahttp.Muxer, decoder func(*http
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -3963,7 +3963,7 @@ func DecodeMethodBodyObjectValidateRequest(mux goahttp.Muxer, decoder func(*http
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -3995,7 +3995,7 @@ func DecodeMethodBodyUnionRequest(mux goahttp.Muxer, decoder func(*http.Request)
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4025,7 +4025,7 @@ func DecodeMethodBodyUnionValidateRequest(mux goahttp.Muxer, decoder func(*http.
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4055,7 +4055,7 @@ func DecodeMethodBodyUnionUserRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4085,7 +4085,7 @@ func DecodeMethodBodyUnionUserValidateRequest(mux goahttp.Muxer, decoder func(*h
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4115,7 +4115,7 @@ func DecodeMethodBodyArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Re
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4142,7 +4142,7 @@ func DecodeMethodBodyArrayStringValidateRequest(mux goahttp.Muxer, decoder func(
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4172,7 +4172,7 @@ func DecodeMethodBodyArrayUserRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4202,7 +4202,7 @@ func DecodeMethodBodyArrayUserValidateRequest(mux goahttp.Muxer, decoder func(*h
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4232,7 +4232,7 @@ func DecodeMethodBodyMapStringRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4258,7 +4258,7 @@ func DecodeMethodBodyMapStringValidateRequest(mux goahttp.Muxer, decoder func(*h
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4288,7 +4288,7 @@ func DecodeMethodBodyMapUserRequest(mux goahttp.Muxer, decoder func(*http.Reques
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4318,7 +4318,7 @@ func DecodeMethodBodyMapUserValidateRequest(mux goahttp.Muxer, decoder func(*htt
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4365,7 +4365,7 @@ func DecodeMethodBodyPrimitiveStringValidateRequest(mux goahttp.Muxer, decoder f
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4398,7 +4398,7 @@ func DecodeMethodBodyPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder fun
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4431,7 +4431,7 @@ func DecodeMethodBodyPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, deco
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4469,7 +4469,7 @@ func DecodeMethodBodyPrimitiveArrayBoolValidateRequest(mux goahttp.Muxer, decode
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4507,7 +4507,7 @@ func DecodeMethodBodyPrimitiveArrayUserRequiredRequest(mux goahttp.Muxer, decode
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4544,7 +4544,7 @@ func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux goahttp.Muxer, decode
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4584,7 +4584,7 @@ func DecodeMethodBodyPrimitiveArrayUserRequest(mux goahttp.Muxer, decoder func(*
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				err = nil
 			} else {
 				var gerr *goa.ServiceError
@@ -4612,7 +4612,7 @@ func DecodeMethodBodyPrimitiveArrayUserRequest(mux goahttp.Muxer, decoder func(*
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				err = nil
 			} else {
 				var gerr *goa.ServiceError
@@ -4640,7 +4640,7 @@ func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux goahttp.Muxer, decode
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4675,7 +4675,7 @@ func DecodeMethodBodyQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Re
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4710,7 +4710,7 @@ func DecodeMethodBodyQueryObjectValidateRequest(mux goahttp.Muxer, decoder func(
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4752,7 +4752,7 @@ func DecodeMethodBodyQueryUserRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4786,7 +4786,7 @@ func DecodeMethodBodyQueryUserValidateRequest(mux goahttp.Muxer, decoder func(*h
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4828,7 +4828,7 @@ func DecodeMethodBodyPathObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4862,7 +4862,7 @@ func DecodeMethodBodyPathObjectValidateRequest(mux goahttp.Muxer, decoder func(*
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4903,7 +4903,7 @@ func DecodeMethodBodyPathUserRequest(mux goahttp.Muxer, decoder func(*http.Reque
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4936,7 +4936,7 @@ func DecodeMethodUserBodyPathValidateRequest(mux goahttp.Muxer, decoder func(*ht
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -4977,7 +4977,7 @@ func DecodeMethodBodyQueryPathObjectRequest(mux goahttp.Muxer, decoder func(*htt
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -5016,7 +5016,7 @@ func DecodeMethodBodyQueryPathObjectValidateRequest(mux goahttp.Muxer, decoder f
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -5063,7 +5063,7 @@ func DecodeMethodBodyQueryPathUserRequest(mux goahttp.Muxer, decoder func(*http.
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -5102,7 +5102,7 @@ func DecodeMethodBodyQueryPathUserValidateRequest(mux goahttp.Muxer, decoder fun
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -5161,8 +5161,8 @@ func DecodeMapQueryPrimitivePrimitiveRequest(mux goahttp.Muxer, decoder func(*ht
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keya = keyRaw[openIdx+1 : closeIdx]
 						}
@@ -5203,8 +5203,8 @@ func DecodeMapQueryPrimitiveArrayRequest(mux goahttp.Muxer, decoder func(*http.R
 					{
 						openIdx := strings.IndexRune(keyRaw, '[')
 						closeIdx := strings.IndexRune(keyRaw, ']')
-						if closeIdx == -1 {
-							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 						} else {
 							keya = keyRaw[openIdx+1 : closeIdx]
 						}
@@ -5244,7 +5244,7 @@ func DecodeMethodMapQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -5376,7 +5376,7 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
@@ -5662,8 +5662,8 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							if closeIdx == -1 {
-								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 							} else {
 								keyaRaw := keyRaw[openIdx+1 : closeIdx]
 								v, err2 := strconv.ParseFloat(keyaRaw, 32)
@@ -5717,8 +5717,8 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 						{
 							openIdx := strings.IndexRune(keyRaw, '[')
 							closeIdx := strings.IndexRune(keyRaw, ']')
-							if closeIdx == -1 {
-								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: missing closing bracket"))
+							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
 							} else {
 								keyaRaw := keyRaw[openIdx+1 : closeIdx]
 								v, err2 := strconv.ParseFloat(keyaRaw, 32)
@@ -6123,7 +6123,7 @@ func DecodeMethodBodyCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Req
 		)
 		err = decoder(r).Decode(&body)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return nil, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError

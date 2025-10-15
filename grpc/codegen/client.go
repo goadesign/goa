@@ -9,29 +9,27 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// ClientFiles returns the client implementation for every gRPC service. The
-// files include the client which invokes the protoc-generated gRPC client
-// and encoders and decoders to transform protocol buffer types and gRPC
-// metadata into goa types and vice versa.
-func ClientFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
-	svcLen := len(root.API.GRPC.Services)
+// ClientFiles returns the client files that contain client methods to call the
+// corresponding service methods along with the encoding and decoding logic.
+func ClientFiles(genpkg string, services *ServicesData) []*codegen.File {
+	svcLen := len(services.Root.API.GRPC.Services)
 	fw := make([]*codegen.File, 2*svcLen)
-	for i, svc := range root.API.GRPC.Services {
-		fw[i] = client(genpkg, svc)
+	for i, svc := range services.Root.API.GRPC.Services {
+		fw[i] = clientFile(genpkg, svc, services)
 	}
-	for i, svc := range root.API.GRPC.Services {
-		fw[i+svcLen] = clientEncodeDecode(genpkg, svc)
+	for i, svc := range services.Root.API.GRPC.Services {
+		fw[i+svcLen] = clientEncodeDecode(genpkg, svc, services)
 	}
 	return fw
 }
 
-// client returns the files defining the gRPC client.
-func client(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
+// clientFile returns the file implementing the gRPC client.
+func clientFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
 	var (
 		fpath    string
 		sections []*codegen.SectionTemplate
 
-		data = GRPCServices.Get(svc.Name())
+		data = services.Get(svc.Name())
 	)
 	{
 		svcName := data.Service.PathName
@@ -46,7 +44,6 @@ func client(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 			{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 		}
-		imports = append(imports, data.Service.UserTypeImports...)
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC client", "client", imports),
 		}
@@ -112,12 +109,14 @@ func client(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
-func clientEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File {
+// clientEncodeDecode returns the file containing the gRPC client encoding and
+// decoding logic.
+func clientEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
 	var (
 		fpath    string
 		sections []*codegen.SectionTemplate
 
-		data = GRPCServices.Get(svc.Name())
+		data = services.Get(svc.Name())
 	)
 	{
 		svcName := data.Service.PathName
@@ -135,9 +134,8 @@ func clientEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr) *codegen.File 
 			{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 		}
-		imports = append(imports, data.Service.UserTypeImports...)
 		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client encoders and decoders", "client", imports)}
-		fm := transTmplFuncs(svc)
+		fm := transTmplFuncs(svc, services)
 		fm["metadataEncodeDecodeData"] = metadataEncodeDecodeData
 		fm["typeConversionData"] = typeConversionData
 		fm["isBearer"] = isBearer

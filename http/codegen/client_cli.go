@@ -14,8 +14,8 @@ type commandData struct {
 	*cli.CommandData
 	// Subcommands is the list of endpoint commands.
 	Subcommands []*subcommandData
-	// NeedStream if true initializes the websocket dialer.
-	NeedStream bool
+	// NeedDialer if true initializes the websocket dialer.
+	NeedDialer bool
 }
 
 // commandData wraps the common SubcommandData and adds HTTP-specific fields.
@@ -37,7 +37,8 @@ type subcommandData struct {
 }
 
 // ClientCLIFiles returns the client HTTP CLI support file.
-func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+func ClientCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
+	root := services.Root
 	if len(root.API.HTTP.Services) == 0 {
 		return nil
 	}
@@ -46,11 +47,11 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 		svcs []*expr.HTTPServiceExpr
 	)
 	for _, svc := range root.API.HTTP.Services {
-		sd := HTTPServices.Get(svc.Name())
+		sd := services.Get(svc.Name())
 		if len(sd.Endpoints) > 0 {
 			command := &commandData{
 				CommandData: cli.BuildCommandData(sd.Service),
-				NeedStream:  hasWebSocket(sd),
+				NeedDialer:  hasWebSocket(sd),
 			}
 
 			for _, e := range sd.Endpoints {
@@ -75,10 +76,10 @@ func ClientCLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 				}
 			}
 		}
-		files = append(files, endpointParser(genpkg, root, svr, svrData))
+		files = append(files, endpointParser(genpkg, root, svr, svrData, services))
 	}
 	for i, svc := range svcs {
-		files = append(files, payloadBuilders(genpkg, svc, data[i].CommandData))
+		files = append(files, payloadBuilders(genpkg, svc, data[i].CommandData, services))
 	}
 	return files
 }
@@ -102,7 +103,7 @@ func buildSubcommandData(sd *ServiceData, e *EndpointData) *subcommandData {
 
 // endpointParser returns the file that implements the command line parser that
 // builds the client endpoint and payload necessary to perform a request.
-func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, data []*commandData) *codegen.File {
+func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, data []*commandData, services *ServicesData) *codegen.File {
 	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
 	path := filepath.Join(codegen.Gendir, "http", "cli", pkg, "cli.go")
 	title := fmt.Sprintf("%s HTTP client CLI support package", svr.Name)
@@ -119,7 +120,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 	}
 	for _, sv := range svr.Services {
 		svc := root.Service(sv)
-		sd := HTTPServices.Get(svc.Name)
+		sd := services.Get(svc.Name)
 		if sd == nil {
 			continue
 		}
@@ -166,8 +167,8 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
-func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.CommandData) *codegen.File {
-	sd := HTTPServices.Get(svc.Name())
+func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.CommandData, services *ServicesData) *codegen.File {
+	sd := services.Get(svc.Name())
 	path := filepath.Join(codegen.Gendir, "http", sd.Service.PathName, "client", "cli.go")
 	title := fmt.Sprintf("%s HTTP client CLI support package", svc.Name())
 	specs := []*codegen.ImportSpec{
@@ -181,7 +182,6 @@ func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.Command
 		codegen.GoaNamedImport("http", "goahttp"),
 		{Path: genpkg + "/" + sd.Service.PathName, Name: sd.Service.PkgName},
 	}
-	specs = append(specs, sd.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", specs),
 	}
@@ -292,7 +292,7 @@ func streamFlag(svcn, en string) *cli.FlagData {
 // uses stream for sending payload/result.
 func streamingCmdExists(data []*commandData) bool {
 	for _, c := range data {
-		if c.NeedStream {
+		if c.NeedDialer {
 			return true
 		}
 	}

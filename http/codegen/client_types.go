@@ -8,10 +8,11 @@ import (
 )
 
 // ClientTypeFiles returns the HTTP transport client types files.
-func ClientTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+func ClientTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
+	root := services.Root
 	fw := make([]*codegen.File, len(root.API.HTTP.Services))
 	for i, svc := range root.API.HTTP.Services {
-		fw[i] = clientType(genpkg, svc, make(map[string]struct{}))
+		fw[i] = clientType(genpkg, svc, make(map[string]struct{}), services)
 	}
 	return fw
 }
@@ -40,10 +41,10 @@ func ClientTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 //
 //   - Response header variables hold pointers when not required and have no
 //     default value.
-func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct{}) *codegen.File {
+func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct{}, services *ServicesData) *codegen.File {
 	var (
 		path    string
-		data    = HTTPServices.Get(svc.Name())
+		data    = services.Get(svc.Name())
 		svcName = data.Service.PathName
 	)
 	path = filepath.Join(codegen.Gendir, "http", svcName, "client", "types.go")
@@ -54,7 +55,6 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		codegen.GoaImport(""),
 	}
-	imports = append(imports, data.Service.UserTypeImports...)
 	header := codegen.Header(svc.Name()+" HTTP client types", "client", imports)
 
 	var (

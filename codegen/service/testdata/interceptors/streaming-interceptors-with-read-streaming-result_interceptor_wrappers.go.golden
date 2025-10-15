@@ -68,6 +68,11 @@ func wrapClientMethodLogging(endpoint goa.Endpoint, i ClientInterceptors) goa.En
 	}
 }
 
+// Unwrap returns the underlying stream type.
+func (w *wrappedMethodServerStream) Unwrap() any {
+	return w.stream
+}
+
 // Send streams instances of "MethodServerStream" after executing the applied
 // interceptor.
 func (w *wrappedMethodServerStream) Send(v *MethodResult) error {

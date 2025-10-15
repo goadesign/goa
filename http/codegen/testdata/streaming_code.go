@@ -39,7 +39,7 @@ func NewStreamingResultMethodHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingResultService")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -58,12 +58,20 @@ func NewStreamingResultMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if v.Stream.(*StreamingResultMethodServerStream).conn != nil {
+			var stream *StreamingResultMethodServerStream
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
+				stream = wrapper.Unwrap().(*StreamingResultMethodServerStream)
+			} else {
+				stream = v.Stream.(*StreamingResultMethodServerStream)
+			}
+			if stream != nil && stream.conn != nil {
 				// Response writer has been hijacked, do not encode the error
-				errhandler(ctx, w, err)
+				if errhandler != nil {
+					errhandler(ctx, w, err)
+				}
 				return
 			}
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -208,12 +216,20 @@ func NewStreamingResultNoPayloadMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if v.Stream.(*StreamingResultNoPayloadMethodServerStream).conn != nil {
+			var stream *StreamingResultNoPayloadMethodServerStream
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
+				stream = wrapper.Unwrap().(*StreamingResultNoPayloadMethodServerStream)
+			} else {
+				stream = v.Stream.(*StreamingResultNoPayloadMethodServerStream)
+			}
+			if stream != nil && stream.conn != nil {
 				// Response writer has been hijacked, do not encode the error
-				errhandler(ctx, w, err)
+				if errhandler != nil {
+					errhandler(ctx, w, err)
+				}
 				return
 			}
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -1069,7 +1085,7 @@ func NewStreamingPayloadMethodHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "StreamingPayloadService")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -1088,12 +1104,20 @@ func NewStreamingPayloadMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if v.Stream.(*StreamingPayloadMethodServerStream).conn != nil {
+			var stream *StreamingPayloadMethodServerStream
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
+				stream = wrapper.Unwrap().(*StreamingPayloadMethodServerStream)
+			} else {
+				stream = v.Stream.(*StreamingPayloadMethodServerStream)
+			}
+			if stream != nil && stream.conn != nil {
 				// Response writer has been hijacked, do not encode the error
-				errhandler(ctx, w, err)
+				if errhandler != nil {
+					errhandler(ctx, w, err)
+				}
 				return
 			}
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -1275,12 +1299,20 @@ func NewStreamingPayloadNoPayloadMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if v.Stream.(*StreamingPayloadNoPayloadMethodServerStream).conn != nil {
+			var stream *StreamingPayloadNoPayloadMethodServerStream
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
+				stream = wrapper.Unwrap().(*StreamingPayloadNoPayloadMethodServerStream)
+			} else {
+				stream = v.Stream.(*StreamingPayloadNoPayloadMethodServerStream)
+			}
+			if stream != nil && stream.conn != nil {
 				// Response writer has been hijacked, do not encode the error
-				errhandler(ctx, w, err)
+				if errhandler != nil {
+					errhandler(ctx, w, err)
+				}
 				return
 			}
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -2533,7 +2565,7 @@ func NewBidirectionalStreamingMethodHandler(
 		ctx = context.WithValue(ctx, goa.ServiceKey, "BidirectionalStreamingService")
 		payload, err := decodeRequest(r)
 		if err != nil {
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -2552,12 +2584,20 @@ func NewBidirectionalStreamingMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if v.Stream.(*BidirectionalStreamingMethodServerStream).conn != nil {
+			var stream *BidirectionalStreamingMethodServerStream
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
+				stream = wrapper.Unwrap().(*BidirectionalStreamingMethodServerStream)
+			} else {
+				stream = v.Stream.(*BidirectionalStreamingMethodServerStream)
+			}
+			if stream != nil && stream.conn != nil {
 				// Response writer has been hijacked, do not encode the error
-				errhandler(ctx, w, err)
+				if errhandler != nil {
+					errhandler(ctx, w, err)
+				}
 				return
 			}
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return
@@ -2782,12 +2822,20 @@ func NewBidirectionalStreamingNoPayloadMethodHandler(
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
-			if v.Stream.(*BidirectionalStreamingNoPayloadMethodServerStream).conn != nil {
+			var stream *BidirectionalStreamingNoPayloadMethodServerStream
+			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
+				stream = wrapper.Unwrap().(*BidirectionalStreamingNoPayloadMethodServerStream)
+			} else {
+				stream = v.Stream.(*BidirectionalStreamingNoPayloadMethodServerStream)
+			}
+			if stream != nil && stream.conn != nil {
 				// Response writer has been hijacked, do not encode the error
-				errhandler(ctx, w, err)
+				if errhandler != nil {
+					errhandler(ctx, w, err)
+				}
 				return
 			}
-			if err := encodeError(ctx, w, err); err != nil {
+			if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 				errhandler(ctx, w, err)
 			}
 			return

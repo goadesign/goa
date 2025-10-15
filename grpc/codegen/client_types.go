@@ -8,31 +8,22 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// ClientTypeFiles returns the types file for every gRPC service that contain
-// constructors to transform:
-//
-//   - service payload types into protocol buffer request message types
-//   - protocol buffer response message types into service result types
-func ClientTypeFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
-	fw := make([]*codegen.File, len(root.API.GRPC.Services))
-	seen := make(map[string]struct{})
-	for i, r := range root.API.GRPC.Services {
-		fw[i] = clientType(genpkg, r, seen)
+// ClientTypeFiles returns the client types files containing all the client
+// interfaces and types needed to implement gRPC client.
+func ClientTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
+	fw := make([]*codegen.File, len(services.Root.API.GRPC.Services))
+	for i, svc := range services.Root.API.GRPC.Services {
+		fw[i] = clientType(genpkg, svc, services)
 	}
 	return fw
 }
 
-// clientType returns the file containing the constructor functions to
-// transform the service payload types to the corresponding gRPC request types
-// and gRPC response types to the corresponding service result types.
-//
-// seen keeps track of the constructor names that have already been generated
-// to prevent duplicate code generation.
-func clientType(genpkg string, svc *expr.GRPCServiceExpr, _ map[string]struct{}) *codegen.File {
+// clientType returns the file defining the gRPC client types.
+func clientType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
 	var (
 		initData []*InitData
 
-		sd = GRPCServices.Get(svc.Name())
+		sd = services.Get(svc.Name())
 	)
 	{
 		seen := make(map[string]struct{})
@@ -84,7 +75,6 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, _ map[string]struct{})
 			{Path: path.Join(genpkg, svcName, "views"), Name: sd.Service.ViewsPkg},
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 		}
-		imports = append(imports, sd.Service.UserTypeImports...)
 		imports = append(imports, sd.Service.ProtoImports...)
 		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client types", "client", imports)}
 		for _, init := range initData {
