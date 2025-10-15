@@ -2,6 +2,7 @@ package expr
 
 import (
 	"fmt"
+	"slices"
 
 	"goa.design/goa/v3/eval"
 )
@@ -151,14 +152,6 @@ func (e *GRPCEndpointExpr) Validate() error {
 		verr.Add(e, "Endpoint name cannot be empty")
 	}
 
-	// error if payload, result, and error type define attribute of Any type
-	// which is unsupported.
-	verr.Merge(e.hasAnyType(e.MethodExpr.Payload, "Payload"))
-	verr.Merge(e.hasAnyType(e.MethodExpr.Result, "Result"))
-	for _, er := range e.MethodExpr.Errors {
-		verr.Merge(e.hasAnyType(er.AttributeExpr, fmt.Sprintf("Error %q", er.Name)))
-	}
-
 	var hasMessage, hasMetadata bool
 	// Validate request
 	if e.Request.Type != Empty {
@@ -197,13 +190,7 @@ func (e *GRPCEndpointExpr) Validate() error {
 				// security attributes
 				var found bool
 				for _, nat := range *pobj {
-					found = false
-					for _, n := range secAttrs {
-						if n == nat.Name {
-							found = true
-							break
-						}
-					}
+					found = slices.Contains(secAttrs, nat.Name)
 					if !found {
 						msgFields.Set(nat.Name, nat.Attribute)
 					}
@@ -528,60 +515,4 @@ func getSecurityAttributes(m *MethodExpr) []string {
 	return secAttrs
 }
 
-// hasAnyType recurses through the given attribute and returns validation error
-// if any attribute is of Any type.
-func (e *GRPCEndpointExpr) hasAnyType(a *AttributeExpr, typ string, seen ...map[string]struct{}) *eval.ValidationErrors {
-	verr := new(eval.ValidationErrors)
-	if a.Type == Any {
-		verr.Add(e, "%s type is Any type which is not supported in gRPC", typ)
-	}
-	switch actual := a.Type.(type) {
-	case UserType:
-		var s map[string]struct{}
-		if len(seen) > 0 {
-			s = seen[0]
-		} else {
-			s = make(map[string]struct{})
-			seen = append(seen, s)
-		}
-		if _, ok := s[actual.ID()]; ok {
-			return verr
-		}
-		s[actual.ID()] = struct{}{}
-		verr.Merge(e.hasAnyType(actual.Attribute(), typ, seen...))
-	case *Array:
-		if IsPrimitive(actual.ElemType.Type) {
-			if actual.ElemType.Type == Any {
-				verr.Add(e, "Array element type is Any type which is not supported in gRPC")
-			}
-			return verr
-		}
-		verr.Merge(e.hasAnyType(actual.ElemType, typ, seen...))
-	case *Map:
-		if IsPrimitive(actual.KeyType.Type) {
-			if actual.KeyType.Type == Any {
-				verr.Add(e, "Map key type is Any type which is not supported in gRPC")
-			}
-		} else {
-			verr.Merge(e.hasAnyType(actual.KeyType, typ, seen...))
-		}
-		if IsPrimitive(actual.ElemType.Type) {
-			if actual.ElemType.Type == Any {
-				verr.Add(e, "Map element type is Any type which is not supported in gRPC")
-			}
-			return verr
-		}
-		verr.Merge(e.hasAnyType(actual.ElemType, typ, seen...))
-	case *Object:
-		for _, nat := range *actual {
-			if IsPrimitive(nat.Attribute.Type) {
-				if nat.Attribute.Type == Any {
-					verr.Add(e, "Attribute %q is Any type which is not supported in gRPC", nat.Name)
-				}
-				continue
-			}
-			verr.Merge(e.hasAnyType(nat.Attribute, typ, seen...))
-		}
-	}
-	return verr
-}
+

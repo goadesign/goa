@@ -1,0 +1,40 @@
+// BuildMethodMapQueryObjectPayload builds the payload for the
+// ServiceMapQueryObject MethodMapQueryObject endpoint from CLI flags.
+func BuildMethodMapQueryObjectPayload(serviceMapQueryObjectMethodMapQueryObjectBody string, serviceMapQueryObjectMethodMapQueryObjectA string, serviceMapQueryObjectMethodMapQueryObjectC string) (*servicemapqueryobject.PayloadType, error) {
+	var err error
+	var body MethodMapQueryObjectRequestBody
+	{
+		err = json.Unmarshal([]byte(serviceMapQueryObjectMethodMapQueryObjectBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"b\": \"patternb\"\n   }'")
+		}
+		if body.B != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("body.b", *body.B, "patternb"))
+		}
+		if err != nil {
+			return nil, err
+		}
+	}
+	var a string
+	{
+		a = serviceMapQueryObjectMethodMapQueryObjectA
+		err = goa.MergeErrors(err, goa.ValidatePattern("a", a, "patterna"))
+		if err != nil {
+			return nil, err
+		}
+	}
+	var c map[int][]string
+	{
+		err = json.Unmarshal([]byte(serviceMapQueryObjectMethodMapQueryObjectC), &c)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for c, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"1484745265794365762\": [\n         \"Similique aspernatur.\",\n         \"Error explicabo.\",\n         \"Minima cumque voluptatem et distinctio aliquam.\",\n         \"Blanditiis ut eaque.\"\n      ],\n      \"4925854623691091547\": [\n         \"Eos aut ipsam.\",\n         \"Aliquam tempora.\"\n      ],\n      \"7174751143827362498\": [\n         \"Facilis minus explicabo nemo eos vel repellat.\",\n         \"Voluptatum magni aperiam qui.\"\n      ]\n   }'")
+		}
+	}
+	v := &servicemapqueryobject.PayloadType{
+		B: body.B,
+	}
+	v.A = a
+	v.C = c
+
+	return v, nil
+}

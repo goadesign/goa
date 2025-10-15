@@ -1,0 +1,22 @@
+func Validate() (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("target.required_alias", string(target.RequiredAlias), "^[A-z].*[a-z]$"))
+	if utf8.RuneCountInString(string(target.RequiredAlias)) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_alias", string(target.RequiredAlias), utf8.RuneCountInString(string(target.RequiredAlias)), 1, true))
+	}
+	if utf8.RuneCountInString(string(target.RequiredAlias)) > 10 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_alias", string(target.RequiredAlias), utf8.RuneCountInString(string(target.RequiredAlias)), 10, false))
+	}
+	if target.Alias != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("target.alias", string(*target.Alias), "^[A-z].*[a-z]$"))
+	}
+	if target.Alias != nil {
+		if utf8.RuneCountInString(string(*target.Alias)) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("target.alias", string(*target.Alias), utf8.RuneCountInString(string(*target.Alias)), 1, true))
+		}
+	}
+	if target.Alias != nil {
+		if utf8.RuneCountInString(string(*target.Alias)) > 10 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("target.alias", string(*target.Alias), utf8.RuneCountInString(string(*target.Alias)), 10, false))
+		}
+	}
+}

@@ -32,12 +32,12 @@ func InterceptorsFiles(_ string, service *expr.ServiceExpr, services *ServicesDa
 // This method is called twice, once for the server and once for the client.
 func interceptorFile(svc *Data, server bool) *codegen.File {
 	filename := "client_interceptors.go"
-	template := "client_interceptors"
+	template := clientInterceptorsT
 	section := "client-interceptors-type"
 	desc := "Client Interceptors"
 	if server {
 		filename = "service_interceptors.go"
-		template = "server_interceptors"
+		template = serverInterceptorsT
 		section = "server-interceptors-type"
 		desc = "Server Interceptors"
 	}
@@ -73,14 +73,14 @@ func interceptorFile(svc *Data, server bool) *codegen.File {
 		}),
 		{
 			Name:   section,
-			Source: readTemplate(template),
+			Source: serviceTemplates.Read(template),
 			Data:   svc,
 		},
 	}
 	if len(interceptors) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "interceptor-types",
-			Source: readTemplate("interceptors_types"),
+			Source: serviceTemplates.Read(interceptorsTypesT),
 			Data:   interceptors,
 			FuncMap: map[string]any{
 				"hasPrivateImplementationTypes": hasPrivateImplementationTypes,
@@ -88,10 +88,10 @@ func interceptorFile(svc *Data, server bool) *codegen.File {
 		})
 	}
 
-	template = "endpoint_wrappers"
+	template = endpointWrappersT
 	section = "endpoint-wrapper"
 	if !server {
-		template = "client_wrappers"
+		template = clientWrappersT
 		section = "client-wrapper"
 	}
 	for _, m := range svc.Methods {
@@ -104,8 +104,8 @@ func interceptorFile(svc *Data, server bool) *codegen.File {
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   section,
-			Source: readTemplate(template),
-			Data: map[string]interface{}{
+			Source: serviceTemplates.Read(template),
+			Data: map[string]any{
 				"MethodVarName": m.VarName,
 				"Method":        m.Name,
 				"Service":       svc.Name,
@@ -117,7 +117,7 @@ func interceptorFile(svc *Data, server bool) *codegen.File {
 	if len(interceptors) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "interceptors",
-			Source: readTemplate("interceptors"),
+			Source: serviceTemplates.Read(interceptorsT),
 			Data:   interceptors,
 			FuncMap: map[string]any{
 				"hasPrivateImplementationTypes": hasPrivateImplementationTypes,
@@ -147,8 +147,8 @@ func wrapperFile(svc *Data) *codegen.File {
 		if len(wrappedServerStreams) > 0 {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "server-interceptor-stream-wrapper-types",
-				Source: readTemplate("server_interceptor_stream_wrapper_types"),
-				Data: map[string]interface{}{
+				Source: serviceTemplates.Read(serverInterceptorStreamWrapperTypesT),
+				Data: map[string]any{
 					"WrappedServerStreams": wrappedServerStreams,
 				},
 			})
@@ -159,8 +159,8 @@ func wrapperFile(svc *Data) *codegen.File {
 		if len(wrappedClientStreams) > 0 {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-interceptor-stream-wrapper-types",
-				Source: readTemplate("client_interceptor_stream_wrapper_types"),
-				Data: map[string]interface{}{
+				Source: serviceTemplates.Read(clientInterceptorStreamWrapperTypesT),
+				Data: map[string]any{
 					"WrappedClientStreams": wrappedClientStreams,
 				},
 			})
@@ -171,8 +171,8 @@ func wrapperFile(svc *Data) *codegen.File {
 	if len(svc.ServerInterceptors) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-interceptor-wrappers",
-			Source: readTemplate("server_interceptor_wrappers"),
-			Data: map[string]interface{}{
+			Source: serviceTemplates.Read(serverInterceptorWrappersT),
+			Data: map[string]any{
 				"Service":            svc.Name,
 				"ServerInterceptors": svc.ServerInterceptors,
 			},
@@ -181,8 +181,8 @@ func wrapperFile(svc *Data) *codegen.File {
 	if len(svc.ClientInterceptors) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-interceptor-wrappers",
-			Source: readTemplate("client_interceptor_wrappers"),
-			Data: map[string]interface{}{
+			Source: serviceTemplates.Read(clientInterceptorWrappersT),
+			Data: map[string]any{
 				"Service":            svc.Name,
 				"ClientInterceptors": svc.ClientInterceptors,
 			},
@@ -193,8 +193,8 @@ func wrapperFile(svc *Data) *codegen.File {
 	if len(wrappedServerStreams) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-interceptor-stream-wrappers",
-			Source: readTemplate("server_interceptor_stream_wrappers"),
-			Data: map[string]interface{}{
+			Source: serviceTemplates.Read(serverInterceptorStreamWrappersT),
+			Data: map[string]any{
 				"WrappedServerStreams": wrappedServerStreams,
 			},
 		})
@@ -202,8 +202,8 @@ func wrapperFile(svc *Data) *codegen.File {
 	if len(wrappedClientStreams) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-interceptor-stream-wrappers",
-			Source: readTemplate("client_interceptor_stream_wrappers"),
-			Data: map[string]interface{}{
+			Source: serviceTemplates.Read(clientInterceptorStreamWrappersT),
+			Data: map[string]any{
 				"WrappedClientStreams": wrappedClientStreams,
 			},
 		})

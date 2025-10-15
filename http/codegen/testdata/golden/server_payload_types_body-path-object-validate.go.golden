@@ -1,0 +1,11 @@
+// NewMethodBodyPathObjectValidatePayload builds a
+// ServiceBodyPathObjectValidate service MethodBodyPathObjectValidate endpoint
+// payload.
+func NewMethodBodyPathObjectValidatePayload(body *MethodBodyPathObjectValidateRequestBody, b string) *servicebodypathobjectvalidate.MethodBodyPathObjectValidatePayload {
+	v := &servicebodypathobjectvalidate.MethodBodyPathObjectValidatePayload{
+		A: *body.A,
+	}
+	v.B = b
+
+	return v
+}

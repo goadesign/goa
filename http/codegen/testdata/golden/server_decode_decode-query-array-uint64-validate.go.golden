@@ -1,0 +1,39 @@
+// DecodeMethodQueryArrayUInt64ValidateRequest returns a decoder for requests
+// sent to the ServiceQueryArrayUInt64Validate MethodQueryArrayUInt64Validate
+// endpoint.
+func DecodeMethodQueryArrayUInt64ValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryarrayuint64validate.MethodQueryArrayUInt64ValidatePayload, error) {
+	return func(r *http.Request) (*servicequeryarrayuint64validate.MethodQueryArrayUInt64ValidatePayload, error) {
+		var (
+			q   []uint64
+			err error
+		)
+		{
+			qRaw := r.URL.Query()["q"]
+			if qRaw == nil {
+				err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
+			}
+			q = make([]uint64, len(qRaw))
+			for i, rv := range qRaw {
+				v, err2 := strconv.ParseUint(rv, 10, 64)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of unsigned integers"))
+				}
+				q[i] = v
+			}
+		}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
+		}
+		for _, e := range q {
+			if e < 1 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("q[*]", e, 1, true))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryArrayUInt64ValidatePayload(q)
+
+		return payload, nil
+	}
+}

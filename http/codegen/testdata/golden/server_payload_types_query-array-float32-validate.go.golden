@@ -1,0 +1,9 @@
+// NewMethodQueryArrayFloat32ValidatePayload builds a
+// ServiceQueryArrayFloat32Validate service MethodQueryArrayFloat32Validate
+// endpoint payload.
+func NewMethodQueryArrayFloat32ValidatePayload(q []float32) *servicequeryarrayfloat32validate.MethodQueryArrayFloat32ValidatePayload {
+	v := &servicequeryarrayfloat32validate.MethodQueryArrayFloat32ValidatePayload{}
+	v.Q = q
+
+	return v
+}

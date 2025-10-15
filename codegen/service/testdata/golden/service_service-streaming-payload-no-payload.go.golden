@@ -1,0 +1,51 @@
+
+// Service is the StreamingPayloadNoPayloadService service interface.
+type Service interface {
+	// StreamingPayloadNoPayloadMethod implements StreamingPayloadNoPayloadMethod.
+	StreamingPayloadNoPayloadMethod(context.Context, StreamingPayloadNoPayloadMethodServerStream) (err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "StreamingPayloadNoPayloadService"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"StreamingPayloadNoPayloadMethod"}
+
+// StreamingPayloadNoPayloadMethodServerStream allows streaming instances of
+// string to the client.
+type StreamingPayloadNoPayloadMethodServerStream interface {
+	// SendAndClose streams instances of "string" and closes the stream.
+	SendAndClose(string) error
+	// SendAndCloseWithContext streams instances of "string" and closes the stream
+	// with context.
+	SendAndCloseWithContext(context.Context, string) error
+	// Recv reads instances of "any" from the stream.
+	Recv() (any, error)
+	// RecvWithContext reads instances of "any" from the stream with context.
+	RecvWithContext(context.Context) (any, error)
+}
+
+// StreamingPayloadNoPayloadMethodClientStream allows streaming instances of
+// any to the client.
+type StreamingPayloadNoPayloadMethodClientStream interface {
+	// Send streams instances of "any".
+	Send(any) error
+	// SendWithContext streams instances of "any" with context.
+	SendWithContext(context.Context, any) error
+	// CloseAndRecv stops sending messages to the stream and reads instances of
+	// "string" from the stream.
+	CloseAndRecv() (string, error)
+	// CloseAndRecvWithContext stops sending messages to the stream and reads
+	// instances of "string" from the stream with context.
+	CloseAndRecvWithContext(context.Context) (string, error)
+}

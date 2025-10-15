@@ -1,0 +1,18 @@
+// DecodeMethodQueryBytesRequest returns a decoder for requests sent to the
+// ServiceQueryBytes MethodQueryBytes endpoint.
+func DecodeMethodQueryBytesRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerybytes.MethodQueryBytesPayload, error) {
+	return func(r *http.Request) (*servicequerybytes.MethodQueryBytesPayload, error) {
+		var (
+			q []byte
+		)
+		{
+			qRaw := r.URL.Query().Get("q")
+			if qRaw != "" {
+				q = []byte(qRaw)
+			}
+		}
+		payload := NewMethodQueryBytesPayload(q)
+
+		return payload, nil
+	}
+}

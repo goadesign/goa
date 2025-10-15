@@ -1,0 +1,16 @@
+// EncodeMethodTagStringRequiredResponse returns an encoder for responses
+// returned by the ServiceTagStringRequired MethodTagStringRequired endpoint.
+func EncodeMethodTagStringRequiredResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*servicetagstringrequired.MethodTagStringRequiredResult)
+		if res.H == "value" {
+			w.Header().Set("H", res.H)
+			w.WriteHeader(http.StatusAccepted)
+			return nil
+		}
+		enc := encoder(ctx, w)
+		body := NewMethodTagStringRequiredOKResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}

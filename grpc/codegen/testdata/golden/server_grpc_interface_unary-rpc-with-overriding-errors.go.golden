@@ -1,0 +1,22 @@
+// MethodUnaryRPCWithOverridingErrors implements the
+// "MethodUnaryRPCWithOverridingErrors" method in
+// service_unary_rpc_with_overriding_errorspb.ServiceUnaryRPCWithOverridingErrorsServer
+// interface.
+func (s *Server) MethodUnaryRPCWithOverridingErrors(ctx context.Context, message *service_unary_rpc_with_overriding_errorspb.MethodUnaryRPCWithOverridingErrorsRequest) (*service_unary_rpc_with_overriding_errorspb.MethodUnaryRPCWithOverridingErrorsResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "MethodUnaryRPCWithOverridingErrors")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceUnaryRPCWithOverridingErrors")
+	resp, err := s.MethodUnaryRPCWithOverridingErrorsH.Handle(ctx, message)
+	if err != nil {
+		var en goa.GoaErrorNamer
+		if errors.As(err, &en) {
+			switch en.GoaErrorName() {
+			case "overridden":
+				return nil, goagrpc.NewStatusError(codes.Unknown, err, goagrpc.NewErrorResponse(err))
+			case "internal":
+				return nil, goagrpc.NewStatusError(codes.Unknown, err, goagrpc.NewErrorResponse(err))
+			}
+		}
+		return nil, goagrpc.EncodeError(err)
+	}
+	return resp.(*service_unary_rpc_with_overriding_errorspb.MethodUnaryRPCWithOverridingErrorsResponse), nil
+}

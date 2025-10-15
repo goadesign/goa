@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"text/template"
@@ -17,7 +18,7 @@ var (
 	initTypeCodeTmpl = template.Must(
 		template.New("initTypeCode").
 			Funcs(template.FuncMap{"goify": codegen.Goify}).
-			Parse(readTemplate("return_type_init")),
+			Parse(serviceTemplates.Read(returnTypeInitT)),
 	)
 
 	// validateTypeCodeTmpl is the template used to render the code to
@@ -25,7 +26,7 @@ var (
 	validateTypeCodeTmpl = template.Must(
 		template.New("validateType").
 			Funcs(template.FuncMap{"goify": codegen.Goify}).
-			Parse(readTemplate("type_validate")),
+			Parse(serviceTemplates.Read(typeValidateT)),
 	)
 )
 
@@ -76,6 +77,9 @@ type (
 		// ProtoImports lists the import specifications for the custom
 		// proto types used by the service.
 		ProtoImports []*codegen.ImportSpec
+		// UserTypeImports lists the import specifications for the user types
+		// used by the service.
+		UserTypeImports []*codegen.ImportSpec
 
 		// userTypes lists the type definitions that the service depends on.
 		userTypes []*UserTypeData
@@ -128,6 +132,16 @@ type (
 		StreamingPayloadDesc string
 		// StreamingPayloadEx is an example of a valid streaming payload value.
 		StreamingPayloadEx any
+		// StreamingResult is the name of the streaming result type if any (when different from Result).
+		StreamingResult string
+		// StreamingResultDef is the streaming result type definition if any.
+		StreamingResultDef string
+		// StreamingResultRef is the reference to the streaming result type if any.
+		StreamingResultRef string
+		// StreamingResultDesc is the streaming result type description if any.
+		StreamingResultDesc string
+		// StreamingResultEx is an example of a valid streaming result value.
+		StreamingResultEx any
 		// Result is the name of the result type if any.
 		Result string
 		// ResultLoc defines the file and Go package of the result type
@@ -146,6 +160,12 @@ type (
 		// ErrorLocs lists the file and Go package of the error type
 		// if overridden via Meta indexed by error name.
 		ErrorLocs map[string]*codegen.Location
+		// IsJSONRPC indicates if the endpoint is a JSON-RPC endpoint.
+		IsJSONRPC bool
+		// IsJSONRPCSSE indicates if the JSON-RPC endpoint uses SSE transport.
+		IsJSONRPCSSE bool
+		// IsJSONRPCWebSocket indicates if the JSON-RPC endpoint uses WebSocket transport.
+		IsJSONRPCWebSocket bool
 		// Requirements contains the security requirements for the
 		// method.
 		Requirements RequirementsData
@@ -184,6 +204,10 @@ type (
 		// result and response body reader when SkipResponseBodyEncodeDecode is
 		// used.
 		ResponseStruct string
+		// EndpointField is the unique field name used in the generated client
+		// struct to store the goa.Endpoint for this method. It is computed with a
+		// scope that includes method names to avoid field/method name collisions.
+		EndpointField string
 	}
 
 	// StreamData is the data used to generate client and server interfaces that
@@ -207,6 +231,14 @@ type (
 		SendTypeName string
 		// SendTypeRef is the reference to the type sent through the stream.
 		SendTypeRef string
+		// SendAndCloseName is the name of the send and close function (SSE only).
+		SendAndCloseName string
+		// SendAndCloseDesc is the description for the send and close function.
+		SendAndCloseDesc string
+		// SendAndCloseWithContextName is the name of the send and close function with context.
+		SendAndCloseWithContextName string
+		// SendAndCloseWithContextDesc is the description for the send and close function with context.
+		SendAndCloseWithContextDesc string
 		// RecvName is the name of the receive function.
 		RecvName string
 		// RecvDesc is the description for the recv function.
@@ -398,6 +430,10 @@ type (
 		// Loc defines the file and Go package of the method if
 		// overridden in corresponding union type via Meta.
 		Loc *codegen.Location
+		// UnderlyingRef is the reference to the underlying concrete type for which
+		// a wrapper must be generated in the service package when the method is not
+		// emitted in the underlying type package.
+		UnderlyingRef string
 	}
 
 	// SchemeData describes a single security scheme.
@@ -674,7 +710,8 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		viewedRTs        []*ViewedResultTypeData
 	)
 	scope := codegen.NewNameScope()
-	scope.Unique("Use") // Reserve "Use" for Endpoints struct Use method.
+	scope.Unique("Use")       // Reserve "Use" for Endpoints struct Use method.
+	scope.Unique("websocket") // Reserve "websocket" to avoid collision with gorilla/websocket
 	viewScope := codegen.NewNameScope()
 	pkgName := scope.HashedUnique(service, strings.ToLower(codegen.Goify(service.Name, false)), "svc")
 	viewspkg := pkgName + "views"
@@ -700,6 +737,9 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 
 	// A function to collect inner user types from an attribute expression
 	collectUserTypes := func(att *expr.AttributeExpr) {
+		if att == nil {
+			return
+		}
 		if ut, ok := att.Type.(expr.UserType); ok {
 			att = ut.Attribute()
 		}
@@ -710,6 +750,10 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		collectUserTypes(m.Payload)
 		collectUserTypes(m.StreamingPayload)
 		collectUserTypes(m.Result)
+		// Collect streaming result types if different from Result
+		if m.HasMixedResults() {
+			collectUserTypes(m.StreamingResult)
+		}
 		// Collect projected types
 		if hasResultType(m.Result) {
 			types, umeths := collectProjectedTypes(expr.DupAtt(m.Result), m.Result, viewspkg, scope, viewScope, seenProj)
@@ -723,6 +767,9 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 
 	// A function to convert raw object type to user type.
 	wrapObject := func(att *expr.AttributeExpr, name, id string) {
+		if att == nil {
+			return
+		}
 		if _, ok := att.Type.(*expr.Object); ok {
 			att.Type = &expr.UserTypeExpr{
 				AttributeExpr: expr.DupAtt(att),
@@ -743,6 +790,10 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		wrapObject(m.StreamingPayload, name+"StreamingPayload", service.Name+"#"+name+"StreamingPayload")
 		// Create user type for raw object results
 		wrapObject(m.Result, name+"Result", service.Name+"#"+name+"Result")
+		// Create user type for raw object streaming results (if different from Result)
+		if m.HasMixedResults() {
+			wrapObject(m.StreamingResult, name+"StreamingResult", service.Name+"#"+name+"StreamingResult")
+		}
 	}
 
 	// Add forced types
@@ -754,11 +805,8 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		att := &expr.AttributeExpr{Type: t}
 		if len(svcs) > 0 {
 			// Force generate type only in the specified services
-			for _, svc := range svcs {
-				if svc == service.Name {
-					types = append(types, collectTypes(att, scope, seen)...)
-					break
-				}
+			if slices.Contains(svcs, service.Name) {
+				types = append(types, collectTypes(att, scope, seen)...)
 			}
 			continue
 		}
@@ -806,7 +854,14 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		seenViewed[vrt.Name+"::"+view] = vrt
 	}
 
-	var unionMethods []*UnionValueMethodData
+	// Compute unique EndpointField names using the service-level scope, after
+	// method names are set. This records field identifiers without changing
+	// existing method names.
+	for _, m := range methods {
+		m.EndpointField = scope.Unique(m.VarName+"Endpoint", "")
+	}
+
+	unionMethods := make([]*UnionValueMethodData, 0, len(types)+len(errTypes))
 	var ms []*UnionValueMethodData
 	seen = make(map[string]struct{})
 	for _, t := range types {
@@ -816,9 +871,15 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		ms = append(ms, collectUnionMethods(&expr.AttributeExpr{Type: t.Type}, scope, t.Loc, seen)...)
 	}
 	for _, m := range service.Methods {
-		ms = append(ms, collectUnionMethods(m.Payload, scope, codegen.UserTypeLocation(m.Payload.Type), seen)...)
-		ms = append(ms, collectUnionMethods(m.StreamingPayload, scope, codegen.UserTypeLocation(m.StreamingPayload.Type), seen)...)
-		ms = append(ms, collectUnionMethods(m.Result, scope, codegen.UserTypeLocation(m.Result.Type), seen)...)
+		if m.Payload != nil {
+			ms = append(ms, collectUnionMethods(m.Payload, scope, codegen.UserTypeLocation(m.Payload.Type), seen)...)
+		}
+		if m.StreamingPayload != nil {
+			ms = append(ms, collectUnionMethods(m.StreamingPayload, scope, codegen.UserTypeLocation(m.StreamingPayload.Type), seen)...)
+		}
+		if m.Result != nil {
+			ms = append(ms, collectUnionMethods(m.Result, scope, codegen.UserTypeLocation(m.Result.Type), seen)...)
+		}
 		for _, e := range m.Errors {
 			ms = append(ms, collectUnionMethods(e.AttributeExpr, scope, codegen.UserTypeLocation(e.Type), seen)...)
 		}
@@ -909,8 +970,8 @@ func (d *ServicesData) collectInterceptors(svc *expr.ServiceExpr, methods []*Met
 
 // typeContext returns a contextual attribute for service types. Service types
 // are Go types and uses non-pointers to hold attributes having default values.
-func typeContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
-	return codegen.NewAttributeContext(false, false, true, pkg, scope)
+func typeContext(scope *codegen.NameScope) *codegen.AttributeContext {
+	return codegen.NewAttributeContext(false, false, true, "", scope)
 }
 
 // projectedTypeContext returns a contextual attribute for a projected type.
@@ -924,7 +985,7 @@ func projectedTypeContext(pkg string, ptr bool, scope *codegen.NameScope) *codeg
 // records them in userTypes.
 func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[string]struct{}) (data []*UserTypeData) {
 	if at == nil || at.Type == expr.Empty {
-		return
+		return data
 	}
 	collect := func(at *expr.AttributeExpr) []*UserTypeData { return collectTypes(at, scope, seen) }
 	switch dt := at.Type.(type) {
@@ -957,13 +1018,13 @@ func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[str
 			data = append(data, collect(nat.Attribute)...)
 		}
 	}
-	return
+	return data
 }
 
 // collectUnionMethods traverses the attribute to gather all union value methods.
 func collectUnionMethods(att *expr.AttributeExpr, scope *codegen.NameScope, loc *codegen.Location, seen map[string]struct{}) (data []*UnionValueMethodData) {
 	if att == nil || att.Type == expr.Empty {
-		return
+		return data
 	}
 	collect := func(at *expr.AttributeExpr, loc *codegen.Location) []*UnionValueMethodData {
 		return collectUnionMethods(at, scope, loc, seen)
@@ -985,18 +1046,58 @@ func collectUnionMethods(att *expr.AttributeExpr, scope *codegen.NameScope, loc 
 		data = append(data, collect(dt.KeyType, loc)...)
 		data = append(data, collect(dt.ElemType, loc)...)
 	case *expr.Union:
+		// Detect duplicate underlying user types across union values.
+		utCounts := make(map[string]int)
+		for _, v := range dt.Values {
+			if ut, ok := v.Attribute.Type.(expr.UserType); ok {
+				utCounts[ut.ID()]++
+			}
+		}
 		for _, nat := range dt.Values {
+			mloc := loc
+			var (
+				underlyingRef string
+				wrapperName   string
+				typeRef       string
+			)
+			if ut, ok := nat.Attribute.Type.(expr.UserType); ok {
+				uloc := codegen.UserTypeLocation(ut)
+				// Need wrapper if member type is in a different package than the union,
+				// or if the same underlying user type appears in multiple branches.
+				if uloc != nil && (uloc.PackageName() != loc.PackageName() || utCounts[ut.ID()] > 1) {
+					// If wrapper is emitted in the same package as the underlying type,
+					// use unqualified name to avoid self-import cycles.
+					if uloc.PackageName() == mloc.PackageName() {
+						underlyingRef = scope.GoTypeName(nat.Attribute)
+					} else {
+						underlyingRef = scope.GoFullTypeName(nat.Attribute, uloc.PackageName())
+					}
+					wrapperName = scope.Unique(codegen.Goify(dt.Name(), true)+codegen.Goify(nat.Name, true), "")
+					typeRef = wrapperName // wrappers use value receivers
+				} else {
+					// Same package and unique: attach marker directly to the member type.
+					mloc = uloc
+					wrapperName = scope.GoTypeName(nat.Attribute)
+					typeRef = scope.GoTypeRef(nat.Attribute) // preserve pointer/value semantics
+				}
+			} else {
+				// Non-user types always get per-branch wrappers for uniqueness.
+				underlyingRef = scope.GoTypeName(nat.Attribute)
+				wrapperName = scope.Unique(codegen.Goify(dt.Name(), true)+codegen.Goify(nat.Name, true), "")
+				typeRef = wrapperName // wrappers use value receivers
+			}
 			data = append(data, &UnionValueMethodData{
-				Name:    codegen.UnionValTypeName(dt.Name()),
-				TypeRef: scope.GoTypeRef(nat.Attribute),
-				Loc:     loc,
+				Name:          codegen.UnionValTypeName(dt.Name()),
+				TypeRef:       typeRef,
+				Loc:           mloc,
+				UnderlyingRef: underlyingRef,
 			})
 		}
 		for _, nat := range dt.Values {
 			data = append(data, collect(nat.Attribute, loc)...)
 		}
 	}
-	return
+	return data
 }
 
 // buildErrorInitData creates the data needed to generate code around endpoint error return values.
@@ -1040,7 +1141,8 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		resultEx    any
 		errors      []*ErrorInitData
 		errorLocs   map[string]*codegen.Location
-		reqs        RequirementsData
+		isJSONRPC   bool
+		reqs        = make(RequirementsData, 0, len(m.Requirements))
 		schemes     SchemesData
 	)
 	vname = scope.Unique(codegen.Goify(m.Name, true), "Endpoint")
@@ -1084,6 +1186,27 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 			errorLocs[er.Name] = codegen.UserTypeLocation(er.Type)
 		}
 	}
+
+	_, isJSONRPC = m.Meta["jsonrpc"]
+
+	// Check if this JSON-RPC method uses SSE or WebSocket
+	var isJSONRPCSSE bool
+	var isJSONRPCWebSocket bool
+	if isJSONRPC && m.IsStreaming() {
+		if httpJSONRPCSvc := d.Root.API.JSONRPC.HTTPExpr.Service(m.Service.Name); httpJSONRPCSvc != nil {
+			for _, e := range httpJSONRPCSvc.HTTPEndpoints {
+				if e.MethodExpr.Name == m.Name {
+					if e.SSE != nil {
+						isJSONRPCSSE = true
+					} else {
+						isJSONRPCWebSocket = true
+					}
+					break
+				}
+			}
+		}
+	}
+
 	for _, req := range m.Requirements {
 		var rs SchemesData
 		for _, s := range req.Schemes {
@@ -1093,10 +1216,25 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		}
 		reqs = append(reqs, &RequirementData{Schemes: rs, Scopes: req.Scopes})
 	}
-	var httpMet *expr.HTTPEndpointExpr
-	if httpSvc := d.Root.HTTPService(m.Service.Name); httpSvc != nil {
-		httpMet = httpSvc.Endpoint(m.Name)
+
+	// Unfortunately we can't completely isolate the service codegen from
+	// the underlying transport when wanting to skip Goa's built-in decoding.
+	skipRequestBodyEncodeDecode := false
+	skipResponseBodyEncodeDecode := false
+	var httpSvc *expr.HTTPServiceExpr
+	for _, svc := range d.Root.API.HTTP.Services {
+		if svc.Name() == m.Service.Name {
+			httpSvc = svc
+			break
+		}
 	}
+	if httpSvc != nil {
+		if httpMet := httpSvc.Endpoint(m.Name); httpMet != nil {
+			skipRequestBodyEncodeDecode = httpMet.SkipRequestBodyEncodeDecode
+			skipResponseBodyEncodeDecode = httpMet.SkipResponseBodyEncodeDecode
+		}
+	}
+
 	data := &MethodData{
 		Name:                         m.Name,
 		VarName:                      vname,
@@ -1116,21 +1254,25 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		ResultEx:                     resultEx,
 		Errors:                       errors,
 		ErrorLocs:                    errorLocs,
+		IsJSONRPC:                    isJSONRPC,
+		IsJSONRPCSSE:                 isJSONRPCSSE,
+		IsJSONRPCWebSocket:           isJSONRPCWebSocket,
 		Requirements:                 reqs,
 		Schemes:                      schemes,
 		StreamKind:                   m.Stream,
-		SkipRequestBodyEncodeDecode:  httpMet != nil && httpMet.SkipRequestBodyEncodeDecode,
-		SkipResponseBodyEncodeDecode: httpMet != nil && httpMet.SkipResponseBodyEncodeDecode,
+		SkipRequestBodyEncodeDecode:  skipRequestBodyEncodeDecode,
+		SkipResponseBodyEncodeDecode: skipResponseBodyEncodeDecode,
 		RequestStruct:                vname + "RequestData",
 		ResponseStruct:               vname + "ResponseData",
 	}
+
 	d.initStreamData(data, m, vname, rname, resultRef, scope)
 	return data
 }
 
 // initStreamData initializes the streaming payload data structures and methods.
 func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vname, rname, resultRef string, scope *codegen.NameScope) {
-	if !m.IsStreaming() {
+	if !m.IsStreaming() && !m.HasMixedResults() {
 		return
 	}
 	var (
@@ -1139,8 +1281,28 @@ func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vnam
 		spayloadDef  string
 		spayloadDesc string
 		spayloadEx   any
+		srname       = rname     // streaming result name
+		srref        = resultRef // streaming result ref
 	)
-	if m.StreamingPayload.Type != expr.Empty {
+
+	// If StreamingResult is different from Result, use it for streaming
+	if m.HasMixedResults() && m.StreamingResult != nil && m.StreamingResult.Type != expr.Empty {
+		srname = scope.GoTypeName(m.StreamingResult)
+		srref = scope.GoTypeRef(m.StreamingResult)
+		data.StreamingResult = srname
+		data.StreamingResultRef = srref
+		if dt, ok := m.StreamingResult.Type.(expr.UserType); ok {
+			data.StreamingResultDef = scope.GoTypeDef(dt.Attribute(), false, true)
+		}
+		data.StreamingResultDesc = m.StreamingResult.Description
+		if data.StreamingResultDesc == "" {
+			data.StreamingResultDesc = fmt.Sprintf("%s is the streaming result type of the %s service %s method.",
+				srname, m.Service.Name, m.Name)
+		}
+		data.StreamingResultEx = m.StreamingResult.Example(d.Root.API.ExampleGenerator)
+	}
+
+	if m.StreamingPayload != nil && m.StreamingPayload.Type != expr.Empty {
 		spayloadName = scope.GoTypeName(m.StreamingPayload)
 		spayloadRef = scope.GoTypeRef(m.StreamingPayload)
 		if dt, ok := m.StreamingPayload.Type.(expr.UserType); ok {
@@ -1153,43 +1315,66 @@ func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vnam
 		}
 		spayloadEx = m.StreamingPayload.Example(d.Root.API.ExampleGenerator)
 	}
+	// For JSON-RPC WebSocket:
+	// - Client streaming (no result streaming): no endpoint struct needed, just payload
+	// - Bidirectional streaming: endpoint struct needed for both payload and stream
+	endpointStruct := vname + "EndpointInput"
+	if data.IsJSONRPC && m.IsStreaming() && !data.IsJSONRPCSSE && m.Stream == expr.ClientStreamKind {
+		endpointStruct = ""
+	}
+	// For mixed results with SSE, treat as server streaming
+	streamKind := m.Stream
+	if m.HasMixedResults() && !m.IsStreaming() {
+		// Mixed results with SSE should be treated as server streaming
+		streamKind = expr.ServerStreamKind
+	}
 	svrStream := &StreamData{
 		Interface:           vname + "ServerStream",
 		VarName:             scope.Unique(codegen.Goify(m.Name, true), "ServerStream"),
-		EndpointStruct:      vname + "EndpointInput",
-		Kind:                m.Stream,
+		EndpointStruct:      endpointStruct,
+		Kind:                streamKind,
 		SendName:            "Send",
-		SendDesc:            fmt.Sprintf("Send streams instances of %q.", rname),
+		SendDesc:            fmt.Sprintf("Send streams instances of %q.", srname),
 		SendWithContextName: "SendWithContext",
-		SendWithContextDesc: fmt.Sprintf("SendWithContext streams instances of %q with context.", rname),
-		SendTypeName:        rname,
-		SendTypeRef:         resultRef,
+		SendWithContextDesc: fmt.Sprintf("SendWithContext streams instances of %q with context.", srname),
+		SendTypeName:        srname,
+		SendTypeRef:         srref,
 		MustClose:           true,
 	}
 	cliStream := &StreamData{
 		Interface:           vname + "ClientStream",
 		VarName:             scope.Unique(codegen.Goify(m.Name, true), "ClientStream"),
-		Kind:                m.Stream,
+		Kind:                streamKind,
 		RecvName:            "Recv",
-		RecvDesc:            fmt.Sprintf("Recv reads instances of %q from the stream.", rname),
+		RecvDesc:            fmt.Sprintf("Recv reads instances of %q from the stream.", srname),
 		RecvWithContextName: "RecvWithContext",
-		RecvWithContextDesc: fmt.Sprintf("RecvWithContext reads instances of %q from the stream with context.", rname),
-		RecvTypeName:        rname,
-		RecvTypeRef:         resultRef,
+		RecvWithContextDesc: fmt.Sprintf("RecvWithContext reads instances of %q from the stream with context.", srname),
+		RecvTypeName:        srname,
+		RecvTypeRef:         srref,
 	}
-	if m.Stream == expr.ClientStreamKind || m.Stream == expr.BidirectionalStreamKind {
-		switch m.Stream {
+	// For SSE server streaming, we need both Send (for notifications) and SendAndClose (for final response)
+	if data.IsJSONRPCSSE && m.Stream == expr.ServerStreamKind && resultRef != "" {
+		svrStream.SendAndCloseName = "SendAndClose"
+		svrStream.SendAndCloseDesc = fmt.Sprintf("SendAndClose sends a final response with %q and closes the stream.", srname)
+		// For JSON-RPC SSE, methods take context directly; align names accordingly
+		svrStream.SendWithContextName = "Send"
+		svrStream.RecvWithContextName = "Recv"
+		// Update Send description to clarify it's for notifications only
+		svrStream.SendDesc = fmt.Sprintf("Send streams JSON-RPC notifications with %q. Notifications do not expect a response.", srname)
+	}
+	if streamKind == expr.ClientStreamKind || streamKind == expr.BidirectionalStreamKind {
+		switch streamKind {
 		case expr.ClientStreamKind:
-			if resultRef != "" {
+			if srref != "" {
 				svrStream.SendName = "SendAndClose"
-				svrStream.SendDesc = fmt.Sprintf("SendAndClose streams instances of %q and closes the stream.", rname)
+				svrStream.SendDesc = fmt.Sprintf("SendAndClose streams instances of %q and closes the stream.", srname)
 				svrStream.SendWithContextName = "SendAndCloseWithContext"
-				svrStream.SendWithContextDesc = fmt.Sprintf("SendAndCloseWithContext streams instances of %q and closes the stream with context.", rname)
+				svrStream.SendWithContextDesc = fmt.Sprintf("SendAndCloseWithContext streams instances of %q and closes the stream with context.", srname)
 				svrStream.MustClose = false
 				cliStream.RecvName = "CloseAndRecv"
-				cliStream.RecvDesc = fmt.Sprintf("CloseAndRecv stops sending messages to the stream and reads instances of %q from the stream.", rname)
+				cliStream.RecvDesc = fmt.Sprintf("CloseAndRecv stops sending messages to the stream and reads instances of %q from the stream.", srname)
 				cliStream.RecvWithContextName = "CloseAndRecvWithContext"
-				cliStream.RecvWithContextDesc = fmt.Sprintf("CloseAndRecvWithContext stops sending messages to the stream and reads instances of %q from the stream with context.", rname)
+				cliStream.RecvWithContextDesc = fmt.Sprintf("CloseAndRecvWithContext stops sending messages to the stream and reads instances of %q from the stream with context.", srname)
 			} else {
 				cliStream.MustClose = true
 			}
@@ -1494,7 +1679,7 @@ func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, 
 			if pd != nil {
 				projected.Type = pd.Type
 			}
-			return
+			return data, umeths
 		}
 		seen[dt.ID()] = nil
 		pt.Rename(pt.Name() + "View")
@@ -1540,7 +1725,7 @@ func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, 
 			})
 		}
 	}
-	return
+	return data, umeths
 }
 
 // hasResultType returns true if the given attribute has a result type recursively.
@@ -1820,7 +2005,7 @@ func buildTypeInits(projected, att *expr.AttributeExpr, viewspkg string, scope, 
 		}
 
 		srcCtx := projectedTypeContext(viewspkg, true, viewScope)
-		tgtCtx := typeContext("", scope)
+		tgtCtx := typeContext(scope)
 		resvar := scope.GoTypeName(att)
 		name := "new" + resvar
 		if view.Name != expr.DefaultView {
@@ -1883,7 +2068,7 @@ func buildProjections(projected, att *expr.AttributeExpr, viewspkg string, scope
 			},
 		}
 
-		srcCtx := typeContext("", scope)
+		srcCtx := typeContext(scope)
 		tgtCtx := projectedTypeContext(viewspkg, true, viewScope)
 		tname := scope.GoTypeName(projected)
 		name := "new" + tname

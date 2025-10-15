@@ -3,25 +3,20 @@ package openapiv3_test
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"text/template"
 
 	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/stretchr/testify/assert"
 
+	"goa.design/goa/v3/codegen/testutil"
 	httpgen "goa.design/goa/v3/http/codegen"
 	"goa.design/goa/v3/http/codegen/openapi"
 	openapiv3 "goa.design/goa/v3/http/codegen/openapi/v3"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
-
-var update = flag.Bool("update", false, "update .golden files")
 
 func TestFiles(t *testing.T) {
 	var (
@@ -34,6 +29,7 @@ func TestFiles(t *testing.T) {
 		// TestSections
 		{"file-service", testdata.FileServiceDSL},
 		{"file-service-swagger", testdata.FileServiceSwaggerDSL},
+		{"file-service-wildcard", testdata.FileServiceWildcardDSL},
 		{"valid", testdata.SimpleDSL},
 		{"multiple-services", testdata.MultipleServicesDSL},
 		{"multiple-views", testdata.MultipleViewsDSL},
@@ -97,44 +93,15 @@ func TestFiles(t *testing.T) {
 					validateSwagger(t, buf.Bytes())
 
 					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", strings.TrimSuffix(c.Name, "-swagger"), tname))
-					if *update {
-						if err := os.WriteFile(golden, buf.Bytes(), 0644); err != nil {
-							t.Fatalf("failed to update golden file: %s", err)
-						}
-					}
-
-					want, err := os.ReadFile(golden)
-					want = bytes.ReplaceAll(want, []byte{'\r', '\n'}, []byte{'\n'})
-					if err != nil {
-						t.Fatalf("failed to read golden file: %s", err)
-					}
-					if !bytes.Equal(buf.Bytes(), want) {
-						var left, right string
-						if filepath.Ext(o.Path) == ".json" {
-							left = prettifyJSON(t, buf.Bytes())
-							right = prettifyJSON(t, want)
-						} else {
-							left = buf.String()
-							right = string(want)
-						}
-						assert.Equal(t, right, left)
+					if filepath.Ext(o.Path) == ".json" {
+						testutil.AssertJSON(t, golden, buf.Bytes())
+					} else {
+						testutil.AssertString(t, golden, buf.String())
 					}
 				})
 			}
 		})
 	}
-}
-
-func prettifyJSON(t *testing.T, b []byte) string {
-	var v any
-	if err := json.Unmarshal(b, &v); err != nil {
-		t.Errorf("failed to unmarshal swagger JSON: %s", err)
-	}
-	p, err := json.MarshalIndent(v, "", "    ")
-	if err != nil {
-		t.Errorf("failed to marshal swagger JSON: %s", err)
-	}
-	return string(p)
 }
 
 func validateSwagger(t *testing.T, b []byte) {

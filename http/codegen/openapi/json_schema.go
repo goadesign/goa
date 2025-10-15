@@ -187,13 +187,14 @@ func GenerateServiceDefinition(api *expr.APIExpr, res *expr.HTTPServiceExpr) {
 				} else {
 					identifier = ""
 				}
-				if targetSchema == nil {
+				switch {
+				case targetSchema == nil:
 					targetSchema = TypeSchemaWithPrefix(api, mt, a.Name())
-				} else if targetSchema.AnyOf == nil {
+				case targetSchema.AnyOf == nil:
 					firstSchema := targetSchema
 					targetSchema = NewSchema()
 					targetSchema.AnyOf = []*Schema{firstSchema, TypeSchemaWithPrefix(api, mt, a.Name())}
-				} else {
+				default:
 					targetSchema.AnyOf = append(targetSchema.AnyOf, TypeSchemaWithPrefix(api, mt, a.Name()))
 				}
 			}

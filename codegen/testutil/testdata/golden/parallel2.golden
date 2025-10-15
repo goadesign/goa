@@ -1,0 +1,6 @@
+// Parallel 2
+package simple
+
+func Hello() string {
+	return "Hello, World!"
+}

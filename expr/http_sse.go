@@ -43,26 +43,26 @@ func (e *HTTPSSEExpr) EvalName() string {
 }
 
 // Validate validates the Server-Sent Events expression against a specific result type.
-func (e *HTTPSSEExpr) Validate(endpoint *HTTPEndpointExpr) error {
-	if endpoint == nil || endpoint.MethodExpr == nil || endpoint.MethodExpr.Result == nil {
+func (e *HTTPSSEExpr) Validate(method *MethodExpr) error {
+	if method == nil || method.Result == nil {
 		return nil
 	}
 
 	verr := new(eval.ValidationErrors)
-	if err := validateSSEField(endpoint.MethodExpr.Payload, e.RequestIDField, "request ID", []DataType{String}); err != nil {
-		verr.Add(endpoint, err.Error())
+	if err := validateSSEField(method.Payload, e.RequestIDField, "request ID", []DataType{String}); err != nil {
+		verr.Add(method, "%s", err.Error())
 	}
-	if err := validateSSEField(endpoint.MethodExpr.Result, e.DataField, "event data", nil); err != nil {
-		verr.Add(endpoint, err.Error())
+	if err := validateSSEField(method.Result, e.DataField, "event data", nil); err != nil {
+		verr.Add(method, "%s", err.Error())
 	}
-	if err := validateSSEField(endpoint.MethodExpr.Result, e.IDField, "event id", []DataType{String}); err != nil {
-		verr.Add(endpoint, err.Error())
+	if err := validateSSEField(method.Result, e.IDField, "event id", []DataType{String}); err != nil {
+		verr.Add(method, "%s", err.Error())
 	}
-	if err := validateSSEField(endpoint.MethodExpr.Result, e.EventField, "event type", []DataType{String}); err != nil {
-		verr.Add(endpoint, err.Error())
+	if err := validateSSEField(method.Result, e.EventField, "event type", []DataType{String}); err != nil {
+		verr.Add(method, "%s", err.Error())
 	}
-	if err := validateSSEField(endpoint.MethodExpr.Result, e.RetryField, "event retry", []DataType{Int, Int32, Int64, UInt, UInt32, UInt64}); err != nil {
-		verr.Add(endpoint, err.Error())
+	if err := validateSSEField(method.Result, e.RetryField, "event retry", []DataType{Int, Int32, Int64, UInt, UInt32, UInt64}); err != nil {
+		verr.Add(method, "%s", err.Error())
 	}
 
 	if len(verr.Errors) == 0 {

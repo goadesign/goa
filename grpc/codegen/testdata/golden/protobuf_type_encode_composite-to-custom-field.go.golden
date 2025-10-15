@@ -1,0 +1,29 @@
+func transform() {
+	target := &proto.CompositeWithCustomField{}
+	if source.RequiredString != nil {
+		target.RequiredString = *source.RequiredString
+	}
+	if source.DefaultInt != nil {
+		target.DefaultInt = int32(*source.DefaultInt)
+	}
+	if source.DefaultInt == nil {
+		target.DefaultInt = 100
+	}
+	if source.Type != nil {
+		target.Type = svcProtoSimpleToProtoSimple(source.Type)
+	}
+	if source.Map != nil {
+		target.Map_ = make(map[int32]string, len(source.Map))
+		for key, val := range source.Map {
+			tk := int32(key)
+			tv := val
+			target.Map_[tk] = tv
+		}
+	}
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.Array[i] = val
+		}
+	}
+}

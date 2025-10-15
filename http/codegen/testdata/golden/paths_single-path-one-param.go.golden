@@ -1,0 +1,4 @@
+// MethodPathOneParamServicePathOneParamPath returns the URL path to the ServicePathOneParam service MethodPathOneParam HTTP endpoint.
+func MethodPathOneParamServicePathOneParamPath(a string) string {
+	return fmt.Sprintf("/one/%v/two", a)
+}

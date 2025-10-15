@@ -1,0 +1,8 @@
+// NewMethodHeaderArrayStringPayload builds a ServiceHeaderArrayString service
+// MethodHeaderArrayString endpoint payload.
+func NewMethodHeaderArrayStringPayload(h []string) *serviceheaderarraystring.MethodHeaderArrayStringPayload {
+	v := &serviceheaderarraystring.MethodHeaderArrayStringPayload{}
+	v.H = h
+
+	return v
+}

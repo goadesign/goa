@@ -37,21 +37,20 @@ type subcommandData struct {
 }
 
 // ClientCLIFiles returns the client HTTP CLI support file.
-func ClientCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
-	root := services.Root
-	if len(root.API.HTTP.Services) == 0 {
+func ClientCLIFiles(genpkg string, data *ServicesData) []*codegen.File {
+	if len(data.Expressions.Services) == 0 {
 		return nil
 	}
 	var (
-		data []*commandData
+		cmds []*commandData
 		svcs []*expr.HTTPServiceExpr
 	)
-	for _, svc := range root.API.HTTP.Services {
-		sd := services.Get(svc.Name())
+	for _, svc := range data.Expressions.Services {
+		sd := data.Get(svc.Name())
 		if len(sd.Endpoints) > 0 {
 			command := &commandData{
 				CommandData: cli.BuildCommandData(sd.Service),
-				NeedDialer:  hasWebSocket(sd),
+				NeedDialer:  HasWebSocket(sd),
 			}
 
 			for _, e := range sd.Endpoints {
@@ -62,24 +61,24 @@ func ClientCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
 
 			command.Example = command.Subcommands[0].Example
 
-			data = append(data, command)
+			cmds = append(cmds, command)
 			svcs = append(svcs, svc)
 		}
 	}
-	var files []*codegen.File
-	for _, svr := range root.API.Servers {
+	files := make([]*codegen.File, 0, len(data.Root.API.Servers)*2) // preallocate for CLI files
+	for _, svr := range data.Root.API.Servers {
 		var svrData []*commandData
 		for _, name := range svr.Services {
 			for i, svc := range svcs {
 				if svc.Name() == name {
-					svrData = append(svrData, data[i])
+					svrData = append(svrData, cmds[i])
 				}
 			}
 		}
-		files = append(files, endpointParser(genpkg, root, svr, svrData, services))
+		files = append(files, endpointParser(genpkg, data.Root, svr, svrData, data))
 	}
 	for i, svc := range svcs {
-		files = append(files, payloadBuilders(genpkg, svc, data[i].CommandData, services))
+		files = append(files, payloadBuilders(genpkg, svc, cmds[i].CommandData, data))
 	}
 	return files
 }
@@ -148,7 +147,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		cli.UsageExamples(cliData),
 		{
 			Name:   "parse-endpoint",
-			Source: readTemplate("parse_endpoint"),
+			Source: httpTemplates.Read(parseEndpointT),
 			Data: struct {
 				FlagsCode string
 				Commands  []*commandData
@@ -194,6 +193,7 @@ func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.Command
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
+// buildFlags builds the flag data and build function for an endpoint.
 func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildFunctionData) {
 	var (
 		flags         []*cli.FlagData
@@ -218,9 +218,10 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildF
 	return flags, buildFunction
 }
 
+// makeFlags creates flag data and build function from endpoint arguments.
 func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*cli.FlagData, *cli.BuildFunctionData) {
 	var (
-		fdata     []*cli.FieldData
+		fdata     = make([]*cli.FieldData, 0, len(args)) // preallocate
 		flags     = make([]*cli.FlagData, len(args))
 		params    = make([]string, len(args))
 		pInitArgs = make([]*codegen.InitArgData, len(args))

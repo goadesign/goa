@@ -1,0 +1,30 @@
+// MethodUnaryRPCWithErrors implements the "MethodUnaryRPCWithErrors" method in
+// service_unary_rpc_with_errorspb.ServiceUnaryRPCWithErrorsServer interface.
+func (s *Server) MethodUnaryRPCWithErrors(ctx context.Context, message *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsRequest) (*service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "MethodUnaryRPCWithErrors")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceUnaryRPCWithErrors")
+	resp, err := s.MethodUnaryRPCWithErrorsH.Handle(ctx, message)
+	if err != nil {
+		var en goa.GoaErrorNamer
+		if errors.As(err, &en) {
+			switch en.GoaErrorName() {
+			case "timeout":
+				return nil, goagrpc.NewStatusError(codes.Canceled, err, goagrpc.NewErrorResponse(err))
+			case "internal":
+				var er *serviceunaryrpcwitherrors.AnotherError
+				errors.As(err, &er)
+				return nil, goagrpc.NewStatusError(codes.Unknown, err, NewMethodUnaryRPCWithErrorsInternalError(er))
+			case "bad_request":
+				var er *serviceunaryrpcwitherrors.AnotherError
+				errors.As(err, &er)
+				return nil, goagrpc.NewStatusError(codes.InvalidArgument, err, NewMethodUnaryRPCWithErrorsBadRequestError(er))
+			case "custom_error":
+				var er *serviceunaryrpcwitherrors.ErrorType
+				errors.As(err, &er)
+				return nil, goagrpc.NewStatusError(codes.Unknown, err, NewMethodUnaryRPCWithErrorsCustomErrorError(er))
+			}
+		}
+		return nil, goagrpc.EncodeError(err)
+	}
+	return resp.(*service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsResponse), nil
+}

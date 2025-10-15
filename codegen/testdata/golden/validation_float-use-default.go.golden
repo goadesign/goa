@@ -1,0 +1,23 @@
+func Validate() (err error) {
+	if target.RequiredFloat < 1 {
+		err = goa.MergeErrors(err, goa.InvalidRangeError("target.required_float", target.RequiredFloat, 1, true))
+	}
+	if !(target.DefaultInteger == 1.2 || target.DefaultInteger == 5 || target.DefaultInteger == 10 || target.DefaultInteger == 100.8) {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.default_integer", target.DefaultInteger, []any{1.2, 5, 10, 100.8}))
+	}
+	if target.Float64 != nil {
+		if *target.Float64 > 100.1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("target.float64", *target.Float64, 100.1, false))
+		}
+	}
+	if target.ExclusiveFloat64 != nil {
+		if *target.ExclusiveFloat64 <= 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_float64", *target.ExclusiveFloat64, 1, true))
+		}
+	}
+	if target.ExclusiveFloat64 != nil {
+		if *target.ExclusiveFloat64 <= 1 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_float64", *target.ExclusiveFloat64, 1, true))
+		}
+	}
+}

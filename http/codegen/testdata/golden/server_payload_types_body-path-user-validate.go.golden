@@ -1,0 +1,11 @@
+// NewMethodUserBodyPathValidatePayloadType builds a
+// ServiceBodyPathUserValidate service MethodUserBodyPathValidate endpoint
+// payload.
+func NewMethodUserBodyPathValidatePayloadType(body *MethodUserBodyPathValidateRequestBody, b string) *servicebodypathuservalidate.PayloadType {
+	v := &servicebodypathuservalidate.PayloadType{
+		A: *body.A,
+	}
+	v.B = b
+
+	return v
+}

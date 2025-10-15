@@ -1,0 +1,72 @@
+
+// Service is the MultipleMethods service interface.
+type Service interface {
+	// A implements A.
+	A(context.Context, *APayload) (res *AResult, err error)
+	// B implements B.
+	B(context.Context, *BPayload) (res *BResult, err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "MultipleMethods"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [2]string{"A", "B"}
+
+// APayload is the payload type of the MultipleMethods service A method.
+type APayload struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
+
+// AResult is the result type of the MultipleMethods service A method.
+type AResult struct {
+	IntField      int
+	StringField   string
+	BooleanField  bool
+	BytesField    []byte
+	OptionalField *string
+}
+
+// BPayload is the payload type of the MultipleMethods service B method.
+type BPayload struct {
+	ArrayField  []bool
+	MapField    map[int]string
+	ObjectField *struct {
+		IntField    *int
+		StringField *string
+	}
+	UserTypeField *Parent
+}
+
+// BResult is the result type of the MultipleMethods service B method.
+type BResult struct {
+	ArrayField  []bool
+	MapField    map[int]string
+	ObjectField *struct {
+		IntField    *int
+		StringField *string
+	}
+	UserTypeField *Parent
+}
+
+type Child struct {
+	P *Parent
+}
+
+type Parent struct {
+	C *Child
+}

@@ -1,0 +1,36 @@
+// DecodeMethodCookiePrimitiveBoolValidateRequest returns a decoder for
+// requests sent to the ServiceCookiePrimitiveBoolValidate
+// MethodCookiePrimitiveBoolValidate endpoint.
+func DecodeMethodCookiePrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (bool, error) {
+	return func(r *http.Request) (bool, error) {
+		var (
+			c2  bool
+			err error
+			c   *http.Cookie
+		)
+		c, err = r.Cookie("c")
+		{
+			var c2Raw string
+			if c != nil {
+				c2Raw = c.Value
+			}
+			if c2Raw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("c", "cookie"))
+			}
+			v, err2 := strconv.ParseBool(c2Raw)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("c", c2Raw, "boolean"))
+			}
+			c2 = v
+		}
+		if !(c2 == true) {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("c", c2, []any{true}))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := c
+
+		return payload, nil
+	}
+}

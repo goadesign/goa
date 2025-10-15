@@ -42,8 +42,9 @@ func sseClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesD
 				{Path: "strings"},
 				{Path: "strconv"},
 				{Path: "sync"},
-				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name())},
-				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/views"},
+				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
+				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/views", Name: data.Service.ViewsPkg},
+				{Path: "goa.design/goa/v3/http", Name: "goahttp"},
 			},
 		),
 	}
@@ -59,7 +60,7 @@ func sseClientTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 			continue
 		}
 		// Create a map of template functions needed for the SSE template
-		funcs := map[string]interface{}{
+		funcs := map[string]any{
 			"dict": func(values ...any) (map[string]any, error) {
 				if len(values)%2 != 0 {
 					return nil, fmt.Errorf("odd number of arguments")
@@ -77,7 +78,7 @@ func sseClientTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:    "client-sse",
-			Source:  readTemplate("client_sse", "sse_parse"),
+			Source:  httpTemplates.Read(clientSseT, sseParseP),
 			Data:    ed,
 			FuncMap: funcs,
 		})

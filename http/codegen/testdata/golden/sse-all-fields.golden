@@ -36,18 +36,18 @@ func (s *SSEAllFieldsMethodServerStream) SendWithContext(ctx context.Context, v 
 	})
 	res := v
 
-	if id := res.id; id != "" {
+	if id := res.ID; id != "" {
 		fmt.Fprintf(s.w, "id: %s\n", id)
 	}
-	if event := res.event; event != "" {
+	if event := res.Event; event != "" {
 		fmt.Fprintf(s.w, "event: %s\n", event)
 	}
-	if retry := res.retry; retry > 0 {
+	if retry := res.Retry; retry > 0 {
 		fmt.Fprintf(s.w, "retry: %d\n", retry)
 	}
 
 	var data string
-	dataField := res.data
+	dataField := res.Data
 	byts, err := json.Marshal(dataField)
 	if err != nil {
 		return err
@@ -55,9 +55,7 @@ func (s *SSEAllFieldsMethodServerStream) SendWithContext(ctx context.Context, v 
 	data = string(byts)
 	fmt.Fprintf(s.w, "data: %s\n\n", data)
 
-	if f, ok := s.w.(http.Flusher); ok {
-		f.Flush()
-	}
+	http.NewResponseController(s.w).Flush()
 	return nil
 }
 

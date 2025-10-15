@@ -1,0 +1,48 @@
+{
+  "components": {},
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/ui/{filepath}": {
+      "get": {
+        "operationId": "front#/ui/{filepath}",
+        "parameters": [
+          {
+            "description": "Relative file path",
+            "in": "path",
+            "name": "filepath",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File downloaded"
+          },
+          "404": {
+            "description": "File not found"
+          }
+        },
+        "summary": "Download ui/dist",
+        "tags": [
+          "front"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "front"
+    }
+  ]
+}

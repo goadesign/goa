@@ -1,0 +1,14 @@
+// EncodeMethodMultipartArrayTypeRequest returns an encoder for requests sent
+// to the ServiceMultipartArrayType MethodMultipartArrayType server.
+func EncodeMethodMultipartArrayTypeRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.([]*servicemultipartarraytype.PayloadType)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceMultipartArrayType", "MethodMultipartArrayType", "[]*servicemultipartarraytype.PayloadType", v)
+		}
+		if err := encoder(req).Encode(p); err != nil {
+			return goahttp.ErrEncodingError("ServiceMultipartArrayType", "MethodMultipartArrayType", err)
+		}
+		return nil
+	}
+}

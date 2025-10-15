@@ -1,0 +1,15 @@
+// EncodeMethodBodyArrayStringRequest returns an encoder for requests sent to
+// the ServiceBodyArrayString MethodBodyArrayString server.
+func EncodeMethodBodyArrayStringRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicebodyarraystring.MethodBodyArrayStringPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceBodyArrayString", "MethodBodyArrayString", "*servicebodyarraystring.MethodBodyArrayStringPayload", v)
+		}
+		body := NewMethodBodyArrayStringRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("ServiceBodyArrayString", "MethodBodyArrayString", err)
+		}
+		return nil
+	}
+}

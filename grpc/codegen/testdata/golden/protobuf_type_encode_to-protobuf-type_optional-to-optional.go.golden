@@ -1,0 +1,46 @@
+func transform() {
+	target := &proto.Optional{
+		Float_:  source.Float,
+		String_: source.String,
+		Bytes_:  source.Bytes,
+		Any: func() *anypb.Any {
+			if source.Any == nil {
+				return nil
+			}
+			// Convert Go any to protobuf Any using JSON marshaling
+			if jsonData, err := json.Marshal(source.Any); err == nil {
+				if data, err := anypb.New(&structpb.Value{
+					Kind: &structpb.Value_StringValue{StringValue: string(jsonData)},
+				}); err == nil {
+					return data
+				}
+			}
+			return nil
+		}(),
+	}
+	if source.Int != nil {
+		int_ := int32(*source.Int)
+		target.Int = &int_
+	}
+	if source.Uint != nil {
+		uint_ := uint32(*source.Uint)
+		target.Uint = &uint_
+	}
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.Array[i] = val
+		}
+	}
+	if source.Map != nil {
+		target.Map_ = make(map[int32]string, len(source.Map))
+		for key, val := range source.Map {
+			tk := int32(key)
+			tv := val
+			target.Map_[tk] = tv
+		}
+	}
+	if source.UserType != nil {
+		target.UserType = svcProtoOptionalToProtoOptional(source.UserType)
+	}
+}

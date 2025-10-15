@@ -1,0 +1,24 @@
+// Code generated with goa vX, DO NOT EDIT.
+//
+// ServiceMessageUserTypeWithNestedUserTypes protocol buffer definition
+//
+// Command:
+// goa
+
+syntax = "proto3";
+
+package service_message_user_type_with_nested_user_types;
+
+option go_package = "/service_message_user_type_with_nested_user_typespb";
+
+message MethodMessageUserTypeWithNestedUserTypesRequest {
+}
+
+message RTCollection {
+	repeated RT field = 1;
+}
+
+message RT {
+	optional sint32 int_field = 1;
+	optional string string_field = 2;
+}

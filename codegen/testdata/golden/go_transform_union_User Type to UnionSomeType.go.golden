@@ -1,0 +1,9 @@
+func transform() {
+	var target *UnionSomeType
+	switch source.Type {
+	case "SomeType":
+		var val *SomeType
+		json.Unmarshal([]byte(source.Value), &val)
+		target = val
+	}
+}

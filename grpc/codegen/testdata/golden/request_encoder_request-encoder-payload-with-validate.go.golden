@@ -1,0 +1,12 @@
+// EncodeMethodMessageWithValidateRequest encodes requests sent to
+// ServiceMessageWithValidate MethodMessageWithValidate endpoint.
+func EncodeMethodMessageWithValidateRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
+	payload, ok := v.(*servicemessagewithvalidate.RequestUT)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceMessageWithValidate", "MethodMessageWithValidate", "*servicemessagewithvalidate.RequestUT", v)
+	}
+	if payload.InMetadata != nil {
+		(*md).Append("Authorization", fmt.Sprintf("%v", *payload.InMetadata))
+	}
+	return NewProtoMethodMessageWithValidateRequest(payload), nil
+}

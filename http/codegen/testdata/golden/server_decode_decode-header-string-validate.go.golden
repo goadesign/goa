@@ -1,0 +1,23 @@
+// DecodeMethodHeaderStringValidateRequest returns a decoder for requests sent
+// to the ServiceHeaderStringValidate MethodHeaderStringValidate endpoint.
+func DecodeMethodHeaderStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheaderstringvalidate.MethodHeaderStringValidatePayload, error) {
+	return func(r *http.Request) (*serviceheaderstringvalidate.MethodHeaderStringValidatePayload, error) {
+		var (
+			h   *string
+			err error
+		)
+		hRaw := r.Header.Get("h")
+		if hRaw != "" {
+			h = &hRaw
+		}
+		if h != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("h", *h, "header"))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodHeaderStringValidatePayload(h)
+
+		return payload, nil
+	}
+}

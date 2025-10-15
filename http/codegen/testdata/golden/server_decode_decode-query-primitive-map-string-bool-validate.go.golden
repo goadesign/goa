@@ -1,0 +1,59 @@
+// DecodeMethodQueryPrimitiveMapStringBoolValidateRequest returns a decoder for
+// requests sent to the ServiceQueryPrimitiveMapStringBoolValidate
+// MethodQueryPrimitiveMapStringBoolValidate endpoint.
+func DecodeMethodQueryPrimitiveMapStringBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (map[string]bool, error) {
+	return func(r *http.Request) (map[string]bool, error) {
+		var (
+			q   map[string]bool
+			err error
+		)
+		{
+			qRaw := r.URL.Query()
+			if len(qRaw) == 0 {
+				err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
+			}
+			for keyRaw, valRaw := range qRaw {
+				if strings.HasPrefix(keyRaw, "q[") {
+					if q == nil {
+						q = make(map[string]bool)
+					}
+					var keya string
+					{
+						openIdx := strings.IndexRune(keyRaw, '[')
+						closeIdx := strings.IndexRune(keyRaw, ']')
+						if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
+							err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
+						} else {
+							keya = keyRaw[openIdx+1 : closeIdx]
+						}
+					}
+					var vala bool
+					{
+						valaRaw := valRaw[0]
+						v, err2 := strconv.ParseBool(valaRaw)
+						if err2 != nil {
+							err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", valaRaw, "boolean"))
+						}
+						vala = v
+					}
+					q[keya] = vala
+				}
+			}
+		}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
+		}
+		for k, v := range q {
+			err = goa.MergeErrors(err, goa.ValidatePattern("q.key", k, "key"))
+			if !(v == true) {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[key]", v, []any{true}))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := q
+
+		return payload, nil
+	}
+}

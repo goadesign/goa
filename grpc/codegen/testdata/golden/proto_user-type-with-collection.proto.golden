@@ -1,0 +1,27 @@
+// Code generated with goa vX, DO NOT EDIT.
+//
+// ServiceMessageUserTypeWithPrimitives protocol buffer definition
+//
+// Command:
+// goa
+
+syntax = "proto3";
+
+package service_message_user_type_with_primitives;
+
+option go_package = "/service_message_user_type_with_primitivespb";
+
+message MethodMessageUserTypeWithPrimitivesRequest {
+}
+
+message MethodMessageUserTypeWithPrimitivesResponse {
+	RTCollection collection_field = 1;
+}
+
+message RTCollection {
+	repeated RT field = 1;
+}
+
+message RT {
+	optional sint32 int_field = 1;
+}

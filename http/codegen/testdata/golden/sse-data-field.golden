@@ -37,17 +37,11 @@ func (s *SSEDataFieldMethodServerStream) SendWithContext(ctx context.Context, v 
 	res := v
 
 	var data string
-	dataField := res.data
-	byts, err := json.Marshal(dataField)
-	if err != nil {
-		return err
-	}
-	data = string(byts)
+	dataField := res.Data
+	data = dataField
 	fmt.Fprintf(s.w, "data: %s\n\n", data)
 
-	if f, ok := s.w.(http.Flusher); ok {
-		f.Flush()
-	}
+	http.NewResponseController(s.w).Flush()
 	return nil
 }
 

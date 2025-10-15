@@ -1,0 +1,29 @@
+// DecodeMethodQueryArrayIntRequest returns a decoder for requests sent to the
+// ServiceQueryArrayInt MethodQueryArrayInt endpoint.
+func DecodeMethodQueryArrayIntRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryarrayint.MethodQueryArrayIntPayload, error) {
+	return func(r *http.Request) (*servicequeryarrayint.MethodQueryArrayIntPayload, error) {
+		var (
+			q   []int
+			err error
+		)
+		{
+			qRaw := r.URL.Query()["q"]
+			if qRaw != nil {
+				q = make([]int, len(qRaw))
+				for i, rv := range qRaw {
+					v, err2 := strconv.ParseInt(rv, 10, strconv.IntSize)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of integers"))
+					}
+					q[i] = int(v)
+				}
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryArrayIntPayload(q)
+
+		return payload, nil
+	}
+}

@@ -84,7 +84,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, se
 		codegen.Header("", "main", specs),
 		{
 			Name:   "server-main-start",
-			Source: readTemplate("server_start"),
+			Source: exampleTemplates.Read(serverStartT),
 			Data: map[string]any{
 				"Server": svrdata,
 			},
@@ -93,13 +93,13 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, se
 			},
 		}, {
 			Name:   "server-main-logger",
-			Source: readTemplate("server_logger"),
+			Source: exampleTemplates.Read(serverLoggerT),
 			Data: map[string]any{
 				"APIPkg": apiPkg,
 			},
 		}, {
 			Name:   "server-main-services",
-			Source: readTemplate("server_services"),
+			Source: exampleTemplates.Read(serverServicesT),
 			Data: map[string]any{
 				"APIPkg":   apiPkg,
 				"Services": svcData,
@@ -109,7 +109,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, se
 			},
 		}, {
 			Name:   "server-main-interceptors",
-			Source: readTemplate("server_interceptors"),
+			Source: exampleTemplates.Read(serverInterceptorsT),
 			Data: map[string]any{
 				"APIPkg":          apiPkg,
 				"InterPkg":        interPkg,
@@ -121,7 +121,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, se
 			},
 		}, {
 			Name:   "server-main-endpoints",
-			Source: readTemplate("server_endpoints"),
+			Source: exampleTemplates.Read(serverEndpointsT),
 			Data: map[string]any{
 				"Services": svcData,
 			},
@@ -130,10 +130,10 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, se
 			},
 		}, {
 			Name:   "server-main-interrupts",
-			Source: readTemplate("server_interrupts"),
+			Source: exampleTemplates.Read(serverInterruptsT),
 		}, {
 			Name:   "server-main-handler",
-			Source: readTemplate("server_handler"),
+			Source: exampleTemplates.Read(serverHandlerT),
 			Data: map[string]any{
 				"Server":   svrdata,
 				"Services": svcData,
@@ -142,11 +142,14 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, se
 				"goify":   codegen.Goify,
 				"join":    strings.Join,
 				"toUpper": strings.ToUpper,
+				"hasJSONRPCEndpoints": func(svcData *service.Data) bool {
+					return hasJSONRPCEndpoints(root, svcData)
+				},
 			},
 		},
 		{
 			Name:   "server-main-end",
-			Source: readTemplate("server_end"),
+			Source: exampleTemplates.Read(serverEndT),
 		},
 	}
 
@@ -158,6 +161,16 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, se
 func mustInitServices(data []*service.Data) bool {
 	for _, svc := range data {
 		if len(svc.Methods) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// hasJSONRPCEndpoints returns true if the service has JSON-RPC endpoints.
+func hasJSONRPCEndpoints(root *expr.RootExpr, data *service.Data) bool {
+	for _, svc := range root.API.JSONRPC.Services {
+		if svc.Name() == data.Name {
 			return true
 		}
 	}

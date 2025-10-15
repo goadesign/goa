@@ -13,7 +13,7 @@
 # - "all" is the default target, it runs "lint" and "test"
 #
 MAJOR=3
-MINOR=21
+MINOR=22
 BUILD=5
 
 GOOS=$(shell go env GOOS)
@@ -27,7 +27,9 @@ DEPEND=\
 	google.golang.org/protobuf/cmd/protoc-gen-go@latest \
 	google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest 
 
-all: lint test
+all: lint test integration-test
+
+all-tests: lint test integration-test
 
 ci: depend all
 
@@ -75,6 +77,15 @@ endif
 
 test:
 	go test ./... --coverprofile=cover.out
+
+integration-test: build-goa
+ifneq ($(GOOS),windows)
+	cd jsonrpc/integration_tests && go test -count=1 -timeout 10m ./...
+endif
+
+# Needed for CI to run integration tests
+build-goa:
+	cd cmd/goa && go install .
 
 release: release-goa release-examples release-plugins
 	@echo "Release v$(MAJOR).$(MINOR).$(BUILD) complete"

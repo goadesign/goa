@@ -1,9 +1,9 @@
 package codegen
 
 import (
+	"goa.design/goa/v3/codegen/testutil"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
@@ -15,12 +15,11 @@ func TestServerMultipartFuncType(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL, testdata.MultipartPrimitiveDecoderFuncTypeCode},
-		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL, testdata.MultipartUserTypeDecoderFuncTypeCode},
-		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL, testdata.MultipartArrayTypeDecoderFuncTypeCode},
-		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL, testdata.MultipartMapTypeDecoderFuncTypeCode},
+		{"multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL},
+		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL},
+		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL},
+		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -31,7 +30,7 @@ func TestServerMultipartFuncType(t *testing.T) {
 			sections := fs[0].SectionTemplates
 			require.Greater(t, len(sections), 5)
 			code := codegen.SectionCode(t, sections[3])
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/server_multipart_"+c.Name+".go.golden", code)
 		})
 	}
 }
@@ -41,12 +40,11 @@ func TestClientMultipartFuncType(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL, testdata.MultipartPrimitiveEncoderFuncTypeCode},
-		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL, testdata.MultipartUserTypeEncoderFuncTypeCode},
-		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL, testdata.MultipartArrayTypeEncoderFuncTypeCode},
-		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL, testdata.MultipartMapTypeEncoderFuncTypeCode},
+		{"multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL},
+		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL},
+		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL},
+		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -57,7 +55,7 @@ func TestClientMultipartFuncType(t *testing.T) {
 			sections := fs[0].SectionTemplates
 			require.Greater(t, len(sections), 4)
 			code := codegen.SectionCode(t, sections[2])
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/client_multipart_"+c.Name+".go.golden", code)
 		})
 	}
 }
@@ -67,14 +65,13 @@ func TestServerMultipartNewFunc(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"server-multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL, testdata.MultipartPrimitiveDecoderFuncCode},
-		{"server-multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL, testdata.MultipartUserTypeDecoderFuncCode},
-		{"server-multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL, testdata.MultipartArrayTypeDecoderFuncCode},
-		{"server-multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL, testdata.MultipartMapTypeDecoderFuncCode},
-		{"server-multipart-with-param", testdata.PayloadMultipartWithParamDSL, testdata.MultipartWithParamDecoderFuncCode},
-		{"server-multipart-with-params-and-headers", testdata.PayloadMultipartWithParamsAndHeadersDSL, testdata.MultipartWithParamsAndHeadersDecoderFuncCode},
+		{"server-multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL},
+		{"server-multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL},
+		{"server-multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL},
+		{"server-multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL},
+		{"server-multipart-with-param", testdata.PayloadMultipartWithParamDSL},
+		{"server-multipart-with-params-and-headers", testdata.PayloadMultipartWithParamsAndHeadersDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -85,7 +82,7 @@ func TestServerMultipartNewFunc(t *testing.T) {
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 3)
 			code := codegen.SectionCode(t, sections[3])
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/server_multipart_"+c.Name+".go.golden", code)
 		})
 	}
 }
@@ -95,14 +92,13 @@ func TestClientMultipartNewFunc(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"client-multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL, testdata.MultipartPrimitiveEncoderFuncCode},
-		{"client-multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL, testdata.MultipartUserTypeEncoderFuncCode},
-		{"client-multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL, testdata.MultipartArrayTypeEncoderFuncCode},
-		{"client-multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL, testdata.MultipartMapTypeEncoderFuncCode},
-		{"client-multipart-with-param", testdata.PayloadMultipartWithParamDSL, testdata.MultipartWithParamEncoderFuncCode},
-		{"client-multipart-with-params-and-headers", testdata.PayloadMultipartWithParamsAndHeadersDSL, testdata.MultipartWithParamsAndHeadersEncoderFuncCode},
+		{"client-multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL},
+		{"client-multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL},
+		{"client-multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL},
+		{"client-multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL},
+		{"client-multipart-with-param", testdata.PayloadMultipartWithParamDSL},
+		{"client-multipart-with-params-and-headers", testdata.PayloadMultipartWithParamsAndHeadersDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -113,7 +109,7 @@ func TestClientMultipartNewFunc(t *testing.T) {
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 3)
 			code := codegen.SectionCode(t, sections[3])
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/client_multipart_"+c.Name+".go.golden", code)
 		})
 	}
 }

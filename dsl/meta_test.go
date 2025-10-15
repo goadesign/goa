@@ -1,6 +1,7 @@
 package dsl_test
 
 import (
+	"slices"
 	"testing"
 
 	. "goa.design/goa/v3/dsl"
@@ -51,12 +52,7 @@ func TestMetaData(t *testing.T) {
 }
 
 func hasValue(vals []string, val string) bool {
-	for _, v := range vals {
-		if v == val {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(vals, val)
 }
 func apiExprMeta(e eval.Expression) expr.MetaExpr    { return e.(*expr.APIExpr).Meta }
 func userTypeMeta(e eval.Expression) expr.MetaExpr   { return e.(*expr.UserTypeExpr).Meta }

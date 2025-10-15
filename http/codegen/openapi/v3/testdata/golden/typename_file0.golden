@@ -1,1 +1,206 @@
-{"openapi":"3.0.3","info":{"title":"Goa API","version":"0.0.1"},"servers":[{"url":"https://goa.design"}],"paths":{"/bar":{"post":{"tags":["testService"],"summary":"bar testService","operationId":"testService#bar","requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/BarPayload"},"example":{"value":""}}}},"responses":{"200":{"description":"OK response.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/GoaExampleBar"},"example":{"value":""}}}}}}},"/baz":{"post":{"tags":["testService"],"summary":"baz testService","operationId":"testService#baz","requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/BazPayload"},"example":{"value":""}}}},"responses":{"200":{"description":"OK response.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/BazResult"},"example":{"value":""}}}}}}},"/foo":{"post":{"tags":["testService"],"summary":"foo testService","operationId":"testService#foo","requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/Foo"},"example":{"value":""}}}},"responses":{"200":{"description":"OK response.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/FooResult"},"example":{"value":""}}}}}}}},"components":{"schemas":{"BarPayload":{"type":"object","properties":{"value":{"type":"string","example":""}},"example":{"value":""}},"BazPayload":{"type":"object","properties":{"value":{"type":"string","example":""}},"example":{"value":""}},"BazResult":{"type":"object","properties":{"value":{"type":"string","example":""}},"example":{"value":""}},"Foo":{"type":"object","properties":{"value":{"type":"string","example":""}},"example":{"value":""}},"FooResult":{"type":"object","properties":{"value":{"type":"string","example":""}},"example":{"value":""}},"GoaExampleBar":{"type":"object","properties":{"value":{"type":"string","example":""}},"example":{"value":""}}}},"tags":[{"name":"testService"}]}
+{
+  "components": {
+    "schemas": {
+      "BarPayload": {
+        "example": {
+          "value": ""
+        },
+        "properties": {
+          "value": {
+            "example": "",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "BazPayload": {
+        "example": {
+          "value": ""
+        },
+        "properties": {
+          "value": {
+            "example": "",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "BazResult": {
+        "example": {
+          "value": ""
+        },
+        "properties": {
+          "value": {
+            "example": "",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Foo": {
+        "example": {
+          "value": ""
+        },
+        "properties": {
+          "value": {
+            "example": "",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "FooResult": {
+        "example": {
+          "value": ""
+        },
+        "properties": {
+          "value": {
+            "example": "",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "GoaExampleBar": {
+        "example": {
+          "value": ""
+        },
+        "properties": {
+          "value": {
+            "example": "",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/bar": {
+      "post": {
+        "operationId": "testService#bar",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "value": ""
+              },
+              "schema": {
+                "$ref": "#/components/schemas/BarPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "value": ""
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/GoaExampleBar"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "bar testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    },
+    "/baz": {
+      "post": {
+        "operationId": "testService#baz",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "value": ""
+              },
+              "schema": {
+                "$ref": "#/components/schemas/BazPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "value": ""
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/BazResult"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "baz testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    },
+    "/foo": {
+      "post": {
+        "operationId": "testService#foo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "value": ""
+              },
+              "schema": {
+                "$ref": "#/components/schemas/Foo"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "value": ""
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/FooResult"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "foo testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://goa.design"
+    }
+  ],
+  "tags": [
+    {
+      "name": "testService"
+    }
+  ]
+}

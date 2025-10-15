@@ -1,1 +1,60 @@
-{"swagger":"2.0","info":{"title":"","version":"0.0.1"},"host":"localhost:80","consumes":["application/json","application/xml","application/gob"],"produces":["application/json","application/xml","application/gob"],"paths":{"/path1":{"get":{"tags":["service-name"],"summary":"Download filename","operationId":"service-name#/path1","responses":{"200":{"description":"File downloaded","schema":{"type":"file"}}},"schemes":["http"]}},"/path2":{"get":{"tags":["user-tag"],"summary":"Download filename","operationId":"service-name#/path2","responses":{"200":{"description":"File downloaded","schema":{"type":"file"}}},"schemes":["http"]}}}}
+{
+  "consumes": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "host": "localhost:80",
+  "info": {
+    "title": "",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/path1": {
+      "get": {
+        "operationId": "service-name#/path1",
+        "responses": {
+          "200": {
+            "description": "File downloaded",
+            "schema": {
+              "type": "file"
+            }
+          }
+        },
+        "schemes": [
+          "http"
+        ],
+        "summary": "Download filename",
+        "tags": [
+          "service-name"
+        ]
+      }
+    },
+    "/path2": {
+      "get": {
+        "operationId": "service-name#/path2",
+        "responses": {
+          "200": {
+            "description": "File downloaded",
+            "schema": {
+              "type": "file"
+            }
+          }
+        },
+        "schemes": [
+          "http"
+        ],
+        "summary": "Download filename",
+        "tags": [
+          "user-tag"
+        ]
+      }
+    }
+  },
+  "produces": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "swagger": "2.0"
+}

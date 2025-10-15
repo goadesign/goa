@@ -1,0 +1,34 @@
+// DecodeMethodQueryArrayAnyValidateRequest returns a decoder for requests sent
+// to the ServiceQueryArrayAnyValidate MethodQueryArrayAnyValidate endpoint.
+func DecodeMethodQueryArrayAnyValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryarrayanyvalidate.MethodQueryArrayAnyValidatePayload, error) {
+	return func(r *http.Request) (*servicequeryarrayanyvalidate.MethodQueryArrayAnyValidatePayload, error) {
+		var (
+			q   []any
+			err error
+		)
+		{
+			qRaw := r.URL.Query()["q"]
+			if qRaw == nil {
+				err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
+			}
+			q = make([]any, len(qRaw))
+			for i, rv := range qRaw {
+				q[i] = rv
+			}
+		}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
+		}
+		for _, e := range q {
+			if !(e == "val" || e == 1) {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[*]", e, []any{"val", 1}))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryArrayAnyValidatePayload(q)
+
+		return payload, nil
+	}
+}

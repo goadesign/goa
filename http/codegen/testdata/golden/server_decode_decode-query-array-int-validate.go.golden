@@ -1,0 +1,38 @@
+// DecodeMethodQueryArrayIntValidateRequest returns a decoder for requests sent
+// to the ServiceQueryArrayIntValidate MethodQueryArrayIntValidate endpoint.
+func DecodeMethodQueryArrayIntValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryarrayintvalidate.MethodQueryArrayIntValidatePayload, error) {
+	return func(r *http.Request) (*servicequeryarrayintvalidate.MethodQueryArrayIntValidatePayload, error) {
+		var (
+			q   []int
+			err error
+		)
+		{
+			qRaw := r.URL.Query()["q"]
+			if qRaw == nil {
+				err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
+			}
+			q = make([]int, len(qRaw))
+			for i, rv := range qRaw {
+				v, err2 := strconv.ParseInt(rv, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of integers"))
+				}
+				q[i] = int(v)
+			}
+		}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
+		}
+		for _, e := range q {
+			if e < 1 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("q[*]", e, 1, true))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryArrayIntValidatePayload(q)
+
+		return payload, nil
+	}
+}

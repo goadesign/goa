@@ -1,0 +1,28 @@
+// DecodeMethodCookieStringValidateRequest returns a decoder for requests sent
+// to the ServiceCookieStringValidate MethodCookieStringValidate endpoint.
+func DecodeMethodCookieStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicecookiestringvalidate.MethodCookieStringValidatePayload, error) {
+	return func(r *http.Request) (*servicecookiestringvalidate.MethodCookieStringValidatePayload, error) {
+		var (
+			c2  *string
+			err error
+			c   *http.Cookie
+		)
+		c, _ = r.Cookie("c")
+		var c2Raw string
+		if c != nil {
+			c2Raw = c.Value
+		}
+		if c2Raw != "" {
+			c2 = &c2Raw
+		}
+		if c2 != nil {
+			err = goa.MergeErrors(err, goa.ValidatePattern("c", *c2, "cookie"))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodCookieStringValidatePayload(c2)
+
+		return payload, nil
+	}
+}

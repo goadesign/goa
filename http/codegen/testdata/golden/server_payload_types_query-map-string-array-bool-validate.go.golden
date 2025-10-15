@@ -1,0 +1,9 @@
+// NewMethodQueryMapStringArrayBoolValidatePayload builds a
+// ServiceQueryMapStringArrayBoolValidate service
+// MethodQueryMapStringArrayBoolValidate endpoint payload.
+func NewMethodQueryMapStringArrayBoolValidatePayload(q map[string][]bool) *servicequerymapstringarrayboolvalidate.MethodQueryMapStringArrayBoolValidatePayload {
+	v := &servicequerymapstringarrayboolvalidate.MethodQueryMapStringArrayBoolValidatePayload{}
+	v.Q = q
+
+	return v
+}

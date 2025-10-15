@@ -1,0 +1,27 @@
+// DecodeMethodQueryUIntRequest returns a decoder for requests sent to the
+// ServiceQueryUInt MethodQueryUInt endpoint.
+func DecodeMethodQueryUIntRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryuint.MethodQueryUIntPayload, error) {
+	return func(r *http.Request) (*servicequeryuint.MethodQueryUIntPayload, error) {
+		var (
+			q   *uint
+			err error
+		)
+		{
+			qRaw := r.URL.Query().Get("q")
+			if qRaw != "" {
+				v, err2 := strconv.ParseUint(qRaw, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "unsigned integer"))
+				}
+				pv := uint(v)
+				q = &pv
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryUIntPayload(q)
+
+		return payload, nil
+	}
+}

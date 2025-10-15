@@ -1,0 +1,24 @@
+func transform() {
+	target := &proto.Composite{
+		RequiredString: &source.MyString,
+	}
+	defaultInt := int32(source.MyInt)
+	target.DefaultInt = &defaultInt
+	if source.MyType != nil {
+		target.Type = svcProtoSimpleToProtoSimple(source.MyType)
+	}
+	if source.MyMap != nil {
+		target.Map_ = make(map[int32]string, len(source.MyMap))
+		for key, val := range source.MyMap {
+			tk := int32(key)
+			tv := val
+			target.Map_[tk] = tv
+		}
+	}
+	if source.MyArray != nil {
+		target.Array = make([]string, len(source.MyArray))
+		for i, val := range source.MyArray {
+			target.Array[i] = val
+		}
+	}
+}

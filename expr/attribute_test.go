@@ -1052,7 +1052,6 @@ func TestAttributeExprEvalName(t *testing.T) {
 			t.Errorf("%s: got %#v, expected %#v", key, actual, testcase.expected)
 		}
 	}
-
 }
 
 func TestAttributeExprValidationValidate(t *testing.T) {

@@ -1,0 +1,8 @@
+func transform() {
+	target := &proto.Recursive{
+		RequiredString: source.RequiredString,
+	}
+	if source.Recursive != nil {
+		target.Recursive = svcProtoRecursiveToProtoRecursive(source.Recursive)
+	}
+}

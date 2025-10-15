@@ -38,9 +38,7 @@ func (s *SSEStringMethodServerStream) SendWithContext(ctx context.Context, v str
 	data = res
 	fmt.Fprintf(s.w, "data: %s\n\n", data)
 
-	if f, ok := s.w.(http.Flusher); ok {
-		f.Flush()
-	}
+	http.NewResponseController(s.w).Flush()
 	return nil
 }
 

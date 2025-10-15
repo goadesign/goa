@@ -1,0 +1,24 @@
+// EncodeMethodServiceErrorResponseError returns an encoder for errors returned
+// by the MethodServiceErrorResponse ServiceNoBodyErrorResponse endpoint.
+func EncodeMethodServiceErrorResponseError(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder, formatter func(ctx context.Context, err error) goahttp.Statuser) func(context.Context, http.ResponseWriter, error) error {
+	encodeError := goahttp.ErrorEncoder(encoder, formatter)
+	return func(ctx context.Context, w http.ResponseWriter, v error) error {
+		var en goa.GoaErrorNamer
+		if !errors.As(v, &en) {
+			return encodeError(ctx, w, v)
+		}
+		switch en.GoaErrorName() {
+		case "bad_request":
+			var res *servicenobodyerrorresponse.StringError
+			errors.As(v, &res)
+			if res.Header != nil {
+				w.Header().Set("Header", *res.Header)
+			}
+			w.Header().Set("goa-error", res.GoaErrorName())
+			w.WriteHeader(http.StatusBadRequest)
+			return nil
+		default:
+			return encodeError(ctx, w, v)
+		}
+	}
+}

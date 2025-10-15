@@ -23,8 +23,16 @@ func ReadUDP(t *testing.T, udplisten string, expectedMessages int, sender func()
 	if err != nil {
 		t.Fatal(err)
 	}
-	listener, err := net.ListenUDP("udp", resAddr)
-	if err != nil {
+	var listener *net.UDPConn
+	// Retry a few times in case the port is briefly unavailable (e.g. CI workers)
+	for range 5 {
+		listener, err = net.ListenUDP("udp", resAddr)
+		if err == nil {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if listener == nil || err != nil {
 		t.Fatal(err)
 	}
 

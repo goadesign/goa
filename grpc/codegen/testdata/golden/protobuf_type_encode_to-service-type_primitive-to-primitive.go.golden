@@ -1,0 +1,3 @@
+func transform() {
+	target := int(source.Field)
+}

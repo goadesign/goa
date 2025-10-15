@@ -1,0 +1,19 @@
+// EncodeMethodHeaderArrayInt32Response returns an encoder for responses
+// returned by the ServiceHeaderArrayInt32 MethodHeaderArrayInt32 endpoint.
+func EncodeMethodHeaderArrayInt32Response(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*serviceheaderarrayint32.MethodHeaderArrayInt32Result)
+		if res.H != nil {
+			val := res.H
+			hsSlice := make([]string, len(val))
+			for i, e := range val {
+				es := strconv.FormatInt(int64(e), 10)
+				hsSlice[i] = es
+			}
+			hs := strings.Join(hsSlice, ", ")
+			w.Header().Set("H", hs)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}

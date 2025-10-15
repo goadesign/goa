@@ -9,13 +9,14 @@
 {{- end }}
 {{- $resultType := .ResultRef }}
 {{- if .ClientStream }}
+	{{- /* When a client stream exists, always return it from the client method. */ -}}
 	{{- $resultType = .ClientStream.Interface }}
 {{- end }}
 func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context{{ if .PayloadRef }}, p {{ .PayloadRef }}{{ end }}{{ if .MethodData.SkipRequestBodyEncodeDecode}}, req io.ReadCloser{{ end }}) ({{ if $resultType }}res {{ $resultType }}, {{ end }}{{ if .MethodData.SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}err error) {
 	{{- if or $resultType .MethodData.SkipResponseBodyEncodeDecode }}
 	var ires any
 	{{- end }}
-	{{ if or $resultType .MethodData.SkipResponseBodyEncodeDecode }}ires{{ else }}_{{ end }}, err = c.{{ .VarName}}Endpoint(ctx, {{ if .MethodData.SkipRequestBodyEncodeDecode }}&{{ .RequestStruct }}{ {{ if .PayloadRef }}Payload: p, {{ end }}Body: req }{{ else if .PayloadRef }}p{{ else }}nil{{ end }})
+	{{ if or $resultType .MethodData.SkipResponseBodyEncodeDecode }}ires{{ else }}_{{ end }}, err = c.{{ .EndpointField }}(ctx, {{ if .MethodData.SkipRequestBodyEncodeDecode }}&{{ .RequestStruct }}{ {{ if .PayloadRef }}Payload: p, {{ end }}Body: req }{{ else if .PayloadRef }}p{{ else }}nil{{ end }})
 	{{- if not (or $resultType .MethodData.SkipResponseBodyEncodeDecode) }}
 	return
 	{{- else }}

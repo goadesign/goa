@@ -1,0 +1,13 @@
+// NewMethodExplicitBodyUserResultObjectMultipleViewResulttypemultipleviewsOK
+// builds a "ServiceExplicitBodyUserResultObjectMultipleView" service
+// "MethodExplicitBodyUserResultObjectMultipleView" endpoint result from a HTTP
+// "OK" response.
+func NewMethodExplicitBodyUserResultObjectMultipleViewResulttypemultipleviewsOK(body *MethodExplicitBodyUserResultObjectMultipleViewResponseBody, c *string) *serviceexplicitbodyuserresultobjectmultipleviewviews.ResulttypemultipleviewsView {
+	v := &serviceexplicitbodyuserresultobjectmultipleviewviews.ResulttypemultipleviewsView{}
+	if body.A != nil {
+		v.A = unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectmultipleviewviewsUserTypeView(body.A)
+	}
+	v.C = c
+
+	return v
+}

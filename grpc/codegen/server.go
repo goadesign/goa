@@ -50,7 +50,7 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 			codegen.Header(svc.Name()+" gRPC server", "server", imports),
 			{
 				Name:   "server-struct",
-				Source: readTemplate("server_struct_type"),
+				Source: grpcTemplates.Read(grpcServerStructTypeT),
 				Data:   data,
 			},
 		}
@@ -58,24 +58,24 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 			if e.ServerStream != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "server-stream-struct-type",
-					Source: readTemplate("stream_struct_type"),
+					Source: grpcTemplates.Read(grpcStreamStructTypeT),
 					Data:   e.ServerStream,
 				})
 			}
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-init",
-			Source: readTemplate("server_init"),
+			Source: grpcTemplates.Read(grpcServerInitT),
 			Data:   data,
 		})
 		for _, e := range data.Endpoints {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "grpc-handler-init",
-				Source: readTemplate("grpc_handler_init"),
+				Source: grpcTemplates.Read(grpcHandlerInitT),
 				Data:   e,
 			}, &codegen.SectionTemplate{
 				Name:   "server-grpc-interface",
-				Source: readTemplate("server_grpc_interface"),
+				Source: grpcTemplates.Read(grpcServerGRPCInterfaceT),
 				Data:   e,
 			})
 		}
@@ -84,28 +84,28 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 				if e.ServerStream.SendConvert != nil {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "server-stream-send",
-						Source: readTemplate("stream_send"),
+						Source: grpcTemplates.Read(grpcStreamSendT),
 						Data:   e.ServerStream,
 					})
 				}
 				if e.Method.StreamKind == expr.ClientStreamKind || e.Method.StreamKind == expr.BidirectionalStreamKind {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "server-stream-recv",
-						Source: readTemplate("stream_recv"),
+						Source: grpcTemplates.Read(grpcStreamRecvT),
 						Data:   e.ServerStream,
 					})
 				}
 				if e.ServerStream.MustClose {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "server-stream-close",
-						Source: readTemplate("stream_close"),
+						Source: grpcTemplates.Read(grpcStreamCloseT),
 						Data:   e.ServerStream,
 					})
 				}
 				if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "server-stream-set-view",
-						Source: readTemplate("stream_set_view"),
+						Source: grpcTemplates.Read(grpcStreamSetViewT),
 						Data:   e.ServerStream,
 					})
 				}
@@ -147,7 +147,7 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *Serv
 			if e.Response.ServerConvert != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "response-encoder",
-					Source: readTemplate("response_encoder", "convert_type_to_string"),
+					Source: grpcTemplates.Read(grpcResponseEncoderT, grpcConvertTypeToStringP, "string_conversion"),
 					Data:   e,
 					FuncMap: map[string]any{
 						"typeConversionData":       typeConversionData,
@@ -160,7 +160,7 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *Serv
 				fm["isEmpty"] = isEmpty
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "request-decoder",
-					Source:  readTemplate("request_decoder", "convert_string_to_type"),
+					Source:  grpcTemplates.Read(grpcRequestDecoderT, grpcConvertStringToTypeP, "type_conversion", "slice_conversion", "slice_item_conversion"),
 					Data:    e,
 					FuncMap: fm,
 				})

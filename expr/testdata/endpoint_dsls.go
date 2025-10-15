@@ -713,3 +713,41 @@ var GRPCEndpointWithExtendedTypes = func() {
 		})
 	})
 }
+
+var GRPCEndpointWithInheritErrorDSL = func() {
+	API("API", func() {
+		Error("not_found")
+		GRPC(func() {
+			Response("not_found", CodeNotFound)
+		})
+	})
+	Service("Service", func() {
+		Error("not_found")
+		Method("Method", func() {
+			GRPC(func() {
+				Response(CodeOK)
+			})
+		})
+	})
+}
+
+var GRPCEndpointWithUnionContainingAny = func() {
+	var AnyAlias = Type("AnyAlias", func() {
+		Attribute("value", Any)
+	})
+
+	var U = Type("U", func() {
+		OneOf("choice", func() {
+			Field(1, "plain_any", Any)
+			Field(2, "array_any", ArrayOf(AnyAlias))
+			Field(3, "map_any", MapOf(String, AnyAlias))
+		})
+	})
+
+	Service("Service", func() {
+		Method("MethodUnion", func() {
+			Payload(U)
+			GRPC(func() {})
+		})
+	})
+}

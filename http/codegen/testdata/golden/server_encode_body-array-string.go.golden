@@ -1,0 +1,11 @@
+// EncodeMethodBodyArrayStringResponse returns an encoder for responses
+// returned by the ServiceBodyArrayString MethodBodyArrayString endpoint.
+func EncodeMethodBodyArrayStringResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*servicebodyarraystring.MethodBodyArrayStringResult)
+		enc := encoder(ctx, w)
+		body := NewMethodBodyArrayStringResponseBody(res)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}

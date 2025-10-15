@@ -1,7 +1,30 @@
 version: "2"
 linters:
   enable:
-    - errorlint
-    - errcheck
-    - staticcheck
+    - errorlint     # Better error handling patterns for Go 1.13+
+    - errcheck      # Check for unchecked errors
+    - staticcheck   # Advanced static analysis
+    - unparam       # Detects unused parameters
+    - unused        # Detects unused constants, variables, functions and types
+    - ineffassign   # Detects ineffectual assignments
+    - bodyclose     # Check HTTP response body is closed
+    - gocritic      # Provides bug, performance and style diagnostics
+    - misspell      # Check for misspelled words
+    - nakedret      # Check naked returns in large functions
+    - prealloc      # Suggest preallocating slices
+    - unconvert     # Remove unnecessary type conversions
+    - whitespace    # Check for unnecessary whitespace
+    - nilerr        # Find code that returns nil even if error is not nil
+    - copyloopvar   # Check for loop variable issues  
+    - sqlclosecheck # Check sql.Rows and sql.Stmt are closed
+    - makezero      # Find slice declarations with non-zero initial length
+  settings:
+    staticcheck:
+      checks:
+        - "-ST1001"   # Dot imports are used intentionally in DSL
+    nakedret:
+      max-func-lines: 30
+    misspell:
+      ignore-rules:
+        - Statuser
 

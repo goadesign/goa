@@ -3,10 +3,10 @@ package codegen
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen/testdata"
+	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/expr"
 )
 
@@ -25,28 +25,27 @@ func TestGoTransformUnion(t *testing.T) {
 		defaultCtx      = NewAttributeContext(false, false, true, "", scope)
 	)
 	tc := []struct {
-		Name     string
-		Source   *expr.AttributeExpr
-		Target   *expr.AttributeExpr
-		Expected string
+		Name   string
+		Source *expr.AttributeExpr
+		Target *expr.AttributeExpr
 	}{
-		{"UnionString to UnionString2", unionString, unionString2, unionToUnionCode},
-		{"UnionStringInt to UnionStringInt2", unionStringInt, unionStringInt2, unionMultiToUnionMultiCode},
+		{"UnionString to UnionString2", unionString, unionString2},
+		{"UnionStringInt to UnionStringInt2", unionStringInt, unionStringInt2},
 
-		{"UnionString to User Type", unionString, userType, unionStringToUserTypeCode},
-		{"UnionStringInt to User Type", unionStringInt, userType, unionStringIntToUserTypeCode},
-		{"UnionSomeType to User Type", unionSomeType, userType, unionSomeTypeToUserTypeCode},
+		{"UnionString to User Type", unionString, userType},
+		{"UnionStringInt to User Type", unionStringInt, userType},
+		{"UnionSomeType to User Type", unionSomeType, userType},
 
-		{"User Type to UnionString", userType, unionString, userTypeToUnionStringCode},
-		{"User Type to UnionStringInt", userType, unionStringInt, userTypeToUnionStringIntCode},
-		{"User Type to UnionSomeType", userType, unionSomeType, userTypeToUnionSomeTypeCode},
+		{"User Type to UnionString", userType, unionString},
+		{"User Type to UnionStringInt", userType, unionStringInt},
+		{"User Type to UnionSomeType", userType, unionSomeType},
 	}
 	for _, c := range tc {
 		t.Run(c.Name, func(t *testing.T) {
 			code, _, err := GoTransform(c.Source, c.Target, "source", "target", defaultCtx, defaultCtx, "", true)
 			require.NoError(t, err)
 			code = FormatTestCode(t, "package foo\nfunc transform(){\n"+code+"}")
-			assert.Equal(t, c.Expected, code)
+			testutil.AssertGo(t, "testdata/golden/go_transform_union_"+c.Name+".go.golden", code)
 		})
 	}
 }
@@ -84,110 +83,3 @@ func TestGoTransformUnionError(t *testing.T) {
 		})
 	}
 }
-
-const unionToUnionCode = `func transform() {
-	var target *UnionString2
-	switch actual := source.(type) {
-	case UnionStringString:
-		obj := UnionString2String(actual)
-		target = obj
-	}
-}
-`
-
-const unionMultiToUnionMultiCode = `func transform() {
-	var target *UnionStringInt2
-	switch actual := source.(type) {
-	case UnionStringIntString:
-		obj := UnionStringInt2String(actual)
-		target = obj
-	case UnionStringIntInt:
-		obj := UnionStringInt2Int(actual)
-		target = obj
-	}
-}
-`
-
-const unionStringToUserTypeCode = `func transform() {
-	var target *UnionUserType
-	js, _ := json.Marshal(source)
-	var name string
-	switch source.(type) {
-	case UnionStringString:
-		name = "String"
-	}
-	target = &UnionUserType{
-		Type:  name,
-		Value: string(js),
-	}
-}
-`
-
-const unionStringIntToUserTypeCode = `func transform() {
-	var target *UnionUserType
-	js, _ := json.Marshal(source)
-	var name string
-	switch source.(type) {
-	case UnionStringIntString:
-		name = "String"
-	case UnionStringIntInt:
-		name = "Int"
-	}
-	target = &UnionUserType{
-		Type:  name,
-		Value: string(js),
-	}
-}
-`
-
-const unionSomeTypeToUserTypeCode = `func transform() {
-	var target *UnionUserType
-	js, _ := json.Marshal(source)
-	var name string
-	switch source.(type) {
-	case *SomeType:
-		name = "SomeType"
-	}
-	target = &UnionUserType{
-		Type:  name,
-		Value: string(js),
-	}
-}
-`
-
-const userTypeToUnionStringCode = `func transform() {
-	var target *UnionString
-	switch source.Type {
-	case "String":
-		var val UnionStringString
-		json.Unmarshal([]byte(source.Value), &val)
-		target = val
-	}
-}
-`
-
-const userTypeToUnionStringIntCode = `func transform() {
-	var target *UnionStringInt
-	switch source.Type {
-	case "String":
-		var val UnionStringIntString
-		json.Unmarshal([]byte(source.Value), &val)
-		target = val
-	case "Int":
-		var val UnionStringIntInt
-		json.Unmarshal([]byte(source.Value), &val)
-		target = val
-	}
-}
-`
-
-const userTypeToUnionSomeTypeCode = `func transform() {
-	var target *UnionSomeType
-	switch source.Type {
-	case "SomeType":
-		var val *SomeType
-		json.Unmarshal([]byte(source.Value), &val)
-		target = val
-	}
-}
-`

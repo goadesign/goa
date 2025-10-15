@@ -1,0 +1,8 @@
+// NewMethodQueryArrayInt64Payload builds a ServiceQueryArrayInt64 service
+// MethodQueryArrayInt64 endpoint payload.
+func NewMethodQueryArrayInt64Payload(q []int64) *servicequeryarrayint64.MethodQueryArrayInt64Payload {
+	v := &servicequeryarrayint64.MethodQueryArrayInt64Payload{}
+	v.Q = q
+
+	return v
+}

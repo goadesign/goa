@@ -2,6 +2,7 @@ package example
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -84,6 +85,17 @@ type (
 		Port string
 		// Transport is the transport type for the URL.
 		Transport *TransportData
+		// HandlerArgs are the precomputed handler arguments for this URI used by
+		// the example server template. Each entry may contain an Endpoint and/or
+		// Service argument name to be passed to the handler in order.
+		HandlerArgs []HandlerArg
+	}
+
+	// HandlerArg represents one argument slot to the handler call in the example
+	// server. Only one of Endpoint or Service may be set for each entry.
+	HandlerArg struct {
+		Endpoint string
+		Service  string
 	}
 
 	// TransportData contains the data about a transport (http or grpc).
@@ -171,9 +183,7 @@ func (h *HostData) DefaultURL(transport Transport) string {
 
 // buildServerData builds the server data for the given server expression.
 func buildServerData(svr *expr.ServerExpr, root *expr.RootExpr) *Data {
-	var (
-		hosts []*HostData
-	)
+	hosts := make([]*HostData, 0, len(svr.Hosts))
 	for _, h := range svr.Hosts {
 		hosts = append(hosts, buildHostData(h))
 	}
@@ -210,6 +220,14 @@ func buildServerData(svr *expr.ServerExpr, root *expr.RootExpr) *Data {
 				transports = append(transports, newHTTPTransport())
 				foundTrans[TransportHTTP] = struct{}{}
 			}
+			seenHTTP = true
+		}
+		if root.API.JSONRPC.Service(svc) != nil {
+			// JSON-RPC implies HTTP transport; ensure HTTP transport exists
+			if !seenHTTP {
+				transports = append(transports, newHTTPTransport())
+				foundTrans[TransportHTTP] = struct{}{}
+			}
 		}
 		if root.API.GRPC.Service(svc) != nil {
 			grpcServices = append(grpcServices, svc)
@@ -227,7 +245,7 @@ func buildServerData(svr *expr.ServerExpr, root *expr.RootExpr) *Data {
 			transport.Services = grpcServices
 		}
 	}
-	return &Data{
+	sd := &Data{
 		Name:        svr.Name,
 		Description: svr.Description,
 		Services:    svr.Services,
@@ -237,6 +255,13 @@ func buildServerData(svr *expr.ServerExpr, root *expr.RootExpr) *Data {
 		Transports:  transports,
 		Dir:         codegen.SnakeCase(codegen.Goify(svr.Name, true)),
 	}
+	// Precompute handler args for each URI of each host
+	for _, h := range sd.Hosts {
+		for _, u := range h.URIs {
+			u.HandlerArgs = computeHandlerArgsForURI(u, sd, root)
+		}
+	}
+	return sd
 }
 
 // buildHostData builds the host data for the given host expression.
@@ -353,4 +378,54 @@ func newHTTPTransport() *TransportData {
 
 func newGRPCTransport() *TransportData {
 	return &TransportData{Type: TransportGRPC, Name: "gRPC"}
+}
+
+// computeHandlerArgsForURI returns the ordered handler arguments for the given URI.
+func computeHandlerArgsForURI(uri *URIData, server *Data, root *expr.RootExpr) []HandlerArg {
+	capHint := len(server.Services)
+	httpSvcNames := make([]string, 0, capHint)
+	grpcSvcNames := make([]string, 0, capHint)
+	jsonrpcSvcNames := make([]string, 0, len(root.API.JSONRPC.Services))
+	for _, t := range server.Transports {
+		if t.Type == TransportHTTP {
+			httpSvcNames = append(httpSvcNames, t.Services...)
+		}
+		if t.Type == TransportGRPC {
+			grpcSvcNames = append(grpcSvcNames, t.Services...)
+		}
+	}
+	for _, j := range root.API.JSONRPC.Services {
+		jsonrpcSvcNames = append(jsonrpcSvcNames, j.Name())
+	}
+	// Track HTTP services that actually define endpoints (not just file servers)
+	hasHTTPMethods := make(map[string]bool, len(root.API.HTTP.Services))
+	for _, hs := range root.API.HTTP.Services {
+		if len(hs.HTTPEndpoints) > 0 {
+			hasHTTPMethods[hs.Name()] = true
+		}
+	}
+	var out []HandlerArg
+	if uri.Transport.Type == TransportGRPC {
+		for _, name := range grpcSvcNames {
+			out = append(out, HandlerArg{Endpoint: codegen.Goify(name, false) + "Endpoints"})
+		}
+		return out
+	}
+	// Endpoints first for union(HTTP services, JSON-RPC services) in server.Services order
+	for _, svcName := range server.Services {
+		if (slices.Contains(httpSvcNames, svcName) && hasHTTPMethods[svcName]) || slices.Contains(jsonrpcSvcNames, svcName) {
+			out = append(out, HandlerArg{Endpoint: codegen.Goify(svcName, false) + "Endpoints"})
+		}
+	}
+	// Then JSON-RPC services: Service then Endpoints only if not already included above
+	for _, svcName := range server.Services {
+		if slices.Contains(jsonrpcSvcNames, svcName) {
+			out = append(out, HandlerArg{Service: codegen.Goify(svcName, false) + "Svc"})
+			if !slices.Contains(httpSvcNames, svcName) && !slices.Contains(jsonrpcSvcNames, svcName) {
+				// This branch will normally not run since JSON-RPC services are included above
+				out = append(out, HandlerArg{Endpoint: codegen.Goify(svcName, false) + "Endpoints"})
+			}
+		}
+	}
+	return out
 }

@@ -1,0 +1,18 @@
+// DecodeMethodUnaryRPCNoResultRequest decodes requests sent to
+// "ServiceUnaryRPCNoResult" service "MethodUnaryRPCNoResult" endpoint.
+func DecodeMethodUnaryRPCNoResultRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
+	var (
+		message *service_unary_rpc_no_resultpb.MethodUnaryRPCNoResultRequest
+		ok      bool
+	)
+	{
+		if message, ok = v.(*service_unary_rpc_no_resultpb.MethodUnaryRPCNoResultRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoResult", "MethodUnaryRPCNoResult", "*service_unary_rpc_no_resultpb.MethodUnaryRPCNoResultRequest", v)
+		}
+	}
+	var payload []string
+	{
+		payload = NewMethodUnaryRPCNoResultPayload(message)
+	}
+	return payload, nil
+}

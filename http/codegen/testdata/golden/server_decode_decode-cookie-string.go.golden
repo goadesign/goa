@@ -1,0 +1,21 @@
+// DecodeMethodCookieStringRequest returns a decoder for requests sent to the
+// ServiceCookieString MethodCookieString endpoint.
+func DecodeMethodCookieStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicecookiestring.MethodCookieStringPayload, error) {
+	return func(r *http.Request) (*servicecookiestring.MethodCookieStringPayload, error) {
+		var (
+			c2 *string
+			c  *http.Cookie
+		)
+		c, _ = r.Cookie("c")
+		var c2Raw string
+		if c != nil {
+			c2Raw = c.Value
+		}
+		if c2Raw != "" {
+			c2 = &c2Raw
+		}
+		payload := NewMethodCookieStringPayload(c2)
+
+		return payload, nil
+	}
+}

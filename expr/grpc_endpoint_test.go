@@ -15,14 +15,8 @@ func TestGRPCEndpointValidation(t *testing.T) {
 		Errors []string
 	}{
 		"endpoint-with-any-type": {
-			DSL: testdata.GRPCEndpointWithAnyType,
-			Errors: []string{`service "Service" gRPC endpoint "Method": Map key type is Any type which is not supported in gRPC
-service "Service" gRPC endpoint "Method": Array element type is Any type which is not supported in gRPC
-service "Service" gRPC endpoint "Method": Attribute "invalid_primitive" is Any type which is not supported in gRPC
-service "Service" gRPC endpoint "Method": Array element type is Any type which is not supported in gRPC
-service "Service" gRPC endpoint "Method": Error "invalid_error_type" type is Any type which is not supported in gRPC
-service "Service" gRPC endpoint "Method": Map element type is Any type which is not supported in gRPC`,
-			},
+			DSL:    testdata.GRPCEndpointWithAnyType,
+			Errors: []string{}, // Any type is now supported in gRPC
 		},
 		"endpoint-with-untagged-fields": {
 			DSL: testdata.GRPCEndpointWithUntaggedFields,
@@ -43,6 +37,18 @@ service "Service" gRPC endpoint "Method": field number 2 in attribute "key_dup_i
 		"endpoint-with-extended-types": {
 			DSL:    testdata.GRPCEndpointWithExtendedTypes,
 			Errors: []string{},
+		},
+		"endpoint-with-inherit-error": {
+			DSL:    testdata.GRPCEndpointWithInheritErrorDSL,
+			Errors: []string{},
+		},
+		"endpoint-union-containing-any": {
+			DSL: testdata.GRPCEndpointWithUnionContainingAny,
+			Errors: []string{
+				`service "Service" method "MethodUnion": union type choice has array elements, not supported by gRPC
+service "Service" method "MethodUnion": union type choice has map elements, not supported by gRPC`,
+				// Any type error removed as Any is now supported
+			},
 		},
 	}
 	for name, c := range cases {

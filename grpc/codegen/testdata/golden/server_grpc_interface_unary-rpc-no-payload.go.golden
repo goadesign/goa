@@ -1,0 +1,11 @@
+// MethodUnaryRPCNoPayload implements the "MethodUnaryRPCNoPayload" method in
+// service_unary_rpc_no_payloadpb.ServiceUnaryRPCNoPayloadServer interface.
+func (s *Server) MethodUnaryRPCNoPayload(ctx context.Context, message *service_unary_rpc_no_payloadpb.MethodUnaryRPCNoPayloadRequest) (*service_unary_rpc_no_payloadpb.MethodUnaryRPCNoPayloadResponse, error) {
+	ctx = context.WithValue(ctx, goa.MethodKey, "MethodUnaryRPCNoPayload")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceUnaryRPCNoPayload")
+	resp, err := s.MethodUnaryRPCNoPayloadH.Handle(ctx, message)
+	if err != nil {
+		return nil, goagrpc.EncodeError(err)
+	}
+	return resp.(*service_unary_rpc_no_payloadpb.MethodUnaryRPCNoPayloadResponse), nil
+}

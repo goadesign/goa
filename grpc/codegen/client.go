@@ -49,27 +49,27 @@ func clientFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-struct",
-			Source: readTemplate("client_struct"),
+			Source: grpcTemplates.Read(grpcClientStructT),
 			Data:   data,
 		})
 		for _, e := range data.Endpoints {
 			if e.ClientStream != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "client-stream-struct-type",
-					Source: readTemplate("stream_struct_type"),
+					Source: grpcTemplates.Read(grpcStreamStructTypeT),
 					Data:   e.ClientStream,
 				})
 			}
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "grpc-client-init",
-			Source: readTemplate("client_init"),
+			Source: grpcTemplates.Read(grpcClientInitT),
 			Data:   data,
 		})
 		for _, e := range data.Endpoints {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-endpoint-init",
-				Source: readTemplate("client_endpoint_init"),
+				Source: grpcTemplates.Read(grpcClientEndpointInitT),
 				Data:   e,
 			})
 		}
@@ -78,28 +78,28 @@ func clientFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 				if e.ClientStream.RecvConvert != nil {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-stream-recv",
-						Source: readTemplate("stream_recv"),
+						Source: grpcTemplates.Read(grpcStreamRecvT),
 						Data:   e.ClientStream,
 					})
 				}
 				if e.Method.StreamKind == expr.ClientStreamKind || e.Method.StreamKind == expr.BidirectionalStreamKind {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-stream-send",
-						Source: readTemplate("stream_send"),
+						Source: grpcTemplates.Read(grpcStreamSendT),
 						Data:   e.ClientStream,
 					})
 				}
 				if e.ClientStream.MustClose {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-stream-close",
-						Source: readTemplate("stream_close"),
+						Source: grpcTemplates.Read(grpcStreamCloseT),
 						Data:   e.ClientStream,
 					})
 				}
 				if e.Method.ViewedResult != nil && e.Method.ViewedResult.ViewName == "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-stream-set-view",
-						Source: readTemplate("stream_set_view"),
+						Source: grpcTemplates.Read(grpcStreamSetViewT),
 						Data:   e.ClientStream,
 					})
 				}
@@ -142,13 +142,13 @@ func clientEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *Serv
 		for _, e := range data.Endpoints {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "remote-method-builder",
-				Source: readTemplate("remote_method_builder"),
+				Source: grpcTemplates.Read(grpcRemoteMethodBuilderT),
 				Data:   e,
 			})
 			if e.PayloadRef != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "request-encoder",
-					Source:  readTemplate("request_encoder", "convert_type_to_string"),
+					Source:  grpcTemplates.Read(grpcRequestEncoderT, grpcConvertTypeToStringP, "string_conversion"),
 					Data:    e,
 					FuncMap: fm,
 				})
@@ -156,7 +156,7 @@ func clientEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *Serv
 			if e.ResultRef != "" || e.ClientStream != nil {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "response-decoder",
-					Source:  readTemplate("response_decoder", "convert_string_to_type"),
+					Source:  grpcTemplates.Read(grpcResponseDecoderT, grpcConvertStringToTypeP, "type_conversion", "slice_conversion", "slice_item_conversion"),
 					Data:    e,
 					FuncMap: fm,
 				})

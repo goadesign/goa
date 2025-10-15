@@ -1,0 +1,8 @@
+// NewMethodHeaderCustomNamePayload builds a ServiceHeaderCustomName service
+// MethodHeaderCustomName endpoint payload.
+func NewMethodHeaderCustomNamePayload(h *string) *serviceheadercustomname.MethodHeaderCustomNamePayload {
+	v := &serviceheadercustomname.MethodHeaderCustomNamePayload{}
+	v.Header = h
+
+	return v
+}

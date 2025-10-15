@@ -1,0 +1,20 @@
+// NewProtoMethodRequest builds the gRPC request type from the payload of the
+// "Method" endpoint of the "DefaultFields" service.
+func NewProtoMethodRequest(payload *defaultfields.MethodPayload) *default_fieldspb.MethodRequest {
+	message := &default_fieldspb.MethodRequest{
+		Req:  payload.Req,
+		Opt:  payload.Opt,
+		Def0: &payload.Def0,
+		Def1: &payload.Def1,
+		Def2: &payload.Def2,
+		Reqs: payload.Reqs,
+		Opts: payload.Opts,
+		Defs: &payload.Defs,
+		Defe: &payload.Defe,
+		Rat:  payload.Rat,
+		Flt:  payload.Flt,
+		Flt0: &payload.Flt0,
+		Flt1: &payload.Flt1,
+	}
+	return message
+}

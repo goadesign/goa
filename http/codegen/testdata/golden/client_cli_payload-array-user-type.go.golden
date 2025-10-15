@@ -1,0 +1,17 @@
+// BuildMethodBodyInlineArrayUserPayload builds the payload for the
+// ServiceBodyInlineArrayUser MethodBodyInlineArrayUser endpoint from CLI flags.
+func BuildMethodBodyInlineArrayUserPayload(serviceBodyInlineArrayUserMethodBodyInlineArrayUserBody string) ([]*servicebodyinlinearrayuser.ElemType, error) {
+	var err error
+	var body []*ElemTypeRequestBody
+	{
+		err = json.Unmarshal([]byte(serviceBodyInlineArrayUserMethodBodyInlineArrayUserBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'[\n      {\n         \"a\": \"patterna\",\n         \"b\": \"patternb\"\n      },\n      {\n         \"a\": \"patterna\",\n         \"b\": \"patternb\"\n      }\n   ]'")
+		}
+	}
+	v := make([]*servicebodyinlinearrayuser.ElemType, len(body))
+	for i, val := range body {
+		v[i] = marshalElemTypeRequestBodyToServicebodyinlinearrayuserElemType(val)
+	}
+	return v, nil
+}

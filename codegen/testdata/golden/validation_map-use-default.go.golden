@@ -1,0 +1,17 @@
+func Validate() (err error) {
+	if target.RequiredMap == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_map", "target"))
+	}
+	if len(target.RequiredMap) < 5 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_map", target.RequiredMap, len(target.RequiredMap), 5, true))
+	}
+	if len(target.DefaultMap) > 3 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("target.default_map", target.DefaultMap, len(target.DefaultMap), 3, false))
+	}
+	for k, v := range target.Map {
+		err = goa.MergeErrors(err, goa.ValidatePattern("target.map.key", k, "^[A-Z]"))
+		if v > 5 {
+			err = goa.MergeErrors(err, goa.InvalidRangeError("target.map[key]", v, 5, false))
+		}
+	}
+}

@@ -1,0 +1,11 @@
+func transform() {
+	target := &proto.SimpleOneOf{}
+	if source.SimpleOneOf != nil {
+		switch val := source.SimpleOneOf.(type) {
+		case *proto.SimpleOneOf_String_:
+			target.SimpleOneOf = proto.SimpleOneOfString(val.String_)
+		case *proto.SimpleOneOf_Integer:
+			target.SimpleOneOf = proto.SimpleOneOfInteger(val.Integer)
+		}
+	}
+}

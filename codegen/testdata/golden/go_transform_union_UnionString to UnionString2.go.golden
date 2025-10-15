@@ -1,0 +1,8 @@
+func transform() {
+	var target *UnionString2
+	switch actual := source.(type) {
+	case UnionStringString:
+		obj := UnionString2String(actual)
+		target = obj
+	}
+}

@@ -1,0 +1,6 @@
+func transform() {
+	target := &proto.CompositePkgOverride{}
+	if source.WithOverride != nil {
+		target.WithOverride = svcTypesWithOverrideToProtoWithOverride(source.WithOverride)
+	}
+}

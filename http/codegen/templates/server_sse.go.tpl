@@ -10,7 +10,7 @@ type {{ .SSE.StructName }} struct {
 
 {{ printf "%s %s" .SSE.SendName .SSE.SendDesc | comment }}
 func (s *{{ .SSE.StructName }}) {{ .SSE.SendName }}(v {{ .SSE.EventTypeRef }}) error {
-	return s.{{ .SSE.SendWithContextName }}(context.Background(), v)
+    return s.{{ .SSE.SendWithContextName }}(context.Background(), v)
 }
 
 {{ printf "%s %s" .SSE.SendWithContextName .SSE.SendWithContextDesc | comment }}
@@ -38,7 +38,7 @@ func (s *{{ .SSE.StructName }}) {{ .SSE.SendWithContextName }}(ctx context.Conte
 	{{- else }}
 	res := v
 	{{- end }}
-	
+
 	{{ if .SSE.IDField }}
 	if id := res.{{ .SSE.IDField }}; id != "" {
 		fmt.Fprintf(s.w, "id: %s\n", id)
@@ -66,9 +66,7 @@ func (s *{{ .SSE.StructName }}) {{ .SSE.SendWithContextName }}(ctx context.Conte
 	{{- end }}
 	fmt.Fprintf(s.w, "data: %s\n\n", data)
 
-	if f, ok := s.w.(http.Flusher); ok {
-		f.Flush()
-	}
+	http.NewResponseController(s.w).Flush()
 	return nil
 }
 

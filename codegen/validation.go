@@ -31,17 +31,17 @@ func init() {
 		"constant": constant,
 		"add":      func(a, b int) int { return a + b },
 	}
-	enumValT = template.Must(template.New("enum").Funcs(fm).Parse(enumValTmpl))
-	formatValT = template.Must(template.New("format").Funcs(fm).Parse(formatValTmpl))
-	patternValT = template.Must(template.New("pattern").Funcs(fm).Parse(patternValTmpl))
-	exclMinMaxValT = template.Must(template.New("exclMinMax").Funcs(fm).Parse(exclMinMaxValTmpl))
-	minMaxValT = template.Must(template.New("minMax").Funcs(fm).Parse(minMaxValTmpl))
-	lengthValT = template.Must(template.New("length").Funcs(fm).Parse(lengthValTmpl))
-	requiredValT = template.Must(template.New("req").Funcs(fm).Parse(requiredValTmpl))
-	arrayValT = template.Must(template.New("array").Funcs(fm).Parse(arrayValTmpl))
-	mapValT = template.Must(template.New("map").Funcs(fm).Parse(mapValTmpl))
-	unionValT = template.Must(template.New("union").Funcs(fm).Parse(unionValTmpl))
-	userValT = template.Must(template.New("user").Funcs(fm).Parse(userValTmpl))
+	enumValT = template.Must(template.New("enum").Funcs(fm).Parse(codegenTemplates.Read(validationEnumT)))
+	formatValT = template.Must(template.New("format").Funcs(fm).Parse(codegenTemplates.Read(validationFormatT)))
+	patternValT = template.Must(template.New("pattern").Funcs(fm).Parse(codegenTemplates.Read(validationPatternT)))
+	exclMinMaxValT = template.Must(template.New("exclMinMax").Funcs(fm).Parse(codegenTemplates.Read(validationExclMinMaxT)))
+	minMaxValT = template.Must(template.New("minMax").Funcs(fm).Parse(codegenTemplates.Read(validationMinMaxT)))
+	lengthValT = template.Must(template.New("length").Funcs(fm).Parse(codegenTemplates.Read(validationLengthT)))
+	requiredValT = template.Must(template.New("req").Funcs(fm).Parse(codegenTemplates.Read(validationRequiredT)))
+	arrayValT = template.Must(template.New("array").Funcs(fm).Parse(codegenTemplates.Read(validationArrayT)))
+	mapValT = template.Must(template.New("map").Funcs(fm).Parse(codegenTemplates.Read(validationMapT)))
+	unionValT = template.Must(template.New("union").Funcs(fm).Parse(codegenTemplates.Read(validationUnionT)))
+	userValT = template.Must(template.New("user").Funcs(fm).Parse(codegenTemplates.Read(validationUserT)))
 }
 
 // AttributeValidationCode produces Go code that runs the validations defined
@@ -170,7 +170,10 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		for _, v := range u.Values {
 			vatt := v.Attribute
 			if view {
-				val := validateAttribute(attCtx, vatt, put, "v", context+".value", true, view)
+				// Union values in views are never pointers - they are concrete typed values
+				unionCtx := attCtx.Dup()
+				unionCtx.Pointer = false
+				val := validateAttribute(unionCtx, vatt, put, "v", context+".value", true, view)
 				if val != "" {
 					types = append(types, attCtx.Scope.Ref(vatt, attCtx.DefaultPkg))
 					vals = append(vals, val)
@@ -300,7 +303,7 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 		}
 		return buf.String()
 	}
-	var res []string
+	res := make([]string, 0, 8) // preallocate with typical validation count
 	if values := validation.Values; values != nil {
 		data["values"] = values
 		if val := runTemplate(enumValT, data); val != "" {
@@ -326,8 +329,8 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 			res = append(res, val)
 		}
 	}
-	if min := validation.Minimum; min != nil {
-		data["min"] = *min
+	if minVal := validation.Minimum; minVal != nil {
+		data["min"] = *minVal
 		data["isMin"] = true
 		if val := runTemplate(minMaxValT, data); val != "" {
 			res = append(res, val)
@@ -340,8 +343,8 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 			res = append(res, val)
 		}
 	}
-	if max := validation.Maximum; max != nil {
-		data["max"] = *max
+	if maxVal := validation.Maximum; maxVal != nil {
+		data["max"] = *maxVal
 		data["isMin"] = false
 		if val := runTemplate(minMaxValT, data); val != "" {
 			res = append(res, val)
@@ -514,80 +517,3 @@ func constant(formatName string) string {
 	}
 	panic("unknown format") // bug
 }
-
-const (
-	arrayValTmpl = `for _, e := range {{ .target }} {
-{{ .validation }}
-}`
-
-	mapValTmpl = `for {{if .keyValidation }}k{{ else }}_{{ end }}, {{ if .valueValidation }}v{{ else }}_{{ end }} := range {{ .target }} {
-{{- .keyValidation }}
-{{- .valueValidation }}
-}`
-
-	unionValTmpl = `switch v := {{ .target }}.(type) {
-{{- range $i, $val := .values }}
-	case {{ index $.types $i }}:
-		{{ $val }}
-{{ end -}}
-}`
-
-	userValTmpl = `if err2 := Validate{{ .name }}({{ .target }}); err2 != nil {
-        err = goa.MergeErrors(err, err2)
-}`
-
-	enumValTmpl = `{{ if .isPointer }}if {{ .target }} != nil {
-{{ end -}}
-if !({{ oneof .targetVal .values }}) {
-        err = goa.MergeErrors(err, goa.InvalidEnumValueError({{ printf "%q" .context }}, {{ .targetVal }}, {{ slice .values }}))
-{{ if .isPointer -}}
-}
-{{ end -}}
-}`
-
-	patternValTmpl = `{{ if .isPointer }}if {{ .target }} != nil {
-{{ end -}}
-        err = goa.MergeErrors(err, goa.ValidatePattern({{ printf "%q" .context }}, {{ .targetVal }}, {{ printf "%q" .pattern }}))
-{{- if .isPointer }}
-}
-{{- end }}`
-
-	formatValTmpl = `{{ if .isPointer }}if {{ .target }} != nil {
-{{ end -}}
-        err = goa.MergeErrors(err, goa.ValidateFormat({{ printf "%q" .context }}, {{ .targetVal}}, {{ constant .format }}))
-{{- if .isPointer }}
-}
-{{- end }}`
-
-	exclMinMaxValTmpl = `{{ if .isPointer }}if {{ .target }} != nil {
-{{ end -}}
-        if {{ .targetVal }} {{ if .isExclMin }}<={{ else }}>={{ end }} {{ if .isExclMin }}{{ .exclMin }}{{ else }}{{ .exclMax }}{{ end }} {
-        err = goa.MergeErrors(err, goa.InvalidRangeError({{ printf "%q" .context }}, {{ .targetVal }}, {{ if .isExclMin }}{{ .exclMin }}, true{{ else }}{{ .exclMax }}, false{{ end }}))
-{{ if .isPointer -}}
-}
-{{ end -}}
-}`
-
-	minMaxValTmpl = `{{ if .isPointer -}}if {{ .target }} != nil {
-{{ end -}}
-        if {{ .targetVal }} {{ if .isMin }}<{{ else }}>{{ end }} {{ if .isMin }}{{ .min }}{{ else }}{{ .max }}{{ end }} {
-        err = goa.MergeErrors(err, goa.InvalidRangeError({{ printf "%q" .context }}, {{ .targetVal }}, {{ if .isMin }}{{ .min }}, true{{ else }}{{ .max }}, false{{ end }}))
-{{ if .isPointer -}}
-}
-{{ end -}}
-}`
-
-	lengthValTmpl = `{{ $target := or (and (or (or .array .map) .nonzero) .target) .targetVal -}}
-{{ if and .isPointer .string -}}
-if {{ .target }} != nil {
-{{ end -}}
-if {{ if .string }}utf8.RuneCountInString({{ $target }}){{ else }}len({{ $target }}){{ end }} {{ if .isMinLength }}<{{ else }}>{{ end }} {{ if .isMinLength }}{{ .minLength }}{{ else }}{{ .maxLength }}{{ end }} {
-        err = goa.MergeErrors(err, goa.InvalidLengthError({{ printf "%q" .context }}, {{ $target }}, {{ if .string }}utf8.RuneCountInString({{ $target }}){{ else }}len({{ $target }}){{ end }}, {{ if .isMinLength }}{{ .minLength }}, true{{ else }}{{ .maxLength }}, false{{ end }}))
-}{{- if and .isPointer .string }}
-}
-{{- end }}`
-
-	requiredValTmpl = `if {{ $.target }}.{{ .attCtx.Scope.Field $.reqAtt .req true }} == nil {
-        err = goa.MergeErrors(err, goa.MissingFieldError("{{ .req }}", {{ printf "%q" $.context }}))
-}`
-)

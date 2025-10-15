@@ -1,0 +1,6 @@
+// Legacy code example
+package simple
+
+func Hello() string {
+	return "Hello, World!"
+}

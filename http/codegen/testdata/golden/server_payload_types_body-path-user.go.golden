@@ -1,0 +1,10 @@
+// NewMethodBodyPathUserPayloadType builds a ServiceBodyPathUser service
+// MethodBodyPathUser endpoint payload.
+func NewMethodBodyPathUserPayloadType(body *MethodBodyPathUserRequestBody, b string) *servicebodypathuser.PayloadType {
+	v := &servicebodypathuser.PayloadType{
+		A: body.A,
+	}
+	v.B = &b
+
+	return v
+}

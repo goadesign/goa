@@ -1,0 +1,8 @@
+// NewMethodQueryBoolPayload builds a ServiceQueryBool service MethodQueryBool
+// endpoint payload.
+func NewMethodQueryBoolPayload(q *bool) *servicequerybool.MethodQueryBoolPayload {
+	v := &servicequerybool.MethodQueryBoolPayload{}
+	v.Q = q
+
+	return v
+}

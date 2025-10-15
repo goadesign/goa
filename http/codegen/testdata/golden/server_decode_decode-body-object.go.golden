@@ -1,0 +1,26 @@
+// DecodeMethodBodyObjectRequest returns a decoder for requests sent to the
+// ServiceBodyObject MethodBodyObject endpoint.
+func DecodeMethodBodyObjectRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyobject.MethodBodyObjectPayload, error) {
+	return func(r *http.Request) (*servicebodyobject.MethodBodyObjectPayload, error) {
+		var (
+			body struct {
+				B *string `form:"b" json:"b" xml:"b"`
+			}
+			err error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		payload := NewMethodBodyObjectPayload(body)
+
+		return payload, nil
+	}
+}

@@ -1,0 +1,7 @@
+func transform() {
+	target := &Required{
+		RequiredString: &source.RequiredString,
+		DefaultBool:    &source.DefaultBool,
+		Integer:        source.Integer,
+	}
+}

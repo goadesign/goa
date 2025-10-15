@@ -1,0 +1,18 @@
+
+syntax = "proto3";
+
+package method_with_reserved_name;
+
+option go_package = "/method_with_reserved_namepb";
+
+// Service is the MethodWithReservedName service interface.
+service MethodWithReservedName {
+	// String implements string.
+	rpc String (StringRequest) returns (StringResponse);
+}
+
+message StringRequest {
+}
+
+message StringResponse {
+}

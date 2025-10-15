@@ -36,11 +36,11 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v any, md metadata.
 				if {{ .VarName }}Raw := md.Get({{ printf "%q" .Name }}); len({{ .VarName }}Raw) == 0 {
 					err = goa.MergeErrors(err, goa.MissingFieldError({{ printf "%q" .Name }}, "metadata"))
 				} else {
-					{{- template "slice_conversion" . }}
+					{{- template "partial_slice_conversion" . }}
 				}
 			{{- else }}
 				if {{ .VarName }}Raw := md.Get({{ printf "%q" .Name }}); len({{ .VarName }}Raw) > 0 {
-					{{- template "slice_conversion" . }}
+					{{- template "partial_slice_conversion" . }}
 				}
 			{{- end }}
 		{{- else }}
@@ -49,12 +49,12 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v any, md metadata.
 					err = goa.MergeErrors(err, goa.MissingFieldError({{ printf "%q" .Name }}, "metadata"))
 				} else {
 					{{ .VarName }}Raw := vals[0]
-					{{ template "type_conversion" . }}
+					{{ template "partial_type_conversion" . }}
 				}
 			{{- else }}
 				if vals := md.Get({{ printf "%q" .Name }}); len(vals) > 0 {
 					{{ .VarName }}Raw := vals[0]
-					{{ template "type_conversion" . }}
+					{{ template "partial_type_conversion" . }}
 				}
 			{{- end }}
 		{{- end }}

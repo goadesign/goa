@@ -1,0 +1,13 @@
+func transform() {
+	var target *UnionStringInt
+	switch source.Type {
+	case "String":
+		var val UnionStringIntString
+		json.Unmarshal([]byte(source.Value), &val)
+		target = val
+	case "Int":
+		var val UnionStringIntInt
+		json.Unmarshal([]byte(source.Value), &val)
+		target = val
+	}
+}

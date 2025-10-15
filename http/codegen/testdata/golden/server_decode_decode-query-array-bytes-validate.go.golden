@@ -1,0 +1,35 @@
+// DecodeMethodQueryArrayBytesValidateRequest returns a decoder for requests
+// sent to the ServiceQueryArrayBytesValidate MethodQueryArrayBytesValidate
+// endpoint.
+func DecodeMethodQueryArrayBytesValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryarraybytesvalidate.MethodQueryArrayBytesValidatePayload, error) {
+	return func(r *http.Request) (*servicequeryarraybytesvalidate.MethodQueryArrayBytesValidatePayload, error) {
+		var (
+			q   [][]byte
+			err error
+		)
+		{
+			qRaw := r.URL.Query()["q"]
+			if qRaw == nil {
+				err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
+			}
+			q = make([][]byte, len(qRaw))
+			for i, rv := range qRaw {
+				q[i] = []byte(rv)
+			}
+		}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
+		}
+		for _, e := range q {
+			if len(e) < 2 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("q[*]", e, len(e), 2, true))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryArrayBytesValidatePayload(q)
+
+		return payload, nil
+	}
+}

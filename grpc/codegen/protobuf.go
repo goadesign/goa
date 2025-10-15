@@ -3,6 +3,7 @@ package codegen
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -269,9 +270,19 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	case *expr.Map:
 		return fmt.Sprintf("map<%s, %s>", protoType(actual.KeyType, sd), protoType(actual.ElemType, sd))
 	case *expr.Union:
-		def := "\toneof " + codegen.SnakeCase(protoBufify(actual.Name(), false, false)) + " {"
+		// Compute oneof name and ensure it does not collide with any of the member field names
+		oneofName := codegen.SnakeCase(protoBufify(actual.Name(), false, false))
+		var fieldNames []string
 		for _, nat := range actual.Values {
 			fn := codegen.SnakeCase(protoBufify(nat.Name, false, false))
+			fieldNames = append(fieldNames, fn)
+		}
+		for slices.Contains(fieldNames, oneofName) {
+			oneofName += "_oneof"
+		}
+		def := "\toneof " + oneofName + " {"
+		for i, nat := range actual.Values {
+			fn := fieldNames[i]
 			fnum := rpcTag(nat.Attribute)
 			var typ string
 			if prim := getPrimitive(nat.Attribute); prim != nil {
@@ -429,6 +440,8 @@ func protoNativeType(t expr.DataType) string {
 		return "string"
 	case expr.BytesKind:
 		return "bytes"
+	case expr.AnyKind:
+		return "google.protobuf.Any"
 	default:
 		panic(fmt.Sprintf("cannot compute native protocol buffer type for %T", t)) // bug
 	}
@@ -461,6 +474,8 @@ func protoBufNativeGoTypeName(t expr.DataType) string {
 		return "string"
 	case expr.BytesKind:
 		return "[]byte"
+	case expr.AnyKind:
+		return "*anypb.Any"
 	default:
 		panic(fmt.Sprintf("cannot compute native protocol buffer type for %T %v", t, t)) // bug
 	}

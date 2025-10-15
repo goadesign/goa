@@ -6,45 +6,20 @@
   </p>
   <p align="center">
     <a href="https://github.com/goadesign/goa/releases/latest"><img alt="Release" src="https://img.shields.io/github/release/goadesign/goa.svg?style=for-the-badge"></a>
-    <a href="https://pkg.go.dev/goa.design/goa/v3@v3.21.5/dsl?tab=doc"><img alt="Go Doc" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=for-the-badge"></a>
+    <a href="https://pkg.go.dev/goa.design/goa/v3@v3.22.5/dsl?tab=doc"><img alt="Go Doc" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=for-the-badge"></a>
     <a href="https://github.com/goadesign/goa/actions/workflows/ci.yml"><img alt="GitHub Action: Test" src="https://img.shields.io/github/actions/workflow/status/goadesign/goa/test.yml?branch=v3&style=for-the-badge"></a>
     <a href="https://goreportcard.com/report/github.com/goadesign/goa"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/goadesign/goa?style=for-the-badge"></a>
     <a href="/LICENSE"><img alt="Software License" src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge"></a>
     <a href="https://gurubase.io/g/goa"><img alt="Gurubase" src="https://img.shields.io/badge/Gurubase-Ask%20Goa%20Guru-006BFF?style=for-the-badge"></a>
+    <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard"><img alt="Goa Design Wizard" src="https://img.shields.io/badge/Goa%20Design%20Wizard-ChatGPT-00A67D?logo=openai&logoColor=white&style=for-the-badge"></a>
     </br>
-    <a href="https://gophers.slack.com/messages/goa"><img alt="Slack: Goa" src="https://img.shields.io/badge/Goa-gray.svg?longCache=true&logo=slack&colorB=red&style=for-the-badge"></a>
-    <a href="https://invite.slack.golangbridge.org/"><img alt="Slack: Sign-up" src="https://img.shields.io/badge/Signup-gray.svg?longCache=true&logo=slack&colorB=red&style=for-the-badge"></a>
-    <a href="https://bsky.app/profile/goadesign.bsky.social"><img alt="BSky: Goa" src="https://img.shields.io/badge/Bluesky-0285FF?longCache=true&logo=bluesky&logoColor=fff&style=for-the-badge"></a>
+    <a href="https://goadesign.substack.com"><img alt="Substack: Design First" src="https://img.shields.io/badge/Design%20First-Substack-FF6719?logo=substack&logoColor=white&style=for-the-badge"></a>
+    <a href="https://gophers.slack.com/messages/goa"><img alt="Slack: Goa" src="https://img.shields.io/badge/Goa-Slack-4A154B?logo=slack&logoColor=white&style=for-the-badge"></a>
+    <a href="https://bsky.app/profile/goadesign.bsky.social"><img alt="Bluesky: Goa Design" src="https://img.shields.io/badge/Goa%20Design-Bluesky-0285FF?logo=bluesky&logoColor=white&style=for-the-badge"></a>
   </p>
 </p>
 
-<div align="center">
-<table border="0" cellspacing="0" cellpadding="0">
-    <tr>
-        <td align="center" width="200">
-            <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">
-                <img src="docs/Wizard.png" alt="Wizard Logo" style="width: 100%; height: auto;"/>
-            </a>
-        </td>
-        <td align="center">
-            <div>
-            <h1>Goa Design Wizard</h1>
-            </div>
-            <p>
-            Use the <a href="https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard">Goa Design Wizard</a> to:
-            </p>
-            <ul>
-                <li>Create Goa designs in seconds</li>
-                <li>Review existing designs</li>
-                <li>Explore the Goa DSL</li>
-            </ul>
-            <p>
-            (requires a <a href="https://openai.com/blog/chatgpt-plus">ChatGPT Plus</a> subscription)<br/><br/>
-            </p>
-        </td>
-    </tr>
-</table>
-</div>
+<!-- Removed card; Wizard is now a badge button above -->
 
 # Goa - Design First, Code With Confidence
 
@@ -98,23 +73,24 @@ Traditional API development suffers from:
 Goa solves these problems by:
 - Generating 30-50% of your codebase directly from your design
 - Ensuring perfect alignment between design, code, and documentation
-- Supporting multiple transports (HTTP and gRPC) from a single design
+- Supporting multiple transports (HTTP, gRPC, and JSON-RPC) from a single design
 - Maintaining a clean separation between business logic and transport details
 
-## 🌟 Key Features
+## Key Features
 
 - **Expressive Design Language**: Define your API with a clear, type-safe DSL that captures your intent
 - **Comprehensive Code Generation**:
   - Type-safe server interfaces that enforce your design
   - Client packages with full error handling
-  - Transport layer adapters (HTTP/gRPC) with routing and encoding
+  - Transport layer adapters (HTTP/gRPC/JSON-RPC) with routing and encoding
   - OpenAPI/Swagger documentation that's always in sync
   - CLI tools for testing your services
-- **Multi-Protocol Support**: Generate HTTP REST and gRPC endpoints from a single design
+- **Multi-Protocol Support**: Generate HTTP REST, gRPC, and JSON-RPC endpoints from a single design
 - **Clean Architecture**: Business logic remains separate from transport concerns
 - **Enterprise Ready**: Supports authentication, authorization, CORS, logging, and more
+- **Comprehensive Testing**: Includes extensive unit and integration test suites ensuring quality and reliability
 
-## 🔄 How It Works
+## How It Works
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────────────┐
@@ -128,7 +104,7 @@ Goa solves these problems by:
 3. **Implement**: Focus solely on writing your business logic in the generated interfaces
 4. **Evolve**: Update your design and regenerate code as your API evolves
 
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 # Install Goa
@@ -177,9 +153,38 @@ The example above:
 2. Generates server and client code
 3. Starts a server that logs requests server-side (without displaying any client output)
 
-## 📚 Documentation
+### JSON-RPC Alternative
 
-Our completely redesigned documentation site at [goa.design](https://goa.design) provides comprehensive guides and references:
+For a JSON-RPC service, simply add a `JSONRPC` expression to the service and
+method:
+
+```go
+var _ = Service("hello" , func() {
+    JSONRPC(func() {
+        Path("/jsonrpc")
+    })
+    Method("say_hello", func() {
+        Payload(func() {
+            Field(1, "name", String)
+            Required("name")
+        })
+        Result(String)
+
+        JSONRPC(func() {})
+    })
+}
+```
+
+Then test with:
+```bash
+curl -X POST http://localhost:8000/jsonrpc \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","method":"hello.say_hello","params":{"name":"world"},"id":"1"}'
+```
+
+## Documentation
+
+Our documentation site at [goa.design](https://goa.design) provides comprehensive guides and references:
 
 - **[Introduction](https://goa.design/docs/1-introduction/)**: Understand Goa's philosophy and benefits
 - **[Getting Started](https://goa.design/docs/2-getting-started/)**: Build your first Goa service step-by-step
@@ -188,7 +193,7 @@ Our completely redesigned documentation site at [goa.design](https://goa.design)
 - **[Real-World Guide](https://goa.design/docs/5-real-world/)**: Follow best practices for production services
 - **[Advanced Topics](https://goa.design/docs/6-advanced/)**: Explore advanced features and techniques
 
-## 🛠️ Real-World Examples
+##  Real-World Examples
 
 The [examples repository](https://github.com/goadesign/examples) contains complete, working examples demonstrating:
 
@@ -202,30 +207,34 @@ The [examples repository](https://github.com/goadesign/examples) contains comple
 - **Interceptors**: Request/response processing middleware
 - **Multipart**: Handling multipart form submissions
 - **Security**: Authentication and authorization examples
-- **Streaming**: Implementing streaming endpoints
+- **Streaming**: Implementing streaming endpoints (HTTP, WebSocket, JSON-RPC SSE)
 - **Tracing**: Integrating with observability tools
 - **TUS**: Resumable file uploads implementation
 
-## 🏢 Success Stories
-
-*"Goa reduced our API development time by 40% while ensuring perfect consistency between our documentation and implementation. It's been a game-changer for our microservices architecture."* - Lead Engineer at FinTech Company
-
-*"We migrated 30+ services to Goa and eliminated documentation drift entirely. Our teams can now focus on business logic instead of maintaining OpenAPI specs by hand."* - CTO at SaaS Platform
-
-## 🤝 Community & Support
+## Community & Support
 
 - Join the [#goa](https://gophers.slack.com/messages/goa/) channel on Gophers Slack
 - Ask questions on [GitHub Discussions](https://github.com/goadesign/goa/discussions)
 - Follow us on [Bluesky](https://goadesign.bsky.social)
 - Report issues on [GitHub](https://github.com/goadesign/goa/issues)
 - Find answers with the [Goa Guru](https://gurubase.io/g/goa) AI assistant
+- Subscribe to our Substack, “Design First”: [Design First](https://goadesign.substack.com/subscribe?params=%5Bobject%20Object%5D)
 
-## 📣 What's New
+## What's New
 
-**Jan 2024:** Goa's powerful design DSL is now accessible through the [Goa Design Wizard](https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard), a specialized AI trained on Goa. Generate service designs through natural language conversations!
+**July 2025:** Goa now includes comprehensive **JSON-RPC 2.0 support** as a
+first-class transport alongside HTTP and gRPC! Generate complete JSON-RPC
+services with streaming support (WebSocket and SSE), client/server code, CLI
+tools, and full type safety - all from a single design.
 
-**February 2025:** The Goa website has been completely redesigned with extensive new documentation, tutorials, and guides to help you build better services.
+**February 2025:** The Goa website has been completely redesigned with extensive
+new documentation, tutorials, and guides to help you build better services.
 
-## 📄 License
+**Jan 2024:** Goa's powerful design DSL is now accessible through the
+[Goa Design Wizard](https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard), a
+specialized AI trained on Goa. Generate service designs through natural language
+conversations!
+
+## License
 
 MIT License - see [LICENSE](LICENSE) for details.

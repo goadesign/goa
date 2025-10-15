@@ -1,0 +1,4 @@
+// MethodPathMultipleParamServicePathMultipleParamPath returns the URL path to the ServicePathMultipleParam service MethodPathMultipleParam HTTP endpoint.
+func MethodPathMultipleParamServicePathMultipleParamPath(a string, b string) string {
+	return fmt.Sprintf("/one/%v/two/%v/three", a, b)
+}

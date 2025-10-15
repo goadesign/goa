@@ -42,7 +42,7 @@ func TestExampleServiceFiles(t *testing.T) {
 					require.NoError(t, f.SectionTemplates[0].Write(&b))
 					line, err := b.ReadBytes('\n')
 					require.NoError(t, err)
-					got := string(bytes.TrimRight(line, "\n"))
+					got := string(bytes.TrimRight(line, "\r\n"))
 					assert.Equal(t, c.Expected, got)
 				}
 			})

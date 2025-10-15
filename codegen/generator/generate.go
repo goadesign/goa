@@ -56,7 +56,15 @@ func Generate(dir, cmd string) (outputs []string, err1 error) {
 		if err != nil {
 			return nil, err
 		}
-		genpkg = pkgs[0].PkgPath
+		// In temporary workspaces (e.g., tests) and on Windows, PkgPath may resolve
+		// to an absolute filesystem path which is not a valid Go import path and
+		// would produce invalid imports (e.g., backslashes). Fall back to the
+		// relative generated package import path in that case.
+		if filepath.IsAbs(pkgs[0].PkgPath) {
+			genpkg = codegen.Gendir
+		} else {
+			genpkg = pkgs[0].PkgPath
+		}
 	}
 
 	// 3. Retrieve goa generators for given command.
@@ -91,7 +99,11 @@ func Generate(dir, cmd string) (outputs []string, err1 error) {
 		return nil, err
 	}
 
-	// 7. Write the files.
+	// 7. Merge files that target the same path to avoid overwriting content when
+	// multiple generators (or services) emit sections for the same file.
+	genfiles = mergeFilesByPath(genfiles)
+
+	// 8. Write the files.
 	written := make(map[string]struct{})
 	for _, f := range genfiles {
 		filename, err := f.Render(dir)
@@ -103,7 +115,7 @@ func Generate(dir, cmd string) (outputs []string, err1 error) {
 		}
 	}
 
-	// 8. Compute all output filenames.
+	// 9. Compute all output filenames.
 	{
 		outputs = make([]string, len(written))
 		cwd, err := os.Getwd()
@@ -123,4 +135,119 @@ func Generate(dir, cmd string) (outputs []string, err1 error) {
 	sort.Strings(outputs)
 
 	return outputs, nil
+}
+
+// mergeFilesByPath coalesces files that share the same output path by
+// concatenating their non-header sections and merging header imports. This
+// prevents later renders from truncating earlier content when multiple
+// services contribute sections to the same file (e.g., shared user types with
+// union value methods).
+func mergeFilesByPath(files []*codegen.File) []*codegen.File {
+	if len(files) <= 1 {
+		return files
+	}
+
+	byPath := make(map[string]*codegen.File)
+	namesByPath := make(map[string]map[string]struct{})
+
+	// First pass: build merged file per path
+	for _, f := range files {
+		if f == nil {
+			continue
+		}
+		path := f.Path
+		if existing, ok := byPath[path]; ok {
+			// Merge headers (index 0) imports
+			if len(existing.SectionTemplates) > 0 && len(f.SectionTemplates) > 0 {
+				mergeHeaderImports(existing.SectionTemplates[0], f.SectionTemplates[0])
+			}
+			// Initialize seen section names for this path
+			if namesByPath[path] == nil {
+				namesByPath[path] = make(map[string]struct{})
+				for _, st := range existing.SectionTemplates {
+					namesByPath[path][st.Name] = struct{}{}
+				}
+			}
+			// Append unique sections (skip header at index 0)
+			for i, st := range f.SectionTemplates {
+				if i == 0 {
+					continue
+				}
+				if _, seen := namesByPath[path][st.Name]; seen {
+					continue
+				}
+				existing.SectionTemplates = append(existing.SectionTemplates, st)
+				namesByPath[path][st.Name] = struct{}{}
+			}
+			// Preserve a finalize function if destination does not have one
+			if existing.FinalizeFunc == nil && f.FinalizeFunc != nil {
+				existing.FinalizeFunc = f.FinalizeFunc
+			}
+			// Skip adding a duplicate File entry
+			continue
+		}
+
+		// New path: record and initialize seen names
+		byPath[path] = f
+		m := make(map[string]struct{})
+		for _, st := range f.SectionTemplates {
+			m[st.Name] = struct{}{}
+		}
+		namesByPath[path] = m
+	}
+
+	// Second pass: preserve original order by first occurrence of each path
+	merged := make([]*codegen.File, 0, len(byPath))
+	seenPaths := make(map[string]struct{})
+	for _, f := range files {
+		if f == nil {
+			continue
+		}
+		if _, ok := seenPaths[f.Path]; ok {
+			continue
+		}
+		if mf, ok := byPath[f.Path]; ok {
+			merged = append(merged, mf)
+			seenPaths[f.Path] = struct{}{}
+		}
+	}
+	return merged
+}
+
+// mergeHeaderImports merges the import specs from src header into dst header,
+// deduplicating by (Name, Path). If either section is not a header produced by
+// codegen.Header, this function is a no-op.
+func mergeHeaderImports(dst, src *codegen.SectionTemplate) {
+	if dst == nil || src == nil {
+		return
+	}
+	dmap, dok := dst.Data.(map[string]any)
+	smap, sok := src.Data.(map[string]any)
+	if !dok || !sok {
+		return
+	}
+	dlist, _ := dmap["Imports"].([]*codegen.ImportSpec)
+	slist, _ := smap["Imports"].([]*codegen.ImportSpec)
+	if len(slist) == 0 {
+		return
+	}
+	seen := make(map[string]struct{}, len(dlist))
+	for _, imp := range dlist {
+		if imp == nil {
+			continue
+		}
+		seen[imp.Name+"|"+imp.Path] = struct{}{}
+	}
+	for _, imp := range slist {
+		if imp == nil {
+			continue
+		}
+		key := imp.Name + "|" + imp.Path
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		dlist = append(dlist, imp)
+		seen[key] = struct{}{}
+	}
+	dmap["Imports"] = dlist
 }

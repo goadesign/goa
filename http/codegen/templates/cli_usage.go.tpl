@@ -1,5 +1,5 @@
 
-func httpUsageCommands() string {
+func httpUsageCommands() []string {
   return cli.UsageCommands()
 }
 

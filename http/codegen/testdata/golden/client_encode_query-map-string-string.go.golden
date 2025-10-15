@@ -1,0 +1,17 @@
+// EncodeMethodQueryMapStringStringRequest returns an encoder for requests sent
+// to the ServiceQueryMapStringString MethodQueryMapStringString server.
+func EncodeMethodQueryMapStringStringRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicequerymapstringstring.MethodQueryMapStringStringPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryMapStringString", "MethodQueryMapStringString", "*servicequerymapstringstring.MethodQueryMapStringStringPayload", v)
+		}
+		values := req.URL.Query()
+		for k, value := range p.Q {
+			key := fmt.Sprintf("q[%s]", k)
+			values.Add(key, value)
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

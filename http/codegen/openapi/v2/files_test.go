@@ -2,26 +2,21 @@ package openapiv2_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
-	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
 	"testing"
 	"text/template"
 
 	"github.com/getkin/kin-openapi/openapi2"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"goa.design/goa/v3/codegen/testutil"
 	httpgen "goa.design/goa/v3/http/codegen"
 	"goa.design/goa/v3/http/codegen/openapi"
 	openapiv2 "goa.design/goa/v3/http/codegen/openapi/v2"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
-
-var update = flag.Bool("update", false, "update .golden files")
 
 func TestSections(t *testing.T) {
 	var (
@@ -91,44 +86,15 @@ func TestSections(t *testing.T) {
 					}
 
 					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
-					if *update {
-						if err := os.WriteFile(golden, buf.Bytes(), 0644); err != nil {
-							t.Fatalf("failed to update golden file: %s", err)
-						}
-					}
-
-					want, err := os.ReadFile(golden)
-					want = bytes.ReplaceAll(want, []byte{'\r', '\n'}, []byte{'\n'})
-					if err != nil {
-						t.Fatalf("failed to read golden file: %s", err)
-					}
-					if !bytes.Equal(buf.Bytes(), want) {
-						var got, expected string
-						if filepath.Ext(o.Path) == ".json" {
-							got = prettifyJSON(t, buf.Bytes())
-							expected = prettifyJSON(t, want)
-						} else {
-							got = buf.String()
-							expected = string(want)
-						}
-						assert.Equal(t, expected, got)
+					if filepath.Ext(o.Path) == ".json" {
+						testutil.AssertJSON(t, golden, buf.Bytes())
+					} else {
+						testutil.AssertString(t, golden, buf.String())
 					}
 				})
 			}
 		})
 	}
-}
-
-func prettifyJSON(t *testing.T, b []byte) string {
-	var v any
-	if err := json.Unmarshal(b, &v); err != nil {
-		t.Errorf("failed to unmarshal swagger JSON: %s", err)
-	}
-	p, err := json.MarshalIndent(v, "", "    ")
-	if err != nil {
-		t.Errorf("failed to marshal swagger JSON: %s", err)
-	}
-	return string(p)
 }
 
 func TestValidations(t *testing.T) {
@@ -166,15 +132,11 @@ func TestValidations(t *testing.T) {
 					}
 
 					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
-					if *update {
-						require.NoError(t, os.WriteFile(golden, buf.Bytes(), 0644), "failed to update golden file")
-						return
+					if filepath.Ext(o.Path) == ".json" {
+						testutil.AssertJSON(t, golden, buf.Bytes())
+					} else {
+						testutil.AssertString(t, golden, buf.String())
 					}
-
-					want, err := os.ReadFile(golden)
-					require.NoError(t, err, "failed to read golden file")
-					want = bytes.ReplaceAll(want, []byte{'\r', '\n'}, []byte{'\n'})
-					assert.Equal(t, string(want), buf.String())
 				})
 			}
 		})
@@ -214,15 +176,11 @@ func TestExtensions(t *testing.T) {
 					}
 
 					golden := filepath.Join(goldenPath, fmt.Sprintf("%s_%s.golden", c.Name, tname))
-					if *update {
-						require.NoError(t, os.WriteFile(golden, buf.Bytes(), 0644), "failed to update golden file")
-						return
+					if filepath.Ext(o.Path) == ".json" {
+						testutil.AssertJSON(t, golden, buf.Bytes())
+					} else {
+						testutil.AssertString(t, golden, buf.String())
 					}
-
-					want, err := os.ReadFile(golden)
-					want = bytes.ReplaceAll(want, []byte{'\r', '\n'}, []byte{'\n'})
-					require.NoError(t, err, "failed to read golden file")
-					assert.Equal(t, string(want), buf.String())
 				})
 			}
 		})

@@ -223,7 +223,7 @@ func (s *Segment) Capture(name string, fn func()) {
 }
 
 // AddAnnotation adds a key-value pair that can be queried by AWS X-Ray.
-func (s *Segment) AddAnnotation(key string, value string) {
+func (s *Segment) AddAnnotation(key, value string) {
 	s.addAnnotation(key, value)
 }
 
@@ -251,7 +251,7 @@ func (s *Segment) addAnnotation(key string, value any) {
 
 // AddMetadata adds a key-value pair to the metadata.default attribute.
 // Metadata is not queryable, but is recorded.
-func (s *Segment) AddMetadata(key string, value string) {
+func (s *Segment) AddMetadata(key, value string) {
 	s.addMetadata(key, value)
 }
 
@@ -325,12 +325,9 @@ func exceptionData(e error) *Exception {
 	}
 	if s, ok := e.(stackTracer); ok {
 		st := s.StackTrace()
-		ln := len(st)
-		if ln > maxStackDepth {
-			ln = maxStackDepth
-		}
+		ln := min(len(st), maxStackDepth)
 		frames := make([]*StackEntry, ln)
-		for i := 0; i < ln; i++ {
+		for i := range ln {
 			f := st[i]
 			line, _ := strconv.Atoi(fmt.Sprintf("%d", f))
 			frames[i] = &StackEntry{

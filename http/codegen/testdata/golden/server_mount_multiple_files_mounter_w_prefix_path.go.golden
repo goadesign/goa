@@ -1,0 +1,6 @@
+// MountPathToFolder configures the mux to serve GET request made to
+// "/server_file_server".
+func MountPathToFolder(mux goahttp.Muxer, h http.Handler) {
+	mux.Handle("GET", "/server_file_server/", h.ServeHTTP)
+	mux.Handle("GET", "/server_file_server/{*wildcard}", h.ServeHTTP)
+}

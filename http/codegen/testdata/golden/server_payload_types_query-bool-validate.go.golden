@@ -1,0 +1,8 @@
+// NewMethodQueryBoolValidatePayload builds a ServiceQueryBoolValidate service
+// MethodQueryBoolValidate endpoint payload.
+func NewMethodQueryBoolValidatePayload(q bool) *servicequeryboolvalidate.MethodQueryBoolValidatePayload {
+	v := &servicequeryboolvalidate.MethodQueryBoolValidatePayload{}
+	v.Q = q
+
+	return v
+}

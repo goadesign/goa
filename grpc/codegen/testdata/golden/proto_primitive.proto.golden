@@ -1,0 +1,20 @@
+// Code generated with goa vX, DO NOT EDIT.
+//
+// ServiceMessagePrimitive protocol buffer definition
+//
+// Command:
+// goa
+
+syntax = "proto3";
+
+package service_message_primitive;
+
+option go_package = "/service_message_primitivepb";
+
+message MethodMessagePrimitiveRequest {
+	uint32 field = 1;
+}
+
+message MethodMessagePrimitiveResponse {
+	sint32 field = 1;
+}

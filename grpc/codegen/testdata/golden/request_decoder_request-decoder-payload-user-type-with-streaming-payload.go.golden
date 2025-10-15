@@ -1,0 +1,33 @@
+// DecodeMethodBidirectionalStreamingRPCWithPayloadRequest decodes requests
+// sent to "ServiceBidirectionalStreamingRPCWithPayload" service
+// "MethodBidirectionalStreamingRPCWithPayload" endpoint.
+func DecodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
+	var (
+		a   *int
+		b   *string
+		err error
+	)
+	{
+		if vals := md.Get("a"); len(vals) > 0 {
+			aRaw := vals[0]
+
+			v, err2 := strconv.ParseInt(aRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("a", aRaw, "integer"))
+			}
+			pv := int(v)
+			a = &pv
+		}
+		if vals := md.Get("b"); len(vals) > 0 {
+			b = &vals[0]
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	var payload *servicebidirectionalstreamingrpcwithpayload.Payload
+	{
+		payload = NewMethodBidirectionalStreamingRPCWithPayloadPayload(a, b)
+	}
+	return payload, nil
+}

@@ -2,8 +2,10 @@ package openapiv2
 
 import (
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -66,9 +68,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 		if !openapi.MustGenerate(res.Meta) || !openapi.MustGenerate(res.ServiceExpr.Meta) {
 			continue
 		}
-		for k, v := range openapi.ExtensionsFromExpr(res.Meta) {
-			s.Paths[k] = v
-		}
+		maps.Copy(s.Paths, openapi.ExtensionsFromExpr(res.Meta))
 		for _, fs := range res.FileServers {
 			if !openapi.MustGenerate(fs.Meta) || !openapi.MustGenerate(fs.Service.Meta) {
 				continue
@@ -121,7 +121,7 @@ func defaultURI(h *expr.HostExpr) string {
 // addScopeDescription generates and adds required scopes to the scheme's description.
 func addScopeDescription(scopes []*expr.ScopeExpr, sd *SecurityDefinition) {
 	// Generate scopes to add to description
-	var lines []string
+	lines := make([]string, 0, len(scopes))
 
 	for _, scope := range scopes {
 		lines = append(lines, fmt.Sprintf("  * `%s`: %s", scope.Name, scope.Description))
@@ -277,12 +277,9 @@ func paramsFromExpr(params *expr.MappedAttributeExpr, path string) []*Parameter 
 	)
 	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *expr.AttributeExpr) error { // nolint: errcheck
 		in := "query"
-		for _, w := range wildcards {
-			if n == w {
-				in = "path"
-				required = true
-				break
-			}
+		if slices.Contains(wildcards, n) {
+			in = "path"
+			required = true
 		}
 		param := paramFor(at, pn, in, required)
 		res = append(res, param)
@@ -521,13 +518,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			resp := responseSpecFromExpr(s, root, r, endpoint.Service.Name())
 			responses[strconv.Itoa(r.StatusCode)] = resp
 			if r.ContentType != "" {
-				foundCT := false
-				for _, ct := range produces {
-					if ct == r.ContentType {
-						foundCT = true
-						break
-					}
-				}
+				foundCT := slices.Contains(produces, r.ContentType)
 				if !foundCT {
 					produces = append(produces, r.ContentType)
 				}
@@ -599,7 +590,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		for i, req := range endpoint.Requirements {
 			requirement := make(map[string][]string)
 			for _, s := range req.Schemes {
-				requirement[s.Hash()] = []string{}
+				requirement[s.Hash()] = nil
 				switch s.Kind {
 				case expr.OAuth2Kind:
 					if len(req.Scopes) > 0 {

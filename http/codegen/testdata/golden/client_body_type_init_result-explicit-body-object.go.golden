@@ -1,0 +1,14 @@
+// NewMethodExplicitBodyUserResultObjectResulttypeOK builds a
+// "ServiceExplicitBodyUserResultObject" service
+// "MethodExplicitBodyUserResultObject" endpoint result from a HTTP "OK"
+// response.
+func NewMethodExplicitBodyUserResultObjectResulttypeOK(body *MethodExplicitBodyUserResultObjectResponseBody, c *string, b *string) *serviceexplicitbodyuserresultobjectviews.ResulttypeView {
+	v := &serviceexplicitbodyuserresultobjectviews.ResulttypeView{}
+	if body.A != nil {
+		v.A = unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectviewsUserTypeView(body.A)
+	}
+	v.C = c
+	v.B = b
+
+	return v
+}

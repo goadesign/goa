@@ -1,0 +1,46 @@
+func transform() {
+	target := &proto.Optional{
+		Float:  source.Float_,
+		String: source.String_,
+		Bytes:  source.Bytes_,
+		Any: func() any {
+			if source.Any != nil {
+				var value structpb.Value
+				if err := source.Any.UnmarshalTo(&value); err == nil {
+					if str := value.GetStringValue(); str != "" {
+						var result any
+						if err := json.Unmarshal([]byte(str), &result); err == nil {
+							return result
+						}
+					}
+				}
+			}
+			return nil
+		}(),
+	}
+	if source.Int != nil {
+		int_ := int(*source.Int)
+		target.Int = &int_
+	}
+	if source.Uint != nil {
+		uint_ := uint(*source.Uint)
+		target.Uint = &uint_
+	}
+	if source.Array != nil {
+		target.Array = make([]string, len(source.Array))
+		for i, val := range source.Array {
+			target.Array[i] = val
+		}
+	}
+	if source.Map_ != nil {
+		target.Map = make(map[int]string, len(source.Map_))
+		for key, val := range source.Map_ {
+			tk := int(key)
+			tv := val
+			target.Map[tk] = tv
+		}
+	}
+	if source.UserType != nil {
+		target.UserType = protobufProtoOptionalToProtoOptional(source.UserType)
+	}
+}

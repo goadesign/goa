@@ -1,0 +1,17 @@
+// EncodeMethodExplicitBodyPrimitiveResultMultipleViewResponse returns an
+// encoder for responses returned by the
+// ServiceExplicitBodyPrimitiveResultMultipleView
+// MethodExplicitBodyPrimitiveResultMultipleView endpoint.
+func EncodeMethodExplicitBodyPrimitiveResultMultipleViewResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res := v.(*serviceexplicitbodyprimitiveresultmultipleviewviews.Resulttypemultipleviews)
+		w.Header().Set("goa-view", res.View)
+		enc := encoder(ctx, w)
+		body := res.Projected.A
+		if res.Projected.C != nil {
+			w.Header().Set("Location", *res.Projected.C)
+		}
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}

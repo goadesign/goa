@@ -1,0 +1,25 @@
+// MethodWithErrorCustomPkgErrorNameResponseBody is the type of the
+// "ServiceWithErrorCustomPkg" service "MethodWithErrorCustomPkg" endpoint HTTP
+// response body for the "error_name" error.
+type MethodWithErrorCustomPkgErrorNameResponseBody struct {
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+}
+
+// NewMethodWithErrorCustomPkgErrorName builds a ServiceWithErrorCustomPkg
+// service MethodWithErrorCustomPkg endpoint error_name error.
+func NewMethodWithErrorCustomPkgErrorName(body *MethodWithErrorCustomPkgErrorNameResponseBody) *custom.CustomError {
+	v := &custom.CustomError{
+		Name: *body.Name,
+	}
+
+	return v
+}
+
+// ValidateMethodWithErrorCustomPkgErrorNameResponseBody runs the validations
+// defined on MethodWithErrorCustomPkg_error_name_Response_Body
+func ValidateMethodWithErrorCustomPkgErrorNameResponseBody(body *MethodWithErrorCustomPkgErrorNameResponseBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	return
+}

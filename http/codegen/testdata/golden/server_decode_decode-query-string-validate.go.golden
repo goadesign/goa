@@ -1,0 +1,23 @@
+// DecodeMethodQueryStringValidateRequest returns a decoder for requests sent
+// to the ServiceQueryStringValidate MethodQueryStringValidate endpoint.
+func DecodeMethodQueryStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerystringvalidate.MethodQueryStringValidatePayload, error) {
+	return func(r *http.Request) (*servicequerystringvalidate.MethodQueryStringValidatePayload, error) {
+		var (
+			q   string
+			err error
+		)
+		q = r.URL.Query().Get("q")
+		if q == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
+		}
+		if !(q == "val") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []any{"val"}))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryStringValidatePayload(q)
+
+		return payload, nil
+	}
+}

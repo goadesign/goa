@@ -1,0 +1,28 @@
+// DecodeMethodBodyUnionUserValidateRequest returns a decoder for requests sent
+// to the ServiceBodyUnionUserValidate MethodBodyUnionUserValidate endpoint.
+func DecodeMethodBodyUnionUserValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyunionuservalidate.MethodBodyUnionUserValidatePayload, error) {
+	return func(r *http.Request) (*servicebodyunionuservalidate.MethodBodyUnionUserValidatePayload, error) {
+		var (
+			body MethodBodyUnionUserValidateRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateMethodBodyUnionUserValidateRequestBody(&body)
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyUnionUserValidatePayload(&body)
+
+		return payload, nil
+	}
+}

@@ -1,0 +1,25 @@
+// EncodeMethodQueryMapIntMapStringArrayIntValidateRequest returns an encoder
+// for requests sent to the ServiceQueryMapIntMapStringArrayIntValidate
+// MethodQueryMapIntMapStringArrayIntValidate server.
+func EncodeMethodQueryMapIntMapStringArrayIntValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(map[int]map[string][]int)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryMapIntMapStringArrayIntValidate", "MethodQueryMapIntMapStringArrayIntValidate", "map[int]map[string][]int", v)
+		}
+		values := req.URL.Query()
+		for kRaw, value := range p {
+			k := strconv.Itoa(kRaw)
+			key := fmt.Sprintf("q[%s]", k)
+			for k, value := range value {
+				key = fmt.Sprintf("%s[%s]", key, k)
+				for _, val := range value {
+					valStr := strconv.Itoa(val)
+					values.Add(key, valStr)
+				}
+			}
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

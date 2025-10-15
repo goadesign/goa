@@ -1,0 +1,17 @@
+// EncodeMethodQueryArrayStringValidateRequest returns an encoder for requests
+// sent to the ServiceQueryArrayStringValidate MethodQueryArrayStringValidate
+// server.
+func EncodeMethodQueryArrayStringValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicequeryarraystringvalidate.MethodQueryArrayStringValidatePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryArrayStringValidate", "MethodQueryArrayStringValidate", "*servicequeryarraystringvalidate.MethodQueryArrayStringValidatePayload", v)
+		}
+		values := req.URL.Query()
+		for _, value := range p.Q {
+			values.Add("q", value)
+		}
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

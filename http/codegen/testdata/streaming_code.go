@@ -54,7 +54,7 @@ func NewStreamingResultMethodHandler(
 				w:          w,
 				r:          r,
 			},
-			Payload: payload.(*streamingresultservice.Request),
+			Payload: payload,
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
@@ -1100,7 +1100,7 @@ func NewStreamingPayloadMethodHandler(
 				w:          w,
 				r:          r,
 			},
-			Payload: payload.(*streamingpayloadservice.Payload),
+			Payload: payload,
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {
@@ -2580,7 +2580,7 @@ func NewBidirectionalStreamingMethodHandler(
 				w:          w,
 				r:          r,
 			},
-			Payload: payload.(*bidirectionalstreamingservice.Payload),
+			Payload: payload,
 		}
 		_, err = endpoint(ctx, v)
 		if err != nil {

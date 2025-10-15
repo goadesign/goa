@@ -1,0 +1,21 @@
+
+syntax = "proto3";
+
+package service_bidirectional_streaming_rpc;
+
+option go_package = "/service_bidirectional_streaming_rpcpb";
+
+// Service is the ServiceBidirectionalStreamingRPC service interface.
+service ServiceBidirectionalStreamingRPC {
+	// MethodBidirectionalStreamingRPC implements MethodBidirectionalStreamingRPC.
+	rpc MethodBidirectionalStreamingRPC (stream MethodBidirectionalStreamingRPCStreamingRequest) returns (stream MethodBidirectionalStreamingRPCResponse);
+}
+
+message MethodBidirectionalStreamingRPCStreamingRequest {
+	sint32 field = 1;
+}
+
+message MethodBidirectionalStreamingRPCResponse {
+	optional sint32 a = 1;
+	optional string b = 2;
+}

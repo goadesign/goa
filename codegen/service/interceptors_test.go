@@ -18,11 +18,7 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-var updateGolden = false
-
-func init() {
-	flag.BoolVar(&updateGolden, "w", false, "update golden files")
-}
+var updateGolden = flag.Bool("update-interceptors", false, "update golden files for interceptor tests")
 
 func TestInterceptors(t *testing.T) {
 	cases := []struct {
@@ -223,7 +219,7 @@ func TestCollectAttributes(t *testing.T) {
 
 func compareOrUpdateGolden(t *testing.T, code, golden string) {
 	t.Helper()
-	if updateGolden {
+	if *updateGolden {
 		require.NoError(t, os.MkdirAll(filepath.Dir(golden), 0750))
 		require.NoError(t, os.WriteFile(golden, []byte(code), 0640))
 		return

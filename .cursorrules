@@ -1,0 +1,16 @@
+# Goa repository rules for Cursor
+
+- Never edit generated code. Fix the generator/templates instead.
+- Prefer any over interface{} in new code.
+- Transports: HTTP, gRPC, and JSON-RPC 2.0 (HTTP, SSE, WebSocket). JSON-RPC supports batch and notifications; streaming over WS/SSE.
+- Testing:
+  - Run unit tests with `make test`.
+  - JSON-RPC integration tests live in `jsonrpc/integration_tests`; run with `make integration-test` (skips on Windows).
+  - Golden tests use testify; update with `go test -update` or `-u`.
+- Code style:
+  - Small, focused files; one main construct per file when possible.
+  - Public types first, then private types, public constants, private constants, public vars, private vars, public functions/methods, then private.
+  - Use `maps.Copy`/`slices.Contains`, `http.NoBody`, avoid shadowing builtins.
+- Architecture quick map:
+  - `dsl/` (design DSL), `expr/` (expressions), `codegen/` (generation engine & templates), `cmd/goa/` (CLI), `http/`, `grpc/`, `jsonrpc/` (transports), `pkg/`, `middleware/`, `security/`, `eval/`.
+- For deeper guidance, see `CLAUDE.md`.

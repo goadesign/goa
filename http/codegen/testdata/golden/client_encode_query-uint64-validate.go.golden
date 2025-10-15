@@ -1,0 +1,14 @@
+// EncodeMethodQueryUInt64ValidateRequest returns an encoder for requests sent
+// to the ServiceQueryUInt64Validate MethodQueryUInt64Validate server.
+func EncodeMethodQueryUInt64ValidateRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicequeryuint64validate.MethodQueryUInt64ValidatePayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryUInt64Validate", "MethodQueryUInt64Validate", "*servicequeryuint64validate.MethodQueryUInt64ValidatePayload", v)
+		}
+		values := req.URL.Query()
+		values.Add("q", fmt.Sprintf("%v", p.Q))
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

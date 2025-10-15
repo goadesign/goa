@@ -1,0 +1,8 @@
+// NewMethodHeaderStringValidatePayload builds a ServiceHeaderStringValidate
+// service MethodHeaderStringValidate endpoint payload.
+func NewMethodHeaderStringValidatePayload(h *string) *serviceheaderstringvalidate.MethodHeaderStringValidatePayload {
+	v := &serviceheaderstringvalidate.MethodHeaderStringValidatePayload{}
+	v.H = h
+
+	return v
+}

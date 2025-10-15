@@ -1,0 +1,14 @@
+// EncodeMethodHeaderUInt32Response returns an encoder for responses returned
+// by the ServiceHeaderUInt32 MethodHeaderUInt32 endpoint.
+func EncodeMethodHeaderUInt32Response(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*serviceheaderuint32.MethodHeaderUInt32Result)
+		if res.H != nil {
+			val := res.H
+			hs := strconv.FormatUint(uint64(*val), 10)
+			w.Header().Set("H", hs)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}

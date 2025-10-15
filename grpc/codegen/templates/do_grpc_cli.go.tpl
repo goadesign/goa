@@ -19,7 +19,7 @@ func doGRPC(_, host string, _ int, _ bool) (goa.Endpoint, any, error) {
 }
 
 {{ if eq .DefaultTransport.Type "grpc" }}
-func grpcUsageCommands() string {
+func grpcUsageCommands() []string {
 	return cli.UsageCommands()
 }
 

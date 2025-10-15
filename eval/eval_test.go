@@ -127,7 +127,6 @@ func (m *mockExpr) EvalName() string {
 
 // TestValidationErrors tests the ValidationErrors type methods
 func TestValidationErrors(t *testing.T) {
-
 	t.Run("Error", func(t *testing.T) {
 		// Test Error() method
 		expr1 := &mockExpr{}

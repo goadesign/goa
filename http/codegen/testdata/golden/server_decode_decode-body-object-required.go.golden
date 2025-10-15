@@ -1,0 +1,32 @@
+// DecodeMethodBodyObjectRequiredRequest returns a decoder for requests sent to
+// the ServiceBodyObjectRequired MethodBodyObjectRequired endpoint.
+func DecodeMethodBodyObjectRequiredRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyobjectrequired.MethodBodyObjectRequiredPayload, error) {
+	return func(r *http.Request) (*servicebodyobjectrequired.MethodBodyObjectRequiredPayload, error) {
+		var (
+			body struct {
+				B *string `form:"b" json:"b" xml:"b"`
+			}
+			err error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		if body.B == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("b", "body"))
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyObjectRequiredPayload(body)
+
+		return payload, nil
+	}
+}

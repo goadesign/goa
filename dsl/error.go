@@ -74,8 +74,8 @@ const (
 //	})
 //
 //	var _ = Service("divider", func() {
-//	    Error("invalid_arguments") // Refers to error defined above.
-//	                               // No need to define HTTP mapping again.
+//	    Error("invalid_argument") // Refers to error defined above.
+//	                              // No need to define HTTP mapping again.
 //
 //	    // Method which uses the default type for its response.
 //	    Method("divide", func() {

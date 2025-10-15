@@ -90,6 +90,7 @@ func TestAPIExprFinalize(t *testing.T) {
 	}
 
 	for k, tc := range cases {
+		Root = &RootExpr{}
 		tc.api.Finalize()
 
 		if actual := tc.api.Servers; len(tc.expected) != len(actual) {

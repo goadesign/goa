@@ -1,10 +1,10 @@
 package codegen
 
 import (
+	"goa.design/goa/v3/codegen/testutil"
 	"bytes"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
@@ -12,13 +12,11 @@ import (
 )
 
 func TestClientCLIFiles(t *testing.T) {
-
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"payload-with-validations", testdata.PayloadWithValidationsDSL, testdata.PayloadWithValidationsBuildCode},
+		{"payload-with-validations", testdata.PayloadWithValidationsDSL},
 	}
 
 	for _, c := range cases {
@@ -33,7 +31,7 @@ func TestClientCLIFiles(t *testing.T) {
 				require.NoError(t, s.Write(&buf))
 			}
 			code := codegen.FormatTestCode(t, buf.String())
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/client_cli_"+c.Name+".go.golden", code)
 		})
 	}
 }

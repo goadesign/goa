@@ -1,1 +1,104 @@
-{"openapi":"3.0.3","info":{"title":"Goa API","version":"0.0.1"},"servers":[{"url":"https://goa.design"}],"paths":{"/":{"get":{"tags":["testService"],"summary":"testEndpoint testService","operationId":"testService#testEndpoint","requestBody":{"required":true,"content":{"application/json":{"schema":{"$ref":"#/components/schemas/Payload"},"example":{"required_string":"","string":""}}}},"responses":{"200":{"description":"OK response.","content":{"application/json":{"schema":{"$ref":"#/components/schemas/Result"},"example":{"int":0,"required_int":0}}}}}}}},"components":{"schemas":{"Payload":{"type":"object","properties":{"required_string":{"type":"string","example":""},"string":{"type":"string","example":""}},"example":{"required_string":"","string":""},"required":["required_string"]},"Result":{"type":"object","properties":{"int":{"type":"integer","example":0,"format":"int64"},"required_int":{"type":"integer","example":0,"format":"int64"}},"example":{"int":0,"required_int":0},"required":["required_int"]}}},"tags":[{"name":"testService"}]}
+{
+  "components": {
+    "schemas": {
+      "Payload": {
+        "example": {
+          "required_string": "",
+          "string": ""
+        },
+        "properties": {
+          "required_string": {
+            "example": "",
+            "type": "string"
+          },
+          "string": {
+            "example": "",
+            "type": "string"
+          }
+        },
+        "required": [
+          "required_string"
+        ],
+        "type": "object"
+      },
+      "Result": {
+        "example": {
+          "int": 0,
+          "required_int": 0
+        },
+        "properties": {
+          "int": {
+            "example": 0,
+            "format": "int64",
+            "type": "integer"
+          },
+          "required_int": {
+            "example": 0,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "required_int"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "testService#testEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "required_string": "",
+                "string": ""
+              },
+              "schema": {
+                "$ref": "#/components/schemas/Payload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "int": 0,
+                  "required_int": 0
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "testEndpoint testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "https://goa.design"
+    }
+  ],
+  "tags": [
+    {
+      "name": "testService"
+    }
+  ]
+}

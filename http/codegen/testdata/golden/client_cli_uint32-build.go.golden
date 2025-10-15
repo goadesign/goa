@@ -1,0 +1,21 @@
+// BuildMethodQueryUInt32Payload builds the payload for the ServiceQueryUInt32
+// MethodQueryUInt32 endpoint from CLI flags.
+func BuildMethodQueryUInt32Payload(serviceQueryUInt32MethodQueryUInt32Q string) (*servicequeryuint32.MethodQueryUInt32Payload, error) {
+	var err error
+	var q *uint32
+	{
+		if serviceQueryUInt32MethodQueryUInt32Q != "" {
+			var v uint64
+			v, err = strconv.ParseUint(serviceQueryUInt32MethodQueryUInt32Q, 10, 32)
+			val := uint32(v)
+			q = &val
+			if err != nil {
+				return nil, fmt.Errorf("invalid value for q, must be UINT32")
+			}
+		}
+	}
+	v := &servicequeryuint32.MethodQueryUInt32Payload{}
+	v.Q = q
+
+	return v, nil
+}

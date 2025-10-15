@@ -1,0 +1,15 @@
+// EncodeMethodHeaderBoolRequiredDefaultResponse returns an encoder for
+// responses returned by the ServiceHeaderBoolRequiredDefault
+// MethodHeaderBoolRequiredDefault endpoint.
+func EncodeMethodHeaderBoolRequiredDefaultResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*serviceheaderboolrequireddefault.MethodHeaderBoolRequiredDefaultResult)
+		{
+			val := res.H
+			hs := strconv.FormatBool(val)
+			w.Header().Set("H", hs)
+		}
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}

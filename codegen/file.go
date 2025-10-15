@@ -9,6 +9,7 @@ import (
 	"go/scanner"
 	"go/token"
 	"io"
+	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -88,7 +89,7 @@ func (f *File) Render(dir string) (string, error) {
 
 	file, err := os.OpenFile(
 		path,
-		os.O_CREATE|os.O_APPEND|os.O_WRONLY,
+		os.O_CREATE|os.O_TRUNC|os.O_WRONLY,
 		0600,
 	)
 	if err != nil {
@@ -123,9 +124,7 @@ func (f *File) Render(dir string) (string, error) {
 // Write writes the section to the given writer.
 func (s *SectionTemplate) Write(w io.Writer) error {
 	funcs := TemplateFuncs()
-	for k, v := range s.FuncMap {
-		funcs[k] = v
-	}
+	maps.Copy(funcs, s.FuncMap)
 	tmpl := template.Must(template.New(s.Name).Funcs(funcs).Parse(s.Source))
 	return tmpl.Execute(w, s.Data)
 }
@@ -158,7 +157,7 @@ func finalizeGoSource(path string) error {
 		}
 	}
 	ast.SortImports(fset, file)
-	w, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+	w, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}

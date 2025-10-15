@@ -1,0 +1,58 @@
+// DecodeMethodMapQueryObjectRequest returns a decoder for requests sent to the
+// ServiceMapQueryObject MethodMapQueryObject endpoint.
+func DecodeMethodMapQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicemapqueryobject.PayloadType, error) {
+	return func(r *http.Request) (*servicemapqueryobject.PayloadType, error) {
+		var (
+			body MethodMapQueryObjectRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateMethodMapQueryObjectRequestBody(&body)
+		if err != nil {
+			return nil, err
+		}
+
+		var (
+			a string
+			c map[int][]string
+
+			params = mux.Vars(r)
+		)
+		a = params["a"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("a", a, "patterna"))
+		{
+			cRaw := r.URL.Query()
+			if len(cRaw) == 0 {
+				err = goa.MergeErrors(err, goa.MissingFieldError("c", "query string"))
+			}
+			if c == nil {
+				c = make(map[int][]string)
+			}
+			for keyRaw, valRaw := range cRaw {
+				var key int
+				v, err2 := strconv.ParseInt(keyRaw, 10, strconv.IntSize)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", keyRaw, "integer"))
+				}
+				key = int(v)
+				c[key] = valRaw
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodMapQueryObjectPayloadType(&body, a, c)
+
+		return payload, nil
+	}
+}

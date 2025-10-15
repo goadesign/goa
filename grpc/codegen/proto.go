@@ -48,7 +48,7 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData)
 		// header comments
 		{
 			Name:   "proto-header",
-			Source: readTemplate("proto_header"),
+			Source: grpcTemplates.Read(grpcProtoHeaderT),
 			Data: map[string]any{
 				"Title":       fmt.Sprintf("%s protocol buffer definition", svc.Name()),
 				"ToolVersion": goa.Version(),
@@ -57,7 +57,7 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData)
 		// proto syntax and package
 		{
 			Name:   "proto-start",
-			Source: readTemplate("proto_start"),
+			Source: grpcTemplates.Read(grpcProtoStartT),
 			Data: map[string]any{
 				"ProtoVersion": ProtoVersion,
 				"Pkg":          pkgName(svc, svcName),
@@ -67,7 +67,7 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData)
 		// service definition
 		{
 			Name:   "grpc-service",
-			Source: readTemplate("grpc_service"),
+			Source: grpcTemplates.Read(grpcServiceT),
 			Data:   data,
 		},
 	}
@@ -76,7 +76,7 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData)
 	for _, m := range data.Messages {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "grpc-message",
-			Source: readTemplate("grpc_message"),
+			Source: grpcTemplates.Read(grpcMessageT),
 			Data:   m,
 		})
 	}

@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/grpc/codegen/testdata"
 )
 
@@ -34,7 +35,7 @@ func TestParseEndpointWithInterceptors(t *testing.T) {
 			}
 			code := codegen.FormatTestCode(t, buf.String())
 			golden := filepath.Join("testdata", "endpoint-"+c.Name+".golden")
-			compareOrUpdateGolden(t, code, golden)
+			testutil.AssertGo(t, golden, code)
 		})
 	}
 }

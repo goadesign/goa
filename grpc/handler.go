@@ -7,7 +7,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 
 	goa "goa.design/goa/v3/pkg"
 )
@@ -84,7 +83,8 @@ func (h *unaryHandler) Handle(ctx context.Context, reqpb any) (any, error) {
 				if errors.As(err, &e) {
 					return nil, err
 				}
-				return nil, status.Error(codes.InvalidArgument, err.Error())
+				gerr := goa.DecodePayloadError(err.Error())
+				return nil, NewStatusError(codes.InvalidArgument, gerr, NewErrorResponse(gerr))
 			}
 		}
 	}
@@ -113,7 +113,8 @@ func (h *unaryHandler) Handle(ctx context.Context, reqpb any) (any, error) {
 				if errors.As(err, &e) {
 					return nil, err
 				}
-				return nil, status.Error(codes.Unknown, err.Error())
+				gerr := goa.Fault("%s", err.Error())
+				return nil, NewStatusError(codes.Unknown, gerr, NewErrorResponse(gerr))
 			}
 		}
 	}
@@ -121,14 +122,16 @@ func (h *unaryHandler) Handle(ctx context.Context, reqpb any) (any, error) {
 	// Encode gRPC headers
 	if len(hdr) > 0 {
 		if err := grpc.SendHeader(ctx, hdr); err != nil {
-			return nil, status.Error(codes.Unknown, err.Error())
+			gerr := goa.Fault("%s", err.Error())
+			return nil, NewStatusError(codes.Unknown, gerr, NewErrorResponse(gerr))
 		}
 	}
 
 	// Encode gRPC trailers
 	if len(trlr) > 0 {
 		if err := grpc.SetTrailer(ctx, trlr); err != nil {
-			return nil, status.Error(codes.Unknown, err.Error())
+			gerr := goa.Fault("%s", err.Error())
+			return nil, NewStatusError(codes.Unknown, gerr, NewErrorResponse(gerr))
 		}
 	}
 
@@ -149,7 +152,8 @@ func (h *streamHandler) Decode(ctx context.Context, reqpb any) (any, error) {
 				if errors.As(err, &e) {
 					return nil, err
 				}
-				return nil, status.Error(codes.InvalidArgument, err.Error())
+				gerr := goa.DecodePayloadError(err.Error())
+				return nil, NewStatusError(codes.InvalidArgument, gerr, NewErrorResponse(gerr))
 			}
 		}
 	}

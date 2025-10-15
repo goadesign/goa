@@ -1,0 +1,22 @@
+// MethodClientStreamingRPCWithPayload implements the
+// "MethodClientStreamingRPCWithPayload" method in
+// service_client_streaming_rpc_with_payloadpb.ServiceClientStreamingRPCWithPayloadServer
+// interface.
+func (s *Server) MethodClientStreamingRPCWithPayload(stream service_client_streaming_rpc_with_payloadpb.ServiceClientStreamingRPCWithPayload_MethodClientStreamingRPCWithPayloadServer) error {
+	ctx := stream.Context()
+	ctx = context.WithValue(ctx, goa.MethodKey, "MethodClientStreamingRPCWithPayload")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceClientStreamingRPCWithPayload")
+	p, err := s.MethodClientStreamingRPCWithPayloadH.Decode(ctx, nil)
+	if err != nil {
+		return goagrpc.EncodeError(err)
+	}
+	ep := &serviceclientstreamingrpcwithpayload.MethodClientStreamingRPCWithPayloadEndpointInput{
+		Stream:  &MethodClientStreamingRPCWithPayloadServerStream{stream: stream},
+		Payload: p.(int),
+	}
+	err = s.MethodClientStreamingRPCWithPayloadH.Handle(ctx, ep)
+	if err != nil {
+		return goagrpc.EncodeError(err)
+	}
+	return nil
+}

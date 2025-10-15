@@ -13,12 +13,15 @@ var transformGoArrayT, transformGoMapT, transformGoUnionT, transformGoUnionToObj
 
 // NOTE: can't initialize inline because https://github.com/golang/go/issues/1817
 func init() {
-	fm := template.FuncMap{"transformAttribute": transformAttribute, "transformHelperName": transformHelperName}
-	transformGoArrayT = template.Must(template.New("transformGoArray").Funcs(fm).Parse(transformGoArrayTmpl))
-	transformGoMapT = template.Must(template.New("transformGoMap").Funcs(fm).Parse(transformGoMapTmpl))
-	transformGoUnionT = template.Must(template.New("transformGoUnion").Funcs(fm).Parse(transformGoUnionTmpl))
-	transformGoUnionToObjectT = template.Must(template.New("transformGoUnionToObject").Funcs(fm).Parse(transformGoUnionToObjectTmpl))
-	transformGoObjectToUnionT = template.Must(template.New("transformGoObjectToUnion").Funcs(fm).Parse(transformGoObjectToUnionTmpl))
+	fm := template.FuncMap{
+		"transformAttribute":  transformAttribute,
+		"transformHelperName": transformHelperName,
+	}
+	transformGoArrayT = template.Must(template.New("transformGoArray").Funcs(fm).Parse(codegenTemplates.Read(transformGoArrayTmplName)))
+	transformGoMapT = template.Must(template.New("transformGoMap").Funcs(fm).Parse(codegenTemplates.Read(transformGoMapTmplName)))
+	transformGoUnionT = template.Must(template.New("transformGoUnion").Funcs(fm).Parse(codegenTemplates.Read(transformGoUnionTmplName)))
+	transformGoUnionToObjectT = template.Must(template.New("transformGoUnionToObject").Funcs(fm).Parse(codegenTemplates.Read(transformGoUnionToObjectTmplName)))
+	transformGoObjectToUnionT = template.Must(template.New("transformGoObjectToUnion").Funcs(fm).Parse(codegenTemplates.Read(transformGoObjectToUnionTmplName)))
 }
 
 // GoTransform produces Go code that initializes the data structure defined
@@ -268,9 +271,77 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			case ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr) || !expr.IsPrimitive(srcc.Type):
 				// source attribute is a primitive pointer or not a primitive
 				code += fmt.Sprintf("if %s == nil {\n\t", srcVar)
-				if ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr) && expr.IsPrimitive(tgtc.Type) {
+				switch {
+				case ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr) && expr.IsPrimitive(tgtc.Type):
 					code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", GoNativeTypeName(tgtc.Type), tdef, tgtVar)
-				} else {
+				case expr.IsArray(tgtc.Type):
+					arr := expr.AsArray(tgtc.Type)
+					if expr.IsAlias(arr.ElemType.Type) {
+						// Render typed array default literals for aliased element types,
+						// e.g. []pkg.EnumType{pkg.EnumType("val")}.
+						elemRef := ta.TargetCtx.Scope.Ref(arr.ElemType, ta.TargetCtx.Pkg(arr.ElemType))
+						var items []string
+						switch dv := tdef.(type) {
+						case expr.ArrayVal:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []any:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []string:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []int:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []int32:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []int64:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []uint:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []uint32:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []uint64:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []float32:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []float64:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						case []bool:
+							for _, de := range dv {
+								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
+							}
+						default:
+							// Fallback to raw default if we don't recognize the element slice
+							code += fmt.Sprintf("%s = %#v\n", tgtVar, tdef)
+						}
+						if len(items) > 0 {
+							code += fmt.Sprintf("%s = []%s{%s}\n", tgtVar, elemRef, strings.Join(items, ", "))
+						}
+					} else {
+						// Non-alias element type: use raw default without casting elements
+						code += fmt.Sprintf("%s = %#v\n", tgtVar, tdef)
+					}
+				default:
 					code += fmt.Sprintf("%s = %#v\n", tgtVar, tdef)
 				}
 				code += "}\n"
@@ -400,6 +471,13 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	// Need to type assert targetVar before assigning field values.
 	ta.TargetCtx.IsInterface = true
 
+	base := "obj"
+	if strings.HasPrefix(targetVar, "obj.") {
+		base = "tmp"
+	}
+	// Use deterministic temp var: 'obj' at top-level, 'tmp' for nested assignments.
+	tmp := base
+
 	data := map[string]any{
 		"SourceTypeRefs": sourceTypeRefs,
 		"SourceTypes":    srcUnion.Values,
@@ -410,6 +488,7 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 		"TypeRef":        ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target)),
 		"TargetTypeName": ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg(target), ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault),
 		"TransformAttrs": ta,
+		"TempVarName":    tmp,
 	}
 	var buf bytes.Buffer
 	if err := transformGoUnionT.Execute(&buf, data); err != nil {
@@ -518,7 +597,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 	case expr.IsUnion(source.Type):
 		tt := expr.AsUnion(target.Type)
 		if tt == nil {
-			return
+			return helpers, err
 		}
 		for i, st := range expr.AsUnion(source.Type).Values {
 			if other, err = collectHelpers(st.Attribute, tt.Values[i].Attribute, true, ta, seen); err == nil {
@@ -527,7 +606,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 		}
 	case expr.IsObject(source.Type):
 		if expr.IsUnion(target.Type) {
-			return
+			return helpers, err
 		}
 		walkMatches(source, target, func(srcMatt, _ *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
 			if err != nil {
@@ -538,7 +617,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 			}
 		})
 	}
-	return
+	return helpers, err
 }
 
 // collectHelpers recurses through the given attributes and returns the transform
@@ -549,7 +628,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformAttrs, seen map[string]*TransformFunctionData) (helpers []*TransformFunctionData, err error) {
 	name := transformHelperName(source, target, ta)
 	if _, ok := seen[name]; ok {
-		return
+		return helpers, err
 	}
 	if _, ok := source.Type.(expr.UserType); ok && expr.IsObject(source.Type) {
 		var h *TransformFunctionData
@@ -574,7 +653,7 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 	case expr.IsUnion(source.Type):
 		tt := expr.AsUnion(target.Type)
 		if tt == nil {
-			return
+			return helpers, err
 		}
 		for i, st := range expr.AsUnion(source.Type).Values {
 			if other, err = collectHelpers(st.Attribute, tt.Values[i].Attribute, req, ta, seen); err == nil {
@@ -583,7 +662,7 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 		}
 	case expr.IsObject(source.Type):
 		if expr.IsUnion(target.Type) {
-			return
+			return helpers, err
 		}
 		walkMatches(source, target, func(srcMatt, _ *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
 			if err != nil {
@@ -594,7 +673,7 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformA
 			}
 		})
 	}
-	return
+	return helpers, err
 }
 
 // generateHelper generates the code that transform instances of source into
@@ -662,71 +741,3 @@ func transformHelperName(source, target *expr.AttributeExpr, ta *TransformAttrs)
 	}
 	return Goify(prefix+sname+"To"+tname, false)
 }
-
-const (
-	transformGoArrayTmpl = `{{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} make([]{{ .ElemTypeRef }}, len({{ .SourceVar }}))
-for {{ .LoopVar }}, val := range {{ .SourceVar }} {
-{{ if .IsStruct -}}
-	{{ .TargetVar }}[{{ .LoopVar }}] = {{ transformHelperName .SourceElem .TargetElem .TransformAttrs }}(val)
-{{ else -}}
-	{{ transformAttribute .SourceElem .TargetElem "val" (printf "%s[%s]" .TargetVar .LoopVar) false .TransformAttrs -}}
-{{ end -}}
-}
-`
-
-	transformGoMapTmpl = `{{ .TargetVar }} {{ if .NewVar }}:={{ else }}={{ end }} make(map[{{ .KeyTypeRef }}]{{ .ElemTypeRef }}, len({{ .SourceVar }}))
-for key, val := range {{ .SourceVar }} {
-{{ if .IsKeyStruct -}}
-	tk := {{ transformHelperName .SourceKey .TargetKey .TransformAttrs -}}(val)
-{{ else -}}
-  {{ transformAttribute .SourceKey .TargetKey "key" "tk" true .TransformAttrs -}}
-{{ end -}}
-{{ if .IsElemStruct -}}
-	if val == nil {
-		{{ .TargetVar }}[tk] = nil
-		continue
-	}
-	{{ .TargetVar }}[tk] = {{ transformHelperName .SourceElem .TargetElem .TransformAttrs -}}(val)
-{{ else -}}
-	{{ transformAttribute .SourceElem .TargetElem "val" (printf "tv%s" .LoopVar) true .TransformAttrs -}}
-	{{ .TargetVar }}[tk] = {{ printf "tv%s" .LoopVar -}}
-{{ end -}}
-}
-`
-
-	transformGoUnionTmpl = `{{ if .NewVar }}var {{ .TargetVar }} {{ .TypeRef }}
-{{ end }}switch actual := {{ .SourceVar }}.(type) {
-	{{- range $i, $ref := .SourceTypeRefs }}
-	case {{ $ref }}:
-		{{- transformAttribute (index $.SourceTypes $i).Attribute (index $.TargetTypes $i).Attribute "actual" "obj" true $.TransformAttrs -}}
-		{{ $.TargetVar }} = obj
-	{{- end }}
-}
-`
-
-	transformGoUnionToObjectTmpl = `{{ if .NewVar }}var {{ .TargetVar }} {{ .TypeRef }}
-{{ end }}js, _ := json.Marshal({{ .SourceVar }})
-var name string
-switch {{ .SourceVar }}.(type) {
-	{{- range $i, $ref := .SourceTypeRefs }}
-	case {{ $ref }}:
-		name = {{ printf "%q" (index $.SourceTypeNames $i) }}
-	{{- end }}
-}
-{{ .TargetVar }} = &{{ .TargetTypeName }}{
-	Type: name,
-	Value: string(js),
-}
-`
-
-	transformGoObjectToUnionTmpl = `{{ if .NewVar }}var {{ .TargetVar }} {{ .TypeRef }}
-{{ end }}switch {{ .SourceVarDeref }}.Type {
-	{{- range $i, $name := .UnionTypes }}
-	case {{ printf "%q" $name }}:
-		var val {{ index $.TargetTypeRefs $i }}
-		json.Unmarshal([]byte({{ if $.Pointer }}*{{ end }}{{ $.SourceVar }}.Value), &val)
-		{{ $.TargetVar }} = val
-	{{- end }}
-}
-`
-)

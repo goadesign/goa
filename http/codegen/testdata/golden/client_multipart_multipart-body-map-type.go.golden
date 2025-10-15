@@ -1,0 +1,4 @@
+// ServiceMultipartMapTypeMethodMultipartMapTypeEncoderFunc is the type to
+// encode multipart request for the "ServiceMultipartMapType" service
+// "MethodMultipartMapType" endpoint.
+type ServiceMultipartMapTypeMethodMultipartMapTypeEncoderFunc func(*multipart.Writer, map[string]int) error

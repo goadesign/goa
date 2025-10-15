@@ -1,0 +1,4 @@
+// SlashNoBasePathNoBasePathPath returns the URL path to the NoBasePath service SlashNoBasePath HTTP endpoint.
+func SlashNoBasePathNoBasePathPath() string {
+	return "/"
+}

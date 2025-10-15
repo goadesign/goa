@@ -1,0 +1,20 @@
+// MethodUnaryRPCNoPayload calls the "MethodUnaryRPCNoPayload" function in
+// service_unary_rpc_no_payloadpb.ServiceUnaryRPCNoPayloadClient interface.
+func (c *Client) MethodUnaryRPCNoPayload() goa.Endpoint {
+	return func(ctx context.Context, v any) (any, error) {
+		inv := goagrpc.NewInvoker(
+			BuildMethodUnaryRPCNoPayloadFunc(c.grpccli, c.opts...),
+			nil,
+			DecodeMethodUnaryRPCNoPayloadResponse)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			// Try to decode a Goa error response detail before falling back to Fault.
+			resp := goagrpc.DecodeError(err)
+			if eresp, ok := resp.(*goapb.ErrorResponse); ok {
+				return nil, goagrpc.NewServiceError(eresp)
+			}
+			return nil, goa.Fault("%s", err.Error())
+		}
+		return res, nil
+	}
+}

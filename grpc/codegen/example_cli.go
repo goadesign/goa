@@ -67,7 +67,7 @@ func exampleCLI(genpkg string, services *ServicesData, svr *expr.ServerExpr) *co
 		codegen.Header("", "main", specs),
 		{
 			Name:   "do-grpc-cli",
-			Source: readTemplate("do_grpc_cli"),
+			Source: grpcTemplates.Read(grpcDoGRPCCLIT),
 			Data: map[string]any{
 				"DefaultTransport": svrdata.DefaultTransport(),
 				"Services":         svcData,

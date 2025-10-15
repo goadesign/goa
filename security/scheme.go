@@ -12,6 +12,7 @@ package security
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -121,13 +122,7 @@ func (s *JWTScheme) Validate(scopes []string) error {
 func validateScopes(expected, actual []string) error {
 	var missing []string
 	for _, r := range expected {
-		found := false
-		for _, s := range actual {
-			if s == r {
-				found = true
-				break
-			}
-		}
+		found := slices.Contains(actual, r)
 		if !found {
 			missing = append(missing, r)
 		}

@@ -1,0 +1,4 @@
+// ServiceMultipartPrimitiveMethodMultipartPrimitiveEncoderFunc is the type to
+// encode multipart request for the "ServiceMultipartPrimitive" service
+// "MethodMultipartPrimitive" endpoint.
+type ServiceMultipartPrimitiveMethodMultipartPrimitiveEncoderFunc func(*multipart.Writer, string) error

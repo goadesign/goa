@@ -1,0 +1,28 @@
+openapi: 3.0.3
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+paths:
+    /ui/{filepath}:
+        get:
+            tags:
+                - front
+            summary: Download ui/dist
+            operationId: front#/ui/{filepath}
+            parameters:
+                - name: filepath
+                  in: path
+                  description: Relative file path
+                  required: true
+                  schema:
+                    type: string
+            responses:
+                "200":
+                    description: File downloaded
+                "404":
+                    description: File not found
+components: {}
+tags:
+    - name: front

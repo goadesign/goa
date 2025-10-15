@@ -1,0 +1,20 @@
+// MethodServerStreamingRPC implements the "MethodServerStreamingRPC" method in
+// service_server_streaming_rpcpb.ServiceServerStreamingRPCServer interface.
+func (s *Server) MethodServerStreamingRPC(message *service_server_streaming_rpcpb.MethodServerStreamingRPCRequest, stream service_server_streaming_rpcpb.ServiceServerStreamingRPC_MethodServerStreamingRPCServer) error {
+	ctx := stream.Context()
+	ctx = context.WithValue(ctx, goa.MethodKey, "MethodServerStreamingRPC")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceServerStreamingRPC")
+	p, err := s.MethodServerStreamingRPCH.Decode(ctx, message)
+	if err != nil {
+		return goagrpc.EncodeError(err)
+	}
+	ep := &serviceserverstreamingrpc.MethodServerStreamingRPCEndpointInput{
+		Stream:  &MethodServerStreamingRPCServerStream{stream: stream},
+		Payload: p.(int),
+	}
+	err = s.MethodServerStreamingRPCH.Handle(ctx, ep)
+	if err != nil {
+		return goagrpc.EncodeError(err)
+	}
+	return nil
+}

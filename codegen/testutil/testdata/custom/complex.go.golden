@@ -1,0 +1,36 @@
+package service
+
+import (
+	"context"
+	"log"
+)
+
+type Service interface {
+	DoSomething(ctx context.Context) error
+}
+
+type serviceImpl struct {
+	logger *log.Logger
+}
+
+func (s *serviceImpl) DoSomething(ctx context.Context) error {
+	s.logger.Println("Doing something")
+	return nil
+}
+
+package types
+
+type User struct {
+	ID    string
+	Name  string
+	Email string
+}
+
+type Request struct {
+	UserID string
+}
+
+type Response struct {
+	User  *User
+	Error error
+}

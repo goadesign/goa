@@ -1,0 +1,8 @@
+// NewMethodQueryArrayAnyPayload builds a ServiceQueryArrayAny service
+// MethodQueryArrayAny endpoint payload.
+func NewMethodQueryArrayAnyPayload(q []any) *servicequeryarrayany.MethodQueryArrayAnyPayload {
+	v := &servicequeryarrayany.MethodQueryArrayAnyPayload{}
+	v.Q = q
+
+	return v
+}

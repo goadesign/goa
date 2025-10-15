@@ -75,12 +75,34 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 			{Path: path.Join(genpkg, svcName, "views"), Name: sd.Service.ViewsPkg},
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 		}
+		// Add imports if Any type is used
+		needsAnyTypeImports := false
+		for _, e := range svc.GRPCEndpoints {
+			if hasAnyType(e.MethodExpr.Payload) || hasAnyType(e.MethodExpr.Result) {
+				needsAnyTypeImports = true
+				break
+			}
+			for _, er := range e.MethodExpr.Errors {
+				if hasAnyType(er.AttributeExpr) {
+					needsAnyTypeImports = true
+					break
+				}
+			}
+			if needsAnyTypeImports {
+				break
+			}
+		}
+		if needsAnyTypeImports {
+			imports = append(imports, &codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/anypb", Name: "anypb"})
+			imports = append(imports, &codegen.ImportSpec{Path: "encoding/json"})
+			imports = append(imports, &codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"})
+		}
 		imports = append(imports, sd.Service.ProtoImports...)
 		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client types", "client", imports)}
 		for _, init := range initData {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-type-init",
-				Source: readTemplate("type_init"),
+				Source: grpcTemplates.Read(grpcTypeInitT),
 				Data:   init,
 				FuncMap: map[string]any{
 					"isAlias": expr.IsAlias,
@@ -99,14 +121,14 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 			}
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-validate",
-				Source: readTemplate("validate"),
+				Source: grpcTemplates.Read(grpcValidateT),
 				Data:   data,
 			})
 		}
 		for _, h := range sd.transformHelpers {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-transform-helper",
-				Source: readTemplate("transform_helper"),
+				Source: grpcTemplates.Read(grpcTransformHelperT),
 				Data:   h,
 			})
 		}

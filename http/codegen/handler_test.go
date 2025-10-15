@@ -1,10 +1,10 @@
 package codegen
 
 import (
-	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"goa.design/goa/v3/codegen/testutil"
+
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
@@ -17,26 +17,25 @@ func TestHandlerInit(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
-		Code string
 	}{
-		{"no payload no result", testdata.ServerNoPayloadNoResultDSL, testdata.ServerNoPayloadNoResultHandlerConstructorCode},
-		{"no payload no result with a redirect", testdata.ServerNoPayloadNoResultWithRedirectDSL, testdata.ServerNoPayloadNoResultWithRedirectHandlerConstructorCode},
-		{"payload no result", testdata.ServerPayloadNoResultDSL, testdata.ServerPayloadNoResultHandlerConstructorCode},
-		{"payload no result with a redirect", testdata.ServerPayloadNoResultWithRedirectDSL, testdata.ServerPayloadNoResultWithRedirectHandlerConstructorCode},
-		{"no payload result", testdata.ServerNoPayloadResultDSL, testdata.ServerNoPayloadResultHandlerConstructorCode},
-		{"payload result", testdata.ServerPayloadResultDSL, testdata.ServerPayloadResultHandlerConstructorCode},
-		{"payload result error", testdata.ServerPayloadResultErrorDSL, testdata.ServerPayloadResultErrorHandlerConstructorCode},
-		{"skip response body encode decode", testdata.ServerSkipResponseBodyEncodeDecodeDSL, testdata.ServerSkipResponseBodyEncodeDecodeCode},
+		{"no payload no result", testdata.ServerNoPayloadNoResultDSL},
+		{"no payload no result with a redirect", testdata.ServerNoPayloadNoResultWithRedirectDSL},
+		{"payload no result", testdata.ServerPayloadNoResultDSL},
+		{"payload no result with a redirect", testdata.ServerPayloadNoResultWithRedirectDSL},
+		{"no payload result", testdata.ServerNoPayloadResultDSL},
+		{"payload result", testdata.ServerPayloadResultDSL},
+		{"payload result error", testdata.ServerPayloadResultErrorDSL},
+		{"skip response body encode decode", testdata.ServerSkipResponseBodyEncodeDecodeDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunHTTPDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
 			fs := ServerFiles(genpkg, services)
-			sections := codegentest.Sections(fs, filepath.Join("", "server.go"), "server-handler-init")
+			sections := codegentest.Sections(fs, "server.go", "server-handler-init")
 			require.Greater(t, len(sections), 0)
 			code := codegen.SectionCode(t, sections[0])
-			assert.Equal(t, c.Code, code)
+			testutil.AssertGo(t, "testdata/golden/handler_"+c.Name+".go.golden", code)
 		})
 	}
 }

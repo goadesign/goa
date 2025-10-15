@@ -1,0 +1,9 @@
+func transform() {
+	target := &ResultTypeCollection{}
+	if source.Collection != nil {
+		target.Collection = make([]*ResultType, len(source.Collection))
+		for i, val := range source.Collection {
+			target.Collection[i] = transformResultTypeToResultType(val)
+		}
+	}
+}

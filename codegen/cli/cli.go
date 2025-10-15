@@ -262,7 +262,7 @@ func UsageCommands(data []*CommandData) *codegen.SectionTemplate {
 		usages[i] = fmt.Sprintf("%s %s%s%s", cmd.Name, lp, strings.Join(subs, "|"), rp)
 	}
 
-	return &codegen.SectionTemplate{Source: usageT, Data: usages}
+	return &codegen.SectionTemplate{Source: cliTemplates.Read(usageCommandsT), Data: usages}
 }
 
 // UsageExamples builds a section template that generates a help text showing
@@ -275,7 +275,7 @@ func UsageExamples(data []*CommandData) *codegen.SectionTemplate {
 		}
 	}
 
-	return &codegen.SectionTemplate{Source: exampleT, Data: examples}
+	return &codegen.SectionTemplate{Source: cliTemplates.Read(usageExamplesT), Data: examples}
 }
 
 // FlagsCode returns a string containing the code that parses the command-line
@@ -285,7 +285,7 @@ func UsageExamples(data []*CommandData) *codegen.SectionTemplate {
 func FlagsCode(data []*CommandData) string {
 	section := codegen.SectionTemplate{
 		Name:    "parse-endpoint-flags",
-		Source:  parseFlagsT,
+		Source:  cliTemplates.Read(parseFlagsT),
 		Data:    data,
 		FuncMap: map[string]any{"printDescription": printDescription},
 	}
@@ -303,7 +303,7 @@ func FlagsCode(data []*CommandData) string {
 func CommandUsage(data *CommandData) *codegen.SectionTemplate {
 	return &codegen.SectionTemplate{
 		Name:    "cli-command-usage",
-		Source:  commandUsageT,
+		Source:  cliTemplates.Read(commandUsageT),
 		Data:    data,
 		FuncMap: map[string]any{"printDescription": printDescription},
 	}
@@ -314,7 +314,7 @@ func CommandUsage(data *CommandData) *codegen.SectionTemplate {
 func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTemplate {
 	return &codegen.SectionTemplate{
 		Name:   "cli-build-payload",
-		Source: buildPayloadT,
+		Source: cliTemplates.Read(buildPayloadT),
 		Data:   buildFunction,
 		FuncMap: map[string]any{
 			"fieldCode": fieldCode,
@@ -559,7 +559,7 @@ func conversionCode(from, to, typeName string, pointer bool) (string, bool, bool
 		if pointer {
 			ref = "&"
 		}
-		parse = parse + fmt.Sprintf("\n%s = %s%s", to, ref, target)
+		parse += fmt.Sprintf("\n%s = %s%s", to, ref, target)
 	}
 	return parse, declErr, checkErr
 }
@@ -606,166 +606,3 @@ func fieldCode(init *PayloadInitData) string {
 	return c
 }
 
-// input: []string
-const usageT = `// UsageCommands returns the set of commands and sub-commands using the format
-//
-//    command (subcommand1|subcommand2|...)
-//
-func UsageCommands() string {
-	return ` + "`" + `{{ range . }}{{ . }}
-{{ end }}` + "`" + `
-}
-`
-
-// input: []string
-const exampleT = `// UsageExamples produces an example of a valid invocation of the CLI tool.
-func UsageExamples() string {
-	return {{ range . }}os.Args[0] + ` + "`" + ` {{ . }}` + "`" + ` + "\n" +
-	{{ end }}""
-}
-`
-
-// input: []commandData
-const parseFlagsT = `var (
-		{{- range . }}
-		{{ .VarName }}Flags = flag.NewFlagSet("{{ .Name }}", flag.ContinueOnError)
-		{{ range .Subcommands }}
-		{{ .FullName }}Flags = flag.NewFlagSet("{{ .Name }}", flag.ExitOnError)
-		{{- $sub := . }}
-		{{- range .Flags }}
-		{{ .FullName }}Flag = {{ $sub.FullName }}Flags.String("{{ .Name }}", "{{ if .Default }}{{ .Default }}{{ else if .Required }}REQUIRED{{ end }}", {{ printf "%q" .Description }})
-		{{- end }}
-		{{ end }}
-		{{- end }}
-	)
-	{{ range . -}}
-	{{ $cmd := . -}}
-	{{ .VarName }}Flags.Usage = {{ .VarName }}Usage
-	{{ range .Subcommands -}}
-	{{ .FullName }}Flags.Usage = {{ .FullName }}Usage
-	{{ end }}
-	{{ end }}
-	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
-		return nil, nil, err
-	}
-
-	if flag.NArg() < 2 { // two non flag args are required: SERVICE and ENDPOINT (aka COMMAND)
-		return nil, nil, fmt.Errorf("not enough arguments")
-	}
-
-	var (
-		svcn string
-		svcf *flag.FlagSet
-	)
-	{
-		svcn = flag.Arg(0)
-		switch svcn {
-	{{- range . }}
-		case "{{ .Name }}":
-			svcf = {{ .VarName }}Flags
-	{{- end }}
-		default:
-			return nil, nil, fmt.Errorf("unknown service %q", svcn)
-		}
-	}
-	if err := svcf.Parse(flag.Args()[1:]); err != nil {
-		return nil, nil, err
-	}
-
-	var (
-		epn string
-		epf *flag.FlagSet
-	)
-	{
-		epn = svcf.Arg(0)
-		switch svcn {
-	{{- range . }}
-		case "{{ .Name }}":
-			switch epn {
-		{{- range .Subcommands }}
-			case "{{ .Name }}":
-				epf = {{ .FullName }}Flags
-		{{ end }}
-			}
-	{{ end }}
-		}
-	}
-	if epf == nil {
-		return nil, nil, fmt.Errorf("unknown %q endpoint %q", svcn, epn)
-	}
-
-	// Parse endpoint flags if any
-	if svcf.NArg() > 1 {
-		if err := epf.Parse(svcf.Args()[1:]); err != nil {
-			return nil, nil, err
-		}
-	}
-`
-
-// input: commandData
-const commandUsageT = `
-{{ printf "%sUsage displays the usage of the %s command and its subcommands." .VarName .Name | comment }}
-func {{ .VarName }}Usage() {
-	fmt.Fprintf(os.Stderr, ` + "`" + `{{ printDescription .Description }}
-Usage:
-    %[1]s [globalflags] {{ .Name }} COMMAND [flags]
-
-COMMAND:
-    {{- range .Subcommands }}
-    {{ .Name }}: {{ printDescription .Description }}
-    {{- end }}
-
-Additional help:
-    %[1]s {{ .Name }} COMMAND --help
-` + "`" + `, os.Args[0])
-}
-
-{{- range .Subcommands }}
-func {{ .FullName }}Usage() {
-	fmt.Fprintf(os.Stderr, ` + "`" + `%[1]s [flags] {{ $.Name }} {{ .Name }}{{range .Flags }} -{{ .Name }} {{ .Type }}{{ end }}
-
-{{ printDescription .Description}}
-	{{- range .Flags }}
-    -{{ .Name }} {{ .Type }}: {{ .Description }}
-	{{- end }}
-
-Example:
-    %[1]s {{ .Example }}
-` + "`" + `, os.Args[0])
-}
-{{ end }}
-`
-
-// input: buildFunctionData
-const buildPayloadT = `{{ printf "%s builds the payload for the %s %s endpoint from CLI flags." .Name .ServiceName .MethodName | comment }}
-func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .ResultType }}, error) {
-{{- if .CheckErr }}
-	var err error
-{{- end }}
-{{- range .Fields }}
-	{{- if .VarName }}
-		var {{ .VarName }} {{ .TypeRef }}
-		{
-			{{ .Init }}
-		}
-	{{- end }}
-{{- end }}
-{{- with .PayloadInit }}
-	{{- if .Code }}
-		{{ .Code }}
-		{{- if .ReturnTypeAttribute }}
-			res := &{{ .ReturnTypeName }}{
-				{{ .ReturnTypeAttribute }}: {{ if .ReturnTypeAttributePointer }}&{{ end }}v,
-			}
-		{{- end }}
-	{{- end }}
-	{{- if .ReturnIsStruct }}
-		{{- if not .Code }}
-		{{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }} := &{{ .ReturnTypeName }}{}
-		{{- end }}
-		{{ fieldCode . }}
-	{{- end }}
-	return {{ if .ReturnTypeAttribute }}res{{ else }}v{{ end }}, nil
-{{- end }}
-}
-`

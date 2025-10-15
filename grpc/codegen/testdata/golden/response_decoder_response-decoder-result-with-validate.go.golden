@@ -1,0 +1,54 @@
+// DecodeMethodMessageWithValidateResponse decodes responses from the
+// ServiceMessageWithValidate MethodMessageWithValidate endpoint.
+func DecodeMethodMessageWithValidateResponse(ctx context.Context, v any, hdr, trlr metadata.MD) (any, error) {
+	var (
+		inHeader  *int
+		inTrailer *bool
+		err       error
+	)
+	{
+
+		if vals := hdr.Get("Location"); len(vals) > 0 {
+			inHeaderRaw = vals[0]
+
+			v, err2 := strconv.ParseInt(inHeaderRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("inHeader", inHeaderRaw, "integer"))
+			}
+			pv := int(v)
+			inHeader = &pv
+		}
+		if inHeader != nil {
+			if *inHeader < 1 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("InHeader", *inHeader, 1, true))
+			}
+		}
+
+		if vals := trlr.Get("InTrailer"); len(vals) > 0 {
+			inTrailerRaw = vals[0]
+
+			v, err2 := strconv.ParseBool(inTrailerRaw)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("inTrailer", inTrailerRaw, "boolean"))
+			}
+			inTrailer = &v
+		}
+		if inTrailer != nil {
+			if !(*inTrailer == true) {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("InTrailer", *inTrailer, []any{true}))
+			}
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	message, ok := v.(*service_message_with_validatepb.MethodMessageWithValidateResponse)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceMessageWithValidate", "MethodMessageWithValidate", "*service_message_with_validatepb.MethodMessageWithValidateResponse", v)
+	}
+	if err = ValidateMethodMessageWithValidateResponse(message); err != nil {
+		return nil, err
+	}
+	res := NewMethodMessageWithValidateResult(message, inHeader, inTrailer)
+	return res, nil
+}

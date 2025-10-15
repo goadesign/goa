@@ -1,0 +1,39 @@
+// DecodeMethodQueryPrimitiveArrayBoolValidateRequest returns a decoder for
+// requests sent to the ServiceQueryPrimitiveArrayBoolValidate
+// MethodQueryPrimitiveArrayBoolValidate endpoint.
+func DecodeMethodQueryPrimitiveArrayBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) ([]bool, error) {
+	return func(r *http.Request) ([]bool, error) {
+		var (
+			q   []bool
+			err error
+		)
+		{
+			qRaw := r.URL.Query()["q"]
+			if qRaw == nil {
+				err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
+			}
+			q = make([]bool, len(qRaw))
+			for i, rv := range qRaw {
+				v, err2 := strconv.ParseBool(rv)
+				if err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of booleans"))
+				}
+				q[i] = v
+			}
+		}
+		if len(q) < 1 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
+		}
+		for _, e := range q {
+			if !(e == true) {
+				err = goa.MergeErrors(err, goa.InvalidEnumValueError("q[*]", e, []any{true}))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := q
+
+		return payload, nil
+	}
+}

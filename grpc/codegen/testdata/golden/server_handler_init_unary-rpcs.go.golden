@@ -1,0 +1,17 @@
+// NewMethodUnaryRPCAHandler creates a gRPC handler which serves the
+// "ServiceUnaryRPCs" service "MethodUnaryRPCA" endpoint.
+func NewMethodUnaryRPCAHandler(endpoint goa.Endpoint, h goagrpc.UnaryHandler) goagrpc.UnaryHandler {
+	if h == nil {
+		h = goagrpc.NewUnaryHandler(endpoint, DecodeMethodUnaryRPCARequest, EncodeMethodUnaryRPCAResponse)
+	}
+	return h
+}
+
+// NewMethodUnaryRPCBHandler creates a gRPC handler which serves the
+// "ServiceUnaryRPCs" service "MethodUnaryRPCB" endpoint.
+func NewMethodUnaryRPCBHandler(endpoint goa.Endpoint, h goagrpc.UnaryHandler) goagrpc.UnaryHandler {
+	if h == nil {
+		h = goagrpc.NewUnaryHandler(endpoint, DecodeMethodUnaryRPCBRequest, EncodeMethodUnaryRPCBResponse)
+	}
+	return h
+}

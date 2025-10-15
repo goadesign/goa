@@ -1,0 +1,29 @@
+// DecodeMethodQueryArrayFloat32Request returns a decoder for requests sent to
+// the ServiceQueryArrayFloat32 MethodQueryArrayFloat32 endpoint.
+func DecodeMethodQueryArrayFloat32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryarrayfloat32.MethodQueryArrayFloat32Payload, error) {
+	return func(r *http.Request) (*servicequeryarrayfloat32.MethodQueryArrayFloat32Payload, error) {
+		var (
+			q   []float32
+			err error
+		)
+		{
+			qRaw := r.URL.Query()["q"]
+			if qRaw != nil {
+				q = make([]float32, len(qRaw))
+				for i, rv := range qRaw {
+					v, err2 := strconv.ParseFloat(rv, 32)
+					if err2 != nil {
+						err = goa.MergeErrors(err, goa.InvalidFieldTypeError("q", qRaw, "array of floats"))
+					}
+					q[i] = float32(v)
+				}
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryArrayFloat32Payload(q)
+
+		return payload, nil
+	}
+}

@@ -1,0 +1,17 @@
+func transform() {
+	target := &Composite{
+		RequiredString: source.MyString,
+		DefaultInt:     source.MyInt,
+	}
+	target.Type = transformSimpleToSimple(source.MyType)
+	target.Map = make(map[int]string, len(source.MyMap))
+	for key, val := range source.MyMap {
+		tk := key
+		tv := val
+		target.Map[tk] = tv
+	}
+	target.Array = make([]string, len(source.MyArray))
+	for i, val := range source.MyArray {
+		target.Array[i] = val
+	}
+}

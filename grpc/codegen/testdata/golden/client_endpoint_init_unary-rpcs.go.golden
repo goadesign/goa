@@ -1,0 +1,41 @@
+// MethodUnaryRPCA calls the "MethodUnaryRPCA" function in
+// service_unary_rp_cspb.ServiceUnaryRPCsClient interface.
+func (c *Client) MethodUnaryRPCA() goa.Endpoint {
+	return func(ctx context.Context, v any) (any, error) {
+		inv := goagrpc.NewInvoker(
+			BuildMethodUnaryRPCAFunc(c.grpccli, c.opts...),
+			EncodeMethodUnaryRPCARequest,
+			DecodeMethodUnaryRPCAResponse)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			// Try to decode a Goa error response detail before falling back to Fault.
+			resp := goagrpc.DecodeError(err)
+			if eresp, ok := resp.(*goapb.ErrorResponse); ok {
+				return nil, goagrpc.NewServiceError(eresp)
+			}
+			return nil, goa.Fault("%s", err.Error())
+		}
+		return res, nil
+	}
+}
+
+// MethodUnaryRPCB calls the "MethodUnaryRPCB" function in
+// service_unary_rp_cspb.ServiceUnaryRPCsClient interface.
+func (c *Client) MethodUnaryRPCB() goa.Endpoint {
+	return func(ctx context.Context, v any) (any, error) {
+		inv := goagrpc.NewInvoker(
+			BuildMethodUnaryRPCBFunc(c.grpccli, c.opts...),
+			EncodeMethodUnaryRPCBRequest,
+			DecodeMethodUnaryRPCBResponse)
+		res, err := inv.Invoke(ctx, v)
+		if err != nil {
+			// Try to decode a Goa error response detail before falling back to Fault.
+			resp := goagrpc.DecodeError(err)
+			if eresp, ok := resp.(*goapb.ErrorResponse); ok {
+				return nil, goagrpc.NewServiceError(eresp)
+			}
+			return nil, goa.Fault("%s", err.Error())
+		}
+		return res, nil
+	}
+}

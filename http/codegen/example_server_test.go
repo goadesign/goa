@@ -2,10 +2,7 @@ package codegen
 
 import (
 	"bytes"
-	"flag"
-	"os"
 	"path/filepath"
-	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,29 +12,10 @@ import (
 	"goa.design/goa/v3/codegen/example"
 	ctestdata "goa.design/goa/v3/codegen/example/testdata"
 	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
-var updateGolden = false
-
-func init() {
-	flag.BoolVar(&updateGolden, "w", false, "update golden files")
-}
-
-func compareOrUpdateGolden(t *testing.T, code, golden string) {
-	t.Helper()
-	if updateGolden {
-		require.NoError(t, os.MkdirAll(filepath.Dir(golden), 0750))
-		require.NoError(t, os.WriteFile(golden, []byte(code), 0640))
-		return
-	}
-	data, err := os.ReadFile(golden)
-	require.NoError(t, err)
-	if runtime.GOOS == "windows" {
-		data = bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n"))
-	}
-	assert.Equal(t, string(data), code)
-}
 
 func TestExampleServerFiles(t *testing.T) {
 	t.Run("package name check", func(t *testing.T) {
@@ -58,7 +36,7 @@ func TestExampleServerFiles(t *testing.T) {
 				example.Servers = make(example.ServersData)
 				root := codegen.RunDSL(t, c.DSL)
 				require.Len(t, root.Services, 3)
-				httpServices := NewServicesData(service.NewServicesData(root))
+				httpServices := NewServicesData(service.NewServicesData(root), root.API.HTTP)
 				fs := ExampleServerFiles("", httpServices)
 				require.Len(t, fs, 2)
 				for i, f := range fs {
@@ -94,7 +72,7 @@ func TestExampleServerFiles(t *testing.T) {
 				// reset global variable
 				example.Servers = make(example.ServersData)
 				root := codegen.RunDSL(t, c.DSL)
-				httpServices := NewServicesData(service.NewServicesData(root))
+				httpServices := NewServicesData(service.NewServicesData(root), root.API.HTTP)
 				fs := ExampleServerFiles("", httpServices)
 				require.Len(t, fs, 1)
 				require.Greater(t, len(fs[0].SectionTemplates), 0)
@@ -104,7 +82,7 @@ func TestExampleServerFiles(t *testing.T) {
 				}
 				code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
 				golden := filepath.Join("testdata", "golden", "server-"+c.Name+".golden")
-				compareOrUpdateGolden(t, code, golden)
+				testutil.CompareOrUpdateGolden(t, code, golden)
 			})
 		}
 	})

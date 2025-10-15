@@ -1,0 +1,14 @@
+// EncodeMethodQueryAnyRequest returns an encoder for requests sent to the
+// ServiceQueryAny MethodQueryAny server.
+func EncodeMethodQueryAnyRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*servicequeryany.MethodQueryAnyPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ServiceQueryAny", "MethodQueryAny", "*servicequeryany.MethodQueryAnyPayload", v)
+		}
+		values := req.URL.Query()
+		values.Add("q", fmt.Sprintf("%v", p.Q))
+		req.URL.RawQuery = values.Encode()
+		return nil
+	}
+}

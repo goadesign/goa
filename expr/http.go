@@ -62,12 +62,13 @@ func (h *HTTPExpr) Service(name string) *HTTPServiceExpr {
 
 // ServiceFor creates a new or returns the existing service definition for the
 // given service.
-func (h *HTTPExpr) ServiceFor(s *ServiceExpr) *HTTPServiceExpr {
+func (h *HTTPExpr) ServiceFor(s *ServiceExpr, root *HTTPExpr) *HTTPServiceExpr {
 	if res := h.Service(s.Name); res != nil {
 		return res
 	}
 	res := &HTTPServiceExpr{
 		ServiceExpr: s,
+		Root:        root,
 	}
 	h.Services = append(h.Services, res)
 	return res

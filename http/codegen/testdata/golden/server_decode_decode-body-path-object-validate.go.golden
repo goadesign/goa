@@ -1,0 +1,40 @@
+// DecodeMethodBodyPathObjectValidateRequest returns a decoder for requests
+// sent to the ServiceBodyPathObjectValidate MethodBodyPathObjectValidate
+// endpoint.
+func DecodeMethodBodyPathObjectValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodypathobjectvalidate.MethodBodyPathObjectValidatePayload, error) {
+	return func(r *http.Request) (*servicebodypathobjectvalidate.MethodBodyPathObjectValidatePayload, error) {
+		var (
+			body MethodBodyPathObjectValidateRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return nil, gerr
+			}
+			return nil, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateMethodBodyPathObjectValidateRequestBody(&body)
+		if err != nil {
+			return nil, err
+		}
+
+		var (
+			b string
+
+			params = mux.Vars(r)
+		)
+		b = params["b"]
+		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodBodyPathObjectValidatePayload(&body, b)
+
+		return payload, nil
+	}
+}

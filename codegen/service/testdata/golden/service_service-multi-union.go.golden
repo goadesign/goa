@@ -1,0 +1,41 @@
+
+// Service is the MultiUnionService service interface.
+type Service interface {
+	// MultiUnion implements MultiUnion.
+	MultiUnion(context.Context, *Union) (res *Union, err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "MultiUnionService"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"MultiUnion"}
+
+type TypeA struct {
+	A *int
+}
+
+type TypeB struct {
+	B *string
+}
+
+// Union is the payload type of the MultiUnionService service MultiUnion method.
+type Union struct {
+	Values interface {
+		valuesVal()
+	}
+}
+
+func (*TypeA) valuesVal() {}
+
+func (*TypeB) valuesVal() {}

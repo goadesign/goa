@@ -2,6 +2,7 @@ package openapiv3
 
 import (
 	"fmt"
+	"maps"
 	"regexp"
 	"sort"
 	"strconv"
@@ -127,7 +128,6 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 
 		// endpoints
 		for _, e := range svc.HTTPEndpoints {
-
 			if !openapi.MustGenerate(e.Meta) || !openapi.MustGenerate(e.MethodExpr.Meta) {
 				continue
 			}
@@ -161,9 +161,7 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 					path.Extensions = openapi.ExtensionsFromExpr(r.Endpoint.Meta)
 					if len(exts) > 0 {
 						path.Extensions = make(map[string]any)
-						for k, v := range exts {
-							path.Extensions[k] = v
-						}
+						maps.Copy(path.Extensions, exts)
 					}
 				}
 			}
@@ -176,6 +174,9 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 			}
 
 			for _, key := range f.RequestPaths {
+				// Replace wildcards in the path to OpenAPI path parameter form
+				// e.g. "/ui/{*filepath}" -> "/ui/{filepath}"
+				key = expr.HTTPWildcardRegex.ReplaceAllString(key, "/{$1}")
 				operation := buildFileServerOperation(key, f, api)
 				path, ok := paths[key]
 				if !ok {
@@ -212,7 +213,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	summary = fmt.Sprintf("%s %s", e.Name(), svc.Name())
 	setSummary(meta)
 	setSummary(svc.ServiceExpr.Meta)
-	setSummary(r.Endpoint.Meta)
+	setSummary(e.Meta)
 	setSummary(m.Meta)
 
 	// OpenAPI operationId
@@ -228,7 +229,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	operationIDFormat = defaultOperationIDFormat
 	setOperationIDFormat(meta)
 	setOperationIDFormat(m.Service.Meta)
-	setOperationIDFormat(r.Endpoint.Meta)
+	setOperationIDFormat(e.Meta)
 	setOperationIDFormat(m.Meta)
 
 	// request body
@@ -317,7 +318,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	tagNames = openapi.TagNamesFromExpr(e.Meta)
 	if len(tagNames) == 0 {
 		// By default tag with service name
-		tagNames = []string{r.Endpoint.Service.Name()}
+		tagNames = []string{e.Service.Name()}
 	}
 
 	// An endpoint can have multiple routes, so we need to be able to build a unique
@@ -357,10 +358,17 @@ func buildFileServerOperation(key string, fs *expr.HTTPFileServerExpr, api *expr
 	if len(wildcards) > 0 {
 		pref := ParameterRef{
 			Value: &Parameter{
+				// Use the literal wildcard (including leading '*') as name to match path if needed
+				// Note: HTTPWildcardRegex already strips '*' in ExtractHTTPWildcards; however
+				// the path key has been normalized to "/{name}" so the correct parameter name
+				// is the bare wildcard identifier.
 				Name:        wildcards[0],
 				Description: "Relative file path",
 				In:          "path",
 				Required:    true,
+				Schema: &openapi.Schema{ // string schema makes validators happy
+					Type: openapi.String,
+				},
 			},
 		}
 		params = []*ParameterRef{&pref}
@@ -369,20 +377,20 @@ func buildFileServerOperation(key string, fs *expr.HTTPFileServerExpr, api *expr
 	// responses
 	var responses map[string]*ResponseRef
 	{
-		desc := "File downloaded"
+		desc200 := "File downloaded"
 		rref := ResponseRef{
 			Value: &Response{
-				Description: &desc,
+				Description: &desc200,
 			},
 		}
 		responses = map[string]*ResponseRef{
 			"200": &rref,
 		}
 		if len(wildcards) > 0 {
-			desc = "File not found"
+			desc404 := "File not found"
 			responses["404"] = &ResponseRef{
 				Value: &Response{
-					Description: &desc,
+					Description: &desc404,
 				},
 			}
 		}
@@ -635,13 +643,13 @@ func buildTags(api *expr.APIExpr) []*openapi.Tag {
 	}
 
 	// sort tag names alphabetically
-	var keys []string
+	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 
-	var tags []*openapi.Tag
+	tags := make([]*openapi.Tag, 0, len(keys))
 	for _, k := range keys {
 		tags = append(tags, m[k])
 	}

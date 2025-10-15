@@ -1,0 +1,14 @@
+func transform() {
+	target := &proto.MapArray{}
+	if source.MapArray != nil {
+		target.MapArray = make([]map[int]string, len(source.MapArray))
+		for i, val := range source.MapArray {
+			target.MapArray[i] = make(map[int]string, len(val.Field))
+			for key, val := range val.Field {
+				tk := int(key)
+				tv := val
+				target.MapArray[i][tk] = tv
+			}
+		}
+	}
+}

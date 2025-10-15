@@ -47,10 +47,19 @@ func TestWrapDoer(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {
+			// Use a unique UDP port per subtest to avoid cross-test interference
+			l, err := net.ListenUDP("udp", &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: 0})
+			if err != nil {
+				t.Fatalf("error creating UDP listener: %v", err)
+			}
+			addr := l.LocalAddr().(*net.UDPAddr)
+			_ = l.Close()
+			dynamicListen := addr.String()
+
 			expMsgs := 0 // expected number of messages to be sent to X-Ray daemon
 			if tc.Segment {
 				expMsgs = 2
-				xrayConn, err := net.Dial("udp", udplisten)
+				xrayConn, err := net.Dial("udp", dynamicListen)
 				if err != nil {
 					t.Fatalf("error creating xray daemon connection: %v", err)
 				}
@@ -61,8 +70,12 @@ func TestWrapDoer(t *testing.T) {
 			}
 
 			doer := newTestDoer(t, tc.Segment, tc.StatusCode)
-			messages := xraytest.ReadUDP(t, udplisten, expMsgs, func() {
-				if _, err := WrapDoer(doer).Do(req); err != nil && !tc.Error {
+			messages := xraytest.ReadUDP(t, dynamicListen, expMsgs, func() {
+				resp, err := WrapDoer(doer).Do(req)
+				if resp != nil && resp.Body != nil {
+					defer func() { _ = resp.Body.Close() }()
+				}
+				if err != nil && !tc.Error {
 					t.Fatalf("error executing request: %v", err)
 				}
 			})
