@@ -199,7 +199,6 @@ func (je *jsonEncoder) Read(b []byte) (n int, err error) {
 		return 0, errEncodeNotCalled
 	}
 	return je.r.Read(b)
-
 }
 
 func (*jsonEncoder) Close() (err error) { return nil }
