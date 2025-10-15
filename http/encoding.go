@@ -178,10 +178,15 @@ func RequestEncoder(r *http.Request) Encoder {
 	}
 	enc := new(jsonEncoder)
 	r.Body = enc
+	// GetBody enables request retry on HTTP/2 connections when the server
+	// sends GOAWAY during graceful shutdown. Without GetBody, the HTTP transport
+	// cannot retry because the request body has already been consumed.
 	r.GetBody = enc.GetBody
 	return enc
 }
 
+// jsonEncoder implements io.ReadCloser and provides GetBody functionality
+// to support HTTP/2 request retries during server graceful shutdown (GOAWAY).
 type jsonEncoder struct {
 	b []byte
 	r bytes.Reader
@@ -197,7 +202,7 @@ func (je *jsonEncoder) Read(b []byte) (n int, err error) {
 
 }
 
-func (je *jsonEncoder) Close() (err error) { return nil }
+func (*jsonEncoder) Close() (err error) { return nil }
 
 func (je *jsonEncoder) Encode(v any) error {
 	b, err := json.Marshal(v)
@@ -209,6 +214,8 @@ func (je *jsonEncoder) Encode(v any) error {
 	return nil
 }
 
+// GetBody returns a new reader of the encoded bytes, enabling request retries.
+// This is required for HTTP/2 connections to handle server GOAWAY during graceful shutdown.
 func (je *jsonEncoder) GetBody() (io.ReadCloser, error) {
 	if len(je.b) == 0 {
 		return nil, errEncodeNotCalled
