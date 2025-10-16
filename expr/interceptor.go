@@ -58,10 +58,10 @@ func (i *InterceptorExpr) validate(m *MethodExpr) *eval.ValidationErrors {
 				}
 			}
 			if i.ReadPayload != nil {
-				i.validateAttributeAccess(m, "read payload", verr, AsObject(payload.Type), i.ReadPayload)
+				i.validateAttributeAccess(m, "read payload", verr, payload, i.ReadPayload)
 			}
 			if i.WritePayload != nil {
-				i.validateAttributeAccess(m, "write payload", verr, AsObject(payload.Type), i.WritePayload)
+				i.validateAttributeAccess(m, "write payload", verr, payload, i.WritePayload)
 			}
 		}
 	}
@@ -82,10 +82,10 @@ func (i *InterceptorExpr) validate(m *MethodExpr) *eval.ValidationErrors {
 				}
 			}
 			if i.ReadResult != nil {
-				i.validateAttributeAccess(m, "read result", verr, AsObject(result.Type), i.ReadResult)
+				i.validateAttributeAccess(m, "read result", verr, result, i.ReadResult)
 			}
 			if i.WriteResult != nil {
-				i.validateAttributeAccess(m, "write result", verr, AsObject(result.Type), i.WriteResult)
+				i.validateAttributeAccess(m, "write result", verr, result, i.WriteResult)
 			}
 		}
 	}
@@ -106,10 +106,10 @@ func (i *InterceptorExpr) validate(m *MethodExpr) *eval.ValidationErrors {
 					}
 				}
 				if i.ReadStreamingPayload != nil {
-					i.validateAttributeAccess(m, "read streaming payload", verr, AsObject(payload.Type), i.ReadStreamingPayload)
+					i.validateAttributeAccess(m, "read streaming payload", verr, payload, i.ReadStreamingPayload)
 				}
 				if i.WriteStreamingPayload != nil {
-					i.validateAttributeAccess(m, "write streaming payload", verr, AsObject(payload.Type), i.WriteStreamingPayload)
+					i.validateAttributeAccess(m, "write streaming payload", verr, payload, i.WriteStreamingPayload)
 				}
 			}
 		}
@@ -131,10 +131,10 @@ func (i *InterceptorExpr) validate(m *MethodExpr) *eval.ValidationErrors {
 					}
 				}
 				if i.ReadStreamingResult != nil {
-					i.validateAttributeAccess(m, "read streaming result", verr, AsObject(result.Type), i.ReadStreamingResult)
+					i.validateAttributeAccess(m, "read streaming result", verr, result, i.ReadStreamingResult)
 				}
 				if i.WriteStreamingResult != nil {
-					i.validateAttributeAccess(m, "write streaming result", verr, AsObject(result.Type), i.WriteStreamingResult)
+					i.validateAttributeAccess(m, "write streaming result", verr, result, i.WriteStreamingResult)
 				}
 			}
 		}
@@ -144,14 +144,14 @@ func (i *InterceptorExpr) validate(m *MethodExpr) *eval.ValidationErrors {
 }
 
 // validateAttributeAccess validates that all attributes in attr exist in obj
-func (i *InterceptorExpr) validateAttributeAccess(m *MethodExpr, source string, verr *eval.ValidationErrors, obj *Object, attr *AttributeExpr) {
+func (i *InterceptorExpr) validateAttributeAccess(m *MethodExpr, source string, verr *eval.ValidationErrors, target *AttributeExpr, attr *AttributeExpr) {
 	attrObj := AsObject(attr.Type)
 	if attrObj == nil {
 		verr.Add(m, "interceptor %q %s attribute is not an object", i.Name, source)
 		return
 	}
 	for _, att := range *attrObj {
-		if obj.Attribute(att.Name) == nil {
+		if target.Find(att.Name) == nil {
 			verr.Add(m, "interceptor %q cannot %s attribute %q: attribute does not exist", i.Name, source, att.Name)
 		}
 	}

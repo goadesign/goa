@@ -40,6 +40,36 @@ func TestInterceptorExpr_Validate(t *testing.T) {
 				}),
 			),
 		},
+		"payload-with-user-type-extend": {
+			intercept: makeInterceptor(t, withReadPayload(t, namedAttr(t, "frombase"))),
+			method: makeMethod(t, func(m *MethodExpr) {
+				// Base user type providing attribute via Extend
+				base := &UserTypeExpr{AttributeExpr: &AttributeExpr{Type: &Object{namedAttr(t, "frombase")}}, TypeName: "Base"}
+				// Payload is a user type that extends base
+				ut := &UserTypeExpr{AttributeExpr: &AttributeExpr{Type: &Object{namedAttr(t, "own")}}, TypeName: "PayloadUT"}
+				ut.AttributeExpr.Bases = []DataType{base}
+				m.Payload = &AttributeExpr{Type: ut}
+			}),
+		},
+		"result-with-user-type-extend": {
+			intercept: makeInterceptor(t, withReadResult(t, namedAttr(t, "frombase"))),
+			method: makeMethod(t, func(m *MethodExpr) {
+				base := &UserTypeExpr{AttributeExpr: &AttributeExpr{Type: &Object{namedAttr(t, "frombase")}}, TypeName: "RBase"}
+				ut := &UserTypeExpr{AttributeExpr: &AttributeExpr{Type: &Object{namedAttr(t, "ownr")}}, TypeName: "ResultUT"}
+				ut.AttributeExpr.Bases = []DataType{base}
+				m.Result = &AttributeExpr{Type: ut}
+			}),
+		},
+		"streaming-payload-with-user-type-extend": {
+			intercept: makeInterceptor(t, withReadStreamingPayload(t, namedAttr(t, "frombase"))),
+			method: makeMethod(t, func(m *MethodExpr) {
+				m.Stream = ClientStreamKind
+				base := &UserTypeExpr{AttributeExpr: &AttributeExpr{Type: &Object{namedAttr(t, "frombase")}}, TypeName: "SPBase"}
+				ut := &UserTypeExpr{AttributeExpr: &AttributeExpr{Type: &Object{namedAttr(t, "ownsp")}}, TypeName: "SPUT"}
+				ut.AttributeExpr.Bases = []DataType{base}
+				m.StreamingPayload = &AttributeExpr{Type: ut}
+			}),
+		},
 		"invalid-payload-not-object": {
 			intercept: makeInterceptor(t, withReadPayload(t, namedAttr(t, "foo"))),
 			method: makeMethod(t, func(m *MethodExpr) {
