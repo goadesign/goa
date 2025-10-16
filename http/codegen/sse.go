@@ -57,6 +57,8 @@ type (
 		RequestIDField string
 		// RequestIDPointer indicates whether the RequestIDField is a pointer (i.e., optional primitive).
 		RequestIDPointer bool
+		// HasResponseBody indicates whether an HTTP response body converter exists for this endpoint.
+		HasResponseBody bool
 	}
 )
 
@@ -134,6 +136,15 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 		RequestIDField:      e.SSE.RequestIDField,
 		RequestIDPointer:    ridPtr,
 	}
+
+	if ed.Result != nil {
+		for _, resp := range ed.Result.Responses {
+			if len(resp.ServerBody) > 0 {
+				ed.SSE.HasResponseBody = true
+				break
+			}
+		}
+	}
 }
 
 // sseServerFile returns the file implementing the SSE server
@@ -186,22 +197,23 @@ func sseTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 			continue
 		}
 		// Create a map of template functions needed for the SSE template
-		funcs := map[string]any{
-			"dict": func(values ...any) (map[string]any, error) {
-				if len(values)%2 != 0 {
-					return nil, fmt.Errorf("odd number of arguments")
+	funcs := map[string]any{
+		"dict": func(values ...any) (map[string]any, error) {
+			if len(values)%2 != 0 {
+				return nil, fmt.Errorf("odd number of arguments")
+			}
+			dict := make(map[string]any, len(values)/2)
+			for i := 0; i < len(values); i += 2 {
+				key, ok := values[i].(string)
+				if !ok {
+					return nil, fmt.Errorf("dict keys must be strings")
 				}
-				dict := make(map[string]any, len(values)/2)
-				for i := 0; i < len(values); i += 2 {
-					key, ok := values[i].(string)
-					if !ok {
-						return nil, fmt.Errorf("dict keys must be strings")
-					}
-					dict[key] = values[i+1]
-				}
-				return dict, nil
-			},
-		}
+				dict[key] = values[i+1]
+			}
+			return dict, nil
+		},
+		"goify": codegen.Goify,
+	}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:    "server-sse",
 			Source:  httpTemplates.Read(serverSseT, sseFormatP),
