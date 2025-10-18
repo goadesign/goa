@@ -55,11 +55,16 @@ func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.Exa
 
 // paramFor converts the given attribute into a OpenAPI spec parameter.
 func paramFor(att *expr.AttributeExpr, name, in string, required bool, rand *expr.ExampleGenerator) *Parameter {
+	allowEmpty := in != "path"
+	if att.Validation != nil {
+		allowEmpty = att.Validation.AllowEmptyValue
+	}
+
 	param := &Parameter{
 		Name:            name,
 		In:              in,
 		Description:     att.Description,
-		AllowEmptyValue: in != "path",
+		AllowEmptyValue: allowEmpty,
 		Required:        required,
 		Schema:          newSchemafier(rand).schemafy(att),
 		Extensions:      openapi.ExtensionsFromExpr(att.Meta),

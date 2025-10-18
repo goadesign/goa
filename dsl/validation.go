@@ -381,6 +381,17 @@ func MinLength(val int) {
 	}
 }
 
+// AllowEmptyValue sets the AllowEmptyValue flag for a query or header parameter.
+// If not set, default behavior in paramFor is in != "path".
+func AllowEmptyValue(val bool) {
+	if a, ok := eval.Current().(*expr.AttributeExpr); ok {
+		if a.Validation == nil {
+			a.Validation = &expr.ValidationExpr{}
+		}
+		a.Validation.AllowEmptyValue = val
+	}
+}
+
 // MaxLength adds a "maxItems" validation to the attribute.
 // See http://json-schema.org/latest/json-schema-validation.html#anchor42.
 //

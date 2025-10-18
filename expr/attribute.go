@@ -98,6 +98,9 @@ type (
 		// described at
 		// http://json-schema.org/latest/json-schema-validation.html#anchor61.
 		Required []string
+		// AllowEmptyValue indicates whether the attribute allows empty
+		// values. This is primarily used for query string parameters.
+		AllowEmptyValue bool
 	}
 
 	// ValidationFormat is the type used to enumerate the possible string
