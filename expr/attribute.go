@@ -100,7 +100,7 @@ type (
 		Required []string
 		// AllowEmptyValue indicates whether the attribute allows empty
 		// values. This is primarily used for query string parameters.
-		AllowEmptyValue bool
+		AllowEmptyValue *bool
 	}
 
 	// ValidationFormat is the type used to enumerate the possible string

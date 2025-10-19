@@ -388,7 +388,7 @@ func AllowEmptyValue(val bool) {
 		if a.Validation == nil {
 			a.Validation = &expr.ValidationExpr{}
 		}
-		a.Validation.AllowEmptyValue = val
+		a.Validation.AllowEmptyValue = &val
 	}
 }
 
