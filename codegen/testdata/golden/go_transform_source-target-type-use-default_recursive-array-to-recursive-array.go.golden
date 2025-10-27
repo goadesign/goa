@@ -5,6 +5,10 @@ func transform() {
 	if source.Recursive != nil {
 		target.Recursive = make([]*RecursiveArray, len(source.Recursive))
 		for i, val := range source.Recursive {
+			if val == nil {
+				target.Recursive[i] = nil
+				continue
+			}
 			target.Recursive[i] = transformRecursiveArrayToRecursiveArray(val)
 		}
 	}

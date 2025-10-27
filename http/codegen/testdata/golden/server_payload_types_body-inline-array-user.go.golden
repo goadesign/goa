@@ -3,6 +3,10 @@
 func NewMethodBodyInlineArrayUserElemType(body []*ElemTypeRequestBody) []*servicebodyinlinearrayuser.ElemType {
 	v := make([]*servicebodyinlinearrayuser.ElemType, len(body))
 	for i, val := range body {
+		if val == nil {
+			v[i] = nil
+			continue
+		}
 		v[i] = unmarshalElemTypeRequestBodyToServicebodyinlinearrayuserElemType(val)
 	}
 	return v

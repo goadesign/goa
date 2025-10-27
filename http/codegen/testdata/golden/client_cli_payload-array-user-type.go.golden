@@ -11,6 +11,10 @@ func BuildMethodBodyInlineArrayUserPayload(serviceBodyInlineArrayUserMethodBodyI
 	}
 	v := make([]*servicebodyinlinearrayuser.ElemType, len(body))
 	for i, val := range body {
+		if val == nil {
+			v[i] = nil
+			continue
+		}
 		v[i] = marshalElemTypeRequestBodyToServicebodyinlinearrayuserElemType(val)
 	}
 	return v, nil
