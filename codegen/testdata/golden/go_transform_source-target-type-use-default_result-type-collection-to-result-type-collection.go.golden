@@ -3,6 +3,10 @@ func transform() {
 	if source.Collection != nil {
 		target.Collection = make([]*ResultType, len(source.Collection))
 		for i, val := range source.Collection {
+			if val == nil {
+				target.Collection[i] = nil
+				continue
+			}
 			target.Collection[i] = transformResultTypeToResultType(val)
 		}
 	}
