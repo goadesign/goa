@@ -2,7 +2,6 @@ package example
 
 import (
 	"fmt"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -381,51 +380,106 @@ func newGRPCTransport() *TransportData {
 }
 
 // computeHandlerArgsForURI returns the ordered handler arguments for the given URI.
+// For HTTP URIs that serve both HTTP and JSON-RPC services, the order is:
+//   - HTTP service endpoints (for services in the HTTP transport list)
+//   - JSON-RPC service interfaces (in JSONRPC.Services order)
+//   - JSON-RPC service endpoints (for services not already added as HTTP endpoints)
 func computeHandlerArgsForURI(uri *URIData, server *Data, root *expr.RootExpr) []HandlerArg {
 	capHint := len(server.Services)
-	httpSvcNames := make([]string, 0, capHint)
 	grpcSvcNames := make([]string, 0, capHint)
-	jsonrpcSvcNames := make([]string, 0, len(root.API.JSONRPC.Services))
 	for _, t := range server.Transports {
-		if t.Type == TransportHTTP {
-			httpSvcNames = append(httpSvcNames, t.Services...)
-		}
 		if t.Type == TransportGRPC {
 			grpcSvcNames = append(grpcSvcNames, t.Services...)
 		}
 	}
-	for _, j := range root.API.JSONRPC.Services {
-		jsonrpcSvcNames = append(jsonrpcSvcNames, j.Name())
-	}
-	// Track HTTP services that actually define endpoints (not just file servers)
-	hasHTTPMethods := make(map[string]bool, len(root.API.HTTP.Services))
-	for _, hs := range root.API.HTTP.Services {
-		if len(hs.HTTPEndpoints) > 0 {
-			hasHTTPMethods[hs.Name()] = true
-		}
-	}
-	var out []HandlerArg
 	if uri.Transport.Type == TransportGRPC {
+		out := make([]HandlerArg, 0, len(grpcSvcNames))
 		for _, name := range grpcSvcNames {
 			out = append(out, HandlerArg{Endpoint: codegen.Goify(name, false) + "Endpoints"})
 		}
 		return out
 	}
-	// Endpoints first for union(HTTP services, JSON-RPC services) in server.Services order
-	for _, svcName := range server.Services {
-		if (slices.Contains(httpSvcNames, svcName) && hasHTTPMethods[svcName]) || slices.Contains(jsonrpcSvcNames, svcName) {
-			out = append(out, HandlerArg{Endpoint: codegen.Goify(svcName, false) + "Endpoints"})
+
+	var jsonrpcServices []*expr.HTTPServiceExpr
+	if root.API != nil && root.API.JSONRPC != nil {
+		jsonrpcServices = root.API.JSONRPC.Services
+	}
+
+	httpSvcSet := make(map[string]struct{}, len(server.Services))
+	for _, t := range server.Transports {
+		if t.Type != TransportHTTP {
+			continue
+		}
+		for _, name := range t.Services {
+			httpSvcSet[name] = struct{}{}
 		}
 	}
-	// Then JSON-RPC services: Service then Endpoints only if not already included above
-	for _, svcName := range server.Services {
-		if slices.Contains(jsonrpcSvcNames, svcName) {
-			out = append(out, HandlerArg{Service: codegen.Goify(svcName, false) + "Svc"})
-			if !slices.Contains(httpSvcNames, svcName) && !slices.Contains(jsonrpcSvcNames, svcName) {
-				// This branch will normally not run since JSON-RPC services are included above
-				out = append(out, HandlerArg{Endpoint: codegen.Goify(svcName, false) + "Endpoints"})
+
+	out := make([]HandlerArg, 0, len(server.Services)+len(jsonrpcServices))
+
+	serviceHasHandlers := func(name string) bool {
+		if svc := root.Service(name); len(svc.Methods) > 0 {
+			return true
+		}
+		if hs := root.API.HTTP.Service(name); hs != nil && len(hs.HTTPEndpoints) > 0 {
+			return true
+		}
+		if js := root.API.JSONRPC.Service(name); js != nil && len(js.HTTPEndpoints) > 0 {
+			return true
+		}
+		return false
+	}
+
+	// Build set of services that are in $.Services for the template.
+	// The template data depends on whether there are HTTP services:
+	// - If there are HTTP services: $.Services = HTTP services only
+	// - If there are NO HTTP services: $.Services = all JSON-RPC services
+	servicesInTemplate := make(map[string]struct{})
+	hasHTTPServices := false
+	if root.API != nil && root.API.HTTP != nil && len(root.API.HTTP.Services) > 0 {
+		hasHTTPServices = true
+		for _, hs := range root.API.HTTP.Services {
+			if hs.ServiceExpr != nil {
+				servicesInTemplate[hs.ServiceExpr.Name] = struct{}{}
 			}
 		}
 	}
+	// If no HTTP services, JSON-RPC services populate $.Services
+	if !hasHTTPServices && root.API != nil && root.API.JSONRPC != nil {
+		for _, js := range root.API.JSONRPC.Services {
+			if js.ServiceExpr != nil {
+				servicesInTemplate[js.ServiceExpr.Name] = struct{}{}
+			}
+		}
+	}
+
+	addedEndpoints := make(map[string]bool, len(server.Services))
+
+	// Step 1: Add endpoint pointers for services in server.Services that are also in $.Services.
+	// This matches the template's first loop: {{ range $.Services }}{{ if .Service.Methods }}
+	// where $.Services includes both HTTP and JSON-RPC services.
+	for _, svcName := range server.Services {
+		if _, inTemplate := servicesInTemplate[svcName]; inTemplate && serviceHasHandlers(svcName) {
+			out = append(out, HandlerArg{Endpoint: codegen.Goify(svcName, false) + "Endpoints"})
+			addedEndpoints[svcName] = true
+		}
+	}
+
+	// Step 2: For each JSON-RPC service, add service interface, then endpoint (if not HTTP).
+	// This matches the template's second loop: {{ range $.JSONRPCServices }}
+	// where each iteration adds the service, checks if it's in $.Services, and conditionally
+	// adds the endpoint - all in the same iteration (not separate loops).
+	for _, jsvc := range jsonrpcServices {
+		name := jsvc.ServiceExpr.Name
+		// Add service interface
+		out = append(out, HandlerArg{Service: codegen.Goify(name, false) + "Svc"})
+		// Add endpoint if this service doesn't have HTTP transport
+		// (i.e., wasn't added in Step 1)
+		if !addedEndpoints[name] && serviceHasHandlers(name) {
+			out = append(out, HandlerArg{Endpoint: codegen.Goify(name, false) + "Endpoints"})
+			addedEndpoints[name] = true
+		}
+	}
+
 	return out
 }
