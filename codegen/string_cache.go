@@ -52,10 +52,3 @@ func (c *stringCache) getCached(key cacheKey, compute func() string) string {
 	c.cache[key] = result
 	return result
 }
-
-// clear resets the cache (useful for testing).
-func (c *stringCache) clear() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.cache = make(map[cacheKey]string)
-}
