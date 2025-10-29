@@ -12,8 +12,10 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
+	"golang.org/x/tools/go/ast/astutil"
 	"golang.org/x/tools/imports"
 )
 
@@ -140,10 +142,20 @@ func finalizeGoSource(path string) error {
 		return fmt.Errorf("%s\n========\nContent:\n%s", buf.String(), content)
 	}
 
-	// Clean unused imports - using optimized single-pass algorithm
-	importMap := buildImportMap(file)
-	detectUsedImports(file, importMap)
-	removeUnusedImports(fset, file, importMap)
+	// Clean unused imports
+	imps := astutil.Imports(fset, file)
+	for _, group := range imps {
+		for _, imp := range group {
+			path := strings.Trim(imp.Path.Value, `"`)
+			if !astutil.UsesImport(file, path) {
+				if imp.Name != nil {
+					astutil.DeleteNamedImport(fset, file, imp.Name.Name, path)
+				} else {
+					astutil.DeleteImport(fset, file, path)
+				}
+			}
+		}
+	}
 	ast.SortImports(fset, file)
 	w, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
