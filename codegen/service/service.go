@@ -302,18 +302,21 @@ func AddUserTypeImports(genpkg string, header *codegen.SectionTemplate, d *Data)
 		importsByPath[loc.FilePath] = &codegen.ImportSpec{Name: loc.PackageName(), Path: genpkg + "/" + loc.RelImportPath}
 	}
 
+	// Process method-specific locations
 	for _, m := range d.Methods {
 		initLoc(m.PayloadLoc)
 		initLoc(m.ResultLoc)
 		for _, l := range m.ErrorLocs {
 			initLoc(l)
 		}
-		for _, ut := range d.userTypes {
-			initLoc(ut.Loc)
-		}
-		for _, et := range d.errorTypes {
-			initLoc(et.Loc)
-		}
+	}
+
+	// Process service-level types once (not per method)
+	for _, ut := range d.userTypes {
+		initLoc(ut.Loc)
+	}
+	for _, et := range d.errorTypes {
+		initLoc(et.Loc)
 	}
 
 	for _, imp := range importsByPath { // Order does not matter, imports are sorted during formatting.
