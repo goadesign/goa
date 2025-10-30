@@ -187,17 +187,19 @@ func TaggedAttribute(a *AttributeExpr, tag string) string {
 	return ""
 }
 
-// WalkAttribute iterates over the given attribute, its bases and references
+// walkAttribute iterates over the given attribute, its bases and references
 // (if any). It calls the given function giving each attribute as it iterates.
 // It stops if the given attribute is not an object type or there is no more
 // attribute to iterate over or if the iterator function returned an error. It
 // is generally used in implementing the Validator interface since attribute
 // bases and references are only merged during Finalize. It is not a recursive
 // implementation.
-func WalkAttribute(att *AttributeExpr, it func(name string, a *AttributeExpr) error) error {
+// Note: keep this function private as it does not walk through all types.
+// External packages should use the codegen.Walk function instead.
+func walkAttribute(att *AttributeExpr, it func(name string, a *AttributeExpr) error) error {
 	switch dt := att.Type.(type) {
 	case UserType:
-		if err := WalkAttribute(dt.Attribute(), it); err != nil {
+		if err := walkAttribute(dt.Attribute(), it); err != nil {
 			return err
 		}
 	case *Object:
@@ -208,12 +210,12 @@ func WalkAttribute(att *AttributeExpr, it func(name string, a *AttributeExpr) er
 		}
 	}
 	for _, b := range att.Bases {
-		if err := WalkAttribute(&AttributeExpr{Type: b}, it); err != nil {
+		if err := walkAttribute(&AttributeExpr{Type: b}, it); err != nil {
 			return err
 		}
 	}
 	for _, r := range att.References {
-		if err := WalkAttribute(&AttributeExpr{Type: r}, it); err != nil {
+		if err := walkAttribute(&AttributeExpr{Type: r}, it); err != nil {
 			return err
 		}
 	}

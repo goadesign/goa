@@ -180,7 +180,7 @@ func (rt *ResultTypeExpr) Finalize() {
 	rt.ensureDefaultView()
 	rt.UserTypeExpr.Finalize()
 	seen := make(map[string]struct{})
-	WalkAttribute(rt.AttributeExpr, func(_ string, att *AttributeExpr) error { // nolint: errcheck
+	walkAttribute(rt.AttributeExpr, func(_ string, att *AttributeExpr) error { // nolint: errcheck
 		if rt, ok := att.Type.(*ResultTypeExpr); ok {
 			if _, ok := seen[rt.Identifier]; !ok {
 				seen[rt.Identifier] = struct{}{}
