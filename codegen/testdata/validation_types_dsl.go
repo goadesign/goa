@@ -97,6 +97,13 @@ var ValidationTypesDSL = func() {
 			Required("required_array")
 		})
 
+		_ = Type("ArrayRequired", func() {
+			Attribute("required_array", ArrayOfRequired(IntegerT), func() {
+				MinLength(1)
+			})
+			Required("required_array")
+		})
+
 		_ = Type("Map", func() {
 			Attribute("required_map", MapOf(Int, String), func() {
 				MinLength(5)

@@ -242,7 +242,7 @@ func (m *MethodExpr) validateErrors() *eval.ValidationErrors {
 			// presence of struct:error:name meta in the object type.
 			if i != j && e.Type == e2.Type && IsObject(e.Type) {
 				var found bool
-				WalkAttribute(e.AttributeExpr, func(_ string, att *AttributeExpr) error { // nolint: errcheck
+				walkAttribute(e.AttributeExpr, func(_ string, att *AttributeExpr) error { // nolint: errcheck
 					if _, ok := att.Meta["struct:error:name"]; ok {
 						found = true
 						return fmt.Errorf("struct:error:name found: stop iteration")
