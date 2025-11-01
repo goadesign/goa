@@ -514,5 +514,3 @@ func getSecurityAttributes(m *MethodExpr) []string {
 	}
 	return secAttrs
 }
-
-

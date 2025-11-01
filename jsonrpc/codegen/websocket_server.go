@@ -18,8 +18,8 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 		return nil
 	}
 	funcs := map[string]any{
-		"lowerInitial":       lowerInitial,
-		"allErrors":          allErrors,
+		"lowerInitial":        lowerInitial,
+		"allErrors":           allErrors,
 		"isWebSocketEndpoint": httpcodegen.IsWebSocketEndpoint,
 	}
 	svcName := data.Service.PathName

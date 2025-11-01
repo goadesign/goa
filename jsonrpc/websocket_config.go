@@ -42,12 +42,12 @@ type (
 )
 
 const (
-	StreamErrorConnection StreamErrorType = iota // WebSocket connection errors
-	StreamErrorProtocol                          // Invalid JSON-RPC protocol
-	StreamErrorParsing                           // Failed to parse/decode response
-	StreamErrorOrphaned                          // Response with no matching request
-	StreamErrorTimeout                           // Request timeout
-	StreamErrorNotification                      // Server-initiated notification received
+	StreamErrorConnection   StreamErrorType = iota // WebSocket connection errors
+	StreamErrorProtocol                            // Invalid JSON-RPC protocol
+	StreamErrorParsing                             // Failed to parse/decode response
+	StreamErrorOrphaned                            // Response with no matching request
+	StreamErrorTimeout                             // Request timeout
+	StreamErrorNotification                        // Server-initiated notification received
 )
 
 // WithRequestTimeout sets the timeout for individual requests

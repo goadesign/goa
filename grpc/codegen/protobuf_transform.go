@@ -696,7 +696,7 @@ func convertPrimitiveToProto(_, tgt *expr.AttributeExpr, srcPtr, _ bool, srcVar 
 
 		return fmt.Sprintf(convertGoAnyToProtobufAnyFunc, srcVar, srcVar)
 	}
-	
+
 	tgtType := protoBufNativeGoTypeName(tgt.Type)
 	if srcPtr {
 		srcVar = "*" + srcVar
@@ -713,7 +713,7 @@ func convertPrimitiveFromProto(_, tgt *expr.AttributeExpr, srcPtr, _ bool, srcVa
 
 		return fmt.Sprintf(convertProtobufAnyToGoAnyFunc, srcVar, srcVar)
 	}
-	
+
 	tgtType, _ := codegen.GetMetaType(tgt)
 	if tgtType == "" {
 		tgtType = ta.TargetCtx.Scope.Ref(tgt, ta.TargetCtx.Pkg(tgt))

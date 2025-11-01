@@ -55,7 +55,7 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 		// Check HTTP service
 		httpSvc := root.API.JSONRPC.Service("calc")
 		require.NotNil(t, httpSvc)
-		
+
 		// Prepare the service to create routes
 		httpSvc.Prepare()
 
@@ -77,7 +77,7 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 				}
 			}
 		}
-		
+
 		assert.Greater(t, jsonrpcEndpointCount, 0, "should have at least one JSON-RPC endpoint")
 		assert.NotNil(t, firstRoute, "should have found a route")
 		assert.Equal(t, "/rpc", firstRoute.Path, "route path should be /rpc")
@@ -133,10 +133,10 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 		// Check route method
 		httpSvc := root.API.JSONRPC.Service("stream")
 		require.NotNil(t, httpSvc)
-		
+
 		// Prepare the service to create routes
 		httpSvc.Prepare()
-		
+
 		// Find first endpoint with route
 		var route *expr.RouteExpr
 		for _, e := range httpSvc.HTTPEndpoints {
@@ -145,7 +145,7 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 				break
 			}
 		}
-		
+
 		require.NotNil(t, route)
 		assert.Equal(t, "GET", route.Method, "WebSocket should force GET method")
 	})

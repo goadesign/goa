@@ -4,10 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	. "goa.design/goa/v3/dsl"
-	"goa.design/goa/v3/grpc/codegen/testdata"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	. "goa.design/goa/v3/dsl"
+	"goa.design/goa/v3/grpc/codegen/testdata"
 )
 
 // TestStreamingWithErrors tests that streaming endpoints properly handle
@@ -25,17 +25,17 @@ func TestStreamingWithErrors(t *testing.T) {
 				// Verify error decoding is present
 				assert.Contains(t, code, "goagrpc.DecodeError(err)",
 					"should decode errors from stream")
-				
+
 				// Verify custom error types are handled
 				assert.Contains(t, code, "case *streaming_error_servicepb.ServerStreamCustomErrorError:",
 					"should handle custom error type")
 				assert.Contains(t, code, "case *streaming_error_servicepb.ServerStreamValidationErrorError:",
 					"should handle validation error type")
-				
+
 				// Verify generic errors are handled
 				assert.Contains(t, code, "case *goapb.ErrorResponse:",
 					"should handle generic goa errors")
-				
+
 				// Verify proper error construction
 				assert.Contains(t, code, "NewServerStreamCustomErrorError(message",
 					"should construct custom error")
@@ -85,7 +85,7 @@ func TestStreamingWithErrors(t *testing.T) {
 func TestStreamingErrorsWithValidation(t *testing.T) {
 	root := RunGRPCDSL(t, testdata.ServerStreamingWithCustomErrorsDSL)
 	services := CreateGRPCServices(root)
-	
+
 	// Verify the DSL has errors with validation
 	require.Len(t, root.Services, 1)
 	svc := root.Services[0]
@@ -153,7 +153,7 @@ func TestStreamingErrorComparison(t *testing.T) {
 
 	// Find unary and streaming code in different sections
 	var unaryCode, streamCode string
-	
+
 	// For unary, look in client-endpoint-init
 	if sections := clientfs[0].Section("client-endpoint-init"); len(sections) > 0 {
 		var code strings.Builder
@@ -162,7 +162,7 @@ func TestStreamingErrorComparison(t *testing.T) {
 		}
 		unaryCode = code.String()
 	}
-	
+
 	// For streaming, look in client-stream-recv
 	if sections := clientfs[0].Section("client-stream-recv"); len(sections) > 0 {
 		var code strings.Builder

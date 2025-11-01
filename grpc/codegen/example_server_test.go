@@ -13,7 +13,6 @@ import (
 	"goa.design/goa/v3/codegen/testutil"
 )
 
-
 func TestExampleServerFiles(t *testing.T) {
 	cases := []struct {
 		Name string
