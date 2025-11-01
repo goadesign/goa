@@ -102,18 +102,18 @@ func (m *MethodExpr) Prepare() {
 	if m.StreamingPayload == nil {
 		m.StreamingPayload = &AttributeExpr{Type: Empty}
 	}
-	
+
 	// Backward compatibility: if StreamingResult is set but Result is not,
 	// copy StreamingResult to Result so existing code generation continues to work
 	if m.StreamingResult != nil && m.Result == nil {
 		m.Result = m.StreamingResult
 	}
-	
+
 	// Initialize Result to Empty if still nil
 	if m.Result == nil {
 		m.Result = &AttributeExpr{Type: Empty}
 	}
-	
+
 	// If this is a streaming method without explicit StreamingResult,
 	// use Result for backward compatibility
 	if m.StreamingResult == nil && m.Stream != NoStreamKind {
@@ -355,7 +355,7 @@ func (m *MethodExpr) Finalize() {
 	} else {
 		m.StreamingPayload.Finalize()
 	}
-	
+
 	// Handle StreamingResult finalization
 	if m.StreamingResult != nil {
 		m.StreamingResult.Finalize()
@@ -363,7 +363,7 @@ func (m *MethodExpr) Finalize() {
 			rt.Finalize()
 		}
 	}
-	
+
 	// Handle Result finalization (may be same as StreamingResult for backward compat)
 	if m.Result == nil {
 		m.Result = &AttributeExpr{Type: Empty}

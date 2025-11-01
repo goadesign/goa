@@ -421,7 +421,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 			}
 		}
 	}
-	
+
 	// Validate mixed results configuration
 	if e.MethodExpr.HasMixedResults() {
 		// Mixed results (different Result and StreamingResult types) requires SSE
@@ -444,7 +444,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 			if !e.MethodExpr.HasMixedResults() {
 				verr.Add(e, "Server-Sent Events can only be used with endpoints that have a streaming result or mixed results")
 			}
-		// case ServerStreamKind is valid, no error
+			// case ServerStreamKind is valid, no error
 		}
 	}
 
@@ -467,7 +467,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 			} else {
 				requestHasID = hasJSONRPCIDField(e.MethodExpr.Payload)
 			}
-			
+
 			if !requestHasID {
 				verr.Add(e, "JSON-RPC method %q result defines an ID field but the request (payload) does not. Result may only have ID field if request does", e.MethodExpr.Name)
 			}
@@ -757,7 +757,7 @@ func (e *HTTPEndpointExpr) Finalize() {
 			e.MethodExpr.Stream = BidirectionalStreamKind
 		}
 	}
-	
+
 	// Compute security scheme attribute name and corresponding HTTP location
 	if reqLen := len(e.MethodExpr.Requirements); reqLen > 0 {
 		e.Requirements = make([]*SecurityExpr, 0, reqLen)
@@ -1183,9 +1183,19 @@ func isEmpty(a *AttributeExpr) bool {
 // hasJSONRPCIDField returns true if an attribute or any of its nested attributes
 // has the "jsonrpc:id" meta tag, indicating it's designated as the JSON-RPC ID field.
 func hasJSONRPCIDField(attr *AttributeExpr) bool {
+	return hasJSONRPCIDFieldRec(attr, make(map[*AttributeExpr]struct{}), make(map[string]struct{}))
+}
+
+// hasJSONRPCIDFieldRec walks the attribute graph looking for the jsonrpc:id meta
+// while guarding against cycles that may occur with recursive user types.
+func hasJSONRPCIDFieldRec(attr *AttributeExpr, seen map[*AttributeExpr]struct{}, seenUT map[string]struct{}) bool {
 	if attr == nil || attr.Type == Empty {
 		return false
 	}
+	if _, ok := seen[attr]; ok {
+		return false
+	}
+	seen[attr] = struct{}{}
 
 	// Check if this attribute itself has the jsonrpc:id meta tag
 	if attr.Meta != nil {
@@ -1197,16 +1207,21 @@ func hasJSONRPCIDField(attr *AttributeExpr) bool {
 	// For object types, check all nested attributes
 	if obj := AsObject(attr.Type); obj != nil {
 		for _, nat := range *obj {
-			if hasJSONRPCIDField(nat.Attribute) {
+			if hasJSONRPCIDFieldRec(nat.Attribute, seen, seenUT) {
 				return true
 			}
 		}
 	}
 
-	// For user types, check the underlying attribute
+	// For user types, check the underlying attribute (guarding for recursion)
 	if ut, ok := attr.Type.(UserType); ok {
-		return hasJSONRPCIDField(ut.Attribute())
+		if ut != nil {
+			if _, ok := seenUT[ut.ID()]; ok {
+				return false
+			}
+			seenUT[ut.ID()] = struct{}{}
+			return hasJSONRPCIDFieldRec(ut.Attribute(), seen, seenUT)
+		}
 	}
-
 	return false
 }

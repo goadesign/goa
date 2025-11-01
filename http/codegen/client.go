@@ -200,7 +200,7 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 					"responseStructPkg":   responseStructPkg,
 				},
 			})
-			
+
 			// Generate SSE endpoint with "Stream" suffix
 			sseEndpoint := *e
 			sseEndpoint.EndpointInit = e.EndpointInit + "Stream"

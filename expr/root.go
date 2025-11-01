@@ -176,43 +176,43 @@ func (*RootExpr) EvalName() string {
 
 // Validate makes sure the root expression is valid for code generation.
 func (r *RootExpr) Validate() error {
-    var verr eval.ValidationErrors
-    if r.API == nil {
-        verr.Add(r, "Missing API declaration")
-    }
-    // Ensure user type Go type names are unique across the design. Duplicate
-    // user type names (e.g., via TypeName) can lead to conflicting generated
-    // code. The Type DSL checks for duplicate declared names; this check
-    // covers collisions introduced by renaming.
-    useen := make(map[string]struct{})
-    for _, ut := range r.Types {
-        name := ut.Name()
-        if _, ok := useen[name]; ok {
-            verr.Add(r, "type %#v defined twice", name)
-        } else {
-            useen[name] = struct{}{}
-        }
-    }
-    // Ensure result type Go type names are unique across declared result types
-    // (exclude generated collection/result types). Generated types (e.g.,
-    // CollectionOf) do not set the openapi:typename meta, whereas declared
-    // result types do (set when calling dsl.ResultType). This prevents
-    // collisions like two declared ResultType blocks both using TypeName("A"),
-    // while allowing declared types to coexist with generated collection types
-    // that may share a name like "XCollection".
-    seen := make(map[string]struct{})
-    for _, rt := range r.ResultTypes {
-        if _, declared := rt.Meta["openapi:typename"]; !declared {
-            continue // skip generated result types
-        }
-        name := rt.Name()
-        if _, ok := seen[name]; ok {
-            verr.Add(r, "result type %#v defined twice", name)
-        } else {
-            seen[name] = struct{}{}
-        }
-    }
-    return &verr
+	var verr eval.ValidationErrors
+	if r.API == nil {
+		verr.Add(r, "Missing API declaration")
+	}
+	// Ensure user type Go type names are unique across the design. Duplicate
+	// user type names (e.g., via TypeName) can lead to conflicting generated
+	// code. The Type DSL checks for duplicate declared names; this check
+	// covers collisions introduced by renaming.
+	useen := make(map[string]struct{})
+	for _, ut := range r.Types {
+		name := ut.Name()
+		if _, ok := useen[name]; ok {
+			verr.Add(r, "type %#v defined twice", name)
+		} else {
+			useen[name] = struct{}{}
+		}
+	}
+	// Ensure result type Go type names are unique across declared result types
+	// (exclude generated collection/result types). Generated types (e.g.,
+	// CollectionOf) do not set the openapi:typename meta, whereas declared
+	// result types do (set when calling dsl.ResultType). This prevents
+	// collisions like two declared ResultType blocks both using TypeName("A"),
+	// while allowing declared types to coexist with generated collection types
+	// that may share a name like "XCollection".
+	seen := make(map[string]struct{})
+	for _, rt := range r.ResultTypes {
+		if _, declared := rt.Meta["openapi:typename"]; !declared {
+			continue // skip generated result types
+		}
+		name := rt.Name()
+		if _, ok := seen[name]; ok {
+			verr.Add(r, "result type %#v defined twice", name)
+		} else {
+			seen[name] = struct{}{}
+		}
+	}
+	return &verr
 }
 
 // Finalize finalizes the server expressions.

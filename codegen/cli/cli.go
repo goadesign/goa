@@ -605,4 +605,3 @@ func fieldCode(init *PayloadInitData) string {
 	}
 	return c
 }
-

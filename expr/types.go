@@ -32,7 +32,8 @@ type (
 
 	// Array is the type used to describe field arrays or repeated fields.
 	Array struct {
-		ElemType *AttributeExpr
+		ElemType         *AttributeExpr
+		NonNullableElems bool
 	}
 
 	// Map is the type used to describe maps of fields.

@@ -197,23 +197,23 @@ func sseTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 			continue
 		}
 		// Create a map of template functions needed for the SSE template
-	funcs := map[string]any{
-		"dict": func(values ...any) (map[string]any, error) {
-			if len(values)%2 != 0 {
-				return nil, fmt.Errorf("odd number of arguments")
-			}
-			dict := make(map[string]any, len(values)/2)
-			for i := 0; i < len(values); i += 2 {
-				key, ok := values[i].(string)
-				if !ok {
-					return nil, fmt.Errorf("dict keys must be strings")
+		funcs := map[string]any{
+			"dict": func(values ...any) (map[string]any, error) {
+				if len(values)%2 != 0 {
+					return nil, fmt.Errorf("odd number of arguments")
 				}
-				dict[key] = values[i+1]
-			}
-			return dict, nil
-		},
-		"goify": codegen.Goify,
-	}
+				dict := make(map[string]any, len(values)/2)
+				for i := 0; i < len(values); i += 2 {
+					key, ok := values[i].(string)
+					if !ok {
+						return nil, fmt.Errorf("dict keys must be strings")
+					}
+					dict[key] = values[i+1]
+				}
+				return dict, nil
+			},
+			"goify": codegen.Goify,
+		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:    "server-sse",
 			Source:  httpTemplates.Read(serverSseT, sseFormatP),

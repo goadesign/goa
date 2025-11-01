@@ -126,7 +126,8 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 			}
 		}
 	case expr.IsArray(att.Type):
-		elem := expr.AsArray(att.Type).ElemType
+		arr := expr.AsArray(att.Type)
+		elem := arr.ElemType
 		ctx := attCtx
 		if ctx.Pointer && expr.IsPrimitive(elem.Type) {
 			// Array elements of primitive type are never pointers
@@ -134,9 +135,14 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 			ctx.Pointer = false
 		}
 		val := validateAttribute(ctx, elem, put, "e", context+"[*]", true, view)
-		if val != "" {
+		if val != "" || arr.NonNullableElems {
 			newline()
-			data := map[string]any{"target": target, "validation": val}
+			data := map[string]any{
+				"target":           target,
+				"validation":       val,
+				"nonNullableElems": arr.NonNullableElems,
+				"context":          context,
+			}
 			if err := arrayValT.Execute(buf, data); err != nil {
 				panic(err) // bug
 			}

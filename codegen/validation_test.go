@@ -13,19 +13,20 @@ func TestRecursiveValidationCode(t *testing.T) {
 	var (
 		scope = NewNameScope()
 
-		integerT = root.UserType("Integer")
-		stringT  = root.UserType("String")
-		floatT   = root.UserType("Float")
-		aliasT   = root.UserType("AliasType")
-		userT    = root.UserType("UserType")
-		arrayUT  = root.UserType("ArrayUserType")
-		arrayT   = root.UserType("Array")
-		mapT     = root.UserType("Map")
-		unionT   = root.UserType("Union")
-		rtT      = root.UserType("Result")
-		rtcolT   = root.UserType("Collection")
-		colT     = root.UserType("TypeWithCollection")
-		deepT    = root.UserType("Deep")
+		integerT  = root.UserType("Integer")
+		stringT   = root.UserType("String")
+		floatT    = root.UserType("Float")
+		aliasT    = root.UserType("AliasType")
+		userT     = root.UserType("UserType")
+		arrayUT   = root.UserType("ArrayUserType")
+		arrayT    = root.UserType("Array")
+		arrayReqT = root.UserType("ArrayRequired")
+		mapT      = root.UserType("Map")
+		unionT    = root.UserType("Union")
+		rtT       = root.UserType("Result")
+		rtcolT    = root.UserType("Collection")
+		colT      = root.UserType("TypeWithCollection")
+		deepT     = root.UserType("Deep")
 	)
 	cases := []struct {
 		Name       string
@@ -51,6 +52,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 		{"array-required", arrayT, true, false, false},
 		{"array-pointer", arrayT, false, true, false},
 		{"array-use-default", arrayT, false, false, true},
+		{"array-required-non-nullable-elems", arrayReqT, true, false, false},
 		{"map-required", mapT, true, false, false},
 		{"map-pointer", mapT, false, true, false},
 		{"map-use-default", mapT, false, false, true},

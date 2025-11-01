@@ -160,11 +160,6 @@ const (
 	CookieSameSiteDefault CookieSameSiteValue = "default"
 )
 
-// EvalName returns the name used by the DSL evaluation.
-func (*AttributeExpr) EvalName() string {
-	return "attribute"
-}
-
 // validated keeps track of validated attributes to handle cyclical definitions.
 var validated = make(map[*AttributeExpr]bool)
 
@@ -190,6 +185,46 @@ func TaggedAttribute(a *AttributeExpr, tag string) string {
 		}
 	}
 	return ""
+}
+
+// walkAttribute iterates over the given attribute, its bases and references
+// (if any). It calls the given function giving each attribute as it iterates.
+// It stops if the given attribute is not an object type or there is no more
+// attribute to iterate over or if the iterator function returned an error. It
+// is generally used in implementing the Validator interface since attribute
+// bases and references are only merged during Finalize. It is not a recursive
+// implementation.
+// Note: keep this function private as it does not walk through all types.
+// External packages should use the codegen.Walk function instead.
+func walkAttribute(att *AttributeExpr, it func(name string, a *AttributeExpr) error) error {
+	switch dt := att.Type.(type) {
+	case UserType:
+		if err := walkAttribute(dt.Attribute(), it); err != nil {
+			return err
+		}
+	case *Object:
+		for _, nat := range *dt {
+			if err := it(nat.Name, nat.Attribute); err != nil {
+				return err
+			}
+		}
+	}
+	for _, b := range att.Bases {
+		if err := walkAttribute(&AttributeExpr{Type: b}, it); err != nil {
+			return err
+		}
+	}
+	for _, r := range att.References {
+		if err := walkAttribute(&AttributeExpr{Type: r}, it); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// EvalName returns the name used by the DSL evaluation.
+func (*AttributeExpr) EvalName() string {
+	return "attribute"
 }
 
 // Validate tests whether the attribute required fields exist.  Since attributes
@@ -987,37 +1022,4 @@ func (*AttributeExpr) IsSupportedValidationFormat(vf ValidationFormat) bool {
 		return true
 	}
 	return false
-}
-
-// walkAttribute iterates over the given attribute, its bases and references
-// (if any). It calls the given function giving each attribute as it iterates.
-// It stops if the given attribute is not an object type or there is no more
-// attribute to iterate over or if the iterator function returned an error. It
-// is generally used in implementing the Validator interface since attribute
-// bases and references are only merged during Finalize. It is not a recursive
-// implementation.
-func walkAttribute(att *AttributeExpr, it func(name string, a *AttributeExpr) error) error {
-	switch dt := att.Type.(type) {
-	case UserType:
-		if err := walkAttribute(dt.Attribute(), it); err != nil {
-			return err
-		}
-	case *Object:
-		for _, nat := range *dt {
-			if err := it(nat.Name, nat.Attribute); err != nil {
-				return err
-			}
-		}
-	}
-	for _, b := range att.Bases {
-		if err := walkAttribute(&AttributeExpr{Type: b}, it); err != nil {
-			return err
-		}
-	}
-	for _, r := range att.References {
-		if err := walkAttribute(&AttributeExpr{Type: r}, it); err != nil {
-			return err
-		}
-	}
-	return nil
 }

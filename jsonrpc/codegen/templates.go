@@ -11,16 +11,16 @@ import (
 // Server template constants
 const (
 	// Server
-	serverHandlerT           = "server_handler"
-	serverHandlerInitT       = "server_handler_init"
-	serverInitT              = "server_init"
-	serverStructT            = "server_struct"
-	serverServiceT           = "server_service"
-	serverUseT               = "server_use"
-	serverMethodNamesT       = "server_method_names"
-	serverMountT             = "server_mount"
-	serverEncodeErrorT       = "server_encode_error"
-	mixedServerHandlerT      = "mixed_server_handler"
+	serverHandlerT      = "server_handler"
+	serverHandlerInitT  = "server_handler_init"
+	serverInitT         = "server_init"
+	serverStructT       = "server_struct"
+	serverServiceT      = "server_service"
+	serverUseT          = "server_use"
+	serverMethodNamesT  = "server_method_names"
+	serverMountT        = "server_mount"
+	serverEncodeErrorT  = "server_encode_error"
+	mixedServerHandlerT = "mixed_server_handler"
 
 	// Server example
 	serverConfigureT = "server_configure"
