@@ -94,7 +94,7 @@ func ResetDSL(t *testing.T) {
 	GeneratedResultTypes = new(ResultTypesRoot)
 	require.NoError(t, eval.Register(Root))
 	require.NoError(t, eval.Register(GeneratedResultTypes))
-	
+
 	// Initialize default API for DSL execution
 	Root.API = NewAPIExpr("test api", func() {})
 	Root.API.Servers = []*ServerExpr{Root.API.DefaultServer()}

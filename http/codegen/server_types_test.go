@@ -1,8 +1,8 @@
 package codegen
 
 import (
-	"goa.design/goa/v3/codegen/testutil"
 	"bytes"
+	"goa.design/goa/v3/codegen/testutil"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -46,14 +46,3 @@ func TestServerTypes(t *testing.T) {
 		})
 	}
 }
-
-
-
-
-
-
-
-
-
-
-

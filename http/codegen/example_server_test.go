@@ -16,7 +16,6 @@ import (
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
-
 func TestExampleServerFiles(t *testing.T) {
 	t.Run("package name check", func(t *testing.T) {
 		cases := []struct {

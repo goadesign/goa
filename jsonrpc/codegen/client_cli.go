@@ -17,7 +17,7 @@ func ClientCLIFiles(genpkg string, services *httpcodegen.ServicesData) []*codege
 		for _, section := range f.SectionTemplates {
 			if section.Name == "parse-endpoint" {
 				// Update the template source to use goahttp.ConnConfigureFunc instead of *ConnConfigurer
-				section.Source = strings.ReplaceAll(section.Source, 
+				section.Source = strings.ReplaceAll(section.Source,
 					"{{ .VarName }}Configurer *{{ .PkgName }}.ConnConfigurer,",
 					"{{ .VarName }}ConfigFn goahttp.ConnConfigureFunc,")
 				section.Source = strings.ReplaceAll(section.Source,

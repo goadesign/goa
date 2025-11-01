@@ -35,7 +35,7 @@ func exampleServer(genpkg string, services *ServicesData, svr *expr.ServerExpr) 
 	}
 
 	var scope = codegen.NewNameScope()
-	
+
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "fmt"},
