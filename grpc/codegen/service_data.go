@@ -780,12 +780,25 @@ func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req
 // req if true indicates that the validations are generated for validating
 // request messages.
 func collectValidations(att *expr.AttributeExpr, attName string, req bool, sd *ServiceData) {
+	collectValidationsR(att, attName, req, sd, make(map[string]struct{}))
+}
+
+// collectValidationsR recurses through the attribute and collects validation
+// functions with cycle detection using a seen set of user type IDs.
+func collectValidationsR(att *expr.AttributeExpr, attName string, req bool, sd *ServiceData, seen map[string]struct{}) {
 	gattName := codegen.Goify(attName, false)
 	switch dt := att.Type.(type) {
 	case expr.UserType:
 		if expr.IsPrimitive(dt) {
 			// Alias type - validation is generate inline in parent type validation code.
 			return
+		}
+		// Cycle guard: avoid infinite recursion on recursive user types.
+		if id := dt.ID(); id != "" {
+			if _, ok := seen[id]; ok {
+				return
+			}
+			seen[id] = struct{}{}
 		}
 		vtx := protoBufTypeContext(sd.PkgName, sd.Scope, false)
 		def := codegen.AttributeValidationCode(att, dt, vtx, true, false, gattName, attName)
@@ -815,19 +828,19 @@ func collectValidations(att *expr.AttributeExpr, attName string, req bool, sd *S
 		}
 	collect:
 		att := userTypeAttribute(dt)
-		collectValidations(att, attName, req, sd)
+		collectValidationsR(att, attName, req, sd, seen)
 	case *expr.Object:
 		for _, nat := range *dt {
-			collectValidations(nat.Attribute, nat.Name, req, sd)
+			collectValidationsR(nat.Attribute, nat.Name, req, sd, seen)
 		}
 	case *expr.Array:
-		collectValidations(dt.ElemType, "elem", req, sd)
+		collectValidationsR(dt.ElemType, "elem", req, sd, seen)
 	case *expr.Map:
-		collectValidations(dt.KeyType, "key", req, sd)
-		collectValidations(dt.ElemType, "val", req, sd)
+		collectValidationsR(dt.KeyType, "key", req, sd, seen)
+		collectValidationsR(dt.ElemType, "val", req, sd, seen)
 	case *expr.Union:
 		for _, nat := range dt.Values {
-			collectValidations(nat.Attribute, nat.Name, req, sd)
+			collectValidationsR(nat.Attribute, nat.Name, req, sd, seen)
 		}
 	}
 }
