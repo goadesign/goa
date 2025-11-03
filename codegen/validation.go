@@ -229,6 +229,9 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 		}
 		return fmt.Sprintf("%s%s\n}", cond, code)
 	}
+	// Alias user types: validate underlying attribute with alias flag so that
+	// validation operates on the base value type while preserving pointer
+	// semantics from the current attribute context.
 	if expr.IsAlias(ut) {
 		return recurseValidationCode(ut.Attribute(), put, ctx, req, true, view, target, context, nil).String()
 	}
@@ -279,9 +282,11 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 	if validation == nil {
 		return ""
 	}
+
 	var (
 		kind            = att.Type.Kind()
-		isNativePointer = kind == expr.BytesKind || kind == expr.AnyKind
+		unaliased       = unalias(att.Type).Kind()
+		isNativePointer = unaliased == expr.BytesKind || unaliased == expr.AnyKind
 		isPointer       = attCtx.Pointer || (!req && (att.DefaultValue == nil || !attCtx.UseDefault))
 		tval            = target
 	)

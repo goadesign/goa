@@ -493,11 +493,19 @@ func (a *AttributeExpr) IsPrimitivePointer(attName string, useDefault bool) bool
 	if att == nil {
 		return false
 	}
-	if IsPrimitive(att.Type) {
-		return att.Type.Kind() != BytesKind && att.Type.Kind() != AnyKind &&
-			!a.IsRequired(attName) && (!a.HasDefaultValue(attName) || !useDefault)
+	t := unalias(att.Type)
+	return t.Kind() != BytesKind && t.Kind() != AnyKind &&
+		!a.IsRequired(attName) && (!a.HasDefaultValue(attName) || !useDefault)
+}
+
+func unalias(dt DataType) DataType {
+	if ut, ok := dt.(UserType); ok {
+		if _, ok := ut.Attribute().Type.(Primitive); ok {
+			return ut.Attribute().Type
+		}
+		return unalias(ut.Attribute().Type)
 	}
-	return false
+	return dt
 }
 
 // HasTag returns true if the attribute is an object that has an attribute with
