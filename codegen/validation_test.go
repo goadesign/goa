@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"strings"
 	"testing"
 
 	"goa.design/goa/v3/codegen/testdata"
@@ -89,4 +90,120 @@ func TestRecursiveValidationCode(t *testing.T) {
 		code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
 		testutil.AssertGo(t, "testdata/golden/validation_union-with-format-validation.go.golden", code)
 	})
+}
+
+// TestRecursiveValidationWithCycleGuard tests that recursive types are
+// properly handled without infinite loops. The recursion guard should prevent
+// cycles while still allowing validation of the same type in different contexts.
+func TestRecursiveValidationWithCycleGuard(t *testing.T) {
+	root := RunDSL(t, testdata.RecursiveValidationDSL)
+	scope := NewNameScope()
+
+	cases := []struct {
+		Name     string
+		TypeName string
+		Pointer  bool
+	}{
+		{"recursive-type-pointer", "RecursiveType", true},
+		{"recursive-type-required", "RecursiveType", false},
+		{"container-with-recursive-array", "ContainerWithRecursiveArray", true},
+		{"container-with-recursive-map", "ContainerWithRecursiveMap", true},
+		{"nested-recursive-pointer", "NestedRecursive", true},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			ctx := NewAttributeContext(c.Pointer, false, false, "", scope)
+			ut := root.UserType(c.TypeName)
+			code := ValidationCode(&expr.AttributeExpr{Type: ut}, nil, ctx, !c.Pointer, false, false, "target")
+			// Verify code is generated (not empty) and doesn't cause infinite recursion
+			if code == "" {
+				t.Error("Expected validation code to be generated")
+			}
+			// Verify the code can be formatted (indicates valid Go code)
+			code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
+			if code == "" {
+				t.Error("Expected formatted code to be generated")
+			}
+		})
+	}
+}
+
+// TestMultipleAliasTypesInSameStruct tests that multiple fields with the same
+// alias type can be validated independently. Previously, the recursion guard
+// would incorrectly block validation of the second field.
+func TestMultipleAliasTypesInSameStruct(t *testing.T) {
+	root := RunDSL(t, testdata.ValidationTypesDSL)
+	scope := NewNameScope()
+
+	aliasT := root.UserType("AliasType")
+	ctx := NewAttributeContext(false, false, false, "", scope)
+
+	code := ValidationCode(&expr.AttributeExpr{Type: aliasT}, nil, ctx, true, false, false, "target")
+	code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
+
+	// Verify both alias fields are validated (required_alias and alias)
+	// The code should contain validation for both fields
+	if !strings.Contains(code, "required_alias") {
+		t.Error("Expected validation code for 'required_alias' field")
+	}
+	if !strings.Contains(code, "target.alias") {
+		t.Error("Expected validation code for 'alias' field")
+	}
+	// Verify both get pattern validation
+	if strings.Count(code, "ValidatePattern") < 2 {
+		t.Errorf("Expected at least 2 pattern validations (one per alias field), got %d", strings.Count(code, "ValidatePattern"))
+	}
+}
+
+// TestAliasTypeInArrayAndMap tests that alias types work correctly when
+// nested in arrays and maps, ensuring the recursion guard doesn't interfere.
+func TestAliasTypeInArrayAndMap(t *testing.T) {
+	root := RunDSL(t, testdata.ValidationTypesDSL)
+	scope := NewNameScope()
+
+	var (
+		alias = root.UserType("Alias")
+	)
+
+	// Create a type with alias in array
+	arrayWithAlias := &expr.AttributeExpr{
+		Type: &expr.Array{
+			ElemType: &expr.AttributeExpr{Type: alias},
+		},
+	}
+
+	// Create a type with alias in map
+	mapWithAlias := &expr.AttributeExpr{
+		Type: &expr.Map{
+			KeyType:  &expr.AttributeExpr{Type: expr.String},
+			ElemType: &expr.AttributeExpr{Type: alias},
+		},
+	}
+
+	cases := []struct {
+		Name   string
+		Att    *expr.AttributeExpr
+		Target string
+	}{
+		{"alias-in-array", arrayWithAlias, "target"},
+		{"alias-in-map", mapWithAlias, "target"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			ctx := NewAttributeContext(false, false, false, "", scope)
+			code := ValidationCode(c.Att, nil, ctx, true, false, false, c.Target)
+			code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
+
+			// Verify validation code is generated
+			if code == "" {
+				t.Error("Expected validation code to be generated")
+			}
+			// Verify it contains validation for the alias type
+			if !strings.Contains(code, "ValidatePattern") && !strings.Contains(code, "InvalidLengthError") {
+				t.Error("Expected validation code to contain pattern or length validation for alias type")
+			}
+		})
+	}
 }
