@@ -763,6 +763,41 @@ func TestAttributeExprIsPrimitivePointer(t *testing.T) {
 			useDefault: false, // should have panicked!
 			expected:   false, // should have panicked!
 		},
+		// Test that non-primitive types (like maps, user types) return false early
+		// This verifies the fix that adds an early return check for !IsPrimitive(att.Type)
+		"non-primitive-early-return": {
+			attribute: AttributeExpr{
+				Type: &Object{
+					&NamedAttributeExpr{
+						Name: "userType",
+						Attribute: &AttributeExpr{
+							Type: &UserTypeExpr{
+								AttributeExpr: &AttributeExpr{
+									Type: &Object{
+										&NamedAttributeExpr{
+											Name:      "name",
+											Attribute: &AttributeExpr{Type: String},
+										},
+									},
+								},
+							},
+						},
+					},
+					&NamedAttributeExpr{
+						Name: "mapType",
+						Attribute: &AttributeExpr{
+							Type: &Map{
+								KeyType:  &AttributeExpr{Type: String},
+								ElemType: &AttributeExpr{Type: String},
+							},
+						},
+					},
+				},
+			},
+			attName:    "userType",
+			useDefault: false,
+			expected:   false, // Non-primitive types should return false
+		},
 	}
 
 	for k, tc := range cases {
