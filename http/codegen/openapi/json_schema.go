@@ -7,6 +7,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
+	"gopkg.in/yaml.v3"
 )
 
 type (
@@ -434,7 +435,127 @@ func (s *Schema) MarshalJSON() ([]byte, error) {
 
 // MarshalYAML returns value which marshaled in place of the original value
 func (s *Schema) MarshalYAML() (any, error) {
-	return MarshalYAML((*_Schema)(s), s.Extensions)
+	// First get the marshaled result
+	result, err := MarshalYAML((*_Schema)(s), s.Extensions)
+	if err != nil {
+		return nil, err
+	}
+
+	// If there's an example, we need to ensure string values are properly
+	// quoted in YAML to avoid type confusion (e.g., hex strings like "0xffff"
+	// being interpreted as numbers)
+	if s.Example != nil {
+		// Convert result to yaml.Node for fine-grained control
+		var node yaml.Node
+		if err := node.Encode(result); err != nil {
+			return nil, err
+		}
+
+		// Find and fix the example field in the node tree
+		fixExampleNode(&node, s)
+
+		return &node, nil
+	}
+
+	return result, nil
+}
+
+// fixExampleNode traverses the YAML node tree to find the "example" field
+// and ensures string values are properly quoted to prevent YAML parsers
+// from misinterpreting string values as numbers.
+func fixExampleNode(node *yaml.Node, schema *Schema) {
+	if node == nil || schema == nil {
+		return
+	}
+
+	// For mapping nodes, look for the "example" key
+	if node.Kind == yaml.MappingNode {
+		for i := 0; i < len(node.Content)-1; i += 2 {
+			keyNode := node.Content[i]
+			valueNode := node.Content[i+1]
+
+			if keyNode.Value == "example" {
+				// Found the example field
+				if schema.Type == String {
+					// For string types, ensure the example is quoted if needed
+					if str, ok := schema.Example.(string); ok {
+						if needsQuoting(str) {
+							valueNode.SetString(str)
+							valueNode.Style = yaml.DoubleQuotedStyle
+						}
+					}
+				} else if schema.Type == Object && valueNode.Kind == yaml.MappingNode {
+					// For object types, fix string values in the example map
+					fixObjectExample(valueNode, schema)
+				}
+			} else if keyNode.Value == "properties" && schema.Properties != nil {
+				// Recursively fix examples in nested properties
+				if valueNode.Kind == yaml.MappingNode {
+					for j := 0; j < len(valueNode.Content)-1; j += 2 {
+						propName := valueNode.Content[j].Value
+						propNode := valueNode.Content[j+1]
+						if propSchema, ok := schema.Properties[propName]; ok {
+							fixExampleNode(propNode, propSchema)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Recurse into child nodes
+	for _, child := range node.Content {
+		fixExampleNode(child, schema)
+	}
+}
+
+// fixObjectExample fixes string values in an object example based on property schemas
+func fixObjectExample(exampleNode *yaml.Node, schema *Schema) {
+	if exampleNode.Kind != yaml.MappingNode || schema.Properties == nil {
+		return
+	}
+
+	for i := 0; i < len(exampleNode.Content)-1; i += 2 {
+		keyNode := exampleNode.Content[i]
+		valueNode := exampleNode.Content[i+1]
+		propName := keyNode.Value
+
+		// Check if this property is defined as a string type
+		if propSchema, ok := schema.Properties[propName]; ok {
+			if propSchema.Type == String && valueNode.Kind == yaml.ScalarNode {
+				// Only quote strings that YAML would misinterpret
+				if needsQuoting(valueNode.Value) {
+					valueNode.Style = yaml.DoubleQuotedStyle
+				}
+			}
+		}
+	}
+}
+
+// needsQuoting determines if a string value needs explicit quoting in YAML
+// to prevent it from being misinterpreted as a different type
+func needsQuoting(value string) bool {
+	if len(value) == 0 {
+		return false
+	}
+
+	// Check if it starts with 0x (hex number)
+	if len(value) >= 2 && value[0] == '0' && (value[1] == 'x' || value[1] == 'X') {
+		// Could be interpreted as hex number, needs quoting
+		return true
+	}
+
+	// Check if it starts with 0o (octal number)
+	if len(value) >= 2 && value[0] == '0' && (value[1] == 'o' || value[1] == 'O') {
+		return true
+	}
+
+	// Already has quotes in the value itself (like "\"0xffff\"")
+	if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
+		return true
+	}
+
+	return false
 }
 
 // Dup creates a shallow clone of the given schema.
