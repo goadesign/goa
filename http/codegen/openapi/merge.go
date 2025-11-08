@@ -26,9 +26,9 @@ func (s *Schema) Merge(other *Schema) {
 		}
 	}
 
-	for n, d := range other.Definitions {
-		if _, ok := s.Definitions[n]; !ok {
-			s.Definitions[n] = d
+	for n, d := range other.Defs {
+		if _, ok := s.Defs[n]; !ok {
+			s.Defs[n] = d
 		}
 	}
 
