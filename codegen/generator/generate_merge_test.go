@@ -49,7 +49,7 @@ func TestGenerateMergesSamePathFiles(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	_, err := Generate(dir, "gen")
+	_, err := Generate(dir, "gen", false)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
