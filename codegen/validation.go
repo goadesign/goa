@@ -260,7 +260,11 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 	}
 	var buf bytes.Buffer
 	name := ctx.Scope.Name(att, "", ctx.Pointer, ctx.UseDefault)
-	data := map[string]any{"name": Goify(name, true), "target": target}
+	// Use the scoped type name directly to preserve identifiers such as
+	// protocol buffer-reserved names that include a trailing underscore
+	// (e.g., Message_). Applying Goify here would drop underscores and
+	// cause mismatches between function declarations and call sites.
+	data := map[string]any{"name": name, "target": target}
 	if err := userValT.Execute(&buf, data); err != nil {
 		panic(err) // bug
 	}
