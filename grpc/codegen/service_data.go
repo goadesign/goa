@@ -760,7 +760,10 @@ func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req
 	removeMeta(att)
 	if def := codegen.ValidationCode(att, ut, vtx, true, expr.IsAlias(att.Type), false, attName); def != "" {
 		v := &ValidationData{
-			Name:    "Validate" + name,
+			// Validation function names must match the identifiers used by
+			// validation templates (which Goify the type name). Use Goify here
+			// as well so helpers like ValidateMessage line up with calls.
+			Name:    "Validate" + codegen.Goify(name, true),
 			Def:     def,
 			ArgName: attName,
 			SrcName: name,
@@ -818,7 +821,9 @@ func collectValidationsR(att *expr.AttributeExpr, attName string, req bool, sd *
 		}
 		if def != "" {
 			sd.validations = append(sd.validations, &ValidationData{
-				Name:    "Validate" + name,
+				// Match helper function identifiers with validation template
+				// calls (Validate{{ Goify(name) }}).
+				Name:    "Validate" + codegen.Goify(name, true),
 				Def:     def,
 				ArgName: gattName,
 				SrcName: name,
