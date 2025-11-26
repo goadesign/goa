@@ -5,6 +5,7 @@ import (
 	"go/build"
 	"os"
 	"strings"
+	"time"
 
 	"flag"
 
@@ -77,29 +78,55 @@ var (
 
 func generate(cmd, path, output string, debug bool) error {
 	var (
-		files []string
-		err   error
-		tmp   *Generator
+		files                                                            []string
+		err                                                              error
+		tmp                                                              *Generator
+		startTotal, startImport, startNewGen, startWrite, startCompile, startRun time.Time
 	)
 
+	startTotal = time.Now()
+	if debug {
+		fmt.Fprintf(os.Stderr, "[TIMING] Starting goa generation\n")
+	}
+
+	startImport = time.Now()
 	if _, err = build.Import(path, ".", 0); err != nil {
 		goto fail
 	}
+	if debug {
+		fmt.Fprintf(os.Stderr, "[TIMING] build.Import took %v\n", time.Since(startImport))
+	}
 
-	tmp = NewGenerator(cmd, path, output)
+	startNewGen = time.Now()
+	tmp = NewGenerator(cmd, path, output, debug)
+	if debug {
+		fmt.Fprintf(os.Stderr, "[TIMING] NewGenerator took %v\n", time.Since(startNewGen))
+	}
 
+	startWrite = time.Now()
 	if err = tmp.Write(debug); err != nil {
 		goto fail
 	}
-
-	if err = tmp.Compile(); err != nil {
-		goto fail
+	if debug {
+		fmt.Fprintf(os.Stderr, "[TIMING] Write (generate main.go) took %v\n", time.Since(startWrite))
 	}
 
-	if files, err = tmp.Run(); err != nil {
+	startCompile = time.Now()
+	if err = tmp.Compile(debug); err != nil {
 		goto fail
 	}
+	if debug {
+		fmt.Fprintf(os.Stderr, "[TIMING] Compile (go get + go build) took %v\n", time.Since(startCompile))
+	}
 
+	startRun = time.Now()
+	if files, err = tmp.Run(debug); err != nil {
+		goto fail
+	}
+	if debug {
+		fmt.Fprintf(os.Stderr, "[TIMING] Run (execute binary) took %v\n", time.Since(startRun))
+		fmt.Fprintf(os.Stderr, "[TIMING] Total generation time: %v\n", time.Since(startTotal))
+	}
 	fmt.Println(strings.Join(files, "\n"))
 	if !debug {
 		tmp.Remove()

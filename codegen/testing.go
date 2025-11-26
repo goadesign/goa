@@ -65,12 +65,10 @@ func sectionCodeWithPrefix(t *testing.T, section *SectionTemplate, prefix string
 // content of a valid Go source file (i.e. start with "package")
 func FormatTestCode(t *testing.T, code string) string {
 	t.Helper()
-	tmp := CreateTempFile(t, code)
-	defer func() { _ = os.Remove(tmp) }()
-	require.NoError(t, finalizeGoSource(tmp))
-	content, err := os.ReadFile(tmp)
+	// Process the code in memory without creating a temp file
+	formatted, err := finalizeGoSource("test.go", []byte(code))
 	require.NoError(t, err)
-	return strings.Join(strings.Split(string(content), "\n")[2:], "\n")
+	return strings.Join(strings.Split(string(formatted), "\n")[2:], "\n")
 }
 
 // CreateTempFile creates a temporary file and writes the given content.
