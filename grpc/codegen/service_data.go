@@ -740,7 +740,12 @@ func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req
 	if !ok {
 		return nil
 	}
-	name := protoBufGoTypeName(att, sd.Scope)
+	vtx := protoBufTypeContext(sd.PkgName, sd.Scope, false)
+	// Validation helper names must be derived from the same protobuf-aware
+	// scope used by the validation templates so that function declarations
+	// and call sites (e.g. Message_) stay in sync regardless of traversal
+	// order or reserved-name handling.
+	name := vtx.Scope.Name(att, "", vtx.Pointer, vtx.UseDefault)
 	ref := protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope)
 	kind := validateClient
 	if req {
@@ -756,7 +761,6 @@ func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req
 			return n
 		}
 	}
-	vtx := protoBufTypeContext(sd.PkgName, sd.Scope, false)
 	removeMeta(att)
 	if def := codegen.ValidationCode(att, ut, vtx, true, expr.IsAlias(att.Type), false, attName); def != "" {
 		v := &ValidationData{
@@ -805,7 +809,10 @@ func collectValidationsR(att *expr.AttributeExpr, attName string, req bool, sd *
 		}
 		vtx := protoBufTypeContext(sd.PkgName, sd.Scope, false)
 		def := codegen.AttributeValidationCode(att, dt, vtx, true, false, gattName, attName)
-		name := protoBufMessageName(att, sd.Scope)
+		// Match helper function identifiers with validation template calls by
+		// using the same protobuf-aware scope for the type name. This keeps
+		// names like Message_ consistent between declarations and call sites.
+		name := vtx.Scope.Name(att, "", vtx.Pointer, vtx.UseDefault)
 		kind := validateClient
 		if req {
 			kind = validateServer
