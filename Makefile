@@ -114,6 +114,8 @@ release-goa:
 	cd cmd/goa && go install
 	git push origin v$(MAJOR)
 	git push origin v$(MAJOR).$(MINOR).$(BUILD)
+	# Wait for Go proxy to update
+	sleep 10
 
 release-examples:
 	cd $(GOPATH)/src/goa.design/examples && \
