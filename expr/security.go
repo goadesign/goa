@@ -40,6 +40,13 @@ const (
 )
 
 type (
+	// SecurityHolder is an interface that allows expression types to receive
+	// security requirements. Types implementing this interface can use the
+	// Security() DSL function to add security schemes.
+	SecurityHolder interface {
+		AddSecurityRequirement(*SecurityExpr)
+	}
+
 	// SecurityExpr defines a security requirement.
 	SecurityExpr struct {
 		// Schemes is the list of security schemes used for this

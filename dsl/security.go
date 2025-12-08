@@ -274,6 +274,8 @@ func Security(args ...any) {
 		actual.Requirements = append(actual.Requirements, security)
 	case *expr.APIExpr:
 		actual.Requirements = append(actual.Requirements, security)
+	case expr.SecurityHolder:
+		actual.AddSecurityRequirement(security)
 	default:
 		eval.IncompatibleDSL()
 		return
