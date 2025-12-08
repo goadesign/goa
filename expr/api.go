@@ -76,6 +76,41 @@ type (
 		// URL to documentation.
 		URL string `json:"url,omitempty"`
 	}
+
+	// URLHolder is an interface that allows expression types to receive
+	// a URL. Types implementing this interface can use the URL() DSL
+	// function to set a URL.
+	URLHolder interface {
+		SetURL(string)
+	}
+
+	// DescriptionHolder is an interface that allows expression types to
+	// receive a description. Types implementing this interface can use
+	// the Description() DSL function to set a description.
+	DescriptionHolder interface {
+		SetDescription(string)
+	}
+
+	// TitleHolder is an interface that allows expression types to receive
+	// a title. Types implementing this interface can use the Title() DSL
+	// function to set a title.
+	TitleHolder interface {
+		SetTitle(string)
+	}
+
+	// VersionHolder is an interface that allows expression types to
+	// receive a version. Types implementing this interface can use the
+	// Version() DSL function to set a version.
+	VersionHolder interface {
+		SetVersion(string)
+	}
+
+	// TimeoutHolder is an interface that allows expression types to
+	// receive a timeout duration. Types implementing this interface can
+	// use the Timeout() DSL function to set a timeout.
+	TimeoutHolder interface {
+		SetTimeout(string) error
+	}
 )
 
 // NewAPIExpr initializes an API expression.

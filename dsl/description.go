@@ -8,9 +8,10 @@ import (
 // Description sets the expression description.
 //
 // Description may appear in API, Docs, Type or Attribute.
-// Description may also appear in Response and Files.
+// Description may also appear in Response and Files, or any expression
+// implementing DescriptionHolder.
 //
-// Description accepts one arguments: the description string.
+// Description accepts one argument: the description string.
 //
 // Example:
 //
@@ -47,6 +48,8 @@ func Description(d string) {
 		e.Description = d
 	case *expr.InterceptorExpr:
 		e.Description = d
+	case expr.DescriptionHolder:
+		e.SetDescription(d)
 	default:
 		eval.IncompatibleDSL()
 	}
