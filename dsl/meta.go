@@ -130,6 +130,15 @@ const DefaultProtoc = expr.DefaultProtoc
 //	    })
 //	})
 //
+// - "proto:tag:json" sets the JSON name emitted in the generated protobuf
+//   field option. Applicable to attributes only.
+//
+//	var MyType = Type("MyType", func() {
+//	    Field(1, "id", String, func() {
+//	        Meta("proto:tag:json", "identifier")
+//	    })
+//	})
+//
 // - "protoc:cmd" provides an alternate command to execute for protoc with
 // optional arguments. Applicable to API and service definitions only. If used
 // on an API definition the include paths are used for all services, unless
