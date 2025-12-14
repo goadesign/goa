@@ -223,7 +223,12 @@ func walkAttribute(att *AttributeExpr, it func(name string, a *AttributeExpr) er
 }
 
 // EvalName returns the name used by the DSL evaluation.
-func (*AttributeExpr) EvalName() string {
+func (a *AttributeExpr) EvalName() string {
+	if a != nil {
+		if n, ok := a.Meta["openapi:typename"]; ok && len(n) > 0 {
+			return fmt.Sprintf("type %#v", n[0])
+		}
+	}
 	return "attribute"
 }
 
