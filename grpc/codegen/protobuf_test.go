@@ -1,8 +1,10 @@
 package codegen
 
 import (
+	"strings"
 	"testing"
 
+	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 )
 
@@ -176,5 +178,52 @@ func TestHasAnyType(t *testing.T) {
 				t.Errorf("got %t, expected %t", got, c.Expected)
 			}
 		})
+	}
+}
+
+func TestProtoBufMessageDefJSONNameOption(t *testing.T) {
+	attr := &expr.AttributeExpr{
+		Type: &expr.Object{
+			&expr.NamedAttributeExpr{
+				Name: "value",
+				Attribute: &expr.AttributeExpr{
+					Type: expr.String,
+					Meta: expr.MetaExpr{
+						"rpc:tag":        []string{"1"},
+						"proto:tag:json": []string{"customValue"},
+					},
+				},
+			},
+		},
+	}
+	sd := &ServiceData{Scope: codegen.NewNameScope()}
+	def := protoBufMessageDef(attr, sd)
+	if !strings.Contains(def, `json_name = "customValue"`) {
+		t.Fatalf("expected json_name option, got %q", def)
+	}
+}
+
+func TestProtoBufMessageDefJSONNameOptionOneOf(t *testing.T) {
+	attr := &expr.AttributeExpr{
+		Type: &expr.Union{
+			TypeName: "Animal",
+			Values: []*expr.NamedAttributeExpr{
+				{
+					Name: "Cat",
+					Attribute: &expr.AttributeExpr{
+						Type: expr.String,
+						Meta: expr.MetaExpr{
+							"rpc:tag":        []string{"1"},
+							"proto:tag:json": []string{"cat"},
+						},
+					},
+				},
+			},
+		},
+	}
+	sd := &ServiceData{Scope: codegen.NewNameScope()}
+	def := protoBufMessageDef(attr, sd)
+	if !strings.Contains(def, `json_name = "cat"`) {
+		t.Fatalf("expected json_name option in oneof, got %q", def)
 	}
 }
