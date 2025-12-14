@@ -1,0 +1,18 @@
+func Validate() (err error) {
+	if target.RequiredArray == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_array", "target"))
+	}
+	if len(target.RequiredArray) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("target.required_array", target.RequiredArray, len(target.RequiredArray), 1, true))
+	}
+	for _, e := range target.RequiredArray {
+		if e == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("target.required_array", "[*]"))
+		}
+		if e != nil {
+			if err2 := ValidateInteger(e); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
+	}
+}

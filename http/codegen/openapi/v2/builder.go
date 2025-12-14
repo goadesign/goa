@@ -93,6 +93,8 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 			s.Definitions[n] = d
 		}
 	}
+	// Convert OpenAPI 3.0 references (#/$defs/) to Swagger 2.0 format (#/definitions/)
+	convertRefsToV2(s)
 	return s, nil
 }
 
@@ -812,5 +814,80 @@ func initValidations(attr *expr.AttributeExpr, def any) {
 	}
 	if val.MaxLength != nil {
 		initMaxLengthValidation(def, expr.IsArray(attr.Type), val.MaxLength)
+	}
+}
+
+// convertRefsToV2 converts all OpenAPI 3.0 references (#/$defs/) to Swagger 2.0
+// format (#/definitions/) in all schemas throughout the V2 specification.
+func convertRefsToV2(s *V2) {
+	// Convert references in definitions
+	for _, def := range s.Definitions {
+		convertSchemaRefs(def)
+	}
+	// Convert references in paths
+	for _, pathVal := range s.Paths {
+		if path, ok := pathVal.(*Path); ok {
+			convertPathRefs(path)
+		}
+	}
+	// Convert references in parameters
+	for _, param := range s.Parameters {
+		if param.Schema != nil {
+			convertSchemaRefs(param.Schema)
+		}
+	}
+}
+
+// convertPathRefs converts references in all operations of a path.
+func convertPathRefs(path *Path) {
+	ops := []*Operation{path.Get, path.Put, path.Post, path.Delete, path.Options, path.Head, path.Patch}
+	for _, op := range ops {
+		if op == nil {
+			continue
+		}
+		// Convert references in parameters
+		for _, param := range op.Parameters {
+			if param.Schema != nil {
+				convertSchemaRefs(param.Schema)
+			}
+		}
+		// Convert references in responses
+		for _, resp := range op.Responses {
+			if resp.Schema != nil {
+				convertSchemaRefs(resp.Schema)
+			}
+		}
+	}
+}
+
+// convertSchemaRefs recursively converts all #/$defs/ references to #/definitions/
+// in a schema and all nested schemas.
+func convertSchemaRefs(schema *openapi.Schema) {
+	if schema == nil {
+		return
+	}
+	// Convert the reference itself
+	if strings.HasPrefix(schema.Ref, "#/$defs/") {
+		schema.Ref = strings.Replace(schema.Ref, "#/$defs/", "#/definitions/", 1)
+	}
+	// Convert references in items
+	if schema.Items != nil {
+		convertSchemaRefs(schema.Items)
+	}
+	// Convert references in properties
+	for _, prop := range schema.Properties {
+		convertSchemaRefs(prop)
+	}
+	// Convert references in anyOf
+	for _, anyOfSchema := range schema.AnyOf {
+		convertSchemaRefs(anyOfSchema)
+	}
+	// Convert references in additionalProperties when it's a schema
+	if apSchema, ok := schema.AdditionalProperties.(*openapi.Schema); ok {
+		convertSchemaRefs(apSchema)
+	}
+	// Convert references in $defs (though these shouldn't exist in Swagger 2.0)
+	for _, def := range schema.Defs {
+		convertSchemaRefs(def)
 	}
 }

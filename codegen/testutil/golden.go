@@ -123,6 +123,7 @@ func (g *GoldenFile) CompareContent() {
 }
 
 // Compare compares the actual content with the golden file content (legacy API)
+//
 // Deprecated: Use StringContent().Path().CompareContent() for the fluent API
 func (g *GoldenFile) Compare(actual string, golden string) {
 	g.t.Helper()

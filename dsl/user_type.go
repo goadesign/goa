@@ -163,6 +163,35 @@ func ArrayOf(v any, fn ...func()) *expr.Array {
 	return &expr.Array{ElemType: &at}
 }
 
+// ArrayOfRequired creates an array type from its element type where elements
+// cannot be null.
+//
+// ArrayOfRequired may be used wherever types can.
+// The first argument is the type of the array elements specified by name or by
+// reference.
+// The second argument is an optional function that defines validations for the
+// array elements.
+//
+// The difference between ArrayOf and ArrayOfRequired is that ArrayOfRequired
+// generates validation code that rejects null elements in the array.
+//
+// Examples:
+//
+//	var Names = ArrayOfRequired(String, func() {
+//	    Pattern("[a-zA-Z]+") // Validates elements of the array
+//	})
+//
+//	var Account = Type("Account", func() {
+//	    Attribute("bottles", ArrayOfRequired(Bottle), "Account bottles", func() {
+//	        MinLength(1) // Validates array as a whole
+//	    })
+//	})
+func ArrayOfRequired(v any, fn ...func()) *expr.Array {
+	arr := ArrayOf(v, fn...)
+	arr.NonNullableElems = true
+	return arr
+}
+
 // MapOf creates a map from its key and element types.
 //
 // MapOf may be used wherever types can.

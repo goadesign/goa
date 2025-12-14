@@ -29,6 +29,7 @@ var MethodNames = [1]string{"StreamingResultWithViewsMethod"}
 type StreamingResultWithViewsMethodServerStream interface {
 	// Send streams instances of "MultipleViews".
 	Send(*MultipleViews) error
+	// SendWithContext streams instances of "MultipleViews" with context.
 	SendWithContext(context.Context, *MultipleViews) error
 	// Close closes the stream.
 	Close() error
@@ -39,7 +40,10 @@ type StreamingResultWithViewsMethodServerStream interface {
 // StreamingResultWithViewsMethodClientStream allows streaming instances of
 // *MultipleViews to the client.
 type StreamingResultWithViewsMethodClientStream interface {
+	// Recv reads instances of "MultipleViews" from the stream.
 	Recv() (*MultipleViews, error)
+	// RecvWithContext reads instances of "MultipleViews" from the stream with
+	// context.
 	RecvWithContext(context.Context) (*MultipleViews, error)
 }
 

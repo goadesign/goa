@@ -23,17 +23,18 @@ import (
 //	    Result(Sum)
 //	    Error(ErrInvalidOperands)
 //	})
-func Method(name string, fn func()) {
+func Method(name string, fn func()) *expr.MethodExpr {
 	if name == "" {
 		eval.ReportError("method name cannot be empty")
 	}
 	s, ok := eval.Current().(*expr.ServiceExpr)
 	if !ok {
 		eval.IncompatibleDSL()
-		return
+		return nil
 	}
-	ep := &expr.MethodExpr{Name: name, Service: s, DSLFunc: fn}
-	s.Methods = append(s.Methods, ep)
+	me := &expr.MethodExpr{Name: name, Service: s, DSLFunc: fn}
+	s.Methods = append(s.Methods, me)
+	return me
 }
 
 // Deprecated marks HTTP routes as deprecated in the generated OpenAPI specifications.

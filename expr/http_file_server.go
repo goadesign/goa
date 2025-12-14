@@ -40,13 +40,25 @@ func (f *HTTPFileServerExpr) EvalName() string {
 // Finalize normalizes the request path.
 func (f *HTTPFileServerExpr) Finalize() {
 	current := f.RequestPaths[0]
+	// Support absolute mount semantics when path starts with "//".
+	// In that case, ignore API and service prefixes and mount at server root.
+	isAbs := strings.HasPrefix(current, "//")
+	if isAbs {
+		current = "/" + strings.TrimPrefix(current, "//")
+	}
+
 	paths := f.Service.Paths
 	if len(paths) == 0 {
 		paths = []string{"/"}
 	}
 	f.RequestPaths = make([]string, len(paths))
 	for i, sp := range paths {
-		p := path.Join(Root.API.HTTP.Path, sp, current)
+		var p string
+		if isAbs {
+			p = current
+		} else {
+			p = path.Join(Root.API.HTTP.Path, sp, current)
+		}
 		// Make sure request path starts with a "/" so codegen can rely on it.
 		if !strings.HasPrefix(p, "/") {
 			p = "/" + p

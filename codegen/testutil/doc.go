@@ -1,6 +1,6 @@
 // Package testutil provides testing utilities for the Goa code generation framework.
 //
-// Golden File Testing
+// # Golden File Testing
 //
 // The package provides utilities for golden file testing, a technique where
 // expected outputs are stored in files and compared against actual outputs
@@ -12,10 +12,10 @@
 //	func TestCodeGeneration(t *testing.T) {
 //		// Create a golden file manager
 //		gf := testutil.NewGoldenFile(t, "testdata/golden")
-//		
+//
 //		// Generate code
 //		code := generateCode()
-//		
+//
 //		// Compare with golden file
 //		gf.Compare(code, "mytest.golden")
 //	}
@@ -45,10 +45,10 @@
 //		"file1.golden": code1,
 //		"file2.golden": code2,
 //	})
-//	
+//
 //	// Create golden file if it doesn't exist
 //	gf.CompareOrCreate(code, "new.golden")
-//	
+//
 //	// Check if a golden file exists
 //	if gf.Exists("optional.golden") {
 //		gf.Compare(code, "optional.golden")

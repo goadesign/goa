@@ -57,6 +57,8 @@ type (
 		RequestIDField string
 		// RequestIDPointer indicates whether the RequestIDField is a pointer (i.e., optional primitive).
 		RequestIDPointer bool
+		// HasResponseBody indicates whether an HTTP response body converter exists for this endpoint.
+		HasResponseBody bool
 	}
 )
 
@@ -134,6 +136,15 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 		RequestIDField:      e.SSE.RequestIDField,
 		RequestIDPointer:    ridPtr,
 	}
+
+	if ed.Result != nil {
+		for _, resp := range ed.Result.Responses {
+			if len(resp.ServerBody) > 0 {
+				ed.SSE.HasResponseBody = true
+				break
+			}
+		}
+	}
 }
 
 // sseServerFile returns the file implementing the SSE server
@@ -201,6 +212,7 @@ func sseTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 				}
 				return dict, nil
 			},
+			"goify": codegen.Goify,
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:    "server-sse",

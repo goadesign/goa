@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -44,12 +45,36 @@ func TestRequestEncoder(t *testing.T) {
 				r.Header.Set(ct, c.requestCT)
 			}
 
-			encoder := RequestEncoder(r)
+			_ = RequestEncoder(r)
 
-			assert.Equal(t, wantT, fmt.Sprintf("%T", encoder))
 			assert.Equal(t, c.wantCT, r.Header.Get(ct))
 		})
 	}
+}
+
+func TestRequestEncoderGetBody(t *testing.T) {
+	r := &http.Request{Header: http.Header{}}
+	encoder := RequestEncoder(r)
+
+	_, err := r.Body.Read(nil)
+	assert.Error(t, err, "request Body should error (but not panic) if read before data is encoded")
+
+	_, err = r.GetBody()
+	assert.Error(t, err, "request GetBody should error (but not panic) if read before data is encoded")
+
+	err = encoder.Encode("body")
+	require.NoError(t, err)
+
+	bodyContents, err := io.ReadAll(r.Body)
+	require.NoError(t, err)
+	assert.Equal(t, `"body"`, string(bodyContents))
+
+	newBody, err := r.GetBody()
+	require.NoError(t, err)
+
+	newBodyContents, err := io.ReadAll(newBody)
+	require.NoError(t, err)
+	assert.Equal(t, bodyContents, newBodyContents)
 }
 
 func TestRequestDecoder(t *testing.T) {
@@ -155,6 +180,17 @@ func TestResponseEncoder(t *testing.T) {
 			assert.Equal(t, c.encoderType, fmt.Sprintf("%T", encoder))
 		})
 	}
+}
+
+func TestResponseEncoder_ContentTypeHeaderPreservesCharset(t *testing.T) {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContentTypeKey, "application/json; charset=utf-8")
+	w := httptest.NewRecorder()
+
+	encoder := ResponseEncoder(ctx, w)
+
+	require.Equal(t, "*json.Encoder", fmt.Sprintf("%T", encoder))
+	assert.Equal(t, "application/json; charset=utf-8", w.Header().Get("Content-Type"))
 }
 
 func TestResponseEncoder_Encode_ErrorResponse(t *testing.T) {

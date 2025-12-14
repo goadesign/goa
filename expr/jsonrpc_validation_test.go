@@ -22,12 +22,12 @@ func TestJSONRPCTransportConsistency(t *testing.T) {
 					Name: "TestService",
 					Meta: expr.MetaExpr{"jsonrpc:service": []string{}},
 				}
-				
+
 				httpService := &expr.HTTPServiceExpr{
 					ServiceExpr: service,
 					Root:        &expr.HTTPExpr{},
 				}
-				
+
 				// Regular HTTP method
 				m1 := &expr.MethodExpr{
 					Name:    "GetUser",
@@ -43,7 +43,7 @@ func TestJSONRPCTransportConsistency(t *testing.T) {
 					Cookies:    &expr.MappedAttributeExpr{AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}}},
 					Params:     &expr.MappedAttributeExpr{AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}}},
 				}
-				
+
 				// SSE streaming method
 				m2 := &expr.MethodExpr{
 					Name:    "WatchUsers",
@@ -61,7 +61,7 @@ func TestJSONRPCTransportConsistency(t *testing.T) {
 					Params:     &expr.MappedAttributeExpr{AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}}},
 					SSE:        &expr.HTTPSSEExpr{},
 				}
-				
+
 				httpService.HTTPEndpoints = []*expr.HTTPEndpointExpr{e1, e2}
 				return httpService
 			},
@@ -74,12 +74,12 @@ func TestJSONRPCTransportConsistency(t *testing.T) {
 					Name: "TestService",
 					Meta: expr.MetaExpr{"jsonrpc:service": []string{}},
 				}
-				
+
 				httpService := &expr.HTTPServiceExpr{
 					ServiceExpr: service,
 					Root:        &expr.HTTPExpr{},
 				}
-				
+
 				// WebSocket streaming method
 				m1 := &expr.MethodExpr{
 					Name:             "Stream",
@@ -96,7 +96,7 @@ func TestJSONRPCTransportConsistency(t *testing.T) {
 					Cookies:    &expr.MappedAttributeExpr{AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}}},
 					Params:     &expr.MappedAttributeExpr{AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}}},
 				}
-				
+
 				// Regular HTTP method
 				m2 := &expr.MethodExpr{
 					Name:    "Get",
@@ -112,7 +112,7 @@ func TestJSONRPCTransportConsistency(t *testing.T) {
 					Cookies:    &expr.MappedAttributeExpr{AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}}},
 					Params:     &expr.MappedAttributeExpr{AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}}},
 				}
-				
+
 				httpService.HTTPEndpoints = []*expr.HTTPEndpointExpr{e1, e2}
 				return httpService
 			},
@@ -126,12 +126,12 @@ func TestJSONRPCTransportConsistency(t *testing.T) {
 					Name: "TestService",
 					Meta: expr.MetaExpr{"jsonrpc:service": []string{}},
 				}
-				
+
 				httpService := &expr.HTTPServiceExpr{
 					ServiceExpr: service,
 					Root:        &expr.HTTPExpr{},
 				}
-				
+
 				// WebSocket streaming method
 				m1 := &expr.MethodExpr{
 					Name:             "Stream",
@@ -148,7 +148,7 @@ func TestJSONRPCTransportConsistency(t *testing.T) {
 					Cookies:    &expr.MappedAttributeExpr{AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}}},
 					Params:     &expr.MappedAttributeExpr{AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}}},
 				}
-				
+
 				// SSE streaming method
 				m2 := &expr.MethodExpr{
 					Name:    "Watch",
@@ -166,7 +166,7 @@ func TestJSONRPCTransportConsistency(t *testing.T) {
 					Params:     &expr.MappedAttributeExpr{AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}}},
 					SSE:        &expr.HTTPSSEExpr{},
 				}
-				
+
 				httpService.HTTPEndpoints = []*expr.HTTPEndpointExpr{e1, e2}
 				return httpService
 			},
@@ -174,12 +174,12 @@ func TestJSONRPCTransportConsistency(t *testing.T) {
 			ErrorMsg: "cannot mix WebSocket with other transports",
 		},
 	}
-	
+
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			svc := c.Setup()
 			err := svc.Validate()
-			
+
 			if c.WantErr {
 				if err == nil {
 					t.Errorf("expected error containing %q but got none", c.ErrorMsg)

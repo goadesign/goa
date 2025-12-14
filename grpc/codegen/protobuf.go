@@ -294,7 +294,8 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 			if d := nat.Attribute.Description; d != "" {
 				desc = codegen.Comment(d) + "\n\t"
 			}
-			def += fmt.Sprintf("\n\t\t%s%s %s = %d;", desc, typ, fn, fnum)
+			opt := protoJSONOption(nat.Attribute)
+			def += fmt.Sprintf("\n\t\t%s%s %s = %d%s;", desc, typ, fn, fnum, opt)
 		}
 		def += "\n\t}"
 		return def
@@ -336,13 +337,24 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 					desc = codegen.Comment(nat.Attribute.Description) + "\n\t"
 				}
 			}
-			ss = append(ss, fmt.Sprintf("\t%s%s%s %s = %d;", desc, opt, typ, fn, fnum))
+			optJSON := protoJSONOption(nat.Attribute)
+			ss = append(ss, fmt.Sprintf("\t%s%s%s %s = %d%s;", desc, opt, typ, fn, fnum, optJSON))
 		}
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
+}
+
+func protoJSONOption(att *expr.AttributeExpr) string {
+	if att == nil || att.Meta == nil {
+		return ""
+	}
+	if names := att.Meta["proto:tag:json"]; len(names) > 0 && names[0] != "" {
+		return fmt.Sprintf(" [json_name = %q]", names[0])
+	}
+	return ""
 }
 
 // protoBufGoFullTypeRef returns the Go code qualified with package name that
@@ -440,6 +452,8 @@ func protoNativeType(t expr.DataType) string {
 		return "string"
 	case expr.BytesKind:
 		return "bytes"
+	case expr.AnyKind:
+		return "google.protobuf.Any"
 	default:
 		panic(fmt.Sprintf("cannot compute native protocol buffer type for %T", t)) // bug
 	}
@@ -472,6 +486,8 @@ func protoBufNativeGoTypeName(t expr.DataType) string {
 		return "string"
 	case expr.BytesKind:
 		return "[]byte"
+	case expr.AnyKind:
+		return "*anypb.Any"
 	default:
 		panic(fmt.Sprintf("cannot compute native protocol buffer type for %T %v", t, t)) // bug
 	}

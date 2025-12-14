@@ -180,6 +180,23 @@ var FileServiceDSL = func() {
 	})
 }
 
+// FileServiceWildcardDSL defines a service with a file server using a wildcard path.
+var FileServiceWildcardDSL = func() {
+	var _ = API("test", func() {
+		Server("test", func() {
+			Host("localhost", func() {
+				URI("http://localhost:80")
+			})
+		})
+	})
+	var _ = Service("front", func() {
+		Files("/ui/{*filepath}", "ui/dist", func() {
+			Meta("openapi:summary", "Download ui/dist")
+			Meta("openapi:tag:front")
+		})
+	})
+}
+
 var FileServiceSwaggerDSL = func() {
 	var _ = Service("service-name", func() {
 		Files("path1", "filename")

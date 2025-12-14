@@ -61,6 +61,26 @@ func endpointParser(genpkg string, services *ServicesData, svr *expr.ServerExpr,
 		codegen.GoaNamedImport("grpc", "goagrpc"),
 		{Path: "google.golang.org/grpc", Name: "grpc"},
 	}
+	// Add anypb and structpb imports if Any type is used
+	needsAnyPb := false
+	for _, svc := range services.Root.API.GRPC.Services {
+		for _, e := range svc.GRPCEndpoints {
+			if hasAnyType(e.MethodExpr.Payload) || hasAnyType(e.MethodExpr.Result) {
+				needsAnyPb = true
+				break
+			}
+		}
+		if needsAnyPb {
+			break
+		}
+	}
+	if needsAnyPb {
+		specs = append(specs,
+			&codegen.ImportSpec{Path: "encoding/json"},
+			&codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/anypb", Name: "anypb"},
+			&codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"},
+		)
+	}
 	for _, svc := range services.Root.API.GRPC.Services {
 		sd := services.Get(svc.Name())
 		if sd == nil {
@@ -116,6 +136,20 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.Command
 		codegen.GoaImport(""),
 		{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
 		{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
+	}
+	// Add anypb and structpb imports if Any type is used
+	needsAnyPb := false
+	for _, e := range svc.GRPCEndpoints {
+		if hasAnyType(e.MethodExpr.Payload) || hasAnyType(e.MethodExpr.Result) {
+			needsAnyPb = true
+			break
+		}
+	}
+	if needsAnyPb {
+		specs = append(specs,
+			&codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/anypb", Name: "anypb"},
+			&codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"},
+		)
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", specs),

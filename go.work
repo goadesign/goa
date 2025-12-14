@@ -1,5 +1,0 @@
-go 1.24.5
-
-use .
-
-use ./jsonrpc/integration_tests

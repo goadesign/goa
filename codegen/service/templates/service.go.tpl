@@ -129,11 +129,14 @@ type {{ .Stream.Interface }} interface {
 		{{- else }}
 		{{ comment .Stream.SendDesc }}
 		{{ .Stream.SendName }}({{ .Stream.SendTypeRef }}) error
+		{{ comment .Stream.SendWithContextDesc }}
                 {{ .Stream.SendWithContextName }}(context.Context, {{ .Stream.SendTypeRef }}) error
 		{{- end }}
 	{{- end }}
 	{{- if and .Stream.RecvTypeRef (not .IsJSONRPCWebSocket) }}
+		{{ comment .Stream.RecvDesc }}
 		{{ .Stream.RecvName }}() ({{ .Stream.RecvTypeRef }}, error)
+		{{ comment .Stream.RecvWithContextDesc }}
 		{{ .Stream.RecvWithContextName }}(context.Context) ({{ .Stream.RecvTypeRef }}, error)
 	{{- end }}
 

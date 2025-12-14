@@ -13,8 +13,8 @@
 # - "all" is the default target, it runs "lint" and "test"
 #
 MAJOR=3
-MINOR=22
-BUILD=2
+MINOR=23
+BUILD=3
 
 GOOS=$(shell go env GOOS)
 GOARCH=$(shell go env GOARCH)
@@ -114,6 +114,8 @@ release-goa:
 	cd cmd/goa && go install
 	git push origin v$(MAJOR)
 	git push origin v$(MAJOR).$(MINOR).$(BUILD)
+	# Wait for Go proxy to update
+	sleep 10
 
 release-examples:
 	cd $(GOPATH)/src/goa.design/examples && \

@@ -59,6 +59,10 @@ const (
 	// UnsupportedMediaType is the error name returned by the Goa decoder
 	// when the content type of the HTTP request body is not supported.
 	UnsupportedMediaType = "unsupported_media_type"
+	// DecodePayload is the error name for decode payload errors.
+	DecodePayload = "decode_payload"
+	// MissingPayload is the error name for missing payload errors.
+	MissingPayload = "missing_payload"
 )
 
 // NewServiceError creates an error.
@@ -110,13 +114,13 @@ func TemporaryTimeoutError(name, format string, v ...any) *ServiceError {
 // MissingPayloadError is the error produced by the generated code when a
 // request is missing a required payload.
 func MissingPayloadError() error {
-	return PermanentError("missing_payload", "missing required payload")
+	return PermanentError(MissingPayload, "missing required payload")
 }
 
 // DecodePayloadError is the error produced by the generated code when a request
 // body cannot be decoded successfully.
 func DecodePayloadError(msg string) error {
-	return PermanentError("decode_payload", "%s", msg)
+	return PermanentError(DecodePayload, "%s", msg)
 }
 
 // UnsupportedMediaTypeError is the error produced by the Goa decoder when the

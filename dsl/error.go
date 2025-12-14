@@ -229,26 +229,48 @@ func Temporary() {
 	attr.AddMeta("goa:error:temporary")
 }
 
-// Timeout qualifies an error type as describing errors due to timeouts.
+// Timeout qualifies an error type as describing errors due to timeouts, or
+// sets a timeout duration on expressions implementing TimeoutHolder.
 //
-// Timeout must appear in a Error expression.
+// When used in an Error expression, Timeout takes no argument and marks the
+// error as a timeout error.
 //
-// Timeout takes no argument.
+// When used in an expression implementing TimeoutHolder, Timeout takes a
+// duration string (e.g., "30s", "1m", "500ms").
 //
-// Example:
+// Example (error timeout):
 //
 //	var _ = Service("divider", func() {
 //	    Error("request_timeout", func() {
 //	        Timeout()
 //	    })
 //	})
-func Timeout() {
-	attr, ok := eval.Current().(*expr.AttributeExpr)
-	if !ok {
+//
+// Example (duration timeout):
+//
+//	Registry("corp", func() {
+//	    URL("https://registry.corp.internal")
+//	    Timeout("30s")
+//	})
+func Timeout(args ...string) {
+	switch e := eval.Current().(type) {
+	case *expr.AttributeExpr:
+		if len(args) > 0 {
+			eval.ReportError("Timeout in Error expression takes no arguments")
+			return
+		}
+		e.AddMeta("goa:error:timeout")
+	case expr.TimeoutHolder:
+		if len(args) != 1 {
+			eval.ReportError("Timeout requires a duration string argument")
+			return
+		}
+		if err := e.SetTimeout(args[0]); err != nil {
+			eval.ReportError("invalid timeout: %s", err)
+		}
+	default:
 		eval.IncompatibleDSL()
-		return
 	}
-	attr.AddMeta("goa:error:timeout")
 }
 
 // Fault qualifies an error type as describing errors due to a server-side

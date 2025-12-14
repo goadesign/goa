@@ -155,21 +155,23 @@ func hasMinMaxValidation(a *AttributeExpr) bool {
 // byLength generates a random size array of examples based on what's given.
 func byLength(a *AttributeExpr, r *ExampleGenerator) any {
 	count := NewLength(a, r)
-	switch a.Type.Kind() {
+	// Use unaliased type to handle alias types (e.g., Type("Alias", String))
+	dt := unalias(a.Type)
+	switch dt.Kind() {
 	case StringKind:
 		return r.Characters(count)
 	case BytesKind:
 		return []byte(r.Characters(count))
 	case MapKind:
 		raw := make(map[any]any)
-		m := a.Type.(*Map)
+		m := dt.(*Map)
 		for range count {
 			raw[m.KeyType.Example(r)] = m.ElemType.Example(r)
 		}
 		return m.MakeMap(raw)
 	case ArrayKind:
 		raw := make([]any, count)
-		ar := a.Type.(*Array)
+		ar := dt.(*Array)
 		for i := range count {
 			raw[i] = ar.ElemType.Example(r)
 		}

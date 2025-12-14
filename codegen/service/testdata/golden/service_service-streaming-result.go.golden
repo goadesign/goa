@@ -26,6 +26,7 @@ var MethodNames = [1]string{"StreamingResultMethod"}
 type StreamingResultMethodServerStream interface {
 	// Send streams instances of "AResult".
 	Send(*AResult) error
+	// SendWithContext streams instances of "AResult" with context.
 	SendWithContext(context.Context, *AResult) error
 	// Close closes the stream.
 	Close() error
@@ -34,7 +35,9 @@ type StreamingResultMethodServerStream interface {
 // StreamingResultMethodClientStream allows streaming instances of *AResult to
 // the client.
 type StreamingResultMethodClientStream interface {
+	// Recv reads instances of "AResult" from the stream.
 	Recv() (*AResult, error)
+	// RecvWithContext reads instances of "AResult" from the stream with context.
 	RecvWithContext(context.Context) (*AResult, error)
 }
 

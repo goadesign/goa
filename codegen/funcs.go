@@ -103,6 +103,20 @@ func CamelCase(name string, firstUpper, acronym bool) string {
 		return ""
 	}
 
+	// Use cache to avoid recomputing the same transformation
+	key := cacheKey{
+		input:      name,
+		firstUpper: firstUpper,
+		acronym:    acronym,
+		operation:  "camel",
+	}
+	return globalStringCache.getCached(key, func() string {
+		return camelCaseUncached(name, firstUpper, acronym)
+	})
+}
+
+// camelCaseUncached is the original implementation without caching.
+func camelCaseUncached(name string, firstUpper, acronym bool) string {
 	runes := []rune(name)
 	// remove trailing invalid identifiers (makes code below simpler)
 	runes = removeTrailingInvalid(runes)

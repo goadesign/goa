@@ -26,8 +26,12 @@ var MethodNames = [1]string{"StreamingPayloadMethod"}
 type StreamingPayloadMethodServerStream interface {
 	// SendAndClose streams instances of "AResult" and closes the stream.
 	SendAndClose(*AResult) error
+	// SendAndCloseWithContext streams instances of "AResult" and closes the stream
+	// with context.
 	SendAndCloseWithContext(context.Context, *AResult) error
+	// Recv reads instances of "APayload" from the stream.
 	Recv() (*APayload, error)
+	// RecvWithContext reads instances of "APayload" from the stream with context.
 	RecvWithContext(context.Context) (*APayload, error)
 }
 
@@ -36,8 +40,13 @@ type StreamingPayloadMethodServerStream interface {
 type StreamingPayloadMethodClientStream interface {
 	// Send streams instances of "APayload".
 	Send(*APayload) error
+	// SendWithContext streams instances of "APayload" with context.
 	SendWithContext(context.Context, *APayload) error
+	// CloseAndRecv stops sending messages to the stream and reads instances of
+	// "AResult" from the stream.
 	CloseAndRecv() (*AResult, error)
+	// CloseAndRecvWithContext stops sending messages to the stream and reads
+	// instances of "AResult" from the stream with context.
 	CloseAndRecvWithContext(context.Context) (*AResult, error)
 }
 

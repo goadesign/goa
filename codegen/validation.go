@@ -49,8 +49,7 @@ func init() {
 //
 // See ValidationCode for a description of the arguments.
 func AttributeValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias bool, target, attName string) string {
-	seen := make(map[string]*bytes.Buffer)
-	return recurseValidationCode(att, put, attCtx, req, alias, false, target, attName, seen).String()
+	return recurseValidationCode(att, put, attCtx, req, alias, false, target, attName, nil).String()
 }
 
 // ValidationCode produces Go code that runs the validations defined in the
@@ -74,11 +73,13 @@ func AttributeValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx 
 //
 // context is used to produce helpful messages in case of error.
 func ValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target string) string {
-	seen := make(map[string]*bytes.Buffer)
-	return recurseValidationCode(att, put, attCtx, req, alias, view, target, target, seen).String()
+	return recurseValidationCode(att, put, attCtx, req, alias, view, target, target, nil).String()
 }
 
 func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
+	if seen == nil {
+		seen = make(map[string]*bytes.Buffer)
+	}
 	var (
 		buf      = new(bytes.Buffer)
 		first    = true
@@ -86,7 +87,10 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 	)
 
 	// Break infinite recursions
-	if isUT {
+	// Note: when alias=true, we're validating the underlying base type,
+	// so alias types shouldn't use the recursion guard. Only non-alias user
+	// types need cycle protection.
+	if isUT && !alias {
 		if buf, ok := seen[ut.ID()]; ok {
 			return buf
 		}
@@ -119,24 +123,30 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		for _, nat := range *(expr.AsObject(att.Type)) {
 			tgt := fmt.Sprintf("%s.%s", target, attCtx.Scope.Field(nat.Attribute, nat.Name, true))
 			ctx := fmt.Sprintf("%s.%s", context, nat.Name)
-			val := validateAttribute(attCtx, nat.Attribute, put, tgt, ctx, att.IsRequired(nat.Name), view)
+			val := validateAttribute(attCtx, nat.Attribute, put, tgt, ctx, att.IsRequired(nat.Name), view, seen)
 			if val != "" {
 				newline()
 				buf.WriteString(val)
 			}
 		}
 	case expr.IsArray(att.Type):
-		elem := expr.AsArray(att.Type).ElemType
+		arr := expr.AsArray(att.Type)
+		elem := arr.ElemType
 		ctx := attCtx
 		if ctx.Pointer && expr.IsPrimitive(elem.Type) {
 			// Array elements of primitive type are never pointers
 			ctx = attCtx.Dup()
 			ctx.Pointer = false
 		}
-		val := validateAttribute(ctx, elem, put, "e", context+"[*]", true, view)
-		if val != "" {
+		val := validateAttribute(ctx, elem, put, "e", context+"[*]", true, view, seen)
+		if val != "" || arr.NonNullableElems {
 			newline()
-			data := map[string]any{"target": target, "validation": val}
+			data := map[string]any{
+				"target":           target,
+				"validation":       val,
+				"nonNullableElems": arr.NonNullableElems,
+				"context":          context,
+			}
 			if err := arrayValT.Execute(buf, data); err != nil {
 				panic(err) // bug
 			}
@@ -145,11 +155,11 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		m := expr.AsMap(att.Type)
 		ctx := attCtx.Dup()
 		ctx.Pointer = false
-		keyVal := validateAttribute(ctx, m.KeyType, put, "k", context+".key", true, view)
+		keyVal := validateAttribute(ctx, m.KeyType, put, "k", context+".key", true, view, seen)
 		if keyVal != "" {
 			keyVal = "\n" + keyVal
 		}
-		valueVal := validateAttribute(ctx, m.ElemType, put, "v", context+"[key]", true, view)
+		valueVal := validateAttribute(ctx, m.ElemType, put, "v", context+"[key]", true, view, seen)
 		if valueVal != "" {
 			valueVal = "\n" + valueVal
 		}
@@ -173,14 +183,14 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 				// Union values in views are never pointers - they are concrete typed values
 				unionCtx := attCtx.Dup()
 				unionCtx.Pointer = false
-				val := validateAttribute(unionCtx, vatt, put, "v", context+".value", true, view)
+				val := validateAttribute(unionCtx, vatt, put, "v", context+".value", true, view, seen)
 				if val != "" {
 					types = append(types, attCtx.Scope.Ref(vatt, attCtx.DefaultPkg))
 					vals = append(vals, val)
 				}
 			} else {
 				fieldName := attCtx.Scope.Field(vatt, v.Name, true)
-				val := validateAttribute(attCtx, vatt, put, "v."+fieldName, context+".value", true, view)
+				val := validateAttribute(attCtx, vatt, put, "v."+fieldName, context+".value", true, view, seen)
 				if val != "" {
 					tref := attCtx.Scope.Ref(&expr.AttributeExpr{Type: put}, attCtx.DefaultPkg)
 					types = append(types, tref+"_"+fieldName)
@@ -204,10 +214,10 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 	return buf
 }
 
-func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.UserType, target, context string, req, view bool) string {
+func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.UserType, target, context string, req, view bool, seen map[string]*bytes.Buffer) string {
 	ut, isUT := att.Type.(expr.UserType)
 	if !isUT {
-		code := recurseValidationCode(att, put, ctx, req, false, view, target, context, nil).String()
+		code := recurseValidationCode(att, put, ctx, req, false, view, target, context, seen).String()
 		if code == "" {
 			return ""
 		}
@@ -223,15 +233,38 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 		}
 		return fmt.Sprintf("%s%s\n}", cond, code)
 	}
+	// Alias user types: validate underlying attribute with alias flag so that
+	// validation operates on the base value type while preserving pointer
+	// semantics from the current attribute context.
 	if expr.IsAlias(ut) {
-		return recurseValidationCode(ut.Attribute(), put, ctx, req, true, view, target, context, nil).String()
+		// Preserve field-level attributes (e.g., DefaultValue, Required) while
+		// validating alias user types against their underlying base. Passing
+		// the original attribute with alias=true ensures validations operate
+		// on the correct value type without dropping field defaults.
+		code := recurseValidationCode(att, put, ctx, req, true, view, target, context, seen).String()
+		if code == "" {
+			return ""
+		}
+		// For optional pointer fields, wrap validation code in nil check
+		if !ctx.Pointer && (req || (att.DefaultValue != nil && ctx.UseDefault)) {
+			return code
+		}
+		cond := fmt.Sprintf("if %s != nil {\n", target)
+		if strings.HasPrefix(code, cond) {
+			return code
+		}
+		return fmt.Sprintf("%s%s\n}", cond, code)
 	}
 	if !hasValidations(ctx, ut) {
 		return ""
 	}
 	var buf bytes.Buffer
 	name := ctx.Scope.Name(att, "", ctx.Pointer, ctx.UseDefault)
-	data := map[string]any{"name": Goify(name, true), "target": target}
+	// Use the scoped type name directly to preserve identifiers such as
+	// protocol buffer-reserved names that include a trailing underscore
+	// (e.g., Message_). Applying Goify here would drop underscores and
+	// cause mismatches between function declarations and call sites.
+	data := map[string]any{"name": name, "target": target}
 	if err := userValT.Execute(&buf, data); err != nil {
 		panic(err) // bug
 	}
@@ -273,9 +306,11 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 	if validation == nil {
 		return ""
 	}
+
 	var (
 		kind            = att.Type.Kind()
-		isNativePointer = kind == expr.BytesKind || kind == expr.AnyKind
+		unaliased       = unalias(att.Type)
+		isNativePointer = unaliased.Kind() == expr.BytesKind || unaliased.Kind() == expr.AnyKind
 		isPointer       = attCtx.Pointer || (!req && (att.DefaultValue == nil || !attCtx.UseDefault))
 		tval            = target
 	)
@@ -283,7 +318,10 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 		tval = "*" + tval
 	}
 	if alias {
-		tval = fmt.Sprintf("%s(%s)", att.Type.Name(), tval)
+		tval = fmt.Sprintf("%s(%s)", unaliased.Name(), tval)
+		// When validating alias types, use the underlying type's kind
+		// for string detection (needed for utf8.RuneCountInString usage)
+		kind = unaliased.Kind()
 	}
 	data := map[string]any{
 		"attribute": att,
