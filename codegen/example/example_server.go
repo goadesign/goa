@@ -96,6 +96,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, se
 			Source: exampleTemplates.Read(serverLoggerT),
 			Data: map[string]any{
 				"APIPkg": apiPkg,
+				"Server": svrdata,
 			},
 		}, {
 			Name:   "server-main-services",
