@@ -56,7 +56,8 @@ func API(name string, fn func()) *expr.APIExpr {
 
 // Title sets the API title. It is used by the generated OpenAPI specification.
 //
-// Title must appear in an API expression.
+// Title must appear in an API expression or any expression implementing
+// TitleHolder.
 //
 // Title accepts a single string argument.
 //
@@ -66,16 +67,20 @@ func API(name string, fn func()) *expr.APIExpr {
 //	    Title("divider API")
 //	})
 func Title(val string) {
-	if s, ok := eval.Current().(*expr.APIExpr); ok {
-		s.Title = val
-		return
+	switch e := eval.Current().(type) {
+	case *expr.APIExpr:
+		e.Title = val
+	case expr.TitleHolder:
+		e.SetTitle(val)
+	default:
+		eval.IncompatibleDSL()
 	}
-	eval.IncompatibleDSL()
 }
 
 // Version specifies the API version. One design describes one version.
 //
-// Version must appear in an API expression.
+// Version must appear in an API expression or any expression implementing
+// VersionHolder.
 //
 // Version accepts a single string argument.
 //
@@ -85,11 +90,14 @@ func Title(val string) {
 //	    Version("1.0")
 //	})
 func Version(ver string) {
-	if s, ok := eval.Current().(*expr.APIExpr); ok {
-		s.Version = ver
-		return
+	switch e := eval.Current().(type) {
+	case *expr.APIExpr:
+		e.Version = ver
+	case expr.VersionHolder:
+		e.SetVersion(ver)
+	default:
+		eval.IncompatibleDSL()
 	}
-	eval.IncompatibleDSL()
 }
 
 // Contact sets the API contact information.
@@ -278,7 +286,8 @@ func Email(email string) {
 
 // URL sets the contact, license or external documentation URL.
 //
-// URL must appear in Contact, License or Docs.
+// URL must appear in Contact, License, Docs, or any expression implementing
+// URLHolder.
 //
 // URL accepts a single argument which is the URL.
 //
@@ -295,6 +304,8 @@ func URL(url string) {
 		def.URL = url
 	case *expr.DocsExpr:
 		def.URL = url
+	case expr.URLHolder:
+		def.SetURL(url)
 	default:
 		eval.IncompatibleDSL()
 	}

@@ -65,6 +65,17 @@ files if they do not already exist.
 - Use multi‑line `if` blocks; target ~80‑column lines when practical.
 - Struct/composite literals: break long/named fields onto one field per line with trailing commas; close brace on its own line.
 
+### Slices, Maps, and Validation Contracts
+
+- Do not rely on `nil` vs empty slices or maps to encode presence for required
+  fields. Goa’s generated Go structs use `omitempty`, and gRPC/JSON treat both
+  `nil` and empty slices/maps as “missing” for required properties. If a field
+  is required at the contract level, model it as a non-collection scalar (or
+  use an explicit presence flag), not as “non‑empty slice implies present”.
+  Conversely, if an array/map may legitimately be empty, do **not** mark it
+  as required in the DSL—make the container required and the collection
+  optional.
+
 ## Testing Guidelines
 - Write table‑driven tests in `*_test.go` using `testing` (optionally `testify`).
 - Name tests `TestXxx`; keep unit tests fast and deterministic.

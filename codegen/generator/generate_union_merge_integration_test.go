@@ -54,7 +54,7 @@ func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
 	_ = cg.RunDSL(t, dsl)
 
 	dir := t.TempDir()
-	if _, err := Generate(dir, "gen"); err != nil {
+	if _, err := Generate(dir, "gen", false); err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
 

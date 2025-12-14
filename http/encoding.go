@@ -150,7 +150,7 @@ func ResponseEncoder(ctx context.Context, w http.ResponseWriter) Encoder {
 					enc = json.NewEncoder(w)
 				}
 			}
-			SetContentType(w, mt)
+			SetContentType(w, ct)
 			return enc
 		}
 		// If Accept header exists in the request, infer the response encoder

@@ -26,6 +26,11 @@ func CLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
 	svrdata := Servers.Get(svr, root)
 
+	// Skip CLI generation for servers with no transports (e.g., agent-only services)
+	if svrdata.DefaultTransport() == nil {
+		return nil
+	}
+
 	path := filepath.Join("cmd", svrdata.Dir+"-cli", "main.go")
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.

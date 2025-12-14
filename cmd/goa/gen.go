@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"goa.design/goa/v3/codegen"
 	"golang.org/x/tools/go/packages"
@@ -44,7 +45,7 @@ type Generator struct {
 }
 
 // NewGenerator creates a Generator.
-func NewGenerator(cmd, path, output string) *Generator {
+func NewGenerator(cmd, path, output string, debug bool) *Generator {
 	bin := "goa"
 	if runtime.GOOS == "windows" {
 		bin += ".exe"
@@ -55,7 +56,11 @@ func NewGenerator(cmd, path, output string) *Generator {
 	{
 		version = 2
 		matched := false
+		startPkgLoad := time.Now()
 		pkgs, _ := packages.Load(&packages.Config{Mode: packages.NeedFiles | packages.NeedModule}, path)
+		if debug {
+			fmt.Fprintf(os.Stderr, "[TIMING]   packages.Load (design files) took %v\n", time.Since(startPkgLoad))
+		}
 		fset := token.NewFileSet()
 		p := regexp.MustCompile(`goa.design/goa/v(\d+)/dsl`)
 		for _, pkg := range pkgs {
@@ -132,6 +137,7 @@ func (g *Generator) Write(_ bool) error {
 			codegen.SimpleImport("sort"),
 			codegen.SimpleImport("strconv"),
 			codegen.SimpleImport("strings"),
+			codegen.SimpleImport("time"),
 			codegen.SimpleImport("goa.design/goa/" + ver + "codegen"),
 			codegen.SimpleImport("goa.design/goa/" + ver + "codegen/generator"),
 			codegen.SimpleImport("goa.design/goa/" + ver + "eval"),
@@ -154,9 +160,10 @@ func (g *Generator) Write(_ bool) error {
 }
 
 // Compile compiles the generator.
-func (g *Generator) Compile() error {
+func (g *Generator) Compile(debug bool) error {
 	// We first need to go get the generated package to make sure that all
 	// dependencies are added to go.sum prior to compiling.
+	startLoad := time.Now()
 	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName}, fmt.Sprintf(".%c%s", filepath.Separator, g.tmpDir))
 	if err != nil {
 		return err
@@ -164,13 +171,25 @@ func (g *Generator) Compile() error {
 	if len(pkgs) != 1 {
 		return fmt.Errorf("expected to find one package in %s", g.tmpDir)
 	}
+	if debug {
+		fmt.Fprintf(os.Stderr, "[TIMING]   packages.Load (temp dir) took %v\n", time.Since(startLoad))
+	}
+
 	if !g.hasVendorDirectory {
+		startGet := time.Now()
 		if err := g.runGoCmd("get", pkgs[0].PkgPath); err != nil {
 			return err
 		}
+		if debug {
+			fmt.Fprintf(os.Stderr, "[TIMING]   go get took %v\n", time.Since(startGet))
+		}
 	}
 
+	startBuild := time.Now()
 	err = g.runGoCmd("build", "-o", g.bin)
+	if debug {
+		fmt.Fprintf(os.Stderr, "[TIMING]   go build took %v\n", time.Since(startBuild))
+	}
 
 	// If we're in vendor context we check the error string to see if it's an issue of unsatisfied dependencies
 	if err != nil && g.hasVendorDirectory {
@@ -183,7 +202,7 @@ func (g *Generator) Compile() error {
 }
 
 // Run runs the compiled binary and return the output lines.
-func (g *Generator) Run() ([]string, error) {
+func (g *Generator) Run(debug bool) ([]string, error) {
 	var cmdl string
 	{
 		args := make([]string, len(os.Args)-1)
@@ -210,7 +229,7 @@ func (g *Generator) Run() ([]string, error) {
 		cmdl = fmt.Sprintf("$ %s%s", rawcmd, cmdl)
 	}
 
-	args := []string{"--version=" + strconv.Itoa(g.DesignVersion), "--output=" + g.Output, "--cmd=" + cmdl}
+	args := []string{"--version=" + strconv.Itoa(g.DesignVersion), "--output=" + g.Output, "--cmd=" + cmdl, "--debug=" + strconv.FormatBool(debug)}
 	cmd := exec.Command(filepath.Join(g.tmpDir, g.bin), args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -291,6 +310,7 @@ const mainT = `func main() {
 		out     = flag.String("output", "", "")
 		version = flag.String("version", "", "")
 		cmdl    = flag.String("cmd", "", "")
+		debug   = flag.Bool("debug", false, "")
 		ver int
 	)
 	{
@@ -311,15 +331,31 @@ const mainT = `func main() {
 		ver = v
 	}
 
+	startBinary := time.Now()
+	if *debug {
+		fmt.Fprintf(os.Stderr, "[TIMING]   [binary] Starting generated binary execution\n")
+	}
+
 	if ver > goa.Major {
 		fail("cannot run goa %s on design using goa v%s\n", goa.Version(), *version)
 	}
+
+	startCheckErrors := time.Now()
 	if err := eval.Context.Errors; err != nil {
 		fail(err.Error())
 	}
+	if *debug {
+		fmt.Fprintf(os.Stderr, "[TIMING]   [binary] Check eval.Context.Errors took %v\n", time.Since(startCheckErrors))
+	}
+
+	startRunDSL := time.Now()
 	if err := eval.RunDSL(); err != nil {
 		fail(err.Error())
 	}
+	if *debug {
+		fmt.Fprintf(os.Stderr, "[TIMING]   [binary] eval.RunDSL() took %v\n", time.Since(startRunDSL))
+	}
+
 {{- range .CleanupDirs }}
 	if err := os.RemoveAll({{ printf "%q" . }}); err != nil {
 		fail(err.Error())
@@ -328,11 +364,16 @@ const mainT = `func main() {
 {{- if gt .DesignVersion 2 }}
 	codegen.DesignVersion = ver
 {{- end }}
-	outputs, err := generator.Generate(*out, {{ printf "%q" .Command }})
+
+	startGenerate := time.Now()
+	outputs, err := generator.Generate(*out, {{ printf "%q" .Command }}, *debug)
 	if err != nil {
 		fail(err.Error())
 	}
-
+	if *debug {
+		fmt.Fprintf(os.Stderr, "[TIMING]   [binary] generator.Generate() took %v\n", time.Since(startGenerate))
+		fmt.Fprintf(os.Stderr, "[TIMING]   [binary] Total binary execution took %v\n", time.Since(startBinary))
+	}
 	fmt.Println(strings.Join(outputs, "\n"))
 }
 
