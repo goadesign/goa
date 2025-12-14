@@ -182,6 +182,17 @@ func TestResponseEncoder(t *testing.T) {
 	}
 }
 
+func TestResponseEncoder_ContentTypeHeaderPreservesCharset(t *testing.T) {
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, ContentTypeKey, "application/json; charset=utf-8")
+	w := httptest.NewRecorder()
+
+	encoder := ResponseEncoder(ctx, w)
+
+	require.Equal(t, "*json.Encoder", fmt.Sprintf("%T", encoder))
+	assert.Equal(t, "application/json; charset=utf-8", w.Header().Get("Content-Type"))
+}
+
 func TestResponseEncoder_Encode_ErrorResponse(t *testing.T) {
 	var (
 		serviceError              = goa.NewServiceError(errors.New("foo"), "foo", false, false, false)
