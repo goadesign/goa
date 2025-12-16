@@ -130,14 +130,20 @@ const DefaultProtoc = expr.DefaultProtoc
 //	    })
 //	})
 //
-// - "proto:tag:json" sets the JSON name emitted in the generated protobuf
-//   field option. Applicable to attributes only.
+// - "struct:tag:json:name" sets the JSON field name used when Goa generates a
+// `json` struct tag for non-transport types (e.g., service types in gen/<svc>/service.go).
+// Goa appends ",omitempty" automatically when the attribute is not required by
+// its parent object. If "struct:tag:json" is also set, it takes precedence and
+// overrides the tag entirely.
 //
-//	var MyType = Type("MyType", func() {
-//	    Field(1, "id", String, func() {
-//	        Meta("proto:tag:json", "identifier")
-//	    })
-//	})
+//   - "proto:tag:json" sets the JSON name emitted in the generated protobuf
+//     field option. Applicable to attributes only.
+//
+//     var MyType = Type("MyType", func() {
+//     Field(1, "id", String, func() {
+//     Meta("proto:tag:json", "identifier")
+//     })
+//     })
 //
 // - "protoc:cmd" provides an alternate command to execute for protoc with
 // optional arguments. Applicable to API and service definitions only. If used
