@@ -80,6 +80,9 @@ type (
 		// ClientTransformHelpers is the list of transform functions
 		// required by the various client side constructors.
 		ClientTransformHelpers []*codegen.TransformFunctionData
+		// UnionTypes lists the sum-type unions referenced by the HTTP request and
+		// response body types.
+		UnionTypes []*service.UnionTypeData
 		// Scope initialized with all the server and client types.
 		Scope *codegen.NameScope
 	}
@@ -952,6 +955,35 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			})
 		}
 	}
+
+	unionByHash := make(map[string]*service.UnionTypeData)
+	seenUnionTypes := make(map[string]struct{})
+	for _, a := range httpSvc.HTTPEndpoints {
+		collectHTTPUnionTypes(a.Body, sd.Scope, unionByHash, seenUnionTypes)
+
+		if a.MethodExpr.StreamingPayload.Type != expr.Empty {
+			collectHTTPUnionTypes(a.StreamingBody, sd.Scope, unionByHash, seenUnionTypes)
+		}
+
+		if a.MethodExpr.Result != nil {
+			for _, v := range a.Responses {
+				collectHTTPUnionTypes(v.Body, sd.Scope, unionByHash, seenUnionTypes)
+			}
+		}
+
+		for _, v := range a.HTTPErrors {
+			collectHTTPUnionTypes(v.Response.Body, sd.Scope, unionByHash, seenUnionTypes)
+		}
+	}
+
+	unions := make([]*service.UnionTypeData, 0, len(unionByHash))
+	for _, u := range unionByHash {
+		unions = append(unions, u)
+	}
+	sort.Slice(unions, func(i, j int) bool {
+		return unions[i].Name < unions[j].Name
+	})
+	sd.UnionTypes = unions
 
 	return sd
 }
@@ -2627,6 +2659,10 @@ func collectUserTypes(dt expr.DataType, cb func(expr.UserType), seen ...map[stri
 		for _, nat := range *actual {
 			collectUserTypes(nat.Attribute.Type, cb, seen...)
 		}
+	case *expr.Union:
+		for _, nat := range actual.Values {
+			collectUserTypes(nat.Attribute.Type, cb, seen...)
+		}
 	case *expr.Array:
 		collectUserTypes(actual.ElemType.Type, cb, seen...)
 	case *expr.Map:
@@ -2639,6 +2675,63 @@ func collectUserTypes(dt expr.DataType, cb func(expr.UserType), seen ...map[stri
 		s[actual.ID()] = struct{}{}
 		cb(actual)
 		collectUserTypes(actual.Attribute().Type, cb, s)
+	}
+}
+
+func collectHTTPUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, unions map[string]*service.UnionTypeData, seen map[string]struct{}) {
+	if att == nil || att.Type == expr.Empty {
+		return
+	}
+	switch dt := att.Type.(type) {
+	case expr.UserType:
+		if _, ok := seen[dt.ID()]; ok {
+			return
+		}
+		seen[dt.ID()] = struct{}{}
+		collectHTTPUnionTypes(dt.Attribute(), scope, unions, seen)
+	case *expr.Object:
+		for _, nat := range *dt {
+			collectHTTPUnionTypes(nat.Attribute, scope, unions, seen)
+		}
+	case *expr.Array:
+		collectHTTPUnionTypes(dt.ElemType, scope, unions, seen)
+	case *expr.Map:
+		collectHTTPUnionTypes(dt.KeyType, scope, unions, seen)
+		collectHTTPUnionTypes(dt.ElemType, scope, unions, seen)
+	case *expr.Union:
+		hash := dt.Hash()
+		if _, ok := unions[hash]; !ok {
+			unions[hash] = buildHTTPUnionTypeData(dt, scope)
+		}
+		for _, nat := range dt.Values {
+			collectHTTPUnionTypes(nat.Attribute, scope, unions, seen)
+		}
+	}
+}
+
+func buildHTTPUnionTypeData(u *expr.Union, scope *codegen.NameScope) *service.UnionTypeData {
+	att := &expr.AttributeExpr{Type: u}
+	name := scope.GoTypeName(att)
+	kindName := scope.Unique(name + "Kind")
+
+	fields := make([]*service.UnionFieldData, len(u.Values))
+	for i, nat := range u.Values {
+		fieldName := codegen.Goify(nat.Name, true)
+		fieldType := scope.GoTypeRef(nat.Attribute)
+		kindConst := kindName + fieldName
+		fields[i] = &service.UnionFieldData{
+			Name:      nat.Name,
+			KindConst: kindConst,
+			FieldName: fieldName,
+			FieldType: fieldType,
+			TypeTag:   nat.Name,
+		}
+	}
+
+	return &service.UnionTypeData{
+		Name:     name,
+		KindName: kindName,
+		Fields:   fields,
 	}
 }
 

@@ -72,6 +72,12 @@ func (u Values) AsA() (_ *TypeA, ok bool) {
 	return u.A, true
 }
 
+// SetA sets the a branch of the union.
+func (u *Values) SetA(v *TypeA) {
+	u.kind = ValuesKindA
+	u.A = v
+}
+
 // NewValuesB constructs a Values with the b branch set.
 func NewValuesB(v *TypeB) Values {
 	return Values{
@@ -86,6 +92,12 @@ func (u Values) AsB() (_ *TypeB, ok bool) {
 		return
 	}
 	return u.B, true
+}
+
+// SetB sets the b branch of the union.
+func (u *Values) SetB(v *TypeB) {
+	u.kind = ValuesKindB
+	u.B = v
 }
 
 // Validate ensures the union discriminant is valid.
@@ -162,5 +174,4 @@ func (u *Values) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
-
 

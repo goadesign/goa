@@ -30,4 +30,3 @@ func TestNormalizeFileForPackageMatch(t *testing.T) {
 		})
 	}
 }
-

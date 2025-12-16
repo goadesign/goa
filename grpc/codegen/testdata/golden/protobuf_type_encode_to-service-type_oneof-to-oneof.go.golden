@@ -3,9 +3,17 @@ func transform() {
 	if source.SimpleOneOf != nil {
 		switch val := source.SimpleOneOf.(type) {
 		case *proto.SimpleOneOf_String_:
-			target.SimpleOneOf = proto.SimpleOneOfString(val.String_)
+			{
+				u := target.SimpleOneOf
+				u.SetString(proto.SimpleOneOfString(val.String_))
+				target.SimpleOneOf = u
+			}
 		case *proto.SimpleOneOf_Integer:
-			target.SimpleOneOf = proto.SimpleOneOfInteger(val.Integer)
+			{
+				u := target.SimpleOneOf
+				u.SetInteger(proto.SimpleOneOfInteger(val.Integer))
+				target.SimpleOneOf = u
+			}
 		}
 	}
 }

@@ -64,6 +64,12 @@ func (u Values) AsDevice() (_ alias.Alias, ok bool) {
 	return u.Device, true
 }
 
+// SetDevice sets the Device branch of the union.
+func (u *Values) SetDevice(v alias.Alias) {
+	u.kind = ValuesKindDevice
+	u.Device = v
+}
+
 // NewValuesMetric constructs a Values with the Metric branch set.
 func NewValuesMetric(v alias.Alias) Values {
 	return Values{
@@ -78,6 +84,12 @@ func (u Values) AsMetric() (_ alias.Alias, ok bool) {
 		return
 	}
 	return u.Metric, true
+}
+
+// SetMetric sets the Metric branch of the union.
+func (u *Values) SetMetric(v alias.Alias) {
+	u.kind = ValuesKindMetric
+	u.Metric = v
 }
 
 // Validate ensures the union discriminant is valid.
@@ -154,5 +166,4 @@ func (u *Values) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
-
 

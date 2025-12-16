@@ -26,4 +26,3 @@ func TestIncompatibleDSLIncludesTypeContext(t *testing.T) {
 		t.Fatalf("unexpected error: %s", err.Error())
 	}
 }
-

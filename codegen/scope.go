@@ -149,7 +149,7 @@ func (s *NameScope) goTypeDefWithPkgOverride(att *expr.AttributeExpr, ptr, useDe
 		if targetPkg != "" {
 			return s.GoFullTypeName(att, targetPkg)
 		}
-		return s.GoFullTypeName(att, pkg)
+		return s.GoFullTypeName(att, "")
 	case *expr.Object:
 		ss := []string{"struct {"}
 		for _, nat := range *actual {

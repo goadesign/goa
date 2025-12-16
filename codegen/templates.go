@@ -20,6 +20,7 @@ const (
 	validationArrayT      = "validation/array"
 	validationMapT        = "validation/map"
 	validationUnionT      = "validation/union"
+	validationUnionSumT   = "validation/union_sum"
 	validationUserT       = "validation/user"
 	validationEnumT       = "validation/enum"
 	validationPatternT    = "validation/pattern"

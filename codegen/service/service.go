@@ -246,7 +246,10 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		}
 		fullRelPath := filepath.Join(codegen.Gendir, p)
 		dir, _ := filepath.Split(fullRelPath)
-		h := codegen.Header("User types", codegen.Goify(filepath.Base(dir), false), nil)
+		h := codegen.Header("User types", codegen.Goify(filepath.Base(dir), false), []*codegen.ImportSpec{
+			codegen.SimpleImport("fmt"),
+			codegen.GoaImport(""),
+		})
 		sections := append([]*codegen.SectionTemplate{h}, secs...)
 		files = append(files, &codegen.File{Path: fullRelPath, SectionTemplates: sections})
 	}

@@ -78,6 +78,12 @@ func (u Values) AsInt() (_ ValuesInt, ok bool) {
 	return u.Int, true
 }
 
+// SetInt sets the Int branch of the union.
+func (u *Values) SetInt(v ValuesInt) {
+	u.kind = ValuesKindInt
+	u.Int = v
+}
+
 // NewValuesString constructs a Values with the String branch set.
 func NewValuesString(v ValuesString) Values {
 	return Values{
@@ -92,6 +98,12 @@ func (u Values) AsString() (_ ValuesString, ok bool) {
 		return
 	}
 	return u.String, true
+}
+
+// SetString sets the String branch of the union.
+func (u *Values) SetString(v ValuesString) {
+	u.kind = ValuesKindString
+	u.String = v
 }
 
 // NewValuesBoolean constructs a Values with the Boolean branch set.
@@ -110,6 +122,12 @@ func (u Values) AsBoolean() (_ ValuesBoolean, ok bool) {
 	return u.Boolean, true
 }
 
+// SetBoolean sets the Boolean branch of the union.
+func (u *Values) SetBoolean(v ValuesBoolean) {
+	u.kind = ValuesKindBoolean
+	u.Boolean = v
+}
+
 // NewValuesBytes constructs a Values with the Bytes branch set.
 func NewValuesBytes(v ValuesBytes) Values {
 	return Values{
@@ -124,6 +142,12 @@ func (u Values) AsBytes() (_ ValuesBytes, ok bool) {
 		return
 	}
 	return u.Bytes, true
+}
+
+// SetBytes sets the Bytes branch of the union.
+func (u *Values) SetBytes(v ValuesBytes) {
+	u.kind = ValuesKindBytes
+	u.Bytes = v
 }
 
 // Validate ensures the union discriminant is valid.
@@ -226,5 +250,4 @@ func (u *Values) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
-
 

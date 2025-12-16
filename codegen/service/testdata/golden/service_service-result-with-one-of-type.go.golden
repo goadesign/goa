@@ -76,6 +76,12 @@ func (u Result) AsT() (_ *T, ok bool) {
 	return u.T, true
 }
 
+// SetT sets the t branch of the union.
+func (u *Result) SetT(v *T) {
+	u.kind = ResultKindT
+	u.T = v
+}
+
 // NewResultU constructs a Result with the u branch set.
 func NewResultU(v *U) Result {
 	return Result{
@@ -90,6 +96,12 @@ func (u Result) AsU() (_ *U, ok bool) {
 		return
 	}
 	return u.U, true
+}
+
+// SetU sets the u branch of the union.
+func (u *Result) SetU(v *U) {
+	u.kind = ResultKindU
+	u.U = v
 }
 
 // Validate ensures the union discriminant is valid.
@@ -184,19 +196,27 @@ func NewViewedResultOneof(res *ResultOneof, view string) *resultwithoneoftypevie
 // ResultOneof.
 func newResultOneof(vres *resultwithoneoftypeviews.ResultOneofView) *ResultOneof {
 	res := &ResultOneof{}
-	if vres.Result != nil {
-		switch actual := vres.Result.(type) {
-		case *resultwithoneoftypeviews.TView:
+	if vres.Result.Kind() != "" {
+		switch string(vres.Result.Kind()) {
+		case "t":
+			actual, _ := vres.Result.AsT()
 			obj := &T{
 				Message: actual.Message,
 			}
-			res.Result = obj
-		case *resultwithoneoftypeviews.UView:
+
+			u := res.Result
+			u.SetT((*T)(obj))
+			res.Result = u
+		case "u":
+			actual, _ := vres.Result.AsU()
 			obj := &U{}
 			if actual.Item != nil {
-				obj.(*U).Item = transformResultwithoneoftypeviewsItemViewToItem(actual.Item)
+				obj.Item = transformResultwithoneoftypeviewsItemViewToItem(actual.Item)
 			}
-			res.Result = obj
+
+			u := res.Result
+			u.SetU((*U)(obj))
+			res.Result = u
 		}
 	}
 	return res
@@ -206,19 +226,27 @@ func newResultOneof(vres *resultwithoneoftypeviews.ResultOneofView) *ResultOneof
 // ResultOneofView using the "default" view.
 func newResultOneofView(res *ResultOneof) *resultwithoneoftypeviews.ResultOneofView {
 	vres := &resultwithoneoftypeviews.ResultOneofView{}
-	if res.Result != nil {
-		switch actual := res.Result.(type) {
-		case *T:
+	if res.Result.Kind() != "" {
+		switch string(res.Result.Kind()) {
+		case "t":
+			actual, _ := res.Result.AsT()
 			obj := &resultwithoneoftypeviews.TView{
 				Message: actual.Message,
 			}
-			vres.Result = obj
-		case *U:
+
+			u := vres.Result
+			u.SetT((*resultwithoneoftypeviews.TView)(obj))
+			vres.Result = u
+		case "u":
+			actual, _ := res.Result.AsU()
 			obj := &resultwithoneoftypeviews.UView{}
 			if actual.Item != nil {
-				obj.(*resultwithoneoftypeviews.UView).Item = transformItemToResultwithoneoftypeviewsItemView(actual.Item)
+				obj.Item = transformItemToResultwithoneoftypeviewsItemView(actual.Item)
 			}
-			vres.Result = obj
+
+			u := vres.Result
+			u.SetU((*resultwithoneoftypeviews.UView)(obj))
+			vres.Result = u
 		}
 	}
 	return vres

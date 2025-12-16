@@ -117,4 +117,3 @@ func (u *{{ .Name }}) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
-

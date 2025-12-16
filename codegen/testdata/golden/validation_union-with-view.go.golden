@@ -1,47 +1,50 @@
 func Validate() (err error) {
-	if target.RequiredUnion == nil {
+	if target.RequiredUnion.Kind() == "" {
 		err = goa.MergeErrors(err, goa.MissingFieldError("required_union", "target"))
 	}
-	switch v := target.RequiredUnion.(type) {
-	case *Integer:
-		if v != nil {
-			if err2 := ValidateInteger(v); err2 != nil {
+	switch string(target.RequiredUnion.Kind()) {
+	case "int":
+		actual, _ := target.RequiredUnion.AsInt()
+		if actual != nil {
+			if err2 := ValidateInteger(actual); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
-
-	case *Float:
-		if v != nil {
-			if err2 := ValidateFloat(v); err2 != nil {
+	case "float":
+		actual, _ := target.RequiredUnion.AsFloat()
+		if actual != nil {
+			if err2 := ValidateFloat(actual); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
-
-	case *String:
-		if v != nil {
-			if err2 := ValidateString(v); err2 != nil {
+	case "string":
+		actual, _ := target.RequiredUnion.AsString()
+		if actual != nil {
+			if err2 := ValidateString(actual); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
 	}
-	switch v := target.Union.(type) {
-	case *Integer:
-		if v != nil {
-			if err2 := ValidateInteger(v); err2 != nil {
+
+	switch string(target.Union.Kind()) {
+	case "int":
+		actual, _ := target.Union.AsInt()
+		if actual != nil {
+			if err2 := ValidateInteger(actual); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
-
-	case *Float:
-		if v != nil {
-			if err2 := ValidateFloat(v); err2 != nil {
+	case "float":
+		actual, _ := target.Union.AsFloat()
+		if actual != nil {
+			if err2 := ValidateFloat(actual); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
-
-	case *String:
-		if v != nil {
-			if err2 := ValidateString(v); err2 != nil {
+	case "string":
+		actual, _ := target.Union.AsString()
+		if actual != nil {
+			if err2 := ValidateString(actual); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}

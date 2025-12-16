@@ -5,9 +5,17 @@ func transform() {
 	if source.RecursiveOneOf != nil {
 		switch val := source.RecursiveOneOf.(type) {
 		case *proto.RecursiveOneOf_Integer:
-			target.RecursiveOneOf = proto.RecursiveOneOfInteger(val.Integer)
+			{
+				u := target.RecursiveOneOf
+				u.SetInteger(proto.RecursiveOneOfInteger(val.Integer))
+				target.RecursiveOneOf = u
+			}
 		case *proto.RecursiveOneOf_Recurse:
-			target.RecursiveOneOf = protobufProtoRecursiveOneOfToProtoRecursiveOneOf(val.Recurse)
+			{
+				u := target.RecursiveOneOf
+				u.SetRecurse(protobufProtoRecursiveOneOfToProtoRecursiveOneOf(val.Recurse))
+				target.RecursiveOneOf = u
+			}
 		}
 	}
 }

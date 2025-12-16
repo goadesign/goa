@@ -48,6 +48,7 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 	path = filepath.Join(codegen.Gendir, "http", svcName, "server", "types.go")
 	imports := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
+		{Path: "fmt"},
 		{Path: "unicode/utf8"},
 		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 		codegen.GoaImport(""),
@@ -162,6 +163,15 @@ func serverType(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 		if tdata.ValidateDef != "" {
 			validatedTypes = append(validatedTypes, tdata)
 		}
+	}
+
+	// union sum types
+	for _, u := range data.UnionTypes {
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "server-union-type",
+			Source: httpTemplates.Read(unionTypeT),
+			Data:   u,
+		})
 	}
 
 	// body constructors

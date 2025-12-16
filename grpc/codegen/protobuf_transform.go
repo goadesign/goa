@@ -179,7 +179,7 @@ func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 				// At top-level we do not expect pointer-to-interface unions.
 				code, err = transformUnionToProto(source, target, sourceVar, targetVar, false, ta)
 			} else {
-				code, err = transformUnionFromProto(source, target, sourceVar, targetVar, false, ta)
+				code, err = transformUnionFromProto(source, target, sourceVar, targetVar, ta)
 			}
 		case source.Type.Kind() == expr.AnyKind || target.Type.Kind() == expr.AnyKind:
 			// Special handling for Any type conversions
@@ -345,7 +345,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				} else {
 					// Service unions in Goa are represented as interface types, not *interface.
 					// Always assign concrete values to the interface (no pointer-to-interface).
-					code, err = transformUnionFromProto(srcc, tgtc, srcVar, tgtVar, false, ta)
+					code, err = transformUnionFromProto(srcc, tgtc, srcVar, tgtVar, ta)
 				}
 			}
 		}
@@ -367,7 +367,11 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			checkNil = isRef || marshalNonPrimitive
 		}
 		if code != "" && checkNil {
-			code = fmt.Sprintf("if %s != nil {\n\t%s}\n", srcVar, code)
+			cond := fmt.Sprintf("if %s != nil {\n", srcVar)
+			if expr.IsUnion(srcc.Type) && ta.proto {
+				cond = fmt.Sprintf("if %s.Kind() != \"\" {\n", srcVar)
+			}
+			code = fmt.Sprintf("%s\t%s}\n", cond, code)
 		}
 
 		// Default value handling. We need to handle default values if the target
@@ -580,31 +584,33 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 }
 
 // transformUnionToProto returns the code to transform an attribute of type
-// union from Goa to protobuf. It returns an error if source and target are not
+// union from protobuf to Goa. It returns an error if source and target are not
 // compatible for transformation.
 func transformUnionToProto(source, target *expr.AttributeExpr, sourceVar, targetVar string, sourcePtr bool, ta *transformAttrs) (string, error) {
 	if err := codegen.IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
 		return "", err
 	}
 	tdata := transformUnionData(source, target, ta)
-	targetValueTypeNames := make([]string, len(tdata.TargetValues))
-	targetFieldNames := make([]string, len(tdata.TargetValues))
-	for i, v := range tdata.TargetValues {
-		fieldName := ta.TargetCtx.Scope.Field(v.Attribute, v.Name, true)
-		targetFieldNames[i] = fieldName
-		targetValueTypeNames[i] = ta.message + "_" + fieldName
+	cases := make([]map[string]any, 0, len(tdata.SourceValues))
+	for i, sv := range tdata.SourceValues {
+		tv := tdata.TargetValues[i]
+		fieldName := ta.TargetCtx.Scope.Field(tv.Attribute, tv.Name, true)
+		cases = append(cases, map[string]any{
+			"typeTag":           sv.Name,
+			"sourceFieldName":   codegen.Goify(sv.Name, true),
+			"sourceAttr":        sv.Attribute,
+			"targetAttr":        tv.Attribute,
+			"targetWrapperType": ta.message + "_" + fieldName,
+			"targetFieldName":   fieldName,
+		})
 	}
 
 	data := map[string]any{
-		"SourceVar":            sourceVar,
-		"TargetVar":            targetVar,
-		"SourcePtr":            sourcePtr,
-		"SourceValueTypeRefs":  tdata.SourceValueTypeRefs,
-		"SourceValues":         tdata.SourceValues,
-		"TargetValues":         tdata.TargetValues,
-		"TransformAttrs":       ta,
-		"TargetValueTypeNames": targetValueTypeNames,
-		"TargetFieldNames":     targetFieldNames,
+		"SourceVar":      sourceVar,
+		"TargetVar":      targetVar,
+		"SourcePtr":      sourcePtr,
+		"TransformAttrs": ta,
+		"Cases":          cases,
 	}
 	var buf bytes.Buffer
 	if err := transformGoUnionToProtoT.Execute(&buf, data); err != nil {
@@ -614,32 +620,31 @@ func transformUnionToProto(source, target *expr.AttributeExpr, sourceVar, target
 }
 
 // transformUnionFromProto returns the code to transform an attribute of type
-// union from Goa to protobuf. It returns an error if source and target are not
+// union from protobuf to Goa. It returns an error if source and target are not
 // compatible for transformation.
-func transformUnionFromProto(source, target *expr.AttributeExpr, sourceVar, targetVar string, targetPtr bool, ta *transformAttrs) (string, error) {
+func transformUnionFromProto(source, target *expr.AttributeExpr, sourceVar, targetVar string, ta *transformAttrs) (string, error) {
 	if err := codegen.IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
 		return "", err
 	}
 	tdata := transformUnionData(source, target, ta)
-	sourceFieldNames := make([]string, len(tdata.SourceValues))
-	for i, v := range tdata.SourceValues {
-		fieldName := ta.SourceCtx.Scope.Field(v.Attribute, v.Name, true)
-		sourceFieldNames[i] = fieldName
+	cases := make([]map[string]any, 0, len(tdata.SourceValues))
+	for i, sv := range tdata.SourceValues {
+		tv := tdata.TargetValues[i]
+		sourceFieldName := ta.SourceCtx.Scope.Field(sv.Attribute, sv.Name, true)
+		targetFieldName := codegen.Goify(tv.Name, true)
+		cases = append(cases, map[string]any{
+			"sourceValueTypeRef": tdata.SourceValueTypeRefs[i],
+			"sourceFieldName":    sourceFieldName,
+			"sourceAttr":         sv.Attribute,
+			"targetAttr":         tv.Attribute,
+			"targetFieldName":    targetFieldName,
+		})
 	}
-
-	// Non-pointer interface type for union target (avoid *interface which would yield ** on address-of)
-	targetIface := ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg(target), false, ta.TargetCtx.UseDefault)
 	data := map[string]any{
-		"SourceVar":           sourceVar,
-		"TargetVar":           targetVar,
-		"TargetPtr":           targetPtr,
-		"TargetIface":         targetIface,
-		"SourceValueTypeRefs": tdata.SourceValueTypeRefs,
-		"SourceFieldNames":    sourceFieldNames,
-		"SourceValues":        tdata.SourceValues,
-		"TargetValues":        tdata.TargetValues,
-		"TransformAttrs":      ta,
-		"TargetWrapperRefs":   tdata.TargetWrapperRefs,
+		"SourceVar":      sourceVar,
+		"TargetVar":      targetVar,
+		"TransformAttrs": ta,
+		"Cases":          cases,
 	}
 	var buf bytes.Buffer
 	if err := transformGoUnionFromProtoT.Execute(&buf, data); err != nil {

@@ -1,7 +1,8 @@
-switch src := {{ if .SourcePtr }}(*{{ .SourceVar }}){{ else }}{{ .SourceVar }}{{ end }}.(type) {
-{{- range $i, $ref := .SourceValueTypeRefs }}
-case {{ . }}:
-		{{- $val := (convertType (index $.SourceValues $i).Attribute (index $.TargetValues $i).Attribute false false "src" $.TransformAttrs) }}
-		{{ $.TargetVar }} = &{{ index $.TargetValueTypeNames $i }}{ {{ (index $.TargetFieldNames $i) }}: {{ $val }} }
+switch string({{ if .SourcePtr }}(*{{ .SourceVar }}){{ else }}{{ .SourceVar }}{{ end }}.Kind()) {
+{{- range .Cases }}
+case {{ printf "%q" .typeTag }}:
+	actual, _ := {{ if $.SourcePtr }}(*{{ $.SourceVar }}){{ else }}{{ $.SourceVar }}{{ end }}.As{{ .sourceFieldName }}()
+	{{- $val := (convertType .sourceAttr .targetAttr false false "actual" $.TransformAttrs) }}
+	{{ $.TargetVar }} = &{{ .targetWrapperType }}{ {{ .targetFieldName }}: {{ $val }} }
 {{- end }}
 }

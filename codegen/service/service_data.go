@@ -1066,6 +1066,7 @@ func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Lo
 	att := &expr.AttributeExpr{Type: u}
 	name := scope.GoTypeName(att)
 	kindName := scope.Unique(name + "Kind")
+	unionPkg := loc.PackageName()
 
 	fields := make([]*UnionFieldData, len(u.Values))
 	for i, nat := range u.Values {
@@ -1073,6 +1074,9 @@ func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Lo
 		var pkg string
 		if tloc := codegen.UserTypeLocation(nat.Attribute.Type); tloc != nil {
 			pkg = tloc.PackageName()
+			if pkg == unionPkg {
+				pkg = ""
+			}
 		}
 		fieldType := scope.GoFullTypeRef(nat.Attribute, pkg)
 		kindConst := kindName + codegen.Goify(nat.Name, true)
@@ -2262,4 +2266,3 @@ func removeMeta(att *expr.AttributeExpr) {
 		return nil
 	})
 }
-

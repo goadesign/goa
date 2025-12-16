@@ -106,9 +106,11 @@ func transformPrimitive(source, target *expr.AttributeExpr, sourceVar, targetVar
 	if newVar {
 		assign = ":="
 	}
-	if source.Type.Name() != target.Type.Name() {
-		cast := ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target))
-		return fmt.Sprintf("%s %s %s(%s)\n", targetVar, assign, cast, sourceVar), nil
+
+	srcRef := ta.SourceCtx.Scope.Ref(source, ta.SourceCtx.Pkg(source))
+	tgtRef := ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target))
+	if srcRef != tgtRef {
+		return fmt.Sprintf("%s %s %s(%s)\n", targetVar, assign, tgtRef, sourceVar), nil
 	}
 	return fmt.Sprintf("%s %s %s\n", targetVar, assign, sourceVar), nil
 }
@@ -249,7 +251,11 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			checkNil = isRef || marshalNonPrimitive
 		}
 		if code != "" && checkNil {
-			code = fmt.Sprintf("if %s != nil {\n\t%s}", srcVar, code)
+			cond := fmt.Sprintf("if %s != nil {\n", srcVar)
+			if expr.IsUnion(srcc.Type) {
+				cond = fmt.Sprintf("if %s.Kind() != \"\" {\n", srcVar)
+			}
+			code = fmt.Sprintf("%s\t%s}", cond, code)
 			if expr.IsArray(srcc.Type) && srcMatt.IsRequired(n) {
 				code += fmt.Sprintf("else {\n\t%s = []%s{}\n}\n", tgtVar, ta.TargetCtx.Scope.Ref(expr.AsArray(tgtc.Type).ElemType, ta.TargetCtx.Pkg(expr.AsArray(tgtc.Type).ElemType)))
 			} else {
@@ -453,37 +459,59 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 				source.Type.Name(), target.Type.Name(), i, err)
 		}
 	}
-	sourceTypeRefs := make([]string, len(srcUnion.Values))
-	for i, st := range srcUnion.Values {
-		sourceTypeRefs[i] = ta.TargetCtx.Scope.Ref(st.Attribute, ta.SourceCtx.Pkg(st.Attribute))
-	}
-	targetTypeNames := make([]string, len(tgtUnion.Values))
-	for i, tt := range tgtUnion.Values {
-		targetTypeNames[i] = ta.TargetCtx.Scope.Name(tt.Attribute, ta.TargetCtx.Pkg(tt.Attribute), ta.TargetCtx.Pointer, ta.TargetCtx.Pointer)
-	}
 
-	// Need to type assert targetVar before assigning field values.
-	ta.TargetCtx.IsInterface = true
+	// Unions are generated as concrete sum-type structs with Kind/AsX/SetX
+	// helpers. Transform by branching on the runtime Kind discriminator.
+	unionPkg := ta.TargetCtx.Pkg(target)
+	typeRef := ta.TargetCtx.Scope.Ref(target, unionPkg)
 
-	base := "obj"
-	if strings.HasPrefix(targetVar, "obj.") {
-		base = "tmp"
-	}
 	// Use deterministic temp var: 'obj' at top-level, 'tmp' for nested assignments.
-	tmp := base
+	tempVarName := "obj"
+	if strings.HasPrefix(targetVar, "obj.") {
+		tempVarName = "tmp"
+	}
+
+	cases := make([]map[string]any, 0, len(srcUnion.Values))
+	for i, st := range srcUnion.Values {
+		if st == nil || st.Attribute == nil {
+			continue
+		}
+		if i >= len(tgtUnion.Values) {
+			break
+		}
+		tt := tgtUnion.Values[i]
+		if tt == nil || tt.Attribute == nil {
+			continue
+		}
+		castPkg := ta.TargetCtx.Pkg(tt.Attribute)
+		// When generating transforms outside of the type's package, some nested
+		// helper user types may not carry struct:pkg:path metadata. In that case
+		// default to the union type package rather than the current file package.
+		if castPkg == ta.TargetCtx.DefaultPkg && unionPkg != "" && unionPkg != ta.TargetCtx.DefaultPkg {
+			castPkg = unionPkg
+		}
+		cases = append(cases, map[string]any{
+			"CaseName":        st.Name,
+			"SourceFieldName": Goify(st.Name, true),
+			"TargetFieldName": Goify(tt.Name, true),
+			"SourceAttr":      st.Attribute,
+			"TargetAttr":      tt.Attribute,
+			"TargetCastType":  ta.TargetCtx.Scope.Ref(tt.Attribute, castPkg),
+		})
+	}
 
 	data := map[string]any{
-		"SourceTypeRefs": sourceTypeRefs,
-		"SourceTypes":    srcUnion.Values,
-		"TargetTypes":    tgtUnion.Values,
-		"SourceVar":      sourceVar,
-		"TargetVar":      targetVar,
-		"NewVar":         newVar,
-		"TypeRef":        ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target)),
-		"TargetTypeName": ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg(target), ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault),
-		"TransformAttrs": ta,
-		"TempVarName":    tmp,
+		"SourceVar":       sourceVar,
+		"TargetVar":       targetVar,
+		"NewVar":          newVar,
+		"TypeRef":         typeRef,
+		"TargetIsPointer": strings.HasPrefix(typeRef, "*"),
+		"ValueTypeRef":    strings.TrimPrefix(typeRef, "*"),
+		"TempVarName":     tempVarName,
+		"Cases":           cases,
+		"TransformAttrs":  ta,
 	}
+
 	var buf bytes.Buffer
 	if err := transformGoUnionT.Execute(&buf, data); err != nil {
 		return "", err
@@ -614,8 +642,21 @@ func generateHelper(source, target *expr.AttributeExpr, req bool, ta *TransformA
 	// Reset need for type assertion for union types because we are
 	// generating the code to transform the concrete type.
 	ta.TargetCtx.IsInterface = false
+	// When transforming into a user type defined in an external package, assume
+	// nested anonymous types (e.g., union sum types) belong to the same target
+	// package unless they explicitly specify a different location.
+	prevDefaultPkg := ta.TargetCtx.DefaultPkg
+	prevSamePackageConversion := ta.TargetCtx.SamePackageConversion
+	if pkg := ta.TargetCtx.Pkg(target); pkg != "" && pkg != prevDefaultPkg {
+		ta.TargetCtx.DefaultPkg = pkg
+		ta.TargetCtx.SamePackageConversion = false
+		defer func() {
+			ta.TargetCtx.DefaultPkg = prevDefaultPkg
+			ta.TargetCtx.SamePackageConversion = prevSamePackageConversion
+		}()
+	}
 
-	code, err := transformAttribute(source.Type.(expr.UserType).Attribute(), target, "v", "res", true, ta)
+	code, err := transformAttribute(source, target, "v", "res", true, ta)
 	if err != nil {
 		return nil, err
 	}
