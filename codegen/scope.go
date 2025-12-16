@@ -167,7 +167,7 @@ func (s *NameScope) goTypeDefWithPkgOverride(att *expr.AttributeExpr, ptr, useDe
 				if at.Description != "" {
 					desc = Comment(at.Description) + "\n\t"
 				}
-				tags = AttributeTags(att, at)
+				tags = AttributeTagsWithName(att, name, at)
 			}
 			ss = append(ss, fmt.Sprintf("\t%s%s %s%s", desc, fn, tdef, tags))
 		}

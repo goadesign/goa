@@ -107,7 +107,13 @@ func attributeTags(parent, att *expr.AttributeExpr, t string, optional bool) str
 	if optional || isJSONRPCID(att) {
 		o = ",omitempty"
 	}
-	return fmt.Sprintf(" `form:\"%s%s\" json:\"%s%s\" xml:\"%s%s\"`", t, o, t, o, t, o)
+	jsonName := t
+	if att != nil && att.Meta != nil {
+		if v := att.Meta["struct:tag:json:name"]; len(v) > 0 && v[0] != "" {
+			jsonName = strings.Join(v, ",")
+		}
+	}
+	return fmt.Sprintf(" `form:\"%s%s\" json:\"%s%s\" xml:\"%s%s\"`", t, o, jsonName, o, t, o)
 }
 
 // isJSONRPCID checks if the attribute is marked as a JSON-RPC ID attribute

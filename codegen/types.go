@@ -54,6 +54,9 @@ func AttributeTags(_, att *expr.AttributeExpr) string {
 	for _, key := range keys {
 		val := att.Meta[key]
 		if strings.HasPrefix(key, "struct:tag:") {
+			if key == "struct:tag:json:name" {
+				continue
+			}
 			name := key[11:]
 			value := strings.Join(val, ",")
 			elems = append(elems, fmt.Sprintf("%s:\"%s\"", name, value))
@@ -63,4 +66,64 @@ func AttributeTags(_, att *expr.AttributeExpr) string {
 		return " `" + strings.Join(elems, " ") + "`"
 	}
 	return ""
+}
+
+// AttributeTagsWithName computes the struct field tags from its metadata,
+// interpreting the "struct:tag:json:name" key when present.
+//
+// The "struct:tag:json" meta key always takes precedence and is treated as a
+// complete tag override value. When only "struct:tag:json:name" is set, Goa
+// computes the json tag and appends ",omitempty" when the field is not
+// required by its parent object.
+func AttributeTagsWithName(parent *expr.AttributeExpr, fieldName string, att *expr.AttributeExpr) string {
+	if att == nil || len(att.Meta) == 0 {
+		return ""
+	}
+	tags := make(map[string]string)
+	var jsonName string
+	keys := make([]string, 0, len(att.Meta))
+	for k := range att.Meta {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		val := att.Meta[key]
+		if !strings.HasPrefix(key, "struct:tag:") {
+			continue
+		}
+		switch key {
+		case "struct:tag:json:name":
+			if jsonName == "" && len(val) > 0 {
+				jsonName = strings.Join(val, ",")
+			}
+			continue
+		default:
+		}
+		name := key[11:]
+		value := strings.Join(val, ",")
+		tags[name] = value
+		if name == "json" {
+			// Full override: do not attempt to merge with json:name.
+			jsonName = ""
+		}
+	}
+	if _, ok := tags["json"]; !ok && jsonName != "" {
+		if parent != nil && fieldName != "" && !parent.IsRequired(fieldName) {
+			jsonName += ",omitempty"
+		}
+		tags["json"] = jsonName
+	}
+	if len(tags) == 0 {
+		return ""
+	}
+	names := make([]string, 0, len(tags))
+	for n := range tags {
+		names = append(names, n)
+	}
+	sort.Strings(names)
+	elems := make([]string, 0, len(names))
+	for _, n := range names {
+		elems = append(elems, fmt.Sprintf("%s:\"%s\"", n, tags[n]))
+	}
+	return " `" + strings.Join(elems, " ") + "`"
 }

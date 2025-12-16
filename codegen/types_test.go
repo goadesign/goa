@@ -154,6 +154,30 @@ func TestGoNativeTypeName(t *testing.T) {
 	}
 }
 
+func TestAttributeTagsWithName_JSONName(t *testing.T) {
+	parent := &expr.AttributeExpr{
+		Type: &expr.Object{
+			{Name: "RequiredField", Attribute: &expr.AttributeExpr{Type: expr.String}},
+			{Name: "OptionalField", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		},
+		Validation: &expr.ValidationExpr{Required: []string{"RequiredField"}},
+	}
+	required := &expr.AttributeExpr{
+		Type: expr.String,
+		Meta: expr.MetaExpr{"struct:tag:json:name": []string{"required_field"}},
+	}
+	optional := &expr.AttributeExpr{
+		Type: expr.String,
+		Meta: expr.MetaExpr{"struct:tag:json:name": []string{"optional_field"}},
+	}
+	if got, want := AttributeTagsWithName(parent, "RequiredField", required), " `json:\"required_field\"`"; got != want {
+		t.Fatalf("required: got %q, want %q", got, want)
+	}
+	if got, want := AttributeTagsWithName(parent, "OptionalField", optional), " `json:\"optional_field,omitempty\"`"; got != want {
+		t.Fatalf("optional: got %q, want %q", got, want)
+	}
+}
+
 func TestGoify(t *testing.T) {
 	cases := map[string]struct {
 		str        string
