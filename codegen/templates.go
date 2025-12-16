@@ -12,11 +12,9 @@ const (
 	headerT = "header"
 
 	// Transform templates
-	transformGoArrayTmplName         = "transform_go_array"
-	transformGoMapTmplName           = "transform_go_map"
-	transformGoUnionTmplName         = "transform_go_union"
-	transformGoUnionToObjectTmplName = "transform_go_union_to_object"
-	transformGoObjectToUnionTmplName = "transform_go_object_to_union"
+	transformGoArrayTmplName = "transform_go_array"
+	transformGoMapTmplName   = "transform_go_map"
+	transformGoUnionTmplName = "transform_go_union"
 
 	// Validation templates
 	validationArrayT      = "validation/array"

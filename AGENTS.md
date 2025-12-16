@@ -1,93 +1,123 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
-- `dsl/`: Public design language definitions (uses dot imports intentionally).
-- `expr/`: Internal AST and validation for the DSL.
-- `codegen/`: Generators for transports, types, and docs.
-- `http/`, `grpc/`, `jsonrpc/`: Transport-specific runtime and codegen helpers.
-- `middleware/`: Built-in interceptors and middleware.
-- `pkg/`: Core runtime (endpoints, errors, version, helpers).
-- `cmd/goa/`: Goa CLI source. Install locally to try changes.
-- `docs/`, `security/`, `eval/`: Documentation assets, security notes, evaluation code.
+## Common Rules
 
-## Build, Test, and Development Commands
-- `make lint` — Run linters per `.golangci.yml` across `./...`.
-- `make test` — Run unit and integration tests; writes coverage to `cover.out`.
-- `cd cmd/goa && go install .` — Build/install the Goa CLI from source.
+### Agent Behavior
 
-## Coding Style & Naming Conventions
-- Go 1.24+. Format with `go fmt ./...`; keep imports grouped.
-- Files: `lower_snake_case.go`; packages: lowercase, short, meaningful.
-- Exported identifiers require GoDoc comments; avoid stutter.
-- Errors: wrap with `%w`; prefer `errors.Is/As` (enforced by `errorlint`).
+- **Plan before acting**: For ≤2 files, state a brief plan then implement. For ≥3 files, write a step-by-step plan first.
+- **Read before editing**: Always read files before modifying. Search over guessing.
+- **Fix root causes**: Do not produce local workarounds—fix the real issue.
+- **Be concise**: Give short status updates during multi-step work. Present a short summary when done.
 
-## Code File Organization
-- Declarations order:
-  1) Types (public first, then private) in a single `type (...)` block when practical
-  2) Constants (public, then private)
-  3) Variables (public, then private)
-  4) Public functions
-  5) Public methods
-  6) Private functions
-  7) Private methods
-- No commented‑out code; remove dead code instead of commenting.
-- Keep imports grouped; stdlib separated from external. Let `gofmt` manage ordering.
+### Go Code Style
 
-## Repro Protocol
-To reproduce a code generation issue from a specific design, follow this protocol:
-1. Create a new directory under ~/src/repros: ~/src/repros/<issue>. Choose a meaningful short name, for example ~/src/repros/customtype.
-2. Create a design subdirectory and write the design file in ~/src/repros/<issue>/design/design.go.
-3. Run `go mod init <issue>` in the issue directory where <issue> is the same short name, for example `go mod init customtype`.
-4. Run `goa gen <issue>/design` in the issue directory, this will create a 'gen' directory.
-5. Run `go mod tidy` to download all dependencies.
-6. Run `go mod edit -replace goa.design/goa/v3=$HOME/src/goa`
-7. Run `goa gen <issue>/design` in the issue directory a second time, this time it will use the development version of goa.
-8. [OPTIONAL] if needed also generate the example command line tools with `goa example <issue>/design`
-You are now ready to troubleshoot goa by making changes in ~/src/goa and
-running the `goa gen` and/or `goa example` commands as per the above.
+- **Go 1.24+**. Format with `go fmt ./...`.
+- **Imports**: Group stdlib separate from external. Let gofmt manage ordering.
+- **Files**: Use `lower_snake_case.go`. Keep ≤1000 lines; split proactively.
+- **Naming**: Packages are lowercase and short. Exported identifiers need GoDoc. Avoid stutter.
+- **Types**: Use `any` over `interface{}`. Prefer concrete types over `interface{}`.
+- **Errors**: Wrap with `%w`. Use `errors.Is/As`. **Never ignore errors or use `_ = call()`**.
+- **Signatures**: Keep on one line when ≤100 columns. Only wrap genuinely long signatures.
+- **Slice/map nil**: Do not check nil before `len`. `len(nil)` returns 0. Use `len(x) == 0` directly.
 
-## Code Generation Behavior
-- After modifying goa source code, you do not need to manually rebuild the goa
-CLI. The `goa gen` and `goa example` commands automatically compile and use a
-temporary binary that includes your latest changes.
-- The `goa gen` command deletes and recreates the entire `gen` directory each
-time it runs, removing any previously generated files. In contrast, the `goa
-example` command generates example service code but does not overwrite existing
-files in the `cmd` directory or any top-level service files; it only creates new
-files if they do not already exist.
+### Code Blocks and Literals
 
-## General Principles
-- Fail fast: do not mask invariant violations with defensive nil checks in hot paths; surface precise errors.
-- Keep code tidy: no commented‑out code blocks; keep PRs focused.
+- Always place a newline after `{` and before `}` for `if`, `for`, `switch`, `func`, `type`.
+- No single-line blocks: `if cond { do() }` → use multiple lines.
+- Short struct literals are fine inline: `&T{A: 1}`. Break long literals to one field per line with trailing commas.
 
-## Additional Style Details
-- Prefer `any` over `interface{}` in new code.
-- Use multi‑line `if` blocks; target ~80‑column lines when practical.
-- Struct/composite literals: break long/named fields onto one field per line with trailing commas; close brace on its own line.
+### File Organization
 
-### Slices, Maps, and Validation Contracts
+Order declarations as:
+1. Types (public, then private) in a single `type (...)` block when practical
+2. Constants (public, then private)
+3. Variables (public, then private)
+4. Public functions
+5. Public methods
+6. Private functions
+7. Private methods
 
-- Do not rely on `nil` vs empty slices or maps to encode presence for required
-  fields. Goa’s generated Go structs use `omitempty`, and gRPC/JSON treat both
-  `nil` and empty slices/maps as “missing” for required properties. If a field
-  is required at the contract level, model it as a non-collection scalar (or
-  use an explicit presence flag), not as “non‑empty slice implies present”.
-  Conversely, if an array/map may legitimately be empty, do **not** mark it
-  as required in the DSL—make the container required and the collection
-  optional.
+No commented-out code—delete dead code.
 
-## Testing Guidelines
-- Write table‑driven tests in `*_test.go` using `testing` (optionally `testify`).
-- Name tests `TestXxx`; keep unit tests fast and deterministic.
-- Run `make test` locally and ensure coverage does not regress.
+### Error Handling & Contracts
 
-## Commit & Pull Request Guidelines
-- Commit style mirrors history: `scope(subscope): concise summary`.
-  Example: `http/codegen: fix SSE Last-Event-ID handling (#1234)`.
-- Reference issues using `Fixes #NNNN` in PRs. Include rationale, tests, and docs updates when behavior/design changes.
-- Keep PRs focused and small; ensure `make lint` and `make test` pass.
-- If changing generators or DSL, run the CLI against examples to validate.
+- **Always check errors**. Never discard with `_`.
+- **Strong contracts**: Goa validates payloads at boundaries. Do not re-validate inside service code.
+- **No defensive programming**: Do not add nil/empty guards for values guaranteed by construction, Goa, or prior validation.
+- **Validate only at boundaries**: HTTP/gRPC handlers, event consumers, DB results, third-party APIs, `ctx.Value()`, type assertions, required map lookups.
+- **Fail fast**: Unexpected states are bugs. Return precise errors or panic—do not silently recover or skip.
 
-## Agent‑Specific Notes
-- Avoid release automation (`make release*`). Keep patches minimal and scoped.
-- Do not run `git` commands in this environment; maintainers handle tagging and releases.
+### Goa DSL Rules
+
+- **Never edit `gen/`**: Always regenerate.
+- **DSL validation**: Put validations (lengths, enums, formats) in the design. Do not re-validate in code.
+- **Avoid `Any`**: Use concrete types to enable gRPC generation.
+
+### Codegen Implementation
+
+- **Use NameScope helpers** for type references: `GoTypeRef`, `GoFullTypeRef`, `GoTypeName`. Never concatenate strings for types.
+- Let Goa decide pointer/value semantics. Do not force `pointer=true` except in transport validation.
+
+### Documentation
+
+- Every exported type, function, method, and field must have a GoDoc comment explaining its contract—like Go stdlib documentation.
+
+### Safety & Forbidden Operations
+
+| Action | Policy |
+|--------|--------|
+| `git clean/stash/reset/checkout` | **FORBIDDEN** |
+| `go clean -cache` | **FORBIDDEN** during normal work |
+| Edit `gen/` directly | **FORBIDDEN** |
+| Changes ≥3 files | Describe plan first |
+| New dependencies | Explain why first |
+
+### Testing
+
+- Write table-driven tests in `*_test.go`.
+- Name tests `TestXxx`. Keep fast and deterministic.
+- Use `testify/require` for assertions.
+- Prefer `t.Errorf` over `t.Fatalf` so tests report multiple failures.
+
+---
+
+## Goa-Specific Rules
+
+### Project Structure
+
+- `dsl/`: Public DSL definitions (dot imports allowed per `.golangci.yml`)
+- `expr/`: Internal AST and validation
+- `codegen/`: Generators for transports, types, docs
+- `http/`, `grpc/`, `jsonrpc/`: Transport-specific codegen
+- `middleware/`: Built-in interceptors
+- `pkg/`: Core runtime
+- `cmd/goa/`: CLI source
+
+### Build & Test
+
+```bash
+make lint          # Run linters
+make test          # Run tests
+cd cmd/goa && go install .  # Install CLI locally
+```
+
+### Code Generation Behavior
+
+- After modifying goa source, `goa gen` and `goa example` automatically compile and use your changes—no manual rebuild needed.
+- `goa gen` deletes and recreates the entire `gen/` directory.
+- `goa example` only creates new files; it does not overwrite existing `cmd/` files.
+
+### Repro Protocol
+
+To reproduce a codegen issue:
+1. Create `~/src/repros/<issue>/design/design.go`
+2. `go mod init <issue>` in the issue directory
+3. `goa gen <issue>/design`
+4. `go mod tidy`
+5. `go mod edit -replace goa.design/goa/v3=$HOME/src/goa`
+6. `goa gen <issue>/design` again with local goa
+7. Optional: `goa example <issue>/design`
+
+### Slices/Maps and Required Fields
+
+Do not rely on nil vs empty to encode presence. Goa uses `omitempty`—both nil and empty serialize as "missing". If empty is valid, do not mark the field as required.

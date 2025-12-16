@@ -85,6 +85,13 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			})
 		}
 	}
+	for _, u := range svc.unions {
+		addTypeDefSection(pathWithDefault(u.Loc, svcPath), "~union:"+u.Name, &codegen.SectionTemplate{
+			Name:   "service-union-type",
+			Source: serviceTemplates.Read(unionTypeT),
+			Data:   u,
+		})
+	}
 
 	var errorTypes []*UserTypeData
 	seenErrs := make(map[string]struct{})
@@ -103,14 +110,6 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			}
 			errorTypes = append(errorTypes, et)
 		}
-	}
-
-	for _, m := range svc.unionValueMethods {
-		addTypeDefSection(pathWithDefault(m.Loc, svcPath), "~"+m.TypeRef+"."+m.Name, &codegen.SectionTemplate{
-			Name:   "service-union-value-method",
-			Source: serviceTemplates.Read(unionValueMethodT),
-			Data:   m,
-		})
 	}
 
 	for _, et := range errorTypes {
@@ -173,6 +172,12 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		codegen.GoaImport(""),
 		codegen.GoaImport("security"),
 		codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
+	}
+	if len(svc.unions) > 0 {
+		imports = append(imports,
+			codegen.SimpleImport("encoding/json"),
+			codegen.SimpleImport("fmt"),
+		)
 	}
 	header := codegen.Header(service.Name+" service", svc.PkgName, imports)
 	def := &codegen.SectionTemplate{

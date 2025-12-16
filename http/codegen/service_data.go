@@ -1020,7 +1020,8 @@ func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[string]struct{}) *e
 		}
 		att.Type = &obj
 	case *expr.Union:
-		att = expr.UnionToObject(att)
+		// Unions are represented as first-class sum types; HTTP uses the same
+		// type for request and response bodies.
 	}
 	return att
 }

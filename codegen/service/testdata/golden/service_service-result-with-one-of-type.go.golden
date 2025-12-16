@@ -27,9 +27,7 @@ type Item struct {
 
 // ResultOneof is the result type of the ResultWithOneOfType service A method.
 type ResultOneof struct {
-	Result interface {
-		resultVal()
-	}
+	Result Result
 }
 
 type T struct {
@@ -40,9 +38,134 @@ type U struct {
 	Item *Item
 }
 
-func (*T) resultVal() {}
+// Result is a sum-type union.
+type Result struct {
+	kind ResultKind
+	T    *T
+	U    *U
+}
 
-func (*U) resultVal() {}
+// ResultKind enumerates the union variants for Result.
+type ResultKind string
+
+const (
+	// ResultKindT identifies the t branch of the union.
+	ResultKindT ResultKind = "t"
+	// ResultKindU identifies the u branch of the union.
+	ResultKindU ResultKind = "u"
+)
+
+// Kind returns the discriminator value of the union.
+func (u Result) Kind() ResultKind {
+	return u.kind
+}
+
+// NewResultT constructs a Result with the t branch set.
+func NewResultT(v *T) Result {
+	return Result{
+		kind: ResultKindT,
+		T:    v,
+	}
+}
+
+// AsT returns the value of the t branch if set.
+func (u Result) AsT() (_ *T, ok bool) {
+	if u.kind != ResultKindT {
+		return
+	}
+	return u.T, true
+}
+
+// NewResultU constructs a Result with the u branch set.
+func NewResultU(v *U) Result {
+	return Result{
+		kind: ResultKindU,
+		U:    v,
+	}
+}
+
+// AsU returns the value of the u branch if set.
+func (u Result) AsU() (_ *U, ok bool) {
+	if u.kind != ResultKindU {
+		return
+	}
+	return u.U, true
+}
+
+// Validate ensures the union discriminant is valid.
+func (u Result) Validate() error {
+	switch u.kind {
+	case "":
+		return goa.InvalidEnumValueError("type", "", []any{
+			string(ResultKindT),
+			string(ResultKindU),
+		})
+	case ResultKindT:
+		return nil
+	case ResultKindU:
+		return nil
+	default:
+		return goa.InvalidEnumValueError("type", u.kind, []any{
+			string(ResultKindT),
+			string(ResultKindU),
+		})
+	}
+}
+
+// MarshalJSON marshals the union into the canonical {type,value} JSON shape.
+func (u Result) MarshalJSON() ([]byte, error) {
+	if err := u.Validate(); err != nil {
+		return nil, err
+	}
+	var (
+		value any
+	)
+	switch u.kind {
+	case ResultKindT:
+		value = u.T
+	case ResultKindU:
+		value = u.U
+	default:
+		return nil, fmt.Errorf("unexpected Result discriminant %q", u.kind)
+	}
+	return json.Marshal(struct {
+		Type  string `json:"type"`
+		Value any    `json:"value"`
+	}{
+		Type:  string(u.kind),
+		Value: value,
+	})
+}
+
+// UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
+func (u *Result) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	switch raw.Type {
+	case string(ResultKindT):
+		var v *T
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = ResultKindT
+		u.T = v
+	case string(ResultKindU):
+		var v *U
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = ResultKindU
+		u.U = v
+	default:
+		return fmt.Errorf("unexpected Result type %q", raw.Type)
+	}
+	return nil
+}
 
 // NewResultOneof initializes result type ResultOneof from viewed result type
 // ResultOneof.

@@ -808,15 +808,13 @@ var PayloadBodyUnionConstructorCode = `// NewMethodBodyUnionUnion builds a Servi
 func NewMethodBodyUnionUnion(body *MethodBodyUnionRequestBody) *servicebodyunion.Union {
 	v := &servicebodyunion.Union{}
 	if body.Values != nil {
-		switch *body.Values.Type {
-		case "String":
-			var val servicebodyunion.ValuesString
-			json.Unmarshal([]byte(*body.Values.Value), &val)
-			v.Values = val
-		case "Int":
-			var val servicebodyunion.ValuesInt
-			json.Unmarshal([]byte(*body.Values.Value), &val)
-			v.Values = val
+		switch actual := body.Values.(type) {
+		case ValuesStringRequestBody:
+			obj := servicebodyunion.ValuesString(actual)
+			v.Values = obj
+		case ValuesIntRequestBody:
+			obj := servicebodyunion.ValuesInt(actual)
+			v.Values = obj
 		}
 	}
 

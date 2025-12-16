@@ -23,15 +23,136 @@ var MethodNames = [1]string{"A"}
 
 // Scope is the payload type of the UnionWithAliasCrossPkg service A method.
 type Scope struct {
-	Values interface {
-		valuesVal()
+	Values Values
+}
+
+// Values is a sum-type union.
+type Values struct {
+	kind   ValuesKind
+	Device alias.Alias
+	Metric alias.Alias
+}
+
+// ValuesKind enumerates the union variants for Values.
+type ValuesKind string
+
+const (
+	// ValuesKindDevice identifies the Device branch of the union.
+	ValuesKindDevice ValuesKind = "Device"
+	// ValuesKindMetric identifies the Metric branch of the union.
+	ValuesKindMetric ValuesKind = "Metric"
+)
+
+// Kind returns the discriminator value of the union.
+func (u Values) Kind() ValuesKind {
+	return u.kind
+}
+
+// NewValuesDevice constructs a Values with the Device branch set.
+func NewValuesDevice(v alias.Alias) Values {
+	return Values{
+		kind:   ValuesKindDevice,
+		Device: v,
 	}
 }
 
-type ValuesDevice alias.Alias
+// AsDevice returns the value of the Device branch if set.
+func (u Values) AsDevice() (_ alias.Alias, ok bool) {
+	if u.kind != ValuesKindDevice {
+		return
+	}
+	return u.Device, true
+}
 
-func (ValuesDevice) valuesVal() {}
+// NewValuesMetric constructs a Values with the Metric branch set.
+func NewValuesMetric(v alias.Alias) Values {
+	return Values{
+		kind:   ValuesKindMetric,
+		Metric: v,
+	}
+}
 
-type ValuesMetric alias.Alias
+// AsMetric returns the value of the Metric branch if set.
+func (u Values) AsMetric() (_ alias.Alias, ok bool) {
+	if u.kind != ValuesKindMetric {
+		return
+	}
+	return u.Metric, true
+}
 
-func (ValuesMetric) valuesVal() {}
+// Validate ensures the union discriminant is valid.
+func (u Values) Validate() error {
+	switch u.kind {
+	case "":
+		return goa.InvalidEnumValueError("type", "", []any{
+			string(ValuesKindDevice),
+			string(ValuesKindMetric),
+		})
+	case ValuesKindDevice:
+		return nil
+	case ValuesKindMetric:
+		return nil
+	default:
+		return goa.InvalidEnumValueError("type", u.kind, []any{
+			string(ValuesKindDevice),
+			string(ValuesKindMetric),
+		})
+	}
+}
+
+// MarshalJSON marshals the union into the canonical {type,value} JSON shape.
+func (u Values) MarshalJSON() ([]byte, error) {
+	if err := u.Validate(); err != nil {
+		return nil, err
+	}
+	var (
+		value any
+	)
+	switch u.kind {
+	case ValuesKindDevice:
+		value = u.Device
+	case ValuesKindMetric:
+		value = u.Metric
+	default:
+		return nil, fmt.Errorf("unexpected Values discriminant %q", u.kind)
+	}
+	return json.Marshal(struct {
+		Type  string `json:"type"`
+		Value any    `json:"value"`
+	}{
+		Type:  string(u.kind),
+		Value: value,
+	})
+}
+
+// UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
+func (u *Values) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	switch raw.Type {
+	case string(ValuesKindDevice):
+		var v alias.Alias
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = ValuesKindDevice
+		u.Device = v
+	case string(ValuesKindMetric):
+		var v alias.Alias
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = ValuesKindMetric
+		u.Metric = v
+	default:
+		return fmt.Errorf("unexpected Values type %q", raw.Type)
+	}
+	return nil
+}
+
+
