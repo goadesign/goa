@@ -3,19 +3,16 @@ func transform() {
 		Float_:  source.Float,
 		String_: source.String,
 		Bytes_:  source.Bytes,
-		Any: func() *anypb.Any {
+		Any: func() *structpb.Value {
+			// Convert Go any to protobuf Value directly
 			if source.Any == nil {
-				return nil
+				return structpb.NewNullValue()
 			}
-			// Convert Go any to protobuf Any using JSON marshaling
-			if jsonData, err := json.Marshal(source.Any); err == nil {
-				if data, err := anypb.New(&structpb.Value{
-					Kind: &structpb.Value_StringValue{StringValue: string(jsonData)},
-				}); err == nil {
-					return data
-				}
+			value, err := structpb.NewValue(source.Any)
+			if err != nil {
+				panic(fmt.Sprintf("failed to convert value to structpb.Value: %v", err))
 			}
-			return nil
+			return value
 		}(),
 	}
 	if source.Int != nil {

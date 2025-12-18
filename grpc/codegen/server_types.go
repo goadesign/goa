@@ -88,8 +88,7 @@ func serverType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 			}
 		}
 		if needsAnyTypeImports {
-			imports = append(imports, &codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/anypb", Name: "anypb"})
-			imports = append(imports, &codegen.ImportSpec{Path: "encoding/json"})
+			imports = append(imports, &codegen.ImportSpec{Path: "fmt"})
 			imports = append(imports, &codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"})
 		}
 		imports = append(imports, sd.Service.ProtoImports...)
