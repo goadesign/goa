@@ -662,17 +662,17 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		}
 	}
 	if expr.IsPrimitive(at.Type) {
-		// Add google.protobuf.Any import when Any type is used
+		// Add google.protobuf.Value import when Any type is used
 		if at.Type.Kind() == expr.AnyKind {
 			found := false
 			for _, imp := range imports {
-				if imp == "google/protobuf/any.proto" {
+				if imp == "google/protobuf/struct.proto" {
 					found = true
 					break
 				}
 			}
 			if !found {
-				imports = append(imports, "google/protobuf/any.proto")
+				imports = append(imports, "google/protobuf/struct.proto")
 			}
 		}
 		return data, imports

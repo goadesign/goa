@@ -52,12 +52,12 @@ type ArrayOfBool struct {
 
 # How does goa handle the Any type in gRPC?
 
-Goa supports the `Any` type in gRPC by mapping it to `google.protobuf.Any`. The conversion between Go's `any` type and protobuf's `Any` is done using JSON marshaling/unmarshaling.
+Goa supports the `Any` type in gRPC by mapping it to `google.protobuf.Value`, which is specifically designed to represent dynamic JSON-like values. This is simpler and more efficient than using `google.protobuf.Any`.
 
 ## Conversion Process
 
-- **Go to Protobuf**: When converting from Go `any` to `*anypb.Any`, the value is JSON-marshaled and wrapped in a `structpb.Value`.
-- **Protobuf to Go**: When converting from `*anypb.Any` to Go `any`, the value is unwrapped and JSON-unmarshaled.
+- **Go to Protobuf**: When converting from Go `any` to `*structpb.Value`, Goa uses `structpb.NewValue()` which directly converts Go types to protobuf Value.
+- **Protobuf to Go**: When converting from `*structpb.Value` to Go `any`, Goa uses the `AsInterface()` method which returns the corresponding Go value.
 
 ## Example Usage
 
@@ -78,14 +78,14 @@ Method("echo", func() {
 
 This generates the following protobuf:
 ```proto
-import "google/protobuf/any.proto";
+import "google/protobuf/struct.proto";
 
 message EchoRequest {
-    optional google.protobuf.Any data = 1;
+    optional google.protobuf.Value data = 1;
 }
 
 message EchoResponse {
-    optional google.protobuf.Any data = 1;
+    optional google.protobuf.Value data = 1;
 }
 ```
 
@@ -96,8 +96,18 @@ message EchoResponse {
 - Arrays of Any: `ArrayOf(Any)`
 - Nested structures containing Any
 
+## Supported Value Types
+
+The `google.protobuf.Value` type natively supports:
+- Null values
+- Numbers (integer and floating point)
+- Strings
+- Booleans
+- Structs (maps)
+- Lists (arrays)
+
 ## Limitations
 
-- The JSON conversion means that complex Go types may not roundtrip perfectly
-- Only JSON-serializable values are supported
-- Type information is lost during conversion
+- Complex Go types (channels, functions, custom structs) need to be JSON-serializable
+- Type information is abstracted to basic JSON types
+- Precision may be lost for very large integers (uses float64 internally)

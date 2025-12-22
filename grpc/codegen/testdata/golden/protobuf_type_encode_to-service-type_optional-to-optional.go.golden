@@ -4,16 +4,9 @@ func transform() {
 		String: source.String_,
 		Bytes:  source.Bytes_,
 		Any: func() any {
+			// Convert protobuf Value to Go any directly
 			if source.Any != nil {
-				var value structpb.Value
-				if err := source.Any.UnmarshalTo(&value); err == nil {
-					if str := value.GetStringValue(); str != "" {
-						var result any
-						if err := json.Unmarshal([]byte(str), &result); err == nil {
-							return result
-						}
-					}
-				}
+				return source.Any.AsInterface()
 			}
 			return nil
 		}(),

@@ -82,7 +82,7 @@ func TestProtoNativeType(t *testing.T) {
 	}, {
 		"Bytes", expr.Bytes, "bytes",
 	}, {
-		"Any", expr.Any, "google.protobuf.Any",
+		"Any", expr.Any, "google.protobuf.Value",
 	}}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -122,7 +122,7 @@ func TestProtoBufNativeGoTypeName(t *testing.T) {
 	}, {
 		"Bytes", expr.Bytes, "[]byte",
 	}, {
-		"Any", expr.Any, "*anypb.Any",
+		"Any", expr.Any, "*structpb.Value",
 	}}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
