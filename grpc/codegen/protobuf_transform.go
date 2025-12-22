@@ -679,32 +679,22 @@ func convertType(src, tgt *expr.AttributeExpr, srcPtr bool, tgtPtr bool, srcVar 
 	return convertPrimitiveFromProto(src, tgt, srcPtr, tgtPtr, srcVar, ta)
 }
 
-const convertGoAnyToProtobufAnyFunc = `func() *anypb.Any {
+const convertGoAnyToProtobufValueFunc = `func() *structpb.Value {
+	// Convert Go any to protobuf Value directly
 	if %s == nil {
-		return nil
+		return structpb.NewNullValue()
 	}
-	// Convert Go any to protobuf Any using JSON marshaling
-	if jsonData, err := json.Marshal(%s); err == nil {
-		if data, err := anypb.New(&structpb.Value{
-			Kind: &structpb.Value_StringValue{StringValue: string(jsonData)},
-		}); err == nil {
-			return data
-		}
+	value, err := structpb.NewValue(%s)
+	if err != nil {
+		panic(fmt.Sprintf("failed to convert value to structpb.Value: %%v", err))
 	}
-	return nil
+	return value
 }()`
 
-const convertProtobufAnyToGoAnyFunc = `func() any {
+const convertProtobufValueToGoAnyFunc = `func() any {
+	// Convert protobuf Value to Go any directly
 	if %s != nil {
-		var value structpb.Value
-		if err := %s.UnmarshalTo(&value); err == nil {
-			if str := value.GetStringValue(); str != "" {
-				var result any
-				if err := json.Unmarshal([]byte(str), &result); err == nil {
-					return result
-				}
-			}
-		}
+		return %s.AsInterface()
 	}
 	return nil
 }()`
@@ -714,13 +704,13 @@ const convertProtobufAnyToGoAnyFunc = `func() any {
 // NOTE: For Int and UInt kinds, protocol buffer Go compiler generates
 // int32 and uint32 respectively whereas Goa generates int and uint.
 func convertPrimitiveToProto(_, tgt *expr.AttributeExpr, srcPtr, _ bool, srcVar string, _ *transformAttrs) string {
-	// Special handling for Any type conversion to google.protobuf.Any
+	// Special handling for Any type conversion to google.protobuf.Value
 	if tgt.Type.Kind() == expr.AnyKind {
 		if srcPtr {
 			srcVar = "*" + srcVar
 		}
 
-		return fmt.Sprintf(convertGoAnyToProtobufAnyFunc, srcVar, srcVar)
+		return fmt.Sprintf(convertGoAnyToProtobufValueFunc, srcVar, srcVar)
 	}
 
 	tgtType := protoBufNativeGoTypeName(tgt.Type)
@@ -731,13 +721,13 @@ func convertPrimitiveToProto(_, tgt *expr.AttributeExpr, srcPtr, _ bool, srcVar 
 }
 
 func convertPrimitiveFromProto(_, tgt *expr.AttributeExpr, srcPtr, _ bool, srcVar string, ta *transformAttrs) string {
-	// Special handling for Any type conversion from google.protobuf.Any
+	// Special handling for Any type conversion from google.protobuf.Value
 	if tgt.Type.Kind() == expr.AnyKind {
 		if srcPtr {
 			srcVar = "*" + srcVar
 		}
 
-		return fmt.Sprintf(convertProtobufAnyToGoAnyFunc, srcVar, srcVar)
+		return fmt.Sprintf(convertProtobufValueToGoAnyFunc, srcVar, srcVar)
 	}
 
 	tgtType, _ := codegen.GetMetaType(tgt)

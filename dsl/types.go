@@ -37,9 +37,9 @@ const (
 	Bytes = expr.Bytes
 
 	// Any is the type for an arbitrary JSON value (any in Go).
-	// In gRPC, Any is mapped to google.protobuf.Any using JSON encoding/decoding.
-	// The value is JSON-marshaled when converting from Go to protobuf, and
-	// JSON-unmarshaled when converting from protobuf to Go.
+	// In gRPC, Any is mapped to google.protobuf.Value which natively supports
+	// dynamic JSON-like values. Conversion uses structpb.NewValue() for Go to
+	// protobuf and AsInterface() for protobuf to Go.
 	Any = expr.Any
 )
 

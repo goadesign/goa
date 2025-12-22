@@ -220,7 +220,7 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 
 			// Check if transformation contains Any type conversion logic
 			if c.ToProto {
-				require.Contains(t, code, "func() *anypb.Any", "To proto conversion should generate Any type conversion function")
+				require.Contains(t, code, "func() *structpb.Value", "To proto conversion should generate Value type conversion function")
 			} else {
 				require.Contains(t, code, "func() any", "From proto conversion should generate any type conversion function")
 			}
