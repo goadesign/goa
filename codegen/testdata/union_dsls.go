@@ -51,5 +51,30 @@ var TestUnionDSL = func() {
 			Attribute("Value", String)
 			Required("Type", "Value")
 		})
+
+		// Union with custom type and value keys
+		UnionCustomKeys = Type("UnionCustomKeys", func() {
+			OneOf("UnionCustomKeys", func() {
+				Meta("oneof:type:field", "kind")
+				Meta("oneof:value:field", "data")
+				Attribute("String", String)
+				Attribute("Int", Int)
+			})
+		})
+
+		// Union with different custom keys for testing
+		UnionPaymentMethod = Type("UnionPaymentMethod", func() {
+			OneOf("UnionPaymentMethod", func() {
+				Meta("oneof:type:field", "paymentType")
+				Meta("oneof:value:field", "details")
+				Attribute("CreditCard", SomeType)
+				Attribute("PayPal", String)
+			})
+		})
+
+		_ = Type("CustomKeysContainer", func() {
+			Attribute("UnionCustomKeys", UnionCustomKeys)
+			Attribute("UnionPaymentMethod", UnionPaymentMethod)
+		})
 	)
 }

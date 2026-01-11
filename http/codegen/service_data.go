@@ -2732,6 +2732,8 @@ func buildHTTPUnionTypeData(u *expr.Union, scope *codegen.NameScope) *service.Un
 		Name:     name,
 		KindName: kindName,
 		Fields:   fields,
+		TypeKey:  u.GetTypeKey(),
+		ValueKey: u.GetValueKey(),
 	}
 }
 

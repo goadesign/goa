@@ -430,6 +430,10 @@ type (
 		// Loc defines the file and Go package of the union type if overridden via
 		// Meta. When nil the type is generated in the default service file.
 		Loc *codegen.Location
+		// TypeKey is the discriminator field name for JSON marshaling (defaults to "type").
+		TypeKey string
+		// ValueKey is the value field name for JSON marshaling (defaults to "value").
+		ValueKey string
 	}
 
 	// UnionFieldData describes a single branch of a union.
@@ -1094,6 +1098,8 @@ func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Lo
 		KindName: kindName,
 		Fields:   fields,
 		Loc:      loc,
+		TypeKey:  u.GetTypeKey(),
+		ValueKey: u.GetValueKey(),
 	}
 }
 

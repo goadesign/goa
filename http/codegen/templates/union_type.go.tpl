@@ -50,7 +50,7 @@ func (u *{{ $.Name }}) Set{{ .FieldName }}(v {{ .FieldType }}) {
 func (u {{ .Name }}) Validate() error {
 	switch u.kind {
 	case "":
-		return goa.InvalidEnumValueError("type", "", []any{
+		return goa.InvalidEnumValueError({{ printf "%q" .TypeKey }}, "", []any{
 			{{- range .Fields }}
 			string({{ .KindConst }}),
 			{{- end }}
@@ -60,7 +60,7 @@ func (u {{ .Name }}) Validate() error {
 		return nil
 	{{- end }}
 	default:
-		return goa.InvalidEnumValueError("type", u.kind, []any{
+		return goa.InvalidEnumValueError({{ printf "%q" $.TypeKey }}, u.kind, []any{
 			{{- range .Fields }}
 			string({{ .KindConst }}),
 			{{- end }}
@@ -85,8 +85,8 @@ func (u {{ .Name }}) MarshalJSON() ([]byte, error) {
 		return nil, fmt.Errorf("unexpected {{ .Name }} discriminant %q", u.kind)
 	}
 	return json.Marshal(struct {
-		Type  string {{ printf "`json:\"type\"`" }}
-		Value any    {{ printf "`json:\"value\"`" }}
+		Type  string {{ printf "`json:\"%s\"`" .TypeKey }}
+		Value any    {{ printf "`json:\"%s\"`" .ValueKey }}
 	}{
 		Type:  string(u.kind),
 		Value: value,
@@ -96,8 +96,8 @@ func (u {{ .Name }}) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
 func (u *{{ .Name }}) UnmarshalJSON(data []byte) error {
 	var raw struct {
-		Type  string          {{ printf "`json:\"type\"`" }}
-		Value json.RawMessage {{ printf "`json:\"value\"`" }}
+		Type  string          {{ printf "`json:\"%s\"`" .TypeKey }}
+		Value json.RawMessage {{ printf "`json:\"%s\"`" .ValueKey }}
 	}
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err

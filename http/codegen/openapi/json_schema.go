@@ -365,27 +365,30 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 			s.AdditionalProperties = true
 		}
 	case *expr.Union:
-		// Unions are represented as an object with a discriminated value:
-		// { "type": <branch>, "value": <branch schema> }.
+		// Unions are represented as an object with a discriminated value.
+		// The field names are configurable via Meta tags (defaults: "type" and "value").
+		typeKey := actual.GetTypeKey()
+		valueKey := actual.GetValueKey()
+
 		s.Type = Object
 		if s.Properties == nil {
 			s.Properties = make(map[string]*Schema)
 		}
-		// Discriminator "type" with enum of branch names.
+		// Discriminator with enum of branch names.
 		typeSchema := NewSchema()
 		typeSchema.Type = String
 		typeSchema.Enum = make([]any, len(actual.Values))
 		for i, val := range actual.Values {
 			typeSchema.Enum[i] = val.Name
 		}
-		// "value" can be any of the branch schemas.
+		// Value can be any of the branch schemas.
 		valueSchema := NewSchema()
 		for _, val := range actual.Values {
 			valueSchema.AnyOf = append(valueSchema.AnyOf, AttributeTypeSchemaWithPrefix(api, val.Attribute, prefix))
 		}
-		s.Properties["type"] = typeSchema
-		s.Properties["value"] = valueSchema
-		s.Required = append(s.Required, "type", "value")
+		s.Properties[typeKey] = typeSchema
+		s.Properties[valueKey] = valueSchema
+		s.Required = append(s.Required, typeKey, valueKey)
 	case *expr.UserTypeExpr:
 		s.Ref = TypeRefWithPrefix(api, actual, prefix)
 	case *expr.ResultTypeExpr:

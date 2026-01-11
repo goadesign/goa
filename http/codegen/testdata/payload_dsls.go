@@ -3666,3 +3666,44 @@ var PayloadWithValidatedAliasDSL = func() {
 		})
 	})
 }
+
+var PayloadBodyUnionCustomKeysDSL = func() {
+	var CustomUnion = Type("CustomUnion", func() {
+		OneOf("Values", func() {
+			Meta("oneof:type:field", "kind")
+			Meta("oneof:value:field", "data")
+			Attribute("String", String)
+			Attribute("Int", Int)
+		})
+	})
+	Service("ServiceBodyUnionCustomKeys", func() {
+		Method("MethodBodyUnionCustomKeys", func() {
+			Payload(CustomUnion)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
+var PayloadBodyUnionCustomKeysValidateDSL = func() {
+	var PaymentMethod = Type("PaymentMethod", func() {
+		OneOf("method", func() {
+			Meta("oneof:type:field", "paymentType")
+			Meta("oneof:value:field", "details")
+			Attribute("CreditCard", String)
+			Attribute("PayPal", String)
+		})
+	})
+	Service("ServiceBodyUnionCustomKeysValidate", func() {
+		Method("MethodBodyUnionCustomKeysValidate", func() {
+			Payload(func() {
+				Attribute("payment", PaymentMethod)
+				Required("payment")
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}

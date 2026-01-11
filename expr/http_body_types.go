@@ -9,16 +9,21 @@ import (
 )
 
 // UnionToObject returns an object adequate to serialize the given union type in
-// HTTP requests and responses. The object has two fields: "Type" and "Value".
-// The "Type" field is a string that indicates the name of the union type. The
-// "Value" field is a string that contains the JSON encoded union value.
+// HTTP requests and responses. The object has two fields for the discriminator
+// and value, with names determined by the union's Meta tags (defaulting to
+// "Type" and "Value"). The discriminator field indicates the name of the union
+// type, and the value field contains the JSON encoded union value.
 func UnionToObject(att *AttributeExpr) *AttributeExpr {
 	example := att.Example(Root.API.ExampleGenerator)
 	js, err := json.Marshal(example)
 	if err != nil {
 		js = []byte("null")
 	}
-	values := AsUnion(att.Type).Values
+	union := AsUnion(att.Type)
+	values := union.Values
+	typeKey := union.GetTypeKey()
+	valueKey := union.GetValueKey()
+
 	names := make([]any, len(values))
 	vals := make([]string, len(values))
 	bases := make([]DataType, len(values))
@@ -28,32 +33,32 @@ func UnionToObject(att *AttributeExpr) *AttributeExpr {
 		bases[i] = nat.Attribute.Type
 	}
 	obj := Object([]*NamedAttributeExpr{
-		{Name: "Type", Attribute: &AttributeExpr{
+		{Name: typeKey, Attribute: &AttributeExpr{
 			Type:        String,
 			Description: "Union type name, one of:\n" + strings.Join(vals, "\n"),
 			Validation:  &ValidationExpr{Values: names},
 			Meta: MetaExpr{
-				"struct:tag:form": {"Type"},
-				"struct:tag:json": {"Type"},
-				"struct:tag:xml":  {"Type"},
+				"struct:tag:form": {typeKey},
+				"struct:tag:json": {typeKey},
+				"struct:tag:xml":  {typeKey},
 			},
 		}},
-		{Name: "Value", Attribute: &AttributeExpr{
+		{Name: valueKey, Attribute: &AttributeExpr{
 			Type:         String,
 			Description:  "JSON encoded union value",
 			UserExamples: []*ExampleExpr{{Value: string(js)}},
 			Bases:        bases, // For OpenAPI generation
 			Meta: MetaExpr{
-				"struct:tag:form": {"Value"},
-				"struct:tag:json": {"Value"},
-				"struct:tag:xml":  {"Value"},
+				"struct:tag:form": {valueKey},
+				"struct:tag:json": {valueKey},
+				"struct:tag:xml":  {valueKey},
 			},
 		}},
 	})
 	return &AttributeExpr{
 		Type:        &obj,
 		Description: att.Description,
-		Validation:  &ValidationExpr{Required: []string{"Type", "Value"}},
+		Validation:  &ValidationExpr{Required: []string{typeKey, valueKey}},
 	}
 }
 
