@@ -1596,3 +1596,47 @@ var ValidateErrorResponseTypeDSL = func() {
 		})
 	})
 }
+
+var ResultBodyUnionCustomKeysDSL = func() {
+	var CustomUnion = Type("CustomUnion", func() {
+		OneOf("Values", func() {
+			Meta("oneof:type:field", "kind")
+			Meta("oneof:value:field", "data")
+			Attribute("String", String)
+			Attribute("Int", Int)
+		})
+	})
+	Service("ServiceResultUnionCustomKeys", func() {
+		Method("MethodResultUnionCustomKeys", func() {
+			Result(CustomUnion)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var ResultBodyUnionCustomKeysMultiDSL = func() {
+	var TypeA = Type("TypeA", func() {
+		Attribute("a", Int)
+	})
+	var TypeB = Type("TypeB", func() {
+		Attribute("b", String)
+	})
+	var PaymentResponse = Type("PaymentResponse", func() {
+		OneOf("status", func() {
+			Meta("oneof:type:field", "statusType")
+			Meta("oneof:value:field", "statusDetails")
+			Attribute("success", TypeA)
+			Attribute("failure", TypeB)
+		})
+	})
+	Service("ServiceResultUnionCustomKeysMulti", func() {
+		Method("MethodResultUnionCustomKeysMulti", func() {
+			Result(PaymentResponse)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}

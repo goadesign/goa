@@ -239,6 +239,56 @@ func OneOf(name string, args ...any) {
 		}
 	}
 	Attribute(name, &expr.Union{TypeName: name}, desc, fn)
+
+	// Extract and validate oneof:type:field and oneof:value:field meta tags
+	var parent *expr.AttributeExpr
+	switch def := eval.Current().(type) {
+	case *expr.AttributeExpr:
+		parent = def
+	case expr.CompositeExpr:
+		parent = def.Attribute()
+	default:
+		return
+	}
+	if parent == nil {
+		return
+	}
+
+	// Find the union attribute we just created
+	attr := parent.Find(name)
+	if attr == nil || attr.Meta == nil {
+		return
+	}
+
+	union, ok := attr.Type.(*expr.Union)
+	if !ok {
+		return
+	}
+
+	// Extract type key from meta
+	if typeKeys, ok := attr.Meta["oneof:type:field"]; ok && len(typeKeys) > 0 {
+		typeKey := typeKeys[0]
+		if typeKey == "" {
+			eval.ReportError("oneof:type:field meta cannot be empty")
+			return
+		}
+		union.TypeKey = typeKey
+	}
+
+	// Extract value key from meta
+	if valueKeys, ok := attr.Meta["oneof:value:field"]; ok && len(valueKeys) > 0 {
+		valueKey := valueKeys[0]
+		if valueKey == "" {
+			eval.ReportError("oneof:value:field meta cannot be empty")
+			return
+		}
+		union.ValueKey = valueKey
+	}
+
+	// Validate that type and value keys are different
+	if union.TypeKey != "" && union.ValueKey != "" && union.TypeKey == union.ValueKey {
+		eval.ReportError("oneof:type:field and oneof:value:field cannot be the same (%q)", union.TypeKey)
+	}
 }
 
 // Default sets the default value for an attribute.

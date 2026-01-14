@@ -876,6 +876,106 @@ func TestMapIsCompatible(t *testing.T) {
 	}
 }
 
+func TestUnionGetTypeKey(t *testing.T) {
+	cases := map[string]struct {
+		typeKey  string
+		expected string
+	}{
+		"default": {
+			typeKey:  "",
+			expected: "type",
+		},
+		"custom": {
+			typeKey:  "kind",
+			expected: "kind",
+		},
+		"discriminator": {
+			typeKey:  "discriminator",
+			expected: "discriminator",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			union := &Union{
+				TypeName: "TestUnion",
+				TypeKey:  tc.typeKey,
+			}
+			if actual := union.GetTypeKey(); actual != tc.expected {
+				t.Errorf("got %q, expected %q", actual, tc.expected)
+			}
+		})
+	}
+}
+
+func TestUnionGetValueKey(t *testing.T) {
+	cases := map[string]struct {
+		valueKey string
+		expected string
+	}{
+		"default": {
+			valueKey: "",
+			expected: "value",
+		},
+		"custom": {
+			valueKey: "data",
+			expected: "data",
+		},
+		"payload": {
+			valueKey: "payload",
+			expected: "payload",
+		},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			union := &Union{
+				TypeName: "TestUnion",
+				ValueKey: tc.valueKey,
+			}
+			if actual := union.GetValueKey(); actual != tc.expected {
+				t.Errorf("got %q, expected %q", actual, tc.expected)
+			}
+		})
+	}
+}
+
+func TestUnionDupPreservesCustomKeys(t *testing.T) {
+	original := &Union{
+		TypeName: "TestUnion",
+		TypeKey:  "kind",
+		ValueKey: "data",
+		Values: []*NamedAttributeExpr{
+			{
+				Name: "String",
+				Attribute: &AttributeExpr{
+					Type: String,
+				},
+			},
+		},
+	}
+
+	duplicated := Dup(original)
+
+	dup, ok := duplicated.(*Union)
+	if !ok {
+		t.Fatalf("expected *Union, got %T", duplicated)
+	}
+
+	if dup.TypeKey != original.TypeKey {
+		t.Errorf("TypeKey: got %q, expected %q", dup.TypeKey, original.TypeKey)
+	}
+	if dup.ValueKey != original.ValueKey {
+		t.Errorf("ValueKey: got %q, expected %q", dup.ValueKey, original.ValueKey)
+	}
+	if dup.GetTypeKey() != original.GetTypeKey() {
+		t.Errorf("GetTypeKey(): got %q, expected %q", dup.GetTypeKey(), original.GetTypeKey())
+	}
+	if dup.GetValueKey() != original.GetValueKey() {
+		t.Errorf("GetValueKey(): got %q, expected %q", dup.GetValueKey(), original.GetValueKey())
+	}
+}
+
 func TestQualifiedTypeName(t *testing.T) {
 	var (
 		array = &Array{

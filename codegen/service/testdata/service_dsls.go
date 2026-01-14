@@ -1054,3 +1054,61 @@ var MixedAndMultipleAPIKeySecurityDSL = func() {
 		})
 	})
 }
+
+// UnionCustomKeysDSL tests union with custom type and value keys via Meta tags.
+var UnionCustomKeysDSL = func() {
+	var CustomUnion = Type("CustomUnion", func() {
+		OneOf("Values", func() {
+			Meta("oneof:type:field", "kind")
+			Meta("oneof:value:field", "data")
+			Attribute("Int", Int)
+			Attribute("String", String)
+		})
+	})
+	Service("CustomKeysService", func() {
+		Method("CustomUnion", func() {
+			Payload(CustomUnion)
+			Result(CustomUnion)
+		})
+	})
+}
+
+// UnionCustomKeysMultiTypeDSL tests union with custom keys and user-defined types.
+var UnionCustomKeysMultiTypeDSL = func() {
+	var TypeA = Type("TypeA", func() {
+		Attribute("a", Int)
+	})
+	var TypeB = Type("TypeB", func() {
+		Attribute("b", String)
+	})
+	var PaymentMethod = Type("PaymentMethod", func() {
+		OneOf("method", func() {
+			Meta("oneof:type:field", "paymentType")
+			Meta("oneof:value:field", "details")
+			Attribute("credit_card", TypeA)
+			Attribute("paypal", TypeB)
+		})
+	})
+	Service("PaymentService", func() {
+		Method("ProcessPayment", func() {
+			Payload(PaymentMethod)
+			Result(PaymentMethod)
+		})
+	})
+}
+
+// UnionDefaultKeysDSL tests that unions without custom Meta tags still use "type" and "value".
+var UnionDefaultKeysDSL = func() {
+	var DefaultUnion = Type("DefaultUnion", func() {
+		OneOf("Values", func() {
+			Attribute("Int", Int)
+			Attribute("String", String)
+		})
+	})
+	Service("DefaultKeysService", func() {
+		Method("DefaultUnion", func() {
+			Payload(DefaultUnion)
+			Result(DefaultUnion)
+		})
+	})
+}

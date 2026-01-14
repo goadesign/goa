@@ -87,7 +87,12 @@ func (d *dupper) DupType(t DataType) DataType {
 			ElemType: d.DupAttribute(actual.ElemType),
 		}
 	case *Union:
-		dp := Union{TypeName: actual.TypeName, Values: make([]*NamedAttributeExpr, len(actual.Values))}
+		dp := Union{
+			TypeName: actual.TypeName,
+			Values:   make([]*NamedAttributeExpr, len(actual.Values)),
+			TypeKey:  actual.TypeKey,
+			ValueKey: actual.ValueKey,
+		}
 		for i, nat := range actual.Values {
 			dp.Values[i] = &NamedAttributeExpr{Name: nat.Name, Attribute: d.DupAttribute(nat.Attribute)}
 		}

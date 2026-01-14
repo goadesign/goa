@@ -211,8 +211,11 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			s.AdditionalProperties = sf.schemafy(t.ElemType)
 		}
 	case *expr.Union:
-		// Represent unions as an object {type, value} where "type" is a discriminator
-		// and "value" holds one of the branch schemas.
+		// Represent unions as an object with discriminator and value fields.
+		// The field names are configurable via Meta tags (defaults: "type" and "value").
+		typeKey := t.GetTypeKey()
+		valueKey := t.GetValueKey()
+
 		s.Type = openapi.Object
 		if s.Properties == nil {
 			s.Properties = make(map[string]*openapi.Schema)
@@ -226,9 +229,9 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		for _, val := range t.Values {
 			valueSchema.AnyOf = append(valueSchema.AnyOf, sf.schemafy(val.Attribute))
 		}
-		s.Properties["type"] = typeSchema
-		s.Properties["value"] = valueSchema
-		s.Required = append(s.Required, "type", "value")
+		s.Properties[typeKey] = typeSchema
+		s.Properties[valueKey] = valueSchema
+		s.Required = append(s.Required, typeKey, valueKey)
 	case expr.UserType:
 		if expr.IsAlias(t) {
 			return sf.schemafy(t.Attribute())
