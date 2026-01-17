@@ -673,10 +673,17 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	for _, httpEndpoint := range httpSvc.HTTPEndpoints {
 		method := svc.Method(httpEndpoint.MethodExpr.Name)
 
-		var routes []*RouteData
-		i := 0
-		for _, r := range httpEndpoint.Routes {
-			for _, rpath := range r.FullPaths() {
+		routePaths := make([][]string, len(httpEndpoint.Routes))
+		routesCap := 0
+		for i, r := range httpEndpoint.Routes {
+			fps := r.FullPaths()
+			routePaths[i] = fps
+			routesCap += len(fps)
+		}
+		routes := make([]*RouteData, 0, routesCap)
+		pathCount := 0
+		for i, r := range httpEndpoint.Routes {
+			for _, rpath := range routePaths[i] {
 				params := expr.ExtractHTTPWildcards(rpath)
 				var (
 					init *InitData
@@ -685,10 +692,10 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 					initArgs := make([]*InitArgData, len(params))
 					pathParamsObj := expr.AsObject(httpEndpoint.PathParams().Type)
 					suffix := ""
-					if i > 0 {
-						suffix = strconv.Itoa(i + 1)
+					if pathCount > 0 {
+						suffix = strconv.Itoa(pathCount + 1)
 					}
-					i++
+					pathCount++
 					name := fmt.Sprintf("%s%sPath%s", method.VarName, svc.StructName, suffix)
 					for j, arg := range params {
 						patt := pathParamsObj.Attribute(arg)
@@ -1196,6 +1203,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			clientArgs []*InitArgData
 			serverArgs []*InitArgData
 		)
+		argsCap := len(request.PathParams) + len(request.QueryParams) + len(request.Headers) + len(request.Cookies)
 		n := codegen.Goify(ep.Name, true)
 		p := codegen.Goify(ep.Payload, true)
 		// Raw payload object has type name prefixed with endpoint name. No need to
@@ -1209,6 +1217,8 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		desc = fmt.Sprintf("%s builds a %s service %s endpoint payload.",
 			name, svc.Name, e.Name())
 		isObject = expr.IsObject(payload.Type)
+		serverArgs = make([]*InitArgData, 0, argsCap+1)
+		clientArgs = make([]*InitArgData, 0, argsCap+1)
 		if body != expr.Empty {
 			var (
 				svcode string
@@ -1220,7 +1230,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 					cvcode = codegen.ValidationCode(ut.Attribute(), ut, httpclictx, true, expr.IsAlias(ut), false, "body")
 				}
 			}
-			serverArgs = []*InitArgData{{
+			serverArgs = append(serverArgs, &InitArgData{
 				Ref: sd.Scope.GoVar("body", body),
 				AttributeData: &AttributeData{
 					Name:     "body",
@@ -1232,8 +1242,8 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 					Example:  e.Body.Example(sds.Root.API.ExampleGenerator),
 					Validate: svcode,
 				},
-			}}
-			clientArgs = []*InitArgData{{
+			})
+			clientArgs = append(clientArgs, &InitArgData{
 				Ref: sd.Scope.GoVar("body", body),
 				AttributeData: &AttributeData{
 					Name:     "body",
@@ -1245,9 +1255,9 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 					Example:  e.Body.Example(sds.Root.API.ExampleGenerator),
 					Validate: cvcode,
 				},
-			}}
+			})
 		}
-		var args []*InitArgData
+		args := make([]*InitArgData, 0, argsCap)
 		for _, p := range request.PathParams {
 			args = append(args, &InitArgData{
 				Ref: p.VarName,
@@ -1875,18 +1885,25 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 			name = fmt.Sprintf("New%s%s", codegen.Goify(ep.Name, true), codegen.Goify(v.ErrorExpr.Name, true))
 			desc = fmt.Sprintf("%s builds a %s service %s endpoint %s error.",
 				name, svc.Name, e.Name(), v.ErrorExpr.Name)
+			headers := sds.extractHeaders(v.Response.Headers, v.AttributeExpr, errctx, sd.Scope)
+			cookies := sds.extractCookies(v.Response.Cookies, v.AttributeExpr, errctx, sd.Scope)
+			argsCap := len(headers) + len(cookies)
+			if body != expr.Empty {
+				argsCap++
+			}
+			args = make([]*InitArgData, 0, argsCap)
 			if body != expr.Empty {
 				isObject = expr.IsObject(body)
 				ref := "body"
 				if isObject {
 					ref = "&body"
 				}
-				args = []*InitArgData{{
+				args = append(args, &InitArgData{
 					Ref:           ref,
 					AttributeData: &AttributeData{Name: "body", VarName: "body", TypeRef: sd.Scope.GoTypeRef(v.Response.Body)},
-				}}
+				})
 			}
-			for _, h := range sds.extractHeaders(v.Response.Headers, v.AttributeExpr, errctx, sd.Scope) {
+			for _, h := range headers {
 				args = append(args, &InitArgData{
 					Ref: h.VarName,
 					AttributeData: &AttributeData{
@@ -1902,7 +1919,7 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 					},
 				})
 			}
-			for _, c := range sds.extractCookies(v.Response.Cookies, v.AttributeExpr, errctx, sd.Scope) {
+			for _, c := range cookies {
 				args = append(args, &InitArgData{
 					Ref: c.VarName,
 					AttributeData: &AttributeData{
