@@ -49,8 +49,11 @@ func TestGoTransformHelpers(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, len(c.HelperNames), len(funcs), "invalid helpers count")
 			var actual []string
-			for _, f := range funcs {
-				actual = append(actual, f.Name)
+			if len(funcs) > 0 {
+				actual = make([]string, len(funcs))
+				for i, f := range funcs {
+					actual[i] = f.Name
+				}
 			}
 			assert.Equal(t, c.HelperNames, actual, "invalid helper names")
 		})

@@ -195,13 +195,14 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 	// service.go
 	var sections []*codegen.SectionTemplate
 	{
-		sections = []*codegen.SectionTemplate{header, def}
 		names := make([]string, len(typeDefSections[svcPath]))
 		i := 0
 		for n := range typeDefSections[svcPath] {
 			names[i] = n
 			i++
 		}
+		sections = make([]*codegen.SectionTemplate, 0, 2+len(names)+len(svcSections))
+		sections = append(sections, header, def)
 		sort.Strings(names)
 		for _, n := range names {
 			sections = append(sections, typeDefSections[svcPath][n])

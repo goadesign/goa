@@ -97,11 +97,12 @@ func endpointParser(genpkg string, services *ServicesData, svr *expr.ServerExpr,
 		}
 	}
 
-	sections := []*codegen.SectionTemplate{
+	sections := make([]*codegen.SectionTemplate, 0, 4+len(data))
+	sections = append(sections,
 		codegen.Header(title, "cli", specs),
 		cli.UsageCommands(data),
 		cli.UsageExamples(data),
-		{
+		&codegen.SectionTemplate{
 			Name:   "parse-endpoint-grpc",
 			Source: grpcTemplates.Read(grpcParseEndpointT),
 			Data: struct {
@@ -112,7 +113,7 @@ func endpointParser(genpkg string, services *ServicesData, svr *expr.ServerExpr,
 				data,
 			},
 		},
-	}
+	)
 	for _, cmd := range data {
 		sections = append(sections, cli.CommandUsage(cmd))
 	}

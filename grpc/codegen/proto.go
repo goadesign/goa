@@ -44,9 +44,10 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData)
 	fname := fmt.Sprintf("%s_%s_%s.proto", ProtoPrefix, repoName, svcName)
 	path := filepath.Join(codegen.Gendir, "grpc", svcName, pbPkgName, fname)
 
-	sections := []*codegen.SectionTemplate{
+	sections := make([]*codegen.SectionTemplate, 0, 3+len(data.Messages))
+	sections = append(sections,
 		// header comments
-		{
+		&codegen.SectionTemplate{
 			Name:   "proto-header",
 			Source: grpcTemplates.Read(grpcProtoHeaderT),
 			Data: map[string]any{
@@ -55,7 +56,7 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData)
 			},
 		},
 		// proto syntax and package
-		{
+		&codegen.SectionTemplate{
 			Name:   "proto-start",
 			Source: grpcTemplates.Read(grpcProtoStartT),
 			Data: map[string]any{
@@ -65,12 +66,12 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData)
 			},
 		},
 		// service definition
-		{
+		&codegen.SectionTemplate{
 			Name:   "grpc-service",
 			Source: grpcTemplates.Read(grpcServiceT),
 			Data:   data,
 		},
-	}
+	)
 
 	// message definition
 	for _, m := range data.Messages {
