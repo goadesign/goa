@@ -32,19 +32,20 @@ func ExampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, ser
 	svrdata := example.Servers.Get(svr, root)
 	fpath := filepath.Join("cmd", svrdata.Dir, "http.go")
 	specs := make([]*codegen.ImportSpec, 0, 12+2*len(root.API.HTTP.Services))
-	specs = append(specs,
-		&codegen.ImportSpec{Path: "context"},
-		&codegen.ImportSpec{Path: "net/http"},
-		&codegen.ImportSpec{Path: "net/url"},
-		&codegen.ImportSpec{Path: "os"},
-		&codegen.ImportSpec{Path: "sync"},
-		&codegen.ImportSpec{Path: "time"},
+	baseSpecs := []*codegen.ImportSpec{
+		{Path: "context"},
+		{Path: "net/http"},
+		{Path: "net/url"},
+		{Path: "os"},
+		{Path: "sync"},
+		{Path: "time"},
 		codegen.GoaNamedImport("http", "goahttp"),
-		&codegen.ImportSpec{Path: "goa.design/clue/debug"},
-		&codegen.ImportSpec{Path: "goa.design/clue/log"},
+		{Path: "goa.design/clue/debug"},
+		{Path: "goa.design/clue/log"},
 		codegen.GoaImport("middleware"),
-		&codegen.ImportSpec{Path: "github.com/gorilla/websocket"},
-	)
+		{Path: "github.com/gorilla/websocket"},
+	}
+	specs = append(specs, baseSpecs...)
 
 	scope := codegen.NewNameScope()
 	for _, svc := range root.API.HTTP.Services {

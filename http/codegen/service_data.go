@@ -673,17 +673,14 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	for _, httpEndpoint := range httpSvc.HTTPEndpoints {
 		method := svc.Method(httpEndpoint.MethodExpr.Name)
 
-		routePaths := make([][]string, len(httpEndpoint.Routes))
 		routesCap := 0
-		for i, r := range httpEndpoint.Routes {
-			fps := r.FullPaths()
-			routePaths[i] = fps
-			routesCap += len(fps)
+		for _, r := range httpEndpoint.Routes {
+			routesCap += len(r.FullPaths())
 		}
 		routes := make([]*RouteData, 0, routesCap)
 		pathCount := 0
-		for i, r := range httpEndpoint.Routes {
-			for _, rpath := range routePaths[i] {
+		for _, r := range httpEndpoint.Routes {
+			for _, rpath := range r.FullPaths() {
 				params := expr.ExtractHTTPWildcards(rpath)
 				var (
 					init *InitData
