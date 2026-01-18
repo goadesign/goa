@@ -5,7 +5,14 @@ This document is intended to help Goa maintainers release new versions of Goa.
 ## Using `make release`
 
 1. Update `MAJOR`, `MINOR` and `BUILD` as needed in `Makefile`.
-2. Run `make release`
+2. Make sure the `goa.design/examples` and `goa.design/plugins` repositories exist in `$(go env GOPATH)/src` and are clean:
+   - `$(go env GOPATH)/src/goa.design/examples` on branch `main`
+   - `$(go env GOPATH)/src/goa.design/plugins` on branch `v3`
+3. Run `make release`
+
+`make release` runs a preflight check (`release-preflight`) after bumping the version and updating
+the README badge. The preflight runs `lint`, `test-release` (no coverage artifact) and
+`integration-test` before tagging and pushing.
 
 ## Manual release procedure
 

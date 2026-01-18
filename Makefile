@@ -13,13 +13,16 @@
 # - "all" is the default target, it runs "lint" and "test"
 #
 MAJOR=3
-MINOR=23
-BUILD=4
+MINOR=24
+BUILD=0
 
 GOOS=$(shell go env GOOS)
 GOARCH=$(shell go env GOARCH)
 GO_FILES=$(shell find . -type f -name '*.go')
 GOPATH=$(shell go env GOPATH)
+
+.PHONY: all all-tests ci depend lint test test-release integration-test build-goa release release-preflight release-goa release-examples release-plugins
+.NOTPARALLEL: release release-goa release-examples release-plugins
 
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
@@ -78,6 +81,9 @@ endif
 test:
 	go test ./... --coverprofile=cover.out
 
+test-release:
+	go test -count=1 ./...
+
 integration-test: build-goa
 ifneq ($(GOOS),windows)
 	cd jsonrpc/integration_tests && go test -count=1 -timeout 10m ./...
@@ -87,31 +93,48 @@ endif
 build-goa:
 	cd cmd/goa && go install .
 
+release-preflight: lint test-release integration-test
+
 release: release-goa release-examples release-plugins
 	@echo "Release v$(MAJOR).$(MINOR).$(BUILD) complete"
 
 release-goa:
 	# First make sure all is clean
-	git diff-index --quiet HEAD
+	@status="$$(git status --porcelain)"; \
+	if [ -n "$$status" ]; then \
+		echo "error: goa repo has uncommitted changes:"; \
+		echo "$$status"; \
+		exit 1; \
+	fi
 	cd $(GOPATH)/src/goa.design/examples && \
 		git checkout main && \
 		git pull origin main && \
-		git diff-index --quiet HEAD
+		status="$$(git status --porcelain)" && \
+		if [ -n "$$status" ]; then \
+			echo "error: examples repo has uncommitted changes:"; \
+			echo "$$status"; \
+			exit 1; \
+		fi
 	cd $(GOPATH)/src/goa.design/plugins && \
 		git checkout v$(MAJOR) && \
 		git pull origin v$(MAJOR) && \
-		git diff-index --quiet HEAD
+		status="$$(git status --porcelain)" && \
+		if [ -n "$$status" ]; then \
+			echo "error: plugins repo has uncommitted changes:"; \
+			echo "$$status"; \
+			exit 1; \
+		fi
 	go mod tidy 
 	# Bump version number, commit and push
 	sed 's/Major = .*/Major = $(MAJOR)/' pkg/version.go > _tmp && mv _tmp pkg/version.go
 	sed 's/Minor = .*/Minor = $(MINOR)/' pkg/version.go > _tmp && mv _tmp pkg/version.go
 	sed 's/Build = .*/Build = $(BUILD)/' pkg/version.go > _tmp && mv _tmp pkg/version.go
-	sed 's/Current Release: `v3\..*/Current Release: `v$(MAJOR).$(MINOR).$(BUILD)`/' README.md > _tmp && mv _tmp README.md
 	sed 's/goa\/v3@v.*tab=doc/goa\/v3@v$(MAJOR).$(MINOR).$(BUILD)\/dsl?tab=doc/' README.md > _tmp && mv _tmp README.md
+	$(MAKE) release-preflight
 	git add .
 	git commit -m "Release v$(MAJOR).$(MINOR).$(BUILD)"
 	git tag v$(MAJOR).$(MINOR).$(BUILD)
-	cd cmd/goa && go install
+	cd cmd/goa && go install .
 	git push origin v$(MAJOR)
 	git push origin v$(MAJOR).$(MINOR).$(BUILD)
 	# Wait for Go proxy to update
