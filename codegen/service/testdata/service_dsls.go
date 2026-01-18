@@ -141,6 +141,23 @@ var UnionWithAliasCrossPkgDSL = func() {
 	})
 }
 
+// PkgPathUnionDSL tests that union sum types generated into struct:pkg:path files
+// include the required JSON imports for the generated marshalers.
+var PkgPathUnionDSL = func() {
+	var TypeWithUnion = Type("TypeWithUnion", func() {
+		Meta("struct:pkg:path", "types")
+		OneOf("Values", func() {
+			Attribute("A", String)
+			Attribute("B", Int)
+		})
+	})
+	Service("PkgPathUnion", func() {
+		Method("M", func() {
+			Payload(TypeWithUnion)
+		})
+	})
+}
+
 var WithDefaultDSL = func() {
 	Service("WithDefault", func() {
 		Method("A", func() {

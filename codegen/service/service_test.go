@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"go/format"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -145,4 +146,29 @@ func TestStructPkgPath(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStructPkgPath_UnionImportsJSON(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.PkgPathUnionDSL)
+	services := NewServicesData(root)
+	require.Len(t, root.Services, 1)
+
+	files := Files("goa.design/goa/example", root.Services[0], services, make(map[string][]string))
+	require.GreaterOrEqual(t, len(files), 2, "expected at least service.go + one struct:pkg:path file")
+
+	var typeFile *codegen.File
+	for _, f := range files {
+		if strings.HasSuffix(f.Path, filepath.Join("gen", "types", "type_with_union.go")) {
+			typeFile = f
+			break
+		}
+	}
+	require.NotNil(t, typeFile, "expected generated type file for struct:pkg:path type_with_union")
+
+	buf := new(bytes.Buffer)
+	for _, s := range typeFile.SectionTemplates {
+		require.NoError(t, s.Write(buf))
+	}
+	code := buf.String()
+	require.Contains(t, code, "\"encoding/json\"", "expected encoding/json import in generated file:\n%s", code)
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -227,9 +228,13 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			continue
 		}
 		var secs []*codegen.SectionTemplate
+		hasUnion := false
 		ts := typesByPath[p]
 		sort.Strings(ts)
 		for _, name := range ts {
+			if strings.HasPrefix(name, "~union:") {
+				hasUnion = true
+			}
 			hasName := false
 			for _, n := range userTypePkgs[p] {
 				if hasName = n == name; hasName {
@@ -247,10 +252,14 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		}
 		fullRelPath := filepath.Join(codegen.Gendir, p)
 		dir, _ := filepath.Split(fullRelPath)
-		h := codegen.Header("User types", codegen.Goify(filepath.Base(dir), false), []*codegen.ImportSpec{
+		imports := []*codegen.ImportSpec{
 			codegen.SimpleImport("fmt"),
 			codegen.GoaImport(""),
-		})
+		}
+		if hasUnion {
+			imports = append(imports, codegen.SimpleImport("encoding/json"))
+		}
+		h := codegen.Header("User types", codegen.Goify(filepath.Base(dir), false), imports)
 		sections := append([]*codegen.SectionTemplate{h}, secs...)
 		files = append(files, &codegen.File{Path: fullRelPath, SectionTemplates: sections})
 	}
