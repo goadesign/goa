@@ -9,16 +9,21 @@ import (
 )
 
 // UnionToObject returns an object adequate to serialize the given union type in
-// HTTP requests and responses. The object has two fields: "Type" and "Value".
-// The "Type" field is a string that indicates the name of the union type. The
-// "Value" field is a string that contains the JSON encoded union value.
+// HTTP requests and responses. The object has two fields for the discriminator
+// and value, with names determined by the union's Meta tags (defaulting to
+// "Type" and "Value"). The discriminator field indicates the name of the union
+// type, and the value field contains the JSON encoded union value.
 func UnionToObject(att *AttributeExpr) *AttributeExpr {
 	example := att.Example(Root.API.ExampleGenerator)
 	js, err := json.Marshal(example)
 	if err != nil {
 		js = []byte("null")
 	}
-	values := AsUnion(att.Type).Values
+	union := AsUnion(att.Type)
+	values := union.Values
+	typeKey := union.GetTypeKey()
+	valueKey := union.GetValueKey()
+
 	names := make([]any, len(values))
 	vals := make([]string, len(values))
 	bases := make([]DataType, len(values))
@@ -28,32 +33,32 @@ func UnionToObject(att *AttributeExpr) *AttributeExpr {
 		bases[i] = nat.Attribute.Type
 	}
 	obj := Object([]*NamedAttributeExpr{
-		{Name: "Type", Attribute: &AttributeExpr{
+		{Name: typeKey, Attribute: &AttributeExpr{
 			Type:        String,
 			Description: "Union type name, one of:\n" + strings.Join(vals, "\n"),
 			Validation:  &ValidationExpr{Values: names},
 			Meta: MetaExpr{
-				"struct:tag:form": {"Type"},
-				"struct:tag:json": {"Type"},
-				"struct:tag:xml":  {"Type"},
+				"struct:tag:form": {typeKey},
+				"struct:tag:json": {typeKey},
+				"struct:tag:xml":  {typeKey},
 			},
 		}},
-		{Name: "Value", Attribute: &AttributeExpr{
+		{Name: valueKey, Attribute: &AttributeExpr{
 			Type:         String,
 			Description:  "JSON encoded union value",
 			UserExamples: []*ExampleExpr{{Value: string(js)}},
 			Bases:        bases, // For OpenAPI generation
 			Meta: MetaExpr{
-				"struct:tag:form": {"Value"},
-				"struct:tag:json": {"Value"},
-				"struct:tag:xml":  {"Value"},
+				"struct:tag:form": {valueKey},
+				"struct:tag:json": {valueKey},
+				"struct:tag:xml":  {valueKey},
 			},
 		}},
 	})
 	return &AttributeExpr{
 		Type:        &obj,
 		Description: att.Description,
-		Validation:  &ValidationExpr{Required: []string{"Type", "Value"}},
+		Validation:  &ValidationExpr{Required: []string{typeKey, valueKey}},
 	}
 }
 
@@ -142,14 +147,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		bodyOnly = headers.IsEmpty() && params.IsEmpty() && cookies.IsEmpty() && a.MapQueryParams == nil
 	)
 
-	// 1. If Payload is a union type, then the request body is a struct with
-	// two fields: the union type and its value.
-	if IsUnion(payload.Type) {
-		attr := UnionToObject(payload)
-		renameType(attr, name, suffix)
-		return attr
-	}
-
+	// 1. If Payload is not an object then check whether there are
 	// 2. If Payload is not an object then check whether there are
 	// params, cookies or headers defined and if so return empty type
 	// (payload encoded in request params or headers) otherwise return
@@ -218,11 +216,6 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 		return nil
 	}
 	att := e.MethodExpr.StreamingPayload
-	if IsUnion(att.Type) {
-		attr := UnionToObject(att)
-		renameType(attr, e.Name(), "StreamingBody")
-		return attr
-	}
 	if !IsObject(att.Type) {
 		return DupAtt(att)
 	}
@@ -279,11 +272,6 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	// name to handle the case where the same type is used by multiple
 	// methods with potentially different result types.
 	if resp.Body != nil {
-		if IsUnion(resp.Body.Type) {
-			attr := UnionToObject(resp.Body)
-			renameType(attr, name, suffix)
-			return attr
-		}
 		if !IsObject(resp.Body.Type) {
 			return resp.Body
 		}
@@ -301,14 +289,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		return att
 	}
 
-	// 2. Map unions to objects.
-	if IsUnion(attr.Type) {
-		attr = UnionToObject(attr)
-		renameType(attr, name, suffix)
-		return attr
-	}
-
-	// 3. If attribute is not an object then check whether there are headers or
+	// 2. If attribute is not an object then check whether there are headers or
 	// cookies defined and if so return empty type (attr encoded in response
 	// header or cookie) otherwise return renamed attr type (attr encoded in
 	// response body).
@@ -329,12 +310,12 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	removeAttributes(body, resp.Headers)
 	removeAttributes(body, resp.Cookies)
 
-	// 5. Return empty type if no attribute left
+	// 4. Return empty type if no attribute left
 	if len(*AsObject(body.Type)) == 0 {
 		return &AttributeExpr{Type: Empty}
 	}
 
-	// 6. Build computed user type
+	// 5. Build computed user type
 	userType := &UserTypeExpr{
 		AttributeExpr: body.Attribute(),
 		TypeName:      name,

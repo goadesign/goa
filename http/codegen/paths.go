@@ -38,14 +38,15 @@ func clientPath(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File
 // contains the request path constructors for the given service.
 func pathSections(svc *expr.HTTPServiceExpr, pkg string, services *ServicesData) []*codegen.SectionTemplate {
 	title := fmt.Sprintf("HTTP request path constructors for the %s service.", svc.Name())
-	sections := []*codegen.SectionTemplate{
+	sections := make([]*codegen.SectionTemplate, 0, 1+len(svc.HTTPEndpoints))
+	sections = append(sections,
 		codegen.Header(title, pkg, []*codegen.ImportSpec{
 			{Path: "fmt"},
 			{Path: "net/url"},
 			{Path: "strconv"},
 			{Path: "strings"},
 		}),
-	}
+	)
 	sdata := services.Get(svc.Name())
 	for _, e := range svc.HTTPEndpoints {
 		sections = append(sections, &codegen.SectionTemplate{

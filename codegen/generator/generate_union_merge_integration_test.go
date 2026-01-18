@@ -58,7 +58,9 @@ func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
 		t.Fatalf("Generate failed: %v", err)
 	}
 
-	// Verify generated types/summary.go contains both struct and union marker.
+	// Verify generated types/summary.go still contains the struct definition for
+	// the shared user type. The original regression dropped the struct when
+	// merging multiple files contributing to the same path.
 	p := filepath.Join(dir, cg.Gendir, "types", cg.SnakeCase("Summary")+".go")
 	bs, err := os.ReadFile(p)
 	if err != nil {
@@ -67,8 +69,5 @@ func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
 	content := string(bs)
 	if !strings.Contains(content, "type Summary struct") {
 		t.Fatalf("missing struct definition in %s:\n%s", p, content)
-	}
-	if !strings.Contains(content, "myUnionVal()") {
-		t.Fatalf("missing union marker method in %s:\n%s", p, content)
 	}
 }

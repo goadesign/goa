@@ -21,6 +21,7 @@ var (
 	arrayValT      *template.Template
 	mapValT        *template.Template
 	unionValT      *template.Template
+	unionSumValT   *template.Template
 	userValT       *template.Template
 )
 
@@ -29,7 +30,20 @@ func init() {
 		"slice":    toSlice,
 		"oneof":    oneof,
 		"constant": constant,
-		"add":      func(a, b int) int { return a + b },
+		"isUnion": func(att *expr.AttributeExpr) bool {
+			if att == nil {
+				return false
+			}
+			return expr.IsUnion(att.Type)
+		},
+		"isAttributeScope": func(scope Attributor) bool {
+			if scope == nil {
+				return false
+			}
+			_, ok := scope.(*AttributeScope)
+			return ok
+		},
+		"add": func(a, b int) int { return a + b },
 	}
 	enumValT = template.Must(template.New("enum").Funcs(fm).Parse(codegenTemplates.Read(validationEnumT)))
 	formatValT = template.Must(template.New("format").Funcs(fm).Parse(codegenTemplates.Read(validationFormatT)))
@@ -41,6 +55,7 @@ func init() {
 	arrayValT = template.Must(template.New("array").Funcs(fm).Parse(codegenTemplates.Read(validationArrayT)))
 	mapValT = template.Must(template.New("map").Funcs(fm).Parse(codegenTemplates.Read(validationMapT)))
 	unionValT = template.Must(template.New("union").Funcs(fm).Parse(codegenTemplates.Read(validationUnionT)))
+	unionSumValT = template.Must(template.New("union-sum").Funcs(fm).Parse(codegenTemplates.Read(validationUnionSumT)))
 	userValT = template.Must(template.New("user").Funcs(fm).Parse(codegenTemplates.Read(validationUserT)))
 }
 
@@ -171,10 +186,34 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 			}
 		}
 	case expr.IsUnion(att.Type):
-		// NOTE: the only time we validate a union is when we are
-		// validating a proto-generated type or view types since the HTTP
-		// serialization transforms unions into objects.
 		u := expr.AsUnion(att.Type)
+		if _, ok := attCtx.Scope.(*AttributeScope); ok {
+			cases := make([]map[string]any, 0, len(u.Values))
+			for _, v := range u.Values {
+				val := validateAttribute(attCtx, v.Attribute, put, "actual", context+".value", true, view, seen)
+				if val == "" {
+					continue
+				}
+				cases = append(cases, map[string]any{
+					"typeTag":    v.Name,
+					"fieldName":  Goify(v.Name, true),
+					"validation": val,
+				})
+			}
+			if len(cases) > 0 {
+				newline()
+				data := map[string]any{
+					"target": target,
+					"cases":  cases,
+				}
+				if err := unionSumValT.Execute(buf, data); err != nil {
+					panic(err) // bug
+				}
+			}
+			break
+		}
+
+		// Validate unions represented as interfaces (e.g., protobuf oneof wrappers).
 		var vals []string
 		var types []string
 		for _, v := range u.Values {
@@ -339,7 +378,7 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 		if err := tmpl.Execute(&buf, data); err != nil {
 			panic(err) // bug
 		}
-		return buf.String()
+		return strings.Trim(buf.String(), "\n")
 	}
 	res := make([]string, 0, 8) // preallocate with typical validation count
 	if values := validation.Values; values != nil {

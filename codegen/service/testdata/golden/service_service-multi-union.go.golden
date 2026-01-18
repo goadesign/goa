@@ -31,11 +31,147 @@ type TypeB struct {
 
 // Union is the payload type of the MultiUnionService service MultiUnion method.
 type Union struct {
-	Values interface {
-		valuesVal()
+	Values Values
+}
+
+// Values is a sum-type union.
+type Values struct {
+	kind ValuesKind
+	A    *TypeA
+	B    *TypeB
+}
+
+// ValuesKind enumerates the union variants for Values.
+type ValuesKind string
+
+const (
+	// ValuesKindA identifies the a branch of the union.
+	ValuesKindA ValuesKind = "a"
+	// ValuesKindB identifies the b branch of the union.
+	ValuesKindB ValuesKind = "b"
+)
+
+// Kind returns the discriminator value of the union.
+func (u Values) Kind() ValuesKind {
+	return u.kind
+}
+
+// NewValuesA constructs a Values with the a branch set.
+func NewValuesA(v *TypeA) Values {
+	return Values{
+		kind: ValuesKindA,
+		A:    v,
 	}
 }
 
-func (*TypeA) valuesVal() {}
+// AsA returns the value of the a branch if set.
+func (u Values) AsA() (_ *TypeA, ok bool) {
+	if u.kind != ValuesKindA {
+		return
+	}
+	return u.A, true
+}
 
-func (*TypeB) valuesVal() {}
+// SetA sets the a branch of the union.
+func (u *Values) SetA(v *TypeA) {
+	u.kind = ValuesKindA
+	u.A = v
+}
+
+// NewValuesB constructs a Values with the b branch set.
+func NewValuesB(v *TypeB) Values {
+	return Values{
+		kind: ValuesKindB,
+		B:    v,
+	}
+}
+
+// AsB returns the value of the b branch if set.
+func (u Values) AsB() (_ *TypeB, ok bool) {
+	if u.kind != ValuesKindB {
+		return
+	}
+	return u.B, true
+}
+
+// SetB sets the b branch of the union.
+func (u *Values) SetB(v *TypeB) {
+	u.kind = ValuesKindB
+	u.B = v
+}
+
+// Validate ensures the union discriminant is valid.
+func (u Values) Validate() error {
+	switch u.kind {
+	case "":
+		return goa.InvalidEnumValueError("type", "", []any{
+			string(ValuesKindA),
+			string(ValuesKindB),
+		})
+	case ValuesKindA:
+		return nil
+	case ValuesKindB:
+		return nil
+	default:
+		return goa.InvalidEnumValueError("type", u.kind, []any{
+			string(ValuesKindA),
+			string(ValuesKindB),
+		})
+	}
+}
+
+// MarshalJSON marshals the union into the canonical {type,value} JSON shape.
+func (u Values) MarshalJSON() ([]byte, error) {
+	if err := u.Validate(); err != nil {
+		return nil, err
+	}
+	var (
+		value any
+	)
+	switch u.kind {
+	case ValuesKindA:
+		value = u.A
+	case ValuesKindB:
+		value = u.B
+	default:
+		return nil, fmt.Errorf("unexpected Values discriminant %q", u.kind)
+	}
+	return json.Marshal(struct {
+		Type  string `json:"type"`
+		Value any    `json:"value"`
+	}{
+		Type:  string(u.kind),
+		Value: value,
+	})
+}
+
+// UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
+func (u *Values) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	switch raw.Type {
+	case string(ValuesKindA):
+		var v *TypeA
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = ValuesKindA
+		u.A = v
+	case string(ValuesKindB):
+		var v *TypeB
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = ValuesKindB
+		u.B = v
+	default:
+		return fmt.Errorf("unexpected Values type %q", raw.Type)
+	}
+	return nil
+}
+

@@ -67,20 +67,21 @@ func sseServerStreamFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 	}
 	svcName := data.Service.PathName
 	title := fmt.Sprintf("%s SSE server streaming", svc.Name())
-	imports := []*codegen.ImportSpec{
-		{Path: "bytes"},
-		{Path: "context"},
-		{Path: "encoding/json"},
-		{Path: "errors"},
-		{Path: "fmt"},
-		{Path: "net/http"},
-		{Path: "sync"},
+	imports := make([]*codegen.ImportSpec, 0, 11+len(data.Service.UserTypeImports))
+	imports = append(imports,
+		&codegen.ImportSpec{Path: "bytes"},
+		&codegen.ImportSpec{Path: "context"},
+		&codegen.ImportSpec{Path: "encoding/json"},
+		&codegen.ImportSpec{Path: "errors"},
+		&codegen.ImportSpec{Path: "fmt"},
+		&codegen.ImportSpec{Path: "net/http"},
+		&codegen.ImportSpec{Path: "sync"},
 		codegen.GoaImport(""),
 		codegen.GoaImport("jsonrpc"),
 		codegen.GoaNamedImport("http", "goahttp"),
 		// Import the service package from the correct location
-		{Path: genpkg + "/" + codegen.SnakeCase(data.Service.Name), Name: data.Service.PkgName},
-	}
+		&codegen.ImportSpec{Path: genpkg + "/" + codegen.SnakeCase(data.Service.Name), Name: data.Service.PkgName},
+	)
 	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),

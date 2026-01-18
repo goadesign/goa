@@ -2,12 +2,14 @@ func transform() {
 	target := &proto.RecursiveOneOf{
 		String_: source.String,
 	}
-	if source.RecursiveOneOf != nil {
-		switch src := source.RecursiveOneOf.(type) {
-		case proto.RecursiveOneOfInteger:
-			target.RecursiveOneOf = &proto.RecursiveOneOf_Integer{Integer: int32(src)}
-		case *proto.RecursiveOneOf:
-			target.RecursiveOneOf = &proto.RecursiveOneOf_Recurse{Recurse: svcProtoRecursiveOneOfToProtoRecursiveOneOf(src)}
+	if source.RecursiveOneOf.Kind() != "" {
+		switch string(source.RecursiveOneOf.Kind()) {
+		case "integer":
+			actual, _ := source.RecursiveOneOf.AsInteger()
+			target.RecursiveOneOf = &proto.RecursiveOneOf_Integer{Integer: int32(actual)}
+		case "recurse":
+			actual, _ := source.RecursiveOneOf.AsRecurse()
+			target.RecursiveOneOf = &proto.RecursiveOneOf_Recurse{Recurse: svcProtoRecursiveOneOfToProtoRecursiveOneOf(actual)}
 		}
 	}
 }

@@ -23,9 +23,7 @@ var MethodNames = [1]string{"A"}
 
 // AUnion is the payload type of the UnionService service A method.
 type AUnion struct {
-	Values interface {
-		valuesVal()
-	}
+	Values Values
 }
 
 type ValuesBoolean bool
@@ -36,10 +34,220 @@ type ValuesInt int
 
 type ValuesString string
 
-func (ValuesBoolean) valuesVal() {}
+// Values is a sum-type union.
+type Values struct {
+	kind    ValuesKind
+	Int     ValuesInt
+	String  ValuesString
+	Boolean ValuesBoolean
+	Bytes   ValuesBytes
+}
 
-func (ValuesBytes) valuesVal() {}
+// ValuesKind enumerates the union variants for Values.
+type ValuesKind string
 
-func (ValuesInt) valuesVal() {}
+const (
+	// ValuesKindInt identifies the Int branch of the union.
+	ValuesKindInt ValuesKind = "Int"
+	// ValuesKindString identifies the String branch of the union.
+	ValuesKindString ValuesKind = "String"
+	// ValuesKindBoolean identifies the Boolean branch of the union.
+	ValuesKindBoolean ValuesKind = "Boolean"
+	// ValuesKindBytes identifies the Bytes branch of the union.
+	ValuesKindBytes ValuesKind = "Bytes"
+)
 
-func (ValuesString) valuesVal() {}
+// Kind returns the discriminator value of the union.
+func (u Values) Kind() ValuesKind {
+	return u.kind
+}
+
+// NewValuesInt constructs a Values with the Int branch set.
+func NewValuesInt(v ValuesInt) Values {
+	return Values{
+		kind: ValuesKindInt,
+		Int:  v,
+	}
+}
+
+// AsInt returns the value of the Int branch if set.
+func (u Values) AsInt() (_ ValuesInt, ok bool) {
+	if u.kind != ValuesKindInt {
+		return
+	}
+	return u.Int, true
+}
+
+// SetInt sets the Int branch of the union.
+func (u *Values) SetInt(v ValuesInt) {
+	u.kind = ValuesKindInt
+	u.Int = v
+}
+
+// NewValuesString constructs a Values with the String branch set.
+func NewValuesString(v ValuesString) Values {
+	return Values{
+		kind:   ValuesKindString,
+		String: v,
+	}
+}
+
+// AsString returns the value of the String branch if set.
+func (u Values) AsString() (_ ValuesString, ok bool) {
+	if u.kind != ValuesKindString {
+		return
+	}
+	return u.String, true
+}
+
+// SetString sets the String branch of the union.
+func (u *Values) SetString(v ValuesString) {
+	u.kind = ValuesKindString
+	u.String = v
+}
+
+// NewValuesBoolean constructs a Values with the Boolean branch set.
+func NewValuesBoolean(v ValuesBoolean) Values {
+	return Values{
+		kind:    ValuesKindBoolean,
+		Boolean: v,
+	}
+}
+
+// AsBoolean returns the value of the Boolean branch if set.
+func (u Values) AsBoolean() (_ ValuesBoolean, ok bool) {
+	if u.kind != ValuesKindBoolean {
+		return
+	}
+	return u.Boolean, true
+}
+
+// SetBoolean sets the Boolean branch of the union.
+func (u *Values) SetBoolean(v ValuesBoolean) {
+	u.kind = ValuesKindBoolean
+	u.Boolean = v
+}
+
+// NewValuesBytes constructs a Values with the Bytes branch set.
+func NewValuesBytes(v ValuesBytes) Values {
+	return Values{
+		kind:  ValuesKindBytes,
+		Bytes: v,
+	}
+}
+
+// AsBytes returns the value of the Bytes branch if set.
+func (u Values) AsBytes() (_ ValuesBytes, ok bool) {
+	if u.kind != ValuesKindBytes {
+		return
+	}
+	return u.Bytes, true
+}
+
+// SetBytes sets the Bytes branch of the union.
+func (u *Values) SetBytes(v ValuesBytes) {
+	u.kind = ValuesKindBytes
+	u.Bytes = v
+}
+
+// Validate ensures the union discriminant is valid.
+func (u Values) Validate() error {
+	switch u.kind {
+	case "":
+		return goa.InvalidEnumValueError("type", "", []any{
+			string(ValuesKindInt),
+			string(ValuesKindString),
+			string(ValuesKindBoolean),
+			string(ValuesKindBytes),
+		})
+	case ValuesKindInt:
+		return nil
+	case ValuesKindString:
+		return nil
+	case ValuesKindBoolean:
+		return nil
+	case ValuesKindBytes:
+		return nil
+	default:
+		return goa.InvalidEnumValueError("type", u.kind, []any{
+			string(ValuesKindInt),
+			string(ValuesKindString),
+			string(ValuesKindBoolean),
+			string(ValuesKindBytes),
+		})
+	}
+}
+
+// MarshalJSON marshals the union into the canonical {type,value} JSON shape.
+func (u Values) MarshalJSON() ([]byte, error) {
+	if err := u.Validate(); err != nil {
+		return nil, err
+	}
+	var (
+		value any
+	)
+	switch u.kind {
+	case ValuesKindInt:
+		value = u.Int
+	case ValuesKindString:
+		value = u.String
+	case ValuesKindBoolean:
+		value = u.Boolean
+	case ValuesKindBytes:
+		value = u.Bytes
+	default:
+		return nil, fmt.Errorf("unexpected Values discriminant %q", u.kind)
+	}
+	return json.Marshal(struct {
+		Type  string `json:"type"`
+		Value any    `json:"value"`
+	}{
+		Type:  string(u.kind),
+		Value: value,
+	})
+}
+
+// UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
+func (u *Values) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	switch raw.Type {
+	case string(ValuesKindInt):
+		var v ValuesInt
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = ValuesKindInt
+		u.Int = v
+	case string(ValuesKindString):
+		var v ValuesString
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = ValuesKindString
+		u.String = v
+	case string(ValuesKindBoolean):
+		var v ValuesBoolean
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = ValuesKindBoolean
+		u.Boolean = v
+	case string(ValuesKindBytes):
+		var v ValuesBytes
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = ValuesKindBytes
+		u.Bytes = v
+	default:
+		return fmt.Errorf("unexpected Values type %q", raw.Type)
+	}
+	return nil
+}
+

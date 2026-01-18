@@ -168,7 +168,9 @@ func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesD
 	}
 
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "sse.go")
-	sections := []*codegen.SectionTemplate{
+	tmplSections := sseTemplateSections(data)
+	sections := make([]*codegen.SectionTemplate, 0, 1+len(tmplSections))
+	sections = append(sections,
 		codegen.Header(
 			"sse",
 			"server",
@@ -184,8 +186,8 @@ func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesD
 				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/views", Name: data.Service.ViewsPkg},
 			},
 		),
-	}
-	sections = append(sections, sseTemplateSections(data)...)
+	)
+	sections = append(sections, tmplSections...)
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 

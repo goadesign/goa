@@ -1,11 +1,19 @@
 func transform() {
 	var target *UnionStringInt2
-	switch actual := source.(type) {
-	case UnionStringIntString:
+	switch string(source.Kind()) {
+	case "String":
+		actual, _ := source.AsString()
 		obj := UnionStringInt2String(actual)
-		target = obj
-	case UnionStringIntInt:
+
+		var u UnionStringInt2
+		u.SetString((UnionStringInt2String)(obj))
+		target = &u
+	case "Int":
+		actual, _ := source.AsInt()
 		obj := UnionStringInt2Int(actual)
-		target = obj
+
+		var u UnionStringInt2
+		u.SetInt((UnionStringInt2Int)(obj))
+		target = &u
 	}
 }

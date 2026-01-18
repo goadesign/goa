@@ -94,18 +94,16 @@ func buildInfo(api *expr.APIExpr) *Info {
 func buildComponents(root *expr.RootExpr, types map[string]*openapi.Schema) *Components {
 	var schemesRef map[string]*SecuritySchemeRef
 	{
-		var schemes []*expr.SchemeExpr
+		schemesRef = make(map[string]*SecuritySchemeRef)
 		for _, s := range root.API.HTTP.Services {
 			for _, e := range s.HTTPEndpoints {
 				for _, r := range e.Requirements {
-					schemes = append(schemes, r.Schemes...)
+					for _, sch := range r.Schemes {
+						schemesRef[sch.Hash()] = &SecuritySchemeRef{
+							Value: buildSecurityScheme(sch),
+						}
+					}
 				}
-			}
-		}
-		schemesRef = make(map[string]*SecuritySchemeRef, len(schemes))
-		for _, se := range schemes {
-			schemesRef[se.Hash()] = &SecuritySchemeRef{
-				Value: buildSecurityScheme(se),
 			}
 		}
 	}

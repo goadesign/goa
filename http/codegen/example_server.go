@@ -31,7 +31,8 @@ func ExampleServerFiles(genpkg string, data *ServicesData) []*codegen.File {
 func ExampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 	svrdata := example.Servers.Get(svr, root)
 	fpath := filepath.Join("cmd", svrdata.Dir, "http.go")
-	specs := []*codegen.ImportSpec{
+	specs := make([]*codegen.ImportSpec, 0, 12+2*len(root.API.HTTP.Services))
+	baseSpecs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "net/http"},
 		{Path: "net/url"},
@@ -44,6 +45,7 @@ func ExampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, ser
 		codegen.GoaImport("middleware"),
 		{Path: "github.com/gorilla/websocket"},
 	}
+	specs = append(specs, baseSpecs...)
 
 	scope := codegen.NewNameScope()
 	for _, svc := range root.API.HTTP.Services {
@@ -153,9 +155,8 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 		scope.Unique(s.Service.PkgName)
 	}
 	{
-		specs := []*codegen.ImportSpec{
-			{Path: "mime/multipart"},
-		}
+		specs := make([]*codegen.ImportSpec, 0, 2)
+		specs = append(specs, &codegen.ImportSpec{Path: "mime/multipart"})
 		data := services.Get(svc.Name())
 		specs = append(specs, &codegen.ImportSpec{
 			Path: path.Join(genpkg, data.Service.PathName),

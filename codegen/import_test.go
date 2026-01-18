@@ -152,11 +152,13 @@ func TestGetMetaTypeImports(t *testing.T) {
 				}
 			}
 			for _, methodExpr := range serviceExpr.Methods {
-				var got []string
-				for _, v := range GetMetaTypeImports(methodExpr.Payload) {
+				payloadImports := GetMetaTypeImports(methodExpr.Payload)
+				resultImports := GetMetaTypeImports(methodExpr.Result)
+				got := make([]string, 0, len(payloadImports)+len(resultImports))
+				for _, v := range payloadImports {
 					got = append(got, v.Path)
 				}
-				for _, v := range GetMetaTypeImports(methodExpr.Result) {
+				for _, v := range resultImports {
 					got = append(got, v.Path)
 				}
 				sort.Strings(got)

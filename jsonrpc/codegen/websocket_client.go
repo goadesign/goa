@@ -19,23 +19,24 @@ func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 	title := fmt.Sprintf("%s WebSocket JSON-RPC client", svc.Name())
 
 	// Build imports list for WebSocket clients
-	imports := []*codegen.ImportSpec{
-		{Path: "bytes"},
-		{Path: "context"},
-		{Path: "encoding/json"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "net/http"},
-		{Path: "strconv"},
-		{Path: "sync"},
-		{Path: "sync/atomic"},
-		{Path: "time"},
-		{Path: "github.com/gorilla/websocket"},
+	imports := make([]*codegen.ImportSpec, 0, 15+len(data.Service.UserTypeImports))
+	imports = append(imports,
+		&codegen.ImportSpec{Path: "bytes"},
+		&codegen.ImportSpec{Path: "context"},
+		&codegen.ImportSpec{Path: "encoding/json"},
+		&codegen.ImportSpec{Path: "fmt"},
+		&codegen.ImportSpec{Path: "io"},
+		&codegen.ImportSpec{Path: "net/http"},
+		&codegen.ImportSpec{Path: "strconv"},
+		&codegen.ImportSpec{Path: "sync"},
+		&codegen.ImportSpec{Path: "sync/atomic"},
+		&codegen.ImportSpec{Path: "time"},
+		&codegen.ImportSpec{Path: "github.com/gorilla/websocket"},
 		codegen.GoaImport(""),
 		codegen.GoaImport("jsonrpc"),
 		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-	}
+		&codegen.ImportSpec{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+	)
 	imports = append(imports, data.Service.UserTypeImports...)
 
 	sections := []*codegen.SectionTemplate{

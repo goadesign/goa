@@ -80,6 +80,9 @@ type (
 		// ClientTransformHelpers is the list of transform functions
 		// required by the various client side constructors.
 		ClientTransformHelpers []*codegen.TransformFunctionData
+		// UnionTypes lists the sum-type unions referenced by the HTTP request and
+		// response body types.
+		UnionTypes []*service.UnionTypeData
 		// Scope initialized with all the server and client types.
 		Scope *codegen.NameScope
 	}
@@ -670,8 +673,12 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	for _, httpEndpoint := range httpSvc.HTTPEndpoints {
 		method := svc.Method(httpEndpoint.MethodExpr.Name)
 
-		var routes []*RouteData
-		i := 0
+		routesCap := 0
+		for _, r := range httpEndpoint.Routes {
+			routesCap += len(r.FullPaths())
+		}
+		routes := make([]*RouteData, 0, routesCap)
+		pathCount := 0
 		for _, r := range httpEndpoint.Routes {
 			for _, rpath := range r.FullPaths() {
 				params := expr.ExtractHTTPWildcards(rpath)
@@ -682,10 +689,10 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 					initArgs := make([]*InitArgData, len(params))
 					pathParamsObj := expr.AsObject(httpEndpoint.PathParams().Type)
 					suffix := ""
-					if i > 0 {
-						suffix = strconv.Itoa(i + 1)
+					if pathCount > 0 {
+						suffix = strconv.Itoa(pathCount + 1)
 					}
-					i++
+					pathCount++
 					name := fmt.Sprintf("%s%sPath%s", method.VarName, svc.StructName, suffix)
 					for j, arg := range params {
 						patt := pathParamsObj.Attribute(arg)
@@ -953,6 +960,35 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		}
 	}
 
+	unionByHash := make(map[string]*service.UnionTypeData)
+	seenUnionTypes := make(map[string]struct{})
+	for _, a := range httpSvc.HTTPEndpoints {
+		collectHTTPUnionTypes(a.Body, sd.Scope, unionByHash, seenUnionTypes)
+
+		if a.MethodExpr.StreamingPayload.Type != expr.Empty {
+			collectHTTPUnionTypes(a.StreamingBody, sd.Scope, unionByHash, seenUnionTypes)
+		}
+
+		if a.MethodExpr.Result != nil {
+			for _, v := range a.Responses {
+				collectHTTPUnionTypes(v.Body, sd.Scope, unionByHash, seenUnionTypes)
+			}
+		}
+
+		for _, v := range a.HTTPErrors {
+			collectHTTPUnionTypes(v.Response.Body, sd.Scope, unionByHash, seenUnionTypes)
+		}
+	}
+
+	unions := make([]*service.UnionTypeData, 0, len(unionByHash))
+	for _, u := range unionByHash {
+		unions = append(unions, u)
+	}
+	sort.Slice(unions, func(i, j int) bool {
+		return unions[i].Name < unions[j].Name
+	})
+	sd.UnionTypes = unions
+
 	return sd
 }
 
@@ -1020,7 +1056,8 @@ func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[string]struct{}) *e
 		}
 		att.Type = &obj
 	case *expr.Union:
-		att = expr.UnionToObject(att)
+		// Unions are represented as first-class sum types; HTTP uses the same
+		// type for request and response bodies.
 	}
 	return att
 }
@@ -1163,6 +1200,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			clientArgs []*InitArgData
 			serverArgs []*InitArgData
 		)
+		argsCap := len(request.PathParams) + len(request.QueryParams) + len(request.Headers) + len(request.Cookies)
 		n := codegen.Goify(ep.Name, true)
 		p := codegen.Goify(ep.Payload, true)
 		// Raw payload object has type name prefixed with endpoint name. No need to
@@ -1176,6 +1214,8 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		desc = fmt.Sprintf("%s builds a %s service %s endpoint payload.",
 			name, svc.Name, e.Name())
 		isObject = expr.IsObject(payload.Type)
+		serverArgs = make([]*InitArgData, 0, argsCap+1)
+		clientArgs = make([]*InitArgData, 0, argsCap+1)
 		if body != expr.Empty {
 			var (
 				svcode string
@@ -1187,7 +1227,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 					cvcode = codegen.ValidationCode(ut.Attribute(), ut, httpclictx, true, expr.IsAlias(ut), false, "body")
 				}
 			}
-			serverArgs = []*InitArgData{{
+			serverArgs = append(serverArgs, &InitArgData{
 				Ref: sd.Scope.GoVar("body", body),
 				AttributeData: &AttributeData{
 					Name:     "body",
@@ -1199,8 +1239,8 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 					Example:  e.Body.Example(sds.Root.API.ExampleGenerator),
 					Validate: svcode,
 				},
-			}}
-			clientArgs = []*InitArgData{{
+			})
+			clientArgs = append(clientArgs, &InitArgData{
 				Ref: sd.Scope.GoVar("body", body),
 				AttributeData: &AttributeData{
 					Name:     "body",
@@ -1212,9 +1252,9 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 					Example:  e.Body.Example(sds.Root.API.ExampleGenerator),
 					Validate: cvcode,
 				},
-			}}
+			})
 		}
-		var args []*InitArgData
+		args := make([]*InitArgData, 0, argsCap)
 		for _, p := range request.PathParams {
 			args = append(args, &InitArgData{
 				Ref: p.VarName,
@@ -1842,18 +1882,25 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 			name = fmt.Sprintf("New%s%s", codegen.Goify(ep.Name, true), codegen.Goify(v.ErrorExpr.Name, true))
 			desc = fmt.Sprintf("%s builds a %s service %s endpoint %s error.",
 				name, svc.Name, e.Name(), v.ErrorExpr.Name)
+			headers := sds.extractHeaders(v.Response.Headers, v.AttributeExpr, errctx, sd.Scope)
+			cookies := sds.extractCookies(v.Response.Cookies, v.AttributeExpr, errctx, sd.Scope)
+			argsCap := len(headers) + len(cookies)
+			if body != expr.Empty {
+				argsCap++
+			}
+			args = make([]*InitArgData, 0, argsCap)
 			if body != expr.Empty {
 				isObject = expr.IsObject(body)
 				ref := "body"
 				if isObject {
 					ref = "&body"
 				}
-				args = []*InitArgData{{
+				args = append(args, &InitArgData{
 					Ref:           ref,
 					AttributeData: &AttributeData{Name: "body", VarName: "body", TypeRef: sd.Scope.GoTypeRef(v.Response.Body)},
-				}}
+				})
 			}
-			for _, h := range sds.extractHeaders(v.Response.Headers, v.AttributeExpr, errctx, sd.Scope) {
+			for _, h := range headers {
 				args = append(args, &InitArgData{
 					Ref: h.VarName,
 					AttributeData: &AttributeData{
@@ -1869,7 +1916,7 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 					},
 				})
 			}
-			for _, c := range sds.extractCookies(v.Response.Cookies, v.AttributeExpr, errctx, sd.Scope) {
+			for _, c := range cookies {
 				args = append(args, &InitArgData{
 					Ref: c.VarName,
 					AttributeData: &AttributeData{
@@ -2626,6 +2673,10 @@ func collectUserTypes(dt expr.DataType, cb func(expr.UserType), seen ...map[stri
 		for _, nat := range *actual {
 			collectUserTypes(nat.Attribute.Type, cb, seen...)
 		}
+	case *expr.Union:
+		for _, nat := range actual.Values {
+			collectUserTypes(nat.Attribute.Type, cb, seen...)
+		}
 	case *expr.Array:
 		collectUserTypes(actual.ElemType.Type, cb, seen...)
 	case *expr.Map:
@@ -2638,6 +2689,65 @@ func collectUserTypes(dt expr.DataType, cb func(expr.UserType), seen ...map[stri
 		s[actual.ID()] = struct{}{}
 		cb(actual)
 		collectUserTypes(actual.Attribute().Type, cb, s)
+	}
+}
+
+func collectHTTPUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, unions map[string]*service.UnionTypeData, seen map[string]struct{}) {
+	if att == nil || att.Type == expr.Empty {
+		return
+	}
+	switch dt := att.Type.(type) {
+	case expr.UserType:
+		if _, ok := seen[dt.ID()]; ok {
+			return
+		}
+		seen[dt.ID()] = struct{}{}
+		collectHTTPUnionTypes(dt.Attribute(), scope, unions, seen)
+	case *expr.Object:
+		for _, nat := range *dt {
+			collectHTTPUnionTypes(nat.Attribute, scope, unions, seen)
+		}
+	case *expr.Array:
+		collectHTTPUnionTypes(dt.ElemType, scope, unions, seen)
+	case *expr.Map:
+		collectHTTPUnionTypes(dt.KeyType, scope, unions, seen)
+		collectHTTPUnionTypes(dt.ElemType, scope, unions, seen)
+	case *expr.Union:
+		hash := dt.Hash()
+		if _, ok := unions[hash]; !ok {
+			unions[hash] = buildHTTPUnionTypeData(dt, scope)
+		}
+		for _, nat := range dt.Values {
+			collectHTTPUnionTypes(nat.Attribute, scope, unions, seen)
+		}
+	}
+}
+
+func buildHTTPUnionTypeData(u *expr.Union, scope *codegen.NameScope) *service.UnionTypeData {
+	att := &expr.AttributeExpr{Type: u}
+	name := scope.GoTypeName(att)
+	kindName := scope.Unique(name + "Kind")
+
+	fields := make([]*service.UnionFieldData, len(u.Values))
+	for i, nat := range u.Values {
+		fieldName := codegen.Goify(nat.Name, true)
+		fieldType := scope.GoTypeRef(nat.Attribute)
+		kindConst := kindName + fieldName
+		fields[i] = &service.UnionFieldData{
+			Name:      nat.Name,
+			KindConst: kindConst,
+			FieldName: fieldName,
+			FieldType: fieldType,
+			TypeTag:   nat.Name,
+		}
+	}
+
+	return &service.UnionTypeData{
+		Name:     name,
+		KindName: kindName,
+		Fields:   fields,
+		TypeKey:  u.GetTypeKey(),
+		ValueKey: u.GetValueKey(),
 	}
 }
 

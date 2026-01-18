@@ -1,11 +1,13 @@
 func transform() {
 	target := &proto.SimpleOneOf{}
-	if source.SimpleOneOf != nil {
-		switch src := source.SimpleOneOf.(type) {
-		case proto.SimpleOneOfString:
-			target.SimpleOneOf = &proto.SimpleOneOf_String_{String_: string(src)}
-		case proto.SimpleOneOfInteger:
-			target.SimpleOneOf = &proto.SimpleOneOf_Integer{Integer: int32(src)}
+	if source.SimpleOneOf.Kind() != "" {
+		switch string(source.SimpleOneOf.Kind()) {
+		case "string":
+			actual, _ := source.SimpleOneOf.AsString()
+			target.SimpleOneOf = &proto.SimpleOneOf_String_{String_: string(actual)}
+		case "integer":
+			actual, _ := source.SimpleOneOf.AsInteger()
+			target.SimpleOneOf = &proto.SimpleOneOf_Integer{Integer: int32(actual)}
 		}
 	}
 }

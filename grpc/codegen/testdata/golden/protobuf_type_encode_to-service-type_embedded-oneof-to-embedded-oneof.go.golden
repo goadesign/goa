@@ -5,19 +5,47 @@ func transform() {
 	if source.EmbeddedOneOf != nil {
 		switch val := source.EmbeddedOneOf.(type) {
 		case *proto.EmbeddedOneOf_String_:
-			target.EmbeddedOneOf = proto.EmbeddedOneOfString(val.String_)
+			{
+				u := target.EmbeddedOneOf
+				u.SetString(proto.EmbeddedOneOfString(val.String_))
+				target.EmbeddedOneOf = u
+			}
 		case *proto.EmbeddedOneOf_Integer:
-			target.EmbeddedOneOf = proto.EmbeddedOneOfInteger(val.Integer)
+			{
+				u := target.EmbeddedOneOf
+				u.SetInteger(proto.EmbeddedOneOfInteger(val.Integer))
+				target.EmbeddedOneOf = u
+			}
 		case *proto.EmbeddedOneOf_Boolean:
-			target.EmbeddedOneOf = proto.EmbeddedOneOfBoolean(val.Boolean)
+			{
+				u := target.EmbeddedOneOf
+				u.SetBoolean(proto.EmbeddedOneOfBoolean(val.Boolean))
+				target.EmbeddedOneOf = u
+			}
 		case *proto.EmbeddedOneOf_Number:
-			target.EmbeddedOneOf = proto.EmbeddedOneOfNumber(val.Number)
+			{
+				u := target.EmbeddedOneOf
+				u.SetNumber(proto.EmbeddedOneOfNumber(val.Number))
+				target.EmbeddedOneOf = u
+			}
 		case *proto.EmbeddedOneOf_Array:
-			target.EmbeddedOneOf = protobufProtoEmbeddedOneOfArrayToProtoEmbeddedOneOfArray(val.Array)
+			{
+				u := target.EmbeddedOneOf
+				u.SetArray(protobufProtoEmbeddedOneOfArrayToProtoEmbeddedOneOfArray(val.Array))
+				target.EmbeddedOneOf = u
+			}
 		case *proto.EmbeddedOneOf_Map_:
-			target.EmbeddedOneOf = protobufProtoEmbeddedOneOfMapToProtoEmbeddedOneOfMap(val.Map_)
+			{
+				u := target.EmbeddedOneOf
+				u.SetMap(protobufProtoEmbeddedOneOfMapToProtoEmbeddedOneOfMap(val.Map_))
+				target.EmbeddedOneOf = u
+			}
 		case *proto.EmbeddedOneOf_UserType:
-			target.EmbeddedOneOf = protobufProtoSimpleOneOfToProtoSimpleOneOf(val.UserType)
+			{
+				u := target.EmbeddedOneOf
+				u.SetUserType(protobufProtoSimpleOneOfToProtoSimpleOneOf(val.UserType))
+				target.EmbeddedOneOf = u
+			}
 		}
 	}
 }

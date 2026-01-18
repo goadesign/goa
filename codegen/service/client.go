@@ -37,7 +37,8 @@ func ClientFile(_ string, service *expr.ServiceExpr, services *ServicesData) *co
 			Source: serviceTemplates.Read(serviceClientInitT),
 			Data:   data,
 		}
-		sections = []*codegen.SectionTemplate{header, def, init}
+		sections = make([]*codegen.SectionTemplate, 0, 3+len(data.Methods))
+		sections = append(sections, header, def, init)
 		for _, m := range data.Methods {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-method",

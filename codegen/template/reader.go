@@ -17,7 +17,7 @@ type TemplateReader struct {
 func (tr *TemplateReader) Read(name string, partials ...string) string {
 	var prefix string
 	if len(partials) > 0 {
-		var partialDefs []string
+		partialDefs := make([]string, 0, len(partials))
 		for _, partial := range partials {
 			content, err := fs.ReadFile(tr.FS, path.Join("templates", "partial", partial+".go.tpl"))
 			if err != nil {

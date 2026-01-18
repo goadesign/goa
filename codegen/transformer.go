@@ -226,6 +226,9 @@ func (a *AttributeContext) IsPrimitivePointer(name string, att *expr.AttributeEx
 
 // Pkg returns the package name of the given type.
 func (a *AttributeContext) Pkg(att *expr.AttributeExpr) string {
+	if att == nil {
+		return a.DefaultPkg
+	}
 	if loc := UserTypeLocation(att.Type); loc != nil {
 		pkg := loc.PackageName()
 		// If this is same-package conversion and the type's package matches
@@ -234,6 +237,12 @@ func (a *AttributeContext) Pkg(att *expr.AttributeExpr) string {
 			return ""
 		}
 		return pkg
+	}
+	if expr.AsUnion(att.Type) != nil {
+		if a.SamePackageConversion {
+			return ""
+		}
+		return a.DefaultPkg
 	}
 	return a.DefaultPkg
 }

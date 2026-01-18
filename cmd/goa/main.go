@@ -78,10 +78,11 @@ var (
 
 func generate(cmd, path, output string, debug bool) error {
 	var (
-		files                                                            []string
-		err                                                              error
-		tmp                                                              *Generator
-		startTotal, startImport, startNewGen, startWrite, startCompile, startRun time.Time
+		files []string
+		err   error
+		tmp   *Generator
+		startTotal, startImport, startNewGen,
+		startWrite, startCompile, startRun time.Time
 	)
 
 	startTotal = time.Now()

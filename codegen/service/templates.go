@@ -44,7 +44,7 @@ const (
 	streamingPayloadT = "streaming_payload"
 	resultT           = "result"
 	userTypeT         = "user_type"
-	unionValueMethodT = "union_value_method"
+	unionTypeT        = "union_type"
 	errorT            = "error"
 	errorInitT        = "error_init"
 	typeInitT         = "type_init"

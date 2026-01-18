@@ -85,6 +85,13 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			})
 		}
 	}
+	for _, u := range svc.unions {
+		addTypeDefSection(pathWithDefault(u.Loc, svcPath), "~union:"+u.Name, &codegen.SectionTemplate{
+			Name:   "service-union-type",
+			Source: serviceTemplates.Read(unionTypeT),
+			Data:   u,
+		})
+	}
 
 	var errorTypes []*UserTypeData
 	seenErrs := make(map[string]struct{})
@@ -103,14 +110,6 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			}
 			errorTypes = append(errorTypes, et)
 		}
-	}
-
-	for _, m := range svc.unionValueMethods {
-		addTypeDefSection(pathWithDefault(m.Loc, svcPath), "~"+m.TypeRef+"."+m.Name, &codegen.SectionTemplate{
-			Name:   "service-union-value-method",
-			Source: serviceTemplates.Read(unionValueMethodT),
-			Data:   m,
-		})
 	}
 
 	for _, et := range errorTypes {
@@ -174,6 +173,12 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		codegen.GoaImport("security"),
 		codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
 	}
+	if len(svc.unions) > 0 {
+		imports = append(imports,
+			codegen.SimpleImport("encoding/json"),
+			codegen.SimpleImport("fmt"),
+		)
+	}
 	header := codegen.Header(service.Name+" service", svc.PkgName, imports)
 	def := &codegen.SectionTemplate{
 		Name:   "service",
@@ -190,13 +195,14 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 	// service.go
 	var sections []*codegen.SectionTemplate
 	{
-		sections = []*codegen.SectionTemplate{header, def}
 		names := make([]string, len(typeDefSections[svcPath]))
 		i := 0
 		for n := range typeDefSections[svcPath] {
 			names[i] = n
 			i++
 		}
+		sections = make([]*codegen.SectionTemplate, 0, 2+len(names)+len(svcSections))
+		sections = append(sections, header, def)
 		sort.Strings(names)
 		for _, n := range names {
 			sections = append(sections, typeDefSections[svcPath][n])
@@ -241,7 +247,10 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		}
 		fullRelPath := filepath.Join(codegen.Gendir, p)
 		dir, _ := filepath.Split(fullRelPath)
-		h := codegen.Header("User types", codegen.Goify(filepath.Base(dir), false), nil)
+		h := codegen.Header("User types", codegen.Goify(filepath.Base(dir), false), []*codegen.ImportSpec{
+			codegen.SimpleImport("fmt"),
+			codegen.GoaImport(""),
+		})
 		sections := append([]*codegen.SectionTemplate{h}, secs...)
 		files = append(files, &codegen.File{Path: fullRelPath, SectionTemplates: sections})
 	}

@@ -54,7 +54,11 @@ func CommandLine() string {
 // Comment produces line comments by concatenating the given strings and
 // producing 80 characters long lines starting with "//".
 func Comment(elems ...string) string {
-	var lines []string
+	lineCount := 0
+	for _, e := range elems {
+		lineCount += strings.Count(e, "\n") + 1
+	}
+	lines := make([]string, 0, lineCount)
 	for _, e := range elems {
 		lines = append(lines, strings.Split(e, "\n")...)
 	}

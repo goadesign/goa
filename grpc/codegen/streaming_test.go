@@ -127,7 +127,7 @@ func TestStreaming(t *testing.T) {
 					path = clientfs[0].Path
 				}
 				seclen := len(sections)
-				var code []string
+				code := make([]string, 0, seclen)
 				for _, section := range sections {
 					code = append(code, codegen.SectionCode(t, section))
 				}

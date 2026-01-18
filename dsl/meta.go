@@ -136,14 +136,14 @@ const DefaultProtoc = expr.DefaultProtoc
 // its parent object. If "struct:tag:json" is also set, it takes precedence and
 // overrides the tag entirely.
 //
-//   - "proto:tag:json" sets the JSON name emitted in the generated protobuf
-//     field option. Applicable to attributes only.
+// - "proto:tag:json" sets the JSON name emitted in the generated protobuf
+// field option. Applicable to attributes only.
 //
-//     var MyType = Type("MyType", func() {
-//     Field(1, "id", String, func() {
-//     Meta("proto:tag:json", "identifier")
-//     })
-//     })
+//	var MyType = Type("MyType", func() {
+//	   Field(1, "id", String, func() {
+//	       Meta("proto:tag:json", "identifier")
+//	   })
+//	})
 //
 // - "protoc:cmd" provides an alternate command to execute for protoc with
 // optional arguments. Applicable to API and service definitions only. If used

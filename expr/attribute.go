@@ -316,6 +316,14 @@ func (a *AttributeExpr) validatePkgPath(pkgPath string, t DataType) *eval.Valida
 		verr.Merge(a.validatePkgPath(pkgPath, mp.KeyType.Type))
 		verr.Merge(a.validatePkgPath(pkgPath, mp.ElemType.Type))
 	}
+	if u := AsUnion(t); u != nil {
+		for _, nat := range u.Values {
+			if nat == nil || nat.Attribute == nil {
+				continue
+			}
+			verr.Merge(a.validatePkgPath(pkgPath, nat.Attribute.Type))
+		}
+	}
 	if ut, ok := t.(UserType); pkgPath != "" && ok {
 		// This check ensures we error if a sub-type has a different custom package type set
 		// or if two user types have different custom packages but share a sub-type (field that's a user type)
@@ -339,12 +347,8 @@ func (a *AttributeExpr) Finalize() {
 		return // Avoid infinite recursion.
 	}
 	a.finalized = true
-	var pkgPath string
 	if ut, ok := a.Type.(UserType); ok {
 		ut.Finalize()
-		if meta, ok := ut.Attribute().Meta["struct:pkg:path"]; ok {
-			pkgPath = meta[0]
-		}
 	}
 	switch {
 	case IsObject(a.Type):
@@ -369,20 +373,6 @@ func (a *AttributeExpr) Finalize() {
 		a.Bases = nil
 
 		for _, nat := range *AsObject(a.Type) {
-			if pkgPath != "" {
-				if u := AsUnion(nat.Attribute.Type); u != nil {
-					for _, nat := range u.Values {
-						// Union types are generated using a private interface
-						// to ensure that only types that are part of the enum
-						// can be assigned to the attribute. This means that the
-						// union values must be declared in the same package as
-						// the parent attribute.
-						if ut, ok := nat.Attribute.Type.(UserType); ok {
-							ut.Attribute().AddMeta("struct:pkg:path", pkgPath)
-						}
-					}
-				}
-			}
 			nat.Attribute.Finalize()
 		}
 	case IsUnion(a.Type):

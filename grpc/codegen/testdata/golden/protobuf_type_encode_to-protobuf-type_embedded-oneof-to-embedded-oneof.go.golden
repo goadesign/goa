@@ -2,22 +2,29 @@ func transform() {
 	target := &proto.EmbeddedOneOf{
 		String_: source.String,
 	}
-	if source.EmbeddedOneOf != nil {
-		switch src := source.EmbeddedOneOf.(type) {
-		case proto.EmbeddedOneOfString:
-			target.EmbeddedOneOf = &proto.EmbeddedOneOf_String_{String_: string(src)}
-		case proto.EmbeddedOneOfInteger:
-			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Integer{Integer: int32(src)}
-		case proto.EmbeddedOneOfBoolean:
-			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Boolean{Boolean: bool(src)}
-		case proto.EmbeddedOneOfNumber:
-			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Number{Number: int32(src)}
-		case proto.EmbeddedOneOfArray:
-			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Array{Array: svcProtoEmbeddedOneOfArrayToProtoEmbeddedOneOfArray(src)}
-		case proto.EmbeddedOneOfMap:
-			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Map_{Map_: svcProtoEmbeddedOneOfMapToProtoEmbeddedOneOfMap(src)}
-		case *proto.SimpleOneOf:
-			target.EmbeddedOneOf = &proto.EmbeddedOneOf_UserType{UserType: svcProtoSimpleOneOfToProtoSimpleOneOf(src)}
+	if source.EmbeddedOneOf.Kind() != "" {
+		switch string(source.EmbeddedOneOf.Kind()) {
+		case "string":
+			actual, _ := source.EmbeddedOneOf.AsString()
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_String_{String_: string(actual)}
+		case "integer":
+			actual, _ := source.EmbeddedOneOf.AsInteger()
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Integer{Integer: int32(actual)}
+		case "boolean":
+			actual, _ := source.EmbeddedOneOf.AsBoolean()
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Boolean{Boolean: bool(actual)}
+		case "number":
+			actual, _ := source.EmbeddedOneOf.AsNumber()
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Number{Number: int32(actual)}
+		case "array":
+			actual, _ := source.EmbeddedOneOf.AsArray()
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Array{Array: svcProtoEmbeddedOneOfArrayToProtoEmbeddedOneOfArray(actual)}
+		case "map":
+			actual, _ := source.EmbeddedOneOf.AsMap()
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_Map_{Map_: svcProtoEmbeddedOneOfMapToProtoEmbeddedOneOfMap(actual)}
+		case "user_type":
+			actual, _ := source.EmbeddedOneOf.AsUserType()
+			target.EmbeddedOneOf = &proto.EmbeddedOneOf_UserType{UserType: svcProtoSimpleOneOfToProtoSimpleOneOf(actual)}
 		}
 	}
 }

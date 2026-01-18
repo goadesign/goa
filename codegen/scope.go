@@ -143,7 +143,13 @@ func (s *NameScope) goTypeDefWithPkgOverride(att *expr.AttributeExpr, ptr, useDe
 		}
 		return fmt.Sprintf("map[%s]%s", keyDef, elemDef)
 	case *expr.Union:
-		return fmt.Sprintf("interface{\n\t%s()\n}", UnionValTypeName(actual.TypeName))
+		// Unions are generated as named sum-type structs. Refer to the named type
+		// here; the concrete definition is emitted separately by the service
+		// code generator.
+		if targetPkg != "" {
+			return s.GoFullTypeName(att, targetPkg)
+		}
+		return s.GoFullTypeName(att, "")
 	case *expr.Object:
 		ss := []string{"struct {"}
 		for _, nat := range *actual {
