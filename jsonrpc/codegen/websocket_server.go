@@ -24,22 +24,23 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 	}
 	svcName := data.Service.PathName
 	title := fmt.Sprintf("%s WebSocket server streaming", svc.Name())
-	imports := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "encoding/json"},
-		{Path: "errors"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "net/http"},
-		{Path: "strings"},
-		{Path: "sync"},
-		{Path: "time"},
-		{Path: "github.com/gorilla/websocket"},
+	imports := make([]*codegen.ImportSpec, 0, 14+len(data.Service.UserTypeImports))
+	imports = append(imports,
+		&codegen.ImportSpec{Path: "context"},
+		&codegen.ImportSpec{Path: "encoding/json"},
+		&codegen.ImportSpec{Path: "errors"},
+		&codegen.ImportSpec{Path: "fmt"},
+		&codegen.ImportSpec{Path: "io"},
+		&codegen.ImportSpec{Path: "net/http"},
+		&codegen.ImportSpec{Path: "strings"},
+		&codegen.ImportSpec{Path: "sync"},
+		&codegen.ImportSpec{Path: "time"},
+		&codegen.ImportSpec{Path: "github.com/gorilla/websocket"},
 		codegen.GoaImport(""),
 		codegen.GoaImport("jsonrpc"),
 		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-	}
+		&codegen.ImportSpec{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+	)
 	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),

@@ -88,23 +88,24 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		"lowerInitial":        lowerInitial,
 		"hasMixedTransports":  func() bool { return hasMixedJSONRPCTransports(svc, services) },
 	}
-	imports := []*codegen.ImportSpec{
-		{Path: "bufio"},
-		{Path: "bytes"},
-		{Path: "context"},
-		{Path: "errors"},
-		{Path: "fmt"},
-		{Path: "io"},
-		{Path: "mime/multipart"},
-		{Path: "net/http"},
-		{Path: "path"},
-		{Path: "strings"},
+	imports := make([]*codegen.ImportSpec, 0, 15+len(data.Service.UserTypeImports))
+	imports = append(imports,
+		&codegen.ImportSpec{Path: "bufio"},
+		&codegen.ImportSpec{Path: "bytes"},
+		&codegen.ImportSpec{Path: "context"},
+		&codegen.ImportSpec{Path: "errors"},
+		&codegen.ImportSpec{Path: "fmt"},
+		&codegen.ImportSpec{Path: "io"},
+		&codegen.ImportSpec{Path: "mime/multipart"},
+		&codegen.ImportSpec{Path: "net/http"},
+		&codegen.ImportSpec{Path: "path"},
+		&codegen.ImportSpec{Path: "strings"},
 		codegen.GoaImport(""),
 		codegen.GoaImport("jsonrpc"),
 		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-	}
+		&codegen.ImportSpec{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+		&codegen.ImportSpec{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
+	)
 	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),

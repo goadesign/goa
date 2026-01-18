@@ -256,11 +256,12 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *Ser
 		codegen.GoaNamedImport("http", "goahttp"),
 		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 	}
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "server", imports),
-	}
-	sections = append(sections, serverStructWSSections(data)...)
-	sections = append(sections, serverWSSections(data)...)
+	structSections := serverStructWSSections(data)
+	wsSections := serverWSSections(data)
+	sections := make([]*codegen.SectionTemplate, 0, 1+len(structSections)+len(wsSections))
+	sections = append(sections, codegen.Header(title, "server", imports))
+	sections = append(sections, structSections...)
+	sections = append(sections, wsSections...)
 
 	return &codegen.File{
 		Path:             filepath.Join(codegen.Gendir, "http", svcName, "server", "websocket.go"),
@@ -289,11 +290,12 @@ func WebsocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *Ser
 		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 	}
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", imports),
-	}
-	sections = append(sections, clientStructWSSections(data)...)
-	sections = append(sections, clientWSSections(data)...)
+	structSections := clientStructWSSections(data)
+	wsSections := clientWSSections(data)
+	sections := make([]*codegen.SectionTemplate, 0, 1+len(structSections)+len(wsSections))
+	sections = append(sections, codegen.Header(title, "client", imports))
+	sections = append(sections, structSections...)
+	sections = append(sections, wsSections...)
 
 	return &codegen.File{
 		Path:             filepath.Join(codegen.Gendir, "http", svcName, "client", "websocket.go"),
