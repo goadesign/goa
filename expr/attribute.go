@@ -646,6 +646,11 @@ func (a *AttributeExpr) AddMeta(name string, vals ...string) {
 	a.Meta[name] = append(a.Meta[name], vals...)
 }
 
+// DeleteMeta removes the metadata entry with the given name.
+func (a *AttributeExpr) DeleteMeta(name string) {
+	delete(a.Meta, name)
+}
+
 // ExtractUserExamples return the examples defined in the design directly on the
 // attribute or on its type.
 func (a *AttributeExpr) ExtractUserExamples() []*ExampleExpr {

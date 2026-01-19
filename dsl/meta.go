@@ -314,42 +314,11 @@ const DefaultProtoc = expr.DefaultProtoc
 //	    Meta("openapi:typename", "Bar")
 //	})
 func Meta(name string, value ...string) {
-	appendMeta := func(meta expr.MetaExpr, name string, value ...string) expr.MetaExpr {
-		if meta == nil {
-			meta = make(map[string][]string)
-		}
-		meta[name] = append(meta[name], value...)
-		return meta
-	}
-
 	switch e := eval.Current().(type) {
-	case *expr.APIExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
-	case *expr.ServerExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
-	case *expr.HostExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
-	case *expr.AttributeExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
-	case *expr.ResultTypeExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
-	case *expr.MethodExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
-	case *expr.ServiceExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
-	case *expr.HTTPServiceExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
-	case *expr.HTTPEndpointExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
-	case *expr.RouteExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
-	case *expr.HTTPFileServerExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
-	case *expr.HTTPResponseExpr:
-		e.Meta = appendMeta(e.Meta, name, value...)
+	case expr.MetaAdder:
+		e.AddMeta(name, value...)
 	case expr.CompositeExpr:
-		att := e.Attribute()
-		att.Meta = appendMeta(att.Meta, name, value...)
+		e.Attribute().AddMeta(name, value...)
 	default:
 		eval.IncompatibleDSL()
 	}
@@ -362,33 +331,10 @@ func Meta(name string, value ...string) {
 // RemoveMeta takes a single argument, the name of the meta key to remove.
 func RemoveMeta(name string) {
 	switch e := eval.Current().(type) {
-	case *expr.APIExpr:
-		delete(e.Meta, name)
-	case *expr.ServerExpr:
-		delete(e.Meta, name)
-	case *expr.HostExpr:
-		delete(e.Meta, name)
-	case *expr.AttributeExpr:
-		delete(e.Meta, name)
-	case *expr.ResultTypeExpr:
-		delete(e.Meta, name)
-	case *expr.MethodExpr:
-		delete(e.Meta, name)
-	case *expr.ServiceExpr:
-		delete(e.Meta, name)
-	case *expr.HTTPServiceExpr:
-		delete(e.Meta, name)
-	case *expr.HTTPEndpointExpr:
-		delete(e.Meta, name)
-	case *expr.RouteExpr:
-		delete(e.Meta, name)
-	case *expr.HTTPFileServerExpr:
-		delete(e.Meta, name)
-	case *expr.HTTPResponseExpr:
-		delete(e.Meta, name)
+	case expr.MetaDeleter:
+		e.DeleteMeta(name)
 	case expr.CompositeExpr:
-		att := e.Attribute()
-		delete(att.Meta, name)
+		e.Attribute().DeleteMeta(name)
 	default:
 		eval.IncompatibleDSL()
 	}
