@@ -315,10 +315,10 @@ const DefaultProtoc = expr.DefaultProtoc
 //	})
 func Meta(name string, value ...string) {
 	switch e := eval.Current().(type) {
-	case expr.CompositeExpr:
-		e.Attribute().AddMeta(name, value...)
 	case expr.MetaAdder:
 		e.AddMeta(name, value...)
+	case expr.CompositeExpr:
+		e.Attribute().AddMeta(name, value...)
 	default:
 		eval.IncompatibleDSL()
 	}
@@ -331,10 +331,10 @@ func Meta(name string, value ...string) {
 // RemoveMeta takes a single argument, the name of the meta key to remove.
 func RemoveMeta(name string) {
 	switch e := eval.Current().(type) {
-	case expr.CompositeExpr:
-		e.Attribute().DeleteMeta(name)
 	case expr.MetaDeleter:
 		e.DeleteMeta(name)
+	case expr.CompositeExpr:
+		e.Attribute().DeleteMeta(name)
 	default:
 		eval.IncompatibleDSL()
 	}
