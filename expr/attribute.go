@@ -277,11 +277,6 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 	} else if u := AsUnion(a.Type); u != nil {
 		for _, ut := range u.Values {
 			verr.Merge(ut.Attribute.Validate(ctx, parent))
-			if IsArray(ut.Attribute.Type) {
-				verr.Add(parent, "union type %s has array elements, not supported by gRPC", u.Name())
-			} else if IsMap(ut.Attribute.Type) {
-				verr.Add(parent, "union type %s has map elements, not supported by gRPC", u.Name())
-			}
 		}
 	}
 

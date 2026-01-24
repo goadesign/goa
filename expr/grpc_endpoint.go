@@ -152,6 +152,16 @@ func (e *GRPCEndpointExpr) Validate() error {
 		verr.Add(e, "Endpoint name cannot be empty")
 	}
 
+	seenUnions := make(map[*Union]struct{})
+	seenAttrs := make(map[*AttributeExpr]struct{})
+	validateGRPCUnionShapes(e.MethodExpr.Payload, e.MethodExpr, verr, seenUnions, seenAttrs)
+	validateGRPCUnionShapes(e.MethodExpr.StreamingPayload, e.MethodExpr, verr, seenUnions, seenAttrs)
+	validateGRPCUnionShapes(e.MethodExpr.Result, e.MethodExpr, verr, seenUnions, seenAttrs)
+	validateGRPCUnionShapes(e.MethodExpr.StreamingResult, e.MethodExpr, verr, seenUnions, seenAttrs)
+	for _, er := range e.MethodExpr.Errors {
+		validateGRPCUnionShapes(er.AttributeExpr, e.MethodExpr, verr, seenUnions, seenAttrs)
+	}
+
 	var hasMessage, hasMetadata bool
 	// Validate request
 	if e.Request.Type != Empty {
@@ -214,6 +224,51 @@ func (e *GRPCEndpointExpr) Validate() error {
 		verr.Merge(er.Validate())
 	}
 	return verr
+}
+
+func validateGRPCUnionShapes(att *AttributeExpr, parent eval.Expression, verr *eval.ValidationErrors, seenUnions map[*Union]struct{}, seenAttrs map[*AttributeExpr]struct{}) {
+	if att == nil || att.Type == nil {
+		return
+	}
+	if _, ok := seenAttrs[att]; ok {
+		return
+	}
+	seenAttrs[att] = struct{}{}
+
+	if u := AsUnion(att.Type); u != nil {
+		if _, ok := seenUnions[u]; ok {
+			return
+		}
+		seenUnions[u] = struct{}{}
+		for _, ut := range u.Values {
+			switch {
+			case IsArray(ut.Attribute.Type):
+				verr.Add(parent, "union type %s has array elements, not supported by gRPC", u.Name())
+			case IsMap(ut.Attribute.Type):
+				verr.Add(parent, "union type %s has map elements, not supported by gRPC", u.Name())
+			}
+			validateGRPCUnionShapes(ut.Attribute, parent, verr, seenUnions, seenAttrs)
+		}
+		return
+	}
+
+	if o := AsObject(att.Type); o != nil {
+		for _, nat := range *o {
+			validateGRPCUnionShapes(nat.Attribute, parent, verr, seenUnions, seenAttrs)
+		}
+		return
+	}
+
+	if ar := AsArray(att.Type); ar != nil {
+		validateGRPCUnionShapes(ar.ElemType, parent, verr, seenUnions, seenAttrs)
+		return
+	}
+
+	if m := AsMap(att.Type); m != nil {
+		validateGRPCUnionShapes(m.KeyType, parent, verr, seenUnions, seenAttrs)
+		validateGRPCUnionShapes(m.ElemType, parent, verr, seenUnions, seenAttrs)
+		return
+	}
 }
 
 // Finalize ensures the request and response attributes are initialized.
