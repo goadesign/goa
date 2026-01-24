@@ -197,7 +197,14 @@ func (s *NameScope) goTypeDefWithPkgOverride(att *expr.AttributeExpr, ptr, useDe
 		} else if targetPkg != "" {
 			prefix = targetPkg + "."
 		}
-		return prefix + s.GoTypeName(att)
+		// Qualified references (pkg.Type) do not compete in the local identifier
+		// namespace. Never apply local scoping (suffixing) to the type name portion
+		// of an external reference, otherwise we can emit identifiers that do not
+		// exist in the referenced package (e.g., pkg.Foo2).
+		if prefix == "" {
+			return s.GoTypeName(att)
+		}
+		return prefix + Goify(actual.Name(), true)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
@@ -279,11 +286,15 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 		if actual == expr.ErrorResult {
 			return "goa.ServiceError"
 		}
-		n := s.HashedUnique(actual, Goify(actual.Name(), true), "")
+		// Qualified type references (pkg.Type) do not compete in the local
+		// identifier namespace. Never apply local scoping (suffixing) to the type
+		// name portion of an external reference, otherwise we can emit identifiers
+		// that do not exist in the referenced package (e.g., pkg.Foo2).
+		base := Goify(actual.Name(), true)
 		if pkg == "" {
-			return n
+			return s.HashedUnique(actual, base, "")
 		}
-		return pkg + "." + n
+		return pkg + "." + base
 	case expr.CompositeExpr:
 		return s.GoFullTypeName(actual.Attribute(), pkgWithDefault(actual.Attribute().Type, pkg))
 	default:

@@ -190,7 +190,14 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		if _, ok := attCtx.Scope.(*AttributeScope); ok {
 			cases := make([]map[string]any, 0, len(u.Values))
 			for _, v := range u.Values {
-				val := validateAttribute(attCtx, v.Attribute, put, "actual", context+".value", true, view, seen)
+				// Sum-type unions (struct-based, with Kind/AsX accessors) store each
+				// branch as either a value (primitives, arrays, maps) or a pointer
+				// (object user types). The union validation template binds the branch
+				// value to a local named "actual"; the pointer semantics must match
+				// that local, not the enclosing field context.
+				unionCtx := attCtx.Dup()
+				unionCtx.Pointer = expr.IsObject(v.Attribute.Type)
+				val := validateAttribute(unionCtx, v.Attribute, put, "actual", context+".value", true, view, seen)
 				if val == "" {
 					continue
 				}
