@@ -287,12 +287,26 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 			return "goa.ServiceError"
 		}
 		// Qualified type references (pkg.Type) do not compete in the local
-		// identifier namespace. Never apply local scoping (suffixing) to the type
-		// name portion of an external reference, otherwise we can emit identifiers
-		// that do not exist in the referenced package (e.g., pkg.Foo2).
+		// identifier namespace.
+		//
+		// When generating qualified references, we must not blindly apply local
+		// scoping (suffixing) to the referenced type name, otherwise we can emit
+		// identifiers that do not exist in the referenced package (e.g., pkg.Foo2).
+		//
+		// However, when the scope already assigned a unique name to the referenced
+		// type (i.e., the type is defined in this scope and got suffixed due to a
+		// collision), qualified references must use that assigned name to stay
+		// consistent across packages. This is critical for transport packages that
+		// refer to types defined in the service package (e.g., grpc referencing a
+		// payload type defined as Request2).
 		base := Goify(actual.Name(), true)
 		if pkg == "" {
 			return s.HashedUnique(actual, base, "")
+		}
+		if UserTypeLocation(actual) == nil {
+			if n, ok := s.names[actual.Hash()]; ok {
+				return pkg + "." + n
+			}
 		}
 		return pkg + "." + base
 	case expr.CompositeExpr:
