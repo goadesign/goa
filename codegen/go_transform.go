@@ -490,6 +490,12 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 		if castPkg == ta.TargetCtx.DefaultPkg && unionPkg != "" && unionPkg != ta.TargetCtx.DefaultPkg {
 			castPkg = unionPkg
 		}
+		useHelper := false
+		if _, ok := st.Attribute.Type.(expr.UserType); ok && expr.IsObject(st.Attribute.Type) {
+			if _, ok := tt.Attribute.Type.(expr.UserType); ok && expr.IsObject(tt.Attribute.Type) {
+				useHelper = true
+			}
+		}
 		cases = append(cases, map[string]any{
 			"CaseName":        st.Name,
 			"SourceFieldName": Goify(st.Name, true),
@@ -497,6 +503,8 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 			"SourceAttr":      st.Attribute,
 			"TargetAttr":      tt.Attribute,
 			"TargetCastType":  ta.TargetCtx.Scope.Ref(tt.Attribute, castPkg),
+			"UseHelper":       useHelper,
+			"HelperName":      transformHelperName(st.Attribute, tt.Attribute, ta),
 		})
 	}
 

@@ -37,6 +37,11 @@ var TestUnionDSL = func() {
 				Attribute("SomeType", SomeType)
 			})
 		})
+		UnionSomeType2 = Type("UnionSomeType2", func() {
+			OneOf("UnionSomeType2", func() {
+				Attribute("SomeType", SomeType)
+			})
+		})
 
 		_ = Type("Container", func() {
 			Attribute("UnionString", UnionString)
@@ -44,6 +49,7 @@ var TestUnionDSL = func() {
 			Attribute("UnionStringInt", UnionStringInt)
 			Attribute("UnionStringInt2", UnionStringInt2)
 			Attribute("UnionSomeType", UnionSomeType)
+			Attribute("UnionSomeType2", UnionSomeType2)
 		})
 
 		_ = Type("UnionUserType", func() {
