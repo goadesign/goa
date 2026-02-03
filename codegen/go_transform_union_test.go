@@ -20,6 +20,8 @@ func TestGoTransformUnion(t *testing.T) {
 		unionString2    = root.UserType("Container").Attribute().Find("UnionString2").Find("UnionString2")
 		unionStringInt  = root.UserType("Container").Attribute().Find("UnionStringInt").Find("UnionStringInt")
 		unionStringInt2 = root.UserType("Container").Attribute().Find("UnionStringInt2").Find("UnionStringInt2")
+		unionSomeType   = root.UserType("Container").Attribute().Find("UnionSomeType").Find("UnionSomeType")
+		unionSomeType2  = root.UserType("Container").Attribute().Find("UnionSomeType2").Find("UnionSomeType2")
 		defaultCtx      = NewAttributeContext(false, false, true, "", scope)
 	)
 	tc := []struct {
@@ -29,6 +31,7 @@ func TestGoTransformUnion(t *testing.T) {
 	}{
 		{"UnionString to UnionString2", unionString, unionString2},
 		{"UnionStringInt to UnionStringInt2", unionStringInt, unionStringInt2},
+		{"UnionSomeType to UnionSomeType2", unionSomeType, unionSomeType2},
 	}
 	for _, c := range tc {
 		t.Run(c.Name, func(t *testing.T) {

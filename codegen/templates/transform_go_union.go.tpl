@@ -4,7 +4,11 @@ switch string({{ .SourceVar }}.Kind()) {
 {{- range .Cases }}
 case {{ printf "%q" .CaseName }}:
 	actual, _ := {{ $.SourceVar }}.As{{ .SourceFieldName }}()
+	{{- if .UseHelper }}
+	{{ $.TempVarName }} := {{ .HelperName }}(actual)
+	{{- else }}
 	{{ transformAttribute .SourceAttr .TargetAttr "actual" $.TempVarName true $.TransformAttrs -}}
+	{{- end }}
 	{{- if $.NewVar }}
 	var u {{ $.ValueTypeRef }}
 	u.Set{{ .TargetFieldName }}(({{ .TargetCastType }})({{ $.TempVarName }}))
