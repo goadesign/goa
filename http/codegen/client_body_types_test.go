@@ -2,12 +2,12 @@ package codegen
 
 import (
 	"bytes"
-	"goa.design/goa/v3/codegen/testutil"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -72,6 +72,7 @@ func TestClientTypes(t *testing.T) {
 	}{
 		{"client-mixed-payload-attrs", testdata.MixedPayloadInBodyDSL},
 		{"client-multiple-methods", testdata.MultipleMethodsDSL},
+		{"client-multiple-methods-with-array-type-payloads", testdata.MultipleMethodsWithArrayTypePayloadsDSL},
 		{"client-payload-extend-validate", testdata.PayloadExtendedValidateDSL},
 		{"client-result-type-validate", testdata.ResultTypeValidateDSL},
 		{"client-with-result-collection", testdata.ResultWithResultCollectionDSL},

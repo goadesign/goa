@@ -70,10 +70,10 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 	for _, a := range svc.HTTPEndpoints {
 		adata := data.Endpoint(a.Name())
 		if data := adata.Payload.Request.ClientBody; data != nil {
-			if _, ok := seen[data.Name]; ok {
+			if _, ok := seen[data.Ref]; ok {
 				continue
 			}
-			seen[data.Name] = struct{}{}
+			seen[data.Ref] = struct{}{}
 			if data.Def != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "client-request-body",
@@ -96,10 +96,10 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		}
 		if adata.ClientWebSocket != nil {
 			if data := adata.ClientWebSocket.Payload; data != nil {
-				if _, ok := seen[data.Name]; ok {
+				if _, ok := seen[data.Ref]; ok {
 					continue
 				}
-				seen[data.Name] = struct{}{}
+				seen[data.Ref] = struct{}{}
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-request-body",
@@ -125,10 +125,10 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		adata := data.Endpoint(a.Name())
 		for _, resp := range adata.Result.Responses {
 			if data := resp.ClientBody; data != nil {
-				if _, ok := seen[data.Name]; ok {
+				if _, ok := seen[data.Ref]; ok {
 					continue
 				}
-				seen[data.Name] = struct{}{}
+				seen[data.Ref] = struct{}{}
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-response-body",
@@ -152,10 +152,10 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		for _, gerr := range adata.Errors {
 			for _, herr := range gerr.Errors {
 				if data := herr.Response.ClientBody; data != nil {
-					if _, ok := seen[data.Name]; ok {
+					if _, ok := seen[data.Ref]; ok {
 						continue
 					}
-					seen[data.Name] = struct{}{}
+					seen[data.Ref] = struct{}{}
 					if data.Def != "" {
 						sections = append(sections, &codegen.SectionTemplate{
 							Name:   "client-error-body",
@@ -176,10 +176,10 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 
 	for _, data := range data.ClientBodyAttributeTypes {
 		// Check if this type has already been added to avoid duplicates
-		if _, ok := seen[data.Name]; ok {
+		if _, ok := seen[data.Ref]; ok {
 			continue
 		}
-		seen[data.Name] = struct{}{}
+		seen[data.Ref] = struct{}{}
 
 		if data.Def != "" {
 			sections = append(sections, &codegen.SectionTemplate{
