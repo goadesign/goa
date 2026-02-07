@@ -74,6 +74,33 @@ var StreamingResultDSL = func() {
 	})
 }
 
+var MixedResultsDSL = func() {
+	var PayloadType = Type("Payload", func() {
+		Attribute("x", String)
+		Required("x")
+	})
+	var ResultType = Type("Result", func() {
+		Attribute("id", String)
+		Required("id")
+	})
+	var EventType = Type("Event", func() {
+		Attribute("message", String)
+		Required("message")
+	})
+	Service("MixedResultsService", func() {
+		Method("Create", func() {
+			Payload(PayloadType)
+			Result(ResultType)
+			StreamingResult(EventType)
+			HTTP(func() {
+				POST("/jobs")
+				ServerSentEvents()
+				Response(StatusOK)
+			})
+		})
+	})
+}
+
 var StreamingResultWithViewsDSL = func() {
 	var Request = Type("Request", func() {
 		Attribute("x", String)

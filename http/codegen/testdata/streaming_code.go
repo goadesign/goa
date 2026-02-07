@@ -80,6 +80,104 @@ func NewStreamingResultMethodHandler(
 }
 `
 
+var MixedResultsServerHandlerInitCode = `// NewCreateHandler creates a HTTP handler which loads the HTTP request and
+// calls the "MixedResultsService" service "Create" endpoint.
+func NewCreateHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) http.Handler {
+	var (
+		decodeRequest  = DecodeCreateRequest(mux, decoder)
+		encodeResponse = EncodeCreateResponse(encoder)
+		encodeError    = goahttp.ErrorEncoder(encoder, formatter)
+	)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ctx := context.WithValue(r.Context(), goahttp.AcceptTypeKey, r.Header.Get("Accept"))
+		ctx = context.WithValue(ctx, goa.MethodKey, "Create")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "MixedResultsService")
+
+		// Content negotiation for mixed results (standard HTTP vs SSE)
+		acceptHeader := r.Header.Get("Accept")
+		if strings.Contains(acceptHeader, "text/event-stream") {
+			// Handle SSE request
+			payload, err := decodeRequest(r)
+			if err != nil {
+				if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+					errhandler(ctx, w, err)
+				}
+				return
+			}
+			v := &mixedresultsservice.CreateEndpointInput{
+				Stream: &CreateServerStream{
+					w: w,
+					r: r,
+				},
+				Payload: payload,
+			}
+			_, err = endpoint(ctx, v)
+			if err != nil {
+				if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+					errhandler(ctx, w, err)
+				}
+			}
+		} else {
+			// Handle standard HTTP request
+			payload, err := decodeRequest(r)
+			if err != nil {
+				if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+					errhandler(ctx, w, err)
+				}
+				return
+			}
+			// Mixed results endpoints always use the generated endpoint input struct.
+			// In the standard (non-SSE) mode, Stream discards events and the service
+			// must return the synchronous result.
+			v := &mixedresultsservice.CreateEndpointInput{
+				Stream:  &discardCreateServerStream{},
+				Payload: payload,
+			}
+			res, err := endpoint(ctx, v)
+			if err != nil {
+				if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
+					errhandler(ctx, w, err)
+				}
+				return
+			}
+			if err := encodeResponse(ctx, w, res); err != nil {
+				if errhandler != nil {
+					errhandler(ctx, w, err)
+				}
+			}
+		}
+	})
+}
+
+// discardCreateServerStream implements the mixedresultsservice.CreateServerStream
+// interface and drops all events. It is used for mixed results endpoints in
+// unary (non-SSE) mode so service implementations can use the stream parameter
+// without nil checks.
+type discardCreateServerStream struct{}
+
+// Send discards the event.
+func (s *discardCreateServerStream) Send(v *mixedresultsservice.Event) error {
+	return nil
+}
+
+// SendWithContext discards the event.
+func (s *discardCreateServerStream) SendWithContext(ctx context.Context, v *mixedresultsservice.Event) error {
+	return nil
+}
+
+// Close is a no-op.
+func (s *discardCreateServerStream) Close() error {
+	return nil
+}
+`
+
 var StreamingResultServerStreamSendCode = `// Send streams instances of "streamingresultservice.UserType" to the
 // "StreamingResultMethod" endpoint websocket connection.
 func (s *StreamingResultMethodServerStream) Send(v *streamingresultservice.UserType) error {

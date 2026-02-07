@@ -39,6 +39,9 @@ func TestServerStreaming(t *testing.T) {
 		}},
 
 		// streaming result
+		{"mixed-results", testdata.MixedResultsDSL, []*sectionExpectation{
+			{"server-handler-init", &testdata.MixedResultsServerHandlerInitCode},
+		}},
 		{"streaming-result", testdata.StreamingResultDSL, []*sectionExpectation{
 			{"server-handler-init", &testdata.StreamingResultServerHandlerInitCode},
 			{"server-websocket-send", &testdata.StreamingResultServerStreamSendCode},

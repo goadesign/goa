@@ -116,6 +116,28 @@ var StreamingResultEndpointDSL = func() {
 	})
 }
 
+var MixedResultsEndpointDSL = func() {
+	var PayloadType = Type("Payload", func() {
+		Attribute("id", String)
+		Required("id")
+	})
+	var ResultType = Type("ResultType", func() {
+		Attribute("ok", Boolean)
+		Required("ok")
+	})
+	var EventType = Type("EventType", func() {
+		Attribute("message", String)
+		Required("message")
+	})
+	Service("MixedResultsEndpoint", func() {
+		Method("MixedResultsMethod", func() {
+			Payload(PayloadType)
+			Result(ResultType)
+			StreamingResult(EventType)
+		})
+	})
+}
+
 var StreamingPayloadEndpointDSL = func() {
 	var AType = Type("AType", func() {
 		Attribute("a", String)
