@@ -21,6 +21,7 @@
 			conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		{{- end }}
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -28,6 +29,6 @@
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return {{ if eq .Function "Recv" }}rv, {{ end }}err
+	if s.upgradeErr != nil {
+		return {{ if eq .Function "Recv" }}rv, {{ end }}s.upgradeErr
 	}

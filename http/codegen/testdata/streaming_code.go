@@ -189,6 +189,7 @@ func (s *StreamingResultMethodServerStream) Send(v *streamingresultservice.UserT
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -196,8 +197,8 @@ func (s *StreamingResultMethodServerStream) Send(v *streamingresultservice.UserT
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := v
 	body := NewStreamingResultMethodResponseBody(res)
@@ -241,6 +242,7 @@ func (s *StreamingResultWithViewsMethodServerStream) Send(v *streamingresultwith
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -248,8 +250,8 @@ func (s *StreamingResultWithViewsMethodServerStream) Send(v *streamingresultwith
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := streamingresultwithviewsservice.NewViewedUsertype(v, s.view)
 	var body any
@@ -583,6 +585,7 @@ func (s *StreamingResultWithExplicitViewMethodServerStream) Send(v *streamingres
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -590,8 +593,8 @@ func (s *StreamingResultWithExplicitViewMethodServerStream) Send(v *streamingres
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := streamingresultwithexplicitviewservice.NewViewedUsertype(v, "extended")
 	body := NewStreamingResultWithExplicitViewMethodResponseBodyExtended(res.Projected)
@@ -621,6 +624,7 @@ func (s *StreamingResultCollectionWithViewsMethodServerStream) Send(v streamingr
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -628,8 +632,8 @@ func (s *StreamingResultCollectionWithViewsMethodServerStream) Send(v streamingr
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := streamingresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, s.view)
 	var body any
@@ -716,6 +720,7 @@ func (s *StreamingResultCollectionWithExplicitViewMethodServerStream) Send(v str
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -723,8 +728,8 @@ func (s *StreamingResultCollectionWithExplicitViewMethodServerStream) Send(v str
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := streamingresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
 	body := NewUsertypeResponseTinyCollection(res.Projected)
@@ -824,6 +829,7 @@ func (s *StreamingResultPrimitiveMethodServerStream) Send(v string) error {
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -831,8 +837,8 @@ func (s *StreamingResultPrimitiveMethodServerStream) Send(v string) error {
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := v
 	return s.conn.WriteJSON(res)
@@ -882,6 +888,7 @@ func (s *StreamingResultPrimitiveArrayMethodServerStream) Send(v []int32) error 
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -889,8 +896,8 @@ func (s *StreamingResultPrimitiveArrayMethodServerStream) Send(v []int32) error 
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := v
 	return s.conn.WriteJSON(res)
@@ -942,6 +949,7 @@ func (s *StreamingResultPrimitiveMapMethodServerStream) Send(v map[int32]string)
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -949,8 +957,8 @@ func (s *StreamingResultPrimitiveMapMethodServerStream) Send(v map[int32]string)
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := v
 	return s.conn.WriteJSON(res)
@@ -1002,6 +1010,7 @@ func (s *StreamingResultUserTypeArrayMethodServerStream) Send(v []*streamingresu
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -1009,8 +1018,8 @@ func (s *StreamingResultUserTypeArrayMethodServerStream) Send(v []*streamingresu
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := v
 	body := NewStreamingResultUserTypeArrayMethodResponseBody(res)
@@ -1067,6 +1076,7 @@ func (s *StreamingResultUserTypeMapMethodServerStream) Send(v map[string]*stream
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -1074,8 +1084,8 @@ func (s *StreamingResultUserTypeMapMethodServerStream) Send(v map[string]*stream
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := v
 	body := NewStreamingResultUserTypeMapMethodResponseBody(res)
@@ -1257,6 +1267,7 @@ func (s *StreamingPayloadMethodServerStream) Recv() (*streamingpayloadservice.Re
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -1264,8 +1275,8 @@ func (s *StreamingPayloadMethodServerStream) Recv() (*streamingpayloadservice.Re
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&msg); err != nil {
 		return rv, err
@@ -1512,6 +1523,7 @@ func (s *StreamingPayloadNoResultMethodServerStream) Recv() (string, error) {
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -1519,8 +1531,8 @@ func (s *StreamingPayloadNoResultMethodServerStream) Recv() (string, error) {
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&msg); err != nil {
 		return rv, err
@@ -1624,6 +1636,7 @@ func (s *StreamingPayloadResultWithViewsMethodServerStream) Recv() (float32, err
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -1631,8 +1644,8 @@ func (s *StreamingPayloadResultWithViewsMethodServerStream) Recv() (float32, err
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&msg); err != nil {
 		return rv, err
@@ -1755,6 +1768,7 @@ func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) Recv() (float
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -1762,8 +1776,8 @@ func (s *StreamingPayloadResultWithExplicitViewMethodServerStream) Recv() (float
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&msg); err != nil {
 		return rv, err
@@ -1881,6 +1895,7 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) Recv() (an
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -1888,8 +1903,8 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) Recv() (an
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&msg); err != nil {
 		return rv, err
@@ -2018,6 +2033,7 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) Rec
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -2025,8 +2041,8 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) Rec
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&msg); err != nil {
 		return rv, err
@@ -2134,6 +2150,7 @@ func (s *StreamingPayloadPrimitiveMethodServerStream) Recv() (string, error) {
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -2141,8 +2158,8 @@ func (s *StreamingPayloadPrimitiveMethodServerStream) Recv() (string, error) {
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&msg); err != nil {
 		return rv, err
@@ -2238,6 +2255,7 @@ func (s *StreamingPayloadPrimitiveArrayMethodServerStream) Recv() ([]int32, erro
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -2245,8 +2263,8 @@ func (s *StreamingPayloadPrimitiveArrayMethodServerStream) Recv() ([]int32, erro
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
@@ -2344,6 +2362,7 @@ func (s *StreamingPayloadPrimitiveMapMethodServerStream) Recv() (map[string]int3
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -2351,8 +2370,8 @@ func (s *StreamingPayloadPrimitiveMapMethodServerStream) Recv() (map[string]int3
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
@@ -2451,6 +2470,7 @@ func (s *StreamingPayloadUserTypeArrayMethodServerStream) Recv() ([]*streamingpa
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -2458,8 +2478,8 @@ func (s *StreamingPayloadUserTypeArrayMethodServerStream) Recv() ([]*streamingpa
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
@@ -2562,6 +2582,7 @@ func (s *StreamingPayloadUserTypeMapMethodServerStream) Recv() (map[string]*stre
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -2569,8 +2590,8 @@ func (s *StreamingPayloadUserTypeMapMethodServerStream) Recv() (map[string]*stre
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
@@ -2715,6 +2736,7 @@ func (s *BidirectionalStreamingMethodServerStream) Send(v *bidirectionalstreamin
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -2722,8 +2744,8 @@ func (s *BidirectionalStreamingMethodServerStream) Send(v *bidirectionalstreamin
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := v
 	body := NewBidirectionalStreamingMethodResponseBody(res)
@@ -2753,6 +2775,7 @@ func (s *BidirectionalStreamingMethodServerStream) Recv() (*bidirectionalstreami
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -2760,8 +2783,8 @@ func (s *BidirectionalStreamingMethodServerStream) Recv() (*bidirectionalstreami
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&msg); err != nil {
 		return rv, err
@@ -3059,6 +3082,7 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Send(v *bidire
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3066,8 +3090,8 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Send(v *bidire
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := bidirectionalstreamingresultwithviewsservice.NewViewedUsertype(v, s.view)
 	var body any
@@ -3106,6 +3130,7 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Recv() (float3
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3113,8 +3138,8 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Recv() (float3
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&msg); err != nil {
 		return rv, err
@@ -3239,6 +3264,7 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Send(v 
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3246,8 +3272,8 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Send(v 
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := bidirectionalstreamingresultwithexplicitviewservice.NewViewedUsertype(v, "extended")
 	body := NewBidirectionalStreamingResultWithExplicitViewMethodResponseBodyExtended(res.Projected)
@@ -3279,6 +3305,7 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Recv() 
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3286,8 +3313,8 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodServerStream) Recv() 
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&msg); err != nil {
 		return rv, err
@@ -3370,6 +3397,7 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3377,8 +3405,8 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := bidirectionalstreamingresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, s.view)
 	var body any
@@ -3418,6 +3446,7 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Recv
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3425,8 +3454,8 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Recv
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&msg); err != nil {
 		return rv, err
@@ -3525,6 +3554,7 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3532,8 +3562,8 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := bidirectionalstreamingresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
 	body := NewUsertypeResponseTinyCollection(res.Projected)
@@ -3565,6 +3595,7 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3572,8 +3603,8 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&msg); err != nil {
 		return rv, err
@@ -3652,6 +3683,7 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Send(v string) error
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3659,8 +3691,8 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Send(v string) error
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := v
 	return s.conn.WriteJSON(res)
@@ -3689,6 +3721,7 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Recv() (string, erro
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3696,8 +3729,8 @@ func (s *BidirectionalStreamingPrimitiveMethodServerStream) Recv() (string, erro
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&msg); err != nil {
 		return rv, err
@@ -3767,6 +3800,7 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Send(v []string
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3774,8 +3808,8 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Send(v []string
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := v
 	return s.conn.WriteJSON(res)
@@ -3804,6 +3838,7 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Recv() ([]int32
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3811,8 +3846,8 @@ func (s *BidirectionalStreamingPrimitiveArrayMethodServerStream) Recv() ([]int32
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
@@ -3882,6 +3917,7 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Send(v map[int]in
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3889,8 +3925,8 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Send(v map[int]in
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := v
 	return s.conn.WriteJSON(res)
@@ -3919,6 +3955,7 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Recv() (map[strin
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -3926,8 +3963,8 @@ func (s *BidirectionalStreamingPrimitiveMapMethodServerStream) Recv() (map[strin
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
@@ -3998,6 +4035,7 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Send(v []*bidire
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -4005,8 +4043,8 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Send(v []*bidire
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := v
 	body := NewBidirectionalStreamingUserTypeArrayMethodResponseBody(res)
@@ -4038,6 +4076,7 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Recv() ([]*bidir
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -4045,8 +4084,8 @@ func (s *BidirectionalStreamingUserTypeArrayMethodServerStream) Recv() ([]*bidir
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
@@ -4124,6 +4163,7 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Send(v map[string]
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -4131,8 +4171,8 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Send(v map[string]
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := v
 	body := NewBidirectionalStreamingUserTypeMapMethodResponseBody(res)
@@ -4164,6 +4204,7 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Recv() (map[string
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -4171,8 +4212,8 @@ func (s *BidirectionalStreamingUserTypeMapMethodServerStream) Recv() (map[string
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return rv, err
+	if s.upgradeErr != nil {
+		return rv, s.upgradeErr
 	}
 	if err = s.conn.ReadJSON(&body); err != nil {
 		return rv, err
