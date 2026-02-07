@@ -29,6 +29,7 @@ func TestViews(t *testing.T) {
 		{"result-with-multiple-methods", testdata.ResultWithMultipleMethodsDSL, testdata.ResultWithMultipleMethodsCode},
 		{"result-with-enum-type", testdata.ResultWithEnumTypeDSL, testdata.ResultWithEnumType},
 		{"result-with-pkg-path", testdata.ResultWithPkgPathDSL, testdata.ResultWithPkgPathCode},
+		{"result-with-oneof-in-result-type", testdata.ResultWithOneOfInResultTypeDSL, testdata.ResultWithOneOfInResultTypeCode},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

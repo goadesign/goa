@@ -276,3 +276,22 @@ var ResultWithCustomFieldsDSL = func() {
 		})
 	})
 }
+
+var ResultWithOneOfInResultTypeDSL = func() {
+	var OneOfValue = Type("OneOfValue", func() {
+		OneOf("flag", func() {
+			Attribute("astring", String, "String data")
+			Attribute("aint", Int64, "Int data")
+		})
+	})
+	var OneOfResource = ResultType("application/vnd.oneof.resource", func() {
+		TypeName("OneOfResource")
+		Attribute("data", OneOfValue, "Data (type depends on flag)")
+		Required("data")
+	})
+	Service("ResultWithOneOfInResultType", func() {
+		Method("List", func() {
+			Result(OneOfResource)
+		})
+	})
+}
