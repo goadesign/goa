@@ -3160,6 +3160,37 @@ var MultipleMethodsDSL = func() {
 	})
 }
 
+var MultipleMethodsWithArrayTypePayloadsDSL = func() {
+	var PayloadA = Type("PayloadA", func() {
+		Attribute("a", String, func() {
+			Pattern("patterna")
+		})
+	})
+	var PayloadB = Type("PayloadB", func() {
+		Attribute("a", String, func() {
+			Pattern("patterna")
+		})
+		Attribute("b", String, func() {
+			Pattern("patternb")
+		})
+		Required("a", "b")
+	})
+	Service("ServiceMultipleMethods", func() {
+		Method("MethodA", func() {
+			Payload(ArrayOf(PayloadA))
+			HTTP(func() {
+				POST("/")
+			})
+		})
+		Method("MethodB", func() {
+			Payload(ArrayOf(PayloadB))
+			HTTP(func() {
+				PUT("/")
+			})
+		})
+	})
+}
+
 var MixedPayloadInBodyDSL = func() {
 	var BPayload = Type("BPayload", func() {
 		Attribute("int", Int)

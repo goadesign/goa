@@ -1,0 +1,55 @@
+// PayloadARequestBody is used to define fields on request body types.
+type PayloadARequestBody struct {
+	A *string `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+}
+
+// PayloadBRequestBody is used to define fields on request body types.
+type PayloadBRequestBody struct {
+	A string `form:"a" json:"a" xml:"a"`
+	B string `form:"b" json:"b" xml:"b"`
+}
+
+// NewPayloadARequestBody builds the HTTP request body from the payload of the
+// "MethodA" endpoint of the "ServiceMultipleMethods" service.
+func NewPayloadARequestBody(p []*servicemultiplemethods.PayloadA) []*PayloadARequestBody {
+	body := make([]*PayloadARequestBody, len(p))
+	for i, val := range p {
+		if val == nil {
+			body[i] = nil
+			continue
+		}
+		body[i] = marshalServicemultiplemethodsPayloadAToPayloadARequestBody(val)
+	}
+	return body
+}
+
+// NewPayloadBRequestBody builds the HTTP request body from the payload of the
+// "MethodB" endpoint of the "ServiceMultipleMethods" service.
+func NewPayloadBRequestBody(p []*servicemultiplemethods.PayloadB) []*PayloadBRequestBody {
+	body := make([]*PayloadBRequestBody, len(p))
+	for i, val := range p {
+		if val == nil {
+			body[i] = nil
+			continue
+		}
+		body[i] = marshalServicemultiplemethodsPayloadBToPayloadBRequestBody(val)
+	}
+	return body
+}
+
+// ValidatePayloadARequestBody runs the validations defined on
+// PayloadARequestBody
+func ValidatePayloadARequestBody(body *PayloadARequestBody) (err error) {
+	if body.A != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.a", *body.A, "patterna"))
+	}
+	return
+}
+
+// ValidatePayloadBRequestBody runs the validations defined on
+// PayloadBRequestBody
+func ValidatePayloadBRequestBody(body *PayloadBRequestBody) (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("body.a", body.A, "patterna"))
+	err = goa.MergeErrors(err, goa.ValidatePattern("body.b", body.B, "patternb"))
+	return
+}
