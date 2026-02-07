@@ -183,7 +183,7 @@ func (s *{{ .Method.VarName }}StreamImpl) Close() error {
 // processEvent processes a raw SSE event into the expected type
 func (s *{{ .Method.VarName }}StreamImpl) processEvent(eventData []byte) (event {{ .SSE.EventTypeRef }}, err error) {
         {{- if .SSE.EventIsStruct }}
-        event = &{{ .SSE.EventTypeName }}{}
+        event = new({{ deref .SSE.EventTypeRef }})
         {{- end }}
         var dataLines []string
         for _, line := range bytes.Split(eventData, []byte("\n")) {

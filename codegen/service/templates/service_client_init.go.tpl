@@ -3,6 +3,9 @@ func New{{ .ClientVarName }}({{ .ClientInitArgs }} goa.Endpoint{{ if .HasClientI
     return &{{ .ClientVarName }}{
     {{- range .Methods }}
         {{ .EndpointField }}: {{ if .ClientInterceptors }}Wrap{{ .VarName }}ClientEndpoint({{ end }}{{ .ArgName }}{{ if .ClientInterceptors }}, ci){{ end }},
+		{{- if .HasMixedResults }}
+        {{ .StreamEndpointField }}: {{ if .ClientInterceptors }}Wrap{{ .VarName }}ClientEndpoint({{ end }}{{ .StreamArgName }}{{ if .ClientInterceptors }}, ci){{ end }},
+		{{- end }}
     {{- end }}
     }
 }

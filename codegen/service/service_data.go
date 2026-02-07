@@ -188,6 +188,10 @@ type (
 		// StreamKind is the kind of the stream (payload or result or
 		// bidirectional).
 		StreamKind expr.StreamKind
+		// HasMixedResults indicates whether the method defines both Result and
+		// StreamingResult with different types, enabling content negotiation at
+		// the transport layer (e.g. JSON vs SSE over HTTP).
+		HasMixedResults bool
 		// SkipRequestBodyEncodeDecode is true if the method payload includes
 		// the raw HTTP request body reader.
 		SkipRequestBodyEncodeDecode bool
@@ -206,6 +210,13 @@ type (
 		// struct to store the goa.Endpoint for this method. It is computed with a
 		// scope that includes method names to avoid field/method name collisions.
 		EndpointField string
+		// StreamEndpointField is the unique field name used in the generated client
+		// struct to store the "streaming mode" goa.Endpoint for mixed results. The
+		// transport endpoint forces server streaming (e.g. sets "Accept:
+		// text/event-stream") and returns the client stream interface.
+		//
+		// It is only set when HasMixedResults is true.
+		StreamEndpointField string
 	}
 
 	// StreamData is the data used to generate client and server interfaces that
@@ -871,6 +882,9 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	// existing method names.
 	for _, m := range methods {
 		m.EndpointField = scope.Unique(m.VarName+"Endpoint", "")
+		if m.HasMixedResults {
+			m.StreamEndpointField = scope.Unique(m.VarName+"StreamEndpoint", "")
+		}
 	}
 
 	// Collect union sum-type definitions for the service.
@@ -1330,6 +1344,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		Requirements:                 reqs,
 		Schemes:                      schemes,
 		StreamKind:                   m.Stream,
+		HasMixedResults:              m.HasMixedResults(),
 		SkipRequestBodyEncodeDecode:  skipRequestBodyEncodeDecode,
 		SkipResponseBodyEncodeDecode: skipResponseBodyEncodeDecode,
 		RequestStruct:                vname + "RequestData",

@@ -26,6 +26,7 @@ func TestEndpoint(t *testing.T) {
 		{"endpoint-with-result", testdata.WithResultEndpointDSL, testdata.WithResultEndpoint},
 		{"endpoint-with-result-multiple-views", testdata.WithResultMultipleViewsEndpointDSL, testdata.WithResultMultipleViewsEndpoint},
 		{"endpoint-streaming-result", testdata.StreamingResultEndpointDSL, testdata.StreamingResultMethodEndpoint},
+		{"endpoint-mixed-results", testdata.MixedResultsEndpointDSL, testdata.MixedResultsMethodEndpoint},
 		{"endpoint-streaming-result-no-payload", testdata.StreamingResultNoPayloadEndpointDSL, testdata.StreamingResultNoPayloadMethodEndpoint},
 		{"endpoint-streaming-result-with-views", testdata.StreamingResultWithViewsMethodDSL, testdata.StreamingResultWithViewsMethodEndpoint},
 		{"endpoint-streaming-payload", testdata.StreamingPayloadEndpointDSL, testdata.StreamingPayloadMethodEndpoint},

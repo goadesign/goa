@@ -137,6 +137,14 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 		RequestIDPointer:    ridPtr,
 	}
 
+	// Mixed results SSE uses the streaming result type for events, not the unary
+	// HTTP response body type. Disable HTTP response body conversion in the SSE
+	// stream implementation and marshal the event value directly.
+	if ed.HasMixedResults {
+		ed.SSE.HasResponseBody = false
+		return
+	}
+
 	if ed.Result != nil {
 		for _, resp := range ed.Result.Responses {
 			if len(resp.ServerBody) > 0 {

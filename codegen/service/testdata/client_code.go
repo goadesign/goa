@@ -133,6 +133,44 @@ func (c *Client) StreamingResultMethod(ctx context.Context, p *APayload) (res St
 }
 `
 
+const MixedResultsMethodClient = `// Client is the "MixedResultsEndpoint" service client.
+type Client struct {
+	MixedResultsMethodEndpoint       goa.Endpoint
+	MixedResultsMethodStreamEndpoint goa.Endpoint
+}
+
+// NewClient initializes a "MixedResultsEndpoint" service client given the
+// endpoints.
+func NewClient(mixedResultsMethod, mixedResultsMethodStream goa.Endpoint) *Client {
+	return &Client{
+		MixedResultsMethodEndpoint:       mixedResultsMethod,
+		MixedResultsMethodStreamEndpoint: mixedResultsMethodStream,
+	}
+}
+
+// MixedResultsMethod calls the "MixedResultsMethod" endpoint of the
+// "MixedResultsEndpoint" service.
+func (c *Client) MixedResultsMethod(ctx context.Context, p *Payload) (res *ResultType, err error) {
+	var ires any
+	ires, err = c.MixedResultsMethodEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(*ResultType), nil
+}
+
+// MixedResultsMethodStream calls the "MixedResultsMethod" endpoint of the
+// "MixedResultsEndpoint" service with server streaming enabled.
+func (c *Client) MixedResultsMethodStream(ctx context.Context, p *Payload) (res MixedResultsMethodClientStream, err error) {
+	var ires any
+	ires, err = c.MixedResultsMethodStreamEndpoint(ctx, p)
+	if err != nil {
+		return
+	}
+	return ires.(MixedResultsMethodClientStream), nil
+}
+`
+
 const StreamingResultNoPayloadMethodClient = `// Client is the "StreamingResultNoPayloadService" service client.
 type Client struct {
 	StreamingResultNoPayloadMethodEndpoint goa.Endpoint

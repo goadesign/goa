@@ -94,7 +94,16 @@ func {{ .HandlerInit }}(
 			data := &{{ .ServicePkgName }}.{{ .Method.RequestStruct }}{ {{ if .Payload.Ref }}Payload: payload, {{ end }}Body: r.Body }
 			res, err := endpoint(ctx, data)
 		{{- else }}
-			res, err := endpoint(ctx, {{ if .Payload.Ref }}payload{{ else }}nil{{ end }})
+			// Mixed results endpoints always use the generated endpoint input struct.
+			// In the standard (non-SSE) mode, Stream discards events and the service
+			// must return the synchronous result.
+			v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
+				Stream: &discard{{ .Method.VarName }}ServerStream{},
+			{{- if .Payload.Ref }}
+				Payload: payload,
+			{{- end }}
+			}
+			res, err := endpoint(ctx, v)
 		{{- end }}
 			if err != nil {
 				if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
@@ -289,3 +298,27 @@ func {{ .HandlerInit }}(
 	{{- end }}{{/* end of not .HasMixedResults */}}
 	})
 }
+
+{{- if .HasMixedResults }}
+
+// discard{{ .Method.VarName }}ServerStream implements the {{ .SSE.Interface }}
+// interface and drops all events. It is used for mixed results endpoints in
+// unary (non-SSE) mode so service implementations can use the stream parameter
+// without nil checks.
+type discard{{ .Method.VarName }}ServerStream struct{}
+
+// {{ .SSE.SendName }} discards the event.
+func (s *discard{{ .Method.VarName }}ServerStream) {{ .SSE.SendName }}(v {{ .SSE.EventTypeRef }}) error {
+	return nil
+}
+
+// {{ .SSE.SendWithContextName }} discards the event.
+func (s *discard{{ .Method.VarName }}ServerStream) {{ .SSE.SendWithContextName }}(ctx context.Context, v {{ .SSE.EventTypeRef }}) error {
+	return nil
+}
+
+// Close is a no-op.
+func (s *discard{{ .Method.VarName }}ServerStream) Close() error {
+	return nil
+}
+{{- end }}

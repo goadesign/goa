@@ -242,6 +242,49 @@ func NewStreamingResultMethodEndpoint(s Service) goa.Endpoint {
 }
 `
 
+const MixedResultsMethodEndpoint = `// Endpoints wraps the "MixedResultsEndpoint" service endpoints.
+type Endpoints struct {
+	MixedResultsMethod goa.Endpoint
+}
+
+// MixedResultsMethodEndpointInput holds both the payload and the server stream
+// of the "MixedResultsMethod" method.
+type MixedResultsMethodEndpointInput struct {
+	// Payload is the method payload.
+	Payload *Payload
+	// Stream is the server stream used by the "MixedResultsMethod" method to send
+	// data.
+	Stream MixedResultsMethodServerStream
+}
+
+// NewEndpoints wraps the methods of the "MixedResultsEndpoint" service with
+// endpoints.
+func NewEndpoints(s Service) *Endpoints {
+	return &Endpoints{
+		MixedResultsMethod: NewMixedResultsMethodEndpoint(s),
+	}
+}
+
+// Use applies the given middleware to all the "MixedResultsEndpoint" service
+// endpoints.
+func (e *Endpoints) Use(m func(goa.Endpoint) goa.Endpoint) {
+	e.MixedResultsMethod = m(e.MixedResultsMethod)
+}
+
+// NewMixedResultsMethodEndpoint returns an endpoint function that calls the
+// method "MixedResultsMethod" of service "MixedResultsEndpoint".
+func NewMixedResultsMethodEndpoint(s Service) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		ep := req.(*MixedResultsMethodEndpointInput)
+		res, err := s.MixedResultsMethod(ctx, ep.Payload, ep.Stream)
+		if err != nil {
+			return nil, err
+		}
+		return res, nil
+	}
+}
+`
+
 const StreamingResultNoPayloadMethodEndpoint = `// Endpoints wraps the "StreamingResultNoPayloadEndpoint" service endpoints.
 type Endpoints struct {
 	StreamingResultNoPayloadMethod goa.Endpoint
