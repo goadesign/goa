@@ -29,6 +29,8 @@ type ConnConfigurer struct {
 // testservice.StreamingEndpointServerStream interface.
 type StreamingEndpointServerStream struct {
 	once sync.Once
+	// upgradeErr is the error returned by the websocket upgrade attempt.
+	upgradeErr error
 	// upgrader is the websocket connection upgrader.
 	upgrader goahttp.Upgrader
 	// configurer is the websocket connection configurer.
@@ -63,6 +65,7 @@ func (s *StreamingEndpointServerStream) Send(v string) error {
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -70,8 +73,8 @@ func (s *StreamingEndpointServerStream) Send(v string) error {
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := v
 	return s.conn.WriteJSON(res)

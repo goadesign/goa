@@ -2,6 +2,8 @@
 type {{ .VarName }} struct {
 {{- if eq .Type "server" }}
 	once sync.Once
+	{{ comment "upgradeErr is the error returned by the websocket upgrade attempt." }}
+	upgradeErr error
 	{{ comment "upgrader is the websocket connection upgrader." }}
 	upgrader goahttp.Upgrader
 	{{ comment "configurer is the websocket connection configurer." }}

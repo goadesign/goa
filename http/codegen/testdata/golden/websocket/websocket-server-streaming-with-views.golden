@@ -29,6 +29,8 @@ type ConnConfigurer struct {
 // testservice.StreamUserWithViewsServerStream interface.
 type StreamUserWithViewsServerStream struct {
 	once sync.Once
+	// upgradeErr is the error returned by the websocket upgrade attempt.
+	upgradeErr error
 	// upgrader is the websocket connection upgrader.
 	upgrader goahttp.Upgrader
 	// configurer is the websocket connection configurer.
@@ -68,6 +70,7 @@ func (s *StreamUserWithViewsServerStream) Send(v *testservice.User) error {
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
 		if err != nil {
+			s.upgradeErr = err
 			return
 		}
 		if s.configurer != nil {
@@ -75,8 +78,8 @@ func (s *StreamUserWithViewsServerStream) Send(v *testservice.User) error {
 		}
 		s.conn = conn
 	})
-	if err != nil {
-		return err
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	res := testservice.NewViewedUser(v, s.view)
 	var body any
