@@ -44,6 +44,11 @@ type (
 		// ArgName is the name of the argument used to initialize the client
 		// struct method field.
 		ArgName string
+		// StreamArgName is the name of the argument used to initialize the client
+		// struct stream endpoint field when the method defines mixed results.
+		//
+		// It is only set when HasMixedResults is true.
+		StreamArgName string
 		// ClientVarName is the corresponding client struct field name.
 		ClientVarName string
 		// ServiceName is the name of the owner service.
@@ -142,16 +147,24 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 
 func endpointData(svc *Data) *EndpointsData {
 	methods := make([]*EndpointMethodData, len(svc.Methods))
-	names := make([]string, len(svc.Methods))
+	argScope := codegen.NewNameScope()
+	var names []string
 	for i, m := range svc.Methods {
+		argName := argScope.Unique(codegen.Goify(m.VarName, false), "")
+		names = append(names, argName)
+		streamArgName := ""
+		if m.HasMixedResults {
+			streamArgName = argScope.Unique(argName+"Stream", "")
+			names = append(names, streamArgName)
+		}
 		methods[i] = &EndpointMethodData{
 			MethodData:     m,
-			ArgName:        codegen.Goify(m.VarName, false),
+			ArgName:        argName,
+			StreamArgName:  streamArgName,
 			ServiceName:    svc.Name,
 			ServiceVarName: serviceInterfaceName,
 			ClientVarName:  clientStructName,
 		}
-		names[i] = codegen.Goify(m.VarName, false)
 	}
 	desc := fmt.Sprintf("%s wraps the %q service endpoints.", endpointsStructName, svc.Name)
 	return &EndpointsData{

@@ -7,6 +7,38 @@
 	{{- end }}
 //	- error: internal error
 {{- end }}
+{{- if .HasMixedResults }}
+{{- $unaryResultType := .ResultRef }}
+func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context{{ if .PayloadRef }}, p {{ .PayloadRef }}{{ end }}{{ if .MethodData.SkipRequestBodyEncodeDecode}}, req io.ReadCloser{{ end }}) ({{ if $unaryResultType }}res {{ $unaryResultType }}, {{ end }}{{ if .MethodData.SkipResponseBodyEncodeDecode }}resp io.ReadCloser, {{ end }}err error) {
+	{{- if or $unaryResultType .MethodData.SkipResponseBodyEncodeDecode }}
+	var ires any
+	{{- end }}
+	{{ if or $unaryResultType .MethodData.SkipResponseBodyEncodeDecode }}ires{{ else }}_{{ end }}, err = c.{{ .EndpointField }}(ctx, {{ if .MethodData.SkipRequestBodyEncodeDecode }}&{{ .RequestStruct }}{ {{ if .PayloadRef }}Payload: p, {{ end }}Body: req }{{ else if .PayloadRef }}p{{ else }}nil{{ end }})
+	{{- if not (or $unaryResultType .MethodData.SkipResponseBodyEncodeDecode) }}
+	return
+	{{- else }}
+	if err != nil {
+		return
+	}
+		{{- if .MethodData.SkipResponseBodyEncodeDecode }}
+	o := ires.(*{{ .MethodData.ResponseStruct }})
+	return {{ if .ResultRef }}o.Result, {{ end }}o.Body, nil
+		{{- else }}
+	return ires.({{ $unaryResultType }}), nil
+		{{- end }}
+	{{- end }}
+}
+
+{{ printf "%sStream calls the %q endpoint of the %q service with server streaming enabled." .VarName .Name .ServiceName | comment }}
+func (c *{{ .ClientVarName }}) {{ .VarName }}Stream(ctx context.Context{{ if .PayloadRef }}, p {{ .PayloadRef }}{{ end }}{{ if .MethodData.SkipRequestBodyEncodeDecode}}, req io.ReadCloser{{ end }}) (res {{ .ClientStream.Interface }}, err error) {
+	var ires any
+	ires, err = c.{{ .StreamEndpointField }}(ctx, {{ if .MethodData.SkipRequestBodyEncodeDecode }}&{{ .RequestStruct }}{ {{ if .PayloadRef }}Payload: p, {{ end }}Body: req }{{ else if .PayloadRef }}p{{ else }}nil{{ end }})
+	if err != nil {
+		return
+	}
+	return ires.({{ .ClientStream.Interface }}), nil
+}
+{{- else }}
 {{- $resultType := .ResultRef }}
 {{- if .ClientStream }}
 	{{- /* When a client stream exists, always return it from the client method. */ -}}
@@ -31,3 +63,4 @@ func (c *{{ .ClientVarName }}) {{ .VarName }}(ctx context.Context{{ if .PayloadR
 		{{- end }}
 	{{- end }}
 }
+{{- end }}

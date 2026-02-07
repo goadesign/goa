@@ -25,6 +25,10 @@ type Service interface {
 	{{- if .ServerStream }}
 		{{- if and .IsJSONRPC (not .IsJSONRPCSSE) (eq .ServerStream.Kind 2) }}
 			{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}) ({{ if .Result }}res {{ .ResultRef }}, {{ end }}err error)
+		{{- else if .HasMixedResults }}
+			{{- /* Mixed results: the method may be invoked in a unary (JSON) or streaming (SSE) mode.
+			     The server stream is non-nil only when the transport negotiates streaming. */}}
+			{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}, {{ .ServerStream.Interface }}) ({{ if .Result }}res {{ .ResultRef }}, {{ end }}{{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}err error)
 		{{- else }}
 			{{- if and .IsJSONRPC (not .IsJSONRPCSSE) (eq .ServerStream.Kind 3) .PayloadRef }}
 				{{- /* JSON-RPC WebSocket server streaming with non-streaming payload */ -}}

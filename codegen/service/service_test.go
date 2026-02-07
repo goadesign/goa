@@ -43,6 +43,7 @@ func TestService(t *testing.T) {
 		{"service-force-generate-type", testdata.ForceGenerateTypeDSL},
 		{"service-force-generate-type-explicit", testdata.ForceGenerateTypeExplicitDSL},
 		{"service-streaming-result", testdata.StreamingResultMethodDSL},
+		{"service-mixed-results", testdata.MixedResultsEndpointDSL},
 		{"service-streaming-result-with-views", testdata.StreamingResultWithViewsMethodDSL},
 		{"service-streaming-result-with-explicit-view", testdata.StreamingResultWithExplicitViewMethodDSL},
 		{"service-streaming-result-no-payload", testdata.StreamingResultNoPayloadMethodDSL},

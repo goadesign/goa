@@ -3,6 +3,7 @@ package codegen
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -76,6 +77,9 @@ func sseClientTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 					dict[key] = values[i+1]
 				}
 				return dict, nil
+			},
+			"deref": func(ref string) string {
+				return strings.TrimPrefix(ref, "*")
 			},
 		}
 		sections = append(sections, &codegen.SectionTemplate{

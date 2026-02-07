@@ -25,6 +25,7 @@ func TestClient(t *testing.T) {
 		{"client-no-payload", testdata.NoPayloadEndpointDSL, testdata.NoPayloadMethodsClient},
 		{"client-with-result", testdata.WithResultEndpointDSL, testdata.WithResultMethodClient},
 		{"client-streaming-result", testdata.StreamingResultMethodDSL, testdata.StreamingResultMethodClient},
+		{"client-mixed-results", testdata.MixedResultsEndpointDSL, testdata.MixedResultsMethodClient},
 		{"client-streaming-result-no-payload", testdata.StreamingResultNoPayloadMethodDSL, testdata.StreamingResultNoPayloadMethodClient},
 		{"client-streaming-payload", testdata.StreamingPayloadMethodDSL, testdata.StreamingPayloadMethodClient},
 		{"client-streaming-payload-no-payload", testdata.StreamingPayloadNoPayloadMethodDSL, testdata.StreamingPayloadNoPayloadMethodClient},

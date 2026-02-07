@@ -120,7 +120,24 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 
 {{- if .ServerStream }}
 	{{- if .ServerStream.EndpointStruct }}
+		{{- if .HasMixedResults }}
+		res, {{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view, {{ end }}{{ end }}err := s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
+		if err != nil {
+			return nil, err
+		}
+			{{- if .ViewedResult }}
+				{{- if .ViewedResult.ViewName }}
+		vres := {{ $.ViewedResult.Init.Name }}(res, {{ printf "%q" .ViewedResult.ViewName }})
+				{{- else }}
+		vres := {{ $.ViewedResult.Init.Name }}(res, view)
+				{{- end }}
+		return vres, nil
+			{{- else }}
+		return res, nil
+			{{- end }}
+		{{- else }}
 		return nil, s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
+		{{- end }}
 	{{- else }}
 		{{- /* JSON-RPC WebSocket client streaming: no stream parameter, just payload */ -}}
 		{{- if .PayloadRef }}
