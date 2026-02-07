@@ -1117,6 +1117,73 @@ func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Lo
 	}
 }
 
+// collectViewUnionTypes traverses the attribute to gather all union sum-type
+// definitions referenced by view-projected types. It always uses the provided
+// location for all nested user types so that unions are generated in the views
+// package and refer to view-local types (preventing import cycles).
+func collectViewUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, loc *codegen.Location, unions map[string]*UnionTypeData, seen map[string]struct{}) {
+	if att == nil || att.Type == expr.Empty {
+		return
+	}
+	switch dt := att.Type.(type) {
+	case expr.UserType:
+		if _, ok := seen[dt.ID()]; ok {
+			return
+		}
+		seen[dt.ID()] = struct{}{}
+		collectViewUnionTypes(dt.Attribute(), scope, loc, unions, seen)
+	case *expr.Object:
+		for _, nat := range *dt {
+			collectViewUnionTypes(nat.Attribute, scope, loc, unions, seen)
+		}
+	case *expr.Array:
+		collectViewUnionTypes(dt.ElemType, scope, loc, unions, seen)
+	case *expr.Map:
+		collectViewUnionTypes(dt.KeyType, scope, loc, unions, seen)
+		collectViewUnionTypes(dt.ElemType, scope, loc, unions, seen)
+	case *expr.Union:
+		hash := dt.Hash()
+		if _, ok := unions[hash]; !ok {
+			unions[hash] = buildViewUnionTypeData(dt, scope, loc)
+		}
+		for _, nat := range dt.Values {
+			collectViewUnionTypes(nat.Attribute, scope, loc, unions, seen)
+		}
+	}
+}
+
+// buildViewUnionTypeData creates the data needed to generate a sum-type union
+// in the views package. Field types are computed using the view scope and are
+// always emitted unqualified so they refer to the view-local projected types.
+func buildViewUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Location) *UnionTypeData {
+	att := &expr.AttributeExpr{Type: u}
+	name := scope.GoTypeName(att)
+	kindName := scope.Unique(name + "Kind")
+
+	fields := make([]*UnionFieldData, len(u.Values))
+	for i, nat := range u.Values {
+		fieldName := codegen.Goify(nat.Name, true)
+		fieldType := scope.GoTypeRef(nat.Attribute)
+		kindConst := kindName + codegen.Goify(nat.Name, true)
+		fields[i] = &UnionFieldData{
+			Name:      nat.Name,
+			KindConst: kindConst,
+			FieldName: fieldName,
+			FieldType: fieldType,
+			TypeTag:   nat.Name,
+		}
+	}
+
+	return &UnionTypeData{
+		Name:     name,
+		KindName: kindName,
+		Fields:   fields,
+		Loc:      loc,
+		TypeKey:  u.GetTypeKey(),
+		ValueKey: u.GetValueKey(),
+	}
+}
+
 // buildErrorInitData creates the data needed to generate code around endpoint error return values.
 func buildErrorInitData(er *expr.ErrorExpr, scope *codegen.NameScope) *ErrorInitData {
 	_, temporary := er.Meta["goa:error:temporary"]
