@@ -148,7 +148,7 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 func endpointData(svc *Data) *EndpointsData {
 	methods := make([]*EndpointMethodData, len(svc.Methods))
 	argScope := codegen.NewNameScope()
-	var names []string
+	names := make([]string, 0, len(svc.Methods)*2)
 	for i, m := range svc.Methods {
 		argName := argScope.Unique(codegen.Goify(m.VarName, false), "")
 		names = append(names, argName)
