@@ -92,7 +92,15 @@ func NewClient(baseURL string, config *ClientConfig) (*Client, error) {
 	// Create WebSocket dialer if not provided
 	wsDialer := config.WSDialer
 	if wsDialer == nil {
-		wsDialer = websocket.DefaultDialer
+		// Do not use proxies from environment variables for integration tests.
+		// A developer shell may have HTTP(S)_PROXY set, which breaks localhost
+		// WebSocket upgrades and causes "websocket: bad handshake" failures.
+		//
+		// Gorilla uses ProxyFromEnvironment in websocket.DefaultDialer; setting
+		// Proxy to nil disables proxy use entirely.
+		defaultDialer := *websocket.DefaultDialer
+		defaultDialer.Proxy = nil
+		wsDialer = &defaultDialer
 	}
 
 	return &Client{
@@ -336,6 +344,17 @@ func (c *Client) ConnectWebSocket(ctx context.Context) error {
 
 	conn, resp, err := c.wsDialer.DialContext(ctx, wsURL.String(), headers)
 	if err != nil {
+		if resp != nil {
+			if resp.Body == nil {
+				return fmt.Errorf("websocket dial failed (status %d): %w", resp.StatusCode, err)
+			}
+			body, readErr := io.ReadAll(resp.Body)
+			_ = resp.Body.Close()
+			if readErr != nil {
+				return fmt.Errorf("websocket dial failed (status %d): %w", resp.StatusCode, err)
+			}
+			return fmt.Errorf("websocket dial failed (status %d): %w: %s", resp.StatusCode, err, string(body))
+		}
 		return fmt.Errorf("websocket dial failed: %w", err)
 	}
 	if resp != nil && resp.Body != nil {
