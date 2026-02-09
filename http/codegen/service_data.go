@@ -1666,7 +1666,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 					}
 					clientBodyData = sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, false, nil, sd)
 				}
-				if clientBodyData != nil {
+				if clientBodyData != nil && clientBodyData.Def != "" {
 					sd.ClientTypeNames[clientBodyData.Name] = false
 				}
 				for _, h := range headersData {
@@ -1993,7 +1993,9 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 				}
 				clientBodyData = sds.buildResponseBodyType(v.Response.Body, v.AttributeExpr, errorLoc, e, false, nil, sd)
 				if clientBodyData != nil {
-					sd.ClientTypeNames[clientBodyData.Name] = false
+					if clientBodyData.Def != "" {
+						sd.ClientTypeNames[clientBodyData.Name] = false
+					}
 					clientBodyData.Description = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body for the %q error.",
 						clientBodyData.VarName, svc.Name, e.Name(), v.Name)
 					serverBodyData[0].Description = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body for the %q error.",
@@ -2274,12 +2276,27 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, lo
 			}
 		}
 	} else if !expr.IsPrimitive(body.Type) && mustInit {
-		// response body is an array or map type.
-		name = codegen.Goify(e.Name(), true) + "ResponseBody"
-		varname = name
-		desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
-			varname, svc.Name, e.Name())
-		def = goTypeDef(sd.Scope, body, !svr, svr)
+		// Response body is an array or map type.
+		//
+		// Server-side code needs a named wrapper (scoped to the endpoint) so the
+		// generator can produce stable constructor identifiers (e.g.
+		// New<Endpoint>ResponseBody) for element-wise transforms and projections.
+		//
+		// Client-side code decodes directly into the concrete composite type (e.g.
+		// []T, map[K]V) and validates/transforms the value in-place. This avoids
+		// generating endpoint-named alias types that are structurally identical and
+		// may be deduplicated away in client/types.go.
+		if svr {
+			name = codegen.Goify(e.Name(), true) + "ResponseBody"
+			varname = name
+			desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
+				varname, svc.Name, e.Name())
+			def = goTypeDef(sd.Scope, body, !svr, svr)
+		} else {
+			varname = sd.Scope.GoTypeRef(body)
+			desc = body.Description
+			def = ""
+		}
 		validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), false, "body")
 	} else {
 		// response body is a primitive type. They are used as non-pointers when
@@ -2376,7 +2393,7 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, lo
 			ServerArgs:          []*InitArgData{&arg},
 		}
 	}
-	return &TypeData{
+	td := &TypeData{
 		Name:        name,
 		VarName:     varname,
 		Description: desc,
@@ -2388,6 +2405,7 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, lo
 		Example:     body.Example(sds.Root.API.ExampleGenerator),
 		View:        viewName,
 	}
+	return td
 }
 
 func (sds *ServicesData) extractPathParams(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, scope *codegen.NameScope) []*ParamData {
