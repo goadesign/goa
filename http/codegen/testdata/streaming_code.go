@@ -1040,7 +1040,7 @@ var StreamingResultUserTypeArrayClientStreamRecvCode = `// Recv reads instances 
 func (s *StreamingResultUserTypeArrayMethodClientStream) Recv() ([]*streamingresultusertypearrayservice.UserType, error) {
 	var (
 		rv   []*streamingresultusertypearrayservice.UserType
-		body StreamingResultUserTypeArrayMethodResponseBody
+		body []*UserTypeResponse
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -1107,7 +1107,7 @@ var StreamingResultUserTypeMapClientStreamRecvCode = `// Recv reads instances of
 func (s *StreamingResultUserTypeMapMethodClientStream) Recv() (map[string]*streamingresultusertypemapservice.UserType, error) {
 	var (
 		rv   map[string]*streamingresultusertypemapservice.UserType
-		body StreamingResultUserTypeMapMethodResponseBody
+		body map[string]*UserTypeResponse
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -4128,7 +4128,7 @@ var BidirectionalStreamingUserTypeArrayClientStreamRecvCode = `// Recv reads ins
 func (s *BidirectionalStreamingUserTypeArrayMethodClientStream) Recv() ([]*bidirectionalstreamingusertypearrayservice.ResultType, error) {
 	var (
 		rv   []*bidirectionalstreamingusertypearrayservice.ResultType
-		body BidirectionalStreamingUserTypeArrayMethodResponseBody
+		body []*ResultTypeResponse
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -4256,7 +4256,7 @@ var BidirectionalStreamingUserTypeMapClientStreamRecvCode = `// Recv reads insta
 func (s *BidirectionalStreamingUserTypeMapMethodClientStream) Recv() (map[string]*bidirectionalstreamingusertypemapservice.ResultType, error) {
 	var (
 		rv   map[string]*bidirectionalstreamingusertypemapservice.ResultType
-		body BidirectionalStreamingUserTypeMapMethodResponseBody
+		body map[string]*ResultTypeResponse
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
