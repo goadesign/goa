@@ -125,10 +125,10 @@ func clientType(genpkg string, svc *expr.HTTPServiceExpr, seen map[string]struct
 		adata := data.Endpoint(a.Name())
 		for _, resp := range adata.Result.Responses {
 			if data := resp.ClientBody; data != nil {
-				if _, ok := seen[data.Ref]; ok {
+				if _, ok := seen[data.Name]; ok {
 					continue
 				}
-				seen[data.Ref] = struct{}{}
+				seen[data.Name] = struct{}{}
 				if data.Def != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "client-response-body",
