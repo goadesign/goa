@@ -29,8 +29,9 @@ route HEAD "/" of service "DisallowResponseBody" HTTP endpoint "Method": HTTP st
 				expr.RunDSL(t, c.DSL)
 			} else {
 				err := expr.RunInvalidDSL(t, c.DSL)
-				if !strings.HasSuffix(err.Error(), c.Error) {
-					t.Errorf("got error %q\nexpected %q", err.Error(), c.Error)
+				got := stripValidationLocations(err.Error())
+				if !strings.HasSuffix(got, c.Error) {
+					t.Errorf("got error %q\nexpected %q", got, c.Error)
 				}
 			}
 		})
@@ -106,8 +107,9 @@ func TestHTTPEndpointPrepare(t *testing.T) {
 				}
 			} else {
 				err := expr.RunInvalidDSL(t, c.DSL)
-				if err.Error() != c.Error {
-					t.Errorf("got error %q, expected %q", err.Error(), c.Error)
+				got := stripValidationLocations(err.Error())
+				if got != c.Error {
+					t.Errorf("got error %q, expected %q", got, c.Error)
 				}
 			}
 		})
@@ -200,8 +202,8 @@ service "Service" HTTP endpoint "MethodC": HTTP endpoint request body must be em
 				}
 				if len(errs) > 1 || len(errs) == 0 {
 					t.Errorf("got %d errors, expected 1", len(errs))
-				} else if errs[0].Error() != c.Error {
-					t.Errorf("got `%s`, expected `%s`", err.Error(), c.Error)
+				} else if got := stripValidationLocations(errs[0].Error()); got != c.Error {
+					t.Errorf("got `%s`, expected `%s`", got, c.Error)
 				}
 			}
 		})

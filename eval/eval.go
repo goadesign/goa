@@ -148,7 +148,12 @@ type ValidationErrors struct {
 func (verr *ValidationErrors) Error() string {
 	msg := make([]string, len(verr.Errors))
 	for i, err := range verr.Errors {
-		msg[i] = fmt.Sprintf("%s: %s", verr.Expressions[i].EvalName(), err)
+		expr := verr.Expressions[i]
+		if file, line, ok := validationErrorLocation(expr); ok {
+			msg[i] = fmt.Sprintf("[%s:%d] %s: %s", file, line, expr.EvalName(), err)
+		} else {
+			msg[i] = fmt.Sprintf("%s: %s", expr.EvalName(), err)
+		}
 	}
 	return strings.Join(msg, "\n")
 }

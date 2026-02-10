@@ -74,8 +74,9 @@ service "Service" method "MethodUnion": union type choice has map elements, not 
 					t.Errorf("%s: got %d, expected the number of error values to match %d", name, len(errs), len(c.Errors))
 				} else {
 					for i, err := range errs {
-						if err.Error() != c.Errors[i] {
-							t.Errorf("%s:\ngot \t%q,\nexpected\t%q at index %d", name, err.Error(), c.Errors[i], i)
+						got := stripValidationLocations(err.Error())
+						if got != c.Errors[i] {
+							t.Errorf("%s:\ngot \t%q,\nexpected\t%q at index %d", name, got, c.Errors[i], i)
 						}
 					}
 				}

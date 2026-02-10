@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 )
@@ -66,16 +67,14 @@ func normalizeFileForPackageMatch(file string) string {
 // When successful it returns the file name and line number, empty string and
 // 0 otherwise.
 func computeErrorLocation() (file string, line int) {
-	skipFunc := func(pc uintptr, file string) bool {
+	shouldSkip := func(file, name string) bool {
 		if strings.HasSuffix(file, "_test.go") { // Be nice with tests
 			return false
 		}
-		file = filepath.ToSlash(file)
-		fn := runtime.FuncForPC(pc)
-		var name string
-		if fn != nil {
-			name = fn.Name()
+		if isGoaSourceFile(file) {
+			return true
 		}
+		file = filepath.ToSlash(file)
 		normalized := normalizeFileForPackageMatch(file)
 		for _, pkg := range Context.dslPackages {
 			if strings.Contains(file, pkg) || strings.Contains(normalized, pkg) || strings.Contains(name, pkg) {
@@ -84,24 +83,97 @@ func computeErrorLocation() (file string, line int) {
 		}
 		return false
 	}
-	depth := 3
-	pc, file, line, _ := runtime.Caller(depth)
-	for skipFunc(pc, file) {
-		depth++
-		pc, file, line, _ = runtime.Caller(depth)
+
+	// Start scanning just above computeErrorLocation itself. This is robust to
+	// inlining and avoids hardcoding assumptions about the exact call depth.
+	const skip = 2
+	pcs := make([]uintptr, 32)
+	n := runtime.Callers(skip, pcs)
+	frames := runtime.CallersFrames(pcs[:n])
+	for {
+		frame, more := frames.Next()
+		if frame.File == "" || frame.Line == 0 {
+			if !more {
+				break
+			}
+			continue
+		}
+		if !shouldSkip(frame.File, frame.Function) {
+			return relativeToWorkdir(frame.File), frame.Line
+		}
+		if !more {
+			break
+		}
 	}
+	return "", 0
+}
+
+// isGoaSourceFile reports whether file points into the Goa module sources.
+//
+// This is used to robustly skip internal Goa frames even when the runtime
+// reports a call location (file:line) inside an inlined Goa function but the
+// corresponding frame Function name does not include an import path.
+func isGoaSourceFile(file string) bool {
+	_, thisFile, _, ok := runtime.Caller(0)
+	if !ok {
+		return false
+	}
+	root := filepath.Dir(filepath.Dir(thisFile))
+	rel, err := filepath.Rel(root, file)
+	if err != nil {
+		return false
+	}
+	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
+}
+
+// validationErrorLocation returns the location of the DSL that declared the
+// given expression when available.
+//
+// The location is derived from the expression DSL function pointer and is used
+// to annotate validation errors (i.e. errors returned by Validate()).
+func validationErrorLocation(expr Expression) (file string, line int, ok bool) {
+	source, ok := expr.(Source)
+	if !ok {
+		return "", 0, false
+	}
+	fn := source.DSL()
+	if fn == nil {
+		return "", 0, false
+	}
+	return dslFuncLocation(fn)
+}
+
+// dslFuncLocation returns the file and line where the given DSL function is
+// declared.
+//
+// The returned file is relative to the current working directory when possible.
+func dslFuncLocation(fn func()) (file string, line int, ok bool) {
+	pc := reflect.ValueOf(fn).Pointer()
+	f := runtime.FuncForPC(pc)
+	if f == nil {
+		return "", 0, false
+	}
+	file, line = f.FileLine(pc)
+	if file == "" || line == 0 {
+		return "", 0, false
+	}
+	return relativeToWorkdir(file), line, true
+}
+
+// relativeToWorkdir returns file relative to the current working directory when
+// possible, otherwise it returns file unchanged.
+func relativeToWorkdir(file string) string {
 	wd, err := os.Getwd()
 	if err != nil {
-		return file, line
+		return file
 	}
 	wd, err = filepath.Abs(wd)
 	if err != nil {
-		return file, line
+		return file
 	}
-	f, err := filepath.Rel(wd, file)
+	rel, err := filepath.Rel(wd, file)
 	if err != nil {
-		return file, line
+		return file
 	}
-	file = f
-	return file, line
+	return rel
 }
