@@ -41,7 +41,7 @@ service "AnotherInvalidSecuritySchemesService" method "Method": payload of metho
 				expr.RunDSL(t, tc.DSL)
 			} else {
 				err := expr.RunInvalidDSL(t, tc.DSL)
-				assert.EqualError(t, err, tc.Error)
+				assert.Equal(t, tc.Error, stripValidationLocations(err.Error()))
 			}
 		})
 	}

@@ -40,8 +40,9 @@ service "MissingCookieResultAttribute" HTTP endpoint "Method": attribute "bar" u
 				expr.RunDSL(t, c.DSL)
 			} else {
 				err := expr.RunInvalidDSL(t, c.DSL)
-				if err.Error() != c.Error {
-					t.Errorf("got error %q, expected %q", err.Error(), c.Error)
+				got := stripValidationLocations(err.Error())
+				if got != c.Error {
+					t.Errorf("got error %q, expected %q", got, c.Error)
 				}
 			}
 		})
