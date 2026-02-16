@@ -82,11 +82,19 @@ type (
 )
 
 // NewMuxer returns a Muxer implementation based on a Chi router.
+//
+// The returned muxer sets r.Pattern (Go 1.22+) on every dispatched request
+// before middlewares run. This allows observability middleware such as
+// otelhttp to read the matched route from r.Pattern for span attributes and
+// metrics. To take advantage of this, register otelhttp as a mux middleware
+// rather than wrapping the mux externally:
+//
+//	mux := goahttp.NewMuxer()
+//	mux.Use(otelhttp.NewMiddleware("service"))
 func NewMuxer() ResolverMuxer {
 	return &mux{
-		Router:      chi.NewRouter(),
-		wildcards:   make(map[string]string),
-		middlewares: nil,
+		Router:    chi.NewRouter(),
+		wildcards: make(map[string]string),
 	}
 }
 
@@ -127,6 +135,18 @@ func (m *mux) Handle(method, pattern string, handler http.HandlerFunc) {
 		r.Pattern = reqPattern
 		handler(w, r)
 	}))
+}
+
+// ServeHTTP resolves the matched route and sets r.Pattern before dispatching
+// the request through chi's middleware chain and handler. This ensures that
+// middlewares registered via Use() — such as otelhttp.NewMiddleware — can
+// read r.Pattern to tag spans and metrics with the http.route attribute.
+func (m *mux) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	rctx := chi.NewRouteContext()
+	if m.Match(rctx, r.Method, r.URL.Path) {
+		r.Pattern = r.Method + " " + m.resolveWildcard(r.Method, rctx.RoutePattern())
+	}
+	m.Router.ServeHTTP(w, r)
 }
 
 // Vars extracts the path variables from the request context.

@@ -193,6 +193,63 @@ func TestRequestPattern(t *testing.T) {
 	}
 }
 
+// TestRequestPatternInMiddleware verifies that r.Pattern is set by the
+// built-in middleware before user-registered middlewares run. This is
+// critical for observability middleware (e.g., otelhttp) that reads
+// r.Pattern to set the http.route span attribute at span-start time.
+func TestRequestPatternInMiddleware(t *testing.T) {
+	cases := []struct {
+		Name     string
+		Method   string
+		Pattern  string
+		URL      string
+		Expected string
+	}{
+		{
+			Name:     "simple",
+			Method:   "GET",
+			Pattern:  "/users",
+			URL:      "/users",
+			Expected: "GET /users",
+		},
+		{
+			Name:     "with segment",
+			Method:   "POST",
+			Pattern:  "/users/{id}",
+			URL:      "/users/123",
+			Expected: "POST /users/{id}",
+		},
+		{
+			Name:     "with wildcard",
+			Method:   "GET",
+			Pattern:  "/files/{*path}",
+			URL:      "/files/a/b/c",
+			Expected: "GET /files/{*path}",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			var middlewareCalled bool
+			mux := NewMuxer()
+			// Register a user middleware that reads r.Pattern —
+			// simulating otelhttp.NewMiddleware.
+			mux.Use(func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					assert.Equal(t, c.Expected, r.Pattern)
+					middlewareCalled = true
+					next.ServeHTTP(w, r)
+				})
+			})
+			mux.Handle(c.Method, c.Pattern, func(_ http.ResponseWriter, _ *http.Request) {})
+			req, _ := http.NewRequest(c.Method, c.URL, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			assert.True(t, middlewareCalled)
+		})
+	}
+}
+
 func TestResolvePattern(t *testing.T) {
 	cases := []struct {
 		Name     string
