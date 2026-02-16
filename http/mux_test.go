@@ -146,6 +146,53 @@ func TestVars(t *testing.T) {
 	}
 }
 
+func TestRequestPattern(t *testing.T) {
+	cases := []struct {
+		Name     string
+		Method   string
+		Pattern  string
+		URL      string
+		Expected string
+	}{
+		{
+			Name:     "simple",
+			Method:   "GET",
+			Pattern:  "/users",
+			URL:      "/users",
+			Expected: "GET /users",
+		},
+		{
+			Name:     "with segment",
+			Method:   "POST",
+			Pattern:  "/users/{id}",
+			URL:      "/users/123",
+			Expected: "POST /users/{id}",
+		},
+		{
+			Name:     "with wildcard",
+			Method:   "GET",
+			Pattern:  "/files/{*path}",
+			URL:      "/files/a/b/c",
+			Expected: "GET /files/{*path}",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			var called bool
+			mux := NewMuxer()
+			mux.Handle(c.Method, c.Pattern, func(_ http.ResponseWriter, r *http.Request) {
+				assert.Equal(t, c.Expected, r.Pattern)
+				called = true
+			})
+			req, _ := http.NewRequest(c.Method, c.URL, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+			assert.True(t, called)
+		})
+	}
+}
+
 func TestResolvePattern(t *testing.T) {
 	cases := []struct {
 		Name     string
