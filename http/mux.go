@@ -94,6 +94,10 @@ func NewMuxer() ResolverMuxer {
 var wildPath = regexp.MustCompile(`/{\*([a-zA-Z0-9_]+)}`)
 
 // Handle registers the handler function for the given method and pattern.
+// It sets r.Pattern on every matched request to "METHOD /path" (matching the
+// Go 1.22+ convention used by http.ServeMux), enabling observability
+// middleware such as otelhttp to automatically tag spans and metrics with
+// the matched route.
 func (m *mux) Handle(method, pattern string, handler http.HandlerFunc) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -109,6 +113,9 @@ func (m *mux) Handle(method, pattern string, handler http.HandlerFunc) {
 		}))
 		m.middlewares = nil
 	}
+	// Capture the registered pattern before wildcard rewriting so we can
+	// populate r.Pattern for downstream consumers.
+	reqPattern := method + " " + pattern
 	if wildcards := wildPath.FindStringSubmatch(pattern); len(wildcards) > 0 {
 		if len(wildcards) > 2 {
 			panic("too many wildcards")
@@ -116,7 +123,10 @@ func (m *mux) Handle(method, pattern string, handler http.HandlerFunc) {
 		pattern = wildPath.ReplaceAllString(pattern, "/*")
 		m.wildcards[method+"::"+pattern] = wildcards[1]
 	}
-	m.Method(method, pattern, handler)
+	m.Method(method, pattern, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.Pattern = reqPattern
+		handler(w, r)
+	}))
 }
 
 // Vars extracts the path variables from the request context.
