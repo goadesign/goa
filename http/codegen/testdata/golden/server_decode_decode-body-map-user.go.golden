@@ -2,6 +2,7 @@
 // ServiceBodyMapUser MethodBodyMapUser endpoint.
 func DecodeMethodBodyMapUserRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodymapuser.MethodBodyMapUserPayload, error) {
 	return func(r *http.Request) (*servicebodymapuser.MethodBodyMapUserPayload, error) {
+		var payload *servicebodymapuser.MethodBodyMapUserPayload
 		var (
 			body MethodBodyMapUserRequestBody
 			err  error
@@ -9,19 +10,19 @@ func DecodeMethodBodyMapUserRequest(mux goahttp.Muxer, decoder func(*http.Reques
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 		err = ValidateMethodBodyMapUserRequestBody(&body)
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodBodyMapUserPayload(&body)
+		payload = NewMethodBodyMapUserPayload(&body)
 
 		return payload, nil
 	}

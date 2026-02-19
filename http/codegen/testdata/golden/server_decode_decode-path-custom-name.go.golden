@@ -2,13 +2,14 @@
 // ServicePathCustomName MethodPathCustomName endpoint.
 func DecodeMethodPathCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicepathcustomname.MethodPathCustomNamePayload, error) {
 	return func(r *http.Request) (*servicepathcustomname.MethodPathCustomNamePayload, error) {
+		var payload *servicepathcustomname.MethodPathCustomNamePayload
 		var (
 			p string
 
 			params = mux.Vars(r)
 		)
 		p = params["p"]
-		payload := NewMethodPathCustomNamePayload(p)
+		payload = NewMethodPathCustomNamePayload(p)
 
 		return payload, nil
 	}

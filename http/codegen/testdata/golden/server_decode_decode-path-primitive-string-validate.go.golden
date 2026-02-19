@@ -3,6 +3,7 @@
 // MethodPathPrimitiveStringValidate endpoint.
 func DecodeMethodPathPrimitiveStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (string, error) {
 	return func(r *http.Request) (string, error) {
+		var payload string
 		var (
 			p   string
 			err error
@@ -14,9 +15,9 @@ func DecodeMethodPathPrimitiveStringValidateRequest(mux goahttp.Muxer, decoder f
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("p", p, []any{"val"}))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := p
+		payload = p
 
 		return payload, nil
 	}

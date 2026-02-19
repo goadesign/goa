@@ -3,6 +3,7 @@
 // endpoint.
 func DecodeMethodBodyPrimitiveArrayUserRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyprimitivearrayuser.PayloadType, error) {
 	return func(r *http.Request) (*servicebodyprimitivearrayuser.PayloadType, error) {
+		var payload *servicebodyprimitivearrayuser.PayloadType
 		var (
 			body string
 			err  error
@@ -14,12 +15,12 @@ func DecodeMethodBodyPrimitiveArrayUserRequest(mux goahttp.Muxer, decoder func(*
 			} else {
 				var gerr *goa.ServiceError
 				if errors.As(err, &gerr) {
-					return nil, gerr
+					return payload, gerr
 				}
-				return nil, goa.DecodePayloadError(err.Error())
+				return payload, goa.DecodePayloadError(err.Error())
 			}
 		}
-		payload := NewMethodBodyPrimitiveArrayUserPayloadType(body)
+		payload = NewMethodBodyPrimitiveArrayUserPayloadType(body)
 
 		return payload, nil
 	}

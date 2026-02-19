@@ -2,6 +2,7 @@
 // the ServiceQueryArrayFloat64 MethodQueryArrayFloat64 endpoint.
 func DecodeMethodQueryArrayFloat64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryarrayfloat64.MethodQueryArrayFloat64Payload, error) {
 	return func(r *http.Request) (*servicequeryarrayfloat64.MethodQueryArrayFloat64Payload, error) {
+		var payload *servicequeryarrayfloat64.MethodQueryArrayFloat64Payload
 		var (
 			q   []float64
 			err error
@@ -20,9 +21,9 @@ func DecodeMethodQueryArrayFloat64Request(mux goahttp.Muxer, decoder func(*http.
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryArrayFloat64Payload(q)
+		payload = NewMethodQueryArrayFloat64Payload(q)
 
 		return payload, nil
 	}

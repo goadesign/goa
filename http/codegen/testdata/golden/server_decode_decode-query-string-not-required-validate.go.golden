@@ -3,6 +3,7 @@
 // MethodQueryStringNotRequiredValidate endpoint.
 func DecodeMethodQueryStringNotRequiredValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerystringnotrequiredvalidate.MethodQueryStringNotRequiredValidatePayload, error) {
 	return func(r *http.Request) (*servicequerystringnotrequiredvalidate.MethodQueryStringNotRequiredValidatePayload, error) {
+		var payload *servicequerystringnotrequiredvalidate.MethodQueryStringNotRequiredValidatePayload
 		var (
 			q   *string
 			err error
@@ -17,9 +18,9 @@ func DecodeMethodQueryStringNotRequiredValidateRequest(mux goahttp.Muxer, decode
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryStringNotRequiredValidatePayload(q)
+		payload = NewMethodQueryStringNotRequiredValidatePayload(q)
 
 		return payload, nil
 	}

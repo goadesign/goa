@@ -2,6 +2,7 @@
 // ServiceBodyUnionUser MethodBodyUnionUser endpoint.
 func DecodeMethodBodyUnionUserRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyunionuser.UnionUser, error) {
 	return func(r *http.Request) (*servicebodyunionuser.UnionUser, error) {
+		var payload *servicebodyunionuser.UnionUser
 		var (
 			body MethodBodyUnionUserRequestBody
 			err  error
@@ -9,15 +10,15 @@ func DecodeMethodBodyUnionUserRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
-		payload := NewMethodBodyUnionUserUnionUser(&body)
+		payload = NewMethodBodyUnionUserUnionUser(&body)
 
 		return payload, nil
 	}

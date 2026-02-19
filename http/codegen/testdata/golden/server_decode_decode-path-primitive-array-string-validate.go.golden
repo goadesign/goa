@@ -3,6 +3,7 @@
 // MethodPathPrimitiveArrayStringValidate endpoint.
 func DecodeMethodPathPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) ([]string, error) {
 	return func(r *http.Request) ([]string, error) {
+		var payload []string
 		var (
 			p   []string
 			err error
@@ -26,9 +27,9 @@ func DecodeMethodPathPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, deco
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := p
+		payload = p
 
 		return payload, nil
 	}

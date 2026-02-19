@@ -3,6 +3,7 @@
 // MethodHeaderPrimitiveBoolValidate endpoint.
 func DecodeMethodHeaderPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (bool, error) {
 	return func(r *http.Request) (bool, error) {
+		var payload bool
 		var (
 			h   bool
 			err error
@@ -22,9 +23,9 @@ func DecodeMethodHeaderPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder f
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("h", h, []any{true}))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := h
+		payload = h
 
 		return payload, nil
 	}

@@ -3,6 +3,7 @@
 // MethodQueryPrimitiveMapBoolArrayBoolValidate endpoint.
 func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (map[bool][]bool, error) {
 	return func(r *http.Request) (map[bool][]bool, error) {
+		var payload map[bool][]bool
 		var (
 			q   map[bool][]bool
 			err error
@@ -64,9 +65,9 @@ func DecodeMethodQueryPrimitiveMapBoolArrayBoolValidateRequest(mux goahttp.Muxer
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := q
+		payload = q
 
 		return payload, nil
 	}

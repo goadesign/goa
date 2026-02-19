@@ -3,6 +3,7 @@
 // MethodHeaderStringDefaultValidate endpoint.
 func DecodeMethodHeaderStringDefaultValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheaderstringdefaultvalidate.MethodHeaderStringDefaultValidatePayload, error) {
 	return func(r *http.Request) (*serviceheaderstringdefaultvalidate.MethodHeaderStringDefaultValidatePayload, error) {
+		var payload *serviceheaderstringdefaultvalidate.MethodHeaderStringDefaultValidatePayload
 		var (
 			h   string
 			err error
@@ -17,9 +18,9 @@ func DecodeMethodHeaderStringDefaultValidateRequest(mux goahttp.Muxer, decoder f
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("h", h, []any{"def"}))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodHeaderStringDefaultValidatePayload(h)
+		payload = NewMethodHeaderStringDefaultValidatePayload(h)
 
 		return payload, nil
 	}

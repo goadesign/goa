@@ -2,6 +2,7 @@
 // the ServiceQueryAnyValidate MethodQueryAnyValidate endpoint.
 func DecodeMethodQueryAnyValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryanyvalidate.MethodQueryAnyValidatePayload, error) {
 	return func(r *http.Request) (*servicequeryanyvalidate.MethodQueryAnyValidatePayload, error) {
+		var payload *servicequeryanyvalidate.MethodQueryAnyValidatePayload
 		var (
 			q   any
 			err error
@@ -14,9 +15,9 @@ func DecodeMethodQueryAnyValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []any{"val", 1}))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryAnyValidatePayload(q)
+		payload = NewMethodQueryAnyValidatePayload(q)
 
 		return payload, nil
 	}

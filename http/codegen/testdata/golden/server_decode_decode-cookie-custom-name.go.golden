@@ -2,6 +2,7 @@
 // the ServiceCookieCustomName MethodCookieCustomName endpoint.
 func DecodeMethodCookieCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicecookiecustomname.MethodCookieCustomNamePayload, error) {
 	return func(r *http.Request) (*servicecookiecustomname.MethodCookieCustomNamePayload, error) {
+		var payload *servicecookiecustomname.MethodCookieCustomNamePayload
 		var (
 			c2 *string
 			c  *http.Cookie
@@ -14,7 +15,7 @@ func DecodeMethodCookieCustomNameRequest(mux goahttp.Muxer, decoder func(*http.R
 		if c2Raw != "" {
 			c2 = &c2Raw
 		}
-		payload := NewMethodCookieCustomNamePayload(c2)
+		payload = NewMethodCookieCustomNamePayload(c2)
 
 		return payload, nil
 	}

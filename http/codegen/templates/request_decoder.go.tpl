@@ -1,14 +1,14 @@
 {{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .RequestDecoder .ServiceName .Method.Name | comment }}
 func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) ({{ .Payload.Ref }}, error) {
 	return func(r *http.Request) ({{ .Payload.Ref }}, error) {
-{{- if .MultipartRequestDecoder }}
 		var payload {{ .Payload.Ref }}
+{{- if .MultipartRequestDecoder }}
 		if err := decoder(r).Decode(&payload); err != nil {
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 {{- else if .Payload.Request.ServerBody }}
 		var (
@@ -19,7 +19,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		if err != nil {
 	{{- if .Payload.Request.MustHaveBody }}
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 	{{- else }}
 			if errors.Is(err, io.EOF) {
@@ -28,9 +28,9 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 	{{- end }}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 	{{- if not .Payload.Request.MustHaveBody }}
 			}
 	{{- end }}
@@ -38,7 +38,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 	{{- if .Payload.Request.ServerBody.ValidateRef }}
 		{{ .Payload.Request.ServerBody.ValidateRef }}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
 	{{- end }}
 {{- end }}
@@ -46,22 +46,22 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 	{{- template "partial_request_elements" .Payload.Request }}
 	{{- if .Payload.Request.MustValidate }}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
 	{{- end }}
 	{{- if .Payload.Request.PayloadInit }}
-	payload := {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }}, {{ end }})
+	payload = {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }}, {{ end }})
 	{{- else if .Payload.DecoderReturnValue }}
-	payload := {{ .Payload.DecoderReturnValue }}
+	payload = {{ .Payload.DecoderReturnValue }}
 	{{- else }}
-	payload := body
+	payload = body
 	{{- end }}
 {{- end }}
 {{- if .BasicScheme }}{{ with .BasicScheme }}
 	user, pass, {{ if or .UsernameRequired .PasswordRequired }}ok{{ else }}_{{ end }} := r.BasicAuth()
 		{{- if or .UsernameRequired .PasswordRequired}}
 	if !ok {
-		return nil, goa.MissingFieldError("Authorization", "header")
+		return payload, goa.MissingFieldError("Authorization", "header")
 	}
 		{{- end }}
 	payload.{{ .UsernameField }} = {{ if .UsernamePointer }}&{{ end }}user

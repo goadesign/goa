@@ -3,6 +3,7 @@
 // endpoint.
 func DecodeMethodHeaderArrayStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheaderarraystringvalidate.MethodHeaderArrayStringValidatePayload, error) {
 	return func(r *http.Request) (*serviceheaderarraystringvalidate.MethodHeaderArrayStringValidatePayload, error) {
+		var payload *serviceheaderarraystringvalidate.MethodHeaderArrayStringValidatePayload
 		var (
 			h   []string
 			err error
@@ -14,9 +15,9 @@ func DecodeMethodHeaderArrayStringValidateRequest(mux goahttp.Muxer, decoder fun
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodHeaderArrayStringValidatePayload(h)
+		payload = NewMethodHeaderArrayStringValidatePayload(h)
 
 		return payload, nil
 	}

@@ -2,6 +2,7 @@
 // to the ServiceHeaderStringDefault MethodHeaderStringDefault endpoint.
 func DecodeMethodHeaderStringDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheaderstringdefault.MethodHeaderStringDefaultPayload, error) {
 	return func(r *http.Request) (*serviceheaderstringdefault.MethodHeaderStringDefaultPayload, error) {
+		var payload *serviceheaderstringdefault.MethodHeaderStringDefaultPayload
 		var (
 			h string
 		)
@@ -11,7 +12,7 @@ func DecodeMethodHeaderStringDefaultRequest(mux goahttp.Muxer, decoder func(*htt
 		} else {
 			h = "def"
 		}
-		payload := NewMethodHeaderStringDefaultPayload(h)
+		payload = NewMethodHeaderStringDefaultPayload(h)
 
 		return payload, nil
 	}

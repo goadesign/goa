@@ -2,6 +2,7 @@
 // the ServiceQueryArrayInt32 MethodQueryArrayInt32 endpoint.
 func DecodeMethodQueryArrayInt32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryarrayint32.MethodQueryArrayInt32Payload, error) {
 	return func(r *http.Request) (*servicequeryarrayint32.MethodQueryArrayInt32Payload, error) {
+		var payload *servicequeryarrayint32.MethodQueryArrayInt32Payload
 		var (
 			q   []int32
 			err error
@@ -20,9 +21,9 @@ func DecodeMethodQueryArrayInt32Request(mux goahttp.Muxer, decoder func(*http.Re
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryArrayInt32Payload(q)
+		payload = NewMethodQueryArrayInt32Payload(q)
 
 		return payload, nil
 	}

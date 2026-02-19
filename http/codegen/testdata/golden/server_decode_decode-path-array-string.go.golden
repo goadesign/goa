@@ -2,6 +2,7 @@
 // the ServicePathArrayString MethodPathArrayString endpoint.
 func DecodeMethodPathArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicepatharraystring.MethodPathArrayStringPayload, error) {
 	return func(r *http.Request) (*servicepatharraystring.MethodPathArrayStringPayload, error) {
+		var payload *servicepatharraystring.MethodPathArrayStringPayload
 		var (
 			p []string
 
@@ -15,7 +16,7 @@ func DecodeMethodPathArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Re
 				p[i] = rv
 			}
 		}
-		payload := NewMethodPathArrayStringPayload(p)
+		payload = NewMethodPathArrayStringPayload(p)
 
 		return payload, nil
 	}

@@ -2,6 +2,7 @@
 // ServiceBodyCustomName MethodBodyCustomName endpoint.
 func DecodeMethodBodyCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodycustomname.MethodBodyCustomNamePayload, error) {
 	return func(r *http.Request) (*servicebodycustomname.MethodBodyCustomNamePayload, error) {
+		var payload *servicebodycustomname.MethodBodyCustomNamePayload
 		var (
 			body MethodBodyCustomNameRequestBody
 			err  error
@@ -9,15 +10,15 @@ func DecodeMethodBodyCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Req
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
-		payload := NewMethodBodyCustomNamePayload(&body)
+		payload = NewMethodBodyCustomNamePayload(&body)
 
 		return payload, nil
 	}

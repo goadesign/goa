@@ -2,13 +2,14 @@
 // ServicePathString MethodPathString endpoint.
 func DecodeMethodPathStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicepathstring.MethodPathStringPayload, error) {
 	return func(r *http.Request) (*servicepathstring.MethodPathStringPayload, error) {
+		var payload *servicepathstring.MethodPathStringPayload
 		var (
 			p string
 
 			params = mux.Vars(r)
 		)
 		p = params["p"]
-		payload := NewMethodPathStringPayload(p)
+		payload = NewMethodPathStringPayload(p)
 
 		return payload, nil
 	}

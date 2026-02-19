@@ -2,6 +2,7 @@
 // the ServiceQueryBytesValidate MethodQueryBytesValidate endpoint.
 func DecodeMethodQueryBytesValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerybytesvalidate.MethodQueryBytesValidatePayload, error) {
 	return func(r *http.Request) (*servicequerybytesvalidate.MethodQueryBytesValidatePayload, error) {
+		var payload *servicequerybytesvalidate.MethodQueryBytesValidatePayload
 		var (
 			q   []byte
 			err error
@@ -17,9 +18,9 @@ func DecodeMethodQueryBytesValidateRequest(mux goahttp.Muxer, decoder func(*http
 			err = goa.MergeErrors(err, goa.InvalidLengthError("q", q, len(q), 1, true))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryBytesValidatePayload(q)
+		payload = NewMethodQueryBytesValidatePayload(q)
 
 		return payload, nil
 	}

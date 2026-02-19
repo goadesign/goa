@@ -2,6 +2,7 @@
 // the ServiceHeaderCustomName MethodHeaderCustomName endpoint.
 func DecodeMethodHeaderCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheadercustomname.MethodHeaderCustomNamePayload, error) {
 	return func(r *http.Request) (*serviceheadercustomname.MethodHeaderCustomNamePayload, error) {
+		var payload *serviceheadercustomname.MethodHeaderCustomNamePayload
 		var (
 			h *string
 		)
@@ -9,7 +10,7 @@ func DecodeMethodHeaderCustomNameRequest(mux goahttp.Muxer, decoder func(*http.R
 		if hRaw != "" {
 			h = &hRaw
 		}
-		payload := NewMethodHeaderCustomNamePayload(h)
+		payload = NewMethodHeaderCustomNamePayload(h)
 
 		return payload, nil
 	}

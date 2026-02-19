@@ -2,6 +2,7 @@
 // ServiceQueryArrayAny MethodQueryArrayAny endpoint.
 func DecodeMethodQueryArrayAnyRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryarrayany.MethodQueryArrayAnyPayload, error) {
 	return func(r *http.Request) (*servicequeryarrayany.MethodQueryArrayAnyPayload, error) {
+		var payload *servicequeryarrayany.MethodQueryArrayAnyPayload
 		var (
 			q []any
 		)
@@ -14,7 +15,7 @@ func DecodeMethodQueryArrayAnyRequest(mux goahttp.Muxer, decoder func(*http.Requ
 				}
 			}
 		}
-		payload := NewMethodQueryArrayAnyPayload(q)
+		payload = NewMethodQueryArrayAnyPayload(q)
 
 		return payload, nil
 	}

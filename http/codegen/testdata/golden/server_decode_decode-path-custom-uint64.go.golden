@@ -2,6 +2,7 @@
 // the ServicePathCustomUInt64 MethodPathCustomUInt64 endpoint.
 func DecodeMethodPathCustomUInt64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicepathcustomuint64.MethodPathCustomUInt64Payload, error) {
 	return func(r *http.Request) (*servicepathcustomuint64.MethodPathCustomUInt64Payload, error) {
+		var payload *servicepathcustomuint64.MethodPathCustomUInt64Payload
 		var (
 			p   hide.Uint64
 			err error
@@ -17,9 +18,9 @@ func DecodeMethodPathCustomUInt64Request(mux goahttp.Muxer, decoder func(*http.R
 			p = (hide.Uint64)(v)
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodPathCustomUInt64Payload(p)
+		payload = NewMethodPathCustomUInt64Payload(p)
 
 		return payload, nil
 	}

@@ -2,6 +2,7 @@
 // the ServiceMapQueryPrimitiveArray MapQueryPrimitiveArray endpoint.
 func DecodeMapQueryPrimitiveArrayRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (map[string][]uint, error) {
 	return func(r *http.Request) (map[string][]uint, error) {
+		var payload map[string][]uint
 		var (
 			query map[string][]uint
 			err   error
@@ -42,9 +43,9 @@ func DecodeMapQueryPrimitiveArrayRequest(mux goahttp.Muxer, decoder func(*http.R
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := query
+		payload = query
 
 		return payload, nil
 	}

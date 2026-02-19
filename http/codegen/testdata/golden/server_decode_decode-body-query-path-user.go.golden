@@ -2,6 +2,7 @@
 // the ServiceBodyQueryPathUser MethodBodyQueryPathUser endpoint.
 func DecodeMethodBodyQueryPathUserRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyquerypathuser.PayloadType, error) {
 	return func(r *http.Request) (*servicebodyquerypathuser.PayloadType, error) {
+		var payload *servicebodyquerypathuser.PayloadType
 		var (
 			body MethodBodyQueryPathUserRequestBody
 			err  error
@@ -9,13 +10,13 @@ func DecodeMethodBodyQueryPathUserRequest(mux goahttp.Muxer, decoder func(*http.
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 
 		var (
@@ -29,7 +30,7 @@ func DecodeMethodBodyQueryPathUserRequest(mux goahttp.Muxer, decoder func(*http.
 		if bRaw != "" {
 			b = &bRaw
 		}
-		payload := NewMethodBodyQueryPathUserPayloadType(&body, c2, b)
+		payload = NewMethodBodyQueryPathUserPayloadType(&body, c2, b)
 
 		return payload, nil
 	}

@@ -2,6 +2,7 @@
 // ServiceQueryInt64 MethodQueryInt64 endpoint.
 func DecodeMethodQueryInt64Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryint64.MethodQueryInt64Payload, error) {
 	return func(r *http.Request) (*servicequeryint64.MethodQueryInt64Payload, error) {
+		var payload *servicequeryint64.MethodQueryInt64Payload
 		var (
 			q   *int64
 			err error
@@ -17,9 +18,9 @@ func DecodeMethodQueryInt64Request(mux goahttp.Muxer, decoder func(*http.Request
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryInt64Payload(q)
+		payload = NewMethodQueryInt64Payload(q)
 
 		return payload, nil
 	}

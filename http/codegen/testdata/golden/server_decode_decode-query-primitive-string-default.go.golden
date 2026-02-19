@@ -3,6 +3,7 @@
 // MethodQueryPrimitiveStringDefault endpoint.
 func DecodeMethodQueryPrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (string, error) {
 	return func(r *http.Request) (string, error) {
+		var payload string
 		var (
 			q   string
 			err error
@@ -12,9 +13,9 @@ func DecodeMethodQueryPrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder f
 			err = goa.MergeErrors(err, goa.MissingFieldError("q", "query string"))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := q
+		payload = q
 
 		return payload, nil
 	}

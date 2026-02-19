@@ -3,6 +3,7 @@
 // endpoint.
 func DecodeMethodBodyArrayStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyarraystringvalidate.MethodBodyArrayStringValidatePayload, error) {
 	return func(r *http.Request) (*servicebodyarraystringvalidate.MethodBodyArrayStringValidatePayload, error) {
+		var payload *servicebodyarraystringvalidate.MethodBodyArrayStringValidatePayload
 		var (
 			body MethodBodyArrayStringValidateRequestBody
 			err  error
@@ -10,19 +11,19 @@ func DecodeMethodBodyArrayStringValidateRequest(mux goahttp.Muxer, decoder func(
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 		err = ValidateMethodBodyArrayStringValidateRequestBody(&body)
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodBodyArrayStringValidatePayload(&body)
+		payload = NewMethodBodyArrayStringValidatePayload(&body)
 
 		return payload, nil
 	}

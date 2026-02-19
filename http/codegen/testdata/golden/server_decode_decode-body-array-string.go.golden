@@ -2,6 +2,7 @@
 // the ServiceBodyArrayString MethodBodyArrayString endpoint.
 func DecodeMethodBodyArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyarraystring.MethodBodyArrayStringPayload, error) {
 	return func(r *http.Request) (*servicebodyarraystring.MethodBodyArrayStringPayload, error) {
+		var payload *servicebodyarraystring.MethodBodyArrayStringPayload
 		var (
 			body MethodBodyArrayStringRequestBody
 			err  error
@@ -9,15 +10,15 @@ func DecodeMethodBodyArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Re
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
-		payload := NewMethodBodyArrayStringPayload(&body)
+		payload = NewMethodBodyArrayStringPayload(&body)
 
 		return payload, nil
 	}

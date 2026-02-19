@@ -2,6 +2,7 @@
 // to the ServiceQueryStringValidate MethodQueryStringValidate endpoint.
 func DecodeMethodQueryStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerystringvalidate.MethodQueryStringValidatePayload, error) {
 	return func(r *http.Request) (*servicequerystringvalidate.MethodQueryStringValidatePayload, error) {
+		var payload *servicequerystringvalidate.MethodQueryStringValidatePayload
 		var (
 			q   string
 			err error
@@ -14,9 +15,9 @@ func DecodeMethodQueryStringValidateRequest(mux goahttp.Muxer, decoder func(*htt
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []any{"val"}))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryStringValidatePayload(q)
+		payload = NewMethodQueryStringValidatePayload(q)
 
 		return payload, nil
 	}

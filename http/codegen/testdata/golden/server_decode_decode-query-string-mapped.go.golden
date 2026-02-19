@@ -2,6 +2,7 @@
 // the ServiceQueryStringMapped MethodQueryStringMapped endpoint.
 func DecodeMethodQueryStringMappedRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerystringmapped.MethodQueryStringMappedPayload, error) {
 	return func(r *http.Request) (*servicequerystringmapped.MethodQueryStringMappedPayload, error) {
+		var payload *servicequerystringmapped.MethodQueryStringMappedPayload
 		var (
 			query *string
 		)
@@ -9,7 +10,7 @@ func DecodeMethodQueryStringMappedRequest(mux goahttp.Muxer, decoder func(*http.
 		if queryRaw != "" {
 			query = &queryRaw
 		}
-		payload := NewMethodQueryStringMappedPayload(query)
+		payload = NewMethodQueryStringMappedPayload(query)
 
 		return payload, nil
 	}

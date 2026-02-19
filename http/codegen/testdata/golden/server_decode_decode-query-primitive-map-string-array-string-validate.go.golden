@@ -4,6 +4,7 @@
 // MethodQueryPrimitiveMapStringArrayStringValidate endpoint.
 func DecodeMethodQueryPrimitiveMapStringArrayStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (map[string][]string, error) {
 	return func(r *http.Request) (map[string][]string, error) {
+		var payload map[string][]string
 		var (
 			q   map[string][]string
 			err error
@@ -45,9 +46,9 @@ func DecodeMethodQueryPrimitiveMapStringArrayStringValidateRequest(mux goahttp.M
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := q
+		payload = q
 
 		return payload, nil
 	}

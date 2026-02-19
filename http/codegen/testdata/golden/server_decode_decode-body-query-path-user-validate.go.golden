@@ -3,6 +3,7 @@
 // endpoint.
 func DecodeMethodBodyQueryPathUserValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyquerypathuservalidate.PayloadType, error) {
 	return func(r *http.Request) (*servicebodyquerypathuservalidate.PayloadType, error) {
+		var payload *servicebodyquerypathuservalidate.PayloadType
 		var (
 			body MethodBodyQueryPathUserValidateRequestBody
 			err  error
@@ -10,17 +11,17 @@ func DecodeMethodBodyQueryPathUserValidateRequest(mux goahttp.Muxer, decoder fun
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 		err = ValidateMethodBodyQueryPathUserValidateRequestBody(&body)
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
 
 		var (
@@ -37,9 +38,9 @@ func DecodeMethodBodyQueryPathUserValidateRequest(mux goahttp.Muxer, decoder fun
 		}
 		err = goa.MergeErrors(err, goa.ValidatePattern("b", b, "patternb"))
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodBodyQueryPathUserValidatePayloadType(&body, c2, b)
+		payload = NewMethodBodyQueryPathUserValidatePayloadType(&body, c2, b)
 
 		return payload, nil
 	}

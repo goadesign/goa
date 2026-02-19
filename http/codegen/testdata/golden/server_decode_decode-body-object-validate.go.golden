@@ -2,6 +2,7 @@
 // the ServiceBodyObjectValidate MethodBodyObjectValidate endpoint.
 func DecodeMethodBodyObjectValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyobjectvalidate.MethodBodyObjectValidatePayload, error) {
 	return func(r *http.Request) (*servicebodyobjectvalidate.MethodBodyObjectValidatePayload, error) {
+		var payload *servicebodyobjectvalidate.MethodBodyObjectValidatePayload
 		var (
 			body struct {
 				B *string `form:"b" json:"b" xml:"b"`
@@ -11,21 +12,21 @@ func DecodeMethodBodyObjectValidateRequest(mux goahttp.Muxer, decoder func(*http
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 		if body.B != nil {
 			err = goa.MergeErrors(err, goa.ValidatePattern("body.b", *body.B, "pattern"))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodBodyObjectValidatePayload(body)
+		payload = NewMethodBodyObjectValidatePayload(body)
 
 		return payload, nil
 	}

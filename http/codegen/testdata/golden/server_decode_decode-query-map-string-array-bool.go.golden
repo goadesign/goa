@@ -3,6 +3,7 @@
 // endpoint.
 func DecodeMethodQueryMapStringArrayBoolRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerymapstringarraybool.MethodQueryMapStringArrayBoolPayload, error) {
 	return func(r *http.Request) (*servicequerymapstringarraybool.MethodQueryMapStringArrayBoolPayload, error) {
+		var payload *servicequerymapstringarraybool.MethodQueryMapStringArrayBoolPayload
 		var (
 			q   map[string][]bool
 			err error
@@ -42,9 +43,9 @@ func DecodeMethodQueryMapStringArrayBoolRequest(mux goahttp.Muxer, decoder func(
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryMapStringArrayBoolPayload(q)
+		payload = NewMethodQueryMapStringArrayBoolPayload(q)
 
 		return payload, nil
 	}

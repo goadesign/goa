@@ -2,6 +2,7 @@
 // the ServiceQueryCustomName MethodQueryCustomName endpoint.
 func DecodeMethodQueryCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerycustomname.MethodQueryCustomNamePayload, error) {
 	return func(r *http.Request) (*servicequerycustomname.MethodQueryCustomNamePayload, error) {
+		var payload *servicequerycustomname.MethodQueryCustomNamePayload
 		var (
 			q *string
 		)
@@ -9,7 +10,7 @@ func DecodeMethodQueryCustomNameRequest(mux goahttp.Muxer, decoder func(*http.Re
 		if qRaw != "" {
 			q = &qRaw
 		}
-		payload := NewMethodQueryCustomNamePayload(q)
+		payload = NewMethodQueryCustomNamePayload(q)
 
 		return payload, nil
 	}

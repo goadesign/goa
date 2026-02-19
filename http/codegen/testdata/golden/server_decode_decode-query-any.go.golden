@@ -2,6 +2,7 @@
 // ServiceQueryAny MethodQueryAny endpoint.
 func DecodeMethodQueryAnyRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryany.MethodQueryAnyPayload, error) {
 	return func(r *http.Request) (*servicequeryany.MethodQueryAnyPayload, error) {
+		var payload *servicequeryany.MethodQueryAnyPayload
 		var (
 			q any
 		)
@@ -9,7 +10,7 @@ func DecodeMethodQueryAnyRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 		if qRaw != "" {
 			q = qRaw
 		}
-		payload := NewMethodQueryAnyPayload(q)
+		payload = NewMethodQueryAnyPayload(q)
 
 		return payload, nil
 	}

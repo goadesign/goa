@@ -2,6 +2,7 @@
 // ServiceQueryMapAlias MethodA endpoint.
 func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerymapalias.MethodAPayload, error) {
 	return func(r *http.Request) (*servicequerymapalias.MethodAPayload, error) {
+		var payload *servicequerymapalias.MethodAPayload
 		var (
 			map_ map[float32]bool
 			err  error
@@ -44,9 +45,9 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodAPayload(map_)
+		payload = NewMethodAPayload(map_)
 
 		return payload, nil
 	}

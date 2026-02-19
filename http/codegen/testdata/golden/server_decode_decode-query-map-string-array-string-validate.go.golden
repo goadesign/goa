@@ -3,6 +3,7 @@
 // MethodQueryMapStringArrayStringValidate endpoint.
 func DecodeMethodQueryMapStringArrayStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerymapstringarraystringvalidate.MethodQueryMapStringArrayStringValidatePayload, error) {
 	return func(r *http.Request) (*servicequerymapstringarraystringvalidate.MethodQueryMapStringArrayStringValidatePayload, error) {
+		var payload *servicequerymapstringarraystringvalidate.MethodQueryMapStringArrayStringValidatePayload
 		var (
 			q   map[string][]string
 			err error
@@ -43,9 +44,9 @@ func DecodeMethodQueryMapStringArrayStringValidateRequest(mux goahttp.Muxer, dec
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryMapStringArrayStringValidatePayload(q)
+		payload = NewMethodQueryMapStringArrayStringValidatePayload(q)
 
 		return payload, nil
 	}

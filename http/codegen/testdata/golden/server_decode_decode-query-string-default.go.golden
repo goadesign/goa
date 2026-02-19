@@ -2,6 +2,7 @@
 // the ServiceQueryStringDefault MethodQueryStringDefault endpoint.
 func DecodeMethodQueryStringDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerystringdefault.MethodQueryStringDefaultPayload, error) {
 	return func(r *http.Request) (*servicequerystringdefault.MethodQueryStringDefaultPayload, error) {
+		var payload *servicequerystringdefault.MethodQueryStringDefaultPayload
 		var (
 			q string
 		)
@@ -11,7 +12,7 @@ func DecodeMethodQueryStringDefaultRequest(mux goahttp.Muxer, decoder func(*http
 		} else {
 			q = "def"
 		}
-		payload := NewMethodQueryStringDefaultPayload(q)
+		payload = NewMethodQueryStringDefaultPayload(q)
 
 		return payload, nil
 	}

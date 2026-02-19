@@ -2,6 +2,7 @@
 // ServiceWithParamsAndHeadersBlock MethodA endpoint.
 func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicewithparamsandheadersblock.MethodAPayload, error) {
 	return func(r *http.Request) (*servicewithparamsandheadersblock.MethodAPayload, error) {
+		var payload *servicewithparamsandheadersblock.MethodAPayload
 		var (
 			body MethodARequestBody
 			err  error
@@ -9,13 +10,13 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 
 		var (
@@ -74,9 +75,9 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 			optionalButRequiredHeader = float32(v)
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodAPayload(&body, path, optional, optionalButRequiredParam, required, optionalButRequiredHeader)
+		payload = NewMethodAPayload(&body, path, optional, optionalButRequiredParam, required, optionalButRequiredHeader)
 
 		return payload, nil
 	}

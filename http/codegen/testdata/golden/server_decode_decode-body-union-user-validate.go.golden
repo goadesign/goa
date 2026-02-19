@@ -2,6 +2,7 @@
 // to the ServiceBodyUnionUserValidate MethodBodyUnionUserValidate endpoint.
 func DecodeMethodBodyUnionUserValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyunionuservalidate.MethodBodyUnionUserValidatePayload, error) {
 	return func(r *http.Request) (*servicebodyunionuservalidate.MethodBodyUnionUserValidatePayload, error) {
+		var payload *servicebodyunionuservalidate.MethodBodyUnionUserValidatePayload
 		var (
 			body MethodBodyUnionUserValidateRequestBody
 			err  error
@@ -9,19 +10,19 @@ func DecodeMethodBodyUnionUserValidateRequest(mux goahttp.Muxer, decoder func(*h
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 		err = ValidateMethodBodyUnionUserValidateRequestBody(&body)
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodBodyUnionUserValidatePayload(&body)
+		payload = NewMethodBodyUnionUserValidatePayload(&body)
 
 		return payload, nil
 	}

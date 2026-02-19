@@ -6,9 +6,9 @@ func DecodeMethodMultipartArrayTypeRequest(mux goahttp.Muxer, decoder func(*http
 		if err := decoder(r).Decode(&payload); err != nil {
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 
 		return payload, nil
