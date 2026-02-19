@@ -2,6 +2,7 @@
 // the ServiceQueryInt64Validate MethodQueryInt64Validate endpoint.
 func DecodeMethodQueryInt64ValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryint64validate.MethodQueryInt64ValidatePayload, error) {
 	return func(r *http.Request) (*servicequeryint64validate.MethodQueryInt64ValidatePayload, error) {
+		var payload *servicequeryint64validate.MethodQueryInt64ValidatePayload
 		var (
 			q   int64
 			err error
@@ -21,9 +22,9 @@ func DecodeMethodQueryInt64ValidateRequest(mux goahttp.Muxer, decoder func(*http
 			err = goa.MergeErrors(err, goa.InvalidRangeError("q", q, 1, true))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryInt64ValidatePayload(q)
+		payload = NewMethodQueryInt64ValidatePayload(q)
 
 		return payload, nil
 	}

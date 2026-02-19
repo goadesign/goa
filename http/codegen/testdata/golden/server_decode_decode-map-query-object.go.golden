@@ -2,6 +2,7 @@
 // ServiceMapQueryObject MethodMapQueryObject endpoint.
 func DecodeMethodMapQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicemapqueryobject.PayloadType, error) {
 	return func(r *http.Request) (*servicemapqueryobject.PayloadType, error) {
+		var payload *servicemapqueryobject.PayloadType
 		var (
 			body MethodMapQueryObjectRequestBody
 			err  error
@@ -9,17 +10,17 @@ func DecodeMethodMapQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 		err = ValidateMethodMapQueryObjectRequestBody(&body)
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
 
 		var (
@@ -49,9 +50,9 @@ func DecodeMethodMapQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodMapQueryObjectPayloadType(&body, a, c)
+		payload = NewMethodMapQueryObjectPayloadType(&body, a, c)
 
 		return payload, nil
 	}

@@ -2,6 +2,7 @@
 // the ServicePathStringValidate MethodPathStringValidate endpoint.
 func DecodeMethodPathStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicepathstringvalidate.MethodPathStringValidatePayload, error) {
 	return func(r *http.Request) (*servicepathstringvalidate.MethodPathStringValidatePayload, error) {
+		var payload *servicepathstringvalidate.MethodPathStringValidatePayload
 		var (
 			p   string
 			err error
@@ -13,9 +14,9 @@ func DecodeMethodPathStringValidateRequest(mux goahttp.Muxer, decoder func(*http
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("p", p, []any{"val"}))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodPathStringValidatePayload(p)
+		payload = NewMethodPathStringValidatePayload(p)
 
 		return payload, nil
 	}

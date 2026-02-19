@@ -1,0 +1,22 @@
+// DecodeMethodPathPrimitiveStringFormatIPValidateRequest returns a decoder for
+// requests sent to the ServicePathPrimitiveStringFormatIPValidate
+// MethodPathPrimitiveStringFormatIPValidate endpoint.
+func DecodeMethodPathPrimitiveStringFormatIPValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (string, error) {
+	return func(r *http.Request) (string, error) {
+		var payload string
+		var (
+			ip  string
+			err error
+
+			params = mux.Vars(r)
+		)
+		ip = params["ip"]
+		err = goa.MergeErrors(err, goa.ValidateFormat("ip", ip, goa.FormatIP))
+		if err != nil {
+			return payload, err
+		}
+		payload = ip
+
+		return payload, nil
+	}
+}

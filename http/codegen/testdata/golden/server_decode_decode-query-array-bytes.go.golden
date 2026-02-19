@@ -2,6 +2,7 @@
 // the ServiceQueryArrayBytes MethodQueryArrayBytes endpoint.
 func DecodeMethodQueryArrayBytesRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryarraybytes.MethodQueryArrayBytesPayload, error) {
 	return func(r *http.Request) (*servicequeryarraybytes.MethodQueryArrayBytesPayload, error) {
+		var payload *servicequeryarraybytes.MethodQueryArrayBytesPayload
 		var (
 			q [][]byte
 		)
@@ -14,7 +15,7 @@ func DecodeMethodQueryArrayBytesRequest(mux goahttp.Muxer, decoder func(*http.Re
 				}
 			}
 		}
-		payload := NewMethodQueryArrayBytesPayload(q)
+		payload = NewMethodQueryArrayBytesPayload(q)
 
 		return payload, nil
 	}

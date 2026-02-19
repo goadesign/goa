@@ -2,6 +2,7 @@
 // the ServiceQueryUIntValidate MethodQueryUIntValidate endpoint.
 func DecodeMethodQueryUIntValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryuintvalidate.MethodQueryUIntValidatePayload, error) {
 	return func(r *http.Request) (*servicequeryuintvalidate.MethodQueryUIntValidatePayload, error) {
+		var payload *servicequeryuintvalidate.MethodQueryUIntValidatePayload
 		var (
 			q   uint
 			err error
@@ -21,9 +22,9 @@ func DecodeMethodQueryUIntValidateRequest(mux goahttp.Muxer, decoder func(*http.
 			err = goa.MergeErrors(err, goa.InvalidRangeError("q", q, 1, true))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryUIntValidatePayload(q)
+		payload = NewMethodQueryUIntValidatePayload(q)
 
 		return payload, nil
 	}

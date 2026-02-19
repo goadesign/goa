@@ -3,6 +3,7 @@
 // MethodQueryPrimitiveStringValidate endpoint.
 func DecodeMethodQueryPrimitiveStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (string, error) {
 	return func(r *http.Request) (string, error) {
+		var payload string
 		var (
 			q   string
 			err error
@@ -15,9 +16,9 @@ func DecodeMethodQueryPrimitiveStringValidateRequest(mux goahttp.Muxer, decoder 
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []any{"val"}))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := q
+		payload = q
 
 		return payload, nil
 	}

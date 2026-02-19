@@ -2,6 +2,7 @@
 // the ServicePathCustomFloat32 MethodPathCustomFloat32 endpoint.
 func DecodeMethodPathCustomFloat32Request(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicepathcustomfloat32.MethodPathCustomFloat32Payload, error) {
 	return func(r *http.Request) (*servicepathcustomfloat32.MethodPathCustomFloat32Payload, error) {
+		var payload *servicepathcustomfloat32.MethodPathCustomFloat32Payload
 		var (
 			p   hide.Float32
 			err error
@@ -17,9 +18,9 @@ func DecodeMethodPathCustomFloat32Request(mux goahttp.Muxer, decoder func(*http.
 			p = hide.Float32(v)
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodPathCustomFloat32Payload(p)
+		payload = NewMethodPathCustomFloat32Payload(p)
 
 		return payload, nil
 	}

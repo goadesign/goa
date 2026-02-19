@@ -2,6 +2,7 @@
 // ServicePathCustomUInt MethodPathCustomUInt endpoint.
 func DecodeMethodPathCustomUIntRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicepathcustomuint.MethodPathCustomUIntPayload, error) {
 	return func(r *http.Request) (*servicepathcustomuint.MethodPathCustomUIntPayload, error) {
+		var payload *servicepathcustomuint.MethodPathCustomUIntPayload
 		var (
 			p   hide.Uint
 			err error
@@ -17,9 +18,9 @@ func DecodeMethodPathCustomUIntRequest(mux goahttp.Muxer, decoder func(*http.Req
 			p = hide.Uint(v)
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodPathCustomUIntPayload(p)
+		payload = NewMethodPathCustomUIntPayload(p)
 
 		return payload, nil
 	}

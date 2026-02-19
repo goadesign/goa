@@ -2,6 +2,7 @@
 // ServiceBodyUser MethodBodyUser endpoint.
 func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyuser.PayloadType, error) {
 	return func(r *http.Request) (*servicebodyuser.PayloadType, error) {
+		var payload *servicebodyuser.PayloadType
 		var (
 			body MethodBodyUserRequestBody
 			err  error
@@ -13,16 +14,16 @@ func DecodeMethodBodyUserRequest(mux goahttp.Muxer, decoder func(*http.Request) 
 			} else {
 				var gerr *goa.ServiceError
 				if errors.As(err, &gerr) {
-					return nil, gerr
+					return payload, gerr
 				}
-				return nil, goa.DecodePayloadError(err.Error())
+				return payload, goa.DecodePayloadError(err.Error())
 			}
 		}
 		err = ValidateMethodBodyUserRequestBody(&body)
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodBodyUserPayloadType(&body)
+		payload = NewMethodBodyUserPayloadType(&body)
 
 		return payload, nil
 	}

@@ -113,6 +113,7 @@ func TestDecode(t *testing.T) {
 		{"decode-path-array-string-validate", testdata.PayloadPathArrayStringValidateDSL},
 
 		{"decode-path-primitive-string-validate", testdata.PayloadPathPrimitiveStringValidateDSL},
+		{"decode-path-primitive-string-formatip-validate", testdata.PayloadPathPrimitiveStringFormatIPValidateDSL},
 		{"decode-path-primitive-bool-validate", testdata.PayloadPathPrimitiveBoolValidateDSL},
 		{"decode-path-primitive-array-string-validate", testdata.PayloadPathPrimitiveArrayStringValidateDSL},
 		{"decode-path-primitive-array-bool-validate", testdata.PayloadPathPrimitiveArrayBoolValidateDSL},
@@ -225,6 +226,7 @@ func TestDecode(t *testing.T) {
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 2)
 			code := codegen.SectionCode(t, sections[2])
+			require.NotContains(t, code, "return nil,")
 			testutil.AssertGo(t, "testdata/golden/server_decode_"+c.Name+".go.golden", code)
 		})
 	}

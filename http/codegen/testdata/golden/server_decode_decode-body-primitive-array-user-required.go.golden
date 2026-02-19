@@ -3,6 +3,7 @@
 // MethodBodyPrimitiveArrayUserRequired endpoint.
 func DecodeMethodBodyPrimitiveArrayUserRequiredRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) ([]*servicebodyprimitivearrayuserrequired.PayloadType, error) {
 	return func(r *http.Request) ([]*servicebodyprimitivearrayuserrequired.PayloadType, error) {
+		var payload []*servicebodyprimitivearrayuserrequired.PayloadType
 		var (
 			body []*PayloadTypeRequestBody
 			err  error
@@ -10,13 +11,13 @@ func DecodeMethodBodyPrimitiveArrayUserRequiredRequest(mux goahttp.Muxer, decode
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 		for _, e := range body {
 			if e != nil {
@@ -26,9 +27,9 @@ func DecodeMethodBodyPrimitiveArrayUserRequiredRequest(mux goahttp.Muxer, decode
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodBodyPrimitiveArrayUserRequiredPayloadType(body)
+		payload = NewMethodBodyPrimitiveArrayUserRequiredPayloadType(body)
 
 		return payload, nil
 	}

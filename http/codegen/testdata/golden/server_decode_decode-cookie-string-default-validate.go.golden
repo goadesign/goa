@@ -3,6 +3,7 @@
 // MethodCookieStringDefaultValidate endpoint.
 func DecodeMethodCookieStringDefaultValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicecookiestringdefaultvalidate.MethodCookieStringDefaultValidatePayload, error) {
 	return func(r *http.Request) (*servicecookiestringdefaultvalidate.MethodCookieStringDefaultValidatePayload, error) {
+		var payload *servicecookiestringdefaultvalidate.MethodCookieStringDefaultValidatePayload
 		var (
 			c2  string
 			err error
@@ -22,9 +23,9 @@ func DecodeMethodCookieStringDefaultValidateRequest(mux goahttp.Muxer, decoder f
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("c", c2, []any{"def"}))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodCookieStringDefaultValidatePayload(c2)
+		payload = NewMethodCookieStringDefaultValidatePayload(c2)
 
 		return payload, nil
 	}

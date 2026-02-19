@@ -2,6 +2,7 @@
 // ServiceBodyQueryUser MethodBodyQueryUser endpoint.
 func DecodeMethodBodyQueryUserRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyqueryuser.PayloadType, error) {
 	return func(r *http.Request) (*servicebodyqueryuser.PayloadType, error) {
+		var payload *servicebodyqueryuser.PayloadType
 		var (
 			body MethodBodyQueryUserRequestBody
 			err  error
@@ -9,13 +10,13 @@ func DecodeMethodBodyQueryUserRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 
 		var (
@@ -25,7 +26,7 @@ func DecodeMethodBodyQueryUserRequest(mux goahttp.Muxer, decoder func(*http.Requ
 		if bRaw != "" {
 			b = &bRaw
 		}
-		payload := NewMethodBodyQueryUserPayloadType(&body, b)
+		payload = NewMethodBodyQueryUserPayloadType(&body, b)
 
 		return payload, nil
 	}

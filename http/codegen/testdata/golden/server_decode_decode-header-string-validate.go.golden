@@ -2,6 +2,7 @@
 // to the ServiceHeaderStringValidate MethodHeaderStringValidate endpoint.
 func DecodeMethodHeaderStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheaderstringvalidate.MethodHeaderStringValidatePayload, error) {
 	return func(r *http.Request) (*serviceheaderstringvalidate.MethodHeaderStringValidatePayload, error) {
+		var payload *serviceheaderstringvalidate.MethodHeaderStringValidatePayload
 		var (
 			h   *string
 			err error
@@ -14,9 +15,9 @@ func DecodeMethodHeaderStringValidateRequest(mux goahttp.Muxer, decoder func(*ht
 			err = goa.MergeErrors(err, goa.ValidatePattern("h", *h, "header"))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodHeaderStringValidatePayload(h)
+		payload = NewMethodHeaderStringValidatePayload(h)
 
 		return payload, nil
 	}

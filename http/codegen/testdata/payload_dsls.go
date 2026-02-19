@@ -1512,6 +1512,20 @@ var PayloadPathPrimitiveStringValidateDSL = func() {
 	})
 }
 
+var PayloadPathPrimitiveStringFormatIPValidateDSL = func() {
+	Service("ServicePathPrimitiveStringFormatIPValidate", func() {
+		Method("MethodPathPrimitiveStringFormatIPValidate", func() {
+			Payload(String, func() {
+				Format(FormatIP)
+			})
+			HTTP(func() {
+				GET("/forecast/{ip}")
+				Param("ip")
+			})
+		})
+	})
+}
+
 var PayloadPathPrimitiveBoolValidateDSL = func() {
 	Service("ServicePathPrimitiveBoolValidate", func() {
 		Method("MethodPathPrimitiveBoolValidate", func() {

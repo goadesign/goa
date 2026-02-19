@@ -2,6 +2,7 @@
 // ServiceQueryMapAliasValidate MethodA endpoint.
 func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerymapaliasvalidate.MethodAPayload, error) {
 	return func(r *http.Request) (*servicequerymapaliasvalidate.MethodAPayload, error) {
+		var payload *servicequerymapaliasvalidate.MethodAPayload
 		var (
 			map_ map[float32]bool
 			err  error
@@ -47,9 +48,9 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 			err = goa.MergeErrors(err, goa.InvalidLengthError("map", map_, len(map_), 5, true))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodAPayload(map_)
+		payload = NewMethodAPayload(map_)
 
 		return payload, nil
 	}

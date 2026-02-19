@@ -3,6 +3,7 @@
 // MethodBodyPrimitiveArrayStringValidate endpoint.
 func DecodeMethodBodyPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) ([]string, error) {
 	return func(r *http.Request) ([]string, error) {
+		var payload []string
 		var (
 			body []string
 			err  error
@@ -10,13 +11,13 @@ func DecodeMethodBodyPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, deco
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 		if len(body) < 1 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body", body, len(body), 1, true))
@@ -27,9 +28,9 @@ func DecodeMethodBodyPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, deco
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := body
+		payload = body
 
 		return payload, nil
 	}

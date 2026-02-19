@@ -2,6 +2,7 @@
 // the ServiceBodyUserValidate MethodBodyUserValidate endpoint.
 func DecodeMethodBodyUserValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodyuservalidate.PayloadType, error) {
 	return func(r *http.Request) (*servicebodyuservalidate.PayloadType, error) {
+		var payload *servicebodyuservalidate.PayloadType
 		var (
 			body string
 			err  error
@@ -13,16 +14,16 @@ func DecodeMethodBodyUserValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 			} else {
 				var gerr *goa.ServiceError
 				if errors.As(err, &gerr) {
-					return nil, gerr
+					return payload, gerr
 				}
-				return nil, goa.DecodePayloadError(err.Error())
+				return payload, goa.DecodePayloadError(err.Error())
 			}
 		}
 		err = goa.MergeErrors(err, goa.ValidatePattern("body", body, "apattern"))
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodBodyUserValidatePayloadType(body)
+		payload = NewMethodBodyUserValidatePayloadType(body)
 
 		return payload, nil
 	}

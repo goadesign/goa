@@ -3,6 +3,7 @@
 // endpoint.
 func DecodeMethodQueryMapBoolBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerymapboolboolvalidate.MethodQueryMapBoolBoolValidatePayload, error) {
 	return func(r *http.Request) (*servicequerymapboolboolvalidate.MethodQueryMapBoolBoolValidatePayload, error) {
+		var payload *servicequerymapboolboolvalidate.MethodQueryMapBoolBoolValidatePayload
 		var (
 			q   map[bool]bool
 			err error
@@ -57,9 +58,9 @@ func DecodeMethodQueryMapBoolBoolValidateRequest(mux goahttp.Muxer, decoder func
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryMapBoolBoolValidatePayload(q)
+		payload = NewMethodQueryMapBoolBoolValidatePayload(q)
 
 		return payload, nil
 	}

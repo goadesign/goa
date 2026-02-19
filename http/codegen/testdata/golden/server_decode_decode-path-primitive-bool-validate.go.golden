@@ -3,6 +3,7 @@
 // endpoint.
 func DecodeMethodPathPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (bool, error) {
 	return func(r *http.Request) (bool, error) {
+		var payload bool
 		var (
 			p   bool
 			err error
@@ -21,9 +22,9 @@ func DecodeMethodPathPrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder fun
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("p", p, []any{true}))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := p
+		payload = p
 
 		return payload, nil
 	}

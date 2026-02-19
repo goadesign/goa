@@ -2,6 +2,7 @@
 // ServiceCookieString MethodCookieString endpoint.
 func DecodeMethodCookieStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicecookiestring.MethodCookieStringPayload, error) {
 	return func(r *http.Request) (*servicecookiestring.MethodCookieStringPayload, error) {
+		var payload *servicecookiestring.MethodCookieStringPayload
 		var (
 			c2 *string
 			c  *http.Cookie
@@ -14,7 +15,7 @@ func DecodeMethodCookieStringRequest(mux goahttp.Muxer, decoder func(*http.Reque
 		if c2Raw != "" {
 			c2 = &c2Raw
 		}
-		payload := NewMethodCookieStringPayload(c2)
+		payload = NewMethodCookieStringPayload(c2)
 
 		return payload, nil
 	}

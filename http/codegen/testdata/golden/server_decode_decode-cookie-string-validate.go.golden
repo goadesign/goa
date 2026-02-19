@@ -2,6 +2,7 @@
 // to the ServiceCookieStringValidate MethodCookieStringValidate endpoint.
 func DecodeMethodCookieStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicecookiestringvalidate.MethodCookieStringValidatePayload, error) {
 	return func(r *http.Request) (*servicecookiestringvalidate.MethodCookieStringValidatePayload, error) {
+		var payload *servicecookiestringvalidate.MethodCookieStringValidatePayload
 		var (
 			c2  *string
 			err error
@@ -19,9 +20,9 @@ func DecodeMethodCookieStringValidateRequest(mux goahttp.Muxer, decoder func(*ht
 			err = goa.MergeErrors(err, goa.ValidatePattern("c", *c2, "cookie"))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodCookieStringValidatePayload(c2)
+		payload = NewMethodCookieStringValidatePayload(c2)
 
 		return payload, nil
 	}

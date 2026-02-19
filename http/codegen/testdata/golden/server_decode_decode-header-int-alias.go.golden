@@ -2,6 +2,7 @@
 // ServiceHeaderIntAlias MethodA endpoint.
 func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheaderintalias.MethodAPayload, error) {
 	return func(r *http.Request) (*serviceheaderintalias.MethodAPayload, error) {
+		var payload *serviceheaderintalias.MethodAPayload
 		var (
 			int_   *int
 			int32_ *int32
@@ -41,9 +42,9 @@ func DecodeMethodARequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodAPayload(int_, int32_, int64_)
+		payload = NewMethodAPayload(int_, int32_, int64_)
 
 		return payload, nil
 	}

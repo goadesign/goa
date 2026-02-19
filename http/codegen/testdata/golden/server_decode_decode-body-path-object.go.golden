@@ -2,6 +2,7 @@
 // ServiceBodyPathObject MethodBodyPathObject endpoint.
 func DecodeMethodBodyPathObjectRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicebodypathobject.MethodBodyPathObjectPayload, error) {
 	return func(r *http.Request) (*servicebodypathobject.MethodBodyPathObjectPayload, error) {
+		var payload *servicebodypathobject.MethodBodyPathObjectPayload
 		var (
 			body MethodBodyPathObjectRequestBody
 			err  error
@@ -9,13 +10,13 @@ func DecodeMethodBodyPathObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 		err = decoder(r).Decode(&body)
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				return nil, goa.MissingPayloadError()
+				return payload, goa.MissingPayloadError()
 			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
-				return nil, gerr
+				return payload, gerr
 			}
-			return nil, goa.DecodePayloadError(err.Error())
+			return payload, goa.DecodePayloadError(err.Error())
 		}
 
 		var (
@@ -24,7 +25,7 @@ func DecodeMethodBodyPathObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 			params = mux.Vars(r)
 		)
 		b = params["b"]
-		payload := NewMethodBodyPathObjectPayload(&body, b)
+		payload = NewMethodBodyPathObjectPayload(&body, b)
 
 		return payload, nil
 	}

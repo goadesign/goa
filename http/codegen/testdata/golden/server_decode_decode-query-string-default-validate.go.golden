@@ -3,6 +3,7 @@
 // MethodQueryStringDefaultValidate endpoint.
 func DecodeMethodQueryStringDefaultValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerystringdefaultvalidate.MethodQueryStringDefaultValidatePayload, error) {
 	return func(r *http.Request) (*servicequerystringdefaultvalidate.MethodQueryStringDefaultValidatePayload, error) {
+		var payload *servicequerystringdefaultvalidate.MethodQueryStringDefaultValidatePayload
 		var (
 			q   string
 			err error
@@ -17,9 +18,9 @@ func DecodeMethodQueryStringDefaultValidateRequest(mux goahttp.Muxer, decoder fu
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("q", q, []any{"def"}))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryStringDefaultValidatePayload(q)
+		payload = NewMethodQueryStringDefaultValidatePayload(q)
 
 		return payload, nil
 	}

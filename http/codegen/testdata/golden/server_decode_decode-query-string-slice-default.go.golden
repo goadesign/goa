@@ -3,6 +3,7 @@
 // endpoint.
 func DecodeMethodQueryStringSliceDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerystringslicedefault.MethodQueryStringSliceDefaultPayload, error) {
 	return func(r *http.Request) (*servicequerystringslicedefault.MethodQueryStringSliceDefaultPayload, error) {
+		var payload *servicequerystringslicedefault.MethodQueryStringSliceDefaultPayload
 		var (
 			q []string
 		)
@@ -10,7 +11,7 @@ func DecodeMethodQueryStringSliceDefaultRequest(mux goahttp.Muxer, decoder func(
 		if q == nil {
 			q = []string{"hello", "goodbye"}
 		}
-		payload := NewMethodQueryStringSliceDefaultPayload(q)
+		payload = NewMethodQueryStringSliceDefaultPayload(q)
 
 		return payload, nil
 	}

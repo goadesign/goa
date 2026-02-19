@@ -2,6 +2,7 @@
 // ServiceQueryBool MethodQueryBool endpoint.
 func DecodeMethodQueryBoolRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerybool.MethodQueryBoolPayload, error) {
 	return func(r *http.Request) (*servicequerybool.MethodQueryBoolPayload, error) {
+		var payload *servicequerybool.MethodQueryBoolPayload
 		var (
 			q   *bool
 			err error
@@ -17,9 +18,9 @@ func DecodeMethodQueryBoolRequest(mux goahttp.Muxer, decoder func(*http.Request)
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryBoolPayload(q)
+		payload = NewMethodQueryBoolPayload(q)
 
 		return payload, nil
 	}

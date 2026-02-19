@@ -2,6 +2,7 @@
 // ServiceHeaderString MethodHeaderString endpoint.
 func DecodeMethodHeaderStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheaderstring.MethodHeaderStringPayload, error) {
 	return func(r *http.Request) (*serviceheaderstring.MethodHeaderStringPayload, error) {
+		var payload *serviceheaderstring.MethodHeaderStringPayload
 		var (
 			h *string
 		)
@@ -9,7 +10,7 @@ func DecodeMethodHeaderStringRequest(mux goahttp.Muxer, decoder func(*http.Reque
 		if hRaw != "" {
 			h = &hRaw
 		}
-		payload := NewMethodHeaderStringPayload(h)
+		payload = NewMethodHeaderStringPayload(h)
 
 		return payload, nil
 	}

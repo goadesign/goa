@@ -3,6 +3,7 @@
 // MethodCookiePrimitiveStringDefault endpoint.
 func DecodeMethodCookiePrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (string, error) {
 	return func(r *http.Request) (string, error) {
+		var payload string
 		var (
 			c2  string
 			err error
@@ -15,9 +16,9 @@ func DecodeMethodCookiePrimitiveStringDefaultRequest(mux goahttp.Muxer, decoder 
 			c2 = c.Value
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := c
+		payload = c
 
 		return payload, nil
 	}

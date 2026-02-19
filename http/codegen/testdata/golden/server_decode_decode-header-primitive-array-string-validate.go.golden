@@ -3,6 +3,7 @@
 // MethodHeaderPrimitiveArrayStringValidate endpoint.
 func DecodeMethodHeaderPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) ([]string, error) {
 	return func(r *http.Request) ([]string, error) {
+		var payload []string
 		var (
 			h   []string
 			err error
@@ -18,9 +19,9 @@ func DecodeMethodHeaderPrimitiveArrayStringValidateRequest(mux goahttp.Muxer, de
 			err = goa.MergeErrors(err, goa.ValidatePattern("h[*]", e, "val"))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := h
+		payload = h
 
 		return payload, nil
 	}

@@ -3,6 +3,7 @@
 // endpoint.
 func DecodeMethodQueryArrayUInt64ValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryarrayuint64validate.MethodQueryArrayUInt64ValidatePayload, error) {
 	return func(r *http.Request) (*servicequeryarrayuint64validate.MethodQueryArrayUInt64ValidatePayload, error) {
+		var payload *servicequeryarrayuint64validate.MethodQueryArrayUInt64ValidatePayload
 		var (
 			q   []uint64
 			err error
@@ -30,9 +31,9 @@ func DecodeMethodQueryArrayUInt64ValidateRequest(mux goahttp.Muxer, decoder func
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryArrayUInt64ValidatePayload(q)
+		payload = NewMethodQueryArrayUInt64ValidatePayload(q)
 
 		return payload, nil
 	}

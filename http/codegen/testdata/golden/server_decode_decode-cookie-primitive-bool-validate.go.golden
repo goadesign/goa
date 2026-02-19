@@ -3,6 +3,7 @@
 // MethodCookiePrimitiveBoolValidate endpoint.
 func DecodeMethodCookiePrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (bool, error) {
 	return func(r *http.Request) (bool, error) {
+		var payload bool
 		var (
 			c2  bool
 			err error
@@ -27,9 +28,9 @@ func DecodeMethodCookiePrimitiveBoolValidateRequest(mux goahttp.Muxer, decoder f
 			err = goa.MergeErrors(err, goa.InvalidEnumValueError("c", c2, []any{true}))
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := c
+		payload = c
 
 		return payload, nil
 	}

@@ -2,11 +2,12 @@
 // the ServiceHeaderArrayString MethodHeaderArrayString endpoint.
 func DecodeMethodHeaderArrayStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*serviceheaderarraystring.MethodHeaderArrayStringPayload, error) {
 	return func(r *http.Request) (*serviceheaderarraystring.MethodHeaderArrayStringPayload, error) {
+		var payload *serviceheaderarraystring.MethodHeaderArrayStringPayload
 		var (
 			h []string
 		)
 		h = r.Header["H"]
-		payload := NewMethodHeaderArrayStringPayload(h)
+		payload = NewMethodHeaderArrayStringPayload(h)
 
 		return payload, nil
 	}

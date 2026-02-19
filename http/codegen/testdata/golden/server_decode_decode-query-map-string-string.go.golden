@@ -2,6 +2,7 @@
 // to the ServiceQueryMapStringString MethodQueryMapStringString endpoint.
 func DecodeMethodQueryMapStringStringRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerymapstringstring.MethodQueryMapStringStringPayload, error) {
 	return func(r *http.Request) (*servicequerymapstringstring.MethodQueryMapStringStringPayload, error) {
+		var payload *servicequerymapstringstring.MethodQueryMapStringStringPayload
 		var (
 			q   map[string]string
 			err error
@@ -30,9 +31,9 @@ func DecodeMethodQueryMapStringStringRequest(mux goahttp.Muxer, decoder func(*ht
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryMapStringStringPayload(q)
+		payload = NewMethodQueryMapStringStringPayload(q)
 
 		return payload, nil
 	}

@@ -2,6 +2,7 @@
 // to the ServiceQueryArrayAnyValidate MethodQueryArrayAnyValidate endpoint.
 func DecodeMethodQueryArrayAnyValidateRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryarrayanyvalidate.MethodQueryArrayAnyValidatePayload, error) {
 	return func(r *http.Request) (*servicequeryarrayanyvalidate.MethodQueryArrayAnyValidatePayload, error) {
+		var payload *servicequeryarrayanyvalidate.MethodQueryArrayAnyValidatePayload
 		var (
 			q   []any
 			err error
@@ -25,9 +26,9 @@ func DecodeMethodQueryArrayAnyValidateRequest(mux goahttp.Muxer, decoder func(*h
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryArrayAnyValidatePayload(q)
+		payload = NewMethodQueryArrayAnyValidatePayload(q)
 
 		return payload, nil
 	}

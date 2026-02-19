@@ -2,6 +2,7 @@
 // ServiceQueryUInt MethodQueryUInt endpoint.
 func DecodeMethodQueryUIntRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequeryuint.MethodQueryUIntPayload, error) {
 	return func(r *http.Request) (*servicequeryuint.MethodQueryUIntPayload, error) {
+		var payload *servicequeryuint.MethodQueryUIntPayload
 		var (
 			q   *uint
 			err error
@@ -18,9 +19,9 @@ func DecodeMethodQueryUIntRequest(mux goahttp.Muxer, decoder func(*http.Request)
 			}
 		}
 		if err != nil {
-			return nil, err
+			return payload, err
 		}
-		payload := NewMethodQueryUIntPayload(q)
+		payload = NewMethodQueryUIntPayload(q)
 
 		return payload, nil
 	}
