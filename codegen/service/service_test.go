@@ -173,3 +173,41 @@ func TestStructPkgPath_UnionImportsJSON(t *testing.T) {
 	code := buf.String()
 	require.Contains(t, code, "\"encoding/json\"", "expected encoding/json import in generated file:\n%s", code)
 }
+
+func TestStructPkgPath_UnionJSONFieldBranchesGenerateAliases(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.PkgPathUnionJSONFieldDSL)
+	services := NewServicesData(root)
+	require.Len(t, root.Services, 1)
+
+	files := Files("goa.design/goa/example", root.Services[0], services, make(map[string][]string))
+	require.GreaterOrEqual(t, len(files), 2, "expected at least service.go + one struct:pkg:path file")
+
+	var typeFile *codegen.File
+	for _, f := range files {
+		if strings.HasSuffix(f.Path, filepath.Join("gen", "types", "type_with_json_field_union.go")) {
+			typeFile = f
+			break
+		}
+	}
+	require.NotNil(t, typeFile, "expected generated type file for struct:pkg:path type_with_json_field_union")
+
+	buf := new(bytes.Buffer)
+	for _, s := range typeFile.SectionTemplates {
+		require.NoError(t, s.Write(buf))
+	}
+	code := buf.String()
+	require.Contains(t, code, "A ValuesA", "expected union field A to use generated alias type:\n%s", code)
+	require.Contains(t, code, "B ValuesB", "expected union field B to use generated alias type:\n%s", code)
+
+	var hasValuesAFile, hasValuesBFile bool
+	for _, f := range files {
+		if strings.HasSuffix(f.Path, filepath.Join("gen", "types", "values_a.go")) {
+			hasValuesAFile = true
+		}
+		if strings.HasSuffix(f.Path, filepath.Join("gen", "types", "values_b.go")) {
+			hasValuesBFile = true
+		}
+	}
+	require.True(t, hasValuesAFile, "expected generated alias file in struct:pkg:path package: gen/types/values_a.go")
+	require.True(t, hasValuesBFile, "expected generated alias file in struct:pkg:path package: gen/types/values_b.go")
+}

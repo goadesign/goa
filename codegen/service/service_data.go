@@ -457,6 +457,12 @@ type (
 		FieldName string
 		// FieldType is the Go type used in the union struct field and public API.
 		FieldType string
+		// EmitPrimitiveAlias is true when the branch uses a generated primitive alias
+		// that must be declared in the same file as the union type.
+		EmitPrimitiveAlias bool
+		// PrimitiveAliasType is the underlying Go type used by the generated branch
+		// alias (for example "string" or "float64").
+		PrimitiveAliasType string
 		// TypeTag is the JSON "type" discriminator value for this branch.
 		TypeTag string
 	}
@@ -746,7 +752,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 
 	// A function to collect user types from an error expression
 	recordError := func(er *expr.ErrorExpr) {
-		errTypes = append(errTypes, collectTypes(er.AttributeExpr, scope, seen)...)
+		errTypes = append(errTypes, collectTypes(er.AttributeExpr, scope, seen, nil)...)
 		if er.Type == expr.ErrorResult {
 			if _, ok := seenErrors[er.Name]; ok {
 				return
@@ -764,10 +770,12 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		if att == nil {
 			return
 		}
+		var loc *codegen.Location
 		if ut, ok := att.Type.(expr.UserType); ok {
+			loc = codegen.UserTypeLocation(ut)
 			att = ut.Attribute()
 		}
-		types = append(types, collectTypes(att, scope, seen)...)
+		types = append(types, collectTypes(att, scope, seen, loc)...)
 	}
 	for _, m := range service.Methods {
 		// collect inner user types
@@ -829,12 +837,12 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		if len(svcs) > 0 {
 			// Force generate type only in the specified services
 			if slices.Contains(svcs, service.Name) {
-				types = append(types, collectTypes(att, scope, seen)...)
+				types = append(types, collectTypes(att, scope, seen, nil)...)
 			}
 			continue
 		}
 		// Force generate type in all the services
-		types = append(types, collectTypes(att, scope, seen)...)
+		types = append(types, collectTypes(att, scope, seen, nil)...)
 	}
 
 	var (
@@ -1006,15 +1014,21 @@ func projectedTypeContext(pkg string, ptr bool, scope *codegen.NameScope) *codeg
 
 // collectTypes recurses through the attribute to gather all user types and
 // records them in userTypes.
-func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[string]struct{}) (data []*UserTypeData) {
+func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[string]struct{}, loc *codegen.Location) (data []*UserTypeData) {
 	if at == nil || at.Type == expr.Empty {
 		return data
 	}
-	collect := func(at *expr.AttributeExpr) []*UserTypeData { return collectTypes(at, scope, seen) }
+	collect := func(at *expr.AttributeExpr, loc *codegen.Location) []*UserTypeData {
+		return collectTypes(at, scope, seen, loc)
+	}
 	switch dt := at.Type.(type) {
 	case expr.UserType:
 		if _, ok := seen[dt.ID()]; ok {
 			return nil
+		}
+		typeLoc := codegen.UserTypeLocation(dt)
+		if typeLoc == nil {
+			typeLoc = loc
 		}
 		data = append(data, &UserTypeData{
 			Name:        dt.Name(),
@@ -1022,23 +1036,23 @@ func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[str
 			Description: dt.Attribute().Description,
 			Def:         scope.GoTypeDef(dt.Attribute(), false, true),
 			Ref:         scope.GoTypeRef(at),
-			Loc:         codegen.UserTypeLocation(dt),
+			Loc:         typeLoc,
 			Type:        dt,
 		})
 		seen[dt.ID()] = struct{}{}
-		data = append(data, collect(dt.Attribute())...)
+		data = append(data, collect(dt.Attribute(), typeLoc)...)
 	case *expr.Object:
 		for _, nat := range *dt {
-			data = append(data, collect(nat.Attribute)...)
+			data = append(data, collect(nat.Attribute, loc)...)
 		}
 	case *expr.Array:
-		data = append(data, collect(dt.ElemType)...)
+		data = append(data, collect(dt.ElemType, loc)...)
 	case *expr.Map:
-		data = append(data, collect(dt.KeyType)...)
-		data = append(data, collect(dt.ElemType)...)
+		data = append(data, collect(dt.KeyType, loc)...)
+		data = append(data, collect(dt.ElemType, loc)...)
 	case *expr.Union:
 		for _, nat := range dt.Values {
-			data = append(data, collect(nat.Attribute)...)
+			data = append(data, collect(nat.Attribute, loc)...)
 		}
 	}
 	return data
@@ -1097,13 +1111,18 @@ func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Lo
 			}
 		}
 		fieldType := scope.GoFullTypeRef(nat.Attribute, pkg)
+		primitiveAliasType, hasPrimitiveAlias := primitiveAliasGoType(nat.Attribute.Type)
+		_, isUserType := nat.Attribute.Type.(expr.UserType)
+		emitPrimitiveAlias := hasPrimitiveAlias && !isUserType && pkg == ""
 		kindConst := kindName + codegen.Goify(nat.Name, true)
 		fields[i] = &UnionFieldData{
-			Name:      nat.Name,
-			KindConst: kindConst,
-			FieldName: fieldName,
-			FieldType: fieldType,
-			TypeTag:   nat.Name,
+			Name:               nat.Name,
+			KindConst:          kindConst,
+			FieldName:          fieldName,
+			FieldType:          fieldType,
+			EmitPrimitiveAlias: emitPrimitiveAlias,
+			PrimitiveAliasType: primitiveAliasType,
+			TypeTag:            nat.Name,
 		}
 	}
 
@@ -1164,13 +1183,18 @@ func buildViewUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codege
 	for i, nat := range u.Values {
 		fieldName := codegen.Goify(nat.Name, true)
 		fieldType := scope.GoTypeRef(nat.Attribute)
+		primitiveAliasType, hasPrimitiveAlias := primitiveAliasGoType(nat.Attribute.Type)
+		_, isUserType := nat.Attribute.Type.(expr.UserType)
+		emitPrimitiveAlias := hasPrimitiveAlias && !isUserType
 		kindConst := kindName + codegen.Goify(nat.Name, true)
 		fields[i] = &UnionFieldData{
-			Name:      nat.Name,
-			KindConst: kindConst,
-			FieldName: fieldName,
-			FieldType: fieldType,
-			TypeTag:   nat.Name,
+			Name:               nat.Name,
+			KindConst:          kindConst,
+			FieldName:          fieldName,
+			FieldType:          fieldType,
+			EmitPrimitiveAlias: emitPrimitiveAlias,
+			PrimitiveAliasType: primitiveAliasType,
+			TypeTag:            nat.Name,
 		}
 	}
 
@@ -1181,6 +1205,21 @@ func buildViewUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codege
 		Loc:      loc,
 		TypeKey:  u.GetTypeKey(),
 		ValueKey: u.GetValueKey(),
+	}
+}
+
+// primitiveAliasGoType resolves the native Go type for a primitive alias branch.
+// It uses expr.IsPrimitive to enforce the type contract and then unwraps aliases.
+func primitiveAliasGoType(dt expr.DataType) (string, bool) {
+	if !expr.IsPrimitive(dt) {
+		return "", false
+	}
+	for {
+		ut, ok := dt.(expr.UserType)
+		if !ok {
+			return codegen.GoNativeTypeName(dt), true
+		}
+		dt = ut.Attribute().Type
 	}
 }
 

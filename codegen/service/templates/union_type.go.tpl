@@ -1,4 +1,10 @@
 {{- /* Union sum-type definition and helpers. */ -}}
+{{- range .Fields }}
+{{- if .EmitPrimitiveAlias }}
+type {{ .FieldType }} {{ .PrimitiveAliasType }}
+
+{{- end }}
+{{- end }}
 // {{ .Name }} is a sum-type union.
 type {{ .Name }} struct {
 	kind {{ .KindName }}

@@ -158,6 +158,27 @@ var PkgPathUnionDSL = func() {
 	})
 }
 
+// PkgPathUnionJSONFieldDSL tests OneOf branches declared with JSONField in a
+// struct:pkg:path type.
+var PkgPathUnionJSONFieldDSL = func() {
+	var TypeWithJSONFieldUnion = Type("TypeWithJSONFieldUnion", func() {
+		Meta("struct:pkg:path", "types")
+		OneOf("Values", func() {
+			Field(1, "A", String, func() {
+				Meta("struct:tag:json", "a")
+			})
+			Field(2, "B", Int, func() {
+				Meta("struct:tag:json", "b")
+			})
+		})
+	})
+	Service("PkgPathUnionJSONField", func() {
+		Method("M", func() {
+			Payload(TypeWithJSONFieldUnion)
+		})
+	})
+}
+
 var WithDefaultDSL = func() {
 	Service("WithDefault", func() {
 		Method("A", func() {
