@@ -196,10 +196,8 @@ func TestStructPkgPath_UnionJSONFieldBranchesGenerateAliases(t *testing.T) {
 		require.NoError(t, s.Write(buf))
 	}
 	code := buf.String()
-	hasInlineAliases := strings.Contains(code, "type ValuesA string") && strings.Contains(code, "type ValuesB int")
-	if hasInlineAliases {
-		return
-	}
+	require.Contains(t, code, "A ValuesA", "expected union field A to use generated alias type:\n%s", code)
+	require.Contains(t, code, "B ValuesB", "expected union field B to use generated alias type:\n%s", code)
 
 	var hasValuesAFile, hasValuesBFile bool
 	for _, f := range files {
@@ -210,5 +208,6 @@ func TestStructPkgPath_UnionJSONFieldBranchesGenerateAliases(t *testing.T) {
 			hasValuesBFile = true
 		}
 	}
-	require.True(t, hasValuesAFile && hasValuesBFile, "expected generated aliases for JSONField union branches")
+	require.True(t, hasValuesAFile, "expected generated alias file in struct:pkg:path package: gen/types/values_a.go")
+	require.True(t, hasValuesBFile, "expected generated alias file in struct:pkg:path package: gen/types/values_b.go")
 }
