@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/eval"
+	goa "goa.design/goa/v3/pkg"
 )
 
 // TestGenerateMergesSamePathFiles verifies that when two generators emit content
@@ -106,8 +108,9 @@ func TestGenerateParallelManyFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
+	outputs = assertVersionFile(t, dir, outputs)
 
-	// Verify all files were written
+	// Verify all generator files were written
 	if len(outputs) != numFiles {
 		t.Fatalf("expected %d output files, got %d", numFiles, len(outputs))
 	}
@@ -169,6 +172,7 @@ func TestGenerateParallelWithMerge(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
+	outputs = assertVersionFile(t, dir, outputs)
 
 	if len(outputs) != 2 {
 		t.Fatalf("expected 2 output files, got %d", len(outputs))
@@ -268,6 +272,7 @@ func TestGenerateParallelSingleFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
+	outputs = assertVersionFile(t, dir, outputs)
 
 	if len(outputs) != 1 {
 		t.Fatalf("expected 1 output file, got %d", len(outputs))
@@ -282,4 +287,34 @@ func TestGenerateParallelSingleFile(t *testing.T) {
 	if !strings.Contains(content, "type Single struct{}") {
 		t.Fatalf("file missing expected content:\n%s", content)
 	}
+}
+
+// assertVersionFile checks that goa.json was emitted with the correct version
+// and returns the remaining outputs (excluding goa.json) for further assertions.
+func assertVersionFile(t *testing.T, dir string, outputs []string) []string {
+	t.Helper()
+
+	versionPath := filepath.Join(codegen.Gendir, "goa.json")
+
+	// Read and validate goa.json content.
+	bs, err := os.ReadFile(filepath.Join(dir, versionPath))
+	if err != nil {
+		t.Fatalf("failed reading goa.json: %v", err)
+	}
+	var data map[string]string
+	if err := json.Unmarshal(bs, &data); err != nil {
+		t.Fatalf("goa.json is not valid JSON: %v", err)
+	}
+	if v := data["goa_version"]; v != goa.Version() {
+		t.Fatalf("goa.json version = %q, want %q", v, goa.Version())
+	}
+
+	// Filter goa.json out of outputs.
+	var rest []string
+	for _, o := range outputs {
+		if filepath.Base(o) != "goa.json" {
+			rest = append(rest, o)
+		}
+	}
+	return rest
 }

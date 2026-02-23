@@ -1,5 +1,5 @@
 {{ if .Title -}}
-// Code generated with goa {{ .ToolVersion }}, DO NOT EDIT.
+// Code generated with goa, DO NOT EDIT.
 //
 // {{ .Title }}
 //
