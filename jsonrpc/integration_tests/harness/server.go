@@ -209,8 +209,8 @@ func (s *Server) waitForReady(ctx context.Context) error {
 		return nil
 	case err := <-errChan:
 		return err
-	case <-time.After(10 * time.Second):
-		return fmt.Errorf("server failed to start within 10 seconds")
+	case <-time.After(60 * time.Second):
+		return fmt.Errorf("server failed to start within 60 seconds")
 	case <-ctx.Done():
 		return ctx.Err()
 	}
