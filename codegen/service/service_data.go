@@ -1073,7 +1073,7 @@ func collectUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, loc *c
 		seen[dt.ID()] = struct{}{}
 		collectUnionTypes(dt.Attribute(), scope, codegen.UserTypeLocation(dt), unions, seen)
 	case *expr.Object:
-		for _, nat := range *dt {
+		for _, nat := range sortedNamedAttributes(*dt) {
 			collectUnionTypes(nat.Attribute, scope, loc, unions, seen)
 		}
 	case *expr.Array:
@@ -1152,7 +1152,7 @@ func collectViewUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, lo
 		seen[dt.ID()] = struct{}{}
 		collectViewUnionTypes(dt.Attribute(), scope, loc, unions, seen)
 	case *expr.Object:
-		for _, nat := range *dt {
+		for _, nat := range sortedNamedAttributes(*dt) {
 			collectViewUnionTypes(nat.Attribute, scope, loc, unions, seen)
 		}
 	case *expr.Array:
@@ -1206,6 +1206,21 @@ func buildViewUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codege
 		TypeKey:  u.GetTypeKey(),
 		ValueKey: u.GetValueKey(),
 	}
+}
+
+// sortedNamedAttributes returns object fields sorted by attribute name.
+// Union naming uses NameScope uniqueness, so callers that discover unions while
+// traversing objects must use a deterministic field order to avoid oscillating
+// generated identifiers across runs.
+func sortedNamedAttributes(attrs []*expr.NamedAttributeExpr) []*expr.NamedAttributeExpr {
+	if len(attrs) < 2 {
+		return attrs
+	}
+	sorted := slices.Clone(attrs)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Name < sorted[j].Name
+	})
+	return sorted
 }
 
 // primitiveAliasGoType resolves the native Go type for a primitive alias branch.
