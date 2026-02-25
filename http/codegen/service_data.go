@@ -2722,7 +2722,7 @@ func collectHTTPUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, un
 		seen[dt.ID()] = struct{}{}
 		collectHTTPUnionTypes(dt.Attribute(), scope, unions, seen)
 	case *expr.Object:
-		for _, nat := range *dt {
+		for _, nat := range sortedNamedAttributes(*dt) {
 			collectHTTPUnionTypes(nat.Attribute, scope, unions, seen)
 		}
 	case *expr.Array:
@@ -2767,6 +2767,21 @@ func buildHTTPUnionTypeData(u *expr.Union, scope *codegen.NameScope) *service.Un
 		TypeKey:  u.GetTypeKey(),
 		ValueKey: u.GetValueKey(),
 	}
+}
+
+// sortedNamedAttributes returns object fields sorted by attribute name.
+// Union naming uses NameScope uniqueness, so callers that discover unions while
+// traversing objects must use a deterministic field order to avoid oscillating
+// generated identifiers across runs.
+func sortedNamedAttributes(attrs []*expr.NamedAttributeExpr) []*expr.NamedAttributeExpr {
+	if len(attrs) < 2 {
+		return attrs
+	}
+	sorted := slices.Clone(attrs)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Name < sorted[j].Name
+	})
+	return sorted
 }
 
 func (sds *ServicesData) attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData) *TypeData {
