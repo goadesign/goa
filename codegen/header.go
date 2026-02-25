@@ -1,6 +1,9 @@
 package codegen
 
 import (
+	"encoding/json"
+	"path/filepath"
+
 	goa "goa.design/goa/v3/pkg"
 )
 
@@ -10,11 +13,24 @@ func Header(title, pack string, imports []*ImportSpec) *SectionTemplate {
 		Name:   "source-header",
 		Source: codegenTemplates.Read(headerT),
 		Data: map[string]any{
-			"Title":       title,
-			"ToolVersion": goa.Version(),
-			"Pkg":         pack,
-			"Imports":     imports,
+			"Title":   title,
+			"Pkg":     pack,
+			"Imports": imports,
 		},
+	}
+}
+
+// VersionFile returns a file that contains the goa version used to generate
+// the code. The file is written to gen/goa.json.
+func VersionFile() *File {
+	data := map[string]string{"goa_version": goa.Version()}
+	b, _ := json.MarshalIndent(data, "", "  ")
+	return &File{
+		Path: filepath.Join(Gendir, "goa.json"),
+		SectionTemplates: []*SectionTemplate{{
+			Name:   "goa-version",
+			Source: string(b),
+		}},
 	}
 }
 

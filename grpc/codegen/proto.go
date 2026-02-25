@@ -9,7 +9,6 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
-	goa "goa.design/goa/v3/pkg"
 )
 
 const (
@@ -51,8 +50,7 @@ func protoFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData)
 			Name:   "proto-header",
 			Source: grpcTemplates.Read(grpcProtoHeaderT),
 			Data: map[string]any{
-				"Title":       fmt.Sprintf("%s protocol buffer definition", svc.Name()),
-				"ToolVersion": goa.Version(),
+				"Title": fmt.Sprintf("%s protocol buffer definition", svc.Name()),
 			},
 		},
 		// proto syntax and package
