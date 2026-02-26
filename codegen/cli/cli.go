@@ -167,7 +167,7 @@ func BuildCommandData(data *service.Data) *CommandData {
 	var interceptors *InterceptorData
 	if len(data.ClientInterceptors) > 0 {
 		interceptors = &InterceptorData{
-			VarName: "inter",
+			VarName: codegen.Goify(data.Name, false) + "Inter",
 			PkgName: data.PkgName,
 		}
 	}
@@ -226,7 +226,7 @@ func BuildSubcommandData(data *service.Data, m *service.MethodData, buildFunctio
 	var interceptors *InterceptorData
 	if len(m.ClientInterceptors) > 0 {
 		interceptors = &InterceptorData{
-			VarName: "inter",
+			VarName: codegen.Goify(data.Name, false) + "Inter",
 			PkgName: data.PkgName,
 		}
 	}
