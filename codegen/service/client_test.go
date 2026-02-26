@@ -33,6 +33,7 @@ func TestClient(t *testing.T) {
 		{"client-bidirectional-streaming", testdata.BidirectionalStreamingMethodDSL, testdata.BidirectionalStreamingMethodClient},
 		{"client-bidirectional-streaming-no-payload", testdata.BidirectionalStreamingNoPayloadMethodDSL, testdata.BidirectionalStreamingNoPayloadMethodClient},
 		{"client-interceptor", testdata.EndpointWithClientInterceptorDSL, testdata.InterceptorClient},
+		{"client-interceptor-no-method", testdata.NoMethodClientInterceptorDSL, testdata.NoMethodInterceptorClient},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

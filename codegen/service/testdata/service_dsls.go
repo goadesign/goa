@@ -1041,6 +1041,13 @@ var EndpointWithClientInterceptorDSL = func() {
 	})
 }
 
+var NoMethodClientInterceptorDSL = func() {
+	Interceptor("tracing")
+	Service("NoMethodClientInterceptor", func() {
+		ClientInterceptor("tracing")
+	})
+}
+
 var MultipleAPIKeySecurityDSL = func() {
 	var APIKeyAuth = APIKeySecurity("api_key")
 	var TenantKeyAuth = APIKeySecurity("tenant")
