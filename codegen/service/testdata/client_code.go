@@ -346,3 +346,14 @@ func (c *Client) Method(ctx context.Context, p string) (res string, err error) {
 	return ires.(string), nil
 }
 `
+
+const NoMethodInterceptorClient = `// Client is the "NoMethodClientInterceptor" service client.
+type Client struct {
+}
+
+// NewClient initializes a "NoMethodClientInterceptor" service client given the
+// endpoints.
+func NewClient(ci ClientInterceptors) *Client {
+	return &Client{}
+}
+`
