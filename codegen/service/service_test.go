@@ -58,6 +58,7 @@ func TestService(t *testing.T) {
 		{"service-bidirectional-streaming-result-with-explicit-view", testdata.BidirectionalStreamingResultWithExplicitViewMethodDSL},
 		{"service-multiple-api-key-security", testdata.MultipleAPIKeySecurityDSL},
 		{"service-mixed-and-multiple-api-key-security", testdata.MixedAndMultipleAPIKeySecurityDSL},
+		{"service-raw-object-payload-type-name-collision", testdata.RawObjectPayloadTypeNameCollisionDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
