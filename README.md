@@ -220,21 +220,6 @@ The [examples repository](https://github.com/goadesign/examples) contains comple
 - Find answers with the [Goa Guru](https://gurubase.io/g/goa) AI assistant
 - Subscribe to our Substack, “Design First”: [Design First](https://goadesign.substack.com/subscribe?params=%5Bobject%20Object%5D)
 
-## What's New
-
-**July 2025:** Goa now includes comprehensive **JSON-RPC 2.0 support** as a
-first-class transport alongside HTTP and gRPC! Generate complete JSON-RPC
-services with streaming support (WebSocket and SSE), client/server code, CLI
-tools, and full type safety - all from a single design.
-
-**February 2025:** The Goa website has been completely redesigned with extensive
-new documentation, tutorials, and guides to help you build better services.
-
-**Jan 2024:** Goa's powerful design DSL is now accessible through the
-[Goa Design Wizard](https://chat.openai.com/g/g-mLuQDGyro-goa-design-wizard), a
-specialized AI trained on Goa. Generate service designs through natural language
-conversations!
-
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.

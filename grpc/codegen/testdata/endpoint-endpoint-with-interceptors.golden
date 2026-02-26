@@ -35,7 +35,7 @@ func UsageExamples() string {
 // line.
 func ParseEndpoint(
 	cc *grpc.ClientConn,
-	inter servicewithinterceptors.ClientInterceptors,
+	serviceWithInterceptorsInter servicewithinterceptors.ClientInterceptors,
 	opts ...grpc.CallOption,
 ) (goa.Endpoint, any, error) {
 	var (
@@ -118,11 +118,11 @@ func ParseEndpoint(
 			switch epn {
 			case "method-a":
 				endpoint = c.MethodA()
-				endpoint = servicewithinterceptors.WrapMethodAClientEndpoint(endpoint, inter)
+				endpoint = servicewithinterceptors.WrapMethodAClientEndpoint(endpoint, serviceWithInterceptorsInter)
 				data, err = servicewithinterceptorsc.BuildMethodAPayload(*serviceWithInterceptorsMethodAMessageFlag)
 			case "method-b":
 				endpoint = c.MethodB()
-				endpoint = servicewithinterceptors.WrapMethodBClientEndpoint(endpoint, inter)
+				endpoint = servicewithinterceptors.WrapMethodBClientEndpoint(endpoint, serviceWithInterceptorsInter)
 				data, err = servicewithinterceptorsc.BuildMethodBPayload(*serviceWithInterceptorsMethodBMessageFlag)
 			}
 		}

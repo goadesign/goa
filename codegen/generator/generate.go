@@ -156,13 +156,18 @@ func Generate(dir, cmd string, debug bool) (outputs []string, err1 error) {
 		}
 	}
 
-	// 8. Write the files (in parallel).
+	// 8. Emit goa.json version file (gen command only).
+	if cmd == "gen" {
+		genfiles = append(genfiles, codegen.VersionFile())
+	}
+
+	// 9. Write the files (in parallel).
 	written := make(map[string]struct{})
 	{
 		start := time.Now()
 		numWorkers := runtime.NumCPU()
 		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 8: Starting parallel file writing with %d workers\n", numWorkers)
+			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 9: Starting parallel file writing with %d workers\n", numWorkers)
 		}
 
 		// Channel for work items
@@ -234,11 +239,11 @@ func Generate(dir, cmd string, debug bool) (outputs []string, err1 error) {
 		}
 
 		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 8: Write files took %v (%d files written, %d slow renders)\n", time.Since(start), len(written), slowRenders)
+			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 9: Write files took %v (%d files written, %d slow renders)\n", time.Since(start), len(written), slowRenders)
 		}
 	}
 
-	// 9. Compute all output filenames.
+	// 10. Compute all output filenames.
 	{
 		start := time.Now()
 		outputs = make([]string, len(written))
@@ -256,7 +261,7 @@ func Generate(dir, cmd string, debug bool) (outputs []string, err1 error) {
 			i++
 		}
 		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 9: Compute output filenames took %v\n", time.Since(start))
+			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 10: Compute output filenames took %v\n", time.Since(start))
 		}
 	}
 	sort.Strings(outputs)
