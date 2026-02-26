@@ -30,14 +30,14 @@ func (e *GoaError) Error() string {
 	return ""
 }
 
-// ErrorName returns "GoaError".
+// ErrorName returns the error name.
 //
 // Deprecated: Use GoaErrorName - https://github.com/goadesign/goa/issues/3105
 func (e *GoaError) ErrorName() string {
 	return e.GoaErrorName()
 }
 
-// GoaErrorName returns "GoaError".
+// GoaErrorName returns the error name.
 func (e *GoaError) GoaErrorName() string {
 	return e.ErrorCode
 }
