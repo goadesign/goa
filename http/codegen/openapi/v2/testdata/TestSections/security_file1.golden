@@ -27,24 +27,6 @@ paths:
                 **Required security scopes for api_key**:
                   * `api:read`
             operationId: testService#testEndpointA
-            parameters:
-                - name: k
-                  in: query
-                  required: true
-                  type: string
-                - name: Token
-                  in: header
-                  required: true
-                  type: string
-                - name: X-Authorization
-                  in: header
-                  required: true
-                  type: string
-                - name: Authorization
-                  in: header
-                  description: Basic Auth security using Basic scheme (https://tools.ietf.org/html/rfc7617)
-                  required: true
-                  type: string
             responses:
                 "204":
                     description: No Content response.
@@ -61,15 +43,6 @@ paths:
                 - testService
             summary: testEndpointB testService
             operationId: testService#testEndpointB
-            parameters:
-                - name: auth
-                  in: query
-                  required: true
-                  type: string
-                - name: Authorization
-                  in: header
-                  required: true
-                  type: string
             responses:
                 "204":
                     description: No Content response.
