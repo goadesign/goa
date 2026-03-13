@@ -259,6 +259,69 @@ var EndpointMissingTokenPayload = func() {
 	})
 }
 
+var EndpointUnionQueryParam = func() {
+	var Text = Type("Text", func() {
+		Attribute("value", String)
+	})
+	var JSON = Type("JSON", func() {
+		Attribute("message", String)
+	})
+
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("filter", OneOf(Text, JSON))
+			})
+			HTTP(func() {
+				GET("/")
+				Param("filter")
+			})
+		})
+	})
+}
+
+var EndpointUnionHeader = func() {
+	var Text = Type("Text", func() {
+		Attribute("value", String)
+	})
+	var JSON = Type("JSON", func() {
+		Attribute("message", String)
+	})
+
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("filter", OneOf(Text, JSON))
+			})
+			HTTP(func() {
+				GET("/")
+				Header("filter")
+			})
+		})
+	})
+}
+
+var EndpointUnionCookie = func() {
+	var Text = Type("Text", func() {
+		Attribute("value", String)
+	})
+	var JSON = Type("JSON", func() {
+		Attribute("message", String)
+	})
+
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("filter", OneOf(Text, JSON))
+			})
+			HTTP(func() {
+				GET("/")
+				Cookie("filter")
+			})
+		})
+	})
+}
+
 var EndpointExtendToken = func() {
 	var CommonAttributes = Type("Common", func() {
 		Token("token", String)

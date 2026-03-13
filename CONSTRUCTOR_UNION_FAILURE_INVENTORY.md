@@ -18,10 +18,10 @@ Do not call the feature done until each item is:
 
 - [ ] Declaration-form vs constructor-form `OneOf(...)` must not misparse based on context.
 - [x] Malformed constructor calls must fail closed and must not degrade into another type.
-- [ ] Constructor-form string variants support already-defined named types.
-- [ ] Constructor-form string variants support true forward declarations.
-- [ ] Constructor-form string variants support recursion.
-- [ ] Constructor-form string variants report precise unresolved-name errors.
+- [x] Constructor-form string variants support already-defined named types.
+- [x] Constructor-form string variants support true forward declarations.
+- [x] Constructor-form string variants support recursion.
+- [x] Constructor-form string variants report precise unresolved-name errors.
 - [x] Constructor-form discriminator key overrides propagate correctly from enclosing payload/result attributes.
 
 ## Variant Naming and Wire Contract
@@ -55,7 +55,7 @@ Do not call the feature done until each item is:
 - [ ] Required payload semantics remain intact after nil/null handling changes.
 - [ ] Client and server generation remain behaviorally aligned.
 - [ ] Nested constructor unions with custom discriminator/value keys are client/server symmetric, not just OpenAPI-correct.
-- [ ] Constructor unions are rejected or handled intentionally when placed in HTTP params, headers, or cookies.
+- [x] Constructor unions are rejected or handled intentionally when placed in HTTP params, headers, or cookies.
 - [ ] Multipart request generation either supports constructor unions correctly or rejects them with a precise error.
 - [ ] WebSocket streaming generation handles constructor-form unions for `StreamingPayload` / `StreamingResult` correctly.
 - [ ] Security-scheme extraction through constructor unions either works intentionally or fails with a precise DSL error.
@@ -101,7 +101,6 @@ Do not call the feature done until each item is:
 
 ## Open Items Under Active Audit
 
-- True forward-declared string variants in constructor-form `OneOf(...)`.
 - Traversal-order stability for schema refs and wrapper component naming.
 - Symmetry between constructor-form unions and named/declaration-form unions.
 - Symmetry between HTTP client and server handling for nested and top-level unions.

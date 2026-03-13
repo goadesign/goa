@@ -523,8 +523,13 @@ func resolveOneOfVariantType(variant any) expr.DataType {
 		if dt := expr.Root.UserType(actual); dt != nil {
 			return dt
 		}
-		eval.InvalidArgError("type", variant)
-		return nil
+		return &expr.UserTypeExpr{
+			TypeName: actual,
+			UID:      "$type-ref:" + actual,
+			AttributeExpr: &expr.AttributeExpr{
+				Meta: expr.MetaExpr{"dsl:type:ref": []string{actual}},
+			},
+		}
 	default:
 		eval.InvalidArgError("type", variant)
 		return nil

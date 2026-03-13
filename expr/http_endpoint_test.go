@@ -182,6 +182,18 @@ service "Service" HTTP endpoint "Method": HTTP endpoint response body must be em
 service "Service" HTTP endpoint "MethodB": HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.
 service "Service" HTTP endpoint "MethodC": HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.`,
 		},
+		"endpoint-union-query-param": {
+			DSL:   testdata.EndpointUnionQueryParam,
+			Error: `service "Service" HTTP endpoint "Method": path parameter filter cannot be an object, path parameter types must be primitive, array or map (query string only)`,
+		},
+		"endpoint-union-header": {
+			DSL:   testdata.EndpointUnionHeader,
+			Error: `service "Service" HTTP endpoint "Method": header "filter" must be primitive or array`,
+		},
+		"endpoint-union-cookie": {
+			DSL:   testdata.EndpointUnionCookie,
+			Error: `service "Service" HTTP endpoint "Method": cookie "filter" must be primitive`,
+		},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {

@@ -3,6 +3,8 @@ package dsl_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	. "goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
@@ -229,7 +231,7 @@ func TestOneOfTypeConstructorRejectsInvalidVariant(t *testing.T) {
 	eval.Context = &eval.DSLContext{}
 	expr.Root = &expr.RootExpr{}
 
-	dt := OneOf(String, "invalid")
+	dt := OneOf(String, 42)
 	union, ok := dt.(*expr.Union)
 	if !ok {
 		t.Errorf("expected invalid union placeholder, got %T", dt)
@@ -321,38 +323,14 @@ func TestOneOfTypeConstructorRejectsUnnamedComplexVariants(t *testing.T) {
 }
 
 func TestOneOfTypeConstructorMissingTypeDoesNotFallbackToString(t *testing.T) {
-	eval.Context = &eval.DSLContext{}
-	expr.Root = &expr.RootExpr{}
+	err := expr.RunInvalidDSL(t, func() {
+		Type("Parent", func() {
+			Attribute("choice", OneOf("MissingType", Int))
+		})
+	})
 
-	parent := &expr.UserTypeExpr{
-		TypeName: "Parent",
-		AttributeExpr: &expr.AttributeExpr{
-			Type: &expr.Object{},
-		},
-	}
-
-	eval.Execute(func() {
-		Attribute("choice", OneOf("MissingType", Int))
-	}, parent)
-	choice := parent.Attribute().Find("choice")
-	if choice == nil {
-		t.Errorf("expected choice attribute")
-		return
-	}
-	union := expr.AsUnion(choice.Type)
-	if union == nil {
-		t.Errorf("expected invalid union placeholder type, got %T", choice.Type)
-		return
-	}
-	if union.TypeName != "InvalidOneOf" {
-		t.Errorf("expected invalid union type name %q, got %q", "InvalidOneOf", union.TypeName)
-	}
-	if choice.Type == expr.String {
-		t.Errorf("expected choice type not to fall back to string")
-	}
-	if eval.Context.Errors == nil {
-		t.Errorf("expected DSL error for missing OneOf type")
-	}
+	require.Error(t, err)
+	require.Contains(t, err.Error(), `unknown type reference "MissingType"`)
 }
 
 func TestOneOfTypeConstructorPayloadMetaOverridesKeys(t *testing.T) {
@@ -424,4 +402,106 @@ func TestOneOfTypeConstructorForMethodPayloadAndResult(t *testing.T) {
 	if result.TypeName != "CircleOrSquare" {
 		t.Errorf("expected result union type name %q, got %q", "CircleOrSquare", result.TypeName)
 	}
+}
+
+func TestOneOfTypeConstructorSupportsForwardDeclaredTypeInAttribute(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		Type("A", func() {
+			Attribute("choice", OneOf("B", Int))
+		})
+		Type("B", func() {
+			Attribute("value", String)
+			Required("value")
+		})
+	})
+
+	atype := root.UserType("A")
+	require.NotNil(t, atype)
+
+	choice := atype.Attribute().Find("choice")
+	require.NotNil(t, choice)
+
+	union := expr.AsUnion(choice.Type)
+	require.NotNil(t, union)
+	require.Len(t, union.Values, 2)
+
+	first, ok := union.Values[0].Attribute.Type.(expr.UserType)
+	require.True(t, ok, "expected first union branch to resolve to a user type")
+	if first.Name() != "B" {
+		t.Errorf("expected first union branch type %q, got %q", "B", first.Name())
+	}
+}
+
+func TestOneOfTypeConstructorSupportsForwardDeclaredTypeInPayloadAndResult(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		Service("calc", func() {
+			Method("show", func() {
+				Payload(OneOf("Later", Int))
+				Result(OneOf("Later", Int))
+			})
+		})
+		Type("Later", func() {
+			Attribute("message", String)
+			Required("message")
+		})
+	})
+
+	method := root.Services[0].Methods[0]
+	payload := expr.AsUnion(method.Payload.Type)
+	require.NotNil(t, payload)
+	require.Len(t, payload.Values, 2)
+
+	payloadType, ok := payload.Values[0].Attribute.Type.(expr.UserType)
+	require.True(t, ok, "expected payload branch to resolve to a user type")
+	if payloadType.Name() != "Later" {
+		t.Errorf("expected payload branch type %q, got %q", "Later", payloadType.Name())
+	}
+
+	result := expr.AsUnion(method.Result.Type)
+	require.NotNil(t, result)
+	require.Len(t, result.Values, 2)
+
+	resultType, ok := result.Values[0].Attribute.Type.(expr.UserType)
+	require.True(t, ok, "expected result branch to resolve to a user type")
+	if resultType.Name() != "Later" {
+		t.Errorf("expected result branch type %q, got %q", "Later", resultType.Name())
+	}
+}
+
+func TestOneOfTypeConstructorSupportsRecursiveNamedVariants(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		Type("Node", func() {
+			Attribute("next", OneOf("Node", "Leaf"))
+		})
+		Type("Leaf", func() {
+			Attribute("value", String)
+		})
+	})
+
+	node := root.UserType("Node")
+	require.NotNil(t, node)
+
+	next := node.Attribute().Find("next")
+	require.NotNil(t, next)
+
+	union := expr.AsUnion(next.Type)
+	require.NotNil(t, union)
+	require.Len(t, union.Values, 2)
+
+	first, ok := union.Values[0].Attribute.Type.(expr.UserType)
+	require.True(t, ok, "expected recursive branch to resolve to a user type")
+	if first.Name() != "Node" {
+		t.Errorf("expected recursive branch type %q, got %q", "Node", first.Name())
+	}
+}
+
+func TestOneOfTypeConstructorReportsUnresolvedForwardType(t *testing.T) {
+	err := expr.RunInvalidDSL(t, func() {
+		Type("A", func() {
+			Attribute("choice", OneOf("Missing", Int))
+		})
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), `unknown type reference "Missing"`)
 }
