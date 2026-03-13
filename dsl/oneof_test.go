@@ -505,3 +505,18 @@ func TestOneOfTypeConstructorReportsUnresolvedForwardType(t *testing.T) {
 	require.Error(t, err)
 	require.Contains(t, err.Error(), `unknown type reference "Missing"`)
 }
+
+func TestOneOfDeclarationFormUsedAsPayloadTypeFails(t *testing.T) {
+	err := expr.RunInvalidDSL(t, func() {
+		Service("Shapes", func() {
+			Method("draw", func() {
+				Payload(OneOf("Inner", func() {
+					Attribute("value", String)
+				}))
+			})
+		})
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "invalid use of OneOf")
+}

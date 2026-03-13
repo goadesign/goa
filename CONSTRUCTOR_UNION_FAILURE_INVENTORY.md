@@ -16,6 +16,7 @@ Do not call the feature done until each item is:
 
 ## DSL Evaluation
 
+- [x] Declaration-signature `OneOf(...)` outside declaration contexts fails with a precise DSL-context error in covered cases.
 - [ ] Declaration-form vs constructor-form `OneOf(...)` must not misparse based on context.
 - [x] Malformed constructor calls must fail closed and must not degrade into another type.
 - [x] Constructor-form string variants support already-defined named types.
@@ -109,6 +110,7 @@ Do not call the feature done until each item is:
 - Symmetry between constructor-form unions and named/declaration-form unions.
 - Symmetry between HTTP client and server handling for nested and top-level unions.
 - Remaining edge cases for custom discriminator/value keys.
+- Remaining context ambiguity when declaration-form `OneOf(...)` is supplied as an `Attribute` type argument inside declaration contexts.
 - gRPC, OpenAPI v2, CLI, collections, views, and error-declaration behavior for constructor-form unions.
 - Broader validation coverage beyond the covered active-branch smoke path.
 - Ambiguous overlapping object-branch examples and multi-example schema/example divergence.

@@ -231,6 +231,10 @@ func Field(tag any, name string, args ...any) {
 //	    })
 //	})
 func OneOf(arg any, args ...any) expr.DataType {
+	if looksLikeOneOfAttributeDeclarationSignature(arg, args...) && !isOneOfDeclarationContext() {
+		eval.IncompatibleDSL()
+		return invalidOneOfType()
+	}
 	if isOneOfAttributeDeclaration(arg, args...) {
 		oneOfAttribute(arg.(string), args...)
 		return nil
@@ -349,6 +353,18 @@ func Example(args ...any) {
 }
 
 func isOneOfAttributeDeclaration(arg any, args ...any) bool {
+	if !looksLikeOneOfAttributeDeclarationSignature(arg, args...) {
+		return false
+	}
+	switch eval.Current().(type) {
+	case *expr.AttributeExpr, expr.CompositeExpr:
+		return true
+	default:
+		return false
+	}
+}
+
+func looksLikeOneOfAttributeDeclarationSignature(arg any, args ...any) bool {
 	name, ok := arg.(string)
 	if !ok || name == "" {
 		return false
@@ -359,12 +375,7 @@ func isOneOfAttributeDeclaration(arg any, args ...any) bool {
 	if _, ok := args[len(args)-1].(func()); !ok {
 		return false
 	}
-	switch eval.Current().(type) {
-	case *expr.AttributeExpr, expr.CompositeExpr:
-		return true
-	default:
-		return false
-	}
+	return true
 }
 
 func isMalformedOneOfAttributeDeclaration(arg any, args ...any) bool {
