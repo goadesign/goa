@@ -44,6 +44,7 @@ Do not call the feature done until each item is:
 
 ## Validation and Defaults
 
+- [x] Validation code generation validates the active constructor-union branch in covered constructor-union smoke tests.
 - [ ] Validation code generation correctly validates the active constructor-union branch, including nested branch validations.
 - [ ] Invalid constructor unions in validation paths fail precisely instead of skipping validation or generating uncompilable code.
 - [ ] Default values for constructor unions either render correctly in generated Go code or fail with a precise DSL/codegen error.
@@ -70,6 +71,7 @@ Do not call the feature done until each item is:
 
 ## OpenAPI v2 Compatibility
 
+- [x] Constructor-form unions do not panic or crash OpenAPI v2 generation in covered smoke tests.
 - [ ] Constructor-form unions do not panic or crash OpenAPI v2 generation.
 - [ ] OpenAPI v2 degrades gracefully for constructor-form unions with a stable, intentional fallback shape.
 
@@ -96,6 +98,7 @@ Do not call the feature done until each item is:
 ## Other Goa Surfaces
 
 - [x] Unary gRPC code generation supports top-level constructor-form union payloads/results in covered smoke tests without invalid `.proto` output or generator panics.
+- [x] HTTP and gRPC CLI generation support top-level constructor-form union payloads in covered smoke tests without generation failures.
 - [ ] gRPC code generation supports constructor-form unions, including top-level method payloads/results, without invalid `.proto` output or generator panics.
 - [ ] CLI generation handles constructor-form unions, including top-level payloads/results, without generation failures or unusable clients.
 - [ ] `Error(...)` declarations with constructor-form unions either work correctly end to end or fail with a precise, intentional DSL/codegen error.
@@ -107,6 +110,7 @@ Do not call the feature done until each item is:
 - Symmetry between HTTP client and server handling for nested and top-level unions.
 - Remaining edge cases for custom discriminator/value keys.
 - gRPC, OpenAPI v2, CLI, collections, views, and error-declaration behavior for constructor-form unions.
+- Broader validation coverage beyond the covered active-branch smoke path.
 - Ambiguous overlapping object-branch examples and multi-example schema/example divergence.
 - Discriminator drift under `TypeName`, aliasing, and generated renames.
 - Ambiguous branch inference for user examples.

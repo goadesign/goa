@@ -1,8 +1,12 @@
 package codegen
 
 import (
+	"bytes"
 	"goa.design/goa/v3/codegen/testutil"
+	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -57,5 +61,24 @@ func TestClientCLIFiles(t *testing.T) {
 			code := codegen.SectionCode(t, sections[c.SectionIndex])
 			testutil.AssertGo(t, "testdata/golden/client_cli_"+c.Name+".go.golden", code)
 		})
+	}
+}
+
+func TestConstructorUnionClientCLIFiles(t *testing.T) {
+	root := RunHTTPDSL(t, testdata.ConstructorUnionHTTPDSL)
+	services := CreateHTTPServices(root)
+	fs := ClientCLIFiles("", services)
+	require.GreaterOrEqual(t, len(fs), 2, "expected parser and payload builder files")
+
+	var builder bytes.Buffer
+	for _, s := range fs[1].SectionTemplates {
+		require.NoError(t, s.Write(&builder))
+	}
+	builderCode := codegen.FormatTestCode(t, builder.String())
+	if !strings.Contains(builderCode, "json.Unmarshal") {
+		t.Errorf("expected HTTP CLI payload builder to decode constructor union payload from JSON, got %q", builderCode)
+	}
+	if !strings.Contains(builderCode, "BuildShowPayload") {
+		t.Errorf("expected HTTP CLI payload builder to expose constructor union payload builder, got %q", builderCode)
 	}
 }

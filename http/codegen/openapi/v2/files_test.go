@@ -187,6 +187,23 @@ func TestExtensions(t *testing.T) {
 	}
 }
 
+func TestConstructorUnionDoesNotCrashOpenAPIV2(t *testing.T) {
+	openapi.Definitions = make(map[string]*openapi.Schema)
+	root := httpgen.RunHTTPDSL(t, testdata.ConstructorUnionHTTPDSL)
+	oFiles, err := openapiv2.Files(root)
+	require.NoError(t, err, "OpenAPI v2 generation failed for constructor union")
+	require.NotEmpty(t, oFiles, "expected Swagger files for constructor union DSL")
+	for _, o := range oFiles {
+		var buf bytes.Buffer
+		require.Len(t, o.SectionTemplates, 1, "expected one section per output file")
+		tmpl := template.Must(template.New("openapi").Funcs(o.SectionTemplates[0].FuncMap).Parse(o.SectionTemplates[0].Source))
+		require.NoError(t, tmpl.Execute(&buf, o.SectionTemplates[0].Data), "failed to render %s", o.Path)
+		if filepath.Ext(o.Path) == ".json" {
+			require.NoError(t, validateSwagger(buf.Bytes()), "invalid swagger for constructor union DSL")
+		}
+	}
+}
+
 // validateSwagger asserts that the given bytes contain a valid Swagger spec.
 func validateSwagger(b []byte) error {
 	doc := &openapi2.T{}

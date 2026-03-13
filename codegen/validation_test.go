@@ -90,6 +90,23 @@ func TestRecursiveValidationCode(t *testing.T) {
 		code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
 		testutil.AssertGo(t, "testdata/golden/validation_union-with-format-validation.go.golden", code)
 	})
+
+	t.Run("constructor-union-validation", func(t *testing.T) {
+		ctx := NewAttributeContext(false, false, false, "", scope)
+		root := RunDSL(t, testdata.ConstructorUnionValidationDSL)
+		unionT := root.UserType("ConstructorUnionValidation")
+		code := ValidationCode(&expr.AttributeExpr{Type: unionT}, nil, ctx, true, false, false, "target")
+		code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
+		if !strings.Contains(code, "switch string(target.Choice.Kind())") {
+			t.Errorf("expected constructor union validation to switch on active branch, got %q", code)
+		}
+		if !strings.Contains(code, "ValidateConstructorUnionValidationText") {
+			t.Errorf("expected constructor union validation to call text branch validator, got %q", code)
+		}
+		if !strings.Contains(code, "ValidateConstructorUnionValidationJSON") {
+			t.Errorf("expected constructor union validation to call JSON branch validator, got %q", code)
+		}
+	})
 }
 
 // TestRecursiveValidationWithCycleGuard tests that recursive types are
