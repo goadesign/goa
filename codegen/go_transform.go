@@ -464,6 +464,8 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	// helpers. Transform by branching on the runtime Kind discriminator.
 	unionPkg := ta.TargetCtx.Pkg(target)
 	typeRef := ta.TargetCtx.Scope.Ref(target, unionPkg)
+	sourcePkg := ta.SourceCtx.Pkg(source)
+	sourceRef := ta.SourceCtx.Scope.Ref(source, sourcePkg)
 
 	// Use deterministic temp var: 'obj' at top-level, 'tmp' for nested assignments.
 	tempVarName := "obj"
@@ -510,6 +512,7 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 
 	data := map[string]any{
 		"SourceVar":       sourceVar,
+		"SourceIsPointer": strings.HasPrefix(sourceRef, "*"),
 		"TargetVar":       targetVar,
 		"NewVar":          newVar,
 		"TypeRef":         typeRef,

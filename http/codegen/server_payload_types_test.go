@@ -97,6 +97,7 @@ func TestPayloadConstructor(t *testing.T) {
 		{"body-query-user", testdata.PayloadBodyQueryUserDSL},
 		{"body-query-user-validate", testdata.PayloadBodyQueryUserValidateDSL},
 		{"body-union", testdata.PayloadBodyUnionDSL},
+		{"constructor-union", testdata.ConstructorUnionHTTPDSL},
 		{"body-query-user-union", testdata.PayloadBodyQueryUserUnionDSL},
 		{"body-query-user-union-validate", testdata.PayloadBodyQueryUserUnionValidateDSL},
 

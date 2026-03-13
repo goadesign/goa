@@ -1,0 +1,133 @@
+openapi: 3.0.3
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+      description: Default server for test api
+paths:
+    /:
+        post:
+            tags:
+                - ConstructorUnionCustomKeys
+            summary: Show ConstructorUnionCustomKeys
+            operationId: ConstructorUnionCustomKeys#Show
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            discriminator:
+                                mapping:
+                                    JSONPayload: '#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5'
+                                    TextPayload: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6'
+                                propertyName: kind
+                            example:
+                                data:
+                                    text: Neque nisi quibusdam nisi sint sunt.
+                                kind: TextPayload
+                            oneOf:
+                                - $ref: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6'
+                                - $ref: '#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5'
+                            properties:
+                                data:
+                                    anyOf:
+                                        - $ref: '#/components/schemas/TextPayload'
+                                        - $ref: '#/components/schemas/JSONPayload'
+                                kind:
+                                    enum:
+                                        - TextPayload
+                                        - JSONPayload
+                                    type: string
+                            required:
+                                - kind
+                                - data
+                            type: object
+                        example:
+                            data:
+                                text: Neque nisi quibusdam nisi sint sunt.
+                            kind: TextPayload
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                discriminator:
+                                    mapping:
+                                        JSONPayload: '#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5'
+                                        TextPayload: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6'
+                                    propertyName: kind
+                                example:
+                                    data:
+                                        text: Neque nisi quibusdam nisi sint sunt.
+                                    kind: TextPayload
+                                oneOf:
+                                    - $ref: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6'
+                                    - $ref: '#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5'
+                                properties:
+                                    data:
+                                        anyOf:
+                                            - $ref: '#/components/schemas/TextPayload'
+                                            - $ref: '#/components/schemas/JSONPayload'
+                                    kind:
+                                        enum:
+                                            - TextPayload
+                                            - JSONPayload
+                                        type: string
+                                required:
+                                    - kind
+                                    - data
+                                type: object
+                            example:
+                                data:
+                                    text: Neque nisi quibusdam nisi sint sunt.
+                                kind: TextPayload
+components:
+    schemas:
+        JSONPayload:
+            type: object
+            properties:
+                message:
+                    type: string
+                    example: Et tempora et quae.
+            example:
+                message: Itaque inventore optio.
+            required:
+                - message
+        TextPayload:
+            type: object
+            properties:
+                text:
+                    type: string
+                    example: Quia molestias.
+            example:
+                text: Doloribus qui quia.
+            required:
+                - text
+        TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/JSONPayload'
+                kind:
+                    type: string
+                    enum:
+                        - JSONPayload
+            required:
+                - kind
+                - data
+        TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/TextPayload'
+                kind:
+                    type: string
+                    enum:
+                        - TextPayload
+            required:
+                - kind
+                - data
+tags:
+    - name: ConstructorUnionCustomKeys

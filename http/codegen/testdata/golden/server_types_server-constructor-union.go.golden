@@ -1,0 +1,202 @@
+// ShowResponseBody is the type of the "ConstructorUnion" service "Show"
+// endpoint HTTP response body.
+type ShowResponseBody TextPayloadOrJSONPayload
+
+// TextPayload is used to define fields on response body types.
+type TextPayload struct {
+	Text string `form:"text" json:"text" xml:"text"`
+}
+
+// JSONPayload is used to define fields on response body types.
+type JSONPayload struct {
+	Message string `form:"message" json:"message" xml:"message"`
+}
+
+// TextPayloadOrJSONPayload is a sum-type union.
+type TextPayloadOrJSONPayload struct {
+	kind        TextPayloadOrJSONPayloadKind
+	TextPayload *TextPayload
+	JSONPayload *JSONPayload
+}
+
+// TextPayloadOrJSONPayloadKind enumerates the union variants for TextPayloadOrJSONPayload.
+type TextPayloadOrJSONPayloadKind string
+
+const (
+	// TextPayloadOrJSONPayloadKindTextPayload identifies the TextPayload branch of the union.
+	TextPayloadOrJSONPayloadKindTextPayload TextPayloadOrJSONPayloadKind = "TextPayload"
+	// TextPayloadOrJSONPayloadKindJSONPayload identifies the JSONPayload branch of the union.
+	TextPayloadOrJSONPayloadKindJSONPayload TextPayloadOrJSONPayloadKind = "JSONPayload"
+)
+
+// Kind returns the discriminator value of the union.
+func (u TextPayloadOrJSONPayload) Kind() TextPayloadOrJSONPayloadKind {
+	return u.kind
+}
+
+// NewTextPayloadOrJSONPayloadTextPayload constructs a TextPayloadOrJSONPayload with the TextPayload branch set.
+func NewTextPayloadOrJSONPayloadTextPayload(v *TextPayload) TextPayloadOrJSONPayload {
+	return TextPayloadOrJSONPayload{
+		kind:        TextPayloadOrJSONPayloadKindTextPayload,
+		TextPayload: v,
+	}
+}
+
+// AsTextPayload returns the value of the TextPayload branch if set.
+func (u TextPayloadOrJSONPayload) AsTextPayload() (_ *TextPayload, ok bool) {
+	if u.kind != TextPayloadOrJSONPayloadKindTextPayload {
+		return
+	}
+	return u.TextPayload, true
+}
+
+// SetTextPayload sets the TextPayload branch of the union.
+func (u *TextPayloadOrJSONPayload) SetTextPayload(v *TextPayload) {
+	u.kind = TextPayloadOrJSONPayloadKindTextPayload
+	u.TextPayload = v
+}
+
+// NewTextPayloadOrJSONPayloadJSONPayload constructs a TextPayloadOrJSONPayload with the JSONPayload branch set.
+func NewTextPayloadOrJSONPayloadJSONPayload(v *JSONPayload) TextPayloadOrJSONPayload {
+	return TextPayloadOrJSONPayload{
+		kind:        TextPayloadOrJSONPayloadKindJSONPayload,
+		JSONPayload: v,
+	}
+}
+
+// AsJSONPayload returns the value of the JSONPayload branch if set.
+func (u TextPayloadOrJSONPayload) AsJSONPayload() (_ *JSONPayload, ok bool) {
+	if u.kind != TextPayloadOrJSONPayloadKindJSONPayload {
+		return
+	}
+	return u.JSONPayload, true
+}
+
+// SetJSONPayload sets the JSONPayload branch of the union.
+func (u *TextPayloadOrJSONPayload) SetJSONPayload(v *JSONPayload) {
+	u.kind = TextPayloadOrJSONPayloadKindJSONPayload
+	u.JSONPayload = v
+}
+
+// Validate ensures the union discriminant is valid.
+func (u TextPayloadOrJSONPayload) Validate() error {
+	switch u.kind {
+	case "":
+		return goa.InvalidEnumValueError("type", "", []any{
+			string(TextPayloadOrJSONPayloadKindTextPayload),
+			string(TextPayloadOrJSONPayloadKindJSONPayload),
+		})
+	case TextPayloadOrJSONPayloadKindTextPayload:
+		return nil
+	case TextPayloadOrJSONPayloadKindJSONPayload:
+		return nil
+	default:
+		return goa.InvalidEnumValueError("type", u.kind, []any{
+			string(TextPayloadOrJSONPayloadKindTextPayload),
+			string(TextPayloadOrJSONPayloadKindJSONPayload),
+		})
+	}
+}
+
+// MarshalJSON marshals the union into the canonical {type,value} JSON shape.
+func (u TextPayloadOrJSONPayload) MarshalJSON() ([]byte, error) {
+	if err := u.Validate(); err != nil {
+		return nil, err
+	}
+	var (
+		value any
+	)
+	switch u.kind {
+	case TextPayloadOrJSONPayloadKindTextPayload:
+		value = u.TextPayload
+	case TextPayloadOrJSONPayloadKindJSONPayload:
+		value = u.JSONPayload
+	default:
+		return nil, fmt.Errorf("unexpected TextPayloadOrJSONPayload discriminant %q", u.kind)
+	}
+	return json.Marshal(struct {
+		Type  string `json:"type"`
+		Value any    `json:"value"`
+	}{
+		Type:  string(u.kind),
+		Value: value,
+	})
+}
+
+// UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
+func (u *TextPayloadOrJSONPayload) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	switch raw.Type {
+	case string(TextPayloadOrJSONPayloadKindTextPayload):
+		var v *TextPayload
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = TextPayloadOrJSONPayloadKindTextPayload
+		u.TextPayload = v
+	case string(TextPayloadOrJSONPayloadKindJSONPayload):
+		var v *JSONPayload
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = TextPayloadOrJSONPayloadKindJSONPayload
+		u.JSONPayload = v
+	default:
+		return fmt.Errorf("unexpected TextPayloadOrJSONPayload type %q", raw.Type)
+	}
+	return nil
+}
+
+// NewShowResponseBody builds the HTTP response body from the result of the
+// "Show" endpoint of the "ConstructorUnion" service.
+func NewShowResponseBody(res *constructorunion.TextPayloadOrJSONPayload) ShowResponseBody {
+	var body *TextPayloadOrJSONPayload
+
+	if res != nil {
+		switch string(res.Kind()) {
+		case "TextPayload":
+			actual, _ := res.AsTextPayload()
+			obj := marshalConstructorunionTextPayloadToTextPayload(actual)
+			var u TextPayloadOrJSONPayload
+			u.SetTextPayload((*TextPayload)(obj))
+			body = &u
+		case "JSONPayload":
+			actual, _ := res.AsJSONPayload()
+			obj := marshalConstructorunionJSONPayloadToJSONPayload(actual)
+			var u TextPayloadOrJSONPayload
+			u.SetJSONPayload((*JSONPayload)(obj))
+			body = &u
+		}
+	}
+	return body
+}
+
+// NewShowTextPayloadOrJSONPayload builds a ConstructorUnion service Show
+// endpoint payload.
+func NewShowTextPayloadOrJSONPayload(body *TextPayloadOrJSONPayload) *constructorunion.TextPayloadOrJSONPayload {
+	var v *constructorunion.TextPayloadOrJSONPayload
+
+	if body != nil {
+		switch string(body.Kind()) {
+		case "TextPayload":
+			actual, _ := body.AsTextPayload()
+			obj := unmarshalTextPayloadToConstructorunionTextPayload(actual)
+			var u constructorunion.TextPayloadOrJSONPayload
+			u.SetTextPayload((*constructorunion.TextPayload)(obj))
+			v = &u
+		case "JSONPayload":
+			actual, _ := body.AsJSONPayload()
+			obj := unmarshalJSONPayloadToConstructorunionJSONPayload(actual)
+			var u constructorunion.TextPayloadOrJSONPayload
+			u.SetJSONPayload((*constructorunion.JSONPayload)(obj))
+			v = &u
+		}
+	}
+	return v
+}

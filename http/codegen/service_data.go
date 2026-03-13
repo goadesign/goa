@@ -2979,6 +2979,13 @@ func needInit(dt expr.DataType) bool {
 			}
 		}
 		return false
+	case *expr.Union:
+		for _, nat := range actual.Values {
+			if needInit(nat.Attribute.Type) {
+				return true
+			}
+		}
+		return false
 	case expr.UserType:
 		return true
 	default:

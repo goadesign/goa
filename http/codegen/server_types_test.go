@@ -30,6 +30,7 @@ func TestServerTypes(t *testing.T) {
 		{"server-query-custom-name", testdata.PayloadQueryCustomNameDSL},
 		{"server-header-custom-name", testdata.PayloadHeaderCustomNameDSL},
 		{"server-cookie-custom-name", testdata.PayloadCookieCustomNameDSL},
+		{"server-constructor-union", testdata.ConstructorUnionHTTPDSL},
 		{"server-payload-with-validated-alias", testdata.PayloadWithValidatedAliasDSL},
 	}
 	for _, c := range cases {

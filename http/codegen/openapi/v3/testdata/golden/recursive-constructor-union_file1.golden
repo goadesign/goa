@@ -1,0 +1,160 @@
+openapi: 3.0.3
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+      description: Default server for test api
+paths:
+    /:
+        post:
+            tags:
+                - RecursiveConstructorUnion
+            summary: Show RecursiveConstructorUnion
+            operationId: RecursiveConstructorUnion#Show
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            discriminator:
+                                mapping:
+                                    Leaf: '#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5'
+                                    Node: '#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6'
+                                propertyName: type
+                            example:
+                                type: Leaf
+                                value:
+                                    value: Et quae sunt itaque.
+                            oneOf:
+                                - $ref: '#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5'
+                                - $ref: '#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6'
+                            properties:
+                                type:
+                                    enum:
+                                        - Leaf
+                                        - Node
+                                    type: string
+                                value:
+                                    anyOf:
+                                        - $ref: '#/components/schemas/Leaf'
+                                        - $ref: '#/components/schemas/Node'
+                            required:
+                                - type
+                                - value
+                            type: object
+                        example:
+                            type: Leaf
+                            value:
+                                value: Et quae sunt itaque.
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                discriminator:
+                                    mapping:
+                                        Leaf: '#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5'
+                                        Node: '#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6'
+                                    propertyName: type
+                                example:
+                                    type: Leaf
+                                    value:
+                                        value: Et quae sunt itaque.
+                                oneOf:
+                                    - $ref: '#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5'
+                                    - $ref: '#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6'
+                                properties:
+                                    type:
+                                        enum:
+                                            - Leaf
+                                            - Node
+                                        type: string
+                                    value:
+                                        anyOf:
+                                            - $ref: '#/components/schemas/Leaf'
+                                            - $ref: '#/components/schemas/Node'
+                                required:
+                                    - type
+                                    - value
+                                type: object
+                            example:
+                                type: Leaf
+                                value:
+                                    value: Et quae sunt itaque.
+components:
+    schemas:
+        Leaf:
+            type: object
+            properties:
+                value:
+                    type: string
+                    example: Quia molestias.
+            example:
+                value: Doloribus qui quia.
+            required:
+                - value
+        LeafOrNodeLeafEnvelope66640687b72f2cc5:
+            type: object
+            properties:
+                type:
+                    type: string
+                    enum:
+                        - Leaf
+                value:
+                    $ref: '#/components/schemas/Leaf'
+            required:
+                - type
+                - value
+        LeafOrNodeNodeEnvelope1422994f41aff3a6:
+            type: object
+            properties:
+                type:
+                    type: string
+                    enum:
+                        - Node
+                value:
+                    $ref: '#/components/schemas/Node'
+            required:
+                - type
+                - value
+        Node:
+            type: object
+            properties:
+                next:
+                    discriminator:
+                        mapping:
+                            Leaf: '#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5'
+                            Node: '#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6'
+                        propertyName: type
+                    example:
+                        type: Leaf
+                        value:
+                            value: Et quae sunt itaque.
+                    oneOf:
+                        - $ref: '#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5'
+                        - $ref: '#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6'
+                    properties:
+                        type:
+                            enum:
+                                - Leaf
+                                - Node
+                            type: string
+                        value:
+                            anyOf:
+                                - $ref: '#/components/schemas/Leaf'
+                                - $ref: '#/components/schemas/Node'
+                    required:
+                        - type
+                        - value
+                    type: object
+            example:
+                next:
+                    type: Leaf
+                    value:
+                        value: Et quae sunt itaque.
+            required:
+                - next
+tags:
+    - name: RecursiveConstructorUnion

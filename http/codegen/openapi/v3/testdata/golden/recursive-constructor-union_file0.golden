@@ -1,0 +1,269 @@
+{
+  "components": {
+    "schemas": {
+      "Leaf": {
+        "example": {
+          "value": "Doloribus qui quia."
+        },
+        "properties": {
+          "value": {
+            "example": "Quia molestias.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "type": "object"
+      },
+      "LeafOrNodeLeafEnvelope66640687b72f2cc5": {
+        "properties": {
+          "type": {
+            "enum": [
+              "Leaf"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/Leaf"
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ],
+        "type": "object"
+      },
+      "LeafOrNodeNodeEnvelope1422994f41aff3a6": {
+        "properties": {
+          "type": {
+            "enum": [
+              "Node"
+            ],
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/Node"
+          }
+        },
+        "required": [
+          "type",
+          "value"
+        ],
+        "type": "object"
+      },
+      "Node": {
+        "example": {
+          "next": {
+            "type": "Leaf",
+            "value": {
+              "value": "Et quae sunt itaque."
+            }
+          }
+        },
+        "properties": {
+          "next": {
+            "discriminator": {
+              "mapping": {
+                "Leaf": "#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5",
+                "Node": "#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6"
+              },
+              "propertyName": "type"
+            },
+            "example": {
+              "type": "Leaf",
+              "value": {
+                "value": "Et quae sunt itaque."
+              }
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5"
+              },
+              {
+                "$ref": "#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6"
+              }
+            ],
+            "properties": {
+              "type": {
+                "enum": [
+                  "Leaf",
+                  "Node"
+                ],
+                "type": "string"
+              },
+              "value": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/Leaf"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Node"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "type",
+              "value"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "next"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "RecursiveConstructorUnion#Show",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "type": "Leaf",
+                "value": {
+                  "value": "Et quae sunt itaque."
+                }
+              },
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "Leaf": "#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5",
+                    "Node": "#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6"
+                  },
+                  "propertyName": "type"
+                },
+                "example": {
+                  "type": "Leaf",
+                  "value": {
+                    "value": "Et quae sunt itaque."
+                  }
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6"
+                  }
+                ],
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "Leaf",
+                      "Node"
+                    ],
+                    "type": "string"
+                  },
+                  "value": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/Leaf"
+                      },
+                      {
+                        "$ref": "#/components/schemas/Node"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "type",
+                  "value"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "type": "Leaf",
+                  "value": {
+                    "value": "Et quae sunt itaque."
+                  }
+                },
+                "schema": {
+                  "discriminator": {
+                    "mapping": {
+                      "Leaf": "#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5",
+                      "Node": "#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6"
+                    },
+                    "propertyName": "type"
+                  },
+                  "example": {
+                    "type": "Leaf",
+                    "value": {
+                      "value": "Et quae sunt itaque."
+                    }
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5"
+                    },
+                    {
+                      "$ref": "#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6"
+                    }
+                  ],
+                  "properties": {
+                    "type": {
+                      "enum": [
+                        "Leaf",
+                        "Node"
+                      ],
+                      "type": "string"
+                    },
+                    "value": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/components/schemas/Leaf"
+                        },
+                        {
+                          "$ref": "#/components/schemas/Node"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "type",
+                    "value"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "Show RecursiveConstructorUnion",
+        "tags": [
+          "RecursiveConstructorUnion"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "RecursiveConstructorUnion"
+    }
+  ]
+}

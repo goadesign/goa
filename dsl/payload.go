@@ -209,6 +209,7 @@ func methodDSL(m *expr.MethodExpr, suffix string, p any, args ...any) *expr.Attr
 	}
 	if fn != nil {
 		eval.Execute(fn, att)
+		applyUnionMetaFromAttribute(att)
 		if obj, ok := att.Type.(*expr.Object); ok {
 			if len(*obj) == 0 {
 				att.Type = expr.Empty

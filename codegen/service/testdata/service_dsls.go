@@ -99,6 +99,23 @@ var UnionMethodDSL = func() {
 	})
 }
 
+var InlineUnionMethodDSL = func() {
+	var TextResult = Type("TextResult", func() {
+		Attribute("text", String)
+		Required("text")
+	})
+	var JSONResult = Type("JSONResult", func() {
+		Attribute("message", String)
+		Required("message")
+	})
+	Service("InlineUnionService", func() {
+		Method("Show", func() {
+			Payload(OneOf(TextResult, JSONResult))
+			Result(OneOf(TextResult, JSONResult))
+		})
+	})
+}
+
 var MultiUnionMethodDSL = func() {
 	var TypeA = Type("TypeA", func() {
 		Attribute("a", Int)

@@ -1,5 +1,8 @@
 {{- if .NewVar }}var {{ .TargetVar }} {{ .TypeRef }}
 {{ end -}}
+{{- if .SourceIsPointer }}
+if {{ .SourceVar }} != nil {
+{{- end }}
 switch string({{ .SourceVar }}.Kind()) {
 {{- range .Cases }}
 case {{ printf "%q" .CaseName }}:
@@ -24,3 +27,6 @@ case {{ printf "%q" .CaseName }}:
 	{{- end }}
 {{- end }}
 }
+{{- if .SourceIsPointer }}
+}
+{{- end }}

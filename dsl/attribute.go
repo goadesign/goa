@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"fmt"
+	"strings"
 
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
@@ -158,6 +159,7 @@ func Attribute(name string, args ...any) {
 		if fn != nil {
 			eval.Execute(fn, attr)
 		}
+		applyUnionMetaFromAttribute(attr)
 		if attr.Type == nil {
 			// DSL did not contain an "Attribute" declaration
 			attr.Type = expr.String
@@ -202,12 +204,14 @@ func Field(tag any, name string, args ...any) {
 	Attribute(name, append(args, fn)...)
 }
 
-// OneOf creates a union type from a name and a list of attributes.
+// OneOf defines or constructs a union type.
 //
-// OneOf may be used wherever Attribute can.
+// OneOf supports two forms:
 //
-// OneOf takes a name as first argument, a description as optional second
-// argument and a function that lists the union types as last argument.
+//  1. Inside an object DSL, OneOf defines a named union attribute from a name,
+//     an optional description and a function that lists the union branches.
+//  2. Wherever a data type can be used, OneOf constructs a union type directly
+//     from two or more existing types.
 //
 // Example:
 //
@@ -218,77 +222,30 @@ func Field(tag any, name string, args ...any) {
 //	        Attribute("dog", Dog, "Dogs are cool too")
 //	    })
 //	})
-func OneOf(name string, args ...any) {
-	if len(args) == 0 {
-		eval.TooFewArgError()
-		return
+//
+//	var ResultUnion = OneOf(TextResult, JSONResult)
+//
+//	var _ = Service("result", func() {
+//	    Method("show", func() {
+//	        Result(OneOf(TextResult, JSONResult))
+//	    })
+//	})
+func OneOf(arg any, args ...any) expr.DataType {
+	if isOneOfAttributeDeclaration(arg, args...) {
+		oneOfAttribute(arg.(string), args...)
+		return nil
 	}
-	if len(args) > 2 {
-		eval.TooManyArgError()
-		return
-	}
-	fn, ok := args[len(args)-1].(func())
-	if !ok {
-		eval.InvalidArgError("function", args[len(args)-1])
-	}
-	var desc string
-	if len(args) > 1 {
-		desc, ok = args[0].(string)
-		if !ok {
-			eval.InvalidArgError("string", args[0])
+	if name, ok := arg.(string); ok {
+		if isMalformedOneOfAttributeDeclaration(arg, args...) {
+			oneOfAttribute(name, args...)
+			return nil
+		}
+		if len(args) > 2 && !areOneOfTypeConstructorArgs(append([]any{arg}, args...)...) {
+			eval.TooManyArgError()
+			return nil
 		}
 	}
-	Attribute(name, &expr.Union{TypeName: name}, desc, fn)
-
-	// Extract and validate oneof:type:field and oneof:value:field meta tags
-	var parent *expr.AttributeExpr
-	switch def := eval.Current().(type) {
-	case *expr.AttributeExpr:
-		parent = def
-	case expr.CompositeExpr:
-		parent = def.Attribute()
-	default:
-		return
-	}
-	if parent == nil {
-		return
-	}
-
-	// Find the union attribute we just created
-	attr := parent.Find(name)
-	if attr == nil || attr.Meta == nil {
-		return
-	}
-
-	union, ok := attr.Type.(*expr.Union)
-	if !ok {
-		return
-	}
-
-	// Extract type key from meta
-	if typeKeys, ok := attr.Meta["oneof:type:field"]; ok && len(typeKeys) > 0 {
-		typeKey := typeKeys[0]
-		if typeKey == "" {
-			eval.ReportError("oneof:type:field meta cannot be empty")
-			return
-		}
-		union.TypeKey = typeKey
-	}
-
-	// Extract value key from meta
-	if valueKeys, ok := attr.Meta["oneof:value:field"]; ok && len(valueKeys) > 0 {
-		valueKey := valueKeys[0]
-		if valueKey == "" {
-			eval.ReportError("oneof:value:field meta cannot be empty")
-			return
-		}
-		union.ValueKey = valueKey
-	}
-
-	// Validate that type and value keys are different
-	if union.TypeKey != "" && union.ValueKey != "" && union.TypeKey == union.ValueKey {
-		eval.ReportError("oneof:type:field and oneof:value:field cannot be the same (%q)", union.TypeKey)
-	}
+	return oneOfType(arg, args...)
 }
 
 // Default sets the default value for an attribute.
@@ -389,6 +346,272 @@ func Example(args ...any) {
 		return
 	}
 	a.UserExamples = append(a.UserExamples, ex)
+}
+
+func isOneOfAttributeDeclaration(arg any, args ...any) bool {
+	name, ok := arg.(string)
+	if !ok || name == "" {
+		return false
+	}
+	if len(args) == 0 || len(args) > 2 {
+		return false
+	}
+	if _, ok := args[len(args)-1].(func()); !ok {
+		return false
+	}
+	switch eval.Current().(type) {
+	case *expr.AttributeExpr, expr.CompositeExpr:
+		return true
+	default:
+		return false
+	}
+}
+
+func isMalformedOneOfAttributeDeclaration(arg any, args ...any) bool {
+	if !isOneOfDeclarationContext() || len(args) == 0 {
+		return false
+	}
+	if _, ok := args[len(args)-1].(func()); ok {
+		return true
+	}
+	return !areOneOfTypeConstructorArgs(append([]any{arg}, args...)...)
+}
+
+func isOneOfDeclarationContext() bool {
+	switch eval.Current().(type) {
+	case *expr.AttributeExpr, expr.CompositeExpr:
+		return true
+	default:
+		return false
+	}
+}
+
+func areOneOfTypeConstructorArgs(args ...any) bool {
+	for _, arg := range args {
+		switch arg.(type) {
+		case expr.DataType, string:
+			continue
+		default:
+			return false
+		}
+	}
+	return len(args) >= 2
+}
+
+func oneOfAttribute(name string, args ...any) {
+	if len(args) == 0 {
+		eval.TooFewArgError()
+		return
+	}
+	if len(args) > 2 {
+		eval.TooManyArgError()
+		return
+	}
+	fn, ok := args[len(args)-1].(func())
+	if !ok {
+		eval.InvalidArgError("function", args[len(args)-1])
+	}
+	var desc string
+	if len(args) > 1 {
+		desc, ok = args[0].(string)
+		if !ok {
+			eval.InvalidArgError("string", args[0])
+		}
+	}
+	Attribute(name, &expr.Union{TypeName: name}, desc, fn)
+
+	// Extract and validate oneof:type:field and oneof:value:field meta tags
+	var parent *expr.AttributeExpr
+	switch def := eval.Current().(type) {
+	case *expr.AttributeExpr:
+		parent = def
+	case expr.CompositeExpr:
+		parent = def.Attribute()
+	default:
+		return
+	}
+	if parent == nil {
+		return
+	}
+
+	// Find the union attribute we just created
+	attr := parent.Find(name)
+	if attr == nil || attr.Meta == nil {
+		return
+	}
+
+	union, ok := attr.Type.(*expr.Union)
+	if !ok {
+		return
+	}
+
+	// Extract type key from meta
+	if typeKeys, ok := attr.Meta["oneof:type:field"]; ok && len(typeKeys) > 0 {
+		typeKey := typeKeys[0]
+		if typeKey == "" {
+			eval.ReportError("oneof:type:field meta cannot be empty")
+			return
+		}
+		union.TypeKey = typeKey
+	}
+
+	// Extract value key from meta
+	if valueKeys, ok := attr.Meta["oneof:value:field"]; ok && len(valueKeys) > 0 {
+		valueKey := valueKeys[0]
+		if valueKey == "" {
+			eval.ReportError("oneof:value:field meta cannot be empty")
+			return
+		}
+		union.ValueKey = valueKey
+	}
+
+	// Validate that type and value keys are different
+	if union.TypeKey != "" && union.ValueKey != "" && union.TypeKey == union.ValueKey {
+		eval.ReportError("oneof:type:field and oneof:value:field cannot be the same (%q)", union.TypeKey)
+	}
+}
+
+func oneOfType(arg any, args ...any) expr.DataType {
+	variants := append([]any{arg}, args...)
+	if len(variants) < 2 {
+		eval.TooFewArgError()
+		return invalidOneOfType()
+	}
+
+	types := make([]expr.DataType, 0, len(variants))
+	baseNames := make([]string, 0, len(variants))
+	invalid := false
+	for _, variant := range variants {
+		dt := resolveOneOfVariantType(variant)
+		if dt == nil {
+			invalid = true
+			continue
+		}
+		if !isStableOneOfVariantType(dt) {
+			eval.ReportError("constructor OneOf variants of type %s must use a named Type to produce stable discriminators", expr.QualifiedTypeName(dt))
+			invalid = true
+			continue
+		}
+		types = append(types, dt)
+		baseNames = append(baseNames, oneOfVariantName(dt))
+	}
+	if invalid {
+		return invalidOneOfType()
+	}
+
+	names := uniqueOneOfVariantNames(baseNames)
+	values := make([]*expr.NamedAttributeExpr, 0, len(types))
+	for i, dt := range types {
+		values = append(values, &expr.NamedAttributeExpr{
+			Name: names[i],
+			Attribute: &expr.AttributeExpr{
+				Type: dt,
+			},
+		})
+	}
+	return &expr.Union{
+		TypeName: oneOfUnionTypeName(names),
+		Values:   values,
+	}
+}
+
+func resolveOneOfVariantType(variant any) expr.DataType {
+	switch actual := variant.(type) {
+	case expr.DataType:
+		return actual
+	case string:
+		if dt := expr.Root.UserType(actual); dt != nil {
+			return dt
+		}
+		eval.InvalidArgError("type", variant)
+		return nil
+	default:
+		eval.InvalidArgError("type", variant)
+		return nil
+	}
+}
+
+func oneOfVariantName(dt expr.DataType) string {
+	name := strings.TrimSpace(dt.Name())
+	if name == "" {
+		return "Value"
+	}
+	return expr.Title(name)
+}
+
+func isStableOneOfVariantType(dt expr.DataType) bool {
+	switch dt.(type) {
+	case *expr.Array, *expr.Map, *expr.Object:
+		return false
+	default:
+		return strings.TrimSpace(dt.Name()) != ""
+	}
+}
+
+func uniqueOneOfVariantNames(bases []string) []string {
+	reserved := make(map[string]struct{}, len(bases))
+	for _, base := range bases {
+		reserved[base] = struct{}{}
+	}
+
+	names := make([]string, len(bases))
+	seen := make(map[string]int, len(bases))
+	for i, base := range bases {
+		seen[base]++
+		if seen[base] == 1 {
+			names[i] = base
+			continue
+		}
+
+		for suffix := 2; ; suffix++ {
+			name := fmt.Sprintf("%s%d", base, suffix)
+			if _, ok := reserved[name]; ok {
+				continue
+			}
+			names[i] = name
+			reserved[name] = struct{}{}
+			break
+		}
+	}
+
+	return names
+}
+
+func oneOfUnionTypeName(names []string) string {
+	if len(names) == 0 {
+		return "Union"
+	}
+	return strings.Join(names, "Or")
+}
+
+func invalidOneOfType() expr.DataType {
+	return &expr.Union{TypeName: "InvalidOneOf"}
+}
+
+func applyUnionMetaFromAttribute(attr *expr.AttributeExpr) {
+	union := expr.AsUnion(attr.Type)
+	if union == nil || attr.Meta == nil {
+		return
+	}
+	if typeKeys, ok := attr.Meta["oneof:type:field"]; ok && len(typeKeys) > 0 {
+		typeKey := typeKeys[0]
+		if typeKey == "" {
+			eval.ReportError("oneof:type:field meta cannot be empty")
+			return
+		}
+		union.TypeKey = typeKey
+	}
+	if valueKeys, ok := attr.Meta["oneof:value:field"]; ok && len(valueKeys) > 0 {
+		valueKey := valueKeys[0]
+		if valueKey == "" {
+			eval.ReportError("oneof:value:field meta cannot be empty")
+			return
+		}
+		union.ValueKey = valueKey
+	}
+	if union.TypeKey != "" && union.ValueKey != "" && union.TypeKey == union.ValueKey {
+		eval.ReportError("oneof:type:field and oneof:value:field cannot be the same (%q)", union.TypeKey)
+	}
 }
 
 func parseAttributeArgs(baseAttr *expr.AttributeExpr, args ...any) (expr.DataType, string, func()) {

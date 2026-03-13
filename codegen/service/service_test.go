@@ -23,6 +23,7 @@ func TestService(t *testing.T) {
 		{"service-single", testdata.SingleMethodDSL},
 		{"service-multiple", testdata.MultipleMethodsDSL},
 		{"service-union", testdata.UnionMethodDSL},
+		{"service-inline-union", testdata.InlineUnionMethodDSL},
 		{"service-multi-union", testdata.MultiUnionMethodDSL},
 		{"service-union-alias-cross-pkg", testdata.UnionWithAliasCrossPkgDSL},
 		{"service-no-payload-no-result", testdata.EmptyMethodDSL},

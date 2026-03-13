@@ -36,16 +36,19 @@ type (
 		schemas map[string]*openapi.Schema
 		// type names indexed by hashes
 		hashes map[uint64][]string
-		rand   *expr.ExampleGenerator
+		// union branch schema names indexed by a stable branch key
+		unionBranchSchemas map[string]string
+		rand               *expr.ExampleGenerator
 	}
 )
 
 // newSchemafier initializes a schemafier.
 func newSchemafier(rand *expr.ExampleGenerator) *schemafier {
 	return &schemafier{
-		schemas: make(map[string]*openapi.Schema),
-		hashes:  make(map[uint64][]string),
-		rand:    rand,
+		schemas:            make(map[string]*openapi.Schema),
+		hashes:             make(map[uint64][]string),
+		unionBranchSchemas: make(map[string]string),
+		rand:               rand,
 	}
 }
 
@@ -232,6 +235,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		s.Properties[typeKey] = typeSchema
 		s.Properties[valueKey] = valueSchema
 		s.Required = append(s.Required, typeKey, valueKey)
+		s.Extensions = buildUnionSchemaExtensions(t, sf)
 	case expr.UserType:
 		if expr.IsAlias(t) {
 			return sf.schemafy(t.Attribute())
@@ -279,8 +283,15 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 
 	// Default value, example, extensions
 	s.DefaultValue = toStringMap(attr.DefaultValue)
-	s.Example = attr.Example(sf.rand)
-	s.Extensions = openapi.ExtensionsFromExpr(attr.Meta)
+	s.Example = canonicalizeGeneratedExampleValue(attr, attr.Example(sf.rand), sf)
+	if metaExtensions := openapi.ExtensionsFromExpr(attr.Meta); len(metaExtensions) > 0 {
+		if s.Extensions == nil {
+			s.Extensions = make(map[string]any, len(metaExtensions))
+		}
+		for k, v := range metaExtensions {
+			s.Extensions[k] = v
+		}
+	}
 
 	// Validations
 	if ap := openapi.AdditionalPropertiesFromExpr(attr.Meta); ap != nil {
@@ -331,6 +342,73 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	}
 
 	return s
+}
+
+func buildUnionSchemaExtensions(union *expr.Union, sf *schemafier) map[string]any {
+	typeKey := union.GetTypeKey()
+	oneOf := make([]any, 0, len(union.Values))
+	mapping := make(map[string]any, len(union.Values))
+	for _, val := range union.Values {
+		ref := sf.ensureUnionBranchSchema(union, val)
+		oneOf = append(oneOf, &openapi.Schema{Ref: ref})
+		mapping[val.Name] = ref
+	}
+	return map[string]any{
+		"oneOf": oneOf,
+		"discriminator": map[string]any{
+			"propertyName": typeKey,
+			"mapping":      mapping,
+		},
+	}
+}
+
+func buildUnionExample(union *expr.Union, sf *schemafier) any {
+	if len(union.Values) == 0 {
+		return nil
+	}
+	branch := union.Values[0]
+	return map[string]any{
+		union.GetTypeKey():  branch.Name,
+		union.GetValueKey(): canonicalizeGeneratedExampleValue(branch.Attribute, branch.Attribute.Example(sf.rand), sf),
+	}
+}
+
+func (sf *schemafier) ensureUnionBranchSchema(union *expr.Union, val *expr.NamedAttributeExpr) string {
+	key := sf.unionBranchSchemaKey(union, val)
+	if name, ok := sf.unionBranchSchemas[key]; ok {
+		return toRef(name)
+	}
+
+	name := sf.uniquify(deterministicUnionBranchSchemaName(union, val, key))
+	sf.unionBranchSchemas[key] = name
+	typeKey := union.GetTypeKey()
+	valueKey := union.GetValueKey()
+	branchSchema := openapi.NewSchema()
+	branchSchema.Type = openapi.Object
+	sf.schemas[name] = branchSchema
+	branchSchema.Properties[typeKey] = &openapi.Schema{
+		Type: openapi.String,
+		Enum: []any{val.Name},
+	}
+	branchSchema.Properties[valueKey] = sf.schemafy(val.Attribute)
+	branchSchema.Required = []string{typeKey, valueKey}
+	return toRef(name)
+}
+
+func (sf *schemafier) unionBranchSchemaKey(union *expr.Union, val *expr.NamedAttributeExpr) string {
+	h := sf.hashAttribute(val.Attribute, fnv.New64())
+	return strings.Join([]string{
+		union.TypeName,
+		union.GetTypeKey(),
+		union.GetValueKey(),
+		val.Name,
+		strconv.FormatUint(h, 10),
+	}, ":")
+}
+
+func deterministicUnionBranchSchemaName(union *expr.Union, val *expr.NamedAttributeExpr, key string) string {
+	sum := hashString(key, fnv.New64())
+	return codegen.Goify(fmt.Sprintf("%s%sEnvelope%x", union.TypeName, val.Name, sum), true)
 }
 
 // uniquify returns n if n is not a known type name. Otherwise uniquify appends

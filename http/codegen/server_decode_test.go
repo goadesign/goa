@@ -152,6 +152,8 @@ func TestDecode(t *testing.T) {
 		{"decode-body-object-required", testdata.PayloadBodyObjectRequiredDSL},
 		{"decode-body-object-validate", testdata.PayloadBodyObjectValidateDSL},
 		{"decode-body-union", testdata.PayloadBodyUnionDSL},
+		{"decode-constructor-union", testdata.ConstructorUnionHTTPDSL},
+		{"decode-constructor-union-optional-body-with-header", testdata.ConstructorUnionOptionalBodyWithHeaderHTTPDSL},
 		{"decode-body-union-validate", testdata.PayloadBodyUnionValidateDSL},
 		{"decode-body-union-user", testdata.PayloadBodyUnionUserDSL},
 		{"decode-body-union-user-validate", testdata.PayloadBodyUnionUserValidateDSL},

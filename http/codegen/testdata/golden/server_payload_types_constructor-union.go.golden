@@ -1,0 +1,23 @@
+// NewShowTextPayloadOrJSONPayload builds a ConstructorUnion service Show
+// endpoint payload.
+func NewShowTextPayloadOrJSONPayload(body *TextPayloadOrJSONPayload) *constructorunion.TextPayloadOrJSONPayload {
+	var v *constructorunion.TextPayloadOrJSONPayload
+
+	if body != nil {
+		switch string(body.Kind()) {
+		case "TextPayload":
+			actual, _ := body.AsTextPayload()
+			obj := unmarshalTextPayloadToConstructorunionTextPayload(actual)
+			var u constructorunion.TextPayloadOrJSONPayload
+			u.SetTextPayload((*constructorunion.TextPayload)(obj))
+			v = &u
+		case "JSONPayload":
+			actual, _ := body.AsJSONPayload()
+			obj := unmarshalJSONPayloadToConstructorunionJSONPayload(actual)
+			var u constructorunion.TextPayloadOrJSONPayload
+			u.SetJSONPayload((*constructorunion.JSONPayload)(obj))
+			v = &u
+		}
+	}
+	return v
+}

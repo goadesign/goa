@@ -1,0 +1,221 @@
+{
+  "components": {
+    "schemas": {
+      "JSONPayload": {
+        "example": {
+          "message": "Itaque inventore optio."
+        },
+        "properties": {
+          "message": {
+            "example": "Et tempora et quae.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      },
+      "TextPayload": {
+        "example": {
+          "text": "Doloribus qui quia."
+        },
+        "properties": {
+          "text": {
+            "example": "Quia molestias.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/JSONPayload"
+          },
+          "kind": {
+            "enum": [
+              "JSONPayload"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "data"
+        ],
+        "type": "object"
+      },
+      "TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/TextPayload"
+          },
+          "kind": {
+            "enum": [
+              "TextPayload"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "data"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "ConstructorUnionCustomKeys#Show",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "data": {
+                  "text": "Neque nisi quibusdam nisi sint sunt."
+                },
+                "kind": "TextPayload"
+              },
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "JSONPayload": "#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5",
+                    "TextPayload": "#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6"
+                  },
+                  "propertyName": "kind"
+                },
+                "example": {
+                  "data": {
+                    "text": "Neque nisi quibusdam nisi sint sunt."
+                  },
+                  "kind": "TextPayload"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5"
+                  }
+                ],
+                "properties": {
+                  "data": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/TextPayload"
+                      },
+                      {
+                        "$ref": "#/components/schemas/JSONPayload"
+                      }
+                    ]
+                  },
+                  "kind": {
+                    "enum": [
+                      "TextPayload",
+                      "JSONPayload"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "data"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "text": "Neque nisi quibusdam nisi sint sunt."
+                  },
+                  "kind": "TextPayload"
+                },
+                "schema": {
+                  "discriminator": {
+                    "mapping": {
+                      "JSONPayload": "#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5",
+                      "TextPayload": "#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6"
+                    },
+                    "propertyName": "kind"
+                  },
+                  "example": {
+                    "data": {
+                      "text": "Neque nisi quibusdam nisi sint sunt."
+                    },
+                    "kind": "TextPayload"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6"
+                    },
+                    {
+                      "$ref": "#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5"
+                    }
+                  ],
+                  "properties": {
+                    "data": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/components/schemas/TextPayload"
+                        },
+                        {
+                          "$ref": "#/components/schemas/JSONPayload"
+                        }
+                      ]
+                    },
+                    "kind": {
+                      "enum": [
+                        "TextPayload",
+                        "JSONPayload"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "Show ConstructorUnionCustomKeys",
+        "tags": [
+          "ConstructorUnionCustomKeys"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "ConstructorUnionCustomKeys"
+    }
+  ]
+}

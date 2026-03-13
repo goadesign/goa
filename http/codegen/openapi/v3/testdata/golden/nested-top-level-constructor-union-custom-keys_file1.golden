@@ -1,0 +1,217 @@
+openapi: 3.0.3
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+      description: Default server for test api
+paths:
+    /:
+        post:
+            tags:
+                - NestedTopLevelConstructorUnionCustomKeys
+            summary: Show NestedTopLevelConstructorUnionCustomKeys
+            operationId: NestedTopLevelConstructorUnionCustomKeys#Show
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            discriminator:
+                                mapping:
+                                    OuterA: '#/components/schemas/OuterAOrOuterBOuterAEnvelope9d05003798bcccc3'
+                                    OuterB: '#/components/schemas/OuterAOrOuterBOuterBEnvelope27ac53b26ab0a3f2'
+                                propertyName: kind
+                            example:
+                                data:
+                                    choice:
+                                        data:
+                                            text: Neque nisi quibusdam nisi sint sunt.
+                                        kind: InnerA
+                                kind: OuterA
+                            oneOf:
+                                - $ref: '#/components/schemas/OuterAOrOuterBOuterAEnvelope9d05003798bcccc3'
+                                - $ref: '#/components/schemas/OuterAOrOuterBOuterBEnvelope27ac53b26ab0a3f2'
+                            properties:
+                                data:
+                                    anyOf:
+                                        - $ref: '#/components/schemas/OuterA'
+                                        - $ref: '#/components/schemas/OuterB'
+                                kind:
+                                    enum:
+                                        - OuterA
+                                        - OuterB
+                                    type: string
+                            required:
+                                - kind
+                                - data
+                            type: object
+                        example:
+                            data:
+                                choice:
+                                    data:
+                                        text: Neque nisi quibusdam nisi sint sunt.
+                                    kind: InnerA
+                            kind: OuterA
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                discriminator:
+                                    mapping:
+                                        OuterA: '#/components/schemas/OuterAOrOuterBOuterAEnvelope9d05003798bcccc3'
+                                        OuterB: '#/components/schemas/OuterAOrOuterBOuterBEnvelope27ac53b26ab0a3f2'
+                                    propertyName: kind
+                                example:
+                                    data:
+                                        choice:
+                                            data:
+                                                text: Neque nisi quibusdam nisi sint sunt.
+                                            kind: InnerA
+                                    kind: OuterA
+                                oneOf:
+                                    - $ref: '#/components/schemas/OuterAOrOuterBOuterAEnvelope9d05003798bcccc3'
+                                    - $ref: '#/components/schemas/OuterAOrOuterBOuterBEnvelope27ac53b26ab0a3f2'
+                                properties:
+                                    data:
+                                        anyOf:
+                                            - $ref: '#/components/schemas/OuterA'
+                                            - $ref: '#/components/schemas/OuterB'
+                                    kind:
+                                        enum:
+                                            - OuterA
+                                            - OuterB
+                                        type: string
+                                required:
+                                    - kind
+                                    - data
+                                type: object
+                            example:
+                                data:
+                                    choice:
+                                        data:
+                                            text: Neque nisi quibusdam nisi sint sunt.
+                                        kind: InnerA
+                                kind: OuterA
+components:
+    schemas:
+        InnerA:
+            type: object
+            properties:
+                text:
+                    type: string
+                    example: Quia molestias.
+            example:
+                text: Doloribus qui quia.
+            required:
+                - text
+        InnerAOrInnerBInnerAEnvelope209a198071cb00f2:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InnerA'
+                kind:
+                    type: string
+                    enum:
+                        - InnerA
+            required:
+                - kind
+                - data
+        InnerAOrInnerBInnerBEnvelope6c32b5fa4387d787:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/InnerB'
+                kind:
+                    type: string
+                    enum:
+                        - InnerB
+            required:
+                - kind
+                - data
+        InnerB:
+            type: object
+            properties:
+                message:
+                    type: string
+                    example: Et tempora et quae.
+            example:
+                message: Itaque inventore optio.
+            required:
+                - message
+        OuterA:
+            type: object
+            properties:
+                choice:
+                    discriminator:
+                        mapping:
+                            InnerA: '#/components/schemas/InnerAOrInnerBInnerAEnvelope209a198071cb00f2'
+                            InnerB: '#/components/schemas/InnerAOrInnerBInnerBEnvelope6c32b5fa4387d787'
+                        propertyName: kind
+                    example:
+                        data:
+                            text: Neque nisi quibusdam nisi sint sunt.
+                        kind: InnerA
+                    oneOf:
+                        - $ref: '#/components/schemas/InnerAOrInnerBInnerAEnvelope209a198071cb00f2'
+                        - $ref: '#/components/schemas/InnerAOrInnerBInnerBEnvelope6c32b5fa4387d787'
+                    properties:
+                        data:
+                            anyOf:
+                                - $ref: '#/components/schemas/InnerA'
+                                - $ref: '#/components/schemas/InnerB'
+                        kind:
+                            enum:
+                                - InnerA
+                                - InnerB
+                            type: string
+                    required:
+                        - kind
+                        - data
+                    type: object
+            example:
+                choice:
+                    data:
+                        text: Neque nisi quibusdam nisi sint sunt.
+                    kind: InnerA
+            required:
+                - choice
+        OuterAOrOuterBOuterAEnvelope9d05003798bcccc3:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/OuterA'
+                kind:
+                    type: string
+                    enum:
+                        - OuterA
+            required:
+                - kind
+                - data
+        OuterAOrOuterBOuterBEnvelope27ac53b26ab0a3f2:
+            type: object
+            properties:
+                data:
+                    $ref: '#/components/schemas/OuterB'
+                kind:
+                    type: string
+                    enum:
+                        - OuterB
+            required:
+                - kind
+                - data
+        OuterB:
+            type: object
+            properties:
+                count:
+                    type: integer
+                    example: 4213596203809091209
+                    format: int64
+            example:
+                count: 5094429249470280925
+            required:
+                - count
+tags:
+    - name: NestedTopLevelConstructorUnionCustomKeys

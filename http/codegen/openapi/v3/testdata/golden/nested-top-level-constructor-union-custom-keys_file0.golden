@@ -1,0 +1,356 @@
+{
+  "components": {
+    "schemas": {
+      "InnerA": {
+        "example": {
+          "text": "Doloribus qui quia."
+        },
+        "properties": {
+          "text": {
+            "example": "Quia molestias.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "type": "object"
+      },
+      "InnerAOrInnerBInnerAEnvelope209a198071cb00f2": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/InnerA"
+          },
+          "kind": {
+            "enum": [
+              "InnerA"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "data"
+        ],
+        "type": "object"
+      },
+      "InnerAOrInnerBInnerBEnvelope6c32b5fa4387d787": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/InnerB"
+          },
+          "kind": {
+            "enum": [
+              "InnerB"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "data"
+        ],
+        "type": "object"
+      },
+      "InnerB": {
+        "example": {
+          "message": "Itaque inventore optio."
+        },
+        "properties": {
+          "message": {
+            "example": "Et tempora et quae.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      },
+      "OuterA": {
+        "example": {
+          "choice": {
+            "data": {
+              "text": "Neque nisi quibusdam nisi sint sunt."
+            },
+            "kind": "InnerA"
+          }
+        },
+        "properties": {
+          "choice": {
+            "discriminator": {
+              "mapping": {
+                "InnerA": "#/components/schemas/InnerAOrInnerBInnerAEnvelope209a198071cb00f2",
+                "InnerB": "#/components/schemas/InnerAOrInnerBInnerBEnvelope6c32b5fa4387d787"
+              },
+              "propertyName": "kind"
+            },
+            "example": {
+              "data": {
+                "text": "Neque nisi quibusdam nisi sint sunt."
+              },
+              "kind": "InnerA"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/InnerAOrInnerBInnerAEnvelope209a198071cb00f2"
+              },
+              {
+                "$ref": "#/components/schemas/InnerAOrInnerBInnerBEnvelope6c32b5fa4387d787"
+              }
+            ],
+            "properties": {
+              "data": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/InnerA"
+                  },
+                  {
+                    "$ref": "#/components/schemas/InnerB"
+                  }
+                ]
+              },
+              "kind": {
+                "enum": [
+                  "InnerA",
+                  "InnerB"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "data"
+            ],
+            "type": "object"
+          }
+        },
+        "required": [
+          "choice"
+        ],
+        "type": "object"
+      },
+      "OuterAOrOuterBOuterAEnvelope9d05003798bcccc3": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OuterA"
+          },
+          "kind": {
+            "enum": [
+              "OuterA"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "data"
+        ],
+        "type": "object"
+      },
+      "OuterAOrOuterBOuterBEnvelope27ac53b26ab0a3f2": {
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/OuterB"
+          },
+          "kind": {
+            "enum": [
+              "OuterB"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "data"
+        ],
+        "type": "object"
+      },
+      "OuterB": {
+        "example": {
+          "count": 5094429249470281000
+        },
+        "properties": {
+          "count": {
+            "example": 4213596203809091000,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "NestedTopLevelConstructorUnionCustomKeys#Show",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "data": {
+                  "choice": {
+                    "data": {
+                      "text": "Neque nisi quibusdam nisi sint sunt."
+                    },
+                    "kind": "InnerA"
+                  }
+                },
+                "kind": "OuterA"
+              },
+              "schema": {
+                "discriminator": {
+                  "mapping": {
+                    "OuterA": "#/components/schemas/OuterAOrOuterBOuterAEnvelope9d05003798bcccc3",
+                    "OuterB": "#/components/schemas/OuterAOrOuterBOuterBEnvelope27ac53b26ab0a3f2"
+                  },
+                  "propertyName": "kind"
+                },
+                "example": {
+                  "data": {
+                    "choice": {
+                      "data": {
+                        "text": "Neque nisi quibusdam nisi sint sunt."
+                      },
+                      "kind": "InnerA"
+                    }
+                  },
+                  "kind": "OuterA"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/OuterAOrOuterBOuterAEnvelope9d05003798bcccc3"
+                  },
+                  {
+                    "$ref": "#/components/schemas/OuterAOrOuterBOuterBEnvelope27ac53b26ab0a3f2"
+                  }
+                ],
+                "properties": {
+                  "data": {
+                    "anyOf": [
+                      {
+                        "$ref": "#/components/schemas/OuterA"
+                      },
+                      {
+                        "$ref": "#/components/schemas/OuterB"
+                      }
+                    ]
+                  },
+                  "kind": {
+                    "enum": [
+                      "OuterA",
+                      "OuterB"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "data"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": {
+                    "choice": {
+                      "data": {
+                        "text": "Neque nisi quibusdam nisi sint sunt."
+                      },
+                      "kind": "InnerA"
+                    }
+                  },
+                  "kind": "OuterA"
+                },
+                "schema": {
+                  "discriminator": {
+                    "mapping": {
+                      "OuterA": "#/components/schemas/OuterAOrOuterBOuterAEnvelope9d05003798bcccc3",
+                      "OuterB": "#/components/schemas/OuterAOrOuterBOuterBEnvelope27ac53b26ab0a3f2"
+                    },
+                    "propertyName": "kind"
+                  },
+                  "example": {
+                    "data": {
+                      "choice": {
+                        "data": {
+                          "text": "Neque nisi quibusdam nisi sint sunt."
+                        },
+                        "kind": "InnerA"
+                      }
+                    },
+                    "kind": "OuterA"
+                  },
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/OuterAOrOuterBOuterAEnvelope9d05003798bcccc3"
+                    },
+                    {
+                      "$ref": "#/components/schemas/OuterAOrOuterBOuterBEnvelope27ac53b26ab0a3f2"
+                    }
+                  ],
+                  "properties": {
+                    "data": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/components/schemas/OuterA"
+                        },
+                        {
+                          "$ref": "#/components/schemas/OuterB"
+                        }
+                      ]
+                    },
+                    "kind": {
+                      "enum": [
+                        "OuterA",
+                        "OuterB"
+                      ],
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "Show NestedTopLevelConstructorUnionCustomKeys",
+        "tags": [
+          "NestedTopLevelConstructorUnionCustomKeys"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "NestedTopLevelConstructorUnionCustomKeys"
+    }
+  ]
+}

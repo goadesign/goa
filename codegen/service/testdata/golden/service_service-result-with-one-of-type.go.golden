@@ -197,19 +197,22 @@ func NewViewedResultOneof(res *ResultOneof, view string) *resultwithoneoftypevie
 func newResultOneof(vres *resultwithoneoftypeviews.ResultOneofView) *ResultOneof {
 	res := &ResultOneof{}
 	if vres.Result.Kind() != "" {
-		switch string(vres.Result.Kind()) {
-		case "t":
-			actual, _ := vres.Result.AsT()
-			obj := transformResultwithoneoftypeviewsTViewToT(actual)
-			u := res.Result
-			u.SetT((*T)(obj))
-			res.Result = u
-		case "u":
-			actual, _ := vres.Result.AsU()
-			obj := transformResultwithoneoftypeviewsUViewToU(actual)
-			u := res.Result
-			u.SetU((*U)(obj))
-			res.Result = u
+
+		if vres.Result != nil {
+			switch string(vres.Result.Kind()) {
+			case "t":
+				actual, _ := vres.Result.AsT()
+				obj := transformResultwithoneoftypeviewsTViewToT(actual)
+				u := res.Result
+				u.SetT((*T)(obj))
+				res.Result = u
+			case "u":
+				actual, _ := vres.Result.AsU()
+				obj := transformResultwithoneoftypeviewsUViewToU(actual)
+				u := res.Result
+				u.SetU((*U)(obj))
+				res.Result = u
+			}
 		}
 	}
 	return res
@@ -220,19 +223,22 @@ func newResultOneof(vres *resultwithoneoftypeviews.ResultOneofView) *ResultOneof
 func newResultOneofView(res *ResultOneof) *resultwithoneoftypeviews.ResultOneofView {
 	vres := &resultwithoneoftypeviews.ResultOneofView{}
 	if res.Result.Kind() != "" {
-		switch string(res.Result.Kind()) {
-		case "t":
-			actual, _ := res.Result.AsT()
-			obj := transformTToResultwithoneoftypeviewsTView(actual)
-			u := vres.Result
-			u.SetT((*resultwithoneoftypeviews.TView)(obj))
-			vres.Result = u
-		case "u":
-			actual, _ := res.Result.AsU()
-			obj := transformUToResultwithoneoftypeviewsUView(actual)
-			u := vres.Result
-			u.SetU((*resultwithoneoftypeviews.UView)(obj))
-			vres.Result = u
+
+		if res.Result != nil {
+			switch string(res.Result.Kind()) {
+			case "t":
+				actual, _ := res.Result.AsT()
+				obj := transformTToResultwithoneoftypeviewsTView(actual)
+				u := vres.Result
+				u.SetT((*resultwithoneoftypeviews.TView)(obj))
+				vres.Result = u
+			case "u":
+				actual, _ := res.Result.AsU()
+				obj := transformUToResultwithoneoftypeviewsUView(actual)
+				u := vres.Result
+				u.SetU((*resultwithoneoftypeviews.UView)(obj))
+				vres.Result = u
+			}
 		}
 	}
 	return vres

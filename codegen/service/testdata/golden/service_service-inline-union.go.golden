@@ -1,0 +1,172 @@
+
+// Service is the InlineUnionService service interface.
+type Service interface {
+	// Show implements Show.
+	Show(context.Context, *TextResultOrJSONResult) (res *TextResultOrJSONResult, err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "InlineUnionService"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [1]string{"Show"}
+
+type JSONResult struct {
+	Message string
+}
+
+type TextResult struct {
+	Text string
+}
+
+// TextResultOrJSONResult is a sum-type union.
+type TextResultOrJSONResult struct {
+	kind       TextResultOrJSONResultKind
+	TextResult *TextResult
+	JSONResult *JSONResult
+}
+
+// TextResultOrJSONResultKind enumerates the union variants for TextResultOrJSONResult.
+type TextResultOrJSONResultKind string
+
+const (
+	// TextResultOrJSONResultKindTextResult identifies the TextResult branch of the union.
+	TextResultOrJSONResultKindTextResult TextResultOrJSONResultKind = "TextResult"
+	// TextResultOrJSONResultKindJSONResult identifies the JSONResult branch of the union.
+	TextResultOrJSONResultKindJSONResult TextResultOrJSONResultKind = "JSONResult"
+)
+
+// Kind returns the discriminator value of the union.
+func (u TextResultOrJSONResult) Kind() TextResultOrJSONResultKind {
+	return u.kind
+}
+
+// NewTextResultOrJSONResultTextResult constructs a TextResultOrJSONResult with the TextResult branch set.
+func NewTextResultOrJSONResultTextResult(v *TextResult) TextResultOrJSONResult {
+	return TextResultOrJSONResult{
+		kind:       TextResultOrJSONResultKindTextResult,
+		TextResult: v,
+	}
+}
+
+// AsTextResult returns the value of the TextResult branch if set.
+func (u TextResultOrJSONResult) AsTextResult() (_ *TextResult, ok bool) {
+	if u.kind != TextResultOrJSONResultKindTextResult {
+		return
+	}
+	return u.TextResult, true
+}
+
+// SetTextResult sets the TextResult branch of the union.
+func (u *TextResultOrJSONResult) SetTextResult(v *TextResult) {
+	u.kind = TextResultOrJSONResultKindTextResult
+	u.TextResult = v
+}
+
+// NewTextResultOrJSONResultJSONResult constructs a TextResultOrJSONResult with the JSONResult branch set.
+func NewTextResultOrJSONResultJSONResult(v *JSONResult) TextResultOrJSONResult {
+	return TextResultOrJSONResult{
+		kind:       TextResultOrJSONResultKindJSONResult,
+		JSONResult: v,
+	}
+}
+
+// AsJSONResult returns the value of the JSONResult branch if set.
+func (u TextResultOrJSONResult) AsJSONResult() (_ *JSONResult, ok bool) {
+	if u.kind != TextResultOrJSONResultKindJSONResult {
+		return
+	}
+	return u.JSONResult, true
+}
+
+// SetJSONResult sets the JSONResult branch of the union.
+func (u *TextResultOrJSONResult) SetJSONResult(v *JSONResult) {
+	u.kind = TextResultOrJSONResultKindJSONResult
+	u.JSONResult = v
+}
+
+// Validate ensures the union discriminant is valid.
+func (u TextResultOrJSONResult) Validate() error {
+	switch u.kind {
+	case "":
+		return goa.InvalidEnumValueError("type", "", []any{
+			string(TextResultOrJSONResultKindTextResult),
+			string(TextResultOrJSONResultKindJSONResult),
+		})
+	case TextResultOrJSONResultKindTextResult:
+		return nil
+	case TextResultOrJSONResultKindJSONResult:
+		return nil
+	default:
+		return goa.InvalidEnumValueError("type", u.kind, []any{
+			string(TextResultOrJSONResultKindTextResult),
+			string(TextResultOrJSONResultKindJSONResult),
+		})
+	}
+}
+
+// MarshalJSON marshals the union into the canonical {type,value} JSON shape.
+func (u TextResultOrJSONResult) MarshalJSON() ([]byte, error) {
+	if err := u.Validate(); err != nil {
+		return nil, err
+	}
+	var (
+		value any
+	)
+	switch u.kind {
+	case TextResultOrJSONResultKindTextResult:
+		value = u.TextResult
+	case TextResultOrJSONResultKindJSONResult:
+		value = u.JSONResult
+	default:
+		return nil, fmt.Errorf("unexpected TextResultOrJSONResult discriminant %q", u.kind)
+	}
+	return json.Marshal(struct {
+		Type  string `json:"type"`
+		Value any    `json:"value"`
+	}{
+		Type:  string(u.kind),
+		Value: value,
+	})
+}
+
+// UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
+func (u *TextResultOrJSONResult) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	switch raw.Type {
+	case string(TextResultOrJSONResultKindTextResult):
+		var v *TextResult
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = TextResultOrJSONResultKindTextResult
+		u.TextResult = v
+	case string(TextResultOrJSONResultKindJSONResult):
+		var v *JSONResult
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = TextResultOrJSONResultKindJSONResult
+		u.JSONResult = v
+	default:
+		return fmt.Errorf("unexpected TextResultOrJSONResult type %q", raw.Type)
+	}
+	return nil
+}
+
