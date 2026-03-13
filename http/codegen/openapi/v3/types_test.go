@@ -875,6 +875,74 @@ func TestInitExamplesUsesMatchingObjectBranchForUserExample(t *testing.T) {
 	}
 }
 
+func TestInitExamplesPropagatesUnionFieldUserExampleToPayloadExample(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.ConstructorUnionUserExampleSecondBranchHTTPDSL)
+	attr := root.API.HTTP.Services[0].HTTPEndpoints[0].Body
+	exampler := &testExampler{}
+	choice := attr.Find("choice")
+	if choice == nil {
+		t.Fatalf("expected choice attribute on HTTP body")
+	}
+	if len(choice.ExtractUserExamples()) == 0 {
+		t.Fatalf("expected direct body choice user examples")
+	}
+	if ut, ok := attr.Type.(expr.UserType); ok {
+		utChoice := ut.Attribute().Find("choice")
+		if utChoice == nil {
+			t.Fatalf("expected choice attribute on body user type")
+		}
+		if len(utChoice.ExtractUserExamples()) == 0 {
+			t.Fatalf("expected user type choice user examples")
+		}
+	}
+
+	initExamples(exampler, attr, root.API.ExampleGenerator)
+
+	raw, ok := exampler.example.(map[string]any)
+	if !ok {
+		t.Fatalf("expected payload object example, got %T", exampler.example)
+	}
+	choiceExample, ok := raw["choice"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected canonicalized union example, got %#v", raw["choice"])
+	}
+	if choiceExample["type"] != "JSONPayload" {
+		t.Fatalf("expected payload union type %q, got %#v", "JSONPayload", choiceExample["type"])
+	}
+	value, ok := choiceExample["value"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected union value object, got %#v", choiceExample["value"])
+	}
+	if value["message"] != "hello" {
+		t.Fatalf("expected user example message %q, got %#v", "hello", value["message"])
+	}
+}
+
+func TestSchemafyUsesUnionFieldUserExample(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.ConstructorUnionUserExampleSecondBranchHTTPDSL)
+	attr := root.API.HTTP.Services[0].HTTPEndpoints[0].Body.Find("choice")
+	if attr == nil {
+		t.Fatalf("expected choice attribute on HTTP body")
+	}
+	sf := newSchemafier(root.API.ExampleGenerator)
+
+	schema := sf.schemafy(attr)
+	example, ok := schema.Example.(map[string]any)
+	if !ok {
+		t.Fatalf("expected schema example map, got %T", schema.Example)
+	}
+	if example["type"] != "JSONPayload" {
+		t.Fatalf("expected schema union type %q, got %#v", "JSONPayload", example["type"])
+	}
+	value, ok := example["value"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected union value object, got %#v", example["value"])
+	}
+	if value["message"] != "hello" {
+		t.Fatalf("expected schema user example message %q, got %#v", "hello", value["message"])
+	}
+}
+
 func TestInitExamplesCanonicalizesNestedTopLevelUnionExamples(t *testing.T) {
 	root := codegen.RunDSL(t, testdata.NestedTopLevelConstructorUnionHTTPDSL)
 	attr := root.Services[0].Methods[0].Payload
@@ -939,6 +1007,26 @@ func TestBuildBodyTypesRecursiveConstructorUnion(t *testing.T) {
 	}
 	if len(types) == 0 {
 		t.Fatalf("expected generated schemas for recursive constructor union")
+	}
+}
+
+func TestHTTPBodyPreservesUnionFieldUserExamples(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.ConstructorUnionUserExampleSecondBranchHTTPDSL)
+	body := root.API.HTTP.Services[0].HTTPEndpoints[0].Body
+	choice := body.Find("choice")
+	if choice == nil {
+		t.Fatalf("expected choice attribute on HTTP body")
+	}
+	examples := choice.ExtractUserExamples()
+	if len(examples) == 0 {
+		t.Fatalf("expected union field user examples to be preserved on HTTP body")
+	}
+	value, ok := examples[len(examples)-1].Value.(map[string]any)
+	if !ok {
+		t.Fatalf("expected user example map, got %T", examples[len(examples)-1].Value)
+	}
+	if value["message"] != "hello" {
+		t.Fatalf("expected preserved user example message %q, got %#v", "hello", value["message"])
 	}
 }
 

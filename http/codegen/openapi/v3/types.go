@@ -283,7 +283,11 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 
 	// Default value, example, extensions
 	s.DefaultValue = toStringMap(attr.DefaultValue)
-	s.Example = canonicalizeGeneratedExampleValue(attr, attr.Example(sf.rand), sf)
+	if examples := attr.ExtractUserExamples(); len(examples) > 0 {
+		s.Example = canonicalizeExampleValue(attr, examples[len(examples)-1].Value, sf)
+	} else {
+		s.Example = canonicalizeGeneratedExampleValue(attr, attr.Example(sf.rand), sf)
+	}
 	if metaExtensions := openapi.ExtensionsFromExpr(attr.Meta); len(metaExtensions) > 0 {
 		if s.Extensions == nil {
 			s.Extensions = make(map[string]any, len(metaExtensions))

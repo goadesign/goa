@@ -104,15 +104,35 @@ func canonicalizeUnionExample(union *expr.Union, value any, sf *schemafier) any 
 func canonicalizeGeneratedObjectExample(obj *expr.Object, value any, sf *schemafier) any {
 	raw, ok := value.(map[string]any)
 	if !ok {
-		return value
+		raw = nil
 	}
-	res := make(map[string]any, len(raw))
-	for k, v := range raw {
-		if nat := obj.Attribute(k); nat != nil {
-			res[k] = canonicalizeGeneratedExampleValue(nat, v, sf)
-			continue
+	res := make(map[string]any, len(*obj))
+	for _, nat := range *obj {
+		childValue, found := any(nil), false
+		useUserExample := false
+		if raw != nil {
+			childValue, found = raw[nat.Name]
 		}
-		res[k] = v
+		if len(nat.Attribute.ExtractUserExamples()) > 0 {
+			childValue = nat.Attribute.Example(sf.rand)
+			found = true
+			useUserExample = true
+		}
+		if found {
+			if useUserExample {
+				res[nat.Name] = canonicalizeExampleValue(nat.Attribute, childValue, sf)
+			} else {
+				res[nat.Name] = canonicalizeGeneratedExampleValue(nat.Attribute, childValue, sf)
+			}
+		}
+	}
+	if raw != nil {
+		for k, v := range raw {
+			if _, ok := res[k]; ok {
+				continue
+			}
+			res[k] = v
+		}
 	}
 	return res
 }

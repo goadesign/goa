@@ -4,9 +4,9 @@
       "ExamplePayload": {
         "example": {
           "choice": {
-            "type": "TextPayload",
+            "type": "JSONPayload",
             "value": {
-              "text": "Ullam aut."
+              "message": "hello"
             }
           }
         },
@@ -20,9 +20,9 @@
               "propertyName": "type"
             },
             "example": {
-              "type": "TextPayload",
+              "type": "JSONPayload",
               "value": {
-                "text": "Ullam aut."
+                "message": "hello"
               }
             },
             "oneOf": [
@@ -146,9 +146,9 @@
             "application/json": {
               "example": {
                 "choice": {
-                  "type": "TextPayload",
+                  "type": "JSONPayload",
                   "value": {
-                    "text": "Iste perspiciatis."
+                    "message": "hello"
                   }
                 }
               },
@@ -165,9 +165,9 @@
               "application/json": {
                 "example": {
                   "choice": {
-                    "type": "TextPayload",
+                    "type": "JSONPayload",
                     "value": {
-                      "text": "Harum et."
+                      "message": "hello"
                     }
                   }
                 },

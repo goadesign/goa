@@ -20,9 +20,9 @@ paths:
                             $ref: '#/components/schemas/ExamplePayload'
                         example:
                             choice:
-                                type: TextPayload
+                                type: JSONPayload
                                 value:
-                                    text: Iste perspiciatis.
+                                    message: hello
             responses:
                 "200":
                     description: OK response.
@@ -32,9 +32,9 @@ paths:
                                 $ref: '#/components/schemas/ExamplePayload'
                             example:
                                 choice:
-                                    type: TextPayload
+                                    type: JSONPayload
                                     value:
-                                        text: Harum et.
+                                        message: hello
 components:
     schemas:
         ExamplePayload:
@@ -47,9 +47,9 @@ components:
                             TextPayload: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope80d6bc984d45350d'
                         propertyName: type
                     example:
-                        type: TextPayload
+                        type: JSONPayload
                         value:
-                            text: Ullam aut.
+                            message: hello
                     oneOf:
                         - $ref: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope80d6bc984d45350d'
                         - $ref: '#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope1d1e27eb46f1e82c'
@@ -69,9 +69,9 @@ components:
                     type: object
             example:
                 choice:
-                    type: TextPayload
+                    type: JSONPayload
                     value:
-                        text: Ullam aut.
+                        message: hello
             required:
                 - choice
         JSONPayload:
