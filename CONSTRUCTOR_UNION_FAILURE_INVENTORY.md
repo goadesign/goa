@@ -102,7 +102,8 @@ Do not call the feature done until each item is:
 - [x] HTTP and gRPC CLI generation support top-level constructor-form union payloads in covered smoke tests without generation failures.
 - [ ] gRPC code generation supports constructor-form unions, including top-level method payloads/results, without invalid `.proto` output or generator panics.
 - [ ] CLI generation handles constructor-form unions, including top-level payloads/results, without generation failures or unusable clients.
-- [ ] `Error(...)` declarations with constructor-form unions either work correctly end to end or fail with a precise, intentional DSL/codegen error.
+- [x] `Error(...)` declarations with constructor-form unions fail with a precise, intentional DSL validation error in covered cases.
+- [x] gRPC error conversion no longer needs to handle constructor-form union error types because union-typed errors are rejected before transport/codegen.
 
 ## Open Items Under Active Audit
 
@@ -143,6 +144,7 @@ Do not call the feature done until each item is:
 - [ ] Multipart and WebSocket streaming coverage for constructor-form unions, asserting intentional support or precise rejection.
 - [ ] Security-analysis coverage where an auth token is reachable only inside a constructor-union branch, asserting a precise failure mode.
 - [ ] Repeated identical anonymous constructor unions across multiple methods, asserting deduping/naming behavior is intentional and collision-free.
+- [x] `Error(...)` coverage where the error type is a constructor-form union, asserting HTTP and gRPC either generate the required transforms and mappings or fail with a precise DSL/codegen error.
 
 ## Deferred Limitations
 

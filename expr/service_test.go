@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	. "goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/expr/testdata"
 )
@@ -113,6 +114,27 @@ func TestErrorExprValidate(t *testing.T) {
 		Error string
 	}{
 		{"no error", testdata.ValidErrorsDSL, ""},
+		{
+			"constructor union error type",
+			func() {
+				TextError := Type("TextError", func() {
+					ErrorName("name", String)
+					Attribute("message", String)
+					Required("name", "message")
+				})
+				JSONError := Type("JSONError", func() {
+					ErrorName("name", String)
+					Attribute("detail", String)
+					Required("name", "detail")
+				})
+				Service("Calc", func() {
+					Method("Divide", func() {
+						Error("bad_request", OneOf(TextError, JSONError))
+					})
+				})
+			},
+			`attribute: error type "bad_request" must not be a union; use separate named errors or an object type`,
+		},
 		{"invalid-struct-error-name-meta", testdata.InvalidStructErrorNameDSL,
 			`attribute: error name "a" must be required in type "ServiceError"
 attribute: duplicate error names in type "Error"

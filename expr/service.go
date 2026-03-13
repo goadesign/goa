@@ -105,6 +105,10 @@ func (s *ServiceExpr) Finalize() {
 // custom error types.
 func (e *ErrorExpr) Validate() error {
 	verr := new(eval.ValidationErrors)
+	if IsUnion(e.Type) {
+		verr.Add(e, "error type %q must not be a union; use separate named errors or an object type", e.Name)
+		return verr
+	}
 	var errField string
 	walkAttribute(e.AttributeExpr, func(name string, att *AttributeExpr) error { // nolint: errcheck
 		if _, ok := att.Meta["struct:error:name"]; ok {
