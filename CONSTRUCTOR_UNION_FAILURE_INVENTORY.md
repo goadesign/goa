@@ -90,11 +90,12 @@ Do not call the feature done until each item is:
 
 - [ ] The change does not alter unrelated code paths.
 - [x] Existing repo rules in `AGENTS.md` are currently satisfied in the touched code.
-- [ ] `make test` passes after the final change set.
-- [ ] `make lint` passes after the final change set.
+- [x] `make test` passes after the current change set.
+- [x] `make lint` passes after the current change set.
 
 ## Other Goa Surfaces
 
+- [x] Unary gRPC code generation supports top-level constructor-form union payloads/results in covered smoke tests without invalid `.proto` output or generator panics.
 - [ ] gRPC code generation supports constructor-form unions, including top-level method payloads/results, without invalid `.proto` output or generator panics.
 - [ ] CLI generation handles constructor-form unions, including top-level payloads/results, without generation failures or unusable clients.
 - [ ] `Error(...)` declarations with constructor-form unions either work correctly end to end or fail with a precise, intentional DSL/codegen error.
@@ -115,6 +116,7 @@ Do not call the feature done until each item is:
 - Invalid HTTP placements for constructor unions.
 - Validation/default rendering gaps for constructor unions.
 - Multipart, WebSocket streaming, and security-analysis behavior for constructor unions.
+- Broader gRPC coverage beyond the covered unary top-level payload/result smoke path.
 - Anonymous-union deduping and helper/type collisions across repeated use sites.
 
 ## Priority Tests To Add

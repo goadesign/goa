@@ -89,6 +89,22 @@ func TestMessageDefSection(t *testing.T) {
 	}
 }
 
+func TestConstructorUnionUnaryRPCProtoFiles(t *testing.T) {
+	root := RunGRPCDSL(t, testdata.ConstructorUnionUnaryRPCDSL)
+	services := CreateGRPCServices(root)
+	fs := ProtoFiles("", services)
+	require.Len(t, fs, 1)
+
+	sections := fs[0].SectionTemplates
+	require.GreaterOrEqual(t, len(sections), 3)
+
+	code := sectionCode(t, sections[1:]...)
+	assert.Contains(t, code, "oneof")
+
+	fpath := codegen.CreateTempFile(t, code)
+	assert.NoError(t, protoc(defaultProtocCmd, fpath, nil), "error occurred when compiling constructor union proto file %q", fpath)
+}
+
 func TestProtoc(t *testing.T) {
 	const code = testdata.UnaryRPCsProtoCode
 

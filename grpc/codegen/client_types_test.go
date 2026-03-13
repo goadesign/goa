@@ -3,6 +3,7 @@ package codegen
 import (
 	"bytes"
 	"goa.design/goa/v3/codegen/testutil"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -40,5 +41,24 @@ func TestClientTypeFiles(t *testing.T) {
 			code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
 			testutil.AssertGo(t, "testdata/golden/client_types_"+c.Name+".go.golden", code)
 		})
+	}
+}
+
+func TestConstructorUnionUnaryRPCClientTypeFiles(t *testing.T) {
+	root := RunGRPCDSL(t, testdata.ConstructorUnionUnaryRPCDSL)
+	services := CreateGRPCServices(root)
+	fs := ClientTypeFiles("", services)
+	require.Len(t, fs, 1)
+
+	var buf bytes.Buffer
+	for _, s := range fs[0].SectionTemplates[1:] {
+		require.NoError(t, s.Write(&buf))
+	}
+	code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
+	if !strings.Contains(code, "TextPayload") || !strings.Contains(code, "JSONPayload") {
+		t.Errorf("expected client type generation to reference constructor union payload branches, got %q", code)
+	}
+	if !strings.Contains(code, "TextResult") || !strings.Contains(code, "JSONResult") {
+		t.Errorf("expected client type generation to reference constructor union result branches, got %q", code)
 	}
 }

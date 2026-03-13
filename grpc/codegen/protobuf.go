@@ -270,35 +270,7 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	case *expr.Map:
 		return fmt.Sprintf("map<%s, %s>", protoType(actual.KeyType, sd), protoType(actual.ElemType, sd))
 	case *expr.Union:
-		// Compute oneof name and ensure it does not collide with any of the member field names
-		oneofName := codegen.SnakeCase(protoBufify(actual.Name(), false, false))
-		var fieldNames []string
-		for _, nat := range actual.Values {
-			fn := codegen.SnakeCase(protoBufify(nat.Name, false, false))
-			fieldNames = append(fieldNames, fn)
-		}
-		for slices.Contains(fieldNames, oneofName) {
-			oneofName += "_oneof"
-		}
-		def := "\toneof " + oneofName + " {"
-		for i, nat := range actual.Values {
-			fn := fieldNames[i]
-			fnum := rpcTag(nat.Attribute)
-			var typ string
-			if prim := getPrimitive(nat.Attribute); prim != nil {
-				typ = protoType(prim, sd)
-			} else {
-				typ = protoType(nat.Attribute, sd)
-			}
-			var desc string
-			if d := nat.Attribute.Description; d != "" {
-				desc = codegen.Comment(d) + "\n\t"
-			}
-			opt := protoJSONOption(nat.Attribute)
-			def += fmt.Sprintf("\n\t\t%s%s %s = %d%s;", desc, typ, fn, fnum, opt)
-		}
-		def += "\n\t}"
-		return def
+		return " {\n" + protoBufOneOfDef(actual, sd, map[uint64]struct{}{}) + "\n}"
 	case expr.UserType:
 		if actual == expr.Empty {
 			return " {}"
@@ -310,9 +282,17 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	case *expr.Object:
 		var ss []string
 		ss = append(ss, " {")
+		usedTags := make(map[uint64]struct{})
+		for _, nat := range *actual {
+			if !expr.IsUnion(nat.Attribute.Type) {
+				if tag := rpcTag(nat.Attribute); tag > 0 {
+					usedTags[tag] = struct{}{}
+				}
+			}
+		}
 		for _, nat := range *actual {
 			if expr.IsUnion(nat.Attribute.Type) {
-				ss = append(ss, protoBufMessageDef(nat.Attribute, sd))
+				ss = append(ss, protoBufOneOfDef(expr.AsUnion(nat.Attribute.Type), sd, usedTags))
 				continue
 			}
 			var (
@@ -345,6 +325,53 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
+}
+
+func protoBufOneOfDef(actual *expr.Union, sd *ServiceData, usedTags map[uint64]struct{}) string {
+	// Compute oneof name and ensure it does not collide with any of the member field names
+	oneofName := codegen.SnakeCase(protoBufify(actual.Name(), false, false))
+	fieldNames := make([]string, 0, len(actual.Values))
+	for _, nat := range actual.Values {
+		fn := codegen.SnakeCase(protoBufify(nat.Name, false, false))
+		fieldNames = append(fieldNames, fn)
+	}
+	for slices.Contains(fieldNames, oneofName) {
+		oneofName += "_oneof"
+	}
+	def := "\toneof " + oneofName + " {"
+	nextTag := func() uint64 {
+		var tag uint64 = 1
+		for {
+			if _, ok := usedTags[tag]; !ok {
+				usedTags[tag] = struct{}{}
+				return tag
+			}
+			tag++
+		}
+	}
+	for i, nat := range actual.Values {
+		fn := fieldNames[i]
+		fnum := rpcTag(nat.Attribute)
+		if fnum == 0 {
+			fnum = nextTag()
+		} else {
+			usedTags[fnum] = struct{}{}
+		}
+		var typ string
+		if prim := getPrimitive(nat.Attribute); prim != nil {
+			typ = protoType(prim, sd)
+		} else {
+			typ = protoType(nat.Attribute, sd)
+		}
+		var desc string
+		if d := nat.Attribute.Description; d != "" {
+			desc = codegen.Comment(d) + "\n\t"
+		}
+		opt := protoJSONOption(nat.Attribute)
+		def += fmt.Sprintf("\n\t\t%s%s %s = %d%s;", desc, typ, fn, fnum, opt)
+	}
+	def += "\n\t}"
+	return def
 }
 
 func protoJSONOption(att *expr.AttributeExpr) string {

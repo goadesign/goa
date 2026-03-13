@@ -84,6 +84,29 @@ var UnaryRPCWithErrorsDSL = func() {
 	})
 }
 
+var ConstructorUnionUnaryRPCDSL = func() {
+	var TextPayload = Type("TextPayload", func() {
+		Field(1, "text", String)
+	})
+	var JSONPayload = Type("JSONPayload", func() {
+		Field(1, "message", String)
+	})
+	var TextResult = Type("TextResult", func() {
+		Field(1, "text", String)
+	})
+	var JSONResult = Type("JSONResult", func() {
+		Field(1, "message", String)
+	})
+
+	Service("ConstructorUnionUnaryRPC", func() {
+		Method("Show", func() {
+			Payload(OneOf(TextPayload, JSONPayload))
+			Result(OneOf(TextResult, JSONResult))
+			GRPC(func() {})
+		})
+	})
+}
+
 var ElemValidationDSL = func() {
 	var PayloadType = Type("PayloadType", func() {
 		Field(1, "foo", MapOf(String, ArrayOf(String)), func() {
