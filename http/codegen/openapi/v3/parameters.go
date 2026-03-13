@@ -6,6 +6,7 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
+	openapiinternal "goa.design/goa/v3/http/codegen/openapi/internal"
 )
 
 // paramsFromPath computes the OpenAPI spec parameters for the given endpoint
@@ -22,7 +23,7 @@ func paramsFromPath(endpoint *expr.HTTPEndpointExpr, path string, rand *expr.Exa
 			in = "path"
 			required = true
 		}
-		if in != "path" && openapi.IsSecurityParameter(endpoint, in, pn) {
+		if in != "path" && openapiinternal.IsSecurityParameter(endpoint, in, pn) {
 			return nil
 		}
 		res = append(res, paramFor(at, pn, in, required, rand))
@@ -37,7 +38,7 @@ func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.Exa
 	var params []*Parameter
 
 	expr.WalkMappedAttr(endpoint.Headers, func(name, elem string, att *expr.AttributeExpr) error { // nolint: errcheck
-		if openapi.IsSecurityParameter(endpoint, "header", elem) {
+		if openapiinternal.IsSecurityParameter(endpoint, "header", elem) {
 			return nil
 		}
 		required := endpoint.Headers.IsRequiredNoDefault(name)
@@ -45,7 +46,7 @@ func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.Exa
 		return nil
 	})
 	expr.WalkMappedAttr(endpoint.Cookies, func(name, elem string, att *expr.AttributeExpr) error { // nolint: errcheck
-		if openapi.IsSecurityParameter(endpoint, "cookie", elem) {
+		if openapiinternal.IsSecurityParameter(endpoint, "cookie", elem) {
 			return nil
 		}
 		required := endpoint.Cookies.IsRequiredNoDefault(name)

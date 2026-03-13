@@ -12,6 +12,7 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
+	openapiinternal "goa.design/goa/v3/http/codegen/openapi/internal"
 )
 
 // NewV2 returns the OpenAPI v2 specification for the given API.
@@ -35,7 +36,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	if hasAbsoluteRoutes(root) {
 		basePath = ""
 	}
-	params := paramsFromExpr(root.API.HTTP.Params, basePath)
+	params := paramsFromExpr(nil, root.API.HTTP.Params, basePath)
 	var paramMap map[string]*Parameter
 	if len(params) > 0 {
 		paramMap = make(map[string]*Parameter, len(params))
@@ -269,11 +270,7 @@ func summaryFromMeta(name string, meta expr.MetaExpr) string {
 	return name
 }
 
-func paramsFromExpr(params *expr.MappedAttributeExpr, path string) []*Parameter {
-	return paramsFromExprForEndpoint(nil, params, path)
-}
-
-func paramsFromExprForEndpoint(endpoint *expr.HTTPEndpointExpr, params *expr.MappedAttributeExpr, path string) []*Parameter {
+func paramsFromExpr(endpoint *expr.HTTPEndpointExpr, params *expr.MappedAttributeExpr, path string) []*Parameter {
 	if params == nil {
 		return nil
 	}
@@ -287,7 +284,7 @@ func paramsFromExprForEndpoint(endpoint *expr.HTTPEndpointExpr, params *expr.Map
 			in = "path"
 			required = true
 		}
-		if endpoint != nil && in != "path" && openapi.IsSecurityParameter(endpoint, in, pn) {
+		if endpoint != nil && in != "path" && openapiinternal.IsSecurityParameter(endpoint, in, pn) {
 			return nil
 		}
 		param := paramFor(at, pn, in, required)
@@ -301,7 +298,7 @@ func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr) []*Parameter {
 	var params []*Parameter
 
 	expr.WalkMappedAttr(endpoint.Headers, func(name, elem string, att *expr.AttributeExpr) error { // nolint: errcheck
-		if openapi.IsSecurityParameter(endpoint, "header", elem) {
+		if openapiinternal.IsSecurityParameter(endpoint, "header", elem) {
 			return nil
 		}
 		required := endpoint.Headers.IsRequiredNoDefault(name)
@@ -499,7 +496,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		// Remove any wildcards that is defined in path as a workaround to
 		// https://github.com/OAI/OpenAPI-Specification/issues/291
 		key = expr.HTTPWildcardRegex.ReplaceAllString(key, "/{$1}")
-		params := paramsFromExprForEndpoint(endpoint, endpoint.Params, key)
+		params := paramsFromExpr(endpoint, endpoint.Params, key)
 		params = append(params, paramsFromHeaders(endpoint)...)
 		var produces []string
 
