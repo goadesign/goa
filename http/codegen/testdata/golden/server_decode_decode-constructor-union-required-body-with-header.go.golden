@@ -25,6 +25,10 @@ func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 			switch string(body.Kind()) {
 			case "RequiredBodyWithHeaderTextPayload":
 				actual, _ := body.AsRequiredBodyWithHeaderTextPayload()
+				if actual == nil {
+					err = goa.MergeErrors(err, goa.MissingFieldError("value", "body.value"))
+					break
+				}
 				if actual != nil {
 					if err2 := ValidateRequiredBodyWithHeaderTextPayload(actual); err2 != nil {
 						err = goa.MergeErrors(err, err2)
@@ -32,6 +36,10 @@ func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 				}
 			case "RequiredBodyWithHeaderJSONPayload":
 				actual, _ := body.AsRequiredBodyWithHeaderJSONPayload()
+				if actual == nil {
+					err = goa.MergeErrors(err, goa.MissingFieldError("value", "body.value"))
+					break
+				}
 				if actual != nil {
 					if err2 := ValidateRequiredBodyWithHeaderJSONPayload(actual); err2 != nil {
 						err = goa.MergeErrors(err, err2)

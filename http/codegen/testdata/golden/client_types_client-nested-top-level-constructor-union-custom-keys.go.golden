@@ -357,6 +357,10 @@ func ValidateOuterA(body *OuterA) (err error) {
 	switch string(body.Choice.Kind()) {
 	case "InnerA":
 		actual, _ := body.Choice.AsInnerA()
+		if actual == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("value", "body.choice.value"))
+			break
+		}
 		if actual != nil {
 			if err2 := ValidateInnerA(actual); err2 != nil {
 				err = goa.MergeErrors(err, err2)
@@ -364,6 +368,10 @@ func ValidateOuterA(body *OuterA) (err error) {
 		}
 	case "InnerB":
 		actual, _ := body.Choice.AsInnerB()
+		if actual == nil {
+			err = goa.MergeErrors(err, goa.MissingFieldError("value", "body.choice.value"))
+			break
+		}
 		if actual != nil {
 			if err2 := ValidateInnerB(actual); err2 != nil {
 				err = goa.MergeErrors(err, err2)

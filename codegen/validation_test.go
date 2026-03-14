@@ -143,6 +143,7 @@ func TestRecursiveValidationCode(t *testing.T) {
 		require.Contains(t, code, "switch string(target.Choice.Kind())")
 		require.Contains(t, code, "case \"text\":")
 		require.Contains(t, code, "case \"json\":")
+		require.Contains(t, code, "goa.MissingFieldError(\"value\", \"target.Choice.value\")")
 	})
 
 	t.Run("invalid-constructor-union-fails-before-validation", func(t *testing.T) {

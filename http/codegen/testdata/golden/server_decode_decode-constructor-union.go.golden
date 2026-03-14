@@ -25,6 +25,10 @@ func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 			switch string(body.Kind()) {
 			case "TextPayload":
 				actual, _ := body.AsTextPayload()
+				if actual == nil {
+					err = goa.MergeErrors(err, goa.MissingFieldError("value", "body.value"))
+					break
+				}
 				if actual != nil {
 					if err2 := ValidateTextPayload(actual); err2 != nil {
 						err = goa.MergeErrors(err, err2)
@@ -32,6 +36,10 @@ func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 				}
 			case "JSONPayload":
 				actual, _ := body.AsJSONPayload()
+				if actual == nil {
+					err = goa.MergeErrors(err, goa.MissingFieldError("value", "body.value"))
+					break
+				}
 				if actual != nil {
 					if err2 := ValidateJSONPayload(actual); err2 != nil {
 						err = goa.MergeErrors(err, err2)
