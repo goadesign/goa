@@ -128,6 +128,10 @@ func TestClientEncode(t *testing.T) {
 		{"body-map-string-validate", testdata.PayloadBodyMapStringValidateDSL},
 		{"body-map-user", testdata.PayloadBodyMapUserDSL},
 		{"body-map-user-validate", testdata.PayloadBodyMapUserValidateDSL},
+		{"body-constructor-union", testdata.ConstructorUnionHTTPDSL},
+		{"body-constructor-union-custom-keys", testdata.ConstructorUnionCustomKeysHTTPDSL},
+		{"body-nested-constructor-union", testdata.NestedConstructorUnionHTTPDSL},
+		{"body-nested-top-level-constructor-union-custom-keys", testdata.NestedTopLevelConstructorUnionCustomKeysHTTPDSL},
 
 		{"body-primitive-string-validate", testdata.PayloadBodyPrimitiveStringValidateDSL},
 		{"body-primitive-bool-validate", testdata.PayloadBodyPrimitiveBoolValidateDSL},

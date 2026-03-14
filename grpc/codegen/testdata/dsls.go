@@ -107,6 +107,29 @@ var ConstructorUnionUnaryRPCDSL = func() {
 	})
 }
 
+var ConstructorUnionBidirectionalStreamingRPCDSL = func() {
+	var TextStreamPayload = Type("TextStreamPayload", func() {
+		Field(1, "text", String)
+	})
+	var JSONStreamPayload = Type("JSONStreamPayload", func() {
+		Field(1, "message", String)
+	})
+	var TextStreamResult = Type("TextStreamResult", func() {
+		Field(1, "text", String)
+	})
+	var JSONStreamResult = Type("JSONStreamResult", func() {
+		Field(1, "message", String)
+	})
+
+	Service("ConstructorUnionBidirectionalStreamingRPC", func() {
+		Method("Stream", func() {
+			StreamingPayload(OneOf(TextStreamPayload, JSONStreamPayload))
+			StreamingResult(OneOf(TextStreamResult, JSONStreamResult))
+			GRPC(func() {})
+		})
+	})
+}
+
 var ElemValidationDSL = func() {
 	var PayloadType = Type("PayloadType", func() {
 		Field(1, "foo", MapOf(String, ArrayOf(String)), func() {

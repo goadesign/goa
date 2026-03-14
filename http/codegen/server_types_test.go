@@ -31,6 +31,8 @@ func TestServerTypes(t *testing.T) {
 		{"server-header-custom-name", testdata.PayloadHeaderCustomNameDSL},
 		{"server-cookie-custom-name", testdata.PayloadCookieCustomNameDSL},
 		{"server-constructor-union", testdata.ConstructorUnionHTTPDSL},
+		{"server-constructor-union-custom-keys", testdata.ConstructorUnionCustomKeysHTTPDSL},
+		{"server-nested-top-level-constructor-union-custom-keys", testdata.NestedTopLevelConstructorUnionCustomKeysHTTPDSL},
 		{"server-payload-with-validated-alias", testdata.PayloadWithValidatedAliasDSL},
 	}
 	for _, c := range cases {
@@ -46,4 +48,23 @@ func TestServerTypes(t *testing.T) {
 			testutil.AssertGo(t, "testdata/golden/server_types_"+c.Name+".go.golden", code)
 		})
 	}
+}
+
+func TestServerTypesNormalizedConstructorUnionIdentifiers(t *testing.T) {
+	root := RunHTTPDSL(t, testdata.ConstructorUnionNormalizedBranchNamesHTTPDSL)
+	services := CreateHTTPServices(root)
+	fs := serverType("gen", root.API.HTTP.Services[0], services)
+
+	var buf bytes.Buffer
+	for _, s := range fs.SectionTemplates[1:] {
+		require.NoError(t, s.Write(&buf))
+	}
+	code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
+
+	require.Contains(t, code, ` = "FirstNormalizedBranch"`)
+	require.Contains(t, code, ` = "SecondNormalizedBranch"`)
+	require.Contains(t, code, "FooBar ")
+	require.Contains(t, code, "FooBar2 ")
+	require.Contains(t, code, "AsFirstNormalizedBranch()")
+	require.Contains(t, code, "AsSecondNormalizedBranch()")
 }

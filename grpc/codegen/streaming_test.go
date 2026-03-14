@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -147,4 +148,34 @@ func TestStreaming(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConstructorUnionStreaming(t *testing.T) {
+	root := RunGRPCDSL(t, testdata.ConstructorUnionBidirectionalStreamingRPCDSL)
+	services := CreateGRPCServices(root)
+
+	serverFiles := ServerFiles("", services)
+	assert.Len(t, serverFiles, 2)
+	clientFiles := ClientFiles("", services)
+	assert.Len(t, clientFiles, 2)
+
+	var serverBuf, clientBuf bytes.Buffer
+	for _, section := range serverFiles[0].SectionTemplates {
+		assert.NoError(t, section.Write(&serverBuf))
+	}
+	for _, section := range clientFiles[0].SectionTemplates {
+		assert.NoError(t, section.Write(&clientBuf))
+	}
+
+	serverCode := serverBuf.String()
+	clientCode := clientBuf.String()
+
+	assert.Contains(t, serverCode, "TextStreamPayload")
+	assert.Contains(t, serverCode, "JSONStreamPayload")
+	assert.Contains(t, serverCode, "TextStreamResult")
+	assert.Contains(t, serverCode, "JSONStreamResult")
+	assert.Contains(t, serverCode, "StreamServerStream")
+	assert.Contains(t, clientCode, "StreamClientStream")
+	assert.Contains(t, clientCode, "TextStreamPayload")
+	assert.Contains(t, clientCode, "JSONStreamResult")
 }

@@ -1,0 +1,15 @@
+// EncodeShowRequest returns an encoder for requests sent to the
+// ConstructorUnion Show server.
+func EncodeShowRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*constructorunion.JSONPayloadOrTextPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("ConstructorUnion", "Show", "*constructorunion.JSONPayloadOrTextPayload", v)
+		}
+		body := NewJSONPayloadOrTextPayload(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("ConstructorUnion", "Show", err)
+		}
+		return nil
+	}
+}

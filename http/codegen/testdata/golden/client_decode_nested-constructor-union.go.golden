@@ -1,0 +1,15 @@
+// EncodeShowRequest returns an encoder for requests sent to the
+// NestedConstructorUnion Show server.
+func EncodeShowRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		p, ok := v.(*nestedconstructorunion.NestedPayload)
+		if !ok {
+			return goahttp.ErrInvalidType("NestedConstructorUnion", "Show", "*nestedconstructorunion.NestedPayload", v)
+		}
+		body := NewShowRequestBody(p)
+		if err := encoder(req).Encode(&body); err != nil {
+			return goahttp.ErrEncodingError("NestedConstructorUnion", "Show", err)
+		}
+		return nil
+	}
+}

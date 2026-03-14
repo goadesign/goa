@@ -34,6 +34,12 @@ service "AnotherInvalidSecuritySchemesService" method "Method": payload of metho
 service "AnotherInvalidSecuritySchemesService" method "Method": payload of method "Method" of service "AnotherInvalidSecuritySchemesService" defines a JWT token attribute, but no JWT auth security scheme exist
 service "AnotherInvalidSecuritySchemesService" method "Method": payload of method "Method" of service "AnotherInvalidSecuritySchemesService" defines a OAuth2 access token attribute, but no OAuth2 security scheme exist`,
 		},
+		{"union-branch-security-attribute", testdata.UnionBranchSecurityAttributeDSL,
+			`service "UnionBranchSecurityService" method "SecureMethod": payload of method "SecureMethod" of service "UnionBranchSecurityService" does not define a JWT attribute, use Token to define one`,
+		},
+		{"constructor-union-result-view", testdata.ConstructorUnionResultViewDSL,
+			`service "ConstructorUnionResultViewService" method "Show": result -  uses view "tiny" but "AOrB" is not a result type`,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.Name, func(t *testing.T) {

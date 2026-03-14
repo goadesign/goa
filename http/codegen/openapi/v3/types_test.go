@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	dsl "goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
@@ -329,6 +331,50 @@ func matchesUnionSchemaExtensions(t *testing.T, schema *openapi.Schema, types ma
 		if _, ok := refSchema.Properties["value"]; !ok {
 			t.Fatal("expected value property")
 		}
+	}
+}
+
+func TestConstructorUnionRenamedTypesKeepDeclaredDiscriminators(t *testing.T) {
+	root := expr.RunDSL(t, testdata.ConstructorUnionRenamedTypesHTTPDSL)
+
+	bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes)
+	require.Len(t, bodies, 1)
+	var methodBodies *EndpointBodies
+	for _, methods := range bodies {
+		require.Len(t, methods, 1)
+		for _, body := range methods {
+			methodBodies = body
+		}
+	}
+	require.NotNil(t, methodBodies)
+
+	requestSchema := methodBodies.RequestBody
+	if requestSchema != nil && requestSchema.Ref != "" {
+		requestSchema = types[nameFromRef(requestSchema.Ref)]
+	}
+	if requestSchema == nil {
+		t.Fatal("expected request body schema")
+	}
+
+	discriminator, ok := requestSchema.Extensions["discriminator"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected discriminator extension, got %T", requestSchema.Extensions["discriminator"])
+	}
+	mapping, ok := discriminator["mapping"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected discriminator mapping, got %T", discriminator["mapping"])
+	}
+	if _, ok := mapping["AlphaPayload"]; !ok {
+		t.Fatalf("expected declared discriminator AlphaPayload in mapping, got %#v", mapping)
+	}
+	if _, ok := mapping["BetaPayload"]; !ok {
+		t.Fatalf("expected declared discriminator BetaPayload in mapping, got %#v", mapping)
+	}
+	if _, ok := mapping["RenamedAlphaPayload"]; ok {
+		t.Fatalf("unexpected renamed discriminator in mapping: %#v", mapping)
+	}
+	if _, ok := mapping["RenamedBetaPayload"]; ok {
+		t.Fatalf("unexpected renamed discriminator in mapping: %#v", mapping)
 	}
 }
 
@@ -844,8 +890,8 @@ func TestInitExamplesCanonicalizesNestedUnionExamples(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected canonicalized union example, got %#v", raw["choice"])
 	}
-	if choice["type"] != "TextPayload" {
-		t.Fatalf("expected nested union type %q, got %#v", "TextPayload", choice["type"])
+	if choice["type"] != "JSONPayload" {
+		t.Fatalf("expected nested union type %q, got %#v", "JSONPayload", choice["type"])
 	}
 	if _, ok := choice["value"].(map[string]any); !ok {
 		t.Fatalf("expected nested union value object, got %#v", choice["value"])
@@ -941,6 +987,164 @@ func TestSchemafyUsesUnionFieldUserExample(t *testing.T) {
 	if value["message"] != "hello" {
 		t.Fatalf("expected schema user example message %q, got %#v", "hello", value["message"])
 	}
+}
+
+func TestInitExamplesOmitsAmbiguousObjectBranchUserExample(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.ConstructorUnionAmbiguousUserExampleHTTPDSL)
+	attr := root.Services[0].Methods[0].Payload.Find("choice")
+	exampler := &testExampler{}
+
+	initExamples(exampler, attr, root.API.ExampleGenerator)
+
+	if exampler.example != nil {
+		t.Fatalf("expected ambiguous raw union example to be omitted, got %#v", exampler.example)
+	}
+}
+
+func TestSchemafyOmitsAmbiguousObjectBranchUserExample(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.ConstructorUnionAmbiguousUserExampleHTTPDSL)
+	attr := root.API.HTTP.Services[0].HTTPEndpoints[0].Body.Find("choice")
+	if attr == nil {
+		t.Fatalf("expected choice attribute on HTTP body")
+	}
+	sf := newSchemafier(root.API.ExampleGenerator)
+
+	schema := sf.schemafy(attr)
+	if schema.Example != nil {
+		t.Fatalf("expected ambiguous schema example to be omitted, got %#v", schema.Example)
+	}
+}
+
+func TestInitExamplesExplicitWrappedUserExampleWinsWithCustomKeys(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.ConstructorUnionExplicitWrappedUserExampleCustomKeysHTTPDSL)
+	attr := root.Services[0].Methods[0].Payload.Find("choice")
+	exampler := &testExampler{}
+
+	initExamples(exampler, attr, root.API.ExampleGenerator)
+
+	choice, ok := exampler.example.(map[string]any)
+	if !ok {
+		t.Fatalf("expected canonicalized union example, got %T", exampler.example)
+	}
+	if choice["kind"] != "ExplicitWrappedObjectPayloadB" {
+		t.Fatalf("expected union type %q, got %#v", "ExplicitWrappedObjectPayloadB", choice["kind"])
+	}
+	value, ok := choice["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected union value object, got %#v", choice["data"])
+	}
+	if value["message"] != "hello" {
+		t.Fatalf("expected user example message %q, got %#v", "hello", value["message"])
+	}
+}
+
+func TestInitExamplesOmitsAmbiguousObjectBranchUserExampleWithCustomKeys(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.ConstructorUnionAmbiguousUserExampleCustomKeysHTTPDSL)
+	attr := root.Services[0].Methods[0].Payload.Find("choice")
+	exampler := &testExampler{}
+
+	initExamples(exampler, attr, root.API.ExampleGenerator)
+
+	if exampler.example != nil {
+		t.Fatalf("expected ambiguous raw union example with custom keys to be omitted, got %#v", exampler.example)
+	}
+}
+
+func TestSchemafyOmitsAmbiguousObjectBranchUserExampleWithCustomKeys(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.ConstructorUnionAmbiguousUserExampleCustomKeysHTTPDSL)
+	attr := root.API.HTTP.Services[0].HTTPEndpoints[0].Body.Find("choice")
+	if attr == nil {
+		t.Fatalf("expected choice attribute on HTTP body")
+	}
+	sf := newSchemafier(root.API.ExampleGenerator)
+
+	schema := sf.schemafy(attr)
+	if schema.Example != nil {
+		t.Fatalf("expected ambiguous schema example with custom keys to be omitted, got %#v", schema.Example)
+	}
+}
+
+func TestInitExamplesMultipleUserExamplesRemainStable(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.ConstructorUnionMultipleExamplesHTTPDSL)
+	attr := root.Services[0].Methods[0].Payload.Find("choice")
+	exampler := &testExampler{}
+
+	initExamples(exampler, attr, root.API.ExampleGenerator)
+
+	require.Nil(t, exampler.example)
+	require.Len(t, exampler.examples, 2)
+	jsonExample := exampler.examples["json"].Value.Value.(map[string]any)
+	textExample := exampler.examples["text"].Value.Value.(map[string]any)
+	require.Equal(t, "MultiExampleJSONPayload", jsonExample["type"])
+	require.Equal(t, "MultiExampleTextPayload", textExample["type"])
+}
+
+func TestSchemafyUsesLastUserExampleForUnionSchemaExample(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.ConstructorUnionMultipleExamplesHTTPDSL)
+	attr := root.API.HTTP.Services[0].HTTPEndpoints[0].Body.Find("choice")
+	if attr == nil {
+		t.Fatalf("expected choice attribute on HTTP body")
+	}
+	sf := newSchemafier(root.API.ExampleGenerator)
+
+	schema := sf.schemafy(attr)
+	example, ok := schema.Example.(map[string]any)
+	if !ok {
+		t.Fatalf("expected schema example map, got %T", schema.Example)
+	}
+	require.Equal(t, "MultiExampleTextPayload", example["type"])
+}
+
+func TestInitExamplesMixedUserAndGeneratedNestedExamples(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.NestedMixedConstructorUnionExamplesCustomKeysHTTPDSL)
+	attr := root.Services[0].Methods[0].Payload
+	exampler := &testExampler{}
+
+	initExamples(exampler, attr, root.API.ExampleGenerator)
+
+	raw, ok := exampler.example.(map[string]any)
+	if !ok {
+		t.Fatalf("expected payload object example, got %T", exampler.example)
+	}
+	outer, ok := raw["outer"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected nested outer object, got %#v", raw["outer"])
+	}
+	choice, ok := outer["choice"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected canonicalized union example, got %#v", outer["choice"])
+	}
+	require.Equal(t, "NestedMixedOuterText", choice["type"])
+	inner, ok := outer["inner"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected generated nested union example, got %#v", outer["inner"])
+	}
+	require.NotNil(t, inner["kind"])
+	require.NotNil(t, inner["data"])
+}
+
+func TestSchemafyMixedUserAndGeneratedNestedExamples(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.NestedMixedConstructorUnionExamplesCustomKeysHTTPDSL)
+	attr := root.API.HTTP.Services[0].HTTPEndpoints[0].Body
+	sf := newSchemafier(root.API.ExampleGenerator)
+
+	schema := sf.schemafy(attr)
+	if schema.Ref != "" {
+		schema = sf.schemas[nameFromRef(schema.Ref)]
+	}
+	example, ok := schema.Example.(map[string]any)
+	if !ok {
+		t.Fatalf("expected schema example map, got %T", schema.Example)
+	}
+	outer, ok := example["outer"].(map[string]any)
+	if !ok {
+		t.Fatalf("expected outer schema example object, got %#v", example["outer"])
+	}
+	choice := outer["choice"].(map[string]any)
+	require.Equal(t, "NestedMixedOuterText", choice["type"])
+	inner := outer["inner"].(map[string]any)
+	require.NotNil(t, inner["kind"])
+	require.NotNil(t, inner["data"])
 }
 
 func TestInitExamplesCanonicalizesNestedTopLevelUnionExamples(t *testing.T) {
@@ -1120,6 +1324,57 @@ func TestDeterministicUnionBranchSchemaNameStableAcrossOrder(t *testing.T) {
 	}
 	if name1B != name2B {
 		t.Fatalf("expected stable name for B branch, got %q and %q", name1B, name2B)
+	}
+}
+
+func TestBuildUnionExampleStableAcrossOrder(t *testing.T) {
+	newNamedObject := func(typeName string) *expr.NamedAttributeExpr {
+		return &expr.NamedAttributeExpr{
+			Name: typeName,
+			Attribute: &expr.AttributeExpr{
+				Type: &expr.UserTypeExpr{
+					TypeName: typeName,
+					AttributeExpr: &expr.AttributeExpr{
+						Type: &expr.Object{
+							&expr.NamedAttributeExpr{
+								Name: "value",
+								Attribute: &expr.AttributeExpr{
+									Type: expr.String,
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+
+	union1 := &expr.Union{
+		TypeName: "Choice",
+		Values: []*expr.NamedAttributeExpr{
+			newNamedObject("B"),
+			newNamedObject("A"),
+		},
+	}
+	union2 := &expr.Union{
+		TypeName: "Choice",
+		Values: []*expr.NamedAttributeExpr{
+			newNamedObject("A"),
+			newNamedObject("B"),
+		},
+	}
+	sf := newSchemafier(expr.NewRandom("stable-order"))
+
+	ex1, ok := buildUnionExample(union1, sf).(map[string]any)
+	if !ok {
+		t.Fatalf("expected union example object, got %T", buildUnionExample(union1, sf))
+	}
+	ex2, ok := buildUnionExample(union2, sf).(map[string]any)
+	if !ok {
+		t.Fatalf("expected union example object, got %T", buildUnionExample(union2, sf))
+	}
+	if ex1["type"] != ex2["type"] {
+		t.Fatalf("expected stable generated union branch across order, got %#v and %#v", ex1["type"], ex2["type"])
 	}
 }
 

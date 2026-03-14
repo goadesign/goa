@@ -1,0 +1,50 @@
+func transform() {
+	target := &ConstructorUnionCollections{}
+	if source.ArrayChoices != nil {
+		target.ArrayChoices = make([]*ConstructorUnionCollectionsJSONPayloadOrConstructorUnionCollectionsTextPayload, len(source.ArrayChoices))
+		for i, val := range source.ArrayChoices {
+
+			if val != nil {
+				switch string(val.Kind()) {
+				case "ConstructorUnionCollectionsTextPayload":
+					actual, _ := val.AsConstructorUnionCollectionsTextPayload()
+					obj := transformConstructorUnionCollectionsTextPayloadToConstructorUnionCollectionsTextPayload(actual)
+					u := target.ArrayChoices[i]
+					u.SetConstructorUnionCollectionsTextPayload((*ConstructorUnionCollectionsTextPayload)(obj))
+					target.ArrayChoices[i] = u
+				case "ConstructorUnionCollectionsJSONPayload":
+					actual, _ := val.AsConstructorUnionCollectionsJSONPayload()
+					obj := transformConstructorUnionCollectionsJSONPayloadToConstructorUnionCollectionsJSONPayload(actual)
+					u := target.ArrayChoices[i]
+					u.SetConstructorUnionCollectionsJSONPayload((*ConstructorUnionCollectionsJSONPayload)(obj))
+					target.ArrayChoices[i] = u
+				}
+			}
+		}
+	}
+	if source.MapChoices != nil {
+		target.MapChoices = make(map[string]*ConstructorUnionCollectionsJSONPayloadOrConstructorUnionCollectionsTextPayload, len(source.MapChoices))
+		for key, val := range source.MapChoices {
+			tk := key
+			var tv *ConstructorUnionCollectionsJSONPayloadOrConstructorUnionCollectionsTextPayload
+
+			if val != nil {
+				switch string(val.Kind()) {
+				case "ConstructorUnionCollectionsTextPayload":
+					actual, _ := val.AsConstructorUnionCollectionsTextPayload()
+					obj := transformConstructorUnionCollectionsTextPayloadToConstructorUnionCollectionsTextPayload(actual)
+					var u ConstructorUnionCollectionsJSONPayloadOrConstructorUnionCollectionsTextPayload
+					u.SetConstructorUnionCollectionsTextPayload((*ConstructorUnionCollectionsTextPayload)(obj))
+					tv = &u
+				case "ConstructorUnionCollectionsJSONPayload":
+					actual, _ := val.AsConstructorUnionCollectionsJSONPayload()
+					obj := transformConstructorUnionCollectionsJSONPayloadToConstructorUnionCollectionsJSONPayload(actual)
+					var u ConstructorUnionCollectionsJSONPayloadOrConstructorUnionCollectionsTextPayload
+					u.SetConstructorUnionCollectionsJSONPayload((*ConstructorUnionCollectionsJSONPayload)(obj))
+					tv = &u
+				}
+			}
+			target.MapChoices[tk] = tv
+		}
+	}
+}

@@ -1,0 +1,50 @@
+// DecodeShowRequest returns a decoder for requests sent to the
+// ConstructorUnionCustomKeys Show endpoint.
+func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*constructorunioncustomkeys.JSONPayloadOrTextPayload, error) {
+	return func(r *http.Request) (*constructorunioncustomkeys.JSONPayloadOrTextPayload, error) {
+		var payload *constructorunioncustomkeys.JSONPayloadOrTextPayload
+		var (
+			body *JSONPayloadOrTextPayload
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		if body == nil {
+			return payload, goa.MissingPayloadError()
+		}
+		if body != nil {
+			switch string(body.Kind()) {
+			case "TextPayload":
+				actual, _ := body.AsTextPayload()
+				if actual != nil {
+					if err2 := ValidateTextPayload(actual); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
+				}
+			case "JSONPayload":
+				actual, _ := body.AsJSONPayload()
+				if actual != nil {
+					if err2 := ValidateJSONPayload(actual); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
+				}
+			}
+
+			if err != nil {
+				return payload, err
+			}
+		}
+		payload = NewShowJSONPayloadOrTextPayload(&body)
+
+		return payload, nil
+	}
+}

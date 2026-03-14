@@ -2,7 +2,10 @@ package service
 
 import (
 	"bytes"
+	"go/ast"
 	"go/format"
+	"go/parser"
+	"go/token"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -24,6 +27,7 @@ func TestService(t *testing.T) {
 		{"service-multiple", testdata.MultipleMethodsDSL},
 		{"service-union", testdata.UnionMethodDSL},
 		{"service-inline-union", testdata.InlineUnionMethodDSL},
+		{"service-declaration-and-inline-union", testdata.DeclarationAndInlineUnionMethodDSL},
 		{"service-multi-union", testdata.MultiUnionMethodDSL},
 		{"service-union-alias-cross-pkg", testdata.UnionWithAliasCrossPkgDSL},
 		{"service-no-payload-no-result", testdata.EmptyMethodDSL},
@@ -82,6 +86,86 @@ func TestService(t *testing.T) {
 			testutil.AssertGo(t, "testdata/golden/service_"+c.Name+".go.golden", code)
 		})
 	}
+}
+
+func TestRepeatedInlineUnionMethodIdentifiers(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.RepeatedInlineUnionMethodDSL)
+	services := NewServicesData(root)
+	require.Len(t, root.Services, 1)
+
+	files := Files("goa.design/goa/example", root.Services[0], services, make(map[string][]string))
+	require.NotEmpty(t, files)
+
+	buf := new(bytes.Buffer)
+	for _, s := range files[0].SectionTemplates[1:] {
+		require.NoError(t, s.Write(buf))
+	}
+	bs, err := format.Source(buf.Bytes())
+	require.NoError(t, err, buf.String())
+
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "service.go", "package service\n"+string(bs), 0)
+	require.NoError(t, err)
+
+	seen := make(map[string]token.Pos)
+	var duplicates []string
+	for _, decl := range file.Decls {
+		switch d := decl.(type) {
+		case *ast.FuncDecl:
+			if d.Recv != nil {
+				continue
+			}
+			if prev, ok := seen[d.Name.Name]; ok {
+				duplicates = append(duplicates, d.Name.Name+"@"+fset.Position(prev).String())
+				continue
+			}
+			seen[d.Name.Name] = d.Pos()
+		case *ast.GenDecl:
+			if d.Tok != token.TYPE {
+				continue
+			}
+			for _, spec := range d.Specs {
+				typeSpec, ok := spec.(*ast.TypeSpec)
+				require.True(t, ok)
+				if prev, dup := seen[typeSpec.Name.Name]; dup {
+					duplicates = append(duplicates, typeSpec.Name.Name+"@"+fset.Position(prev).String())
+					continue
+				}
+				seen[typeSpec.Name.Name] = typeSpec.Pos()
+			}
+		}
+	}
+
+	require.Empty(t, duplicates, "expected repeated constructor unions to avoid duplicate top-level identifiers")
+	require.Contains(t, string(bs), "First(context.Context, *RepeatedInlineUnionJSONPayloadOrRepeatedInlineUnionTextPayload)")
+	require.Contains(t, string(bs), "Second(context.Context, *RepeatedInlineUnionJSONPayloadOrRepeatedInlineUnionTextPayload)")
+	require.Contains(t, string(bs), "RepeatedInlineUnionJSONResultOrRepeatedInlineUnionTextResult")
+	require.Equal(t, 1, strings.Count(string(bs), "type RepeatedInlineUnionJSONPayloadOrRepeatedInlineUnionTextPayload struct"))
+	require.Equal(t, 1, strings.Count(string(bs), "type RepeatedInlineUnionJSONResultOrRepeatedInlineUnionTextResult struct"))
+}
+
+func TestNormalizedInlineUnionMethodIdentifiers(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.NormalizedInlineUnionMethodDSL)
+	services := NewServicesData(root)
+	require.Len(t, root.Services, 1)
+
+	files := Files("goa.design/goa/example", root.Services[0], services, make(map[string][]string))
+	require.NotEmpty(t, files)
+
+	buf := new(bytes.Buffer)
+	for _, s := range files[0].SectionTemplates[1:] {
+		require.NoError(t, s.Write(buf))
+	}
+	bs, err := format.Source(buf.Bytes())
+	require.NoError(t, err, buf.String())
+	code := string(bs)
+
+	require.Contains(t, code, ` = "NormalizedInlineUnionFirst"`)
+	require.Contains(t, code, ` = "NormalizedInlineUnionSecond"`)
+	require.Contains(t, code, "FooBar ")
+	require.Contains(t, code, "FooBar2 ")
+	require.Contains(t, code, "AsNormalizedInlineUnionFirst()")
+	require.Contains(t, code, "AsNormalizedInlineUnionSecond()")
 }
 
 func TestStructPkgPath(t *testing.T) {

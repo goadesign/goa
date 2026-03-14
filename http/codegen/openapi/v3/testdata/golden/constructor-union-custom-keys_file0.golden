@@ -16,22 +16,7 @@
         ],
         "type": "object"
       },
-      "TextPayload": {
-        "example": {
-          "text": "Doloribus qui quia."
-        },
-        "properties": {
-          "text": {
-            "example": "Quia molestias.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "text"
-        ],
-        "type": "object"
-      },
-      "TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5": {
+      "JSONPayloadOrTextPayloadJSONPayloadEnvelope4d704eedbb85e23f": {
         "properties": {
           "data": {
             "$ref": "#/components/schemas/JSONPayload"
@@ -49,7 +34,7 @@
         ],
         "type": "object"
       },
-      "TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6": {
+      "JSONPayloadOrTextPayloadTextPayloadEnvelope334b543111996e4c": {
         "properties": {
           "data": {
             "$ref": "#/components/schemas/TextPayload"
@@ -64,6 +49,21 @@
         "required": [
           "kind",
           "data"
+        ],
+        "type": "object"
+      },
+      "TextPayload": {
+        "example": {
+          "text": "Doloribus qui quia."
+        },
+        "properties": {
+          "text": {
+            "example": "Quia molestias.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
         ],
         "type": "object"
       }
@@ -83,47 +83,47 @@
             "application/json": {
               "example": {
                 "data": {
-                  "text": "Neque nisi quibusdam nisi sint sunt."
+                  "message": "Doloremque autem."
                 },
-                "kind": "TextPayload"
+                "kind": "JSONPayload"
               },
               "schema": {
                 "discriminator": {
                   "mapping": {
-                    "JSONPayload": "#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5",
-                    "TextPayload": "#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6"
+                    "JSONPayload": "#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope4d704eedbb85e23f",
+                    "TextPayload": "#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelope334b543111996e4c"
                   },
                   "propertyName": "kind"
                 },
                 "example": {
                   "data": {
-                    "text": "Neque nisi quibusdam nisi sint sunt."
+                    "message": "Doloremque autem."
                   },
-                  "kind": "TextPayload"
+                  "kind": "JSONPayload"
                 },
                 "oneOf": [
                   {
-                    "$ref": "#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6"
+                    "$ref": "#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope4d704eedbb85e23f"
                   },
                   {
-                    "$ref": "#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5"
+                    "$ref": "#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelope334b543111996e4c"
                   }
                 ],
                 "properties": {
                   "data": {
                     "anyOf": [
                       {
-                        "$ref": "#/components/schemas/TextPayload"
+                        "$ref": "#/components/schemas/JSONPayload"
                       },
                       {
-                        "$ref": "#/components/schemas/JSONPayload"
+                        "$ref": "#/components/schemas/TextPayload"
                       }
                     ]
                   },
                   "kind": {
                     "enum": [
-                      "TextPayload",
-                      "JSONPayload"
+                      "JSONPayload",
+                      "TextPayload"
                     ],
                     "type": "string"
                   }
@@ -144,47 +144,47 @@
               "application/json": {
                 "example": {
                   "data": {
-                    "text": "Neque nisi quibusdam nisi sint sunt."
+                    "message": "Doloremque autem."
                   },
-                  "kind": "TextPayload"
+                  "kind": "JSONPayload"
                 },
                 "schema": {
                   "discriminator": {
                     "mapping": {
-                      "JSONPayload": "#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5",
-                      "TextPayload": "#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6"
+                      "JSONPayload": "#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope4d704eedbb85e23f",
+                      "TextPayload": "#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelope334b543111996e4c"
                     },
                     "propertyName": "kind"
                   },
                   "example": {
                     "data": {
-                      "text": "Neque nisi quibusdam nisi sint sunt."
+                      "message": "Doloremque autem."
                     },
-                    "kind": "TextPayload"
+                    "kind": "JSONPayload"
                   },
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6"
+                      "$ref": "#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope4d704eedbb85e23f"
                     },
                     {
-                      "$ref": "#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5"
+                      "$ref": "#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelope334b543111996e4c"
                     }
                   ],
                   "properties": {
                     "data": {
                       "anyOf": [
                         {
-                          "$ref": "#/components/schemas/TextPayload"
+                          "$ref": "#/components/schemas/JSONPayload"
                         },
                         {
-                          "$ref": "#/components/schemas/JSONPayload"
+                          "$ref": "#/components/schemas/TextPayload"
                         }
                       ]
                     },
                     "kind": {
                       "enum": [
-                        "TextPayload",
-                        "JSONPayload"
+                        "JSONPayload",
+                        "TextPayload"
                       ],
                       "type": "string"
                     }

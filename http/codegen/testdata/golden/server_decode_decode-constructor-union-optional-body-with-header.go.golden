@@ -4,7 +4,7 @@ func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 	return func(r *http.Request) (*constructorunionoptionalbodywithheader.ShowPayload, error) {
 		var payload *constructorunionoptionalbodywithheader.ShowPayload
 		var (
-			body *TextPayloadOrJSONPayload
+			body *JSONPayloadOrTextPayload
 			err  error
 		)
 		err = decoder(r).Decode(&body)

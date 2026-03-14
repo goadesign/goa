@@ -1099,10 +1099,11 @@ func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Lo
 	name := scope.GoTypeName(att)
 	kindName := scope.Unique(name + "Kind")
 	unionPkg := loc.PackageName()
+	fieldNames := uniqueUnionFieldNames(u.Values)
 
 	fields := make([]*UnionFieldData, len(u.Values))
 	for i, nat := range u.Values {
-		fieldName := codegen.Goify(nat.Name, true)
+		fieldName := fieldNames[i]
 		var pkg string
 		if tloc := codegen.UserTypeLocation(nat.Attribute.Type); tloc != nil {
 			pkg = tloc.PackageName()
@@ -1178,10 +1179,11 @@ func buildViewUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codege
 	att := &expr.AttributeExpr{Type: u}
 	name := scope.GoTypeName(att)
 	kindName := scope.Unique(name + "Kind")
+	fieldNames := uniqueUnionFieldNames(u.Values)
 
 	fields := make([]*UnionFieldData, len(u.Values))
 	for i, nat := range u.Values {
-		fieldName := codegen.Goify(nat.Name, true)
+		fieldName := fieldNames[i]
 		fieldType := scope.GoTypeRef(nat.Attribute)
 		primitiveAliasType, hasPrimitiveAlias := primitiveAliasGoType(nat.Attribute.Type)
 		_, isUserType := nat.Attribute.Type.(expr.UserType)
@@ -1206,6 +1208,45 @@ func buildViewUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codege
 		TypeKey:  u.GetTypeKey(),
 		ValueKey: u.GetValueKey(),
 	}
+}
+
+func uniqueUnionFieldNames(values []*expr.NamedAttributeExpr) []string {
+	bases := make([]string, len(values))
+	for i, nat := range values {
+		bases[i] = codegen.Goify(nat.Name, true)
+	}
+	names := make([]string, len(values))
+	groups := make(map[string][]int, len(values))
+	for i, base := range bases {
+		groups[base] = append(groups[base], i)
+	}
+	for base, idxs := range groups {
+		if len(idxs) == 1 {
+			names[idxs[0]] = base
+			continue
+		}
+		sorted := append([]int(nil), idxs...)
+		sort.SliceStable(sorted, func(i, j int) bool {
+			left := unionFieldStableKey(values[sorted[i]])
+			right := unionFieldStableKey(values[sorted[j]])
+			if left == right {
+				return sorted[i] < sorted[j]
+			}
+			return left < right
+		})
+		for offset, idx := range sorted {
+			if offset == 0 {
+				names[idx] = base
+				continue
+			}
+			names[idx] = fmt.Sprintf("%s%d", base, offset+1)
+		}
+	}
+	return names
+}
+
+func unionFieldStableKey(nat *expr.NamedAttributeExpr) string {
+	return nat.Name + ":" + nat.Attribute.Type.Hash()
 }
 
 // sortedNamedAttributes returns object fields sorted by attribute name.

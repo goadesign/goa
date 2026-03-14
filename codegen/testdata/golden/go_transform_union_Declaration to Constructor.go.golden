@@ -1,0 +1,20 @@
+func transform() {
+	var target *DeclarationConstructorJSONPayloadOrDeclarationConstructorTextPayload
+
+	if source != nil {
+		switch string(source.Kind()) {
+		case "DeclarationConstructorTextPayload":
+			actual, _ := source.AsDeclarationConstructorTextPayload()
+			obj := transformDeclarationConstructorTextPayloadToDeclarationConstructorTextPayload(actual)
+			var u DeclarationConstructorJSONPayloadOrDeclarationConstructorTextPayload
+			u.SetDeclarationConstructorTextPayload((*DeclarationConstructorTextPayload)(obj))
+			target = &u
+		case "DeclarationConstructorJSONPayload":
+			actual, _ := source.AsDeclarationConstructorJSONPayload()
+			obj := transformDeclarationConstructorJSONPayloadToDeclarationConstructorJSONPayload(actual)
+			var u DeclarationConstructorJSONPayloadOrDeclarationConstructorTextPayload
+			u.SetDeclarationConstructorJSONPayload((*DeclarationConstructorJSONPayload)(obj))
+			target = &u
+		}
+	}
+}

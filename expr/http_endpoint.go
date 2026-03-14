@@ -614,6 +614,9 @@ func (e *HTTPEndpointExpr) Validate() error {
 		}
 		return verr
 	}
+	if e.MultipartRequest && IsUnion(e.MethodExpr.Payload.Type) {
+		verr.Add(e, "MultipartRequest requires an object payload, constructor unions are not supported")
+	}
 	if IsArray(e.MethodExpr.Payload.Type) {
 		if e.MapQueryParams != nil {
 			verr.Add(e, "MapParams is set but Payload type is array. Payload type must be map or an object with a map attribute")

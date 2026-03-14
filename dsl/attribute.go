@@ -2,6 +2,7 @@ package dsl
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"goa.design/goa/v3/eval"
@@ -263,6 +264,10 @@ func Default(def any) {
 		eval.IncompatibleDSL()
 		return
 	}
+	if union := expr.AsUnion(a.Type); union != nil && union.TypeName != "InvalidOneOf" {
+		eval.ReportError("default values are not supported for union attributes")
+		return
+	}
 	if a.Type != nil && !a.Type.IsCompatible(def) {
 		eval.ReportError("default value %#v is incompatible with attribute of type %s",
 			def, expr.QualifiedTypeName(a.Type))
@@ -510,13 +515,16 @@ func oneOfType(arg any, args ...any) expr.DataType {
 		return invalidOneOfType()
 	}
 
-	names := uniqueOneOfVariantNames(baseNames)
+	names := uniqueOneOfVariantNames(types, baseNames)
 	values := make([]*expr.NamedAttributeExpr, 0, len(types))
 	for i, dt := range types {
 		values = append(values, &expr.NamedAttributeExpr{
 			Name: names[i],
 			Attribute: &expr.AttributeExpr{
 				Type: dt,
+				Meta: expr.MetaExpr{
+					"oneof:variant:derived": {"true"},
+				},
 			},
 		})
 	}
@@ -548,7 +556,7 @@ func resolveOneOfVariantType(variant any) expr.DataType {
 }
 
 func oneOfVariantName(dt expr.DataType) string {
-	name := strings.TrimSpace(dt.Name())
+	name := strings.TrimSpace(oneOfVariantPublicName(dt))
 	if name == "" {
 		return "Value"
 	}
@@ -564,40 +572,74 @@ func isStableOneOfVariantType(dt expr.DataType) bool {
 	}
 }
 
-func uniqueOneOfVariantNames(bases []string) []string {
+func uniqueOneOfVariantNames(types []expr.DataType, bases []string) []string {
 	reserved := make(map[string]struct{}, len(bases))
 	for _, base := range bases {
 		reserved[base] = struct{}{}
 	}
 
 	names := make([]string, len(bases))
-	seen := make(map[string]int, len(bases))
+	groups := make(map[string][]int, len(bases))
 	for i, base := range bases {
-		seen[base]++
-		if seen[base] == 1 {
-			names[i] = base
+		groups[base] = append(groups[base], i)
+	}
+	for base, indexes := range groups {
+		if len(indexes) == 1 {
+			names[indexes[0]] = base
 			continue
 		}
-
-		for suffix := 2; ; suffix++ {
-			name := fmt.Sprintf("%s%d", base, suffix)
-			if _, ok := reserved[name]; ok {
+		sorted := append([]int(nil), indexes...)
+		sort.SliceStable(sorted, func(i, j int) bool {
+			left := oneOfVariantStableKey(types[sorted[i]])
+			right := oneOfVariantStableKey(types[sorted[j]])
+			if left == right {
+				return sorted[i] < sorted[j]
+			}
+			return left < right
+		})
+		for offset, idx := range sorted {
+			if offset == 0 {
+				names[idx] = base
 				continue
 			}
-			names[i] = name
-			reserved[name] = struct{}{}
-			break
+			for suffix := offset + 1; ; suffix++ {
+				name := fmt.Sprintf("%s%d", base, suffix)
+				if _, ok := reserved[name]; ok {
+					continue
+				}
+				names[idx] = name
+				reserved[name] = struct{}{}
+				break
+			}
 		}
 	}
 
 	return names
 }
 
+func oneOfVariantStableKey(dt expr.DataType) string {
+	return oneOfVariantPublicName(dt) + ":" + dt.Hash()
+}
+
 func oneOfUnionTypeName(names []string) string {
 	if len(names) == 0 {
 		return "Union"
 	}
-	return strings.Join(names, "Or")
+	sorted := append([]string(nil), names...)
+	sort.Strings(sorted)
+	return strings.Join(sorted, "Or")
+}
+
+func oneOfVariantPublicName(dt expr.DataType) string {
+	if ut, ok := dt.(expr.UserType); ok && ut.Attribute() != nil {
+		if name, ok := ut.Attribute().Meta.Last("name:original"); ok && strings.TrimSpace(name) != "" {
+			return name
+		}
+		if name, ok := ut.Attribute().Meta.Last("openapi:typename"); ok && strings.TrimSpace(name) != "" {
+			return name
+		}
+	}
+	return dt.Name()
 }
 
 func invalidOneOfType() expr.DataType {

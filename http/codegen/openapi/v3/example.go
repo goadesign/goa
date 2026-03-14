@@ -1,6 +1,10 @@
 package openapiv3
 
 import (
+	"fmt"
+	"hash/fnv"
+	"sort"
+
 	"goa.design/goa/v3/expr"
 )
 
@@ -33,7 +37,7 @@ func initExamples(obj exampler, attr *expr.AttributeExpr, r *expr.ExampleGenerat
 	case len(examples) > 0:
 		obj.setExample(canonicalizeExampleValue(attr, examples[0].Value, sf))
 	default:
-		obj.setExample(canonicalizeGeneratedExampleValue(attr, attr.Example(r), sf))
+		obj.setExample(generatedExampleValue(attr, sf))
 	}
 }
 
@@ -81,6 +85,25 @@ func canonicalizeGeneratedExampleValue(attr *expr.AttributeExpr, value any, sf *
 	}
 }
 
+func generatedExampleValue(attr *expr.AttributeExpr, sf *schemafier) any {
+	if attr == nil {
+		return nil
+	}
+	if !containsUnionType(attr.Type) {
+		if union := expr.AsUnion(attr.Type); union != nil {
+			return buildUnionExample(union, sf)
+		}
+		return canonicalizeGeneratedExampleValue(attr, attr.Example(sf.rand), sf)
+	}
+	gen := sf.exampleGenerator(attr)
+	local := *sf
+	local.rand = gen
+	if union := expr.AsUnion(attr.Type); union != nil {
+		return buildUnionExample(union, &local)
+	}
+	return canonicalizeGeneratedExampleValue(attr, attr.Example(gen), &local)
+}
+
 func canonicalizeUnionExample(union *expr.Union, value any, sf *schemafier) any {
 	if raw, ok := value.(map[string]any); ok {
 		if branchName, ok := raw[union.GetTypeKey()].(string); ok {
@@ -92,13 +115,17 @@ func canonicalizeUnionExample(union *expr.Union, value any, sf *schemafier) any 
 			}
 		}
 	}
-	if branch := findMatchingUnionBranch(union, value); branch != nil {
+	branch, ambiguous := findMatchingUnionBranchDetail(union, value)
+	if branch != nil {
 		return map[string]any{
 			union.GetTypeKey():  branch.Name,
 			union.GetValueKey(): canonicalizeExampleValue(branch.Attribute, value, sf),
 		}
 	}
-	return buildUnionExample(union, sf)
+	if ambiguous {
+		return nil
+	}
+	return nil
 }
 
 func canonicalizeGeneratedObjectExample(obj *expr.Object, value any, sf *schemafier) any {
@@ -122,7 +149,11 @@ func canonicalizeGeneratedObjectExample(obj *expr.Object, value any, sf *schemaf
 			if useUserExample {
 				res[nat.Name] = canonicalizeExampleValue(nat.Attribute, childValue, sf)
 			} else {
-				res[nat.Name] = canonicalizeGeneratedExampleValue(nat.Attribute, childValue, sf)
+				if expr.AsUnion(nat.Attribute.Type) != nil {
+					res[nat.Name] = generatedExampleValue(nat.Attribute, sf)
+				} else {
+					res[nat.Name] = canonicalizeGeneratedExampleValue(nat.Attribute, childValue, sf)
+				}
 			}
 		}
 	}
@@ -178,7 +209,7 @@ func findUnionBranch(union *expr.Union, name string) *expr.NamedAttributeExpr {
 	return nil
 }
 
-func findMatchingUnionBranch(union *expr.Union, value any) *expr.NamedAttributeExpr {
+func findMatchingUnionBranchDetail(union *expr.Union, value any) (*expr.NamedAttributeExpr, bool) {
 	var (
 		best      *expr.NamedAttributeExpr
 		bestScore int
@@ -200,9 +231,53 @@ func findMatchingUnionBranch(union *expr.Union, value any) *expr.NamedAttributeE
 		}
 	}
 	if ambiguous {
+		return nil, true
+	}
+	return best, false
+}
+
+func (sf *schemafier) exampleGenerator(attr *expr.AttributeExpr) *expr.ExampleGenerator {
+	if sf == nil || attr == nil {
 		return nil
 	}
-	return best
+	seed := fmt.Sprintf("openapi-v3:%d", sf.hashAttribute(attr, fnv.New64()))
+	return expr.NewRandom(seed)
+}
+
+func containsUnionType(dt expr.DataType) bool {
+	return containsUnionTypeSeen(dt, make(map[expr.DataType]struct{}))
+}
+
+func containsUnionTypeSeen(dt expr.DataType, seen map[expr.DataType]struct{}) bool {
+	switch dt.(type) {
+	case nil:
+		return false
+	case expr.Primitive:
+		return false
+	}
+	if _, ok := seen[dt]; ok {
+		return false
+	}
+	seen[dt] = struct{}{}
+	switch actual := dt.(type) {
+	case *expr.Union:
+		return true
+	case expr.UserType:
+		return containsUnionTypeSeen(actual.Attribute().Type, seen)
+	case *expr.Object:
+		for _, nat := range *actual {
+			if containsUnionTypeSeen(nat.Attribute.Type, seen) {
+				return true
+			}
+		}
+		return false
+	case *expr.Array:
+		return containsUnionTypeSeen(actual.ElemType.Type, seen)
+	case *expr.Map:
+		return containsUnionTypeSeen(actual.KeyType.Type, seen) || containsUnionTypeSeen(actual.ElemType.Type, seen)
+	default:
+		return false
+	}
 }
 
 func exampleMatchScore(attr *expr.AttributeExpr, value any) (int, bool) {
@@ -211,8 +286,11 @@ func exampleMatchScore(attr *expr.AttributeExpr, value any) (int, bool) {
 	}
 	switch actual := attr.Type.(type) {
 	case *expr.Union:
-		branch := findMatchingUnionBranch(actual, value)
+		branch, ambiguous := findMatchingUnionBranchDetail(actual, value)
 		if branch == nil {
+			if ambiguous {
+				return 0, false
+			}
 			return 0, false
 		}
 		score, ok := exampleMatchScore(branch.Attribute, value)
@@ -234,6 +312,20 @@ func exampleMatchScore(attr *expr.AttributeExpr, value any) (int, bool) {
 		}
 		return 0, false
 	}
+}
+
+func firstGeneratedUnionBranch(union *expr.Union) *expr.NamedAttributeExpr {
+	if len(union.Values) == 0 {
+		return nil
+	}
+	branches := append([]*expr.NamedAttributeExpr(nil), union.Values...)
+	sort.SliceStable(branches, func(i, j int) bool {
+		if branches[i].Name == branches[j].Name {
+			return branches[i].Attribute.Type.Hash() < branches[j].Attribute.Type.Hash()
+		}
+		return branches[i].Name < branches[j].Name
+	})
+	return branches[0]
 }
 
 func objectExampleMatchScore(obj *expr.Object, value any) (int, bool) {

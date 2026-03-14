@@ -84,3 +84,46 @@ var TestUnionDSL = func() {
 		})
 	)
 }
+
+var ConstructorUnionCollectionsDSL = func() {
+	var TextPayload = Type("ConstructorUnionCollectionsTextPayload", func() {
+		Attribute("text", String)
+		Required("text")
+	})
+	var JSONPayload = Type("ConstructorUnionCollectionsJSONPayload", func() {
+		Attribute("message", String)
+		Required("message")
+	})
+	var Choice = OneOf(TextPayload, JSONPayload)
+
+	var _ = Type("ConstructorUnionCollections", func() {
+		Attribute("ArrayChoices", ArrayOf(Choice))
+		Attribute("MapChoices", MapOf(String, Choice))
+	})
+}
+
+var DeclarationAndConstructorUnionSymmetryDSL = func() {
+	var TextPayload = Type("DeclarationConstructorTextPayload", func() {
+		Attribute("text", String)
+		Required("text")
+	})
+	var JSONPayload = Type("DeclarationConstructorJSONPayload", func() {
+		Attribute("message", String)
+		Required("message")
+	})
+	var DeclaredChoice = Type("DeclarationConstructorDeclaredChoice", func() {
+		OneOf("Value", func() {
+			Attribute("DeclarationConstructorTextPayload", TextPayload)
+			Attribute("DeclarationConstructorJSONPayload", JSONPayload)
+		})
+	})
+
+	var _ = Type("DeclarationUnionContainer", func() {
+		Attribute("Choice", DeclaredChoice)
+		Required("Choice")
+	})
+	var _ = Type("ConstructorUnionContainer", func() {
+		Attribute("Choice", OneOf(TextPayload, JSONPayload))
+		Required("Choice")
+	})
+}

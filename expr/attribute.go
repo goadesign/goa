@@ -3,6 +3,7 @@ package expr
 import (
 	"fmt"
 	"slices"
+	"sort"
 	"strings"
 
 	"goa.design/goa/v3/eval"
@@ -384,9 +385,11 @@ func (a *AttributeExpr) Finalize() {
 			nat.Attribute.Finalize()
 		}
 	case IsUnion(a.Type):
-		for _, nat := range AsUnion(a.Type).Values {
+		union := AsUnion(a.Type)
+		for _, nat := range union.Values {
 			nat.Attribute.Finalize()
 		}
+		normalizeDerivedUnion(union)
 	case IsArray(a.Type):
 		AsArray(a.Type).ElemType.Finalize()
 	case IsMap(a.Type):
@@ -442,6 +445,115 @@ func (a *AttributeExpr) resolveTypeRef() error {
 
 func isTypeRef(ut *UserTypeExpr) bool {
 	return ut != nil && strings.HasPrefix(ut.UID, "$type-ref:")
+}
+
+func normalizeDerivedUnion(union *Union) {
+	if !hasDerivedUnionVariantNames(union) {
+		return
+	}
+	types := make([]DataType, len(union.Values))
+	bases := make([]string, len(union.Values))
+	for i, nat := range union.Values {
+		types[i] = nat.Attribute.Type
+		bases[i] = derivedUnionVariantName(nat.Attribute.Type)
+	}
+	names := uniqueDerivedUnionVariantNames(types, bases)
+	for i, nat := range union.Values {
+		nat.Name = names[i]
+	}
+	union.TypeName = derivedUnionTypeName(names)
+}
+
+func hasDerivedUnionVariantNames(union *Union) bool {
+	if union == nil || len(union.Values) == 0 {
+		return false
+	}
+	for _, nat := range union.Values {
+		if nat == nil || nat.Attribute == nil {
+			return false
+		}
+		if _, ok := nat.Attribute.Meta.Last("oneof:variant:derived"); !ok {
+			return false
+		}
+	}
+	return true
+}
+
+func derivedUnionVariantName(dt DataType) string {
+	name := strings.TrimSpace(publicUnionVariantName(dt))
+	if name == "" {
+		return "Value"
+	}
+	return Title(name)
+}
+
+func publicUnionVariantName(dt DataType) string {
+	if ut, ok := dt.(UserType); ok && ut.Attribute() != nil {
+		if name, ok := ut.Attribute().Meta.Last("name:original"); ok && strings.TrimSpace(name) != "" {
+			return name
+		}
+		if name, ok := ut.Attribute().Meta.Last("openapi:typename"); ok && strings.TrimSpace(name) != "" {
+			return name
+		}
+	}
+	return dt.Name()
+}
+
+func uniqueDerivedUnionVariantNames(types []DataType, bases []string) []string {
+	reserved := make(map[string]struct{}, len(bases))
+	for _, base := range bases {
+		reserved[base] = struct{}{}
+	}
+
+	names := make([]string, len(bases))
+	groups := make(map[string][]int, len(bases))
+	for i, base := range bases {
+		groups[base] = append(groups[base], i)
+	}
+	for base, indexes := range groups {
+		if len(indexes) == 1 {
+			names[indexes[0]] = base
+			continue
+		}
+		sortedIndexes := append([]int(nil), indexes...)
+		sort.SliceStable(sortedIndexes, func(i, j int) bool {
+			left := derivedUnionVariantStableKey(types[sortedIndexes[i]])
+			right := derivedUnionVariantStableKey(types[sortedIndexes[j]])
+			if left == right {
+				return sortedIndexes[i] < sortedIndexes[j]
+			}
+			return left < right
+		})
+		for offset, idx := range sortedIndexes {
+			if offset == 0 {
+				names[idx] = base
+				continue
+			}
+			for suffix := offset + 1; ; suffix++ {
+				name := fmt.Sprintf("%s%d", base, suffix)
+				if _, ok := reserved[name]; ok {
+					continue
+				}
+				names[idx] = name
+				reserved[name] = struct{}{}
+				break
+			}
+		}
+	}
+	return names
+}
+
+func derivedUnionVariantStableKey(dt DataType) string {
+	return publicUnionVariantName(dt) + ":" + dt.Hash()
+}
+
+func derivedUnionTypeName(names []string) string {
+	if len(names) == 0 {
+		return "Union"
+	}
+	sortedNames := append([]string(nil), names...)
+	sort.Strings(sortedNames)
+	return strings.Join(sortedNames, "Or")
 }
 
 // Merge merges other's attributes into a overriding attributes of a with

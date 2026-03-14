@@ -227,6 +227,93 @@ func TestOneOfTypeConstructorReservesExplicitNames(t *testing.T) {
 	}
 }
 
+func TestOneOfTypeConstructorNormalizesDuplicateNamesDeterministicallyAcrossOrder(t *testing.T) {
+	buildNames := func(firstName, secondName string) map[string]string {
+		eval.Context = &eval.DSLContext{}
+		expr.Root = &expr.RootExpr{}
+
+		first := Type(firstName, func() {
+			Attribute("text", String)
+		})
+		second := Type(secondName, func() {
+			Attribute("count", Int)
+		})
+
+		union, ok := OneOf(first, second).(*expr.Union)
+		require.True(t, ok)
+		require.Nil(t, eval.Context.Errors)
+
+		namesByHash := make(map[string]string, len(union.Values))
+		for _, branch := range union.Values {
+			namesByHash[branch.Attribute.Type.Hash()] = branch.Name
+		}
+		return namesByHash
+	}
+
+	forward := buildNames("foo", "Foo")
+	reverse := buildNames("Foo", "foo")
+	require.Equal(t, forward, reverse)
+}
+
+func TestOneOfTypeConstructorTypeNameStableAcrossOrder(t *testing.T) {
+	buildTypeName := func(firstName, secondName string) string {
+		eval.Context = &eval.DSLContext{}
+		expr.Root = &expr.RootExpr{}
+
+		first := Type(firstName, func() {
+			Attribute("text", String)
+		})
+		second := Type(secondName, func() {
+			Attribute("count", Int)
+		})
+
+		union, ok := OneOf(first, second).(*expr.Union)
+		require.True(t, ok)
+		require.Nil(t, eval.Context.Errors)
+		return union.TypeName
+	}
+
+	require.Equal(t, buildTypeName("TextPayload", "JSONPayload"), buildTypeName("JSONPayload", "TextPayload"))
+}
+
+func TestOneOfTypeConstructorUsesDeclaredNamesForDiscriminators(t *testing.T) {
+	eval.Context = &eval.DSLContext{}
+	expr.Root = &expr.RootExpr{}
+
+	alpha := Type("AlphaPayload", String, func() {
+		TypeName("RenamedAlphaPayload")
+	})
+	beta := Type("BetaPayload", String, func() {
+		TypeName("RenamedBetaPayload")
+	})
+
+	union, ok := OneOf(alpha, beta).(*expr.Union)
+	require.True(t, ok)
+	require.Nil(t, eval.Context.Errors)
+
+	require.Equal(t, "AlphaPayloadOrBetaPayload", union.TypeName)
+	require.Len(t, union.Values, 2)
+	require.Equal(t, "AlphaPayload", union.Values[0].Name)
+	require.Equal(t, "BetaPayload", union.Values[1].Name)
+}
+
+func TestOneOfTypeConstructorAllowsNamedComplexAliases(t *testing.T) {
+	eval.Context = &eval.DSLContext{}
+	expr.Root = &expr.RootExpr{}
+
+	ids := Type("IDs", ArrayOf(String))
+	counts := Type("Counts", MapOf(String, Int))
+
+	union, ok := OneOf(ids, counts).(*expr.Union)
+	require.True(t, ok)
+	require.Nil(t, eval.Context.Errors)
+
+	require.Equal(t, "CountsOrIDs", union.TypeName)
+	require.Len(t, union.Values, 2)
+	require.Equal(t, "IDs", union.Values[0].Name)
+	require.Equal(t, "Counts", union.Values[1].Name)
+}
+
 func TestOneOfTypeConstructorRejectsInvalidVariant(t *testing.T) {
 	eval.Context = &eval.DSLContext{}
 	expr.Root = &expr.RootExpr{}
@@ -363,6 +450,46 @@ func TestOneOfTypeConstructorPayloadMetaOverridesKeys(t *testing.T) {
 	if payload.GetValueKey() != "data" {
 		t.Errorf("expected payload value key %q, got %q", "data", payload.GetValueKey())
 	}
+}
+
+func TestOneOfTypeConstructorRejectsDefaultInAttribute(t *testing.T) {
+	err := expr.RunInvalidDSL(t, func() {
+		text := Type("Text", func() {
+			Attribute("text", String)
+		})
+		json := Type("JSON", func() {
+			Attribute("message", String)
+		})
+		Type("Parent", func() {
+			Attribute("choice", OneOf(text, json), func() {
+				Default(map[string]any{"type": "JSON", "value": map[string]any{"message": "hello"}})
+			})
+		})
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "default values are not supported for union attributes")
+}
+
+func TestOneOfTypeConstructorRejectsDefaultInPayload(t *testing.T) {
+	err := expr.RunInvalidDSL(t, func() {
+		text := Type("Text", func() {
+			Attribute("text", String)
+		})
+		json := Type("JSON", func() {
+			Attribute("message", String)
+		})
+		Service("Shapes", func() {
+			Method("draw", func() {
+				Payload(OneOf(text, json), func() {
+					Default(map[string]any{"type": "JSON", "value": map[string]any{"message": "hello"}})
+				})
+			})
+		})
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "default values are not supported for union attributes")
 }
 
 func TestOneOfTypeConstructorForMethodPayloadAndResult(t *testing.T) {
@@ -519,4 +646,16 @@ func TestOneOfDeclarationFormUsedAsPayloadTypeFails(t *testing.T) {
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "invalid use of OneOf")
+}
+
+func TestOneOfDeclarationFormUsedAsAttributeTypeFails(t *testing.T) {
+	err := expr.RunInvalidDSL(t, func() {
+		Type("Parent", func() {
+			Attribute("choice", OneOf("Inner", func() {
+				Attribute("value", String)
+			}))
+		})
+	})
+
+	require.Error(t, err)
 }

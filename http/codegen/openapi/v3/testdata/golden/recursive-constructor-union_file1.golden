@@ -25,7 +25,7 @@ paths:
                             example:
                                 type: Leaf
                                 value:
-                                    value: Et quae sunt itaque.
+                                    value: Provident ut sapiente magni.
                             oneOf:
                                 - $ref: '#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5'
                                 - $ref: '#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6'
@@ -46,7 +46,7 @@ paths:
                         example:
                             type: Leaf
                             value:
-                                value: Et quae sunt itaque.
+                                value: Provident ut sapiente magni.
             responses:
                 "200":
                     description: OK response.
@@ -61,7 +61,7 @@ paths:
                                 example:
                                     type: Leaf
                                     value:
-                                        value: Et quae sunt itaque.
+                                        value: Provident ut sapiente magni.
                                 oneOf:
                                     - $ref: '#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5'
                                     - $ref: '#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6'
@@ -82,7 +82,7 @@ paths:
                             example:
                                 type: Leaf
                                 value:
-                                    value: Et quae sunt itaque.
+                                    value: Provident ut sapiente magni.
 components:
     schemas:
         Leaf:
@@ -131,7 +131,7 @@ components:
                     example:
                         type: Leaf
                         value:
-                            value: Et quae sunt itaque.
+                            value: Provident ut sapiente magni.
                     oneOf:
                         - $ref: '#/components/schemas/LeafOrNodeLeafEnvelope66640687b72f2cc5'
                         - $ref: '#/components/schemas/LeafOrNodeNodeEnvelope1422994f41aff3a6'
@@ -153,7 +153,7 @@ components:
                 next:
                     type: Leaf
                     value:
-                        value: Et quae sunt itaque.
+                        value: Provident ut sapiente magni.
             required:
                 - next
 tags:

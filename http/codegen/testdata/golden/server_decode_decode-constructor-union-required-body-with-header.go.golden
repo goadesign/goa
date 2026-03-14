@@ -1,0 +1,61 @@
+// DecodeShowRequest returns a decoder for requests sent to the
+// ConstructorUnionRequiredBodyWithHeader Show endpoint.
+func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*constructorunionrequiredbodywithheader.ShowPayload, error) {
+	return func(r *http.Request) (*constructorunionrequiredbodywithheader.ShowPayload, error) {
+		var payload *constructorunionrequiredbodywithheader.ShowPayload
+		var (
+			body *RequiredBodyWithHeaderJSONPayloadOrRequiredBodyWithHeaderTextPayload
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		if body == nil {
+			return payload, goa.MissingPayloadError()
+		}
+		if body != nil {
+			switch string(body.Kind()) {
+			case "RequiredBodyWithHeaderTextPayload":
+				actual, _ := body.AsRequiredBodyWithHeaderTextPayload()
+				if actual != nil {
+					if err2 := ValidateRequiredBodyWithHeaderTextPayload(actual); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
+				}
+			case "RequiredBodyWithHeaderJSONPayload":
+				actual, _ := body.AsRequiredBodyWithHeaderJSONPayload()
+				if actual != nil {
+					if err2 := ValidateRequiredBodyWithHeaderJSONPayload(actual); err2 != nil {
+						err = goa.MergeErrors(err, err2)
+					}
+				}
+			}
+
+			if err != nil {
+				return payload, err
+			}
+		}
+
+		var (
+			token string
+		)
+		token = r.Header.Get("Authorization")
+		if token == "" {
+			err = goa.MergeErrors(err, goa.MissingFieldError("token", "header"))
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewShowPayload(&body, token)
+
+		return payload, nil
+	}
+}

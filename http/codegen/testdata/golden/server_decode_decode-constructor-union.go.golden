@@ -1,10 +1,10 @@
 // DecodeShowRequest returns a decoder for requests sent to the
 // ConstructorUnion Show endpoint.
-func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*constructorunion.TextPayloadOrJSONPayload, error) {
-	return func(r *http.Request) (*constructorunion.TextPayloadOrJSONPayload, error) {
-		var payload *constructorunion.TextPayloadOrJSONPayload
+func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*constructorunion.JSONPayloadOrTextPayload, error) {
+	return func(r *http.Request) (*constructorunion.JSONPayloadOrTextPayload, error) {
+		var payload *constructorunion.JSONPayloadOrTextPayload
 		var (
-			body *TextPayloadOrJSONPayload
+			body *JSONPayloadOrTextPayload
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -43,7 +43,7 @@ func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.De
 				return payload, err
 			}
 		}
-		payload = NewShowTextPayloadOrJSONPayload(&body)
+		payload = NewShowJSONPayloadOrTextPayload(&body)
 
 		return payload, nil
 	}

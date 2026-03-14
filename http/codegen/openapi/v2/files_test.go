@@ -188,19 +188,48 @@ func TestExtensions(t *testing.T) {
 }
 
 func TestConstructorUnionDoesNotCrashOpenAPIV2(t *testing.T) {
-	openapi.Definitions = make(map[string]*openapi.Schema)
-	root := httpgen.RunHTTPDSL(t, testdata.ConstructorUnionHTTPDSL)
-	oFiles, err := openapiv2.Files(root)
-	require.NoError(t, err, "OpenAPI v2 generation failed for constructor union")
-	require.NotEmpty(t, oFiles, "expected Swagger files for constructor union DSL")
-	for _, o := range oFiles {
-		var buf bytes.Buffer
-		require.Len(t, o.SectionTemplates, 1, "expected one section per output file")
-		tmpl := template.Must(template.New("openapi").Funcs(o.SectionTemplates[0].FuncMap).Parse(o.SectionTemplates[0].Source))
-		require.NoError(t, tmpl.Execute(&buf, o.SectionTemplates[0].Data), "failed to render %s", o.Path)
-		if filepath.Ext(o.Path) == ".json" {
-			require.NoError(t, validateSwagger(buf.Bytes()), "invalid swagger for constructor union DSL")
-		}
+	cases := []struct {
+		Name string
+		DSL  func()
+	}{
+		{"top-level", testdata.ConstructorUnionHTTPDSL},
+		{"custom-keys", testdata.ConstructorUnionCustomKeysHTTPDSL},
+		{"nested", testdata.NestedTopLevelConstructorUnionCustomKeysHTTPDSL},
+		{"recursive", testdata.RecursiveConstructorUnionHTTPDSL},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			openapi.Definitions = make(map[string]*openapi.Schema)
+			root := httpgen.RunHTTPDSL(t, c.DSL)
+			oFiles, err := openapiv2.Files(root)
+			require.NoError(t, err, "OpenAPI v2 generation failed for constructor union")
+			require.NotEmpty(t, oFiles, "expected Swagger files for constructor union DSL")
+			for _, o := range oFiles {
+				var buf bytes.Buffer
+				require.Len(t, o.SectionTemplates, 1, "expected one section per output file")
+				tmpl := template.Must(template.New("openapi").Funcs(o.SectionTemplates[0].FuncMap).Parse(o.SectionTemplates[0].Source))
+				require.NoError(t, tmpl.Execute(&buf, o.SectionTemplates[0].Data), "failed to render %s", o.Path)
+				if filepath.Ext(o.Path) != ".json" {
+					continue
+				}
+				require.NoError(t, validateSwagger(buf.Bytes()), "invalid swagger for constructor union DSL")
+
+				doc := &openapi2.T{}
+				require.NoError(t, doc.UnmarshalJSON(buf.Bytes()))
+				post := doc.Paths["/"].Post
+				require.NotNil(t, post)
+				if post.Parameters != nil {
+					for _, p := range post.Parameters {
+						if p.In == "body" && p.Schema != nil && p.Schema.Value != nil && p.Schema.Value.Type != nil {
+							require.Contains(t, *p.Schema.Value.Type, "object", "expected constructor union body to degrade to an object schema in OpenAPI v2")
+						}
+					}
+				}
+				if resp, ok := post.Responses["200"]; ok && resp.Schema != nil && resp.Schema.Value != nil && resp.Schema.Value.Type != nil {
+					require.Contains(t, *resp.Schema.Value.Type, "object", "expected constructor union response to degrade to an object schema in OpenAPI v2")
+				}
+			}
+		})
 	}
 }
 

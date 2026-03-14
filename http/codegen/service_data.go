@@ -2745,10 +2745,11 @@ func buildHTTPUnionTypeData(u *expr.Union, scope *codegen.NameScope) *service.Un
 	att := &expr.AttributeExpr{Type: u}
 	name := scope.GoTypeName(att)
 	kindName := scope.Unique(name + "Kind")
+	fieldNames := uniqueHTTPUnionFieldNames(u.Values)
 
 	fields := make([]*service.UnionFieldData, len(u.Values))
 	for i, nat := range u.Values {
-		fieldName := codegen.Goify(nat.Name, true)
+		fieldName := fieldNames[i]
 		fieldType := scope.GoTypeRef(nat.Attribute)
 		kindConst := kindName + fieldName
 		fields[i] = &service.UnionFieldData{
@@ -2767,6 +2768,45 @@ func buildHTTPUnionTypeData(u *expr.Union, scope *codegen.NameScope) *service.Un
 		TypeKey:  u.GetTypeKey(),
 		ValueKey: u.GetValueKey(),
 	}
+}
+
+func uniqueHTTPUnionFieldNames(values []*expr.NamedAttributeExpr) []string {
+	bases := make([]string, len(values))
+	for i, nat := range values {
+		bases[i] = codegen.Goify(nat.Name, true)
+	}
+	names := make([]string, len(values))
+	groups := make(map[string][]int, len(values))
+	for i, base := range bases {
+		groups[base] = append(groups[base], i)
+	}
+	for base, idxs := range groups {
+		if len(idxs) == 1 {
+			names[idxs[0]] = base
+			continue
+		}
+		sorted := append([]int(nil), idxs...)
+		sort.SliceStable(sorted, func(i, j int) bool {
+			left := httpUnionFieldStableKey(values[sorted[i]])
+			right := httpUnionFieldStableKey(values[sorted[j]])
+			if left == right {
+				return sorted[i] < sorted[j]
+			}
+			return left < right
+		})
+		for offset, idx := range sorted {
+			if offset == 0 {
+				names[idx] = base
+				continue
+			}
+			names[idx] = fmt.Sprintf("%s%d", base, offset+1)
+		}
+	}
+	return names
+}
+
+func httpUnionFieldStableKey(nat *expr.NamedAttributeExpr) string {
+	return nat.Name + ":" + nat.Attribute.Type.Hash()
 }
 
 // sortedNamedAttributes returns object fields sorted by attribute name.

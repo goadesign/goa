@@ -1,0 +1,354 @@
+// ShowResponseBody is the type of the
+// "NestedTopLevelConstructorUnionCustomKeys" service "Show" endpoint HTTP
+// response body.
+type ShowResponseBody OuterAOrOuterB
+
+// OuterA is used to define fields on response body types.
+type OuterA struct {
+	Choice InnerAOrInnerB `form:"choice" json:"choice" xml:"choice"`
+}
+
+// InnerA is used to define fields on response body types.
+type InnerA struct {
+	Text string `form:"text" json:"text" xml:"text"`
+}
+
+// InnerB is used to define fields on response body types.
+type InnerB struct {
+	Message string `form:"message" json:"message" xml:"message"`
+}
+
+// OuterB is used to define fields on response body types.
+type OuterB struct {
+	Count int `form:"count" json:"count" xml:"count"`
+}
+
+// InnerAOrInnerB is a sum-type union.
+type InnerAOrInnerB struct {
+	kind   InnerAOrInnerBKind
+	InnerA *InnerA
+	InnerB *InnerB
+}
+
+// InnerAOrInnerBKind enumerates the union variants for InnerAOrInnerB.
+type InnerAOrInnerBKind string
+
+const (
+	// InnerAOrInnerBKindInnerA identifies the InnerA branch of the union.
+	InnerAOrInnerBKindInnerA InnerAOrInnerBKind = "InnerA"
+	// InnerAOrInnerBKindInnerB identifies the InnerB branch of the union.
+	InnerAOrInnerBKindInnerB InnerAOrInnerBKind = "InnerB"
+)
+
+// Kind returns the discriminator value of the union.
+func (u InnerAOrInnerB) Kind() InnerAOrInnerBKind {
+	return u.kind
+}
+
+// NewInnerAOrInnerBInnerA constructs a InnerAOrInnerB with the InnerA branch set.
+func NewInnerAOrInnerBInnerA(v *InnerA) InnerAOrInnerB {
+	return InnerAOrInnerB{
+		kind:   InnerAOrInnerBKindInnerA,
+		InnerA: v,
+	}
+}
+
+// AsInnerA returns the value of the InnerA branch if set.
+func (u InnerAOrInnerB) AsInnerA() (_ *InnerA, ok bool) {
+	if u.kind != InnerAOrInnerBKindInnerA {
+		return
+	}
+	return u.InnerA, true
+}
+
+// SetInnerA sets the InnerA branch of the union.
+func (u *InnerAOrInnerB) SetInnerA(v *InnerA) {
+	u.kind = InnerAOrInnerBKindInnerA
+	u.InnerA = v
+}
+
+// NewInnerAOrInnerBInnerB constructs a InnerAOrInnerB with the InnerB branch set.
+func NewInnerAOrInnerBInnerB(v *InnerB) InnerAOrInnerB {
+	return InnerAOrInnerB{
+		kind:   InnerAOrInnerBKindInnerB,
+		InnerB: v,
+	}
+}
+
+// AsInnerB returns the value of the InnerB branch if set.
+func (u InnerAOrInnerB) AsInnerB() (_ *InnerB, ok bool) {
+	if u.kind != InnerAOrInnerBKindInnerB {
+		return
+	}
+	return u.InnerB, true
+}
+
+// SetInnerB sets the InnerB branch of the union.
+func (u *InnerAOrInnerB) SetInnerB(v *InnerB) {
+	u.kind = InnerAOrInnerBKindInnerB
+	u.InnerB = v
+}
+
+// Validate ensures the union discriminant is valid.
+func (u InnerAOrInnerB) Validate() error {
+	switch u.kind {
+	case "":
+		return goa.InvalidEnumValueError("kind", "", []any{
+			string(InnerAOrInnerBKindInnerA),
+			string(InnerAOrInnerBKindInnerB),
+		})
+	case InnerAOrInnerBKindInnerA:
+		return nil
+	case InnerAOrInnerBKindInnerB:
+		return nil
+	default:
+		return goa.InvalidEnumValueError("kind", u.kind, []any{
+			string(InnerAOrInnerBKindInnerA),
+			string(InnerAOrInnerBKindInnerB),
+		})
+	}
+}
+
+// MarshalJSON marshals the union into the canonical {type,value} JSON shape.
+func (u InnerAOrInnerB) MarshalJSON() ([]byte, error) {
+	if err := u.Validate(); err != nil {
+		return nil, err
+	}
+	var (
+		value any
+	)
+	switch u.kind {
+	case InnerAOrInnerBKindInnerA:
+		value = u.InnerA
+	case InnerAOrInnerBKindInnerB:
+		value = u.InnerB
+	default:
+		return nil, fmt.Errorf("unexpected InnerAOrInnerB discriminant %q", u.kind)
+	}
+	return json.Marshal(struct {
+		Type  string `json:"kind"`
+		Value any    `json:"data"`
+	}{
+		Type:  string(u.kind),
+		Value: value,
+	})
+}
+
+// UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
+func (u *InnerAOrInnerB) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type  string          `json:"kind"`
+		Value json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	switch raw.Type {
+	case string(InnerAOrInnerBKindInnerA):
+		var v *InnerA
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = InnerAOrInnerBKindInnerA
+		u.InnerA = v
+	case string(InnerAOrInnerBKindInnerB):
+		var v *InnerB
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = InnerAOrInnerBKindInnerB
+		u.InnerB = v
+	default:
+		return fmt.Errorf("unexpected InnerAOrInnerB type %q", raw.Type)
+	}
+	return nil
+}
+
+// OuterAOrOuterB is a sum-type union.
+type OuterAOrOuterB struct {
+	kind   OuterAOrOuterBKind
+	OuterA *OuterA
+	OuterB *OuterB
+}
+
+// OuterAOrOuterBKind enumerates the union variants for OuterAOrOuterB.
+type OuterAOrOuterBKind string
+
+const (
+	// OuterAOrOuterBKindOuterA identifies the OuterA branch of the union.
+	OuterAOrOuterBKindOuterA OuterAOrOuterBKind = "OuterA"
+	// OuterAOrOuterBKindOuterB identifies the OuterB branch of the union.
+	OuterAOrOuterBKindOuterB OuterAOrOuterBKind = "OuterB"
+)
+
+// Kind returns the discriminator value of the union.
+func (u OuterAOrOuterB) Kind() OuterAOrOuterBKind {
+	return u.kind
+}
+
+// NewOuterAOrOuterBOuterA constructs a OuterAOrOuterB with the OuterA branch set.
+func NewOuterAOrOuterBOuterA(v *OuterA) OuterAOrOuterB {
+	return OuterAOrOuterB{
+		kind:   OuterAOrOuterBKindOuterA,
+		OuterA: v,
+	}
+}
+
+// AsOuterA returns the value of the OuterA branch if set.
+func (u OuterAOrOuterB) AsOuterA() (_ *OuterA, ok bool) {
+	if u.kind != OuterAOrOuterBKindOuterA {
+		return
+	}
+	return u.OuterA, true
+}
+
+// SetOuterA sets the OuterA branch of the union.
+func (u *OuterAOrOuterB) SetOuterA(v *OuterA) {
+	u.kind = OuterAOrOuterBKindOuterA
+	u.OuterA = v
+}
+
+// NewOuterAOrOuterBOuterB constructs a OuterAOrOuterB with the OuterB branch set.
+func NewOuterAOrOuterBOuterB(v *OuterB) OuterAOrOuterB {
+	return OuterAOrOuterB{
+		kind:   OuterAOrOuterBKindOuterB,
+		OuterB: v,
+	}
+}
+
+// AsOuterB returns the value of the OuterB branch if set.
+func (u OuterAOrOuterB) AsOuterB() (_ *OuterB, ok bool) {
+	if u.kind != OuterAOrOuterBKindOuterB {
+		return
+	}
+	return u.OuterB, true
+}
+
+// SetOuterB sets the OuterB branch of the union.
+func (u *OuterAOrOuterB) SetOuterB(v *OuterB) {
+	u.kind = OuterAOrOuterBKindOuterB
+	u.OuterB = v
+}
+
+// Validate ensures the union discriminant is valid.
+func (u OuterAOrOuterB) Validate() error {
+	switch u.kind {
+	case "":
+		return goa.InvalidEnumValueError("kind", "", []any{
+			string(OuterAOrOuterBKindOuterA),
+			string(OuterAOrOuterBKindOuterB),
+		})
+	case OuterAOrOuterBKindOuterA:
+		return nil
+	case OuterAOrOuterBKindOuterB:
+		return nil
+	default:
+		return goa.InvalidEnumValueError("kind", u.kind, []any{
+			string(OuterAOrOuterBKindOuterA),
+			string(OuterAOrOuterBKindOuterB),
+		})
+	}
+}
+
+// MarshalJSON marshals the union into the canonical {type,value} JSON shape.
+func (u OuterAOrOuterB) MarshalJSON() ([]byte, error) {
+	if err := u.Validate(); err != nil {
+		return nil, err
+	}
+	var (
+		value any
+	)
+	switch u.kind {
+	case OuterAOrOuterBKindOuterA:
+		value = u.OuterA
+	case OuterAOrOuterBKindOuterB:
+		value = u.OuterB
+	default:
+		return nil, fmt.Errorf("unexpected OuterAOrOuterB discriminant %q", u.kind)
+	}
+	return json.Marshal(struct {
+		Type  string `json:"kind"`
+		Value any    `json:"data"`
+	}{
+		Type:  string(u.kind),
+		Value: value,
+	})
+}
+
+// UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
+func (u *OuterAOrOuterB) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type  string          `json:"kind"`
+		Value json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	switch raw.Type {
+	case string(OuterAOrOuterBKindOuterA):
+		var v *OuterA
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = OuterAOrOuterBKindOuterA
+		u.OuterA = v
+	case string(OuterAOrOuterBKindOuterB):
+		var v *OuterB
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = OuterAOrOuterBKindOuterB
+		u.OuterB = v
+	default:
+		return fmt.Errorf("unexpected OuterAOrOuterB type %q", raw.Type)
+	}
+	return nil
+}
+
+// NewShowResponseBody builds the HTTP response body from the result of the
+// "Show" endpoint of the "NestedTopLevelConstructorUnionCustomKeys" service.
+func NewShowResponseBody(res *nestedtoplevelconstructorunioncustomkeys.OuterAOrOuterB) ShowResponseBody {
+	var body *OuterAOrOuterB
+
+	if res != nil {
+		switch string(res.Kind()) {
+		case "OuterA":
+			actual, _ := res.AsOuterA()
+			obj := marshalNestedtoplevelconstructorunioncustomkeysOuterAToOuterA(actual)
+			var u OuterAOrOuterB
+			u.SetOuterA((*OuterA)(obj))
+			body = &u
+		case "OuterB":
+			actual, _ := res.AsOuterB()
+			obj := marshalNestedtoplevelconstructorunioncustomkeysOuterBToOuterB(actual)
+			var u OuterAOrOuterB
+			u.SetOuterB((*OuterB)(obj))
+			body = &u
+		}
+	}
+	return body
+}
+
+// NewShowOuterAOrOuterB builds a NestedTopLevelConstructorUnionCustomKeys
+// service Show endpoint payload.
+func NewShowOuterAOrOuterB(body *OuterAOrOuterB) *nestedtoplevelconstructorunioncustomkeys.OuterAOrOuterB {
+	var v *nestedtoplevelconstructorunioncustomkeys.OuterAOrOuterB
+
+	if body != nil {
+		switch string(body.Kind()) {
+		case "OuterA":
+			actual, _ := body.AsOuterA()
+			obj := unmarshalOuterAToNestedtoplevelconstructorunioncustomkeysOuterA(actual)
+			var u nestedtoplevelconstructorunioncustomkeys.OuterAOrOuterB
+			u.SetOuterA((*nestedtoplevelconstructorunioncustomkeys.OuterA)(obj))
+			v = &u
+		case "OuterB":
+			actual, _ := body.AsOuterB()
+			obj := unmarshalOuterBToNestedtoplevelconstructorunioncustomkeysOuterB(actual)
+			var u nestedtoplevelconstructorunioncustomkeys.OuterAOrOuterB
+			u.SetOuterB((*nestedtoplevelconstructorunioncustomkeys.OuterB)(obj))
+			v = &u
+		}
+	}
+	return v
+}

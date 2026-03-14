@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -223,13 +224,14 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		if s.Properties == nil {
 			s.Properties = make(map[string]*openapi.Schema)
 		}
+		values := sortedUnionValues(t)
 		typeSchema := &openapi.Schema{Type: "string"}
-		typeSchema.Enum = make([]any, len(t.Values))
-		for i, val := range t.Values {
+		typeSchema.Enum = make([]any, len(values))
+		for i, val := range values {
 			typeSchema.Enum[i] = val.Name
 		}
 		valueSchema := &openapi.Schema{}
-		for _, val := range t.Values {
+		for _, val := range values {
 			valueSchema.AnyOf = append(valueSchema.AnyOf, sf.schemafy(val.Attribute))
 		}
 		s.Properties[typeKey] = typeSchema
@@ -286,7 +288,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	if examples := attr.ExtractUserExamples(); len(examples) > 0 {
 		s.Example = canonicalizeExampleValue(attr, examples[len(examples)-1].Value, sf)
 	} else {
-		s.Example = canonicalizeGeneratedExampleValue(attr, attr.Example(sf.rand), sf)
+		s.Example = generatedExampleValue(attr, sf)
 	}
 	if metaExtensions := openapi.ExtensionsFromExpr(attr.Meta); len(metaExtensions) > 0 {
 		if s.Extensions == nil {
@@ -350,9 +352,10 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 
 func buildUnionSchemaExtensions(union *expr.Union, sf *schemafier) map[string]any {
 	typeKey := union.GetTypeKey()
-	oneOf := make([]any, 0, len(union.Values))
-	mapping := make(map[string]any, len(union.Values))
-	for _, val := range union.Values {
+	values := sortedUnionValues(union)
+	oneOf := make([]any, 0, len(values))
+	mapping := make(map[string]any, len(values))
+	for _, val := range values {
 		ref := sf.ensureUnionBranchSchema(union, val)
 		oneOf = append(oneOf, &openapi.Schema{Ref: ref})
 		mapping[val.Name] = ref
@@ -367,10 +370,10 @@ func buildUnionSchemaExtensions(union *expr.Union, sf *schemafier) map[string]an
 }
 
 func buildUnionExample(union *expr.Union, sf *schemafier) any {
-	if len(union.Values) == 0 {
+	branch := firstGeneratedUnionBranch(union)
+	if branch == nil {
 		return nil
 	}
-	branch := union.Values[0]
 	return map[string]any{
 		union.GetTypeKey():  branch.Name,
 		union.GetValueKey(): canonicalizeGeneratedExampleValue(branch.Attribute, branch.Attribute.Example(sf.rand), sf),
@@ -413,6 +416,20 @@ func (sf *schemafier) unionBranchSchemaKey(union *expr.Union, val *expr.NamedAtt
 func deterministicUnionBranchSchemaName(union *expr.Union, val *expr.NamedAttributeExpr, key string) string {
 	sum := hashString(key, fnv.New64())
 	return codegen.Goify(fmt.Sprintf("%s%sEnvelope%x", union.TypeName, val.Name, sum), true)
+}
+
+func sortedUnionValues(union *expr.Union) []*expr.NamedAttributeExpr {
+	if len(union.Values) < 2 {
+		return union.Values
+	}
+	values := append([]*expr.NamedAttributeExpr(nil), union.Values...)
+	sort.SliceStable(values, func(i, j int) bool {
+		if values[i].Name == values[j].Name {
+			return values[i].Attribute.Type.Hash() < values[j].Attribute.Type.Hash()
+		}
+		return values[i].Name < values[j].Name
+	})
+	return values
 }
 
 // uniquify returns n if n is not a known type name. Otherwise uniquify appends

@@ -1,0 +1,321 @@
+
+// Service is the DeclarationAndInlineUnionService service interface.
+type Service interface {
+	// Declared implements Declared.
+	Declared(context.Context, *DeclarationAndInlineUnionDeclaredChoice) (res *DeclarationAndInlineUnionDeclaredChoice, err error)
+	// Constructed implements Constructed.
+	Constructed(context.Context, *DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload) (res *DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload, err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "test api"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "DeclarationAndInlineUnionService"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames = [2]string{"Declared", "Constructed"}
+
+// DeclarationAndInlineUnionDeclaredChoice is the payload type of the
+// DeclarationAndInlineUnionService service Declared method.
+type DeclarationAndInlineUnionDeclaredChoice struct {
+	Value Value
+}
+
+type DeclarationAndInlineUnionJSONPayload struct {
+	Message string
+}
+
+type DeclarationAndInlineUnionTextPayload struct {
+	Text string
+}
+
+// DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload is a sum-type union.
+type DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload struct {
+	kind                                 DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKind
+	DeclarationAndInlineUnionTextPayload *DeclarationAndInlineUnionTextPayload
+	DeclarationAndInlineUnionJSONPayload *DeclarationAndInlineUnionJSONPayload
+}
+
+// DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKind enumerates the union variants for DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload.
+type DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKind string
+
+const (
+	// DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionTextPayload identifies the DeclarationAndInlineUnionTextPayload branch of the union.
+	DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionTextPayload DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKind = "DeclarationAndInlineUnionTextPayload"
+	// DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionJSONPayload identifies the DeclarationAndInlineUnionJSONPayload branch of the union.
+	DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionJSONPayload DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKind = "DeclarationAndInlineUnionJSONPayload"
+)
+
+// Kind returns the discriminator value of the union.
+func (u DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload) Kind() DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKind {
+	return u.kind
+}
+
+// NewDeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadDeclarationAndInlineUnionTextPayload constructs a DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload with the DeclarationAndInlineUnionTextPayload branch set.
+func NewDeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadDeclarationAndInlineUnionTextPayload(v *DeclarationAndInlineUnionTextPayload) DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload {
+	return DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload{
+		kind:                                 DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionTextPayload,
+		DeclarationAndInlineUnionTextPayload: v,
+	}
+}
+
+// AsDeclarationAndInlineUnionTextPayload returns the value of the DeclarationAndInlineUnionTextPayload branch if set.
+func (u DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload) AsDeclarationAndInlineUnionTextPayload() (_ *DeclarationAndInlineUnionTextPayload, ok bool) {
+	if u.kind != DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionTextPayload {
+		return
+	}
+	return u.DeclarationAndInlineUnionTextPayload, true
+}
+
+// SetDeclarationAndInlineUnionTextPayload sets the DeclarationAndInlineUnionTextPayload branch of the union.
+func (u *DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload) SetDeclarationAndInlineUnionTextPayload(v *DeclarationAndInlineUnionTextPayload) {
+	u.kind = DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionTextPayload
+	u.DeclarationAndInlineUnionTextPayload = v
+}
+
+// NewDeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadDeclarationAndInlineUnionJSONPayload constructs a DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload with the DeclarationAndInlineUnionJSONPayload branch set.
+func NewDeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadDeclarationAndInlineUnionJSONPayload(v *DeclarationAndInlineUnionJSONPayload) DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload {
+	return DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload{
+		kind:                                 DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionJSONPayload,
+		DeclarationAndInlineUnionJSONPayload: v,
+	}
+}
+
+// AsDeclarationAndInlineUnionJSONPayload returns the value of the DeclarationAndInlineUnionJSONPayload branch if set.
+func (u DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload) AsDeclarationAndInlineUnionJSONPayload() (_ *DeclarationAndInlineUnionJSONPayload, ok bool) {
+	if u.kind != DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionJSONPayload {
+		return
+	}
+	return u.DeclarationAndInlineUnionJSONPayload, true
+}
+
+// SetDeclarationAndInlineUnionJSONPayload sets the DeclarationAndInlineUnionJSONPayload branch of the union.
+func (u *DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload) SetDeclarationAndInlineUnionJSONPayload(v *DeclarationAndInlineUnionJSONPayload) {
+	u.kind = DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionJSONPayload
+	u.DeclarationAndInlineUnionJSONPayload = v
+}
+
+// Validate ensures the union discriminant is valid.
+func (u DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload) Validate() error {
+	switch u.kind {
+	case "":
+		return goa.InvalidEnumValueError("type", "", []any{
+			string(DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionTextPayload),
+			string(DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionJSONPayload),
+		})
+	case DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionTextPayload:
+		return nil
+	case DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionJSONPayload:
+		return nil
+	default:
+		return goa.InvalidEnumValueError("type", u.kind, []any{
+			string(DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionTextPayload),
+			string(DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionJSONPayload),
+		})
+	}
+}
+
+// MarshalJSON marshals the union into the canonical {type,value} JSON shape.
+func (u DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload) MarshalJSON() ([]byte, error) {
+	if err := u.Validate(); err != nil {
+		return nil, err
+	}
+	var (
+		value any
+	)
+	switch u.kind {
+	case DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionTextPayload:
+		value = u.DeclarationAndInlineUnionTextPayload
+	case DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionJSONPayload:
+		value = u.DeclarationAndInlineUnionJSONPayload
+	default:
+		return nil, fmt.Errorf("unexpected DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload discriminant %q", u.kind)
+	}
+	return json.Marshal(struct {
+		Type  string `json:"type"`
+		Value any    `json:"value"`
+	}{
+		Type:  string(u.kind),
+		Value: value,
+	})
+}
+
+// UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
+func (u *DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	switch raw.Type {
+	case string(DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionTextPayload):
+		var v *DeclarationAndInlineUnionTextPayload
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionTextPayload
+		u.DeclarationAndInlineUnionTextPayload = v
+	case string(DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionJSONPayload):
+		var v *DeclarationAndInlineUnionJSONPayload
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayloadKindDeclarationAndInlineUnionJSONPayload
+		u.DeclarationAndInlineUnionJSONPayload = v
+	default:
+		return fmt.Errorf("unexpected DeclarationAndInlineUnionJSONPayloadOrDeclarationAndInlineUnionTextPayload type %q", raw.Type)
+	}
+	return nil
+}
+
+// Value is a sum-type union.
+type Value struct {
+	kind                                 ValueKind
+	DeclarationAndInlineUnionTextPayload *DeclarationAndInlineUnionTextPayload
+	DeclarationAndInlineUnionJSONPayload *DeclarationAndInlineUnionJSONPayload
+}
+
+// ValueKind enumerates the union variants for Value.
+type ValueKind string
+
+const (
+	// ValueKindDeclarationAndInlineUnionTextPayload identifies the DeclarationAndInlineUnionTextPayload branch of the union.
+	ValueKindDeclarationAndInlineUnionTextPayload ValueKind = "DeclarationAndInlineUnionTextPayload"
+	// ValueKindDeclarationAndInlineUnionJSONPayload identifies the DeclarationAndInlineUnionJSONPayload branch of the union.
+	ValueKindDeclarationAndInlineUnionJSONPayload ValueKind = "DeclarationAndInlineUnionJSONPayload"
+)
+
+// Kind returns the discriminator value of the union.
+func (u Value) Kind() ValueKind {
+	return u.kind
+}
+
+// NewValueDeclarationAndInlineUnionTextPayload constructs a Value with the DeclarationAndInlineUnionTextPayload branch set.
+func NewValueDeclarationAndInlineUnionTextPayload(v *DeclarationAndInlineUnionTextPayload) Value {
+	return Value{
+		kind:                                 ValueKindDeclarationAndInlineUnionTextPayload,
+		DeclarationAndInlineUnionTextPayload: v,
+	}
+}
+
+// AsDeclarationAndInlineUnionTextPayload returns the value of the DeclarationAndInlineUnionTextPayload branch if set.
+func (u Value) AsDeclarationAndInlineUnionTextPayload() (_ *DeclarationAndInlineUnionTextPayload, ok bool) {
+	if u.kind != ValueKindDeclarationAndInlineUnionTextPayload {
+		return
+	}
+	return u.DeclarationAndInlineUnionTextPayload, true
+}
+
+// SetDeclarationAndInlineUnionTextPayload sets the DeclarationAndInlineUnionTextPayload branch of the union.
+func (u *Value) SetDeclarationAndInlineUnionTextPayload(v *DeclarationAndInlineUnionTextPayload) {
+	u.kind = ValueKindDeclarationAndInlineUnionTextPayload
+	u.DeclarationAndInlineUnionTextPayload = v
+}
+
+// NewValueDeclarationAndInlineUnionJSONPayload constructs a Value with the DeclarationAndInlineUnionJSONPayload branch set.
+func NewValueDeclarationAndInlineUnionJSONPayload(v *DeclarationAndInlineUnionJSONPayload) Value {
+	return Value{
+		kind:                                 ValueKindDeclarationAndInlineUnionJSONPayload,
+		DeclarationAndInlineUnionJSONPayload: v,
+	}
+}
+
+// AsDeclarationAndInlineUnionJSONPayload returns the value of the DeclarationAndInlineUnionJSONPayload branch if set.
+func (u Value) AsDeclarationAndInlineUnionJSONPayload() (_ *DeclarationAndInlineUnionJSONPayload, ok bool) {
+	if u.kind != ValueKindDeclarationAndInlineUnionJSONPayload {
+		return
+	}
+	return u.DeclarationAndInlineUnionJSONPayload, true
+}
+
+// SetDeclarationAndInlineUnionJSONPayload sets the DeclarationAndInlineUnionJSONPayload branch of the union.
+func (u *Value) SetDeclarationAndInlineUnionJSONPayload(v *DeclarationAndInlineUnionJSONPayload) {
+	u.kind = ValueKindDeclarationAndInlineUnionJSONPayload
+	u.DeclarationAndInlineUnionJSONPayload = v
+}
+
+// Validate ensures the union discriminant is valid.
+func (u Value) Validate() error {
+	switch u.kind {
+	case "":
+		return goa.InvalidEnumValueError("type", "", []any{
+			string(ValueKindDeclarationAndInlineUnionTextPayload),
+			string(ValueKindDeclarationAndInlineUnionJSONPayload),
+		})
+	case ValueKindDeclarationAndInlineUnionTextPayload:
+		return nil
+	case ValueKindDeclarationAndInlineUnionJSONPayload:
+		return nil
+	default:
+		return goa.InvalidEnumValueError("type", u.kind, []any{
+			string(ValueKindDeclarationAndInlineUnionTextPayload),
+			string(ValueKindDeclarationAndInlineUnionJSONPayload),
+		})
+	}
+}
+
+// MarshalJSON marshals the union into the canonical {type,value} JSON shape.
+func (u Value) MarshalJSON() ([]byte, error) {
+	if err := u.Validate(); err != nil {
+		return nil, err
+	}
+	var (
+		value any
+	)
+	switch u.kind {
+	case ValueKindDeclarationAndInlineUnionTextPayload:
+		value = u.DeclarationAndInlineUnionTextPayload
+	case ValueKindDeclarationAndInlineUnionJSONPayload:
+		value = u.DeclarationAndInlineUnionJSONPayload
+	default:
+		return nil, fmt.Errorf("unexpected Value discriminant %q", u.kind)
+	}
+	return json.Marshal(struct {
+		Type  string `json:"type"`
+		Value any    `json:"value"`
+	}{
+		Type:  string(u.kind),
+		Value: value,
+	})
+}
+
+// UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
+func (u *Value) UnmarshalJSON(data []byte) error {
+	var raw struct {
+		Type  string          `json:"type"`
+		Value json.RawMessage `json:"value"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	switch raw.Type {
+	case string(ValueKindDeclarationAndInlineUnionTextPayload):
+		var v *DeclarationAndInlineUnionTextPayload
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = ValueKindDeclarationAndInlineUnionTextPayload
+		u.DeclarationAndInlineUnionTextPayload = v
+	case string(ValueKindDeclarationAndInlineUnionJSONPayload):
+		var v *DeclarationAndInlineUnionJSONPayload
+		if err := json.Unmarshal(raw.Value, &v); err != nil {
+			return err
+		}
+		u.kind = ValueKindDeclarationAndInlineUnionJSONPayload
+		u.DeclarationAndInlineUnionJSONPayload = v
+	default:
+		return fmt.Errorf("unexpected Value type %q", raw.Type)
+	}
+	return nil
+}
+

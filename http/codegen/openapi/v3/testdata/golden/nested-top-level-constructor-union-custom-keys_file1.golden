@@ -26,7 +26,7 @@ paths:
                                 data:
                                     choice:
                                         data:
-                                            text: Neque nisi quibusdam nisi sint sunt.
+                                            text: Nobis enim eos aut labore est.
                                         kind: InnerA
                                 kind: OuterA
                             oneOf:
@@ -50,7 +50,7 @@ paths:
                             data:
                                 choice:
                                     data:
-                                        text: Neque nisi quibusdam nisi sint sunt.
+                                        text: Nobis enim eos aut labore est.
                                     kind: InnerA
                             kind: OuterA
             responses:
@@ -68,7 +68,7 @@ paths:
                                     data:
                                         choice:
                                             data:
-                                                text: Neque nisi quibusdam nisi sint sunt.
+                                                text: Nobis enim eos aut labore est.
                                             kind: InnerA
                                     kind: OuterA
                                 oneOf:
@@ -92,7 +92,7 @@ paths:
                                 data:
                                     choice:
                                         data:
-                                            text: Neque nisi quibusdam nisi sint sunt.
+                                            text: Nobis enim eos aut labore est.
                                         kind: InnerA
                                 kind: OuterA
 components:
@@ -152,7 +152,7 @@ components:
                         propertyName: kind
                     example:
                         data:
-                            text: Neque nisi quibusdam nisi sint sunt.
+                            text: Nobis enim eos aut labore est.
                         kind: InnerA
                     oneOf:
                         - $ref: '#/components/schemas/InnerAOrInnerBInnerAEnvelope209a198071cb00f2'
@@ -174,7 +174,7 @@ components:
             example:
                 choice:
                     data:
-                        text: Neque nisi quibusdam nisi sint sunt.
+                        text: Nobis enim eos aut labore est.
                     kind: InnerA
             required:
                 - choice
@@ -207,10 +207,10 @@ components:
             properties:
                 count:
                     type: integer
-                    example: 4213596203809091209
+                    example: 3453827949848117901
                     format: int64
             example:
-                count: 5094429249470280925
+                count: 944964629895926327
             required:
                 - count
 tags:

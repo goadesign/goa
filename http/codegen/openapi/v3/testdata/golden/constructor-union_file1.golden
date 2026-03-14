@@ -19,34 +19,34 @@ paths:
                         schema:
                             discriminator:
                                 mapping:
-                                    JSONPayload: '#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope1d1e27eb46f1e82c'
-                                    TextPayload: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope80d6bc984d45350d'
+                                    JSONPayload: '#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope273448a81d4e8596'
+                                    TextPayload: '#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelopeab7266b0a01ac8ab'
                                 propertyName: type
                             example:
-                                type: TextPayload
+                                type: JSONPayload
                                 value:
-                                    text: Neque nisi quibusdam nisi sint sunt.
+                                    message: Doloremque autem.
                             oneOf:
-                                - $ref: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope80d6bc984d45350d'
-                                - $ref: '#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope1d1e27eb46f1e82c'
+                                - $ref: '#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope273448a81d4e8596'
+                                - $ref: '#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelopeab7266b0a01ac8ab'
                             properties:
                                 type:
                                     enum:
-                                        - TextPayload
                                         - JSONPayload
+                                        - TextPayload
                                     type: string
                                 value:
                                     anyOf:
-                                        - $ref: '#/components/schemas/TextPayload'
                                         - $ref: '#/components/schemas/JSONPayload'
+                                        - $ref: '#/components/schemas/TextPayload'
                             required:
                                 - type
                                 - value
                             type: object
                         example:
-                            type: TextPayload
+                            type: JSONPayload
                             value:
-                                text: Neque nisi quibusdam nisi sint sunt.
+                                message: Doloremque autem.
             responses:
                 "200":
                     description: OK response.
@@ -55,34 +55,34 @@ paths:
                             schema:
                                 discriminator:
                                     mapping:
-                                        JSONPayload: '#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope1d1e27eb46f1e82c'
-                                        TextPayload: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope80d6bc984d45350d'
+                                        JSONPayload: '#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope273448a81d4e8596'
+                                        TextPayload: '#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelopeab7266b0a01ac8ab'
                                     propertyName: type
                                 example:
-                                    type: TextPayload
+                                    type: JSONPayload
                                     value:
-                                        text: Neque nisi quibusdam nisi sint sunt.
+                                        message: Doloremque autem.
                                 oneOf:
-                                    - $ref: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope80d6bc984d45350d'
-                                    - $ref: '#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope1d1e27eb46f1e82c'
+                                    - $ref: '#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope273448a81d4e8596'
+                                    - $ref: '#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelopeab7266b0a01ac8ab'
                                 properties:
                                     type:
                                         enum:
-                                            - TextPayload
                                             - JSONPayload
+                                            - TextPayload
                                         type: string
                                     value:
                                         anyOf:
-                                            - $ref: '#/components/schemas/TextPayload'
                                             - $ref: '#/components/schemas/JSONPayload'
+                                            - $ref: '#/components/schemas/TextPayload'
                                 required:
                                     - type
                                     - value
                                 type: object
                             example:
-                                type: TextPayload
+                                type: JSONPayload
                                 value:
-                                    text: Neque nisi quibusdam nisi sint sunt.
+                                    message: Doloremque autem.
 components:
     schemas:
         JSONPayload:
@@ -95,17 +95,7 @@ components:
                 message: Itaque inventore optio.
             required:
                 - message
-        TextPayload:
-            type: object
-            properties:
-                text:
-                    type: string
-                    example: Quia molestias.
-            example:
-                text: Doloribus qui quia.
-            required:
-                - text
-        TextPayloadOrJSONPayloadJSONPayloadEnvelope1d1e27eb46f1e82c:
+        JSONPayloadOrTextPayloadJSONPayloadEnvelope273448a81d4e8596:
             type: object
             properties:
                 type:
@@ -117,7 +107,7 @@ components:
             required:
                 - type
                 - value
-        TextPayloadOrJSONPayloadTextPayloadEnvelope80d6bc984d45350d:
+        JSONPayloadOrTextPayloadTextPayloadEnvelopeab7266b0a01ac8ab:
             type: object
             properties:
                 type:
@@ -129,5 +119,15 @@ components:
             required:
                 - type
                 - value
+        TextPayload:
+            type: object
+            properties:
+                text:
+                    type: string
+                    example: Quia molestias.
+            example:
+                text: Doloribus qui quia.
+            required:
+                - text
 tags:
     - name: ConstructorUnion

@@ -71,3 +71,50 @@ var InvalidSecuritySchemesDSL = func() {
 		})
 	})
 }
+
+var UnionBranchSecurityAttributeDSL = func() {
+	TokenPayload := Type("UnionBranchSecurityTokenPayload", func() {
+		Token("token", String)
+		Attribute("message", String)
+	})
+	JSONPayload := Type("UnionBranchSecurityJSONPayload", func() {
+		Attribute("message", String)
+	})
+	Service("UnionBranchSecurityService", func() {
+		Method("SecureMethod", func() {
+			Security(JWTAuth)
+			Payload(OneOf(TokenPayload, JSONPayload))
+		})
+	})
+}
+
+var ConstructorUnionResultViewDSL = func() {
+	TinyA := ResultType("application/vnd.a", func() {
+		TypeName("TinyA")
+		Attributes(func() {
+			Attribute("a", String)
+		})
+		View("default", func() {
+			Attribute("a")
+		})
+		View("tiny", func() {
+			Attribute("a")
+		})
+	})
+	TinyB := ResultType("application/vnd.b", func() {
+		TypeName("TinyB")
+		Attributes(func() {
+			Attribute("b", String)
+		})
+		View("default", func() {
+			Attribute("b")
+		})
+	})
+	Service("ConstructorUnionResultViewService", func() {
+		Method("Show", func() {
+			Result(OneOf(TinyA, TinyB), func() {
+				View("tiny")
+			})
+		})
+	})
+}

@@ -3,8 +3,11 @@ package openapiv3_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"text/template"
@@ -111,6 +114,45 @@ func TestFiles(t *testing.T) {
 	}
 }
 
+func TestConstructorUnionFilesStableAcrossBranchOrder(t *testing.T) {
+	forward := renderOpenAPIFiles(t, testdata.ConstructorUnionHTTPDSL)
+	reordered := renderOpenAPIFiles(t, testdata.ConstructorUnionHTTPReorderedDSL)
+	if len(forward) != len(reordered) {
+		t.Fatalf("expected same number of rendered files, got %d and %d", len(forward), len(reordered))
+	}
+	for i := range forward {
+		if forward[i] != reordered[i] {
+			t.Fatalf("expected identical OpenAPI output for reordered constructor union branches in file %d", i)
+		}
+	}
+}
+
+func TestConstructorUnionFilesStableAcrossUnrelatedDeclarationOrder(t *testing.T) {
+	forward := renderOpenAPIFiles(t, testdata.ConstructorUnionUnrelatedDeclarationOrderHTTPDSL)
+	reordered := renderOpenAPIFiles(t, testdata.ConstructorUnionUnrelatedDeclarationOrderReorderedHTTPDSL)
+	if len(forward) != len(reordered) {
+		t.Fatalf("expected same number of rendered files, got %d and %d", len(forward), len(reordered))
+	}
+	forwardSig := constructorUnionRenderedSignature(t, forward)
+	reorderedSig := constructorUnionRenderedSignature(t, reordered)
+	if !reflect.DeepEqual(forwardSig, reorderedSig) {
+		t.Fatalf("expected stable constructor-union request/response schema signature across unrelated declaration order, got %#v and %#v", forwardSig, reorderedSig)
+	}
+}
+
+func TestConstructorUnionFilesStableAcrossServiceTraversalOrder(t *testing.T) {
+	forward := renderOpenAPIFiles(t, testdata.ConstructorUnionTraversalOrderHTTPDSL)
+	reordered := renderOpenAPIFiles(t, testdata.ConstructorUnionTraversalOrderReorderedHTTPDSL)
+	if len(forward) != len(reordered) {
+		t.Fatalf("expected same number of rendered files, got %d and %d", len(forward), len(reordered))
+	}
+	forwardSig := traversalRenderedSignature(t, forward)
+	reorderedSig := traversalRenderedSignature(t, reordered)
+	if !reflect.DeepEqual(forwardSig, reorderedSig) {
+		t.Fatalf("expected stable constructor-union component refs across service traversal order, got %#v and %#v", forwardSig, reorderedSig)
+	}
+}
+
 func validateSwagger(t *testing.T, b []byte) {
 	swagger, err := openapi3.NewLoader().LoadFromData(b)
 	if err == nil {
@@ -119,4 +161,110 @@ func validateSwagger(t *testing.T, b []byte) {
 	if err != nil {
 		t.Errorf("invalid spec: %s\nspec:\n%s", err.Error(), string(b))
 	}
+}
+
+func renderOpenAPIFiles(t *testing.T, dslFn func()) []string {
+	t.Helper()
+
+	openapi.Definitions = make(map[string]*openapi.Schema)
+	root := httpgen.RunHTTPDSL(t, dslFn)
+	oFiles, err := openapiv3.Files(root)
+	if err != nil {
+		t.Fatalf("OpenAPI failed with %s", err)
+	}
+
+	rendered := make([]string, len(oFiles))
+	for i, o := range oFiles {
+		sections := o.SectionTemplates
+		if len(sections) != 1 {
+			t.Fatalf("expected 1 section, got %d", len(sections))
+		}
+		var buf bytes.Buffer
+		tmpl := template.Must(template.New("openapi").Funcs(sections[0].FuncMap).Parse(sections[0].Source))
+		if err := tmpl.Execute(&buf, sections[0].Data); err != nil {
+			t.Fatalf("failed to render template: %s", err)
+		}
+		validateSwagger(t, buf.Bytes())
+		rendered[i] = buf.String()
+	}
+
+	return rendered
+}
+
+func constructorUnionRenderedSignature(t *testing.T, rendered []string) map[string]any {
+	t.Helper()
+
+	for _, doc := range rendered {
+		if !strings.HasPrefix(strings.TrimSpace(doc), "{") {
+			continue
+		}
+		var spec map[string]any
+		if err := json.Unmarshal([]byte(doc), &spec); err != nil {
+			t.Fatalf("failed to parse rendered OpenAPI JSON: %s", err)
+		}
+		paths := nestedMap(spec, "paths")
+		post := nestedMap(paths, "/", "post")
+		reqSchema := nestedMap(post, "requestBody", "content", "application/json", "schema")
+		respSchema := nestedMap(post, "responses", "200", "content", "application/json", "schema")
+		components := nestedMap(spec, "components", "schemas")
+		names := make([]string, 0)
+		for name := range components {
+			if strings.Contains(name, "JSONPayloadOrTextPayload") {
+				names = append(names, name)
+			}
+		}
+		sort.Strings(names)
+		return map[string]any{
+			"requestMapping":  nestedMap(reqSchema, "discriminator", "mapping"),
+			"requestOneOf":    reqSchema["oneOf"],
+			"requestExample":  reqSchema["example"],
+			"responseMapping": nestedMap(respSchema, "discriminator", "mapping"),
+			"responseOneOf":   respSchema["oneOf"],
+			"responseExample": respSchema["example"],
+			"componentNames":  names,
+		}
+	}
+	t.Fatal("expected rendered JSON OpenAPI document")
+	return nil
+}
+
+func traversalRenderedSignature(t *testing.T, rendered []string) map[string]any {
+	t.Helper()
+
+	for _, doc := range rendered {
+		if !strings.HasPrefix(strings.TrimSpace(doc), "{") {
+			continue
+		}
+		var spec map[string]any
+		if err := json.Unmarshal([]byte(doc), &spec); err != nil {
+			t.Fatalf("failed to parse rendered OpenAPI JSON: %s", err)
+		}
+		components := nestedMap(spec, "components", "schemas")
+		names := make([]string, 0, len(components))
+		for name := range components {
+			if strings.Contains(name, "Traversal") {
+				names = append(names, name)
+			}
+		}
+		sort.Strings(names)
+		signature := make(map[string]any, len(names))
+		for _, name := range names {
+			signature[name] = components[name]
+		}
+		return signature
+	}
+	t.Fatal("expected rendered JSON OpenAPI document")
+	return nil
+}
+
+func nestedMap(m map[string]any, keys ...string) map[string]any {
+	current := m
+	for _, key := range keys {
+		next, ok := current[key].(map[string]any)
+		if !ok {
+			return nil
+		}
+		current = next
+	}
+	return current
 }

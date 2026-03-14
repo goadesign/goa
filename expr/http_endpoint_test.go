@@ -194,6 +194,10 @@ service "Service" HTTP endpoint "MethodC": HTTP endpoint request body must be em
 			DSL:   testdata.EndpointUnionCookie,
 			Error: `service "Service" HTTP endpoint "Method": cookie "filter" must be primitive`,
 		},
+		"endpoint-multipart-constructor-union": {
+			DSL:   testdata.EndpointMultipartConstructorUnion,
+			Error: `service "Service" HTTP endpoint "Method": MultipartRequest requires an object payload, constructor unions are not supported`,
+		},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {

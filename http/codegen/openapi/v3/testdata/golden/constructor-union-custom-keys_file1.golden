@@ -19,25 +19,25 @@ paths:
                         schema:
                             discriminator:
                                 mapping:
-                                    JSONPayload: '#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5'
-                                    TextPayload: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6'
+                                    JSONPayload: '#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope4d704eedbb85e23f'
+                                    TextPayload: '#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelope334b543111996e4c'
                                 propertyName: kind
                             example:
                                 data:
-                                    text: Neque nisi quibusdam nisi sint sunt.
-                                kind: TextPayload
+                                    message: Doloremque autem.
+                                kind: JSONPayload
                             oneOf:
-                                - $ref: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6'
-                                - $ref: '#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5'
+                                - $ref: '#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope4d704eedbb85e23f'
+                                - $ref: '#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelope334b543111996e4c'
                             properties:
                                 data:
                                     anyOf:
-                                        - $ref: '#/components/schemas/TextPayload'
                                         - $ref: '#/components/schemas/JSONPayload'
+                                        - $ref: '#/components/schemas/TextPayload'
                                 kind:
                                     enum:
-                                        - TextPayload
                                         - JSONPayload
+                                        - TextPayload
                                     type: string
                             required:
                                 - kind
@@ -45,8 +45,8 @@ paths:
                             type: object
                         example:
                             data:
-                                text: Neque nisi quibusdam nisi sint sunt.
-                            kind: TextPayload
+                                message: Doloremque autem.
+                            kind: JSONPayload
             responses:
                 "200":
                     description: OK response.
@@ -55,25 +55,25 @@ paths:
                             schema:
                                 discriminator:
                                     mapping:
-                                        JSONPayload: '#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5'
-                                        TextPayload: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6'
+                                        JSONPayload: '#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope4d704eedbb85e23f'
+                                        TextPayload: '#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelope334b543111996e4c'
                                     propertyName: kind
                                 example:
                                     data:
-                                        text: Neque nisi quibusdam nisi sint sunt.
-                                    kind: TextPayload
+                                        message: Doloremque autem.
+                                    kind: JSONPayload
                                 oneOf:
-                                    - $ref: '#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6'
-                                    - $ref: '#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5'
+                                    - $ref: '#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope4d704eedbb85e23f'
+                                    - $ref: '#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelope334b543111996e4c'
                                 properties:
                                     data:
                                         anyOf:
-                                            - $ref: '#/components/schemas/TextPayload'
                                             - $ref: '#/components/schemas/JSONPayload'
+                                            - $ref: '#/components/schemas/TextPayload'
                                     kind:
                                         enum:
-                                            - TextPayload
                                             - JSONPayload
+                                            - TextPayload
                                         type: string
                                 required:
                                     - kind
@@ -81,8 +81,8 @@ paths:
                                 type: object
                             example:
                                 data:
-                                    text: Neque nisi quibusdam nisi sint sunt.
-                                kind: TextPayload
+                                    message: Doloremque autem.
+                                kind: JSONPayload
 components:
     schemas:
         JSONPayload:
@@ -95,17 +95,7 @@ components:
                 message: Itaque inventore optio.
             required:
                 - message
-        TextPayload:
-            type: object
-            properties:
-                text:
-                    type: string
-                    example: Quia molestias.
-            example:
-                text: Doloribus qui quia.
-            required:
-                - text
-        TextPayloadOrJSONPayloadJSONPayloadEnvelope69f356ec7f8d7fd5:
+        JSONPayloadOrTextPayloadJSONPayloadEnvelope4d704eedbb85e23f:
             type: object
             properties:
                 data:
@@ -117,7 +107,7 @@ components:
             required:
                 - kind
                 - data
-        TextPayloadOrJSONPayloadTextPayloadEnvelope86a417c4591ff4e6:
+        JSONPayloadOrTextPayloadTextPayloadEnvelope334b543111996e4c:
             type: object
             properties:
                 data:
@@ -129,5 +119,15 @@ components:
             required:
                 - kind
                 - data
+        TextPayload:
+            type: object
+            properties:
+                text:
+                    type: string
+                    example: Quia molestias.
+            example:
+                text: Doloribus qui quia.
+            required:
+                - text
 tags:
     - name: ConstructorUnionCustomKeys

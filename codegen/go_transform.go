@@ -81,12 +81,12 @@ func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 		return
 	}
 	switch {
+	case expr.IsUnion(source.Type):
+		code, err = transformUnion(source, target, sourceVar, targetVar, newVar, ta)
 	case expr.IsArray(source.Type):
 		code, err = transformArray(expr.AsArray(source.Type), expr.AsArray(target.Type), sourceVar, targetVar, newVar, ta)
 	case expr.IsMap(source.Type):
 		code, err = transformMap(expr.AsMap(source.Type), expr.AsMap(target.Type), sourceVar, targetVar, newVar, ta)
-	case expr.IsUnion(source.Type):
-		code, err = transformUnion(source, target, sourceVar, targetVar, newVar, ta)
 	case expr.IsObject(source.Type):
 		code, err = transformObject(source, target, sourceVar, targetVar, newVar, ta)
 	default:

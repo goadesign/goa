@@ -57,7 +57,7 @@
           "next": {
             "type": "Leaf",
             "value": {
-              "value": "Et quae sunt itaque."
+              "value": "Provident ut sapiente magni."
             }
           }
         },
@@ -73,7 +73,7 @@
             "example": {
               "type": "Leaf",
               "value": {
-                "value": "Et quae sunt itaque."
+                "value": "Provident ut sapiente magni."
               }
             },
             "oneOf": [
@@ -132,7 +132,7 @@
               "example": {
                 "type": "Leaf",
                 "value": {
-                  "value": "Et quae sunt itaque."
+                  "value": "Provident ut sapiente magni."
                 }
               },
               "schema": {
@@ -146,7 +146,7 @@
                 "example": {
                   "type": "Leaf",
                   "value": {
-                    "value": "Et quae sunt itaque."
+                    "value": "Provident ut sapiente magni."
                   }
                 },
                 "oneOf": [
@@ -193,7 +193,7 @@
                 "example": {
                   "type": "Leaf",
                   "value": {
-                    "value": "Et quae sunt itaque."
+                    "value": "Provident ut sapiente magni."
                   }
                 },
                 "schema": {
@@ -207,7 +207,7 @@
                   "example": {
                     "type": "Leaf",
                     "value": {
-                      "value": "Et quae sunt itaque."
+                      "value": "Provident ut sapiente magni."
                     }
                   },
                   "oneOf": [

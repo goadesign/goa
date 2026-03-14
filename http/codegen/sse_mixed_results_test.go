@@ -52,4 +52,3 @@ func TestSSE_MixedResults(t *testing.T) {
 		require.Contains(t, code, "event = new(")
 	})
 }
-

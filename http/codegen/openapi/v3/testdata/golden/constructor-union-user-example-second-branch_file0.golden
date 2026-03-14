@@ -14,8 +14,8 @@
           "choice": {
             "discriminator": {
               "mapping": {
-                "JSONPayload": "#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope1d1e27eb46f1e82c",
-                "TextPayload": "#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope80d6bc984d45350d"
+                "JSONPayload": "#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope273448a81d4e8596",
+                "TextPayload": "#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelopeab7266b0a01ac8ab"
               },
               "propertyName": "type"
             },
@@ -27,27 +27,27 @@
             },
             "oneOf": [
               {
-                "$ref": "#/components/schemas/TextPayloadOrJSONPayloadTextPayloadEnvelope80d6bc984d45350d"
+                "$ref": "#/components/schemas/JSONPayloadOrTextPayloadJSONPayloadEnvelope273448a81d4e8596"
               },
               {
-                "$ref": "#/components/schemas/TextPayloadOrJSONPayloadJSONPayloadEnvelope1d1e27eb46f1e82c"
+                "$ref": "#/components/schemas/JSONPayloadOrTextPayloadTextPayloadEnvelopeab7266b0a01ac8ab"
               }
             ],
             "properties": {
               "type": {
                 "enum": [
-                  "TextPayload",
-                  "JSONPayload"
+                  "JSONPayload",
+                  "TextPayload"
                 ],
                 "type": "string"
               },
               "value": {
                 "anyOf": [
                   {
-                    "$ref": "#/components/schemas/TextPayload"
+                    "$ref": "#/components/schemas/JSONPayload"
                   },
                   {
-                    "$ref": "#/components/schemas/JSONPayload"
+                    "$ref": "#/components/schemas/TextPayload"
                   }
                 ]
               }
@@ -79,22 +79,7 @@
         ],
         "type": "object"
       },
-      "TextPayload": {
-        "example": {
-          "text": "Doloribus qui quia."
-        },
-        "properties": {
-          "text": {
-            "example": "Quia molestias.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "text"
-        ],
-        "type": "object"
-      },
-      "TextPayloadOrJSONPayloadJSONPayloadEnvelope1d1e27eb46f1e82c": {
+      "JSONPayloadOrTextPayloadJSONPayloadEnvelope273448a81d4e8596": {
         "properties": {
           "type": {
             "enum": [
@@ -112,7 +97,7 @@
         ],
         "type": "object"
       },
-      "TextPayloadOrJSONPayloadTextPayloadEnvelope80d6bc984d45350d": {
+      "JSONPayloadOrTextPayloadTextPayloadEnvelopeab7266b0a01ac8ab": {
         "properties": {
           "type": {
             "enum": [
@@ -127,6 +112,21 @@
         "required": [
           "type",
           "value"
+        ],
+        "type": "object"
+      },
+      "TextPayload": {
+        "example": {
+          "text": "Doloribus qui quia."
+        },
+        "properties": {
+          "text": {
+            "example": "Quia molestias.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
         ],
         "type": "object"
       }

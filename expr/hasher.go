@@ -71,7 +71,7 @@ func hashUnion(u *Union, ignoreFields, ignoreNames, ignoreTags bool, seen map[*O
 	sorted := make([]*NamedAttributeExpr, len(u.Values))
 	copy(sorted, u.Values)
 	sort.Slice(sorted, func(i, j int) bool {
-		return u.Values[i].Name < u.Values[j].Name
+		return sorted[i].Name < sorted[j].Name
 	})
 	h := unionTypePrefix + u.TypeName
 	for _, nat := range sorted {

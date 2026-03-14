@@ -28,7 +28,7 @@ paths:
                                     choice:
                                         type: InnerA
                                         value:
-                                            text: Neque nisi quibusdam nisi sint sunt.
+                                            text: Nobis enim eos aut labore est.
                             oneOf:
                                 - $ref: '#/components/schemas/OuterAOrOuterBOuterAEnvelope86bb26502062475c'
                                 - $ref: '#/components/schemas/OuterAOrOuterBOuterBEnvelopee2befa7c2c5c47e9'
@@ -52,7 +52,7 @@ paths:
                                 choice:
                                     type: InnerA
                                     value:
-                                        text: Neque nisi quibusdam nisi sint sunt.
+                                        text: Nobis enim eos aut labore est.
             responses:
                 "200":
                     description: OK response.
@@ -70,7 +70,7 @@ paths:
                                         choice:
                                             type: InnerA
                                             value:
-                                                text: Neque nisi quibusdam nisi sint sunt.
+                                                text: Nobis enim eos aut labore est.
                                 oneOf:
                                     - $ref: '#/components/schemas/OuterAOrOuterBOuterAEnvelope86bb26502062475c'
                                     - $ref: '#/components/schemas/OuterAOrOuterBOuterBEnvelopee2befa7c2c5c47e9'
@@ -94,7 +94,7 @@ paths:
                                     choice:
                                         type: InnerA
                                         value:
-                                            text: Neque nisi quibusdam nisi sint sunt.
+                                            text: Nobis enim eos aut labore est.
 components:
     schemas:
         InnerA:
@@ -153,7 +153,7 @@ components:
                     example:
                         type: InnerA
                         value:
-                            text: Neque nisi quibusdam nisi sint sunt.
+                            text: Nobis enim eos aut labore est.
                     oneOf:
                         - $ref: '#/components/schemas/InnerAOrInnerBInnerAEnvelope4ed7ad5c6d0d3dc7'
                         - $ref: '#/components/schemas/InnerAOrInnerBInnerBEnvelope720c030a4b4a5648'
@@ -175,7 +175,7 @@ components:
                 choice:
                     type: InnerA
                     value:
-                        text: Neque nisi quibusdam nisi sint sunt.
+                        text: Nobis enim eos aut labore est.
             required:
                 - choice
         OuterAOrOuterBOuterAEnvelope86bb26502062475c:
@@ -207,10 +207,10 @@ components:
             properties:
                 count:
                     type: integer
-                    example: 4213596203809091209
+                    example: 3453827949848117901
                     format: int64
             example:
-                count: 5094429249470280925
+                count: 944964629895926327
             required:
                 - count
 tags:

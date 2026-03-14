@@ -151,6 +151,49 @@ func TestWebSocketTemplateExercise(t *testing.T) {
 	require.NoError(t, err, "Client WebSocket file should render without error")
 }
 
+func TestConstructorUnionWebSocketFiles(t *testing.T) {
+	root := RunHTTPDSL(t, bidirectionalStreamingConstructorUnionDSL)
+	services := CreateHTTPServices(root)
+
+	serverFiles := ServerFiles("", services)
+	clientFiles := ClientFiles("", services)
+
+	var serverWSFile, clientWSFile *codegen.File
+	for _, f := range serverFiles {
+		if filepath.Base(f.Path) == "websocket.go" {
+			serverWSFile = f
+			break
+		}
+	}
+	for _, f := range clientFiles {
+		if filepath.Base(f.Path) == "websocket.go" {
+			clientWSFile = f
+			break
+		}
+	}
+
+	require.NotNil(t, serverWSFile, "Server WebSocket file should be generated")
+	require.NotNil(t, clientWSFile, "Client WebSocket file should be generated")
+
+	serverCode, err := renderFileToString(serverWSFile)
+	require.NoError(t, err)
+	clientCode, err := renderFileToString(clientWSFile)
+	require.NoError(t, err)
+
+	require.Contains(t, serverCode, "TextStreamPayload")
+	require.Contains(t, serverCode, "JSONStreamPayload")
+	require.Contains(t, serverCode, "TextStreamResult")
+	require.Contains(t, serverCode, "JSONStreamResult")
+	require.Contains(t, serverCode, "ReadJSON")
+	require.Contains(t, serverCode, "WriteJSON")
+	require.Contains(t, clientCode, "TextStreamPayload")
+	require.Contains(t, clientCode, "JSONStreamPayload")
+	require.Contains(t, clientCode, "TextStreamResult")
+	require.Contains(t, clientCode, "JSONStreamResult")
+	require.Contains(t, clientCode, "ReadJSON")
+	require.Contains(t, clientCode, "WriteJSON")
+}
+
 // DSL definitions for comprehensive WebSocket testing
 
 func serverStreamingPrimitiveDSL() {
@@ -159,6 +202,35 @@ func serverStreamingPrimitiveDSL() {
 			StreamingResult(String)
 			HTTP(func() {
 				GET("/stream/primitive")
+			})
+		})
+	})
+}
+
+func bidirectionalStreamingConstructorUnionDSL() {
+	var TextStreamPayload = Type("TextStreamPayload", func() {
+		Attribute("text", String)
+		Required("text")
+	})
+	var JSONStreamPayload = Type("JSONStreamPayload", func() {
+		Attribute("message", String)
+		Required("message")
+	})
+	var TextStreamResult = Type("TextStreamResult", func() {
+		Attribute("text", String)
+		Required("text")
+	})
+	var JSONStreamResult = Type("JSONStreamResult", func() {
+		Attribute("message", String)
+		Required("message")
+	})
+
+	Service("BidirectionalStreamingConstructorUnionService", func() {
+		Method("BidirectionalStreamingConstructorUnionMethod", func() {
+			StreamingPayload(OneOf(TextStreamPayload, JSONStreamPayload))
+			StreamingResult(OneOf(TextStreamResult, JSONStreamResult))
+			HTTP(func() {
+				GET("/stream/constructor-union")
 			})
 		})
 	})

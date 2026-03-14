@@ -98,6 +98,8 @@ func TestPayloadConstructor(t *testing.T) {
 		{"body-query-user-validate", testdata.PayloadBodyQueryUserValidateDSL},
 		{"body-union", testdata.PayloadBodyUnionDSL},
 		{"constructor-union", testdata.ConstructorUnionHTTPDSL},
+		{"constructor-union-custom-keys", testdata.ConstructorUnionCustomKeysHTTPDSL},
+		{"nested-top-level-constructor-union-custom-keys", testdata.NestedTopLevelConstructorUnionCustomKeysHTTPDSL},
 		{"body-query-user-union", testdata.PayloadBodyQueryUserUnionDSL},
 		{"body-query-user-union-validate", testdata.PayloadBodyQueryUserUnionValidateDSL},
 

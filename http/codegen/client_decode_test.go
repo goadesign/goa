@@ -32,6 +32,10 @@ func TestClientDecode(t *testing.T) {
 		{"with-headers-dsl-viewed-result", testdata.WithHeadersBlockViewedResultDSL},
 		{"validate-error-response-type", testdata.ValidateErrorResponseTypeDSL},
 		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL},
+		{"constructor-union", testdata.ConstructorUnionHTTPDSL},
+		{"constructor-union-custom-keys", testdata.ConstructorUnionCustomKeysHTTPDSL},
+		{"nested-constructor-union", testdata.NestedConstructorUnionHTTPDSL},
+		{"nested-top-level-constructor-union-custom-keys", testdata.NestedTopLevelConstructorUnionCustomKeysHTTPDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

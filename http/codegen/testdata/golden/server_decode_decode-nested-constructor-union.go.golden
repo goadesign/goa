@@ -1,0 +1,29 @@
+// DecodeShowRequest returns a decoder for requests sent to the
+// NestedConstructorUnion Show endpoint.
+func DecodeShowRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*nestedconstructorunion.NestedPayload, error) {
+	return func(r *http.Request) (*nestedconstructorunion.NestedPayload, error) {
+		var payload *nestedconstructorunion.NestedPayload
+		var (
+			body ShowRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateShowRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+		payload = NewShowNestedPayload(&body)
+
+		return payload, nil
+	}
+}

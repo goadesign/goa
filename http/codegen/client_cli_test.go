@@ -65,20 +65,32 @@ func TestClientCLIFiles(t *testing.T) {
 }
 
 func TestConstructorUnionClientCLIFiles(t *testing.T) {
-	root := RunHTTPDSL(t, testdata.ConstructorUnionHTTPDSL)
-	services := CreateHTTPServices(root)
-	fs := ClientCLIFiles("", services)
-	require.GreaterOrEqual(t, len(fs), 2, "expected parser and payload builder files")
+	cases := []struct {
+		Name string
+		DSL  func()
+	}{
+		{"top-level", testdata.ConstructorUnionHTTPDSL},
+		{"custom-keys", testdata.ConstructorUnionCustomKeysHTTPDSL},
+		{"nested-top-level-custom-keys", testdata.NestedTopLevelConstructorUnionCustomKeysHTTPDSL},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			root := RunHTTPDSL(t, c.DSL)
+			services := CreateHTTPServices(root)
+			fs := ClientCLIFiles("", services)
+			require.GreaterOrEqual(t, len(fs), 2, "expected parser and payload builder files")
 
-	var builder bytes.Buffer
-	for _, s := range fs[1].SectionTemplates {
-		require.NoError(t, s.Write(&builder))
-	}
-	builderCode := codegen.FormatTestCode(t, builder.String())
-	if !strings.Contains(builderCode, "json.Unmarshal") {
-		t.Errorf("expected HTTP CLI payload builder to decode constructor union payload from JSON, got %q", builderCode)
-	}
-	if !strings.Contains(builderCode, "BuildShowPayload") {
-		t.Errorf("expected HTTP CLI payload builder to expose constructor union payload builder, got %q", builderCode)
+			var builder bytes.Buffer
+			for _, s := range fs[1].SectionTemplates {
+				require.NoError(t, s.Write(&builder))
+			}
+			builderCode := codegen.FormatTestCode(t, builder.String())
+			if !strings.Contains(builderCode, "json.Unmarshal") {
+				t.Errorf("expected HTTP CLI payload builder to decode constructor union payload from JSON, got %q", builderCode)
+			}
+			if !strings.Contains(builderCode, "BuildShowPayload") {
+				t.Errorf("expected HTTP CLI payload builder to expose constructor union payload builder, got %q", builderCode)
+			}
+		})
 	}
 }

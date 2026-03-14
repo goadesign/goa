@@ -72,7 +72,7 @@
           "choice": {
             "type": "InnerA",
             "value": {
-              "text": "Neque nisi quibusdam nisi sint sunt."
+              "text": "Nobis enim eos aut labore est."
             }
           }
         },
@@ -88,7 +88,7 @@
             "example": {
               "type": "InnerA",
               "value": {
-                "text": "Neque nisi quibusdam nisi sint sunt."
+                "text": "Nobis enim eos aut labore est."
               }
             },
             "oneOf": [
@@ -168,11 +168,11 @@
       },
       "OuterB": {
         "example": {
-          "count": 5094429249470281000
+          "count": 944964629895926300
         },
         "properties": {
           "count": {
-            "example": 4213596203809091000,
+            "example": 3453827949848118000,
             "format": "int64",
             "type": "integer"
           }
@@ -202,7 +202,7 @@
                   "choice": {
                     "type": "InnerA",
                     "value": {
-                      "text": "Neque nisi quibusdam nisi sint sunt."
+                      "text": "Nobis enim eos aut labore est."
                     }
                   }
                 }
@@ -221,7 +221,7 @@
                     "choice": {
                       "type": "InnerA",
                       "value": {
-                        "text": "Neque nisi quibusdam nisi sint sunt."
+                        "text": "Nobis enim eos aut labore est."
                       }
                     }
                   }
@@ -273,7 +273,7 @@
                     "choice": {
                       "type": "InnerA",
                       "value": {
-                        "text": "Neque nisi quibusdam nisi sint sunt."
+                        "text": "Nobis enim eos aut labore est."
                       }
                     }
                   }
@@ -292,7 +292,7 @@
                       "choice": {
                         "type": "InnerA",
                         "value": {
-                          "text": "Neque nisi quibusdam nisi sint sunt."
+                          "text": "Nobis enim eos aut labore est."
                         }
                       }
                     }
