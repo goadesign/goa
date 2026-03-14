@@ -59,3 +59,28 @@ func TestGoTransformHelpers(t *testing.T) {
 		})
 	}
 }
+
+func TestGoTransformHelperNilGuardForPointerUserTypes(t *testing.T) {
+	root := RunDSL(t, testdata.TestTypesDSL)
+	scope := NewNameScope()
+
+	composite := root.UserType("Composite")
+	require.NotNil(t, composite, "source type not found in testdata")
+
+	pointerCtx := NewAttributeContext(true, false, false, "", scope)
+	defaultCtx := NewAttributeContext(false, false, true, "", scope)
+
+	_, funcs, err := GoTransform(&expr.AttributeExpr{Type: composite}, &expr.AttributeExpr{Type: composite}, "source", "target", pointerCtx, defaultCtx, "", true)
+	require.NoError(t, err)
+	require.NotEmpty(t, funcs)
+
+	found := false
+	for _, fn := range funcs {
+		if fn.Name != "transformSimpleToSimple" {
+			continue
+		}
+		found = true
+		assert.Contains(t, fn.Code, "if v == nil {\n\treturn nil\n}\n")
+	}
+	require.True(t, found, "expected nested user type helper to be generated")
+}

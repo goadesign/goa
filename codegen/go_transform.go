@@ -673,7 +673,9 @@ func generateHelper(source, target *expr.AttributeExpr, req bool, ta *TransformA
 	if err != nil {
 		return nil, err
 	}
-	if !req && !expr.IsPrimitive(source.Type) {
+	if ta.SourceCtx.Pointer && !expr.IsPrimitive(source.Type) {
+		code = "if v == nil {\n\treturn nil\n}\n" + code
+	} else if !req && !expr.IsPrimitive(source.Type) {
 		code = "if v == nil {\n\treturn nil\n}\n" + code
 	}
 	tfd := &TransformFunctionData{
