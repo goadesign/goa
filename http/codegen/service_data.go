@@ -2757,7 +2757,7 @@ func buildHTTPUnionTypeData(u *expr.Union, scope *codegen.NameScope) *service.Un
 			KindConst: kindConst,
 			FieldName: fieldName,
 			FieldType: fieldType,
-			TypeTag:   nat.Name,
+			TypeTag:   expr.UnionVariantTag(nat),
 		}
 	}
 

@@ -1123,7 +1123,7 @@ func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Lo
 			FieldType:          fieldType,
 			EmitPrimitiveAlias: emitPrimitiveAlias,
 			PrimitiveAliasType: primitiveAliasType,
-			TypeTag:            nat.Name,
+			TypeTag:            expr.UnionVariantTag(nat),
 		}
 	}
 
@@ -1196,7 +1196,7 @@ func buildViewUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codege
 			FieldType:          fieldType,
 			EmitPrimitiveAlias: emitPrimitiveAlias,
 			PrimitiveAliasType: primitiveAliasType,
-			TypeTag:            nat.Name,
+			TypeTag:            expr.UnionVariantTag(nat),
 		}
 	}
 

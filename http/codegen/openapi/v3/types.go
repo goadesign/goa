@@ -228,7 +228,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		typeSchema := &openapi.Schema{Type: "string"}
 		typeSchema.Enum = make([]any, len(values))
 		for i, val := range values {
-			typeSchema.Enum[i] = val.Name
+			typeSchema.Enum[i] = expr.UnionVariantTag(val)
 		}
 		valueSchema := &openapi.Schema{}
 		for _, val := range values {
@@ -358,7 +358,7 @@ func buildUnionSchemaExtensions(union *expr.Union, sf *schemafier) map[string]an
 	for _, val := range values {
 		ref := sf.ensureUnionBranchSchema(union, val)
 		oneOf = append(oneOf, &openapi.Schema{Ref: ref})
-		mapping[val.Name] = ref
+		mapping[expr.UnionVariantTag(val)] = ref
 	}
 	return map[string]any{
 		"oneOf": oneOf,
@@ -375,7 +375,7 @@ func buildUnionExample(union *expr.Union, sf *schemafier) any {
 		return nil
 	}
 	return map[string]any{
-		union.GetTypeKey():  branch.Name,
+		union.GetTypeKey():  expr.UnionVariantTag(branch),
 		union.GetValueKey(): canonicalizeGeneratedExampleValue(branch.Attribute, branch.Attribute.Example(sf.rand), sf),
 	}
 }
@@ -395,7 +395,7 @@ func (sf *schemafier) ensureUnionBranchSchema(union *expr.Union, val *expr.Named
 	sf.schemas[name] = branchSchema
 	branchSchema.Properties[typeKey] = &openapi.Schema{
 		Type: openapi.String,
-		Enum: []any{val.Name},
+		Enum: []any{expr.UnionVariantTag(val)},
 	}
 	branchSchema.Properties[valueKey] = sf.schemafy(val.Attribute)
 	branchSchema.Required = []string{typeKey, valueKey}
@@ -408,7 +408,7 @@ func (sf *schemafier) unionBranchSchemaKey(union *expr.Union, val *expr.NamedAtt
 		union.TypeName,
 		union.GetTypeKey(),
 		union.GetValueKey(),
-		val.Name,
+		expr.UnionVariantTag(val),
 		strconv.FormatUint(h, 10),
 	}, ":")
 }

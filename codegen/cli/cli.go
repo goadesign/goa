@@ -436,7 +436,9 @@ func jsonExample(v any) string {
 	r := reflect.ValueOf(v)
 	if r.Kind() == reflect.Map {
 		keys := r.MapKeys()
-		if keys[0].Kind() != reflect.String {
+		if len(keys) == 0 {
+			v = map[string]any{}
+		} else if keys[0].Kind() != reflect.String {
 			a := make(map[string]any, len(keys))
 			var kstr string
 			for _, k := range keys {

@@ -374,12 +374,12 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 		if s.Properties == nil {
 			s.Properties = make(map[string]*Schema)
 		}
-		// Discriminator with enum of branch names.
+		// Discriminator with enum of branch tags/names.
 		typeSchema := NewSchema()
 		typeSchema.Type = String
 		typeSchema.Enum = make([]any, len(actual.Values))
 		for i, val := range actual.Values {
-			typeSchema.Enum[i] = val.Name
+			typeSchema.Enum[i] = expr.UnionVariantTag(val)
 		}
 		// Value can be any of the branch schemas.
 		valueSchema := NewSchema()

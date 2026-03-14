@@ -118,7 +118,7 @@ func canonicalizeUnionExample(union *expr.Union, value any, sf *schemafier) any 
 	branch, ambiguous := findMatchingUnionBranchDetail(union, value)
 	if branch != nil {
 		return map[string]any{
-			union.GetTypeKey():  branch.Name,
+			union.GetTypeKey():  expr.UnionVariantTag(branch),
 			union.GetValueKey(): canonicalizeExampleValue(branch.Attribute, value, sf),
 		}
 	}
@@ -205,7 +205,7 @@ func canonicalizeGeneratedMapExample(mp *expr.Map, value any, sf *schemafier) an
 
 func findUnionBranch(union *expr.Union, name string) *expr.NamedAttributeExpr {
 	for _, branch := range union.Values {
-		if branch.Name == name {
+		if branch.Name == name || expr.UnionVariantTag(branch) == name {
 			return branch
 		}
 	}

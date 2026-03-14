@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+const unionVariantTagMetaKey = "oneof:type:tag"
+
 // UnionVariantPublicName returns the stable public-facing name for the union
 // variant data type.
 func UnionVariantPublicName(dt DataType) string {
@@ -47,6 +49,25 @@ func DerivedUnionTypeName(names []string) string {
 	sortedNames := append([]string(nil), names...)
 	sort.Strings(sortedNames)
 	return strings.Join(sortedNames, "Or")
+}
+
+// UnionVariantTag returns the wire discriminator value for a union branch.
+// It prefers explicit metadata and falls back to the branch name.
+func UnionVariantTag(nat *NamedAttributeExpr) string {
+	if nat == nil || nat.Attribute == nil {
+		return ""
+	}
+	if nat.Attribute.Meta != nil {
+		if tag, ok := nat.Attribute.Meta.Last(unionVariantTagMetaKey); ok && strings.TrimSpace(tag) != "" {
+			return tag
+		}
+	}
+	if ut, ok := nat.Attribute.Type.(UserType); ok && ut.Attribute() != nil && ut.Attribute().Meta != nil {
+		if tag, ok := ut.Attribute().Meta.Last(unionVariantTagMetaKey); ok && strings.TrimSpace(tag) != "" {
+			return tag
+		}
+	}
+	return nat.Name
 }
 
 // UniqueStableNames deduplicates base names using the corresponding stable
