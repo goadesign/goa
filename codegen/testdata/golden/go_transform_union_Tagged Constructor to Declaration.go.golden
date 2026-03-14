@@ -1,0 +1,20 @@
+func transform() {
+	var target *Value
+
+	if source != nil {
+		switch string(source.Kind()) {
+		case "text":
+			actual, _ := source.AsTaggedDeclarationConstructorTextPayload()
+			obj := transformTaggedDeclarationConstructorTextPayloadToTaggedDeclarationConstructorTextPayload(actual)
+			var u Value
+			u.SetTaggedDeclarationConstructorTextPayload((*TaggedDeclarationConstructorTextPayload)(obj))
+			target = &u
+		case "json":
+			actual, _ := source.AsTaggedDeclarationConstructorJSONPayload()
+			obj := transformTaggedDeclarationConstructorJSONPayloadToTaggedDeclarationConstructorJSONPayload(actual)
+			var u Value
+			u.SetTaggedDeclarationConstructorJSONPayload((*TaggedDeclarationConstructorJSONPayload)(obj))
+			target = &u
+		}
+	}
+}

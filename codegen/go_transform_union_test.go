@@ -126,6 +126,37 @@ func TestGoTransformDeclarationConstructorUnionSymmetry(t *testing.T) {
 	}
 }
 
+func TestGoTransformDeclarationConstructorUnionTaggedSymmetry(t *testing.T) {
+	root := RunDSL(t, testdata.DeclarationAndConstructorUnionTaggedSymmetryDSL)
+	scope := NewNameScope()
+	defaultCtx := NewAttributeContext(false, false, true, "", scope)
+
+	declared := root.UserType("TaggedDeclarationUnionContainer").Attribute().Find("Choice").Find("Value")
+	constructor := root.UserType("TaggedConstructorUnionContainer").Attribute().Find("Choice")
+	require.NotNil(t, declared)
+	require.NotNil(t, constructor)
+
+	cases := []struct {
+		Name   string
+		Source *expr.AttributeExpr
+		Target *expr.AttributeExpr
+	}{
+		{"Tagged Declaration to Constructor", declared, constructor},
+		{"Tagged Constructor to Declaration", constructor, declared},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			code, _, err := GoTransform(c.Source, c.Target, "source", "target", defaultCtx, defaultCtx, "", true)
+			require.NoError(t, err)
+			code = FormatTestCode(t, "package foo\nfunc transform(){\n"+code+"}")
+			require.Contains(t, code, "case \"text\":")
+			require.Contains(t, code, "case \"json\":")
+			testutil.AssertGo(t, "testdata/golden/go_transform_union_"+c.Name+".go.golden", code)
+		})
+	}
+}
+
 func TestGoTransformObjectFieldValueUnionDoesNotEmitNilGuard(t *testing.T) {
 	root := RunDSL(t, testdata.DeclarationAndConstructorUnionSymmetryDSL)
 	scope := NewNameScope()

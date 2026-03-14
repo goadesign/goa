@@ -127,3 +127,31 @@ var DeclarationAndConstructorUnionSymmetryDSL = func() {
 		Required("Choice")
 	})
 }
+
+var DeclarationAndConstructorUnionTaggedSymmetryDSL = func() {
+	var TextPayload = Type("TaggedDeclarationConstructorTextPayload", func() {
+		Meta("oneof:type:tag", "text")
+		Attribute("text", String)
+		Required("text")
+	})
+	var JSONPayload = Type("TaggedDeclarationConstructorJSONPayload", func() {
+		Meta("oneof:type:tag", "json")
+		Attribute("message", String)
+		Required("message")
+	})
+	var DeclaredChoice = Type("TaggedDeclarationConstructorDeclaredChoice", func() {
+		OneOf("Value", func() {
+			Attribute("TaggedDeclarationConstructorTextPayload", TextPayload)
+			Attribute("TaggedDeclarationConstructorJSONPayload", JSONPayload)
+		})
+	})
+
+	var _ = Type("TaggedDeclarationUnionContainer", func() {
+		Attribute("Choice", DeclaredChoice)
+		Required("Choice")
+	})
+	var _ = Type("TaggedConstructorUnionContainer", func() {
+		Attribute("Choice", OneOf(TextPayload, JSONPayload))
+		Required("Choice")
+	})
+}
