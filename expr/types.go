@@ -59,6 +59,9 @@ type (
 	Union struct {
 		TypeName string
 		Values   []*NamedAttributeExpr
+		// ExplicitTypeName is true when the union type name was set explicitly
+		// via DSL metadata and should not be recomputed from derived variants.
+		ExplicitTypeName bool
 		// TypeKey is the discriminator field name for JSON marshaling (defaults to "type")
 		TypeKey string
 		// ValueKey is the value field name for JSON marshaling (defaults to "value")

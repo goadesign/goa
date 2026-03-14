@@ -460,6 +460,17 @@ func oneOfAttribute(name string, args ...any) {
 		return
 	}
 
+	// Extract type name from meta
+	if typeNames, ok := attr.Meta["oneof:typename"]; ok && len(typeNames) > 0 {
+		typeName := typeNames[0]
+		if typeName == "" {
+			eval.ReportError("oneof:typename meta cannot be empty")
+			return
+		}
+		union.TypeName = typeName
+		union.ExplicitTypeName = true
+	}
+
 	// Extract type key from meta
 	if typeKeys, ok := attr.Meta["oneof:type:field"]; ok && len(typeKeys) > 0 {
 		typeKey := typeKeys[0]
@@ -569,6 +580,15 @@ func applyUnionMetaFromAttribute(attr *expr.AttributeExpr) {
 	union := expr.AsUnion(attr.Type)
 	if union == nil || attr.Meta == nil {
 		return
+	}
+	if typeNames, ok := attr.Meta["oneof:typename"]; ok && len(typeNames) > 0 {
+		typeName := typeNames[0]
+		if typeName == "" {
+			eval.ReportError("oneof:typename meta cannot be empty")
+			return
+		}
+		union.TypeName = typeName
+		union.ExplicitTypeName = true
 	}
 	if typeKeys, ok := attr.Meta["oneof:type:field"]; ok && len(typeKeys) > 0 {
 		typeKey := typeKeys[0]

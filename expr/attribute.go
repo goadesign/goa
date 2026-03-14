@@ -458,7 +458,9 @@ func normalizeDerivedUnion(union *Union) {
 	for i, nat := range union.Values {
 		nat.Name = names[i]
 	}
-	union.TypeName = DerivedUnionTypeName(names)
+	if !union.ExplicitTypeName {
+		union.TypeName = DerivedUnionTypeName(names)
+	}
 }
 
 func hasDerivedUnionVariantNames(union *Union) bool {

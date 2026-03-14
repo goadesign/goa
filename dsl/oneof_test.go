@@ -605,6 +605,39 @@ func TestOneOfTypeConstructorSupportsForwardDeclaredTypeInAttribute(t *testing.T
 	}
 }
 
+func TestOneOfTypeConstructorSupportsTypeNameOverride(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		Type("Envelope", func() {
+			Attribute("event", OneOf("NodeCreated", "NodeDeleted"), func() {
+				Meta("oneof:typename", "RealtimeEvent")
+				Meta("oneof:type:field", "type")
+				Meta("oneof:value:field", "payload")
+			})
+		})
+		Type("NodeCreated", func() {
+			Attribute("id", String)
+			Required("id")
+		})
+		Type("NodeDeleted", func() {
+			Attribute("id", String)
+			Required("id")
+		})
+	})
+
+	envelope := root.UserType("Envelope")
+	require.NotNil(t, envelope)
+
+	event := envelope.Attribute().Find("event")
+	require.NotNil(t, event)
+
+	union := expr.AsUnion(event.Type)
+	require.NotNil(t, union)
+	require.True(t, union.ExplicitTypeName)
+	require.Equal(t, "RealtimeEvent", union.TypeName)
+	require.Equal(t, "type", union.GetTypeKey())
+	require.Equal(t, "payload", union.GetValueKey())
+}
+
 func TestOneOfTypeConstructorSupportsForwardDeclaredTypeInPayloadAndResult(t *testing.T) {
 	root := expr.RunDSL(t, func() {
 		Service("calc", func() {
