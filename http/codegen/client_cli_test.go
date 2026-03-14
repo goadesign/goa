@@ -3,6 +3,7 @@ package codegen
 import (
 	"bytes"
 	"goa.design/goa/v3/codegen/testutil"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -92,5 +93,34 @@ func TestConstructorUnionClientCLIFiles(t *testing.T) {
 				t.Errorf("expected HTTP CLI payload builder to expose constructor union payload builder, got %q", builderCode)
 			}
 		})
+	}
+}
+
+func TestConstructorUnionClientCLIPayloadValidatorsExistInClientTypes(t *testing.T) {
+	root := RunHTTPDSL(t, testdata.ConstructorUnionClientValidatorReferenceHTTPDSL)
+	services := CreateHTTPServices(root)
+
+	cliFiles := ClientCLIFiles("", services)
+	require.GreaterOrEqual(t, len(cliFiles), 2, "expected parser and payload builder files")
+	var builder bytes.Buffer
+	for _, s := range cliFiles[1].SectionTemplates {
+		require.NoError(t, s.Write(&builder))
+	}
+	builderCode := codegen.FormatTestCode(t, builder.String())
+
+	typeFiles := ClientTypeFiles("", services)
+	require.NotEmpty(t, typeFiles, "expected client type files")
+	var types bytes.Buffer
+	for _, s := range typeFiles[0].SectionTemplates {
+		require.NoError(t, s.Write(&types))
+	}
+	typesCode := codegen.FormatTestCode(t, types.String())
+
+	re := regexp.MustCompile(`Validate([A-Za-z0-9]+RequestBody)\(`)
+	matches := re.FindAllStringSubmatch(builderCode, -1)
+	require.NotEmpty(t, matches, "expected constructor-union builder to reference request-body validators")
+	for _, match := range matches {
+		name := match[1]
+		require.Contains(t, typesCode, "func Validate"+name+"(", "missing client validator for %s", name)
 	}
 }

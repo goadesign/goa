@@ -472,6 +472,43 @@ var NestedTopLevelConstructorUnionCustomKeysHTTPDSL = func() {
 	})
 }
 
+var ConstructorUnionClientValidatorReferenceHTTPDSL = func() {
+	var All = Type("ClientValidatorReferenceAll", func() {
+		Meta("name:original", "All")
+		Meta("oneof:type:tag", "all")
+	})
+	var Single = Type("ClientValidatorReferenceSingle", func() {
+		Meta("name:original", "Single")
+		Meta("oneof:type:tag", "single")
+		Attribute("task_id", String)
+		Required("task_id")
+	})
+	var Batch = Type("ClientValidatorReferenceBatch", func() {
+		Meta("name:original", "Batch")
+		Meta("oneof:type:tag", "batch")
+		Attribute("task_ids", ArrayOf(String), func() {
+			MinLength(1)
+		})
+		Required("task_ids")
+	})
+	var PayloadType = Type("ClientValidatorReferencePayload", func() {
+		Attribute("value", OneOf(All, Single, Batch), func() {
+			Meta("oneof:typename", "ClientValidatorReferenceMode")
+			Meta("oneof:type:field", "mode")
+			Meta("oneof:value:field", "value")
+		})
+		Required("value")
+	})
+	Service("ClientValidatorReference", func() {
+		Method("Show", func() {
+			Payload(PayloadType)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
 var RecursiveConstructorUnionHTTPDSL = func() {
 	var Leaf = Type("Leaf", func() {
 		Attribute("value", String)

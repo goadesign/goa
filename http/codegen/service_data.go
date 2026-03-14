@@ -2116,9 +2116,11 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 		def = goTypeDef(sd.Scope, ut.Attribute(), svr, !svr)
 		desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP request body.",
 			varname, svc.Name, e.Name())
-		if svr {
-			// generate validation code for unmarshaled type (server-side).
-			validateDef = codegen.ValidationCode(ut.Attribute(), ut, httpctx, true, expr.IsAlias(ut), false, "body")
+		// Generate validation code for unmarshaled request bodies on the server,
+		// and for client request bodies only when constructor unions require the
+		// corresponding validator helper during CLI payload validation.
+		if svr || containsUnionType(body.Type) {
+			validateDef = codegen.ValidationCode(body, ut, httpctx, true, expr.IsAlias(ut), false, "body")
 			if validateDef != "" {
 				validateRef = fmt.Sprintf("err = Validate%s(&body)", varname)
 			}
@@ -2834,6 +2836,9 @@ func (sds *ServicesData) attributeTypeData(ut expr.UserType, req, ptr, server bo
 		// requests server-side and CLI.
 		// Alias types are validated inline in the parent type
 		validate = codegen.ValidationCode(ut.Attribute(), ut, hctx, true, expr.IsAlias(ut), false, "body")
+		if validate == "" && req && !server && needsClientRequestBodyValidatorStub(ut) {
+			validate = "// no validations"
+		}
 	}
 	if validate != "" {
 		validateRef = fmt.Sprintf("err = Validate%s(v)", name)
@@ -2848,6 +2853,44 @@ func (sds *ServicesData) attributeTypeData(ut expr.UserType, req, ptr, server bo
 		ValidateRef: validateRef,
 		Example:     att.Example(sds.Root.API.ExampleGenerator),
 	}
+}
+
+func needsClientRequestBodyValidatorStub(ut expr.UserType) bool {
+	if ut == nil || ut.Attribute() == nil || ut.Attribute().Meta == nil {
+		return false
+	}
+	_, ok := ut.Attribute().Meta.Last("oneof:type:tag")
+	return ok
+}
+
+func containsUnionType(dt expr.DataType) bool {
+	return containsUnionTypeRecursive(dt, make(map[string]struct{}))
+}
+
+func containsUnionTypeRecursive(dt expr.DataType, seen map[string]struct{}) bool {
+	switch actual := dt.(type) {
+	case nil:
+		return false
+	case *expr.Union:
+		return true
+	case expr.UserType:
+		if _, ok := seen[actual.ID()]; ok {
+			return false
+		}
+		seen[actual.ID()] = struct{}{}
+		return containsUnionTypeRecursive(actual.Attribute().Type, seen)
+	case *expr.Object:
+		for _, nat := range *actual {
+			if containsUnionTypeRecursive(nat.Attribute.Type, seen) {
+				return true
+			}
+		}
+	case *expr.Array:
+		return containsUnionTypeRecursive(actual.ElemType.Type, seen)
+	case *expr.Map:
+		return containsUnionTypeRecursive(actual.KeyType.Type, seen) || containsUnionTypeRecursive(actual.ElemType.Type, seen)
+	}
+	return false
 }
 
 // httpContext returns a context for attributes of types used to marshal and
