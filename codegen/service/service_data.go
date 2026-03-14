@@ -1115,7 +1115,7 @@ func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Lo
 		primitiveAliasType, hasPrimitiveAlias := primitiveAliasGoType(nat.Attribute.Type)
 		_, isUserType := nat.Attribute.Type.(expr.UserType)
 		emitPrimitiveAlias := hasPrimitiveAlias && !isUserType && pkg == ""
-		kindConst := kindName + codegen.Goify(nat.Name, true)
+		kindConst := kindName + fieldName
 		fields[i] = &UnionFieldData{
 			Name:               nat.Name,
 			KindConst:          kindConst,
@@ -1188,7 +1188,7 @@ func buildViewUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codege
 		primitiveAliasType, hasPrimitiveAlias := primitiveAliasGoType(nat.Attribute.Type)
 		_, isUserType := nat.Attribute.Type.(expr.UserType)
 		emitPrimitiveAlias := hasPrimitiveAlias && !isUserType
-		kindConst := kindName + codegen.Goify(nat.Name, true)
+		kindConst := kindName + fieldName
 		fields[i] = &UnionFieldData{
 			Name:               nat.Name,
 			KindConst:          kindConst,
@@ -1212,37 +1212,14 @@ func buildViewUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codege
 
 func uniqueUnionFieldNames(values []*expr.NamedAttributeExpr) []string {
 	bases := make([]string, len(values))
+	stableKeys := make([]string, len(values))
 	for i, nat := range values {
 		bases[i] = codegen.Goify(nat.Name, true)
+		stableKeys[i] = unionFieldStableKey(nat)
 	}
-	names := make([]string, len(values))
-	groups := make(map[string][]int, len(values))
-	for i, base := range bases {
-		groups[base] = append(groups[base], i)
-	}
-	for base, idxs := range groups {
-		if len(idxs) == 1 {
-			names[idxs[0]] = base
-			continue
-		}
-		sorted := append([]int(nil), idxs...)
-		sort.SliceStable(sorted, func(i, j int) bool {
-			left := unionFieldStableKey(values[sorted[i]])
-			right := unionFieldStableKey(values[sorted[j]])
-			if left == right {
-				return sorted[i] < sorted[j]
-			}
-			return left < right
-		})
-		for offset, idx := range sorted {
-			if offset == 0 {
-				names[idx] = base
-				continue
-			}
-			names[idx] = fmt.Sprintf("%s%d", base, offset+1)
-		}
-	}
-	return names
+	return expr.UniqueStableNames(bases, stableKeys, func(base string, ordinal int) string {
+		return fmt.Sprintf("%s%d", base, ordinal)
+	})
 }
 
 func unionFieldStableKey(nat *expr.NamedAttributeExpr) string {

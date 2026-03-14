@@ -3,7 +3,6 @@ package expr
 import (
 	"fmt"
 	"slices"
-	"sort"
 	"strings"
 
 	"goa.design/goa/v3/eval"
@@ -452,16 +451,14 @@ func normalizeDerivedUnion(union *Union) {
 		return
 	}
 	types := make([]DataType, len(union.Values))
-	bases := make([]string, len(union.Values))
 	for i, nat := range union.Values {
 		types[i] = nat.Attribute.Type
-		bases[i] = derivedUnionVariantName(nat.Attribute.Type)
 	}
-	names := uniqueDerivedUnionVariantNames(types, bases)
+	names := DerivedUnionVariantNames(types)
 	for i, nat := range union.Values {
 		nat.Name = names[i]
 	}
-	union.TypeName = derivedUnionTypeName(names)
+	union.TypeName = DerivedUnionTypeName(names)
 }
 
 func hasDerivedUnionVariantNames(union *Union) bool {
@@ -477,83 +474,6 @@ func hasDerivedUnionVariantNames(union *Union) bool {
 		}
 	}
 	return true
-}
-
-func derivedUnionVariantName(dt DataType) string {
-	name := strings.TrimSpace(publicUnionVariantName(dt))
-	if name == "" {
-		return "Value"
-	}
-	return Title(name)
-}
-
-func publicUnionVariantName(dt DataType) string {
-	if ut, ok := dt.(UserType); ok && ut.Attribute() != nil {
-		if name, ok := ut.Attribute().Meta.Last("name:original"); ok && strings.TrimSpace(name) != "" {
-			return name
-		}
-		if name, ok := ut.Attribute().Meta.Last("openapi:typename"); ok && strings.TrimSpace(name) != "" {
-			return name
-		}
-	}
-	return dt.Name()
-}
-
-func uniqueDerivedUnionVariantNames(types []DataType, bases []string) []string {
-	reserved := make(map[string]struct{}, len(bases))
-	for _, base := range bases {
-		reserved[base] = struct{}{}
-	}
-
-	names := make([]string, len(bases))
-	groups := make(map[string][]int, len(bases))
-	for i, base := range bases {
-		groups[base] = append(groups[base], i)
-	}
-	for base, indexes := range groups {
-		if len(indexes) == 1 {
-			names[indexes[0]] = base
-			continue
-		}
-		sortedIndexes := append([]int(nil), indexes...)
-		sort.SliceStable(sortedIndexes, func(i, j int) bool {
-			left := derivedUnionVariantStableKey(types[sortedIndexes[i]])
-			right := derivedUnionVariantStableKey(types[sortedIndexes[j]])
-			if left == right {
-				return sortedIndexes[i] < sortedIndexes[j]
-			}
-			return left < right
-		})
-		for offset, idx := range sortedIndexes {
-			if offset == 0 {
-				names[idx] = base
-				continue
-			}
-			for suffix := offset + 1; ; suffix++ {
-				name := fmt.Sprintf("%s%d", base, suffix)
-				if _, ok := reserved[name]; ok {
-					continue
-				}
-				names[idx] = name
-				reserved[name] = struct{}{}
-				break
-			}
-		}
-	}
-	return names
-}
-
-func derivedUnionVariantStableKey(dt DataType) string {
-	return publicUnionVariantName(dt) + ":" + dt.Hash()
-}
-
-func derivedUnionTypeName(names []string) string {
-	if len(names) == 0 {
-		return "Union"
-	}
-	sortedNames := append([]string(nil), names...)
-	sort.Strings(sortedNames)
-	return strings.Join(sortedNames, "Or")
 }
 
 // Merge merges other's attributes into a overriding attributes of a with

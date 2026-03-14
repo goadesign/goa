@@ -801,8 +801,9 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 	} else {
 		// Protobuf -> Go: switch on protobuf oneof variants and cast converted
 		// value into Go-side wrappers when required.
+		fieldNames := uniqueProtoUnionFieldNames(src.Values)
 		for i, v := range src.Values {
-			fieldName := ta.SourceCtx.Scope.Field(v.Attribute, v.Name, true)
+			fieldName := protoBufifyAtt(v.Attribute, fieldNames[i], true)
 			sourceValueTypeRefs[i] = ta.message + "_" + fieldName
 		}
 		// Determine the union package for the target side. For anonymous

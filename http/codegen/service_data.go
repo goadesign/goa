@@ -2772,37 +2772,14 @@ func buildHTTPUnionTypeData(u *expr.Union, scope *codegen.NameScope) *service.Un
 
 func uniqueHTTPUnionFieldNames(values []*expr.NamedAttributeExpr) []string {
 	bases := make([]string, len(values))
+	stableKeys := make([]string, len(values))
 	for i, nat := range values {
 		bases[i] = codegen.Goify(nat.Name, true)
+		stableKeys[i] = httpUnionFieldStableKey(nat)
 	}
-	names := make([]string, len(values))
-	groups := make(map[string][]int, len(values))
-	for i, base := range bases {
-		groups[base] = append(groups[base], i)
-	}
-	for base, idxs := range groups {
-		if len(idxs) == 1 {
-			names[idxs[0]] = base
-			continue
-		}
-		sorted := append([]int(nil), idxs...)
-		sort.SliceStable(sorted, func(i, j int) bool {
-			left := httpUnionFieldStableKey(values[sorted[i]])
-			right := httpUnionFieldStableKey(values[sorted[j]])
-			if left == right {
-				return sorted[i] < sorted[j]
-			}
-			return left < right
-		})
-		for offset, idx := range sorted {
-			if offset == 0 {
-				names[idx] = base
-				continue
-			}
-			names[idx] = fmt.Sprintf("%s%d", base, offset+1)
-		}
-	}
-	return names
+	return expr.UniqueStableNames(bases, stableKeys, func(base string, ordinal int) string {
+		return fmt.Sprintf("%s%d", base, ordinal)
+	})
 }
 
 func httpUnionFieldStableKey(nat *expr.NamedAttributeExpr) string {

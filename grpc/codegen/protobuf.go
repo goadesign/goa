@@ -330,11 +330,7 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 func protoBufOneOfDef(actual *expr.Union, sd *ServiceData, usedTags map[uint64]struct{}) string {
 	// Compute oneof name and ensure it does not collide with any of the member field names
 	oneofName := codegen.SnakeCase(protoBufify(actual.Name(), false, false))
-	fieldNames := make([]string, 0, len(actual.Values))
-	for _, nat := range actual.Values {
-		fn := codegen.SnakeCase(protoBufify(nat.Name, false, false))
-		fieldNames = append(fieldNames, fn)
-	}
+	fieldNames := uniqueProtoUnionFieldNames(actual.Values)
 	for slices.Contains(fieldNames, oneofName) {
 		oneofName += "_oneof"
 	}
@@ -372,6 +368,26 @@ func protoBufOneOfDef(actual *expr.Union, sd *ServiceData, usedTags map[uint64]s
 	}
 	def += "\n\t}"
 	return def
+}
+
+func uniqueProtoUnionFieldNames(values []*expr.NamedAttributeExpr) []string {
+	bases := make([]string, len(values))
+	stableKeys := make([]string, len(values))
+	for i, nat := range values {
+		bases[i] = protoUnionFieldBaseName(nat)
+		stableKeys[i] = protoUnionFieldStableKey(nat)
+	}
+	return expr.UniqueStableNames(bases, stableKeys, func(base string, ordinal int) string {
+		return fmt.Sprintf("%s_%d", base, ordinal)
+	})
+}
+
+func protoUnionFieldBaseName(nat *expr.NamedAttributeExpr) string {
+	return codegen.SnakeCase(protoBufifyAtt(nat.Attribute, nat.Name, false))
+}
+
+func protoUnionFieldStableKey(nat *expr.NamedAttributeExpr) string {
+	return nat.Name + ":" + nat.Attribute.Type.Hash()
 }
 
 func protoJSONOption(att *expr.AttributeExpr) string {

@@ -62,6 +62,62 @@ func TestCollectUnionTypesDeterministicAcrossObjectOrder(t *testing.T) {
 	require.Equal(t, forwardNames, reverseNames)
 }
 
+func TestBuildUnionTypeDataKindConstsUseUniqueFieldNames(t *testing.T) {
+	union := makeUnionForOrderTest("normalized",
+		"foo_bar",
+		"foo-bar",
+	)
+	loc := &codegen.Location{RelImportPath: "gen/service"}
+
+	data := buildUnionTypeData(union, codegen.NewNameScope(), loc)
+	require.Len(t, data.Fields, 2)
+	require.ElementsMatch(t,
+		[]string{"FooBar", "FooBar2"},
+		[]string{data.Fields[0].FieldName, data.Fields[1].FieldName},
+	)
+	require.ElementsMatch(t,
+		[]string{"NormalizedKindFooBar", "NormalizedKindFooBar2"},
+		[]string{data.Fields[0].KindConst, data.Fields[1].KindConst},
+	)
+	require.ElementsMatch(t,
+		[]string{"foo_bar", "foo-bar"},
+		[]string{data.Fields[0].TypeTag, data.Fields[1].TypeTag},
+	)
+}
+
+func TestBuildViewUnionTypeDataKindConstsUseUniqueFieldNames(t *testing.T) {
+	union := makeUnionForOrderTest("normalized",
+		"foo_bar",
+		"foo-bar",
+	)
+	loc := &codegen.Location{RelImportPath: "gen/views"}
+
+	data := buildViewUnionTypeData(union, codegen.NewNameScope(), loc)
+	require.Len(t, data.Fields, 2)
+	require.ElementsMatch(t,
+		[]string{"FooBar", "FooBar2"},
+		[]string{data.Fields[0].FieldName, data.Fields[1].FieldName},
+	)
+	require.ElementsMatch(t,
+		[]string{"NormalizedKindFooBar", "NormalizedKindFooBar2"},
+		[]string{data.Fields[0].KindConst, data.Fields[1].KindConst},
+	)
+	require.ElementsMatch(t,
+		[]string{"foo_bar", "foo-bar"},
+		[]string{data.Fields[0].TypeTag, data.Fields[1].TypeTag},
+	)
+}
+
+func TestUniqueUnionFieldNamesReservePreexistingNormalizedNames(t *testing.T) {
+	names := uniqueUnionFieldNames([]*expr.NamedAttributeExpr{
+		{Name: "Foo", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		{Name: "Foo!", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		{Name: "Foo2", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	})
+
+	require.ElementsMatch(t, []string{"Foo", "Foo2", "Foo3"}, names)
+}
+
 func collectServiceUnionTypeNames(att *expr.AttributeExpr, loc *codegen.Location) map[string]string {
 	scope := codegen.NewNameScope()
 	seen := make(map[string]struct{})

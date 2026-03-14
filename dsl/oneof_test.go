@@ -492,6 +492,52 @@ func TestOneOfTypeConstructorRejectsDefaultInPayload(t *testing.T) {
 	require.Contains(t, err.Error(), "default values are not supported for union attributes")
 }
 
+func TestOneOfDeclarationRejectsDefaultInAttribute(t *testing.T) {
+	err := expr.RunInvalidDSL(t, func() {
+		text := Type("Text", func() {
+			Attribute("text", String)
+		})
+		json := Type("JSON", func() {
+			Attribute("message", String)
+		})
+		Type("Parent", func() {
+			OneOf("choice", func() {
+				Attribute("text", text)
+				Attribute("json", json)
+				Default(map[string]any{"type": "json", "value": map[string]any{"message": "hello"}})
+			})
+		})
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "default values are not supported for union attributes")
+}
+
+func TestOneOfDeclarationRejectsDefaultInPayloadAttribute(t *testing.T) {
+	err := expr.RunInvalidDSL(t, func() {
+		text := Type("Text", func() {
+			Attribute("text", String)
+		})
+		json := Type("JSON", func() {
+			Attribute("message", String)
+		})
+		Service("Shapes", func() {
+			Method("draw", func() {
+				Payload(func() {
+					OneOf("choice", func() {
+						Attribute("text", text)
+						Attribute("json", json)
+						Default(map[string]any{"type": "json", "value": map[string]any{"message": "hello"}})
+					})
+				})
+			})
+		})
+	})
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "default values are not supported for union attributes")
+}
+
 func TestOneOfTypeConstructorForMethodPayloadAndResult(t *testing.T) {
 	root := expr.RunDSL(t, func() {
 		circle := Type("Circle", func() {

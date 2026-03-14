@@ -488,7 +488,19 @@ func validateRPCTags(fields *Object, e *GRPCEndpointExpr) *eval.ValidationErrors
 	verr := new(eval.ValidationErrors)
 	foundRPC := make(map[string]string)
 	for _, nat := range *fields {
-		if IsUnion(nat.Attribute.Type) {
+		if union := AsUnion(nat.Attribute.Type); union != nil {
+			for _, branch := range union.Values {
+				tag, ok := branch.Attribute.FieldTag()
+				if !ok {
+					continue
+				}
+				name := nat.Name + "." + branch.Name
+				if a, ok := foundRPC[tag]; ok {
+					verr.Add(e, "field number %s in attribute %q already exists for attribute %q", tag, name, a)
+				} else {
+					foundRPC[tag] = name
+				}
+			}
 			continue
 		}
 		if tag, ok := nat.Attribute.FieldTag(); !ok {

@@ -130,6 +130,24 @@ var ConstructorUnionBidirectionalStreamingRPCDSL = func() {
 	})
 }
 
+var ConstructorUnionNormalizedProtoFieldNamesDSL = func() {
+	var FirstPayload = Type("FirstPayload", func() {
+		Meta("name:original", "foo_bar")
+		Field(1, "text", String)
+	})
+	var SecondPayload = Type("SecondPayload", func() {
+		Meta("name:original", "foo-bar")
+		Field(1, "message", String)
+	})
+
+	Service("ConstructorUnionNormalizedProtoFieldNames", func() {
+		Method("Show", func() {
+			Payload(OneOf(FirstPayload, SecondPayload))
+			GRPC(func() {})
+		})
+	})
+}
+
 var ElemValidationDSL = func() {
 	var PayloadType = Type("PayloadType", func() {
 		Field(1, "foo", MapOf(String, ArrayOf(String)), func() {

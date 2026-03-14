@@ -60,6 +60,16 @@ func TestCollectHTTPUnionTypesDeterministicAcrossObjectOrder(t *testing.T) {
 	require.Equal(t, forwardNames, reverseNames)
 }
 
+func TestUniqueHTTPUnionFieldNamesReservePreexistingNormalizedNames(t *testing.T) {
+	names := uniqueHTTPUnionFieldNames([]*expr.NamedAttributeExpr{
+		{Name: "Foo", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		{Name: "Foo!", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		{Name: "Foo2", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	})
+
+	require.ElementsMatch(t, []string{"Foo", "Foo2", "Foo3"}, names)
+}
+
 func collectHTTPUnionTypeNames(att *expr.AttributeExpr) map[string]string {
 	scope := cg.NewNameScope()
 	seen := make(map[string]struct{})

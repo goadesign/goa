@@ -123,6 +123,9 @@ func canonicalizeUnionExample(union *expr.Union, value any, sf *schemafier) any 
 		}
 	}
 	if ambiguous {
+		// Fail closed: dropping an ambiguous user example is safer than
+		// canonicalizing it to an arbitrary union branch and changing the
+		// contract that the user described.
 		return nil
 	}
 	return nil
@@ -227,6 +230,9 @@ func findMatchingUnionBranchDetail(union *expr.Union, value any) (*expr.NamedAtt
 			continue
 		}
 		if score == bestScore {
+			// Equal scores mean the raw example does not identify a unique branch.
+			// Callers must treat that as ambiguous instead of falling back to the
+			// first matching branch.
 			ambiguous = true
 		}
 	}
