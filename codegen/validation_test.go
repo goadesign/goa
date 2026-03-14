@@ -134,6 +134,17 @@ func TestRecursiveValidationCode(t *testing.T) {
 		}
 	})
 
+	t.Run("constructor-union-tagged-validation", func(t *testing.T) {
+		ctx := NewAttributeContext(false, false, false, "", scope)
+		root := RunDSL(t, testdata.DeclarationAndConstructorUnionTaggedSymmetryDSL)
+		unionT := root.UserType("TaggedConstructorUnionContainer")
+		code := ValidationCode(&expr.AttributeExpr{Type: unionT}, nil, ctx, true, false, false, "target")
+		code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
+		require.Contains(t, code, "switch string(target.Choice.Kind())")
+		require.Contains(t, code, "case \"text\":")
+		require.Contains(t, code, "case \"json\":")
+	})
+
 	t.Run("invalid-constructor-union-fails-before-validation", func(t *testing.T) {
 		err := expr.RunInvalidDSL(t, func() {
 			dsl.Type("BrokenValidation", func() {

@@ -202,7 +202,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 					continue
 				}
 				cases = append(cases, map[string]any{
-					"typeTag":    v.Name,
+					"typeTag":    expr.UnionVariantTag(v),
 					"fieldName":  Goify(v.Name, true),
 					"validation": val,
 				})
