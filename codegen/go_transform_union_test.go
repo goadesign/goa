@@ -125,3 +125,19 @@ func TestGoTransformDeclarationConstructorUnionSymmetry(t *testing.T) {
 		})
 	}
 }
+
+func TestGoTransformObjectFieldValueUnionDoesNotEmitNilGuard(t *testing.T) {
+	root := RunDSL(t, testdata.DeclarationAndConstructorUnionSymmetryDSL)
+	scope := NewNameScope()
+	defaultCtx := NewAttributeContext(false, false, true, "", scope)
+
+	container := root.UserType("ConstructorUnionContainer")
+	require.NotNil(t, container)
+
+	code, _, err := GoTransform(&expr.AttributeExpr{Type: container}, &expr.AttributeExpr{Type: container}, "source", "target", defaultCtx, defaultCtx, "", true)
+	require.NoError(t, err)
+	code = FormatTestCode(t, "package foo\nfunc transform(){\n"+code+"}")
+
+	require.Contains(t, code, "if source.Choice.Kind() != \"\" {")
+	require.NotContains(t, code, "if source.Choice != nil {")
+}

@@ -4,23 +4,21 @@ func NewMethodBodyUnionUnion(body *MethodBodyUnionRequestBody) *servicebodyunion
 	v := &servicebodyunion.Union{}
 	if body.Values.Kind() != "" {
 
-		if body.Values != nil {
-			switch string(body.Values.Kind()) {
-			case "String":
-				actual, _ := body.Values.AsString()
-				obj := servicebodyunion.ValuesString(actual)
+		switch string(body.Values.Kind()) {
+		case "String":
+			actual, _ := body.Values.AsString()
+			obj := servicebodyunion.ValuesString(actual)
 
-				u := v.Values
-				u.SetString((servicebodyunion.ValuesString)(obj))
-				v.Values = u
-			case "Int":
-				actual, _ := body.Values.AsInt()
-				obj := servicebodyunion.ValuesInt(actual)
+			u := v.Values
+			u.SetString((servicebodyunion.ValuesString)(obj))
+			v.Values = u
+		case "Int":
+			actual, _ := body.Values.AsInt()
+			obj := servicebodyunion.ValuesInt(actual)
 
-				u := v.Values
-				u.SetInt((servicebodyunion.ValuesInt)(obj))
-				v.Values = u
-			}
+			u := v.Values
+			u.SetInt((servicebodyunion.ValuesInt)(obj))
+			v.Values = u
 		}
 	}
 
