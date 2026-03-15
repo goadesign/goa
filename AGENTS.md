@@ -57,6 +57,8 @@ No commented-out code—delete dead code.
 
 - **Use NameScope helpers** for type references: `GoTypeRef`, `GoFullTypeRef`, `GoTypeName`. Never concatenate strings for types.
 - Let Goa decide pointer/value semantics. Do not force `pointer=true` except in transport validation.
+- **Keep helper visibility minimal**: If logic is shared only inside one codegen area, keep it package-private or move it under an `internal` package. Do not export helpers from a parent package just to share them across sibling generators.
+- **Avoid pass-through wrappers**: When two helper functions differ only by forwarding arguments or hard-coding `nil`, collapse them into a single implementation instead of adding an extra layer.
 
 ### Documentation
 

@@ -250,7 +250,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	// parameters
 	var params []*ParameterRef
 	{
-		ps := paramsFromPath(e.Params, key, rand)
+		ps := paramsFromPath(e, key, rand)
 		ps = append(ps, paramsFromHeadersAndCookies(e, rand)...)
 		if e.MapQueryParams != nil {
 			name := *e.MapQueryParams

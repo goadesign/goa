@@ -64,41 +64,6 @@
     "/": {
       "get": {
         "operationId": "testService#testEndpointA",
-        "parameters": [
-          {
-            "allowEmptyValue": true,
-            "example": "Doloribus qui quia.",
-            "in": "query",
-            "name": "k",
-            "required": true,
-            "schema": {
-              "example": "Quia molestias.",
-              "type": "string"
-            }
-          },
-          {
-            "allowEmptyValue": true,
-            "example": "Itaque inventore optio.",
-            "in": "header",
-            "name": "Token",
-            "required": true,
-            "schema": {
-              "example": "Et tempora et quae.",
-              "type": "string"
-            }
-          },
-          {
-            "allowEmptyValue": true,
-            "example": "Iste perspiciatis.",
-            "in": "header",
-            "name": "X-Authorization",
-            "required": true,
-            "schema": {
-              "example": "Ullam aut.",
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "204": {
             "description": "No Content response."
@@ -123,19 +88,6 @@
       },
       "post": {
         "operationId": "testService#testEndpointB",
-        "parameters": [
-          {
-            "allowEmptyValue": true,
-            "example": "Neque nisi quibusdam nisi sint sunt.",
-            "in": "query",
-            "name": "auth",
-            "required": true,
-            "schema": {
-              "example": "Harum et.",
-              "type": "string"
-            }
-          }
-        ],
         "responses": {
           "204": {
             "description": "No Content response."

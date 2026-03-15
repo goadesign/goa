@@ -12,6 +12,7 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
+	openapiinternal "goa.design/goa/v3/http/codegen/openapi/internal"
 )
 
 // NewV2 returns the OpenAPI v2 specification for the given API.
@@ -35,7 +36,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	if hasAbsoluteRoutes(root) {
 		basePath = ""
 	}
-	params := paramsFromExpr(root.API.HTTP.Params, basePath)
+	params := paramsFromExpr(nil, root.API.HTTP.Params, basePath)
 	var paramMap map[string]*Parameter
 	if len(params) > 0 {
 		paramMap = make(map[string]*Parameter, len(params))
@@ -269,7 +270,7 @@ func summaryFromMeta(name string, meta expr.MetaExpr) string {
 	return name
 }
 
-func paramsFromExpr(params *expr.MappedAttributeExpr, path string) []*Parameter {
+func paramsFromExpr(endpoint *expr.HTTPEndpointExpr, params *expr.MappedAttributeExpr, path string) []*Parameter {
 	if params == nil {
 		return nil
 	}
@@ -283,6 +284,9 @@ func paramsFromExpr(params *expr.MappedAttributeExpr, path string) []*Parameter 
 			in = "path"
 			required = true
 		}
+		if endpoint != nil && in != "path" && openapiinternal.IsSecurityParameter(endpoint, in, pn) {
+			return nil
+		}
 		param := paramFor(at, pn, in, required)
 		res = append(res, param)
 		return nil
@@ -294,23 +298,13 @@ func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr) []*Parameter {
 	var params []*Parameter
 
 	expr.WalkMappedAttr(endpoint.Headers, func(name, elem string, att *expr.AttributeExpr) error { // nolint: errcheck
+		if openapiinternal.IsSecurityParameter(endpoint, "header", elem) {
+			return nil
+		}
 		required := endpoint.Headers.IsRequiredNoDefault(name)
 		params = append(params, paramFor(att, elem, "header", required))
 		return nil
 	})
-
-	// Add basic auth to headers
-	if att := expr.TaggedAttribute(endpoint.MethodExpr.Payload, "security:username"); att != "" {
-		// Basic Auth is always encoded in the Authorization header
-		// https://golang.org/pkg/net/http/#Request.SetBasicAuth
-		params = append(params, &Parameter{
-			In:          "header",
-			Name:        "Authorization",
-			Required:    endpoint.MethodExpr.Payload.IsRequired(att),
-			Description: "Basic Auth security using Basic scheme (https://tools.ietf.org/html/rfc7617)",
-			Type:        "string",
-		})
-	}
 
 	return params
 }
@@ -502,7 +496,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 		// Remove any wildcards that is defined in path as a workaround to
 		// https://github.com/OAI/OpenAPI-Specification/issues/291
 		key = expr.HTTPWildcardRegex.ReplaceAllString(key, "/{$1}")
-		params := paramsFromExpr(endpoint.Params, key)
+		params := paramsFromExpr(endpoint, endpoint.Params, key)
 		params = append(params, paramsFromHeaders(endpoint)...)
 		var produces []string
 
