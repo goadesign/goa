@@ -127,3 +127,19 @@ func AttributeTagsWithName(parent *expr.AttributeExpr, fieldName string, att *ex
 	}
 	return " `" + strings.Join(elems, " ") + "`"
 }
+
+// UniqueUnionFieldNames computes deterministic, de-duplicated Go struct field names
+// for union branches. When a union contains distinct types that normalize to the same
+// Go identifier (e.g. "foo_bar" and "foo-bar" both becoming "FooBar"), this function
+// appends integer suffixes to subsequent branches to ensure generated Go code compiles.
+func UniqueUnionFieldNames(values []*expr.NamedAttributeExpr) []string {
+	bases := make([]string, len(values))
+	stableKeys := make([]string, len(values))
+	for i, nat := range values {
+		bases[i] = Goify(nat.Name, true)
+		stableKeys[i] = nat.Name + ":" + nat.Attribute.Type.Hash()
+	}
+	return expr.UniqueStableNames(bases, stableKeys, nil, func(base string, ordinal int) string {
+		return fmt.Sprintf("%s%d", base, ordinal)
+	})
+}

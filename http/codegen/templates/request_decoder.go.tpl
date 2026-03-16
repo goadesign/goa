@@ -35,7 +35,7 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 			}
 	{{- end }}
 		}
-	{{- if isPointerTypeRef .Payload.Request.ServerBody.VarName }}
+	{{- if .Payload.Request.ServerBody.Ptr }}
 		if body == nil {
 	{{- if .Payload.Request.MustHaveBody }}
 			return payload, goa.MissingPayloadError()
@@ -43,14 +43,14 @@ func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahtt
 		}
 	{{- end }}
 	{{- if .Payload.Request.ServerBody.ValidateRef }}
-		{{- if isPointerTypeRef .Payload.Request.ServerBody.VarName }}
+		{{- if .Payload.Request.ServerBody.Ptr }}
 		if body != nil {
 		{{- end }}
 		{{ .Payload.Request.ServerBody.ValidateRef }}
 		if err != nil {
 			return payload, err
 		}
-		{{- if isPointerTypeRef .Payload.Request.ServerBody.VarName }}
+		{{- if .Payload.Request.ServerBody.Ptr }}
 		}
 		{{- end }}
 	{{- end }}

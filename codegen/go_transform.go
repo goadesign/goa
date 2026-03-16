@@ -453,10 +453,28 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 		return "", fmt.Errorf("cannot transform union: number of union types differ (%s has %d, %s has %d)",
 			source.Type.Name(), len(srcUnion.Values), target.Type.Name(), len(tgtUnion.Values))
 	}
-	for i, st := range srcUnion.Values {
-		if err := IsCompatible(st.Attribute.Type, tgtUnion.Values[i].Attribute.Type, sourceVar, targetVar); err != nil {
-			return "", fmt.Errorf("cannot transform union %s to %s: type at index %d: %w",
-				source.Type.Name(), target.Type.Name(), i, err)
+
+	srcNames := UniqueUnionFieldNames(srcUnion.Values)
+	tgtNames := UniqueUnionFieldNames(tgtUnion.Values)
+
+	type tgtBranch struct {
+		tt   *expr.NamedAttributeExpr
+		name string
+	}
+	tgtMap := make(map[string]tgtBranch, len(tgtUnion.Values))
+	for j, tt := range tgtUnion.Values {
+		tgtMap[tt.Name] = tgtBranch{tt: tt, name: tgtNames[j]}
+	}
+
+	for _, st := range srcUnion.Values {
+		tb, ok := tgtMap[st.Name]
+		if !ok {
+			return "", fmt.Errorf("cannot transform union %s to %s: missing target branch %q",
+				source.Type.Name(), target.Type.Name(), st.Name)
+		}
+		if err := IsCompatible(st.Attribute.Type, tb.tt.Attribute.Type, sourceVar, targetVar); err != nil {
+			return "", fmt.Errorf("cannot transform union %s to %s: branch %q is incompatible: %w",
+				source.Type.Name(), target.Type.Name(), st.Name, err)
 		}
 	}
 
@@ -476,10 +494,8 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 		if st == nil || st.Attribute == nil {
 			continue
 		}
-		if i >= len(tgtUnion.Values) {
-			break
-		}
-		tt := tgtUnion.Values[i]
+		tb := tgtMap[st.Name]
+		tt := tb.tt
 		if tt == nil || tt.Attribute == nil {
 			continue
 		}
@@ -498,8 +514,8 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 		}
 		cases = append(cases, map[string]any{
 			"CaseName":        expr.UnionVariantTag(st),
-			"SourceFieldName": Goify(st.Name, true),
-			"TargetFieldName": Goify(tt.Name, true),
+			"SourceFieldName": srcNames[i],
+			"TargetFieldName": tb.name,
 			"SourceAttr":      st.Attribute,
 			"TargetAttr":      tt.Attribute,
 			"TargetCastType":  ta.TargetCtx.Scope.Ref(tt.Attribute, castPkg),

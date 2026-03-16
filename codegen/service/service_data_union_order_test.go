@@ -109,7 +109,7 @@ func TestBuildViewUnionTypeDataKindConstsUseUniqueFieldNames(t *testing.T) {
 }
 
 func TestUniqueUnionFieldNamesReservePreexistingNormalizedNames(t *testing.T) {
-	names := uniqueUnionFieldNames([]*expr.NamedAttributeExpr{
+	names := codegen.UniqueUnionFieldNames([]*expr.NamedAttributeExpr{
 		{Name: "Foo", Attribute: &expr.AttributeExpr{Type: expr.String}},
 		{Name: "Foo!", Attribute: &expr.AttributeExpr{Type: expr.String}},
 		{Name: "Foo2", Attribute: &expr.AttributeExpr{Type: expr.String}},

@@ -61,7 +61,7 @@ func TestGoTransformUnionError(t *testing.T) {
 		Error  string
 	}{
 		{"UnionString to UnionStringInt", unionString, unionStringInt, "cannot transform union: number of union types differ (UnionString has 1, UnionStringInt has 2)"},
-		{"UnionString to UnionSomeType", unionString, unionSomeType, "cannot transform union UnionString to UnionSomeType: type at index 0: source is a string but target type is object"},
+		{"UnionString to UnionSomeType", unionString, unionSomeType, "cannot transform union UnionString to UnionSomeType: missing target branch \"String\""},
 	}
 	for _, c := range tc {
 		t.Run(c.Name, func(t *testing.T) {

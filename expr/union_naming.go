@@ -35,7 +35,7 @@ func DerivedUnionVariantNames(types []DataType) []string {
 		bases[i] = Title(name)
 		stableKeys[i] = UnionVariantPublicName(dt) + ":" + dt.Hash()
 	}
-	return UniqueStableNames(bases, stableKeys, func(base string, ordinal int) string {
+	return UniqueStableNames(bases, stableKeys, nil, func(base string, ordinal int) string {
 		return fmt.Sprintf("%s%d", base, ordinal)
 	})
 }
@@ -72,7 +72,7 @@ func UnionVariantTag(nat *NamedAttributeExpr) string {
 
 // UniqueStableNames deduplicates base names using the corresponding stable
 // keys to produce deterministic suffix assignment across runs.
-func UniqueStableNames(bases, stableKeys []string, suffix func(base string, ordinal int) string) []string {
+func UniqueStableNames(bases, stableKeys []string, usedNames map[string]struct{}, suffix func(base string, ordinal int) string) []string {
 	if len(bases) != len(stableKeys) {
 		panic("bases and stableKeys must have the same length")
 	}
@@ -80,6 +80,11 @@ func UniqueStableNames(bases, stableKeys []string, suffix func(base string, ordi
 		return nil
 	}
 	reserved := make(map[string]struct{}, len(bases))
+	if usedNames != nil {
+		for name := range usedNames {
+			reserved[name] = struct{}{}
+		}
+	}
 	for _, base := range bases {
 		reserved[base] = struct{}{}
 	}
@@ -91,6 +96,24 @@ func UniqueStableNames(bases, stableKeys []string, suffix func(base string, ordi
 	}
 	for base, indexes := range groups {
 		if len(indexes) == 1 {
+			// Even if there's only 1, check if the base is in usedNames (but base is already in reserved!)
+			// Wait, if it's already used by an EXTERNAL field, we MUST suffix it!
+			// If usedNames contains base, we shouldn't just use base!
+			if usedNames != nil {
+				if _, ok := usedNames[base]; ok {
+					// Base is taken by an external field! We must suffix it.
+					for ordinal := 2; ; ordinal++ {
+						name := suffix(base, ordinal)
+						if _, ok := reserved[name]; ok {
+							continue
+						}
+						names[indexes[0]] = name
+						reserved[name] = struct{}{}
+						break
+					}
+					continue
+				}
+			}
 			names[indexes[0]] = base
 			continue
 		}
@@ -105,6 +128,22 @@ func UniqueStableNames(bases, stableKeys []string, suffix func(base string, ordi
 		})
 		for offset, idx := range sortedIndexes {
 			if offset == 0 {
+				// Wait! If offset == 0, can we use base?
+				// Yes, unless usedNames has it!
+				if usedNames != nil {
+					if _, ok := usedNames[base]; ok {
+						for ordinal := 2; ; ordinal++ {
+							name := suffix(base, ordinal)
+							if _, ok := reserved[name]; ok {
+								continue
+							}
+							names[idx] = name
+							reserved[name] = struct{}{}
+							break
+						}
+						continue
+					}
+				}
 				names[idx] = base
 				continue
 			}

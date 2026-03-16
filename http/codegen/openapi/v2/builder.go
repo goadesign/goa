@@ -157,7 +157,11 @@ func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
 						addScopeDescription(s.Scopes, &sd)
 					case expr.APIKeyKind:
 						sd.Type = "apiKey"
-						sd.In = s.In
+						if s.In == "cookie" {
+							sd.In = "header" // Swagger 2 does not support "cookie"
+						} else {
+							sd.In = s.In
+						}
 						sd.Name = s.Name
 						addScopeDescription(s.Scopes, &sd)
 					case expr.JWTKind:
@@ -872,10 +876,11 @@ func convertSchemaRefs(schema *openapi.Schema) {
 	for _, prop := range schema.Properties {
 		convertSchemaRefs(prop)
 	}
-	// Convert references in anyOf
+	// Clear anyOf as Swagger 2.0 does not support it.
 	for _, anyOfSchema := range schema.AnyOf {
 		convertSchemaRefs(anyOfSchema)
 	}
+	schema.AnyOf = nil
 	// Convert references in additionalProperties when it's a schema
 	if apSchema, ok := schema.AdditionalProperties.(*openapi.Schema); ok {
 		convertSchemaRefs(apSchema)

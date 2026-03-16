@@ -231,22 +231,12 @@ func Field(tag any, name string, args ...any) {
 //	    })
 //	})
 func OneOf(arg any, args ...any) expr.DataType {
-	if looksLikeOneOfAttributeDeclarationSignature(arg, args...) && !isOneOfDeclarationContext() {
-		eval.IncompatibleDSL()
-		return invalidOneOfType()
-	}
-	if isOneOfAttributeDeclaration(arg, args...) {
-		oneOfAttribute(arg.(string), args...)
-		return nil
-	}
 	if name, ok := arg.(string); ok {
-		if isMalformedOneOfAttributeDeclaration(arg, args...) {
-			oneOfAttribute(name, args...)
-			return nil
-		}
-		if len(args) > 2 && !areOneOfTypeConstructorArgs(append([]any{arg}, args...)...) {
-			eval.TooManyArgError()
-			return nil
+		if len(args) > 0 {
+			if _, ok := args[len(args)-1].(func()); ok {
+				oneOfAttribute(name, args...)
+				return nil
+			}
 		}
 	}
 	return oneOfType(arg, args...)
@@ -354,63 +344,6 @@ func Example(args ...any) {
 		return
 	}
 	a.UserExamples = append(a.UserExamples, ex)
-}
-
-func isOneOfAttributeDeclaration(arg any, args ...any) bool {
-	if !looksLikeOneOfAttributeDeclarationSignature(arg, args...) {
-		return false
-	}
-	switch eval.Current().(type) {
-	case *expr.AttributeExpr, expr.CompositeExpr:
-		return true
-	default:
-		return false
-	}
-}
-
-func looksLikeOneOfAttributeDeclarationSignature(arg any, args ...any) bool {
-	name, ok := arg.(string)
-	if !ok || name == "" {
-		return false
-	}
-	if len(args) == 0 || len(args) > 2 {
-		return false
-	}
-	if _, ok := args[len(args)-1].(func()); !ok {
-		return false
-	}
-	return true
-}
-
-func isMalformedOneOfAttributeDeclaration(arg any, args ...any) bool {
-	if !isOneOfDeclarationContext() || len(args) == 0 {
-		return false
-	}
-	if _, ok := args[len(args)-1].(func()); ok {
-		return true
-	}
-	return !areOneOfTypeConstructorArgs(append([]any{arg}, args...)...)
-}
-
-func isOneOfDeclarationContext() bool {
-	switch eval.Current().(type) {
-	case *expr.AttributeExpr, expr.CompositeExpr:
-		return true
-	default:
-		return false
-	}
-}
-
-func areOneOfTypeConstructorArgs(args ...any) bool {
-	for _, arg := range args {
-		switch arg.(type) {
-		case expr.DataType, string:
-			continue
-		default:
-			return false
-		}
-	}
-	return len(args) >= 2
 }
 
 func oneOfAttribute(name string, args ...any) {

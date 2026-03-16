@@ -553,6 +553,10 @@ type (
 		Example any
 		// View is the view used to render the (result) type if any.
 		View string
+		// Type is the underlying data type.
+		Type expr.DataType
+		// Ptr is true if the Go type is a pointer.
+		Ptr bool
 	}
 
 	// MultipartData contains the data needed to render multipart
@@ -2202,6 +2206,8 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 		ValidateDef: validateDef,
 		ValidateRef: validateRef,
 		Example:     body.Example(sds.Root.API.ExampleGenerator),
+		Type:        body.Type,
+		Ptr:         strings.HasPrefix(varname, "*"),
 	}
 }
 
@@ -2406,6 +2412,8 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, lo
 		ValidateRef: validateRef,
 		Example:     body.Example(sds.Root.API.ExampleGenerator),
 		View:        viewName,
+		Type:        body.Type,
+		Ptr:         strings.HasPrefix(varname, "*"),
 	}
 	return td
 }
@@ -2779,7 +2787,7 @@ func uniqueHTTPUnionFieldNames(values []*expr.NamedAttributeExpr) []string {
 		bases[i] = codegen.Goify(nat.Name, true)
 		stableKeys[i] = httpUnionFieldStableKey(nat)
 	}
-	return expr.UniqueStableNames(bases, stableKeys, func(base string, ordinal int) string {
+	return expr.UniqueStableNames(bases, stableKeys, nil, func(base string, ordinal int) string {
 		return fmt.Sprintf("%s%d", base, ordinal)
 	})
 }
@@ -2852,6 +2860,8 @@ func (sds *ServicesData) attributeTypeData(ut expr.UserType, req, ptr, server bo
 		ValidateDef: validate,
 		ValidateRef: validateRef,
 		Example:     att.Example(sds.Root.API.ExampleGenerator),
+		Type:        ut,
+		Ptr:         strings.HasPrefix(name, "*"),
 	}
 }
 

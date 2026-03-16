@@ -189,7 +189,8 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		u := expr.AsUnion(att.Type)
 		if _, ok := attCtx.Scope.(*AttributeScope); ok {
 			cases := make([]map[string]any, 0, len(u.Values))
-			for _, v := range u.Values {
+			uniqueNames := UniqueUnionFieldNames(u.Values)
+			for i, v := range u.Values {
 				// Sum-type unions (struct-based, with Kind/AsX accessors) store each
 				// branch as either a value (primitives, arrays, maps) or a pointer
 				// (object user types). The union validation template binds the branch
@@ -202,11 +203,11 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 					continue
 				}
 				cases = append(cases, map[string]any{
-					"typeTag":      expr.UnionVariantTag(v),
-					"fieldName":    Goify(v.Name, true),
+					"typeTag":       expr.UnionVariantTag(v),
+					"fieldName":     uniqueNames[i],
 					"requiresValue": strings.HasPrefix(strings.TrimSpace(val), "if actual != nil {"),
-					"context":      context + ".value",
-					"validation":   val,
+					"context":       context + ".value",
+					"validation":    val,
 				})
 			}
 			if len(cases) > 0 {

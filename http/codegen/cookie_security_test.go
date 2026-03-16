@@ -48,7 +48,7 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 		require.Len(t, *swagger.Paths["/auth/profile"].Get.Security, 1)
 		for name, def := range swagger.SecurityDefinitions {
 			require.Equal(t, "apiKey", def.Type, name)
-			require.Equal(t, "cookie", def.In, name)
+			require.Equal(t, "header", def.In, name)
 			require.Equal(t, "__Host-ak_session", def.Name, name)
 			require.Contains(t, (*swagger.Paths["/auth/profile"].Get.Security)[0], name)
 		}

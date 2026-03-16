@@ -270,7 +270,7 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	case *expr.Map:
 		return fmt.Sprintf("map<%s, %s>", protoType(actual.KeyType, sd), protoType(actual.ElemType, sd))
 	case *expr.Union:
-		return " {\n" + protoBufOneOfDef(actual, sd, map[uint64]struct{}{}) + "\n}"
+		return " {\n" + protoBufOneOfDef(actual, sd, map[uint64]struct{}{}, map[string]struct{}{}) + "\n}"
 	case expr.UserType:
 		if actual == expr.Empty {
 			return " {}"
@@ -283,16 +283,27 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 		var ss []string
 		ss = append(ss, " {")
 		usedTags := make(map[uint64]struct{})
+		usedNames := make(map[string]struct{})
+
+		// Pre-seed explicitly used tags and names (from all fields, including unions)
 		for _, nat := range *actual {
-			if !expr.IsUnion(nat.Attribute.Type) {
+			if u := expr.AsUnion(nat.Attribute.Type); u != nil {
+				for _, v := range u.Values {
+					if tag := rpcTag(v.Attribute); tag > 0 {
+						usedTags[tag] = struct{}{}
+					}
+				}
+			} else {
 				if tag := rpcTag(nat.Attribute); tag > 0 {
 					usedTags[tag] = struct{}{}
 				}
+				usedNames[codegen.SnakeCase(protoBufify(nat.Name, false, false))] = struct{}{}
 			}
 		}
+
 		for _, nat := range *actual {
 			if expr.IsUnion(nat.Attribute.Type) {
-				ss = append(ss, protoBufOneOfDef(expr.AsUnion(nat.Attribute.Type), sd, usedTags))
+				ss = append(ss, protoBufOneOfDef(expr.AsUnion(nat.Attribute.Type), sd, usedTags, usedNames))
 				continue
 			}
 			var (
@@ -327,13 +338,23 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	}
 }
 
-func protoBufOneOfDef(actual *expr.Union, sd *ServiceData, usedTags map[uint64]struct{}) string {
+func protoBufOneOfDef(actual *expr.Union, sd *ServiceData, usedTags map[uint64]struct{}, usedNames map[string]struct{}) string {
 	// Compute oneof name and ensure it does not collide with any of the member field names
 	oneofName := codegen.SnakeCase(protoBufify(actual.Name(), false, false))
-	fieldNames := uniqueProtoUnionFieldNames(actual.Values)
-	for slices.Contains(fieldNames, oneofName) {
+	fieldNames := uniqueProtoUnionFieldNames(actual.Values, usedNames)
+	
+	hasKey := func(m map[string]struct{}, k string) bool {
+		_, ok := m[k]
+		return ok
+	}
+
+	for slices.Contains(fieldNames, oneofName) || (usedNames != nil && hasKey(usedNames, oneofName)) {
 		oneofName += "_oneof"
 	}
+	if usedNames != nil {
+		usedNames[oneofName] = struct{}{}
+	}
+
 	def := "\toneof " + oneofName + " {"
 	nextTag := func() uint64 {
 		var tag uint64 = 1
@@ -347,6 +368,9 @@ func protoBufOneOfDef(actual *expr.Union, sd *ServiceData, usedTags map[uint64]s
 	}
 	for i, nat := range actual.Values {
 		fn := fieldNames[i]
+		if usedNames != nil {
+			usedNames[fn] = struct{}{}
+		}
 		fnum := rpcTag(nat.Attribute)
 		if fnum == 0 {
 			fnum = nextTag()
@@ -370,14 +394,14 @@ func protoBufOneOfDef(actual *expr.Union, sd *ServiceData, usedTags map[uint64]s
 	return def
 }
 
-func uniqueProtoUnionFieldNames(values []*expr.NamedAttributeExpr) []string {
+func uniqueProtoUnionFieldNames(values []*expr.NamedAttributeExpr, usedNames map[string]struct{}) []string {
 	bases := make([]string, len(values))
 	stableKeys := make([]string, len(values))
 	for i, nat := range values {
 		bases[i] = protoUnionFieldBaseName(nat)
 		stableKeys[i] = protoUnionFieldStableKey(nat)
 	}
-	return expr.UniqueStableNames(bases, stableKeys, func(base string, ordinal int) string {
+	return expr.UniqueStableNames(bases, stableKeys, usedNames, func(base string, ordinal int) string {
 		return fmt.Sprintf("%s_%d", base, ordinal)
 	})
 }

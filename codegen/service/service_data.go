@@ -1099,7 +1099,7 @@ func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Lo
 	name := scope.GoTypeName(att)
 	kindName := scope.Unique(name + "Kind")
 	unionPkg := loc.PackageName()
-	fieldNames := uniqueUnionFieldNames(u.Values)
+	fieldNames := codegen.UniqueUnionFieldNames(u.Values)
 
 	fields := make([]*UnionFieldData, len(u.Values))
 	for i, nat := range u.Values {
@@ -1179,7 +1179,7 @@ func buildViewUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codege
 	att := &expr.AttributeExpr{Type: u}
 	name := scope.GoTypeName(att)
 	kindName := scope.Unique(name + "Kind")
-	fieldNames := uniqueUnionFieldNames(u.Values)
+	fieldNames := codegen.UniqueUnionFieldNames(u.Values)
 
 	fields := make([]*UnionFieldData, len(u.Values))
 	for i, nat := range u.Values {
@@ -1210,21 +1210,6 @@ func buildViewUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codege
 	}
 }
 
-func uniqueUnionFieldNames(values []*expr.NamedAttributeExpr) []string {
-	bases := make([]string, len(values))
-	stableKeys := make([]string, len(values))
-	for i, nat := range values {
-		bases[i] = codegen.Goify(nat.Name, true)
-		stableKeys[i] = unionFieldStableKey(nat)
-	}
-	return expr.UniqueStableNames(bases, stableKeys, func(base string, ordinal int) string {
-		return fmt.Sprintf("%s%d", base, ordinal)
-	})
-}
-
-func unionFieldStableKey(nat *expr.NamedAttributeExpr) string {
-	return nat.Name + ":" + nat.Attribute.Type.Hash()
-}
 
 // sortedNamedAttributes returns object fields sorted by attribute name.
 // Union naming uses NameScope uniqueness, so callers that discover unions while

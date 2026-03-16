@@ -207,10 +207,7 @@ func transTmplFuncs(s *expr.HTTPServiceExpr, services *ServicesData) map[string]
 		},
 		"conversionData":       conversionData,
 		"headerConversionData": headerConversionData,
-		"isPointerTypeRef": func(ref string) bool {
-			return strings.HasPrefix(ref, "*")
-		},
-		"printValue":       printValue,
+		"printValue":           printValue,
 		"viewedServerBody": viewedServerBody,
 	}
 }
