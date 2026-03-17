@@ -804,7 +804,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		if _, ok := att.Type.(*expr.Object); ok {
 			att.Type = &expr.UserTypeExpr{
 				AttributeExpr: expr.DupAtt(att),
-				TypeName:      scope.Name(name),
+				TypeName:      scope.PeekUnique(name),
 				UID:           id,
 			}
 		}

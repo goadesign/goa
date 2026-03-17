@@ -12,8 +12,8 @@ func Title(s string) string {
 }
 
 // findKey finds the given key in the endpoint expression and returns the
-// transport element name and the position (header, query, or body for HTTP or
-// message, metadata for gRPC endpoint).
+// transport element name and the position (header, query, cookie, or body for
+// HTTP or message, metadata for gRPC endpoint).
 func findKey(exp eval.Expression, keyAtt string) (string, string) {
 	switch e := exp.(type) {
 	case *HTTPEndpointExpr:
@@ -21,6 +21,8 @@ func findKey(exp eval.Expression, keyAtt string) (string, string) {
 			return n, "query"
 		} else if n, exists := e.Headers.FindKey(keyAtt); exists {
 			return n, "header"
+		} else if n, exists := e.Cookies.FindKey(keyAtt); exists {
+			return n, "cookie"
 		} else if e.Body == nil {
 			return "", "header"
 		}

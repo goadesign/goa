@@ -76,6 +76,32 @@ func (s *NameScope) Unique(name string, suffix ...string) string {
 	}
 }
 
+// PeekUnique returns the name that Unique would return for the same inputs,
+// without mutating the scope.
+//
+// This is useful when synthesizing type names or identifiers that are later
+// reserved via Hash-based naming (e.g., GoTypeName/HashedUnique) and therefore
+// must not increment the scope counters twice.
+func (s *NameScope) PeekUnique(name string, suffix ...string) string {
+	c, ok := s.counts[name]
+	if !ok {
+		return name
+	}
+	if len(suffix) > 0 {
+		name += suffix[0]
+		c, ok = s.counts[name]
+		if !ok {
+			return name
+		}
+	}
+	for i := c; ; i++ {
+		ret := name + strconv.Itoa(i+1)
+		if _, ok := s.counts[ret]; !ok {
+			return ret
+		}
+	}
+}
+
 // Name returns a unique name for the given name by adding a counter value to
 // the name until unique. It returns the same value when called multiple times
 // for the same given name.

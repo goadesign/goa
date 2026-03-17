@@ -65,3 +65,34 @@ func TestNameScope_GoFullTypeName_UsesScopedNameWhenQualified(t *testing.T) {
 		t.Fatalf("expected qualified base name %q with fresh scope, got %q", want, got)
 	}
 }
+
+func TestNameScope_PeekUnique_MatchesUniqueWithoutMutation(t *testing.T) {
+	seed := func(scope *NameScope) {
+		scope.Unique("a")
+		scope.Unique("a")
+		scope.Unique("a2")
+		scope.Unique("hello")
+		scope.Unique("hello1")
+	}
+
+	peek := NewNameScope()
+	seed(peek)
+
+	mutating := NewNameScope()
+	seed(mutating)
+
+	if got, want := peek.PeekUnique("a"), mutating.Unique("a"); got != want {
+		t.Fatalf("expected peek %q, got %q", want, got)
+	}
+	if got, want := peek.PeekUnique("hel", "lo"), mutating.Unique("hel", "lo"); got != want {
+		t.Fatalf("expected peek %q, got %q", want, got)
+	}
+	if got, want := peek.PeekUnique("hello", "1"), mutating.Unique("hello", "1"); got != want {
+		t.Fatalf("expected peek %q, got %q", want, got)
+	}
+
+	// PeekUnique must not mutate the scope.
+	if got, want := peek.Unique("a"), "a3"; got != want {
+		t.Fatalf("expected scope unchanged, got %q", got)
+	}
+}

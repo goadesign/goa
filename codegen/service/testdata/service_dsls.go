@@ -1100,6 +1100,36 @@ var MixedAndMultipleAPIKeySecurityDSL = func() {
 	})
 }
 
+// RawObjectPayloadTypeNameCollisionDSL exercises the naming of synthetic user
+// types created when wrapping raw object payloads.
+//
+// The service generator wraps raw object payloads in a synthetic user type
+// named after the method (e.g. Foo -> FooPayload). That name must be computed
+// using NameScope uniqueness rules even when a would-be suffix (FooPayload2) is
+// already taken, otherwise codegen can emit invalid references.
+var RawObjectPayloadTypeNameCollisionDSL = func() {
+	var FooPayload = Type("FooPayload", func() {
+		Attribute("x", String)
+	})
+	var FooPayload2 = Type("FooPayload2", func() {
+		Attribute("y", String)
+	})
+
+	Service("RawObjectPayloadTypeNameCollision", func() {
+		// Reserve FooPayload and FooPayload2 in the NameScope *before* raw-object
+		// payload wrapping occurs (wrapObject runs before method data is built).
+		Error("reserve_foo_payload", FooPayload)
+		Error("reserve_foo_payload2", FooPayload2)
+
+		Method("Foo", func() {
+			Payload(func() {
+				Attribute("a", String)
+				Required("a")
+			})
+		})
+	})
+}
+
 // UnionCustomKeysDSL tests union with custom type and value keys via Meta tags.
 var UnionCustomKeysDSL = func() {
 	var CustomUnion = Type("CustomUnion", func() {

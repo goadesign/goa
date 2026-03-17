@@ -2,18 +2,19 @@ package openapiv3
 
 import (
 	"slices"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
+	openapiinternal "goa.design/goa/v3/http/codegen/openapi/internal"
 )
 
-// paramsFromPath computes the OpenAPI spec parameters for the given API,
-// service or endpoint HTTP path and query parameters.
-func paramsFromPath(params *expr.MappedAttributeExpr, path string, rand *expr.ExampleGenerator) []*Parameter {
+// paramsFromPath computes the OpenAPI spec parameters for the given endpoint
+// HTTP path and query parameters.
+func paramsFromPath(endpoint *expr.HTTPEndpointExpr, path string, rand *expr.ExampleGenerator) []*Parameter {
 	var (
 		res       []*Parameter
+		params    = endpoint.Params
 		wildcards = expr.ExtractHTTPWildcards(path)
 	)
 	codegen.WalkMappedAttr(params, func(n, pn string, required bool, at *expr.AttributeExpr) error { // nolint: errcheck
@@ -21,6 +22,9 @@ func paramsFromPath(params *expr.MappedAttributeExpr, path string, rand *expr.Ex
 		if slices.Contains(wildcards, n) {
 			in = "path"
 			required = true
+		}
+		if in != "path" && openapiinternal.IsSecurityParameter(endpoint, in, pn) {
+			return nil
 		}
 		res = append(res, paramFor(at, pn, in, required, rand))
 		return nil
@@ -34,10 +38,7 @@ func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.Exa
 	var params []*Parameter
 
 	expr.WalkMappedAttr(endpoint.Headers, func(name, elem string, att *expr.AttributeExpr) error { // nolint: errcheck
-		if strings.ToLower(elem) == "authorization" {
-			// Headers named "Authorization" are ignored by OpenAPI v3.
-			// Instead it uses the security and securitySchemes sections to
-			// define authorization.
+		if openapiinternal.IsSecurityParameter(endpoint, "header", elem) {
 			return nil
 		}
 		required := endpoint.Headers.IsRequiredNoDefault(name)
@@ -45,6 +46,9 @@ func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.Exa
 		return nil
 	})
 	expr.WalkMappedAttr(endpoint.Cookies, func(name, elem string, att *expr.AttributeExpr) error { // nolint: errcheck
+		if openapiinternal.IsSecurityParameter(endpoint, "cookie", elem) {
+			return nil
+		}
 		required := endpoint.Cookies.IsRequiredNoDefault(name)
 		params = append(params, paramFor(att, elem, "cookie", required, rand))
 		return nil
