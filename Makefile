@@ -20,6 +20,11 @@ GOOS=$(shell go env GOOS)
 GOARCH=$(shell go env GOARCH)
 GO_FILES=$(shell find . -type f -name '*.go')
 GOPATH=$(shell go env GOPATH)
+GOBIN_DIR=$(GOPATH)/bin
+GOLANGCI_LINT_VERSION?=v2.11.3
+GOLANGCI_LINT=$(GOBIN_DIR)/golangci-lint
+PROTOC_BIN=protoc
+PROTOC_DEST=$(GOBIN_DIR)/$(PROTOC_BIN)
 
 .PHONY: all all-tests ci depend lint test test-release integration-test build-goa release release-preflight release-goa release-examples release-plugins
 .NOTPARALLEL: release release-goa release-examples release-plugins
@@ -55,43 +60,57 @@ endif
 ifeq ($(GOOS),windows)
 	PROTOC=protoc-$(PROTOC_VERSION)-win32
 	PROTOC_EXEC="$(PROTOC)\bin\protoc.exe"
+	PROTOC_BIN=protoc.exe
 	GOPATH:=$(subst \,/,$(GOPATH))
 endif
 
 depend:
 	@echo INSTALLING DEPENDENCIES...
+	@mkdir -p "$(GOBIN_DIR)"
 	@go mod download
-	@for package in $(DEPEND); do go install $$package; done
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOPATH)/bin latest 
+	@for package in $(DEPEND); do GOBIN="$(GOBIN_DIR)" go install $$package; done
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOBIN_DIR) $(GOLANGCI_LINT_VERSION)
+	@$(GOLANGCI_LINT) version
 	@go mod tidy -compat=1.17
 	@echo INSTALLING PROTOC...
-	@mkdir $(PROTOC)
+	@rm -rf "$(PROTOC)"
+	@mkdir -p "$(PROTOC)"
 	@cd $(PROTOC); \
 	curl -O -L https://github.com/protocolbuffers/protobuf/releases/download/v$(PROTOC_VERSION)/$(PROTOC).zip; \
 	$(UNZIP) $(PROTOC).zip
-	@cp $(PROTOC_EXEC) $(GOPATH)/bin && \
+	@rm -f "$(PROTOC_DEST)" && \
+		cp $(PROTOC_EXEC) "$(PROTOC_DEST)" && \
+		chmod 0755 "$(PROTOC_DEST)" && \
 		rm -rf $(PROTOC) && \
-		echo "`protoc --version`"
+		"$(PROTOC_DEST)" --version
 
 lint:
 ifneq ($(GOOS),windows)
-	@golangci-lint run ./... || (echo "^ - lint errors!" && echo && exit 1)
+	@$(GOLANGCI_LINT) run ./... || (echo "^ - lint errors!" && echo && exit 1)
 endif
 
 test:
+ifneq ($(GOOS),windows)
+	PATH="$(GOBIN_DIR):$$PATH" go test ./... --coverprofile=cover.out
+else
 	go test ./... --coverprofile=cover.out
+endif
 
 test-release:
+ifneq ($(GOOS),windows)
+	PATH="$(GOBIN_DIR):$$PATH" go test -count=1 ./...
+else
 	go test -count=1 ./...
+endif
 
 integration-test: build-goa
 ifneq ($(GOOS),windows)
-	cd jsonrpc/integration_tests && go test -count=1 -timeout 10m ./...
+	cd jsonrpc/integration_tests && PATH="$(GOBIN_DIR):$$PATH" go test -count=1 -timeout 10m ./...
 endif
 
 # Needed for CI to run integration tests
 build-goa:
-	cd cmd/goa && go install .
+	cd cmd/goa && GOBIN="$(GOBIN_DIR)" go install .
 
 release-preflight: lint test-release integration-test
 

@@ -71,12 +71,27 @@ import (
 package testpackage
 
 `
-		imprt            = []*ImportSpec{{Path: "test"}}
-		imports          = append(imprt, &ImportSpec{Path: "other"})
-		pathImport       = []*ImportSpec{{Path: "import/with/slashes"}}
-		pathImports      = append(pathImport, &ImportSpec{Path: "other/import/with/slashes"})
-		pathNamedImport  = []*ImportSpec{{Name: "myname", Path: "import/with/slashes"}}
-		pathNamedImports = append(pathNamedImport, &ImportSpec{Name: "myothername", Path: "other/import/with/slashes"})
+		imprt = []*ImportSpec{
+			{Path: "test"},
+		}
+		imports = []*ImportSpec{
+			{Path: "test"},
+			{Path: "other"},
+		}
+		pathImport = []*ImportSpec{
+			{Path: "import/with/slashes"},
+		}
+		pathImports = []*ImportSpec{
+			{Path: "import/with/slashes"},
+			{Path: "other/import/with/slashes"},
+		}
+		pathNamedImport = []*ImportSpec{
+			{Name: "myname", Path: "import/with/slashes"},
+		}
+		pathNamedImports = []*ImportSpec{
+			{Name: "myname", Path: "import/with/slashes"},
+			{Name: "myothername", Path: "other/import/with/slashes"},
+		}
 	)
 	cases := map[string]struct {
 		Title    string

@@ -760,14 +760,14 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		payload := sds.buildPayloadData(httpEndpoint, sd)
 
 		var (
-			reqs  service.RequirementsData
+			reqs  = make(service.RequirementsData, 0, len(httpEndpoint.Requirements))
 			hsch  service.SchemesData
 			bosch service.SchemesData
 			qsch  service.SchemesData
 			basch *service.SchemeData
 		)
 		for _, req := range httpEndpoint.Requirements {
-			var rs service.SchemesData
+			rs := make(service.SchemesData, 0, len(req.Schemes))
 			for _, sch := range req.Schemes {
 				s := service.BuildSchemeData(sch, httpEndpoint.MethodExpr)
 				rs = rs.Append(s)
