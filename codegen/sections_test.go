@@ -71,24 +71,27 @@ import (
 package testpackage
 
 `
-		imprt = func() []*ImportSpec {
-			imports := make([]*ImportSpec, 0, 2)
-			imports = append(imports, &ImportSpec{Path: "test"})
-			return imports
-		}()
-		imports    = append(imprt, &ImportSpec{Path: "other"})
-		pathImport = func() []*ImportSpec {
-			imports := make([]*ImportSpec, 0, 2)
-			imports = append(imports, &ImportSpec{Path: "import/with/slashes"})
-			return imports
-		}()
-		pathImports     = append(pathImport, &ImportSpec{Path: "other/import/with/slashes"})
-		pathNamedImport = func() []*ImportSpec {
-			imports := make([]*ImportSpec, 0, 2)
-			imports = append(imports, &ImportSpec{Name: "myname", Path: "import/with/slashes"})
-			return imports
-		}()
-		pathNamedImports = append(pathNamedImport, &ImportSpec{Name: "myothername", Path: "other/import/with/slashes"})
+		imprt = []*ImportSpec{
+			{Path: "test"},
+		}
+		imports = []*ImportSpec{
+			{Path: "test"},
+			{Path: "other"},
+		}
+		pathImport = []*ImportSpec{
+			{Path: "import/with/slashes"},
+		}
+		pathImports = []*ImportSpec{
+			{Path: "import/with/slashes"},
+			{Path: "other/import/with/slashes"},
+		}
+		pathNamedImport = []*ImportSpec{
+			{Name: "myname", Path: "import/with/slashes"},
+		}
+		pathNamedImports = []*ImportSpec{
+			{Name: "myname", Path: "import/with/slashes"},
+			{Name: "myothername", Path: "other/import/with/slashes"},
+		}
 	)
 	cases := map[string]struct {
 		Title    string
