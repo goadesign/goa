@@ -936,8 +936,10 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		}
 
 		if res := a.MethodExpr.Result; res != nil {
+			md := sd.Service.Method(a.Name())
 			for _, v := range a.Responses {
-				collectUserTypes(v.Body.Type, func(ut expr.UserType) {
+				body := effectiveClientResponseBody(v.Body, a, md)
+				collectUserTypes(body.Type, func(ut expr.UserType) {
 					// NOTE: ServerBodyAttributeTypes for response body types are
 					// collected in buildResponseBodyType because we have to generate
 					// body types for each view in a result type.
@@ -970,8 +972,9 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		}
 
 		if a.MethodExpr.Result != nil {
+			md := sd.Service.Method(a.Name())
 			for _, v := range a.Responses {
-				collectHTTPUnionTypes(v.Body, sd.Scope, unionByHash, seenUnionTypes)
+				collectHTTPUnionTypes(effectiveClientResponseBody(v.Body, a, md), sd.Scope, unionByHash, seenUnionTypes)
 			}
 		}
 
@@ -1614,6 +1617,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 				init           *InitData
 				origin         string
 				mustValidate   bool
+				clientRespBody = resp.Body
 
 				resAttr = result
 			)
@@ -1631,6 +1635,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 				}
 				if viewed {
 					vname := ""
+					clientView := clientResponseViewName(e, md)
 					if origin != "" {
 						// Response body is explicitly set to an attribute in the method
 						// result type. No need to do any view-based projections server side.
@@ -1659,7 +1664,12 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 							}
 						}
 					}
-					clientBodyData = sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, false, &vname, sd)
+					if clientView != "" {
+						clientRespBody = effectiveClientResponseBody(resp.Body, e, md)
+						clientBodyData = sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, false, &clientView, sd)
+					} else {
+						clientBodyData = sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, false, &vname, sd)
+					}
 				} else {
 					if sbd := sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, nil, sd); sbd != nil {
 						serverBodyData = append(serverBodyData, sbd)
@@ -1714,17 +1724,17 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 							name = fmt.Sprintf("New%s%s%s", n, r, status)
 						}
 						desc = fmt.Sprintf("%s builds a %q service %q endpoint result from a HTTP %q response.", name, svc.Name, e.Name(), status)
-						if resp.Body.Type != expr.Empty {
+						if clientRespBody.Type != expr.Empty {
 							if origin != "" {
 								pointer = result.IsPrimitivePointer(origin, true)
 							}
 							ref := "body"
-							if expr.IsObject(resp.Body.Type) {
+							if expr.IsObject(clientRespBody.Type) {
 								ref = "&body"
 								pointer = false
 							}
 							var vcode string
-							if ut, ok := resp.Body.Type.(expr.UserType); ok {
+							if ut, ok := clientRespBody.Type.(expr.UserType); ok {
 								if val := ut.Attribute().Validation; val != nil {
 									vcode = codegen.ValidationCode(ut.Attribute(), ut, httpclictx, true, expr.IsAlias(ut), false, "body")
 								}
@@ -1734,7 +1744,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 								AttributeData: &AttributeData{
 									Name:     "body",
 									VarName:  "body",
-									TypeRef:  sd.Scope.GoTypeRef(resp.Body),
+									TypeRef:  sd.Scope.GoTypeRef(clientRespBody),
 									Validate: vcode,
 								},
 							}}
@@ -1748,7 +1758,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 							//   rely on the fact that the required attributes are
 							//   set in the response body (otherwise validation
 							//   would fail).
-							code, helpers, err = unmarshal(resp.Body, resAttr, "body", httpclictx, svcctx)
+							code, helpers, err = unmarshal(clientRespBody, resAttr, "body", httpclictx, svcctx)
 							if err == nil {
 								sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 							}
@@ -2234,10 +2244,9 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, lo
 		pkg     = pkgWithDefault(loc, sd.Service.PkgName)
 		svcctx  = serviceContext(pkg, sd.Service.Scope)
 	)
-	// For server code, we project the response body type if the type is a result
-	// type and generate a type for each view in the result type. This makes it
-	// possible to return only the attributes in the view in the server response.
-	if svr && view != nil && *view != "" {
+	// Project the response body when the design fixes the response to a single
+	// view so the generated transport code uses the effective wire shape.
+	if view != nil && *view != "" {
 		viewName = *view
 		body = expr.DupAtt(body)
 		if rt, ok := body.Type.(*expr.ResultTypeExpr); ok {
@@ -2247,7 +2256,11 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, lo
 				panic(err)
 			}
 			body.Type = rt
-			sd.ServerTypeNames[rt.Name()] = false
+			if svr {
+				sd.ServerTypeNames[rt.Name()] = false
+			} else {
+				sd.ClientTypeNames[rt.Name()] = false
+			}
 		}
 	}
 
@@ -2311,8 +2324,8 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, lo
 		// We collect the server body types need to generate a response body type
 		// here because the response body type would be different from the actual
 		// type in the HTTPResponseExpr since we projected the body type above.
-		// For client side, we don't have to generate a separate body type per
-		// view. Hence the client types are collected in "analyze" function.
+		// For client side, response body types are collected in "analyze" using
+		// the effective client response body.
 		collectUserTypes(body.Type, func(ut expr.UserType) {
 			if d := sds.attributeTypeData(ut, false, false, true, sd); d != nil {
 				sd.ServerBodyAttributeTypes = append(sd.ServerBodyAttributeTypes, d)
@@ -2739,6 +2752,48 @@ func collectHTTPUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, un
 			collectHTTPUnionTypes(nat.Attribute, scope, unions, seen)
 		}
 	}
+}
+
+// effectiveClientResponseBody returns the response body shape used by client
+// code generation. When the design fixes the response to a single view, the
+// returned attribute uses that projected ResultType so type collection, union
+// collection, and client decode/init all agree on one transport body.
+func effectiveClientResponseBody(body *expr.AttributeExpr, e *expr.HTTPEndpointExpr, md *service.MethodData) *expr.AttributeExpr {
+	if body == nil {
+		return body
+	}
+	view := clientResponseViewName(e, md)
+	if view == "" {
+		return body
+	}
+	body = expr.DupAtt(body)
+	rt, ok := body.Type.(*expr.ResultTypeExpr)
+	if !ok {
+		return body
+	}
+	projected, err := expr.Project(rt, view)
+	if err != nil {
+		panic(err) // bug
+	}
+	body.Type = projected
+	return body
+}
+
+// clientResponseViewName returns the response view used by client code
+// generation when the design fixes the response to a single view. An empty
+// string means the client must keep the unprojected transport body because the
+// server may render multiple views.
+func clientResponseViewName(e *expr.HTTPEndpointExpr, md *service.MethodData) string {
+	if md == nil || md.ViewedResult == nil {
+		return ""
+	}
+	if v, ok := e.MethodExpr.Result.Meta.Last(expr.ViewMetaKey); ok {
+		return v
+	}
+	if len(md.ViewedResult.Views) == 1 {
+		return md.ViewedResult.Views[0].Name
+	}
+	return ""
 }
 
 func buildHTTPUnionTypeData(u *expr.Union, scope *codegen.NameScope) *service.UnionTypeData {
