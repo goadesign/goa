@@ -790,7 +790,7 @@ var StreamingResultCollectionWithExplicitViewClientStreamRecvCode = `// Recv rea
 func (s *StreamingResultCollectionWithExplicitViewMethodClientStream) Recv() (streamingresultcollectionwithexplicitviewservice.UsertypeCollection, error) {
 	var (
 		rv   streamingresultcollectionwithexplicitviewservice.UsertypeCollection
-		body StreamingResultCollectionWithExplicitViewMethodResponseBody
+		body UsertypeResponseTinyCollection
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -2084,7 +2084,7 @@ var StreamingPayloadResultCollectionWithExplicitViewClientStreamRecvCode = `// C
 func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) CloseAndRecv() (streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection, error) {
 	var (
 		rv   streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection
-		body StreamingPayloadResultCollectionWithExplicitViewMethodResponseBody
+		body UsertypeResponseTinyCollection
 		err  error
 	)
 	defer s.conn.Close()
@@ -3645,7 +3645,7 @@ var BidirectionalStreamingResultCollectionWithExplicitViewClientStreamRecvCode =
 func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStream) Recv() (bidirectionalstreamingresultcollectionwithexplicitviewservice.UsertypeCollection, error) {
 	var (
 		rv   bidirectionalstreamingresultcollectionwithexplicitviewservice.UsertypeCollection
-		body BidirectionalStreamingResultCollectionWithExplicitViewMethodResponseBody
+		body UsertypeResponseTinyCollection
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
