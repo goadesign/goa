@@ -50,6 +50,20 @@ type ArrayOfBool struct {
 }
 ```
 
+# How does goa encode methods that define both Payload and StreamingPayload?
+
+For gRPC, goa keeps ordinary method payload in the typed message channel.
+When a method defines both `Payload(...)` and `StreamingPayload(...)`, goa
+generates a streamed request envelope with two variants:
+
+- `initial_payload` carries the one-shot method payload once at stream setup.
+- `stream_item` carries each `StreamingPayload` value after that.
+
+This keeps gRPC metadata reserved for explicit `GRPC.Metadata(...)` fields and
+security attributes. It also means rich payload types such as objects, maps,
+and unions are encoded with the normal protobuf message machinery instead of
+being stringified into headers.
+
 # How does goa handle the Any type in gRPC?
 
 Goa supports the `Any` type in gRPC by mapping it to `google.protobuf.Value`, which is specifically designed to represent dynamic JSON-like values. This is simpler and more efficient than using `google.protobuf.Any`.

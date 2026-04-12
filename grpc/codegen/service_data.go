@@ -178,8 +178,17 @@ type (
 	RequestData struct {
 		// Description is the request description.
 		Description string
-		// Message is the gRPC request message.
+		// Message is the gRPC request message used by the transport. For
+		// streaming payload methods with an initial payload frame, this is the
+		// synthesized stream envelope.
 		Message *service.UserTypeData
+		// PayloadMessage is the gRPC message that carries the one-shot method
+		// payload fields before any stream envelope wrapping.
+		PayloadMessage *service.UserTypeData
+		// StreamEnvelope describes the synthesized stream envelope when the
+		// transport must carry both the one-shot payload and streaming payload
+		// items through the same streamed protobuf message.
+		StreamEnvelope *StreamEnvelopeData
 		// Metadata is the request metadata.
 		Metadata []*MetadataData
 		// ServerConvert is the request data with constructor function to
@@ -193,6 +202,23 @@ type (
 		// CLIArgs is the list of arguments for the command-line client.
 		// This is set only for the client side.
 		CLIArgs []*InitArgData
+	}
+
+	// StreamEnvelopeData describes a synthesized streamed protobuf envelope.
+	StreamEnvelopeData struct {
+		// FieldName is the protobuf oneof field name on the envelope message.
+		FieldName string
+		// InitialFieldName is the name of the initial payload branch field.
+		InitialFieldName string
+		// InitialWrapperRef is the fully qualified protobuf wrapper type for the
+		// initial payload branch.
+		InitialWrapperRef string
+		// StreamItemFieldName is the name of the streaming payload item branch
+		// field.
+		StreamItemFieldName string
+		// StreamItemWrapperRef is the fully qualified protobuf wrapper type for
+		// the streaming payload item branch.
+		StreamItemWrapperRef string
 	}
 
 	// ResponseData describes a gRPC success or error response.
@@ -462,10 +488,26 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 	}
 	seen, imported := make(map[string]struct{}), make(map[string]struct{})
 	for _, e := range gs.GRPCEndpoints {
+		hasRequestMessage := !isEmpty(e.Request.Type)
+		useStreamEnvelope := usesStreamEnvelope(e)
+
 		// convert request and response types to protocol buffer message types
 		e.Request = makeProtoBufMessage(e.Request, protoBufify(e.Name()+"_request", true, true), sd)
 		if e.MethodExpr.StreamingPayload.Type != expr.Empty {
-			e.StreamingRequest = makeProtoBufMessage(e.StreamingRequest, protoBufify(e.Name()+"_streaming_request", true, true), sd)
+			streamMessageName := protoBufify(e.Name()+"_streaming_request", true, true)
+			if useStreamEnvelope {
+				streamMessageName = protoBufify(e.Name()+"_stream_item", true, true)
+			}
+			e.StreamingRequest = makeProtoBufMessage(e.StreamingRequest, streamMessageName, sd)
+		}
+		var requestEnvelope *expr.AttributeExpr
+		if useStreamEnvelope {
+			requestEnvelope = makeProtoBufStreamEnvelope(
+				e.Request,
+				e.StreamingRequest,
+				protoBufify(e.Name()+"_streaming_request", true, true),
+				sd,
+			)
 		}
 		e.Response.Message = makeProtoBufMessage(e.Response.Message, protoBufify(e.Name()+"_response", true, true), sd)
 		for _, er := range e.GRPCErrors {
@@ -540,6 +582,9 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			ServerConvert: d.buildRequestConvertData(e.Request, e.MethodExpr.Payload, reqMD, e, sd, true),
 			ClientConvert: d.buildRequestConvertData(e.Request, e.MethodExpr.Payload, reqMD, e, sd, false),
 		}
+		if hasRequestMessage {
+			request.PayloadMessage = collect(e.Request)
+		}
 		if obj := expr.AsObject(e.Request.Type); (obj != nil && len(*obj) > 0) || expr.IsUnion(e.Request.Type) {
 			// add the request message as the first argument to the CLI
 			request.CLIArgs = append(request.CLIArgs, &InitArgData{
@@ -567,9 +612,13 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 				DefaultValue: m.DefaultValue,
 			})
 		}
-		if e.StreamingRequest.Type != expr.Empty {
+		switch {
+		case requestEnvelope != nil:
+			request.Message = collect(requestEnvelope)
+			request.StreamEnvelope = buildStreamEnvelopeData(requestEnvelope, request.Message, sd)
+		case e.StreamingRequest.Type != expr.Empty:
 			request.Message = collect(e.StreamingRequest)
-		} else {
+		default:
 			request.Message = collect(e.Request)
 		}
 
@@ -872,20 +921,20 @@ func userTypeAttribute(ut expr.UserType) *expr.AttributeExpr {
 
 // buildRequestConvertData builds the convert data for the server and client
 // requests.
-//   - server side - converts generated gRPC request type in *.pb.go and the
-//     gRPC  metadata to method payload type.
-//   - client side - converts method payload type to generated gRPC request
-//     type in *.pb.go.
+//   - server side - converts the one-shot gRPC request message (if any) and
+//     gRPC metadata to the method payload type.
+//   - client side - converts the method payload type to the one-shot gRPC
+//     request message sent before any stream items.
 //
 // svr param indicates that the convert data is generated for server side.
 func (d *ServicesData) buildRequestConvertData(request, payload *expr.AttributeExpr, md []*MetadataData, e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *ConvertData {
-	// Server-side: No need to build convert data if payload is empty or payload
-	// is not an object type and endpoint streams payload (the payload is
-	// encoded in metadata under "goa-payload" in this case).
-	if (svr && (isEmpty(payload.Type) || !expr.IsObject(payload.Type) && e.MethodExpr.IsPayloadStreaming())) ||
-		// Client-side: No need to build convert data if streaming payload since
-		// all attributes in method payload is encoded into request metadata.
-		(!svr && e.MethodExpr.IsPayloadStreaming()) {
+	if svr && isEmpty(payload.Type) {
+		return nil
+	}
+	if !svr && e.MethodExpr.IsPayloadStreaming() && isEmpty(request.Type) {
+		return nil
+	}
+	if svr && e.MethodExpr.IsPayloadStreaming() && isEmpty(request.Type) && !expr.IsObject(payload.Type) {
 		return nil
 	}
 
@@ -1295,6 +1344,60 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 		return nil
 	})
 	return metadata
+}
+
+// usesStreamEnvelope reports whether the transport needs a typed stream
+// envelope to carry both the one-shot method payload and streaming payload
+// items.
+func usesStreamEnvelope(e *expr.GRPCEndpointExpr) bool {
+	return e.MethodExpr.IsPayloadStreaming() && !isEmpty(e.Request.Type)
+}
+
+// makeProtoBufStreamEnvelope builds the protobuf stream envelope that carries
+// the initial request payload frame and subsequent stream item frames.
+func makeProtoBufStreamEnvelope(request, stream *expr.AttributeExpr, tname string, sd *ServiceData) *expr.AttributeExpr {
+	initial := expr.DupAtt(request)
+	initial.Meta = initial.Meta.Dup()
+	initial.Meta["rpc:tag"] = []string{"1"}
+	streamItem := expr.DupAtt(stream)
+	streamItem.Meta = streamItem.Meta.Dup()
+	streamItem.Meta["rpc:tag"] = []string{"2"}
+	envelope := &expr.AttributeExpr{
+		Type: &expr.Object{
+			&expr.NamedAttributeExpr{
+				Name: "body",
+				Attribute: &expr.AttributeExpr{
+					Type: &expr.Union{
+						TypeName: "body",
+						Values: []*expr.NamedAttributeExpr{
+							{Name: "initial_payload", Attribute: initial},
+							{Name: "stream_item", Attribute: streamItem},
+						},
+					},
+				},
+			},
+		},
+		Validation: &expr.ValidationExpr{Required: []string{"body"}},
+	}
+	return makeProtoBufMessage(envelope, tname, sd)
+}
+
+// buildStreamEnvelopeData computes the generated Go names for the protobuf
+// oneof field and wrapper types of the synthesized stream envelope.
+func buildStreamEnvelopeData(envelope *expr.AttributeExpr, message *service.UserTypeData, sd *ServiceData) *StreamEnvelopeData {
+	body := envelope.Find("body")
+	union := expr.AsUnion(body.Type)
+	scope := &protoBufScope{scope: sd.Scope}
+	fieldName := scope.Field(body, union.TypeName, true)
+	initialFieldName := scope.Field(union.Values[0].Attribute, union.Values[0].Name, true)
+	streamItemFieldName := scope.Field(union.Values[1].Attribute, union.Values[1].Name, true)
+	return &StreamEnvelopeData{
+		FieldName:          fieldName,
+		InitialFieldName:   initialFieldName,
+		InitialWrapperRef:  fmt.Sprintf("%s.%s_%s", sd.PkgName, message.VarName, initialFieldName),
+		StreamItemFieldName: streamItemFieldName,
+		StreamItemWrapperRef: fmt.Sprintf("%s.%s_%s", sd.PkgName, message.VarName, streamItemFieldName),
+	}
 }
 
 func unalias(att *expr.AttributeExpr) *expr.AttributeExpr {

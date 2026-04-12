@@ -6,7 +6,18 @@ func (s *Server) MethodClientStreamingRPCWithPayload(stream service_client_strea
 	ctx := stream.Context()
 	ctx = context.WithValue(ctx, goa.MethodKey, "MethodClientStreamingRPCWithPayload")
 	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceClientStreamingRPCWithPayload")
-	p, err := s.MethodClientStreamingRPCWithPayloadH.Decode(ctx, nil)
+	var reqpb any
+	message, err := stream.Recv()
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			reqpb = nil
+		} else {
+			return goagrpc.EncodeError(err)
+		}
+	} else {
+		reqpb = message
+	}
+	p, err := s.MethodClientStreamingRPCWithPayloadH.Decode(ctx, reqpb)
 	if err != nil {
 		return goagrpc.EncodeError(err)
 	}

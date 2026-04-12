@@ -67,15 +67,36 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v any, md metadata.
 		return nil, err
 	}
 {{- end }}
-{{- if and (not .Method.StreamingPayload) (not (isEmpty .Request.Message.Type)) }}
+{{- if .Request.PayloadMessage }}
 	var (
-		message {{ .Request.ServerConvert.SrcRef }}
+		message {{ .Request.PayloadMessage.Ref }}
 		ok bool
 	)
 	{
-		if message, ok = v.({{ .Request.ServerConvert.SrcRef }}); !ok {
-			return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Request.Message.Ref }}", v)
+		{{- if .Request.StreamEnvelope }}
+			if v == nil {
+				return nil, goa.MissingFieldError("initial_payload", "stream")
+			}
+			var envelope {{ .Request.Message.Ref }}
+			if envelope, ok = v.({{ .Request.Message.Ref }}); !ok {
+				return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Request.Message.Ref }}", v)
+			}
+			switch body := envelope.{{ .Request.StreamEnvelope.FieldName }}.(type) {
+			case *{{ .Request.StreamEnvelope.InitialWrapperRef }}:
+				if body.{{ .Request.StreamEnvelope.InitialFieldName }} == nil {
+					return nil, goa.MissingFieldError("initial_payload", "stream")
+				}
+				message = body.{{ .Request.StreamEnvelope.InitialFieldName }}
+			case *{{ .Request.StreamEnvelope.StreamItemWrapperRef }}:
+				return nil, goa.InvalidFieldTypeError("body", "stream_item", "initial_payload")
+			default:
+				return nil, goa.MissingFieldError("initial_payload", "stream")
+			}
+		{{- else }}
+		if message, ok = v.({{ .Request.PayloadMessage.Ref }}); !ok {
+			return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Request.PayloadMessage.Ref }}", v)
 		}
+		{{- end }}
 	{{- if .Request.ServerConvert.Validation }}
 		if err {{ if .Request.Metadata }}={{ else }}:={{ end }} {{ .Request.ServerConvert.Validation.Name }}(message); err != nil {
 			return nil, err

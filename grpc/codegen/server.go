@@ -46,6 +46,12 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 			{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
 		}
+		for _, e := range data.Endpoints {
+			if e.Request.StreamEnvelope != nil {
+				imports = append(imports, &codegen.ImportSpec{Path: "io"})
+				break
+			}
+		}
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC server", "server", imports),
 			{
