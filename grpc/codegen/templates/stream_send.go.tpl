@@ -8,7 +8,15 @@ func (s *{{ .VarName }}) {{ .SendName }}(res {{ .SendRef }}) error {
 	{{- end }}
 {{- end }}
 	v := {{ .SendConvert.Init.Name }}({{ if and .Endpoint.Method.ViewedResult (eq .Type "server") }}vres.Projected{{ else }}res{{ end }})
+	{{- if and (eq .Type "client") .Endpoint.Request.StreamEnvelope }}
+	return s.stream.{{ .SendName }}(&{{ .Endpoint.PkgName }}.{{ .Endpoint.Request.Message.VarName }}{
+		{{ .Endpoint.Request.StreamEnvelope.FieldName }}: &{{ .Endpoint.Request.StreamEnvelope.StreamItemWrapperRef }}{
+			{{ .Endpoint.Request.StreamEnvelope.StreamItemFieldName }}: v,
+		},
+	})
+	{{- else }}
 	return s.stream.{{ .SendName }}(v)
+	{{- end }}
 }
 
 {{ comment .SendWithContextDesc }}

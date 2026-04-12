@@ -10,7 +10,22 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 	ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
 
 {{- if .ServerStream }}
-	{{if .PayloadRef }}p{{ else }}_{{ end }}, err := s.{{ .Method.VarName }}H.Decode(ctx, {{ if .Method.StreamingPayload }}nil{{ else }}message{{ end }})
+	{{- if .Request.StreamEnvelope }}
+		var reqpb any
+		message, err := stream.Recv()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				reqpb = nil
+			} else {
+				return goagrpc.EncodeError(err)
+			}
+		} else {
+			reqpb = message
+		}
+		{{if .PayloadRef }}p{{ else }}_{{ end }}, err := s.{{ .Method.VarName }}H.Decode(ctx, reqpb)
+	{{- else }}
+		{{if .PayloadRef }}p{{ else }}_{{ end }}, err := s.{{ .Method.VarName }}H.Decode(ctx, {{ if .Method.StreamingPayload }}nil{{ else }}message{{ end }})
+	{{- end }}
 	{{- template "handle_error" . }}
 	ep := &{{ .ServicePkgName }}.{{ .Method.VarName }}EndpointInput{
 		Stream: &{{ .ServerStream.VarName }}{stream: stream},

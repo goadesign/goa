@@ -327,14 +327,6 @@ func (e *GRPCEndpointExpr) Finalize() {
 			}
 		}
 
-		// If endpoint defines streaming payload, then add the attributes in method
-		// payload type to request metadata.
-		if e.MethodExpr.StreamingPayload.Type != Empty {
-			for _, nat := range *pobj {
-				addToMetadata(nat.Name, "")
-			}
-		}
-
 		// msgObj contains only the attributes in the method payload that must
 		// be added to the request message type after removing attributes
 		// specified in the request metadata.
@@ -387,14 +379,7 @@ func (e *GRPCEndpointExpr) Finalize() {
 		}
 	} else {
 		// method payload is not an object type.
-		if e.MethodExpr.StreamingPayload.Type != Empty {
-			// endpoint defines streaming payload. So add the method payload to
-			// request metadata under "goa-payload" field
-			e.Metadata.Type.(*Object).Set("goa_payload", e.MethodExpr.Payload)
-			e.Metadata.Validation.AddRequired("goa_payload")
-		} else {
-			initAttrFromDesign(e.Request, e.MethodExpr.Payload)
-		}
+		initAttrFromDesign(e.Request, e.MethodExpr.Payload)
 	}
 
 	// Finalize streaming payload type if defined

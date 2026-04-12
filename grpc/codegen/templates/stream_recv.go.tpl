@@ -1,7 +1,11 @@
 {{ comment .RecvDesc }}
 func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvRef }}, error) {
 	var res {{ .RecvRef }}
+	{{- if and (eq .Type "server") .Endpoint.Request.StreamEnvelope }}
+	message, err := s.stream.{{ .RecvName }}()
+	{{- else }}
 	v, err := s.stream.{{ .RecvName }}()
+	{{- end }}
 	if err != nil {
 	{{- if and .Endpoint .Endpoint.Errors (eq .Type "client") }}
 		resp := goagrpc.DecodeError(err)
@@ -26,6 +30,21 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvRef }}, error) {
 		return res, err
 	{{- end }}
 	}
+	{{- if and (eq .Type "server") .Endpoint.Request.StreamEnvelope }}
+	body, ok := message.{{ .Endpoint.Request.StreamEnvelope.FieldName }}.(*{{ .Endpoint.Request.StreamEnvelope.StreamItemWrapperRef }})
+	if !ok {
+		switch message.{{ .Endpoint.Request.StreamEnvelope.FieldName }}.(type) {
+		case *{{ .Endpoint.Request.StreamEnvelope.InitialWrapperRef }}:
+			return res, goa.InvalidFieldTypeError("body", "initial_payload", "stream_item")
+		default:
+			return res, goa.MissingFieldError("stream_item", "stream")
+		}
+	}
+	if body.{{ .Endpoint.Request.StreamEnvelope.StreamItemFieldName }} == nil {
+		return res, goa.MissingFieldError("stream_item", "stream")
+	}
+	v := body.{{ .Endpoint.Request.StreamEnvelope.StreamItemFieldName }}
+	{{- end }}
 {{- if and .Endpoint.Method.ViewedResult (eq .Type "client") }}
 	proj := {{ .RecvConvert.Init.Name }}({{ range .RecvConvert.Init.Args }}{{ .Name }}, {{ end }})
 	vres := {{ if not .Endpoint.Method.ViewedResult.IsCollection }}&{{ end }}{{ .Endpoint.Method.ViewedResult.FullName }}{Projected: proj, View: {{ if .Endpoint.Method.ViewedResult.ViewName }}"{{ .Endpoint.Method.ViewedResult.ViewName }}"{{ else }}s.view{{ end }} }

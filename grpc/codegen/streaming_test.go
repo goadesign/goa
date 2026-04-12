@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/grpc/codegen/testdata"
@@ -147,4 +148,42 @@ func TestStreaming(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStreamingPayloadEnvelopeWithUnionPayload(t *testing.T) {
+	root := RunGRPCDSL(t, testdata.ClientStreamingRPCWithUnionPayloadDSL)
+	services := CreateGRPCServices(root)
+
+	clientfs := ClientFiles("", services)
+	require.Len(t, clientfs, 2)
+	serverfs := ServerFiles("", services)
+	require.Len(t, serverfs, 2)
+	protofs := ProtoFiles("", services)
+	require.Len(t, protofs, 1)
+
+	requestEncoder := codegen.SectionsCode(t, clientfs[1].Section("request-encoder"))
+	assert.Contains(t, requestEncoder, "InitialPayload")
+	assert.Contains(t, requestEncoder, "MethodClientStreamingRPCWithUnionPayloadStreamingRequest")
+
+	clientSend := codegen.SectionsCode(t, clientfs[0].Section("client-stream-send"))
+	assert.Contains(t, clientSend, "StreamItem")
+	assert.Contains(t, clientSend, "UploadChunk")
+
+	serverInterface := codegen.SectionsCode(t, serverfs[0].Section("server-grpc-interface"))
+	assert.Contains(t, serverInterface, "message, err := stream.Recv()")
+	assert.Contains(t, serverInterface, "Decode(ctx, reqpb)")
+
+	requestDecoder := codegen.SectionsCode(t, serverfs[1].Section("request-decoder"))
+	assert.Contains(t, requestDecoder, "InitialPayload")
+	assert.Contains(t, requestDecoder, "stream_item")
+	assert.Contains(t, requestDecoder, "NewMethodClientStreamingRPCWithUnionPayloadPayload(message)")
+
+	proto := sectionCode(t, protofs[0].SectionTemplates[1:]...)
+	assert.Contains(t, proto, "message MethodClientStreamingRPCWithUnionPayloadStreamingRequest")
+	assert.Contains(t, proto, "oneof body")
+	assert.Contains(t, proto, "MethodClientStreamingRPCWithUnionPayloadRequest initial_payload")
+	assert.Contains(t, proto, "MethodClientStreamingRPCWithUnionPayloadStreamItem stream_item")
+
+	fpath := codegen.CreateTempFile(t, proto)
+	assert.NoError(t, protoc(defaultProtocCmd, fpath, nil))
 }

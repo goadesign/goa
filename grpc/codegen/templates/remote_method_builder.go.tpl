@@ -4,9 +4,22 @@ func Build{{ .Method.VarName }}Func(grpccli {{ .PkgName }}.{{ .ClientInterface }
 		for _, opt := range cliopts {
 			opts = append(opts, opt)
 		}
-		if reqpb != nil {
-			return grpccli.{{ .ClientMethodName }}(ctx{{ if not .Method.StreamingPayload }}, reqpb.({{ .Request.ClientConvert.TgtRef }}){{ end }}, opts...)
-		}
-		return grpccli.{{ .ClientMethodName }}(ctx{{ if not .Method.StreamingPayload }}, &{{ .Request.ClientConvert.TgtName }}{}{{ end }}, opts...)
+		{{- if .Request.StreamEnvelope }}
+			stream, err := grpccli.{{ .ClientMethodName }}(ctx, opts...)
+			if err != nil {
+				return nil, err
+			}
+			if reqpb != nil {
+				if err := stream.Send(reqpb.({{ .Request.Message.Ref }})); err != nil {
+					return nil, err
+				}
+			}
+			return stream, nil
+		{{- else }}
+			if reqpb != nil {
+				return grpccli.{{ .ClientMethodName }}(ctx{{ if not .Method.StreamingPayload }}, reqpb.({{ .Request.ClientConvert.TgtRef }}){{ end }}, opts...)
+			}
+			return grpccli.{{ .ClientMethodName }}(ctx{{ if not .Method.StreamingPayload }}, &{{ .Request.ClientConvert.TgtName }}{}{{ end }}, opts...)
+		{{- end }}
 	}
 }

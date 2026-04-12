@@ -4,6 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/expr/testdata"
@@ -83,4 +85,18 @@ service "Service" method "MethodUnion": union type choice has map elements, not 
 			}
 		})
 	}
+}
+
+func TestGRPCEndpointStreamingPayloadKeepsInitialRequest(t *testing.T) {
+	root := expr.RunDSL(t, testdata.GRPCEndpointWithStreamingPayloadInitialRequest)
+	grpcSvc := root.API.GRPC.Service("Service")
+	require.NotNil(t, grpcSvc)
+	require.Len(t, grpcSvc.GRPCEndpoints, 1)
+
+	endpoint := grpcSvc.GRPCEndpoints[0]
+	req := expr.AsObject(endpoint.Request.Type)
+	require.NotNil(t, req)
+	require.NotNil(t, req.Attribute("repository_id"))
+	require.NotNil(t, req.Attribute("version_ref"))
+	require.True(t, endpoint.Metadata.IsEmpty())
 }

@@ -264,6 +264,32 @@ var ClientStreamingRPCWithPayloadDSL = func() {
 	})
 }
 
+var ClientStreamingRPCWithUnionPayloadDSL = func() {
+	var VersionRef = Type("VersionRef", func() {
+		OneOf("ref_type", func() {
+			Field(1, "version_id", String)
+			Field(2, "ref_name", String)
+		})
+		Required("ref_type")
+	})
+	var UploadChunk = Type("UploadChunk", func() {
+		Field(1, "chunk", Bytes)
+		Required("chunk")
+	})
+	Service("ServiceClientStreamingRPCWithUnionPayload", func() {
+		Method("MethodClientStreamingRPCWithUnionPayload", func() {
+			Payload(func() {
+				Field(1, "repository_id", String)
+				Field(2, "version_ref", VersionRef)
+				Required("repository_id", "version_ref")
+			})
+			StreamingPayload(UploadChunk)
+			Result(String)
+			GRPC(func() {})
+		})
+	})
+}
+
 var ClientStreamingNoResultDSL = func() {
 	Service("ServiceClientStreamingNoResult", func() {
 		Method("MethodClientStreamingNoResult", func() {
