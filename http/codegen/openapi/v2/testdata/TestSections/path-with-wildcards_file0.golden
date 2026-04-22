@@ -15,6 +15,7 @@
         "operationId": "test service#test endpoint",
         "parameters": [
           {
+            "format": "int64",
             "in": "path",
             "name": "int_map",
             "required": true,

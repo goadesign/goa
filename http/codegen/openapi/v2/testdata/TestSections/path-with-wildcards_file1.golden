@@ -23,6 +23,7 @@ paths:
                   in: path
                   required: true
                   type: integer
+                  format: int64
             responses:
                 "204":
                     description: No Content response.
