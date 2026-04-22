@@ -15,12 +15,14 @@
         "operationId": "test service#test endpoint",
         "parameters": [
           {
+            "format": "int64",
             "in": "path",
             "name": "foo",
             "required": true,
             "type": "integer"
           },
           {
+            "format": "int64",
             "in": "path",
             "name": "bar",
             "required": true,
