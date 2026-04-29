@@ -85,6 +85,94 @@
 	{{ if $checkNil }} } else { {{ else }}if res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .FieldName }} == nil { {{ end }}
 		{{ .VarName }} := "{{ printValue .Type .DefaultValue }}"
 		{{- end }}
+		{{- $hasBindings := or .MaxAgeFrom .DomainFrom .PathFrom .SecureFrom .HTTPOnlyFrom .SameSiteFrom }}
+		{{- if $hasBindings }}
+		cookie{{ .VarName }} := &http.Cookie{
+			Name: {{ printf "%q" .HTTPName }},
+			Value: {{ .VarName }},
+			{{- if and .MaxAgeFrom (not .MaxAgeFrom.FieldPointer) }}
+			MaxAge: int(res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .MaxAgeFrom.FieldName }}),
+			{{- else if and (not .MaxAgeFrom) .MaxAge }}
+			MaxAge: {{ .MaxAge }},
+			{{- end }}
+			{{- if and .PathFrom (not .PathFrom.FieldPointer) }}
+			Path: res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .PathFrom.FieldName }},
+			{{- else if and (not .PathFrom) .Path }}
+			Path: {{ printf "%q" .Path }},
+			{{- end }}
+			{{- if and .DomainFrom (not .DomainFrom.FieldPointer) }}
+			Domain: res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .DomainFrom.FieldName }},
+			{{- else if and (not .DomainFrom) .Domain }}
+			Domain: {{ printf "%q" .Domain }},
+			{{- end }}
+			{{- if and .SecureFrom (not .SecureFrom.FieldPointer) }}
+			Secure: res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .SecureFrom.FieldName }},
+			{{- else if and (not .SecureFrom) .Secure }}
+			Secure: true,
+			{{- end }}
+			{{- if and .HTTPOnlyFrom (not .HTTPOnlyFrom.FieldPointer) }}
+			HttpOnly: res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .HTTPOnlyFrom.FieldName }},
+			{{- else if and (not .HTTPOnlyFrom) .HTTPOnly }}
+			HttpOnly: true,
+			{{- end }}
+			{{- if and (not .SameSiteFrom) .SameSite }}
+			SameSite: {{ .SameSite }},
+			{{- end }}
+		}
+		{{- if and .MaxAgeFrom .MaxAgeFrom.FieldPointer }}
+		if res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .MaxAgeFrom.FieldName }} != nil {
+			cookie{{ .VarName }}.MaxAge = int(*res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .MaxAgeFrom.FieldName }})
+		}
+		{{- end }}
+		{{- if and .PathFrom .PathFrom.FieldPointer }}
+		if res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .PathFrom.FieldName }} != nil {
+			cookie{{ .VarName }}.Path = *res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .PathFrom.FieldName }}
+		}
+		{{- end }}
+		{{- if and .DomainFrom .DomainFrom.FieldPointer }}
+		if res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .DomainFrom.FieldName }} != nil {
+			cookie{{ .VarName }}.Domain = *res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .DomainFrom.FieldName }}
+		}
+		{{- end }}
+		{{- if and .SecureFrom .SecureFrom.FieldPointer }}
+		if res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .SecureFrom.FieldName }} != nil {
+			cookie{{ .VarName }}.Secure = *res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .SecureFrom.FieldName }}
+		}
+		{{- end }}
+		{{- if and .HTTPOnlyFrom .HTTPOnlyFrom.FieldPointer }}
+		if res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .HTTPOnlyFrom.FieldName }} != nil {
+			cookie{{ .VarName }}.HttpOnly = *res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .HTTPOnlyFrom.FieldName }}
+		}
+		{{- end }}
+		{{- if .SameSiteFrom }}
+		{{- if .SameSiteFrom.FieldPointer }}
+		if res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .SameSiteFrom.FieldName }} != nil {
+			switch *res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .SameSiteFrom.FieldName }} {
+			case "Strict":
+				cookie{{ .VarName }}.SameSite = http.SameSiteStrictMode
+			case "Lax":
+				cookie{{ .VarName }}.SameSite = http.SameSiteLaxMode
+			case "None":
+				cookie{{ .VarName }}.SameSite = http.SameSiteNoneMode
+			default:
+				cookie{{ .VarName }}.SameSite = http.SameSiteDefaultMode
+			}
+		}
+		{{- else }}
+		switch res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .SameSiteFrom.FieldName }} {
+		case "Strict":
+			cookie{{ .VarName }}.SameSite = http.SameSiteStrictMode
+		case "Lax":
+			cookie{{ .VarName }}.SameSite = http.SameSiteLaxMode
+		case "None":
+			cookie{{ .VarName }}.SameSite = http.SameSiteNoneMode
+		default:
+			cookie{{ .VarName }}.SameSite = http.SameSiteDefaultMode
+		}
+		{{- end }}
+		{{- end }}
+		http.SetCookie(w, cookie{{ .VarName }})
+		{{- else }}
 		http.SetCookie(w, &http.Cookie{
 			Name: {{ printf "%q" .HTTPName }},
 			Value: {{ .VarName }},
@@ -107,6 +195,7 @@
 			SameSite: {{ .SameSite }},
 			{{- end }}
 		})
+		{{- end }}
 		{{- if or $checkNil $initDef }}
 	}
 		{{- end }}

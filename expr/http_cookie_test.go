@@ -1,9 +1,12 @@
 package expr_test
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
+	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/expr/testdata"
 )
@@ -44,6 +47,80 @@ func TestHTTPResponseCookie(t *testing.T) {
 						t.Errorf("got value %q for cookies metadata %q, expected %q", m[n][0], n, fmt.Sprintf("%v", v))
 					}
 				}
+			}
+		})
+	}
+}
+
+func TestHTTPResponseCookieAttrBindings(t *testing.T) {
+	root := expr.RunDSL(t, testdata.CookieAttrBindingsDSL)
+	cookies := root.API.HTTP.Services[len(root.API.HTTP.Services)-1].HTTPEndpoints[0].Responses[0].Cookies
+	obj := expr.AsObject(cookies.Type)
+	if len(*obj) != 1 {
+		t.Fatalf("got %d cookies, expected 1", len(*obj))
+	}
+	cookie := (*obj)[0].Attribute
+	cases := map[string]string{
+		"cookie:max-age:from":   "expiresIn",
+		"cookie:domain:from":    "cookieDomain",
+		"cookie:path:from":      "cookiePath",
+		"cookie:secure:from":    "isSecure",
+		"cookie:http-only:from": "isHTTPOnly",
+		"cookie:same-site:from": "sameSite",
+	}
+	for k, want := range cases {
+		got, ok := cookie.Meta[k]
+		if !ok {
+			t.Errorf("cookie metadata %q missing", k)
+			continue
+		}
+		if len(got) != 1 || got[0] != want {
+			t.Errorf("cookie metadata %q = %v, want [%q]", k, got, want)
+		}
+	}
+}
+
+func TestHTTPResponseCookieAttrBindingValidation(t *testing.T) {
+	cases := []struct {
+		Name string
+		DSL  func()
+		Want string
+	}{
+		{
+			"missing-attr",
+			testdata.CookieAttrBindingMissingAttrDSL,
+			"binds Max-Age to attribute \"doesNotExist\"",
+		},
+		{
+			"wrong-type",
+			testdata.CookieAttrBindingWrongTypeDSL,
+			"binds Max-Age to attribute \"expiresIn\" but it must be an integer",
+		},
+		{
+			"undeclared-cookie",
+			testdata.CookieAttrBindingUndeclaredDSL,
+			"CookieAttributes references cookie \"notDeclared\"",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			err := expr.RunInvalidDSL(t, c.DSL)
+			if err == nil {
+				t.Fatalf("expected validation error containing %q", c.Want)
+			}
+			var msg string
+			var verr *eval.ValidationErrors
+			if errors.As(err, &verr) {
+				msgs := make([]string, len(verr.Errors))
+				for i, e := range verr.Errors {
+					msgs[i] = e.Error()
+				}
+				msg = strings.Join(msgs, "\n")
+			} else {
+				msg = err.Error()
+			}
+			if !strings.Contains(msg, c.Want) {
+				t.Fatalf("expected error to contain %q, got: %s", c.Want, msg)
 			}
 		})
 	}

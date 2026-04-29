@@ -229,6 +229,7 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 				if !IsPrimitive(t) {
 					verr.Add(e, "attribute %q used in HTTP cookies must be a primitive type.", c.Name)
 				}
+				verr.Merge(validateCookieAttrBindings(r, c.Name, c.Attribute, resultAttributeType, inview))
 			}
 		default:
 			if len(*AsObject(r.Cookies.Type)) > 1 {
@@ -389,6 +390,60 @@ func (r *HTTPResponseExpr) mapUnmappedAttrs(svcAtt *AttributeExpr) {
 			r.Headers.Type.(*Object).Set("goa-attribute", svcAtt)
 		}
 	}
+}
+
+// validateCookieAttrBindings validates the per-cookie attribute bindings
+// (Max-Age, Domain, Path, Secure, HttpOnly, SameSite) recorded as
+// "cookie:<kind>:from" metadata on the cookie attribute. It checks that each
+// referenced result attribute exists and is of the kind expected by the bound
+// cookie property.
+func validateCookieAttrBindings(r *HTTPResponseExpr, cookieName string, cookieAttr *AttributeExpr, resultAttributeType func(string) DataType, inview string) *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+	if cookieAttr == nil || len(cookieAttr.Meta) == 0 {
+		return verr
+	}
+	bindings := []struct {
+		key  string
+		kind string
+		want string
+		ok   func(DataType) bool
+	}{
+		{"cookie:max-age:from", "Max-Age", "an integer", func(t DataType) bool {
+			k := t.Kind()
+			return k == IntKind || k == Int32Kind || k == Int64Kind || k == UIntKind || k == UInt32Kind || k == UInt64Kind
+		}},
+		{"cookie:domain:from", "Domain", "a string", func(t DataType) bool {
+			return t.Kind() == StringKind
+		}},
+		{"cookie:path:from", "Path", "a string", func(t DataType) bool {
+			return t.Kind() == StringKind
+		}},
+		{"cookie:secure:from", "Secure", "a boolean", func(t DataType) bool {
+			return t.Kind() == BooleanKind
+		}},
+		{"cookie:http-only:from", "HttpOnly", "a boolean", func(t DataType) bool {
+			return t.Kind() == BooleanKind
+		}},
+		{"cookie:same-site:from", "SameSite", "a string", func(t DataType) bool {
+			return t.Kind() == StringKind
+		}},
+	}
+	for _, b := range bindings {
+		v, ok := cookieAttr.Meta[b.key]
+		if !ok || len(v) == 0 {
+			continue
+		}
+		attrName := v[0]
+		t := resultAttributeType(attrName)
+		if t == nil {
+			verr.Add(r, "cookie %q binds %s to attribute %q which has no equivalent attribute in%s result type", cookieName, b.kind, attrName, inview)
+			continue
+		}
+		if !b.ok(t) {
+			verr.Add(r, "cookie %q binds %s to attribute %q but it must be %s", cookieName, b.kind, attrName, b.want)
+		}
+	}
+	return verr
 }
 
 // bodyAllowedForStatus reports whether a given response status code

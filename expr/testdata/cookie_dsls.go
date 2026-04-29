@@ -143,3 +143,96 @@ var CookieSameSiteDSL = func() {
 		})
 	})
 }
+
+var CookieAttrBindingsDSL = func() {
+	Service("CookieSvc", func() {
+		Method("Method", func() {
+			Result(func() {
+				Attribute("cookie", String)
+				Attribute("expiresIn", Int)
+				Attribute("cookieDomain", String)
+				Attribute("cookiePath", String)
+				Attribute("isSecure", Boolean)
+				Attribute("isHTTPOnly", Boolean)
+				Attribute("sameSite", String)
+				Required("cookie", "expiresIn", "cookieDomain", "cookiePath",
+					"isSecure", "isHTTPOnly", "sameSite")
+			})
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Cookie("cookie")
+					CookieAttributes("cookie", func() {
+						MaxAgeFrom("expiresIn")
+						DomainFrom("cookieDomain")
+						PathFrom("cookiePath")
+						SecureFrom("isSecure")
+						HTTPOnlyFrom("isHTTPOnly")
+						SameSiteFrom("sameSite")
+					})
+				})
+			})
+		})
+	})
+}
+
+var CookieAttrBindingMissingAttrDSL = func() {
+	Service("CookieSvc", func() {
+		Method("Method", func() {
+			Result(func() {
+				Attribute("cookie", String)
+				Required("cookie")
+			})
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Cookie("cookie")
+					CookieAttributes("cookie", func() {
+						MaxAgeFrom("doesNotExist")
+					})
+				})
+			})
+		})
+	})
+}
+
+var CookieAttrBindingWrongTypeDSL = func() {
+	Service("CookieSvc", func() {
+		Method("Method", func() {
+			Result(func() {
+				Attribute("cookie", String)
+				Attribute("expiresIn", String)
+				Required("cookie", "expiresIn")
+			})
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Cookie("cookie")
+					CookieAttributes("cookie", func() {
+						MaxAgeFrom("expiresIn")
+					})
+				})
+			})
+		})
+	})
+}
+
+var CookieAttrBindingUndeclaredDSL = func() {
+	Service("CookieSvc", func() {
+		Method("Method", func() {
+			Result(func() {
+				Attribute("cookie", String)
+				Required("cookie")
+			})
+			HTTP(func() {
+				POST("/")
+				Response(StatusOK, func() {
+					Cookie("cookie")
+					CookieAttributes("notDeclared", func() {
+						MaxAgeFrom("cookie")
+					})
+				})
+			})
+		})
+	})
+}

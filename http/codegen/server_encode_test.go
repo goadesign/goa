@@ -87,6 +87,10 @@ func TestEncode(t *testing.T) {
 
 		{"result-with-custom-pkg-type", testdata.ResultWithCustomPkgTypeDSL},
 		{"result-with-embedded-custom-pkg-type", testdata.EmbeddedCustomPkgTypeDSL},
+
+		{"cookie-attr-bindings", testdata.ResultCookieAttrBindingsDSL},
+		{"cookie-attr-bindings-optional", testdata.ResultCookieAttrBindingsOptionalDSL},
+		{"cookie-attr-bindings-mixed", testdata.ResultCookieAttrBindingsMixedDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

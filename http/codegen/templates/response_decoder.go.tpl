@@ -31,6 +31,44 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 		{{- if .ResultInit }}
 			{{- if .ViewedResult }}
 			p := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+				{{- range .Cookies }}
+					{{- if .MaxAgeFrom }}{{ if .MaxAgeFrom.FieldPointer }}
+				{{ .MaxAgeFrom.VarName }}Tmp := {{ .MaxAgeFrom.VarName }}
+				p.{{ .MaxAgeFrom.FieldName }} = &{{ .MaxAgeFrom.VarName }}Tmp
+					{{- else }}
+				p.{{ .MaxAgeFrom.FieldName }} = {{ .MaxAgeFrom.VarName }}
+					{{- end }}{{- end }}
+					{{- if .DomainFrom }}{{ if .DomainFrom.FieldPointer }}
+				{{ .DomainFrom.VarName }}Tmp := {{ .DomainFrom.VarName }}
+				p.{{ .DomainFrom.FieldName }} = &{{ .DomainFrom.VarName }}Tmp
+					{{- else }}
+				p.{{ .DomainFrom.FieldName }} = {{ .DomainFrom.VarName }}
+					{{- end }}{{- end }}
+					{{- if .PathFrom }}{{ if .PathFrom.FieldPointer }}
+				{{ .PathFrom.VarName }}Tmp := {{ .PathFrom.VarName }}
+				p.{{ .PathFrom.FieldName }} = &{{ .PathFrom.VarName }}Tmp
+					{{- else }}
+				p.{{ .PathFrom.FieldName }} = {{ .PathFrom.VarName }}
+					{{- end }}{{- end }}
+					{{- if .SecureFrom }}{{ if .SecureFrom.FieldPointer }}
+				{{ .SecureFrom.VarName }}Tmp := {{ .SecureFrom.VarName }}
+				p.{{ .SecureFrom.FieldName }} = &{{ .SecureFrom.VarName }}Tmp
+					{{- else }}
+				p.{{ .SecureFrom.FieldName }} = {{ .SecureFrom.VarName }}
+					{{- end }}{{- end }}
+					{{- if .HTTPOnlyFrom }}{{ if .HTTPOnlyFrom.FieldPointer }}
+				{{ .HTTPOnlyFrom.VarName }}Tmp := {{ .HTTPOnlyFrom.VarName }}
+				p.{{ .HTTPOnlyFrom.FieldName }} = &{{ .HTTPOnlyFrom.VarName }}Tmp
+					{{- else }}
+				p.{{ .HTTPOnlyFrom.FieldName }} = {{ .HTTPOnlyFrom.VarName }}
+					{{- end }}{{- end }}
+					{{- if .SameSiteFrom }}{{ if .SameSiteFrom.FieldPointer }}
+				{{ .SameSiteFrom.VarName }}Tmp := {{ .SameSiteFrom.VarName }}
+				p.{{ .SameSiteFrom.FieldName }} = &{{ .SameSiteFrom.VarName }}Tmp
+					{{- else }}
+				p.{{ .SameSiteFrom.FieldName }} = {{ .SameSiteFrom.VarName }}
+					{{- end }}{{- end }}
+				{{- end }}
 				{{- if .TagName }}
 				tmp := {{ printf "%q" .TagValue }}
 				p.{{ .TagName }} = &tmp
@@ -49,6 +87,44 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 			res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ResultInit.Name }}(vres)
 			{{- else }}
 			res := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+				{{- range .Cookies }}
+					{{- if .MaxAgeFrom }}{{ if .MaxAgeFrom.FieldPointer }}
+				{{ .MaxAgeFrom.VarName }}Tmp := {{ .MaxAgeFrom.VarName }}
+				res.{{ .MaxAgeFrom.FieldName }} = &{{ .MaxAgeFrom.VarName }}Tmp
+					{{- else }}
+				res.{{ .MaxAgeFrom.FieldName }} = {{ .MaxAgeFrom.VarName }}
+					{{- end }}{{- end }}
+					{{- if .DomainFrom }}{{ if .DomainFrom.FieldPointer }}
+				{{ .DomainFrom.VarName }}Tmp := {{ .DomainFrom.VarName }}
+				res.{{ .DomainFrom.FieldName }} = &{{ .DomainFrom.VarName }}Tmp
+					{{- else }}
+				res.{{ .DomainFrom.FieldName }} = {{ .DomainFrom.VarName }}
+					{{- end }}{{- end }}
+					{{- if .PathFrom }}{{ if .PathFrom.FieldPointer }}
+				{{ .PathFrom.VarName }}Tmp := {{ .PathFrom.VarName }}
+				res.{{ .PathFrom.FieldName }} = &{{ .PathFrom.VarName }}Tmp
+					{{- else }}
+				res.{{ .PathFrom.FieldName }} = {{ .PathFrom.VarName }}
+					{{- end }}{{- end }}
+					{{- if .SecureFrom }}{{ if .SecureFrom.FieldPointer }}
+				{{ .SecureFrom.VarName }}Tmp := {{ .SecureFrom.VarName }}
+				res.{{ .SecureFrom.FieldName }} = &{{ .SecureFrom.VarName }}Tmp
+					{{- else }}
+				res.{{ .SecureFrom.FieldName }} = {{ .SecureFrom.VarName }}
+					{{- end }}{{- end }}
+					{{- if .HTTPOnlyFrom }}{{ if .HTTPOnlyFrom.FieldPointer }}
+				{{ .HTTPOnlyFrom.VarName }}Tmp := {{ .HTTPOnlyFrom.VarName }}
+				res.{{ .HTTPOnlyFrom.FieldName }} = &{{ .HTTPOnlyFrom.VarName }}Tmp
+					{{- else }}
+				res.{{ .HTTPOnlyFrom.FieldName }} = {{ .HTTPOnlyFrom.VarName }}
+					{{- end }}{{- end }}
+					{{- if .SameSiteFrom }}{{ if .SameSiteFrom.FieldPointer }}
+				{{ .SameSiteFrom.VarName }}Tmp := {{ .SameSiteFrom.VarName }}
+				res.{{ .SameSiteFrom.FieldName }} = &{{ .SameSiteFrom.VarName }}Tmp
+					{{- else }}
+				res.{{ .SameSiteFrom.FieldName }} = {{ .SameSiteFrom.VarName }}
+					{{- end }}{{- end }}
+				{{- end }}
 			{{- end }}
 			{{- if and .TagName (not .ViewedResult) }}
 				{{- if .TagPointer }}

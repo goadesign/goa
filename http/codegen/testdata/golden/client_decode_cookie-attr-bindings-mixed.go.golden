@@ -1,0 +1,70 @@
+// DecodeMethodCookieAttrBindingsMixedResponse returns a decoder for responses
+// returned by the ServiceCookieAttrBindingsMixed MethodCookieAttrBindingsMixed
+// endpoint. restoreBody controls whether the response body should be restored
+// after having been read.
+func DecodeMethodCookieAttrBindingsMixedResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
+		if restoreBody {
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				body MethodCookieAttrBindingsMixedResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ServiceCookieAttrBindingsMixed", "MethodCookieAttrBindingsMixed", err)
+			}
+			err = ValidateMethodCookieAttrBindingsMixedResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceCookieAttrBindingsMixed", "MethodCookieAttrBindingsMixed", err)
+			}
+			var (
+				a          string
+				aRaw       string
+				aExpiresIn int
+				b          string
+				bRaw       string
+
+				cookies = resp.Cookies()
+			)
+			for _, c := range cookies {
+				switch c.Name {
+				case "A":
+					aRaw = c.Value
+					aExpiresIn = int(c.MaxAge)
+				case "B":
+					bRaw = c.Value
+				}
+			}
+			if aRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("a", "cookie"))
+			}
+			a = aRaw
+			if bRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("b", "cookie"))
+			}
+			b = bRaw
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceCookieAttrBindingsMixed", "MethodCookieAttrBindingsMixed", err)
+			}
+			res := NewMethodCookieAttrBindingsMixedResultOK(&body, a, b)
+			res.ExpiresIn = aExpiresIn
+			return res, nil
+		default:
+			body, _ := io.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceCookieAttrBindingsMixed", "MethodCookieAttrBindingsMixed", resp.StatusCode, string(body))
+		}
+	}
+}

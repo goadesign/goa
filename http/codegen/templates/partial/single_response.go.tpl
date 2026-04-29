@@ -114,6 +114,24 @@
 		{{- range .Cookies }}
 				{{ .VarName }}    {{ .TypeRef }}
 				{{ .VarName }}Raw string
+				{{- if .MaxAgeFrom }}
+				{{ .MaxAgeFrom.VarName }} {{ .MaxAgeFrom.TypeRef }}
+				{{- end }}
+				{{- if .DomainFrom }}
+				{{ .DomainFrom.VarName }} {{ .DomainFrom.TypeRef }}
+				{{- end }}
+				{{- if .PathFrom }}
+				{{ .PathFrom.VarName }} {{ .PathFrom.TypeRef }}
+				{{- end }}
+				{{- if .SecureFrom }}
+				{{ .SecureFrom.VarName }} {{ .SecureFrom.TypeRef }}
+				{{- end }}
+				{{- if .HTTPOnlyFrom }}
+				{{ .HTTPOnlyFrom.VarName }} {{ .HTTPOnlyFrom.TypeRef }}
+				{{- end }}
+				{{- if .SameSiteFrom }}
+				{{ .SameSiteFrom.VarName }} {{ .SameSiteFrom.TypeRef }}
+				{{- end }}
 		{{- end }}
 
 				cookies = resp.Cookies()
@@ -130,6 +148,33 @@
 		{{- range .Cookies }}
 			case {{ printf "%q" .HTTPName }}:
 				{{ .VarName }}Raw = c.Value
+				{{- if .MaxAgeFrom }}
+				{{ .MaxAgeFrom.VarName }} = {{ .MaxAgeFrom.TypeRef }}(c.MaxAge)
+				{{- end }}
+				{{- if .DomainFrom }}
+				{{ .DomainFrom.VarName }} = c.Domain
+				{{- end }}
+				{{- if .PathFrom }}
+				{{ .PathFrom.VarName }} = c.Path
+				{{- end }}
+				{{- if .SecureFrom }}
+				{{ .SecureFrom.VarName }} = c.Secure
+				{{- end }}
+				{{- if .HTTPOnlyFrom }}
+				{{ .HTTPOnlyFrom.VarName }} = c.HttpOnly
+				{{- end }}
+				{{- if .SameSiteFrom }}
+				switch c.SameSite {
+				case http.SameSiteStrictMode:
+					{{ .SameSiteFrom.VarName }} = "Strict"
+				case http.SameSiteLaxMode:
+					{{ .SameSiteFrom.VarName }} = "Lax"
+				case http.SameSiteNoneMode:
+					{{ .SameSiteFrom.VarName }} = "None"
+				default:
+					{{ .SameSiteFrom.VarName }} = "Default"
+				}
+				{{- end }}
 		{{- end }}
 			}
 		}

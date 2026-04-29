@@ -1,6 +1,7 @@
 package dsl
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -631,6 +632,177 @@ func CookieSameSite(s expr.CookieSameSiteValue) {
 		return
 	}
 	cookieAttribute("same-site", string(s))
+}
+
+// cookieAttrBindingsExpr is the transient eval context opened by
+// CookieAttributes. It wraps the cookie's underlying AttributeExpr inside the
+// response Cookies object so the Cookie...From binders can write per-cookie
+// binding metadata onto the right attribute.
+type cookieAttrBindingsExpr struct {
+	// Attr is the cookie attribute that binders annotate.
+	Attr *expr.AttributeExpr
+	// Name is the cookie attribute name used for diagnostics.
+	Name string
+}
+
+// EvalName returns the qualified name of the cookie binding context.
+func (c *cookieAttrBindingsExpr) EvalName() string {
+	return fmt.Sprintf("CookieAttributes(%q)", c.Name)
+}
+
+// CookieAttributes opens a per-cookie attribute binding context for the named
+// cookie defined in the enclosing Response. Inside the closure, the
+// MaxAgeFrom, DomainFrom, PathFrom, SecureFrom, HTTPOnlyFrom and SameSiteFrom
+// functions bind cookie attributes (Max-Age, Domain, Path, Secure, HttpOnly,
+// SameSite) to result type attributes computed at runtime by the service
+// method. The bindings apply only to the named cookie. The server populates
+// the cookie attributes from the bound result fields when emitting the
+// response, and the client decodes the corresponding HTTP cookie attributes
+// back into the same result fields.
+//
+// Bindings are additive to and take precedence over the response-wide literal
+// metadata set by CookieMaxAge, CookieDomain, CookiePath, CookieSecure,
+// CookieHTTPOnly and CookieSameSite.
+//
+// CookieAttributes must appear in a Response expression. The first argument is
+// the attribute-side cookie name (the part before the colon in
+// `Cookie("attr:cookie")`).
+//
+// Example:
+//
+//	var LoginResult = ResultType("application/vnd.login", func() {
+//	    Attributes(func() {
+//	        Attribute("sessionID", String)
+//	        Attribute("expiresIn", Int)
+//	        Attribute("cookieDomain", String)
+//	        Attribute("cookiePath", String)
+//	        Attribute("isSecure", Boolean)
+//	        Attribute("isHTTPOnly", Boolean)
+//	        Attribute("sameSite", String)
+//	    })
+//	    Required("sessionID", "expiresIn", "cookieDomain", "cookiePath",
+//	        "isSecure", "isHTTPOnly", "sameSite")
+//	})
+//
+//	Method("login", func() {
+//	    Result(LoginResult)
+//	    HTTP(func() {
+//	        POST("/login")
+//	        Response(StatusOK, func() {
+//	            Cookie("sessionID:SID", String)
+//	            CookieAttributes("sessionID", func() {
+//	                MaxAgeFrom("expiresIn")
+//	                DomainFrom("cookieDomain")
+//	                PathFrom("cookiePath")
+//	                SecureFrom("isSecure")
+//	                HTTPOnlyFrom("isHTTPOnly")
+//	                SameSiteFrom("sameSite")
+//	            })
+//	        })
+//	    })
+//	})
+func CookieAttributes(name string, fn func()) {
+	r, ok := eval.Current().(*expr.HTTPResponseExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	if name == "" {
+		eval.ReportError("cookie name cannot be empty")
+		return
+	}
+	if r.Cookies == nil {
+		eval.ReportError("CookieAttributes references cookie %q but no cookie has been declared in the response", name)
+		return
+	}
+	obj := expr.AsObject(r.Cookies.Type)
+	if obj == nil {
+		eval.ReportError("CookieAttributes references cookie %q but the response cookie set is not an object", name)
+		return
+	}
+	attr := obj.Attribute(name)
+	if attr == nil {
+		eval.ReportError("CookieAttributes references cookie %q which has not been declared with Cookie() in the same Response", name)
+		return
+	}
+	eval.Execute(fn, &cookieAttrBindingsExpr{Attr: attr, Name: name})
+}
+
+// MaxAgeFrom binds the enclosing cookie's "Max-Age" attribute to a result
+// type attribute. The referenced attribute must be of an integer primitive
+// type. The server populates http.Cookie.MaxAge from this result field; the
+// client decodes c.MaxAge back into the same field.
+//
+// MaxAgeFrom must appear in a CookieAttributes expression.
+func MaxAgeFrom(attr string) {
+	cookieFromBinding("max-age", attr)
+}
+
+// DomainFrom binds the enclosing cookie's "Domain" attribute to a result
+// type attribute. The referenced attribute must be of type String. The server
+// populates http.Cookie.Domain from this result field; the client decodes
+// c.Domain back into the same field.
+//
+// DomainFrom must appear in a CookieAttributes expression.
+func DomainFrom(attr string) {
+	cookieFromBinding("domain", attr)
+}
+
+// PathFrom binds the enclosing cookie's "Path" attribute to a result type
+// attribute. The referenced attribute must be of type String. The server
+// populates http.Cookie.Path from this result field; the client decodes
+// c.Path back into the same field.
+//
+// PathFrom must appear in a CookieAttributes expression.
+func PathFrom(attr string) {
+	cookieFromBinding("path", attr)
+}
+
+// SecureFrom binds the enclosing cookie's "Secure" attribute to a result
+// type attribute. The referenced attribute must be of type Boolean. The
+// server populates http.Cookie.Secure from this result field; the client
+// decodes c.Secure back into the same field.
+//
+// SecureFrom must appear in a CookieAttributes expression.
+func SecureFrom(attr string) {
+	cookieFromBinding("secure", attr)
+}
+
+// HTTPOnlyFrom binds the enclosing cookie's "HttpOnly" attribute to a result
+// type attribute. The referenced attribute must be of type Boolean. The
+// server populates http.Cookie.HttpOnly from this result field; the client
+// decodes c.HttpOnly back into the same field.
+//
+// HTTPOnlyFrom must appear in a CookieAttributes expression.
+func HTTPOnlyFrom(attr string) {
+	cookieFromBinding("http-only", attr)
+}
+
+// SameSiteFrom binds the enclosing cookie's "SameSite" attribute to a result
+// type attribute. The referenced attribute must be of type String and at
+// runtime must hold one of the values of CookieSameSiteStrict,
+// CookieSameSiteLax, CookieSameSiteNone or CookieSameSiteDefault. The server
+// populates http.Cookie.SameSite from this result field; the client decodes
+// c.SameSite back into the same field.
+//
+// SameSiteFrom must appear in a CookieAttributes expression.
+func SameSiteFrom(attr string) {
+	cookieFromBinding("same-site", attr)
+}
+
+// cookieFromBinding records a per-cookie attribute binding on the cookie
+// attribute carried by the surrounding CookieAttributes context.
+func cookieFromBinding(kind, attr string) {
+	c, ok := eval.Current().(*cookieAttrBindingsExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	if attr == "" {
+		eval.ReportError("attribute name cannot be empty")
+		return
+	}
+	c.Attr.AddMeta("cookie:"+kind+":from", attr)
 }
 
 // Params groups a set of Param expressions. It makes it possible to list

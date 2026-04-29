@@ -1640,3 +1640,84 @@ var ResultBodyUnionCustomKeysMultiDSL = func() {
 		})
 	})
 }
+
+var ResultCookieAttrBindingsDSL = func() {
+	Service("ServiceCookieAttrBindings", func() {
+		Method("MethodCookieAttrBindings", func() {
+			Result(func() {
+				Attribute("sessionID", String)
+				Attribute("expiresIn", Int)
+				Attribute("cookieDomain", String)
+				Attribute("cookiePath", String)
+				Attribute("isSecure", Boolean)
+				Attribute("isHTTPOnly", Boolean)
+				Attribute("sameSite", String)
+				Required("sessionID", "expiresIn", "cookieDomain",
+					"cookiePath", "isSecure", "isHTTPOnly", "sameSite")
+			})
+			HTTP(func() {
+				POST("/login")
+				Response(StatusOK, func() {
+					Cookie("sessionID:SID", String)
+					CookieAttributes("sessionID", func() {
+						MaxAgeFrom("expiresIn")
+						DomainFrom("cookieDomain")
+						PathFrom("cookiePath")
+						SecureFrom("isSecure")
+						HTTPOnlyFrom("isHTTPOnly")
+						SameSiteFrom("sameSite")
+					})
+				})
+			})
+		})
+	})
+}
+
+var ResultCookieAttrBindingsOptionalDSL = func() {
+	Service("ServiceCookieAttrBindingsOptional", func() {
+		Method("MethodCookieAttrBindingsOptional", func() {
+			Result(func() {
+				Attribute("sessionID", String)
+				Attribute("expiresIn", Int)
+				Attribute("cookieDomain", String)
+				Required("sessionID")
+			})
+			HTTP(func() {
+				POST("/login")
+				Response(StatusOK, func() {
+					Cookie("sessionID:SID", String)
+					CookieAttributes("sessionID", func() {
+						MaxAgeFrom("expiresIn")
+						DomainFrom("cookieDomain")
+					})
+				})
+			})
+		})
+	})
+}
+
+var ResultCookieAttrBindingsMixedDSL = func() {
+	Service("ServiceCookieAttrBindingsMixed", func() {
+		Method("MethodCookieAttrBindingsMixed", func() {
+			Result(func() {
+				Attribute("a", String)
+				Attribute("b", String)
+				Attribute("expiresIn", Int)
+				Required("a", "b", "expiresIn")
+			})
+			HTTP(func() {
+				POST("/login")
+				Response(StatusOK, func() {
+					Cookie("a:A", String)
+					Cookie("b:B", String)
+					CookieAttributes("a", func() {
+						MaxAgeFrom("expiresIn")
+					})
+					CookieMaxAge(3600)
+					CookieDomain("goa.design")
+					CookieSecure()
+				})
+			})
+		})
+	})
+}

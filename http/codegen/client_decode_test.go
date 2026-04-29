@@ -32,6 +32,10 @@ func TestClientDecode(t *testing.T) {
 		{"with-headers-dsl-viewed-result", testdata.WithHeadersBlockViewedResultDSL},
 		{"validate-error-response-type", testdata.ValidateErrorResponseTypeDSL},
 		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL},
+
+		{"cookie-attr-bindings", testdata.ResultCookieAttrBindingsDSL},
+		{"cookie-attr-bindings-optional", testdata.ResultCookieAttrBindingsOptionalDSL},
+		{"cookie-attr-bindings-mixed", testdata.ResultCookieAttrBindingsMixedDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

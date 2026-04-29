@@ -528,6 +528,51 @@ type (
 		HTTPOnly bool
 		// SameSite sets the cookie "same-site" attribute to the given value.
 		SameSite string
+		// MaxAgeFrom binds the cookie "Max-Age" attribute to a result
+		// type attribute populated at runtime by the service method.
+		MaxAgeFrom *CookieAttrBinding
+		// DomainFrom binds the cookie "Domain" attribute to a result
+		// type attribute.
+		DomainFrom *CookieAttrBinding
+		// PathFrom binds the cookie "Path" attribute to a result type
+		// attribute.
+		PathFrom *CookieAttrBinding
+		// SecureFrom binds the cookie "Secure" attribute to a result
+		// type attribute.
+		SecureFrom *CookieAttrBinding
+		// HTTPOnlyFrom binds the cookie "HttpOnly" attribute to a result
+		// type attribute.
+		HTTPOnlyFrom *CookieAttrBinding
+		// SameSiteFrom binds the cookie "SameSite" attribute to a result
+		// type attribute.
+		SameSiteFrom *CookieAttrBinding
+	}
+
+	// CookieAttrBinding describes a per-cookie attribute (Max-Age, Domain,
+	// Path, Secure, HttpOnly, SameSite) bound to a result-type attribute via
+	// the CookieAttributes / Cookie...From DSL. The server populates the
+	// http.Cookie field from the bound result attribute and the client
+	// decoder writes the corresponding *http.Cookie field back into the same
+	// result attribute.
+	CookieAttrBinding struct {
+		// AttributeName is the result-type attribute name.
+		AttributeName string
+		// FieldName is the Go struct field name on the result type.
+		FieldName string
+		// FieldPointer reports whether the Go field is a pointer
+		// (i.e. the attribute is optional in the result type).
+		FieldPointer bool
+		// Type is the bound attribute's primitive data type.
+		Type expr.DataType
+		// TypeRef is the Go type reference for the bound attribute
+		// (without leading pointer star). It is used to cast the
+		// http.Cookie integer attribute into the result attribute's
+		// type when it is non-int (e.g. int32, int64).
+		TypeRef string
+		// VarName is a unique local variable name used by the client
+		// response decoder to capture the decoded cookie attribute
+		// before assigning it onto the result struct.
+		VarName string
 	}
 
 	// TypeData contains the data needed to render a type definition.
@@ -2610,7 +2655,7 @@ func (sds *ServicesData) extractHeaders(a *expr.MappedAttributeExpr, svcAtt *exp
 
 func (sds *ServicesData) extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope) []*CookieData {
 	var cookies []*CookieData
-	codegen.WalkMappedAttr(a, func(name, elem string, required bool, _ *expr.AttributeExpr) error { // nolint: errcheck
+	codegen.WalkMappedAttr(a, func(name, elem string, required bool, cattr *expr.AttributeExpr) error { // nolint: errcheck
 		var hattr *expr.AttributeExpr
 		if hattr = svcAtt.Find(name); hattr == nil {
 			hattr = svcAtt
@@ -2678,6 +2723,37 @@ func (sds *ServicesData) extractCookies(a *expr.MappedAttributeExpr, svcAtt *exp
 					c.SameSite = "http.SameSiteNoneMode"
 				case string(expr.CookieSameSiteDefault):
 					c.SameSite = "http.SameSiteDefaultMode"
+				}
+			}
+		}
+		if cattr != nil && expr.IsObject(svcAtt.Type) {
+			for _, b := range []struct {
+				key  string
+				dest **CookieAttrBinding
+			}{
+				{"cookie:max-age:from", &c.MaxAgeFrom},
+				{"cookie:domain:from", &c.DomainFrom},
+				{"cookie:path:from", &c.PathFrom},
+				{"cookie:secure:from", &c.SecureFrom},
+				{"cookie:http-only:from", &c.HTTPOnlyFrom},
+				{"cookie:same-site:from", &c.SameSiteFrom},
+			} {
+				vals, ok := cattr.Meta[b.key]
+				if !ok || len(vals) == 0 {
+					continue
+				}
+				attrName := vals[0]
+				battr := svcAtt.Find(attrName)
+				if battr == nil {
+					continue
+				}
+				*b.dest = &CookieAttrBinding{
+					AttributeName: attrName,
+					FieldName:     codegen.GoifyAtt(battr, attrName, true),
+					FieldPointer:  svcCtx.IsPrimitivePointer(attrName, svcAtt),
+					Type:          battr.Type,
+					TypeRef:       scope.GoTypeRef(battr),
+					VarName:       scope.Name(codegen.Goify(name+"_"+attrName, false)),
 				}
 			}
 		}
