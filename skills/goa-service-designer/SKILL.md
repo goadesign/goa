@@ -43,6 +43,8 @@ implementation files and does not overwrite existing custom implementation later
   need to change, edit the design first and regenerate.
 - Never patch generated files, OpenAPI output, protobuf output, or generated clients to hide a stale
   design.
+- Import generated packages with explicit aliases prefixed by `gen`, such as `genfront`,
+  `gendefinitions`, or `genruns`, so generated Goa contracts are recognizable at call sites.
 - Put boundary validation in Goa. Use `Required`, `Enum`, `Format`, `Pattern`, `Minimum`,
   `Maximum`, `MinLength`, `MaxLength`, defaults, security fields, and explicit transport mappings in
   the design.
