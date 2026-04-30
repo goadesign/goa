@@ -26,11 +26,11 @@ func EncodeMethodCookieAttrBindingsOptionalAllResponse(encoder func(context.Cont
 		}
 		if res.SameSite != nil {
 			switch *res.SameSite {
-			case "Strict":
+			case "strict":
 				cookiesessionID.SameSite = http.SameSiteStrictMode
-			case "Lax":
+			case "lax":
 				cookiesessionID.SameSite = http.SameSiteLaxMode
-			case "None":
+			case "none":
 				cookiesessionID.SameSite = http.SameSiteNoneMode
 			default:
 				cookiesessionID.SameSite = http.SameSiteDefaultMode

@@ -166,13 +166,13 @@
 				{{- if .SameSiteFrom }}
 				switch c.SameSite {
 				case http.SameSiteStrictMode:
-					{{ .SameSiteFrom.VarName }} = "Strict"
+					{{ .SameSiteFrom.VarName }} = "strict"
 				case http.SameSiteLaxMode:
-					{{ .SameSiteFrom.VarName }} = "Lax"
+					{{ .SameSiteFrom.VarName }} = "lax"
 				case http.SameSiteNoneMode:
-					{{ .SameSiteFrom.VarName }} = "None"
+					{{ .SameSiteFrom.VarName }} = "none"
 				default:
-					{{ .SameSiteFrom.VarName }} = "Default"
+					{{ .SameSiteFrom.VarName }} = "default"
 				}
 				{{- end }}
 		{{- end }}

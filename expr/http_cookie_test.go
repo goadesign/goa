@@ -80,6 +80,20 @@ func TestHTTPResponseCookieAttrBindings(t *testing.T) {
 	}
 }
 
+func TestCookieSameSiteConstantsAreLowercase(t *testing.T) {
+	cases := map[expr.CookieSameSiteValue]string{
+		expr.CookieSameSiteStrict:  "strict",
+		expr.CookieSameSiteLax:     "lax",
+		expr.CookieSameSiteNone:    "none",
+		expr.CookieSameSiteDefault: "default",
+	}
+	for got, want := range cases {
+		if string(got) != want {
+			t.Errorf("CookieSameSite constant = %q, want %q (the SameSiteFrom binding contract and the http codegen partials key on these exact lower-case values)", string(got), want)
+		}
+	}
+}
+
 func TestHTTPResponseBodyExcludesCookieAttrBindings(t *testing.T) {
 	root := expr.RunDSL(t, testdata.CookieAttrBindingsDSL)
 	resp := root.API.HTTP.Services[len(root.API.HTTP.Services)-1].HTTPEndpoints[0].Responses[0]

@@ -148,11 +148,11 @@
 		{{- if .SameSiteFrom.FieldPointer }}
 		if res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .SameSiteFrom.FieldName }} != nil {
 			switch *res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .SameSiteFrom.FieldName }} {
-			case "Strict":
+			case "strict":
 				cookie{{ .VarName }}.SameSite = http.SameSiteStrictMode
-			case "Lax":
+			case "lax":
 				cookie{{ .VarName }}.SameSite = http.SameSiteLaxMode
-			case "None":
+			case "none":
 				cookie{{ .VarName }}.SameSite = http.SameSiteNoneMode
 			default:
 				cookie{{ .VarName }}.SameSite = http.SameSiteDefaultMode
@@ -160,11 +160,11 @@
 		}
 		{{- else }}
 		switch res{{ if $.ViewedResult }}.Projected{{ end }}.{{ .SameSiteFrom.FieldName }} {
-		case "Strict":
+		case "strict":
 			cookie{{ .VarName }}.SameSite = http.SameSiteStrictMode
-		case "Lax":
+		case "lax":
 			cookie{{ .VarName }}.SameSite = http.SameSiteLaxMode
-		case "None":
+		case "none":
 			cookie{{ .VarName }}.SameSite = http.SameSiteNoneMode
 		default:
 			cookie{{ .VarName }}.SameSite = http.SameSiteDefaultMode

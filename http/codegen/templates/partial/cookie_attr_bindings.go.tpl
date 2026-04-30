@@ -51,7 +51,7 @@
 	{{- end }}
 	{{- if .SameSiteFrom }}
 		{{- if .SameSiteFrom.FieldPointer }}
-		if {{ .SameSiteFrom.VarName }} != "" && {{ .SameSiteFrom.VarName }} != "Default" {
+		if {{ .SameSiteFrom.VarName }} != "" && {{ .SameSiteFrom.VarName }} != "default" {
 			{{ .SameSiteFrom.VarName }}Tmp := {{ .SameSiteFrom.VarName }}
 			{{ $.Target }}.{{ .SameSiteFrom.FieldName }} = &{{ .SameSiteFrom.VarName }}Tmp
 		}

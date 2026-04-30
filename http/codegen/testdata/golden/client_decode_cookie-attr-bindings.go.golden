@@ -42,13 +42,13 @@ func DecodeMethodCookieAttrBindingsResponse(decoder func(*http.Response) goahttp
 					sessionIDIsHTTPOnly = c.HttpOnly
 					switch c.SameSite {
 					case http.SameSiteStrictMode:
-						sessionIDSameSite = "Strict"
+						sessionIDSameSite = "strict"
 					case http.SameSiteLaxMode:
-						sessionIDSameSite = "Lax"
+						sessionIDSameSite = "lax"
 					case http.SameSiteNoneMode:
-						sessionIDSameSite = "None"
+						sessionIDSameSite = "none"
 					default:
-						sessionIDSameSite = "Default"
+						sessionIDSameSite = "default"
 					}
 				}
 			}
