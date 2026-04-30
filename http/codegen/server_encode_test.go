@@ -90,6 +90,7 @@ func TestEncode(t *testing.T) {
 
 		{"cookie-attr-bindings", testdata.ResultCookieAttrBindingsDSL},
 		{"cookie-attr-bindings-optional", testdata.ResultCookieAttrBindingsOptionalDSL},
+		{"cookie-attr-bindings-optional-all", testdata.ResultCookieAttrBindingsOptionalAllDSL},
 		{"cookie-attr-bindings-mixed", testdata.ResultCookieAttrBindingsMixedDSL},
 		{"cookie-attr-bindings-body", testdata.ResultCookieAttrBindingsBodyDSL},
 		{"cookie-attr-bindings-error", testdata.ResultCookieAttrBindingsErrorDSL},

@@ -1,0 +1,43 @@
+// EncodeMethodCookieAttrBindingsOptionalAllResponse returns an encoder for
+// responses returned by the ServiceCookieAttrBindingsOptionalAll
+// MethodCookieAttrBindingsOptionalAll endpoint.
+func EncodeMethodCookieAttrBindingsOptionalAllResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*servicecookieattrbindingsoptionalall.MethodCookieAttrBindingsOptionalAllResult)
+		sessionID := res.SessionID
+		cookiesessionID := &http.Cookie{
+			Name:  "SID",
+			Value: sessionID,
+		}
+		if res.ExpiresIn != nil {
+			cookiesessionID.MaxAge = int(*res.ExpiresIn)
+		}
+		if res.CookiePath != nil {
+			cookiesessionID.Path = *res.CookiePath
+		}
+		if res.CookieDomain != nil {
+			cookiesessionID.Domain = *res.CookieDomain
+		}
+		if res.IsSecure != nil {
+			cookiesessionID.Secure = *res.IsSecure
+		}
+		if res.IsHTTPOnly != nil {
+			cookiesessionID.HttpOnly = *res.IsHTTPOnly
+		}
+		if res.SameSite != nil {
+			switch *res.SameSite {
+			case "Strict":
+				cookiesessionID.SameSite = http.SameSiteStrictMode
+			case "Lax":
+				cookiesessionID.SameSite = http.SameSiteLaxMode
+			case "None":
+				cookiesessionID.SameSite = http.SameSiteNoneMode
+			default:
+				cookiesessionID.SameSite = http.SameSiteDefaultMode
+			}
+		}
+		http.SetCookie(w, cookiesessionID)
+		w.WriteHeader(http.StatusOK)
+		return nil
+	}
+}

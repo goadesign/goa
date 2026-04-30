@@ -660,6 +660,14 @@ func (c *cookieAttrBindingsExpr) EvalName() string {
 // response, and the client decodes the corresponding HTTP cookie attributes
 // back into the same result fields.
 //
+// Presence semantics on the client: when the bound result attribute is a
+// pointer (optional, no default), the client decoder treats a zero-valued
+// cookie attribute as absent and leaves the result field nil. That means
+// MaxAge=0, empty Domain or Path, Secure/HttpOnly false, and SameSite=Default
+// are all reported as nil. This conflates "explicit zero" with "attribute
+// not set" — net/http does not preserve that distinction. Required (non-
+// pointer) bound attributes are always assigned, including the zero value.
+//
 // Bindings are additive to and take precedence over the response-wide literal
 // metadata set by CookieMaxAge, CookieDomain, CookiePath, CookieSecure,
 // CookieHTTPOnly and CookieSameSite.

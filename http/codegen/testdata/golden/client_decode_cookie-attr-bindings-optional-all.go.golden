@@ -1,0 +1,93 @@
+// DecodeMethodCookieAttrBindingsOptionalAllResponse returns a decoder for
+// responses returned by the ServiceCookieAttrBindingsOptionalAll
+// MethodCookieAttrBindingsOptionalAll endpoint. restoreBody controls whether
+// the response body should be restored after having been read.
+func DecodeMethodCookieAttrBindingsOptionalAllResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
+		if restoreBody {
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusOK:
+			var (
+				sessionID             string
+				sessionIDRaw          string
+				sessionIDExpiresIn    int
+				sessionIDCookieDomain string
+				sessionIDCookiePath   string
+				sessionIDIsSecure     bool
+				sessionIDIsHTTPOnly   bool
+				sessionIDSameSite     string
+
+				cookies = resp.Cookies()
+				err     error
+			)
+			for _, c := range cookies {
+				switch c.Name {
+				case "SID":
+					sessionIDRaw = c.Value
+					sessionIDExpiresIn = int(c.MaxAge)
+					sessionIDCookieDomain = c.Domain
+					sessionIDCookiePath = c.Path
+					sessionIDIsSecure = c.Secure
+					sessionIDIsHTTPOnly = c.HttpOnly
+					switch c.SameSite {
+					case http.SameSiteStrictMode:
+						sessionIDSameSite = "Strict"
+					case http.SameSiteLaxMode:
+						sessionIDSameSite = "Lax"
+					case http.SameSiteNoneMode:
+						sessionIDSameSite = "None"
+					default:
+						sessionIDSameSite = "Default"
+					}
+				}
+			}
+			if sessionIDRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("sessionID", "cookie"))
+			}
+			sessionID = sessionIDRaw
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceCookieAttrBindingsOptionalAll", "MethodCookieAttrBindingsOptionalAll", err)
+			}
+			res := NewMethodCookieAttrBindingsOptionalAllResultOK(sessionID)
+			if sessionIDExpiresIn != 0 {
+				sessionIDExpiresInTmp := sessionIDExpiresIn
+				res.ExpiresIn = &sessionIDExpiresInTmp
+			}
+			if sessionIDCookieDomain != "" {
+				sessionIDCookieDomainTmp := sessionIDCookieDomain
+				res.CookieDomain = &sessionIDCookieDomainTmp
+			}
+			if sessionIDCookiePath != "" {
+				sessionIDCookiePathTmp := sessionIDCookiePath
+				res.CookiePath = &sessionIDCookiePathTmp
+			}
+			if sessionIDIsSecure {
+				sessionIDIsSecureTmp := sessionIDIsSecure
+				res.IsSecure = &sessionIDIsSecureTmp
+			}
+			if sessionIDIsHTTPOnly {
+				sessionIDIsHTTPOnlyTmp := sessionIDIsHTTPOnly
+				res.IsHTTPOnly = &sessionIDIsHTTPOnlyTmp
+			}
+			if sessionIDSameSite != "" && sessionIDSameSite != "Default" {
+				sessionIDSameSiteTmp := sessionIDSameSite
+				res.SameSite = &sessionIDSameSiteTmp
+			}
+			return res, nil
+		default:
+			body, _ := io.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceCookieAttrBindingsOptionalAll", "MethodCookieAttrBindingsOptionalAll", resp.StatusCode, string(body))
+		}
+	}
+}

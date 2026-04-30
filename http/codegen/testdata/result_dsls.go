@@ -1696,6 +1696,37 @@ var ResultCookieAttrBindingsOptionalDSL = func() {
 	})
 }
 
+var ResultCookieAttrBindingsOptionalAllDSL = func() {
+	Service("ServiceCookieAttrBindingsOptionalAll", func() {
+		Method("MethodCookieAttrBindingsOptionalAll", func() {
+			Result(func() {
+				Attribute("sessionID", String)
+				Attribute("expiresIn", Int)
+				Attribute("cookieDomain", String)
+				Attribute("cookiePath", String)
+				Attribute("isSecure", Boolean)
+				Attribute("isHTTPOnly", Boolean)
+				Attribute("sameSite", String)
+				Required("sessionID")
+			})
+			HTTP(func() {
+				POST("/login")
+				Response(StatusOK, func() {
+					Cookie("sessionID:SID", String)
+					CookieAttributes("sessionID", func() {
+						MaxAgeFrom("expiresIn")
+						DomainFrom("cookieDomain")
+						PathFrom("cookiePath")
+						SecureFrom("isSecure")
+						HTTPOnlyFrom("isHTTPOnly")
+						SameSiteFrom("sameSite")
+					})
+				})
+			})
+		})
+	})
+}
+
 var ResultCookieAttrBindingsMixedDSL = func() {
 	Service("ServiceCookieAttrBindingsMixed", func() {
 		Method("MethodCookieAttrBindingsMixed", func() {
