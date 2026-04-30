@@ -193,6 +193,8 @@ Our documentation site at [goa.design](https://goa.design) provides comprehensiv
 - **[Real-World Guide](https://goa.design/docs/5-real-world/)**: Follow best practices for production services
 - **[Advanced Topics](https://goa.design/docs/6-advanced/)**: Explore advanced features and techniques
 
+Using a coding agent with Goa? See [`skills/`](skills/) for reusable Agent Skills that help agents follow Goa's design-first workflow in application repositories.
+
 ##  Real-World Examples
 
 The [examples repository](https://github.com/goadesign/examples) contains complete, working examples demonstrating:
