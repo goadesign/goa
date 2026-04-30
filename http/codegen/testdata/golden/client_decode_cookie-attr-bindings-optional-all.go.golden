@@ -60,30 +60,12 @@ func DecodeMethodCookieAttrBindingsOptionalAllResponse(decoder func(*http.Respon
 				return nil, goahttp.ErrValidationError("ServiceCookieAttrBindingsOptionalAll", "MethodCookieAttrBindingsOptionalAll", err)
 			}
 			res := NewMethodCookieAttrBindingsOptionalAllResultOK(sessionID)
-			if sessionIDExpiresIn != 0 {
-				sessionIDExpiresInTmp := sessionIDExpiresIn
-				res.ExpiresIn = &sessionIDExpiresInTmp
-			}
-			if sessionIDCookieDomain != "" {
-				sessionIDCookieDomainTmp := sessionIDCookieDomain
-				res.CookieDomain = &sessionIDCookieDomainTmp
-			}
-			if sessionIDCookiePath != "" {
-				sessionIDCookiePathTmp := sessionIDCookiePath
-				res.CookiePath = &sessionIDCookiePathTmp
-			}
-			if sessionIDIsSecure {
-				sessionIDIsSecureTmp := sessionIDIsSecure
-				res.IsSecure = &sessionIDIsSecureTmp
-			}
-			if sessionIDIsHTTPOnly {
-				sessionIDIsHTTPOnlyTmp := sessionIDIsHTTPOnly
-				res.IsHTTPOnly = &sessionIDIsHTTPOnlyTmp
-			}
-			if sessionIDSameSite != "" && sessionIDSameSite != "default" {
-				sessionIDSameSiteTmp := sessionIDSameSite
-				res.SameSite = &sessionIDSameSiteTmp
-			}
+			res.ExpiresIn = goahttp.CookieIntAttr(sessionIDExpiresIn)
+			res.CookieDomain = goahttp.CookieStringAttr(sessionIDCookieDomain)
+			res.CookiePath = goahttp.CookieStringAttr(sessionIDCookiePath)
+			res.IsSecure = goahttp.CookieBoolAttr(sessionIDIsSecure)
+			res.IsHTTPOnly = goahttp.CookieBoolAttr(sessionIDIsHTTPOnly)
+			res.SameSite = goahttp.CookieSameSiteAttr(sessionIDSameSite)
 			return res, nil
 		default:
 			body, _ := io.ReadAll(resp.Body)

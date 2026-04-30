@@ -43,14 +43,8 @@ func DecodeMethodCookieAttrBindingsOptionalResponse(decoder func(*http.Response)
 				return nil, goahttp.ErrValidationError("ServiceCookieAttrBindingsOptional", "MethodCookieAttrBindingsOptional", err)
 			}
 			res := NewMethodCookieAttrBindingsOptionalResultOK(sessionID)
-			if sessionIDExpiresIn != 0 {
-				sessionIDExpiresInTmp := sessionIDExpiresIn
-				res.ExpiresIn = &sessionIDExpiresInTmp
-			}
-			if sessionIDCookieDomain != "" {
-				sessionIDCookieDomainTmp := sessionIDCookieDomain
-				res.CookieDomain = &sessionIDCookieDomainTmp
-			}
+			res.ExpiresIn = goahttp.CookieIntAttr(sessionIDExpiresIn)
+			res.CookieDomain = goahttp.CookieStringAttr(sessionIDCookieDomain)
 			return res, nil
 		default:
 			body, _ := io.ReadAll(resp.Body)
