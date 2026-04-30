@@ -4,8 +4,6 @@
 func EncodeMethodCookieAttrBindingsOptionalResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
 	return func(ctx context.Context, w http.ResponseWriter, v any) error {
 		res, _ := v.(*servicecookieattrbindingsoptional.MethodCookieAttrBindingsOptionalResult)
-		enc := encoder(ctx, w)
-		body := NewMethodCookieAttrBindingsOptionalResponseBody(res)
 		sessionID := res.SessionID
 		cookiesessionID := &http.Cookie{
 			Name:  "SID",
@@ -19,6 +17,6 @@ func EncodeMethodCookieAttrBindingsOptionalResponse(encoder func(context.Context
 		}
 		http.SetCookie(w, cookiesessionID)
 		w.WriteHeader(http.StatusOK)
-		return enc.Encode(body)
+		return nil
 	}
 }

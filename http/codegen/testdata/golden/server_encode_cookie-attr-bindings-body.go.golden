@@ -1,0 +1,19 @@
+// EncodeMethodCookieAttrBindingsBodyResponse returns an encoder for responses
+// returned by the ServiceCookieAttrBindingsBody MethodCookieAttrBindingsBody
+// endpoint.
+func EncodeMethodCookieAttrBindingsBodyResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+	return func(ctx context.Context, w http.ResponseWriter, v any) error {
+		res, _ := v.(*servicecookieattrbindingsbody.MethodCookieAttrBindingsBodyResult)
+		enc := encoder(ctx, w)
+		body := NewMethodCookieAttrBindingsBodyResponseBody(res)
+		sessionID := res.SessionID
+		cookiesessionID := &http.Cookie{
+			Name:   "SID",
+			Value:  sessionID,
+			MaxAge: int(res.ExpiresIn),
+		}
+		http.SetCookie(w, cookiesessionID)
+		w.WriteHeader(http.StatusOK)
+		return enc.Encode(body)
+	}
+}

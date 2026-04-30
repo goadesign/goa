@@ -80,6 +80,32 @@ func TestHTTPResponseCookieAttrBindings(t *testing.T) {
 	}
 }
 
+func TestHTTPResponseBodyExcludesCookieAttrBindings(t *testing.T) {
+	root := expr.RunDSL(t, testdata.CookieAttrBindingsDSL)
+	resp := root.API.HTTP.Services[len(root.API.HTTP.Services)-1].HTTPEndpoints[0].Responses[0]
+	if resp.Body == nil {
+		t.Fatalf("expected response body to be computed")
+	}
+	bound := []string{"expiresIn", "cookieDomain", "cookiePath", "isSecure", "isHTTPOnly", "sameSite"}
+	if obj := expr.AsObject(resp.Body.Type); obj != nil {
+		for _, nat := range *obj {
+			for _, b := range bound {
+				if nat.Name == b {
+					t.Errorf("response body still contains cookie-bound attribute %q", b)
+				}
+			}
+		}
+	}
+	cookieValue := "cookie"
+	if obj := expr.AsObject(resp.Body.Type); obj != nil {
+		for _, nat := range *obj {
+			if nat.Name == cookieValue {
+				t.Errorf("response body still contains cookie value attribute %q", cookieValue)
+			}
+		}
+	}
+}
+
 func TestHTTPErrorCookieAttrBindings(t *testing.T) {
 	root := expr.RunDSL(t, testdata.CookieAttrBindingErrorDSL)
 	httpErr := root.API.HTTP.Services[len(root.API.HTTP.Services)-1].HTTPEndpoints[0].HTTPErrors[0]

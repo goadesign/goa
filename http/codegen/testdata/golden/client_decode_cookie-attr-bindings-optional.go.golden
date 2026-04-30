@@ -19,20 +19,13 @@ func DecodeMethodCookieAttrBindingsOptionalResponse(decoder func(*http.Response)
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (
-				body MethodCookieAttrBindingsOptionalResponseBody
-				err  error
-			)
-			err = decoder(resp).Decode(&body)
-			if err != nil {
-				return nil, goahttp.ErrDecodingError("ServiceCookieAttrBindingsOptional", "MethodCookieAttrBindingsOptional", err)
-			}
-			var (
 				sessionID             string
 				sessionIDRaw          string
 				sessionIDExpiresIn    int
 				sessionIDCookieDomain string
 
 				cookies = resp.Cookies()
+				err     error
 			)
 			for _, c := range cookies {
 				switch c.Name {
@@ -49,7 +42,7 @@ func DecodeMethodCookieAttrBindingsOptionalResponse(decoder func(*http.Response)
 			if err != nil {
 				return nil, goahttp.ErrValidationError("ServiceCookieAttrBindingsOptional", "MethodCookieAttrBindingsOptional", err)
 			}
-			res := NewMethodCookieAttrBindingsOptionalResultOK(&body, sessionID)
+			res := NewMethodCookieAttrBindingsOptionalResultOK(sessionID)
 			sessionIDExpiresInTmp := sessionIDExpiresIn
 			res.ExpiresIn = &sessionIDExpiresInTmp
 			sessionIDCookieDomainTmp := sessionIDCookieDomain

@@ -19,18 +19,6 @@ func DecodeMethodCookieAttrBindingsMixedResponse(decoder func(*http.Response) go
 		switch resp.StatusCode {
 		case http.StatusOK:
 			var (
-				body MethodCookieAttrBindingsMixedResponseBody
-				err  error
-			)
-			err = decoder(resp).Decode(&body)
-			if err != nil {
-				return nil, goahttp.ErrDecodingError("ServiceCookieAttrBindingsMixed", "MethodCookieAttrBindingsMixed", err)
-			}
-			err = ValidateMethodCookieAttrBindingsMixedResponseBody(&body)
-			if err != nil {
-				return nil, goahttp.ErrValidationError("ServiceCookieAttrBindingsMixed", "MethodCookieAttrBindingsMixed", err)
-			}
-			var (
 				a          string
 				aRaw       string
 				aExpiresIn int
@@ -38,6 +26,7 @@ func DecodeMethodCookieAttrBindingsMixedResponse(decoder func(*http.Response) go
 				bRaw       string
 
 				cookies = resp.Cookies()
+				err     error
 			)
 			for _, c := range cookies {
 				switch c.Name {
@@ -59,7 +48,7 @@ func DecodeMethodCookieAttrBindingsMixedResponse(decoder func(*http.Response) go
 			if err != nil {
 				return nil, goahttp.ErrValidationError("ServiceCookieAttrBindingsMixed", "MethodCookieAttrBindingsMixed", err)
 			}
-			res := NewMethodCookieAttrBindingsMixedResultOK(&body, a, b)
+			res := NewMethodCookieAttrBindingsMixedResultOK(a, b)
 			res.ExpiresIn = aExpiresIn
 			return res, nil
 		default:

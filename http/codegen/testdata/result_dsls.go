@@ -1722,6 +1722,29 @@ var ResultCookieAttrBindingsMixedDSL = func() {
 	})
 }
 
+var ResultCookieAttrBindingsBodyDSL = func() {
+	Service("ServiceCookieAttrBindingsBody", func() {
+		Method("MethodCookieAttrBindingsBody", func() {
+			Result(func() {
+				Attribute("sessionID", String)
+				Attribute("expiresIn", Int)
+				Attribute("userID", String)
+				Attribute("displayName", String)
+				Required("sessionID", "expiresIn", "userID", "displayName")
+			})
+			HTTP(func() {
+				POST("/login")
+				Response(StatusOK, func() {
+					Cookie("sessionID:SID", String)
+					CookieAttributes("sessionID", func() {
+						MaxAgeFrom("expiresIn")
+					})
+				})
+			})
+		})
+	})
+}
+
 var ResultCookieAttrBindingsErrorDSL = func() {
 	var SessionInvalid = Type("SessionInvalid", func() {
 		ErrorName("name")

@@ -309,6 +309,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	// 4. Remove header and cookie attributes
 	removeAttributes(body, resp.Headers)
 	removeAttributes(body, resp.Cookies)
+	removeCookieAttrBindings(body, resp.Cookies)
 
 	// 4. Return empty type if no attribute left
 	if len(*AsObject(body.Type)) == 0 {
@@ -350,6 +351,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		mv := NewMappedAttributeExpr(v.AttributeExpr)
 		removeAttributes(mv, resp.Headers)
 		removeAttributes(mv, resp.Cookies)
+		removeCookieAttrBindings(mv, resp.Cookies)
 		nv := &ViewExpr{
 			AttributeExpr: mv.Attribute(),
 			Name:          v.Name,
@@ -468,6 +470,37 @@ func removeAttributes(attr, sub *MappedAttributeExpr) {
 	o := AsObject(sub.Type)
 	for _, nat := range *o {
 		removeAttribute(attr, nat.Name)
+	}
+}
+
+// removeCookieAttrBindings strips from body the result-type attributes that
+// are referenced by per-cookie CookieAttributes bindings (cookie:<kind>:from
+// meta keys on each cookie attribute). These attributes carry runtime values
+// for the cookie's Max-Age, Domain, Path, Secure, HttpOnly or SameSite fields
+// and would otherwise leak into the default JSON body.
+func removeCookieAttrBindings(body, cookies *MappedAttributeExpr) {
+	if cookies == nil || cookies.IsEmpty() {
+		return
+	}
+	bindingKeys := []string{
+		"cookie:max-age:from",
+		"cookie:domain:from",
+		"cookie:path:from",
+		"cookie:secure:from",
+		"cookie:http-only:from",
+		"cookie:same-site:from",
+	}
+	for _, nat := range *AsObject(cookies.Type) {
+		if nat.Attribute == nil {
+			continue
+		}
+		for _, k := range bindingKeys {
+			vals, ok := nat.Attribute.Meta[k]
+			if !ok || len(vals) == 0 {
+				continue
+			}
+			removeAttribute(body, vals[0])
+		}
 	}
 }
 

@@ -4,8 +4,6 @@
 func EncodeMethodCookieAttrBindingsMixedResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
 	return func(ctx context.Context, w http.ResponseWriter, v any) error {
 		res, _ := v.(*servicecookieattrbindingsmixed.MethodCookieAttrBindingsMixedResult)
-		enc := encoder(ctx, w)
-		body := NewMethodCookieAttrBindingsMixedResponseBody(res)
 		a := res.A
 		cookiea := &http.Cookie{
 			Name:   "A",
@@ -24,6 +22,6 @@ func EncodeMethodCookieAttrBindingsMixedResponse(encoder func(context.Context, h
 			Secure: true,
 		})
 		w.WriteHeader(http.StatusOK)
-		return enc.Encode(body)
+		return nil
 	}
 }
