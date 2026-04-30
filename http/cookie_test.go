@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func ptr[T any](v T) *T { return &v }
+
 func TestCookieIntAttr(t *testing.T) {
 	cases := []struct {
 		name string
@@ -13,8 +15,8 @@ func TestCookieIntAttr(t *testing.T) {
 		want *int
 	}{
 		{"zero-yields-nil", 0, nil},
-		{"positive-yields-pointer", 60, intPtr(60)},
-		{"negative-yields-pointer", -1, intPtr(-1)},
+		{"positive-yields-pointer", 60, ptr(60)},
+		{"negative-yields-pointer", -1, ptr(-1)},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -50,8 +52,8 @@ func TestCookieStringAttr(t *testing.T) {
 		want *string
 	}{
 		{"empty-yields-nil", "", nil},
-		{"non-empty-yields-pointer", "example.com", strPtr("example.com")},
-		{"whitespace-yields-pointer", " ", strPtr(" ")},
+		{"non-empty-yields-pointer", "example.com", ptr("example.com")},
+		{"whitespace-yields-pointer", " ", ptr(" ")},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -73,7 +75,7 @@ func TestCookieBoolAttr(t *testing.T) {
 		want *bool
 	}{
 		{"false-yields-nil", false, nil},
-		{"true-yields-pointer", true, boolPtr(true)},
+		{"true-yields-pointer", true, ptr(true)},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -96,9 +98,9 @@ func TestCookieSameSiteAttr(t *testing.T) {
 	}{
 		{"empty-yields-nil", "", nil},
 		{"default-yields-nil", "default", nil},
-		{"strict-yields-pointer", "strict", strPtr("strict")},
-		{"lax-yields-pointer", "lax", strPtr("lax")},
-		{"none-yields-pointer", "none", strPtr("none")},
+		{"strict-yields-pointer", "strict", ptr("strict")},
+		{"lax-yields-pointer", "lax", ptr("lax")},
+		{"none-yields-pointer", "none", ptr("none")},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -112,7 +114,3 @@ func TestCookieSameSiteAttr(t *testing.T) {
 		})
 	}
 }
-
-func intPtr(v int) *int       { return &v }
-func strPtr(v string) *string { return &v }
-func boolPtr(v bool) *bool    { return &v }
