@@ -530,21 +530,29 @@ type (
 		SameSite string
 		// MaxAgeFrom binds the cookie "Max-Age" attribute to a result
 		// type attribute populated at runtime by the service method.
+		// When set it takes precedence over the MaxAge literal: codegen
+		// emits the bound expression and ignores MaxAge for this cookie,
+		// so exactly one of the two ever reaches the wire.
 		MaxAgeFrom *CookieAttrBinding
 		// DomainFrom binds the cookie "Domain" attribute to a result
-		// type attribute.
+		// type attribute. When set it takes precedence over the Domain
+		// literal; exactly one of the two reaches the wire.
 		DomainFrom *CookieAttrBinding
 		// PathFrom binds the cookie "Path" attribute to a result type
-		// attribute.
+		// attribute. When set it takes precedence over the Path literal;
+		// exactly one of the two reaches the wire.
 		PathFrom *CookieAttrBinding
 		// SecureFrom binds the cookie "Secure" attribute to a result
-		// type attribute.
+		// type attribute. When set it takes precedence over the Secure
+		// literal; exactly one of the two reaches the wire.
 		SecureFrom *CookieAttrBinding
 		// HTTPOnlyFrom binds the cookie "HttpOnly" attribute to a result
-		// type attribute.
+		// type attribute. When set it takes precedence over the HTTPOnly
+		// literal; exactly one of the two reaches the wire.
 		HTTPOnlyFrom *CookieAttrBinding
 		// SameSiteFrom binds the cookie "SameSite" attribute to a result
-		// type attribute.
+		// type attribute. When set it takes precedence over the SameSite
+		// literal; exactly one of the two reaches the wire.
 		SameSiteFrom *CookieAttrBinding
 	}
 
