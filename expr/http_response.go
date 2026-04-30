@@ -399,10 +399,10 @@ func (r *HTTPResponseExpr) mapUnmappedAttrs(svcAtt *AttributeExpr) {
 // of the kind expected by the bound cookie property. typeNoun is the noun used
 // in diagnostic messages ("result type" or "error type").
 func validateCookieAttrBindings(r eval.Expression, cookieName string, cookieAttr *AttributeExpr, attributeType func(string) DataType, typeNoun, inview string) *eval.ValidationErrors {
-	verr := new(eval.ValidationErrors)
 	if cookieAttr == nil || len(cookieAttr.Meta) == 0 {
-		return verr
+		return nil
 	}
+	verr := new(eval.ValidationErrors)
 	bindings := []struct {
 		key  string
 		kind string
