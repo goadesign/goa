@@ -1,0 +1,70 @@
+// DecodeMethodCookieAttrBindingsErrorResponse returns a decoder for responses
+// returned by the ServiceCookieAttrBindingsError MethodCookieAttrBindingsError
+// endpoint. restoreBody controls whether the response body should be restored
+// after having been read.
+// DecodeMethodCookieAttrBindingsErrorResponse may return the following errors:
+//   - "session_invalid" (type *servicecookieattrbindingserror.SessionInvalid): http.StatusUnauthorized
+//   - error: internal error
+func DecodeMethodCookieAttrBindingsErrorResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+	return func(resp *http.Response) (any, error) {
+		if restoreBody {
+			b, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, err
+			}
+			resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			defer func() {
+				resp.Body = io.NopCloser(bytes.NewBuffer(b))
+			}()
+		} else {
+			defer resp.Body.Close()
+		}
+		switch resp.StatusCode {
+		case http.StatusNoContent:
+			return nil, nil
+		case http.StatusUnauthorized:
+			var (
+				body MethodCookieAttrBindingsErrorSessionInvalidResponseBody
+				err  error
+			)
+			err = decoder(resp).Decode(&body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("ServiceCookieAttrBindingsError", "MethodCookieAttrBindingsError", err)
+			}
+			err = ValidateMethodCookieAttrBindingsErrorSessionInvalidResponseBody(&body)
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceCookieAttrBindingsError", "MethodCookieAttrBindingsError", err)
+			}
+			var (
+				reason           string
+				reasonRaw        string
+				reasonRetryAfter int
+				reasonLoginPath  string
+
+				cookies = resp.Cookies()
+			)
+			for _, c := range cookies {
+				switch c.Name {
+				case "Reason":
+					reasonRaw = c.Value
+					reasonRetryAfter = int(c.MaxAge)
+					reasonLoginPath = c.Path
+				}
+			}
+			if reasonRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("reason", "cookie"))
+			}
+			reason = reasonRaw
+			if err != nil {
+				return nil, goahttp.ErrValidationError("ServiceCookieAttrBindingsError", "MethodCookieAttrBindingsError", err)
+			}
+			errres := NewMethodCookieAttrBindingsErrorSessionInvalid(&body, reason)
+			errres.RetryAfter = reasonRetryAfter
+			errres.LoginPath = reasonLoginPath
+			return nil, errres
+		default:
+			body, _ := io.ReadAll(resp.Body)
+			return nil, goahttp.ErrInvalidResponse("ServiceCookieAttrBindingsError", "MethodCookieAttrBindingsError", resp.StatusCode, string(body))
+		}
+	}
+}

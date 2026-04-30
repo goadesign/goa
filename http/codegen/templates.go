@@ -107,6 +107,7 @@ const (
 	requestElementsP        = "request_elements"
 	queryMapConversionP     = "query_map_conversion"
 	pathConversionP         = "path_conversion"
+	cookieAttrBindingsP     = "cookie_attr_bindings"
 )
 
 //go:embed templates/*

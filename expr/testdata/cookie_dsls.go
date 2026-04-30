@@ -236,3 +236,74 @@ var CookieAttrBindingUndeclaredDSL = func() {
 		})
 	})
 }
+
+var CookieAttrBindingErrorDSL = func() {
+	var SessionInvalid = Type("SessionInvalid", func() {
+		ErrorName("name")
+		Attribute("name", String)
+		Attribute("reason", String)
+		Attribute("retryAfter", Int)
+		Required("name", "reason", "retryAfter")
+	})
+	Service("CookieSvc", func() {
+		Method("Method", func() {
+			Error("session_invalid", SessionInvalid)
+			HTTP(func() {
+				GET("/")
+				Response("session_invalid", StatusUnauthorized, func() {
+					Cookie("reason")
+					CookieAttributes("reason", func() {
+						MaxAgeFrom("retryAfter")
+					})
+				})
+			})
+		})
+	})
+}
+
+var CookieAttrBindingErrorMissingAttrDSL = func() {
+	var SessionInvalid = Type("SessionInvalid", func() {
+		ErrorName("name")
+		Attribute("name", String)
+		Attribute("reason", String)
+		Required("name", "reason")
+	})
+	Service("CookieSvc", func() {
+		Method("Method", func() {
+			Error("session_invalid", SessionInvalid)
+			HTTP(func() {
+				GET("/")
+				Response("session_invalid", StatusUnauthorized, func() {
+					Cookie("reason")
+					CookieAttributes("reason", func() {
+						MaxAgeFrom("doesNotExist")
+					})
+				})
+			})
+		})
+	})
+}
+
+var CookieAttrBindingErrorWrongTypeDSL = func() {
+	var SessionInvalid = Type("SessionInvalid", func() {
+		ErrorName("name")
+		Attribute("name", String)
+		Attribute("reason", String)
+		Attribute("retryAfter", String)
+		Required("name", "reason", "retryAfter")
+	})
+	Service("CookieSvc", func() {
+		Method("Method", func() {
+			Error("session_invalid", SessionInvalid)
+			HTTP(func() {
+				GET("/")
+				Response("session_invalid", StatusUnauthorized, func() {
+					Cookie("reason")
+					CookieAttributes("reason", func() {
+						MaxAgeFrom("retryAfter")
+					})
+				})
+			})
+		})
+	})
+}

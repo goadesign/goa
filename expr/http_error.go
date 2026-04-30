@@ -52,6 +52,20 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 		ee = Root.Error(e.Name)
 	}
 
+	// validate cookie attribute bindings against the error type
+	if e.Response.Cookies != nil && !e.Response.Cookies.IsEmpty() && ee != nil && IsObject(ee.Type) {
+		errAttributeType := func(name string) DataType {
+			att := ee.Find(name)
+			if att == nil {
+				return nil
+			}
+			return att.Type
+		}
+		for _, c := range *AsObject(e.Response.Cookies.Type) {
+			verr.Merge(validateCookieAttrBindings(e.Response, c.Name, c.Attribute, errAttributeType, "error type", ""))
+		}
+	}
+
 	// validate headers
 	if e.Response.Headers != nil && !e.Response.Headers.IsEmpty() {
 		verr.Merge(e.Response.Headers.Validate("HTTP error response headers", e.Response))

@@ -91,6 +91,7 @@ func TestEncode(t *testing.T) {
 		{"cookie-attr-bindings", testdata.ResultCookieAttrBindingsDSL},
 		{"cookie-attr-bindings-optional", testdata.ResultCookieAttrBindingsOptionalDSL},
 		{"cookie-attr-bindings-mixed", testdata.ResultCookieAttrBindingsMixedDSL},
+		{"cookie-attr-bindings-error", testdata.ResultCookieAttrBindingsErrorDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

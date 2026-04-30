@@ -99,13 +99,15 @@ func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 		if e.Result != nil || len(e.Errors) > 0 {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "response-decoder",
-				Source: httpTemplates.Read(responseDecoderT, singleResponseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP),
+				Source: httpTemplates.Read(responseDecoderT, singleResponseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP, cookieAttrBindingsP),
 				Data:   e,
 				FuncMap: map[string]any{
 					"goTypeRef": func(dt expr.DataType) string {
 						return services.ServicesData.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 					},
-					"buildResponseData": buildResponseData,
+					"buildResponseData":  buildResponseData,
+					"hasCookieBindings":  hasCookieBindings,
+					"cookieBindingsArgs": cookieBindingsArgs,
 				},
 			})
 		}
@@ -270,6 +272,29 @@ func buildResponseData(data *ResponseData, serviceName string, method *service.M
 		"Data":        data,
 		"ServiceName": serviceName,
 		"Method":      method,
+	}
+}
+
+// hasCookieBindings reports whether any cookie in the slice carries a
+// CookieAttributes binding that the response decoder must copy back into the
+// constructed result or error.
+func hasCookieBindings(cookies []*CookieData) bool {
+	for _, c := range cookies {
+		if c.MaxAgeFrom != nil || c.DomainFrom != nil || c.PathFrom != nil ||
+			c.SecureFrom != nil || c.HTTPOnlyFrom != nil || c.SameSiteFrom != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// cookieBindingsArgs builds the data passed to the "cookie_attr_bindings"
+// partial. Target is the local Go variable to assign decoded cookie attributes
+// into (e.g. "p", "res", or an error-result local).
+func cookieBindingsArgs(cookies []*CookieData, target string) map[string]any {
+	return map[string]any{
+		"Cookies": cookies,
+		"Target":  target,
 	}
 }
 

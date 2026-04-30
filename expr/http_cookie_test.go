@@ -80,6 +80,23 @@ func TestHTTPResponseCookieAttrBindings(t *testing.T) {
 	}
 }
 
+func TestHTTPErrorCookieAttrBindings(t *testing.T) {
+	root := expr.RunDSL(t, testdata.CookieAttrBindingErrorDSL)
+	httpErr := root.API.HTTP.Services[len(root.API.HTTP.Services)-1].HTTPEndpoints[0].HTTPErrors[0]
+	obj := expr.AsObject(httpErr.Response.Cookies.Type)
+	if len(*obj) != 1 {
+		t.Fatalf("got %d cookies, expected 1", len(*obj))
+	}
+	cookie := (*obj)[0].Attribute
+	got, ok := cookie.Meta["cookie:max-age:from"]
+	if !ok {
+		t.Fatalf("cookie metadata %q missing", "cookie:max-age:from")
+	}
+	if len(got) != 1 || got[0] != "retryAfter" {
+		t.Errorf("cookie metadata %q = %v, want [%q]", "cookie:max-age:from", got, "retryAfter")
+	}
+}
+
 func TestHTTPResponseCookieAttrBindingValidation(t *testing.T) {
 	cases := []struct {
 		Name string
@@ -100,6 +117,16 @@ func TestHTTPResponseCookieAttrBindingValidation(t *testing.T) {
 			"undeclared-cookie",
 			testdata.CookieAttrBindingUndeclaredDSL,
 			"CookieAttributes references cookie \"notDeclared\"",
+		},
+		{
+			"error-missing-attr",
+			testdata.CookieAttrBindingErrorMissingAttrDSL,
+			"binds Max-Age to attribute \"doesNotExist\" which has no equivalent attribute in error type",
+		},
+		{
+			"error-wrong-type",
+			testdata.CookieAttrBindingErrorWrongTypeDSL,
+			"binds Max-Age to attribute \"retryAfter\" but it must be an integer",
 		},
 	}
 	for _, c := range cases {

@@ -229,7 +229,7 @@ func (r *HTTPResponseExpr) Validate(e *HTTPEndpointExpr) *eval.ValidationErrors 
 				if !IsPrimitive(t) {
 					verr.Add(e, "attribute %q used in HTTP cookies must be a primitive type.", c.Name)
 				}
-				verr.Merge(validateCookieAttrBindings(r, c.Name, c.Attribute, resultAttributeType, inview))
+				verr.Merge(validateCookieAttrBindings(r, c.Name, c.Attribute, resultAttributeType, "result type", inview))
 			}
 		default:
 			if len(*AsObject(r.Cookies.Type)) > 1 {
@@ -395,9 +395,10 @@ func (r *HTTPResponseExpr) mapUnmappedAttrs(svcAtt *AttributeExpr) {
 // validateCookieAttrBindings validates the per-cookie attribute bindings
 // (Max-Age, Domain, Path, Secure, HttpOnly, SameSite) recorded as
 // "cookie:<kind>:from" metadata on the cookie attribute. It checks that each
-// referenced result attribute exists and is of the kind expected by the bound
-// cookie property.
-func validateCookieAttrBindings(r *HTTPResponseExpr, cookieName string, cookieAttr *AttributeExpr, resultAttributeType func(string) DataType, inview string) *eval.ValidationErrors {
+// referenced attribute exists in the surrounding result or error type and is
+// of the kind expected by the bound cookie property. typeNoun is the noun used
+// in diagnostic messages ("result type" or "error type").
+func validateCookieAttrBindings(r eval.Expression, cookieName string, cookieAttr *AttributeExpr, attributeType func(string) DataType, typeNoun, inview string) *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
 	if cookieAttr == nil || len(cookieAttr.Meta) == 0 {
 		return verr
@@ -434,9 +435,9 @@ func validateCookieAttrBindings(r *HTTPResponseExpr, cookieName string, cookieAt
 			continue
 		}
 		attrName := v[0]
-		t := resultAttributeType(attrName)
+		t := attributeType(attrName)
 		if t == nil {
-			verr.Add(r, "cookie %q binds %s to attribute %q which has no equivalent attribute in%s result type", cookieName, b.kind, attrName, inview)
+			verr.Add(r, "cookie %q binds %s to attribute %q which has no equivalent attribute in%s %s", cookieName, b.kind, attrName, inview, typeNoun)
 			continue
 		}
 		if !b.ok(t) {

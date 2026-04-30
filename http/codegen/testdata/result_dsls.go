@@ -1721,3 +1721,29 @@ var ResultCookieAttrBindingsMixedDSL = func() {
 		})
 	})
 }
+
+var ResultCookieAttrBindingsErrorDSL = func() {
+	var SessionInvalid = Type("SessionInvalid", func() {
+		ErrorName("name")
+		Attribute("name", String)
+		Attribute("reason", String)
+		Attribute("retryAfter", Int)
+		Attribute("loginPath", String)
+		Required("name", "reason", "retryAfter", "loginPath")
+	})
+	Service("ServiceCookieAttrBindingsError", func() {
+		Method("MethodCookieAttrBindingsError", func() {
+			Error("session_invalid", SessionInvalid)
+			HTTP(func() {
+				GET("/")
+				Response("session_invalid", StatusUnauthorized, func() {
+					Cookie("reason:Reason", String)
+					CookieAttributes("reason", func() {
+						MaxAgeFrom("retryAfter")
+						PathFrom("loginPath")
+					})
+				})
+			})
+		})
+	})
+}
