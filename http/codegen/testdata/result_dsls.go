@@ -1660,12 +1660,12 @@ var ResultCookieAttrBindingsDSL = func() {
 				Response(StatusOK, func() {
 					Cookie("sessionID:SID", String)
 					CookieAttributes("sessionID", func() {
-						MaxAgeFrom("expiresIn")
-						DomainFrom("cookieDomain")
-						PathFrom("cookiePath")
-						SecureFrom("isSecure")
-						HTTPOnlyFrom("isHTTPOnly")
-						SameSiteFrom("sameSite")
+						MaxAge("expiresIn")
+						Domain("cookieDomain")
+						Path("cookiePath")
+						Secure("isSecure")
+						HTTPOnly("isHTTPOnly")
+						SameSite("sameSite")
 					})
 				})
 			})
@@ -1687,8 +1687,8 @@ var ResultCookieAttrBindingsOptionalDSL = func() {
 				Response(StatusOK, func() {
 					Cookie("sessionID:SID", String)
 					CookieAttributes("sessionID", func() {
-						MaxAgeFrom("expiresIn")
-						DomainFrom("cookieDomain")
+						MaxAge("expiresIn")
+						Domain("cookieDomain")
 					})
 				})
 			})
@@ -1714,12 +1714,12 @@ var ResultCookieAttrBindingsOptionalAllDSL = func() {
 				Response(StatusOK, func() {
 					Cookie("sessionID:SID", String)
 					CookieAttributes("sessionID", func() {
-						MaxAgeFrom("expiresIn")
-						DomainFrom("cookieDomain")
-						PathFrom("cookiePath")
-						SecureFrom("isSecure")
-						HTTPOnlyFrom("isHTTPOnly")
-						SameSiteFrom("sameSite")
+						MaxAge("expiresIn")
+						Domain("cookieDomain")
+						Path("cookiePath")
+						Secure("isSecure")
+						HTTPOnly("isHTTPOnly")
+						SameSite("sameSite")
 					})
 				})
 			})
@@ -1742,7 +1742,7 @@ var ResultCookieAttrBindingsMixedDSL = func() {
 					Cookie("a:A", String)
 					Cookie("b:B", String)
 					CookieAttributes("a", func() {
-						MaxAgeFrom("expiresIn")
+						MaxAge("expiresIn")
 					})
 					CookieMaxAge(3600)
 					CookieDomain("goa.design")
@@ -1768,7 +1768,7 @@ var ResultCookieAttrBindingsBodyDSL = func() {
 				Response(StatusOK, func() {
 					Cookie("sessionID:SID", String)
 					CookieAttributes("sessionID", func() {
-						MaxAgeFrom("expiresIn")
+						MaxAge("expiresIn")
 					})
 				})
 			})
@@ -1793,8 +1793,8 @@ var ResultCookieAttrBindingsErrorDSL = func() {
 				Response("session_invalid", StatusUnauthorized, func() {
 					Cookie("reason:Reason", String)
 					CookieAttributes("reason", func() {
-						MaxAgeFrom("retryAfter")
-						PathFrom("loginPath")
+						MaxAge("retryAfter")
+						Path("loginPath")
 					})
 				})
 			})

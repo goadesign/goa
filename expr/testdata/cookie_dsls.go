@@ -163,12 +163,12 @@ var CookieAttrBindingsDSL = func() {
 				Response(StatusOK, func() {
 					Cookie("cookie")
 					CookieAttributes("cookie", func() {
-						MaxAgeFrom("expiresIn")
-						DomainFrom("cookieDomain")
-						PathFrom("cookiePath")
-						SecureFrom("isSecure")
-						HTTPOnlyFrom("isHTTPOnly")
-						SameSiteFrom("sameSite")
+						MaxAge("expiresIn")
+						Domain("cookieDomain")
+						Path("cookiePath")
+						Secure("isSecure")
+						HTTPOnly("isHTTPOnly")
+						SameSite("sameSite")
 					})
 				})
 			})
@@ -188,7 +188,7 @@ var CookieAttrBindingMissingAttrDSL = func() {
 				Response(StatusOK, func() {
 					Cookie("cookie")
 					CookieAttributes("cookie", func() {
-						MaxAgeFrom("doesNotExist")
+						MaxAge("doesNotExist")
 					})
 				})
 			})
@@ -209,7 +209,7 @@ var CookieAttrBindingWrongTypeDSL = func() {
 				Response(StatusOK, func() {
 					Cookie("cookie")
 					CookieAttributes("cookie", func() {
-						MaxAgeFrom("expiresIn")
+						MaxAge("expiresIn")
 					})
 				})
 			})
@@ -229,7 +229,7 @@ var CookieAttrBindingUndeclaredDSL = func() {
 				Response(StatusOK, func() {
 					Cookie("cookie")
 					CookieAttributes("notDeclared", func() {
-						MaxAgeFrom("cookie")
+						MaxAge("cookie")
 					})
 				})
 			})
@@ -253,7 +253,7 @@ var CookieAttrBindingErrorDSL = func() {
 				Response("session_invalid", StatusUnauthorized, func() {
 					Cookie("reason")
 					CookieAttributes("reason", func() {
-						MaxAgeFrom("retryAfter")
+						MaxAge("retryAfter")
 					})
 				})
 			})
@@ -276,7 +276,7 @@ var CookieAttrBindingErrorMissingAttrDSL = func() {
 				Response("session_invalid", StatusUnauthorized, func() {
 					Cookie("reason")
 					CookieAttributes("reason", func() {
-						MaxAgeFrom("doesNotExist")
+						MaxAge("doesNotExist")
 					})
 				})
 			})
@@ -300,7 +300,7 @@ var CookieAttrBindingErrorWrongTypeDSL = func() {
 				Response("session_invalid", StatusUnauthorized, func() {
 					Cookie("reason")
 					CookieAttributes("reason", func() {
-						MaxAgeFrom("retryAfter")
+						MaxAge("retryAfter")
 					})
 				})
 			})

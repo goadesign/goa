@@ -89,7 +89,7 @@ func TestCookieSameSiteConstantsAreLowercase(t *testing.T) {
 	}
 	for got, want := range cases {
 		if string(got) != want {
-			t.Errorf("CookieSameSite constant = %q, want %q (the SameSiteFrom binding contract and the http codegen partials key on these exact lower-case values)", string(got), want)
+			t.Errorf("CookieSameSite constant = %q, want %q (the SameSite binding contract and the http codegen partials key on these exact lower-case values)", string(got), want)
 		}
 	}
 }

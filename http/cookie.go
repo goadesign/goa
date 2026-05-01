@@ -44,7 +44,7 @@ func CookieBoolAttr(v bool) *bool {
 // canonical "default" sentinel that net/http produces for cookies without a
 // SameSite attribute (or with the literal SameSite=Default token). The HTTP
 // transport calls this from generated client decoders for pointer-bound
-// SameSiteFrom bindings.
+// SameSite bindings.
 func CookieSameSiteAttr(v string) *string {
 	if v == "" || v == "default" {
 		return nil
