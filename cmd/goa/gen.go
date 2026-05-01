@@ -30,6 +30,9 @@ type Generator struct {
 	// Output is the absolute path to the output directory.
 	Output string
 
+	// ServiceOutput is the absolute path to the example service output directory.
+	ServiceOutput string
+
 	// DesignVersion is the major component of the Goa version used by the design DSL.
 	// DesignVersion is either 2 or 3.
 	DesignVersion int
@@ -45,7 +48,7 @@ type Generator struct {
 }
 
 // NewGenerator creates a Generator.
-func NewGenerator(cmd, path, output string, debug bool) *Generator {
+func NewGenerator(cmd, path, output, serviceOutput string, debug bool) *Generator {
 	bin := "goa"
 	if runtime.GOOS == "windows" {
 		bin += ".exe"
@@ -96,6 +99,7 @@ func NewGenerator(cmd, path, output string, debug bool) *Generator {
 		Command:            cmd,
 		DesignPath:         path,
 		Output:             output,
+		ServiceOutput:      serviceOutput,
 		DesignVersion:      version,
 		hasVendorDirectory: hasVendorDirectory,
 		bin:                bin,
@@ -229,7 +233,7 @@ func (g *Generator) Run(debug bool) ([]string, error) {
 		cmdl = fmt.Sprintf("$ %s%s", rawcmd, cmdl)
 	}
 
-	args := []string{"--version=" + strconv.Itoa(g.DesignVersion), "--output=" + g.Output, "--cmd=" + cmdl, "--debug=" + strconv.FormatBool(debug)}
+	args := []string{"--version=" + strconv.Itoa(g.DesignVersion), "--output=" + g.Output, "--service-output=" + g.ServiceOutput, "--cmd=" + cmdl, "--debug=" + strconv.FormatBool(debug)}
 	cmd := exec.Command(filepath.Join(g.tmpDir, g.bin), args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
@@ -307,16 +311,20 @@ func cleanupDirs(cmd, output string) []string {
 // mainT is the template for the generator main.
 const mainT = `func main() {
 	var (
-		out     = flag.String("output", "", "")
-		version = flag.String("version", "", "")
-		cmdl    = flag.String("cmd", "", "")
-		debug   = flag.Bool("debug", false, "")
+		out          = flag.String("output", "", "")
+		serviceOut   = flag.String("service-output", "", "")
+		version      = flag.String("version", "", "")
+		cmdl         = flag.String("cmd", "", "")
+		debug        = flag.Bool("debug", false, "")
 		ver int
 	)
 	{
 		flag.Parse()
 		if *out == "" {
 			fail("missing output flag")
+		}
+		if *serviceOut == "" {
+			*serviceOut = *out
 		}
 		if *version == "" {
 			fail("missing version flag")
@@ -366,7 +374,7 @@ const mainT = `func main() {
 {{- end }}
 
 	startGenerate := time.Now()
-	outputs, err := generator.Generate(*out, {{ printf "%q" .Command }}, *debug)
+	outputs, err := generator.Generate(*out, {{ printf "%q" .Command }}, *serviceOut, *debug)
 	if err != nil {
 		fail(err.Error())
 	}

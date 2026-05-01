@@ -13,7 +13,7 @@ import (
 
 // Example iterates through the roots and returns files that implement an
 // example service, server, and client.
-func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+func Example(genpkg string, roots []eval.Root, serviceOutput string) ([]*codegen.File, error) {
 	var files []*codegen.File
 	for _, root := range roots {
 		r, ok := root.(*expr.RootExpr)
@@ -25,7 +25,7 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		services := service.NewServicesData(r)
 
 		// example service implementation
-		if fs := service.ExampleServiceFiles(genpkg, r, services); len(fs) != 0 {
+		if fs := service.ExampleServiceFiles(genpkg, r, services, serviceOutput); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 

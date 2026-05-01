@@ -30,6 +30,9 @@ type (
 		SectionTemplates []*SectionTemplate
 		// Path returns the file path relative to the output directory.
 		Path string
+		// OutputDir overrides the base directory used when rendering the file.
+		// When empty, Render uses the directory passed as argument.
+		OutputDir string
 		// SkipExist indicates whether the file should be skipped if one
 		// already exists at the given path.
 		SkipExist bool
@@ -70,7 +73,11 @@ func (f *File) Section(name string) []*SectionTemplate {
 // happens the smallest integer value greater than 1 to make it unique. Renders
 // returns the computed path.
 func (f *File) Render(dir string) (string, error) {
-	base, err := filepath.Abs(dir)
+	baseDir := dir
+	if f.OutputDir != "" {
+		baseDir = f.OutputDir
+	}
+	base, err := filepath.Abs(baseDir)
 	if err != nil {
 		return "", err
 	}

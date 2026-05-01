@@ -41,14 +41,16 @@ func main() {
 	}
 
 	var (
-		output = "."
-		debug  bool
+		output        = "."
+		serviceOutput = ""
+		debug         bool
 	)
 	if len(os.Args) > offset+1 {
 		var (
-			fset = flag.NewFlagSet("default", flag.ExitOnError)
-			o    = fset.String("o", "", "output `directory`")
-			out  = fset.String("output", output, "output `directory`")
+			fset       = flag.NewFlagSet("default", flag.ExitOnError)
+			o          = fset.String("o", "", "output `directory`")
+			out        = fset.String("output", output, "output `directory`")
+			serviceOut = fset.String("service-output", "", "service output `directory`")
 		)
 		fset.BoolVar(&debug, "debug", false, "Print debug information")
 
@@ -62,9 +64,16 @@ func main() {
 		if output == "" {
 			output = *out
 		}
+		serviceOutput = *serviceOut
+		if serviceOutput == "" {
+			serviceOutput = output
+		}
+	}
+	if serviceOutput == "" {
+		serviceOutput = output
 	}
 
-	if err := gen(cmd, path, output, debug); err != nil {
+	if err := gen(cmd, path, output, serviceOutput, debug); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
@@ -76,7 +85,7 @@ var (
 	gen   = generate
 )
 
-func generate(cmd, path, output string, debug bool) error {
+func generate(cmd, path, output, serviceOutput string, debug bool) error {
 	var (
 		files []string
 		err   error
@@ -99,7 +108,7 @@ func generate(cmd, path, output string, debug bool) error {
 	}
 
 	startNewGen = time.Now()
-	tmp = NewGenerator(cmd, path, output, debug)
+	tmp = NewGenerator(cmd, path, output, serviceOutput, debug)
 	if debug {
 		fmt.Fprintf(os.Stderr, "[TIMING] NewGenerator took %v\n", time.Since(startNewGen))
 	}
@@ -146,7 +155,7 @@ Learn more at https://goa.design.
 
 Usage:
   goa gen PACKAGE [--output DIRECTORY] [--debug]
-  goa example PACKAGE [--output DIRECTORY] [--debug]
+  goa example PACKAGE [--output DIRECTORY] [--service-output DIRECTORY] [--debug]
   goa version
 
 Commands:
@@ -164,6 +173,9 @@ Args:
 Flags:
   -o, -output DIRECTORY
         output directory, defaults to the current working directory
+
+  -service-output DIRECTORY
+        service example output directory, defaults to the output directory
 
   -debug
         Print debug information (mainly intended for Goa developers)

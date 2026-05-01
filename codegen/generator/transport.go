@@ -12,7 +12,7 @@ import (
 
 // Transport iterates through the roots and returns the files needed to render
 // the transport code.
-func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+func Transport(genpkg string, roots []eval.Root, _ string) ([]*codegen.File, error) {
 	var files []*codegen.File
 	for _, root := range roots {
 		r, ok := root.(*expr.RootExpr)

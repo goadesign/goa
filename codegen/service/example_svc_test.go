@@ -2,6 +2,8 @@ package service
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,7 +36,7 @@ func TestExampleServiceFiles(t *testing.T) {
 				root := codegen.RunDSL(t, c.DSL)
 				services := NewServicesData(root)
 				require.Len(t, root.Services, 3)
-				fs := ExampleServiceFiles("", root, services)
+				fs := ExampleServiceFiles("", root, services, "")
 				require.Len(t, fs, 3)
 				for _, f := range fs {
 					require.Greater(t, len(f.SectionTemplates), 0)
@@ -47,5 +49,22 @@ func TestExampleServiceFiles(t *testing.T) {
 				}
 			})
 		}
+	})
+
+	t.Run("service output dir", func(t *testing.T) {
+		root := codegen.RunDSL(t, testdata.SingleMethodDSL)
+		services := NewServicesData(root)
+		serviceOutput := filepath.Join(t.TempDir(), "svc")
+		fs := ExampleServiceFiles("", root, services, serviceOutput)
+		require.Len(t, fs, 1)
+		renderDir := t.TempDir()
+		for _, f := range fs {
+			_, err := f.Render(renderDir)
+			require.NoError(t, err)
+		}
+		_, err := os.Stat(filepath.Join(serviceOutput, fs[0].Path))
+		require.NoError(t, err)
+		_, err = os.Stat(filepath.Join(renderDir, fs[0].Path))
+		require.Error(t, err)
 	})
 }

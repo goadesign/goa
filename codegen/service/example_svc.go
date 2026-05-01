@@ -3,6 +3,7 @@ package service
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -35,7 +36,7 @@ type (
 
 // ExampleServiceFiles returns a basic service implementation for every
 // service expression.
-func ExampleServiceFiles(genpkg string, root *expr.RootExpr, services *ServicesData) []*codegen.File {
+func ExampleServiceFiles(genpkg string, root *expr.RootExpr, services *ServicesData, serviceOutput string) []*codegen.File {
 	// determine the unique API package name different from the service names
 	scope := codegen.NewNameScope()
 	for _, svc := range root.Services {
@@ -49,7 +50,7 @@ func ExampleServiceFiles(genpkg string, root *expr.RootExpr, services *ServicesD
 
 	var fw []*codegen.File
 	for _, svc := range root.Services {
-		if f := exampleServiceFile(genpkg, root, svc, services, apipkg); f != nil {
+		if f := exampleServiceFile(genpkg, root, svc, services, apipkg, serviceOutput); f != nil {
 			fw = append(fw, f)
 		}
 	}
@@ -57,10 +58,10 @@ func ExampleServiceFiles(genpkg string, root *expr.RootExpr, services *ServicesD
 }
 
 // exampleServiceFile returns a basic implementation of the given service.
-func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, services *ServicesData, apipkg string) *codegen.File {
+func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, services *ServicesData, apipkg, serviceOutput string) *codegen.File {
 	data := services.Get(svc.Name)
 	svcName := data.PathName
-	fpath := svcName + ".go"
+	fpath := filepath.Join(serviceOutput, svcName+".go")
 	if _, err := os.Stat(fpath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
@@ -106,7 +107,8 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 	}
 
 	return &codegen.File{
-		Path:             fpath,
+		Path:             svcName + ".go",
+		OutputDir:        serviceOutput,
 		SectionTemplates: sections,
 		SkipExist:        true,
 	}

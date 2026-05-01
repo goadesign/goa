@@ -10,7 +10,7 @@ import (
 // Service iterates through the roots and returns the files needed to render
 // the service code. It returns an error if the roots slice does not include
 // a goa design.
-func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+func Service(genpkg string, roots []eval.Root, _ string) ([]*codegen.File, error) {
 	var files []*codegen.File
 	var userTypePkgs = make(map[string][]string)
 	for _, root := range roots {

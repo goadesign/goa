@@ -15,7 +15,7 @@ import (
 )
 
 // Generate runs the code generation algorithms.
-func Generate(dir, cmd string, debug bool) (outputs []string, err1 error) {
+func Generate(dir, cmd, serviceOutput string, debug bool) (outputs []string, err1 error) {
 	startGenerate := time.Now()
 	if debug {
 		fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Starting generator.Generate()\n")
@@ -119,7 +119,7 @@ func Generate(dir, cmd string, debug bool) (outputs []string, err1 error) {
 		start := time.Now()
 		for i, gen := range genfuncs {
 			genStart := time.Now()
-			fs, err := gen(genpkg, roots)
+			fs, err := gen(genpkg, roots, serviceOutput)
 			if err != nil {
 				return nil, err
 			}

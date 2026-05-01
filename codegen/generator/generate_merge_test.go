@@ -25,7 +25,7 @@ func TestGenerateMergesSamePathFiles(t *testing.T) {
 	// second write would overwrite the first.
 	Generators = func(cmd string) ([]Genfunc, error) {
 		return []Genfunc{
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			func(genpkg string, roots []eval.Root, _ string) ([]*codegen.File, error) {
 				f := &codegen.File{Path: filepath.Join(codegen.Gendir, "types", "merge_test.go")}
 				f.SectionTemplates = []*codegen.SectionTemplate{
 					codegen.Header("User types", "types", nil),
@@ -36,7 +36,7 @@ func TestGenerateMergesSamePathFiles(t *testing.T) {
 				}
 				return []*codegen.File{f}, nil
 			},
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			func(genpkg string, roots []eval.Root, _ string) ([]*codegen.File, error) {
 				f := &codegen.File{Path: filepath.Join(codegen.Gendir, "types", "merge_test.go")}
 				f.SectionTemplates = []*codegen.SectionTemplate{
 					codegen.Header("User types", "types", nil),
@@ -51,7 +51,7 @@ func TestGenerateMergesSamePathFiles(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	_, err := Generate(dir, "gen", false)
+	_, err := Generate(dir, "gen", dir, false)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
@@ -83,7 +83,7 @@ func TestGenerateParallelManyFiles(t *testing.T) {
 	const numFiles = 20
 	Generators = func(cmd string) ([]Genfunc, error) {
 		return []Genfunc{
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			func(genpkg string, roots []eval.Root, _ string) ([]*codegen.File, error) {
 				files := make([]*codegen.File, numFiles)
 				for i := 0; i < numFiles; i++ {
 					f := &codegen.File{
@@ -104,7 +104,7 @@ func TestGenerateParallelManyFiles(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	outputs, err := Generate(dir, "gen", false)
+	outputs, err := Generate(dir, "gen", dir, false)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
@@ -140,7 +140,7 @@ func TestGenerateParallelWithMerge(t *testing.T) {
 	// This exercises both merging and parallel writing with NumCPU workers.
 	Generators = func(cmd string) ([]Genfunc, error) {
 		return []Genfunc{
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			func(genpkg string, roots []eval.Root, _ string) ([]*codegen.File, error) {
 				f1 := &codegen.File{Path: filepath.Join(codegen.Gendir, "types", "merged.go")}
 				f1.SectionTemplates = []*codegen.SectionTemplate{
 					codegen.Header("Types", "types", nil),
@@ -148,7 +148,7 @@ func TestGenerateParallelWithMerge(t *testing.T) {
 				}
 				return []*codegen.File{f1}, nil
 			},
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			func(genpkg string, roots []eval.Root, _ string) ([]*codegen.File, error) {
 				f2 := &codegen.File{Path: filepath.Join(codegen.Gendir, "types", "merged.go")}
 				f2.SectionTemplates = []*codegen.SectionTemplate{
 					codegen.Header("Types", "types", nil),
@@ -156,7 +156,7 @@ func TestGenerateParallelWithMerge(t *testing.T) {
 				}
 				return []*codegen.File{f2}, nil
 			},
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			func(genpkg string, roots []eval.Root, _ string) ([]*codegen.File, error) {
 				f3 := &codegen.File{Path: filepath.Join(codegen.Gendir, "types", "separate.go")}
 				f3.SectionTemplates = []*codegen.SectionTemplate{
 					codegen.Header("Types", "types", nil),
@@ -168,7 +168,7 @@ func TestGenerateParallelWithMerge(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	outputs, err := Generate(dir, "gen", false)
+	outputs, err := Generate(dir, "gen", dir, false)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
@@ -214,7 +214,7 @@ func TestGenerateParallelErrorHandling(t *testing.T) {
 	// Worker pool should capture first error but continue processing other files.
 	Generators = func(cmd string) ([]Genfunc, error) {
 		return []Genfunc{
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			func(genpkg string, roots []eval.Root, _ string) ([]*codegen.File, error) {
 				files := make([]*codegen.File, 5)
 				for i := 0; i < 5; i++ {
 					f := &codegen.File{
@@ -239,7 +239,7 @@ func TestGenerateParallelErrorHandling(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	_, err := Generate(dir, "gen", false)
+	_, err := Generate(dir, "gen", dir, false)
 	if err == nil {
 		t.Fatal("expected error from parallel generation, got nil")
 	}
@@ -256,7 +256,7 @@ func TestGenerateParallelSingleFile(t *testing.T) {
 
 	Generators = func(cmd string) ([]Genfunc, error) {
 		return []Genfunc{
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			func(genpkg string, roots []eval.Root, _ string) ([]*codegen.File, error) {
 				f := &codegen.File{Path: filepath.Join(codegen.Gendir, "types", "single.go")}
 				f.SectionTemplates = []*codegen.SectionTemplate{
 					codegen.Header("Types", "types", nil),
@@ -268,7 +268,7 @@ func TestGenerateParallelSingleFile(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	outputs, err := Generate(dir, "gen", false)
+	outputs, err := Generate(dir, "gen", dir, false)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
