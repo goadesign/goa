@@ -774,6 +774,8 @@ func (e *HTTPEndpointExpr) Finalize() {
 					continue
 				case APIKeyKind:
 					field = TaggedAttribute(e.MethodExpr.Payload, "security:apikey:"+sch.SchemeName)
+				case BearerKind:
+					field = TaggedAttribute(e.MethodExpr.Payload, "security:bearer")
 				case JWTKind:
 					field = TaggedAttribute(e.MethodExpr.Payload, "security:token")
 				case OAuth2Kind:

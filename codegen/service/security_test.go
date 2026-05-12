@@ -45,6 +45,7 @@ func TestSecureEndpoint(t *testing.T) {
 		{"with-required-scopes", testdata.EndpointWithRequiredScopesDSL, testdata.EndpointWithRequiredScopesCode},
 		{"with-optional-required-scopes", testdata.EndpointWithOptionalRequiredScopesDSL, testdata.EndpointWithOptionalRequiredScopesCode},
 		{"with-api-key-override", testdata.EndpointWithAPIKeyOverrideDSL, testdata.EndpointWithAPIKeyOverrideCode},
+		{"with-bearer", testdata.EndpointWithBearerDSL, testdata.EndpointWithBearerCode},
 		{"with-oauth2", testdata.EndpointWithOAuth2DSL, testdata.EndpointWithOAuth2Code},
 	}
 	for _, c := range cases {

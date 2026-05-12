@@ -175,6 +175,7 @@ func TestSchemeExprEvalName(t *testing.T) {
 		"OAuth2Kind":    {kind: OAuth2Kind, expected: "OAuth2Security"},
 		"BasicAuthKind": {kind: BasicAuthKind, expected: "BasicAuthSecurity"},
 		"APIKeyKind":    {kind: APIKeyKind, expected: "APIKeySecurity"},
+		"BearerKind":    {kind: BearerKind, expected: "BearerSecurity"},
 		"JWTKind":       {kind: JWTKind, expected: "JWTSecurity"},
 		"NoKind":        {kind: NoKind, expected: "This case is panic"},
 	}
@@ -200,6 +201,26 @@ func TestSchemeExprEvalName(t *testing.T) {
 	}
 }
 
+func TestSchemeKindStableValues(t *testing.T) {
+	cases := map[string]struct {
+		kind     SchemeKind
+		expected int
+	}{
+		"OAuth2Kind":    {kind: OAuth2Kind, expected: 1},
+		"BasicAuthKind": {kind: BasicAuthKind, expected: 2},
+		"APIKeyKind":    {kind: APIKeyKind, expected: 3},
+		"JWTKind":       {kind: JWTKind, expected: 4},
+		"NoKind":        {kind: NoKind, expected: 5},
+		"BearerKind":    {kind: BearerKind, expected: 6},
+	}
+
+	for k, tc := range cases {
+		if actual := int(tc.kind); actual != tc.expected {
+			t.Errorf("%s: got %#v, expected %#v", k, actual, tc.expected)
+		}
+	}
+}
+
 func TestSchemeExprType(t *testing.T) {
 	cases := map[string]struct {
 		kind     SchemeKind
@@ -216,6 +237,10 @@ func TestSchemeExprType(t *testing.T) {
 		"api key": {
 			kind:     APIKeyKind,
 			expected: "APIKey",
+		},
+		"bearer": {
+			kind:     BearerKind,
+			expected: "Bearer",
 		},
 		"jwt": {
 			kind:     JWTKind,
@@ -361,6 +386,10 @@ func TestSchemeKindString(t *testing.T) {
 		"api key": {
 			kind:     APIKeyKind,
 			expected: "APIKey",
+		},
+		"bearer": {
+			kind:     BearerKind,
+			expected: "Bearer",
 		},
 		"jwt": {
 			kind:     JWTKind,

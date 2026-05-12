@@ -1922,6 +1922,23 @@ var PayloadJWTAuthorizationHeaderDSL = func() {
 	})
 }
 
+var PayloadBearerAuthorizationHeaderDSL = func() {
+	var Bearer = BearerSecurity("bearer", func() {
+		Scope("api:read")
+	})
+	Service("ServiceHeaderPrimitiveStringDefault", func() {
+		Method("MethodHeaderPrimitiveStringDefault", func() {
+			Security(Bearer)
+			Payload(func() {
+				BearerToken("token", String)
+			})
+			HTTP(func() {
+				GET("")
+			})
+		})
+	})
+}
+
 var PayloadJWTAuthorizationCustomHeaderDSL = func() {
 	var JWT = JWTSecurity("jwt", func() {
 		Scope("api:read")

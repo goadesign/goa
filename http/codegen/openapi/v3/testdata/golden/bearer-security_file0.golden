@@ -1,0 +1,73 @@
+{
+  "components": {
+    "securitySchemes": {
+      "bearer_header_Authorization": {
+        "description": "Opaque session token or trusted OIDC access token.",
+        "scheme": "bearer",
+        "type": "http"
+      },
+      "formatted_bearer_header_Authorization": {
+        "bearerFormat": "JWT",
+        "description": "JWT access token.",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/formatted": {
+      "get": {
+        "operationId": "testService#formattedBearer",
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        },
+        "security": [
+          {
+            "formatted_bearer_header_Authorization": []
+          }
+        ],
+        "summary": "formattedBearer testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    },
+    "/plain": {
+      "get": {
+        "operationId": "testService#plainBearer",
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        },
+        "security": [
+          {
+            "bearer_header_Authorization": []
+          }
+        ],
+        "summary": "plainBearer testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "testService"
+    }
+  ]
+}

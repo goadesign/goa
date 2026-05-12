@@ -443,6 +443,43 @@ var SecurityDSL = func() {
 	})
 }
 
+var BearerSecurityDSL = func() {
+	var BearerAuth = BearerSecurity("bearer", func() {
+		Description("Opaque session token or trusted OIDC access token.")
+		Scope("api:read", "Read-only access")
+	})
+
+	var FormattedBearerAuth = BearerSecurity("formatted_bearer", func() {
+		Description("JWT access token.")
+		BearerFormat("JWT")
+	})
+
+	Service("testService", func() {
+		Method("plainBearer", func() {
+			Security(BearerAuth, func() {
+				Scope("api:read")
+			})
+			Payload(func() {
+				BearerToken("token", String)
+				Required("token")
+			})
+			HTTP(func() {
+				GET("/plain")
+			})
+		})
+		Method("formattedBearer", func() {
+			Security(FormattedBearerAuth)
+			Payload(func() {
+				BearerToken("token", String)
+				Required("token")
+			})
+			HTTP(func() {
+				GET("/formatted")
+			})
+		})
+	})
+}
+
 var ServerHostWithVariablesDSL = func() {
 	var _ = API("test", func() {
 		Server("test", func() {

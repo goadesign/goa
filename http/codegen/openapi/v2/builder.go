@@ -160,10 +160,10 @@ func securitySpecFromExpr(root *expr.RootExpr) map[string]*SecurityDefinition {
 						sd.In = s.In
 						sd.Name = s.Name
 						addScopeDescription(s.Scopes, &sd)
-					case expr.JWTKind:
+					case expr.BearerKind, expr.JWTKind:
 						sd.Type = "apiKey"
-						// OpenAPI V2 spec does not support JWT scheme. Hence we add the scheme
-						// information to the description.
+						// OpenAPI V2 spec does not support HTTP bearer schemes. Hence
+						// we add the scheme information to the description.
 						addScopeDescription(s.Scopes, &sd)
 						sd.In = s.In
 						sd.Name = s.Name
@@ -592,7 +592,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 					if len(req.Scopes) > 0 {
 						requirement[s.Hash()] = req.Scopes
 					}
-				case expr.BasicAuthKind, expr.APIKeyKind, expr.JWTKind:
+				case expr.BasicAuthKind, expr.APIKeyKind, expr.BearerKind, expr.JWTKind:
 					lines := make([]string, 0, len(req.Scopes))
 					for _, scope := range req.Scopes {
 						lines = append(lines, fmt.Sprintf("  * `%s`", scope))

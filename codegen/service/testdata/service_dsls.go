@@ -1100,6 +1100,26 @@ var MixedAndMultipleAPIKeySecurityDSL = func() {
 	})
 }
 
+var BearerSecurityDSL = func() {
+	var BearerAuth = BearerSecurity("bearer", func() {
+		Scope("api:read", "Read access to API")
+	})
+
+	Service("BearerSecurity", func() {
+		Method("A", func() {
+			Security(BearerAuth, func() {
+				Scope("api:read")
+			})
+			Payload(func() {
+				BearerToken("token", String)
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
+
 // RawObjectPayloadTypeNameCollisionDSL exercises the naming of synthetic user
 // types created when wrapping raw object payloads.
 //

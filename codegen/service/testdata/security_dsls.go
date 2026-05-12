@@ -22,6 +22,12 @@ var APIKeyAuth = APIKeySecurity("api_key", func() {
 	Scope("api:admin", "Admin access")
 })
 
+var BearerAuth = BearerSecurity("bearer", func() {
+	Scope("api:read", "Read-only access")
+	Scope("api:write", "Read and write access")
+	Scope("api:admin", "Admin access")
+})
+
 var OAuth2AuthorizationCode = OAuth2Security("authCode", func() {
 	AuthorizationCodeFlow("/authorization", "/token", "/refresh")
 	Scope("api:write", "Write acess")
@@ -142,6 +148,22 @@ var EndpointWithAPIKeyOverrideDSL = func() {
 			Security(APIKeyAuth)
 			Payload(func() {
 				APIKey("api_key", "key", String)
+			})
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var EndpointWithBearerDSL = func() {
+	Service("EndpointWithBearer", func() {
+		Method("SecureWithBearer", func() {
+			Security(BearerAuth, func() {
+				Scope("api:read")
+			})
+			Payload(func() {
+				BearerToken("token", String)
 			})
 			HTTP(func() {
 				GET("/")

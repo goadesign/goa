@@ -65,9 +65,9 @@ func UnionToObject(att *AttributeExpr) *AttributeExpr {
 // defaultRequestHeaderAttributes returns a map keyed by the names of the
 // payload attributes that should come from the request HTTP headers by default.
 // This includes mapping done for certain authorization schemes (basic auth,
-// JWT, OAuth). The corresponding boolean value indicates whether the value maps
-// directly to a payload attribute (true) or whether the value is used to
-// compute the payload attribute (false). The only case where the value is
+// Bearer, JWT, OAuth). The corresponding boolean value indicates whether the
+// value maps directly to a payload attribute (true) or whether the value is used
+// to compute the payload attribute (false). The only case where the value is
 // computed by the generated code at this point is for basic authorization (the
 // single "Authorization" header is used to compute both the username and
 // password attributes).
@@ -106,6 +106,8 @@ func defaultRequestHeaderAttributes(e *HTTPEndpointExpr) map[string]bool {
 				continue
 			case APIKeyKind:
 				field = TaggedAttribute(e.MethodExpr.Payload, "security:apikey:"+sch.SchemeName)
+			case BearerKind:
+				field = TaggedAttribute(e.MethodExpr.Payload, "security:bearer")
 			case JWTKind:
 				field = TaggedAttribute(e.MethodExpr.Payload, "security:token")
 			case OAuth2Kind:

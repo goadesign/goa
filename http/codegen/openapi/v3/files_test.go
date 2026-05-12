@@ -35,6 +35,7 @@ func TestFiles(t *testing.T) {
 		{"multiple-views", testdata.MultipleViewsDSL},
 		{"explicit-view", testdata.ExplicitViewDSL},
 		{"security", testdata.SecurityDSL},
+		{"bearer-security", testdata.BearerSecurityDSL},
 		{"server-host-with-variables", testdata.ServerHostWithVariablesDSL},
 		{"with-spaces", testdata.WithSpacesDSL},
 		{"with-map", testdata.WithMapDSL},

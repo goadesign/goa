@@ -126,11 +126,86 @@ func OAuth2Security(name string, fn ...func()) *expr.SchemeExpr {
 	return e
 }
 
+// BearerSecurity defines an HTTP Bearer security scheme where a token is passed
+// in the request Authorization header using the "Bearer" authentication scheme.
+// It models the standard OpenAPI v3 HTTP bearer scheme:
+//
+//	type: http
+//	scheme: bearer
+//
+// Use BearerSecurity when the token format is generic, opaque, or otherwise
+// not part of the Goa service contract. This includes APIs that accept opaque
+// session tokens, JWT access tokens, or both under the same Bearer header.
+//
+// BearerSecurity is distinct from JWTSecurity. Both schemes use the same
+// default HTTP wire format, "Authorization: Bearer <token>", but they generate
+// different DSL/runtime names. BearerSecurity generates BearerAuth,
+// security.BearerScheme and uses BearerToken payload attributes. JWTSecurity is
+// the JWT-specific variant kept for designs that intentionally want JWT names.
+//
+// This scheme supports defining scopes that an endpoint may require to
+// authorize the request. The scheme also supports specifying a bearer format
+// hint for OpenAPI v3 with BearerFormat. The bearer format is documentation
+// only; Goa still exposes the raw token string to the generated auth function.
+//
+// BearerSecurity is a top level DSL.
+//
+// BearerSecurity takes a name as first argument and an optional DSL as second
+// argument.
+//
+// Example:
+//
+//	var Bearer = BearerSecurity("bearer", func() {
+//	    Description("Opaque session token or trusted OIDC access token.")
+//	    Scope("system:write", "Write to the system")
+//	    Scope("system:read", "Read anything in there")
+//	})
+func BearerSecurity(name string, fn ...func()) *expr.SchemeExpr {
+	if _, ok := eval.Current().(eval.TopExpr); !ok {
+		eval.IncompatibleDSL()
+		return nil
+	}
+
+	if securitySchemeRedefined(name) {
+		return nil
+	}
+
+	e := &expr.SchemeExpr{
+		SchemeName: name,
+		Kind:       expr.BearerKind,
+		In:         "header",
+		Name:       "Authorization",
+	}
+
+	if len(fn) != 0 {
+		if !eval.Execute(fn[0], e) {
+			return nil
+		}
+	}
+
+	expr.Root.Schemes = append(expr.Root.Schemes, e)
+
+	return e
+}
+
 // JWTSecurity defines an HTTP security scheme where a JWT is passed in the
-// request Authorization header as a bearer token to perform auth. This scheme
-// supports defining scopes that endpoint may require to authorize the request.
-// The scheme also supports specifying a token URL used to retrieve token
-// values.
+// request Authorization header as a bearer token to perform auth. Use
+// JWTSecurity when the token is specifically a JWT and the generated DSL and
+// runtime names should say JWT.
+//
+// JWTSecurity is not a different HTTP authentication protocol from
+// BearerSecurity. Both schemes default to "Authorization: Bearer <token>" and
+// both expose the raw token string to the generated auth function. The
+// distinction is semantic and affects generated names: JWTSecurity generates
+// JWTAuth, security.JWTScheme and uses Token payload attributes, while
+// BearerSecurity generates BearerAuth, security.BearerScheme and uses
+// BearerToken payload attributes.
+//
+// This scheme supports defining scopes that an endpoint may require to
+// authorize the request. OpenAPI v3 output uses "JWT" as the default bearer
+// format hint for JWTSecurity. The bearer format is documentation only; Goa
+// does not parse or validate JWT claims. Use BearerFormat to override the
+// OpenAPI v3 hint.
 //
 // Since scopes are not compatible with the Swagger specification, the swagger
 // generator inserts comments in the description of the different elements on
@@ -175,16 +250,36 @@ func JWTSecurity(name string, fn ...func()) *expr.SchemeExpr {
 	return e
 }
 
+// BearerFormat sets the format hint for a bearer token security scheme. The
+// value is emitted as the OpenAPI v3 bearerFormat field. JWTSecurity emits
+// "JWT" by default when the bearer format is empty. The field is an OpenAPI
+// documentation hint only and does not change generated token extraction or
+// validation behavior.
+//
+// BearerFormat must appear in BearerSecurity or JWTSecurity.
+func BearerFormat(format string) {
+	current, ok := eval.Current().(*expr.SchemeExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	if current.Kind != expr.BearerKind && current.Kind != expr.JWTKind {
+		eval.ReportError("cannot specify bearer format for non-bearer security scheme.")
+		return
+	}
+	current.BearerFormat = format
+}
+
 // Security defines authentication requirements to access an entire API, service
 // or individual service method.
 //
 // The requirement refers to one or more OAuth2Security, BasicAuthSecurity,
-// APIKeySecurity or JWTSecurity security scheme. If the schemes include a
-// OAuth2Security or JWTSecurity scheme then required scopes may be listed by
-// name in the Security DSL. All the listed schemes must be validated by the
-// client for the request to be authorized. Security may appear multiple times
-// in the same scope in which case the client may validate any one of the
-// requirements for the request to be authorized.
+// APIKeySecurity, BearerSecurity or JWTSecurity security scheme. If the schemes
+// include a BearerSecurity, OAuth2Security or JWTSecurity scheme then required
+// scopes may be listed by name in the Security DSL. All the listed schemes must
+// be validated by the client for the request to be authorized. Security may
+// appear multiple times in the same scope in which case the client may validate
+// any one of the requirements for the request to be authorized.
 //
 // Security must appear in an API, Service or Method expression.
 //
@@ -464,9 +559,48 @@ func AccessTokenField(tag any, name string, args ...any) {
 	Field(tag, name, args...)
 }
 
-// Token defines the attribute used to provide the JWT to an endpoint secured
-// via JWT. The parameters and usage of Token are the same as the goa DSL
-// Attribute function.
+// BearerToken defines the attribute used to provide the raw token to an
+// endpoint secured via BearerSecurity. The parameters and usage of BearerToken
+// are the same as the goa DSL Attribute function.
+//
+// The generated code produced by goa uses the value of the corresponding
+// payload field to initialize the Authorization header.
+//
+// Example:
+//
+//	Method("secured", func() {
+//	    Security(Bearer)
+//	    Payload(func() {
+//	        BearerToken("token", String, "Bearer token used to perform authorization")
+//	        Required("token")
+//	    })
+//	    Result(String)
+//	    HTTP(func() {
+//	        // The "Authorization" header is defined implicitly.
+//	        GET("/")
+//	    })
+//	})
+func BearerToken(name string, args ...any) {
+	args = useDSL(args, func() { Meta("security:bearer") })
+	Attribute(name, args...)
+}
+
+// BearerTokenField is syntactic sugar to define a bearer token attribute with
+// the "rpc:tag" meta set with the value of the first argument.
+//
+// BearerTokenField takes the same arguments as BearerToken with the addition of
+// the tag value as the first argument.
+func BearerTokenField(tag any, name string, args ...any) {
+	args = useDSL(args, func() { Meta("security:bearer") })
+	Field(tag, name, args...)
+}
+
+// Token defines the attribute used to provide the raw JWT bearer token to an
+// endpoint secured via JWTSecurity. The parameters and usage of Token are the
+// same as the goa DSL Attribute function.
+//
+// Use BearerToken instead when the endpoint is secured via BearerSecurity and
+// the generated names should not be JWT-specific.
 //
 // The generated code produced by goa uses the value of the corresponding
 // payload field to initialize the Authorization header.
@@ -500,14 +634,17 @@ func TokenField(tag any, name string, args ...any) {
 	Field(tag, name, args...)
 }
 
-// Scope has two uses: in JWTSecurity or OAuth2Security it defines a scope
-// supported by the scheme. In Security it lists required scopes.
+// Scope has two uses: in BearerSecurity, JWTSecurity or OAuth2Security it
+// defines a scope supported by the scheme. In Security it lists required scopes.
+// Scopes on BearerSecurity and JWTSecurity are Goa authorization metadata passed
+// to the generated auth function; they are not OpenAPI OAuth2 scopes.
 //
-// Scope must appear in Security, BasicSecurity, APIKeySecurity, JWTSecurity or OAuth2Security.
+// Scope must appear in Security, BasicSecurity, APIKeySecurity,
+// BearerSecurity, JWTSecurity or OAuth2Security.
 //
 // Scope accepts one or two arguments: the first argument is the scope name and
-// when used in JWTSecurity or OAuth2Security the second argument is a
-// description.
+// when used in BearerSecurity, JWTSecurity or OAuth2Security the second
+// argument is a description.
 //
 // Example:
 //

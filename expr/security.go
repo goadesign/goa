@@ -17,11 +17,13 @@ const (
 	BasicAuthKind
 	// APIKeyKind means "apiKey" security scheme.
 	APIKeyKind
-	// JWTKind means an "JWT" security scheme, with support for
-	// TokenPath and Scopes.
+	// JWTKind means a "JWT" security scheme with support for scopes.
 	JWTKind
 	// NoKind means to have no security for this endpoint.
 	NoKind
+	// BearerKind means an HTTP "bearer" security scheme with support for
+	// scopes.
+	BearerKind
 )
 
 // FlowKind is a type of OAuth2 flow.
@@ -72,7 +74,10 @@ type (
 		// Name refers to a header or parameter name, based on In's
 		// value.
 		Name string
-		// Scopes lists the Basic, APIKey, JWT or OAuth2 scopes.
+		// BearerFormat is a hint to identify how the bearer token is
+		// formatted. It is emitted in OpenAPI v3 bearerFormat when set.
+		BearerFormat string
+		// Scopes lists the Basic, APIKey, Bearer, JWT or OAuth2 scopes.
 		Scopes []*ScopeExpr
 		// Flows determine the oauth2 flows supported by this scheme.
 		Flows []*FlowExpr
@@ -127,13 +132,15 @@ func DupRequirement(req *SecurityExpr) *SecurityExpr {
 // DupScheme creates a copy of the given scheme expression.
 func DupScheme(sch *SchemeExpr) *SchemeExpr {
 	dup := SchemeExpr{
-		Kind:        sch.Kind,
-		SchemeName:  sch.SchemeName,
-		Description: sch.Description,
-		In:          sch.In,
-		Scopes:      sch.Scopes,
-		Flows:       sch.Flows,
-		Meta:        sch.Meta,
+		Kind:         sch.Kind,
+		SchemeName:   sch.SchemeName,
+		Description:  sch.Description,
+		In:           sch.In,
+		Name:         sch.Name,
+		BearerFormat: sch.BearerFormat,
+		Scopes:       sch.Scopes,
+		Flows:        sch.Flows,
+		Meta:         sch.Meta,
 	}
 	return &dup
 }
@@ -147,6 +154,8 @@ func (s *SchemeExpr) Type() string {
 		return "BasicAuth"
 	case APIKeyKind:
 		return "APIKey"
+	case BearerKind:
+		return "Bearer"
 	case JWTKind:
 		return "JWT"
 	default:
@@ -218,6 +227,8 @@ func (k SchemeKind) String() string {
 		return "Basic"
 	case APIKeyKind:
 		return "APIKey"
+	case BearerKind:
+		return "Bearer"
 	case JWTKind:
 		return "JWT"
 	case OAuth2Kind:

@@ -540,11 +540,8 @@ func buildSecurityRequirements(reqs []*expr.SecurityExpr) []map[string][]string 
 		sr := make(map[string][]string, len(req.Schemes))
 		for _, sch := range req.Schemes {
 			scopes := make([]string, 0)
-			switch sch.Kind {
-			case expr.OAuth2Kind, expr.JWTKind:
-				if len(req.Scopes) > 0 {
-					scopes = req.Scopes
-				}
+			if sch.Kind == expr.OAuth2Kind && len(req.Scopes) > 0 {
+				scopes = req.Scopes
 			}
 			sr[sch.Hash()] = scopes
 		}
@@ -573,12 +570,17 @@ func buildSecurityScheme(se *expr.SchemeExpr) *SecurityScheme {
 			Name:        se.Name,
 			Extensions:  openapi.ExtensionsFromExpr(se.Meta),
 		}
-	case expr.JWTKind:
+	case expr.BearerKind, expr.JWTKind:
+		bearerFormat := se.BearerFormat
+		if bearerFormat == "" && se.Kind == expr.JWTKind {
+			bearerFormat = "JWT"
+		}
 		scheme = &SecurityScheme{
-			Type:        "http",
-			Scheme:      "bearer",
-			Description: se.Description,
-			Extensions:  openapi.ExtensionsFromExpr(se.Meta),
+			Type:         "http",
+			Scheme:       "bearer",
+			BearerFormat: bearerFormat,
+			Description:  se.Description,
+			Extensions:   openapi.ExtensionsFromExpr(se.Meta),
 		}
 	case expr.OAuth2Kind:
 		scopes := make(map[string]string, len(se.Scopes))

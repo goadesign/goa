@@ -19,6 +19,7 @@
         "type": "http"
       },
       "jwt_header_X-Authorization": {
+        "bearerFormat": "JWT",
         "description": "Secures endpoint by requiring a valid JWT token retrieved via the signin endpoint. Supports scopes \"api:read\" and \"api:write\".",
         "scheme": "bearer",
         "type": "http"
@@ -73,9 +74,7 @@
           {
             "api_key_query_k": [],
             "basic_header_Authorization": [],
-            "jwt_header_X-Authorization": [
-              "api:read"
-            ],
+            "jwt_header_X-Authorization": [],
             "oauth2_header_Token": [
               "api:read"
             ]

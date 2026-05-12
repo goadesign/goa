@@ -114,6 +114,7 @@ func TestClientEncode(t *testing.T) {
 		{"header-string-default", testdata.PayloadHeaderStringDefaultDSL},
 		{"header-primitive-string-default", testdata.PayloadHeaderPrimitiveStringDefaultDSL},
 		{"header-jwt-authorization", testdata.PayloadJWTAuthorizationHeaderDSL},
+		{"header-bearer-authorization", testdata.PayloadBearerAuthorizationHeaderDSL},
 		{"header-jwt-custom-header", testdata.PayloadJWTAuthorizationCustomHeaderDSL},
 
 		{"body-string", testdata.PayloadBodyStringDSL},

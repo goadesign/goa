@@ -152,6 +152,7 @@ func (m *MethodExpr) validateRequirements() *eval.ValidationErrors {
 	var (
 		hasBasicAuth bool
 		hasAPIKey    bool
+		hasBearer    bool
 		hasJWT       bool
 		hasOAuth     bool
 	)
@@ -172,6 +173,11 @@ func (m *MethodExpr) validateRequirements() *eval.ValidationErrors {
 				if !hasTag(m.Payload, "security:apikey:"+s.SchemeName) {
 					verr.Add(m, "payload of method %q of service %q does not define an API key attribute, use APIKey to define one", m.Name, m.Service.Name)
 				}
+			case BearerKind:
+				hasBearer = true
+				if !hasTag(m.Payload, "security:bearer") {
+					verr.Add(m, "payload of method %q of service %q does not define a Bearer token attribute, use BearerToken to define one", m.Name, m.Service.Name)
+				}
 			case JWTKind:
 				hasJWT = true
 				if !hasTag(m.Payload, "security:token") {
@@ -187,7 +193,7 @@ func (m *MethodExpr) validateRequirements() *eval.ValidationErrors {
 		for _, scope := range r.Scopes {
 			found := false
 			for _, s := range r.Schemes {
-				if s.Kind == BasicAuthKind || s.Kind == APIKeyKind || s.Kind == OAuth2Kind || s.Kind == JWTKind {
+				if s.Kind == BasicAuthKind || s.Kind == APIKeyKind || s.Kind == BearerKind || s.Kind == OAuth2Kind || s.Kind == JWTKind {
 					for _, se := range s.Scopes {
 						if se.Name == scope {
 							found = true
@@ -212,6 +218,11 @@ func (m *MethodExpr) validateRequirements() *eval.ValidationErrors {
 	if !hasAPIKey {
 		if hasTagPrefix(m.Payload, "security:apikey") {
 			verr.Add(m, "payload of method %q of service %q defines an API key attribute, but no APIKey security scheme exist", m.Name, m.Service.Name)
+		}
+	}
+	if !hasBearer {
+		if hasTag(m.Payload, "security:bearer") {
+			verr.Add(m, "payload of method %q of service %q defines a Bearer token attribute, but no Bearer security scheme exist", m.Name, m.Service.Name)
 		}
 	}
 	if !hasJWT {
@@ -440,22 +451,7 @@ func (m *MethodExpr) HasMixedResults() bool {
 func copyReqs(reqs []*SecurityExpr) []*SecurityExpr {
 	reqs2 := make([]*SecurityExpr, len(reqs))
 	for i, req := range reqs {
-		req2 := &SecurityExpr{Scopes: req.Scopes}
-		schs := make([]*SchemeExpr, len(req.Schemes))
-		for j, sch := range req.Schemes {
-			schs[j] = &SchemeExpr{
-				Kind:        sch.Kind,
-				SchemeName:  sch.SchemeName,
-				Description: sch.Description,
-				In:          sch.In,
-				Name:        sch.Name,
-				Scopes:      sch.Scopes,
-				Flows:       sch.Flows,
-				Meta:        sch.Meta,
-			}
-		}
-		req2.Schemes = schs
-		reqs2[i] = req2
+		reqs2[i] = DupRequirement(req)
 	}
 	return reqs2
 }

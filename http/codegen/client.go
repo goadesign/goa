@@ -287,7 +287,7 @@ func isBearer(schemes []*service.SchemeData) bool {
 		if s.Name != "Authorization" {
 			continue
 		}
-		if s.Type == "JWT" || s.Type == "OAuth2" {
+		if s.Type == "Bearer" || s.Type == "JWT" || s.Type == "OAuth2" {
 			return true
 		}
 	}
