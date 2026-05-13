@@ -469,8 +469,8 @@ type (
 
 	// SchemeData describes a single security scheme.
 	SchemeData struct {
-		// Kind is the type of scheme, one of "Basic", "APIKey", "JWT"
-		// or "OAuth2".
+		// Kind is the type of scheme, one of "Basic", "APIKey",
+		// "Bearer", "JWT" or "OAuth2".
 		Type string
 		// SchemeName is the name of the scheme.
 		SchemeName string
@@ -500,15 +500,15 @@ type (
 		// contains the password is required.
 		PasswordRequired bool
 		// CredField contains the name of the payload field that should
-		// be initialized with the API key, the JWT token or the OAuth2
-		// access token.
+		// be initialized with the API key, the bearer token, the JWT
+		// token or the OAuth2 access token.
 		CredField string
 		// CredPointer is true if the credential field is a pointer.
 		CredPointer bool
 		// CredRequired specifies if the key is a required attribute.
 		CredRequired bool
 		// KeyAttr is the name of the attribute that contains
-		// the security tag (for APIKey, OAuth2, and JWT schemes).
+		// the security tag (for APIKey, Bearer, OAuth2, and JWT schemes).
 		KeyAttr string
 		// Scopes lists the scopes that apply to the scheme.
 		Scopes []string
@@ -1699,6 +1699,28 @@ func BuildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 		}
 	case expr.APIKeyKind:
 		if keyAtt := expr.TaggedAttribute(m.Payload, "security:apikey:"+s.SchemeName); keyAtt != "" {
+			key := codegen.Goify(keyAtt, true)
+			var scopes []string
+			if len(s.Scopes) > 0 {
+				scopes = make([]string, len(s.Scopes))
+				for i, s := range s.Scopes {
+					scopes[i] = s.Name
+				}
+			}
+			return &SchemeData{
+				Type:         s.Kind.String(),
+				Name:         s.Name,
+				SchemeName:   s.SchemeName,
+				CredField:    key,
+				CredPointer:  m.Payload.IsPrimitivePointer(keyAtt, true),
+				CredRequired: m.Payload.IsRequired(keyAtt),
+				KeyAttr:      keyAtt,
+				Scopes:       scopes,
+				In:           s.In,
+			}
+		}
+	case expr.BearerKind:
+		if keyAtt := expr.TaggedAttribute(m.Payload, "security:bearer"); keyAtt != "" {
 			key := codegen.Goify(keyAtt, true)
 			var scopes []string
 			if len(s.Scopes) > 0 {

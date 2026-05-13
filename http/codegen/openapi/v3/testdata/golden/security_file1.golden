@@ -18,8 +18,7 @@ paths:
             security:
                 - api_key_query_k: []
                   basic_header_Authorization: []
-                  jwt_header_X-Authorization:
-                    - api:read
+                  jwt_header_X-Authorization: []
                   oauth2_header_Token:
                     - api:read
         post:
@@ -55,6 +54,7 @@ components:
             type: http
             description: Secures endpoint by requiring a valid JWT token retrieved via the signin endpoint. Supports scopes "api:read" and "api:write".
             scheme: bearer
+            bearerFormat: JWT
         oauth2_header_Token:
             type: oauth2
             description: Secures endpoint by requiring a valid OAuth2 token retrieved via the signin endpoint. Supports scopes "api:read" and "api:write".

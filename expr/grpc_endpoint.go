@@ -312,6 +312,8 @@ func (e *GRPCEndpointExpr) Finalize() {
 						continue
 					case APIKeyKind:
 						field = TaggedAttribute(e.MethodExpr.Payload, "security:apikey:"+sch.SchemeName)
+					case BearerKind:
+						field = TaggedAttribute(e.MethodExpr.Payload, "security:bearer")
 					case JWTKind:
 						field = TaggedAttribute(e.MethodExpr.Payload, "security:token")
 					case OAuth2Kind:
@@ -539,6 +541,10 @@ func getSecurityAttributes(m *MethodExpr) []string {
 				}
 			case APIKeyKind:
 				if field := TaggedAttribute(m.Payload, "security:apikey:"+sch.SchemeName); field != "" {
+					secAttrs = append(secAttrs, field)
+				}
+			case BearerKind:
+				if field := TaggedAttribute(m.Payload, "security:bearer"); field != "" {
 					secAttrs = append(secAttrs, field)
 				}
 			case JWTKind:

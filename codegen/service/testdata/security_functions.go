@@ -121,6 +121,30 @@ func NewSecureWithAPIKeyOverrideEndpoint(s Service, authAPIKeyFn security.AuthAP
 }
 `
 
+var EndpointWithBearerCode = `// NewSecureWithBearerEndpoint returns an endpoint function that calls the
+// method "SecureWithBearer" of service "EndpointWithBearer".
+func NewSecureWithBearerEndpoint(s Service, authBearerFn security.AuthBearerFunc) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		p := req.(*SecureWithBearerPayload)
+		var err error
+		sc := security.BearerScheme{
+			Name:           "bearer",
+			Scopes:         []string{"api:read", "api:write", "api:admin"},
+			RequiredScopes: []string{"api:read"},
+		}
+		var token string
+		if p.Token != nil {
+			token = *p.Token
+		}
+		ctx, err = authBearerFn(ctx, token, &sc)
+		if err != nil {
+			return nil, err
+		}
+		return nil, s.SecureWithBearer(ctx, p)
+	}
+}
+`
+
 var EndpointWithOAuth2Code = `// NewSecureWithOAuth2Endpoint returns an endpoint function that calls the
 // method "SecureWithOAuth2" of service "EndpointWithOAuth2".
 func NewSecureWithOAuth2Endpoint(s Service, authOAuth2Fn security.AuthOAuth2Func) goa.Endpoint {

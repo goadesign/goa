@@ -58,8 +58,8 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 				{{- end }}
 				ctx, err = auth{{ .Type }}Fn(ctx, {{ if $s.CredPointer }}key{{ else }}{{ $payload }}.{{ $s.CredField }}{{ end }}, &sc)
 
-			{{- else if eq .Type "JWT" }}
-				sc := security.JWTScheme{
+			{{- else if or (eq .Type "Bearer") (eq .Type "JWT") }}
+				sc := security.{{ .Type }}Scheme{
 					Name: {{ printf "%q" .SchemeName }},
 					Scopes: []string{ {{- range .Scopes }}{{ printf "%q" . }}, {{ end }} },
 					RequiredScopes: []string{ {{- range $r.Scopes }}{{ printf "%q" . }}, {{ end }} },

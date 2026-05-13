@@ -12,6 +12,10 @@ var JWTAuth = JWTSecurity("jwt", func() {
 
 var APIKeyAuth = APIKeySecurity("api_key")
 
+var BearerAuth = BearerSecurity("bearer", func() {
+	Scope("api:read", "Read-only access")
+})
+
 var OAuth2 = OAuth2Security("authCode", func() {
 	AuthorizationCodeFlow("http://^authorization", "^example:/token<>", "http://refresh^") // invalid URLs
 	Scope("api:write", "Write acess")
@@ -43,7 +47,7 @@ var InvalidSecuritySchemesDSL = func() {
 			Scope("not:found") // invalid security scope
 		})
 		Method("SecureMethod", func() {
-			Security(BasicAuth, JWTAuth, func() {
+			Security(BasicAuth, BearerAuth, JWTAuth, func() {
 				Scope("not:found") // invalid security scope
 			})
 			Payload(func() {
@@ -64,6 +68,7 @@ var InvalidSecuritySchemesDSL = func() {
 				Username("user", String)
 				Password("pass", String)
 				APIKey("key_key", "key", String)
+				BearerToken("bearer_token", String)
 				Token("token", String)
 				AccessToken("access_token", String)
 			})

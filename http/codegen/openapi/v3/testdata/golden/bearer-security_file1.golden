@@ -1,0 +1,43 @@
+openapi: 3.0.3
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+      description: Default server for test api
+paths:
+    /formatted:
+        get:
+            tags:
+                - testService
+            summary: formattedBearer testService
+            operationId: testService#formattedBearer
+            responses:
+                "204":
+                    description: No Content response.
+            security:
+                - formatted_bearer_header_Authorization: []
+    /plain:
+        get:
+            tags:
+                - testService
+            summary: plainBearer testService
+            operationId: testService#plainBearer
+            responses:
+                "204":
+                    description: No Content response.
+            security:
+                - bearer_header_Authorization: []
+components:
+    securitySchemes:
+        bearer_header_Authorization:
+            type: http
+            description: Opaque session token or trusted OIDC access token.
+            scheme: bearer
+        formatted_bearer_header_Authorization:
+            type: http
+            description: JWT access token.
+            scheme: bearer
+            bearerFormat: JWT
+tags:
+    - name: testService

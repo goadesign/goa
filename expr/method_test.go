@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/expr/testdata"
@@ -20,6 +21,7 @@ func TestMethodExprValidate(t *testing.T) {
 		{"invalid-security-schemes", testdata.InvalidSecuritySchemesDSL,
 			`service "InvalidSecuritySchemesService" method "SecureMethod": payload of method "SecureMethod" of service "InvalidSecuritySchemesService" does not define a username attribute, use Username to define one
 service "InvalidSecuritySchemesService" method "SecureMethod": payload of method "SecureMethod" of service "InvalidSecuritySchemesService" does not define a password attribute, use Password to define one
+service "InvalidSecuritySchemesService" method "SecureMethod": payload of method "SecureMethod" of service "InvalidSecuritySchemesService" does not define a Bearer token attribute, use BearerToken to define one
 service "InvalidSecuritySchemesService" method "SecureMethod": payload of method "SecureMethod" of service "InvalidSecuritySchemesService" does not define a JWT attribute, use Token to define one
 service "InvalidSecuritySchemesService" method "SecureMethod": security scope "not:found" not found in any of the security schemes.
 flow authorization_code: invalid token URL "^example:/token<>": parse "^example:/token<>": first path segment in URL cannot contain colon
@@ -31,6 +33,7 @@ service "InvalidSecuritySchemesService" method "InheritedSecureMethod": security
 service "AnotherInvalidSecuritySchemesService" method "Method": payload of method "Method" of service "AnotherInvalidSecuritySchemesService" defines a username attribute, but no basic auth security scheme exist
 service "AnotherInvalidSecuritySchemesService" method "Method": payload of method "Method" of service "AnotherInvalidSecuritySchemesService" defines a password attribute, but no basic auth security scheme exist
 service "AnotherInvalidSecuritySchemesService" method "Method": payload of method "Method" of service "AnotherInvalidSecuritySchemesService" defines an API key attribute, but no APIKey security scheme exist
+service "AnotherInvalidSecuritySchemesService" method "Method": payload of method "Method" of service "AnotherInvalidSecuritySchemesService" defines a Bearer token attribute, but no Bearer security scheme exist
 service "AnotherInvalidSecuritySchemesService" method "Method": payload of method "Method" of service "AnotherInvalidSecuritySchemesService" defines a JWT token attribute, but no JWT auth security scheme exist
 service "AnotherInvalidSecuritySchemesService" method "Method": payload of method "Method" of service "AnotherInvalidSecuritySchemesService" defines a OAuth2 access token attribute, but no OAuth2 security scheme exist`,
 		},
@@ -43,6 +46,69 @@ service "AnotherInvalidSecuritySchemesService" method "Method": payload of metho
 				err := expr.RunInvalidDSL(t, tc.DSL)
 				assert.Equal(t, tc.Error, stripValidationLocations(err.Error()))
 			}
+		})
+	}
+}
+
+func TestMethodExprFinalizeInheritsBearerFormat(t *testing.T) {
+	cases := []struct {
+		name       string
+		kind       expr.SchemeKind
+		setup      func(*expr.SecurityExpr) (*expr.APIExpr, *expr.ServiceExpr)
+		schemeName string
+	}{
+		{
+			name: "service security",
+			kind: expr.BearerKind,
+			setup: func(req *expr.SecurityExpr) (*expr.APIExpr, *expr.ServiceExpr) {
+				return &expr.APIExpr{}, &expr.ServiceExpr{
+					Name:         "Service",
+					Requirements: []*expr.SecurityExpr{req},
+				}
+			},
+			schemeName: "bearer",
+		},
+		{
+			name: "API security",
+			kind: expr.JWTKind,
+			setup: func(req *expr.SecurityExpr) (*expr.APIExpr, *expr.ServiceExpr) {
+				return &expr.APIExpr{
+					Requirements: []*expr.SecurityExpr{req},
+				}, &expr.ServiceExpr{Name: "Service"}
+			},
+			schemeName: "jwt",
+		},
+	}
+
+	root := expr.Root
+	t.Cleanup(func() {
+		expr.Root = root
+	})
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			scheme := &expr.SchemeExpr{
+				Kind:         tc.kind,
+				SchemeName:   tc.schemeName,
+				BearerFormat: "JWT",
+				In:           "header",
+				Name:         "Authorization",
+			}
+			req := &expr.SecurityExpr{Schemes: []*expr.SchemeExpr{scheme}}
+			api, service := tc.setup(req)
+			expr.Root = &expr.RootExpr{API: api}
+
+			method := &expr.MethodExpr{
+				Name:    "Method",
+				Service: service,
+			}
+			method.Finalize()
+
+			require.Len(t, method.Requirements, 1)
+			require.Len(t, method.Requirements[0].Schemes, 1)
+			inherited := method.Requirements[0].Schemes[0]
+			require.NotSame(t, scheme, inherited)
+			require.Equal(t, "JWT", inherited.BearerFormat)
 		})
 	}
 }
