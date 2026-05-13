@@ -23,10 +23,12 @@ paths:
                   in: path
                   required: true
                   type: integer
+                  format: int64
                 - name: bar
                   in: path
                   required: true
                   type: integer
+                  format: int64
             responses:
                 "204":
                     description: No Content response.

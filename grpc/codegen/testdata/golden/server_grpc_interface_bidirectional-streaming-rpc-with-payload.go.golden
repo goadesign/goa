@@ -6,7 +6,18 @@ func (s *Server) MethodBidirectionalStreamingRPCWithPayload(stream service_bidir
 	ctx := stream.Context()
 	ctx = context.WithValue(ctx, goa.MethodKey, "MethodBidirectionalStreamingRPCWithPayload")
 	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceBidirectionalStreamingRPCWithPayload")
-	p, err := s.MethodBidirectionalStreamingRPCWithPayloadH.Decode(ctx, nil)
+	var reqpb any
+	message, err := stream.Recv()
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			reqpb = nil
+		} else {
+			return goagrpc.EncodeError(err)
+		}
+	} else {
+		reqpb = message
+	}
+	p, err := s.MethodBidirectionalStreamingRPCWithPayloadH.Decode(ctx, reqpb)
 	if err != nil {
 		return goagrpc.EncodeError(err)
 	}

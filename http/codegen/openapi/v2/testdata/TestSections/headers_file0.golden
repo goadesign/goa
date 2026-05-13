@@ -15,12 +15,14 @@
         "operationId": "test service#test endpoint",
         "parameters": [
           {
+            "format": "int64",
             "in": "header",
             "name": "foo",
             "required": false,
             "type": "integer"
           },
           {
+            "format": "int64",
             "in": "header",
             "name": "bar",
             "required": false,

@@ -6,7 +6,7 @@
   </p>
   <p align="center">
     <a href="https://github.com/goadesign/goa/releases/latest"><img alt="Release" src="https://img.shields.io/github/release/goadesign/goa.svg?style=for-the-badge"></a>
-    <a href="https://pkg.go.dev/goa.design/goa/v3@v3.25.3/dsl?tab=doc"><img alt="Go Doc" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=for-the-badge"></a>
+    <a href="https://pkg.go.dev/goa.design/goa/v3@v3.26.0/dsl?tab=doc"><img alt="Go Doc" src="https://img.shields.io/badge/godoc-reference-blue.svg?style=for-the-badge"></a>
     <a href="https://github.com/goadesign/goa/actions/workflows/ci.yml"><img alt="GitHub Action: Test" src="https://img.shields.io/github/actions/workflow/status/goadesign/goa/test.yml?branch=v3&style=for-the-badge"></a>
     <a href="https://goreportcard.com/report/github.com/goadesign/goa"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/goadesign/goa?style=for-the-badge"></a>
     <a href="/LICENSE"><img alt="Software License" src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge"></a>
@@ -192,6 +192,8 @@ Our documentation site at [goa.design](https://goa.design) provides comprehensiv
 - **[Core Concepts](https://goa.design/docs/4-concepts/)**: Master the design language and architecture
 - **[Real-World Guide](https://goa.design/docs/5-real-world/)**: Follow best practices for production services
 - **[Advanced Topics](https://goa.design/docs/6-advanced/)**: Explore advanced features and techniques
+
+Using a coding agent with Goa? See [`skills/`](skills/) for reusable Agent Skills that help agents follow Goa's design-first workflow in application repositories.
 
 ##  Real-World Examples
 

@@ -91,6 +91,9 @@ func Payload(val any, args ...any) {
 // StreamingPayload requires a transport that supports client-to-server streaming
 // such as gRPC or WebSockets. When using HTTP or JSON-RPC transports, methods
 // with StreamingPayload must use WebSockets (via GET endpoints).
+// For gRPC methods that define both Payload and StreamingPayload, the ordinary
+// method payload is sent once as the initial typed stream frame and the
+// StreamingPayload values are sent as subsequent stream item frames.
 //
 // Examples:
 //

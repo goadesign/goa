@@ -39,7 +39,16 @@ func Encode{{ .Method.VarName }}Request(ctx context.Context, v any, md *metadata
 	{{- end }}
 {{- end }}
 {{- if .Request.ClientConvert }}
+	{{- if .Request.StreamEnvelope }}
+	message := {{ .Request.ClientConvert.Init.Name }}({{ range .Request.ClientConvert.Init.Args }}{{ .Name }}, {{ end }})
+	return &{{ .PkgName }}.{{ .Request.Message.VarName }}{
+		{{ .Request.StreamEnvelope.FieldName }}: &{{ .Request.StreamEnvelope.InitialWrapperRef }}{
+			{{ .Request.StreamEnvelope.InitialFieldName }}: message,
+		},
+	}, nil
+	{{- else }}
 	return {{ .Request.ClientConvert.Init.Name }}({{ range .Request.ClientConvert.Init.Args }}{{ .Name }}, {{ end }}), nil
+	{{- end }}
 {{- else }}
 	return nil, nil
 {{- end }}

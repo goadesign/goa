@@ -246,7 +246,9 @@ func Message(fn func()) {
 // request metadata unless specified explicitly in request message using
 // Message function. All other attributes in method payload are added to the
 // request message unless specified explicitly using Metadata (in which case
-// will be added to the metadata).
+// will be added to the metadata). For methods that also define
+// StreamingPayload, the ordinary request message is carried as the initial
+// typed stream frame rather than being rewritten into metadata.
 //
 // Metadata takes one argument of function type which lists the attributes
 // that must be set in the request metadata instead of the message.

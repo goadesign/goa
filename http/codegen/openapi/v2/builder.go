@@ -311,56 +311,31 @@ func paramsFromHeaders(endpoint *expr.HTTPEndpointExpr) []*Parameter {
 
 func paramFor(at *expr.AttributeExpr, name, in string, required bool) *Parameter {
 	alias := at
-	if expr.IsAlias(at.Type) {
-		at = at.Type.(expr.UserType).Attribute()
-	}
+	at = resolvedAliasAttribute(at)
 	p := &Parameter{
 		In:          in,
 		Name:        name,
 		Default:     openapi.ToStringMap(at.DefaultValue),
 		Description: at.Description,
 		Required:    required,
-		Type:        at.Type.Name(),
 	}
+	p.Type, p.Format = openAPITypeFormat(at)
 	if expr.IsArray(at.Type) {
 		p.Items = itemsFromExpr(expr.AsArray(at.Type).ElemType)
 		p.CollectionFormat = "multi"
 	}
-	switch at.Type {
-	case expr.Int, expr.UInt, expr.UInt32, expr.UInt64:
-		p.Type = "integer"
-	case expr.Int32, expr.Int64:
-		p.Type = "integer"
-		p.Format = at.Type.Name()
-	case expr.Float32:
-		p.Type = "number"
-		p.Format = "float"
-	case expr.Float64:
-		p.Type = "number"
-		p.Format = "double"
-	case expr.Bytes:
-		p.Type = "string"
-		p.Format = "byte"
-	}
 	p.Extensions = openapi.ExtensionsFromExpr(at.Meta)
-	initValidations(alias, p)
+	initAttributeValidations(alias, p)
 	return p
 }
 
 func itemsFromExpr(at *expr.AttributeExpr) *Items {
-	items := &Items{Type: at.Type.Name()}
-	p, ok := at.Type.(expr.Primitive)
-	if ok {
-		switch p.Kind() {
-		case expr.IntKind, expr.Int64Kind, expr.UIntKind, expr.UInt64Kind, expr.Int32Kind, expr.UInt32Kind:
-			items.Type = "integer"
-		case expr.Float32Kind, expr.Float64Kind:
-			items.Type = "number"
-		case expr.BytesKind:
-			items.Type = "string"
-		}
+	itemType, itemFormat := openAPITypeFormat(at)
+	items := &Items{
+		Type:   itemType,
+		Format: itemFormat,
 	}
-	initValidations(at, items)
+	initAttributeValidations(at, items)
 	if expr.IsArray(at.Type) {
 		items.Items = itemsFromExpr(expr.AsArray(at.Type).ElemType)
 	}
@@ -401,12 +376,17 @@ func headersFromExpr(headers *expr.MappedAttributeExpr) map[string]*Header {
 	}
 	res := make(map[string]*Header)
 	codegen.WalkMappedAttr(headers, func(_, n string, _ bool, at *expr.AttributeExpr) error { // nolint: errcheck
+		headerType, headerFormat := openAPITypeFormat(at)
 		header := &Header{
 			Default:     at.DefaultValue,
 			Description: at.Description,
-			Type:        at.Type.Name(),
+			Type:        headerType,
+			Format:      headerFormat,
 		}
-		initValidations(at, header)
+		if expr.IsArray(at.Type) {
+			header.Items = itemsFromExpr(expr.AsArray(at.Type).ElemType)
+		}
+		initAttributeValidations(at, header)
 		res[n] = header
 		return nil
 	})
@@ -414,6 +394,45 @@ func headersFromExpr(headers *expr.MappedAttributeExpr) map[string]*Header {
 		return nil
 	}
 	return res
+}
+
+func openAPITypeFormat(at *expr.AttributeExpr) (string, string) {
+	at = resolvedAliasAttribute(at)
+	p, ok := at.Type.(expr.Primitive)
+	if !ok {
+		return at.Type.Name(), ""
+	}
+	switch p.Kind() {
+	case expr.IntKind, expr.UIntKind, expr.Int64Kind, expr.UInt64Kind:
+		return "integer", "int64"
+	case expr.Int32Kind, expr.UInt32Kind:
+		return "integer", "int32"
+	case expr.Float32Kind:
+		return "number", "float"
+	case expr.Float64Kind:
+		return "number", "double"
+	case expr.BytesKind:
+		return "string", "byte"
+	case expr.AnyKind:
+		return "", ""
+	default:
+		return p.Name(), ""
+	}
+}
+
+func resolvedAliasAttribute(at *expr.AttributeExpr) *expr.AttributeExpr {
+	if expr.IsAlias(at.Type) {
+		return at.Type.(expr.UserType).Attribute()
+	}
+	return at
+}
+
+func initAttributeValidations(at *expr.AttributeExpr, def any) {
+	resolved := resolvedAliasAttribute(at)
+	if resolved != at {
+		initValidations(resolved, def)
+	}
+	initValidations(at, def)
 }
 
 func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServerExpr) {
