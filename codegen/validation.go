@@ -395,9 +395,15 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 		}
 	}
 	if format := validation.Format; format != "" {
-		data["format"] = string(format)
-		if val := runTemplate(formatValT, data); val != "" {
-			res = append(res, val)
+		// Skip format validation for attributes with struct:field:type meta
+		// that implement encoding.TextUnmarshaler — the UnmarshalText call
+		// already validates the format implicitly during deserialization.
+		typeName, _ := GetMetaType(att)
+		if typeName == "" {
+			data["format"] = string(format)
+			if val := runTemplate(formatValT, data); val != "" {
+				res = append(res, val)
+			}
 		}
 	}
 	if pattern := validation.Pattern; pattern != "" {

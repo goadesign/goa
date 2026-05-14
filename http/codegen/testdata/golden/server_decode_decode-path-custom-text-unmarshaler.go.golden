@@ -1,0 +1,26 @@
+// DecodeMethodPathCustomTextUnmarshalerRequest returns a decoder for requests
+// sent to the ServicePathCustomTextUnmarshaler MethodPathCustomTextUnmarshaler
+// endpoint.
+func DecodeMethodPathCustomTextUnmarshalerRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicepathcustomtextunmarshaler.MethodPathCustomTextUnmarshalerPayload, error) {
+	return func(r *http.Request) (*servicepathcustomtextunmarshaler.MethodPathCustomTextUnmarshalerPayload, error) {
+		var payload *servicepathcustomtextunmarshaler.MethodPathCustomTextUnmarshalerPayload
+		var (
+			p   uuid.UUID
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			if err2 := p.UnmarshalText([]byte(pRaw)); err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "uuid.UUID"))
+			}
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewMethodPathCustomTextUnmarshalerPayload(p)
+
+		return payload, nil
+	}
+}

@@ -23,6 +23,8 @@ func TestDecode(t *testing.T) {
 		{"decode-path-custom-uint", testdata.PayloadPathCustomUIntDSL},
 		{"decode-path-custom-uint32", testdata.PayloadPathCustomUInt32DSL},
 		{"decode-path-custom-uint64", testdata.PayloadPathCustomUInt64DSL},
+		{"decode-path-custom-text-unmarshaler", testdata.PayloadPathCustomTextUnmarshalerDSL},
+		{"decode-query-custom-text-unmarshaler", testdata.PayloadQueryCustomTextUnmarshalerDSL},
 		{"decode-query-bool", testdata.PayloadQueryBoolDSL},
 		{"decode-query-bool-validate", testdata.PayloadQueryBoolValidateDSL},
 		{"decode-query-int", testdata.PayloadQueryIntDSL},

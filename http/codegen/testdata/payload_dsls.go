@@ -3769,3 +3769,38 @@ var PayloadBodyUnionCustomKeysValidateDSL = func() {
 		})
 	})
 }
+
+var PayloadPathCustomTextUnmarshalerDSL = func() {
+	Service("ServicePathCustomTextUnmarshaler", func() {
+		Method("MethodPathCustomTextUnmarshaler", func() {
+			Payload(func() {
+				Attribute("p", String, func() {
+					Meta("struct:field:type", "uuid.UUID", "github.com/google/uuid")
+				})
+				Required("p")
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadQueryCustomTextUnmarshalerDSL = func() {
+	Service("ServiceQueryCustomTextUnmarshaler", func() {
+		Method("MethodQueryCustomTextUnmarshaler", func() {
+			Payload(func() {
+				Attribute("p", String, func() {
+					Meta("struct:field:type", "uuid.UUID", "github.com/google/uuid")
+				})
+				Required("p")
+			})
+			HTTP(func() {
+				GET("/")
+				Params(func() {
+					Param("p")
+				})
+			})
+		})
+	})
+}

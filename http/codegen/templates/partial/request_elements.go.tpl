@@ -27,19 +27,24 @@
 		)
 
 {{- range .PathParams }}
-	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
+	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) (not .IsTextUnmarshaler) }}
 		{{ .VarName }} = params["{{ .HTTPName }}"]
 
 	{{- else }}{{/* not string and not any */}}
 		{
-			{{ .VarName }}Raw := params["{{ .HTTPName }}"]
-			{{- template "partial_path_conversion" . }}
+            {{ .VarName }}Raw := params["{{ .HTTPName }}"]
+            {{- template "partial_path_conversion" . }}
+            {{- if .IsTextUnmarshaler }}
+            {{- if .Validate }}
+            {{ .Validate }}
+            {{- end }}
+            {{- end }}
 		}
 
 	{{- end }}
-		{{- if .Validate }}
-		{{ .Validate }}
-		{{- end }}
+        {{- if and .Validate (not .IsTextUnmarshaler) }}
+        {{ .Validate }}
+        {{- end }}
 {{- end }}
 
 {{- $qpVar := "r.URL.Query()" }}
@@ -48,13 +53,13 @@
 qp := r.URL.Query()
 {{- end }}
 {{- range .QueryParams }}
-	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required }}
+	{{- if and (or (eq .Type.Name "string") (eq .Type.Name "any")) .Required (not .IsTextUnmarshaler) }}
 		{{ .VarName }} = {{$qpVar}}.Get("{{ .HTTPName }}")
 		if {{ .VarName }} == "" {
 			err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "query string"))
 		}
 
-	{{- else if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
+	{{- else if (and (or (eq .Type.Name "string") (eq .Type.Name "any")) (not .IsTextUnmarshaler)) }}
 		{{ .VarName }}Raw := {{$qpVar}}.Get("{{ .HTTPName }}")
 		if {{ .VarName }}Raw != "" {
 			{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
@@ -206,10 +211,15 @@ qp := r.URL.Query()
 		{{- if or .DefaultValue (not .Required) }}
 		}
 		{{- end }}
+		{{- if .IsTextUnmarshaler }}
+		{{- if .Validate }}
+		{{ .Validate }}
+		{{- end }}
+		{{- end }}
 	}
 
 	{{- end }}
-		{{- if .Validate }}
+		{{- if and .Validate (not .IsTextUnmarshaler) }}
 		{{ .Validate }}
 		{{- end }}
 {{- end }}
