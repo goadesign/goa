@@ -469,29 +469,30 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 
 // hasValidations returns true if a UserType contains validations.
 func hasValidations(attCtx *AttributeContext, ut expr.UserType) bool {
+	// We need to check empirically whether there are validations to be
+	// generated. We can't call recurseValidationCode() to avoid infinite
+	// recursions, but we can use validationCode() for the local (non-recursive)
+	// attribute-level checks — it is the source of truth for whether a given
+	// attribute produces any validation output, including any skips (e.g.
+	// format checks on struct:field:type attributes). For nested user types
+	// and required-field checks we keep the structural walk.
 	res := false
 	done := errors.New("done")
 	Walk(ut.Attribute(), func(a *expr.AttributeExpr) error { // nolint: errcheck
 		if a.Validation == nil {
 			return nil
 		}
-		// If the only validation is Format and the attribute has a
-		// struct:field:type meta override, the format check is skipped at
-		// code generation time (UnmarshalText covers it and ValidateFormat
-		// requires a plain string). Don't count this as a validation.
-		if typeName, _ := GetMetaType(a); typeName != "" {
-			v := a.Validation
-			if v.Format != "" && v.Pattern == "" && v.Values == nil &&
-				v.Minimum == nil && v.Maximum == nil &&
-				v.ExclusiveMinimum == nil && v.ExclusiveMaximum == nil &&
-				v.MinLength == nil && v.MaxLength == nil {
-				return nil
-			}
-		}
-		if attCtx.Pointer || !a.Validation.HasRequiredOnly() {
+		// Use validationCode() as the source of truth for whether this
+		// attribute produces any local validation output. This naturally
+		// handles all codegen skips (e.g. Format on struct:field:type)
+		// without hasValidations() needing to mirror those conditions.
+		if validationCode(a, attCtx, true, false, "x", "x") != "" {
 			res = true
 			return done
 		}
+		// validationCode() does not cover required-field checks (those are
+		// emitted by the parent object, not the attribute itself), so check
+		// those separately to avoid missing them.
 		res = len(generatedRequiredValidation(a, attCtx)) > 0
 		if res {
 			return done
