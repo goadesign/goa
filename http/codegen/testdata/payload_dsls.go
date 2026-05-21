@@ -3804,3 +3804,39 @@ var PayloadQueryCustomTextUnmarshalerDSL = func() {
 		})
 	})
 }
+
+var PayloadPathCustomTextUnmarshalerFormatDSL = func() {
+	Service("ServicePathCustomTextUnmarshalerFormat", func() {
+		Method("MethodPathCustomTextUnmarshalerFormat", func() {
+			Payload(func() {
+				Attribute("p", String, func() {
+					Format(FormatUUID)
+					Meta("struct:field:type", "uuid.UUID", "github.com/google/uuid")
+				})
+				Required("p")
+			})
+			HTTP(func() {
+				GET("/{p}")
+			})
+		})
+	})
+}
+
+var PayloadQueryCustomTextUnmarshalerOptionalDSL = func() {
+	Service("ServiceQueryCustomTextUnmarshalerOptional", func() {
+		Method("MethodQueryCustomTextUnmarshalerOptional", func() {
+			Payload(func() {
+				Attribute("p", String, func() {
+					Meta("struct:field:type", "uuid.UUID", "github.com/google/uuid")
+				})
+				// p is NOT in Required — it is optional, so the generated variable is *uuid.UUID
+			})
+			HTTP(func() {
+				GET("/")
+				Params(func() {
+					Param("p")
+				})
+			})
+		})
+	})
+}

@@ -80,9 +80,18 @@
 		}
 		{{ if and (ne .TypeRef nil) (and (ne .TypeRef "bool") (ne .TypeRef "*bool")) }}{{ .VarName }} = ({{.TypeRef}})({{ if .Pointer }}&{{ end }}v){{ else }}{{ .VarName }} = {{ if .Pointer }}&{{ end }}v{{ end }}
     {{- else if .IsTextUnmarshaler }}
-        if err2 := {{ .VarName }}.UnmarshalText([]byte({{ .VarName }}Raw)); err2 != nil {
-            err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .Name }}, {{ .VarName }}Raw, {{ printf "%q" .TypeRef }}))
-        }
+        {{- if .Pointer }}
+            var {{ .VarName }}Val {{ .TypeName }}
+            if err2 := {{ .VarName }}Val.UnmarshalText([]byte({{ .VarName }}Raw)); err2 != nil {
+                err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .Name }}, {{ .VarName }}Raw, {{ printf "%q" .TypeName }}))
+            } else {
+                {{ .VarName }} = &{{ .VarName }}Val
+            }
+        {{- else }}
+            if err2 := {{ .VarName }}.UnmarshalText([]byte({{ .VarName }}Raw)); err2 != nil {
+                err = goa.MergeErrors(err, goa.InvalidFieldTypeError({{ printf "%q" .Name }}, {{ .VarName }}Raw, {{ printf "%q" .TypeName }}))
+            }
+        {{- end }}
 	{{- else }}
 		// unsupported type {{ .Type.Name }} for var {{ .VarName }}
 	{{- end }}

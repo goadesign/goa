@@ -2452,7 +2452,15 @@ func (sds *ServicesData) extractPathParams(a *expr.MappedAttributeExpr, service 
 		}
 		validate := codegen.AttributeValidationCode(c, nil, ctx, true, expr.IsAlias(c.Type), varn, name)
 		if isStringMetaType(c) {
-			validate = codegen.AttributeValidationCode(c, nil, ctx, true, expr.IsAlias(c.Type), varn+"Raw", name)
+			// Build a copy of the attribute with Format cleared so the shared
+			// validation code does not emit a format check (UnmarshalText covers it).
+			cNoFmt := *c
+			if c.Validation != nil {
+				v := *c.Validation
+				v.Format = ""
+				cNoFmt.Validation = &v
+			}
+			validate = codegen.AttributeValidationCode(&cNoFmt, nil, ctx, true, expr.IsAlias(c.Type), varn+"Raw", name)
 		}
 		params = append(params, &ParamData{
 			Map:            false,
@@ -2521,7 +2529,15 @@ func (sds *ServicesData) extractQueryParams(a *expr.MappedAttributeExpr, service
 		}
 		validate := codegen.AttributeValidationCode(c, nil, ctx, required, expr.IsAlias(c.Type), varn, name)
 		if isStringMetaType(c) {
-			validate = codegen.AttributeValidationCode(c, nil, ctx, required, expr.IsAlias(c.Type), varn+"Raw", name)
+			// Build a copy of the attribute with Format cleared so the shared
+			// validation code does not emit a format check (UnmarshalText covers it).
+			cNoFmt := *c
+			if c.Validation != nil {
+				v := *c.Validation
+				v.Format = ""
+				cNoFmt.Validation = &v
+			}
+			validate = codegen.AttributeValidationCode(&cNoFmt, nil, ctx, required, expr.IsAlias(c.Type), varn+"Raw", name)
 		}
 		params = append(params, &ParamData{
 			Map: mp != nil,

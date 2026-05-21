@@ -395,9 +395,9 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 		}
 	}
 	if format := validation.Format; format != "" {
-		// Skip format validation for attributes with struct:field:type meta
-		// that implement encoding.TextUnmarshaler — the UnmarshalText call
-		// already validates the format implicitly during deserialization.
+		// Skip format validation when struct:field:type overrides a string attribute
+		// with a custom type — the custom type's own parsing (e.g. UnmarshalText)
+		// already validates the format, and ValidateFormat expects a plain string.
 		typeName, _ := GetMetaType(att)
 		if typeName == "" {
 			data["format"] = string(format)
