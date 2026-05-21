@@ -469,14 +469,24 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 
 // hasValidations returns true if a UserType contains validations.
 func hasValidations(attCtx *AttributeContext, ut expr.UserType) bool {
-	// We need to check empirically whether there are validations to be
-	// generated, we can't just generate and check whether something was
-	// generated to avoid infinite recursions.
 	res := false
 	done := errors.New("done")
 	Walk(ut.Attribute(), func(a *expr.AttributeExpr) error { // nolint: errcheck
 		if a.Validation == nil {
 			return nil
+		}
+		// If the only validation is Format and the attribute has a
+		// struct:field:type meta override, the format check is skipped at
+		// code generation time (UnmarshalText covers it and ValidateFormat
+		// requires a plain string). Don't count this as a validation.
+		if typeName, _ := GetMetaType(a); typeName != "" {
+			v := a.Validation
+			if v.Format != "" && v.Pattern == "" && v.Values == nil &&
+				v.Minimum == nil && v.Maximum == nil &&
+				v.ExclusiveMinimum == nil && v.ExclusiveMaximum == nil &&
+				v.MinLength == nil && v.MaxLength == nil {
+				return nil
+			}
 		}
 		if attCtx.Pointer || !a.Validation.HasRequiredOnly() {
 			res = true
