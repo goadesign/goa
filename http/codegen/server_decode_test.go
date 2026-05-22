@@ -168,6 +168,7 @@ func TestDecode(t *testing.T) {
 		{"decode-body-map-user", testdata.PayloadBodyMapUserDSL},
 		{"decode-body-map-user-validate", testdata.PayloadBodyMapUserValidateDSL},
 		{"decode-deep-user", testdata.PayloadDeepUserDSL},
+		{"decode-body-nested-uuid-field", testdata.PayloadBodyNestedUUIDFieldDSL},
 
 		{"decode-body-primitive-string-validate", testdata.PayloadBodyPrimitiveStringValidateDSL},
 		{"decode-body-primitive-bool-validate", testdata.PayloadBodyPrimitiveBoolValidateDSL},

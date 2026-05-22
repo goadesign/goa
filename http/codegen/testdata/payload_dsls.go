@@ -3840,3 +3840,27 @@ var PayloadQueryCustomTextUnmarshalerOptionalDSL = func() {
 		})
 	})
 }
+
+var PayloadBodyNestedUUIDFieldDSL = func() {
+	// Regression test: when a nested body type's only validations are
+	// Format(FormatUUID) + struct:field:type (e.g. UUIDField()), the parent
+	// validate function must not emit a ValidateX call for the nested type
+	// since no ValidateX function will be generated for it.
+	var NestedType = Type("NestedUUIDOnly", func() {
+		Attribute("id", String, func() {
+			Format(FormatUUID)
+			Meta("struct:field:type", "uuid.UUID", "github.com/google/uuid")
+		})
+		Meta("type:generate:force")
+	})
+	Service("ServiceBodyNestedUUIDField", func() {
+		Method("MethodBodyNestedUUIDField", func() {
+			Payload(func() {
+				Attribute("nested", NestedType)
+			})
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}

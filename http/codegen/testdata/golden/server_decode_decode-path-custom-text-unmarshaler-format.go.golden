@@ -5,7 +5,7 @@ func DecodeMethodPathCustomTextUnmarshalerFormatRequest(mux goahttp.Muxer, decod
 	return func(r *http.Request) (*servicepathcustomtextunmarshalerformat.MethodPathCustomTextUnmarshalerFormatPayload, error) {
 		var payload *servicepathcustomtextunmarshalerformat.MethodPathCustomTextUnmarshalerFormatPayload
 		var (
-			p uuid.UUID
+			p   uuid.UUID
 			err error
 
 			params = mux.Vars(r)

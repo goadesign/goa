@@ -490,13 +490,6 @@ func hasValidations(attCtx *AttributeContext, ut expr.UserType) bool {
 			res = true
 			return done
 		}
-		// validationCode() does not cover required-field checks (those are
-		// emitted by the parent object, not the attribute itself), so check
-		// those separately to avoid missing them.
-		res = len(generatedRequiredValidation(a, attCtx)) > 0
-		if res {
-			return done
-		}
 		return nil
 	})
 	return res
