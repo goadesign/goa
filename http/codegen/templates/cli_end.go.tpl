@@ -1,4 +1,4 @@
-return cli.ParseEndpoint(
+endpoint, payload, err := cli.ParseEndpoint(
 		scheme,
 		host,
 		doer,
@@ -26,4 +26,8 @@ return cli.ParseEndpoint(
 	{{- end }}
 {{- end }}
 	)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse endpoint: %w", err)
+	}
+	return endpoint, payload, nil
 }
