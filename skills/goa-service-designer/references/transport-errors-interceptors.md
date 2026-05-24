@@ -53,7 +53,14 @@ Goa's streaming DSL is transport-agnostic. The transport mapping determines HTTP
 
 ## Errors
 
-- Define common errors at API or service scope and operation-specific errors at method scope.
+- Define reusable potential errors at API scope when you want one canonical error type/name and one
+  transport mapping. API-level `Error(...)` declarations do not make those errors applicable to
+  every endpoint.
+- Define an error at service scope only when every method on that service can return it.
+- Define an error at method scope when only that method can return it.
+- Do not promote a method-specific error to service scope just to avoid repeating a declaration or to
+  make generated constructors easier to reach; the design would falsely advertise that all service
+  methods can return it.
 - Use descriptive names and descriptions.
 - Prefer `ErrorResult` for most errors.
 - Add `Temporary()`, `Timeout()`, or `Fault()` when clients should behave differently.

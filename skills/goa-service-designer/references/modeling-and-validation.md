@@ -28,8 +28,8 @@ var AccountID = Type("AccountID", String, func() {
 })
 
 Payload(func() {
-    Field(1, "account_id", AccountID, "Account to query.")
-    Required("account_id")
+    Field(1, "AccountID", AccountID, "Account to query.")
+    Required("AccountID")
 })
 ```
 
@@ -48,13 +48,13 @@ than duplicating aliases in each service design.
 
 ```go
 Payload(func() {
-    Field(1, "account_id", AccountID, "Account identifier.")
-    Field(2, "limit", Int, "Maximum number of items.", func() {
+    Field(1, "AccountID", AccountID, "Account identifier.")
+    Field(2, "Limit", Int, "Maximum number of items.", func() {
         Default(50)
         Minimum(1)
         Maximum(100)
     })
-    Required("account_id")
+    Required("AccountID")
 })
 ```
 

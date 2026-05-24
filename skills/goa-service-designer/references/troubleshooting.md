@@ -71,13 +71,13 @@ Good design-level validation:
 
 ```go
 Payload(func() {
-    Field(1, "account_id", AccountID, "Account identifier.")
-    Field(2, "limit", Int, "Maximum number of items.", func() {
+    Field(1, "AccountID", AccountID, "Account identifier.")
+    Field(2, "Limit", Int, "Maximum number of items.", func() {
         Default(50)
         Minimum(1)
         Maximum(100)
     })
-    Required("account_id")
+    Required("AccountID")
 })
 ```
 

@@ -45,9 +45,16 @@ implementation files and does not overwrite existing custom implementation later
   design.
 - Import generated packages with explicit aliases prefixed by `gen`, such as `genfront`,
   `gendefinitions`, or `genruns`, so generated Goa contracts are recognizable at call sites.
+- In Goa design, type field names use CamelCase (`Field(1, "AccountID", ...)`,
+  `Required("AccountID")`). Method names use snake_case (`Method("get_account", ...)`).
 - Put boundary validation in Goa. Use `Required`, `Enum`, `Format`, `Pattern`, `Minimum`,
   `Maximum`, `MinLength`, `MaxLength`, defaults, security fields, and explicit transport mappings in
   the design.
+- Model error applicability at the narrowest correct Goa scope. API-level errors define reusable
+  potential errors and let transports map them once; they do not mean every endpoint returns every
+  API-level error. Service-level errors apply to all methods in that service. Method-level errors
+  apply only to that method. Do not list an error at service scope just to make a generated
+  constructor convenient if only some methods can return it.
 - In service code, trust decoded payloads and enforce business invariants. Do not add nil guards,
   fallback behavior, silent recovery, blanket string trimming, or compatibility shims for values the
   design guarantees.
