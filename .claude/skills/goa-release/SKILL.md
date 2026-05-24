@@ -70,22 +70,26 @@ For each repository:
    ```bash
    go get -u -v ./...
    go mod tidy
+   (cd jsonrpc/integration_tests && go get -u -v ./... && go mod tidy)
    make
    ```
 
-   `go get` should only update `go.mod` and `go.sum`. If other files changed in any repository,
-   review why before committing.
+   The JSON-RPC integration tests are a nested Go module; update and tidy it before rerunning
+   `make` so `integration-test` does not fail on stale module metadata. `go get` should only update
+   `go.mod` and `go.sum`. If other files changed in any repository, review why before committing.
 
 3. In the examples repository, run:
 
    ```bash
-   go get -u -v ./...
-   go mod tidy
+   go list -m -f '{{if .Main}}{{.Dir}}{{end}}' all | while IFS= read -r mod; do
+     [ -n "$mod" ] && (cd "$mod" && go get -u -v ./... && go mod tidy)
+   done
    make
    ```
 
-   If files changed, commit them with `Prepare v3.x.y`. Do not push; `make release-examples`
-   pushes the branch.
+   The examples repository has no root `go.mod`; each example listed in `go.work` owns its own
+   module. Update and tidy every example module before running `make`. If files changed, commit them
+   with `Prepare v3.x.y`. Do not push; `make release-examples` pushes the branch.
 
 4. In the plugins repository, run:
 
@@ -155,15 +159,25 @@ After `make release` succeeds, create GitHub release notes for the Goa tag.
 
 ## Announcements
 
-After GitHub release notes are ready, draft announcements for Slack, Bluesky, and Substack. Keep the
-tone excited, concrete, and not cheesy.
+After GitHub release notes are ready, draft announcements for Slack, Bluesky, and Substack. Make
+them exciting and delightful by showing what the release helps users do, not by adding hype.
 
-- Slack: 2-4 short paragraphs or bullets. Lead with the most useful user-facing change, link to the
-  GitHub release, and thank contributors.
-- Bluesky: Check the current Bluesky character limit before drafting. If it cannot be checked,
-  assume 300 characters and stay under the limit. Include the version, one concrete highlight, and a
-  release link.
+Voice rules:
+
+- Lead with the most concrete user payoff.
+- Use warm, crisp language with one or two memorable details from the release.
+- Avoid empty hype, forced jokes, excessive exclamation marks, launch cliches, and insider-only
+  wording.
+- Keep contributor thanks visible and sincere.
+
+Channel guidance:
+
+- Slack: 2-4 short paragraphs or bullets. Sound like a maintainer sharing good news with the
+  community. Lead with the most useful user-facing change, link to the GitHub release, and thank
+  contributors.
+- Bluesky: Posts are limited to 300 graphemes. Stay under that limit, include the version, one
+  concrete highlight, and a release link. Make the line feel polished enough to repost.
 - Substack: Write a short note for readers who may not know Goa deeply. Use a friendly title, a
-  brief explanation of Goa, the release highlights, upgrade guidance if any, and contributor thanks.
-  Keep it proportional to the release size.
+  brief explanation of Goa, a user-centered story for the release highlights, upgrade guidance if
+  any, and contributor thanks. Keep it proportional to the release size.
 
