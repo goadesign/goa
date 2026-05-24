@@ -6206,3 +6206,111 @@ func DecodeMethodCookieCustomNameRequest(mux goahttp.Muxer, decoder func(*http.R
 	}
 }
 `
+
+var PayloadPathCustomTextUnmarshalerDecodeCode = `// DecodeMethodPathCustomTextUnmarshalerRequest returns a decoder for requests sent to
+// the ServicePathCustomTextUnmarshaler MethodPathCustomTextUnmarshaler endpoint.
+func DecodeMethodPathCustomTextUnmarshalerRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			p   uuid.UUID
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			if err2 := p.UnmarshalText([]byte(pRaw)); err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "uuid.UUID"))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodPathCustomTextUnmarshalerPayload(p)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadQueryCustomTextUnmarshalerDecodeCode = `// DecodeMethodQueryCustomTextUnmarshalerRequest returns a decoder for requests sent to
+// the ServiceQueryCustomTextUnmarshaler MethodQueryCustomTextUnmarshaler endpoint.
+func DecodeMethodQueryCustomTextUnmarshalerRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (any, error) {
+	return func(r *http.Request) (any, error) {
+		var (
+			p   uuid.UUID
+			err error
+		)
+		{
+			pRaw := r.URL.Query().Get("p")
+			if pRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("p", "query string"))
+			}
+			if err2 := p.UnmarshalText([]byte(pRaw)); err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "uuid.UUID"))
+			}
+		}
+		if err != nil {
+			return nil, err
+		}
+		payload := NewMethodQueryCustomTextUnmarshalerPayload(p)
+
+		return payload, nil
+	}
+}
+`
+
+var PayloadPathCustomTextUnmarshalerFormatDecodeCode = `// DecodeMethodPathCustomTextUnmarshalerFormatRequest returns a decoder for requests sent to
+// the ServicePathCustomTextUnmarshalerFormat MethodPathCustomTextUnmarshalerFormat endpoint.
+func DecodeMethodPathCustomTextUnmarshalerFormatRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicepathcustomtextunmarshalerformat.MethodPathCustomTextUnmarshalerFormatPayload, error) {
+	return func(r *http.Request) (*servicepathcustomtextunmarshalerformat.MethodPathCustomTextUnmarshalerFormatPayload, error) {
+		var payload *servicepathcustomtextunmarshalerformat.MethodPathCustomTextUnmarshalerFormatPayload
+		var (
+			p uuid.UUID
+			err error
+
+			params = mux.Vars(r)
+		)
+		{
+			pRaw := params["p"]
+			if err2 := p.UnmarshalText([]byte(pRaw)); err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "uuid.UUID"))
+			}
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewMethodPathCustomTextUnmarshalerFormatPayload(p)
+
+		return payload, nil
+	}
+}`
+
+var PayloadQueryCustomTextUnmarshalerOptionalDecodeCode = `// DecodeMethodQueryCustomTextUnmarshalerOptionalRequest returns a decoder for requests sent to
+// the ServiceQueryCustomTextUnmarshalerOptional MethodQueryCustomTextUnmarshalerOptional endpoint.
+func DecodeMethodQueryCustomTextUnmarshalerOptionalRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerycustomtextunmarshaleroptional.MethodQueryCustomTextUnmarshalerOptionalPayload, error) {
+	return func(r *http.Request) (*servicequerycustomtextunmarshaleroptional.MethodQueryCustomTextUnmarshalerOptionalPayload, error) {
+		var payload *servicequerycustomtextunmarshaleroptional.MethodQueryCustomTextUnmarshalerOptionalPayload
+		var (
+			p   *uuid.UUID
+			err error
+		)
+		{
+			pRaw := r.URL.Query().Get("p")
+			if pRaw != "" {
+				var pVal uuid.UUID
+				if err2 := pVal.UnmarshalText([]byte(pRaw)); err2 != nil {
+					err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "uuid.UUID"))
+				} else {
+					p = &pVal
+				}
+			}
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewMethodQueryCustomTextUnmarshalerOptionalPayload(p)
+
+		return payload, nil
+	}
+}`

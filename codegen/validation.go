@@ -395,9 +395,15 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 		}
 	}
 	if format := validation.Format; format != "" {
-		data["format"] = string(format)
-		if val := runTemplate(formatValT, data); val != "" {
-			res = append(res, val)
+		// Skip format validation when struct:field:type overrides a string attribute
+		// with a custom type — the custom type's own parsing (e.g. UnmarshalText)
+		// already validates the format, and ValidateFormat expects a plain string.
+		typeName, _ := GetMetaType(att)
+		if typeName == "" {
+			data["format"] = string(format)
+			if val := runTemplate(formatValT, data); val != "" {
+				res = append(res, val)
+			}
 		}
 	}
 	if pattern := validation.Pattern; pattern != "" {
@@ -464,20 +470,24 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 // hasValidations returns true if a UserType contains validations.
 func hasValidations(attCtx *AttributeContext, ut expr.UserType) bool {
 	// We need to check empirically whether there are validations to be
-	// generated, we can't just generate and check whether something was
-	// generated to avoid infinite recursions.
+	// generated. We can't call recurseValidationCode() to avoid infinite
+	// recursions, but we can use validationCode() for the local (non-recursive)
+	// attribute-level checks — it is the source of truth for whether a given
+	// attribute produces any validation output, including any skips (e.g.
+	// format checks on struct:field:type attributes). For nested user types
+	// and required-field checks we keep the structural walk.
 	res := false
 	done := errors.New("done")
 	Walk(ut.Attribute(), func(a *expr.AttributeExpr) error { // nolint: errcheck
 		if a.Validation == nil {
 			return nil
 		}
-		if attCtx.Pointer || !a.Validation.HasRequiredOnly() {
+		// Use validationCode() as the source of truth for whether this
+		// attribute produces any local validation output. This naturally
+		// handles all codegen skips (e.g. Format on struct:field:type)
+		// without hasValidations() needing to mirror those conditions.
+		if validationCode(a, attCtx, true, false, "x", "x") != "" {
 			res = true
-			return done
-		}
-		res = len(generatedRequiredValidation(a, attCtx)) > 0
-		if res {
 			return done
 		}
 		return nil

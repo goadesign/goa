@@ -23,6 +23,10 @@ func TestDecode(t *testing.T) {
 		{"decode-path-custom-uint", testdata.PayloadPathCustomUIntDSL},
 		{"decode-path-custom-uint32", testdata.PayloadPathCustomUInt32DSL},
 		{"decode-path-custom-uint64", testdata.PayloadPathCustomUInt64DSL},
+		{"decode-path-custom-text-unmarshaler", testdata.PayloadPathCustomTextUnmarshalerDSL},
+		{"decode-path-custom-text-unmarshaler-format", testdata.PayloadPathCustomTextUnmarshalerFormatDSL},
+		{"decode-query-custom-text-unmarshaler", testdata.PayloadQueryCustomTextUnmarshalerDSL},
+		{"decode-query-custom-text-unmarshaler-optional", testdata.PayloadQueryCustomTextUnmarshalerOptionalDSL},
 		{"decode-query-bool", testdata.PayloadQueryBoolDSL},
 		{"decode-query-bool-validate", testdata.PayloadQueryBoolValidateDSL},
 		{"decode-query-int", testdata.PayloadQueryIntDSL},
@@ -164,6 +168,7 @@ func TestDecode(t *testing.T) {
 		{"decode-body-map-user", testdata.PayloadBodyMapUserDSL},
 		{"decode-body-map-user-validate", testdata.PayloadBodyMapUserValidateDSL},
 		{"decode-deep-user", testdata.PayloadDeepUserDSL},
+		{"decode-body-nested-uuid-field", testdata.PayloadBodyNestedUUIDFieldDSL},
 
 		{"decode-body-primitive-string-validate", testdata.PayloadBodyPrimitiveStringValidateDSL},
 		{"decode-body-primitive-bool-validate", testdata.PayloadBodyPrimitiveBoolValidateDSL},

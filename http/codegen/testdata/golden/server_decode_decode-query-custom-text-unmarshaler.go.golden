@@ -1,0 +1,27 @@
+// DecodeMethodQueryCustomTextUnmarshalerRequest returns a decoder for requests
+// sent to the ServiceQueryCustomTextUnmarshaler
+// MethodQueryCustomTextUnmarshaler endpoint.
+func DecodeMethodQueryCustomTextUnmarshalerRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (*servicequerycustomtextunmarshaler.MethodQueryCustomTextUnmarshalerPayload, error) {
+	return func(r *http.Request) (*servicequerycustomtextunmarshaler.MethodQueryCustomTextUnmarshalerPayload, error) {
+		var payload *servicequerycustomtextunmarshaler.MethodQueryCustomTextUnmarshalerPayload
+		var (
+			p   uuid.UUID
+			err error
+		)
+		{
+			pRaw := r.URL.Query().Get("p")
+			if pRaw == "" {
+				err = goa.MergeErrors(err, goa.MissingFieldError("p", "query string"))
+			}
+			if err2 := p.UnmarshalText([]byte(pRaw)); err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("p", pRaw, "uuid.UUID"))
+			}
+		}
+		if err != nil {
+			return payload, err
+		}
+		payload = NewMethodQueryCustomTextUnmarshalerPayload(p)
+
+		return payload, nil
+	}
+}

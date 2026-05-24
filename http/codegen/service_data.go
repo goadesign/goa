@@ -456,6 +456,10 @@ type (
 		IsAliased bool
 		// ServiceTypeRef is the service-aware type reference for cross-service resolution.
 		ServiceTypeRef string
+		// IsTextUnmarshaler is true if the attribute has a struct:field:type meta
+		// whose underlying DSL type is string and the custom type is expected to
+		// implement encoding.TextUnmarshaler for conversion from HTTP path/query params.
+		IsTextUnmarshaler bool
 	}
 
 	// InitArgData represents a single constructor argument.
@@ -1144,7 +1148,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		}
 		if !mustValidate {
 			for _, p := range paramsData {
-				if p.Validate != "" || needConversion(p.Type) {
+				if p.Validate != "" || needConversion(p.Type) || p.IsTextUnmarshaler {
 					mustValidate = true
 					break
 				}
@@ -1152,7 +1156,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		}
 		if !mustValidate {
 			for _, q := range queryData {
-				if q.Map || q.Validate != "" || q.Required || needConversion(q.Type) {
+				if q.Map || q.Validate != "" || q.Required || needConversion(q.Type) || q.IsTextUnmarshaler {
 					mustValidate = true
 					break
 				}
@@ -2446,6 +2450,18 @@ func (sds *ServicesData) extractPathParams(a *expr.MappedAttributeExpr, service 
 			fptr = service.IsPrimitivePointer(name, true)
 			ft = service.Find(name).Type
 		}
+		validate := codegen.AttributeValidationCode(c, nil, ctx, true, expr.IsAlias(c.Type), varn, name)
+		if isStringMetaType(c) {
+			// Build a copy of the attribute with Format cleared so the shared
+			// validation code does not emit a format check (UnmarshalText covers it).
+			cNoFmt := *c
+			if c.Validation != nil {
+				v := *c.Validation
+				v.Format = ""
+				cNoFmt.Validation = &v
+			}
+			validate = codegen.AttributeValidationCode(&cNoFmt, nil, ctx, true, expr.IsAlias(c.Type), varn+"Raw", name)
+		}
 		params = append(params, &ParamData{
 			Map:            false,
 			MapStringSlice: false,
@@ -2455,20 +2471,21 @@ func (sds *ServicesData) extractPathParams(a *expr.MappedAttributeExpr, service 
 				Slice:         arr != nil,
 				StringSlice:   stringSlice,
 				AttributeData: &AttributeData{
-					Name:         name,
-					Description:  c.Description,
-					FieldName:    fieldName,
-					FieldPointer: fptr,
-					FieldType:    ft,
-					VarName:      varn,
-					Required:     true,
-					Type:         c.Type,
-					TypeName:     scope.GoTypeName(c),
-					TypeRef:      scope.GoTypeRef(c),
-					Pointer:      false,
-					Validate:     codegen.AttributeValidationCode(c, nil, ctx, true, expr.IsAlias(c.Type), varn, name),
-					DefaultValue: c.DefaultValue,
-					Example:      c.Example(sds.Root.API.ExampleGenerator),
+					Name:              name,
+					Description:       c.Description,
+					FieldName:         fieldName,
+					FieldPointer:      fptr,
+					FieldType:         ft,
+					VarName:           varn,
+					Required:          true,
+					Type:              c.Type,
+					TypeName:          scope.GoTypeName(c),
+					TypeRef:           scope.GoTypeRef(c),
+					Pointer:           false,
+					Validate:          validate,
+					IsTextUnmarshaler: isStringMetaType(c),
+					DefaultValue:      c.DefaultValue,
+					Example:           c.Example(sds.Root.API.ExampleGenerator),
 				},
 			},
 		})
@@ -2510,6 +2527,18 @@ func (sds *ServicesData) extractQueryParams(a *expr.MappedAttributeExpr, service
 			fptr = service.IsPrimitivePointer(name, true)
 			ft = service.Find(name).Type
 		}
+		validate := codegen.AttributeValidationCode(c, nil, ctx, required, expr.IsAlias(c.Type), varn, name)
+		if isStringMetaType(c) {
+			// Build a copy of the attribute with Format cleared so the shared
+			// validation code does not emit a format check (UnmarshalText covers it).
+			cNoFmt := *c
+			if c.Validation != nil {
+				v := *c.Validation
+				v.Format = ""
+				cNoFmt.Validation = &v
+			}
+			validate = codegen.AttributeValidationCode(&cNoFmt, nil, ctx, required, expr.IsAlias(c.Type), varn+"Raw", name)
+		}
 		params = append(params, &ParamData{
 			Map: mp != nil,
 			MapStringSlice: mp != nil &&
@@ -2522,20 +2551,21 @@ func (sds *ServicesData) extractQueryParams(a *expr.MappedAttributeExpr, service
 				HTTPName:      elem,
 				AttributeName: name,
 				AttributeData: &AttributeData{
-					Name:         name,
-					Description:  c.Description,
-					FieldName:    fieldName,
-					FieldPointer: fptr,
-					FieldType:    ft,
-					VarName:      varn,
-					Required:     required,
-					Type:         c.Type,
-					TypeName:     scope.GoTypeName(c),
-					TypeRef:      typeRef,
-					Pointer:      pointer,
-					Validate:     codegen.AttributeValidationCode(c, nil, ctx, required, expr.IsAlias(c.Type), varn, name),
-					DefaultValue: c.DefaultValue,
-					Example:      c.Example(sds.Root.API.ExampleGenerator),
+					Name:              name,
+					Description:       c.Description,
+					FieldName:         fieldName,
+					FieldPointer:      fptr,
+					FieldType:         ft,
+					VarName:           varn,
+					Required:          required,
+					Type:              c.Type,
+					TypeName:          scope.GoTypeName(c),
+					TypeRef:           typeRef,
+					Pointer:           pointer,
+					Validate:          validate,
+					IsTextUnmarshaler: isStringMetaType(c),
+					DefaultValue:      c.DefaultValue,
+					Example:           c.Example(sds.Root.API.ExampleGenerator),
 				},
 			},
 		})
@@ -2973,6 +3003,17 @@ func needConversion(dt expr.DataType) bool {
 	default:
 		return true
 	}
+}
+
+// isStringMetaType returns true if the attribute has a struct:field:type meta
+// whose underlying DSL type is string, indicating the custom type should
+// implement encoding.TextUnmarshaler for HTTP parameter conversion.
+func isStringMetaType(c *expr.AttributeExpr) bool {
+	typeName, _ := codegen.GetMetaType(c)
+	if typeName == "" {
+		return false
+	}
+	return c.Type.Kind() == expr.StringKind
 }
 
 // addMarshalTags adds JSON, XML and Form tags to all inline object attributes recursively.
