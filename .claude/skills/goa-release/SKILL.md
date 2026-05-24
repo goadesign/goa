@@ -11,8 +11,9 @@ examples, and plugins, so do not run it unless the user explicitly wants to perf
 ## Release Contract
 
 - Goa major version is always `3`. Never increment `MAJOR`; if it is not `3`, stop and ask.
-- Resolve the target version before making dependency-update commits in any repository. If the user
-  did not give an explicit `v3.x.y` or say whether this is a patch or minor release, ask.
+- Resolve the target version before making dependency-update commits in any repository. The agent
+  should pick the version from the changes, explain the reasoning, and get confirmation before
+  editing files or running dependency updates.
 - Apply semver within v3:
   - Patch release: increment `BUILD`.
   - Minor release: increment `MINOR` and reset `BUILD=0`.
@@ -31,9 +32,17 @@ Determine the target version before changing any repository:
 
 1. Read `MAJOR`, `MINOR`, and `BUILD` from the Goa `Makefile`.
 2. Confirm `MAJOR=3`.
-3. Compute the target version from the requested bump. If the user did not give an explicit
-   `v3.x.y` or say whether this is a patch or minor release, ask.
-4. Use the exact target version for every preparation commit, tag check, and release command.
+3. Inspect the commits and merged PRs since the previous release tag.
+4. Pick the semver bump:
+   - Minor when the release includes a user-visible feature, new DSL/runtime capability, or
+     backward-compatible public API addition.
+   - Patch when the release only includes fixes, dependency updates, docs, tests, or internal
+     maintenance.
+5. Tell the user the selected target version and the specific changes that justify it, then ask for
+   confirmation. If the user supplied an explicit version, validate it against the same reasoning and
+   call out any mismatch before continuing.
+6. Use the exact confirmed target version for every preparation commit, tag check, and release
+   command.
 
 ## Required Repositories
 
@@ -124,4 +133,37 @@ command that can create commits, tags, and pushes. Before running it:
 5. Fix the root cause, verify the affected repository is in the expected state, then rerun the
    narrowest safe target or command.
 6. When release completes, report the released version and the branch/tag pushes that succeeded.
+
+## GitHub Release Notes
+
+After `make release` succeeds, create GitHub release notes for the Goa tag.
+
+1. Gather the final commit/PR list from the previous Goa tag to the new tag. Include merged PR
+   numbers, titles, authors, and any notable dependency or downstream examples/plugins release work.
+2. Identify every human contributor in that range from commit authors and PR authors. Do not miss
+   contributors whose commits were merged by someone else. Exclude bots from the thank-you list
+   unless their work is directly meaningful to users.
+3. Write notes that are clear and useful to someone who does not know Goa internals:
+   - Start with a short plain-language summary of why the release matters.
+   - Use sections only when the amount of change justifies them, such as `Highlights`, `Fixes`,
+     `Dependencies`, `Upgrade Notes`, and `Contributors`.
+   - Explain user impact before implementation detail. Avoid raw commit-log dumps.
+   - Include upgrade notes only for actions users may need to take.
+   - Thank every contributor by name or handle.
+4. Create or update the GitHub release for `v3.x.y` with the final notes. Do not mention agent or AI
+   tooling in public release notes.
+
+## Announcements
+
+After GitHub release notes are ready, draft announcements for Slack, Bluesky, and Substack. Keep the
+tone excited, concrete, and not cheesy.
+
+- Slack: 2-4 short paragraphs or bullets. Lead with the most useful user-facing change, link to the
+  GitHub release, and thank contributors.
+- Bluesky: Check the current Bluesky character limit before drafting. If it cannot be checked,
+  assume 300 characters and stay under the limit. Include the version, one concrete highlight, and a
+  release link.
+- Substack: Write a short note for readers who may not know Goa deeply. Use a friendly title, a
+  brief explanation of Goa, the release highlights, upgrade guidance if any, and contributor thanks.
+  Keep it proportional to the release size.
 
