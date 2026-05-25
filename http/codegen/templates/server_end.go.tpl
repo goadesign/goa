@@ -23,12 +23,12 @@
 		log.Printf(ctx, "shutting down HTTP server at %q", u.Host)
 
 		{{ comment "Shutdown gracefully with a 30s timeout." }}
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
 		defer cancel()
 
-		err := srv.Shutdown(ctx)
+		err := srv.Shutdown(shutdownCtx)
 		if err != nil {
-			log.Printf(ctx, "failed to shutdown: %v", err)
+			log.Printf(shutdownCtx, "failed to shutdown: %v", err)
 		}
 	}()
 }
