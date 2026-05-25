@@ -32,6 +32,8 @@ type (
 		// schemes. Incoming requests must validate at least one
 		// requirement to be authorized.
 		Requirements []*SecurityExpr
+		// NoSecurity records whether the method explicitly disables security.
+		NoSecurity bool
 		// ClientInterceptors is the list of client interceptors.
 		ClientInterceptors []*InterceptorExpr
 		// ServerInterceptors is the list of server interceptors.
@@ -413,6 +415,7 @@ loop:
 		}
 	}
 	if noreq {
+		m.NoSecurity = true
 		m.Requirements = nil
 		return
 	}

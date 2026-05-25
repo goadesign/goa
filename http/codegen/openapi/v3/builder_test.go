@@ -1,13 +1,17 @@
 package openapiv3
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"goa.design/goa/v3/codegen"
+	dsl "goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
 	"goa.design/goa/v3/http/codegen/openapi/v3/testdata/dsls"
+	"gopkg.in/yaml.v3"
 )
 
 func TestBuildInfo(t *testing.T) {
@@ -84,6 +88,43 @@ func TestBuildInfo(t *testing.T) {
 			if info.Version != c.Version {
 				t.Errorf("got API version %q, expected %q", info.Version, c.Version)
 			}
+		})
+	}
+}
+
+func TestNoSecurityOverridesAPISecurity(t *testing.T) {
+	root := codegen.RunDSL(t, noSecurityOverridesAPISecurityDSL)
+	spec := New(root)
+
+	cases := map[string]struct {
+		marshal   func(any) ([]byte, error)
+		unmarshal func([]byte, any) error
+	}{
+		"json": {
+			marshal:   json.Marshal,
+			unmarshal: json.Unmarshal,
+		},
+		"yaml": {
+			marshal:   yaml.Marshal,
+			unmarshal: yaml.Unmarshal,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			data, err := tc.marshal(spec)
+			require.NoError(t, err)
+
+			var actual struct {
+				Paths map[string]map[string]struct {
+					Security []map[string][]string `json:"security" yaml:"security"`
+				} `json:"paths" yaml:"paths"`
+			}
+			require.NoError(t, tc.unmarshal(data, &actual))
+
+			require.NotEmpty(t, actual.Paths["/secure"]["get"].Security, "secure operation has no security requirements")
+			security := actual.Paths["/public"]["get"].Security
+			require.NotNil(t, security, "NoSecurity operation omitted the operation security override")
+			require.Empty(t, security, "NoSecurity operation security expected empty override")
 		})
 	}
 }
@@ -457,4 +498,30 @@ func matchesHeader(t *testing.T, h *HeaderRef, types map[string]*openapi.Schema,
 		In:              "header",
 	}}
 	matchesParameterHeader(t, par, types, expected, "header")
+}
+
+var noSecurityOverridesAPISecurityDSL = func() {
+	var JWTAuth = dsl.JWTSecurity("jwt")
+
+	dsl.API("test", func() {
+		dsl.Security(JWTAuth)
+	})
+
+	dsl.Service("test", func() {
+		dsl.Method("secure", func() {
+			dsl.Payload(func() {
+				dsl.Token("token", dsl.String)
+				dsl.Required("token")
+			})
+			dsl.HTTP(func() {
+				dsl.GET("/secure")
+			})
+		})
+		dsl.Method("public", func() {
+			dsl.NoSecurity()
+			dsl.HTTP(func() {
+				dsl.GET("/public")
+			})
+		})
+	})
 }

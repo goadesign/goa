@@ -642,6 +642,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			Deprecated:   deprecated,
 			Extensions:   openapi.ExtensionsFromExpr(endpoint.MethodExpr.Meta),
 			Security:     requirements,
+			NoSecurity:   endpoint.MethodExpr.NoSecurity,
 		}
 
 		if key == "" {
