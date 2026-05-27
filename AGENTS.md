@@ -11,7 +11,7 @@
 
 ### Go Code Style
 
-- **Go 1.24+**. Format with `go fmt ./...`.
+- **Go 1.25+**. Format with `go fmt ./...`.
 - **Imports**: Group stdlib separate from external. Let gofmt manage ordering.
 - **Files**: Use `lower_snake_case.go`. Keep ≤1000 lines; split proactively.
 - **Naming**: Packages are lowercase and short. Exported identifiers need GoDoc. Avoid stutter.
