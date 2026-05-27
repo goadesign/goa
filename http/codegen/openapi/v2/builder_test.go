@@ -95,6 +95,87 @@ func TestNoSecurityOverridesAPISecurity(t *testing.T) {
 	}
 }
 
+func TestNoSecurityOverridesServiceSecurity(t *testing.T) {
+	root := codegen.RunDSL(t, noSecurityOverridesServiceSecurityDSL)
+	spec, err := NewV2(root, root.API.Servers[0].Hosts[0])
+	require.NoError(t, err)
+
+	cases := map[string]struct {
+		marshal   func(any) ([]byte, error)
+		unmarshal func([]byte, any) error
+	}{
+		"json": {
+			marshal:   json.Marshal,
+			unmarshal: json.Unmarshal,
+		},
+		"yaml": {
+			marshal:   yaml.Marshal,
+			unmarshal: yaml.Unmarshal,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			data, err := tc.marshal(spec)
+			require.NoError(t, err)
+
+			var actual struct {
+				Paths map[string]map[string]struct {
+					Security []map[string][]string `json:"security" yaml:"security"`
+				} `json:"paths" yaml:"paths"`
+			}
+			require.NoError(t, tc.unmarshal(data, &actual))
+
+			require.NotEmpty(t, actual.Paths["/service-secure"]["get"].Security, "secure operation has no security requirements")
+			security := actual.Paths["/service-public"]["get"].Security
+			require.NotNil(t, security, "NoSecurity operation omitted the operation security override")
+			require.Empty(t, security, "NoSecurity operation security expected empty override")
+		})
+	}
+}
+
+func TestOperationSecurityMarshal(t *testing.T) {
+	securityCases := map[string]struct {
+		operation Operation
+		expected  map[string]any
+	}{
+		"nil security is omitted": {
+			operation: Operation{},
+			expected:  map[string]any{},
+		},
+		"empty security is emitted": {
+			operation: Operation{Security: SecurityRequirements{}},
+			expected:  map[string]any{"security": []any{}},
+		},
+	}
+	cases := map[string]struct {
+		marshal   func(any) ([]byte, error)
+		unmarshal func([]byte, any) error
+	}{
+		"json": {
+			marshal:   json.Marshal,
+			unmarshal: json.Unmarshal,
+		},
+		"yaml": {
+			marshal:   yaml.Marshal,
+			unmarshal: yaml.Unmarshal,
+		},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			for securityName, securityTC := range securityCases {
+				t.Run(securityName, func(t *testing.T) {
+					data, err := tc.marshal(securityTC.operation)
+					require.NoError(t, err)
+
+					var actual map[string]any
+					require.NoError(t, tc.unmarshal(data, &actual))
+					require.Equal(t, securityTC.expected, actual)
+				})
+			}
+		})
+	}
+}
+
 var noSecurityOverridesAPISecurityDSL = func() {
 	var JWTAuth = dsl.JWTSecurity("jwt")
 
@@ -116,6 +197,31 @@ var noSecurityOverridesAPISecurityDSL = func() {
 			dsl.NoSecurity()
 			dsl.HTTP(func() {
 				dsl.GET("/public")
+			})
+		})
+	})
+}
+
+var noSecurityOverridesServiceSecurityDSL = func() {
+	var JWTAuth = dsl.JWTSecurity("jwt")
+
+	dsl.API("test", func() {})
+
+	dsl.Service("test", func() {
+		dsl.Security(JWTAuth)
+		dsl.Method("service-secure", func() {
+			dsl.Payload(func() {
+				dsl.Token("token", dsl.String)
+				dsl.Required("token")
+			})
+			dsl.HTTP(func() {
+				dsl.GET("/service-secure")
+			})
+		})
+		dsl.Method("service-public", func() {
+			dsl.NoSecurity()
+			dsl.HTTP(func() {
+				dsl.GET("/service-public")
 			})
 		})
 	})

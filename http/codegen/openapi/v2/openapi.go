@@ -94,12 +94,13 @@ type (
 		// Deprecated declares this operation to be deprecated.
 		Deprecated bool `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
 		// Security is a declaration of which security schemes are applied for this operation.
-		Security []map[string][]string `json:"security,omitempty" yaml:"security,omitempty"`
-		// NoSecurity indicates that the operation explicitly disables security.
-		NoSecurity bool `json:"-" yaml:"-"`
+		Security SecurityRequirements `json:"security,omitzero" yaml:"security,omitempty"`
 		// Extensions defines the swagger extensions.
 		Extensions map[string]any `json:"-" yaml:"-"`
 	}
+
+	// SecurityRequirements lists alternative security requirements.
+	SecurityRequirements []map[string][]string
 
 	// Parameter describes a single operation parameter.
 	Parameter struct {
@@ -286,7 +287,7 @@ func (p Path) MarshalJSON() ([]byte, error) {
 
 // MarshalJSON returns the JSON encoding of o.
 func (o Operation) MarshalJSON() ([]byte, error) {
-	return openapi.MarshalJSON(_Operation(o), operationExtensions(o))
+	return openapi.MarshalJSON(_Operation(o), o.Extensions)
 }
 
 // MarshalJSON returns the JSON encoding of p.
@@ -316,19 +317,12 @@ func (p Path) MarshalYAML() (any, error) {
 
 // MarshalYAML returns value which marshaled in place of the original value
 func (o Operation) MarshalYAML() (any, error) {
-	return openapi.MarshalYAML(_Operation(o), operationExtensions(o))
+	return openapi.MarshalYAML(_Operation(o), o.Extensions)
 }
 
-func operationExtensions(o Operation) map[string]any {
-	if !o.NoSecurity {
-		return o.Extensions
-	}
-	extensions := make(map[string]any, len(o.Extensions)+1)
-	for key, value := range o.Extensions {
-		extensions[key] = value
-	}
-	extensions["security"] = []map[string][]string{}
-	return extensions
+// IsZero reports whether s should be omitted from OpenAPI output.
+func (s SecurityRequirements) IsZero() bool {
+	return s == nil
 }
 
 // MarshalYAML returns value which marshaled in place of the original value

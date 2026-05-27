@@ -32,8 +32,6 @@ type (
 		// schemes. Incoming requests must validate at least one
 		// requirement to be authorized.
 		Requirements []*SecurityExpr
-		// NoSecurity records whether the method explicitly disables security.
-		NoSecurity bool
 		// ClientInterceptors is the list of client interceptors.
 		ClientInterceptors []*InterceptorExpr
 		// ServerInterceptors is the list of server interceptors.
@@ -403,20 +401,8 @@ func (m *MethodExpr) Finalize() {
 	}
 
 	// Inherit security requirements
-	noreq := false
-loop:
-	for _, r := range m.Requirements {
-		// Handle special case of no security
-		for _, s := range r.Schemes {
-			if s.Kind == NoKind {
-				noreq = true
-				break loop
-			}
-		}
-	}
-	if noreq {
-		m.NoSecurity = true
-		m.Requirements = nil
+	if HasNoSecurity(m.Requirements) {
+		m.Requirements = []*SecurityExpr{{Schemes: []*SchemeExpr{{Kind: NoKind}}}}
 		return
 	}
 	if len(m.Requirements) == 0 {

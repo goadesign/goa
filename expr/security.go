@@ -145,6 +145,28 @@ func DupScheme(sch *SchemeExpr) *SchemeExpr {
 	return &dup
 }
 
+// HasNoSecurity returns true if the security requirements explicitly disable
+// security.
+func HasNoSecurity(reqs []*SecurityExpr) bool {
+	for _, req := range reqs {
+		for _, scheme := range req.Schemes {
+			if scheme.Kind == NoKind {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// EffectiveSecurityRequirements returns the security requirements that should
+// be enforced. It returns nil when reqs explicitly disable security.
+func EffectiveSecurityRequirements(reqs []*SecurityExpr) []*SecurityExpr {
+	if HasNoSecurity(reqs) {
+		return nil
+	}
+	return reqs
+}
+
 // Type returns the type of the scheme.
 func (s *SchemeExpr) Type() string {
 	switch s.Kind {

@@ -601,7 +601,10 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 
 		description := endpoint.Description()
 
-		requirements := make([]map[string][]string, len(endpoint.Requirements))
+		var requirements SecurityRequirements
+		if len(endpoint.Requirements) > 0 {
+			requirements = make(SecurityRequirements, len(endpoint.Requirements))
+		}
 		for i, req := range endpoint.Requirements {
 			requirement := make(map[string][]string)
 			for _, s := range req.Schemes {
@@ -627,6 +630,9 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			}
 			requirements[i] = requirement
 		}
+		if expr.HasNoSecurity(endpoint.MethodExpr.Requirements) {
+			requirements = SecurityRequirements{}
+		}
 		_, deprecated := endpoint.MethodExpr.Meta.Last("openapi:deprecated")
 		operation := &Operation{
 			Tags:         tagNames,
@@ -642,7 +648,6 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			Deprecated:   deprecated,
 			Extensions:   openapi.ExtensionsFromExpr(endpoint.MethodExpr.Meta),
 			Security:     requirements,
-			NoSecurity:   endpoint.MethodExpr.NoSecurity,
 		}
 
 		if key == "" {

@@ -73,14 +73,15 @@ func UnionToObject(att *AttributeExpr) *AttributeExpr {
 // password attributes).
 func defaultRequestHeaderAttributes(e *HTTPEndpointExpr) map[string]bool {
 	var requirements []*SecurityExpr
-	if e.MethodExpr.Requirements != nil {
+	switch {
+	case HasNoSecurity(e.MethodExpr.Requirements):
+		return nil
+	case len(e.MethodExpr.Requirements) > 0:
 		requirements = e.MethodExpr.Requirements
-	}
-	if e.Service.ServiceExpr.Requirements != nil {
-		requirements = append(requirements, e.Service.ServiceExpr.Requirements...)
-	}
-	if Root.API.Requirements != nil {
-		requirements = append(requirements, Root.API.Requirements...)
+	case len(e.Service.ServiceExpr.Requirements) > 0:
+		requirements = e.Service.ServiceExpr.Requirements
+	case len(Root.API.Requirements) > 0:
+		requirements = Root.API.Requirements
 	}
 	if len(requirements) == 0 {
 		return nil

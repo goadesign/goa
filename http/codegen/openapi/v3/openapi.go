@@ -101,22 +101,23 @@ type (
 	// Operation represents an OpenAPI Operation object as defined in
 	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#operationObject
 	Operation struct {
-		Tags        []string                `json:"tags,omitempty" yaml:"tags,omitempty"`
-		Summary     string                  `json:"summary,omitempty" yaml:"summary,omitempty"`
-		Description string                  `json:"description,omitempty" yaml:"description,omitempty"`
-		OperationID string                  `json:"operationId,omitempty" yaml:"operationId,omitempty"`
-		Parameters  []*ParameterRef         `json:"parameters,omitempty" yaml:"parameters,omitempty"`
-		RequestBody *RequestBodyRef         `json:"requestBody,omitempty" yaml:"requestBody,omitempty"`
-		Responses   map[string]*ResponseRef `json:"responses" yaml:"responses"` // Required
-		Callbacks   map[string]*CallbackRef `json:"callbacks,omitempty" yaml:"callbacks,omitempty"`
-		Deprecated  bool                    `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
-		Security    []map[string][]string   `json:"security,omitempty" yaml:"security,omitempty"`
-		// NoSecurity indicates that the operation explicitly disables security.
-		NoSecurity   bool                  `json:"-" yaml:"-"`
-		Servers      []*Server             `json:"servers,omitempty" yaml:"servers,omitempty"`
-		ExternalDocs *openapi.ExternalDocs `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
-		Extensions   map[string]any        `json:"-" yaml:"-"`
+		Tags         []string                `json:"tags,omitempty" yaml:"tags,omitempty"`
+		Summary      string                  `json:"summary,omitempty" yaml:"summary,omitempty"`
+		Description  string                  `json:"description,omitempty" yaml:"description,omitempty"`
+		OperationID  string                  `json:"operationId,omitempty" yaml:"operationId,omitempty"`
+		Parameters   []*ParameterRef         `json:"parameters,omitempty" yaml:"parameters,omitempty"`
+		RequestBody  *RequestBodyRef         `json:"requestBody,omitempty" yaml:"requestBody,omitempty"`
+		Responses    map[string]*ResponseRef `json:"responses" yaml:"responses"` // Required
+		Callbacks    map[string]*CallbackRef `json:"callbacks,omitempty" yaml:"callbacks,omitempty"`
+		Deprecated   bool                    `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
+		Security     SecurityRequirements    `json:"security,omitzero" yaml:"security,omitempty"`
+		Servers      []*Server               `json:"servers,omitempty" yaml:"servers,omitempty"`
+		ExternalDocs *openapi.ExternalDocs   `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
+		Extensions   map[string]any          `json:"-" yaml:"-"`
 	}
+
+	// SecurityRequirements lists alternative security requirements.
+	SecurityRequirements []map[string][]string
 
 	// Parameter represents an OpenAPI Parameter object as defined in
 	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#parameterObject
@@ -282,7 +283,7 @@ func (p PathItem) MarshalJSON() ([]byte, error) {
 
 // MarshalJSON returns the JSON encoding of o.
 func (o Operation) MarshalJSON() ([]byte, error) {
-	return openapi.MarshalJSON(_Operation(o), operationExtensions(o))
+	return openapi.MarshalJSON(_Operation(o), o.Extensions)
 }
 
 // MarshalJSON returns the JSON encoding of p.
@@ -312,19 +313,12 @@ func (p PathItem) MarshalYAML() (any, error) {
 
 // MarshalYAML returns value which marshaled in place of the original value
 func (o Operation) MarshalYAML() (any, error) {
-	return openapi.MarshalYAML(_Operation(o), operationExtensions(o))
+	return openapi.MarshalYAML(_Operation(o), o.Extensions)
 }
 
-func operationExtensions(o Operation) map[string]any {
-	if !o.NoSecurity {
-		return o.Extensions
-	}
-	extensions := make(map[string]any, len(o.Extensions)+1)
-	for key, value := range o.Extensions {
-		extensions[key] = value
-	}
-	extensions["security"] = []map[string][]string{}
-	return extensions
+// IsZero reports whether s should be omitted from OpenAPI output.
+func (s SecurityRequirements) IsZero() bool {
+	return s == nil
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
