@@ -401,19 +401,8 @@ func (m *MethodExpr) Finalize() {
 	}
 
 	// Inherit security requirements
-	noreq := false
-loop:
-	for _, r := range m.Requirements {
-		// Handle special case of no security
-		for _, s := range r.Schemes {
-			if s.Kind == NoKind {
-				noreq = true
-				break loop
-			}
-		}
-	}
-	if noreq {
-		m.Requirements = nil
+	if HasNoSecurity(m.Requirements) {
+		m.Requirements = []*SecurityExpr{{Schemes: []*SchemeExpr{{Kind: NoKind}}}}
 		return
 	}
 	if len(m.Requirements) == 0 {

@@ -331,6 +331,10 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 
 	// An endpoint may be marked as deprecated. if the openapi:deprecated tag is present, we populate it to true
 	_, deprecated := e.Meta.Last("openapi:deprecated")
+	security := buildSecurityRequirements(e.Requirements)
+	if expr.HasNoSecurity(e.MethodExpr.Requirements) {
+		security = SecurityRequirements{}
+	}
 	return &Operation{
 		Tags:         tagNames,
 		Summary:      summary,
@@ -339,7 +343,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		Parameters:   params,
 		RequestBody:  requestBody,
 		Responses:    responses,
-		Security:     buildSecurityRequirements(e.Requirements),
+		Security:     security,
 		Deprecated:   deprecated,
 		ExternalDocs: openapi.DocsFromExpr(m.Docs, m.Meta),
 		Extensions:   openapi.ExtensionsFromExpr(m.Meta),
@@ -534,8 +538,14 @@ func buildServers(servers []*expr.ServerExpr) []*Server {
 
 // buildSecurityRequirements builds the OpenAPI security requirements for the
 // given security expressions.
-func buildSecurityRequirements(reqs []*expr.SecurityExpr) []map[string][]string {
-	srs := make([]map[string][]string, len(reqs))
+func buildSecurityRequirements(reqs []*expr.SecurityExpr) SecurityRequirements {
+	if expr.HasNoSecurity(reqs) {
+		return SecurityRequirements{}
+	}
+	if len(reqs) == 0 {
+		return nil
+	}
+	srs := make(SecurityRequirements, len(reqs))
 	for i, req := range reqs {
 		sr := make(map[string][]string, len(req.Schemes))
 		for _, sch := range req.Schemes {
