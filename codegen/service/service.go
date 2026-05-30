@@ -290,27 +290,48 @@ func dedupeByResult(ms []*MethodData) []*MethodData {
 	return out
 }
 
-// AddServiceDataMetaTypeImports Adds all imports defined by struct:field:type from the service expr and the service data
-func AddServiceDataMetaTypeImports(header *codegen.SectionTemplate, svcExpr *expr.ServiceExpr, svcData *Data) {
-	codegen.AddServiceMetaTypeImports(header, svcExpr)
-	for _, ut := range svcData.userTypes {
-		codegen.AddImport(header, codegen.GetMetaTypeImports(ut.Type.Attribute())...)
-	}
-	for _, et := range svcData.errorTypes {
-		codegen.AddImport(header, codegen.GetMetaTypeImports(et.Type.Attribute())...)
-	}
-	for _, t := range svcData.viewedResultTypes {
-		codegen.AddImport(header, codegen.GetMetaTypeImports(t.Type.Attribute())...)
-	}
-	for _, t := range svcData.projectedTypes {
-		codegen.AddImport(header, codegen.GetMetaTypeImports(t.Type.Attribute())...)
-	}
+// SetUserTypeImports sets the import paths for user types declared in custom
+// packages with the Meta key "struct:pkg:path".
+func SetUserTypeImports(genpkg string, d *Data) {
+	d.UserTypeImports = userTypeImports(genpkg, d)
 }
 
-// AddUserTypeImports sets the import paths for the user types defined in the
-// service.  User types may be declared in multiple packages when defined with
-// the Meta key "struct:pkg:path".
-func AddUserTypeImports(genpkg string, header *codegen.SectionTemplate, d *Data) {
+// AddServiceDataMetaTypeImports adds all imports defined by struct:field:type
+// metadata for the service data.
+func AddServiceDataMetaTypeImports(header *codegen.SectionTemplate, d *Data) {
+	codegen.AddImport(header, d.metaTypeImports...)
+}
+
+// AddUserTypeImports adds the imports for user types declared in custom
+// packages with the Meta key "struct:pkg:path".
+func AddUserTypeImports(header *codegen.SectionTemplate, d *Data) {
+	codegen.AddImport(header, d.UserTypeImports...)
+}
+
+func metaTypeImports(svcExpr *expr.ServiceExpr, svcData *Data) []*codegen.ImportSpec {
+	seen := make(map[codegen.ImportSpec]struct{})
+	var imports []*codegen.ImportSpec
+	for _, m := range svcExpr.Methods {
+		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(m.Payload)...)
+		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(m.StreamingPayload)...)
+		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(m.Result)...)
+	}
+	for _, ut := range svcData.userTypes {
+		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(ut.Type.Attribute())...)
+	}
+	for _, et := range svcData.errorTypes {
+		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(et.Type.Attribute())...)
+	}
+	for _, t := range svcData.viewedResultTypes {
+		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(t.Type.Attribute())...)
+	}
+	for _, t := range svcData.projectedTypes {
+		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(t.Type.Attribute())...)
+	}
+	return imports
+}
+
+func userTypeImports(genpkg string, d *Data) []*codegen.ImportSpec {
 	importsByPath := make(map[string]*codegen.ImportSpec)
 
 	initLoc := func(loc *codegen.Location) {
@@ -337,10 +358,22 @@ func AddUserTypeImports(genpkg string, header *codegen.SectionTemplate, d *Data)
 		initLoc(et.Loc)
 	}
 
+	imports := make([]*codegen.ImportSpec, 0, len(importsByPath))
 	for _, imp := range importsByPath { // Order does not matter, imports are sorted during formatting.
-		codegen.AddImport(header, imp)
-		d.UserTypeImports = append(d.UserTypeImports, imp)
+		imports = append(imports, imp)
 	}
+	return imports
+}
+
+func appendUniqueImport(imports []*codegen.ImportSpec, seen map[codegen.ImportSpec]struct{}, specs ...*codegen.ImportSpec) []*codegen.ImportSpec {
+	for _, spec := range specs {
+		if _, ok := seen[*spec]; ok {
+			continue
+		}
+		seen[*spec] = struct{}{}
+		imports = append(imports, spec)
+	}
+	return imports
 }
 
 func errorName(et *UserTypeData) string {
