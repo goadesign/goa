@@ -22,6 +22,9 @@ func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 
 		// Create service data
 		services := service.NewServicesData(r)
+		for _, s := range r.Services {
+			service.SetUserTypeImports(genpkg, services.Get(s.Name))
+		}
 
 		// HTTP
 		httpServices := httpcodegen.NewServicesData(services, r.API.HTTP)
@@ -52,15 +55,7 @@ func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		files = append(files, jsonrpccodegen.SSEServerFiles(genpkg, jsonrpcServices)...)
 
 		// Add service data meta type imports
-		for _, f := range files {
-			if len(f.SectionTemplates) > 0 {
-				for _, s := range r.Services {
-					d := services.Get(s.Name)
-					service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], s, d)
-					service.AddUserTypeImports(genpkg, f.SectionTemplates[0], d)
-				}
-			}
-		}
+		addServicesImports(files, services, r.Services)
 	}
 	return files, nil
 }

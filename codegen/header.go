@@ -41,10 +41,20 @@ func AddImport(section *SectionTemplate, imprts ...*ImportSpec) {
 		return
 	}
 	var specs []*ImportSpec
-	if data, ok := section.Data.(map[string]any); ok {
-		if imports, ok := data["Imports"]; ok {
-			specs = imports.([]*ImportSpec)
-		}
-		data["Imports"] = append(specs, imprts...)
+	data := section.Data.(map[string]any)
+	if imports, ok := data["Imports"]; ok {
+		specs = imports.([]*ImportSpec)
 	}
+	seen := make(map[ImportSpec]struct{}, len(specs)+len(imprts))
+	for _, spec := range specs {
+		seen[*spec] = struct{}{}
+	}
+	for _, spec := range imprts {
+		if _, ok := seen[*spec]; ok {
+			continue
+		}
+		seen[*spec] = struct{}{}
+		specs = append(specs, spec)
+	}
+	data["Imports"] = specs
 }

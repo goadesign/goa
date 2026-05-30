@@ -23,6 +23,9 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 
 		// Create service data
 		services := service.NewServicesData(r)
+		for _, s := range r.Services {
+			service.SetUserTypeImports(genpkg, services.Get(s.Name))
+		}
 
 		// example service implementation
 		if fs := service.ExampleServiceFiles(genpkg, r, services); len(fs) != 0 {
@@ -78,13 +81,7 @@ func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		}
 
 		// Add imports defined via struct:field:type
-		for _, f := range files {
-			if len(f.SectionTemplates) > 0 {
-				for _, s := range r.Services {
-					service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], s, services.Get(s.Name))
-				}
-			}
-		}
+		addServicesMetaTypeImports(files, services, r.Services)
 	}
 	return files, nil
 }
