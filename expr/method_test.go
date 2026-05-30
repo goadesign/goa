@@ -113,6 +113,39 @@ func TestMethodExprFinalizeInheritsBearerFormat(t *testing.T) {
 	}
 }
 
+func TestMethodExprFinalizePreservesNoSecurityMarker(t *testing.T) {
+	root := expr.Root
+	t.Cleanup(func() {
+		expr.Root = root
+	})
+
+	expr.Root = &expr.RootExpr{
+		API: &expr.APIExpr{
+			Requirements: []*expr.SecurityExpr{{
+				Schemes: []*expr.SchemeExpr{{
+					Kind:       expr.JWTKind,
+					SchemeName: "jwt",
+				}},
+			}},
+		},
+	}
+	method := &expr.MethodExpr{
+		Name: "Health",
+		Requirements: []*expr.SecurityExpr{{
+			Schemes: []*expr.SchemeExpr{{Kind: expr.NoKind}},
+		}},
+		Service: &expr.ServiceExpr{Name: "Service"},
+	}
+
+	method.Finalize()
+
+	require.True(t, expr.HasNoSecurity(method.Requirements))
+	require.Len(t, method.Requirements, 1)
+	require.Len(t, method.Requirements[0].Schemes, 1)
+	require.Equal(t, expr.NoKind, method.Requirements[0].Schemes[0].Kind)
+	require.Nil(t, expr.EffectiveSecurityRequirements(method.Requirements))
+}
+
 func TestMethodExprError(t *testing.T) {
 	var (
 		errorFoo = &expr.ErrorExpr{

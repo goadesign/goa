@@ -289,9 +289,10 @@ func (e *GRPCEndpointExpr) Finalize() {
 
 		// Initialize any security attributes in request metadata unless it is
 		// specified explicitly in the request message via the DSL.
-		if reqLen := len(e.MethodExpr.Requirements); reqLen > 0 {
+		requirements := EffectiveSecurityRequirements(e.MethodExpr.Requirements)
+		if reqLen := len(requirements); reqLen > 0 {
 			e.Requirements = make([]*SecurityExpr, 0, reqLen)
-			for _, req := range e.MethodExpr.Requirements {
+			for _, req := range requirements {
 				dupReq := DupRequirement(req)
 				for _, sch := range dupReq.Schemes {
 					var field string

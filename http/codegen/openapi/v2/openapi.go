@@ -94,10 +94,13 @@ type (
 		// Deprecated declares this operation to be deprecated.
 		Deprecated bool `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
 		// Security is a declaration of which security schemes are applied for this operation.
-		Security []map[string][]string `json:"security,omitempty" yaml:"security,omitempty"`
+		Security SecurityRequirements `json:"security,omitzero" yaml:"security,omitempty"`
 		// Extensions defines the swagger extensions.
 		Extensions map[string]any `json:"-" yaml:"-"`
 	}
+
+	// SecurityRequirements lists alternative security requirements.
+	SecurityRequirements []map[string][]string
 
 	// Parameter describes a single operation parameter.
 	Parameter struct {
@@ -315,6 +318,11 @@ func (p Path) MarshalYAML() (any, error) {
 // MarshalYAML returns value which marshaled in place of the original value
 func (o Operation) MarshalYAML() (any, error) {
 	return openapi.MarshalYAML(_Operation(o), o.Extensions)
+}
+
+// IsZero reports whether s should be omitted from OpenAPI output.
+func (s SecurityRequirements) IsZero() bool {
+	return s == nil
 }
 
 // MarshalYAML returns value which marshaled in place of the original value

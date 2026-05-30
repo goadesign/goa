@@ -1349,7 +1349,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		}
 	}
 
-	for _, req := range m.Requirements {
+	for _, req := range expr.EffectiveSecurityRequirements(m.Requirements) {
 		var rs SchemesData
 		for _, s := range req.Schemes {
 			sch := BuildSchemeData(s, m)

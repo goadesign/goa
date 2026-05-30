@@ -110,11 +110,14 @@ type (
 		Responses    map[string]*ResponseRef `json:"responses" yaml:"responses"` // Required
 		Callbacks    map[string]*CallbackRef `json:"callbacks,omitempty" yaml:"callbacks,omitempty"`
 		Deprecated   bool                    `json:"deprecated,omitempty" yaml:"deprecated,omitempty"`
-		Security     []map[string][]string   `json:"security,omitempty" yaml:"security,omitempty"`
+		Security     SecurityRequirements    `json:"security,omitzero" yaml:"security,omitempty"`
 		Servers      []*Server               `json:"servers,omitempty" yaml:"servers,omitempty"`
 		ExternalDocs *openapi.ExternalDocs   `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
 		Extensions   map[string]any          `json:"-" yaml:"-"`
 	}
+
+	// SecurityRequirements lists alternative security requirements.
+	SecurityRequirements []map[string][]string
 
 	// Parameter represents an OpenAPI Parameter object as defined in
 	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#parameterObject
@@ -311,6 +314,11 @@ func (p PathItem) MarshalYAML() (any, error) {
 // MarshalYAML returns value which marshaled in place of the original value
 func (o Operation) MarshalYAML() (any, error) {
 	return openapi.MarshalYAML(_Operation(o), o.Extensions)
+}
+
+// IsZero reports whether s should be omitted from OpenAPI output.
+func (s SecurityRequirements) IsZero() bool {
+	return s == nil
 }
 
 // MarshalYAML returns value which marshaled in place of the original value
