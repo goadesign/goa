@@ -170,3 +170,42 @@ func TestGetMetaTypeImports(t *testing.T) {
 		})
 	}
 }
+
+// TestGetMetaTypeImportsAcrossDesigns verifies that results are cached by
+// attribute identity, not by type name: two designs that declare a type with
+// the same name but different struct:field:type imports must each resolve their
+// own imports.
+func TestGetMetaTypeImportsAcrossDesigns(t *testing.T) {
+	design := func(pkg string) func() {
+		return func() {
+			shared := dsl.Type("Shared", func() {
+				dsl.Attribute("a", dsl.String, func() {
+					dsl.Meta("struct:field:type", "Custom", pkg)
+				})
+			})
+			dsl.Service("svc", func() {
+				dsl.Method("m", func() {
+					dsl.Payload(shared)
+				})
+			})
+		}
+	}
+	paths := func(imports []*ImportSpec) []string {
+		got := make([]string, 0, len(imports))
+		for _, im := range imports {
+			got = append(got, im.Path)
+		}
+		sort.Strings(got)
+		return got
+	}
+	root1 := RunDSL(t, design("package/first"))
+	first := paths(GetMetaTypeImports(root1.Services[0].Methods[0].Payload))
+	root2 := RunDSL(t, design("package/second"))
+	second := paths(GetMetaTypeImports(root2.Services[0].Methods[0].Payload))
+	if want := []string{"package/first"}; !reflect.DeepEqual(want, first) {
+		t.Errorf("first design: want %+v, got %+v", want, first)
+	}
+	if want := []string{"package/second"}; !reflect.DeepEqual(want, second) {
+		t.Errorf("second design: want %+v, got %+v", want, second)
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strconv"
+	"sync"
 
 	"goa.design/goa/v3/expr"
 	goa "goa.design/goa/v3/pkg"
@@ -119,9 +120,17 @@ func GetMetaType(att *expr.AttributeExpr) (typeName string, importS *ImportSpec)
 	return
 }
 
+// metaTypeImports caches GetMetaTypeImports results by attribute.
+var metaTypeImports sync.Map // map[*expr.AttributeExpr][]*ImportSpec
+
 // GetMetaTypeImports parses the attribute for all user defined imports
 func GetMetaTypeImports(att *expr.AttributeExpr) []*ImportSpec {
-	return safelyGetMetaTypeImports(att, nil)
+	if v, ok := metaTypeImports.Load(att); ok {
+		return v.([]*ImportSpec)
+	}
+	res := safelyGetMetaTypeImports(att, nil)
+	metaTypeImports.Store(att, res)
+	return res
 }
 
 // safelyGetMetaTypeImports parses attributes while keeping track of previous usertypes to avoid infinite recursion
