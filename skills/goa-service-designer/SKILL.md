@@ -47,6 +47,11 @@ implementation files and does not overwrite existing custom implementation later
   `gendefinitions`, or `genruns`, so generated Goa contracts are recognizable at call sites.
 - In Goa design, type field names use CamelCase (`Field(1, "AccountID", ...)`,
   `Required("AccountID")`). Method names use snake_case (`Method("get_account", ...)`).
+- Use literal integer field tags in Goa design. For each non-`Extend` type, payload, or result
+  definition, start `Field` tags at `1` and increment by `1` within that definition. For any
+  definition that calls `Extend`, the fields introduced by that definition start at `100` and
+  increment by `1`. Do not carry field counters across methods or types, and do not hide field tags
+  behind variables or helper calls.
 - Put boundary validation in Goa. Use `Required`, `Enum`, `Format`, `Pattern`, `Minimum`,
   `Maximum`, `MinLength`, `MaxLength`, defaults, security fields, and explicit transport mappings in
   the design.
