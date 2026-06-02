@@ -792,7 +792,7 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 			}
 			var fdt expr.DataType
 			switch f.Type.Kind() {
-			case reflect.Ptr:
+			case reflect.Pointer:
 				if err := buildDesignType(&fdt, f.Type.Elem(), aref, recf); err != nil {
 					return fmt.Errorf("%q.%s: %w", t.Name(), f.Name, err)
 				}
@@ -826,7 +826,7 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 		}
 		return nil
 
-	case reflect.Ptr:
+	case reflect.Pointer:
 		rec.path = "*(" + rec.path + ")"
 		if err := buildDesignType(dt, t.Elem(), ref, rec); err != nil {
 			return err
@@ -942,7 +942,7 @@ func appendCompPath(r compRec, p string) compRec {
 // returns nil if they do, an error otherwise.
 func compatible(from expr.DataType, to reflect.Type, recs ...compRec) error {
 	// deference if needed
-	if to.Kind() == reflect.Ptr {
+	if to.Kind() == reflect.Pointer {
 		return compatible(from, to.Elem(), recs...)
 	}
 

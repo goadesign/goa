@@ -13,7 +13,7 @@
 # - "all" is the default target, it runs "lint" and "test"
 #
 MAJOR=3
-MINOR=27
+MINOR=28
 BUILD=0
 
 GOOS=$(shell go env GOOS)
