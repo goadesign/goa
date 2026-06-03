@@ -260,11 +260,11 @@ func ResponseDecoder(resp *http.Response) Decoder {
 // encoded as a permanent internal server error. This behavior as well as the
 // shape of the response can be overridden by providing a non-nil formatter.
 func ErrorEncoder(encoder func(context.Context, http.ResponseWriter) Encoder, formatter func(ctx context.Context, err error) Statuser) func(context.Context, http.ResponseWriter, error) error {
+	if formatter == nil {
+		formatter = NewErrorResponse
+	}
 	return func(ctx context.Context, w http.ResponseWriter, err error) error {
 		enc := encoder(ctx, w)
-		if formatter == nil {
-			formatter = NewErrorResponse
-		}
 		resp := formatter(ctx, err)
 		w.WriteHeader(resp.StatusCode())
 		return enc.Encode(resp)
