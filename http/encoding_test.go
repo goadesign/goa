@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -126,6 +127,28 @@ func TestUnsupportedDecoder(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusUnsupportedMediaType, w.Code)
+}
+
+func TestErrorEncoderNilFormatterRace(t *testing.T) {
+	// Reproduce the data race that occurs when ErrorEncoder is called with a
+	// nil formatter: the returned encoder is invoked concurrently and each
+	// goroutine writes to the captured formatter variable. Run with -race.
+	encoder := ErrorEncoder(ResponseEncoder, nil)
+	err := errors.New("boom")
+
+	const n = 50
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for range n {
+		go func() {
+			defer wg.Done()
+			// Each goroutine uses its own ResponseWriter to avoid unrelated
+			// races and isolate the race on the captured formatter.
+			w := httptest.NewRecorder()
+			require.NoError(t, encoder(context.Background(), w, err))
+		}()
+	}
+	wg.Wait()
 }
 
 func TestResponseEncoder(t *testing.T) {
