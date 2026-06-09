@@ -280,7 +280,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 
 	// Default value, example, extensions
 	s.DefaultValue = toStringMap(attr.DefaultValue)
-	s.Example = attr.Example(sf.rand)
+	s.Example = openapi.Example(attr, sf.rand)
 	s.Extensions = openapi.ExtensionsFromExpr(attr.Meta)
 
 	// Validations
