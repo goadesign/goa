@@ -20,6 +20,11 @@ func TestDescription(t *testing.T) {
 		"api":  {&expr.APIExpr{}, description, apiDesc},
 		"attr": {&expr.AttributeExpr{}, description, attrDesc},
 		"docs": {&expr.DocsExpr{}, description, docsDesc},
+		"user_type": {
+			&expr.UserTypeExpr{AttributeExpr: &expr.AttributeExpr{}},
+			description,
+			userTypeDesc,
+		},
 	}
 
 	for k, tc := range cases {
@@ -39,3 +44,6 @@ func TestDescription(t *testing.T) {
 func apiDesc(e eval.Expression) string  { return e.(*expr.APIExpr).Description }
 func attrDesc(e eval.Expression) string { return e.(*expr.AttributeExpr).Description }
 func docsDesc(e eval.Expression) string { return e.(*expr.DocsExpr).Description }
+func userTypeDesc(e eval.Expression) string {
+	return e.(*expr.UserTypeExpr).Attribute().Description
+}

@@ -2,6 +2,7 @@ package openapiv3
 
 import (
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/http/codegen/openapi"
 )
 
 type (
@@ -23,15 +24,15 @@ func initExamples(obj exampler, attr *expr.AttributeExpr, r *expr.ExampleGenerat
 			example := &Example{
 				Summary:     ex.Summary,
 				Description: ex.Description,
-				Value:       ex.Value,
+				Value:       openapi.ProjectExample(attr, ex.Value),
 			}
 			refs[ex.Summary] = &ExampleRef{Value: example}
 		}
 		obj.setExamples(refs)
 		return
 	case len(examples) > 0:
-		obj.setExample(examples[0].Value)
+		obj.setExample(openapi.ProjectExample(attr, examples[0].Value))
 	default:
-		obj.setExample(attr.Example(r))
+		obj.setExample(openapi.Example(attr, r))
 	}
 }

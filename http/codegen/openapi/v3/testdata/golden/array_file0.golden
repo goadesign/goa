@@ -142,6 +142,7 @@
               }
             }
           },
+          "description": "Request body for testEndpoint.",
           "required": true
         },
         "responses": {

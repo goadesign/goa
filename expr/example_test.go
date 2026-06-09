@@ -65,6 +65,7 @@ func TestExample(t *testing.T) {
 		{"invalid-example-type", testdata.InvalidExampleTypeDSL, nil, "service \"InvalidExampleType\" method \"Method\": payload - example value map[int]int{1:1} is incompatible with type map"},
 		{"empty-example", testdata.EmptyExampleDSL, nil, "too few arguments given to Example in attribute"},
 		{"hiding-example", testdata.HidingExampleDSL, nil, ""},
+		{"openapi-generate-false-array-example", testdata.OpenAPIGenerateFalseArrayExampleDSL, map[string]any{"items": []map[string]any{{"name": "example"}}}, ""},
 		{"overriding-hidden-examples", testdata.OverridingHiddenExamplesDSL, "example", ""},
 	}
 	r := expr.NewRandom("test")

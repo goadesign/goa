@@ -2,6 +2,7 @@
   "components": {
     "schemas": {
       "Bar": {
+        "description": "Request body for test endpoint.",
         "example": {
           "string": ""
         },
@@ -75,6 +76,7 @@
               }
             }
           },
+          "description": "Request body for test endpoint.",
           "required": true
         },
         "responses": {

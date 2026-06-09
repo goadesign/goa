@@ -12,6 +12,7 @@ paths:
             summary: bar testService
             operationId: testService#bar
             requestBody:
+                description: Request body for bar.
                 required: true
                 content:
                     application/json:
@@ -35,6 +36,7 @@ paths:
             summary: baz testService
             operationId: testService#baz
             requestBody:
+                description: Request body for baz.
                 required: true
                 content:
                     application/json:
@@ -58,6 +60,7 @@ paths:
             summary: foo testService
             operationId: testService#foo
             requestBody:
+                description: Request body for foo.
                 required: true
                 content:
                     application/json:
@@ -82,6 +85,7 @@ components:
                 value:
                     type: string
                     example: ""
+            description: Request body for bar.
             example:
                 value: ""
         BazPayload:
@@ -90,6 +94,7 @@ components:
                 value:
                     type: string
                     example: ""
+            description: Request body for baz.
             example:
                 value: ""
         BazResult:
@@ -106,6 +111,7 @@ components:
                 value:
                     type: string
                     example: ""
+            description: Request body for foo.
             example:
                 value: ""
         FooResult:

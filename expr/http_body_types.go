@@ -319,8 +319,17 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	}
 
 	// 5. Build computed user type
+	bodyAtt := body.Attribute()
+	if bodyAtt.Description == "" {
+		if t, ok := attr.Type.(UserType); ok {
+			bodyAtt.Description = t.Attribute().Description
+		}
+	}
+	if bodyAtt.Description == "" {
+		bodyAtt.Description = attr.Description
+	}
 	userType := &UserTypeExpr{
-		AttributeExpr: body.Attribute(),
+		AttributeExpr: bodyAtt,
 		TypeName:      name,
 		UID:           concat(svc.Name(), "#", name),
 	}
@@ -343,9 +352,10 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	rt, isrt := attr.Type.(*ResultTypeExpr)
 	if !isrt {
 		return &AttributeExpr{
-			Type:       userType,
-			Validation: userType.Validation,
-			Meta:       attr.Meta,
+			Type:        userType,
+			Description: userType.Description,
+			Validation:  userType.Validation,
+			Meta:        attr.Meta,
 		}
 	}
 	views := make([]*ViewExpr, len(rt.Views))
@@ -369,9 +379,10 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		v.Parent = nmt
 	}
 	return &AttributeExpr{
-		Type:       nmt,
-		Validation: userType.Validation,
-		Meta:       attr.Meta,
+		Type:        nmt,
+		Description: userType.Description,
+		Validation:  userType.Validation,
+		Meta:        attr.Meta,
 	}
 }
 

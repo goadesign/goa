@@ -28,6 +28,8 @@ func Description(d string) {
 		e.Description = d
 	case *expr.ServiceExpr:
 		e.Description = d
+	case *expr.UserTypeExpr:
+		e.Attribute().Description = d
 	case *expr.ResultTypeExpr:
 		e.Description = d
 	case *expr.AttributeExpr:

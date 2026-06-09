@@ -91,7 +91,14 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 				continue
 			}
 
-			req := sf.schemafy(e.Body)
+			reqBody := e.Body
+			if reqBody.Type != expr.Empty && reqBody.Description == "" {
+				if _, ok := reqBody.Type.(expr.UserType); ok {
+					reqBody = expr.DupAtt(reqBody)
+					reqBody.Description = defaultRequestBodyDescription(e)
+				}
+			}
+			req := sf.schemafy(reqBody)
 			if e.StreamingBody != nil {
 				sreq := sf.schemafy(e.StreamingBody)
 				var note string
@@ -252,6 +259,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			for _, ref := range refs {
 				if ref == metaRef || metaName == "" {
 					s.Ref = ref
+					sf.ensureSchemaDescription(ref, t, attr)
 					return s
 				}
 			}
@@ -268,7 +276,11 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		typeName := sf.uniquify(codegen.Goify(name, true))
 		s.Ref = toRef(typeName)
 		sf.hashes[h] = append(sf.hashes[h], s.Ref)
-		sf.schemas[typeName] = sf.schemafy(t.Attribute(), true)
+		schema := sf.schemafy(t.Attribute(), true)
+		if schema.Description == "" {
+			schema.Description = userTypeDescription(t, attr)
+		}
+		sf.schemas[typeName] = schema
 		return s // All other schema properties are set in the reference
 	default:
 		panic(fmt.Sprintf("unknown type %T", t)) // bug
@@ -280,7 +292,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 
 	// Default value, example, extensions
 	s.DefaultValue = toStringMap(attr.DefaultValue)
-	s.Example = attr.Example(sf.rand)
+	s.Example = openapi.Example(attr, sf.rand)
 	s.Extensions = openapi.ExtensionsFromExpr(attr.Meta)
 
 	// Validations
@@ -332,6 +344,32 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	}
 
 	return s
+}
+
+// ensureSchemaDescription updates an existing component schema with the type or
+// reference attribute description if the component was first created without
+// one. This preserves user type descriptions when structurally equivalent types
+// are reused under a component reference.
+func (sf *schemafier) ensureSchemaDescription(ref string, t expr.UserType, attr *expr.AttributeExpr) {
+	const prefix = "#/components/schemas/"
+	typeName := strings.TrimPrefix(ref, prefix)
+	if typeName == ref {
+		return
+	}
+	schema := sf.schemas[typeName]
+	if schema == nil || schema.Description != "" {
+		return
+	}
+	schema.Description = userTypeDescription(t, attr)
+}
+
+// userTypeDescription returns the canonical description for a user type schema,
+// falling back to the description of the attribute that introduced the type.
+func userTypeDescription(t expr.UserType, attr *expr.AttributeExpr) string {
+	if desc := t.Attribute().Description; desc != "" {
+		return desc
+	}
+	return attr.Description
 }
 
 // uniquify returns n if n is not a known type name. Otherwise uniquify appends

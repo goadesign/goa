@@ -106,6 +106,27 @@ var HidingExampleDSL = func() {
 	})
 }
 
+var OpenAPIGenerateFalseArrayExampleDSL = func() {
+	var Hidden = Type("Hidden", func() {
+		Meta("openapi:generate", "false")
+		Attribute("name", String, func() {
+			Example("example")
+		})
+		Required("name")
+	})
+	Service("OpenAPIGenerateFalseArrayExample", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("items", ArrayOf(Hidden), func() {
+					MinLength(1)
+					MaxLength(1)
+				})
+				Required("items")
+			})
+		})
+	})
+}
+
 var OverridingHiddenExamplesDSL = func() {
 	Service("OverridingHiddenExamples", func() {
 		Meta("openapi:example", "false")

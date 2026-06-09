@@ -2,6 +2,7 @@
   "components": {
     "schemas": {
       "Error": {
+        "description": "Error response result type",
         "example": {
           "fault": true,
           "id": "123abc",

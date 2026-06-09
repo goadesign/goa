@@ -13,6 +13,7 @@ paths:
             summary: testEndpoint testService
             operationId: testService#testEndpoint
             requestBody:
+                description: Request body for testEndpoint.
                 required: true
                 content:
                     application/json:
@@ -63,6 +64,7 @@ components:
                     example:
                         "": ""
                     additionalProperties: true
+            description: Request body for testEndpoint.
             example:
                 any: ""
                 any_array:
