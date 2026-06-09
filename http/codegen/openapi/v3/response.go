@@ -20,7 +20,7 @@ func headersFromAttr(attr *expr.MappedAttributeExpr, rand *expr.ExampleGenerator
 			Description: attr.Description,
 			Required:    attr.IsRequiredNoDefault(name),
 			Schema:      newSchemafier(rand).schemafy(attr),
-			Example:     attr.Example(rand),
+			Example:     openapi.Example(attr, rand),
 			Extensions:  openapi.ExtensionsFromExpr(attr.Meta),
 		}
 		initExamples(header, attr, rand)

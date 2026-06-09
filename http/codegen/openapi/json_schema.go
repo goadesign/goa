@@ -3,6 +3,7 @@ package openapi
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"strconv"
 
 	"goa.design/goa/v3/codegen"
@@ -448,6 +449,20 @@ func ToStringMap(val any) any {
 	}
 }
 
+// Example returns an example value projected to the OpenAPI-visible shape of at.
+func Example(at *expr.AttributeExpr, r *expr.ExampleGenerator) any {
+	return ProjectExample(at, at.Example(r))
+}
+
+// ProjectExample removes values for fields that are hidden from the OpenAPI
+// schema by metadata while keeping examples usable by service codegen.
+func ProjectExample(at *expr.AttributeExpr, val any) any {
+	if val == nil {
+		return nil
+	}
+	return projectExample(at.Type, val)
+}
+
 // MarshalJSON returns the JSON encoding of s.
 func (s *Schema) MarshalJSON() ([]byte, error) {
 	return MarshalJSON((*_Schema)(s), s.Extensions)
@@ -506,7 +521,7 @@ func buildAttributeSchema(api *expr.APIExpr, s *Schema, at *expr.AttributeExpr) 
 	}
 	s.DefaultValue = ToStringMap(at.DefaultValue)
 	s.Description = at.Description
-	s.Example = at.Example(api.ExampleGenerator)
+	s.Example = Example(at, api.ExampleGenerator)
 	s.Extensions = ExtensionsFromExpr(at.Meta)
 	if ap := AdditionalPropertiesFromExpr(at.Meta); ap != nil {
 		s.AdditionalProperties = ap
@@ -626,4 +641,100 @@ func AdditionalPropertiesFromExpr(meta expr.MetaExpr) any {
 		return false
 	}
 	return nil
+}
+
+func projectExample(t expr.DataType, val any) any {
+	switch actual := t.(type) {
+	case *expr.UserTypeExpr:
+		return ProjectExample(actual.Attribute(), val)
+	case *expr.ResultTypeExpr:
+		return ProjectExample(actual.Attribute(), val)
+	case *expr.Object:
+		return projectObjectExample(actual, val)
+	case *expr.Array:
+		return projectArrayExample(actual, val)
+	case *expr.Map:
+		return projectMapExample(actual, val)
+	default:
+		return ToStringMap(val)
+	}
+}
+
+func projectObjectExample(obj *expr.Object, val any) any {
+	values, ok := exampleMap(val)
+	if !ok {
+		return ToStringMap(val)
+	}
+	projected := make(map[string]any)
+	for _, nat := range *obj {
+		if !MustGenerate(nat.Attribute.Meta) {
+			continue
+		}
+		if v, ok := values[nat.Name]; ok {
+			if projectedValue := ProjectExample(nat.Attribute, v); projectedValue != nil {
+				projected[nat.Name] = projectedValue
+			}
+		}
+	}
+	return projected
+}
+
+func projectArrayExample(array *expr.Array, val any) any {
+	values, ok := exampleSlice(val)
+	if !ok {
+		return ToStringMap(val)
+	}
+	projected := make([]any, len(values))
+	for i, v := range values {
+		projected[i] = ProjectExample(array.ElemType, v)
+	}
+	return projected
+}
+
+func projectMapExample(m *expr.Map, val any) any {
+	values, ok := exampleMap(val)
+	if !ok {
+		return ToStringMap(val)
+	}
+	projected := make(map[string]any, len(values))
+	for k, v := range values {
+		if projectedValue := ProjectExample(m.ElemType, v); projectedValue != nil {
+			projected[k] = projectedValue
+		}
+	}
+	return projected
+}
+
+func exampleMap(val any) (map[string]any, bool) {
+	switch actual := val.(type) {
+	case map[string]any:
+		return actual, true
+	case map[any]any:
+		m := make(map[string]any, len(actual))
+		for k, v := range actual {
+			m[ToString(k)] = v
+		}
+		return m, true
+	}
+	rv := reflect.ValueOf(val)
+	if rv.Kind() != reflect.Map || rv.Type().Key().Kind() != reflect.String {
+		return nil, false
+	}
+	m := make(map[string]any, rv.Len())
+	for _, k := range rv.MapKeys() {
+		m[k.String()] = rv.MapIndex(k).Interface()
+	}
+	return m, true
+}
+
+func exampleSlice(val any) ([]any, bool) {
+	rv := reflect.ValueOf(val)
+	if rv.Kind() != reflect.Array && rv.Kind() != reflect.Slice {
+		return nil, false
+	}
+	values := make([]any, rv.Len())
+	for i := range values {
+		values[i] = rv.Index(i).Interface()
+	}
+	return values, true
 }
