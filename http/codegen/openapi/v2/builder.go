@@ -521,8 +521,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 
 		responses := make(map[string]*Response, len(endpoint.Responses))
 		for _, r := range endpoint.Responses {
-			switch {
-			case endpoint.UsesWebSocket():
+			if endpoint.UsesWebSocket() {
 				// A WebSocket endpoint allows at most one successful response
 				// definition. So it is okay to change the first successful
 				// response to a HTTP 101 response for OpenAPI docs.
@@ -530,9 +529,6 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 					r = r.Dup()
 					r.StatusCode = expr.StatusSwitchingProtocols
 				}
-			case endpoint.UsesSSE():
-				r = r.Dup()
-				r.ContentType = "text/event-stream"
 			}
 			resp := responseSpecFromExpr(s, root, r, endpoint.Service.Name())
 			responses[strconv.Itoa(r.StatusCode)] = resp

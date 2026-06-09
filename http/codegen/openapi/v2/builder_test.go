@@ -141,7 +141,6 @@ func TestStreamingResponseStatusCodes(t *testing.T) {
 	sseResponses := spec.Paths["/sse"].(*Path).Get.Responses
 	require.Contains(t, sseResponses, "200")
 	require.NotContains(t, sseResponses, "101")
-	require.Contains(t, spec.Paths["/sse"].(*Path).Get.Produces, "text/event-stream")
 	require.NotContains(t, spec.Paths["/sse"].(*Path).Get.Schemes, "ws")
 	require.NotContains(t, spec.Paths["/sse"].(*Path).Get.Schemes, "wss")
 
