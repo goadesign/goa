@@ -64,7 +64,7 @@ type (
 
 // initSSEData initializes the SSE related data in ed.
 func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
-	if e.SSE == nil {
+	if !e.UsesSSE() {
 		return
 	}
 

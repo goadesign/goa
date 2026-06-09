@@ -289,13 +289,11 @@ func (svc *HTTPServiceExpr) validateTransports(verr *eval.ValidationErrors) {
 
 	// Analyze endpoints
 	for _, e := range svc.HTTPEndpoints {
-		usesWebSocket := e.MethodExpr.IsStreaming() && e.SSE == nil
-
 		if e.IsJSONRPC() {
-			if usesWebSocket {
+			if e.UsesWebSocket() {
 				hasJSONRPCWebSocket = true
 			}
-		} else if usesWebSocket {
+		} else if e.UsesWebSocket() {
 			hasPureHTTPWebSocket = true
 		}
 	}
@@ -373,7 +371,7 @@ func (svc *HTTPServiceExpr) prepareJSONRPCRoutes() {
 
 		// If using WebSocket, force GET
 		for _, e := range svc.HTTPEndpoints {
-			if e.IsJSONRPC() && e.MethodExpr.IsStreaming() && e.SSE == nil {
+			if e.IsJSONRPC() && e.UsesWebSocket() {
 				method = "GET" // WebSocket requires GET
 				break
 			}
@@ -404,13 +402,12 @@ func (svc *HTTPServiceExpr) validateJSONRPCTransportConsistency(verr *eval.Valid
 
 	for _, e := range svc.HTTPEndpoints {
 		if e.IsJSONRPC() {
-			if e.MethodExpr.IsStreaming() {
-				if e.SSE != nil {
-					hasSSE = true
-				} else {
-					hasWebSocket = true
-				}
-			} else {
+			switch {
+			case e.UsesWebSocket():
+				hasWebSocket = true
+			case e.UsesSSE():
+				hasSSE = true
+			default:
 				hasRegular = true
 			}
 		}
@@ -429,7 +426,7 @@ func (svc *HTTPServiceExpr) validateJSONRPCRoutes(verr *eval.ValidationErrors) {
 		if e.IsJSONRPC() {
 			for _, r := range e.Routes {
 				// WebSocket requires GET
-				if e.MethodExpr.IsStreaming() && e.SSE == nil {
+				if e.UsesWebSocket() {
 					if r.Method != "GET" {
 						verr.Add(r, "JSON-RPC WebSocket endpoint must use GET method, got %q", r.Method)
 					}
