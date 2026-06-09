@@ -36,6 +36,10 @@ const DefaultProtoc = expr.DefaultProtoc
 //	    Meta("type:generate:force", "service1", "service2")
 //	})
 //
+// OpenAPI generators emit forced schemas only for services included in the
+// OpenAPI document. Combine this metadata with Meta("openapi:generate", "false")
+// to force Go type generation without publishing an otherwise unused schema.
+//
 // - "struct:error:name" DEPRECATED, use ErrorName instead.
 //
 // - "struct:pkg:path" overrides where the Go type generated for the enclosing

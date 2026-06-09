@@ -1,24 +1,6 @@
 {
   "components": {
     "schemas": {
-      "JSON": {
-        "example": {
-          "int": 1,
-          "string": ""
-        },
-        "properties": {
-          "int": {
-            "example": 1,
-            "format": "int64",
-            "type": "integer"
-          },
-          "string": {
-            "example": "",
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
       "TestEndpointDefaultResponseBody": {
         "description": "TestEndpointDefaultResponseBody result type (default view)",
         "example": {

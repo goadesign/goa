@@ -81,6 +81,7 @@ func TestBuildBodyTypes(t *testing.T) {
 		ExpectedFormat        string
 		ExpectedResponseTypes rt
 		ExpectedExtraTypes    map[string]typ
+		ExpectedAbsentTypes   []string
 	}{{
 		Name: "string_body",
 		DSL:  dsls.StringBodyDSL(svcName, "string_body"),
@@ -160,6 +161,13 @@ func TestBuildBodyTypes(t *testing.T) {
 		ExpectedType:          tempty,
 		ExpectedResponseTypes: rt{204: tempty, 400: tobj("name", tstring, "age", tint)},
 	}, {
+		Name: "unused_type",
+		DSL:  dsls.UnusedTypeDSL(svcName, "unused_type"),
+
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{204: tempty},
+		ExpectedAbsentTypes:   []string{"Unused"},
+	}, {
 		Name: "forced_type",
 		DSL:  dsls.ForcedTypeDSL(svcName, "forced_type"),
 
@@ -167,12 +175,40 @@ func TestBuildBodyTypes(t *testing.T) {
 		ExpectedResponseTypes: rt{204: tempty},
 		ExpectedExtraTypes:    map[string]typ{"Forced": tobj("foo", tstring)},
 	}, {
+		Name: "service_scoped_forced_type",
+		DSL:  dsls.ServiceScopedForcedTypeDSL(svcName, "service_scoped_forced_type", svcName),
+
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{204: tempty},
+		ExpectedExtraTypes:    map[string]typ{"Forced": tobj("foo", tstring)},
+	}, {
+		Name: "other_service_scoped_forced_type",
+		DSL:  dsls.ServiceScopedForcedTypeDSL(svcName, "other_service_scoped_forced_type", "other"),
+
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{204: tempty},
+		ExpectedAbsentTypes:   []string{"Forced"},
+	}, {
+		Name: "openapi_suppressed_forced_type",
+		DSL:  dsls.OpenAPISuppressedForcedTypeDSL(svcName, "openapi_suppressed_forced_type"),
+
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{204: tempty},
+		ExpectedAbsentTypes:   []string{"Forced"},
+	}, {
 		Name: "forced_result_type",
 		DSL:  dsls.ForcedResultTypeDSL(svcName, "forced_result_type"),
 
 		ExpectedType:          tempty,
 		ExpectedResponseTypes: rt{204: tempty},
 		ExpectedExtraTypes:    map[string]typ{"Forced": tobj("foo", tstring)},
+	}, {
+		Name: "openapi_suppressed_forced_result_type",
+		DSL:  dsls.OpenAPISuppressedForcedResultTypeDSL(svcName, "openapi_suppressed_forced_result_type"),
+
+		ExpectedType:          tempty,
+		ExpectedResponseTypes: rt{204: tempty},
+		ExpectedAbsentTypes:   []string{"Forced"},
 	}}
 
 	for _, c := range cases {
@@ -218,6 +254,11 @@ func TestBuildBodyTypes(t *testing.T) {
 					continue
 				}
 				matchesSchema(t, "extra type", got, types, forced)
+			}
+			for _, name := range c.ExpectedAbsentTypes {
+				if _, ok := types[name]; ok {
+					t.Errorf("unexpected type %q", name)
+				}
 			}
 		})
 	}

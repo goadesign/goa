@@ -222,11 +222,59 @@ func ObjectErrorResponseBodyDSL(svcName, metName string) func() {
 	}
 }
 
+func UnusedTypeDSL(svcName, metName string) func() {
+	return func() {
+		var _ = Type("Unused", func() {
+			Attribute("foo")
+		})
+		var _ = Service(svcName, func() {
+			Method(metName, func() {
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}
+
 func ForcedTypeDSL(svcName, metName string) func() {
 	return func() {
 		var _ = Type("Forced", func() {
 			Attribute("foo")
 			Meta("type:generate:force")
+		})
+		var _ = Service(svcName, func() {
+			Method(metName, func() {
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}
+
+func ServiceScopedForcedTypeDSL(svcName, metName, forcedSvcName string) func() {
+	return func() {
+		var _ = Type("Forced", func() {
+			Attribute("foo")
+			Meta("type:generate:force", forcedSvcName)
+		})
+		var _ = Service(svcName, func() {
+			Method(metName, func() {
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}
+
+func OpenAPISuppressedForcedTypeDSL(svcName, metName string) func() {
+	return func() {
+		var _ = Type("Forced", func() {
+			Attribute("foo")
+			Meta("type:generate:force")
+			Meta("openapi:generate", "false")
 		})
 		var _ = Service(svcName, func() {
 			Method(metName, func() {
@@ -245,6 +293,25 @@ func ForcedResultTypeDSL(svcName, metName string) func() {
 				Attribute("foo")
 			})
 			Meta("type:generate:force")
+		})
+		var _ = Service(svcName, func() {
+			Method(metName, func() {
+				HTTP(func() {
+					POST("/")
+				})
+			})
+		})
+	}
+}
+
+func OpenAPISuppressedForcedResultTypeDSL(svcName, metName string) func() {
+	return func() {
+		var _ = ResultType("Forced", func() {
+			Attributes(func() {
+				Attribute("foo")
+			})
+			Meta("type:generate:force")
+			Meta("openapi:generate", "false")
 		})
 		var _ = Service(svcName, func() {
 			Method(metName, func() {
