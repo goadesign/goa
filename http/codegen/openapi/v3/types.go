@@ -64,16 +64,17 @@ func newSchemafier(rand *expr.ExampleGenerator) *schemafier {
 func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*expr.ResultTypeExpr) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
 	bodies := make(map[string]map[string]*EndpointBodies)
 	sf := newSchemafier(api.ExampleGenerator)
+	services := openAPIGeneratedServices(api)
 
 	// Generates the types referenced from the endpoints.
 	for _, t := range types {
-		if !mustGenerateType(t.Attribute().Meta) {
+		if !mustGenerateType(t.Attribute().Meta, services) {
 			continue
 		}
 		sf.schemafy(&expr.AttributeExpr{Type: t})
 	}
 	for _, t := range resultTypes {
-		if !mustGenerateType(t.Attribute().Meta) {
+		if !mustGenerateType(t.Attribute().Meta, services) {
 			continue
 		}
 		sf.schemafy(&expr.AttributeExpr{Type: t})
@@ -509,13 +510,29 @@ func orderedHash(a, b uint64, h hash.Hash64) uint64 {
 	return h.Sum64()
 }
 
-func mustGenerateType(meta expr.MetaExpr) bool {
-	if _, ok := meta["type:generate:force"]; ok {
-		return true
+func openAPIGeneratedServices(api *expr.APIExpr) map[string]struct{} {
+	services := make(map[string]struct{}, len(api.HTTP.Services))
+	for _, s := range api.HTTP.Services {
+		if !openapi.MustGenerate(s.Meta) || !openapi.MustGenerate(s.ServiceExpr.Meta) {
+			continue
+		}
+		services[s.Name()] = struct{}{}
 	}
-	if n, ok := meta.Last("openapi:typename"); ok {
-		if n != "" {
+	return services
+}
+
+func mustGenerateType(meta expr.MetaExpr, services map[string]struct{}) bool {
+	if !openapi.MustGenerate(meta) {
+		return false
+	}
+	if svcs, ok := meta["type:generate:force"]; ok {
+		if len(svcs) == 0 {
 			return true
+		}
+		for _, svc := range svcs {
+			if _, ok := services[svc]; ok {
+				return true
+			}
 		}
 	}
 	return false
