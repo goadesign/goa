@@ -521,14 +521,18 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 
 		responses := make(map[string]*Response, len(endpoint.Responses))
 		for _, r := range endpoint.Responses {
-			if endpoint.MethodExpr.IsStreaming() {
-				// A streaming endpoint allows at most one successful response
+			switch {
+			case endpoint.UsesWebSocket():
+				// A WebSocket endpoint allows at most one successful response
 				// definition. So it is okay to change the first successful
-				// response to a HTTP 101 response for openapi docs.
+				// response to a HTTP 101 response for OpenAPI docs.
 				if _, ok := responses[strconv.Itoa(expr.StatusSwitchingProtocols)]; !ok {
 					r = r.Dup()
 					r.StatusCode = expr.StatusSwitchingProtocols
 				}
+			case endpoint.UsesSSE():
+				r = r.Dup()
+				r.ContentType = "text/event-stream"
 			}
 			resp := responseSpecFromExpr(s, root, r, endpoint.Service.Name())
 			responses[strconv.Itoa(r.StatusCode)] = resp
@@ -585,8 +589,8 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			}
 		}
 
-		// replace http with ws for streaming endpoints
-		if endpoint.MethodExpr.IsStreaming() {
+		// replace HTTP with WebSocket schemes for WebSocket endpoints
+		if endpoint.UsesWebSocket() {
 			for i := len(schemes) - 1; i >= 0; i-- {
 				if schemes[i] == "http" {
 					news := append([]string{"ws"}, schemes[i+1:]...)

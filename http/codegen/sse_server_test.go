@@ -40,3 +40,16 @@ func TestSSE(t *testing.T) {
 		})
 	}
 }
+
+func TestSSETransportDefaultsToStatusOK(t *testing.T) {
+	root := RunHTTPDSL(t, testdata.SSEStringDSL)
+	services := CreateHTTPServices(root)
+	fs := ServerFiles("", services)
+	require.Len(t, fs, 3)
+
+	sections := fs[1].SectionTemplates
+	require.Greater(t, len(sections), 1)
+	code := codegen.SectionCode(t, sections[1])
+	require.Contains(t, code, "s.w.WriteHeader(http.StatusOK)")
+	require.NotContains(t, code, "http.StatusSwitchingProtocols")
+}

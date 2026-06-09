@@ -133,6 +133,24 @@ func TestNoSecurityOverridesServiceSecurity(t *testing.T) {
 	}
 }
 
+func TestStreamingResponseStatusCodes(t *testing.T) {
+	root := codegen.RunDSL(t, streamingResponseStatusDSL)
+	spec, err := NewV2(root, root.API.Servers[0].Hosts[0])
+	require.NoError(t, err)
+
+	sseResponses := spec.Paths["/sse"].(*Path).Get.Responses
+	require.Contains(t, sseResponses, "200")
+	require.NotContains(t, sseResponses, "101")
+	require.Contains(t, spec.Paths["/sse"].(*Path).Get.Produces, "text/event-stream")
+	require.NotContains(t, spec.Paths["/sse"].(*Path).Get.Schemes, "ws")
+	require.NotContains(t, spec.Paths["/sse"].(*Path).Get.Schemes, "wss")
+
+	websocketResponses := spec.Paths["/websocket"].(*Path).Get.Responses
+	require.Contains(t, websocketResponses, "101")
+	require.NotContains(t, websocketResponses, "200")
+	require.Contains(t, spec.Paths["/websocket"].(*Path).Get.Schemes, "ws")
+}
+
 func TestOperationSecurityMarshal(t *testing.T) {
 	securityCases := map[string]struct {
 		operation Operation
@@ -222,6 +240,24 @@ var noSecurityOverridesServiceSecurityDSL = func() {
 			dsl.NoSecurity()
 			dsl.HTTP(func() {
 				dsl.GET("/service-public")
+			})
+		})
+	})
+}
+
+var streamingResponseStatusDSL = func() {
+	dsl.Service("streaming", func() {
+		dsl.Method("sse", func() {
+			dsl.StreamingResult(dsl.String)
+			dsl.HTTP(func() {
+				dsl.GET("/sse")
+				dsl.ServerSentEvents()
+			})
+		})
+		dsl.Method("websocket", func() {
+			dsl.StreamingResult(dsl.String)
+			dsl.HTTP(func() {
+				dsl.GET("/websocket")
 			})
 		})
 	})

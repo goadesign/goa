@@ -278,10 +278,11 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	// responses
 	responses := make(map[string]*ResponseRef, len(e.Responses))
 	for _, r := range e.Responses {
-		if e.MethodExpr.IsStreaming() {
-			// A streaming endpoint allows at most one successful response
+		switch {
+		case e.UsesWebSocket():
+			// A WebSocket endpoint allows at most one successful response
 			// definition. So it is okay to change the first successful
-			// response to a HTTP 101 response for openapi docs.
+			// response to a HTTP 101 response for OpenAPI docs.
 			if _, ok := responses[strconv.Itoa(expr.StatusSwitchingProtocols)]; !ok {
 				b := bodies.ResponseBodies[r.StatusCode]
 				delete(bodies.ResponseBodies, r.StatusCode)
@@ -289,6 +290,9 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 				r.StatusCode = expr.StatusSwitchingProtocols
 				bodies.ResponseBodies[r.StatusCode] = b
 			}
+		case e.UsesSSE():
+			r = r.Dup()
+			r.ContentType = "text/event-stream"
 		}
 		resp := responseFromExpr(r, bodies.ResponseBodies, rand)
 		responses[strconv.Itoa(r.StatusCode)] = &ResponseRef{Value: resp}

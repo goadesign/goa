@@ -75,7 +75,7 @@ type (
 
 // initWebSocketData initializes the WebSocket related data in ed.
 func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
-	if e.SSE != nil {
+	if !e.UsesWebSocket() {
 		return
 	}
 	var (

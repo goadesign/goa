@@ -130,6 +130,18 @@ func (e *HTTPEndpointExpr) IsJSONRPC() bool {
 	return ok
 }
 
+// UsesSSE returns true if the endpoint streams result events over Server-Sent
+// Events.
+func (e *HTTPEndpointExpr) UsesSSE() bool {
+	return e.SSE != nil && (e.MethodExpr.IsResultStreaming() || e.MethodExpr.HasMixedResults())
+}
+
+// UsesWebSocket returns true if the endpoint streams payloads or results over a
+// WebSocket connection.
+func (e *HTTPEndpointExpr) UsesWebSocket() bool {
+	return e.MethodExpr.IsStreaming() && e.SSE == nil
+}
+
 // HasAbsoluteRoutes returns true if all the endpoint routes are absolute.
 func (e *HTTPEndpointExpr) HasAbsoluteRoutes() bool {
 	for _, r := range e.Routes {
@@ -354,7 +366,7 @@ func (e *HTTPEndpointExpr) Prepare() {
 
 	// Make sure JSON-RPC HTTP verb is set to GET if the endpoint is a
 	// WebSocket endpoint
-	if e.MethodExpr.IsStreaming() && e.SSE == nil && len(e.Routes) > 0 {
+	if e.UsesWebSocket() && len(e.Routes) > 0 {
 		e.Routes[0].Method = "GET"
 	}
 
@@ -451,7 +463,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 	// JSON-RPC validation
 	if e.IsJSONRPC() {
 		// JSON-RPC WebSocket endpoints with server streaming cannot have both Payload and StreamingPayload
-		if e.MethodExpr.Stream == ServerStreamKind && e.SSE == nil {
+		if e.UsesWebSocket() && e.MethodExpr.Stream == ServerStreamKind {
 			if e.MethodExpr.Payload.Type != Empty && e.MethodExpr.StreamingPayload.Type != Empty {
 				verr.Add(e, "JSON-RPC WebSocket server streaming method %q cannot define both Payload and StreamingPayload. Use Payload for the request data", e.MethodExpr.Name)
 			}
@@ -730,7 +742,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 		// Exception: JSON-RPC WebSocket endpoints can have payloads as they are sent
 		// as JSON-RPC messages after the WebSocket connection is established
 		_, isJSONRPC := e.MethodExpr.Meta["jsonrpc"]
-		if e.SSE == nil && !isJSONRPC { // Only apply this validation to non-SSE, non-JSON-RPC streaming endpoints
+		if e.UsesWebSocket() && !isJSONRPC {
 			verr.Add(e, "HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.")
 		}
 	}
@@ -748,7 +760,7 @@ func (e *HTTPEndpointExpr) Finalize() {
 	// move the payload to streaming payload. This is because the payload is sent as
 	// JSON-RPC messages after the WebSocket connection is established, making it
 	// effectively a streaming payload from the transport perspective.
-	if _, isJSONRPC := e.MethodExpr.Meta["jsonrpc"]; isJSONRPC && e.MethodExpr.Stream == ServerStreamKind && e.SSE == nil {
+	if _, isJSONRPC := e.MethodExpr.Meta["jsonrpc"]; isJSONRPC && e.UsesWebSocket() && e.MethodExpr.Stream == ServerStreamKind {
 		if e.MethodExpr.Payload.Type != Empty && e.MethodExpr.StreamingPayload.Type == Empty {
 			// Move payload to streaming payload
 			e.MethodExpr.StreamingPayload = e.MethodExpr.Payload
@@ -1037,7 +1049,7 @@ func (r *RouteExpr) Validate() *eval.ValidationErrors {
 
 	// For WebSocket streaming endpoints, only GET is supported
 	// SSE endpoints can use both GET and POST (JSON-RPC SSE uses POST)
-	if r.Endpoint.MethodExpr.IsStreaming() && len(r.Endpoint.Responses) > 0 && r.Endpoint.SSE == nil {
+	if r.Endpoint.UsesWebSocket() && len(r.Endpoint.Responses) > 0 {
 		if r.Method != "GET" {
 			verr.Add(r, "WebSocket endpoint supports only \"GET\" method. Got %q.", r.Method)
 		}

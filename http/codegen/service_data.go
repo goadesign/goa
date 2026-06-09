@@ -837,7 +837,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			"Args":         args,
 			"PathInit":     routes[0].PathInit,
 			"Verb":         routes[0].Verb,
-			"IsWebSocket":  httpEndpoint.MethodExpr.IsStreaming() && httpEndpoint.SSE == nil,
+			"IsWebSocket":  httpEndpoint.UsesWebSocket(),
 		}
 		if httpEndpoint.SkipRequestBodyEncodeDecode {
 			data["RequestStruct"] = pkg + "." + method.RequestStruct
