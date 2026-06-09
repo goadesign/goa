@@ -12,6 +12,7 @@ paths:
             summary: testEndpoint testService
             operationId: testService#testEndpoint
             requestBody:
+                description: Request body for testEndpoint.
                 required: true
                 content:
                     application/json:
@@ -41,6 +42,7 @@ components:
                 string:
                     type: string
                     example: ""
+            description: Request body for testEndpoint.
             example:
                 required_string: ""
                 string: ""

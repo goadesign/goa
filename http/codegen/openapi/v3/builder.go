@@ -240,7 +240,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		mt := &MediaType{Schema: bodies.RequestBody}
 		initExamples(mt, e.Body, rand)
 		requestBody = &RequestBodyRef{Value: &RequestBody{
-			Description: e.Body.Description,
+			Description: requestBodyDescription(e),
 			Required:    e.Body.Type != expr.Empty,
 			Content:     map[string]*MediaType{ct: mt},
 			Extensions:  openapi.ExtensionsFromExpr(e.Body.Meta),
@@ -352,6 +352,32 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		ExternalDocs: openapi.DocsFromExpr(m.Docs, m.Meta),
 		Extensions:   openapi.ExtensionsFromExpr(m.Meta),
 	}
+}
+
+// requestBodyDescription returns the request body description authored in the
+// HTTP body, payload, or referenced type. It uses a deterministic default for
+// computed bodies so generated OpenAPI requestBody objects are always
+// self-describing.
+func requestBodyDescription(e *expr.HTTPEndpointExpr) string {
+	if e.Body.Description != "" {
+		return e.Body.Description
+	}
+	if ut, ok := e.Body.Type.(expr.UserType); ok {
+		if desc := ut.Attribute().Description; desc != "" {
+			return desc
+		}
+	}
+	if e.MethodExpr.Payload != nil && e.MethodExpr.Payload.Description != "" {
+		return e.MethodExpr.Payload.Description
+	}
+	return defaultRequestBodyDescription(e)
+}
+
+// defaultRequestBodyDescription returns the conventional description for
+// request bodies computed from payload fields after parameters and headers have
+// been projected out.
+func defaultRequestBodyDescription(e *expr.HTTPEndpointExpr) string {
+	return fmt.Sprintf("Request body for %s.", e.Name())
 }
 
 // buildFileServerOperation builds the OpenAPI Operation object for the given file server.

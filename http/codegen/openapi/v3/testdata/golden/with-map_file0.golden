@@ -60,6 +60,7 @@
         "type": "object"
       },
       "TestEndpointRequestBody": {
+        "description": "Request body for test endpoint.",
         "example": {
           "int_map": {
             "": 1
@@ -221,6 +222,7 @@
               }
             }
           },
+          "description": "Request body for test endpoint.",
           "required": true
         },
         "responses": {

@@ -2,6 +2,7 @@
   "components": {
     "schemas": {
       "TestEndpointRequestBody": {
+        "description": "Request body for testEndpoint.",
         "example": {
           "any": "",
           "any_array": [
@@ -69,6 +70,7 @@
               }
             }
           },
+          "description": "Request body for testEndpoint.",
           "required": true
         },
         "responses": {

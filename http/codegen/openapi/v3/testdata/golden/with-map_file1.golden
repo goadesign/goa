@@ -13,6 +13,7 @@ paths:
             summary: test endpoint test service
             operationId: test service#test endpoint
             requestBody:
+                description: Request body for test endpoint.
                 required: true
                 content:
                     application/json:
@@ -104,6 +105,7 @@ components:
                         type: integer
                         example: 1
                         format: int64
+            description: Request body for test endpoint.
             example:
                 int_map:
                     "": 1

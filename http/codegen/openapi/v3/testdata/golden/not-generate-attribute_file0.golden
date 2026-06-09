@@ -2,6 +2,7 @@
   "components": {
     "schemas": {
       "Payload": {
+        "description": "Request body for testEndpoint.",
         "example": {
           "required_string": "",
           "string": ""
@@ -66,6 +67,7 @@
               }
             }
           },
+          "description": "Request body for testEndpoint.",
           "required": true
         },
         "responses": {

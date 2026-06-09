@@ -285,14 +285,14 @@ func TestBuildOperation(t *testing.T) {
 		DSL:  dsls.RequestObjectBody(svcName, "request_object_body"),
 
 		ExpectedDeprecated:  false,
-		ExpectedRequestBody: &requestBody{"", tobj("name", tstring), true},
+		ExpectedRequestBody: &requestBody{"Request body for request_object_body.", tobj("name", tstring), true},
 		ExpectedResponses:   responses{"204": {Description: "No Content response."}},
 	}, {
 		Name: "request_streaming_string_body",
 		DSL:  dsls.RequestObjectBody(svcName, "request_streaming_string_body"),
 
 		ExpectedDeprecated:  false,
-		ExpectedRequestBody: &requestBody{"", tobj("name", tstring), true},
+		ExpectedRequestBody: &requestBody{"Request body for request_streaming_string_body.", tobj("name", tstring), true},
 		ExpectedResponses:   responses{"204": {Description: "No Content response."}},
 	}, {
 		Name: "request_map_params",

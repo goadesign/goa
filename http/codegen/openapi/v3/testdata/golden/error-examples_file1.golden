@@ -72,6 +72,7 @@ components:
                     type: boolean
                     description: Is the error a timeout?
                     example: false
+            description: Error response result type
             example:
                 fault: true
                 id: 123abc

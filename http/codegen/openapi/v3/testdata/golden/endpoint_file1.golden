@@ -16,6 +16,7 @@ paths:
                             string: ""
                         schema:
                             $ref: '#/components/schemas/Payload'
+                description: Request body for testEndpoint.
                 required: true
             responses:
                 "200":
@@ -40,6 +41,7 @@ components:
                     example: ""
                     type: string
                     x-test-schema: Payload
+            description: Request body for testEndpoint.
             example:
                 string: ""
         Result:
