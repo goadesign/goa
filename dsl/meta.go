@@ -321,7 +321,8 @@ const DefaultProtoc = expr.DefaultProtoc
 // any valid JSON. Applicable to API (OpenAPI info and tag objects), Service
 // (OpenAPI paths object), Method (OpenAPI path-item object), Route (OpenAPI
 // operation object), Param (OpenAPI parameter object), Response (OpenAPI
-// response object) and Security (OpenAPI security-scheme object). See
+// response object), Security (OpenAPI security-scheme object) and types
+// (OpenAPI schema object). See
 // https://github.com/OAI/OpenAPI-Specification/blob/master/guidelines/EXTENSIONS.md.
 //
 //	var _ = API("MyAPI", func() {

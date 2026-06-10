@@ -1163,3 +1163,19 @@ var OpenAPIInvalidVersionDSL = func() {
 		})
 	})
 }
+
+var TypeExtensionDSL = func() {
+	var Notification = Type("Notification", func() {
+		Meta("openapi:extension:x-test-include", "true")
+		Attribute("id", String)
+	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			Payload(Notification)
+			Result(Notification)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
