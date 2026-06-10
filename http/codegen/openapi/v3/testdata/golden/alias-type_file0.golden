@@ -1,0 +1,116 @@
+{
+  "components": {
+    "schemas": {
+      "Setup": {
+        "description": "Request body for testEndpoint.",
+        "example": {
+          "completed": [
+            "where",
+            "where",
+            "where",
+            "where"
+          ],
+          "current": "where"
+        },
+        "properties": {
+          "completed": {
+            "example": [
+              "where",
+              "where"
+            ],
+            "items": {
+              "description": "Setup stage.",
+              "enum": [
+                "who",
+                "when",
+                "where",
+                "what"
+              ],
+              "example": "what",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "current": {
+            "description": "Setup stage.",
+            "enum": [
+              "who",
+              "when",
+              "where",
+              "what"
+            ],
+            "example": "who",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/": {
+      "post": {
+        "operationId": "testService#testEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "completed": [
+                  "where",
+                  "where"
+                ],
+                "current": "where"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/Setup"
+              }
+            }
+          },
+          "description": "Request body for testEndpoint.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "completed": [
+                    "when",
+                    "when",
+                    "when",
+                    "when"
+                  ],
+                  "current": "when"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Setup"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "testEndpoint testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "testService"
+    }
+  ]
+}

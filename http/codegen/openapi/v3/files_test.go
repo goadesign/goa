@@ -58,6 +58,8 @@ func TestFiles(t *testing.T) {
 		{"endpoint", testdata.ExtensionDSL},
 		{"endpoint-swagger", testdata.ExtensionSwaggerDSL},
 		{"type-extension", testdata.TypeExtensionDSL},
+		// Alias types stay inline in 3.0 documents (named in 3.2 only).
+		{"alias-type", testdata.AliasTypeDSL},
 		{"skip-response-body-encode-decode", testdata.SkipResponseBodyEncodeDecodeDSL},
 		// TestValidations
 		{"string", testdata.StringValidationDSL},
@@ -131,6 +133,7 @@ func TestFilesV32(t *testing.T) {
 		{"sse-all-fields", testdata.SSEAllFieldsDSL},
 		{"sse-mixed-results", testdata.MixedResultsDSL},
 		{"websocket", testdata.StreamingResultDSL},
+		{"alias-type", testdata.AliasTypeDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

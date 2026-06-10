@@ -42,6 +42,12 @@ type (
 		// type names indexed by hashes
 		hashes map[uint64][]string
 		rand   *expr.ExampleGenerator
+		// nameAliases generates named component schemas for primitive alias
+		// types instead of inlining them. Only set when the schemas map feeds
+		// the document components (OpenAPI 3.2 documents): schemafiers whose
+		// schemas are discarded (parameters, headers) must keep inlining
+		// aliases as their references would dangle.
+		nameAliases bool
 	}
 )
 
@@ -69,6 +75,7 @@ func newSchemafier(rand *expr.ExampleGenerator) *schemafier {
 func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*expr.ResultTypeExpr, ver openapi.Version) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
 	bodies := make(map[string]map[string]*EndpointBodies)
 	sf := newSchemafier(api.ExampleGenerator)
+	sf.nameAliases = ver == openapi.Version32
 	services := openAPIGeneratedServices(api)
 
 	// Generates the types referenced from the endpoints.
@@ -293,7 +300,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		s.Properties[valueKey] = valueSchema
 		s.Required = append(s.Required, typeKey, valueKey)
 	case expr.UserType:
-		if expr.IsAlias(t) {
+		if expr.IsAlias(t) && !sf.nameAliases {
 			return sf.schemafy(t.Attribute())
 		}
 		h := sf.hashAttribute(attr, fnv.New64())

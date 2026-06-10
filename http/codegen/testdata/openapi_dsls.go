@@ -1179,3 +1179,23 @@ var TypeExtensionDSL = func() {
 		})
 	})
 }
+
+var AliasTypeDSL = func() {
+	var Stage = Type("Stage", String, func() {
+		Description("Setup stage.")
+		Enum("who", "when", "where", "what")
+	})
+	var Setup = Type("Setup", func() {
+		Attribute("current", Stage)
+		Attribute("completed", ArrayOf(Stage))
+	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			Payload(Setup)
+			Result(Setup)
+			HTTP(func() {
+				POST("/")
+			})
+		})
+	})
+}
