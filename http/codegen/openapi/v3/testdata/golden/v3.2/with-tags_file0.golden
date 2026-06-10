@@ -1,0 +1,60 @@
+{
+  "components": {},
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.2.0",
+  "paths": {
+    "/{int_map}": {
+      "post": {
+        "operationId": "test service#test endpoint",
+        "parameters": [
+          {
+            "example": 1933576090881075000,
+            "in": "path",
+            "name": "int_map",
+            "required": true,
+            "schema": {
+              "example": 9176544974339886000,
+              "format": "int64",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        },
+        "summary": "test endpoint test service",
+        "tags": [
+          "SomeTag"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "name": "test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "description": "Endpoint description",
+      "externalDocs": {
+        "url": "Endpoint URL"
+      },
+      "name": "AnotherTag"
+    },
+    {
+      "description": "Endpoint description",
+      "externalDocs": {
+        "url": "Endpoint URL"
+      },
+      "name": "SomeTag"
+    }
+  ]
+}

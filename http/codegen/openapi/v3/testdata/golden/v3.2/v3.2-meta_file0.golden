@@ -1,0 +1,48 @@
+{
+  "components": {},
+  "info": {
+    "summary": "Test API summary",
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.2.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "testService#testEndpoint",
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        },
+        "summary": "testEndpoint testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "name": "multi-dev",
+      "url": "http://localhost:8080"
+    },
+    {
+      "name": "multi-prod",
+      "url": "https://goa.design"
+    },
+    {
+      "name": "single",
+      "url": "https://single.goa.design"
+    }
+  ],
+  "tags": [
+    {
+      "description": "Operations about users",
+      "kind": "nav",
+      "name": "Users",
+      "parent": "Accounts",
+      "summary": "Users"
+    }
+  ]
+}

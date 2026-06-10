@@ -12,8 +12,13 @@ import (
 	"goa.design/goa/v3/http/codegen/openapi"
 )
 
-// OpenAPIVersion is the OpenAPI specification version targeted by this package.
+// OpenAPIVersion is the OpenAPI specification version of the documents
+// generated for openapi.Version30.
 const OpenAPIVersion = "3.0.3"
+
+// OpenAPIVersion32 is the OpenAPI specification version of the documents
+// generated for openapi.Version32.
+const OpenAPIVersion32 = "3.2.0"
 
 var (
 	routeIndexReplacementRegExp = regexp.MustCompile(`\((.*){routeIndex}\)`)
@@ -23,9 +28,10 @@ const (
 	defaultOperationIDFormat = "{service}#{method}(#{routeIndex})"
 )
 
-// New returns the OpenAPI v3 specification for the given API.
-// It returns nil if the design does not define HTTP endpoints.
-func New(root *expr.RootExpr) *OpenAPI {
+// New returns the OpenAPI specification conforming to the given version
+// (openapi.Version30 or openapi.Version32) for the given API. It returns nil
+// if the design does not define HTTP endpoints.
+func New(root *expr.RootExpr, ver openapi.Version) *OpenAPI {
 	if root == nil || root.API == nil || root.API.HTTP == nil || len(root.API.HTTP.Services) == 0 {
 		// No HTTP transport
 		return nil
@@ -39,19 +45,24 @@ func New(root *expr.RootExpr) *OpenAPI {
 		root.API.ExampleGenerator.Randomizer = nil
 	}
 
-	var (
-		bodies, types = buildBodyTypes(root.API, root.Types, root.ResultTypes)
+	specVersion := OpenAPIVersion
+	if ver == openapi.Version32 {
+		specVersion = OpenAPIVersion32
+	}
 
-		info     = buildInfo(root.API)
+	var (
+		bodies, types = buildBodyTypes(root.API, root.Types, root.ResultTypes, ver)
+
+		info     = buildInfo(root.API, ver)
 		comps    = buildComponents(root, types)
-		servers  = buildServers(root.API.Servers)
-		paths    = buildPaths(root.API.HTTP, bodies, root.API)
+		servers  = buildServers(root.API.Servers, ver)
+		paths    = buildPaths(root.API.HTTP, bodies, root.API, ver)
 		security = buildSecurityRequirements(root.API.Requirements)
-		tags     = buildTags(root.API)
+		tags     = buildTags(root.API, ver)
 	)
 
 	return &OpenAPI{
-		OpenAPI:    OpenAPIVersion,
+		OpenAPI:    specVersion,
 		Info:       info,
 		Components: comps,
 		Paths:      paths,
@@ -62,7 +73,7 @@ func New(root *expr.RootExpr) *OpenAPI {
 }
 
 // buildInfo builds the OpenAPI Info object.
-func buildInfo(api *expr.APIExpr) *Info {
+func buildInfo(api *expr.APIExpr, ver openapi.Version) *Info {
 	title := api.Title
 	if title == "" {
 		title = "Goa API" // cannot be empty as per OpenAPI spec
@@ -73,6 +84,11 @@ func buildInfo(api *expr.APIExpr) *Info {
 		TermsOfService: api.TermsOfService,
 		Version:        api.Version,
 		Extensions:     openapi.ExtensionsFromExpr(api.Meta),
+	}
+	if ver == openapi.Version32 {
+		if s, ok := api.Meta.Last("openapi:info:summary"); ok {
+			info.Summary = s
+		}
 	}
 	if c := api.Contact; c != nil {
 		info.Contact = &Contact{
@@ -115,7 +131,7 @@ func buildComponents(root *expr.RootExpr, types map[string]*openapi.Schema) *Com
 
 // buildPaths builds the OpenAPI Paths map with key as the HTTP path string and
 // the value as the corresponding PathItem object.
-func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, api *expr.APIExpr) map[string]*PathItem {
+func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, api *expr.APIExpr, ver openapi.Version) map[string]*PathItem {
 	var paths = make(map[string]*PathItem)
 	for _, svc := range h.Services {
 		if !openapi.MustGenerate(svc.Meta) || !openapi.MustGenerate(svc.ServiceExpr.Meta) {
@@ -134,7 +150,7 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 					// Remove any wildcards that is defined in path as a workaround to
 					// https://github.com/OAI/OpenAPI-Specification/issues/291
 					key = expr.HTTPWildcardRegex.ReplaceAllString(key, "/{$1}")
-					operation := buildOperation(key, r, sbod[e.Name()], api.ExampleGenerator, api.Meta)
+					operation := buildOperation(key, r, sbod[e.Name()], api.ExampleGenerator, api.Meta, ver)
 					path, ok := paths[key]
 					if !ok {
 						path = new(PathItem)
@@ -189,7 +205,7 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 }
 
 // buildOperation builds the OpenAPI Operation object for the given path.
-func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand *expr.ExampleGenerator, meta expr.MetaExpr) *Operation {
+func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand *expr.ExampleGenerator, meta expr.MetaExpr, ver openapi.Version) *Operation {
 	e := r.Endpoint
 	m := e.MethodExpr
 	svc := e.Service
@@ -252,6 +268,12 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	{
 		ps := paramsFromPath(e, key, rand)
 		ps = append(ps, paramsFromHeadersAndCookies(e, rand)...)
+		if ver == openapi.Version32 && e.UsesSSE() && e.SSE.RequestIDField != "" {
+			// The generated handler reads the Last-Event-ID header directly so
+			// the header does not appear in the endpoint headers expression.
+			att := expr.AsObject(m.Payload.Type).Attribute(e.SSE.RequestIDField)
+			ps = append(ps, paramFor(att, "Last-Event-ID", "header", false, rand))
+		}
 		if e.MapQueryParams != nil {
 			name := *e.MapQueryParams
 			if name == "" {
@@ -278,6 +300,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	// responses
 	responses := make(map[string]*ResponseRef, len(e.Responses))
 	for _, r := range e.Responses {
+		var resultCT string
 		switch {
 		case e.UsesWebSocket():
 			// A WebSocket endpoint allows at most one successful response
@@ -291,10 +314,14 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 				bodies.ResponseBodies[r.StatusCode] = b
 			}
 		case e.UsesSSE():
+			resultCT = responseContentType(r)
 			r = r.Dup()
 			r.ContentType = "text/event-stream"
 		}
 		resp := responseFromExpr(r, bodies.ResponseBodies, rand)
+		if ver == openapi.Version32 && e.UsesSSE() {
+			setSSEContent(resp, bodies, resultCT, m.HasMixedResults())
+		}
 		responses[strconv.Itoa(r.StatusCode)] = &ResponseRef{Value: resp}
 	}
 	for _, er := range e.HTTPErrors {
@@ -503,7 +530,7 @@ func parseOperationIDTemplate(template, service, method string, routeIndex int) 
 
 // buildServers builds the OpenAPI Server objects from the given server
 // expressions.
-func buildServers(servers []*expr.ServerExpr) []*Server {
+func buildServers(servers []*expr.ServerExpr, ver openapi.Version) []*Server {
 	var svrs []*Server
 	for _, svr := range servers {
 		if !openapi.MustGenerate(svr.Meta) {
@@ -560,10 +587,23 @@ func buildServers(servers []*expr.ServerExpr) []*Server {
 				Description: svr.Description,
 				Variables:   serverVariable,
 			}
+			if ver == openapi.Version32 {
+				server.Name = serverName(svr, host)
+			}
 			svrs = append(svrs, server)
 		}
 	}
 	return svrs
+}
+
+// serverName computes the OpenAPI 3.2 name of the Server object built for the
+// given design server and host. The host name qualifies the server name when
+// the server defines several hosts so generated names are unique.
+func serverName(svr *expr.ServerExpr, host *expr.HostExpr) string {
+	if len(svr.Hosts) == 1 {
+		return svr.Name
+	}
+	return svr.Name + "-" + host.Name
 }
 
 // buildSecurityRequirements builds the OpenAPI security requirements for the
@@ -668,16 +708,16 @@ func buildSecurityScheme(se *expr.SchemeExpr) *SecurityScheme {
 }
 
 // buildTags builds the OpenAPI Tag object from the API expression.
-func buildTags(api *expr.APIExpr) []*openapi.Tag {
+func buildTags(api *expr.APIExpr, ver openapi.Version) []*openapi.Tag {
 	m := make(map[string]*openapi.Tag)
-	for _, t := range openapi.TagsFromExpr(api.Meta) {
+	for _, t := range openapi.TagsFromExpr(api.Meta, ver) {
 		m[t.Name] = t
 	}
 	for _, s := range api.HTTP.Services {
 		if !openapi.MustGenerate(s.Meta) || !openapi.MustGenerate(s.ServiceExpr.Meta) {
 			continue
 		}
-		for _, t := range openapi.TagsFromExpr(s.Meta) {
+		for _, t := range openapi.TagsFromExpr(s.Meta, ver) {
 			m[t.Name] = t
 		}
 	}

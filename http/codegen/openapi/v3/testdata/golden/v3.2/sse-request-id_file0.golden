@@ -1,0 +1,94 @@
+{
+  "components": {
+    "schemas": {
+      "SSERequestIDMethodRequestBody": {
+        "description": "Request body for SSERequestIDMethod.",
+        "example": {
+          "id": "Doloribus qui quia."
+        },
+        "properties": {
+          "id": {
+            "example": "Quia molestias.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.2.0",
+  "paths": {
+    "/request-id": {
+      "get": {
+        "operationId": "SSERequestIDService#SSERequestIDMethod",
+        "parameters": [
+          {
+            "allowEmptyValue": true,
+            "example": "Harum et.",
+            "in": "header",
+            "name": "Last-Event-ID",
+            "schema": {
+              "example": "Iste perspiciatis.",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "id": "Ullam aut."
+              },
+              "schema": {
+                "$ref": "#/components/schemas/SSERequestIDMethodRequestBody"
+              }
+            }
+          },
+          "description": "Request body for SSERequestIDMethod.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "example": "Itaque inventore optio.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "SSERequestIDMethod SSERequestIDService",
+        "tags": [
+          "SSERequestIDService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "name": "test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "SSERequestIDService"
+    }
+  ]
+}

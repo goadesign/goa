@@ -1,0 +1,66 @@
+openapi: 3.2.0
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+      name: test api
+      description: Default server for test api
+paths:
+    /object:
+        get:
+            tags:
+                - SSEObjectService
+            summary: SSEObjectMethod SSEObjectService
+            operationId: SSEObjectService#SSEObjectMethod
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        text/event-stream:
+                            itemSchema:
+                                type: object
+                                properties:
+                                    data:
+                                        type: string
+                                        contentMediaType: application/json
+                                        contentSchema:
+                                            type: object
+                                            properties:
+                                                flag:
+                                                    type: boolean
+                                                    example: false
+                                                id:
+                                                    type: string
+                                                    example: Sunt itaque inventore optio quia ullam aut.
+                                                value:
+                                                    type: integer
+                                                    example: 3602919998459661528
+                                                    format: int64
+                                            example:
+                                                flag: false
+                                                id: Repellendus harum.
+                                                value: 5721637919286150856
+                                required:
+                                    - data
+components:
+    schemas:
+        SSEObjectMethodResponseBody:
+            type: object
+            properties:
+                flag:
+                    type: boolean
+                    example: true
+                id:
+                    type: string
+                    example: Quia molestias.
+                value:
+                    type: integer
+                    example: 7595816812588075382
+                    format: int64
+            example:
+                flag: true
+                id: Quia inventore et.
+                value: 3742304935485895874
+tags:
+    - name: SSEObjectService

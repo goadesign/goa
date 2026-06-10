@@ -1,0 +1,23 @@
+openapi: 3.2.0
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: https://{version}.goa.design
+      name: test
+      variables:
+        version:
+            default: v1
+paths:
+    /:
+        post:
+            tags:
+                - testService
+            summary: testEndpoint testService
+            operationId: testService#testEndpoint
+            responses:
+                "204":
+                    description: No Content response.
+components: {}
+tags:
+    - name: testService

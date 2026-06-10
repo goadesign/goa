@@ -27,6 +27,11 @@ type (
 	EndpointBodies struct {
 		RequestBody    *openapi.Schema
 		ResponseBodies map[int][]*openapi.Schema
+		// SSEItemSchema describes a single event streamed by a server-sent
+		// events endpoint. It is only computed for OpenAPI 3.2 documents
+		// which render it as the itemSchema of the text/event-stream media
+		// type.
+		SSEItemSchema *openapi.Schema
 	}
 
 	// schemafier is an internal data structure used to keep the state required to
@@ -61,7 +66,7 @@ func newSchemafier(rand *expr.ExampleGenerator) *schemafier {
 // value indexed by type name.
 //
 // NOTE: entries are nil when the corresponding type is Empty.
-func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*expr.ResultTypeExpr) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
+func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*expr.ResultTypeExpr, ver openapi.Version) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
 	bodies := make(map[string]map[string]*EndpointBodies)
 	sf := newSchemafier(api.ExampleGenerator)
 	services := openAPIGeneratedServices(api)
@@ -143,11 +148,58 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 				js := sf.schemafy(body)
 				res[resp.StatusCode] = append(res[resp.StatusCode], js)
 			}
-			sbodies[e.Name()] = &EndpointBodies{req, res}
+			eb := &EndpointBodies{RequestBody: req, ResponseBodies: res}
+			if ver == openapi.Version32 && e.UsesSSE() {
+				eb.SSEItemSchema = sf.buildSSEItemSchema(e)
+			}
+			sbodies[e.Name()] = eb
 		}
 		bodies[s.Name()] = sbodies
 	}
 	return bodies, sf.schemas
+}
+
+// buildSSEItemSchema returns the JSON schema describing a single event
+// streamed by the given server-sent events endpoint as defined by the OpenAPI
+// 3.2 sequential media types. The schema is an object whose properties mirror
+// the SSE event fields mapped by the design: data is always present, event,
+// id and retry only when the design maps them. String and bytes data is
+// written raw on the wire while other types are JSON-encoded, which the data
+// property reflects using the JSON schema contentMediaType and contentSchema
+// keywords.
+func (sf *schemafier) buildSSEItemSchema(e *expr.HTTPEndpointExpr) *openapi.Schema {
+	sse := e.SSE
+	sr := e.MethodExpr.StreamingResult
+	data := sr
+	if sse.DataField != "" {
+		data = expr.AsObject(sr.Type).Attribute(sse.DataField)
+	}
+	var dataSchema *openapi.Schema
+	switch data.Type {
+	case expr.String, expr.Bytes:
+		dataSchema = sf.schemafy(data)
+	default:
+		dataSchema = &openapi.Schema{
+			Type:             openapi.String,
+			ContentMediaType: "application/json",
+			ContentSchema:    sf.schemafy(data),
+		}
+	}
+	props := map[string]*openapi.Schema{"data": dataSchema}
+	if sse.EventField != "" {
+		props["event"] = sf.schemafy(expr.AsObject(sr.Type).Attribute(sse.EventField))
+	}
+	if sse.IDField != "" {
+		props["id"] = sf.schemafy(expr.AsObject(sr.Type).Attribute(sse.IDField))
+	}
+	if sse.RetryField != "" {
+		props["retry"] = sf.schemafy(expr.AsObject(sr.Type).Attribute(sse.RetryField))
+	}
+	return &openapi.Schema{
+		Type:       openapi.Object,
+		Properties: props,
+		Required:   []string{"data"},
+	}
 }
 
 func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi.Schema {

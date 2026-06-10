@@ -31,15 +31,7 @@ func headersFromAttr(attr *expr.MappedAttributeExpr, rand *expr.ExampleGenerator
 }
 
 func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema, rand *expr.ExampleGenerator) *Response {
-	ct := r.ContentType
-	rt, ok := r.Body.Type.(*expr.ResultTypeExpr)
-	if ok && ct == "" {
-		ct = rt.ContentType
-	}
-	if ct == "" {
-		// Default to application/json
-		ct = "application/json"
-	}
+	ct := responseContentType(r)
 	headers := headersFromAttr(r.Headers, rand)
 	cookies := headersFromAttr(r.Cookies, rand)
 	if len(cookies) > 0 {
@@ -97,6 +89,39 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 		Content:     content,
 		Extensions:  openapi.ExtensionsFromExpr(r.Meta),
 	}
+}
+
+// responseContentType computes the content type of the given response: the
+// explicitly defined content type if any, the content type of the response
+// result type otherwise, defaulting to application/json.
+func responseContentType(r *expr.HTTPResponseExpr) string {
+	if r.ContentType != "" {
+		return r.ContentType
+	}
+	if rt, ok := r.Body.Type.(*expr.ResultTypeExpr); ok && rt.ContentType != "" {
+		return rt.ContentType
+	}
+	return "application/json"
+}
+
+// setSSEContent rewrites the content of a successful server-sent events
+// response for OpenAPI 3.2 documents. The text/event-stream media type
+// describes each streamed event with an itemSchema instead of a whole-stream
+// schema. When the method defines mixed results (distinct unary and streaming
+// result types) the unary result is documented under its own content type
+// (ct) next to the event stream to reflect the content negotiation performed
+// by the generated handler.
+func setSSEContent(resp *Response, bodies *EndpointBodies, ct string, mixed bool) {
+	sse := &MediaType{ItemSchema: bodies.SSEItemSchema}
+	if !mixed {
+		resp.Content = map[string]*MediaType{"text/event-stream": sse}
+		return
+	}
+	if mt, ok := resp.Content["text/event-stream"]; ok {
+		delete(resp.Content, "text/event-stream")
+		resp.Content[ct] = mt
+	}
+	resp.Content["text/event-stream"] = sse
 }
 
 func isSkipResponseBodyEncodeDecode(parent eval.Expression) bool {

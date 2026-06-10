@@ -1092,3 +1092,74 @@ var AdditionalPropertiesEmbeddedPayloadResultDSL = func() {
 		})
 	})
 }
+
+var OpenAPIV32MetaDSL = func() {
+	var _ = API("test", func() {
+		Meta("openapi:info:summary", "Test API summary")
+		Meta("openapi:tag:Users:desc", "Operations about users")
+		Meta("openapi:tag:Users:summary", "Users")
+		Meta("openapi:tag:Users:parent", "Accounts")
+		Meta("openapi:tag:Users:kind", "nav")
+		Server("multi", func() {
+			Host("dev", func() {
+				URI("http://localhost:8080")
+			})
+			Host("prod", func() {
+				URI("https://goa.design")
+			})
+		})
+		Server("single", func() {
+			Host("only", func() {
+				URI("https://single.goa.design")
+			})
+		})
+	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			Payload(Empty)
+			Result(Empty)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var OpenAPIVersionsSubsetDSL = func() {
+	var _ = API("test", func() {
+		Meta("openapi:versions", "3.2")
+	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var OpenAPIPathOverrideDSL = func() {
+	var _ = API("test", func() {
+		Meta("openapi:path:3.2", "docs/openapi")
+	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+var OpenAPIInvalidVersionDSL = func() {
+	var _ = API("test", func() {
+		Meta("openapi:versions", "4.0")
+	})
+	Service("testService", func() {
+		Method("testEndpoint", func() {
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}

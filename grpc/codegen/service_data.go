@@ -1392,10 +1392,10 @@ func buildStreamEnvelopeData(envelope *expr.AttributeExpr, message *service.User
 	initialFieldName := scope.Field(union.Values[0].Attribute, union.Values[0].Name, true)
 	streamItemFieldName := scope.Field(union.Values[1].Attribute, union.Values[1].Name, true)
 	return &StreamEnvelopeData{
-		FieldName:          fieldName,
-		InitialFieldName:   initialFieldName,
-		InitialWrapperRef:  fmt.Sprintf("%s.%s_%s", sd.PkgName, message.VarName, initialFieldName),
-		StreamItemFieldName: streamItemFieldName,
+		FieldName:            fieldName,
+		InitialFieldName:     initialFieldName,
+		InitialWrapperRef:    fmt.Sprintf("%s.%s_%s", sd.PkgName, message.VarName, initialFieldName),
+		StreamItemFieldName:  streamItemFieldName,
 		StreamItemWrapperRef: fmt.Sprintf("%s.%s_%s", sd.PkgName, message.VarName, streamItemFieldName),
 	}
 }

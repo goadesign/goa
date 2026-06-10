@@ -1,0 +1,44 @@
+openapi: 3.2.0
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+      name: test api
+      description: Default server for test api
+paths:
+    /{x}:
+        get:
+            tags:
+                - StreamingResultService
+            summary: StreamingResultMethod StreamingResultService
+            operationId: StreamingResultService#StreamingResultMethod
+            parameters:
+                - name: x
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+                    example: Et tempora et quae.
+                  example: Itaque inventore optio.
+            responses:
+                "101":
+                    description: Switching Protocols response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/UserType'
+                            example:
+                                a: Ullam aut.
+components:
+    schemas:
+        UserType:
+            type: object
+            properties:
+                a:
+                    type: string
+                    example: Quia molestias.
+            example:
+                a: Doloribus qui quia.
+tags:
+    - name: StreamingResultService

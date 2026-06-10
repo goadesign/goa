@@ -1,0 +1,72 @@
+{
+  "components": {
+    "schemas": {
+      "SSEDataFieldMethodResponseBody": {
+        "example": {
+          "data": "Qui quia inventore et tempora.",
+          "flag": true
+        },
+        "properties": {
+          "data": {
+            "example": "Quia molestias.",
+            "type": "string"
+          },
+          "flag": {
+            "example": true,
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.2.0",
+  "paths": {
+    "/data-field": {
+      "get": {
+        "operationId": "SSEDataFieldService#SSEDataFieldMethod",
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "example": "Sunt itaque inventore optio quia ullam aut.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "SSEDataFieldMethod SSEDataFieldService",
+        "tags": [
+          "SSEDataFieldService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "name": "test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "SSEDataFieldService"
+    }
+  ]
+}

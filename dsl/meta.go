@@ -197,6 +197,38 @@ const DefaultProtoc = expr.DefaultProtoc
 //	    Meta("openapi:generate", "false")
 //	})
 //
+// - "openapi:versions" selects the OpenAPI specification versions to
+// generate. Valid values are "2.0" (Swagger, gen/http/openapi.json and
+// .yaml), "3.0" (OpenAPI 3.0.3, gen/http/openapi3.json and .yaml) and "3.2"
+// (OpenAPI 3.2.0, gen/http/openapi3.2.json and .yaml). Defaults to all three
+// versions. Invalid values fail code generation. Note: random example values
+// may differ between selections as the example generator is stateful and
+// shared across documents. Applicable to API only.
+//
+//	var _ = API("MyAPI", func() {
+//	    Meta("openapi:versions", "2.0", "3.2")
+//	})
+//
+// - "openapi:path:<version>" overrides the output path of the OpenAPI
+// documents generated for the given version ("2.0", "3.0" or "3.2"). The
+// value is relative to the gen directory and must not include an extension:
+// both JSON and YAML documents are generated at that path. Applicable to API
+// only.
+//
+//	var _ = API("MyAPI", func() {
+//	    // Writes gen/docs/openapi.json and gen/docs/openapi.yaml
+//	    Meta("openapi:path:3.2", "docs/openapi")
+//	})
+//
+// - "openapi:info:summary" sets the OpenAPI Info object summary field. Only
+// OpenAPI 3.2 documents render the field, it is ignored by other versions.
+// Not to be confused with "openapi:summary" which sets operation summaries.
+// Applicable to API only.
+//
+//	var _ = API("MyAPI", func() {
+//	    Meta("openapi:info:summary", "A short summary of MyAPI")
+//	})
+//
 // - "openapi:json:prefix" specifies the prefix used to format the OpenAPI
 // specification encoded in JSON. It can be used with "openapi:json:indent".
 // Applicable to API only.
@@ -262,7 +294,9 @@ const DefaultProtoc = expr.DefaultProtoc
 // - "swagger:tag:xxx" DEPRECATED, use "openapi:tag:xxx" instead
 //
 // - "openapi:tag:xxx" sets the OpenAPI object field tag xxx. Applicable to
-// HTTP services and methods. Tags are defined on services and used by methods.
+// HTTP services and methods. Tags are defined on services and used by
+// methods. The "summary", "parent" and "kind" sub-keys set the corresponding
+// OpenAPI 3.2 Tag object fields and only appear in OpenAPI 3.2 documents.
 //
 //	var _ = Service("MyService", func() {
 //	    HTTP(func() {
@@ -270,6 +304,9 @@ const DefaultProtoc = expr.DefaultProtoc
 //	    	Meta("openapi:tag:Backend:url", "http://example.com")
 //	    	Meta("openapi:tag:Backend:url:desc", "See more docs here")
 //	    	Meta("openapi:tag:Backend:extension:x-data", `{"foo":"bar"}`)
+//	    	Meta("openapi:tag:Backend:summary", "Backend endpoints")  // OpenAPI 3.2
+//	    	Meta("openapi:tag:Backend:parent", "Infrastructure")     // OpenAPI 3.2
+//	    	Meta("openapi:tag:Backend:kind", "nav")                  // OpenAPI 3.2
 //	    })
 //	    Method("MyMethod", func() {
 //	        HTTP(func() {

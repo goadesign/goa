@@ -12,17 +12,41 @@ import (
 type Tag struct {
 	// Name of the tag.
 	Name string `json:"name,omitempty" yaml:"name,omitempty"`
+	// Summary is a short summary of the tag (OpenAPI 3.2).
+	Summary string `json:"summary,omitempty" yaml:"summary,omitempty"`
 	// Description is a short description of the tag.
 	// GFM syntax can be used for rich text representation.
 	Description string `json:"description,omitempty" yaml:"description,omitempty"`
+	// Parent is the name of the parent tag (OpenAPI 3.2).
+	Parent string `json:"parent,omitempty" yaml:"parent,omitempty"`
+	// Kind is the kind of the tag, e.g. "nav" or "audience" (OpenAPI 3.2).
+	Kind string `json:"kind,omitempty" yaml:"kind,omitempty"`
 	// ExternalDocs is additional external documentation for this tag.
 	ExternalDocs *ExternalDocs `json:"externalDocs,omitempty" yaml:"externalDocs,omitempty"`
 	// Extensions defines the OpenAPI extensions.
 	Extensions map[string]any `json:"-" yaml:"-"`
 }
 
-// TagsFromExpr extracts the OpenAPI related metadata from the given expression.
-func TagsFromExpr(mdata expr.MetaExpr) (tags []*Tag) {
+// TagsFromExpr extracts the OpenAPI tag metadata from the given expression
+// for the given specification version. The tag fields introduced by OpenAPI
+// 3.2 (summary, parent, kind) are only extracted when ver is Version32 as
+// earlier specification versions do not define them.
+func TagsFromExpr(mdata expr.MetaExpr, ver Version) []*Tag {
+	return parseTags(mdata, ver == Version32)
+}
+
+// TagNamesFromExpr computes the names of the OpenAPI tags specified in the
+// given metadata expressions.
+func TagNamesFromExpr(mdata expr.MetaExpr) (tagNames []string) {
+	for _, tag := range parseTags(mdata, false) {
+		tagNames = append(tagNames, tag.Name)
+	}
+	return
+}
+
+// parseTags builds the tags defined in the given metadata. extras enables the
+// OpenAPI 3.2 only tag fields which must not appear in 2.0 and 3.0 documents.
+func parseTags(mdata expr.MetaExpr, extras bool) (tags []*Tag) {
 	keys := make([]string, 0, len(mdata))
 	for k := range mdata {
 		keys = append(keys, k)
@@ -50,19 +74,25 @@ func TagsFromExpr(mdata expr.MetaExpr) (tags []*Tag) {
 			tags = append(tags, tag)
 		}
 		if len(chunks) == 4 {
-			switch chunks[3] {
-			case "desc":
+			switch {
+			case chunks[3] == "desc":
 				tag.Description = mdata[key][0]
-			case "url":
+			case chunks[3] == "url":
 				if tag.ExternalDocs == nil {
 					tag.ExternalDocs = &ExternalDocs{}
 				}
 				tag.ExternalDocs.URL = mdata[key][0]
-			case "url:desc":
+			case chunks[3] == "url:desc":
 				if tag.ExternalDocs == nil {
 					tag.ExternalDocs = &ExternalDocs{}
 				}
 				tag.ExternalDocs.Description = mdata[key][0]
+			case extras && chunks[3] == "summary":
+				tag.Summary = mdata[key][0]
+			case extras && chunks[3] == "parent":
+				tag.Parent = mdata[key][0]
+			case extras && chunks[3] == "kind":
+				tag.Kind = mdata[key][0]
 			default:
 				idx := strings.Index(key, "extension:")
 				if idx == -1 {
@@ -74,16 +104,6 @@ func TagsFromExpr(mdata expr.MetaExpr) (tags []*Tag) {
 	}
 
 	return tags
-}
-
-// TagNamesFromExpr computes the names of the OpenAPI tags specified in the
-// given metadata expressions.
-func TagNamesFromExpr(mdata expr.MetaExpr) (tagNames []string) {
-	tags := TagsFromExpr(mdata)
-	for _, tag := range tags {
-		tagNames = append(tagNames, tag.Name)
-	}
-	return
 }
 
 type _tag Tag

@@ -58,7 +58,7 @@ func TestSections(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := httpgen.RunHTTPDSL(t, c.DSL)
-			oFiles, err := openapiv2.Files(root)
+			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
 			if err != nil {
 				t.Fatalf("OpenAPI failed with %s", err)
 			}
@@ -115,7 +115,7 @@ func TestValidations(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := httpgen.RunHTTPDSL(t, c.DSL)
-			oFiles, err := openapiv2.Files(root)
+			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
 			require.NoError(t, err, "OpenAPI failed")
 			require.NotEmpty(t, oFiles, "No swagger files")
 			for i, o := range oFiles {
@@ -159,7 +159,7 @@ func TestExtensions(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := httpgen.RunHTTPDSL(t, c.DSL)
-			oFiles, err := openapiv2.Files(root)
+			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
 			require.NoError(t, err, "OpenAPI failed")
 			require.NotEmpty(t, oFiles, "No swagger files")
 			for i, o := range oFiles {

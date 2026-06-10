@@ -48,6 +48,11 @@ type (
 		Required             []string `json:"required,omitempty" yaml:"required,omitempty"`
 		AdditionalProperties any      `json:"additionalProperties,omitempty" yaml:"additionalProperties,omitempty"`
 
+		// Content (JSON Schema 2020-12), used by OpenAPI 3.2 documents to
+		// describe string-encoded data such as JSON-encoded SSE event fields.
+		ContentMediaType string  `json:"contentMediaType,omitempty" yaml:"contentMediaType,omitempty"`
+		ContentSchema    *Schema `json:"contentSchema,omitempty" yaml:"contentSchema,omitempty"`
+
 		// Union
 		AnyOf []*Schema `json:"anyOf,omitempty" yaml:"anyOf,omitempty"`
 
@@ -498,6 +503,10 @@ func (s *Schema) Dup() *Schema {
 		MaxItems:             s.MaxItems,
 		Required:             s.Required,
 		AdditionalProperties: s.AdditionalProperties,
+		ContentMediaType:     s.ContentMediaType,
+	}
+	if s.ContentSchema != nil {
+		js.ContentSchema = s.ContentSchema.Dup()
 	}
 	for n, p := range s.Properties {
 		js.Properties[n] = p.Dup()

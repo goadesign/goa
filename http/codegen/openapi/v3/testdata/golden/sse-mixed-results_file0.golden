@@ -1,0 +1,93 @@
+{
+  "components": {
+    "schemas": {
+      "Payload": {
+        "description": "Request body for Create.",
+        "example": {
+          "x": "Doloribus qui quia."
+        },
+        "properties": {
+          "x": {
+            "example": "Quia molestias.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "x"
+        ],
+        "type": "object"
+      },
+      "Result": {
+        "example": {
+          "id": "Itaque inventore optio."
+        },
+        "properties": {
+          "id": {
+            "example": "Et tempora et quae.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/jobs": {
+      "post": {
+        "operationId": "MixedResultsService#Create",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "x": "Ullam aut."
+              },
+              "schema": {
+                "$ref": "#/components/schemas/Payload"
+              }
+            }
+          },
+          "description": "Request body for Create.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "example": {
+                  "id": "Iste perspiciatis."
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "Create MixedResultsService",
+        "tags": [
+          "MixedResultsService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "MixedResultsService"
+    }
+  ]
+}

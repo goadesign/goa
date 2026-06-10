@@ -30,15 +30,60 @@ func TestOpenAPI(t *testing.T) {
 }
 
 func TestOutputPath(t *testing.T) {
-	// Reset global variables
-	openapi.Definitions = make(map[string]*openapi.Schema)
-	root := RunHTTPDSL(t, testdata.SimpleDSL)
-	o, err := OpenAPIFiles(root)
-	require.NoError(t, err)
-	c := 4 // number of files we expect
-	require.Len(t, o, c)
-	assert.Equal(t, filepath.Join("gen", "http", "openapi.json"), o[0].Path)
-	assert.Equal(t, filepath.Join("gen", "http", "openapi.yaml"), o[1].Path)
-	assert.Equal(t, filepath.Join("gen", "http", "openapi3.json"), o[2].Path)
-	assert.Equal(t, filepath.Join("gen", "http", "openapi3.yaml"), o[3].Path)
+	cases := []struct {
+		Name  string
+		DSL   func()
+		Paths []string
+		Err   string
+	}{{
+		Name: "default",
+		DSL:  testdata.SimpleDSL,
+		Paths: []string{
+			filepath.Join("gen", "http", "openapi.json"),
+			filepath.Join("gen", "http", "openapi.yaml"),
+			filepath.Join("gen", "http", "openapi3.json"),
+			filepath.Join("gen", "http", "openapi3.yaml"),
+			filepath.Join("gen", "http", "openapi3.2.json"),
+			filepath.Join("gen", "http", "openapi3.2.yaml"),
+		},
+	}, {
+		Name: "versions subset",
+		DSL:  testdata.OpenAPIVersionsSubsetDSL,
+		Paths: []string{
+			filepath.Join("gen", "http", "openapi3.2.json"),
+			filepath.Join("gen", "http", "openapi3.2.yaml"),
+		},
+	}, {
+		Name: "path override",
+		DSL:  testdata.OpenAPIPathOverrideDSL,
+		Paths: []string{
+			filepath.Join("gen", "http", "openapi.json"),
+			filepath.Join("gen", "http", "openapi.yaml"),
+			filepath.Join("gen", "http", "openapi3.json"),
+			filepath.Join("gen", "http", "openapi3.yaml"),
+			filepath.Join("gen", "docs", "openapi.json"),
+			filepath.Join("gen", "docs", "openapi.yaml"),
+		},
+	}, {
+		Name: "invalid version",
+		DSL:  testdata.OpenAPIInvalidVersionDSL,
+		Err:  `invalid value "4.0" for meta "openapi:versions": valid values are "2.0", "3.0" and "3.2"`,
+	}}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			// Reset global variables
+			openapi.Definitions = make(map[string]*openapi.Schema)
+			root := RunHTTPDSL(t, c.DSL)
+			o, err := OpenAPIFiles(root)
+			if c.Err != "" {
+				require.EqualError(t, err, c.Err)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, o, len(c.Paths))
+			for i, p := range c.Paths {
+				assert.Equal(t, p, o[i].Path)
+			}
+		})
+	}
 }

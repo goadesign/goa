@@ -20,7 +20,7 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 	if root == nil {
 		return nil, nil
 	}
-	tags := openapi.TagsFromExpr(root.API.Meta)
+	tags := openapi.TagsFromExpr(root.API.Meta, openapi.Version20)
 	u, err := url.Parse(defaultURI(h))
 	if err != nil {
 		// This should never happen because server expression must have been
