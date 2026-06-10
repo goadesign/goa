@@ -45,11 +45,12 @@ implementation files and does not overwrite existing custom implementation later
   design.
 - Import generated packages with explicit aliases prefixed by `gen`, such as `genfront`,
   `gendefinitions`, or `genruns`, so generated Goa contracts are recognizable at call sites.
-- In Goa design for public HTTP APIs, JSON body properties and query parameters use lower
-  camel case (`Field(1, "accountId", ...)`, `Param("fromEventId")`,
-  `Required("accountId")`). If a route convention uses another casing for path placeholders,
-  keep the route explicit and map it in the HTTP DSL (for example
-  `Param("accountId:account_id")`). Method names use snake_case (`Method("get_account", ...)`).
+- In Goa design for public HTTP APIs, JSON body properties, query parameters, and path
+  parameters use lower camel case (`Field(1, "accountId", ...)`, `Param("fromEventId")`,
+  `Param("accountId")`, `Required("accountId")`). If a protocol or compatibility boundary
+  requires another transport name, keep the route/header explicit and map it in the HTTP DSL
+  (for example `Header("tusResumable:Tus-Resumable")`). Method names use snake_case
+  (`Method("get_account", ...)`).
 - Use literal integer field tags in Goa design. For each non-`Extend` type, payload, or result
   definition, start `Field` tags at `1` and increment by `1` within that definition. For any
   definition that calls `Extend`, the fields introduced by that definition start at `100` and
