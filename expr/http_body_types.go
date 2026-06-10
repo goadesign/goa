@@ -194,15 +194,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	appendSuffix(ut.Attribute().Type, suffix)
 
 	if t, ok := payload.Type.(UserType); ok {
-		// Remember openapi typename for example to generate friendly OpenAPI specs.
-		if m, ok := t.Attribute().Meta["openapi:typename"]; ok {
-			ut.AddMeta("openapi:typename", m...)
-		}
-
-		// Remember additionalProperties.
-		if m, ok := t.Attribute().Meta["openapi:additionalProperties"]; ok {
-			ut.AddMeta("openapi:additionalProperties", m...)
-		}
+		copyOpenAPITypeMeta(t, ut)
 	}
 
 	return &AttributeExpr{
@@ -335,17 +327,10 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	}
 
 	if t, ok := attr.Type.(UserType); ok {
-		// Remember original type name and openapi typename for example
-		// to generate friendly OpenAPI specs.
+		// Remember original type name for example to generate friendly
+		// OpenAPI specs.
 		userType.AddMeta("name:original", t.Name())
-		if m, ok := t.Attribute().Meta["openapi:typename"]; ok {
-			userType.AddMeta("openapi:typename", m...)
-		}
-
-		// Remember additionalProperties.
-		if m, ok := t.Attribute().Meta["openapi:additionalProperties"]; ok {
-			userType.AddMeta("openapi:additionalProperties", m...)
-		}
+		copyOpenAPITypeMeta(t, userType)
 	}
 
 	appendSuffix(userType.Attribute().Type, suffix)
@@ -402,6 +387,21 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 // 3) If the first string is a single word or camelcased, the rest of the
 // strings are concatenated to form a valid upper camelcase.
 // e.g. concat("myEndpoint", "streaming", "Body") => "MyEndpointStreamingBody"
+// copyOpenAPITypeMeta copies the OpenAPI schema meta — type name, additional
+// properties and extensions — from the original design type to the computed
+// HTTP body type so the generated specs render them.
+func copyOpenAPITypeMeta(from UserType, to *UserTypeExpr) {
+	for key, vals := range from.Attribute().Meta {
+		switch {
+		case key == "openapi:typename",
+			key == "openapi:additionalProperties",
+			strings.HasPrefix(key, "openapi:extension:"),
+			strings.HasPrefix(key, "swagger:extension:"):
+			to.AddMeta(key, vals...)
+		}
+	}
+}
+
 func concat(strs ...string) string {
 	if len(strs) == 1 {
 		return strs[0]

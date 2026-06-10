@@ -1,0 +1,46 @@
+openapi: 3.0.3
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+      description: Default server for test api
+paths:
+    /:
+        post:
+            tags:
+                - testService
+            summary: testEndpoint testService
+            operationId: testService#testEndpoint
+            requestBody:
+                description: Request body for testEndpoint.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/Notification'
+                        example:
+                            id: Et tempora et quae.
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Notification'
+                            example:
+                                id: Itaque inventore optio.
+components:
+    schemas:
+        Notification:
+            description: Request body for testEndpoint.
+            example:
+                id: Doloribus qui quia.
+            properties:
+                id:
+                    example: Quia molestias.
+                    type: string
+            type: object
+            x-test-include: true
+tags:
+    - name: testService
