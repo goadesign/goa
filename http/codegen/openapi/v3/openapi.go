@@ -21,7 +21,8 @@ type (
 	// Info represents an OpenAPI Info object as defined in
 	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#infoObject
 	Info struct {
-		Title          string         `json:"title" yaml:"title"` // Required
+		Title          string         `json:"title" yaml:"title"`                         // Required
+		Summary        string         `json:"summary,omitempty" yaml:"summary,omitempty"` // OpenAPI 3.2
 		Description    string         `json:"description,omitempty" yaml:"description,omitempty"`
 		TermsOfService string         `json:"termsOfService,omitempty" yaml:"termsOfService,omitempty"`
 		Contact        *Contact       `json:"contact,omitempty" yaml:"contact,omitempty"`
@@ -34,6 +35,7 @@ type (
 	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#serverObject
 	Server struct {
 		URL         string                     `json:"url" yaml:"url"`
+		Name        string                     `json:"name,omitempty" yaml:"name,omitempty"` // OpenAPI 3.2
 		Description string                     `json:"description,omitempty" yaml:"description,omitempty"`
 		Variables   map[string]*ServerVariable `json:"variables,omitempty" yaml:"variables,omitempty"`
 	}
@@ -151,7 +153,10 @@ type (
 	// MediaType represents an OpenAPI Media Type object as defined in
 	// https://github.com/OAI/OpenAPI-Specification/blob/master/versions/3.0.3.md#mediaTypeObject
 	MediaType struct {
-		Schema     *openapi.Schema        `json:"schema,omitempty" yaml:"schema,omitempty"`
+		Schema *openapi.Schema `json:"schema,omitempty" yaml:"schema,omitempty"`
+		// ItemSchema describes each item streamed over a sequential media
+		// type such as text/event-stream (OpenAPI 3.2).
+		ItemSchema *openapi.Schema        `json:"itemSchema,omitempty" yaml:"itemSchema,omitempty"`
 		Example    any                    `json:"example,omitempty" yaml:"example,omitempty"`
 		Examples   map[string]*ExampleRef `json:"examples,omitempty" yaml:"examples,omitempty"`
 		Encoding   map[string]*Encoding   `json:"encoding,omitempty" yaml:"encoding,omitempty"`

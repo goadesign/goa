@@ -67,7 +67,7 @@ func TestBuildInfo(t *testing.T) {
 				License:        &expr.LicenseExpr{Name: licenseName, URL: licenseURL},
 			}
 
-			info := buildInfo(api)
+			info := buildInfo(api, openapi.Version30)
 
 			expected := c.Title
 			if api.Title == "" {
@@ -94,7 +94,7 @@ func TestBuildInfo(t *testing.T) {
 
 func TestNoSecurityOverridesAPISecurity(t *testing.T) {
 	root := codegen.RunDSL(t, noSecurityOverridesAPISecurityDSL)
-	spec := New(root)
+	spec := New(root, openapi.Version30)
 
 	cases := map[string]struct {
 		marshal   func(any) ([]byte, error)
@@ -131,7 +131,7 @@ func TestNoSecurityOverridesAPISecurity(t *testing.T) {
 
 func TestNoSecurityOverridesServiceSecurity(t *testing.T) {
 	root := codegen.RunDSL(t, noSecurityOverridesServiceSecurityDSL)
-	spec := New(root)
+	spec := New(root, openapi.Version30)
 
 	cases := map[string]struct {
 		marshal   func(any) ([]byte, error)
@@ -168,7 +168,7 @@ func TestNoSecurityOverridesServiceSecurity(t *testing.T) {
 
 func TestStreamingResponseStatusCodes(t *testing.T) {
 	root := codegen.RunDSL(t, streamingResponseStatusDSL)
-	spec := New(root)
+	spec := New(root, openapi.Version30)
 
 	sseResponses := spec.Paths["/sse"].Get.Responses
 	require.Contains(t, sseResponses, "200")
@@ -334,7 +334,7 @@ func TestBuildOperation(t *testing.T) {
 			var types map[string]*openapi.Schema
 			{
 				var bds map[string]map[string]*EndpointBodies
-				bds, types = buildBodyTypes(root.API, root.Types, root.ResultTypes)
+				bds, types = buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30)
 				if svc, ok := bds[svcName]; ok {
 					bodies, ok = svc[c.Name]
 					if !ok {
@@ -366,7 +366,7 @@ func TestBuildOperation(t *testing.T) {
 				return
 			}
 
-			op := buildOperation(c.Name, route, bodies, expr.NewRandom(c.Name), root.API.Meta)
+			op := buildOperation(c.Name, route, bodies, expr.NewRandom(c.Name), root.API.Meta, openapi.Version30)
 
 			if op.Description != c.ExpectedDescription {
 				t.Errorf("got description %q for method %q, expected %q", op.Description, c.Name, c.ExpectedDescription)
@@ -455,7 +455,7 @@ func TestBuildOperationID(t *testing.T) {
 				if s.Name() == svcName {
 					for _, e := range s.HTTPEndpoints {
 						for i, r := range e.Routes {
-							op := buildOperation(c.Name, r, &EndpointBodies{}, expr.NewRandom(c.Name), api.Meta)
+							op := buildOperation(c.Name, r, &EndpointBodies{}, expr.NewRandom(c.Name), api.Meta, openapi.Version30)
 
 							if len(c.ExpectedOperationIDs) == 0 {
 								t.Error("no expected operation IDs")

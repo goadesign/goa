@@ -1,0 +1,41 @@
+{
+  "components": {},
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "testService#testEndpoint",
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          }
+        },
+        "summary": "testEndpoint testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8080"
+    },
+    {
+      "url": "https://goa.design"
+    },
+    {
+      "url": "https://single.goa.design"
+    }
+  ],
+  "tags": [
+    {
+      "description": "Operations about users",
+      "name": "Users"
+    }
+  ]
+}

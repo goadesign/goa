@@ -1,0 +1,103 @@
+openapi: 3.2.0
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+      name: test api
+      description: Default server for test api
+paths:
+    /all-fields:
+        get:
+            tags:
+                - SSEAllFieldsService
+            summary: SSEAllFieldsMethod SSEAllFieldsService
+            operationId: SSEAllFieldsService#SSEAllFieldsMethod
+            parameters:
+                - name: Last-Event-ID
+                  in: header
+                  allowEmptyValue: true
+                  schema:
+                    type: string
+                    example: Itaque inventore optio.
+                  example: Ullam aut.
+            requestBody:
+                description: Request body for SSEAllFieldsMethod.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/SSEAllFieldsMethodRequestBody'
+                        example:
+                            id: Et tempora et quae.
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        text/event-stream:
+                            itemSchema:
+                                type: object
+                                properties:
+                                    data:
+                                        type: string
+                                        contentMediaType: application/json
+                                        contentSchema:
+                                            type: object
+                                            properties:
+                                                message:
+                                                    type: string
+                                                    example: Hello, world!
+                                            example:
+                                                message: Hello, world!
+                                    event:
+                                        type: string
+                                        example: update
+                                    id:
+                                        type: string
+                                        example: "123"
+                                    retry:
+                                        type: integer
+                                        example: 3000
+                                        format: int64
+                                required:
+                                    - data
+components:
+    schemas:
+        SSEAllFieldsMethodRequestBody:
+            type: object
+            properties:
+                id:
+                    type: string
+                    example: Quia molestias.
+            description: Request body for SSEAllFieldsMethod.
+            example:
+                id: Doloribus qui quia.
+        SSEAllFieldsMethodResponseBody:
+            type: object
+            properties:
+                data:
+                    type: object
+                    properties:
+                        message:
+                            type: string
+                            example: Hello, world!
+                    example:
+                        message: Hello, world!
+                event:
+                    type: string
+                    example: update
+                id:
+                    type: string
+                    example: "123"
+                retry:
+                    type: integer
+                    example: 3000
+                    format: int64
+            example:
+                data:
+                    message: Hello, world!
+                event: update
+                id: "123"
+                retry: 3000
+tags:
+    - name: SSEAllFieldsService

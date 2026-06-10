@@ -16,7 +16,9 @@ import (
 // service and client commands. It is also consumed by the OpenAPI specification
 // generator. There is one specification generated per server. The first URI of
 // the first host is used to set the OpenAPI v2 specification 'host' and
-// 'basePath' values.
+// 'basePath' values. OpenAPI 3.2 documents render the server name as the
+// Server object 'name' field, suffixed with the host name when the server
+// defines several hosts.
 //
 // Server must appear in an API expression.
 //

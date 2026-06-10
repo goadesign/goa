@@ -1,0 +1,44 @@
+{
+  "components": {},
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/string": {
+      "get": {
+        "operationId": "SSEStringService#SSEStringMethod",
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "example": "Doloribus qui quia.",
+                "schema": {
+                  "example": "Quia molestias.",
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "SSEStringMethod SSEStringService",
+        "tags": [
+          "SSEStringService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "SSEStringService"
+    }
+  ]
+}

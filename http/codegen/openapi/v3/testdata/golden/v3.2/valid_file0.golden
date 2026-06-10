@@ -1,0 +1,87 @@
+{
+  "components": {
+    "schemas": {
+      "Payload": {
+        "description": "Request body for testEndpoint.",
+        "example": {
+          "string": ""
+        },
+        "properties": {
+          "string": {
+            "example": "",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Result": {
+        "example": {
+          "string": ""
+        },
+        "properties": {
+          "string": {
+            "example": "",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.2.0",
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "testService#testEndpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "string": ""
+              },
+              "schema": {
+                "$ref": "#/components/schemas/Payload"
+              }
+            }
+          },
+          "description": "Request body for testEndpoint.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "string": ""
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/Result"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "testEndpoint testService",
+        "tags": [
+          "testService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "name": "test",
+      "url": "https://goa.design"
+    }
+  ],
+  "tags": [
+    {
+      "name": "testService"
+    }
+  ]
+}

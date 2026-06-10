@@ -1,0 +1,29 @@
+openapi: 3.2.0
+info:
+    title: Goa API
+    summary: Test API summary
+    version: 0.0.1
+servers:
+    - url: http://localhost:8080
+      name: multi-dev
+    - url: https://goa.design
+      name: multi-prod
+    - url: https://single.goa.design
+      name: single
+paths:
+    /:
+        get:
+            tags:
+                - testService
+            summary: testEndpoint testService
+            operationId: testService#testEndpoint
+            responses:
+                "204":
+                    description: No Content response.
+components: {}
+tags:
+    - name: Users
+      summary: Users
+      description: Operations about users
+      parent: Accounts
+      kind: nav

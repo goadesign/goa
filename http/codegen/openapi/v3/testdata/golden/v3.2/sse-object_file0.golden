@@ -1,0 +1,101 @@
+{
+  "components": {
+    "schemas": {
+      "SSEObjectMethodResponseBody": {
+        "example": {
+          "flag": true,
+          "id": "Quia inventore et.",
+          "value": 3742304935485895700
+        },
+        "properties": {
+          "flag": {
+            "example": true,
+            "type": "boolean"
+          },
+          "id": {
+            "example": "Quia molestias.",
+            "type": "string"
+          },
+          "value": {
+            "example": 7595816812588075000,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.2.0",
+  "paths": {
+    "/object": {
+      "get": {
+        "operationId": "SSEObjectService#SSEObjectMethod",
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "contentMediaType": "application/json",
+                      "contentSchema": {
+                        "example": {
+                          "flag": false,
+                          "id": "Repellendus harum.",
+                          "value": 5721637919286151000
+                        },
+                        "properties": {
+                          "flag": {
+                            "example": false,
+                            "type": "boolean"
+                          },
+                          "id": {
+                            "example": "Sunt itaque inventore optio quia ullam aut.",
+                            "type": "string"
+                          },
+                          "value": {
+                            "example": 3602919998459661300,
+                            "format": "int64",
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "SSEObjectMethod SSEObjectService",
+        "tags": [
+          "SSEObjectService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "name": "test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "SSEObjectService"
+    }
+  ]
+}

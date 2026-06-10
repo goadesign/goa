@@ -38,7 +38,9 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 		root := RunHTTPDSL(t, cookieAPIKeySecurityDSL)
 		openapi.Definitions = make(map[string]*openapi.Schema)
 
-		v2JSON := renderOpenAPIJSON(t, openapiv2.Files, root)
+		v2Files, err := openapiv2.Files(root, openapi.DefaultPath20)
+		require.NoError(t, err)
+		v2JSON := renderOpenAPIJSON(t, v2Files)
 		var swagger openapi2.T
 		require.NoError(t, swagger.UnmarshalJSON(v2JSON))
 		require.Len(t, swagger.SecurityDefinitions, 1)
@@ -54,7 +56,7 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 		}
 
 		openapi.Definitions = make(map[string]*openapi.Schema)
-		v3JSON := renderOpenAPIJSON(t, openapiv3.Files, root)
+		v3JSON := renderOpenAPIJSON(t, openapiv3.Files(root, openapi.Version30, openapi.DefaultPath30))
 		loader := openapi3.NewLoader()
 		doc, err := loader.LoadFromData(v3JSON)
 		require.NoError(t, err)
@@ -103,15 +105,9 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 	})
 }
 
-func renderOpenAPIJSON(
-	t *testing.T,
-	build func(*expr.RootExpr) ([]*codegen.File, error),
-	root *expr.RootExpr,
-) []byte {
+func renderOpenAPIJSON(t *testing.T, files []*codegen.File) []byte {
 	t.Helper()
 
-	files, err := build(root)
-	require.NoError(t, err)
 	for _, f := range files {
 		if filepath.Ext(f.Path) != ".json" {
 			continue

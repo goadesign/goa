@@ -215,7 +215,7 @@ func TestBuildBodyTypes(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := codegen.RunDSL(t, c.DSL)
 
-			bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes)
+			bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30)
 
 			svc, ok := bodies[svcName]
 			if !ok {
@@ -410,7 +410,7 @@ func TestMapTypes(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			// Build the OpenAPI spec
 			root := codegen.RunDSL(t, tc.DSL)
-			bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes)
+			bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30)
 
 			// Find the service and method
 			svcBodies, ok := bodies[svcName]
@@ -499,7 +499,7 @@ func validateAdditionalPropsSchema(t *testing.T, ctx string, schema *openapi.Sch
 func TestTypesOnlyDifferByEnum(t *testing.T) {
 	root := codegen.RunDSL(t, dsls.StringEnumBodyDSL())
 
-	bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes)
+	bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30)
 
 	svc1, ok := bodies["svc_enum_1"]
 	if !ok {

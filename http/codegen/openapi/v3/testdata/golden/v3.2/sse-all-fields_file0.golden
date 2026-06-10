@@ -1,0 +1,157 @@
+{
+  "components": {
+    "schemas": {
+      "SSEAllFieldsMethodRequestBody": {
+        "description": "Request body for SSEAllFieldsMethod.",
+        "example": {
+          "id": "Doloribus qui quia."
+        },
+        "properties": {
+          "id": {
+            "example": "Quia molestias.",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "SSEAllFieldsMethodResponseBody": {
+        "example": {
+          "data": {
+            "message": "Hello, world!"
+          },
+          "event": "update",
+          "id": "123",
+          "retry": 3000
+        },
+        "properties": {
+          "data": {
+            "example": {
+              "message": "Hello, world!"
+            },
+            "properties": {
+              "message": {
+                "example": "Hello, world!",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "event": {
+            "example": "update",
+            "type": "string"
+          },
+          "id": {
+            "example": "123",
+            "type": "string"
+          },
+          "retry": {
+            "example": 3000,
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.2.0",
+  "paths": {
+    "/all-fields": {
+      "get": {
+        "operationId": "SSEAllFieldsService#SSEAllFieldsMethod",
+        "parameters": [
+          {
+            "allowEmptyValue": true,
+            "example": "Ullam aut.",
+            "in": "header",
+            "name": "Last-Event-ID",
+            "schema": {
+              "example": "Itaque inventore optio.",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "example": {
+                "id": "Et tempora et quae."
+              },
+              "schema": {
+                "$ref": "#/components/schemas/SSEAllFieldsMethodRequestBody"
+              }
+            }
+          },
+          "description": "Request body for SSEAllFieldsMethod.",
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "text/event-stream": {
+                "itemSchema": {
+                  "properties": {
+                    "data": {
+                      "contentMediaType": "application/json",
+                      "contentSchema": {
+                        "example": {
+                          "message": "Hello, world!"
+                        },
+                        "properties": {
+                          "message": {
+                            "example": "Hello, world!",
+                            "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "string"
+                    },
+                    "event": {
+                      "example": "update",
+                      "type": "string"
+                    },
+                    "id": {
+                      "example": "123",
+                      "type": "string"
+                    },
+                    "retry": {
+                      "example": 3000,
+                      "format": "int64",
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "data"
+                  ],
+                  "type": "object"
+                }
+              }
+            },
+            "description": "OK response."
+          }
+        },
+        "summary": "SSEAllFieldsMethod SSEAllFieldsService",
+        "tags": [
+          "SSEAllFieldsService"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "name": "test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "SSEAllFieldsService"
+    }
+  ]
+}

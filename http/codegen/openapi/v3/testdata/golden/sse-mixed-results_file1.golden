@@ -1,0 +1,57 @@
+openapi: 3.0.3
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+      description: Default server for test api
+paths:
+    /jobs:
+        post:
+            tags:
+                - MixedResultsService
+            summary: Create MixedResultsService
+            operationId: MixedResultsService#Create
+            requestBody:
+                description: Request body for Create.
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            $ref: '#/components/schemas/Payload'
+                        example:
+                            x: Ullam aut.
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        text/event-stream:
+                            schema:
+                                $ref: '#/components/schemas/Result'
+                            example:
+                                id: Iste perspiciatis.
+components:
+    schemas:
+        Payload:
+            type: object
+            properties:
+                x:
+                    type: string
+                    example: Quia molestias.
+            description: Request body for Create.
+            example:
+                x: Doloribus qui quia.
+            required:
+                - x
+        Result:
+            type: object
+            properties:
+                id:
+                    type: string
+                    example: Et tempora et quae.
+            example:
+                id: Itaque inventore optio.
+            required:
+                - id
+tags:
+    - name: MixedResultsService

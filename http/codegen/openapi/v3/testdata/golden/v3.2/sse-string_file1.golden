@@ -1,0 +1,31 @@
+openapi: 3.2.0
+info:
+    title: Goa API
+    version: 0.0.1
+servers:
+    - url: http://localhost:80
+      name: test api
+      description: Default server for test api
+paths:
+    /string:
+        get:
+            tags:
+                - SSEStringService
+            summary: SSEStringMethod SSEStringService
+            operationId: SSEStringService#SSEStringMethod
+            responses:
+                "200":
+                    description: OK response.
+                    content:
+                        text/event-stream:
+                            itemSchema:
+                                type: object
+                                properties:
+                                    data:
+                                        type: string
+                                        example: Doloribus qui quia.
+                                required:
+                                    - data
+components: {}
+tags:
+    - name: SSEStringService
