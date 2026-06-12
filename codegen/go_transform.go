@@ -91,7 +91,7 @@ func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 	case expr.IsObject(source.Type):
 		code, err = transformObject(source, target, sourceVar, targetVar, newVar, ta)
 	default:
-		code, err = transformPrimitive(source, target, sourceVar, targetVar, newVar, ta)
+		code = transformPrimitive(source, target, sourceVar, targetVar, newVar, ta)
 	}
 	return
 }
@@ -99,7 +99,7 @@ func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 // transformPrimitive returns the code to transform source primitive type to
 // target primitive type. The caller (transformAttribute) already verified that
 // source and target are compatible.
-func transformPrimitive(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
+func transformPrimitive(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) string {
 	assign := "="
 	if newVar {
 		assign = ":="
@@ -108,9 +108,9 @@ func transformPrimitive(source, target *expr.AttributeExpr, sourceVar, targetVar
 	srcRef := ta.SourceCtx.Scope.Ref(source, ta.SourceCtx.Pkg(source))
 	tgtRef := ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target))
 	if srcRef != tgtRef {
-		return fmt.Sprintf("%s %s %s(%s)\n", targetVar, assign, tgtRef, sourceVar), nil
+		return fmt.Sprintf("%s %s %s(%s)\n", targetVar, assign, tgtRef, sourceVar)
 	}
-	return fmt.Sprintf("%s %s %s\n", targetVar, assign, sourceVar), nil
+	return fmt.Sprintf("%s %s %s\n", targetVar, assign, sourceVar)
 }
 
 // transformObject generates Go code to transform source object to target

@@ -96,19 +96,17 @@ func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 				Data:   e.MultipartRequestEncoder,
 			})
 		}
-		if e.Result != nil || len(e.Errors) > 0 {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "response-decoder",
-				Source: httpTemplates.Read(responseDecoderT, singleResponseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP),
-				Data:   e,
-				FuncMap: map[string]any{
-					"goTypeRef": func(dt expr.DataType) string {
-						return services.ServicesData.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
-					},
-					"buildResponseData": buildResponseData,
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "response-decoder",
+			Source: httpTemplates.Read(responseDecoderT, singleResponseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP),
+			Data:   e,
+			FuncMap: map[string]any{
+				"goTypeRef": func(dt expr.DataType) string {
+					return services.ServicesData.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 				},
-			})
-		}
+				"buildResponseData": buildResponseData,
+			},
+		})
 		if e.Method.SkipRequestBodyEncodeDecode {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "build-stream-request",
@@ -185,40 +183,21 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 	})
 
 	for _, e := range data.Endpoints {
-		// For mixed results, generate both standard and SSE endpoints
+		endpoints := []*EndpointData{e}
 		if e.HasMixedResults {
-			// Generate standard HTTP endpoint
+			// For mixed results, generate both a standard HTTP endpoint and
+			// an SSE endpoint with a "Stream" suffix.
 			standardEndpoint := *e
 			standardEndpoint.SSE = nil
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "client-endpoint-init",
-				Source: httpTemplates.Read(clientEndpointInitT),
-				Data:   &standardEndpoint,
-				FuncMap: map[string]any{
-					"isWebSocketEndpoint": IsWebSocketEndpoint,
-					"isSSEEndpoint":       IsSSEEndpoint,
-					"responseStructPkg":   responseStructPkg,
-				},
-			})
-
-			// Generate SSE endpoint with "Stream" suffix
 			sseEndpoint := *e
 			sseEndpoint.EndpointInit = e.EndpointInit + "Stream"
+			endpoints = []*EndpointData{&standardEndpoint, &sseEndpoint}
+		}
+		for _, ep := range endpoints {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-endpoint-init",
 				Source: httpTemplates.Read(clientEndpointInitT),
-				Data:   &sseEndpoint,
-				FuncMap: map[string]any{
-					"isWebSocketEndpoint": IsWebSocketEndpoint,
-					"isSSEEndpoint":       IsSSEEndpoint,
-					"responseStructPkg":   responseStructPkg,
-				},
-			})
-		} else {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "client-endpoint-init",
-				Source: httpTemplates.Read(clientEndpointInitT),
-				Data:   e,
+				Data:   ep,
 				FuncMap: map[string]any{
 					"isWebSocketEndpoint": IsWebSocketEndpoint,
 					"isSSEEndpoint":       IsSSEEndpoint,

@@ -1,8 +1,10 @@
 package codegen
 
 import (
-	"goa.design/goa/v3/codegen/testutil"
 	"testing"
+
+	"goa.design/goa/v3/codegen/testutil"
+	"goa.design/goa/v3/expr"
 
 	"github.com/stretchr/testify/require"
 
@@ -34,7 +36,7 @@ func TestPaths(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			root := RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			require.Len(t, root.API.HTTP.Services, 1)
 			services := CreateHTTPServices(root)
 			fs := serverPath(root.API.HTTP.Services[0], services)
@@ -60,7 +62,7 @@ func TestPathTrailingShash(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			root := RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			require.Len(t, root.API.HTTP.Services, 1)
 			services := CreateHTTPServices(root)
 			fs := serverPath(root.API.HTTP.Services[0], services)

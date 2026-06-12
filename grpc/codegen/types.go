@@ -8,18 +8,30 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+// ServerTypeFiles returns the server types files containing all the server
+// interfaces and types needed to implement gRPC server.
+func ServerTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
+	fw := make([]*codegen.File, len(services.Root.API.GRPC.Services))
+	for i, svc := range services.Root.API.GRPC.Services {
+		fw[i] = typesFile(genpkg, svc, services, true)
+	}
+	return fw
+}
+
 // ClientTypeFiles returns the client types files containing all the client
 // interfaces and types needed to implement gRPC client.
 func ClientTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(services.Root.API.GRPC.Services))
 	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = clientType(genpkg, svc, services)
+		fw[i] = typesFile(genpkg, svc, services, false)
 	}
 	return fw
 }
 
-// clientType returns the file defining the gRPC client types.
-func clientType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
+// typesFile returns the file defining the gRPC types for the given service.
+// svr indicates whether the file is generated for the server (true) or the
+// client (false) package.
+func typesFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData, svr bool) *codegen.File {
 	var (
 		initData []*InitData
 
@@ -28,7 +40,7 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 	{
 		seen := make(map[string]struct{})
 		collect := func(c *ConvertData) {
-			if c.Init == nil {
+			if c == nil || c.Init == nil {
 				return
 			}
 			if _, ok := seen[c.Init.Name]; ok {
@@ -39,26 +51,35 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 		}
 		for _, a := range svc.GRPCEndpoints {
 			ed := sd.Endpoint(a.Name())
-			if c := ed.Request.ClientConvert; c != nil {
-				collect(c)
-			}
-			if c := ed.Response.ClientConvert; c != nil {
-				collect(c)
-			}
-			if ed.ClientStream != nil {
-				if c := ed.ClientStream.RecvConvert; c != nil {
-					collect(c)
+			if svr {
+				collect(ed.Request.ServerConvert)
+				collect(ed.Response.ServerConvert)
+				if ed.ServerStream != nil {
+					collect(ed.ServerStream.SendConvert)
+					collect(ed.ServerStream.RecvConvert)
 				}
-				if c := ed.ClientStream.SendConvert; c != nil {
-					collect(c)
+				for _, e := range ed.Errors {
+					collect(e.Response.ServerConvert)
 				}
-			}
-			for _, e := range ed.Errors {
-				if c := e.Response.ClientConvert; c != nil {
-					collect(c)
+			} else {
+				collect(ed.Request.ClientConvert)
+				collect(ed.Response.ClientConvert)
+				if ed.ClientStream != nil {
+					collect(ed.ClientStream.RecvConvert)
+					collect(ed.ClientStream.SendConvert)
+				}
+				for _, e := range ed.Errors {
+					collect(e.Response.ClientConvert)
 				}
 			}
 		}
+	}
+
+	side := "client"
+	skipKind := validateServer
+	if svr {
+		side = "server"
+		skipKind = validateClient
 	}
 
 	var (
@@ -67,7 +88,7 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 	)
 	{
 		svcName := sd.Service.PathName
-		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "types.go")
+		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, side, "types.go")
 		imports := []*codegen.ImportSpec{
 			{Path: "unicode/utf8"},
 			codegen.GoaImport(""),
@@ -76,62 +97,49 @@ func clientType(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 		}
 		// Add imports if Any type is used
-		needsAnyTypeImports := false
-		for _, e := range svc.GRPCEndpoints {
-			if hasAnyType(e.MethodExpr.Payload) || hasAnyType(e.MethodExpr.Result) {
-				needsAnyTypeImports = true
-				break
-			}
-			for _, er := range e.MethodExpr.Errors {
-				if hasAnyType(er.AttributeExpr) {
-					needsAnyTypeImports = true
-					break
-				}
-			}
-			if needsAnyTypeImports {
-				break
-			}
-		}
-		if needsAnyTypeImports {
+		if usesAnyType(svc.GRPCEndpoints, true) {
 			imports = append(imports, &codegen.ImportSpec{Path: "fmt"})
 			imports = append(imports, &codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"})
 		}
 		imports = append(imports, sd.Service.ProtoImports...)
-		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client types", "client", imports)}
+		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC "+side+" types", side, imports)}
 		for _, init := range initData {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "client-type-init",
+				Name:   side + "-type-init",
 				Source: grpcTemplates.Read(grpcTypeInitT),
 				Data:   init,
 				FuncMap: map[string]any{
-					"isAlias": expr.IsAlias,
-					"fullName": func(dt expr.DataType) string {
-						if loc := codegen.UserTypeLocation(dt); loc != nil {
-							return loc.PackageName() + "." + dt.Name()
-						}
-						return dt.Name()
-					},
+					"isAlias":  expr.IsAlias,
+					"fullName": fullTypeName,
 				},
 			})
 		}
 		for _, data := range sd.validations {
-			if data.Kind == validateServer {
+			if data.Kind == skipKind {
 				continue
 			}
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "client-validate",
+				Name:   side + "-validate",
 				Source: grpcTemplates.Read(grpcValidateT),
 				Data:   data,
 			})
 		}
 		for _, h := range sd.transformHelpers {
 			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "client-transform-helper",
+				Name:   side + "-transform-helper",
 				Source: grpcTemplates.Read(grpcTransformHelperT),
 				Data:   h,
 			})
 		}
 	}
-
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
+}
+
+// fullTypeName returns the name of the given type qualified with the name of
+// its package when the type is defined in an explicit user type location.
+func fullTypeName(dt expr.DataType) string {
+	if loc := codegen.UserTypeLocation(dt); loc != nil {
+		return loc.PackageName() + "." + dt.Name()
+	}
+	return dt.Name()
 }

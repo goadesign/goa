@@ -13,7 +13,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 
 	"goa.design/goa/v3/codegen/testutil"
-	httpgen "goa.design/goa/v3/http/codegen"
+	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
 	openapiv3 "goa.design/goa/v3/http/codegen/openapi/v3"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -80,7 +80,7 @@ func TestFiles(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
-			root := httpgen.RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			oFiles := openapiv3.Files(root, openapi.Version30, openapi.DefaultPath30)
 			for i, o := range oFiles {
 				tname := fmt.Sprintf("file%d", i)
@@ -139,7 +139,7 @@ func TestFilesV32(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
-			root := httpgen.RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			oFiles := openapiv3.Files(root, openapi.Version32, openapi.DefaultPath32)
 			wantPaths := []string{
 				filepath.Join("gen", "http", "openapi3.2.json"),

@@ -203,14 +203,12 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildF
 
 	svcn := svc.Service.Name
 	en := e.Method.Name
-	if e.Payload != nil {
-		if e.Payload.Request.PayloadInit != nil {
-			args := e.Payload.Request.PayloadInit.ClientArgs
-			args = append(args, e.Payload.Request.PayloadInit.CLIArgs...)
-			flags, buildFunction = makeFlags(e, args, e.Payload.Request.PayloadType)
-		} else if e.Payload.Ref != "" {
-			flags = append(flags, cli.NewFlagData(svcn, en, "p", e.Method.PayloadRef, e.Method.PayloadDesc, true, e.Method.PayloadEx, e.Method.PayloadDefault))
-		}
+	if e.Payload.Request.PayloadInit != nil {
+		args := e.Payload.Request.PayloadInit.ClientArgs
+		args = append(args, e.Payload.Request.PayloadInit.CLIArgs...)
+		flags, buildFunction = makeFlags(e, args, e.Payload.Request.PayloadType)
+	} else if e.Payload.Ref != "" {
+		flags = append(flags, cli.NewFlagData(svcn, en, "p", e.Method.PayloadRef, e.Method.PayloadDesc, true, e.Method.PayloadEx, e.Method.PayloadDefault))
 	}
 	if e.Method.SkipRequestBodyEncodeDecode {
 		flags = append(flags, streamFlag(svcn, en))

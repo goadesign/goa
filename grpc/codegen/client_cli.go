@@ -64,13 +64,8 @@ func endpointParser(genpkg string, services *ServicesData, svr *expr.ServerExpr,
 	// Add structpb import if Any type is used
 	needsAnyPb := false
 	for _, svc := range services.Root.API.GRPC.Services {
-		for _, e := range svc.GRPCEndpoints {
-			if hasAnyType(e.MethodExpr.Payload) || hasAnyType(e.MethodExpr.Result) {
-				needsAnyPb = true
-				break
-			}
-		}
-		if needsAnyPb {
+		if usesAnyType(svc.GRPCEndpoints, false) {
+			needsAnyPb = true
 			break
 		}
 	}
@@ -137,14 +132,7 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.Command
 		{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 	}
 	// Add structpb import if Any type is used
-	needsAnyPb := false
-	for _, e := range svc.GRPCEndpoints {
-		if hasAnyType(e.MethodExpr.Payload) || hasAnyType(e.MethodExpr.Result) {
-			needsAnyPb = true
-			break
-		}
-	}
-	if needsAnyPb {
+	if usesAnyType(svc.GRPCEndpoints, false) {
 		specs = append(specs,
 			&codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"},
 		)

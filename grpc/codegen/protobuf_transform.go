@@ -37,9 +37,6 @@ type unionData struct {
 	SourceValues        []*expr.NamedAttributeExpr
 	TargetValues        []*expr.NamedAttributeExpr
 	SourceValueTypeRefs []string
-	// TargetWrapperRefs holds wrapper type refs used when assigning from
-	// protobuf to Go union (proto -> Go). Empty string means no wrapper.
-	TargetWrapperRefs []string
 }
 
 var (
@@ -168,10 +165,9 @@ func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 	{
 		switch {
 		case expr.IsArray(source.Type):
-			// Top-level array transforms never assign into a pointer field.
-			code, err = transformArray(expr.AsArray(source.Type), expr.AsArray(target.Type), sourceVar, targetVar, newVar, false, false, ta)
+			code, err = transformArray(expr.AsArray(source.Type), expr.AsArray(target.Type), sourceVar, targetVar, newVar, ta)
 		case expr.IsMap(source.Type):
-			code, err = transformMap(expr.AsMap(source.Type), expr.AsMap(target.Type), sourceVar, targetVar, newVar, false, ta)
+			code, err = transformMap(expr.AsMap(source.Type), expr.AsMap(target.Type), sourceVar, targetVar, newVar, ta)
 		case expr.IsObject(source.Type):
 			code, err = transformObject(source, target, sourceVar, targetVar, newVar, ta)
 		case expr.IsUnion(source.Type):
@@ -319,15 +315,9 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			_, isUserType := srcc.Type.(expr.UserType)
 			switch {
 			case expr.IsArray(srcc.Type):
-				// Go service types do not use pointer-to-slice fields.
-				// Protobuf messages also do not use pointer slices. Always false.
-				tgtPtr := false
-				// Source array fields are slices (nil when absent), not pointer-to-slice.
-				srcPtr := false
-				code, err = transformArray(expr.AsArray(srcc.Type), expr.AsArray(tgtc.Type), srcVar, tgtVar, false, tgtPtr, srcPtr, ta)
+				code, err = transformArray(expr.AsArray(srcc.Type), expr.AsArray(tgtc.Type), srcVar, tgtVar, false, ta)
 			case expr.IsMap(srcc.Type):
-				// Never use pointer-to-map on protobuf targets; default to false.
-				code, err = transformMap(expr.AsMap(srcc.Type), expr.AsMap(tgtc.Type), srcVar, tgtVar, false, false, ta)
+				code, err = transformMap(expr.AsMap(srcc.Type), expr.AsMap(tgtc.Type), srcVar, tgtVar, false, ta)
 			case isUserType:
 				if !expr.IsPrimitive(srcc.Type) {
 					code = fmt.Sprintf("%s = %s(%s)\n", tgtVar, transformHelperName(srcc, tgtc, ta), srcVar)
@@ -349,19 +339,14 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			return
 		}
 
-		// We need to check for a nil source if it holds a reference (pointer to
-		// primitive or an object, array or map) and is not required. We also want
-		// to always check nil if the attribute is not a primitive; it's a
+		// We need to check for a nil source if it holds a reference, that is a
+		// pointer to primitive or a non-primitive. Non-primitives are always
+		// guarded (proto3 message fields are always nilable): it's a
 		// 1) user type and we want to avoid calling transform helper functions
 		// with nil value
 		// 2) it's an object, map or array to avoid making empty arrays and maps
 		// and to avoid derefencing nil.
-		var checkNil bool
-		{
-			isRef := !expr.IsPrimitive(srcc.Type) && !srcMatt.IsRequired(n) || ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr) && expr.IsPrimitive(srcc.Type)
-			marshalNonPrimitive := !expr.IsPrimitive(srcc.Type)
-			checkNil = isRef || marshalNonPrimitive
-		}
+		checkNil := !expr.IsPrimitive(srcc.Type) || ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr)
 		if code != "" && checkNil {
 			cond := fmt.Sprintf("if %s != nil {\n", srcVar)
 			if expr.IsUnion(srcc.Type) && ta.proto {
@@ -423,7 +408,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 // transformArray returns the code to transform source attribute of array
 // type to target attribute of array type. It returns an error if source
 // and target are not compatible for transformation.
-func transformArray(source, target *expr.Array, sourceVar, targetVar string, newVar bool, targetPtr bool, sourcePtr bool, ta *transformAttrs) (string, error) {
+func transformArray(source, target *expr.Array, sourceVar, targetVar string, newVar bool, ta *transformAttrs) (string, error) {
 	elem := target.ElemType
 	if ta.proto {
 		elem = unAlias(elem)
@@ -482,8 +467,6 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 		"TargetElem":     tgt,
 		"SourceVar":      sourceVar,
 		"TargetVar":      targetVar,
-		"TargetPtr":      targetPtr,
-		"SourcePtr":      sourcePtr,
 		"NewVar":         newVar,
 		"TransformAttrs": ta,
 		"LoopVar":        string(rune(105 + strings.Count(targetVar, "["))),
@@ -499,7 +482,7 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 // transformMap returns the code to transform source attribute of map
 // type to target attribute of map type. It returns an error if source
 // and target are not compatible for transformation.
-func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar bool, targetPtr bool, ta *transformAttrs) (string, error) {
+func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar bool, ta *transformAttrs) (string, error) {
 	// Target map key cannot be nested in protocol buffers. So no need to worry
 	// about unwrapping.
 	if err := codegen.IsCompatible(source.KeyType.Type, target.KeyType.Type, sourceVar+"[key]", targetVar+"[key]"); err != nil {
@@ -564,7 +547,6 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 		"TargetElem":     tgt,
 		"SourceVar":      sourceVar,
 		"TargetVar":      targetVar,
-		"TargetPtr":      targetPtr,
 		"NewVar":         newVar,
 		"TransformAttrs": ta,
 		"LoopVar":        "",
@@ -596,7 +578,7 @@ func transformUnionToProto(source, target *expr.AttributeExpr, sourceVar, target
 			"sourceFieldName":   codegen.Goify(sv.Name, true),
 			"sourceAttr":        sv.Attribute,
 			"targetAttr":        tv.Attribute,
-			"targetWrapperType": ta.message + "_" + fieldName,
+			"targetWrapperType": protocOneofWrapperRef(ta.message, fieldName),
 			"targetFieldName":   fieldName,
 		})
 	}
@@ -751,106 +733,11 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 	copy(tgtValues, tgt.Values)
 
 	sourceValueTypeRefs := make([]string, len(src.Values))
-	targetWrapperRefs := make([]string, len(src.Values))
-	if ta.proto {
-		// Go -> protobuf: when union members are user types, switch on the
-		// actual user type rather than synthetic wrapper types. Only non-user
-		// types (primitives, maps, arrays) require per-branch wrapper types.
-		unionPkg := ta.SourceCtx.Pkg(source)
-		samePkg := true
-		commonPkg := ""
-		for _, v := range src.Values {
-			ut, ok := v.Attribute.Type.(expr.UserType)
-			if !ok {
-				samePkg = false
-				break
-			}
-			if loc := codegen.UserTypeLocation(ut); loc != nil {
-				if commonPkg == "" {
-					commonPkg = loc.PackageName()
-				} else if commonPkg != loc.PackageName() {
-					samePkg = false
-					break
-				}
-			} else {
-				samePkg = false
-				break
-			}
-		}
-		for i, v := range src.Values {
-			if _, ok := v.Attribute.Type.(expr.UserType); ok {
-				sourceValueTypeRefs[i] = ta.SourceCtx.Scope.Ref(v.Attribute, ta.SourceCtx.Pkg(v.Attribute))
-				continue
-			}
-			// Non-user types are represented via per-branch defined wrapper types.
-			w := codegen.Goify(src.Name(), true) + codegen.Goify(v.Name, true)
-			pkg := unionPkg
-			if samePkg && commonPkg != "" {
-				pkg = commonPkg
-			}
-			if pkg != "" {
-				sourceValueTypeRefs[i] = pkg + "." + w
-			} else {
-				sourceValueTypeRefs[i] = w
-			}
-		}
-	} else {
-		// Protobuf -> Go: switch on protobuf oneof variants and cast converted
-		// value into Go-side wrappers when required.
+	if !ta.proto {
+		// Protobuf -> Go: switch on protobuf oneof variants.
 		for i, v := range src.Values {
 			fieldName := ta.SourceCtx.Scope.Field(v.Attribute, v.Name, true)
-			sourceValueTypeRefs[i] = ta.message + "_" + fieldName
-		}
-		// Determine the union package for the target side. For anonymous
-		// unions embedded in objects the package may be empty. In that case
-		// we must not force per-branch wrappers solely based on package
-		// comparison; instead rely on duplicate-type detection and whether
-		// the member is a non-user type.
-		unionPkg := ta.TargetCtx.Pkg(target)
-		// Prefer a common member package for wrappers if all target values share it (e.g., shared user-type unions).
-		samePkg := true
-		commonPkg := ""
-		for _, tv := range tgt.Values {
-			ut, ok := tv.Attribute.Type.(expr.UserType)
-			if !ok {
-				samePkg = false
-				break
-			}
-			if loc := codegen.UserTypeLocation(ut); loc != nil {
-				if commonPkg == "" {
-					commonPkg = loc.PackageName()
-				} else if commonPkg != loc.PackageName() {
-					samePkg = false
-					break
-				}
-			} else {
-				samePkg = false
-				break
-			}
-		}
-		// For protobuf -> Go transforms, when union members are user types,
-		// prefer assigning the converted user type directly to the union
-		// interface. This avoids generating synthetic per-branch wrapper
-		// types (e.g., DetailsFoo) which do not exist in the target package
-		// unless transport-agnostic codegen created them. Only non-user types
-		// require wrappers.
-		for i, tv := range tgt.Values {
-			useWrapper := false
-			if _, ok := tv.Attribute.Type.(expr.UserType); !ok {
-				useWrapper = true
-			}
-			if useWrapper {
-				w := codegen.Goify(tgt.Name(), true) + codegen.Goify(tv.Name, true)
-				pkg := unionPkg
-				if samePkg && commonPkg != "" {
-					pkg = commonPkg
-				}
-				if pkg != "" {
-					targetWrapperRefs[i] = pkg + "." + w
-				} else {
-					targetWrapperRefs[i] = w
-				}
-			}
+			sourceValueTypeRefs[i] = protocOneofWrapperRef(ta.message, fieldName)
 		}
 	}
 	return &unionData{
@@ -859,8 +746,15 @@ func transformUnionData(source, target *expr.AttributeExpr, ta *transformAttrs) 
 		SourceValues:        srcValues,
 		TargetValues:        tgtValues,
 		SourceValueTypeRefs: sourceValueTypeRefs,
-		TargetWrapperRefs:   targetWrapperRefs,
 	}
+}
+
+// protocOneofWrapperRef returns the reference to the Go wrapper type that
+// protoc generates for a oneof field: it mirrors protoc generated Go oneof
+// wrapper type naming which joins the parent message type name and the oneof
+// field name with an underscore (Message_Field).
+func protocOneofWrapperRef(message, fieldName string) string {
+	return message + "_" + fieldName
 }
 
 // transformAttributeHelpers returns the Go transform functions and their definitions
@@ -1104,14 +998,6 @@ func transformHelperName(source, target *expr.AttributeExpr, ta *transformAttrs)
 		prefix = ta.Prefix
 	}
 	return codegen.Goify(prefix+sname+"To"+tname, false)
-}
-
-// unAlias returns the base AttributeExpr of an aliased one.
-func unAlias(at *expr.AttributeExpr) *expr.AttributeExpr {
-	if prim := getPrimitive(at); prim != nil {
-		return prim
-	}
-	return at
 }
 
 // isUnionMessage returns true if the given attribute is a union message.

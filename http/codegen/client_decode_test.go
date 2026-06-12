@@ -1,8 +1,10 @@
 package codegen
 
 import (
-	"goa.design/goa/v3/codegen/testutil"
 	"testing"
+
+	"goa.design/goa/v3/codegen/testutil"
+	"goa.design/goa/v3/expr"
 
 	"github.com/stretchr/testify/require"
 
@@ -35,7 +37,7 @@ func TestClientDecode(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			root := RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
 			fs := ClientFiles("", services)
 			require.Len(t, fs, 2)

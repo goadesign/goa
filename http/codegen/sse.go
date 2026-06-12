@@ -145,12 +145,10 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 		return
 	}
 
-	if ed.Result != nil {
-		for _, resp := range ed.Result.Responses {
-			if len(resp.ServerBody) > 0 {
-				ed.SSE.HasResponseBody = true
-				break
-			}
+	for _, resp := range ed.Result.Responses {
+		if len(resp.ServerBody) > 0 {
+			ed.SSE.HasResponseBody = true
+			break
 		}
 	}
 }
@@ -159,19 +157,7 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 // streaming implementation if any.
 func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
-	if data == nil {
-		return nil
-	}
-
-	// Check if any endpoint has SSE
-	hasSSE := false
-	for _, ed := range data.Endpoints {
-		if ed.SSE != nil {
-			hasSSE = true
-			break
-		}
-	}
-	if !hasSSE {
+	if !HasSSE(data) {
 		return nil
 	}
 
@@ -206,32 +192,34 @@ func sseTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 		if ed.SSE == nil {
 			continue
 		}
-		// Create a map of template functions needed for the SSE template
-		funcs := map[string]any{
-			"dict": func(values ...any) (map[string]any, error) {
-				if len(values)%2 != 0 {
-					return nil, fmt.Errorf("odd number of arguments")
-				}
-				dict := make(map[string]any, len(values)/2)
-				for i := 0; i < len(values); i += 2 {
-					key, ok := values[i].(string)
-					if !ok {
-						return nil, fmt.Errorf("dict keys must be strings")
-					}
-					dict[key] = values[i+1]
-				}
-				return dict, nil
-			},
-			"goify": codegen.Goify,
-		}
 		sections = append(sections, &codegen.SectionTemplate{
-			Name:    "server-sse",
-			Source:  httpTemplates.Read(serverSseT, sseFormatP),
-			Data:    ed,
-			FuncMap: funcs,
+			Name:   "server-sse",
+			Source: httpTemplates.Read(serverSseT, sseFormatP),
+			Data:   ed,
+			FuncMap: map[string]any{
+				"dict":  dict,
+				"goify": codegen.Goify,
+			},
 		})
 	}
 	return sections
+}
+
+// dict builds a map from alternating key/value arguments. It is used by the
+// SSE templates to pass multiple values to nested templates.
+func dict(values ...any) (map[string]any, error) {
+	if len(values)%2 != 0 {
+		return nil, fmt.Errorf("odd number of arguments")
+	}
+	d := make(map[string]any, len(values)/2)
+	for i := 0; i < len(values); i += 2 {
+		key, ok := values[i].(string)
+		if !ok {
+			return nil, fmt.Errorf("dict keys must be strings")
+		}
+		d[key] = values[i+1]
+	}
+	return d, nil
 }
 
 // IsSSEEndpoint returns true if the endpoint defines a streaming result

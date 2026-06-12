@@ -13,7 +13,7 @@ import (
 
 	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/dsl"
-	httpgen "goa.design/goa/v3/http/codegen"
+	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
 	openapiv2 "goa.design/goa/v3/http/codegen/openapi/v2"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -57,7 +57,7 @@ func TestSections(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
-			root := httpgen.RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
 			if err != nil {
 				t.Fatalf("OpenAPI failed with %s", err)
@@ -114,7 +114,7 @@ func TestValidations(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
-			root := httpgen.RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
 			require.NoError(t, err, "OpenAPI failed")
 			require.NotEmpty(t, oFiles, "No swagger files")
@@ -158,7 +158,7 @@ func TestExtensions(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
-			root := httpgen.RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
 			require.NoError(t, err, "OpenAPI failed")
 			require.NotEmpty(t, oFiles, "No swagger files")
@@ -192,7 +192,7 @@ func TestNamedPrimitiveParamsAndHeadersUseOpenAPIBaseTypes(t *testing.T) {
 	// Reset global variables
 	openapi.Definitions = make(map[string]*openapi.Schema)
 
-	root := httpgen.RunHTTPDSL(t, func() {
+	root := expr.RunDSL(t, func() {
 		var UUID = dsl.Type("UUID", dsl.String, func() {
 			dsl.Format(dsl.FormatUUID)
 		})
