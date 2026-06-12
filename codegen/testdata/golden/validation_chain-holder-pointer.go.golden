@@ -1,0 +1,49 @@
+func Validate() (err error) {
+	if target.ReqMid == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("req_mid", "target"))
+	}
+	if target.ReqMid != nil {
+		if !(string(*target.ReqMid) == "ab" || string(*target.ReqMid) == "abc" || string(*target.ReqMid) == "abcd") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.req_mid", string(*target.ReqMid), []any{"ab", "abc", "abcd"}))
+		}
+	}
+	if target.ReqMid != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("target.req_mid", string(*target.ReqMid), "^[a-z]+$"))
+	}
+	if target.ReqMid != nil {
+		if utf8.RuneCountInString(string(*target.ReqMid)) < 2 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("target.req_mid", string(*target.ReqMid), utf8.RuneCountInString(string(*target.ReqMid)), 2, true))
+		}
+	}
+	if target.Mid != nil {
+		if !(string(*target.Mid) == "ab" || string(*target.Mid) == "abc" || string(*target.Mid) == "abcd") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.mid", string(*target.Mid), []any{"ab", "abc", "abcd"}))
+		}
+	}
+	if target.Mid != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("target.mid", string(*target.Mid), "^[a-z]+$"))
+	}
+	if target.Mid != nil {
+		if utf8.RuneCountInString(string(*target.Mid)) < 2 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("target.mid", string(*target.Mid), utf8.RuneCountInString(string(*target.Mid)), 2, true))
+		}
+	}
+	if target.Pass != nil {
+		if !(string(*target.Pass) == "ab" || string(*target.Pass) == "abc" || string(*target.Pass) == "abcd") {
+			err = goa.MergeErrors(err, goa.InvalidEnumValueError("target.pass", string(*target.Pass), []any{"ab", "abc", "abcd"}))
+		}
+	}
+	if target.Pass != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("target.pass", string(*target.Pass), "^[a-z]+$"))
+	}
+	if target.Pass != nil {
+		if utf8.RuneCountInString(string(*target.Pass)) < 2 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("target.pass", string(*target.Pass), utf8.RuneCountInString(string(*target.Pass)), 2, true))
+		}
+	}
+	if target.Obj != nil {
+		if err2 := ValidateChainObjLeaf(target.Obj); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+}

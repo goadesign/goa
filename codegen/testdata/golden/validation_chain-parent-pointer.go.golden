@@ -1,0 +1,7 @@
+func Validate() (err error) {
+	if target.Child != nil {
+		if err2 := ValidateChainChild(target.Child); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+}

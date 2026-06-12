@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen/testdata"
 	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/expr"
@@ -154,6 +156,132 @@ func TestMultipleAliasTypesInSameStruct(t *testing.T) {
 	if strings.Count(code, "ValidatePattern") < 2 {
 		t.Errorf("Expected at least 2 pattern validations (one per alias field), got %d", strings.Count(code, "ValidatePattern"))
 	}
+}
+
+// TestChainedAliasValidationCode verifies that validation code generated for
+// user type alias chains two and three levels deep merges the validations of
+// every chain level and that generating the code does not mutate the design
+// expression tree (no flattening write-backs, no pointer aliasing).
+func TestChainedAliasValidationCode(t *testing.T) {
+	root := RunDSL(t, testdata.ChainedAliasValidationDSL)
+	scope := NewNameScope()
+
+	cases := []struct {
+		Name     string
+		TypeName string
+		Required bool
+		Pointer  bool
+	}{
+		{"chain-holder-required", "ChainHolder", true, false},
+		{"chain-holder-pointer", "ChainHolder", false, true},
+		{"chain-mid", "ChainMid", true, false},
+		{"chain-pass", "ChainPass", true, false},
+		{"chain-obj-leaf", "ChainObjLeaf", true, false},
+		{"chain-obj-holder", "ChainObjHolder", true, false},
+		{"chain-parent-pointer", "ChainParent", false, true},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			ut := root.UserType(c.TypeName)
+			before := snapshotValidations(t, ut)
+
+			ctx := NewAttributeContext(c.Pointer, false, false, "", scope)
+			code := ValidationCode(&expr.AttributeExpr{Type: ut}, nil, ctx, c.Required, expr.IsAlias(ut), false, "target")
+			code = FormatTestCode(t, "package foo\nfunc Validate() (err error){\n"+code+"}")
+			testutil.AssertGo(t, "testdata/golden/validation_"+c.Name+".go.golden", code)
+
+			assertValidationsUnchanged(t, before)
+		})
+	}
+}
+
+// TestValidationPredicatesPure verifies that hasValidations and repeated
+// ValidationCode invocations have no write side effects on the design tree
+// and that repeated calls yield identical output (the legacy implementation
+// flattened alias chain validations in place, so a first call could change
+// the result of subsequent consumers).
+func TestValidationPredicatesPure(t *testing.T) {
+	root := RunDSL(t, testdata.ChainedAliasValidationDSL)
+	scope := NewNameScope()
+	ctx := NewAttributeContext(false, false, false, "", scope)
+
+	child := root.UserType("ChainChild")
+	before := snapshotValidations(t, child)
+	require.True(t, hasValidations(ctx, child), "ChainChild contains alias chain validations")
+	assertValidationsUnchanged(t, before)
+
+	holder := root.UserType("ChainHolder")
+	before = snapshotValidations(t, holder)
+	att := &expr.AttributeExpr{Type: holder}
+	first := ValidationCode(att, nil, ctx, true, false, false, "target")
+	second := ValidationCode(att, nil, ctx, true, false, false, "target")
+	require.Equal(t, first, second, "ValidationCode is not idempotent")
+	assertValidationsUnchanged(t, before)
+}
+
+// validationSnapshot captures the identity and deep value of an attribute
+// validation so mutations can be detected after running codegen.
+type validationSnapshot struct {
+	att *expr.AttributeExpr
+	ptr *expr.ValidationExpr
+	dup *expr.ValidationExpr
+}
+
+// snapshotValidations records the validation of every attribute reachable
+// from the given user type, including down alias chains.
+func snapshotValidations(t *testing.T, ut expr.UserType) []validationSnapshot {
+	t.Helper()
+	var snaps []validationSnapshot
+	require.NoError(t, Walk(&expr.AttributeExpr{Type: ut}, func(a *expr.AttributeExpr) error {
+		snaps = append(snaps, validationSnapshot{att: a, ptr: a.Validation, dup: dupValidationForTest(a.Validation)})
+		return nil
+	}))
+	return snaps
+}
+
+// assertValidationsUnchanged verifies that every snapshotted attribute still
+// holds the exact same *ValidationExpr pointer with unchanged contents.
+func assertValidationsUnchanged(t *testing.T, snaps []validationSnapshot) {
+	t.Helper()
+	for _, s := range snaps {
+		if s.ptr == nil {
+			require.Nil(t, s.att.Validation, "validation was assigned to an attribute that had none")
+			continue
+		}
+		require.Same(t, s.ptr, s.att.Validation, "attribute validation pointer was replaced")
+		require.Equal(t, s.dup, dupValidationForTest(s.att.Validation), "attribute validation contents were mutated")
+	}
+}
+
+// dupValidationForTest deep copies a validation, including the Values slice
+// and scalar pointers, so in-place mutations of the original are detected.
+func dupValidationForTest(v *expr.ValidationExpr) *expr.ValidationExpr {
+	if v == nil {
+		return nil
+	}
+	dupFloat := func(p *float64) *float64 {
+		if p == nil {
+			return nil
+		}
+		f := *p
+		return &f
+	}
+	dupInt := func(p *int) *int {
+		if p == nil {
+			return nil
+		}
+		i := *p
+		return &i
+	}
+	d := v.Dup()
+	d.Values = append([]any(nil), v.Values...)
+	d.ExclusiveMinimum = dupFloat(v.ExclusiveMinimum)
+	d.Minimum = dupFloat(v.Minimum)
+	d.Maximum = dupFloat(v.Maximum)
+	d.ExclusiveMaximum = dupFloat(v.ExclusiveMaximum)
+	d.MinLength = dupInt(v.MinLength)
+	d.MaxLength = dupInt(v.MaxLength)
+	return d
 }
 
 // TestAliasTypeInArrayAndMap tests that alias types work correctly when

@@ -1,0 +1,9 @@
+func Validate() (err error) {
+	err = goa.MergeErrors(err, goa.ValidatePattern("target.name", target.Name, "^[a-z]+$"))
+	if utf8.RuneCountInString(target.Name) < 2 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("target.name", target.Name, utf8.RuneCountInString(target.Name), 2, true))
+	}
+	if target.Count < 1 {
+		err = goa.MergeErrors(err, goa.InvalidRangeError("target.count", target.Count, 1, true))
+	}
+}
