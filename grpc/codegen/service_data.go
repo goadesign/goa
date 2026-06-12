@@ -894,9 +894,16 @@ func collectValidationsR(att *expr.AttributeExpr, attName string, req bool, sd *
 func userTypeAttribute(ut expr.UserType) *expr.AttributeExpr {
 	att := ut.Attribute()
 	if rt, ok := ut.(*expr.ResultTypeExpr); ok {
-		if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
-			// result type collection
-			att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
+		// Result type collections are wrapper user types themselves: the
+		// wrappedAttrMeta marker lives directly on their attribute when the
+		// collection was wrapped as a whole message (makeProtoBufMessage) and
+		// on a nested wrapper user type when the collection was wrapped in
+		// place as a field type (makeProtoBufMessageR).
+		if len(att.Meta[wrappedAttrMeta]) > 0 || isWrappedAttr(att) {
+			if expr.IsArray(unwrapAttr(att).Type) {
+				// result type collection
+				att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
+			}
 		}
 	}
 	return att

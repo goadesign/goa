@@ -133,20 +133,23 @@ func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 		err      error
 	)
 
-	if err := codegen.IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
-		if ta.proto {
+	// The protocol buffer side of the transformation (target when generating
+	// to proto, source otherwise) may be a synthesized wrapper message:
+	// unwrap it before generating the transformation code.
+	if ta.proto {
+		if isWrappedAttr(target) {
 			name := ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg(target), ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault)
 			initCode += fmt.Sprintf("%s := &%s{}\n", targetVar, name)
 			targetVar += ".Field"
 			newVar = false
 			target = unwrapAttr(expr.DupAtt(target))
-		} else {
-			source = unwrapAttr(expr.DupAtt(source))
-			sourceVar += ".Field"
 		}
-		if err = codegen.IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
-			return "", err
-		}
+	} else if isWrappedAttr(source) {
+		source = unwrapAttr(expr.DupAtt(source))
+		sourceVar += ".Field"
+	}
+	if err := codegen.IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
+		return "", err
 	}
 
 	if ta.proto {
@@ -300,17 +303,18 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			tgtVar = targetVar + "." + ta.TargetCtx.Scope.Field(tgtc, tgtMatt.ElemName(n), true)
 		)
 		{
-			if err = codegen.IsCompatible(srcc.Type, tgtc.Type, "", ""); err != nil {
-				if ta.proto {
+			if ta.proto {
+				if isWrappedAttr(tgtc) {
 					ta.targetInit = ta.TargetCtx.Scope.Name(tgtc, ta.TargetCtx.Pkg(tgtc), ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault)
 					tgtc = unwrapAttr(tgtc)
-				} else {
-					srcc = unwrapAttr(srcc)
+					ta.wrapped = true
 				}
+			} else if isWrappedAttr(srcc) {
+				srcc = unwrapAttr(srcc)
 				ta.wrapped = true
-				if err = codegen.IsCompatible(srcc.Type, tgtc.Type, "", ""); err != nil {
-					return
-				}
+			}
+			if err = codegen.IsCompatible(srcc.Type, tgtc.Type, "", ""); err != nil {
+				return
 			}
 			_, isUserType := srcc.Type.(expr.UserType)
 			switch {
@@ -442,17 +446,18 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 
 	src := source.ElemType
 	tgt := elem
-	if err = codegen.IsCompatible(src.Type, tgt.Type, "[0]", "[0]"); err != nil {
-		if ta.proto {
+	if ta.proto {
+		if isWrappedAttr(tgt) {
 			ta.targetInit = ta.TargetCtx.Scope.Name(tgt, ta.TargetCtx.Pkg(tgt), ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault)
 			tgt = unwrapAttr(expr.DupAtt(tgt))
-		} else {
-			src = unwrapAttr(expr.DupAtt(src))
+			ta.wrapped = true
 		}
+	} else if isWrappedAttr(src) {
+		src = unwrapAttr(expr.DupAtt(src))
 		ta.wrapped = true
-		if err = codegen.IsCompatible(src.Type, tgt.Type, "[0]", "[0]"); err != nil {
-			return "", err
-		}
+	}
+	if err = codegen.IsCompatible(src.Type, tgt.Type, "[0]", "[0]"); err != nil {
+		return "", err
 	}
 	valVar := "val"
 	if obj := expr.AsObject(src.Type); obj != nil {
@@ -526,17 +531,18 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 
 	src := source.ElemType
 	tgt := target.ElemType
-	if err = codegen.IsCompatible(src.Type, tgt.Type, "[*]", "[*]"); err != nil {
-		if ta.proto {
+	if ta.proto {
+		if isWrappedAttr(tgt) {
 			ta.targetInit = ta.TargetCtx.Scope.Name(tgt, ta.TargetCtx.Pkg(tgt), ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault)
 			tgt = unwrapAttr(expr.DupAtt(tgt))
-		} else {
-			src = unwrapAttr(expr.DupAtt(src))
+			ta.wrapped = true
 		}
+	} else if isWrappedAttr(src) {
+		src = unwrapAttr(expr.DupAtt(src))
 		ta.wrapped = true
-		if err = codegen.IsCompatible(src.Type, tgt.Type, "[*]", "[*]"); err != nil {
-			return "", err
-		}
+	}
+	if err = codegen.IsCompatible(src.Type, tgt.Type, "[*]", "[*]"); err != nil {
+		return "", err
 	}
 	data := map[string]any{
 		"KeyTypeRef":     targetKeyRef,
@@ -772,15 +778,15 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *transform
 		err     error
 	)
 	{
-		if err = codegen.IsCompatible(source.Type, target.Type, "", ""); err != nil {
-			if ta.proto {
+		if ta.proto {
+			if isWrappedAttr(target) {
 				target = unwrapAttr(expr.DupAtt(target))
-			} else {
-				source = unwrapAttr(expr.DupAtt(source))
 			}
-			if err = codegen.IsCompatible(source.Type, target.Type, "", ""); err != nil {
-				return nil, err
-			}
+		} else if isWrappedAttr(source) {
+			source = unwrapAttr(expr.DupAtt(source))
+		}
+		if err = codegen.IsCompatible(source.Type, target.Type, "", ""); err != nil {
+			return nil, err
 		}
 		// Do not generate a transform function for the top most user type.
 		switch {
@@ -816,15 +822,15 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *transform
 				if err != nil {
 					return
 				}
-				if err = codegen.IsCompatible(srcc.Type, tgtc.Type, "", ""); err != nil {
-					if ta.proto {
+				if ta.proto {
+					if isWrappedAttr(tgtc) {
 						tgtc = unwrapAttr(tgtc)
-					} else {
-						srcc = unwrapAttr(srcc)
 					}
-					if err = codegen.IsCompatible(srcc.Type, tgtc.Type, "", ""); err != nil {
-						return
-					}
+				} else if isWrappedAttr(srcc) {
+					srcc = unwrapAttr(srcc)
+				}
+				if err = codegen.IsCompatible(srcc.Type, tgtc.Type, "", ""); err != nil {
+					return
 				}
 				h, err2 := collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), ta, seen)
 				if err2 != nil {
@@ -883,8 +889,10 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *transformA
 			src := srcVal.Attribute
 			tgt := tgtAttrs.Values[i].Attribute
 			if ta.proto {
-				tgt = unwrapAttr(tgt)
-			} else {
+				if isWrappedAttr(tgt) {
+					tgt = unwrapAttr(tgt)
+				}
+			} else if isWrappedAttr(src) {
 				src = unwrapAttr(src)
 			}
 			helpers, err := collectHelpers(src, tgt, true, ta, seen)
@@ -931,15 +939,15 @@ func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *transformA
 		var err error
 		{
 			walkMatches(source, target, func(srcMatt, _ *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
-				if err = codegen.IsCompatible(srcc.Type, tgtc.Type, "", ""); err != nil {
-					if ta.proto {
+				if ta.proto {
+					if isWrappedAttr(tgtc) {
 						tgtc = unwrapAttr(tgtc)
-					} else {
-						srcc = unwrapAttr(srcc)
 					}
-					if err = codegen.IsCompatible(srcc.Type, tgtc.Type, "", ""); err != nil {
-						return
-					}
+				} else if isWrappedAttr(srcc) {
+					srcc = unwrapAttr(srcc)
+				}
+				if err = codegen.IsCompatible(srcc.Type, tgtc.Type, "", ""); err != nil {
+					return
 				}
 				var helpers []*codegen.TransformFunctionData
 				helpers, err = collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), ta, seen)
