@@ -1,0 +1,37 @@
+package kitchensink
+
+import (
+	"context"
+	calc "kitchensink/calc"
+
+	"goa.design/clue/log"
+)
+
+// Calc service example implementation.
+// The example methods log the requests and return zero values.
+type calcsrvc struct{}
+
+// NewCalc returns the Calc service implementation.
+func NewCalc() calc.Service {
+	return &calcsrvc{}
+}
+
+// Add implements add.
+func (s *calcsrvc) Add(ctx context.Context, p *calc.AddPayload) (res *calc.AddResult, err error) {
+	res = &calc.AddResult{}
+	log.Printf(ctx, "calc.add")
+	return
+}
+
+// Ping implements ping.
+func (s *calcsrvc) Ping(ctx context.Context) (res *calc.PingResult, err error) {
+	res = &calc.PingResult{}
+	log.Printf(ctx, "calc.ping")
+	return
+}
+
+// Log implements log.
+func (s *calcsrvc) Log(ctx context.Context, p *calc.LogPayload) (err error) {
+	log.Printf(ctx, "calc.log")
+	return
+}
