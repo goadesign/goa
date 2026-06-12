@@ -3,14 +3,13 @@ package codegen
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
-// ClientFiles returns the generated HTTP client files.
+// ClientFiles returns the generated JSON-RPC client files.
 func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File {
 	jsvcs := data.Root.API.JSONRPC.Services
 	files := make([]*codegen.File, 0, len(jsvcs)*3)
@@ -28,9 +27,7 @@ func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 		if f == nil {
 			continue
 		}
-		updateHeader(f)
 		var swapped int
-		sections := make([]*codegen.SectionTemplate, 0, len(f.SectionTemplates))
 		for _, s := range f.SectionTemplates {
 			switch s.Name {
 			case "source-header":
@@ -44,16 +41,12 @@ func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 				swapped++
 			}
 			s.Name = "jsonrpc-" + s.Name
-			sections = append(sections, s)
 		}
 		// The HTTP client file emits exactly one response decoder per
 		// endpoint. Guard against the two generators drifting apart.
 		if n := len(data.Get(svc.Name()).Endpoints); swapped != n {
 			panic(fmt.Sprintf("jsonrpc: swapped %d response decoders for service %q, expected %d", swapped, svc.Name(), n))
 		}
-
-		f.SectionTemplates = sections
-		f.Path = strings.Replace(f.Path, "/http/", "/jsonrpc/", 1)
 		files = append(files, f)
 	}
 	return files

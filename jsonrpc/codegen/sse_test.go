@@ -8,6 +8,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/testutil"
+	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/jsonrpc/codegen/testdata"
 )
 
@@ -22,7 +23,7 @@ func TestJSONRPCSSE(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			root := RunJSONRPCDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			services := CreateJSONRPCServices(root)
 
 			// Generate SSE files

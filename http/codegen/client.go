@@ -34,8 +34,8 @@ func ClientFiles(genpkg string, data *ServicesData) []*codegen.File {
 func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
-	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "encode_decode.go")
-	title := fmt.Sprintf("%s HTTP client encoders and decoders", svc.Name())
+	path := filepath.Join(codegen.Gendir, services.dir(), svcName, "client", "encode_decode.go")
+	title := fmt.Sprintf("%s %s client encoders and decoders", svc.Name(), services.label())
 	imports := []*codegen.ImportSpec{
 		{Path: "bytes"},
 		{Path: "context"},

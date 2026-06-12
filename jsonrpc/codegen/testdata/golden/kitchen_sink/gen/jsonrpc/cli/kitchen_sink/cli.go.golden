@@ -10,10 +10,10 @@ package cli
 import (
 	"flag"
 	"fmt"
-	calcc "kitchensink/http/calc/client"
-	chatc "kitchensink/http/chat/client"
-	feedc "kitchensink/http/feed/client"
-	mixedc "kitchensink/http/mixed/client"
+	calcc "kitchensink/jsonrpc/calc/client"
+	chatc "kitchensink/jsonrpc/chat/client"
+	feedc "kitchensink/jsonrpc/feed/client"
+	mixedc "kitchensink/jsonrpc/mixed/client"
 	"net/http"
 	"os"
 

@@ -37,7 +37,6 @@ func exampleServer(genpkg string, data *httpcodegen.ServicesData, svr *expr.Serv
 	}
 	if file == nil {
 		file = httpcodegen.ExampleServer(genpkg, data.Root, svr, data)
-		updateHeader(file)
 	}
 
 	// Add JSON-RPC imports to the HTTP server file

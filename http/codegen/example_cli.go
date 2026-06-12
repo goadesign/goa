@@ -9,8 +9,8 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// ExampleCLIFiles returns an example client tool HTTP implementation for each
-// server expression.
+// ExampleCLIFiles returns an example client tool implementation for the
+// transport described by services for each server expression.
 func ExampleCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
 	var files []*codegen.File
 	for _, svr := range services.Root.API.Servers {
@@ -21,13 +21,17 @@ func ExampleCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
 	return files
 }
 
-// ExampleCLI returns an example client tool HTTP implementation for the given
-// server expression.
+// ExampleCLI returns an example client tool implementation for the transport
+// described by services and the given server expression.
 func ExampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 	svrdata := example.Servers.Get(svr, services.Root)
-	path := filepath.Join("cmd", svrdata.Dir+"-cli", "http.go")
+	path := filepath.Join("cmd", svrdata.Dir+"-cli", services.dir()+".go")
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
+	}
+	funcSuffix := "HTTP"
+	if services.jsonrpc {
+		funcSuffix = "JSONRPC"
 	}
 	rootPath := example.RootPath(genpkg)
 	specs := []*codegen.ImportSpec{
@@ -43,7 +47,7 @@ func ExampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 		{Path: "github.com/gorilla/websocket"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: genpkg + "/http/cli/" + svrdata.Dir, Name: "cli"},
+		{Path: genpkg + "/" + services.dir() + "/cli/" + svrdata.Dir, Name: "cli"},
 	}
 	importScope := codegen.NewNameScope()
 	for _, svc := range services.Root.Services {
@@ -70,7 +74,7 @@ func ExampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 			Data: map[string]any{
 				"Services":        svcData,
 				"InterceptorsPkg": interceptorsPkg,
-				"FuncSuffix":      "HTTP",
+				"FuncSuffix":      funcSuffix,
 			},
 		},
 		{
@@ -99,7 +103,7 @@ func ExampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 			Name:   "cli-http-usage",
 			Source: httpTemplates.Read(cliUsageT),
 			Data: map[string]any{
-				"VarPrefix": "http",
+				"VarPrefix": services.dir(),
 			},
 		},
 	}

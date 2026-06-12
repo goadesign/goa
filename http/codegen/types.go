@@ -78,7 +78,7 @@ func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *Ser
 		validateSection = "client-validate"
 		bodyInitT = clientBodyInitT
 	}
-	path := filepath.Join(codegen.Gendir, "http", svcName, side, "types.go")
+	path := filepath.Join(codegen.Gendir, services.dir(), svcName, side, "types.go")
 	imports := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
 		{Path: "fmt"},
@@ -91,7 +91,7 @@ func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *Ser
 	} else {
 		imports = append(imports, views, codegen.GoaImport(""))
 	}
-	header := codegen.Header(svc.Name()+" HTTP "+side+" types", side, imports)
+	header := codegen.Header(svc.Name()+" "+services.label()+" "+side+" types", side, imports)
 
 	var (
 		initData       []*InitData
@@ -147,7 +147,7 @@ func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *Ser
 		var body, wsPayload *TypeData
 		if svr {
 			body = adata.Payload.Request.ServerBody
-			if adata.ServerWebSocket != nil && !adata.Method.IsJSONRPC {
+			if adata.ServerWebSocket != nil && !adata.IsJSONRPC {
 				wsPayload = adata.ServerWebSocket.Payload
 			}
 		} else {

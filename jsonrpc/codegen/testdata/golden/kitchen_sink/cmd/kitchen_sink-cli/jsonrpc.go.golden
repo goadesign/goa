@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	cli "kitchensink/http/cli/kitchen_sink"
+	cli "kitchensink/jsonrpc/cli/kitchen_sink"
 	"net/http"
 	"time"
 

@@ -9,7 +9,6 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"io"
 	calc "kitchensink/calc"
@@ -19,18 +18,6 @@ import (
 	"goa.design/goa/v3/jsonrpc"
 	goa "goa.design/goa/v3/pkg"
 )
-
-// EncodeAddResponse returns an encoder for responses returned by the Calc add
-// endpoint.
-func EncodeAddResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
-	return func(ctx context.Context, w http.ResponseWriter, v any) error {
-		res, _ := v.(*calc.AddResult)
-		enc := encoder(ctx, w)
-		body := NewAddResponseBody(res)
-		w.WriteHeader(http.StatusOK)
-		return enc.Encode(body)
-	}
-}
 
 // DecodeAddRequest returns a decoder for requests sent to the Calc add
 // endpoint.
@@ -60,27 +47,6 @@ func DecodeAddRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Dec
 		payload = NewAddPayload(&body)
 
 		return payload, nil
-	}
-}
-
-// EncodePingResponse returns an encoder for responses returned by the Calc
-// ping endpoint.
-func EncodePingResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
-	return func(ctx context.Context, w http.ResponseWriter, v any) error {
-		res, _ := v.(*calc.PingResult)
-		enc := encoder(ctx, w)
-		body := NewPingResponseBody(res)
-		w.WriteHeader(http.StatusOK)
-		return enc.Encode(body)
-	}
-}
-
-// EncodeLogResponse returns an encoder for responses returned by the Calc log
-// endpoint.
-func EncodeLogResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
-	return func(ctx context.Context, w http.ResponseWriter, v any) error {
-		w.WriteHeader(http.StatusNoContent)
-		return nil
 	}
 }
 

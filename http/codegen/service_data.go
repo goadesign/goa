@@ -36,6 +36,10 @@ type (
 		*service.ServicesData
 		Expressions *expr.HTTPExpr
 		HTTPData    map[string]*ServiceData
+		// jsonrpc indicates that the data describes the JSON-RPC
+		// transport: generated files live under gen/jsonrpc and titles
+		// use the JSON-RPC label.
+		jsonrpc bool
 	}
 
 	// ServiceData contains the data used to render the code related to a
@@ -613,6 +617,15 @@ func NewServicesData(services *service.ServicesData, expressions *expr.HTTPExpr)
 	}
 }
 
+// NewJSONRPCServicesData creates a new ServicesData instance for the JSON-RPC
+// transport: file constructors write under gen/jsonrpc and use the JSON-RPC
+// label in generated file headers.
+func NewJSONRPCServicesData(services *service.ServicesData, expressions *expr.HTTPExpr) *ServicesData {
+	data := NewServicesData(services, expressions)
+	data.jsonrpc = true
+	return data
+}
+
 // Get retrieves the transport data for the service with the given name
 // computing it if needed. It returns nil if there is no service with the given
 // name.
@@ -637,6 +650,24 @@ func (svc *ServiceData) Endpoint(name string) *EndpointData {
 		}
 	}
 	return nil
+}
+
+// dir returns the name of the transport directory under gen: "http" or
+// "jsonrpc".
+func (sds *ServicesData) dir() string {
+	if sds.jsonrpc {
+		return "jsonrpc"
+	}
+	return "http"
+}
+
+// label returns the transport label used in generated file headers: "HTTP" or
+// "JSON-RPC".
+func (sds *ServicesData) label() string {
+	if sds.jsonrpc {
+		return "JSON-RPC"
+	}
+	return "HTTP"
 }
 
 // analyze creates the data necessary to render the code of the given service.

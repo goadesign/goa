@@ -8,13 +8,14 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/jsonrpc/codegen/testdata"
 )
 
 // TestJSONRPCSSE_DedupEventTypes verifies the SSE server stream switch contains only
 // one case for a shared event type used by multiple streaming endpoints.
 func TestJSONRPCSSE_DedupEventTypes(t *testing.T) {
-	root := RunJSONRPCDSL(t, testdata.JSONRPCSSEDuplicateEventDSL)
+	root := expr.RunDSL(t, testdata.JSONRPCSSEDuplicateEventDSL)
 	services := CreateJSONRPCServices(root)
 
 	// Generate JSON-RPC server files (includes service-level SSE impl when present)

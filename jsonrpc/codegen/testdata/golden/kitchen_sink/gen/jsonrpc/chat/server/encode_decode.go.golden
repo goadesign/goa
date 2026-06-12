@@ -9,7 +9,6 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"io"
 	chat "kitchensink/chat"
@@ -19,18 +18,6 @@ import (
 	"goa.design/goa/v3/jsonrpc"
 	goa "goa.design/goa/v3/pkg"
 )
-
-// EncodeEchoResponse returns an encoder for responses returned by the Chat
-// echo endpoint.
-func EncodeEchoResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
-	return func(ctx context.Context, w http.ResponseWriter, v any) error {
-		res, _ := v.(*chat.EchoResult)
-		enc := encoder(ctx, w)
-		body := NewEchoResponseBody(res)
-		w.WriteHeader(http.StatusOK)
-		return enc.Encode(body)
-	}
-}
 
 // DecodeEchoRequest returns a decoder for requests sent to the Chat echo
 // endpoint.

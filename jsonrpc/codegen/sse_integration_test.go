@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/jsonrpc/codegen/testdata"
 )
 
@@ -18,7 +19,7 @@ func TestJSONRPCSSEIntegration(t *testing.T) {
 	}
 
 	// Run the DSL
-	root := RunJSONRPCDSL(t, testdata.JSONRPCSSEObjectDSL)
+	root := expr.RunDSL(t, testdata.JSONRPCSSEObjectDSL)
 	services := CreateJSONRPCServices(root)
 
 	// Generate all files

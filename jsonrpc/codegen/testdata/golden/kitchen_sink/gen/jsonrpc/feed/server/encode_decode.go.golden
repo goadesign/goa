@@ -9,7 +9,6 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"io"
 	feed "kitchensink/feed"
@@ -19,18 +18,6 @@ import (
 	"goa.design/goa/v3/jsonrpc"
 	goa "goa.design/goa/v3/pkg"
 )
-
-// EncodeWatchResponse returns an encoder for responses returned by the Feed
-// watch endpoint.
-func EncodeWatchResponse(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
-	return func(ctx context.Context, w http.ResponseWriter, v any) error {
-		res, _ := v.(*feed.WatchResult)
-		enc := encoder(ctx, w)
-		body := NewWatchResponseBody(res)
-		w.WriteHeader(http.StatusOK)
-		return enc.Encode(body)
-	}
-}
 
 // DecodeWatchRequest returns a decoder for requests sent to the Feed watch
 // endpoint.

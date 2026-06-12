@@ -109,8 +109,8 @@ func buildSubcommandData(sd *ServiceData, e *EndpointData) *subcommandData {
 // builds the client endpoint and payload necessary to perform a request.
 func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, data []*commandData, services *ServicesData) *codegen.File {
 	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
-	path := filepath.Join(codegen.Gendir, "http", "cli", pkg, "cli.go")
-	title := fmt.Sprintf("%s HTTP client CLI support package", svr.Name)
+	path := filepath.Join(codegen.Gendir, services.dir(), "cli", pkg, "cli.go")
+	title := fmt.Sprintf("%s %s client CLI support package", svr.Name, services.label())
 	specs := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
 		{Path: "flag"},
@@ -129,7 +129,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 			continue
 		}
 		specs = append(specs, &codegen.ImportSpec{
-			Path: genpkg + "/http/" + sd.Service.PathName + "/client",
+			Path: genpkg + "/" + services.dir() + "/" + sd.Service.PathName + "/client",
 			Name: sd.Service.PkgName + "c",
 		})
 		// Add interceptors import if service has client interceptors
@@ -165,8 +165,8 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 // use flag values as arguments.
 func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.CommandData, services *ServicesData) *codegen.File {
 	sd := services.Get(svc.Name())
-	path := filepath.Join(codegen.Gendir, "http", sd.Service.PathName, "client", "cli.go")
-	title := fmt.Sprintf("%s HTTP client CLI support package", svc.Name())
+	path := filepath.Join(codegen.Gendir, services.dir(), sd.Service.PathName, "client", "cli.go")
+	title := fmt.Sprintf("%s %s client CLI support package", svc.Name(), services.label())
 	specs := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
 		{Path: "fmt"},

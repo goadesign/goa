@@ -121,8 +121,8 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 func ServerEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
-	path := filepath.Join(codegen.Gendir, "http", svcName, "server", "encode_decode.go")
-	title := fmt.Sprintf("%s HTTP server encoders and decoders", svc.Name())
+	path := filepath.Join(codegen.Gendir, services.dir(), svcName, "server", "encode_decode.go")
+	title := fmt.Sprintf("%s %s server encoders and decoders", svc.Name(), services.label())
 	imports := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "errors"},
@@ -142,7 +142,7 @@ func ServerEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 	sections := []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
 
 	for _, e := range data.Endpoints {
-		if e.Redirect == nil && (!IsWebSocketEndpoint(e) || e.Method.IsJSONRPC) {
+		if e.Redirect == nil && !IsWebSocketEndpoint(e) && !e.IsJSONRPC {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "response-encoder",
 				FuncMap: transTmplFuncs(svc, services),
@@ -170,7 +170,7 @@ func ServerEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 				Data:    e.MultipartRequestDecoder,
 			})
 		}
-		if len(e.Errors) > 0 {
+		if len(e.Errors) > 0 && !e.IsJSONRPC {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:    "error-encoder",
 				Source:  httpTemplates.Read(errorEncoderT, responseP, headerConversionP),
