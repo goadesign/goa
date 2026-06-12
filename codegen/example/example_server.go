@@ -23,6 +23,24 @@ func ServerFiles(genpkg string, root *expr.RootExpr, services *service.ServicesD
 	return fw
 }
 
+// APIPkg returns a unique package name for the example API implementation
+// package derived from the API name. The name is registered with the given
+// scope so subsequent calls return distinct names.
+func APIPkg(root *expr.RootExpr, scope *codegen.NameScope) string {
+	return scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
+}
+
+// RootPath returns the Go import path of the project root computed from the
+// generated code package import path genpkg. It returns "." if genpkg has no
+// parent path.
+func RootPath(genpkg string) string {
+	// genpkg is created by path.Join so the separator is / regardless of operating system
+	if idx := strings.LastIndex(genpkg, "/"); idx > 0 {
+		return genpkg[:idx]
+	}
+	return "."
+}
+
 // exampleSvrMain returns the default main function for the given server
 // expression.
 func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, services *service.ServicesData) *codegen.File {
@@ -62,19 +80,8 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, se
 	}
 	interPkg := scope.Unique("interceptors", "ex")
 
-	var (
-		rootPath string
-		apiPkg   string
-	)
-	{
-		// genpkg is created by path.Join so the separator is / regardless of operating system
-		idx := strings.LastIndex(genpkg, string("/"))
-		rootPath = "."
-		if idx > 0 {
-			rootPath = genpkg[:idx]
-		}
-		apiPkg = scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
-	}
+	rootPath := RootPath(genpkg)
+	apiPkg := APIPkg(root, scope)
 	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
 	if hasInterceptors {
 		specs = append(specs, &codegen.ImportSpec{Path: path.Join(rootPath, "interceptors"), Name: interPkg})

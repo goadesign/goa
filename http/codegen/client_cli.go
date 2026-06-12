@@ -141,28 +141,19 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		cliData[i] = cmd.CommandData
 	}
 
-	sections := make([]*codegen.SectionTemplate, 0, 4+len(cliData))
-	sections = append(sections,
-		codegen.Header(title, "cli", specs),
-		cli.UsageCommands(cliData),
-		cli.UsageExamples(cliData),
-		&codegen.SectionTemplate{
-			Name:   "parse-endpoint",
-			Source: httpTemplates.Read(parseEndpointT),
-			Data: struct {
-				FlagsCode string
-				Commands  []*commandData
-			}{
-				cli.FlagsCode(cliData),
-				data,
-			},
-			FuncMap: map[string]any{"streamingCmdExists": streamingCmdExists},
+	parseSection := &codegen.SectionTemplate{
+		Name:   "parse-endpoint",
+		Source: httpTemplates.Read(parseEndpointT),
+		Data: struct {
+			FlagsCode string
+			Commands  []*commandData
+		}{
+			cli.FlagsCode(cliData),
+			data,
 		},
-	)
-	for _, cmd := range cliData {
-		sections = append(sections, cli.CommandUsage(cmd))
+		FuncMap: map[string]any{"streamingCmdExists": streamingCmdExists},
 	}
-	return &codegen.File{Path: path, SectionTemplates: sections}
+	return cli.EndpointParserFile(path, title, specs, cliData, parseSection)
 }
 
 // payloadBuilders returns the file that contains the payload constructors that
@@ -182,16 +173,7 @@ func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.Command
 		codegen.GoaNamedImport("http", "goahttp"),
 		{Path: genpkg + "/" + sd.Service.PathName, Name: sd.Service.PkgName},
 	}
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", specs),
-	}
-	for _, sub := range data.Subcommands {
-		if sub.BuildFunction != nil {
-			sections = append(sections, cli.PayloadBuilderSection(sub.BuildFunction))
-		}
-	}
-
-	return &codegen.File{Path: path, SectionTemplates: sections}
+	return cli.PayloadBuildersFile(path, title, specs, data)
 }
 
 // buildFlags builds the flag data and build function for an endpoint.
@@ -219,13 +201,8 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildF
 
 // makeFlags creates flag data and build function from endpoint arguments.
 func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*cli.FlagData, *cli.BuildFunctionData) {
-	var (
-		fdata     = make([]*cli.FieldData, 0, len(args)) // preallocate
-		flags     = make([]*cli.FlagData, len(args))
-		params    = make([]string, len(args))
-		pInitArgs = make([]*codegen.InitArgData, len(args))
-		check     bool
-	)
+	fargs := make([]*cli.FlagArgData, len(args))
+	pInitArgs := make([]*codegen.InitArgData, len(args))
 	for i, arg := range args {
 		pInitArgs[i] = &codegen.InitArgData{
 			Name:         arg.VarName,
@@ -235,31 +212,21 @@ func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*
 			FieldType:    arg.FieldType,
 			Type:         arg.Type,
 		}
-
-		f := cli.NewFlagData(e.ServiceName, e.Method.Name, arg.VarName, arg.TypeName, arg.Description, arg.Required, arg.Example, arg.DefaultValue)
-		flags[i] = f
-		params[i] = f.FullName
-		if arg.FieldName == "" && arg.VarName != "body" {
-			continue
+		fargs[i] = &cli.FlagArgData{
+			Name:         arg.VarName,
+			TypeName:     arg.TypeName,
+			TypeRef:      arg.TypeRef,
+			FieldName:    arg.FieldName,
+			Description:  arg.Description,
+			Required:     arg.Required,
+			Example:      arg.Example,
+			DefaultValue: arg.DefaultValue,
+			Validate:     arg.Validate,
+			OmitField:    arg.FieldName == "" && arg.VarName != "body",
 		}
-		code, chek := cli.FieldLoadCode(f, arg.VarName, arg.TypeName, arg.Validate, arg.DefaultValue, payload, e.Payload.Ref)
-		check = check || chek
-		tn := arg.TypeRef
-		if f.Type == "JSON" {
-			// We need to declare the variable without
-			// a pointer to be able to unmarshal the JSON
-			// using its address.
-			tn = arg.TypeName
-		}
-		fdata = append(fdata, &cli.FieldData{
-			Name:    arg.VarName,
-			VarName: arg.VarName,
-			TypeRef: tn,
-			Init:    code,
-		})
 	}
 
-	pInit := cli.PayloadInitData{
+	pInit := &cli.PayloadInitData{
 		Code:                       e.Payload.Request.PayloadInit.ClientCode,
 		ReturnTypeAttribute:        e.Payload.Request.PayloadInit.ReturnTypeAttribute,
 		ReturnTypeAttributePointer: e.Payload.Request.PayloadInit.ReturnIsPrimitivePointer,
@@ -269,17 +236,7 @@ func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*
 		Args:                       pInitArgs,
 	}
 
-	return flags, &cli.BuildFunctionData{
-		Name:         "Build" + e.Method.VarName + "Payload",
-		ActualParams: params,
-		FormalParams: params,
-		ServiceName:  e.ServiceName,
-		MethodName:   e.Method.Name,
-		ResultType:   e.Payload.Ref,
-		Fields:       fdata,
-		PayloadInit:  &pInit,
-		CheckErr:     check,
-	}
+	return cli.MakeFlags(e.ServiceName, e.Method, fargs, payload, e.Payload.Ref, pInit)
 }
 
 // streamFlag returns the flag used to specify the upload file for endpoints

@@ -119,6 +119,35 @@ type (
 		CheckErr bool
 	}
 
+	// FlagArgData describes a payload initialization argument from which a
+	// command-line flag and the code that loads the flag value into the
+	// corresponding payload builder field are generated.
+	FlagArgData struct {
+		// Name is the argument variable name used to derive the flag name and
+		// the name of the local variable holding the flag value.
+		Name string
+		// TypeName is the argument Go type name.
+		TypeName string
+		// TypeRef is the reference to the argument type.
+		TypeRef string
+		// FieldName is the name of the payload field initialized with the
+		// argument value if any.
+		FieldName string
+		// Description is the flag help text.
+		Description string
+		// Required is true if the flag is required.
+		Required bool
+		// Example is an example value for the flag.
+		Example any
+		// DefaultValue is the default value of the argument if any.
+		DefaultValue any
+		// Validate contains the validation code for the argument value if any.
+		Validate string
+		// OmitField if true generates the flag without a corresponding payload
+		// builder field.
+		OmitField bool
+	}
+
 	// FieldData contains the data needed to generate the code that initializes a
 	// field in the method payload type.
 	FieldData struct {
@@ -243,6 +272,98 @@ func BuildSubcommandData(data *service.Data, m *service.MethodData, buildFunctio
 	generateExample(sub, data.Name)
 
 	return sub
+}
+
+// EndpointParserFile returns the file that implements the command line parser
+// that builds the client endpoint and payload necessary to perform a request.
+// The parse section renders the transport-specific ParseEndpoint function.
+func EndpointParserFile(
+	path, title string,
+	specs []*codegen.ImportSpec,
+	data []*CommandData,
+	parseSection *codegen.SectionTemplate,
+) *codegen.File {
+	sections := make([]*codegen.SectionTemplate, 0, 4+len(data))
+	sections = append(sections,
+		codegen.Header(title, "cli", specs),
+		UsageCommands(data),
+		UsageExamples(data),
+		parseSection,
+	)
+	for _, cmd := range data {
+		sections = append(sections, CommandUsage(cmd))
+	}
+	return &codegen.File{Path: path, SectionTemplates: sections}
+}
+
+// MakeFlags returns the flag data generated from the given payload
+// initialization arguments along with the data for the function that builds
+// the method payload from the corresponding flag values. payload and
+// payloadRef describe the method payload type, pinit - if not nil - describes
+// the payload constructor invoked by the build function.
+func MakeFlags(
+	svcn string,
+	m *service.MethodData,
+	args []*FlagArgData,
+	payload expr.DataType,
+	payloadRef string,
+	pinit *PayloadInitData,
+) ([]*FlagData, *BuildFunctionData) {
+	var (
+		fdata  = make([]*FieldData, 0, len(args)) // preallocate
+		flags  = make([]*FlagData, len(args))
+		params = make([]string, len(args))
+		check  bool
+	)
+	for i, arg := range args {
+		f := NewFlagData(svcn, m.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example, arg.DefaultValue)
+		flags[i] = f
+		params[i] = f.FullName
+		if arg.OmitField {
+			continue
+		}
+		code, chek := FieldLoadCode(f, arg.Name, arg.TypeName, arg.Validate, arg.DefaultValue, payload, payloadRef)
+		check = check || chek
+		tn := arg.TypeRef
+		if f.Type == "JSON" {
+			// We need to declare the variable without
+			// a pointer to be able to unmarshal the JSON
+			// using its address.
+			tn = arg.TypeName
+		}
+		fdata = append(fdata, &FieldData{
+			Name:    arg.Name,
+			VarName: arg.Name,
+			TypeRef: tn,
+			Init:    code,
+		})
+	}
+
+	return flags, &BuildFunctionData{
+		Name:         "Build" + m.VarName + "Payload",
+		ActualParams: params,
+		FormalParams: params,
+		ServiceName:  svcn,
+		MethodName:   m.Name,
+		ResultType:   payloadRef,
+		Fields:       fdata,
+		PayloadInit:  pinit,
+		CheckErr:     check,
+	}
+}
+
+// PayloadBuildersFile returns the file that contains the payload constructors
+// that use the command flag values as arguments.
+func PayloadBuildersFile(path, title string, specs []*codegen.ImportSpec, data *CommandData) *codegen.File {
+	sections := []*codegen.SectionTemplate{
+		codegen.Header(title, "client", specs),
+	}
+	for _, sub := range data.Subcommands {
+		if sub.BuildFunction != nil {
+			sections = append(sections, PayloadBuilderSection(sub.BuildFunction))
+		}
+	}
+	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
 // UsageCommands builds a section template that generates a help text showing

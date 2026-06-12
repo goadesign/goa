@@ -62,19 +62,8 @@ func ExampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, ser
 			})
 	}
 
-	var (
-		rootPath string
-		apiPkg   string
-	)
-	{
-		// genpkg is created by path.Join so the separator is / regardless of operating system
-		idx := strings.LastIndex(genpkg, string("/"))
-		rootPath = "."
-		if idx > 0 {
-			rootPath = genpkg[:idx]
-		}
-		apiPkg = scope.Unique(strings.ToLower(codegen.Goify(services.Root.API.Name, false) + "api"))
-	}
+	rootPath := example.RootPath(genpkg)
+	apiPkg := scope.Unique(strings.ToLower(codegen.Goify(services.Root.API.Name, false) + "api"))
 	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
 
 	var svcdata []*ServiceData
@@ -163,7 +152,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 			Name: scope.Unique(data.Service.PkgName, "svc"),
 		})
 
-		apiPkg := scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
+		apiPkg := example.APIPkg(root, scope)
 		sections = []*codegen.SectionTemplate{codegen.Header("", apiPkg, specs)}
 		for _, e := range data.Endpoints {
 			if e.MultipartRequestDecoder != nil {

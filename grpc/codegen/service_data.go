@@ -557,11 +557,11 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		md := svc.Method(e.Name())
 		if e.MethodExpr.Payload.Type != expr.Empty {
 			payloadRef = svc.Scope.GoFullTypeRef(e.MethodExpr.Payload,
-				pkgWithDefault(md.PayloadLoc, svc.PkgName))
+				md.PayloadLoc.PackageNameOrDefault(svc.PkgName))
 		}
 		if e.MethodExpr.Result.Type != expr.Empty {
 			resultRef = svc.Scope.GoFullTypeRef(e.MethodExpr.Result,
-				pkgWithDefault(md.ResultLoc, svc.PkgName))
+				md.ResultLoc.PackageNameOrDefault(svc.PkgName))
 		}
 		if md.ViewedResult != nil {
 			viewedResultRef = md.ViewedResult.FullRef
@@ -922,7 +922,7 @@ func (d *ServicesData) buildRequestConvertData(request, payload *expr.AttributeE
 	}
 
 	svc := sd.Service
-	pkg := pkgWithDefault(svc.Method(e.MethodExpr.Name).PayloadLoc, svc.PkgName)
+	pkg := svc.Method(e.MethodExpr.Name).PayloadLoc.PackageNameOrDefault(svc.PkgName)
 	svcCtx := serviceTypeContext(pkg, svc.Scope)
 	if svr {
 		// server side
@@ -1068,7 +1068,7 @@ func (d *ServicesData) buildErrorsData(e *expr.GRPCEndpointExpr, sd *ServiceData
 		errorLoc := svc.Method(e.MethodExpr.Name).ErrorLocs[v.Name]
 		errors = append(errors, &ErrorData{
 			Name:     v.Name,
-			Ref:      svc.Scope.GoFullTypeRef(v.AttributeExpr, pkgWithDefault(errorLoc, svc.PkgName)),
+			Ref:      svc.Scope.GoFullTypeRef(v.AttributeExpr, errorLoc.PackageNameOrDefault(svc.PkgName)),
 			Response: responseData,
 		})
 	}
@@ -1395,16 +1395,8 @@ func resultContext(e *expr.GRPCEndpointExpr, sd *ServiceData) (*expr.AttributeEx
 		// return projected type context
 		return vresAtt, codegen.NewAttributeContext(true, false, true, svc.ViewsPkg, svc.ViewScope)
 	}
-	pkg := pkgWithDefault(md.ResultLoc, svc.PkgName)
+	pkg := md.ResultLoc.PackageNameOrDefault(svc.PkgName)
 	return e.MethodExpr.Result, serviceTypeContext(pkg, svc.Scope)
-}
-
-// pkgWithDefault returns the package name of the given location if not nil, def otherwise.
-func pkgWithDefault(loc *codegen.Location, def string) string {
-	if loc == nil {
-		return def
-	}
-	return loc.PackageName()
 }
 
 // getPrimitive returns the primitive expression if the given expression is an alias to one

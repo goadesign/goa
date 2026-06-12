@@ -841,7 +841,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 					args = append(args, ca)
 				}
 			}
-			pkg = pkgWithDefault(method.PayloadLoc, svc.PkgName)
+			pkg = method.PayloadLoc.PackageNameOrDefault(svc.PkgName)
 			if len(routes[0].PathInit.ClientArgs) > 0 && httpEndpoint.MethodExpr.Payload.Type != expr.Empty {
 				payloadRef = svc.Scope.GoFullTypeRef(httpEndpoint.MethodExpr.Payload, pkg)
 			}
@@ -1073,7 +1073,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		ep         = svc.Method(e.MethodExpr.Name)
 		httpsvrctx = httpContext(sd.Scope, true, true)
 		httpclictx = httpContext(sd.Scope, true, false)
-		pkg        = pkgWithDefault(ep.PayloadLoc, svc.PkgName)
+		pkg        = ep.PayloadLoc.PackageNameOrDefault(svc.PkgName)
 		svcctx     = serviceContext(pkg, sd.Service.Scope)
 
 		request       *RequestData
@@ -1457,7 +1457,7 @@ func (sds *ServicesData) buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 	var (
 		svc    = sd.Service
 		ep     = svc.Method(e.MethodExpr.Name)
-		pkg    = pkgWithDefault(ep.ResultLoc, svc.PkgName)
+		pkg    = ep.ResultLoc.PackageNameOrDefault(svc.PkgName)
 		result = e.MethodExpr.Result
 
 		name string
@@ -1529,7 +1529,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 
 		svc        = sd.Service
 		md         = svc.Method(e.Name())
-		pkg        = pkgWithDefault(md.ResultLoc, svc.PkgName)
+		pkg        = md.ResultLoc.PackageNameOrDefault(svc.PkgName)
 		httpclictx = httpContext(sd.Scope, false, false)
 		scope      = svc.Scope
 		svcctx     = serviceContext(pkg, sd.Service.Scope)
@@ -1789,7 +1789,7 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 			body = v.Response.Body.Type
 		)
 
-		pkg := pkgWithDefault(ep.ErrorLocs[v.Name], svc.PkgName)
+		pkg := ep.ErrorLocs[v.Name].PackageNameOrDefault(svc.PkgName)
 		errctx := serviceContext(pkg, sd.Service.Scope)
 
 		if needInit(v.Type) {
@@ -1997,7 +1997,7 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 		svc     = sd.Service
 		httpctx = httpContext(sd.Scope, true, svr)
 		ep      = sd.Service.Method(e.Name())
-		pkg     = pkgWithDefault(ep.PayloadLoc, sd.Service.PkgName)
+		pkg     = ep.PayloadLoc.PackageNameOrDefault(sd.Service.PkgName)
 		svcctx  = serviceContext(pkg, sd.Service.Scope)
 	)
 	name = body.Type.Name()
@@ -2125,7 +2125,7 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, lo
 
 		svc     = sd.Service
 		httpctx = httpContext(sd.Scope, false, svr)
-		pkg     = pkgWithDefault(loc, sd.Service.PkgName)
+		pkg     = loc.PackageNameOrDefault(sd.Service.PkgName)
 		svcctx  = serviceContext(pkg, sd.Service.Scope)
 	)
 	// Project the response body when the design fixes the response to a single
@@ -2750,14 +2750,6 @@ func serviceContext(pkg string, scope *codegen.NameScope) *codegen.AttributeCont
 // viewContext returns an attribute context for projected types.
 func viewContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
 	return codegen.NewAttributeContext(true, false, true, pkg, scope)
-}
-
-// pkgWithDefault returns the package name of the given location if not nil, def otherwise.
-func pkgWithDefault(loc *codegen.Location, def string) string {
-	if loc == nil {
-		return def
-	}
-	return loc.PackageName()
 }
 
 // unmarshal initializes a data structure defined by target type from a data

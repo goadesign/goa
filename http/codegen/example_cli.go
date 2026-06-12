@@ -3,7 +3,6 @@ package codegen
 import (
 	"os"
 	"path/filepath"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
@@ -30,11 +29,7 @@ func ExampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
-	idx := strings.LastIndex(genpkg, string("/"))
-	rootPath := "."
-	if idx > 0 {
-		rootPath = genpkg[:idx]
-	}
+	rootPath := example.RootPath(genpkg)
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "encoding/json"},
@@ -58,7 +53,7 @@ func ExampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 	}
 	interceptorsPkg := importScope.Unique("interceptors", "ex")
 	specs = append(specs, &codegen.ImportSpec{Path: rootPath + "/interceptors", Name: interceptorsPkg})
-	apiPkg := importScope.Unique(strings.ToLower(codegen.Goify(services.Root.API.Name, false)), "api")
+	apiPkg := example.APIPkg(services.Root, importScope)
 	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
 
 	var svcData []*ServiceData
