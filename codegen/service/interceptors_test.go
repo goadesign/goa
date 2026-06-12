@@ -97,6 +97,7 @@ func TestCollectAttributes(t *testing.T) {
 		attrNames *expr.AttributeExpr
 		parent    *expr.AttributeExpr
 		want      []*AttributeData
+		panics    bool
 	}{
 		{
 			name:      "nil-attributes",
@@ -176,7 +177,7 @@ func TestCollectAttributes(t *testing.T) {
 				},
 				Validation: &expr.ValidationExpr{Required: []string{"name"}},
 			},
-			want: []*AttributeData{nil},
+			panics: true,
 		},
 		{
 			name: "user-type-with-package",
@@ -211,6 +212,10 @@ func TestCollectAttributes(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			scope := codegen.NewNameScope()
+			if tc.panics {
+				assert.Panics(t, func() { collectAttributes(tc.attrNames, tc.parent, scope) })
+				return
+			}
 			got := collectAttributes(tc.attrNames, tc.parent, scope)
 			assert.Equal(t, tc.want, got)
 		})

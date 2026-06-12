@@ -158,7 +158,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 				}
 			}
 			if err != nil {
-				fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
+				panic(err) // bug
 			}
 			svrPayload.Init = &InitData{
 				Name:           name,

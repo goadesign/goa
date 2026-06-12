@@ -331,8 +331,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
 							}
 						default:
-							// Fallback to raw default if we don't recognize the element slice
-							code += fmt.Sprintf("%s = %#v\n", tgtVar, tdef)
+							panic(fmt.Sprintf("unsupported default value type %T for aliased array element", tdef)) // bug
 						}
 						if len(items) > 0 {
 							code += fmt.Sprintf("%s = []%s{%s}\n", tgtVar, elemRef, strings.Join(items, ", "))

@@ -546,7 +546,7 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 					}
 				}
 			}
-			return nil
+			panic(fmt.Sprintf("no protobuf message collected for attribute of type %q", att.Type.Name())) // bug
 		}
 
 		var (

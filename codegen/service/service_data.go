@@ -1807,7 +1807,9 @@ func collectAttributes(attrNames, parent *expr.AttributeExpr, scope *codegen.Nam
 	for i, nat := range *obj {
 		parentAttr := parent.Find(nat.Name)
 		if parentAttr == nil {
-			continue
+			// Attribute references are validated at design time so a miss
+			// here would surface as a nil deref at template render time.
+			panic(fmt.Sprintf("attribute %q not found in parent attribute", nat.Name)) // bug
 		}
 		var pkg string
 		if loc := codegen.UserTypeLocation(parentAttr.Type); loc != nil {

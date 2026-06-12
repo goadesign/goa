@@ -493,15 +493,18 @@ func protoBufNativeGoTypeName(t expr.DataType) string {
 	}
 }
 
-// rpcTag returns the unique numbered RPC tag from the given attribute.
+// rpcTag returns the unique numbered RPC tag from the given attribute. Every
+// gRPC message field carries a tag by the time codegen runs: DSL validation
+// rejects untagged fields and synthesized wrapper fields are tagged at
+// creation, so a missing or unparseable tag is a bug.
 func rpcTag(a *expr.AttributeExpr) uint64 {
-	var tag uint64
-	if t, ok := a.FieldTag(); ok {
-		tn, err := strconv.ParseUint(t, 10, 64)
-		if err != nil {
-			panic(err) // bug (should catch invalid field numbers in validation)
-		}
-		tag = tn
+	t, ok := a.FieldTag()
+	if !ok {
+		panic(fmt.Sprintf("attribute of type %q has no rpc:tag meta", a.Type.Name())) // bug
+	}
+	tag, err := strconv.ParseUint(t, 10, 64)
+	if err != nil {
+		panic(err) // bug
 	}
 	return tag
 }

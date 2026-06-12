@@ -815,11 +815,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 					// Populate service-aware type resolution fields
 					_, ca.IsAliased = ca.FieldType.(expr.UserType)
 					if ca.IsAliased {
-						if svcData := sds.ServicesData.Get(svc.Name); svcData != nil {
-							ca.ServiceTypeRef = svcData.Scope.GoTypeRef(&expr.AttributeExpr{Type: ca.Type})
-						} else {
-							ca.ServiceTypeRef = codegen.Goify(ca.FieldType.Name(), true)
-						}
+						ca.ServiceTypeRef = sds.ServicesData.Get(svc.Name).Scope.GoTypeRef(&expr.AttributeExpr{Type: ca.Type})
 					}
 					args = append(args, ca)
 				}
@@ -1455,7 +1451,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			}
 		}
 		if err != nil {
-			fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
+			panic(err) // bug
 		}
 		init = &InitData{
 			Name:                     name,
@@ -1775,7 +1771,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 							}
 						}
 						if err != nil {
-							fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
+							panic(err) // bug
 						}
 						for _, h := range headersData {
 							clientArgs = append(clientArgs, &InitArgData{
@@ -1976,7 +1972,7 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 				}
 			}
 			if err != nil {
-				fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
+				panic(err) // bug
 			}
 
 			init = &InitData{
@@ -2180,7 +2176,7 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 			}
 			code, helpers, err = marshal(srcAtt, body, src, "body", svcctx, httpctx)
 			if err != nil {
-				fmt.Println(err.Error()) // TBD validate DSL so errors are not possible
+				panic(err) // bug
 			}
 			sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 		}
@@ -2578,8 +2574,13 @@ func (sds *ServicesData) extractQueryParams(a *expr.MappedAttributeExpr, service
 func (sds *ServicesData) extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope) []*HeaderData {
 	var headers []*HeaderData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, _ *expr.AttributeExpr) error { // nolint: errcheck
-		var attr *expr.AttributeExpr
-		if attr = svcAtt.Find(name); attr == nil {
+		attr := svcAtt.Find(name)
+		if attr == nil {
+			// Primitive payloads map the whole payload to a single header in
+			// which case the mapped name has no corresponding attribute.
+			if expr.IsObject(svcAtt.Type) {
+				panic(fmt.Sprintf("header %q does not map to a payload attribute", name)) // bug
+			}
 			attr = svcAtt
 		}
 		var hattr *expr.AttributeExpr
@@ -2641,8 +2642,13 @@ func (sds *ServicesData) extractHeaders(a *expr.MappedAttributeExpr, svcAtt *exp
 func (sds *ServicesData) extractCookies(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope) []*CookieData {
 	var cookies []*CookieData
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, _ *expr.AttributeExpr) error { // nolint: errcheck
-		var hattr *expr.AttributeExpr
-		if hattr = svcAtt.Find(name); hattr == nil {
+		hattr := svcAtt.Find(name)
+		if hattr == nil {
+			// Primitive payloads map the whole payload to a single cookie in
+			// which case the mapped name has no corresponding attribute.
+			if expr.IsObject(svcAtt.Type) {
+				panic(fmt.Sprintf("cookie %q does not map to a payload attribute", name)) // bug
+			}
 			hattr = svcAtt
 		}
 		hattr = makeHTTPType(hattr)

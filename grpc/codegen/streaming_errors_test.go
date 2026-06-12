@@ -118,8 +118,8 @@ func TestStreamingErrorComparison(t *testing.T) {
 	// DSL with both unary and streaming methods with errors
 	dsl := func() {
 		var CustomError = Type("CustomError", func() {
-			ErrorName("name", String, "error name")
-			Attribute("message", String, "error message")
+			ErrorName(1, "name", String, "error name")
+			Field(2, "message", String, "error message")
 			Required("name", "message")
 		})
 

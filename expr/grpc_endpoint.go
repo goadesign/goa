@@ -222,6 +222,13 @@ func (e *GRPCEndpointExpr) Validate() error {
 	// Validate errors
 	for _, er := range e.GRPCErrors {
 		verr.Merge(er.Validate())
+		// Custom object error types are rendered as protobuf messages so
+		// their fields must define field numbers, mirroring the payload and
+		// result checks above. Default ErrorResult errors travel in the gRPC
+		// status and need no tags.
+		if ee := e.MethodExpr.Error(er.Name); ee != nil && ee.Type != ErrorResult && IsObject(ee.Type) {
+			verr.Merge(validateRPCTags(AsObject(ee.Type), e))
+		}
 	}
 	return verr
 }
@@ -460,7 +467,7 @@ func validateMessage(msgAtt, serviceAtt *AttributeExpr, e *GRPCEndpointExpr, req
 		for _, nat := range *AsObject(msgAtt.Type) {
 			if a := serviceAtt.Find(nat.Name); a != nil {
 				msgFields.Set(nat.Name, a)
-				break
+				continue
 			}
 			verr.Add(e, "%s message attribute %q is not found in %s", msgKind, nat.Name, serviceKind)
 		}
