@@ -93,6 +93,11 @@ type (
 		UnionTypes []*service.UnionTypeData
 		// Scope initialized with all the server and client types.
 		Scope *codegen.NameScope
+		// bodies caches the shaped body attributes derived from the
+		// design expressions during analysis. Shaped bodies are detached
+		// copies: the analyze pass must never write them back onto the
+		// design expression tree.
+		bodies shapedBodies
 	}
 
 	// EndpointData contains the data used to render the code related to a
@@ -593,6 +598,19 @@ type (
 	// query string parameter, header or cookie. Its value is used in bug
 	// report messages.
 	httpElementKind string
+
+	// shapedBodies caches the detached body attributes computed from the
+	// design expressions: request and response bodies are shaped with
+	// makeHTTPType while streaming bodies are plain copies. Caching
+	// guarantees the shaping runs once per expression and that all the
+	// consumers share the same attribute instances, which keeps the
+	// example generator call sequence stable.
+	shapedBodies struct {
+		requests  map[*expr.HTTPEndpointExpr]*expr.AttributeExpr
+		streams   map[*expr.HTTPEndpointExpr]*expr.AttributeExpr
+		responses map[*expr.HTTPResponseExpr]*expr.AttributeExpr
+		errors    map[*expr.HTTPErrorExpr]*expr.AttributeExpr
+	}
 )
 
 const (
@@ -985,7 +1003,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	}
 
 	for _, a := range httpSvc.HTTPEndpoints {
-		collectUserTypes(a.Body.Type, func(ut expr.UserType) {
+		collectUserTypes(sd.bodies.request(a).Type, func(ut expr.UserType) {
 			if d := sds.attributeTypeData(ut, true, true, true, sd); d != nil {
 				sd.ServerBodyAttributeTypes = append(sd.ServerBodyAttributeTypes, d)
 			}
@@ -995,7 +1013,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		})
 
 		if a.MethodExpr.StreamingPayload.Type != expr.Empty {
-			collectUserTypes(a.StreamingBody.Type, func(ut expr.UserType) {
+			collectUserTypes(sd.bodies.streaming(a).Type, func(ut expr.UserType) {
 				if d := sds.attributeTypeData(ut, true, true, true, sd); d != nil {
 					sd.ServerBodyAttributeTypes = append(sd.ServerBodyAttributeTypes, d)
 				}
@@ -1007,7 +1025,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 
 		md := sd.Service.Method(a.Name())
 		for _, v := range a.Responses {
-			body := effectiveClientResponseBody(v.Body, a, md)
+			body := effectiveClientResponseBody(sd.bodies.response(v), a, md)
 			collectUserTypes(body.Type, func(ut expr.UserType) {
 				// NOTE: ServerBodyAttributeTypes for response body types are
 				// collected in buildResponseBodyType because we have to generate
@@ -1019,7 +1037,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		}
 
 		for _, v := range a.HTTPErrors {
-			collectUserTypes(v.Response.Body.Type, func(ut expr.UserType) {
+			collectUserTypes(sd.bodies.errorResponse(v).Type, func(ut expr.UserType) {
 				// NOTE: ServerBodyAttributeTypes for error response body types are
 				// collected in buildResponseBodyType because we have to generate
 				// body types for each view in a result type.
@@ -1033,19 +1051,19 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	unionByHash := make(map[string]*service.UnionTypeData)
 	seenUnionTypes := make(map[string]struct{})
 	for _, a := range httpSvc.HTTPEndpoints {
-		collectHTTPUnionTypes(a.Body, sd.Scope, unionByHash, seenUnionTypes)
+		collectHTTPUnionTypes(sd.bodies.request(a), sd.Scope, unionByHash, seenUnionTypes)
 
 		if a.MethodExpr.StreamingPayload.Type != expr.Empty {
-			collectHTTPUnionTypes(a.StreamingBody, sd.Scope, unionByHash, seenUnionTypes)
+			collectHTTPUnionTypes(sd.bodies.streaming(a), sd.Scope, unionByHash, seenUnionTypes)
 		}
 
 		md := sd.Service.Method(a.Name())
 		for _, v := range a.Responses {
-			collectHTTPUnionTypes(effectiveClientResponseBody(v.Body, a, md), sd.Scope, unionByHash, seenUnionTypes)
+			collectHTTPUnionTypes(effectiveClientResponseBody(sd.bodies.response(v), a, md), sd.Scope, unionByHash, seenUnionTypes)
 		}
 
 		for _, v := range a.HTTPErrors {
-			collectHTTPUnionTypes(v.Response.Body, sd.Scope, unionByHash, seenUnionTypes)
+			collectHTTPUnionTypes(sd.bodies.errorResponse(v), sd.Scope, unionByHash, seenUnionTypes)
 		}
 	}
 
@@ -1110,15 +1128,76 @@ func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[string]struct{}) *e
 	return att
 }
 
+// request returns the shaped HTTP request body for the given endpoint. The
+// returned attribute is a detached copy of the design body: aliased user
+// types are flattened and marshal tag meta may be added to it without
+// affecting the design expression tree.
+func (b *shapedBodies) request(e *expr.HTTPEndpointExpr) *expr.AttributeExpr {
+	if att, ok := b.requests[e]; ok {
+		return att
+	}
+	if b.requests == nil {
+		b.requests = make(map[*expr.HTTPEndpointExpr]*expr.AttributeExpr)
+	}
+	att := makeHTTPType(e.Body)
+	b.requests[e] = att
+	return att
+}
+
+// streaming returns the streaming request body for the given endpoint. The
+// returned attribute is a detached copy of the design body so that marshal
+// tag meta may be added to it without affecting the design expression tree.
+// Streaming bodies are not shaped with makeHTTPType: aliased user types have
+// never been flattened in streaming bodies.
+func (b *shapedBodies) streaming(e *expr.HTTPEndpointExpr) *expr.AttributeExpr {
+	if att, ok := b.streams[e]; ok {
+		return att
+	}
+	if b.streams == nil {
+		b.streams = make(map[*expr.HTTPEndpointExpr]*expr.AttributeExpr)
+	}
+	att := expr.DupAtt(e.StreamingBody)
+	b.streams[e] = att
+	return att
+}
+
+// response returns the shaped HTTP body for the given success response, see
+// request.
+func (b *shapedBodies) response(resp *expr.HTTPResponseExpr) *expr.AttributeExpr {
+	if att, ok := b.responses[resp]; ok {
+		return att
+	}
+	if b.responses == nil {
+		b.responses = make(map[*expr.HTTPResponseExpr]*expr.AttributeExpr)
+	}
+	att := makeHTTPType(resp.Body)
+	b.responses[resp] = att
+	return att
+}
+
+// errorResponse returns the shaped HTTP body for the given error response,
+// see request.
+func (b *shapedBodies) errorResponse(v *expr.HTTPErrorExpr) *expr.AttributeExpr {
+	if att, ok := b.errors[v]; ok {
+		return att
+	}
+	if b.errors == nil {
+		b.errors = make(map[*expr.HTTPErrorExpr]*expr.AttributeExpr)
+	}
+	att := makeHTTPType(v.Response.Body)
+	b.errors[v] = att
+	return att
+}
+
 // buildPayloadData returns the data structure used to describe the endpoint
 // payload including the HTTP request details. It also returns the user types
 // used by the request body type recursively if any.
 func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceData) *PayloadData {
-	e.Body = makeHTTPType(e.Body)
+	httpBody := sd.bodies.request(e)
 	var (
 		payload    = e.MethodExpr.Payload
 		svc        = sd.Service
-		body       = e.Body.Type
+		body       = httpBody.Type
 		ep         = svc.Method(e.MethodExpr.Name)
 		httpsvrctx = httpContext(sd.Scope, true, true)
 		httpclictx = httpContext(sd.Scope, true, false)
@@ -1130,8 +1209,8 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 	)
 	{
 		var (
-			serverBodyData = sds.buildRequestBodyType(e.Body, payload, e, true, sd)
-			clientBodyData = sds.buildRequestBodyType(e.Body, payload, e, false, sd)
+			serverBodyData = sds.buildRequestBodyType(httpBody, payload, e, true, sd)
+			clientBodyData = sds.buildRequestBodyType(httpBody, payload, e, false, sd)
 			paramsData     = sds.extractPathParams(e.PathParams(), payload, sd.Scope)
 			queryData      = sds.extractQueryParams(e.QueryParams(), payload, sd.Scope)
 			headersData    = sds.extractHeaders(e.Headers, payload, svcctx, sd.Scope)
@@ -1211,11 +1290,11 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 				}
 			}
 		}
-		if e.Body.Type != expr.Empty {
+		if body != expr.Empty {
 			// If design uses Body("name") syntax we need to use the
 			// corresponding attribute in the result type for body
 			// transformation.
-			if o, ok := e.Body.Meta["origin:attribute"]; ok {
+			if o, ok := httpBody.Meta["origin:attribute"]; ok {
 				origin = o[0]
 				if !payload.IsRequired(o[0]) {
 					mustHaveBody = false
@@ -1280,11 +1359,11 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 				AttributeData: &AttributeData{
 					Name:     "body",
 					VarName:  "body",
-					TypeName: sd.Scope.GoTypeName(e.Body),
-					TypeRef:  sd.Scope.GoTypeRef(e.Body),
+					TypeName: sd.Scope.GoTypeName(httpBody),
+					TypeRef:  sd.Scope.GoTypeRef(httpBody),
 					Type:     body,
 					Required: true,
-					Example:  e.Body.Example(sds.Root.API.ExampleGenerator),
+					Example:  httpBody.Example(sds.Root.API.ExampleGenerator),
 					Validate: svcode,
 				},
 			})
@@ -1293,11 +1372,11 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 				AttributeData: &AttributeData{
 					Name:     "body",
 					VarName:  "body",
-					TypeName: sd.Scope.GoTypeNameWithDefaults(e.Body),
-					TypeRef:  sd.Scope.GoTypeRefWithDefaults(e.Body),
+					TypeName: sd.Scope.GoTypeNameWithDefaults(httpBody),
+					TypeRef:  sd.Scope.GoTypeRefWithDefaults(httpBody),
 					Type:     body,
 					Required: true,
-					Example:  e.Body.Example(sds.Root.API.ExampleGenerator),
+					Example:  httpBody.Example(sds.Root.API.ExampleGenerator),
 					Validate: cvcode,
 				},
 			})
@@ -1405,7 +1484,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		if body != expr.Empty {
 			// If design uses Body("name") syntax then need to use payload
 			// attribute to transform.
-			if o, ok := e.Body.Meta["origin:attribute"]; ok {
+			if o, ok := httpBody.Meta["origin:attribute"]; ok {
 				origin = o[0]
 				pAtt = expr.AsObject(payload.Type).Attribute(origin)
 				pointer = !payload.IsRequired(o[0]) && expr.IsPrimitive(pAtt.Type)
@@ -1414,7 +1493,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			var (
 				helpers []*codegen.TransformFunctionData
 			)
-			serverCode, helpers, err = unmarshal(e.Body, pAtt, "body", httpsvrctx, svcctx)
+			serverCode, helpers, err = unmarshal(httpBody, pAtt, "body", httpsvrctx, svcctx)
 			if err == nil {
 				sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
 			}
@@ -1422,7 +1501,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			// body is used by the CLI tool to build the payload given to the
 			// client endpoint. It differs because the body type there does not
 			// use pointers for all fields (no need to validate).
-			clientCode, helpers, err = marshal(e.Body, pAtt, "body", "v", httpclictx, svcctx)
+			clientCode, helpers, err = marshal(httpBody, pAtt, "body", "v", httpclictx, svcctx)
 			if err == nil {
 				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 			}
@@ -1590,7 +1669,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 		}
 		notag := -1
 		for i, resp := range e.Responses {
-			resp.Body = makeHTTPType(resp.Body)
+			respBody := sd.bodies.response(resp)
 			if resp.Tag[0] == "" {
 				if notag > -1 {
 					continue // we don't want more than one response with no tag
@@ -1605,18 +1684,18 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 				init           *InitData
 				origin         string
 				mustValidate   bool
-				clientRespBody = resp.Body
+				clientRespBody = respBody
 
 				resAttr = result
 			)
 			{
 				headersData = sds.extractHeaders(resp.Headers, result, svcctx, scope)
 				cookiesData = sds.extractCookies(resp.Cookies, result, svcctx, scope)
-				if resp.Body.Type != expr.Empty {
+				if respBody.Type != expr.Empty {
 					// If design uses Body("name") syntax we need to use the
 					// corresponding attribute in the result type for body
 					// transformation.
-					if o, ok := resp.Body.Meta["origin:attribute"]; ok {
+					if o, ok := respBody.Meta["origin:attribute"]; ok {
 						origin = o[0]
 						resAttr = expr.AsObject(resAttr.Type).Attribute(origin)
 					}
@@ -1627,14 +1706,14 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 					if origin != "" {
 						// Response body is explicitly set to an attribute in the method
 						// result type. No need to do any view-based projections server side.
-						if sbd := sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &vname, sd); sbd != nil {
+						if sbd := sds.buildResponseBodyType(respBody, result, md.ResultLoc, e, true, &vname, sd); sbd != nil {
 							serverBodyData = append(serverBodyData, sbd)
 						}
 					} else if v, ok := e.MethodExpr.Result.Meta.Last(expr.ViewMetaKey); ok {
 						// Design explicitly sets the view to render the result.
 						// We generate only one server body type which will be rendered
 						// using the specified view.
-						if sbd := sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &v, sd); sbd != nil {
+						if sbd := sds.buildResponseBodyType(respBody, result, md.ResultLoc, e, true, &v, sd); sbd != nil {
 							serverBodyData = append(serverBodyData, sbd)
 						}
 					} else {
@@ -1647,22 +1726,22 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 						// attributes defined in the view in the response (NOTE: a required
 						// attribute in the result type may not be present in all its views)
 						for _, view := range md.ViewedResult.Views {
-							if sbd := sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, &view.Name, sd); sbd != nil {
+							if sbd := sds.buildResponseBodyType(respBody, result, md.ResultLoc, e, true, &view.Name, sd); sbd != nil {
 								serverBodyData = append(serverBodyData, sbd)
 							}
 						}
 					}
 					if clientView != "" {
-						clientRespBody = effectiveClientResponseBody(resp.Body, e, md)
-						clientBodyData = sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, false, &clientView, sd)
+						clientRespBody = effectiveClientResponseBody(respBody, e, md)
+						clientBodyData = sds.buildResponseBodyType(respBody, result, md.ResultLoc, e, false, &clientView, sd)
 					} else {
-						clientBodyData = sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, false, &vname, sd)
+						clientBodyData = sds.buildResponseBodyType(respBody, result, md.ResultLoc, e, false, &vname, sd)
 					}
 				} else {
-					if sbd := sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, true, nil, sd); sbd != nil {
+					if sbd := sds.buildResponseBodyType(respBody, result, md.ResultLoc, e, true, nil, sd); sbd != nil {
 						serverBodyData = append(serverBodyData, sbd)
 					}
-					clientBodyData = sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, false, nil, sd)
+					clientBodyData = sds.buildResponseBodyType(respBody, result, md.ResultLoc, e, false, nil, sd)
 				}
 				if clientBodyData != nil && clientBodyData.Def != "" {
 					sd.ClientTypeNames[clientBodyData.Name] = struct{}{}
@@ -1831,10 +1910,10 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 
 	data := make(map[string][]*ErrorData)
 	for _, v := range e.HTTPErrors {
-		v.Response.Body = makeHTTPType(v.Response.Body)
+		respBody := sd.bodies.errorResponse(v)
 		var (
 			init *InitData
-			body = v.Response.Body.Type
+			body = respBody.Type
 		)
 
 		pkg := ep.ErrorLocs[v.Name].PackageNameOrDefault(svc.PkgName)
@@ -1865,7 +1944,7 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 				}
 				args = append(args, &InitArgData{
 					Ref:           ref,
-					AttributeData: &AttributeData{Name: "body", VarName: "body", TypeRef: sd.Scope.GoTypeRef(v.Response.Body)},
+					AttributeData: &AttributeData{Name: "body", VarName: "body", TypeRef: sd.Scope.GoTypeRef(respBody)},
 				})
 			}
 			for _, h := range headers {
@@ -1884,13 +1963,13 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 				eAtt := v.AttributeExpr
 				// If design uses Body("name") syntax then need to use payload
 				// attribute to transform.
-				if o, ok := v.Response.Body.Meta["origin:attribute"]; ok {
+				if o, ok := respBody.Meta["origin:attribute"]; ok {
 					origin = o[0]
 					eAtt = expr.AsObject(v.ErrorExpr.Type).Attribute(origin)
 				}
 
 				var helpers []*codegen.TransformFunctionData
-				code, helpers, err = unmarshal(v.Response.Body, eAtt, "body", httpclictx, errctx)
+				code, helpers, err = unmarshal(respBody, eAtt, "body", httpclictx, errctx)
 				if err == nil {
 					sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 				}
@@ -1930,10 +2009,10 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 			)
 			{
 				errorLoc := ep.ErrorLocs[v.ErrorExpr.Name]
-				if sbd := sds.buildResponseBodyType(v.Response.Body, v.AttributeExpr, errorLoc, e, true, nil, sd); sbd != nil {
+				if sbd := sds.buildResponseBodyType(respBody, v.AttributeExpr, errorLoc, e, true, nil, sd); sbd != nil {
 					serverBodyData = append(serverBodyData, sbd)
 				}
-				clientBodyData = sds.buildResponseBodyType(v.Response.Body, v.AttributeExpr, errorLoc, e, false, nil, sd)
+				clientBodyData = sds.buildResponseBodyType(respBody, v.AttributeExpr, errorLoc, e, false, nil, sd)
 				if clientBodyData != nil {
 					if clientBodyData.Def != "" {
 						sd.ClientTypeNames[clientBodyData.Name] = struct{}{}

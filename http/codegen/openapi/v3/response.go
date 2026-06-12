@@ -64,7 +64,7 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 				Schema:     bodies[r.StatusCode][0],
 				Extensions: openapi.ExtensionsFromExpr(r.Body.Meta),
 			}
-			initExamples(content[ct], r.Body, rand)
+			initExamples(content[ct], staticViewBody(r), rand)
 		} else if r.StatusCode != expr.StatusNoContent &&
 			isSkipResponseBodyEncodeDecode(r.Parent) {
 			// When SkipResponseBodyEncodeDecode is declared, the response type
@@ -93,12 +93,14 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 
 // responseContentType computes the content type of the given response: the
 // explicitly defined content type if any, the content type of the response
-// result type otherwise, defaulting to application/json.
+// result type otherwise, defaulting to application/json. The result type is
+// the view-projected one when the design pins the response to a single view;
+// projected result types carry no content type.
 func responseContentType(r *expr.HTTPResponseExpr) string {
 	if r.ContentType != "" {
 		return r.ContentType
 	}
-	if rt, ok := r.Body.Type.(*expr.ResultTypeExpr); ok && rt.ContentType != "" {
+	if rt, ok := staticViewBody(r).Type.(*expr.ResultTypeExpr); ok && rt.ContentType != "" {
 		return rt.ContentType
 	}
 	return "application/json"

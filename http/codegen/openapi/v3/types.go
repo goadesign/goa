@@ -138,21 +138,7 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 				resps = append(resps, er.Response)
 			}
 			for _, resp := range resps {
-				var view string
-				if v, ok := resp.Body.Meta.Last(expr.ViewMetaKey); ok {
-					view = v
-				}
-				body := resp.Body
-				if view != "" {
-					// Static view, dup and project
-					rt := expr.Dup(body.Type).(*expr.ResultTypeExpr)
-					rt, err := expr.Project(rt, view)
-					if err != nil {
-						panic(fmt.Sprintf("failed to project %q to view %q", body.Type.Name(), view))
-					}
-					body.Type = rt
-				}
-				js := sf.schemafy(body)
+				js := sf.schemafy(staticViewBody(resp))
 				res[resp.StatusCode] = append(res[resp.StatusCode], js)
 			}
 			eb := &EndpointBodies{RequestBody: req, ResponseBodies: res}
@@ -207,6 +193,24 @@ func (sf *schemafier) buildSSEItemSchema(e *expr.HTTPEndpointExpr) *openapi.Sche
 		Properties: props,
 		Required:   []string{"data"},
 	}
+}
+
+// staticViewBody returns the response body attribute used to compute the
+// OpenAPI schema and examples. When the design pins the response to a single
+// view the result type is projected onto a detached copy of the body: the
+// design expression tree is read-only for the generators.
+func staticViewBody(resp *expr.HTTPResponseExpr) *expr.AttributeExpr {
+	view, ok := resp.Body.Meta.Last(expr.ViewMetaKey)
+	if !ok || view == "" {
+		return resp.Body
+	}
+	body := expr.DupAtt(resp.Body)
+	rt, err := expr.Project(body.Type.(*expr.ResultTypeExpr), view)
+	if err != nil {
+		panic(fmt.Sprintf("failed to project %q to view %q", body.Type.Name(), view)) // bug
+	}
+	body.Type = rt
+	return body
 }
 
 func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi.Schema {
