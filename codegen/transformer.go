@@ -61,6 +61,10 @@ type (
 		SourceCtx, TargetCtx *AttributeContext
 		// Prefix is the transform function helper prefix.
 		Prefix string
+		// Hooks are optional generator specific extension points
+		// consulted by the transform engine. Nil selects the engine
+		// defaults.
+		Hooks *TransformHooks
 	}
 
 	// TransformFunctionData describes a helper function used to transform

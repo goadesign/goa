@@ -1,10 +1,8 @@
 switch val := {{ .SourceVar }}.(type) {
 {{- range .Cases }}
-case {{ .sourceValueTypeRef }}: {
-	{{- $field := (print "val." .sourceFieldName) }}
-	{{- $tmp := (convertType .sourceAttr .targetAttr false false $field $.TransformAttrs) -}}
+case {{ .SourceValueTypeRef }}: {
 	u := {{ $.TargetVar }}
-	u.Set{{ .targetFieldName }}({{ $tmp }})
+	u.Set{{ .TargetFieldName }}({{ .ConvertedValue }})
 	{{ $.TargetVar }} = u
 }
 {{- end }}
