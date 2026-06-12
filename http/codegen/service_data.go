@@ -73,17 +73,15 @@ type (
 		// attributes in the client code.
 		ClientBodyAttributeTypes []*TypeData
 		// ServerTypeNames records the user type names used to define
-		// the endpoint request and response bodies for server code.
-		// The type name is used as the key and a bool as the value
-		// which if true indicates that the type has been generated
-		// in the server package.
-		ServerTypeNames map[string]bool
+		// the endpoint request and response bodies for server code. It
+		// is populated once during analysis and acts as a
+		// deduplication set; file generators must never write to it.
+		ServerTypeNames map[string]struct{}
 		// ClientTypeNames records the user type names used to define
-		// the endpoint request and response bodies for client code.
-		// The type name is used as the key and a bool as the value
-		// which if true indicates that the type has been generated
-		// in the client package.
-		ClientTypeNames map[string]bool
+		// the endpoint request and response bodies for client code. It
+		// is populated once during analysis and acts as a
+		// deduplication set; file generators must never write to it.
+		ClientTypeNames map[string]struct{}
 		// ServerTransformHelpers is the list of transform functions
 		// required by the various server side constructors.
 		ServerTransformHelpers []*codegen.TransformFunctionData
@@ -689,8 +687,8 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		MountServer:      "Mount",
 		ServerService:    "Service",
 		ClientStruct:     "Client",
-		ServerTypeNames:  make(map[string]bool),
-		ClientTypeNames:  make(map[string]bool),
+		ServerTypeNames:  make(map[string]struct{}),
+		ClientTypeNames:  make(map[string]struct{}),
 		Scope:            scope,
 	}
 
@@ -798,11 +796,23 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 					if err != nil {
 						panic(err)
 					}
+					// The request builder construction below renames the
+					// client-side arguments in place (VarName, Ref,
+					// IsAliased and ServiceTypeRef) so the client args
+					// must not alias the server args.
+					clientArgs := make([]*InitArgData, len(initArgs))
+					for j, arg := range initArgs {
+						attCopy := *arg.AttributeData
+						clientArgs[j] = &InitArgData{
+							AttributeData: &attCopy,
+							Ref:           arg.Ref,
+						}
+					}
 					init = &InitData{
 						Name:           name,
 						Description:    fmt.Sprintf("%s returns the URL path to the %s service %s HTTP endpoint. ", name, svc.Name, method.Name),
 						ServerArgs:     initArgs,
-						ClientArgs:     initArgs,
+						ClientArgs:     clientArgs,
 						ReturnTypeName: "string",
 						ReturnTypeRef:  "string",
 						ServerCode:     buffer.String(),
@@ -1168,8 +1178,8 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			queryData = append(queryData, mapQueryParam)
 		}
 		if serverBodyData != nil {
-			sd.ServerTypeNames[serverBodyData.Name] = false
-			sd.ClientTypeNames[serverBodyData.Name] = false
+			sd.ServerTypeNames[serverBodyData.Name] = struct{}{}
+			sd.ClientTypeNames[serverBodyData.Name] = struct{}{}
 		}
 		for _, p := range cookiesData {
 			if p.Required || p.Validate != "" || needConversion(p.Type) {
@@ -1580,7 +1590,6 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 		}
 		notag := -1
 		for i, resp := range e.Responses {
-			resp.Body = expr.DupAtt(resp.Body)
 			resp.Body = makeHTTPType(resp.Body)
 			if resp.Tag[0] == "" {
 				if notag > -1 {
@@ -1656,7 +1665,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 					clientBodyData = sds.buildResponseBodyType(resp.Body, result, md.ResultLoc, e, false, nil, sd)
 				}
 				if clientBodyData != nil && clientBodyData.Def != "" {
-					sd.ClientTypeNames[clientBodyData.Name] = false
+					sd.ClientTypeNames[clientBodyData.Name] = struct{}{}
 				}
 				for _, h := range headersData {
 					if h.Validate != "" || h.Required || needConversion(h.Type) {
@@ -1927,7 +1936,7 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 				clientBodyData = sds.buildResponseBodyType(v.Response.Body, v.AttributeExpr, errorLoc, e, false, nil, sd)
 				if clientBodyData != nil {
 					if clientBodyData.Def != "" {
-						sd.ClientTypeNames[clientBodyData.Name] = false
+						sd.ClientTypeNames[clientBodyData.Name] = struct{}{}
 					}
 					clientBodyData.Description = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body for the %q error.",
 						clientBodyData.VarName, svc.Name, e.Name(), v.Name)
@@ -2180,9 +2189,9 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, lo
 			}
 			body.Type = rt
 			if svr {
-				sd.ServerTypeNames[rt.Name()] = false
+				sd.ServerTypeNames[rt.Name()] = struct{}{}
 			} else {
-				sd.ClientTypeNames[rt.Name()] = false
+				sd.ClientTypeNames[rt.Name()] = struct{}{}
 			}
 		}
 	}
@@ -2243,7 +2252,7 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, lo
 		desc = body.Description
 	}
 	if svr {
-		sd.ServerTypeNames[name] = false
+		sd.ServerTypeNames[name] = struct{}{}
 		// We collect the server body types need to generate a response body type
 		// here because the response body type would be different from the actual
 		// type in the HTTPResponseExpr since we projected the body type above.
@@ -2727,7 +2736,7 @@ func (sds *ServicesData) attributeTypeData(ut expr.UserType, req, ptr, server bo
 	if _, ok := seen[ut.Name()]; ok {
 		return nil
 	}
-	seen[ut.Name()] = false
+	seen[ut.Name()] = struct{}{}
 
 	var (
 		name        string

@@ -173,8 +173,8 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 		}
 		cliPayload = sds.buildRequestBodyType(e.StreamingBody, e.MethodExpr.StreamingPayload, e, false, sd)
 		if cliPayload != nil {
-			sd.ClientTypeNames[cliPayload.Name] = false
-			sd.ServerTypeNames[cliPayload.Name] = false
+			sd.ClientTypeNames[cliPayload.Name] = struct{}{}
+			sd.ServerTypeNames[cliPayload.Name] = struct{}{}
 		}
 		if e.MethodExpr.Stream == expr.ClientStreamKind {
 			svrSendDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection and closes the connection.", md.ServerStream.SendName, svrSendTypeName, md.Name)
