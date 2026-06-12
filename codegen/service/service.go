@@ -187,7 +187,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		Data:   svc,
 		FuncMap: map[string]any{
 			"hasJSONRPCStreaming": hasJSONRPCStreaming,
-			"isJSONRPCWebSocket":  func(sd *Data) bool { return hasJSONRPCStreaming(sd) && !isJSONRPCSSE(services, service) },
+			"isJSONRPCWebSocket":  hasJSONRPCWebSocket,
 			"streamInterfaceFor":  streamInterfaceFor,
 			"dedupeByResult":      dedupeByResult,
 		},
@@ -405,22 +405,14 @@ func hasJSONRPCStreaming(sd *Data) bool {
 	return false
 }
 
-// isJSONRPCSSE returns true if the service uses SSE for JSON-RPC streaming.
-// This requires checking the HTTP endpoints in the root expression.
-func isJSONRPCSSE(sd *ServicesData, svc *expr.ServiceExpr) bool {
-	// Check if service has JSON-RPC
-	httpSvc := sd.Root.API.JSONRPC.HTTPExpr.Service(svc.Name)
-	if httpSvc == nil {
-		return false
-	}
-
-	// Check if any JSON-RPC streaming endpoint uses SSE
-	for _, e := range httpSvc.HTTPEndpoints {
-		if e.MethodExpr.IsStreaming() && e.IsJSONRPC() && e.SSE != nil {
+// hasJSONRPCWebSocket returns true if the service has a JSON-RPC streaming
+// endpoint that uses the WebSocket transport.
+func hasJSONRPCWebSocket(sd *Data) bool {
+	for _, m := range sd.Methods {
+		if m.IsJSONRPCWebSocket {
 			return true
 		}
 	}
-
 	return false
 }
 

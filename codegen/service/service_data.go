@@ -902,7 +902,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	unionByHash := make(map[string]*UnionTypeData)
 	seen = make(map[string]struct{})
 	collectUnions := func(att *expr.AttributeExpr, loc *codegen.Location) {
-		collectUnionTypes(att, scope, loc, unionByHash, seen)
+		collectUnionTypes(att, scope, loc, unionByHash, seen, false)
 	}
 	for _, t := range types {
 		collectUnions(&expr.AttributeExpr{Type: t.Type}, t.Loc)
@@ -1064,8 +1064,10 @@ func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[str
 
 // collectUnionTypes traverses the attribute to gather all union sum-type
 // definitions referenced by the service. It records each union by its hash to
-// avoid generating duplicate types.
-func collectUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, loc *codegen.Location, unions map[string]*UnionTypeData, seen map[string]struct{}) {
+// avoid generating duplicate types. When view is true the provided location is
+// used for all nested user types so that unions are generated in the views
+// package and refer to view-local types (preventing import cycles).
+func collectUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, loc *codegen.Location, unions map[string]*UnionTypeData, seen map[string]struct{}, view bool) {
 	if att == nil || att.Type == expr.Empty {
 		return
 	}
@@ -1075,121 +1077,61 @@ func collectUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, loc *c
 			return
 		}
 		seen[dt.ID()] = struct{}{}
-		collectUnionTypes(dt.Attribute(), scope, codegen.UserTypeLocation(dt), unions, seen)
+		typeLoc := loc
+		if !view {
+			typeLoc = codegen.UserTypeLocation(dt)
+		}
+		collectUnionTypes(dt.Attribute(), scope, typeLoc, unions, seen, view)
 	case *expr.Object:
 		for _, nat := range sortedNamedAttributes(*dt) {
-			collectUnionTypes(nat.Attribute, scope, loc, unions, seen)
+			collectUnionTypes(nat.Attribute, scope, loc, unions, seen, view)
 		}
 	case *expr.Array:
-		collectUnionTypes(dt.ElemType, scope, loc, unions, seen)
+		collectUnionTypes(dt.ElemType, scope, loc, unions, seen, view)
 	case *expr.Map:
-		collectUnionTypes(dt.KeyType, scope, loc, unions, seen)
-		collectUnionTypes(dt.ElemType, scope, loc, unions, seen)
+		collectUnionTypes(dt.KeyType, scope, loc, unions, seen, view)
+		collectUnionTypes(dt.ElemType, scope, loc, unions, seen, view)
 	case *expr.Union:
 		hash := dt.Hash()
 		if _, ok := unions[hash]; !ok {
-			unions[hash] = buildUnionTypeData(dt, scope, loc)
+			unions[hash] = buildUnionTypeData(dt, scope, loc, view)
 		}
 		for _, nat := range dt.Values {
-			collectUnionTypes(nat.Attribute, scope, loc, unions, seen)
+			collectUnionTypes(nat.Attribute, scope, loc, unions, seen, view)
 		}
 	}
 }
 
 // buildUnionTypeData creates the data needed to generate a sum-type union
-// struct, its discriminator kind, and branch metadata.
-func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Location) *UnionTypeData {
+// struct, its discriminator kind, and branch metadata. When view is true the
+// union is generated in the views package: field types are computed using the
+// view scope and are always emitted unqualified so they refer to the
+// view-local projected types.
+func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Location, view bool) *UnionTypeData {
 	att := &expr.AttributeExpr{Type: u}
 	name := scope.GoTypeName(att)
 	kindName := scope.Unique(name + "Kind")
-	unionPkg := loc.PackageName()
+	var unionPkg string
+	if !view {
+		unionPkg = loc.PackageName()
+	}
 
 	fields := make([]*UnionFieldData, len(u.Values))
 	for i, nat := range u.Values {
 		fieldName := codegen.Goify(nat.Name, true)
 		var pkg string
-		if tloc := codegen.UserTypeLocation(nat.Attribute.Type); tloc != nil {
-			pkg = tloc.PackageName()
-			if pkg == unionPkg {
-				pkg = ""
+		if !view {
+			if tloc := codegen.UserTypeLocation(nat.Attribute.Type); tloc != nil {
+				pkg = tloc.PackageName()
+				if pkg == unionPkg {
+					pkg = ""
+				}
 			}
 		}
 		fieldType := scope.GoFullTypeRef(nat.Attribute, pkg)
 		primitiveAliasType, hasPrimitiveAlias := primitiveAliasGoType(nat.Attribute.Type)
 		_, isUserType := nat.Attribute.Type.(expr.UserType)
 		emitPrimitiveAlias := hasPrimitiveAlias && !isUserType && pkg == ""
-		kindConst := kindName + codegen.Goify(nat.Name, true)
-		fields[i] = &UnionFieldData{
-			Name:               nat.Name,
-			KindConst:          kindConst,
-			FieldName:          fieldName,
-			FieldType:          fieldType,
-			EmitPrimitiveAlias: emitPrimitiveAlias,
-			PrimitiveAliasType: primitiveAliasType,
-			TypeTag:            nat.Name,
-		}
-	}
-
-	return &UnionTypeData{
-		Name:     name,
-		KindName: kindName,
-		Fields:   fields,
-		Loc:      loc,
-		TypeKey:  u.GetTypeKey(),
-		ValueKey: u.GetValueKey(),
-	}
-}
-
-// collectViewUnionTypes traverses the attribute to gather all union sum-type
-// definitions referenced by view-projected types. It always uses the provided
-// location for all nested user types so that unions are generated in the views
-// package and refer to view-local types (preventing import cycles).
-func collectViewUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, loc *codegen.Location, unions map[string]*UnionTypeData, seen map[string]struct{}) {
-	if att == nil || att.Type == expr.Empty {
-		return
-	}
-	switch dt := att.Type.(type) {
-	case expr.UserType:
-		if _, ok := seen[dt.ID()]; ok {
-			return
-		}
-		seen[dt.ID()] = struct{}{}
-		collectViewUnionTypes(dt.Attribute(), scope, loc, unions, seen)
-	case *expr.Object:
-		for _, nat := range sortedNamedAttributes(*dt) {
-			collectViewUnionTypes(nat.Attribute, scope, loc, unions, seen)
-		}
-	case *expr.Array:
-		collectViewUnionTypes(dt.ElemType, scope, loc, unions, seen)
-	case *expr.Map:
-		collectViewUnionTypes(dt.KeyType, scope, loc, unions, seen)
-		collectViewUnionTypes(dt.ElemType, scope, loc, unions, seen)
-	case *expr.Union:
-		hash := dt.Hash()
-		if _, ok := unions[hash]; !ok {
-			unions[hash] = buildViewUnionTypeData(dt, scope, loc)
-		}
-		for _, nat := range dt.Values {
-			collectViewUnionTypes(nat.Attribute, scope, loc, unions, seen)
-		}
-	}
-}
-
-// buildViewUnionTypeData creates the data needed to generate a sum-type union
-// in the views package. Field types are computed using the view scope and are
-// always emitted unqualified so they refer to the view-local projected types.
-func buildViewUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Location) *UnionTypeData {
-	att := &expr.AttributeExpr{Type: u}
-	name := scope.GoTypeName(att)
-	kindName := scope.Unique(name + "Kind")
-
-	fields := make([]*UnionFieldData, len(u.Values))
-	for i, nat := range u.Values {
-		fieldName := codegen.Goify(nat.Name, true)
-		fieldType := scope.GoTypeRef(nat.Attribute)
-		primitiveAliasType, hasPrimitiveAlias := primitiveAliasGoType(nat.Attribute.Type)
-		_, isUserType := nat.Attribute.Type.(expr.UserType)
-		emitPrimitiveAlias := hasPrimitiveAlias && !isUserType
 		kindConst := kindName + codegen.Goify(nat.Name, true)
 		fields[i] = &UnionFieldData{
 			Name:               nat.Name,
@@ -1882,8 +1824,8 @@ func buildProjectedType(projected, att *expr.AttributeExpr, viewspkg string, sco
 		pt      = projected.Type.(expr.UserType)
 	)
 	if _, isrt := pt.(*expr.ResultTypeExpr); isrt {
-		typeInits = buildTypeInits(projected, att, viewspkg, scope, viewScope)
-		projections = buildProjections(projected, att, viewspkg, scope, viewScope)
+		typeInits = buildViewConversions(projected, att, viewspkg, scope, viewScope, true)
+		projections = buildViewConversions(projected, att, viewspkg, scope, viewScope, false)
 		views = buildViews(att.Type.(*expr.ResultTypeExpr), viewScope)
 	}
 	validations := buildValidations(projected, viewScope)
@@ -2065,10 +2007,16 @@ func wrapProjected(projected expr.UserType) expr.UserType {
 	}
 }
 
-// buildTypeInits builds the data to generate the constructor code to
-// initialize a result type from a projected type.
-func buildTypeInits(projected, att *expr.AttributeExpr, viewspkg string, scope, viewScope *codegen.NameScope) []*InitData {
-	prt := projected.Type.(*expr.ResultTypeExpr)
+// buildViewConversions builds the data to generate the constructor code that
+// converts between a result type and its projected type, one constructor per
+// view. When toResult is true the constructors initialize the result type from
+// the projected type, otherwise they project the result type to the projected
+// type based on the view.
+func buildViewConversions(projected, att *expr.AttributeExpr, viewspkg string, scope, viewScope *codegen.NameScope, toResult bool) []*InitData {
+	vrt := att.Type.(*expr.ResultTypeExpr)
+	if toResult {
+		vrt = projected.Type.(*expr.ResultTypeExpr)
+	}
 	pobj := expr.AsObject(projected.Type)
 	parr := expr.AsArray(projected.Type)
 	if parr != nil {
@@ -2076,10 +2024,8 @@ func buildTypeInits(projected, att *expr.AttributeExpr, viewspkg string, scope, 
 		pobj = expr.AsObject(parr.ElemType.Type)
 	}
 
-	// For every view defined in the result type, build a constructor function
-	// to create the result type from a projected type based on the view.
-	init := make([]*InitData, 0, len(prt.Views))
-	for _, view := range prt.Views {
+	init := make([]*InitData, 0, len(vrt.Views))
+	for _, view := range vrt.Views {
 		var typ expr.DataType
 		obj := &expr.Object{}
 		walkViewAttrs(pobj, view, func(name string, att, _ *expr.AttributeExpr) {
@@ -2087,113 +2033,76 @@ func buildTypeInits(projected, att *expr.AttributeExpr, viewspkg string, scope, 
 		})
 		typ = obj
 		if parr != nil {
+			ename := parr.ElemType.Type.Name()
+			if toResult {
+				ename = scope.GoTypeName(parr.ElemType)
+			}
 			typ = &expr.Array{ElemType: &expr.AttributeExpr{
 				Type: &expr.ResultTypeExpr{
 					UserTypeExpr: &expr.UserTypeExpr{
 						AttributeExpr: &expr.AttributeExpr{Type: obj},
-						TypeName:      scope.GoTypeName(parr.ElemType),
+						TypeName:      ename,
 					},
 				},
 			}}
 		}
-		src := &expr.AttributeExpr{
+		wname := projected.Type.Name()
+		if toResult {
+			wname = scope.GoTypeName(projected)
+		}
+		// viewed is the projected type narrowed down to the view attributes.
+		viewed := &expr.AttributeExpr{
 			Type: &expr.ResultTypeExpr{
 				UserTypeExpr: &expr.UserTypeExpr{
 					AttributeExpr: &expr.AttributeExpr{Type: typ},
-					TypeName:      scope.GoTypeName(projected),
+					TypeName:      wname,
 				},
-				Views:      prt.Views,
-				Identifier: prt.Identifier,
+				Views:      vrt.Views,
+				Identifier: vrt.Identifier,
 			},
 		}
-
-		srcCtx := projectedTypeContext(viewspkg, true, viewScope)
-		tgtCtx := typeContext(scope)
-		resvar := scope.GoTypeName(att)
-		name := "new" + resvar
-		if view.Name != expr.DefaultView {
-			name += codegen.Goify(view.Name, true)
-		}
-		code, helpers := buildConstructorCode(src, att, "vres", "res", srcCtx, tgtCtx, view.Name)
 
 		pkg := ""
 		if loc := codegen.UserTypeLocation(att.Type); loc != nil {
 			pkg = loc.PackageName()
 		}
-		init = append(init, &InitData{
-			Name:          name,
-			Description:   fmt.Sprintf("%s converts projected type %s to service type %s.", name, resvar, resvar),
-			Args:          []*InitArgData{{Name: "vres", Ref: viewScope.GoFullTypeRef(projected, viewspkg)}},
-			ReturnTypeRef: scope.GoFullTypeRef(att, pkg),
-			Code:          code,
-			Helpers:       helpers,
-		})
+		if toResult {
+			srcCtx := projectedTypeContext(viewspkg, true, viewScope)
+			tgtCtx := typeContext(scope)
+			resvar := scope.GoTypeName(att)
+			name := "new" + resvar
+			if view.Name != expr.DefaultView {
+				name += codegen.Goify(view.Name, true)
+			}
+			code, helpers := buildConstructorCode(viewed, att, "vres", "res", srcCtx, tgtCtx, view.Name)
+			init = append(init, &InitData{
+				Name:          name,
+				Description:   fmt.Sprintf("%s converts projected type %s to service type %s.", name, resvar, resvar),
+				Args:          []*InitArgData{{Name: "vres", Ref: viewScope.GoFullTypeRef(projected, viewspkg)}},
+				ReturnTypeRef: scope.GoFullTypeRef(att, pkg),
+				Code:          code,
+				Helpers:       helpers,
+			})
+		} else {
+			srcCtx := typeContext(scope)
+			tgtCtx := projectedTypeContext(viewspkg, true, viewScope)
+			tname := scope.GoTypeName(projected)
+			name := "new" + tname
+			if view.Name != expr.DefaultView {
+				name += codegen.Goify(view.Name, true)
+			}
+			code, helpers := buildConstructorCode(att, viewed, "res", "vres", srcCtx, tgtCtx, view.Name)
+			init = append(init, &InitData{
+				Name:          name,
+				Description:   fmt.Sprintf("%s projects result type %s to projected type %s using the %q view.", name, scope.GoTypeName(att), tname, view.Name),
+				Args:          []*InitArgData{{Name: "res", Ref: scope.GoFullTypeRef(att, pkg)}},
+				ReturnTypeRef: viewScope.GoFullTypeRef(projected, viewspkg),
+				Code:          code,
+				Helpers:       helpers,
+			})
+		}
 	}
 	return init
-}
-
-// buildProjections builds the data to generate the constructor code to
-// project a result type to a projected type based on a view.
-func buildProjections(projected, att *expr.AttributeExpr, viewspkg string, scope, viewScope *codegen.NameScope) []*InitData {
-	rt := att.Type.(*expr.ResultTypeExpr)
-	projections := make([]*InitData, 0, len(rt.Views))
-	for _, view := range rt.Views {
-		var typ expr.DataType
-		obj := &expr.Object{}
-		pobj := expr.AsObject(projected.Type)
-		parr := expr.AsArray(projected.Type)
-		if parr != nil {
-			// result type collection
-			pobj = expr.AsObject(parr.ElemType.Type)
-		}
-		walkViewAttrs(pobj, view, func(name string, att, _ *expr.AttributeExpr) {
-			obj.Set(name, att)
-		})
-		typ = obj
-		if parr != nil {
-			typ = &expr.Array{ElemType: &expr.AttributeExpr{
-				Type: &expr.ResultTypeExpr{
-					UserTypeExpr: &expr.UserTypeExpr{
-						AttributeExpr: &expr.AttributeExpr{Type: obj},
-						TypeName:      parr.ElemType.Type.Name(),
-					},
-				},
-			}}
-		}
-		tgt := &expr.AttributeExpr{
-			Type: &expr.ResultTypeExpr{
-				UserTypeExpr: &expr.UserTypeExpr{
-					AttributeExpr: &expr.AttributeExpr{Type: typ},
-					TypeName:      projected.Type.Name(),
-				},
-				Views:      rt.Views,
-				Identifier: rt.Identifier,
-			},
-		}
-
-		srcCtx := typeContext(scope)
-		tgtCtx := projectedTypeContext(viewspkg, true, viewScope)
-		tname := scope.GoTypeName(projected)
-		name := "new" + tname
-		if view.Name != expr.DefaultView {
-			name += codegen.Goify(view.Name, true)
-		}
-		code, helpers := buildConstructorCode(att, tgt, "res", "vres", srcCtx, tgtCtx, view.Name)
-
-		pkg := ""
-		if loc := codegen.UserTypeLocation(att.Type); loc != nil {
-			pkg = loc.PackageName()
-		}
-		projections = append(projections, &InitData{
-			Name:          name,
-			Description:   fmt.Sprintf("%s projects result type %s to projected type %s using the %q view.", name, scope.GoTypeName(att), tname, view.Name),
-			Args:          []*InitArgData{{Name: "res", Ref: scope.GoFullTypeRef(att, pkg)}},
-			ReturnTypeRef: viewScope.GoFullTypeRef(projected, viewspkg),
-			Code:          code,
-			Helpers:       helpers,
-		})
-	}
-	return projections
 }
 
 // buildValidations builds the data required to generate validations for the

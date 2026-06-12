@@ -32,7 +32,7 @@ func ViewsFile(_ string, service *expr.ServiceExpr, services *ServicesData) *cod
 	seenUnions := make(map[string]struct{})
 	viewLoc := &codegen.Location{RelImportPath: "views"}
 	for _, t := range svc.projectedTypes {
-		collectViewUnionTypes(&expr.AttributeExpr{Type: t.Type}, svc.ViewScope, viewLoc, unionByHash, seenUnions)
+		collectUnionTypes(&expr.AttributeExpr{Type: t.Type}, svc.ViewScope, viewLoc, unionByHash, seenUnions, true)
 	}
 	unions := make([]*UnionTypeData, 0, len(unionByHash))
 	for _, u := range unionByHash {
