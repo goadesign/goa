@@ -1675,123 +1675,70 @@ func BuildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 	if !expr.IsObject(m.Payload.Type) {
 		return nil
 	}
-	switch s.Kind {
-	case expr.BasicAuthKind:
+	if s.Kind == expr.BasicAuthKind {
 		userAtt := expr.TaggedAttribute(m.Payload, "security:username")
-		user := codegen.Goify(userAtt, true)
 		passAtt := expr.TaggedAttribute(m.Payload, "security:password")
-		pass := codegen.Goify(passAtt, true)
-		var scopes []string
-		if len(s.Scopes) > 0 {
-			scopes = make([]string, len(s.Scopes))
-			for i, s := range s.Scopes {
-				scopes[i] = s.Name
-			}
-		}
 		return &SchemeData{
 			Type:             s.Kind.String(),
 			SchemeName:       s.SchemeName,
 			UsernameAttr:     userAtt,
-			UsernameField:    user,
+			UsernameField:    codegen.Goify(userAtt, true),
 			UsernamePointer:  m.Payload.IsPrimitivePointer(userAtt, true),
 			UsernameRequired: m.Payload.IsRequired(userAtt),
 			PasswordAttr:     passAtt,
-			PasswordField:    pass,
+			PasswordField:    codegen.Goify(passAtt, true),
 			PasswordPointer:  m.Payload.IsPrimitivePointer(passAtt, true),
 			PasswordRequired: m.Payload.IsRequired(passAtt),
-			Scopes:           scopes,
-		}
-	case expr.APIKeyKind:
-		if keyAtt := expr.TaggedAttribute(m.Payload, "security:apikey:"+s.SchemeName); keyAtt != "" {
-			key := codegen.Goify(keyAtt, true)
-			var scopes []string
-			if len(s.Scopes) > 0 {
-				scopes = make([]string, len(s.Scopes))
-				for i, s := range s.Scopes {
-					scopes[i] = s.Name
-				}
-			}
-			return &SchemeData{
-				Type:         s.Kind.String(),
-				Name:         s.Name,
-				SchemeName:   s.SchemeName,
-				CredField:    key,
-				CredPointer:  m.Payload.IsPrimitivePointer(keyAtt, true),
-				CredRequired: m.Payload.IsRequired(keyAtt),
-				KeyAttr:      keyAtt,
-				Scopes:       scopes,
-				In:           s.In,
-			}
-		}
-	case expr.BearerKind:
-		if keyAtt := expr.TaggedAttribute(m.Payload, "security:bearer"); keyAtt != "" {
-			key := codegen.Goify(keyAtt, true)
-			var scopes []string
-			if len(s.Scopes) > 0 {
-				scopes = make([]string, len(s.Scopes))
-				for i, s := range s.Scopes {
-					scopes[i] = s.Name
-				}
-			}
-			return &SchemeData{
-				Type:         s.Kind.String(),
-				Name:         s.Name,
-				SchemeName:   s.SchemeName,
-				CredField:    key,
-				CredPointer:  m.Payload.IsPrimitivePointer(keyAtt, true),
-				CredRequired: m.Payload.IsRequired(keyAtt),
-				KeyAttr:      keyAtt,
-				Scopes:       scopes,
-				In:           s.In,
-			}
-		}
-	case expr.JWTKind:
-		if keyAtt := expr.TaggedAttribute(m.Payload, "security:token"); keyAtt != "" {
-			key := codegen.Goify(keyAtt, true)
-			var scopes []string
-			if len(s.Scopes) > 0 {
-				scopes = make([]string, len(s.Scopes))
-				for i, s := range s.Scopes {
-					scopes[i] = s.Name
-				}
-			}
-			return &SchemeData{
-				Type:         s.Kind.String(),
-				Name:         s.Name,
-				SchemeName:   s.SchemeName,
-				CredField:    key,
-				CredPointer:  m.Payload.IsPrimitivePointer(keyAtt, true),
-				CredRequired: m.Payload.IsRequired(keyAtt),
-				KeyAttr:      keyAtt,
-				Scopes:       scopes,
-				In:           s.In,
-			}
-		}
-	case expr.OAuth2Kind:
-		if keyAtt := expr.TaggedAttribute(m.Payload, "security:accesstoken"); keyAtt != "" {
-			key := codegen.Goify(keyAtt, true)
-			var scopes []string
-			if len(s.Scopes) > 0 {
-				scopes = make([]string, len(s.Scopes))
-				for i, s := range s.Scopes {
-					scopes[i] = s.Name
-				}
-			}
-			return &SchemeData{
-				Type:         s.Kind.String(),
-				Name:         s.Name,
-				SchemeName:   s.SchemeName,
-				CredField:    key,
-				CredPointer:  m.Payload.IsPrimitivePointer(keyAtt, true),
-				CredRequired: m.Payload.IsRequired(keyAtt),
-				KeyAttr:      keyAtt,
-				Scopes:       scopes,
-				Flows:        s.Flows,
-				In:           s.In,
-			}
+			Scopes:           schemeScopes(s),
 		}
 	}
-	return nil
+	// The remaining scheme kinds all carry a single credential attribute
+	// identified by a kind-specific security tag on the method payload.
+	var tag string
+	switch s.Kind {
+	case expr.APIKeyKind:
+		tag = "security:apikey:" + s.SchemeName
+	case expr.BearerKind:
+		tag = "security:bearer"
+	case expr.JWTKind:
+		tag = "security:token"
+	case expr.OAuth2Kind:
+		tag = "security:accesstoken"
+	default:
+		return nil
+	}
+	keyAtt := expr.TaggedAttribute(m.Payload, tag)
+	if keyAtt == "" {
+		return nil
+	}
+	data := &SchemeData{
+		Type:         s.Kind.String(),
+		Name:         s.Name,
+		SchemeName:   s.SchemeName,
+		CredField:    codegen.Goify(keyAtt, true),
+		CredPointer:  m.Payload.IsPrimitivePointer(keyAtt, true),
+		CredRequired: m.Payload.IsRequired(keyAtt),
+		KeyAttr:      keyAtt,
+		Scopes:       schemeScopes(s),
+		In:           s.In,
+	}
+	if s.Kind == expr.OAuth2Kind {
+		data.Flows = s.Flows
+	}
+	return data
+}
+
+// schemeScopes returns the scope names defined by the scheme, nil when the
+// scheme defines none.
+func schemeScopes(s *expr.SchemeExpr) []string {
+	if len(s.Scopes) == 0 {
+		return nil
+	}
+	scopes := make([]string, len(s.Scopes))
+	for i, sc := range s.Scopes {
+		scopes[i] = sc.Name
+	}
+	return scopes
 }
 
 // collectAttributes builds AttributeData from an AttributeExpr

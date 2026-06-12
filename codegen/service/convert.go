@@ -33,98 +33,17 @@ type convertData struct {
 func ConvertFiles(root *expr.RootExpr, service *expr.ServiceExpr, services *ServicesData) ([]*codegen.File, error) {
 	// Filter conversion and creation functions that are relevant for this service
 	svc := services.Get(service.Name)
-	var conversions, creations []*expr.TypeMap
-
-	// Collect relevant conversions
-	for _, c := range root.Conversions {
-		for _, m := range service.Methods {
-			if ut, ok := m.Payload.Type.(expr.UserType); ok {
-				if ut.Name() == c.User.Name() {
-					conversions = append(conversions, c)
-					break
-				}
-			}
-		}
-		for _, m := range service.Methods {
-			if ut, ok := m.Result.Type.(expr.UserType); ok {
-				if ut.Name() == c.User.Name() {
-					conversions = append(conversions, c)
-					break
-				}
-			}
-		}
-		for _, t := range svc.userTypes {
-			if c.User.Name() == t.Name {
-				conversions = append(conversions, c)
-				break
-			}
-		}
-	}
-
-	// Collect relevant creations
-	for _, c := range root.Creations {
-		for _, m := range service.Methods {
-			if ut, ok := m.Payload.Type.(expr.UserType); ok {
-				if ut.Name() == c.User.Name() {
-					creations = append(creations, c)
-					break
-				}
-			}
-		}
-		for _, m := range service.Methods {
-			if ut, ok := m.Result.Type.(expr.UserType); ok {
-				if ut.Name() == c.User.Name() {
-					creations = append(creations, c)
-					break
-				}
-			}
-		}
-		for _, t := range svc.userTypes {
-			if c.User.Name() == t.Name {
-				creations = append(creations, c)
-				break
-			}
-		}
-	}
+	conversions := relevantTypeMaps(root.Conversions, service, svc)
+	creations := relevantTypeMaps(root.Creations, service, svc)
 
 	if len(conversions) == 0 && len(creations) == 0 {
 		return nil, nil
 	}
 
 	// Group conversions and creations by target package path
-	conversionsByPath := make(map[string][]*expr.TypeMap)
-	creationsByPath := make(map[string][]*expr.TypeMap)
 	allPaths := make(map[string]struct{})
-
-	// Group conversions by path
-	for _, c := range conversions {
-		var path string
-		if loc := codegen.UserTypeLocation(c.User); loc != nil {
-			// Custom package path - use directory containing the type file
-			dir := filepath.Dir(loc.FilePath)
-			path = filepath.Join(codegen.Gendir, dir, "convert.go")
-		} else {
-			// Default to service package
-			path = filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "convert.go")
-		}
-		conversionsByPath[path] = append(conversionsByPath[path], c)
-		allPaths[path] = struct{}{}
-	}
-
-	// Group creations by path
-	for _, c := range creations {
-		var path string
-		if loc := codegen.UserTypeLocation(c.User); loc != nil {
-			// Custom package path - use directory containing the type file
-			dir := filepath.Dir(loc.FilePath)
-			path = filepath.Join(codegen.Gendir, dir, "convert.go")
-		} else {
-			// Default to service package
-			path = filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "convert.go")
-		}
-		creationsByPath[path] = append(creationsByPath[path], c)
-		allPaths[path] = struct{}{}
-	}
+	conversionsByPath := groupByConvertPath(conversions, service, allPaths)
+	creationsByPath := groupByConvertPath(creations, service, allPaths)
 
 	// Generate a file for each path
 	var files []*codegen.File
@@ -145,6 +64,57 @@ func ConvertFiles(root *expr.RootExpr, service *expr.ServiceExpr, services *Serv
 	}
 
 	return files, nil
+}
+
+// relevantTypeMaps filters the type maps whose user type is a method payload,
+// a method result, or a user type of the given service. The returned slice
+// drives which ConvertTo/CreateFrom functions ConvertFiles generates.
+func relevantTypeMaps(maps []*expr.TypeMap, service *expr.ServiceExpr, svc *Data) []*expr.TypeMap {
+	var relevant []*expr.TypeMap
+	for _, c := range maps {
+		if typeMapMatchesService(c, service, svc) {
+			relevant = append(relevant, c)
+		}
+	}
+	return relevant
+}
+
+// typeMapMatchesService reports whether the type map's user type is used by
+// the service as a method payload, a method result, or a service user type.
+func typeMapMatchesService(c *expr.TypeMap, service *expr.ServiceExpr, svc *Data) bool {
+	for _, m := range service.Methods {
+		if ut, ok := m.Payload.Type.(expr.UserType); ok && ut.Name() == c.User.Name() {
+			return true
+		}
+		if ut, ok := m.Result.Type.(expr.UserType); ok && ut.Name() == c.User.Name() {
+			return true
+		}
+	}
+	for _, t := range svc.userTypes {
+		if c.User.Name() == t.Name {
+			return true
+		}
+	}
+	return false
+}
+
+// groupByConvertPath groups the type maps by the convert.go file path derived
+// from their user type location, defaulting to the service package. It
+// records every path in paths so the caller can iterate the union of
+// conversion and creation paths.
+func groupByConvertPath(maps []*expr.TypeMap, service *expr.ServiceExpr, paths map[string]struct{}) map[string][]*expr.TypeMap {
+	byPath := make(map[string][]*expr.TypeMap)
+	for _, c := range maps {
+		var path string
+		if loc := codegen.UserTypeLocation(c.User); loc != nil {
+			path = filepath.Join(codegen.Gendir, filepath.Dir(loc.FilePath), "convert.go")
+		} else {
+			path = filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "convert.go")
+		}
+		byPath[path] = append(byPath[path], c)
+		paths[path] = struct{}{}
+	}
+	return byPath
 }
 
 // generateConvertFileForPath generates a single convert.go file for the given path
@@ -432,199 +402,6 @@ func getExternalTypeInfo(external any) (string, string, error) {
 	pkgImport := getPkgImport(pkg.PkgPath(), cwd)
 	alias := strings.Split(pkg.String(), ".")[0]
 	return pkgImport, alias, nil
-}
-
-// ConvertFile returns the file containing the conversion and creation functions
-// if any.
-func ConvertFile(root *expr.RootExpr, service *expr.ServiceExpr, services *ServicesData) (*codegen.File, error) {
-	// Filter conversion and creation functions that are relevant for this
-	// service
-	svc := services.Get(service.Name)
-	var conversions, creations []*expr.TypeMap
-	for _, c := range root.Conversions {
-		for _, m := range service.Methods {
-			if ut, ok := m.Payload.Type.(expr.UserType); ok {
-				if ut.Name() == c.User.Name() {
-					conversions = append(conversions, c)
-					break
-				}
-			}
-		}
-		for _, m := range service.Methods {
-			if ut, ok := m.Result.Type.(expr.UserType); ok {
-				if ut.Name() == c.User.Name() {
-					conversions = append(conversions, c)
-					break
-				}
-			}
-		}
-		for _, t := range svc.userTypes {
-			if c.User.Name() == t.Name {
-				conversions = append(conversions, c)
-				break
-			}
-		}
-	}
-	for _, c := range root.Creations {
-		for _, m := range service.Methods {
-			if ut, ok := m.Payload.Type.(expr.UserType); ok {
-				if ut.Name() == c.User.Name() {
-					creations = append(creations, c)
-					break
-				}
-			}
-		}
-		for _, m := range service.Methods {
-			if ut, ok := m.Result.Type.(expr.UserType); ok {
-				if ut.Name() == c.User.Name() {
-					creations = append(creations, c)
-					break
-				}
-			}
-		}
-		for _, t := range svc.userTypes {
-			if c.User.Name() == t.Name {
-				creations = append(creations, c)
-				break
-			}
-		}
-	}
-	if len(conversions) == 0 && len(creations) == 0 {
-		return nil, nil
-	}
-
-	// Retrieve external packages info
-	ppm := make(map[string]string)
-	for _, c := range conversions {
-		pkgImport, alias, err := getExternalTypeInfo(c.External)
-		if err != nil {
-			return nil, err
-		}
-		ppm[pkgImport] = alias
-	}
-	for _, c := range creations {
-		pkgImport, alias, err := getExternalTypeInfo(c.External)
-		if err != nil {
-			return nil, err
-		}
-		ppm[pkgImport] = alias
-	}
-	pkgs := make([]*codegen.ImportSpec, 0, len(ppm)+2)
-	for pp, alias := range ppm {
-		pkgs = append(pkgs, &codegen.ImportSpec{Name: alias, Path: pp})
-	}
-
-	// Build header section
-	pkgs = append(pkgs, &codegen.ImportSpec{Path: "context"}, codegen.GoaImport(""))
-	path := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "convert.go")
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(service.Name+" service type conversion functions", svc.PkgName, pkgs),
-	}
-
-	var (
-		names = map[string]struct{}{}
-
-		transFuncs []*codegen.TransformFunctionData
-	)
-
-	// Build conversion sections if any
-	for _, c := range conversions {
-		var dt expr.DataType
-		if err := buildDesignType(&dt, reflect.TypeOf(c.External), c.User); err != nil {
-			return nil, err
-		}
-		t := reflect.TypeOf(c.External)
-		tgtPkg := t.String()
-		if idx := strings.Index(tgtPkg, "."); idx != -1 {
-			tgtPkg = tgtPkg[:idx]
-		}
-		srcCtx := typeContext(svc.Scope)
-		tgtCtx := codegen.NewAttributeContext(false, false, false, tgtPkg, codegen.NewNameScope())
-		srcAtt := &expr.AttributeExpr{Type: c.User}
-		tgtAtt := &expr.AttributeExpr{Type: dt}
-		tgtAtt.AddMeta("struct:type:name", dt.Name()) // Used by transformer to generate the correct type name.
-		code, tf, err := codegen.GoTransform(
-			srcAtt, tgtAtt,
-			"t", "v", srcCtx, tgtCtx, "transform", true)
-		if err != nil {
-			return nil, err
-		}
-		transFuncs = codegen.AppendHelpers(transFuncs, tf)
-		base := "ConvertTo" + t.Name()
-		name := uniquify(base, names)
-		ref := t.String()
-		if expr.IsObject(c.User) {
-			ref = "*" + ref
-		}
-		data := convertData{
-			Name:            name,
-			ReceiverTypeRef: svc.Scope.GoTypeRef(srcAtt),
-			TypeName:        t.Name(),
-			TypeRef:         ref,
-			Code:            code,
-		}
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "convert-to",
-			Source: serviceTemplates.Read(convertT),
-			Data:   data,
-		})
-	}
-
-	// Build creation sections if any
-	for _, c := range creations {
-		var dt expr.DataType
-		if err := buildDesignType(&dt, reflect.TypeOf(c.External), c.User); err != nil {
-			return nil, err
-		}
-		t := reflect.TypeOf(c.External)
-		srcPkg := t.String()
-		if idx := strings.Index(srcPkg, "."); idx != -1 {
-			srcPkg = srcPkg[:idx]
-		}
-		srcCtx := codegen.NewAttributeContext(false, false, false, srcPkg, codegen.NewNameScope())
-		tgtCtx := typeContext(svc.Scope)
-		tgtAtt := &expr.AttributeExpr{Type: c.User}
-		code, tf, err := codegen.GoTransform(
-			&expr.AttributeExpr{Type: dt}, tgtAtt,
-			"v", "temp", srcCtx, tgtCtx, "transform", true)
-		if err != nil {
-			return nil, err
-		}
-		transFuncs = codegen.AppendHelpers(transFuncs, tf)
-		base := "CreateFrom" + t.Name()
-		name := uniquify(base, names)
-		ref := t.String()
-		if expr.IsObject(c.User) {
-			ref = "*" + ref
-		}
-		data := convertData{
-			Name:            name,
-			ReceiverTypeRef: codegen.NewNameScope().GoTypeRef(tgtAtt),
-			TypeRef:         ref,
-			Code:            code,
-		}
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "create-from",
-			Source: serviceTemplates.Read(createT),
-			Data:   data,
-		})
-	}
-
-	// Build transformation helper functions section if any.
-	seen := make(map[string]struct{})
-	for _, tf := range transFuncs {
-		if _, ok := seen[tf.Name]; ok {
-			continue
-		}
-		seen[tf.Name] = struct{}{}
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "convert-create-helper",
-			Source: serviceTemplates.Read(transformHelperT),
-			Data:   tf,
-		})
-	}
-
-	return &codegen.File{Path: path, SectionTemplates: sections}, nil
 }
 
 // uniquify checks if base is a key of taken and if not returns it. Otherwise

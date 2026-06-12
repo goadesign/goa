@@ -43,9 +43,6 @@ type (
 		// DefaultPkg is the default package name where the attribute
 		// type is found. it can be overridden via struct:pkg:path meta.
 		DefaultPkg string
-		// IsInterface is true if the attribute is an interface (union type).
-		// In this case assigning child attributes requires a type assertion.
-		IsInterface bool
 		// SamePackageConversion if true indicates that this context is being used
 		// for conversion code generation within the same package as the types.
 		SamePackageConversion bool
@@ -270,7 +267,7 @@ func (a *AttributeScope) Name(att *expr.AttributeExpr, pkg string, ptr, useDefau
 		// the inline struct are qualified against the correct package (e.g.,
 		// use "types.UUID" instead of incorrectly qualifying with the service
 		// package alias).
-		return a.scope.GoTypeDefWithTargetPkg(att, ptr, useDefault, pkg)
+		return a.scope.goTypeDefWithPkgOverride(att, ptr, useDefault, "", pkg)
 	}
 	if n, ok := att.Meta["struct:type:name"]; ok {
 		// If the attribute has a "struct:type:name" meta then use it as the

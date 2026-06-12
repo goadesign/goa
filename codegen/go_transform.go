@@ -3,6 +3,7 @@ package codegen
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 	"strings"
 	"text/template"
 
@@ -65,7 +66,7 @@ func GoTransform(source, target *expr.AttributeExpr, sourceVar, targetVar string
 		return "", nil, err
 	}
 
-	funcs, err := transformAttributeHelpers(source, target, ta, make(map[string]*TransformFunctionData))
+	funcs, err := collectHelpers(source, target, true, true, ta, make(map[string]*TransformFunctionData))
 	if err != nil {
 		return "", nil, err
 	}
@@ -95,13 +96,10 @@ func transformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 	return
 }
 
-// transformPrimitive returns the code to transform source primtive type to
-// target primitive type. It returns an error if source and target are not
-// compatible for transformation.
+// transformPrimitive returns the code to transform source primitive type to
+// target primitive type. The caller (transformAttribute) already verified that
+// source and target are compatible.
 func transformPrimitive(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
-	if err := IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
-		return "", err
-	}
 	assign := "="
 	if newVar {
 		assign = ":="
@@ -222,10 +220,6 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			case expr.IsUnion(srcc.Type):
 				code, err = transformUnion(srcc, tgtc, srcVar, tgtVar, false, ta)
 			case ok:
-				if ta.TargetCtx.IsInterface {
-					ref := ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target))
-					tgtVar = targetVar + ".(" + ref + ")." + GoifyAtt(tgtc, tgtMatt.ElemName(n), true)
-				}
 				if !expr.IsPrimitive(srcc.Type) {
 					code = fmt.Sprintf("%s = %s(%s)\n", tgtVar, transformHelperName(srcc, tgtc, ta), srcVar)
 				}
@@ -280,58 +274,13 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 						// Render typed array default literals for aliased element types,
 						// e.g. []pkg.EnumType{pkg.EnumType("val")}.
 						elemRef := ta.TargetCtx.Scope.Ref(arr.ElemType, ta.TargetCtx.Pkg(arr.ElemType))
-						var items []string
-						switch dv := tdef.(type) {
-						case expr.ArrayVal:
-							for _, de := range dv {
-								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
-							}
-						case []any:
-							for _, de := range dv {
-								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
-							}
-						case []string:
-							for _, de := range dv {
-								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
-							}
-						case []int:
-							for _, de := range dv {
-								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
-							}
-						case []int32:
-							for _, de := range dv {
-								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
-							}
-						case []int64:
-							for _, de := range dv {
-								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
-							}
-						case []uint:
-							for _, de := range dv {
-								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
-							}
-						case []uint32:
-							for _, de := range dv {
-								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
-							}
-						case []uint64:
-							for _, de := range dv {
-								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
-							}
-						case []float32:
-							for _, de := range dv {
-								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
-							}
-						case []float64:
-							for _, de := range dv {
-								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
-							}
-						case []bool:
-							for _, de := range dv {
-								items = append(items, fmt.Sprintf("%s(%#v)", elemRef, de))
-							}
-						default:
+						rv := reflect.ValueOf(tdef)
+						if rv.Kind() != reflect.Slice {
 							panic(fmt.Sprintf("unsupported default value type %T for aliased array element", tdef)) // bug
+						}
+						items := make([]string, rv.Len())
+						for i := range items {
+							items[i] = fmt.Sprintf("%s(%#v)", elemRef, rv.Index(i).Interface())
 						}
 						if len(items) > 0 {
 							code += fmt.Sprintf("%s = []%s{%s}\n", tgtVar, elemRef, strings.Join(items, ", "))
@@ -464,7 +413,9 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	unionPkg := ta.TargetCtx.Pkg(target)
 	typeRef := ta.TargetCtx.Scope.Ref(target, unionPkg)
 
-	// Use deterministic temp var: 'obj' at top-level, 'tmp' for nested assignments.
+	// Use deterministic temp var: 'obj' at top-level, 'tmp' for nested
+	// assignments. A "obj." prefix means this transform is emitted inside a
+	// case body of an enclosing union transform which already declared 'obj'.
 	tempVarName := "obj"
 	if strings.HasPrefix(targetVar, "obj.") {
 		tempVarName = "tmp"
@@ -472,16 +423,7 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 
 	cases := make([]map[string]any, 0, len(srcUnion.Values))
 	for i, st := range srcUnion.Values {
-		if st == nil || st.Attribute == nil {
-			continue
-		}
-		if i >= len(tgtUnion.Values) {
-			break
-		}
 		tt := tgtUnion.Values[i]
-		if tt == nil || tt.Attribute == nil {
-			continue
-		}
 		castPkg := ta.TargetCtx.Pkg(tt.Attribute)
 		// When generating transforms outside of the type's package, some nested
 		// helper user types may not carry struct:pkg:path metadata. In that case
@@ -526,31 +468,40 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	return buf.String(), nil
 }
 
-// transformAttributeHelpers returns the Go transform functions and their definitions
-// that may be used in code produced by Transform. It returns an error if source and
-// target are incompatible (different types, fields of different type etc).
-// transformAttributeHelpers recurses through the attribute types and calls
-// collectHelpers for each child attribute. collectHelpers actually produces the
-// transform helper functions for the given attribute.
+// collectHelpers recurses through the given attributes and returns the
+// transform helper functions required by the code GoTransform produces. The
+// top-level call (topLevel true) does not generate a helper for the top-most
+// user type because the generated code inlines that transformation; children
+// of composite top-level types always get helpers.
 //
-// source, target are the source and target attributes used in transformation
-//
-// ta holds the transform attributes
-//
-// seen keeps track of generated transform functions to avoid infinite recursion.
-func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *TransformAttrs, seen map[string]*TransformFunctionData) (helpers []*TransformFunctionData, err error) {
-	// Do not generate a transform function for the top most user type.
+// seen keeps track of generated transform functions to avoid infinite
+// recursion on recursive types.
+func collectHelpers(source, target *expr.AttributeExpr, req, topLevel bool, ta *TransformAttrs, seen map[string]*TransformFunctionData) (helpers []*TransformFunctionData, err error) {
+	if topLevel {
+		req = true
+	} else {
+		name := transformHelperName(source, target, ta)
+		if _, ok := seen[name]; ok {
+			return helpers, err
+		}
+		if _, ok := source.Type.(expr.UserType); ok && expr.IsObject(source.Type) {
+			var h *TransformFunctionData
+			if h, err = generateHelper(source, target, req, ta, seen); h != nil {
+				helpers = append(helpers, h)
+			}
+		}
+	}
 	var other []*TransformFunctionData
 	switch {
 	case expr.IsArray(source.Type):
-		if other, err = collectHelpers(expr.AsArray(source.Type).ElemType, expr.AsArray(target.Type).ElemType, true, ta, seen); err == nil {
+		if other, err = collectHelpers(expr.AsArray(source.Type).ElemType, expr.AsArray(target.Type).ElemType, req, false, ta, seen); err == nil {
 			helpers = append(helpers, other...)
 		}
 	case expr.IsMap(source.Type):
 		sm, tm := expr.AsMap(source.Type), expr.AsMap(target.Type)
-		if other, err = collectHelpers(sm.ElemType, tm.ElemType, true, ta, seen); err == nil {
+		if other, err = collectHelpers(sm.ElemType, tm.ElemType, req, false, ta, seen); err == nil {
 			helpers = append(helpers, other...)
-			if other, err = collectHelpers(sm.KeyType, tm.KeyType, true, ta, seen); err == nil {
+			if other, err = collectHelpers(sm.KeyType, tm.KeyType, req, false, ta, seen); err == nil {
 				helpers = append(helpers, other...)
 			}
 		}
@@ -560,7 +511,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 			return helpers, err
 		}
 		for i, st := range expr.AsUnion(source.Type).Values {
-			if other, err = collectHelpers(st.Attribute, tt.Values[i].Attribute, true, ta, seen); err == nil {
+			if other, err = collectHelpers(st.Attribute, tt.Values[i].Attribute, req, false, ta, seen); err == nil {
 				helpers = append(helpers, other...)
 			}
 		}
@@ -572,7 +523,7 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 			if err != nil {
 				return
 			}
-			if other, err = collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), ta, seen); err == nil {
+			if other, err = collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), false, ta, seen); err == nil {
 				helpers = append(helpers, other...)
 			}
 		})
@@ -580,87 +531,21 @@ func transformAttributeHelpers(source, target *expr.AttributeExpr, ta *Transform
 	return helpers, err
 }
 
-// collectHelpers recurses through the given attributes and returns the transform
-// helper functions required to generate the transform code. If the attributes type
-// is array or map then the recursion is done via transformAttributeHelpers so that
-// the tope level conversion function is skipped as the generate code does not make
-// use of it (since it inlines that top-level transformation).
-func collectHelpers(source, target *expr.AttributeExpr, req bool, ta *TransformAttrs, seen map[string]*TransformFunctionData) (helpers []*TransformFunctionData, err error) {
-	name := transformHelperName(source, target, ta)
-	if _, ok := seen[name]; ok {
-		return helpers, err
-	}
-	if _, ok := source.Type.(expr.UserType); ok && expr.IsObject(source.Type) {
-		var h *TransformFunctionData
-		if h, err = generateHelper(source, target, req, ta, seen); h != nil {
-			helpers = append(helpers, h)
-		}
-	}
-	var other []*TransformFunctionData
-	switch {
-	case expr.IsArray(source.Type):
-		if other, err = collectHelpers(expr.AsArray(source.Type).ElemType, expr.AsArray(target.Type).ElemType, req, ta, seen); err == nil {
-			helpers = append(helpers, other...)
-		}
-	case expr.IsMap(source.Type):
-		sm, tm := expr.AsMap(source.Type), expr.AsMap(target.Type)
-		if other, err = collectHelpers(sm.ElemType, tm.ElemType, req, ta, seen); err == nil {
-			helpers = append(helpers, other...)
-			if other, err = collectHelpers(sm.KeyType, tm.KeyType, req, ta, seen); err == nil {
-				helpers = append(helpers, other...)
-			}
-		}
-	case expr.IsUnion(source.Type):
-		tt := expr.AsUnion(target.Type)
-		if tt == nil {
-			return helpers, err
-		}
-		for i, st := range expr.AsUnion(source.Type).Values {
-			if other, err = collectHelpers(st.Attribute, tt.Values[i].Attribute, req, ta, seen); err == nil {
-				helpers = append(helpers, other...)
-			}
-		}
-	case expr.IsObject(source.Type):
-		if expr.IsUnion(target.Type) {
-			return helpers, err
-		}
-		walkMatches(source, target, func(srcMatt, _ *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
-			if err != nil {
-				return
-			}
-			if other, err = collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), ta, seen); err == nil {
-				helpers = append(helpers, other...)
-			}
-		})
-	}
-	return helpers, err
-}
-
-// generateHelper generates the code that transform instances of source into
-// target. Both source and targe must be user types or generateHelper panics.
-// generateHelper returns nil if a helper has already been generated for the
-// pair source, target.
+// generateHelper generates the code that transforms instances of source into
+// target. Both source and target must be user types. The caller
+// (collectHelpers) guarantees no helper was generated yet for the pair.
 func generateHelper(source, target *expr.AttributeExpr, req bool, ta *TransformAttrs, seen map[string]*TransformFunctionData) (*TransformFunctionData, error) {
 	name := transformHelperName(source, target, ta)
-	if _, ok := seen[name]; ok {
-		return nil, nil
-	}
 
-	// Reset need for type assertion for union types because we are
-	// generating the code to transform the concrete type.
-	ta.TargetCtx.IsInterface = false
 	// When transforming into a user type defined in an external package, assume
 	// nested anonymous types (e.g., union sum types) belong to the same target
-	// package unless they explicitly specify a different location.
-	prevDefaultPkg := ta.TargetCtx.DefaultPkg
-	prevSamePackageConversion := ta.TargetCtx.SamePackageConversion
-	if pkg := ta.TargetCtx.Pkg(target); pkg != "" && pkg != prevDefaultPkg {
-		ta.TargetCtx.DefaultPkg = pkg
-		ta.TargetCtx.SamePackageConversion = false
-		defer func() {
-			ta.TargetCtx.DefaultPkg = prevDefaultPkg
-			ta.TargetCtx.SamePackageConversion = prevSamePackageConversion
-		}()
+	// package unless they explicitly specify a different location. Work on a
+	// copy of the context so the caller's context is never mutated.
+	if pkg := ta.TargetCtx.Pkg(target); pkg != "" && pkg != ta.TargetCtx.DefaultPkg {
+		tgtCtx := ta.TargetCtx.Dup()
+		tgtCtx.DefaultPkg = pkg
+		tgtCtx.SamePackageConversion = false
+		ta = &TransformAttrs{SourceCtx: ta.SourceCtx, TargetCtx: tgtCtx, Prefix: ta.Prefix}
 	}
 
 	code, err := transformAttribute(source, target, "v", "res", true, ta)

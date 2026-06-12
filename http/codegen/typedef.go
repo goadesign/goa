@@ -82,7 +82,7 @@ func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefaul
 						optional = !ma.IsRequired(name)
 					}
 				}
-				tags = attributeTags(mat, at, elem, optional)
+				tags = attributeTags(at, elem, optional)
 			}
 			ss = append(ss, fmt.Sprintf("\t%s%s %s%s", desc, fn, tdef, tags))
 			return nil
@@ -97,8 +97,8 @@ func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefaul
 }
 
 // attributeTags computes the struct field tags.
-func attributeTags(parent, att *expr.AttributeExpr, t string, optional bool) string {
-	if tags := codegen.AttributeTags(parent, att); tags != "" {
+func attributeTags(att *expr.AttributeExpr, t string, optional bool) string {
+	if tags := codegen.AttributeTags(att); tags != "" {
 		return tags
 	}
 	var o string

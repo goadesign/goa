@@ -329,10 +329,6 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				// Never use pointer-to-map on protobuf targets; default to false.
 				code, err = transformMap(expr.AsMap(srcc.Type), expr.AsMap(tgtc.Type), srcVar, tgtVar, false, false, ta)
 			case isUserType:
-				if ta.TargetCtx.IsInterface {
-					ref := ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target))
-					tgtVar = targetVar + ".(" + ref + ")." + codegen.GoifyAtt(tgtc, tgtMatt.ElemName(n), true)
-				}
 				if !expr.IsPrimitive(srcc.Type) {
 					code = fmt.Sprintf("%s = %s(%s)\n", tgtVar, transformHelperName(srcc, tgtc, ta), srcVar)
 				}
