@@ -40,9 +40,9 @@ const (
 	websocketStreamErrorTypesT = "websocket_stream_error_types"
 
 	// SSE templates
+	sseServerStreamBaseT = "sse_server_stream_base"
 	sseServerStreamT     = "sse_server_stream"
 	sseClientStreamT     = "sse_client_stream"
-	sseServerStreamImplT = "sse_server_stream_impl"
 	sseServerHandlerT    = "sse_server_handler"
 
 	// Partial templates

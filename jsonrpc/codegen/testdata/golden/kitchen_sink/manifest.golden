@@ -56,7 +56,6 @@ gen/jsonrpc/feed/server/encode_decode.go
 gen/jsonrpc/feed/server/paths.go
 gen/jsonrpc/feed/server/server.go
 gen/jsonrpc/feed/server/sse.go
-gen/jsonrpc/feed/server/stream.go
 gen/jsonrpc/feed/server/types.go
 gen/jsonrpc/mixed/client/cli.go
 gen/jsonrpc/mixed/client/client.go

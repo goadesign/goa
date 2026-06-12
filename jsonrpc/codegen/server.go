@@ -18,7 +18,7 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 		files = append(files, serverFile(genpkg, svc, data))
 		// Generate either WebSocket or SSE file based on transport type
 		if hasJSONRPCSSE(svc) {
-			if f := sseServerStreamFile(genpkg, svc, data); f != nil {
+			if f := sseServerFile(genpkg, svc, data); f != nil {
 				files = append(files, f)
 			}
 		} else if f := websocketServerFile(genpkg, svc, data); f != nil {

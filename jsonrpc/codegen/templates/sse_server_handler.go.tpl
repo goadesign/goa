@@ -6,20 +6,20 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	var req jsonrpc.RawRequest
 	if err := s.decoder(r).Decode(&req); err != nil {
 		// Emit JSON-RPC parse error as SSE event
-		stream := &{{ lowerInitial .Service.StructName }}SSEStream{w: w, r: r, encoder: s.encoder, decoder: s.decoder}
+		stream := &sseServerStream{w: w, r: r, encoder: s.encoder}
 		_ = stream.sendError(ctx, nil, jsonrpc.ParseError, "Parse error", nil)
 		return
 	}
 	
 	// Validate JSON-RPC request
 	if req.JSONRPC != "2.0" {
-		stream := &{{ lowerInitial .Service.StructName }}SSEStream{w: w, r: r, encoder: s.encoder, decoder: s.decoder}
+		stream := &sseServerStream{w: w, r: r, encoder: s.encoder}
 		_ = stream.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil)
 		return
 	}
 	
 	if req.Method == "" {
-		stream := &{{ lowerInitial .Service.StructName }}SSEStream{w: w, r: r, encoder: s.encoder, decoder: s.decoder}
+		stream := &sseServerStream{w: w, r: r, encoder: s.encoder}
 		_ = stream.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil)
 		return
 	}
@@ -34,7 +34,7 @@ func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	{{- end }}
 {{- end }}
 	default:
-		stream := &{{ lowerInitial .Service.StructName }}SSEStream{w: w, r: r, encoder: s.encoder, decoder: s.decoder}
+		stream := &sseServerStream{w: w, r: r, encoder: s.encoder}
 		_ = stream.sendError(ctx, req.ID, jsonrpc.MethodNotFound, "Method not found", nil)
 		return
 	}

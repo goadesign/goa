@@ -26,24 +26,24 @@ func TestJSONRPCSSE(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
 			services := CreateJSONRPCServices(root)
 
-			// Generate SSE files
-			fs := SSEServerFiles("", services)
-			require.NotEmpty(t, fs, "expected SSE files to be generated")
+			// Generate server files (includes the SSE streams file)
+			fs := ServerFiles("", services)
+			require.NotEmpty(t, fs, "expected server files to be generated")
 
 			// Debug: print all generated files
 			for _, f := range fs {
 				t.Logf("Generated file: %s", f.Path)
 			}
 
-			// Find the server stream file
+			// Find the server SSE streams file
 			var serverStreamFile *codegen.File
 			for _, f := range fs {
-				if filepath.Base(f.Path) == "stream.go" && filepath.Base(filepath.Dir(f.Path)) == "server" {
+				if filepath.Base(f.Path) == "sse.go" && filepath.Base(filepath.Dir(f.Path)) == "server" {
 					serverStreamFile = f
 					break
 				}
 			}
-			require.NotNil(t, serverStreamFile, "server stream file not found")
+			require.NotNil(t, serverStreamFile, "server SSE streams file not found")
 
 			// Find the jsonrpc-sse-server-stream section
 			var streamSection *codegen.SectionTemplate

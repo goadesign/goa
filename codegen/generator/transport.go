@@ -52,7 +52,6 @@ func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		files = append(files, httpcodegen.ClientTypeFiles(genpkg, jsonrpcServices)...)
 		files = append(files, httpcodegen.PathFiles(jsonrpcServices)...)
 		files = append(files, httpcodegen.ClientCLIFiles(genpkg, jsonrpcServices)...)
-		files = append(files, jsonrpccodegen.SSEServerFiles(genpkg, jsonrpcServices)...)
 
 		// Add service data meta type imports
 		addServicesImports(files, services, r.Services)
