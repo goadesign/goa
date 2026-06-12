@@ -16,6 +16,10 @@ type commandData struct {
 	Subcommands []*subcommandData
 	// NeedDialer if true initializes the websocket dialer.
 	NeedDialer bool
+	// JSONRPC if true indicates the command targets a JSON-RPC service:
+	// streaming endpoints are configured with a goahttp.ConnConfigureFunc
+	// instead of a client package ConnConfigurer.
+	JSONRPC bool
 }
 
 // commandData wraps the common SubcommandData and adds HTTP-specific fields.
@@ -51,6 +55,7 @@ func ClientCLIFiles(genpkg string, data *ServicesData) []*codegen.File {
 			command := &commandData{
 				CommandData: cli.BuildCommandData(sd.Service),
 				NeedDialer:  HasWebSocket(sd),
+				JSONRPC:     sd.Endpoints[0].IsJSONRPC,
 			}
 
 			for _, e := range sd.Endpoints {

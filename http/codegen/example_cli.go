@@ -70,6 +70,7 @@ func ExampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 			Data: map[string]any{
 				"Services":        svcData,
 				"InterceptorsPkg": interceptorsPkg,
+				"FuncSuffix":      "HTTP",
 			},
 		},
 		{
@@ -97,6 +98,9 @@ func ExampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *co
 		{
 			Name:   "cli-http-usage",
 			Source: httpTemplates.Read(cliUsageT),
+			Data: map[string]any{
+				"VarPrefix": "http",
+			},
 		},
 	}
 	return &codegen.File{

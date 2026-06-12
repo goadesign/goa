@@ -10,7 +10,7 @@ func ParseEndpoint(
 	dialer goahttp.Dialer,
 		{{- range .Commands }}
 			{{- if .NeedDialer }}
-				{{ .VarName }}Configurer *{{ .PkgName }}.ConnConfigurer,
+				{{ if .JSONRPC }}{{ .VarName }}ConfigFn goahttp.ConnConfigureFunc,{{ else }}{{ .VarName }}Configurer *{{ .PkgName }}.ConnConfigurer,{{ end }}
 			{{- end }}
 		{{- end }}
 	{{- end }}
@@ -35,7 +35,7 @@ func ParseEndpoint(
 		switch svcn {
 	{{- range .Commands }}
 		case "{{ .Name }}":
-			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedDialer }}, dialer, {{ .VarName }}Configurer{{ end }})
+			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedDialer }}, dialer, {{ if .JSONRPC }}{{ .VarName }}ConfigFn{{ else }}{{ .VarName }}Configurer{{ end }}{{ end }})
 			switch epn {
 		{{- $pkgName := .PkgName }}
 		{{- range .Subcommands }}

@@ -80,6 +80,11 @@ func ExampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, ser
 			Source: httpTemplates.Read(serverStartT),
 			Data: map[string]any{
 				"Services": svcdata,
+				// JSONRPCServices must always be set (typed nil when
+				// absent) so the template functions receive a valid
+				// []*ServiceData value. The JSON-RPC generator
+				// overrides it with the JSON-RPC service data.
+				"JSONRPCServices": []*ServiceData(nil),
 			},
 		},
 		{
@@ -94,8 +99,9 @@ func ExampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, ser
 			Name:   "server-http-init",
 			Source: httpTemplates.Read(serverConfigureT),
 			Data: map[string]any{
-				"Services": svcdata,
-				"APIPkg":   apiPkg,
+				"Services":        svcdata,
+				"JSONRPCServices": []*ServiceData(nil),
+				"APIPkg":          apiPkg,
 			},
 			FuncMap: map[string]any{"needDialer": NeedDialer, "hasWebSocket": HasWebSocket},
 		},
@@ -107,7 +113,8 @@ func ExampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, ser
 			Name:   "server-http-end",
 			Source: httpTemplates.Read(serverEndT),
 			Data: map[string]any{
-				"Services": svcdata,
+				"Services":        svcdata,
+				"JSONRPCServices": []*ServiceData(nil),
 			},
 		},
 		{

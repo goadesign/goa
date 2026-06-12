@@ -1,6 +1,13 @@
-{{ printf "%s returns an encoder for requests sent to the %s %s server." .RequestEncoder .ServiceName .Method.Name | comment }}
+{{ if and .IsJSONRPC (not .Payload.Ref) }}{{ printf "%s returns an encoder for requests sent to the %s service %s JSON-RPC method." .RequestEncoder .ServiceName .Method.Name | comment }}{{ else }}{{ printf "%s returns an encoder for requests sent to the %s %s server." .RequestEncoder .ServiceName .Method.Name | comment }}{{ end }}
 func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
 	return func(req *http.Request, v any) error {
+{{- if and .IsJSONRPC (not .Payload.Ref) }}
+		{{- template "partial_jsonrpc_request_envelope" . }}
+		if err := encoder(req).Encode(body); err != nil {
+			return goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+		}
+		return nil
+{{- else }}
 		{{- if .Method.SkipRequestBodyEncodeDecode }}
 		data, ok := v.(*{{ requestStructPkg .Method .ServicePkgName }}.{{ .Method.RequestStruct }})
 		if !ok {
@@ -149,9 +156,12 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		}
 	{{- else if .Payload.Request.ClientBody }}
 		{{- if .Payload.Request.ClientBody.Init }}
-		body := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .FieldPointer }}&{{ end }}{{ .VarName }}, {{ end }})
+		{{ if .IsJSONRPC }}b{{ else }}body{{ end }} := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .FieldPointer }}&{{ end }}{{ .VarName }}, {{ end }})
 		{{- else }}
-		body := p{{ if .Payload.Request.PayloadAttr }}.{{ .Payload.Request.PayloadAttr }}{{ end }}
+		{{ if .IsJSONRPC }}b{{ else }}body{{ end }} := p{{ if .Payload.Request.PayloadAttr }}.{{ .Payload.Request.PayloadAttr }}{{ end }}
+		{{- end }}
+		{{- if .IsJSONRPC }}
+		{{- template "partial_jsonrpc_request_envelope" . }}
 		{{- end }}
 		if err := encoder(req).Encode(&body); err != nil {
 			return goahttp.ErrEncodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
@@ -173,5 +183,6 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		{{- end }}
 	{{- end }}{{ end }}
 		return nil
+{{- end }}
 	}
 }

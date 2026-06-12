@@ -27,8 +27,12 @@ func exampleCLI(genpkg string, data *httpcodegen.ServicesData, svr *expr.ServerE
 	f.Path = strings.Replace(f.Path, "http.go", "jsonrpc.go", 1)
 	updateHeader(f)
 	for _, s := range f.SectionTemplates {
-		s.Source = strings.ReplaceAll(s.Source, "doHTTP", "doJSONRPC")
-		s.Source = strings.ReplaceAll(s.Source, "httpUsage", "jsonrpcUsage")
+		switch s.Name {
+		case "cli-http-start":
+			s.Data.(map[string]any)["FuncSuffix"] = "JSONRPC"
+		case "cli-http-usage":
+			s.Data.(map[string]any)["VarPrefix"] = "jsonrpc"
+		}
 	}
 
 	return f

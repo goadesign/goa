@@ -22,10 +22,6 @@ const (
 	serverEncodeErrorT  = "server_encode_error"
 	mixedServerHandlerT = "mixed_server_handler"
 
-	// Server example
-	serverConfigureT = "server_configure"
-	serverHttpStartT = "server_http_start"
-
 	// Client
 	clientStructT       = "client_struct"
 	clientInitT         = "client_init"

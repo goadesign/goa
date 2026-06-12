@@ -54,6 +54,16 @@ func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 	}
+	for _, e := range data.Endpoints {
+		if e.IsJSONRPC {
+			// JSON-RPC request encoders build the JSON-RPC envelope.
+			imports = append(imports,
+				&codegen.ImportSpec{Path: "github.com/google/uuid"},
+				codegen.GoaImport("jsonrpc"),
+			)
+			break
+		}
+	}
 	sections := []*codegen.SectionTemplate{codegen.Header(title, "client", imports)}
 
 	for _, e := range data.Endpoints {
@@ -62,10 +72,10 @@ func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 			Source: httpTemplates.Read(requestBuilderT),
 			Data:   e,
 		})
-		if e.RequestEncoder != "" && e.Payload.Ref != "" {
+		if e.RequestEncoder != "" && (e.Payload.Ref != "" || e.IsJSONRPC) {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "request-encoder",
-				Source: httpTemplates.Read(requestEncoderT, clientTypeConversionP, clientMapConversionP),
+				Source: httpTemplates.Read(requestEncoderT, clientTypeConversionP, clientMapConversionP, jsonrpcRequestEnvelopeP),
 				FuncMap: map[string]any{
 					"typeConversionData": typeConversionData,
 					"mapConversionData":  mapConversionData,

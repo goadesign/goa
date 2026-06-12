@@ -98,6 +98,11 @@ type (
 	EndpointData struct {
 		// Method contains the related service method data.
 		Method *service.MethodData
+		// IsJSONRPC indicates whether this endpoint is a JSON-RPC
+		// endpoint. Unlike Method.IsJSONRPC it is endpoint-scoped: a
+		// method exposed over both plain HTTP and JSON-RPC yields two
+		// endpoints with different values.
+		IsJSONRPC bool
 		// ServiceName is the name of the service exposing the endpoint.
 		ServiceName string
 		// ServiceVarName is the goified service name (first letter
@@ -814,7 +819,9 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		}
 
 		var requestEncoder string
-		if payload.Request.ClientBody != nil || len(payload.Request.Headers) > 0 || len(payload.Request.QueryParams) > 0 || len(payload.Request.Cookies) > 0 || basch != nil {
+		if httpEndpoint.IsJSONRPC() || payload.Request.ClientBody != nil || len(payload.Request.Headers) > 0 || len(payload.Request.QueryParams) > 0 || len(payload.Request.Cookies) > 0 || basch != nil {
+			// JSON-RPC endpoints always need a request encoder to build
+			// the JSON-RPC envelope, even when the payload is empty.
 			requestEncoder = fmt.Sprintf("Encode%sRequest", method.VarName)
 		}
 
@@ -873,6 +880,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 
 		ed := &EndpointData{
 			Method:          method,
+			IsJSONRPC:       httpEndpoint.IsJSONRPC(),
 			ServiceName:     svc.Name,
 			ServiceVarName:  svc.VarName,
 			ServicePkgName:  svc.PkgName,

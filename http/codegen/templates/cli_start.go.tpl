@@ -1,4 +1,4 @@
-func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, error) {
+func do{{ .FuncSuffix }}(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, error) {
 	var (
 		doer goahttp.Doer
 {{- range .Services }}

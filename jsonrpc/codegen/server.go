@@ -39,29 +39,6 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 				codegen.AddImport(s, &codegen.ImportSpec{Path: "io"})
 				codegen.AddImport(s, codegen.GoaImport("jsonrpc"))
 			}
-			// Replace HTTP request decoder with proper JSON-RPC version
-			if s.Name == "request-decoder" {
-				// Surgical modification 1: Update function signatures for JSON-RPC
-				s.Source = strings.Replace(s.Source,
-					"func(*http.Request) (",
-					"func(*http.Request, *jsonrpc.RawRequest) (", 1)
-
-				// Surgical modification 2: Inject JSON-RPC body handling + signature
-				s.Source = strings.Replace(s.Source,
-					"return func(r *http.Request) ({{ .Payload.Ref }}, error) {",
-					`return func(r *http.Request, req *jsonrpc.RawRequest) ({{ .Payload.Ref }}, error) {
-		r.Body = io.NopCloser(bytes.NewReader(req.Params))`, 1)
-
-				// Surgical modification 3: Fix return values (nil -> zero values)
-				s.Source = strings.ReplaceAll(s.Source,
-					"return nil, ",
-					`var zero {{ .Payload.Ref }}
-		return zero, `)
-
-				s.Name = "jsonrpc-request-decoder"
-				sections = append(sections, s)
-				continue
-			}
 			// Remove the error encoder sections, JSON-RPC
 			// inlines the error encoding in each handler.
 			if s.Name != "error-encoder" {
