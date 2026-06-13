@@ -34,10 +34,14 @@ func TestOpenAPIOrderIndependence(t *testing.T) {
 		{"streaming-result", testdata.StreamingResultDSL},
 		{"streaming-payload", testdata.StreamingPayloadDSL},
 		// NOTE: methods declaring anonymous object results (e.g.
-		// testdata.SSEObjectDSL) still fail this check: the service-level
-		// analyze pass wraps raw object payloads and results into user
-		// types in place (wrapObject in codegen/service). That mutation is
-		// owned by the service analyze pass, not the HTTP one.
+		// testdata.SSEObjectDSL) only pass this check because the raw
+		// object wrapping moved out of the service analyze pass into
+		// codegen.NormalizeRoot which CreateHTTPServices applies before
+		// computing the transport data. The pristine root below is rendered
+		// without normalization, so designs whose OpenAPI output depends on
+		// the wrapping must normalize both roots (see
+		// TestGeneratorsTreatDesignAsReadOnly in codegen/generator for the
+		// full read-only guarantee).
 		{"sse", testdata.SSEStringDSL},
 	}
 	for _, c := range cases {

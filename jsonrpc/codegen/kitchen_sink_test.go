@@ -10,6 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	goacodegen "goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/generator"
 	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/eval"
@@ -25,6 +26,9 @@ import (
 // against a manifest so files that appear or disappear fail the test.
 func TestJSONRPCKitchenSink(t *testing.T) {
 	root := expr.RunDSL(t, testdata.JSONRPCKitchenSinkDSL)
+	// The test invokes the generator functions directly so it must apply the
+	// design normalization generator.Generate runs before them.
+	goacodegen.NormalizeRoot(root)
 	roots := []eval.Root{root}
 
 	tfiles, err := generator.Transport("kitchensink", roots)

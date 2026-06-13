@@ -799,17 +799,19 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		}
 	}
 
-	// A function to convert raw object type to user type.
-	wrapObject := func(att *expr.AttributeExpr, name, id string) {
+	// A function to record method user types so that forced types are not
+	// collected twice. Raw object method types are wrapped into synthesized
+	// user types by codegen.NormalizeRoot before any generator runs: analyze
+	// reads the design and never mutates it, so a raw object here means the
+	// root was not normalized.
+	recordMethodType := func(m *expr.MethodExpr, att *expr.AttributeExpr) {
 		if att == nil {
 			return
 		}
 		if _, ok := att.Type.(*expr.Object); ok {
-			att.Type = &expr.UserTypeExpr{
-				AttributeExpr: expr.DupAtt(att),
-				TypeName:      scope.PeekUnique(name),
-				UID:           id,
-			}
+			panic(fmt.Sprintf(
+				"service %q method %q declares a raw object type: codegen.NormalizeRoot must run after eval finalization and before the generators read the design",
+				service.Name, m.Name)) // bug
 		}
 		if ut, ok := att.Type.(expr.UserType); ok {
 			seen[ut.ID()] = struct{}{}
@@ -817,16 +819,11 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	}
 
 	for _, m := range service.Methods {
-		name := codegen.Goify(m.Name, true)
-		// Create user type for raw object payloads
-		wrapObject(m.Payload, name+"Payload", service.Name+"#"+name+"Payload")
-		// Create user type for raw object streaming payloads
-		wrapObject(m.StreamingPayload, name+"StreamingPayload", service.Name+"#"+name+"StreamingPayload")
-		// Create user type for raw object results
-		wrapObject(m.Result, name+"Result", service.Name+"#"+name+"Result")
-		// Create user type for raw object streaming results (if different from Result)
+		recordMethodType(m, m.Payload)
+		recordMethodType(m, m.StreamingPayload)
+		recordMethodType(m, m.Result)
 		if m.HasMixedResults() {
-			wrapObject(m.StreamingResult, name+"StreamingResult", service.Name+"#"+name+"StreamingResult")
+			recordMethodType(m, m.StreamingResult)
 		}
 	}
 

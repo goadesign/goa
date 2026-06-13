@@ -111,6 +111,16 @@ const SchemaRef = "https://json-schema.org/draft/2020-12/schema"
 var (
 	// Definitions contains the generated JSON schema definitions
 	Definitions map[string]*Schema
+
+	// definitionNames records the definition name assigned to result type
+	// expressions returned as-is by expr.Project (the design expression when
+	// it is already projected onto the requested view). The historical
+	// implementation renamed those expressions in place which made later
+	// references resolve to the first assigned name; the registry preserves
+	// that behavior while keeping the design expression tree read-only for
+	// the generators. Entries are keyed by expression instance so stale
+	// entries from previous generations cannot collide with new designs.
+	definitionNames = make(map[*expr.ResultTypeExpr]string)
 )
 
 // Initialize the global variables
@@ -246,17 +256,33 @@ func ResultTypeRefWithPrefix(api *expr.APIExpr, mt *expr.ResultTypeExpr, view, p
 	if n, ok := mt.Meta["openapi:typename"]; ok {
 		metaName = codegen.Goify(n[0], true)
 	}
+	name := projected.TypeName
 	if metaName != "" {
-		projected.TypeName = metaName
+		name = metaName
 	}
-	if _, ok := Definitions[projected.TypeName]; !ok {
-		projected.TypeName = codegen.Goify(prefix, true) + codegen.Goify(projected.TypeName, true)
-		if metaName != "" {
-			projected.TypeName = metaName
+	if assigned, ok := definitionNames[projected]; ok {
+		// expr.Project returned the design expression itself and a
+		// definition name was already assigned to it: keep referencing it.
+		name = assigned
+	} else {
+		if _, ok := Definitions[name]; !ok {
+			name = codegen.Goify(prefix, true) + codegen.Goify(name, true)
+			if metaName != "" {
+				name = metaName
+			}
 		}
-		GenerateResultTypeDefinition(api, projected, expr.DefaultView)
+		if projected == mt {
+			// expr.Project returns its input when the result type is
+			// already projected onto the requested view. Record the
+			// assigned name instead of renaming the design expression in
+			// place: the design tree is read-only for the generators.
+			definitionNames[projected] = name
+		}
 	}
-	return fmt.Sprintf("#/$defs/%s", projected.TypeName)
+	if _, ok := Definitions[name]; !ok {
+		GenerateResultTypeDefinition(api, renamedResultType(projected, name), expr.DefaultView)
+	}
+	return fmt.Sprintf("#/$defs/%s", name)
 }
 
 // TypeRef produces the JSON reference to the type definition.
@@ -585,6 +611,22 @@ func initAttributeValidation(s *Schema, at *expr.AttributeExpr) {
 		}
 		s.Required = append(s.Required, v)
 	}
+}
+
+// renamedResultType returns rt carrying the given type name. When the name
+// already matches it returns rt unchanged, otherwise it returns a shallow
+// copy sharing the attribute, views and identifier so the schema definition
+// is registered under the assigned name without renaming the (possibly design
+// owned) expression in place.
+func renamedResultType(rt *expr.ResultTypeExpr, name string) *expr.ResultTypeExpr {
+	if rt.TypeName == name {
+		return rt
+	}
+	ut := *rt.UserTypeExpr
+	ut.TypeName = name
+	dup := *rt
+	dup.UserTypeExpr = &ut
+	return &dup
 }
 
 // toSchemaHrefs produces hrefs that replace the path wildcards with JSON

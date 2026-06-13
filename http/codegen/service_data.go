@@ -1091,6 +1091,12 @@ func makeHTTPType(att *expr.AttributeExpr) *expr.AttributeExpr {
 func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[string]struct{}) *expr.AttributeExpr {
 	switch dt := att.Type.(type) {
 	case expr.UserType:
+		if dt == expr.Empty {
+			// Empty is a shared sentinel that expr.Dup deliberately never
+			// duplicates: rewriting its attribute would mutate global design
+			// state. There is nothing to flatten in it anyway.
+			return att
+		}
 		if _, ok := dt.(*expr.ResultTypeExpr); !ok && !expr.IsObject(dt) {
 			// Aliased user type. Use the underlying aliased type instead of
 			// generating new types in the client and server packages
