@@ -61,7 +61,6 @@ definitions:
                 - string: ""
                 - string: ""
                 - string: ""
-                - string: ""
             foo: ""
     TestServiceTestEndpointRequestBody:
         title: TestServiceTestEndpointRequestBody

@@ -20,7 +20,7 @@ func BuildAddPayload(calcAddBody string) (*calc.AddPayload, error) {
 	{
 		err = json.Unmarshal([]byte(calcAddBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": 7412872588402985781,\n      \"b\": 5913590264761675057,\n      \"id\": \"Velit et dolor iste ab sint est.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": 281524111196350841,\n      \"b\": 4865202500627059760,\n      \"id\": \"Perspiciatis sed soluta distinctio facere voluptas et.\"\n   }'")
 		}
 	}
 	v := &calc.AddPayload{
@@ -39,7 +39,7 @@ func BuildLogPayload(calcLogBody string) (*calc.LogPayload, error) {
 	{
 		err = json.Unmarshal([]byte(calcLogBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"id\": \"Necessitatibus optio ipsum maxime tempore.\",\n      \"message\": \"Ut sed accusantium.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"id\": \"Suscipit saepe tempore fuga recusandae amet blanditiis.\",\n      \"message\": \"Est quisquam molestiae.\"\n   }'")
 		}
 	}
 	v := &calc.LogPayload{

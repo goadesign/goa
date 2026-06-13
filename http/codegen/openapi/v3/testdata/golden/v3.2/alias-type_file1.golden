@@ -38,7 +38,6 @@ paths:
                                 completed:
                                     - where
                                     - where
-                                    - where
                                 current: where
 components:
     schemas:
@@ -57,7 +56,6 @@ components:
             description: Request body for testEndpoint.
             example:
                 completed:
-                    - who
                     - who
                     - who
                     - who

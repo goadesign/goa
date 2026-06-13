@@ -32,6 +32,7 @@ paths:
                                 bar:
                                     - string: ""
                                     - string: ""
+                                    - string: ""
                                 foo: ""
                 "404":
                     description: Not Found response.
@@ -41,7 +42,6 @@ paths:
                                 $ref: '#/components/schemas/GoaFoobar'
                             example:
                                 bar:
-                                    - string: ""
                                     - string: ""
                                     - string: ""
                                     - string: ""
@@ -74,6 +74,7 @@ components:
                     example: ""
             example:
                 bar:
+                    - string: ""
                     - string: ""
                     - string: ""
                 foo: ""

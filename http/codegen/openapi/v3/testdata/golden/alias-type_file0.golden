@@ -5,18 +5,17 @@
         "description": "Request body for testEndpoint.",
         "example": {
           "completed": [
-            "where",
-            "where",
-            "where",
-            "where"
+            "who",
+            "who",
+            "who"
           ],
-          "current": "where"
+          "current": "who"
         },
         "properties": {
           "completed": {
             "example": [
-              "where",
-              "where"
+              "who",
+              "who"
             ],
             "items": {
               "description": "Setup stage.",
@@ -61,10 +60,12 @@
             "application/json": {
               "example": {
                 "completed": [
-                  "where",
-                  "where"
+                  "who",
+                  "who",
+                  "who",
+                  "who"
                 ],
-                "current": "where"
+                "current": "who"
               },
               "schema": {
                 "$ref": "#/components/schemas/Setup"
@@ -80,12 +81,10 @@
               "application/json": {
                 "example": {
                   "completed": [
-                    "when",
-                    "when",
-                    "when",
-                    "when"
+                    "where",
+                    "where"
                   ],
-                  "current": "when"
+                  "current": "where"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/Setup"

@@ -798,7 +798,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 								Type:        att.Type,
 								Pointer:     pointer,
 								Required:    true,
-								Example:     att.Example(sds.Root.API.ExampleGenerator),
+								Example:     att.Example(sds.Root.API.ExampleGenerator.Field(httpEndpoint.MethodExpr.Payload, arg)),
 								Validate:    vcode,
 							},
 						}
@@ -1256,7 +1256,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 						TypeRef:      sd.Scope.GoTypeRef(pAtt),
 						Validate:     codegen.AttributeValidationCode(pAtt, nil, httpsvrctx, required, expr.IsAlias(pAtt.Type), varn, name),
 						DefaultValue: pAtt.DefaultValue,
-						Example:      pAtt.Example(sds.Root.API.ExampleGenerator),
+						Example:      pAtt.Example(sds.Root.API.ExampleGenerator.Field(e.MethodExpr.Payload, name)),
 					},
 				},
 			}
@@ -1442,7 +1442,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 							Type:         uatt.Type,
 							Pointer:      sc.UsernamePointer,
 							Validate:     codegen.ValidationCode(uatt, nil, httpsvrctx, sc.UsernameRequired, expr.IsAlias(uatt.Type), false, sc.UsernameAttr),
-							Example:      uatt.Example(sds.Root.API.ExampleGenerator),
+							Example:      uatt.Example(sds.Root.API.ExampleGenerator.Field(e.MethodExpr.Payload, sc.UsernameAttr)),
 						},
 					}
 					patt := e.MethodExpr.Payload.Find(sc.PasswordAttr)
@@ -1465,7 +1465,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 							Type:         patt.Type,
 							Pointer:      sc.PasswordPointer,
 							Validate:     codegen.ValidationCode(patt, nil, httpsvrctx, sc.PasswordRequired, expr.IsAlias(patt.Type), false, sc.PasswordAttr),
-							Example:      patt.Example(sds.Root.API.ExampleGenerator),
+							Example:      patt.Example(sds.Root.API.ExampleGenerator.Field(e.MethodExpr.Payload, sc.PasswordAttr)),
 						},
 					}
 					cliArgs = []*InitArgData{uarg, parg}
@@ -2622,7 +2622,7 @@ func (sds *ServicesData) extractElements(kind httpElementKind, a *expr.MappedAtt
 				Validate:          validate,
 				IsTextUnmarshaler: isText,
 				DefaultValue:      att.DefaultValue,
-				Example:           att.Example(sds.Root.API.ExampleGenerator),
+				Example:           att.Example(sds.Root.API.ExampleGenerator.Field(svcAtt, name)),
 			},
 		}, att)
 		return nil

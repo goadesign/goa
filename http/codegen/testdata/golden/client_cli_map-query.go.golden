@@ -85,7 +85,7 @@ func ParseEndpoint(
 				err = json.Unmarshal([]byte(*serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag), &val)
 				data = val
 				if err != nil {
-					return nil, nil, fmt.Errorf("invalid JSON for serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"Iste perspiciatis.\": [\n         567408540461384614,\n         5721637919286150856\n      ],\n      \"Itaque inventore optio.\": [\n         944964629895926327,\n         9816802860198551805\n      ],\n      \"Molestias recusandae doloribus qui quia.\": [\n         16144582504089020071,\n         3742304935485895874,\n         13394165655285281246,\n         7388093990298529880\n      ]\n   }'")
+					return nil, nil, fmt.Errorf("invalid JSON for serviceMapQueryPrimitiveArrayMapQueryPrimitiveArrayPFlag, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"Quidem accusamus.\": [\n         3906106080549376696,\n         18039872150139340048\n      ],\n      \"Repellat occaecati officiis doloremque.\": [\n         8210943955859777434,\n         7701234893751856770,\n         12687845642945213165,\n         5080739739723289788\n      ],\n      \"Voluptas officiis in eum nostrum voluptatem.\": [\n         7799018251876253497,\n         23602025540978920\n      ]\n   }'")
 				}
 			}
 		}

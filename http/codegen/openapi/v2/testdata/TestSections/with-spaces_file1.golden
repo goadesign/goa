@@ -66,4 +66,5 @@ definitions:
             bar:
                 - string: ""
                 - string: ""
+                - string: ""
             foo: ""

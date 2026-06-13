@@ -1300,7 +1300,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 				expr.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == expr.StringKind,
 			Validate:     codegen.AttributeValidationCode(c, nil, ctx, required, false, varn, name),
 			DefaultValue: c.DefaultValue,
-			Example:      c.Example(services.Root.API.ExampleGenerator),
+			Example:      c.Example(services.Root.API.ExampleGenerator.Field(service, name)),
 		})
 		return nil
 	})

@@ -3,8 +3,8 @@
     "schemas": {
       "SSEDataFieldMethodResponseBody": {
         "example": {
-          "data": "Qui quia inventore et tempora.",
-          "flag": true
+          "data": "Enim nihil.",
+          "flag": false
         },
         "properties": {
           "data": {
@@ -36,7 +36,7 @@
                 "itemSchema": {
                   "properties": {
                     "data": {
-                      "example": "Sunt itaque inventore optio quia ullam aut.",
+                      "example": "Qui quia inventore et tempora.",
                       "type": "string"
                     }
                   },

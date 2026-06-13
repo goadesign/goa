@@ -3,9 +3,9 @@
     "schemas": {
       "SSEObjectMethodResponseBody": {
         "example": {
-          "flag": true,
-          "id": "Quia inventore et.",
-          "value": 3742304935485895700
+          "flag": false,
+          "id": "Consequuntur dolores eos voluptatem.",
+          "value": 7986166745691455000
         },
         "properties": {
           "flag": {
@@ -46,20 +46,20 @@
                       "contentSchema": {
                         "example": {
                           "flag": false,
-                          "id": "Repellendus harum.",
-                          "value": 5721637919286151000
+                          "id": "Consequuntur dolores eos voluptatem.",
+                          "value": 7986166745691455000
                         },
                         "properties": {
                           "flag": {
-                            "example": false,
+                            "example": true,
                             "type": "boolean"
                           },
                           "id": {
-                            "example": "Sunt itaque inventore optio quia ullam aut.",
+                            "example": "Quia inventore et.",
                             "type": "string"
                           },
                           "value": {
-                            "example": 3602919998459661300,
+                            "example": 3742304935485895700,
                             "format": "int64",
                             "type": "integer"
                           }

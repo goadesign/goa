@@ -29,18 +29,18 @@ paths:
                                             properties:
                                                 flag:
                                                     type: boolean
-                                                    example: false
+                                                    example: true
                                                 id:
                                                     type: string
-                                                    example: Sunt itaque inventore optio quia ullam aut.
+                                                    example: Quia inventore et.
                                                 value:
                                                     type: integer
-                                                    example: 3602919998459661528
+                                                    example: 3742304935485895874
                                                     format: int64
                                             example:
                                                 flag: false
-                                                id: Repellendus harum.
-                                                value: 5721637919286150856
+                                                id: Consequuntur dolores eos voluptatem.
+                                                value: 7986166745691455230
                                 required:
                                     - data
 components:
@@ -59,8 +59,8 @@ components:
                     example: 7595816812588075382
                     format: int64
             example:
-                flag: true
-                id: Quia inventore et.
-                value: 3742304935485895874
+                flag: false
+                id: Consequuntur dolores eos voluptatem.
+                value: 7986166745691455230
 tags:
     - name: SSEObjectService

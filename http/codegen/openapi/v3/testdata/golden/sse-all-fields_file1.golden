@@ -20,7 +20,7 @@ paths:
                         schema:
                             $ref: '#/components/schemas/SSEAllFieldsMethodRequestBody'
                         example:
-                            id: Et tempora et quae.
+                            id: Ducimus vel.
             responses:
                 "200":
                     description: OK response.
@@ -44,7 +44,7 @@ components:
                     example: Quia molestias.
             description: Request body for SSEAllFieldsMethod.
             example:
-                id: Doloribus qui quia.
+                id: Consequuntur dolores eos voluptatem.
         SSEAllFieldsMethodResponseBody:
             type: object
             properties:

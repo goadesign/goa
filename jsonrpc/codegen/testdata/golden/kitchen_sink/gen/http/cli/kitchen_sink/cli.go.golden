@@ -31,7 +31,7 @@ func UsageCommands() []string {
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
-	return os.Args[0] + " " + "mixed lookup --body '{\n      \"id\": \"Laboriosam nisi in.\",\n      \"key\": \"Voluptatibus hic eius et quasi hic laboriosam.\"\n   }'" + "\n" +
+	return os.Args[0] + " " + "mixed lookup --body '{\n      \"id\": \"Mollitia voluptatum expedita velit assumenda.\",\n      \"key\": \"Blanditiis sed voluptatum odit dolores impedit.\"\n   }'" + "\n" +
 		os.Args[0] + " " + "health check" + "\n" +
 		""
 }
@@ -176,7 +176,7 @@ func mixedLookupUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "mixed lookup --body '{\n      \"id\": \"Laboriosam nisi in.\",\n      \"key\": \"Voluptatibus hic eius et quasi hic laboriosam.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "mixed lookup --body '{\n      \"id\": \"Mollitia voluptatum expedita velit assumenda.\",\n      \"key\": \"Blanditiis sed voluptatum odit dolores impedit.\"\n   }'")
 }
 
 // healthUsage displays the usage of the health command and its subcommands.

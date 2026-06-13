@@ -64,35 +64,111 @@ type Randomizer interface {
 func NewRandom(seed string) *ExampleGenerator {
 	return &ExampleGenerator{
 		Randomizer: NewFakerRandomizer(seed),
+		seed:       seed,
 	}
 }
 
+// ExampleGenerator generates examples from a value stream seeded by a design
+// identity. Example computations derive child generators at stable design
+// boundaries (user type IDs, object field names, array indices) via Derived
+// so that an example is a pure function of the design: it does not change
+// when unrelated parts of the design change or when code generators evaluate
+// attributes in a different order.
 type ExampleGenerator struct {
 	Randomizer
+	// seed identifies the design element this generator draws values for;
+	// generators derived from it extend the seed via Derived. It is empty
+	// for generators built around a caller-supplied Randomizer, which
+	// cannot re-seed and therefore never derive.
+	seed string
+	// root points to the generator this one was derived from so that all
+	// derived generators share the root's seen cache. It is nil on roots.
+	root *ExampleGenerator
 	seen map[string]*any
 	mu   sync.RWMutex
 }
 
+// Derived returns a generator whose value stream is seeded from this
+// generator's seed extended with the given identity, independent of how many
+// values were drawn so far. Derived generators share the root generator's
+// seen values so a user type keeps a single example wherever it appears.
+// Generators that cannot re-seed (disabled example generation or a
+// caller-supplied Randomizer) return themselves.
+func (r *ExampleGenerator) Derived(id string) *ExampleGenerator {
+	return r.reseeded(r.seed + "/" + id)
+}
+
+// Rebased returns a generator whose value stream is seeded from the root
+// design seed and the given absolute identity, discarding the current
+// derivation path. It anchors examples of design elements that own a global
+// identity — user type IDs in particular — so the computed value is the same
+// no matter where in the design the element is reached from. Generators that
+// cannot re-seed (disabled example generation or a caller-supplied
+// Randomizer) return themselves.
+func (r *ExampleGenerator) Rebased(id string) *ExampleGenerator {
+	return r.reseeded(r.store().seed + ":" + id)
+}
+
 // PreviouslySeen returns the previously seen value for a given ID
 func (r *ExampleGenerator) PreviouslySeen(typeID string) (*any, bool) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	if r.seen == nil {
+	s := r.store()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.seen == nil {
 		return nil, false
 	}
-	val, haveSeen := r.seen[typeID]
+	val, haveSeen := s.seen[typeID]
 	return val, haveSeen
 }
 
 // HaveSeen stores the seen value in the randomizer, for reuse later
 func (r *ExampleGenerator) HaveSeen(typeID string, val *any) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if r.seen == nil {
-		r.seen = make(map[string]*any)
+	s := r.store()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.seen == nil {
+		s.seen = make(map[string]*any)
 	}
 
-	r.seen[typeID] = val
+	s.seen[typeID] = val
+}
+
+// Field returns a generator anchored to the identity of the named field of
+// the given parent attribute: the parent type identity extended with the
+// field name when the parent is a user type, the field name alone otherwise.
+// Code generators use it when they compute the example of one element
+// extracted from a payload or result (transport params, headers, cookies,
+// metadata) so the standalone example matches the corresponding field value
+// in the parent type's composite example and stays stable across generator
+// changes.
+func (r *ExampleGenerator) Field(parent *AttributeExpr, name string) *ExampleGenerator {
+	if ut, ok := parent.Type.(UserType); ok {
+		return r.Rebased(ut.ID()).Derived(name)
+	}
+	return r.Rebased(name)
+}
+
+// store returns the generator owning the seen cache and the root design
+// seed: the generator this one was derived from, or the generator itself
+// when it is a root.
+func (r *ExampleGenerator) store() *ExampleGenerator {
+	if r.root != nil {
+		return r.root
+	}
+	return r
+}
+
+// reseeded returns a generator drawing from a fresh value stream seeded with
+// the given seed and sharing this generator's root state.
+func (r *ExampleGenerator) reseeded(seed string) *ExampleGenerator {
+	if r.Randomizer == nil || r.store().seed == "" {
+		return r
+	}
+	return &ExampleGenerator{
+		Randomizer: NewFakerRandomizer(seed),
+		seed:       seed,
+		root:       r.store(),
+	}
 }
 
 // NewFakerRandomizer creates a randomizer that uses the faker library to

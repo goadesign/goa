@@ -25,7 +25,6 @@ paths:
                                 - ""
                                 - ""
                                 - ""
-                                - ""
                             any_map:
                                 "": ""
             responses:
@@ -38,6 +37,7 @@ paths:
                             example:
                                 any: ""
                                 any_array:
+                                    - ""
                                     - ""
                                     - ""
                                     - ""

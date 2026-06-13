@@ -23,7 +23,7 @@ paths:
                                 properties:
                                     data:
                                         type: string
-                                        example: Sunt itaque inventore optio quia ullam aut.
+                                        example: Qui quia inventore et tempora.
                                 required:
                                     - data
 components:
@@ -38,7 +38,7 @@ components:
                     type: boolean
                     example: true
             example:
-                data: Qui quia inventore et tempora.
-                flag: true
+                data: Enim nihil.
+                flag: false
 tags:
     - name: SSEDataFieldService

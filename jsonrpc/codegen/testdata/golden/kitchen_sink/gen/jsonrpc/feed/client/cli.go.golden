@@ -21,7 +21,7 @@ func BuildWatchPayload(feedWatchBody string) (*feed.WatchPayload, error) {
 	{
 		err = json.Unmarshal([]byte(feedWatchBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"last_event_id\": \"Perferendis ea esse.\",\n      \"request_id\": \"Numquam inventore consequatur voluptatum animi.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"last_event_id\": \"Iure dolor.\",\n      \"request_id\": \"Aut voluptas.\"\n   }'")
 		}
 	}
 	v := &feed.WatchPayload{

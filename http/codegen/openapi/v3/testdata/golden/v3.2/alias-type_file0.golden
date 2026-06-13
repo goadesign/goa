@@ -7,7 +7,6 @@
           "completed": [
             "who",
             "who",
-            "who",
             "who"
           ],
           "current": "who"
@@ -77,7 +76,6 @@
               "application/json": {
                 "example": {
                   "completed": [
-                    "where",
                     "where",
                     "where"
                   ],

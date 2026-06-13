@@ -4,7 +4,7 @@
       "SSERequestIDMethodRequestBody": {
         "description": "Request body for SSERequestIDMethod.",
         "example": {
-          "id": "Doloribus qui quia."
+          "id": "Consequuntur dolores eos voluptatem."
         },
         "properties": {
           "id": {
@@ -28,11 +28,11 @@
         "parameters": [
           {
             "allowEmptyValue": true,
-            "example": "Harum et.",
+            "example": "Ullam aut.",
             "in": "header",
             "name": "Last-Event-ID",
             "schema": {
-              "example": "Iste perspiciatis.",
+              "example": "Itaque inventore optio.",
               "type": "string"
             }
           }
@@ -41,7 +41,7 @@
           "content": {
             "application/json": {
               "example": {
-                "id": "Ullam aut."
+                "id": "Est voluptas est repellat."
               },
               "schema": {
                 "$ref": "#/components/schemas/SSERequestIDMethodRequestBody"
@@ -58,7 +58,7 @@
                 "itemSchema": {
                   "properties": {
                     "data": {
-                      "example": "Itaque inventore optio.",
+                      "example": "Et tempora et quae.",
                       "type": "string"
                     }
                   },

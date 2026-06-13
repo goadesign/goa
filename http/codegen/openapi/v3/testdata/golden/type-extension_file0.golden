@@ -4,7 +4,7 @@
       "Notification": {
         "description": "Request body for testEndpoint.",
         "example": {
-          "id": "Doloribus qui quia."
+          "id": "Consequuntur dolores eos voluptatem."
         },
         "properties": {
           "id": {
@@ -30,7 +30,7 @@
           "content": {
             "application/json": {
               "example": {
-                "id": "Et tempora et quae."
+                "id": "Quia velit et."
               },
               "schema": {
                 "$ref": "#/components/schemas/Notification"
@@ -45,7 +45,7 @@
             "content": {
               "application/json": {
                 "example": {
-                  "id": "Itaque inventore optio."
+                  "id": "Aut soluta voluptatem nisi corrupti."
                 },
                 "schema": {
                   "$ref": "#/components/schemas/Notification"

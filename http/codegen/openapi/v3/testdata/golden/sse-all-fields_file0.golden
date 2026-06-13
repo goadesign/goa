@@ -4,7 +4,7 @@
       "SSEAllFieldsMethodRequestBody": {
         "description": "Request body for SSEAllFieldsMethod.",
         "example": {
-          "id": "Doloribus qui quia."
+          "id": "Consequuntur dolores eos voluptatem."
         },
         "properties": {
           "id": {
@@ -67,7 +67,7 @@
           "content": {
             "application/json": {
               "example": {
-                "id": "Et tempora et quae."
+                "id": "Ducimus vel."
               },
               "schema": {
                 "$ref": "#/components/schemas/SSEAllFieldsMethodRequestBody"

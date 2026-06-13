@@ -26,8 +26,7 @@
             }
           ],
           "foo": [
-            "Repudiandae sit.",
-            "Asperiores fuga qui rem qui earum eos."
+            "Aliquid ut modi suscipit et et."
           ]
         },
         "properties": {
@@ -76,63 +75,56 @@
             "application/json": {
               "example": [
                 {
-                  "bar": [
-                    {
-                      "string": ""
-                    }
-                  ],
-                  "foo": []
+                  "bar": [],
+                  "foo": [
+                    "Totam doloremque exercitationem voluptate.",
+                    "Repellat perspiciatis voluptas et quia deleniti."
+                  ]
                 },
                 {
-                  "bar": [
-                    {
-                      "string": ""
-                    }
-                  ],
-                  "foo": []
+                  "bar": [],
+                  "foo": [
+                    "Totam doloremque exercitationem voluptate.",
+                    "Repellat perspiciatis voluptas et quia deleniti."
+                  ]
                 },
                 {
-                  "bar": [
-                    {
-                      "string": ""
-                    }
-                  ],
-                  "foo": []
-                },
-                {
-                  "bar": [
-                    {
-                      "string": ""
-                    }
-                  ],
-                  "foo": []
+                  "bar": [],
+                  "foo": [
+                    "Totam doloremque exercitationem voluptate.",
+                    "Repellat perspiciatis voluptas et quia deleniti."
+                  ]
                 }
               ],
               "schema": {
                 "example": [
                   {
-                    "bar": [
-                      {
-                        "string": ""
-                      }
-                    ],
-                    "foo": []
+                    "bar": [],
+                    "foo": [
+                      "Totam doloremque exercitationem voluptate.",
+                      "Repellat perspiciatis voluptas et quia deleniti."
+                    ]
                   },
                   {
-                    "bar": [
-                      {
-                        "string": ""
-                      }
-                    ],
-                    "foo": []
+                    "bar": [],
+                    "foo": [
+                      "Totam doloremque exercitationem voluptate.",
+                      "Repellat perspiciatis voluptas et quia deleniti."
+                    ]
                   },
                   {
-                    "bar": [
-                      {
-                        "string": ""
-                      }
-                    ],
-                    "foo": []
+                    "bar": [],
+                    "foo": [
+                      "Totam doloremque exercitationem voluptate.",
+                      "Repellat perspiciatis voluptas et quia deleniti."
+                    ]
+                  },
+                  {
+                    "bar": [],
+                    "foo": [
+                      "Totam doloremque exercitationem voluptate.",
+                      "Repellat perspiciatis voluptas et quia deleniti."
+                    ]
                   }
                 ],
                 "items": {

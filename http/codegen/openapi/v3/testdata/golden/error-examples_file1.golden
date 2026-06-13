@@ -74,12 +74,12 @@ components:
                     example: false
             description: Error response result type
             example:
-                fault: true
+                fault: false
                 id: 123abc
                 message: parameter 'p' must be an integer
                 name: bad_request
-                temporary: true
-                timeout: true
+                temporary: false
+                timeout: false
             required:
                 - name
                 - id
