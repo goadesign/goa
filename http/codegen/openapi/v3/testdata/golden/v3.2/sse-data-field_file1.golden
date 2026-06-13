@@ -23,7 +23,7 @@ paths:
                                 properties:
                                     data:
                                         type: string
-                                        example: Quia molestias.
+                                        example: Quos qui dolore voluptas.
                                 required:
                                     - data
 components:

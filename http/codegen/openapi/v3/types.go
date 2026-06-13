@@ -69,6 +69,23 @@ func (sf *schemafier) rebased(id string) *schemafier {
 	return &c
 }
 
+// bodyExampleID returns the absolute design identity anchoring the example
+// streams of an endpoint request or response body. Anonymous body types
+// (inline arrays, maps and primitives) have no type identity of their own so
+// their examples anchor on the endpoint that owns them.
+func bodyExampleID(svc, endpoint, role string) string {
+	return svc + "." + endpoint + "." + role
+}
+
+// fieldOf returns a schemafier whose example value stream is anchored to the
+// identity of the named field of the given parent attribute, sharing all
+// other state. See expr.ExampleGenerator.Field.
+func (sf *schemafier) fieldOf(parent *expr.AttributeExpr, name string) *schemafier {
+	c := *sf
+	c.rand = sf.rand.Field(parent, name)
+	return &c
+}
+
 // newSchemafier initializes a schemafier.
 func newSchemafier(rand *expr.ExampleGenerator) *schemafier {
 	return &schemafier{
@@ -128,7 +145,7 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 					reqBody.Description = defaultRequestBodyDescription(e)
 				}
 			}
-			req := sf.schemafy(reqBody)
+			req := sf.rebased(bodyExampleID(s.Name(), e.Name(), "request")).schemafy(reqBody)
 			if e.StreamingBody != nil {
 				sreq := sf.schemafy(e.StreamingBody)
 				var note string
@@ -155,8 +172,9 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 			for _, er := range e.HTTPErrors {
 				resps = append(resps, er.Response)
 			}
-			for _, resp := range resps {
-				js := sf.schemafy(staticViewBody(resp))
+			for i, resp := range resps {
+				id := bodyExampleID(s.Name(), e.Name(), "response."+strconv.Itoa(resp.StatusCode)+"."+strconv.Itoa(i))
+				js := sf.rebased(id).schemafy(staticViewBody(resp))
 				res[resp.StatusCode] = append(res[resp.StatusCode], js)
 			}
 			eb := &EndpointBodies{RequestBody: req, ResponseBodies: res}
@@ -182,29 +200,31 @@ func (sf *schemafier) buildSSEItemSchema(e *expr.HTTPEndpointExpr) *openapi.Sche
 	sse := e.SSE
 	sr := e.MethodExpr.StreamingResult
 	data := sr
+	dsf := sf
 	if sse.DataField != "" {
 		data = expr.AsObject(sr.Type).Attribute(sse.DataField)
+		dsf = sf.fieldOf(sr, sse.DataField)
 	}
 	var dataSchema *openapi.Schema
 	switch data.Type {
 	case expr.String, expr.Bytes:
-		dataSchema = sf.schemafy(data)
+		dataSchema = dsf.schemafy(data)
 	default:
 		dataSchema = &openapi.Schema{
 			Type:             openapi.String,
 			ContentMediaType: "application/json",
-			ContentSchema:    sf.schemafy(data),
+			ContentSchema:    dsf.schemafy(data),
 		}
 	}
 	props := map[string]*openapi.Schema{"data": dataSchema}
 	if sse.EventField != "" {
-		props["event"] = sf.schemafy(expr.AsObject(sr.Type).Attribute(sse.EventField))
+		props["event"] = sf.fieldOf(sr, sse.EventField).schemafy(expr.AsObject(sr.Type).Attribute(sse.EventField))
 	}
 	if sse.IDField != "" {
-		props["id"] = sf.schemafy(expr.AsObject(sr.Type).Attribute(sse.IDField))
+		props["id"] = sf.fieldOf(sr, sse.IDField).schemafy(expr.AsObject(sr.Type).Attribute(sse.IDField))
 	}
 	if sse.RetryField != "" {
-		props["retry"] = sf.schemafy(expr.AsObject(sr.Type).Attribute(sse.RetryField))
+		props["retry"] = sf.fieldOf(sr, sse.RetryField).schemafy(expr.AsObject(sr.Type).Attribute(sse.RetryField))
 	}
 	return &openapi.Schema{
 		Type:       openapi.Object,

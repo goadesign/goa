@@ -58,7 +58,7 @@
                 "itemSchema": {
                   "properties": {
                     "data": {
-                      "example": "Doloribus qui quia.",
+                      "example": "Quia molestias.",
                       "type": "string"
                     }
                   },

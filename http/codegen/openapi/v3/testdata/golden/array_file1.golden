@@ -33,15 +33,7 @@ paths:
                                   foo:
                                     - Totam doloremque exercitationem voluptate.
                                     - Repellat perspiciatis voluptas et quia deleniti.
-                                - bar: []
-                                  foo:
-                                    - Totam doloremque exercitationem voluptate.
-                                    - Repellat perspiciatis voluptas et quia deleniti.
                         example:
-                            - bar: []
-                              foo:
-                                - Totam doloremque exercitationem voluptate.
-                                - Repellat perspiciatis voluptas et quia deleniti.
                             - bar: []
                               foo:
                                 - Totam doloremque exercitationem voluptate.

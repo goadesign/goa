@@ -84,24 +84,10 @@
                     "Totam doloremque exercitationem voluptate.",
                     "Repellat perspiciatis voluptas et quia deleniti."
                   ]
-                },
-                {
-                  "bar": [],
-                  "foo": [
-                    "Totam doloremque exercitationem voluptate.",
-                    "Repellat perspiciatis voluptas et quia deleniti."
-                  ]
                 }
               ],
               "schema": {
                 "example": [
-                  {
-                    "bar": [],
-                    "foo": [
-                      "Totam doloremque exercitationem voluptate.",
-                      "Repellat perspiciatis voluptas et quia deleniti."
-                    ]
-                  },
                   {
                     "bar": [],
                     "foo": [

@@ -254,7 +254,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 			ct = "multipart/form-data"
 		}
 		mt := &MediaType{Schema: bodies.RequestBody}
-		initExamples(mt, e.Body, rand)
+		initExamples(mt, e.Body, rand.Rebased(bodyExampleID(m.Service.Name, e.Name(), "request")))
 		requestBody = &RequestBodyRef{Value: &RequestBody{
 			Description: requestBodyDescription(e),
 			Required:    e.Body.Type != expr.Empty,

@@ -16,8 +16,8 @@ paths:
                         application/json:
                             schema:
                                 type: string
-                                example: Beatae non id consequatur.
-                            example: Aut sed ducimus repudiandae sit explicabo asperiores.
+                                example: Debitis repellendus at repellendus fugit iusto deleniti.
+                            example: Debitis repellendus at repellendus fugit iusto deleniti.
 components: {}
 tags:
     - name: testService

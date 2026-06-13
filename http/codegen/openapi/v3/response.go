@@ -3,6 +3,7 @@ package openapiv3
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
@@ -15,15 +16,18 @@ func headersFromAttr(attr *expr.MappedAttributeExpr, rand *expr.ExampleGenerator
 		return nil
 	}
 	headers := make(map[string]*HeaderRef, len(*o))
-	expr.WalkMappedAttr(attr, func(name, elem string, attr *expr.AttributeExpr) error { // nolint: errcheck
+	expr.WalkMappedAttr(attr, func(name, elem string, hattr *expr.AttributeExpr) error { // nolint: errcheck
+		// Anchor the header example stream to the header identity so the
+		// example survives generator reorderings.
+		hrand := rand.Field(attr.AttributeExpr, name)
 		header := &Header{
-			Description: attr.Description,
-			Required:    attr.IsRequiredNoDefault(name),
-			Schema:      newSchemafier(rand).schemafy(attr),
-			Example:     openapi.Example(attr, rand),
-			Extensions:  openapi.ExtensionsFromExpr(attr.Meta),
+			Description: hattr.Description,
+			Required:    hattr.IsRequiredNoDefault(name),
+			Schema:      newSchemafier(hrand).schemafy(hattr),
+			Example:     openapi.Example(hattr, hrand),
+			Extensions:  openapi.ExtensionsFromExpr(hattr.Meta),
 		}
-		initExamples(header, attr, rand)
+		initExamples(header, hattr, hrand)
 		headers[elem] = &HeaderRef{Value: header}
 		return nil
 	})
@@ -64,7 +68,9 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 				Schema:     bodies[r.StatusCode][0],
 				Extensions: openapi.ExtensionsFromExpr(r.Body.Meta),
 			}
-			initExamples(content[ct], staticViewBody(r), rand)
+			ep := r.Parent.(*expr.HTTPEndpointExpr)
+			id := bodyExampleID(ep.Service.Name(), ep.Name(), "response."+strconv.Itoa(r.StatusCode)+".0")
+			initExamples(content[ct], staticViewBody(r), rand.Rebased(id))
 		} else if r.StatusCode != expr.StatusNoContent &&
 			isSkipResponseBodyEncodeDecode(r.Parent) {
 			// When SkipResponseBodyEncodeDecode is declared, the response type
