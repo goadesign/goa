@@ -66,11 +66,11 @@
         "parameters": [
           {
             "allowEmptyValue": true,
-            "example": "Et tempora et quae.",
+            "example": "Non sed saepe voluptatem.",
             "in": "header",
             "name": "Last-Event-ID",
             "schema": {
-              "example": "Doloribus qui quia.",
+              "example": "Natus magni voluptates consequatur suscipit.",
               "type": "string"
             }
           }

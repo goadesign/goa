@@ -26,12 +26,12 @@
         "operationId": "StreamingResultService#StreamingResultMethod",
         "parameters": [
           {
-            "example": "Et tempora et quae.",
+            "example": "Et et quis sint ipsam doloribus.",
             "in": "path",
             "name": "x",
             "required": true,
             "schema": {
-              "example": "Doloribus qui quia.",
+              "example": "Ipsam ut similique tempore.",
               "type": "string"
             }
           }

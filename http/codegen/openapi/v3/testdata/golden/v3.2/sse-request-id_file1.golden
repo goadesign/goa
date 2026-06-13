@@ -19,8 +19,8 @@ paths:
                   allowEmptyValue: true
                   schema:
                     type: string
-                    example: Itaque inventore optio.
-                  example: Ullam aut.
+                    example: Natus magni voluptates consequatur suscipit.
+                  example: Non sed saepe voluptatem.
             requestBody:
                 description: Request body for SSERequestIDMethod.
                 required: true

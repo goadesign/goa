@@ -18,8 +18,8 @@ paths:
                   required: true
                   schema:
                     type: string
-                    example: Doloribus qui quia.
-                  example: Et tempora et quae.
+                    example: Ipsam ut similique tempore.
+                  example: Et et quis sint ipsam doloribus.
             responses:
                 "101":
                     description: Switching Protocols response.

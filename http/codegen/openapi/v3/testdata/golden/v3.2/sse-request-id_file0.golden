@@ -28,11 +28,11 @@
         "parameters": [
           {
             "allowEmptyValue": true,
-            "example": "Ullam aut.",
+            "example": "Non sed saepe voluptatem.",
             "in": "header",
             "name": "Last-Event-ID",
             "schema": {
-              "example": "Itaque inventore optio.",
+              "example": "Natus magni voluptates consequatur suscipit.",
               "type": "string"
             }
           }

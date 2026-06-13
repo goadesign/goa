@@ -19,8 +19,8 @@ paths:
                   allowEmptyValue: true
                   schema:
                     type: string
-                    example: Doloribus qui quia.
-                  example: Et tempora et quae.
+                    example: Natus magni voluptates consequatur suscipit.
+                  example: Non sed saepe voluptatem.
             requestBody:
                 description: Request body for SSEAllFieldsMethod.
                 required: true
