@@ -27,9 +27,6 @@
           },
           {
             "string": ""
-          },
-          {
-            "string": ""
           }
         ],
         "foo": ""
@@ -37,12 +34,6 @@
       "properties": {
         "bar": {
           "example": [
-            {
-              "string": ""
-            },
-            {
-              "string": ""
-            },
             {
               "string": ""
             },
