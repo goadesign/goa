@@ -21,7 +21,7 @@ import (
 
 func TestCookieAPIKeySecurity(t *testing.T) {
 	t.Run("endpoint requirement uses cookie transport", func(t *testing.T) {
-		root := RunHTTPDSL(t, cookieAPIKeySecurityDSL)
+		root := expr.RunDSL(t, cookieAPIKeySecurityDSL)
 		endpoint := root.API.HTTP.Services[0].HTTPEndpoints[0]
 		require.Len(t, endpoint.Requirements, 1)
 		require.Len(t, endpoint.Requirements[0].Schemes, 1)
@@ -35,7 +35,7 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 	})
 
 	t.Run("openapi uses cookie security scheme", func(t *testing.T) {
-		root := RunHTTPDSL(t, cookieAPIKeySecurityDSL)
+		root := expr.RunDSL(t, cookieAPIKeySecurityDSL)
 		openapi.Definitions = make(map[string]*openapi.Schema)
 
 		v2Files, err := openapiv2.Files(root, openapi.DefaultPath20)
@@ -75,10 +75,10 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 	})
 
 	t.Run("http codegen does not duplicate cookie-backed auth fields", func(t *testing.T) {
-		root := RunHTTPDSL(t, cookieAPIKeySecurityDSL)
+		root := expr.RunDSL(t, cookieAPIKeySecurityDSL)
 		services := CreateHTTPServices(root)
 
-		serverTypes := serverType("gen", root.API.HTTP.Services[0], services)
+		serverTypes := typesFile("gen", root.API.HTTP.Services[0], true, services)
 		var serverTypesBuf bytes.Buffer
 		for _, section := range serverTypes.SectionTemplates[1:] {
 			require.NoError(t, section.Write(&serverTypesBuf))

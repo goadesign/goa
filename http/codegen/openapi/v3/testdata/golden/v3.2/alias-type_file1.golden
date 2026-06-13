@@ -38,7 +38,6 @@ paths:
                                 completed:
                                     - where
                                     - where
-                                    - where
                                 current: where
 components:
     schemas:
@@ -50,6 +49,8 @@ components:
                     items:
                         $ref: '#/components/schemas/Stage'
                     example:
+                        - who
+                        - who
                         - who
                         - who
                 current:

@@ -4,11 +4,11 @@
       "Payload": {
         "description": "Request body for Create.",
         "example": {
-          "x": "Doloribus qui quia."
+          "x": "Doloribus qui aspernatur alias consectetur accusamus qui."
         },
         "properties": {
           "x": {
-            "example": "Quia molestias.",
+            "example": "Doloribus qui aspernatur alias consectetur accusamus qui.",
             "type": "string"
           }
         },
@@ -19,11 +19,11 @@
       },
       "Result": {
         "example": {
-          "id": "Itaque inventore optio."
+          "id": "Tenetur aut quam ea repudiandae."
         },
         "properties": {
           "id": {
-            "example": "Et tempora et quae.",
+            "example": "Tenetur aut quam ea repudiandae.",
             "type": "string"
           }
         },
@@ -47,7 +47,7 @@
           "content": {
             "application/json": {
               "example": {
-                "x": "Ullam aut."
+                "x": "Doloribus qui aspernatur alias consectetur accusamus qui."
               },
               "schema": {
                 "$ref": "#/components/schemas/Payload"
@@ -62,7 +62,7 @@
             "content": {
               "text/event-stream": {
                 "example": {
-                  "id": "Iste perspiciatis."
+                  "id": "Tenetur aut quam ea repudiandae."
                 },
                 "schema": {
                   "$ref": "#/components/schemas/Result"

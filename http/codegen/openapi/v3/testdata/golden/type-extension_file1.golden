@@ -20,7 +20,7 @@ paths:
                         schema:
                             $ref: '#/components/schemas/Notification'
                         example:
-                            id: Et tempora et quae.
+                            id: Quia velit et.
             responses:
                 "200":
                     description: OK response.
@@ -29,16 +29,16 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/Notification'
                             example:
-                                id: Itaque inventore optio.
+                                id: Aut soluta voluptatem nisi corrupti.
 components:
     schemas:
         Notification:
             description: Request body for testEndpoint.
             example:
-                id: Doloribus qui quia.
+                id: Quia velit et.
             properties:
                 id:
-                    example: Quia molestias.
+                    example: Quia velit et.
                     type: string
             type: object
             x-test-include: true

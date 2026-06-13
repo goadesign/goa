@@ -32,15 +32,15 @@ paths:
                                                     example: false
                                                 id:
                                                     type: string
-                                                    example: Sunt itaque inventore optio quia ullam aut.
+                                                    example: Consequuntur dolores eos voluptatem.
                                                 value:
                                                     type: integer
-                                                    example: 3602919998459661528
+                                                    example: 7986166745691455230
                                                     format: int64
                                             example:
                                                 flag: false
-                                                id: Repellendus harum.
-                                                value: 5721637919286150856
+                                                id: Consequuntur dolores eos voluptatem.
+                                                value: 7986166745691455230
                                 required:
                                     - data
 components:
@@ -53,14 +53,14 @@ components:
                     example: true
                 id:
                     type: string
-                    example: Quia molestias.
+                    example: Aspernatur dolorem velit tenetur.
                 value:
                     type: integer
-                    example: 7595816812588075382
+                    example: 3199557017606053617
                     format: int64
             example:
                 flag: true
-                id: Quia inventore et.
-                value: 3742304935485895874
+                id: Aspernatur dolorem velit tenetur.
+                value: 3199557017606053617
 tags:
     - name: SSEObjectService

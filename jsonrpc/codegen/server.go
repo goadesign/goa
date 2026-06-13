@@ -17,8 +17,8 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 	for _, svc := range jsvcs {
 		files = append(files, serverFile(genpkg, svc, data))
 		// Generate either WebSocket or SSE file based on transport type
-		if hasJSONRPCSSE(svc, data) {
-			if f := sseServerStreamFile(genpkg, svc, data); f != nil {
+		if hasJSONRPCSSE(svc) {
+			if f := sseServerFile(genpkg, svc, data); f != nil {
 				files = append(files, f)
 			}
 		} else if f := websocketServerFile(genpkg, svc, data); f != nil {
@@ -30,8 +30,6 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 		if f == nil {
 			continue
 		}
-		updateHeader(f)
-		var sections []*codegen.SectionTemplate
 		for _, s := range f.SectionTemplates {
 			// Add the JSON-RPC imports.
 			if s.Name == "source-header" {
@@ -39,44 +37,14 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 				codegen.AddImport(s, &codegen.ImportSpec{Path: "io"})
 				codegen.AddImport(s, codegen.GoaImport("jsonrpc"))
 			}
-			// Replace HTTP request decoder with proper JSON-RPC version
-			if s.Name == "request-decoder" {
-				// Surgical modification 1: Update function signatures for JSON-RPC
-				s.Source = strings.Replace(s.Source,
-					"func(*http.Request) (",
-					"func(*http.Request, *jsonrpc.RawRequest) (", 1)
-
-				// Surgical modification 2: Inject JSON-RPC body handling + signature
-				s.Source = strings.Replace(s.Source,
-					"return func(r *http.Request) ({{ .Payload.Ref }}, error) {",
-					`return func(r *http.Request, req *jsonrpc.RawRequest) ({{ .Payload.Ref }}, error) {
-		r.Body = io.NopCloser(bytes.NewReader(req.Params))`, 1)
-
-				// Surgical modification 3: Fix return values (nil -> zero values)
-				s.Source = strings.ReplaceAll(s.Source,
-					"return nil, ",
-					`var zero {{ .Payload.Ref }}
-		return zero, `)
-
-				s.Name = "jsonrpc-request-decoder"
-				sections = append(sections, s)
-				continue
-			}
-			// Remove the error encoder sections, JSON-RPC
-			// inlines the error encoding in each handler.
-			if s.Name != "error-encoder" {
-				s.Name = "jsonrpc-" + s.Name
-				sections = append(sections, s)
-			}
+			s.Name = "jsonrpc-" + s.Name
 		}
-		f.SectionTemplates = sections
-		f.Path = strings.Replace(f.Path, "/http/", "/jsonrpc/", 1)
 		files = append(files, f)
 	}
 	return files
 }
 
-// serverFile returns the file implementing the HTTP server.
+// serverFile returns the file implementing the JSON-RPC server.
 func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
@@ -86,7 +54,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		"isWebSocketEndpoint": httpcodegen.IsWebSocketEndpoint,
 		"isSSEEndpoint":       httpcodegen.IsSSEEndpoint,
 		"lowerInitial":        lowerInitial,
-		"hasMixedTransports":  func() bool { return hasMixedJSONRPCTransports(svc, services) },
+		"hasMixedTransports":  func() bool { return hasMixedJSONRPCTransports(svc) },
 	}
 	imports := make([]*codegen.ImportSpec, 0, 15+len(data.Service.UserTypeImports))
 	imports = append(imports,
@@ -114,21 +82,21 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 	sections = append(sections,
 		&codegen.SectionTemplate{Name: "jsonrpc-server-struct", Source: jsonrpcTemplates.Read(serverStructT), FuncMap: funcs, Data: data},
 		&codegen.SectionTemplate{Name: "jsonrpc-server-init", Source: jsonrpcTemplates.Read(serverInitT), Data: data, FuncMap: funcs},
-		&codegen.SectionTemplate{Name: "jsonrpc-server-service", Source: jsonrpcTemplates.Read(serverServiceT), Data: data},
+		&codegen.SectionTemplate{Name: "jsonrpc-server-service", Source: httpcodegen.ReadTemplate(serverServiceT), Data: data},
 		&codegen.SectionTemplate{Name: "jsonrpc-server-use", Source: jsonrpcTemplates.Read(serverUseT), Data: data},
-		&codegen.SectionTemplate{Name: "jsonrpc-server-method-names", Source: jsonrpcTemplates.Read(serverMethodNamesT), Data: data},
+		&codegen.SectionTemplate{Name: "jsonrpc-server-method-names", Source: httpcodegen.ReadTemplate(serverMethodNamesT), Data: data},
 	)
 
 	// Use appropriate server handler based on transport
 	switch {
-	case hasMixedJSONRPCTransports(svc, services):
+	case hasMixedJSONRPCTransports(svc):
 		// For mixed transports, we need a unified handler with content negotiation
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-mixed-server-handler", Source: jsonrpcTemplates.Read(mixedServerHandlerT), FuncMap: funcs, Data: data})
 		// Include the standard HTTP handlers that the mixed handler delegates to
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), FuncMap: funcs, Data: data})
 		// Also include SSE handler for SSE-specific logic
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-sse-server-handler", Source: jsonrpcTemplates.Read(sseServerHandlerT), FuncMap: funcs, Data: data})
-	case hasJSONRPCSSE(svc, services):
+	case hasJSONRPCSSE(svc):
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-sse-server-handler", Source: jsonrpcTemplates.Read(sseServerHandlerT), FuncMap: funcs, Data: data})
 	case httpcodegen.HasWebSocket(data):
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-websocket-server-handler", Source: jsonrpcTemplates.Read(websocketServerHandlerT), FuncMap: funcs, Data: data})
@@ -143,8 +111,8 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		HasMixed bool
 	}{
 		ServiceData: data,
-		HasSSE:      hasJSONRPCSSE(svc, services),
-		HasMixed:    hasMixedJSONRPCTransports(svc, services),
+		HasSSE:      hasJSONRPCSSE(svc),
+		HasMixed:    hasMixedJSONRPCTransports(svc),
 	}
 
 	sections = append(sections,
@@ -169,19 +137,12 @@ func lowerInitial(s string) string {
 }
 
 // hasJSONRPCSSE returns true if the service uses SSE for JSON-RPC streaming.
-func hasJSONRPCSSE(svc *expr.HTTPServiceExpr, data *httpcodegen.ServicesData) bool {
-	svcData := data.Get(svc.Name())
-	if svcData == nil {
-		return false
-	}
-
-	// Check if any JSON-RPC streaming endpoint uses SSE
+func hasJSONRPCSSE(svc *expr.HTTPServiceExpr) bool {
 	for _, e := range svc.HTTPEndpoints {
 		if e.MethodExpr.IsStreaming() && e.IsJSONRPC() && e.SSE != nil {
 			return true
 		}
 	}
-
 	return false
 }
 
@@ -196,6 +157,6 @@ func hasJSONRPCHTTP(svc *expr.HTTPServiceExpr) bool {
 }
 
 // hasMixedJSONRPCTransports returns true if the service has both HTTP and SSE JSON-RPC endpoints.
-func hasMixedJSONRPCTransports(svc *expr.HTTPServiceExpr, data *httpcodegen.ServicesData) bool {
-	return hasJSONRPCHTTP(svc) && hasJSONRPCSSE(svc, data)
+func hasMixedJSONRPCTransports(svc *expr.HTTPServiceExpr) bool {
+	return hasJSONRPCHTTP(svc) && hasJSONRPCSSE(svc)
 }

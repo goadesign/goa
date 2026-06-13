@@ -19,8 +19,8 @@ paths:
                   required: true
                   schema:
                     type: string
-                    example: Et tempora et quae.
-                  example: Itaque inventore optio.
+                    example: Ipsam ut similique tempore.
+                  example: Et et quis sint ipsam doloribus.
             responses:
                 "101":
                     description: Switching Protocols response.
@@ -29,7 +29,7 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/UserType'
                             example:
-                                a: Ullam aut.
+                                a: Odio laborum quae ut quis nostrum.
 components:
     schemas:
         UserType:
@@ -37,8 +37,8 @@ components:
             properties:
                 a:
                     type: string
-                    example: Quia molestias.
+                    example: Odio laborum quae ut quis nostrum.
             example:
-                a: Doloribus qui quia.
+                a: Odio laborum quae ut quis nostrum.
 tags:
     - name: StreamingResultService

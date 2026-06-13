@@ -1,20 +1,15 @@
 package codegen
 
 import (
-	"testing"
-
+	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 )
 
-// RunHTTPDSL returns the HTTP DSL root resulting from running the given DSL.
-func RunHTTPDSL(t *testing.T, dsl func()) *expr.RootExpr {
-	// reset all roots and codegen data structures
-	root := expr.RunDSL(t, dsl)
-	return root
-}
-
-// CreateHTTPServices creates a new ServicesData instance for testing.
+// CreateHTTPServices creates a new ServicesData instance for testing. The
+// root is normalized first like the production Generate flow does before the
+// generators read the design.
 func CreateHTTPServices(root *expr.RootExpr) *ServicesData {
+	codegen.NormalizeRoot(root)
 	return NewServicesData(service.NewServicesData(root), root.API.HTTP)
 }

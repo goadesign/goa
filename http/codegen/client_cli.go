@@ -16,6 +16,10 @@ type commandData struct {
 	Subcommands []*subcommandData
 	// NeedDialer if true initializes the websocket dialer.
 	NeedDialer bool
+	// JSONRPC if true indicates the command targets a JSON-RPC service:
+	// streaming endpoints are configured with a goahttp.ConnConfigureFunc
+	// instead of a client package ConnConfigurer.
+	JSONRPC bool
 }
 
 // commandData wraps the common SubcommandData and adds HTTP-specific fields.
@@ -51,6 +55,7 @@ func ClientCLIFiles(genpkg string, data *ServicesData) []*codegen.File {
 			command := &commandData{
 				CommandData: cli.BuildCommandData(sd.Service),
 				NeedDialer:  HasWebSocket(sd),
+				JSONRPC:     sd.Endpoints[0].IsJSONRPC,
 			}
 
 			for _, e := range sd.Endpoints {
@@ -104,8 +109,8 @@ func buildSubcommandData(sd *ServiceData, e *EndpointData) *subcommandData {
 // builds the client endpoint and payload necessary to perform a request.
 func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, data []*commandData, services *ServicesData) *codegen.File {
 	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
-	path := filepath.Join(codegen.Gendir, "http", "cli", pkg, "cli.go")
-	title := fmt.Sprintf("%s HTTP client CLI support package", svr.Name)
+	path := filepath.Join(codegen.Gendir, services.dir(), "cli", pkg, "cli.go")
+	title := fmt.Sprintf("%s %s client CLI support package", svr.Name, services.label())
 	specs := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
 		{Path: "flag"},
@@ -124,7 +129,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 			continue
 		}
 		specs = append(specs, &codegen.ImportSpec{
-			Path: genpkg + "/http/" + sd.Service.PathName + "/client",
+			Path: genpkg + "/" + services.dir() + "/" + sd.Service.PathName + "/client",
 			Name: sd.Service.PkgName + "c",
 		})
 		// Add interceptors import if service has client interceptors
@@ -141,36 +146,27 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		cliData[i] = cmd.CommandData
 	}
 
-	sections := make([]*codegen.SectionTemplate, 0, 4+len(cliData))
-	sections = append(sections,
-		codegen.Header(title, "cli", specs),
-		cli.UsageCommands(cliData),
-		cli.UsageExamples(cliData),
-		&codegen.SectionTemplate{
-			Name:   "parse-endpoint",
-			Source: httpTemplates.Read(parseEndpointT),
-			Data: struct {
-				FlagsCode string
-				Commands  []*commandData
-			}{
-				cli.FlagsCode(cliData),
-				data,
-			},
-			FuncMap: map[string]any{"streamingCmdExists": streamingCmdExists},
+	parseSection := &codegen.SectionTemplate{
+		Name:   "parse-endpoint",
+		Source: httpTemplates.Read(parseEndpointT),
+		Data: struct {
+			FlagsCode string
+			Commands  []*commandData
+		}{
+			cli.FlagsCode(cliData),
+			data,
 		},
-	)
-	for _, cmd := range cliData {
-		sections = append(sections, cli.CommandUsage(cmd))
+		FuncMap: map[string]any{"streamingCmdExists": streamingCmdExists},
 	}
-	return &codegen.File{Path: path, SectionTemplates: sections}
+	return cli.EndpointParserFile(path, title, specs, cliData, parseSection)
 }
 
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
 func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.CommandData, services *ServicesData) *codegen.File {
 	sd := services.Get(svc.Name())
-	path := filepath.Join(codegen.Gendir, "http", sd.Service.PathName, "client", "cli.go")
-	title := fmt.Sprintf("%s HTTP client CLI support package", svc.Name())
+	path := filepath.Join(codegen.Gendir, services.dir(), sd.Service.PathName, "client", "cli.go")
+	title := fmt.Sprintf("%s %s client CLI support package", svc.Name(), services.label())
 	specs := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
 		{Path: "fmt"},
@@ -182,16 +178,7 @@ func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.Command
 		codegen.GoaNamedImport("http", "goahttp"),
 		{Path: genpkg + "/" + sd.Service.PathName, Name: sd.Service.PkgName},
 	}
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", specs),
-	}
-	for _, sub := range data.Subcommands {
-		if sub.BuildFunction != nil {
-			sections = append(sections, cli.PayloadBuilderSection(sub.BuildFunction))
-		}
-	}
-
-	return &codegen.File{Path: path, SectionTemplates: sections}
+	return cli.PayloadBuildersFile(path, title, specs, data)
 }
 
 // buildFlags builds the flag data and build function for an endpoint.
@@ -203,14 +190,12 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildF
 
 	svcn := svc.Service.Name
 	en := e.Method.Name
-	if e.Payload != nil {
-		if e.Payload.Request.PayloadInit != nil {
-			args := e.Payload.Request.PayloadInit.ClientArgs
-			args = append(args, e.Payload.Request.PayloadInit.CLIArgs...)
-			flags, buildFunction = makeFlags(e, args, e.Payload.Request.PayloadType)
-		} else if e.Payload.Ref != "" {
-			flags = append(flags, cli.NewFlagData(svcn, en, "p", e.Method.PayloadRef, e.Method.PayloadDesc, true, e.Method.PayloadEx, e.Method.PayloadDefault))
-		}
+	if e.Payload.Request.PayloadInit != nil {
+		args := e.Payload.Request.PayloadInit.ClientArgs
+		args = append(args, e.Payload.Request.PayloadInit.CLIArgs...)
+		flags, buildFunction = makeFlags(e, args, e.Payload.Request.PayloadType)
+	} else if e.Payload.Ref != "" {
+		flags = append(flags, cli.NewFlagData(svcn, en, "p", e.Method.PayloadRef, e.Method.PayloadDesc, true, e.Method.PayloadEx, e.Method.PayloadDefault))
 	}
 	if e.Method.SkipRequestBodyEncodeDecode {
 		flags = append(flags, streamFlag(svcn, en))
@@ -221,13 +206,8 @@ func buildFlags(svc *ServiceData, e *EndpointData) ([]*cli.FlagData, *cli.BuildF
 
 // makeFlags creates flag data and build function from endpoint arguments.
 func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*cli.FlagData, *cli.BuildFunctionData) {
-	var (
-		fdata     = make([]*cli.FieldData, 0, len(args)) // preallocate
-		flags     = make([]*cli.FlagData, len(args))
-		params    = make([]string, len(args))
-		pInitArgs = make([]*codegen.InitArgData, len(args))
-		check     bool
-	)
+	fargs := make([]*cli.FlagArgData, len(args))
+	pInitArgs := make([]*codegen.InitArgData, len(args))
 	for i, arg := range args {
 		pInitArgs[i] = &codegen.InitArgData{
 			Name:         arg.VarName,
@@ -237,31 +217,21 @@ func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*
 			FieldType:    arg.FieldType,
 			Type:         arg.Type,
 		}
-
-		f := cli.NewFlagData(e.ServiceName, e.Method.Name, arg.VarName, arg.TypeName, arg.Description, arg.Required, arg.Example, arg.DefaultValue)
-		flags[i] = f
-		params[i] = f.FullName
-		if arg.FieldName == "" && arg.VarName != "body" {
-			continue
+		fargs[i] = &cli.FlagArgData{
+			Name:         arg.VarName,
+			TypeName:     arg.TypeName,
+			TypeRef:      arg.TypeRef,
+			FieldName:    arg.FieldName,
+			Description:  arg.Description,
+			Required:     arg.Required,
+			Example:      arg.Example,
+			DefaultValue: arg.DefaultValue,
+			Validate:     arg.Validate,
+			OmitField:    arg.FieldName == "" && arg.VarName != "body",
 		}
-		code, chek := cli.FieldLoadCode(f, arg.VarName, arg.TypeName, arg.Validate, arg.DefaultValue, payload, e.Payload.Ref)
-		check = check || chek
-		tn := arg.TypeRef
-		if f.Type == "JSON" {
-			// We need to declare the variable without
-			// a pointer to be able to unmarshal the JSON
-			// using its address.
-			tn = arg.TypeName
-		}
-		fdata = append(fdata, &cli.FieldData{
-			Name:    arg.VarName,
-			VarName: arg.VarName,
-			TypeRef: tn,
-			Init:    code,
-		})
 	}
 
-	pInit := cli.PayloadInitData{
+	pInit := &cli.PayloadInitData{
 		Code:                       e.Payload.Request.PayloadInit.ClientCode,
 		ReturnTypeAttribute:        e.Payload.Request.PayloadInit.ReturnTypeAttribute,
 		ReturnTypeAttributePointer: e.Payload.Request.PayloadInit.ReturnIsPrimitivePointer,
@@ -271,17 +241,7 @@ func makeFlags(e *EndpointData, args []*InitArgData, payload expr.DataType) ([]*
 		Args:                       pInitArgs,
 	}
 
-	return flags, &cli.BuildFunctionData{
-		Name:         "Build" + e.Method.VarName + "Payload",
-		ActualParams: params,
-		FormalParams: params,
-		ServiceName:  e.ServiceName,
-		MethodName:   e.Method.Name,
-		ResultType:   e.Payload.Ref,
-		Fields:       fdata,
-		PayloadInit:  &pInit,
-		CheckErr:     check,
-	}
+	return cli.MakeFlags(e.ServiceName, e.Method, fargs, payload, e.Payload.Ref, pInit)
 }
 
 // streamFlag returns the flag used to specify the upload file for endpoints

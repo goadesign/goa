@@ -97,7 +97,7 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 	}
 
 	// Add HandleStream method for JSON-RPC WebSocket services (not SSE)
-	if hasJSONRPCStreaming(data) && !isJSONRPCSSE(services, svc) {
+	if hasJSONRPCWebSocket(data) {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "jsonrpc-handle-stream",
 			Source: serviceTemplates.Read(jsonrpcHandleStreamT),

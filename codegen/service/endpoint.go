@@ -99,8 +99,7 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 				// For JSON-RPC WebSocket without StreamingResult (client streaming only): no struct needed
 				// For JSON-RPC SSE: always generate struct (methods have stream params)
 				// For HTTP/gRPC: always generate endpoint input struct
-				isJSONRPCWebSocket := m.IsJSONRPC && !isJSONRPCSSE(services, service)
-				if !isJSONRPCWebSocket || (isJSONRPCWebSocket && m.ServerStream.EndpointStruct != "") {
+				if !m.IsJSONRPCWebSocket || m.ServerStream.EndpointStruct != "" {
 					sections = append(sections, &codegen.SectionTemplate{
 						Name:   "endpoint-input-struct",
 						Source: serviceTemplates.Read(serviceEndpointStreamStructT),

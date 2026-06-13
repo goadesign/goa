@@ -24,6 +24,9 @@ func RunDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	expr.Root.API.Servers = []*expr.ServerExpr{expr.Root.API.DefaultServer()}
 	require.True(t, eval.Execute(dsl, nil), eval.Context.Error())
 	require.NoError(t, eval.RunDSL())
+	// Apply the sanctioned post-finalization rewrite the production Generate
+	// flow runs before the generators read the design.
+	NormalizeRoot(expr.Root)
 	return expr.Root
 }
 

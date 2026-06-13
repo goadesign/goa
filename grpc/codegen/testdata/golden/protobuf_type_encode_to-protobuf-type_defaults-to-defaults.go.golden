@@ -29,8 +29,7 @@ func transform() {
 		}
 	}
 	{
-		var zero []byte
-		if target.Bytes_ == zero {
+		if target.Bytes_ == nil {
 			target.Bytes_ = []byte{0x66, 0x6f, 0x6f, 0x62, 0x61, 0x72}
 		}
 	}

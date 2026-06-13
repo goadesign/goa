@@ -8,11 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
 func TestSSE_MixedResults(t *testing.T) {
-	root := RunHTTPDSL(t, testdata.MixedResultsDSL)
+	root := expr.RunDSL(t, testdata.MixedResultsDSL)
 	services := CreateHTTPServices(root)
 
 	t.Run("server", func(t *testing.T) {

@@ -18,17 +18,17 @@ paths:
                   allowEmptyValue: true
                   schema:
                     type: integer
-                    example: 9176544974339886224
+                    example: 5490475434297746524
                     format: int64
-                  example: 1933576090881074823
+                  example: 8568805688952666114
                 - name: bar
                   in: header
                   allowEmptyValue: true
                   schema:
                     type: integer
-                    example: 2166276375441812184
+                    example: 1475422799873681639
                     format: int64
-                  example: 7595816812588075382
+                  example: 8380651525843655561
             responses:
                 "204":
                     description: No Content response.

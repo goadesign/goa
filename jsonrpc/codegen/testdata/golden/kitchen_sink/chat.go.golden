@@ -1,0 +1,52 @@
+package kitchensink
+
+import (
+	"context"
+	chat "kitchensink/chat"
+
+	"goa.design/clue/log"
+)
+
+// Chat service example implementation.
+// The example methods log the requests and return zero values.
+type chatsrvc struct{}
+
+// NewChat returns the Chat service implementation.
+func NewChat() chat.Service {
+	return &chatsrvc{}
+}
+
+// Echo implements echo.
+func (s *chatsrvc) Echo(ctx context.Context, p *chat.EchoPayload, stream chat.EchoServerStream) (err error) {
+	log.Printf(ctx, "chat.echo")
+	// Minimal example: emit one progress notification and one final response
+	{
+		// Progress notification (no ID)
+		notif := &chat.EchoResult{}
+		if err := stream.Send(ctx, notif); err != nil {
+			return err
+		}
+		// Final response
+		final := &chat.EchoResult{}
+		return stream.SendAndClose(ctx, final)
+	}
+	return
+}
+
+// HandleStream manages a JSON-RPC WebSocket connection, enabling bidirectional
+// communication between the server and client. It receives requests from the
+// client, dispatches them to the appropriate service methods, and can send
+// server-initiated messages back to the client as needed.
+func (s *chatsrvc) HandleStream(ctx context.Context, stream chat.Stream) error {
+	log.Printf(ctx, "chat.HandleStream")
+
+	// Example: In a real implementation you might read from an event source
+	// and send notifications via stream.Send(ctx, event). This stub returns
+	// when the context is canceled.
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		return nil
+	}
+}

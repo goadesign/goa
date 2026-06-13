@@ -112,8 +112,6 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		seen[ut.ID()] = buf
 	}
 
-	flattenValidations(att, make(map[string]struct{}))
-
 	newline := func() {
 		if !first {
 			buf.WriteByte('\n')
@@ -317,11 +315,12 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 	return fmt.Sprintf("if %s != nil {\n\t%s\n}", target, buf.String())
 }
 
-// validationCode produces Go code that runs the validations defined in the
-// given attribute definition if any against the content of the variable named
-// target. The generated code assumes that there is a pre-existing "err"
-// variable of type error. It initializes that variable in case a validation
-// fails.
+// validationCode produces Go code that runs the validations that effectively
+// apply to the given attribute - see expr.EffectiveValidation - if any
+// against the content of the variable named target. The generated code
+// assumes that there is a pre-existing "err" variable of type error. It
+// initializes that variable in case a validation fails. validationCode is
+// pure: it never mutates att or any expression reachable from it.
 //
 // attCtx is the attribute context
 //
@@ -337,18 +336,7 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 //
 // context is used to produce helpful messages in case of error.
 func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alias bool, target, context string) string {
-	validation := att.Validation
-	if ut, ok := att.Type.(expr.UserType); ok {
-		val := ut.Attribute().Validation
-		if val != nil {
-			if validation == nil {
-				validation = val
-			} else {
-				validation.Merge(val)
-			}
-			att.Validation = validation
-		}
-	}
+	validation := expr.EffectiveValidation(att)
 	if validation == nil {
 		return ""
 	}
@@ -456,7 +444,7 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 			res = append(res, val)
 		}
 	}
-	reqs := generatedRequiredValidation(att, attCtx)
+	reqs := generatedRequiredValidation(att, validation, attCtx)
 	obj := expr.AsObject(att.Type)
 	for _, r := range reqs {
 		reqAtt := obj.Attribute(r)
@@ -467,7 +455,8 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 	return strings.Join(res, "\n")
 }
 
-// hasValidations returns true if a UserType contains validations.
+// hasValidations returns true if a UserType contains validations. It is a
+// pure predicate: it never mutates the design expression tree.
 func hasValidations(attCtx *AttributeContext, ut expr.UserType) bool {
 	// We need to check empirically whether there are validations to be
 	// generated. We can't call recurseValidationCode() to avoid infinite
@@ -479,13 +468,9 @@ func hasValidations(attCtx *AttributeContext, ut expr.UserType) bool {
 	res := false
 	done := errors.New("done")
 	Walk(ut.Attribute(), func(a *expr.AttributeExpr) error { // nolint: errcheck
-		if a.Validation == nil {
-			return nil
-		}
-		// Use validationCode() as the source of truth for whether this
-		// attribute produces any local validation output. This naturally
-		// handles all codegen skips (e.g. Format on struct:field:type)
-		// without hasValidations() needing to mirror those conditions.
+		// validationCode computes the validation that effectively applies
+		// to a - including user type alias chain validations - and returns
+		// the empty string when there is nothing to validate.
 		if validationCode(a, attCtx, true, false, "x", "x") != "" {
 			res = true
 			return done
@@ -497,13 +482,11 @@ func hasValidations(attCtx *AttributeContext, ut expr.UserType) bool {
 
 // There is a case where there is validation but no actual validation code: if
 // the validation is a required validation that applies to attributes that
-// cannot be nil i.e. primitive types.
-func generatedRequiredValidation(att *expr.AttributeExpr, attCtx *AttributeContext) (res []string) {
-	if att.Validation == nil {
-		return
-	}
+// cannot be nil i.e. primitive types. val is the validation that effectively
+// applies to att as computed by expr.EffectiveValidation.
+func generatedRequiredValidation(att *expr.AttributeExpr, val *expr.ValidationExpr, attCtx *AttributeContext) (res []string) {
 	obj := expr.AsObject(att.Type)
-	for _, req := range att.Validation.Required {
+	for _, req := range val.Required {
 		reqAtt := obj.Attribute(req)
 		if reqAtt == nil {
 			continue
@@ -519,43 +502,6 @@ func generatedRequiredValidation(att *expr.AttributeExpr, attCtx *AttributeConte
 		res = append(res, req)
 	}
 	return
-}
-
-func flattenValidations(att *expr.AttributeExpr, seen map[string]struct{}) {
-	switch actual := att.Type.(type) {
-	case *expr.Array:
-		flattenValidations(actual.ElemType, seen)
-	case *expr.Map:
-		flattenValidations(actual.KeyType, seen)
-		flattenValidations(actual.ElemType, seen)
-	case *expr.Object:
-		for _, nat := range *actual {
-			flattenValidations(nat.Attribute, seen)
-		}
-	case *expr.Union:
-		for _, nat := range actual.Values {
-			flattenValidations(nat.Attribute, seen)
-		}
-	case expr.UserType:
-		if _, ok := seen[actual.ID()]; ok {
-			return
-		}
-		seen[actual.ID()] = struct{}{}
-		v := att.Validation
-		ut, ok := actual.Attribute().Type.(expr.UserType)
-		for ok {
-			if val := ut.Attribute().Validation; val != nil {
-				if v == nil {
-					v = val
-				} else {
-					v.Merge(val)
-				}
-			}
-			ut, ok = ut.Attribute().Type.(expr.UserType)
-		}
-		att.Validation = v
-		flattenValidations(actual.Attribute(), seen)
-	}
 }
 
 // toSlice returns Go code that represents the given slice.

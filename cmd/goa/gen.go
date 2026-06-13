@@ -134,6 +134,7 @@ func (g *Generator) Write(_ bool) error {
 			codegen.SimpleImport("fmt"),
 			codegen.SimpleImport("os"),
 			codegen.SimpleImport("path/filepath"),
+			codegen.SimpleImport("runtime/debug"),
 			codegen.SimpleImport("sort"),
 			codegen.SimpleImport("strconv"),
 			codegen.SimpleImport("strings"),
@@ -366,7 +367,7 @@ const mainT = `func main() {
 {{- end }}
 
 	startGenerate := time.Now()
-	outputs, err := generator.Generate(*out, {{ printf "%q" .Command }}, *debug)
+	outputs, err := generate(*out, {{ printf "%q" .Command }}, *debug)
 	if err != nil {
 		fail(err.Error())
 	}
@@ -375,6 +376,20 @@ const mainT = `func main() {
 		fmt.Fprintf(os.Stderr, "[TIMING]   [binary] Total binary execution took %v\n", time.Since(startBinary))
 	}
 	fmt.Println(strings.Join(outputs, "\n"))
+}
+
+// generate runs code generation and converts panics into a bug report
+// request: Goa generators panic on internal invariant violations, and this
+// recover is the single boundary turning them into actionable output. Design
+// errors never reach this point; eval.RunDSL reports them before generation.
+func generate(out, cmd string, dbg bool) ([]string, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Fprintf(os.Stderr, "panic: %v\n\n%s\n", r, debug.Stack())
+			fail("This is a bug in Goa, please report it at https://github.com/goadesign/goa/issues and include the stack trace above together with the design that triggered it.\n")
+		}
+	}()
+	return generator.Generate(out, cmd, dbg)
 }
 
 func fail(msg string, vals ...any) {

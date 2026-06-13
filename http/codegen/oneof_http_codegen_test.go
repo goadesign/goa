@@ -65,7 +65,7 @@ func TestClientResponseCodeProjectsSingleViewOneOfResults(t *testing.T) {
 func renderClientCLISectionCode(t *testing.T, dsl func(), fileIndex, sectionIndex int) string {
 	t.Helper()
 
-	root := RunHTTPDSL(t, dsl)
+	root := expr.RunDSL(t, dsl)
 	services := CreateHTTPServices(root)
 	fs := ClientCLIFiles("", services)
 
@@ -78,9 +78,9 @@ func renderClientTypesCode(t *testing.T, dsl func()) string {
 
 	const genpkg = "gen"
 
-	root := RunHTTPDSL(t, dsl)
+	root := expr.RunDSL(t, dsl)
 	services := CreateHTTPServices(root)
-	fs := clientType(genpkg, root.API.HTTP.Services[0], make(map[string]struct{}), services)
+	fs := typesFile(genpkg, root.API.HTTP.Services[0], false, services)
 
 	var buf bytes.Buffer
 	for _, s := range fs.SectionTemplates[1:] {
@@ -95,7 +95,7 @@ func renderClientTypesCode(t *testing.T, dsl func()) string {
 func renderClientDecodeCode(t *testing.T, dsl func()) string {
 	t.Helper()
 
-	root := RunHTTPDSL(t, dsl)
+	root := expr.RunDSL(t, dsl)
 	services := CreateHTTPServices(root)
 	fs := ClientFiles("", services)
 	require.Len(t, fs, 2)

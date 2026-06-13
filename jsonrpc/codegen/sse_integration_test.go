@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/jsonrpc/codegen/testdata"
 )
 
@@ -18,19 +19,17 @@ func TestJSONRPCSSEIntegration(t *testing.T) {
 	}
 
 	// Run the DSL
-	root := RunJSONRPCDSL(t, testdata.JSONRPCSSEObjectDSL)
+	root := expr.RunDSL(t, testdata.JSONRPCSSEObjectDSL)
 	services := CreateJSONRPCServices(root)
 
 	// Generate all files
 	serverFiles := ServerFiles("", services)
 	clientFiles := ClientFiles("", services)
-	sseFiles := SSEServerFiles("", services)
 
 	// Combine all files
-	allFiles := make([]*codegen.File, 0, len(serverFiles)+len(clientFiles)+len(sseFiles))
+	allFiles := make([]*codegen.File, 0, len(serverFiles)+len(clientFiles))
 	allFiles = append(allFiles, serverFiles...)
 	allFiles = append(allFiles, clientFiles...)
-	allFiles = append(allFiles, sseFiles...)
 
 	// Create temp directory
 	tmpDir := t.TempDir()
@@ -46,7 +45,7 @@ func TestJSONRPCSSEIntegration(t *testing.T) {
 	// that files were generated with expected content
 
 	// Check key files exist
-	serverStreamPath := filepath.Join(tmpDir, "gen/jsonrpc/jsonrpcsse_object_service/server/stream.go")
+	serverStreamPath := filepath.Join(tmpDir, "gen/jsonrpc/jsonrpcsse_object_service/server/sse.go")
 	require.FileExists(t, serverStreamPath)
 
 	clientStreamPath := filepath.Join(tmpDir, "gen/jsonrpc/jsonrpcsse_object_service/client/stream.go")

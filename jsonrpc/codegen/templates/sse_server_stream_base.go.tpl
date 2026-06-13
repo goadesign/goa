@@ -1,0 +1,72 @@
+{{ comment "sseServerStream provides the SSE event encoding machinery shared by all JSON-RPC SSE server streams of the service." }}
+type sseServerStream struct {
+	// once ensures the headers are written once.
+	once sync.Once
+	// w is the HTTP response writer used to send the SSE events.
+	w http.ResponseWriter
+	// r is the HTTP request.
+	r *http.Request
+	// encoder is the response encoder.
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder
+}
+
+{{ comment "sseEventWriter wraps http.ResponseWriter to format output as SSE events." }}
+type sseEventWriter struct {
+	w         http.ResponseWriter
+	eventType string
+	started   bool
+}
+
+func (s *sseEventWriter) Header() http.Header { return s.w.Header() }
+func (s *sseEventWriter) WriteHeader(statusCode int) { s.w.WriteHeader(statusCode) }
+func (s *sseEventWriter) Write(data []byte) (int, error) {
+	if !s.started {
+		s.started = true
+		if s.eventType != "" {
+			fmt.Fprintf(s.w, "event: %s\n", s.eventType)
+		}
+		s.w.Write([]byte("data: "))
+	}
+	return s.w.Write(data)
+}
+
+func (s *sseEventWriter) finish() {
+	if s.started {
+		s.w.Write([]byte("\n\n"))
+		http.NewResponseController(s.w).Flush()
+	}
+}
+
+// initSSEHeaders initializes the SSE response headers
+func (s *sseServerStream) initSSEHeaders() {
+	s.once.Do(func() {
+		header := s.w.Header()
+		header.Set("Content-Type", "text/event-stream")
+		header.Set("Cache-Control", "no-cache")
+		header.Set("Connection", "keep-alive")
+		header.Set("X-Accel-Buffering", "no")
+		s.w.WriteHeader(http.StatusOK)
+	})
+}
+
+// sendSSEEvent sends a single SSE event by creating an encoder that writes to the event writer
+func (s *sseServerStream) sendSSEEvent(eventType string, v any) error {
+	s.initSSEHeaders()
+
+	// Create SSE event writer that wraps the response writer
+	ew := &sseEventWriter{w: s.w, eventType: eventType}
+
+	// Create encoder with the event writer and encode the value
+	err := s.encoder(context.Background(), ew).Encode(v)
+
+	// Finish the SSE event (adds newlines and flushes)
+	ew.finish()
+
+	return err
+}
+
+// sendError sends a JSON-RPC error response to the SSE stream
+func (s *sseServerStream) sendError(ctx context.Context, id any, code jsonrpc.Code, message string, data any) error {
+	response := jsonrpc.MakeErrorResponse(id, code, message, data)
+	return s.sendSSEEvent("error", response)
+}

@@ -17,8 +17,11 @@ func RunGRPCDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	return root
 }
 
-// CreateGRPCServices creates a new ServicesData instance for testing.
+// CreateGRPCServices creates a new ServicesData instance for testing. The
+// root is normalized first like the production Generate flow does before the
+// generators read the design.
 func CreateGRPCServices(root *expr.RootExpr) *ServicesData {
+	codegen.NormalizeRoot(root)
 	return NewServicesData(service.NewServicesData(root))
 }
 

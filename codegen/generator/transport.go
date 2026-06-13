@@ -45,14 +45,13 @@ func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		files = append(files, grpccodegen.ClientCLIFiles(genpkg, grpcServices)...)
 
 		// JSON-RPC
-		jsonrpcServices := httpcodegen.NewServicesData(services, &r.API.JSONRPC.HTTPExpr)
+		jsonrpcServices := httpcodegen.NewJSONRPCServicesData(services, &r.API.JSONRPC.HTTPExpr)
 		files = append(files, jsonrpccodegen.ServerFiles(genpkg, jsonrpcServices)...)
 		files = append(files, jsonrpccodegen.ClientFiles(genpkg, jsonrpcServices)...)
-		files = append(files, jsonrpccodegen.ServerTypeFiles(genpkg, jsonrpcServices)...)
-		files = append(files, jsonrpccodegen.ClientTypeFiles(genpkg, jsonrpcServices)...)
-		files = append(files, jsonrpccodegen.PathFiles(jsonrpcServices)...)
-		files = append(files, jsonrpccodegen.ClientCLIFiles(genpkg, jsonrpcServices)...)
-		files = append(files, jsonrpccodegen.SSEServerFiles(genpkg, jsonrpcServices)...)
+		files = append(files, httpcodegen.ServerTypeFiles(genpkg, jsonrpcServices)...)
+		files = append(files, httpcodegen.ClientTypeFiles(genpkg, jsonrpcServices)...)
+		files = append(files, httpcodegen.PathFiles(jsonrpcServices)...)
+		files = append(files, httpcodegen.ClientCLIFiles(genpkg, jsonrpcServices)...)
 
 		// Add service data meta type imports
 		addServicesImports(files, services, r.Services)

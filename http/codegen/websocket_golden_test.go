@@ -11,6 +11,7 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/testutil"
 	. "goa.design/goa/v3/dsl"
+	"goa.design/goa/v3/expr"
 )
 
 // renderFileToString renders all sections of a file to a string without writing to disk
@@ -71,7 +72,7 @@ func TestWebSocketGoldenFiles(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			root := RunHTTPDSL(t, c.dsl)
+			root := expr.RunDSL(t, c.dsl)
 			services := CreateHTTPServices(root)
 
 			var files []*codegen.File
@@ -118,7 +119,7 @@ func TestWebSocketGoldenFiles(t *testing.T) {
 // TestWebSocketTemplateExercise ensures all WebSocket templates are exercised
 func TestWebSocketTemplateExercise(t *testing.T) {
 	// Run a comprehensive test that should exercise all templates
-	root := RunHTTPDSL(t, comprehensiveWebSocketDSL)
+	root := expr.RunDSL(t, comprehensiveWebSocketDSL)
 	services := CreateHTTPServices(root)
 
 	// Generate both server and client files

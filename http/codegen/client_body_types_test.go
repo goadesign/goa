@@ -8,6 +8,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/testutil"
+	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -23,9 +24,9 @@ func TestBodyTypeDecl(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			root := RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
-			fs := clientType(genpkg, root.API.HTTP.Services[0], make(map[string]struct{}), services)
+			fs := typesFile(genpkg, root.API.HTTP.Services[0], false, services)
 			section := fs.SectionTemplates[1]
 			code := codegen.SectionCode(t, section)
 			testutil.AssertGo(t, "testdata/golden/client_body_type_decl_"+c.Name+".go.golden", code)
@@ -54,9 +55,9 @@ func TestBodyTypeInit(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			root := RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
-			fs := clientType(genpkg, root.API.HTTP.Services[0], make(map[string]struct{}), services)
+			fs := typesFile(genpkg, root.API.HTTP.Services[0], false, services)
 			section := fs.SectionTemplates[c.SectionIndex]
 			code := codegen.SectionCode(t, section)
 			testutil.AssertGo(t, "testdata/golden/client_body_type_init_"+c.Name+".go.golden", code)
@@ -87,9 +88,9 @@ func TestClientTypes(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			root := RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
-			fs := clientType(genpkg, root.API.HTTP.Services[0], make(map[string]struct{}), services)
+			fs := typesFile(genpkg, root.API.HTTP.Services[0], false, services)
 			var buf bytes.Buffer
 			for _, s := range fs.SectionTemplates[1:] {
 				require.NoError(t, s.Write(&buf))
@@ -110,7 +111,7 @@ func TestClientTypeFiles(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			root := RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
 			fw := ClientTypeFiles(genpkg, services)
 			for i, fs := range fw {

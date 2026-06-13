@@ -3,7 +3,6 @@ package codegen
 import (
 	"path"
 	"path/filepath"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
@@ -38,7 +37,6 @@ func exampleServer(genpkg string, data *httpcodegen.ServicesData, svr *expr.Serv
 	}
 	if file == nil {
 		file = httpcodegen.ExampleServer(genpkg, data.Root, svr, data)
-		updateHeader(file)
 	}
 
 	// Add JSON-RPC imports to the HTTP server file
@@ -64,36 +62,18 @@ func exampleServer(genpkg string, data *httpcodegen.ServicesData, svr *expr.Serv
 			svcdata = append(svcdata, d)
 		}
 	}
-	sections := make([]*codegen.SectionTemplate, 0, len(file.SectionTemplates)+2)
 	for _, s := range file.SectionTemplates {
 		switch s.Name {
 		case "server-http-start":
-			// Check if the main template already has JSONRPCServices data
+			// Only set the JSON-RPC services if not already populated.
 			data := s.Data.(map[string]any)
-			if _, hasJSONRPCServices := data["JSONRPCServices"]; !hasJSONRPCServices {
-				// Main template doesn't have JSON-RPC services, so we need to add them
+			if existing, _ := data["JSONRPCServices"].([]*httpcodegen.ServiceData); len(existing) == 0 {
 				data["JSONRPCServices"] = svcdata
-				// Replace with JSON-RPC template that includes service parameters in function signature
-				s.Source = jsonrpcTemplates.Read(serverHttpStartT)
 			}
-		case "server-http-end":
+		case "server-http-init", "server-http-end":
 			updateData(s, svcdata, hasHTTP)
-			mountCode := logJSONRPCMount
-			if hasHTTP {
-				mountCode = logHTTPMount + "\n" + logJSONRPCMount
-			}
-			s.Source = strings.Replace(s.Source, logHTTPMount, mountCode, 1)
-		case "server-http-init":
-			updateData(s, svcdata, hasHTTP)
-			s.Source = jsonrpcTemplates.Read(serverConfigureT)
-			s.FuncMap = map[string]any{
-				"needDialer":   httpcodegen.NeedDialer,
-				"hasWebSocket": httpcodegen.HasWebSocket,
-			}
 		}
-		sections = append(sections, s)
 	}
-	file.SectionTemplates = sections
 	return file
 }
 
@@ -103,17 +83,3 @@ func updateData(s *codegen.SectionTemplate, svcdata []*httpcodegen.ServiceData, 
 		delete(s.Data.(map[string]any), "Services")
 	}
 }
-
-const logHTTPMount = `{{- range .Services }}
-		for _, m := range {{ .Service.VarName }}Server.Mounts {
-			log.Printf(ctx, "HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
-		}
-	{{- end }}`
-
-const logJSONRPCMount = `{{- range .JSONRPCServices }}
-		for _, m := range {{ .Service.VarName }}JSONRPCServer.Methods {
-		{{- range (index .Endpoints 0).Routes }}
-			log.Printf(ctx, "JSON-RPC method %q mounted on {{ .Verb }} {{ .Path }}", m)
-		{{- end }}
-		}
-	{{- end }}`

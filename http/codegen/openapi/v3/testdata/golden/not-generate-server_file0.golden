@@ -13,9 +13,9 @@
           "200": {
             "content": {
               "application/json": {
-                "example": "Aut sed ducimus repudiandae sit explicabo asperiores.",
+                "example": "Debitis repellendus at repellendus fugit iusto deleniti.",
                 "schema": {
-                  "example": "Beatae non id consequatur.",
+                  "example": "Debitis repellendus at repellendus fugit iusto deleniti.",
                   "type": "string"
                 }
               }

@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen/service/testdata"
-	"goa.design/goa/v3/expr"
 )
 
 func TestExampleInterceptorsFiles(t *testing.T) {
@@ -84,7 +83,7 @@ func TestExampleInterceptorsFiles(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			// Run DSL
-			root := expr.RunDSL(t, c.DSL)
+			root := runDSL(t, c.DSL)
 			services := NewServicesData(root)
 			require.NotNil(t, root)
 

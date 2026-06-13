@@ -1,8 +1,10 @@
 package codegen
 
 import (
-	"goa.design/goa/v3/codegen/testutil"
 	"testing"
+
+	"goa.design/goa/v3/codegen/testutil"
+	"goa.design/goa/v3/expr"
 
 	"github.com/stretchr/testify/require"
 
@@ -119,10 +121,10 @@ func TestPayloadConstructor(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			root := RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			require.Len(t, root.API.HTTP.Services, 1)
 			services := CreateHTTPServices(root)
-			fs := serverType("", root.API.HTTP.Services[0], services)
+			fs := typesFile("", root.API.HTTP.Services[0], true, services)
 			sections := fs.SectionTemplates
 			var section *codegen.SectionTemplate
 			for _, s := range sections {

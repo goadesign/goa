@@ -491,30 +491,35 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		hasRequestMessage := !isEmpty(e.Request.Type)
 		useStreamEnvelope := usesStreamEnvelope(e)
 
-		// convert request and response types to protocol buffer message types
-		e.Request = makeProtoBufMessage(e.Request, protoBufify(e.Name()+"_request", true, true), sd)
+		// Derive protocol buffer shaped copies of the request and response
+		// attributes. The design expressions are inputs to the analysis and
+		// must not be mutated: the shaped attributes are kept in locals and
+		// threaded explicitly to the data builders below.
+		requestMessage := makeProtoBufMessage(e.Request, protoBufify(e.Name()+"_request", true, true), sd)
+		streamingRequest := e.StreamingRequest
 		if e.MethodExpr.StreamingPayload.Type != expr.Empty {
 			streamMessageName := protoBufify(e.Name()+"_streaming_request", true, true)
 			if useStreamEnvelope {
 				streamMessageName = protoBufify(e.Name()+"_stream_item", true, true)
 			}
-			e.StreamingRequest = makeProtoBufMessage(e.StreamingRequest, streamMessageName, sd)
+			streamingRequest = makeProtoBufMessage(e.StreamingRequest, streamMessageName, sd)
 		}
 		var requestEnvelope *expr.AttributeExpr
 		if useStreamEnvelope {
 			requestEnvelope = makeProtoBufStreamEnvelope(
-				e.Request,
-				e.StreamingRequest,
+				requestMessage,
+				streamingRequest,
 				protoBufify(e.Name()+"_streaming_request", true, true),
 				sd,
 			)
 		}
-		e.Response.Message = makeProtoBufMessage(e.Response.Message, protoBufify(e.Name()+"_response", true, true), sd)
+		responseMessage := makeProtoBufMessage(e.Response.Message, protoBufify(e.Name()+"_response", true, true), sd)
+		errorMessages := make(map[string]*expr.AttributeExpr, len(e.GRPCErrors))
 		for _, er := range e.GRPCErrors {
 			if er.Type == expr.ErrorResult || !expr.IsObject(er.Type) {
 				continue
 			}
-			er.Response.Message = makeProtoBufMessage(er.Response.Message, protoBufify(e.Name()+"_"+er.Name+"_error", true, true), sd)
+			errorMessages[er.Name] = makeProtoBufMessage(er.Response.Message, protoBufify(e.Name()+"_"+er.Name+"_error", true, true), sd)
 		}
 
 		// collect all the nested messages and return the top-level message
@@ -546,7 +551,7 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 					}
 				}
 			}
-			return nil
+			panic(fmt.Sprintf("no protobuf message collected for attribute of type %q", att.Type.Name())) // bug
 		}
 
 		var (
@@ -557,69 +562,54 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		md := svc.Method(e.Name())
 		if e.MethodExpr.Payload.Type != expr.Empty {
 			payloadRef = svc.Scope.GoFullTypeRef(e.MethodExpr.Payload,
-				pkgWithDefault(md.PayloadLoc, svc.PkgName))
+				md.PayloadLoc.PackageNameOrDefault(svc.PkgName))
 		}
 		if e.MethodExpr.Result.Type != expr.Empty {
 			resultRef = svc.Scope.GoFullTypeRef(e.MethodExpr.Result,
-				pkgWithDefault(md.ResultLoc, svc.PkgName))
+				md.ResultLoc.PackageNameOrDefault(svc.PkgName))
 		}
 		if md.ViewedResult != nil {
 			viewedResultRef = md.ViewedResult.FullRef
 		}
-		errors := d.buildErrorsData(e, sd)
+		errors := d.buildErrorsData(e, errorMessages, sd)
 		for _, er := range e.GRPCErrors {
 			if er.Type == expr.ErrorResult || !expr.IsObject(er.Type) {
 				continue
 			}
-			collect(er.Response.Message)
+			collect(errorMessages[er.Name])
 		}
 
 		// build request data
 		reqMD := extractMetadata(e.Metadata, e.MethodExpr.Payload, svc.Scope, *d)
 		request := &RequestData{
-			Description:   e.Request.Description,
+			Description:   requestMessage.Description,
 			Metadata:      reqMD,
-			ServerConvert: d.buildRequestConvertData(e.Request, e.MethodExpr.Payload, reqMD, e, sd, true),
-			ClientConvert: d.buildRequestConvertData(e.Request, e.MethodExpr.Payload, reqMD, e, sd, false),
+			ServerConvert: d.buildRequestConvertData(requestMessage, e.MethodExpr.Payload, reqMD, e, sd, true),
+			ClientConvert: d.buildRequestConvertData(requestMessage, e.MethodExpr.Payload, reqMD, e, sd, false),
 		}
 		if hasRequestMessage {
-			request.PayloadMessage = collect(e.Request)
+			request.PayloadMessage = collect(requestMessage)
 		}
-		if obj := expr.AsObject(e.Request.Type); (obj != nil && len(*obj) > 0) || expr.IsUnion(e.Request.Type) {
+		if obj := expr.AsObject(requestMessage.Type); (obj != nil && len(*obj) > 0) || expr.IsUnion(requestMessage.Type) {
 			// add the request message as the first argument to the CLI
 			request.CLIArgs = append(request.CLIArgs, &InitArgData{
 				Name:     "message",
 				Ref:      "message",
-				TypeName: protoBufGoFullTypeName(e.Request, sd.PkgName, sd.Scope),
-				TypeRef:  protoBufGoFullTypeRef(e.Request, sd.PkgName, sd.Scope),
-				Example:  e.Request.Example(d.Root.API.ExampleGenerator),
+				TypeName: protoBufGoFullTypeName(requestMessage, sd.PkgName, sd.Scope),
+				TypeRef:  protoBufGoFullTypeRef(requestMessage, sd.PkgName, sd.Scope),
+				Example:  requestMessage.Example(d.Root.API.ExampleGenerator),
 			})
 		}
 		// pass the metadata as arguments to client CLI args
-		for _, m := range reqMD {
-			request.CLIArgs = append(request.CLIArgs, &InitArgData{
-				Name:         m.VarName,
-				Ref:          m.VarName,
-				FieldName:    m.FieldName,
-				FieldType:    m.FieldType,
-				TypeName:     m.TypeName,
-				TypeRef:      m.TypeRef,
-				Type:         m.Type,
-				Pointer:      m.Pointer,
-				Required:     m.Required,
-				Validate:     m.Validate,
-				Example:      m.Example,
-				DefaultValue: m.DefaultValue,
-			})
-		}
+		request.CLIArgs = append(request.CLIArgs, initArgsFromMetadata(reqMD)...)
 		switch {
 		case requestEnvelope != nil:
 			request.Message = collect(requestEnvelope)
 			request.StreamEnvelope = buildStreamEnvelopeData(requestEnvelope, request.Message, sd)
-		case e.StreamingRequest.Type != expr.Empty:
-			request.Message = collect(e.StreamingRequest)
+		case streamingRequest.Type != expr.Empty:
+			request.Message = collect(streamingRequest)
 		default:
-			request.Message = collect(e.Request)
+			request.Message = collect(requestMessage)
 		}
 
 		// build response data
@@ -631,13 +621,13 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			Description:   e.Response.Description,
 			Headers:       hdrs,
 			Trailers:      trlrs,
-			ServerConvert: d.buildResponseConvertData(e.Response.Message, result, svcCtx, hdrs, trlrs, e, sd, true),
-			ClientConvert: d.buildResponseConvertData(e.Response.Message, result, svcCtx, hdrs, trlrs, e, sd, false),
+			ServerConvert: d.buildResponseConvertData(responseMessage, result, svcCtx, hdrs, trlrs, e, sd, true),
+			ClientConvert: d.buildResponseConvertData(responseMessage, result, svcCtx, hdrs, trlrs, e, sd, false),
 		}
 		// If the endpoint is a streaming endpoint, no message is returned
 		// by gRPC. Hence, no need to set response message.
-		if e.Response.Message.Type != expr.Empty || !e.MethodExpr.IsStreaming() {
-			response.Message = collect(e.Response.Message)
+		if responseMessage.Type != expr.Empty || !e.MethodExpr.IsStreaming() {
+			response.Message = collect(responseMessage)
 		}
 
 		// gather security requirements
@@ -679,8 +669,8 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		}
 		sd.Endpoints = append(sd.Endpoints, ed)
 		if e.MethodExpr.IsStreaming() {
-			ed.ServerStream = d.buildStreamData(e, sd, true)
-			ed.ClientStream = d.buildStreamData(e, sd, false)
+			ed.ServerStream = d.buildStreamData(e, streamingRequest, responseMessage, sd, true)
+			ed.ClientStream = d.buildStreamData(e, streamingRequest, responseMessage, sd, false)
 		}
 	}
 	return sd
@@ -692,21 +682,19 @@ func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]st
 		return data, imports
 	}
 	if proto := at.Meta["struct:field:proto"]; len(proto) > 1 {
-		if len(proto) > 1 {
-			imp := proto[1]
-			found := false
-			for _, i := range sd.Service.ProtoImports {
-				if i.Path == imp {
-					found = true
-					break
-				}
+		imp := proto[1]
+		found := false
+		for _, i := range sd.Service.ProtoImports {
+			if i.Path == imp {
+				found = true
+				break
 			}
-			if !found {
-				imports = append(imports, imp)
-				if len(proto) > 3 {
-					elems := strings.Split(proto[3], "/")
-					sd.Service.ProtoImports = append(sd.Service.ProtoImports, &codegen.ImportSpec{Path: proto[3], Name: elems[len(elems)-1]})
-				}
+		}
+		if !found {
+			imports = append(imports, imp)
+			if len(proto) > 3 {
+				elems := strings.Split(proto[3], "/")
+				sd.Service.ProtoImports = append(sd.Service.ProtoImports, &codegen.ImportSpec{Path: proto[3], Name: elems[len(elems)-1]})
 			}
 		}
 	}
@@ -911,9 +899,16 @@ func collectValidationsR(att *expr.AttributeExpr, attName string, req bool, sd *
 func userTypeAttribute(ut expr.UserType) *expr.AttributeExpr {
 	att := ut.Attribute()
 	if rt, ok := ut.(*expr.ResultTypeExpr); ok {
-		if a := unwrapAttr(expr.DupAtt(rt.Attribute())); expr.IsArray(a.Type) {
-			// result type collection
-			att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
+		// Result type collections are wrapper user types themselves: the
+		// wrappedAttrMeta marker lives directly on their attribute when the
+		// collection was wrapped as a whole message (makeProtoBufMessage) and
+		// on a nested wrapper user type when the collection was wrapped in
+		// place as a field type (makeProtoBufMessageR).
+		if len(att.Meta[wrappedAttrMeta]) > 0 || isWrappedAttr(att) {
+			if expr.IsArray(unwrapAttr(att).Type) {
+				// result type collection
+				att = &expr.AttributeExpr{Type: expr.AsObject(rt)}
+			}
 		}
 	}
 	return att
@@ -939,29 +934,15 @@ func (d *ServicesData) buildRequestConvertData(request, payload *expr.AttributeE
 	}
 
 	svc := sd.Service
-	pkg := pkgWithDefault(svc.Method(e.MethodExpr.Name).PayloadLoc, svc.PkgName)
+	pkg := svc.Method(e.MethodExpr.Name).PayloadLoc.PackageNameOrDefault(svc.PkgName)
 	svcCtx := serviceTypeContext(pkg, svc.Scope)
 	if svr {
 		// server side
-		data := d.buildInitData(request, payload, "message", "v", svcCtx, false, svr, false, sd)
+		data := d.buildInitData(request, payload, "message", "v", svcCtx, false, false, sd)
 		data.Name = fmt.Sprintf("New%sPayload", codegen.Goify(e.Name(), true))
 		data.Description = fmt.Sprintf("%s builds the payload of the %q endpoint of the %q service from the gRPC request type.", data.Name, e.Name(), svc.Name)
-		for _, m := range md {
-			// pass the metadata as arguments to payload constructor in server
-			data.Args = append(data.Args, &InitArgData{
-				Name:      m.VarName,
-				Ref:       m.VarName,
-				FieldName: m.FieldName,
-				FieldType: m.FieldType,
-				TypeName:  m.TypeName,
-				TypeRef:   m.TypeRef,
-				Type:      m.Type,
-				Pointer:   m.Pointer,
-				Required:  m.Required,
-				Validate:  m.Validate,
-				Example:   m.Example,
-			})
-		}
+		// pass the metadata as arguments to payload constructor in server
+		data.Args = append(data.Args, initArgsFromMetadata(md)...)
 		return &ConvertData{
 			SrcName:    protoBufGoFullTypeName(request, sd.PkgName, sd.Scope),
 			SrcRef:     protoBufGoFullTypeRef(request, sd.PkgName, sd.Scope),
@@ -973,7 +954,7 @@ func (d *ServicesData) buildRequestConvertData(request, payload *expr.AttributeE
 	}
 
 	// client side
-	data := d.buildInitData(payload, request, "payload", "message", svcCtx, true, svr, false, sd)
+	data := d.buildInitData(payload, request, "payload", "message", svcCtx, true, false, sd)
 	data.Description = fmt.Sprintf("%s builds the gRPC request type from the payload of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 	return &ConvertData{
 		SrcName: svc.Scope.GoFullTypeName(payload, pkg),
@@ -999,7 +980,7 @@ func (d *ServicesData) buildResponseConvertData(response, result *expr.Attribute
 	svc := sd.Service
 	if svr {
 		// server side
-		data := d.buildInitData(result, response, "result", "message", svcCtx, true, svr, false, sd)
+		data := d.buildInitData(result, response, "result", "message", svcCtx, true, false, sd)
 		data.Description = fmt.Sprintf("%s builds the gRPC response type from the result of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 		return &ConvertData{
 			SrcName: svcCtx.Scope.Name(result, svcCtx.Pkg(result), svcCtx.Pointer, svcCtx.UseDefault),
@@ -1011,41 +992,13 @@ func (d *ServicesData) buildResponseConvertData(response, result *expr.Attribute
 	}
 
 	// client side
-	data := d.buildInitData(response, result, "message", "result", svcCtx, false, svr, false, sd)
+	data := d.buildInitData(response, result, "message", "result", svcCtx, false, false, sd)
 	data.Name = fmt.Sprintf("New%sResult", codegen.Goify(e.Name(), true))
 	data.Description = fmt.Sprintf("%s builds the result type of the %q endpoint of the %q service from the gRPC response type.", data.Name, e.Name(), svc.Name)
-	for _, m := range hdrs {
-		// pass the headers as arguments to result constructor in client
-		data.Args = append(data.Args, &InitArgData{
-			Name:      m.VarName,
-			Ref:       m.VarName,
-			FieldName: m.FieldName,
-			FieldType: m.FieldType,
-			TypeName:  m.TypeName,
-			TypeRef:   m.TypeRef,
-			Type:      m.Type,
-			Pointer:   m.Pointer,
-			Required:  m.Required,
-			Validate:  m.Validate,
-			Example:   m.Example,
-		})
-	}
-	for _, m := range trlrs {
-		// pass the trailers as arguments to result constructor in client
-		data.Args = append(data.Args, &InitArgData{
-			Name:      m.VarName,
-			Ref:       m.VarName,
-			FieldName: m.FieldName,
-			FieldType: m.FieldType,
-			TypeName:  m.TypeName,
-			TypeRef:   m.TypeRef,
-			Type:      m.Type,
-			Pointer:   m.Pointer,
-			Required:  m.Required,
-			Validate:  m.Validate,
-			Example:   m.Example,
-		})
-	}
+	// pass the headers as arguments to result constructor in client
+	data.Args = append(data.Args, initArgsFromMetadata(hdrs)...)
+	// pass the trailers as arguments to result constructor in client
+	data.Args = append(data.Args, initArgsFromMetadata(trlrs)...)
 	return &ConvertData{
 		SrcName:    protoBufGoFullTypeName(response, sd.PkgName, sd.Scope),
 		SrcRef:     protoBufGoFullTypeRef(response, sd.PkgName, sd.Scope),
@@ -1064,8 +1017,7 @@ func (d *ServicesData) buildResponseConvertData(response, result *expr.Attribute
 // transformation
 // svcCtx is the attribute context for service type
 // proto if true indicates the target type is a protocol buffer type
-// svr if true indicates the code is generated for conversion server side
-func (d *ServicesData) buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar string, svcCtx *codegen.AttributeContext, proto, _, usesrc bool, sd *ServiceData) *InitData {
+func (d *ServicesData) buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar string, svcCtx *codegen.AttributeContext, proto, usesrc bool, sd *ServiceData) *InitData {
 	pbCtx := protoBufTypeContext(sd.PkgName, sd.Scope, false)
 	name := "New"
 	srcCtx := pbCtx
@@ -1115,27 +1067,33 @@ func (d *ServicesData) buildInitData(source, target *expr.AttributeExpr, sourceV
 // buildErrorsData builds the error data for all the error responses in the
 // endpoint expression. The response message for each error response are
 // inferred from the method's error expression if not specified explicitly.
-func (d *ServicesData) buildErrorsData(e *expr.GRPCEndpointExpr, sd *ServiceData) []*ErrorData {
+// errorMessages maps error names to the protobuf shaped copy of their
+// response message derived by analyze; errors without a custom object type
+// have no entry.
+func (d *ServicesData) buildErrorsData(e *expr.GRPCEndpointExpr, errorMessages map[string]*expr.AttributeExpr, sd *ServiceData) []*ErrorData {
 	svc := sd.Service
 	errors := make([]*ErrorData, 0, len(e.GRPCErrors))
 	for _, v := range e.GRPCErrors {
 		responseData := &ResponseData{
 			StatusCode:    statusCodeToGRPCConst(v.Response.StatusCode),
 			Description:   v.Response.Description,
-			ServerConvert: d.buildErrorConvertData(v, e, sd, true),
-			ClientConvert: d.buildErrorConvertData(v, e, sd, false),
+			ServerConvert: d.buildErrorConvertData(v, e, errorMessages[v.Name], sd, true),
+			ClientConvert: d.buildErrorConvertData(v, e, errorMessages[v.Name], sd, false),
 		}
 		errorLoc := svc.Method(e.MethodExpr.Name).ErrorLocs[v.Name]
 		errors = append(errors, &ErrorData{
 			Name:     v.Name,
-			Ref:      svc.Scope.GoFullTypeRef(v.AttributeExpr, pkgWithDefault(errorLoc, svc.PkgName)),
+			Ref:      svc.Scope.GoFullTypeRef(v.AttributeExpr, errorLoc.PackageNameOrDefault(svc.PkgName)),
 			Response: responseData,
 		})
 	}
 	return errors
 }
 
-func (d *ServicesData) buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *ConvertData {
+// buildErrorConvertData builds the convert data for the given error response.
+// message is the protobuf shaped copy of the error response message derived
+// by analyze; it is nil for default errors and non-object error types.
+func (d *ServicesData) buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRPCEndpointExpr, message *expr.AttributeExpr, sd *ServiceData, svr bool) *ConvertData {
 	// No need to build transformation functions for default error or non-object
 	// types.
 	if ge.Type == expr.ErrorResult || !expr.IsObject(ge.Type) {
@@ -1145,36 +1103,39 @@ func (d *ServicesData) buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRP
 	svcCtx := serviceTypeContext(svc.PkgName, svc.Scope)
 	if svr {
 		// server side
-		data := d.buildInitData(ge.AttributeExpr, ge.Response.Message, "er", "message", svcCtx, true, svr, false, sd)
+		data := d.buildInitData(ge.AttributeExpr, message, "er", "message", svcCtx, true, false, sd)
 		data.Name = fmt.Sprintf("New%s%sError", codegen.Goify(e.Name(), true), codegen.Goify(ge.Name, true))
 		data.Description = fmt.Sprintf("%s builds the gRPC error response type from the error of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 		return &ConvertData{
 			SrcName: svcCtx.Scope.Name(ge.AttributeExpr, svcCtx.Pkg(ge.AttributeExpr), svcCtx.Pointer, svcCtx.UseDefault),
 			SrcRef:  svcCtx.Scope.Ref(ge.AttributeExpr, svcCtx.Pkg(ge.AttributeExpr)),
-			TgtName: protoBufGoFullTypeName(ge.Response.Message, sd.PkgName, sd.Scope),
-			TgtRef:  protoBufGoFullTypeRef(ge.Response.Message, sd.PkgName, sd.Scope),
+			TgtName: protoBufGoFullTypeName(message, sd.PkgName, sd.Scope),
+			TgtRef:  protoBufGoFullTypeRef(message, sd.PkgName, sd.Scope),
 			Init:    data,
 		}
 	}
 
 	// client side
-	data := d.buildInitData(ge.Response.Message, ge.AttributeExpr, "message", "er", svcCtx, false, svr, false, sd)
+	data := d.buildInitData(message, ge.AttributeExpr, "message", "er", svcCtx, false, false, sd)
 	data.Name = fmt.Sprintf("New%s%sError", codegen.Goify(e.Name(), true), codegen.Goify(ge.Name, true))
 	data.Description = fmt.Sprintf("%s builds the error type of the %q endpoint of the %q service from the gRPC error response type.", data.Name, e.Name(), svc.Name)
 	return &ConvertData{
-		SrcName:    protoBufGoFullTypeName(ge.Response.Message, sd.PkgName, sd.Scope),
-		SrcRef:     protoBufGoFullTypeRef(ge.Response.Message, sd.PkgName, sd.Scope),
+		SrcName:    protoBufGoFullTypeName(message, sd.PkgName, sd.Scope),
+		SrcRef:     protoBufGoFullTypeRef(message, sd.PkgName, sd.Scope),
 		TgtName:    svcCtx.Scope.Name(ge.AttributeExpr, svcCtx.Pkg(ge.AttributeExpr), svcCtx.Pointer, svcCtx.UseDefault),
 		TgtRef:     svcCtx.Scope.Ref(ge.AttributeExpr, svcCtx.Pkg(ge.AttributeExpr)),
 		Init:       data,
-		Validation: addValidation(ge.Response.Message, "errmsg", sd, false),
+		Validation: addValidation(message, "errmsg", sd, false),
 	}
 }
 
 // buildStreamData builds the StreamData for the server and client streams.
 //
+// streamingRequest and responseMessage are the protobuf shaped copies of the
+// endpoint streaming request and response message derived by analyze.
+//
 // svr param indicates that the stream data is built for the server.
-func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData, svr bool) *StreamData {
+func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, streamingRequest, responseMessage *expr.AttributeExpr, sd *ServiceData, svr bool) *StreamData {
 	var (
 		varn                string
 		intName             string
@@ -1215,9 +1176,9 @@ func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData
 			sendConvert = &ConvertData{
 				SrcName: resCtx.Scope.Name(result, resCtx.Pkg(result), resCtx.Pointer, resCtx.UseDefault),
 				SrcRef:  resCtx.Scope.Ref(result, resCtx.Pkg(result)),
-				TgtName: protoBufGoFullTypeName(e.Response.Message, sd.PkgName, sd.Scope),
-				TgtRef:  protoBufGoFullTypeRef(e.Response.Message, sd.PkgName, sd.Scope),
-				Init:    d.buildInitData(result, e.Response.Message, resVar, "v", resCtx, true, svr, true, sd),
+				TgtName: protoBufGoFullTypeName(responseMessage, sd.PkgName, sd.Scope),
+				TgtRef:  protoBufGoFullTypeRef(responseMessage, sd.PkgName, sd.Scope),
+				Init:    d.buildInitData(result, responseMessage, resVar, "v", resCtx, true, true, sd),
 			}
 		}
 		if e.MethodExpr.StreamingPayload.Type != expr.Empty {
@@ -1225,12 +1186,12 @@ func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData
 			recvWithContextName = md.ServerStream.RecvWithContextName
 			recvRef = svcCtx.Scope.Ref(e.MethodExpr.StreamingPayload, svcCtx.Pkg(e.MethodExpr.StreamingPayload))
 			recvConvert = &ConvertData{
-				SrcName:    protoBufGoFullTypeName(e.StreamingRequest, sd.PkgName, sd.Scope),
-				SrcRef:     protoBufGoFullTypeRef(e.StreamingRequest, sd.PkgName, sd.Scope),
+				SrcName:    protoBufGoFullTypeName(streamingRequest, sd.PkgName, sd.Scope),
+				SrcRef:     protoBufGoFullTypeRef(streamingRequest, sd.PkgName, sd.Scope),
 				TgtName:    svcCtx.Scope.Name(e.MethodExpr.StreamingPayload, svcCtx.Pkg(e.MethodExpr.StreamingPayload), svcCtx.Pointer, svcCtx.UseDefault),
 				TgtRef:     recvRef,
-				Init:       d.buildInitData(e.StreamingRequest, e.MethodExpr.StreamingPayload, "v", "spayload", svcCtx, false, svr, true, sd),
-				Validation: addValidation(e.StreamingRequest, "stream", sd, true),
+				Init:       d.buildInitData(streamingRequest, e.MethodExpr.StreamingPayload, "v", "spayload", svcCtx, false, true, sd),
+				Validation: addValidation(streamingRequest, "stream", sd, true),
 			}
 		}
 		mustClose = md.ServerStream.MustClose
@@ -1246,9 +1207,9 @@ func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData
 			sendConvert = &ConvertData{
 				SrcName: svcCtx.Scope.Name(e.MethodExpr.StreamingPayload, svcCtx.Pkg(e.MethodExpr.StreamingPayload), svcCtx.Pointer, svcCtx.UseDefault),
 				SrcRef:  sendRef,
-				TgtName: protoBufGoFullTypeName(e.StreamingRequest, sd.PkgName, sd.Scope),
-				TgtRef:  protoBufGoFullTypeRef(e.StreamingRequest, sd.PkgName, sd.Scope),
-				Init:    d.buildInitData(e.MethodExpr.StreamingPayload, e.StreamingRequest, "spayload", "v", svcCtx, true, svr, true, sd),
+				TgtName: protoBufGoFullTypeName(streamingRequest, sd.PkgName, sd.Scope),
+				TgtRef:  protoBufGoFullTypeRef(streamingRequest, sd.PkgName, sd.Scope),
+				Init:    d.buildInitData(e.MethodExpr.StreamingPayload, streamingRequest, "spayload", "v", svcCtx, true, true, sd),
 			}
 		}
 		if e.MethodExpr.Result.Type != expr.Empty {
@@ -1256,12 +1217,12 @@ func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, sd *ServiceData
 			recvWithContextName = md.ClientStream.RecvWithContextName
 			recvRef = ed.ResultRef
 			recvConvert = &ConvertData{
-				SrcName:    protoBufGoFullTypeName(e.Response.Message, sd.PkgName, sd.Scope),
-				SrcRef:     protoBufGoFullTypeRef(e.Response.Message, sd.PkgName, sd.Scope),
+				SrcName:    protoBufGoFullTypeName(responseMessage, sd.PkgName, sd.Scope),
+				SrcRef:     protoBufGoFullTypeRef(responseMessage, sd.PkgName, sd.Scope),
 				TgtName:    resCtx.Scope.Name(result, resCtx.Pkg(result), resCtx.Pointer, resCtx.UseDefault),
 				TgtRef:     resCtx.Scope.Ref(result, resCtx.Pkg(result)),
-				Init:       d.buildInitData(e.Response.Message, result, "v", resVar, resCtx, false, svr, true, sd),
-				Validation: addValidation(e.Response.Message, "stream", sd, false),
+				Init:       d.buildInitData(responseMessage, result, "v", resVar, resCtx, false, true, sd),
+				Validation: addValidation(responseMessage, "stream", sd, false),
 			}
 		}
 		mustClose = md.ClientStream.MustClose
@@ -1339,11 +1300,34 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 				expr.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == expr.StringKind,
 			Validate:     codegen.AttributeValidationCode(c, nil, ctx, required, false, varn, name),
 			DefaultValue: c.DefaultValue,
-			Example:      c.Example(services.Root.API.ExampleGenerator),
+			Example:      c.Example(services.Root.API.ExampleGenerator.Field(service, name)),
 		})
 		return nil
 	})
 	return metadata
+}
+
+// initArgsFromMetadata converts the given metadata into constructor arguments
+// so the metadata values can be passed to the generated init functions.
+func initArgsFromMetadata(md []*MetadataData) []*InitArgData {
+	args := make([]*InitArgData, len(md))
+	for i, m := range md {
+		args[i] = &InitArgData{
+			Name:         m.VarName,
+			Ref:          m.VarName,
+			FieldName:    m.FieldName,
+			FieldType:    m.FieldType,
+			TypeName:     m.TypeName,
+			TypeRef:      m.TypeRef,
+			Type:         m.Type,
+			Pointer:      m.Pointer,
+			Required:     m.Required,
+			Validate:     m.Validate,
+			Example:      m.Example,
+			DefaultValue: m.DefaultValue,
+		}
+	}
+	return args
 }
 
 // usesStreamEnvelope reports whether the transport needs a typed stream
@@ -1394,12 +1378,17 @@ func buildStreamEnvelopeData(envelope *expr.AttributeExpr, message *service.User
 	return &StreamEnvelopeData{
 		FieldName:            fieldName,
 		InitialFieldName:     initialFieldName,
-		InitialWrapperRef:    fmt.Sprintf("%s.%s_%s", sd.PkgName, message.VarName, initialFieldName),
+		InitialWrapperRef:    sd.PkgName + "." + protocOneofWrapperRef(message.VarName, initialFieldName),
 		StreamItemFieldName:  streamItemFieldName,
-		StreamItemWrapperRef: fmt.Sprintf("%s.%s_%s", sd.PkgName, message.VarName, streamItemFieldName),
+		StreamItemWrapperRef: sd.PkgName + "." + protocOneofWrapperRef(message.VarName, streamItemFieldName),
 	}
 }
 
+// unalias returns the underlying attribute of the given attribute when its
+// type is a user type, recursing until a non user type is found. Unlike
+// unAlias it also resolves user types with non-primitive bases (e.g. named
+// arrays) which extractMetadata needs to compute the native metadata type
+// references.
 func unalias(att *expr.AttributeExpr) *expr.AttributeExpr {
 	if ut, ok := att.Type.(expr.UserType); ok {
 		if _, ok := ut.Attribute().Type.(expr.Primitive); ok {
@@ -1427,16 +1416,8 @@ func resultContext(e *expr.GRPCEndpointExpr, sd *ServiceData) (*expr.AttributeEx
 		// return projected type context
 		return vresAtt, codegen.NewAttributeContext(true, false, true, svc.ViewsPkg, svc.ViewScope)
 	}
-	pkg := pkgWithDefault(md.ResultLoc, svc.PkgName)
+	pkg := md.ResultLoc.PackageNameOrDefault(svc.PkgName)
 	return e.MethodExpr.Result, serviceTypeContext(pkg, svc.Scope)
-}
-
-// pkgWithDefault returns the package name of the given location if not nil, def otherwise.
-func pkgWithDefault(loc *codegen.Location, def string) string {
-	if loc == nil {
-		return def
-	}
-	return loc.PackageName()
 }
 
 // getPrimitive returns the primitive expression if the given expression is an alias to one
@@ -1450,6 +1431,15 @@ func getPrimitive(att *expr.AttributeExpr) *expr.AttributeExpr {
 	return nil
 }
 
+// unAlias returns the base attribute of the given attribute when it is an
+// alias to a primitive type, the attribute itself otherwise.
+func unAlias(at *expr.AttributeExpr) *expr.AttributeExpr {
+	if prim := getPrimitive(at); prim != nil {
+		return prim
+	}
+	return at
+}
+
 // isEmpty returns true if given type is empty.
 func isEmpty(dt expr.DataType) bool {
 	if dt == expr.Empty {
@@ -1457,6 +1447,26 @@ func isEmpty(dt expr.DataType) bool {
 	}
 	if o := expr.AsObject(dt); o != nil && len(*o) == 0 {
 		return true
+	}
+	return false
+}
+
+// usesAnyType reports whether any of the given endpoints uses the Any type in
+// its payload, result or, when includeErrors is true, error attributes. It is
+// used to determine whether generated files need the structpb import.
+func usesAnyType(endpoints []*expr.GRPCEndpointExpr, includeErrors bool) bool {
+	for _, e := range endpoints {
+		if hasAnyType(e.MethodExpr.Payload) || hasAnyType(e.MethodExpr.Result) {
+			return true
+		}
+		if !includeErrors {
+			continue
+		}
+		for _, er := range e.MethodExpr.Errors {
+			if hasAnyType(er.AttributeExpr) {
+				return true
+			}
+		}
 	}
 	return false
 }

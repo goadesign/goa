@@ -26,7 +26,7 @@ func paramsFromPath(endpoint *expr.HTTPEndpointExpr, path string, rand *expr.Exa
 		if in != "path" && openapiinternal.IsSecurityParameter(endpoint, in, pn) {
 			return nil
 		}
-		res = append(res, paramFor(at, pn, in, required, rand))
+		res = append(res, paramFor(at, pn, in, required, rand.Field(endpoint.MethodExpr.Payload, n)))
 		return nil
 	})
 	return res
@@ -42,7 +42,7 @@ func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.Exa
 			return nil
 		}
 		required := endpoint.Headers.IsRequiredNoDefault(name)
-		params = append(params, paramFor(att, elem, "header", required, rand))
+		params = append(params, paramFor(att, elem, "header", required, rand.Field(endpoint.MethodExpr.Payload, name)))
 		return nil
 	})
 	expr.WalkMappedAttr(endpoint.Cookies, func(name, elem string, att *expr.AttributeExpr) error { // nolint: errcheck
@@ -50,7 +50,7 @@ func paramsFromHeadersAndCookies(endpoint *expr.HTTPEndpointExpr, rand *expr.Exa
 			return nil
 		}
 		required := endpoint.Cookies.IsRequiredNoDefault(name)
-		params = append(params, paramFor(att, elem, "cookie", required, rand))
+		params = append(params, paramFor(att, elem, "cookie", required, rand.Field(endpoint.MethodExpr.Payload, name)))
 		return nil
 	})
 

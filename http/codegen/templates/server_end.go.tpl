@@ -8,6 +8,13 @@
 			log.Printf(ctx, "HTTP %q mounted on %s %s", m.Method, m.Verb, m.Pattern)
 		}
 	{{- end }}
+	{{- range .JSONRPCServices }}
+		for _, m := range {{ .Service.VarName }}JSONRPCServer.Methods {
+		{{- range (index .Endpoints 0).Routes }}
+			log.Printf(ctx, "JSON-RPC method %q mounted on {{ .Verb }} {{ .Path }}", m)
+		{{- end }}
+		}
+	{{- end }}
 
 	(*wg).Add(1)
 	go func() {

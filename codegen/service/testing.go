@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 )
@@ -23,11 +24,14 @@ func initDSL(t *testing.T) *expr.RootExpr {
 	return root
 }
 
-// runDSL returns the DSL root resulting from running the given DSL.
+// runDSL returns the DSL root resulting from running the given DSL. The root
+// is normalized like the production Generate flow does before the generators
+// read the design.
 func runDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	root := initDSL(t)
 	require.True(t, eval.Execute(dsl, nil))
 	require.NoError(t, eval.RunDSL())
+	codegen.NormalizeRoot(root)
 	return root
 }
 

@@ -66,7 +66,7 @@ func collectServiceUnionTypeNames(att *expr.AttributeExpr, loc *codegen.Location
 	scope := codegen.NewNameScope()
 	seen := make(map[string]struct{})
 	unionByHash := make(map[string]*UnionTypeData)
-	collectUnionTypes(att, scope, loc, unionByHash, seen)
+	collectUnionTypes(att, scope, loc, unionByHash, seen, false)
 
 	names := make(map[string]string, len(unionByHash))
 	for hash, data := range unionByHash {

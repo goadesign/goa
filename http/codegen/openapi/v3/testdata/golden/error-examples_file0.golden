@@ -9,7 +9,7 @@
           "message": "parameter 'p' must be an integer",
           "name": "bad_request",
           "temporary": true,
-          "timeout": true
+          "timeout": false
         },
         "properties": {
           "fault": {

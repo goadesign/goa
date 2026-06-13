@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
@@ -8,61 +9,50 @@ import (
 	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
-// SSEServerFiles returns the generated JSON-RPC SSE server files if any.
-func SSEServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File {
-	var files []*codegen.File
-	jsvcs := data.Root.API.JSONRPC.Services
-	for _, svc := range jsvcs {
-		if f := sseServerFile(genpkg, svc, data); f != nil {
-			files = append(files, f)
-		}
-		if f := sseClientFile(genpkg, svc, data); f != nil {
-			files = append(files, f)
-		}
-	}
-	return files
-}
-
-// sseServerFile returns the file implementing the SSE server streaming implementation if any.
+// sseServerFile returns the file implementing the JSON-RPC SSE server
+// streams if any. The file contains the shared SSE stream machinery followed
+// by one stream implementation per SSE endpoint.
 func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	if data == nil {
 		return nil
 	}
-
-	// Check if any endpoint has SSE
-	hasSSE := false
-	for _, ed := range data.Endpoints {
-		if ed.SSE != nil {
-			hasSSE = true
-			break
-		}
-	}
-	if !hasSSE {
+	if !hasSSEEndpoint(data) {
 		return nil
 	}
 
-	path := filepath.Join(codegen.Gendir, "jsonrpc", codegen.SnakeCase(svc.Name()), "server", "stream.go")
-	tmplSections := sseServerStreamSections(data)
-	sections := make([]*codegen.SectionTemplate, 0, 1+len(tmplSections))
-	sections = append(sections,
-		codegen.Header(
-			"stream",
-			"server",
-			[]*codegen.ImportSpec{
-				{Path: "context"},
-				{Path: "errors"},
-				{Path: "fmt"},
-				{Path: "net/http"},
-				{Path: "sync"},
-				codegen.GoaImport(""),
-				codegen.GoaImport("jsonrpc"),
-				codegen.GoaNamedImport("http", "goahttp"),
-				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
-			},
-		),
+	path := filepath.Join(codegen.Gendir, "jsonrpc", data.Service.PathName, "server", "sse.go")
+	title := fmt.Sprintf("%s SSE server streaming", svc.Name())
+	imports := make([]*codegen.ImportSpec, 0, 9+len(data.Service.UserTypeImports))
+	imports = append(imports,
+		&codegen.ImportSpec{Path: "context"},
+		&codegen.ImportSpec{Path: "errors"},
+		&codegen.ImportSpec{Path: "fmt"},
+		&codegen.ImportSpec{Path: "net/http"},
+		&codegen.ImportSpec{Path: "sync"},
+		codegen.GoaImport(""),
+		codegen.GoaImport("jsonrpc"),
+		codegen.GoaNamedImport("http", "goahttp"),
+		&codegen.ImportSpec{Path: genpkg + "/" + data.Service.PathName, Name: data.Service.PkgName},
 	)
-	sections = append(sections, tmplSections...)
+	imports = append(imports, data.Service.UserTypeImports...)
+	sections := []*codegen.SectionTemplate{
+		codegen.Header(title, "server", imports),
+		{
+			Name:   "jsonrpc-sse-server-stream-base",
+			Source: jsonrpcTemplates.Read(sseServerStreamBaseT),
+		},
+	}
+	for _, ed := range data.Endpoints {
+		if ed.SSE == nil {
+			continue
+		}
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "jsonrpc-sse-server-stream",
+			Source: jsonrpcTemplates.Read(sseServerStreamT),
+			Data:   ed,
+		})
+	}
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
@@ -72,20 +62,11 @@ func sseClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodeg
 	if data == nil {
 		return nil
 	}
-
-	// Check if any endpoint has SSE
-	hasSSE := false
-	for _, ed := range data.Endpoints {
-		if ed.SSE != nil {
-			hasSSE = true
-			break
-		}
-	}
-	if !hasSSE {
+	if !hasSSEEndpoint(data) {
 		return nil
 	}
 
-	path := filepath.Join(codegen.Gendir, "jsonrpc", codegen.SnakeCase(svc.Name()), "client", "stream.go")
+	path := filepath.Join(codegen.Gendir, "jsonrpc", data.Service.PathName, "client", "stream.go")
 	tmplSections := sseClientStreamSections(data)
 	sections := make([]*codegen.SectionTemplate, 0, 1+len(tmplSections))
 	sections = append(sections,
@@ -104,32 +85,12 @@ func sseClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodeg
 				{Path: "sync"},
 				codegen.GoaImport("jsonrpc"),
 				codegen.GoaNamedImport("http", "goahttp"),
-				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
+				{Path: genpkg + "/" + data.Service.PathName, Name: data.Service.PkgName},
 			},
 		),
 	)
 	sections = append(sections, tmplSections...)
 	return &codegen.File{Path: path, SectionTemplates: sections}
-}
-
-// sseServerStreamSections returns section templates for SSE server endpoints.
-func sseServerStreamSections(data *httpcodegen.ServiceData) []*codegen.SectionTemplate {
-	sections := make([]*codegen.SectionTemplate, 0)
-	for _, ed := range data.Endpoints {
-		if ed.SSE == nil {
-			continue
-		}
-		// Generate SSE server stream struct and methods
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "jsonrpc-sse-server-stream",
-			Source: jsonrpcTemplates.Read(sseServerStreamT),
-			Data:   ed,
-			FuncMap: map[string]any{
-				"lowerInitial": lowerInitial,
-			},
-		})
-	}
-	return sections
 }
 
 // sseClientStreamSections returns section templates for SSE client endpoints.
@@ -147,4 +108,14 @@ func sseClientStreamSections(data *httpcodegen.ServiceData) []*codegen.SectionTe
 		})
 	}
 	return sections
+}
+
+// hasSSEEndpoint returns true if any endpoint of the service uses SSE.
+func hasSSEEndpoint(data *httpcodegen.ServiceData) bool {
+	for _, ed := range data.Endpoints {
+		if ed.SSE != nil {
+			return true
+		}
+	}
+	return false
 }

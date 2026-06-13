@@ -397,7 +397,7 @@ func TestClientStreaming(t *testing.T) {
 func runTests(t *testing.T, cases []*testCase, filesFn func(root *expr.RootExpr) []*codegen.File) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			root := RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			fs := filesFn(root)
 			require.Greater(t, len(fs), 1)
 			for _, s := range c.Sections {

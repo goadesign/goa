@@ -21,9 +21,11 @@ paths:
                             $ref: '#/components/schemas/Setup'
                         example:
                             completed:
-                                - where
-                                - where
-                            current: where
+                                - who
+                                - who
+                                - who
+                                - who
+                            current: who
             responses:
                 "200":
                     description: OK response.
@@ -33,11 +35,9 @@ paths:
                                 $ref: '#/components/schemas/Setup'
                             example:
                                 completed:
-                                    - when
-                                    - when
-                                    - when
-                                    - when
-                                current: when
+                                    - where
+                                    - where
+                                current: where
 components:
     schemas:
         Setup:
@@ -48,15 +48,17 @@ components:
                     items:
                         type: string
                         description: Setup stage.
-                        example: what
+                        example: who
                         enum:
                             - who
                             - when
                             - where
                             - what
                     example:
-                        - where
-                        - where
+                        - who
+                        - who
+                        - who
+                        - who
                 current:
                     type: string
                     description: Setup stage.
@@ -69,10 +71,10 @@ components:
             description: Request body for testEndpoint.
             example:
                 completed:
-                    - where
-                    - where
-                    - where
-                    - where
-                current: where
+                    - who
+                    - who
+                    - who
+                    - who
+                current: who
 tags:
     - name: testService

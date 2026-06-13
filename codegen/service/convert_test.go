@@ -314,8 +314,8 @@ func TestConvertFiles(t *testing.T) {
 			"multi-package-conversions",
 			testdata.ConvertMultiPkgDSL,
 			map[string]int{
-				"gen/types/convert.go":  5, // header + 2 convert-to + 2 create-from sections
-				"gen/models/convert.go": 5, // header + 2 convert-to + 2 create-from sections
+				"gen/types/convert.go":  3, // header + convert-to + create-from sections
+				"gen/models/convert.go": 3, // header + convert-to + create-from sections
 			},
 		},
 	}

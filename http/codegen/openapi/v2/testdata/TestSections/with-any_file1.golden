@@ -46,7 +46,6 @@ definitions:
                     - ""
                     - ""
                     - ""
-                    - ""
             any_map:
                 type: object
                 example:
@@ -83,6 +82,8 @@ definitions:
         example:
             any: ""
             any_array:
+                - ""
+                - ""
                 - ""
                 - ""
             any_map:

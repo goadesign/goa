@@ -111,6 +111,16 @@ const SchemaRef = "https://json-schema.org/draft/2020-12/schema"
 var (
 	// Definitions contains the generated JSON schema definitions
 	Definitions map[string]*Schema
+
+	// definitionNames records the definition name assigned to result type
+	// expressions returned as-is by expr.Project (the design expression when
+	// it is already projected onto the requested view). The historical
+	// implementation renamed those expressions in place which made later
+	// references resolve to the first assigned name; the registry preserves
+	// that behavior while keeping the design expression tree read-only for
+	// the generators. Entries are keyed by expression instance so stale
+	// entries from previous generations cannot collide with new designs.
+	definitionNames = make(map[*expr.ResultTypeExpr]string)
 )
 
 // Initialize the global variables
@@ -246,17 +256,33 @@ func ResultTypeRefWithPrefix(api *expr.APIExpr, mt *expr.ResultTypeExpr, view, p
 	if n, ok := mt.Meta["openapi:typename"]; ok {
 		metaName = codegen.Goify(n[0], true)
 	}
+	name := projected.TypeName
 	if metaName != "" {
-		projected.TypeName = metaName
+		name = metaName
 	}
-	if _, ok := Definitions[projected.TypeName]; !ok {
-		projected.TypeName = codegen.Goify(prefix, true) + codegen.Goify(projected.TypeName, true)
-		if metaName != "" {
-			projected.TypeName = metaName
+	if assigned, ok := definitionNames[projected]; ok {
+		// expr.Project returned the design expression itself and a
+		// definition name was already assigned to it: keep referencing it.
+		name = assigned
+	} else {
+		if _, ok := Definitions[name]; !ok {
+			name = codegen.Goify(prefix, true) + codegen.Goify(name, true)
+			if metaName != "" {
+				name = metaName
+			}
 		}
-		GenerateResultTypeDefinition(api, projected, expr.DefaultView)
+		if projected == mt {
+			// expr.Project returns its input when the result type is
+			// already projected onto the requested view. Record the
+			// assigned name instead of renaming the design expression in
+			// place: the design tree is read-only for the generators.
+			definitionNames[projected] = name
+		}
 	}
-	return fmt.Sprintf("#/$defs/%s", projected.TypeName)
+	if _, ok := Definitions[name]; !ok {
+		GenerateResultTypeDefinition(api, renamedResultType(projected, name), expr.DefaultView)
+	}
+	return fmt.Sprintf("#/$defs/%s", name)
 }
 
 // TypeRef produces the JSON reference to the type definition.
@@ -308,7 +334,7 @@ func GenerateTypeDefinitionWithName(api *expr.APIExpr, ut *expr.UserTypeExpr, ty
 
 	s.Title = typeName
 	Definitions[typeName] = s
-	buildAttributeSchema(api, s, ut.AttributeExpr)
+	buildAttributeSchema(api, s, ut.AttributeExpr, api.ExampleGenerator.Rebased(ut.ID()))
 }
 
 // TypeSchema produces the JSON schema corresponding to the given data type.
@@ -319,6 +345,14 @@ func TypeSchema(api *expr.APIExpr, t expr.DataType) *Schema {
 // TypeSchemaWithPrefix produces the JSON schema corresponding to the given data type
 // and adds the provided prefix to the type name
 func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Schema {
+	return typeSchemaWithGen(api, t, prefix, api.ExampleGenerator)
+}
+
+// typeSchemaWithGen builds the JSON schema for t drawing example values from
+// gen. Child schemas derive their example streams from their position (object
+// property name, array index, map entry, union member) so every example in
+// the schema is anchored to the design element it illustrates.
+func typeSchemaWithGen(api *expr.APIExpr, t expr.DataType, prefix string, gen *expr.ExampleGenerator) *Schema {
 	s := NewSchema()
 	switch actual := t.(type) {
 	case expr.Primitive:
@@ -350,7 +384,7 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 	case *expr.Array:
 		s.Type = Array
 		s.Items = NewSchema()
-		buildAttributeSchema(api, s.Items, actual.ElemType)
+		buildAttributeSchema(api, s.Items, actual.ElemType, gen.Derived("0"))
 	case *expr.Object:
 		s.Type = Object
 		for _, nat := range *actual {
@@ -358,7 +392,7 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 				continue
 			}
 			prop := NewSchema()
-			buildAttributeSchema(api, prop, nat.Attribute)
+			buildAttributeSchema(api, prop, nat.Attribute, gen.Derived(nat.Name))
 			s.Properties[nat.Name] = prop
 		}
 	case *expr.Map:
@@ -366,7 +400,7 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 		if actual.KeyType.Type == expr.String && actual.ElemType.Type != expr.Any {
 			// Use free-form objects when elements are of type "Any"
 			additionalProperties := NewSchema()
-			s.AdditionalProperties = buildAttributeSchema(api, additionalProperties, actual.ElemType)
+			s.AdditionalProperties = buildAttributeSchema(api, additionalProperties, actual.ElemType, gen.Derived("val0"))
 		} else {
 			s.AdditionalProperties = true
 		}
@@ -390,12 +424,19 @@ func TypeSchemaWithPrefix(api *expr.APIExpr, t expr.DataType, prefix string) *Sc
 		// Value can be any of the branch schemas.
 		valueSchema := NewSchema()
 		for _, val := range actual.Values {
-			valueSchema.AnyOf = append(valueSchema.AnyOf, AttributeTypeSchemaWithPrefix(api, val.Attribute, prefix))
+			branch := typeSchemaWithGen(api, val.Attribute.Type, prefix, gen.Derived(val.Name))
+			initAttributeValidation(branch, val.Attribute)
+			valueSchema.AnyOf = append(valueSchema.AnyOf, branch)
 		}
 		s.Properties[typeKey] = typeSchema
 		s.Properties[valueKey] = valueSchema
 		s.Required = append(s.Required, typeKey, valueKey)
 	case *expr.UserTypeExpr:
+		if expr.IsAlias(actual) {
+			s = typeSchemaWithGen(api, actual.Attribute().Type, prefix, gen.Rebased(actual.ID()))
+			initAttributeValidation(s, actual.Attribute())
+			break
+		}
 		s.Ref = TypeRefWithPrefix(api, actual, prefix)
 	case *expr.ResultTypeExpr:
 		// Use "default" view by default
@@ -521,16 +562,18 @@ func (s *Schema) Dup() *Schema {
 }
 
 // buildAttributeSchema initializes the given JSON schema that corresponds to
-// the given attribute.
-func buildAttributeSchema(api *expr.APIExpr, s *Schema, at *expr.AttributeExpr) *Schema {
-	s.Merge(TypeSchema(api, at.Type))
+// the given attribute, drawing example values from gen.
+func buildAttributeSchema(api *expr.APIExpr, s *Schema, at *expr.AttributeExpr, gen *expr.ExampleGenerator) *Schema {
+	s.Merge(typeSchemaWithGen(api, at.Type, "", gen))
 	if s.Ref != "" {
 		// Ref is exclusive with other fields
 		return s
 	}
 	s.DefaultValue = ToStringMap(at.DefaultValue)
-	s.Description = at.Description
-	s.Example = Example(at, api.ExampleGenerator)
+	if at.Description != "" {
+		s.Description = at.Description
+	}
+	s.Example = ProjectExample(at, at.Example(gen))
 	s.Extensions = ExtensionsFromExpr(at.Meta)
 	if ap := AdditionalPropertiesFromExpr(at.Meta); ap != nil {
 		s.AdditionalProperties = ap
@@ -587,6 +630,22 @@ func initAttributeValidation(s *Schema, at *expr.AttributeExpr) {
 	}
 }
 
+// renamedResultType returns rt carrying the given type name. When the name
+// already matches it returns rt unchanged, otherwise it returns a shallow
+// copy sharing the attribute, views and identifier so the schema definition
+// is registered under the assigned name without renaming the (possibly design
+// owned) expression in place.
+func renamedResultType(rt *expr.ResultTypeExpr, name string) *expr.ResultTypeExpr {
+	if rt.TypeName == name {
+		return rt
+	}
+	ut := *rt.UserTypeExpr
+	ut.TypeName = name
+	dup := *rt
+	dup.UserTypeExpr = &ut
+	return &dup
+}
+
 // toSchemaHrefs produces hrefs that replace the path wildcards with JSON
 // schema references when appropriate.
 func toSchemaHrefs(r *expr.RouteExpr) []string {
@@ -627,7 +686,7 @@ func buildResultTypeSchema(api *expr.APIExpr, mt *expr.ResultTypeExpr, view stri
 	if err != nil {
 		panic(fmt.Sprintf("failed to project media type %#v: %s", mt.Identifier, err)) // bug
 	}
-	buildAttributeSchema(api, s, projected.AttributeExpr)
+	buildAttributeSchema(api, s, projected.AttributeExpr, api.ExampleGenerator.Rebased(projected.ID()))
 }
 
 // MustGenerate returns true if the meta indicates that a OpenAPI specification should be

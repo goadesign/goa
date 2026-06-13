@@ -64,13 +64,8 @@ func endpointParser(genpkg string, services *ServicesData, svr *expr.ServerExpr,
 	// Add structpb import if Any type is used
 	needsAnyPb := false
 	for _, svc := range services.Root.API.GRPC.Services {
-		for _, e := range svc.GRPCEndpoints {
-			if hasAnyType(e.MethodExpr.Payload) || hasAnyType(e.MethodExpr.Result) {
-				needsAnyPb = true
-				break
-			}
-		}
-		if needsAnyPb {
+		if usesAnyType(svc.GRPCEndpoints, false) {
+			needsAnyPb = true
 			break
 		}
 	}
@@ -97,27 +92,18 @@ func endpointParser(genpkg string, services *ServicesData, svr *expr.ServerExpr,
 		}
 	}
 
-	sections := make([]*codegen.SectionTemplate, 0, 4+len(data))
-	sections = append(sections,
-		codegen.Header(title, "cli", specs),
-		cli.UsageCommands(data),
-		cli.UsageExamples(data),
-		&codegen.SectionTemplate{
-			Name:   "parse-endpoint-grpc",
-			Source: grpcTemplates.Read(grpcParseEndpointT),
-			Data: struct {
-				FlagsCode string
-				Commands  []*cli.CommandData
-			}{
-				cli.FlagsCode(data),
-				data,
-			},
+	parseSection := &codegen.SectionTemplate{
+		Name:   "parse-endpoint-grpc",
+		Source: grpcTemplates.Read(grpcParseEndpointT),
+		Data: struct {
+			FlagsCode string
+			Commands  []*cli.CommandData
+		}{
+			cli.FlagsCode(data),
+			data,
 		},
-	)
-	for _, cmd := range data {
-		sections = append(sections, cli.CommandUsage(cmd))
 	}
-	return &codegen.File{Path: fpath, SectionTemplates: sections}
+	return cli.EndpointParserFile(fpath, title, specs, data, parseSection)
 }
 
 // payloadBuilders returns the file that contains the payload constructors that
@@ -137,27 +123,12 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.Command
 		{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
 	}
 	// Add structpb import if Any type is used
-	needsAnyPb := false
-	for _, e := range svc.GRPCEndpoints {
-		if hasAnyType(e.MethodExpr.Payload) || hasAnyType(e.MethodExpr.Result) {
-			needsAnyPb = true
-			break
-		}
-	}
-	if needsAnyPb {
+	if usesAnyType(svc.GRPCEndpoints, false) {
 		specs = append(specs,
 			&codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"},
 		)
 	}
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", specs),
-	}
-	for _, sub := range data.Subcommands {
-		if sub.BuildFunction != nil {
-			sections = append(sections, cli.PayloadBuilderSection(sub.BuildFunction))
-		}
-	}
-	return &codegen.File{Path: fpath, SectionTemplates: sections}
+	return cli.PayloadBuildersFile(fpath, title, specs, data)
 }
 
 func buildFlags(e *EndpointData) ([]*cli.FlagData, *cli.BuildFunctionData) {
@@ -168,14 +139,8 @@ func buildFlags(e *EndpointData) ([]*cli.FlagData, *cli.BuildFunctionData) {
 }
 
 func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.BuildFunctionData) {
-	var (
-		fdata     = make([]*cli.FieldData, 0, len(args))
-		flags     = make([]*cli.FlagData, len(args))
-		params    = make([]string, len(args))
-		pInitArgs = make([]*codegen.InitArgData, len(args))
-		check     bool
-		pinit     *cli.PayloadInitData
-	)
+	fargs := make([]*cli.FlagArgData, len(args))
+	pInitArgs := make([]*codegen.InitArgData, len(args))
 	for i, arg := range args {
 		pInitArgs[i] = &codegen.InitArgData{
 			Name:      arg.Name,
@@ -183,30 +148,21 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 			FieldType: arg.FieldType,
 			Type:      arg.Type,
 		}
-
-		f := cli.NewFlagData(e.ServiceName, e.Method.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example, arg.DefaultValue)
-		flags[i] = f
-		params[i] = f.FullName
-		code, chek := cli.FieldLoadCode(f, arg.Name, arg.TypeName, arg.Validate, arg.DefaultValue, e.PayloadType, e.PayloadRef)
-		check = check || chek
-		tn := arg.TypeRef
-		if f.Type == "JSON" {
-			// We need to declare the variable without
-			// a pointer to be able to unmarshal the JSON
-			// using its address.
-			tn = arg.TypeName
+		fargs[i] = &cli.FlagArgData{
+			Name:         arg.Name,
+			TypeName:     arg.TypeName,
+			TypeRef:      arg.TypeRef,
+			FieldName:    arg.FieldName,
+			Description:  arg.Description,
+			Required:     arg.Required,
+			Example:      arg.Example,
+			DefaultValue: arg.DefaultValue,
+			Validate:     arg.Validate,
 		}
-		fdata = append(fdata, &cli.FieldData{
-			Name:    arg.Name,
-			VarName: arg.Name,
-			TypeRef: tn,
-			Init:    code,
-		})
 	}
-	if e.Method.PayloadRef == "" {
-		return flags, nil
-	}
-	if e.Request.ServerConvert != nil {
+
+	var pinit *cli.PayloadInitData
+	if e.Method.PayloadRef != "" && e.Request.ServerConvert != nil {
 		pinit = &cli.PayloadInitData{
 			Code:           e.Request.ServerConvert.Init.Code,
 			ReturnIsStruct: e.Request.ServerConvert.Init.ReturnIsStruct,
@@ -215,15 +171,9 @@ func makeFlags(e *EndpointData, args []*InitArgData) ([]*cli.FlagData, *cli.Buil
 		}
 	}
 
-	return flags, &cli.BuildFunctionData{
-		Name:         "Build" + e.Method.VarName + "Payload",
-		ActualParams: params,
-		FormalParams: params,
-		ServiceName:  e.ServiceName,
-		MethodName:   e.Method.Name,
-		ResultType:   e.PayloadRef,
-		Fields:       fdata,
-		PayloadInit:  pinit,
-		CheckErr:     check,
+	flags, buildFunction := cli.MakeFlags(e.ServiceName, e.Method, fargs, e.PayloadType, e.PayloadRef, pinit)
+	if e.Method.PayloadRef == "" {
+		return flags, nil
 	}
+	return flags, buildFunction
 }

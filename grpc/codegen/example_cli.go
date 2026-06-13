@@ -4,7 +4,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
@@ -25,21 +24,12 @@ func ExampleCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
 // exampleCLI returns an example client tool HTTP implementation for the given
 // server expression.
 func exampleCLI(genpkg string, services *ServicesData, svr *expr.ServerExpr) *codegen.File {
-	var (
-		mainPath string
-		rootPath string
-
-		svrdata = example.Servers.Get(svr, services.Root)
-	)
-	mainPath = filepath.Join("cmd", svrdata.Dir+"-cli", "grpc.go")
+	svrdata := example.Servers.Get(svr, services.Root)
+	mainPath := filepath.Join("cmd", svrdata.Dir+"-cli", "grpc.go")
 	if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
-	idx := strings.LastIndex(genpkg, string("/"))
-	rootPath = "."
-	if idx > 0 {
-		rootPath = genpkg[:idx]
-	}
+	rootPath := example.RootPath(genpkg)
 
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},

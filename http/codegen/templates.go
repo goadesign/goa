@@ -107,6 +107,7 @@ const (
 	requestElementsP        = "request_elements"
 	queryMapConversionP     = "query_map_conversion"
 	pathConversionP         = "path_conversion"
+	jsonrpcRequestEnvelopeP = "jsonrpc_request_envelope"
 )
 
 //go:embed templates/*
@@ -114,3 +115,11 @@ var templateFS embed.FS
 
 // httpTemplates is the shared template reader for the http codegen package.
 var httpTemplates = &template.TemplateReader{FS: templateFS}
+
+// ReadTemplate returns the source of the HTTP codegen template with the given
+// name, optionally inlining the given partials. It allows transports that
+// reuse the HTTP machinery (e.g. JSON-RPC) to render templates shared with
+// this package.
+func ReadTemplate(name string, partials ...string) string {
+	return httpTemplates.Read(name, partials...)
+}

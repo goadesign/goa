@@ -254,7 +254,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 			ct = "multipart/form-data"
 		}
 		mt := &MediaType{Schema: bodies.RequestBody}
-		initExamples(mt, e.Body, rand)
+		initExamples(mt, e.Body, rand.Rebased(bodyExampleID(m.Service.Name, e.Name(), "request")))
 		requestBody = &RequestBodyRef{Value: &RequestBody{
 			Description: requestBodyDescription(e),
 			Required:    e.Body.Type != expr.Empty,
@@ -272,7 +272,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 			// The generated handler reads the Last-Event-ID header directly so
 			// the header does not appear in the endpoint headers expression.
 			att := expr.AsObject(m.Payload.Type).Attribute(e.SSE.RequestIDField)
-			ps = append(ps, paramFor(att, "Last-Event-ID", "header", false, rand))
+			ps = append(ps, paramFor(att, "Last-Event-ID", "header", false, rand.Field(m.Payload, e.SSE.RequestIDField)))
 		}
 		if e.MapQueryParams != nil {
 			name := *e.MapQueryParams

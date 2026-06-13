@@ -54,15 +54,15 @@ var UnaryRPCNoResultDSL = func() {
 
 var UnaryRPCWithErrorsDSL = func() {
 	var ErrorType = Type("ErrorType", func() {
-		Attribute("a", String)
+		Field(1, "a", String)
 	})
 	var AnotherError = ResultType("application/vnd.goa.another_error", func() {
 		TypeName("AnotherError")
 		Attributes(func() {
-			ErrorName("name", String, func() {
+			ErrorName(1, "name", String, func() {
 				Enum("this", "that")
 			})
-			Attribute("description", String)
+			Field(2, "description", String)
 			Required("name")
 		})
 	})
@@ -222,8 +222,8 @@ var ServerStreamingResultCollectionWithExplicitViewDSL = func() {
 	var RT = ResultType("application/vnd.result", func() {
 		TypeName("ResultType")
 		Attributes(func() {
-			Attribute("IntField", Int)
-			Attribute("DoubleField", Float64)
+			Field(1, "IntField", Int)
+			Field(2, "DoubleField", Float64)
 		})
 		View("default", func() {
 			Attribute("IntField")
@@ -350,16 +350,16 @@ var BidirectionalStreamingRPCWithErrorsDSL = func() {
 var ServerStreamingWithCustomErrorsDSL = func() {
 	// Custom error types for testing error handling in streaming
 	var CustomError = Type("CustomError", func() {
-		ErrorName("name", String, "error name")
-		Attribute("message", String, "error message")
-		Attribute("code", Int, "error code")
+		ErrorName(1, "name", String, "error name")
+		Field(2, "message", String, "error message")
+		Field(3, "code", Int, "error code")
 		Required("name", "message", "code")
 	})
 
 	var ValidationError = Type("ValidationError", func() {
-		ErrorName("name", String, "error name")
-		Attribute("field", String, "field that failed validation")
-		Attribute("reason", String, "validation failure reason")
+		ErrorName(1, "name", String, "error name")
+		Field(2, "field", String, "field that failed validation")
+		Field(3, "reason", String, "validation failure reason")
 		Required("name", "field", "reason")
 	})
 

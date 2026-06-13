@@ -20,9 +20,11 @@ func {{ .HandlerInit }}(
 {{- if isSSEEndpoint . }}
         // Initialize SSE stream early so decode errors can be sent as SSE error events
         strm := &{{ .SSE.StructName }}{
-            w:         w,
-            r:         r,
-            encoder:   encoder,
+            sseServerStream: sseServerStream{
+                w:       w,
+                r:       r,
+                encoder: encoder,
+            },
             requestID: req.ID,
         }
     {{- if .Payload.Ref }}
@@ -68,21 +70,10 @@ func {{ .HandlerInit }}(
         {{- end }}
 		}
         if _, err := endpoint(ctx, v); err != nil {
-            // Send error response via SSE with proper JSON-RPC code mapping
+            // Send the error as a JSON-RPC error event; SendError applies the
+            // design-driven error code mapping.
             if req.ID != nil && req.ID != "" {
-                var en goa.GoaErrorNamer
-                if errors.As(err, &en) {
-                    switch en.GoaErrorName() {
-                    case "invalid_params":
-                        return strm.sendError(ctx, jsonrpc.IDToString(req.ID), jsonrpc.InvalidParams, err.Error(), nil)
-                    case "method_not_found":
-                        return strm.sendError(ctx, jsonrpc.IDToString(req.ID), jsonrpc.MethodNotFound, err.Error(), nil)
-                    }
-                }
-                // Fallback
-                code := jsonrpc.InternalError
-                if _, ok := err.(*goa.ServiceError); ok { code = jsonrpc.InvalidParams }
-                return strm.sendError(ctx, jsonrpc.IDToString(req.ID), code, err.Error(), nil)
+                return strm.SendError(ctx, jsonrpc.IDToString(req.ID), err)
             }
             return nil
         }

@@ -4,6 +4,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 )
@@ -225,5 +228,92 @@ func TestProtoBufMessageDefJSONNameOptionOneOf(t *testing.T) {
 	def := protoBufMessageDef(attr, sd)
 	if !strings.Contains(def, `json_name = "cat"`) {
 		t.Fatalf("expected json_name option in oneof, got %q", def)
+	}
+}
+
+func TestMakeProtoBufMessageMarksWrappers(t *testing.T) {
+	cases := []struct {
+		Name string
+		Type func() expr.DataType
+		// ElemWrapped indicates that the wrapped field is an array whose
+		// element is itself a synthesized wrapper message.
+		ElemWrapped bool
+		// FieldKind is the expected kind of the attribute wrapped by the
+		// top-level message.
+		FieldKind expr.Kind
+	}{{
+		Name:      "primitive",
+		Type:      func() expr.DataType { return expr.Int },
+		FieldKind: expr.IntKind,
+	}, {
+		Name: "array",
+		Type: func() expr.DataType {
+			return &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.Int}}
+		},
+		FieldKind: expr.ArrayKind,
+	}, {
+		Name: "map",
+		Type: func() expr.DataType {
+			return &expr.Map{
+				KeyType:  &expr.AttributeExpr{Type: expr.String},
+				ElemType: &expr.AttributeExpr{Type: expr.Int},
+			}
+		},
+		FieldKind: expr.MapKind,
+	}, {
+		Name: "array-of-array",
+		Type: func() expr.DataType {
+			return &expr.Array{ElemType: &expr.AttributeExpr{
+				Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.Int}},
+			}}
+		},
+		ElemWrapped: true,
+		FieldKind:   expr.ArrayKind,
+	}}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			sd := &ServiceData{Name: "Service", Scope: codegen.NewNameScope()}
+			att := makeProtoBufMessage(&expr.AttributeExpr{Type: c.Type()}, "Message", sd)
+			require.True(t, isWrappedAttr(att), "expected message to be marked as a wrapper")
+			field := unwrapAttr(att)
+			assert.Equal(t, c.FieldKind, field.Type.Kind(), "unexpected wrapped field kind")
+			if c.ElemWrapped {
+				elem := expr.AsArray(field.Type).ElemType
+				require.True(t, isWrappedAttr(elem), "expected nested array element to be marked as a wrapper")
+				inner := unwrapAttr(elem)
+				assert.Equal(t, expr.ArrayKind, inner.Type.Kind(), "unexpected nested wrapped field kind")
+			}
+		})
+	}
+}
+
+func TestUnwrapAttrPanicsOnNonWrapper(t *testing.T) {
+	cases := []struct {
+		Name string
+		Att  *expr.AttributeExpr
+	}{{
+		Name: "primitive",
+		Att:  &expr.AttributeExpr{Type: expr.Int},
+	}, {
+		Name: "object",
+		Att: &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "id", Attribute: &expr.AttributeExpr{Type: expr.Int}},
+		}},
+	}, {
+		// A user type with an attribute literally named "field" but no
+		// marker: only the marker set at wrapping time identifies wrappers.
+		Name: "unmarked user type with field attribute",
+		Att: &expr.AttributeExpr{Type: &expr.UserTypeExpr{
+			TypeName: "NotAWrapper",
+			AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+				{Name: "field", Attribute: &expr.AttributeExpr{Type: expr.Int}},
+			}},
+		}},
+	}}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			assert.False(t, isWrappedAttr(c.Att))
+			require.Panics(t, func() { unwrapAttr(c.Att) })
+		})
 	}
 }

@@ -19,8 +19,8 @@ paths:
                         text/event-stream:
                             schema:
                                 type: string
-                                example: Quia molestias.
-                            example: Doloribus qui quia.
+                                example: Adipisci necessitatibus enim voluptas asperiores corporis.
+                            example: Adipisci necessitatibus enim voluptas asperiores corporis.
 components: {}
 tags:
     - name: SSEStringService

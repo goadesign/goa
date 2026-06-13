@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"goa.design/goa/v3/expr"
 	openapi "goa.design/goa/v3/http/codegen/openapi"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
@@ -22,7 +23,7 @@ func TestOpenAPI(t *testing.T) {
 	for k, c := range cases {
 		// Reset global variables
 		openapi.Definitions = make(map[string]*openapi.Schema)
-		root := RunHTTPDSL(t, c.DSL)
+		root := expr.RunDSL(t, c.DSL)
 		spec, err := OpenAPIFiles(root)
 		require.NoError(t, err)
 		assert.Equal(t, c.NilSpec, spec == nil, k)
@@ -73,7 +74,7 @@ func TestOutputPath(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
-			root := RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			o, err := OpenAPIFiles(root)
 			if c.Err != "" {
 				require.EqualError(t, err, c.Err)

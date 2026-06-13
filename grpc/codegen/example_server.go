@@ -4,7 +4,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
@@ -66,17 +65,8 @@ func exampleServer(genpkg string, services *ServicesData, svr *expr.ServerExpr) 
 			})
 	}
 
-	var (
-		rootPath string
-		apiPkg   string
-	)
-	// genpkg is created by path.Join so the separator is / regardless of operating system
-	idx := strings.LastIndex(genpkg, string("/"))
-	rootPath = "."
-	if idx > 0 {
-		rootPath = genpkg[:idx]
-	}
-	apiPkg = scope.Unique(strings.ToLower(codegen.Goify(services.Root.API.Name, false)), "api")
+	rootPath := example.RootPath(genpkg)
+	apiPkg := example.APIPkg(services.Root, scope)
 	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
 
 	var (

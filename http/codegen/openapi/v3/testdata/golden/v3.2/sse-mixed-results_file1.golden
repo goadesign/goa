@@ -21,7 +21,7 @@ paths:
                         schema:
                             $ref: '#/components/schemas/Payload'
                         example:
-                            x: Harum et.
+                            x: Doloribus qui aspernatur alias consectetur accusamus qui.
             responses:
                 "200":
                     description: OK response.
@@ -30,7 +30,7 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/Result'
                             example:
-                                id: Neque nisi quibusdam nisi sint sunt.
+                                id: Tenetur aut quam ea repudiandae.
                         text/event-stream:
                             itemSchema:
                                 type: object
@@ -49,9 +49,9 @@ components:
             properties:
                 message:
                     type: string
-                    example: Ullam aut.
+                    example: Doloribus nemo quia dolores.
             example:
-                message: Iste perspiciatis.
+                message: Doloribus nemo quia dolores.
             required:
                 - message
         Payload:
@@ -59,10 +59,10 @@ components:
             properties:
                 x:
                     type: string
-                    example: Quia molestias.
+                    example: Doloribus qui aspernatur alias consectetur accusamus qui.
             description: Request body for Create.
             example:
-                x: Doloribus qui quia.
+                x: Doloribus qui aspernatur alias consectetur accusamus qui.
             required:
                 - x
         Result:
@@ -70,9 +70,9 @@ components:
             properties:
                 id:
                     type: string
-                    example: Et tempora et quae.
+                    example: Tenetur aut quam ea repudiandae.
             example:
-                id: Itaque inventore optio.
+                id: Tenetur aut quam ea repudiandae.
             required:
                 - id
 tags:

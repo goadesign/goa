@@ -19,8 +19,8 @@ paths:
                   allowEmptyValue: true
                   schema:
                     type: string
-                    example: Iste perspiciatis.
-                  example: Harum et.
+                    example: Natus magni voluptates consequatur suscipit.
+                  example: Non sed saepe voluptatem.
             requestBody:
                 description: Request body for SSERequestIDMethod.
                 required: true
@@ -29,7 +29,7 @@ paths:
                         schema:
                             $ref: '#/components/schemas/SSERequestIDMethodRequestBody'
                         example:
-                            id: Ullam aut.
+                            id: Est voluptas est repellat.
             responses:
                 "200":
                     description: OK response.
@@ -40,7 +40,7 @@ paths:
                                 properties:
                                     data:
                                         type: string
-                                        example: Itaque inventore optio.
+                                        example: Quia molestias.
                                 required:
                                     - data
 components:
@@ -50,9 +50,9 @@ components:
             properties:
                 id:
                     type: string
-                    example: Quia molestias.
+                    example: Est voluptas est repellat.
             description: Request body for SSERequestIDMethod.
             example:
-                id: Doloribus qui quia.
+                id: Est voluptas est repellat.
 tags:
     - name: SSERequestIDService

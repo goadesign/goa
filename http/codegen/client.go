@@ -34,8 +34,8 @@ func ClientFiles(genpkg string, data *ServicesData) []*codegen.File {
 func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
-	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "encode_decode.go")
-	title := fmt.Sprintf("%s HTTP client encoders and decoders", svc.Name())
+	path := filepath.Join(codegen.Gendir, services.dir(), svcName, "client", "encode_decode.go")
+	title := fmt.Sprintf("%s %s client encoders and decoders", svc.Name(), services.label())
 	imports := []*codegen.ImportSpec{
 		{Path: "bytes"},
 		{Path: "context"},
@@ -54,6 +54,16 @@ func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 	}
+	for _, e := range data.Endpoints {
+		if e.IsJSONRPC {
+			// JSON-RPC request encoders build the JSON-RPC envelope.
+			imports = append(imports,
+				&codegen.ImportSpec{Path: "github.com/google/uuid"},
+				codegen.GoaImport("jsonrpc"),
+			)
+			break
+		}
+	}
 	sections := []*codegen.SectionTemplate{codegen.Header(title, "client", imports)}
 
 	for _, e := range data.Endpoints {
@@ -62,10 +72,10 @@ func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 			Source: httpTemplates.Read(requestBuilderT),
 			Data:   e,
 		})
-		if e.RequestEncoder != "" && e.Payload.Ref != "" {
+		if e.RequestEncoder != "" && (e.Payload.Ref != "" || e.IsJSONRPC) {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "request-encoder",
-				Source: httpTemplates.Read(requestEncoderT, clientTypeConversionP, clientMapConversionP),
+				Source: httpTemplates.Read(requestEncoderT, clientTypeConversionP, clientMapConversionP, jsonrpcRequestEnvelopeP),
 				FuncMap: map[string]any{
 					"typeConversionData": typeConversionData,
 					"mapConversionData":  mapConversionData,
@@ -96,19 +106,17 @@ func ClientEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 				Data:   e.MultipartRequestEncoder,
 			})
 		}
-		if e.Result != nil || len(e.Errors) > 0 {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "response-decoder",
-				Source: httpTemplates.Read(responseDecoderT, singleResponseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP),
-				Data:   e,
-				FuncMap: map[string]any{
-					"goTypeRef": func(dt expr.DataType) string {
-						return services.ServicesData.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
-					},
-					"buildResponseData": buildResponseData,
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:   "response-decoder",
+			Source: httpTemplates.Read(responseDecoderT, singleResponseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP),
+			Data:   e,
+			FuncMap: map[string]any{
+				"goTypeRef": func(dt expr.DataType) string {
+					return services.ServicesData.Get(svc.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 				},
-			})
-		}
+				"buildResponseData": buildResponseData,
+			},
+		})
 		if e.Method.SkipRequestBodyEncodeDecode {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "build-stream-request",
@@ -185,40 +193,21 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 	})
 
 	for _, e := range data.Endpoints {
-		// For mixed results, generate both standard and SSE endpoints
+		endpoints := []*EndpointData{e}
 		if e.HasMixedResults {
-			// Generate standard HTTP endpoint
+			// For mixed results, generate both a standard HTTP endpoint and
+			// an SSE endpoint with a "Stream" suffix.
 			standardEndpoint := *e
 			standardEndpoint.SSE = nil
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "client-endpoint-init",
-				Source: httpTemplates.Read(clientEndpointInitT),
-				Data:   &standardEndpoint,
-				FuncMap: map[string]any{
-					"isWebSocketEndpoint": IsWebSocketEndpoint,
-					"isSSEEndpoint":       IsSSEEndpoint,
-					"responseStructPkg":   responseStructPkg,
-				},
-			})
-
-			// Generate SSE endpoint with "Stream" suffix
 			sseEndpoint := *e
 			sseEndpoint.EndpointInit = e.EndpointInit + "Stream"
+			endpoints = []*EndpointData{&standardEndpoint, &sseEndpoint}
+		}
+		for _, ep := range endpoints {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "client-endpoint-init",
 				Source: httpTemplates.Read(clientEndpointInitT),
-				Data:   &sseEndpoint,
-				FuncMap: map[string]any{
-					"isWebSocketEndpoint": IsWebSocketEndpoint,
-					"isSSEEndpoint":       IsSSEEndpoint,
-					"responseStructPkg":   responseStructPkg,
-				},
-			})
-		} else {
-			sections = append(sections, &codegen.SectionTemplate{
-				Name:   "client-endpoint-init",
-				Source: httpTemplates.Read(clientEndpointInitT),
-				Data:   e,
+				Data:   ep,
 				FuncMap: map[string]any{
 					"isWebSocketEndpoint": IsWebSocketEndpoint,
 					"isSSEEndpoint":       IsSSEEndpoint,

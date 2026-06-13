@@ -2,9 +2,7 @@ package codegen
 
 import (
 	"embed"
-	"strings"
 
-	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/template"
 )
 
@@ -21,10 +19,6 @@ const (
 	serverMountT        = "server_mount"
 	serverEncodeErrorT  = "server_encode_error"
 	mixedServerHandlerT = "mixed_server_handler"
-
-	// Server example
-	serverConfigureT = "server_configure"
-	serverHttpStartT = "server_http_start"
 
 	// Client
 	clientStructT       = "client_struct"
@@ -46,9 +40,9 @@ const (
 	websocketStreamErrorTypesT = "websocket_stream_error_types"
 
 	// SSE templates
+	sseServerStreamBaseT = "sse_server_stream_base"
 	sseServerStreamT     = "sse_server_stream"
 	sseClientStreamT     = "sse_client_stream"
-	sseServerStreamImplT = "sse_server_stream_impl"
 	sseServerHandlerT    = "sse_server_handler"
 
 	// Partial templates
@@ -63,17 +57,3 @@ var templateFS embed.FS
 
 // jsonrpcTemplates is the shared template reader for the jsonrpc codegen package (package-private).
 var jsonrpcTemplates = &template.TemplateReader{FS: templateFS}
-
-// updateHeader modifies the header of the given file to be JSON-RPC specific.
-func updateHeader(f *codegen.File) {
-	// Update the title
-	header := f.SectionTemplates[0]
-	title := strings.Replace(header.Data.(map[string]any)["Title"].(string), "HTTP", "JSON-RPC", 1)
-	header.Data.(map[string]any)["Title"] = title
-
-	// Update the imports
-	imports := header.Data.(map[string]any)["Imports"].([]*codegen.ImportSpec)
-	for _, i := range imports {
-		i.Path = strings.Replace(i.Path, "gen/http", "gen/jsonrpc", 1)
-	}
-}

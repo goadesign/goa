@@ -7,6 +7,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/testutil"
+	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -90,7 +91,7 @@ func TestEncode(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			root := RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
 			fs := ServerFiles("", services)
 			require.Len(t, fs, 2)
@@ -115,7 +116,7 @@ func TestEncodeMarshallingAndUnmarshalling(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			root := RunHTTPDSL(t, c.DSL)
+			root := expr.RunDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
 			fs := ServerFiles("", services)
 			require.Len(t, fs, 2)

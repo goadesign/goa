@@ -16,6 +16,8 @@
           "completed": {
             "example": [
               "who",
+              "who",
+              "who",
               "who"
             ],
             "items": {
@@ -77,7 +79,6 @@
               "application/json": {
                 "example": {
                   "completed": [
-                    "where",
                     "where",
                     "where"
                   ],

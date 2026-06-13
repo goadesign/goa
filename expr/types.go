@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strconv"
 
 	"goa.design/goa/v3/eval"
 )
@@ -421,7 +422,9 @@ func (a *Array) Example(r *ExampleGenerator) any {
 	count := NewLength(a.ElemType, r)
 	res := make([]any, count)
 	for i := range count {
-		res[i] = a.ElemType.Example(r)
+		// Derive the element value stream from the index so elements get
+		// distinct yet design-stable values.
+		res[i] = a.ElemType.Example(r.Derived(strconv.Itoa(i)))
 		if res[i] == nil {
 			// Handle the case of recursive data structures
 			res[i] = make(map[string]any)
@@ -539,7 +542,9 @@ func (*Object) IsCompatible(val any) bool {
 func (o *Object) Example(r *ExampleGenerator) any {
 	res := make(map[string]any)
 	for _, nat := range *o {
-		if v := nat.Attribute.Example(r); v != nil {
+		// Derive the field value stream from the field name so a field
+		// example only changes when the field itself changes.
+		if v := nat.Attribute.Example(r.Derived(nat.Name)); v != nil {
 			res[nat.Name] = v
 		}
 	}
@@ -582,9 +587,11 @@ func (m *Map) Example(r *ExampleGenerator) any {
 	}
 	count := r.Int()%3 + 1
 	pair := map[any]any{}
-	for range count {
-		k := m.KeyType.Example(r)
-		v := m.ElemType.Example(r)
+	for i := range count {
+		// Derive per-entry value streams from the entry index so entries
+		// get distinct yet design-stable keys and values.
+		k := m.KeyType.Example(r.Derived("key" + strconv.Itoa(i)))
+		v := m.ElemType.Example(r.Derived("val" + strconv.Itoa(i)))
 		if k != nil && v != nil {
 			pair[k] = v
 		}
@@ -652,7 +659,10 @@ func (u *Union) Example(r *ExampleGenerator) any {
 	if len(u.Values) == 0 {
 		return nil
 	}
-	return u.Values[r.Int()%len(u.Values)].Attribute.Example(r)
+	// Derive the member value stream from the member name so the example
+	// only changes when the chosen member changes.
+	nat := u.Values[r.Int()%len(u.Values)]
+	return nat.Attribute.Example(r.Derived(nat.Name))
 }
 
 // GetTypeKey returns the discriminator field name for JSON marshaling.

@@ -56,8 +56,6 @@ definitions:
                 example:
                     - string: ""
                     - string: ""
-                    - string: ""
-                    - string: ""
             foo:
                 type: string
                 example: ""

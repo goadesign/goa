@@ -1,23 +1,17 @@
 package codegen
 
 import (
-	"testing"
-
+	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
-// RunJSONRPCDSL returns the DSL root resulting from running the given DSL.
-// Used only in tests.
-func RunJSONRPCDSL(t *testing.T, dsl func()) *expr.RootExpr {
-	// Use the existing expr.RunDSL function
-	root := expr.RunDSL(t, dsl)
-	return root
-}
-
-// CreateJSONRPCServices creates a new ServicesData instance for JSON-RPC testing.
+// CreateJSONRPCServices creates a new ServicesData instance for JSON-RPC
+// testing. The root is normalized first like the production Generate flow
+// does before the generators read the design.
 func CreateJSONRPCServices(root *expr.RootExpr) *httpcodegen.ServicesData {
+	codegen.NormalizeRoot(root)
 	services := service.NewServicesData(root)
-	return httpcodegen.NewServicesData(services, &root.API.JSONRPC.HTTPExpr)
+	return httpcodegen.NewJSONRPCServicesData(services, &root.API.JSONRPC.HTTPExpr)
 }

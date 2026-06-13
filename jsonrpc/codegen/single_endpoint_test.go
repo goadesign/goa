@@ -12,7 +12,7 @@ import (
 
 func TestJSONRPCSingleEndpoint(t *testing.T) {
 	t.Run("service-level JSONRPC", func(t *testing.T) {
-		root := RunJSONRPCDSL(t, func() {
+		root := expr.RunDSL(t, func() {
 			dsl.Service("calc", func() {
 				dsl.JSONRPC(func() {
 					dsl.POST("/rpc")
@@ -85,7 +85,7 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 	})
 
 	t.Run("method-level JSONRPC auto-enables service", func(t *testing.T) {
-		root := RunJSONRPCDSL(t, func() {
+		root := expr.RunDSL(t, func() {
 			dsl.Service("calc2", func() {
 				// No service-level JSONRPC
 
@@ -112,7 +112,7 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 	})
 
 	t.Run("WebSocket forces GET", func(t *testing.T) {
-		root := RunJSONRPCDSL(t, func() {
+		root := expr.RunDSL(t, func() {
 			dsl.Service("stream", func() {
 				dsl.JSONRPC(func() {})
 

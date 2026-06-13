@@ -1,0 +1,24 @@
+package kitchensink
+
+import (
+	"context"
+	mixed "kitchensink/mixed"
+
+	"goa.design/clue/log"
+)
+
+// Mixed service example implementation.
+// The example methods log the requests and return zero values.
+type mixedsrvc struct{}
+
+// NewMixed returns the Mixed service implementation.
+func NewMixed() mixed.Service {
+	return &mixedsrvc{}
+}
+
+// Lookup implements lookup.
+func (s *mixedsrvc) Lookup(ctx context.Context, p *mixed.LookupPayload) (res *mixed.LookupResult, err error) {
+	res = &mixed.LookupResult{}
+	log.Printf(ctx, "mixed.lookup")
+	return
+}

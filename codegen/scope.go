@@ -52,28 +52,12 @@ func (s *NameScope) HashedUnique(key Hasher, name string, suffix ...string) stri
 
 // Unique returns a unique name for the given name. A suffix is appended to the
 // name if given name is not unique. If suffixed name is still not unique, a
-// counter value is added to the suffixed name until unique.
+// counter value is added to the suffixed name until unique. The returned name
+// is reserved in the scope.
 func (s *NameScope) Unique(name string, suffix ...string) string {
-	c, ok := s.counts[name]
-	if !ok {
-		s.counts[name]++
-		return name
-	}
-	if len(suffix) > 0 {
-		name += suffix[0]
-		c, ok = s.counts[name]
-		if !ok {
-			s.counts[name]++
-			return name
-		}
-	}
-	for i := c; ; i++ {
-		ret := name + strconv.Itoa(i+1)
-		if _, ok := s.counts[ret]; !ok {
-			s.counts[ret]++
-			return ret
-		}
-	}
+	ret := s.PeekUnique(name, suffix...)
+	s.counts[ret]++
+	return ret
 }
 
 // PeekUnique returns the name that Unique would return for the same inputs,
@@ -102,9 +86,9 @@ func (s *NameScope) PeekUnique(name string, suffix ...string) string {
 	}
 }
 
-// Name returns a unique name for the given name by adding a counter value to
-// the name until unique. It returns the same value when called multiple times
-// for the same given name.
+// Name returns the unique name the scope would currently assign to the given
+// name: the name itself when unused, otherwise the name with its next counter
+// value appended. Unlike Unique it does not reserve the returned name.
 func (s *NameScope) Name(name string) string {
 	i, ok := s.counts[name]
 	if !ok {
@@ -129,15 +113,7 @@ func (s *NameScope) GoTypeDef(att *expr.AttributeExpr, ptr, useDefault bool) str
 	} else if p, ok := att.Meta.Last("struct:pkg:path"); ok && p != "" {
 		pkg = Goify(filepath.Base(p), false)
 	}
-	return s.goTypeDef(att, ptr, useDefault, pkg)
-}
-
-// GoTypeDefWithTargetPkg returns the Go type definition string, qualifying any
-// user types inside inline structs with the provided target package. This helps
-// when generating JSON-RPC client types that embed inline structs referencing
-// user types defined in a separate package (e.g., gen/types).
-func (s *NameScope) GoTypeDefWithTargetPkg(att *expr.AttributeExpr, ptr, useDefault bool, targetPkg string) string {
-	return s.goTypeDefWithPkgOverride(att, ptr, useDefault, "", targetPkg)
+	return s.goTypeDefWithPkgOverride(att, ptr, useDefault, pkg, "")
 }
 
 // goTypeDefWithPkgOverride generates the Go type definition string for the attribute.
@@ -211,13 +187,7 @@ func (s *NameScope) goTypeDefWithPkgOverride(att *expr.AttributeExpr, ptr, useDe
 		}
 		var prefix string
 		if loc := UserTypeLocation(actual); loc != nil {
-			if targetPkg != "" {
-				if loc.PackageName() != targetPkg {
-					prefix = loc.PackageName() + "."
-				} else {
-					prefix = targetPkg + "."
-				}
-			} else if loc.PackageName() != pkg {
+			if targetPkg != "" || loc.PackageName() != pkg {
 				prefix = loc.PackageName() + "."
 			}
 		} else if targetPkg != "" {
@@ -234,10 +204,6 @@ func (s *NameScope) goTypeDefWithPkgOverride(att *expr.AttributeExpr, ptr, useDe
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
-}
-
-func (s *NameScope) goTypeDef(att *expr.AttributeExpr, ptr, useDefault bool, pkg string) string {
-	return s.goTypeDefWithPkgOverride(att, ptr, useDefault, pkg, "")
 }
 
 // GoVar returns the Go code that returns the address of a variable of the Go type

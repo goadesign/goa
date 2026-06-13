@@ -41,8 +41,10 @@ func GoNativeTypeName(t expr.DataType) string {
 	}
 }
 
-// AttributeTags computes the struct field tags from its metadata if any.
-func AttributeTags(_, att *expr.AttributeExpr) string {
+// AttributeTags computes the struct field tags from the attribute's explicit
+// struct:tag:* metadata, ignoring struct:tag:json:name which only renames the
+// computed json tag (see AttributeTagsWithName).
+func AttributeTags(att *expr.AttributeExpr) string {
 	var elems []string
 	keys := make([]string, len(att.Meta))
 	i := 0

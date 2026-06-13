@@ -96,7 +96,10 @@ func (u *UserTypeExpr) recExample(r *ExampleGenerator) *any {
 	var ex any
 	pex := &ex
 	r.HaveSeen(u.ID(), pex)
-	actual := u.AttributeExpr.Example(r)
+	// Anchor the value stream to the type identity so the example depends
+	// only on the type definition, not on how many examples were computed
+	// before it nor on which design path reached the type first.
+	actual := u.AttributeExpr.Example(r.Rebased(u.ID()))
 	*pex = actual
 	return pex
 }

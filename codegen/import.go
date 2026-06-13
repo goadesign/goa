@@ -99,6 +99,15 @@ func (loc *Location) PackageName() string {
 	return Goify(filepath.Base(loc.RelImportPath), false)
 }
 
+// PackageNameOrDefault returns the package name of the location if not nil,
+// def otherwise.
+func (loc *Location) PackageNameOrDefault(def string) string {
+	if loc == nil {
+		return def
+	}
+	return loc.PackageName()
+}
+
 // GetMetaType retrieves the type and package defined by the struct:field:type
 // metadata if any.
 func GetMetaType(att *expr.AttributeExpr) (typeName string, importS *ImportSpec) {

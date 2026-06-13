@@ -11,6 +11,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -100,12 +101,21 @@ func Generate(dir, cmd string, debug bool) (outputs []string, err1 error) {
 		}
 	}
 
-	// 4. Run the code pre generation plugins.
+	// 4. Run the code pre generation plugins then normalize the design
+	// roots. NormalizeRoot is the only sanctioned design mutation past eval
+	// finalization; it runs after the prepare plugins so plugin contributed
+	// endpoints are normalized too and before the generators so they all
+	// observe the same read-only design tree.
 	{
 		start := time.Now()
 		err := codegen.RunPluginsPrepare(cmd, genpkg, roots)
 		if err != nil {
 			return nil, err
+		}
+		for _, root := range roots {
+			if r, ok := root.(*expr.RootExpr); ok {
+				codegen.NormalizeRoot(r)
+			}
 		}
 		if debug {
 			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 4: Run pre-generation plugins took %v\n", time.Since(start))

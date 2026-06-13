@@ -1,0 +1,9 @@
+func Validate() (err error) {
+	if !(string(target) == "ab" || string(target) == "abc" || string(target) == "abcd") {
+		err = goa.MergeErrors(err, goa.InvalidEnumValueError("target", string(target), []any{"ab", "abc", "abcd"}))
+	}
+	err = goa.MergeErrors(err, goa.ValidatePattern("target", string(target), "^[a-z]+$"))
+	if utf8.RuneCountInString(string(target)) < 2 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("target", string(target), utf8.RuneCountInString(string(target)), 2, true))
+	}
+}

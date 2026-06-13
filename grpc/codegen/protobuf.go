@@ -19,6 +19,18 @@ type (
 	}
 )
 
+const (
+	// wrappedField is the name of the single field of the wrapper messages
+	// synthesized by wrapAttr for non-object protobuf message types
+	// (primitives, arrays and maps).
+	wrappedField = "field"
+	// wrappedAttrMeta is the meta key set by wrapAttr on the attribute of
+	// synthesized wrapper message user types. Its presence is the contract
+	// used by isWrappedAttr and unwrapAttr to identify wrapper messages
+	// deterministically.
+	wrappedAttrMeta = "grpc:wrapped"
+)
+
 // Name returns the protocol buffer type name.
 func (p *protoBufScope) Name(att *expr.AttributeExpr, pkg string, _, _ bool) string {
 	return protoBufGoFullTypeName(att, pkg, p.scope)
@@ -146,7 +158,7 @@ func wrapAttr(att *expr.AttributeExpr, tname string, req bool, sd *ServiceData) 
 		res := &expr.AttributeExpr{
 			Type: &expr.Object{
 				&expr.NamedAttributeExpr{
-					Name: "field",
+					Name: wrappedField,
 					Attribute: &expr.AttributeExpr{
 						Type:       attr.Type,
 						Meta:       expr.MetaExpr{"rpc:tag": []string{"1"}},
@@ -154,10 +166,11 @@ func wrapAttr(att *expr.AttributeExpr, tname string, req bool, sd *ServiceData) 
 					},
 				},
 			},
+			Meta: expr.MetaExpr{wrappedAttrMeta: []string{wrappedField}},
 		}
 		if req {
 			res.Validation = &expr.ValidationExpr{
-				Required: []string{"field"},
+				Required: []string{wrappedField},
 			}
 		}
 		return res
@@ -179,13 +192,44 @@ func wrapAttr(att *expr.AttributeExpr, tname string, req bool, sd *ServiceData) 
 	att.Validation = nil
 }
 
-// unwrapAttr returns the attribute under the attribute name "field".
-// If "field" does not exist, it returns the given attribute.
-func unwrapAttr(att *expr.AttributeExpr) *expr.AttributeExpr {
-	if a := att.Find("field"); a != nil {
-		return a
+// isWrappedAttr reports whether att references a wrapper message synthesized
+// by wrapAttr: att.Type is a user type whose attribute carries the
+// wrappedAttrMeta marker. User type chains are followed because wrapAttr
+// nests the wrapper user type inside user defined array types (see
+// makeProtoBufMessageR).
+func isWrappedAttr(att *expr.AttributeExpr) bool {
+	ut, ok := att.Type.(expr.UserType)
+	if !ok {
+		return false
 	}
-	return att
+	wrapper := ut.Attribute()
+	if len(wrapper.Meta[wrappedAttrMeta]) > 0 {
+		return true
+	}
+	return isWrappedAttr(wrapper)
+}
+
+// unwrapAttr returns the attribute wrapped by the wrapper message referenced
+// by att as synthesized by wrapAttr. att must either carry the
+// wrappedAttrMeta marker directly (it is the wrapper user type attribute
+// itself) or reference a (possibly nested) wrapper user type. unwrapAttr
+// panics when att is not a wrapper or when the wrapper field is missing:
+// both denote a violation of the wrapping contract established at message
+// creation.
+func unwrapAttr(att *expr.AttributeExpr) *expr.AttributeExpr {
+	wrapper := att
+	for len(wrapper.Meta[wrappedAttrMeta]) == 0 {
+		ut, ok := wrapper.Type.(expr.UserType)
+		if !ok {
+			panic(fmt.Sprintf("attribute of type %q is not a protobuf wrapper message", att.Type.Name())) // bug
+		}
+		wrapper = ut.Attribute()
+	}
+	field := expr.AsObject(wrapper.Type).Attribute(wrappedField)
+	if field == nil {
+		panic(fmt.Sprintf("protobuf wrapper message of type %q has no %q attribute", att.Type.Name(), wrappedField)) // bug
+	}
+	return field
 }
 
 // protoBufMessageName returns the protocol buffer message name of the given
@@ -493,15 +537,18 @@ func protoBufNativeGoTypeName(t expr.DataType) string {
 	}
 }
 
-// rpcTag returns the unique numbered RPC tag from the given attribute.
+// rpcTag returns the unique numbered RPC tag from the given attribute. Every
+// gRPC message field carries a tag by the time codegen runs: DSL validation
+// rejects untagged fields and synthesized wrapper fields are tagged at
+// creation, so a missing or unparseable tag is a bug.
 func rpcTag(a *expr.AttributeExpr) uint64 {
-	var tag uint64
-	if t, ok := a.FieldTag(); ok {
-		tn, err := strconv.ParseUint(t, 10, 64)
-		if err != nil {
-			panic(err) // bug (should catch invalid field numbers in validation)
-		}
-		tag = tn
+	t, ok := a.FieldTag()
+	if !ok {
+		panic(fmt.Sprintf("attribute of type %q has no rpc:tag meta", a.Type.Name())) // bug
+	}
+	tag, err := strconv.ParseUint(t, 10, 64)
+	if err != nil {
+		panic(err) // bug
 	}
 	return tag
 }

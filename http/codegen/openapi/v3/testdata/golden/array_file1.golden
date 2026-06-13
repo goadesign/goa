@@ -21,28 +21,31 @@ paths:
                             items:
                                 $ref: '#/components/schemas/Foobar'
                             example:
-                                - bar:
-                                    - string: ""
-                                  foo: []
-                                - bar:
-                                    - string: ""
-                                  foo: []
-                                - bar:
-                                    - string: ""
-                                  foo: []
+                                - bar: []
+                                  foo:
+                                    - Totam doloremque exercitationem voluptate.
+                                    - Repellat perspiciatis voluptas et quia deleniti.
+                                - bar: []
+                                  foo:
+                                    - Totam doloremque exercitationem voluptate.
+                                    - Repellat perspiciatis voluptas et quia deleniti.
+                                - bar: []
+                                  foo:
+                                    - Totam doloremque exercitationem voluptate.
+                                    - Repellat perspiciatis voluptas et quia deleniti.
                         example:
-                            - bar:
-                                - string: ""
-                              foo: []
-                            - bar:
-                                - string: ""
-                              foo: []
-                            - bar:
-                                - string: ""
-                              foo: []
-                            - bar:
-                                - string: ""
-                              foo: []
+                            - bar: []
+                              foo:
+                                - Totam doloremque exercitationem voluptate.
+                                - Repellat perspiciatis voluptas et quia deleniti.
+                            - bar: []
+                              foo:
+                                - Totam doloremque exercitationem voluptate.
+                                - Repellat perspiciatis voluptas et quia deleniti.
+                            - bar: []
+                              foo:
+                                - Totam doloremque exercitationem voluptate.
+                                - Repellat perspiciatis voluptas et quia deleniti.
             responses:
                 "200":
                     description: OK response.
@@ -73,25 +76,23 @@ components:
                     type: array
                     items:
                         $ref: '#/components/schemas/Bar'
-                    example:
-                        - string: ""
-                        - string: ""
+                    example: []
                     minItems: 0
                     maxItems: 42
                 foo:
                     type: array
                     items:
                         type: string
-                        example: Beatae non id consequatur.
-                    example: []
+                        example: Molestiae dolor eveniet omnis atque.
+                    example:
+                        - Totam doloremque exercitationem voluptate.
+                        - Repellat perspiciatis voluptas et quia deleniti.
                     minItems: 0
                     maxItems: 42
             example:
-                bar:
-                    - string: ""
-                    - string: ""
+                bar: []
                 foo:
-                    - Repudiandae sit.
-                    - Asperiores fuga qui rem qui earum eos.
+                    - Totam doloremque exercitationem voluptate.
+                    - Repellat perspiciatis voluptas et quia deleniti.
 tags:
     - name: testService

@@ -13,9 +13,9 @@
           "200": {
             "content": {
               "text/event-stream": {
-                "example": "Doloribus qui quia.",
+                "example": "Adipisci necessitatibus enim voluptas asperiores corporis.",
                 "schema": {
-                  "example": "Quia molestias.",
+                  "example": "Adipisci necessitatibus enim voluptas asperiores corporis.",
                   "type": "string"
                 }
               }
