@@ -791,7 +791,8 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		}
 		// Collect projected types
 		if hasResultType(m.Result) {
-			ptypes := collectProjectedTypes(expr.DupAtt(m.Result), m.Result, viewspkg, scope, viewScope, seenProj)
+			projected, result := projectedResultRoot(service, m)
+			ptypes := collectProjectedTypes(projected, result, viewspkg, scope, viewScope, seenProj)
 			projTypes = append(projTypes, ptypes...)
 		}
 		for _, er := range m.Errors {
@@ -1768,6 +1769,22 @@ func collectProjectedTypes(projected, att *expr.AttributeExpr, viewspkg string, 
 		}
 	}
 	return data
+}
+
+// projectedResultRoot returns the root attribute used to collect projected
+// view types for m.Result. NormalizeRoot synthesizes user types for raw object
+// method results before service analysis; projected view collection keeps the
+// pre-normalization shape by traversing those synthetic wrappers' attributes
+// directly instead of generating view-local types for the wrappers themselves.
+func projectedResultRoot(service *expr.ServiceExpr, m *expr.MethodExpr) (*expr.AttributeExpr, *expr.AttributeExpr) {
+	if ut, ok := m.Result.Type.(*expr.UserTypeExpr); ok && ut.ID() == normalizedMethodTypeID(service, m, "Result") {
+		return expr.DupAtt(ut.Attribute()), ut.Attribute()
+	}
+	return expr.DupAtt(m.Result), m.Result
+}
+
+func normalizedMethodTypeID(service *expr.ServiceExpr, m *expr.MethodExpr, suffix string) string {
+	return service.Name + "#" + codegen.Goify(m.Name, true) + suffix
 }
 
 // hasResultType returns true if the given attribute has a result type recursively.

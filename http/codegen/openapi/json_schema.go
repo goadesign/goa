@@ -432,6 +432,11 @@ func typeSchemaWithGen(api *expr.APIExpr, t expr.DataType, prefix string, gen *e
 		s.Properties[valueKey] = valueSchema
 		s.Required = append(s.Required, typeKey, valueKey)
 	case *expr.UserTypeExpr:
+		if expr.IsAlias(actual) {
+			s = typeSchemaWithGen(api, actual.Attribute().Type, prefix, gen.Rebased(actual.ID()))
+			initAttributeValidation(s, actual.Attribute())
+			break
+		}
 		s.Ref = TypeRefWithPrefix(api, actual, prefix)
 	case *expr.ResultTypeExpr:
 		// Use "default" view by default
@@ -565,7 +570,9 @@ func buildAttributeSchema(api *expr.APIExpr, s *Schema, at *expr.AttributeExpr, 
 		return s
 	}
 	s.DefaultValue = ToStringMap(at.DefaultValue)
-	s.Description = at.Description
+	if at.Description != "" {
+		s.Description = at.Description
+	}
 	s.Example = ProjectExample(at, at.Example(gen))
 	s.Extensions = ExtensionsFromExpr(at.Meta)
 	if ap := AdditionalPropertiesFromExpr(at.Meta); ap != nil {

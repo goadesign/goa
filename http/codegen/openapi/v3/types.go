@@ -343,7 +343,8 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		s.Required = append(s.Required, typeKey, valueKey)
 	case expr.UserType:
 		if expr.IsAlias(t) && !sf.nameAliases {
-			return sf.rebased(t.ID()).schemafy(t.Attribute())
+			s = sf.rebased(t.ID()).schemafy(t.Attribute())
+			break
 		}
 		h := sf.hashAttribute(attr, fnv.New64())
 
@@ -386,7 +387,9 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 	default:
 		panic(fmt.Sprintf("unknown type %T", t)) // bug
 	}
-	s.Description = attr.Description
+	if attr.Description != "" {
+		s.Description = attr.Description
+	}
 	if note != "" {
 		s.Description += "\n" + note
 	}
