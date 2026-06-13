@@ -7,6 +7,7 @@
           "completed": [
             "who",
             "who",
+            "who",
             "who"
           ],
           "current": "who"
@@ -14,6 +15,8 @@
         "properties": {
           "completed": {
             "example": [
+              "who",
+              "who",
               "who",
               "who"
             ],

@@ -3,12 +3,12 @@
     "schemas": {
       "SSEDataFieldMethodResponseBody": {
         "example": {
-          "data": "Enim nihil.",
-          "flag": false
+          "data": "Ipsum voluptatem quaerat quo et non sed.",
+          "flag": true
         },
         "properties": {
           "data": {
-            "example": "Quia molestias.",
+            "example": "Ipsum voluptatem quaerat quo et non sed.",
             "type": "string"
           },
           "flag": {
@@ -36,7 +36,7 @@
                 "itemSchema": {
                   "properties": {
                     "data": {
-                      "example": "Qui quia inventore et tempora.",
+                      "example": "Quia molestias.",
                       "type": "string"
                     }
                   },

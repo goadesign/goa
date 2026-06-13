@@ -4,11 +4,11 @@
       "Notification": {
         "description": "Request body for testEndpoint.",
         "example": {
-          "id": "Consequuntur dolores eos voluptatem."
+          "id": "Quia velit et."
         },
         "properties": {
           "id": {
-            "example": "Quia molestias.",
+            "example": "Quia velit et.",
             "type": "string"
           }
         },

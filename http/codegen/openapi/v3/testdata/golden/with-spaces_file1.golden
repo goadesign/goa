@@ -67,14 +67,11 @@ components:
                     example:
                         - string: ""
                         - string: ""
-                        - string: ""
-                        - string: ""
                 foo:
                     type: string
                     example: ""
             example:
                 bar:
-                    - string: ""
                     - string: ""
                     - string: ""
                 foo: ""

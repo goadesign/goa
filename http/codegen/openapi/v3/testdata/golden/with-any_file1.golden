@@ -58,7 +58,6 @@ components:
                         - ""
                         - ""
                         - ""
-                        - ""
                 any_map:
                     type: object
                     example:
@@ -68,6 +67,7 @@ components:
             example:
                 any: ""
                 any_array:
+                    - ""
                     - ""
                     - ""
                 any_map:

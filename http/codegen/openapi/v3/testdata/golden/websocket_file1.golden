@@ -36,8 +36,8 @@ components:
             properties:
                 a:
                     type: string
-                    example: Quia molestias.
+                    example: Odio laborum quae ut quis nostrum.
             example:
-                a: Magnam id itaque quo.
+                a: Odio laborum quae ut quis nostrum.
 tags:
     - name: StreamingResultService

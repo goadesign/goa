@@ -40,7 +40,7 @@ paths:
                                 properties:
                                     data:
                                         type: string
-                                        example: Et tempora et quae.
+                                        example: Doloribus qui quia.
                                 required:
                                     - data
 components:
@@ -50,9 +50,9 @@ components:
             properties:
                 id:
                     type: string
-                    example: Quia molestias.
+                    example: Est voluptas est repellat.
             description: Request body for SSERequestIDMethod.
             example:
-                id: Consequuntur dolores eos voluptatem.
+                id: Est voluptas est repellat.
 tags:
     - name: SSERequestIDService

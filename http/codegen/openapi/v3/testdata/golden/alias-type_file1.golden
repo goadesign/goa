@@ -48,13 +48,15 @@ components:
                     items:
                         type: string
                         description: Setup stage.
-                        example: what
+                        example: who
                         enum:
                             - who
                             - when
                             - where
                             - what
                     example:
+                        - who
+                        - who
                         - who
                         - who
                 current:
@@ -69,6 +71,7 @@ components:
             description: Request body for testEndpoint.
             example:
                 completed:
+                    - who
                     - who
                     - who
                     - who

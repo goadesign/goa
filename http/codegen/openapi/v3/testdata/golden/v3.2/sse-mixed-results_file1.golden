@@ -49,9 +49,9 @@ components:
             properties:
                 message:
                     type: string
-                    example: Et tempora et quae.
+                    example: Doloribus nemo quia dolores.
             example:
-                message: Ex ut rerum aut dolorem accusamus architecto.
+                message: Doloribus nemo quia dolores.
             required:
                 - message
         Payload:
@@ -59,10 +59,10 @@ components:
             properties:
                 x:
                     type: string
-                    example: Quia molestias.
+                    example: Doloribus qui aspernatur alias consectetur accusamus qui.
             description: Request body for Create.
             example:
-                x: Delectus hic blanditiis.
+                x: Doloribus qui aspernatur alias consectetur accusamus qui.
             required:
                 - x
         Result:
@@ -70,9 +70,9 @@ components:
             properties:
                 id:
                     type: string
-                    example: Doloribus qui quia.
+                    example: Tenetur aut quam ea repudiandae.
             example:
-                id: Consequuntur dolores eos voluptatem.
+                id: Tenetur aut quam ea repudiandae.
             required:
                 - id
 tags:

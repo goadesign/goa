@@ -4,11 +4,11 @@
       "SSERequestIDMethodRequestBody": {
         "description": "Request body for SSERequestIDMethod.",
         "example": {
-          "id": "Consequuntur dolores eos voluptatem."
+          "id": "Est voluptas est repellat."
         },
         "properties": {
           "id": {
-            "example": "Quia molestias.",
+            "example": "Est voluptas est repellat.",
             "type": "string"
           }
         },
@@ -58,7 +58,7 @@
                 "itemSchema": {
                   "properties": {
                     "data": {
-                      "example": "Et tempora et quae.",
+                      "example": "Doloribus qui quia.",
                       "type": "string"
                     }
                   },

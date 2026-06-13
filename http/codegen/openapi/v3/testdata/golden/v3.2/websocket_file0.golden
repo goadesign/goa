@@ -3,11 +3,11 @@
     "schemas": {
       "UserType": {
         "example": {
-          "a": "Magnam id itaque quo."
+          "a": "Odio laborum quae ut quis nostrum."
         },
         "properties": {
           "a": {
-            "example": "Quia molestias.",
+            "example": "Odio laborum quae ut quis nostrum.",
             "type": "string"
           }
         },

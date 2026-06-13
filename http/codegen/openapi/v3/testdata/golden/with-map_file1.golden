@@ -72,7 +72,6 @@ components:
                 bar:
                     - string: ""
                     - string: ""
-                    - string: ""
                 foo: ""
         TestEndpointRequestBody:
             type: object

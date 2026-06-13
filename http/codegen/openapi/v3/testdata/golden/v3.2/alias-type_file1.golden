@@ -51,11 +51,14 @@ components:
                     example:
                         - who
                         - who
+                        - who
+                        - who
                 current:
                     $ref: '#/components/schemas/Stage'
             description: Request body for testEndpoint.
             example:
                 completed:
+                    - who
                     - who
                     - who
                     - who

@@ -41,10 +41,10 @@ components:
             properties:
                 id:
                     type: string
-                    example: Quia molestias.
+                    example: Ducimus vel.
             description: Request body for SSEAllFieldsMethod.
             example:
-                id: Consequuntur dolores eos voluptatem.
+                id: Ducimus vel.
         SSEAllFieldsMethodResponseBody:
             type: object
             properties:

@@ -3,11 +3,11 @@
     "schemas": {
       "Event": {
         "example": {
-          "message": "Ex ut rerum aut dolorem accusamus architecto."
+          "message": "Doloribus nemo quia dolores."
         },
         "properties": {
           "message": {
-            "example": "Et tempora et quae.",
+            "example": "Doloribus nemo quia dolores.",
             "type": "string"
           }
         },
@@ -19,11 +19,11 @@
       "Payload": {
         "description": "Request body for Create.",
         "example": {
-          "x": "Delectus hic blanditiis."
+          "x": "Doloribus qui aspernatur alias consectetur accusamus qui."
         },
         "properties": {
           "x": {
-            "example": "Quia molestias.",
+            "example": "Doloribus qui aspernatur alias consectetur accusamus qui.",
             "type": "string"
           }
         },
@@ -34,11 +34,11 @@
       },
       "Result": {
         "example": {
-          "id": "Consequuntur dolores eos voluptatem."
+          "id": "Tenetur aut quam ea repudiandae."
         },
         "properties": {
           "id": {
-            "example": "Doloribus qui quia.",
+            "example": "Tenetur aut quam ea repudiandae.",
             "type": "string"
           }
         },

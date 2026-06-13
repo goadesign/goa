@@ -51,6 +51,24 @@ type (
 	}
 )
 
+// derived returns a schemafier drawing example values from a stream derived
+// from the given identity, sharing all other state. See
+// expr.ExampleGenerator.Derived.
+func (sf *schemafier) derived(id string) *schemafier {
+	c := *sf
+	c.rand = sf.rand.Derived(id)
+	return &c
+}
+
+// rebased returns a schemafier whose example value stream is anchored to the
+// given absolute design identity, sharing all other state. See
+// expr.ExampleGenerator.Rebased.
+func (sf *schemafier) rebased(id string) *schemafier {
+	c := *sf
+	c.rand = sf.rand.Rebased(id)
+	return &c
+}
+
 // newSchemafier initializes a schemafier.
 func newSchemafier(rand *expr.ExampleGenerator) *schemafier {
 	return &schemafier{
@@ -259,7 +277,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		}
 	case *expr.Array:
 		s.Type = openapi.Array
-		s.Items = sf.schemafy(t.ElemType)
+		s.Items = sf.derived("0").schemafy(t.ElemType)
 	case *expr.Object:
 		s.Type = openapi.Object
 		var itemNotes []string
@@ -267,7 +285,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			if !openapi.MustGenerate(nat.Attribute.Meta) {
 				continue
 			}
-			s.Properties[nat.Name] = sf.schemafy(nat.Attribute)
+			s.Properties[nat.Name] = sf.derived(nat.Name).schemafy(nat.Attribute)
 		}
 		if len(itemNotes) > 0 {
 			note = strings.Join(itemNotes, "\n")
@@ -279,7 +297,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			// See https://swagger.io/docs/specification/data-models/dictionaries/.
 			s.AdditionalProperties = true
 		} else {
-			s.AdditionalProperties = sf.schemafy(t.ElemType)
+			s.AdditionalProperties = sf.derived("val0").schemafy(t.ElemType)
 		}
 	case *expr.Union:
 		// Represent unions as an object with discriminator and value fields.
@@ -298,14 +316,14 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		}
 		valueSchema := &openapi.Schema{}
 		for _, val := range t.Values {
-			valueSchema.AnyOf = append(valueSchema.AnyOf, sf.schemafy(val.Attribute))
+			valueSchema.AnyOf = append(valueSchema.AnyOf, sf.derived(val.Name).schemafy(val.Attribute))
 		}
 		s.Properties[typeKey] = typeSchema
 		s.Properties[valueKey] = valueSchema
 		s.Required = append(s.Required, typeKey, valueKey)
 	case expr.UserType:
 		if expr.IsAlias(t) && !sf.nameAliases {
-			return sf.schemafy(t.Attribute())
+			return sf.rebased(t.ID()).schemafy(t.Attribute())
 		}
 		h := sf.hashAttribute(attr, fnv.New64())
 
@@ -339,7 +357,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		typeName := sf.uniquify(codegen.Goify(name, true))
 		s.Ref = toRef(typeName)
 		sf.hashes[h] = append(sf.hashes[h], s.Ref)
-		schema := sf.schemafy(t.Attribute(), true)
+		schema := sf.rebased(t.ID()).schemafy(t.Attribute(), true)
 		if schema.Description == "" {
 			schema.Description = userTypeDescription(t, attr)
 		}

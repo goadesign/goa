@@ -17,28 +17,15 @@
       },
       "Foobar": {
         "example": {
-          "bar": [
-            {
-              "string": ""
-            },
-            {
-              "string": ""
-            }
-          ],
+          "bar": [],
           "foo": [
-            "Aliquid ut modi suscipit et et."
+            "Totam doloremque exercitationem voluptate.",
+            "Repellat perspiciatis voluptas et quia deleniti."
           ]
         },
         "properties": {
           "bar": {
-            "example": [
-              {
-                "string": ""
-              },
-              {
-                "string": ""
-              }
-            ],
+            "example": [],
             "items": {
               "$ref": "#/components/schemas/Bar"
             },
@@ -47,9 +34,12 @@
             "type": "array"
           },
           "foo": {
-            "example": [],
+            "example": [
+              "Totam doloremque exercitationem voluptate.",
+              "Repellat perspiciatis voluptas et quia deleniti."
+            ],
             "items": {
-              "example": "Beatae non id consequatur.",
+              "example": "Molestiae dolor eveniet omnis atque.",
               "type": "string"
             },
             "maxItems": 42,
@@ -74,6 +64,13 @@
           "content": {
             "application/json": {
               "example": [
+                {
+                  "bar": [],
+                  "foo": [
+                    "Totam doloremque exercitationem voluptate.",
+                    "Repellat perspiciatis voluptas et quia deleniti."
+                  ]
+                },
                 {
                   "bar": [],
                   "foo": [
