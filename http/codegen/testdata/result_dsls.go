@@ -761,6 +761,62 @@ var ResultWithResultCollectionDSL = func() {
 	})
 }
 
+// ResultTypeSiblingUserTypeFieldsDSL defines a result type with sibling fields (a, b)
+// that both reference the same named type (UserType). This tests the projection cache
+// fix for a bug where sibling fields were sharing the same AttributeExpr pointer,
+// causing metadata (descriptions and JSON tags) to leak between them.
+var ResultTypeSiblingUserTypeFieldsDSL = func() {
+	var UserType = Type("UserType", func() {
+		Attribute("u", Int)
+	})
+
+	var RT = ResultType("ResultTypeSibling", func() {
+		Attribute("a", UserType, "Attribute A", func() {
+			Meta("struct:tag:json", "a")
+		})
+		Attribute("b", UserType, "Attribute B", func() {
+			Meta("struct:tag:json", "b")
+		})
+	})
+
+	Service("ServiceResultUserTypeSibling", func() {
+		Method("MethodResultUserTypeSibling", func() {
+			Result(RT)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+// ResultTypeCollectionSiblingUserTypeFieldsDSL defines a result type collection with
+// sibling fields (a, b) that both reference the same named type (UserType). This tests
+// the fix for a bug where sibling fields were sharing the same AttributeExpr pointer,
+// causing metadata (descriptions and JSON tags) to leak between them.
+var ResultTypeCollectionSiblingUserTypeFieldsDSL = func() {
+	var UserType = Type("UserType", func() {
+		Attribute("u", Int)
+	})
+
+	var RT = ResultType("ResultTypeSiblingCollection", func() {
+		Attribute("a", UserType, "Attribute A", func() {
+			Meta("struct:tag:json", "a")
+		})
+		Attribute("b", UserType, "Attribute B", func() {
+			Meta("struct:tag:json", "b")
+		})
+	})
+
+	Service("ServiceResultCollectionUserTypeSibling", func() {
+		Method("MethodResultCollectionUserTypeSibling", func() {
+			Result(CollectionOf(RT))
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
 var ResultWithCustomPkgTypeDSL = func() {
 	var Foo = Type("Foo", func() {
 		Meta("struct:pkg:path", "foo")

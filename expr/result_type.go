@@ -363,7 +363,7 @@ func projectCollection(rt *ResultTypeExpr, view string, seen map[string]*Attribu
 }
 
 func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen map[string]*AttributeExpr) (*AttributeExpr, error) {
-	if att, ok := seen[hashAttrAndView(at, view)]; ok {
+	if att, ok := seen[hashAttrViewField(at, view, vat.Name)]; ok {
 		return att, nil
 	}
 	at = DupAtt(at)
@@ -378,7 +378,7 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 				view = DefaultView
 			}
 		}
-		seen[hashAttrAndView(at, view)] = at
+		seen[hashAttrViewField(at, view, vat.Name)] = at
 		pr, err := project(rt, view, seen)
 		if err != nil {
 			return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %w", view, vat.Name, err)
@@ -388,7 +388,7 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 	}
 
 	if _, ok := at.Type.(*UserTypeExpr); ok {
-		seen[hashAttrAndView(at, view)] = at
+		seen[hashAttrViewField(at, view, vat.Name)] = at
 	}
 
 	if obj := AsObject(at.Type); obj != nil {
@@ -461,4 +461,10 @@ func (v *ViewExpr) EvalName() string {
 // same value for two attributes and views that produce the same projected type.
 func hashAttrAndView(att *AttributeExpr, view string) string {
 	return Hash(att.Type, false, false, false) + "::" + view
+}
+
+// hashAttrViewField computes the projection cache key for an attribute, view,
+// and field name.
+func hashAttrViewField(att *AttributeExpr, view, field string) string {
+	return hashAttrAndView(att, view) + "::" + field
 }
