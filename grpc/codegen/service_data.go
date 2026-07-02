@@ -189,6 +189,12 @@ type (
 		// transport must carry both the one-shot payload and streaming payload
 		// items through the same streamed protobuf message.
 		StreamEnvelope *StreamEnvelopeData
+		// LegacyDecode describes the server-side decoding of requests sent by
+		// clients that speak the legacy stream protocol which predates the
+		// stream envelope and carries the one-shot method payload in gRPC
+		// request metadata. It is nil unless the endpoint enables the
+		// "grpc:stream:compat" meta.
+		LegacyDecode *LegacyDecodeData
 		// Metadata is the request metadata.
 		Metadata []*MetadataData
 		// ServerConvert is the request data with constructor function to
@@ -219,6 +225,22 @@ type (
 		// StreamItemWrapperRef is the fully qualified protobuf wrapper type for
 		// the streaming payload item branch.
 		StreamItemWrapperRef string
+	}
+
+	// LegacyDecodeData describes how generated servers decode the one-shot
+	// method payload that legacy stream protocol clients send in gRPC
+	// request metadata.
+	LegacyDecodeData struct {
+		// FuncName is the name of the generated legacy request decoder.
+		FuncName string
+		// Metadata lists the request metadata carrying the method payload
+		// along with any explicitly mapped and security metadata.
+		Metadata []*MetadataData
+		// ServerConvert builds the method payload from the metadata values.
+		// It is nil when the payload is not an object type, in which case it
+		// travels under the reserved "goa_payload" metadata key and maps
+		// directly to the payload.
+		ServerConvert *ConvertData
 	}
 
 	// ResponseData describes a gRPC success or error response.
@@ -606,6 +628,9 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		case requestEnvelope != nil:
 			request.Message = collect(requestEnvelope)
 			request.StreamEnvelope = buildStreamEnvelopeData(requestEnvelope, request.Message, sd)
+			if e.LegacyStreamCompat() {
+				request.LegacyDecode = d.buildLegacyDecodeData(e, sd)
+			}
 		case streamingRequest.Type != expr.Empty:
 			request.Message = collect(streamingRequest)
 		default:
@@ -963,6 +988,51 @@ func (d *ServicesData) buildRequestConvertData(request, payload *expr.AttributeE
 		TgtRef:  protoBufGoFullTypeRef(request, sd.PkgName, sd.Scope),
 		Init:    data,
 	}
+}
+
+// buildLegacyDecodeData computes the data needed to decode requests sent by
+// legacy stream protocol clients which carry the one-shot method payload in
+// gRPC request metadata. The metadata layout mirrors what pre-envelope
+// versions of goa generated: every payload attribute not explicitly mapped
+// to metadata is carried under its own name and non-object payloads travel
+// under the reserved "goa_payload" key.
+func (d *ServicesData) buildLegacyDecodeData(e *expr.GRPCEndpointExpr, sd *ServiceData) *LegacyDecodeData {
+	svc := sd.Service
+	payload := e.MethodExpr.Payload
+	legacyMD := expr.DupMappedAtt(e.Metadata)
+	mdObj := expr.AsObject(legacyMD.Type)
+	if pobj := expr.AsObject(payload.Type); pobj != nil {
+		for _, nat := range *pobj {
+			if mdObj.Attribute(nat.Name) == nil {
+				mdObj.Set(nat.Name, expr.DupAtt(nat.Attribute))
+			}
+			if payload.IsRequired(nat.Name) {
+				legacyMD.Validation.AddRequired(nat.Name)
+			}
+		}
+	} else {
+		mdObj.Set("goa_payload", expr.DupAtt(payload))
+		legacyMD.Validation.AddRequired("goa_payload")
+	}
+	md := extractMetadata(legacyMD, payload, svc.Scope, *d)
+	data := &LegacyDecodeData{
+		FuncName: fmt.Sprintf("decode%sLegacyRequest", codegen.Goify(e.Name(), true)),
+		Metadata: md,
+	}
+	if expr.IsObject(payload.Type) {
+		pkg := svc.Method(e.MethodExpr.Name).PayloadLoc.PackageNameOrDefault(svc.PkgName)
+		svcCtx := serviceTypeContext(pkg, svc.Scope)
+		init := d.buildInitData(&expr.AttributeExpr{Type: expr.Empty}, payload, "message", "v", svcCtx, false, false, sd)
+		init.Name = fmt.Sprintf("New%sPayloadFromMetadata", codegen.Goify(e.Name(), true))
+		init.Description = fmt.Sprintf("%s builds the payload of the %q endpoint of the %q service from the gRPC request metadata sent by legacy stream protocol clients.", init.Name, e.Name(), svc.Name)
+		init.Args = append(init.Args, initArgsFromMetadata(md)...)
+		data.ServerConvert = &ConvertData{
+			TgtName: svc.Scope.GoFullTypeName(payload, svcCtx.Pkg(payload)),
+			TgtRef:  svc.Scope.GoFullTypeRef(payload, svcCtx.Pkg(payload)),
+			Init:    init,
+		}
+	}
+	return data
 }
 
 // buildResponseConvertData builds the convert data for the server and client

@@ -55,6 +55,7 @@ func TestRequestEncoder(t *testing.T) {
 		{"request-encoder-payload-primitive", testdata.ServerStreamingRPCDSL},
 		{"request-encoder-payload-primitive-with-streaming-payload", testdata.ClientStreamingRPCWithPayloadDSL},
 		{"request-encoder-payload-user-type-with-streaming-payload", testdata.BidirectionalStreamingRPCWithPayloadDSL},
+		{"request-encoder-payload-user-type-with-streaming-payload-legacy-compat", testdata.BidirectionalStreamingRPCWithPayloadLegacyCompatDSL},
 		{"request-encoder-payload-with-metadata", testdata.MessageWithMetadataDSL},
 		{"request-encoder-payload-with-validate", testdata.MessageWithValidateDSL},
 		{"request-encoder-payload-with-security-attributes", testdata.MessageWithSecurityAttrsDSL},

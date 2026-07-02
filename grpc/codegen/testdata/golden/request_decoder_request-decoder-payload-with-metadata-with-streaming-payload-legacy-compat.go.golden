@@ -1,0 +1,86 @@
+// DecodeMethodBidirectionalStreamingRPCWithMetadataLegacyCompatRequest decodes
+// requests sent to "ServiceBidirectionalStreamingRPCWithMetadataLegacyCompat"
+// service "MethodBidirectionalStreamingRPCWithMetadataLegacyCompat" endpoint.
+func DecodeMethodBidirectionalStreamingRPCWithMetadataLegacyCompatRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
+	if !goagrpc.UsesStreamEnvelope(ctx) {
+		return decodeMethodBidirectionalStreamingRPCWithMetadataLegacyCompatLegacyRequest(ctx, md)
+	}
+	var (
+		b   *string
+		err error
+	)
+	{
+		if vals := md.Get("b"); len(vals) > 0 {
+			b = &vals[0]
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	var (
+		message *service_bidirectional_streaming_rpc_with_metadata_legacy_compatpb.MethodBidirectionalStreamingRPCWithMetadataLegacyCompatRequest
+		ok      bool
+	)
+	{
+		if v == nil {
+			return nil, goa.MissingFieldError("initial_payload", "stream")
+		}
+		var envelope *service_bidirectional_streaming_rpc_with_metadata_legacy_compatpb.MethodBidirectionalStreamingRPCWithMetadataLegacyCompatStreamingRequest
+		if envelope, ok = v.(*service_bidirectional_streaming_rpc_with_metadata_legacy_compatpb.MethodBidirectionalStreamingRPCWithMetadataLegacyCompatStreamingRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceBidirectionalStreamingRPCWithMetadataLegacyCompat", "MethodBidirectionalStreamingRPCWithMetadataLegacyCompat", "*service_bidirectional_streaming_rpc_with_metadata_legacy_compatpb.MethodBidirectionalStreamingRPCWithMetadataLegacyCompatStreamingRequest", v)
+		}
+		switch body := envelope.Body.(type) {
+		case *service_bidirectional_streaming_rpc_with_metadata_legacy_compatpb.MethodBidirectionalStreamingRPCWithMetadataLegacyCompatStreamingRequest_InitialPayload:
+			if body.InitialPayload == nil {
+				return nil, goa.MissingFieldError("initial_payload", "stream")
+			}
+			message = body.InitialPayload
+		case *service_bidirectional_streaming_rpc_with_metadata_legacy_compatpb.MethodBidirectionalStreamingRPCWithMetadataLegacyCompatStreamingRequest_StreamItem:
+			return nil, goa.InvalidFieldTypeError("body", "stream_item", "initial_payload")
+		default:
+			return nil, goa.MissingFieldError("initial_payload", "stream")
+		}
+	}
+	var payload *servicebidirectionalstreamingrpcwithmetadatalegacycompat.Payload
+	{
+		payload = NewMethodBidirectionalStreamingRPCWithMetadataLegacyCompatPayload(message, b)
+	}
+	return payload, nil
+}
+
+// decodeMethodBidirectionalStreamingRPCWithMetadataLegacyCompatLegacyRequest
+// decodes requests sent to
+// "ServiceBidirectionalStreamingRPCWithMetadataLegacyCompat" service
+// "MethodBidirectionalStreamingRPCWithMetadataLegacyCompat" endpoint by
+// clients that speak the legacy stream protocol which carries the method
+// payload in gRPC request metadata.
+func decodeMethodBidirectionalStreamingRPCWithMetadataLegacyCompatLegacyRequest(ctx context.Context, md metadata.MD) (any, error) {
+	var (
+		b   *string
+		a   *int
+		err error
+	)
+	{
+		if vals := md.Get("b"); len(vals) > 0 {
+			b = &vals[0]
+		}
+		if vals := md.Get("a"); len(vals) > 0 {
+			aRaw := vals[0]
+
+			v, err2 := strconv.ParseInt(aRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("a", aRaw, "integer"))
+			}
+			pv := int(v)
+			a = &pv
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	var payload *servicebidirectionalstreamingrpcwithmetadatalegacycompat.Payload
+	{
+		payload = NewMethodBidirectionalStreamingRPCWithMetadataLegacyCompatPayloadFromMetadata(b, a)
+	}
+	return payload, nil
+}

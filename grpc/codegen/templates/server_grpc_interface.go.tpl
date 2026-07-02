@@ -10,7 +10,20 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 	ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
 
 {{- if .ServerStream }}
-	{{- if .Request.StreamEnvelope }}
+	{{- if and .Request.StreamEnvelope .Request.LegacyDecode }}
+		envelope := goagrpc.UsesStreamEnvelope(ctx)
+		var reqpb any
+		if envelope {
+			message, err := stream.Recv()
+			if err != nil && !errors.Is(err, io.EOF) {
+				return goagrpc.EncodeError(err)
+			}
+			if err == nil {
+				reqpb = message
+			}
+		}
+		{{if .PayloadRef }}p{{ else }}_{{ end }}, err := s.{{ .Method.VarName }}H.Decode(ctx, reqpb)
+	{{- else if .Request.StreamEnvelope }}
 		var reqpb any
 		message, err := stream.Recv()
 		if err != nil {
@@ -28,7 +41,7 @@ func (s *{{ .ServerStruct }}) {{ .Method.VarName }}(
 	{{- end }}
 	{{- template "handle_error" . }}
 	ep := &{{ .ServicePkgName }}.{{ .Method.VarName }}EndpointInput{
-		Stream: &{{ .ServerStream.VarName }}{stream: stream},
+		Stream: &{{ .ServerStream.VarName }}{stream: stream{{ if .Request.LegacyDecode }}, legacy: !envelope{{ end }}},
 	{{- if .PayloadRef }}
 		Payload: p.({{ .PayloadRef }}),
 	{{- end }}

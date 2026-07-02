@@ -44,6 +44,26 @@ service "Service" gRPC endpoint "Method": field number 2 in attribute "key_dup_i
 			DSL:    testdata.GRPCEndpointWithInheritErrorDSL,
 			Errors: []string{},
 		},
+		"endpoint-stream-compat": {
+			DSL:    testdata.GRPCEndpointStreamCompat,
+			Errors: []string{},
+		},
+		"endpoint-stream-compat-service-level": {
+			DSL:    testdata.GRPCEndpointStreamCompatServiceLevel,
+			Errors: []string{},
+		},
+		"endpoint-stream-compat-bad-value": {
+			DSL:    testdata.GRPCEndpointStreamCompatBadValue,
+			Errors: []string{`service "Service" gRPC endpoint "Method": invalid "grpc:stream:compat" meta value "v2": only "v1" is supported`},
+		},
+		"endpoint-stream-compat-no-streaming-payload": {
+			DSL:    testdata.GRPCEndpointStreamCompatNoStreamingPayload,
+			Errors: []string{`service "Service" gRPC endpoint "Method": "grpc:stream:compat" meta requires the method to define both Payload and StreamingPayload`},
+		},
+		"endpoint-stream-compat-union-payload": {
+			DSL:    testdata.GRPCEndpointStreamCompatUnionPayload,
+			Errors: []string{`service "Service" gRPC endpoint "Method": attribute "version_ref" of the method payload must be a primitive or an array of primitives to satisfy the "grpc:stream:compat" meta`},
+		},
 		"endpoint-union-containing-any": {
 			DSL: testdata.GRPCEndpointWithUnionContainingAny,
 			Errors: []string{
@@ -99,4 +119,25 @@ func TestGRPCEndpointStreamingPayloadKeepsInitialRequest(t *testing.T) {
 	require.NotNil(t, req.Attribute("repository_id"))
 	require.NotNil(t, req.Attribute("version_ref"))
 	require.True(t, endpoint.Metadata.IsEmpty())
+}
+
+func TestGRPCEndpointLegacyStreamCompat(t *testing.T) {
+	cases := []struct {
+		Name     string
+		DSL      func()
+		Expected bool
+	}{
+		{"method-level", testdata.GRPCEndpointStreamCompat, true},
+		{"service-level", testdata.GRPCEndpointStreamCompatServiceLevel, true},
+		{"not-set", testdata.GRPCEndpointWithStreamingPayloadInitialRequest, false},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			root := expr.RunDSL(t, c.DSL)
+			grpcSvc := root.API.GRPC.Service("Service")
+			require.NotNil(t, grpcSvc)
+			require.Len(t, grpcSvc.GRPCEndpoints, 1)
+			require.Equal(t, c.Expected, grpcSvc.GRPCEndpoints[0].LegacyStreamCompat())
+		})
+	}
 }

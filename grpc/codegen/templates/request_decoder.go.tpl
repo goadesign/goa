@@ -1,72 +1,11 @@
 {{ printf "Decode%sRequest decodes requests sent to %q service %q endpoint." .Method.VarName .ServiceName .Method.Name | comment }}
 func Decode{{ .Method.VarName }}Request(ctx context.Context, v any, md metadata.MD) (any, error) {
-{{- if .Request.Metadata }}
-	var (
-	{{- range .Request.Metadata }}
-		{{ .VarName }} {{ .TypeRef }}
-	{{- end }}
-		err error
-	)
-	{
-	{{- range .Request.Metadata }}
-		{{- if or (eq .TypeName "string") (eq .Type.Name "any") }}
-			{{- if .Required }}
-				if vals := md.Get({{ printf "%q" .Name }}); len(vals) == 0 {
-					err = goa.MergeErrors(err, goa.MissingFieldError({{ printf "%q" .Name }}, "metadata"))
-				} else {
-					{{ .VarName }} = vals[0]
-				}
-			{{- else }}
-				if vals := md.Get({{ printf "%q" .Name }}); len(vals) > 0 {
-					{{ .VarName }} = {{ if .Pointer }}&{{ end }}vals[0]
-				}
-			{{- end }}
-		{{- else if .StringSlice }}
-			{{- if .Required }}
-				if vals := md.Get({{ printf "%q" .Name }}); len(vals) == 0 {
-					err = goa.MergeErrors(err, goa.MissingFieldError({{ printf "%q" .Name }}, "metadata"))
-				} else {
-					{{ .VarName }} = vals
-				}
-			{{- else }}
-				{{ .VarName }} = md.Get({{ printf "%q" .Name }})
-			{{- end }}
-		{{- else if .Slice }}
-			{{- if .Required }}
-				if {{ .VarName }}Raw := md.Get({{ printf "%q" .Name }}); len({{ .VarName }}Raw) == 0 {
-					err = goa.MergeErrors(err, goa.MissingFieldError({{ printf "%q" .Name }}, "metadata"))
-				} else {
-					{{- template "partial_slice_conversion" . }}
-				}
-			{{- else }}
-				if {{ .VarName }}Raw := md.Get({{ printf "%q" .Name }}); len({{ .VarName }}Raw) > 0 {
-					{{- template "partial_slice_conversion" . }}
-				}
-			{{- end }}
-		{{- else }}
-			{{- if .Required }}
-				if vals := md.Get({{ printf "%q" .Name }}); len(vals) == 0 {
-					err = goa.MergeErrors(err, goa.MissingFieldError({{ printf "%q" .Name }}, "metadata"))
-				} else {
-					{{ .VarName }}Raw := vals[0]
-					{{ template "partial_type_conversion" . }}
-				}
-			{{- else }}
-				if vals := md.Get({{ printf "%q" .Name }}); len(vals) > 0 {
-					{{ .VarName }}Raw := vals[0]
-					{{ template "partial_type_conversion" . }}
-				}
-			{{- end }}
-		{{- end }}
-		{{- if .Validate }}
-			{{ .Validate }}
-		{{- end }}
-	{{- end }}
-	}
-	if err != nil {
-		return nil, err
+{{- if .Request.LegacyDecode }}
+	if !goagrpc.UsesStreamEnvelope(ctx) {
+		return {{ .Request.LegacyDecode.FuncName }}(ctx, md)
 	}
 {{- end }}
+{{- template "partial_metadata_decode" .Request.Metadata }}
 {{- if .Request.PayloadMessage }}
 	var (
 		message {{ .Request.PayloadMessage.Ref }}
@@ -111,6 +50,29 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v any, md metadata.
 		{{- else }}
 			payload = {{ (index .Request.Metadata 0).VarName }}
 		{{- end }}
+	{{- template "strip_auth_schemes" . }}
+	}
+	return payload, nil
+}
+{{- if .Request.LegacyDecode }}
+
+{{ printf "%s decodes requests sent to %q service %q endpoint by clients that speak the legacy stream protocol which carries the method payload in gRPC request metadata." .Request.LegacyDecode.FuncName .ServiceName .Method.Name | comment }}
+func {{ .Request.LegacyDecode.FuncName }}(ctx context.Context, md metadata.MD) (any, error) {
+{{- template "partial_metadata_decode" .Request.LegacyDecode.Metadata }}
+	var payload {{ .PayloadRef }}
+	{
+		{{- if .Request.LegacyDecode.ServerConvert }}
+			payload = {{ .Request.LegacyDecode.ServerConvert.Init.Name }}({{ range .Request.LegacyDecode.ServerConvert.Init.Args }}{{ .Name }}, {{ end }})
+		{{- else }}
+			payload = {{ (index .Request.LegacyDecode.Metadata 0).VarName }}
+		{{- end }}
+	{{- template "strip_auth_schemes" . }}
+	}
+	return payload, nil
+}
+{{- end }}
+
+{{- define "strip_auth_schemes" }}
 {{- range .MetadataSchemes }}
 	{{- if ne .Type "Basic" }}
 		{{- if not .CredRequired }}
@@ -126,6 +88,4 @@ func Decode{{ .Method.VarName }}Request(ctx context.Context, v any, md metadata.
 		{{- end }}
 	{{- end }}
 {{- end }}
-	}
-	return payload, nil
-}
+{{- end }}

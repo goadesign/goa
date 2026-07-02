@@ -1,0 +1,16 @@
+// EncodeMethodBidirectionalStreamingRPCWithPayloadLegacyCompatRequest encodes
+// requests sent to ServiceBidirectionalStreamingRPCWithPayloadLegacyCompat
+// MethodBidirectionalStreamingRPCWithPayloadLegacyCompat endpoint.
+func EncodeMethodBidirectionalStreamingRPCWithPayloadLegacyCompatRequest(ctx context.Context, v any, md *metadata.MD) (any, error) {
+	payload, ok := v.(*servicebidirectionalstreamingrpcwithpayloadlegacycompat.Payload)
+	if !ok {
+		return nil, goagrpc.ErrInvalidType("ServiceBidirectionalStreamingRPCWithPayloadLegacyCompat", "MethodBidirectionalStreamingRPCWithPayloadLegacyCompat", "*servicebidirectionalstreamingrpcwithpayloadlegacycompat.Payload", v)
+	}
+	(*md).Append(goagrpc.StreamProtocolMetadataKey, goagrpc.StreamProtocolEnvelope)
+	message := NewProtoMethodBidirectionalStreamingRPCWithPayloadLegacyCompatRequest(payload)
+	return &service_bidirectional_streaming_rpc_with_payload_legacy_compatpb.MethodBidirectionalStreamingRPCWithPayloadLegacyCompatStreamingRequest{
+		Body: &service_bidirectional_streaming_rpc_with_payload_legacy_compatpb.MethodBidirectionalStreamingRPCWithPayloadLegacyCompatStreamingRequest_InitialPayload{
+			InitialPayload: message,
+		},
+	}, nil
+}

@@ -166,7 +166,7 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *Serv
 				fm["isEmpty"] = isEmpty
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "request-decoder",
-					Source:  grpcTemplates.Read(grpcRequestDecoderT, grpcConvertStringToTypeP, "type_conversion", "slice_conversion", "slice_item_conversion"),
+					Source:  grpcTemplates.Read(grpcRequestDecoderT, grpcConvertStringToTypeP, "type_conversion", "slice_conversion", "slice_item_conversion", "metadata_decode"),
 					Data:    e,
 					FuncMap: fm,
 				})
