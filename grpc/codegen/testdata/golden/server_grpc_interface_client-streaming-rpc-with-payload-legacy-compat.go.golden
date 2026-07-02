@@ -1,0 +1,33 @@
+// MethodClientStreamingRPCWithPayloadLegacyCompat implements the
+// "MethodClientStreamingRPCWithPayloadLegacyCompat" method in
+// service_client_streaming_rpc_with_payload_legacy_compatpb.ServiceClientStreamingRPCWithPayloadLegacyCompatServer
+// interface.
+func (s *Server) MethodClientStreamingRPCWithPayloadLegacyCompat(stream service_client_streaming_rpc_with_payload_legacy_compatpb.ServiceClientStreamingRPCWithPayloadLegacyCompat_MethodClientStreamingRPCWithPayloadLegacyCompatServer) error {
+	ctx := stream.Context()
+	ctx = context.WithValue(ctx, goa.MethodKey, "MethodClientStreamingRPCWithPayloadLegacyCompat")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceClientStreamingRPCWithPayloadLegacyCompat")
+	envelope := goagrpc.UsesStreamEnvelope(ctx)
+	var reqpb any
+	if envelope {
+		message, err := stream.Recv()
+		if err != nil && !errors.Is(err, io.EOF) {
+			return goagrpc.EncodeError(err)
+		}
+		if err == nil {
+			reqpb = message
+		}
+	}
+	p, err := s.MethodClientStreamingRPCWithPayloadLegacyCompatH.Decode(ctx, reqpb)
+	if err != nil {
+		return goagrpc.EncodeError(err)
+	}
+	ep := &serviceclientstreamingrpcwithpayloadlegacycompat.MethodClientStreamingRPCWithPayloadLegacyCompatEndpointInput{
+		Stream:  &MethodClientStreamingRPCWithPayloadLegacyCompatServerStream{stream: stream, legacy: !envelope},
+		Payload: p.(int),
+	}
+	err = s.MethodClientStreamingRPCWithPayloadLegacyCompatH.Handle(ctx, ep)
+	if err != nil {
+		return goagrpc.EncodeError(err)
+	}
+	return nil
+}

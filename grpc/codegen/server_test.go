@@ -26,6 +26,8 @@ func TestServerGRPCInterface(t *testing.T) {
 		{"bidirectional-streaming-rpc", testdata.BidirectionalStreamingRPCDSL},
 		{"bidirectional-streaming-rpc-with-payload", testdata.BidirectionalStreamingRPCWithPayloadDSL},
 		{"bidirectional-streaming-rpc-with-errors", testdata.BidirectionalStreamingRPCWithErrorsDSL},
+		{"client-streaming-rpc-with-payload-legacy-compat", testdata.ClientStreamingRPCWithPayloadLegacyCompatDSL},
+		{"bidirectional-streaming-rpc-with-payload-legacy-compat", testdata.BidirectionalStreamingRPCWithPayloadLegacyCompatDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -80,6 +82,9 @@ func TestRequestDecoder(t *testing.T) {
 		{"request-decoder-payload-primitive", testdata.ServerStreamingRPCDSL},
 		{"request-decoder-payload-primitive-with-streaming-payload", testdata.ClientStreamingRPCWithPayloadDSL},
 		{"request-decoder-payload-user-type-with-streaming-payload", testdata.BidirectionalStreamingRPCWithPayloadDSL},
+		{"request-decoder-payload-primitive-with-streaming-payload-legacy-compat", testdata.ClientStreamingRPCWithPayloadLegacyCompatDSL},
+		{"request-decoder-payload-user-type-with-streaming-payload-legacy-compat", testdata.BidirectionalStreamingRPCWithPayloadLegacyCompatDSL},
+		{"request-decoder-payload-with-metadata-with-streaming-payload-legacy-compat", testdata.BidirectionalStreamingRPCWithMetadataLegacyCompatDSL},
 		{"request-decoder-payload-with-metadata", testdata.MessageWithMetadataDSL},
 		{"request-decoder-payload-with-validate", testdata.MessageWithValidateDSL},
 		{"request-decoder-payload-with-security-attributes", testdata.MessageWithSecurityAttrsDSL},

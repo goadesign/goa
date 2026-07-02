@@ -53,6 +53,9 @@ func typesFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData,
 			ed := sd.Endpoint(a.Name())
 			if svr {
 				collect(ed.Request.ServerConvert)
+				if ed.Request.LegacyDecode != nil {
+					collect(ed.Request.LegacyDecode.ServerConvert)
+				}
 				collect(ed.Response.ServerConvert)
 				if ed.ServerStream != nil {
 					collect(ed.ServerStream.SendConvert)
