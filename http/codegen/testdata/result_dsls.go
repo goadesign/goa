@@ -817,6 +817,39 @@ var ResultTypeCollectionSiblingUserTypeFieldsDSL = func() {
 	})
 }
 
+// ResultTypeNestedUserTypeFieldsDSL defines a result type and a nested user type
+// (Wrapper) that both have a field named "a" of the same type (UserType). This tests
+// that the projection cache keys projected types rather than field attributes so
+// that same-named fields in different parent types do not share metadata
+// (descriptions and JSON tags).
+var ResultTypeNestedUserTypeFieldsDSL = func() {
+	var UserType = Type("UserType", func() {
+		Attribute("u", Int)
+	})
+
+	var Wrapper = Type("Wrapper", func() {
+		Attribute("a", UserType, "Inner A", func() {
+			Meta("struct:tag:json", "inner_a")
+		})
+	})
+
+	var RT = ResultType("ResultTypeNested", func() {
+		Attribute("a", UserType, "Outer A", func() {
+			Meta("struct:tag:json", "outer_a")
+		})
+		Attribute("nested", Wrapper)
+	})
+
+	Service("ServiceResultUserTypeNested", func() {
+		Method("MethodResultUserTypeNested", func() {
+			Result(RT)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
 var ResultWithCustomPkgTypeDSL = func() {
 	var Foo = Type("Foo", func() {
 		Meta("struct:pkg:path", "foo")
