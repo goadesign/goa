@@ -38,6 +38,9 @@ func Encode{{ .Method.VarName }}Request(ctx context.Context, v any, md *metadata
 		{{- end }}
 	{{- end }}
 {{- end }}
+{{- if .Request.StreamEnvelope }}
+	(*md).Append(goagrpc.StreamProtocolMetadataKey, goagrpc.StreamProtocolEnvelope)
+{{- end }}
 {{- if .Request.ClientConvert }}
 	{{- if .Request.StreamEnvelope }}
 	message := {{ .Request.ClientConvert.Init.Name }}({{ range .Request.ClientConvert.Init.Args }}{{ .Name }}, {{ end }})

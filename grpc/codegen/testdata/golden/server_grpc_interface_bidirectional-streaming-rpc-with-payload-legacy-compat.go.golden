@@ -1,0 +1,33 @@
+// MethodBidirectionalStreamingRPCWithPayloadLegacyCompat implements the
+// "MethodBidirectionalStreamingRPCWithPayloadLegacyCompat" method in
+// service_bidirectional_streaming_rpc_with_payload_legacy_compatpb.ServiceBidirectionalStreamingRPCWithPayloadLegacyCompatServer
+// interface.
+func (s *Server) MethodBidirectionalStreamingRPCWithPayloadLegacyCompat(stream service_bidirectional_streaming_rpc_with_payload_legacy_compatpb.ServiceBidirectionalStreamingRPCWithPayloadLegacyCompat_MethodBidirectionalStreamingRPCWithPayloadLegacyCompatServer) error {
+	ctx := stream.Context()
+	ctx = context.WithValue(ctx, goa.MethodKey, "MethodBidirectionalStreamingRPCWithPayloadLegacyCompat")
+	ctx = context.WithValue(ctx, goa.ServiceKey, "ServiceBidirectionalStreamingRPCWithPayloadLegacyCompat")
+	envelope := goagrpc.UsesStreamEnvelope(ctx)
+	var reqpb any
+	if envelope {
+		message, err := stream.Recv()
+		if err != nil && !errors.Is(err, io.EOF) {
+			return goagrpc.EncodeError(err)
+		}
+		if err == nil {
+			reqpb = message
+		}
+	}
+	p, err := s.MethodBidirectionalStreamingRPCWithPayloadLegacyCompatH.Decode(ctx, reqpb)
+	if err != nil {
+		return goagrpc.EncodeError(err)
+	}
+	ep := &servicebidirectionalstreamingrpcwithpayloadlegacycompat.MethodBidirectionalStreamingRPCWithPayloadLegacyCompatEndpointInput{
+		Stream:  &MethodBidirectionalStreamingRPCWithPayloadLegacyCompatServerStream{stream: stream, legacy: !envelope},
+		Payload: p.(*servicebidirectionalstreamingrpcwithpayloadlegacycompat.Payload),
+	}
+	err = s.MethodBidirectionalStreamingRPCWithPayloadLegacyCompatH.Handle(ctx, ep)
+	if err != nil {
+		return goagrpc.EncodeError(err)
+	}
+	return nil
+}

@@ -35,6 +35,16 @@ type (
 	}
 )
 
+const (
+	// streamCompatMetaKey is the meta key that makes generated servers also
+	// accept clients speaking the legacy stream protocol which predates the
+	// typed stream envelope.
+	streamCompatMetaKey = "grpc:stream:compat"
+	// streamCompatLegacy is the only supported value of the stream
+	// compatibility meta and selects the legacy metadata-based protocol.
+	streamCompatLegacy = "v1"
+)
+
 // Name of gRPC endpoint
 func (e *GRPCEndpointExpr) Name() string {
 	return e.MethodExpr.Name
@@ -143,6 +153,16 @@ func (e *GRPCEndpointExpr) Prepare() {
 	}
 }
 
+// LegacyStreamCompat reports whether the generated server must also accept
+// clients that speak the legacy stream protocol which carries the one-shot
+// method payload in gRPC request metadata instead of a typed initial stream
+// frame. It is enabled by setting Meta("grpc:stream:compat", "v1") on the
+// method, the service or the API.
+func (e *GRPCEndpointExpr) LegacyStreamCompat() bool {
+	v, ok := e.streamCompatValue()
+	return ok && v == streamCompatLegacy
+}
+
 // Validate validates the endpoint expression by checking if the request
 // and responses contains the "rpc:tag" in the meta. It also makes sure
 // that there is only one response per status code.
@@ -151,6 +171,7 @@ func (e *GRPCEndpointExpr) Validate() error {
 	if e.Name() == "" {
 		verr.Add(e, "Endpoint name cannot be empty")
 	}
+	verr.Merge(e.validateStreamCompat())
 
 	seenUnions := make(map[*Union]struct{})
 	seenAttrs := make(map[*AttributeExpr]struct{})
@@ -567,4 +588,76 @@ func getSecurityAttributes(m *MethodExpr) []string {
 		}
 	}
 	return secAttrs
+}
+
+// streamCompatValue returns the value of the stream compatibility meta by
+// looking up the endpoint, method, service and API expressions in that order.
+func (e *GRPCEndpointExpr) streamCompatValue() (string, bool) {
+	if v, ok := e.Meta.Last(streamCompatMetaKey); ok {
+		return v, true
+	}
+	if v, ok := e.MethodExpr.Meta.Last(streamCompatMetaKey); ok {
+		return v, true
+	}
+	if v, ok := e.Service.ServiceExpr.Meta.Last(streamCompatMetaKey); ok {
+		return v, true
+	}
+	if v, ok := Root.API.Meta.Last(streamCompatMetaKey); ok {
+		return v, true
+	}
+	return "", false
+}
+
+// validateStreamCompat validates the stream compatibility meta if set. The
+// legacy stream protocol carries the one-shot method payload in gRPC metadata
+// which can only encode primitive values and arrays of primitive values.
+func (e *GRPCEndpointExpr) validateStreamCompat() *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+	value, ok := e.streamCompatValue()
+	if !ok {
+		return verr
+	}
+	if value != streamCompatLegacy {
+		verr.Add(e, "invalid %q meta value %q: only %q is supported", streamCompatMetaKey, value, streamCompatLegacy)
+		return verr
+	}
+	if !e.MethodExpr.IsPayloadStreaming() || e.MethodExpr.Payload.Type == Empty {
+		// The meta only affects methods that combine a one-shot payload with
+		// a streaming payload. Only report a missing effect when the meta is
+		// set on the endpoint or method directly; service and API level metas
+		// legitimately apply to a subset of the methods they cover.
+		_, endpointLevel := e.Meta.Last(streamCompatMetaKey)
+		_, methodLevel := e.MethodExpr.Meta.Last(streamCompatMetaKey)
+		if endpointLevel || methodLevel {
+			verr.Add(e, "%q meta requires the method to define both Payload and StreamingPayload", streamCompatMetaKey)
+		}
+		return verr
+	}
+	if obj := AsObject(e.MethodExpr.Payload.Type); obj != nil {
+		metObj := AsObject(e.Metadata.Type)
+		for _, nat := range *obj {
+			if metObj.Attribute(nat.Name) != nil {
+				// Attributes explicitly mapped to metadata travel in metadata
+				// under both protocols and are validated separately.
+				continue
+			}
+			if !isMetadataEncodable(nat.Attribute.Type) {
+				verr.Add(e, "attribute %q of the method payload must be a primitive or an array of primitives to satisfy the %q meta", nat.Name, streamCompatMetaKey)
+			}
+		}
+	} else if !isMetadataEncodable(e.MethodExpr.Payload.Type) {
+		verr.Add(e, "the method payload must be a primitive, an array of primitives or an object to satisfy the %q meta", streamCompatMetaKey)
+	}
+	return verr
+}
+
+// isMetadataEncodable reports whether values of the given type can be carried
+// in gRPC metadata, that is whether they can be encoded to and decoded from
+// header strings.
+func isMetadataEncodable(dt DataType) bool {
+	if IsPrimitive(dt) {
+		return true
+	}
+	arr := AsArray(dt)
+	return arr != nil && IsPrimitive(arr.ElemType.Type)
 }

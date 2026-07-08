@@ -776,3 +776,71 @@ var GRPCEndpointWithStreamingPayloadInitialRequest = func() {
 		})
 	})
 }
+
+var GRPCEndpointStreamCompat = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Meta("grpc:stream:compat", "v1")
+			Payload(func() {
+				Field(1, "a", Int)
+				Field(2, "b", ArrayOf(String))
+			})
+			StreamingPayload(Int)
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointStreamCompatServiceLevel = func() {
+	Service("Service", func() {
+		Meta("grpc:stream:compat", "v1")
+		Method("Method", func() {
+			Payload(Int)
+			StreamingPayload(Int)
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointStreamCompatBadValue = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Meta("grpc:stream:compat", "v2")
+			Payload(Int)
+			StreamingPayload(Int)
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointStreamCompatNoStreamingPayload = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Meta("grpc:stream:compat", "v1")
+			Payload(Int)
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointStreamCompatUnionPayload = func() {
+	var VersionRef = Type("VersionRef", func() {
+		OneOf("ref_type", func() {
+			Field(1, "version_id", String)
+			Field(2, "ref_name", String)
+		})
+		Required("ref_type")
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Meta("grpc:stream:compat", "v1")
+			Payload(func() {
+				Field(1, "repository_id", String)
+				Field(2, "version_ref", VersionRef)
+				Required("repository_id", "version_ref")
+			})
+			StreamingPayload(Int)
+			GRPC(func() {})
+		})
+	})
+}
