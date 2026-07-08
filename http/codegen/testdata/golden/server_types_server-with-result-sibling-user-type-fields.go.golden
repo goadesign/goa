@@ -1,0 +1,28 @@
+// MethodResultUserTypeSiblingResponseBody is the type of the
+// "ServiceResultUserTypeSibling" service "MethodResultUserTypeSibling"
+// endpoint HTTP response body.
+type MethodResultUserTypeSiblingResponseBody struct {
+	// Attribute A
+	A *UserTypeResponseBody `json:"a"`
+	// Attribute B
+	B *UserTypeResponseBody `json:"b"`
+}
+
+// UserTypeResponseBody is used to define fields on response body types.
+type UserTypeResponseBody struct {
+	U *int `form:"u,omitempty" json:"u,omitempty" xml:"u,omitempty"`
+}
+
+// NewMethodResultUserTypeSiblingResponseBody builds the HTTP response body
+// from the result of the "MethodResultUserTypeSibling" endpoint of the
+// "ServiceResultUserTypeSibling" service.
+func NewMethodResultUserTypeSiblingResponseBody(res *serviceresultusertypesiblingviews.ResulttypesiblingView) *MethodResultUserTypeSiblingResponseBody {
+	body := &MethodResultUserTypeSiblingResponseBody{}
+	if res.A != nil {
+		body.A = marshalServiceresultusertypesiblingviewsUserTypeViewToUserTypeResponseBody(res.A)
+	}
+	if res.B != nil {
+		body.B = marshalServiceresultusertypesiblingviewsUserTypeViewToUserTypeResponseBody(res.B)
+	}
+	return body
+}

@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -27,8 +30,9 @@ var (
 	compositeResultDefault = resultType("a", object(collectionResultDefault), "b", String)
 	compositeResultLink    = resultType("a", object(collectionResultLink))
 
-	recursiveResult         = resultRecursive("a", String, view("default", "a", object(String)))
-	embeddedRecursiveResult = resultType("a", String, "rec", recursiveResult)
+	// recursiveResult is its own expected projection: projecting a recursive
+	// result type yields a single projected type that references itself.
+	recursiveResult = resultRecursive("a", String, view("default", "a", object(String)))
 )
 
 func init() {
@@ -50,7 +54,7 @@ func TestProject(t *testing.T) {
 		{"collection-link", collectionResult, "link", collectionResultLink},
 		{"composite-default", compositeResult, "default", compositeResultDefault},
 		{"composite-link", compositeResult, "link", compositeResultLink},
-		{"recursive", recursiveResult, "default", embeddedRecursiveResult},
+		{"recursive", recursiveResult, "default", recursiveResult},
 	}
 	for _, k := range cases {
 		t.Run(k.Name, func(t *testing.T) {
@@ -76,6 +80,73 @@ func TestProject(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestProjectDoesNotAliasFieldAttributes verifies that fields sharing a type
+// share the projected type but never the AttributeExpr wrapping it, so that
+// per-field metadata such as descriptions does not leak across fields.
+func TestProjectDoesNotAliasFieldAttributes(t *testing.T) {
+	t.Run("sibling user type fields", func(t *testing.T) {
+		shared := userType("Shared", object(Int))
+		rt := resultType("a", shared, "b", shared,
+			view("default", "a", object(Int), "b", object(Int)))
+
+		projected, err := Project(rt, "default")
+		require.NoError(t, err)
+
+		obj := AsObject(projected.Type)
+		a, b := obj.Attribute("a"), obj.Attribute("b")
+		assert.NotSame(t, a, b)
+		assert.Equal(t, "desc a", a.Description)
+		assert.Equal(t, "desc b", b.Description)
+		assert.Same(t, a.Type, b.Type)
+	})
+
+	t.Run("sibling result type fields", func(t *testing.T) {
+		rt := resultType("x", simpleResult, "y", simpleResult,
+			view("default", "x", AsObject(simpleResult), "y", AsObject(simpleResult)))
+
+		projected, err := Project(rt, "default")
+		require.NoError(t, err)
+
+		obj := AsObject(projected.Type)
+		x, y := obj.Attribute("x"), obj.Attribute("y")
+		assert.NotSame(t, x, y)
+		assert.Equal(t, "desc x", x.Description)
+		assert.Equal(t, "desc y", y.Description)
+		assert.Same(t, x.Type, y.Type)
+	})
+
+	t.Run("same field in different parent types", func(t *testing.T) {
+		shared := userType("Shared", object(Int))
+		wrapper := userType("Wrapper", &Object{
+			{Name: "a", Attribute: &AttributeExpr{Type: shared, Description: "Inner A"}},
+		})
+		rt := resultType("a", shared, "nested", wrapper,
+			view("default",
+				"a", object(Int),
+				"nested", &Object{{Name: "a", Attribute: &AttributeExpr{Type: object(Int)}}}))
+
+		projected, err := Project(rt, "default")
+		require.NoError(t, err)
+
+		obj := AsObject(projected.Type)
+		outer := obj.Attribute("a")
+		assert.Equal(t, "desc a", outer.Description)
+		inner := AsObject(obj.Attribute("nested").Type).Attribute("a")
+		assert.NotSame(t, outer, inner)
+		assert.Equal(t, "Inner A", inner.Description)
+		assert.Same(t, outer.Type, inner.Type)
+	})
+
+	t.Run("recursive result type references its own projection", func(t *testing.T) {
+		projected, err := Project(recursiveResult, "default")
+		require.NoError(t, err)
+
+		rec := AsObject(projected.Type).Attribute("rec")
+		assert.Equal(t, "desc rec", rec.Description)
+		assert.Same(t, projected, rec.Type)
+	})
 }
 
 // view is a helper function for building view expressions used in tests. name

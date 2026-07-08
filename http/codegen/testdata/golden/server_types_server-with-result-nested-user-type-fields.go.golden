@@ -1,0 +1,33 @@
+// MethodResultUserTypeNestedResponseBody is the type of the
+// "ServiceResultUserTypeNested" service "MethodResultUserTypeNested" endpoint
+// HTTP response body.
+type MethodResultUserTypeNestedResponseBody struct {
+	// Outer A
+	A      *UserTypeResponseBody `json:"outer_a"`
+	Nested *WrapperResponseBody  `form:"nested,omitempty" json:"nested,omitempty" xml:"nested,omitempty"`
+}
+
+// UserTypeResponseBody is used to define fields on response body types.
+type UserTypeResponseBody struct {
+	U *int `form:"u,omitempty" json:"u,omitempty" xml:"u,omitempty"`
+}
+
+// WrapperResponseBody is used to define fields on response body types.
+type WrapperResponseBody struct {
+	// Inner A
+	A *UserTypeResponseBody `json:"inner_a"`
+}
+
+// NewMethodResultUserTypeNestedResponseBody builds the HTTP response body from
+// the result of the "MethodResultUserTypeNested" endpoint of the
+// "ServiceResultUserTypeNested" service.
+func NewMethodResultUserTypeNestedResponseBody(res *serviceresultusertypenestedviews.ResulttypenestedView) *MethodResultUserTypeNestedResponseBody {
+	body := &MethodResultUserTypeNestedResponseBody{}
+	if res.A != nil {
+		body.A = marshalServiceresultusertypenestedviewsUserTypeViewToUserTypeResponseBody(res.A)
+	}
+	if res.Nested != nil {
+		body.Nested = marshalServiceresultusertypenestedviewsWrapperViewToWrapperResponseBody(res.Nested)
+	}
+	return body
+}

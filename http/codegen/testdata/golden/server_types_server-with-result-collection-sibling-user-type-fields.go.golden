@@ -1,0 +1,33 @@
+// ResulttypesiblingcollectionResponseCollection is the type of the
+// "ServiceResultCollectionUserTypeSibling" service
+// "MethodResultCollectionUserTypeSibling" endpoint HTTP response body.
+type ResulttypesiblingcollectionResponseCollection []*ResulttypesiblingcollectionResponse
+
+// ResulttypesiblingcollectionResponse is used to define fields on response
+// body types.
+type ResulttypesiblingcollectionResponse struct {
+	// Attribute A
+	A *UserTypeResponse `json:"a"`
+	// Attribute B
+	B *UserTypeResponse `json:"b"`
+}
+
+// UserTypeResponse is used to define fields on response body types.
+type UserTypeResponse struct {
+	U *int `form:"u,omitempty" json:"u,omitempty" xml:"u,omitempty"`
+}
+
+// NewResulttypesiblingcollectionResponseCollection builds the HTTP response
+// body from the result of the "MethodResultCollectionUserTypeSibling" endpoint
+// of the "ServiceResultCollectionUserTypeSibling" service.
+func NewResulttypesiblingcollectionResponseCollection(res serviceresultcollectionusertypesiblingviews.ResulttypesiblingcollectionCollectionView) ResulttypesiblingcollectionResponseCollection {
+	body := make([]*ResulttypesiblingcollectionResponse, len(res))
+	for i, val := range res {
+		if val == nil {
+			body[i] = nil
+			continue
+		}
+		body[i] = marshalServiceresultcollectionusertypesiblingviewsResulttypesiblingcollectionViewToResulttypesiblingcollectionResponse(val)
+	}
+	return body
+}

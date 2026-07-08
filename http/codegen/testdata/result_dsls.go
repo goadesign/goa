@@ -761,6 +761,95 @@ var ResultWithResultCollectionDSL = func() {
 	})
 }
 
+// ResultTypeSiblingUserTypeFieldsDSL defines a result type with sibling fields (a, b)
+// that both reference the same named type (UserType). This tests the projection cache
+// fix for a bug where sibling fields were sharing the same AttributeExpr pointer,
+// causing metadata (descriptions and JSON tags) to leak between them.
+var ResultTypeSiblingUserTypeFieldsDSL = func() {
+	var UserType = Type("UserType", func() {
+		Attribute("u", Int)
+	})
+
+	var RT = ResultType("ResultTypeSibling", func() {
+		Attribute("a", UserType, "Attribute A", func() {
+			Meta("struct:tag:json", "a")
+		})
+		Attribute("b", UserType, "Attribute B", func() {
+			Meta("struct:tag:json", "b")
+		})
+	})
+
+	Service("ServiceResultUserTypeSibling", func() {
+		Method("MethodResultUserTypeSibling", func() {
+			Result(RT)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+// ResultTypeCollectionSiblingUserTypeFieldsDSL defines a result type collection with
+// sibling fields (a, b) that both reference the same named type (UserType). This tests
+// the fix for a bug where sibling fields were sharing the same AttributeExpr pointer,
+// causing metadata (descriptions and JSON tags) to leak between them.
+var ResultTypeCollectionSiblingUserTypeFieldsDSL = func() {
+	var UserType = Type("UserType", func() {
+		Attribute("u", Int)
+	})
+
+	var RT = ResultType("ResultTypeSiblingCollection", func() {
+		Attribute("a", UserType, "Attribute A", func() {
+			Meta("struct:tag:json", "a")
+		})
+		Attribute("b", UserType, "Attribute B", func() {
+			Meta("struct:tag:json", "b")
+		})
+	})
+
+	Service("ServiceResultCollectionUserTypeSibling", func() {
+		Method("MethodResultCollectionUserTypeSibling", func() {
+			Result(CollectionOf(RT))
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
+// ResultTypeNestedUserTypeFieldsDSL defines a result type and a nested user type
+// (Wrapper) that both have a field named "a" of the same type (UserType). This tests
+// that the projection cache keys projected types rather than field attributes so
+// that same-named fields in different parent types do not share metadata
+// (descriptions and JSON tags).
+var ResultTypeNestedUserTypeFieldsDSL = func() {
+	var UserType = Type("UserType", func() {
+		Attribute("u", Int)
+	})
+
+	var Wrapper = Type("Wrapper", func() {
+		Attribute("a", UserType, "Inner A", func() {
+			Meta("struct:tag:json", "inner_a")
+		})
+	})
+
+	var RT = ResultType("ResultTypeNested", func() {
+		Attribute("a", UserType, "Outer A", func() {
+			Meta("struct:tag:json", "outer_a")
+		})
+		Attribute("nested", Wrapper)
+	})
+
+	Service("ServiceResultUserTypeNested", func() {
+		Method("MethodResultUserTypeNested", func() {
+			Result(RT)
+			HTTP(func() {
+				GET("/")
+			})
+		})
+	})
+}
+
 var ResultWithCustomPkgTypeDSL = func() {
 	var Foo = Type("Foo", func() {
 		Meta("struct:pkg:path", "foo")

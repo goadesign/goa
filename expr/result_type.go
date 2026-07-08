@@ -232,14 +232,24 @@ func (rt *ResultTypeExpr) ensureDefaultView() {
 // individual attributes may use a different view. In this case Project uses
 // that view and returns an error if it isn't defined on the attribute type.
 func Project(rt *ResultTypeExpr, view string) (*ResultTypeExpr, error) {
-	return project(rt, view, make(map[string]*AttributeExpr))
+	return project(rt, view, make(map[string]UserType))
 }
 
-func project(rt *ResultTypeExpr, view string, seen map[string]*AttributeExpr) (*ResultTypeExpr, error) {
+// project computes the projection of rt for view. seen memoizes projected
+// types keyed by (type hash, view). It caches types only - never field
+// attributes - so that sibling fields referencing the same type each keep
+// their own AttributeExpr (description and meta would otherwise leak across
+// fields). projectSingle registers its projection before computing the fields
+// so that recursive references resolve to the in-flight projection and the
+// recursion terminates.
+func project(rt *ResultTypeExpr, view string, seen map[string]UserType) (*ResultTypeExpr, error) {
 	_, params, _ := mime.ParseMediaType(rt.Identifier)
 	if params["view"] == view {
 		// nothing to do
 		return rt, nil
+	}
+	if p, ok := seen[hashTypeAndView(rt, view)]; ok {
+		return p.(*ResultTypeExpr), nil
 	}
 	if _, ok := rt.Type.(*Array); ok {
 		return projectCollection(rt, view, seen)
@@ -247,7 +257,7 @@ func project(rt *ResultTypeExpr, view string, seen map[string]*AttributeExpr) (*
 	return projectSingle(rt, view, seen)
 }
 
-func projectSingle(rt *ResultTypeExpr, view string, seen map[string]*AttributeExpr) (*ResultTypeExpr, error) {
+func projectSingle(rt *ResultTypeExpr, view string, seen map[string]UserType) (*ResultTypeExpr, error) {
 	v := rt.View(view)
 	if v == nil {
 		return nil, fmt.Errorf("unknown view %#v", view)
@@ -280,26 +290,15 @@ func projectSingle(rt *ResultTypeExpr, view string, seen map[string]*AttributeEx
 		typeName += Title(view)
 	}
 
-	var ut *UserTypeExpr
-	if att, ok := seen[hashAttrAndView(rt.Attribute(), view)]; ok {
-		if rt, ok2 := att.Type.(*ResultTypeExpr); ok2 {
-			ut = &UserTypeExpr{
-				AttributeExpr: DupAtt(rt.Attribute()),
-				TypeName:      rt.TypeName,
-			}
-		}
-	}
 	id := rt.projectIdentifier(view)
-	if ut == nil {
-		ut = &UserTypeExpr{
-			AttributeExpr: &AttributeExpr{
-				Description: desc,
-				Validation:  val,
-			},
-		}
+	ut := &UserTypeExpr{
+		AttributeExpr: &AttributeExpr{
+			Description: desc,
+			Validation:  val,
+		},
+		TypeName: typeName,
+		UID:      id,
 	}
-	ut.TypeName = typeName
-	ut.UID = id
 	ut.Type = Dup(v.Type)
 	ut.UserExamples = v.UserExamples
 	projected := &ResultTypeExpr{
@@ -311,6 +310,11 @@ func projectSingle(rt *ResultTypeExpr, view string, seen map[string]*AttributeEx
 		AttributeExpr: DupAtt(v.AttributeExpr),
 		Parent:        projected,
 	}}
+
+	// Register the projection before computing the fields so that recursive
+	// references to rt resolve to the in-flight projection - its fields are
+	// filled in place below - and the recursion terminates.
+	seen[hashTypeAndView(rt, view)] = projected
 
 	projectedObj := projected.Type.(*Object)
 	mtObj := AsObject(rt.Type)
@@ -326,7 +330,7 @@ func projectSingle(rt *ResultTypeExpr, view string, seen map[string]*AttributeEx
 	return projected, nil
 }
 
-func projectCollection(rt *ResultTypeExpr, view string, seen map[string]*AttributeExpr) (*ResultTypeExpr, error) {
+func projectCollection(rt *ResultTypeExpr, view string, seen map[string]UserType) (*ResultTypeExpr, error) {
 	// Project the collection element result type
 	e := rt.Type.(*Array).ElemType.Type.(*ResultTypeExpr) // validation checked this cast would work
 	pe, err2 := project(e, view, seen)
@@ -359,13 +363,16 @@ func projectCollection(rt *ResultTypeExpr, view string, seen map[string]*Attribu
 		return nil, eval.Context.Errors
 	}
 
+	seen[hashTypeAndView(rt, view)] = proj
 	return proj, nil
 }
 
-func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen map[string]*AttributeExpr) (*AttributeExpr, error) {
-	if att, ok := seen[hashAttrAndView(at, view)]; ok {
-		return att, nil
-	}
+// projectRecursive computes the projected attribute for the field described
+// by at within a result type being projected with view. vat is the matching
+// view attribute. It always returns a fresh attribute: projected types are
+// shared through seen but the attributes wrapping them never are, so that
+// per-field metadata does not leak across fields of the same type.
+func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, seen map[string]UserType) (*AttributeExpr, error) {
 	at = DupAtt(at)
 
 	if rt, ok := at.Type.(*ResultTypeExpr); ok {
@@ -378,7 +385,6 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 				view = DefaultView
 			}
 		}
-		seen[hashAttrAndView(at, view)] = at
 		pr, err := project(rt, view, seen)
 		if err != nil {
 			return nil, fmt.Errorf("view %#v on field %#v cannot be computed: %w", view, vat.Name, err)
@@ -387,8 +393,15 @@ func projectRecursive(at *AttributeExpr, vat *NamedAttributeExpr, view string, s
 		return at, nil
 	}
 
-	if _, ok := at.Type.(*UserTypeExpr); ok {
-		seen[hashAttrAndView(at, view)] = at
+	if ut, ok := at.Type.(*UserTypeExpr); ok {
+		key := hashTypeAndView(ut, view)
+		if p, ok := seen[key]; ok {
+			at.Type = p
+			return at, nil
+		}
+		// Register before recursing into the fields below (they are projected
+		// in place) so that recursive user types terminate.
+		seen[key] = ut
 	}
 
 	if obj := AsObject(at.Type); obj != nil {
@@ -457,8 +470,8 @@ func (v *ViewExpr) EvalName() string {
 	return prefix + suffix
 }
 
-// hashAttrAndView computes a hash for an attribute and a view that returns the
-// same value for two attributes and views that produce the same projected type.
-func hashAttrAndView(att *AttributeExpr, view string) string {
-	return Hash(att.Type, false, false, false) + "::" + view
+// hashTypeAndView computes the projection cache key for the given type and
+// view. Two types with the same key project to the same type for the view.
+func hashTypeAndView(t DataType, view string) string {
+	return Hash(t, false, false, false) + "::" + view
 }
