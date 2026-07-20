@@ -60,7 +60,7 @@ func (s *BidirectionalWithViewsClientStream) Recv() (*testservice.Response, erro
 		return rv, err
 	}
 	res := NewBidirectionalWithViewsResponseOK(&body)
-	vres := &testserviceviews.Response{res, s.view}
+	vres := &testserviceviews.Response{Projected: res, View: s.view}
 	if err := testserviceviews.ValidateResponse(vres); err != nil {
 		return rv, goahttp.ErrValidationError("TestService", "BidirectionalWithViews", err)
 	}
