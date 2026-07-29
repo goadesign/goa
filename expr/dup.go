@@ -74,7 +74,10 @@ func (d *dupper) DupType(t DataType) DataType {
 	case Primitive:
 		return t
 	case *Array:
-		return &Array{ElemType: d.DupAttribute(actual.ElemType)}
+		return &Array{
+			ElemType:         d.DupAttribute(actual.ElemType),
+			NonNullableElems: actual.NonNullableElems,
+		}
 	case *Object:
 		res := &Object{}
 		for _, nat := range *actual {

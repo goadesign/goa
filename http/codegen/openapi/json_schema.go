@@ -405,32 +405,27 @@ func typeSchemaWithGen(api *expr.APIExpr, t expr.DataType, prefix string, gen *e
 			s.AdditionalProperties = true
 		}
 	case *expr.Union:
-		// Unions are represented as an object with a discriminated value.
-		// The field names are configurable via Meta tags (defaults: "type" and "value").
+		// Each branch owns both its discriminator literal and value schema so
+		// clients cannot combine one branch tag with another branch value.
 		typeKey := actual.GetTypeKey()
 		valueKey := actual.GetValueKey()
 
 		s.Type = Object
-		if s.Properties == nil {
-			s.Properties = make(map[string]*Schema)
-		}
-		// Discriminator with enum of branch names.
-		typeSchema := NewSchema()
-		typeSchema.Type = String
-		typeSchema.Enum = make([]any, len(actual.Values))
-		for i, val := range actual.Values {
-			typeSchema.Enum[i] = val.Name
-		}
-		// Value can be any of the branch schemas.
-		valueSchema := NewSchema()
 		for _, val := range actual.Values {
-			branch := typeSchemaWithGen(api, val.Attribute.Type, prefix, gen.Derived(val.Name))
-			initAttributeValidation(branch, val.Attribute)
-			valueSchema.AnyOf = append(valueSchema.AnyOf, branch)
+			valueSchema := typeSchemaWithGen(api, val.Attribute.Type, prefix, gen.Derived(val.Name))
+			initAttributeValidation(valueSchema, val.Attribute)
+			s.AnyOf = append(s.AnyOf, &Schema{
+				Type: Object,
+				Properties: map[string]*Schema{
+					typeKey: {
+						Type: String,
+						Enum: []any{val.Name},
+					},
+					valueKey: valueSchema,
+				},
+				Required: []string{typeKey, valueKey},
+			})
 		}
-		s.Properties[typeKey] = typeSchema
-		s.Properties[valueKey] = valueSchema
-		s.Required = append(s.Required, typeKey, valueKey)
 	case *expr.UserTypeExpr:
 		if expr.IsAlias(actual) {
 			s = typeSchemaWithGen(api, actual.Attribute().Type, prefix, gen.Rebased(actual.ID()))
@@ -554,6 +549,12 @@ func (s *Schema) Dup() *Schema {
 	}
 	if s.Items != nil {
 		js.Items = s.Items.Dup()
+	}
+	if len(s.AnyOf) > 0 {
+		js.AnyOf = make([]*Schema, len(s.AnyOf))
+		for i, branch := range s.AnyOf {
+			js.AnyOf[i] = branch.Dup()
+		}
 	}
 	for n, d := range s.Defs {
 		js.Defs[n] = d.Dup()

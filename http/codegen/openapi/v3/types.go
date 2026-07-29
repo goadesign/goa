@@ -320,27 +320,25 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			s.AdditionalProperties = sf.derived("val0").schemafy(t.ElemType)
 		}
 	case *expr.Union:
-		// Represent unions as an object with discriminator and value fields.
-		// The field names are configurable via Meta tags (defaults: "type" and "value").
+		// Each branch owns both its discriminator literal and value schema so
+		// clients cannot combine one branch tag with another branch value.
 		typeKey := t.GetTypeKey()
 		valueKey := t.GetValueKey()
 
 		s.Type = openapi.Object
-		if s.Properties == nil {
-			s.Properties = make(map[string]*openapi.Schema)
-		}
-		typeSchema := &openapi.Schema{Type: "string"}
-		typeSchema.Enum = make([]any, len(t.Values))
-		for i, val := range t.Values {
-			typeSchema.Enum[i] = val.Name
-		}
-		valueSchema := &openapi.Schema{}
 		for _, val := range t.Values {
-			valueSchema.AnyOf = append(valueSchema.AnyOf, sf.derived(val.Name).schemafy(val.Attribute))
+			s.AnyOf = append(s.AnyOf, &openapi.Schema{
+				Type: openapi.Object,
+				Properties: map[string]*openapi.Schema{
+					typeKey: {
+						Type: openapi.String,
+						Enum: []any{val.Name},
+					},
+					valueKey: sf.derived(val.Name).schemafy(val.Attribute),
+				},
+				Required: []string{typeKey, valueKey},
+			})
 		}
-		s.Properties[typeKey] = typeSchema
-		s.Properties[valueKey] = valueSchema
-		s.Required = append(s.Required, typeKey, valueKey)
 	case expr.UserType:
 		if expr.IsAlias(t) && !sf.nameAliases {
 			s = sf.rebased(t.ID()).schemafy(t.Attribute())

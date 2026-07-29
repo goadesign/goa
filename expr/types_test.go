@@ -908,6 +908,33 @@ func TestUnionGetTypeKey(t *testing.T) {
 	}
 }
 
+func TestUnionExampleAndCompatibilityUseTaggedEnvelope(t *testing.T) {
+	union := &Union{
+		TypeName: "Outcome",
+		TypeKey:  "kind",
+		ValueKey: "data",
+		Values: []*NamedAttributeExpr{
+			{Name: "text", Attribute: &AttributeExpr{Type: String}},
+			{Name: "count", Attribute: &AttributeExpr{Type: Int}},
+		},
+	}
+
+	example := union.Example(NewRandom("test"))
+	envelope, ok := example.(map[string]any)
+	if !ok {
+		t.Fatalf("expected tagged envelope, got %T", example)
+	}
+	if !union.IsCompatible(envelope) {
+		t.Fatalf("generated example is not compatible: %#v", envelope)
+	}
+	if union.IsCompatible(map[string]any{"kind": "text", "data": 3}) {
+		t.Fatal("expected mismatched branch value to be incompatible")
+	}
+	if union.IsCompatible("plain branch value") {
+		t.Fatal("expected untagged branch value to be incompatible")
+	}
+}
+
 func TestUnionGetValueKey(t *testing.T) {
 	cases := map[string]struct {
 		valueKey string

@@ -2782,6 +2782,7 @@ func buildHTTPUnionTypeData(u *expr.Union, scope *codegen.NameScope) *service.Un
 			KindConst: kindConst,
 			FieldName: fieldName,
 			FieldType: fieldType,
+			Nilable:   codegen.IsNilable(nat.Attribute.Type),
 			TypeTag:   nat.Name,
 		}
 	}

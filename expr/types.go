@@ -646,15 +646,27 @@ func (u *Union) Hash() string {
 
 // IsCompatible returns true if u describes the (Go) type of val.
 func (u *Union) IsCompatible(val any) bool {
+	envelope, ok := val.(map[string]any)
+	if !ok || len(envelope) != 2 {
+		return false
+	}
+	tag, ok := envelope[u.GetTypeKey()].(string)
+	if !ok {
+		return false
+	}
+	value, ok := envelope[u.GetValueKey()]
+	if !ok {
+		return false
+	}
 	for _, nat := range u.Values {
-		if nat.Attribute.Type.IsCompatible(val) {
-			return true
+		if nat.Name == tag {
+			return nat.Attribute.Type.IsCompatible(value)
 		}
 	}
 	return false
 }
 
-// Example returns a random example value.
+// Example returns a canonical tagged-envelope example.
 func (u *Union) Example(r *ExampleGenerator) any {
 	if len(u.Values) == 0 {
 		return nil
@@ -662,7 +674,10 @@ func (u *Union) Example(r *ExampleGenerator) any {
 	// Derive the member value stream from the member name so the example
 	// only changes when the chosen member changes.
 	nat := u.Values[r.Int()%len(u.Values)]
-	return nat.Attribute.Example(r.Derived(nat.Name))
+	return map[string]any{
+		u.GetTypeKey():  nat.Name,
+		u.GetValueKey(): nat.Attribute.Example(r.Derived(nat.Name)),
+	}
 }
 
 // GetTypeKey returns the discriminator field name for JSON marshaling.

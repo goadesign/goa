@@ -47,6 +47,7 @@ func (s *Schema) createMergeItems(other *Schema) mergeItems {
 		{&s.Type, other.Type, s.Type == ""},
 		{&s.Ref, other.Ref, s.Ref == ""},
 		{&s.Items, other.Items, s.Items == nil},
+		{&s.AnyOf, other.AnyOf, s.AnyOf == nil},
 		{&s.DefaultValue, other.DefaultValue, s.DefaultValue == nil},
 		{&s.Title, other.Title, s.Title == ""},
 		{&s.Media, other.Media, s.Media == nil},
