@@ -460,6 +460,9 @@ type (
 		FieldName string
 		// FieldType is the Go type used in the union struct field and public API.
 		FieldType string
+		// Nilable is true when the Go branch value can be nil even though the
+		// canonical union value is required.
+		Nilable bool
 		// EmitPrimitiveAlias is true when the branch uses a generated primitive alias
 		// that must be declared in the same file as the union type.
 		EmitPrimitiveAlias bool
@@ -1136,6 +1139,7 @@ func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Lo
 			KindConst:          kindConst,
 			FieldName:          fieldName,
 			FieldType:          fieldType,
+			Nilable:            codegen.IsNilable(nat.Attribute.Type),
 			EmitPrimitiveAlias: emitPrimitiveAlias,
 			PrimitiveAliasType: primitiveAliasType,
 			TypeTag:            nat.Name,

@@ -113,8 +113,14 @@ func (u Result) Validate() error {
 			string(ResultKindU),
 		})
 	case ResultKindT:
+		if u.T == nil {
+			return goa.MissingFieldError("value", "Result")
+		}
 		return nil
 	case ResultKindU:
+		if u.U == nil {
+			return goa.MissingFieldError("value", "Result")
+		}
 		return nil
 	default:
 		return goa.InvalidEnumValueError("type", u.kind, []any{
@@ -158,6 +164,12 @@ func (u *Result) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Value) == 0 {
+		return goa.MissingFieldError("value", "Result")
+	}
+	if bytes.Equal(bytes.TrimSpace(raw.Value), []byte("null")) {
+		return goa.InvalidFieldTypeError("value", nil, "non-null JSON value")
+	}
 	switch raw.Type {
 	case string(ResultKindT):
 		var v *T
@@ -174,7 +186,13 @@ func (u *Result) UnmarshalJSON(data []byte) error {
 		u.kind = ResultKindU
 		u.U = v
 	default:
-		return fmt.Errorf("unexpected Result type %q", raw.Type)
+		if raw.Type == "" {
+			return goa.MissingFieldError("type", "Result")
+		}
+		return goa.InvalidEnumValueError("type", raw.Type, []any{
+			string(ResultKindT),
+			string(ResultKindU),
+		})
 	}
 	return nil
 }

@@ -63,6 +63,11 @@ func (u {{ .Name }}) Validate() error {
 		})
 	{{- range .Fields }}
 	case {{ .KindConst }}:
+		{{- if .Nilable }}
+		if u.{{ .FieldName }} == nil {
+			return goa.MissingFieldError({{ printf "%q" $.ValueKey }}, "{{ $.Name }}")
+		}
+		{{- end }}
 		return nil
 	{{- end }}
 	default:
@@ -108,6 +113,12 @@ func (u *{{ .Name }}) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &raw); err != nil {
 		return err
 	}
+	if len(raw.Value) == 0 {
+		return goa.MissingFieldError({{ printf "%q" .ValueKey }}, "{{ .Name }}")
+	}
+	if bytes.Equal(bytes.TrimSpace(raw.Value), []byte("null")) {
+		return goa.InvalidFieldTypeError({{ printf "%q" .ValueKey }}, nil, "non-null JSON value")
+	}
 	switch raw.Type {
 	{{- range .Fields }}
 	case string({{ .KindConst }}):
@@ -119,8 +130,14 @@ func (u *{{ .Name }}) UnmarshalJSON(data []byte) error {
 		u.{{ .FieldName }} = v
 	{{- end }}
 	default:
-		return fmt.Errorf("unexpected {{ .Name }} type %q", raw.Type)
+		if raw.Type == "" {
+			return goa.MissingFieldError({{ printf "%q" .TypeKey }}, "{{ .Name }}")
+		}
+		return goa.InvalidEnumValueError({{ printf "%q" .TypeKey }}, raw.Type, []any{
+			{{- range .Fields }}
+			string({{ .KindConst }}),
+			{{- end }}
+		})
 	}
 	return nil
 }
-

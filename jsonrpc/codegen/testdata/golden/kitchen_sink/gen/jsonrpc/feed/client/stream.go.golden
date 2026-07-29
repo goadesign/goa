@@ -129,7 +129,7 @@ func (s *WatchClientStream) Recv(ctx context.Context) (*feed.WatchResult, error)
 			}
 
 			if response.Error != nil {
-				return zero, fmt.Errorf("JSON-RPC error %d: %s", response.Error.Code, response.Error.Message)
+				return zero, response.Error
 			}
 			// Decode the final result
 			if response.Result == nil {
@@ -158,7 +158,7 @@ func (s *WatchClientStream) Recv(ctx context.Context) (*feed.WatchResult, error)
 
 			s.closed = true
 			if response.Error != nil {
-				return zero, fmt.Errorf("JSON-RPC error %d: %s", response.Error.Code, response.Error.Message)
+				return zero, response.Error
 			}
 			return zero, fmt.Errorf("unexpected error response")
 

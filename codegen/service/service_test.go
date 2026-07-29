@@ -173,6 +173,7 @@ func TestStructPkgPath_UnionImportsJSON(t *testing.T) {
 		require.NoError(t, s.Write(buf))
 	}
 	code := buf.String()
+	require.Contains(t, code, "\"bytes\"", "expected bytes import in generated file:\n%s", code)
 	require.Contains(t, code, "\"encoding/json\"", "expected encoding/json import in generated file:\n%s", code)
 }
 

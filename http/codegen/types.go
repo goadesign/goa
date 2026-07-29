@@ -85,6 +85,9 @@ func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *Ser
 		{Path: "unicode/utf8"},
 		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 	}
+	if len(data.UnionTypes) > 0 {
+		imports = append(imports, &codegen.ImportSpec{Path: "bytes"})
+	}
 	views := &codegen.ImportSpec{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg}
 	if svr {
 		imports = append(imports, codegen.GoaImport(""), views)

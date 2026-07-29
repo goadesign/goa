@@ -49,6 +49,7 @@ func ViewsFile(_ string, service *expr.ServiceExpr, services *ServicesData) *cod
 	}
 	if len(unions) > 0 {
 		imports = append(imports,
+			codegen.SimpleImport("bytes"),
 			codegen.SimpleImport("encoding/json"),
 			codegen.SimpleImport("fmt"),
 		)

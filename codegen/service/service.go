@@ -176,6 +176,7 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 	}
 	if len(svc.unions) > 0 {
 		imports = append(imports,
+			codegen.SimpleImport("bytes"),
 			codegen.SimpleImport("encoding/json"),
 			codegen.SimpleImport("fmt"),
 		)
@@ -257,7 +258,10 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			codegen.GoaImport(""),
 		}
 		if hasUnion {
-			imports = append(imports, codegen.SimpleImport("encoding/json"))
+			imports = append(imports,
+				codegen.SimpleImport("bytes"),
+				codegen.SimpleImport("encoding/json"),
+			)
 		}
 		h := codegen.Header("User types", codegen.Goify(filepath.Base(dir), false), imports)
 		sections := append([]*codegen.SectionTemplate{h}, secs...)

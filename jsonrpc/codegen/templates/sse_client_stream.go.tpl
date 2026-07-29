@@ -108,7 +108,7 @@ func (s *{{ .Method.VarName }}ClientStream) {{ .Method.ClientStream.RecvName }}(
 			}
 			
 			if response.Error != nil {
-				return zero, fmt.Errorf("JSON-RPC error %d: %s", response.Error.Code, response.Error.Message)
+				return zero, response.Error
 			}
 			
 			{{- if .Method.Result }}
@@ -144,7 +144,7 @@ func (s *{{ .Method.VarName }}ClientStream) {{ .Method.ClientStream.RecvName }}(
 			
 			s.closed = true
 			if response.Error != nil {
-				return zero, fmt.Errorf("JSON-RPC error %d: %s", response.Error.Code, response.Error.Message)
+				return zero, response.Error
 			}
 			return zero, fmt.Errorf("unexpected error response")
 			

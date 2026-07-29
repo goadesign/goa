@@ -41,6 +41,15 @@ func GoNativeTypeName(t expr.DataType) string {
 	}
 }
 
+// IsNilable reports whether the Go type generated for t can be nil.
+func IsNilable(t expr.DataType) bool {
+	return expr.IsObject(t) ||
+		expr.IsArray(t) ||
+		expr.IsMap(t) ||
+		t.Kind() == expr.BytesKind ||
+		t.Kind() == expr.AnyKind
+}
+
 // AttributeTags computes the struct field tags from the attribute's explicit
 // struct:tag:* metadata, ignoring struct:tag:json:name which only renames the
 // computed json tag (see AttributeTagsWithName).
