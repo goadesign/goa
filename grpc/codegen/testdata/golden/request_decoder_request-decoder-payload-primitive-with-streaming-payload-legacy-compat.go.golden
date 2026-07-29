@@ -1,0 +1,70 @@
+// DecodeMethodClientStreamingRPCWithPayloadLegacyCompatRequest decodes
+// requests sent to "ServiceClientStreamingRPCWithPayloadLegacyCompat" service
+// "MethodClientStreamingRPCWithPayloadLegacyCompat" endpoint.
+func DecodeMethodClientStreamingRPCWithPayloadLegacyCompatRequest(ctx context.Context, v any, md metadata.MD) (any, error) {
+	if !goagrpc.UsesStreamEnvelope(ctx) {
+		return decodeMethodClientStreamingRPCWithPayloadLegacyCompatLegacyRequest(ctx, md)
+	}
+	var (
+		message *service_client_streaming_rpc_with_payload_legacy_compatpb.MethodClientStreamingRPCWithPayloadLegacyCompatRequest
+		ok      bool
+	)
+	{
+		if v == nil {
+			return nil, goa.MissingFieldError("initial_payload", "stream")
+		}
+		var envelope *service_client_streaming_rpc_with_payload_legacy_compatpb.MethodClientStreamingRPCWithPayloadLegacyCompatStreamingRequest
+		if envelope, ok = v.(*service_client_streaming_rpc_with_payload_legacy_compatpb.MethodClientStreamingRPCWithPayloadLegacyCompatStreamingRequest); !ok {
+			return nil, goagrpc.ErrInvalidType("ServiceClientStreamingRPCWithPayloadLegacyCompat", "MethodClientStreamingRPCWithPayloadLegacyCompat", "*service_client_streaming_rpc_with_payload_legacy_compatpb.MethodClientStreamingRPCWithPayloadLegacyCompatStreamingRequest", v)
+		}
+		switch body := envelope.Body.(type) {
+		case *service_client_streaming_rpc_with_payload_legacy_compatpb.MethodClientStreamingRPCWithPayloadLegacyCompatStreamingRequest_InitialPayload:
+			if body.InitialPayload == nil {
+				return nil, goa.MissingFieldError("initial_payload", "stream")
+			}
+			message = body.InitialPayload
+		case *service_client_streaming_rpc_with_payload_legacy_compatpb.MethodClientStreamingRPCWithPayloadLegacyCompatStreamingRequest_StreamItem:
+			return nil, goa.InvalidFieldTypeError("body", "stream_item", "initial_payload")
+		default:
+			return nil, goa.MissingFieldError("initial_payload", "stream")
+		}
+	}
+	var payload int
+	{
+		payload = NewMethodClientStreamingRPCWithPayloadLegacyCompatPayload(message)
+	}
+	return payload, nil
+}
+
+// decodeMethodClientStreamingRPCWithPayloadLegacyCompatLegacyRequest decodes
+// requests sent to "ServiceClientStreamingRPCWithPayloadLegacyCompat" service
+// "MethodClientStreamingRPCWithPayloadLegacyCompat" endpoint by clients that
+// speak the legacy stream protocol which carries the method payload in gRPC
+// request metadata.
+func decodeMethodClientStreamingRPCWithPayloadLegacyCompatLegacyRequest(ctx context.Context, md metadata.MD) (any, error) {
+	var (
+		goaPayload int
+		err        error
+	)
+	{
+		if vals := md.Get("goa_payload"); len(vals) == 0 {
+			err = goa.MergeErrors(err, goa.MissingFieldError("goa_payload", "metadata"))
+		} else {
+			goaPayloadRaw := vals[0]
+
+			v, err2 := strconv.ParseInt(goaPayloadRaw, 10, strconv.IntSize)
+			if err2 != nil {
+				err = goa.MergeErrors(err, goa.InvalidFieldTypeError("goaPayload", goaPayloadRaw, "integer"))
+			}
+			goaPayload = int(v)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	var payload int
+	{
+		payload = goaPayload
+	}
+	return payload, nil
+}

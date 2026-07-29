@@ -264,6 +264,18 @@ var ClientStreamingRPCWithPayloadDSL = func() {
 	})
 }
 
+var ClientStreamingRPCWithPayloadLegacyCompatDSL = func() {
+	Service("ServiceClientStreamingRPCWithPayloadLegacyCompat", func() {
+		Method("MethodClientStreamingRPCWithPayloadLegacyCompat", func() {
+			Meta("grpc:stream:compat", "v1")
+			Payload(Int)
+			StreamingPayload(Int)
+			Result(String)
+			GRPC(func() {})
+		})
+	})
+}
+
 var ClientStreamingRPCWithUnionPayloadDSL = func() {
 	var VersionRef = Type("VersionRef", func() {
 		OneOf("ref_type", func() {
@@ -326,6 +338,42 @@ var BidirectionalStreamingRPCWithPayloadDSL = func() {
 			StreamingPayload(Int)
 			StreamingResult(UInt)
 			GRPC(func() {})
+		})
+	})
+}
+
+var BidirectionalStreamingRPCWithPayloadLegacyCompatDSL = func() {
+	var PT = Type("Payload", func() {
+		Field(1, "a", Int)
+		Field(2, "b", String)
+	})
+	Service("ServiceBidirectionalStreamingRPCWithPayloadLegacyCompat", func() {
+		Method("MethodBidirectionalStreamingRPCWithPayloadLegacyCompat", func() {
+			Meta("grpc:stream:compat", "v1")
+			Payload(PT)
+			StreamingPayload(Int)
+			StreamingResult(UInt)
+			GRPC(func() {})
+		})
+	})
+}
+
+var BidirectionalStreamingRPCWithMetadataLegacyCompatDSL = func() {
+	var PT = Type("Payload", func() {
+		Field(1, "a", Int)
+		Field(2, "b", String)
+	})
+	Service("ServiceBidirectionalStreamingRPCWithMetadataLegacyCompat", func() {
+		Method("MethodBidirectionalStreamingRPCWithMetadataLegacyCompat", func() {
+			Meta("grpc:stream:compat", "v1")
+			Payload(PT)
+			StreamingPayload(Int)
+			StreamingResult(UInt)
+			GRPC(func() {
+				Metadata(func() {
+					Attribute("b")
+				})
+			})
 		})
 	})
 }

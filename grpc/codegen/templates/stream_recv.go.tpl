@@ -1,6 +1,20 @@
 {{ comment .RecvDesc }}
 func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvRef }}, error) {
 	var res {{ .RecvRef }}
+	{{- if and (eq .Type "server") .Endpoint.Request.LegacyDecode }}
+	if s.legacy {
+		v := &{{ .RecvConvert.SrcName }}{}
+		if err := s.stream.RecvMsg(v); err != nil {
+			return res, err
+		}
+		{{- if .RecvConvert.Validation }}
+		if err := {{ .RecvConvert.Validation.Name }}(v); err != nil {
+			return res, err
+		}
+		{{- end }}
+		return {{ .RecvConvert.Init.Name }}({{ range .RecvConvert.Init.Args }}{{ .Name }}, {{ end }}), nil
+	}
+	{{- end }}
 	{{- if and (eq .Type "server") .Endpoint.Request.StreamEnvelope }}
 	message, err := s.stream.{{ .RecvName }}()
 	{{- else }}

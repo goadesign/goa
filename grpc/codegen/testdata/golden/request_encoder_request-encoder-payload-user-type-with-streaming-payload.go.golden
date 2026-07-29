@@ -6,6 +6,7 @@ func EncodeMethodBidirectionalStreamingRPCWithPayloadRequest(ctx context.Context
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceBidirectionalStreamingRPCWithPayload", "MethodBidirectionalStreamingRPCWithPayload", "*servicebidirectionalstreamingrpcwithpayload.Payload", v)
 	}
+	(*md).Append(goagrpc.StreamProtocolMetadataKey, goagrpc.StreamProtocolEnvelope)
 	message := NewProtoMethodBidirectionalStreamingRPCWithPayloadRequest(payload)
 	return &service_bidirectional_streaming_rpc_with_payloadpb.MethodBidirectionalStreamingRPCWithPayloadStreamingRequest{
 		Body: &service_bidirectional_streaming_rpc_with_payloadpb.MethodBidirectionalStreamingRPCWithPayloadStreamingRequest_InitialPayload{

@@ -187,3 +187,45 @@ func TestStreamingPayloadEnvelopeWithUnionPayload(t *testing.T) {
 	fpath := codegen.CreateTempFile(t, proto)
 	assert.NoError(t, protoc(defaultProtocCmd, fpath, nil))
 }
+
+func TestStreamingPayloadLegacyCompat(t *testing.T) {
+	root := RunGRPCDSL(t, testdata.BidirectionalStreamingRPCWithPayloadLegacyCompatDSL)
+	services := CreateGRPCServices(root)
+
+	serverfs := ServerFiles("", services)
+	require.Len(t, serverfs, 2)
+	clientfs := ClientFiles("", services)
+	require.Len(t, clientfs, 2)
+
+	// The server stream tracks the protocol spoken by the client.
+	structCode := codegen.SectionsCode(t, serverfs[0].Section("server-stream-struct-type"))
+	assert.Contains(t, structCode, "legacy bool")
+
+	// The server stream reads raw stream item frames from legacy clients.
+	serverRecv := codegen.SectionsCode(t, serverfs[0].Section("server-stream-recv"))
+	assert.Contains(t, serverRecv, "if s.legacy {")
+	assert.Contains(t, serverRecv, "RecvMsg")
+
+	// The handler only waits for an initial payload frame from envelope clients.
+	serverInterface := codegen.SectionsCode(t, serverfs[0].Section("server-grpc-interface"))
+	assert.Contains(t, serverInterface, "goagrpc.UsesStreamEnvelope(ctx)")
+	assert.Contains(t, serverInterface, "legacy:")
+
+	// The request decoder dispatches to a legacy decoder that reads the
+	// payload from request metadata.
+	requestDecoder := codegen.SectionsCode(t, serverfs[1].Section("request-decoder"))
+	assert.Contains(t, requestDecoder, "LegacyRequest(ctx, md)")
+	assert.Contains(t, requestDecoder, `md.Get("a")`)
+	assert.Contains(t, requestDecoder, "PayloadFromMetadata(")
+
+	// Generated clients declare the envelope protocol in request metadata.
+	requestEncoder := codegen.SectionsCode(t, clientfs[1].Section("request-encoder"))
+	assert.Contains(t, requestEncoder, "goagrpc.StreamProtocolMetadataKey")
+
+	// The wire contract for envelope clients is unchanged.
+	protofs := ProtoFiles("", services)
+	require.Len(t, protofs, 1)
+	proto := sectionCode(t, protofs[0].SectionTemplates[1:]...)
+	assert.Contains(t, proto, "oneof body")
+	assert.Contains(t, proto, "initial_payload")
+}
