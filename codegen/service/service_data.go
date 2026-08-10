@@ -900,10 +900,10 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	}
 
 	// Collect union sum-type definitions for the service.
-	unionByHash := make(map[string]*UnionTypeData)
+	unionByPackage := make(map[string]*UnionTypeData)
 	seen = make(map[string]struct{})
 	collectUnions := func(att *expr.AttributeExpr, loc *codegen.Location) {
-		collectUnionTypes(att, scope, loc, unionByHash, seen, false)
+		collectUnionTypes(att, scope, loc, unionByPackage, seen, false)
 	}
 	for _, t := range types {
 		collectUnions(&expr.AttributeExpr{Type: t.Type}, t.Loc)
@@ -925,12 +925,15 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 			collectUnions(e.AttributeExpr, codegen.UserTypeLocation(e.Type))
 		}
 	}
-	unions := make([]*UnionTypeData, 0, len(unionByHash))
-	for _, u := range unionByHash {
+	unions := make([]*UnionTypeData, 0, len(unionByPackage))
+	for _, u := range unionByPackage {
 		unions = append(unions, u)
 	}
 	sort.Slice(unions, func(i, j int) bool {
-		return unions[i].Name < unions[j].Name
+		if unions[i].Name != unions[j].Name {
+			return unions[i].Name < unions[j].Name
+		}
+		return unionPackageKey(unions[i].Loc, false) < unionPackageKey(unions[j].Loc, false)
 	})
 
 	desc := service.Description
@@ -1064,10 +1067,12 @@ func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[str
 }
 
 // collectUnionTypes traverses the attribute to gather all union sum-type
-// definitions referenced by the service. It records each union by its hash to
-// avoid generating duplicate types. When view is true the provided location is
-// used for all nested user types so that unions are generated in the views
-// package and refer to view-local types (preventing import cycles).
+// definitions referenced by the service. It records each union by its hash and
+// generated package so Extend can copy one union into multiple packages while
+// duplicate uses within one package still share a definition. When view is true
+// the provided location is used for all nested user types so that unions are
+// generated in the views package and refer to view-local types (preventing
+// import cycles).
 func collectUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, loc *codegen.Location, unions map[string]*UnionTypeData, seen map[string]struct{}, view bool) {
 	if att == nil || att.Type == expr.Empty {
 		return
@@ -1093,14 +1098,27 @@ func collectUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, loc *c
 		collectUnionTypes(dt.KeyType, scope, loc, unions, seen, view)
 		collectUnionTypes(dt.ElemType, scope, loc, unions, seen, view)
 	case *expr.Union:
-		hash := dt.Hash()
-		if _, ok := unions[hash]; !ok {
-			unions[hash] = buildUnionTypeData(dt, scope, loc, view)
+		key := dt.Hash() + "\x00" + unionPackageKey(loc, view)
+		if _, ok := unions[key]; !ok {
+			unions[key] = buildUnionTypeData(dt, scope, loc, view)
 		}
 		for _, nat := range dt.Values {
 			collectUnionTypes(nat.Attribute, scope, loc, unions, seen, view)
 		}
 	}
+}
+
+// unionPackageKey identifies the generated package that owns a union. A nil
+// location is the current service package; viewed unions share the views
+// package regardless of locations inherited from service types.
+func unionPackageKey(loc *codegen.Location, view bool) string {
+	if view {
+		return "views"
+	}
+	if loc == nil {
+		return ""
+	}
+	return loc.RelImportPath
 }
 
 // buildUnionTypeData creates the data needed to generate a sum-type union

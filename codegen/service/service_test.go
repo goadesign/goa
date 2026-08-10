@@ -214,3 +214,39 @@ func TestStructPkgPath_UnionJSONFieldBranchesGenerateAliases(t *testing.T) {
 	require.True(t, hasValuesAFile, "expected generated alias file in struct:pkg:path package: gen/types/values_a.go")
 	require.True(t, hasValuesBFile, "expected generated alias file in struct:pkg:path package: gen/types/values_b.go")
 }
+
+func TestStructPkgPath_ExtendedUnionGeneratedInEachOwningPackage(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.PkgPathExtendedUnionDSL)
+	services := NewServicesData(root)
+	require.Len(t, root.Services, 1)
+
+	files := Files("goa.design/goa/example", root.Services[0], services, make(map[string][]string))
+	require.GreaterOrEqual(t, len(files), 2)
+
+	var serviceFile, sharedTypeFile *codegen.File
+	for _, f := range files {
+		switch {
+		case strings.HasSuffix(f.Path, filepath.Join("gen", "pkg_path_extended_union", "service.go")):
+			serviceFile = f
+		case strings.HasSuffix(f.Path, filepath.Join("gen", "types", "equipment_scope.go")):
+			sharedTypeFile = f
+		}
+	}
+	require.NotNil(t, serviceFile)
+	require.NotNil(t, sharedTypeFile)
+
+	render := func(file *codegen.File) string {
+		buf := new(bytes.Buffer)
+		for _, section := range file.SectionTemplates {
+			require.NoError(t, section.Write(buf))
+		}
+		code, err := format.Source(buf.Bytes())
+		require.NoError(t, err, buf.String())
+		return string(code)
+	}
+	serviceCode := render(serviceFile)
+	sharedTypeCode := render(sharedTypeFile)
+	require.Contains(t, serviceCode, "Scope Scope")
+	require.Contains(t, serviceCode, "type Scope struct")
+	require.Contains(t, sharedTypeCode, "type Scope struct")
+}
