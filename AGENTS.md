@@ -103,6 +103,13 @@ make test          # Run tests
 cd cmd/goa && go install .  # Install CLI locally
 ```
 
+### Releases
+
+- For every Goa release or version bump, follow
+  [`.cursor/skills/goa-release/SKILL.md`](.cursor/skills/goa-release/SKILL.md).
+- Do not edit `pkg/version.go` or the README version badge by hand during the standard release
+  workflow; `make release` owns those changes.
+
 ### Code Generation Behavior
 
 - After modifying goa source, `goa gen` and `goa example` automatically compile and use your changes—no manual rebuild needed.
