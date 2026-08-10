@@ -65,7 +65,6 @@
         "operationId": "SSEAllFieldsService#SSEAllFieldsMethod",
         "parameters": [
           {
-            "allowEmptyValue": true,
             "example": "Non sed saepe voluptatem.",
             "in": "header",
             "name": "Last-Event-ID",

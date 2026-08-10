@@ -16,7 +16,6 @@ paths:
             parameters:
                 - name: Last-Event-ID
                   in: header
-                  allowEmptyValue: true
                   schema:
                     type: string
                     example: Natus magni voluptates consequatur suscipit.

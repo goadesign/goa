@@ -27,7 +27,6 @@
         "operationId": "SSERequestIDService#SSERequestIDMethod",
         "parameters": [
           {
-            "allowEmptyValue": true,
             "example": "Non sed saepe voluptatem.",
             "in": "header",
             "name": "Last-Event-ID",

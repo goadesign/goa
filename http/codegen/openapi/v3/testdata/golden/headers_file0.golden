@@ -11,7 +11,6 @@
         "operationId": "test service#test endpoint",
         "parameters": [
           {
-            "allowEmptyValue": true,
             "example": 8568805688952666000,
             "in": "header",
             "name": "foo",
@@ -22,7 +21,6 @@
             }
           },
           {
-            "allowEmptyValue": true,
             "example": 8380651525843656000,
             "in": "header",
             "name": "bar",
