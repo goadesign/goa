@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -73,5 +74,23 @@ func TestCmdLine(t *testing.T) {
 		if debug != c.ExpectedDebug {
 			t.Errorf("%s: Expected debug to be %v but got %v", k, c.ExpectedDebug, debug)
 		}
+	}
+}
+
+func TestGeneratorWriteCreatesAbsoluteTemporaryDirectory(t *testing.T) {
+	generator := &Generator{
+		Command:       "gen",
+		DesignPath:    "example.com/design",
+		Output:        t.TempDir(),
+		DesignVersion: 3,
+		bin:           "goa",
+	}
+	t.Cleanup(generator.Remove)
+
+	if err := generator.Write(false); err != nil {
+		t.Errorf("Write() error = %v", err)
+	}
+	if !filepath.IsAbs(generator.tmpDir) {
+		t.Errorf("Write() temporary directory = %q, want absolute path", generator.tmpDir)
 	}
 }
