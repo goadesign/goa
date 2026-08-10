@@ -106,13 +106,13 @@ func NewGenerator(cmd, path, output string, debug bool) *Generator {
 func (g *Generator) Write(_ bool) error {
 	var tmpDir string
 	{
-		wd := "."
-		if cwd, err := os.Getwd(); err != nil {
-			wd = cwd
+		wd, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("get current directory: %w", err)
 		}
 		tmp, err := os.MkdirTemp(wd, "goa")
 		if err != nil {
-			return err
+			return fmt.Errorf("create generator directory: %w", err)
 		}
 		tmpDir = tmp
 	}
@@ -165,7 +165,7 @@ func (g *Generator) Compile(debug bool) error {
 	// We first need to go get the generated package to make sure that all
 	// dependencies are added to go.sum prior to compiling.
 	startLoad := time.Now()
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName}, fmt.Sprintf(".%c%s", filepath.Separator, g.tmpDir))
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName}, g.tmpDir)
 	if err != nil {
 		return err
 	}
