@@ -48,7 +48,7 @@ func (u Values) Kind() ValuesKind {
 	return u.kind
 }
 
-// NewValuesDevice constructs a Values with the Device branch set.
+// NewValuesDevice constructs Values with the Device branch set.
 func NewValuesDevice(v alias.Alias) Values {
 	return Values{
 		kind:   ValuesKindDevice,
@@ -70,7 +70,7 @@ func (u *Values) SetDevice(v alias.Alias) {
 	u.Device = v
 }
 
-// NewValuesMetric constructs a Values with the Metric branch set.
+// NewValuesMetric constructs Values with the Metric branch set.
 func NewValuesMetric(v alias.Alias) Values {
 	return Values{
 		kind:   ValuesKindMetric,

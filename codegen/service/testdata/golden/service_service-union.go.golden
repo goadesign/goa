@@ -62,7 +62,7 @@ func (u Values) Kind() ValuesKind {
 	return u.kind
 }
 
-// NewValuesInt constructs a Values with the Int branch set.
+// NewValuesInt constructs Values with the Int branch set.
 func NewValuesInt(v ValuesInt) Values {
 	return Values{
 		kind: ValuesKindInt,
@@ -84,7 +84,7 @@ func (u *Values) SetInt(v ValuesInt) {
 	u.Int = v
 }
 
-// NewValuesString constructs a Values with the String branch set.
+// NewValuesString constructs Values with the String branch set.
 func NewValuesString(v ValuesString) Values {
 	return Values{
 		kind:   ValuesKindString,
@@ -106,7 +106,7 @@ func (u *Values) SetString(v ValuesString) {
 	u.String = v
 }
 
-// NewValuesBoolean constructs a Values with the Boolean branch set.
+// NewValuesBoolean constructs Values with the Boolean branch set.
 func NewValuesBoolean(v ValuesBoolean) Values {
 	return Values{
 		kind:    ValuesKindBoolean,
@@ -128,7 +128,7 @@ func (u *Values) SetBoolean(v ValuesBoolean) {
 	u.Boolean = v
 }
 
-// NewValuesBytes constructs a Values with the Bytes branch set.
+// NewValuesBytes constructs Values with the Bytes branch set.
 func NewValuesBytes(v ValuesBytes) Values {
 	return Values{
 		kind:  ValuesKindBytes,
