@@ -179,6 +179,34 @@ var PkgPathUnionJSONFieldDSL = func() {
 	})
 }
 
+// PkgPathExtendedUnionDSL tests that extending a relocated type copies its
+// nested union into the package that owns the extending type.
+var PkgPathExtendedUnionDSL = func() {
+	var ScopeDescription = Type("ScopeDescription", String, func() {
+		Meta("struct:pkg:path", "types")
+	})
+	var EquipmentAliases = Type("EquipmentAliases", ArrayOf(String), func() {
+		Meta("struct:pkg:path", "types")
+	})
+	var EquipmentScope = Type("EquipmentScope", func() {
+		Meta("struct:pkg:path", "types")
+		Meta("type:generate:force")
+		OneOf("Scope", func() {
+			Attribute("Description", ScopeDescription)
+			Attribute("DeviceAliases", EquipmentAliases)
+		})
+	})
+	var ToolPayload = Type("ToolPayload", func() {
+		Extend(EquipmentScope)
+		Attribute("query", String)
+	})
+	Service("PkgPathExtendedUnion", func() {
+		Method("M", func() {
+			Payload(ToolPayload)
+		})
+	})
+}
+
 var WithDefaultDSL = func() {
 	Service("WithDefault", func() {
 		Method("A", func() {
