@@ -23,7 +23,7 @@ var MethodNames = [1]string{"A"}
 
 // AUnion is the payload type of the UnionService service A method.
 type AUnion struct {
-	Values Values
+	Values *Values
 }
 
 type ValuesBoolean bool

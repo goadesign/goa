@@ -50,6 +50,17 @@ func IsNilable(t expr.DataType) bool {
 		t.Kind() == expr.AnyKind
 }
 
+// goFieldIsPointer reports whether a field in a generated Goa Go struct uses a
+// pointer. Optional unions are pointers so nil represents omission, while a
+// present union must select one of its declared values.
+func goFieldIsPointer(parent *expr.AttributeExpr, name string, ptr, useDefault bool) bool {
+	field := expr.AsObject(parent.Type).Attribute(name)
+	return expr.IsObject(field.Type) ||
+		expr.IsUnion(field.Type) && !parent.IsRequired(name) ||
+		parent.IsPrimitivePointer(name, useDefault) ||
+		ptr && expr.IsPrimitive(field.Type) && field.Type.Kind() != expr.AnyKind && field.Type.Kind() != expr.BytesKind
+}
+
 // AttributeTags computes the struct field tags from the attribute's explicit
 // struct:tag:* metadata, ignoring struct:tag:json:name which only renames the
 // computed json tag (see AttributeTagsWithName).

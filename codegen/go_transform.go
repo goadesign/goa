@@ -299,6 +299,14 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			// handling keep using the unwrapped field variables.
 			dispatchSrcVar, dispatchTgtVar, dispatchNewVar := srcVar, tgtVar, false
 			prelude := dir.apply(&dispatchSrcVar, &dispatchTgtVar, &dispatchNewVar)
+			var postlude string
+			if expr.IsUnion(tgtc.Type) && ta.TargetCtx.IsFieldPointer(n, tgtMatt.AttributeExpr) {
+				unionVar := Goify(tgtMatt.ElemName(n), false) + "Value"
+				unionRef := ta.TargetCtx.Scope.Name(tgtc, ta.TargetCtx.Pkg(tgtc), false, ta.TargetCtx.UseDefault)
+				prelude += fmt.Sprintf("var %s %s\n", unionVar, unionRef)
+				dispatchTgtVar = unionVar
+				postlude = fmt.Sprintf("%s = &%s\n", tgtVar, unionVar)
+			}
 			_, ok := srcc.Type.(expr.UserType)
 			switch {
 			case expr.IsArray(srcc.Type):
@@ -327,7 +335,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				code, err = TransformAttribute(srcc, tgtc, dispatchSrcVar, dispatchTgtVar, dispatchNewVar, ta)
 			}
 			if code != "" {
-				code = prelude + code
+				code = prelude + code + postlude
 			}
 		}
 		if err != nil {
@@ -344,7 +352,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 		var guarded bool
 		if h != nil && h.GuardCondition != nil {
 			var cond string
-			if cond, guarded = h.GuardCondition(srcc, srcVar, srcMatt.IsRequired(n), ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr)); guarded && cond != "" && code != "" {
+			if cond, guarded = h.GuardCondition(srcc, srcVar, srcMatt.IsRequired(n), ta.SourceCtx.IsFieldPointer(n, srcMatt.AttributeExpr)); guarded && cond != "" && code != "" {
 				code = fmt.Sprintf("%s\t%s}\n", cond, code)
 			}
 		}
@@ -358,7 +366,11 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			if code != "" && checkNil {
 				cond := fmt.Sprintf("if %s != nil {\n", srcVar)
 				if expr.IsUnion(srcc.Type) {
-					cond = fmt.Sprintf("if %s.Kind() != \"\" {\n", srcVar)
+					if ta.SourceCtx.IsFieldPointer(n, srcMatt.AttributeExpr) {
+						cond = fmt.Sprintf("if %s != nil && %s.Kind() != \"\" {\n", srcVar, srcVar)
+					} else {
+						cond = fmt.Sprintf("if %s.Kind() != \"\" {\n", srcVar)
+					}
 				}
 				code = fmt.Sprintf("%s\t%s}", cond, code)
 				if expr.IsArray(srcc.Type) && srcMatt.IsRequired(n) {

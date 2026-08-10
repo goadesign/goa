@@ -265,8 +265,18 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 		if code == "" {
 			return ""
 		}
-		if expr.IsArray(att.Type) || expr.IsMap(att.Type) || expr.IsUnion(att.Type) {
+		if expr.IsArray(att.Type) || expr.IsMap(att.Type) {
 			return code
+		}
+		if expr.IsUnion(att.Type) {
+			if req {
+				return code
+			}
+			cond := fmt.Sprintf("if %s != nil {\n", target)
+			if strings.HasPrefix(code, cond) {
+				return code
+			}
+			return fmt.Sprintf("%s%s\n}", cond, code)
 		}
 		if !ctx.Pointer && (req || (att.DefaultValue != nil && ctx.UseDefault)) {
 			return code

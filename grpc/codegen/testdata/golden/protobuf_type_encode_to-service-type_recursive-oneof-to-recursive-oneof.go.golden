@@ -3,19 +3,21 @@ func transform() {
 		String: source.String_,
 	}
 	if source.RecursiveOneOf != nil {
+		var recursiveOneOfValue proto.RecursiveOneOf2
 		switch val := source.RecursiveOneOf.(type) {
 		case *proto.RecursiveOneOf_Integer:
 			{
-				u := target.RecursiveOneOf
+				u := recursiveOneOfValue
 				u.SetInteger(proto.RecursiveOneOfInteger(val.Integer))
-				target.RecursiveOneOf = u
+				recursiveOneOfValue = u
 			}
 		case *proto.RecursiveOneOf_Recurse:
 			{
-				u := target.RecursiveOneOf
+				u := recursiveOneOfValue
 				u.SetRecurse(protobufProtoRecursiveOneOfToProtoRecursiveOneOf(val.Recurse))
-				target.RecursiveOneOf = u
+				recursiveOneOfValue = u
 			}
 		}
+		target.RecursiveOneOf = &recursiveOneOfValue
 	}
 }

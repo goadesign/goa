@@ -195,3 +195,27 @@ func TestGoTransform(t *testing.T) {
 		})
 	}
 }
+
+func TestGoTransformOptionalUnionField(t *testing.T) {
+	union := &expr.Union{
+		TypeName: "Scope",
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "description", Attribute: &expr.AttributeExpr{Type: expr.String}},
+			{Name: "aliases", Attribute: &expr.AttributeExpr{Type: &expr.Array{
+				ElemType: &expr.AttributeExpr{Type: expr.String},
+			}}},
+		},
+	}
+	object := &expr.Object{
+		{Name: "scope", Attribute: &expr.AttributeExpr{Type: union}},
+	}
+	attribute := &expr.AttributeExpr{Type: object}
+	scope := NewNameScope()
+	ctx := NewAttributeContext(false, false, true, "", scope)
+
+	code, _, err := GoTransform(attribute, attribute, "source", "target", ctx, ctx, "", true)
+	require.NoError(t, err)
+	require.Contains(t, code, `if source.Scope != nil && source.Scope.Kind() != "" {`)
+	require.Contains(t, code, "var scopeValue Scope")
+	require.Contains(t, code, "target.Scope = &scopeValue")
+}

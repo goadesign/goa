@@ -112,6 +112,9 @@ func protoHooks(proto bool, targetCtx *codegen.AttributeContext) *codegen.Transf
 				return "", true
 			}
 			if proto && expr.IsUnion(src.Type) {
+				if srcPtr {
+					return fmt.Sprintf("if %s != nil && %s.Kind() != \"\" {\n", srcVar, srcVar), true
+				}
 				return fmt.Sprintf("if %s.Kind() != \"\" {\n", srcVar), true
 			}
 			return fmt.Sprintf("if %s != nil {\n", srcVar), true

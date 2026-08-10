@@ -82,7 +82,7 @@ type (
 		// "if p.Name != nil {\n". src is the (possibly normalized)
 		// field attribute, srcVar the source field variable, required
 		// reports whether the field is required and srcPtr whether the
-		// source field holds a primitive pointer. An empty condition
+		// source field is pointer-backed. An empty condition
 		// with ok true means the field transformation must not be
 		// guarded. ok must be false to use the engine default policy
 		// (the gRPC generator always guards non-primitives because

@@ -246,7 +246,7 @@ func TestStructPkgPath_ExtendedUnionGeneratedInEachOwningPackage(t *testing.T) {
 	}
 	serviceCode := render(serviceFile)
 	sharedTypeCode := render(sharedTypeFile)
-	require.Contains(t, serviceCode, "Scope Scope")
+	require.Contains(t, serviceCode, "Scope *Scope")
 	require.Contains(t, serviceCode, "type Scope struct")
 	require.Contains(t, sharedTypeCode, "type Scope struct")
 }
