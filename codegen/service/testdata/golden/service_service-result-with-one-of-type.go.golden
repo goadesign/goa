@@ -60,7 +60,7 @@ func (u Result) Kind() ResultKind {
 	return u.kind
 }
 
-// NewResultT constructs a Result with the t branch set.
+// NewResultT constructs Result with the t branch set.
 func NewResultT(v *T) Result {
 	return Result{
 		kind: ResultKindT,
@@ -82,7 +82,7 @@ func (u *Result) SetT(v *T) {
 	u.T = v
 }
 
-// NewResultU constructs a Result with the u branch set.
+// NewResultU constructs Result with the u branch set.
 func NewResultU(v *U) Result {
 	return Result{
 		kind: ResultKindU,

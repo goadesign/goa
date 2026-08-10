@@ -56,7 +56,7 @@ func (u Values) Kind() ValuesKind {
 	return u.kind
 }
 
-// NewValuesA constructs a Values with the a branch set.
+// NewValuesA constructs Values with the a branch set.
 func NewValuesA(v *TypeA) Values {
 	return Values{
 		kind: ValuesKindA,
@@ -78,7 +78,7 @@ func (u *Values) SetA(v *TypeA) {
 	u.A = v
 }
 
-// NewValuesB constructs a Values with the b branch set.
+// NewValuesB constructs Values with the b branch set.
 func NewValuesB(v *TypeB) Values {
 	return Values{
 		kind: ValuesKindB,
