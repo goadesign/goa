@@ -215,7 +215,8 @@ func TestGoTransformOptionalUnionField(t *testing.T) {
 
 	code, _, err := GoTransform(attribute, attribute, "source", "target", ctx, ctx, "", true)
 	require.NoError(t, err)
-	require.Contains(t, code, `if source.Scope != nil && source.Scope.Kind() != "" {`)
+	require.Contains(t, code, `if source.Scope != nil {`)
+	require.NotContains(t, code, `source.Scope.Kind() != ""`)
 	require.Contains(t, code, "var scopeValue Scope")
 	require.Contains(t, code, "target.Scope = &scopeValue")
 }

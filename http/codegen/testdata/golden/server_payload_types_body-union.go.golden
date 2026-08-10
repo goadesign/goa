@@ -2,7 +2,7 @@
 // endpoint payload.
 func NewMethodBodyUnionUnion(body *MethodBodyUnionRequestBody) *servicebodyunion.Union {
 	v := &servicebodyunion.Union{}
-	if body.Values != nil && body.Values.Kind() != "" {
+	if body.Values != nil {
 		var valuesValue servicebodyunion.Values
 		switch string(body.Values.Kind()) {
 		case "String":
