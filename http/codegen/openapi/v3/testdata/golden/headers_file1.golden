@@ -15,7 +15,6 @@ paths:
             parameters:
                 - name: foo
                   in: header
-                  allowEmptyValue: true
                   schema:
                     type: integer
                     example: 5490475434297746524
@@ -23,7 +22,6 @@ paths:
                   example: 8568805688952666114
                 - name: bar
                   in: header
-                  allowEmptyValue: true
                   schema:
                     type: integer
                     example: 1475422799873681639

@@ -63,7 +63,7 @@ func paramFor(att *expr.AttributeExpr, name, in string, required bool, rand *exp
 		Name:            name,
 		In:              in,
 		Description:     att.Description,
-		AllowEmptyValue: in != "path",
+		AllowEmptyValue: in == "query",
 		Required:        required,
 		Schema:          newSchemafier(rand).schemafy(att),
 		Extensions:      openapi.ExtensionsFromExpr(att.Meta),

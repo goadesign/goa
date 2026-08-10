@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
 	"goa.design/goa/v3/http/codegen/openapi/v3/testdata/dsls"
@@ -523,6 +524,61 @@ func TestTypesOnlyDifferByEnum(t *testing.T) {
 		jsoned, _ := json.Marshal(derefed)
 		t.Errorf("shared referenced type (%s) was: %v", name, string(jsoned))
 		return
+	}
+}
+
+func TestBuildBodyTypesPreservesPrimitiveAliasComponents(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		unauthorized := dsl.Type("Unauthorized", dsl.String, func() {
+			dsl.Description("Authentication is required.")
+		})
+		forbidden := dsl.Type("Forbidden", dsl.String, func() {
+			dsl.Description("Access is forbidden.")
+		})
+
+		dsl.Service("auth", func() {
+			dsl.Method("show", func() {
+				dsl.Error("unauthorized", unauthorized)
+				dsl.Error("forbidden", forbidden)
+				dsl.HTTP(func() {
+					dsl.GET("/")
+					dsl.Response("unauthorized", dsl.StatusUnauthorized)
+					dsl.Response("forbidden", dsl.StatusForbidden)
+				})
+			})
+		})
+	})
+
+	bodies, types := buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version32)
+	tests := []struct {
+		name        string
+		status      int
+		description string
+	}{
+		{name: "Unauthorized", status: 401, description: "Authentication is required."},
+		{name: "Forbidden", status: 403, description: "Access is forbidden."},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			responses := bodies["auth"]["show"].ResponseBodies[test.status]
+			if len(responses) != 1 {
+				t.Errorf("got %d response schemas, expected 1", len(responses))
+				return
+			}
+			wantRef := "#/components/schemas/" + test.name
+			if responses[0].Ref != wantRef {
+				t.Errorf("got response ref %q, expected %q", responses[0].Ref, wantRef)
+			}
+			schema, ok := types[test.name]
+			if !ok {
+				t.Errorf("missing component schema %q", test.name)
+				return
+			}
+			if schema.Description != test.description {
+				t.Errorf("got description %q, expected %q", schema.Description, test.description)
+			}
+		})
 	}
 }
 
