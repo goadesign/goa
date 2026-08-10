@@ -111,6 +111,7 @@ var MultiUnionMethodDSL = func() {
 			Attribute("a", TypeA)
 			Attribute("b", TypeB)
 		})
+		Required("Values")
 	})
 	Service("MultiUnionService", func() {
 		Method("MultiUnion", func() {

@@ -1,7 +1,10 @@
 func Validate() (err error) {
-	switch string(target.Response.Kind()) {
-	case "timestamp":
-		actual, _ := target.Response.AsTimestamp()
-		err = goa.MergeErrors(err, goa.ValidateFormat("target.response.value", string(actual), goa.FormatDateTime))
+	if target.Response != nil {
+		switch string(target.Response.Kind()) {
+		case "timestamp":
+			actual, _ := target.Response.AsTimestamp()
+			err = goa.MergeErrors(err, goa.ValidateFormat("target.response.value", string(actual), goa.FormatDateTime))
+		}
+
 	}
 }

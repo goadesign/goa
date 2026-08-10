@@ -23,7 +23,7 @@ var MethodNames = [1]string{"A"}
 
 // Scope is the payload type of the UnionWithAliasCrossPkg service A method.
 type Scope struct {
-	Values Values
+	Values *Values
 }
 
 // Values is a sum-type union.

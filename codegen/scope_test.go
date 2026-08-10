@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"strings"
 	"testing"
 
 	"goa.design/goa/v3/expr"
@@ -94,5 +95,32 @@ func TestNameScope_PeekUnique_MatchesUniqueWithoutMutation(t *testing.T) {
 	// PeekUnique must not mutate the scope.
 	if got, want := peek.Unique("a"), "a3"; got != want {
 		t.Fatalf("expected scope unchanged, got %q", got)
+	}
+}
+
+func TestNameScope_GoTypeDef_UsesPointersOnlyForOptionalUnions(t *testing.T) {
+	union := &expr.Union{
+		TypeName: "Scope",
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "description", Attribute: &expr.AttributeExpr{Type: expr.String}},
+			{Name: "aliases", Attribute: &expr.AttributeExpr{Type: &expr.Array{
+				ElemType: &expr.AttributeExpr{Type: expr.String},
+			}}},
+		},
+	}
+	attribute := &expr.AttributeExpr{
+		Type: &expr.Object{
+			{Name: "optional", Attribute: &expr.AttributeExpr{Type: union}},
+			{Name: "required", Attribute: &expr.AttributeExpr{Type: union}},
+		},
+		Validation: &expr.ValidationExpr{Required: []string{"required"}},
+	}
+
+	typeDef := NewNameScope().GoTypeDef(attribute, false, false)
+	if !strings.Contains(typeDef, "Optional *Scope") {
+		t.Fatalf("expected optional union field to be a pointer, got:\n%s", typeDef)
+	}
+	if !strings.Contains(typeDef, "Required Scope") {
+		t.Fatalf("expected required union field to remain a value, got:\n%s", typeDef)
 	}
 }

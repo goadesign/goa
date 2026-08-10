@@ -2,23 +2,25 @@
 // endpoint payload.
 func NewMethodBodyUnionUnion(body *MethodBodyUnionRequestBody) *servicebodyunion.Union {
 	v := &servicebodyunion.Union{}
-	if body.Values.Kind() != "" {
+	if body.Values != nil && body.Values.Kind() != "" {
+		var valuesValue servicebodyunion.Values
 		switch string(body.Values.Kind()) {
 		case "String":
 			actual, _ := body.Values.AsString()
 			obj := servicebodyunion.ValuesString(actual)
 
-			u := v.Values
+			u := valuesValue
 			u.SetString((servicebodyunion.ValuesString)(obj))
-			v.Values = u
+			valuesValue = u
 		case "Int":
 			actual, _ := body.Values.AsInt()
 			obj := servicebodyunion.ValuesInt(actual)
 
-			u := v.Values
+			u := valuesValue
 			u.SetInt((servicebodyunion.ValuesInt)(obj))
-			v.Values = u
+			valuesValue = u
 		}
+		v.Values = &valuesValue
 	}
 
 	return v

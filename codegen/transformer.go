@@ -225,6 +225,16 @@ func (a *AttributeContext) IsPrimitivePointer(name string, att *expr.AttributeEx
 	return att.IsPrimitivePointer(name, a.UseDefault)
 }
 
+// IsFieldPointer reports whether the generated Go field is pointer-backed in
+// this context.
+func (a *AttributeContext) IsFieldPointer(name string, att *expr.AttributeExpr) bool {
+	if _, ok := a.Scope.(*AttributeScope); !ok {
+		field := expr.AsObject(att.Type).Attribute(name)
+		return expr.IsPrimitive(field.Type) && a.IsPrimitivePointer(name, att)
+	}
+	return goFieldIsPointer(att, name, a.Pointer, a.UseDefault)
+}
+
 // Pkg returns the package name of the given type.
 func (a *AttributeContext) Pkg(att *expr.AttributeExpr) string {
 	if att == nil {

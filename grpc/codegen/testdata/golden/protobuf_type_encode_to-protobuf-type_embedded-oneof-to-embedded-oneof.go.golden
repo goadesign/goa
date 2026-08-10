@@ -2,7 +2,7 @@ func transform() {
 	target := &proto.EmbeddedOneOf{
 		String_: source.String,
 	}
-	if source.EmbeddedOneOf.Kind() != "" {
+	if source.EmbeddedOneOf != nil && source.EmbeddedOneOf.Kind() != "" {
 		switch string(source.EmbeddedOneOf.Kind()) {
 		case "string":
 			actual, _ := source.EmbeddedOneOf.AsString()

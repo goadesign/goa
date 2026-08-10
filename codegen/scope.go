@@ -167,9 +167,7 @@ func (s *NameScope) goTypeDefWithPkgOverride(att *expr.AttributeExpr, ptr, useDe
 			{
 				fn = GoifyAtt(at, name, true)
 				tdef = s.goTypeDefWithPkgOverride(at, ptr, useDefault, pkg, targetPkg)
-				if expr.IsObject(at.Type) ||
-					att.IsPrimitivePointer(name, useDefault) ||
-					(ptr && expr.IsPrimitive(at.Type) && at.Type.Kind() != expr.AnyKind && at.Type.Kind() != expr.BytesKind) {
+				if goFieldIsPointer(att, name, ptr, useDefault) {
 					tdef = "*" + tdef
 				}
 				if at.Description != "" {

@@ -1,19 +1,21 @@
 func transform() {
 	target := &proto.SimpleOneOf{}
 	if source.SimpleOneOf != nil {
+		var simpleOneOfValue proto.SimpleOneOf2
 		switch val := source.SimpleOneOf.(type) {
 		case *proto.SimpleOneOf_String_:
 			{
-				u := target.SimpleOneOf
+				u := simpleOneOfValue
 				u.SetString(proto.SimpleOneOfString(val.String_))
-				target.SimpleOneOf = u
+				simpleOneOfValue = u
 			}
 		case *proto.SimpleOneOf_Integer:
 			{
-				u := target.SimpleOneOf
+				u := simpleOneOfValue
 				u.SetInteger(proto.SimpleOneOfInteger(val.Integer))
-				target.SimpleOneOf = u
+				simpleOneOfValue = u
 			}
 		}
+		target.SimpleOneOf = &simpleOneOfValue
 	}
 }

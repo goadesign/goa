@@ -27,7 +27,7 @@ type Item struct {
 
 // ResultOneof is the result type of the ResultWithOneOfType service A method.
 type ResultOneof struct {
-	Result Result
+	Result *Result
 }
 
 type T struct {
@@ -214,21 +214,23 @@ func NewViewedResultOneof(res *ResultOneof, view string) *resultwithoneoftypevie
 // ResultOneof.
 func newResultOneof(vres *resultwithoneoftypeviews.ResultOneofView) *ResultOneof {
 	res := &ResultOneof{}
-	if vres.Result.Kind() != "" {
+	if vres.Result != nil && vres.Result.Kind() != "" {
+		var resultValue Result
 		switch string(vres.Result.Kind()) {
 		case "t":
 			actual, _ := vres.Result.AsT()
 			obj := transformResultwithoneoftypeviewsTViewToT(actual)
-			u := res.Result
+			u := resultValue
 			u.SetT((*T)(obj))
-			res.Result = u
+			resultValue = u
 		case "u":
 			actual, _ := vres.Result.AsU()
 			obj := transformResultwithoneoftypeviewsUViewToU(actual)
-			u := res.Result
+			u := resultValue
 			u.SetU((*U)(obj))
-			res.Result = u
+			resultValue = u
 		}
+		res.Result = &resultValue
 	}
 	return res
 }
@@ -237,21 +239,23 @@ func newResultOneof(vres *resultwithoneoftypeviews.ResultOneofView) *ResultOneof
 // ResultOneofView using the "default" view.
 func newResultOneofView(res *ResultOneof) *resultwithoneoftypeviews.ResultOneofView {
 	vres := &resultwithoneoftypeviews.ResultOneofView{}
-	if res.Result.Kind() != "" {
+	if res.Result != nil && res.Result.Kind() != "" {
+		var resultValue resultwithoneoftypeviews.Result
 		switch string(res.Result.Kind()) {
 		case "t":
 			actual, _ := res.Result.AsT()
 			obj := transformTToResultwithoneoftypeviewsTView(actual)
-			u := vres.Result
+			u := resultValue
 			u.SetT((*resultwithoneoftypeviews.TView)(obj))
-			vres.Result = u
+			resultValue = u
 		case "u":
 			actual, _ := res.Result.AsU()
 			obj := transformUToResultwithoneoftypeviewsUView(actual)
-			u := vres.Result
+			u := resultValue
 			u.SetU((*resultwithoneoftypeviews.UView)(obj))
-			vres.Result = u
+			resultValue = u
 		}
+		vres.Result = &resultValue
 	}
 	return vres
 }
