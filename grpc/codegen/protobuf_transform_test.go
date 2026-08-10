@@ -159,7 +159,8 @@ func TestProtoBufTransform(t *testing.T) {
 			{"pkg-override-to-pkg-override", pkgOverride, pkgOverride, false, svcCtx},
 		},
 	}
-	for name, cases := range tc {
+	for _, name := range []string{"to-protobuf-type", "to-service-type"} {
+		cases := tc[name]
 		t.Run(name, func(t *testing.T) {
 			for _, c := range cases {
 				t.Run(c.Name, func(t *testing.T) {

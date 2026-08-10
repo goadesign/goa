@@ -214,7 +214,7 @@ func NewViewedResultOneof(res *ResultOneof, view string) *resultwithoneoftypevie
 // ResultOneof.
 func newResultOneof(vres *resultwithoneoftypeviews.ResultOneofView) *ResultOneof {
 	res := &ResultOneof{}
-	if vres.Result != nil && vres.Result.Kind() != "" {
+	if vres.Result != nil {
 		var resultValue Result
 		switch string(vres.Result.Kind()) {
 		case "t":
@@ -239,7 +239,7 @@ func newResultOneof(vres *resultwithoneoftypeviews.ResultOneofView) *ResultOneof
 // ResultOneofView using the "default" view.
 func newResultOneofView(res *ResultOneof) *resultwithoneoftypeviews.ResultOneofView {
 	vres := &resultwithoneoftypeviews.ResultOneofView{}
-	if res.Result != nil && res.Result.Kind() != "" {
+	if res.Result != nil {
 		var resultValue resultwithoneoftypeviews.Result
 		switch string(res.Result.Kind()) {
 		case "t":
