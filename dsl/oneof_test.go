@@ -126,3 +126,41 @@ func TestOneOfCustomKeysSameKeyError(t *testing.T) {
 		t.Fatal("expected DSL error for same type and value keys, got none")
 	}
 }
+
+func TestOneOfTypeName(t *testing.T) {
+	eval.Context = &eval.DSLContext{}
+
+	ut := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{
+			Type: &expr.Object{},
+		},
+		TypeName: "TestType",
+	}
+
+	eval.Execute(func() {
+		OneOf("scope", func() {
+			TypeName("EquipmentScopeSelection")
+			Attribute("description", String)
+			Attribute("aliases", ArrayOf(String))
+		})
+	}, ut)
+
+	if eval.Context.Errors != nil {
+		t.Errorf("unexpected DSL errors: %v", eval.Context.Errors)
+	}
+	obj := ut.Attribute().Type.(*expr.Object)
+	scope := obj.Attribute("scope")
+	if scope == nil {
+		t.Fatal("scope attribute not found")
+	}
+	union, ok := scope.Type.(*expr.Union)
+	if !ok {
+		t.Fatalf("expected Union type, got %T", scope.Type)
+	}
+	if union.Name() != "EquipmentScopeSelection" {
+		t.Errorf("expected union name %q, got %q", "EquipmentScopeSelection", union.Name())
+	}
+	if obj.Attribute("EquipmentScopeSelection") != nil {
+		t.Error("TypeName changed the scope attribute name")
+	}
+}

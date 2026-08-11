@@ -128,13 +128,19 @@ func ResultType(identifier string, args ...any) *expr.ResultTypeExpr {
 // This function makes it possible to override that and provide a custom name.
 // name must be a valid Go identifier.
 //
-// TypeName must appear in a Type or ResultType expression.
+// TypeName must appear in a Type, ResultType, or OneOf expression. In a OneOf
+// expression it changes the generated Go union name without changing the
+// attribute name used by transports.
 func TypeName(name string) {
 	switch e := eval.Current().(type) {
 	case expr.UserType:
 		e.Rename(name)
 	case *expr.AttributeExpr:
-		e.AddMeta("struct:type:name", name)
+		if union, ok := e.Type.(*expr.Union); ok {
+			union.TypeName = name
+		} else {
+			e.AddMeta("struct:type:name", name)
+		}
 	default:
 		eval.IncompatibleDSL()
 	}
