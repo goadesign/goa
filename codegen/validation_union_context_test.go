@@ -59,8 +59,16 @@ func TestUnionValidationUsesGeneratedFieldRepresentation(t *testing.T) {
 	transportCtx.UnionPointer = true
 	transportCode := ValidationCode(attribute, nil, transportCtx, true, false, false, "target")
 	require.Contains(t, transportCode, "if target.Required == nil {")
+	require.Contains(t, transportCode, "if target.Required != nil {")
 	require.Contains(t, transportCode, "if target.Optional != nil {")
 	require.NotContains(t, transportCode, `if target.Required.Kind() == "" {`)
+
+	marshalCtx := NewAttributeContext(false, false, true, "", scope)
+	marshalCtx.UnionPointer = true
+	marshalCode := ValidationCode(attribute, nil, marshalCtx, true, false, false, "target")
+	require.Contains(t, marshalCode, `if target.Required.Kind() == "" {`)
+	require.NotContains(t, marshalCode, "if target.Required != nil {")
+	require.Contains(t, marshalCode, "if target.Optional != nil {")
 }
 
 // requiredObjectUnionDSL defines a OneOf with required-only object branches so
