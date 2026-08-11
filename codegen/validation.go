@@ -273,7 +273,11 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 		}
 		if expr.IsUnion(att.Type) {
 			_, sumType := ctx.Scope.(*AttributeScope)
-			if req || sumType && !ctx.IsUnionPointer(false) {
+			if sumType {
+				if !ctx.IsUnionPointer(req) {
+					return code
+				}
+			} else if req {
 				return code
 			}
 			cond := fmt.Sprintf("if %s != nil {\n", target)
