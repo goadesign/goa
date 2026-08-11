@@ -1,7 +1,9 @@
 // {{ .Method.VarName }}ClientStream is the interface for reading Server-Sent Events.
 type {{ .Method.VarName }}ClientStream interface {
-    // Recv reads and returns the next event from the SSE stream.
-    Recv(context.Context) ({{ .SSE.EventTypeRef }}, error)
+    // {{ .Method.ClientStream.RecvName }} reads and returns the next event from the SSE stream.
+    {{ .Method.ClientStream.RecvName }}() ({{ .SSE.EventTypeRef }}, error)
+    // {{ .Method.ClientStream.RecvWithContextName }} reads and returns the next event from the SSE stream with context.
+    {{ .Method.ClientStream.RecvWithContextName }}(context.Context) ({{ .SSE.EventTypeRef }}, error)
     // Close closes the SSE stream and releases resources.
     Close() error
 }
@@ -20,6 +22,10 @@ type (
 // {{ .Method.VarName }}StreamImpl implements the {{ .Method.VarName }}ClientStream interface.
 var _ {{ .Method.VarName }}ClientStream = (*{{ .Method.VarName }}StreamImpl)(nil)
 
+// {{ .Method.VarName }}StreamImpl implements the service client stream
+// interface so the generated endpoint client can return it directly.
+var _ {{ .ServicePkgName }}.{{ .Method.ClientStream.Interface }} = (*{{ .Method.VarName }}StreamImpl)(nil)
+
 // New{{ .Method.VarName }}Stream creates a new {{ .Method.VarName }}ClientStream.
 func New{{ .Method.VarName }}Stream(resp *http.Response, decoder func(*http.Response) goahttp.Decoder) {{ .Method.VarName }}ClientStream {
         return &{{ .Method.VarName }}StreamImpl{
@@ -29,8 +35,13 @@ func New{{ .Method.VarName }}Stream(resp *http.Response, decoder func(*http.Resp
         }
 }
 
-// Recv reads and returns the next event from the SSE stream, respecting context cancellation.
-func (s *{{ .Method.VarName }}StreamImpl) Recv(ctx context.Context) (event {{ .SSE.EventTypeRef }}, err error) {
+// {{ .Method.ClientStream.RecvName }} reads and returns the next event from the SSE stream.
+func (s *{{ .Method.VarName }}StreamImpl) {{ .Method.ClientStream.RecvName }}() ({{ .SSE.EventTypeRef }}, error) {
+        return s.{{ .Method.ClientStream.RecvWithContextName }}(context.Background())
+}
+
+// {{ .Method.ClientStream.RecvWithContextName }} reads and returns the next event from the SSE stream, respecting context cancellation.
+func (s *{{ .Method.VarName }}StreamImpl) {{ .Method.ClientStream.RecvWithContextName }}(ctx context.Context) (event {{ .SSE.EventTypeRef }}, err error) {
         var byts []byte
         byts, err = s.readEvent(ctx)
         if err != nil {
