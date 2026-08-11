@@ -148,28 +148,34 @@ func (s *{{ .Method.VarName }}StreamImpl) checkBuffer() ([]byte, bool) {
                 return nil, false
         }
 
-        // Look for double newline in buffer
-        for i := 0; i < len(s.buffer)-1; i++ {
-                if s.buffer[i] == '\n' && s.buffer[i+1] == '\n' {
-                        // Found complete event
-                        eventEnd := i + 2 // Include both newlines
-                        eventData := s.buffer[:eventEnd]
+	// Look for double newline in buffer
+	for i := 0; i < len(s.buffer)-1; i++ {
+		if s.buffer[i] == '\n' && s.buffer[i+1] == '\n' {
+			// Found complete event. Copy it out: compacting the buffer
+			// below would otherwise overwrite the returned bytes, since
+			// both slices share the same backing array.
+			eventEnd := i + 2 // Include both newlines
+			eventData := make([]byte, eventEnd)
+			copy(eventData, s.buffer[:eventEnd])
 
-                        // Save remaining data for next time
-                        if eventEnd < len(s.buffer) {
-                                s.buffer = append(s.buffer[:0], s.buffer[eventEnd:]...)
-                        } else {
-                                s.buffer = s.buffer[:0]
-                        }
+			// Save remaining data for next time
+			if eventEnd < len(s.buffer) {
+				s.buffer = append(s.buffer[:0], s.buffer[eventEnd:]...)
+			} else {
+				s.buffer = s.buffer[:0]
+			}
 
-                        return eventData, true
-                }
-        }
+			return eventData, true
+		}
+	}
 
-        // No complete event found, return buffer contents
-        eventData := s.buffer
-        s.buffer = s.buffer[:0] // Clear buffer but keep capacity
-        return eventData, false
+	// No complete event found, return a copy of the buffer contents: the
+	// caller keeps accumulating into the returned slice while readEvent
+	// refills s.buffer, so they must not share a backing array.
+	eventData := make([]byte, len(s.buffer))
+	copy(eventData, s.buffer)
+	s.buffer = s.buffer[:0] // Clear buffer but keep capacity
+	return eventData, false
 }
 
 // Close closes the SSE stream and releases any associated resources.
