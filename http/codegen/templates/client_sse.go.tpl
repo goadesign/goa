@@ -46,11 +46,9 @@ func (s *{{ .Method.VarName }}StreamImpl) {{ .Method.ClientStream.RecvWithContex
         byts, err = s.readEvent(ctx)
         if err != nil {
                 if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-                        // Clean up on EOF or context cancellation
+                        // Clean up on EOF or context cancellation. io.EOF
+                        // propagates to the caller to signal end of stream.
                         s.Close()
-                        if errors.Is(err, io.EOF) {
-                                err = nil
-                        }
                 }
                 return
         }
@@ -77,28 +75,24 @@ func (s *{{ .Method.VarName }}StreamImpl) readEvent(ctx context.Context) ([]byte
         wasNewline := len(eventData) > 0 && eventData[len(eventData)-1] == '\n'
         buf := make([]byte, bufSize)
 
-        // Read data in chunks until we find an event or hit EOF
-        for {
-                // Check if context is done
-                select {
-                case <-ctx.Done():
-                        if len(eventData) > 0 {
-                                return eventData, nil
-                        }
-                        return nil, ctx.Err()
-                default:
-                        // Continue processing
-                }
+	// Read data in chunks until we find an event or hit EOF. A stream that
+	// ends mid-event (before the blank-line delimiter) discards the partial
+	// frame, per the SSE specification.
+	for {
+		// Check if context is done
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			// Continue processing
+		}
 
-                // Check if stream is closed
-                s.lock.Lock()
-                if s.closed {
-                        s.lock.Unlock()
-                        if len(eventData) > 0 {
-                                return eventData, nil
-                        }
-                        return nil, io.EOF
-                }
+		// Check if stream is closed
+		s.lock.Lock()
+		if s.closed {
+			s.lock.Unlock()
+			return nil, io.EOF
+		}
 
                 // Read next chunk
                 n, err := s.resp.Body.Read(buf)
@@ -132,13 +126,11 @@ func (s *{{ .Method.VarName }}StreamImpl) readEvent(ctx context.Context) ([]byte
                         }
                 }
 
-                // Return partial data at EOF
-                if errors.Is(err, io.EOF) {
-                        if len(eventData) > 0 {
-                                return eventData, nil
-                        }
-                        return nil, io.EOF
-                }
+		// Discard any partial frame at EOF: an event that ends before its
+		// blank-line delimiter was truncated by the transport.
+		if errors.Is(err, io.EOF) {
+			return nil, io.EOF
+		}
         }
 }
 
@@ -156,28 +148,34 @@ func (s *{{ .Method.VarName }}StreamImpl) checkBuffer() ([]byte, bool) {
                 return nil, false
         }
 
-        // Look for double newline in buffer
-        for i := 0; i < len(s.buffer)-1; i++ {
-                if s.buffer[i] == '\n' && s.buffer[i+1] == '\n' {
-                        // Found complete event
-                        eventEnd := i + 2 // Include both newlines
-                        eventData := s.buffer[:eventEnd]
+	// Look for double newline in buffer
+	for i := 0; i < len(s.buffer)-1; i++ {
+		if s.buffer[i] == '\n' && s.buffer[i+1] == '\n' {
+			// Found complete event. Copy it out: compacting the buffer
+			// below would otherwise overwrite the returned bytes, since
+			// both slices share the same backing array.
+			eventEnd := i + 2 // Include both newlines
+			eventData := make([]byte, eventEnd)
+			copy(eventData, s.buffer[:eventEnd])
 
-                        // Save remaining data for next time
-                        if eventEnd < len(s.buffer) {
-                                s.buffer = append(s.buffer[:0], s.buffer[eventEnd:]...)
-                        } else {
-                                s.buffer = s.buffer[:0]
-                        }
+			// Save remaining data for next time
+			if eventEnd < len(s.buffer) {
+				s.buffer = append(s.buffer[:0], s.buffer[eventEnd:]...)
+			} else {
+				s.buffer = s.buffer[:0]
+			}
 
-                        return eventData, true
-                }
-        }
+			return eventData, true
+		}
+	}
 
-        // No complete event found, return buffer contents
-        eventData := s.buffer
-        s.buffer = s.buffer[:0] // Clear buffer but keep capacity
-        return eventData, false
+	// No complete event found, return a copy of the buffer contents: the
+	// caller keeps accumulating into the returned slice while readEvent
+	// refills s.buffer, so they must not share a backing array.
+	eventData := make([]byte, len(s.buffer))
+	copy(eventData, s.buffer)
+	s.buffer = s.buffer[:0] // Clear buffer but keep capacity
+	return eventData, false
 }
 
 // Close closes the SSE stream and releases any associated resources.
