@@ -11,11 +11,9 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// Repro for anonymous (embedded) oneof of user types nested in an array.
-// The transform from protobuf -> Go should NOT introduce per-branch
-// wrappers like DetailsAlpha(...)/DetailsBeta(...) when the union members
-// are user types and the union is embedded in an object (unionPkg == "").
-func TestAnonymousUserUnionArray_NoWrappersFromProto(t *testing.T) {
+// TestAnonymousUserUnionArrayNoWrappersFromProto verifies that protobuf
+// oneofs nested in arrays convert directly into value-backed service unions.
+func TestAnonymousUserUnionArrayNoWrappersFromProto(t *testing.T) {
 	root := codegen.RunDSL(t, func() {
 		// Two distinct user types
 		Alpha := func() {
@@ -60,6 +58,7 @@ func TestAnonymousUserUnionArray_NoWrappersFromProto(t *testing.T) {
 	// Ensure no per-branch wrapper casts (e.g., types.DetailsAlpha(...)).
 	require.NotContains(t, out, "types.Details")
 	require.NotContains(t, out, "Details(")
+	require.NotContains(t, out, "detailsValue")
 	// Sanity check: union switch on Details field exists.
 	require.True(t, strings.Contains(out, "switch") && strings.Contains(out, ".Details"))
 }

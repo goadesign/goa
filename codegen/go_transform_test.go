@@ -196,7 +196,7 @@ func TestGoTransform(t *testing.T) {
 	}
 }
 
-func TestGoTransformOptionalUnionField(t *testing.T) {
+func TestGoTransformServiceUnionField(t *testing.T) {
 	union := &expr.Union{
 		TypeName: "Scope",
 		Values: []*expr.NamedAttributeExpr{
@@ -215,8 +215,43 @@ func TestGoTransformOptionalUnionField(t *testing.T) {
 
 	code, _, err := GoTransform(attribute, attribute, "source", "target", ctx, ctx, "", true)
 	require.NoError(t, err)
-	require.Contains(t, code, `if source.Scope != nil {`)
-	require.NotContains(t, code, `source.Scope.Kind() != ""`)
-	require.Contains(t, code, "var scopeValue Scope")
-	require.Contains(t, code, "target.Scope = &scopeValue")
+	require.Contains(t, code, `if source.Scope.Kind() != "" {`)
+	require.NotContains(t, code, `if source.Scope != nil {`)
+	require.NotContains(t, code, "scopeValue")
+	require.NotContains(t, code, "target.Scope = &")
+}
+
+func TestGoTransformUnionAcrossTransportBoundary(t *testing.T) {
+	union := &expr.Union{
+		TypeName: "Scope",
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "description", Attribute: &expr.AttributeExpr{Type: expr.String}},
+			{Name: "aliases", Attribute: &expr.AttributeExpr{Type: &expr.Array{
+				ElemType: &expr.AttributeExpr{Type: expr.String},
+			}}},
+		},
+	}
+	attribute := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "scope", Attribute: &expr.AttributeExpr{Type: union}},
+	}}
+	scope := NewNameScope()
+	serviceCtx := NewAttributeContext(false, false, true, "", scope)
+	transportCtx := serviceCtx.Dup()
+	transportCtx.UnionPointer = true
+
+	serviceToTransport, _, err := GoTransform(
+		attribute, attribute, "source", "target", serviceCtx, transportCtx, "", true,
+	)
+	require.NoError(t, err)
+	require.Contains(t, serviceToTransport, `if source.Scope.Kind() != "" {`)
+	require.Contains(t, serviceToTransport, "var scopeValue Scope")
+	require.Contains(t, serviceToTransport, "target.Scope = &scopeValue")
+
+	transportToService, _, err := GoTransform(
+		attribute, attribute, "source", "target", transportCtx, serviceCtx, "", true,
+	)
+	require.NoError(t, err)
+	require.Contains(t, transportToService, `if source.Scope != nil {`)
+	require.NotContains(t, transportToService, "scopeValue")
+	require.NotContains(t, transportToService, "target.Scope = &")
 }

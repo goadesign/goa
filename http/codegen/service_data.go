@@ -2873,7 +2873,9 @@ func (sds *ServicesData) attributeTypeData(ut expr.UserType, req, ptr, server bo
 // svr if true indicates that the type is a server type, else client type
 func httpContext(scope *codegen.NameScope, request, svr bool) *codegen.AttributeContext {
 	marshal := !request && svr || request && !svr
-	return codegen.NewAttributeContext(!marshal, false, marshal, "", scope)
+	ctx := codegen.NewAttributeContext(!marshal, false, marshal, "", scope)
+	ctx.UnionPointer = true
+	return ctx
 }
 
 // serviceContext returns an attribute context for service types.

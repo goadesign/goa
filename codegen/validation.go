@@ -43,6 +43,9 @@ func init() {
 			_, ok := scope.(*AttributeScope)
 			return ok
 		},
+		"isUnionPointer": func(ctx *AttributeContext, required bool) bool {
+			return ctx.IsUnionPointer(required)
+		},
 		"add": func(a, b int) int { return a + b },
 	}
 	enumValT = template.Must(template.New("enum").Funcs(fm).Parse(codegenTemplates.Read(validationEnumT)))
@@ -269,7 +272,8 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 			return code
 		}
 		if expr.IsUnion(att.Type) {
-			if req {
+			_, sumType := ctx.Scope.(*AttributeScope)
+			if req || sumType && !ctx.IsUnionPointer(false) {
 				return code
 			}
 			cond := fmt.Sprintf("if %s != nil {\n", target)

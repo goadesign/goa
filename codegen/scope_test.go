@@ -1,8 +1,9 @@
 package codegen
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"goa.design/goa/v3/expr"
 )
@@ -98,7 +99,7 @@ func TestNameScope_PeekUnique_MatchesUniqueWithoutMutation(t *testing.T) {
 	}
 }
 
-func TestNameScope_GoTypeDef_UsesPointersOnlyForOptionalUnions(t *testing.T) {
+func TestNameScopeGoTypeDefUsesValueUnions(t *testing.T) {
 	union := &expr.Union{
 		TypeName: "Scope",
 		Values: []*expr.NamedAttributeExpr{
@@ -116,11 +117,9 @@ func TestNameScope_GoTypeDef_UsesPointersOnlyForOptionalUnions(t *testing.T) {
 		Validation: &expr.ValidationExpr{Required: []string{"required"}},
 	}
 
-	typeDef := NewNameScope().GoTypeDef(attribute, false, false)
-	if !strings.Contains(typeDef, "Optional *Scope") {
-		t.Fatalf("expected optional union field to be a pointer, got:\n%s", typeDef)
-	}
-	if !strings.Contains(typeDef, "Required Scope") {
-		t.Fatalf("expected required union field to remain a value, got:\n%s", typeDef)
+	for _, pointer := range []bool{false, true} {
+		typeDef := NewNameScope().GoTypeDef(attribute, pointer, false)
+		assert.Contains(t, typeDef, "Optional Scope")
+		assert.Contains(t, typeDef, "Required Scope")
 	}
 }

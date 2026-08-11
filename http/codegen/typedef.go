@@ -24,6 +24,14 @@ import (
 // default value so cannot be nil) otherwise the fields are values only when
 // required.
 func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefault bool) string {
+	ctx := codegen.NewAttributeContext(ptr, false, useDefault, "", scope)
+	ctx.UnionPointer = true
+	return goTypeDefForContext(scope, att, ctx)
+}
+
+// goTypeDefForContext recursively renders an HTTP body type using the same
+// field representation consulted by transport conversion and validation.
+func goTypeDefForContext(scope *codegen.NameScope, att *expr.AttributeExpr, ctx *codegen.AttributeContext) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
 		if t, _ := codegen.GetMetaType(att); t != "" {
@@ -31,17 +39,17 @@ func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefaul
 		}
 		return codegen.GoNativeTypeName(actual)
 	case *expr.Array:
-		d := goTypeDef(scope, actual.ElemType, ptr, useDefault)
+		d := goTypeDefForContext(scope, actual.ElemType, ctx)
 		if expr.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *expr.Map:
-		keyDef := goTypeDef(scope, actual.KeyType, ptr, useDefault)
+		keyDef := goTypeDefForContext(scope, actual.KeyType, ctx)
 		if expr.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
-		elemDef := goTypeDef(scope, actual.ElemType, ptr, useDefault)
+		elemDef := goTypeDefForContext(scope, actual.ElemType, ctx)
 		if expr.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
@@ -50,7 +58,6 @@ func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefaul
 		var ss []string
 		ss = append(ss, "struct {")
 		ma := expr.NewMappedAttributeExpr(att)
-		mat := ma.Attribute()
 		codegen.WalkMappedAttr(ma, func(name, elem string, _ bool, at *expr.AttributeExpr) error { // nolint: errcheck
 			var (
 				fn   string
@@ -60,12 +67,8 @@ func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefaul
 			)
 			{
 				fn = codegen.GoifyAtt(at, name, true)
-				tdef = goTypeDef(scope, at, ptr, useDefault)
-				if expr.IsPrimitive(at.Type) {
-					if (ptr || mat.IsPrimitivePointer(name, useDefault)) && at.Type != expr.Bytes && at.Type != expr.Any {
-						tdef = "*" + tdef
-					}
-				} else if expr.IsObject(at.Type) {
+				tdef = goTypeDefForContext(scope, at, ctx)
+				if ctx.IsFieldPointer(name, att) {
 					tdef = "*" + tdef
 				}
 				if at.Description != "" {
@@ -74,9 +77,9 @@ func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefaul
 				var optional bool
 				{
 					switch {
-					case ptr:
+					case ctx.Pointer:
 						optional = true
-					case useDefault:
+					case ctx.UseDefault:
 						optional = !ma.IsRequired(name) && !ma.HasDefaultValue(name)
 					default:
 						optional = !ma.IsRequired(name)
