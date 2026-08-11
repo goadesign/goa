@@ -46,11 +46,9 @@ func (s *{{ .Method.VarName }}StreamImpl) {{ .Method.ClientStream.RecvWithContex
         byts, err = s.readEvent(ctx)
         if err != nil {
                 if errors.Is(err, io.EOF) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-                        // Clean up on EOF or context cancellation
+                        // Clean up on EOF or context cancellation. io.EOF
+                        // propagates to the caller to signal end of stream.
                         s.Close()
-                        if errors.Is(err, io.EOF) {
-                                err = nil
-                        }
                 }
                 return
         }
@@ -77,28 +75,24 @@ func (s *{{ .Method.VarName }}StreamImpl) readEvent(ctx context.Context) ([]byte
         wasNewline := len(eventData) > 0 && eventData[len(eventData)-1] == '\n'
         buf := make([]byte, bufSize)
 
-        // Read data in chunks until we find an event or hit EOF
-        for {
-                // Check if context is done
-                select {
-                case <-ctx.Done():
-                        if len(eventData) > 0 {
-                                return eventData, nil
-                        }
-                        return nil, ctx.Err()
-                default:
-                        // Continue processing
-                }
+	// Read data in chunks until we find an event or hit EOF. A stream that
+	// ends mid-event (before the blank-line delimiter) discards the partial
+	// frame, per the SSE specification.
+	for {
+		// Check if context is done
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			// Continue processing
+		}
 
-                // Check if stream is closed
-                s.lock.Lock()
-                if s.closed {
-                        s.lock.Unlock()
-                        if len(eventData) > 0 {
-                                return eventData, nil
-                        }
-                        return nil, io.EOF
-                }
+		// Check if stream is closed
+		s.lock.Lock()
+		if s.closed {
+			s.lock.Unlock()
+			return nil, io.EOF
+		}
 
                 // Read next chunk
                 n, err := s.resp.Body.Read(buf)
@@ -132,13 +126,11 @@ func (s *{{ .Method.VarName }}StreamImpl) readEvent(ctx context.Context) ([]byte
                         }
                 }
 
-                // Return partial data at EOF
-                if errors.Is(err, io.EOF) {
-                        if len(eventData) > 0 {
-                                return eventData, nil
-                        }
-                        return nil, io.EOF
-                }
+		// Discard any partial frame at EOF: an event that ends before its
+		// blank-line delimiter was truncated by the transport.
+		if errors.Is(err, io.EOF) {
+			return nil, io.EOF
+		}
         }
 }
 
