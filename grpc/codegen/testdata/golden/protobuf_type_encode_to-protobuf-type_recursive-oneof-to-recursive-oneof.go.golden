@@ -2,7 +2,7 @@ func transform() {
 	target := &proto.RecursiveOneOf{
 		String_: source.String,
 	}
-	if source.RecursiveOneOf != nil && source.RecursiveOneOf.Kind() != "" {
+	if source.RecursiveOneOf.Kind() != "" {
 		switch string(source.RecursiveOneOf.Kind()) {
 		case "integer":
 			actual, _ := source.RecursiveOneOf.AsInteger()

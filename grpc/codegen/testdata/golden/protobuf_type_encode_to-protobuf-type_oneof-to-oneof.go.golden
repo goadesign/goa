@@ -1,6 +1,6 @@
 func transform() {
 	target := &proto.SimpleOneOf{}
-	if source.SimpleOneOf != nil && source.SimpleOneOf.Kind() != "" {
+	if source.SimpleOneOf.Kind() != "" {
 		switch string(source.SimpleOneOf.Kind()) {
 		case "string":
 			actual, _ := source.SimpleOneOf.AsString()

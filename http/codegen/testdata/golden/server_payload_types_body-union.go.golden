@@ -3,24 +3,22 @@
 func NewMethodBodyUnionUnion(body *MethodBodyUnionRequestBody) *servicebodyunion.Union {
 	v := &servicebodyunion.Union{}
 	if body.Values != nil {
-		var valuesValue servicebodyunion.Values
 		switch string(body.Values.Kind()) {
 		case "String":
 			actual, _ := body.Values.AsString()
 			obj := servicebodyunion.ValuesString(actual)
 
-			u := valuesValue
+			u := v.Values
 			u.SetString((servicebodyunion.ValuesString)(obj))
-			valuesValue = u
+			v.Values = u
 		case "Int":
 			actual, _ := body.Values.AsInt()
 			obj := servicebodyunion.ValuesInt(actual)
 
-			u := valuesValue
+			u := v.Values
 			u.SetInt((servicebodyunion.ValuesInt)(obj))
-			valuesValue = u
+			v.Values = u
 		}
-		v.Values = &valuesValue
 	}
 
 	return v

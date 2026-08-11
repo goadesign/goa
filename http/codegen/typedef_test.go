@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -80,6 +81,42 @@ func TestGoTypeDef(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			def := goTypeDef(codegen.NewNameScope(), c.Attr, c.UsePtr, c.UseDefault)
 			assert.Equal(t, c.Def, def)
+		})
+	}
+}
+
+func TestGoTypeDefUnionPresence(t *testing.T) {
+	union := &expr.Union{
+		TypeName: "Scope",
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "description", Attribute: &expr.AttributeExpr{Type: expr.String}},
+			{Name: "aliases", Attribute: &expr.AttributeExpr{Type: &expr.Array{
+				ElemType: &expr.AttributeExpr{Type: expr.String},
+			}}},
+		},
+	}
+	attribute := &expr.AttributeExpr{
+		Type: &expr.Object{
+			{Name: "optional", Attribute: &expr.AttributeExpr{Type: union}},
+			{Name: "required", Attribute: &expr.AttributeExpr{Type: union}},
+		},
+		Validation: &expr.ValidationExpr{Required: []string{"required"}},
+	}
+
+	tests := []struct {
+		name            string
+		pointer         bool
+		optionalPointer bool
+		requiredPointer bool
+	}{
+		{name: "marshal", optionalPointer: true},
+		{name: "validate", pointer: true, optionalPointer: true, requiredPointer: true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			def := goTypeDef(codegen.NewNameScope(), attribute, test.pointer, false)
+			assert.Equal(t, test.optionalPointer, strings.Contains(def, "Optional *Scope"))
+			assert.Equal(t, test.requiredPointer, strings.Contains(def, "Required *Scope"))
 		})
 	}
 }

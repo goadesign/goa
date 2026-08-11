@@ -3,51 +3,49 @@ func transform() {
 		String: source.String_,
 	}
 	if source.EmbeddedOneOf != nil {
-		var embeddedOneOfValue proto.EmbeddedOneOf2
 		switch val := source.EmbeddedOneOf.(type) {
 		case *proto.EmbeddedOneOf_String_:
 			{
-				u := embeddedOneOfValue
+				u := target.EmbeddedOneOf
 				u.SetString(proto.EmbeddedOneOfString(val.String_))
-				embeddedOneOfValue = u
+				target.EmbeddedOneOf = u
 			}
 		case *proto.EmbeddedOneOf_Integer:
 			{
-				u := embeddedOneOfValue
+				u := target.EmbeddedOneOf
 				u.SetInteger(proto.EmbeddedOneOfInteger(val.Integer))
-				embeddedOneOfValue = u
+				target.EmbeddedOneOf = u
 			}
 		case *proto.EmbeddedOneOf_Boolean:
 			{
-				u := embeddedOneOfValue
+				u := target.EmbeddedOneOf
 				u.SetBoolean(proto.EmbeddedOneOfBoolean(val.Boolean))
-				embeddedOneOfValue = u
+				target.EmbeddedOneOf = u
 			}
 		case *proto.EmbeddedOneOf_Number:
 			{
-				u := embeddedOneOfValue
+				u := target.EmbeddedOneOf
 				u.SetNumber(proto.EmbeddedOneOfNumber(val.Number))
-				embeddedOneOfValue = u
+				target.EmbeddedOneOf = u
 			}
 		case *proto.EmbeddedOneOf_Array:
 			{
-				u := embeddedOneOfValue
+				u := target.EmbeddedOneOf
 				u.SetArray(protobufProtoEmbeddedOneOfArrayToProtoEmbeddedOneOfArray(val.Array))
-				embeddedOneOfValue = u
+				target.EmbeddedOneOf = u
 			}
 		case *proto.EmbeddedOneOf_Map_:
 			{
-				u := embeddedOneOfValue
+				u := target.EmbeddedOneOf
 				u.SetMap(protobufProtoEmbeddedOneOfMapToProtoEmbeddedOneOfMap(val.Map_))
-				embeddedOneOfValue = u
+				target.EmbeddedOneOf = u
 			}
 		case *proto.EmbeddedOneOf_UserType:
 			{
-				u := embeddedOneOfValue
+				u := target.EmbeddedOneOf
 				u.SetUserType(protobufProtoSimpleOneOfToProtoSimpleOneOf(val.UserType))
-				embeddedOneOfValue = u
+				target.EmbeddedOneOf = u
 			}
 		}
-		target.EmbeddedOneOf = &embeddedOneOfValue
 	}
 }

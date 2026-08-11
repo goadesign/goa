@@ -46,6 +46,11 @@ type (
 		// SamePackageConversion if true indicates that this context is being used
 		// for conversion code generation within the same package as the types.
 		SamePackageConversion bool
+		// UnionPointer if true indicates that optional sum-type union fields use
+		// pointers to preserve transport-level presence. Required union fields also
+		// use pointers when Pointer is true. Service types leave this false because
+		// the empty union discriminator represents omission after decoding.
+		UnionPointer bool
 	}
 
 	// AttributeScope contains the scope of an attribute. It implements the
@@ -228,11 +233,20 @@ func (a *AttributeContext) IsPrimitivePointer(name string, att *expr.AttributeEx
 // IsFieldPointer reports whether the generated Go field is pointer-backed in
 // this context.
 func (a *AttributeContext) IsFieldPointer(name string, att *expr.AttributeExpr) bool {
+	field := expr.AsObject(att.Type).Attribute(name)
+	if expr.IsUnion(field.Type) {
+		return a.IsUnionPointer(att.IsRequired(name))
+	}
 	if _, ok := a.Scope.(*AttributeScope); !ok {
-		field := expr.AsObject(att.Type).Attribute(name)
 		return expr.IsPrimitive(field.Type) && a.IsPrimitivePointer(name, att)
 	}
 	return goFieldIsPointer(att, name, a.Pointer, a.UseDefault)
+}
+
+// IsUnionPointer reports whether a sum-type union field with the given
+// requiredness is pointer-backed in this context.
+func (a *AttributeContext) IsUnionPointer(required bool) bool {
+	return a.UnionPointer && (!required || a.Pointer)
 }
 
 // Pkg returns the package name of the given type.
@@ -267,6 +281,7 @@ func (a *AttributeContext) Dup() *AttributeContext {
 		Scope:                 a.Scope,
 		DefaultPkg:            a.DefaultPkg,
 		SamePackageConversion: a.SamePackageConversion,
+		UnionPointer:          a.UnionPointer,
 	}
 }
 
