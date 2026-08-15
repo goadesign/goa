@@ -1,0 +1,77 @@
+// ClientStreamStreamingBody is the type of the
+// "StreamingPayloadRequiredFieldsService" service "ClientStream" endpoint HTTP
+// request body.
+type ClientStreamStreamingBody StreamingRequestStreamingBody
+
+// BidirectionalStreamStreamingBody is the type of the
+// "StreamingPayloadRequiredFieldsService" service "BidirectionalStream"
+// endpoint HTTP request body.
+type BidirectionalStreamStreamingBody StreamingRequestStreamingBody
+
+// StreamingRequestStreamingBody is used to define fields on request body types.
+type StreamingRequestStreamingBody struct {
+	Required     *string `form:"required,omitempty" json:"required,omitempty" xml:"required,omitempty"`
+	Optional     *string `form:"optional,omitempty" json:"optional,omitempty" xml:"optional,omitempty"`
+	BaseRequired *string `form:"baseRequired,omitempty" json:"baseRequired,omitempty" xml:"baseRequired,omitempty"`
+}
+
+// NewClientStreamStreamingBody builds a StreamingPayloadRequiredFieldsService
+// service ClientStream endpoint payload.
+func NewClientStreamStreamingBody(body *ClientStreamStreamingBody) *streamingpayloadrequiredfieldsservice.StreamingRequest {
+	v := &streamingpayloadrequiredfieldsservice.StreamingRequest{
+		Required:     *body.Required,
+		Optional:     body.Optional,
+		BaseRequired: *body.BaseRequired,
+	}
+
+	return v
+}
+
+// NewBidirectionalStreamStreamingBody builds a
+// StreamingPayloadRequiredFieldsService service BidirectionalStream endpoint
+// payload.
+func NewBidirectionalStreamStreamingBody(body *BidirectionalStreamStreamingBody) *streamingpayloadrequiredfieldsservice.StreamingRequest {
+	v := &streamingpayloadrequiredfieldsservice.StreamingRequest{
+		Required:     *body.Required,
+		Optional:     body.Optional,
+		BaseRequired: *body.BaseRequired,
+	}
+
+	return v
+}
+
+// ValidateClientStreamStreamingBody runs the validations defined on
+// ClientStreamStreamingBody
+func ValidateClientStreamStreamingBody(body *ClientStreamStreamingBody) (err error) {
+	if body.Required == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required", "body"))
+	}
+	if body.BaseRequired == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("baseRequired", "body"))
+	}
+	return
+}
+
+// ValidateBidirectionalStreamStreamingBody runs the validations defined on
+// BidirectionalStreamStreamingBody
+func ValidateBidirectionalStreamStreamingBody(body *BidirectionalStreamStreamingBody) (err error) {
+	if body.Required == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required", "body"))
+	}
+	if body.BaseRequired == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("baseRequired", "body"))
+	}
+	return
+}
+
+// ValidateStreamingRequestStreamingBody runs the validations defined on
+// StreamingRequestStreamingBody
+func ValidateStreamingRequestStreamingBody(body *StreamingRequestStreamingBody) (err error) {
+	if body.Required == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required", "body"))
+	}
+	if body.BaseRequired == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("baseRequired", "body"))
+	}
+	return
+}

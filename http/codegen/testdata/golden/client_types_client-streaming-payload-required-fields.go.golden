@@ -1,0 +1,40 @@
+// ClientStreamStreamingBody is the type of the
+// "StreamingPayloadRequiredFieldsService" service "ClientStream" endpoint HTTP
+// request body.
+type ClientStreamStreamingBody StreamingRequestStreamingBody
+
+// BidirectionalStreamStreamingBody is the type of the
+// "StreamingPayloadRequiredFieldsService" service "BidirectionalStream"
+// endpoint HTTP request body.
+type BidirectionalStreamStreamingBody StreamingRequestStreamingBody
+
+// StreamingRequestStreamingBody is used to define fields on request body types.
+type StreamingRequestStreamingBody struct {
+	Required     string  `form:"required" json:"required" xml:"required"`
+	Optional     *string `form:"optional,omitempty" json:"optional,omitempty" xml:"optional,omitempty"`
+	BaseRequired string  `form:"baseRequired" json:"baseRequired" xml:"baseRequired"`
+}
+
+// NewClientStreamStreamingBody builds the HTTP request body from the payload
+// of the "ClientStream" endpoint of the
+// "StreamingPayloadRequiredFieldsService" service.
+func NewClientStreamStreamingBody(p *streamingpayloadrequiredfieldsservice.StreamingRequest) *ClientStreamStreamingBody {
+	body := &ClientStreamStreamingBody{
+		Required:     p.Required,
+		Optional:     p.Optional,
+		BaseRequired: p.BaseRequired,
+	}
+	return body
+}
+
+// NewBidirectionalStreamStreamingBody builds the HTTP request body from the
+// payload of the "BidirectionalStream" endpoint of the
+// "StreamingPayloadRequiredFieldsService" service.
+func NewBidirectionalStreamStreamingBody(p *streamingpayloadrequiredfieldsservice.StreamingRequest) *BidirectionalStreamStreamingBody {
+	body := &BidirectionalStreamStreamingBody{
+		Required:     p.Required,
+		Optional:     p.Optional,
+		BaseRequired: p.BaseRequired,
+	}
+	return body
+}

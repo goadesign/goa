@@ -216,6 +216,14 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 	}
 	const suffix = "StreamingBody"
 	dupped := DupAtt(att)
+	// Method attributes that reference user types keep validation on the
+	// referenced type. Promote it to the computed body so HTTP type generation
+	// and transport conversion use the same field requiredness.
+	if dupped.Validation == nil {
+		if ut, ok := dupped.Type.(UserType); ok {
+			dupped.Validation = ut.Attribute().Validation
+		}
+	}
 	RemovePkgPath(dupped)
 	appendSuffix(dupped.Type, suffix)
 	ut := &UserTypeExpr{
@@ -226,7 +234,7 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 
 	return &AttributeExpr{
 		Type:         ut,
-		Validation:   att.Validation,
+		Validation:   dupped.Validation,
 		UserExamples: att.UserExamples,
 	}
 }

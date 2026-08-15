@@ -36,6 +36,7 @@ func TestServerTypes(t *testing.T) {
 		{"server-header-custom-name", testdata.PayloadHeaderCustomNameDSL},
 		{"server-cookie-custom-name", testdata.PayloadCookieCustomNameDSL},
 		{"server-payload-with-validated-alias", testdata.PayloadWithValidatedAliasDSL},
+		{"server-streaming-payload-required-fields", testdata.StreamingPayloadRequiredFieldsDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
