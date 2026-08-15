@@ -337,6 +337,39 @@ var StreamingPayloadDSL = func() {
 	})
 }
 
+var StreamingPayloadRequiredFieldsDSL = func() {
+	var Base = Type("StreamingBase", func() {
+		Attribute("baseRequired", String)
+		Required("baseRequired")
+	})
+	var Request = Type("StreamingRequest", func() {
+		Extend(Base)
+		Attribute("required", String)
+		Attribute("optional", String)
+		Required("required")
+	})
+	Service("StreamingPayloadRequiredFieldsService", func() {
+		Method("ClientStream", func() {
+			Payload(func() {})
+			StreamingPayload(Request)
+			Result(String)
+			HTTP(func() {
+				GET("/client")
+				Response(StatusOK)
+			})
+		})
+		Method("BidirectionalStream", func() {
+			Payload(func() {})
+			StreamingPayload(Request)
+			StreamingResult(String)
+			HTTP(func() {
+				GET("/bidirectional")
+				Response(StatusOK)
+			})
+		})
+	})
+}
+
 var StreamingPayloadNoPayloadDSL = func() {
 	var Request = Type("Request", func() {
 		Attribute("x", String)
