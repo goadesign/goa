@@ -32,9 +32,44 @@ func Method(name string, fn func()) *expr.MethodExpr {
 		eval.IncompatibleDSL()
 		return nil
 	}
-	me := &expr.MethodExpr{Name: name, Service: s, DSLFunc: fn}
+	me := &expr.MethodExpr{
+		Name:    name,
+		Service: s,
+		Stream:  expr.NoStreamKind,
+		DSLFunc: fn,
+	}
 	s.Methods = append(s.Methods, me)
 	return me
+}
+
+// Idempotent marks a method as safe to retry with the exact same input.
+//
+// Idempotent must appear in a Method expression.
+//
+// Marking a method idempotent is a service contract: replaying the same
+// invocation must have the same externally visible effect as invoking the
+// method once. Transport generators use this contract to advertise or
+// configure retry behavior where the transport supports it.
+//
+// Idempotent takes no argument.
+//
+// Example:
+//
+//	Method("show", func() {
+//	    Idempotent()
+//	    Payload(func() {
+//	        Attribute("id", String)
+//	        Required("id")
+//	    })
+//	    Result(Book)
+//	})
+func Idempotent() {
+	method, ok := eval.Current().(*expr.MethodExpr)
+	if !ok {
+		eval.IncompatibleDSL()
+		return
+	}
+	method.Idempotent = true
 }
 
 // Deprecated marks HTTP routes as deprecated in the generated OpenAPI specifications.

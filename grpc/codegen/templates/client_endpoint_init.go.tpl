@@ -1,6 +1,11 @@
+{{- $retry := and .Method.Idempotent (eq .Method.StreamKind 1) }}
 {{ printf "%s calls the %q function in %s.%s interface." .Method.VarName .Method.VarName .PkgName .ClientInterface | comment }}
 func (c *{{ .ClientStruct }}) {{ .Method.VarName }}() goa.Endpoint {
+	{{- if $retry }}
+	endpoint := func(ctx context.Context, v any) (any, error) {
+	{{- else }}
 	return func(ctx context.Context, v any) (any, error) {
+	{{- end }}
 		inv := goagrpc.NewInvoker(
 			Build{{ .Method.VarName }}Func(c.grpccli, c.opts...),
 			{{ if .PayloadRef }}Encode{{ .Method.VarName }}Request{{ else }}nil{{ end }},
@@ -24,17 +29,32 @@ func (c *{{ .ClientStruct }}) {{ .Method.VarName }}() goa.Endpoint {
 			case *goapb.ErrorResponse:
 				return nil, goagrpc.NewServiceError(message)
 			default:
+				{{- if $retry }}
+				return nil, goagrpc.NewTransportError(err)
+				{{- else }}
 				return nil, goa.Fault("%s", err.Error())
+				{{- end }}
 			}
 		{{- else }}
+			{{- if $retry }}
+			// Try to decode a Goa error response detail before preserving the transport error.
+			{{- else }}
 			// Try to decode a Goa error response detail before falling back to Fault.
+			{{- end }}
 			resp := goagrpc.DecodeError(err)
 			if eresp, ok := resp.(*goapb.ErrorResponse); ok {
 				return nil, goagrpc.NewServiceError(eresp)
 			}
+			{{- if $retry }}
+			return nil, goagrpc.NewTransportError(err)
+			{{- else }}
 			return nil, goa.Fault("%s", err.Error())
+			{{- end }}
 		{{- end }}
 		}
 		return res, nil
 	}
+	{{- if $retry }}
+	return goa.RetryEndpoint(endpoint{{ range .Method.Errors }}{{ if .Temporary }}, {{ printf "%q" .ErrName }}{{ end }}{{ end }})
+	{{- end }}
 }

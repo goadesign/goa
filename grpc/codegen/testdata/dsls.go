@@ -979,6 +979,25 @@ var ServiceWithPackageDSL = func() {
 	})
 }
 
+var IdempotentRPCsDSL = func() {
+	Service("IdempotentRPCs", func() {
+		Method("read", func() {
+			Idempotent()
+			Error("busy", func() {
+				Temporary()
+			})
+			GRPC(func() {
+				Response("busy", CodeUnavailable)
+			})
+		})
+		Method("stream", func() {
+			Idempotent()
+			StreamingResult(String)
+			GRPC(func() {})
+		})
+	})
+}
+
 var PayloadWithValidationsDSL = func() {
 	Service("PayloadWithValidation", func() {
 		Method("method_a", func() {

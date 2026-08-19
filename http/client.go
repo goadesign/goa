@@ -10,6 +10,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"syscall"
 )
 
 type (
@@ -57,6 +58,11 @@ type (
 
 func (c ClientError) Unwrap() error {
 	return c.Err
+}
+
+// Retryable reports whether repeating an idempotent request may succeed.
+func (c ClientError) Retryable() bool {
+	return c.Temporary
 }
 
 // NewDebugDoer wraps the given doer and captures the request and response so
@@ -178,7 +184,14 @@ func ErrInvalidURL(svc, m, u string, err error) error {
 // response body.
 func ErrDecodingError(svc, m string, err error) error {
 	msg := fmt.Sprintf("failed to decode response body: %s", err)
-	return &ClientError{Name: "decoding_error", Message: msg, Service: svc, Method: m, Err: err}
+	return &ClientError{
+		Name:      "decoding_error",
+		Message:   msg,
+		Service:   svc,
+		Method:    m,
+		Temporary: retryableRequestError(err),
+		Err:       err,
+	}
 }
 
 // ErrValidationError is the error returned when the response body is properly
@@ -197,9 +210,12 @@ func ErrInvalidResponse(svc, m string, code int, body string) error {
 	}
 	msg := fmt.Sprintf("invalid response code %#v"+b+"%s", code, body)
 
-	temporary := code == http.StatusServiceUnavailable ||
+	temporary := code == http.StatusRequestTimeout ||
 		code == http.StatusConflict ||
+		code == http.StatusTooEarly ||
 		code == http.StatusTooManyRequests ||
+		code == http.StatusBadGateway ||
+		code == http.StatusServiceUnavailable ||
 		code == http.StatusGatewayTimeout
 
 	timeout := code == http.StatusRequestTimeout ||
@@ -215,12 +231,30 @@ func ErrInvalidResponse(svc, m string, code int, body string) error {
 
 // ErrRequestError is the error returned when the request fails to be sent.
 func ErrRequestError(svc, m string, err error) error {
-	temporary := false
 	timeout := false
 	var nerr net.Error
 	if errors.As(err, &nerr) {
 		timeout = nerr.Timeout()
 	}
 	return &ClientError{Name: "request_error", Message: err.Error(), Service: svc, Method: m,
-		Temporary: temporary, Timeout: timeout, Err: err}
+		Temporary: retryableRequestError(err), Timeout: timeout, Err: err}
+}
+
+// retryableRequestError recognizes connection and response-body failures that
+// can succeed when a replay-safe request uses a new connection.
+func retryableRequestError(err error) bool {
+	if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+		return true
+	}
+	if errors.Is(err, syscall.ECONNRESET) ||
+		errors.Is(err, syscall.ECONNREFUSED) ||
+		errors.Is(err, syscall.EPIPE) {
+		return true
+	}
+	var dnserr *net.DNSError
+	if errors.As(err, &dnserr) && dnserr.IsTemporary {
+		return true
+	}
+	var nerr net.Error
+	return errors.As(err, &nerr) && nerr.Timeout()
 }

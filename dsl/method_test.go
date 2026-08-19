@@ -29,6 +29,9 @@ func TestMethod(t *testing.T) {
 				if method.Name != "a" {
 					t.Fatalf("a: expected method name to be %s, got %s", "a", method.Name)
 				}
+				if method.Stream != expr.NoStreamKind {
+					t.Errorf("a: expected no stream kind, got %d", method.Stream)
+				}
 			},
 		},
 		"b": {
@@ -88,6 +91,21 @@ func TestMethod(t *testing.T) {
 				}
 				if !method.Payload.IsRequired("required") {
 					t.Errorf("c: expected the required field to be required")
+				}
+			},
+		},
+		"idempotent": {
+			func() {
+				Method("idempotent", func() {
+					Idempotent()
+				})
+			},
+			func(t *testing.T, methods []*expr.MethodExpr) {
+				if len(methods) != 1 {
+					t.Fatalf("idempotent: expected 1 method, got %d", len(methods))
+				}
+				if !methods[0].Idempotent {
+					t.Error("idempotent: expected method to be idempotent")
 				}
 			},
 		},

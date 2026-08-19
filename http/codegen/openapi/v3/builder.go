@@ -377,7 +377,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		Security:     security,
 		Deprecated:   deprecated,
 		ExternalDocs: openapi.DocsFromExpr(m.Docs, m.Meta),
-		Extensions:   openapi.ExtensionsFromExpr(m.Meta),
+		Extensions:   openapi.ExtensionsFromMethod(m),
 	}
 }
 

@@ -1,3 +1,4 @@
+{{- $retry := and .Method.Idempotent (eq .Method.StreamKind 1) (not .Method.SkipRequestBodyEncodeDecode) (not .MultipartRequestEncoder) (not (isWebSocketEndpoint .)) (not (isSSEEndpoint .)) }}
 {{ printf "%s returns an endpoint that makes HTTP requests to the %s service %s server." .EndpointInit .ServiceName .Method.Name | comment }}
 func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.VarName }} {{ .MultipartRequestEncoder.FuncName }}{{ end }}) goa.Endpoint {
 	var (
@@ -6,7 +7,11 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 		{{- end }}
 		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
 	)
+	{{- if $retry }}
+	endpoint := func(ctx context.Context, v any) (any, error) {
+	{{- else }}
 	return func(ctx context.Context, v any) (any, error) {
+	{{- end }}
 		req, err := c.{{ .RequestInit.Name }}(ctx, {{ range .RequestInit.ClientArgs }}{{ .Ref }}, {{ end }})
 		if err != nil {
 			return nil, err
@@ -94,4 +99,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 		{{- end }}
 	{{- end }}
 	}
+	{{- if $retry }}
+	return goa.RetryEndpoint(endpoint{{ range .Method.Errors }}{{ if .Temporary }}, {{ printf "%q" .ErrName }}{{ end }}{{ end }})
+	{{- end }}
 }

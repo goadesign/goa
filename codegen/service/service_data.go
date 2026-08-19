@@ -108,6 +108,9 @@ type (
 		Description string
 		// VarName is the Go method name.
 		VarName string
+		// Idempotent reports whether replaying the exact invocation has the
+		// same externally visible effect as invoking the method once.
+		Idempotent bool
 		// Payload is the name of the payload type if any,
 		Payload string
 		// PayloadLoc defines the file and Go package of the payload type
@@ -1343,6 +1346,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		Name:                         m.Name,
 		VarName:                      vname,
 		Description:                  desc,
+		Idempotent:                   m.Idempotent,
 		Payload:                      payloadName,
 		PayloadLoc:                   payloadLoc,
 		PayloadDef:                   payloadDef,

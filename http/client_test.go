@@ -2,7 +2,11 @@ package http
 
 import (
 	"errors"
+	"io"
+	nethttp "net/http"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestClientError_Unwrap(t *testing.T) {
@@ -51,5 +55,44 @@ func TestClientError_Unwrap(t *testing.T) {
 				}
 			},
 		)
+	}
+}
+
+func TestClientErrorRetryable(t *testing.T) {
+	cases := []struct {
+		name      string
+		err       error
+		retryable bool
+	}{
+		{
+			name:      "request EOF",
+			err:       ErrRequestError("service", "method", io.EOF),
+			retryable: true,
+		},
+		{
+			name:      "truncated response",
+			err:       ErrDecodingError("service", "method", io.ErrUnexpectedEOF),
+			retryable: true,
+		},
+		{
+			name:      "bad gateway",
+			err:       ErrInvalidResponse("service", "method", nethttp.StatusBadGateway, ""),
+			retryable: true,
+		},
+		{
+			name:      "bad request",
+			err:       ErrInvalidResponse("service", "method", nethttp.StatusBadRequest, ""),
+			retryable: false,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var clientErr *ClientError
+			if !assert.ErrorAs(t, tc.err, &clientErr) {
+				return
+			}
+			assert.Equal(t, tc.retryable, clientErr.Retryable())
+		})
 	}
 }

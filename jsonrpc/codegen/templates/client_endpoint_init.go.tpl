@@ -1,3 +1,4 @@
+{{- $retry := and .Method.Idempotent (eq .Method.StreamKind 1) (not .Method.SkipRequestBodyEncodeDecode) (not (isWebSocketEndpoint .)) (not (isSSEEndpoint .)) }}
 {{ printf "%s returns an endpoint that makes JSON-RPC requests to the %s service %s method." .EndpointInit .ServiceName .Method.Name | comment }}
 func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 {{- if not (isWebSocketEndpoint .) }}
@@ -10,7 +11,11 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 	{{- end }}
 	)
 {{- end }}
+	{{- if $retry }}
+	endpoint := func(ctx context.Context, v any) (any, error) {
+	{{- else }}
 	return func(ctx context.Context, v any) (any, error) {
+	{{- end }}
 {{- if not (isWebSocketEndpoint .) }}
 		req, err := c.{{ .RequestInit.Name }}(ctx, {{ range .RequestInit.ClientArgs }}{{ .Ref }}, {{ end }})
 		if err != nil {
@@ -88,4 +93,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 		return decodeResponse(resp)
 {{- end }}
 	}
+	{{- if $retry }}
+	return goa.RetryEndpoint(endpoint{{ range .Method.Errors }}{{ if .Temporary }}, {{ printf "%q" .ErrName }}{{ end }}{{ end }})
+	{{- end }}
 }

@@ -81,6 +81,20 @@ func NewServiceError(resp *goapb.ErrorResponse) *goa.ServiceError {
 	}
 }
 
+// NewTransportError preserves an undecoded gRPC failure as a Goa service
+// error. Unavailable failures are temporary so generated idempotent endpoints
+// can retry them without matching error strings.
+func NewTransportError(err error) *goa.ServiceError {
+	code := status.Code(err)
+	return goa.NewServiceError(
+		err,
+		"fault",
+		code == codes.DeadlineExceeded,
+		code == codes.Unavailable,
+		true,
+	)
+}
+
 // NewStatusError creates a gRPC status error with the error response
 // messages added to its details.
 func NewStatusError(code codes.Code, err error, details ...protoiface.MessageV1) error {

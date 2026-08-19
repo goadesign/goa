@@ -5,13 +5,47 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"goa.design/goa/v3/codegen"
+	. "goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
+
+func TestIdempotentHTTPEndpointCodegen(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		Service("Retry", func() {
+			Method("read", func() {
+				Idempotent()
+				Error("busy", func() {
+					Temporary()
+				})
+				HTTP(func() {
+					GET("/read")
+					Response("busy", StatusServiceUnavailable)
+				})
+			})
+			Method("write", func() {
+				HTTP(func() {
+					POST("/write")
+				})
+			})
+		})
+	})
+	services := CreateHTTPServices(root)
+	clientFiles := ClientFiles("", services)
+	require.NotEmpty(t, clientFiles)
+
+	clientCode := codegen.SectionsCode(t, clientFiles[0].Section("client-endpoint-init"))
+
+	assert.Contains(t, clientCode, `goa.RetryEndpoint(endpoint, "busy")`)
+	assert.Equal(t, 1, strings.Count(clientCode, "goa.RetryEndpoint("))
+}
 
 // TestFileGenerationIdempotent builds the HTTP services data once and renders
 // the complete generated file set twice, asserting that both renders produce

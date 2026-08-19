@@ -40,6 +40,9 @@ type (
 		Service *ServiceExpr
 		// Meta is an arbitrary set of key/value pairs, see dsl.Meta
 		Meta MetaExpr
+		// Idempotent reports whether replaying the exact invocation has the
+		// same externally visible effect as invoking the method once.
+		Idempotent bool
 		// Stream is the kind of stream (none, payload, result, or both)
 		// the method defines.
 		Stream StreamKind

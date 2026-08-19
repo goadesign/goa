@@ -646,7 +646,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			Responses:    responses,
 			Schemes:      schemes,
 			Deprecated:   deprecated,
-			Extensions:   openapi.ExtensionsFromExpr(endpoint.MethodExpr.Meta),
+			Extensions:   openapi.ExtensionsFromMethod(endpoint.MethodExpr),
 			Security:     requirements,
 		}
 

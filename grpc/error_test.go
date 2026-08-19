@@ -87,3 +87,40 @@ func TestEncodeErrorStatusCodes(t *testing.T) {
 		})
 	}
 }
+
+func TestNewTransportError(t *testing.T) {
+	cases := []struct {
+		name      string
+		code      codes.Code
+		temporary bool
+		timeout   bool
+	}{
+		{
+			name:      "unavailable",
+			code:      codes.Unavailable,
+			temporary: true,
+		},
+		{
+			name:    "deadline exceeded",
+			code:    codes.DeadlineExceeded,
+			timeout: true,
+		},
+		{
+			name: "internal",
+			code: codes.Internal,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cause := status.Error(tc.code, tc.name)
+
+			err := NewTransportError(cause)
+
+			assert.Equal(t, tc.temporary, err.Temporary)
+			assert.Equal(t, tc.timeout, err.Timeout)
+			assert.True(t, err.Fault)
+			assert.ErrorIs(t, err, cause)
+		})
+	}
+}

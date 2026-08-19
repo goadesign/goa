@@ -23,6 +23,20 @@ func ExtensionsFromExpr(mdata expr.MetaExpr) map[string]any {
 	return swag
 }
 
+// ExtensionsFromMethod returns the OpenAPI extensions authored as method
+// metadata and advertises the method's idempotency contract when present.
+func ExtensionsFromMethod(method *expr.MethodExpr) map[string]any {
+	extensions := ExtensionsFromExpr(method.Meta)
+	if !method.Idempotent {
+		return extensions
+	}
+	if extensions == nil {
+		extensions = make(map[string]any)
+	}
+	extensions["x-goa-idempotent"] = true
+	return extensions
+}
+
 // extensionsFromExprWithPrefix generates openapi extensions from
 // the given meta expression with keys starting the given prefix.
 func extensionsFromExprWithPrefix(mdata expr.MetaExpr, prefix string) map[string]any {
