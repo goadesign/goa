@@ -1,3 +1,5 @@
+// This file verifies HTTP body graph rewrites visit independent declarations
+// and terminate when recursive copies return to their authored origin.
 package expr
 
 import (
@@ -96,35 +98,4 @@ func TestRemovePkgPathDistinguishesEqualUIDOrigins(t *testing.T) {
 	RemovePkgPath(root)
 	require.NotContains(t, first.Attribute().Meta, "struct:pkg:path")
 	require.NotContains(t, second.Attribute().Meta, "struct:pkg:path")
-}
-
-func TestAppendSuffixDistinguishesEqualUIDOriginsAndTerminatesRecursion(t *testing.T) {
-	first := &UserTypeExpr{TypeName: "First", UID: "shared"}
-	firstObject := &Object{}
-	first.AttributeExpr = &AttributeExpr{Type: firstObject}
-	firstObject.Set("self", &AttributeExpr{Type: first})
-	second := &UserTypeExpr{
-		AttributeExpr: &AttributeExpr{Type: &Object{}},
-		TypeName:      "Second",
-		UID:           "shared",
-	}
-	root := &Object{
-		{Name: "first", Attribute: &AttributeExpr{Type: first}},
-		{Name: "second", Attribute: &AttributeExpr{Type: second}},
-	}
-
-	appendSuffix(root, "Body")
-	require.Equal(t, "FirstBody", first.Name())
-	require.Equal(t, "SecondBody", second.Name())
-}
-
-func TestAppendSuffixTerminatesAfterRecursiveCopyDetachesOrigin(t *testing.T) {
-	original := &UserTypeExpr{TypeName: "Recursive"}
-	object := &Object{}
-	original.AttributeExpr = &AttributeExpr{Type: object}
-	object.Set("self", &AttributeExpr{Type: original})
-	copy := Dup(original).(UserType)
-
-	appendSuffix(copy, "Body")
-	require.Equal(t, "RecursiveBody", copy.Name())
 }

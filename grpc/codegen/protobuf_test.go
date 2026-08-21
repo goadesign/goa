@@ -1,3 +1,5 @@
+// This file verifies protobuf wire shaping, naming, JSON options, wrappers,
+// and recursion follow generated-package declaration ownership.
 package codegen
 
 import (

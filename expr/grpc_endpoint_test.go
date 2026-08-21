@@ -1,3 +1,5 @@
+// This file verifies gRPC endpoint preparation and validation, including the
+// native primitive contract required by request and response metadata.
 package expr_test
 
 import (
@@ -39,6 +41,15 @@ service "Service" gRPC endpoint "Method": field number 2 in attribute "key_dup_i
 		"endpoint-with-extended-types": {
 			DSL:    testdata.GRPCEndpointWithExtendedTypes,
 			Errors: []string{},
+		},
+		"endpoint-with-composite-metadata": {
+			DSL: testdata.GRPCEndpointWithCompositeMetadata,
+			Errors: []string{`service "Service" gRPC endpoint "Method": Request metadata attribute "object" must be a primitive or an array of primitives, got MetadataObject
+service "Service" gRPC endpoint "Method": Request metadata attribute "mapping" must be a primitive or an array of primitives, got map
+service "Service" gRPC endpoint "Method": Request metadata attribute "choice" must be a primitive or an array of primitives, got choice
+service "Service" gRPC endpoint "Method": Response metadata attribute "object" must be a primitive or an array of primitives, got MetadataObject
+service "Service" gRPC endpoint "Method": Response metadata attribute "mapping" must be a primitive or an array of primitives, got map
+service "Service" gRPC endpoint "Method": Response metadata attribute "choice" must be a primitive or an array of primitives, got choice`},
 		},
 		"endpoint-with-inherit-error": {
 			DSL:    testdata.GRPCEndpointWithInheritErrorDSL,

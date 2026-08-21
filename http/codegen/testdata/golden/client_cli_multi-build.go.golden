@@ -6,7 +6,7 @@ func BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, s
 	{
 		err = json.Unmarshal([]byte(serviceMultiMethodMultiPayloadBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"c\": {\n         \"att\": true,\n         \"att10\": \"Aut et.\",\n         \"att11\": \"SGljIHZpdGFlIHZlbGl0IG1hZ25hbSBhdC4=\",\n         \"att12\": \"Voluptatibus harum autem totam quaerat quis ut.\",\n         \"att13\": [\n            \"Sunt inventore est voluptatum ipsam omnis.\",\n            \"Quidem quo a non sequi quo.\",\n            \"Voluptate id corrupti.\",\n            \"Sit cum quia magnam est nihil illo.\"\n         ],\n         \"att14\": {\n            \"Fuga consequatur magnam vel sint doloribus.\": \"Corporis deserunt.\",\n            \"Omnis eveniet.\": \"Nobis quia incidunt nemo illum.\"\n         },\n         \"att15\": {\n            \"inline\": \"Suscipit voluptate magnam facilis.\"\n         },\n         \"att2\": 1586082787030249061,\n         \"att3\": 1689516036,\n         \"att4\": 2650159337126663108,\n         \"att5\": 15366113216962746133,\n         \"att6\": 2615133795,\n         \"att7\": 13370278622483873840,\n         \"att8\": 0.7927184,\n         \"att9\": 0.12075756206016808\n      }\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"c\": {\n         \"att\": false,\n         \"att10\": \"Ea impedit omnis.\",\n         \"att11\": \"RXQgb21uaXMgcXVhcyBuaWhpbCBiZWF0YWUgZXNzZSBkZWxlbml0aS4=\",\n         \"att12\": \"Dolorum non.\",\n         \"att13\": [\n            \"Sint nisi.\",\n            \"Accusantium rerum nihil quae ducimus consequatur fugiat.\",\n            \"Autem eum et et et nulla quasi.\",\n            \"Cumque ut optio.\"\n         ],\n         \"att14\": {\n            \"Vel sunt architecto.\": \"Animi distinctio sequi atque et explicabo ullam.\",\n            \"Vitae beatae ea porro magni et.\": \"Et eaque iusto fugit qui.\"\n         },\n         \"att15\": {\n            \"inline\": \"Quia sint.\"\n         },\n         \"att2\": 143235663851589327,\n         \"att3\": 1890639226,\n         \"att4\": 8858961141680733979,\n         \"att5\": 15592217388400497022,\n         \"att6\": 1918120858,\n         \"att7\": 17362445853891470951,\n         \"att8\": 0.35741758,\n         \"att9\": 0.44400284372015414\n      }\n   }'")
 		}
 	}
 	var b *string
@@ -28,7 +28,7 @@ func BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, s
 	}
 	v := &servicemulti.MethodMultiPayloadPayload{}
 	if body.C != nil {
-		v.C = marshalUserTypeRequestBodyToServicemultiUserType(body.C)
+		v.C = marshalUserTypeToServicemultiUserType(body.C)
 	}
 	v.B = b
 	v.A = a

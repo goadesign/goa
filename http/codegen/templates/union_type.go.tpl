@@ -23,8 +23,8 @@ func (u {{ .Name }}) Kind() {{ .KindName }} {
 }
 
 {{- range .Fields }}
-// New{{ $.Name }}{{ .FieldName }} constructs {{ $.Name }} with the {{ .Name }} branch set.
-func New{{ $.Name }}{{ .FieldName }}(v {{ .FieldType }}) {{ $.Name }} {
+// {{ .Constructor }} constructs {{ $.Name }} with the {{ .Name }} branch set.
+func {{ .Constructor }}(v {{ .FieldType }}) {{ $.Name }} {
 	return {{ $.Name }}{
 		kind:      {{ .KindConst }},
 		{{ .FieldName }}: v,

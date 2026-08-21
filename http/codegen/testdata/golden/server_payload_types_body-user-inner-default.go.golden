@@ -4,7 +4,7 @@
 func NewMethodBodyUserInnerDefaultPayloadType(body *MethodBodyUserInnerDefaultRequestBody) *servicebodyuserinnerdefault.PayloadType {
 	v := &servicebodyuserinnerdefault.PayloadType{}
 	if body.Inner != nil {
-		v.Inner = unmarshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType(body.Inner)
+		v.Inner = unmarshalInnerTypeToServicebodyuserinnerdefaultInnerType(body.Inner)
 	}
 
 	return v

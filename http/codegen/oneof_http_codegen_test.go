@@ -20,7 +20,7 @@ func TestClientCLIInlinesOneOfRequestValidation(t *testing.T) {
 
 	require.Contains(t, code, "BuildMethodBodyUnionUserValidatePayload")
 	require.Contains(t, code, "if body.A == nil")
-	require.Contains(t, code, "marshalUnionUserValidateRequestBodyTo")
+	require.Contains(t, code, "marshalUnionUserValidateTo")
 	require.NotContains(t, code, "ValidateMethodBodyUnionUserValidateRequestBody")
 }
 

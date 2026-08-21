@@ -1,15 +1,15 @@
 // MethodARequestBody is the type of the "ServiceMixedPayloadInBody" service
 // "MethodA" endpoint HTTP request body.
 type MethodARequestBody struct {
-	Any    any                  `form:"any,omitempty" json:"any,omitempty" xml:"any,omitempty"`
-	Array  []float32            `form:"array,omitempty" json:"array,omitempty" xml:"array,omitempty"`
-	Map    map[uint]any         `form:"map,omitempty" json:"map,omitempty" xml:"map,omitempty"`
-	Object *BPayloadRequestBody `form:"object,omitempty" json:"object,omitempty" xml:"object,omitempty"`
-	DupObj *BPayloadRequestBody `form:"dup_obj,omitempty" json:"dup_obj,omitempty" xml:"dup_obj,omitempty"`
+	Any    any          `form:"any,omitempty" json:"any,omitempty" xml:"any,omitempty"`
+	Array  []float32    `form:"array,omitempty" json:"array,omitempty" xml:"array,omitempty"`
+	Map    map[uint]any `form:"map,omitempty" json:"map,omitempty" xml:"map,omitempty"`
+	Object *BPayload    `form:"object,omitempty" json:"object,omitempty" xml:"object,omitempty"`
+	DupObj *BPayload    `form:"dup_obj,omitempty" json:"dup_obj,omitempty" xml:"dup_obj,omitempty"`
 }
 
-// BPayloadRequestBody is used to define fields on request body types.
-type BPayloadRequestBody struct {
+// BPayload is used to define fields on request body types.
+type BPayload struct {
 	Int   *int   `form:"int,omitempty" json:"int,omitempty" xml:"int,omitempty"`
 	Bytes []byte `form:"bytes,omitempty" json:"bytes,omitempty" xml:"bytes,omitempty"`
 }
@@ -32,9 +32,9 @@ func NewMethodAAPayload(body *MethodARequestBody) *servicemixedpayloadinbody.APa
 			v.Map[tk] = tv
 		}
 	}
-	v.Object = unmarshalBPayloadRequestBodyToServicemixedpayloadinbodyBPayload(body.Object)
+	v.Object = unmarshalBPayloadToServicemixedpayloadinbodyBPayload(body.Object)
 	if body.DupObj != nil {
-		v.DupObj = unmarshalBPayloadRequestBodyToServicemixedpayloadinbodyBPayload(body.DupObj)
+		v.DupObj = unmarshalBPayloadToServicemixedpayloadinbodyBPayload(body.DupObj)
 	}
 
 	return v
@@ -49,21 +49,20 @@ func ValidateMethodARequestBody(body *MethodARequestBody) (err error) {
 		err = goa.MergeErrors(err, goa.MissingFieldError("object", "body"))
 	}
 	if body.Object != nil {
-		if err2 := ValidateBPayloadRequestBody(body.Object); err2 != nil {
+		if err2 := ValidateBPayload(body.Object); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	if body.DupObj != nil {
-		if err2 := ValidateBPayloadRequestBody(body.DupObj); err2 != nil {
+		if err2 := ValidateBPayload(body.DupObj); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// ValidateBPayloadRequestBody runs the validations defined on
-// BPayloadRequestBody
-func ValidateBPayloadRequestBody(body *BPayloadRequestBody) (err error) {
+// ValidateBPayload runs the validations defined on BPayload
+func ValidateBPayload(body *BPayload) (err error) {
 	if body.Int == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("int", "body"))
 	}

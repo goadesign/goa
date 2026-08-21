@@ -2,7 +2,7 @@
 // ServiceBodyInlineArrayUser MethodBodyInlineArrayUser endpoint from CLI flags.
 func BuildMethodBodyInlineArrayUserPayload(serviceBodyInlineArrayUserMethodBodyInlineArrayUserBody string) ([]*servicebodyinlinearrayuser.ElemType, error) {
 	var err error
-	var body []*ElemTypeRequestBody
+	var body []*ElemType
 	{
 		err = json.Unmarshal([]byte(serviceBodyInlineArrayUserMethodBodyInlineArrayUserBody), &body)
 		if err != nil {
@@ -15,7 +15,7 @@ func BuildMethodBodyInlineArrayUserPayload(serviceBodyInlineArrayUserMethodBodyI
 			v[i] = nil
 			continue
 		}
-		v[i] = marshalElemTypeRequestBodyToServicebodyinlinearrayuserElemType(val)
+		v[i] = marshalElemTypeToServicebodyinlinearrayuserElemType(val)
 	}
 	return v, nil
 }

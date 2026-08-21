@@ -3,7 +3,7 @@
 func NewMethodBodyUserInnerPayloadType(body *MethodBodyUserInnerRequestBody) *servicebodyuserinner.PayloadType {
 	v := &servicebodyuserinner.PayloadType{}
 	if body.Inner != nil {
-		v.Inner = unmarshalInnerTypeRequestBodyToServicebodyuserinnerInnerType(body.Inner)
+		v.Inner = unmarshalInnerTypeToServicebodyuserinnerInnerType(body.Inner)
 	}
 
 	return v

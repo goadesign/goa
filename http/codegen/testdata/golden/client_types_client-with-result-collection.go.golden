@@ -2,19 +2,19 @@
 // "ServiceResultWithResultCollection" service
 // "MethodResultWithResultCollection" endpoint HTTP response body.
 type MethodResultWithResultCollectionResponseBody struct {
-	A *ResulttypeResponseBody `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+	A *Resulttype `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
 }
 
-// ResulttypeResponseBody is used to define fields on response body types.
-type ResulttypeResponseBody struct {
-	X RtCollectionResponseBody `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"`
+// Resulttype is used to define fields on response body types.
+type Resulttype struct {
+	X RtCollection `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"`
 }
 
-// RtCollectionResponseBody is used to define fields on response body types.
-type RtCollectionResponseBody []*RtResponseBody
+// RtCollection is used to define fields on response body types.
+type RtCollection []*Rt
 
-// RtResponseBody is used to define fields on response body types.
-type RtResponseBody struct {
+// Rt is used to define fields on response body types.
+type Rt struct {
 	X *string `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"`
 }
 
@@ -24,7 +24,7 @@ type RtResponseBody struct {
 func NewMethodResultWithResultCollectionResultOK(body *MethodResultWithResultCollectionResponseBody) *serviceresultwithresultcollection.MethodResultWithResultCollectionResult {
 	v := &serviceresultwithresultcollection.MethodResultWithResultCollectionResult{}
 	if body.A != nil {
-		v.A = unmarshalResulttypeResponseBodyToServiceresultwithresultcollectionResulttype(body.A)
+		v.A = unmarshalResulttypeToServiceresultwithresultcollectionResulttype(body.A)
 	}
 
 	return v
@@ -34,30 +34,28 @@ func NewMethodResultWithResultCollectionResultOK(body *MethodResultWithResultCol
 // defined on MethodResultWithResultCollectionResponseBody
 func ValidateMethodResultWithResultCollectionResponseBody(body *MethodResultWithResultCollectionResponseBody) (err error) {
 	if body.A != nil {
-		if err2 := ValidateResulttypeResponseBody(body.A); err2 != nil {
+		if err2 := ValidateResulttype(body.A); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// ValidateResulttypeResponseBody runs the validations defined on
-// ResulttypeResponseBody
-func ValidateResulttypeResponseBody(body *ResulttypeResponseBody) (err error) {
+// ValidateResulttype runs the validations defined on Resulttype
+func ValidateResulttype(body *Resulttype) (err error) {
 	if body.X != nil {
-		if err2 := ValidateRtCollectionResponseBody(body.X); err2 != nil {
+		if err2 := ValidateRtCollection(body.X); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// ValidateRtCollectionResponseBody runs the validations defined on
-// RtCollectionResponseBody
-func ValidateRtCollectionResponseBody(body RtCollectionResponseBody) (err error) {
+// ValidateRtCollection runs the validations defined on RtCollection
+func ValidateRtCollection(body RtCollection) (err error) {
 	for _, e := range body {
 		if e != nil {
-			if err2 := ValidateRtResponseBody(e); err2 != nil {
+			if err2 := ValidateRt(e); err2 != nil {
 				err = goa.MergeErrors(err, err2)
 			}
 		}
@@ -65,8 +63,8 @@ func ValidateRtCollectionResponseBody(body RtCollectionResponseBody) (err error)
 	return
 }
 
-// ValidateRtResponseBody runs the validations defined on RtResponseBody
-func ValidateRtResponseBody(body *RtResponseBody) (err error) {
+// ValidateRt runs the validations defined on Rt
+func ValidateRt(body *Rt) (err error) {
 	if body.X != nil {
 		if utf8.RuneCountInString(*body.X) < 5 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.x", *body.X, utf8.RuneCountInString(*body.X), 5, true))

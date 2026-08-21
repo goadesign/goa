@@ -1,3 +1,5 @@
+// This file verifies generated protobuf services and message declarations,
+// including package-owned naming collisions, by compiling each schema.
 package codegen
 
 import (
@@ -35,6 +37,7 @@ func TestProtoFiles(t *testing.T) {
 		{"protofiles-struct-meta-type", testdata.StructMetaTypeDSL},
 		{"protofiles-default-fields", testdata.DefaultFieldsDSL},
 		{"protofiles-custom-message-name", testdata.CustomMessageNameDSL},
+		{"protofiles-distinct-custom-message-names", testdata.DistinctCustomMessageNamesDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

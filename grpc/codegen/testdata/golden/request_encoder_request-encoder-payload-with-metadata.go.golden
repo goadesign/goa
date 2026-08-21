@@ -6,7 +6,9 @@ func EncodeMethodMessageWithMetadataRequest(ctx context.Context, v any, md *meta
 		return nil, goagrpc.ErrInvalidType("ServiceMessageWithMetadata", "MethodMessageWithMetadata", "*servicemessagewithmetadata.RequestUT", v)
 	}
 	if payload.InMetadata != nil {
-		(*md).Append("Authorization", fmt.Sprintf("%v", *payload.InMetadata))
+		inMetadataWire := *payload.InMetadata
+		(*md).Append("Authorization", fmt.Sprintf("%v",
+			inMetadataWire))
 	}
 	return NewProtoMethodMessageWithMetadataRequest(payload), nil
 }

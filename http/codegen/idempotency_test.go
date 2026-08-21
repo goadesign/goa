@@ -1,3 +1,5 @@
+// This file verifies repeated HTTP analysis produces the same package-owned
+// declarations and does not retain mutable state between runs.
 package codegen
 
 import (
@@ -50,8 +52,8 @@ func TestIdempotentHTTPEndpointCodegen(t *testing.T) {
 // TestFileGenerationIdempotent builds the HTTP services data once and renders
 // the complete generated file set twice, asserting that both renders produce
 // byte-identical outputs. This guards against file generators mutating shared
-// analysis state (e.g. the ServerTypeNames/ClientTypeNames dedup sets or the
-// PathInit argument data) in ways that change subsequent renders.
+// analysis state (for example package declaration catalogs or PathInit
+// argument data) in ways that change subsequent renders.
 func TestFileGenerationIdempotent(t *testing.T) {
 	cases := []struct {
 		Name string

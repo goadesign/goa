@@ -1,3 +1,5 @@
+// This file contains expected HTTP streaming sections used to verify that
+// websocket client and server code names the exact catalog-owned wire types.
 package testdata
 
 var MixedEndpointsConnConfigurerStructCode = `// ConnConfigurer holds the websocket connection configurer functions for the
@@ -639,11 +641,11 @@ func (s *StreamingResultCollectionWithViewsMethodServerStream) Send(v streamingr
 	var body any
 	switch s.view {
 	case "tiny":
-		body = NewUsertypeResponseTinyCollection(res.Projected)
+		body = NewUsertypeTinyCollection(res.Projected)
 	case "extended":
-		body = NewUsertypeResponseExtendedCollection(res.Projected)
+		body = NewUsertypeExtendedCollection(res.Projected)
 	case "default", "":
-		body = NewUsertypeResponseCollection(res.Projected)
+		body = NewUsertypeCollection(res.Projected)
 	}
 	return s.conn.WriteJSON(body)
 }
@@ -732,7 +734,7 @@ func (s *StreamingResultCollectionWithExplicitViewMethodServerStream) Send(v str
 		return s.upgradeErr
 	}
 	res := streamingresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
-	body := NewUsertypeResponseTinyCollection(res.Projected)
+	body := NewUsertypeTinyCollection(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 
@@ -790,7 +792,7 @@ var StreamingResultCollectionWithExplicitViewClientStreamRecvCode = `// Recv rea
 func (s *StreamingResultCollectionWithExplicitViewMethodClientStream) Recv() (streamingresultcollectionwithexplicitviewservice.UsertypeCollection, error) {
 	var (
 		rv   streamingresultcollectionwithexplicitviewservice.UsertypeCollection
-		body UsertypeResponseTinyCollection
+		body UsertypeTinyCollection
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -1040,7 +1042,7 @@ var StreamingResultUserTypeArrayClientStreamRecvCode = `// Recv reads instances 
 func (s *StreamingResultUserTypeArrayMethodClientStream) Recv() ([]*streamingresultusertypearrayservice.UserType, error) {
 	var (
 		rv   []*streamingresultusertypearrayservice.UserType
-		body []*UserTypeResponse
+		body []*UserType
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -1107,7 +1109,7 @@ var StreamingResultUserTypeMapClientStreamRecvCode = `// Recv reads instances of
 func (s *StreamingResultUserTypeMapMethodClientStream) Recv() (map[string]*streamingresultusertypemapservice.UserType, error) {
 	var (
 		rv   map[string]*streamingresultusertypemapservice.UserType
-		body map[string]*UserTypeResponse
+		body map[string]*UserType
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -1861,11 +1863,11 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) SendAndClo
 	var body any
 	switch s.view {
 	case "tiny":
-		body = NewUsertypeResponseTinyCollection(res.Projected)
+		body = NewUsertypeTinyCollection(res.Projected)
 	case "extended":
-		body = NewUsertypeResponseExtendedCollection(res.Projected)
+		body = NewUsertypeExtendedCollection(res.Projected)
 	case "default", "":
-		body = NewUsertypeResponseCollection(res.Projected)
+		body = NewUsertypeCollection(res.Projected)
 	}
 	return s.conn.WriteJSON(body)
 }
@@ -2004,7 +2006,7 @@ var StreamingPayloadResultCollectionWithExplicitViewServerStreamSendCode = `// S
 func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) SendAndClose(v streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection) error {
 	defer s.conn.Close()
 	res := streamingpayloadresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
-	body := NewUsertypeResponseTinyCollection(res.Projected)
+	body := NewUsertypeTinyCollection(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 
@@ -2084,7 +2086,7 @@ var StreamingPayloadResultCollectionWithExplicitViewClientStreamRecvCode = `// C
 func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) CloseAndRecv() (streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection, error) {
 	var (
 		rv   streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection
-		body UsertypeResponseTinyCollection
+		body UsertypeTinyCollection
 		err  error
 	)
 	defer s.conn.Close()
@@ -3412,11 +3414,11 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 	var body any
 	switch s.view {
 	case "tiny":
-		body = NewUsertypeResponseTinyCollection(res.Projected)
+		body = NewUsertypeTinyCollection(res.Projected)
 	case "extended":
-		body = NewUsertypeResponseExtendedCollection(res.Projected)
+		body = NewUsertypeExtendedCollection(res.Projected)
 	case "default", "":
-		body = NewUsertypeResponseCollection(res.Projected)
+		body = NewUsertypeCollection(res.Projected)
 	}
 	return s.conn.WriteJSON(body)
 }
@@ -3566,7 +3568,7 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 		return s.upgradeErr
 	}
 	res := bidirectionalstreamingresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
-	body := NewUsertypeResponseTinyCollection(res.Projected)
+	body := NewUsertypeTinyCollection(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 
@@ -3645,7 +3647,7 @@ var BidirectionalStreamingResultCollectionWithExplicitViewClientStreamRecvCode =
 func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStream) Recv() (bidirectionalstreamingresultcollectionwithexplicitviewservice.UsertypeCollection, error) {
 	var (
 		rv   bidirectionalstreamingresultcollectionwithexplicitviewservice.UsertypeCollection
-		body UsertypeResponseTinyCollection
+		body UsertypeTinyCollection
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -4128,7 +4130,7 @@ var BidirectionalStreamingUserTypeArrayClientStreamRecvCode = `// Recv reads ins
 func (s *BidirectionalStreamingUserTypeArrayMethodClientStream) Recv() ([]*bidirectionalstreamingusertypearrayservice.ResultType, error) {
 	var (
 		rv   []*bidirectionalstreamingusertypearrayservice.ResultType
-		body []*ResultTypeResponse
+		body []*ResultType
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -4256,7 +4258,7 @@ var BidirectionalStreamingUserTypeMapClientStreamRecvCode = `// Recv reads insta
 func (s *BidirectionalStreamingUserTypeMapMethodClientStream) Recv() (map[string]*bidirectionalstreamingusertypemapservice.ResultType, error) {
 	var (
 		rv   map[string]*bidirectionalstreamingusertypemapservice.ResultType
-		body map[string]*ResultTypeResponse
+		body map[string]*ResultType
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)

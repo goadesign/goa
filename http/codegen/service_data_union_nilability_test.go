@@ -1,3 +1,5 @@
+// This file verifies HTTP union records preserve the nilability of every
+// branch when rendering their package-owned sum type.
 package codegen
 
 import (
@@ -11,7 +13,13 @@ import (
 
 func TestBuildHTTPUnionTypeDataMarksNilableBranches(t *testing.T) {
 	union := unionWithBranchTypes()
-	data := buildHTTPUnionTypeData(union, codegen.NewNameScope())
+	record := &wireUnionRecord{
+		name:         "Value",
+		kindName:     "ValueKind",
+		kindConsts:   []string{"ValueKindArray", "ValueKindBool", "ValueKindBytes", "ValueKindMap", "ValueKindObject", "ValueKindString"},
+		constructors: []string{"NewValueArray", "NewValueBool", "NewValueBytes", "NewValueMap", "NewValueObject", "NewValueString"},
+	}
+	data := buildHTTPUnionTypeData(union, codegen.NewNameScope(), record)
 
 	nilable := make(map[string]bool, len(data.Fields))
 	for _, field := range data.Fields {

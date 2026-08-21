@@ -74,8 +74,8 @@ func TestGenerateHTTPUnionUsedByRequestAndResponseCompiles(t *testing.T) {
 	runGeneratedTests(t, genDir)
 }
 
-// assertGeneratedUnionDeclarations proves the two request copies share one
-// declaration while the differently shaped response receives another.
+// assertGeneratedUnionDeclarations proves identical request derivations reuse
+// one union while the differently shaped response receives another.
 func assertGeneratedUnionDeclarations(t *testing.T, genDir string) {
 	t.Helper()
 	path := filepath.Join(genDir, "http", "front", "server", "types.go")
@@ -91,7 +91,13 @@ func assertGeneratedUnionDeclarations(t *testing.T, genDir string) {
 		t.Fatalf("expected one response Scope2 declaration:\n%s", code)
 	}
 	if strings.Contains(code, "type Scope3 struct {") {
-		t.Fatalf("copied request union produced a third declaration:\n%s", code)
+		t.Fatalf("identical request derivation produced a third union declaration:\n%s", code)
+	}
+	if strings.Contains(code, "SiteSetRequestBody") {
+		t.Fatalf("identical request derivation produced a second branch declaration:\n%s", code)
+	}
+	if strings.Count(code, "\tSiteSet  *SiteSet\n") != 1 {
+		t.Fatalf("request union does not reference its canonical branch declaration:\n%s", code)
 	}
 }
 

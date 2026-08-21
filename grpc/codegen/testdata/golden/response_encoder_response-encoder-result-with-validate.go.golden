@@ -7,12 +7,16 @@ func EncodeMethodMessageWithValidateResponse(ctx context.Context, v any, hdr, tr
 	}
 	resp := NewProtoMethodMessageWithValidateResponse(result)
 
-	if res.InHeader != nil {
-		(*hdr).Append("Location", fmt.Sprintf("%v", *p.InHeader))
+	if result.InHeader != nil {
+		inHeaderWire := *result.InHeader
+		(*hdr).Append("Location", fmt.Sprintf("%v",
+			inHeaderWire))
 	}
 
-	if res.InTrailer != nil {
-		(*trlr).Append("InTrailer", fmt.Sprintf("%v", *p.InTrailer))
+	if result.InTrailer != nil {
+		inTrailerWire := *result.InTrailer
+		(*trlr).Append("InTrailer", fmt.Sprintf("%v",
+			inTrailerWire))
 	}
 	return resp, nil
 }

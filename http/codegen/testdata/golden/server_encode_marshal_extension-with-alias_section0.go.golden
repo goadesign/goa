@@ -1,12 +1,12 @@
-// unmarshalExtensionRequestBodyToFooserviceExtension builds a value of type
-// *fooservice.Extension from a value of type *ExtensionRequestBody.
-func unmarshalExtensionRequestBodyToFooserviceExtension(v *ExtensionRequestBody) *fooservice.Extension {
+// unmarshalExtensionToFooserviceExtension builds a value of type
+// *fooservice.Extension from a value of type *Extension.
+func unmarshalExtensionToFooserviceExtension(v *Extension) *fooservice.Extension {
 	if v == nil {
 		return nil
 	}
 	res := &fooservice.Extension{}
 	if v.Bar != nil {
-		res.Bar = unmarshalBarRequestBodyToFooserviceBar(v.Bar)
+		res.Bar = unmarshalBarToFooserviceBar(v.Bar)
 	}
 
 	return res

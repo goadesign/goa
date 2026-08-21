@@ -1,3 +1,5 @@
+// This file defines reusable endpoint designs that exercise HTTP and gRPC
+// preparation, validation, inheritance, streaming, and metadata behavior.
 package testdata
 
 import (
@@ -707,6 +709,46 @@ var GRPCEndpointWithExtendedTypes = func() {
 					})
 					Message(func() {
 						Attribute("id")
+					})
+				})
+			})
+		})
+	})
+}
+
+var GRPCEndpointWithCompositeMetadata = func() {
+	objectValue := Type("MetadataObject", func() {
+		Attribute("name", String)
+	})
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("object", objectValue)
+				Attribute("mapping", MapOf(String, String))
+				OneOf("choice", func() {
+					Attribute("text", String)
+					Attribute("count", Int)
+				})
+			})
+			Result(func() {
+				Attribute("object", objectValue)
+				Attribute("mapping", MapOf(String, String))
+				OneOf("choice", func() {
+					Attribute("text", String)
+					Attribute("count", Int)
+				})
+			})
+			GRPC(func() {
+				Metadata(func() {
+					Attribute("object")
+					Attribute("mapping")
+					Attribute("choice")
+				})
+				Response(func() {
+					Headers(func() { Attribute("object") })
+					Trailers(func() {
+						Attribute("mapping")
+						Attribute("choice")
 					})
 				})
 			})

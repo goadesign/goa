@@ -572,6 +572,8 @@ func validateMetadata(metAtt *MappedAttributeExpr, serviceAtt *AttributeExpr, e 
 		for _, nat := range *AsObject(metAtt.Type) {
 			if a := serviceAtt.Find(nat.Name); a == nil {
 				verr.Add(e, "%s metadata attribute %q is not found in %s", metKind, nat.Name, serviceKind)
+			} else if !isMetadataEncodable(a.Type) {
+				verr.Add(e, "%s metadata attribute %q must be a primitive or an array of primitives, got %s", metKind, nat.Name, a.Type.Name())
 			}
 		}
 	} else {

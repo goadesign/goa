@@ -5,7 +5,7 @@ func EncodeMethodBodyCollectionExplicitViewResponse(encoder func(context.Context
 	return func(ctx context.Context, w http.ResponseWriter, v any) error {
 		res := v.(servicebodycollectionexplicitviewviews.ResulttypecollectionCollection)
 		enc := encoder(ctx, w)
-		body := NewResulttypecollectionResponseTinyCollection(res.Projected)
+		body := NewResulttypecollectionTinyCollection(res.Projected)
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)
 	}

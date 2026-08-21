@@ -2,12 +2,12 @@
 // "ServiceResultWithResultView" service "MethodResultWithResultView" endpoint
 // HTTP response body.
 type MethodResultWithResultViewResponseBodyFull struct {
-	Name *string         `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-	Rt   *RtResponseBody `form:"rt,omitempty" json:"rt,omitempty" xml:"rt,omitempty"`
+	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	Rt   *Rt     `form:"rt,omitempty" json:"rt,omitempty" xml:"rt,omitempty"`
 }
 
-// RtResponseBody is used to define fields on response body types.
-type RtResponseBody struct {
+// Rt is used to define fields on response body types.
+type Rt struct {
 	X *string `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"`
 }
 
@@ -19,7 +19,7 @@ func NewMethodResultWithResultViewResponseBodyFull(res *serviceresultwithresultv
 		Name: res.Name,
 	}
 	if res.Rt != nil {
-		body.Rt = marshalServiceresultwithresultviewviewsRtViewToRtResponseBody(res.Rt)
+		body.Rt = marshalServiceresultwithresultviewviewsRtViewToRt(res.Rt)
 	}
 	return body
 }

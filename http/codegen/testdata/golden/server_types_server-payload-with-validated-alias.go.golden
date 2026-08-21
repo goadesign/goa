@@ -1,11 +1,11 @@
 // MethodStreamingBody is the type of the "ServicePayloadValidatedAlias"
 // service "Method" endpoint HTTP request body.
 type MethodStreamingBody struct {
-	Name *ValidatedStringStreamingBody `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	Name *ValidatedString `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 }
 
-// ValidatedStringStreamingBody is used to define fields on request body types.
-type ValidatedStringStreamingBody string
+// ValidatedString is used to define fields on request body types.
+type ValidatedString string
 
 // NewMethodStreamingBody builds a ServicePayloadValidatedAlias service Method
 // endpoint payload.

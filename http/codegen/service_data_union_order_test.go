@@ -7,8 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	cg "goa.design/goa/v3/codegen"
-	svc "goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 )
@@ -79,17 +77,18 @@ func TestCollectHTTPUnionTypesReusesSameShapedDeclarationsAndReferences(t *testi
 		},
 	}
 
-	scope := cg.NewNameScope()
-	unions := make(map[cg.UnionTypeID]*svc.UnionTypeData)
-	collectHTTPUnionTypes(bodies, scope, unions, make(map[expr.UserType]struct{}))
+	catalog := newWireTypeCatalog()
+	catalog.collect(bodies, wireAttribute, wireTypePolicy{}, "")
+	catalog.Freeze()
+	catalog.applyNames(bodies, wireAttribute, wireTypePolicy{})
 
-	emitted := make([]string, 0, len(unions))
-	for _, union := range unions {
+	emitted := make([]string, 0, len(catalog.unions))
+	for _, union := range catalog.unionTypes() {
 		emitted = append(emitted, union.Name)
 	}
 	references := []string{
-		scope.GoTypeName(&expr.AttributeExpr{Type: first}),
-		scope.GoTypeName(&expr.AttributeExpr{Type: second}),
+		catalog.scope.GoTypeName(&expr.AttributeExpr{Type: first}),
+		catalog.scope.GoTypeName(&expr.AttributeExpr{Type: second}),
 	}
 	require.Equal(t, []string{"Value"}, emitted)
 	require.Equal(t, []string{"Value", "Value"}, references)
@@ -119,13 +118,16 @@ func TestHTTPServiceDataReusesSameShapedMethodBodyUnions(t *testing.T) {
 
 	data := CreateHTTPServices(root).Get("values")
 	require.NotNil(t, data)
-	emitted := make([]string, len(data.UnionTypes))
-	for i, union := range data.UnionTypes {
-		emitted[i] = union.Name
+	for _, catalog := range []*wireTypeCatalog{data.serverWireTypes, data.clientWireTypes} {
+		unions := catalog.unionTypes()
+		emitted := make([]string, len(unions))
+		for i, union := range unions {
+			emitted[i] = union.Name
+		}
+		require.Equal(t, []string{"Value", "Value2"}, emitted)
 	}
-	require.Equal(t, []string{"Value"}, emitted)
 	require.Contains(t, data.Endpoint("first").Payload.Request.ServerBody.Def, "Value *Value ")
-	require.Contains(t, data.Endpoint("second").Payload.Request.ServerBody.Def, "Value *Value ")
+	require.Contains(t, data.Endpoint("second").Payload.Request.ServerBody.Def, "Value *Value2 ")
 }
 
 func TestMakeHTTPTypeRemovesServicePackageOwnershipFromWireCopy(t *testing.T) {
@@ -196,14 +198,13 @@ func sameShapedValueUnionDSL() {
 }
 
 func collectHTTPUnionTypeNames(att *expr.AttributeExpr) map[string]string {
-	scope := cg.NewNameScope()
-	seen := make(map[expr.UserType]struct{})
-	unionTypes := make(map[cg.UnionTypeID]*svc.UnionTypeData)
-	collectHTTPUnionTypes(att, scope, unionTypes, seen)
+	catalog := newWireTypeCatalog()
+	catalog.collect(att, wireAttribute, wireTypePolicy{}, "")
+	catalog.Freeze()
 
-	names := make(map[string]string, len(unionTypes))
-	for identity, data := range unionTypes {
-		names[identity.Hash()] = data.Name
+	names := make(map[string]string, len(catalog.unions))
+	for _, record := range catalog.unions {
+		names[record.identity.definition.Hash()] = record.data.Name
 	}
 	return names
 }

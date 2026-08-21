@@ -1,13 +1,13 @@
-// marshalServicedeepuserviewsImmediatechildextenderViewToImmediatechildextenderResponseBody
-// builds a value of type *ImmediatechildextenderResponseBody from a value of
-// type *servicedeepuserviews.ImmediatechildextenderView.
-func marshalServicedeepuserviewsImmediatechildextenderViewToImmediatechildextenderResponseBody(v *servicedeepuserviews.ImmediatechildextenderView) *ImmediatechildextenderResponseBody {
+// marshalServicedeepuserviewsImmediatechildextenderViewToImmediatechildextender
+// builds a value of type *Immediatechildextender from a value of type
+// *servicedeepuserviews.ImmediatechildextenderView.
+func marshalServicedeepuserviewsImmediatechildextenderViewToImmediatechildextender(v *servicedeepuserviews.ImmediatechildextenderView) *Immediatechildextender {
 	if v == nil {
 		return nil
 	}
-	res := &ImmediatechildextenderResponseBody{}
+	res := &Immediatechildextender{}
 	if v.DeepChild != nil {
-		res.DeepChild = marshalServicedeepuserviewsDeepchildViewToDeepchildResponseBody(v.DeepChild)
+		res.DeepChild = marshalServicedeepuserviewsDeepchildViewToDeepchild(v.DeepChild)
 	}
 
 	return res

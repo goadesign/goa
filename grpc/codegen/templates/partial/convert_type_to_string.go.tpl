@@ -22,6 +22,4 @@
 	{{ .VarName }} := string({{ .Target }})
 {{- else if eq .Type.Name "any" -}}
 	{{ .VarName }} := fmt.Sprintf("%v", {{ .Target }})
-{{- else }}
-	// unsupported type {{ .Type.Name }} for field {{ .FieldName }}
 {{- end }}

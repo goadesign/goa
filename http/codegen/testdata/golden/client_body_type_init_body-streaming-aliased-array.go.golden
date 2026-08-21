@@ -3,9 +3,9 @@
 func NewStreamStreamingBody(p *streamingaliasedarray.PayloadType) *StreamStreamingBody {
 	body := &StreamStreamingBody{}
 	if p.Values != nil {
-		body.Values = make([]CustomIntStreamingBody, len(p.Values))
+		body.Values = make([]CustomInt, len(p.Values))
 		for i, val := range p.Values {
-			body.Values[i] = CustomIntStreamingBody(val)
+			body.Values[i] = CustomInt(val)
 		}
 	}
 	return body

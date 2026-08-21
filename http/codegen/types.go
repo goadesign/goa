@@ -80,6 +80,7 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 		validateSection = "client-validate"
 		bodyInitT = clientBodyInitT
 	}
+	unionTypes := data.wireTypes(svr).unionTypes()
 	path := filepath.Join(codegen.Gendir, services.dir(), svcName, side, "types.go")
 	imports := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
@@ -87,7 +88,7 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 		{Path: "unicode/utf8"},
 		services.ServiceImport(svc.Name()),
 	}
-	if len(data.UnionTypes) > 0 {
+	if len(unionTypes) > 0 {
 		imports = append(imports, &codegen.ImportSpec{Path: "bytes"})
 	}
 	views := services.ViewImport(svc.Name())
@@ -104,46 +105,42 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 
 		sections = []*codegen.SectionTemplate{header}
 
-		// seen tracks the body types already emitted in this file. Server
-		// types are deduplicated by type name because distinct
-		// endpoint-scoped composite wrappers may share a structural
-		// reference, client types by reference because structurally
-		// identical types are decoded interchangeably.
-		seen          = make(map[string]struct{})
+		// seen tracks the canonical package records already emitted. Type names
+		// and references are outputs of these records, never declaration
+		// identity.
+		seen          = make(map[*wireTypeRecord]struct{})
 		seenInits     = make(map[string]struct{})
-		seenValidated = make(map[string]struct{})
+		seenValidated = make(map[*wireTypeRecord]struct{})
 	)
-	key := func(td *TypeData) string {
-		if svr {
-			return td.Name
-		}
-		return td.Ref
-	}
 	// addDecl emits the type declaration section if the type has a
 	// definition.
 	addDecl := func(name string, td *TypeData) {
-		if td.Def != "" {
+		if td.declaration == nil || td.Def == "" {
+			return
+		}
+		if _, ok := seen[td.declaration]; ok {
+			return
+		}
+		seen[td.declaration] = struct{}{}
+		declaration := td.declaration.data
+		if declaration != nil {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   name,
 				Source: httpTemplates.Read(typeDeclT),
-				Data:   td,
+				Data:   declaration,
 			})
 		}
 	}
-	// addValidated records the type for validation method generation. Client
-	// types are deduplicated by name; server types rely on the body type
-	// dedup performed by the callers.
+	// addValidated records each package-owned validation helper once.
 	addValidated := func(td *TypeData) {
-		if td.ValidateDef == "" {
+		if td.declaration == nil || td.ValidateDef == "" {
 			return
 		}
-		if !svr {
-			if _, ok := seenValidated[td.Name]; ok {
-				return
-			}
-			seenValidated[td.Name] = struct{}{}
+		if _, ok := seenValidated[td.declaration]; ok {
+			return
 		}
-		validatedTypes = append(validatedTypes, td)
+		seenValidated[td.declaration] = struct{}{}
+		validatedTypes = append(validatedTypes, td.declaration.data)
 	}
 
 	// request body types
@@ -164,12 +161,6 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 		for i, td := range []*TypeData{body, wsPayload} {
 			if td == nil {
 				continue
-			}
-			if !svr {
-				if _, ok := seen[td.Ref]; ok {
-					continue
-				}
-				seen[td.Ref] = struct{}{}
 			}
 			name := requestBodySection
 			if i == 1 {
@@ -201,13 +192,12 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 				}
 			}
 			for _, td := range bodies {
-				if _, ok := seen[key(td)]; ok {
-					continue
-				}
-				seen[key(td)] = struct{}{}
 				addDecl(responseBodySection, td)
 				if td.Init != nil {
-					initData = append(initData, td.Init)
+					if _, ok := seenInits[td.Init.Name]; !ok {
+						seenInits[td.Init.Name] = struct{}{}
+						initData = append(initData, td.Init)
+					}
 				}
 				addValidated(td)
 			}
@@ -227,18 +217,12 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 					}
 				}
 				for _, td := range bodies {
-					if _, ok := seen[key(td)]; ok {
-						continue
-					}
-					// Server error body types without a definition are not
-					// marked as emitted: their endpoint-scoped constructors
-					// and validations are collected for every occurrence.
-					if !svr || td.Def != "" {
-						seen[key(td)] = struct{}{}
-					}
 					addDecl(errorBodySection, td)
 					if td.Init != nil {
-						initData = append(initData, td.Init)
+						if _, ok := seenInits[td.Init.Name]; !ok {
+							seenInits[td.Init.Name] = struct{}{}
+							initData = append(initData, td.Init)
+						}
 					}
 					addValidated(td)
 				}
@@ -252,18 +236,12 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 		atts = data.ClientBodyAttributeTypes
 	}
 	for _, td := range atts {
-		if !svr {
-			if _, ok := seen[td.Ref]; ok {
-				continue
-			}
-			seen[td.Ref] = struct{}{}
-		}
 		addDecl(attributeSection, td)
 		addValidated(td)
 	}
 
 	// union sum types
-	for _, u := range data.UnionTypes {
+	for _, u := range unionTypes {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   unionSection,
 			Source: httpTemplates.Read(unionTypeT),

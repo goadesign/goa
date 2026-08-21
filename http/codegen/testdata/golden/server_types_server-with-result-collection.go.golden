@@ -2,19 +2,19 @@
 // "ServiceResultWithResultCollection" service
 // "MethodResultWithResultCollection" endpoint HTTP response body.
 type MethodResultWithResultCollectionResponseBody struct {
-	A *ResulttypeResponseBody `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+	A *Resulttype `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
 }
 
-// ResulttypeResponseBody is used to define fields on response body types.
-type ResulttypeResponseBody struct {
-	X RtCollectionResponseBody `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"`
+// Resulttype is used to define fields on response body types.
+type Resulttype struct {
+	X RtCollection `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"`
 }
 
-// RtCollectionResponseBody is used to define fields on response body types.
-type RtCollectionResponseBody []*RtResponseBody
+// RtCollection is used to define fields on response body types.
+type RtCollection []*Rt
 
-// RtResponseBody is used to define fields on response body types.
-type RtResponseBody struct {
+// Rt is used to define fields on response body types.
+type Rt struct {
 	X *string `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"`
 }
 
@@ -24,7 +24,7 @@ type RtResponseBody struct {
 func NewMethodResultWithResultCollectionResponseBody(res *serviceresultwithresultcollection.MethodResultWithResultCollectionResult) *MethodResultWithResultCollectionResponseBody {
 	body := &MethodResultWithResultCollectionResponseBody{}
 	if res.A != nil {
-		body.A = marshalServiceresultwithresultcollectionResulttypeToResulttypeResponseBody(res.A)
+		body.A = marshalServiceresultwithresultcollectionResulttypeToResulttype(res.A)
 	}
 	return body
 }

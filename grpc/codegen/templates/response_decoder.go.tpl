@@ -44,7 +44,7 @@ func Decode{{ .Method.VarName }}Response(ctx context.Context, v any, hdr, trlr m
 	{{- end }}
 	}, nil
 {{- else }}
-	message, ok := v.({{ .Response.ClientConvert.SrcRef }})
+	{{ if hasInitArg .Response.ClientConvert.Init.Args "message" }}message{{ else }}_{{ end }}, ok := v.({{ .Response.ClientConvert.SrcRef }})
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .Response.ClientConvert.SrcRef }}", v)
 	}
@@ -76,7 +76,7 @@ func Decode{{ .Method.VarName }}Response(ctx context.Context, v any, hdr, trlr m
 			}
 		{{- else }}
 			if vals := {{ .VarName }}.Get({{ printf "%q" .Metadata.Name }}); len(vals) > 0 {
-				{{ .Metadata.VarName }} = vals[0]
+				{{ .Metadata.VarName }} = {{ if .Metadata.Pointer }}&{{ end }}vals[0]
 			}
 		{{- end }}
 	{{- else if .Metadata.StringSlice }}
@@ -106,12 +106,12 @@ func Decode{{ .Method.VarName }}Response(ctx context.Context, v any, hdr, trlr m
 			if vals := {{ .VarName }}.Get({{ printf "%q" .Metadata.Name }}); len(vals) == 0 {
 				err = goa.MergeErrors(err, goa.MissingFieldError({{ printf "%q" .Metadata.Name }}, "metadata"))
 			} else {
-				{{ .Metadata.VarName }}Raw = vals[0]
+				{{ .Metadata.VarName }}Raw := vals[0]
 				{{ template "partial_type_conversion" .Metadata }}
 			}
 		{{- else }}
 			if vals := {{ .VarName }}.Get({{ printf "%q" .Metadata.Name }}); len(vals) > 0 {
-				{{ .Metadata.VarName }}Raw = vals[0]
+				{{ .Metadata.VarName }}Raw := vals[0]
 				{{ template "partial_type_conversion" .Metadata }}
 			}
 		{{- end }}

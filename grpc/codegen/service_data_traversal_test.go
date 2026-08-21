@@ -103,6 +103,57 @@ func TestCollectMessagesDistinguishesSharedExplicitNameWithDifferentSchemas(t *t
 	require.Contains(t, messages[1].Def, "sint32 value = 1")
 }
 
+func TestCollectMessagesDistinguishesSharedExplicitNameWithDifferentOrigins(t *testing.T) {
+	first := &expr.AttributeExpr{
+		Type: grpcMessageTraversalType("First", "first", expr.String, "1"),
+		Meta: expr.MetaExpr{"struct:name:proto": {"SharedWire"}},
+	}
+	second := &expr.AttributeExpr{
+		Type: grpcMessageTraversalType("Second", "second", expr.String, "1"),
+		Meta: expr.MetaExpr{"struct:name:proto": {"SharedWire"}},
+	}
+	root := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "first", Attribute: first},
+		{Name: "second", Attribute: second},
+	}}
+
+	messages := freezeTraversalMessages(grpcTraversalServiceData(), root)
+	require.Len(t, messages, 2)
+	require.Equal(t, "SharedWire", messages[0].VarName)
+	require.Equal(t, "SharedWire2", messages[1].VarName)
+}
+
+func TestCollectMessagesUsesUnaryResultSourceForMixedResults(t *testing.T) {
+	firstResult := grpcMessageTraversalType("FirstResult", "first-result", expr.String, "1")
+	secondResult := grpcMessageTraversalType("SecondResult", "second-result", expr.String, "1")
+	streamingResult := grpcMessageTraversalType("StreamingResult", "streaming-result", expr.String, "1")
+	firstEndpoint := &expr.GRPCEndpointExpr{MethodExpr: &expr.MethodExpr{
+		Result:          &expr.AttributeExpr{Type: firstResult},
+		StreamingResult: &expr.AttributeExpr{Type: streamingResult},
+	}}
+	secondEndpoint := &expr.GRPCEndpointExpr{MethodExpr: &expr.MethodExpr{
+		Result:          &expr.AttributeExpr{Type: secondResult},
+		StreamingResult: &expr.AttributeExpr{Type: streamingResult},
+	}}
+	firstWire := &expr.AttributeExpr{
+		Type: grpcMessageTraversalType("FirstWire", "first-wire", expr.String, "1"),
+		Meta: expr.MetaExpr{"struct:name:proto": {"SharedWire"}},
+	}
+	secondWire := &expr.AttributeExpr{
+		Type: grpcMessageTraversalType("SecondWire", "second-wire", expr.String, "1"),
+		Meta: expr.MetaExpr{"struct:name:proto": {"SharedWire"}},
+	}
+	sd := grpcTraversalServiceData()
+	sd.protobuf = newProtobufPackageCatalog(sd.PkgName)
+	sd.protobuf.collectMessage(firstWire, protobufRootMessageSource(firstWire, firstEndpoint, nil, protobufResponseMessage), sd)
+	sd.protobuf.collectMessage(secondWire, protobufRootMessageSource(secondWire, secondEndpoint, nil, protobufResponseMessage), sd)
+
+	messages := sd.protobuf.freezeMessages(sd)
+	require.Len(t, messages, 2)
+	require.Equal(t, "SharedWire", messages[0].VarName)
+	require.Equal(t, "SharedWire2", messages[1].VarName)
+}
+
 func TestCollectMessagesStopsAtRecursiveCopy(t *testing.T) {
 	message := grpcMessageTraversalType("Recursive", "recursive", expr.String, "1")
 	object := expr.AsObject(message)

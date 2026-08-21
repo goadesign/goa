@@ -3,8 +3,10 @@ func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .Ret
 	{{ .Code }}
 {{- if .ReturnIsStruct }}
 	{{- range .Args }}
-		{{- if .FieldName }}
-			{{ $.ReturnVarName }}.{{ .FieldName }} = {{ if isAlias .FieldType }}{{ .FieldTypeRef }}({{ end }}{{ .Name }}{{ if isAlias .FieldType }}){{ end }}
+		{{- if .InitCode }}
+			{{ .InitCode }}
+		{{- else if .FieldName }}
+			{{ $.ReturnVarName }}.{{ .FieldName }} = {{ .Name }}
 		{{- end }}
 	{{- end }}
 {{- end }}

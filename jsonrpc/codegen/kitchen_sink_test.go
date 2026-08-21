@@ -1,3 +1,5 @@
+// This file compiles a representative JSON-RPC design and compares every
+// generated package with its checked-in golden contract.
 package codegen_test
 
 import (

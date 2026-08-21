@@ -1,3 +1,5 @@
+// This file defines gRPC DSL fixtures used to exercise message, metadata,
+// streaming, validation, and generated package ownership behavior.
 package testdata
 
 import (
@@ -1132,6 +1134,29 @@ var CustomMessageNameDSL = func() {
 		Method("Stream", func() {
 			StreamingPayload(CustomType)
 			StreamingResult(CustomType)
+			GRPC(func() {})
+		})
+	})
+}
+
+var DistinctCustomMessageNamesDSL = func() {
+	var First = Type("First", func() {
+		Meta("struct:name:proto", "Shared")
+		Field(1, "value", String)
+	})
+	var Second = Type("Second", func() {
+		Meta("struct:name:proto", "Shared")
+		Field(1, "value", String)
+	})
+	Service("DistinctCustomMessageNames", func() {
+		Method("UseFirst", func() {
+			Payload(First)
+			Result(First)
+			GRPC(func() {})
+		})
+		Method("UseSecond", func() {
+			Payload(Second)
+			Result(Second)
 			GRPC(func() {})
 		})
 	})

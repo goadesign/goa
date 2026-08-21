@@ -68,12 +68,17 @@ conflicting requirements are rejected; generated and metadata qualifiers may
 receive deterministic suffixes. Each generated file still imports only the
 paths used by the declarations and references it renders.
 
-Each transport plans the literal imports used by its own templates before the
-catalog freezes. JSON-RPC planning includes HTTP planning because it reuses the
-HTTP type, codec, and command-line renderers. The service planner does not know
-about transport packages. Render functions derive their output import paths
-from the same generation-backed service analysis; they do not accept another
-generated module path that could redirect files away from their imports.
+Each transport plans both the literal imports used by its templates and every
+generated client, server, protobuf, and command-line package it will reference
+before the catalog freezes. Preferred qualifiers come from the authored service
+path, never by appending text to an already allocated qualifier. JSON-RPC
+planning includes HTTP planning because it reuses the HTTP type, codec, and
+command-line renderers. Example planning also reserves the application,
+interceptor, transport-server, and command-line paths before the common freeze.
+The service planner does not know about transport packages. Render functions
+derive their output import paths from the same generation-backed service
+analysis; they do not accept another generated module path that could redirect
+files away from their imports.
 
 Planning a declaration returns its canonical record. Once every selected
 generator and plugin has planned its output, the context freezes the catalog.
@@ -111,7 +116,41 @@ catalog:
 
 This is the only supported route for resolving generated service types inside
 HTTP, gRPC, JSON-RPC, conversion, and validation helpers. Transport-specific
-scopes still own transport-only wire declarations.
+scopes still own transport-only wire declarations. Each actual HTTP,
+JSON-RPC, or protobuf output package has its own wire declaration catalog. The
+catalog first collects the complete detached wire shapes and validation rules,
+then freezes deterministic declaration and validator names before templates
+request references. Traversal provenance only stops recursion; it never decides
+that two emitted declarations are interchangeable.
+
+HTTP body shaping renames only the endpoint's top-level wrapper. Nested copied
+declarations retain their authored `Origin()` until the client or server wire
+catalog assigns the name used in that output package. This keeps transport-local
+correlation out of the expression graph and lets one authored declaration reuse
+one request record while still receiving a distinct response record when pointer,
+view, default, or validation policy changes.
+
+An HTTP union record combines its authored JSON shape with the exact frozen
+wire declaration records used by every branch. Equal JSON shapes are therefore
+reused only when their generated branch types are also the same. The catalog
+plans the union type, discriminator type, branch constants, and constructors
+before freezing; transforms and validators consume those records instead of
+reconstructing names from authored types.
+
+gRPC request headers, response headers, and trailers are native wire values:
+one primitive or an array of primitives. Analysis recursively removes named
+service aliases from a detached copy while preserving validation, defaults, and
+requiredness. Metadata parsing and serialization use that local native value;
+Goa's normal transformer converts between it and the frozen service field in
+the actual client or server package. Objects, maps, and unions are rejected by
+DSL validation rather than reaching templates as unsupported cases.
+
+An explicit protobuf message name is a preferred emitted name, not declaration
+identity. Root messages retain the `Origin()` of the service declaration whose
+value they carry, even when gRPC shaping builds a separate wire object for an
+endpoint role. Two authored declarations with different `Origin()` values
+remain separate catalog records even when they request the same protobuf name
+and have the same current wire shape.
 
 Each side of a conversion enters its own attribute independently. A copied HTTP
 body remains owned by the HTTP package even if the source service declaration
@@ -123,8 +162,12 @@ full-path import binding used by that file's imports.
 Reusable API- or service-level HTTP and gRPC error mappings are response policy,
 not replacement service types. When an endpoint inherits a mapping by error
 name, the mapping's error attribute must equal the method's effective error
-attribute, including its named type shape, validations, defaults, and struct
-metadata. Validation rejects incompatible shadowing before code generation.
+attribute after References and Bases are materialized, including its named type
+shape, validations, defaults, and struct metadata. Validation finalizes a
+complete detached copy of each cyclic graph; it never mutates or registers the
+evaluated declarations. Union branches compare by position because transforms
+pair branches by position. Validation rejects incompatible shadowing before
+code generation.
 Finalization then binds the mapping to the method error declaration, so service
 constructors, transport encoders and decoders, and generated references all use
 one concrete error value. For example, an API mapping for a string

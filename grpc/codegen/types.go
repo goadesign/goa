@@ -113,9 +113,6 @@ func typesFile(svc *expr.GRPCServiceExpr, services *ServicesData, svr bool) *cod
 				Name:   side + "-type-init",
 				Source: grpcTemplates.Read(grpcTypeInitT),
 				Data:   init,
-				FuncMap: map[string]any{
-					"isAlias": expr.IsAlias,
-				},
 			})
 		}
 		for _, data := range sd.validations {

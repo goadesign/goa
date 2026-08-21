@@ -131,13 +131,12 @@ func defaultRequestHeaderAttributes(e *HTTPEndpointExpr) map[string]bool {
 // by removing the attributes of the method payload used to define headers and
 // parameters.
 func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
-	const suffix = "RequestBody"
 	var (
 		name = concat(a.Name(), "Request", "Body")
 	)
 	if a.Body != nil {
 		a.Body = DupAtt(a.Body)
-		renameType(a.Body, name, suffix)
+		renameType(a.Body, name)
 		if ut, ok := a.Body.Type.(*UserTypeExpr); ok {
 			ut.UID = a.Service.Name() + "#" + name
 		}
@@ -161,7 +160,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		if bodyOnly {
 			payload = DupAtt(payload)
 			RemovePkgPath(payload)
-			renameType(payload, name, suffix)
+			renameType(payload, name)
 			return payload
 		}
 		return &AttributeExpr{Type: Empty}
@@ -193,8 +192,6 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		TypeName:      name,
 		UID:           a.Service.Name() + "#" + a.Name(),
 	}
-	appendSuffix(ut.Attribute().Type, suffix)
-
 	if t, ok := payload.Type.(UserType); ok {
 		copyOpenAPITypeMeta(t, ut)
 	}
@@ -216,7 +213,6 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 	if !IsObject(att.Type) {
 		return DupAtt(att)
 	}
-	const suffix = "StreamingBody"
 	dupped := DupAtt(att)
 	// Method attributes that reference user types keep validation on the
 	// referenced type. Promote it to the computed body so HTTP type generation
@@ -227,7 +223,6 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 		}
 	}
 	RemovePkgPath(dupped)
-	appendSuffix(dupped.Type, suffix)
 	ut := &UserTypeExpr{
 		AttributeExpr: dupped,
 		TypeName:      concat(e.Name(), "Streaming", "Body"),
@@ -266,7 +261,6 @@ func httpErrorResponseBody(e *HTTPEndpointExpr, v *HTTPErrorExpr) *AttributeExpr
 }
 
 func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseExpr, svc *HTTPServiceExpr) *AttributeExpr {
-	const suffix = "ResponseBody"
 	name = concat(name, "Response", "Body")
 	if attr == nil || attr.Type == Empty {
 		return &AttributeExpr{Type: Empty}
@@ -284,7 +278,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 			return &AttributeExpr{Type: Empty}
 		}
 		att := DupAtt(resp.Body)
-		renameType(att, name, suffix)
+		renameType(att, name)
 		if ut, ok := att.Type.(*UserTypeExpr); ok {
 			ut.UID = svc.Name() + "#" + name
 		}
@@ -302,7 +296,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		if resp.Headers.IsEmpty() && resp.Cookies.IsEmpty() {
 			attr = DupAtt(attr)
 			RemovePkgPath(attr)
-			renameType(attr, name, "Response") // Do not use ResponseBody as it could clash with name of element
+			renameType(attr, name)
 			return attr
 		}
 		return &AttributeExpr{Type: Empty}
@@ -343,7 +337,6 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		copyOpenAPITypeMeta(t, userType)
 	}
 
-	appendSuffix(userType.Attribute().Type, suffix)
 	rt, isrt := attr.Type.(*ResultTypeExpr)
 	if !isrt {
 		return &AttributeExpr{
@@ -451,19 +444,10 @@ func concat(strs ...string) string {
 	return name
 }
 
-func renameType(att *AttributeExpr, name, suffix string) {
+func renameType(att *AttributeExpr, name string) {
 	RemovePkgPath(att)
-	rt := att.Type
-	switch rtt := rt.(type) {
-	case UserType:
-		rtt.Rename(name)
-		appendSuffix(rtt.Attribute().Type, suffix)
-	case *Object:
-		appendSuffix(rt, suffix)
-	case *Array:
-		appendSuffix(rt, suffix)
-	case *Map:
-		appendSuffix(rt, suffix)
+	if userType, ok := att.Type.(UserType); ok {
+		userType.Rename(name)
 	}
 }
 
@@ -478,14 +462,6 @@ func RemovePkgPath(attr *AttributeExpr) {
 			RemovePkgPath(dt.Attribute())
 		}
 	}
-}
-
-// appendSuffix recursively traverses the given data type and appends the given
-// suffix to all the user type names.
-func appendSuffix(dt DataType, suffix string) {
-	walk(dt, func(ut UserType) {
-		ut.Rename(ut.Name() + suffix)
-	})
 }
 
 func removeAttributes(attr, sub *MappedAttributeExpr) {
@@ -551,13 +527,8 @@ func walkrec(dt DataType, do func(UserType), seen map[UserType]struct{}) {
 		if _, ok := seen[origin]; ok {
 			return
 		}
-		// Mark the declaration before invoking do because callbacks such as
-		// appendSuffix rename the declaration and deliberately detach its origin.
 		seen[origin] = struct{}{}
 		do(dt)
-		// A callback may detach a copied declaration from its source. Remember the
-		// resulting declaration too so recursive references do not process it again.
-		seen[dt.Origin()] = struct{}{}
 		walkrec(dt.Attribute().Type, do, seen)
 	case *Object:
 		for _, nat := range *dt {

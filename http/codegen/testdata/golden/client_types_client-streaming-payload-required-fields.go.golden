@@ -1,15 +1,15 @@
 // ClientStreamStreamingBody is the type of the
 // "StreamingPayloadRequiredFieldsService" service "ClientStream" endpoint HTTP
 // request body.
-type ClientStreamStreamingBody StreamingRequestStreamingBody
+type ClientStreamStreamingBody StreamingRequest
 
 // BidirectionalStreamStreamingBody is the type of the
 // "StreamingPayloadRequiredFieldsService" service "BidirectionalStream"
 // endpoint HTTP request body.
-type BidirectionalStreamStreamingBody StreamingRequestStreamingBody
+type BidirectionalStreamStreamingBody StreamingRequest
 
-// StreamingRequestStreamingBody is used to define fields on request body types.
-type StreamingRequestStreamingBody struct {
+// StreamingRequest is used to define fields on request body types.
+type StreamingRequest struct {
 	Required     string  `form:"required" json:"required" xml:"required"`
 	Optional     *string `form:"optional,omitempty" json:"optional,omitempty" xml:"optional,omitempty"`
 	BaseRequired string  `form:"baseRequired" json:"baseRequired" xml:"baseRequired"`

@@ -55,21 +55,19 @@ definitions:
                 type: array
                 items:
                     $ref: '#/definitions/Bar'
-                example: []
+                example:
+                    - string: ""
                 minItems: 0
                 maxItems: 42
             foo:
                 type: array
                 items:
                     type: string
-                    example: Molestiae dolor eveniet omnis atque.
-                example:
-                    - Totam doloremque exercitationem voluptate.
-                    - Repellat perspiciatis voluptas et quia deleniti.
+                    example: Eaque consequatur asperiores est.
+                example: []
                 minItems: 0
                 maxItems: 42
         example:
-            bar: []
-            foo:
-                - Totam doloremque exercitationem voluptate.
-                - Repellat perspiciatis voluptas et quia deleniti.
+            bar:
+                - string: ""
+            foo: []

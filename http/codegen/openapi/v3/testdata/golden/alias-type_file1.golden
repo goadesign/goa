@@ -21,11 +21,11 @@ paths:
                             $ref: '#/components/schemas/Setup'
                         example:
                             completed:
-                                - who
-                                - who
-                                - who
-                                - who
-                            current: who
+                                - where
+                                - where
+                                - where
+                                - where
+                            current: where
             responses:
                 "200":
                     description: OK response.
@@ -48,21 +48,21 @@ components:
                     items:
                         type: string
                         description: Setup stage.
-                        example: who
+                        example: where
                         enum:
                             - who
                             - when
                             - where
                             - what
                     example:
-                        - who
-                        - who
-                        - who
-                        - who
+                        - where
+                        - where
+                        - where
+                        - where
                 current:
                     type: string
                     description: Setup stage.
-                    example: who
+                    example: where
                     enum:
                         - who
                         - when
@@ -71,10 +71,10 @@ components:
             description: Request body for testEndpoint.
             example:
                 completed:
-                    - who
-                    - who
-                    - who
-                    - who
-                current: who
+                    - where
+                    - where
+                    - where
+                    - where
+                current: where
 tags:
     - name: testService

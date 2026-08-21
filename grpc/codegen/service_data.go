@@ -5,6 +5,7 @@ package codegen
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service"
@@ -142,12 +143,20 @@ type (
 		FieldName string
 		// FieldType is the type of the struct field.
 		FieldType expr.DataType
-		// FieldTypeRef is the frozen service reference used to cast an aliased
-		// metadata value before assigning it to the service field.
-		FieldTypeRef string
+		// ServiceAttribute is the service field populated from this metadata.
+		ServiceAttribute *expr.AttributeExpr
+		// WireAttribute is the detached native gRPC metadata value.
+		WireAttribute *expr.AttributeExpr
 		// VarName is the name of the Go variable used to read or
 		// convert the metadata value.
 		VarName string
+		// WireVarName is the local variable produced before metadata encoding.
+		WireVarName string
+		// EncodeCode converts the service field to WireVarName.
+		EncodeCode string
+		// DecodeCode converts VarName to the service constructor target. The
+		// constructor replaces metadataTargetPlaceholder with its result variable.
+		DecodeCode string
 		// TypeName is the name of the type.
 		TypeName string
 		// TypeRef is the reference to the type.
@@ -160,11 +169,6 @@ type (
 		StringSlice bool
 		// Slice is true if the metadata value type is an array.
 		Slice bool
-		// MapStringSlice is true if the metadata value type is a map of string
-		// slice.
-		MapStringSlice bool
-		// Map is true if the metadata value type is a map.
-		Map bool
 		// Type describes the datatype of the variable value. Mainly
 		// used for conversion.
 		Type expr.DataType
@@ -358,9 +362,8 @@ type (
 		// FieldType is the type of the data structure field that should be
 		// initialized with the argument if any.
 		FieldType expr.DataType
-		// FieldTypeRef is the frozen service reference used to cast an aliased
-		// argument before assigning it to the service field.
-		FieldTypeRef string
+		// InitCode converts and assigns this argument to the constructor result.
+		InitCode string
 		// TypeName is the argument type name.
 		TypeName string
 		// TypeRef is the argument type reference.
@@ -433,21 +436,13 @@ type (
 	validateKind int
 )
 
-// NewServicesData creates a new ServicesData instance for the given service data.
-func NewServicesData(services *service.ServicesData) *ServicesData {
-	return &ServicesData{
-		ServicesData: services,
-		GRPCServices: make(map[string]*ServiceData),
-	}
-}
-
 const (
 	// pbPkgName is the directory name where the .proto file is generated and
 	// compiled.
 	pbPkgName = "pb"
-)
-
-const (
+	// metadataTargetPlaceholder marks the constructor result until the same
+	// metadata record is attached to its concrete conversion function.
+	metadataTargetPlaceholder = "__goa_metadata_target__"
 	// validateServer generates the validation code for request messages in the
 	// server package.
 	validateServer validateKind = iota + 1
@@ -455,6 +450,14 @@ const (
 	// client package.
 	validateClient
 )
+
+// NewServicesData creates a new ServicesData instance for the given service data.
+func NewServicesData(services *service.ServicesData) *ServicesData {
+	return &ServicesData{
+		ServicesData: services,
+		GRPCServices: make(map[string]*ServiceData),
+	}
+}
 
 // Get retrieves the transport data for the service with the given name
 // computing it if needed. It returns nil if there is no service with the given
@@ -589,7 +592,7 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			})
 		}
 		// pass the metadata as arguments to client CLI args
-		request.CLIArgs = append(request.CLIArgs, initArgsFromMetadata(reqMD)...)
+		request.CLIArgs = append(request.CLIArgs, initArgsFromMetadata(reqMD, "")...)
 		switch {
 		case requestEnvelope != nil:
 			request.Message = collect(requestEnvelope)
@@ -729,11 +732,11 @@ func prepareProtobufPackage(serviceExpr *expr.GRPCServiceExpr, sd *ServiceData) 
 		requestSource := protobufRootMessageSource(endpoint.Request, endpoint, nil, protobufRequestMessage)
 		streamingSource := protobufRootMessageSource(endpoint.StreamingRequest, endpoint, nil, protobufStreamingRequestMessage)
 		responseSource := protobufRootMessageSource(endpoint.Response.Message, endpoint, nil, protobufResponseMessage)
-		sd.protobuf.bindSyntheticSource(messages.request, requestSource)
+		sd.protobuf.bindRootSource(messages.request, requestSource)
 		if messages.streamingRequest.Type != expr.Empty {
-			sd.protobuf.bindSyntheticSource(messages.streamingRequest, streamingSource)
+			sd.protobuf.bindRootSource(messages.streamingRequest, streamingSource)
 		}
-		sd.protobuf.bindSyntheticSource(messages.response, responseSource)
+		sd.protobuf.bindRootSource(messages.response, responseSource)
 		for _, grpcError := range endpoint.GRPCErrors {
 			message := messages.errors[grpcError.Name]
 			if message == nil {
@@ -745,7 +748,7 @@ func prepareProtobufPackage(serviceExpr *expr.GRPCServiceExpr, sd *ServiceData) 
 				grpcError,
 				protobufErrorMessage,
 			)
-			sd.protobuf.bindSyntheticSource(message, errorSource)
+			sd.protobuf.bindRootSource(message, errorSource)
 			collect(message, errorSource)
 		}
 		requestNeeded := !isEmpty(endpoint.Request.Type) ||
@@ -758,7 +761,7 @@ func prepareProtobufPackage(serviceExpr *expr.GRPCServiceExpr, sd *ServiceData) 
 				endpoint: endpoint,
 				role:     protobufStreamEnvelopeMessage,
 			}}
-			sd.protobuf.bindSyntheticSource(messages.requestEnvelope, envelopeSource)
+			sd.protobuf.bindRootSource(messages.requestEnvelope, envelopeSource)
 			collect(messages.requestEnvelope, envelopeSource)
 		}
 		if messages.streamingRequest.Type != expr.Empty {
@@ -778,8 +781,10 @@ func prepareProtobufPackage(serviceExpr *expr.GRPCServiceExpr, sd *ServiceData) 
 		if sd.protobuf.message(messages.response) != nil {
 			sd.protobuf.collectValidation(messages.response, validateClient, "message", "message")
 		}
-		for _, message := range messages.errors {
-			sd.protobuf.collectValidation(message, validateClient, "errmsg", "errmsg")
+		for _, grpcError := range endpoint.GRPCErrors {
+			if message := messages.errors[grpcError.Name]; message != nil {
+				sd.protobuf.collectValidation(message, validateClient, "errmsg", "errmsg")
+			}
 		}
 		if endpoint.MethodExpr.StreamingPayload.Type != expr.Empty {
 			sd.protobuf.collectValidation(messages.streamingRequest, validateServer, "stream", "stream")
@@ -789,9 +794,29 @@ func prepareProtobufPackage(serviceExpr *expr.GRPCServiceExpr, sd *ServiceData) 
 	return prepared
 }
 
-// protobufRootMessageSource retains authored declaration provenance and uses a
-// typed endpoint role only when message shaping created the root declaration.
+// protobufRootMessageSource identifies a root message by the authored service
+// declaration whose value it carries. Endpoint roles identify only messages
+// whose service value is inline or compiler-created. The shaped wire attribute
+// is a fallback because explicit Message DSL may itself name a declaration.
 func protobufRootMessageSource(attribute *expr.AttributeExpr, endpoint *expr.GRPCEndpointExpr, grpcError *expr.GRPCErrorExpr, role protobufSyntheticRole) protobufMessageSource {
+	var serviceAttribute *expr.AttributeExpr
+	switch role {
+	case protobufRequestMessage:
+		serviceAttribute = endpoint.MethodExpr.Payload
+	case protobufStreamingRequestMessage:
+		serviceAttribute = endpoint.MethodExpr.StreamingPayload
+	case protobufResponseMessage:
+		serviceAttribute = endpoint.MethodExpr.Result
+	case protobufErrorMessage:
+		if methodError := endpoint.MethodExpr.Error(grpcError.Name); methodError != nil {
+			serviceAttribute = methodError.AttributeExpr
+		}
+	}
+	if serviceAttribute != nil {
+		if userType, ok := serviceAttribute.Type.(expr.UserType); ok {
+			return protobufMessageSource{origin: userType.Origin()}
+		}
+	}
 	if userType, ok := attribute.Type.(expr.UserType); ok {
 		return protobufMessageSource{origin: userType.Origin()}
 	}
@@ -866,7 +891,7 @@ func (d *ServicesData) buildRequestConvertData(request, payload *expr.AttributeE
 		data.Name = fmt.Sprintf("New%sPayload", codegen.Goify(e.Name(), true))
 		data.Description = fmt.Sprintf("%s builds the payload of the %q endpoint of the %q service from the gRPC request type.", data.Name, e.Name(), svc.Name)
 		// pass the metadata as arguments to payload constructor in server
-		data.Args = append(data.Args, initArgsFromMetadata(md)...)
+		data.Args = append(data.Args, initArgsFromMetadata(md, data.ReturnVarName)...)
 		return &ConvertData{
 			SrcName:    protoBufGoFullTypeName(request, sd.PkgName, sd),
 			SrcRef:     protoBufGoFullTypeRef(request, sd.PkgName, sd),
@@ -923,7 +948,7 @@ func (d *ServicesData) buildLegacyDecodeData(e *expr.GRPCEndpointExpr, sd *Servi
 		init := d.buildInitData(&expr.AttributeExpr{Type: expr.Empty}, payload, "message", "v", svcCtx, sd.Service.Method(e.Name()).Payload, false, false, sd)
 		init.Name = fmt.Sprintf("New%sPayloadFromMetadata", codegen.Goify(e.Name(), true))
 		init.Description = fmt.Sprintf("%s builds the payload of the %q endpoint of the %q service from the gRPC request metadata sent by legacy stream protocol clients.", init.Name, e.Name(), svc.Name)
-		init.Args = append(init.Args, initArgsFromMetadata(md)...)
+		init.Args = append(init.Args, initArgsFromMetadata(md, init.ReturnVarName)...)
 		data.ServerConvert = &ConvertData{
 			TgtName: svcCtx.Scope.Name(payload, svcCtx.Pkg(payload), svcCtx.Pointer, svcCtx.UseDefault),
 			TgtRef:  svcCtx.Scope.Ref(payload, svcCtx.Pkg(payload)),
@@ -969,9 +994,9 @@ func (d *ServicesData) buildResponseConvertData(response, result *expr.Attribute
 	data.Name = fmt.Sprintf("New%sResult", codegen.Goify(e.Name(), true))
 	data.Description = fmt.Sprintf("%s builds the result type of the %q endpoint of the %q service from the gRPC response type.", data.Name, e.Name(), svc.Name)
 	// pass the headers as arguments to result constructor in client
-	data.Args = append(data.Args, initArgsFromMetadata(hdrs)...)
+	data.Args = append(data.Args, initArgsFromMetadata(hdrs, data.ReturnVarName)...)
 	// pass the trailers as arguments to result constructor in client
-	data.Args = append(data.Args, initArgsFromMetadata(trlrs)...)
+	data.Args = append(data.Args, initArgsFromMetadata(trlrs, data.ReturnVarName)...)
 	return &ConvertData{
 		SrcName:    protoBufGoFullTypeName(response, sd.PkgName, sd),
 		SrcRef:     protoBufGoFullTypeRef(response, sd.PkgName, sd),
@@ -1266,15 +1291,13 @@ func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, streamingReques
 // metadata attribute and service type (payload/result).
 func (d *ServicesData) extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, sd *ServiceData, side string) []*MetadataData {
 	var metadata []*MetadataData
-	scope := sd.Service.Scope
-	ctx := d.serviceTypeContext(sd, side).Enter(service)
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, c *expr.AttributeExpr) error { // nolint: errcheck
-		arr := expr.AsArray(c.Type)
-		mp := expr.AsMap(c.Type)
-		typeRef := scope.GoTypeRef(unalias(c))
+		wire := nativeMetadataAttribute(c)
+		arr := expr.AsArray(wire.Type)
+		wireCtx := codegen.NewAttributeContext(false, false, true, "", codegen.NewNameScope()).Enter(wire)
 		serviceField := service
 		ft := service.Type
-		varn := scope.Name(codegen.Goify(name, false))
+		varn := codegen.Goify(name, false)
 		fieldName := codegen.Goify(name, true)
 		var pointer bool
 		if !expr.IsObject(service.Type) {
@@ -1284,50 +1307,107 @@ func (d *ServicesData) extractMetadata(a *expr.MappedAttributeExpr, service *exp
 			serviceField = service.Find(name)
 			ft = serviceField.Type
 		}
+		typeRef := wireCtx.Scope.Ref(wire, wireCtx.Pkg(wire))
 		if pointer {
 			typeRef = "*" + typeRef
 		}
-		fieldContext := ctx.Enter(serviceField)
+		serviceVar := "payload"
+		encodeSide := "client"
+		if side == "client" {
+			serviceVar = "result"
+			encodeSide = "server"
+		}
+		fieldRef := serviceVar
+		targetRef := metadataTargetPlaceholder
+		if fieldName != "" {
+			fieldRef += "." + fieldName
+			targetRef += "." + fieldName
+		}
+		wireVar := varn + "Wire"
+		encodeCode := d.metadataTransform(wire, serviceField, fieldRef, wireVar, sd, encodeSide, pointer, true)
+		decodeCode := d.metadataTransform(wire, serviceField, varn, targetRef, sd, side, pointer, false)
 		metadata = append(metadata, &MetadataData{
-			Name:          elem,
-			AttributeName: name,
-			Description:   c.Description,
-			FieldName:     fieldName,
-			FieldType:     ft,
-			FieldTypeRef:  fieldContext.Scope.Ref(serviceField, fieldContext.Pkg(serviceField)),
-			VarName:       varn,
-			Required:      required,
-			Type:          c.Type,
-			TypeName:      scope.GoTypeName(unalias(c)),
-			TypeRef:       typeRef,
-			Pointer:       pointer,
-			Slice:         arr != nil,
-			StringSlice:   arr != nil && arr.ElemType.Type.Kind() == expr.StringKind,
-			Map:           mp != nil,
-			MapStringSlice: mp != nil &&
-				mp.KeyType.Type.Kind() == expr.StringKind &&
-				mp.ElemType.Type.Kind() == expr.ArrayKind &&
-				expr.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == expr.StringKind,
-			Validate:     codegen.AttributeValidationCode(c, nil, ctx, required, false, varn, name),
-			DefaultValue: c.DefaultValue,
-			Example:      c.Example(d.Root.API.ExampleGenerator.Field(service, name)),
+			Name:             elem,
+			AttributeName:    name,
+			Description:      wire.Description,
+			FieldName:        fieldName,
+			FieldType:        ft,
+			ServiceAttribute: serviceField,
+			WireAttribute:    wire,
+			VarName:          varn,
+			WireVarName:      wireVar,
+			EncodeCode:       encodeCode,
+			DecodeCode:       decodeCode,
+			Required:         required,
+			Type:             wire.Type,
+			TypeName:         wireCtx.Scope.Name(wire, wireCtx.Pkg(wire), false, true),
+			TypeRef:          typeRef,
+			Pointer:          pointer,
+			Slice:            arr != nil,
+			StringSlice:      arr != nil && arr.ElemType.Type.Kind() == expr.StringKind,
+			Validate:         codegen.AttributeValidationCode(wire, nil, wireCtx, required, false, varn, name),
+			DefaultValue:     wire.DefaultValue,
+			Example:          wire.Example(d.Root.API.ExampleGenerator.Field(service, name)),
 		})
 		return nil
 	})
 	return metadata
 }
 
+// metadataTransform generates the canonical conversion between a detached
+// metadata value and its service field in the package that renders the code.
+func (d *ServicesData) metadataTransform(wire, serviceField *expr.AttributeExpr, sourceVar, targetVar string, sd *ServiceData, side string, pointer, encode bool) string {
+	wireCtx := codegen.NewAttributeContext(false, false, true, "", codegen.NewNameScope()).Enter(wire)
+	serviceCtx := d.serviceTypeContext(sd, side).Enter(serviceField)
+	source, target := wire, serviceField
+	sourceCtx, targetCtx := wireCtx, serviceCtx
+	if encode {
+		source, target = serviceField, wire
+		sourceCtx, targetCtx = serviceCtx, wireCtx
+	}
+	if pointer {
+		sourceVar = "*" + sourceVar
+	}
+	if encode {
+		code, helpers, err := codegen.GoTransform(source, target, sourceVar, targetVar, sourceCtx, targetCtx, "", true)
+		if err != nil {
+			panic(err)
+		}
+		sd.transformHelpers = codegen.AppendHelpers(sd.transformHelpers, helpers)
+		return code
+	}
+	if !pointer {
+		code, helpers, err := codegen.GoTransform(source, target, sourceVar, targetVar, sourceCtx, targetCtx, "", false)
+		if err != nil {
+			panic(err)
+		}
+		sd.transformHelpers = codegen.AppendHelpers(sd.transformHelpers, helpers)
+		return code
+	}
+	converted := codegen.Goify(strings.TrimPrefix(sourceVar, "*"), false) + "Service"
+	code, helpers, err := codegen.GoTransform(source, target, sourceVar, converted, sourceCtx, targetCtx, "", true)
+	if err != nil {
+		panic(err)
+	}
+	sd.transformHelpers = codegen.AppendHelpers(sd.transformHelpers, helpers)
+	return "if " + strings.TrimPrefix(sourceVar, "*") + " != nil {\n" + code + "\n" + targetVar + " = &" + converted + "\n}\n"
+}
+
 // initArgsFromMetadata converts the given metadata into constructor arguments
 // so the metadata values can be passed to the generated init functions.
-func initArgsFromMetadata(md []*MetadataData) []*InitArgData {
+func initArgsFromMetadata(md []*MetadataData, targetVar string) []*InitArgData {
 	args := make([]*InitArgData, len(md))
 	for i, m := range md {
+		initCode := ""
+		if targetVar != "" {
+			initCode = strings.ReplaceAll(m.DecodeCode, metadataTargetPlaceholder, targetVar)
+		}
 		args[i] = &InitArgData{
 			Name:         m.VarName,
 			Ref:          m.VarName,
 			FieldName:    m.FieldName,
 			FieldType:    m.FieldType,
-			FieldTypeRef: m.FieldTypeRef,
+			InitCode:     initCode,
 			TypeName:     m.TypeName,
 			TypeRef:      m.TypeRef,
 			Type:         m.Type,
@@ -1395,19 +1475,76 @@ func buildStreamEnvelopeData(envelope *expr.AttributeExpr, message *service.User
 	}
 }
 
-// unalias returns the underlying attribute of the given attribute when its
-// type is a user type, recursing until a non user type is found. Unlike
-// unAlias it also resolves user types with non-primitive bases (e.g. named
-// arrays) which extractMetadata needs to compute the native metadata type
-// references.
-func unalias(att *expr.AttributeExpr) *expr.AttributeExpr {
-	if ut, ok := att.Type.(expr.UserType); ok {
-		if _, ok := ut.Attribute().Type.(expr.Primitive); ok {
-			return ut.Attribute()
-		}
-		return unalias(ut.Attribute())
+// nativeMetadataAttribute returns a detached primitive or primitive-array
+// value for gRPC metadata. Named service declarations are recursively removed
+// while their validation and default contracts remain on the wire copy.
+func nativeMetadataAttribute(source *expr.AttributeExpr) *expr.AttributeExpr {
+	if userType, ok := source.Type.(expr.UserType); ok {
+		result := nativeMetadataAttribute(userType.Attribute())
+		mergeNativeMetadataContract(result, source)
+		return result
 	}
-	return att
+	result := &expr.AttributeExpr{
+		Description:  source.Description,
+		DefaultValue: source.DefaultValue,
+		UserExamples: source.UserExamples,
+	}
+	if source.Validation != nil {
+		result.Validation = source.Validation.Dup()
+	}
+	if source.Meta != nil {
+		result.Meta = source.Meta.Dup()
+	}
+	switch actual := source.Type.(type) {
+	case expr.Primitive:
+		result.Type = actual
+	case *expr.Array:
+		result.Type = &expr.Array{
+			ElemType:         nativeMetadataAttribute(actual.ElemType),
+			NonNullableElems: actual.NonNullableElems,
+		}
+	default:
+		panic(fmt.Sprintf("invalid gRPC metadata type %s", source.Type.Name()))
+	}
+	stripMetadataServiceNames(result)
+	return result
+}
+
+// mergeNativeMetadataContract applies constraints authored on an alias use to
+// the detached contract inherited from the alias declaration.
+func mergeNativeMetadataContract(target, source *expr.AttributeExpr) {
+	if source.Description != "" {
+		target.Description = source.Description
+	}
+	if source.DefaultValue != nil {
+		target.DefaultValue = source.DefaultValue
+	}
+	if source.Validation != nil {
+		if target.Validation == nil {
+			target.Validation = source.Validation.Dup()
+		} else {
+			target.Validation.Merge(source.Validation)
+		}
+	}
+	if source.Meta != nil {
+		if target.Meta == nil {
+			target.Meta = make(expr.MetaExpr)
+		}
+		for name, values := range source.Meta {
+			target.Meta[name] = append([]string(nil), values...)
+		}
+	}
+	stripMetadataServiceNames(target)
+}
+
+// stripMetadataServiceNames removes Go service declaration overrides from a
+// value rendered entirely in the generated gRPC client or server package.
+func stripMetadataServiceNames(attribute *expr.AttributeExpr) {
+	for name := range attribute.Meta {
+		if strings.HasPrefix(name, "struct:") || name == "name:original" {
+			delete(attribute.Meta, name)
+		}
+	}
 }
 
 // serviceTypeContext returns a context that resolves service declarations from

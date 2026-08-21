@@ -5,7 +5,7 @@
 func NewMethodExplicitBodyUserResultObjectMultipleViewResulttypemultipleviewsOK(body *MethodExplicitBodyUserResultObjectMultipleViewResponseBody, c *string) *serviceexplicitbodyuserresultobjectmultipleviewviews.ResulttypemultipleviewsView {
 	v := &serviceexplicitbodyuserresultobjectmultipleviewviews.ResulttypemultipleviewsView{}
 	if body.A != nil {
-		v.A = unmarshalUserTypeResponseBodyToServiceexplicitbodyuserresultobjectmultipleviewviewsUserTypeView(body.A)
+		v.A = unmarshalUserTypeToServiceexplicitbodyuserresultobjectmultipleviewviewsUserTypeView(body.A)
 	}
 	v.C = c
 

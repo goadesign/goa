@@ -1,3 +1,5 @@
+// This file defines the gRPC transport DSL for endpoint messages, metadata,
+// status responses, streaming behavior, and protobuf field mappings.
 package dsl
 
 import (
@@ -251,7 +253,10 @@ func Message(fn func()) {
 // typed stream frame rather than being rewritten into metadata.
 //
 // Metadata takes one argument of function type which lists the attributes
-// that must be set in the request metadata instead of the message.
+// that must be set in the request metadata instead of the message. Each
+// selected attribute must have an effective primitive type or an array whose
+// elements have an effective primitive type. Named aliases are accepted and
+// converted to the native metadata value by generated client and server code.
 // If Metadata is set in the gRPC endpoint expression, it inherits the
 // attribute properties (description, type, meta, validations etc.) from the
 // method payload.
@@ -302,6 +307,9 @@ func Metadata(fn func()) {
 //
 // Trailers takes one argument of function type which lists the attributes
 // that must be set in the trailer response metadata instead of the message.
+// Each selected attribute must have an effective primitive type or an array
+// whose elements have an effective primitive type. Named aliases are accepted
+// and converted to the native metadata value by generated code.
 // If Trailers is set in the gRPC response expression, it inherits the
 // attribute properties (description, type, meta, validations etc.) from the
 // method result.

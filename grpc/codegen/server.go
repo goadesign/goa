@@ -149,6 +149,9 @@ func serverEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 			services.ViewImport(svc.Name()),
 			services.PackageImport(path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
 		}
+		if responseMetadataNeedsFormat(data) {
+			imports = append(imports, &codegen.ImportSpec{Path: "fmt"})
+		}
 		sections = []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
 
 		for _, e := range data.Endpoints {
@@ -176,6 +179,21 @@ func serverEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 		}
 	}
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
+}
+
+// responseMetadataNeedsFormat reports whether a response header or trailer
+// serializes a non-string scalar through fmt.Sprintf.
+func responseMetadataNeedsFormat(service *ServiceData) bool {
+	for _, endpoint := range service.Endpoints {
+		for _, group := range [][]*MetadataData{endpoint.Response.Headers, endpoint.Response.Trailers} {
+			for _, metadata := range group {
+				if !metadata.Slice && metadata.TypeName != "string" && metadata.Type.Name() != "bytes" {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }
 
 func transTmplFuncs(s *expr.GRPCServiceExpr, services *ServicesData) map[string]any {

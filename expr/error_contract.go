@@ -16,6 +16,15 @@ type (
 		first  *AttributeExpr
 		second *AttributeExpr
 	}
+
+	// effectiveErrorCopier owns a detached graph while inherited error
+	// attributes are materialized for comparison. Both maps are keyed by the
+	// source node so recursive declarations and inheritance edges reconnect to
+	// their copied counterparts.
+	effectiveErrorCopier struct {
+		attributes map[*AttributeExpr]*AttributeExpr
+		userTypes  map[UserType]UserType
+	}
 )
 
 // equivalentErrorAttributes reports whether two error attributes generate the
@@ -29,7 +38,230 @@ func equivalentErrorAttributes(first, second *AttributeExpr) bool {
 	if first == nil || second == nil {
 		return false
 	}
+	first = effectiveErrorAttribute(first)
+	second = effectiveErrorAttribute(second)
 	return equivalentErrorAttributeNodes(first, second, make(map[attributePair]struct{}))
+}
+
+// effectiveErrorAttribute returns a detached copy with References and Bases
+// applied by AttributeExpr.Finalize. Validation can therefore compare the
+// value contracts code generation will see without mutating evaluated design.
+func effectiveErrorAttribute(source *AttributeExpr) *AttributeExpr {
+	copier := &effectiveErrorCopier{
+		attributes: make(map[*AttributeExpr]*AttributeExpr),
+		userTypes:  make(map[UserType]UserType),
+	}
+	result := copier.attribute(source)
+	result.Finalize()
+	return result
+}
+
+// attribute copies one attribute shell before following its type and
+// inheritance edges so self-recursive graphs terminate on the copied shell.
+func (c *effectiveErrorCopier) attribute(source *AttributeExpr) *AttributeExpr {
+	if source == nil {
+		return nil
+	}
+	if copied, ok := c.attributes[source]; ok {
+		return copied
+	}
+	copied := &AttributeExpr{
+		Description:  source.Description,
+		DefaultValue: cloneErrorContractValue(source.DefaultValue),
+		DSLFunc:      source.DSLFunc,
+	}
+	c.attributes[source] = copied
+	if source.Docs != nil {
+		docs := *source.Docs
+		copied.Docs = &docs
+	}
+	if source.Validation != nil {
+		copied.Validation = cloneErrorValidation(source.Validation)
+	}
+	if source.Meta != nil {
+		copied.Meta = source.Meta.Dup()
+	}
+	if len(source.UserExamples) > 0 {
+		copied.UserExamples = make([]*ExampleExpr, len(source.UserExamples))
+		for index, example := range source.UserExamples {
+			copy := *example
+			copy.Value = cloneErrorContractValue(example.Value)
+			copied.UserExamples[index] = &copy
+		}
+	}
+	copied.Type = c.dataType(source.Type)
+	copied.Bases = c.dataTypes(source.Bases)
+	copied.References = c.dataTypes(source.References)
+	return copied
+}
+
+// cloneErrorValidation detaches slices and scalar pointers that
+// ValidationExpr.Dup deliberately shares with its source.
+func cloneErrorValidation(source *ValidationExpr) *ValidationExpr {
+	copied := source.Dup()
+	copied.Values = make([]any, len(source.Values))
+	for index, value := range source.Values {
+		copied.Values[index] = cloneErrorContractValue(value)
+	}
+	copied.ExclusiveMinimum = dupFloat(source.ExclusiveMinimum)
+	copied.Minimum = dupFloat(source.Minimum)
+	copied.Maximum = dupFloat(source.Maximum)
+	copied.ExclusiveMaximum = dupFloat(source.ExclusiveMaximum)
+	copied.MinLength = dupInt(source.MinLength)
+	copied.MaxLength = dupInt(source.MaxLength)
+	return copied
+}
+
+// cloneErrorContractValue copies the collection values accepted by defaults,
+// enum validations, and examples. Primitive values are immutable and can be
+// shared safely.
+func cloneErrorContractValue(source any) any {
+	switch actual := source.(type) {
+	case Val:
+		copied := make(Val, len(actual))
+		for name, value := range actual {
+			copied[name] = cloneErrorContractValue(value)
+		}
+		return copied
+	case ArrayVal:
+		copied := make(ArrayVal, len(actual))
+		for index, value := range actual {
+			copied[index] = cloneErrorContractValue(value)
+		}
+		return copied
+	case MapVal:
+		copied := make(MapVal, len(actual))
+		for key, value := range actual {
+			copied[cloneErrorContractValue(key)] = cloneErrorContractValue(value)
+		}
+		return copied
+	case []any:
+		copied := make([]any, len(actual))
+		for index, value := range actual {
+			copied[index] = cloneErrorContractValue(value)
+		}
+		return copied
+	case []byte:
+		return append([]byte(nil), actual...)
+	case map[string]any:
+		copied := make(map[string]any, len(actual))
+		for name, value := range actual {
+			copied[name] = cloneErrorContractValue(value)
+		}
+		return copied
+	case map[any]any:
+		copied := make(map[any]any, len(actual))
+		for key, value := range actual {
+			copied[cloneErrorContractValue(key)] = cloneErrorContractValue(value)
+		}
+		return copied
+	default:
+		return actual
+	}
+}
+
+// dataTypes reconnects inheritance declarations to the same copied graph used
+// by attribute types.
+func (c *effectiveErrorCopier) dataTypes(source []DataType) []DataType {
+	if len(source) == 0 {
+		return nil
+	}
+	copied := make([]DataType, len(source))
+	for index, dataType := range source {
+		copied[index] = c.dataType(dataType)
+	}
+	return copied
+}
+
+// dataType copies each concrete type without registering generated result
+// types. User-type shells are installed before their attributes are followed.
+func (c *effectiveErrorCopier) dataType(source DataType) DataType {
+	switch actual := source.(type) {
+	case nil:
+		return nil
+	case Primitive:
+		return actual
+	case *Object:
+		copied := make(Object, 0, len(*actual))
+		for _, field := range *actual {
+			copied = append(copied, &NamedAttributeExpr{
+				Name:      field.Name,
+				Attribute: c.attribute(field.Attribute),
+			})
+		}
+		return &copied
+	case *Array:
+		return &Array{
+			ElemType:         c.attribute(actual.ElemType),
+			NonNullableElems: actual.NonNullableElems,
+		}
+	case *Map:
+		return &Map{
+			KeyType:  c.attribute(actual.KeyType),
+			ElemType: c.attribute(actual.ElemType),
+		}
+	case *Union:
+		copied := &Union{
+			TypeName: actual.TypeName,
+			TypeKey:  actual.TypeKey,
+			ValueKey: actual.ValueKey,
+			Values:   make([]*NamedAttributeExpr, len(actual.Values)),
+		}
+		for index, branch := range actual.Values {
+			copied.Values[index] = &NamedAttributeExpr{
+				Name:      branch.Name,
+				Attribute: c.attribute(branch.Attribute),
+			}
+		}
+		return copied
+	case *ResultTypeExpr:
+		origin := actual.Origin()
+		if copied, ok := c.userTypes[origin]; ok {
+			return copied
+		}
+		copied := &ResultTypeExpr{
+			UserTypeExpr: &UserTypeExpr{
+				TypeName: actual.TypeName,
+				UID:      actual.UID,
+			},
+			Identifier:  actual.Identifier,
+			ContentType: actual.ContentType,
+		}
+		c.userTypes[origin] = copied
+		copied.AttributeExpr = c.attribute(actual.AttributeExpr)
+		copied.Views = make([]*ViewExpr, len(actual.Views))
+		for index, view := range actual.Views {
+			copied.Views[index] = &ViewExpr{
+				AttributeExpr: c.attribute(view.AttributeExpr),
+				Name:          view.Name,
+				Parent:        copied,
+			}
+		}
+		return copied
+	case *UserTypeExpr:
+		origin := actual.Origin()
+		if copied, ok := c.userTypes[origin]; ok {
+			return copied
+		}
+		copied := &UserTypeExpr{
+			TypeName: actual.TypeName,
+			UID:      actual.UID,
+		}
+		c.userTypes[origin] = copied
+		copied.AttributeExpr = c.attribute(actual.AttributeExpr)
+		return copied
+	case UserType:
+		origin := actual.Origin()
+		if copied, ok := c.userTypes[origin]; ok {
+			return copied
+		}
+		copied := actual.Dup(nil)
+		c.userTypes[origin] = copied
+		copied.SetAttribute(c.attribute(actual.Attribute()))
+		return copied
+	default:
+		panic("unknown error attribute type")
+	}
 }
 
 // equivalentErrorAttributeNodes compares every contract-bearing node while
@@ -88,15 +320,9 @@ func equivalentErrorAttributeNodes(first, second *AttributeExpr, seen map[attrib
 			len(firstType.Values) != len(secondType.Values) {
 			return false
 		}
-		for _, branch := range firstType.Values {
-			var other *AttributeExpr
-			for _, candidate := range secondType.Values {
-				if candidate.Name == branch.Name {
-					other = candidate.Attribute
-					break
-				}
-			}
-			if other == nil || !equivalentErrorAttributeNodes(branch.Attribute, other, seen) {
+		for index, branch := range firstType.Values {
+			other := secondType.Values[index]
+			if branch.Name != other.Name || !equivalentErrorAttributeNodes(branch.Attribute, other.Attribute, seen) {
 				return false
 			}
 		}

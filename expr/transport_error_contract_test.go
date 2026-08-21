@@ -61,6 +61,36 @@ func TestHTTPInheritedErrorMappingAcceptsEquivalentValidationOrder(t *testing.T)
 	require.Same(t, endpoint.MethodExpr.Error("bad_request"), endpoint.HTTPErrors[0].ErrorExpr)
 }
 
+func TestHTTPInheritedErrorMappingUsesEffectiveInheritedContract(t *testing.T) {
+	root := expr.RunDSL(t, equivalentHTTPInheritedErrorMappingDSL)
+	endpoint := root.API.HTTP.Services[0].HTTPEndpoints[0]
+
+	require.Same(t, endpoint.MethodExpr.Error("bad_request"), endpoint.HTTPErrors[0].ErrorExpr)
+}
+
+func TestGRPCInheritedErrorMappingUsesEffectiveInheritedContract(t *testing.T) {
+	root := expr.RunDSL(t, equivalentGRPCInheritedErrorMappingDSL)
+	endpoint := root.API.GRPC.Services[0].GRPCEndpoints[0]
+
+	require.Same(t, endpoint.MethodExpr.Error("bad_request"), endpoint.GRPCErrors[0].ErrorExpr)
+}
+
+func TestInheritedErrorMappingRejectsDifferentEffectiveBases(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		dsl  func()
+	}{
+		{"HTTP", incompatibleHTTPInheritedErrorMappingDSL},
+		{"gRPC", incompatibleGRPCInheritedErrorMappingDSL},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			err := expr.RunInvalidDSL(t, test.dsl)
+			require.ErrorContains(t, err, `error mapping "bad_request"`)
+			require.ErrorContains(t, err, "must define the same error attribute")
+		})
+	}
+}
+
 func TestGRPCInheritedErrorMappingRejectsIncompatibleError(t *testing.T) {
 	err := expr.RunInvalidDSL(t, incompatibleGRPCErrorMappingDSL)
 	require.ErrorContains(t, err, `gRPC error mapping "bad_request"`)
@@ -183,6 +213,86 @@ var equivalentServiceErrorMappingDSL = func() {
 		Method("Show", func() {
 			Error("bad_request", String)
 			HTTP(func() { GET("/") })
+			GRPC(func() {})
+		})
+	})
+}
+
+var equivalentHTTPInheritedErrorMappingDSL = func() {
+	base := Type("HTTPErrorBase", func() {
+		Attribute("message", String, func() {
+			Default("invalid")
+			Meta("struct:field:name", "Message")
+		})
+		Required("message")
+	})
+	API("errors", func() {
+		Error("bad_request", &expr.Object{}, func() { Extend(base) })
+		HTTP(func() { Response(StatusBadRequest, "bad_request") })
+	})
+	Service("Errors", func() {
+		Method("Show", func() {
+			Error("bad_request", &expr.Object{}, func() {
+				Attribute("message", String, func() {
+					Default("invalid")
+					Meta("struct:field:name", "Message")
+				})
+				Required("message")
+			})
+			HTTP(func() { GET("/") })
+		})
+	})
+}
+
+var equivalentGRPCInheritedErrorMappingDSL = func() {
+	base := Type("GRPCErrorBase", func() {
+		Attribute("message", String, func() { Meta("rpc:tag", "1") })
+		Required("message")
+	})
+	API("errors", func() {
+		Error("bad_request", &expr.Object{}, func() { Extend(base) })
+		GRPC(func() { Response("bad_request", CodeInvalidArgument) })
+	})
+	Service("Errors", func() {
+		Method("Show", func() {
+			Error("bad_request", &expr.Object{}, func() {
+				Attribute("message", String, func() { Meta("rpc:tag", "1") })
+				Required("message")
+			})
+			GRPC(func() {})
+		})
+	})
+}
+
+var incompatibleHTTPInheritedErrorMappingDSL = func() {
+	stringBase := Type("HTTPStringErrorBase", func() { Attribute("value", String) })
+	integerBase := Type("HTTPIntegerErrorBase", func() { Attribute("value", Int) })
+	API("errors", func() {
+		Error("bad_request", &expr.Object{}, func() { Extend(stringBase) })
+		HTTP(func() { Response(StatusBadRequest, "bad_request") })
+	})
+	Service("Errors", func() {
+		Method("Show", func() {
+			Error("bad_request", &expr.Object{}, func() { Extend(integerBase) })
+			HTTP(func() { GET("/") })
+		})
+	})
+}
+
+var incompatibleGRPCInheritedErrorMappingDSL = func() {
+	stringBase := Type("GRPCStringErrorBase", func() {
+		Attribute("value", String, func() { Meta("rpc:tag", "1") })
+	})
+	integerBase := Type("GRPCIntegerErrorBase", func() {
+		Attribute("value", Int, func() { Meta("rpc:tag", "1") })
+	})
+	API("errors", func() {
+		Error("bad_request", &expr.Object{}, func() { Extend(stringBase) })
+		GRPC(func() { Response("bad_request", CodeInvalidArgument) })
+	})
+	Service("Errors", func() {
+		Method("Show", func() {
+			Error("bad_request", &expr.Object{}, func() { Extend(integerBase) })
 			GRPC(func() {})
 		})
 	})

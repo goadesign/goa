@@ -22,11 +22,11 @@ paths:
                             $ref: '#/components/schemas/Setup'
                         example:
                             completed:
-                                - who
-                                - who
-                                - who
-                                - who
-                            current: who
+                                - where
+                                - where
+                                - where
+                                - where
+                            current: where
             responses:
                 "200":
                     description: OK response.
@@ -49,24 +49,24 @@ components:
                     items:
                         $ref: '#/components/schemas/Stage'
                     example:
-                        - who
-                        - who
-                        - who
-                        - who
+                        - where
+                        - where
+                        - where
+                        - where
                 current:
                     $ref: '#/components/schemas/Stage'
             description: Request body for testEndpoint.
             example:
                 completed:
-                    - who
-                    - who
-                    - who
-                    - who
-                current: who
+                    - where
+                    - where
+                    - where
+                    - where
+                current: where
         Stage:
             type: string
             description: Setup stage.
-            example: who
+            example: where
             enum:
                 - who
                 - when

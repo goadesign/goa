@@ -24,26 +24,27 @@ func Encode{{ .Method.VarName }}Response(ctx context.Context, v any, hdr, trlr *
 }
 
 {{- define "metadata_encoder" }}
+	{{- if .Metadata.Pointer }}
+	if result.{{ .Metadata.FieldName }} != nil {
+	{{- end }}
+	{{ .Metadata.EncodeCode }}
 	{{- if .Metadata.StringSlice }}
-	{{ .VarName }}.Append({{ printf "%q" .Metadata.Name }}, res.{{ .Metadata.FieldName }}...)
+	{{ .VarName }}.Append({{ printf "%q" .Metadata.Name }}, {{ .Metadata.WireVarName }}...)
 	{{- else if .Metadata.Slice }}
-		for _, value := range res.{{ .Metadata.FieldName }} {
+		for _, value := range {{ .Metadata.WireVarName }} {
 			{{ template "partial_convert_type_to_string" (typeConversionData .Metadata.Type.ElemType.Type "valueStr" "value") }}
 			{{ .VarName }}.Append({{ printf "%q" .Metadata.Name }}, valueStr)
 		}
 	{{- else }}
-		{{- if .Metadata.Pointer }}
-			if res.{{ .Metadata.FieldName }} != nil {
-		{{- end }}
 		{{ .VarName }}.Append({{ printf "%q" .Metadata.Name }},
 			{{- if eq .Metadata.Type.Name "bytes" }} string(
 			{{- else if not (eq .Metadata.TypeName "string") }} fmt.Sprintf("%v",
 			{{- end }}
-			{{- if .Metadata.Pointer }}*{{ end }}p.{{ .Metadata.FieldName }}
+			{{ .Metadata.WireVarName }}
 			{{- if or (eq .Metadata.Type.Name "bytes") (not (eq .Metadata.TypeName "string")) }})
 			{{- end }})
-		{{- if .Metadata.Pointer }}
-			}
-		{{- end }}
+	{{- end }}
+	{{- if .Metadata.Pointer }}
+	}
 	{{- end }}
 {{- end }}

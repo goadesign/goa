@@ -55,7 +55,7 @@ definitions:
             foo:
                 type: string
                 example: ""
-        description: Foo BarResponseBody result type (default view)
+        description: Foo Bar result type (default view)
         example:
             bar:
                 - string: ""

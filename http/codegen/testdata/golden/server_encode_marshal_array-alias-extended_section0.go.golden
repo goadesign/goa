@@ -1,6 +1,6 @@
-// unmarshalResultTypeRequestBodyToFooserviceResultType builds a value of type
-// *fooservice.ResultType from a value of type *ResultTypeRequestBody.
-func unmarshalResultTypeRequestBodyToFooserviceResultType(v *ResultTypeRequestBody) *fooservice.ResultType {
+// unmarshalResultTypeToFooserviceResultType builds a value of type
+// *fooservice.ResultType from a value of type *ResultType.
+func unmarshalResultTypeToFooserviceResultType(v *ResultType) *fooservice.ResultType {
 	res := &fooservice.ResultType{}
 	if v.Foo != nil {
 		foo := fooservice.Foo(*v.Foo)

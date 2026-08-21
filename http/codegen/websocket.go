@@ -133,7 +133,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 				var svcode string
 				if ut, ok := body.(expr.UserType); ok {
 					if val := ut.Attribute().Validation; val != nil {
-						httpctx := httpContext(sd.Scope, true, true)
+						httpctx := httpContext(sd.serverWireTypes.scope, true, true)
 						svcode = codegen.ValidationCode(ut.Attribute(), ut, httpctx, true, expr.IsAlias(ut), false, "body")
 					}
 				}
@@ -142,8 +142,8 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 					AttributeData: &AttributeData{
 						Name:     "payload",
 						VarName:  "body",
-						TypeName: sd.Scope.GoTypeName(streamBody),
-						TypeRef:  sd.Scope.GoTypeRef(streamBody),
+						TypeName: sd.serverWireTypes.scope.GoTypeName(streamBody),
+						TypeRef:  sd.serverWireTypes.scope.GoTypeRef(streamBody),
 						Type:     streamBody.Type,
 						Required: true,
 						// The example has always been computed from the
@@ -155,7 +155,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 			}
 			if body != expr.Empty {
 				var helpers []*codegen.TransformFunctionData
-				httpctx := httpContext(sd.Scope, true, true)
+				httpctx := httpContext(sd.serverWireTypes.scope, true, true)
 				serverCode, helpers, err = marshal(streamBody, e.MethodExpr.StreamingPayload, "body", "v", httpctx, svcctx)
 				if err == nil {
 					sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
@@ -176,10 +176,6 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 			}
 		}
 		cliPayload = sds.buildRequestBodyType(streamBody, e.MethodExpr.StreamingPayload, e, false, sd)
-		if cliPayload != nil {
-			sd.ClientTypeNames[cliPayload.Name] = struct{}{}
-			sd.ServerTypeNames[cliPayload.Name] = struct{}{}
-		}
 		if e.MethodExpr.Stream == expr.ClientStreamKind {
 			svrSendDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection and closes the connection.", md.ServerStream.SendName, svrSendTypeName, md.Name)
 			svrSendWithContextDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection with context and closes the connection.", md.ServerStream.SendWithContextName, svrSendTypeName, md.Name)

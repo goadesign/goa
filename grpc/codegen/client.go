@@ -138,6 +138,7 @@ func clientEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 		}
 		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client encoders and decoders", "client", imports)}
 		fm := transTmplFuncs(svc, services)
+		fm["hasInitArg"] = hasInitArg
 		fm["metadataEncodeDecodeData"] = metadataEncodeDecodeData
 		fm["typeConversionData"] = typeConversionData
 		fm["isBearer"] = isBearer
@@ -166,6 +167,18 @@ func clientEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 		}
 	}
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
+}
+
+// hasInitArg reports whether a generated constructor consumes the named
+// source variable. Templates use it to avoid binding an empty protobuf
+// message that only carries response metadata.
+func hasInitArg(args []*InitArgData, name string) bool {
+	for _, arg := range args {
+		if arg.Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 // isBearer returns true if the security scheme uses a Bearer scheme.

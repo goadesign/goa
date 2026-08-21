@@ -1,15 +1,15 @@
 // ClientStreamStreamingBody is the type of the
 // "StreamingPayloadRequiredFieldsService" service "ClientStream" endpoint HTTP
 // request body.
-type ClientStreamStreamingBody StreamingRequestStreamingBody
+type ClientStreamStreamingBody StreamingRequest
 
 // BidirectionalStreamStreamingBody is the type of the
 // "StreamingPayloadRequiredFieldsService" service "BidirectionalStream"
 // endpoint HTTP request body.
-type BidirectionalStreamStreamingBody StreamingRequestStreamingBody
+type BidirectionalStreamStreamingBody StreamingRequest
 
-// StreamingRequestStreamingBody is used to define fields on request body types.
-type StreamingRequestStreamingBody struct {
+// StreamingRequest is used to define fields on request body types.
+type StreamingRequest struct {
 	Required     *string `form:"required,omitempty" json:"required,omitempty" xml:"required,omitempty"`
 	Optional     *string `form:"optional,omitempty" json:"optional,omitempty" xml:"optional,omitempty"`
 	BaseRequired *string `form:"baseRequired,omitempty" json:"baseRequired,omitempty" xml:"baseRequired,omitempty"`
@@ -64,9 +64,8 @@ func ValidateBidirectionalStreamStreamingBody(body *BidirectionalStreamStreaming
 	return
 }
 
-// ValidateStreamingRequestStreamingBody runs the validations defined on
-// StreamingRequestStreamingBody
-func ValidateStreamingRequestStreamingBody(body *StreamingRequestStreamingBody) (err error) {
+// ValidateStreamingRequest runs the validations defined on StreamingRequest
+func ValidateStreamingRequest(body *StreamingRequest) (err error) {
 	if body.Required == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("required", "body"))
 	}

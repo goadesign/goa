@@ -22,15 +22,20 @@
     },
     "Foobar": {
       "example": {
-        "bar": [],
-        "foo": [
-          "Totam doloremque exercitationem voluptate.",
-          "Repellat perspiciatis voluptas et quia deleniti."
-        ]
+        "bar": [
+          {
+            "string": ""
+          }
+        ],
+        "foo": []
       },
       "properties": {
         "bar": {
-          "example": [],
+          "example": [
+            {
+              "string": ""
+            }
+          ],
           "items": {
             "$ref": "#/definitions/Bar"
           },
@@ -39,12 +44,9 @@
           "type": "array"
         },
         "foo": {
-          "example": [
-            "Totam doloremque exercitationem voluptate.",
-            "Repellat perspiciatis voluptas et quia deleniti."
-          ],
+          "example": [],
           "items": {
-            "example": "Molestiae dolor eveniet omnis atque.",
+            "example": "Eaque consequatur asperiores est.",
             "type": "string"
           },
           "maxItems": 42,

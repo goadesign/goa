@@ -3,13 +3,13 @@
 // endpoint HTTP response body.
 type MethodResultUserTypeSiblingResponseBody struct {
 	// Attribute A
-	A *UserTypeResponseBody `json:"a"`
+	A *UserType `json:"a"`
 	// Attribute B
-	B *UserTypeResponseBody `json:"b"`
+	B *UserType `json:"b"`
 }
 
-// UserTypeResponseBody is used to define fields on response body types.
-type UserTypeResponseBody struct {
+// UserType is used to define fields on response body types.
+type UserType struct {
 	U *int `form:"u,omitempty" json:"u,omitempty" xml:"u,omitempty"`
 }
 
@@ -19,10 +19,10 @@ type UserTypeResponseBody struct {
 func NewMethodResultUserTypeSiblingResponseBody(res *serviceresultusertypesiblingviews.ResulttypesiblingView) *MethodResultUserTypeSiblingResponseBody {
 	body := &MethodResultUserTypeSiblingResponseBody{}
 	if res.A != nil {
-		body.A = marshalServiceresultusertypesiblingviewsUserTypeViewToUserTypeResponseBody(res.A)
+		body.A = marshalServiceresultusertypesiblingviewsUserTypeViewToUserType(res.A)
 	}
 	if res.B != nil {
-		body.B = marshalServiceresultusertypesiblingviewsUserTypeViewToUserTypeResponseBody(res.B)
+		body.B = marshalServiceresultusertypesiblingviewsUserTypeViewToUserType(res.B)
 	}
 	return body
 }

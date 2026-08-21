@@ -268,8 +268,8 @@ func TestGoTransformUnionAcrossTransportBoundary(t *testing.T) {
 }
 
 func TestGoTransformEntersSourceAndTargetOwnersIndependently(t *testing.T) {
-	source := transformOwnerTestType("Envelope", "Choice")
-	target := transformOwnerTestType("Envelope", "Choice")
+	source := transformOwnerTestType("SourceEnvelope", "SourceChoice", "source/types")
+	target := transformOwnerTestType("TargetEnvelope", "TargetSelection", "target/models")
 	sourceOwner := newTransformOwnerAttributor("source")
 	targetOwner := newTransformOwnerAttributor("target")
 
@@ -285,14 +285,14 @@ func TestGoTransformEntersSourceAndTargetOwnersIndependently(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, helpers)
-	require.Contains(t, helpers[0].ParamTypeRef, "sourceChoiceContainer.ChoiceContainer")
-	require.Contains(t, helpers[0].ResultTypeRef, "targetChoiceContainer.ChoiceContainer")
-	require.Contains(t, *sourceOwner.entered, "sourceEnvelope")
-	require.Contains(t, *sourceOwner.entered, "sourceChoiceContainer")
-	require.Contains(t, *sourceOwner.entered, "sourceChoice")
-	require.Contains(t, *targetOwner.entered, "targetEnvelope")
-	require.Contains(t, *targetOwner.entered, "targetChoiceContainer")
-	require.Contains(t, *targetOwner.entered, "targetChoice")
+	require.Contains(t, helpers[0].ParamTypeRef, "sourceSourceChoiceContainer.SourceChoiceContainer")
+	require.Contains(t, helpers[0].ResultTypeRef, "targetTargetSelectionContainer.TargetSelectionContainer")
+	require.Contains(t, *sourceOwner.entered, "sourceSourceEnvelope")
+	require.Contains(t, *sourceOwner.entered, "sourceSourceChoiceContainer")
+	require.Contains(t, *sourceOwner.entered, "sourceSourceChoice")
+	require.Contains(t, *targetOwner.entered, "targetTargetEnvelope")
+	require.Contains(t, *targetOwner.entered, "targetTargetSelectionContainer")
+	require.Contains(t, *targetOwner.entered, "targetTargetSelection")
 
 	reverseSource := newTransformOwnerAttributor("source")
 	reverseTarget := newTransformOwnerAttributor("target")
@@ -308,8 +308,8 @@ func TestGoTransformEntersSourceAndTargetOwnersIndependently(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.NotEmpty(t, reverseHelpers)
-	require.Contains(t, reverseHelpers[0].ParamTypeRef, "targetChoiceContainer.ChoiceContainer")
-	require.Contains(t, reverseHelpers[0].ResultTypeRef, "sourceChoiceContainer.ChoiceContainer")
+	require.Contains(t, reverseHelpers[0].ParamTypeRef, "targetTargetSelectionContainer.TargetSelectionContainer")
+	require.Contains(t, reverseHelpers[0].ResultTypeRef, "sourceSourceChoiceContainer.SourceChoiceContainer")
 }
 
 func newTransformOwnerAttributor(prefix string) *transformOwnerAttributor {
@@ -356,7 +356,7 @@ func (a *transformOwnerAttributor) Scope() *NameScope {
 	return a.scope
 }
 
-func transformOwnerTestType(name, unionName string) expr.UserType {
+func transformOwnerTestType(name, unionName, location string) expr.UserType {
 	union := &expr.Union{
 		TypeName: unionName,
 		Values: []*expr.NamedAttributeExpr{
@@ -370,7 +370,7 @@ func transformOwnerTestType(name, unionName string) expr.UserType {
 			Type: &expr.Object{
 				{Name: "choice", Attribute: &expr.AttributeExpr{Type: union}},
 			},
-			Meta: expr.MetaExpr{"struct:pkg:path": {"service/types"}},
+			Meta: expr.MetaExpr{"struct:pkg:path": {location}},
 		},
 	}
 	return &expr.UserTypeExpr{
@@ -379,7 +379,7 @@ func transformOwnerTestType(name, unionName string) expr.UserType {
 			Type: &expr.Object{
 				{Name: "inner", Attribute: &expr.AttributeExpr{Type: container}},
 			},
-			Meta: expr.MetaExpr{"struct:pkg:path": {"service/types"}},
+			Meta: expr.MetaExpr{"struct:pkg:path": {location}},
 		},
 	}
 }

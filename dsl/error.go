@@ -68,8 +68,10 @@ const (
 // A reusable API or service transport response mapping is matched to a method
 // error by name, but it does not replace the method's error type. If a method or
 // service shadows the reusable error with the same name, both error attributes
-// must define the same type, validations, defaults, and struct metadata. Goa
-// rejects incompatible definitions during design validation.
+// must define the same effective type, validations, defaults, and struct
+// metadata after Reference and Extend inheritance is applied. Goa compares a
+// detached finalized copy and rejects incompatible definitions during design
+// validation without changing the authored declarations.
 //
 // See Attribute for details on the Error arguments.
 //

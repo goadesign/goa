@@ -3,19 +3,19 @@
 // HTTP response body.
 type MethodResultUserTypeNestedResponseBody struct {
 	// Outer A
-	A      *UserTypeResponseBody `json:"outer_a"`
-	Nested *WrapperResponseBody  `form:"nested,omitempty" json:"nested,omitempty" xml:"nested,omitempty"`
+	A      *UserType `json:"outer_a"`
+	Nested *Wrapper  `form:"nested,omitempty" json:"nested,omitempty" xml:"nested,omitempty"`
 }
 
-// UserTypeResponseBody is used to define fields on response body types.
-type UserTypeResponseBody struct {
+// UserType is used to define fields on response body types.
+type UserType struct {
 	U *int `form:"u,omitempty" json:"u,omitempty" xml:"u,omitempty"`
 }
 
-// WrapperResponseBody is used to define fields on response body types.
-type WrapperResponseBody struct {
+// Wrapper is used to define fields on response body types.
+type Wrapper struct {
 	// Inner A
-	A *UserTypeResponseBody `json:"inner_a"`
+	A *UserType `json:"inner_a"`
 }
 
 // NewMethodResultUserTypeNestedResponseBody builds the HTTP response body from
@@ -24,10 +24,10 @@ type WrapperResponseBody struct {
 func NewMethodResultUserTypeNestedResponseBody(res *serviceresultusertypenestedviews.ResulttypenestedView) *MethodResultUserTypeNestedResponseBody {
 	body := &MethodResultUserTypeNestedResponseBody{}
 	if res.A != nil {
-		body.A = marshalServiceresultusertypenestedviewsUserTypeViewToUserTypeResponseBody(res.A)
+		body.A = marshalServiceresultusertypenestedviewsUserTypeViewToUserType(res.A)
 	}
 	if res.Nested != nil {
-		body.Nested = marshalServiceresultusertypenestedviewsWrapperViewToWrapperResponseBody(res.Nested)
+		body.Nested = marshalServiceresultusertypenestedviewsWrapperViewToWrapper(res.Nested)
 	}
 	return body
 }

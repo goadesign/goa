@@ -5,20 +5,20 @@
         "description": "Request body for testEndpoint.",
         "example": {
           "completed": [
-            "who",
-            "who",
-            "who",
-            "who"
+            "where",
+            "where",
+            "where",
+            "where"
           ],
-          "current": "who"
+          "current": "where"
         },
         "properties": {
           "completed": {
             "example": [
-              "who",
-              "who",
-              "who",
-              "who"
+              "where",
+              "where",
+              "where",
+              "where"
             ],
             "items": {
               "$ref": "#/components/schemas/Stage"
@@ -39,7 +39,7 @@
           "where",
           "what"
         ],
-        "example": "who",
+        "example": "where",
         "type": "string"
       }
     }
@@ -58,12 +58,12 @@
             "application/json": {
               "example": {
                 "completed": [
-                  "who",
-                  "who",
-                  "who",
-                  "who"
+                  "where",
+                  "where",
+                  "where",
+                  "where"
                 ],
-                "current": "who"
+                "current": "where"
               },
               "schema": {
                 "$ref": "#/components/schemas/Setup"

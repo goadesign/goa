@@ -1,3 +1,5 @@
+// This file defines HTTP request and response header DSL and the shared entry
+// point used to select gRPC response metadata fields.
 package dsl
 
 import (
@@ -9,7 +11,9 @@ import (
 // When used in a HTTP expression, it groups a set of Header expressions and
 // makes it possible to list required headers using the Required function.
 // When used in a GRPC response expression, it defines the headers to be sent
-// in the response metadata.
+// in the response metadata. A gRPC response header must have an effective
+// primitive type or an array whose elements have an effective primitive type;
+// generated codecs convert named service aliases to and from native values.
 //
 // To define HTTP headers, Headers must appear in an Service HTTP expression
 // to define request headers common to all the service methods. Headers may

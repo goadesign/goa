@@ -1,14 +1,14 @@
-// NewPayloadTypeRequestBody builds the HTTP request body from the payload of
-// the "MethodBodyPrimitiveArrayUserValidate" endpoint of the
+// NewPayloadType builds the HTTP request body from the payload of the
+// "MethodBodyPrimitiveArrayUserValidate" endpoint of the
 // "ServiceBodyPrimitiveArrayUserValidate" service.
-func NewPayloadTypeRequestBody(p []*servicebodyprimitivearrayuservalidate.PayloadType) []*PayloadTypeRequestBody {
-	body := make([]*PayloadTypeRequestBody, len(p))
+func NewPayloadType(p []*servicebodyprimitivearrayuservalidate.PayloadType) []*PayloadType {
+	body := make([]*PayloadType, len(p))
 	for i, val := range p {
 		if val == nil {
 			body[i] = nil
 			continue
 		}
-		body[i] = marshalServicebodyprimitivearrayuservalidatePayloadTypeToPayloadTypeRequestBody(val)
+		body[i] = marshalServicebodyprimitivearrayuservalidatePayloadTypeToPayloadType(val)
 	}
 	return body
 }

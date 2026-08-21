@@ -12,7 +12,7 @@ type ListResponseBody struct {
 }
 
 // ListSomethingWentWrongResponseBody is the type of the "ServiceA" service
-// "list" endpoint HTTP response body for the "something_went_wrong" error.
+// "list" endpoint HTTP response body.
 type ListSomethingWentWrongResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`

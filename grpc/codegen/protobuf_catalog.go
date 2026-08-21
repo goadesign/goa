@@ -23,7 +23,7 @@ type (
 		messageUses       map[*expr.AttributeExpr]*protobufMessageRecord
 		unions            []*protobufUnionRecord
 		unionUses         map[*expr.AttributeExpr]*protobufUnionRecord
-		syntheticSources  map[expr.UserType]protobufMessageSource
+		rootSources       map[expr.UserType]protobufMessageSource
 		reservedNames     []string
 		validators        []*protobufValidationRecord
 		frozen            bool
@@ -132,10 +132,10 @@ const (
 // generated protobuf package.
 func newProtobufPackageCatalog(packageName string) *protobufPackageCatalog {
 	return &protobufPackageCatalog{
-		packageName:      packageName,
-		messageUses:      make(map[*expr.AttributeExpr]*protobufMessageRecord),
-		unionUses:        make(map[*expr.AttributeExpr]*protobufUnionRecord),
-		syntheticSources: make(map[expr.UserType]protobufMessageSource),
+		packageName: packageName,
+		messageUses: make(map[*expr.AttributeExpr]*protobufMessageRecord),
+		unionUses:   make(map[*expr.AttributeExpr]*protobufUnionRecord),
+		rootSources: make(map[expr.UserType]protobufMessageSource),
 	}
 }
 
@@ -148,19 +148,23 @@ func (c *protobufPackageCatalog) reserveName(name string) {
 	c.reservedNames = append(c.reservedNames, name)
 }
 
-// bindSyntheticSource associates a shaped synthetic declaration and all of
-// its later copies with the endpoint role that created it.
-func (c *protobufPackageCatalog) bindSyntheticSource(attribute *expr.AttributeExpr, source protobufMessageSource) {
-	userType, ok := attribute.Type.(expr.UserType)
-	if !ok || source.synthetic.role == 0 {
+// bindRootSource associates a shaped root declaration and all of its later
+// copies with the authored service declaration or synthetic endpoint role
+// whose value it carries.
+func (c *protobufPackageCatalog) bindRootSource(attribute *expr.AttributeExpr, source protobufMessageSource) {
+	if attribute.Type == expr.Empty {
 		return
 	}
-	c.syntheticSources[userType.Origin()] = source
+	userType, ok := attribute.Type.(expr.UserType)
+	if !ok || (source.origin == nil && source.synthetic.role == 0) {
+		return
+	}
+	c.rootSources[userType.Origin()] = source
 }
 
 // collectMessage records every protobuf declaration reachable from attribute.
-// source identifies a synthetic root; nested authored declarations retain
-// their own origins.
+// source identifies the service declaration or synthetic role carried by the
+// root; nested authored declarations retain their own origins.
 func (c *protobufPackageCatalog) collectMessage(attribute *expr.AttributeExpr, source protobufMessageSource, sd *ServiceData) []string {
 	if c.frozen {
 		panic("cannot collect a protobuf message after the package catalog is frozen")
@@ -300,7 +304,7 @@ func (c *protobufPackageCatalog) message(attribute *expr.AttributeExpr) *protobu
 	}
 	userType := attribute.Type.(expr.UserType)
 	source := protobufMessageSource{origin: userType.Origin()}
-	if synthetic, ok := c.syntheticSources[userType.Origin()]; ok {
+	if synthetic, ok := c.rootSources[userType.Origin()]; ok {
 		source = synthetic
 	}
 	identity := protobufMessageIdentityFor(attribute, source)
@@ -387,17 +391,17 @@ func (c *protobufPackageCatalog) collectMessageRecursive(attribute *expr.Attribu
 	case expr.UserType:
 		origin := actual.Origin()
 		identitySource := protobufMessageSource{origin: origin}
-		if synthetic, ok := c.syntheticSources[origin]; ok {
-			identitySource = synthetic
+		if rootSource, ok := c.rootSources[origin]; ok {
+			identitySource = rootSource
 		}
 		if !root && len(actual.Attribute().Meta[wrappedAttrMeta]) > 0 {
 			identitySource = protobufMessageSource{synthetic: protobufSyntheticMessage{
 				role: protobufWrapperMessage,
 			}}
 		}
-		if root && source.synthetic.role != 0 {
+		if root && (source.origin != nil || source.synthetic.role != 0) {
 			identitySource = source
-			c.syntheticSources[origin] = source
+			c.rootSources[origin] = source
 		}
 		identity := protobufMessageIdentityFor(attribute, identitySource)
 		record := c.findMessage(identity)
@@ -628,15 +632,8 @@ func protobufMessageIdentityFor(attribute *expr.AttributeExpr, source protobufMe
 // sameProtobufMessageIdentity compares the typed source and every protobuf
 // schema fact rather than expression hashes or generated names.
 func sameProtobufMessageIdentity(left, right protobufMessageIdentity) bool {
-	if left.preferredName != right.preferredName || left.explicitName != right.explicitName {
+	if left.source != right.source || left.preferredName != right.preferredName || left.explicitName != right.explicitName {
 		return false
-	}
-	if left.source != right.source {
-		// An explicit protobuf name declares intentional reuse across endpoint
-		// roles or authored origins when the complete wire schemas also match.
-		if !left.explicitName {
-			return false
-		}
 	}
 	return sameProtobufWireAttribute(left.attribute, right.attribute, make(map[protobufAttributePair]struct{}))
 }
