@@ -12,6 +12,8 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+// TestGeneratedTypesRejectRelocatedNameCollision verifies that one generated
+// package rejects distinct DSL names that produce the same exported Go name.
 func TestGeneratedTypesRejectRelocatedNameCollision(t *testing.T) {
 	var first, second expr.UserType
 	root := RunDSL(t, func() {

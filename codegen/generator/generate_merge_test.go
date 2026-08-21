@@ -14,6 +14,8 @@ import (
 	goa "goa.design/goa/v3/pkg"
 )
 
+// TestMergeFilesPreservesSameLabelSections verifies that diagnostic section
+// labels do not cause the merger to discard different generated bodies.
 func TestMergeFilesPreservesSameLabelSections(t *testing.T) {
 	t.Cleanup(func() { Generators = generators })
 	Generators = func(_ string) ([]Genfunc, error) {

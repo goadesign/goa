@@ -16,6 +16,8 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+// TestRelocatedUnionPackageNamesCompile verifies that two services and their
+// HTTP and gRPC transports compile against distinct unions in one shared package.
 func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 	t.Cleanup(func() { Generators = generators })
 	Generators = func(_ string) ([]Genfunc, error) {
@@ -69,6 +71,16 @@ func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 	writeGeneratedModule(t, genDir, "gen")
 	_, err := Generate(dir, "gen", false)
 	require.NoError(t, err)
+	for _, path := range []string{
+		filepath.Join("types", "first_input.go"),
+		filepath.Join("types", "second_input.go"),
+		filepath.Join("http", "first", "server", "server.go"),
+		filepath.Join("http", "second", "server", "server.go"),
+		filepath.Join("grpc", "first", "server", "server.go"),
+		filepath.Join("grpc", "second", "server", "server.go"),
+	} {
+		require.FileExists(t, filepath.Join(genDir, path))
+	}
 	runGeneratedTests(t, genDir)
 }
 
