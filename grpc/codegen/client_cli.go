@@ -26,7 +26,7 @@ func ClientCLIFiles(services *ServicesData) []*codegen.File {
 			continue
 		}
 		sd := services.Get(svc.Name())
-		command := cli.BuildCommandData(sd.Service)
+		command := cli.BuildCommandData(sd.Service, sd.ClientPkgName)
 		for _, e := range sd.Endpoints {
 			flags, buildFunction := buildFlags(e)
 			subcmd := cli.BuildSubcommandData(sd.Service, e.Method, buildFunction, flags)
@@ -84,7 +84,7 @@ func endpointParser(services *ServicesData, svr *expr.ServerExpr, data []*cli.Co
 		}
 		svcName := sd.Service.PathName
 		specs = append(specs,
-			&codegen.ImportSpec{Path: path.Join(genpkg, "grpc", svcName, "client"), Name: sd.Service.PkgName + "c"},
+			services.PackageImport(path.Join(genpkg, "grpc", svcName, "client")),
 			services.PackageImport(path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)))
 		// Add interceptors import if service has client interceptors
 		if len(sd.Service.ClientInterceptors) > 0 {

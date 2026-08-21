@@ -3,6 +3,7 @@
 package codegen
 
 import (
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -30,4 +31,32 @@ func TestPlanIncludesSharedHTTPImportAliases(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, "uuid2", services.ServiceImport("UUID").Name)
+}
+
+// TestPlanReservesGeneratedJSONRPCPackages verifies that the JSON-RPC client,
+// server, and CLI imports are frozen by their complete generated paths.
+func TestPlanReservesGeneratedJSONRPCPackages(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		for _, name := range []string{"Foo", "Fooc", "Foojssvr"} {
+			dsl.Service(name, func() {
+				dsl.Method("Read", func() { dsl.JSONRPC(func() {}) })
+			})
+		}
+	})
+	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, service.Plan(root, generation))
+	require.NoError(t, Plan(generation))
+	require.NoError(t, generation.Freeze())
+	services, err := service.NewServicesData(root, generation)
+	require.NoError(t, err)
+
+	client := services.PackageImport("generated.local/gen/jsonrpc/foo/client")
+	server := services.PackageImport("generated.local/gen/jsonrpc/foo/server")
+	cli := services.PackageImport(path.Join(
+		"generated.local/gen/jsonrpc/cli",
+		codegen.SnakeCase(codegen.Goify(root.API.Servers[0].Name, true)),
+	))
+	require.NotEqual(t, services.ServiceImport("Fooc").Name, client.Name)
+	require.NotEqual(t, services.ServiceImport("Foojssvr").Name, server.Name)
+	require.Equal(t, "cli", cli.Name)
 }

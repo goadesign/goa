@@ -3,7 +3,7 @@ import (
 	cli "grpc/cli/test"
 	"os"
 
-	"./interceptors"
+	interceptors "./interceptors"
 	goa "goa.design/goa/v3/pkg"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

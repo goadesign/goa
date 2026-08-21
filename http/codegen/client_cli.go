@@ -55,7 +55,7 @@ func ClientCLIFiles(data *ServicesData) []*codegen.File {
 		sd := data.Get(svc.Name())
 		if len(sd.Endpoints) > 0 {
 			command := &commandData{
-				CommandData: cli.BuildCommandData(sd.Service),
+				CommandData: cli.BuildCommandData(sd.Service, sd.ClientPkgName),
 				NeedDialer:  HasWebSocket(sd),
 				JSONRPC:     sd.Endpoints[0].IsJSONRPC,
 			}
@@ -133,7 +133,7 @@ func endpointParser(root *expr.RootExpr, svr *expr.ServerExpr, data []*commandDa
 		}
 		specs = append(specs, &codegen.ImportSpec{
 			Path: genpkg + "/" + services.dir() + "/" + sd.Service.PathName + "/client",
-			Name: sd.Service.PkgName + "c",
+			Name: sd.ClientPkgName,
 		})
 		// Add interceptors import if service has client interceptors
 		if len(sd.Service.ClientInterceptors) > 0 {

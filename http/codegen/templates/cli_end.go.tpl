@@ -1,4 +1,4 @@
-endpoint, payload, err := cli.ParseEndpoint(
+endpoint, payload, err := {{ .CLIPkg }}.ParseEndpoint(
 		scheme,
 		host,
 		doer,

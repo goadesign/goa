@@ -1,3 +1,5 @@
+// This file renders runnable gRPC client examples whose generated CLI and
+// interceptor imports use the qualifiers selected during planning.
 package codegen
 
 import (
@@ -21,8 +23,8 @@ func ExampleCLIFiles(services *ServicesData) []*codegen.File {
 	return files
 }
 
-// exampleCLI returns an example client tool HTTP implementation for the given
-// server expression.
+// exampleCLI returns an example gRPC client tool for the given server
+// expression.
 func exampleCLI(services *ServicesData, svr *expr.ServerExpr) *codegen.File {
 	genpkg := services.GenPkg()
 	svrdata := example.Servers.Get(svr, services.Root)
@@ -31,6 +33,7 @@ func exampleCLI(services *ServicesData, svr *expr.ServerExpr) *codegen.File {
 		return nil // file already exists, skip it.
 	}
 	rootPath := example.RootPath(genpkg)
+	cliImport := services.PackageImport(path.Join(genpkg, "grpc", "cli", svrdata.Dir))
 
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
@@ -43,15 +46,22 @@ func exampleCLI(services *ServicesData, svr *expr.ServerExpr) *codegen.File {
 		{Path: "time"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("grpc", "goagrpc"),
-		{Path: rootPath + "/interceptors"},
-		{Path: path.Join(genpkg, "grpc", "cli", svrdata.Dir), Name: "cli"},
+		cliImport,
 	}
 
 	var svcData []*ServiceData
+	hasClientInterceptors := false
 	for _, svc := range svr.Services {
 		if data := services.Get(svc); data != nil {
 			svcData = append(svcData, data)
+			hasClientInterceptors = hasClientInterceptors || len(data.Service.ClientInterceptors) > 0
 		}
+	}
+	var interceptorsPkg string
+	if hasClientInterceptors {
+		interceptorImport := services.PackageImport(rootPath + "/interceptors")
+		interceptorsPkg = interceptorImport.Name
+		specs = append(specs, interceptorImport)
 	}
 
 	sections := []*codegen.SectionTemplate{
@@ -62,7 +72,8 @@ func exampleCLI(services *ServicesData, svr *expr.ServerExpr) *codegen.File {
 			Data: map[string]any{
 				"DefaultTransport": svrdata.DefaultTransport(),
 				"Services":         svcData,
-				"InterceptorsPkg":  "interceptors",
+				"InterceptorsPkg":  interceptorsPkg,
+				"CLIPkg":           cliImport.Name,
 			},
 		},
 	}

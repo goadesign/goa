@@ -1,8 +1,10 @@
+// This file renders the shared example server entrypoint and resolves every
+// generated service, application, and interceptor import through the frozen
+// generation catalog.
 package example
 
 import (
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -67,24 +69,23 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, se
 
 	// Iterate through services listed in the server expression.
 	svcData := make([]*service.Data, len(svr.Services))
-	scope := codegen.NewNameScope()
 	hasInterceptors := false
 	for i, svc := range svr.Services {
 		sd := services.Get(svc)
 		svcData[i] = sd
-		specs = append(specs, &codegen.ImportSpec{
-			Path: path.Join(genpkg, sd.PathName),
-			Name: scope.Unique(sd.PkgName, "svc"),
-		})
+		serviceImport := services.ServiceImport(svc)
+		specs = append(specs, serviceImport)
 		hasInterceptors = hasInterceptors || len(sd.ServerInterceptors) > 0
 	}
-	interPkg := scope.Unique("interceptors", "ex")
-
 	rootPath := RootPath(genpkg)
-	apiPkg := APIPkg(root, scope)
-	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
+	apiImport := services.PackageImport(rootPath)
+	apiPkg := apiImport.Name
+	specs = append(specs, apiImport)
+	var interPkg string
 	if hasInterceptors {
-		specs = append(specs, &codegen.ImportSpec{Path: path.Join(rootPath, "interceptors"), Name: interPkg})
+		interceptorImport := services.PackageImport(rootPath + "/interceptors")
+		interPkg = interceptorImport.Name
+		specs = append(specs, interceptorImport)
 	}
 
 	sections := []*codegen.SectionTemplate{

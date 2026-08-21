@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
@@ -42,6 +43,9 @@ func createServiceServicesForPackage(root *expr.RootExpr, genpkg string) *servic
 		panic(err)
 	}
 	if err := Plan(generation); err != nil {
+		panic(err)
+	}
+	if err := example.Plan(generation); err != nil {
 		panic(err)
 	}
 	if err := generation.Freeze(); err != nil {

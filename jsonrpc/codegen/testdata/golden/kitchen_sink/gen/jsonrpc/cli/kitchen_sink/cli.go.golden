@@ -13,7 +13,7 @@ import (
 	calcc "kitchensink/jsonrpc/calc/client"
 	chatc "kitchensink/jsonrpc/chat/client"
 	feedc "kitchensink/jsonrpc/feed/client"
-	mixedc "kitchensink/jsonrpc/mixed/client"
+	mixedc2 "kitchensink/jsonrpc/mixed/client"
 	"net/http"
 	"os"
 
@@ -212,11 +212,11 @@ func ParseEndpoint(
 				data, err = feedc.BuildWatchPayload(*feedWatchBodyFlag)
 			}
 		case "mixed":
-			c := mixedc.NewClient(scheme, host, doer, enc, dec, restore)
+			c := mixedc2.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
 			case "lookup":
 				endpoint = c.Lookup()
-				data, err = mixedc.BuildLookupPayload(*mixedLookupBodyFlag)
+				data, err = mixedc2.BuildLookupPayload(*mixedLookupBodyFlag)
 			}
 		}
 	}

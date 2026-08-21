@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	cli "kitchensink/jsonrpc/cli/kitchen_sink"
+	cli2 "kitchensink/jsonrpc/cli/kitchen_sink"
 	"net/http"
 	"time"
 
@@ -29,7 +29,7 @@ func doJSONRPC(scheme, host string, timeout int, debug bool) (goa.Endpoint, any,
 		dialer = websocket.DefaultDialer
 	}
 
-	endpoint, payload, err := cli.ParseEndpoint(
+	endpoint, payload, err := cli2.ParseEndpoint(
 		scheme,
 		host,
 		doer,
@@ -46,9 +46,9 @@ func doJSONRPC(scheme, host string, timeout int, debug bool) (goa.Endpoint, any,
 }
 
 func jsonrpcUsageCommands() []string {
-	return cli.UsageCommands()
+	return cli2.UsageCommands()
 }
 
 func jsonrpcUsageExamples() string {
-	return cli.UsageExamples()
+	return cli2.UsageExamples()
 }

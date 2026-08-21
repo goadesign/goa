@@ -4,6 +4,7 @@ package codegen
 
 import (
 	"path"
+	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -50,10 +51,24 @@ func Plan(generation *codegen.Generation) error {
 			continue
 		}
 		for _, service := range design.API.GRPC.Services {
-			protobufName := codegen.SnakeCase(codegen.Goify(service.Name(), false))
-			protobufPath := path.Join(generation.GenPkg(), "grpc", protobufName, pbPkgName)
-			if err := generation.ReserveGeneratedImport(codegen.NewImport(protobufName+"pb", protobufPath)); err != nil {
+			pathName := codegen.SnakeCase(codegen.Goify(service.Name(), false))
+			packageName := strings.ToLower(codegen.Goify(service.Name(), false))
+			if err := generation.ReserveGeneratedImport(codegen.NewImport(packageName+"c", path.Join(generation.GenPkg(), "grpc", pathName, "client"))); err != nil {
 				return err
+			}
+			if err := generation.ReserveGeneratedImport(codegen.NewImport(packageName+"svr", path.Join(generation.GenPkg(), "grpc", pathName, "server"))); err != nil {
+				return err
+			}
+			if err := generation.ReserveGeneratedImport(codegen.NewImport(pathName+"pb", path.Join(generation.GenPkg(), "grpc", pathName, pbPkgName))); err != nil {
+				return err
+			}
+		}
+		if len(design.API.GRPC.Services) > 0 {
+			for _, server := range design.API.Servers {
+				serverName := codegen.SnakeCase(codegen.Goify(server.Name, true))
+				if err := generation.ReserveGeneratedImport(codegen.NewImport("cli", path.Join(generation.GenPkg(), "grpc", "cli", serverName))); err != nil {
+					return err
+				}
 			}
 		}
 	}

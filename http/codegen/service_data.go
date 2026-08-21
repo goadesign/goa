@@ -50,6 +50,12 @@ type (
 	ServiceData struct {
 		// Service contains the related service data.
 		Service *service.Data
+		// ClientPkgName is the frozen qualifier for the generated transport
+		// client package.
+		ClientPkgName string
+		// ServerPkgName is the frozen qualifier for the generated transport
+		// server package.
+		ServerPkgName string
 		// Endpoints describes the endpoint data for this service.
 		Endpoints []*EndpointData
 		// FileServers lists the file servers for this service.
@@ -706,6 +712,8 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	scope.Unique(svc.PkgName)
 	sd := &ServiceData{
 		Service:          svc,
+		ClientPkgName:    sds.PackageImport(path.Join(sds.GenPkg(), sds.dir(), svc.PathName, "client")).Name,
+		ServerPkgName:    sds.PackageImport(path.Join(sds.GenPkg(), sds.dir(), svc.PathName, "server")).Name,
 		ServerStruct:     "Server",
 		MountPointStruct: "MountPoint",
 		ServerInit:       "New",

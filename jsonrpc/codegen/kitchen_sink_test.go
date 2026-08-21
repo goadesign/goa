@@ -11,11 +11,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	goacodegen "goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/generator"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
+	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
 	"goa.design/goa/v3/jsonrpc/codegen/testdata"
 )
 
@@ -33,6 +35,8 @@ func TestJSONRPCKitchenSink(t *testing.T) {
 	roots := []eval.Root{root}
 	generation := goacodegen.NewGeneration("kitchensink", roots)
 	require.NoError(t, service.Plan(root, generation))
+	require.NoError(t, jsonrpccodegen.Plan(generation))
+	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 
 	tfiles, err := generator.Transport(generation)

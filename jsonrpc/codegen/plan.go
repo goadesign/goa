@@ -3,7 +3,11 @@
 package codegen
 
 import (
+	"path"
+	"strings"
+
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
@@ -37,6 +41,30 @@ func Plan(generation *codegen.Generation) error {
 	for _, spec := range imports {
 		if err := generation.RequireImport(spec); err != nil {
 			return err
+		}
+	}
+	for _, root := range generation.Roots() {
+		design, ok := root.(*expr.RootExpr)
+		if !ok {
+			continue
+		}
+		for _, service := range design.API.JSONRPC.Services {
+			pathName := codegen.SnakeCase(codegen.Goify(service.Name(), false))
+			packageName := strings.ToLower(codegen.Goify(service.Name(), false))
+			if err := generation.ReserveGeneratedImport(codegen.NewImport(packageName+"c", path.Join(generation.GenPkg(), "jsonrpc", pathName, "client"))); err != nil {
+				return err
+			}
+			if err := generation.ReserveGeneratedImport(codegen.NewImport(packageName+"jssvr", path.Join(generation.GenPkg(), "jsonrpc", pathName, "server"))); err != nil {
+				return err
+			}
+		}
+		if len(design.API.JSONRPC.Services) > 0 {
+			for _, server := range design.API.Servers {
+				serverName := codegen.SnakeCase(codegen.Goify(server.Name, true))
+				if err := generation.ReserveGeneratedImport(codegen.NewImport("cli", path.Join(generation.GenPkg(), "jsonrpc", "cli", serverName))); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil

@@ -66,10 +66,11 @@ func TestExampleServerFiles(t *testing.T) {
 			root := codegen.RunDSL(t, c.DSL)
 			generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
 			require.NoError(t, service.Plan(root, generation))
+			require.NoError(t, Plan(generation))
 			require.NoError(t, generation.Freeze())
 			services, err := service.NewServicesData(root, generation)
 			require.NoError(t, err)
-			fs := ServerFiles("", root, services)
+			fs := ServerFiles(generation.GenPkg(), root, services)
 			require.Len(t, fs, 1)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer

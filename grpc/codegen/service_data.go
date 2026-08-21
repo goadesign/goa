@@ -25,6 +25,12 @@ type (
 	ServiceData struct {
 		// Service contains the related service data.
 		Service *service.Data
+		// ClientPkgName is the frozen qualifier for the generated gRPC client
+		// package.
+		ClientPkgName string
+		// ServerPkgName is the frozen qualifier for the generated gRPC server
+		// package.
+		ServerPkgName string
 		// PkgName is the name of the generated package in *.pb.go.
 		PkgName string
 		// ProtoImports is the list of proto package imports.
@@ -510,6 +516,8 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 	svcVarN := scope.HashedUnique(gs.ServiceExpr, codegen.Goify(svc.Name, true))
 	sd := &ServiceData{
 		Service:             svc,
+		ClientPkgName:       d.PackageImport(path.Join(d.GenPkg(), "grpc", svc.PathName, "client")).Name,
+		ServerPkgName:       d.PackageImport(path.Join(d.GenPkg(), "grpc", svc.PathName, "server")).Name,
 		Name:                svcVarN,
 		Description:         svc.Description,
 		PkgName:             pkg,

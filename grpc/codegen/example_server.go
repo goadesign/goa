@@ -1,3 +1,6 @@
+// This file renders runnable gRPC servers whose generated service, transport,
+// protobuf, and application imports use the qualifiers selected during
+// planning.
 package codegen
 
 import (
@@ -34,8 +37,6 @@ func exampleServer(services *ServicesData, svr *expr.ServerExpr) *codegen.File {
 		return nil // file already exists, skip it.
 	}
 
-	var scope = codegen.NewNameScope()
-
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "fmt"},
@@ -51,24 +52,15 @@ func exampleServer(services *ServicesData, svr *expr.ServerExpr) *codegen.File {
 	for _, svc := range services.Root.API.GRPC.Services {
 		sd := services.Get(svc.Name())
 		svcName := sd.Service.PathName
-		specs = append(specs,
-			&codegen.ImportSpec{
-				Path: path.Join(genpkg, "grpc", svcName, "server"),
-				Name: scope.Unique(sd.Service.PkgName + "svr"),
-			},
-			&codegen.ImportSpec{
-				Path: path.Join(genpkg, svcName),
-				Name: scope.Unique(sd.Service.PkgName),
-			},
-			&codegen.ImportSpec{
-				Path: path.Join(genpkg, "grpc", svcName, pbPkgName),
-				Name: scope.Unique(svcName + pbPkgName),
-			})
+		serverImport := services.PackageImport(path.Join(genpkg, "grpc", svcName, "server"))
+		serviceImport := services.ServiceImport(svc.Name())
+		protobufImport := services.PackageImport(path.Join(genpkg, "grpc", svcName, pbPkgName))
+		specs = append(specs, serverImport, serviceImport, protobufImport)
 	}
 
 	rootPath := example.RootPath(genpkg)
-	apiPkg := example.APIPkg(services.Root, scope)
-	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
+	apiImport := services.PackageImport(rootPath)
+	specs = append(specs, apiImport)
 
 	var (
 		sections []*codegen.SectionTemplate

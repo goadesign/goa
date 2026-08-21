@@ -5,15 +5,15 @@
 	// responses.
 	var (
 	{{- range .Services }}
-		{{ .Service.VarName }}Server *{{.Service.PkgName}}svr.Server
+		{{ .Service.VarName }}Server *{{ .ServerPkgName }}.Server
 	{{- end }}
 	)
 	{
 	{{- range .Services }}
 		{{- if .Endpoints }}
-		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New({{ .Service.VarName }}Endpoints{{ if .HasUnaryEndpoint }}, nil{{ end }}{{ if .HasStreamingEndpoint }}, nil{{ end }})
+		{{ .Service.VarName }}Server = {{ .ServerPkgName }}.New({{ .Service.VarName }}Endpoints{{ if .HasUnaryEndpoint }}, nil{{ end }}{{ if .HasStreamingEndpoint }}, nil{{ end }})
 		{{-  else }}
-		{{ .Service.VarName }}Server = {{ .Service.PkgName }}svr.New(nil{{ if .HasUnaryEndpoint }}, nil{{ end }}{{ if .HasStreamingEndpoint }}, nil{{ end }})
+		{{ .Service.VarName }}Server = {{ .ServerPkgName }}.New(nil{{ if .HasUnaryEndpoint }}, nil{{ end }}{{ if .HasStreamingEndpoint }}, nil{{ end }})
 		{{-  end }}
 	{{- end }}
 	}

@@ -31,8 +31,7 @@ type (
 		// Example is a valid command invocation, starting with the
 		// command name.
 		Example string
-		// PkgName is the service HTTP client package import name,
-		// e.g. "storagec".
+		// PkgName is the transport client package import name, e.g. "storagec".
 		PkgName string
 		// Interceptors contains the data for client interceptors if any.
 		Interceptors *InterceptorData
@@ -186,8 +185,9 @@ type (
 )
 
 // BuildCommandData builds the data needed by CLI code generators to render the
-// parsing of the service command.
-func BuildCommandData(data *service.Data) *CommandData {
+// parsing of the service command. clientPkgName is the frozen qualifier for
+// the generated transport client package.
+func BuildCommandData(data *service.Data, clientPkgName string) *CommandData {
 	description := data.Description
 	if description == "" {
 		description = fmt.Sprintf("Make requests to the %q service", data.Name)
@@ -205,7 +205,7 @@ func BuildCommandData(data *service.Data) *CommandData {
 		Name:         codegen.KebabCase(data.Name),
 		VarName:      codegen.Goify(data.Name, false),
 		Description:  description,
-		PkgName:      data.PkgName + "c",
+		PkgName:      clientPkgName,
 		Interceptors: interceptors,
 	}
 }

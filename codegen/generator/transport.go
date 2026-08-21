@@ -4,6 +4,7 @@ package generator
 
 import (
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/service"
 	grpccodegen "goa.design/goa/v3/grpc/codegen"
 	httpcodegen "goa.design/goa/v3/http/codegen"
@@ -54,6 +55,9 @@ func Transport(generation *codegen.Generation) ([]*codegen.File, error) {
 // required by each transport before the shared generation catalog freezes.
 func planTransportData(generation *codegen.Generation) error {
 	if err := planServiceData(generation); err != nil {
+		return err
+	}
+	if err := example.Plan(generation); err != nil {
 		return err
 	}
 	var hasHTTP, hasGRPC, hasJSONRPC bool

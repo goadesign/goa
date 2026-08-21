@@ -3,7 +3,11 @@
 package codegen
 
 import (
+	"path"
+	"strings"
+
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 )
 
 // Plan reserves every literal import qualifier used by HTTP render templates.
@@ -40,6 +44,30 @@ func Plan(generation *codegen.Generation) error {
 	for _, spec := range imports {
 		if err := generation.RequireImport(spec); err != nil {
 			return err
+		}
+	}
+	for _, root := range generation.Roots() {
+		design, ok := root.(*expr.RootExpr)
+		if !ok {
+			continue
+		}
+		for _, service := range design.API.HTTP.Services {
+			pathName := codegen.SnakeCase(codegen.Goify(service.Name(), false))
+			packageName := strings.ToLower(codegen.Goify(service.Name(), false))
+			if err := generation.ReserveGeneratedImport(codegen.NewImport(packageName+"c", path.Join(generation.GenPkg(), "http", pathName, "client"))); err != nil {
+				return err
+			}
+			if err := generation.ReserveGeneratedImport(codegen.NewImport(packageName+"svr", path.Join(generation.GenPkg(), "http", pathName, "server"))); err != nil {
+				return err
+			}
+		}
+		if len(design.API.HTTP.Services) > 0 {
+			for _, server := range design.API.Servers {
+				serverName := codegen.SnakeCase(codegen.Goify(server.Name, true))
+				if err := generation.ReserveGeneratedImport(codegen.NewImport("cli", path.Join(generation.GenPkg(), "http", "cli", serverName))); err != nil {
+					return err
+				}
+			}
 		}
 	}
 	return nil

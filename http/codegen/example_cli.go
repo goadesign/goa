@@ -1,7 +1,11 @@
+// This file renders runnable HTTP and JSON-RPC client examples whose generated
+// CLI, service, application, and interceptor imports use the qualifiers
+// selected during planning.
 package codegen
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
@@ -26,8 +30,8 @@ func ExampleCLIFiles(services *ServicesData) []*codegen.File {
 func ExampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 	genpkg := services.GenPkg()
 	svrdata := example.Servers.Get(svr, services.Root)
-	path := filepath.Join("cmd", svrdata.Dir+"-cli", services.dir()+".go")
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
+	outputPath := filepath.Join("cmd", svrdata.Dir+"-cli", services.dir()+".go")
+	if _, err := os.Stat(outputPath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
 	funcSuffix := "HTTP"
@@ -35,6 +39,7 @@ func ExampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 		funcSuffix = "JSONRPC"
 	}
 	rootPath := example.RootPath(genpkg)
+	cliImport := services.PackageImport(path.Join(genpkg, services.dir(), "cli", svrdata.Dir))
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "encoding/json"},
@@ -48,18 +53,24 @@ func ExampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 		{Path: "github.com/gorilla/websocket"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: genpkg + "/" + services.dir() + "/cli/" + svrdata.Dir, Name: "cli"},
+		cliImport,
 	}
-	importScope := codegen.NewNameScope()
+	hasClientInterceptors := false
 	for _, svc := range services.Root.Services {
 		data := services.ServicesData.Get(svc.Name)
-		specs = append(specs, &codegen.ImportSpec{Path: genpkg + "/" + data.PkgName})
-		importScope.Unique(data.PkgName)
+		serviceImport := services.ServiceImport(svc.Name)
+		specs = append(specs, serviceImport)
+		hasClientInterceptors = hasClientInterceptors || len(data.ClientInterceptors) > 0
 	}
-	interceptorsPkg := importScope.Unique("interceptors", "ex")
-	specs = append(specs, &codegen.ImportSpec{Path: rootPath + "/interceptors", Name: interceptorsPkg})
-	apiPkg := example.APIPkg(services.Root, importScope)
-	specs = append(specs, &codegen.ImportSpec{Path: rootPath, Name: apiPkg})
+	var interceptorsPkg string
+	if hasClientInterceptors {
+		interceptorImport := services.PackageImport(rootPath + "/interceptors")
+		interceptorsPkg = interceptorImport.Name
+		specs = append(specs, interceptorImport)
+	}
+	apiImport := services.PackageImport(rootPath)
+	apiPkg := apiImport.Name
+	specs = append(specs, apiImport)
 
 	var svcData []*ServiceData
 	for _, svc := range svr.Services {
@@ -94,6 +105,7 @@ func ExampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 			Data: map[string]any{
 				"Services": svcData,
 				"APIPkg":   apiPkg,
+				"CLIPkg":   cliImport.Name,
 			},
 			FuncMap: map[string]any{
 				"needDialer":   NeedDialer,
@@ -105,11 +117,12 @@ func ExampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 			Source: httpTemplates.Read(cliUsageT),
 			Data: map[string]any{
 				"VarPrefix": services.dir(),
+				"CLIPkg":    cliImport.Name,
 			},
 		},
 	}
 	return &codegen.File{
-		Path:             path,
+		Path:             outputPath,
 		SectionTemplates: sections,
 		SkipExist:        true,
 	}

@@ -1,3 +1,6 @@
+// This file augments runnable HTTP server examples with JSON-RPC mounts while
+// preserving the generated service and transport aliases selected during
+// planning.
 package codegen
 
 import (
@@ -21,6 +24,8 @@ func ExampleServerFiles(data *httpcodegen.ServicesData, files []*codegen.File) [
 	return fw
 }
 
+// exampleServer adds a server's JSON-RPC imports and mount code to its shared
+// HTTP example file.
 func exampleServer(data *httpcodegen.ServicesData, svr *expr.ServerExpr, files []*codegen.File) *codegen.File {
 	genpkg := data.GenPkg()
 	svrdata := example.Servers.Get(svr, data.Root)
@@ -40,20 +45,13 @@ func exampleServer(data *httpcodegen.ServicesData, svr *expr.ServerExpr, files [
 		file = httpcodegen.ExampleServer(data.Root, svr, data)
 	}
 
-	// Add JSON-RPC imports to the HTTP server file
+	// Add JSON-RPC imports to the HTTP server file.
 	header := file.SectionTemplates[0]
-	scope := codegen.NewNameScope()
 	for _, svc := range data.Root.API.JSONRPC.Services {
 		sd := data.Get(svc.Name())
 		svcName := sd.Service.PathName
-		codegen.AddImport(header, &codegen.ImportSpec{
-			Path: path.Join(genpkg, svcName),
-			Name: scope.Unique(sd.Service.PkgName),
-		})
-		codegen.AddImport(header, &codegen.ImportSpec{
-			Path: path.Join(genpkg, "jsonrpc", svcName, "server"),
-			Name: scope.Unique(sd.Service.PkgName + "jssvr"),
-		})
+		codegen.AddImport(header, data.ServiceImport(svc.Name()))
+		codegen.AddImport(header, data.PackageImport(path.Join(genpkg, "jsonrpc", svcName, "server")))
 	}
 
 	// Add JSON-RPC to the HTTP server file

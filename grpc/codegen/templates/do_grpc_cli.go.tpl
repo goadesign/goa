@@ -8,7 +8,7 @@ func doGRPC(_, host string, _ int, _ bool) (goa.Endpoint, any, error) {
 		{{ .Service.VarName }}Interceptors := {{ $.InterceptorsPkg }}.New{{ .Service.StructName }}ClientInterceptors()
 	{{- end }}
 {{- end }}
-	return cli.ParseEndpoint(
+	return {{ .CLIPkg }}.ParseEndpoint(
 		conn,
 {{- range .Services }}
 	{{- if .Service.ClientInterceptors }}
@@ -20,10 +20,10 @@ func doGRPC(_, host string, _ int, _ bool) (goa.Endpoint, any, error) {
 
 {{ if eq .DefaultTransport.Type "grpc" }}
 func grpcUsageCommands() []string {
-	return cli.UsageCommands()
+	return {{ .CLIPkg }}.UsageCommands()
 }
 
 func grpcUsageExamples() string {
-	return cli.UsageExamples()
+	return {{ .CLIPkg }}.UsageExamples()
 }
 {{- end }}
