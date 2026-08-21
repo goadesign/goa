@@ -1,3 +1,5 @@
+// This file renders JSON-RPC client calls and codecs per service and keeps
+// generated-type imports local to each returned file.
 package codegen
 
 import (
@@ -14,12 +16,12 @@ func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 	jsvcs := data.Root.API.JSONRPC.Services
 	files := make([]*codegen.File, 0, len(jsvcs)*3)
 	for _, svc := range jsvcs {
-		files = append(files, clientFile(genpkg, svc, data))
+		files = append(files, addEndpointImports(clientFile(genpkg, svc, data), genpkg, svc.HTTPEndpoints...))
 		if f := websocketClientFile(genpkg, svc, data); f != nil {
-			files = append(files, f)
+			files = append(files, addEndpointImports(f, genpkg, jsonRPCWebSocketEndpoints(svc)...))
 		}
 		if f := sseClientFile(genpkg, svc, data); f != nil {
-			files = append(files, f)
+			files = append(files, addEndpointImports(f, genpkg, jsonRPCSSEEndpoints(svc)...))
 		}
 	}
 	for _, svc := range jsvcs {
@@ -47,7 +49,7 @@ func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 		if n := len(data.Get(svc.Name()).Endpoints); swapped != n {
 			panic(fmt.Sprintf("jsonrpc: swapped %d response decoders for service %q, expected %d", swapped, svc.Name(), n))
 		}
-		files = append(files, f)
+		files = append(files, addEndpointImports(f, genpkg, svc.HTTPEndpoints...))
 	}
 	return files
 }

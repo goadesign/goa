@@ -1,3 +1,6 @@
+// This file generates ConvertTo and CreateFrom functions for service types
+// mapped to external Go structs. Service-side names come from the frozen
+// package catalog, including nested types relocated by design metadata.
 package service
 
 import (
@@ -192,19 +195,17 @@ func generateConvertFileForPath(
 			tgtPkg = tgtPkg[:idx]
 		}
 
-		// Use the correct source context based on where the conversion file will be generated
-		var srcCtx *codegen.AttributeContext
+		outputPath := servicePackagePath(services.generation.GenPkg, service)
 		if loc := codegen.UserTypeLocation(c.User); loc != nil {
-			srcScope := services.generation.GeneratedPackage(
-				generatedPackagePath(services.generation.GenPkg, service, loc),
-			).Scope()
-			// Use conversion context so types in the same package are not qualified
-			srcCtx = codegen.NewAttributeContextForConversion(false, false, true, convertPkgName, srcScope)
-		} else {
-			srcCtx = typeContext(svc.Scope)
+			outputPath = generatedPackagePath(services.generation.GenPkg, service, loc)
+		}
+		srcAtt := &expr.AttributeExpr{Type: c.User}
+		srcResolver := newServiceResolver(services.generation, service, outputPath).Enter(srcAtt)
+		srcCtx := &codegen.AttributeContext{
+			UseDefault: true,
+			Scope:      srcResolver,
 		}
 		tgtCtx := codegen.NewAttributeContext(false, false, false, tgtPkg, codegen.NewNameScope())
-		srcAtt := &expr.AttributeExpr{Type: c.User}
 		tgtAtt := &expr.AttributeExpr{Type: dt}
 		tgtAtt.AddMeta("struct:type:name", dt.Name()) // Used by transformer to generate the correct type name.
 		code, tf, err := codegen.GoTransform(
@@ -247,18 +248,16 @@ func generateConvertFileForPath(
 		}
 		srcCtx := codegen.NewAttributeContext(false, false, false, srcPkg, codegen.NewNameScope())
 
-		// Use the correct target context based on where the conversion file will be generated
-		var tgtCtx *codegen.AttributeContext
-		if loc := codegen.UserTypeLocation(c.User); loc != nil {
-			tgtScope := services.generation.GeneratedPackage(
-				generatedPackagePath(services.generation.GenPkg, service, loc),
-			).Scope()
-			// Use conversion context so types in the same package are not qualified
-			tgtCtx = codegen.NewAttributeContextForConversion(false, false, true, convertPkgName, tgtScope)
-		} else {
-			tgtCtx = typeContext(svc.Scope)
-		}
 		tgtAtt := &expr.AttributeExpr{Type: c.User}
+		outputPath := servicePackagePath(services.generation.GenPkg, service)
+		if loc := codegen.UserTypeLocation(c.User); loc != nil {
+			outputPath = generatedPackagePath(services.generation.GenPkg, service, loc)
+		}
+		tgtResolver := newServiceResolver(services.generation, service, outputPath).Enter(tgtAtt)
+		tgtCtx := &codegen.AttributeContext{
+			UseDefault: true,
+			Scope:      tgtResolver,
+		}
 		code, tf, err := codegen.GoTransform(
 			&expr.AttributeExpr{Type: dt}, tgtAtt,
 			"v", "temp", srcCtx, tgtCtx, "transform", true)

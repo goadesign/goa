@@ -1,3 +1,5 @@
+// This file renders HTTP client calls and codecs per service; each file owns
+// the imports required by the service methods it contains.
 package codegen
 
 import (
@@ -13,17 +15,17 @@ import (
 func ClientFiles(genpkg string, data *ServicesData) []*codegen.File {
 	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3) // preallocate for client files
 	for _, svc := range data.Expressions.Services {
-		files = append(files, clientFile(genpkg, svc, data))
+		files = append(files, addEndpointImports(clientFile(genpkg, svc, data), genpkg, svc.HTTPEndpoints...))
 		if f := WebsocketClientFile(genpkg, svc, data); f != nil {
-			files = append(files, f)
+			files = append(files, addEndpointImports(f, genpkg, httpWebSocketEndpoints(svc)...))
 		}
 		if f := sseClientFile(genpkg, svc, data); f != nil {
-			files = append(files, f)
+			files = append(files, addEndpointImports(f, genpkg, httpSSEEndpoints(svc)...))
 		}
 	}
 	for _, svc := range data.Expressions.Services {
 		if f := ClientEncodeDecodeFile(genpkg, svc, data); f != nil {
-			files = append(files, f)
+			files = append(files, addEndpointImports(f, genpkg, svc.HTTPEndpoints...))
 		}
 	}
 	return files

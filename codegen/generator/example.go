@@ -1,3 +1,5 @@
+// This file assembles example service, server, and client files from frozen
+// service analysis without mutating imports across unrelated output files.
 package generator
 
 import (
@@ -19,10 +21,6 @@ func Example(generation *codegen.Generation) ([]*codegen.File, error) {
 		if err != nil {
 			return nil, err
 		}
-		for _, s := range r.Services {
-			service.SetUserTypeImports(generation.GenPkg, services.Get(s.Name))
-		}
-
 		// example service implementation
 		if fs := service.ExampleServiceFiles(generation.GenPkg, r, services); len(fs) != 0 {
 			files = append(files, fs...)
@@ -75,9 +73,6 @@ func Example(generation *codegen.Generation) ([]*codegen.File, error) {
 				files = append(files, fs...)
 			}
 		}
-
-		// Add imports defined via struct:field:type
-		addServicesMetaTypeImports(files, services, r.Services)
 	}
 	return files, nil
 }

@@ -1,3 +1,5 @@
+// This file renders HTTP client command parsers and per-service payload
+// builders, including imports for relocated payload types used by each builder.
 package codegen
 
 import (
@@ -178,7 +180,7 @@ func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.Command
 		codegen.GoaNamedImport("http", "goahttp"),
 		{Path: genpkg + "/" + sd.Service.PathName, Name: sd.Service.PkgName},
 	}
-	return cli.PayloadBuildersFile(path, title, specs, data)
+	return addEndpointImports(cli.PayloadBuildersFile(path, title, specs, data), genpkg, svc.HTTPEndpoints...)
 }
 
 // buildFlags builds the flag data and build function for an endpoint.

@@ -1,3 +1,5 @@
+// This file verifies service render analysis and the generated service files
+// built from its immutable data.
 package service
 
 import (
@@ -68,6 +70,45 @@ func TestServicesDataUsesFrozenPackageDeclarations(t *testing.T) {
 
 	_, err = generation.GeneratedPackage("goa.design/goa/example/types").DeclareUserType(shared)
 	require.ErrorContains(t, err, "frozen")
+}
+
+// TestServicesDataUsesRebuiltViewDeclarations verifies that planning and
+// rendering can rebuild view expressions while sharing frozen declarations.
+func TestServicesDataUsesRebuiltViewDeclarations(t *testing.T) {
+	var result *expr.ResultTypeExpr
+	root := codegen.RunDSL(t, func() {
+		result = dsl.ResultType("application/vnd.value", func() {
+			dsl.TypeName("Value")
+			dsl.Attribute("name", dsl.String)
+			dsl.View("default", func() {
+				dsl.Attribute("name")
+			})
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() {
+				dsl.Result(result)
+			})
+		})
+	})
+
+	generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
+	require.NoError(t, Plan(root, generation))
+	views := generation.GeneratedPackage("goa.design/goa/example/values/views")
+	plannedProjected, err := views.DerivedType(codegen.NewProjectedTypeID(result))
+	require.NoError(t, err)
+	plannedViewed, err := views.DerivedType(codegen.NewViewedResultTypeID(result))
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+
+	services, err := NewServicesData(root, generation)
+	require.NoError(t, err)
+	service := services.Get("Values")
+	require.Len(t, service.projectedTypes, 1)
+	require.Len(t, service.viewedResultTypes, 1)
+	require.Same(t, plannedProjected, service.projectedTypes[0].Declaration)
+	require.Same(t, plannedViewed, service.viewedResultTypes[0].Declaration)
+	require.Equal(t, "ValueView", plannedProjected.Name)
+	require.Equal(t, "Value", plannedViewed.Name)
 }
 
 func TestFilesEmitsPackageDeclarationsOnce(t *testing.T) {
@@ -158,12 +199,10 @@ func TestFilesEmitsSharedPackagesOnceAcrossRoots(t *testing.T) {
 	require.NoError(t, Plan(secondRoot, generation))
 	firstUnion := expr.AsObject(firstType).Attribute("Value").Type.(*expr.Union)
 	secondUnion := expr.AsObject(secondType).Attribute("Value").Type.(*expr.Union)
-	firstAlias := firstUnion.Values[0].Attribute.Type.(expr.UserType)
-	secondAlias := secondUnion.Values[0].Attribute.Type.(expr.UserType)
 	generatedPackage := generation.GeneratedPackage("goa.design/goa/example/types")
-	firstBranch, err := generatedPackage.UnionBranchType(firstUnion, "text", firstAlias)
+	firstBranch, err := generatedPackage.UnionBranchType(firstUnion, "text")
 	require.NoError(t, err)
-	secondBranch, err := generatedPackage.UnionBranchType(secondUnion, "text", secondAlias)
+	secondBranch, err := generatedPackage.UnionBranchType(secondUnion, "text")
 	require.NoError(t, err)
 	require.Same(t, firstBranch, secondBranch)
 
@@ -208,11 +247,10 @@ func TestGeneratedUnionBranchCollisionDoesNotCanonicalizeToRootType(t *testing.T
 	generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
 	require.NoError(t, Plan(root, generation))
 	union := expr.AsObject(container).Attribute("Value").Type.(*expr.Union)
-	alias := union.Values[0].Attribute.Type.(expr.UserType)
 	generatedPackage := generation.GeneratedPackage("goa.design/goa/example/types")
 	exactDeclaration, err := generatedPackage.UserType(exact)
 	require.NoError(t, err)
-	branchDeclaration, err := generatedPackage.UnionBranchType(union, "text", alias)
+	branchDeclaration, err := generatedPackage.UnionBranchType(union, "text")
 	require.NoError(t, err)
 	require.NotSame(t, exactDeclaration, branchDeclaration)
 
@@ -379,38 +417,25 @@ func TestStructPkgPath_UnionImportsJSON(t *testing.T) {
 
 func TestStructPkgPath_UnionNamesSharePackageScopeAcrossServices(t *testing.T) {
 	root := codegen.RunDSL(t, testdata.PkgPathUnionNameScopeDSL)
-	render := func(servicesToRender []*expr.ServiceExpr) string {
-		services := mustServicesData(t, root)
-		var generated strings.Builder
-		_ = servicesToRender
-		files := Files("goa.design/goa/example", []*ServicesData{services})
-		for _, file := range files {
-			if !strings.Contains(file.Path, filepath.Join("gen", "types")) {
-				continue
-			}
-			for _, section := range file.SectionTemplates {
-				require.NoError(t, section.Write(&generated))
-			}
+	services := mustServicesData(t, root)
+	var generated strings.Builder
+	files := Files("goa.design/goa/example", []*ServicesData{services})
+	for _, file := range files {
+		if !strings.Contains(file.Path, filepath.Join("gen", "types")) {
+			continue
 		}
-		return generated.String()
+		for _, section := range file.SectionTemplates {
+			require.NoError(t, section.Write(&generated))
+		}
 	}
 
-	code := render(root.Services)
+	code := generated.String()
 	require.Equal(t, 1, strings.Count(code, "type Value struct {"), code)
 	require.Equal(t, 1, strings.Count(code, "type ValueKind string"), code)
 	firstUsesValue := unionFieldType(code, "FirstValue")
 	secondUsesValue := unionFieldType(code, "SecondValue")
 	thirdUsesValue := unionFieldType(code, "ThirdValue")
 	require.Equal(t, []string{"Value", "Value", "Value"}, []string{firstUsesValue, secondUsesValue, thirdUsesValue})
-
-	reversed := render([]*expr.ServiceExpr{root.Services[2], root.Services[1], root.Services[0]})
-	require.Equal(t, firstUsesValue, unionFieldType(reversed, "FirstValue"), reversed)
-	require.Equal(t, secondUsesValue, unionFieldType(reversed, "SecondValue"), reversed)
-	require.Equal(t, thirdUsesValue, unionFieldType(reversed, "ThirdValue"), reversed)
-
-	selective := render([]*expr.ServiceExpr{root.Services[1]})
-	require.Equal(t, 1, strings.Count(selective, "type Value struct {"), selective)
-	require.Equal(t, "Value", unionFieldType(selective, "SecondValue"), selective)
 }
 
 func unionFieldType(code, owner string) string {

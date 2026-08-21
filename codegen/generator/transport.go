@@ -1,3 +1,5 @@
+// This file assembles HTTP, gRPC, and JSON-RPC files from service analysis;
+// each transport builder owns the imports of the file it returns.
 package generator
 
 import (
@@ -18,10 +20,6 @@ func Transport(generation *codegen.Generation) ([]*codegen.File, error) {
 		if err != nil {
 			return nil, err
 		}
-		for _, s := range r.Services {
-			service.SetUserTypeImports(generation.GenPkg, services.Get(s.Name))
-		}
-
 		// HTTP
 		httpServices := httpcodegen.NewServicesData(services, r.API.HTTP)
 		files = append(files, httpcodegen.ServerFiles(generation.GenPkg, httpServices)...)
@@ -48,9 +46,6 @@ func Transport(generation *codegen.Generation) ([]*codegen.File, error) {
 		files = append(files, httpcodegen.ClientTypeFiles(generation.GenPkg, jsonrpcServices)...)
 		files = append(files, httpcodegen.PathFiles(jsonrpcServices)...)
 		files = append(files, httpcodegen.ClientCLIFiles(generation.GenPkg, jsonrpcServices)...)
-
-		// Add service data meta type imports
-		addServicesImports(files, services, r.Services)
 	}
 	return files, nil
 }

@@ -1,3 +1,6 @@
+// This file generates Go transformations between compatible design types.
+// Recursive helpers carry each side's package owner through nested named
+// declarations so emitted references select the planned Go package.
 package codegen
 
 import (
@@ -564,12 +567,11 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	cases := make([]map[string]any, 0, len(srcUnion.Values))
 	for i, st := range srcUnion.Values {
 		tt := tgtUnion.Values[i]
-		castPkg := ta.TargetCtx.Pkg(tt.Attribute)
-		// When generating transforms outside of the type's package, some nested
-		// helper user types may not carry struct:pkg:path metadata. In that case
-		// default to the union type package rather than the current file package.
-		if castPkg == ta.TargetCtx.DefaultPkg && unionPkg != "" && unionPkg != ta.TargetCtx.DefaultPkg {
-			castPkg = unionPkg
+		branchAttrs := &TransformAttrs{
+			SourceCtx: ta.SourceCtx.Enter(st.Attribute),
+			TargetCtx: ta.TargetCtx.Enter(tt.Attribute),
+			Prefix:    ta.Prefix,
+			Hooks:     ta.Hooks,
 		}
 		useHelper := false
 		if _, ok := st.Attribute.Type.(expr.UserType); ok && expr.IsObject(st.Attribute.Type) {
@@ -583,9 +585,9 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 			"TargetFieldName": Goify(tt.Name, true),
 			"SourceAttr":      st.Attribute,
 			"TargetAttr":      tt.Attribute,
-			"TargetCastType":  ta.TargetCtx.Scope.Ref(tt.Attribute, castPkg),
+			"TargetCastType":  branchAttrs.TargetCtx.Scope.Ref(tt.Attribute, branchAttrs.TargetCtx.Pkg(tt.Attribute)),
 			"UseHelper":       useHelper,
-			"HelperName":      TransformHelperName(st.Attribute, tt.Attribute, ta),
+			"HelperName":      TransformHelperName(st.Attribute, tt.Attribute, branchAttrs),
 		})
 	}
 
@@ -682,18 +684,13 @@ func collectHelpers(source, target *expr.AttributeExpr, req, topLevel bool, ta *
 // target. Both source and target must be user types. The caller
 // (collectHelpers) guarantees no helper was generated yet for the pair.
 func generateHelper(source, target *expr.AttributeExpr, req bool, ta *TransformAttrs, seen map[string]*TransformFunctionData) (*TransformFunctionData, error) {
-	name := TransformHelperName(source, target, ta)
-
-	// When transforming into a user type defined in an external package, assume
-	// nested anonymous types (e.g., union sum types) belong to the same target
-	// package unless they explicitly specify a different location. Work on a
-	// copy of the context so the caller's context is never mutated.
-	if pkg := ta.TargetCtx.Pkg(target); pkg != "" && pkg != ta.TargetCtx.DefaultPkg {
-		tgtCtx := ta.TargetCtx.Dup()
-		tgtCtx.DefaultPkg = pkg
-		tgtCtx.SamePackageConversion = false
-		ta = &TransformAttrs{SourceCtx: ta.SourceCtx, TargetCtx: tgtCtx, Prefix: ta.Prefix, Hooks: ta.Hooks}
+	ta = &TransformAttrs{
+		SourceCtx: ta.SourceCtx.Enter(source),
+		TargetCtx: ta.TargetCtx.Enter(target),
+		Prefix:    ta.Prefix,
+		Hooks:     ta.Hooks,
 	}
+	name := TransformHelperName(source, target, ta)
 
 	code, err := TransformAttribute(source, target, "v", "res", true, ta)
 	if err != nil {

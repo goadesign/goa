@@ -1,3 +1,5 @@
+// This file verifies that service union declarations keep deterministic names
+// regardless of design traversal order.
 package service
 
 import (
@@ -82,9 +84,10 @@ func collectServiceUnionTypeNames(att *expr.AttributeExpr, loc *codegen.Location
 		generation: generation,
 		packages:   make(map[string]*generatedPackageData),
 	}
-	seen := make(map[string]struct{})
+	seen := make(map[expr.UserType]struct{})
 	unionByHash := make(map[unionDataKey]*UnionTypeData)
-	if err := services.collectUnionTypes(att, service, codegen.NewNameScope(), loc, unionByHash, seen, false); err != nil {
+	resolver := newServiceResolver(generation, service, generatedPackagePath(generation.GenPkg, service, loc))
+	if err := services.collectUnionTypes(att, service, resolver, loc, unionByHash, seen, false); err != nil {
 		panic(err)
 	}
 

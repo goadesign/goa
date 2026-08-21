@@ -102,6 +102,55 @@ func TestGeneratedPackageExactUserTypesDoNotMerge(t *testing.T) {
 	require.ErrorContains(t, err, "already declared")
 }
 
+// TestGeneratedPackageUserTypeCopiesShareDeclaration verifies that exact
+// compiler copies use their declaration origin instead of one transient copy
+// pointer as package identity.
+func TestGeneratedPackageUserTypeCopiesShareDeclaration(t *testing.T) {
+	generation := NewGeneration("generated.local/gen", nil)
+	types := generation.GeneratedPackage("generated.local/gen/types")
+	original := generatedUserType("ValueText", "value-text")
+	copy := original.Dup(expr.DupAtt(original.Attribute()))
+
+	first, err := types.DeclareUserType(original)
+	require.NoError(t, err)
+	second, err := types.DeclareUserType(copy)
+	require.NoError(t, err)
+	require.Same(t, first, second)
+	require.NoError(t, generation.Freeze())
+
+	lookedUp, err := types.UserType(copy)
+	require.NoError(t, err)
+	require.Same(t, first, lookedUp)
+}
+
+// TestGeneratedPackageDerivedTypesUseTypedSourceIdentity verifies that view
+// declarations rebuilt in the render phase select the records planned from
+// the same exact source declaration.
+func TestGeneratedPackageDerivedTypesUseTypedSourceIdentity(t *testing.T) {
+	generation := NewGeneration("generated.local/gen", nil)
+	views := generation.GeneratedPackage("generated.local/gen/service/views")
+	source := generatedUserType("Value", "value")
+	copy := source.Dup(expr.DupAtt(source.Attribute()))
+	projectedID := NewProjectedTypeID(source)
+	viewedID := NewViewedResultTypeID(source)
+
+	projected, err := views.DeclareDerivedType(projectedID, "ValueView")
+	require.NoError(t, err)
+	viewed, err := views.DeclareDerivedType(viewedID, "Value")
+	require.NoError(t, err)
+	require.NotSame(t, projected, viewed)
+	require.NoError(t, generation.Freeze())
+
+	projectedCopy, err := views.DerivedType(NewProjectedTypeID(copy))
+	require.NoError(t, err)
+	require.Same(t, projected, projectedCopy)
+	viewedCopy, err := views.DerivedType(NewViewedResultTypeID(copy))
+	require.NoError(t, err)
+	require.Same(t, viewed, viewedCopy)
+	require.Equal(t, "ValueView", projected.Name)
+	require.Equal(t, "Value", viewed.Name)
+}
+
 // TestGeneratedPackageUnionBranchesShareDeclaration verifies that separately
 // allocated copies of one structural union reuse their generated branch alias.
 func TestGeneratedPackageUnionBranchesShareDeclaration(t *testing.T) {
@@ -123,7 +172,7 @@ func TestGeneratedPackageUnionBranchesShareDeclaration(t *testing.T) {
 
 	require.NoError(t, generation.Freeze())
 	require.Equal(t, "ValueText", firstDeclaration.Name)
-	lookedUp, err := types.UnionBranchType(secondUnion, "text", secondAlias)
+	lookedUp, err := types.UnionBranchType(secondUnion, "text")
 	require.NoError(t, err)
 	require.Same(t, firstDeclaration, lookedUp)
 }
@@ -152,6 +201,30 @@ func TestGeneratedPackageUnionBranchesAreIsolatedByUnion(t *testing.T) {
 		firstDeclaration.Name,
 		secondDeclaration.Name,
 	})
+}
+
+// TestGeneratedPackageUnionFamilyAvoidsExactTypeNames verifies that union
+// constants and constructors use package-owned frozen names instead of
+// colliding with exact DSL type declarations.
+func TestGeneratedPackageUnionFamilyAvoidsExactTypeNames(t *testing.T) {
+	generation := NewGeneration("generated.local/gen", nil)
+	types := generation.GeneratedPackage("generated.local/gen/types")
+	for _, name := range []string{"ValueKindText", "NewValueText"} {
+		_, err := types.DeclareUserType(generatedUserType(name, name))
+		require.NoError(t, err)
+	}
+	union, alias := generatedUnionWithBranch("Value", "text", "text", expr.String)
+	_, err := types.DeclareUnion(union)
+	require.NoError(t, err)
+	aliasDeclaration, err := types.DeclareUnionBranchType(union, "text", alias)
+	require.NoError(t, err)
+
+	require.NoError(t, generation.Freeze())
+	branch, err := types.UnionBranch(union, "text")
+	require.NoError(t, err)
+	require.Equal(t, "ValueKindText2", branch.KindConst)
+	require.Equal(t, "NewValueText2", branch.Constructor)
+	require.Same(t, aliasDeclaration, branch.Type)
 }
 
 // TestGeneratedPackageUnions verifies that emitted-definition identity makes

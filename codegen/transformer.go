@@ -1,3 +1,5 @@
+// This file defines the naming and pointer contracts shared by Go
+// transformation and validation generators.
 package codegen
 
 import (
@@ -20,6 +22,13 @@ type (
 		// attribute and field name. If firstUpper is true then the field name
 		// first letter is capitalized.
 		Field(att *expr.AttributeExpr, name string, firstUpper bool) string
+		// Package returns the qualifier used to reference att from the current
+		// generated file, or the empty string for a same-package declaration.
+		Package(att *expr.AttributeExpr) string
+		// Enter returns the resolver that owns att and declarations nested in it.
+		Enter(att *expr.AttributeExpr) Attributor
+		// IsSumType reports whether unions use Goa's generated sum-type layout.
+		IsSumType() bool
 	}
 
 	// AttributeContext contains properties which impacts the code generating
@@ -40,12 +49,6 @@ type (
 		UseDefault bool
 		// Scope is the attribute scope.
 		Scope Attributor
-		// DefaultPkg is the default package name where the attribute
-		// type is found. it can be overridden via struct:pkg:path meta.
-		DefaultPkg string
-		// SamePackageConversion if true indicates that this context is being used
-		// for conversion code generation within the same package as the types.
-		SamePackageConversion bool
 		// UnionPointer if true indicates that optional sum-type union fields use
 		// pointers to preserve transport-level presence. Required union fields also
 		// use pointers when Pointer is true. Service types leave this false because
@@ -58,6 +61,8 @@ type (
 	AttributeScope struct {
 		// scope is the name scope for the attribute.
 		scope *NameScope
+		// pkg is the default generated Go package qualifier.
+		pkg string
 	}
 
 	// TransformAttrs are the attributes that help in the transformation.
@@ -103,21 +108,13 @@ func NewAttributeContext(pointer, reqIgnore, useDefault bool, pkg string, scope 
 		Pointer:        pointer,
 		IgnoreRequired: reqIgnore,
 		UseDefault:     useDefault,
-		Scope:          NewAttributeScope(scope),
-		DefaultPkg:     pkg,
+		Scope:          newAttributeScope(scope, pkg),
 	}
-}
-
-// NewAttributeContextForConversion initializes an attribute context for same-package conversion.
-func NewAttributeContextForConversion(pointer, reqIgnore, useDefault bool, pkg string, scope *NameScope) *AttributeContext {
-	ctx := NewAttributeContext(pointer, reqIgnore, useDefault, pkg, scope)
-	ctx.SamePackageConversion = true
-	return ctx
 }
 
 // NewAttributeScope initializes an attribute scope.
 func NewAttributeScope(scope *NameScope) *AttributeScope {
-	return &AttributeScope{scope: scope}
+	return newAttributeScope(scope, "")
 }
 
 // IsCompatible returns an error if a and b are not both objects, both arrays,
@@ -181,23 +178,23 @@ func MapDepth(m *expr.Map) int {
 	return mapDepth(m.ElemType.Type, 0)
 }
 
-func mapDepth(dt expr.DataType, depth int, seen ...map[string]struct{}) int {
+func mapDepth(dt expr.DataType, depth int, seen ...map[expr.DataType]struct{}) int {
 	if mp := expr.AsMap(dt); mp != nil {
 		depth++
 		depth = mapDepth(mp.ElemType.Type, depth, seen...)
 	} else if ar := expr.AsArray(dt); ar != nil {
 		depth = mapDepth(ar.ElemType.Type, depth, seen...)
 	} else if mo := expr.AsObject(dt); mo != nil {
-		var s map[string]struct{}
+		var s map[expr.DataType]struct{}
 		if len(seen) > 0 {
 			s = seen[0]
 		} else {
-			s = make(map[string]struct{})
+			s = make(map[expr.DataType]struct{})
 			seen = append(seen, s)
 		}
-		key := dt.Name()
+		key := dt
 		if u, ok := dt.(expr.UserType); ok {
-			key = u.ID()
+			key = u.Origin()
 		}
 		if _, ok := s[key]; ok {
 			return depth
@@ -237,7 +234,7 @@ func (a *AttributeContext) IsFieldPointer(name string, att *expr.AttributeExpr) 
 	if expr.IsUnion(field.Type) {
 		return a.IsUnionPointer(att.IsRequired(name))
 	}
-	if _, ok := a.Scope.(*AttributeScope); !ok {
+	if !a.Scope.IsSumType() {
 		return expr.IsPrimitive(field.Type) && a.IsPrimitivePointer(name, att)
 	}
 	return goFieldIsPointer(att, name, a.Pointer, a.UseDefault)
@@ -251,37 +248,25 @@ func (a *AttributeContext) IsUnionPointer(required bool) bool {
 
 // Pkg returns the package name of the given type.
 func (a *AttributeContext) Pkg(att *expr.AttributeExpr) string {
-	if att == nil {
-		return a.DefaultPkg
-	}
-	if loc := UserTypeLocation(att.Type); loc != nil {
-		pkg := loc.PackageName()
-		// If this is same-package conversion and the type's package matches
-		// the context's default package, return empty string to avoid qualification
-		if a.SamePackageConversion && pkg == a.DefaultPkg {
-			return ""
-		}
-		return pkg
-	}
-	if expr.AsUnion(att.Type) != nil {
-		if a.SamePackageConversion {
-			return ""
-		}
-		return a.DefaultPkg
-	}
-	return a.DefaultPkg
+	return a.Scope.Package(att)
+}
+
+// Enter returns a copy whose attributor owns att and unlocated declarations
+// nested inside it.
+func (a *AttributeContext) Enter(att *expr.AttributeExpr) *AttributeContext {
+	entered := a.Dup()
+	entered.Scope = a.Scope.Enter(att)
+	return entered
 }
 
 // Dup creates a shallow copy of the AttributeContext.
 func (a *AttributeContext) Dup() *AttributeContext {
 	return &AttributeContext{
-		Pointer:               a.Pointer,
-		IgnoreRequired:        a.IgnoreRequired,
-		UseDefault:            a.UseDefault,
-		Scope:                 a.Scope,
-		DefaultPkg:            a.DefaultPkg,
-		SamePackageConversion: a.SamePackageConversion,
-		UnionPointer:          a.UnionPointer,
+		Pointer:        a.Pointer,
+		IgnoreRequired: a.IgnoreRequired,
+		UseDefault:     a.UseDefault,
+		Scope:          a.Scope,
+		UnionPointer:   a.UnionPointer,
 	}
 }
 
@@ -314,6 +299,33 @@ func (a *AttributeScope) Ref(att *expr.AttributeExpr, pkg string) string {
 	return a.scope.GoFullTypeRef(att, pkg)
 }
 
+// Package returns the qualifier selected by att's explicit type location or
+// the scope's default package.
+func (a *AttributeScope) Package(att *expr.AttributeExpr) string {
+	if att == nil {
+		return a.pkg
+	}
+	if loc := UserTypeLocation(att.Type); loc != nil {
+		return loc.PackageName()
+	}
+	return a.pkg
+}
+
+// Enter returns a scope whose default qualifier follows att's explicit type
+// location. The underlying name scope remains unchanged.
+func (a *AttributeScope) Enter(att *expr.AttributeExpr) Attributor {
+	if loc := UserTypeLocation(att.Type); loc != nil && loc.PackageName() != a.pkg {
+		return newAttributeScope(a.scope, loc.PackageName())
+	}
+	return a
+}
+
+// IsSumType reports that AttributeScope renders unions using Goa's generated
+// sum-type structs.
+func (*AttributeScope) IsSumType() bool {
+	return true
+}
+
 // Field returns a valid Go struct field name.
 func (*AttributeScope) Field(att *expr.AttributeExpr, name string, firstUpper bool) string {
 	return GoifyAtt(att, name, firstUpper)
@@ -322,4 +334,10 @@ func (*AttributeScope) Field(att *expr.AttributeExpr, name string, firstUpper bo
 // Scope returns the name scope.
 func (a *AttributeScope) Scope() *NameScope {
 	return a.scope
+}
+
+// newAttributeScope builds an attribute scope with explicit package
+// qualification behavior.
+func newAttributeScope(scope *NameScope, pkg string) *AttributeScope {
+	return &AttributeScope{scope: scope, pkg: pkg}
 }

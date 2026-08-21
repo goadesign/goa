@@ -1,3 +1,5 @@
+// This file renders one service's in-process client and keeps its type imports
+// scoped to that generated client file.
 package service
 
 import (
@@ -13,10 +15,11 @@ const (
 )
 
 // ClientFile returns the client file for the given service.
-func ClientFile(_ string, service *expr.ServiceExpr, services *ServicesData) *codegen.File {
+func ClientFile(genpkg string, service *expr.ServiceExpr, services *ServicesData) *codegen.File {
 	svc := services.Get(service.Name)
 	data := endpointData(svc)
 	path := filepath.Join(codegen.Gendir, svc.PathName, "client.go")
+	outputPackage := genpkg + "/" + svc.PathName
 	var (
 		sections []*codegen.SectionTemplate
 	)
@@ -26,6 +29,7 @@ func ClientFile(_ string, service *expr.ServiceExpr, services *ServicesData) *co
 			{Path: "io"},
 			codegen.GoaImport(""),
 		}
+		imports = append(imports, AttributeImports(genpkg, outputPackage, serviceReferenceAttributes(service)...)...)
 		header := codegen.Header(service.Name+" client", svc.PkgName, imports)
 		def := &codegen.SectionTemplate{
 			Name:   "client-struct",

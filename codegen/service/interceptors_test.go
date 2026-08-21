@@ -1,3 +1,5 @@
+// This file verifies generated server and client interceptor data, including
+// selected payload and result attribute references.
 package service
 
 import (
@@ -211,12 +213,12 @@ func TestCollectAttributes(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			scope := codegen.NewNameScope()
+			attributor := codegen.NewAttributeScope(codegen.NewNameScope())
 			if tc.panics {
-				assert.Panics(t, func() { collectAttributes(tc.attrNames, tc.parent, scope) })
+				assert.Panics(t, func() { collectAttributes(tc.attrNames, tc.parent, attributor) })
 				return
 			}
-			got := collectAttributes(tc.attrNames, tc.parent, scope)
+			got := collectAttributes(tc.attrNames, tc.parent, attributor)
 			assert.Equal(t, tc.want, got)
 		})
 	}

@@ -1,3 +1,5 @@
+// This file generates validation code for service, view, and transport
+// attributes using the package owner carried by each attribute context.
 package codegen
 
 import (
@@ -188,7 +190,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		}
 	case expr.IsUnion(att.Type):
 		u := expr.AsUnion(att.Type)
-		if _, ok := attCtx.Scope.(*AttributeScope); ok {
+		if attCtx.Scope.IsSumType() {
 			cases := make([]map[string]any, 0, len(u.Values))
 			for _, v := range u.Values {
 				// Sum-type unions (struct-based, with Kind/AsX accessors) store each
@@ -232,14 +234,14 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 				unionCtx.Pointer = false
 				val := validateAttribute(unionCtx, vatt, put, "v", context+".value", true, view, seen)
 				if val != "" {
-					types = append(types, attCtx.Scope.Ref(vatt, attCtx.DefaultPkg))
+					types = append(types, attCtx.Scope.Ref(vatt, attCtx.Pkg(vatt)))
 					vals = append(vals, val)
 				}
 			} else {
 				fieldName := attCtx.Scope.Field(vatt, v.Name, true)
 				val := validateAttribute(attCtx, vatt, put, "v."+fieldName, context+".value", true, view, seen)
 				if val != "" {
-					tref := attCtx.Scope.Ref(&expr.AttributeExpr{Type: put}, attCtx.DefaultPkg)
+					tref := attCtx.Scope.Ref(&expr.AttributeExpr{Type: put}, attCtx.Pkg(&expr.AttributeExpr{Type: put}))
 					types = append(types, tref+"_"+fieldName)
 					vals = append(vals, val)
 				}
@@ -272,8 +274,7 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 			return code
 		}
 		if expr.IsUnion(att.Type) {
-			_, sumType := ctx.Scope.(*AttributeScope)
-			if sumType {
+			if ctx.Scope.IsSumType() {
 				if !ctx.IsUnionPointer(req) {
 					return code
 				}

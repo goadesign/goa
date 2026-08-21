@@ -43,6 +43,20 @@ func NewNameScope() *NameScope {
 	}
 }
 
+// Fork returns a mutable naming scope containing every name and hashed binding
+// already recorded in s. Generators use it for private helpers that must avoid
+// declarations owned by a frozen generated package.
+func (s *NameScope) Fork() *NameScope {
+	fork := NewNameScope()
+	for hash, name := range s.names {
+		fork.names[hash] = name
+	}
+	for name, count := range s.counts {
+		fork.counts[name] = count
+	}
+	return fork
+}
+
 // HashedUnique builds the unique name for key using name and - if not unique -
 // appending suffix and - if still not unique - a counter value. It returns
 // the same value when called multiple times for a key returning the same hash.

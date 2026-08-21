@@ -3,6 +3,7 @@
 package generator
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -87,6 +88,236 @@ func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 	runGeneratedTests(t, genDir)
 }
 
+// TestServiceUnionGeneratedBranchShapesCompile verifies that generated branch
+// aliases with one natural name but different primitive shapes remain distinct.
+func TestServiceUnionGeneratedBranchShapesCompile(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{{Plan: planServiceData, Generate: Service}}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		first := dsl.Type("FirstValue", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.OneOf("Value", func() {
+				dsl.Attribute("text", dsl.String)
+			})
+		})
+		second := dsl.Type("SecondValue", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.OneOf("Value", func() {
+				dsl.Attribute("text", dsl.Int)
+			})
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(first)
+				dsl.Result(second)
+			})
+		})
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	unionSource, err := os.ReadFile(filepath.Join(genDir, "types", "unions.go"))
+	require.NoError(t, err)
+	require.Contains(t, string(unionSource), "type Value struct")
+	require.Contains(t, string(unionSource), "type Value2 struct")
+	runGeneratedTests(t, genDir)
+}
+
+// TestServiceUnionFamilyNamesAvoidExactDeclarations verifies that union
+// constants and constructors cannot collide with exact DSL type names.
+func TestServiceUnionFamilyNamesAvoidExactDeclarations(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{{Plan: planServiceData, Generate: Service}}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		kind := dsl.Type("ValueKindText", dsl.String)
+		constructor := dsl.Type("NewValueText", dsl.String)
+		payload := dsl.Type("Payload", func() {
+			dsl.Attribute("kind", kind)
+			dsl.Attribute("constructor", constructor)
+			dsl.OneOf("Value", func() {
+				dsl.Attribute("text", dsl.String)
+			})
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(payload)
+			})
+		})
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	runGeneratedTests(t, genDir)
+}
+
+// TestServiceFilesOwnTheirImports verifies that imports used by one service do
+// not leak into another service file generated from the same design root.
+func TestServiceFilesOwnTheirImports(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planServiceData, Generate: Transport},
+		}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		dsl.API("file-owned imports", func() {})
+		firstInput := dsl.Type("FirstInput", func() {
+			dsl.Meta("struct:pkg:path", "first/shared")
+			dsl.Field(1, "value", dsl.String)
+		})
+		secondInput := dsl.Type("SecondInput", func() {
+			dsl.Meta("struct:pkg:path", "second/shared")
+			dsl.Field(1, "value", dsl.String)
+		})
+		dsl.Service("First", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(firstInput)
+				dsl.HTTP(func() {
+					dsl.POST("/first")
+					dsl.Response(204)
+				})
+				dsl.GRPC(func() {})
+			})
+		})
+		dsl.Service("Second", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(secondInput)
+				dsl.HTTP(func() {
+					dsl.POST("/second")
+					dsl.Response(204)
+				})
+				dsl.GRPC(func() {})
+			})
+		})
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	runGeneratedTests(t, genDir)
+}
+
+// TestNestedRelocatedDeclarationsOwnTheirImports verifies that metadata imports
+// used by two relocated declarations stay in their respective declaration
+// files and do not leak into the service file that references their package.
+func TestNestedRelocatedDeclarationsOwnTheirImports(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{{Plan: planServiceData, Generate: Service}}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		dsl.API("nested file-owned imports", func() {})
+		outer := dsl.Type("Outer", func() {
+			dsl.Meta("struct:pkg:path", "models")
+			dsl.Attribute("value", dsl.String, func() {
+				dsl.Meta("struct:field:type", "shared.Value", "gen/custom/first/shared", "shared")
+			})
+		})
+		inner := dsl.Type("Inner", func() {
+			dsl.Meta("struct:pkg:path", "models")
+			dsl.Attribute("value", dsl.String, func() {
+				dsl.Meta("struct:field:type", "shared.Value", "gen/custom/second/shared", "shared")
+			})
+		})
+		dsl.Service("Nested", func() {
+			dsl.Method("Outer", func() {
+				dsl.Payload(outer)
+			})
+			dsl.Method("Inner", func() {
+				dsl.Payload(inner)
+			})
+		})
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	writeStubPackage(t, filepath.Join(genDir, "custom", "first", "shared"), "shared")
+	writeStubPackage(t, filepath.Join(genDir, "custom", "second", "shared"), "shared")
+	runGeneratedTests(t, genDir)
+}
+
+// TestTransportSectionsOwnTheirImports verifies that a streaming transport
+// file imports only the declarations used by the streaming endpoints it
+// renders, even when another endpoint uses the same package name elsewhere.
+func TestTransportSectionsOwnTheirImports(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		dsl.API("transport section imports", func() {})
+		streamMessage := dsl.Type("StreamMessage", func() {
+			dsl.Meta("struct:pkg:path", "stream/shared")
+			dsl.Attribute("value", dsl.String)
+		})
+		request := dsl.Type("Request", func() {
+			dsl.Meta("struct:pkg:path", "request/shared")
+			dsl.Attribute("value", dsl.String)
+		})
+		dsl.Service("Messages", func() {
+			dsl.Method("Watch", func() {
+				dsl.StreamingResult(streamMessage)
+				dsl.HTTP(func() {
+					dsl.GET("/watch")
+					dsl.Response(200)
+				})
+			})
+			dsl.Method("Create", func() {
+				dsl.Payload(request)
+				dsl.HTTP(func() {
+					dsl.POST("/messages")
+					dsl.Response(204)
+				})
+			})
+		})
+	})
+	generation := codegen.NewGeneration("gen", []eval.Root{root})
+	require.NoError(t, planServiceData(generation))
+	require.NoError(t, generation.Freeze())
+	files, err := Transport(generation)
+	require.NoError(t, err)
+
+	var header strings.Builder
+	for _, file := range files {
+		if filepath.ToSlash(file.Path) != "gen/http/messages/server/websocket.go" {
+			continue
+		}
+		require.NoError(t, file.SectionTemplates[0].Write(&header))
+		break
+	}
+	require.NotEmpty(t, header.String())
+	require.Contains(t, header.String(), `"gen/stream/shared"`)
+	require.NotContains(t, header.String(), `"gen/request/shared"`)
+}
+
+// writeStubPackage creates the external package referenced by struct:field:type
+// metadata inside the generated module used by the integration test.
+func writeStubPackage(t *testing.T, dir, packageName string) {
+	t.Helper()
+	require.NoError(t, os.MkdirAll(dir, 0o750))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(dir, "value.go"),
+		[]byte("package "+packageName+"\n\ntype Value string\n"),
+		0o600,
+	))
+}
+
 func TestServiceRelocatedUnionNamesSpanDesignRoots(t *testing.T) {
 	roots := []eval.Root{
 		codegen.RunDSL(t, unusedRelocatedValueRoot()),
@@ -129,17 +360,16 @@ func TestServiceRelocatedUnionNamesSpanDesignRoots(t *testing.T) {
 	)
 }
 
-func TestServiceSelectiveRelocatedUnionOwnerCompiles(t *testing.T) {
-	root := codegen.RunDSL(t, selectiveRelocatedUnionRoot())
+// TestServiceRelocatedUnionOwnerCompilesAcrossGeneration verifies a complete
+// root analysis emits one shared relocated union for every referencing service.
+func TestServiceRelocatedUnionOwnerCompilesAcrossGeneration(t *testing.T) {
+	root := codegen.RunDSL(t, sharedRelocatedUnionRoot())
 	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
 	require.NoError(t, servicecodegen.Plan(root, generation))
 	require.NoError(t, generation.Freeze())
 	services, err := servicecodegen.NewServicesData(root, generation)
 	require.NoError(t, err)
-	data := services.Get(root.Services[1].Name)
-	servicecodegen.SetUserTypeImports("generated.local/gen", data)
 	files := servicecodegen.Files("generated.local/gen", []*servicecodegen.ServicesData{services})
-	addServiceImports(files, data)
 	dir := t.TempDir()
 	for _, file := range files {
 		_, err := file.Render(dir)
@@ -160,9 +390,9 @@ func unusedRelocatedValueRoot() func() {
 	}
 }
 
-// selectiveRelocatedUnionRoot declares the same relocated union from two
-// services so rendering only the later service must still emit its definition.
-func selectiveRelocatedUnionRoot() func() {
+// sharedRelocatedUnionRoot declares the same relocated union from two services
+// so one generation-wide render emits its definition exactly once.
+func sharedRelocatedUnionRoot() func() {
 	return func() {
 		first := relocatedValueType("FirstValue")
 		second := relocatedValueType("SecondValue")

@@ -1,3 +1,5 @@
+// This file renders starter interceptor implementations that depend only on
+// the service package and interceptor metadata, not service type packages.
 package service
 
 import (
@@ -38,16 +40,17 @@ func exampleInterceptorsFile(genpkg string, svc *expr.ServiceExpr, services *Ser
 	if len(sdata.ServerInterceptors) > 0 {
 		serverPath := filepath.Join("interceptors", sdata.PathName+"_server.go")
 		if _, err := os.Stat(serverPath); os.IsNotExist(err) {
+			imports := []*codegen.ImportSpec{
+				{Path: "context"},
+				{Path: "fmt"},
+				{Path: "goa.design/clue/log"},
+				codegen.GoaImport(""),
+				{Path: path.Join(genpkg, sdata.PathName), Name: sdata.PkgName},
+			}
 			files = append(files, &codegen.File{
 				Path: serverPath,
 				SectionTemplates: []*codegen.SectionTemplate{
-					codegen.Header(fmt.Sprintf("%s example server interceptors", sdata.Name), "interceptors", []*codegen.ImportSpec{
-						{Path: "context"},
-						{Path: "fmt"},
-						{Path: "goa.design/clue/log"},
-						codegen.GoaImport(""),
-						{Path: path.Join(genpkg, sdata.PathName), Name: sdata.PkgName},
-					}),
+					codegen.Header(fmt.Sprintf("%s example server interceptors", sdata.Name), "interceptors", imports),
 					{
 						Name:   "example-server-interceptor",
 						Source: serviceTemplates.Read(exampleServerInterceptorT),
@@ -62,16 +65,17 @@ func exampleInterceptorsFile(genpkg string, svc *expr.ServiceExpr, services *Ser
 	if len(sdata.ClientInterceptors) > 0 {
 		clientPath := filepath.Join("interceptors", sdata.PathName+"_client.go")
 		if _, err := os.Stat(clientPath); os.IsNotExist(err) {
+			imports := []*codegen.ImportSpec{
+				{Path: "context"},
+				{Path: "fmt"},
+				{Path: "goa.design/clue/log"},
+				codegen.GoaImport(""),
+				{Path: path.Join(genpkg, sdata.PathName), Name: sdata.PkgName},
+			}
 			files = append(files, &codegen.File{
 				Path: clientPath,
 				SectionTemplates: []*codegen.SectionTemplate{
-					codegen.Header(fmt.Sprintf("%s example client interceptors", sdata.Name), "interceptors", []*codegen.ImportSpec{
-						{Path: "context"},
-						{Path: "fmt"},
-						{Path: "goa.design/clue/log"},
-						codegen.GoaImport(""),
-						{Path: path.Join(genpkg, sdata.PathName), Name: sdata.PkgName},
-					}),
+					codegen.Header(fmt.Sprintf("%s example client interceptors", sdata.Name), "interceptors", imports),
 					{
 						Name:   "example-client-interceptor",
 						Source: serviceTemplates.Read(exampleClientInterceptorT),

@@ -1,3 +1,5 @@
+// This file analyzes HTTP streaming endpoints into the WebSocket server and
+// client data rendered by their dedicated generated files.
 package codegen
 
 import (
@@ -146,7 +148,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 						Required: true,
 						// The example has always been computed from the
 						// request body, not the streaming body.
-						Example: sd.bodies.request(e).Example(sds.Root.API.ExampleGenerator),
+						Example:  sd.bodies.request(e).Example(sds.Root.API.ExampleGenerator),
 						Validate: svcode,
 					},
 				}}

@@ -1,3 +1,4 @@
+// This file verifies package-level name allocation and generated type identity.
 package codegen
 
 import (
@@ -204,7 +205,9 @@ func TestNameScope_GoTypeNameDistinguishesInlineObjectFieldOrder(t *testing.T) {
 	assert.Equal(t, "Value2", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
 }
 
-func TestNameScope_GoTypeNameDistinguishesGoifiedBranchTypeCollisions(t *testing.T) {
+// TestNameScope_GoTypeNameSharesIdenticalEmittedUnionDefinitions verifies
+// semantically different branch declarations share a structurally equal union.
+func TestNameScope_GoTypeNameSharesIdenticalEmittedUnionDefinitions(t *testing.T) {
 	branch := func(name, id string) expr.UserType {
 		return &expr.UserTypeExpr{
 			TypeName: name,
@@ -227,7 +230,24 @@ func TestNameScope_GoTypeNameDistinguishesGoifiedBranchTypeCollisions(t *testing
 	second := union(branch("foo_bar", "second"))
 	scope := NewNameScope()
 	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: first}))
-	assert.Equal(t, "Value2", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
+	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
+}
+
+// TestNameScopeForkPreservesBindingsAndAcceptsHelperNames verifies a frozen
+// declaration scope can seed a separate mutable helper namespace.
+func TestNameScopeForkPreservesBindingsAndAcceptsHelperNames(t *testing.T) {
+	typeExpr := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+		TypeName:      "Value",
+	}
+	scope := NewNameScope()
+	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: typeExpr}))
+	scope.Freeze()
+
+	fork := scope.Fork()
+	assert.Equal(t, "Value", fork.GoTypeName(&expr.AttributeExpr{Type: typeExpr}))
+	assert.Equal(t, "Value2", fork.Unique("Value"))
+	assert.Equal(t, "helper", fork.Unique("helper"))
 }
 
 func TestUnionTypeID(t *testing.T) {
@@ -327,6 +347,52 @@ func TestUnionTypeIDIgnoresNonEmittedPointerSharing(t *testing.T) {
 		shared := innerUnion()
 		assert.Equal(t, NewUnionTypeID(outerUnion(shared, shared)), NewUnionTypeID(outerUnion(innerUnion(), innerUnion())))
 	})
+}
+
+// TestUnionTypeIDIncludesGeneratedUserTypeShape verifies generated aliases
+// with one name and distinct definitions produce distinct union identities.
+func TestUnionTypeIDIncludesGeneratedUserTypeShape(t *testing.T) {
+	generatedBranch := func(dataType expr.DataType) *expr.Union {
+		alias := &expr.UserTypeExpr{
+			AttributeExpr: &expr.AttributeExpr{Type: dataType},
+			TypeName:      "ValueText",
+		}
+		return &expr.Union{
+			TypeName: "Value",
+			Values: []*expr.NamedAttributeExpr{{
+				Name:      "text",
+				Attribute: &expr.AttributeExpr{Type: alias},
+			}},
+		}
+	}
+
+	require.NotEqual(t,
+		NewUnionTypeID(generatedBranch(expr.String)),
+		NewUnionTypeID(generatedBranch(expr.Int)),
+	)
+}
+
+// TestUnionTypeIDEncodesRecursiveGeneratedUserTypeShape verifies recursive
+// generated aliases terminate and retain their distinct field definitions.
+func TestUnionTypeIDEncodesRecursiveGeneratedUserTypeShape(t *testing.T) {
+	recursiveUnion := func(fieldType expr.DataType) *expr.Union {
+		alias := &expr.UserTypeExpr{TypeName: "ValueNode"}
+		alias.AttributeExpr = &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "value", Attribute: &expr.AttributeExpr{Type: fieldType}},
+			{Name: "next", Attribute: &expr.AttributeExpr{Type: alias}},
+		}}
+		return &expr.Union{
+			TypeName: "Value",
+			Values: []*expr.NamedAttributeExpr{
+				{Name: "node", Attribute: &expr.AttributeExpr{Type: alias}},
+			},
+		}
+	}
+
+	require.NotEqual(t,
+		NewUnionTypeID(recursiveUnion(expr.String)),
+		NewUnionTypeID(recursiveUnion(expr.Int)),
+	)
 }
 
 func TestNameScope_GoFullTypeName_UsesScopedRelocatedUserTypeNameWhenQualified(t *testing.T) {

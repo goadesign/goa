@@ -70,3 +70,26 @@ func newResultInlineValidationView(res *ResultInlineValidation) *resultwithinlin
 	}
 	return vres
 }
+
+// newResultInlineValidationBResult converts projected type
+// ResultInlineValidationBResult to service type ResultInlineValidationBResult.
+func newResultInlineValidationBResult(vres *resultwithinlinevalidationviews.ResultInlineValidationBResultView) *ResultInlineValidationBResult {
+	res := &ResultInlineValidationBResult{
+		B: vres.B,
+	}
+	if vres.A != nil {
+		res.A = *vres.A
+	}
+	return res
+}
+
+// newResultInlineValidationBResultView projects result type
+// ResultInlineValidationBResult to projected type
+// ResultInlineValidationBResultView using the "default" view.
+func newResultInlineValidationBResultView(res *ResultInlineValidationBResult) *resultwithinlinevalidationviews.ResultInlineValidationBResultView {
+	vres := &resultwithinlinevalidationviews.ResultInlineValidationBResultView{
+		A: &res.A,
+		B: res.B,
+	}
+	return vres
+}

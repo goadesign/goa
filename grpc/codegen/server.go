@@ -1,3 +1,5 @@
+// This file renders gRPC servers and codecs per service; each returned file
+// receives imports from the complete endpoint set it renders.
 package codegen
 
 import (
@@ -17,10 +19,10 @@ func ServerFiles(genpkg string, services *ServicesData) []*codegen.File {
 	svcLen := len(services.Root.API.GRPC.Services)
 	fw := make([]*codegen.File, 2*svcLen)
 	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = serverFile(genpkg, svc, services)
+		fw[i] = addEndpointImports(serverFile(genpkg, svc, services), genpkg, svc.GRPCEndpoints...)
 	}
 	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i+svcLen] = serverEncodeDecode(genpkg, svc, services)
+		fw[i+svcLen] = addEndpointImports(serverEncodeDecode(genpkg, svc, services), genpkg, svc.GRPCEndpoints...)
 	}
 	return fw
 }

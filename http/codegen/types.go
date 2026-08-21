@@ -1,3 +1,5 @@
+// This file renders HTTP request and response types per service and transport
+// side, using imports attached to that exact generated type file.
 package codegen
 
 import (
@@ -11,7 +13,7 @@ import (
 func ServerTypeFiles(genpkg string, data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(data.Expressions.Services))
 	for i, svc := range data.Expressions.Services {
-		fw[i] = typesFile(genpkg, svc, true, data)
+		fw[i] = addEndpointImports(typesFile(genpkg, svc, true, data), genpkg, svc.HTTPEndpoints...)
 	}
 	return fw
 }
@@ -20,7 +22,7 @@ func ServerTypeFiles(genpkg string, data *ServicesData) []*codegen.File {
 func ClientTypeFiles(genpkg string, data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(data.Expressions.Services))
 	for i, svc := range data.Expressions.Services {
-		fw[i] = typesFile(genpkg, svc, false, data)
+		fw[i] = addEndpointImports(typesFile(genpkg, svc, false, data), genpkg, svc.HTTPEndpoints...)
 	}
 	return fw
 }

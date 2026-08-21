@@ -1,3 +1,5 @@
+// This file renders gRPC command parsers and per-service payload builders,
+// including relocated payload imports in the builder that references them.
 package codegen
 
 import (
@@ -128,7 +130,7 @@ func payloadBuilders(genpkg string, svc *expr.GRPCServiceExpr, data *cli.Command
 			&codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"},
 		)
 	}
-	return cli.PayloadBuildersFile(fpath, title, specs, data)
+	return addEndpointImports(cli.PayloadBuildersFile(fpath, title, specs, data), genpkg, svc.GRPCEndpoints...)
 }
 
 func buildFlags(e *EndpointData) ([]*cli.FlagData, *cli.BuildFunctionData) {

@@ -1,3 +1,5 @@
+// This file renders starter service implementations and imports only the
+// generated types referenced by each implementation's service methods.
 package service
 
 import (
@@ -73,6 +75,7 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 		{Path: "goa.design/clue/log"},
 		{Path: "goa.design/goa/v3/security"},
 	}
+	specs = append(specs, AttributeImports(genpkg, path.Dir(genpkg), serviceReferenceAttributes(svc)...)...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", apipkg, specs),
 		{
@@ -92,8 +95,9 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 			Data:   data,
 		})
 	}
+	resolver := newServiceResolver(services.generation, svc, path.Dir(genpkg))
 	for _, m := range svc.Methods {
-		sections = append(sections, basicEndpointSection(m, data))
+		sections = append(sections, basicEndpointSection(m, data, resolver))
 	}
 
 	// Add HandleStream method for JSON-RPC WebSocket services (not SSE)
@@ -112,20 +116,20 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 	}
 }
 
-// basicEndpointSection returns a section with a basic implementation for the
-// given method.
-func basicEndpointSection(m *expr.MethodExpr, svcData *Data) *codegen.SectionTemplate {
+// basicEndpointSection returns a starter implementation whose payload and
+// result references come from the method's frozen generated-package records.
+func basicEndpointSection(m *expr.MethodExpr, svcData *Data, resolver *declarationResolver) *codegen.SectionTemplate {
 	md := svcData.Method(m.Name)
 	ed := &basicEndpointData{
 		MethodData:     md,
 		ServiceVarName: svcData.VarName,
 	}
 	if m.Payload.Type != expr.Empty {
-		ed.PayloadFullRef = svcData.Scope.GoFullTypeRef(m.Payload, svcData.PkgName)
+		ed.PayloadFullRef = resolver.Ref(m.Payload, "")
 	}
 	if m.Result.Type != expr.Empty {
-		ed.ResultFullName = svcData.Scope.GoFullTypeName(m.Result, svcData.PkgName)
-		ed.ResultFullRef = svcData.Scope.GoFullTypeRef(m.Result, svcData.PkgName)
+		ed.ResultFullName = resolver.Name(m.Result, "", false, true)
+		ed.ResultFullRef = resolver.Ref(m.Result, "")
 		ed.ResultIsStruct = expr.IsObject(m.Result.Type)
 		if md.ViewedResult != nil {
 			view := expr.DefaultView

@@ -1,3 +1,5 @@
+// This file renders HTTP server handlers and encoders per service; each file
+// receives imports derived only from the endpoint sections it contains.
 package codegen
 
 import (
@@ -15,17 +17,17 @@ import (
 func ServerFiles(genpkg string, data *ServicesData) []*codegen.File {
 	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3)
 	for _, svc := range data.Expressions.Services {
-		files = append(files, serverFile(genpkg, svc, data))
+		files = append(files, addEndpointImports(serverFile(genpkg, svc, data), genpkg, svc.HTTPEndpoints...))
 		if f := websocketServerFile(genpkg, svc, data); f != nil {
-			files = append(files, f)
+			files = append(files, addEndpointImports(f, genpkg, httpWebSocketEndpoints(svc)...))
 		}
 		if f := sseServerFile(genpkg, svc, data); f != nil {
-			files = append(files, f)
+			files = append(files, addEndpointImports(f, genpkg, httpSSEEndpoints(svc)...))
 		}
 	}
 	for _, svc := range data.Expressions.Services {
 		if f := ServerEncodeDecodeFile(genpkg, svc, data); f != nil {
-			files = append(files, f)
+			files = append(files, addEndpointImports(f, genpkg, svc.HTTPEndpoints...))
 		}
 	}
 	return files

@@ -1,3 +1,5 @@
+// This file renders JSON-RPC server handlers and codecs per service and keeps
+// generated-type imports local to each returned file.
 package codegen
 
 import (
@@ -15,14 +17,14 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 	jsvcs := data.Root.API.JSONRPC.Services
 	files := make([]*codegen.File, 0, len(jsvcs)*3)
 	for _, svc := range jsvcs {
-		files = append(files, serverFile(genpkg, svc, data))
+		files = append(files, addEndpointImports(serverFile(genpkg, svc, data), genpkg, svc.HTTPEndpoints...))
 		// Generate either WebSocket or SSE file based on transport type
 		if hasJSONRPCSSE(svc) {
 			if f := sseServerFile(genpkg, svc, data); f != nil {
-				files = append(files, f)
+				files = append(files, addEndpointImports(f, genpkg, jsonRPCSSEEndpoints(svc)...))
 			}
 		} else if f := websocketServerFile(genpkg, svc, data); f != nil {
-			files = append(files, f)
+			files = append(files, addEndpointImports(f, genpkg, jsonRPCWebSocketEndpoints(svc)...))
 		}
 	}
 	for _, svc := range jsvcs {
@@ -39,7 +41,7 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 			}
 			s.Name = "jsonrpc-" + s.Name
 		}
-		files = append(files, f)
+		files = append(files, addEndpointImports(f, genpkg, svc.HTTPEndpoints...))
 	}
 	return files
 }
@@ -56,7 +58,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		"lowerInitial":        lowerInitial,
 		"hasMixedTransports":  func() bool { return hasMixedJSONRPCTransports(svc) },
 	}
-	imports := make([]*codegen.ImportSpec, 0, 15+len(data.Service.UserTypeImports))
+	imports := make([]*codegen.ImportSpec, 0, 15)
 	imports = append(imports,
 		&codegen.ImportSpec{Path: "bufio"},
 		&codegen.ImportSpec{Path: "bytes"},
@@ -74,7 +76,6 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		&codegen.ImportSpec{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 		&codegen.ImportSpec{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
 	)
-	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),
 	}

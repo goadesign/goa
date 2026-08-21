@@ -1,3 +1,5 @@
+// This file renders service declarations and aggregates relocated declarations
+// into the exact generated Go packages and files that own them.
 package service
 
 import (
@@ -18,7 +20,7 @@ func Files(genpkg string, analyses []*ServicesData) []*codegen.File {
 			files = append(files, serviceFiles(genpkg, service, services)...)
 		}
 	}
-	return append(files, generatedPackageFiles(analyses)...)
+	return append(files, generatedPackageFiles(genpkg, analyses)...)
 }
 
 // serviceFiles renders the declarations and helpers owned exclusively by one
@@ -164,6 +166,19 @@ func serviceFiles(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 		codegen.GoaImport("security"),
 		codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
 	}
+	outputPackage := genpkg + "/" + svcName
+	attributes := serviceReferenceAttributes(service)
+	for _, userType := range svc.userTypes {
+		if userType.Loc == nil {
+			attributes = append(attributes, userType.Type.Attribute())
+		}
+	}
+	for _, errorType := range svc.errorTypes {
+		if errorType.Loc == nil {
+			attributes = append(attributes, errorType.Type.Attribute())
+		}
+	}
+	imports = append(imports, AttributeImports(genpkg, outputPackage, attributes...)...)
 	header := codegen.Header(service.Name+" service", svc.PkgName, imports)
 	def := &codegen.SectionTemplate{
 		Name:   "service",
@@ -194,7 +209,7 @@ func serviceFiles(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 
 // generatedPackageFiles renders each relocated user type in its configured
 // file and one sorted unions.go for every package that owns unions.
-func generatedPackageFiles(analyses []*ServicesData) []*codegen.File {
+func generatedPackageFiles(genpkg string, analyses []*ServicesData) []*codegen.File {
 	packages := aggregateGeneratedPackages(analyses)
 	packagePaths := make([]string, 0, len(packages))
 	for packagePath := range packages {
@@ -220,10 +235,18 @@ func generatedPackageFiles(analyses []*ServicesData) []*codegen.File {
 			sort.Slice(generatedTypes, func(i, j int) bool {
 				return generatedTypes[i].declaration.Name < generatedTypes[j].declaration.Name
 			})
-			sections := []*codegen.SectionTemplate{codegen.Header("User types", generatedPackage.packageName, []*codegen.ImportSpec{
+			imports := []*codegen.ImportSpec{
 				codegen.SimpleImport("fmt"),
 				codegen.GoaImport(""),
-			})}
+			}
+			collector := newImportCollector(genpkg, packagePath)
+			for _, generatedType := range generatedTypes {
+				collector.collect(generatedType.userType.Attribute())
+			}
+			imports = append(imports, collector.imports()...)
+			sections := []*codegen.SectionTemplate{
+				codegen.Header("User types", generatedPackage.packageName, imports),
+			}
 			for _, generatedType := range generatedTypes {
 				sections = append(sections, generatedType.section)
 				if generatedType.error != nil {
@@ -241,12 +264,26 @@ func generatedPackageFiles(analyses []*ServicesData) []*codegen.File {
 			sort.Slice(unions, func(i, j int) bool {
 				return unions[i].Name < unions[j].Name
 			})
-			sections := []*codegen.SectionTemplate{codegen.Header("Union types", generatedPackage.packageName, []*codegen.ImportSpec{
+			imports := []*codegen.ImportSpec{
 				codegen.SimpleImport("bytes"),
 				codegen.SimpleImport("encoding/json"),
 				codegen.SimpleImport("fmt"),
 				codegen.GoaImport(""),
-			})}
+			}
+			collector := newImportCollector(genpkg, packagePath)
+			for _, union := range unions {
+				for _, named := range union.source.Values {
+					if userType, ok := named.Attribute.Type.(expr.UserType); ok && codegen.UserTypeLocation(userType) == nil {
+						collector.collect(userType.Attribute())
+						continue
+					}
+					collector.collect(named.Attribute)
+				}
+			}
+			imports = append(imports, collector.imports()...)
+			sections := []*codegen.SectionTemplate{
+				codegen.Header("Union types", generatedPackage.packageName, imports),
+			}
 			for _, union := range unions {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "service-union-type",
@@ -272,7 +309,6 @@ func aggregateGeneratedPackages(analyses []*ServicesData) map[string]*generatedP
 			generatedPackage, ok := packages[packagePath]
 			if !ok {
 				generatedPackage = &generatedPackageData{
-					importPath:  analyzedPackage.importPath,
 					outputPath:  analyzedPackage.outputPath,
 					packageName: analyzedPackage.packageName,
 					types:       make(map[*codegen.TypeDeclaration]*generatedTypeData),
@@ -316,92 +352,6 @@ func dedupeByResult(ms []*MethodData) []*MethodData {
 		out = append(out, m)
 	}
 	return out
-}
-
-// SetUserTypeImports sets the import paths for user types declared in custom
-// packages with the Meta key "struct:pkg:path".
-func SetUserTypeImports(genpkg string, d *Data) {
-	d.UserTypeImports = userTypeImports(genpkg, d)
-}
-
-// AddServiceDataMetaTypeImports adds all imports defined by struct:field:type
-// metadata for the service data.
-func AddServiceDataMetaTypeImports(header *codegen.SectionTemplate, d *Data) {
-	codegen.AddImport(header, d.metaTypeImports...)
-}
-
-// AddUserTypeImports adds the imports for user types declared in custom
-// packages with the Meta key "struct:pkg:path".
-func AddUserTypeImports(header *codegen.SectionTemplate, d *Data) {
-	codegen.AddImport(header, d.UserTypeImports...)
-}
-
-func metaTypeImports(svcExpr *expr.ServiceExpr, svcData *Data) []*codegen.ImportSpec {
-	seen := make(map[codegen.ImportSpec]struct{})
-	var imports []*codegen.ImportSpec
-	for _, m := range svcExpr.Methods {
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(m.Payload)...)
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(m.StreamingPayload)...)
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(m.Result)...)
-	}
-	for _, ut := range svcData.userTypes {
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(ut.Type.Attribute())...)
-	}
-	for _, et := range svcData.errorTypes {
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(et.Type.Attribute())...)
-	}
-	for _, t := range svcData.viewedResultTypes {
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(t.Type.Attribute())...)
-	}
-	for _, t := range svcData.projectedTypes {
-		imports = appendUniqueImport(imports, seen, codegen.GetMetaTypeImports(t.Type.Attribute())...)
-	}
-	return imports
-}
-
-func userTypeImports(genpkg string, d *Data) []*codegen.ImportSpec {
-	importsByPath := make(map[string]*codegen.ImportSpec)
-
-	initLoc := func(loc *codegen.Location) {
-		if loc == nil {
-			return
-		}
-		importsByPath[loc.FilePath] = &codegen.ImportSpec{Name: loc.PackageName(), Path: genpkg + "/" + loc.RelImportPath}
-	}
-
-	// Process method-specific locations
-	for _, m := range d.Methods {
-		initLoc(m.PayloadLoc)
-		initLoc(m.ResultLoc)
-		for _, l := range m.ErrorLocs {
-			initLoc(l)
-		}
-	}
-
-	// Process service-level types once (not per method)
-	for _, ut := range d.userTypes {
-		initLoc(ut.Loc)
-	}
-	for _, et := range d.errorTypes {
-		initLoc(et.Loc)
-	}
-
-	imports := make([]*codegen.ImportSpec, 0, len(importsByPath))
-	for _, imp := range importsByPath { // Order does not matter, imports are sorted during formatting.
-		imports = append(imports, imp)
-	}
-	return imports
-}
-
-func appendUniqueImport(imports []*codegen.ImportSpec, seen map[codegen.ImportSpec]struct{}, specs ...*codegen.ImportSpec) []*codegen.ImportSpec {
-	for _, spec := range specs {
-		if _, ok := seen[*spec]; ok {
-			continue
-		}
-		seen[*spec] = struct{}{}
-		imports = append(imports, spec)
-	}
-	return imports
 }
 
 func errorName(et *UserTypeData) string {

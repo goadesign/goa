@@ -1,3 +1,5 @@
+// This file assembles service-owned generated files after every participating
+// Goa design root has planned and frozen its package declarations.
 package generator
 
 import (
@@ -22,18 +24,13 @@ func Service(generation *codegen.Generation) ([]*codegen.File, error) {
 		analyses[i] = services
 
 		for _, s := range r.Services {
-			d := services.Get(s.Name)
-			service.SetUserTypeImports(generation.GenPkg, d)
-
 			endpointFiles := []*codegen.File{
 				service.EndpointFile(generation.GenPkg, s, services),
 				service.ClientFile(generation.GenPkg, s, services),
 			}
-			addServiceImports(endpointFiles, d)
 			files = append(files, endpointFiles...)
 
 			if f := service.ViewsFile(generation.GenPkg, s, services); f != nil {
-				addServiceImports([]*codegen.File{f}, d)
 				files = append(files, f)
 			}
 			convFiles, err := service.ConvertFiles(r, s, services)
@@ -44,9 +41,6 @@ func Service(generation *codegen.Generation) ([]*codegen.File, error) {
 		}
 	}
 	svcFiles := service.Files(generation.GenPkg, analyses)
-	for i, services := range analyses {
-		addServicesImports(svcFiles, services, designRoots[i].Services)
-	}
 	return append(svcFiles, files...), nil
 }
 
@@ -71,35 +65,4 @@ func serviceRoots(roots []eval.Root) []*expr.RootExpr {
 		}
 	}
 	return designRoots
-}
-
-func addServiceImports(files []*codegen.File, d *service.Data) {
-	for _, f := range files {
-		if len(f.SectionTemplates) == 0 {
-			continue
-		}
-		service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], d)
-		service.AddUserTypeImports(f.SectionTemplates[0], d)
-	}
-}
-
-func addServicesImports(files []*codegen.File, services *service.ServicesData, svcs []*expr.ServiceExpr) {
-	for _, s := range svcs {
-		addServiceImports(files, services.Get(s.Name))
-	}
-}
-
-func addMetaTypeImports(files []*codegen.File, d *service.Data) {
-	for _, f := range files {
-		if len(f.SectionTemplates) == 0 {
-			continue
-		}
-		service.AddServiceDataMetaTypeImports(f.SectionTemplates[0], d)
-	}
-}
-
-func addServicesMetaTypeImports(files []*codegen.File, services *service.ServicesData, svcs []*expr.ServiceExpr) {
-	for _, s := range svcs {
-		addMetaTypeImports(files, services.Get(s.Name))
-	}
 }

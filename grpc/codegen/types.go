@@ -1,3 +1,5 @@
+// This file renders gRPC client and server conversion types per service and
+// attaches imports to the exact side-specific file that uses them.
 package codegen
 
 import (
@@ -13,7 +15,7 @@ import (
 func ServerTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(services.Root.API.GRPC.Services))
 	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = typesFile(genpkg, svc, services, true)
+		fw[i] = addEndpointImports(typesFile(genpkg, svc, services, true), genpkg, svc.GRPCEndpoints...)
 	}
 	return fw
 }
@@ -23,7 +25,7 @@ func ServerTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
 func ClientTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(services.Root.API.GRPC.Services))
 	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = typesFile(genpkg, svc, services, false)
+		fw[i] = addEndpointImports(typesFile(genpkg, svc, services, false), genpkg, svc.GRPCEndpoints...)
 	}
 	return fw
 }

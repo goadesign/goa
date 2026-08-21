@@ -1,3 +1,5 @@
+// This file renders JSON-RPC server-sent-event clients and servers with imports
+// scoped to the service represented by each stream file.
 package codegen
 
 import (
@@ -23,7 +25,7 @@ func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodeg
 
 	path := filepath.Join(codegen.Gendir, "jsonrpc", data.Service.PathName, "server", "sse.go")
 	title := fmt.Sprintf("%s SSE server streaming", svc.Name())
-	imports := make([]*codegen.ImportSpec, 0, 9+len(data.Service.UserTypeImports))
+	imports := make([]*codegen.ImportSpec, 0, 9)
 	imports = append(imports,
 		&codegen.ImportSpec{Path: "context"},
 		&codegen.ImportSpec{Path: "errors"},
@@ -35,7 +37,6 @@ func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodeg
 		codegen.GoaNamedImport("http", "goahttp"),
 		&codegen.ImportSpec{Path: genpkg + "/" + data.Service.PathName, Name: data.Service.PkgName},
 	)
-	imports = append(imports, data.Service.UserTypeImports...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),
 		{

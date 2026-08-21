@@ -1,3 +1,5 @@
+// This file renders one JSON-RPC WebSocket client implementation and leaves
+// service-specific import attachment to the owning file builder.
 package codegen
 
 import (
@@ -19,7 +21,7 @@ func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 	title := fmt.Sprintf("%s WebSocket JSON-RPC client", svc.Name())
 
 	// Build imports list for WebSocket clients
-	imports := make([]*codegen.ImportSpec, 0, 15+len(data.Service.UserTypeImports))
+	imports := make([]*codegen.ImportSpec, 0, 15)
 	imports = append(imports,
 		&codegen.ImportSpec{Path: "bytes"},
 		&codegen.ImportSpec{Path: "context"},
@@ -37,7 +39,6 @@ func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 		codegen.GoaNamedImport("http", "goahttp"),
 		&codegen.ImportSpec{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
 	)
-	imports = append(imports, data.Service.UserTypeImports...)
 
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", imports),

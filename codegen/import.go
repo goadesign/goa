@@ -1,3 +1,5 @@
+// This file models generated Go imports and derives type imports from explicit
+// Goa metadata without assigning them to unrelated generated files.
 package codegen
 
 import (
@@ -134,22 +136,23 @@ func GetMetaTypeImports(att *expr.AttributeExpr) []*ImportSpec {
 }
 
 // safelyGetMetaTypeImports parses attributes while keeping track of previous usertypes to avoid infinite recursion
-func safelyGetMetaTypeImports(att *expr.AttributeExpr, seen map[string]struct{}) []*ImportSpec {
+func safelyGetMetaTypeImports(att *expr.AttributeExpr, seen map[expr.UserType]struct{}) []*ImportSpec {
 	if att == nil {
 		return nil
 	}
 	if seen == nil {
-		seen = make(map[string]struct{})
+		seen = make(map[expr.UserType]struct{})
 	}
 	uniqueImports := make(map[ImportSpec]struct{})
 	imports := make([]*ImportSpec, 0)
 
 	switch t := att.Type.(type) {
 	case expr.UserType:
-		if _, wasSeen := seen[t.ID()]; wasSeen {
+		origin := t.Origin()
+		if _, wasSeen := seen[origin]; wasSeen {
 			return imports
 		}
-		seen[t.ID()] = struct{}{}
+		seen[origin] = struct{}{}
 		for _, im := range safelyGetMetaTypeImports(t.Attribute(), seen) {
 			if im != nil {
 				uniqueImports[*im] = struct{}{}
@@ -191,13 +194,4 @@ func safelyGetMetaTypeImports(att *expr.AttributeExpr, seen map[string]struct{})
 		imports = append(imports, &cp)
 	}
 	return imports
-}
-
-// AddServiceMetaTypeImports adds meta type imports for each method of the service expr
-func AddServiceMetaTypeImports(header *SectionTemplate, svc *expr.ServiceExpr) {
-	for _, m := range svc.Methods {
-		AddImport(header, GetMetaTypeImports(m.Payload)...)
-		AddImport(header, GetMetaTypeImports(m.StreamingPayload)...)
-		AddImport(header, GetMetaTypeImports(m.Result)...)
-	}
 }

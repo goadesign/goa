@@ -1,18 +1,20 @@
+// This file defines user-authored type declarations and the distinction
+// between their stable semantic IDs and in-memory copy provenance.
 package expr
 
 type (
 	// UserTypeExpr describes user defined types. While a given design must
 	// ensure that the names are unique the code used to generate code can
 	// create multiple user types that share the same name (for example because
-	// generated in different packages). UID is always unique and makes it
-	// possible to avoid infinite recursions when traversing the data structures
-	// described by the attribute expression e.g. when computing example values.
+	// generated in different packages). When supplied, UID is a stable semantic
+	// identifier used by deterministic examples and media-type behavior; Origin
+	// identifies copied in-memory declarations.
 	UserTypeExpr struct {
 		// The embedded attribute expression.
 		*AttributeExpr
 		// Name of type
 		TypeName string
-		// UID of type
+		// UID is the optional stable semantic identifier of the type.
 		UID string
 		// origin is the earliest declaration copied to create this type.
 		origin UserType

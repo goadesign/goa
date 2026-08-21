@@ -1,3 +1,5 @@
+// This file renders one service's endpoint API and derives type imports only
+// from the methods emitted into that endpoint file.
 package service
 
 import (
@@ -72,6 +74,7 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 	svc := services.Get(service.Name)
 	svcName := svc.PathName
 	path := filepath.Join(codegen.Gendir, svcName, "endpoints.go")
+	outputPackage := genpkg + "/" + svcName
 	data := endpointData(svc)
 	var (
 		sections []*codegen.SectionTemplate
@@ -85,6 +88,7 @@ func EndpointFile(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 			codegen.GoaImport("security"),
 			{Path: genpkg + "/" + svcName + "/" + "views", Name: svc.ViewsPkg},
 		}
+		imports = append(imports, AttributeImports(genpkg, outputPackage, serviceReferenceAttributes(service)...)...)
 		header := codegen.Header(service.Name+" endpoints", svc.PkgName, imports)
 		def := &codegen.SectionTemplate{
 			Name:   "endpoints-struct",

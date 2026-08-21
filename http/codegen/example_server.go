@@ -1,3 +1,5 @@
+// This file renders example HTTP server wiring and multipart stubs, attaching
+// relocated type imports only to the example file that references them.
 package codegen
 
 import (
@@ -8,6 +10,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
+	servicecodegen "goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 )
 
@@ -154,10 +157,17 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 		specs := make([]*codegen.ImportSpec, 0, 2)
 		specs = append(specs, &codegen.ImportSpec{Path: "mime/multipart"})
 		data := services.Get(svc.Name())
+		var multipartEndpoints []*expr.HTTPEndpointExpr
+		for _, endpoint := range data.Endpoints {
+			if endpoint.MultipartRequestDecoder != nil || endpoint.MultipartRequestEncoder != nil {
+				multipartEndpoints = append(multipartEndpoints, svc.Endpoint(endpoint.Method.Name))
+			}
+		}
 		specs = append(specs, &codegen.ImportSpec{
 			Path: path.Join(genpkg, data.Service.PathName),
 			Name: scope.Unique(data.Service.PkgName, "svc"),
 		})
+		specs = append(specs, servicecodegen.AttributeImports(genpkg, example.RootPath(genpkg), httpEndpointAttributes(multipartEndpoints...)...)...)
 
 		apiPkg := example.APIPkg(root, scope)
 		sections = []*codegen.SectionTemplate{codegen.Header("", apiPkg, specs)}

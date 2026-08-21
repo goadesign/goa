@@ -1,3 +1,5 @@
+// This file renders projected and viewed result declarations in one service's
+// views package, including unions required by those declarations.
 package service
 
 import (
@@ -17,7 +19,7 @@ type viewedType struct {
 
 // ViewsFile returns the views file for the given service which contains
 // logic to render result types using the defined views.
-func ViewsFile(_ string, service *expr.ServiceExpr, services *ServicesData) *codegen.File {
+func ViewsFile(genpkg string, service *expr.ServiceExpr, services *ServicesData) *codegen.File {
 	svc := services.Get(service.Name)
 	if len(svc.projectedTypes) == 0 {
 		return nil
@@ -29,13 +31,14 @@ func ViewsFile(_ string, service *expr.ServiceExpr, services *ServicesData) *cod
 	// depends on views), therefore unions must be generated in the views package
 	// when referenced by projected types.
 	unionByHash := make(map[unionDataKey]*UnionTypeData)
-	seenUnions := make(map[string]struct{})
+	seenUnions := make(map[expr.UserType]struct{})
 	viewLoc := &codegen.Location{RelImportPath: "views"}
+	resolver := newViewResolver(services.generation, service, svc.viewDerived)
 	for _, t := range svc.projectedTypes {
 		if err := services.collectUnionTypes(
 			&expr.AttributeExpr{Type: t.Type},
 			service,
-			svc.ViewScope,
+			resolver,
 			viewLoc,
 			unionByHash,
 			seenUnions,
@@ -53,6 +56,7 @@ func ViewsFile(_ string, service *expr.ServiceExpr, services *ServicesData) *cod
 	})
 
 	path := filepath.Join(codegen.Gendir, svc.PathName, "views", "view.go")
+	outputPackage := genpkg + "/" + svc.PathName + "/views"
 	imports := []*codegen.ImportSpec{
 		codegen.GoaImport(""),
 		{Path: "unicode/utf8"},
@@ -64,6 +68,14 @@ func ViewsFile(_ string, service *expr.ServiceExpr, services *ServicesData) *cod
 			codegen.SimpleImport("fmt"),
 		)
 	}
+	var attributes []*expr.AttributeExpr
+	for _, viewed := range svc.viewedResultTypes {
+		attributes = append(attributes, viewed.Type.Attribute())
+	}
+	for _, projected := range svc.projectedTypes {
+		attributes = append(attributes, projected.Type.Attribute())
+	}
+	imports = append(imports, AttributeImports(genpkg, outputPackage, attributes...)...)
 	header := codegen.Header(service.Name+" views", "views",
 		imports)
 	sections := []*codegen.SectionTemplate{header}
