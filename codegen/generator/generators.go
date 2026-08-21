@@ -7,13 +7,19 @@ import (
 	"goa.design/goa/v3/eval"
 )
 
-// Genfunc is the type of the functions invoked to generate code.
-type Genfunc func(genpkg string, roots []eval.Root) ([]*codegen.File, error)
+type (
+	// Genfunc plans declarations and renders files for one generation run.
+	Genfunc struct {
+		// Plan declares generated package types before any generator renders files.
+		Plan codegen.PlanFunc
+		// Generate renders files from the frozen generation catalog.
+		Generate func(*codegen.Generation) ([]*codegen.File, error)
+	}
+)
 
-// Generators returns the qualified paths (including the package name) to the
-// code generator functions for the given command, an error if the command is
-// not supported. Generators is a public variable so that external code (e.g.
-// plugins) may override the default generators.
+// Generators returns the generation lifecycle callbacks for the given command,
+// or an error if the command is not supported. Generators is a public variable
+// so external code may replace the default generators.
 var Generators = generators
 
 // generators returns the generator functions exposed by the generator package
@@ -21,10 +27,20 @@ var Generators = generators
 func generators(cmd string) ([]Genfunc, error) {
 	switch cmd {
 	case "gen":
-		return []Genfunc{Service, Transport, OpenAPI}, nil
+		return []Genfunc{renderOnly(Service), renderOnly(Transport), renderOnly(OpenAPI)}, nil
 	case "example":
-		return []Genfunc{Example}, nil
+		return []Genfunc{renderOnly(Example)}, nil
 	default:
 		return nil, fmt.Errorf("unknown command %q", cmd)
+	}
+}
+
+// renderOnly adapts a generator that does not yet plan package declarations to
+// render with the generation context selected by the top-level lifecycle.
+func renderOnly(generate func(string, []eval.Root) ([]*codegen.File, error)) Genfunc {
+	return Genfunc{
+		Generate: func(generation *codegen.Generation) ([]*codegen.File, error) {
+			return generate(generation.GenPkg, generation.Roots)
+		},
 	}
 }

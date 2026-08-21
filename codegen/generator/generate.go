@@ -122,14 +122,38 @@ func Generate(dir, cmd string, debug bool) (outputs []string, err1 error) {
 		}
 	}
 
-	// 5. Generate initial set of files produced by goa code generators.
+	// 5. Create one generation context, plan every core and plugin declaration,
+	// then freeze all generated package names before rendering begins.
+	generation := codegen.NewGeneration(genpkg, roots)
+	{
+		start := time.Now()
+		for _, gen := range genfuncs {
+			if gen.Plan == nil {
+				continue
+			}
+			if err := gen.Plan(generation); err != nil {
+				return nil, err
+			}
+		}
+		if err := codegen.RunPluginsPlan(cmd, generation); err != nil {
+			return nil, err
+		}
+		if err := generation.Freeze(); err != nil {
+			return nil, err
+		}
+		if debug {
+			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 5: Plan and freeze declarations took %v\n", time.Since(start))
+		}
+	}
+
+	// 6. Generate the initial files produced by the core generators.
 	// NOTE: Parallelization causes infinite recursion in AsObject() for circular type references
 	var genfiles []*codegen.File
 	{
 		start := time.Now()
 		for i, gen := range genfuncs {
 			genStart := time.Now()
-			fs, err := gen(genpkg, roots)
+			fs, err := gen.Generate(generation)
 			if err != nil {
 				return nil, err
 			}
@@ -139,45 +163,45 @@ func Generate(dir, cmd string, debug bool) (outputs []string, err1 error) {
 			}
 		}
 		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 5: Generate initial files took %v (total %d files)\n", time.Since(start), len(genfiles))
+			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 6: Generate initial files took %v (total %d files)\n", time.Since(start), len(genfiles))
 		}
 	}
 
-	// 6. Run the code generation plugins.
+	// 7. Run the code generation plugins with the same frozen generation.
 	{
 		start := time.Now()
 		var err error
-		genfiles, err = codegen.RunPlugins(cmd, genpkg, roots, genfiles)
+		genfiles, err = codegen.RunPlugins(cmd, generation, genfiles)
 		if err != nil {
 			return nil, err
 		}
 		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 6: Run post-generation plugins took %v (now %d files)\n", time.Since(start), len(genfiles))
+			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 7: Run post-generation plugins took %v (now %d files)\n", time.Since(start), len(genfiles))
 		}
 	}
 
-	// 7. Merge files that target the same path to avoid overwriting content when
+	// 8. Merge files that target the same path to avoid overwriting content when
 	// multiple generators (or services) emit sections for the same file.
 	{
 		start := time.Now()
 		genfiles = mergeFilesByPath(genfiles)
 		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 7: Merging files by path took %v (now %d files)\n", time.Since(start), len(genfiles))
+			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 8: Merging files by path took %v (now %d files)\n", time.Since(start), len(genfiles))
 		}
 	}
 
-	// 8. Emit goa.json version file (gen command only).
+	// 9. Emit goa.json version file (gen command only).
 	if cmd == "gen" {
 		genfiles = append(genfiles, codegen.VersionFile())
 	}
 
-	// 9. Write the files (in parallel).
+	// 10. Write the files (in parallel).
 	written := make(map[string]struct{})
 	{
 		start := time.Now()
 		numWorkers := runtime.NumCPU()
 		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 9: Starting parallel file writing with %d workers\n", numWorkers)
+			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 10: Starting parallel file writing with %d workers\n", numWorkers)
 		}
 
 		// Channel for work items
@@ -249,11 +273,11 @@ func Generate(dir, cmd string, debug bool) (outputs []string, err1 error) {
 		}
 
 		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 9: Write files took %v (%d files written, %d slow renders)\n", time.Since(start), len(written), slowRenders)
+			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 10: Write files took %v (%d files written, %d slow renders)\n", time.Since(start), len(written), slowRenders)
 		}
 	}
 
-	// 10. Compute all output filenames.
+	// 11. Compute all output filenames.
 	{
 		start := time.Now()
 		outputs = make([]string, len(written))
@@ -271,7 +295,7 @@ func Generate(dir, cmd string, debug bool) (outputs []string, err1 error) {
 			i++
 		}
 		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 10: Compute output filenames took %v\n", time.Since(start))
+			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 11: Compute output filenames took %v\n", time.Since(start))
 		}
 	}
 	sort.Strings(outputs)

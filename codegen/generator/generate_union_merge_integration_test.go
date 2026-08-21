@@ -17,7 +17,9 @@ import (
 // failure mode where only the union method remained and the struct was lost.
 func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
 	t.Cleanup(func() { Generators = generators })
-	Generators = func(cmd string) ([]Genfunc, error) { return []Genfunc{Service, Transport, OpenAPI}, nil }
+	Generators = func(cmd string) ([]Genfunc, error) {
+		return []Genfunc{renderOnly(Service), renderOnly(Transport), renderOnly(OpenAPI)}, nil
+	}
 
 	dsl := func() {
 		d.API("test", func() {})

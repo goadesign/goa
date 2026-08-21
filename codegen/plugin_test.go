@@ -3,6 +3,11 @@ package codegen
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
 )
 
 func TestRegisterPlugin(t *testing.T) {
@@ -31,7 +36,7 @@ func TestRegisterPlugin(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			plugins = tc.existingPs
-			RegisterPlugin(pIns.name, "", nil, nil)
+			RegisterPlugin(pIns.name, "", nil, nil, nil)
 			if !reflect.DeepEqual(plugins, tc.expectedPs) {
 				t.Errorf("invalid plugin registration order")
 			}
@@ -66,7 +71,7 @@ func TestRegisterPluginFirst(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			plugins = tc.existingPs
-			RegisterPluginFirst(pIns.name, "", nil, nil)
+			RegisterPluginFirst(pIns.name, "", nil, nil, nil)
 			if !reflect.DeepEqual(plugins, tc.expectedPs) {
 				t.Errorf("invalid plugin registration order")
 			}
@@ -101,10 +106,52 @@ func TestRegisterPluginLast(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			plugins = tc.existingPs
-			RegisterPluginLast(pIns.name, "", nil, nil)
+			RegisterPluginLast(pIns.name, "", nil, nil, nil)
 			if !reflect.DeepEqual(plugins, tc.expectedPs) {
 				t.Errorf("invalid plugin registration order")
 			}
 		})
 	}
+}
+
+func TestRegisterPluginLifecycleCallbacksUseGeneration(t *testing.T) {
+	existing := plugins
+	plugins = nil
+	t.Cleanup(func() {
+		plugins = existing
+	})
+
+	var (
+		events     []string
+		plannedGen *Generation
+	)
+	RegisterPlugin(
+		"lifecycle",
+		"test",
+		func(_ string, _ []eval.Root) error {
+			events = append(events, "prepare")
+			return nil
+		},
+		func(generation *Generation) error {
+			events = append(events, "plan")
+			plannedGen = generation
+			_, err := generation.GeneratedPackage("generated.local/gen/types").DeclareUnion(
+				&expr.Union{TypeName: "Value"},
+			)
+			return err
+		},
+		func(generation *Generation, files []*File) ([]*File, error) {
+			events = append(events, "render")
+			require.Same(t, plannedGen, generation)
+			return files, nil
+		},
+	)
+
+	generation := NewGeneration("generated.local/gen", nil)
+	require.NoError(t, RunPluginsPrepare("test", generation.GenPkg, generation.Roots))
+	require.NoError(t, RunPluginsPlan("test", generation))
+	require.NoError(t, generation.Freeze())
+	_, err := RunPlugins("test", generation, nil)
+	require.NoError(t, err)
+	require.Equal(t, []string{"prepare", "plan", "render"}, events)
 }

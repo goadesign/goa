@@ -21,7 +21,7 @@ import (
 func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 	t.Cleanup(func() { Generators = generators })
 	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{Service, Transport}, nil
+		return []Genfunc{renderOnly(Service), renderOnly(Transport)}, nil
 	}
 
 	root := func() {

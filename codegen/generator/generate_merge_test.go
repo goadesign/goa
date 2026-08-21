@@ -20,7 +20,7 @@ func TestMergeFilesPreservesSameLabelSections(t *testing.T) {
 	t.Cleanup(func() { Generators = generators })
 	Generators = func(_ string) ([]Genfunc, error) {
 		return []Genfunc{
-			func(_ string, _ []eval.Root) ([]*codegen.File, error) {
+			renderOnly(func(_ string, _ []eval.Root) ([]*codegen.File, error) {
 				return []*codegen.File{{
 					Path: filepath.Join(codegen.Gendir, "types", "same_label.go"),
 					SectionTemplates: []*codegen.SectionTemplate{
@@ -28,8 +28,8 @@ func TestMergeFilesPreservesSameLabelSections(t *testing.T) {
 						{Name: "type-def", Source: "type First struct{}\n"},
 					},
 				}}, nil
-			},
-			func(_ string, _ []eval.Root) ([]*codegen.File, error) {
+			}),
+			renderOnly(func(_ string, _ []eval.Root) ([]*codegen.File, error) {
 				return []*codegen.File{{
 					Path: filepath.Join(codegen.Gendir, "types", "same_label.go"),
 					SectionTemplates: []*codegen.SectionTemplate{
@@ -37,7 +37,7 @@ func TestMergeFilesPreservesSameLabelSections(t *testing.T) {
 						{Name: "type-def", Source: "type Second struct{}\n"},
 					},
 				}}, nil
-			},
+			}),
 		}, nil
 	}
 
@@ -63,7 +63,7 @@ func TestGenerateMergesSamePathFiles(t *testing.T) {
 	// second write would overwrite the first.
 	Generators = func(cmd string) ([]Genfunc, error) {
 		return []Genfunc{
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			renderOnly(func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				f := &codegen.File{Path: filepath.Join(codegen.Gendir, "types", "merge_test.go")}
 				f.SectionTemplates = []*codegen.SectionTemplate{
 					codegen.Header("User types", "types", nil),
@@ -73,8 +73,8 @@ func TestGenerateMergesSamePathFiles(t *testing.T) {
 					},
 				}
 				return []*codegen.File{f}, nil
-			},
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			}),
+			renderOnly(func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				f := &codegen.File{Path: filepath.Join(codegen.Gendir, "types", "merge_test.go")}
 				f.SectionTemplates = []*codegen.SectionTemplate{
 					codegen.Header("User types", "types", nil),
@@ -84,7 +84,7 @@ func TestGenerateMergesSamePathFiles(t *testing.T) {
 					},
 				}
 				return []*codegen.File{f}, nil
-			},
+			}),
 		}, nil
 	}
 
@@ -121,7 +121,7 @@ func TestGenerateParallelManyFiles(t *testing.T) {
 	const numFiles = 20
 	Generators = func(cmd string) ([]Genfunc, error) {
 		return []Genfunc{
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			renderOnly(func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				files := make([]*codegen.File, numFiles)
 				for i := 0; i < numFiles; i++ {
 					f := &codegen.File{
@@ -137,7 +137,7 @@ func TestGenerateParallelManyFiles(t *testing.T) {
 					files[i] = f
 				}
 				return files, nil
-			},
+			}),
 		}, nil
 	}
 
@@ -178,30 +178,30 @@ func TestGenerateParallelWithMerge(t *testing.T) {
 	// This exercises both merging and parallel writing with NumCPU workers.
 	Generators = func(cmd string) ([]Genfunc, error) {
 		return []Genfunc{
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			renderOnly(func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				f1 := &codegen.File{Path: filepath.Join(codegen.Gendir, "types", "merged.go")}
 				f1.SectionTemplates = []*codegen.SectionTemplate{
 					codegen.Header("Types", "types", nil),
 					{Name: "type1", Source: "type Type1 struct{}\n"},
 				}
 				return []*codegen.File{f1}, nil
-			},
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			}),
+			renderOnly(func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				f2 := &codegen.File{Path: filepath.Join(codegen.Gendir, "types", "merged.go")}
 				f2.SectionTemplates = []*codegen.SectionTemplate{
 					codegen.Header("Types", "types", nil),
 					{Name: "type2", Source: "type Type2 struct{}\n"},
 				}
 				return []*codegen.File{f2}, nil
-			},
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			}),
+			renderOnly(func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				f3 := &codegen.File{Path: filepath.Join(codegen.Gendir, "types", "separate.go")}
 				f3.SectionTemplates = []*codegen.SectionTemplate{
 					codegen.Header("Types", "types", nil),
 					{Name: "type3", Source: "type Type3 struct{}\n"},
 				}
 				return []*codegen.File{f3}, nil
-			},
+			}),
 		}, nil
 	}
 
@@ -252,7 +252,7 @@ func TestGenerateParallelErrorHandling(t *testing.T) {
 	// Worker pool should capture first error but continue processing other files.
 	Generators = func(cmd string) ([]Genfunc, error) {
 		return []Genfunc{
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			renderOnly(func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				files := make([]*codegen.File, 5)
 				for i := 0; i < 5; i++ {
 					f := &codegen.File{
@@ -272,7 +272,7 @@ func TestGenerateParallelErrorHandling(t *testing.T) {
 					files[i] = f
 				}
 				return files, nil
-			},
+			}),
 		}, nil
 	}
 
@@ -294,14 +294,14 @@ func TestGenerateParallelSingleFile(t *testing.T) {
 
 	Generators = func(cmd string) ([]Genfunc, error) {
 		return []Genfunc{
-			func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+			renderOnly(func(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 				f := &codegen.File{Path: filepath.Join(codegen.Gendir, "types", "single.go")}
 				f.SectionTemplates = []*codegen.SectionTemplate{
 					codegen.Header("Types", "types", nil),
 					{Name: "type", Source: "type Single struct{}\n"},
 				}
 				return []*codegen.File{f}, nil
-			},
+			}),
 		}, nil
 	}
 

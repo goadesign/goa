@@ -9,6 +9,13 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+type exactHasher string
+
+// Hash returns the exact map identity supplied by the test.
+func (h exactHasher) Hash() string {
+	return string(h)
+}
+
 func TestNameScope_Freeze(t *testing.T) {
 	scope := NewNameScope()
 	existing := &expr.UserTypeExpr{
@@ -73,6 +80,13 @@ func TestNameScope_Unique(t *testing.T) {
 			t.Errorf("#%v, expected %v, got %v", i, v.Expected, got)
 		}
 	}
+}
+
+func TestNameScope_HashedUniqueUsesExactHash(t *testing.T) {
+	scope := NewNameScope()
+	require.Equal(t, "First", scope.HashedUnique(exactHasher("shared"), "First"))
+	require.Equal(t, "First", scope.HashedUnique(exactHasher("shared"), "Ignored"))
+	require.Equal(t, "First2", scope.HashedUnique(exactHasher("distinct"), "First"))
 }
 
 func TestNameScope_GoFullTypeName_UsesScopedNameWhenQualified(t *testing.T) {
@@ -216,7 +230,71 @@ func TestNameScope_GoTypeNameDistinguishesGoifiedBranchTypeCollisions(t *testing
 	assert.Equal(t, "Value2", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
 }
 
-func TestUnionTypeHashIgnoresNonEmittedPointerSharing(t *testing.T) {
+func TestUnionTypeID(t *testing.T) {
+	branch := func(name string, dataType expr.DataType) *expr.NamedAttributeExpr {
+		return &expr.NamedAttributeExpr{Name: name, Attribute: &expr.AttributeExpr{Type: dataType}}
+	}
+	userType := func(path string) expr.UserType {
+		return &expr.UserTypeExpr{
+			AttributeExpr: &expr.AttributeExpr{
+				Type: expr.String,
+				Meta: expr.MetaExpr{"struct:pkg:path": {path}},
+			},
+			TypeName: "Entry",
+			UID:      "entry",
+		}
+	}
+	tests := []struct {
+		name   string
+		first  *expr.Union
+		second *expr.Union
+	}{
+		{
+			name:   "wire keys",
+			first:  &expr.Union{TypeName: "Value", TypeKey: "type", ValueKey: "value"},
+			second: &expr.Union{TypeName: "Value", TypeKey: "kind", ValueKey: "data"},
+		},
+		{
+			name: "branch order",
+			first: &expr.Union{TypeName: "Value", Values: []*expr.NamedAttributeExpr{
+				branch("left", expr.String),
+				branch("right", expr.Int),
+			}},
+			second: &expr.Union{TypeName: "Value", Values: []*expr.NamedAttributeExpr{
+				branch("right", expr.Int),
+				branch("left", expr.String),
+			}},
+		},
+		{
+			name: "branch Go shape",
+			first: &expr.Union{TypeName: "Value", Values: []*expr.NamedAttributeExpr{
+				branch("entry", expr.String),
+			}},
+			second: &expr.Union{TypeName: "Value", Values: []*expr.NamedAttributeExpr{
+				{Name: "entry", Attribute: &expr.AttributeExpr{
+					Type: expr.String,
+					Meta: expr.MetaExpr{"struct:field:type": {"CustomString"}},
+				}},
+			}},
+		},
+		{
+			name: "relocated branch package",
+			first: &expr.Union{TypeName: "Value", Values: []*expr.NamedAttributeExpr{
+				branch("entry", userType("types/first")),
+			}},
+			second: &expr.Union{TypeName: "Value", Values: []*expr.NamedAttributeExpr{
+				branch("entry", userType("types/second")),
+			}},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			require.NotEqual(t, NewUnionTypeID(test.first), NewUnionTypeID(test.second))
+		})
+	}
+}
+
+func TestUnionTypeIDIgnoresNonEmittedPointerSharing(t *testing.T) {
 	object := func() *expr.Object {
 		fields := expr.Object{
 			{Name: "text", Attribute: &expr.AttributeExpr{Type: expr.String}},
@@ -243,11 +321,11 @@ func TestUnionTypeHashIgnoresNonEmittedPointerSharing(t *testing.T) {
 
 	t.Run("inline object", func(t *testing.T) {
 		shared := object()
-		assert.Equal(t, UnionTypeHash(outerUnion(shared, shared)), UnionTypeHash(outerUnion(object(), object())))
+		assert.Equal(t, NewUnionTypeID(outerUnion(shared, shared)), NewUnionTypeID(outerUnion(object(), object())))
 	})
 	t.Run("nested union", func(t *testing.T) {
 		shared := innerUnion()
-		assert.Equal(t, UnionTypeHash(outerUnion(shared, shared)), UnionTypeHash(outerUnion(innerUnion(), innerUnion())))
+		assert.Equal(t, NewUnionTypeID(outerUnion(shared, shared)), NewUnionTypeID(outerUnion(innerUnion(), innerUnion())))
 	})
 }
 

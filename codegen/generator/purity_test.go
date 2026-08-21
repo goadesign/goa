@@ -81,8 +81,15 @@ func TestGeneratorsTreatDesignAsReadOnly(t *testing.T) {
 			for _, cmd := range []string{"gen", "example"} {
 				genfuncs, err := Generators(cmd)
 				require.NoError(t, err)
+				generation := codegen.NewGeneration("gen", []eval.Root{root})
 				for _, gen := range genfuncs {
-					_, err := gen("gen", []eval.Root{root})
+					if gen.Plan != nil {
+						require.NoError(t, gen.Plan(generation))
+					}
+				}
+				require.NoError(t, generation.Freeze())
+				for _, gen := range genfuncs {
+					_, err := gen.Generate(generation)
 					require.NoError(t, err)
 				}
 			}

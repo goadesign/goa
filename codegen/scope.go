@@ -43,7 +43,7 @@ func NewNameScope() *NameScope {
 // appending suffix and - if still not unique - a counter value. It returns
 // the same value when called multiple times for a key returning the same hash.
 func (s *NameScope) HashedUnique(key Hasher, name string, suffix ...string) string {
-	hash := scopedTypeHash(key)
+	hash := key.Hash()
 	if n, ok := s.names[hash]; ok {
 		return n
 	}
@@ -286,7 +286,7 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 			s.GoFullTypeRef(actual.ElemType, pkgWithDefault(actual.ElemType.Type, pkg)))
 	case *expr.Object:
 		return s.GoTypeDef(att, false, false)
-	case expr.UserType, *expr.Union:
+	case expr.UserType:
 		if actual == expr.ErrorResult {
 			return "goa.ServiceError"
 		}
@@ -303,14 +303,9 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 		// consistent across packages. This is critical for transport packages that
 		// refer to types defined in the service package (e.g., grpc referencing a
 		// payload type defined as Request2).
-		base := Goify(actual.Name(), true)
-		if pkg == "" {
-			return s.HashedUnique(actual, base, "")
-		}
-		if n, ok := s.names[scopedTypeHash(actual)]; ok {
-			return pkg + "." + n
-		}
-		return pkg + "." + base
+		return s.scopedTypeName(actual, Goify(actual.Name(), true), pkg)
+	case *expr.Union:
+		return s.scopedTypeName(NewUnionTypeID(actual), Goify(actual.Name(), true), pkg)
 	case expr.CompositeExpr:
 		return s.GoFullTypeName(actual.Attribute(), pkgWithDefault(actual.Attribute().Type, pkg))
 	default:
@@ -318,13 +313,16 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 	}
 }
 
-// scopedTypeHash returns the emitted-definition identity for unions and the
-// existing type hash for every other scoped declaration.
-func scopedTypeHash(key Hasher) string {
-	if union, ok := key.(*expr.Union); ok {
-		return UnionTypeHash(union)
+// scopedTypeName returns a local or package-qualified generated declaration
+// name. The caller supplies the exact identity owned by the target package.
+func (s *NameScope) scopedTypeName(key Hasher, base, pkg string) string {
+	if pkg == "" {
+		return s.HashedUnique(key, base, "")
 	}
-	return key.Hash()
+	if name, ok := s.names[key.Hash()]; ok {
+		return pkg + "." + name
+	}
+	return pkg + "." + base
 }
 
 // pkgWithDefault returns the package defining the given type. If the types is a

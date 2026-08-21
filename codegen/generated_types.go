@@ -5,7 +5,7 @@ package codegen
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 
 	"goa.design/goa/v3/expr"
 )
@@ -17,7 +17,7 @@ type (
 		path          string
 		scope         *NameScope
 		userTypes     map[expr.UserType]*TypeDeclaration
-		unions        map[string]*unionDeclaration
+		unions        map[UnionTypeID]*unionDeclaration
 		userTypeNames map[string]string
 		frozen        bool
 	}
@@ -82,7 +82,7 @@ func (p *GeneratedPackage) DeclareUnion(union *expr.Union) (*TypeDeclaration, er
 	if p.frozen {
 		return nil, fmt.Errorf("generated package %q is frozen", p.path)
 	}
-	identity := UnionTypeHash(union)
+	identity := NewUnionTypeID(union)
 	if planned, ok := p.unions[identity]; ok {
 		return planned.declaration, nil
 	}
@@ -107,7 +107,7 @@ func (p *GeneratedPackage) UserType(userType expr.UserType) (*TypeDeclaration, e
 // Union returns union's existing package declaration without allocating a
 // name or declaration record.
 func (p *GeneratedPackage) Union(union *expr.Union) (*TypeDeclaration, error) {
-	if planned, ok := p.unions[UnionTypeHash(union)]; ok {
+	if planned, ok := p.unions[NewUnionTypeID(union)]; ok {
 		return planned.declaration, nil
 	}
 	return nil, fmt.Errorf("union %q is not declared in generated package %q", union.Name(), p.path)
@@ -128,7 +128,7 @@ func newGeneratedPackage(path string) *GeneratedPackage {
 		path:          path,
 		scope:         NewNameScope(),
 		userTypes:     make(map[expr.UserType]*TypeDeclaration),
-		unions:        make(map[string]*unionDeclaration),
+		unions:        make(map[UnionTypeID]*unionDeclaration),
 		userTypeNames: make(map[string]string),
 	}
 }
@@ -136,14 +136,14 @@ func newGeneratedPackage(path string) *GeneratedPackage {
 // freeze assigns pending union names in structural-identity order, then ends
 // declaration and scope mutation while preserving read-only lookups.
 func (p *GeneratedPackage) freeze() {
-	identities := make([]string, 0, len(p.unions))
+	identities := make([]UnionTypeID, 0, len(p.unions))
 	for identity := range p.unions {
 		identities = append(identities, identity)
 	}
-	sort.Strings(identities)
+	slices.Sort(identities)
 	for _, identity := range identities {
 		planned := p.unions[identity]
-		name := p.scope.HashedUnique(planned.union, Goify(planned.union.Name(), true), "")
+		name := p.scope.HashedUnique(identity, Goify(planned.union.Name(), true), "")
 		planned.declaration.Name = name
 	}
 	p.scope.Freeze()
