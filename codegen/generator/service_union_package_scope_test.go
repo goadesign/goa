@@ -21,7 +21,10 @@ import (
 func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 	t.Cleanup(func() { Generators = generators })
 	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{renderOnly(Service), renderOnly(Transport)}, nil
+		return []Genfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planServiceData, Generate: Transport},
+		}, nil
 	}
 
 	root := func() {
@@ -93,7 +96,10 @@ func TestServiceRelocatedUnionNamesSpanDesignRoots(t *testing.T) {
 		codegen.RunDSL(t, relocatedDifferentUnionRoot()),
 		codegen.RunDSL(t, relocatedTopLevelValueRoot()),
 	}
-	files, err := Service("goa.design/goa/example", roots)
+	generation := codegen.NewGeneration("goa.design/goa/example", roots)
+	require.NoError(t, planServiceData(generation))
+	require.NoError(t, generation.Freeze())
+	files, err := Service(generation)
 	require.NoError(t, err)
 
 	var generated strings.Builder
@@ -107,13 +113,13 @@ func TestServiceRelocatedUnionNamesSpanDesignRoots(t *testing.T) {
 	}
 	code := generated.String()
 	require.Equal(t, 1, strings.Count(code, "type Value struct {"), code)
+	require.Contains(t, code, "type Value struct {\n\tText string", code)
 	require.Equal(t, 1, strings.Count(code, "type Value2 struct {"), code)
-	require.Equal(t, 1, strings.Count(code, "type ValueKind string"), code)
-	require.Equal(t, 1, strings.Count(code, "type Value2Kind string"), code)
 	require.Equal(t, 1, strings.Count(code, "type Value3 struct {"), code)
-	require.Contains(t, code, "type Value3 struct {\n\tText string", code)
+	require.Equal(t, 1, strings.Count(code, "type Value2Kind string"), code)
+	require.Equal(t, 1, strings.Count(code, "type Value3Kind string"), code)
 	require.Equal(t,
-		[]string{"Value", "Value", "Value", "Value2"},
+		[]string{"Value2", "Value2", "Value2", "Value3"},
 		[]string{
 			unionFieldType(code, "ZExistingValue"),
 			unionFieldType(code, "MExistingValue"),
@@ -125,15 +131,14 @@ func TestServiceRelocatedUnionNamesSpanDesignRoots(t *testing.T) {
 
 func TestServiceSelectiveRelocatedUnionOwnerCompiles(t *testing.T) {
 	root := codegen.RunDSL(t, selectiveRelocatedUnionRoot())
-	services := servicecodegen.NewServicesData(root)
+	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, servicecodegen.Plan(root, generation))
+	require.NoError(t, generation.Freeze())
+	services, err := servicecodegen.NewServicesData(root, generation)
+	require.NoError(t, err)
 	data := services.Get(root.Services[1].Name)
 	servicecodegen.SetUserTypeImports("generated.local/gen", data)
-	files := servicecodegen.Files(
-		"generated.local/gen",
-		root.Services[1],
-		services,
-		make(map[string][]string),
-	)
+	files := servicecodegen.Files("generated.local/gen", []*servicecodegen.ServicesData{services})
 	addServiceImports(files, data)
 	dir := t.TempDir()
 	for _, file := range files {

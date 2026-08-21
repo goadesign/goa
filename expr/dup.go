@@ -23,14 +23,14 @@ func DupAtt(att *AttributeExpr) *AttributeExpr {
 
 // dupper implements recursive and cycle safe copy of data types.
 type dupper struct {
-	uts map[string]UserType
+	uts map[UserType]UserType
 	ats map[*AttributeExpr]struct{}
 }
 
 // newDupper returns a new initialized dupper.
 func newDupper() *dupper {
 	return &dupper{
-		uts: make(map[string]UserType),
+		uts: make(map[UserType]UserType),
 		ats: make(map[*AttributeExpr]struct{}),
 	}
 }
@@ -101,11 +101,12 @@ func (d *dupper) DupType(t DataType) DataType {
 		}
 		return &dp
 	case UserType:
-		if u, ok := d.uts[actual.ID()]; ok {
+		origin := actual.Origin()
+		if u, ok := d.uts[origin]; ok {
 			return u
 		}
 		dp := actual.Dup(nil)
-		d.uts[actual.ID()] = dp
+		d.uts[origin] = dp
 		dupAtt := d.DupAttribute(actual.Attribute())
 		dp.SetAttribute(dupAtt)
 

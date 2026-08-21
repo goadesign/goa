@@ -323,7 +323,7 @@ func TestConvertFiles(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := runDSL(t, c.DSL)
-			services := NewServicesData(root)
+			services := mustServicesData(t, root)
 
 			for _, svc := range root.Services {
 				files, err := ConvertFiles(root, svc, services)

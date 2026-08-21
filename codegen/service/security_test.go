@@ -24,7 +24,7 @@ func TestSecureEndpointInit(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := codegen.RunDSL(t, c.DSL)
-			services := NewServicesData(root)
+			services := mustServicesData(t, root)
 			require.Len(t, root.Services, 1)
 			fs := EndpointFile("", root.Services[0], services)
 			require.NotNil(t, fs)
@@ -51,7 +51,7 @@ func TestSecureEndpoint(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := codegen.RunDSL(t, c.DSL)
-			services := NewServicesData(root)
+			services := mustServicesData(t, root)
 			require.Len(t, root.Services, 1)
 			fs := EndpointFile("", root.Services[0], services)
 			require.NotNil(t, fs)
@@ -73,7 +73,7 @@ func TestSecureWithSkipRequestBodyEncodeDecode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := codegen.RunDSL(t, c.DSL)
-			services := NewServicesData(root)
+			services := mustServicesData(t, root)
 			require.Len(t, root.Services, 1)
 			fs := EndpointFile("", root.Services[0], services)
 			require.NotNil(t, fs)

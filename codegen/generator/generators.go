@@ -30,9 +30,13 @@ var Generators = generators
 func generators(cmd string) ([]Genfunc, error) {
 	switch cmd {
 	case "gen":
-		return []Genfunc{renderOnly(Service), renderOnly(Transport), renderOnly(OpenAPI)}, nil
+		return []Genfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planServiceData, Generate: Transport},
+			{Plan: planServiceData, Generate: OpenAPI},
+		}, nil
 	case "example":
-		return []Genfunc{renderOnly(Example)}, nil
+		return []Genfunc{{Plan: planServiceData, Generate: Example}}, nil
 	default:
 		return nil, fmt.Errorf("unknown command %q", cmd)
 	}

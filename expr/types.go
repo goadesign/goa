@@ -78,6 +78,9 @@ type (
 		CompositeExpr
 		// ID returns the identifier for the user type.
 		ID() string
+		// Origin returns the earliest comparable user type declaration from
+		// which this value was copied.
+		Origin() UserType
 		// Rename changes the type name to the given value.
 		Rename(string)
 		// SetAttribute updates the underlying attribute.

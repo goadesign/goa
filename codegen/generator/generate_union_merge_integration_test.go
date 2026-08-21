@@ -18,7 +18,11 @@ import (
 func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
 	t.Cleanup(func() { Generators = generators })
 	Generators = func(cmd string) ([]Genfunc, error) {
-		return []Genfunc{renderOnly(Service), renderOnly(Transport), renderOnly(OpenAPI)}, nil
+		return []Genfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planServiceData, Generate: Transport},
+			{Plan: planServiceData, Generate: OpenAPI},
+		}, nil
 	}
 
 	dsl := func() {

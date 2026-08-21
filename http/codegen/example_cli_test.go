@@ -10,7 +10,6 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
 	ctestdata "goa.design/goa/v3/codegen/example/testdata"
-	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
@@ -31,7 +30,7 @@ func TestExampleCLIFiles(t *testing.T) {
 			// reset global variable
 			example.Servers = make(example.ServersData)
 			root := codegen.RunDSL(t, c.DSL)
-			httpServices := NewServicesData(service.NewServicesData(root), root.API.HTTP)
+			httpServices := NewServicesData(createServiceServices(root), root.API.HTTP)
 			fs := ExampleCLIFiles("", httpServices)
 			require.Len(t, fs, 1)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)

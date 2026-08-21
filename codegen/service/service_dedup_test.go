@@ -15,10 +15,10 @@ import (
 // same result type the generated service code only emits a single event marker method.
 func TestService_DedupEventMarkers(t *testing.T) {
 	root := codegen.RunDSL(t, stest.StreamingDuplicateResultTypesDSL)
-	services := NewServicesData(root)
+	services := mustServicesData(t, root)
 	require.Len(t, root.Services, 1)
 
-	files := Files("goa.design/goa/example", root.Services[0], services, make(map[string][]string))
+	files := Files("goa.design/goa/example", []*ServicesData{services})
 	require.Greater(t, len(files), 0)
 
 	// Generate the service.go content

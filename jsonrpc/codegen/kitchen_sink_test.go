@@ -12,6 +12,7 @@ import (
 
 	goacodegen "goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/generator"
+	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
@@ -30,10 +31,13 @@ func TestJSONRPCKitchenSink(t *testing.T) {
 	// design normalization generator.Generate runs before them.
 	goacodegen.NormalizeRoot(root)
 	roots := []eval.Root{root}
+	generation := goacodegen.NewGeneration("kitchensink", roots)
+	require.NoError(t, service.Plan(root, generation))
+	require.NoError(t, generation.Freeze())
 
-	tfiles, err := generator.Transport("kitchensink", roots)
+	tfiles, err := generator.Transport(generation)
 	require.NoError(t, err)
-	efiles, err := generator.Example("kitchensink", roots)
+	efiles, err := generator.Example(generation)
 	require.NoError(t, err)
 
 	tmp := t.TempDir()

@@ -10,32 +10,29 @@ import (
 // Service iterates through the roots and returns the files needed to render
 // the service code. It returns an error if the roots slice does not include
 // a goa design.
-func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+func Service(generation *codegen.Generation) ([]*codegen.File, error) {
 	var files []*codegen.File
-	var userTypePkgs = make(map[string][]string)
-	designRoots := serviceRoots(roots)
-	servicesByRoot := service.NewServicesDataForRoots(designRoots)
-	for _, r := range designRoots {
-		services := servicesByRoot[r]
+	designRoots := serviceRoots(generation.Roots)
+	analyses := make([]*service.ServicesData, len(designRoots))
+	for i, r := range designRoots {
+		services, err := service.NewServicesData(r, generation)
+		if err != nil {
+			return nil, err
+		}
+		analyses[i] = services
 
 		for _, s := range r.Services {
 			d := services.Get(s.Name)
-			service.SetUserTypeImports(genpkg, d)
-
-			// Make sure service is first so name scope is
-			// properly initialized.
-			svcFiles := service.Files(genpkg, s, services, userTypePkgs)
-			addServiceImports(svcFiles, d)
-			files = append(files, svcFiles...)
+			service.SetUserTypeImports(generation.GenPkg, d)
 
 			endpointFiles := []*codegen.File{
-				service.EndpointFile(genpkg, s, services),
-				service.ClientFile(genpkg, s, services),
+				service.EndpointFile(generation.GenPkg, s, services),
+				service.ClientFile(generation.GenPkg, s, services),
 			}
 			addServiceImports(endpointFiles, d)
 			files = append(files, endpointFiles...)
 
-			if f := service.ViewsFile(genpkg, s, services); f != nil {
+			if f := service.ViewsFile(generation.GenPkg, s, services); f != nil {
 				addServiceImports([]*codegen.File{f}, d)
 				files = append(files, f)
 			}
@@ -46,7 +43,22 @@ func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 			files = append(files, convFiles...)
 		}
 	}
-	return files, nil
+	svcFiles := service.Files(generation.GenPkg, analyses)
+	for i, services := range analyses {
+		addServicesImports(svcFiles, services, designRoots[i].Services)
+	}
+	return append(svcFiles, files...), nil
+}
+
+// planServiceData declares service-owned generated package types for every Goa
+// design root in generation.
+func planServiceData(generation *codegen.Generation) error {
+	for _, root := range serviceRoots(generation.Roots) {
+		if err := service.Plan(root, generation); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // serviceRoots returns every Goa design root that emits files into the same

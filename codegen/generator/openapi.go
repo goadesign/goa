@@ -2,19 +2,22 @@ package generator
 
 import (
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/eval"
-	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/codegen/service"
 	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
 // OpenAPI iterates through the roots and returns the files needed to render
 // the service OpenAPI spec. It produces OpenAPI specifications only if the
 // roots define a HTTP service.
-func OpenAPI(_ string, roots []eval.Root) ([]*codegen.File, error) {
-	for _, root := range roots {
-		if r, ok := root.(*expr.RootExpr); ok {
-			return httpcodegen.OpenAPIFiles(r)
+func OpenAPI(generation *codegen.Generation) ([]*codegen.File, error) {
+	designRoots := serviceRoots(generation.Roots)
+	for _, root := range designRoots {
+		if _, err := service.NewServicesData(root, generation); err != nil {
+			return nil, err
 		}
+	}
+	if len(designRoots) > 0 {
+		return httpcodegen.OpenAPIFiles(designRoots[0])
 	}
 	return nil, nil
 }

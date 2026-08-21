@@ -12,8 +12,224 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
 	"goa.design/goa/v3/codegen/testutil"
+	"goa.design/goa/v3/dsl"
+	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 )
+
+func TestServicesDataUsesFrozenPackageDeclarations(t *testing.T) {
+	var shared expr.UserType
+	root := codegen.RunDSL(t, func() {
+		shared = dsl.Type("Shared", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.OneOf("Value", func() {
+				dsl.Attribute("text", dsl.String)
+			})
+		})
+		first := dsl.Type("FirstPayload", func() {
+			dsl.Attribute("shared", shared)
+		})
+		second := dsl.Type("SecondPayload", func() {
+			dsl.Attribute("shared", shared)
+		})
+		dsl.Service("First", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(first)
+			})
+		})
+		dsl.Service("Second", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(second)
+			})
+		})
+	})
+
+	generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
+	require.NoError(t, Plan(root, generation))
+	require.Panics(t, func() {
+		_, _ = NewServicesData(root, generation)
+	})
+	require.NoError(t, generation.Freeze())
+	services, err := NewServicesData(root, generation)
+	require.NoError(t, err)
+
+	first := services.Get("First")
+	second := services.Get("Second")
+	firstShared := findUserTypeData(first.userTypes, shared)
+	secondShared := findUserTypeData(second.userTypes, shared)
+	require.NotNil(t, firstShared)
+	require.NotNil(t, secondShared)
+	require.Same(t, firstShared.Declaration, secondShared.Declaration)
+	require.Len(t, first.unions, 1)
+	require.Len(t, second.unions, 1)
+	require.Same(t, first.unions[0].Declaration, second.unions[0].Declaration)
+	require.Equal(t, "Value", first.unions[0].Name)
+	require.Equal(t, "ValueKind", first.unions[0].KindName)
+
+	_, err = generation.GeneratedPackage("goa.design/goa/example/types").DeclareUserType(shared)
+	require.ErrorContains(t, err, "frozen")
+}
+
+func TestFilesEmitsPackageDeclarationsOnce(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.PkgPathUnionNameScopeDSL)
+	services := mustServicesData(t, root)
+	files := Files("goa.design/goa/example", []*ServicesData{services})
+
+	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "first_value.go")))
+	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "second_value.go")))
+	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "third_value.go")))
+	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "unions.go")))
+
+	unionFile := findFile(files, filepath.Join("gen", "types", "unions.go"))
+	require.NotNil(t, unionFile)
+	code := renderSections(t, unionFile.SectionTemplates)
+	require.Equal(t, 1, strings.Count(code, "type Value struct {"), code)
+	require.Equal(t, 1, strings.Count(code, "type ValueKind string"), code)
+}
+
+func TestFilesEmitsDifferentSameBaseUnionsWithFrozenNames(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		first := dsl.Type("First", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.OneOf("Value", func() {
+				dsl.Attribute("text", dsl.String)
+			})
+		})
+		second := dsl.Type("Second", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.OneOf("Value", func() {
+				dsl.Attribute("number", dsl.Int)
+			})
+		})
+		dsl.Service("FirstService", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(first)
+			})
+		})
+		dsl.Service("SecondService", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(second)
+			})
+		})
+	})
+
+	files := Files("goa.design/goa/example", []*ServicesData{mustServicesData(t, root)})
+	unionFile := findFile(files, filepath.Join("gen", "types", "unions.go"))
+	require.NotNil(t, unionFile)
+	code := renderSections(t, unionFile.SectionTemplates)
+	require.Equal(t, 1, strings.Count(code, "type Value struct {"), code)
+	require.Equal(t, 1, strings.Count(code, "type Value2 struct {"), code)
+	require.Equal(t, 1, strings.Count(code, "type ValueKind string"), code)
+	require.Equal(t, 1, strings.Count(code, "type Value2Kind string"), code)
+}
+
+func TestFilesEmitsSharedPackagesOnceAcrossRoots(t *testing.T) {
+	var firstType expr.UserType
+	firstRoot := codegen.RunDSL(t, func() {
+		firstType = dsl.Type("First", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.OneOf("Value", func() {
+				dsl.Attribute("text", dsl.String)
+			})
+		})
+		dsl.Service("FirstService", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(firstType)
+			})
+		})
+	})
+	var secondType expr.UserType
+	secondRoot := codegen.RunDSL(t, func() {
+		secondType = dsl.Type("Second", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.OneOf("Value", func() {
+				dsl.Attribute("text", dsl.String)
+			})
+		})
+		dsl.Service("SecondService", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(secondType)
+			})
+		})
+	})
+
+	generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{firstRoot, secondRoot})
+	require.NoError(t, Plan(firstRoot, generation))
+	require.NoError(t, Plan(secondRoot, generation))
+	firstUnion := expr.AsObject(firstType).Attribute("Value").Type.(*expr.Union)
+	secondUnion := expr.AsObject(secondType).Attribute("Value").Type.(*expr.Union)
+	firstAlias := firstUnion.Values[0].Attribute.Type.(expr.UserType)
+	secondAlias := secondUnion.Values[0].Attribute.Type.(expr.UserType)
+	generatedPackage := generation.GeneratedPackage("goa.design/goa/example/types")
+	firstBranch, err := generatedPackage.UnionBranchType(firstUnion, "text", firstAlias)
+	require.NoError(t, err)
+	secondBranch, err := generatedPackage.UnionBranchType(secondUnion, "text", secondAlias)
+	require.NoError(t, err)
+	require.Same(t, firstBranch, secondBranch)
+
+	require.NoError(t, generation.Freeze())
+	firstServices, err := NewServicesData(firstRoot, generation)
+	require.NoError(t, err)
+	secondServices, err := NewServicesData(secondRoot, generation)
+	require.NoError(t, err)
+	files := Files("goa.design/goa/example", []*ServicesData{firstServices, secondServices})
+
+	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "first.go")))
+	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "second.go")))
+	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "value_text.go")))
+	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "unions.go")))
+	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "first_service", "service.go")))
+	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "second_service", "service.go")))
+}
+
+func TestGeneratedUnionBranchCollisionDoesNotCanonicalizeToRootType(t *testing.T) {
+	var (
+		exact     expr.UserType
+		container expr.UserType
+	)
+	root := codegen.RunDSL(t, func() {
+		exact = dsl.Type("Value-Text", dsl.String, func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.Meta("type:generate:force")
+		})
+		container = dsl.Type("Container", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.OneOf("Value", func() {
+				dsl.Attribute("text", dsl.String)
+			})
+		})
+		dsl.Service("Collision", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(container)
+			})
+		})
+	})
+
+	generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
+	require.NoError(t, Plan(root, generation))
+	union := expr.AsObject(container).Attribute("Value").Type.(*expr.Union)
+	alias := union.Values[0].Attribute.Type.(expr.UserType)
+	generatedPackage := generation.GeneratedPackage("goa.design/goa/example/types")
+	exactDeclaration, err := generatedPackage.UserType(exact)
+	require.NoError(t, err)
+	branchDeclaration, err := generatedPackage.UnionBranchType(union, "text", alias)
+	require.NoError(t, err)
+	require.NotSame(t, exactDeclaration, branchDeclaration)
+
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, "ValueText", exactDeclaration.Name)
+	require.Equal(t, "ValueText2", branchDeclaration.Name)
+	services, err := NewServicesData(root, generation)
+	require.NoError(t, err)
+	typeFile := findFile(
+		Files("goa.design/goa/example", []*ServicesData{services}),
+		filepath.Join("gen", "types", "value_text.go"),
+	)
+	require.NotNil(t, typeFile)
+	code := renderSections(t, typeFile.SectionTemplates)
+	require.Contains(t, code, "type ValueText string")
+	require.Contains(t, code, "type ValueText2 string")
+}
 
 func TestService(t *testing.T) {
 	cases := []struct {
@@ -65,19 +281,12 @@ func TestService(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := codegen.RunDSL(t, c.DSL)
-			services := NewServicesData(root)
+			services := mustServicesData(t, root)
 			require.Len(t, root.Services, 1)
-			files := Files("goa.design/goa/example", root.Services[0], services, make(map[string][]string))
+			files := Files("goa.design/goa/example", []*ServicesData{services})
 			require.Greater(t, len(files), 0)
 
-			// Generate the code
-			buf := new(bytes.Buffer)
-			for _, s := range files[0].SectionTemplates[1:] {
-				require.NoError(t, s.Write(buf))
-			}
-			bs, err := format.Source(buf.Bytes())
-			require.NoError(t, err, buf.String())
-			code := string(bs)
+			code := renderServiceGolden(t, files, files[0])
 
 			// Compare with golden file
 			testutil.AssertGo(t, "testdata/golden/service_"+c.Name+".go.golden", code)
@@ -106,28 +315,24 @@ func TestStructPkgPath(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			userTypePkgs := make(map[string][]string)
 			root := codegen.RunDSL(t, c.DSL)
-			services := NewServicesData(root)
-			files := Files("goa.design/goa/example", root.Services[0], services, userTypePkgs)
+			services := mustServicesData(t, root)
+			files := Files("goa.design/goa/example", []*ServicesData{services})
 
 			// Check file count
-			expectedFiles := len(c.TypeFiles) + 1
+			expectedFiles := len(c.TypeFiles) + len(root.Services)
 			require.Len(t, files, expectedFiles, "unexpected number of files")
 
-			// First file is always the service file
-			buf := new(bytes.Buffer)
-			for _, s := range files[0].SectionTemplates[1:] {
-				require.NoError(t, s.Write(buf))
-			}
-			bs, err := format.Source(buf.Bytes())
-			require.NoError(t, err)
-			testutil.AssertGo(t, "testdata/golden/pkg_path_"+c.Name+"_service.go.golden", string(bs))
+			serviceFile := findFile(files, filepath.Join(codegen.Gendir, services.Get(root.Services[0].Name).PathName, "service.go"))
+			require.NotNil(t, serviceFile)
+			testutil.AssertGo(t, "testdata/golden/pkg_path_"+c.Name+"_service.go.golden", renderServiceGolden(t, files, serviceFile))
 
 			// Type files
-			for i, typeFile := range c.TypeFiles {
+			for _, typeFile := range c.TypeFiles {
+				file := findFile(files, typeFile)
+				require.NotNil(t, file)
 				buf := new(bytes.Buffer)
-				for _, s := range files[i+1].SectionTemplates[1:] {
+				for _, s := range file.SectionTemplates[1:] {
 					require.NoError(t, s.Write(buf))
 				}
 				bs, err := format.Source(buf.Bytes())
@@ -138,7 +343,7 @@ func TestStructPkgPath(t *testing.T) {
 
 			// For dupes case, test the second service
 			if c.Name == "dupes" && len(root.Services) > 1 {
-				files = Files("goa.design/goa/example", root.Services[1], services, userTypePkgs)
+				files = serviceFiles("goa.design/goa/example", root.Services[1], services)
 				require.Len(t, files, 1)
 				buf := new(bytes.Buffer)
 				for _, s := range files[0].SectionTemplates[1:] {
@@ -154,23 +359,17 @@ func TestStructPkgPath(t *testing.T) {
 
 func TestStructPkgPath_UnionImportsJSON(t *testing.T) {
 	root := codegen.RunDSL(t, testdata.PkgPathUnionDSL)
-	services := NewServicesData(root)
+	services := mustServicesData(t, root)
 	require.Len(t, root.Services, 1)
 
-	files := Files("goa.design/goa/example", root.Services[0], services, make(map[string][]string))
+	files := Files("goa.design/goa/example", []*ServicesData{services})
 	require.GreaterOrEqual(t, len(files), 2, "expected at least service.go + one struct:pkg:path file")
 
-	var typeFile *codegen.File
-	for _, f := range files {
-		if strings.HasSuffix(f.Path, filepath.Join("gen", "types", "type_with_union.go")) {
-			typeFile = f
-			break
-		}
-	}
-	require.NotNil(t, typeFile, "expected generated type file for struct:pkg:path type_with_union")
+	unionFile := findFile(files, filepath.Join("gen", "types", "unions.go"))
+	require.NotNil(t, unionFile, "expected generated union file in struct:pkg:path package")
 
 	buf := new(bytes.Buffer)
-	for _, s := range typeFile.SectionTemplates {
+	for _, s := range unionFile.SectionTemplates {
 		require.NoError(t, s.Write(buf))
 	}
 	code := buf.String()
@@ -181,18 +380,16 @@ func TestStructPkgPath_UnionImportsJSON(t *testing.T) {
 func TestStructPkgPath_UnionNamesSharePackageScopeAcrossServices(t *testing.T) {
 	root := codegen.RunDSL(t, testdata.PkgPathUnionNameScopeDSL)
 	render := func(servicesToRender []*expr.ServiceExpr) string {
-		services := NewServicesData(root)
-		userTypePkgs := make(map[string][]string)
+		services := mustServicesData(t, root)
 		var generated strings.Builder
-		for _, service := range servicesToRender {
-			files := Files("goa.design/goa/example", service, services, userTypePkgs)
-			for _, file := range files {
-				if !strings.Contains(file.Path, filepath.Join("gen", "types")) {
-					continue
-				}
-				for _, section := range file.SectionTemplates {
-					require.NoError(t, section.Write(&generated))
-				}
+		_ = servicesToRender
+		files := Files("goa.design/goa/example", []*ServicesData{services})
+		for _, file := range files {
+			if !strings.Contains(file.Path, filepath.Join("gen", "types")) {
+				continue
+			}
+			for _, section := range file.SectionTemplates {
+				require.NoError(t, section.Write(&generated))
 			}
 		}
 		return generated.String()
@@ -230,25 +427,105 @@ func unionFieldType(code, owner string) string {
 	return code[start : start+end]
 }
 
-func TestStructPkgPath_UnionJSONFieldBranchesGenerateAliases(t *testing.T) {
-	root := codegen.RunDSL(t, testdata.PkgPathUnionJSONFieldDSL)
-	services := NewServicesData(root)
-	require.Len(t, root.Services, 1)
+// mustServicesData runs the standalone declaration lifecycle used by service
+// tests and returns the frozen render analysis.
+func mustServicesData(t *testing.T, root *expr.RootExpr) *ServicesData {
+	t.Helper()
+	generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
+	require.NoError(t, Plan(root, generation))
+	require.NoError(t, generation.Freeze())
+	services, err := NewServicesData(root, generation)
+	require.NoError(t, err)
+	return services
+}
 
-	files := Files("goa.design/goa/example", root.Services[0], services, make(map[string][]string))
-	require.GreaterOrEqual(t, len(files), 2, "expected at least service.go + one struct:pkg:path file")
-
-	var typeFile *codegen.File
-	for _, f := range files {
-		if strings.HasSuffix(f.Path, filepath.Join("gen", "types", "type_with_json_field_union.go")) {
-			typeFile = f
-			break
+// countFiles returns how many generated files have the given path.
+func countFiles(files []*codegen.File, path string) int {
+	count := 0
+	for _, file := range files {
+		if file.Path == path {
+			count++
 		}
 	}
-	require.NotNil(t, typeFile, "expected generated type file for struct:pkg:path type_with_json_field_union")
+	return count
+}
+
+// findFile returns the generated file with path, or nil when no file matches.
+func findFile(files []*codegen.File, path string) *codegen.File {
+	for _, file := range files {
+		if file.Path == path {
+			return file
+		}
+	}
+	return nil
+}
+
+// findUserTypeData returns the render data for userType.
+func findUserTypeData(types []*UserTypeData, userType expr.UserType) *UserTypeData {
+	for _, data := range types {
+		if data.Type == userType {
+			return data
+		}
+	}
+	return nil
+}
+
+// renderSections renders sections without writing a generated file.
+func renderSections(t *testing.T, sections []*codegen.SectionTemplate) string {
+	t.Helper()
+	var rendered strings.Builder
+	for _, section := range sections {
+		require.NoError(t, section.Write(&rendered))
+	}
+	return rendered.String()
+}
+
+// renderServiceGolden reconstructs the former single-file declaration order
+// so existing service golden assertions remain unchanged after unions move to
+// their package-owned unions.go file.
+func renderServiceGolden(t *testing.T, files []*codegen.File, serviceFile *codegen.File) string {
+	t.Helper()
+	sections := append([]*codegen.SectionTemplate(nil), serviceFile.SectionTemplates[1:]...)
+	unionFile := findFile(files, filepath.Join(filepath.Dir(serviceFile.Path), "unions.go"))
+	if unionFile != nil {
+		insertAt := len(sections)
+		for i, section := range sections {
+			switch section.Name {
+			case "error-init-func", "viewed-result-type-to-service-result-type",
+				"service-result-type-to-viewed-result-type", "projected-type-to-service-type",
+				"service-type-to-projected-type", "transform-helpers":
+				insertAt = i
+			}
+			if insertAt != len(sections) {
+				break
+			}
+		}
+		sections = append(sections, make([]*codegen.SectionTemplate, len(unionFile.SectionTemplates)-1)...)
+		copy(sections[insertAt+len(unionFile.SectionTemplates)-1:], sections[insertAt:])
+		copy(sections[insertAt:], unionFile.SectionTemplates[1:])
+	}
+	buf := new(bytes.Buffer)
+	for _, section := range sections {
+		require.NoError(t, section.Write(buf))
+	}
+	formatted, err := format.Source(buf.Bytes())
+	require.NoError(t, err, buf.String())
+	return string(formatted)
+}
+
+func TestStructPkgPath_UnionJSONFieldBranchesGenerateAliases(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.PkgPathUnionJSONFieldDSL)
+	services := mustServicesData(t, root)
+	require.Len(t, root.Services, 1)
+
+	files := Files("goa.design/goa/example", []*ServicesData{services})
+	require.GreaterOrEqual(t, len(files), 2, "expected at least service.go + one struct:pkg:path file")
+
+	unionFile := findFile(files, filepath.Join("gen", "types", "unions.go"))
+	require.NotNil(t, unionFile, "expected package-owned union file")
 
 	buf := new(bytes.Buffer)
-	for _, s := range typeFile.SectionTemplates {
+	for _, s := range unionFile.SectionTemplates {
 		require.NoError(t, s.Write(buf))
 	}
 	code := buf.String()
@@ -270,23 +547,26 @@ func TestStructPkgPath_UnionJSONFieldBranchesGenerateAliases(t *testing.T) {
 
 func TestStructPkgPath_ExtendedUnionGeneratedInEachOwningPackage(t *testing.T) {
 	root := codegen.RunDSL(t, testdata.PkgPathExtendedUnionDSL)
-	services := NewServicesData(root)
+	services := mustServicesData(t, root)
 	require.Len(t, root.Services, 1)
 
-	files := Files("goa.design/goa/example", root.Services[0], services, make(map[string][]string))
+	files := Files("goa.design/goa/example", []*ServicesData{services})
 	require.GreaterOrEqual(t, len(files), 2)
 
-	var serviceFile, sharedTypeFile *codegen.File
+	var serviceFile, localUnionFile, sharedUnionFile *codegen.File
 	for _, f := range files {
 		switch {
 		case strings.HasSuffix(f.Path, filepath.Join("gen", "pkg_path_extended_union", "service.go")):
 			serviceFile = f
-		case strings.HasSuffix(f.Path, filepath.Join("gen", "types", "equipment_scope.go")):
-			sharedTypeFile = f
+		case strings.HasSuffix(f.Path, filepath.Join("gen", "pkg_path_extended_union", "unions.go")):
+			localUnionFile = f
+		case strings.HasSuffix(f.Path, filepath.Join("gen", "types", "unions.go")):
+			sharedUnionFile = f
 		}
 	}
 	require.NotNil(t, serviceFile)
-	require.NotNil(t, sharedTypeFile)
+	require.NotNil(t, localUnionFile)
+	require.NotNil(t, sharedUnionFile)
 
 	render := func(file *codegen.File) string {
 		buf := new(bytes.Buffer)
@@ -298,8 +578,9 @@ func TestStructPkgPath_ExtendedUnionGeneratedInEachOwningPackage(t *testing.T) {
 		return string(code)
 	}
 	serviceCode := render(serviceFile)
-	sharedTypeCode := render(sharedTypeFile)
+	localUnionCode := render(localUnionFile)
+	sharedUnionCode := render(sharedUnionFile)
 	require.Contains(t, serviceCode, "Scope Scope")
-	require.Contains(t, serviceCode, "type Scope struct")
-	require.Contains(t, sharedTypeCode, "type Scope struct")
+	require.Contains(t, localUnionCode, "type Scope struct")
+	require.Contains(t, sharedUnionCode, "type Scope struct")
 }

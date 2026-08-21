@@ -1,0 +1,445 @@
+// This file binds service types selected by one design root to the generated
+// packages that declare them. Planning records relocated user types and unions
+// before names freeze; rendering stores one canonical section per declaration
+// record so each package emits that declaration once.
+package service
+
+import (
+	"path"
+	"path/filepath"
+	"slices"
+	"strings"
+
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
+)
+
+type (
+	// plannedAttribute identifies one service attribute and the package inherited
+	// by nested types that do not select their own struct:pkg:path location.
+	plannedAttribute struct {
+		attribute *expr.AttributeExpr
+		service   *expr.ServiceExpr
+		location  *codegen.Location
+	}
+
+	// plannedUserType identifies one user type emitted in one generated package.
+	// The same expression may be copied into two packages through Extend.
+	plannedUserType struct {
+		userType    expr.UserType
+		packagePath string
+	}
+
+	// unionBranch identifies a generated user type that exists only to name one
+	// branch of its owning union.
+	unionBranch struct {
+		union *expr.Union
+		name  string
+	}
+
+	// rootTypeSet maps compiler-created copies back to the exact DSL declaration
+	// in the same design root. Generated union aliases have different typed
+	// origins and are not included.
+	rootTypeSet struct {
+		byOrigin map[expr.UserType]expr.UserType
+	}
+
+	// generatedPackageData owns the render data emitted into one Go package.
+	generatedPackageData struct {
+		importPath  string
+		outputPath  string
+		packageName string
+		types       map[*codegen.TypeDeclaration]*generatedTypeData
+		unions      map[codegen.UnionTypeID]*UnionTypeData
+	}
+
+	// generatedTypeData owns one relocated user-type declaration and optional
+	// error behavior at its metadata-selected file.
+	generatedTypeData struct {
+		declaration *codegen.TypeDeclaration
+		location    *codegen.Location
+		section     *codegen.SectionTemplate
+		error       *codegen.SectionTemplate
+	}
+)
+
+// Plan declares every relocated user type and union reachable from root.
+// User types are declared across the complete root before any union so exact
+// user-authored names always take precedence over generated union names.
+func Plan(root *expr.RootExpr, generation *codegen.Generation) error {
+	inputs := planningInputs(root)
+	rootTypes := newRootTypeSet(root)
+	for _, service := range root.Services {
+		// The service package record makes NewServicesData a render-only contract:
+		// its scope is unavailable until the generation freezes.
+		generation.GeneratedPackage(servicePackagePath(generation.GenPkg, service))
+	}
+
+	seenTypes := make(map[plannedUserType]struct{})
+	for _, input := range inputs {
+		if err := planUserTypes(input.attribute, input.service, input.location, generation, rootTypes, seenTypes); err != nil {
+			return err
+		}
+	}
+
+	seenTypes = make(map[plannedUserType]struct{})
+	for _, input := range inputs {
+		if err := planUnions(input.attribute, input.service, input.location, generation, rootTypes, seenTypes); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// planningInputs returns the service attributes that can cause service types
+// to be emitted. Unused root types are deliberately excluded.
+func planningInputs(root *expr.RootExpr) []plannedAttribute {
+	var inputs []plannedAttribute
+	for _, service := range root.Services {
+		for _, serviceError := range service.Errors {
+			inputs = append(inputs, plannedAttribute{attribute: serviceError.AttributeExpr, service: service})
+		}
+		for _, method := range service.Methods {
+			inputs = append(inputs,
+				plannedAttribute{attribute: method.Payload, service: service},
+				plannedAttribute{attribute: method.StreamingPayload, service: service},
+				plannedAttribute{attribute: method.Result, service: service},
+			)
+			if method.HasMixedResults() {
+				inputs = append(inputs, plannedAttribute{attribute: method.StreamingResult, service: service})
+			}
+			for _, methodError := range method.Errors {
+				inputs = append(inputs, plannedAttribute{attribute: methodError.AttributeExpr, service: service})
+			}
+		}
+		for _, userType := range root.Types {
+			services, ok := userType.Attribute().Meta["type:generate:force"]
+			if !ok || len(services) > 0 && !slices.Contains(services, service.Name) {
+				continue
+			}
+			inputs = append(inputs, plannedAttribute{
+				attribute: &expr.AttributeExpr{Type: userType},
+				service:   service,
+			})
+		}
+	}
+	return inputs
+}
+
+// planUserTypes traverses attribute and declares each relocated user type in
+// the package selected by its own or its enclosing type's metadata.
+func planUserTypes(attribute *expr.AttributeExpr, service *expr.ServiceExpr, location *codegen.Location, generation *codegen.Generation, rootTypes *rootTypeSet, seen map[plannedUserType]struct{}) error {
+	if attribute == nil || attribute.Type == expr.Empty {
+		return nil
+	}
+	recurse := func(attribute *expr.AttributeExpr, location *codegen.Location) error {
+		return planUserTypes(attribute, service, location, generation, rootTypes, seen)
+	}
+	switch actual := attribute.Type.(type) {
+	case expr.UserType:
+		declaredType := rootTypes.canonical(actual)
+		typeLocation := codegen.UserTypeLocation(actual)
+		if typeLocation == nil {
+			typeLocation = location
+		}
+		key := plannedUserType{
+			userType:    declaredType,
+			packagePath: generatedPackagePath(generation.GenPkg, service, typeLocation),
+		}
+		if _, ok := seen[key]; ok {
+			return nil
+		}
+		seen[key] = struct{}{}
+		if typeLocation != nil {
+			if _, err := generation.GeneratedPackage(key.packagePath).DeclareUserType(declaredType); err != nil {
+				return err
+			}
+		}
+		return recurse(actual.Attribute(), typeLocation)
+	case *expr.Object:
+		for _, named := range *actual {
+			if err := recurse(named.Attribute, location); err != nil {
+				return err
+			}
+		}
+	case *expr.Array:
+		return recurse(actual.ElemType, location)
+	case *expr.Map:
+		if err := recurse(actual.KeyType, location); err != nil {
+			return err
+		}
+		return recurse(actual.ElemType, location)
+	case *expr.Union:
+		for _, named := range actual.Values {
+			if userType, ok := generatedUnionBranch(named, rootTypes); ok {
+				if err := recurse(userType.Attribute(), location); err != nil {
+					return err
+				}
+				continue
+			}
+			if err := recurse(named.Attribute, location); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// planUnions traverses attribute after all user types have been declared and
+// records each relocated union in its owning package.
+func planUnions(attribute *expr.AttributeExpr, service *expr.ServiceExpr, location *codegen.Location, generation *codegen.Generation, rootTypes *rootTypeSet, seen map[plannedUserType]struct{}) error {
+	if attribute == nil || attribute.Type == expr.Empty {
+		return nil
+	}
+	recurse := func(attribute *expr.AttributeExpr, location *codegen.Location) error {
+		return planUnions(attribute, service, location, generation, rootTypes, seen)
+	}
+	switch actual := attribute.Type.(type) {
+	case expr.UserType:
+		declaredType := rootTypes.canonical(actual)
+		typeLocation := codegen.UserTypeLocation(actual)
+		if typeLocation == nil {
+			typeLocation = location
+		}
+		key := plannedUserType{
+			userType:    declaredType,
+			packagePath: generatedPackagePath(generation.GenPkg, service, typeLocation),
+		}
+		if _, ok := seen[key]; ok {
+			return nil
+		}
+		seen[key] = struct{}{}
+		return recurse(actual.Attribute(), typeLocation)
+	case *expr.Object:
+		for _, named := range sortedNamedAttributes(*actual) {
+			if err := recurse(named.Attribute, location); err != nil {
+				return err
+			}
+		}
+	case *expr.Array:
+		return recurse(actual.ElemType, location)
+	case *expr.Map:
+		if err := recurse(actual.KeyType, location); err != nil {
+			return err
+		}
+		return recurse(actual.ElemType, location)
+	case *expr.Union:
+		var generatedPackage *codegen.GeneratedPackage
+		if location != nil {
+			packagePath := generatedPackagePath(generation.GenPkg, service, location)
+			generatedPackage = generation.GeneratedPackage(packagePath)
+			if _, err := generatedPackage.DeclareUnion(actual); err != nil {
+				return err
+			}
+		}
+		for _, named := range actual.Values {
+			if userType, ok := generatedUnionBranch(named, rootTypes); ok {
+				if generatedPackage != nil {
+					if _, err := generatedPackage.DeclareUnionBranchType(actual, named.Name, userType); err != nil {
+						return err
+					}
+				}
+				if err := recurse(userType.Attribute(), location); err != nil {
+					return err
+				}
+				continue
+			}
+			if err := recurse(named.Attribute, location); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// newRootTypeSet records the exact declarations whose compiler-created copies
+// share package records. Generated union aliases have independent origins
+// and never enter this set.
+func newRootTypeSet(root *expr.RootExpr) *rootTypeSet {
+	userTypes := &rootTypeSet{
+		byOrigin: make(map[expr.UserType]expr.UserType, len(root.Types)+len(root.ResultTypes)+1),
+	}
+	for _, userType := range root.Types {
+		userTypes.add(userType)
+	}
+	for _, resultType := range root.ResultTypes {
+		userTypes.add(resultType)
+	}
+	userTypes.add(expr.ErrorResult)
+	return userTypes
+}
+
+// generatedUnionBranch identifies the user type synthesized by OneOf around a
+// branch that was not itself an exact DSL user-type declaration.
+func generatedUnionBranch(branch *expr.NamedAttributeExpr, rootTypes *rootTypeSet) (expr.UserType, bool) {
+	userType, ok := branch.Attribute.Type.(expr.UserType)
+	if !ok {
+		return nil, false
+	}
+	return userType, !rootTypes.contains(userType)
+}
+
+// add records one exact root declaration under its typed origin.
+func (s *rootTypeSet) add(userType expr.UserType) {
+	s.byOrigin[userType.Origin()] = userType
+}
+
+// canonical maps only a compiler copy whose typed origin belongs to this root
+// back to its exact declaration.
+func (s *rootTypeSet) canonical(userType expr.UserType) expr.UserType {
+	if canonical, ok := s.byOrigin[userType.Origin()]; ok {
+		return canonical
+	}
+	return userType
+}
+
+// contains reports whether userType is an exact root declaration or one of
+// its compiler copies.
+func (s *rootTypeSet) contains(userType expr.UserType) bool {
+	_, ok := s.byOrigin[userType.Origin()]
+	return ok
+}
+
+// generatedPackagePath returns the actual import path of the package selected
+// by location, or the service package when location is nil.
+func generatedPackagePath(genpkg string, service *expr.ServiceExpr, location *codegen.Location) string {
+	if location != nil {
+		return path.Join(genpkg, location.RelImportPath)
+	}
+	return servicePackagePath(genpkg, service)
+}
+
+// servicePackagePath returns the actual import path of service's generated Go
+// package.
+func servicePackagePath(genpkg string, service *expr.ServiceExpr) string {
+	return path.Join(genpkg, codegen.SnakeCase(service.Name))
+}
+
+// generatedPackage returns the root-owned render data for the package selected
+// by location, creating that owner on first use.
+func (d *ServicesData) generatedPackage(service *expr.ServiceExpr, location *codegen.Location) *generatedPackageData {
+	importPath := generatedPackagePath(d.generation.GenPkg, service, location)
+	if generatedPackage, ok := d.packages[importPath]; ok {
+		return generatedPackage
+	}
+	outputPath := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name))
+	packageName := strings.ToLower(codegen.Goify(service.Name, false))
+	if location != nil {
+		outputPath = filepath.Join(codegen.Gendir, filepath.FromSlash(location.RelImportPath))
+		packageName = location.PackageName()
+	}
+	generatedPackage := &generatedPackageData{
+		importPath:  importPath,
+		outputPath:  outputPath,
+		packageName: packageName,
+		types:       make(map[*codegen.TypeDeclaration]*generatedTypeData),
+		unions:      make(map[codegen.UnionTypeID]*UnionTypeData),
+	}
+	d.packages[importPath] = generatedPackage
+	return generatedPackage
+}
+
+// registerPackageData gives each relocated user type's canonical declaration
+// record one render section at its metadata-selected file.
+func (d *ServicesData) registerPackageData(service *expr.ServiceExpr, data *Data) error {
+	for i, method := range service.Methods {
+		methodData := data.Methods[i]
+		if err := d.registerMethodType(service, method.Payload, methodData.PayloadLoc, methodData.PayloadDef, &codegen.SectionTemplate{
+			Name:   "service-payload",
+			Source: serviceTemplates.Read(payloadT),
+			Data:   methodData,
+		}); err != nil {
+			return err
+		}
+		if method.StreamingPayload != nil {
+			if err := d.registerMethodType(service, method.StreamingPayload, codegen.UserTypeLocation(method.StreamingPayload.Type), methodData.StreamingPayloadDef, &codegen.SectionTemplate{
+				Name:   "service-streaming-payload",
+				Source: serviceTemplates.Read(streamingPayloadT),
+				Data:   methodData,
+			}); err != nil {
+				return err
+			}
+		}
+		if err := d.registerMethodType(service, method.Result, methodData.ResultLoc, methodData.ResultDef, &codegen.SectionTemplate{
+			Name:   "service-result",
+			Source: serviceTemplates.Read(resultT),
+			Data:   methodData,
+		}); err != nil {
+			return err
+		}
+		if method.HasMixedResults() && method.StreamingResult != nil {
+			if err := d.registerMethodType(service, method.StreamingResult, codegen.UserTypeLocation(method.StreamingResult.Type), methodData.StreamingResultDef, &codegen.SectionTemplate{
+				Name:   "service-streaming-result",
+				Source: serviceTemplates.Read(resultT),
+				Data: map[string]any{
+					"Result":     methodData.StreamingResult,
+					"ResultDef":  methodData.StreamingResultDef,
+					"ResultDesc": methodData.StreamingResultDesc,
+				},
+			}); err != nil {
+				return err
+			}
+		}
+	}
+	for _, userType := range data.userTypes {
+		if userType.Loc == nil {
+			continue
+		}
+		d.registerType(service, userType.Declaration, userType.Loc, &codegen.SectionTemplate{
+			Name:   "service-user-type",
+			Source: serviceTemplates.Read(userTypeT),
+			Data:   userType,
+		})
+	}
+	for _, errorType := range data.errorTypes {
+		if errorType.Loc == nil || errorType.Type == expr.ErrorResult {
+			continue
+		}
+		d.registerType(service, errorType.Declaration, errorType.Loc, &codegen.SectionTemplate{
+			Name:   "error-user-type",
+			Source: serviceTemplates.Read(userTypeT),
+			Data:   errorType,
+		})
+		generatedType := d.generatedPackage(service, errorType.Loc).types[errorType.Declaration]
+		if generatedType.error == nil {
+			generatedType.error = &codegen.SectionTemplate{
+				Name:    "service-error",
+				Source:  serviceTemplates.Read(errorT),
+				FuncMap: map[string]any{"errorName": errorName},
+				Data:    errorType,
+			}
+		}
+	}
+	return nil
+}
+
+// registerMethodType records one relocated method payload or result when it
+// has a generated declaration body.
+func (d *ServicesData) registerMethodType(service *expr.ServiceExpr, attribute *expr.AttributeExpr, location *codegen.Location, definition string, section *codegen.SectionTemplate) error {
+	if location == nil || definition == "" {
+		return nil
+	}
+	userType := attribute.Type.(expr.UserType)
+	declaration, err := d.generation.GeneratedPackage(
+		generatedPackagePath(d.generation.GenPkg, service, location),
+	).UserType(d.rootTypes.canonical(userType))
+	if err != nil {
+		return err
+	}
+	d.registerType(service, declaration, location, section)
+	return nil
+}
+
+// registerType stores section under declaration. Repeated uses of the same
+// canonical record retain the first root-order section and emit once.
+func (d *ServicesData) registerType(service *expr.ServiceExpr, declaration *codegen.TypeDeclaration, location *codegen.Location, section *codegen.SectionTemplate) {
+	generatedPackage := d.generatedPackage(service, location)
+	if _, ok := generatedPackage.types[declaration]; ok {
+		return
+	}
+	generatedPackage.types[declaration] = &generatedTypeData{
+		declaration: declaration,
+		location:    location,
+		section:     section,
+	}
+}

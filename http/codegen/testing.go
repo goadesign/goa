@@ -11,5 +11,22 @@ import (
 // generators read the design.
 func CreateHTTPServices(root *expr.RootExpr) *ServicesData {
 	codegen.NormalizeRoot(root)
-	return NewServicesData(service.NewServicesData(root), root.API.HTTP)
+	return NewServicesData(createServiceServices(root), root.API.HTTP)
+}
+
+// createServiceServices performs the complete package declaration lifecycle
+// required by transport test helpers.
+func createServiceServices(root *expr.RootExpr) *service.ServicesData {
+	generation := codegen.NewGeneration("goa.design/goa/example", nil)
+	if err := service.Plan(root, generation); err != nil {
+		panic(err)
+	}
+	if err := generation.Freeze(); err != nil {
+		panic(err)
+	}
+	services, err := service.NewServicesData(root, generation)
+	if err != nil {
+		panic(err)
+	}
+	return services
 }

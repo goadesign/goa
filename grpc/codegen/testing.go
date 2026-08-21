@@ -22,7 +22,24 @@ func RunGRPCDSL(t *testing.T, dsl func()) *expr.RootExpr {
 // generators read the design.
 func CreateGRPCServices(root *expr.RootExpr) *ServicesData {
 	codegen.NormalizeRoot(root)
-	return NewServicesData(service.NewServicesData(root))
+	return NewServicesData(createServiceServices(root))
+}
+
+// createServiceServices performs the complete package declaration lifecycle
+// required by transport test helpers.
+func createServiceServices(root *expr.RootExpr) *service.ServicesData {
+	generation := codegen.NewGeneration("goa.design/goa/example", nil)
+	if err := service.Plan(root, generation); err != nil {
+		panic(err)
+	}
+	if err := generation.Freeze(); err != nil {
+		panic(err)
+	}
+	services, err := service.NewServicesData(root, generation)
+	if err != nil {
+		panic(err)
+	}
+	return services
 }
 
 func sectionCode(t *testing.T, section ...*codegen.SectionTemplate) string {

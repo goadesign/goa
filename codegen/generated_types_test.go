@@ -87,6 +87,73 @@ func TestGeneratedPackageUserTypes(t *testing.T) {
 	require.Equal(t, "Widget", types.Scope().GoTypeName(&expr.AttributeExpr{Type: widget}))
 }
 
+// TestGeneratedPackageExactUserTypesDoNotMerge verifies that structural
+// equality does not weaken the exact-name contract for DSL declarations.
+func TestGeneratedPackageExactUserTypesDoNotMerge(t *testing.T) {
+	generation := NewGeneration("generated.local/gen", nil)
+	types := generation.GeneratedPackage("generated.local/gen/types")
+	first := generatedUserType("ValueText", "first")
+	equivalent := generatedUserType("ValueText", "second")
+
+	_, err := types.DeclareUserType(first)
+	require.NoError(t, err)
+	_, err = types.DeclareUserType(equivalent)
+	require.ErrorContains(t, err, "ValueText")
+	require.ErrorContains(t, err, "already declared")
+}
+
+// TestGeneratedPackageUnionBranchesShareDeclaration verifies that separately
+// allocated copies of one structural union reuse their generated branch alias.
+func TestGeneratedPackageUnionBranchesShareDeclaration(t *testing.T) {
+	generation := NewGeneration("generated.local/gen", nil)
+	types := generation.GeneratedPackage("generated.local/gen/types")
+	firstUnion, firstAlias := generatedUnionWithBranch("Value", "text", "first", expr.String)
+	secondUnion, secondAlias := generatedUnionWithBranch("Value", "text", "second", expr.String)
+
+	_, err := types.DeclareUnion(firstUnion)
+	require.NoError(t, err)
+	firstDeclaration, err := types.DeclareUnionBranchType(firstUnion, "text", firstAlias)
+	require.NoError(t, err)
+	_, err = types.DeclareUnion(secondUnion)
+	require.NoError(t, err)
+	secondDeclaration, err := types.DeclareUnionBranchType(secondUnion, "text", secondAlias)
+	require.NoError(t, err)
+	require.Same(t, firstDeclaration, secondDeclaration)
+	require.Empty(t, firstDeclaration.Name)
+
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, "ValueText", firstDeclaration.Name)
+	lookedUp, err := types.UnionBranchType(secondUnion, "text", secondAlias)
+	require.NoError(t, err)
+	require.Same(t, firstDeclaration, lookedUp)
+}
+
+// TestGeneratedPackageUnionBranchesAreIsolatedByUnion verifies that branch
+// aliases from different emitted union definitions never collapse together.
+func TestGeneratedPackageUnionBranchesAreIsolatedByUnion(t *testing.T) {
+	generation := NewGeneration("generated.local/gen", nil)
+	types := generation.GeneratedPackage("generated.local/gen/types")
+	firstUnion, firstAlias := generatedUnionWithBranch("Value", "text", "first", expr.String)
+	secondUnion, secondAlias := generatedUnionWithBranch("Value", "text", "second", expr.String)
+	secondUnion.TypeKey = "kind"
+
+	_, err := types.DeclareUnion(firstUnion)
+	require.NoError(t, err)
+	firstDeclaration, err := types.DeclareUnionBranchType(firstUnion, "text", firstAlias)
+	require.NoError(t, err)
+	_, err = types.DeclareUnion(secondUnion)
+	require.NoError(t, err)
+	secondDeclaration, err := types.DeclareUnionBranchType(secondUnion, "text", secondAlias)
+	require.NoError(t, err)
+	require.NotSame(t, firstDeclaration, secondDeclaration)
+
+	require.NoError(t, generation.Freeze())
+	require.ElementsMatch(t, []string{"ValueText", "ValueText2"}, []string{
+		firstDeclaration.Name,
+		secondDeclaration.Name,
+	})
+}
+
 // TestGeneratedPackageUnions verifies that emitted-definition identity makes
 // equivalent unions idempotent while different unions with the same base name
 // receive distinct declarations.
@@ -99,7 +166,7 @@ func TestGeneratedPackageUnions(t *testing.T) {
 
 	firstDeclaration, err := types.DeclareUnion(first)
 	require.NoError(t, err)
-	require.Equal(t, &TypeDeclaration{
+	require.Equal(t, &UnionDeclaration{
 		PackagePath: "generated.local/gen/types",
 	}, firstDeclaration)
 	equivalentDeclaration, err := types.DeclareUnion(equivalent)
@@ -119,6 +186,10 @@ func TestGeneratedPackageUnions(t *testing.T) {
 		firstDeclaration.Name,
 		differentDeclaration.Name,
 	})
+	require.ElementsMatch(t, []string{"ValueKind", "Value2Kind"}, []string{
+		firstDeclaration.KindName,
+		differentDeclaration.KindName,
+	})
 
 	reversedGeneration := NewGeneration("generated.local/gen", nil)
 	reversedTypes := reversedGeneration.GeneratedPackage("generated.local/gen/types")
@@ -131,18 +202,21 @@ func TestGeneratedPackageUnions(t *testing.T) {
 	require.Equal(t, differentDeclaration.Name, reversedDifferent.Name)
 }
 
-// TestGeneratedPackageUserTypeWinsUnionNameRegardlessOfOrder verifies that
-// pending unions cannot take an exact user-type name based on traversal order.
-func TestGeneratedPackageUserTypeWinsUnionNameRegardlessOfOrder(t *testing.T) {
+// TestGeneratedPackageUserTypeWinsUnionNamesRegardlessOfOrder verifies that
+// pending unions cannot take exact user-type or discriminator names based on
+// traversal order.
+func TestGeneratedPackageUserTypeWinsUnionNamesRegardlessOfOrder(t *testing.T) {
 	for _, unionFirst := range []bool{true, false} {
 		t.Run(fmt.Sprintf("union first %t", unionFirst), func(t *testing.T) {
 			generation := NewGeneration("generated.local/gen", nil)
 			types := generation.GeneratedPackage("generated.local/gen/types")
 			userType := generatedUserType("Value", "value")
+			kindUserType := generatedUserType("ValueKind", "value-kind")
 			union := generatedUnion("Value", "type", "value")
 			var (
 				userDeclaration  *TypeDeclaration
-				unionDeclaration *TypeDeclaration
+				kindDeclaration  *TypeDeclaration
+				unionDeclaration *UnionDeclaration
 				err              error
 			)
 			if unionFirst {
@@ -153,8 +227,12 @@ func TestGeneratedPackageUserTypeWinsUnionNameRegardlessOfOrder(t *testing.T) {
 				})
 				userDeclaration, err = types.DeclareUserType(userType)
 				require.NoError(t, err)
+				kindDeclaration, err = types.DeclareUserType(kindUserType)
+				require.NoError(t, err)
 			} else {
 				userDeclaration, err = types.DeclareUserType(userType)
+				require.NoError(t, err)
+				kindDeclaration, err = types.DeclareUserType(kindUserType)
 				require.NoError(t, err)
 				require.Panics(t, func() {
 					types.Scope().GoTypeName(&expr.AttributeExpr{Type: userType})
@@ -164,11 +242,16 @@ func TestGeneratedPackageUserTypeWinsUnionNameRegardlessOfOrder(t *testing.T) {
 			}
 
 			require.Equal(t, "Value", userDeclaration.Name)
+			require.Equal(t, "ValueKind", kindDeclaration.Name)
 			require.Empty(t, unionDeclaration.Name)
+			require.Empty(t, unionDeclaration.KindName)
 			require.NoError(t, generation.Freeze())
 			require.Equal(t, "Value", userDeclaration.Name)
+			require.Equal(t, "ValueKind", kindDeclaration.Name)
 			require.Equal(t, "Value2", unionDeclaration.Name)
+			require.Equal(t, "Value2Kind", unionDeclaration.KindName)
 			require.Equal(t, "Value", types.Scope().GoTypeName(&expr.AttributeExpr{Type: userType}))
+			require.Equal(t, "ValueKind", types.Scope().GoTypeName(&expr.AttributeExpr{Type: kindUserType}))
 			require.Equal(t, "Value2", types.Scope().GoTypeName(&expr.AttributeExpr{Type: union}))
 		})
 	}
@@ -234,8 +317,13 @@ func TestGenerationCatalogsAreIsolated(t *testing.T) {
 
 // generatedUserType builds a distinct user type for catalog tests.
 func generatedUserType(name, id string) expr.UserType {
+	return generatedUserTypeOf(name, id, expr.String)
+}
+
+// generatedUserTypeOf builds a distinct user type with the supplied shape.
+func generatedUserTypeOf(name, id string, dataType expr.DataType) expr.UserType {
 	return &expr.UserTypeExpr{
-		AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+		AttributeExpr: &expr.AttributeExpr{Type: dataType},
 		TypeName:      name,
 		UID:           id,
 	}
@@ -249,4 +337,16 @@ func generatedUnion(name, typeKey, valueKey string) *expr.Union {
 		TypeKey:  typeKey,
 		ValueKey: valueKey,
 	}
+}
+
+// generatedUnionWithBranch builds a union with one generated branch alias.
+func generatedUnionWithBranch(unionName, branchName, aliasID string, dataType expr.DataType) (*expr.Union, expr.UserType) {
+	alias := generatedUserTypeOf(unionName+expr.Title(branchName), aliasID, dataType)
+	return &expr.Union{
+		TypeName: unionName,
+		Values: []*expr.NamedAttributeExpr{{
+			Name:      branchName,
+			Attribute: &expr.AttributeExpr{Type: alias},
+		}},
+	}, alias
 }

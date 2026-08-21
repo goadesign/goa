@@ -18,7 +18,10 @@ import (
 func TestGenerateHTTPUnionUsedByRequestAndResponseCompiles(t *testing.T) {
 	t.Cleanup(func() { Generators = generators })
 	Generators = func(cmd string) ([]Genfunc, error) {
-		return []Genfunc{renderOnly(Service), renderOnly(Transport)}, nil
+		return []Genfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planServiceData, Generate: Transport},
+		}, nil
 	}
 
 	dsl := func() {

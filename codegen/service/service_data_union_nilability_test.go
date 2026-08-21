@@ -11,12 +11,15 @@ import (
 
 func TestBuildUnionTypeDataMarksNilableBranches(t *testing.T) {
 	union := unionWithBranchTypes()
-	data := buildUnionTypeData(
+	data, err := buildUnionTypeData(
 		union,
+		nil,
 		codegen.NewNameScope(),
 		&codegen.Location{RelImportPath: "gen/service"},
 		false,
+		nil,
 	)
+	assert.NoError(t, err)
 
 	nilable := make(map[string]bool, len(data.Fields))
 	for _, field := range data.Fields {

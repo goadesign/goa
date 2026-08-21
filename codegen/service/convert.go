@@ -54,6 +54,7 @@ func ConvertFiles(root *expr.RootExpr, service *expr.ServiceExpr, services *Serv
 			creationsByPath[path],
 			service,
 			svc,
+			services,
 		)
 		if err != nil {
 			return nil, err
@@ -125,6 +126,7 @@ func generateConvertFileForPath(
 	creations []*expr.TypeMap,
 	service *expr.ServiceExpr,
 	svc *Data,
+	services *ServicesData,
 ) (*codegen.File, error) {
 	if len(conversions) == 0 && len(creations) == 0 {
 		return nil, nil
@@ -193,10 +195,9 @@ func generateConvertFileForPath(
 		// Use the correct source context based on where the conversion file will be generated
 		var srcCtx *codegen.AttributeContext
 		if loc := codegen.UserTypeLocation(c.User); loc != nil {
-			// Create a context for the custom package with empty default package to avoid qualification
-			srcScope := codegen.NewNameScope()
-			// Register the user type in this scope - this will ensure proper type references
-			srcScope.GoTypeName(&expr.AttributeExpr{Type: c.User})
+			srcScope := services.generation.GeneratedPackage(
+				generatedPackagePath(services.generation.GenPkg, service, loc),
+			).Scope()
 			// Use conversion context so types in the same package are not qualified
 			srcCtx = codegen.NewAttributeContextForConversion(false, false, true, convertPkgName, srcScope)
 		} else {
@@ -249,10 +250,9 @@ func generateConvertFileForPath(
 		// Use the correct target context based on where the conversion file will be generated
 		var tgtCtx *codegen.AttributeContext
 		if loc := codegen.UserTypeLocation(c.User); loc != nil {
-			// Create a context for the custom package with empty default package to avoid qualification
-			tgtScope := codegen.NewNameScope()
-			// Register the user type in this scope - this will ensure proper type references
-			tgtScope.GoTypeName(&expr.AttributeExpr{Type: c.User})
+			tgtScope := services.generation.GeneratedPackage(
+				generatedPackagePath(services.generation.GenPkg, service, loc),
+			).Scope()
 			// Use conversion context so types in the same package are not qualified
 			tgtCtx = codegen.NewAttributeContextForConversion(false, false, true, convertPkgName, tgtScope)
 		} else {

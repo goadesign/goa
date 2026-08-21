@@ -12,6 +12,23 @@ import (
 // does before the generators read the design.
 func CreateJSONRPCServices(root *expr.RootExpr) *httpcodegen.ServicesData {
 	codegen.NormalizeRoot(root)
-	services := service.NewServicesData(root)
+	services := createServiceServices(root)
 	return httpcodegen.NewJSONRPCServicesData(services, &root.API.JSONRPC.HTTPExpr)
+}
+
+// createServiceServices performs the complete package declaration lifecycle
+// required by transport test helpers.
+func createServiceServices(root *expr.RootExpr) *service.ServicesData {
+	generation := codegen.NewGeneration("goa.design/goa/example", nil)
+	if err := service.Plan(root, generation); err != nil {
+		panic(err)
+	}
+	if err := generation.Freeze(); err != nil {
+		panic(err)
+	}
+	services, err := service.NewServicesData(root, generation)
+	if err != nil {
+		panic(err)
+	}
+	return services
 }

@@ -29,6 +29,9 @@ type (
 		ContentType string
 		// Views list the supported views indexed by name.
 		Views []*ViewExpr
+		// origin is the earliest result type declaration copied to create this
+		// result type.
+		origin UserType
 	}
 
 	// ViewExpr defines which fields to render when building a response. The view
@@ -137,7 +140,18 @@ func (rt *ResultTypeExpr) Dup(att *AttributeExpr) UserType {
 		UserTypeExpr: rt.UserTypeExpr.Dup(att).(*UserTypeExpr),
 		Identifier:   rt.Identifier,
 		Views:        rt.Views,
+		origin:       rt.Origin(),
 	}
+}
+
+// Origin returns the earliest result type declaration from which rt was
+// copied. Result types override their embedded user-type origin so the dynamic
+// result-type identity is preserved.
+func (rt *ResultTypeExpr) Origin() UserType {
+	if rt.origin != nil {
+		return rt.origin
+	}
+	return rt
 }
 
 // ID returns the identifier of the result type.
@@ -147,6 +161,13 @@ func (rt *ResultTypeExpr) ID() string {
 
 // Name returns the result type name.
 func (rt *ResultTypeExpr) Name() string { return rt.TypeName }
+
+// Rename changes the result type name and starts a new generated declaration
+// origin at rt.
+func (rt *ResultTypeExpr) Rename(name string) {
+	rt.UserTypeExpr.Rename(name)
+	rt.origin = nil
+}
 
 // View returns the view with the given name.
 func (rt *ResultTypeExpr) View(name string) *ViewExpr {

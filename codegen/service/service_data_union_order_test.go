@@ -63,20 +63,34 @@ func TestCollectUnionTypesDeterministicAcrossObjectOrder(t *testing.T) {
 }
 
 func collectServiceUnionTypeNames(att *expr.AttributeExpr, loc *codegen.Location) map[string]string {
-	scope := codegen.NewNameScope()
-	scopes := &serviceNameScopes{
-		local: scope,
-		packages: &packageScopes{
-			scopes: make(map[string]*codegen.NameScope),
-		},
+	service := &expr.ServiceExpr{Name: "test"}
+	generation := codegen.NewGeneration("generated.local/gen", nil)
+	generatedPackage := generation.GeneratedPackage(
+		generatedPackagePath(generation.GenPkg, service, loc),
+	)
+	object := att.Type.(*expr.Object)
+	for _, named := range *object {
+		_, err := generatedPackage.DeclareUnion(named.Attribute.Type.(*expr.Union))
+		if err != nil {
+			panic(err)
+		}
+	}
+	if err := generation.Freeze(); err != nil {
+		panic(err)
+	}
+	services := &ServicesData{
+		generation: generation,
+		packages:   make(map[string]*generatedPackageData),
 	}
 	seen := make(map[string]struct{})
-	unionByHash := make(map[string]*UnionTypeData)
-	collectUnionTypes(att, scopes, loc, unionByHash, seen, false)
+	unionByHash := make(map[unionDataKey]*UnionTypeData)
+	if err := services.collectUnionTypes(att, service, codegen.NewNameScope(), loc, unionByHash, seen, false); err != nil {
+		panic(err)
+	}
 
 	names := make(map[string]string, len(unionByHash))
-	for hash, data := range unionByHash {
-		names[hash] = data.Name
+	for key, data := range unionByHash {
+		names[string(key.identity)] = data.Name
 	}
 	return names
 }

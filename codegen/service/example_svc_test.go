@@ -32,7 +32,7 @@ func TestExampleServiceFiles(t *testing.T) {
 		for _, c := range cases {
 			t.Run(c.Name, func(t *testing.T) {
 				root := codegen.RunDSL(t, c.DSL)
-				services := NewServicesData(root)
+				services := mustServicesData(t, root)
 				require.Len(t, root.Services, 3)
 				fs := ExampleServiceFiles("", root, services)
 				require.Len(t, fs, 3)

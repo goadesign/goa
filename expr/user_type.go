@@ -14,6 +14,8 @@ type (
 		TypeName string
 		// UID of type
 		UID string
+		// origin is the earliest declaration copied to create this type.
+		origin UserType
 	}
 )
 
@@ -23,6 +25,14 @@ func (u *UserTypeExpr) ID() string {
 		return u.UID
 	}
 	return u.Name()
+}
+
+// Origin returns the earliest user type declaration from which u was copied.
+func (u *UserTypeExpr) Origin() UserType {
+	if u.origin != nil {
+		return u.origin
+	}
+	return u
 }
 
 // Kind implements DataKind.
@@ -45,6 +55,7 @@ func (u *UserTypeExpr) Rename(n string) {
 	u.AddMeta("name:original", u.TypeName)
 	delete(u.Meta, "struct:type:name")
 	u.TypeName = n
+	u.origin = nil
 }
 
 // IsCompatible returns true if u describes the (Go) type of val.
@@ -72,6 +83,7 @@ func (u *UserTypeExpr) Dup(att *AttributeExpr) UserType {
 		AttributeExpr: att,
 		TypeName:      u.TypeName,
 		UID:           u.UID,
+		origin:        u.Origin(),
 	}
 }
 

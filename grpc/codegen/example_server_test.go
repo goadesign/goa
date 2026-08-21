@@ -9,7 +9,6 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
 	ctestdata "goa.design/goa/v3/codegen/example/testdata"
-	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/codegen/testutil"
 )
 
@@ -27,7 +26,7 @@ func TestExampleServerFiles(t *testing.T) {
 			// reset global variable
 			example.Servers = make(example.ServersData)
 			root := codegen.RunDSL(t, c.DSL)
-			services := NewServicesData(service.NewServicesData(root))
+			services := NewServicesData(createServiceServices(root))
 			fs := ExampleServerFiles("", services)
 			require.Greater(t, len(fs), 0)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)

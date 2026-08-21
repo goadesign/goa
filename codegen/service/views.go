@@ -28,12 +28,21 @@ func ViewsFile(_ string, service *expr.ServiceExpr, services *ServicesData) *cod
 	// View-projected types cannot import the service package (which already
 	// depends on views), therefore unions must be generated in the views package
 	// when referenced by projected types.
-	unionByHash := make(map[string]*UnionTypeData)
+	unionByHash := make(map[unionDataKey]*UnionTypeData)
 	seenUnions := make(map[string]struct{})
 	viewLoc := &codegen.Location{RelImportPath: "views"}
-	viewScopes := &serviceNameScopes{local: svc.ViewScope}
 	for _, t := range svc.projectedTypes {
-		collectUnionTypes(&expr.AttributeExpr{Type: t.Type}, viewScopes, viewLoc, unionByHash, seenUnions, true)
+		if err := services.collectUnionTypes(
+			&expr.AttributeExpr{Type: t.Type},
+			service,
+			svc.ViewScope,
+			viewLoc,
+			unionByHash,
+			seenUnions,
+			true,
+		); err != nil {
+			panic(err) // bug
+		}
 	}
 	unions := make([]*UnionTypeData, 0, len(unionByHash))
 	for _, u := range unionByHash {
