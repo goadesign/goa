@@ -93,6 +93,7 @@ func TransformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 		source, target, dir = h.UnwrapPair(source, target)
 		prelude = dir.apply(&sourceVar, &targetVar, &newVar)
 	}
+	ta = enterTransformAttrs(source, target, ta)
 	if err := IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
 		return "", err
 	}
@@ -144,6 +145,7 @@ func TransformHelperName(source, target *expr.AttributeExpr, ta *TransformAttrs)
 		if h := ta.Hooks; h != nil && h.HelperNameAttrs != nil {
 			source, target = h.HelperNameAttrs(source, target)
 		}
+		ta = enterTransformAttrs(source, target, ta)
 		sname = Goify(ta.SourceCtx.Scope.Name(source, ta.SourceCtx.Pkg(source), ta.SourceCtx.Pointer, ta.SourceCtx.UseDefault), true)
 		tname = Goify(ta.TargetCtx.Scope.Name(target, ta.TargetCtx.Pkg(target), ta.TargetCtx.Pointer, ta.TargetCtx.UseDefault), true)
 		prefix = ta.Prefix
@@ -622,6 +624,7 @@ func collectHelpers(source, target *expr.AttributeExpr, req, topLevel bool, ta *
 	if h := ta.Hooks; h != nil && h.UnwrapPair != nil {
 		source, target, _ = h.UnwrapPair(source, target)
 	}
+	ta = enterTransformAttrs(source, target, ta)
 	if topLevel {
 		req = true
 	} else {
@@ -680,16 +683,19 @@ func collectHelpers(source, target *expr.AttributeExpr, req, topLevel bool, ta *
 	return helpers, err
 }
 
+// enterTransformAttrs returns transform attributes whose source and target
+// resolvers independently own the attributes being transformed.
+func enterTransformAttrs(source, target *expr.AttributeExpr, attributes *TransformAttrs) *TransformAttrs {
+	entered := *attributes
+	entered.SourceCtx = attributes.SourceCtx.Enter(source)
+	entered.TargetCtx = attributes.TargetCtx.Enter(target)
+	return &entered
+}
+
 // generateHelper generates the code that transforms instances of source into
 // target. Both source and target must be user types. The caller
 // (collectHelpers) guarantees no helper was generated yet for the pair.
 func generateHelper(source, target *expr.AttributeExpr, req bool, ta *TransformAttrs, seen map[string]*TransformFunctionData) (*TransformFunctionData, error) {
-	ta = &TransformAttrs{
-		SourceCtx: ta.SourceCtx.Enter(source),
-		TargetCtx: ta.TargetCtx.Enter(target),
-		Prefix:    ta.Prefix,
-		Hooks:     ta.Hooks,
-	}
 	name := TransformHelperName(source, target, ta)
 
 	code, err := TransformAttribute(source, target, "v", "res", true, ta)

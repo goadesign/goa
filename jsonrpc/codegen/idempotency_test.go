@@ -32,7 +32,7 @@ func TestIdempotentJSONRPCEndpointCodegen(t *testing.T) {
 		})
 	})
 	services := CreateJSONRPCServices(root)
-	clientFiles := ClientFiles("", services)
+	clientFiles := ClientFiles(services)
 	require.NotEmpty(t, clientFiles)
 
 	var clientCode string

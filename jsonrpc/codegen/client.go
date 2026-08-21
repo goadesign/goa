@@ -12,20 +12,20 @@ import (
 )
 
 // ClientFiles returns the generated JSON-RPC client files.
-func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File {
+func ClientFiles(data *httpcodegen.ServicesData) []*codegen.File {
 	jsvcs := data.Root.API.JSONRPC.Services
 	files := make([]*codegen.File, 0, len(jsvcs)*3)
 	for _, svc := range jsvcs {
-		files = append(files, addEndpointImports(clientFile(genpkg, svc, data), genpkg, svc.HTTPEndpoints...))
-		if f := websocketClientFile(genpkg, svc, data); f != nil {
-			files = append(files, addEndpointImports(f, genpkg, jsonRPCWebSocketEndpoints(svc)...))
+		files = append(files, addEndpointImports(clientFile(svc, data), data, svc.HTTPEndpoints...))
+		if f := websocketClientFile(svc, data); f != nil {
+			files = append(files, addEndpointImports(f, data, jsonRPCWebSocketEndpoints(svc)...))
 		}
-		if f := sseClientFile(genpkg, svc, data); f != nil {
-			files = append(files, addEndpointImports(f, genpkg, jsonRPCSSEEndpoints(svc)...))
+		if f := sseClientFile(svc, data); f != nil {
+			files = append(files, addEndpointImports(f, data, jsonRPCSSEEndpoints(svc)...))
 		}
 	}
 	for _, svc := range jsvcs {
-		f := httpcodegen.ClientEncodeDecodeFile(genpkg, svc, data)
+		f := httpcodegen.ClientEncodeDecodeFile(svc, data)
 		if f == nil {
 			continue
 		}
@@ -49,13 +49,13 @@ func ClientFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 		if n := len(data.Get(svc.Name()).Endpoints); swapped != n {
 			panic(fmt.Sprintf("jsonrpc: swapped %d response decoders for service %q, expected %d", swapped, svc.Name(), n))
 		}
-		files = append(files, addEndpointImports(f, genpkg, svc.HTTPEndpoints...))
+		files = append(files, addEndpointImports(f, data, svc.HTTPEndpoints...))
 	}
 	return files
 }
 
 // clientFile returns the client HTTP transport file
-func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
+func clientFile(svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "jsonrpc", svcName, "client", "client.go")
@@ -77,8 +77,8 @@ func clientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 			codegen.GoaImport(""),
 			codegen.GoaImport("jsonrpc"),
 			codegen.GoaNamedImport("http", "goahttp"),
-			{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-			{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
+			services.ServiceImport(svc.Name()),
+			services.ViewImport(svc.Name()),
 		}),
 	}
 	sections = append(sections, &codegen.SectionTemplate{

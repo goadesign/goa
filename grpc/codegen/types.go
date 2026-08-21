@@ -12,20 +12,20 @@ import (
 
 // ServerTypeFiles returns the server types files containing all the server
 // interfaces and types needed to implement gRPC server.
-func ServerTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
+func ServerTypeFiles(services *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(services.Root.API.GRPC.Services))
 	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = addEndpointImports(typesFile(genpkg, svc, services, true), genpkg, svc.GRPCEndpoints...)
+		fw[i] = addEndpointImports(typesFile(svc, services, true), services, svc.GRPCEndpoints...)
 	}
 	return fw
 }
 
 // ClientTypeFiles returns the client types files containing all the client
 // interfaces and types needed to implement gRPC client.
-func ClientTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
+func ClientTypeFiles(services *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(services.Root.API.GRPC.Services))
 	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = addEndpointImports(typesFile(genpkg, svc, services, false), genpkg, svc.GRPCEndpoints...)
+		fw[i] = addEndpointImports(typesFile(svc, services, false), services, svc.GRPCEndpoints...)
 	}
 	return fw
 }
@@ -33,7 +33,7 @@ func ClientTypeFiles(genpkg string, services *ServicesData) []*codegen.File {
 // typesFile returns the file defining the gRPC types for the given service.
 // svr indicates whether the file is generated for the server (true) or the
 // client (false) package.
-func typesFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData, svr bool) *codegen.File {
+func typesFile(svc *expr.GRPCServiceExpr, services *ServicesData, svr bool) *codegen.File {
 	var (
 		initData []*InitData
 
@@ -97,9 +97,9 @@ func typesFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData,
 		imports := []*codegen.ImportSpec{
 			{Path: "unicode/utf8"},
 			codegen.GoaImport(""),
-			{Path: path.Join(genpkg, svcName), Name: sd.Service.PkgName},
-			{Path: path.Join(genpkg, svcName, "views"), Name: sd.Service.ViewsPkg},
-			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: sd.PkgName},
+			services.ServiceImport(svc.Name()),
+			services.ViewImport(svc.Name()),
+			services.PackageImport(path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
 		}
 		// Add imports if Any type is used
 		if usesAnyType(svc.GRPCEndpoints, true) {
@@ -114,8 +114,7 @@ func typesFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData,
 				Source: grpcTemplates.Read(grpcTypeInitT),
 				Data:   init,
 				FuncMap: map[string]any{
-					"isAlias":  expr.IsAlias,
-					"fullName": fullTypeName,
+					"isAlias": expr.IsAlias,
 				},
 			})
 		}
@@ -138,13 +137,4 @@ func typesFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData,
 		}
 	}
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
-}
-
-// fullTypeName returns the name of the given type qualified with the name of
-// its package when the type is defined in an explicit user type location.
-func fullTypeName(dt expr.DataType) string {
-	if loc := codegen.UserTypeLocation(dt); loc != nil {
-		return loc.PackageName() + "." + dt.Name()
-	}
-	return dt.Name()
 }

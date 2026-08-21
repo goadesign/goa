@@ -23,8 +23,8 @@ func TestJSONRPCSSEIntegration(t *testing.T) {
 	services := CreateJSONRPCServices(root)
 
 	// Generate all files
-	serverFiles := ServerFiles("", services)
-	clientFiles := ClientFiles("", services)
+	serverFiles := ServerFiles(services)
+	clientFiles := ClientFiles(services)
 
 	// Combine all files
 	allFiles := make([]*codegen.File, 0, len(serverFiles)+len(clientFiles))

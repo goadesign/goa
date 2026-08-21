@@ -27,7 +27,7 @@ func TestServerHandler(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
-			fs := ServerFiles(genpkg, services)
+			fs := ServerFiles(services)
 			sections := codegentest.Sections(fs, "server.go", "server-handler")
 			require.Greater(t, len(sections), 0)
 			code := codegen.SectionCode(t, sections[0])

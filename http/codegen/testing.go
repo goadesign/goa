@@ -20,8 +20,11 @@ func CreateHTTPServices(root *expr.RootExpr) *ServicesData {
 // createServiceServices performs the complete package declaration lifecycle
 // required by transport test helpers.
 func createServiceServices(root *expr.RootExpr) *service.ServicesData {
-	generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
+	generation := codegen.NewGeneration("/", []eval.Root{root})
 	if err := service.Plan(root, generation); err != nil {
+		panic(err)
+	}
+	if err := Plan(generation); err != nil {
 		panic(err)
 	}
 	if err := generation.Freeze(); err != nil {

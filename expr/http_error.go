@@ -1,3 +1,5 @@
+// This file binds reusable HTTP error-response policy to the concrete error
+// returned by each endpoint method.
 package expr
 
 import (
@@ -87,16 +89,7 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 
 // Finalize looks up the corresponding method error expression.
 func (e *HTTPErrorExpr) Finalize(a *HTTPEndpointExpr) {
-	var ee *ErrorExpr
-	switch p := e.Response.Parent.(type) {
-	case *HTTPEndpointExpr:
-		ee = p.MethodExpr.Error(e.Name)
-	case *HTTPServiceExpr:
-		ee = p.Error(e.Name)
-	case *RootExpr:
-		ee = Root.Error(e.Name)
-	}
-	e.ErrorExpr = ee
+	e.ErrorExpr = a.MethodExpr.Error(e.Name)
 	e.Response.Finalize(a, e.AttributeExpr)
 	if e.Response.Body == nil {
 		e.Response.Body = httpErrorResponseBody(a, e)
@@ -117,6 +110,20 @@ func (e *HTTPErrorExpr) Finalize(a *HTTPEndpointExpr) {
 		return
 	}
 	e.Response.ContentType = mt.Identifier
+}
+
+// mappedError returns the error declaration that owns this reusable HTTP
+// response policy before the policy is applied to an endpoint method.
+func (e *HTTPErrorExpr) mappedError() (*ErrorExpr, string) {
+	switch parent := e.Response.Parent.(type) {
+	case *HTTPEndpointExpr:
+		return parent.MethodExpr.Error(e.Name), "method"
+	case *HTTPServiceExpr:
+		return parent.Error(e.Name), "service"
+	case *RootExpr:
+		return Root.Error(e.Name), "API"
+	}
+	return nil, ""
 }
 
 // Dup creates a copy of the error expression.

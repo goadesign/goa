@@ -15,20 +15,20 @@ import (
 // contain the server which implements the generated gRPC server interface and
 // encoders and decoders to transform protocol buffer types and gRPC metadata
 // into goa types and vice versa.
-func ServerFiles(genpkg string, services *ServicesData) []*codegen.File {
+func ServerFiles(services *ServicesData) []*codegen.File {
 	svcLen := len(services.Root.API.GRPC.Services)
 	fw := make([]*codegen.File, 2*svcLen)
 	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = addEndpointImports(serverFile(genpkg, svc, services), genpkg, svc.GRPCEndpoints...)
+		fw[i] = addEndpointImports(serverFile(svc, services), services, svc.GRPCEndpoints...)
 	}
 	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i+svcLen] = addEndpointImports(serverEncodeDecode(genpkg, svc, services), genpkg, svc.GRPCEndpoints...)
+		fw[i+svcLen] = addEndpointImports(serverEncodeDecode(svc, services), services, svc.GRPCEndpoints...)
 	}
 	return fw
 }
 
 // serverFile returns the files defining the gRPC server.
-func serverFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
+func serverFile(svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
 	var (
 		fpath    string
 		sections []*codegen.SectionTemplate
@@ -44,9 +44,9 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 			codegen.GoaImport(""),
 			codegen.GoaNamedImport("grpc", "goagrpc"),
 			{Path: "google.golang.org/grpc/codes"},
-			{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
-			{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
-			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
+			services.ServiceImport(svc.Name()),
+			services.ViewImport(svc.Name()),
+			services.PackageImport(path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
 		}
 		for _, e := range data.Endpoints {
 			if e.Request.StreamEnvelope != nil {
@@ -125,7 +125,7 @@ func serverFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData
 
 // serverEncodeDecode returns the file defining the gRPC server encoding and
 // decoding logic.
-func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
+func serverEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
 	var (
 		fpath    string
 		sections []*codegen.SectionTemplate
@@ -145,9 +145,9 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *Serv
 			{Path: "google.golang.org/grpc/metadata"},
 			codegen.GoaImport(""),
 			codegen.GoaNamedImport("grpc", "goagrpc"),
-			{Path: path.Join(genpkg, svcName), Name: data.Service.PkgName},
-			{Path: path.Join(genpkg, svcName, "views"), Name: data.Service.ViewsPkg},
-			{Path: path.Join(genpkg, "grpc", svcName, pbPkgName), Name: data.PkgName},
+			services.ServiceImport(svc.Name()),
+			services.ViewImport(svc.Name()),
+			services.PackageImport(path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
 		}
 		sections = []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
 
@@ -181,7 +181,7 @@ func serverEncodeDecode(genpkg string, svc *expr.GRPCServiceExpr, services *Serv
 func transTmplFuncs(s *expr.GRPCServiceExpr, services *ServicesData) map[string]any {
 	return map[string]any{
 		"goTypeRef": func(dt expr.DataType) string {
-			return services.ServicesData.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+			return services.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 		},
 	}
 }

@@ -124,7 +124,7 @@ func TestPayloadConstructor(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
 			require.Len(t, root.API.HTTP.Services, 1)
 			services := CreateHTTPServices(root)
-			fs := typesFile("", root.API.HTTP.Services[0], true, services)
+			fs := typesFile(root.API.HTTP.Services[0], true, services)
 			sections := fs.SectionTemplates
 			var section *codegen.SectionTemplate
 			for _, s := range sections {

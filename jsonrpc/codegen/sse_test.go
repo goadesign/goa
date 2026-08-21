@@ -27,7 +27,7 @@ func TestJSONRPCSSE(t *testing.T) {
 			services := CreateJSONRPCServices(root)
 
 			// Generate server files (includes the SSE streams file)
-			fs := ServerFiles("", services)
+			fs := ServerFiles(services)
 			require.NotEmpty(t, fs, "expected server files to be generated")
 
 			// Debug: print all generated files

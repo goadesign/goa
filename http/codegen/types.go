@@ -10,19 +10,19 @@ import (
 )
 
 // ServerTypeFiles returns the HTTP transport type files.
-func ServerTypeFiles(genpkg string, data *ServicesData) []*codegen.File {
+func ServerTypeFiles(data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(data.Expressions.Services))
 	for i, svc := range data.Expressions.Services {
-		fw[i] = addEndpointImports(typesFile(genpkg, svc, true, data), genpkg, svc.HTTPEndpoints...)
+		fw[i] = addEndpointImports(typesFile(svc, true, data), data, svc.HTTPEndpoints...)
 	}
 	return fw
 }
 
 // ClientTypeFiles returns the HTTP transport client types files.
-func ClientTypeFiles(genpkg string, data *ServicesData) []*codegen.File {
+func ClientTypeFiles(data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(data.Expressions.Services))
 	for i, svc := range data.Expressions.Services {
-		fw[i] = addEndpointImports(typesFile(genpkg, svc, false, data), genpkg, svc.HTTPEndpoints...)
+		fw[i] = addEndpointImports(typesFile(svc, false, data), data, svc.HTTPEndpoints...)
 	}
 	return fw
 }
@@ -51,7 +51,7 @@ func ClientTypeFiles(genpkg string, data *ServicesData) []*codegen.File {
 //
 //   - Response body fields (if the body is a struct) and header variables hold
 //     pointers when not required and have no default value.
-func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *codegen.File {
+func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *codegen.File {
 	var (
 		data    = services.Get(svc.Name())
 		svcName = data.Service.PathName
@@ -85,12 +85,12 @@ func typesFile(genpkg string, svc *expr.HTTPServiceExpr, svr bool, services *Ser
 		{Path: "encoding/json"},
 		{Path: "fmt"},
 		{Path: "unicode/utf8"},
-		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+		services.ServiceImport(svc.Name()),
 	}
 	if len(data.UnionTypes) > 0 {
 		imports = append(imports, &codegen.ImportSpec{Path: "bytes"})
 	}
-	views := &codegen.ImportSpec{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg}
+	views := services.ViewImport(svc.Name())
 	if svr {
 		imports = append(imports, codegen.GoaImport(""), views)
 	} else {

@@ -4,7 +4,7 @@ func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .Ret
 {{- if .ReturnIsStruct }}
 	{{- range .Args }}
 		{{- if .FieldName }}
-			{{ $.ReturnVarName }}.{{ .FieldName }} = {{ if isAlias .FieldType }}{{ fullName .FieldType }}({{ end }}{{ .Name }}{{ if isAlias .FieldType }}){{ end }}
+			{{ $.ReturnVarName }}.{{ .FieldName }} = {{ if isAlias .FieldType }}{{ .FieldTypeRef }}({{ end }}{{ .Name }}{{ if isAlias .FieldType }}){{ end }}
 		{{- end }}
 	{{- end }}
 {{- end }}

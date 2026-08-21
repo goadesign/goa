@@ -32,11 +32,11 @@ func generators(cmd string) ([]Genfunc, error) {
 	case "gen":
 		return []Genfunc{
 			{Plan: planServiceData, Generate: Service},
-			{Plan: planServiceData, Generate: Transport},
+			{Plan: planTransportData, Generate: Transport},
 			{Plan: planServiceData, Generate: OpenAPI},
 		}, nil
 	case "example":
-		return []Genfunc{{Plan: planServiceData, Generate: Example}}, nil
+		return []Genfunc{{Plan: planTransportData, Generate: Example}}, nil
 	default:
 		return nil, fmt.Errorf("unknown command %q", cmd)
 	}

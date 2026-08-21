@@ -1,3 +1,5 @@
+// This file verifies deterministic HTTP wire union identity and confirms that
+// detached wire expressions do not retain service package ownership.
 package codegen
 
 import (
@@ -78,8 +80,8 @@ func TestCollectHTTPUnionTypesReusesSameShapedDeclarationsAndReferences(t *testi
 	}
 
 	scope := cg.NewNameScope()
-	unions := make(map[string]*svc.UnionTypeData)
-	collectHTTPUnionTypes(bodies, scope, unions, make(map[string]struct{}))
+	unions := make(map[cg.UnionTypeID]*svc.UnionTypeData)
+	collectHTTPUnionTypes(bodies, scope, unions, make(map[expr.UserType]struct{}))
 
 	emitted := make([]string, 0, len(unions))
 	for _, union := range unions {
@@ -126,6 +128,68 @@ func TestHTTPServiceDataReusesSameShapedMethodBodyUnions(t *testing.T) {
 	require.Contains(t, data.Endpoint("second").Payload.Request.ServerBody.Def, "Value *Value ")
 }
 
+func TestMakeHTTPTypeRemovesServicePackageOwnershipFromWireCopy(t *testing.T) {
+	nested := &expr.UserTypeExpr{
+		TypeName: "Nested",
+		AttributeExpr: &expr.AttributeExpr{
+			Type: &expr.Object{
+				{Name: "choice", Attribute: &expr.AttributeExpr{Type: makeUnionForOrderTest("Choice", "text", "number")}},
+			},
+			Meta: expr.MetaExpr{"struct:pkg:path": {"service/types"}},
+		},
+	}
+	outer := &expr.UserTypeExpr{
+		TypeName: "Envelope",
+		AttributeExpr: &expr.AttributeExpr{
+			Type: &expr.Object{
+				{Name: "nested", Attribute: &expr.AttributeExpr{Type: nested}},
+			},
+			Meta: expr.MetaExpr{"struct:pkg:path": {"service/types"}},
+		},
+	}
+
+	wire := makeHTTPType(&expr.AttributeExpr{Type: outer})
+	wireOuter := wire.Type.(expr.UserType)
+	wireNested := expr.AsObject(wireOuter.Attribute().Type).Attribute("nested").Type.(expr.UserType)
+
+	require.NotContains(t, wireOuter.Attribute().Meta, "struct:pkg:path")
+	require.NotContains(t, wireNested.Attribute().Meta, "struct:pkg:path")
+	require.Contains(t, outer.Attribute().Meta, "struct:pkg:path")
+	require.Contains(t, nested.Attribute().Meta, "struct:pkg:path")
+}
+
+func TestStreamingHTTPTypeRemovesServicePackageOwnershipFromWireCopy(t *testing.T) {
+	nested := &expr.UserTypeExpr{
+		TypeName: "Nested",
+		AttributeExpr: &expr.AttributeExpr{
+			Type: &expr.Object{
+				{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}},
+			},
+			Meta: expr.MetaExpr{"struct:pkg:path": {"service/types"}},
+		},
+	}
+	outer := &expr.UserTypeExpr{
+		TypeName: "Envelope",
+		AttributeExpr: &expr.AttributeExpr{
+			Type: &expr.Object{
+				{Name: "nested", Attribute: &expr.AttributeExpr{Type: nested}},
+			},
+			Meta: expr.MetaExpr{"struct:pkg:path": {"service/types"}},
+		},
+	}
+	body := &expr.AttributeExpr{Type: outer}
+	endpoint := &expr.HTTPEndpointExpr{StreamingBody: body}
+
+	wire := new(shapedBodies).streaming(endpoint)
+	wireOuter := wire.Type.(expr.UserType)
+	wireNested := expr.AsObject(wireOuter.Attribute().Type).Attribute("nested").Type.(expr.UserType)
+
+	require.NotContains(t, wireOuter.Attribute().Meta, "struct:pkg:path")
+	require.NotContains(t, wireNested.Attribute().Meta, "struct:pkg:path")
+	require.Contains(t, outer.Attribute().Meta, "struct:pkg:path")
+	require.Contains(t, nested.Attribute().Meta, "struct:pkg:path")
+}
+
 func sameShapedValueUnionDSL() {
 	dsl.Attribute("bool", dsl.Boolean)
 	dsl.Attribute("number", dsl.Float64)
@@ -133,13 +197,13 @@ func sameShapedValueUnionDSL() {
 
 func collectHTTPUnionTypeNames(att *expr.AttributeExpr) map[string]string {
 	scope := cg.NewNameScope()
-	seen := make(map[string]struct{})
-	unionByHash := make(map[string]*svc.UnionTypeData)
-	collectHTTPUnionTypes(att, scope, unionByHash, seen)
+	seen := make(map[expr.UserType]struct{})
+	unionTypes := make(map[cg.UnionTypeID]*svc.UnionTypeData)
+	collectHTTPUnionTypes(att, scope, unionTypes, seen)
 
-	names := make(map[string]string, len(unionByHash))
-	for hash, data := range unionByHash {
-		names[hash] = data.Name
+	names := make(map[string]string, len(unionTypes))
+	for identity, data := range unionTypes {
+		names[identity.Hash()] = data.Name
 	}
 	return names
 }

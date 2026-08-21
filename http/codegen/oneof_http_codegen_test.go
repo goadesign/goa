@@ -67,7 +67,7 @@ func renderClientCLISectionCode(t *testing.T, dsl func(), fileIndex, sectionInde
 
 	root := expr.RunDSL(t, dsl)
 	services := CreateHTTPServices(root)
-	fs := ClientCLIFiles("", services)
+	fs := ClientCLIFiles(services)
 
 	return codegen.SectionCode(t, fs[fileIndex].SectionTemplates[sectionIndex])
 }
@@ -80,7 +80,7 @@ func renderClientTypesCode(t *testing.T, dsl func()) string {
 
 	root := expr.RunDSL(t, dsl)
 	services := CreateHTTPServices(root)
-	fs := typesFile(genpkg, root.API.HTTP.Services[0], false, services)
+	fs := typesFile(root.API.HTTP.Services[0], false, services)
 
 	var buf bytes.Buffer
 	for _, s := range fs.SectionTemplates[1:] {
@@ -97,7 +97,7 @@ func renderClientDecodeCode(t *testing.T, dsl func()) string {
 
 	root := expr.RunDSL(t, dsl)
 	services := CreateHTTPServices(root)
-	fs := ClientFiles("", services)
+	fs := ClientFiles(services)
 	require.Len(t, fs, 2)
 
 	sections := fs[1].SectionTemplates

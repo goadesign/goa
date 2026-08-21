@@ -1,3 +1,5 @@
+// This file prepares, validates, and finalizes the gRPC transport contract for
+// one service method.
 package expr
 
 import (
@@ -250,6 +252,31 @@ func (e *GRPCEndpointExpr) Validate() error {
 		if ee := e.MethodExpr.Error(er.Name); ee != nil && ee.Type != ErrorResult && IsObject(ee.Type) {
 			verr.Merge(validateRPCTags(AsObject(ee.Type), e))
 		}
+	}
+	verr.Merge(e.validateErrorMappings())
+	return verr
+}
+
+// validateErrorMappings ensures inherited gRPC response policy describes the
+// same concrete error value returned by the endpoint method.
+func (e *GRPCEndpointExpr) validateErrorMappings() *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+	for _, mapping := range e.GRPCErrors {
+		mapped, owner := mapping.mappedError()
+		method := e.MethodExpr.Error(mapping.Name)
+		if mapped == nil || method == nil || equivalentErrorAttributes(mapped.AttributeExpr, method.AttributeExpr) {
+			continue
+		}
+		verr.Add(
+			mapping.Response,
+			`gRPC error mapping %q inherited from the %s uses error type %q, but method %q of service %q uses %q; both definitions must define the same error attribute (type, validations, defaults, and struct metadata)`,
+			mapping.Name,
+			owner,
+			mapped.Type.Name(),
+			e.MethodExpr.Name,
+			e.MethodExpr.Service.Name,
+			method.Type.Name(),
+		)
 	}
 	return verr
 }

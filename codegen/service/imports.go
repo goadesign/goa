@@ -26,29 +26,17 @@ type (
 		genpkg        string
 		outputPackage string
 		paths         map[string]struct{}
-		legacy        map[string]*codegen.ImportSpec
 	}
 )
-
-// AttributeImports returns the generated-type and struct:field:type imports
-// referenced by attributes using their preferred, unshared aliases. Transport
-// generators retain this contract until their service-side references move to
-// the declaration resolver in Task 5.
-func AttributeImports(genpkg, outputPackage string, attributes ...*expr.AttributeExpr) []*codegen.ImportSpec {
-	collector := newImportCollector(nil, genpkg, outputPackage)
-	for _, attribute := range attributes {
-		collector.collect(attribute)
-	}
-	return collector.imports()
-}
 
 // AttributeImports returns the exact generated-type and metadata imports
 // referenced by attributes using the frozen aliases shared with service type
 // references.
 func (d *ServicesData) AttributeImports(outputPackage string, attributes ...*expr.AttributeExpr) []*codegen.ImportSpec {
 	collector := newImportCollector(d.aliases, d.generation.GenPkg(), outputPackage)
+	seen := make(map[expr.UserType]struct{})
 	for _, attribute := range attributes {
-		collector.collect(attribute)
+		collector.collectReferences(attribute, seen)
 	}
 	return collector.imports()
 }
@@ -62,7 +50,7 @@ func (d *ServicesData) fileImports(outputPackage string, paths []string, attribu
 		collector.addPath(importPath)
 	}
 	for _, attribute := range attributes {
-		collector.collect(attribute)
+		collector.collectDefinition(attribute)
 	}
 	return collector.imports()
 }
@@ -224,7 +212,6 @@ func newImportCollector(aliases *importAliases, genpkg, outputPackage string) *i
 		genpkg:        genpkg,
 		outputPackage: outputPackage,
 		paths:         make(map[string]struct{}),
-		legacy:        make(map[string]*codegen.ImportSpec),
 	}
 }
 
@@ -236,9 +223,20 @@ func (c *importCollector) addPath(importPath string) {
 	}
 }
 
-// collect walks inline shapes but stops at named types because a reference to a
-// named declaration does not render that declaration's fields in the file.
-func (c *importCollector) collect(attribute *expr.AttributeExpr) {
+// collectDefinition records imports used to render an attribute definition.
+// Named references stop traversal because their fields are emitted elsewhere.
+func (c *importCollector) collectDefinition(attribute *expr.AttributeExpr) {
+	c.collectAttribute(attribute, false, nil)
+}
+
+// collectReferences records imports used by recursive conversion and
+// validation code, including types and metadata nested in named declarations.
+func (c *importCollector) collectReferences(attribute *expr.AttributeExpr, seen map[expr.UserType]struct{}) {
+	c.collectAttribute(attribute, true, seen)
+}
+
+// collectAttribute implements definition and recursive-reference traversal.
+func (c *importCollector) collectAttribute(attribute *expr.AttributeExpr, expandNamed bool, seen map[expr.UserType]struct{}) {
 	if attribute == nil || attribute.Type == expr.Empty {
 		return
 	}
@@ -246,18 +244,27 @@ func (c *importCollector) collect(attribute *expr.AttributeExpr) {
 	switch actual := attribute.Type.(type) {
 	case expr.UserType:
 		c.addLocation(codegen.UserTypeLocation(actual))
+		if !expandNamed {
+			return
+		}
+		origin := actual.Origin()
+		if _, ok := seen[origin]; ok {
+			return
+		}
+		seen[origin] = struct{}{}
+		c.collectAttribute(actual.Attribute(), true, seen)
 	case *expr.Object:
 		for _, named := range *actual {
-			c.collect(named.Attribute)
+			c.collectAttribute(named.Attribute, expandNamed, seen)
 		}
 	case *expr.Array:
-		c.collect(actual.ElemType)
+		c.collectAttribute(actual.ElemType, expandNamed, seen)
 	case *expr.Map:
-		c.collect(actual.KeyType)
-		c.collect(actual.ElemType)
+		c.collectAttribute(actual.KeyType, expandNamed, seen)
+		c.collectAttribute(actual.ElemType, expandNamed, seen)
 	case *expr.Union:
 		for _, named := range actual.Values {
-			c.collect(named.Attribute)
+			c.collectAttribute(named.Attribute, expandNamed, seen)
 		}
 	}
 }
@@ -271,10 +278,6 @@ func (c *importCollector) addLocation(location *codegen.Location) {
 	importPath := path.Join(c.genpkg, location.RelImportPath)
 	if importPath != c.outputPackage {
 		c.paths[importPath] = struct{}{}
-		c.legacy[importPath] = &codegen.ImportSpec{
-			Name: location.PackageName(),
-			Path: importPath,
-		}
 	}
 }
 
@@ -284,7 +287,6 @@ func (c *importCollector) addMetaImport(attribute *expr.AttributeExpr) {
 	_, spec := codegen.GetMetaType(attribute)
 	if spec != nil && spec.Path != c.outputPackage {
 		c.paths[spec.Path] = struct{}{}
-		c.legacy[spec.Path] = spec
 	}
 }
 
@@ -298,11 +300,7 @@ func (c *importCollector) imports() []*codegen.ImportSpec {
 	sort.Strings(paths)
 	imports := make([]*codegen.ImportSpec, len(paths))
 	for i, importPath := range paths {
-		if c.aliases != nil {
-			imports[i] = c.aliases.spec(importPath)
-			continue
-		}
-		imports[i] = c.legacy[importPath]
+		imports[i] = c.aliases.spec(importPath)
 	}
 	return imports
 }

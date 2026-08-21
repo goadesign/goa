@@ -20,7 +20,7 @@ func TestJSONRPCSSE_DedupEventTypes(t *testing.T) {
 	services := CreateJSONRPCServices(root)
 
 	// Generate JSON-RPC server files (includes the SSE streams file)
-	fs := ServerFiles("", services)
+	fs := ServerFiles(services)
 	require.NotEmpty(t, fs)
 
 	// Render the SSE streams file (sse.go)

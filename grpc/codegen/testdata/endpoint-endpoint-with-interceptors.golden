@@ -6,11 +6,11 @@
 package cli
 
 import (
-	servicewithinterceptors "/service_with_interceptors"
 	"flag"
 	"fmt"
 	servicewithinterceptorsc "grpc/service_with_interceptors/client"
 	"os"
+	servicewithinterceptors "service_with_interceptors"
 
 	goa "goa.design/goa/v3/pkg"
 	grpc "google.golang.org/grpc"

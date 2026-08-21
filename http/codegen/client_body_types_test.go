@@ -26,7 +26,7 @@ func TestBodyTypeDecl(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
-			fs := typesFile(genpkg, root.API.HTTP.Services[0], false, services)
+			fs := typesFile(root.API.HTTP.Services[0], false, services)
 			section := fs.SectionTemplates[1]
 			code := codegen.SectionCode(t, section)
 			testutil.AssertGo(t, "testdata/golden/client_body_type_decl_"+c.Name+".go.golden", code)
@@ -57,7 +57,7 @@ func TestBodyTypeInit(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
-			fs := typesFile(genpkg, root.API.HTTP.Services[0], false, services)
+			fs := typesFile(root.API.HTTP.Services[0], false, services)
 			section := fs.SectionTemplates[c.SectionIndex]
 			code := codegen.SectionCode(t, section)
 			testutil.AssertGo(t, "testdata/golden/client_body_type_init_"+c.Name+".go.golden", code)
@@ -91,7 +91,7 @@ func TestClientTypes(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
-			fs := typesFile(genpkg, root.API.HTTP.Services[0], false, services)
+			fs := typesFile(root.API.HTTP.Services[0], false, services)
 			var buf bytes.Buffer
 			for _, s := range fs.SectionTemplates[1:] {
 				require.NoError(t, s.Write(&buf))
@@ -114,7 +114,7 @@ func TestClientTypeFiles(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
-			fw := ClientTypeFiles(genpkg, services)
+			fw := ClientTypeFiles(services)
 			for i, fs := range fw {
 				var buf bytes.Buffer
 				for _, s := range fs.SectionTemplates[1:] {

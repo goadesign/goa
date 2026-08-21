@@ -7,31 +7,37 @@ import (
 	"strings"
 
 	"goa.design/goa/v3/codegen"
-	servicecodegen "goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 )
 
 // addEndpointImports adds the named service-type references used by endpoints
 // to file's header. The output package is computed from the generated path.
-func addEndpointImports(file *codegen.File, genpkg string, endpoints ...*expr.HTTPEndpointExpr) *codegen.File {
+func addEndpointImports(file *codegen.File, services *ServicesData, endpoints ...*expr.HTTPEndpointExpr) *codegen.File {
 	if file == nil {
 		return nil
 	}
 	outputPath := strings.TrimPrefix(strings.ReplaceAll(file.Path, "\\", "/"), codegen.Gendir+"/")
-	outputPackage := path.Join(genpkg, path.Dir(outputPath))
-	codegen.AddImport(file.SectionTemplates[0], servicecodegen.AttributeImports(genpkg, outputPackage, httpEndpointAttributes(endpoints...)...)...)
+	outputPackage := path.Join(services.GenPkg(), path.Dir(outputPath))
+	codegen.AddImport(file.SectionTemplates[0], services.AttributeImports(outputPackage, ServiceReferenceAttributes(endpoints...)...)...)
 	return file
 }
 
-// httpEndpointAttributes returns the named service attributes referenced by
-// the supplied HTTP endpoint sections.
-func httpEndpointAttributes(endpoints ...*expr.HTTPEndpointExpr) []*expr.AttributeExpr {
+// ServiceReferenceAttributes returns the named service attributes referenced
+// by generated HTTP or JSON-RPC endpoint sections, including the nested result
+// field selected as SSE event data.
+func ServiceReferenceAttributes(endpoints ...*expr.HTTPEndpointExpr) []*expr.AttributeExpr {
 	var attributes []*expr.AttributeExpr
 	for _, endpoint := range endpoints {
 		method := endpoint.MethodExpr
-		attributes = append(attributes, method.Payload, method.StreamingPayload, method.Result)
-		if method.HasMixedResults() {
-			attributes = append(attributes, method.StreamingResult)
+		attributes = append(attributes, method.Payload, method.StreamingPayload, method.Result, method.StreamingResult)
+		if endpoint.SSE != nil && endpoint.SSE.DataField != "" {
+			event := method.Result
+			if method.HasMixedResults() {
+				event = method.StreamingResult
+			}
+			if object := expr.AsObject(event.Type); object != nil {
+				attributes = append(attributes, object.Attribute(endpoint.SSE.DataField))
+			}
 		}
 		for _, methodError := range method.Errors {
 			attributes = append(attributes, methodError.AttributeExpr)

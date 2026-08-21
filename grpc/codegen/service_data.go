@@ -4,6 +4,7 @@ package codegen
 
 import (
 	"fmt"
+	"path"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -132,6 +133,9 @@ type (
 		FieldName string
 		// FieldType is the type of the struct field.
 		FieldType expr.DataType
+		// FieldTypeRef is the frozen service reference used to cast an aliased
+		// metadata value before assigning it to the service field.
+		FieldTypeRef string
 		// VarName is the name of the Go variable used to read or
 		// convert the metadata value.
 		VarName string
@@ -345,6 +349,9 @@ type (
 		// FieldType is the type of the data structure field that should be
 		// initialized with the argument if any.
 		FieldType expr.DataType
+		// FieldTypeRef is the frozen service reference used to cast an aliased
+		// argument before assigning it to the service field.
+		FieldTypeRef string
 		// TypeName is the argument type name.
 		TypeName string
 		// TypeRef is the argument type reference.
@@ -493,8 +500,13 @@ func (sd *ServiceData) HasStreamingEndpoint() bool {
 // analyze creates the data necessary to render the code of the given service.
 func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 	svc := d.ServicesData.Get(gs.Name())
+	transportService := *svc
+	transportService.PkgName = d.ServiceImport(svc.Name).Name
+	transportService.ViewsPkg = d.ViewImport(svc.Name).Name
+	svc = &transportService
 	scope := codegen.NewNameScope()
-	pkg := codegen.SnakeCase(codegen.Goify(svc.Name, false)) + pbPkgName
+	protobufPath := path.Join(d.GenPkg(), "grpc", svc.PathName, pbPkgName)
+	pkg := d.PackageImport(protobufPath).Name
 	svcVarN := scope.HashedUnique(gs.ServiceExpr, codegen.Goify(svc.Name, true))
 	sd := &ServiceData{
 		Service:             svc,
@@ -585,12 +597,12 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		)
 		md := svc.Method(e.Name())
 		if e.MethodExpr.Payload.Type != expr.Empty {
-			pkg := md.PayloadLoc.PackageNameOrDefault(svc.PkgName)
-			payloadRef = methodTypeRef(e.MethodExpr.Payload, md.PayloadDeclaration, pkg, svc.Scope)
+			svcctx := d.serviceTypeContext(sd, "server").Enter(e.MethodExpr.Payload)
+			payloadRef = svcctx.Scope.Ref(e.MethodExpr.Payload, svcctx.Pkg(e.MethodExpr.Payload))
 		}
 		if e.MethodExpr.Result.Type != expr.Empty {
-			pkg := md.ResultLoc.PackageNameOrDefault(svc.PkgName)
-			resultRef = methodTypeRef(e.MethodExpr.Result, md.ResultDeclaration, pkg, svc.Scope)
+			svcctx := d.serviceTypeContext(sd, "server").Enter(e.MethodExpr.Result)
+			resultRef = svcctx.Scope.Ref(e.MethodExpr.Result, svcctx.Pkg(e.MethodExpr.Result))
 		}
 		if md.ViewedResult != nil {
 			viewedResultRef = md.ViewedResult.FullRef
@@ -604,7 +616,7 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		}
 
 		// build request data
-		reqMD := extractMetadata(e.Metadata, e.MethodExpr.Payload, svc.Scope, *d)
+		reqMD := d.extractMetadata(e.Metadata, e.MethodExpr.Payload, sd, "server")
 		request := &RequestData{
 			Description:   requestMessage.Description,
 			Metadata:      reqMD,
@@ -640,16 +652,17 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		}
 
 		// build response data
-		result, svcCtx := resultContext(e, sd)
-		hdrs := extractMetadata(e.Response.Headers, result, svc.Scope, *d)
-		trlrs := extractMetadata(e.Response.Trailers, result, svc.Scope, *d)
+		serverResult, serverCtx := d.resultContext(e, sd, "server")
+		clientResult, clientCtx := d.resultContext(e, sd, "client")
+		hdrs := d.extractMetadata(e.Response.Headers, clientResult, sd, "client")
+		trlrs := d.extractMetadata(e.Response.Trailers, clientResult, sd, "client")
 		response := &ResponseData{
 			StatusCode:    statusCodeToGRPCConst(e.Response.StatusCode),
 			Description:   e.Response.Description,
 			Headers:       hdrs,
 			Trailers:      trlrs,
-			ServerConvert: d.buildResponseConvertData(responseMessage, result, svcCtx, hdrs, trlrs, e, sd, true),
-			ClientConvert: d.buildResponseConvertData(responseMessage, result, svcCtx, hdrs, trlrs, e, sd, false),
+			ServerConvert: d.buildResponseConvertData(responseMessage, serverResult, serverCtx, hdrs, trlrs, e, sd, true),
+			ClientConvert: d.buildResponseConvertData(responseMessage, clientResult, clientCtx, hdrs, trlrs, e, sd, false),
 		}
 		// If the endpoint is a streaming endpoint, no message is returned
 		// by gRPC. Hence, no need to set response message.
@@ -961,9 +974,11 @@ func (d *ServicesData) buildRequestConvertData(request, payload *expr.AttributeE
 	}
 
 	svc := sd.Service
-	method := svc.Method(e.MethodExpr.Name)
-	pkg := method.PayloadLoc.PackageNameOrDefault(svc.PkgName)
-	svcCtx := methodTypeContext(payload, method.PayloadDeclaration, pkg, svc.Scope)
+	side := "client"
+	if svr {
+		side = "server"
+	}
+	svcCtx := d.serviceTypeContext(sd, side).Enter(payload)
 	if svr {
 		// server side
 		data := d.buildInitData(request, payload, "message", "v", svcCtx, false, false, sd)
@@ -1017,15 +1032,13 @@ func (d *ServicesData) buildLegacyDecodeData(e *expr.GRPCEndpointExpr, sd *Servi
 		mdObj.Set("goa_payload", expr.DupAtt(payload))
 		legacyMD.Validation.AddRequired("goa_payload")
 	}
-	md := extractMetadata(legacyMD, payload, svc.Scope, *d)
+	md := d.extractMetadata(legacyMD, payload, sd, "server")
 	data := &LegacyDecodeData{
 		FuncName: fmt.Sprintf("decode%sLegacyRequest", codegen.Goify(e.Name(), true)),
 		Metadata: md,
 	}
 	if expr.IsObject(payload.Type) {
-		method := svc.Method(e.MethodExpr.Name)
-		pkg := method.PayloadLoc.PackageNameOrDefault(svc.PkgName)
-		svcCtx := methodTypeContext(payload, method.PayloadDeclaration, pkg, svc.Scope)
+		svcCtx := d.serviceTypeContext(sd, "server").Enter(payload)
 		init := d.buildInitData(&expr.AttributeExpr{Type: expr.Empty}, payload, "message", "v", svcCtx, false, false, sd)
 		init.Name = fmt.Sprintf("New%sPayloadFromMetadata", codegen.Goify(e.Name(), true))
 		init.Description = fmt.Sprintf("%s builds the payload of the %q endpoint of the %q service from the gRPC request metadata sent by legacy stream protocol clients.", init.Name, e.Name(), svc.Name)
@@ -1145,7 +1158,6 @@ func (d *ServicesData) buildInitData(source, target *expr.AttributeExpr, sourceV
 // response message derived by analyze; errors without a custom object type
 // have no entry.
 func (d *ServicesData) buildErrorsData(e *expr.GRPCEndpointExpr, errorMessages map[string]*expr.AttributeExpr, sd *ServiceData) []*ErrorData {
-	svc := sd.Service
 	errors := make([]*ErrorData, 0, len(e.GRPCErrors))
 	for _, v := range e.GRPCErrors {
 		responseData := &ResponseData{
@@ -1154,10 +1166,10 @@ func (d *ServicesData) buildErrorsData(e *expr.GRPCEndpointExpr, errorMessages m
 			ServerConvert: d.buildErrorConvertData(v, e, errorMessages[v.Name], sd, true),
 			ClientConvert: d.buildErrorConvertData(v, e, errorMessages[v.Name], sd, false),
 		}
-		errorLoc := svc.Method(e.MethodExpr.Name).ErrorLocs[v.Name]
+		svcctx := d.serviceTypeContext(sd, "server").Enter(v.AttributeExpr)
 		errors = append(errors, &ErrorData{
 			Name:     v.Name,
-			Ref:      svc.Scope.GoFullTypeRef(v.AttributeExpr, errorLoc.PackageNameOrDefault(svc.PkgName)),
+			Ref:      svcctx.Scope.Ref(v.AttributeExpr, svcctx.Pkg(v.AttributeExpr)),
 			Response: responseData,
 		})
 	}
@@ -1174,7 +1186,11 @@ func (d *ServicesData) buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRP
 		return nil
 	}
 	svc := sd.Service
-	svcCtx := serviceTypeContext(svc.PkgName, svc.Scope)
+	side := "client"
+	if svr {
+		side = "server"
+	}
+	svcCtx := d.serviceTypeContext(sd, side).Enter(ge.AttributeExpr)
 	if svr {
 		// server side
 		data := d.buildInitData(ge.AttributeExpr, message, "er", "message", svcCtx, true, false, sd)
@@ -1232,8 +1248,12 @@ func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, streamingReques
 	svc := sd.Service
 	ed := sd.Endpoint(e.Name())
 	md := ed.Method
-	svcCtx := serviceTypeContext(svc.PkgName, svc.Scope)
-	result, resCtx := resultContext(e, sd)
+	side := "client"
+	if svr {
+		side = "server"
+	}
+	svcCtx := d.serviceTypeContext(sd, side).Enter(e.MethodExpr.StreamingPayload)
+	result, resCtx := d.resultContext(e, sd, side)
 	resVar := "result"
 	if md.ViewedResult != nil {
 		resVar = "vresult"
@@ -1333,13 +1353,15 @@ func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, streamingReques
 
 // extractMetadata collects the request/response metadata from the given
 // metadata attribute and service type (payload/result).
-func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, scope *codegen.NameScope, services ServicesData) []*MetadataData {
+func (d *ServicesData) extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, sd *ServiceData, side string) []*MetadataData {
 	var metadata []*MetadataData
-	ctx := serviceTypeContext("", scope)
+	scope := sd.Service.Scope
+	ctx := d.serviceTypeContext(sd, side).Enter(service)
 	codegen.WalkMappedAttr(a, func(name, elem string, required bool, c *expr.AttributeExpr) error { // nolint: errcheck
 		arr := expr.AsArray(c.Type)
 		mp := expr.AsMap(c.Type)
 		typeRef := scope.GoTypeRef(unalias(c))
+		serviceField := service
 		ft := service.Type
 		varn := scope.Name(codegen.Goify(name, false))
 		fieldName := codegen.Goify(name, true)
@@ -1348,17 +1370,20 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 			fieldName = ""
 		} else {
 			pointer = service.IsPrimitivePointer(name, true)
-			ft = service.Find(name).Type
+			serviceField = service.Find(name)
+			ft = serviceField.Type
 		}
 		if pointer {
 			typeRef = "*" + typeRef
 		}
+		fieldContext := ctx.Enter(serviceField)
 		metadata = append(metadata, &MetadataData{
 			Name:          elem,
 			AttributeName: name,
 			Description:   c.Description,
 			FieldName:     fieldName,
 			FieldType:     ft,
+			FieldTypeRef:  fieldContext.Scope.Ref(serviceField, fieldContext.Pkg(serviceField)),
 			VarName:       varn,
 			Required:      required,
 			Type:          c.Type,
@@ -1374,7 +1399,7 @@ func extractMetadata(a *expr.MappedAttributeExpr, service *expr.AttributeExpr, s
 				expr.AsArray(mp.ElemType.Type).ElemType.Type.Kind() == expr.StringKind,
 			Validate:     codegen.AttributeValidationCode(c, nil, ctx, required, false, varn, name),
 			DefaultValue: c.DefaultValue,
-			Example:      c.Example(services.Root.API.ExampleGenerator.Field(service, name)),
+			Example:      c.Example(d.Root.API.ExampleGenerator.Field(service, name)),
 		})
 		return nil
 	})
@@ -1391,6 +1416,7 @@ func initArgsFromMetadata(md []*MetadataData) []*InitArgData {
 			Ref:          m.VarName,
 			FieldName:    m.FieldName,
 			FieldType:    m.FieldType,
+			FieldTypeRef: m.FieldTypeRef,
 			TypeName:     m.TypeName,
 			TypeRef:      m.TypeRef,
 			Type:         m.Type,
@@ -1473,50 +1499,31 @@ func unalias(att *expr.AttributeExpr) *expr.AttributeExpr {
 	return att
 }
 
-// serviceTypeContext returns a contextual attribute for service types. Service
-// types are Go types and uses non-pointers to hold attributes having default
-// values.
-func serviceTypeContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
-	return codegen.NewAttributeContext(false, false, true, pkg, scope)
+// serviceTypeContext returns a context that resolves service declarations from
+// the generated gRPC package for side.
+func (d *ServicesData) serviceTypeContext(sd *ServiceData, side string) *codegen.AttributeContext {
+	outputPackage := path.Join(d.GenPkg(), "grpc", sd.Service.PathName, side)
+	return &codegen.AttributeContext{
+		UseDefault: true,
+		Scope:      d.ServiceAttributor(sd.Service.Name, outputPackage),
+	}
 }
 
-// methodTypeContext binds a named method wrapper to its frozen declaration and
-// preserves the existing service scope for primitive method types.
-func methodTypeContext(attribute *expr.AttributeExpr, declaration *codegen.TypeDeclaration, pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
-	if declaration == nil {
-		return serviceTypeContext(pkg, scope)
-	}
-	return service.NewMethodTypeContext(attribute, declaration, pkg, scope)
-}
-
-// methodTypeRef returns the frozen reference for a named method type and
-// preserves the existing spelling for primitive method types.
-func methodTypeRef(attribute *expr.AttributeExpr, declaration *codegen.TypeDeclaration, pkg string, scope *codegen.NameScope) string {
-	if declaration == nil {
-		return scope.GoFullTypeRef(attribute, pkg)
-	}
-	name := declaration.Name()
-	if pkg != "" {
-		name = pkg + "." + name
-	}
-	if expr.IsObject(attribute.Type) || expr.IsUnion(attribute.Type) {
-		return "*" + name
-	}
-	return name
-}
-
-// resultContext returns the method result attribute and the result context for the given
-// endpoint.
-func resultContext(e *expr.GRPCEndpointExpr, sd *ServiceData) (*expr.AttributeExpr, *codegen.AttributeContext) {
-	svc := sd.Service
-	md := svc.Method(e.Name())
+// resultContext returns the method result and its frozen service or view
+// declaration context for side.
+func (d *ServicesData) resultContext(e *expr.GRPCEndpointExpr, sd *ServiceData, side string) (*expr.AttributeExpr, *codegen.AttributeContext) {
+	md := sd.Service.Method(e.Name())
 	if md.ViewedResult != nil {
 		vresAtt := expr.AsObject(md.ViewedResult.Type).Attribute("projected")
-		// return projected type context
-		return vresAtt, codegen.NewAttributeContext(true, false, true, svc.ViewsPkg, svc.ViewScope)
+		outputPackage := path.Join(d.GenPkg(), "grpc", sd.Service.PathName, side)
+		return vresAtt, &codegen.AttributeContext{
+			Pointer:    true,
+			UseDefault: true,
+			Scope:      d.ViewAttributor(sd.Service.Name, outputPackage),
+		}
 	}
-	pkg := md.ResultLoc.PackageNameOrDefault(svc.PkgName)
-	return e.MethodExpr.Result, methodTypeContext(e.MethodExpr.Result, md.ResultDeclaration, pkg, svc.Scope)
+	result := e.MethodExpr.Result
+	return result, d.serviceTypeContext(sd, side).Enter(result)
 }
 
 // getPrimitive returns the primitive expression if the given expression is an alias to one

@@ -6,8 +6,8 @@
 package client
 
 import (
+	payloadwithvalidation "/payload_with_validation"
 	"fmt"
-	payloadwithvalidation "payload_with_validation"
 	"strconv"
 	"unicode/utf8"
 

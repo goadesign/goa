@@ -11,10 +11,10 @@ import (
 
 // ExampleCLIFiles returns an example client tool implementation for the
 // transport described by services for each server expression.
-func ExampleCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
+func ExampleCLIFiles(services *ServicesData) []*codegen.File {
 	var files []*codegen.File
 	for _, svr := range services.Root.API.Servers {
-		if f := ExampleCLI(genpkg, svr, services); f != nil {
+		if f := ExampleCLI(svr, services); f != nil {
 			files = append(files, f)
 		}
 	}
@@ -23,7 +23,8 @@ func ExampleCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
 
 // ExampleCLI returns an example client tool implementation for the transport
 // described by services and the given server expression.
-func ExampleCLI(genpkg string, svr *expr.ServerExpr, services *ServicesData) *codegen.File {
+func ExampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
+	genpkg := services.GenPkg()
 	svrdata := example.Servers.Get(svr, services.Root)
 	path := filepath.Join("cmd", svrdata.Dir+"-cli", services.dir()+".go")
 	if _, err := os.Stat(path); !os.IsNotExist(err) {

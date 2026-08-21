@@ -9,9 +9,9 @@ func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*ht
 		return nil
 {{- else }}
 		{{- if .Method.SkipRequestBodyEncodeDecode }}
-		data, ok := v.(*{{ requestStructPkg .Method .ServicePkgName }}.{{ .Method.RequestStruct }})
+		data, ok := v.(*{{ .ServicePkgName }}.{{ .Method.RequestStruct }})
 		if !ok {
-			return goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "*{{ requestStructPkg .Method .ServicePkgName }}.{{ .Method.RequestStruct }}", v)
+			return goahttp.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "*{{ .ServicePkgName }}.{{ .Method.RequestStruct }}", v)
 		}
 		p := data.Payload
 		{{- else }}

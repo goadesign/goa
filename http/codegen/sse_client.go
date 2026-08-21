@@ -10,7 +10,7 @@ import (
 
 // sseClientFile returns the file implementing the SSE client code for SSE endpoints if any.
 // Relies on SSEData (ed.SSE) for all codegen needs.
-func sseClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func sseClientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	if !HasSSE(data) {
 		return nil
@@ -33,8 +33,8 @@ func sseClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesD
 				{Path: "strings"},
 				{Path: "strconv"},
 				{Path: "sync"},
-				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
-				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/views", Name: data.Service.ViewsPkg},
+				services.ServiceImport(svc.Name()),
+				services.ViewImport(svc.Name()),
 				{Path: "goa.design/goa/v3/http", Name: "goahttp"},
 			},
 		),

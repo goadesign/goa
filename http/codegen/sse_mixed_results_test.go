@@ -17,7 +17,7 @@ func TestSSE_MixedResults(t *testing.T) {
 	services := CreateHTTPServices(root)
 
 	t.Run("server", func(t *testing.T) {
-		files := ServerFiles("", services)
+		files := ServerFiles(services)
 		var sseFile *codegen.File
 		for _, f := range files {
 			if strings.HasSuffix(f.Path, filepath.Join("server", "sse.go")) {
@@ -36,7 +36,7 @@ func TestSSE_MixedResults(t *testing.T) {
 	})
 
 	t.Run("client", func(t *testing.T) {
-		files := ClientFiles("", services)
+		files := ClientFiles(services)
 		var sseFile *codegen.File
 		for _, f := range files {
 			if strings.HasSuffix(f.Path, filepath.Join("client", "sse.go")) {

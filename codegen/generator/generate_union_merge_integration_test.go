@@ -20,7 +20,7 @@ func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
 	Generators = func(cmd string) ([]Genfunc, error) {
 		return []Genfunc{
 			{Plan: planServiceData, Generate: Service},
-			{Plan: planServiceData, Generate: Transport},
+			{Plan: planTransportData, Generate: Transport},
 			{Plan: planServiceData, Generate: OpenAPI},
 		}, nil
 	}

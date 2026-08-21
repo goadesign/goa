@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 )
 
@@ -167,6 +168,45 @@ func TestDeclarationResolverPanicsWhenPlanOmittedType(t *testing.T) {
 			resolver.Name(&expr.AttributeExpr{Type: missing}, "", false, true)
 		},
 	)
+}
+
+// TestServicesDataServiceAttributorUsesFrozenPackageDeclarations verifies
+// transport generators can consume the same local, relocated, and nested
+// declaration records used by service rendering without accessing resolver
+// state.
+func TestServicesDataServiceAttributorUsesFrozenPackageDeclarations(t *testing.T) {
+	var record expr.UserType
+	root := codegen.RunDSL(t, func() {
+		record = dsl.Type("Record", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.OneOf("Value", func() {
+				dsl.Attribute("text", dsl.String)
+			})
+			dsl.Attribute("external", dsl.String, func() {
+				dsl.Meta("struct:field:type", "custom.Value", "example.com/custom", "custom")
+			})
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(record)
+			})
+		})
+	})
+	services := mustServicesData(t, root)
+	external := services.ServiceAttributor("Values", "example.com/consumer")
+	recordAttribute := &expr.AttributeExpr{Type: record}
+	recordResolver := external.Enter(recordAttribute)
+	value := expr.AsObject(record.Attribute().Type).Attribute("Value")
+	externalValue := expr.AsObject(record.Attribute().Type).Attribute("external")
+
+	require.Equal(t, "*types.Record", external.Ref(recordAttribute, ""))
+	require.Equal(t, "*types.Value", recordResolver.Ref(value, ""))
+	require.Equal(t, "custom.Value", recordResolver.Ref(externalValue, ""))
+
+	typesPackage := "goa.design/goa/example/types"
+	local := services.ServiceAttributor("Values", typesPackage).Enter(recordAttribute)
+	require.Equal(t, "*Record", local.Ref(recordAttribute, ""))
+	require.Equal(t, "*Value", local.Ref(value, ""))
 }
 
 // aliasesForTest builds the same frozen full-path qualifier table used by

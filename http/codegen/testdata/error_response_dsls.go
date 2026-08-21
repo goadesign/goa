@@ -1,3 +1,5 @@
+// This file defines HTTP error response designs used by transport codegen
+// tests, including reusable API mappings and service-level error contracts.
 package testdata
 
 import (
@@ -148,7 +150,7 @@ var APINoBodyErrorResponseDSL = func() {
 		})
 	})
 	Service("ServiceNoBodyErrorResponse", func() {
-		Error("bad_request")
+		Error("bad_request", StringError)
 		Method("MethodServiceErrorResponse", func() {
 			HTTP(func() {
 				GET("/one/two")
@@ -171,7 +173,7 @@ var APINoBodyErrorResponseWithContentTypeDSL = func() {
 		})
 	})
 	Service("ServiceNoBodyErrorResponse", func() {
-		Error("bad_request")
+		Error("bad_request", StringError)
 		Method("MethodServiceErrorResponse", func() {
 			HTTP(func() {
 				GET("/one/two")

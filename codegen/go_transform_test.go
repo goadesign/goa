@@ -1,3 +1,5 @@
+// This file verifies Go transformations across primitive, composite, named,
+// union, service, and transport-owned attribute contexts.
 package codegen
 
 import (
@@ -8,6 +10,15 @@ import (
 	"goa.design/goa/v3/codegen/testdata"
 	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/expr"
+)
+
+type (
+	transformOwnerAttributor struct {
+		prefix  string
+		owner   string
+		scope   *NameScope
+		entered *[]string
+	}
 )
 
 func TestGoTransform(t *testing.T) {
@@ -254,4 +265,128 @@ func TestGoTransformUnionAcrossTransportBoundary(t *testing.T) {
 	require.Contains(t, transportToService, `if source.Scope != nil {`)
 	require.NotContains(t, transportToService, "scopeValue")
 	require.NotContains(t, transportToService, "target.Scope = &")
+}
+
+func TestGoTransformEntersSourceAndTargetOwnersIndependently(t *testing.T) {
+	source := transformOwnerTestType("Envelope", "Choice")
+	target := transformOwnerTestType("Envelope", "Choice")
+	sourceOwner := newTransformOwnerAttributor("source")
+	targetOwner := newTransformOwnerAttributor("target")
+
+	_, helpers, err := GoTransform(
+		&expr.AttributeExpr{Type: source},
+		&expr.AttributeExpr{Type: target},
+		"source",
+		"target",
+		&AttributeContext{UseDefault: true, Scope: sourceOwner},
+		&AttributeContext{UseDefault: true, Scope: targetOwner},
+		"",
+		true,
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, helpers)
+	require.Contains(t, helpers[0].ParamTypeRef, "sourceChoiceContainer.ChoiceContainer")
+	require.Contains(t, helpers[0].ResultTypeRef, "targetChoiceContainer.ChoiceContainer")
+	require.Contains(t, *sourceOwner.entered, "sourceEnvelope")
+	require.Contains(t, *sourceOwner.entered, "sourceChoiceContainer")
+	require.Contains(t, *sourceOwner.entered, "sourceChoice")
+	require.Contains(t, *targetOwner.entered, "targetEnvelope")
+	require.Contains(t, *targetOwner.entered, "targetChoiceContainer")
+	require.Contains(t, *targetOwner.entered, "targetChoice")
+
+	reverseSource := newTransformOwnerAttributor("source")
+	reverseTarget := newTransformOwnerAttributor("target")
+	_, reverseHelpers, err := GoTransform(
+		&expr.AttributeExpr{Type: target},
+		&expr.AttributeExpr{Type: source},
+		"source",
+		"target",
+		&AttributeContext{UseDefault: true, Scope: reverseTarget},
+		&AttributeContext{UseDefault: true, Scope: reverseSource},
+		"",
+		true,
+	)
+	require.NoError(t, err)
+	require.NotEmpty(t, reverseHelpers)
+	require.Contains(t, reverseHelpers[0].ParamTypeRef, "targetChoiceContainer.ChoiceContainer")
+	require.Contains(t, reverseHelpers[0].ResultTypeRef, "sourceChoiceContainer.ChoiceContainer")
+}
+
+func newTransformOwnerAttributor(prefix string) *transformOwnerAttributor {
+	entered := make([]string, 0)
+	return &transformOwnerAttributor{
+		prefix:  prefix,
+		scope:   NewNameScope(),
+		entered: &entered,
+	}
+}
+
+func (a *transformOwnerAttributor) Name(att *expr.AttributeExpr, _ string, _, _ bool) string {
+	return a.owner + "." + codegenTypeName(att)
+}
+
+func (a *transformOwnerAttributor) Ref(att *expr.AttributeExpr, pkg string) string {
+	name := a.Name(att, pkg, false, false)
+	if expr.IsObject(att.Type) || expr.IsUnion(att.Type) {
+		return "*" + name
+	}
+	return name
+}
+
+func (*transformOwnerAttributor) Field(_ *expr.AttributeExpr, name string, firstUpper bool) string {
+	return Goify(name, firstUpper)
+}
+
+func (a *transformOwnerAttributor) Package(_ *expr.AttributeExpr) string {
+	return a.owner
+}
+
+func (a *transformOwnerAttributor) Enter(att *expr.AttributeExpr) Attributor {
+	entered := *a
+	entered.owner = a.prefix + codegenTypeName(att)
+	*a.entered = append(*a.entered, entered.owner)
+	return &entered
+}
+
+func (*transformOwnerAttributor) IsSumType() bool {
+	return true
+}
+
+func (a *transformOwnerAttributor) Scope() *NameScope {
+	return a.scope
+}
+
+func transformOwnerTestType(name, unionName string) expr.UserType {
+	union := &expr.Union{
+		TypeName: unionName,
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "text", Attribute: &expr.AttributeExpr{Type: expr.String}},
+			{Name: "number", Attribute: &expr.AttributeExpr{Type: expr.Int}},
+		},
+	}
+	container := &expr.UserTypeExpr{
+		TypeName: unionName + "Container",
+		AttributeExpr: &expr.AttributeExpr{
+			Type: &expr.Object{
+				{Name: "choice", Attribute: &expr.AttributeExpr{Type: union}},
+			},
+			Meta: expr.MetaExpr{"struct:pkg:path": {"service/types"}},
+		},
+	}
+	return &expr.UserTypeExpr{
+		TypeName: name,
+		AttributeExpr: &expr.AttributeExpr{
+			Type: &expr.Object{
+				{Name: "inner", Attribute: &expr.AttributeExpr{Type: container}},
+			},
+			Meta: expr.MetaExpr{"struct:pkg:path": {"service/types"}},
+		},
+	}
+}
+
+func codegenTypeName(att *expr.AttributeExpr) string {
+	if att.Type.Name() == "object" {
+		return "Object"
+	}
+	return Goify(att.Type.Name(), true)
 }

@@ -44,10 +44,10 @@ func Example(generation *codegen.Generation) ([]*codegen.File, error) {
 		// HTTP
 		if len(r.API.HTTP.Services) > 0 {
 			httpServices := httpcodegen.NewServicesData(services, r.API.HTTP)
-			if fs := httpcodegen.ExampleServerFiles(generation.GenPkg(), httpServices); len(fs) != 0 {
+			if fs := httpcodegen.ExampleServerFiles(httpServices); len(fs) != 0 {
 				files = append(files, fs...)
 			}
-			if fs := httpcodegen.ExampleCLIFiles(generation.GenPkg(), httpServices); len(fs) != 0 {
+			if fs := httpcodegen.ExampleCLIFiles(httpServices); len(fs) != 0 {
 				files = append(files, fs...)
 			}
 		}
@@ -55,10 +55,10 @@ func Example(generation *codegen.Generation) ([]*codegen.File, error) {
 		// JSON-RPC
 		if len(r.API.JSONRPC.Services) > 0 {
 			jsonrpcServices := httpcodegen.NewJSONRPCServicesData(services, &r.API.JSONRPC.HTTPExpr)
-			if fs := jsonrpccodegen.ExampleServerFiles(generation.GenPkg(), jsonrpcServices, files); len(fs) > 0 {
+			if fs := jsonrpccodegen.ExampleServerFiles(jsonrpcServices, files); len(fs) > 0 {
 				files = append(files, fs...)
 			}
-			if fs := httpcodegen.ExampleCLIFiles(generation.GenPkg(), jsonrpcServices); len(fs) > 0 {
+			if fs := httpcodegen.ExampleCLIFiles(jsonrpcServices); len(fs) > 0 {
 				files = append(files, fs...)
 			}
 		}
@@ -66,10 +66,10 @@ func Example(generation *codegen.Generation) ([]*codegen.File, error) {
 		// GRPC
 		if len(r.API.GRPC.Services) > 0 {
 			grpcServices := grpccodegen.NewServicesData(services)
-			if fs := grpccodegen.ExampleServerFiles(generation.GenPkg(), grpcServices); len(fs) > 0 {
+			if fs := grpccodegen.ExampleServerFiles(grpcServices); len(fs) > 0 {
 				files = append(files, fs...)
 			}
-			if fs := grpccodegen.ExampleCLIFiles(generation.GenPkg(), grpcServices); len(fs) > 0 {
+			if fs := grpccodegen.ExampleCLIFiles(grpcServices); len(fs) > 0 {
 				files = append(files, fs...)
 			}
 		}

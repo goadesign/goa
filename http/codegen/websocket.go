@@ -92,7 +92,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 	)
 	md := ed.Method
 	svc := sd.Service
-	svcctx := methodTypeContext(e.MethodExpr.StreamingPayload, md.StreamingPayloadDeclaration, svc.PkgName, svc.Scope)
+	svcctx := sds.serviceTypeContext(sd, "server").Enter(e.MethodExpr.StreamingPayload)
 	svrSendTypeName := ed.Result.Name
 	svrSendTypeRef := ed.Result.Ref
 	svrSendDesc := fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection.", md.ServerStream.SendName, svrSendTypeName, md.Name)
@@ -101,8 +101,8 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 	cliRecvWithContextDesc := fmt.Sprintf("%s reads instances of %q from the %q endpoint websocket connection with context.", md.ClientStream.RecvWithContextName, svrSendTypeName, md.Name)
 	if e.MethodExpr.Stream == expr.ClientStreamKind || e.MethodExpr.Stream == expr.BidirectionalStreamKind {
 		streamBody := sd.bodies.streaming(e)
-		svrRecvTypeName = methodTypeName(e.MethodExpr.StreamingPayload, md.StreamingPayloadDeclaration, svc.PkgName, svc.Scope)
-		svrRecvTypeRef = methodTypeRef(e.MethodExpr.StreamingPayload, md.StreamingPayloadDeclaration, svc.PkgName, svc.Scope)
+		svrRecvTypeName = svcctx.Scope.Name(e.MethodExpr.StreamingPayload, svcctx.Pkg(e.MethodExpr.StreamingPayload), false, true)
+		svrRecvTypeRef = svcctx.Scope.Ref(e.MethodExpr.StreamingPayload, svcctx.Pkg(e.MethodExpr.StreamingPayload))
 		svrPayload = sds.buildRequestBodyType(streamBody, e.MethodExpr.StreamingPayload, e, true, sd)
 		if needInit(e.MethodExpr.StreamingPayload.Type) {
 			body := streamBody.Type
@@ -168,10 +168,10 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 				Name:           name,
 				Description:    desc,
 				ServerArgs:     serverArgs,
-				ReturnTypeName: methodTypeName(e.MethodExpr.StreamingPayload, md.StreamingPayloadDeclaration, svc.PkgName, svc.Scope),
-				ReturnTypeRef:  methodTypeRef(e.MethodExpr.StreamingPayload, md.StreamingPayloadDeclaration, svc.PkgName, svc.Scope),
+				ReturnTypeName: svcctx.Scope.Name(e.MethodExpr.StreamingPayload, svcctx.Pkg(e.MethodExpr.StreamingPayload), false, true),
+				ReturnTypeRef:  svcctx.Scope.Ref(e.MethodExpr.StreamingPayload, svcctx.Pkg(e.MethodExpr.StreamingPayload)),
 				ReturnIsStruct: expr.IsObject(e.MethodExpr.StreamingPayload.Type),
-				ReturnTypePkg:  svc.PkgName,
+				ReturnTypePkg:  svcctx.Pkg(e.MethodExpr.StreamingPayload),
 				ServerCode:     serverCode,
 			}
 		}
@@ -242,7 +242,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 
 // websocketServerFile returns the file implementing the WebSocket server
 // streaming implementation if any.
-func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func websocketServerFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	if !HasWebSocket(data) {
 		return nil
@@ -258,7 +258,7 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *Ser
 		{Path: "github.com/gorilla/websocket"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+		services.ServiceImport(svc.Name()),
 	}
 	structSections := serverStructWSSections(data)
 	wsSections := serverWSSections(data)
@@ -275,7 +275,7 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *Ser
 
 // WebsocketClientFile returns the file implementing the WebSocket client
 // streaming implementation if any.
-func WebsocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func WebsocketClientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	if !HasWebSocket(data) {
 		return nil
@@ -291,8 +291,8 @@ func WebsocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *Ser
 		{Path: "github.com/gorilla/websocket"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
-		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+		services.ViewImport(svc.Name()),
+		services.ServiceImport(svc.Name()),
 	}
 	structSections := clientStructWSSections(data)
 	wsSections := clientWSSections(data)

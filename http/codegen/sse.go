@@ -1,3 +1,6 @@
+// This file builds HTTP server-sent event render data. Service event values
+// use frozen service declarations while encoded response bodies remain owned
+// by the HTTP transport package.
 package codegen
 
 import (
@@ -59,7 +62,7 @@ type (
 )
 
 // initSSEData initializes the SSE related data in ed.
-func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
+func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 	if !e.UsesSSE() {
 		return
 	}
@@ -73,9 +76,10 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 	if e.MethodExpr.HasMixedResults() && e.MethodExpr.StreamingResult != nil {
 		// For mixed results, use StreamingResult for SSE events
 		eventAttr = e.MethodExpr.StreamingResult
+		svcctx := sds.serviceTypeContext(sd, "server").Enter(eventAttr)
 		eventType = &ResultData{
-			Name:     md.StreamingResult,
-			Ref:      sd.Service.Scope.GoFullTypeRef(eventAttr, svc.PkgName),
+			Name:     svcctx.Scope.Name(eventAttr, svcctx.Pkg(eventAttr), false, true),
+			Ref:      svcctx.Scope.Ref(eventAttr, svcctx.Pkg(eventAttr)),
 			IsStruct: expr.IsObject(eventAttr.Type),
 		}
 	} else {
@@ -89,6 +93,7 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 
 	// Convert attribute names to Go field names
 	var dataFieldVar, dataFieldTypeRef, idFieldVar, eventFieldVar, retryFieldVar string
+	svcctx := sds.serviceTypeContext(sd, "server").Enter(eventAttr)
 	if obj := expr.AsObject(eventAttr.Type); obj != nil {
 		for _, nat := range *obj {
 			switch nat.Name {
@@ -100,7 +105,8 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 				retryFieldVar = codegen.GoifyAtt(nat.Attribute, nat.Name, true)
 			case e.SSE.DataField:
 				dataFieldVar = codegen.GoifyAtt(nat.Attribute, nat.Name, true)
-				dataFieldTypeRef = sd.Service.Scope.GoFullTypeRef(nat.Attribute, svc.PkgName)
+				fieldctx := svcctx.Enter(nat.Attribute)
+				dataFieldTypeRef = fieldctx.Scope.Ref(nat.Attribute, fieldctx.Pkg(nat.Attribute))
 			}
 		}
 	}
@@ -148,7 +154,7 @@ func initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr, sd *ServiceData) {
 
 // sseServerFile returns the file implementing the SSE server
 // streaming implementation if any.
-func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func sseServerFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	if !HasSSE(data) {
 		return nil
@@ -169,8 +175,8 @@ func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesD
 				{Path: "time"},
 				{Path: "encoding/json"},
 				{Path: "fmt"},
-				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()), Name: data.Service.PkgName},
-				{Path: genpkg + "/" + codegen.SnakeCase(svc.Name()) + "/views", Name: data.Service.ViewsPkg},
+				services.ServiceImport(svc.Name()),
+				services.ViewImport(svc.Name()),
 			},
 		),
 	)

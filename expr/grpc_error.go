@@ -1,3 +1,5 @@
+// This file binds reusable gRPC error-response policy to the concrete error
+// returned by each endpoint method.
 package expr
 
 import (
@@ -45,17 +47,22 @@ func (e *GRPCErrorExpr) Validate() *eval.ValidationErrors {
 
 // Finalize looks up the corresponding method error expression.
 func (e *GRPCErrorExpr) Finalize(a *GRPCEndpointExpr) {
-	var ee *ErrorExpr
-	switch p := e.Response.Parent.(type) {
-	case *GRPCEndpointExpr:
-		ee = p.MethodExpr.Error(e.Name)
-	case *GRPCServiceExpr:
-		ee = p.Error(e.Name)
-	case *GRPCExpr:
-		ee = Root.Error(e.Name)
-	}
-	e.ErrorExpr = ee
+	e.ErrorExpr = a.MethodExpr.Error(e.Name)
 	e.Response.Finalize(a, e.AttributeExpr)
+}
+
+// mappedError returns the error declaration that owns this reusable gRPC
+// response policy before the policy is applied to an endpoint method.
+func (e *GRPCErrorExpr) mappedError() (*ErrorExpr, string) {
+	switch parent := e.Response.Parent.(type) {
+	case *GRPCEndpointExpr:
+		return parent.MethodExpr.Error(e.Name), "method"
+	case *GRPCServiceExpr:
+		return parent.Error(e.Name), "service"
+	case *GRPCExpr, *RootExpr:
+		return Root.Error(e.Name), "API"
+	}
+	return nil, ""
 }
 
 // Dup creates a copy of the error expression.

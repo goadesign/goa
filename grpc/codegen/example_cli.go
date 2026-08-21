@@ -11,10 +11,10 @@ import (
 )
 
 // ExampleCLIFiles returns an example gRPC client tool implementation.
-func ExampleCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
+func ExampleCLIFiles(services *ServicesData) []*codegen.File {
 	var files []*codegen.File
 	for _, svr := range services.Root.API.Servers {
-		if f := exampleCLI(genpkg, services, svr); f != nil {
+		if f := exampleCLI(services, svr); f != nil {
 			files = append(files, f)
 		}
 	}
@@ -23,7 +23,8 @@ func ExampleCLIFiles(genpkg string, services *ServicesData) []*codegen.File {
 
 // exampleCLI returns an example client tool HTTP implementation for the given
 // server expression.
-func exampleCLI(genpkg string, services *ServicesData, svr *expr.ServerExpr) *codegen.File {
+func exampleCLI(services *ServicesData, svr *expr.ServerExpr) *codegen.File {
+	genpkg := services.GenPkg()
 	svrdata := example.Servers.Get(svr, services.Root)
 	mainPath := filepath.Join("cmd", svrdata.Dir+"-cli", "grpc.go")
 	if _, err := os.Stat(mainPath); !os.IsNotExist(err) {

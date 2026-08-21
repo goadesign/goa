@@ -7,34 +7,17 @@ import (
 	"strings"
 
 	"goa.design/goa/v3/codegen"
-	servicecodegen "goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
+	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
 // addEndpointImports adds the named service-type references used by endpoints
 // to file's header. The output package is computed from the generated path.
-func addEndpointImports(file *codegen.File, genpkg string, endpoints ...*expr.HTTPEndpointExpr) *codegen.File {
+func addEndpointImports(file *codegen.File, services *httpcodegen.ServicesData, endpoints ...*expr.HTTPEndpointExpr) *codegen.File {
 	outputPath := strings.TrimPrefix(strings.ReplaceAll(file.Path, "\\", "/"), codegen.Gendir+"/")
-	outputPackage := path.Join(genpkg, path.Dir(outputPath))
-	codegen.AddImport(file.SectionTemplates[0], servicecodegen.AttributeImports(genpkg, outputPackage, jsonRPCEndpointAttributes(endpoints...)...)...)
+	outputPackage := path.Join(services.GenPkg(), path.Dir(outputPath))
+	codegen.AddImport(file.SectionTemplates[0], services.AttributeImports(outputPackage, httpcodegen.ServiceReferenceAttributes(endpoints...)...)...)
 	return file
-}
-
-// jsonRPCEndpointAttributes returns the named service attributes referenced by
-// the supplied JSON-RPC endpoint sections.
-func jsonRPCEndpointAttributes(endpoints ...*expr.HTTPEndpointExpr) []*expr.AttributeExpr {
-	var attributes []*expr.AttributeExpr
-	for _, endpoint := range endpoints {
-		method := endpoint.MethodExpr
-		attributes = append(attributes, method.Payload, method.StreamingPayload, method.Result)
-		if method.HasMixedResults() {
-			attributes = append(attributes, method.StreamingResult)
-		}
-		for _, methodError := range method.Errors {
-			attributes = append(attributes, methodError.AttributeExpr)
-		}
-	}
-	return attributes
 }
 
 // jsonRPCWebSocketEndpoints returns only the endpoints whose stream sections

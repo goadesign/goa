@@ -31,7 +31,7 @@ func TestClientTypeFiles(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
 			services := CreateGRPCServices(root)
-			fs := ClientTypeFiles("", services)
+			fs := ClientTypeFiles(services)
 			require.Len(t, fs, 1)
 			var buf bytes.Buffer
 			for _, s := range fs[0].SectionTemplates[1:] {

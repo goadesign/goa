@@ -1,3 +1,5 @@
+// This file prepares, validates, and finalizes the HTTP transport contract for
+// one service method.
 package expr
 
 import (
@@ -604,6 +606,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 	for _, er := range e.HTTPErrors {
 		verr.Merge(er.Validate())
 	}
+	verr.Merge(e.validateErrorMappings())
 
 	// Validate definitions of params, headers and bodies against definition of payload
 	var (
@@ -747,6 +750,30 @@ func (e *HTTPEndpointExpr) Validate() error {
 		}
 	}
 
+	return verr
+}
+
+// validateErrorMappings ensures inherited HTTP response policy describes the
+// same concrete error value returned by the endpoint method.
+func (e *HTTPEndpointExpr) validateErrorMappings() *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+	for _, mapping := range e.HTTPErrors {
+		mapped, owner := mapping.mappedError()
+		method := e.MethodExpr.Error(mapping.Name)
+		if mapped == nil || method == nil || equivalentErrorAttributes(mapped.AttributeExpr, method.AttributeExpr) {
+			continue
+		}
+		verr.Add(
+			mapping.Response,
+			`HTTP error mapping %q inherited from the %s uses error type %q, but method %q of service %q uses %q; both definitions must define the same error attribute (type, validations, defaults, and struct metadata)`,
+			mapping.Name,
+			owner,
+			mapped.Type.Name(),
+			e.MethodExpr.Name,
+			e.MethodExpr.Service.Name,
+			method.Type.Name(),
+		)
+	}
 	return verr
 }
 

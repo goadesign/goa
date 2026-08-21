@@ -23,7 +23,7 @@ func TestClientCLIFiles(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
 			services := CreateGRPCServices(root)
-			fs := ClientCLIFiles("", services)
+			fs := ClientCLIFiles(services)
 			require.Greater(t, len(fs), 1, "expected at least 2 files")
 			require.NotEmpty(t, fs[1].SectionTemplates)
 			var buf bytes.Buffer

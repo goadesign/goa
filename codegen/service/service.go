@@ -273,7 +273,7 @@ func generatedPackageFiles(genpkg string, analyses []*ServicesData) []*codegen.F
 			})
 			collector := newImportCollector(aliases, genpkg, packagePath)
 			for _, generatedType := range generatedTypes {
-				collector.collect(generatedType.userType.Attribute())
+				collector.collectDefinition(generatedType.userType.Attribute())
 			}
 			imports := collector.imports()
 			sections := []*codegen.SectionTemplate{
@@ -302,8 +302,8 @@ func generatedPackageFiles(genpkg string, analyses []*ServicesData) []*codegen.F
 			}
 			for _, union := range unions {
 				for _, field := range union.Fields {
-					collector.collect(field.reference)
-					collector.collect(field.definition)
+					collector.collectDefinition(field.reference)
+					collector.collectDefinition(field.definition)
 				}
 			}
 			imports := collector.imports()

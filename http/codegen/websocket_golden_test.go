@@ -77,9 +77,9 @@ func TestWebSocketGoldenFiles(t *testing.T) {
 
 			var files []*codegen.File
 			if c.fileType == "server" {
-				files = ServerFiles("", services)
+				files = ServerFiles(services)
 			} else {
-				files = ClientFiles("", services)
+				files = ClientFiles(services)
 			}
 
 			// Find the websocket.go file
@@ -123,8 +123,8 @@ func TestWebSocketTemplateExercise(t *testing.T) {
 	services := CreateHTTPServices(root)
 
 	// Generate both server and client files
-	serverFiles := ServerFiles("", services)
-	clientFiles := ClientFiles("", services)
+	serverFiles := ServerFiles(services)
+	clientFiles := ClientFiles(services)
 
 	// Verify WebSocket files were generated
 	var serverWSFile, clientWSFile *codegen.File

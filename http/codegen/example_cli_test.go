@@ -1,3 +1,4 @@
+// This file verifies generated HTTP command-line client examples.
 package codegen
 
 import (
@@ -31,7 +32,7 @@ func TestExampleCLIFiles(t *testing.T) {
 			example.Servers = make(example.ServersData)
 			root := codegen.RunDSL(t, c.DSL)
 			httpServices := NewServicesData(createServiceServices(root), root.API.HTTP)
-			fs := ExampleCLIFiles("", httpServices)
+			fs := ExampleCLIFiles(httpServices)
 			require.Len(t, fs, 1)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer

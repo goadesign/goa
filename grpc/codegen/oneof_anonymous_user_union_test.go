@@ -1,3 +1,5 @@
+// This file verifies protobuf generation for unions containing anonymous user
+// type branches.
 package codegen
 
 import (
@@ -44,7 +46,7 @@ func TestAnonymousUserUnionArrayNoWrappersFromProto(t *testing.T) {
 	})
 
 	sd := &ServiceData{Name: "Svc", Scope: codegen.NewNameScope()}
-	svcCtx := serviceTypeContext("proto", sd.Scope)
+	svcCtx := codegen.NewAttributeContext(false, false, true, "proto", sd.Scope)
 	pbCtx := protoBufTypeContext("proto", sd.Scope, true)
 
 	// Transform protobuf -> Go for Container

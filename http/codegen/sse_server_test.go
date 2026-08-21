@@ -31,7 +31,7 @@ func TestSSE(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
 			services := CreateHTTPServices(root)
-			fs := ServerFiles("", services)
+			fs := ServerFiles(services)
 			require.Len(t, fs, 3)
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 1)
@@ -45,7 +45,7 @@ func TestSSE(t *testing.T) {
 func TestSSETransportDefaultsToStatusOK(t *testing.T) {
 	root := expr.RunDSL(t, testdata.SSEStringDSL)
 	services := CreateHTTPServices(root)
-	fs := ServerFiles("", services)
+	fs := ServerFiles(services)
 	require.Len(t, fs, 3)
 
 	sections := fs[1].SectionTemplates

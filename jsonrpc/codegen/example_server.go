@@ -11,17 +11,18 @@ import (
 )
 
 // ExampleServerFiles returns example JSON-RPC server implementation.
-func ExampleServerFiles(genpkg string, data *httpcodegen.ServicesData, files []*codegen.File) []*codegen.File {
+func ExampleServerFiles(data *httpcodegen.ServicesData, files []*codegen.File) []*codegen.File {
 	var fw []*codegen.File
 	for _, svr := range data.Root.API.Servers {
-		if m := exampleServer(genpkg, data, svr, files); m != nil {
+		if m := exampleServer(data, svr, files); m != nil {
 			fw = append(fw, m)
 		}
 	}
 	return fw
 }
 
-func exampleServer(genpkg string, data *httpcodegen.ServicesData, svr *expr.ServerExpr, files []*codegen.File) *codegen.File {
+func exampleServer(data *httpcodegen.ServicesData, svr *expr.ServerExpr, files []*codegen.File) *codegen.File {
+	genpkg := data.GenPkg()
 	svrdata := example.Servers.Get(svr, data.Root)
 	httppath := filepath.Join("cmd", svrdata.Dir, "http.go")
 
@@ -36,7 +37,7 @@ func exampleServer(genpkg string, data *httpcodegen.ServicesData, svr *expr.Serv
 		}
 	}
 	if file == nil {
-		file = httpcodegen.ExampleServer(genpkg, data.Root, svr, data)
+		file = httpcodegen.ExampleServer(data.Root, svr, data)
 	}
 
 	// Add JSON-RPC imports to the HTTP server file

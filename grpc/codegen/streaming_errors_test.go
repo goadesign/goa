@@ -60,7 +60,7 @@ func TestStreamingWithErrors(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.dsl)
 			services := CreateGRPCServices(root)
-			clientfs := ClientFiles("", services)
+			clientfs := ClientFiles(services)
 			require.Greater(t, len(clientfs), 0)
 
 			// Get recv method implementations
@@ -94,7 +94,7 @@ func TestStreamingErrorsWithValidation(t *testing.T) {
 	require.Greater(t, len(method.Errors), 0, "method should have errors defined")
 
 	// Generate client code
-	clientfs := ClientFiles("", services)
+	clientfs := ClientFiles(services)
 	require.Greater(t, len(clientfs), 0)
 
 	// Check recv implementations
@@ -148,7 +148,7 @@ func TestStreamingErrorComparison(t *testing.T) {
 
 	root := RunGRPCDSL(t, dsl)
 	services := CreateGRPCServices(root)
-	clientfs := ClientFiles("", services)
+	clientfs := ClientFiles(services)
 	require.Greater(t, len(clientfs), 0, "should have client files")
 
 	// Find unary and streaming code in different sections

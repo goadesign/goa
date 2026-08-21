@@ -25,8 +25,8 @@ func TestParseEndpointWithInterceptors(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
-			services := CreateGRPCServices(root)
-			fs := ClientCLIFiles("", services)
+			services := NewServicesData(createServiceServicesForPackage(root, ""))
+			fs := ClientCLIFiles(services)
 			require.Greater(t, len(fs), 1, "expected at least 2 files")
 			require.NotEmpty(t, fs[0].SectionTemplates)
 			var buf bytes.Buffer

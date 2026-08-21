@@ -43,7 +43,7 @@ type subcommandData struct {
 }
 
 // ClientCLIFiles returns the client HTTP CLI support file.
-func ClientCLIFiles(genpkg string, data *ServicesData) []*codegen.File {
+func ClientCLIFiles(data *ServicesData) []*codegen.File {
 	if len(data.Expressions.Services) == 0 {
 		return nil
 	}
@@ -82,10 +82,10 @@ func ClientCLIFiles(genpkg string, data *ServicesData) []*codegen.File {
 				}
 			}
 		}
-		files = append(files, endpointParser(genpkg, data.Root, svr, svrData, data))
+		files = append(files, endpointParser(data.Root, svr, svrData, data))
 	}
 	for i, svc := range svcs {
-		files = append(files, payloadBuilders(genpkg, svc, cmds[i].CommandData, data))
+		files = append(files, payloadBuilders(svc, cmds[i].CommandData, data))
 	}
 	return files
 }
@@ -109,7 +109,8 @@ func buildSubcommandData(sd *ServiceData, e *EndpointData) *subcommandData {
 
 // endpointParser returns the file that implements the command line parser that
 // builds the client endpoint and payload necessary to perform a request.
-func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, data []*commandData, services *ServicesData) *codegen.File {
+func endpointParser(root *expr.RootExpr, svr *expr.ServerExpr, data []*commandData, services *ServicesData) *codegen.File {
+	genpkg := services.GenPkg()
 	pkg := codegen.SnakeCase(codegen.Goify(svr.Name, true))
 	path := filepath.Join(codegen.Gendir, services.dir(), "cli", pkg, "cli.go")
 	title := fmt.Sprintf("%s %s client CLI support package", svr.Name, services.label())
@@ -136,10 +137,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 		})
 		// Add interceptors import if service has client interceptors
 		if len(sd.Service.ClientInterceptors) > 0 {
-			specs = append(specs, &codegen.ImportSpec{
-				Path: genpkg + "/" + sd.Service.PathName,
-				Name: sd.Service.PkgName,
-			})
+			specs = append(specs, services.ServiceImport(svc.Name))
 		}
 	}
 
@@ -165,7 +163,7 @@ func endpointParser(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, da
 
 // payloadBuilders returns the file that contains the payload constructors that
 // use flag values as arguments.
-func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.CommandData, services *ServicesData) *codegen.File {
+func payloadBuilders(svc *expr.HTTPServiceExpr, data *cli.CommandData, services *ServicesData) *codegen.File {
 	sd := services.Get(svc.Name())
 	path := filepath.Join(codegen.Gendir, services.dir(), sd.Service.PathName, "client", "cli.go")
 	title := fmt.Sprintf("%s %s client CLI support package", svc.Name(), services.label())
@@ -178,9 +176,9 @@ func payloadBuilders(genpkg string, svc *expr.HTTPServiceExpr, data *cli.Command
 		{Path: "unicode/utf8"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: genpkg + "/" + sd.Service.PathName, Name: sd.Service.PkgName},
+		services.ServiceImport(svc.Name()),
 	}
-	return addEndpointImports(cli.PayloadBuildersFile(path, title, specs, data), genpkg, svc.HTTPEndpoints...)
+	return addEndpointImports(cli.PayloadBuildersFile(path, title, specs, data), services, svc.HTTPEndpoints...)
 }
 
 // buildFlags builds the flag data and build function for an endpoint.

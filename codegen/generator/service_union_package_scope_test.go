@@ -24,7 +24,7 @@ func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 	Generators = func(_ string) ([]Genfunc, error) {
 		return []Genfunc{
 			{Plan: planServiceData, Generate: Service},
-			{Plan: planServiceData, Generate: Transport},
+			{Plan: planTransportData, Generate: Transport},
 		}, nil
 	}
 
@@ -34,14 +34,24 @@ func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 		firstInput := dsl.Type("FirstInput", func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.OneOf("Value", func() {
-				dsl.Field(1, "text", dsl.String)
+				dsl.Field(1, "record", func() {
+					dsl.OneOf("Nested", func() {
+						dsl.Field(1, "text", dsl.String)
+					})
+					dsl.Required("Nested")
+				})
 			})
 			dsl.Required("Value")
 		})
 		secondInput := dsl.Type("SecondInput", func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.OneOf("Value", func() {
-				dsl.Field(1, "number", dsl.Int)
+				dsl.Field(1, "record", func() {
+					dsl.OneOf("Nested", func() {
+						dsl.Field(1, "text", dsl.Int)
+					})
+					dsl.Required("Nested")
+				})
 			})
 			dsl.Required("Value")
 		})
@@ -55,6 +65,11 @@ func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 				})
 				dsl.GRPC(func() {})
 			})
+			dsl.Method("ReadJSON", func() {
+				dsl.Payload(firstInput)
+				dsl.Result(dsl.String)
+				dsl.JSONRPC(func() {})
+			})
 		})
 		dsl.Service("Second", func() {
 			dsl.Method("Read", func() {
@@ -65,6 +80,11 @@ func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 					dsl.Response(200)
 				})
 				dsl.GRPC(func() {})
+			})
+			dsl.Method("ReadJSON", func() {
+				dsl.Payload(secondInput)
+				dsl.Result(dsl.String)
+				dsl.JSONRPC(func() {})
 			})
 		})
 	}
@@ -82,9 +102,177 @@ func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 		filepath.Join("http", "second", "server", "server.go"),
 		filepath.Join("grpc", "first", "server", "server.go"),
 		filepath.Join("grpc", "second", "server", "server.go"),
+		filepath.Join("jsonrpc", "first", "server", "server.go"),
+		filepath.Join("jsonrpc", "second", "server", "server.go"),
 	} {
 		require.FileExists(t, filepath.Join(genDir, path))
 	}
+	runGeneratedTests(t, genDir)
+}
+
+// TestInheritedTransportErrorMappingsCompileWithMethodErrors verifies reusable
+// HTTP and gRPC response policy binds to the equivalent error value declared by
+// the endpoint method instead of retaining the API declaration object.
+func TestInheritedTransportErrorMappingsCompileWithMethodErrors(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planTransportData, Generate: Transport},
+		}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		dsl.API("error policy", func() {
+			dsl.Error("bad_request", dsl.String)
+			dsl.HTTP(func() { dsl.Response(dsl.StatusBadRequest, "bad_request") })
+			dsl.GRPC(func() { dsl.Response("bad_request", dsl.CodeInvalidArgument) })
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() {
+				dsl.Error("bad_request", dsl.String)
+				dsl.HTTP(func() { dsl.GET("/values") })
+				dsl.GRPC(func() {})
+			})
+		})
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	runGeneratedTests(t, genDir)
+}
+
+// TestNestedTransportMetadataOwnsRecursiveImports verifies conversion helpers
+// import a custom field type nested inside a relocated service declaration.
+func TestNestedTransportMetadataOwnsRecursiveImports(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planTransportData, Generate: Transport},
+		}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		outer := dsl.Type("Outer", func() {
+			dsl.Meta("struct:pkg:path", "domain/outer")
+			dsl.Field(1, "value", dsl.String, func() {
+				dsl.Meta("struct:field:type", "custom.Value", "gen/custom/value", "custom")
+			})
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("HTTP", func() {
+				dsl.Payload(outer)
+				dsl.HTTP(func() { dsl.POST("/values") })
+			})
+			dsl.Method("GRPC", func() {
+				dsl.Payload(outer)
+				dsl.GRPC(func() {})
+			})
+			dsl.Method("JSONRPC", func() {
+				dsl.Payload(outer)
+				dsl.JSONRPC(func() {})
+			})
+		})
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	writeStubPackage(t, filepath.Join(genDir, "custom", "value"), "custom")
+	runGeneratedTests(t, genDir)
+}
+
+// TestTransportServiceImportsUseFrozenAliases verifies a service package whose
+// natural name collides with a fixed runtime import is declared and referenced
+// with the same generation-owned qualifier in every transport.
+func TestTransportServiceImportsUseFrozenAliases(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planTransportData, Generate: Transport},
+		}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		dsl.Service("Goa", func() {
+			for _, transport := range []string{"HTTP", "GRPC", "JSONRPC"} {
+				dsl.Method(transport, func() {
+					dsl.Payload(func() { dsl.Field(1, "value", dsl.String) })
+					switch transport {
+					case "HTTP":
+						dsl.HTTP(func() { dsl.POST("/values") })
+					case "GRPC":
+						dsl.GRPC(func() {})
+					case "JSONRPC":
+						dsl.JSONRPC(func() {})
+					}
+				})
+			}
+		})
+		dsl.Service("Goahttp", func() {
+			dsl.Method("HTTP", func() {
+				dsl.Payload(func() { dsl.Field(1, "value", dsl.String) })
+				dsl.HTTP(func() { dsl.POST("/http-values") })
+			})
+		})
+		dsl.Service("Goapb", func() {
+			dsl.Method("GRPC", func() {
+				dsl.Payload(func() { dsl.Field(1, "value", dsl.String) })
+				dsl.GRPC(func() {})
+			})
+		})
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	runGeneratedTests(t, genDir)
+}
+
+// TestInheritedTransportErrorsOwnImports verifies API-level response policy
+// imports the relocated effective error referenced by generated HTTP and gRPC
+// encoders even though the method does not redeclare it.
+func TestInheritedTransportErrorsOwnImports(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planTransportData, Generate: Transport},
+		}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		fault := dsl.Type("Fault", func() {
+			dsl.Meta("struct:pkg:path", "domain/errors")
+			dsl.Attribute("message", dsl.String)
+		})
+		dsl.API("error imports", func() {
+			dsl.Error("fault", fault)
+			dsl.HTTP(func() { dsl.Response(dsl.StatusBadRequest, "fault") })
+			dsl.GRPC(func() { dsl.Response("fault", dsl.CodeInvalidArgument) })
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() {
+				dsl.HTTP(func() { dsl.GET("/values") })
+				dsl.GRPC(func() {})
+			})
+		})
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
 	runGeneratedTests(t, genDir)
 }
 
@@ -169,7 +357,7 @@ func TestServiceFilesOwnTheirImports(t *testing.T) {
 	Generators = func(_ string) ([]Genfunc, error) {
 		return []Genfunc{
 			{Plan: planServiceData, Generate: Service},
-			{Plan: planServiceData, Generate: Transport},
+			{Plan: planTransportData, Generate: Transport},
 		}, nil
 	}
 
@@ -210,6 +398,69 @@ func TestServiceFilesOwnTheirImports(t *testing.T) {
 	writeGeneratedModule(t, genDir, "gen")
 	_, err := Generate(dir, "gen", false)
 	require.NoError(t, err)
+	runGeneratedTests(t, genDir)
+}
+
+// TestRawBodyStructsRemainInEndpointsPackage verifies relocated payload and
+// result declarations never relocate the request/response wrappers consumed by
+// the raw HTTP body path.
+func TestRawBodyStructsRemainInEndpointsPackage(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planTransportData, Generate: Transport},
+		}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		upload := dsl.Type("Upload", func() {
+			dsl.Meta("struct:pkg:path", "domain/types")
+			dsl.Attribute("length", dsl.Int)
+			dsl.Required("length")
+		})
+		download := dsl.Type("Download", func() {
+			dsl.Meta("struct:pkg:path", "domain/types")
+			dsl.Attribute("length", dsl.Int)
+			dsl.Required("length")
+		})
+		dsl.Service("RawBodies", func() {
+			dsl.Method("Upload", func() {
+				dsl.Payload(upload)
+				dsl.HTTP(func() {
+					dsl.POST("/upload")
+					dsl.Header("length:Content-Length")
+					dsl.SkipRequestBodyEncodeDecode()
+					dsl.Response(dsl.StatusNoContent)
+				})
+			})
+			dsl.Method("Download", func() {
+				dsl.Result(download)
+				dsl.HTTP(func() {
+					dsl.GET("/download")
+					dsl.SkipResponseBodyEncodeDecode()
+					dsl.Response(dsl.StatusOK, func() {
+						dsl.Header("length:Content-Length")
+					})
+				})
+			})
+		})
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+
+	clientSource, err := os.ReadFile(filepath.Join(genDir, "http", "raw_bodies", "client", "client.go"))
+	require.NoError(t, err)
+	require.Contains(t, string(clientSource), "&rawbodies.DownloadResponseData")
+	require.NotContains(t, string(clientSource), "types.DownloadResponseData")
+	codecSource, err := os.ReadFile(filepath.Join(genDir, "http", "raw_bodies", "client", "encode_decode.go"))
+	require.NoError(t, err)
+	require.Contains(t, string(codecSource), "*rawbodies.UploadRequestData")
+	require.NotContains(t, string(codecSource), "types.UploadRequestData")
 	runGeneratedTests(t, genDir)
 }
 
@@ -255,6 +506,107 @@ func TestServiceReferencesUseImportPathAliases(t *testing.T) {
 	require.Contains(t, code, `*shared.First`)
 	require.Contains(t, code, `*shared2.Second`)
 	runGeneratedTests(t, genDir)
+}
+
+// TestTransportReferencesUseImportPathAliases verifies HTTP, gRPC, and
+// JSON-RPC files qualify two same-basename service packages with the aliases
+// frozen by the shared generation.
+func TestTransportReferencesUseImportPathAliases(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planTransportData, Generate: Transport},
+		}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		first := dsl.Type("First", func() {
+			dsl.Meta("struct:pkg:path", "first/shared")
+			dsl.Field(1, "value", dsl.String)
+		})
+		second := dsl.Type("Second", func() {
+			dsl.Meta("struct:pkg:path", "second/shared")
+			dsl.Field(1, "value", dsl.String)
+		})
+		dsl.Service("Values", func() {
+			for _, method := range []struct {
+				name    string
+				path    string
+				payload expr.UserType
+			}{
+				{"HTTPFirst", "/http/first", first},
+				{"HTTPSecond", "/http/second", second},
+			} {
+				dsl.Method(method.name, func() {
+					dsl.Payload(method.payload)
+					dsl.HTTP(func() { dsl.POST(method.path) })
+				})
+			}
+			for _, method := range []struct {
+				name    string
+				payload expr.UserType
+			}{
+				{"GRPCFirst", first},
+				{"GRPCSecond", second},
+			} {
+				dsl.Method(method.name, func() {
+					dsl.Payload(method.payload)
+					dsl.GRPC(func() {})
+				})
+			}
+			for _, method := range []struct {
+				name    string
+				payload expr.UserType
+			}{
+				{"JSONFirst", first},
+				{"JSONSecond", second},
+			} {
+				dsl.Method(method.name, func() {
+					dsl.Payload(method.payload)
+					dsl.JSONRPC(func() {})
+				})
+			}
+		})
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	for _, transport := range []string{"http", "grpc", "jsonrpc"} {
+		source := generatedTreeSource(t, filepath.Join(genDir, transport, "values"))
+		require.Contains(t, source, `shared "gen/first/shared"`)
+		require.Contains(t, source, `shared2 "gen/second/shared"`)
+		require.Contains(t, source, "shared.First")
+		require.Contains(t, source, "shared2.Second")
+	}
+	runGeneratedTests(t, genDir)
+}
+
+// generatedTreeSource returns the concatenated Go source below root in path
+// order so tests can assert file-owned imports without depending on which
+// transport file contains a conversion helper.
+func generatedTreeSource(t *testing.T, root string) string {
+	t.Helper()
+	var source strings.Builder
+	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() || filepath.Ext(path) != ".go" {
+			return nil
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		source.Write(data)
+		return nil
+	})
+	require.NoError(t, err)
+	return source.String()
 }
 
 // TestNamedUnionBranchImportsReferenceOnly verifies that unions.go does not
@@ -352,7 +704,7 @@ func TestNormalizedMethodTypesUseServicePackageNames(t *testing.T) {
 		Generators = func(_ string) ([]Genfunc, error) {
 			return []Genfunc{
 				{Plan: planServiceData, Generate: Service},
-				{Plan: planServiceData, Generate: Transport},
+				{Plan: planTransportData, Generate: Transport},
 			}, nil
 		}
 		codegen.RunDSL(t, func() {
@@ -471,7 +823,7 @@ func TestTransportSectionsOwnTheirImports(t *testing.T) {
 		})
 	})
 	generation := codegen.NewGeneration("gen", []eval.Root{root})
-	require.NoError(t, planServiceData(generation))
+	require.NoError(t, planTransportData(generation))
 	require.NoError(t, generation.Freeze())
 	files, err := Transport(generation)
 	require.NoError(t, err)
@@ -487,6 +839,85 @@ func TestTransportSectionsOwnTheirImports(t *testing.T) {
 	require.NotEmpty(t, header.String())
 	require.Contains(t, header.String(), `"gen/stream/shared"`)
 	require.NotContains(t, header.String(), `"gen/request/shared"`)
+}
+
+// TestRelocatedStreamingUnionReferencesCompile verifies WebSocket and SSE
+// files resolve relocated streaming declarations through the frozen service
+// packages while their event and frame bodies remain transport-owned.
+func TestRelocatedStreamingUnionReferencesCompile(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planTransportData, Generate: Transport},
+		}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		streamInput := relocatedStreamingType("StreamInput", "InputChoice", dsl.String)
+		streamOutput := relocatedStreamingType("StreamOutput", "OutputChoice", dsl.Int)
+		sseEvent := dsl.Type("SSEEvent", func() {
+			dsl.Attribute("data", streamOutput)
+			dsl.Attribute("id", dsl.String)
+			dsl.Required("data", "id")
+		})
+		dsl.Service("HTTPStreams", func() {
+			dsl.Method("Socket", func() {
+				dsl.StreamingPayload(streamInput)
+				dsl.StreamingResult(streamOutput)
+				dsl.HTTP(func() { dsl.GET("/socket") })
+			})
+			dsl.Method("Events", func() {
+				dsl.StreamingResult(sseEvent)
+				dsl.HTTP(func() {
+					dsl.GET("/events")
+					dsl.ServerSentEvents("data", func() { dsl.SSEEventID("id") })
+				})
+			})
+		})
+		dsl.Service("JSONSockets", func() {
+			dsl.Method("Socket", func() {
+				dsl.StreamingPayload(streamInput)
+				dsl.StreamingResult(streamOutput)
+				dsl.JSONRPC(func() {})
+			})
+		})
+		dsl.Service("JSONEvents", func() {
+			dsl.Method("Events", func() {
+				dsl.StreamingResult(sseEvent)
+				dsl.JSONRPC(func() {
+					dsl.ServerSentEvents("data", func() { dsl.SSEEventID("id") })
+				})
+			})
+		})
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	for _, path := range []string{
+		filepath.Join("http", "http_streams", "server", "websocket.go"),
+		filepath.Join("http", "http_streams", "server", "sse.go"),
+		filepath.Join("jsonrpc", "json_sockets", "server", "websocket.go"),
+		filepath.Join("jsonrpc", "json_events", "server", "sse.go"),
+	} {
+		require.FileExists(t, filepath.Join(genDir, path))
+	}
+	runGeneratedTests(t, genDir)
+}
+
+// relocatedStreamingType builds an object with a nested union that is emitted
+// in the shared streaming package used by the integration test.
+func relocatedStreamingType(name, unionName string, value expr.DataType) expr.UserType {
+	return dsl.Type(name, func() {
+		dsl.Meta("struct:pkg:path", "stream/types")
+		dsl.OneOf(unionName, func() {
+			dsl.Attribute("value", value)
+		})
+		dsl.Required(unionName)
+	})
 }
 
 // writeStubPackage creates the external package referenced by struct:field:type
@@ -650,6 +1081,54 @@ func TestFixedRuntimeAliasesCompileWithGoaAndLogServices(t *testing.T) {
 	require.Contains(t, string(logSource), `log2 "generated.local/gen/log"`)
 	writeGeneratedModule(t, dir, "generated.local")
 	runGeneratedTests(t, dir)
+}
+
+// TestTransportStaticAliasesCompileWithHttpAndPathServices verifies transport
+// imports retain their literal qualifiers beside conflicting service names.
+func TestTransportStaticAliasesCompileWithHttpAndPathServices(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planTransportData, Generate: Transport},
+		}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		for _, name := range []string{"Http", "Path"} {
+			dsl.Service(name, func() {
+				dsl.Method("Read", func() {
+					dsl.Payload(dsl.String)
+					dsl.Result(dsl.String)
+					dsl.HTTP(func() { dsl.POST("/" + strings.ToLower(name)) })
+					dsl.GRPC(func() {})
+				})
+				dsl.Method("ReadJSON", func() {
+					dsl.Payload(dsl.String)
+					dsl.Result(dsl.String)
+					dsl.JSONRPC(func() {})
+				})
+			})
+		}
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	httpServers, err := filepath.Glob(filepath.Join(genDir, "http", "*", "server", "server.go"))
+	require.NoError(t, err)
+	require.Len(t, httpServers, 2)
+	var httpSource strings.Builder
+	for _, server := range httpServers {
+		source, err := os.ReadFile(server)
+		require.NoError(t, err)
+		httpSource.Write(source)
+	}
+	require.Contains(t, httpSource.String(), `http_ "gen/http_"`)
+	require.Contains(t, httpSource.String(), `path2 "gen/path"`)
+	runGeneratedTests(t, genDir)
 }
 
 // unusedRelocatedValueRoot declares a relocated type that no service reaches

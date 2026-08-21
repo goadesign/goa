@@ -93,7 +93,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 			resp.Body.Close()
 			return nil, err
 		}
-		return &{{ responseStructPkg .Method .ServicePkgName }}.{{ .Method.ResponseStruct }}{ {{ if .Result.Ref }}Result: res.({{ .Result.Ref }}), {{ end }}Body: resp.Body}, nil
+		return &{{ .ServicePkgName }}.{{ .Method.ResponseStruct }}{ {{ if .Result.Ref }}Result: res.({{ .Result.Ref }}), {{ end }}Body: resp.Body}, nil
 		{{- else }}
 		return decodeResponse(resp)
 		{{- end }}

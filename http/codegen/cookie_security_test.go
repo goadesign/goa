@@ -78,7 +78,7 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 		root := expr.RunDSL(t, cookieAPIKeySecurityDSL)
 		services := CreateHTTPServices(root)
 
-		serverTypes := typesFile("gen", root.API.HTTP.Services[0], true, services)
+		serverTypes := typesFile(root.API.HTTP.Services[0], true, services)
 		var serverTypesBuf bytes.Buffer
 		for _, section := range serverTypes.SectionTemplates[1:] {
 			require.NoError(t, section.Write(&serverTypesBuf))
@@ -88,7 +88,7 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 		require.NotContains(t, serverTypesCode, "browserSession *string, browserSession *string")
 		require.NotContains(t, serverTypesCode, "browserSession string, browserSession string")
 
-		serverFiles := ServerFiles("", services)
+		serverFiles := ServerFiles(services)
 		require.Len(t, serverFiles, 2)
 		serverDecode := codegen.SectionCode(t, serverFiles[1].SectionTemplates[2])
 		require.Contains(t, serverDecode, `r.Cookie("__Host-ak_session")`)
@@ -96,7 +96,7 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 		require.NotContains(t, serverDecode, "browserSession *string, browserSession *string")
 		require.NotContains(t, serverDecode, "browserSession string, browserSession string")
 
-		clientFiles := ClientFiles("", services)
+		clientFiles := ClientFiles(services)
 		require.Len(t, clientFiles, 2)
 		clientEncode := codegen.SectionCode(t, clientFiles[1].SectionTemplates[2])
 		require.Contains(t, clientEncode, `req.AddCookie(&http.Cookie{`)

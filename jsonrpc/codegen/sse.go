@@ -14,7 +14,7 @@ import (
 // sseServerFile returns the file implementing the JSON-RPC SSE server
 // streams if any. The file contains the shared SSE stream machinery followed
 // by one stream implementation per SSE endpoint.
-func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
+func sseServerFile(svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	if data == nil {
 		return nil
@@ -35,7 +35,7 @@ func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodeg
 		codegen.GoaImport(""),
 		codegen.GoaImport("jsonrpc"),
 		codegen.GoaNamedImport("http", "goahttp"),
-		&codegen.ImportSpec{Path: genpkg + "/" + data.Service.PathName, Name: data.Service.PkgName},
+		services.ServiceImport(svc.Name()),
 	)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),
@@ -58,7 +58,7 @@ func sseServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodeg
 }
 
 // sseClientFile returns the file implementing the SSE client streaming implementation if any.
-func sseClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
+func sseClientFile(svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	if data == nil {
 		return nil
@@ -86,7 +86,7 @@ func sseClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodeg
 				{Path: "sync"},
 				codegen.GoaImport("jsonrpc"),
 				codegen.GoaNamedImport("http", "goahttp"),
-				{Path: genpkg + "/" + data.Service.PathName, Name: data.Service.PkgName},
+				services.ServiceImport(svc.Name()),
 			},
 		),
 	)

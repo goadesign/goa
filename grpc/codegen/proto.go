@@ -20,16 +20,17 @@ const (
 )
 
 // ProtoFiles returns the protobuf file for every gRPC service.
-func ProtoFiles(genpkg string, services *ServicesData) []*codegen.File {
+func ProtoFiles(services *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(services.Root.API.GRPC.Services))
 	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = protoFile(genpkg, svc, services)
+		fw[i] = protoFile(svc, services)
 	}
 	return fw
 }
 
 // protoFile returns the protobuf file defining the specified service.
-func protoFile(genpkg string, svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
+func protoFile(svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File {
+	genpkg := services.GenPkg()
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	parts := strings.Split(genpkg, "/")

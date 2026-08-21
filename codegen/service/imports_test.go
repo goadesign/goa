@@ -337,7 +337,7 @@ func TestUnionFieldReferencesUseFixedImportAliases(t *testing.T) {
 	require.Equal(t, "json2.Value", data.Fields[0].FieldType)
 
 	collector := newImportCollector(aliases, generation.GenPkg(), "generated.local/gen/values")
-	collector.collect(branch)
+	collector.collectDefinition(branch)
 	header := codegen.Header(
 		"Union types",
 		"values",

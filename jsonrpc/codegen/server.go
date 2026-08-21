@@ -13,22 +13,22 @@ import (
 )
 
 // ServerFiles returns the generated JSON-RPC server files if any.
-func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File {
+func ServerFiles(data *httpcodegen.ServicesData) []*codegen.File {
 	jsvcs := data.Root.API.JSONRPC.Services
 	files := make([]*codegen.File, 0, len(jsvcs)*3)
 	for _, svc := range jsvcs {
-		files = append(files, addEndpointImports(serverFile(genpkg, svc, data), genpkg, svc.HTTPEndpoints...))
+		files = append(files, addEndpointImports(serverFile(svc, data), data, svc.HTTPEndpoints...))
 		// Generate either WebSocket or SSE file based on transport type
 		if hasJSONRPCSSE(svc) {
-			if f := sseServerFile(genpkg, svc, data); f != nil {
-				files = append(files, addEndpointImports(f, genpkg, jsonRPCSSEEndpoints(svc)...))
+			if f := sseServerFile(svc, data); f != nil {
+				files = append(files, addEndpointImports(f, data, jsonRPCSSEEndpoints(svc)...))
 			}
-		} else if f := websocketServerFile(genpkg, svc, data); f != nil {
-			files = append(files, addEndpointImports(f, genpkg, jsonRPCWebSocketEndpoints(svc)...))
+		} else if f := websocketServerFile(svc, data); f != nil {
+			files = append(files, addEndpointImports(f, data, jsonRPCWebSocketEndpoints(svc)...))
 		}
 	}
 	for _, svc := range jsvcs {
-		f := httpcodegen.ServerEncodeDecodeFile(genpkg, svc, data)
+		f := httpcodegen.ServerEncodeDecodeFile(svc, data)
 		if f == nil {
 			continue
 		}
@@ -41,13 +41,13 @@ func ServerFiles(genpkg string, data *httpcodegen.ServicesData) []*codegen.File 
 			}
 			s.Name = "jsonrpc-" + s.Name
 		}
-		files = append(files, addEndpointImports(f, genpkg, svc.HTTPEndpoints...))
+		files = append(files, addEndpointImports(f, data, svc.HTTPEndpoints...))
 	}
 	return files
 }
 
 // serverFile returns the file implementing the JSON-RPC server.
-func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
+func serverFile(svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	fpath := filepath.Join(codegen.Gendir, "jsonrpc", svcName, "server", "server.go")
@@ -73,8 +73,8 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.
 		codegen.GoaImport(""),
 		codegen.GoaImport("jsonrpc"),
 		codegen.GoaNamedImport("http", "goahttp"),
-		&codegen.ImportSpec{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-		&codegen.ImportSpec{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
+		services.ServiceImport(svc.Name()),
+		services.ViewImport(svc.Name()),
 	)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),

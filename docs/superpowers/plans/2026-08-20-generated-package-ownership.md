@@ -291,27 +291,27 @@ Expected: PASS.
 - Consumes: service data bound to frozen `TypeDeclaration` records and package scopes
 - Produces: package-aware `Attributor` contexts for every recursive service-type transform
 
-- [ ] **Step 1: Add focused transport reference assertions**
+- [x] **Step 1: Add focused transport reference assertions**
 
 For the two-service nested-union design, assert that HTTP and gRPC conversion
 helpers refer to the exact union names declared in the relocated package. Keep
 transport wire-type scopes independent.
 
-- [ ] **Step 2: Make attribute contexts carry package ownership**
+- [x] **Step 2: Make attribute contexts carry package ownership**
 
 Add the generated package path or frozen declaration resolver required for an
 `Attributor` to select the enclosing service package while recursion enters a
 relocated user type. `AttributeContext.Dup` must preserve it, and helper
 generation must update it when `struct:pkg:path` changes the enclosing package.
 
-- [ ] **Step 3: Replace direct service-scope recomputation**
+- [x] **Step 3: Replace direct service-scope recomputation**
 
 HTTP, WebSocket, SSE, client/server callbacks, gRPC conversions, gRPC
 `fullTypeName`, and transport generator setup resolve service types through the
 frozen service attributor or existing canonical method declaration. `sd.Scope`
 continues to name only HTTP/protobuf wire declarations.
 
-- [ ] **Step 4: Run the generated-module regression**
+- [x] **Step 4: Run the generated-module regression**
 
 Run:
 
@@ -321,7 +321,7 @@ go test ./codegen/generator -run TestRelocatedUnionPackageNamesCompile -count=1
 
 Expected: PASS with HTTP and gRPC enabled.
 
-- [ ] **Step 5: Run all core codegen tests**
+- [x] **Step 5: Run all core codegen tests**
 
 Run:
 

@@ -1,3 +1,5 @@
+// This file verifies generated transformations between service values and
+// protobuf messages.
 package codegen
 
 import (
@@ -52,7 +54,7 @@ func TestProtoBufTransform(t *testing.T) {
 		pkgOverride = root.UserType("CompositePkgOverride")
 
 		// attribute contexts used in test cases
-		svcCtx = serviceTypeContext("proto", sd.Scope)
+		svcCtx = codegen.NewAttributeContext(false, false, true, "proto", sd.Scope)
 		ptrCtx = pointerContext("proto", sd.Scope)
 		pbCtx  = protoBufTypeContext("proto", sd.Scope, true)
 	)

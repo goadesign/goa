@@ -14,7 +14,7 @@ import (
 // websocketServerFile returns the file implementing the JSON-RPC WebSocket server
 // streaming implementation if any. It follows the exact same pattern as the encode/decode
 // files: get the HTTP file and modify it for JSON-RPC.
-func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
+func websocketServerFile(svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	if !httpcodegen.HasWebSocket(data) {
 		return nil
@@ -41,7 +41,7 @@ func websocketServerFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 		codegen.GoaImport(""),
 		codegen.GoaImport("jsonrpc"),
 		codegen.GoaNamedImport("http", "goahttp"),
-		&codegen.ImportSpec{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+		services.ServiceImport(svc.Name()),
 	)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),

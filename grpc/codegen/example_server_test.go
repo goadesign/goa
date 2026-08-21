@@ -1,3 +1,4 @@
+// This file verifies generated gRPC server examples.
 package codegen
 
 import (
@@ -27,7 +28,7 @@ func TestExampleServerFiles(t *testing.T) {
 			example.Servers = make(example.ServersData)
 			root := codegen.RunDSL(t, c.DSL)
 			services := NewServicesData(createServiceServices(root))
-			fs := ExampleServerFiles("", services)
+			fs := ExampleServerFiles(services)
 			require.Greater(t, len(fs), 0)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer

@@ -724,6 +724,64 @@ func (d *ServicesData) Get(name string) *Data {
 	return d.Services[name]
 }
 
+// GenPkg returns the generated module import path shared by every declaration,
+// import alias, and transport built from this service analysis.
+func (d *ServicesData) GenPkg() string {
+	return d.generation.GenPkg()
+}
+
+// ServiceImport returns the frozen import alias for name's generated service
+// package. The returned value is a copy that callers may add to one file.
+func (d *ServicesData) ServiceImport(name string) *codegen.ImportSpec {
+	service := d.Root.Service(name)
+	if service == nil {
+		panic(fmt.Sprintf("service %q is not part of the analyzed design root", name))
+	}
+	spec := d.aliases.spec(servicePackagePath(d.generation.GenPkg(), service))
+	return &codegen.ImportSpec{Name: spec.Name, Path: spec.Path}
+}
+
+// ViewImport returns the frozen import alias for name's generated views
+// package. The returned value is a copy that callers may add to one file.
+func (d *ServicesData) ViewImport(name string) *codegen.ImportSpec {
+	service := d.Root.Service(name)
+	if service == nil {
+		panic(fmt.Sprintf("service %q is not part of the analyzed design root", name))
+	}
+	spec := d.aliases.spec(servicePackagePath(d.generation.GenPkg(), service) + "/views")
+	return &codegen.ImportSpec{Name: spec.Name, Path: spec.Path}
+}
+
+// PackageImport returns the frozen import alias for importPath. The returned
+// value is a copy that callers may add to one generated file.
+func (d *ServicesData) PackageImport(importPath string) *codegen.ImportSpec {
+	spec := d.aliases.spec(importPath)
+	return &codegen.ImportSpec{Name: spec.Name, Path: spec.Path}
+}
+
+// ServiceAttributor returns the frozen service declaration resolver for name
+// as referenced from outputPackage. The returned resolver follows explicit
+// generated package locations and uses the same import aliases as service
+// rendering.
+func (d *ServicesData) ServiceAttributor(name, outputPackage string) codegen.Attributor {
+	service := d.Root.Service(name)
+	if service == nil {
+		panic(fmt.Sprintf("service %q is not part of the analyzed design root", name))
+	}
+	return newServiceResolver(d.generation, d.aliases, service, outputPackage)
+}
+
+// ViewAttributor returns the frozen projected and viewed result declaration
+// resolver for name as referenced from outputPackage.
+func (d *ServicesData) ViewAttributor(name, outputPackage string) codegen.Attributor {
+	service := d.Root.Service(name)
+	if service == nil {
+		panic(fmt.Sprintf("service %q is not part of the analyzed design root", name))
+	}
+	data := d.Services[name]
+	return newViewResolver(d.generation, d.aliases, service, data.viewDerived).withOutputPackage(outputPackage)
+}
+
 // Method returns the service method data for the method with the given name,
 // nil if there isn't one.
 func (d *Data) Method(name string) *MethodData {

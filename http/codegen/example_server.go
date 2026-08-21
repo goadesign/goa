@@ -10,20 +10,19 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
-	servicecodegen "goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 )
 
 // ExampleServerFiles returns an example http service implementation.
-func ExampleServerFiles(genpkg string, data *ServicesData) []*codegen.File {
+func ExampleServerFiles(data *ServicesData) []*codegen.File {
 	var fw []*codegen.File
 	for _, svr := range data.Root.API.Servers {
-		if m := ExampleServer(genpkg, data.Root, svr, data); m != nil {
+		if m := ExampleServer(data.Root, svr, data); m != nil {
 			fw = append(fw, m)
 		}
 	}
 	for _, svc := range data.Expressions.Services {
-		if f := dummyMultipartFile(genpkg, data.Root, svc, data); f != nil {
+		if f := dummyMultipartFile(data.Root, svc, data); f != nil {
 			fw = append(fw, f)
 		}
 	}
@@ -31,7 +30,8 @@ func ExampleServerFiles(genpkg string, data *ServicesData) []*codegen.File {
 }
 
 // ExampleServer returns an example HTTP server implementation.
-func ExampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, services *ServicesData) *codegen.File {
+func ExampleServer(root *expr.RootExpr, svr *expr.ServerExpr, services *ServicesData) *codegen.File {
+	genpkg := services.GenPkg()
 	svrdata := example.Servers.Get(svr, root)
 	fpath := filepath.Join("cmd", svrdata.Dir, "http.go")
 	specs := make([]*codegen.ImportSpec, 0, 12+2*len(root.API.HTTP.Services))
@@ -131,7 +131,8 @@ func ExampleServer(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, ser
 
 // dummyMultipartFile returns a dummy implementation of the multipart decoders
 // and encoders.
-func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func dummyMultipartFile(root *expr.RootExpr, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+	genpkg := services.GenPkg()
 	mpath := "multipart.go"
 	if _, err := os.Stat(mpath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
@@ -167,7 +168,7 @@ func dummyMultipartFile(genpkg string, root *expr.RootExpr, svc *expr.HTTPServic
 			Path: path.Join(genpkg, data.Service.PathName),
 			Name: scope.Unique(data.Service.PkgName, "svc"),
 		})
-		specs = append(specs, servicecodegen.AttributeImports(genpkg, example.RootPath(genpkg), httpEndpointAttributes(multipartEndpoints...)...)...)
+		specs = append(specs, services.AttributeImports(example.RootPath(genpkg), ServiceReferenceAttributes(multipartEndpoints...)...)...)
 
 		apiPkg := example.APIPkg(root, scope)
 		sections = []*codegen.SectionTemplate{codegen.Header("", apiPkg, specs)}

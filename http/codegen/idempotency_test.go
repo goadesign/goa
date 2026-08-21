@@ -38,7 +38,7 @@ func TestIdempotentHTTPEndpointCodegen(t *testing.T) {
 		})
 	})
 	services := CreateHTTPServices(root)
-	clientFiles := ClientFiles("", services)
+	clientFiles := ClientFiles(services)
 	require.NotEmpty(t, clientFiles)
 
 	clientCode := codegen.SectionsCode(t, clientFiles[0].Section("client-endpoint-init"))
@@ -68,10 +68,10 @@ func TestFileGenerationIdempotent(t *testing.T) {
 
 			render := func(dir string) {
 				files := PathFiles(services)
-				files = append(files, ServerFiles("gen", services)...)
-				files = append(files, ClientFiles("gen", services)...)
-				files = append(files, ServerTypeFiles("gen", services)...)
-				files = append(files, ClientTypeFiles("gen", services)...)
+				files = append(files, ServerFiles(services)...)
+				files = append(files, ClientFiles(services)...)
+				files = append(files, ServerTypeFiles(services)...)
+				files = append(files, ClientTypeFiles(services)...)
 				require.NotEmpty(t, files)
 				for _, f := range files {
 					_, err := f.Render(dir)

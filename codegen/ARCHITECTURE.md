@@ -33,6 +33,8 @@ explicitly given the active generation context.
 | Design identity and structural equality | `expr` | validation and code generation |
 | Go identifiers in a generated package | the generated-package record for its output path | service and transport rendering |
 | Relocated user-type and union declarations | the same generated-package record | file rendering |
+| Service error values | the endpoint method's effective error declaration | service and transport rendering |
+| HTTP and gRPC error response policy | the transport mapping selected by error name | transport validation and wire rendering |
 | HTTP, gRPC, and JSON-RPC wire types | each transport generator | transport templates |
 | Output-path merging | the generator | all file-producing plugins |
 
@@ -65,6 +67,13 @@ lower-priority preferences. Required qualifiers are allocated first and
 conflicting requirements are rejected; generated and metadata qualifiers may
 receive deterministic suffixes. Each generated file still imports only the
 paths used by the declarations and references it renders.
+
+Each transport plans the literal imports used by its own templates before the
+catalog freezes. JSON-RPC planning includes HTTP planning because it reuses the
+HTTP type, codec, and command-line renderers. The service planner does not know
+about transport packages. Render functions derive their output import paths
+from the same generation-backed service analysis; they do not accept another
+generated module path that could redirect files away from their imports.
 
 Planning a declaration returns its canonical record. Once every selected
 generator and plugin has planned its output, the context freezes the catalog.
@@ -104,6 +113,25 @@ This is the only supported route for resolving generated service types inside
 HTTP, gRPC, JSON-RPC, conversion, and validation helpers. Transport-specific
 scopes still own transport-only wire declarations.
 
+Each side of a conversion enters its own attribute independently. A copied HTTP
+body remains owned by the HTTP package even if the source service declaration
+was relocated, while the service-side value follows the relocated declaration's
+package record. The generated file's actual import path determines whether a
+reference is local or qualified, and the qualifier comes from the same frozen
+full-path import binding used by that file's imports.
+
+Reusable API- or service-level HTTP and gRPC error mappings are response policy,
+not replacement service types. When an endpoint inherits a mapping by error
+name, the mapping's error attribute must equal the method's effective error
+attribute, including its named type shape, validations, defaults, and struct
+metadata. Validation rejects incompatible shadowing before code generation.
+Finalization then binds the mapping to the method error declaration, so service
+constructors, transport encoders and decoders, and generated references all use
+one concrete error value. For example, an API mapping for a string
+`bad_request` may be reused by a method that independently declares the same
+string error, but not by a method that declares `bad_request` as an integer or
+as the built-in service error object.
+
 ## Plugin and file assembly contracts
 
 A plugin that can emit generated service types plans them before the catalog is
@@ -140,5 +168,7 @@ files, or file merging, trace one declaration through all of these stages:
 8. final files after output-path merging.
 
 A service-only render test is insufficient. The regression must compile a real
-generated module with both HTTP and gRPC enabled whenever those transports can
-refer to the declaration.
+generated module with HTTP, gRPC, and JSON-RPC enabled whenever those transports
+can refer to the declaration. Streaming coverage must exercise WebSocket and
+SSE files when streaming payloads, results, or selected SSE data fields contain
+relocated declarations.

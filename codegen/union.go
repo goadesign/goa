@@ -31,14 +31,6 @@ func NewUnionTypeID(union *expr.Union) UnionTypeID {
 	return UnionTypeID(key.String())
 }
 
-// UnionTypeHash returns the string form of a generated union identity.
-//
-// Deprecated: use NewUnionTypeID so generated-definition identity remains
-// distinct from design expression hashes at naming and package ownership sites.
-func UnionTypeHash(union *expr.Union) string {
-	return NewUnionTypeID(union).Hash()
-}
-
 // Hash returns the exact identity used by a generated package's name scope.
 func (id UnionTypeID) Hash() string {
 	return string(id)

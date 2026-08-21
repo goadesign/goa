@@ -11,7 +11,7 @@ import (
 	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
-func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
+func websocketClientFile(svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	if !httpcodegen.HasWebSocket(data) {
 		return nil
@@ -37,7 +37,7 @@ func websocketClientFile(genpkg string, svc *expr.HTTPServiceExpr, services *htt
 		codegen.GoaImport(""),
 		codegen.GoaImport("jsonrpc"),
 		codegen.GoaNamedImport("http", "goahttp"),
-		&codegen.ImportSpec{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
+		services.ServiceImport(svc.Name()),
 	)
 
 	sections := []*codegen.SectionTemplate{

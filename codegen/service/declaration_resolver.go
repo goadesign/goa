@@ -25,34 +25,7 @@ type (
 		derived     map[expr.UserType]codegen.DerivedTypeID
 		view        bool
 	}
-
-	// methodDeclarationAttributor binds one normalized method wrapper to its
-	// frozen declaration while leaving all other transport naming unchanged.
-	methodDeclarationAttributor struct {
-		origin      expr.UserType
-		declaration *codegen.TypeDeclaration
-		delegate    codegen.Attributor
-	}
 )
-
-// NewMethodTypeContext returns the service-side transport context for a named
-// method type. The exact wrapper uses its frozen declaration; nested and wire
-// attributes retain the transport's existing naming scope.
-func NewMethodTypeContext(attribute *expr.AttributeExpr, declaration *codegen.TypeDeclaration, pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
-	userType, ok := attribute.Type.(expr.UserType)
-	if !ok || declaration == nil {
-		panic("method type context requires a named generated declaration")
-	}
-	delegate := codegen.NewAttributeContext(false, false, true, pkg, scope).Scope
-	return &codegen.AttributeContext{
-		UseDefault: true,
-		Scope: &methodDeclarationAttributor{
-			origin:      userType.Origin(),
-			declaration: declaration,
-			delegate:    delegate,
-		},
-	}
-}
 
 // newServiceResolver resolves declarations starting in service's generated
 // package and qualifies names relative to outputPath.
@@ -105,6 +78,9 @@ func (r *declarationResolver) Name(att *expr.AttributeExpr, _ string, ptr, useDe
 	case *expr.Object:
 		return r.Def(att, ptr, useDefault)
 	case expr.UserType:
+		if actual == expr.Empty {
+			return "struct {}"
+		}
 		if actual == expr.ErrorResult {
 			return "goa.ServiceError"
 		}
@@ -314,67 +290,6 @@ func (r *declarationResolver) refDeclaration(declaration *codegen.TypeDeclaratio
 func (r *declarationResolver) declarationName(attribute *expr.AttributeExpr) string {
 	entered := r.Enter(attribute).(*declarationResolver)
 	return entered.userType(entered.currentPath, attribute.Type.(expr.UserType)).Name()
-}
-
-// Name returns the frozen wrapper name for the bound method type and delegates
-// every other attribute to the transport's existing scope.
-func (a *methodDeclarationAttributor) Name(attribute *expr.AttributeExpr, pkg string, pointer, useDefault bool) string {
-	if a.matches(attribute) {
-		if pkg == "" {
-			return a.declaration.Name()
-		}
-		return pkg + "." + a.declaration.Name()
-	}
-	return a.delegate.Name(attribute, pkg, pointer, useDefault)
-}
-
-// Ref returns the frozen wrapper reference for the bound method type and
-// delegates every other attribute to the transport's existing scope.
-func (a *methodDeclarationAttributor) Ref(attribute *expr.AttributeExpr, pkg string) string {
-	if !a.matches(attribute) {
-		return a.delegate.Ref(attribute, pkg)
-	}
-	name := a.Name(attribute, pkg, false, false)
-	if expr.IsObject(attribute.Type) || expr.IsUnion(attribute.Type) {
-		return "*" + name
-	}
-	return name
-}
-
-// Field delegates service field naming to the transport's existing scope.
-func (a *methodDeclarationAttributor) Field(attribute *expr.AttributeExpr, name string, firstUpper bool) string {
-	return a.delegate.Field(attribute, name, firstUpper)
-}
-
-// Package delegates package qualification to the transport's existing scope.
-func (a *methodDeclarationAttributor) Package(attribute *expr.AttributeExpr) string {
-	return a.delegate.Package(attribute)
-}
-
-// Enter keeps the frozen binding for the exact wrapper and delegates nested
-// attributes to the transport's existing package rules.
-func (a *methodDeclarationAttributor) Enter(attribute *expr.AttributeExpr) codegen.Attributor {
-	if a.matches(attribute) {
-		return a
-	}
-	return a.delegate.Enter(attribute)
-}
-
-// IsSumType preserves the transport scope's union representation.
-func (a *methodDeclarationAttributor) IsSumType() bool {
-	return a.delegate.IsSumType()
-}
-
-// Scope returns the transport naming scope used for all unbound attributes.
-func (a *methodDeclarationAttributor) Scope() *codegen.NameScope {
-	return a.delegate.Scope()
-}
-
-// matches reports whether attribute is the exact normalized wrapper bound to
-// this rendering context.
-func (a *methodDeclarationAttributor) matches(attribute *expr.AttributeExpr) bool {
-	userType, ok := attribute.Type.(expr.UserType)
-	return ok && userType.Origin() == a.origin
 }
 
 // serviceFieldIsPointer matches Goa service struct pointer semantics for one

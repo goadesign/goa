@@ -14,27 +14,27 @@ import (
 )
 
 // ServerFiles returns the generated HTTP server files.
-func ServerFiles(genpkg string, data *ServicesData) []*codegen.File {
+func ServerFiles(data *ServicesData) []*codegen.File {
 	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3)
 	for _, svc := range data.Expressions.Services {
-		files = append(files, addEndpointImports(serverFile(genpkg, svc, data), genpkg, svc.HTTPEndpoints...))
-		if f := websocketServerFile(genpkg, svc, data); f != nil {
-			files = append(files, addEndpointImports(f, genpkg, httpWebSocketEndpoints(svc)...))
+		files = append(files, addEndpointImports(serverFile(svc, data), data, svc.HTTPEndpoints...))
+		if f := websocketServerFile(svc, data); f != nil {
+			files = append(files, addEndpointImports(f, data, httpWebSocketEndpoints(svc)...))
 		}
-		if f := sseServerFile(genpkg, svc, data); f != nil {
-			files = append(files, addEndpointImports(f, genpkg, httpSSEEndpoints(svc)...))
+		if f := sseServerFile(svc, data); f != nil {
+			files = append(files, addEndpointImports(f, data, httpSSEEndpoints(svc)...))
 		}
 	}
 	for _, svc := range data.Expressions.Services {
-		if f := ServerEncodeDecodeFile(genpkg, svc, data); f != nil {
-			files = append(files, addEndpointImports(f, genpkg, svc.HTTPEndpoints...))
+		if f := ServerEncodeDecodeFile(svc, data); f != nil {
+			files = append(files, addEndpointImports(f, data, svc.HTTPEndpoints...))
 		}
 	}
 	return files
 }
 
 // serverFile returns the file implementing the HTTP server.
-func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func serverFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	fpath := filepath.Join(codegen.Gendir, "http", svcName, "server", "server.go")
@@ -62,8 +62,8 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 		{Path: "github.com/gorilla/websocket"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
+		services.ServiceImport(svc.Name()),
+		services.ViewImport(svc.Name()),
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),
@@ -120,7 +120,7 @@ func serverFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData
 
 // ServerEncodeDecodeFile returns the file defining the HTTP server encoding and
 // decoding logic.
-func ServerEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func ServerEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, services.dir(), svcName, "server", "encode_decode.go")
@@ -138,8 +138,8 @@ func ServerEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 		{Path: "unicode/utf8"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
-		{Path: genpkg + "/" + svcName, Name: data.Service.PkgName},
-		{Path: genpkg + "/" + svcName + "/" + "views", Name: data.Service.ViewsPkg},
+		services.ServiceImport(svc.Name()),
+		services.ViewImport(svc.Name()),
 	}
 	sections := []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
 
@@ -201,7 +201,7 @@ func ServerEncodeDecodeFile(genpkg string, svc *expr.HTTPServiceExpr, services *
 func transTmplFuncs(s *expr.HTTPServiceExpr, services *ServicesData) map[string]any {
 	return map[string]any{
 		"goTypeRef": func(dt expr.DataType) string {
-			return services.ServicesData.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
+			return services.Get(s.Name()).Scope.GoTypeRef(&expr.AttributeExpr{Type: dt})
 		},
 		"isAliased": func(dt expr.DataType) bool {
 			_, ok := dt.(expr.UserType)
