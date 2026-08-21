@@ -36,3 +36,142 @@ func TestGeneratedTypesRejectRelocatedNameCollision(t *testing.T) {
 	require.ErrorContains(t, err, "foo_bar")
 	require.ErrorContains(t, err, "FooBar")
 }
+
+// TestGenerationOwnsPackageRecords verifies that one generation returns one
+// stable package record and scope for each output path.
+func TestGenerationOwnsPackageRecords(t *testing.T) {
+	generation := NewGeneration("generated.local/gen", nil)
+
+	first := generation.GeneratedPackage("generated.local/gen/types")
+	second := generation.GeneratedPackage("generated.local/gen/types")
+	other := generation.GeneratedPackage("generated.local/gen/other")
+	require.Same(t, first, second)
+	require.Same(t, first.Scope(), second.Scope())
+	require.NotSame(t, first, other)
+	require.NotSame(t, first.Scope(), other.Scope())
+}
+
+// TestGeneratedPackageUserTypes verifies that a generated package records one
+// declaration per user type and that lookups do not reserve names.
+func TestGeneratedPackageUserTypes(t *testing.T) {
+	generation := NewGeneration("generated.local/gen", nil)
+	types := generation.GeneratedPackage("generated.local/gen/types")
+	widget := generatedUserType("Widget", "widget")
+	missing := generatedUserType("Missing", "missing")
+
+	_, err := types.UserType(missing)
+	require.ErrorContains(t, err, "not declared")
+
+	first, err := types.DeclareUserType(widget)
+	require.NoError(t, err)
+	require.Equal(t, &TypeDeclaration{
+		Name:        "Widget",
+		PackagePath: "generated.local/gen/types",
+	}, first)
+	second, err := types.DeclareUserType(widget)
+	require.NoError(t, err)
+	require.Same(t, first, second)
+	require.Equal(t, "Widget", types.Scope().GoTypeName(&expr.AttributeExpr{Type: widget}))
+
+	lookedUp, err := types.UserType(widget)
+	require.NoError(t, err)
+	require.Same(t, first, lookedUp)
+	declaredMissing, err := types.DeclareUserType(missing)
+	require.NoError(t, err)
+	require.Equal(t, "Missing", declaredMissing.Name)
+}
+
+// TestGeneratedPackageUnions verifies that emitted-definition identity makes
+// equivalent unions idempotent while different unions with the same base name
+// receive distinct declarations.
+func TestGeneratedPackageUnions(t *testing.T) {
+	types := NewGeneration("generated.local/gen", nil).
+		GeneratedPackage("generated.local/gen/types")
+	first := generatedUnion("Value", "type", "value")
+	equivalent := generatedUnion("Value", "type", "value")
+	different := generatedUnion("Value", "kind", "data")
+
+	firstDeclaration, err := types.DeclareUnion(first)
+	require.NoError(t, err)
+	require.Equal(t, &TypeDeclaration{
+		Name:        "Value",
+		PackagePath: "generated.local/gen/types",
+	}, firstDeclaration)
+	equivalentDeclaration, err := types.DeclareUnion(equivalent)
+	require.NoError(t, err)
+	require.Same(t, firstDeclaration, equivalentDeclaration)
+
+	differentDeclaration, err := types.DeclareUnion(different)
+	require.NoError(t, err)
+	require.Equal(t, "Value2", differentDeclaration.Name)
+	require.NotSame(t, firstDeclaration, differentDeclaration)
+
+	lookedUp, err := types.Union(equivalent)
+	require.NoError(t, err)
+	require.Same(t, firstDeclaration, lookedUp)
+}
+
+// TestGeneratedPackageLookupAcrossFreeze verifies that freeze keeps existing
+// declarations readable and rejects every later declaration attempt.
+func TestGeneratedPackageLookupAcrossFreeze(t *testing.T) {
+	generation := NewGeneration("generated.local/gen", nil)
+	types := generation.GeneratedPackage("generated.local/gen/types")
+	widget := generatedUserType("Widget", "widget")
+	union := generatedUnion("Value", "type", "value")
+	userDeclaration, err := types.DeclareUserType(widget)
+	require.NoError(t, err)
+	unionDeclaration, err := types.DeclareUnion(union)
+	require.NoError(t, err)
+
+	require.NoError(t, generation.Freeze())
+	lookedUpUser, err := types.UserType(widget)
+	require.NoError(t, err)
+	require.Same(t, userDeclaration, lookedUpUser)
+	lookedUpUnion, err := types.Union(union)
+	require.NoError(t, err)
+	require.Same(t, unionDeclaration, lookedUpUnion)
+
+	_, err = types.DeclareUserType(widget)
+	require.ErrorContains(t, err, "frozen")
+	_, err = types.DeclareUnion(union)
+	require.ErrorContains(t, err, "frozen")
+}
+
+// TestGenerationCatalogsAreIsolated verifies that standalone generation runs
+// do not share declaration records or name reservations.
+func TestGenerationCatalogsAreIsolated(t *testing.T) {
+	first := NewGeneration("generated.local/gen", nil).
+		GeneratedPackage("generated.local/gen/types")
+	second := NewGeneration("generated.local/gen", nil).
+		GeneratedPackage("generated.local/gen/types")
+	firstUnion := generatedUnion("Value", "type", "value")
+	secondUnion := generatedUnion("Value", "type", "value")
+
+	firstDeclaration, err := first.DeclareUnion(firstUnion)
+	require.NoError(t, err)
+	secondDeclaration, err := second.DeclareUnion(secondUnion)
+	require.NoError(t, err)
+	require.Equal(t, "Value", firstDeclaration.Name)
+	require.Equal(t, "Value", secondDeclaration.Name)
+	require.NotSame(t, firstDeclaration, secondDeclaration)
+	require.NotSame(t, first.Scope(), second.Scope())
+}
+
+// generatedUserType builds a distinct user type for catalog tests.
+func generatedUserType(name, id string) expr.UserType {
+	return &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+		TypeName:      name,
+		UID:           id,
+	}
+}
+
+// generatedUnion builds a union whose emitted identity includes the supplied
+// JSON envelope keys.
+func generatedUnion(name, typeKey, valueKey string) *expr.Union {
+	return &expr.Union{
+		TypeName: name,
+		TypeKey:  typeKey,
+		ValueKey: valueKey,
+	}
+}
