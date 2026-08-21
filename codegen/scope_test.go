@@ -4,9 +4,43 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/expr"
 )
+
+func TestNameScope_Freeze(t *testing.T) {
+	scope := NewNameScope()
+	existing := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+		TypeName:      "Existing",
+		UID:           "existing",
+	}
+	require.Equal(t, "Existing", scope.GoTypeName(&expr.AttributeExpr{Type: existing}))
+
+	scope.Freeze()
+	scope.Freeze()
+	require.Equal(t, "Existing", scope.GoTypeName(&expr.AttributeExpr{Type: existing}))
+	require.Equal(t, "Next", scope.PeekUnique("Next"))
+	require.Equal(t, "Next", scope.Name("Next"))
+	require.Panics(t, func() {
+		scope.Unique("Next")
+	})
+	require.Panics(t, func() {
+		scope.HashedUnique(&expr.UserTypeExpr{
+			AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+			TypeName:      "Next",
+			UID:           "next",
+		}, "Next")
+	})
+	require.Panics(t, func() {
+		scope.GoTypeName(&expr.AttributeExpr{Type: &expr.UserTypeExpr{
+			AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+			TypeName:      "Indirect",
+			UID:           "indirect",
+		}})
+	})
+}
 
 func TestNameScope_Unique(t *testing.T) {
 	sequence := []struct {

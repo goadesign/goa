@@ -14,6 +14,7 @@ type (
 	NameScope struct {
 		names  map[string]string // type hash to unique name
 		counts map[string]int    // raw type name to occurrence count
+		frozen bool              // whether new names may be reserved
 	}
 
 	// Hasher is the interface implemented by the objects that must be
@@ -46,6 +47,9 @@ func (s *NameScope) HashedUnique(key Hasher, name string, suffix ...string) stri
 	if n, ok := s.names[hash]; ok {
 		return n
 	}
+	if s.frozen {
+		panic("cannot reserve a new hashed name in a frozen name scope")
+	}
 	name = s.Unique(name, suffix...)
 	s.names[hash] = name
 	return name
@@ -56,9 +60,18 @@ func (s *NameScope) HashedUnique(key Hasher, name string, suffix ...string) stri
 // counter value is added to the suffixed name until unique. The returned name
 // is reserved in the scope.
 func (s *NameScope) Unique(name string, suffix ...string) string {
+	if s.frozen {
+		panic("cannot reserve a name in a frozen name scope")
+	}
 	ret := s.PeekUnique(name, suffix...)
 	s.counts[ret]++
 	return ret
+}
+
+// Freeze prevents the scope from reserving new names. Names already associated
+// with hashes remain readable through HashedUnique and type-reference methods.
+func (s *NameScope) Freeze() {
+	s.frozen = true
 }
 
 // PeekUnique returns the name that Unique would return for the same inputs,

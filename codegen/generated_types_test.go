@@ -3,6 +3,7 @@
 package codegen
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -85,8 +86,8 @@ func TestGeneratedPackageUserTypes(t *testing.T) {
 // equivalent unions idempotent while different unions with the same base name
 // receive distinct declarations.
 func TestGeneratedPackageUnions(t *testing.T) {
-	types := NewGeneration("generated.local/gen", nil).
-		GeneratedPackage("generated.local/gen/types")
+	generation := NewGeneration("generated.local/gen", nil)
+	types := generation.GeneratedPackage("generated.local/gen/types")
 	first := generatedUnion("Value", "type", "value")
 	equivalent := generatedUnion("Value", "type", "value")
 	different := generatedUnion("Value", "kind", "data")
@@ -94,7 +95,6 @@ func TestGeneratedPackageUnions(t *testing.T) {
 	firstDeclaration, err := types.DeclareUnion(first)
 	require.NoError(t, err)
 	require.Equal(t, &TypeDeclaration{
-		Name:        "Value",
 		PackagePath: "generated.local/gen/types",
 	}, firstDeclaration)
 	equivalentDeclaration, err := types.DeclareUnion(equivalent)
@@ -103,12 +103,62 @@ func TestGeneratedPackageUnions(t *testing.T) {
 
 	differentDeclaration, err := types.DeclareUnion(different)
 	require.NoError(t, err)
-	require.Equal(t, "Value2", differentDeclaration.Name)
+	require.Empty(t, differentDeclaration.Name)
 	require.NotSame(t, firstDeclaration, differentDeclaration)
 
 	lookedUp, err := types.Union(equivalent)
 	require.NoError(t, err)
 	require.Same(t, firstDeclaration, lookedUp)
+	require.NoError(t, generation.Freeze())
+	require.ElementsMatch(t, []string{"Value", "Value2"}, []string{
+		firstDeclaration.Name,
+		differentDeclaration.Name,
+	})
+
+	reversedGeneration := NewGeneration("generated.local/gen", nil)
+	reversedTypes := reversedGeneration.GeneratedPackage("generated.local/gen/types")
+	reversedDifferent, err := reversedTypes.DeclareUnion(generatedUnion("Value", "kind", "data"))
+	require.NoError(t, err)
+	reversedFirst, err := reversedTypes.DeclareUnion(generatedUnion("Value", "type", "value"))
+	require.NoError(t, err)
+	require.NoError(t, reversedGeneration.Freeze())
+	require.Equal(t, firstDeclaration.Name, reversedFirst.Name)
+	require.Equal(t, differentDeclaration.Name, reversedDifferent.Name)
+}
+
+// TestGeneratedPackageUserTypeWinsUnionNameRegardlessOfOrder verifies that
+// pending unions cannot take an exact user-type name based on traversal order.
+func TestGeneratedPackageUserTypeWinsUnionNameRegardlessOfOrder(t *testing.T) {
+	for _, unionFirst := range []bool{true, false} {
+		t.Run(fmt.Sprintf("union first %t", unionFirst), func(t *testing.T) {
+			generation := NewGeneration("generated.local/gen", nil)
+			types := generation.GeneratedPackage("generated.local/gen/types")
+			userType := generatedUserType("Value", "value")
+			union := generatedUnion("Value", "type", "value")
+			var (
+				userDeclaration  *TypeDeclaration
+				unionDeclaration *TypeDeclaration
+				err              error
+			)
+			if unionFirst {
+				unionDeclaration, err = types.DeclareUnion(union)
+				require.NoError(t, err)
+				userDeclaration, err = types.DeclareUserType(userType)
+				require.NoError(t, err)
+			} else {
+				userDeclaration, err = types.DeclareUserType(userType)
+				require.NoError(t, err)
+				unionDeclaration, err = types.DeclareUnion(union)
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, "Value", userDeclaration.Name)
+			require.Empty(t, unionDeclaration.Name)
+			require.NoError(t, generation.Freeze())
+			require.Equal(t, "Value", userDeclaration.Name)
+			require.Equal(t, "Value2", unionDeclaration.Name)
+		})
+	}
 }
 
 // TestGeneratedPackageLookupAcrossFreeze verifies that freeze keeps existing
@@ -122,6 +172,7 @@ func TestGeneratedPackageLookupAcrossFreeze(t *testing.T) {
 	require.NoError(t, err)
 	unionDeclaration, err := types.DeclareUnion(union)
 	require.NoError(t, err)
+	require.Empty(t, unionDeclaration.Name)
 
 	require.NoError(t, generation.Freeze())
 	lookedUpUser, err := types.UserType(widget)
@@ -130,6 +181,15 @@ func TestGeneratedPackageLookupAcrossFreeze(t *testing.T) {
 	lookedUpUnion, err := types.Union(union)
 	require.NoError(t, err)
 	require.Same(t, unionDeclaration, lookedUpUnion)
+	require.Equal(t, "Value", lookedUpUnion.Name)
+	require.Equal(t, "Widget", types.Scope().GoTypeName(&expr.AttributeExpr{Type: widget}))
+	require.Equal(t, "Value", types.Scope().GoTypeName(&expr.AttributeExpr{Type: union}))
+	require.Panics(t, func() {
+		types.Scope().Unique("Late")
+	})
+	require.Panics(t, func() {
+		types.Scope().GoTypeName(&expr.AttributeExpr{Type: generatedUserType("Late", "late")})
+	})
 
 	_, err = types.DeclareUserType(widget)
 	require.ErrorContains(t, err, "frozen")
@@ -140,10 +200,10 @@ func TestGeneratedPackageLookupAcrossFreeze(t *testing.T) {
 // TestGenerationCatalogsAreIsolated verifies that standalone generation runs
 // do not share declaration records or name reservations.
 func TestGenerationCatalogsAreIsolated(t *testing.T) {
-	first := NewGeneration("generated.local/gen", nil).
-		GeneratedPackage("generated.local/gen/types")
-	second := NewGeneration("generated.local/gen", nil).
-		GeneratedPackage("generated.local/gen/types")
+	firstGeneration := NewGeneration("generated.local/gen", nil)
+	first := firstGeneration.GeneratedPackage("generated.local/gen/types")
+	secondGeneration := NewGeneration("generated.local/gen", nil)
+	second := secondGeneration.GeneratedPackage("generated.local/gen/types")
 	firstUnion := generatedUnion("Value", "type", "value")
 	secondUnion := generatedUnion("Value", "type", "value")
 
@@ -151,6 +211,8 @@ func TestGenerationCatalogsAreIsolated(t *testing.T) {
 	require.NoError(t, err)
 	secondDeclaration, err := second.DeclareUnion(secondUnion)
 	require.NoError(t, err)
+	require.NoError(t, firstGeneration.Freeze())
+	require.NoError(t, secondGeneration.Freeze())
 	require.Equal(t, "Value", firstDeclaration.Name)
 	require.Equal(t, "Value", secondDeclaration.Name)
 	require.NotSame(t, firstDeclaration, secondDeclaration)

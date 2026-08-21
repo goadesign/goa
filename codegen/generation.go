@@ -46,8 +46,9 @@ func (g *Generation) GeneratedPackage(path string) *GeneratedPackage {
 	return generatedPackage
 }
 
-// Freeze prevents every generated package in the generation from accepting
-// more declarations. Existing declarations remain available through lookup.
+// Freeze assigns deterministic names to pending unions, then prevents every
+// generated package and its name scope from accepting more declarations or
+// name reservations. Existing declarations remain available through lookup.
 func (g *Generation) Freeze() error {
 	if g.frozen {
 		return nil
