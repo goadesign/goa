@@ -57,14 +57,15 @@ func TestCollectUnionTypesDeterministicAcrossObjectOrder(t *testing.T) {
 	loc := &codegen.Location{
 		RelImportPath: "gen/service",
 	}
-	forwardNames := collectServiceUnionTypeNames(forward, loc)
-	reverseNames := collectServiceUnionTypeNames(reverse, loc)
+	forwardNames := collectServiceUnionTypeNames(t, forward, loc)
+	reverseNames := collectServiceUnionTypeNames(t, reverse, loc)
 
 	require.Len(t, forwardNames, 2)
 	require.Equal(t, forwardNames, reverseNames)
 }
 
-func collectServiceUnionTypeNames(att *expr.AttributeExpr, loc *codegen.Location) map[string]string {
+func collectServiceUnionTypeNames(t *testing.T, att *expr.AttributeExpr, loc *codegen.Location) map[string]string {
+	t.Helper()
 	service := &expr.ServiceExpr{Name: "test"}
 	generation := codegen.NewGeneration("generated.local/gen", nil)
 	generatedPackage := generation.GeneratedPackage(
@@ -82,11 +83,17 @@ func collectServiceUnionTypeNames(att *expr.AttributeExpr, loc *codegen.Location
 	}
 	services := &ServicesData{
 		generation: generation,
+		aliases:    aliasesForTest(t, generatedPackagePath(generation.GenPkg, service, loc)),
 		packages:   make(map[string]*generatedPackageData),
 	}
 	seen := make(map[expr.UserType]struct{})
 	unionByHash := make(map[unionDataKey]*UnionTypeData)
-	resolver := newServiceResolver(generation, service, generatedPackagePath(generation.GenPkg, service, loc))
+	resolver := newServiceResolver(
+		generation,
+		services.aliases,
+		service,
+		generatedPackagePath(generation.GenPkg, service, loc),
+	)
 	if err := services.collectUnionTypes(att, service, resolver, loc, unionByHash, seen, false); err != nil {
 		panic(err)
 	}

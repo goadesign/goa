@@ -18,19 +18,48 @@ type (
 	// records selected during Plan.
 	declarationResolver struct {
 		generation  *codegen.Generation
+		aliases     *importAliases
 		service     *expr.ServiceExpr
 		currentPath string
 		outputPath  string
 		derived     map[expr.UserType]codegen.DerivedTypeID
 		view        bool
 	}
+
+	// methodDeclarationAttributor binds one normalized method wrapper to its
+	// frozen declaration while leaving all other transport naming unchanged.
+	methodDeclarationAttributor struct {
+		origin      expr.UserType
+		declaration *codegen.TypeDeclaration
+		delegate    codegen.Attributor
+	}
 )
+
+// NewMethodTypeContext returns the service-side transport context for a named
+// method type. The exact wrapper uses its frozen declaration; nested and wire
+// attributes retain the transport's existing naming scope.
+func NewMethodTypeContext(attribute *expr.AttributeExpr, declaration *codegen.TypeDeclaration, pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
+	userType, ok := attribute.Type.(expr.UserType)
+	if !ok || declaration == nil {
+		panic("method type context requires a named generated declaration")
+	}
+	delegate := codegen.NewAttributeContext(false, false, true, pkg, scope).Scope
+	return &codegen.AttributeContext{
+		UseDefault: true,
+		Scope: &methodDeclarationAttributor{
+			origin:      userType.Origin(),
+			declaration: declaration,
+			delegate:    delegate,
+		},
+	}
+}
 
 // newServiceResolver resolves declarations starting in service's generated
 // package and qualifies names relative to outputPath.
-func newServiceResolver(generation *codegen.Generation, service *expr.ServiceExpr, outputPath string) *declarationResolver {
+func newServiceResolver(generation *codegen.Generation, aliases *importAliases, service *expr.ServiceExpr, outputPath string) *declarationResolver {
 	return &declarationResolver{
 		generation:  generation,
+		aliases:     aliases,
 		service:     service,
 		currentPath: servicePackagePath(generation.GenPkg, service),
 		outputPath:  outputPath,
@@ -40,10 +69,11 @@ func newServiceResolver(generation *codegen.Generation, service *expr.ServiceExp
 // newViewResolver resolves every declaration in service's views package.
 // derived binds rebuilt projected expression origins to their typed catalog
 // identities.
-func newViewResolver(generation *codegen.Generation, service *expr.ServiceExpr, derived map[expr.UserType]codegen.DerivedTypeID) *declarationResolver {
+func newViewResolver(generation *codegen.Generation, aliases *importAliases, service *expr.ServiceExpr, derived map[expr.UserType]codegen.DerivedTypeID) *declarationResolver {
 	viewsPath := servicePackagePath(generation.GenPkg, service) + "/views"
 	return &declarationResolver{
 		generation:  generation,
+		aliases:     aliases,
 		service:     service,
 		currentPath: viewsPath,
 		outputPath:  viewsPath,
@@ -57,8 +87,15 @@ func newViewResolver(generation *codegen.Generation, service *expr.ServiceExpr, 
 func (r *declarationResolver) Name(att *expr.AttributeExpr, _ string, ptr, useDefault bool) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
-		if custom, _ := codegen.GetMetaType(att); custom != "" {
-			return custom
+		if custom, spec := codegen.GetMetaType(att); custom != "" {
+			if spec == nil {
+				return custom
+			}
+			_, typeName, qualified := strings.Cut(custom, ".")
+			if !qualified {
+				return custom
+			}
+			return r.aliases.name(spec.Path) + "." + typeName
 		}
 		return codegen.GoNativeTypeName(actual)
 	case *expr.Array:
@@ -73,14 +110,14 @@ func (r *declarationResolver) Name(att *expr.AttributeExpr, _ string, ptr, useDe
 		}
 		owner := r.owner(att)
 		declaration := r.userType(owner, actual)
-		return r.qualify(owner, declaration.Name)
+		return r.qualify(owner, declaration.Name())
 	case *expr.Union:
 		owner := r.owner(att)
 		declaration, err := r.generation.GeneratedPackage(owner).Union(actual)
 		if err != nil {
 			panic(fmt.Sprintf("resolve union %q for service %q in package %q: %v", actual.Name(), r.service.Name, owner, err))
 		}
-		return r.qualify(owner, declaration.Name)
+		return r.qualify(owner, declaration.Name())
 	case expr.CompositeExpr:
 		return r.Name(actual.Attribute(), "", ptr, useDefault)
 	default:
@@ -166,7 +203,7 @@ func (r *declarationResolver) Package(att *expr.AttributeExpr) string {
 	if owner == r.outputPath {
 		return ""
 	}
-	return generatedPackageName(r.generation.GenPkg, r.service, owner)
+	return r.aliases.name(owner)
 }
 
 // Enter returns a resolver whose current package owns att and its unlocated
@@ -260,13 +297,13 @@ func (r *declarationResolver) qualify(owner, name string) string {
 	if owner == r.outputPath {
 		return name
 	}
-	return generatedPackageName(r.generation.GenPkg, r.service, owner) + "." + name
+	return r.aliases.name(owner) + "." + name
 }
 
 // refDeclaration qualifies declaration for the resolver's output file while
 // preserving the pointer or value semantics of dataType.
 func (r *declarationResolver) refDeclaration(declaration *codegen.TypeDeclaration, dataType expr.DataType) string {
-	qualified := r.qualify(declaration.PackagePath, declaration.Name)
+	qualified := r.qualify(declaration.PackagePath(), declaration.Name())
 	if strings.HasPrefix(declaration.Ref(dataType), "*") {
 		return "*" + qualified
 	}
@@ -276,21 +313,68 @@ func (r *declarationResolver) refDeclaration(declaration *codegen.TypeDeclaratio
 // declarationName returns the unqualified planned name for one named type.
 func (r *declarationResolver) declarationName(attribute *expr.AttributeExpr) string {
 	entered := r.Enter(attribute).(*declarationResolver)
-	return entered.userType(entered.currentPath, attribute.Type.(expr.UserType)).Name
+	return entered.userType(entered.currentPath, attribute.Type.(expr.UserType)).Name()
 }
 
-// generatedPackageName returns the Go package name for one generated import
-// path selected by the service generator.
-func generatedPackageName(genpkg string, service *expr.ServiceExpr, packagePath string) string {
-	servicePath := servicePackagePath(genpkg, service)
-	switch packagePath {
-	case servicePath:
-		return strings.ToLower(codegen.Goify(service.Name, false))
-	case servicePath + "/views":
-		return strings.ToLower(codegen.Goify(service.Name, false)) + "views"
-	default:
-		return strings.ToLower(codegen.Goify(path.Base(packagePath), false))
+// Name returns the frozen wrapper name for the bound method type and delegates
+// every other attribute to the transport's existing scope.
+func (a *methodDeclarationAttributor) Name(attribute *expr.AttributeExpr, pkg string, pointer, useDefault bool) string {
+	if a.matches(attribute) {
+		if pkg == "" {
+			return a.declaration.Name()
+		}
+		return pkg + "." + a.declaration.Name()
 	}
+	return a.delegate.Name(attribute, pkg, pointer, useDefault)
+}
+
+// Ref returns the frozen wrapper reference for the bound method type and
+// delegates every other attribute to the transport's existing scope.
+func (a *methodDeclarationAttributor) Ref(attribute *expr.AttributeExpr, pkg string) string {
+	if !a.matches(attribute) {
+		return a.delegate.Ref(attribute, pkg)
+	}
+	name := a.Name(attribute, pkg, false, false)
+	if expr.IsObject(attribute.Type) || expr.IsUnion(attribute.Type) {
+		return "*" + name
+	}
+	return name
+}
+
+// Field delegates service field naming to the transport's existing scope.
+func (a *methodDeclarationAttributor) Field(attribute *expr.AttributeExpr, name string, firstUpper bool) string {
+	return a.delegate.Field(attribute, name, firstUpper)
+}
+
+// Package delegates package qualification to the transport's existing scope.
+func (a *methodDeclarationAttributor) Package(attribute *expr.AttributeExpr) string {
+	return a.delegate.Package(attribute)
+}
+
+// Enter keeps the frozen binding for the exact wrapper and delegates nested
+// attributes to the transport's existing package rules.
+func (a *methodDeclarationAttributor) Enter(attribute *expr.AttributeExpr) codegen.Attributor {
+	if a.matches(attribute) {
+		return a
+	}
+	return a.delegate.Enter(attribute)
+}
+
+// IsSumType preserves the transport scope's union representation.
+func (a *methodDeclarationAttributor) IsSumType() bool {
+	return a.delegate.IsSumType()
+}
+
+// Scope returns the transport naming scope used for all unbound attributes.
+func (a *methodDeclarationAttributor) Scope() *codegen.NameScope {
+	return a.delegate.Scope()
+}
+
+// matches reports whether attribute is the exact normalized wrapper bound to
+// this rendering context.
+func (a *methodDeclarationAttributor) matches(attribute *expr.AttributeExpr) bool {
+	userType, ok := attribute.Type.(expr.UserType)
+	return ok && userType.Origin() == a.origin
 }
 
 // serviceFieldIsPointer matches Goa service struct pointer semantics for one

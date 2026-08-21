@@ -4,6 +4,7 @@
 package service
 
 import (
+	"path"
 	"strings"
 	"testing"
 
@@ -40,7 +41,7 @@ func TestDeclarationResolverTransformsRelocatedUnionBranches(t *testing.T) {
 	branchDeclaration, err := types.DeclareUnionBranchType(union, "text", generatedBranch)
 	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
-	require.Equal(t, "ValueText2", branchDeclaration.Name)
+	require.Equal(t, "ValueText2", branchDeclaration.Name())
 
 	externalBranch := resolverUserType("ExternalValueText", expr.String)
 	externalUnion := &expr.Union{
@@ -55,7 +56,12 @@ func TestDeclarationResolverTransformsRelocatedUnionBranches(t *testing.T) {
 
 	relocatedAttribute := &expr.AttributeExpr{Type: relocated}
 	externalAttribute := &expr.AttributeExpr{Type: external}
-	resolver := newServiceResolver(generation, service, "generated.local/gen/types")
+	resolver := newServiceResolver(
+		generation,
+		aliasesForTest(t, "generated.local/gen/types"),
+		service,
+		"generated.local/gen/types",
+	)
 	relocatedContext := declarationContext(resolver.Enter(relocatedAttribute), false)
 	externalContext := codegen.NewAttributeContext(false, false, true, "external", codegen.NewNameScope())
 
@@ -111,10 +117,16 @@ func TestDeclarationResolverQualifiesRelocatedConsumersWithoutRenamingLocalType(
 
 	resolver := newServiceResolver(
 		generation,
+		aliasesForTest(
+			t,
+			servicePackagePath(generation.GenPkg, service),
+			"generated.local/gen/errors",
+			"generated.local/gen/types",
+		),
 		service,
 		servicePackagePath(generation.GenPkg, service),
 	)
-	require.Equal(t, "Fault", localDeclaration.Name)
+	require.Equal(t, "Fault", localDeclaration.Name())
 	require.Equal(t, "Fault", resolver.Ref(&expr.AttributeExpr{Type: local}, ""))
 
 	errorData := buildErrorInitData(&expr.ErrorExpr{
@@ -143,6 +155,7 @@ func TestDeclarationResolverPanicsWhenPlanOmittedType(t *testing.T) {
 	require.NoError(t, generation.Freeze())
 	resolver := newServiceResolver(
 		generation,
+		aliasesForTest(t, servicePackagePath(generation.GenPkg, service)),
 		service,
 		servicePackagePath(generation.GenPkg, service),
 	)
@@ -154,6 +167,18 @@ func TestDeclarationResolverPanicsWhenPlanOmittedType(t *testing.T) {
 			resolver.Name(&expr.AttributeExpr{Type: missing}, "", false, true)
 		},
 	)
+}
+
+// aliasesForTest builds the same frozen full-path qualifier table used by
+// service analysis for the package paths exercised by a focused resolver test.
+func aliasesForTest(t *testing.T, paths ...string) *importAliases {
+	t.Helper()
+	plan := &importAliasPlan{candidates: make(map[string]importAliasCandidate)}
+	require.NoError(t, plan.addFixedImports())
+	for _, importPath := range paths {
+		require.NoError(t, plan.add(importPath, codegen.Goify(path.Base(importPath), false), true, false))
+	}
+	return plan.freeze()
 }
 
 // resolverUserType constructs one exact declaration for resolver tests.

@@ -72,6 +72,38 @@ func TestServicesDataUsesFrozenPackageDeclarations(t *testing.T) {
 	require.ErrorContains(t, err, "frozen")
 }
 
+// TestPlanOwnsNormalizedMethodNames verifies that semantic wrappers receive
+// names from the service package catalog and collide only with local exact
+// declarations.
+func TestPlanOwnsNormalizedMethodNames(t *testing.T) {
+	var local expr.UserType
+	root := codegen.RunDSL(t, func() {
+		local = dsl.Type("UsePayload", func() {
+			dsl.Attribute("existing", dsl.String)
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Existing", func() {
+				dsl.Payload(local)
+			})
+			dsl.Method("Use", func() {
+				dsl.Payload(func() {
+					dsl.Attribute("value", dsl.String)
+				})
+			})
+		})
+	})
+	codegen.NormalizeRoot(root)
+	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, Plan(root, generation))
+	require.NoError(t, generation.Freeze())
+
+	service := root.Service("Values")
+	wrapper := service.Method("Use").Payload.Type.(expr.UserType)
+	declaration, err := generation.GeneratedPackage("generated.local/gen/values").Type(wrapper)
+	require.NoError(t, err)
+	require.Equal(t, "UsePayload2", declaration.Name())
+}
+
 // TestServicesDataUsesRebuiltViewDeclarations verifies that planning and
 // rendering can rebuild view expressions while sharing frozen declarations.
 func TestServicesDataUsesRebuiltViewDeclarations(t *testing.T) {
@@ -107,8 +139,8 @@ func TestServicesDataUsesRebuiltViewDeclarations(t *testing.T) {
 	require.Len(t, service.viewedResultTypes, 1)
 	require.Same(t, plannedProjected, service.projectedTypes[0].Declaration)
 	require.Same(t, plannedViewed, service.viewedResultTypes[0].Declaration)
-	require.Equal(t, "ValueView", plannedProjected.Name)
-	require.Equal(t, "Value", plannedViewed.Name)
+	require.Equal(t, "ValueView", plannedProjected.Name())
+	require.Equal(t, "Value", plannedViewed.Name())
 }
 
 func TestFilesEmitsPackageDeclarationsOnce(t *testing.T) {
@@ -255,8 +287,8 @@ func TestGeneratedUnionBranchCollisionDoesNotCanonicalizeToRootType(t *testing.T
 	require.NotSame(t, exactDeclaration, branchDeclaration)
 
 	require.NoError(t, generation.Freeze())
-	require.Equal(t, "ValueText", exactDeclaration.Name)
-	require.Equal(t, "ValueText2", branchDeclaration.Name)
+	require.Equal(t, "ValueText", exactDeclaration.Name())
+	require.Equal(t, "ValueText2", branchDeclaration.Name())
 	services, err := NewServicesData(root, generation)
 	require.NoError(t, err)
 	typeFile := findFile(

@@ -30,6 +30,14 @@ type (
 		packagePath string
 	}
 
+	// methodTypeCandidate identifies one normalized method role and the typed
+	// declaration identity allocated for it.
+	methodTypeCandidate struct {
+		attribute *expr.AttributeExpr
+		suffix    string
+		identity  func(expr.UserType) codegen.DerivedTypeID
+	}
+
 	// unionBranch identifies a generated user type that exists only to name one
 	// branch of its owning union.
 	unionBranch struct {
@@ -69,6 +77,10 @@ type (
 func Plan(root *expr.RootExpr, generation *codegen.Generation) error {
 	inputs := planningInputs(root)
 	rootTypes := newRootTypeSet(root)
+	methodTypes, err := planMethodTypes(root, generation)
+	if err != nil {
+		return err
+	}
 	for _, service := range root.Services {
 		// The service package record makes NewServicesData a render-only contract:
 		// its scope is unavailable until the generation freezes.
@@ -77,7 +89,7 @@ func Plan(root *expr.RootExpr, generation *codegen.Generation) error {
 
 	seenTypes := make(map[plannedUserType]struct{})
 	for _, input := range inputs {
-		if err := planUserTypes(input.attribute, input.service, input.location, generation, rootTypes, seenTypes); err != nil {
+		if err := planUserTypes(input.attribute, input.service, input.location, generation, rootTypes, methodTypes, seenTypes); err != nil {
 			return err
 		}
 	}
@@ -89,6 +101,42 @@ func Plan(root *expr.RootExpr, generation *codegen.Generation) error {
 		}
 	}
 	return planViews(root, generation, rootTypes)
+}
+
+// planMethodTypes declares the semantic wrappers created by NormalizeRoot as
+// derived service-package declarations. Exact user types in the same package
+// are planned separately and therefore keep their authored names.
+func planMethodTypes(root *expr.RootExpr, generation *codegen.Generation) (map[expr.UserType]codegen.DerivedTypeID, error) {
+	planned := make(map[expr.UserType]codegen.DerivedTypeID)
+	for _, service := range root.Services {
+		generatedPackage := generation.GeneratedPackage(servicePackagePath(generation.GenPkg, service))
+		for _, method := range service.Methods {
+			attributes := []methodTypeCandidate{
+				{method.Payload, "Payload", codegen.NewMethodPayloadTypeID},
+				{method.StreamingPayload, "StreamingPayload", codegen.NewMethodStreamingPayloadTypeID},
+				{method.Result, "Result", codegen.NewMethodResultTypeID},
+			}
+			if method.HasMixedResults() {
+				attributes = append(attributes, methodTypeCandidate{
+					attribute: method.StreamingResult,
+					suffix:    "StreamingResult",
+					identity:  codegen.NewMethodStreamingResultTypeID,
+				})
+			}
+			for _, candidate := range attributes {
+				userType, ok := candidate.attribute.Type.(expr.UserType)
+				if !ok || userType.ID() != normalizedMethodTypeID(service, method, candidate.suffix) {
+					continue
+				}
+				identity := candidate.identity(userType)
+				if _, err := generatedPackage.DeclareDerivedType(identity, codegen.Goify(userType.Name(), true)); err != nil {
+					return nil, err
+				}
+				planned[userType.Origin()] = identity
+			}
+		}
+	}
+	return planned, nil
 }
 
 // planningInputs returns the service attributes that can cause service types
@@ -128,15 +176,18 @@ func planningInputs(root *expr.RootExpr) []plannedAttribute {
 
 // planUserTypes traverses attribute and declares each relocated user type in
 // the package selected by its own or its enclosing type's metadata.
-func planUserTypes(attribute *expr.AttributeExpr, service *expr.ServiceExpr, location *codegen.Location, generation *codegen.Generation, rootTypes *rootTypeSet, seen map[plannedUserType]struct{}) error {
+func planUserTypes(attribute *expr.AttributeExpr, service *expr.ServiceExpr, location *codegen.Location, generation *codegen.Generation, rootTypes *rootTypeSet, methodTypes map[expr.UserType]codegen.DerivedTypeID, seen map[plannedUserType]struct{}) error {
 	if attribute == nil || attribute.Type == expr.Empty {
 		return nil
 	}
 	recurse := func(attribute *expr.AttributeExpr, location *codegen.Location) error {
-		return planUserTypes(attribute, service, location, generation, rootTypes, seen)
+		return planUserTypes(attribute, service, location, generation, rootTypes, methodTypes, seen)
 	}
 	switch actual := attribute.Type.(type) {
 	case expr.UserType:
+		if _, normalized := methodTypes[actual.Origin()]; normalized {
+			return recurse(actual.Attribute(), location)
+		}
 		declaredType := rootTypes.canonical(actual)
 		typeLocation := codegen.UserTypeLocation(actual)
 		if typeLocation == nil {
@@ -273,11 +324,11 @@ func planViews(root *expr.RootExpr, generation *codegen.Generation, rootTypes *r
 
 			if resultType, ok := method.Result.Type.(*expr.ResultTypeExpr); ok {
 				serviceTypes := generation.GeneratedPackage(servicePackagePath(generation.GenPkg, service))
-				resultDeclaration, err := serviceTypes.UserType(rootTypes.canonical(resultType))
+				resultDeclaration, err := serviceTypes.Type(rootTypes.canonical(resultType))
 				if err != nil {
 					return err
 				}
-				if _, err := views.DeclareDerivedType(codegen.NewViewedResultTypeID(resultType), resultDeclaration.Name); err != nil {
+				if _, err := views.DeclareDerivedType(codegen.NewViewedResultTypeID(resultType), resultDeclaration.Name()); err != nil {
 					return err
 				}
 			}

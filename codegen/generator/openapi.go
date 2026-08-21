@@ -1,3 +1,5 @@
+// This file renders OpenAPI documents from the same evaluated roots and frozen
+// service declaration data used by the transport generators.
 package generator
 
 import (

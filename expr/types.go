@@ -1,3 +1,5 @@
+// This file defines Goa's core design data types and the structural operations
+// used by evaluation, validation, and code generation.
 package expr
 
 import (

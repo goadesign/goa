@@ -58,7 +58,7 @@ func TestGeneratePhasesShareOneGeneration(t *testing.T) {
 					if err != nil {
 						return nil, err
 					}
-					if declaration.Name == "" {
+					if declaration.Name() == "" {
 						return nil, fmt.Errorf("union name is empty during render")
 					}
 					_, lateDeclare = generation.GeneratedPackage(typesPath).DeclareUnion(lateUnion)

@@ -213,6 +213,189 @@ func TestServiceFilesOwnTheirImports(t *testing.T) {
 	runGeneratedTests(t, genDir)
 }
 
+// TestServiceReferencesUseImportPathAliases verifies that one service can
+// reference generated packages with the same Go package name without emitting
+// duplicate import aliases or ambiguous qualified references.
+func TestServiceReferencesUseImportPathAliases(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{{Plan: planServiceData, Generate: Service}}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		dsl.API("path-owned aliases", func() {})
+		first := dsl.Type("First", func() {
+			dsl.Meta("struct:pkg:path", "first/shared")
+			dsl.Attribute("value", dsl.String)
+		})
+		second := dsl.Type("Second", func() {
+			dsl.Meta("struct:pkg:path", "second/shared")
+			dsl.Attribute("value", dsl.String)
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("First", func() {
+				dsl.Payload(first)
+			})
+			dsl.Method("Second", func() {
+				dsl.Payload(second)
+			})
+		})
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	content, err := os.ReadFile(filepath.Join(genDir, "values", "service.go"))
+	require.NoError(t, err)
+	code := string(content)
+	require.Contains(t, code, `shared "gen/first/shared"`)
+	require.Contains(t, code, `shared2 "gen/second/shared"`)
+	require.Contains(t, code, `*shared.First`)
+	require.Contains(t, code, `*shared2.Second`)
+	runGeneratedTests(t, genDir)
+}
+
+// TestNamedUnionBranchImportsReferenceOnly verifies that unions.go does not
+// expand a named branch definition and import packages used only where that
+// named type itself is declared.
+func TestNamedUnionBranchImportsReferenceOnly(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{{Plan: planServiceData, Generate: Service}}, nil
+	}
+
+	codegen.RunDSL(t, func() {
+		dsl.API("named branch imports", func() {})
+		value := dsl.Type("Value", func() {
+			dsl.OneOf("choice", func() {
+				dsl.Attribute("external", dsl.String, func() {
+					dsl.Meta("struct:field:type", "json.Value", "gen/custom/json", "json")
+				})
+			})
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() {
+				dsl.Result(value)
+			})
+		})
+	})
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	writeStubPackage(t, filepath.Join(genDir, "custom", "json"), "json")
+	content, err := os.ReadFile(filepath.Join(genDir, "values", "unions.go"))
+	require.NoError(t, err)
+	code := string(content)
+	require.Contains(t, code, `"encoding/json"`)
+	require.NotContains(t, code, `"gen/custom/json"`)
+	runGeneratedTests(t, genDir)
+}
+
+// TestNormalizedMethodTypesUseServicePackageNames verifies that raw method
+// object wrappers collide only with declarations emitted in the same service
+// package, never with a nested declaration relocated elsewhere.
+func TestNormalizedMethodTypesUseServicePackageNames(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{{Plan: planServiceData, Generate: Service}}, nil
+	}
+
+	t.Run("relocated name does not collide", func(t *testing.T) {
+		codegen.RunDSL(t, func() {
+			dsl.API("relocated wrapper names", func() {})
+			relocated := dsl.Type("UsePayload", func() {
+				dsl.Meta("struct:pkg:path", "types")
+				dsl.Field(1, "value", dsl.String)
+			})
+			dsl.Service("Values", func() {
+				dsl.Method("Other", func() {
+					dsl.Payload(func() {
+						dsl.Field(1, "nested", relocated)
+					})
+					dsl.HTTP(func() {
+						dsl.POST("/other")
+						dsl.Response(204)
+					})
+					dsl.GRPC(func() {})
+				})
+				dsl.Method("Use", func() {
+					dsl.Payload(func() {
+						dsl.Field(1, "value", dsl.String)
+					})
+					dsl.HTTP(func() {
+						dsl.POST("/use")
+						dsl.Response(204)
+					})
+					dsl.GRPC(func() {})
+				})
+			})
+		})
+
+		dir := t.TempDir()
+		genDir := filepath.Join(dir, codegen.Gendir)
+		writeGeneratedModule(t, genDir, "gen")
+		_, err := Generate(dir, "gen", false)
+		require.NoError(t, err)
+		content, err := os.ReadFile(filepath.Join(genDir, "values", "service.go"))
+		require.NoError(t, err)
+		require.Contains(t, string(content), "type UsePayload struct")
+		require.NotContains(t, string(content), "type UsePayload2 struct")
+		runGeneratedTests(t, genDir)
+	})
+
+	t.Run("local name collides", func(t *testing.T) {
+		Generators = func(_ string) ([]Genfunc, error) {
+			return []Genfunc{
+				{Plan: planServiceData, Generate: Service},
+				{Plan: planServiceData, Generate: Transport},
+			}, nil
+		}
+		codegen.RunDSL(t, func() {
+			dsl.API("local wrapper names", func() {})
+			local := dsl.Type("UsePayload", func() {
+				dsl.Field(1, "existing", dsl.String)
+			})
+			dsl.Service("Values", func() {
+				dsl.Method("Existing", func() {
+					dsl.Payload(local)
+					dsl.HTTP(func() {
+						dsl.POST("/existing")
+						dsl.Response(204)
+					})
+					dsl.GRPC(func() {})
+				})
+				dsl.Method("Use", func() {
+					dsl.Payload(func() {
+						dsl.Field(1, "value", dsl.String)
+					})
+					dsl.HTTP(func() {
+						dsl.POST("/use")
+						dsl.Response(204)
+					})
+					dsl.GRPC(func() {})
+				})
+			})
+		})
+
+		dir := t.TempDir()
+		genDir := filepath.Join(dir, codegen.Gendir)
+		writeGeneratedModule(t, genDir, "gen")
+		_, err := Generate(dir, "gen", false)
+		require.NoError(t, err)
+		content, err := os.ReadFile(filepath.Join(genDir, "values", "service.go"))
+		require.NoError(t, err)
+		code := string(content)
+		require.Contains(t, code, "type UsePayload struct")
+		require.Contains(t, code, "type UsePayload2 struct")
+		runGeneratedTests(t, genDir)
+	})
+}
+
 // TestNestedRelocatedDeclarationsOwnTheirImports verifies that metadata imports
 // used by two relocated declarations stay in their respective declaration
 // files and do not leak into the service file that references their package.

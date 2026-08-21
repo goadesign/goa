@@ -168,6 +168,7 @@ func serviceFiles(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 	}
 	outputPackage := genpkg + "/" + svcName
 	attributes := serviceReferenceAttributes(service)
+	attributes = append(attributes, normalizedMethodDefinitions(service)...)
 	for _, userType := range svc.userTypes {
 		if userType.Loc == nil {
 			attributes = append(attributes, userType.Type.Attribute())
@@ -178,7 +179,7 @@ func serviceFiles(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 			attributes = append(attributes, errorType.Type.Attribute())
 		}
 	}
-	imports = append(imports, AttributeImports(genpkg, outputPackage, attributes...)...)
+	imports = append(imports, services.AttributeImports(outputPackage, attributes...)...)
 	header := codegen.Header(service.Name+" service", svc.PkgName, imports)
 	def := &codegen.SectionTemplate{
 		Name:   "service",
@@ -207,10 +208,52 @@ func serviceFiles(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 	return append(files, InterceptorsFiles(genpkg, service, services)...)
 }
 
+// normalizedMethodDefinitions returns the underlying object definitions
+// emitted for semantic method wrappers in service.go. Their nested references
+// contribute imports even though endpoint and client files stop at the wrapper
+// declaration.
+func normalizedMethodDefinitions(service *expr.ServiceExpr) []*expr.AttributeExpr {
+	var definitions []*expr.AttributeExpr
+	for _, method := range service.Methods {
+		definitions = append(definitions, normalizedMethodDefinitionsFor(method)...)
+	}
+	return definitions
+}
+
+// normalizedMethodDefinitionsFor returns the raw object definitions emitted
+// for one method so service.go imports their nested references.
+func normalizedMethodDefinitionsFor(method *expr.MethodExpr) []*expr.AttributeExpr {
+	var definitions []*expr.AttributeExpr
+	definitions = appendNormalizedMethodDefinition(definitions, method, method.Payload, "Payload")
+	definitions = appendNormalizedMethodDefinition(definitions, method, method.StreamingPayload, "StreamingPayload")
+	definitions = appendNormalizedMethodDefinition(definitions, method, method.Result, "Result")
+	if method.HasMixedResults() {
+		definitions = appendNormalizedMethodDefinition(definitions, method, method.StreamingResult, "StreamingResult")
+	}
+	return definitions
+}
+
+// appendNormalizedMethodDefinition appends the underlying object only when
+// attribute is the semantic wrapper created for the requested method role.
+func appendNormalizedMethodDefinition(definitions []*expr.AttributeExpr, method *expr.MethodExpr, attribute *expr.AttributeExpr, suffix string) []*expr.AttributeExpr {
+	if attribute == nil {
+		return definitions
+	}
+	userType, ok := attribute.Type.(expr.UserType)
+	if !ok || userType.ID() != normalizedMethodTypeID(method.Service, method, suffix) {
+		return definitions
+	}
+	return append(definitions, userType.Attribute())
+}
+
 // generatedPackageFiles renders each relocated user type in its configured
 // file and one sorted unions.go for every package that owns unions.
 func generatedPackageFiles(genpkg string, analyses []*ServicesData) []*codegen.File {
 	packages := aggregateGeneratedPackages(analyses)
+	if len(packages) == 0 {
+		return nil
+	}
+	aliases := analyses[0].aliases
 	packagePaths := make([]string, 0, len(packages))
 	for packagePath := range packages {
 		packagePaths = append(packagePaths, packagePath)
@@ -233,13 +276,13 @@ func generatedPackageFiles(genpkg string, analyses []*ServicesData) []*codegen.F
 		for _, filePath := range filePaths {
 			generatedTypes := typesByFile[filePath]
 			sort.Slice(generatedTypes, func(i, j int) bool {
-				return generatedTypes[i].declaration.Name < generatedTypes[j].declaration.Name
+				return generatedTypes[i].declaration.Name() < generatedTypes[j].declaration.Name()
 			})
 			imports := []*codegen.ImportSpec{
 				codegen.SimpleImport("fmt"),
 				codegen.GoaImport(""),
 			}
-			collector := newImportCollector(genpkg, packagePath)
+			collector := newImportCollector(aliases, genpkg, packagePath)
 			for _, generatedType := range generatedTypes {
 				collector.collect(generatedType.userType.Attribute())
 			}
@@ -270,14 +313,11 @@ func generatedPackageFiles(genpkg string, analyses []*ServicesData) []*codegen.F
 				codegen.SimpleImport("fmt"),
 				codegen.GoaImport(""),
 			}
-			collector := newImportCollector(genpkg, packagePath)
+			collector := newImportCollector(aliases, genpkg, packagePath)
 			for _, union := range unions {
-				for _, named := range union.source.Values {
-					if userType, ok := named.Attribute.Type.(expr.UserType); ok && codegen.UserTypeLocation(userType) == nil {
-						collector.collect(userType.Attribute())
-						continue
-					}
-					collector.collect(named.Attribute)
+				for _, field := range union.Fields {
+					collector.collect(field.reference)
+					collector.collect(field.definition)
 				}
 			}
 			imports = append(imports, collector.imports()...)

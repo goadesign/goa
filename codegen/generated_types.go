@@ -26,7 +26,7 @@ type (
 		frozen        bool
 	}
 
-	// DerivedTypeID identifies a generated view declaration by the exact source
+	// DerivedTypeID identifies a generated declaration by the exact source
 	// declaration and the closed transformation that produces it.
 	DerivedTypeID struct {
 		origin expr.UserType
@@ -36,38 +36,25 @@ type (
 	// TypeDeclaration records the canonical name and package path of one
 	// generated type declaration.
 	TypeDeclaration struct {
-		// Name is the unqualified Go declaration name. Derived view types and
-		// generated union branch aliases keep Name empty until the owning
-		// generation is frozen.
-		Name string
-		// PackagePath is the import path of the package that owns the declaration.
-		PackagePath string
+		name        string
+		packagePath string
 	}
 
 	// UnionDeclaration records the canonical union and discriminator names in
 	// the package that emits them.
 	UnionDeclaration struct {
-		// Name is the unqualified Go union name. It remains empty until the
-		// owning generation is frozen.
-		Name string
-		// KindName is the unqualified Go discriminator type name. It remains
-		// empty until the owning generation is frozen.
-		KindName string
-		// PackagePath is the import path of the package that owns both names.
-		PackagePath string
+		name        string
+		kindName    string
+		packagePath string
 	}
 
 	// UnionBranchDeclaration records the package-level declarations emitted for
 	// one union branch.
 	UnionBranchDeclaration struct {
-		// KindConst is the unqualified discriminator constant name.
-		KindConst string
-		// Constructor is the unqualified constructor function name.
-		Constructor string
-		// Type is the optional generated alias declaration for the branch.
-		Type *TypeDeclaration
-
-		typeName string
+		kindConst   string
+		constructor string
+		branchType  *TypeDeclaration
+		typeName    string
 	}
 
 	// unionDeclaration retains the expression needed to allocate the public
@@ -84,8 +71,8 @@ type (
 		name string
 	}
 
-	// derivedTypeKind distinguishes the only two view declaration families
-	// rebuilt independently during planning and rendering.
+	// derivedTypeKind distinguishes the closed declaration families rebuilt
+	// independently during planning and rendering.
 	derivedTypeKind uint
 
 	// derivedTypeDeclaration retains the preferred name until package freeze.
@@ -98,35 +85,106 @@ type (
 	// derivedTypeOrder contains only stable semantic values so view declaration
 	// suffixes never depend on expression pointer addresses or traversal order.
 	derivedTypeOrder struct {
-		kind        derivedTypeKind
-		name        string
-		sourceName  string
-		sourceID    string
-		sourceShape string
+		kind       derivedTypeKind
+		name       string
+		sourceName string
+		sourceID   string
 	}
 )
 
 const (
 	projectedTypeKind derivedTypeKind = iota + 1
 	viewedResultTypeKind
+	methodPayloadTypeKind
+	methodStreamingPayloadTypeKind
+	methodResultTypeKind
+	methodStreamingResultTypeKind
 )
 
 // NewProjectedTypeID returns the generated declaration identity for the
 // pointer-backed projection of source emitted in a service views package.
 func NewProjectedTypeID(source expr.UserType) DerivedTypeID {
-	return DerivedTypeID{origin: source.Origin(), kind: projectedTypeKind}
+	return newDerivedTypeID(source, projectedTypeKind)
 }
 
 // NewViewedResultTypeID returns the generated declaration identity for the
 // viewed-result wrapper of source emitted in a service views package.
 func NewViewedResultTypeID(source expr.UserType) DerivedTypeID {
-	return DerivedTypeID{origin: source.Origin(), kind: viewedResultTypeKind}
+	return newDerivedTypeID(source, viewedResultTypeKind)
+}
+
+// NewMethodPayloadTypeID returns the generated declaration identity for a raw
+// object wrapped as a service method payload.
+func NewMethodPayloadTypeID(source expr.UserType) DerivedTypeID {
+	return newDerivedTypeID(source, methodPayloadTypeKind)
+}
+
+// NewMethodStreamingPayloadTypeID returns the generated declaration identity
+// for a raw object wrapped as a service method streaming payload.
+func NewMethodStreamingPayloadTypeID(source expr.UserType) DerivedTypeID {
+	return newDerivedTypeID(source, methodStreamingPayloadTypeKind)
+}
+
+// NewMethodResultTypeID returns the generated declaration identity for a raw
+// object wrapped as a service method result.
+func NewMethodResultTypeID(source expr.UserType) DerivedTypeID {
+	return newDerivedTypeID(source, methodResultTypeKind)
+}
+
+// NewMethodStreamingResultTypeID returns the generated declaration identity
+// for a raw object wrapped as a service method streaming result.
+func NewMethodStreamingResultTypeID(source expr.UserType) DerivedTypeID {
+	return newDerivedTypeID(source, methodStreamingResultTypeKind)
+}
+
+// Name returns the unqualified Go declaration name. It is empty until the
+// generation freezes declarations whose names depend on package collisions.
+func (d *TypeDeclaration) Name() string {
+	return d.name
+}
+
+// PackagePath returns the import path of the package that owns the declaration.
+func (d *TypeDeclaration) PackagePath() string {
+	return d.packagePath
+}
+
+// Name returns the unqualified Go union declaration name. It is empty until
+// the generation freezes the owning package.
+func (d *UnionDeclaration) Name() string {
+	return d.name
+}
+
+// KindName returns the unqualified Go discriminator type name. It is empty
+// until the generation freezes the owning package.
+func (d *UnionDeclaration) KindName() string {
+	return d.kindName
+}
+
+// PackagePath returns the import path of the package that owns the union.
+func (d *UnionDeclaration) PackagePath() string {
+	return d.packagePath
+}
+
+// KindConst returns the unqualified discriminator constant for the branch.
+func (d *UnionBranchDeclaration) KindConst() string {
+	return d.kindConst
+}
+
+// Constructor returns the unqualified constructor function for the branch.
+func (d *UnionBranchDeclaration) Constructor() string {
+	return d.constructor
+}
+
+// Type returns the generated branch alias declaration and whether the branch
+// emits one.
+func (d *UnionBranchDeclaration) Type() (*TypeDeclaration, bool) {
+	return d.branchType, d.branchType != nil
 }
 
 // Ref returns the Go reference spelling for declaration's data type, including
 // Goa's pointer/value semantics for named objects, unions, and aliases.
 func (d *TypeDeclaration) Ref(dataType expr.DataType) string {
-	return goTypeRef(d.Name, dataType)
+	return goTypeRef(d.name, dataType)
 }
 
 // DeclareUserType reserves userType's exact exported Go name and returns its
@@ -159,7 +217,7 @@ func (p *GeneratedPackage) DeclareUserType(userType expr.UserType) (*TypeDeclara
 		)
 	}
 	p.scope.HashedUnique(userType, name, "")
-	declaration := &TypeDeclaration{Name: name, PackagePath: p.path}
+	declaration := &TypeDeclaration{name: name, packagePath: p.path}
 	p.userTypes[origin] = declaration
 	p.typeBindings[origin] = declaration
 	p.userTypeNames[name] = userType.Name()
@@ -194,13 +252,25 @@ func (p *GeneratedPackage) DeclareDerivedType(identity DerivedTypeID, name strin
 			identity.origin.Name(),
 		)
 	}
-	declaration := &TypeDeclaration{PackagePath: p.path}
+	declaration := &TypeDeclaration{packagePath: p.path}
+	if identity.kind.isMethodType() {
+		if _, ok := p.typeBindings[identity.origin]; ok {
+			return nil, fmt.Errorf(
+				"user type %q is already bound to another declaration in generated package %q",
+				identity.origin.Name(),
+				p.path,
+			)
+		}
+	}
 	p.derivedTypes[identity] = &derivedTypeDeclaration{
 		declaration: declaration,
 		name:        name,
 		order:       order,
 	}
 	p.derivedKeys[order] = identity
+	if identity.kind.isMethodType() {
+		p.typeBindings[identity.origin] = declaration
+	}
 	return declaration, nil
 }
 
@@ -216,7 +286,7 @@ func (p *GeneratedPackage) DeclareUnion(union *expr.Union) (*UnionDeclaration, e
 		return planned.declaration, nil
 	}
 
-	declaration := &UnionDeclaration{PackagePath: p.path}
+	declaration := &UnionDeclaration{packagePath: p.path}
 	branches := make(map[unionBranchID]*UnionBranchDeclaration, len(union.Values))
 	for _, branch := range union.Values {
 		identity := unionBranchID{name: branch.Name}
@@ -253,7 +323,7 @@ func (p *GeneratedPackage) DeclareUnionBranchType(union *expr.Union, branchName 
 	if !ok {
 		return nil, fmt.Errorf("branch %q of union %q is not declared in generated package %q", branchName, union.Name(), p.path)
 	}
-	if branch.Type != nil {
+	if branch.branchType != nil {
 		name := Goify(userType.Name(), true)
 		if branch.typeName != name {
 			return nil, fmt.Errorf(
@@ -265,18 +335,18 @@ func (p *GeneratedPackage) DeclareUnionBranchType(union *expr.Union, branchName 
 			)
 		}
 		origin := userType.Origin()
-		if existing, ok := p.typeBindings[origin]; ok && existing != branch.Type {
+		if existing, ok := p.typeBindings[origin]; ok && existing != branch.branchType {
 			return nil, fmt.Errorf("user type %q is already bound to another declaration in generated package %q", userType.Name(), p.path)
 		}
-		p.typeBindings[origin] = branch.Type
-		return branch.Type, nil
+		p.typeBindings[origin] = branch.branchType
+		return branch.branchType, nil
 	}
-	declaration := &TypeDeclaration{PackagePath: p.path}
+	declaration := &TypeDeclaration{packagePath: p.path}
 	origin := userType.Origin()
 	if existing, ok := p.typeBindings[origin]; ok && existing != declaration {
 		return nil, fmt.Errorf("user type %q is already bound to another declaration in generated package %q", userType.Name(), p.path)
 	}
-	branch.Type = declaration
+	branch.branchType = declaration
 	branch.typeName = Goify(userType.Name(), true)
 	p.typeBindings[origin] = declaration
 	return declaration, nil
@@ -342,10 +412,10 @@ func (p *GeneratedPackage) UnionBranchType(union *expr.Union, branchName string)
 	if err != nil {
 		return nil, err
 	}
-	if branch.Type == nil {
+	if branch.branchType == nil {
 		return nil, fmt.Errorf("branch %q of union %q has no generated type in package %q", branchName, union.Name(), p.path)
 	}
-	return branch.Type, nil
+	return branch.branchType, nil
 }
 
 // Scope returns the frozen package-owned name scope used to render generated
@@ -383,7 +453,7 @@ func (p *GeneratedPackage) freeze() {
 		return compareDerivedTypeOrder(a.order, b.order)
 	})
 	for _, planned := range derived {
-		planned.declaration.Name = p.scope.Unique(planned.name)
+		planned.declaration.name = p.scope.Unique(planned.name)
 	}
 
 	identities := make([]UnionTypeID, 0, len(p.unions))
@@ -394,8 +464,8 @@ func (p *GeneratedPackage) freeze() {
 	for _, identity := range identities {
 		planned := p.unions[identity]
 		name := p.scope.HashedUnique(identity, Goify(planned.union.Name(), true), "")
-		planned.declaration.Name = name
-		planned.declaration.KindName = p.scope.Unique(name + "Kind")
+		planned.declaration.name = name
+		planned.declaration.kindName = p.scope.Unique(name + "Kind")
 
 		branches := make([]unionBranchID, 0, len(planned.branches))
 		for branch := range planned.branches {
@@ -406,26 +476,40 @@ func (p *GeneratedPackage) freeze() {
 		})
 		for _, identity := range branches {
 			branch := planned.branches[identity]
-			if branch.Type != nil {
-				branch.Type.Name = p.scope.Unique(branch.typeName)
+			if branch.branchType != nil {
+				branch.branchType.name = p.scope.Unique(branch.typeName)
 			}
-			branch.KindConst = p.scope.Unique(planned.declaration.KindName + Goify(identity.name, true))
-			branch.Constructor = p.scope.Unique("New" + planned.declaration.Name + Goify(identity.name, true))
+			branch.kindConst = p.scope.Unique(planned.declaration.kindName + Goify(identity.name, true))
+			branch.constructor = p.scope.Unique("New" + planned.declaration.name + Goify(identity.name, true))
 		}
 	}
 	p.scope.Freeze()
 	p.frozen = true
 }
 
+// newDerivedTypeID validates and records the exact declaration origin used by
+// independently rebuilt planning and rendering graphs.
+func newDerivedTypeID(source expr.UserType, kind derivedTypeKind) DerivedTypeID {
+	if source == nil || source.Origin() == nil {
+		panic("derived type source has no declaration origin")
+	}
+	return DerivedTypeID{origin: source.Origin(), kind: kind}
+}
+
+// isMethodType reports whether the derived declaration names a raw method
+// object wrapper in the service package.
+func (k derivedTypeKind) isMethodType() bool {
+	return k >= methodPayloadTypeKind && k <= methodStreamingResultTypeKind
+}
+
 // newDerivedTypeOrder builds deterministic ordering data independent of
 // expression pointer addresses.
 func newDerivedTypeOrder(identity DerivedTypeID, name string) derivedTypeOrder {
 	return derivedTypeOrder{
-		kind:        identity.kind,
-		name:        name,
-		sourceName:  identity.origin.Name(),
-		sourceID:    identity.origin.ID(),
-		sourceShape: expr.Hash(identity.origin, false, false, false),
+		kind:       identity.kind,
+		name:       name,
+		sourceName: identity.origin.Name(),
+		sourceID:   identity.origin.ID(),
 	}
 }
 
@@ -438,7 +522,6 @@ func compareDerivedTypeOrder(left, right derivedTypeOrder) int {
 		{left.name, right.name},
 		{left.sourceName, right.sourceName},
 		{left.sourceID, right.sourceID},
-		{left.sourceShape, right.sourceShape},
 	} {
 		if compared := strings.Compare(values[0], values[1]); compared != 0 {
 			return compared

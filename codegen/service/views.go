@@ -33,7 +33,7 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr, services *ServicesData)
 	unionByHash := make(map[unionDataKey]*UnionTypeData)
 	seenUnions := make(map[expr.UserType]struct{})
 	viewLoc := &codegen.Location{RelImportPath: "views"}
-	resolver := newViewResolver(services.generation, service, svc.viewDerived)
+	resolver := newViewResolver(services.generation, services.aliases, service, svc.viewDerived)
 	for _, t := range svc.projectedTypes {
 		if err := services.collectUnionTypes(
 			&expr.AttributeExpr{Type: t.Type},
@@ -75,7 +75,7 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr, services *ServicesData)
 	for _, projected := range svc.projectedTypes {
 		attributes = append(attributes, projected.Type.Attribute())
 	}
-	imports = append(imports, AttributeImports(genpkg, outputPackage, attributes...)...)
+	imports = append(imports, services.AttributeImports(outputPackage, attributes...)...)
 	header := codegen.Header(service.Name+" views", "views",
 		imports)
 	sections := []*codegen.SectionTemplate{header}

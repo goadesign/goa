@@ -24,7 +24,12 @@ func TestBuildUnionTypeDataMarksNilableBranches(t *testing.T) {
 	data, err := buildUnionTypeData(
 		union,
 		declaration,
-		newServiceResolver(generation, &expr.ServiceExpr{Name: "service"}, "gen/service"),
+		newServiceResolver(
+			generation,
+			aliasesForTest(t, "gen/service"),
+			&expr.ServiceExpr{Name: "service"},
+			"gen/service",
+		),
 		&codegen.Location{RelImportPath: "gen/service"},
 		false,
 		func(branch *expr.NamedAttributeExpr) (*codegen.UnionBranchDeclaration, error) {

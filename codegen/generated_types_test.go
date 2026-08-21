@@ -69,10 +69,8 @@ func TestGeneratedPackageUserTypes(t *testing.T) {
 
 	first, err := types.DeclareUserType(widget)
 	require.NoError(t, err)
-	require.Equal(t, &TypeDeclaration{
-		Name:        "Widget",
-		PackagePath: "generated.local/gen/types",
-	}, first)
+	require.Equal(t, "Widget", first.Name())
+	require.Equal(t, "generated.local/gen/types", first.PackagePath())
 	second, err := types.DeclareUserType(widget)
 	require.NoError(t, err)
 	require.Same(t, first, second)
@@ -82,7 +80,7 @@ func TestGeneratedPackageUserTypes(t *testing.T) {
 	require.Same(t, first, lookedUp)
 	declaredMissing, err := types.DeclareUserType(missing)
 	require.NoError(t, err)
-	require.Equal(t, "Missing", declaredMissing.Name)
+	require.Equal(t, "Missing", declaredMissing.Name())
 	require.NoError(t, generation.Freeze())
 	require.Equal(t, "Widget", types.Scope().GoTypeName(&expr.AttributeExpr{Type: widget}))
 }
@@ -147,8 +145,53 @@ func TestGeneratedPackageDerivedTypesUseTypedSourceIdentity(t *testing.T) {
 	viewedCopy, err := views.DerivedType(NewViewedResultTypeID(copy))
 	require.NoError(t, err)
 	require.Same(t, viewed, viewedCopy)
-	require.Equal(t, "ValueView", projected.Name)
-	require.Equal(t, "Value", viewed.Name)
+	require.Equal(t, "ValueView", projected.Name())
+	require.Equal(t, "Value", viewed.Name())
+}
+
+// TestGeneratedPackageDerivedNamesIgnoreDeclarationOrder verifies that stable
+// semantic source identifiers, not traversal order, decide suffix ownership.
+func TestGeneratedPackageDerivedNamesIgnoreDeclarationOrder(t *testing.T) {
+	declare := func(reverse bool) (string, string) {
+		generation := NewGeneration("generated.local/gen", nil)
+		views := generation.GeneratedPackage("generated.local/gen/service/views")
+		first := generatedUserType("Value", "first")
+		second := generatedUserType("Value", "second")
+		ids := []DerivedTypeID{NewProjectedTypeID(first), NewProjectedTypeID(second)}
+		if reverse {
+			ids[0], ids[1] = ids[1], ids[0]
+		}
+		for _, identity := range ids {
+			_, err := views.DeclareDerivedType(identity, "ValueView")
+			require.NoError(t, err)
+		}
+		require.NoError(t, generation.Freeze())
+		firstDeclaration, err := views.DerivedType(NewProjectedTypeID(first))
+		require.NoError(t, err)
+		secondDeclaration, err := views.DerivedType(NewProjectedTypeID(second))
+		require.NoError(t, err)
+		return firstDeclaration.Name(), secondDeclaration.Name()
+	}
+
+	first, second := declare(false)
+	reversedFirst, reversedSecond := declare(true)
+	require.Equal(t, first, reversedFirst)
+	require.Equal(t, second, reversedSecond)
+}
+
+// TestGeneratedPackageRejectsAmbiguousDerivedOrder verifies that two distinct
+// origins cannot rely on unstable expression shape to break an otherwise
+// identical semantic ordering tuple.
+func TestGeneratedPackageRejectsAmbiguousDerivedOrder(t *testing.T) {
+	generation := NewGeneration("generated.local/gen", nil)
+	views := generation.GeneratedPackage("generated.local/gen/service/views")
+	first := generatedUserTypeOf("Value", "same", expr.String)
+	second := generatedUserTypeOf("Value", "same", expr.Int)
+
+	_, err := views.DeclareDerivedType(NewProjectedTypeID(first), "ValueView")
+	require.NoError(t, err)
+	_, err = views.DeclareDerivedType(NewProjectedTypeID(second), "ValueView")
+	require.ErrorContains(t, err, "cannot deterministically order")
 }
 
 // TestGeneratedPackageUnionBranchesShareDeclaration verifies that separately
@@ -168,10 +211,10 @@ func TestGeneratedPackageUnionBranchesShareDeclaration(t *testing.T) {
 	secondDeclaration, err := types.DeclareUnionBranchType(secondUnion, "text", secondAlias)
 	require.NoError(t, err)
 	require.Same(t, firstDeclaration, secondDeclaration)
-	require.Empty(t, firstDeclaration.Name)
+	require.Empty(t, firstDeclaration.Name())
 
 	require.NoError(t, generation.Freeze())
-	require.Equal(t, "ValueText", firstDeclaration.Name)
+	require.Equal(t, "ValueText", firstDeclaration.Name())
 	lookedUp, err := types.UnionBranchType(secondUnion, "text")
 	require.NoError(t, err)
 	require.Same(t, firstDeclaration, lookedUp)
@@ -198,8 +241,8 @@ func TestGeneratedPackageUnionBranchesAreIsolatedByUnion(t *testing.T) {
 
 	require.NoError(t, generation.Freeze())
 	require.ElementsMatch(t, []string{"ValueText", "ValueText2"}, []string{
-		firstDeclaration.Name,
-		secondDeclaration.Name,
+		firstDeclaration.Name(),
+		secondDeclaration.Name(),
 	})
 }
 
@@ -222,9 +265,11 @@ func TestGeneratedPackageUnionFamilyAvoidsExactTypeNames(t *testing.T) {
 	require.NoError(t, generation.Freeze())
 	branch, err := types.UnionBranch(union, "text")
 	require.NoError(t, err)
-	require.Equal(t, "ValueKindText2", branch.KindConst)
-	require.Equal(t, "NewValueText2", branch.Constructor)
-	require.Same(t, aliasDeclaration, branch.Type)
+	require.Equal(t, "ValueKindText2", branch.KindConst())
+	require.Equal(t, "NewValueText2", branch.Constructor())
+	branchType, ok := branch.Type()
+	require.True(t, ok)
+	require.Same(t, aliasDeclaration, branchType)
 }
 
 // TestGeneratedPackageUnions verifies that emitted-definition identity makes
@@ -239,16 +284,15 @@ func TestGeneratedPackageUnions(t *testing.T) {
 
 	firstDeclaration, err := types.DeclareUnion(first)
 	require.NoError(t, err)
-	require.Equal(t, &UnionDeclaration{
-		PackagePath: "generated.local/gen/types",
-	}, firstDeclaration)
+	require.Empty(t, firstDeclaration.Name())
+	require.Equal(t, "generated.local/gen/types", firstDeclaration.PackagePath())
 	equivalentDeclaration, err := types.DeclareUnion(equivalent)
 	require.NoError(t, err)
 	require.Same(t, firstDeclaration, equivalentDeclaration)
 
 	differentDeclaration, err := types.DeclareUnion(different)
 	require.NoError(t, err)
-	require.Empty(t, differentDeclaration.Name)
+	require.Empty(t, differentDeclaration.Name())
 	require.NotSame(t, firstDeclaration, differentDeclaration)
 
 	lookedUp, err := types.Union(equivalent)
@@ -256,12 +300,12 @@ func TestGeneratedPackageUnions(t *testing.T) {
 	require.Same(t, firstDeclaration, lookedUp)
 	require.NoError(t, generation.Freeze())
 	require.ElementsMatch(t, []string{"Value", "Value2"}, []string{
-		firstDeclaration.Name,
-		differentDeclaration.Name,
+		firstDeclaration.Name(),
+		differentDeclaration.Name(),
 	})
 	require.ElementsMatch(t, []string{"ValueKind", "Value2Kind"}, []string{
-		firstDeclaration.KindName,
-		differentDeclaration.KindName,
+		firstDeclaration.KindName(),
+		differentDeclaration.KindName(),
 	})
 
 	reversedGeneration := NewGeneration("generated.local/gen", nil)
@@ -271,8 +315,8 @@ func TestGeneratedPackageUnions(t *testing.T) {
 	reversedFirst, err := reversedTypes.DeclareUnion(generatedUnion("Value", "type", "value"))
 	require.NoError(t, err)
 	require.NoError(t, reversedGeneration.Freeze())
-	require.Equal(t, firstDeclaration.Name, reversedFirst.Name)
-	require.Equal(t, differentDeclaration.Name, reversedDifferent.Name)
+	require.Equal(t, firstDeclaration.Name(), reversedFirst.Name())
+	require.Equal(t, differentDeclaration.Name(), reversedDifferent.Name())
 }
 
 // TestGeneratedPackageUserTypeWinsUnionNamesRegardlessOfOrder verifies that
@@ -314,15 +358,15 @@ func TestGeneratedPackageUserTypeWinsUnionNamesRegardlessOfOrder(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			require.Equal(t, "Value", userDeclaration.Name)
-			require.Equal(t, "ValueKind", kindDeclaration.Name)
-			require.Empty(t, unionDeclaration.Name)
-			require.Empty(t, unionDeclaration.KindName)
+			require.Equal(t, "Value", userDeclaration.Name())
+			require.Equal(t, "ValueKind", kindDeclaration.Name())
+			require.Empty(t, unionDeclaration.Name())
+			require.Empty(t, unionDeclaration.KindName())
 			require.NoError(t, generation.Freeze())
-			require.Equal(t, "Value", userDeclaration.Name)
-			require.Equal(t, "ValueKind", kindDeclaration.Name)
-			require.Equal(t, "Value2", unionDeclaration.Name)
-			require.Equal(t, "Value2Kind", unionDeclaration.KindName)
+			require.Equal(t, "Value", userDeclaration.Name())
+			require.Equal(t, "ValueKind", kindDeclaration.Name())
+			require.Equal(t, "Value2", unionDeclaration.Name())
+			require.Equal(t, "Value2Kind", unionDeclaration.KindName())
 			require.Equal(t, "Value", types.Scope().GoTypeName(&expr.AttributeExpr{Type: userType}))
 			require.Equal(t, "ValueKind", types.Scope().GoTypeName(&expr.AttributeExpr{Type: kindUserType}))
 			require.Equal(t, "Value2", types.Scope().GoTypeName(&expr.AttributeExpr{Type: union}))
@@ -341,7 +385,7 @@ func TestGeneratedPackageLookupAcrossFreeze(t *testing.T) {
 	require.NoError(t, err)
 	unionDeclaration, err := types.DeclareUnion(union)
 	require.NoError(t, err)
-	require.Empty(t, unionDeclaration.Name)
+	require.Empty(t, unionDeclaration.Name())
 
 	require.NoError(t, generation.Freeze())
 	lookedUpUser, err := types.UserType(widget)
@@ -350,7 +394,7 @@ func TestGeneratedPackageLookupAcrossFreeze(t *testing.T) {
 	lookedUpUnion, err := types.Union(union)
 	require.NoError(t, err)
 	require.Same(t, unionDeclaration, lookedUpUnion)
-	require.Equal(t, "Value", lookedUpUnion.Name)
+	require.Equal(t, "Value", lookedUpUnion.Name())
 	require.Equal(t, "Widget", types.Scope().GoTypeName(&expr.AttributeExpr{Type: widget}))
 	require.Equal(t, "Value", types.Scope().GoTypeName(&expr.AttributeExpr{Type: union}))
 	require.Panics(t, func() {
@@ -382,8 +426,8 @@ func TestGenerationCatalogsAreIsolated(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, firstGeneration.Freeze())
 	require.NoError(t, secondGeneration.Freeze())
-	require.Equal(t, "Value", firstDeclaration.Name)
-	require.Equal(t, "Value", secondDeclaration.Name)
+	require.Equal(t, "Value", firstDeclaration.Name())
+	require.Equal(t, "Value", secondDeclaration.Name())
 	require.NotSame(t, firstDeclaration, secondDeclaration)
 	require.NotSame(t, first.Scope(), second.Scope())
 }

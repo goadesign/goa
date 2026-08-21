@@ -1,3 +1,5 @@
+// This file copies design data types while preserving declaration provenance,
+// so compiler-created graphs can still resolve their original generated names.
 package expr
 
 import (

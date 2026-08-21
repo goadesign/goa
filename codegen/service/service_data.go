@@ -40,6 +40,7 @@ type (
 		Services map[string]*Data
 
 		generation *codegen.Generation
+		aliases    *importAliases
 		packages   map[string]*generatedPackageData
 		rootTypes  *rootTypeSet
 	}
@@ -123,6 +124,9 @@ type (
 		PayloadDef string
 		// PayloadRef is a reference to the payload type if any,
 		PayloadRef string
+		// PayloadDeclaration is the immutable generated declaration for a named
+		// payload type. It is nil for primitive payloads.
+		PayloadDeclaration *codegen.TypeDeclaration
 		// PayloadDesc is the payload type description if any.
 		PayloadDesc string
 		// PayloadEx is an example of a valid payload value.
@@ -135,6 +139,9 @@ type (
 		StreamingPayloadDef string
 		// StreamingPayloadRef is a reference to the streaming payload type if any.
 		StreamingPayloadRef string
+		// StreamingPayloadDeclaration is the immutable generated declaration for
+		// a named streaming payload type. It is nil for primitive payloads.
+		StreamingPayloadDeclaration *codegen.TypeDeclaration
 		// StreamingPayloadDesc is the streaming payload type description if any.
 		StreamingPayloadDesc string
 		// StreamingPayloadEx is an example of a valid streaming payload value.
@@ -145,6 +152,9 @@ type (
 		StreamingResultDef string
 		// StreamingResultRef is the reference to the streaming result type if any.
 		StreamingResultRef string
+		// StreamingResultDeclaration is the immutable generated declaration for a
+		// named streaming result type. It is nil for primitive results.
+		StreamingResultDeclaration *codegen.TypeDeclaration
 		// StreamingResultDesc is the streaming result type description if any.
 		StreamingResultDesc string
 		// StreamingResultEx is an example of a valid streaming result value.
@@ -158,6 +168,9 @@ type (
 		ResultDef string
 		// ResultRef is the reference to the result type if any.
 		ResultRef string
+		// ResultDeclaration is the immutable generated declaration for a named
+		// result type. It is nil for primitive results.
+		ResultDeclaration *codegen.TypeDeclaration
 		// ResultDesc is the result type description if any.
 		ResultDesc string
 		// ResultEx is an example of a valid result value.
@@ -422,8 +435,8 @@ type (
 
 	// UserTypeData contains the data describing a user-defined type.
 	UserTypeData struct {
-		// Declaration is the generated-package record for a relocated type. It
-		// is nil for a type emitted in its service package or views package.
+		// Declaration is the immutable generated-package record that owns this
+		// type in a service, views, or relocated package.
 		Declaration *codegen.TypeDeclaration
 		// Name is the type name.
 		Name string
@@ -444,8 +457,8 @@ type (
 
 	// UnionTypeData describes a generated sum-type union for a service.
 	UnionTypeData struct {
-		// Declaration is the generated-package record for a relocated union. It
-		// is nil for a union emitted in its service package or views package.
+		// Declaration is the immutable generated-package record that owns this
+		// union in a service, views, or relocated package.
 		Declaration *codegen.UnionDeclaration
 		// Name is the Go type name of the union struct.
 		Name string
@@ -460,8 +473,6 @@ type (
 		TypeKey string
 		// ValueKey is the value field name for JSON marshaling (defaults to "value").
 		ValueKey string
-
-		source *expr.Union
 	}
 
 	// UnionFieldData describes a single branch of a union.
@@ -487,6 +498,9 @@ type (
 		PrimitiveAliasType string
 		// TypeTag is the JSON "type" discriminator value for this branch.
 		TypeTag string
+
+		reference  *expr.AttributeExpr
+		definition *expr.AttributeExpr
 	}
 
 	// SchemeData describes a single security scheme.
@@ -681,10 +695,15 @@ type (
 // NewServicesData analyzes root using declarations frozen by generation.
 // Call Plan for every participating root and freeze generation first.
 func NewServicesData(root *expr.RootExpr, generation *codegen.Generation) (*ServicesData, error) {
+	aliases, err := newImportAliases(root, generation)
+	if err != nil {
+		return nil, err
+	}
 	data := &ServicesData{
 		Root:       root,
 		Services:   make(map[string]*Data),
 		generation: generation,
+		aliases:    aliases,
 		packages:   make(map[string]*generatedPackageData),
 		rootTypes:  newRootTypeSet(root),
 	}
@@ -809,6 +828,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) (*Data, error) {
 	viewDerived := make(map[expr.UserType]codegen.DerivedTypeID)
 	serviceResolver := newServiceResolver(
 		d.generation,
+		d.aliases,
 		service,
 		servicePackagePath(d.generation.GenPkg, service),
 	)
@@ -881,7 +901,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) (*Data, error) {
 				identity := codegen.NewProjectedTypeID(pair.source)
 				viewDerived[pair.projected.Origin()] = identity
 			}
-			viewResolver := newViewResolver(d.generation, service, viewDerived)
+			viewResolver := newViewResolver(d.generation, d.aliases, service, viewDerived)
 			for _, pair := range pairs {
 				identity := codegen.NewProjectedTypeID(pair.source)
 				declaration, err := views.DerivedType(identity)
@@ -1004,7 +1024,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) (*Data, error) {
 			projAtt,
 			viewspkg,
 			serviceResolver,
-			newViewResolver(d.generation, service, viewDerived),
+			newViewResolver(d.generation, d.aliases, service, viewDerived),
 			viewedDeclaration,
 		)
 		found := false
@@ -1195,7 +1215,7 @@ func (d *ServicesData) collectTypes(at *expr.AttributeExpr, service *expr.Servic
 		data = append(data, &UserTypeData{
 			Declaration: declaration,
 			Name:        dt.Name(),
-			VarName:     declaration.Name,
+			VarName:     declaration.Name(),
 			Description: dt.Attribute().Description,
 			Def:         definitionResolver.Def(dt.Attribute(), false, true),
 			Ref:         definitionResolver.Ref(at, ""),
@@ -1343,28 +1363,33 @@ func buildUnionTypeData(u *expr.Union, declaration *codegen.UnionDeclaration, at
 		primitiveAliasType, hasPrimitiveAlias := primitiveAliasGoType(nat.Attribute.Type)
 		_, isUserType := nat.Attribute.Type.(expr.UserType)
 		emitPrimitiveAlias := hasPrimitiveAlias && !isUserType && attributor.Package(nat.Attribute) == ""
+		var definition *expr.AttributeExpr
+		if _, emitsAlias := branchDeclaration.Type(); emitsAlias {
+			definition = nat.Attribute.Type.(expr.UserType).Attribute()
+		}
 		fields[i] = &UnionFieldData{
 			Name:               nat.Name,
-			KindConst:          branchDeclaration.KindConst,
-			Constructor:        branchDeclaration.Constructor,
+			KindConst:          branchDeclaration.KindConst(),
+			Constructor:        branchDeclaration.Constructor(),
 			FieldName:          fieldName,
 			FieldType:          fieldType,
 			Nilable:            codegen.IsNilable(nat.Attribute.Type),
 			EmitPrimitiveAlias: emitPrimitiveAlias,
 			PrimitiveAliasType: primitiveAliasType,
 			TypeTag:            nat.Name,
+			reference:          nat.Attribute,
+			definition:         definition,
 		}
 	}
 
 	return &UnionTypeData{
 		Declaration: declaration,
-		Name:        declaration.Name,
-		KindName:    declaration.KindName,
+		Name:        declaration.Name(),
+		KindName:    declaration.KindName(),
 		Fields:      fields,
 		Loc:         loc,
 		TypeKey:     u.GetTypeKey(),
 		ValueKey:    u.GetValueKey(),
-		source:      u,
 	}, nil
 }
 
@@ -1410,9 +1435,23 @@ func serviceTypeData(attribute *expr.AttributeExpr, resolver *declarationResolve
 	entered := resolver.Enter(attribute).(*declarationResolver)
 	declaration := entered.userType(entered.currentPath, userType)
 	definitionResolver := entered.inOutputPackage(entered.currentPath)
-	return declaration.Name,
+	return declaration.Name(),
 		definitionResolver.Def(userType.Attribute(), false, true),
 		resolver.Ref(attribute, "")
+}
+
+// serviceTypeDeclaration returns the frozen declaration for a named method
+// type. Primitive method types do not own generated declarations.
+func serviceTypeDeclaration(attribute *expr.AttributeExpr, resolver *declarationResolver) *codegen.TypeDeclaration {
+	if attribute == nil || attribute.Type == expr.Empty {
+		return nil
+	}
+	userType, ok := attribute.Type.(expr.UserType)
+	if !ok {
+		return nil
+	}
+	entered := resolver.Enter(attribute).(*declarationResolver)
+	return entered.userType(entered.currentPath, userType)
 }
 
 // buildErrorInitData creates the data needed to generate code around endpoint error return values.
@@ -1547,6 +1586,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		PayloadLoc:                   payloadLoc,
 		PayloadDef:                   payloadDef,
 		PayloadRef:                   payloadRef,
+		PayloadDeclaration:           serviceTypeDeclaration(m.Payload, resolver),
 		PayloadDesc:                  payloadDesc,
 		PayloadEx:                    payloadEx,
 		PayloadDefault:               m.Payload.DefaultValue,
@@ -1554,6 +1594,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		ResultLoc:                    resultLoc,
 		ResultDef:                    resultDef,
 		ResultRef:                    resultRef,
+		ResultDeclaration:            serviceTypeDeclaration(m.Result, resolver),
 		ResultDesc:                   resultDesc,
 		ResultEx:                     resultEx,
 		Errors:                       errors,
@@ -1597,6 +1638,7 @@ func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vnam
 		srname, data.StreamingResultDef, srref = serviceTypeData(m.StreamingResult, resolver)
 		data.StreamingResult = srname
 		data.StreamingResultRef = srref
+		data.StreamingResultDeclaration = serviceTypeDeclaration(m.StreamingResult, resolver)
 		data.StreamingResultDesc = m.StreamingResult.Description
 		if data.StreamingResultDesc == "" {
 			data.StreamingResultDesc = fmt.Sprintf("%s is the streaming result type of the %s service %s method.",
@@ -1607,6 +1649,7 @@ func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vnam
 
 	if m.StreamingPayload != nil && m.StreamingPayload.Type != expr.Empty {
 		spayloadName, spayloadDef, spayloadRef = serviceTypeData(m.StreamingPayload, resolver)
+		data.StreamingPayloadDeclaration = serviceTypeDeclaration(m.StreamingPayload, resolver)
 		spayloadDesc = m.StreamingPayload.Description
 		if spayloadDesc == "" {
 			spayloadDesc = fmt.Sprintf("%s is the streaming payload type of the %s service %s method.",
@@ -2045,7 +2088,7 @@ func buildProjectedType(projected, att *expr.AttributeExpr, viewspkg string, ser
 		typeInits   []*InitData
 		views       []*ViewData
 
-		varname = declaration.Name
+		varname = declaration.Name()
 		pt      = projected.Type.(expr.UserType)
 	)
 	if _, isrt := pt.(*expr.ResultTypeExpr); isrt {
@@ -2107,7 +2150,7 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 		viewName = v
 	}
 	projectedDeclaration := viewResolver.userType(viewResolver.currentPath, projected.Type.(expr.UserType))
-	views := buildViews(rt, declaration.Name)
+	views := buildViews(rt, declaration.Name())
 
 	// build validation data
 	resvar, _, serviceRef := serviceTypeData(att, serviceResolver)
@@ -2115,7 +2158,7 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 	wrapperResolver := viewResolver.bindDerived(projT, codegen.NewViewedResultTypeID(rt))
 	resref := wrapperResolver.refDeclaration(declaration, att.Type)
 	data := map[string]any{
-		"Projected": projectedDeclaration.Name,
+		"Projected": projectedDeclaration.Name(),
 		"ArgVar":    "result",
 		"Source":    "result",
 		"Views":     views,
@@ -2144,7 +2187,7 @@ func buildViewedResultType(att, projected *expr.AttributeExpr, viewspkg string, 
 		"ReturnTypeRef": vresref,
 		"IsCollection":  isarr,
 		"TargetType":    serviceViewResolver.Name(&expr.AttributeExpr{Type: projT}, "", false, true),
-		"InitName":      "new" + projectedDeclaration.Name,
+		"InitName":      "new" + projectedDeclaration.Name(),
 	}
 	buf = &bytes.Buffer{}
 	if err := initTypeCodeTmpl.Execute(buf, data); err != nil {
@@ -2277,7 +2320,7 @@ func buildViewConversions(projected, att *expr.AttributeExpr, serviceResolver, v
 		}
 		wname := projected.Type.Name()
 		if toResult {
-			wname = projectedDeclaration.Name
+			wname = projectedDeclaration.Name()
 		}
 		// viewed is the projected type narrowed down to the view attributes.
 		viewed := &expr.AttributeExpr{
@@ -2321,7 +2364,7 @@ func buildViewConversions(projected, att *expr.AttributeExpr, serviceResolver, v
 				elementInit = serviceElementResolver.userType(
 					serviceElementResolver.currentPath,
 					serviceElement.Type.(expr.UserType),
-				).Name
+				).Name()
 			}
 			code, helpers := buildConstructorCode(
 				viewed,
@@ -2345,7 +2388,7 @@ func buildViewConversions(projected, att *expr.AttributeExpr, serviceResolver, v
 		} else {
 			srcCtx := declarationContext(serviceResolver, false)
 			tgtCtx := declarationContext(viewedResolver, true)
-			tname := projectedDeclaration.Name
+			tname := projectedDeclaration.Name()
 			name := "new" + tname
 			if view.Name != expr.DefaultView {
 				name += codegen.Goify(view.Name, true)
@@ -2353,7 +2396,7 @@ func buildViewConversions(projected, att *expr.AttributeExpr, serviceResolver, v
 			elementInit := ""
 			if parr != nil {
 				projectedElement := parr.ElemType.Type.(expr.UserType)
-				elementInit = viewResolver.userType(viewResolver.currentPath, projectedElement).Name
+				elementInit = viewResolver.userType(viewResolver.currentPath, projectedElement).Name()
 			}
 			code, helpers := buildConstructorCode(
 				att,

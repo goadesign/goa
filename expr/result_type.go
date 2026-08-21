@@ -1,3 +1,5 @@
+// This file defines result types and views, including the declaration origin
+// retained when code generation rebuilds projected result graphs.
 package expr
 
 import (

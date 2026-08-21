@@ -1,3 +1,5 @@
+// This file analyzes gRPC endpoint designs into the immutable data consumed by
+// protobuf message, client, server, conversion, and validation templates.
 package codegen
 
 import (
@@ -583,12 +585,12 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		)
 		md := svc.Method(e.Name())
 		if e.MethodExpr.Payload.Type != expr.Empty {
-			payloadRef = svc.Scope.GoFullTypeRef(e.MethodExpr.Payload,
-				md.PayloadLoc.PackageNameOrDefault(svc.PkgName))
+			pkg := md.PayloadLoc.PackageNameOrDefault(svc.PkgName)
+			payloadRef = methodTypeRef(e.MethodExpr.Payload, md.PayloadDeclaration, pkg, svc.Scope)
 		}
 		if e.MethodExpr.Result.Type != expr.Empty {
-			resultRef = svc.Scope.GoFullTypeRef(e.MethodExpr.Result,
-				md.ResultLoc.PackageNameOrDefault(svc.PkgName))
+			pkg := md.ResultLoc.PackageNameOrDefault(svc.PkgName)
+			resultRef = methodTypeRef(e.MethodExpr.Result, md.ResultDeclaration, pkg, svc.Scope)
 		}
 		if md.ViewedResult != nil {
 			viewedResultRef = md.ViewedResult.FullRef
@@ -959,8 +961,9 @@ func (d *ServicesData) buildRequestConvertData(request, payload *expr.AttributeE
 	}
 
 	svc := sd.Service
-	pkg := svc.Method(e.MethodExpr.Name).PayloadLoc.PackageNameOrDefault(svc.PkgName)
-	svcCtx := serviceTypeContext(pkg, svc.Scope)
+	method := svc.Method(e.MethodExpr.Name)
+	pkg := method.PayloadLoc.PackageNameOrDefault(svc.PkgName)
+	svcCtx := methodTypeContext(payload, method.PayloadDeclaration, pkg, svc.Scope)
 	if svr {
 		// server side
 		data := d.buildInitData(request, payload, "message", "v", svcCtx, false, false, sd)
@@ -971,8 +974,8 @@ func (d *ServicesData) buildRequestConvertData(request, payload *expr.AttributeE
 		return &ConvertData{
 			SrcName:    protoBufGoFullTypeName(request, sd.PkgName, sd.Scope),
 			SrcRef:     protoBufGoFullTypeRef(request, sd.PkgName, sd.Scope),
-			TgtName:    svc.Scope.GoFullTypeName(payload, svcCtx.Pkg(payload)),
-			TgtRef:     svc.Scope.GoFullTypeRef(payload, svcCtx.Pkg(payload)),
+			TgtName:    svcCtx.Scope.Name(payload, svcCtx.Pkg(payload), svcCtx.Pointer, svcCtx.UseDefault),
+			TgtRef:     svcCtx.Scope.Ref(payload, svcCtx.Pkg(payload)),
 			Init:       data,
 			Validation: addValidation(request, "message", sd, true),
 		}
@@ -982,8 +985,8 @@ func (d *ServicesData) buildRequestConvertData(request, payload *expr.AttributeE
 	data := d.buildInitData(payload, request, "payload", "message", svcCtx, true, false, sd)
 	data.Description = fmt.Sprintf("%s builds the gRPC request type from the payload of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 	return &ConvertData{
-		SrcName: svc.Scope.GoFullTypeName(payload, pkg),
-		SrcRef:  svc.Scope.GoFullTypeRef(payload, pkg),
+		SrcName: svcCtx.Scope.Name(payload, svcCtx.Pkg(payload), svcCtx.Pointer, svcCtx.UseDefault),
+		SrcRef:  svcCtx.Scope.Ref(payload, svcCtx.Pkg(payload)),
 		TgtName: protoBufGoFullTypeName(request, sd.PkgName, sd.Scope),
 		TgtRef:  protoBufGoFullTypeRef(request, sd.PkgName, sd.Scope),
 		Init:    data,
@@ -1020,15 +1023,16 @@ func (d *ServicesData) buildLegacyDecodeData(e *expr.GRPCEndpointExpr, sd *Servi
 		Metadata: md,
 	}
 	if expr.IsObject(payload.Type) {
-		pkg := svc.Method(e.MethodExpr.Name).PayloadLoc.PackageNameOrDefault(svc.PkgName)
-		svcCtx := serviceTypeContext(pkg, svc.Scope)
+		method := svc.Method(e.MethodExpr.Name)
+		pkg := method.PayloadLoc.PackageNameOrDefault(svc.PkgName)
+		svcCtx := methodTypeContext(payload, method.PayloadDeclaration, pkg, svc.Scope)
 		init := d.buildInitData(&expr.AttributeExpr{Type: expr.Empty}, payload, "message", "v", svcCtx, false, false, sd)
 		init.Name = fmt.Sprintf("New%sPayloadFromMetadata", codegen.Goify(e.Name(), true))
 		init.Description = fmt.Sprintf("%s builds the payload of the %q endpoint of the %q service from the gRPC request metadata sent by legacy stream protocol clients.", init.Name, e.Name(), svc.Name)
 		init.Args = append(init.Args, initArgsFromMetadata(md)...)
 		data.ServerConvert = &ConvertData{
-			TgtName: svc.Scope.GoFullTypeName(payload, svcCtx.Pkg(payload)),
-			TgtRef:  svc.Scope.GoFullTypeRef(payload, svcCtx.Pkg(payload)),
+			TgtName: svcCtx.Scope.Name(payload, svcCtx.Pkg(payload), svcCtx.Pointer, svcCtx.UseDefault),
+			TgtRef:  svcCtx.Scope.Ref(payload, svcCtx.Pkg(payload)),
 			Init:    init,
 		}
 	}
@@ -1476,6 +1480,31 @@ func serviceTypeContext(pkg string, scope *codegen.NameScope) *codegen.Attribute
 	return codegen.NewAttributeContext(false, false, true, pkg, scope)
 }
 
+// methodTypeContext binds a named method wrapper to its frozen declaration and
+// preserves the existing service scope for primitive method types.
+func methodTypeContext(attribute *expr.AttributeExpr, declaration *codegen.TypeDeclaration, pkg string, scope *codegen.NameScope) *codegen.AttributeContext {
+	if declaration == nil {
+		return serviceTypeContext(pkg, scope)
+	}
+	return service.NewMethodTypeContext(attribute, declaration, pkg, scope)
+}
+
+// methodTypeRef returns the frozen reference for a named method type and
+// preserves the existing spelling for primitive method types.
+func methodTypeRef(attribute *expr.AttributeExpr, declaration *codegen.TypeDeclaration, pkg string, scope *codegen.NameScope) string {
+	if declaration == nil {
+		return scope.GoFullTypeRef(attribute, pkg)
+	}
+	name := declaration.Name()
+	if pkg != "" {
+		name = pkg + "." + name
+	}
+	if expr.IsObject(attribute.Type) || expr.IsUnion(attribute.Type) {
+		return "*" + name
+	}
+	return name
+}
+
 // resultContext returns the method result attribute and the result context for the given
 // endpoint.
 func resultContext(e *expr.GRPCEndpointExpr, sd *ServiceData) (*expr.AttributeExpr, *codegen.AttributeContext) {
@@ -1487,7 +1516,7 @@ func resultContext(e *expr.GRPCEndpointExpr, sd *ServiceData) (*expr.AttributeEx
 		return vresAtt, codegen.NewAttributeContext(true, false, true, svc.ViewsPkg, svc.ViewScope)
 	}
 	pkg := md.ResultLoc.PackageNameOrDefault(svc.PkgName)
-	return e.MethodExpr.Result, serviceTypeContext(pkg, svc.Scope)
+	return e.MethodExpr.Result, methodTypeContext(e.MethodExpr.Result, md.ResultDeclaration, pkg, svc.Scope)
 }
 
 // getPrimitive returns the primitive expression if the given expression is an alias to one

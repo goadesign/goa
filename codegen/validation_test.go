@@ -1,6 +1,9 @@
+// This file verifies generated validation code for nested attributes, user
+// types, unions, and declaration origins.
 package codegen
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -129,6 +132,29 @@ func TestRecursiveValidationWithCycleGuard(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestRecursiveValidationDistinguishesEqualUIDOrigins verifies that compiler
+// copies share recursion state only through their exact declaration origin;
+// unrelated user types with the same semantic UID receive distinct buffers.
+func TestRecursiveValidationDistinguishesEqualUIDOrigins(t *testing.T) {
+	first := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}},
+		TypeName:      "First",
+		UID:           "shared",
+	}
+	second := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}},
+		TypeName:      "Second",
+		UID:           "shared",
+	}
+	ctx := NewAttributeContext(false, false, false, "", NewNameScope())
+	seen := make(map[expr.UserType]*bytes.Buffer)
+
+	firstBuffer := recurseValidationCode(&expr.AttributeExpr{Type: first}, nil, ctx, true, false, false, "first", "first", seen)
+	secondBuffer := recurseValidationCode(&expr.AttributeExpr{Type: second}, nil, ctx, true, false, false, "second", "second", seen)
+	require.NotSame(t, firstBuffer, secondBuffer)
+	require.Len(t, seen, 2)
 }
 
 // TestMultipleAliasTypesInSameStruct tests that multiple fields with the same

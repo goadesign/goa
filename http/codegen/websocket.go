@@ -92,7 +92,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 	)
 	md := ed.Method
 	svc := sd.Service
-	svcctx := serviceContext(sd.Service.PkgName, sd.Service.Scope)
+	svcctx := methodTypeContext(e.MethodExpr.StreamingPayload, md.StreamingPayloadDeclaration, svc.PkgName, svc.Scope)
 	svrSendTypeName := ed.Result.Name
 	svrSendTypeRef := ed.Result.Ref
 	svrSendDesc := fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection.", md.ServerStream.SendName, svrSendTypeName, md.Name)
@@ -101,8 +101,8 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 	cliRecvWithContextDesc := fmt.Sprintf("%s reads instances of %q from the %q endpoint websocket connection with context.", md.ClientStream.RecvWithContextName, svrSendTypeName, md.Name)
 	if e.MethodExpr.Stream == expr.ClientStreamKind || e.MethodExpr.Stream == expr.BidirectionalStreamKind {
 		streamBody := sd.bodies.streaming(e)
-		svrRecvTypeName = sd.Scope.GoFullTypeName(e.MethodExpr.StreamingPayload, svc.PkgName)
-		svrRecvTypeRef = sd.Scope.GoFullTypeRef(e.MethodExpr.StreamingPayload, svc.PkgName)
+		svrRecvTypeName = methodTypeName(e.MethodExpr.StreamingPayload, md.StreamingPayloadDeclaration, svc.PkgName, svc.Scope)
+		svrRecvTypeRef = methodTypeRef(e.MethodExpr.StreamingPayload, md.StreamingPayloadDeclaration, svc.PkgName, svc.Scope)
 		svrPayload = sds.buildRequestBodyType(streamBody, e.MethodExpr.StreamingPayload, e, true, sd)
 		if needInit(e.MethodExpr.StreamingPayload.Type) {
 			body := streamBody.Type
@@ -168,8 +168,8 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 				Name:           name,
 				Description:    desc,
 				ServerArgs:     serverArgs,
-				ReturnTypeName: svc.Scope.GoFullTypeName(e.MethodExpr.StreamingPayload, svc.PkgName),
-				ReturnTypeRef:  svc.Scope.GoFullTypeRef(e.MethodExpr.StreamingPayload, svc.PkgName),
+				ReturnTypeName: methodTypeName(e.MethodExpr.StreamingPayload, md.StreamingPayloadDeclaration, svc.PkgName, svc.Scope),
+				ReturnTypeRef:  methodTypeRef(e.MethodExpr.StreamingPayload, md.StreamingPayloadDeclaration, svc.PkgName, svc.Scope),
 				ReturnIsStruct: expr.IsObject(e.MethodExpr.StreamingPayload.Type),
 				ReturnTypePkg:  svc.PkgName,
 				ServerCode:     serverCode,

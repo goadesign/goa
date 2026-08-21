@@ -200,7 +200,7 @@ func generateConvertFileForPath(
 			outputPath = generatedPackagePath(services.generation.GenPkg, service, loc)
 		}
 		srcAtt := &expr.AttributeExpr{Type: c.User}
-		srcResolver := newServiceResolver(services.generation, service, outputPath).Enter(srcAtt)
+		srcResolver := newServiceResolver(services.generation, services.aliases, service, outputPath).Enter(srcAtt)
 		srcCtx := &codegen.AttributeContext{
 			UseDefault: true,
 			Scope:      srcResolver,
@@ -253,7 +253,7 @@ func generateConvertFileForPath(
 		if loc := codegen.UserTypeLocation(c.User); loc != nil {
 			outputPath = generatedPackagePath(services.generation.GenPkg, service, loc)
 		}
-		tgtResolver := newServiceResolver(services.generation, service, outputPath).Enter(tgtAtt)
+		tgtResolver := newServiceResolver(services.generation, services.aliases, service, outputPath).Enter(tgtAtt)
 		tgtCtx := &codegen.AttributeContext{
 			UseDefault: true,
 			Scope:      tgtResolver,

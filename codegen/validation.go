@@ -96,9 +96,9 @@ func ValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *Attribut
 	return recurseValidationCode(att, put, attCtx, req, alias, view, target, target, nil).String()
 }
 
-func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target, context string, seen map[string]*bytes.Buffer) *bytes.Buffer {
+func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *AttributeContext, req, alias, view bool, target, context string, seen map[expr.UserType]*bytes.Buffer) *bytes.Buffer {
 	if seen == nil {
-		seen = make(map[string]*bytes.Buffer)
+		seen = make(map[expr.UserType]*bytes.Buffer)
 	}
 	var (
 		buf      = new(bytes.Buffer)
@@ -111,10 +111,11 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 	// so alias types shouldn't use the recursion guard. Only non-alias user
 	// types need cycle protection.
 	if isUT && !alias {
-		if buf, ok := seen[ut.ID()]; ok {
+		origin := ut.Origin()
+		if buf, ok := seen[origin]; ok {
 			return buf
 		}
-		seen[ut.ID()] = buf
+		seen[origin] = buf
 	}
 
 	newline := func() {
@@ -263,7 +264,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 	return buf
 }
 
-func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.UserType, target, context string, req, view bool, seen map[string]*bytes.Buffer) string {
+func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.UserType, target, context string, req, view bool, seen map[expr.UserType]*bytes.Buffer) string {
 	ut, isUT := att.Type.(expr.UserType)
 	if !isUT {
 		code := recurseValidationCode(att, put, ctx, req, false, view, target, context, seen).String()

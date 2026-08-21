@@ -75,7 +75,7 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 		{Path: "goa.design/clue/log"},
 		{Path: "goa.design/goa/v3/security"},
 	}
-	specs = append(specs, AttributeImports(genpkg, path.Dir(genpkg), serviceReferenceAttributes(svc)...)...)
+	specs = append(specs, services.AttributeImports(path.Dir(genpkg), serviceReferenceAttributes(svc)...)...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", apipkg, specs),
 		{
@@ -95,7 +95,7 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 			Data:   data,
 		})
 	}
-	resolver := newServiceResolver(services.generation, svc, path.Dir(genpkg))
+	resolver := newServiceResolver(services.generation, services.aliases, svc, path.Dir(genpkg))
 	for _, m := range svc.Methods {
 		sections = append(sections, basicEndpointSection(m, data, resolver))
 	}
