@@ -23,7 +23,7 @@ paths:
                                 properties:
                                     data:
                                         type: string
-                                        example: Quos qui dolore voluptas.
+                                        example: Officia iure ut qui voluptas id velit.
                                 required:
                                     - data
 components:
@@ -33,12 +33,12 @@ components:
             properties:
                 data:
                     type: string
-                    example: Ipsum voluptatem quaerat quo et non sed.
+                    example: Consequuntur velit in amet et dolorem iste.
                 flag:
                     type: boolean
                     example: true
             example:
-                data: Ipsum voluptatem quaerat quo et non sed.
+                data: Consequuntur velit in amet et dolorem iste.
                 flag: true
 tags:
     - name: SSEDataFieldService

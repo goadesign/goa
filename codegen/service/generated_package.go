@@ -7,7 +7,6 @@ package service
 import (
 	"fmt"
 	"path"
-	"path/filepath"
 	"slices"
 	"strings"
 
@@ -27,15 +26,8 @@ type (
 	// plannedUserType identifies one user type emitted in one generated package.
 	// The same expression may be copied into two packages through Extend.
 	plannedUserType struct {
-		userType    expr.UserType
-		packagePath string
-	}
-
-	// methodTypeCandidate identifies one normalized method role and the typed
-	// declaration identity allocated for it.
-	methodTypeCandidate struct {
-		attribute *expr.AttributeExpr
-		identity  codegen.MethodTypeIdentity
+		userType expr.UserType
+		owner    *codegen.GeneratedPackage
 	}
 
 	// unionBranch identifies a generated user type that exists only to name one
@@ -54,10 +46,8 @@ type (
 
 	// generatedPackageData owns the render data emitted into one Go package.
 	generatedPackageData struct {
-		outputPath  string
-		packageName string
-		types       map[*codegen.TypeDeclaration]*generatedTypeData
-		unions      map[codegen.UnionTypeID]*UnionTypeData
+		types  map[*codegen.TypeDeclaration]*generatedTypeData
+		unions map[codegen.UnionTypeID]*UnionTypeData
 	}
 
 	// generatedTypeData owns one relocated user-type declaration and optional
@@ -78,19 +68,18 @@ func Plan(root *expr.RootExpr, generation *codegen.Generation) error {
 	if !generation.HasRoot(root) {
 		return rootMembershipError(root)
 	}
-	if err := planImports(root, generation); err != nil {
-		return err
-	}
 	inputs := planningInputs(root)
 	rootTypes := newRootTypeSet(root)
-	methodTypes, err := planMethodTypes(root, generation)
-	if err != nil {
-		return err
-	}
 	for _, service := range root.Services {
 		// The service package record makes NewServicesData a render-only contract:
 		// its scope is unavailable until the generation freezes.
-		generation.GeneratedPackage(servicePackagePath(generation.GenPkg(), service))
+		if _, err := generation.ClaimPackage(servicePackagePath(generation.GenPkg(), service)); err != nil {
+			return err
+		}
+	}
+	methodTypes, err := planMethodTypes(root, generation)
+	if err != nil {
+		return err
 	}
 
 	seenTypes := make(map[plannedUserType]struct{})
@@ -106,7 +95,10 @@ func Plan(root *expr.RootExpr, generation *codegen.Generation) error {
 			return err
 		}
 	}
-	return planViews(root, generation, rootTypes)
+	if err := planViews(root, generation, rootTypes); err != nil {
+		return err
+	}
+	return planImports(root, inputs, generation)
 }
 
 // rootMembershipError reports an attempt to plan or analyze a design root
@@ -115,35 +107,36 @@ func rootMembershipError(root *expr.RootExpr) error {
 	return fmt.Errorf("service root %p does not belong to the generation", root)
 }
 
-// planMethodTypes declares the semantic wrappers created by NormalizeRoot as
-// derived service-package declarations. Exact user types in the same package
+// planMethodTypes declares the semantic wrappers created when NewGeneration
+// takes ownership of raw method objects. Exact user types in the same package
 // are planned separately and therefore keep their authored names.
 func planMethodTypes(root *expr.RootExpr, generation *codegen.Generation) (map[expr.UserType]codegen.DerivedTypeID, error) {
 	planned := make(map[expr.UserType]codegen.DerivedTypeID)
 	for _, service := range root.Services {
-		generatedPackage := generation.GeneratedPackage(servicePackagePath(generation.GenPkg(), service))
+		generatedPackage := generation.Package(servicePackagePath(generation.GenPkg(), service))
 		for _, method := range service.Methods {
-			attributes := []methodTypeCandidate{
-				{method.Payload, codegen.NewMethodPayloadIdentity(service.Name, method.Name)},
-				{method.StreamingPayload, codegen.NewMethodStreamingPayloadIdentity(service.Name, method.Name)},
-				{method.Result, codegen.NewMethodResultIdentity(service.Name, method.Name)},
+			attributes := []*expr.AttributeExpr{
+				method.Payload,
+				method.StreamingPayload,
+				method.Result,
 			}
 			if method.HasMixedResults() {
-				attributes = append(attributes, methodTypeCandidate{
-					attribute: method.StreamingResult,
-					identity:  codegen.NewMethodStreamingResultIdentity(service.Name, method.Name),
-				})
+				attributes = append(attributes, method.StreamingResult)
 			}
-			for _, candidate := range attributes {
-				userType, ok := candidate.attribute.Type.(expr.UserType)
-				if !ok || !candidate.identity.Matches(userType) {
+			for _, attribute := range attributes {
+				userType, ok := attribute.Type.(expr.UserType)
+				if !ok {
 					continue
 				}
-				_, identity, err := generatedPackage.DeclareMethodType(candidate.identity, userType)
+				identity, ok := generation.NormalizedMethodType(userType)
+				if !ok {
+					continue
+				}
+				_, derived, err := generatedPackage.DeclareMethodType(identity, userType)
 				if err != nil {
 					return nil, err
 				}
-				planned[userType.Origin()] = identity
+				planned[userType.Origin()] = derived
 			}
 		}
 	}
@@ -204,15 +197,16 @@ func planUserTypes(attribute *expr.AttributeExpr, service *expr.ServiceExpr, loc
 		if typeLocation == nil {
 			typeLocation = location
 		}
-		key := plannedUserType{
-			userType:    declaredType,
-			packagePath: generatedPackagePath(generation.GenPkg(), service, typeLocation),
+		owner, err := claimGeneratedPackage(generation, service, typeLocation)
+		if err != nil {
+			return err
 		}
+		key := plannedUserType{userType: declaredType, owner: owner}
 		if _, ok := seen[key]; ok {
 			return nil
 		}
 		seen[key] = struct{}{}
-		if _, err := generation.GeneratedPackage(key.packagePath).DeclareUserType(declaredType); err != nil {
+		if _, err := owner.DeclareUserType(declaredType); err != nil {
 			return err
 		}
 		return recurse(actual.Attribute(), typeLocation)
@@ -261,10 +255,11 @@ func planUnions(attribute *expr.AttributeExpr, service *expr.ServiceExpr, locati
 		if typeLocation == nil {
 			typeLocation = location
 		}
-		key := plannedUserType{
-			userType:    declaredType,
-			packagePath: generatedPackagePath(generation.GenPkg(), service, typeLocation),
+		owner, err := claimGeneratedPackage(generation, service, typeLocation)
+		if err != nil {
+			return err
 		}
+		key := plannedUserType{userType: declaredType, owner: owner}
 		if _, ok := seen[key]; ok {
 			return nil
 		}
@@ -284,8 +279,10 @@ func planUnions(attribute *expr.AttributeExpr, service *expr.ServiceExpr, locati
 		}
 		return recurse(actual.ElemType, location)
 	case *expr.Union:
-		packagePath := generatedPackagePath(generation.GenPkg(), service, location)
-		generatedPackage := generation.GeneratedPackage(packagePath)
+		generatedPackage, err := claimGeneratedPackage(generation, service, location)
+		if err != nil {
+			return err
+		}
 		if _, err := generatedPackage.DeclareUnion(actual); err != nil {
 			return err
 		}
@@ -313,7 +310,10 @@ func planUnions(attribute *expr.AttributeExpr, service *expr.ServiceExpr, locati
 func planViews(root *expr.RootExpr, generation *codegen.Generation, rootTypes *rootTypeSet) error {
 	for _, service := range root.Services {
 		viewsPath := servicePackagePath(generation.GenPkg(), service) + "/views"
-		views := generation.GeneratedPackage(viewsPath)
+		views, err := generation.ClaimPackage(viewsPath)
+		if err != nil {
+			return err
+		}
 		seenProjected := make(map[expr.UserType]expr.UserType)
 		derived := make(map[expr.UserType]codegen.DerivedTypeID)
 		var projectedRoots []*expr.AttributeExpr
@@ -321,7 +321,7 @@ func planViews(root *expr.RootExpr, generation *codegen.Generation, rootTypes *r
 			if !hasResultType(method.Result) {
 				continue
 			}
-			projected, source := projectedResultRoot(service, method)
+			projected, source := projectedResultRoot(generation, method)
 			pairs := projectTypePairs(projected, source, seenProjected)
 			for _, pair := range pairs {
 				identity := codegen.NewProjectedTypeID(pair.source)
@@ -334,7 +334,7 @@ func planViews(root *expr.RootExpr, generation *codegen.Generation, rootTypes *r
 			projectedRoots = append(projectedRoots, projected)
 
 			if resultType, ok := method.Result.Type.(*expr.ResultTypeExpr); ok {
-				serviceTypes := generation.GeneratedPackage(servicePackagePath(generation.GenPkg(), service))
+				serviceTypes := generation.Package(servicePackagePath(generation.GenPkg(), service))
 				if _, err := serviceTypes.Type(rootTypes.canonical(resultType)); err != nil {
 					return err
 				}
@@ -455,8 +455,23 @@ func (s *rootTypeSet) contains(userType expr.UserType) bool {
 	return ok
 }
 
-// generatedPackagePath returns the actual import path of the package selected
-// by location, or the service package when location is nil.
+// claimGeneratedPackage preserves the relative path spelling supplied by
+// design metadata so Generation can reject two claims that resolve to one
+// output package. An absolute path violates the metadata contract instead of
+// selecting a package beneath the generated module by string concatenation.
+func claimGeneratedPackage(generation *codegen.Generation, service *expr.ServiceExpr, location *codegen.Location) (*codegen.GeneratedPackage, error) {
+	if location == nil {
+		return generation.ClaimPackage(servicePackagePath(generation.GenPkg(), service))
+	}
+	if path.IsAbs(location.RelImportPath) {
+		return nil, fmt.Errorf("generated package location %q must be relative", location.RelImportPath)
+	}
+	claim := strings.TrimSuffix(generation.GenPkg(), "/") + "/" + location.RelImportPath
+	return generation.ClaimPackage(claim)
+}
+
+// generatedPackagePath returns the canonical import path selected by location,
+// or the service package when location is nil.
 func generatedPackagePath(genpkg string, service *expr.ServiceExpr, location *codegen.Location) string {
 	if location != nil {
 		return path.Join(genpkg, location.RelImportPath)
@@ -474,22 +489,15 @@ func servicePackagePath(genpkg string, service *expr.ServiceExpr) string {
 // by location, creating that owner on first use.
 func (d *ServicesData) generatedPackage(service *expr.ServiceExpr, location *codegen.Location) *generatedPackageData {
 	importPath := generatedPackagePath(d.generation.GenPkg(), service, location)
-	if generatedPackage, ok := d.packages[importPath]; ok {
+	owner := d.generation.Package(importPath)
+	if generatedPackage, ok := d.packages[owner]; ok {
 		return generatedPackage
 	}
-	outputPath := filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name))
-	packageName := strings.ToLower(codegen.Goify(service.Name, false))
-	if location != nil {
-		outputPath = filepath.Join(codegen.Gendir, filepath.FromSlash(location.RelImportPath))
-		packageName = location.PackageName()
-	}
 	generatedPackage := &generatedPackageData{
-		outputPath:  outputPath,
-		packageName: packageName,
-		types:       make(map[*codegen.TypeDeclaration]*generatedTypeData),
-		unions:      make(map[codegen.UnionTypeID]*UnionTypeData),
+		types:  make(map[*codegen.TypeDeclaration]*generatedTypeData),
+		unions: make(map[codegen.UnionTypeID]*UnionTypeData),
 	}
-	d.packages[importPath] = generatedPackage
+	d.packages[owner] = generatedPackage
 	return generatedPackage
 }
 
@@ -574,7 +582,7 @@ func (d *ServicesData) registerMethodType(service *expr.ServiceExpr, attribute *
 		return nil
 	}
 	userType := attribute.Type.(expr.UserType)
-	declaration, err := d.generation.GeneratedPackage(
+	declaration, err := d.generation.Package(
 		generatedPackagePath(d.generation.GenPkg(), service, location),
 	).UserType(d.rootTypes.canonical(userType))
 	if err != nil {

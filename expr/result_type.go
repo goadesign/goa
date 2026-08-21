@@ -314,14 +314,8 @@ func projectSingle(rt *ResultTypeExpr, view string, seen map[string]UserType) (*
 	}
 
 	id := rt.projectIdentifier(view)
-	ut := &UserTypeExpr{
-		AttributeExpr: &AttributeExpr{
-			Description: desc,
-			Validation:  val,
-		},
-		TypeName: typeName,
-		UID:      id,
-	}
+	attribute := &AttributeExpr{Description: desc, Validation: val}
+	ut := projectedUserType(rt, typeName, id, attribute)
 	ut.Type = Dup(v.Type)
 	ut.UserExamples = v.UserExamples
 	projected := &ResultTypeExpr{
@@ -363,17 +357,14 @@ func projectCollection(rt *ResultTypeExpr, view string, seen map[string]UserType
 
 	// Build the projected collection with the results
 	id := rt.projectIdentifier(view)
+	attribute := &AttributeExpr{
+		Description:  rt.TypeName + " is the result type for an array of " + e.TypeName + " (" + view + " view)",
+		Type:         &Array{ElemType: &AttributeExpr{Type: pe}},
+		UserExamples: rt.UserExamples,
+	}
 	proj := &ResultTypeExpr{
-		Identifier: id,
-		UserTypeExpr: &UserTypeExpr{
-			AttributeExpr: &AttributeExpr{
-				Description:  rt.TypeName + " is the result type for an array of " + e.TypeName + " (" + view + " view)",
-				Type:         &Array{ElemType: &AttributeExpr{Type: pe}},
-				UserExamples: rt.UserExamples,
-			},
-			TypeName: pe.TypeName + "Collection",
-			UID:      id,
-		},
+		Identifier:   id,
+		UserTypeExpr: projectedUserType(rt, pe.TypeName+"Collection", id, attribute),
 		Views: []*ViewExpr{{
 			AttributeExpr: DupAtt(pe.View(DefaultView).AttributeExpr),
 			Name:          DefaultView,
@@ -388,6 +379,15 @@ func projectCollection(rt *ResultTypeExpr, view string, seen map[string]UserType
 
 	seen[hashTypeAndView(rt, view)] = proj
 	return proj, nil
+}
+
+// projectedUserType preserves the exact example owner of a synthesized result
+// type while authored projections retain their media-type-derived UID.
+func projectedUserType(source UserType, name, uid string, attribute *AttributeExpr) *UserTypeExpr {
+	if identity, ok := GeneratedUserTypeExampleIdentity(source); ok {
+		return NewGeneratedUserType(name, attribute, identity)
+	}
+	return &UserTypeExpr{AttributeExpr: attribute, TypeName: name, UID: uid}
 }
 
 // projectRecursive computes the projected attribute for the field described

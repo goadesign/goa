@@ -1,3 +1,5 @@
+// This file verifies OpenAPI 3 schema conversion for unions, including that a
+// typed owner keeps each discriminator paired with its generated member value.
 package openapiv3
 
 import (
@@ -11,7 +13,11 @@ import (
 )
 
 func TestSchemafyCorrelatesUnionDiscriminatorAndValue(t *testing.T) {
-	schema := (&schemafier{rand: expr.NewRandom("test")}).schemafy(unionAttribute())
+	method := &expr.MethodExpr{Name: "union", Service: &expr.ServiceExpr{Name: "test"}}
+	generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(
+		expr.MethodPayloadExampleIdentity(method),
+	)
+	schema := (&schemafier{rand: generator}).schemafy(unionAttribute())
 
 	require.Len(t, schema.AnyOf, 2)
 	assertUnionSchemaBranch(t, schema.AnyOf[0], "text", openapi.Type(openapi.String))

@@ -21,7 +21,7 @@ func BuildEchoPayload(chatEchoBody string) (*chat.EchoPayload, error) {
 	{
 		err = json.Unmarshal([]byte(chatEchoBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"id\": \"Nemo consequuntur est odio.\",\n      \"msg\": \"Accusantium mollitia id sapiente ratione.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"id\": \"Cum omnis ut dolor doloremque velit.\",\n      \"msg\": \"Soluta illum.\"\n   }'")
 		}
 	}
 	v := &chat.EchoPayload{

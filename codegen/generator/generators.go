@@ -8,6 +8,8 @@ import "goa.design/goa/v3/codegen"
 type (
 	// coreGenerator plans and renders one core subsystem for a single run.
 	coreGenerator struct {
+		// name identifies the subsystem in lifecycle diagnostics.
+		name string
 		// Plan declares package symbols and retains run-specific analysis.
 		Plan func(*Plan) error
 		// Generate renders files from the same frozen plan.
@@ -23,31 +25,34 @@ func genGeneratorFactories() []generatorFactory {
 	return []generatorFactory{
 		func() coreGenerator {
 			return coreGenerator{
+				name: "service",
 				Plan: func(plan *Plan) error {
 					return planServiceData(plan.Generation())
 				},
 				Generate: func(plan *Plan) ([]*codegen.File, error) {
-					return Service(plan.Generation())
+					return serviceFiles(plan)
 				},
 			}
 		},
 		func() coreGenerator {
 			return coreGenerator{
+				name: "transport",
 				Plan: func(plan *Plan) error {
 					return planTransportData(plan.Generation())
 				},
 				Generate: func(plan *Plan) ([]*codegen.File, error) {
-					return Transport(plan.Generation())
+					return transportFiles(plan)
 				},
 			}
 		},
 		func() coreGenerator {
 			return coreGenerator{
+				name: "openapi",
 				Plan: func(plan *Plan) error {
 					return planServiceData(plan.Generation())
 				},
 				Generate: func(plan *Plan) ([]*codegen.File, error) {
-					return OpenAPI(plan.Generation())
+					return openAPIFiles(plan)
 				},
 			}
 		},
@@ -59,11 +64,12 @@ func exampleGeneratorFactories() []generatorFactory {
 	return []generatorFactory{
 		func() coreGenerator {
 			return coreGenerator{
+				name: "example",
 				Plan: func(plan *Plan) error {
 					return planTransportData(plan.Generation())
 				},
 				Generate: func(plan *Plan) ([]*codegen.File, error) {
-					return Example(plan.Generation())
+					return exampleFiles(plan)
 				},
 			}
 		},

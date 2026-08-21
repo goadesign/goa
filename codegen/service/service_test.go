@@ -46,13 +46,13 @@ func TestServicesDataUsesFrozenPackageDeclarations(t *testing.T) {
 		})
 	})
 
-	generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
+	generation := mustTestGeneration(t, "goa.design/goa/example", []eval.Root{root})
 	require.NoError(t, Plan(root, generation))
 	require.Panics(t, func() {
-		_, _ = NewServicesData(root, generation)
+		_, _ = NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	})
 	require.NoError(t, generation.Freeze())
-	services, err := NewServicesData(root, generation)
+	services, err := NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 
 	first := services.Get("First")
@@ -68,7 +68,7 @@ func TestServicesDataUsesFrozenPackageDeclarations(t *testing.T) {
 	require.Equal(t, "Value", first.unions[0].Name)
 	require.Equal(t, "ValueKind", first.unions[0].KindName)
 
-	_, err = generation.GeneratedPackage("goa.design/goa/example/types").DeclareUserType(shared)
+	_, err = generation.Package("goa.design/goa/example/types").DeclareUserType(shared)
 	require.ErrorContains(t, err, "frozen")
 }
 
@@ -92,16 +92,121 @@ func TestPlanOwnsNormalizedMethodNames(t *testing.T) {
 			})
 		})
 	})
-	codegen.NormalizeRoot(root)
-	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
 	require.NoError(t, Plan(root, generation))
 	require.NoError(t, generation.Freeze())
 
 	service := root.Service("Values")
 	wrapper := service.Method("Use").Payload.Type.(expr.UserType)
-	declaration, err := generation.GeneratedPackage("generated.local/gen/values").Type(wrapper)
+	declaration, err := generation.Package("generated.local/gen/values").Type(wrapper)
 	require.NoError(t, err)
 	require.Equal(t, "UsePayload2", declaration.Name())
+}
+
+// TestPlanPreservesGeneratedPackageClaims verifies that service planning
+// rejects distinct metadata spellings before path normalization can merge
+// their declarations into one output package.
+func TestPlanPreservesGeneratedPackageClaims(t *testing.T) {
+	tests := []struct {
+		name       string
+		firstPath  string
+		secondPath string
+		contains   string
+	}{
+		{"normalized collision", "types", "domain/../types", "normalize to import path"},
+		{"portable collision", "Types", "types", "case-insensitive filesystem"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := codegen.RunDSL(t, func() {
+				first := dsl.Type("First", func() {
+					dsl.Meta("struct:pkg:path", test.firstPath)
+					dsl.Attribute("value", dsl.String)
+				})
+				second := dsl.Type("Second", func() {
+					dsl.Meta("struct:pkg:path", test.secondPath)
+					dsl.Attribute("value", dsl.String)
+				})
+				dsl.Service("Values", func() {
+					dsl.Method("First", func() { dsl.Payload(first) })
+					dsl.Method("Second", func() { dsl.Payload(second) })
+				})
+			})
+			generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
+
+			err := Plan(root, generation)
+			require.ErrorContains(t, err, test.contains)
+		})
+	}
+}
+
+// TestPlanRejectsInvalidGeneratedPackageLocations verifies that relative Goa
+// metadata cannot escape its generated module or use filesystem separators in
+// a Go import path.
+func TestPlanRejectsInvalidGeneratedPackageLocations(t *testing.T) {
+	tests := []struct {
+		name     string
+		location string
+	}{
+		{"absolute", "/outside"},
+		{"escape", "../outside"},
+		{"backslash", `domain\types`},
+		{"colon", "domain:types"},
+		{"space", "domain types"},
+		{"control", "domain\x00types"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := codegen.RunDSL(t, func() {
+				value := dsl.Type("Value", func() {
+					dsl.Meta("struct:pkg:path", test.location)
+					dsl.Attribute("value", dsl.String)
+				})
+				dsl.Service("Values", func() {
+					dsl.Method("Read", func() { dsl.Payload(value) })
+				})
+			})
+			generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
+
+			require.Error(t, Plan(root, generation))
+		})
+	}
+}
+
+// TestPlanIgnoresUnusedRelocatedTypes verifies that a type excluded from
+// service output does not needlessly claim a package or contribute imports.
+func TestPlanIgnoresUnusedRelocatedTypes(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		dsl.Type("Unused", func() {
+			dsl.Meta("struct:pkg:path", "unused")
+			dsl.Attribute("value", dsl.String)
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() {})
+		})
+	})
+	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
+
+	require.NoError(t, Plan(root, generation))
+	require.NoError(t, generation.Freeze())
+}
+
+// TestFilesUseCanonicalOwnedOutputDirectory verifies that a lone noncanonical
+// metadata spelling emits the declaration beneath its owned canonical package.
+func TestFilesUseCanonicalOwnedOutputDirectory(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		value := dsl.Type("Value", func() {
+			dsl.Meta("struct:pkg:path", "domain/../types")
+			dsl.Attribute("value", dsl.String)
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() { dsl.Payload(value) })
+		})
+	})
+	services := mustServicesData(t, root)
+
+	require.NotNil(t, findFile(Files("goa.design/goa/example", []*ServicesData{services}),
+		filepath.Join("gen", "types", "value.go")))
 }
 
 // TestServicesDataUsesRebuiltViewDeclarations verifies that planning and
@@ -123,16 +228,16 @@ func TestServicesDataUsesRebuiltViewDeclarations(t *testing.T) {
 		})
 	})
 
-	generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
+	generation := mustTestGeneration(t, "goa.design/goa/example", []eval.Root{root})
 	require.NoError(t, Plan(root, generation))
-	views := generation.GeneratedPackage("goa.design/goa/example/values/views")
+	views := mustClaimTestPackage(t, generation, "goa.design/goa/example/values/views")
 	plannedProjected, err := views.DerivedType(codegen.NewProjectedTypeID(result))
 	require.NoError(t, err)
 	plannedViewed, err := views.DerivedType(codegen.NewViewedResultTypeID(result))
 	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
 
-	services, err := NewServicesData(root, generation)
+	services, err := NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 	service := services.Get("Values")
 	require.Len(t, service.projectedTypes, 1)
@@ -226,12 +331,12 @@ func TestFilesEmitsSharedPackagesOnceAcrossRoots(t *testing.T) {
 		})
 	})
 
-	generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{firstRoot, secondRoot})
+	generation := mustTestGeneration(t, "goa.design/goa/example", []eval.Root{firstRoot, secondRoot})
 	require.NoError(t, Plan(firstRoot, generation))
 	require.NoError(t, Plan(secondRoot, generation))
 	firstUnion := expr.AsObject(firstType).Attribute("Value").Type.(*expr.Union)
 	secondUnion := expr.AsObject(secondType).Attribute("Value").Type.(*expr.Union)
-	generatedPackage := generation.GeneratedPackage("goa.design/goa/example/types")
+	generatedPackage := mustClaimTestPackage(t, generation, "goa.design/goa/example/types")
 	firstBranch, err := generatedPackage.UnionBranchType(firstUnion, "text")
 	require.NoError(t, err)
 	secondBranch, err := generatedPackage.UnionBranchType(secondUnion, "text")
@@ -239,9 +344,9 @@ func TestFilesEmitsSharedPackagesOnceAcrossRoots(t *testing.T) {
 	require.Same(t, firstBranch, secondBranch)
 
 	require.NoError(t, generation.Freeze())
-	firstServices, err := NewServicesData(firstRoot, generation)
+	firstServices, err := NewServicesData(firstRoot, generation, expr.NewExampleGenerator(firstRoot.API.RandomizerFactory))
 	require.NoError(t, err)
-	secondServices, err := NewServicesData(secondRoot, generation)
+	secondServices, err := NewServicesData(secondRoot, generation, expr.NewExampleGenerator(secondRoot.API.RandomizerFactory))
 	require.NoError(t, err)
 	files := Files("goa.design/goa/example", []*ServicesData{firstServices, secondServices})
 
@@ -276,10 +381,10 @@ func TestGeneratedUnionBranchCollisionDoesNotCanonicalizeToRootType(t *testing.T
 		})
 	})
 
-	generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
+	generation := mustTestGeneration(t, "goa.design/goa/example", []eval.Root{root})
 	require.NoError(t, Plan(root, generation))
 	union := expr.AsObject(container).Attribute("Value").Type.(*expr.Union)
-	generatedPackage := generation.GeneratedPackage("goa.design/goa/example/types")
+	generatedPackage := mustClaimTestPackage(t, generation, "goa.design/goa/example/types")
 	exactDeclaration, err := generatedPackage.UserType(exact)
 	require.NoError(t, err)
 	branchDeclaration, err := generatedPackage.UnionBranchType(union, "text")
@@ -289,7 +394,7 @@ func TestGeneratedUnionBranchCollisionDoesNotCanonicalizeToRootType(t *testing.T
 	require.NoError(t, generation.Freeze())
 	require.Equal(t, "ValueText", exactDeclaration.Name())
 	require.Equal(t, "ValueText2", branchDeclaration.Name())
-	services, err := NewServicesData(root, generation)
+	services, err := NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 	typeFile := findFile(
 		Files("goa.design/goa/example", []*ServicesData{services}),
@@ -488,10 +593,10 @@ func unionFieldType(code, owner string) string {
 // tests and returns the frozen render analysis.
 func mustServicesData(t *testing.T, root *expr.RootExpr) *ServicesData {
 	t.Helper()
-	generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
+	generation := mustTestGeneration(t, "goa.design/goa/example", []eval.Root{root})
 	require.NoError(t, Plan(root, generation))
 	require.NoError(t, generation.Freeze())
-	services, err := NewServicesData(root, generation)
+	services, err := NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 	return services
 }

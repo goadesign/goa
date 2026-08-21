@@ -274,8 +274,11 @@ func TestMakeProtoBufMessageMarksWrappers(t *testing.T) {
 	}}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			sd := &ServiceData{Name: "Service", Scope: codegen.NewNameScope()}
-			att := makeProtoBufMessage(&expr.AttributeExpr{Type: c.Type()}, "Message", sd)
+			att := makeProtoBufMessage(
+				&expr.AttributeExpr{Type: c.Type()},
+				"Message",
+				testGRPCMessageExampleIdentity(c.Name),
+			)
 			require.True(t, isWrappedAttr(att), "expected message to be marked as a wrapper")
 			field := unwrapAttr(att)
 			assert.Equal(t, c.FieldKind, field.Type.Kind(), "unexpected wrapped field kind")
@@ -297,15 +300,125 @@ func TestMakeProtoBufMessageDistinguishesEqualUIDOrigins(t *testing.T) {
 		{Name: "second", Attribute: &expr.AttributeExpr{Type: second}},
 	}}
 
-	message := makeProtoBufMessage(body, "Request", &ServiceData{
-		Name:  "Service",
-		Scope: codegen.NewNameScope(),
-	})
+	message := makeProtoBufMessage(body, "Request", testGRPCMessageExampleIdentity("equal-UID-origins"))
 	object := expr.AsObject(message.Type.(expr.UserType).Attribute().Type)
 	wireFirst := object.Attribute("first").Type.(expr.UserType)
 	wireSecond := object.Attribute("second").Type.(expr.UserType)
 	require.True(t, isWrappedAttr(&expr.AttributeExpr{Type: wireFirst}))
 	require.True(t, isWrappedAttr(&expr.AttributeExpr{Type: wireSecond}))
+}
+
+func TestMakeProtoBufMessageDistinguishesNormalizedMethodNames(t *testing.T) {
+	service := &expr.ServiceExpr{Name: "Values"}
+	dashedMethod := &expr.MethodExpr{Name: "foo-bar", Service: service}
+	underscoreMethod := &expr.MethodExpr{Name: "foo_bar", Service: service}
+	dashedOwner := expr.GRPCRequestMessageExampleIdentity(dashedMethod)
+	underscoreOwner := expr.GRPCRequestMessageExampleIdentity(underscoreMethod)
+	dashed := makeProtoBufMessage(
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "dashed", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		}},
+		"FooBarRequest",
+		dashedOwner,
+	)
+	underscore := makeProtoBufMessage(
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "underscore", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		}},
+		"FooBarRequest",
+		underscoreOwner,
+	)
+	require.NotEqual(t, dashed.Type.(expr.UserType).ID(), underscore.Type.(expr.UserType).ID())
+
+	cases := []struct {
+		name        string
+		first       *expr.AttributeExpr
+		firstOwner  expr.ExampleIdentity
+		firstField  string
+		second      *expr.AttributeExpr
+		secondOwner expr.ExampleIdentity
+		secondField string
+	}{
+		{
+			name:        "dashed then underscore",
+			first:       dashed,
+			firstOwner:  dashedOwner,
+			firstField:  "dashed",
+			second:      underscore,
+			secondOwner: underscoreOwner,
+			secondField: "underscore",
+		},
+		{
+			name:        "underscore then dashed",
+			first:       underscore,
+			firstOwner:  underscoreOwner,
+			firstField:  "underscore",
+			second:      dashed,
+			secondOwner: dashedOwner,
+			secondField: "dashed",
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test"))
+			first := test.first.Example(generator.At(test.firstOwner)).(map[string]any)
+			second := test.second.Example(generator.At(test.secondOwner)).(map[string]any)
+
+			require.Contains(t, first, test.firstField)
+			require.NotContains(t, first, test.secondField)
+			require.Contains(t, second, test.secondField)
+			require.NotContains(t, second, test.firstField)
+		})
+	}
+}
+
+func TestMakeProtoBufMessageSharesAuthoredCollectionWrapperIdentity(t *testing.T) {
+	arrayAlias := &expr.UserTypeExpr{
+		TypeName: "Strings",
+		UID:      "strings",
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Array{
+			ElemType: &expr.AttributeExpr{Type: expr.String},
+		}},
+	}
+	mapAlias := &expr.UserTypeExpr{
+		TypeName: "Labels",
+		UID:      "labels",
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Map{
+			KeyType:  &expr.AttributeExpr{Type: expr.String},
+			ElemType: &expr.AttributeExpr{Type: expr.Int},
+		}},
+	}
+	owner := testGRPCMessageExampleIdentity("shared-collection-aliases")
+	build := func(fields []string) *expr.AttributeExpr {
+		attributes := make(expr.Object, len(fields))
+		for index, name := range fields {
+			typ := expr.UserType(arrayAlias)
+			if name == "map_a" || name == "map_b" {
+				typ = mapAlias
+			}
+			attributes[index] = &expr.NamedAttributeExpr{
+				Name:      name,
+				Attribute: &expr.AttributeExpr{Type: typ},
+			}
+		}
+		return makeProtoBufMessage(
+			&expr.AttributeExpr{Type: &attributes},
+			"SharedCollectionsRequest",
+			owner,
+		)
+	}
+	forward := build([]string{"array_a", "map_a", "array_b", "map_b"})
+	reverse := build([]string{"map_b", "array_b", "map_a", "array_a"})
+	example := func(message *expr.AttributeExpr) map[string]any {
+		generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test"))
+		return message.Example(generator.At(owner)).(map[string]any)
+	}
+
+	forwardExample := example(forward)
+	reverseExample := example(reverse)
+	require.Equal(t, forwardExample, reverseExample)
+	require.Equal(t, forwardExample["array_a"], forwardExample["array_b"])
+	require.Equal(t, forwardExample["map_a"], forwardExample["map_b"])
 }
 
 // protobufArrayTraversalType builds an authored array declaration that protobuf

@@ -1,5 +1,5 @@
 // This file builds gRPC code-generation analysis in tests using the same
-// normalize, plan, freeze, and render lifecycle as production generation.
+// generation construction, planning, freezing, and rendering as production.
 package codegen
 
 import (
@@ -21,11 +21,9 @@ func RunGRPCDSL(t *testing.T, dsl func()) *expr.RootExpr {
 	return root
 }
 
-// CreateGRPCServices creates a new ServicesData instance for testing. The
-// root is normalized first like the production Generate flow does before the
-// generators read the design.
+// CreateGRPCServices creates a new ServicesData instance for testing.
+// Generation construction normalizes the root before any planner reads it.
 func CreateGRPCServices(root *expr.RootExpr) *ServicesData {
-	codegen.NormalizeRoot(root)
 	return NewServicesData(createServiceServices(root))
 }
 
@@ -38,7 +36,10 @@ func createServiceServices(root *expr.RootExpr) *service.ServicesData {
 // createServiceServicesForPackage builds test service analysis for the exact
 // generated module path whose imports the test renders.
 func createServiceServicesForPackage(root *expr.RootExpr, genpkg string) *service.ServicesData {
-	generation := codegen.NewGeneration(genpkg, []eval.Root{root})
+	generation, err := codegen.NewGeneration(genpkg, []eval.Root{root})
+	if err != nil {
+		panic(err)
+	}
 	if err := service.Plan(root, generation); err != nil {
 		panic(err)
 	}
@@ -51,7 +52,7 @@ func createServiceServicesForPackage(root *expr.RootExpr, genpkg string) *servic
 	if err := generation.Freeze(); err != nil {
 		panic(err)
 	}
-	services, err := service.NewServicesData(root, generation)
+	services, err := service.NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	if err != nil {
 		panic(err)
 	}

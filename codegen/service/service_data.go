@@ -40,8 +40,9 @@ type (
 		Services map[string]*Data
 
 		generation *codegen.Generation
+		examples   *expr.ExampleGenerator
 		aliases    *importAliases
-		packages   map[string]*generatedPackageData
+		packages   map[*codegen.GeneratedPackage]*generatedPackageData
 		rootTypes  *rootTypeSet
 	}
 
@@ -694,7 +695,7 @@ type (
 
 // NewServicesData analyzes root using declarations frozen by generation.
 // Call Plan for every participating root and freeze generation first.
-func NewServicesData(root *expr.RootExpr, generation *codegen.Generation) (*ServicesData, error) {
+func NewServicesData(root *expr.RootExpr, generation *codegen.Generation, examples *expr.ExampleGenerator) (*ServicesData, error) {
 	aliases, err := newImportAliases(root, generation)
 	if err != nil {
 		return nil, err
@@ -703,12 +704,13 @@ func NewServicesData(root *expr.RootExpr, generation *codegen.Generation) (*Serv
 		Root:       root,
 		Services:   make(map[string]*Data),
 		generation: generation,
+		examples:   examples,
 		aliases:    aliases,
-		packages:   make(map[string]*generatedPackageData),
+		packages:   make(map[*codegen.GeneratedPackage]*generatedPackageData),
 		rootTypes:  newRootTypeSet(root),
 	}
 	for _, service := range root.Services {
-		generation.GeneratedPackage(servicePackagePath(generation.GenPkg(), service)).Scope()
+		generation.Package(servicePackagePath(generation.GenPkg(), service)).Scope()
 		analyzed, err := data.analyze(service)
 		if err != nil {
 			return nil, err
@@ -716,6 +718,21 @@ func NewServicesData(root *expr.RootExpr, generation *codegen.Generation) (*Serv
 		data.Services[service.Name] = analyzed
 	}
 	return data, nil
+}
+
+// Example computes attribute's example below the explicit semantic owner.
+func (d *ServicesData) Example(attribute *expr.AttributeExpr, owner expr.ExampleIdentity) any {
+	return attribute.Example(d.examples.At(owner))
+}
+
+// FieldExample computes attribute's example using the same stable field
+// identity as the corresponding field in parent. Named user types own their
+// fields globally; anonymous parents keep the caller-supplied owner.
+func (d *ServicesData) FieldExample(attribute, parent *expr.AttributeExpr, name string, owner expr.ExampleIdentity) any {
+	if typ, ok := parent.Type.(expr.UserType); ok {
+		owner = expr.UserTypeExampleIdentity(typ)
+	}
+	return attribute.Example(d.examples.At(owner).Member(name))
 }
 
 // Get retrieves the analyzed data for the service with the given name. It
@@ -869,11 +886,11 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) (*Data, error) {
 		projTypes  []*ProjectedTypeData
 		viewedRTs  []*ViewedResultTypeData
 	)
-	servicePackage := d.generation.GeneratedPackage(servicePackagePath(d.generation.GenPkg(), service))
+	servicePackage := d.generation.Package(servicePackagePath(d.generation.GenPkg(), service))
 	scope := servicePackage.Scope().Fork()
 	scope.Unique("Use")       // Reserve "Use" for Endpoints struct Use method.
 	scope.Unique("websocket") // Reserve "websocket" to avoid collision with gorilla/websocket
-	viewScope := d.generation.GeneratedPackage(
+	viewScope := d.generation.Package(
 		servicePackagePath(d.generation.GenPkg(), service) + "/views",
 	).Scope().Fork()
 	pkgName := scope.HashedUnique(service, strings.ToLower(codegen.Goify(service.Name, false)), "svc")
@@ -951,10 +968,10 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) (*Data, error) {
 		}
 		// Collect projected types
 		if hasResultType(m.Result) {
-			projected, result := projectedResultRoot(service, m)
+			projected, result := projectedResultRoot(d.generation, m)
 			pairs := projectTypePairs(projected, result, seenProjected)
 			removeMeta(projected)
-			views := d.generation.GeneratedPackage(servicePackagePath(d.generation.GenPkg(), service) + "/views")
+			views := d.generation.Package(servicePackagePath(d.generation.GenPkg(), service) + "/views")
 			for _, pair := range pairs {
 				identity := codegen.NewProjectedTypeID(pair.source)
 				viewDerived[pair.projected.Origin()] = identity
@@ -987,16 +1004,16 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) (*Data, error) {
 
 	// A function to record method user types so that forced types are not
 	// collected twice. Raw object method types are wrapped into synthesized
-	// user types by codegen.NormalizeRoot before any generator runs: analyze
-	// reads the design and never mutates it, so a raw object here means the
-	// root was not normalized.
+	// user types when codegen.NewGeneration takes ownership of the evaluated
+	// roots: analyze reads the design and never mutates it, so a raw object here
+	// means the caller skipped generation construction.
 	recordMethodType := func(m *expr.MethodExpr, att *expr.AttributeExpr) {
 		if att == nil || att.Type == expr.Empty {
 			return
 		}
 		if _, ok := att.Type.(*expr.Object); ok {
 			panic(fmt.Sprintf(
-				"service %q method %q declares a raw object type: codegen.NormalizeRoot must run after eval finalization and before the generators read the design",
+				"service %q method %q declares a raw object type: codegen.NewGeneration must own the finalized design before generators read it",
 				service.Name, m.Name)) // bug
 		}
 		if ut, ok := att.Type.(expr.UserType); ok {
@@ -1071,7 +1088,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) (*Data, error) {
 		}
 		projected := seenProj[rt.Origin()]
 		projAtt := &expr.AttributeExpr{Type: projected.Type}
-		viewedDeclaration, err := d.generation.GeneratedPackage(
+		viewedDeclaration, err := d.generation.Package(
 			servicePackagePath(d.generation.GenPkg(), service) + "/views",
 		).DerivedType(codegen.NewViewedResultTypeID(rt))
 		if err != nil {
@@ -1371,7 +1388,7 @@ func (d *ServicesData) collectUnionTypes(att *expr.AttributeExpr, service *expr.
 		}
 		key := unionDataKey{packagePath: packagePath, identity: codegen.NewUnionTypeID(dt)}
 		if _, ok := unions[key]; !ok {
-			generatedPackage := d.generation.GeneratedPackage(packagePath)
+			generatedPackage := d.generation.Package(packagePath)
 			declaration, err := generatedPackage.Union(dt)
 			if err != nil {
 				return err
@@ -1566,7 +1583,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 			payloadDesc = fmt.Sprintf("%s is the payload type of the %s service %s method.",
 				payloadName, m.Service.Name, m.Name)
 		}
-		payloadEx = m.Payload.Example(d.Root.API.ExampleGenerator)
+		payloadEx = m.Payload.Example(d.examples.At(expr.MethodPayloadExampleIdentity(m)))
 	}
 	if m.Result.Type != expr.Empty {
 		resultLoc = codegen.UserTypeLocation(m.Result.Type)
@@ -1576,7 +1593,7 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 			resultDesc = fmt.Sprintf("%s is the result type of the %s service %s method.",
 				rname, m.Service.Name, m.Name)
 		}
-		resultEx = m.Result.Example(d.Root.API.ExampleGenerator)
+		resultEx = m.Result.Example(d.examples.At(expr.MethodResultExampleIdentity(m)))
 	}
 	if len(m.Errors) > 0 {
 		errors = make([]*ErrorInitData, len(m.Errors))
@@ -1702,7 +1719,7 @@ func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vnam
 			data.StreamingResultDesc = fmt.Sprintf("%s is the streaming result type of the %s service %s method.",
 				srname, m.Service.Name, m.Name)
 		}
-		data.StreamingResultEx = m.StreamingResult.Example(d.Root.API.ExampleGenerator)
+		data.StreamingResultEx = m.StreamingResult.Example(d.examples.At(expr.MethodStreamingResultExampleIdentity(m)))
 	}
 
 	if m.StreamingPayload != nil && m.StreamingPayload.Type != expr.Empty {
@@ -1713,7 +1730,7 @@ func (d *ServicesData) initStreamData(data *MethodData, m *expr.MethodExpr, vnam
 			spayloadDesc = fmt.Sprintf("%s is the streaming payload type of the %s service %s method.",
 				spayloadName, m.Service.Name, m.Name)
 		}
-		spayloadEx = m.StreamingPayload.Example(d.Root.API.ExampleGenerator)
+		spayloadEx = m.StreamingPayload.Example(d.examples.At(expr.MethodStreamingPayloadExampleIdentity(m)))
 	}
 	// For JSON-RPC WebSocket:
 	// - Client streaming (no result streaming): no endpoint struct needed, just payload
@@ -2082,13 +2099,13 @@ func projectTypePairs(projected, source *expr.AttributeExpr, seen map[expr.UserT
 }
 
 // projectedResultRoot returns the root attribute used to collect projected
-// view types for m.Result. NormalizeRoot synthesizes user types for raw object
-// method results before service analysis; projected view collection keeps the
-// pre-normalization shape by traversing those synthetic wrappers' attributes
-// directly instead of generating view-local types for the wrappers themselves.
-func projectedResultRoot(service *expr.ServiceExpr, m *expr.MethodExpr) (*expr.AttributeExpr, *expr.AttributeExpr) {
-	identity := codegen.NewMethodResultIdentity(service.Name, m.Name)
-	if ut, ok := m.Result.Type.(*expr.UserTypeExpr); ok && identity.Matches(ut) {
+// view types for m.Result. Compiler-created method wrappers retain their exact
+// provenance in generation, so authored types with matching text stay intact.
+func projectedResultRoot(generation *codegen.Generation, m *expr.MethodExpr) (*expr.AttributeExpr, *expr.AttributeExpr) {
+	if ut, ok := m.Result.Type.(*expr.UserTypeExpr); ok {
+		if _, normalized := generation.NormalizedMethodType(ut); !normalized {
+			return expr.DupAtt(m.Result), m.Result
+		}
 		return expr.DupAtt(ut.Attribute()), ut.Attribute()
 	}
 	return expr.DupAtt(m.Result), m.Result

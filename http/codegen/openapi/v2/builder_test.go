@@ -1,3 +1,5 @@
+// This file verifies OpenAPI v2 construction from evaluated HTTP endpoint
+// designs, including request and response example ownership.
 package openapiv2
 
 import (
@@ -36,7 +38,7 @@ func TestBuildPathFromFileServer(t *testing.T) {
 			}
 			root := &expr.RootExpr{
 				API: &expr.APIExpr{
-					ExampleGenerator: expr.NewRandom("test"),
+					RandomizerFactory: expr.NewFakerRandomizerFactory("test"),
 				},
 			}
 			fs := &expr.HTTPFileServerExpr{
@@ -47,7 +49,7 @@ func TestBuildPathFromFileServer(t *testing.T) {
 				},
 				RequestPaths: []string{tc.path},
 			}
-			buildPathFromFileServer(s, root, fs)
+			buildPathFromFileServer(s, root, fs, expr.NewExampleGenerator(root.API.RandomizerFactory))
 			for actual := range s.Paths {
 				if actual != tc.expected {
 					t.Errorf("got %#v, expected %#v", actual, tc.expected)
@@ -59,7 +61,7 @@ func TestBuildPathFromFileServer(t *testing.T) {
 
 func TestNoSecurityOverridesAPISecurity(t *testing.T) {
 	root := codegen.RunDSL(t, noSecurityOverridesAPISecurityDSL)
-	spec, err := NewV2(root, root.API.Servers[0].Hosts[0])
+	spec, err := NewV2(root, root.API.Servers[0].Hosts[0], expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 
 	cases := map[string]struct {
@@ -97,7 +99,7 @@ func TestNoSecurityOverridesAPISecurity(t *testing.T) {
 
 func TestNoSecurityOverridesServiceSecurity(t *testing.T) {
 	root := codegen.RunDSL(t, noSecurityOverridesServiceSecurityDSL)
-	spec, err := NewV2(root, root.API.Servers[0].Hosts[0])
+	spec, err := NewV2(root, root.API.Servers[0].Hosts[0], expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 
 	cases := map[string]struct {
@@ -135,7 +137,7 @@ func TestNoSecurityOverridesServiceSecurity(t *testing.T) {
 
 func TestStreamingResponseStatusCodes(t *testing.T) {
 	root := codegen.RunDSL(t, streamingResponseStatusDSL)
-	spec, err := NewV2(root, root.API.Servers[0].Hosts[0])
+	spec, err := NewV2(root, root.API.Servers[0].Hosts[0], expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 
 	sseResponses := spec.Paths["/sse"].(*Path).Get.Responses
@@ -322,13 +324,17 @@ func TestBuildPathFromExpr(t *testing.T) {
 					Meta:             expr.MetaExpr{},
 				},
 			}
+			route.Endpoint.MethodExpr.Name = "method"
+			route.Endpoint.Service.ServiceExpr.Name = "service"
+			route.Endpoint.MethodExpr.Service = route.Endpoint.Service.ServiceExpr
 
 			if tc.deprecated {
 				route.Endpoint.Meta["openapi:deprecated"] = []string{"true"}
 			}
 
 			basePath := "/"
-			buildPathFromExpr(s, root, h, route, basePath)
+			generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test"))
+			buildPathFromExpr(s, root, h, route, basePath, generator)
 			for _, path := range s.Paths {
 				actual := path.(*Path).Post
 				if len(actual.Consumes) != len(tc.expected.Consumes) {

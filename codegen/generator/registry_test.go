@@ -27,12 +27,12 @@ func testRegistry(command string, factories ...generatorFactory) *registry {
 }
 
 // testRegistryFromGenfuncs creates one isolated command from fixture callbacks.
-func testRegistryFromGenfuncs(command string, callbacks []testGenfunc) *registry {
+func testRegistryFromGenfuncs(callbacks []testGenfunc) *registry {
 	factories := make([]generatorFactory, len(callbacks))
 	for i, callback := range callbacks {
 		factories[i] = testGenerator(callback.Plan, callback.Generate)
 	}
-	return testRegistry(command, factories...)
+	return testRegistry("gen", factories...)
 }
 
 // testRenderOnly adapts a root-based rendering fixture into a test callback.
@@ -46,7 +46,7 @@ func testRenderOnly(generate func(string, []eval.Root) ([]*codegen.File, error))
 // a fresh run factory. Retained subsystem plans replace this adapter in Tasks 7–10.
 func testGenerator(plan func(*codegen.Generation) error, generate func(*codegen.Generation) ([]*codegen.File, error)) generatorFactory {
 	return func() coreGenerator {
-		generator := coreGenerator{}
+		generator := coreGenerator{name: "test"}
 		if plan != nil {
 			generator.Plan = func(retained *Plan) error {
 				return plan(retained.Generation())
@@ -59,12 +59,4 @@ func testGenerator(plan func(*codegen.Generation) error, generate func(*codegen.
 		}
 		return generator
 	}
-}
-
-// testRenderGenerator adapts a legacy render-only test callback without adding
-// a production lifecycle path.
-func testRenderGenerator(generate func(string, []eval.Root) ([]*codegen.File, error)) generatorFactory {
-	return testGenerator(nil, func(generation *codegen.Generation) ([]*codegen.File, error) {
-		return generate(generation.GenPkg(), generation.Roots())
-	})
 }

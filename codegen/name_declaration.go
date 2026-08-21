@@ -5,6 +5,7 @@ package codegen
 
 import (
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -13,28 +14,33 @@ type (
 	// Types, functions, constants, and variables still share one package namespace.
 	PackageNameKind uint8
 
-	// PackageNameOrder supplies deterministic ordering for preferred names in
-	// one subsystem-owned declaration family. Implementations compare only
-	// values with the same PackageNameFamily.
+	// PackageNameOrder supplies a deterministic total order for preferred names
+	// in one subsystem-owned declaration family. Implementations must be named,
+	// non-pointer value types whose fields recursively contain immutable values.
+	// The package catalog compares only values of the same concrete type.
 	PackageNameOrder interface {
-		PackageNameFamily() string
+		// ComparePackageName compares two values of the same concrete type. It
+		// must return a negative value when the receiver sorts first, zero only
+		// when both values contain identical stable ordering facts, and a positive
+		// value when the receiver sorts last. Its sign must be antisymmetric, and
+		// its less-than relation must be transitive.
 		ComparePackageName(PackageNameOrder) int
 	}
 
 	// NameDeclaration records one package-level Go identifier. Its final name is
 	// unavailable until the owning generation freezes.
 	NameDeclaration struct {
-		kind        PackageNameKind
-		preferred   string
-		final       string
-		packagePath string
-		exact       bool
-		order       PackageNameOrder
-		base        *NameDeclaration
-		prefix      string
-		suffix      string
-		hashes      []Hasher
-		frozen      bool
+		kind      PackageNameKind
+		preferred string
+		final     string
+		owner     *GeneratedPackage
+		exact     bool
+		order     PackageNameOrder
+		base      *NameDeclaration
+		prefix    string
+		suffix    string
+		hashes    []Hasher
+		frozen    bool
 	}
 )
 
@@ -60,11 +66,10 @@ func NewExactName(kind PackageNameKind, preferred string) *NameDeclaration {
 }
 
 // NewPreferredName creates a compiler-owned declaration whose preferred Go
-// identifier may receive a deterministic numeric suffix.
+// identifier may receive a deterministic numeric suffix. order must be a
+// named, non-pointer value whose fields recursively contain immutable values;
+// the owning package validates that constraint when it accepts the record.
 func NewPreferredName(kind PackageNameKind, preferred string, order PackageNameOrder) *NameDeclaration {
-	if order == nil {
-		panic("preferred package name requires stable ordering")
-	}
 	return &NameDeclaration{
 		kind:      kind,
 		preferred: Goify(preferred, true),
@@ -81,20 +86,9 @@ func (d *NameDeclaration) Name() string {
 	return d.final
 }
 
-// PreferredName returns the unsuffixed Go identifier requested during planning.
-func (d *NameDeclaration) PreferredName() string {
-	return d.preferredName()
-}
-
 // Kind returns the declaration category used for collision diagnostics.
 func (d *NameDeclaration) Kind() PackageNameKind {
 	return d.kind
-}
-
-// PackagePath returns the generated import path that owns the declaration. It
-// is empty until a generated package accepts the record.
-func (d *NameDeclaration) PackagePath() string {
-	return d.packagePath
 }
 
 // String returns the declaration category used in planning errors.
@@ -119,9 +113,6 @@ func newDependentName(kind PackageNameKind, base *NameDeclaration, prefix, suffi
 	if base == nil {
 		panic("dependent package name requires a base declaration")
 	}
-	if order == nil {
-		panic("dependent package name requires stable ordering")
-	}
 	return &NameDeclaration{
 		kind:   kind,
 		order:  order,
@@ -129,6 +120,80 @@ func newDependentName(kind PackageNameKind, base *NameDeclaration, prefix, suffi
 		prefix: prefix,
 		suffix: suffix,
 	}
+}
+
+// comparePackageNames orders independent records without consulting discovery
+// order. Equal ordering facts for distinct records are a planning error.
+func comparePackageNames(left, right *NameDeclaration) int {
+	leftType := reflect.TypeOf(left.order)
+	rightType := reflect.TypeOf(right.order)
+	if compared := strings.Compare(leftType.PkgPath(), rightType.PkgPath()); compared != 0 {
+		return compared
+	}
+	if compared := strings.Compare(leftType.Name(), rightType.Name()); compared != 0 {
+		return compared
+	}
+	return left.order.ComparePackageName(right.order)
+}
+
+// validateNameDeclaration rejects records that cannot identify a package-level
+// Go declaration before the owning package changes its declaration catalog.
+func validateNameDeclaration(declaration *NameDeclaration) error {
+	if !declaration.kind.valid() {
+		return fmt.Errorf("invalid package name kind %d", declaration.kind)
+	}
+	if declaration.preferredName() == "" {
+		return fmt.Errorf("package name must not be empty")
+	}
+	return nil
+}
+
+// validatePackageNameOrder rejects ordering values whose identity or contents
+// can change after collection. A named value type gives independent generators
+// a stable family identity without coordinating through caller-chosen strings.
+func validatePackageNameOrder(order PackageNameOrder) error {
+	if order == nil {
+		return fmt.Errorf("package name order must be a stable concrete named value type")
+	}
+	typeOf := reflect.TypeOf(order)
+	if typeOf.Name() == "" || typeOf.PkgPath() == "" || !isStablePackageNameOrderType(typeOf) {
+		return fmt.Errorf("package name order %T must be a stable concrete named value type", order)
+	}
+	return nil
+}
+
+// isStablePackageNameOrderType reports whether values of typeOf contain only
+// immutable value fields suitable for deterministic comparison after freeze.
+func isStablePackageNameOrderType(typeOf reflect.Type) bool {
+	switch typeOf.Kind() {
+	case reflect.Array:
+		return isStablePackageNameOrderType(typeOf.Elem())
+	case reflect.Struct:
+		for i := range typeOf.NumField() {
+			if !isStablePackageNameOrderType(typeOf.Field(i).Type) {
+				return false
+			}
+		}
+		return true
+	case reflect.Bool,
+		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64,
+		reflect.Complex64, reflect.Complex128,
+		reflect.String:
+		return true
+	default:
+		return false
+	}
+}
+
+// packagePath returns the generated import path that owns the declaration.
+// Access before package collection is an internal planning bug.
+func (d *NameDeclaration) packagePath() string {
+	if d.owner == nil {
+		panic(fmt.Sprintf("package name %q has no generated package owner", d.preferredName()))
+	}
+	return d.owner.path
 }
 
 // preferredName returns the requested name, using the base declaration's
@@ -144,11 +209,12 @@ func (d *NameDeclaration) preferredName() string {
 	return d.prefix + base + d.suffix
 }
 
-// comparePackageNames orders independent records without consulting discovery
-// order. Equal ordering facts for distinct records are a planning error.
-func comparePackageNames(left, right *NameDeclaration) int {
-	if compared := strings.Compare(left.order.PackageNameFamily(), right.order.PackageNameFamily()); compared != 0 {
-		return compared
+// valid reports whether the category is represented by this catalog.
+func (k PackageNameKind) valid() bool {
+	switch k {
+	case NameType, NameFunction, NameConstant, NameVariable:
+		return true
+	default:
+		return false
 	}
-	return left.order.ComparePackageName(right.order)
 }

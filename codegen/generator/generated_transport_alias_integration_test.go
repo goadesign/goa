@@ -39,17 +39,17 @@ func TestGeneratedTransportPackagesCompileWithServiceAliasCollisions(t *testing.
 		}
 	})
 
-	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
 	require.NoError(t, planTransportData(generation))
 	require.NoError(t, generation.Freeze())
-	files, err := Service(generation)
+	files, err := testServiceFiles(generation)
 	require.NoError(t, err)
-	transport, err := Transport(generation)
+	transport, err := testTransportFiles(generation)
 	require.NoError(t, err)
 	files = append(files, transport...)
-	examples, err := Example(generation)
+	exampleFiles, err := assembleExampleFilesForTest(generation)
 	require.NoError(t, err)
-	files = append(files, examples...)
+	files = append(files, exampleFiles...)
 
 	dir := t.TempDir()
 	writeGeneratedModule(t, dir, "generated.local")

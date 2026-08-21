@@ -1,3 +1,5 @@
+// This file verifies service conversion paths, generated helper declarations,
+// and the exact package names used by both definitions and references.
 package service
 
 import (
@@ -316,6 +318,26 @@ func TestConvertFiles(t *testing.T) {
 			map[string]int{
 				"gen/types/convert.go":  3, // header + convert-to + create-from sections
 				"gen/models/convert.go": 3, // header + convert-to + create-from sections
+			},
+		},
+		{
+			"noncanonical-location-uses-owned-package",
+			func() {
+				filter := dsl.Type("FilterConfig", func() {
+					dsl.Meta("struct:pkg:path", "domain/../types")
+					dsl.CreateFrom(testdata.TestFilterConfig{})
+					dsl.ConvertTo(testdata.TestFilterConfig{})
+					dsl.Attribute("name", dsl.String)
+					dsl.Attribute("enabled", dsl.Boolean)
+					dsl.Attribute("value", dsl.Int)
+					dsl.Required("name", "enabled", "value")
+				})
+				dsl.Service("Values", func() {
+					dsl.Method("Read", func() { dsl.Payload(filter) })
+				})
+			},
+			map[string]int{
+				"gen/types/convert.go": 3,
 			},
 		},
 	}

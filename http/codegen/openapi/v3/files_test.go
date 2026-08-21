@@ -1,3 +1,5 @@
+// This file renders complete OpenAPI 3.0 and 3.2 documents from prepared HTTP
+// designs and compares output produced with run-owned example state.
 package openapiv3_test
 
 import (
@@ -81,7 +83,7 @@ func TestFiles(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
-			oFiles := openapiv3.Files(root, openapi.Version30, openapi.DefaultPath30)
+			oFiles := openapiv3.Files(root, openapi.Version30, openapi.DefaultPath30, expr.NewExampleGenerator(root.API.RandomizerFactory))
 			for i, o := range oFiles {
 				tname := fmt.Sprintf("file%d", i)
 				s := o.SectionTemplates
@@ -140,7 +142,7 @@ func TestFilesV32(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
-			oFiles := openapiv3.Files(root, openapi.Version32, openapi.DefaultPath32)
+			oFiles := openapiv3.Files(root, openapi.Version32, openapi.DefaultPath32, expr.NewExampleGenerator(root.API.RandomizerFactory))
 			wantPaths := []string{
 				filepath.Join("gen", "http", "openapi3.2.json"),
 				filepath.Join("gen", "http", "openapi3.2.yaml"),

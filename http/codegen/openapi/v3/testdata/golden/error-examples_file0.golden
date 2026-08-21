@@ -4,17 +4,17 @@
       "Error": {
         "description": "Error response result type",
         "example": {
-          "fault": true,
+          "fault": false,
           "id": "123abc",
           "message": "parameter 'p' must be an integer",
           "name": "bad_request",
           "temporary": true,
-          "timeout": false
+          "timeout": true
         },
         "properties": {
           "fault": {
             "description": "Is the error a server-side fault?",
-            "example": true,
+            "example": false,
             "type": "boolean"
           },
           "id": {
@@ -39,7 +39,7 @@
           },
           "timeout": {
             "description": "Is the error a timeout?",
-            "example": false,
+            "example": true,
             "type": "boolean"
           }
         },

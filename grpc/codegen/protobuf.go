@@ -85,41 +85,33 @@ func protoBufTypeContext(pkg string, service *ServiceData, useDefault bool) *cod
 // map, it wraps the given attribute with an object with a single "field"
 // attribute. For nested arrays/maps, the inner array/map is wrapped into a
 // user type.
-func makeProtoBufMessage(att *expr.AttributeExpr, tname string, sd *ServiceData) *expr.AttributeExpr {
+func makeProtoBufMessage(att *expr.AttributeExpr, tname string, owner expr.ExampleIdentity) *expr.AttributeExpr {
 	att = expr.DupAtt(att)
 	expr.RemovePkgPath(att)
 	ut, isut := att.Type.(expr.UserType)
 	switch {
 	case att.Type == expr.Empty:
-		att.Type = &expr.UserTypeExpr{
-			TypeName:      tname,
-			AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{}},
-			UID:           sd.Name + "#" + tname,
-		}
+		att.Type = expr.NewGeneratedUserType(tname, &expr.AttributeExpr{Type: &expr.Object{}}, owner)
 		return att
 	case expr.IsPrimitive(att.Type):
-		wrapAttr(att, tname, true, sd)
+		wrapAttr(att, tname, true, owner)
 		return att
 	case isut:
-		if expr.IsArray(ut) {
-			wrapAttr(att, tname, false, sd)
+		if expr.IsArray(ut) || expr.IsMap(ut) {
+			wrapAttr(att, tname, false, owner)
 		}
 	case expr.IsArray(att.Type) || expr.IsMap(att.Type):
-		wrapAttr(att, tname, false, sd)
+		wrapAttr(att, tname, false, owner)
 	case expr.IsObject(att.Type) || expr.IsUnion(att.Type):
-		att.Type = &expr.UserTypeExpr{
-			TypeName:      tname,
-			AttributeExpr: expr.DupAtt(att),
-			UID:           sd.Name + "#" + tname,
-		}
+		att.Type = expr.NewGeneratedUserType(tname, expr.DupAtt(att), owner)
 	}
 	n := ""
-	makeProtoBufMessageR(att, &n, sd, make(map[expr.UserType]struct{}))
+	makeProtoBufMessageR(att, &n, owner, make(map[expr.UserType]struct{}))
 	return att
 }
 
 // makeProtoBufMessageR is the recursive implementation of makeProtoBufMessage.
-func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceData, seen map[expr.UserType]struct{}) {
+func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, owner expr.ExampleIdentity, seen map[expr.UserType]struct{}) {
 	ut, isut := att.Type.(expr.UserType)
 
 	// handle infinite recursions
@@ -135,12 +127,12 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceDat
 		switch {
 		case expr.IsArray(att.Type):
 			wrapAttr(att, "ArrayOf"+tname+
-				protoBufify(protoBufShapeTypeName(expr.AsArray(att.Type).ElemType), true, true), true, sd)
+				protoBufify(protoBufShapeTypeName(expr.AsArray(att.Type).ElemType), true, true), true, owner)
 		case expr.IsMap(att.Type):
 			m := expr.AsMap(att.Type)
 			wrapAttr(att, tname+"MapOf"+
 				protoBufify(protoBufShapeTypeName(m.KeyType), true, true)+
-				protoBufify(protoBufShapeTypeName(m.ElemType), true, true), true, sd)
+				protoBufify(protoBufShapeTypeName(m.ElemType), true, true), true, owner)
 		}
 	}
 
@@ -148,32 +140,37 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceDat
 	case expr.IsPrimitive(att.Type):
 		return
 	case isut:
-		if expr.IsArray(ut) {
-			wrapAttr(ut.Attribute(), ut.Name(), false, sd)
+		switch {
+		case expr.IsArray(ut):
+			wrapAttr(ut.Attribute(), ut.Name(), false, expr.GRPCArrayWrapperExampleIdentity(ut))
+		case expr.IsMap(ut):
+			wrapAttr(ut.Attribute(), ut.Name(), false, expr.GRPCMapWrapperExampleIdentity(ut))
 		}
-		makeProtoBufMessageR(ut.Attribute(), tname, sd, seen)
+		makeProtoBufMessageR(ut.Attribute(), tname, owner, seen)
 	case expr.IsArray(att.Type):
 		ar := expr.AsArray(att.Type)
-		makeProtoBufMessageR(ar.ElemType, tname, sd, seen)
+		elementOwner := owner.ArrayElement(0)
+		makeProtoBufMessageR(ar.ElemType, tname, elementOwner, seen)
 		wrap(ar.ElemType, *tname)
 	case expr.IsMap(att.Type):
 		m := expr.AsMap(att.Type)
-		makeProtoBufMessageR(m.ElemType, tname, sd, seen)
+		valueOwner := owner.MapValue(0)
+		makeProtoBufMessageR(m.ElemType, tname, valueOwner, seen)
 		wrap(m.ElemType, *tname)
 	case expr.IsUnion(att.Type):
 		for _, nat := range expr.AsUnion(att.Type).Values {
-			makeProtoBufMessageR(nat.Attribute, tname, sd, seen)
+			makeProtoBufMessageR(nat.Attribute, tname, owner.UnionMember(nat.Name), seen)
 		}
 	case expr.IsObject(att.Type):
 		for _, nat := range *(expr.AsObject(att.Type)) {
-			makeProtoBufMessageR(nat.Attribute, tname, sd, seen)
+			makeProtoBufMessageR(nat.Attribute, tname, owner.Member(nat.Name), seen)
 		}
 	}
 }
 
 // wrapAttr makes the attribute type a user type by wrapping the given
 // attribute into an attribute named "field".
-func wrapAttr(att *expr.AttributeExpr, tname string, req bool, sd *ServiceData) {
+func wrapAttr(att *expr.AttributeExpr, tname string, req bool, owner expr.ExampleIdentity) {
 	wrap := func(attr *expr.AttributeExpr) *expr.AttributeExpr {
 		res := &expr.AttributeExpr{
 			Type: &expr.Object{
@@ -198,15 +195,9 @@ func wrapAttr(att *expr.AttributeExpr, tname string, req bool, sd *ServiceData) 
 	switch dt := att.Type.(type) {
 	case expr.UserType:
 		// Don't change the original user type. Create a copy and wrap that.
-		ut := expr.Dup(dt).(expr.UserType)
-		ut.SetAttribute(wrap(ut.Attribute()))
-		att.Type = ut
+		att.Type = expr.NewGeneratedUserType(dt.Name(), wrap(expr.DupAtt(dt.Attribute())), owner)
 	default:
-		att.Type = &expr.UserTypeExpr{
-			TypeName:      tname,
-			AttributeExpr: wrap(att),
-			UID:           sd.Name + "#" + tname,
-		}
+		att.Type = expr.NewGeneratedUserType(tname, wrap(att), owner)
 	}
 	// Validation is moved to wrapped attribute.
 	att.Validation = nil

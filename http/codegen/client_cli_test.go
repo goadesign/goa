@@ -1,12 +1,15 @@
+// This file verifies HTTP client CLI generation consumes stable, non-empty
+// examples for body, parameter, header, cookie, array, and map flags.
 package codegen
 
 import (
 	"testing"
 
-	"goa.design/goa/v3/codegen/testutil"
-	"goa.design/goa/v3/expr"
+	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/testutil"
+	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -60,4 +63,16 @@ func TestClientCLIFiles(t *testing.T) {
 			testutil.AssertGo(t, "testdata/golden/client_cli_"+c.Name+".go.golden", code)
 		})
 	}
+}
+
+func TestEmptyBodyCLIUsesPayloadFieldExample(t *testing.T) {
+	root := expr.RunDSL(t, testdata.PayloadBodyPrimitiveFieldEmptyDSL)
+	services := CreateHTTPServices(root)
+	endpoint := services.Get("ServiceBodyPrimitiveArrayUser").Endpoints[0]
+	require.NotNil(t, endpoint.Payload.Request.PayloadInit)
+	require.Len(t, endpoint.Payload.Request.PayloadInit.ClientArgs, 1)
+	example := endpoint.Payload.Request.PayloadInit.ClientArgs[0].Example
+
+	require.IsType(t, []string{}, example)
+	require.NotEmpty(t, example)
 }

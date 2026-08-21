@@ -11,13 +11,14 @@ import (
 	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
 )
 
-// Transport iterates through the roots and returns the files needed to render
-// the transport code.
-func Transport(generation *codegen.Generation) ([]*codegen.File, error) {
+// transportFiles returns HTTP, gRPC, and JSON-RPC files described by plan's
+// frozen package declarations and run-owned example state.
+func transportFiles(plan *Plan) ([]*codegen.File, error) {
 	var files []*codegen.File
+	generation := plan.Generation()
 	designRoots := serviceRoots(generation.Roots())
 	for _, r := range designRoots {
-		services, err := service.NewServicesData(r, generation)
+		services, err := service.NewServicesData(r, generation, plan.exampleGenerator(r))
 		if err != nil {
 			return nil, err
 		}

@@ -18,17 +18,17 @@ paths:
                   required: true
                   schema:
                     type: integer
-                    example: 5490475434297746524
+                    example: 2401899298232532419
                     format: int64
-                  example: 8568805688952666114
+                  example: 2401899298232532419
                 - name: bar
                   in: path
                   required: true
                   schema:
                     type: integer
-                    example: 1475422799873681639
+                    example: 2467648858559780444
                     format: int64
-                  example: 8380651525843655561
+                  example: 2467648858559780444
             responses:
                 "204":
                     description: No Content response.

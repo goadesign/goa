@@ -1,16 +1,17 @@
+// This file converts HTTP response headers and cookies into OpenAPI v3 values
+// without sharing consumed example streams between schema and display fields.
 package openapiv3
 
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/openapi"
 )
 
-func headersFromAttr(attr *expr.MappedAttributeExpr, rand *expr.ExampleGenerator) map[string]*HeaderRef {
+func headersFromAttr(attr *expr.MappedAttributeExpr, parent *expr.AttributeExpr, owner expr.ExampleIdentity, rand *expr.ExampleGenerator) map[string]*HeaderRef {
 	o := expr.AsObject(attr.Type)
 	if len(*o) == 0 {
 		return nil
@@ -19,25 +20,24 @@ func headersFromAttr(attr *expr.MappedAttributeExpr, rand *expr.ExampleGenerator
 	expr.WalkMappedAttr(attr, func(name, elem string, hattr *expr.AttributeExpr) error { // nolint: errcheck
 		// Anchor the header example stream to the header identity so the
 		// example survives generator reorderings.
-		hrand := rand.Field(attr.AttributeExpr, name)
+		identity := exampleFieldIdentity(parent, name, owner)
 		header := &Header{
 			Description: hattr.Description,
 			Required:    hattr.IsRequiredNoDefault(name),
-			Schema:      newSchemafier(hrand).schemafy(hattr),
-			Example:     openapi.Example(hattr, hrand),
+			Schema:      newSchemafier(rand.At(identity)).schemafy(hattr),
 			Extensions:  openapi.ExtensionsFromExpr(hattr.Meta),
 		}
-		initExamples(header, hattr, hrand)
+		initExamples(header, hattr, rand.At(identity))
 		headers[elem] = &HeaderRef{Value: header}
 		return nil
 	})
 	return headers
 }
 
-func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema, rand *expr.ExampleGenerator) *Response {
+func responseFromExpr(r *expr.HTTPResponseExpr, body *openapi.Schema, rand *expr.ExampleGenerator, parent *expr.AttributeExpr, fieldOwner, bodyOwner expr.ExampleIdentity) *Response {
 	ct := responseContentType(r)
-	headers := headersFromAttr(r.Headers, rand)
-	cookies := headersFromAttr(r.Cookies, rand)
+	headers := headersFromAttr(r.Headers, parent, fieldOwner, rand)
+	cookies := headersFromAttr(r.Cookies, parent, fieldOwner, rand)
 	if len(cookies) > 0 {
 		if headers == nil {
 			headers = make(map[string]*HeaderRef)
@@ -65,12 +65,10 @@ func responseFromExpr(r *expr.HTTPResponseExpr, bodies map[int][]*openapi.Schema
 		if r.Body.Type != expr.Empty {
 			content = make(map[string]*MediaType)
 			content[ct] = &MediaType{
-				Schema:     bodies[r.StatusCode][0],
+				Schema:     body,
 				Extensions: openapi.ExtensionsFromExpr(r.Body.Meta),
 			}
-			ep := r.Parent.(*expr.HTTPEndpointExpr)
-			id := bodyExampleID(ep.Service.Name(), ep.Name(), "response."+strconv.Itoa(r.StatusCode)+".0")
-			initExamples(content[ct], staticViewBody(r), rand.Rebased(id))
+			initExamples(content[ct], staticViewBody(r), rand.At(bodyOwner))
 		} else if r.StatusCode != expr.StatusNoContent &&
 			isSkipResponseBodyEncodeDecode(r.Parent) {
 			// When SkipResponseBodyEncodeDecode is declared, the response type

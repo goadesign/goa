@@ -84,9 +84,6 @@
                     },
                     {
                       "string": ""
-                    },
-                    {
-                      "string": ""
                     }
                   ],
                   "foo": ""
@@ -103,6 +100,9 @@
               "application/json": {
                 "example": {
                   "bar": [
+                    {
+                      "string": ""
+                    },
                     {
                       "string": ""
                     },

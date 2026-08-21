@@ -107,6 +107,7 @@ definitions:
                         bar:
                             - string: ""
                             - string: ""
+                            - string: ""
                         foo: ""
                 additionalProperties:
                     $ref: '#/definitions/GoaFoobar'
@@ -130,6 +131,7 @@ definitions:
             resulttype_map:
                 "":
                     bar:
+                        - string: ""
                         - string: ""
                         - string: ""
                     foo: ""

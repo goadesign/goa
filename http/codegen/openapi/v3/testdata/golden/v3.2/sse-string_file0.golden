@@ -16,7 +16,7 @@
                 "itemSchema": {
                   "properties": {
                     "data": {
-                      "example": "Quia molestias.",
+                      "example": "Ipsa libero est ipsum blanditiis.",
                       "type": "string"
                     }
                   },

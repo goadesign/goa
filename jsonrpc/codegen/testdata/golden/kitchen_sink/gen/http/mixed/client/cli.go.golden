@@ -21,7 +21,7 @@ func BuildLookupPayload(mixedLookupBody string) (*mixed.LookupPayload, error) {
 	{
 		err = json.Unmarshal([]byte(mixedLookupBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"id\": \"Mollitia voluptatum expedita velit assumenda.\",\n      \"key\": \"Blanditiis sed voluptatum odit dolores impedit.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"id\": \"Cupiditate cupiditate minus veniam sed officia qui.\",\n      \"key\": \"Numquam iusto molestias nulla quod nobis molestias.\"\n   }'")
 		}
 	}
 	v := &mixed.LookupPayload{

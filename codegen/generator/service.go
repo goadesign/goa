@@ -9,15 +9,15 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// Service iterates through the roots and returns the files needed to render
-// the service code. It returns an error if the roots slice does not include
-// a goa design.
-func Service(generation *codegen.Generation) ([]*codegen.File, error) {
+// serviceFiles returns the service files described by plan's frozen package
+// declarations and run-owned example state.
+func serviceFiles(plan *Plan) ([]*codegen.File, error) {
 	var files []*codegen.File
+	generation := plan.Generation()
 	designRoots := serviceRoots(generation.Roots())
 	analyses := make([]*service.ServicesData, len(designRoots))
 	for i, r := range designRoots {
-		services, err := service.NewServicesData(r, generation)
+		services, err := service.NewServicesData(r, generation, plan.exampleGenerator(r))
 		if err != nil {
 			return nil, err
 		}

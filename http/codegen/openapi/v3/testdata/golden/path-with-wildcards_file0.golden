@@ -11,12 +11,12 @@
         "operationId": "test service#test endpoint",
         "parameters": [
           {
-            "example": 5691356309313629000,
+            "example": 6827506417626806000,
             "in": "path",
             "name": "int_map",
             "required": true,
             "schema": {
-              "example": 4595362125781949000,
+              "example": 6827506417626806000,
               "format": "int64",
               "type": "integer"
             }

@@ -6,7 +6,7 @@ func BuildMethodBodyCustomNamePayload(serviceBodyCustomNameMethodBodyCustomNameB
 	{
 		err = json.Unmarshal([]byte(serviceBodyCustomNameMethodBodyCustomNameBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"b\": \"Itaque ab itaque.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"b\": \"Et consequatur molestiae.\"\n   }'")
 		}
 	}
 	v := &servicebodycustomname.MethodBodyCustomNamePayload{

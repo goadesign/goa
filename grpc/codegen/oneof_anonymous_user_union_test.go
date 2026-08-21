@@ -50,7 +50,11 @@ func TestAnonymousUserUnionArrayNoWrappersFromProto(t *testing.T) {
 
 	// Transform protobuf -> Go for Container
 	target := &expr.AttributeExpr{Type: root.UserType("Container")}
-	source := makeProtoBufMessage(expr.DupAtt(target), target.Type.Name(), sd)
+	source := makeProtoBufMessage(
+		expr.DupAtt(target),
+		target.Type.Name(),
+		testGRPCMessageExampleIdentity("anonymous-user-union"),
+	)
 	freezeProtoBufTransformMessages(sd, source)
 	pbCtx := protoBufTypeContext("proto", sd, true)
 

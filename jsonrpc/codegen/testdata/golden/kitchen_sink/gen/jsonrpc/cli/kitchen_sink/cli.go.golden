@@ -35,10 +35,10 @@ func UsageCommands() []string {
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
-	return os.Args[0] + " " + "calc add --body '{\n      \"a\": 281524111196350841,\n      \"b\": 4865202500627059760,\n      \"id\": \"Perspiciatis sed soluta distinctio facere voluptas et.\"\n   }'" + "\n" +
-		os.Args[0] + " " + "chat echo --body '{\n      \"id\": \"Nemo consequuntur est odio.\",\n      \"msg\": \"Accusantium mollitia id sapiente ratione.\"\n   }'" + "\n" +
-		os.Args[0] + " " + "feed watch --body '{\n      \"last_event_id\": \"Iure dolor.\",\n      \"request_id\": \"Aut voluptas.\"\n   }'" + "\n" +
-		os.Args[0] + " " + "mixed lookup --body '{\n      \"id\": \"Mollitia voluptatum expedita velit assumenda.\",\n      \"key\": \"Blanditiis sed voluptatum odit dolores impedit.\"\n   }'" + "\n" +
+	return os.Args[0] + " " + "calc add --body '{\n      \"a\": 5718665059814127631,\n      \"b\": 5455021967244844938,\n      \"id\": \"Assumenda molestias optio.\"\n   }'" + "\n" +
+		os.Args[0] + " " + "chat echo --body '{\n      \"id\": \"Cum omnis ut dolor doloremque velit.\",\n      \"msg\": \"Soluta illum.\"\n   }'" + "\n" +
+		os.Args[0] + " " + "feed watch --body '{\n      \"last_event_id\": \"Aliquam eius.\",\n      \"request_id\": \"Fugit laborum dignissimos dolore.\"\n   }'" + "\n" +
+		os.Args[0] + " " + "mixed lookup --body '{\n      \"id\": \"Et rerum porro qui explicabo ut.\",\n      \"key\": \"Earum amet voluptatum ad soluta.\"\n   }'" + "\n" +
 		""
 }
 
@@ -254,7 +254,7 @@ func calcAddUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "calc add --body '{\n      \"a\": 281524111196350841,\n      \"b\": 4865202500627059760,\n      \"id\": \"Perspiciatis sed soluta distinctio facere voluptas et.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "calc add --body '{\n      \"a\": 5718665059814127631,\n      \"b\": 5455021967244844938,\n      \"id\": \"Assumenda molestias optio.\"\n   }'")
 }
 
 func calcPingUsage() {
@@ -288,7 +288,7 @@ func calcLogUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "calc log --body '{\n      \"id\": \"Suscipit saepe tempore fuga recusandae amet blanditiis.\",\n      \"message\": \"Est quisquam molestiae.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "calc log --body '{\n      \"id\": \"Quae consectetur.\",\n      \"message\": \"Quo excepturi.\"\n   }'")
 }
 
 // chatUsage displays the usage of the chat command and its subcommands.
@@ -316,7 +316,7 @@ func chatEchoUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "chat echo --body '{\n      \"id\": \"Nemo consequuntur est odio.\",\n      \"msg\": \"Accusantium mollitia id sapiente ratione.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "chat echo --body '{\n      \"id\": \"Cum omnis ut dolor doloremque velit.\",\n      \"msg\": \"Soluta illum.\"\n   }'")
 }
 
 // feedUsage displays the usage of the feed command and its subcommands.
@@ -344,7 +344,7 @@ func feedWatchUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "feed watch --body '{\n      \"last_event_id\": \"Iure dolor.\",\n      \"request_id\": \"Aut voluptas.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "feed watch --body '{\n      \"last_event_id\": \"Aliquam eius.\",\n      \"request_id\": \"Fugit laborum dignissimos dolore.\"\n   }'")
 }
 
 // mixedUsage displays the usage of the mixed command and its subcommands.
@@ -372,5 +372,5 @@ func mixedLookupUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "mixed lookup --body '{\n      \"id\": \"Mollitia voluptatum expedita velit assumenda.\",\n      \"key\": \"Blanditiis sed voluptatum odit dolores impedit.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "mixed lookup --body '{\n      \"id\": \"Et rerum porro qui explicabo ut.\",\n      \"key\": \"Earum amet voluptatum ad soluta.\"\n   }'")
 }

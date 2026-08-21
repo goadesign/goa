@@ -1,3 +1,5 @@
+// This file verifies shared JSON Schema rendering for unions, including that a
+// typed owner keeps each discriminator paired with its generated member value.
 package openapi
 
 import (
@@ -10,7 +12,11 @@ import (
 )
 
 func TestAttributeTypeSchemaCorrelatesUnionDiscriminatorAndValue(t *testing.T) {
-	schema := AttributeTypeSchema(&expr.APIExpr{ExampleGenerator: expr.NewRandom("test")}, unionAttribute())
+	method := &expr.MethodExpr{Name: "union", Service: &expr.ServiceExpr{Name: "test"}}
+	generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory("test")).At(
+		expr.MethodPayloadExampleIdentity(method),
+	)
+	schema := AttributeTypeSchema(&expr.APIExpr{}, unionAttribute(), generator)
 
 	require.Len(t, schema.AnyOf, 2)
 	assertUnionSchemaBranch(t, schema.AnyOf[0], "text", Type(String))

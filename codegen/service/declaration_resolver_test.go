@@ -31,8 +31,8 @@ func TestDeclarationResolverTransformsRelocatedUnionBranches(t *testing.T) {
 	})
 	relocated.Attribute().AddMeta("struct:pkg:path", "types")
 
-	generation := codegen.NewGeneration("generated.local/gen", nil)
-	types := generation.GeneratedPackage("generated.local/gen/types")
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	types := mustClaimTestPackage(t, generation, "generated.local/gen/types")
 	_, err := types.DeclareUserType(relocated)
 	require.NoError(t, err)
 	_, err = types.DeclareUserType(resolverUserType("ValueText", expr.Int))
@@ -104,14 +104,14 @@ func TestDeclarationResolverQualifiesRelocatedConsumersWithoutRenamingLocalType(
 	})
 	container.Attribute().AddMeta("struct:pkg:path", "types")
 
-	generation := codegen.NewGeneration("generated.local/gen", nil)
-	servicePackage := generation.GeneratedPackage(servicePackagePath(generation.GenPkg(), service))
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	servicePackage := mustClaimTestPackage(t, generation, servicePackagePath(generation.GenPkg(), service))
 	localDeclaration, err := servicePackage.DeclareUserType(local)
 	require.NoError(t, err)
-	errorsPackage := generation.GeneratedPackage("generated.local/gen/errors")
+	errorsPackage := mustClaimTestPackage(t, generation, "generated.local/gen/errors")
 	_, err = errorsPackage.DeclareUserType(relocated)
 	require.NoError(t, err)
-	typesPackage := generation.GeneratedPackage("generated.local/gen/types")
+	typesPackage := mustClaimTestPackage(t, generation, "generated.local/gen/types")
 	_, err = typesPackage.DeclareUserType(container)
 	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
@@ -151,8 +151,8 @@ func TestDeclarationResolverQualifiesRelocatedConsumersWithoutRenamingLocalType(
 // fails immediately instead of allocating a missing declaration.
 func TestDeclarationResolverPanicsWhenPlanOmittedType(t *testing.T) {
 	service := &expr.ServiceExpr{Name: "Missing"}
-	generation := codegen.NewGeneration("generated.local/gen", nil)
-	generation.GeneratedPackage(servicePackagePath(generation.GenPkg(), service))
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	mustClaimTestPackage(t, generation, servicePackagePath(generation.GenPkg(), service))
 	require.NoError(t, generation.Freeze())
 	resolver := newServiceResolver(
 		generation,
@@ -213,7 +213,7 @@ func TestServicesDataServiceAttributorUsesFrozenPackageDeclarations(t *testing.T
 // service analysis for the package paths exercised by a focused resolver test.
 func aliasesForTest(t *testing.T, paths ...string) *importAliases {
 	t.Helper()
-	generation := codegen.NewGeneration("generated.local/gen", nil)
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	for _, importPath := range paths {
 		require.NoError(t, generation.DeclareImport(codegen.NewImport(codegen.Goify(path.Base(importPath), false), importPath)))
 	}

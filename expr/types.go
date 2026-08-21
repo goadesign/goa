@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
-	"strconv"
 
 	"goa.design/goa/v3/eval"
 )
@@ -429,7 +428,7 @@ func (a *Array) Example(r *ExampleGenerator) any {
 	for i := range count {
 		// Derive the element value stream from the index so elements get
 		// distinct yet design-stable values.
-		res[i] = a.ElemType.Example(r.Derived(strconv.Itoa(i)))
+		res[i] = a.ElemType.Example(r.ArrayElement(i))
 		if res[i] == nil {
 			// Handle the case of recursive data structures
 			res[i] = make(map[string]any)
@@ -549,7 +548,7 @@ func (o *Object) Example(r *ExampleGenerator) any {
 	for _, nat := range *o {
 		// Derive the field value stream from the field name so a field
 		// example only changes when the field itself changes.
-		if v := nat.Attribute.Example(r.Derived(nat.Name)); v != nil {
+		if v := nat.Attribute.Example(r.Member(nat.Name)); v != nil {
 			res[nat.Name] = v
 		}
 	}
@@ -595,8 +594,8 @@ func (m *Map) Example(r *ExampleGenerator) any {
 	for i := range count {
 		// Derive per-entry value streams from the entry index so entries
 		// get distinct yet design-stable keys and values.
-		k := m.KeyType.Example(r.Derived("key" + strconv.Itoa(i)))
-		v := m.ElemType.Example(r.Derived("val" + strconv.Itoa(i)))
+		k := m.KeyType.Example(r.MapKey(i))
+		v := m.ElemType.Example(r.MapValue(i))
 		if k != nil && v != nil {
 			pair[k] = v
 		}
@@ -681,7 +680,7 @@ func (u *Union) Example(r *ExampleGenerator) any {
 	nat := u.Values[r.Int()%len(u.Values)]
 	return map[string]any{
 		u.GetTypeKey():  nat.Name,
-		u.GetValueKey(): nat.Attribute.Example(r.Derived(nat.Name)),
+		u.GetValueKey(): nat.Attribute.Example(r.UnionMember(nat.Name)),
 	}
 }
 

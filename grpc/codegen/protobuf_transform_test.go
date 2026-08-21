@@ -170,11 +170,19 @@ func TestProtoBufTransform(t *testing.T) {
 					srcCtx := c.Ctx
 					tgtCtx := c.Ctx
 					if c.ToProto {
-						target = makeProtoBufMessage(expr.DupAtt(target), target.Type.Name(), sd)
+						target = makeProtoBufMessage(
+							expr.DupAtt(target),
+							target.Type.Name(),
+							testGRPCMessageExampleIdentity(name+"/"+c.Name+"/target"),
+						)
 						freezeProtoBufTransformMessages(sd, target)
 						tgtCtx = protoBufTypeContext("proto", sd, true)
 					} else {
-						source = makeProtoBufMessage(expr.DupAtt(source), source.Type.Name(), sd)
+						source = makeProtoBufMessage(
+							expr.DupAtt(source),
+							source.Type.Name(),
+							testGRPCMessageExampleIdentity(name+"/"+c.Name+"/source"),
+						)
 						freezeProtoBufTransformMessages(sd, source)
 						srcCtx = protoBufTypeContext("proto", sd, true)
 					}

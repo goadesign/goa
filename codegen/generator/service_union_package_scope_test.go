@@ -20,9 +20,9 @@ import (
 // TestRelocatedUnionPackageNamesCompile verifies that two services and their
 // HTTP and gRPC transports compile against distinct unions in one shared package.
 func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
-		{Plan: planServiceData, Generate: Service},
-		{Plan: planTransportData, Generate: Transport},
+	registry := testRegistryFromGenfuncs([]testGenfunc{
+		{Plan: planServiceData, Generate: testServiceFiles},
+		{Plan: planTransportData, Generate: testTransportFiles},
 	})
 
 	root := func() {
@@ -111,9 +111,9 @@ func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 // HTTP and gRPC response policy binds to the equivalent error value declared by
 // the endpoint method instead of retaining the API declaration object.
 func TestInheritedTransportErrorMappingsCompileWithMethodErrors(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
-		{Plan: planServiceData, Generate: Service},
-		{Plan: planTransportData, Generate: Transport},
+	registry := testRegistryFromGenfuncs([]testGenfunc{
+		{Plan: planServiceData, Generate: testServiceFiles},
+		{Plan: planTransportData, Generate: testTransportFiles},
 	})
 
 	codegen.RunDSL(t, func() {
@@ -142,9 +142,9 @@ func TestInheritedTransportErrorMappingsCompileWithMethodErrors(t *testing.T) {
 // TestNestedTransportMetadataOwnsRecursiveImports verifies conversion helpers
 // import a custom field type nested inside a relocated service declaration.
 func TestNestedTransportMetadataOwnsRecursiveImports(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
-		{Plan: planServiceData, Generate: Service},
-		{Plan: planTransportData, Generate: Transport},
+	registry := testRegistryFromGenfuncs([]testGenfunc{
+		{Plan: planServiceData, Generate: testServiceFiles},
+		{Plan: planTransportData, Generate: testTransportFiles},
 	})
 
 	codegen.RunDSL(t, func() {
@@ -183,9 +183,9 @@ func TestNestedTransportMetadataOwnsRecursiveImports(t *testing.T) {
 // natural name collides with a fixed runtime import is declared and referenced
 // with the same generation-owned qualifier in every transport.
 func TestTransportServiceImportsUseFrozenAliases(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
-		{Plan: planServiceData, Generate: Service},
-		{Plan: planTransportData, Generate: Transport},
+	registry := testRegistryFromGenfuncs([]testGenfunc{
+		{Plan: planServiceData, Generate: testServiceFiles},
+		{Plan: planTransportData, Generate: testTransportFiles},
 	})
 
 	codegen.RunDSL(t, func() {
@@ -230,9 +230,9 @@ func TestTransportServiceImportsUseFrozenAliases(t *testing.T) {
 // imports the relocated effective error referenced by generated HTTP and gRPC
 // encoders even though the method does not redeclare it.
 func TestInheritedTransportErrorsOwnImports(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
-		{Plan: planServiceData, Generate: Service},
-		{Plan: planTransportData, Generate: Transport},
+	registry := testRegistryFromGenfuncs([]testGenfunc{
+		{Plan: planServiceData, Generate: testServiceFiles},
+		{Plan: planTransportData, Generate: testTransportFiles},
 	})
 
 	codegen.RunDSL(t, func() {
@@ -264,7 +264,7 @@ func TestInheritedTransportErrorsOwnImports(t *testing.T) {
 // TestServiceUnionGeneratedBranchShapesCompile verifies that generated branch
 // aliases with one natural name but different primitive shapes remain distinct.
 func TestServiceUnionGeneratedBranchShapesCompile(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{{Plan: planServiceData, Generate: Service}})
+	registry := testRegistryFromGenfuncs([]testGenfunc{{Plan: planServiceData, Generate: testServiceFiles}})
 
 	codegen.RunDSL(t, func() {
 		first := dsl.Type("FirstValue", func() {
@@ -302,7 +302,7 @@ func TestServiceUnionGeneratedBranchShapesCompile(t *testing.T) {
 // TestServiceUnionFamilyNamesAvoidExactDeclarations verifies that union
 // constants and constructors cannot collide with exact DSL type names.
 func TestServiceUnionFamilyNamesAvoidExactDeclarations(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{{Plan: planServiceData, Generate: Service}})
+	registry := testRegistryFromGenfuncs([]testGenfunc{{Plan: planServiceData, Generate: testServiceFiles}})
 
 	codegen.RunDSL(t, func() {
 		kind := dsl.Type("ValueKindText", dsl.String)
@@ -332,9 +332,9 @@ func TestServiceUnionFamilyNamesAvoidExactDeclarations(t *testing.T) {
 // TestServiceFilesOwnTheirImports verifies that imports used by one service do
 // not leak into another service file generated from the same design root.
 func TestServiceFilesOwnTheirImports(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
-		{Plan: planServiceData, Generate: Service},
-		{Plan: planTransportData, Generate: Transport},
+	registry := testRegistryFromGenfuncs([]testGenfunc{
+		{Plan: planServiceData, Generate: testServiceFiles},
+		{Plan: planTransportData, Generate: testTransportFiles},
 	})
 
 	codegen.RunDSL(t, func() {
@@ -381,9 +381,9 @@ func TestServiceFilesOwnTheirImports(t *testing.T) {
 // result declarations never relocate the request/response wrappers consumed by
 // the raw HTTP body path.
 func TestRawBodyStructsRemainInEndpointsPackage(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
-		{Plan: planServiceData, Generate: Service},
-		{Plan: planTransportData, Generate: Transport},
+	registry := testRegistryFromGenfuncs([]testGenfunc{
+		{Plan: planServiceData, Generate: testServiceFiles},
+		{Plan: planTransportData, Generate: testTransportFiles},
 	})
 
 	codegen.RunDSL(t, func() {
@@ -441,7 +441,7 @@ func TestRawBodyStructsRemainInEndpointsPackage(t *testing.T) {
 // reference generated packages with the same Go package name without emitting
 // duplicate import aliases or ambiguous qualified references.
 func TestServiceReferencesUseImportPathAliases(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{{Plan: planServiceData, Generate: Service}})
+	registry := testRegistryFromGenfuncs([]testGenfunc{{Plan: planServiceData, Generate: testServiceFiles}})
 
 	codegen.RunDSL(t, func() {
 		dsl.API("path-owned aliases", func() {})
@@ -482,9 +482,9 @@ func TestServiceReferencesUseImportPathAliases(t *testing.T) {
 // JSON-RPC files qualify two same-basename service packages with the aliases
 // frozen by the shared generation.
 func TestTransportReferencesUseImportPathAliases(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
-		{Plan: planServiceData, Generate: Service},
-		{Plan: planTransportData, Generate: Transport},
+	registry := testRegistryFromGenfuncs([]testGenfunc{
+		{Plan: planServiceData, Generate: testServiceFiles},
+		{Plan: planTransportData, Generate: testTransportFiles},
 	})
 
 	codegen.RunDSL(t, func() {
@@ -580,7 +580,7 @@ func generatedTreeSource(t *testing.T, root string) string {
 // expand a named branch definition and import packages used only where that
 // named type itself is declared.
 func TestNamedUnionBranchImportsReferenceOnly(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{{Plan: planServiceData, Generate: Service}})
+	registry := testRegistryFromGenfuncs([]testGenfunc{{Plan: planServiceData, Generate: testServiceFiles}})
 
 	codegen.RunDSL(t, func() {
 		dsl.API("named branch imports", func() {})
@@ -616,7 +616,7 @@ func TestNamedUnionBranchImportsReferenceOnly(t *testing.T) {
 // object wrappers collide only with declarations emitted in the same service
 // package, never with a nested declaration relocated elsewhere.
 func TestNormalizedMethodTypesUseServicePackageNames(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{{Plan: planServiceData, Generate: Service}})
+	registry := testRegistryFromGenfuncs([]testGenfunc{{Plan: planServiceData, Generate: testServiceFiles}})
 
 	t.Run("relocated name does not collide", func(t *testing.T) {
 		codegen.RunDSL(t, func() {
@@ -662,9 +662,9 @@ func TestNormalizedMethodTypesUseServicePackageNames(t *testing.T) {
 	})
 
 	t.Run("local name collides", func(t *testing.T) {
-		registry := testRegistryFromGenfuncs("gen", []testGenfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
+		registry := testRegistryFromGenfuncs([]testGenfunc{
+			{Plan: planServiceData, Generate: testServiceFiles},
+			{Plan: planTransportData, Generate: testTransportFiles},
 		})
 		codegen.RunDSL(t, func() {
 			dsl.API("local wrapper names", func() {})
@@ -711,7 +711,7 @@ func TestNormalizedMethodTypesUseServicePackageNames(t *testing.T) {
 // used by two relocated declarations stay in their respective declaration
 // files and do not leak into the service file that references their package.
 func TestNestedRelocatedDeclarationsOwnTheirImports(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{{Plan: planServiceData, Generate: Service}})
+	registry := testRegistryFromGenfuncs([]testGenfunc{{Plan: planServiceData, Generate: testServiceFiles}})
 
 	codegen.RunDSL(t, func() {
 		dsl.API("nested file-owned imports", func() {})
@@ -778,10 +778,10 @@ func TestTransportSectionsOwnTheirImports(t *testing.T) {
 			})
 		})
 	})
-	generation := codegen.NewGeneration("gen", []eval.Root{root})
+	generation := mustTestGeneration(t, "gen", []eval.Root{root})
 	require.NoError(t, planTransportData(generation))
 	require.NoError(t, generation.Freeze())
-	files, err := Transport(generation)
+	files, err := testTransportFiles(generation)
 	require.NoError(t, err)
 
 	var header strings.Builder
@@ -801,9 +801,9 @@ func TestTransportSectionsOwnTheirImports(t *testing.T) {
 // files resolve relocated streaming declarations through the frozen service
 // packages while their event and frame bodies remain transport-owned.
 func TestRelocatedStreamingUnionReferencesCompile(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
-		{Plan: planServiceData, Generate: Service},
-		{Plan: planTransportData, Generate: Transport},
+	registry := testRegistryFromGenfuncs([]testGenfunc{
+		{Plan: planServiceData, Generate: testServiceFiles},
+		{Plan: planTransportData, Generate: testTransportFiles},
 	})
 
 	codegen.RunDSL(t, func() {
@@ -894,10 +894,10 @@ func TestServiceRelocatedUnionNamesSpanDesignRoots(t *testing.T) {
 		codegen.RunDSL(t, relocatedDifferentUnionRoot()),
 		codegen.RunDSL(t, relocatedTopLevelValueRoot()),
 	}
-	generation := codegen.NewGeneration("goa.design/goa/example", roots)
+	generation := mustTestGeneration(t, "goa.design/goa/example", roots)
 	require.NoError(t, planServiceData(generation))
 	require.NoError(t, generation.Freeze())
-	files, err := Service(generation)
+	files, err := testServiceFiles(generation)
 	require.NoError(t, err)
 
 	var generated strings.Builder
@@ -931,10 +931,10 @@ func TestServiceRelocatedUnionNamesSpanDesignRoots(t *testing.T) {
 // root analysis emits one shared relocated union for every referencing service.
 func TestServiceRelocatedUnionOwnerCompilesAcrossGeneration(t *testing.T) {
 	root := codegen.RunDSL(t, sharedRelocatedUnionRoot())
-	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
 	require.NoError(t, servicecodegen.Plan(root, generation))
 	require.NoError(t, generation.Freeze())
-	services, err := servicecodegen.NewServicesData(root, generation)
+	services, err := servicecodegen.NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 	files := servicecodegen.Files("generated.local/gen", []*servicecodegen.ServicesData{services})
 	dir := t.TempDir()
@@ -976,14 +976,14 @@ func TestServiceAndExamplesCompileWithImportQualifierCollisions(t *testing.T) {
 			})
 		})
 	})
-	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
 	require.NoError(t, servicecodegen.Plan(root, generation))
 	require.NoError(t, generation.Freeze())
-	services, err := servicecodegen.NewServicesData(root, generation)
+	services, err := servicecodegen.NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	files, err := Service(generation)
+	files, err := testServiceFiles(generation)
 	require.NoError(t, err)
 	files = append(files, servicecodegen.ExampleServiceFiles(generation.GenPkg(), root, services)...)
 	for _, file := range files {
@@ -1010,14 +1010,14 @@ func TestFixedRuntimeAliasesCompileWithGoaAndLogServices(t *testing.T) {
 			})
 		}
 	})
-	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
 	require.NoError(t, servicecodegen.Plan(root, generation))
 	require.NoError(t, generation.Freeze())
-	services, err := servicecodegen.NewServicesData(root, generation)
+	services, err := servicecodegen.NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 
 	dir := t.TempDir()
-	files, err := Service(generation)
+	files, err := testServiceFiles(generation)
 	require.NoError(t, err)
 	files = append(files, servicecodegen.ExampleInterceptorsFiles(generation.GenPkg(), root, services)...)
 	for _, file := range files {
@@ -1039,9 +1039,9 @@ func TestFixedRuntimeAliasesCompileWithGoaAndLogServices(t *testing.T) {
 // TestTransportStaticAliasesCompileWithHttpAndPathServices verifies transport
 // imports retain their literal qualifiers beside conflicting service names.
 func TestTransportStaticAliasesCompileWithHttpAndPathServices(t *testing.T) {
-	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
-		{Plan: planServiceData, Generate: Service},
-		{Plan: planTransportData, Generate: Transport},
+	registry := testRegistryFromGenfuncs([]testGenfunc{
+		{Plan: planServiceData, Generate: testServiceFiles},
+		{Plan: planTransportData, Generate: testTransportFiles},
 	})
 
 	codegen.RunDSL(t, func() {

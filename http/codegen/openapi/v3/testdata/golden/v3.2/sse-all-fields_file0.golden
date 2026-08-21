@@ -4,11 +4,11 @@
       "SSEAllFieldsMethodRequestBody": {
         "description": "Request body for SSEAllFieldsMethod.",
         "example": {
-          "id": "Ducimus vel."
+          "id": "Voluptatem deleniti."
         },
         "properties": {
           "id": {
-            "example": "Ducimus vel.",
+            "example": "Voluptatem deleniti.",
             "type": "string"
           }
         },
@@ -65,11 +65,11 @@
         "operationId": "SSEAllFieldsService#SSEAllFieldsMethod",
         "parameters": [
           {
-            "example": "Non sed saepe voluptatem.",
+            "example": "Corrupti possimus quas ut.",
             "in": "header",
             "name": "Last-Event-ID",
             "schema": {
-              "example": "Natus magni voluptates consequatur suscipit.",
+              "example": "Corrupti possimus quas ut.",
               "type": "string"
             }
           }
@@ -78,7 +78,7 @@
           "content": {
             "application/json": {
               "example": {
-                "id": "Ducimus vel."
+                "id": "Voluptatem deleniti."
               },
               "schema": {
                 "$ref": "#/components/schemas/SSEAllFieldsMethodRequestBody"

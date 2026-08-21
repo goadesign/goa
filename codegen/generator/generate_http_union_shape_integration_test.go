@@ -18,8 +18,8 @@ import (
 func TestGenerateHTTPUnionUsedByRequestAndResponseCompiles(t *testing.T) {
 	registry := testRegistry(
 		"gen",
-		testGenerator(planServiceData, Service),
-		testGenerator(planTransportData, Transport),
+		testGenerator(planServiceData, testServiceFiles),
+		testGenerator(planTransportData, testTransportFiles),
 	)
 
 	dsl := func() {

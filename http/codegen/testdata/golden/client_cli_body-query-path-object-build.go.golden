@@ -6,7 +6,7 @@ func BuildMethodBodyQueryPathObjectPayload(serviceBodyQueryPathObjectMethodBodyQ
 	{
 		err = json.Unmarshal([]byte(serviceBodyQueryPathObjectMethodBodyQueryPathObjectBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": \"Hic at eveniet porro sit nisi.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": \"Dolor rerum.\"\n   }'")
 		}
 	}
 	var c2 string

@@ -1,3 +1,5 @@
+// This file defines service methods and finalizes their payload, result,
+// streaming, error, security, and interceptor contracts.
 package expr
 
 import (
@@ -400,6 +402,10 @@ func (m *MethodExpr) Finalize() {
 		}
 	}
 	for _, e := range m.Errors {
+		if _, authored := e.Type.(UserType); !authored {
+			e.finalizeMethodType(m)
+			continue
+		}
 		e.Finalize()
 	}
 

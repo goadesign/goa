@@ -1,5 +1,5 @@
 // This file builds JSON-RPC code-generation analysis in tests using the same
-// normalize, plan, freeze, and render lifecycle as production generation.
+// generation construction, planning, freezing, and rendering as production.
 package codegen
 
 import (
@@ -11,10 +11,9 @@ import (
 )
 
 // CreateJSONRPCServices creates a new ServicesData instance for JSON-RPC
-// testing. The root is normalized first like the production Generate flow
-// does before the generators read the design.
+// testing. Generation construction normalizes the root before any planner
+// reads it.
 func CreateJSONRPCServices(root *expr.RootExpr) *httpcodegen.ServicesData {
-	codegen.NormalizeRoot(root)
 	services := createServiceServices(root)
 	return httpcodegen.NewJSONRPCServicesData(services, &root.API.JSONRPC.HTTPExpr)
 }
@@ -22,7 +21,10 @@ func CreateJSONRPCServices(root *expr.RootExpr) *httpcodegen.ServicesData {
 // createServiceServices performs the complete package declaration lifecycle
 // required by transport test helpers.
 func createServiceServices(root *expr.RootExpr) *service.ServicesData {
-	generation := codegen.NewGeneration("/", []eval.Root{root})
+	generation, err := codegen.NewGeneration("/", []eval.Root{root})
+	if err != nil {
+		panic(err)
+	}
 	if err := service.Plan(root, generation); err != nil {
 		panic(err)
 	}
@@ -32,7 +34,7 @@ func createServiceServices(root *expr.RootExpr) *service.ServicesData {
 	if err := generation.Freeze(); err != nil {
 		panic(err)
 	}
-	services, err := service.NewServicesData(root, generation)
+	services, err := service.NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	if err != nil {
 		panic(err)
 	}

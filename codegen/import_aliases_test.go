@@ -13,7 +13,7 @@ import (
 // design metadata regardless of planning order.
 func TestImportAliasPrioritiesIgnoreRegistrationOrder(t *testing.T) {
 	freeze := func(reverse bool) map[string]string {
-		generation := NewGeneration("generated.local/gen", nil)
+		generation := mustTestGeneration(t, "generated.local/gen", nil)
 		declare := []func() error{
 			func() error {
 				return generation.RequireImport(NewImport("goa", "goa.design/goa/v3/pkg"))
@@ -52,7 +52,7 @@ func TestImportAliasPrioritiesIgnoreRegistrationOrder(t *testing.T) {
 // path has one identity and uses its highest-priority requested spelling.
 func TestImportAliasHighestPriorityWinsPerPath(t *testing.T) {
 	freeze := func(reverse bool) string {
-		generation := NewGeneration("generated.local/gen", nil)
+		generation := mustTestGeneration(t, "generated.local/gen", nil)
 		declare := []func() error{
 			func() error {
 				return generation.RequireImport(NewImport("json", "encoding/json"))
@@ -82,7 +82,7 @@ func TestImportAliasHighestPriorityWinsPerPath(t *testing.T) {
 // generated-package preferences for one path use deterministic spelling.
 func TestGeneratedImportPreferenceIsOrderIndependent(t *testing.T) {
 	freeze := func(first, second string) string {
-		generation := NewGeneration("generated.local/gen", nil)
+		generation := mustTestGeneration(t, "generated.local/gen", nil)
 		require.NoError(t, generation.ReserveGeneratedImport(NewImport(first, "generated.local/gen/value")))
 		require.NoError(t, generation.ReserveGeneratedImport(NewImport(second, "generated.local/gen/value")))
 		require.NoError(t, generation.Freeze())
@@ -95,7 +95,7 @@ func TestGeneratedImportPreferenceIsOrderIndependent(t *testing.T) {
 // TestImportAliasRejectsIncompatibleFixedRequirements verifies that static
 // templates cannot request two different mandatory spellings for one path.
 func TestImportAliasRejectsIncompatibleFixedRequirements(t *testing.T) {
-	generation := NewGeneration("generated.local/gen", nil)
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	require.NoError(t, generation.RequireImport(NewImport("json", "encoding/json")))
 	require.ErrorContains(
 		t,
@@ -107,7 +107,7 @@ func TestImportAliasRejectsIncompatibleFixedRequirements(t *testing.T) {
 // TestImportAliasRejectsFixedQualifierCollision verifies that two static
 // packages cannot both require the same qualifier.
 func TestImportAliasRejectsFixedQualifierCollision(t *testing.T) {
-	generation := NewGeneration("generated.local/gen", nil)
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	require.NoError(t, generation.RequireImport(NewImport("runtime", "example.com/first")))
 	require.NoError(t, generation.RequireImport(NewImport("runtime", "example.com/second")))
 	require.ErrorContains(t, generation.Freeze(), "required by both")

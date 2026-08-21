@@ -23,23 +23,45 @@ paths:
                             example:
                                 - bar:
                                     - string: ""
-                                  foo: []
+                                    - string: ""
+                                  foo:
+                                    - Molestiae labore nihil sunt.
                                 - bar:
                                     - string: ""
-                                  foo: []
+                                    - string: ""
+                                  foo:
+                                    - Molestiae labore nihil sunt.
                                 - bar:
                                     - string: ""
-                                  foo: []
+                                    - string: ""
+                                  foo:
+                                    - Molestiae labore nihil sunt.
+                                - bar:
+                                    - string: ""
+                                    - string: ""
+                                  foo:
+                                    - Molestiae labore nihil sunt.
                         example:
                             - bar:
                                 - string: ""
-                              foo: []
+                                - string: ""
+                              foo:
+                                - Molestiae labore nihil sunt.
                             - bar:
                                 - string: ""
-                              foo: []
+                                - string: ""
+                              foo:
+                                - Molestiae labore nihil sunt.
                             - bar:
                                 - string: ""
-                              foo: []
+                                - string: ""
+                              foo:
+                                - Molestiae labore nihil sunt.
+                            - bar:
+                                - string: ""
+                                - string: ""
+                              foo:
+                                - Molestiae labore nihil sunt.
             responses:
                 "200":
                     description: OK response.
@@ -72,19 +94,23 @@ components:
                         $ref: '#/components/schemas/Bar'
                     example:
                         - string: ""
+                        - string: ""
                     minItems: 0
                     maxItems: 42
                 foo:
                     type: array
                     items:
                         type: string
-                        example: Eaque consequatur asperiores est.
-                    example: []
+                        example: Molestiae labore nihil sunt.
+                    example:
+                        - Molestiae labore nihil sunt.
                     minItems: 0
                     maxItems: 42
             example:
                 bar:
                     - string: ""
-                foo: []
+                    - string: ""
+                foo:
+                    - Molestiae labore nihil sunt.
 tags:
     - name: testService

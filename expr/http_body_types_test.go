@@ -73,6 +73,78 @@ func TestHTTPStreamingBodyValidation(t *testing.T) {
 	}
 }
 
+func TestComputedBodyExamplesDistinguishHTTPAndJSONRPC(t *testing.T) {
+	service := &ServiceExpr{Name: "Service"}
+	method := &MethodExpr{Name: "Method", Service: service}
+	httpEndpoint := &HTTPEndpointExpr{
+		MethodExpr: method,
+		Service:    &HTTPServiceExpr{ServiceExpr: service},
+		Body: &AttributeExpr{Type: &UserTypeExpr{
+			TypeName: "HTTPBody",
+			AttributeExpr: &AttributeExpr{Type: &Object{
+				{Name: "http", Attribute: &AttributeExpr{Type: String}},
+			}},
+		}},
+	}
+	jsonRPCEndpoint := &HTTPEndpointExpr{
+		MethodExpr: method,
+		Service:    &HTTPServiceExpr{ServiceExpr: service},
+		Meta:       MetaExpr{"jsonrpc": {}},
+		Body: &AttributeExpr{Type: &UserTypeExpr{
+			TypeName: "JSONRPCBody",
+			AttributeExpr: &AttributeExpr{Type: &Object{
+				{Name: "jsonrpc", Attribute: &AttributeExpr{Type: String}},
+			}},
+		}},
+	}
+	httpBody := httpRequestBody(httpEndpoint)
+	jsonRPCBody := httpRequestBody(jsonRPCEndpoint)
+	require.NotEqual(t, httpBody.Type.(UserType).ID(), jsonRPCBody.Type.(UserType).ID())
+
+	cases := []struct {
+		Name       string
+		First      *HTTPEndpointExpr
+		FirstBody  *AttributeExpr
+		Second     *HTTPEndpointExpr
+		SecondBody *AttributeExpr
+	}{
+		{
+			Name:       "HTTP then JSON-RPC",
+			First:      httpEndpoint,
+			FirstBody:  httpBody,
+			Second:     jsonRPCEndpoint,
+			SecondBody: jsonRPCBody,
+		},
+		{
+			Name:       "JSON-RPC then HTTP",
+			First:      jsonRPCEndpoint,
+			FirstBody:  jsonRPCBody,
+			Second:     httpEndpoint,
+			SecondBody: httpBody,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			generator := NewExampleGenerator(NewFakerRandomizerFactory("test"))
+			first := c.FirstBody.Example(generator.At(RequestBodyExampleIdentity(c.First))).(map[string]any)
+			second := c.SecondBody.Example(generator.At(RequestBodyExampleIdentity(c.Second))).(map[string]any)
+
+			require.Contains(t, first, transportBodyField(c.First))
+			require.NotContains(t, first, transportBodyField(c.Second))
+			require.Contains(t, second, transportBodyField(c.Second))
+			require.NotContains(t, second, transportBodyField(c.First))
+		})
+	}
+}
+
+// transportBodyField returns the field unique to the endpoint's body mapping.
+func transportBodyField(endpoint *HTTPEndpointExpr) string {
+	if endpoint.IsJSONRPC() {
+		return "jsonrpc"
+	}
+	return "http"
+}
+
 func TestRemovePkgPathDistinguishesEqualUIDOrigins(t *testing.T) {
 	first := &UserTypeExpr{
 		AttributeExpr: &AttributeExpr{

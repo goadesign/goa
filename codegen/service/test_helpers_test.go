@@ -1,0 +1,28 @@
+// This file provides strict construction helpers for service code-generation
+// tests whose package roots and planner claims are deliberately valid.
+package service
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/eval"
+)
+
+// mustTestGeneration creates one generation or fails the calling test.
+func mustTestGeneration(t *testing.T, genpkg string, roots []eval.Root) *codegen.Generation {
+	t.Helper()
+	generation, err := codegen.NewGeneration(genpkg, roots)
+	require.NoError(t, err)
+	return generation
+}
+
+// mustClaimTestPackage claims one valid planner path or fails the calling test.
+func mustClaimTestPackage(t *testing.T, generation *codegen.Generation, path string) *codegen.GeneratedPackage {
+	t.Helper()
+	generatedPackage, err := generation.ClaimPackage(path)
+	require.NoError(t, err)
+	return generatedPackage
+}

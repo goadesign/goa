@@ -11,6 +11,7 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
+	httpdata "goa.design/goa/v3/http/codegen/testdata"
 )
 
 func TestGeneratePhasesShareOneGeneration(t *testing.T) {
@@ -44,7 +45,11 @@ func TestGeneratePhasesShareOneGeneration(t *testing.T) {
 					events = append(events, "core-plan-first")
 					planned = plan.Generation()
 					typesPath = planned.GenPkg() + "/types"
-					_, err := planned.GeneratedPackage(typesPath).DeclareUnion(union)
+					types, err := planned.ClaimPackage(typesPath)
+					if err != nil {
+						return err
+					}
+					_, err = types.DeclareUnion(union)
 					return err
 				},
 				Generate: func(plan *Plan) ([]*codegen.File, error) {
@@ -53,14 +58,14 @@ func TestGeneratePhasesShareOneGeneration(t *testing.T) {
 					if err := assertGeneration(generation); err != nil {
 						return nil, err
 					}
-					declaration, err := generation.GeneratedPackage(typesPath).Union(union)
+					declaration, err := generation.Package(typesPath).Union(union)
 					if err != nil {
 						return nil, err
 					}
 					if declaration.Name() == "" {
 						return nil, fmt.Errorf("union name is empty during render")
 					}
-					_, lateDeclare = generation.GeneratedPackage(typesPath).DeclareUnion(lateUnion)
+					_, lateDeclare = generation.Package(typesPath).DeclareUnion(lateUnion)
 					if lateDeclare == nil {
 						return nil, fmt.Errorf("render declared a new union after freeze")
 					}
@@ -116,4 +121,45 @@ func TestGeneratePhasesShareOneGeneration(t *testing.T) {
 		"core-render-second",
 		"plugin-render",
 	}, events)
+}
+
+// TestPreparedRootsRejectFileRenderMutation proves that persistent mutations
+// made by templates and file finalizers are rejected after rendering completes.
+func TestPreparedRootsRejectFileRenderMutation(t *testing.T) {
+	for _, phase := range []string{"template", "finalizer"} {
+		t.Run(phase, func(t *testing.T) {
+			root := codegen.RunDSL(t, httpdata.AliasTypeDSL)
+			dir := t.TempDir()
+			mutate := func() {
+				root.API.HTTP.Services[0].HTTPEndpoints[0].Routes[0].Path = "/changed"
+			}
+			first := &codegen.File{
+				Path: "first.txt",
+				SectionTemplates: []*codegen.SectionTemplate{{
+					Name:   "first",
+					Source: "first",
+				}},
+			}
+			if phase == "template" {
+				first.SectionTemplates[0].Source = "{{ mutate }}"
+				first.SectionTemplates[0].FuncMap = map[string]any{"mutate": func() string {
+					mutate()
+					return "first"
+				}}
+			} else {
+				first.FinalizeFunc = func(_ string) error {
+					mutate()
+					return nil
+				}
+			}
+			registry := testRegistry("test", func() coreGenerator {
+				return coreGenerator{name: "files", Generate: func(_ *Plan) ([]*codegen.File, error) {
+					return []*codegen.File{first}, nil
+				}}
+			})
+
+			_, err := generate(dir, "test", false, registry)
+			require.ErrorContains(t, err, "generated file renders mutated prepared design")
+		})
+	}
 }

@@ -7,8 +7,9 @@ type (
 	// ensure that the names are unique the code used to generate code can
 	// create multiple user types that share the same name (for example because
 	// generated in different packages). When supplied, UID is a stable semantic
-	// identifier used by deterministic examples and media-type behavior; Origin
-	// identifies copied in-memory declarations.
+	// identifier used by authored examples and media-type behavior; generated
+	// types retain a separate opaque example owner. Origin identifies copied
+	// in-memory declarations.
 	UserTypeExpr struct {
 		// The embedded attribute expression.
 		*AttributeExpr
@@ -18,8 +19,26 @@ type (
 		UID string
 		// origin is the earliest declaration copied to create this type.
 		origin UserType
+		// exampleIdentity is the semantic owner of a type synthesized by a
+		// transport generator. Authored types leave it empty and use ID.
+		exampleIdentity ExampleIdentity
 	}
 )
+
+// NewGeneratedUserType creates a synthesized user type whose stable ID and
+// examples are derived from identity. Code generators use this constructor so
+// a copied wire type cannot accidentally inherit an authored type's identity.
+func NewGeneratedUserType(name string, attribute *AttributeExpr, identity ExampleIdentity) *UserTypeExpr {
+	if identity.seed == "" {
+		panic("generated user type requires an example identity")
+	}
+	return &UserTypeExpr{
+		AttributeExpr:   attribute,
+		TypeName:        name,
+		UID:             "generated:" + identity.Seed(),
+		exampleIdentity: identity,
+	}
+}
 
 // ID returns the unique identifier for the user type.
 func (u *UserTypeExpr) ID() string {
@@ -82,10 +101,11 @@ func (u *UserTypeExpr) Dup(att *AttributeExpr) UserType {
 		return u
 	}
 	return &UserTypeExpr{
-		AttributeExpr: att,
-		TypeName:      u.TypeName,
-		UID:           u.UID,
-		origin:        u.Origin(),
+		AttributeExpr:   att,
+		TypeName:        u.TypeName,
+		UID:             u.UID,
+		origin:          u.Origin(),
+		exampleIdentity: u.exampleIdentity,
 	}
 }
 
@@ -104,16 +124,16 @@ func (u *UserTypeExpr) Example(r *ExampleGenerator) any {
 }
 
 func (u *UserTypeExpr) recExample(r *ExampleGenerator) *any {
-	if ex, ok := r.PreviouslySeen(u.ID()); ok {
+	if ex, ok := r.previouslySeen(u); ok {
 		return ex
 	}
 	var ex any
 	pex := &ex
-	r.HaveSeen(u.ID(), pex)
+	r.haveSeen(u, pex)
 	// Anchor the value stream to the type identity so the example depends
 	// only on the type definition, not on how many examples were computed
 	// before it nor on which design path reached the type first.
-	actual := u.AttributeExpr.Example(r.Rebased(u.ID()))
+	actual := u.AttributeExpr.Example(r.At(UserTypeExampleIdentity(u)))
 	*pex = actual
 	return pex
 }

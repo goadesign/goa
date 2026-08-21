@@ -67,10 +67,10 @@ func TestCollectUnionTypesDeterministicAcrossObjectOrder(t *testing.T) {
 func collectServiceUnionTypeNames(t *testing.T, att *expr.AttributeExpr, loc *codegen.Location) map[string]string {
 	t.Helper()
 	service := &expr.ServiceExpr{Name: "test"}
-	generation := codegen.NewGeneration("generated.local/gen", nil)
-	generatedPackage := generation.GeneratedPackage(
-		generatedPackagePath(generation.GenPkg(), service, loc),
-	)
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	generatedPackage := mustClaimTestPackage(t, generation,
+		generatedPackagePath(generation.GenPkg(), service, loc))
+
 	object := att.Type.(*expr.Object)
 	for _, named := range *object {
 		_, err := generatedPackage.DeclareUnion(named.Attribute.Type.(*expr.Union))
@@ -84,7 +84,7 @@ func collectServiceUnionTypeNames(t *testing.T, att *expr.AttributeExpr, loc *co
 	services := &ServicesData{
 		generation: generation,
 		aliases:    aliasesForTest(t, generatedPackagePath(generation.GenPkg(), service, loc)),
-		packages:   make(map[string]*generatedPackageData),
+		packages:   make(map[*codegen.GeneratedPackage]*generatedPackageData),
 	}
 	seen := make(map[expr.UserType]struct{})
 	unionByHash := make(map[unionDataKey]*UnionTypeData)

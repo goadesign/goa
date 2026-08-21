@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -43,20 +44,26 @@ func ConvertFiles(root *expr.RootExpr, service *expr.ServiceExpr, services *Serv
 		return nil, nil
 	}
 
-	// Group conversions and creations by target package path
-	allPaths := make(map[string]struct{})
-	conversionsByPath := groupByConvertPath(conversions, service, allPaths)
-	creationsByPath := groupByConvertPath(creations, service, allPaths)
+	// Group conversions and creations by the package claimed during planning.
+	allPackages := make(map[*codegen.GeneratedPackage]struct{})
+	conversionsByPackage := groupByConvertPackage(conversions, service, services, allPackages)
+	creationsByPackage := groupByConvertPackage(creations, service, services, allPackages)
 
-	// Generate a file for each path
-	var files []*codegen.File
-	for path := range allPaths {
+	// Generate one file for each owning package.
+	owners := make([]*codegen.GeneratedPackage, 0, len(allPackages))
+	for owner := range allPackages {
+		owners = append(owners, owner)
+	}
+	slices.SortFunc(owners, func(left, right *codegen.GeneratedPackage) int {
+		return strings.Compare(left.ImportPath(), right.ImportPath())
+	})
+	files := make([]*codegen.File, 0, len(owners))
+	for _, owner := range owners {
 		file, err := generateConvertFileForPath(
-			path,
-			conversionsByPath[path],
-			creationsByPath[path],
+			owner,
+			conversionsByPackage[owner],
+			creationsByPackage[owner],
 			service,
-			svc,
 			services,
 		)
 		if err != nil {
@@ -102,53 +109,31 @@ func typeMapMatchesService(c *expr.TypeMap, service *expr.ServiceExpr, svc *Data
 	return false
 }
 
-// groupByConvertPath groups the type maps by the convert.go file path derived
-// from their user type location, defaulting to the service package. It
-// records every path in paths so the caller can iterate the union of
-// conversion and creation paths.
-func groupByConvertPath(maps []*expr.TypeMap, service *expr.ServiceExpr, paths map[string]struct{}) map[string][]*expr.TypeMap {
-	byPath := make(map[string][]*expr.TypeMap)
-	for _, c := range maps {
-		var path string
-		if loc := codegen.UserTypeLocation(c.User); loc != nil {
-			path = filepath.Join(codegen.Gendir, filepath.Dir(loc.FilePath), "convert.go")
-		} else {
-			path = filepath.Join(codegen.Gendir, codegen.SnakeCase(service.Name), "convert.go")
-		}
-		byPath[path] = append(byPath[path], c)
-		paths[path] = struct{}{}
+// groupByConvertPackage groups type maps by the exact generated package that
+// planning assigned to their service type. The owner supplies both the import
+// identity and output directory used during rendering.
+func groupByConvertPackage(maps []*expr.TypeMap, service *expr.ServiceExpr, services *ServicesData, packages map[*codegen.GeneratedPackage]struct{}) map[*codegen.GeneratedPackage][]*expr.TypeMap {
+	byPackage := make(map[*codegen.GeneratedPackage][]*expr.TypeMap)
+	for _, typeMap := range maps {
+		location := codegen.UserTypeLocation(typeMap.User)
+		owner := services.generation.Package(generatedPackagePath(services.generation.GenPkg(), service, location))
+		byPackage[owner] = append(byPackage[owner], typeMap)
+		packages[owner] = struct{}{}
 	}
-	return byPath
+	return byPackage
 }
 
 // generateConvertFileForPath generates a single convert.go file for the given path
 // containing the specified conversions and creations
 func generateConvertFileForPath(
-	convertPath string,
+	owner *codegen.GeneratedPackage,
 	conversions []*expr.TypeMap,
 	creations []*expr.TypeMap,
 	service *expr.ServiceExpr,
-	svc *Data,
 	services *ServicesData,
 ) (*codegen.File, error) {
 	if len(conversions) == 0 && len(creations) == 0 {
 		return nil, nil
-	}
-
-	// Determine package name from path
-	var convertPkgName string
-	if len(conversions) > 0 {
-		if loc := codegen.UserTypeLocation(conversions[0].User); loc != nil {
-			convertPkgName = loc.PackageName()
-		} else {
-			convertPkgName = svc.PkgName
-		}
-	} else if len(creations) > 0 {
-		if loc := codegen.UserTypeLocation(creations[0].User); loc != nil {
-			convertPkgName = loc.PackageName()
-		} else {
-			convertPkgName = svc.PkgName
-		}
 	}
 
 	// Collect the complete external package paths referenced by this file.
@@ -172,15 +157,11 @@ func generateConvertFileForPath(
 		paths = append(paths, importPath)
 	}
 
-	outputPath := servicePackagePath(services.generation.GenPkg(), service)
-	first := append(append([]*expr.TypeMap(nil), conversions...), creations...)[0]
-	if loc := codegen.UserTypeLocation(first.User); loc != nil {
-		outputPath = generatedPackagePath(services.generation.GenPkg(), service, loc)
-	}
+	outputPath := owner.ImportPath()
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(
 			service.Name+" service type conversion functions",
-			convertPkgName,
+			codegen.Goify(path.Base(outputPath), false),
 			services.fileImports(outputPath, paths),
 		),
 	}
@@ -203,10 +184,6 @@ func generateConvertFileForPath(
 		}
 		tgtPkg := services.aliases.name(pkgImport)
 
-		outputPath := servicePackagePath(services.generation.GenPkg(), service)
-		if loc := codegen.UserTypeLocation(c.User); loc != nil {
-			outputPath = generatedPackagePath(services.generation.GenPkg(), service, loc)
-		}
 		srcAtt := &expr.AttributeExpr{Type: c.User}
 		srcResolver := newServiceResolver(services.generation, services.aliases, service, outputPath).Enter(srcAtt)
 		srcCtx := &codegen.AttributeContext{
@@ -258,10 +235,6 @@ func generateConvertFileForPath(
 		srcCtx := codegen.NewAttributeContext(false, false, false, srcPkg, codegen.NewNameScope())
 
 		tgtAtt := &expr.AttributeExpr{Type: c.User}
-		outputPath := servicePackagePath(services.generation.GenPkg(), service)
-		if loc := codegen.UserTypeLocation(c.User); loc != nil {
-			outputPath = generatedPackagePath(services.generation.GenPkg(), service, loc)
-		}
 		tgtResolver := newServiceResolver(services.generation, services.aliases, service, outputPath).Enter(tgtAtt)
 		tgtCtx := &codegen.AttributeContext{
 			UseDefault: true,
@@ -307,7 +280,10 @@ func generateConvertFileForPath(
 		})
 	}
 
-	return &codegen.File{Path: convertPath, SectionTemplates: sections}, nil
+	return &codegen.File{
+		Path:             filepath.Join(owner.OutputDirectory(), "convert.go"),
+		SectionTemplates: sections,
+	}, nil
 }
 
 func commonPath(sep byte, paths ...string) string {

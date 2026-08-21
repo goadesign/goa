@@ -34,11 +34,16 @@ design. One run follows this order:
 1. Resolve the command and instantiate fresh core generator and plugin objects
    from immutable registered factories.
 2. Evaluate and validate the design roots.
-3. Run preparation. Preparation plugins may add or change expressions, and the
-   core normalizer may wrap raw method attributes. No later phase may mutate an
-   expression root.
-4. Create one `codegen.Generation` from an immutable snapshot of the prepared
-   roots and generated module path.
+3. Run preparation plugins, which may add or change expressions. Construct one
+   `codegen.Generation` with exclusive access to those evaluated roots. Its
+   final preparation step wraps raw method attributes and records each exact
+   generated wrapper. Concurrent runs use distinct expression graphs; the
+   generation does not copy the graph or coordinate two runs mutating the same
+   unprepared objects.
+4. Record the prepared roots for mutation auditing. No later phase may mutate
+   an expression root. The audit compares retained semantic state after every
+   later callback; it does not claim that the expression graph was physically
+   copied or made immutable.
 5. Build one typed `generator.Plan`. It creates and retains the core service
    plan for each root, then the selected HTTP, gRPC, JSON-RPC, OpenAPI, and
    example plans that consume those exact service plans. Plugin planning
@@ -79,6 +84,11 @@ These APIs belong to `codegen/generator`, which owns command orchestration.
 The `codegen` package owns generated declarations and files; it does not own a
 process-global plugin lifecycle. Core generator factories follow the same
 fresh-instance rule.
+
+Plugin names are non-empty and unique within one command across the First,
+normal, and Last groups. Registration rejects unknown commands and stops after
+the first run snapshots the registry. This makes alphabetical order a complete
+ordering rule instead of relying on mutable registration sequence.
 
 A factory may close over immutable configuration. Per-run roots, plans, files,
 caches, and errors belong to the returned object. Concurrent and repeated
@@ -179,7 +189,16 @@ paths before collection. If two different package identities normalize to the
 same import path or output directory, planning rejects them. It does not let
 one package win, merge their declarations, or add a suffix to a directory.
 Multiple file contributions may share a canonical path only when they declare
-the same package identity; the file merger then appends all sections.
+the same package identity. The file merger appends every body section and runs
+every file finalizer in contributor order. It rejects conflicting package
+headers, import bindings, or keep-existing-file settings instead of choosing a
+contributor.
+
+Planning claims packages with the exact raw path supplied by the owner. The
+claim is validated as a legal Go import path and preserves enough information
+to reject two distinct raw paths that normalize to one import or output
+directory. After freeze, generators use only canonical-path lookup; every
+claim, including a repeated claim, is rejected because collection is closed.
 
 ## Expression identity and declaration identity
 
@@ -204,6 +223,29 @@ response records when their emitted contracts differ.
 identities such as `UnionTypeID` describe emitted union families. Do not change
 expression hashes, decorate string keys, or add general expression provenance
 to coordinate code generation.
+
+## Example value identity
+
+Example configuration is immutable. One generation run creates an unanchored
+`ExampleGenerator` for each prepared root, and every value draw must first
+select a typed `ExampleIdentity`. The public identity constructors accept the
+owning evaluated expression: a user type, method payload or result, method
+error, HTTP request body, successful HTTP response, or HTTP error. Callers do
+not join service names, response positions, or role labels into seed strings.
+
+Structural descent is also typed. Object members, array elements, map keys, map
+values, and union branches use distinct kind-tagged, length-framed segments.
+For example, object member `"0"` cannot share a stream with array element zero,
+and a result field named `NotFound` cannot share a stream with the method error
+named `NotFound`. Length-constrained arrays and maps derive one stream per
+element, key, and value instead of consuming a shared stream in traversal
+order.
+
+Named user types own their examples globally. Anonymous request, response, and
+streaming shapes retain the explicit method or transport owner passed by their
+caller. A zero-value generator intentionally disables OpenAPI examples; every
+configured but unanchored value draw panics because it violates the identity
+contract.
 
 ## Service plan
 

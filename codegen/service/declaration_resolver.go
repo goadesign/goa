@@ -89,7 +89,7 @@ func (r *declarationResolver) Name(att *expr.AttributeExpr, _ string, ptr, useDe
 		return r.qualify(owner, declaration.Name())
 	case *expr.Union:
 		owner := r.owner(att)
-		declaration, err := r.generation.GeneratedPackage(owner).Union(actual)
+		declaration, err := r.generation.Package(owner).Union(actual)
 		if err != nil {
 			panic(fmt.Sprintf("resolve union %q for service %q in package %q: %v", actual.Name(), r.service.Name, owner, err))
 		}
@@ -235,7 +235,7 @@ func (*declarationResolver) IsSumType() bool {
 
 // Scope returns the frozen name scope owned by the resolver's current package.
 func (r *declarationResolver) Scope() *codegen.NameScope {
-	return r.generation.GeneratedPackage(r.currentPath).Scope()
+	return r.generation.Package(r.currentPath).Scope()
 }
 
 // owner returns the import path that owns att. View projections stay in the
@@ -252,7 +252,7 @@ func (r *declarationResolver) owner(att *expr.AttributeExpr) string {
 
 // userType selects an exact, generated union branch, or rebuilt view record.
 func (r *declarationResolver) userType(owner string, userType expr.UserType) *codegen.TypeDeclaration {
-	generatedPackage := r.generation.GeneratedPackage(owner)
+	generatedPackage := r.generation.Package(owner)
 	if identity, ok := r.derived[userType.Origin()]; ok {
 		declaration, err := generatedPackage.DerivedType(identity)
 		if err != nil {

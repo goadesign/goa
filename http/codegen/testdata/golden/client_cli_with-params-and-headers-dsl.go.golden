@@ -6,7 +6,7 @@ func BuildMethodAPayload(serviceWithParamsAndHeadersBlockMethodABody string, ser
 	{
 		err = json.Unmarshal([]byte(serviceWithParamsAndHeadersBlockMethodABody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"body\": \"Molestias quia.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"body\": \"Dolores eos voluptas.\"\n   }'")
 		}
 	}
 	var path uint

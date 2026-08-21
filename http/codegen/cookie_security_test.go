@@ -1,3 +1,5 @@
+// This file renders HTTP security designs through both OpenAPI versions and
+// verifies cookie API-key placement with run-owned example generation enabled.
 package codegen
 
 import (
@@ -38,7 +40,7 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 		root := expr.RunDSL(t, cookieAPIKeySecurityDSL)
 		openapi.Definitions = make(map[string]*openapi.Schema)
 
-		v2Files, err := openapiv2.Files(root, openapi.DefaultPath20)
+		v2Files, err := openapiv2.Files(root, openapi.DefaultPath20, expr.NewExampleGenerator(root.API.RandomizerFactory))
 		require.NoError(t, err)
 		v2JSON := renderOpenAPIJSON(t, v2Files)
 		var swagger openapi2.T
@@ -56,7 +58,7 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 		}
 
 		openapi.Definitions = make(map[string]*openapi.Schema)
-		v3JSON := renderOpenAPIJSON(t, openapiv3.Files(root, openapi.Version30, openapi.DefaultPath30))
+		v3JSON := renderOpenAPIJSON(t, openapiv3.Files(root, openapi.Version30, openapi.DefaultPath30, expr.NewExampleGenerator(root.API.RandomizerFactory)))
 		loader := openapi3.NewLoader()
 		doc, err := loader.LoadFromData(v3JSON)
 		require.NoError(t, err)

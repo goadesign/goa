@@ -38,7 +38,6 @@ type (
 		commands map[string][]generatorFactory
 		plugins  []pluginDescriptor
 		sealed   bool
-		next     uint64
 	}
 
 	// pluginDescriptor is immutable registration metadata retained globally.
@@ -46,7 +45,6 @@ type (
 		name     string
 		command  string
 		position pluginPosition
-		sequence uint64
 		factory  PluginFactory
 	}
 
@@ -62,17 +60,21 @@ const (
 
 var defaultRegistry = newDefaultRegistry()
 
-// RegisterPlugin registers a factory in the normal alphabetically ordered group.
+// RegisterPlugin registers a factory in the normal alphabetically ordered
+// group. It panics when name is empty, command is unknown, factory is nil, the
+// command already has a plugin with name, or generation has already started.
 func RegisterPlugin(name, command string, factory PluginFactory) {
 	defaultRegistry.registerPlugin(name, command, pluginNormal, factory)
 }
 
-// RegisterPluginFirst registers a factory before normal and Last plugins.
+// RegisterPluginFirst registers a factory before normal and Last plugins. It
+// enforces the same registration contract as RegisterPlugin.
 func RegisterPluginFirst(name, command string, factory PluginFactory) {
 	defaultRegistry.registerPlugin(name, command, pluginFirst, factory)
 }
 
-// RegisterPluginLast registers a factory after First and normal plugins.
+// RegisterPluginLast registers a factory after First and normal plugins. It
+// enforces the same registration contract as RegisterPlugin.
 func RegisterPluginLast(name, command string, factory PluginFactory) {
 	defaultRegistry.registerPlugin(name, command, pluginLast, factory)
 }
@@ -101,7 +103,8 @@ func (r *registry) addCommand(command string, factories ...generatorFactory) {
 	r.commands[command] = slices.Clone(factories)
 }
 
-// registerPlugin records immutable factory metadata before the first snapshot.
+// registerPlugin records one named factory for a known command before the
+// first snapshot. Plugin names uniquely identify their owner within a command.
 func (r *registry) registerPlugin(name, command string, position pluginPosition, factory PluginFactory) {
 	if factory == nil {
 		panic("plugin factory is nil")
@@ -111,14 +114,23 @@ func (r *registry) registerPlugin(name, command string, position pluginPosition,
 	if r.sealed {
 		panic("generator plugin registry is sealed")
 	}
+	if name == "" {
+		panic("plugin name is empty")
+	}
+	if _, ok := r.commands[command]; !ok {
+		panic(fmt.Sprintf("unknown generator command %q", command))
+	}
+	for _, plugin := range r.plugins {
+		if plugin.command == command && plugin.name == name {
+			panic(fmt.Sprintf("plugin %q is already registered for command %q", name, command))
+		}
+	}
 	r.plugins = append(r.plugins, pluginDescriptor{
 		name:     name,
 		command:  command,
 		position: position,
-		sequence: r.next,
 		factory:  factory,
 	})
-	r.next++
 }
 
 // snapshot seals the registry and returns copied factories in stable order.
@@ -136,20 +148,11 @@ func (r *registry) snapshot(command string) ([]generatorFactory, []pluginDescrip
 			plugins = append(plugins, plugin)
 		}
 	}
-	slices.SortStableFunc(plugins, func(left, right pluginDescriptor) int {
+	slices.SortFunc(plugins, func(left, right pluginDescriptor) int {
 		if left.position != right.position {
 			return int(left.position) - int(right.position)
 		}
-		if compared := strings.Compare(left.name, right.name); compared != 0 {
-			return compared
-		}
-		if left.sequence < right.sequence {
-			return -1
-		}
-		if left.sequence > right.sequence {
-			return 1
-		}
-		return 0
+		return strings.Compare(left.name, right.name)
 	})
 	return slices.Clone(factories), plugins, nil
 }

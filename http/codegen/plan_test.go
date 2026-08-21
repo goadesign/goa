@@ -21,18 +21,20 @@ func TestPlanReservesStaticAliasesBeforeFreeze(t *testing.T) {
 			dsl.Method("Read", func() {})
 		})
 	})
-	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, err)
 	require.NoError(t, service.Plan(root, generation))
 	require.NoError(t, Plan(generation))
 	require.NoError(t, generation.Freeze())
-	services, err := service.NewServicesData(root, generation)
+	services, err := service.NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 
 	require.Equal(t, "path2", services.ServiceImport("Path").Name)
 }
 
 func TestPlanRejectsFrozenGeneration(t *testing.T) {
-	generation := codegen.NewGeneration("generated.local/gen", nil)
+	generation, err := codegen.NewGeneration("generated.local/gen", nil)
+	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
 
 	require.Error(t, Plan(generation))
@@ -50,11 +52,12 @@ func TestPlanReservesGeneratedHTTPPackages(t *testing.T) {
 			})
 		}
 	})
-	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, err)
 	require.NoError(t, service.Plan(root, generation))
 	require.NoError(t, Plan(generation))
 	require.NoError(t, generation.Freeze())
-	services, err := service.NewServicesData(root, generation)
+	services, err := service.NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 
 	client := services.PackageImport("generated.local/gen/http/foo/client")

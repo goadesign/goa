@@ -1,3 +1,7 @@
+// This file turns a prepared HTTP design into the requested OpenAPI documents.
+// The generator supplies one run-owned example coordinator; each OpenAPI
+// version anchors its schema and displayed values to the exact request,
+// response, or error expression that owns them.
 package codegen
 
 import (
@@ -12,7 +16,7 @@ import (
 // The "openapi:versions" API meta selects the generated specification
 // versions and the "openapi:path:<version>" API meta overrides their output
 // paths, see openapi.Specs.
-func OpenAPIFiles(root *expr.RootExpr) ([]*codegen.File, error) {
+func OpenAPIFiles(root *expr.RootExpr, generator *expr.ExampleGenerator) ([]*codegen.File, error) {
 	// Only create a OpenAPI specification if there are HTTP services.
 	if len(root.API.HTTP.Services) == 0 {
 		return nil, nil
@@ -24,17 +28,31 @@ func OpenAPIFiles(root *expr.RootExpr) ([]*codegen.File, error) {
 	}
 	var files []*codegen.File
 	for _, spec := range specs {
+		specGenerator := generator
+		if examplesDisabled(root.API.Meta) {
+			specGenerator = &expr.ExampleGenerator{}
+		}
 		var fs []*codegen.File
 		switch spec.Version {
 		case openapi.Version20:
-			fs, err = openapiv2.Files(root, spec.Path)
+			fs, err = openapiv2.Files(root, spec.Path, specGenerator)
 			if err != nil {
 				return nil, err
 			}
 		default: // Version30, Version32
-			fs = openapiv3.Files(root, spec.Version, spec.Path)
+			fs = openapiv3.Files(root, spec.Version, spec.Path, specGenerator)
 		}
 		files = append(files, fs...)
 	}
 	return files, nil
+}
+
+// examplesDisabled reports whether API metadata suppresses examples from
+// generated OpenAPI documents.
+func examplesDisabled(meta expr.MetaExpr) bool {
+	value, ok := meta.Last("openapi:example")
+	if !ok {
+		value, ok = meta.Last("swagger:example")
+	}
+	return ok && value == "false"
 }

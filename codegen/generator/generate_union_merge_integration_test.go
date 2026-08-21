@@ -20,9 +20,9 @@ import (
 func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
 	registry := testRegistry(
 		"gen",
-		testGenerator(planServiceData, Service),
-		testGenerator(planTransportData, Transport),
-		testGenerator(planServiceData, OpenAPI),
+		testGenerator(planServiceData, testServiceFiles),
+		testGenerator(planTransportData, testTransportFiles),
+		testGenerator(planServiceData, testOpenAPIFiles),
 	)
 
 	dsl := func() {

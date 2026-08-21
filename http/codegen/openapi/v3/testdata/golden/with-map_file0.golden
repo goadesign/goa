@@ -21,6 +21,9 @@
             },
             {
               "string": ""
+            },
+            {
+              "string": ""
             }
           ],
           "foo": ""
@@ -28,6 +31,9 @@
         "properties": {
           "bar": {
             "example": [
+              {
+                "string": ""
+              },
               {
                 "string": ""
               },
@@ -109,6 +115,9 @@
                 },
                 {
                   "string": ""
+                },
+                {
+                  "string": ""
                 }
               ],
               "foo": ""
@@ -129,6 +138,9 @@
             "example": {
               "": {
                 "bar": [
+                  {
+                    "string": ""
+                  },
                   {
                     "string": ""
                   },
@@ -209,6 +221,9 @@
                   "resulttype_map": {
                     "": {
                       "bar": [
+                        {
+                          "string": ""
+                        },
                         {
                           "string": ""
                         },

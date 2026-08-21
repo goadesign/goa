@@ -83,9 +83,9 @@ func newImportAliases(root *expr.RootExpr, generation *codegen.Generation) (*imp
 	return &importAliases{generation: generation}, nil
 }
 
-// planImports registers every fixed and design-selected package path reachable
-// from root in the generation-wide alias catalog.
-func planImports(root *expr.RootExpr, generation *codegen.Generation) error {
+// planImports registers every fixed package and every external or generated
+// package referenced by declarations selected for emission from root.
+func planImports(root *expr.RootExpr, inputs []plannedAttribute, generation *codegen.Generation) error {
 	fixed := []*codegen.ImportSpec{
 		codegen.SimpleImport("bytes"),
 		codegen.SimpleImport("context"),
@@ -114,21 +114,9 @@ func planImports(root *expr.RootExpr, generation *codegen.Generation) error {
 		}
 	}
 	seen := make(map[expr.UserType]struct{})
-	for _, userType := range root.Types {
-		if err := planAttributeImports(&expr.AttributeExpr{Type: userType}, generation, seen); err != nil {
+	for _, input := range inputs {
+		if err := planAttributeImports(input.attribute, generation, seen); err != nil {
 			return err
-		}
-	}
-	for _, resultType := range root.ResultTypes {
-		if err := planAttributeImports(&expr.AttributeExpr{Type: resultType}, generation, seen); err != nil {
-			return err
-		}
-	}
-	for _, service := range root.Services {
-		for _, attribute := range serviceReferenceAttributes(service) {
-			if err := planAttributeImports(attribute, generation, seen); err != nil {
-				return err
-			}
 		}
 	}
 	for _, typeMap := range append(append([]*expr.TypeMap(nil), root.Conversions...), root.Creations...) {
@@ -157,9 +145,10 @@ func planAttributeImports(attribute *expr.AttributeExpr, generation *codegen.Gen
 	switch actual := attribute.Type.(type) {
 	case expr.UserType:
 		if location := codegen.UserTypeLocation(actual); location != nil {
+			owner := generation.Package(path.Join(generation.GenPkg(), location.RelImportPath))
 			if err := generation.DeclareImport(codegen.NewImport(
-				location.PackageName(),
-				path.Join(generation.GenPkg(), location.RelImportPath),
+				strings.ToLower(codegen.Goify(path.Base(owner.ImportPath()), false)),
+				owner.ImportPath(),
 			)); err != nil {
 				return err
 			}
@@ -275,7 +264,7 @@ func (c *importCollector) addLocation(location *codegen.Location) {
 	if location == nil {
 		return
 	}
-	importPath := path.Join(c.genpkg, location.RelImportPath)
+	importPath := c.aliases.generation.Package(path.Join(c.genpkg, location.RelImportPath)).ImportPath()
 	if importPath != c.outputPackage {
 		c.paths[importPath] = struct{}{}
 	}

@@ -1,3 +1,5 @@
+// This file verifies that gRPC client endpoint parsing renders from a legal
+// generated package root while preserving configured interceptor wiring.
 package codegen
 
 import (
@@ -25,7 +27,7 @@ func TestParseEndpointWithInterceptors(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
-			services := NewServicesData(createServiceServicesForPackage(root, ""))
+			services := NewServicesData(createServiceServicesForPackage(root, "/"))
 			fs := ClientCLIFiles(services)
 			require.Greater(t, len(fs), 1, "expected at least 2 files")
 			require.NotEmpty(t, fs[0].SectionTemplates)

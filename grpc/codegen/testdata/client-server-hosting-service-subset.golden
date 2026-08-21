@@ -1,6 +1,6 @@
 import (
+	cli "/grpc/cli/single_host"
 	"fmt"
-	cli "grpc/cli/single_host"
 	"os"
 
 	goa "goa.design/goa/v3/pkg"

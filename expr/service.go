@@ -1,3 +1,5 @@
+// This file defines service and error expressions, including the distinct
+// ownership of authored errors and compiler-wrapped inline method errors.
 package expr
 
 import (
@@ -157,4 +159,14 @@ func (e *ErrorExpr) Finalize() {
 		}
 		e.AttributeExpr = &AttributeExpr{Type: ut}
 	}
+}
+
+// finalizeMethodType wraps an inline method error with the exact method-error
+// owner used by service and transport example generation.
+func (e *ErrorExpr) finalizeMethodType(method *MethodExpr) {
+	e.AttributeExpr = &AttributeExpr{Type: NewGeneratedUserType(
+		e.Name,
+		e.AttributeExpr,
+		MethodErrorExampleIdentity(method, e),
+	)}
 }

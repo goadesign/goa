@@ -7,9 +7,11 @@ package generator
 import (
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -103,10 +105,11 @@ func generate(dir, cmd string, debug bool, registry *registry) (outputs []string
 	// 3. Prepare roots, build and freeze one plan, then render core and plugin
 	// files through the fresh run objects instantiated before root evaluation.
 	startLifecycle := time.Now()
-	genfiles, err := run.execute(genpkg, roots)
+	result, err := run.execute(genpkg, roots)
 	if err != nil {
 		return nil, err
 	}
+	genfiles := result.files
 	if debug {
 		fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 3: Lifecycle produced %d files in %v\n", len(genfiles), time.Since(startLifecycle))
 	}
@@ -115,7 +118,10 @@ func generate(dir, cmd string, debug bool, registry *registry) (outputs []string
 	// multiple generators (or services) emit sections for the same file.
 	{
 		start := time.Now()
-		genfiles = mergeFilesByPath(genfiles)
+		genfiles, err = mergeFilesByPath(genfiles)
+		if err != nil {
+			return nil, err
+		}
 		if debug {
 			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 8: Merging files by path took %v (now %d files)\n", time.Since(start), len(genfiles))
 		}
@@ -126,7 +132,8 @@ func generate(dir, cmd string, debug bool, registry *registry) (outputs []string
 		genfiles = append(genfiles, codegen.VersionFile())
 	}
 
-	// 10. Write the files (in parallel).
+	// 10. Write the files in parallel, then audit the prepared design after all
+	// templates and file finalizers have completed.
 	written := make(map[string]struct{})
 	{
 		start := time.Now()
@@ -135,32 +142,29 @@ func generate(dir, cmd string, debug bool, registry *registry) (outputs []string
 			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 10: Starting parallel file writing with %d workers\n", numWorkers)
 		}
 
-		// Channel for work items
 		type workItem struct {
 			index int
 			file  *codegen.File
 		}
 		workChan := make(chan workItem, len(genfiles))
 
-		// Channel for results
-		type result struct {
+		type renderResult struct {
 			index    int
 			filename string
 			duration time.Duration
 			err      error
 		}
-		resultChan := make(chan result, len(genfiles))
+		resultChan := make(chan renderResult, len(genfiles))
 
-		// Start worker pool
-		var wg sync.WaitGroup
+		var workers sync.WaitGroup
 		for range numWorkers {
-			wg.Add(1)
+			workers.Add(1)
 			go func() {
-				defer wg.Done()
+				defer workers.Done()
 				for work := range workChan {
 					renderStart := time.Now()
 					filename, err := work.file.Render(dir)
-					resultChan <- result{
+					resultChan <- renderResult{
 						index:    work.index,
 						filename: filename,
 						duration: time.Since(renderStart),
@@ -170,35 +174,35 @@ func generate(dir, cmd string, debug bool, registry *registry) (outputs []string
 			}()
 		}
 
-		// Send all files to work channel
-		for i, f := range genfiles {
-			workChan <- workItem{index: i, file: f}
+		for i, file := range genfiles {
+			workChan <- workItem{index: i, file: file}
 		}
 		close(workChan)
 
-		// Wait for all workers to finish in a separate goroutine
 		go func() {
-			wg.Wait()
+			workers.Wait()
 			close(resultChan)
 		}()
 
-		// Collect results
+		firstErrorIndex := len(genfiles)
 		var firstErr error
 		slowRenders := 0
-		for res := range resultChan {
-			if res.err != nil && firstErr == nil {
-				firstErr = res.err
+		for render := range resultChan {
+			if render.err != nil && render.index < firstErrorIndex {
+				firstErrorIndex = render.index
+				firstErr = render.err
 			}
-			if res.filename != "" {
-				written[res.filename] = struct{}{}
+			if render.filename != "" {
+				written[render.filename] = struct{}{}
 			}
-			// Only log slow renders (>100ms) to avoid spam
-			if debug && res.duration > 100*time.Millisecond {
-				fmt.Fprintf(os.Stderr, "[TIMING]     [generate]   File %d (%s) render took %v\n", res.index, res.filename, res.duration)
+			if debug && render.duration > 100*time.Millisecond {
+				fmt.Fprintf(os.Stderr, "[TIMING]     [generate]   File %d (%s) render took %v\n", render.index, render.filename, render.duration)
 				slowRenders++
 			}
 		}
-
+		if err := result.plan.verifyPreparedDesign("generated file renders"); err != nil {
+			return nil, err
+		}
 		if firstErr != nil {
 			return nil, firstErr
 		}
@@ -242,58 +246,54 @@ func generate(dir, cmd string, debug bool, registry *registry) (outputs []string
 // prevents later renders from truncating earlier content when multiple
 // services contribute sections to the same file (e.g., shared user types with
 // union value methods).
-func mergeFilesByPath(files []*codegen.File) []*codegen.File {
-	if len(files) <= 1 {
-		return files
+func mergeFilesByPath(files []*codegen.File) ([]*codegen.File, error) {
+	if len(files) == 0 {
+		return files, nil
 	}
 
 	byPath := make(map[string]*codegen.File)
-	namesByPath := make(map[string]map[string]struct{})
+	portablePaths := make(map[string]string)
 
-	// First pass: build merged file per path
+	// First pass: build one complete file per path.
 	for _, f := range files {
 		if f == nil {
 			continue
 		}
-		path := f.Path
-		if existing, ok := byPath[path]; ok {
-			// Merge headers (index 0) imports
-			if len(existing.SectionTemplates) > 0 && len(f.SectionTemplates) > 0 {
-				mergeHeaderImports(existing.SectionTemplates[0], f.SectionTemplates[0])
+		canonicalPath, portablePath, err := canonicalOutputFilePath(f.Path)
+		if err != nil {
+			return nil, err
+		}
+		if claimedPath, ok := portablePaths[portablePath]; ok && claimedPath != canonicalPath {
+			return nil, fmt.Errorf(
+				"generated file paths %q and %q collide on a case-insensitive filesystem",
+				claimedPath,
+				canonicalPath,
+			)
+		}
+		portablePaths[portablePath] = canonicalPath
+		f.Path = canonicalPath
+		if existing, ok := byPath[canonicalPath]; ok {
+			if existing.SkipExist != f.SkipExist {
+				return nil, fmt.Errorf("generated file %q has conflicting SkipExist settings", canonicalPath)
 			}
-			// Initialize seen section names for this path
-			if namesByPath[path] == nil {
-				namesByPath[path] = make(map[string]struct{})
-				for _, st := range existing.SectionTemplates {
-					namesByPath[path][st.Name] = struct{}{}
+			existingHeader, existingHasHeader := firstHeader(existing)
+			contributorHeader, contributorHasHeader := firstHeader(f)
+			if existingHasHeader != contributorHasHeader {
+				return nil, fmt.Errorf("generated file %q mixes header and headerless contributions", canonicalPath)
+			}
+			sectionStart := 0
+			if existingHasHeader {
+				if err := mergeHeaderImports(existingHeader, contributorHeader); err != nil {
+					return nil, fmt.Errorf("merge generated file %q: %w", canonicalPath, err)
 				}
+				sectionStart = 1
 			}
-			// Append unique sections (skip header at index 0)
-			for i, st := range f.SectionTemplates {
-				if i == 0 {
-					continue
-				}
-				if _, seen := namesByPath[path][st.Name]; seen {
-					continue
-				}
-				existing.SectionTemplates = append(existing.SectionTemplates, st)
-				namesByPath[path][st.Name] = struct{}{}
-			}
-			// Preserve a finalize function if destination does not have one
-			if existing.FinalizeFunc == nil && f.FinalizeFunc != nil {
-				existing.FinalizeFunc = f.FinalizeFunc
-			}
-			// Skip adding a duplicate File entry
+			existing.SectionTemplates = append(existing.SectionTemplates, f.SectionTemplates[sectionStart:]...)
+			existing.FinalizeFunc = composeFinalizers(existing.FinalizeFunc, f.FinalizeFunc)
 			continue
 		}
 
-		// New path: record and initialize seen names
-		byPath[path] = f
-		m := make(map[string]struct{})
-		for _, st := range f.SectionTemplates {
-			m[st.Name] = struct{}{}
-		}
-		namesByPath[path] = m
+		byPath[canonicalPath] = f
 	}
 
 	// Second pass: preserve original order by first occurrence of each path
@@ -311,43 +311,112 @@ func mergeFilesByPath(files []*codegen.File) []*codegen.File {
 			seenPaths[f.Path] = struct{}{}
 		}
 	}
-	return merged
+	return merged, nil
 }
 
 // mergeHeaderImports merges the import specs from src header into dst header,
-// deduplicating by (Name, Path). If either section is not a header produced by
-// codegen.Header, this function is a no-op.
-func mergeHeaderImports(dst, src *codegen.SectionTemplate) {
-	if dst == nil || src == nil {
-		return
-	}
-	dmap, dok := dst.Data.(map[string]any)
-	smap, sok := src.Data.(map[string]any)
-	if !dok || !sok {
-		return
+// rejecting package and alias conflicts rather than producing invalid Go.
+func mergeHeaderImports(dst, src *codegen.SectionTemplate) error {
+	dmap, _ := dst.Data.(map[string]any)
+	smap, _ := src.Data.(map[string]any)
+	dpkg, _ := dmap["Pkg"].(string)
+	spkg, _ := smap["Pkg"].(string)
+	if dpkg != spkg {
+		return fmt.Errorf("header packages %q and %q conflict", dpkg, spkg)
 	}
 	dlist, _ := dmap["Imports"].([]*codegen.ImportSpec)
 	slist, _ := smap["Imports"].([]*codegen.ImportSpec)
-	if len(slist) == 0 {
-		return
-	}
-	seen := make(map[string]struct{}, len(dlist))
+	paths := make(map[string]string, len(dlist)+len(slist))
+	aliases := make(map[string]string, len(dlist)+len(slist))
 	for _, imp := range dlist {
-		if imp == nil {
-			continue
+		if _, err := recordImportSpec(paths, aliases, imp); err != nil {
+			return err
 		}
-		seen[imp.Name+"|"+imp.Path] = struct{}{}
 	}
 	for _, imp := range slist {
-		if imp == nil {
-			continue
+		duplicate, err := recordImportSpec(paths, aliases, imp)
+		if err != nil {
+			return err
 		}
-		key := imp.Name + "|" + imp.Path
-		if _, ok := seen[key]; ok {
-			continue
+		if !duplicate {
+			dlist = append(dlist, imp)
 		}
-		dlist = append(dlist, imp)
-		seen[key] = struct{}{}
 	}
 	dmap["Imports"] = dlist
+	return nil
+}
+
+// recordImportSpec validates one import against the complete merged header and
+// reports whether the exact path and alias were already present.
+func recordImportSpec(paths, names map[string]string, spec *codegen.ImportSpec) (bool, error) {
+	if spec == nil {
+		return true, nil
+	}
+	if alias, ok := paths[spec.Path]; ok {
+		if alias != spec.Name {
+			return false, fmt.Errorf("import path %q uses aliases %q and %q", spec.Path, alias, spec.Name)
+		}
+		return true, nil
+	}
+	localName := spec.Name
+	if localName != "" && localName != "_" && localName != "." {
+		if importPath, ok := names[localName]; ok {
+			return false, fmt.Errorf("import name %q refers to paths %q and %q", localName, importPath, spec.Path)
+		}
+		names[localName] = spec.Path
+	}
+	paths[spec.Path] = spec.Name
+	return false, nil
+}
+
+// canonicalOutputFilePath returns the one portable relative spelling used to
+// group and render a generated file. The second result is case-folded so two
+// paths cannot overwrite one another on a case-insensitive filesystem.
+func canonicalOutputFilePath(rawPath string) (string, string, error) {
+	portable := filepath.ToSlash(rawPath)
+	portable = strings.ReplaceAll(portable, `\`, "/")
+	canonical := path.Clean(portable)
+	if canonical == "." ||
+		canonical == ".." ||
+		strings.HasPrefix(canonical, "../") ||
+		strings.HasPrefix(canonical, "/") {
+		return "", "", fmt.Errorf("generated file path %q must stay within the output directory", rawPath)
+	}
+	if strings.Contains(canonical, ":") {
+		return "", "", fmt.Errorf("generated file path %q is not portable", rawPath)
+	}
+	return filepath.FromSlash(canonical), strings.ToLower(canonical), nil
+}
+
+// firstHeader reports the header produced by codegen.Header when it is the
+// first section of file.
+func firstHeader(file *codegen.File) (*codegen.SectionTemplate, bool) {
+	if len(file.SectionTemplates) == 0 {
+		return nil, false
+	}
+	header := file.SectionTemplates[0]
+	data, ok := header.Data.(map[string]any)
+	if !ok {
+		return nil, false
+	}
+	_, hasPackage := data["Pkg"].(string)
+	_, hasImports := data["Imports"].([]*codegen.ImportSpec)
+	return header, hasPackage && hasImports
+}
+
+// composeFinalizers preserves every same-path contributor's post-render work
+// in contributor order and stops at the first error.
+func composeFinalizers(first, second func(string) error) func(string) error {
+	if first == nil {
+		return second
+	}
+	if second == nil {
+		return first
+	}
+	return func(path string) error {
+		if err := first(path); err != nil {
+			return err
+		}
+		return second(path)
+	}
 }

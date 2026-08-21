@@ -14,8 +14,8 @@ import (
 
 func TestBuildUnionTypeDataMarksNilableBranches(t *testing.T) {
 	union := unionWithBranchTypes()
-	generation := codegen.NewGeneration("gen", nil)
-	pkg := generation.GeneratedPackage("gen/service")
+	generation := mustTestGeneration(t, "gen", nil)
+	pkg := mustClaimTestPackage(t, generation, "gen/service")
 	_, err := pkg.DeclareUnion(union)
 	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())

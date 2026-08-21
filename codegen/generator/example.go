@@ -11,13 +11,14 @@ import (
 	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
 )
 
-// Example iterates through the roots and returns files that implement an
-// example service, server, and client.
-func Example(generation *codegen.Generation) ([]*codegen.File, error) {
+// exampleFiles returns example service, server, and client files described by
+// plan's frozen package declarations and run-owned example state.
+func exampleFiles(plan *Plan) ([]*codegen.File, error) {
 	var files []*codegen.File
+	generation := plan.Generation()
 	designRoots := serviceRoots(generation.Roots())
 	for _, r := range designRoots {
-		services, err := service.NewServicesData(r, generation)
+		services, err := service.NewServicesData(r, generation, plan.exampleGenerator(r))
 		if err != nil {
 			return nil, err
 		}

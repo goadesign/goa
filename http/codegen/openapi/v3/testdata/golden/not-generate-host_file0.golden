@@ -13,9 +13,9 @@
           "200": {
             "content": {
               "application/json": {
-                "example": "Debitis repellendus at repellendus fugit iusto deleniti.",
+                "example": "A et aut.",
                 "schema": {
-                  "example": "Debitis repellendus at repellendus fugit iusto deleniti.",
+                  "example": "A et aut.",
                   "type": "string"
                 }
               }

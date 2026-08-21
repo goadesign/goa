@@ -20,13 +20,13 @@ func TestExampleCLIFiles(t *testing.T) {
 		DSL     func()
 		PkgPath string
 	}{
-		{"no-server", ctestdata.NoServerDSL, ""},
-		{"server-hosting-service-subset", ctestdata.ServerHostingServiceSubsetDSL, ""},
-		{"server-hosting-multiple-services", ctestdata.ServerHostingMultipleServicesDSL, ""},
+		{"no-server", ctestdata.NoServerDSL, "/"},
+		{"server-hosting-service-subset", ctestdata.ServerHostingServiceSubsetDSL, "/"},
+		{"server-hosting-multiple-services", ctestdata.ServerHostingMultipleServicesDSL, "/"},
 		{"no-server-pkgpath", ctestdata.NoServerDSL, "my/pkg/path"},
 		{"server-hosting-service-subset-pkgpath", ctestdata.ServerHostingServiceSubsetDSL, "my/pkg/path"},
 		{"server-hosting-multiple-services-pkgpath", ctestdata.ServerHostingMultipleServicesDSL, "my/pkg/path"},
-		{"interceptors", testdata.InterceptorsDSL, ""},
+		{"interceptors", testdata.InterceptorsDSL, "/"},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

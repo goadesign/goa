@@ -1,3 +1,5 @@
+// This file builds OpenAPI v2 operations and schemas from evaluated HTTP
+// endpoints, using exact request and response owners for generated examples.
 package openapiv2
 
 import (
@@ -15,8 +17,9 @@ import (
 	openapiinternal "goa.design/goa/v3/http/codegen/openapi/internal"
 )
 
-// NewV2 returns the OpenAPI v2 specification for the given API.
-func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
+// NewV2 returns the OpenAPI v2 specification for the given API using examples
+// from generator.
+func NewV2(root *expr.RootExpr, h *expr.HostExpr, generator *expr.ExampleGenerator) (*V2, error) {
 	if root == nil {
 		return nil, nil
 	}
@@ -74,14 +77,14 @@ func NewV2(root *expr.RootExpr, h *expr.HostExpr) (*V2, error) {
 			if !openapi.MustGenerate(fs.Meta) || !openapi.MustGenerate(fs.Service.Meta) {
 				continue
 			}
-			buildPathFromFileServer(s, root, fs)
+			buildPathFromFileServer(s, root, fs, generator)
 		}
 		for _, a := range res.HTTPEndpoints {
 			if !openapi.MustGenerate(a.Meta) || !openapi.MustGenerate(a.MethodExpr.Meta) {
 				continue
 			}
 			for _, route := range a.Routes {
-				buildPathFromExpr(s, root, h, route, basePath)
+				buildPathFromExpr(s, root, h, route, basePath, generator)
 			}
 		}
 	}
@@ -342,7 +345,7 @@ func itemsFromExpr(at *expr.AttributeExpr) *Items {
 	return items
 }
 
-func responseSpecFromExpr(_ *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, typeNamePrefix string) *Response {
+func responseSpecFromExpr(_ *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, typeNamePrefix string, generator *expr.ExampleGenerator) *Response {
 	var schema *openapi.Schema
 	if mt, ok := r.Body.Type.(*expr.ResultTypeExpr); ok {
 		view := expr.DefaultView
@@ -350,9 +353,9 @@ func responseSpecFromExpr(_ *V2, root *expr.RootExpr, r *expr.HTTPResponseExpr, 
 			view = v
 		}
 		schema = openapi.NewSchema()
-		schema.Ref = openapi.ResultTypeRefWithPrefix(root.API, mt, view, typeNamePrefix)
+		schema.Ref = openapi.ResultTypeRefWithPrefix(root.API, mt, view, typeNamePrefix, generator)
 	} else if r.Body.Type != expr.Empty {
-		schema = openapi.AttributeTypeSchemaWithPrefix(root.API, r.Body, typeNamePrefix)
+		schema = openapi.AttributeTypeSchemaWithPrefix(root.API, r.Body, typeNamePrefix, generator)
 	}
 	if schema != nil {
 		schema.Extensions = openapi.ExtensionsFromExpr(r.Meta)
@@ -435,7 +438,7 @@ func initAttributeValidations(at *expr.AttributeExpr, def any) {
 	initValidations(at, def)
 }
 
-func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServerExpr) {
+func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServerExpr, generator *expr.ExampleGenerator) {
 	for _, path := range fs.RequestPaths {
 		wcs := expr.ExtractHTTPWildcards(path)
 		var param []*Parameter
@@ -456,7 +459,8 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 			},
 		}
 		if len(wcs) > 0 {
-			schema := openapi.TypeSchema(root.API, expr.ErrorResult)
+			errgen := generator.At(expr.UserTypeExampleIdentity(expr.ErrorResult))
+			schema := openapi.TypeSchema(root.API, expr.ErrorResult, errgen)
 			responses["404"] = &Response{Description: "File not found", Schema: schema}
 		}
 
@@ -503,7 +507,7 @@ func buildPathFromFileServer(s *V2, root *expr.RootExpr, fs *expr.HTTPFileServer
 	}
 }
 
-func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr.RouteExpr, basePath string) {
+func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr.RouteExpr, basePath string, generator *expr.ExampleGenerator) {
 	endpoint := route.Endpoint
 
 	tagNames := openapi.TagNamesFromExpr(endpoint.Meta)
@@ -521,6 +525,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 
 		responses := make(map[string]*Response, len(endpoint.Responses))
 		for _, r := range endpoint.Responses {
+			responseGenerator := generator.At(expr.ResponseBodyExampleIdentity(endpoint, r))
 			if endpoint.UsesWebSocket() {
 				// A WebSocket endpoint allows at most one successful response
 				// definition. So it is okay to change the first successful
@@ -530,7 +535,7 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 					r.StatusCode = expr.StatusSwitchingProtocols
 				}
 			}
-			resp := responseSpecFromExpr(s, root, r, endpoint.Service.Name())
+			resp := responseSpecFromExpr(s, root, r, endpoint.Service.Name(), responseGenerator)
 			responses[strconv.Itoa(r.StatusCode)] = resp
 			if r.ContentType != "" {
 				foundCT := slices.Contains(produces, r.ContentType)
@@ -540,7 +545,8 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 			}
 		}
 		for _, er := range endpoint.HTTPErrors {
-			resp := responseSpecFromExpr(s, root, er.Response, endpoint.Service.Name())
+			responseGenerator := generator.At(expr.ErrorResponseBodyExampleIdentity(endpoint, er))
+			resp := responseSpecFromExpr(s, root, er.Response, endpoint.Service.Name(), responseGenerator)
 			responses[strconv.Itoa(er.Response.StatusCode)] = resp
 		}
 
@@ -559,7 +565,12 @@ func buildPathFromExpr(s *V2, root *expr.RootExpr, h *expr.HostExpr, route *expr
 				In:          in,
 				Description: endpoint.Body.Description,
 				Required:    true,
-				Schema:      openapi.AttributeTypeSchemaWithPrefix(root.API, endpoint.Body, codegen.Goify(endpoint.Service.Name(), true)),
+				Schema: openapi.AttributeTypeSchemaWithPrefix(
+					root.API,
+					endpoint.Body,
+					codegen.Goify(endpoint.Service.Name(), true),
+					generator.At(expr.RequestBodyExampleIdentity(endpoint)),
+				),
 			}
 			params = append(params, pp)
 		}

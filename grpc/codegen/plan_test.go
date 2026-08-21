@@ -25,11 +25,12 @@ func TestPlanReservesGeneratedGRPCPackages(t *testing.T) {
 			})
 		}
 	})
-	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, err)
 	require.NoError(t, service.Plan(root, generation))
 	require.NoError(t, Plan(generation))
 	require.NoError(t, generation.Freeze())
-	services, err := service.NewServicesData(root, generation)
+	services, err := service.NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 
 	client := services.PackageImport("generated.local/gen/grpc/foo/client")

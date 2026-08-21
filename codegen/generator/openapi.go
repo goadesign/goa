@@ -8,18 +8,19 @@ import (
 	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
-// OpenAPI iterates through the roots and returns the files needed to render
-// the service OpenAPI spec. It produces OpenAPI specifications only if the
-// roots define a HTTP service.
-func OpenAPI(generation *codegen.Generation) ([]*codegen.File, error) {
+// openAPIFiles returns OpenAPI files described by plan's frozen package
+// declarations and run-owned example state.
+func openAPIFiles(plan *Plan) ([]*codegen.File, error) {
+	generation := plan.Generation()
 	designRoots := serviceRoots(generation.Roots())
 	for _, root := range designRoots {
-		if _, err := service.NewServicesData(root, generation); err != nil {
+		if _, err := service.NewServicesData(root, generation, plan.exampleGenerator(root)); err != nil {
 			return nil, err
 		}
 	}
 	if len(designRoots) > 0 {
-		return httpcodegen.OpenAPIFiles(designRoots[0])
+		root := designRoots[0]
+		return httpcodegen.OpenAPIFiles(root, plan.exampleGenerator(root))
 	}
 	return nil, nil
 }

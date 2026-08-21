@@ -126,7 +126,7 @@ catalog construction into retained HTTP, JSON-RPC, protobuf, and gRPC plans.
 - Produces: `generator.Plugin`, `PluginFactory`, fresh core factories, and private-field `generator.Plan`
 - Preserves: `Generation`, import-path bindings, `TypeDeclaration`, `UnionDeclaration`, and typed declaration identities
 
-- [ ] **Step 1: Add declaration and lifecycle RED tests**
+- [x] **Step 1: Add declaration and lifecycle RED tests**
 
 Add table-driven tests proving one package namespace catches cross-kind
 collisions, exact names reject, preferred names suffix in stable typed order,
@@ -152,7 +152,7 @@ Expected: FAIL because names are still type-family-specific, plugins are
 registered as callback instances in `codegen`, and `Generators` is mutable
 process-global run state.
 
-- [ ] **Step 2: Implement the common declaration owner**
+- [x] **Step 2: Implement the common declaration owner**
 
 Add private preferred/final state and a package-level symbol kind to
 `NameDeclaration`. Make exact and preferred declaration APIs return the same
@@ -165,7 +165,7 @@ imported toolchain, and later subsystem records. Remove duplicate name fields
 as each owner migrates. Canonicalize output paths during collection and reject
 different package owners that converge after normalization.
 
-- [ ] **Step 3: Move orchestration and plugin registration into generator**
+- [x] **Step 3: Move orchestration and plugin registration into generator**
 
 Implement the approved public surface:
 
@@ -186,21 +186,32 @@ func (p *Plan) Generation() *codegen.Generation
 ```
 
 Store immutable factory descriptors and instantiate fresh plugins and core
-generators before each run. Make normalization part of preparation and close
-root mutation before constructing `Generation`. Delete `Genfunc`, the public
+generators before each run. Make `Generation` construction the final
+preparation operation: normalize raw method objects there, snapshot the design
+immediately afterward, and reject every later mutation. Delete `Genfunc`, the public
 replaceable `Generators` variable, `renderOnly`, and the callback registry in
 `codegen/plugin.go`. Tests install an isolated registry or command factory
 through a private test seam, not a mutable production global.
 
-- [ ] **Step 4: Finish mechanical identity and example cleanup**
+- [x] **Step 4: Finish mechanical identity and example cleanup**
 
 Audit every cycle-only walk and key it by `UserType.Origin()`. Keep semantic
-`ID()` only where it intentionally seeds example generation, OpenAPI examples,
-or a public semantic identifier. Remove render-time example scopes that own
-package-level names; leave local argument and field scopes local. Add focused
-counterexamples with equal semantic IDs and different origins.
+`ID()` only where it identifies a named user type or a public semantic
+identifier. Give every generated example a kind-tagged identity derived from
+its exact owning expression: user type, method payload/result/error, HTTP
+request/success/error body, object member, array element, map key/value, or
+union branch. Reject unanchored draws and remove delimiter-joined paths,
+caller-supplied response ordinals, and shared sequential collection streams.
+Give independently mapped HTTP and JSON-RPC body types distinct stable semantic
+IDs derived from their exact typed body owners so the recursive example cache
+cannot return one transport's body for the other. Preserve authored type IDs
+and expression hash behavior.
+Remove render-time example scopes that own package-level names; leave local
+argument and field scopes local. Add focused cross-kind, delimiter, response
+reordering, dual-transport order, repeated-analysis, and concurrent-run
+counterexamples.
 
-- [ ] **Step 5: Verify and commit Task 6**
+- [x] **Step 5: Verify and commit Task 6**
 
 Run:
 
@@ -516,10 +527,14 @@ declaration identity.
 - [ ] **Step 2: Retain OpenAPI and example analysis**
 
 Build typed OpenAPI plans from prepared expressions and typed example plans
-from exact service/transport plans. Preserve OpenAPI semantic example rebasing
-where `ID()` intentionally selects deterministic example data. Collect every
-example and CLI package-level constructor, variable, and helper through the
-owning package catalog.
+from exact service/transport plans. The example plan owns its server
+composition data; delete the process-global `codegen/example.Servers` map.
+Retain one private JSON Schema registry per OpenAPI plan; delete the exported
+mutable `Definitions` map and process-global definition-name state. The
+returned specification owns its definition map and schema values, so a later
+build cannot mutate it. Use the typed example identities established in Task
+6. Collect every example and CLI package-level constructor, variable, and
+helper through the owning package catalog.
 
 - [ ] **Step 3: Make the core plan the only command execution model**
 
@@ -533,8 +548,11 @@ callback-shaped lifecycle tests.
 
 Run each command twice and concurrently with different roots. Assert byte-
 identical output per input, no cross-run state, no late declarations, and no
-unselected files. Compile full HTTP/gRPC/JSON-RPC examples and validate both
-OpenAPI versions.
+unselected files. Build disjoint example servers and OpenAPI specifications
+sequentially and behind a start barrier; assert no server or schema from one
+design appears in the other and the first returned result remains unchanged
+after the second build. Run both concurrency tests with the race detector.
+Compile full HTTP/gRPC/JSON-RPC examples and validate both OpenAPI versions.
 
 - [ ] **Step 5: Verify and commit Task 10**
 

@@ -6,7 +6,7 @@ func BuildMethodMultiSimplePayloadPayload(serviceMultiSimple1MethodMultiSimplePa
 	{
 		err = json.Unmarshal([]byte(serviceMultiSimple1MethodMultiSimplePayloadBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": false\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": true\n   }'")
 		}
 	}
 	v := &servicemultisimple1.MethodMultiSimplePayloadPayload{

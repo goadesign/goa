@@ -1,3 +1,5 @@
+// This file renders complete Swagger 2.0 documents from prepared HTTP designs
+// and compares the JSON and YAML output produced with run-owned example state.
 package openapiv2_test
 
 import (
@@ -58,7 +60,7 @@ func TestSections(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
-			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
+			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20, expr.NewExampleGenerator(root.API.RandomizerFactory))
 			if err != nil {
 				t.Fatalf("OpenAPI failed with %s", err)
 			}
@@ -115,7 +117,7 @@ func TestValidations(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
-			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
+			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20, expr.NewExampleGenerator(root.API.RandomizerFactory))
 			require.NoError(t, err, "OpenAPI failed")
 			require.NotEmpty(t, oFiles, "No swagger files")
 			for i, o := range oFiles {
@@ -159,7 +161,7 @@ func TestExtensions(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
-			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
+			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20, expr.NewExampleGenerator(root.API.RandomizerFactory))
 			require.NoError(t, err, "OpenAPI failed")
 			require.NotEmpty(t, oFiles, "No swagger files")
 			for i, o := range oFiles {
@@ -233,7 +235,7 @@ func TestNamedPrimitiveParamsAndHeadersUseOpenAPIBaseTypes(t *testing.T) {
 		})
 	})
 
-	spec, err := openapiv2.NewV2(root, root.API.Servers[0].Hosts[0])
+	spec, err := openapiv2.NewV2(root, root.API.Servers[0].Hosts[0], expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 
 	path, ok := spec.Paths["/repro"]

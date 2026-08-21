@@ -1,6 +1,6 @@
 import (
+	cli "/grpc/cli/test_api"
 	"fmt"
-	cli "grpc/cli/test_api"
 	"os"
 
 	goa "goa.design/goa/v3/pkg"

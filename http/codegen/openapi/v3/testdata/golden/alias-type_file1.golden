@@ -21,11 +21,10 @@ paths:
                             $ref: '#/components/schemas/Setup'
                         example:
                             completed:
-                                - where
-                                - where
-                                - where
-                                - where
-                            current: where
+                                - what
+                                - what
+                                - what
+                            current: what
             responses:
                 "200":
                     description: OK response.
@@ -35,9 +34,11 @@ paths:
                                 $ref: '#/components/schemas/Setup'
                             example:
                                 completed:
-                                    - where
-                                    - where
-                                current: where
+                                    - what
+                                    - what
+                                    - what
+                                    - what
+                                current: what
 components:
     schemas:
         Setup:
@@ -48,21 +49,20 @@ components:
                     items:
                         type: string
                         description: Setup stage.
-                        example: where
+                        example: what
                         enum:
                             - who
                             - when
                             - where
                             - what
                     example:
-                        - where
-                        - where
-                        - where
-                        - where
+                        - what
+                        - what
+                        - what
                 current:
                     type: string
                     description: Setup stage.
-                    example: where
+                    example: what
                     enum:
                         - who
                         - when
@@ -71,10 +71,9 @@ components:
             description: Request body for testEndpoint.
             example:
                 completed:
-                    - where
-                    - where
-                    - where
-                    - where
-                current: where
+                    - what
+                    - what
+                    - what
+                current: what
 tags:
     - name: testService

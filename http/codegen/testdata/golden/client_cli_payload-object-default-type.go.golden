@@ -8,7 +8,7 @@ func BuildMethodBodyInlineObjectPayload(serviceBodyInlineObjectMethodBodyInlineO
 	{
 		err = json.Unmarshal([]byte(serviceBodyInlineObjectMethodBodyInlineObjectBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": \"Magnam id itaque quo.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": \"Fugit atque.\"\n   }'")
 		}
 	}
 	v := &servicebodyinlineobject.MethodBodyInlineObjectPayload{

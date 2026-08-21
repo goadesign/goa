@@ -1,3 +1,5 @@
+// This file verifies OpenAPI v3 operation construction, body schemas, and
+// examples produced from evaluated HTTP endpoint designs.
 package openapiv3
 
 import (
@@ -94,7 +96,7 @@ func TestBuildInfo(t *testing.T) {
 
 func TestNoSecurityOverridesAPISecurity(t *testing.T) {
 	root := codegen.RunDSL(t, noSecurityOverridesAPISecurityDSL)
-	spec := New(root, openapi.Version30)
+	spec := New(root, openapi.Version30, expr.NewExampleGenerator(root.API.RandomizerFactory))
 
 	cases := map[string]struct {
 		marshal   func(any) ([]byte, error)
@@ -131,7 +133,7 @@ func TestNoSecurityOverridesAPISecurity(t *testing.T) {
 
 func TestNoSecurityOverridesServiceSecurity(t *testing.T) {
 	root := codegen.RunDSL(t, noSecurityOverridesServiceSecurityDSL)
-	spec := New(root, openapi.Version30)
+	spec := New(root, openapi.Version30, expr.NewExampleGenerator(root.API.RandomizerFactory))
 
 	cases := map[string]struct {
 		marshal   func(any) ([]byte, error)
@@ -168,7 +170,7 @@ func TestNoSecurityOverridesServiceSecurity(t *testing.T) {
 
 func TestStreamingResponseStatusCodes(t *testing.T) {
 	root := codegen.RunDSL(t, streamingResponseStatusDSL)
-	spec := New(root, openapi.Version30)
+	spec := New(root, openapi.Version30, expr.NewExampleGenerator(root.API.RandomizerFactory))
 
 	sseResponses := spec.Paths["/sse"].Get.Responses
 	require.Contains(t, sseResponses, "200")
@@ -334,7 +336,7 @@ func TestBuildOperation(t *testing.T) {
 			var types map[string]*openapi.Schema
 			{
 				var bds map[string]map[string]*EndpointBodies
-				bds, types = buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30)
+				bds, types = buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30, expr.NewExampleGenerator(root.API.RandomizerFactory))
 				if svc, ok := bds[svcName]; ok {
 					bodies, ok = svc[c.Name]
 					if !ok {
@@ -366,7 +368,8 @@ func TestBuildOperation(t *testing.T) {
 				return
 			}
 
-			op := buildOperation(c.Name, route, bodies, expr.NewRandom(c.Name), root.API.Meta, openapi.Version30)
+			generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory(c.Name))
+			op := buildOperation(c.Name, route, bodies, generator, root.API.Meta, openapi.Version30)
 
 			if op.Description != c.ExpectedDescription {
 				t.Errorf("got description %q for method %q, expected %q", op.Description, c.Name, c.ExpectedDescription)
@@ -455,7 +458,8 @@ func TestBuildOperationID(t *testing.T) {
 				if s.Name() == svcName {
 					for _, e := range s.HTTPEndpoints {
 						for i, r := range e.Routes {
-							op := buildOperation(c.Name, r, &EndpointBodies{}, expr.NewRandom(c.Name), api.Meta, openapi.Version30)
+							generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory(c.Name))
+							op := buildOperation(c.Name, r, &EndpointBodies{}, generator, api.Meta, openapi.Version30)
 
 							if len(c.ExpectedOperationIDs) == 0 {
 								t.Error("no expected operation IDs")

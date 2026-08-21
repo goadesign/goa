@@ -31,10 +31,10 @@ func TestPlanRejectsUnregisteredRoot(t *testing.T) {
 			})
 		})
 	})
-	generation := codegen.NewGeneration("generated.local/gen", nil)
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	require.ErrorContains(t, Plan(root, generation), "does not belong")
 	require.NoError(t, generation.Freeze())
-	_, err := NewServicesData(root, generation)
+	_, err := NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.ErrorContains(t, err, "does not belong")
 }
 
@@ -53,7 +53,7 @@ func TestPlanUsesCopiedGenerationRoots(t *testing.T) {
 		})
 	})
 	roots := []eval.Root{first}
-	generation := codegen.NewGeneration("generated.local/gen", roots)
+	generation := mustTestGeneration(t, "generated.local/gen", roots)
 	roots[0] = second
 	returnedRoots := generation.Roots()
 	returnedRoots[0] = second
@@ -64,9 +64,9 @@ func TestPlanUsesCopiedGenerationRoots(t *testing.T) {
 	roots[0] = nil
 	returnedRoots = generation.Roots()
 	returnedRoots[0] = second
-	_, err := NewServicesData(first, generation)
+	_, err := NewServicesData(first, generation, expr.NewExampleGenerator(first.API.RandomizerFactory))
 	require.NoError(t, err)
-	_, err = NewServicesData(second, generation)
+	_, err = NewServicesData(second, generation, expr.NewExampleGenerator(second.API.RandomizerFactory))
 	require.ErrorContains(t, err, "does not belong")
 }
 
@@ -74,7 +74,7 @@ func TestPlanUsesCopiedGenerationRoots(t *testing.T) {
 // retain their canonical qualifier when metadata prefers another spelling for
 // the same complete package path.
 func TestImportAliasesUsePathAsIdentity(t *testing.T) {
-	generation := codegen.NewGeneration("generated.local/gen", nil)
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	require.NoError(t, generation.RequireImport(codegen.SimpleImport("encoding/json")))
 	require.NoError(t, generation.DeclareImport(codegen.NewImport("jason", "encoding/json")))
 	require.NoError(t, generation.Freeze())
@@ -88,7 +88,7 @@ func TestImportAliasesUsePathAsIdentity(t *testing.T) {
 // spellings for one path produce the same frozen qualifier in either order.
 func TestImportAliasPreferenceIsOrderIndependent(t *testing.T) {
 	freeze := func(first, second string) string {
-		generation := codegen.NewGeneration("generated.local/gen", nil)
+		generation := mustTestGeneration(t, "generated.local/gen", nil)
 		require.NoError(t, generation.DeclareImport(codegen.NewImport(first, "example.com/value")))
 		require.NoError(t, generation.DeclareImport(codegen.NewImport(second, "example.com/value")))
 		require.NoError(t, generation.Freeze())
@@ -118,13 +118,13 @@ func TestRegisteredRootsShareImportAliases(t *testing.T) {
 	}
 	firstRoot := rootWithPreference("First", "FirstPayload", "zeta")
 	secondRoot := rootWithPreference("Second", "SecondPayload", "alpha")
-	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{firstRoot, secondRoot})
+	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{firstRoot, secondRoot})
 	require.NoError(t, Plan(firstRoot, generation))
 	require.NoError(t, Plan(secondRoot, generation))
 	require.NoError(t, generation.Freeze())
-	first, err := NewServicesData(firstRoot, generation)
+	first, err := NewServicesData(firstRoot, generation, expr.NewExampleGenerator(firstRoot.API.RandomizerFactory))
 	require.NoError(t, err)
-	second, err := NewServicesData(secondRoot, generation)
+	second, err := NewServicesData(secondRoot, generation, expr.NewExampleGenerator(secondRoot.API.RandomizerFactory))
 	require.NoError(t, err)
 	require.Equal(t, "alpha", first.aliases.name("example.com/shared/value"))
 	require.Equal(t, first.aliases.name("example.com/shared/value"), second.aliases.name("example.com/shared/value"))
@@ -155,7 +155,7 @@ func TestImportAliasesReserveFixedJSON(t *testing.T) {
 			})
 		})
 	})
-	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
 	require.NoError(t, Plan(root, generation))
 	require.NoError(t, generation.Freeze())
 	aliases, err := newImportAliases(root, generation)
@@ -301,7 +301,7 @@ func TestServiceUsesCanonicalViewsQualifier(t *testing.T) {
 // a union field type and the import declaration come from the same frozen path
 // binding when encoding/json already owns the preferred json name.
 func TestUnionFieldReferencesUseFixedImportAliases(t *testing.T) {
-	generation := codegen.NewGeneration("generated.local/gen", nil)
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	require.NoError(t, generation.RequireImport(codegen.SimpleImport("encoding/json")))
 	require.NoError(t, generation.DeclareImport(codegen.NewImport("values", "generated.local/gen/values")))
 	require.NoError(t, generation.DeclareImport(codegen.NewImport("json", "example.com/custom/json")))
@@ -316,7 +316,7 @@ func TestUnionFieldReferencesUseFixedImportAliases(t *testing.T) {
 			Attribute: branch,
 		}},
 	}
-	generatedPackage := generation.GeneratedPackage("generated.local/gen/values")
+	generatedPackage := mustClaimTestPackage(t, generation, "generated.local/gen/values")
 	_, err := generatedPackage.DeclareUnion(union)
 	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())

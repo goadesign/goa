@@ -57,17 +57,21 @@ definitions:
                     $ref: '#/definitions/Bar'
                 example:
                     - string: ""
+                    - string: ""
                 minItems: 0
                 maxItems: 42
             foo:
                 type: array
                 items:
                     type: string
-                    example: Eaque consequatur asperiores est.
-                example: []
+                    example: Molestiae labore nihil sunt.
+                example:
+                    - Molestiae labore nihil sunt.
                 minItems: 0
                 maxItems: 42
         example:
             bar:
                 - string: ""
-            foo: []
+                - string: ""
+            foo:
+                - Molestiae labore nihil sunt.

@@ -4,8 +4,11 @@ package service
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
+	"slices"
 	"sort"
+	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -247,18 +250,22 @@ func generatedPackageFiles(genpkg string, analyses []*ServicesData) []*codegen.F
 		return nil
 	}
 	aliases := analyses[0].aliases
-	packagePaths := make([]string, 0, len(packages))
-	for packagePath := range packages {
-		packagePaths = append(packagePaths, packagePath)
+	packageOwners := make([]*codegen.GeneratedPackage, 0, len(packages))
+	for owner := range packages {
+		packageOwners = append(packageOwners, owner)
 	}
-	sort.Strings(packagePaths)
+	slices.SortFunc(packageOwners, func(left, right *codegen.GeneratedPackage) int {
+		return strings.Compare(left.ImportPath(), right.ImportPath())
+	})
 
 	var files []*codegen.File
-	for _, packagePath := range packagePaths {
-		generatedPackage := packages[packagePath]
+	for _, owner := range packageOwners {
+		packagePath := owner.ImportPath()
+		packageName := codegen.Goify(path.Base(packagePath), false)
+		generatedPackage := packages[owner]
 		typesByFile := make(map[string][]*generatedTypeData)
 		for _, generatedType := range generatedPackage.types {
-			filePath := filepath.Join(codegen.Gendir, generatedType.location.FilePath)
+			filePath := filepath.Join(owner.OutputDirectory(), filepath.Base(generatedType.location.FilePath))
 			typesByFile[filePath] = append(typesByFile[filePath], generatedType)
 		}
 		filePaths := make([]string, 0, len(typesByFile))
@@ -277,7 +284,7 @@ func generatedPackageFiles(genpkg string, analyses []*ServicesData) []*codegen.F
 			}
 			imports := collector.imports()
 			sections := []*codegen.SectionTemplate{
-				codegen.Header("User types", generatedPackage.packageName, imports),
+				codegen.Header("User types", packageName, imports),
 			}
 			for _, generatedType := range generatedTypes {
 				sections = append(sections, generatedType.section)
@@ -308,7 +315,7 @@ func generatedPackageFiles(genpkg string, analyses []*ServicesData) []*codegen.F
 			}
 			imports := collector.imports()
 			sections := []*codegen.SectionTemplate{
-				codegen.Header("Union types", generatedPackage.packageName, imports),
+				codegen.Header("Union types", packageName, imports),
 			}
 			for _, union := range unions {
 				sections = append(sections, &codegen.SectionTemplate{
@@ -318,7 +325,7 @@ func generatedPackageFiles(genpkg string, analyses []*ServicesData) []*codegen.F
 				})
 			}
 			files = append(files, &codegen.File{
-				Path:             filepath.Join(generatedPackage.outputPath, "unions.go"),
+				Path:             filepath.Join(owner.OutputDirectory(), "unions.go"),
 				SectionTemplates: sections,
 			})
 		}
@@ -328,19 +335,17 @@ func generatedPackageFiles(genpkg string, analyses []*ServicesData) []*codegen.F
 
 // aggregateGeneratedPackages selects one render section per canonical package
 // declaration across all analyzed roots without mutating generation state.
-func aggregateGeneratedPackages(analyses []*ServicesData) map[string]*generatedPackageData {
-	packages := make(map[string]*generatedPackageData)
+func aggregateGeneratedPackages(analyses []*ServicesData) map[*codegen.GeneratedPackage]*generatedPackageData {
+	packages := make(map[*codegen.GeneratedPackage]*generatedPackageData)
 	for _, services := range analyses {
-		for packagePath, analyzedPackage := range services.packages {
-			generatedPackage, ok := packages[packagePath]
+		for owner, analyzedPackage := range services.packages {
+			generatedPackage, ok := packages[owner]
 			if !ok {
 				generatedPackage = &generatedPackageData{
-					outputPath:  analyzedPackage.outputPath,
-					packageName: analyzedPackage.packageName,
-					types:       make(map[*codegen.TypeDeclaration]*generatedTypeData),
-					unions:      make(map[codegen.UnionTypeID]*UnionTypeData),
+					types:  make(map[*codegen.TypeDeclaration]*generatedTypeData),
+					unions: make(map[codegen.UnionTypeID]*UnionTypeData),
 				}
-				packages[packagePath] = generatedPackage
+				packages[owner] = generatedPackage
 			}
 			for declaration, generatedType := range analyzedPackage.types {
 				if _, exists := generatedPackage.types[declaration]; !exists {

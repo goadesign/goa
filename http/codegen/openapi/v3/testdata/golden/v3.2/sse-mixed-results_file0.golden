@@ -3,11 +3,11 @@
     "schemas": {
       "Event": {
         "example": {
-          "message": "Doloribus nemo quia dolores."
+          "message": "Accusantium voluptatibus inventore."
         },
         "properties": {
           "message": {
-            "example": "Doloribus nemo quia dolores.",
+            "example": "Accusantium voluptatibus inventore.",
             "type": "string"
           }
         },
@@ -19,11 +19,11 @@
       "Payload": {
         "description": "Request body for Create.",
         "example": {
-          "x": "Doloribus qui aspernatur alias consectetur accusamus qui."
+          "x": "Quis distinctio vitae ut."
         },
         "properties": {
           "x": {
-            "example": "Doloribus qui aspernatur alias consectetur accusamus qui.",
+            "example": "Quis distinctio vitae ut.",
             "type": "string"
           }
         },
@@ -34,11 +34,11 @@
       },
       "Result": {
         "example": {
-          "id": "Tenetur aut quam ea repudiandae."
+          "id": "Delectus eum inventore illum velit et."
         },
         "properties": {
           "id": {
-            "example": "Tenetur aut quam ea repudiandae.",
+            "example": "Delectus eum inventore illum velit et.",
             "type": "string"
           }
         },
@@ -62,7 +62,7 @@
           "content": {
             "application/json": {
               "example": {
-                "x": "Doloribus qui aspernatur alias consectetur accusamus qui."
+                "x": "Quis distinctio vitae ut."
               },
               "schema": {
                 "$ref": "#/components/schemas/Payload"
@@ -77,7 +77,7 @@
             "content": {
               "application/json": {
                 "example": {
-                  "id": "Tenetur aut quam ea repudiandae."
+                  "id": "Delectus eum inventore illum velit et."
                 },
                 "schema": {
                   "$ref": "#/components/schemas/Result"

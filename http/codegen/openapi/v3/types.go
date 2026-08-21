@@ -1,3 +1,5 @@
+// This file converts evaluated Goa types into OpenAPI v3 schemas while keeping
+// generated examples anchored to their exact design locations.
 package openapiv3
 
 import (
@@ -51,38 +53,47 @@ type (
 	}
 )
 
-// derived returns a schemafier drawing example values from a stream derived
-// from the given identity, sharing all other state. See
-// expr.ExampleGenerator.Derived.
-func (sf *schemafier) derived(id string) *schemafier {
+// at returns a schemafier drawing example values from the semantic owner.
+func (sf *schemafier) at(identity expr.ExampleIdentity) *schemafier {
 	c := *sf
-	c.rand = sf.rand.Derived(id)
+	c.rand = sf.rand.At(identity)
 	return &c
 }
 
-// rebased returns a schemafier whose example value stream is anchored to the
-// given absolute design identity, sharing all other state. See
-// expr.ExampleGenerator.Rebased.
-func (sf *schemafier) rebased(id string) *schemafier {
+// member returns a schemafier drawing examples for an object member below the
+// current semantic owner.
+func (sf *schemafier) member(name string) *schemafier {
 	c := *sf
-	c.rand = sf.rand.Rebased(id)
+	c.rand = sf.rand.Member(name)
 	return &c
 }
 
-// bodyExampleID returns the absolute design identity anchoring the example
-// streams of an endpoint request or response body. Anonymous body types
-// (inline arrays, maps and primitives) have no type identity of their own so
-// their examples anchor on the endpoint that owns them.
-func bodyExampleID(svc, endpoint, role string) string {
-	return svc + "." + endpoint + "." + role
+// arrayElement returns a schemafier drawing examples for one array element.
+func (sf *schemafier) arrayElement(index int) *schemafier {
+	c := *sf
+	c.rand = sf.rand.ArrayElement(index)
+	return &c
 }
 
-// fieldOf returns a schemafier whose example value stream is anchored to the
-// identity of the named field of the given parent attribute, sharing all
-// other state. See expr.ExampleGenerator.Field.
-func (sf *schemafier) fieldOf(parent *expr.AttributeExpr, name string) *schemafier {
+// mapValue returns a schemafier drawing examples for one map value.
+func (sf *schemafier) mapValue(index int) *schemafier {
 	c := *sf
-	c.rand = sf.rand.Field(parent, name)
+	c.rand = sf.rand.MapValue(index)
+	return &c
+}
+
+// unionMember returns a schemafier drawing examples for one union member.
+func (sf *schemafier) unionMember(name string) *schemafier {
+	c := *sf
+	c.rand = sf.rand.UnionMember(name)
+	return &c
+}
+
+// field returns a schemafier for a field extracted from parent. Named user
+// types retain their global field identity; anonymous parents use owner.
+func (sf *schemafier) field(parent *expr.AttributeExpr, name string, owner expr.ExampleIdentity) *schemafier {
+	c := *sf
+	c.rand = sf.rand.At(exampleFieldIdentity(parent, name, owner))
 	return &c
 }
 
@@ -107,9 +118,9 @@ func newSchemafier(rand *expr.ExampleGenerator) *schemafier {
 // value indexed by type name.
 //
 // NOTE: entries are nil when the corresponding type is Empty.
-func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*expr.ResultTypeExpr, ver openapi.Version) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
+func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*expr.ResultTypeExpr, ver openapi.Version, generator *expr.ExampleGenerator) (map[string]map[string]*EndpointBodies, map[string]*openapi.Schema) {
 	bodies := make(map[string]map[string]*EndpointBodies)
-	sf := newSchemafier(api.ExampleGenerator)
+	sf := newSchemafier(generator)
 	sf.nameAliases = ver == openapi.Version32
 	services := openAPIGeneratedServices(api)
 
@@ -118,13 +129,13 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 		if !mustGenerateType(t.Attribute().Meta, services) {
 			continue
 		}
-		sf.schemafy(&expr.AttributeExpr{Type: t})
+		sf.at(expr.UserTypeExampleIdentity(t)).schemafy(&expr.AttributeExpr{Type: t})
 	}
 	for _, t := range resultTypes {
 		if !mustGenerateType(t.Attribute().Meta, services) {
 			continue
 		}
-		sf.schemafy(&expr.AttributeExpr{Type: t})
+		sf.at(expr.UserTypeExampleIdentity(t)).schemafy(&expr.AttributeExpr{Type: t})
 	}
 
 	for _, s := range api.HTTP.Services {
@@ -145,9 +156,9 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 					reqBody.Description = defaultRequestBodyDescription(e)
 				}
 			}
-			req := sf.rebased(bodyExampleID(s.Name(), e.Name(), "request")).schemafy(reqBody)
+			req := sf.at(expr.RequestBodyExampleIdentity(e)).schemafy(reqBody)
 			if e.StreamingBody != nil {
-				sreq := sf.schemafy(e.StreamingBody)
+				sreq := sf.at(expr.MethodStreamingPayloadExampleIdentity(e.MethodExpr)).schemafy(e.StreamingBody)
 				var note string
 				if sreq.Ref != "" {
 					note = sreq.Ref
@@ -168,13 +179,15 @@ func buildBodyTypes(api *expr.APIExpr, types []expr.UserType, resultTypes []*exp
 				}
 			}
 			res := make(map[int][]*openapi.Schema)
-			resps := e.Responses
-			for _, er := range e.HTTPErrors {
-				resps = append(resps, er.Response)
+			for _, resp := range e.Responses {
+				identity := expr.ResponseBodyExampleIdentity(e, resp)
+				js := sf.at(identity).schemafy(staticViewBody(resp))
+				res[resp.StatusCode] = append(res[resp.StatusCode], js)
 			}
-			for i, resp := range resps {
-				id := bodyExampleID(s.Name(), e.Name(), "response."+strconv.Itoa(resp.StatusCode)+"."+strconv.Itoa(i))
-				js := sf.rebased(id).schemafy(staticViewBody(resp))
+			for _, httpError := range e.HTTPErrors {
+				identity := expr.ErrorResponseBodyExampleIdentity(e, httpError)
+				resp := httpError.Response
+				js := sf.at(identity).schemafy(staticViewBody(resp))
 				res[resp.StatusCode] = append(res[resp.StatusCode], js)
 			}
 			eb := &EndpointBodies{RequestBody: req, ResponseBodies: res}
@@ -200,10 +213,11 @@ func (sf *schemafier) buildSSEItemSchema(e *expr.HTTPEndpointExpr) *openapi.Sche
 	sse := e.SSE
 	sr := e.MethodExpr.StreamingResult
 	data := sr
-	dsf := sf
+	owner := expr.MethodStreamingResultExampleIdentity(e.MethodExpr)
+	dsf := sf.at(owner)
 	if sse.DataField != "" {
 		data = expr.AsObject(sr.Type).Attribute(sse.DataField)
-		dsf = sf.fieldOf(sr, sse.DataField)
+		dsf = sf.field(sr, sse.DataField, owner)
 	}
 	var dataSchema *openapi.Schema
 	switch data.Type {
@@ -218,13 +232,13 @@ func (sf *schemafier) buildSSEItemSchema(e *expr.HTTPEndpointExpr) *openapi.Sche
 	}
 	props := map[string]*openapi.Schema{"data": dataSchema}
 	if sse.EventField != "" {
-		props["event"] = sf.fieldOf(sr, sse.EventField).schemafy(expr.AsObject(sr.Type).Attribute(sse.EventField))
+		props["event"] = sf.field(sr, sse.EventField, owner).schemafy(expr.AsObject(sr.Type).Attribute(sse.EventField))
 	}
 	if sse.IDField != "" {
-		props["id"] = sf.fieldOf(sr, sse.IDField).schemafy(expr.AsObject(sr.Type).Attribute(sse.IDField))
+		props["id"] = sf.field(sr, sse.IDField, owner).schemafy(expr.AsObject(sr.Type).Attribute(sse.IDField))
 	}
 	if sse.RetryField != "" {
-		props["retry"] = sf.fieldOf(sr, sse.RetryField).schemafy(expr.AsObject(sr.Type).Attribute(sse.RetryField))
+		props["retry"] = sf.field(sr, sse.RetryField, owner).schemafy(expr.AsObject(sr.Type).Attribute(sse.RetryField))
 	}
 	return &openapi.Schema{
 		Type:       openapi.Object,
@@ -297,7 +311,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		}
 	case *expr.Array:
 		s.Type = openapi.Array
-		s.Items = sf.derived("0").schemafy(t.ElemType)
+		s.Items = sf.arrayElement(0).schemafy(t.ElemType)
 	case *expr.Object:
 		s.Type = openapi.Object
 		var itemNotes []string
@@ -305,7 +319,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			if !openapi.MustGenerate(nat.Attribute.Meta) {
 				continue
 			}
-			s.Properties[nat.Name] = sf.derived(nat.Name).schemafy(nat.Attribute)
+			s.Properties[nat.Name] = sf.member(nat.Name).schemafy(nat.Attribute)
 		}
 		if len(itemNotes) > 0 {
 			note = strings.Join(itemNotes, "\n")
@@ -317,7 +331,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 			// See https://swagger.io/docs/specification/data-models/dictionaries/.
 			s.AdditionalProperties = true
 		} else {
-			s.AdditionalProperties = sf.derived("val0").schemafy(t.ElemType)
+			s.AdditionalProperties = sf.mapValue(0).schemafy(t.ElemType)
 		}
 	case *expr.Union:
 		// Each branch owns both its discriminator literal and value schema so
@@ -334,14 +348,14 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 						Type: openapi.String,
 						Enum: []any{val.Name},
 					},
-					valueKey: sf.derived(val.Name).schemafy(val.Attribute),
+					valueKey: sf.unionMember(val.Name).schemafy(val.Attribute),
 				},
 				Required: []string{typeKey, valueKey},
 			})
 		}
 	case expr.UserType:
 		if expr.IsAlias(t) && !sf.nameAliases {
-			s = sf.rebased(t.ID()).schemafy(t.Attribute())
+			s = sf.at(expr.UserTypeExampleIdentity(t)).schemafy(t.Attribute())
 			break
 		}
 		h := sf.hashAttribute(attr, fnv.New64())
@@ -376,7 +390,7 @@ func (sf *schemafier) schemafy(attr *expr.AttributeExpr, noref ...bool) *openapi
 		typeName := sf.uniquify(codegen.Goify(name, true))
 		s.Ref = toRef(typeName)
 		sf.hashes[h] = append(sf.hashes[h], s.Ref)
-		schema := sf.rebased(t.ID()).schemafy(t.Attribute(), true)
+		schema := sf.at(expr.UserTypeExampleIdentity(t)).schemafy(t.Attribute(), true)
 		if schema.Description == "" {
 			schema.Description = userTypeDescription(t, attr)
 		}

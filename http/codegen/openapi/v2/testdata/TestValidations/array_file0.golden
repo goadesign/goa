@@ -25,13 +25,21 @@
         "bar": [
           {
             "string": ""
+          },
+          {
+            "string": ""
           }
         ],
-        "foo": []
+        "foo": [
+          "Molestiae labore nihil sunt."
+        ]
       },
       "properties": {
         "bar": {
           "example": [
+            {
+              "string": ""
+            },
             {
               "string": ""
             }
@@ -44,9 +52,11 @@
           "type": "array"
         },
         "foo": {
-          "example": [],
+          "example": [
+            "Molestiae labore nihil sunt."
+          ],
           "items": {
-            "example": "Eaque consequatur asperiores est.",
+            "example": "Molestiae labore nihil sunt.",
             "type": "string"
           },
           "maxItems": 42,

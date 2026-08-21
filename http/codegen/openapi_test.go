@@ -1,3 +1,5 @@
+// This file verifies HTTP OpenAPI generation uses prepared service data and
+// run-owned example streams without mutating the evaluated design.
 package codegen
 
 import (
@@ -24,7 +26,7 @@ func TestOpenAPI(t *testing.T) {
 		// Reset global variables
 		openapi.Definitions = make(map[string]*openapi.Schema)
 		root := expr.RunDSL(t, c.DSL)
-		spec, err := OpenAPIFiles(root)
+		spec, err := OpenAPIFiles(root, expr.NewExampleGenerator(root.API.RandomizerFactory))
 		require.NoError(t, err)
 		assert.Equal(t, c.NilSpec, spec == nil, k)
 	}
@@ -75,7 +77,7 @@ func TestOutputPath(t *testing.T) {
 			// Reset global variables
 			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
-			o, err := OpenAPIFiles(root)
+			o, err := OpenAPIFiles(root, expr.NewExampleGenerator(root.API.RandomizerFactory))
 			if c.Err != "" {
 				require.EqualError(t, err, c.Err)
 				return

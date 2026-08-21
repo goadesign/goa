@@ -1,3 +1,5 @@
+// This file verifies HTTP and OpenAPI analysis produce identical examples
+// regardless of which transport representation is analyzed first.
 package codegen
 
 import (
@@ -36,10 +38,10 @@ func TestOpenAPIOrderIndependence(t *testing.T) {
 		// NOTE: methods declaring anonymous object results (e.g.
 		// testdata.SSEObjectDSL) only pass this check because the raw
 		// object wrapping moved out of the service analyze pass into
-		// codegen.NormalizeRoot which CreateHTTPServices applies before
+		// codegen.NewGeneration, which CreateHTTPServices constructs before
 		// computing the transport data. The pristine root below is rendered
-		// without normalization, so designs whose OpenAPI output depends on
-		// the wrapping must normalize both roots (see
+		// without generation ownership, so designs whose OpenAPI output depends
+		// on the wrapping must prepare both roots (see
 		// TestGeneratorsTreatDesignAsReadOnly in codegen/generator for the
 		// full read-only guarantee).
 		{"sse", testdata.SSEStringDSL},
@@ -69,13 +71,12 @@ func TestOpenAPIOrderIndependence(t *testing.T) {
 
 // renderOpenAPI generates and renders all the OpenAPI specification files for
 // the given root and returns their content indexed by file path. The global
-// schema registry and the example generator are reset first so that two
-// generations of identical design trees yield identical documents.
+// schema registry is reset first and the call receives a fresh example
+// generator so two identical design trees yield identical documents.
 func renderOpenAPI(t *testing.T, root *expr.RootExpr) map[string]string {
 	t.Helper()
 	openapi.Definitions = make(map[string]*openapi.Schema)
-	root.API.ExampleGenerator = expr.NewRandom(root.API.Name)
-	files, err := OpenAPIFiles(root)
+	files, err := OpenAPIFiles(root, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
 	out := make(map[string]string, len(files))
 	for _, f := range files {

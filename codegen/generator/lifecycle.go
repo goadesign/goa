@@ -4,27 +4,44 @@
 package generator
 
 import (
+	"fmt"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/eval"
-	"goa.design/goa/v3/expr"
 )
 
 type (
 	// generationRun owns every fresh core and plugin instance for one execution.
 	generationRun struct {
 		cores   []coreGenerator
-		plugins []Plugin
+		plugins []runPlugin
+	}
+
+	// runPlugin retains one plugin's registered owner name with its fresh callbacks.
+	runPlugin struct {
+		name string
+		Plugin
+	}
+
+	// generationResult retains the exact plan needed to verify later file renders.
+	generationResult struct {
+		plan  *Plan
+		files []*codegen.File
 	}
 )
 
 // executeGeneration instantiates fresh core and plugin objects, prepares roots,
-// and renders files from one retained frozen plan.
+// and produces file descriptions from one retained frozen plan.
 func executeGeneration(genpkg string, roots []eval.Root, command string, registry *registry) ([]*codegen.File, error) {
 	run, err := newGenerationRun(command, registry)
 	if err != nil {
 		return nil, err
 	}
-	return run.execute(genpkg, roots)
+	result, err := run.execute(genpkg, roots)
+	if err != nil {
+		return nil, err
+	}
+	return result.files, nil
 }
 
 // newGenerationRun snapshots immutable factories and invokes each exactly once.
@@ -37,15 +54,15 @@ func newGenerationRun(command string, registry *registry) (*generationRun, error
 	for i, factory := range coreFactories {
 		cores[i] = factory()
 	}
-	plugins := make([]Plugin, len(pluginDescriptors))
+	plugins := make([]runPlugin, len(pluginDescriptors))
 	for i, descriptor := range pluginDescriptors {
-		plugins[i] = descriptor.factory()
+		plugins[i] = runPlugin{name: descriptor.name, Plugin: descriptor.factory()}
 	}
 	return &generationRun{cores: cores, plugins: plugins}, nil
 }
 
 // execute runs all phases for explicit prepared-root inputs.
-func (r *generationRun) execute(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+func (r *generationRun) execute(genpkg string, roots []eval.Root) (*generationResult, error) {
 	for _, plugin := range r.plugins {
 		if plugin.Prepare != nil {
 			if err := plugin.Prepare(genpkg, roots); err != nil {
@@ -53,29 +70,51 @@ func (r *generationRun) execute(genpkg string, roots []eval.Root) ([]*codegen.Fi
 			}
 		}
 	}
-	for _, root := range roots {
-		if design, ok := root.(*expr.RootExpr); ok {
-			codegen.NormalizeRoot(design)
-		}
+	generation, err := codegen.NewGeneration(genpkg, roots)
+	if err != nil {
+		return nil, err
 	}
-
-	plan := &Plan{generation: codegen.NewGeneration(genpkg, roots)}
+	design, err := snapshotPreparedDesign(roots)
+	if err != nil {
+		return nil, err
+	}
+	plan := &Plan{
+		generation:    generation,
+		preparedRoots: roots,
+		examples:      newExampleGenerators(roots),
+		design:        design,
+	}
+	if err := plan.verifyPreparedDesign("example generator creation"); err != nil {
+		return nil, err
+	}
 	for _, core := range r.cores {
 		if core.Plan != nil {
-			if err := core.Plan(plan); err != nil {
+			callbackErr := core.Plan(plan)
+			if err := plan.verifyPreparedDesign(fmt.Sprintf("core %q plan", core.name)); err != nil {
 				return nil, err
+			}
+			if callbackErr != nil {
+				return nil, callbackErr
 			}
 		}
 	}
 	for _, plugin := range r.plugins {
 		if plugin.Plan != nil {
-			if err := plugin.Plan(plan); err != nil {
+			callbackErr := plugin.Plan(plan)
+			if err := plan.verifyPreparedDesign(fmt.Sprintf("plugin %q plan", plugin.name)); err != nil {
 				return nil, err
+			}
+			if callbackErr != nil {
+				return nil, callbackErr
 			}
 		}
 	}
-	if err := plan.Generation().Freeze(); err != nil {
+	freezeErr := plan.Generation().Freeze()
+	if err := plan.verifyPreparedDesign("generation freeze"); err != nil {
 		return nil, err
+	}
+	if freezeErr != nil {
+		return nil, freezeErr
 	}
 
 	var files []*codegen.File
@@ -83,9 +122,12 @@ func (r *generationRun) execute(genpkg string, roots []eval.Root) ([]*codegen.Fi
 		if core.Generate == nil {
 			continue
 		}
-		generated, err := core.Generate(plan)
-		if err != nil {
+		generated, callbackErr := core.Generate(plan)
+		if err := plan.verifyPreparedDesign(fmt.Sprintf("core %q generate", core.name)); err != nil {
 			return nil, err
+		}
+		if callbackErr != nil {
+			return nil, callbackErr
 		}
 		files = append(files, generated...)
 	}
@@ -93,11 +135,14 @@ func (r *generationRun) execute(genpkg string, roots []eval.Root) ([]*codegen.Fi
 		if plugin.Generate == nil {
 			continue
 		}
-		generated, err := plugin.Generate(plan, files)
-		if err != nil {
+		generated, callbackErr := plugin.Generate(plan, files)
+		if err := plan.verifyPreparedDesign(fmt.Sprintf("plugin %q generate", plugin.name)); err != nil {
 			return nil, err
+		}
+		if callbackErr != nil {
+			return nil, callbackErr
 		}
 		files = generated
 	}
-	return files, nil
+	return &generationResult{plan: plan, files: files}, nil
 }

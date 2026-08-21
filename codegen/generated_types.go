@@ -1,10 +1,11 @@
 // This file defines the declaration catalog owned by one generated Go
-// package. Planning reserves every public type name here before generators use
-// the frozen records to render declarations and references.
+// package. Planning reserves every package-level name here before generators
+// use the frozen records to render declarations and references.
 package codegen
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -12,22 +13,20 @@ import (
 )
 
 type (
-	// GeneratedPackage owns type declarations and their shared naming scope for
-	// one generated Go package.
+	// GeneratedPackage owns declarations and their shared naming scope for one
+	// generated Go package.
 	GeneratedPackage struct {
-		path          string
-		outputDir     string
-		scope         *NameScope
-		names         []*NameDeclaration
-		nameRecords   map[*NameDeclaration]struct{}
-		exactNames    map[string]*NameDeclaration
-		userTypes     map[expr.UserType]*TypeDeclaration
-		typeBindings  map[expr.UserType]*TypeDeclaration
-		derivedTypes  map[DerivedTypeID]*derivedTypeDeclaration
-		unions        map[UnionTypeID]*unionDeclaration
-		userTypeNames map[string]string
-		derivedKeys   map[derivedTypeOrder]DerivedTypeID
-		frozen        bool
+		claim        string
+		path         string
+		outputDir    string
+		scope        *NameScope
+		names        []*NameDeclaration
+		exactNames   map[string]*NameDeclaration
+		userTypes    map[expr.UserType]*TypeDeclaration
+		typeBindings map[expr.UserType]*TypeDeclaration
+		derivedTypes map[DerivedTypeID]*TypeDeclaration
+		unions       map[UnionTypeID]*unionDeclaration
+		frozen       bool
 	}
 
 	// DerivedTypeID identifies a generated declaration by the exact source
@@ -41,9 +40,10 @@ type (
 	// It supplies both the semantic expression UID and the compiler declaration
 	// kind used for the wrapper created from a raw object.
 	MethodTypeIdentity struct {
-		serviceName string
-		methodName  string
-		kind        derivedTypeKind
+		name            string
+		kind            derivedTypeKind
+		exampleIdentity expr.ExampleIdentity
+		origin          expr.UserType
 	}
 
 	// TypeDeclaration records the canonical name and package path of one
@@ -65,7 +65,6 @@ type (
 		kindDeclaration        *NameDeclaration
 		constructorDeclaration *NameDeclaration
 		branchType             *TypeDeclaration
-		typeName               string
 	}
 
 	// unionDeclaration retains the expression needed to allocate the public
@@ -85,13 +84,6 @@ type (
 	// derivedTypeKind distinguishes the closed declaration families rebuilt
 	// independently during planning and rendering.
 	derivedTypeKind uint
-
-	// derivedTypeDeclaration retains the preferred name until package freeze.
-	derivedTypeDeclaration struct {
-		declaration *TypeDeclaration
-		name        string
-		order       derivedTypeOrder
-	}
 
 	// derivedTypeOrder contains only stable semantic values so view declaration
 	// suffixes never depend on expression pointer addresses or traversal order.
@@ -142,42 +134,16 @@ func NewViewedResultTypeID(source expr.UserType) DerivedTypeID {
 	return newDerivedTypeID(source, viewedResultTypeKind)
 }
 
-// NewMethodPayloadIdentity returns the identity of a method payload wrapper.
-func NewMethodPayloadIdentity(serviceName, methodName string) MethodTypeIdentity {
-	return newMethodTypeIdentity(serviceName, methodName, methodPayloadTypeKind)
-}
-
-// NewMethodStreamingPayloadIdentity returns the identity of a method streaming
-// payload wrapper.
-func NewMethodStreamingPayloadIdentity(serviceName, methodName string) MethodTypeIdentity {
-	return newMethodTypeIdentity(serviceName, methodName, methodStreamingPayloadTypeKind)
-}
-
-// NewMethodResultIdentity returns the identity of a method result wrapper.
-func NewMethodResultIdentity(serviceName, methodName string) MethodTypeIdentity {
-	return newMethodTypeIdentity(serviceName, methodName, methodResultTypeKind)
-}
-
-// NewMethodStreamingResultIdentity returns the identity of a method streaming
-// result wrapper.
-func NewMethodStreamingResultIdentity(serviceName, methodName string) MethodTypeIdentity {
-	return newMethodTypeIdentity(serviceName, methodName, methodStreamingResultTypeKind)
-}
-
 // Name returns the semantic wrapper name assigned during normalization.
 func (i MethodTypeIdentity) Name() string {
-	return Goify(i.methodName, true) + i.kind.methodSuffix()
+	return i.name
 }
 
-// UID returns the semantic expression identifier assigned during
-// normalization.
+// UID returns the stable semantic expression identifier assigned during
+// normalization. It reuses the wrapper's typed example owner so declaration
+// identity and example identity cannot disagree about the method role.
 func (i MethodTypeIdentity) UID() string {
-	return i.serviceName + "#" + i.Name()
-}
-
-// Matches reports whether userType was normalized for this exact method role.
-func (i MethodTypeIdentity) Matches(userType expr.UserType) bool {
-	return userType.ID() == i.UID()
+	return "generated:" + i.exampleIdentity.Seed()
 }
 
 // Name returns the unqualified Go declaration name. It panics until the
@@ -188,7 +154,7 @@ func (d *TypeDeclaration) Name() string {
 
 // PackagePath returns the import path of the package that owns the declaration.
 func (d *TypeDeclaration) PackagePath() string {
-	return d.declaration.PackagePath()
+	return d.declaration.packagePath()
 }
 
 // Declaration returns the canonical package-owned name record.
@@ -210,7 +176,7 @@ func (d *UnionDeclaration) KindName() string {
 
 // PackagePath returns the import path of the package that owns the union.
 func (d *UnionDeclaration) PackagePath() string {
-	return d.declaration.PackagePath()
+	return d.declaration.packagePath()
 }
 
 // Declaration returns the canonical package-owned union type name.
@@ -261,15 +227,37 @@ func (p *GeneratedPackage) DeclareName(declaration *NameDeclaration) error {
 	if p.frozen {
 		return fmt.Errorf("generated package %q is frozen", p.path)
 	}
-	if declaration.packagePath != "" {
-		if declaration.packagePath == p.path {
+	if err := validateNameDeclaration(declaration); err != nil {
+		return err
+	}
+	if declaration.owner != nil {
+		if declaration.owner == p {
 			return nil
 		}
 		return fmt.Errorf(
 			"package name %q already belongs to generated package %q",
 			declaration.preferredName(),
-			declaration.packagePath,
+			declaration.owner.path,
 		)
+	}
+	if declaration.base != nil {
+		switch {
+		case declaration.base.owner == nil:
+			return fmt.Errorf(
+				"generated package %q cannot declare preferred %s %q: base declaration is not owned",
+				p.path,
+				declaration.kind,
+				declaration.preferredName(),
+			)
+		case declaration.base.owner != p:
+			return fmt.Errorf(
+				"generated package %q cannot declare preferred %s %q: base declaration belongs to generated package %q",
+				p.path,
+				declaration.kind,
+				declaration.preferredName(),
+				declaration.base.owner.path,
+			)
+		}
 	}
 	if declaration.exact {
 		if existing, ok := p.exactNames[declaration.preferred]; ok {
@@ -283,12 +271,20 @@ func (p *GeneratedPackage) DeclareName(declaration *NameDeclaration) error {
 		}
 		p.exactNames[declaration.preferred] = declaration
 	} else {
-		for existing := range p.nameRecords {
-			if existing.exact || existing.base != nil || declaration.base != nil {
+		if err := validatePackageNameOrder(declaration.order); err != nil {
+			return fmt.Errorf(
+				"generated package %q cannot declare preferred %s %q: %w",
+				p.path,
+				declaration.kind,
+				declaration.preferredName(),
+				err,
+			)
+		}
+		for _, existing := range p.names {
+			if existing.exact || reflect.TypeOf(existing.order) != reflect.TypeOf(declaration.order) {
 				continue
 			}
-			if existing.order.PackageNameFamily() == declaration.order.PackageNameFamily() &&
-				existing.order.ComparePackageName(declaration.order) == 0 {
+			if existing.order.ComparePackageName(declaration.order) == 0 {
 				return fmt.Errorf(
 					"generated package %q cannot deterministically order preferred %s %q",
 					p.path,
@@ -298,9 +294,8 @@ func (p *GeneratedPackage) DeclareName(declaration *NameDeclaration) error {
 			}
 		}
 	}
-	declaration.packagePath = p.path
+	declaration.owner = p
 	p.names = append(p.names, declaration)
-	p.nameRecords[declaration] = struct{}{}
 	return nil
 }
 
@@ -311,20 +306,20 @@ func (p *GeneratedPackage) DeclareUserType(userType expr.UserType) (*TypeDeclara
 		return nil, fmt.Errorf("generated package %q is frozen", p.path)
 	}
 	origin := userType.Origin()
+	name := Goify(userType.Name(), true)
 	if declaration, ok := p.userTypes[origin]; ok {
+		if declaration.declaration.preferred != name {
+			return nil, fmt.Errorf(
+				"user type origin %q cannot declare both %q and %q in generated package %q",
+				origin.Name(),
+				declaration.declaration.preferred,
+				name,
+				p.path,
+			)
+		}
 		return declaration, nil
 	}
 
-	name := Goify(userType.Name(), true)
-	if declaredName, ok := p.userTypeNames[name]; ok {
-		return nil, fmt.Errorf(
-			"generated package %q cannot declare user type %q as %q: already declared by user type %q",
-			p.path,
-			userType.Name(),
-			name,
-			declaredName,
-		)
-	}
 	nameDeclaration := NewExactName(NameType, name)
 	if err := p.DeclareName(nameDeclaration); err != nil {
 		return nil, fmt.Errorf("declare user type %q: %w", userType.Name(), err)
@@ -335,7 +330,6 @@ func (p *GeneratedPackage) DeclareUserType(userType expr.UserType) (*TypeDeclara
 	}
 	p.bindName(nameDeclaration, userType)
 	p.userTypes[origin] = declaration
-	p.userTypeNames[name] = userType.Name()
 	return declaration, nil
 }
 
@@ -346,28 +340,21 @@ func (p *GeneratedPackage) DeclareDerivedType(identity DerivedTypeID, name strin
 	if p.frozen {
 		return nil, fmt.Errorf("generated package %q is frozen", p.path)
 	}
-	if planned, ok := p.derivedTypes[identity]; ok {
-		if planned.name != name {
+	canonicalName := Goify(name, true)
+	if declaration, ok := p.derivedTypes[identity]; ok {
+		if declaration.declaration.preferred != canonicalName {
 			return nil, fmt.Errorf(
 				"derived type from %q cannot declare both %q and %q in generated package %q",
 				identity.origin.Name(),
-				planned.name,
-				name,
+				declaration.declaration.preferred,
+				canonicalName,
 				p.path,
 			)
 		}
-		return planned.declaration, nil
+		return declaration, nil
 	}
-	order := newDerivedTypeOrder(identity, name)
-	if existing, ok := p.derivedKeys[order]; ok && existing != identity {
-		return nil, fmt.Errorf(
-			"generated package %q cannot deterministically order derived type %q from %q",
-			p.path,
-			name,
-			identity.origin.Name(),
-		)
-	}
-	nameDeclaration := NewPreferredName(NameType, name, order)
+	order := newDerivedTypeOrder(identity, canonicalName)
+	nameDeclaration := NewPreferredName(NameType, canonicalName, order)
 	if err := p.DeclareName(nameDeclaration); err != nil {
 		return nil, err
 	}
@@ -377,21 +364,16 @@ func (p *GeneratedPackage) DeclareDerivedType(identity DerivedTypeID, name strin
 			return nil, err
 		}
 	}
-	p.derivedTypes[identity] = &derivedTypeDeclaration{
-		declaration: declaration,
-		name:        name,
-		order:       order,
-	}
-	p.derivedKeys[order] = identity
+	p.derivedTypes[identity] = declaration
 	return declaration, nil
 }
 
 // DeclareMethodType records the declaration created for identity from source
 // and returns the derived identity used for later lookup.
 func (p *GeneratedPackage) DeclareMethodType(identity MethodTypeIdentity, source expr.UserType) (*TypeDeclaration, DerivedTypeID, error) {
-	if !identity.Matches(source) {
+	if identity.origin == nil || identity.origin != source.Origin() {
 		return nil, DerivedTypeID{}, fmt.Errorf(
-			"user type %q does not match method wrapper %q",
+			"user type %q is not the compiler-owned method wrapper %q",
 			source.Name(),
 			identity.UID(),
 		)
@@ -493,12 +475,12 @@ func (p *GeneratedPackage) DeclareUnionBranchType(union *expr.Union, branchName 
 	}
 	if branch.branchType != nil {
 		name := Goify(userType.Name(), true)
-		if branch.typeName != name {
+		if branch.branchType.declaration.preferred != name {
 			return nil, fmt.Errorf(
 				"branch %q of union %q cannot declare both %q and %q",
 				branchName,
 				union.Name(),
-				branch.typeName,
+				branch.branchType.declaration.preferred,
 				name,
 			)
 		}
@@ -522,7 +504,6 @@ func (p *GeneratedPackage) DeclareUnionBranchType(union *expr.Union, branchName 
 		return nil, err
 	}
 	branch.branchType = declaration
-	branch.typeName = typeName
 	return declaration, nil
 }
 
@@ -546,8 +527,8 @@ func (p *GeneratedPackage) Type(userType expr.UserType) (*TypeDeclaration, error
 
 // DerivedType returns a previously planned generated view declaration.
 func (p *GeneratedPackage) DerivedType(identity DerivedTypeID) (*TypeDeclaration, error) {
-	if planned, ok := p.derivedTypes[identity]; ok {
-		return planned.declaration, nil
+	if declaration, ok := p.derivedTypes[identity]; ok {
+		return declaration, nil
 	}
 	return nil, fmt.Errorf(
 		"derived type from %q is not declared in generated package %q",
@@ -601,19 +582,9 @@ func (p *GeneratedPackage) Scope() *NameScope {
 	return p.scope
 }
 
-// PackageNameFamily groups derived service declarations for typed comparison.
-func (o derivedTypeOrder) PackageNameFamily() string {
-	return "service-derived-type"
-}
-
 // ComparePackageName orders two derived service declaration identities.
 func (o derivedTypeOrder) ComparePackageName(other PackageNameOrder) int {
 	return compareDerivedTypeOrder(o, other.(derivedTypeOrder))
-}
-
-// PackageNameFamily groups complete union families for typed comparison.
-func (o unionNameOrder) PackageNameFamily() string {
-	return "union"
 }
 
 // ComparePackageName orders union declarations by emitted identity and role.
@@ -629,19 +600,17 @@ func (o unionNameOrder) ComparePackageName(other PackageNameOrder) int {
 }
 
 // newGeneratedPackage creates an empty mutable declaration catalog for path.
-func newGeneratedPackage(path, outputDir string) *GeneratedPackage {
+func newGeneratedPackage(claim, path, outputDir string) *GeneratedPackage {
 	return &GeneratedPackage{
-		path:          path,
-		outputDir:     outputDir,
-		scope:         NewNameScope(),
-		nameRecords:   make(map[*NameDeclaration]struct{}),
-		exactNames:    make(map[string]*NameDeclaration),
-		userTypes:     make(map[expr.UserType]*TypeDeclaration),
-		typeBindings:  make(map[expr.UserType]*TypeDeclaration),
-		derivedTypes:  make(map[DerivedTypeID]*derivedTypeDeclaration),
-		unions:        make(map[UnionTypeID]*unionDeclaration),
-		userTypeNames: make(map[string]string),
-		derivedKeys:   make(map[derivedTypeOrder]DerivedTypeID),
+		claim:        claim,
+		path:         path,
+		outputDir:    outputDir,
+		scope:        NewNameScope(),
+		exactNames:   make(map[string]*NameDeclaration),
+		userTypes:    make(map[expr.UserType]*TypeDeclaration),
+		typeBindings: make(map[expr.UserType]*TypeDeclaration),
+		derivedTypes: make(map[DerivedTypeID]*TypeDeclaration),
+		unions:       make(map[UnionTypeID]*unionDeclaration),
 	}
 }
 
@@ -701,7 +670,7 @@ func (p *GeneratedPackage) freeze() error {
 		}
 		dependent = waiting
 	}
-	for declaration := range p.nameRecords {
+	for _, declaration := range p.names {
 		for _, hash := range declaration.hashes {
 			p.scope.bind(hash, declaration.final)
 		}
@@ -744,12 +713,24 @@ func newDerivedTypeID(source expr.UserType, kind derivedTypeKind) DerivedTypeID 
 	return DerivedTypeID{origin: source.Origin(), kind: kind}
 }
 
-// newMethodTypeIdentity constructs one of the four compiler-owned method roles.
-func newMethodTypeIdentity(serviceName, methodName string, kind derivedTypeKind) MethodTypeIdentity {
+// newMethodTypeIdentity records the declaration role and exact example owner
+// of one wrapper created from a raw method object.
+func newMethodTypeIdentity(methodName string, kind derivedTypeKind, exampleIdentity expr.ExampleIdentity) MethodTypeIdentity {
 	if !kind.isMethodType() {
 		panic("method type identity requires a method role")
 	}
-	return MethodTypeIdentity{serviceName: serviceName, methodName: methodName, kind: kind}
+	return MethodTypeIdentity{
+		name:            Goify(methodName, true) + kind.methodSuffix(),
+		kind:            kind,
+		exampleIdentity: exampleIdentity,
+	}
+}
+
+// bind records the exact wrapper created during normalization. The pointer is
+// provenance for this run and does not participate in stable names or IDs.
+func (i MethodTypeIdentity) bind(source expr.UserType) MethodTypeIdentity {
+	i.origin = source.Origin()
+	return i
 }
 
 // methodSuffix returns the semantic suffix for one closed method wrapper kind.

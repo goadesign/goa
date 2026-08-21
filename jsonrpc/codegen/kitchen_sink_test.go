@@ -14,11 +14,12 @@ import (
 
 	goacodegen "goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
-	"goa.design/goa/v3/codegen/generator"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
+	grpccodegen "goa.design/goa/v3/grpc/codegen"
+	httpcodegen "goa.design/goa/v3/http/codegen"
 	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
 	"goa.design/goa/v3/jsonrpc/codegen/testdata"
 )
@@ -31,20 +32,19 @@ import (
 // against a manifest so files that appear or disappear fail the test.
 func TestJSONRPCKitchenSink(t *testing.T) {
 	root := expr.RunDSL(t, testdata.JSONRPCKitchenSinkDSL)
-	// The test invokes the generator functions directly so it must apply the
-	// design normalization generator.Generate runs before them.
-	goacodegen.NormalizeRoot(root)
 	roots := []eval.Root{root}
-	generation := goacodegen.NewGeneration("kitchensink", roots)
+	generation, err := goacodegen.NewGeneration("kitchensink", roots)
+	require.NoError(t, err)
 	require.NoError(t, service.Plan(root, generation))
 	require.NoError(t, jsonrpccodegen.Plan(generation))
 	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 
-	tfiles, err := generator.Transport(generation)
+	examples := expr.NewExampleGenerator(root.API.RandomizerFactory)
+	services, err := service.NewServicesData(root, generation, examples)
 	require.NoError(t, err)
-	efiles, err := generator.Example(generation)
-	require.NoError(t, err)
+	tfiles := kitchenSinkTransportFiles(root, services)
+	efiles := kitchenSinkExampleFiles(root, services)
 
 	tmp := t.TempDir()
 	for _, f := range append(tfiles, efiles...) {
@@ -76,4 +76,58 @@ func TestJSONRPCKitchenSink(t *testing.T) {
 		require.NoError(t, err)
 		testutil.CompareOrUpdateGolden(t, string(content), filepath.Join(goldenDir, rel+".golden"))
 	}
+}
+
+// kitchenSinkTransportFiles assembles every transport file through the public
+// subsystem APIs exercised by the golden fixture.
+func kitchenSinkTransportFiles(root *expr.RootExpr, services *service.ServicesData) []*goacodegen.File {
+	httpServices := httpcodegen.NewServicesData(services, root.API.HTTP)
+	files := httpcodegen.ServerFiles(httpServices)
+	files = append(files, httpcodegen.ClientFiles(httpServices)...)
+	files = append(files, httpcodegen.ServerTypeFiles(httpServices)...)
+	files = append(files, httpcodegen.ClientTypeFiles(httpServices)...)
+	files = append(files, httpcodegen.PathFiles(httpServices)...)
+	files = append(files, httpcodegen.ClientCLIFiles(httpServices)...)
+
+	grpcServices := grpccodegen.NewServicesData(services)
+	files = append(files, grpccodegen.ProtoFiles(grpcServices)...)
+	files = append(files, grpccodegen.ServerFiles(grpcServices)...)
+	files = append(files, grpccodegen.ClientFiles(grpcServices)...)
+	files = append(files, grpccodegen.ServerTypeFiles(grpcServices)...)
+	files = append(files, grpccodegen.ClientTypeFiles(grpcServices)...)
+	files = append(files, grpccodegen.ClientCLIFiles(grpcServices)...)
+
+	jsonrpcServices := httpcodegen.NewJSONRPCServicesData(services, &root.API.JSONRPC.HTTPExpr)
+	files = append(files, jsonrpccodegen.ServerFiles(jsonrpcServices)...)
+	files = append(files, jsonrpccodegen.ClientFiles(jsonrpcServices)...)
+	files = append(files, httpcodegen.ServerTypeFiles(jsonrpcServices)...)
+	files = append(files, httpcodegen.ClientTypeFiles(jsonrpcServices)...)
+	files = append(files, httpcodegen.PathFiles(jsonrpcServices)...)
+	return append(files, httpcodegen.ClientCLIFiles(jsonrpcServices)...)
+}
+
+// kitchenSinkExampleFiles assembles example service and transport files
+// through their public subsystem APIs.
+func kitchenSinkExampleFiles(root *expr.RootExpr, services *service.ServicesData) []*goacodegen.File {
+	files := service.ExampleServiceFiles(services.GenPkg(), root, services)
+	files = append(files, service.ExampleInterceptorsFiles(services.GenPkg(), root, services)...)
+	files = append(files, example.ServerFiles(root, services)...)
+	files = append(files, example.CLIFiles(root)...)
+
+	if len(root.API.HTTP.Services) > 0 {
+		httpServices := httpcodegen.NewServicesData(services, root.API.HTTP)
+		files = append(files, httpcodegen.ExampleServerFiles(httpServices)...)
+		files = append(files, httpcodegen.ExampleCLIFiles(httpServices)...)
+	}
+	if len(root.API.JSONRPC.Services) > 0 {
+		jsonrpcServices := httpcodegen.NewJSONRPCServicesData(services, &root.API.JSONRPC.HTTPExpr)
+		files = append(files, jsonrpccodegen.ExampleServerFiles(jsonrpcServices, files)...)
+		files = append(files, httpcodegen.ExampleCLIFiles(jsonrpcServices)...)
+	}
+	if len(root.API.GRPC.Services) > 0 {
+		grpcServices := grpccodegen.NewServicesData(services)
+		files = append(files, grpccodegen.ExampleServerFiles(grpcServices)...)
+		files = append(files, grpccodegen.ExampleCLIFiles(grpcServices)...)
+	}
+	return files
 }

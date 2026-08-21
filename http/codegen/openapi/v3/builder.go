@@ -1,3 +1,5 @@
+// This file builds OpenAPI v3 operations from evaluated HTTP endpoints and
+// preserves the exact semantic owner of every displayed example.
 package openapiv3
 
 import (
@@ -29,20 +31,12 @@ const (
 )
 
 // New returns the OpenAPI specification conforming to the given version
-// (openapi.Version30 or openapi.Version32) for the given API. It returns nil
-// if the design does not define HTTP endpoints.
-func New(root *expr.RootExpr, ver openapi.Version) *OpenAPI {
+// (openapi.Version30 or openapi.Version32) for the given API using examples
+// from generator. It returns nil if the design does not define HTTP endpoints.
+func New(root *expr.RootExpr, ver openapi.Version, generator *expr.ExampleGenerator) *OpenAPI {
 	if root == nil || root.API == nil || root.API.HTTP == nil || len(root.API.HTTP.Services) == 0 {
 		// No HTTP transport
 		return nil
-	}
-
-	m, ok := root.API.Meta.Last("openapi:example")
-	if !ok {
-		m, ok = root.API.Meta.Last("swagger:example")
-	}
-	if ok && m == "false" {
-		root.API.ExampleGenerator.Randomizer = nil
 	}
 
 	specVersion := OpenAPIVersion
@@ -51,12 +45,12 @@ func New(root *expr.RootExpr, ver openapi.Version) *OpenAPI {
 	}
 
 	var (
-		bodies, types = buildBodyTypes(root.API, root.Types, root.ResultTypes, ver)
+		bodies, types = buildBodyTypes(root.API, root.Types, root.ResultTypes, ver, generator)
 
 		info     = buildInfo(root.API, ver)
 		comps    = buildComponents(root, types)
 		servers  = buildServers(root.API.Servers, ver)
-		paths    = buildPaths(root.API.HTTP, bodies, root.API, ver)
+		paths    = buildPaths(root.API.HTTP, bodies, root.API, ver, generator)
 		security = buildSecurityRequirements(root.API.Requirements)
 		tags     = buildTags(root.API, ver)
 	)
@@ -131,7 +125,7 @@ func buildComponents(root *expr.RootExpr, types map[string]*openapi.Schema) *Com
 
 // buildPaths builds the OpenAPI Paths map with key as the HTTP path string and
 // the value as the corresponding PathItem object.
-func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, api *expr.APIExpr, ver openapi.Version) map[string]*PathItem {
+func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, api *expr.APIExpr, ver openapi.Version, generator *expr.ExampleGenerator) map[string]*PathItem {
 	var paths = make(map[string]*PathItem)
 	for _, svc := range h.Services {
 		if !openapi.MustGenerate(svc.Meta) || !openapi.MustGenerate(svc.ServiceExpr.Meta) {
@@ -150,7 +144,7 @@ func buildPaths(h *expr.HTTPExpr, bodies map[string]map[string]*EndpointBodies, 
 					// Remove any wildcards that is defined in path as a workaround to
 					// https://github.com/OAI/OpenAPI-Specification/issues/291
 					key = expr.HTTPWildcardRegex.ReplaceAllString(key, "/{$1}")
-					operation := buildOperation(key, r, sbod[e.Name()], api.ExampleGenerator, api.Meta, ver)
+					operation := buildOperation(key, r, sbod[e.Name()], generator, api.Meta, ver)
 					path, ok := paths[key]
 					if !ok {
 						path = new(PathItem)
@@ -254,7 +248,7 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 			ct = "multipart/form-data"
 		}
 		mt := &MediaType{Schema: bodies.RequestBody}
-		initExamples(mt, e.Body, rand.Rebased(bodyExampleID(m.Service.Name, e.Name(), "request")))
+		initExamples(mt, e.Body, rand.At(expr.RequestBodyExampleIdentity(e)))
 		requestBody = &RequestBodyRef{Value: &RequestBody{
 			Description: requestBodyDescription(e),
 			Required:    e.Body.Type != expr.Empty,
@@ -272,7 +266,9 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 			// The generated handler reads the Last-Event-ID header directly so
 			// the header does not appear in the endpoint headers expression.
 			att := expr.AsObject(m.Payload.Type).Attribute(e.SSE.RequestIDField)
-			ps = append(ps, paramFor(att, "Last-Event-ID", "header", false, rand.Field(m.Payload, e.SSE.RequestIDField)))
+			owner := expr.MethodPayloadExampleIdentity(m)
+			identity := exampleFieldIdentity(m.Payload, e.SSE.RequestIDField, owner)
+			ps = append(ps, paramFor(att, "Last-Event-ID", "header", false, rand, identity))
 		}
 		if e.MapQueryParams != nil {
 			name := *e.MapQueryParams
@@ -299,7 +295,8 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 
 	// responses
 	responses := make(map[string]*ResponseRef, len(e.Responses))
-	for _, r := range e.Responses {
+	responseBodyIndexes := make(map[int]int)
+	for i, r := range e.Responses {
 		var resultCT string
 		switch {
 		case e.UsesWebSocket():
@@ -318,7 +315,15 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 			r = r.Dup()
 			r.ContentType = "text/event-stream"
 		}
-		resp := responseFromExpr(r, bodies.ResponseBodies, rand)
+		var body *openapi.Schema
+		if r.Body.Type != expr.Empty {
+			bodyIndex := responseBodyIndexes[r.StatusCode]
+			body = bodies.ResponseBodies[r.StatusCode][bodyIndex]
+			responseBodyIndexes[r.StatusCode]++
+		}
+		owner := expr.MethodResultExampleIdentity(m)
+		bodyOwner := expr.ResponseBodyExampleIdentity(e, e.Responses[i])
+		resp := responseFromExpr(r, body, rand, m.Result, owner, bodyOwner)
 		if ver == openapi.Version32 && e.UsesSSE() {
 			setSSEContent(resp, bodies, resultCT, m.HasMixedResults())
 		}
@@ -328,7 +333,15 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 		if er.Description != "" && er.Response.Description == "" {
 			er.Response.Description = er.Description
 		}
-		resp := responseFromExpr(er.Response, bodies.ResponseBodies, rand)
+		var body *openapi.Schema
+		if er.Response.Body.Type != expr.Empty {
+			bodyIndex := responseBodyIndexes[er.Response.StatusCode]
+			body = bodies.ResponseBodies[er.Response.StatusCode][bodyIndex]
+			responseBodyIndexes[er.Response.StatusCode]++
+		}
+		owner := expr.MethodErrorExampleIdentity(m, er.ErrorExpr)
+		bodyOwner := expr.ErrorResponseBodyExampleIdentity(e, er)
+		resp := responseFromExpr(er.Response, body, rand, er.AttributeExpr, owner, bodyOwner)
 		desc := er.Name
 		if resp.Description != nil {
 			desc += ": " + *resp.Description

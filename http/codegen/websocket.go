@@ -101,9 +101,10 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 	cliRecvWithContextDesc := fmt.Sprintf("%s reads instances of %q from the %q endpoint websocket connection with context.", md.ClientStream.RecvWithContextName, svrSendTypeName, md.Name)
 	if e.MethodExpr.Stream == expr.ClientStreamKind || e.MethodExpr.Stream == expr.BidirectionalStreamKind {
 		streamBody := sd.bodies.streaming(e)
+		streamOwner := expr.MethodStreamingPayloadExampleIdentity(e.MethodExpr)
 		svrRecvTypeName = svcctx.Scope.Name(e.MethodExpr.StreamingPayload, svcctx.Pkg(e.MethodExpr.StreamingPayload), false, true)
 		svrRecvTypeRef = svcctx.Scope.Ref(e.MethodExpr.StreamingPayload, svcctx.Pkg(e.MethodExpr.StreamingPayload))
-		svrPayload = sds.buildRequestBodyType(streamBody, e.MethodExpr.StreamingPayload, e, true, sd)
+		svrPayload = sds.buildRequestBodyType(streamBody, e.MethodExpr.StreamingPayload, e, true, sd, streamOwner, streamOwner)
 		if needInit(e.MethodExpr.StreamingPayload.Type) {
 			body := streamBody.Type
 			// generate constructor function to transform request body,
@@ -146,9 +147,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 						TypeRef:  sd.serverWireTypes.scope.GoTypeRef(streamBody),
 						Type:     streamBody.Type,
 						Required: true,
-						// The example has always been computed from the
-						// request body, not the streaming body.
-						Example:  sd.bodies.request(e).Example(sds.Root.API.ExampleGenerator),
+						Example:  sds.Example(streamBody, streamOwner),
 						Validate: svcode,
 					},
 				}}
@@ -175,7 +174,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 				ServerCode:     serverCode,
 			}
 		}
-		cliPayload = sds.buildRequestBodyType(streamBody, e.MethodExpr.StreamingPayload, e, false, sd)
+		cliPayload = sds.buildRequestBodyType(streamBody, e.MethodExpr.StreamingPayload, e, false, sd, streamOwner, streamOwner)
 		if e.MethodExpr.Stream == expr.ClientStreamKind {
 			svrSendDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection and closes the connection.", md.ServerStream.SendName, svrSendTypeName, md.Name)
 			svrSendWithContextDesc = fmt.Sprintf("%s streams instances of %q to the %q endpoint websocket connection with context and closes the connection.", md.ServerStream.SendWithContextName, svrSendTypeName, md.Name)
