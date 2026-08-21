@@ -1,3 +1,7 @@
+// Code generators use this file to turn caller-supplied type identities and
+// attributes into unique Go names and type references. Hashed names use exactly
+// the caller's Hash value; after Freeze, existing names remain readable but no
+// new name may be reserved.
 package codegen
 
 import (

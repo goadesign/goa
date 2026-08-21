@@ -1,3 +1,7 @@
+// Plugins register prepare, plan, and render callbacks in this file; the
+// top-level generator invokes matching callbacks with design roots, the active
+// Generation, and generated files. Preparation may change roots, planning may
+// declare types, and rendering receives the same Generation only after freeze.
 package codegen
 
 import "goa.design/goa/v3/eval"

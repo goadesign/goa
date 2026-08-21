@@ -1,3 +1,6 @@
+// Generate asks this file for the core callbacks selected by the gen or example
+// command. It receives Genfunc records whose Plan callbacks all run before the
+// same frozen Generation is passed to their file-producing Generate callbacks.
 package generator
 
 import (

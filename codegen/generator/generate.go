@@ -1,3 +1,7 @@
+// The goa command calls this file with an output directory, command, and debug
+// flag; it reads the evaluated design roots and returns the files it wrote.
+// Every core generator and plugin plans against one Generation, which is frozen
+// before any callback renders files or can add another declaration.
 package generator
 
 import (
