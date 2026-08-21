@@ -3,6 +3,7 @@
 package example
 
 import (
+	"path"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -12,7 +13,7 @@ import (
 // Plan reserves the application and interceptor package aliases consumed by
 // example server and client files before the generation catalog freezes.
 func Plan(generation *codegen.Generation) error {
-	rootPath := RootPath(generation.GenPkg())
+	rootPath := path.Dir(generation.GenPkg())
 	for _, root := range generation.Roots() {
 		design, ok := root.(*expr.RootExpr)
 		if !ok {

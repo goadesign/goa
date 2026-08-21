@@ -16,13 +16,11 @@ import (
 )
 
 func TestGenerateHTTPUnionUsedByRequestAndResponseCompiles(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(cmd string) ([]Genfunc, error) {
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-		}, nil
-	}
+	registry := testRegistry(
+		"gen",
+		testGenerator(planServiceData, Service),
+		testGenerator(planTransportData, Transport),
+	)
 
 	dsl := func() {
 		d.API("test", func() {})
@@ -67,7 +65,7 @@ func TestGenerateHTTPUnionUsedByRequestAndResponseCompiles(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	if _, err := Generate(dir, "gen", false); err != nil {
+	if _, err := generate(dir, "gen", false, registry); err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
 	assertGeneratedUnionDeclarations(t, genDir)

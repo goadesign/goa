@@ -1,3 +1,5 @@
+// This file verifies that complete generation merges shared union
+// declarations without losing their package-owned names.
 package generator
 
 import (
@@ -16,14 +18,12 @@ import (
 // the union marker method for the union branch type. This mirrors the original
 // failure mode where only the union method remained and the struct was lost.
 func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(cmd string) ([]Genfunc, error) {
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-			{Plan: planServiceData, Generate: OpenAPI},
-		}, nil
-	}
+	registry := testRegistry(
+		"gen",
+		testGenerator(planServiceData, Service),
+		testGenerator(planTransportData, Transport),
+		testGenerator(planServiceData, OpenAPI),
+	)
 
 	dsl := func() {
 		d.API("test", func() {})
@@ -61,7 +61,7 @@ func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
 	_ = cg.RunDSL(t, dsl)
 
 	dir := t.TempDir()
-	if _, err := Generate(dir, "gen", false); err != nil {
+	if _, err := generate(dir, "gen", false, registry); err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
 

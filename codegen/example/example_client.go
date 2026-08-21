@@ -1,3 +1,6 @@
+// This file renders example CLI entrypoints from the retained server analysis.
+// Generated service and transport imports are already frozen by planning; the
+// CLI renderer receives no separate generated-module path.
 package example
 
 import (
@@ -11,10 +14,10 @@ import (
 
 // CLIFiles returns example client tool main implementation for each server
 // expression in the design.
-func CLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
+func CLIFiles(root *expr.RootExpr) []*codegen.File {
 	var fw []*codegen.File
 	for _, svr := range root.API.Servers {
-		if m := exampleCLIMain(genpkg, root, svr); m != nil {
+		if m := exampleCLIMain(root, svr); m != nil {
 			fw = append(fw, m)
 		}
 	}
@@ -23,7 +26,7 @@ func CLIFiles(genpkg string, root *expr.RootExpr) []*codegen.File {
 
 // exampleCLIMain returns an example client tool main implementation for the
 // given server expression.
-func exampleCLIMain(_ string, root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
+func exampleCLIMain(root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
 	svrdata := Servers.Get(svr, root)
 
 	// Skip CLI generation for servers with no transports (e.g., agent-only services)

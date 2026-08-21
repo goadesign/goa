@@ -1,3 +1,5 @@
+// This file verifies that common example CLI entrypoints render without a
+// second generated-module path input.
 package example
 
 import (
@@ -27,7 +29,7 @@ func TestExampleCLIFiles(t *testing.T) {
 			// reset global variable
 			Servers = make(ServersData)
 			root := codegen.RunDSL(t, c.DSL)
-			fs := CLIFiles("", root)
+			fs := CLIFiles(root)
 			require.Len(t, fs, 1)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer

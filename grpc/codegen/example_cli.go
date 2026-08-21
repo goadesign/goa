@@ -32,7 +32,7 @@ func exampleCLI(services *ServicesData, svr *expr.ServerExpr) *codegen.File {
 	if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
-	rootPath := example.RootPath(genpkg)
+	rootPath := path.Dir(genpkg)
 	cliImport := services.PackageImport(path.Join(genpkg, "grpc", "cli", svrdata.Dir))
 
 	specs := []*codegen.ImportSpec{

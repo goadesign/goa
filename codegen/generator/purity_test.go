@@ -1,3 +1,5 @@
+// This file snapshots evaluated design expressions and verifies that only the
+// lifecycle preparation phase may change them.
 package generator
 
 import (
@@ -79,19 +81,8 @@ func TestGeneratorsTreatDesignAsReadOnly(t *testing.T) {
 			before := snapshotDesign(root)
 
 			for _, cmd := range []string{"gen", "example"} {
-				genfuncs, err := Generators(cmd)
+				_, err := executeGeneration("gen", []eval.Root{root}, cmd, newDefaultRegistry())
 				require.NoError(t, err)
-				generation := codegen.NewGeneration("gen", []eval.Root{root})
-				for _, gen := range genfuncs {
-					if gen.Plan != nil {
-						require.NoError(t, gen.Plan(generation))
-					}
-				}
-				require.NoError(t, generation.Freeze())
-				for _, gen := range genfuncs {
-					_, err := gen.Generate(generation)
-					require.NoError(t, err)
-				}
 			}
 
 			after := snapshotDesign(root)
@@ -105,6 +96,38 @@ func TestGeneratorsTreatDesignAsReadOnly(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestPreparedRootsDetectPostPrepareMutation proves that the exact design
+// snapshot used by the purity boundary rejects a plugin that changes an
+// expression during planning, after the only mutable lifecycle phase closed.
+func TestPreparedRootsDetectPostPrepareMutation(t *testing.T) {
+	root := expr.RunDSL(t, httpdata.AliasTypeDSL)
+	codegen.NormalizeRoot(root)
+	registry := newRegistry()
+	var (
+		prepared map[*expr.AttributeExpr]attrState
+		target   *expr.AttributeExpr
+	)
+	registry.registerPlugin("mutation", "test", pluginNormal, func() Plugin {
+		return Plugin{Prepare: func(_ string, _ []eval.Root) error {
+			prepared = snapshotDesign(root)
+			for target = range prepared {
+				break
+			}
+			return nil
+		}}
+	})
+	registry.addCommand("test", func() coreGenerator {
+		return coreGenerator{Plan: func(_ *Plan) error {
+			target.Description = "changed after preparation"
+			return nil
+		}}
+	})
+
+	_, err := executeGeneration("generated.local/gen", []eval.Root{root}, "test", registry)
+	require.NoError(t, err)
+	require.NotEqual(t, prepared, snapshotDesign(root), "purity snapshot accepted a planning mutation")
 }
 
 // snapshotDesign walks every expression reachable from the root via exported

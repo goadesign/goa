@@ -38,7 +38,7 @@ func ExampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 	if services.jsonrpc {
 		funcSuffix = "JSONRPC"
 	}
-	rootPath := example.RootPath(genpkg)
+	rootPath := path.Dir(genpkg)
 	cliImport := services.PackageImport(path.Join(genpkg, services.dir(), "cli", svrdata.Dir))
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},

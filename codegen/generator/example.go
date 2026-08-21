@@ -32,12 +32,12 @@ func Example(generation *codegen.Generation) ([]*codegen.File, error) {
 		}
 
 		// server main
-		if fs := example.ServerFiles(generation.GenPkg(), r, services); len(fs) != 0 {
+		if fs := example.ServerFiles(r, services); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 
 		// CLI main
-		if fs := example.CLIFiles(generation.GenPkg(), r); len(fs) != 0 {
+		if fs := example.CLIFiles(r); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 

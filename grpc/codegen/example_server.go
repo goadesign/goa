@@ -58,7 +58,7 @@ func exampleServer(services *ServicesData, svr *expr.ServerExpr) *codegen.File {
 		specs = append(specs, serverImport, serviceImport, protobufImport)
 	}
 
-	rootPath := example.RootPath(genpkg)
+	rootPath := path.Dir(genpkg)
 	apiImport := services.PackageImport(rootPath)
 	specs = append(specs, apiImport)
 

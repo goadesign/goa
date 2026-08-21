@@ -1,3 +1,6 @@
+// This file defines the evaluated design root and validates relationships
+// between its API, services, generated types, and explicitly relocated user
+// types before code generation begins.
 package expr
 
 import (
@@ -229,21 +232,21 @@ func (r *RootExpr) Validate() error {
 // types.
 func (r *RootExpr) validateRelocatedUserTypes() *eval.ValidationErrors {
 	var verr eval.ValidationErrors
-	declared := make(map[string]struct{}, len(r.Types))
+	declared := make(map[UserType]struct{}, len(r.Types))
 	for _, ut := range r.Types {
-		declared[ut.ID()] = struct{}{}
+		declared[ut.Origin()] = struct{}{}
 	}
 	for _, ut := range r.Types {
 		pkgPath, ok := ut.Attribute().Meta.Last("struct:pkg:path")
 		if !ok || pkgPath == "" {
 			continue
 		}
-		seen := make(map[string]struct{})
+		seen := make(map[UserType]struct{})
 		r.walkUserTypeDependencies(ut, seen, "", func(dep UserType, path string) {
-			if dep.ID() == ut.ID() {
+			if dep.Origin() == ut.Origin() {
 				return
 			}
-			if _, ok := declared[dep.ID()]; !ok {
+			if _, ok := declared[dep.Origin()]; !ok {
 				// Generated/derived user types (e.g. union branch wrappers) are
 				// materialized alongside their owning types and do not require an
 				// explicit struct:pkg:path.
@@ -275,7 +278,7 @@ func (r *RootExpr) validateRelocatedUserTypes() *eval.ValidationErrors {
 
 // walkUserTypeDependencies traverses the attribute graph reachable from root and
 // invokes visit for each encountered user type.
-func (r *RootExpr) walkUserTypeDependencies(root UserType, seen map[string]struct{}, path string, visit func(UserType, string)) {
+func (r *RootExpr) walkUserTypeDependencies(root UserType, seen map[UserType]struct{}, path string, visit func(UserType, string)) {
 	if root == nil || root.Attribute() == nil {
 		return
 	}
@@ -287,16 +290,17 @@ func (r *RootExpr) walkUserTypeDependencies(root UserType, seen map[string]struc
 //
 // The path argument records the traversal path through objects, arrays, maps,
 // and unions and is intended for diagnostics.
-func (r *RootExpr) walkAttributeUserTypes(att *AttributeExpr, seen map[string]struct{}, path string, visit func(UserType, string)) {
+func (r *RootExpr) walkAttributeUserTypes(att *AttributeExpr, seen map[UserType]struct{}, path string, visit func(UserType, string)) {
 	if att == nil || att.Type == Empty {
 		return
 	}
 	switch t := att.Type.(type) {
 	case UserType:
-		if _, ok := seen[t.ID()]; ok {
+		origin := t.Origin()
+		if _, ok := seen[origin]; ok {
 			return
 		}
-		seen[t.ID()] = struct{}{}
+		seen[origin] = struct{}{}
 		visit(t, path)
 		r.walkAttributeUserTypes(t.Attribute(), seen, path, visit)
 	case *Object:

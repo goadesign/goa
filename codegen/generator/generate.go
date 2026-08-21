@@ -15,15 +15,24 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/eval"
-	"goa.design/goa/v3/expr"
 	"golang.org/x/tools/go/packages"
 )
 
 // Generate runs the code generation algorithms.
 func Generate(dir, cmd string, debug bool) (outputs []string, err1 error) {
+	return generate(dir, cmd, debug, defaultRegistry)
+}
+
+// generate runs code generation with an explicit registry so package tests can
+// use isolated factories without replacing production globals.
+func generate(dir, cmd string, debug bool, registry *registry) (outputs []string, err1 error) {
 	startGenerate := time.Now()
 	if debug {
 		fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Starting generator.Generate()\n")
+	}
+	run, err := newGenerationRun(cmd, registry)
+	if err != nil {
+		return nil, err
 	}
 
 	// 1. Compute design roots.
@@ -91,97 +100,15 @@ func Generate(dir, cmd string, debug bool) (outputs []string, err1 error) {
 		}
 	}
 
-	// 3. Retrieve goa generators for given command.
-	var genfuncs []Genfunc
-	{
-		start := time.Now()
-		gs, err := Generators(cmd)
-		if err != nil {
-			return nil, err
-		}
-		genfuncs = gs
-		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 3: Retrieve goa generators took %v (%d generators)\n", time.Since(start), len(genfuncs))
-		}
+	// 3. Prepare roots, build and freeze one plan, then render core and plugin
+	// files through the fresh run objects instantiated before root evaluation.
+	startLifecycle := time.Now()
+	genfiles, err := run.execute(genpkg, roots)
+	if err != nil {
+		return nil, err
 	}
-
-	// 4. Run the code pre generation plugins then normalize the design
-	// roots. NormalizeRoot is the only sanctioned design mutation past eval
-	// finalization; it runs after the prepare plugins so plugin contributed
-	// endpoints are normalized too and before the generators so they all
-	// observe the same read-only design tree.
-	{
-		start := time.Now()
-		err := codegen.RunPluginsPrepare(cmd, genpkg, roots)
-		if err != nil {
-			return nil, err
-		}
-		for _, root := range roots {
-			if r, ok := root.(*expr.RootExpr); ok {
-				codegen.NormalizeRoot(r)
-			}
-		}
-		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 4: Run pre-generation plugins took %v\n", time.Since(start))
-		}
-	}
-
-	// 5. Create one generation context, plan every core and plugin declaration,
-	// then freeze all generated package names before rendering begins.
-	generation := codegen.NewGeneration(genpkg, roots)
-	{
-		start := time.Now()
-		for _, gen := range genfuncs {
-			if gen.Plan == nil {
-				continue
-			}
-			if err := gen.Plan(generation); err != nil {
-				return nil, err
-			}
-		}
-		if err := codegen.RunPluginsPlan(cmd, generation); err != nil {
-			return nil, err
-		}
-		if err := generation.Freeze(); err != nil {
-			return nil, err
-		}
-		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 5: Plan and freeze declarations took %v\n", time.Since(start))
-		}
-	}
-
-	// 6. Generate the initial files produced by the core generators.
-	// NOTE: Parallelization causes infinite recursion in AsObject() for circular type references
-	var genfiles []*codegen.File
-	{
-		start := time.Now()
-		for i, gen := range genfuncs {
-			genStart := time.Now()
-			fs, err := gen.Generate(generation)
-			if err != nil {
-				return nil, err
-			}
-			genfiles = append(genfiles, fs...)
-			if debug {
-				fmt.Fprintf(os.Stderr, "[TIMING]     [generate]   Generator %d produced %d files in %v\n", i, len(fs), time.Since(genStart))
-			}
-		}
-		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 6: Generate initial files took %v (total %d files)\n", time.Since(start), len(genfiles))
-		}
-	}
-
-	// 7. Run the code generation plugins with the same frozen generation.
-	{
-		start := time.Now()
-		var err error
-		genfiles, err = codegen.RunPlugins(cmd, generation, genfiles)
-		if err != nil {
-			return nil, err
-		}
-		if debug {
-			fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 7: Run post-generation plugins took %v (now %d files)\n", time.Since(start), len(genfiles))
-		}
+	if debug {
+		fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Stage 3: Lifecycle produced %d files in %v\n", len(genfiles), time.Since(startLifecycle))
 	}
 
 	// 8. Merge files that target the same path to avoid overwriting content when

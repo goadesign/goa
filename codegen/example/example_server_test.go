@@ -70,7 +70,7 @@ func TestExampleServerFiles(t *testing.T) {
 			require.NoError(t, generation.Freeze())
 			services, err := service.NewServicesData(root, generation)
 			require.NoError(t, err)
-			fs := ServerFiles(generation.GenPkg(), root, services)
+			fs := ServerFiles(root, services)
 			require.Len(t, fs, 1)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer

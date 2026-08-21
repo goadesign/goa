@@ -20,13 +20,10 @@ import (
 // TestRelocatedUnionPackageNamesCompile verifies that two services and their
 // HTTP and gRPC transports compile against distinct unions in one shared package.
 func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-		}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
+		{Plan: planServiceData, Generate: Service},
+		{Plan: planTransportData, Generate: Transport},
+	})
 
 	root := func() {
 		dsl.API("relocated union package names", func() {})
@@ -93,7 +90,7 @@ func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	for _, path := range []string{
 		filepath.Join("types", "first_input.go"),
@@ -114,13 +111,10 @@ func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 // HTTP and gRPC response policy binds to the equivalent error value declared by
 // the endpoint method instead of retaining the API declaration object.
 func TestInheritedTransportErrorMappingsCompileWithMethodErrors(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-		}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
+		{Plan: planServiceData, Generate: Service},
+		{Plan: planTransportData, Generate: Transport},
+	})
 
 	codegen.RunDSL(t, func() {
 		dsl.API("error policy", func() {
@@ -140,7 +134,7 @@ func TestInheritedTransportErrorMappingsCompileWithMethodErrors(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	runGeneratedTests(t, genDir)
 }
@@ -148,13 +142,10 @@ func TestInheritedTransportErrorMappingsCompileWithMethodErrors(t *testing.T) {
 // TestNestedTransportMetadataOwnsRecursiveImports verifies conversion helpers
 // import a custom field type nested inside a relocated service declaration.
 func TestNestedTransportMetadataOwnsRecursiveImports(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-		}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
+		{Plan: planServiceData, Generate: Service},
+		{Plan: planTransportData, Generate: Transport},
+	})
 
 	codegen.RunDSL(t, func() {
 		outer := dsl.Type("Outer", func() {
@@ -182,7 +173,7 @@ func TestNestedTransportMetadataOwnsRecursiveImports(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	writeStubPackage(t, filepath.Join(genDir, "custom", "value"), "custom")
 	runGeneratedTests(t, genDir)
@@ -192,13 +183,10 @@ func TestNestedTransportMetadataOwnsRecursiveImports(t *testing.T) {
 // natural name collides with a fixed runtime import is declared and referenced
 // with the same generation-owned qualifier in every transport.
 func TestTransportServiceImportsUseFrozenAliases(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-		}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
+		{Plan: planServiceData, Generate: Service},
+		{Plan: planTransportData, Generate: Transport},
+	})
 
 	codegen.RunDSL(t, func() {
 		dsl.Service("Goa", func() {
@@ -233,7 +221,7 @@ func TestTransportServiceImportsUseFrozenAliases(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	runGeneratedTests(t, genDir)
 }
@@ -242,13 +230,10 @@ func TestTransportServiceImportsUseFrozenAliases(t *testing.T) {
 // imports the relocated effective error referenced by generated HTTP and gRPC
 // encoders even though the method does not redeclare it.
 func TestInheritedTransportErrorsOwnImports(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-		}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
+		{Plan: planServiceData, Generate: Service},
+		{Plan: planTransportData, Generate: Transport},
+	})
 
 	codegen.RunDSL(t, func() {
 		fault := dsl.Type("Fault", func() {
@@ -271,7 +256,7 @@ func TestInheritedTransportErrorsOwnImports(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	runGeneratedTests(t, genDir)
 }
@@ -279,10 +264,7 @@ func TestInheritedTransportErrorsOwnImports(t *testing.T) {
 // TestServiceUnionGeneratedBranchShapesCompile verifies that generated branch
 // aliases with one natural name but different primitive shapes remain distinct.
 func TestServiceUnionGeneratedBranchShapesCompile(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{{Plan: planServiceData, Generate: Service}}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{{Plan: planServiceData, Generate: Service}})
 
 	codegen.RunDSL(t, func() {
 		first := dsl.Type("FirstValue", func() {
@@ -308,7 +290,7 @@ func TestServiceUnionGeneratedBranchShapesCompile(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	unionSource, err := os.ReadFile(filepath.Join(genDir, "types", "unions.go"))
 	require.NoError(t, err)
@@ -320,10 +302,7 @@ func TestServiceUnionGeneratedBranchShapesCompile(t *testing.T) {
 // TestServiceUnionFamilyNamesAvoidExactDeclarations verifies that union
 // constants and constructors cannot collide with exact DSL type names.
 func TestServiceUnionFamilyNamesAvoidExactDeclarations(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{{Plan: planServiceData, Generate: Service}}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{{Plan: planServiceData, Generate: Service}})
 
 	codegen.RunDSL(t, func() {
 		kind := dsl.Type("ValueKindText", dsl.String)
@@ -345,7 +324,7 @@ func TestServiceUnionFamilyNamesAvoidExactDeclarations(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	runGeneratedTests(t, genDir)
 }
@@ -353,13 +332,10 @@ func TestServiceUnionFamilyNamesAvoidExactDeclarations(t *testing.T) {
 // TestServiceFilesOwnTheirImports verifies that imports used by one service do
 // not leak into another service file generated from the same design root.
 func TestServiceFilesOwnTheirImports(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-		}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
+		{Plan: planServiceData, Generate: Service},
+		{Plan: planTransportData, Generate: Transport},
+	})
 
 	codegen.RunDSL(t, func() {
 		dsl.API("file-owned imports", func() {})
@@ -396,7 +372,7 @@ func TestServiceFilesOwnTheirImports(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	runGeneratedTests(t, genDir)
 }
@@ -405,13 +381,10 @@ func TestServiceFilesOwnTheirImports(t *testing.T) {
 // result declarations never relocate the request/response wrappers consumed by
 // the raw HTTP body path.
 func TestRawBodyStructsRemainInEndpointsPackage(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-		}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
+		{Plan: planServiceData, Generate: Service},
+		{Plan: planTransportData, Generate: Transport},
+	})
 
 	codegen.RunDSL(t, func() {
 		upload := dsl.Type("Upload", func() {
@@ -450,7 +423,7 @@ func TestRawBodyStructsRemainInEndpointsPackage(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 
 	clientSource, err := os.ReadFile(filepath.Join(genDir, "http", "raw_bodies", "client", "client.go"))
@@ -468,10 +441,7 @@ func TestRawBodyStructsRemainInEndpointsPackage(t *testing.T) {
 // reference generated packages with the same Go package name without emitting
 // duplicate import aliases or ambiguous qualified references.
 func TestServiceReferencesUseImportPathAliases(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{{Plan: planServiceData, Generate: Service}}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{{Plan: planServiceData, Generate: Service}})
 
 	codegen.RunDSL(t, func() {
 		dsl.API("path-owned aliases", func() {})
@@ -496,7 +466,7 @@ func TestServiceReferencesUseImportPathAliases(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	content, err := os.ReadFile(filepath.Join(genDir, "values", "service.go"))
 	require.NoError(t, err)
@@ -512,13 +482,10 @@ func TestServiceReferencesUseImportPathAliases(t *testing.T) {
 // JSON-RPC files qualify two same-basename service packages with the aliases
 // frozen by the shared generation.
 func TestTransportReferencesUseImportPathAliases(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-		}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
+		{Plan: planServiceData, Generate: Service},
+		{Plan: planTransportData, Generate: Transport},
+	})
 
 	codegen.RunDSL(t, func() {
 		first := dsl.Type("First", func() {
@@ -573,7 +540,7 @@ func TestTransportReferencesUseImportPathAliases(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	for _, transport := range []string{"http", "grpc", "jsonrpc"} {
 		source := generatedTreeSource(t, filepath.Join(genDir, transport, "values"))
@@ -613,10 +580,7 @@ func generatedTreeSource(t *testing.T, root string) string {
 // expand a named branch definition and import packages used only where that
 // named type itself is declared.
 func TestNamedUnionBranchImportsReferenceOnly(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{{Plan: planServiceData, Generate: Service}}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{{Plan: planServiceData, Generate: Service}})
 
 	codegen.RunDSL(t, func() {
 		dsl.API("named branch imports", func() {})
@@ -637,7 +601,7 @@ func TestNamedUnionBranchImportsReferenceOnly(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	writeStubPackage(t, filepath.Join(genDir, "custom", "json"), "json")
 	content, err := os.ReadFile(filepath.Join(genDir, "values", "unions.go"))
@@ -652,10 +616,7 @@ func TestNamedUnionBranchImportsReferenceOnly(t *testing.T) {
 // object wrappers collide only with declarations emitted in the same service
 // package, never with a nested declaration relocated elsewhere.
 func TestNormalizedMethodTypesUseServicePackageNames(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{{Plan: planServiceData, Generate: Service}}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{{Plan: planServiceData, Generate: Service}})
 
 	t.Run("relocated name does not collide", func(t *testing.T) {
 		codegen.RunDSL(t, func() {
@@ -691,7 +652,7 @@ func TestNormalizedMethodTypesUseServicePackageNames(t *testing.T) {
 		dir := t.TempDir()
 		genDir := filepath.Join(dir, codegen.Gendir)
 		writeGeneratedModule(t, genDir, "gen")
-		_, err := Generate(dir, "gen", false)
+		_, err := generate(dir, "gen", false, registry)
 		require.NoError(t, err)
 		content, err := os.ReadFile(filepath.Join(genDir, "values", "service.go"))
 		require.NoError(t, err)
@@ -701,12 +662,10 @@ func TestNormalizedMethodTypesUseServicePackageNames(t *testing.T) {
 	})
 
 	t.Run("local name collides", func(t *testing.T) {
-		Generators = func(_ string) ([]Genfunc, error) {
-			return []Genfunc{
-				{Plan: planServiceData, Generate: Service},
-				{Plan: planTransportData, Generate: Transport},
-			}, nil
-		}
+		registry := testRegistryFromGenfuncs("gen", []testGenfunc{
+			{Plan: planServiceData, Generate: Service},
+			{Plan: planTransportData, Generate: Transport},
+		})
 		codegen.RunDSL(t, func() {
 			dsl.API("local wrapper names", func() {})
 			local := dsl.Type("UsePayload", func() {
@@ -737,7 +696,7 @@ func TestNormalizedMethodTypesUseServicePackageNames(t *testing.T) {
 		dir := t.TempDir()
 		genDir := filepath.Join(dir, codegen.Gendir)
 		writeGeneratedModule(t, genDir, "gen")
-		_, err := Generate(dir, "gen", false)
+		_, err := generate(dir, "gen", false, registry)
 		require.NoError(t, err)
 		content, err := os.ReadFile(filepath.Join(genDir, "values", "service.go"))
 		require.NoError(t, err)
@@ -752,10 +711,7 @@ func TestNormalizedMethodTypesUseServicePackageNames(t *testing.T) {
 // used by two relocated declarations stay in their respective declaration
 // files and do not leak into the service file that references their package.
 func TestNestedRelocatedDeclarationsOwnTheirImports(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{{Plan: planServiceData, Generate: Service}}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{{Plan: planServiceData, Generate: Service}})
 
 	codegen.RunDSL(t, func() {
 		dsl.API("nested file-owned imports", func() {})
@@ -784,7 +740,7 @@ func TestNestedRelocatedDeclarationsOwnTheirImports(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	writeStubPackage(t, filepath.Join(genDir, "custom", "first", "shared"), "shared")
 	writeStubPackage(t, filepath.Join(genDir, "custom", "second", "shared"), "shared")
@@ -845,13 +801,10 @@ func TestTransportSectionsOwnTheirImports(t *testing.T) {
 // files resolve relocated streaming declarations through the frozen service
 // packages while their event and frame bodies remain transport-owned.
 func TestRelocatedStreamingUnionReferencesCompile(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-		}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
+		{Plan: planServiceData, Generate: Service},
+		{Plan: planTransportData, Generate: Transport},
+	})
 
 	codegen.RunDSL(t, func() {
 		streamInput := relocatedStreamingType("StreamInput", "InputChoice", dsl.String)
@@ -895,7 +848,7 @@ func TestRelocatedStreamingUnionReferencesCompile(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	for _, path := range []string{
 		filepath.Join("http", "http_streams", "server", "websocket.go"),
@@ -1086,13 +1039,10 @@ func TestFixedRuntimeAliasesCompileWithGoaAndLogServices(t *testing.T) {
 // TestTransportStaticAliasesCompileWithHttpAndPathServices verifies transport
 // imports retain their literal qualifiers beside conflicting service names.
 func TestTransportStaticAliasesCompileWithHttpAndPathServices(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-		}, nil
-	}
+	registry := testRegistryFromGenfuncs("gen", []testGenfunc{
+		{Plan: planServiceData, Generate: Service},
+		{Plan: planTransportData, Generate: Transport},
+	})
 
 	codegen.RunDSL(t, func() {
 		for _, name := range []string{"Http", "Path"} {
@@ -1115,7 +1065,7 @@ func TestTransportStaticAliasesCompileWithHttpAndPathServices(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	_, err := Generate(dir, "gen", false)
+	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	httpServers, err := filepath.Glob(filepath.Join(genDir, "http", "*", "server", "server.go"))
 	require.NoError(t, err)

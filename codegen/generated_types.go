@@ -16,7 +16,11 @@ type (
 	// one generated Go package.
 	GeneratedPackage struct {
 		path          string
+		outputDir     string
 		scope         *NameScope
+		names         []*NameDeclaration
+		nameRecords   map[*NameDeclaration]struct{}
+		exactNames    map[string]*NameDeclaration
 		userTypes     map[expr.UserType]*TypeDeclaration
 		typeBindings  map[expr.UserType]*TypeDeclaration
 		derivedTypes  map[DerivedTypeID]*derivedTypeDeclaration
@@ -45,25 +49,23 @@ type (
 	// TypeDeclaration records the canonical name and package path of one
 	// generated type declaration.
 	TypeDeclaration struct {
-		name        string
-		packagePath string
+		declaration *NameDeclaration
 	}
 
 	// UnionDeclaration records the canonical union and discriminator names in
 	// the package that emits them.
 	UnionDeclaration struct {
-		name        string
-		kindName    string
-		packagePath string
+		declaration     *NameDeclaration
+		kindDeclaration *NameDeclaration
 	}
 
 	// UnionBranchDeclaration records the package-level declarations emitted for
 	// one union branch.
 	UnionBranchDeclaration struct {
-		kindConst   string
-		constructor string
-		branchType  *TypeDeclaration
-		typeName    string
+		kindDeclaration        *NameDeclaration
+		constructorDeclaration *NameDeclaration
+		branchType             *TypeDeclaration
+		typeName               string
 	}
 
 	// unionDeclaration retains the expression needed to allocate the public
@@ -99,6 +101,16 @@ type (
 		sourceName string
 		sourceID   string
 	}
+
+	// unionNameOrder identifies one declaration in a generated union family.
+	unionNameOrder struct {
+		union  UnionTypeID
+		role   unionNameRole
+		branch string
+	}
+
+	// unionNameRole orders the closed package-level symbols emitted for unions.
+	unionNameRole uint8
 )
 
 const (
@@ -108,6 +120,14 @@ const (
 	methodStreamingPayloadTypeKind
 	methodResultTypeKind
 	methodStreamingResultTypeKind
+)
+
+const (
+	unionTypeNameRole unionNameRole = iota + 1
+	unionKindNameRole
+	unionBranchTypeNameRole
+	unionBranchKindNameRole
+	unionBranchConstructorNameRole
 )
 
 // NewProjectedTypeID returns the generated declaration identity for the
@@ -160,42 +180,67 @@ func (i MethodTypeIdentity) Matches(userType expr.UserType) bool {
 	return userType.ID() == i.UID()
 }
 
-// Name returns the unqualified Go declaration name. It is empty until the
+// Name returns the unqualified Go declaration name. It panics until the
 // generation freezes declarations whose names depend on package collisions.
 func (d *TypeDeclaration) Name() string {
-	return d.name
+	return d.declaration.Name()
 }
 
 // PackagePath returns the import path of the package that owns the declaration.
 func (d *TypeDeclaration) PackagePath() string {
-	return d.packagePath
+	return d.declaration.PackagePath()
 }
 
-// Name returns the unqualified Go union declaration name. It is empty until
-// the generation freezes the owning package.
+// Declaration returns the canonical package-owned name record.
+func (d *TypeDeclaration) Declaration() *NameDeclaration {
+	return d.declaration
+}
+
+// Name returns the unqualified Go union declaration name. It panics until the
+// generation freezes the owning package.
 func (d *UnionDeclaration) Name() string {
-	return d.name
+	return d.declaration.Name()
 }
 
-// KindName returns the unqualified Go discriminator type name. It is empty
-// until the generation freezes the owning package.
+// KindName returns the unqualified Go discriminator type name. It panics until
+// the generation freezes the owning package.
 func (d *UnionDeclaration) KindName() string {
-	return d.kindName
+	return d.kindDeclaration.Name()
 }
 
 // PackagePath returns the import path of the package that owns the union.
 func (d *UnionDeclaration) PackagePath() string {
-	return d.packagePath
+	return d.declaration.PackagePath()
+}
+
+// Declaration returns the canonical package-owned union type name.
+func (d *UnionDeclaration) Declaration() *NameDeclaration {
+	return d.declaration
+}
+
+// KindDeclaration returns the canonical package-owned discriminator type name.
+func (d *UnionDeclaration) KindDeclaration() *NameDeclaration {
+	return d.kindDeclaration
 }
 
 // KindConst returns the unqualified discriminator constant for the branch.
 func (d *UnionBranchDeclaration) KindConst() string {
-	return d.kindConst
+	return d.kindDeclaration.Name()
 }
 
 // Constructor returns the unqualified constructor function for the branch.
 func (d *UnionBranchDeclaration) Constructor() string {
-	return d.constructor
+	return d.constructorDeclaration.Name()
+}
+
+// KindDeclaration returns the canonical discriminator constant name.
+func (d *UnionBranchDeclaration) KindDeclaration() *NameDeclaration {
+	return d.kindDeclaration
+}
+
+// ConstructorDeclaration returns the canonical branch constructor name.
+func (d *UnionBranchDeclaration) ConstructorDeclaration() *NameDeclaration {
+	return d.constructorDeclaration
 }
 
 // Type returns the generated branch alias declaration and whether the branch
@@ -207,7 +252,56 @@ func (d *UnionBranchDeclaration) Type() (*TypeDeclaration, bool) {
 // Ref returns the Go reference spelling for declaration's data type, including
 // Goa's pointer/value semantics for named objects, unions, and aliases.
 func (d *TypeDeclaration) Ref(dataType expr.DataType) string {
-	return goTypeRef(d.name, dataType)
+	return goTypeRef(d.Name(), dataType)
+}
+
+// DeclareName registers one canonical package-level declaration. Registering
+// the same record again is idempotent; another owner or ambiguous order fails.
+func (p *GeneratedPackage) DeclareName(declaration *NameDeclaration) error {
+	if p.frozen {
+		return fmt.Errorf("generated package %q is frozen", p.path)
+	}
+	if declaration.packagePath != "" {
+		if declaration.packagePath == p.path {
+			return nil
+		}
+		return fmt.Errorf(
+			"package name %q already belongs to generated package %q",
+			declaration.preferredName(),
+			declaration.packagePath,
+		)
+	}
+	if declaration.exact {
+		if existing, ok := p.exactNames[declaration.preferred]; ok {
+			return fmt.Errorf(
+				"generated package %q cannot declare exact %s %q: already declared by exact %s",
+				p.path,
+				declaration.kind,
+				declaration.preferred,
+				existing.kind,
+			)
+		}
+		p.exactNames[declaration.preferred] = declaration
+	} else {
+		for existing := range p.nameRecords {
+			if existing.exact || existing.base != nil || declaration.base != nil {
+				continue
+			}
+			if existing.order.PackageNameFamily() == declaration.order.PackageNameFamily() &&
+				existing.order.ComparePackageName(declaration.order) == 0 {
+				return fmt.Errorf(
+					"generated package %q cannot deterministically order preferred %s %q",
+					p.path,
+					declaration.kind,
+					declaration.preferredName(),
+				)
+			}
+		}
+	}
+	declaration.packagePath = p.path
+	p.names = append(p.names, declaration)
+	p.nameRecords[declaration] = struct{}{}
+	return nil
 }
 
 // DeclareUserType reserves userType's exact exported Go name and returns its
@@ -231,19 +325,15 @@ func (p *GeneratedPackage) DeclareUserType(userType expr.UserType) (*TypeDeclara
 			declaredName,
 		)
 	}
-	if p.scope.PeekUnique(name) != name {
-		return nil, fmt.Errorf(
-			"generated package %q cannot declare user type %q as %q: name is already reserved",
-			p.path,
-			userType.Name(),
-			name,
-		)
+	nameDeclaration := NewExactName(NameType, name)
+	if err := p.DeclareName(nameDeclaration); err != nil {
+		return nil, fmt.Errorf("declare user type %q: %w", userType.Name(), err)
 	}
-	declaration := &TypeDeclaration{name: name, packagePath: p.path}
+	declaration := &TypeDeclaration{declaration: nameDeclaration}
 	if err := p.bindType(origin, declaration); err != nil {
 		return nil, err
 	}
-	p.scope.HashedUnique(userType, name, "")
+	p.bindName(nameDeclaration, userType)
 	p.userTypes[origin] = declaration
 	p.userTypeNames[name] = userType.Name()
 	return declaration, nil
@@ -277,7 +367,11 @@ func (p *GeneratedPackage) DeclareDerivedType(identity DerivedTypeID, name strin
 			identity.origin.Name(),
 		)
 	}
-	declaration := &TypeDeclaration{packagePath: p.path}
+	nameDeclaration := NewPreferredName(NameType, name, order)
+	if err := p.DeclareName(nameDeclaration); err != nil {
+		return nil, err
+	}
+	declaration := &TypeDeclaration{declaration: nameDeclaration}
 	if identity.kind.isMethodType() {
 		if err := p.bindType(identity.origin, declaration); err != nil {
 			return nil, err
@@ -308,8 +402,8 @@ func (p *GeneratedPackage) DeclareMethodType(identity MethodTypeIdentity, source
 }
 
 // DeclareUnion records union's emitted definition and returns the same
-// declaration for unions with the same emitted identity. The declaration name
-// remains empty until the owning generation freezes its package catalogs.
+// declaration for unions with the same emitted identity. Reading its name
+// panics until the owning generation freezes its package catalogs.
 func (p *GeneratedPackage) DeclareUnion(union *expr.Union) (*UnionDeclaration, error) {
 	if p.frozen {
 		return nil, fmt.Errorf("generated package %q is frozen", p.path)
@@ -319,14 +413,55 @@ func (p *GeneratedPackage) DeclareUnion(union *expr.Union) (*UnionDeclaration, e
 		return planned.declaration, nil
 	}
 
-	declaration := &UnionDeclaration{packagePath: p.path}
+	nameDeclaration := NewPreferredName(NameType, union.Name(), unionNameOrder{
+		union: identity,
+		role:  unionTypeNameRole,
+	})
+	kindDeclaration := newDependentName(NameType, nameDeclaration, "", "Kind", unionNameOrder{
+		union: identity,
+		role:  unionKindNameRole,
+	})
+	if err := p.DeclareName(nameDeclaration); err != nil {
+		return nil, err
+	}
+	if err := p.DeclareName(kindDeclaration); err != nil {
+		return nil, err
+	}
+	declaration := &UnionDeclaration{
+		declaration:     nameDeclaration,
+		kindDeclaration: kindDeclaration,
+	}
+	p.bindName(nameDeclaration, identity)
 	branches := make(map[unionBranchID]*UnionBranchDeclaration, len(union.Values))
 	for _, branch := range union.Values {
-		identity := unionBranchID{name: branch.Name}
-		if _, ok := branches[identity]; ok {
+		branchIdentity := unionBranchID{name: branch.Name}
+		if _, ok := branches[branchIdentity]; ok {
 			return nil, fmt.Errorf("union %q declares branch %q more than once", union.Name(), branch.Name)
 		}
-		branches[identity] = &UnionBranchDeclaration{}
+		kindDeclaration := newDependentName(
+			NameConstant,
+			declaration.kindDeclaration,
+			"",
+			Goify(branch.Name, true),
+			unionNameOrder{union: identity, role: unionBranchKindNameRole, branch: branch.Name},
+		)
+		constructorDeclaration := newDependentName(
+			NameFunction,
+			declaration.declaration,
+			"New",
+			Goify(branch.Name, true),
+			unionNameOrder{union: identity, role: unionBranchConstructorNameRole, branch: branch.Name},
+		)
+		if err := p.DeclareName(kindDeclaration); err != nil {
+			return nil, err
+		}
+		if err := p.DeclareName(constructorDeclaration); err != nil {
+			return nil, err
+		}
+		branches[branchIdentity] = &UnionBranchDeclaration{
+			kindDeclaration:        kindDeclaration,
+			constructorDeclaration: constructorDeclaration,
+		}
 	}
 	p.unions[identity] = &unionDeclaration{
 		union:       union,
@@ -372,13 +507,22 @@ func (p *GeneratedPackage) DeclareUnionBranchType(union *expr.Union, branchName 
 		}
 		return branch.branchType, nil
 	}
-	declaration := &TypeDeclaration{packagePath: p.path}
+	typeName := Goify(userType.Name(), true)
+	nameDeclaration := NewPreferredName(NameType, typeName, unionNameOrder{
+		union:  NewUnionTypeID(union),
+		role:   unionBranchTypeNameRole,
+		branch: branchName,
+	})
+	if err := p.DeclareName(nameDeclaration); err != nil {
+		return nil, err
+	}
+	declaration := &TypeDeclaration{declaration: nameDeclaration}
 	origin := userType.Origin()
 	if err := p.bindType(origin, declaration); err != nil {
 		return nil, err
 	}
 	branch.branchType = declaration
-	branch.typeName = Goify(userType.Name(), true)
+	branch.typeName = typeName
 	return declaration, nil
 }
 
@@ -457,11 +601,41 @@ func (p *GeneratedPackage) Scope() *NameScope {
 	return p.scope
 }
 
+// PackageNameFamily groups derived service declarations for typed comparison.
+func (o derivedTypeOrder) PackageNameFamily() string {
+	return "service-derived-type"
+}
+
+// ComparePackageName orders two derived service declaration identities.
+func (o derivedTypeOrder) ComparePackageName(other PackageNameOrder) int {
+	return compareDerivedTypeOrder(o, other.(derivedTypeOrder))
+}
+
+// PackageNameFamily groups complete union families for typed comparison.
+func (o unionNameOrder) PackageNameFamily() string {
+	return "union"
+}
+
+// ComparePackageName orders union declarations by emitted identity and role.
+func (o unionNameOrder) ComparePackageName(other PackageNameOrder) int {
+	right := other.(unionNameOrder)
+	if compared := strings.Compare(string(o.union), string(right.union)); compared != 0 {
+		return compared
+	}
+	if o.role != right.role {
+		return int(o.role) - int(right.role)
+	}
+	return strings.Compare(o.branch, right.branch)
+}
+
 // newGeneratedPackage creates an empty mutable declaration catalog for path.
-func newGeneratedPackage(path string) *GeneratedPackage {
+func newGeneratedPackage(path, outputDir string) *GeneratedPackage {
 	return &GeneratedPackage{
 		path:          path,
+		outputDir:     outputDir,
 		scope:         NewNameScope(),
+		nameRecords:   make(map[*NameDeclaration]struct{}),
+		exactNames:    make(map[string]*NameDeclaration),
 		userTypes:     make(map[expr.UserType]*TypeDeclaration),
 		typeBindings:  make(map[expr.UserType]*TypeDeclaration),
 		derivedTypes:  make(map[DerivedTypeID]*derivedTypeDeclaration),
@@ -471,50 +645,76 @@ func newGeneratedPackage(path string) *GeneratedPackage {
 	}
 }
 
-// freeze assigns derived declarations in stable source order and union
-// families in structural-identity order, then ends declaration and scope
-// mutation while preserving read-only lookups.
-func (p *GeneratedPackage) freeze() {
-	derived := make([]*derivedTypeDeclaration, 0, len(p.derivedTypes))
-	for _, planned := range p.derivedTypes {
-		derived = append(derived, planned)
-	}
-	slices.SortFunc(derived, func(a, b *derivedTypeDeclaration) int {
-		return compareDerivedTypeOrder(a.order, b.order)
-	})
-	for _, planned := range derived {
-		planned.declaration.name = p.scope.Unique(planned.name)
-	}
-
-	identities := make([]UnionTypeID, 0, len(p.unions))
-	for identity := range p.unions {
-		identities = append(identities, identity)
-	}
-	slices.Sort(identities)
-	for _, identity := range identities {
-		planned := p.unions[identity]
-		name := p.scope.HashedUnique(identity, Goify(planned.union.Name(), true), "")
-		planned.declaration.name = name
-		planned.declaration.kindName = p.scope.Unique(name + "Kind")
-
-		branches := make([]unionBranchID, 0, len(planned.branches))
-		for branch := range planned.branches {
-			branches = append(branches, branch)
+// freeze allocates exact names first, then independent preferred names in
+// stable typed order, followed by names derived from an already frozen base.
+func (p *GeneratedPackage) freeze() error {
+	exact := make([]*NameDeclaration, 0, len(p.names))
+	preferred := make([]*NameDeclaration, 0, len(p.names))
+	dependent := make([]*NameDeclaration, 0, len(p.names))
+	for _, declaration := range p.names {
+		switch {
+		case declaration.exact:
+			exact = append(exact, declaration)
+		case declaration.base == nil:
+			preferred = append(preferred, declaration)
+		default:
+			dependent = append(dependent, declaration)
 		}
-		slices.SortFunc(branches, func(a, b unionBranchID) int {
-			return strings.Compare(a.name, b.name)
-		})
-		for _, identity := range branches {
-			branch := planned.branches[identity]
-			if branch.branchType != nil {
-				branch.branchType.name = p.scope.Unique(branch.typeName)
+	}
+	slices.SortFunc(exact, func(left, right *NameDeclaration) int {
+		return strings.Compare(left.preferred, right.preferred)
+	})
+	for _, declaration := range exact {
+		declaration.final = p.scope.Unique(declaration.preferred)
+		if declaration.final != declaration.preferred {
+			return fmt.Errorf(
+				"generated package %q cannot preserve exact %s name %q",
+				p.path,
+				declaration.kind,
+				declaration.preferred,
+			)
+		}
+		declaration.frozen = true
+	}
+	slices.SortFunc(preferred, comparePackageNames)
+	for _, declaration := range preferred {
+		declaration.final = p.scope.Unique(declaration.preferred)
+		declaration.frozen = true
+	}
+	for len(dependent) > 0 {
+		ready := dependent[:0]
+		waiting := make([]*NameDeclaration, 0, len(dependent))
+		for _, declaration := range dependent {
+			if declaration.base.frozen {
+				ready = append(ready, declaration)
+			} else {
+				waiting = append(waiting, declaration)
 			}
-			branch.kindConst = p.scope.Unique(planned.declaration.kindName + Goify(identity.name, true))
-			branch.constructor = p.scope.Unique("New" + planned.declaration.name + Goify(identity.name, true))
+		}
+		if len(ready) == 0 {
+			return fmt.Errorf("generated package %q contains a package-name dependency cycle", p.path)
+		}
+		slices.SortFunc(ready, comparePackageNames)
+		for _, declaration := range ready {
+			declaration.final = p.scope.Unique(declaration.preferredName())
+			declaration.frozen = true
+		}
+		dependent = waiting
+	}
+	for declaration := range p.nameRecords {
+		for _, hash := range declaration.hashes {
+			p.scope.bind(hash, declaration.final)
 		}
 	}
 	p.scope.Freeze()
 	p.frozen = true
+	return nil
+}
+
+// bindName associates a type identity with a canonical declaration after all
+// package names have been allocated.
+func (p *GeneratedPackage) bindName(declaration *NameDeclaration, hash Hasher) {
+	declaration.hashes = append(declaration.hashes, hash)
 }
 
 // bindType gives one exact expression origin one canonical package

@@ -92,6 +92,22 @@ func (s *NameScope) Freeze() {
 	s.frozen = true
 }
 
+// bind associates an already reserved name with one hash without allocating a
+// second package identifier. Generated packages call it only during freeze.
+func (s *NameScope) bind(key Hasher, name string) {
+	if s.frozen {
+		panic("cannot bind a hashed name in a frozen name scope")
+	}
+	hash := key.Hash()
+	if existing, ok := s.names[hash]; ok && existing != name {
+		panic(fmt.Sprintf("hash %q is already bound to package name %q", hash, existing))
+	}
+	if _, ok := s.counts[name]; !ok {
+		panic(fmt.Sprintf("package name %q must be reserved before hash binding", name))
+	}
+	s.names[hash] = name
+}
+
 // PeekUnique returns the name that Unique would return for the same inputs,
 // without mutating the scope.
 //

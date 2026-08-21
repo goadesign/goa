@@ -1,53 +1,71 @@
-// Generate asks this file for the core callbacks selected by the gen or example
-// command. It receives Genfunc records whose Plan callbacks all run before the
-// same frozen Generation is passed to their file-producing Generate callbacks.
+// This file defines the fresh core generator objects selected by each command.
+// Factories are immutable; every run receives new callback values and retains
+// one Plan from declaration planning through rendering.
 package generator
 
-import (
-	"fmt"
-
-	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/eval"
-)
+import "goa.design/goa/v3/codegen"
 
 type (
-	// Genfunc plans declarations and renders files for one generation run.
-	Genfunc struct {
-		// Plan declares generated package types before any generator renders files.
-		Plan codegen.PlanFunc
-		// Generate renders files from the frozen generation catalog.
-		Generate func(*codegen.Generation) ([]*codegen.File, error)
+	// coreGenerator plans and renders one core subsystem for a single run.
+	coreGenerator struct {
+		// Plan declares package symbols and retains run-specific analysis.
+		Plan func(*Plan) error
+		// Generate renders files from the same frozen plan.
+		Generate func(*Plan) ([]*codegen.File, error)
 	}
+
+	// generatorFactory creates one core generator instance for a run.
+	generatorFactory func() coreGenerator
 )
 
-// Generators returns the generation lifecycle callbacks for the given command,
-// or an error if the command is not supported. Generators is a public variable
-// so external code may replace the default generators.
-var Generators = generators
-
-// generators returns the generator functions exposed by the generator package
-// for the given command.
-func generators(cmd string) ([]Genfunc, error) {
-	switch cmd {
-	case "gen":
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-			{Plan: planServiceData, Generate: OpenAPI},
-		}, nil
-	case "example":
-		return []Genfunc{{Plan: planTransportData, Generate: Example}}, nil
-	default:
-		return nil, fmt.Errorf("unknown command %q", cmd)
+// genGeneratorFactories returns fresh service, transport, and OpenAPI factories.
+func genGeneratorFactories() []generatorFactory {
+	return []generatorFactory{
+		func() coreGenerator {
+			return coreGenerator{
+				Plan: func(plan *Plan) error {
+					return planServiceData(plan.Generation())
+				},
+				Generate: func(plan *Plan) ([]*codegen.File, error) {
+					return Service(plan.Generation())
+				},
+			}
+		},
+		func() coreGenerator {
+			return coreGenerator{
+				Plan: func(plan *Plan) error {
+					return planTransportData(plan.Generation())
+				},
+				Generate: func(plan *Plan) ([]*codegen.File, error) {
+					return Transport(plan.Generation())
+				},
+			}
+		},
+		func() coreGenerator {
+			return coreGenerator{
+				Plan: func(plan *Plan) error {
+					return planServiceData(plan.Generation())
+				},
+				Generate: func(plan *Plan) ([]*codegen.File, error) {
+					return OpenAPI(plan.Generation())
+				},
+			}
+		},
 	}
 }
 
-// renderOnly adapts a generator that does not yet plan package declarations to
-// render with the generation context selected by the top-level lifecycle.
-func renderOnly(generate func(string, []eval.Root) ([]*codegen.File, error)) Genfunc {
-	return Genfunc{
-		Generate: func(generation *codegen.Generation) ([]*codegen.File, error) {
-			return generate(generation.GenPkg(), generation.Roots())
+// exampleGeneratorFactories returns a fresh example generator factory.
+func exampleGeneratorFactories() []generatorFactory {
+	return []generatorFactory{
+		func() coreGenerator {
+			return coreGenerator{
+				Plan: func(plan *Plan) error {
+					return planTransportData(plan.Generation())
+				},
+				Generate: func(plan *Plan) ([]*codegen.File, error) {
+					return Example(plan.Generation())
+				},
+			}
 		},
 	}
 }

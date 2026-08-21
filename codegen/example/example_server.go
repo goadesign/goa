@@ -5,6 +5,7 @@ package example
 
 import (
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -15,37 +16,19 @@ import (
 
 // ServerFiles returns an example server main implementation for every server
 // expression in the service design.
-func ServerFiles(genpkg string, root *expr.RootExpr, services *service.ServicesData) []*codegen.File {
+func ServerFiles(root *expr.RootExpr, services *service.ServicesData) []*codegen.File {
 	var fw []*codegen.File
 	for _, svr := range root.API.Servers {
-		if m := exampleSvrMain(genpkg, root, svr, services); m != nil {
+		if m := exampleSvrMain(root, svr, services); m != nil {
 			fw = append(fw, m)
 		}
 	}
 	return fw
 }
 
-// APIPkg returns a unique package name for the example API implementation
-// package derived from the API name. The name is registered with the given
-// scope so subsequent calls return distinct names.
-func APIPkg(root *expr.RootExpr, scope *codegen.NameScope) string {
-	return scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
-}
-
-// RootPath returns the Go import path of the project root computed from the
-// generated code package import path genpkg. It returns "." if genpkg has no
-// parent path.
-func RootPath(genpkg string) string {
-	// genpkg is created by path.Join so the separator is / regardless of operating system
-	if idx := strings.LastIndex(genpkg, "/"); idx > 0 {
-		return genpkg[:idx]
-	}
-	return "."
-}
-
 // exampleSvrMain returns the default main function for the given server
 // expression.
-func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, services *service.ServicesData) *codegen.File {
+func exampleSvrMain(root *expr.RootExpr, svr *expr.ServerExpr, services *service.ServicesData) *codegen.File {
 	svrdata := Servers.Get(svr, root)
 	mainPath := filepath.Join("cmd", svrdata.Dir, "main.go")
 	if _, err := os.Stat(mainPath); !os.IsNotExist(err) {
@@ -77,7 +60,7 @@ func exampleSvrMain(genpkg string, root *expr.RootExpr, svr *expr.ServerExpr, se
 		specs = append(specs, serviceImport)
 		hasInterceptors = hasInterceptors || len(sd.ServerInterceptors) > 0
 	}
-	rootPath := RootPath(genpkg)
+	rootPath := path.Dir(services.GenPkg())
 	apiImport := services.PackageImport(rootPath)
 	apiPkg := apiImport.Name
 	specs = append(specs, apiImport)

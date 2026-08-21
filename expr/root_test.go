@@ -1,12 +1,65 @@
+// This file verifies root validation, including exact-origin dependency
+// traversal for explicitly relocated user types.
 package expr
 
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"goa.design/goa/v3/eval"
 )
+
+func TestRelocatedDependenciesUseDeclarationOrigin(t *testing.T) {
+	dependency := &UserTypeExpr{
+		TypeName:      "Dependency",
+		UID:           "shared-semantic-id",
+		AttributeExpr: &AttributeExpr{Type: String},
+	}
+	relocated := &UserTypeExpr{
+		TypeName: "Relocated",
+		UID:      "shared-semantic-id",
+		AttributeExpr: &AttributeExpr{
+			Meta: MetaExpr{"struct:pkg:path": {"types"}},
+			Type: &Object{&NamedAttributeExpr{
+				Name:      "dependency",
+				Attribute: &AttributeExpr{Type: dependency},
+			}},
+		},
+	}
+	root := &RootExpr{Types: []UserType{relocated, dependency}}
+
+	errors := root.validateRelocatedUserTypes()
+	if len(errors.Errors) != 1 {
+		t.Fatalf("expected one relocated dependency error, got %d", len(errors.Errors))
+	}
+	if message := errors.Errors[0].Error(); !strings.Contains(message, "Dependency") {
+		t.Errorf("expected dependency name in error, got %q", message)
+	}
+}
+
+func TestRelocatedDependencyWalkStopsAtExactOriginCopy(t *testing.T) {
+	relocated := &UserTypeExpr{
+		TypeName: "Relocated",
+		UID:      "relocated",
+		AttributeExpr: &AttributeExpr{
+			Meta: MetaExpr{"struct:pkg:path": {"types"}},
+			Type: String,
+		},
+	}
+	copy := relocated.Dup(DupAtt(relocated.Attribute()))
+	relocated.AttributeExpr.Type = &Object{&NamedAttributeExpr{
+		Name:      "self",
+		Attribute: &AttributeExpr{Type: copy},
+	}}
+	root := &RootExpr{Types: []UserType{relocated}}
+
+	errors := root.validateRelocatedUserTypes()
+	if len(errors.Errors) != 0 {
+		t.Errorf("expected exact origin copy to be treated as recursion, got %v", errors)
+	}
+}
 
 func TestRootExprValidate(t *testing.T) {
 	cases := map[string]struct {

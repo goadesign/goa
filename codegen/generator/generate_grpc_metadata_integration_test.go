@@ -12,13 +12,11 @@ import (
 )
 
 func TestGenerateGRPCMetadataAliasesCompile(t *testing.T) {
-	t.Cleanup(func() { Generators = generators })
-	Generators = func(string) ([]Genfunc, error) {
-		return []Genfunc{
-			{Plan: planServiceData, Generate: Service},
-			{Plan: planTransportData, Generate: Transport},
-		}, nil
-	}
+	registry := testRegistry(
+		"gen",
+		testGenerator(planServiceData, Service),
+		testGenerator(planTransportData, Transport),
+	)
 
 	_ = codegen.RunDSL(t, func() {
 		d.API("metadata", func() {})
@@ -68,7 +66,7 @@ func TestGenerateGRPCMetadataAliasesCompile(t *testing.T) {
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "gen")
-	if _, err := Generate(dir, "gen", false); err != nil {
+	if _, err := generate(dir, "gen", false, registry); err != nil {
 		t.Fatalf("generate gRPC metadata module: %v", err)
 	}
 	writeGRPCMetadataRoundTripTest(t, genDir)

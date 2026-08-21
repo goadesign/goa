@@ -1,8 +1,6 @@
-// This file renders example HTTP server wiring and multipart stubs, attaching
-// relocated type imports only to the example file that references them.
-// This file renders runnable HTTP servers and multipart helpers whose
-// generated service, transport, and application imports use the qualifiers
-// selected during planning.
+// This file renders runnable HTTP servers and multipart helpers. Each example
+// file imports relocated types and generated service packages with the
+// qualifiers selected during planning.
 package codegen
 
 import (
@@ -60,7 +58,7 @@ func ExampleServer(root *expr.RootExpr, svr *expr.ServerExpr, services *Services
 		specs = append(specs, serverImport, serviceImport)
 	}
 
-	rootPath := example.RootPath(genpkg)
+	rootPath := path.Dir(genpkg)
 	apiImport := services.PackageImport(rootPath)
 	apiPkg := apiImport.Name
 	specs = append(specs, apiImport)
@@ -148,9 +146,10 @@ func dummyMultipartFile(svc *expr.HTTPServiceExpr, services *ServicesData) *code
 			}
 		}
 		specs = append(specs, services.ServiceImport(svc.Name()))
-		specs = append(specs, services.AttributeImports(example.RootPath(genpkg), ServiceReferenceAttributes(multipartEndpoints...)...)...)
+		rootPath := path.Dir(genpkg)
+		specs = append(specs, services.AttributeImports(rootPath, ServiceReferenceAttributes(multipartEndpoints...)...)...)
 
-		apiPkg := services.PackageImport(example.RootPath(genpkg)).Name
+		apiPkg := services.PackageImport(rootPath).Name
 		sections = []*codegen.SectionTemplate{codegen.Header("", apiPkg, specs)}
 		for _, e := range data.Endpoints {
 			if e.MultipartRequestDecoder != nil {

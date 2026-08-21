@@ -335,11 +335,13 @@ func planViews(root *expr.RootExpr, generation *codegen.Generation, rootTypes *r
 
 			if resultType, ok := method.Result.Type.(*expr.ResultTypeExpr); ok {
 				serviceTypes := generation.GeneratedPackage(servicePackagePath(generation.GenPkg(), service))
-				resultDeclaration, err := serviceTypes.Type(rootTypes.canonical(resultType))
-				if err != nil {
+				if _, err := serviceTypes.Type(rootTypes.canonical(resultType)); err != nil {
 					return err
 				}
-				if _, err := views.DeclareDerivedType(codegen.NewViewedResultTypeID(resultType), resultDeclaration.Name()); err != nil {
+				if _, err := views.DeclareDerivedType(
+					codegen.NewViewedResultTypeID(resultType),
+					codegen.Goify(resultType.Name(), true),
+				); err != nil {
 					return err
 				}
 			}

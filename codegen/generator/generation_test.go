@@ -15,10 +15,7 @@ import (
 
 func TestGeneratePhasesShareOneGeneration(t *testing.T) {
 	command := fmt.Sprintf("test-generation-phases-%p", t)
-	codegen.RunDSL(t, func() {})
-	t.Cleanup(func() {
-		Generators = generators
-	})
+	root := codegen.RunDSL(t, func() {})
 
 	var (
 		events        []string
@@ -39,18 +36,20 @@ func TestGeneratePhasesShareOneGeneration(t *testing.T) {
 		}
 		return nil
 	}
-	Generators = func(_ string) ([]Genfunc, error) {
-		return []Genfunc{
-			{
-				Plan: func(generation *codegen.Generation) error {
+	registry := newRegistry()
+	registry.addCommand(command,
+		func() coreGenerator {
+			return coreGenerator{
+				Plan: func(plan *Plan) error {
 					events = append(events, "core-plan-first")
-					planned = generation
-					typesPath = generation.GenPkg() + "/types"
-					_, err := generation.GeneratedPackage(typesPath).DeclareUnion(union)
+					planned = plan.Generation()
+					typesPath = planned.GenPkg() + "/types"
+					_, err := planned.GeneratedPackage(typesPath).DeclareUnion(union)
 					return err
 				},
-				Generate: func(generation *codegen.Generation) ([]*codegen.File, error) {
+				Generate: func(plan *Plan) ([]*codegen.File, error) {
 					events = append(events, "core-render-first")
+					generation := plan.Generation()
 					if err := assertGeneration(generation); err != nil {
 						return nil, err
 					}
@@ -67,38 +66,45 @@ func TestGeneratePhasesShareOneGeneration(t *testing.T) {
 					}
 					return nil, nil
 				},
-			},
-			{
-				Plan: func(generation *codegen.Generation) error {
+			}
+		},
+		func() coreGenerator {
+			return coreGenerator{
+				Plan: func(plan *Plan) error {
 					events = append(events, "core-plan-second")
-					return assertGeneration(generation)
+					return assertGeneration(plan.Generation())
 				},
-				Generate: func(generation *codegen.Generation) ([]*codegen.File, error) {
+				Generate: func(plan *Plan) ([]*codegen.File, error) {
 					events = append(events, "core-render-second")
-					return nil, assertGeneration(generation)
+					return nil, assertGeneration(plan.Generation())
 				},
-			},
-		}, nil
-	}
-	codegen.RegisterPlugin(
+			}
+		},
+	)
+	registry.registerPlugin(
 		"lifecycle",
 		command,
-		func(_ string, roots []eval.Root) error {
-			events = append(events, "plugin-prepare")
-			preparedRoots = roots
-			return nil
-		},
-		func(generation *codegen.Generation) error {
-			events = append(events, "plugin-plan")
-			return assertGeneration(generation)
-		},
-		func(generation *codegen.Generation, files []*codegen.File) ([]*codegen.File, error) {
-			events = append(events, "plugin-render")
-			return files, assertGeneration(generation)
+		pluginNormal,
+		func() Plugin {
+			return Plugin{
+				Prepare: func(_ string, roots []eval.Root) error {
+					events = append(events, "plugin-prepare")
+					preparedRoots = roots
+					return nil
+				},
+				Plan: func(plan *Plan) error {
+					events = append(events, "plugin-plan")
+					return assertGeneration(plan.Generation())
+				},
+				Generate: func(plan *Plan, files []*codegen.File) ([]*codegen.File, error) {
+					events = append(events, "plugin-render")
+					return files, assertGeneration(plan.Generation())
+				},
+			}
 		},
 	)
 
-	_, err := Generate(t.TempDir(), command, false)
+	_, err := executeGeneration("generated.local/gen", []eval.Root{root}, command, registry)
 	require.NoError(t, err)
 	require.ErrorContains(t, lateDeclare, "frozen")
 	require.Equal(t, []string{
