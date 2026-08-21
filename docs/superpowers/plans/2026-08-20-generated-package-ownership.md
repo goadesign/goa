@@ -227,14 +227,14 @@ Expected: PASS.
 - Consumes: frozen or planning `*codegen.Generation`, `*codegen.TypeDeclaration`
 - Produces: `NewServicesData(*expr.RootExpr, *codegen.Generation) (*ServicesData, error)` and root-level package-owned service files
 
-- [ ] **Step 1: Add package analysis and emission tests**
+- [x] **Step 1: Add package analysis and emission tests**
 
 Test that all services in one root bind to the same declaration records,
 identical unions emit once, different same-base unions receive distinct frozen
 names, relocated user types emit once at their metadata paths, and each owning
 package emits one `unions.go`.
 
-- [ ] **Step 2: Replace local package priming with frozen declarations**
+- [x] **Step 2: Replace local package priming with frozen declarations**
 
 Delete `NewServicesDataForRoots`, `packageScopes`, `serviceNameScopes`,
 `unionCompanionKey`, and every decorated union key. During planning,
@@ -243,7 +243,7 @@ rendering, it looks up the same records. `UserTypeData` and `UnionTypeData`
 retain their `*codegen.TypeDeclaration`; `buildUnionTypeData` allocates the kind
 name once from the owning package scope and stores it in the union render data.
 
-- [ ] **Step 3: Make the package owner render all service types**
+- [x] **Step 3: Make the package owner render all service types**
 
 Change the public renderer to:
 
@@ -256,13 +256,13 @@ file, and one sorted `unions.go` per package. Remove `userTypePkgs`, `~union:`,
 and `unionRegistryKey`. `ConvertFiles` uses the owning package scope rather than
 a fresh one.
 
-- [ ] **Step 4: Migrate core service, example, and OpenAPI generators**
+- [x] **Step 4: Migrate core service, example, and OpenAPI generators**
 
 Their plan callback analyzes each design root with the active generation. Their
 render callback repeats analysis against frozen records and propagates errors.
 The Service renderer calls the root-level `service.Files` once.
 
-- [ ] **Step 5: Run service and generator tests**
+- [x] **Step 5: Run service and generator tests**
 
 Run:
 
