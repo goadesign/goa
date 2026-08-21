@@ -60,10 +60,11 @@ No commented-out code—delete dead code.
 - **Keep helper visibility minimal**: If logic is shared only inside one codegen area, keep it package-private or move it under an `internal` package. Do not export helpers from a parent package just to share them across sibling generators.
 - **Avoid pass-through wrappers**: When two helper functions differ only by forwarding arguments or hard-coding `nil`, collapse them into a single implementation instead of adding an extra layer.
 - **Generated packages own names**: When declarations from multiple services
-  compile into one Go package, that package owns their `NameScope`, canonical
-  declaration records, and emission. Definitions and HTTP/gRPC/JSON-RPC
-  references must consume the same package-owned record; independently primed
-  service scopes are invalid.
+  or plugins compile into one Go package, the generation context plans and
+  freezes that package's `NameScope` and canonical declaration records before
+  rendering. Definitions and HTTP/gRPC/JSON-RPC references must consume the
+  same package-owned record; independently primed service or plugin scopes and
+  declarations added after freeze are invalid.
 - **Keep identity typed and explicit**: Do not encode declaration kind, package,
   scope, or lifetime in decorated names or synthetic string map keys. Do not
   change an expression's `Hash` semantics to satisfy code generation; pass an

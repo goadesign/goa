@@ -14,11 +14,13 @@ then follows this order:
 1. Evaluate and validate the design.
 2. Let preparation plugins amend the evaluated expression roots.
 3. Normalize the roots.
-4. Analyze the design into service and transport rendering data.
-5. Let the core service, HTTP, gRPC, JSON-RPC, and OpenAPI generators return
-   files.
-6. Let post-generation plugins return additional files.
-7. Merge contributions with the same output path and render the files.
+4. Create one generation context for the normalized roots.
+5. Let every selected core generator and plugin declare the generated service
+   types it may emit, then freeze their package names.
+6. Let the core service, HTTP, gRPC, JSON-RPC, and OpenAPI generators render
+   files using the frozen declarations.
+7. Let post-generation plugins render additional files using the same context.
+8. Merge contributions with the same output path and render the files.
 
 The core service generator therefore reasons about one real design root. A
 temporary root created by a plugin is a separate analysis unless the plugin is
@@ -42,8 +44,8 @@ order, branch type shape, and relocated branch packages.
 
 ## Generated packages
 
-The service analysis owns a catalog keyed by the actual generated import path.
-Each catalog entry represents one Go package and owns:
+The generation context owns a catalog keyed by the actual generated import
+path. Each catalog entry represents one Go package and owns:
 
 - one `codegen.NameScope` for every package-level identifier;
 - the relocated user types rendered into that package;
@@ -51,10 +53,12 @@ Each catalog entry represents one Go package and owns:
 - the final names of each union type, discriminator type, constants, and
   constructors.
 
-Registering a declaration returns its canonical record. Code that declares the
-type and code that refers to it must consume that record or the package-aware
-attribute scope backed by it. A transport must never recreate a union name from
-a service-local `NameScope`.
+Planning a declaration returns its canonical record. Once every selected
+generator and plugin has planned its output, the context freezes the catalog.
+Rendering may only look up those records; a late attempt to add a declaration
+is an error. Code that declares a type and code that refers to it must consume
+the same record or the package-aware attribute scope backed by it. A transport
+must never recreate a union name from a service-local `NameScope`.
 
 For example, suppose two services place types in `gen/types`. Both contain a
 nested union whose natural Go name is `Value`, but the unions have different
@@ -75,8 +79,9 @@ which service first referred to them.
 ## Attribute naming during transforms
 
 `codegen.AttributeContext` asks an `Attributor` for names and references. A
-service-local context uses the service package scope. A context that transforms
-a relocated type uses a package-aware attributor:
+service-local context uses the service package record. A context that transforms
+a relocated type uses a package-aware attributor backed by the generation
+catalog:
 
 - a declared user type selects the package named by its `struct:pkg:path`;
 - a nested union selects the package of the enclosing generated declaration;
@@ -88,17 +93,24 @@ scopes still own transport-only wire declarations.
 
 ## Plugin and file assembly contracts
 
-A plugin that can emit declarations into a package already used by core
-generation must receive and use the active generated-package catalog. A plugin
-that analyzes a temporary root independently must emit to packages isolated
-from the core root. Independent analyses may not coordinate through package
-names, process-global maps, decorated strings, or render-order assumptions.
+A plugin that can emit generated service types plans them before the catalog is
+frozen and renders them with the active generation context. A plugin that
+analyzes a temporary root must either plan those types in the active context or
+emit to packages isolated from every other participant. Independent analyses
+may not coordinate through package names, process-global maps, decorated
+strings, or render-order assumptions.
+
+Standalone or selective generation creates a fresh context containing exactly
+the roots, generators, and plugins selected for that output. It runs the same
+plan, freeze, and render phases. An API that accepts only roots and reconstructs
+its own scope cannot safely contribute to a larger generation.
 
 `codegen.SectionTemplate.Name` labels a template for diagnostics. It is not a
-declaration identity. When multiple generators contribute to one output file,
-the file owner must supply explicit declaration identity or combine the
-sections before returning the file. Output merging must not discard sections
-merely because their diagnostic labels match.
+declaration identity. Output merging appends same-path sections and merges
+imports; it must not discard sections merely because their diagnostic labels
+match. Package owners remove identical declaration contributions before they
+become file sections. Conflicting declarations remain visible and fail with a
+generation or Go compilation error instead of disappearing silently.
 
 ## Review gate
 
@@ -107,11 +119,12 @@ files, or file merging, trace one declaration through all of these stages:
 
 1. the single evaluated root;
 2. service analysis;
-3. the owning generated-package record;
-4. service declaration rendering;
-5. HTTP and gRPC references;
-6. post-generation plugin contributions; and
-7. final files after output-path merging.
+3. planning and catalog freeze;
+4. the owning generated-package record;
+5. service declaration rendering;
+6. HTTP and gRPC references;
+7. post-generation plugin contributions; and
+8. final files after output-path merging.
 
 A service-only render test is insufficient. The regression must compile a real
 generated module with both HTTP and gRPC enabled whenever those transports can
