@@ -113,9 +113,12 @@ func (p *GeneratedPackage) Union(union *expr.Union) (*TypeDeclaration, error) {
 	return nil, fmt.Errorf("union %q is not declared in generated package %q", union.Name(), p.path)
 }
 
-// Scope returns the package-owned name scope shared by declaration planning
-// and generated references.
+// Scope returns the frozen package-owned name scope used to render generated
+// references. It panics before declaration planning has been frozen.
 func (p *GeneratedPackage) Scope() *NameScope {
+	if !p.frozen {
+		panic(fmt.Sprintf("generated package %q scope requested before freeze", p.path))
+	}
 	return p.scope
 }
 

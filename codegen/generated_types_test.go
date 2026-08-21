@@ -47,6 +47,10 @@ func TestGenerationOwnsPackageRecords(t *testing.T) {
 	second := generation.GeneratedPackage("generated.local/gen/types")
 	other := generation.GeneratedPackage("generated.local/gen/other")
 	require.Same(t, first, second)
+	require.Panics(t, func() {
+		first.Scope()
+	})
+	require.NoError(t, generation.Freeze())
 	require.Same(t, first.Scope(), second.Scope())
 	require.NotSame(t, first, other)
 	require.NotSame(t, first.Scope(), other.Scope())
@@ -72,7 +76,6 @@ func TestGeneratedPackageUserTypes(t *testing.T) {
 	second, err := types.DeclareUserType(widget)
 	require.NoError(t, err)
 	require.Same(t, first, second)
-	require.Equal(t, "Widget", types.Scope().GoTypeName(&expr.AttributeExpr{Type: widget}))
 
 	lookedUp, err := types.UserType(widget)
 	require.NoError(t, err)
@@ -80,6 +83,8 @@ func TestGeneratedPackageUserTypes(t *testing.T) {
 	declaredMissing, err := types.DeclareUserType(missing)
 	require.NoError(t, err)
 	require.Equal(t, "Missing", declaredMissing.Name)
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, "Widget", types.Scope().GoTypeName(&expr.AttributeExpr{Type: widget}))
 }
 
 // TestGeneratedPackageUnions verifies that emitted-definition identity makes
@@ -143,11 +148,17 @@ func TestGeneratedPackageUserTypeWinsUnionNameRegardlessOfOrder(t *testing.T) {
 			if unionFirst {
 				unionDeclaration, err = types.DeclareUnion(union)
 				require.NoError(t, err)
+				require.Panics(t, func() {
+					types.Scope().GoTypeName(&expr.AttributeExpr{Type: union})
+				})
 				userDeclaration, err = types.DeclareUserType(userType)
 				require.NoError(t, err)
 			} else {
 				userDeclaration, err = types.DeclareUserType(userType)
 				require.NoError(t, err)
+				require.Panics(t, func() {
+					types.Scope().GoTypeName(&expr.AttributeExpr{Type: userType})
+				})
 				unionDeclaration, err = types.DeclareUnion(union)
 				require.NoError(t, err)
 			}
@@ -157,6 +168,8 @@ func TestGeneratedPackageUserTypeWinsUnionNameRegardlessOfOrder(t *testing.T) {
 			require.NoError(t, generation.Freeze())
 			require.Equal(t, "Value", userDeclaration.Name)
 			require.Equal(t, "Value2", unionDeclaration.Name)
+			require.Equal(t, "Value", types.Scope().GoTypeName(&expr.AttributeExpr{Type: userType}))
+			require.Equal(t, "Value2", types.Scope().GoTypeName(&expr.AttributeExpr{Type: union}))
 		})
 	}
 }
