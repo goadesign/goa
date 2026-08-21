@@ -32,7 +32,7 @@
 
 **Interfaces:**
 - Consumes: current full generator, HTTP/gRPC DSL, and same-path file merging
-- Produces: red tests for relocated nested-union references, relocated declared-name collisions, and same-label section preservation
+- Produces: a positive transport preservation test plus red tests for relocated declared-name collisions and same-label section preservation
 
 - [ ] **Step 1: Add the real generated-module regression**
 
@@ -41,7 +41,7 @@ same `struct:pkg:path` package and give each a different nested union whose
 natural name is `Value`. Enable HTTP and gRPC, generate the module, and run `go
 test ./...` inside it.
 
-- [ ] **Step 2: Prove the nested-union regression fails for the intended reason**
+- [ ] **Step 2: Prove the nested-union transport case remains valid**
 
 Run:
 
@@ -49,8 +49,9 @@ Run:
 go test ./codegen/generator -run TestRelocatedUnionPackageNamesCompile -count=1
 ```
 
-Expected: FAIL with a generated Go reference to a union name different from the
-declaration in the shared package.
+Expected on the current branch: PASS. This test preserves the valid two-service
+HTTP/gRPC case while the generation-owned catalog removes the independent name
+allocation that could make later generators diverge.
 
 - [ ] **Step 3: Add the collision and merge regressions**
 
