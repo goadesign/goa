@@ -82,14 +82,14 @@ merger drops the second same-label section.
 - Consumes: `[]eval.Root`, `codegen.NameScope`, and the existing `UnionTypeHash`
 - Produces: `Generation`, generated-package records, collision errors, and immutable lookup after freeze
 
-- [ ] **Step 1: Extend the catalog contract tests**
+- [x] **Step 1: Extend the catalog contract tests**
 
 Alongside the Task 1 collision test, cover user-type idempotency, union
 idempotency, different same-base unions, lookup before and after freeze,
 declaration after freeze rejection, and isolation between standalone
 generations.
 
-- [ ] **Step 2: Run the catalog tests and preserve the Task 1 RED evidence**
+- [x] **Step 2: Run the catalog tests and preserve the Task 1 RED evidence**
 
 Run:
 
@@ -97,7 +97,7 @@ Run:
 go test ./codegen -run 'TestGeneration|TestGeneratedPackage|TestGeneratedTypes' -count=1
 ```
 
-- [ ] **Step 3: Implement package records and freeze**
+- [x] **Step 3: Implement package records and freeze**
 
 Use this public contract:
 
@@ -128,9 +128,11 @@ type TypeDeclaration struct {
 Declaration methods allocate only before freeze. Lookup methods never allocate.
 User types reserve the exact `Goify(Name(), true)` name and report collisions;
 unions temporarily use the existing emitted-definition hash until Task 3 gives
-that identity a distinct type.
+that identity a distinct type. `GeneratedPackage.Scope()` is available only
+after freeze and returns the already-frozen scope; planning uses declaration
+methods instead of direct name reservations.
 
-- [ ] **Step 4: Run the catalog tests green**
+- [x] **Step 4: Run the catalog tests green**
 
 Run:
 
