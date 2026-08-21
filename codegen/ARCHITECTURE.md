@@ -1,217 +1,348 @@
 # Code Generation Architecture
 
 This document defines how Goa turns one evaluated design into generated files.
-It focuses on ownership rules that are easy to violate when a declaration is
-written outside its service package.
+It is the contract for generator authors: one run prepares the design, builds
+one retained plan, freezes every emitted name, and renders that exact plan.
 
-## Generation lifecycle
+## Why this contract exists
 
-The `goa` command compiles and runs a temporary generator for one design. The
-evaluation package registers exactly one core `*expr.RootExpr`; its evaluation
-name is `design`, and duplicate evaluation names are rejected. A generation run
-then follows this order:
+The original AURA failure produced a reference to one validation function name
+and a declaration with another name. The function and its caller were emitted
+into the same generated Go package, but separate analyses allocated their names
+from separately initialized scopes. The first ownership work fixed concrete
+service, HTTP, JSON-RPC, and gRPC cases by adding a generation-wide package
+catalog and transport-local catalogs. It also exposed the remaining design
+mistake: planning still records only selected type families, then rendering
+rebuilds service and transport data and allocates other package-level names.
 
-1. Evaluate and validate the design.
-2. Let preparation plugins amend the evaluated expression roots.
-3. Normalize the roots.
-4. Create one generation context for the normalized roots.
-5. Let every selected core generator and plugin declare the generated service
-   types it may emit, then freeze their package names.
-6. Let the core service, HTTP, gRPC, JSON-RPC, and OpenAPI generators render
-   files using the frozen declarations.
-7. Let post-generation plugins render additional files using the same context.
-8. Merge contributions with the same output path and render the files.
+For example, a render-time service scope can still choose names for endpoint
+constructors, error constructors, validators, and stream helpers after the
+generation has supposedly frozen. A second `NewServicesData` call can rebuild
+the same logical wire model with a different traversal context. Both behaviors
+let a declaration and its reference disagree.
 
-The core service generator therefore reasons about one real design root. A
-temporary root created by a plugin is a separate analysis unless the plugin is
-explicitly given the active generation context.
+The terminal contract is stronger and smaller: every package-level type,
+function, constant, and variable has one declaration record owned by the
+package that emits it. Every subsystem retains the analysis that created those
+records. Rendering reads that analysis; it never reconstructs it.
 
-## Ownership
+## Run lifecycle
 
-| Concern | Owner | Consumers |
-| --- | --- | --- |
-| Design identity and structural equality | `expr` | validation and code generation |
-| Go identifiers in a generated package | the generated-package record for its output path | service and transport rendering |
-| Relocated user-type and union declarations | the same generated-package record | file rendering |
-| Service error values | the endpoint method's effective error declaration | service and transport rendering |
-| HTTP and gRPC error response policy | the transport mapping selected by error name | transport validation and wire rendering |
-| HTTP, gRPC, and JSON-RPC wire types | each transport generator | transport templates |
-| Output-path merging | the generator | all file-producing plugins |
+The `goa` command compiles and runs a temporary generator for one evaluated
+design. One run follows this order:
 
-`expr.Union.Hash()` describes expression identity. It must not change merely
-because generated Go source needs a different notion of equality. Code
-generation uses a separate typed union identity containing every property that
-changes the emitted union declaration, including discriminator keys, branch
-order, branch type shape, and relocated branch packages.
+1. Resolve the command and instantiate fresh core generator and plugin objects
+   from immutable registered factories.
+2. Evaluate and validate the design roots.
+3. Run preparation. Preparation plugins may add or change expressions, and the
+   core normalizer may wrap raw method attributes. No later phase may mutate an
+   expression root.
+4. Create one `codegen.Generation` from an immutable snapshot of the prepared
+   roots and generated module path.
+5. Build one typed `generator.Plan`. It creates and retains the core service
+   plan for each root, then the selected HTTP, gRPC, JSON-RPC, OpenAPI, and
+   example plans that consume those exact service plans. Plugin planning
+   receives the same typed plan.
+6. Each subsystem completes collection, sorts declarations by stable typed
+   identity, and declares every package-level symbol in its actual output
+   package. The generation then freezes package names and import qualifiers.
+7. Core generators render their retained subsystem plans. Plugins render using
+   the same `generator.Plan` and exact core service plans.
+8. Merge contributions with the same canonical output path and render files.
 
-## Generated packages
+Collection must be complete before freeze. Stable ordering makes preferred-name
+suffixes independent of map iteration, traversal order, plugin registration
+order, and process history. Freeze turns every declaration record into a
+read-only value. Render performs no expression mutation, graph analysis,
+declaration discovery, name allocation, or import allocation.
 
-The generation context owns a catalog keyed by the actual generated import
-path. Each catalog entry represents one Go package and owns:
+## Fresh run objects
 
-- one `codegen.NameScope` for every package-level identifier;
-- the relocated user types rendered into that package;
-- the structurally distinct unions rendered into that package; and
-- the final names of each union type, discriminator type, constants, and
-  constructors.
+Registration stores immutable factories, not mutable generator or plugin
+instances. A factory is called once for each generation run:
 
-The generation copies its evaluated roots and generated module import path at
-construction. Callers can read those values but cannot replace the registered
-roots or redirect output packages after planning begins. Planning and rendering
-therefore test membership against the same root snapshot.
+```go
+type Plugin struct {
+    Prepare  PrepareFunc
+    Plan     func(*Plan) error
+    Generate func(*Plan, []*codegen.File) ([]*codegen.File, error)
+}
 
-The generation also owns one import qualifier for each complete import path.
-Imports referenced by static templates have required qualifiers, generated
-service and views packages have preferred qualifiers, and design metadata has
-lower-priority preferences. Required qualifiers are allocated first and
-conflicting requirements are rejected; generated and metadata qualifiers may
-receive deterministic suffixes. Each generated file still imports only the
-paths used by the declarations and references it renders.
+type PluginFactory func() Plugin
 
-Each transport plans both the literal imports used by its templates and every
-generated client, server, protobuf, and command-line package it will reference
-before the catalog freezes. Preferred qualifiers come from the authored service
-path, never by appending text to an already allocated qualifier. JSON-RPC
-planning includes HTTP planning because it reuses the HTTP type, codec, and
-command-line renderers. Example planning also reserves the application,
-interceptor, transport-server, and command-line paths before the common freeze.
-The service planner does not know about transport packages. Render functions
-derive their output import paths from the same generation-backed service
-analysis; they do not accept another generated module path that could redirect
-files away from their imports.
+func RegisterPlugin(name, command string, factory PluginFactory)
+func RegisterPluginFirst(name, command string, factory PluginFactory)
+func RegisterPluginLast(name, command string, factory PluginFactory)
+```
 
-Planning a declaration returns its canonical record. Once every selected
-generator and plugin has planned its output, the context freezes the catalog.
-Rendering may only look up those records; a late attempt to add a declaration
-is an error. Code that declares a type and code that refers to it must consume
-the same record or the package-aware attribute scope backed by it. A transport
-must never recreate a union name from a service-local `NameScope`.
+These APIs belong to `codegen/generator`, which owns command orchestration.
+The `codegen` package owns generated declarations and files; it does not own a
+process-global plugin lifecycle. Core generator factories follow the same
+fresh-instance rule.
 
-For example, suppose two services place types in `gen/types`. Both contain a
-nested union whose natural Go name is `Value`, but the unions have different
-branches. The package catalog may assign `Value` and `Value2`. The user-type
-definitions, service methods, HTTP transforms, and gRPC transforms must all read
-those exact assignments from the `gen/types` catalog.
+A factory may close over immutable configuration. Per-run roots, plans, files,
+caches, and errors belong to the returned object. Concurrent and repeated
+generation runs must not observe one another. The registry itself is immutable
+while runs execute; tests install isolated registries rather than replacing a
+public global `Generators` function.
 
-Relocated declared user types keep the Go form of their declared name. If two
-declared names in one output package become the same Go identifier, such as
-`foo-bar` and `foo_bar` both becoming `FooBar`, generation rejects the design
-before rendering. Silently assigning `FooBar2` would make a public declaration
-depend on unrelated traversal order.
+## The retained core plan
 
-Relocated user types are emitted in their metadata-selected files. Relocated
-unions are emitted once in `unions.go` in the owning package, independent of
-which service first referred to them.
+`generator.Plan` is the typed value shared by core generators and plugins. Its
+fields are private. It exposes the active `Generation` and the exact service
+plan built for a registered root:
 
-## Attribute naming during transforms
+```go
+func (p *Plan) Generation() *codegen.Generation
+func (p *Plan) Service(root *expr.RootExpr) *service.Plan
+```
 
-`codegen.AttributeContext` asks an `Attributor` for names and references. A
-service-local context uses the service package record. A context that transforms
-a relocated type uses a package-aware attributor backed by the generation
-catalog:
+Selected core subsystems are stored in typed fields, not in a generic map.
+There is no `PlanKey`, string key, extension registry, or `any`-typed plan bag.
+A plugin that needs core service declarations consumes `Plan.Service(root)`;
+it may not call service analysis again or rebuild an equivalent plan from the
+root.
 
-- a declared user type selects the package named by its `struct:pkg:path`;
-- a nested union selects the package of the enclosing generated declaration;
-- a local type selects the service package scope.
+Each subsystem has one retained plan constructor. The service contract is:
 
-This is the only supported route for resolving generated service types inside
-HTTP, gRPC, JSON-RPC, conversion, and validation helpers. Transport-specific
-scopes still own transport-only wire declarations. Each actual HTTP,
-JSON-RPC, or protobuf output package has its own wire declaration catalog. The
-catalog first collects the complete detached wire shapes and validation rules,
-then freezes deterministic declaration and validator names before templates
-request references. Traversal provenance only stops recursion; it never decides
-that two emitted declarations are interchangeable.
+```go
+func service.NewPlan(root *expr.RootExpr, generation *codegen.Generation) (*service.Plan, error)
+```
 
-HTTP body shaping renames only the endpoint's top-level wrapper. Nested copied
-declarations retain their authored `Origin()` until the client or server wire
-catalog assigns the name used in that output package. This keeps transport-local
-correlation out of the expression graph and lets one authored declaration reuse
-one request record while still receiving a distinct response record when pointer,
-view, default, or validation policy changes.
+HTTP, gRPC, JSON-RPC, OpenAPI, and example generation use equivalent typed
+constructors. A transport plan receives the exact `*service.Plan` for its root.
+JSON-RPC may retain and reuse its HTTP plan because it emits HTTP codecs and
+wire files, but it does not rebuild HTTP analysis. Render functions accept the
+retained subsystem plan, not a `Generation`, generated module path, expression
+root, or reconstructed `ServicesData`.
 
-An HTTP union record combines its authored JSON shape with the exact frozen
-wire declaration records used by every branch. Equal JSON shapes are therefore
-reused only when their generated branch types are also the same. The catalog
-plans the union type, discriminator type, branch constants, and constructors
-before freezing; transforms and validators consume those records instead of
-reconstructing names from authored types.
+The plan stores immutable render data and canonical declaration pointers. It
+does not store callbacks that repeat analysis. `NewServicesData`, `Genfunc`,
+the replaceable `Generators` variable, `renderOnly`, and the callback plugin
+registry are transition mechanisms to delete.
 
-gRPC request headers, response headers, and trailers are native wire values:
-one primitive or an array of primitives. Analysis recursively removes named
-service aliases from a detached copy while preserving validation, defaults, and
-requiredness. Metadata parsing and serialization use that local native value;
-Goa's normal transformer converts between it and the frozen service field in
-the actual client or server package. Objects, maps, and unions are rejected by
-DSL validation rather than reaching templates as unsupported cases.
+## Generated package ownership
 
-An explicit protobuf message name is a preferred emitted name, not declaration
-identity. Root messages retain the `Origin()` of the service declaration whose
-value they carry, even when gRPC shaping builds a separate wire object for an
-endpoint role. Two authored declarations with different `Origin()` values
-remain separate catalog records even when they request the same protobuf name
-and have the same current wire shape.
+The generation owns a package catalog keyed by the actual generated Go import
+path. Each package record owns:
 
-Each side of a conversion enters its own attribute independently. A copied HTTP
-body remains owned by the HTTP package even if the source service declaration
-was relocated, while the service-side value follows the relocated declaration's
-package record. The generated file's actual import path determines whether a
-reference is local or qualified, and the qualifier comes from the same frozen
-full-path import binding used by that file's imports.
+- one declaration namespace for every package-level type, function, constant,
+  and variable;
+- one import qualifier for every complete import path referenced by files in
+  that package; and
+- the canonical output directory that corresponds to its import path.
 
-Reusable API- or service-level HTTP and gRPC error mappings are response policy,
-not replacement service types. When an endpoint inherits a mapping by error
-name, the mapping's error attribute must equal the method's effective error
-attribute after References and Bases are materialized, including its named type
-shape, validations, defaults, and struct metadata. Validation finalizes a
-complete detached copy of each cyclic graph; it never mutates or registers the
-evaluated declarations. Union branches compare by position because transforms
-pair branches by position. Validation rejects incompatible shadowing before
-code generation.
-Finalization then binds the mapping to the method error declaration, so service
-constructors, transport encoders and decoders, and generated references all use
-one concrete error value. For example, an API mapping for a string
-`bad_request` may be reused by a method that independently declares the same
-string error, but not by a method that declares `bad_request` as an integer or
-as the built-in service error object.
+The common declaration record is `NameDeclaration`. It keeps its preferred and
+final spellings private. `Name()` panics before freeze and returns the same
+final spelling for the remainder of the run after freeze. Existing type,
+union, branch, HTTP wire, protobuf, validator, and helper records contain or
+reference `NameDeclaration`; they do not carry another independently mutable
+name.
 
-## Plugin and file assembly contracts
+Package-level declarations include less obvious symbols: union discriminator
+constants and constructors, endpoint constructors, error and
+result constructors, validation functions, conversion functions, stream
+interfaces and helpers, HTTP body constructors, protobuf oneof wrappers,
+client and server constructors, and package variables emitted by templates.
+Local variables, parameters, struct fields, and method names remain owned by
+their lexical render scope because they cannot collide with package-level
+declarations.
 
-A plugin that can emit generated service types plans them before the catalog is
-frozen and renders them with the active generation context. A plugin that
-analyzes a temporary root must either plan those types in the active context or
-emit to packages isolated from every other participant. Independent analyses
-may not coordinate through package names, process-global maps, decorated
-strings, or render-order assumptions.
+### Exact and preferred symbols
 
-Standalone or selective generation creates a fresh context containing exactly
-the roots, generators, and plugins selected for that output. It runs the same
-plan, freeze, and render phases. An API that accepts only roots and reconstructs
-its own scope cannot safely contribute to a larger generation.
+An exact symbol is part of an authored or external contract. Two distinct
+exact declarations that normalize to the same Go identifier in one package are
+rejected before rendering. Examples include two relocated authored types named
+`foo-bar` and `foo_bar`, or two explicit external names that both require
+`FooBar`.
 
-`codegen.SectionTemplate.Name` labels a template for diagnostics. It is not a
-declaration identity. Output merging appends same-path sections and merges
-imports; it must not discard sections merely because their diagnostic labels
-match. Package owners remove identical declaration contributions before they
-become file sections. Conflicting declarations remain visible and fail with a
-generation or Go compilation error instead of disappearing silently.
+A preferred symbol is generated from a semantic role. It may receive a stable
+numeric suffix when another declaration already owns the preferred spelling.
+Examples include a generated `ValidatePayload`, `NewValueText`, or protobuf
+request message. The declaration's typed identity—not discovery order—decides
+which record receives each spelling.
+
+Exact declarations reserve first. Preferred declarations are sorted by stable
+typed identity and allocated second. A subsystem must reject two distinct
+identities whose ordering facts are equal; pointer addresses, expression
+hashes, map order, and rendered text are not tie-breakers.
+
+### Imports and output paths
+
+Complete import path is the only import identity. Static-template requirements
+have priority over generated-package preferences, which have priority over
+design metadata preferences. References and `ImportSpec` values consume the
+same frozen binding, while each file imports only the paths it uses.
+
+The output planner canonicalizes both generated import paths and filesystem
+paths before collection. If two different package identities normalize to the
+same import path or output directory, planning rejects them. It does not let
+one package win, merge their declarations, or add a suffix to a directory.
+Multiple file contributions may share a canonical path only when they declare
+the same package identity; the file merger then appends all sections.
+
+## Expression identity and declaration identity
+
+Expression identity answers a design question. Declaration identity answers
+whether two generated package-level symbols are the same emitted contract.
+They are deliberately separate.
+
+`UserType.Origin()` identifies one authored declaration across exact compiler
+copies. Recursion walkers use Origin only to detect a cycle in the current
+graph traversal. A cycle set answers “have I entered this declaration on this
+path?” It never proves that two emitted wire declarations, validators, or
+helpers are interchangeable.
+
+An emitted declaration identity contains every fact that changes its generated
+source: owning package and role, source provenance, wire shape, validation,
+defaults, views, pointer policy, ordered union branches, and protocol-specific
+metadata as applicable. Equal semantic `ID()` values do not merge distinct
+origins. Conversely, the same authored origin may produce distinct request and
+response records when their emitted contracts differ.
+
+`expr.Union.Hash()` remains expression identity. Typed code-generation
+identities such as `UnionTypeID` describe emitted union families. Do not change
+expression hashes, decorate string keys, or add general expression provenance
+to coordinate code generation.
+
+## Service plan
+
+`service.Plan` owns every service and views package declaration for one root.
+Its constructor collects service declarations, normalized method wrappers,
+relocated authored types, projected view types, unions and their complete
+families, endpoints, clients, constructors, validators, conversions,
+interceptors, errors, stream types, and package variables. It also collects the
+imports and exact output files those declarations require.
+
+The plan retains one package-backed attributor for each service and views
+package. HTTP, gRPC, JSON-RPC, example, and plugins use those attributors and
+canonical declaration records. No consumer recreates a service `NameScope`,
+calls `NewServicesData`, or reconstructs a name from a DSL spelling and package
+alias.
+
+When multiple prepared roots contribute to one generated package, the core
+plan collects all their declarations before the package freezes and emits the
+package once. A root not present in the Generation snapshot is rejected.
+
+## HTTP and JSON-RPC plans
+
+Each actual HTTP client or server output package owns a retained wire plan. It
+collects complete detached request, response, WebSocket, SSE, error, union,
+constructor, validator, codec, and helper declarations before freeze. The plan
+keeps request and response policy in declaration identity, so one authored
+origin can reuse a record only when the complete emitted wire contract agrees.
+
+HTTP transforms enter the service and wire owners independently. Detached HTTP
+bodies do not carry service package metadata. JSON-RPC consumes the exact HTTP
+plan for the files and codecs it shares, then adds its own package declarations
+to typed JSON-RPC plans. It does not create a second HTTP catalog.
+
+Every validator and helper reference stores its canonical declaration. A call
+site's traversal context may select which declaration it needs, but it never
+selects or changes that declaration's name.
+
+Reusable API- and service-level HTTP or gRPC error mappings select response
+policy by error name. The endpoint method's effective error declaration owns
+the service value that encoders and decoders carry. Planning compares pure,
+fully finalized copies of the mapping and method attributes, including emitted
+type shape, validations, defaults, struct metadata, and ordered union branches.
+It accepts equivalent declarations and binds the mapping to the method record;
+it rejects incompatible shadowing before rendering without mutating the
+evaluated design.
+
+## Protobuf and gRPC plans
+
+The protobuf plan owns a descriptor model for each emitted `.proto` package and
+the corresponding Go package produced by the supported `protoc` and
+`protoc-gen-go` toolchain. Protobuf source declarations and protoc-generated Go
+declarations are different, explicit families.
+
+A declaration family records every package-level Go symbol Goa refers to,
+including messages, nested messages, enums and enum values, oneof interfaces
+and wrapper structs, service interfaces, client and server types, and version-
+dependent support symbols. Preferred protobuf names do not become identity.
+Field numbers, ordered fields and oneof branches, validation, defaults, source
+provenance, and endpoint role are identity facts where they change output.
+
+The protoc Go naming algorithm is selected by an explicit supported toolchain
+version. One versioned implementation derives Go names for a descriptor family;
+templates and transforms do not carry scattered approximations of protoc
+CamelCase or oneof naming. Changing the supported compiler or plugin version
+requires a new versioned naming contract and generated-module proof against the
+real toolchain.
+
+gRPC validators and conversions consume frozen descriptor-family records.
+Validator identity is independent of the call site that first discovers it,
+and conversion contexts cannot allocate a message, wrapper, or validator name.
+Explicit metadata remains a detached native primitive wire contract and uses
+the canonical service transform after parsing or before serialization.
+
+## Plugins
+
+Preparation is the only plugin phase allowed to mutate expression roots. A
+plugin that adds a service, method, type, or transport mapping attaches it to a
+registered root during preparation. Core normalization then observes it before
+planning.
+
+Plugin planning receives `*generator.Plan`. It may declare plugin-owned output
+through the same Generation, and it consumes core declarations through the
+exact retained service plan. Plugin rendering receives the same plan after
+freeze. It may add files and sections, but it cannot create another root,
+re-run service or transport analysis, reserve a name, or change an expression.
+
+MCP generation therefore attaches its generated service expressions during
+prepare and later consumes `Plan.Service(root)`. Agent tool specifications use
+one retained typed specification plan for each output package; public specs and
+transport specs are distinct packages with distinct declaration owners. No
+plugin coordinates through a process-global map, a latest result, a decorated
+hash, `PlanKey`, or render order.
+
+## File assembly
+
+`SectionTemplate.Name` labels a section for diagnostics. It is not declaration
+identity. Package plans remove identical declaration contributions before they
+become sections. The file merger combines imports and appends every non-header
+section in producer order, even when diagnostic labels match. Conflicting
+declarations remain visible and fail during planning or Go compilation instead
+of disappearing silently.
+
+## Compatibility and operations
+
+This architecture intentionally breaks external generators and plugins that
+register callback instances, replace `Generators`, call `NewServicesData`, or
+render from roots and generated module paths. They must register factories,
+retain typed plans, and render those plans.
+
+Generated Go names may change where prior suffix ownership depended on
+traversal or reconstruction. Goa, goa-ai, and applications must regenerate
+together. There is no runtime fallback, persisted-data migration, or staged
+dual mode. A normalized output-path collision now fails during planning rather
+than overwriting or combining unrelated packages.
+
+Fresh factories make repeated and concurrent generation independent. The main
+operational risks are an uncollected template symbol, an incomplete emitted
+identity, or an inaccurate protoc family name. Focused catalog tests, reversed-
+order tests, concurrent-run tests, real generated-module compilation, the
+supported protoc toolchain, goa-ai generation, and full AURA regeneration are
+the required proof.
 
 ## Review gate
 
-Before changing type naming, relocated declarations, generation roots, plugin
-files, or file merging, trace one declaration through all of these stages:
+Before changing generation lifecycle, names, roots, transports, plugins, or
+file merging, trace one representative declaration through:
 
-1. the single evaluated root;
-2. service analysis;
-3. planning and catalog freeze;
-4. the owning generated-package record;
-5. service declaration rendering;
-6. HTTP and gRPC references;
-7. post-generation plugin contributions; and
-8. final files after output-path merging.
+1. the prepared root;
+2. the retained service plan;
+3. the selected transport or plugin plan;
+4. the owning generated package and `NameDeclaration`;
+5. stable collection and freeze;
+6. every declaration and reference rendered from that record;
+7. plugin contributions; and
+8. the final merged file and compiled generated module.
 
-A service-only render test is insufficient. The regression must compile a real
-generated module with HTTP, gRPC, and JSON-RPC enabled whenever those transports
-can refer to the declaration. Streaming coverage must exercise WebSocket and
-SSE files when streaming payloads, results, or selected SSE data fields contain
-relocated declarations.
+Also prove a valid counterexample at the next wider lifetime: two declarations
+with one semantic ID but different origins, one origin with different request
+and response wire contracts, two packages with the same basename, repeated
+runs in one process, and concurrent runs. A service-only render test or a
+source-text assertion is insufficient when the failure can appear in a
+transport, protoc-generated family, plugin, or merged output.
