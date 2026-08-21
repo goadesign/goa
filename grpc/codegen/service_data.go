@@ -864,12 +864,12 @@ func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req
 // req if true indicates that the validations are generated for validating
 // request messages.
 func collectValidations(att *expr.AttributeExpr, attName string, req bool, sd *ServiceData) {
-	collectValidationsR(att, attName, req, sd, make(map[string]struct{}))
+	collectValidationsR(att, attName, req, sd, make(map[expr.UserType]struct{}))
 }
 
 // collectValidationsR recurses through the attribute and collects validation
-// functions with cycle detection using a seen set of user type IDs.
-func collectValidationsR(att *expr.AttributeExpr, attName string, req bool, sd *ServiceData, seen map[string]struct{}) {
+// functions with cycle detection using a seen set of declaration origins.
+func collectValidationsR(att *expr.AttributeExpr, attName string, req bool, sd *ServiceData, seen map[expr.UserType]struct{}) {
 	gattName := codegen.Goify(attName, false)
 	switch dt := att.Type.(type) {
 	case expr.UserType:
@@ -878,12 +878,11 @@ func collectValidationsR(att *expr.AttributeExpr, attName string, req bool, sd *
 			return
 		}
 		// Cycle guard: avoid infinite recursion on recursive user types.
-		if id := dt.ID(); id != "" {
-			if _, ok := seen[id]; ok {
-				return
-			}
-			seen[id] = struct{}{}
+		origin := dt.Origin()
+		if _, ok := seen[origin]; ok {
+			return
 		}
+		seen[origin] = struct{}{}
 		vtx := protoBufTypeContext(sd.PkgName, sd.Scope, false)
 		def := codegen.AttributeValidationCode(att, dt, vtx, true, false, gattName, attName)
 		// Match helper function identifiers with validation template calls by

@@ -1094,10 +1094,10 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 // * changes unions into structs with Type and Value fields.
 func makeHTTPType(att *expr.AttributeExpr) *expr.AttributeExpr {
 	att = expr.DupAtt(att)
-	return makeHTTPTypeRecursive(att, make(map[string]struct{}))
+	return makeHTTPTypeRecursive(att, make(map[expr.UserType]struct{}))
 }
 
-func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[string]struct{}) *expr.AttributeExpr {
+func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[expr.UserType]struct{}) *expr.AttributeExpr {
 	delete(att.Meta, "struct:pkg:path")
 	switch dt := att.Type.(type) {
 	case expr.UserType:
@@ -1121,10 +1121,11 @@ func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[string]struct{}) *e
 			att.DefaultValue = dt.Attribute().DefaultValue
 			att.UserExamples = dt.Attribute().UserExamples
 		}
-		if _, ok := seen[dt.ID()]; ok {
+		origin := dt.Origin()
+		if _, ok := seen[origin]; ok {
 			return att
 		}
-		seen[dt.ID()] = struct{}{}
+		seen[origin] = struct{}{}
 		dt.SetAttribute(makeHTTPTypeRecursive(dt.Attribute(), seen))
 	case *expr.Array:
 		dt.ElemType = makeHTTPTypeRecursive(dt.ElemType, seen)
@@ -2152,7 +2153,7 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 	name = body.Type.Name()
 	ref = sd.Scope.GoTypeRef(body)
 
-	addMarshalTags(body, make(map[string]struct{}))
+	addMarshalTags(body)
 
 	if ut, ok := body.Type.(expr.UserType); ok {
 		varname = codegen.Goify(ut.Name(), true)
@@ -2304,7 +2305,7 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, e 
 	ref = sd.Scope.GoTypeRef(body)
 	mustInit = att.Type != expr.Empty && needInit(body.Type)
 
-	addMarshalTags(body, make(map[string]struct{}))
+	addMarshalTags(body)
 
 	if ut, ok := body.Type.(expr.UserType); ok {
 		// response body is a user type.
@@ -2681,37 +2682,38 @@ func errorInitArg(el *Element) *InitArgData {
 
 // collectUserTypes traverses the given data type recursively and calls back the
 // given function for each attribute using a user type.
-func collectUserTypes(dt expr.DataType, cb func(expr.UserType), seen ...map[string]struct{}) {
+func collectUserTypes(dt expr.DataType, cb func(expr.UserType)) {
+	collectUserTypesRecursive(dt, cb, make(map[expr.UserType]struct{}))
+}
+
+// collectUserTypesRecursive follows nested declarations once per authored
+// origin so recursive copies terminate without hiding unrelated declarations.
+func collectUserTypesRecursive(dt expr.DataType, cb func(expr.UserType), seen map[expr.UserType]struct{}) {
 	if dt == expr.Empty {
 		return
-	}
-	var s map[string]struct{}
-	if len(seen) > 0 {
-		s = seen[0]
-	} else {
-		s = make(map[string]struct{})
 	}
 	switch actual := dt.(type) {
 	case *expr.Object:
 		for _, nat := range *actual {
-			collectUserTypes(nat.Attribute.Type, cb, seen...)
+			collectUserTypesRecursive(nat.Attribute.Type, cb, seen)
 		}
 	case *expr.Union:
 		for _, nat := range actual.Values {
-			collectUserTypes(nat.Attribute.Type, cb, seen...)
+			collectUserTypesRecursive(nat.Attribute.Type, cb, seen)
 		}
 	case *expr.Array:
-		collectUserTypes(actual.ElemType.Type, cb, seen...)
+		collectUserTypesRecursive(actual.ElemType.Type, cb, seen)
 	case *expr.Map:
-		collectUserTypes(actual.KeyType.Type, cb, seen...)
-		collectUserTypes(actual.ElemType.Type, cb, seen...)
+		collectUserTypesRecursive(actual.KeyType.Type, cb, seen)
+		collectUserTypesRecursive(actual.ElemType.Type, cb, seen)
 	case expr.UserType:
-		if _, ok := s[actual.ID()]; ok {
+		origin := actual.Origin()
+		if _, ok := seen[origin]; ok {
 			return
 		}
-		s[actual.ID()] = struct{}{}
+		seen[origin] = struct{}{}
 		cb(actual)
-		collectUserTypes(actual.Attribute().Type, cb, s)
+		collectUserTypesRecursive(actual.Attribute().Type, cb, seen)
 	}
 }
 
@@ -2983,26 +2985,33 @@ func isStringMetaType(c *expr.AttributeExpr) bool {
 }
 
 // addMarshalTags adds JSON, XML and Form tags to all inline object attributes recursively.
-func addMarshalTags(att *expr.AttributeExpr, seen map[string]struct{}) {
+func addMarshalTags(att *expr.AttributeExpr) {
+	addMarshalTagsRecursive(att, make(map[expr.UserType]struct{}))
+}
+
+// addMarshalTagsRecursive annotates every inline object reachable through one
+// declaration origin and stops when recursive copies return to that origin.
+func addMarshalTagsRecursive(att *expr.AttributeExpr, seen map[expr.UserType]struct{}) {
 	if ut, ok := att.Type.(expr.UserType); ok {
-		if _, ok := seen[ut.Hash()]; ok {
+		origin := ut.Origin()
+		if _, ok := seen[origin]; ok {
 			return // avoid infinite recursions
 		}
-		seen[ut.Hash()] = struct{}{}
+		seen[origin] = struct{}{}
 		if expr.IsObject(ut.Attribute().Type) {
 			for _, att := range *(expr.AsObject(att.Type)) {
-				addMarshalTags(att.Attribute, seen)
+				addMarshalTagsRecursive(att.Attribute, seen)
 			}
 		}
 		return
 	}
 	if expr.IsArray(att.Type) {
-		addMarshalTags(expr.AsArray(att.Type).ElemType, seen)
+		addMarshalTagsRecursive(expr.AsArray(att.Type).ElemType, seen)
 		return
 	}
 	if expr.IsMap(att.Type) {
-		addMarshalTags(expr.AsMap(att.Type).KeyType, seen)
-		addMarshalTags(expr.AsMap(att.Type).ElemType, seen)
+		addMarshalTagsRecursive(expr.AsMap(att.Type).KeyType, seen)
+		addMarshalTagsRecursive(expr.AsMap(att.Type).ElemType, seen)
 		return
 	}
 	if !expr.IsObject(att.Type) {

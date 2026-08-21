@@ -1,3 +1,5 @@
+// HTTP body type helpers derive request and response shapes from service types
+// without changing the original design declarations.
 package expr
 
 import (
@@ -539,17 +541,23 @@ func extendBodyAttribute(body *MappedAttributeExpr) {
 // walk traverses the given data type and invokes the given function for each
 // user type it finds including dt itself.
 func walk(dt DataType, do func(UserType)) {
-	walkrec(dt, do, make(map[string]struct{}))
+	walkrec(dt, do, make(map[UserType]struct{}))
 }
 
-func walkrec(dt DataType, do func(UserType), seen map[string]struct{}) {
+func walkrec(dt DataType, do func(UserType), seen map[UserType]struct{}) {
 	switch dt := dt.(type) {
 	case UserType:
-		if _, ok := seen[dt.ID()]; ok {
+		origin := dt.Origin()
+		if _, ok := seen[origin]; ok {
 			return
 		}
+		// Mark the declaration before invoking do because callbacks such as
+		// appendSuffix rename the declaration and deliberately detach its origin.
+		seen[origin] = struct{}{}
 		do(dt)
-		seen[dt.ID()] = struct{}{}
+		// A callback may detach a copied declaration from its source. Remember the
+		// resulting declaration too so recursive references do not process it again.
+		seen[dt.Origin()] = struct{}{}
 		walkrec(dt.Attribute().Type, do, seen)
 	case *Object:
 		for _, nat := range *dt {

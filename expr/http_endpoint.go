@@ -1225,12 +1225,12 @@ func isEmpty(a *AttributeExpr) bool {
 // hasJSONRPCIDField returns true if an attribute or any of its nested attributes
 // has the "jsonrpc:id" meta tag, indicating it's designated as the JSON-RPC ID field.
 func hasJSONRPCIDField(attr *AttributeExpr) bool {
-	return hasJSONRPCIDFieldRec(attr, make(map[*AttributeExpr]struct{}), make(map[string]struct{}))
+	return hasJSONRPCIDFieldRec(attr, make(map[*AttributeExpr]struct{}))
 }
 
 // hasJSONRPCIDFieldRec walks the attribute graph looking for the jsonrpc:id meta
 // while guarding against cycles that may occur with recursive user types.
-func hasJSONRPCIDFieldRec(attr *AttributeExpr, seen map[*AttributeExpr]struct{}, seenUT map[string]struct{}) bool {
+func hasJSONRPCIDFieldRec(attr *AttributeExpr, seen map[*AttributeExpr]struct{}) bool {
 	if attr == nil || attr.Type == Empty {
 		return false
 	}
@@ -1249,7 +1249,7 @@ func hasJSONRPCIDFieldRec(attr *AttributeExpr, seen map[*AttributeExpr]struct{},
 	// For object types, check all nested attributes
 	if obj := AsObject(attr.Type); obj != nil {
 		for _, nat := range *obj {
-			if hasJSONRPCIDFieldRec(nat.Attribute, seen, seenUT) {
+			if hasJSONRPCIDFieldRec(nat.Attribute, seen) {
 				return true
 			}
 		}
@@ -1258,11 +1258,7 @@ func hasJSONRPCIDFieldRec(attr *AttributeExpr, seen map[*AttributeExpr]struct{},
 	// For user types, check the underlying attribute (guarding for recursion)
 	if ut, ok := attr.Type.(UserType); ok {
 		if ut != nil {
-			if _, ok := seenUT[ut.ID()]; ok {
-				return false
-			}
-			seenUT[ut.ID()] = struct{}{}
-			return hasJSONRPCIDFieldRec(ut.Attribute(), seen, seenUT)
+			return hasJSONRPCIDFieldRec(ut.Attribute(), seen)
 		}
 	}
 	return false

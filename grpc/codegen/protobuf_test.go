@@ -287,6 +287,37 @@ func TestMakeProtoBufMessageMarksWrappers(t *testing.T) {
 	}
 }
 
+func TestMakeProtoBufMessageDistinguishesEqualUIDOrigins(t *testing.T) {
+	first := protobufArrayTraversalType("First", "shared")
+	second := protobufArrayTraversalType("Second", "shared")
+	body := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "first", Attribute: &expr.AttributeExpr{Type: first}},
+		{Name: "second", Attribute: &expr.AttributeExpr{Type: second}},
+	}}
+
+	message := makeProtoBufMessage(body, "Request", &ServiceData{
+		Name:  "Service",
+		Scope: codegen.NewNameScope(),
+	})
+	object := expr.AsObject(message.Type.(expr.UserType).Attribute().Type)
+	wireFirst := object.Attribute("first").Type.(expr.UserType)
+	wireSecond := object.Attribute("second").Type.(expr.UserType)
+	require.True(t, isWrappedAttr(&expr.AttributeExpr{Type: wireFirst}))
+	require.True(t, isWrappedAttr(&expr.AttributeExpr{Type: wireSecond}))
+}
+
+// protobufArrayTraversalType builds an authored array declaration that protobuf
+// conversion must wrap in a message.
+func protobufArrayTraversalType(name, uid string) *expr.UserTypeExpr {
+	return &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Array{
+			ElemType: &expr.AttributeExpr{Type: expr.String},
+		}},
+		TypeName: name,
+		UID:      uid,
+	}
+}
+
 func TestUnwrapAttrPanicsOnNonWrapper(t *testing.T) {
 	cases := []struct {
 		Name string

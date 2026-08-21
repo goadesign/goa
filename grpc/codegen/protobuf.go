@@ -114,20 +114,21 @@ func makeProtoBufMessage(att *expr.AttributeExpr, tname string, sd *ServiceData)
 		}
 	}
 	n := ""
-	makeProtoBufMessageR(att, &n, sd, make(map[string]struct{}))
+	makeProtoBufMessageR(att, &n, sd, make(map[expr.UserType]struct{}))
 	return att
 }
 
 // makeProtoBufMessageR is the recursive implementation of makeProtoBufMessage.
-func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceData, seen map[string]struct{}) {
+func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceData, seen map[expr.UserType]struct{}) {
 	ut, isut := att.Type.(expr.UserType)
 
 	// handle infinite recursions
 	if isut {
-		if _, ok := seen[ut.ID()]; ok {
+		origin := ut.Origin()
+		if _, ok := seen[origin]; ok {
 			return
 		}
-		seen[ut.ID()] = struct{}{}
+		seen[origin] = struct{}{}
 	}
 
 	wrap := func(att *expr.AttributeExpr, tname string) {
