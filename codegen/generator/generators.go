@@ -47,7 +47,7 @@ func generators(cmd string) ([]Genfunc, error) {
 func renderOnly(generate func(string, []eval.Root) ([]*codegen.File, error)) Genfunc {
 	return Genfunc{
 		Generate: func(generation *codegen.Generation) ([]*codegen.File, error) {
-			return generate(generation.GenPkg, generation.Roots)
+			return generate(generation.GenPkg(), generation.Roots())
 		},
 	}
 }

@@ -1,3 +1,5 @@
+// This file builds gRPC code-generation analysis in tests using the same
+// normalize, plan, freeze, and render lifecycle as production generation.
 package codegen
 
 import (

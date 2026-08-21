@@ -104,7 +104,7 @@ func TestDeclarationResolverQualifiesRelocatedConsumersWithoutRenamingLocalType(
 	container.Attribute().AddMeta("struct:pkg:path", "types")
 
 	generation := codegen.NewGeneration("generated.local/gen", nil)
-	servicePackage := generation.GeneratedPackage(servicePackagePath(generation.GenPkg, service))
+	servicePackage := generation.GeneratedPackage(servicePackagePath(generation.GenPkg(), service))
 	localDeclaration, err := servicePackage.DeclareUserType(local)
 	require.NoError(t, err)
 	errorsPackage := generation.GeneratedPackage("generated.local/gen/errors")
@@ -119,12 +119,12 @@ func TestDeclarationResolverQualifiesRelocatedConsumersWithoutRenamingLocalType(
 		generation,
 		aliasesForTest(
 			t,
-			servicePackagePath(generation.GenPkg, service),
+			servicePackagePath(generation.GenPkg(), service),
 			"generated.local/gen/errors",
 			"generated.local/gen/types",
 		),
 		service,
-		servicePackagePath(generation.GenPkg, service),
+		servicePackagePath(generation.GenPkg(), service),
 	)
 	require.Equal(t, "Fault", localDeclaration.Name())
 	require.Equal(t, "Fault", resolver.Ref(&expr.AttributeExpr{Type: local}, ""))
@@ -151,13 +151,13 @@ func TestDeclarationResolverQualifiesRelocatedConsumersWithoutRenamingLocalType(
 func TestDeclarationResolverPanicsWhenPlanOmittedType(t *testing.T) {
 	service := &expr.ServiceExpr{Name: "Missing"}
 	generation := codegen.NewGeneration("generated.local/gen", nil)
-	generation.GeneratedPackage(servicePackagePath(generation.GenPkg, service))
+	generation.GeneratedPackage(servicePackagePath(generation.GenPkg(), service))
 	require.NoError(t, generation.Freeze())
 	resolver := newServiceResolver(
 		generation,
-		aliasesForTest(t, servicePackagePath(generation.GenPkg, service)),
+		aliasesForTest(t, servicePackagePath(generation.GenPkg(), service)),
 		service,
-		servicePackagePath(generation.GenPkg, service),
+		servicePackagePath(generation.GenPkg(), service),
 	)
 	missing := resolverUserType("Missing", expr.String)
 	require.PanicsWithValue(

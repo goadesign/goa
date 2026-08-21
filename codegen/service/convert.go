@@ -172,10 +172,10 @@ func generateConvertFileForPath(
 		paths = append(paths, importPath)
 	}
 
-	outputPath := servicePackagePath(services.generation.GenPkg, service)
+	outputPath := servicePackagePath(services.generation.GenPkg(), service)
 	first := append(append([]*expr.TypeMap(nil), conversions...), creations...)[0]
 	if loc := codegen.UserTypeLocation(first.User); loc != nil {
-		outputPath = generatedPackagePath(services.generation.GenPkg, service, loc)
+		outputPath = generatedPackagePath(services.generation.GenPkg(), service, loc)
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(
@@ -203,9 +203,9 @@ func generateConvertFileForPath(
 		}
 		tgtPkg := services.aliases.name(pkgImport)
 
-		outputPath := servicePackagePath(services.generation.GenPkg, service)
+		outputPath := servicePackagePath(services.generation.GenPkg(), service)
 		if loc := codegen.UserTypeLocation(c.User); loc != nil {
-			outputPath = generatedPackagePath(services.generation.GenPkg, service, loc)
+			outputPath = generatedPackagePath(services.generation.GenPkg(), service, loc)
 		}
 		srcAtt := &expr.AttributeExpr{Type: c.User}
 		srcResolver := newServiceResolver(services.generation, services.aliases, service, outputPath).Enter(srcAtt)
@@ -258,9 +258,9 @@ func generateConvertFileForPath(
 		srcCtx := codegen.NewAttributeContext(false, false, false, srcPkg, codegen.NewNameScope())
 
 		tgtAtt := &expr.AttributeExpr{Type: c.User}
-		outputPath := servicePackagePath(services.generation.GenPkg, service)
+		outputPath := servicePackagePath(services.generation.GenPkg(), service)
 		if loc := codegen.UserTypeLocation(c.User); loc != nil {
-			outputPath = generatedPackagePath(services.generation.GenPkg, service, loc)
+			outputPath = generatedPackagePath(services.generation.GenPkg(), service, loc)
 		}
 		tgtResolver := newServiceResolver(services.generation, services.aliases, service, outputPath).Enter(tgtAtt)
 		tgtCtx := &codegen.AttributeContext{

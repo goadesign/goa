@@ -1,3 +1,5 @@
+// This file verifies the starter service implementations generated from
+// normalized service methods and their frozen package references.
 package service
 
 import (
@@ -34,7 +36,7 @@ func TestExampleServiceFiles(t *testing.T) {
 				root := codegen.RunDSL(t, c.DSL)
 				services := mustServicesData(t, root)
 				require.Len(t, root.Services, 3)
-				fs := ExampleServiceFiles(services.generation.GenPkg, root, services)
+				fs := ExampleServiceFiles(services.generation.GenPkg(), root, services)
 				require.Len(t, fs, 3)
 				for _, f := range fs {
 					require.Greater(t, len(f.SectionTemplates), 0)

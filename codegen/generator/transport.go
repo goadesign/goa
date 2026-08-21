@@ -14,7 +14,7 @@ import (
 // the transport code.
 func Transport(generation *codegen.Generation) ([]*codegen.File, error) {
 	var files []*codegen.File
-	designRoots := serviceRoots(generation.Roots)
+	designRoots := serviceRoots(generation.Roots())
 	for _, r := range designRoots {
 		services, err := service.NewServicesData(r, generation)
 		if err != nil {
@@ -22,30 +22,30 @@ func Transport(generation *codegen.Generation) ([]*codegen.File, error) {
 		}
 		// HTTP
 		httpServices := httpcodegen.NewServicesData(services, r.API.HTTP)
-		files = append(files, httpcodegen.ServerFiles(generation.GenPkg, httpServices)...)
-		files = append(files, httpcodegen.ClientFiles(generation.GenPkg, httpServices)...)
-		files = append(files, httpcodegen.ServerTypeFiles(generation.GenPkg, httpServices)...)
-		files = append(files, httpcodegen.ClientTypeFiles(generation.GenPkg, httpServices)...)
+		files = append(files, httpcodegen.ServerFiles(generation.GenPkg(), httpServices)...)
+		files = append(files, httpcodegen.ClientFiles(generation.GenPkg(), httpServices)...)
+		files = append(files, httpcodegen.ServerTypeFiles(generation.GenPkg(), httpServices)...)
+		files = append(files, httpcodegen.ClientTypeFiles(generation.GenPkg(), httpServices)...)
 		files = append(files, httpcodegen.PathFiles(httpServices)...)
-		files = append(files, httpcodegen.ClientCLIFiles(generation.GenPkg, httpServices)...)
+		files = append(files, httpcodegen.ClientCLIFiles(generation.GenPkg(), httpServices)...)
 
 		// GRPC
 		grpcServices := grpccodegen.NewServicesData(services)
-		files = append(files, grpccodegen.ProtoFiles(generation.GenPkg, grpcServices)...)
-		files = append(files, grpccodegen.ServerFiles(generation.GenPkg, grpcServices)...)
-		files = append(files, grpccodegen.ClientFiles(generation.GenPkg, grpcServices)...)
-		files = append(files, grpccodegen.ServerTypeFiles(generation.GenPkg, grpcServices)...)
-		files = append(files, grpccodegen.ClientTypeFiles(generation.GenPkg, grpcServices)...)
-		files = append(files, grpccodegen.ClientCLIFiles(generation.GenPkg, grpcServices)...)
+		files = append(files, grpccodegen.ProtoFiles(generation.GenPkg(), grpcServices)...)
+		files = append(files, grpccodegen.ServerFiles(generation.GenPkg(), grpcServices)...)
+		files = append(files, grpccodegen.ClientFiles(generation.GenPkg(), grpcServices)...)
+		files = append(files, grpccodegen.ServerTypeFiles(generation.GenPkg(), grpcServices)...)
+		files = append(files, grpccodegen.ClientTypeFiles(generation.GenPkg(), grpcServices)...)
+		files = append(files, grpccodegen.ClientCLIFiles(generation.GenPkg(), grpcServices)...)
 
 		// JSON-RPC
 		jsonrpcServices := httpcodegen.NewJSONRPCServicesData(services, &r.API.JSONRPC.HTTPExpr)
-		files = append(files, jsonrpccodegen.ServerFiles(generation.GenPkg, jsonrpcServices)...)
-		files = append(files, jsonrpccodegen.ClientFiles(generation.GenPkg, jsonrpcServices)...)
-		files = append(files, httpcodegen.ServerTypeFiles(generation.GenPkg, jsonrpcServices)...)
-		files = append(files, httpcodegen.ClientTypeFiles(generation.GenPkg, jsonrpcServices)...)
+		files = append(files, jsonrpccodegen.ServerFiles(generation.GenPkg(), jsonrpcServices)...)
+		files = append(files, jsonrpccodegen.ClientFiles(generation.GenPkg(), jsonrpcServices)...)
+		files = append(files, httpcodegen.ServerTypeFiles(generation.GenPkg(), jsonrpcServices)...)
+		files = append(files, httpcodegen.ClientTypeFiles(generation.GenPkg(), jsonrpcServices)...)
 		files = append(files, httpcodegen.PathFiles(jsonrpcServices)...)
-		files = append(files, httpcodegen.ClientCLIFiles(generation.GenPkg, jsonrpcServices)...)
+		files = append(files, httpcodegen.ClientCLIFiles(generation.GenPkg(), jsonrpcServices)...)
 	}
 	return files, nil
 }

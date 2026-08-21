@@ -1,3 +1,5 @@
+// This file verifies that generated example servers and command-line programs
+// contain the service and transport wiring required by representative designs.
 package example
 
 import (

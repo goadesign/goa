@@ -34,7 +34,7 @@ func TestGeneratePhasesShareOneGeneration(t *testing.T) {
 		if planned != generation {
 			return fmt.Errorf("generation changed between plan and render")
 		}
-		if len(generation.Roots) != len(preparedRoots) {
+		if len(generation.Roots()) != len(preparedRoots) {
 			return fmt.Errorf("generation roots changed after plugin preparation")
 		}
 		return nil
@@ -45,7 +45,7 @@ func TestGeneratePhasesShareOneGeneration(t *testing.T) {
 				Plan: func(generation *codegen.Generation) error {
 					events = append(events, "core-plan-first")
 					planned = generation
-					typesPath = generation.GenPkg + "/types"
+					typesPath = generation.GenPkg() + "/types"
 					_, err := generation.GeneratedPackage(typesPath).DeclareUnion(union)
 					return err
 				},

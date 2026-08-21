@@ -13,11 +13,8 @@ type (
 	// Generation owns the evaluated design roots and generated-package naming
 	// catalogs for one standalone code generation run.
 	Generation struct {
-		// GenPkg is the import path of the generated module root.
-		GenPkg string
-		// Roots contains the evaluated DSL roots participating in the run.
-		Roots []eval.Root
-
+		genpkg     string
+		roots      []eval.Root
 		packages   map[string]*GeneratedPackage
 		importPlan *importAliasPlan
 		imports    map[string]importAliasBinding
@@ -28,13 +25,23 @@ type (
 // NewGeneration creates an independent generation catalog for roots.
 func NewGeneration(genpkg string, roots []eval.Root) *Generation {
 	return &Generation{
-		GenPkg:   genpkg,
-		Roots:    append([]eval.Root(nil), roots...),
+		genpkg:   genpkg,
+		roots:    append([]eval.Root(nil), roots...),
 		packages: make(map[string]*GeneratedPackage),
 		importPlan: &importAliasPlan{
 			candidates: make(map[string]*importAliasCandidate),
 		},
 	}
+}
+
+// GenPkg returns the import path of the generated module root.
+func (g *Generation) GenPkg() string {
+	return g.genpkg
+}
+
+// Roots returns a copy of the evaluated DSL roots participating in the run.
+func (g *Generation) Roots() []eval.Root {
+	return append([]eval.Root(nil), g.roots...)
 }
 
 // GeneratedPackage returns the naming catalog for path, creating it before
@@ -58,10 +65,12 @@ func (g *Generation) Freeze() error {
 	if g.frozen {
 		return nil
 	}
+	if err := g.freezeImports(); err != nil {
+		return err
+	}
 	for _, generatedPackage := range g.packages {
 		generatedPackage.freeze()
 	}
-	g.freezeImports()
 	g.frozen = true
 	return nil
 }

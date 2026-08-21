@@ -56,6 +56,31 @@ func TestGenerationOwnsPackageRecords(t *testing.T) {
 	require.NotSame(t, first.Scope(), other.Scope())
 }
 
+// TestGenerationCopiesConstructionState verifies that callers cannot change
+// root membership or the generated package path through constructor inputs or
+// accessor results before or after freeze.
+func TestGenerationCopiesConstructionState(t *testing.T) {
+	first := RunDSL(t, func() {})
+	second := RunDSL(t, func() {})
+	roots := []eval.Root{first}
+	generation := NewGeneration("generated.local/gen", roots)
+
+	roots[0] = second
+	returnedRoots := generation.Roots()
+	returnedRoots[0] = second
+	require.Equal(t, "generated.local/gen", generation.GenPkg())
+	require.True(t, generation.HasRoot(first))
+	require.False(t, generation.HasRoot(second))
+
+	require.NoError(t, generation.Freeze())
+	roots[0] = nil
+	returnedRoots = generation.Roots()
+	returnedRoots[0] = second
+	require.Equal(t, "generated.local/gen", generation.GenPkg())
+	require.True(t, generation.HasRoot(first))
+	require.False(t, generation.HasRoot(second))
+}
+
 // TestGeneratedPackageUserTypes verifies that a generated package records one
 // declaration per user type and that lookups do not reserve names.
 func TestGeneratedPackageUserTypes(t *testing.T) {

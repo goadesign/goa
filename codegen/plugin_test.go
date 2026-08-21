@@ -1,3 +1,5 @@
+// This file verifies plugin registration order and the shared generation
+// lifecycle used by plugin prepare, plan, and render callbacks.
 package codegen
 
 import (
@@ -148,7 +150,7 @@ func TestRegisterPluginLifecycleCallbacksUseGeneration(t *testing.T) {
 	)
 
 	generation := NewGeneration("generated.local/gen", nil)
-	require.NoError(t, RunPluginsPrepare("test", generation.GenPkg, generation.Roots))
+	require.NoError(t, RunPluginsPrepare("test", generation.GenPkg(), generation.Roots()))
 	require.NoError(t, RunPluginsPlan("test", generation))
 	require.NoError(t, generation.Freeze())
 	_, err := RunPlugins("test", generation, nil)

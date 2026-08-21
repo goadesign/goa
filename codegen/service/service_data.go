@@ -708,7 +708,7 @@ func NewServicesData(root *expr.RootExpr, generation *codegen.Generation) (*Serv
 		rootTypes:  newRootTypeSet(root),
 	}
 	for _, service := range root.Services {
-		generation.GeneratedPackage(servicePackagePath(generation.GenPkg, service)).Scope()
+		generation.GeneratedPackage(servicePackagePath(generation.GenPkg(), service)).Scope()
 		analyzed, err := data.analyze(service)
 		if err != nil {
 			return nil, err
@@ -811,12 +811,12 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) (*Data, error) {
 		projTypes  []*ProjectedTypeData
 		viewedRTs  []*ViewedResultTypeData
 	)
-	servicePackage := d.generation.GeneratedPackage(servicePackagePath(d.generation.GenPkg, service))
+	servicePackage := d.generation.GeneratedPackage(servicePackagePath(d.generation.GenPkg(), service))
 	scope := servicePackage.Scope().Fork()
 	scope.Unique("Use")       // Reserve "Use" for Endpoints struct Use method.
 	scope.Unique("websocket") // Reserve "websocket" to avoid collision with gorilla/websocket
 	viewScope := d.generation.GeneratedPackage(
-		servicePackagePath(d.generation.GenPkg, service) + "/views",
+		servicePackagePath(d.generation.GenPkg(), service) + "/views",
 	).Scope().Fork()
 	pkgName := scope.HashedUnique(service, strings.ToLower(codegen.Goify(service.Name, false)), "svc")
 	viewspkg := pkgName + "views"
@@ -830,7 +830,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) (*Data, error) {
 		d.generation,
 		d.aliases,
 		service,
-		servicePackagePath(d.generation.GenPkg, service),
+		servicePackagePath(d.generation.GenPkg(), service),
 	)
 
 	// A function to collect user types from an error expression
@@ -896,7 +896,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) (*Data, error) {
 			projected, result := projectedResultRoot(service, m)
 			pairs := projectTypePairs(projected, result, seenProjected)
 			removeMeta(projected)
-			views := d.generation.GeneratedPackage(servicePackagePath(d.generation.GenPkg, service) + "/views")
+			views := d.generation.GeneratedPackage(servicePackagePath(d.generation.GenPkg(), service) + "/views")
 			for _, pair := range pairs {
 				identity := codegen.NewProjectedTypeID(pair.source)
 				viewDerived[pair.projected.Origin()] = identity
@@ -1014,7 +1014,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) (*Data, error) {
 		projected := seenProj[rt.Origin()]
 		projAtt := &expr.AttributeExpr{Type: projected.Type}
 		viewedDeclaration, err := d.generation.GeneratedPackage(
-			servicePackagePath(d.generation.GenPkg, service) + "/views",
+			servicePackagePath(d.generation.GenPkg(), service) + "/views",
 		).DerivedType(codegen.NewViewedResultTypeID(rt))
 		if err != nil {
 			return nil, err
@@ -1305,11 +1305,11 @@ func (d *ServicesData) collectUnionTypes(att *expr.AttributeExpr, service *expr.
 		}
 		return recurse(dt.ElemType, loc)
 	case *expr.Union:
-		packagePath := servicePackagePath(d.generation.GenPkg, service)
+		packagePath := servicePackagePath(d.generation.GenPkg(), service)
 		if view {
 			packagePath += "/views"
 		} else if loc != nil {
-			packagePath = generatedPackagePath(d.generation.GenPkg, service, loc)
+			packagePath = generatedPackagePath(d.generation.GenPkg(), service, loc)
 		}
 		key := unionDataKey{packagePath: packagePath, identity: codegen.NewUnionTypeID(dt)}
 		if _, ok := unions[key]; !ok {

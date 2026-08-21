@@ -12,7 +12,7 @@ import (
 // the service OpenAPI spec. It produces OpenAPI specifications only if the
 // roots define a HTTP service.
 func OpenAPI(generation *codegen.Generation) ([]*codegen.File, error) {
-	designRoots := serviceRoots(generation.Roots)
+	designRoots := serviceRoots(generation.Roots())
 	for _, root := range designRoots {
 		if _, err := service.NewServicesData(root, generation); err != nil {
 			return nil, err

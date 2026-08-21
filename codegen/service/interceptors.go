@@ -1,3 +1,5 @@
+// This file renders service interceptor interfaces, information records, and
+// endpoint wrappers from the interceptor data collected during service analysis.
 package service
 
 import (

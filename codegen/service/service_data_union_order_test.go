@@ -69,7 +69,7 @@ func collectServiceUnionTypeNames(t *testing.T, att *expr.AttributeExpr, loc *co
 	service := &expr.ServiceExpr{Name: "test"}
 	generation := codegen.NewGeneration("generated.local/gen", nil)
 	generatedPackage := generation.GeneratedPackage(
-		generatedPackagePath(generation.GenPkg, service, loc),
+		generatedPackagePath(generation.GenPkg(), service, loc),
 	)
 	object := att.Type.(*expr.Object)
 	for _, named := range *object {
@@ -83,7 +83,7 @@ func collectServiceUnionTypeNames(t *testing.T, att *expr.AttributeExpr, loc *co
 	}
 	services := &ServicesData{
 		generation: generation,
-		aliases:    aliasesForTest(t, generatedPackagePath(generation.GenPkg, service, loc)),
+		aliases:    aliasesForTest(t, generatedPackagePath(generation.GenPkg(), service, loc)),
 		packages:   make(map[string]*generatedPackageData),
 	}
 	seen := make(map[expr.UserType]struct{})
@@ -92,7 +92,7 @@ func collectServiceUnionTypeNames(t *testing.T, att *expr.AttributeExpr, loc *co
 		generation,
 		services.aliases,
 		service,
-		generatedPackagePath(generation.GenPkg, service, loc),
+		generatedPackagePath(generation.GenPkg(), service, loc),
 	)
 	if err := services.collectUnionTypes(att, service, resolver, loc, unionByHash, seen, false); err != nil {
 		panic(err)

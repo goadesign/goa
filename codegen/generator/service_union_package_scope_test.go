@@ -601,7 +601,7 @@ func TestServiceAndExamplesCompileWithImportQualifierCollisions(t *testing.T) {
 	dir := t.TempDir()
 	files, err := Service(generation)
 	require.NoError(t, err)
-	files = append(files, servicecodegen.ExampleServiceFiles(generation.GenPkg, root, services)...)
+	files = append(files, servicecodegen.ExampleServiceFiles(generation.GenPkg(), root, services)...)
 	for _, file := range files {
 		_, err := file.Render(dir)
 		require.NoError(t, err)
@@ -610,6 +610,45 @@ func TestServiceAndExamplesCompileWithImportQualifierCollisions(t *testing.T) {
 	writeStubPackage(t, filepath.Join(dir, "custom", "strings"), "strings")
 	writeStubPackage(t, filepath.Join(dir, "custom", "values"), "values")
 	writeStubPackage(t, filepath.Join(dir, "custom", "views"), "valuesviews")
+	runGeneratedTests(t, dir)
+}
+
+// TestFixedRuntimeAliasesCompileWithGoaAndLogServices verifies that generated
+// service imports are suffixed when static interceptor templates require the
+// goa and log qualifiers for their runtime packages.
+func TestFixedRuntimeAliasesCompileWithGoaAndLogServices(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		interceptor := dsl.Interceptor("Trace")
+		for _, name := range []string{"Goa", "Log"} {
+			dsl.Service(name, func() {
+				dsl.ServerInterceptor(interceptor)
+				dsl.Method("Read", func() {})
+			})
+		}
+	})
+	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, servicecodegen.Plan(root, generation))
+	require.NoError(t, generation.Freeze())
+	services, err := servicecodegen.NewServicesData(root, generation)
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	files, err := Service(generation)
+	require.NoError(t, err)
+	files = append(files, servicecodegen.ExampleInterceptorsFiles(generation.GenPkg(), root, services)...)
+	for _, file := range files {
+		_, err := file.Render(dir)
+		require.NoError(t, err)
+	}
+	goaSource, err := os.ReadFile(filepath.Join(dir, "interceptors", "goa_server.go"))
+	require.NoError(t, err)
+	require.Contains(t, string(goaSource), `goa "goa.design/goa/v3/pkg"`)
+	require.Contains(t, string(goaSource), `goa2 "generated.local/gen/goa"`)
+	logSource, err := os.ReadFile(filepath.Join(dir, "interceptors", "log_server.go"))
+	require.NoError(t, err)
+	require.Contains(t, string(logSource), `"goa.design/clue/log"`)
+	require.Contains(t, string(logSource), `log2 "generated.local/gen/log"`)
+	writeGeneratedModule(t, dir, "generated.local")
 	runGeneratedTests(t, dir)
 }
 

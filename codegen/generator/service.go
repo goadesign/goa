@@ -14,7 +14,7 @@ import (
 // a goa design.
 func Service(generation *codegen.Generation) ([]*codegen.File, error) {
 	var files []*codegen.File
-	designRoots := serviceRoots(generation.Roots)
+	designRoots := serviceRoots(generation.Roots())
 	analyses := make([]*service.ServicesData, len(designRoots))
 	for i, r := range designRoots {
 		services, err := service.NewServicesData(r, generation)
@@ -25,12 +25,12 @@ func Service(generation *codegen.Generation) ([]*codegen.File, error) {
 
 		for _, s := range r.Services {
 			endpointFiles := []*codegen.File{
-				service.EndpointFile(generation.GenPkg, s, services),
-				service.ClientFile(generation.GenPkg, s, services),
+				service.EndpointFile(generation.GenPkg(), s, services),
+				service.ClientFile(generation.GenPkg(), s, services),
 			}
 			files = append(files, endpointFiles...)
 
-			if f := service.ViewsFile(generation.GenPkg, s, services); f != nil {
+			if f := service.ViewsFile(generation.GenPkg(), s, services); f != nil {
 				files = append(files, f)
 			}
 			convFiles, err := service.ConvertFiles(r, s, services)
@@ -40,14 +40,14 @@ func Service(generation *codegen.Generation) ([]*codegen.File, error) {
 			files = append(files, convFiles...)
 		}
 	}
-	svcFiles := service.Files(generation.GenPkg, analyses)
+	svcFiles := service.Files(generation.GenPkg(), analyses)
 	return append(svcFiles, files...), nil
 }
 
 // planServiceData declares service-owned generated package types for every Goa
 // design root in generation.
 func planServiceData(generation *codegen.Generation) error {
-	for _, root := range serviceRoots(generation.Roots) {
+	for _, root := range serviceRoots(generation.Roots()) {
 		if err := service.Plan(root, generation); err != nil {
 			return err
 		}

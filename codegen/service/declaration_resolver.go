@@ -61,7 +61,7 @@ func newServiceResolver(generation *codegen.Generation, aliases *importAliases, 
 		generation:  generation,
 		aliases:     aliases,
 		service:     service,
-		currentPath: servicePackagePath(generation.GenPkg, service),
+		currentPath: servicePackagePath(generation.GenPkg(), service),
 		outputPath:  outputPath,
 	}
 }
@@ -70,7 +70,7 @@ func newServiceResolver(generation *codegen.Generation, aliases *importAliases, 
 // derived binds rebuilt projected expression origins to their typed catalog
 // identities.
 func newViewResolver(generation *codegen.Generation, aliases *importAliases, service *expr.ServiceExpr, derived map[expr.UserType]codegen.DerivedTypeID) *declarationResolver {
-	viewsPath := servicePackagePath(generation.GenPkg, service) + "/views"
+	viewsPath := servicePackagePath(generation.GenPkg(), service) + "/views"
 	return &declarationResolver{
 		generation:  generation,
 		aliases:     aliases,
@@ -269,7 +269,7 @@ func (r *declarationResolver) owner(att *expr.AttributeExpr) string {
 		return r.currentPath
 	}
 	if location := codegen.UserTypeLocation(att.Type); location != nil {
-		return path.Join(r.generation.GenPkg, location.RelImportPath)
+		return path.Join(r.generation.GenPkg(), location.RelImportPath)
 	}
 	return r.currentPath
 }

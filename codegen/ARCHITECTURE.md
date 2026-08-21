@@ -53,6 +53,19 @@ path. Each catalog entry represents one Go package and owns:
 - the final names of each union type, discriminator type, constants, and
   constructors.
 
+The generation copies its evaluated roots and generated module import path at
+construction. Callers can read those values but cannot replace the registered
+roots or redirect output packages after planning begins. Planning and rendering
+therefore test membership against the same root snapshot.
+
+The generation also owns one import qualifier for each complete import path.
+Imports referenced by static templates have required qualifiers, generated
+service and views packages have preferred qualifiers, and design metadata has
+lower-priority preferences. Required qualifiers are allocated first and
+conflicting requirements are rejected; generated and metadata qualifiers may
+receive deterministic suffixes. Each generated file still imports only the
+paths used by the declarations and references it renders.
+
 Planning a declaration returns its canonical record. Once every selected
 generator and plugin has planned its output, the context freezes the catalog.
 Rendering may only look up those records; a late attempt to add a declaration

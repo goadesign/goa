@@ -1,3 +1,5 @@
+// This file defines streaming service designs used to verify that shared result
+// types emit one event marker method in generated service code.
 package testdata
 
 import (

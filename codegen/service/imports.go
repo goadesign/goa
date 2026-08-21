@@ -46,7 +46,7 @@ func AttributeImports(genpkg, outputPackage string, attributes ...*expr.Attribut
 // referenced by attributes using the frozen aliases shared with service type
 // references.
 func (d *ServicesData) AttributeImports(outputPackage string, attributes ...*expr.AttributeExpr) []*codegen.ImportSpec {
-	collector := newImportCollector(d.aliases, d.generation.GenPkg, outputPackage)
+	collector := newImportCollector(d.aliases, d.generation.GenPkg(), outputPackage)
 	for _, attribute := range attributes {
 		collector.collect(attribute)
 	}
@@ -57,7 +57,7 @@ func (d *ServicesData) AttributeImports(outputPackage string, attributes ...*exp
 // generated file. Explicit paths and attribute-derived paths are deduplicated
 // before their frozen aliases are materialized.
 func (d *ServicesData) fileImports(outputPackage string, paths []string, attributes ...*expr.AttributeExpr) []*codegen.ImportSpec {
-	collector := newImportCollector(d.aliases, d.generation.GenPkg, outputPackage)
+	collector := newImportCollector(d.aliases, d.generation.GenPkg(), outputPackage)
 	for _, importPath := range paths {
 		collector.addPath(importPath)
 	}
@@ -111,17 +111,17 @@ func planImports(root *expr.RootExpr, generation *codegen.Generation) error {
 		codegen.GoaImport("security"),
 	}
 	for _, spec := range fixed {
-		if err := generation.ReserveImport(spec); err != nil {
+		if err := generation.RequireImport(spec); err != nil {
 			return err
 		}
 	}
 	for _, service := range root.Services {
-		servicePath := servicePackagePath(generation.GenPkg, service)
+		servicePath := servicePackagePath(generation.GenPkg(), service)
 		serviceName := strings.ToLower(codegen.Goify(service.Name, false))
-		if err := generation.ReserveImport(codegen.NewImport(serviceName, servicePath)); err != nil {
+		if err := generation.ReserveGeneratedImport(codegen.NewImport(serviceName, servicePath)); err != nil {
 			return err
 		}
-		if err := generation.ReserveImport(codegen.NewImport(serviceName+"views", servicePath+"/views")); err != nil {
+		if err := generation.ReserveGeneratedImport(codegen.NewImport(serviceName+"views", servicePath+"/views")); err != nil {
 			return err
 		}
 	}
@@ -171,7 +171,7 @@ func planAttributeImports(attribute *expr.AttributeExpr, generation *codegen.Gen
 		if location := codegen.UserTypeLocation(actual); location != nil {
 			if err := generation.DeclareImport(codegen.NewImport(
 				location.PackageName(),
-				path.Join(generation.GenPkg, location.RelImportPath),
+				path.Join(generation.GenPkg(), location.RelImportPath),
 			)); err != nil {
 				return err
 			}

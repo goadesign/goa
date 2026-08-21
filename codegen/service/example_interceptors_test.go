@@ -1,3 +1,5 @@
+// This file verifies the starter server and client interceptor files generated
+// from API, service, and method interceptor declarations.
 package service
 
 import (
@@ -88,7 +90,7 @@ func TestExampleInterceptorsFiles(t *testing.T) {
 			require.NotNil(t, root)
 
 			// Generate files
-			fs := ExampleInterceptorsFiles(services.generation.GenPkg, root, services)
+			fs := ExampleInterceptorsFiles(services.generation.GenPkg(), root, services)
 			require.Len(t, fs, len(c.ExpectedFiles))
 
 			// Verify file paths

@@ -12,17 +12,20 @@ import (
 )
 
 type (
+	// importPriority identifies the closed import ownership classes used during
+	// deterministic qualifier allocation.
+	importPriority uint8
+
 	// importAliasPlan records every preferred spelling for a complete package
 	// path before qualifiers are allocated.
 	importAliasPlan struct {
 		candidates map[string]*importAliasCandidate
 	}
 
-	// importAliasCandidate retains generator-reserved and design-preferred names
-	// separately so generator template imports take priority deterministically.
+	// importAliasCandidate retains requested names by ownership class so the
+	// highest-priority request for one complete path wins.
 	importAliasCandidate struct {
-		reserved  map[string]bool
-		preferred map[string]bool
+		spellings [importPriorityCount]map[string]bool
 	}
 
 	// importAliasBinding records the qualifier and whether its import declaration
@@ -33,16 +36,30 @@ type (
 	}
 )
 
-// ReserveImport declares a generator-owned import. Its spelling takes
-// priority over design metadata that names the same path differently.
-func (g *Generation) ReserveImport(spec *ImportSpec) error {
-	return g.declareImport(spec, true)
+const (
+	fixedImportPriority importPriority = iota
+	generatedImportPriority
+	metadataImportPriority
+	importPriorityCount
+)
+
+// RequireImport declares an import whose qualifier is required by static
+// generated code. Two different required qualifiers for one path are rejected.
+func (g *Generation) RequireImport(spec *ImportSpec) error {
+	return g.declareImport(spec, fixedImportPriority)
+}
+
+// ReserveGeneratedImport declares a preferred qualifier for a generated
+// package. Required static imports take priority and may cause it to be
+// suffixed.
+func (g *Generation) ReserveGeneratedImport(spec *ImportSpec) error {
+	return g.declareImport(spec, generatedImportPriority)
 }
 
 // DeclareImport declares a design-owned import. Repeated declarations of one
 // complete path are merged before freeze.
 func (g *Generation) DeclareImport(spec *ImportSpec) error {
-	return g.declareImport(spec, false)
+	return g.declareImport(spec, metadataImportPriority)
 }
 
 // Import returns the frozen import declaration for importPath. It panics when
@@ -61,7 +78,7 @@ func (g *Generation) ImportName(importPath string) string {
 // HasRoot reports whether root is one of the exact evaluated roots registered
 // when the generation was constructed.
 func (g *Generation) HasRoot(root eval.Root) bool {
-	for _, registered := range g.Roots {
+	for _, registered := range g.roots {
 		if registered == root {
 			return true
 		}
@@ -70,7 +87,7 @@ func (g *Generation) HasRoot(root eval.Root) bool {
 }
 
 // declareImport merges one path spelling into the generation plan.
-func (g *Generation) declareImport(spec *ImportSpec, reserved bool) error {
+func (g *Generation) declareImport(spec *ImportSpec, priority importPriority) error {
 	if g.frozen {
 		return fmt.Errorf("generation imports are frozen")
 	}
@@ -83,50 +100,76 @@ func (g *Generation) declareImport(spec *ImportSpec, reserved bool) error {
 	}
 	candidate, ok := g.importPlan.candidates[importPath]
 	if !ok {
-		candidate = &importAliasCandidate{
-			reserved:  make(map[string]bool),
-			preferred: make(map[string]bool),
-		}
+		candidate = &importAliasCandidate{}
 		g.importPlan.candidates[importPath] = candidate
 	}
-	spellings := candidate.preferred
-	if reserved {
-		spellings = candidate.reserved
+	spellings := candidate.spellings[priority]
+	if spellings == nil {
+		spellings = make(map[string]bool)
+		candidate.spellings[priority] = spellings
+	}
+	if priority == fixedImportPriority && len(spellings) > 0 {
+		required, _ := firstImportSpelling(spellings)
+		if required != preferred {
+			return fmt.Errorf(
+				"fixed import path %q requires qualifier %q, not %q",
+				importPath,
+				required,
+				preferred,
+			)
+		}
 	}
 	spellings[preferred] = spellings[preferred] || spec.Name != ""
 	return nil
 }
 
-// freezeImports allocates qualifiers in generator-priority, full-path order.
-func (g *Generation) freezeImports() {
+// freezeImports validates fixed requirements, then allocates qualifiers by
+// ownership class and complete import path.
+func (g *Generation) freezeImports() error {
 	paths := make([]string, 0, len(g.importPlan.candidates))
 	for importPath := range g.importPlan.candidates {
 		paths = append(paths, importPath)
 	}
 	sort.Slice(paths, func(i, j int) bool {
-		left := len(g.importPlan.candidates[paths[i]].reserved) > 0
-		right := len(g.importPlan.candidates[paths[j]].reserved) > 0
+		left := g.importPlan.candidates[paths[i]].priority()
+		right := g.importPlan.candidates[paths[j]].priority()
 		if left != right {
-			return left
+			return left < right
 		}
 		return paths[i] < paths[j]
 	})
-	scope := NewNameScope()
-	g.imports = make(map[string]importAliasBinding, len(paths))
+	fixedPaths := make(map[string]string)
 	for _, importPath := range paths {
 		candidate := g.importPlan.candidates[importPath]
-		spellings := candidate.preferred
-		if len(candidate.reserved) > 0 {
-			spellings = candidate.reserved
+		if candidate.priority() != fixedImportPriority {
+			continue
 		}
+		name, _ := firstImportSpelling(candidate.spellings[fixedImportPriority])
+		if existingPath, ok := fixedPaths[name]; ok && existingPath != importPath {
+			return fmt.Errorf(
+				"fixed import qualifier %q is required by both %q and %q",
+				name,
+				existingPath,
+				importPath,
+			)
+		}
+		fixedPaths[name] = importPath
+	}
+	scope := NewNameScope()
+	bindings := make(map[string]importAliasBinding, len(paths))
+	for _, importPath := range paths {
+		candidate := g.importPlan.candidates[importPath]
+		spellings := candidate.spellings[candidate.priority()]
 		preferred, explicit := firstImportSpelling(spellings)
 		name := scope.Unique(preferred)
-		g.imports[importPath] = importAliasBinding{
+		bindings[importPath] = importAliasBinding{
 			name:     name,
 			explicit: explicit || name != path.Base(importPath),
 		}
 	}
 	scope.Freeze()
+	g.imports = bindings
+	return nil
 }
 
 // importBinding returns one planned binding after generation freeze.
@@ -151,6 +194,16 @@ func firstImportSpelling(spellings map[string]bool) (string, bool) {
 	sort.Strings(names)
 	name := names[0]
 	return name, spellings[name]
+}
+
+// priority returns the strongest ownership class that requested this path.
+func (c *importAliasCandidate) priority() importPriority {
+	for priority := fixedImportPriority; priority < importPriorityCount; priority++ {
+		if len(c.spellings[priority]) > 0 {
+			return priority
+		}
+	}
+	panic("import alias candidate has no spellings")
 }
 
 // explicitImportName omits a redundant alias unless planning or collision

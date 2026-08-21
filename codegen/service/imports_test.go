@@ -38,12 +38,44 @@ func TestPlanRejectsUnregisteredRoot(t *testing.T) {
 	require.ErrorContains(t, err, "does not belong")
 }
 
+// TestPlanUsesCopiedGenerationRoots verifies that mutating root slices outside
+// the generation cannot change which service designs planning and rendering
+// accept.
+func TestPlanUsesCopiedGenerationRoots(t *testing.T) {
+	first := codegen.RunDSL(t, func() {
+		dsl.Service("First", func() {
+			dsl.Method("Read", func() {})
+		})
+	})
+	second := codegen.RunDSL(t, func() {
+		dsl.Service("Second", func() {
+			dsl.Method("Read", func() {})
+		})
+	})
+	roots := []eval.Root{first}
+	generation := codegen.NewGeneration("generated.local/gen", roots)
+	roots[0] = second
+	returnedRoots := generation.Roots()
+	returnedRoots[0] = second
+
+	require.NoError(t, Plan(first, generation))
+	require.ErrorContains(t, Plan(second, generation), "does not belong")
+	require.NoError(t, generation.Freeze())
+	roots[0] = nil
+	returnedRoots = generation.Roots()
+	returnedRoots[0] = second
+	_, err := NewServicesData(first, generation)
+	require.NoError(t, err)
+	_, err = NewServicesData(second, generation)
+	require.ErrorContains(t, err, "does not belong")
+}
+
 // TestImportAliasesUsePathAsIdentity verifies that generator-owned imports
 // retain their canonical qualifier when metadata prefers another spelling for
 // the same complete package path.
 func TestImportAliasesUsePathAsIdentity(t *testing.T) {
 	generation := codegen.NewGeneration("generated.local/gen", nil)
-	require.NoError(t, generation.ReserveImport(codegen.SimpleImport("encoding/json")))
+	require.NoError(t, generation.RequireImport(codegen.SimpleImport("encoding/json")))
 	require.NoError(t, generation.DeclareImport(codegen.NewImport("jason", "encoding/json")))
 	require.NoError(t, generation.Freeze())
 
@@ -97,7 +129,7 @@ func TestRegisteredRootsShareImportAliases(t *testing.T) {
 	require.Equal(t, "alpha", first.aliases.name("example.com/shared/value"))
 	require.Equal(t, first.aliases.name("example.com/shared/value"), second.aliases.name("example.com/shared/value"))
 
-	files := Files(generation.GenPkg, []*ServicesData{first, second})
+	files := Files(generation.GenPkg(), []*ServicesData{first, second})
 	for _, name := range []string{"first_payload.go", "second_payload.go"} {
 		file := findFile(files, path.Join("gen", "types", name))
 		require.NotNil(t, file)
@@ -132,6 +164,25 @@ func TestImportAliasesReserveFixedJSON(t *testing.T) {
 	require.Equal(t, "json2", aliases.name("example.com/custom/json"))
 }
 
+// TestFixedTemplateAliasesBeatGeneratedPackages verifies that generated
+// service paths cannot take qualifiers required by static Goa and log calls.
+func TestFixedTemplateAliasesBeatGeneratedPackages(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		interceptor := dsl.Interceptor("Trace")
+		for _, name := range []string{"Goa", "Log"} {
+			dsl.Service(name, func() {
+				dsl.ServerInterceptor(interceptor)
+				dsl.Method("Read", func() {})
+			})
+		}
+	})
+	services := mustServicesData(t, root)
+	require.Equal(t, "goa", services.aliases.name(codegen.GoaImport("").Path))
+	require.Equal(t, "goa2", services.aliases.name(servicePackagePath(services.generation.GenPkg(), root.Service("Goa"))))
+	require.Equal(t, "log", services.aliases.name("goa.design/clue/log"))
+	require.Equal(t, "log2", services.aliases.name(servicePackagePath(services.generation.GenPkg(), root.Service("Log"))))
+}
+
 // TestDocumentedJSONMetadataUsesCanonicalAlias verifies that an alternate
 // metadata spelling for encoding/json produces one import and one canonical
 // qualifier in the generated service definition.
@@ -149,7 +200,7 @@ func TestDocumentedJSONMetadataUsesCanonicalAlias(t *testing.T) {
 		})
 	})
 	services := mustServicesData(t, root)
-	file := findFile(Files(services.generation.GenPkg, []*ServicesData{services}), path.Join("gen", "values", "service.go"))
+	file := findFile(Files(services.generation.GenPkg(), []*ServicesData{services}), path.Join("gen", "values", "service.go"))
 	require.NotNil(t, file)
 	code := renderSections(t, file.SectionTemplates)
 	require.Contains(t, code, "json.RawMessage")
@@ -171,11 +222,11 @@ func TestExampleServiceUsesCanonicalGeneratedPackageQualifier(t *testing.T) {
 		})
 	})
 	services := mustServicesData(t, root)
-	servicePath := servicePackagePath(services.generation.GenPkg, root.Service("Values"))
+	servicePath := servicePackagePath(services.generation.GenPkg(), root.Service("Values"))
 	require.Equal(t, "values", services.aliases.name(servicePath))
 	require.Equal(t, "values2", services.aliases.name("example.com/custom/values"))
 
-	files := ExampleServiceFiles(services.generation.GenPkg, root, services)
+	files := ExampleServiceFiles(services.generation.GenPkg(), root, services)
 	require.Len(t, files, 1)
 	code := renderSections(t, files[0].SectionTemplates)
 	_, err := format.Source([]byte(code))
@@ -198,12 +249,12 @@ func TestExampleServiceReservesFixedQualifiers(t *testing.T) {
 		})
 	})
 	services := mustServicesData(t, root)
-	servicePath := servicePackagePath(services.generation.GenPkg, root.Service("Fmt"))
+	servicePath := servicePackagePath(services.generation.GenPkg(), root.Service("Fmt"))
 	servicePkg := services.aliases.name(servicePath)
 	require.NotEqual(t, "fmt", servicePkg)
 	require.Equal(t, "strings2", services.aliases.name("example.com/custom/strings"))
 
-	files := ExampleServiceFiles(services.generation.GenPkg, root, services)
+	files := ExampleServiceFiles(services.generation.GenPkg(), root, services)
 	require.Len(t, files, 1)
 	code := renderSections(t, files[0].SectionTemplates)
 	_, err := format.Source([]byte(code))
@@ -232,12 +283,12 @@ func TestServiceUsesCanonicalViewsQualifier(t *testing.T) {
 		})
 	})
 	services := mustServicesData(t, root)
-	servicePath := servicePackagePath(services.generation.GenPkg, root.Service("Values"))
+	servicePath := servicePackagePath(services.generation.GenPkg(), root.Service("Values"))
 	viewsPath := servicePath + "/views"
 	require.Equal(t, "valuesviews", services.aliases.name(viewsPath))
 	require.Equal(t, "valuesviews2", services.aliases.name("example.com/custom/views"))
 
-	file := findFile(Files(services.generation.GenPkg, []*ServicesData{services}), path.Join("gen", "values", "service.go"))
+	file := findFile(Files(services.generation.GenPkg(), []*ServicesData{services}), path.Join("gen", "values", "service.go"))
 	require.NotNil(t, file)
 	code := renderSections(t, file.SectionTemplates)
 	_, err := format.Source([]byte(code))
@@ -251,7 +302,7 @@ func TestServiceUsesCanonicalViewsQualifier(t *testing.T) {
 // binding when encoding/json already owns the preferred json name.
 func TestUnionFieldReferencesUseFixedImportAliases(t *testing.T) {
 	generation := codegen.NewGeneration("generated.local/gen", nil)
-	require.NoError(t, generation.ReserveImport(codegen.SimpleImport("encoding/json")))
+	require.NoError(t, generation.RequireImport(codegen.SimpleImport("encoding/json")))
 	require.NoError(t, generation.DeclareImport(codegen.NewImport("values", "generated.local/gen/values")))
 	require.NoError(t, generation.DeclareImport(codegen.NewImport("json", "example.com/custom/json")))
 	service := &expr.ServiceExpr{Name: "Values"}
@@ -285,7 +336,7 @@ func TestUnionFieldReferencesUseFixedImportAliases(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "json2.Value", data.Fields[0].FieldType)
 
-	collector := newImportCollector(aliases, generation.GenPkg, "generated.local/gen/values")
+	collector := newImportCollector(aliases, generation.GenPkg(), "generated.local/gen/values")
 	collector.collect(branch)
 	header := codegen.Header(
 		"Union types",

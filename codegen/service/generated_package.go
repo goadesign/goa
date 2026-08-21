@@ -90,7 +90,7 @@ func Plan(root *expr.RootExpr, generation *codegen.Generation) error {
 	for _, service := range root.Services {
 		// The service package record makes NewServicesData a render-only contract:
 		// its scope is unavailable until the generation freezes.
-		generation.GeneratedPackage(servicePackagePath(generation.GenPkg, service))
+		generation.GeneratedPackage(servicePackagePath(generation.GenPkg(), service))
 	}
 
 	seenTypes := make(map[plannedUserType]struct{})
@@ -121,7 +121,7 @@ func rootMembershipError(root *expr.RootExpr) error {
 func planMethodTypes(root *expr.RootExpr, generation *codegen.Generation) (map[expr.UserType]codegen.DerivedTypeID, error) {
 	planned := make(map[expr.UserType]codegen.DerivedTypeID)
 	for _, service := range root.Services {
-		generatedPackage := generation.GeneratedPackage(servicePackagePath(generation.GenPkg, service))
+		generatedPackage := generation.GeneratedPackage(servicePackagePath(generation.GenPkg(), service))
 		for _, method := range service.Methods {
 			attributes := []methodTypeCandidate{
 				{method.Payload, codegen.NewMethodPayloadIdentity(service.Name, method.Name)},
@@ -206,7 +206,7 @@ func planUserTypes(attribute *expr.AttributeExpr, service *expr.ServiceExpr, loc
 		}
 		key := plannedUserType{
 			userType:    declaredType,
-			packagePath: generatedPackagePath(generation.GenPkg, service, typeLocation),
+			packagePath: generatedPackagePath(generation.GenPkg(), service, typeLocation),
 		}
 		if _, ok := seen[key]; ok {
 			return nil
@@ -263,7 +263,7 @@ func planUnions(attribute *expr.AttributeExpr, service *expr.ServiceExpr, locati
 		}
 		key := plannedUserType{
 			userType:    declaredType,
-			packagePath: generatedPackagePath(generation.GenPkg, service, typeLocation),
+			packagePath: generatedPackagePath(generation.GenPkg(), service, typeLocation),
 		}
 		if _, ok := seen[key]; ok {
 			return nil
@@ -284,7 +284,7 @@ func planUnions(attribute *expr.AttributeExpr, service *expr.ServiceExpr, locati
 		}
 		return recurse(actual.ElemType, location)
 	case *expr.Union:
-		packagePath := generatedPackagePath(generation.GenPkg, service, location)
+		packagePath := generatedPackagePath(generation.GenPkg(), service, location)
 		generatedPackage := generation.GeneratedPackage(packagePath)
 		if _, err := generatedPackage.DeclareUnion(actual); err != nil {
 			return err
@@ -312,7 +312,7 @@ func planUnions(attribute *expr.AttributeExpr, service *expr.ServiceExpr, locati
 // families after the derived type names have been recorded.
 func planViews(root *expr.RootExpr, generation *codegen.Generation, rootTypes *rootTypeSet) error {
 	for _, service := range root.Services {
-		viewsPath := servicePackagePath(generation.GenPkg, service) + "/views"
+		viewsPath := servicePackagePath(generation.GenPkg(), service) + "/views"
 		views := generation.GeneratedPackage(viewsPath)
 		seenProjected := make(map[expr.UserType]expr.UserType)
 		derived := make(map[expr.UserType]codegen.DerivedTypeID)
@@ -334,7 +334,7 @@ func planViews(root *expr.RootExpr, generation *codegen.Generation, rootTypes *r
 			projectedRoots = append(projectedRoots, projected)
 
 			if resultType, ok := method.Result.Type.(*expr.ResultTypeExpr); ok {
-				serviceTypes := generation.GeneratedPackage(servicePackagePath(generation.GenPkg, service))
+				serviceTypes := generation.GeneratedPackage(servicePackagePath(generation.GenPkg(), service))
 				resultDeclaration, err := serviceTypes.Type(rootTypes.canonical(resultType))
 				if err != nil {
 					return err
@@ -471,7 +471,7 @@ func servicePackagePath(genpkg string, service *expr.ServiceExpr) string {
 // generatedPackage returns the root-owned render data for the package selected
 // by location, creating that owner on first use.
 func (d *ServicesData) generatedPackage(service *expr.ServiceExpr, location *codegen.Location) *generatedPackageData {
-	importPath := generatedPackagePath(d.generation.GenPkg, service, location)
+	importPath := generatedPackagePath(d.generation.GenPkg(), service, location)
 	if generatedPackage, ok := d.packages[importPath]; ok {
 		return generatedPackage
 	}
@@ -573,7 +573,7 @@ func (d *ServicesData) registerMethodType(service *expr.ServiceExpr, attribute *
 	}
 	userType := attribute.Type.(expr.UserType)
 	declaration, err := d.generation.GeneratedPackage(
-		generatedPackagePath(d.generation.GenPkg, service, location),
+		generatedPackagePath(d.generation.GenPkg(), service, location),
 	).UserType(d.rootTypes.canonical(userType))
 	if err != nil {
 		return err
