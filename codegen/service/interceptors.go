@@ -8,21 +8,22 @@ import (
 )
 
 // InterceptorsFiles returns the interceptors files for the given service.
-func InterceptorsFiles(_ string, service *expr.ServiceExpr, services *ServicesData) []*codegen.File {
+func InterceptorsFiles(genpkg string, service *expr.ServiceExpr, services *ServicesData) []*codegen.File {
 	var files []*codegen.File
 	svc := services.Get(service.Name)
+	outputPackage := genpkg + "/" + svc.PathName
 
 	// Generate service-specific interceptor files
 	if len(svc.ServerInterceptors) > 0 {
-		files = append(files, interceptorFile(svc, true))
+		files = append(files, interceptorFile(svc, services, outputPackage, true))
 	}
 	if len(svc.ClientInterceptors) > 0 {
-		files = append(files, interceptorFile(svc, false))
+		files = append(files, interceptorFile(svc, services, outputPackage, false))
 	}
 
 	// Generate wrapper file if this service has any interceptors
 	if len(svc.ServerInterceptors) > 0 || len(svc.ClientInterceptors) > 0 {
-		files = append(files, wrapperFile(svc))
+		files = append(files, wrapperFile(svc, services, outputPackage))
 	}
 
 	return files
@@ -30,7 +31,7 @@ func InterceptorsFiles(_ string, service *expr.ServiceExpr, services *ServicesDa
 
 // interceptorFile returns the file defining the interceptors.
 // This method is called twice, once for the server and once for the client.
-func interceptorFile(svc *Data, server bool) *codegen.File {
+func interceptorFile(svc *Data, services *ServicesData, outputPackage string, server bool) *codegen.File {
 	filename := "client_interceptors.go"
 	template := clientInterceptorsT
 	section := "client-interceptors-type"
@@ -67,10 +68,10 @@ func interceptorFile(svc *Data, server bool) *codegen.File {
 	}
 
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(desc, svc.PkgName, []*codegen.ImportSpec{
-			{Path: "context"},
-			codegen.GoaImport(""),
-		}),
+		codegen.Header(desc, svc.PkgName, services.fileImports(outputPackage, []string{
+			"context",
+			codegen.GoaImport("").Path,
+		})),
 		{
 			Name:   section,
 			Source: serviceTemplates.Read(template),
@@ -130,15 +131,14 @@ func interceptorFile(svc *Data, server bool) *codegen.File {
 }
 
 // wrapperFile returns the file containing the interceptor wrappers.
-func wrapperFile(svc *Data) *codegen.File {
+func wrapperFile(svc *Data, services *ServicesData, outputPackage string) *codegen.File {
 	path := filepath.Join(codegen.Gendir, svc.PathName, "interceptor_wrappers.go")
 
 	var sections []*codegen.SectionTemplate
-	sections = append(sections, codegen.Header("Interceptor wrappers", svc.PkgName, []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "fmt"},
-		codegen.GoaImport(""),
-	}))
+	sections = append(sections, codegen.Header("Interceptor wrappers", svc.PkgName, services.fileImports(outputPackage, []string{
+		"context",
+		codegen.GoaImport("").Path,
+	})))
 
 	// Generate any interceptor stream wrapper struct types first
 	var wrappedServerStreams, wrappedClientStreams []*StreamInterceptorData

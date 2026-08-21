@@ -562,6 +562,57 @@ func TestServiceRelocatedUnionOwnerCompilesAcrossGeneration(t *testing.T) {
 	runGeneratedTests(t, dir)
 }
 
+// TestServiceAndExamplesCompileWithImportQualifierCollisions verifies that
+// fixed packages, generated service packages, generated views packages, and
+// metadata packages share one path-owned qualifier mapping.
+func TestServiceAndExamplesCompileWithImportQualifierCollisions(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		result := dsl.ResultType("application/vnd.value", func() {
+			dsl.TypeName("Value")
+			dsl.Attribute("custom", dsl.String, func() {
+				dsl.Meta("struct:field:type", "valuesviews.Value", "generated.local/custom/views", "valuesviews")
+			})
+			dsl.View("default", func() {
+				dsl.Attribute("custom")
+			})
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(dsl.String, func() {
+					dsl.Meta("struct:field:type", "values.Value", "generated.local/custom/values", "values")
+				})
+				dsl.Result(result)
+			})
+		})
+		dsl.Service("Fmt", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(dsl.String, func() {
+					dsl.Meta("struct:field:type", "strings.Value", "generated.local/custom/strings", "strings")
+				})
+			})
+		})
+	})
+	generation := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, servicecodegen.Plan(root, generation))
+	require.NoError(t, generation.Freeze())
+	services, err := servicecodegen.NewServicesData(root, generation)
+	require.NoError(t, err)
+
+	dir := t.TempDir()
+	files, err := Service(generation)
+	require.NoError(t, err)
+	files = append(files, servicecodegen.ExampleServiceFiles(generation.GenPkg, root, services)...)
+	for _, file := range files {
+		_, err := file.Render(dir)
+		require.NoError(t, err)
+	}
+	writeGeneratedModule(t, dir, "generated.local")
+	writeStubPackage(t, filepath.Join(dir, "custom", "strings"), "strings")
+	writeStubPackage(t, filepath.Join(dir, "custom", "values"), "values")
+	writeStubPackage(t, filepath.Join(dir, "custom", "views"), "valuesviews")
+	runGeneratedTests(t, dir)
+}
+
 // unusedRelocatedValueRoot declares a relocated type that no service reaches
 // and does not force generation. It must not reserve a generated package name.
 func unusedRelocatedValueRoot() func() {

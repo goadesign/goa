@@ -34,7 +34,7 @@ func TestExampleServiceFiles(t *testing.T) {
 				root := codegen.RunDSL(t, c.DSL)
 				services := mustServicesData(t, root)
 				require.Len(t, root.Services, 3)
-				fs := ExampleServiceFiles("", root, services)
+				fs := ExampleServiceFiles(services.generation.GenPkg, root, services)
 				require.Len(t, fs, 3)
 				for _, f := range fs {
 					require.Greater(t, len(f.SectionTemplates), 0)

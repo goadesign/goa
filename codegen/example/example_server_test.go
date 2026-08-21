@@ -14,6 +14,7 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example/testdata"
 	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/eval"
 )
 
 // updateGolden is true when -w is passed to `go test`, e.g. `go test ./... -w`
@@ -61,7 +62,7 @@ func TestExampleServerFiles(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			Servers = make(ServersData)
 			root := codegen.RunDSL(t, c.DSL)
-			generation := codegen.NewGeneration("goa.design/goa/example", nil)
+			generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
 			require.NoError(t, service.Plan(root, generation))
 			require.NoError(t, generation.Freeze())
 			services, err := service.NewServicesData(root, generation)

@@ -151,31 +151,38 @@ func generateConvertFileForPath(
 		}
 	}
 
-	// Retrieve external packages info
-	ppm := make(map[string]string)
+	// Collect the complete external package paths referenced by this file.
+	externalPaths := make(map[string]struct{})
 	for _, c := range conversions {
-		pkgImport, alias, err := getExternalTypeInfo(c.External)
+		pkgImport, _, err := getExternalTypeInfo(c.External)
 		if err != nil {
 			return nil, err
 		}
-		ppm[pkgImport] = alias
+		externalPaths[pkgImport] = struct{}{}
 	}
 	for _, c := range creations {
-		pkgImport, alias, err := getExternalTypeInfo(c.External)
+		pkgImport, _, err := getExternalTypeInfo(c.External)
 		if err != nil {
 			return nil, err
 		}
-		ppm[pkgImport] = alias
+		externalPaths[pkgImport] = struct{}{}
 	}
-	pkgs := make([]*codegen.ImportSpec, 0, len(ppm)+2)
-	for pp, alias := range ppm {
-		pkgs = append(pkgs, &codegen.ImportSpec{Name: alias, Path: pp})
+	paths := make([]string, 0, len(externalPaths))
+	for importPath := range externalPaths {
+		paths = append(paths, importPath)
 	}
 
-	// Build header section
-	pkgs = append(pkgs, &codegen.ImportSpec{Path: "context"}, codegen.GoaImport(""))
+	outputPath := servicePackagePath(services.generation.GenPkg, service)
+	first := append(append([]*expr.TypeMap(nil), conversions...), creations...)[0]
+	if loc := codegen.UserTypeLocation(first.User); loc != nil {
+		outputPath = generatedPackagePath(services.generation.GenPkg, service, loc)
+	}
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(service.Name+" service type conversion functions", convertPkgName, pkgs),
+		codegen.Header(
+			service.Name+" service type conversion functions",
+			convertPkgName,
+			services.fileImports(outputPath, paths),
+		),
 	}
 
 	var (
@@ -190,10 +197,11 @@ func generateConvertFileForPath(
 			return nil, err
 		}
 		t := reflect.TypeOf(c.External)
-		tgtPkg := t.String()
-		if idx := strings.Index(tgtPkg, "."); idx != -1 {
-			tgtPkg = tgtPkg[:idx]
+		pkgImport, _, err := getExternalTypeInfo(c.External)
+		if err != nil {
+			return nil, err
 		}
+		tgtPkg := services.aliases.name(pkgImport)
 
 		outputPath := servicePackagePath(services.generation.GenPkg, service)
 		if loc := codegen.UserTypeLocation(c.User); loc != nil {
@@ -217,7 +225,7 @@ func generateConvertFileForPath(
 		transFuncs = codegen.AppendHelpers(transFuncs, tf)
 		base := "ConvertTo" + t.Name()
 		name := uniquify(base, names)
-		ref := t.String()
+		ref := tgtPkg + "." + t.Name()
 		if expr.IsObject(c.User) {
 			ref = "*" + ref
 		}
@@ -242,10 +250,11 @@ func generateConvertFileForPath(
 			return nil, err
 		}
 		t := reflect.TypeOf(c.External)
-		srcPkg := t.String()
-		if idx := strings.Index(srcPkg, "."); idx != -1 {
-			srcPkg = srcPkg[:idx]
+		pkgImport, _, err := getExternalTypeInfo(c.External)
+		if err != nil {
+			return nil, err
 		}
+		srcPkg := services.aliases.name(pkgImport)
 		srcCtx := codegen.NewAttributeContext(false, false, false, srcPkg, codegen.NewNameScope())
 
 		tgtAtt := &expr.AttributeExpr{Type: c.User}
@@ -267,7 +276,7 @@ func generateConvertFileForPath(
 		transFuncs = codegen.AppendHelpers(transFuncs, tf)
 		base := "CreateFrom" + t.Name()
 		name := uniquify(base, names)
-		ref := t.String()
+		ref := srcPkg + "." + t.Name()
 		if expr.IsObject(c.User) {
 			ref = "*" + ref
 		}

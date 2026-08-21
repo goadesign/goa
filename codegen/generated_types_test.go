@@ -410,6 +410,53 @@ func TestGeneratedPackageLookupAcrossFreeze(t *testing.T) {
 	require.ErrorContains(t, err, "frozen")
 }
 
+// TestGeneratedPackageRejectsConflictingOriginBindings verifies that exact
+// and compiler-derived declarations cannot claim the same expression origin
+// in either declaration order.
+func TestGeneratedPackageRejectsConflictingOriginBindings(t *testing.T) {
+	for _, derivedFirst := range []bool{false, true} {
+		t.Run(fmt.Sprintf("derived first %t", derivedFirst), func(t *testing.T) {
+			generation := NewGeneration("generated.local/gen", nil)
+			types := generation.GeneratedPackage("generated.local/gen/values")
+			wrapper := generatedUserType("ReadPayload", "Values#ReadPayload")
+			identity := NewMethodPayloadIdentity("Values", "Read")
+
+			if derivedFirst {
+				_, _, err := types.DeclareMethodType(identity, wrapper)
+				require.NoError(t, err)
+				_, err = types.DeclareUserType(wrapper)
+				require.ErrorContains(t, err, "already bound")
+				return
+			}
+
+			_, err := types.DeclareUserType(wrapper)
+			require.NoError(t, err)
+			_, _, err = types.DeclareMethodType(identity, wrapper)
+			require.ErrorContains(t, err, "already bound")
+		})
+	}
+}
+
+// TestMethodTypeIdentityMatchesNormalizedWrapper verifies that normalization
+// and declaration planning share the same closed method-role identity.
+func TestMethodTypeIdentityMatchesNormalizedWrapper(t *testing.T) {
+	root := RunDSL(t, func() {
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(func() {
+					dsl.Attribute("value", dsl.String)
+				})
+			})
+		})
+	})
+	wrapper := root.Service("Values").Method("Read").Payload.Type.(expr.UserType)
+	identity := NewMethodPayloadIdentity("Values", "Read")
+
+	require.Equal(t, "ReadPayload", identity.Name())
+	require.Equal(t, "Values#ReadPayload", identity.UID())
+	require.True(t, identity.Matches(wrapper))
+}
+
 // TestGenerationCatalogsAreIsolated verifies that standalone generation runs
 // do not share declaration records or name reservations.
 func TestGenerationCatalogsAreIsolated(t *testing.T) {

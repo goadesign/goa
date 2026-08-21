@@ -2029,16 +2029,11 @@ func projectTypePairs(projected, source *expr.AttributeExpr, seen map[expr.UserT
 // pre-normalization shape by traversing those synthetic wrappers' attributes
 // directly instead of generating view-local types for the wrappers themselves.
 func projectedResultRoot(service *expr.ServiceExpr, m *expr.MethodExpr) (*expr.AttributeExpr, *expr.AttributeExpr) {
-	if ut, ok := m.Result.Type.(*expr.UserTypeExpr); ok && ut.ID() == normalizedMethodTypeID(service, m, "Result") {
+	identity := codegen.NewMethodResultIdentity(service.Name, m.Name)
+	if ut, ok := m.Result.Type.(*expr.UserTypeExpr); ok && identity.Matches(ut) {
 		return expr.DupAtt(ut.Attribute()), ut.Attribute()
 	}
 	return expr.DupAtt(m.Result), m.Result
-}
-
-// normalizedMethodTypeID returns the semantic identifier assigned when
-// NormalizeRoot wraps a raw method object in a generated user type.
-func normalizedMethodTypeID(service *expr.ServiceExpr, m *expr.MethodExpr, suffix string) string {
-	return service.Name + "#" + codegen.Goify(m.Name, true) + suffix
 }
 
 // hasResultType returns true if the given attribute has a result type recursively.

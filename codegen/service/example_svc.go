@@ -33,6 +33,14 @@ type (
 		// by the endpoint implementation.
 		StreamInterface string
 	}
+
+	// exampleServiceData separates the generated service package declaration
+	// name from the qualifier used by this example file.
+	exampleServiceData struct {
+		*Data
+		// ServicePkg is the canonical generated service package qualifier.
+		ServicePkg string
+	}
 )
 
 // ExampleServiceFiles returns a basic service implementation for every
@@ -62,42 +70,44 @@ func ExampleServiceFiles(genpkg string, root *expr.RootExpr, services *ServicesD
 func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, services *ServicesData, apipkg string) *codegen.File {
 	data := services.Get(svc.Name)
 	svcName := data.PathName
+	servicePath := path.Join(genpkg, svcName)
+	servicePkg := services.aliases.name(servicePath)
+	renderData := &exampleServiceData{Data: data, ServicePkg: servicePkg}
 	fpath := svcName + ".go"
 	if _, err := os.Stat(fpath); !os.IsNotExist(err) {
 		return nil // file already exists, skip it.
 	}
-	specs := []*codegen.ImportSpec{
-		{Path: "io"},
-		{Path: "context"},
-		{Path: "fmt"},
-		{Path: "strings"},
-		{Path: path.Join(genpkg, svcName), Name: data.PkgName},
-		{Path: "goa.design/clue/log"},
-		{Path: "goa.design/goa/v3/security"},
-	}
-	specs = append(specs, services.AttributeImports(path.Dir(genpkg), serviceReferenceAttributes(svc)...)...)
+	specs := services.fileImports(path.Dir(genpkg), []string{
+		"io",
+		"context",
+		"fmt",
+		"strings",
+		servicePath,
+		"goa.design/clue/log",
+		codegen.GoaImport("security").Path,
+	}, serviceReferenceAttributes(svc)...)
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", apipkg, specs),
 		{
 			Name:   "basic-service-struct",
 			Source: serviceTemplates.Read(exampleServiceStructT),
-			Data:   data,
+			Data:   renderData,
 		}, {
 			Name:   "basic-service-init",
 			Source: serviceTemplates.Read(exampleServiceInitT),
-			Data:   data,
+			Data:   renderData,
 		},
 	}
 	if len(data.Schemes) > 0 {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "security-authfuncs",
 			Source: serviceTemplates.Read(exampleSecurityAuthfuncsT),
-			Data:   data,
+			Data:   renderData,
 		})
 	}
 	resolver := newServiceResolver(services.generation, services.aliases, svc, path.Dir(genpkg))
 	for _, m := range svc.Methods {
-		sections = append(sections, basicEndpointSection(m, data, resolver))
+		sections = append(sections, basicEndpointSection(m, data, resolver, servicePkg))
 	}
 
 	// Add HandleStream method for JSON-RPC WebSocket services (not SSE)
@@ -105,7 +115,7 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "jsonrpc-handle-stream",
 			Source: serviceTemplates.Read(jsonrpcHandleStreamT),
-			Data:   data,
+			Data:   renderData,
 		})
 	}
 
@@ -118,7 +128,7 @@ func exampleServiceFile(genpkg string, _ *expr.RootExpr, svc *expr.ServiceExpr, 
 
 // basicEndpointSection returns a starter implementation whose payload and
 // result references come from the method's frozen generated-package records.
-func basicEndpointSection(m *expr.MethodExpr, svcData *Data, resolver *declarationResolver) *codegen.SectionTemplate {
+func basicEndpointSection(m *expr.MethodExpr, svcData *Data, resolver *declarationResolver, servicePkg string) *codegen.SectionTemplate {
 	md := svcData.Method(m.Name)
 	ed := &basicEndpointData{
 		MethodData:     md,
@@ -140,7 +150,7 @@ func basicEndpointSection(m *expr.MethodExpr, svcData *Data, resolver *declarati
 		}
 	}
 	if md.ServerStream != nil {
-		ed.StreamInterface = svcData.PkgName + "." + md.ServerStream.Interface
+		ed.StreamInterface = servicePkg + "." + md.ServerStream.Interface
 	}
 	return &codegen.SectionTemplate{
 		Name:   "basic-endpoint",

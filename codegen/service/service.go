@@ -159,16 +159,9 @@ func serviceFiles(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 		})
 	}
 
-	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("context"),
-		codegen.SimpleImport("io"),
-		codegen.GoaImport(""),
-		codegen.GoaImport("security"),
-		codegen.NewImport(svc.ViewsPkg, genpkg+"/"+svcName+"/views"),
-	}
 	outputPackage := genpkg + "/" + svcName
 	attributes := serviceReferenceAttributes(service)
-	attributes = append(attributes, normalizedMethodDefinitions(service)...)
+	attributes = append(attributes, emittedMethodDefinitions(service, svc)...)
 	for _, userType := range svc.userTypes {
 		if userType.Loc == nil {
 			attributes = append(attributes, userType.Type.Attribute())
@@ -179,7 +172,13 @@ func serviceFiles(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 			attributes = append(attributes, errorType.Type.Attribute())
 		}
 	}
-	imports = append(imports, services.AttributeImports(outputPackage, attributes...)...)
+	imports := services.fileImports(outputPackage, []string{
+		"context",
+		"io",
+		codegen.GoaImport("").Path,
+		codegen.GoaImport("security").Path,
+		outputPackage + "/views",
+	}, attributes...)
 	header := codegen.Header(service.Name+" service", svc.PkgName, imports)
 	def := &codegen.SectionTemplate{
 		Name:   "service",
@@ -208,39 +207,33 @@ func serviceFiles(genpkg string, service *expr.ServiceExpr, services *ServicesDa
 	return append(files, InterceptorsFiles(genpkg, service, services)...)
 }
 
-// normalizedMethodDefinitions returns the underlying object definitions
-// emitted for semantic method wrappers in service.go. Their nested references
-// contribute imports even though endpoint and client files stop at the wrapper
-// declaration.
-func normalizedMethodDefinitions(service *expr.ServiceExpr) []*expr.AttributeExpr {
+// emittedMethodDefinitions returns the underlying method type definitions
+// written to service.go so their nested references contribute imports.
+func emittedMethodDefinitions(service *expr.ServiceExpr, data *Data) []*expr.AttributeExpr {
 	var definitions []*expr.AttributeExpr
-	for _, method := range service.Methods {
-		definitions = append(definitions, normalizedMethodDefinitionsFor(method)...)
+	for index, method := range service.Methods {
+		methodData := data.Methods[index]
+		if methodData.PayloadLoc == nil && methodData.PayloadDef != "" {
+			definitions = appendUserTypeDefinition(definitions, method.Payload)
+		}
+		if method.StreamingPayload != nil && codegen.UserTypeLocation(method.StreamingPayload.Type) == nil && methodData.StreamingPayloadDef != "" {
+			definitions = appendUserTypeDefinition(definitions, method.StreamingPayload)
+		}
+		if methodData.ResultLoc == nil && methodData.ResultDef != "" {
+			definitions = appendUserTypeDefinition(definitions, method.Result)
+		}
+		if method.HasMixedResults() && codegen.UserTypeLocation(method.StreamingResult.Type) == nil && methodData.StreamingResultDef != "" {
+			definitions = appendUserTypeDefinition(definitions, method.StreamingResult)
+		}
 	}
 	return definitions
 }
 
-// normalizedMethodDefinitionsFor returns the raw object definitions emitted
-// for one method so service.go imports their nested references.
-func normalizedMethodDefinitionsFor(method *expr.MethodExpr) []*expr.AttributeExpr {
-	var definitions []*expr.AttributeExpr
-	definitions = appendNormalizedMethodDefinition(definitions, method, method.Payload, "Payload")
-	definitions = appendNormalizedMethodDefinition(definitions, method, method.StreamingPayload, "StreamingPayload")
-	definitions = appendNormalizedMethodDefinition(definitions, method, method.Result, "Result")
-	if method.HasMixedResults() {
-		definitions = appendNormalizedMethodDefinition(definitions, method, method.StreamingResult, "StreamingResult")
-	}
-	return definitions
-}
-
-// appendNormalizedMethodDefinition appends the underlying object only when
-// attribute is the semantic wrapper created for the requested method role.
-func appendNormalizedMethodDefinition(definitions []*expr.AttributeExpr, method *expr.MethodExpr, attribute *expr.AttributeExpr, suffix string) []*expr.AttributeExpr {
-	if attribute == nil {
-		return definitions
-	}
+// appendUserTypeDefinition appends the definition rendered for a named method
+// attribute.
+func appendUserTypeDefinition(definitions []*expr.AttributeExpr, attribute *expr.AttributeExpr) []*expr.AttributeExpr {
 	userType, ok := attribute.Type.(expr.UserType)
-	if !ok || userType.ID() != normalizedMethodTypeID(method.Service, method, suffix) {
+	if !ok {
 		return definitions
 	}
 	return append(definitions, userType.Attribute())
@@ -278,15 +271,11 @@ func generatedPackageFiles(genpkg string, analyses []*ServicesData) []*codegen.F
 			sort.Slice(generatedTypes, func(i, j int) bool {
 				return generatedTypes[i].declaration.Name() < generatedTypes[j].declaration.Name()
 			})
-			imports := []*codegen.ImportSpec{
-				codegen.SimpleImport("fmt"),
-				codegen.GoaImport(""),
-			}
 			collector := newImportCollector(aliases, genpkg, packagePath)
 			for _, generatedType := range generatedTypes {
 				collector.collect(generatedType.userType.Attribute())
 			}
-			imports = append(imports, collector.imports()...)
+			imports := collector.imports()
 			sections := []*codegen.SectionTemplate{
 				codegen.Header("User types", generatedPackage.packageName, imports),
 			}
@@ -307,20 +296,17 @@ func generatedPackageFiles(genpkg string, analyses []*ServicesData) []*codegen.F
 			sort.Slice(unions, func(i, j int) bool {
 				return unions[i].Name < unions[j].Name
 			})
-			imports := []*codegen.ImportSpec{
-				codegen.SimpleImport("bytes"),
-				codegen.SimpleImport("encoding/json"),
-				codegen.SimpleImport("fmt"),
-				codegen.GoaImport(""),
-			}
 			collector := newImportCollector(aliases, genpkg, packagePath)
+			for _, importPath := range []string{"bytes", "encoding/json", "fmt", codegen.GoaImport("").Path} {
+				collector.addPath(importPath)
+			}
 			for _, union := range unions {
 				for _, field := range union.Fields {
 					collector.collect(field.reference)
 					collector.collect(field.definition)
 				}
 			}
-			imports = append(imports, collector.imports()...)
+			imports := collector.imports()
 			sections := []*codegen.SectionTemplate{
 				codegen.Header("Union types", generatedPackage.packageName, imports),
 			}

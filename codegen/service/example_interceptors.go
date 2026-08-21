@@ -26,10 +26,11 @@ func ExampleInterceptorsFiles(genpkg string, r *expr.RootExpr, services *Service
 // exampleInterceptorsFile returns the example interceptors for the given service.
 func exampleInterceptorsFile(genpkg string, svc *expr.ServiceExpr, services *ServicesData) []*codegen.File {
 	sdata := services.Get(svc.Name)
+	servicePath := path.Join(genpkg, sdata.PathName)
 	data := map[string]any{
 		"ServiceName":        sdata.Name,
 		"StructName":         sdata.StructName,
-		"PkgName":            "interceptors",
+		"PkgName":            services.aliases.name(servicePath),
 		"ServerInterceptors": sdata.ServerInterceptors,
 		"ClientInterceptors": sdata.ClientInterceptors,
 	}
@@ -40,13 +41,12 @@ func exampleInterceptorsFile(genpkg string, svc *expr.ServiceExpr, services *Ser
 	if len(sdata.ServerInterceptors) > 0 {
 		serverPath := filepath.Join("interceptors", sdata.PathName+"_server.go")
 		if _, err := os.Stat(serverPath); os.IsNotExist(err) {
-			imports := []*codegen.ImportSpec{
-				{Path: "context"},
-				{Path: "fmt"},
-				{Path: "goa.design/clue/log"},
-				codegen.GoaImport(""),
-				{Path: path.Join(genpkg, sdata.PathName), Name: sdata.PkgName},
-			}
+			imports := services.fileImports("", []string{
+				"context",
+				"goa.design/clue/log",
+				codegen.GoaImport("").Path,
+				servicePath,
+			})
 			files = append(files, &codegen.File{
 				Path: serverPath,
 				SectionTemplates: []*codegen.SectionTemplate{
@@ -65,13 +65,12 @@ func exampleInterceptorsFile(genpkg string, svc *expr.ServiceExpr, services *Ser
 	if len(sdata.ClientInterceptors) > 0 {
 		clientPath := filepath.Join("interceptors", sdata.PathName+"_client.go")
 		if _, err := os.Stat(clientPath); os.IsNotExist(err) {
-			imports := []*codegen.ImportSpec{
-				{Path: "context"},
-				{Path: "fmt"},
-				{Path: "goa.design/clue/log"},
-				codegen.GoaImport(""),
-				{Path: path.Join(genpkg, sdata.PathName), Name: sdata.PkgName},
-			}
+			imports := services.fileImports("", []string{
+				"context",
+				"goa.design/clue/log",
+				codegen.GoaImport("").Path,
+				servicePath,
+			})
 			files = append(files, &codegen.File{
 				Path: clientPath,
 				SectionTemplates: []*codegen.SectionTemplate{

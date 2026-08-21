@@ -6,6 +6,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 )
 
@@ -28,7 +29,7 @@ func CreateGRPCServices(root *expr.RootExpr) *ServicesData {
 // createServiceServices performs the complete package declaration lifecycle
 // required by transport test helpers.
 func createServiceServices(root *expr.RootExpr) *service.ServicesData {
-	generation := codegen.NewGeneration("goa.design/goa/example", nil)
+	generation := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
 	if err := service.Plan(root, generation); err != nil {
 		panic(err)
 	}

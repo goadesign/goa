@@ -4,7 +4,6 @@
 package service
 
 import (
-	"fmt"
 	"path"
 	"sort"
 	"strings"
@@ -17,29 +16,7 @@ type (
 	// importAliases is the frozen render-model binding from complete import paths
 	// to their unique Go qualifiers.
 	importAliases struct {
-		bindings map[string]importBinding
-	}
-
-	// importBinding records the allocated qualifier and whether the import must
-	// spell it explicitly in a generated header.
-	importBinding struct {
-		name      string
-		preferred string
-		explicit  bool
-	}
-
-	// importAliasCandidate records one package path before deterministic alias
-	// allocation. Fixed generator imports receive priority over design metadata.
-	importAliasCandidate struct {
-		preferred string
-		explicit  bool
-		fixed     bool
-	}
-
-	// importAliasPlan collects all package paths before any render string is
-	// produced.
-	importAliasPlan struct {
-		candidates map[string]importAliasCandidate
+		generation *codegen.Generation
 	}
 
 	// importCollector accumulates the imports referenced by one generated Go
@@ -76,6 +53,20 @@ func (d *ServicesData) AttributeImports(outputPackage string, attributes ...*exp
 	return collector.imports()
 }
 
+// fileImports returns one canonical import per complete path used by a single
+// generated file. Explicit paths and attribute-derived paths are deduplicated
+// before their frozen aliases are materialized.
+func (d *ServicesData) fileImports(outputPackage string, paths []string, attributes ...*expr.AttributeExpr) []*codegen.ImportSpec {
+	collector := newImportCollector(d.aliases, d.generation.GenPkg, outputPackage)
+	for _, importPath := range paths {
+		collector.addPath(importPath)
+	}
+	for _, attribute := range attributes {
+		collector.collect(attribute)
+	}
+	return collector.imports()
+}
+
 // serviceReferenceAttributes returns the method and error attributes whose
 // named declarations are referenced by service, endpoint, and client files.
 func serviceReferenceAttributes(service *expr.ServiceExpr) []*expr.AttributeExpr {
@@ -95,108 +86,93 @@ func serviceReferenceAttributes(service *expr.ServiceExpr) []*expr.AttributeExpr
 	return attributes
 }
 
-// newImportAliases scans every participating design root plus the explicit
-// root being rendered, then freezes deterministic aliases before service
-// analysis creates type-reference strings.
+// newImportAliases returns the generation-owned frozen alias binding used by
+// service analysis and rendering.
 func newImportAliases(root *expr.RootExpr, generation *codegen.Generation) (*importAliases, error) {
-	plan := &importAliasPlan{candidates: make(map[string]importAliasCandidate)}
-	if err := plan.addFixedImports(); err != nil {
-		return nil, err
+	if !generation.HasRoot(root) {
+		return nil, rootMembershipError(root)
 	}
-	seenRoots := make(map[*expr.RootExpr]struct{}, len(generation.Roots)+1)
-	for _, evaluated := range generation.Roots {
-		design, ok := evaluated.(*expr.RootExpr)
-		if !ok {
-			continue
-		}
-		seenRoots[design] = struct{}{}
-		if err := plan.addRoot(design, generation.GenPkg); err != nil {
-			return nil, err
-		}
-	}
-	if _, ok := seenRoots[root]; !ok {
-		if err := plan.addRoot(root, generation.GenPkg); err != nil {
-			return nil, err
-		}
-	}
-	return plan.freeze(), nil
+	return &importAliases{generation: generation}, nil
 }
 
-// addFixedImports reserves qualifiers used directly by service and view
-// templates before metadata-selected packages compete for those names.
-func (p *importAliasPlan) addFixedImports() error {
+// planImports registers every fixed and design-selected package path reachable
+// from root in the generation-wide alias catalog.
+func planImports(root *expr.RootExpr, generation *codegen.Generation) error {
 	fixed := []*codegen.ImportSpec{
 		codegen.SimpleImport("bytes"),
 		codegen.SimpleImport("context"),
 		codegen.SimpleImport("encoding/json"),
 		codegen.SimpleImport("fmt"),
 		codegen.SimpleImport("io"),
+		codegen.SimpleImport("strings"),
 		codegen.SimpleImport("unicode/utf8"),
+		codegen.SimpleImport("goa.design/clue/log"),
 		codegen.GoaImport(""),
 		codegen.GoaImport("security"),
 	}
 	for _, spec := range fixed {
-		if err := p.add(spec.Path, spec.Name, spec.Name != "", true); err != nil {
+		if err := generation.ReserveImport(spec); err != nil {
 			return err
 		}
 	}
-	return nil
-}
-
-// addRoot collects generated package locations and metadata imports reachable
-// from one complete service design.
-func (p *importAliasPlan) addRoot(root *expr.RootExpr, genpkg string) error {
 	for _, service := range root.Services {
-		servicePath := servicePackagePath(genpkg, service)
+		servicePath := servicePackagePath(generation.GenPkg, service)
 		serviceName := strings.ToLower(codegen.Goify(service.Name, false))
-		if err := p.add(servicePath, serviceName, true, false); err != nil {
+		if err := generation.ReserveImport(codegen.NewImport(serviceName, servicePath)); err != nil {
 			return err
 		}
-		if err := p.add(servicePath+"/views", serviceName+"views", true, false); err != nil {
+		if err := generation.ReserveImport(codegen.NewImport(serviceName+"views", servicePath+"/views")); err != nil {
 			return err
 		}
 	}
 	seen := make(map[expr.UserType]struct{})
 	for _, userType := range root.Types {
-		if err := p.addAttribute(&expr.AttributeExpr{Type: userType}, genpkg, seen); err != nil {
+		if err := planAttributeImports(&expr.AttributeExpr{Type: userType}, generation, seen); err != nil {
 			return err
 		}
 	}
 	for _, resultType := range root.ResultTypes {
-		if err := p.addAttribute(&expr.AttributeExpr{Type: resultType}, genpkg, seen); err != nil {
+		if err := planAttributeImports(&expr.AttributeExpr{Type: resultType}, generation, seen); err != nil {
 			return err
 		}
 	}
 	for _, service := range root.Services {
 		for _, attribute := range serviceReferenceAttributes(service) {
-			if err := p.addAttribute(attribute, genpkg, seen); err != nil {
+			if err := planAttributeImports(attribute, generation, seen); err != nil {
 				return err
 			}
+		}
+	}
+	for _, typeMap := range append(append([]*expr.TypeMap(nil), root.Conversions...), root.Creations...) {
+		importPath, alias, err := getExternalTypeInfo(typeMap.External)
+		if err != nil {
+			return err
+		}
+		if err := generation.DeclareImport(codegen.NewImport(alias, importPath)); err != nil {
+			return err
 		}
 	}
 	return nil
 }
 
-// addAttribute recursively records every explicit generated location and
+// planAttributeImports recursively records every explicit generated location and
 // struct:field:type import reachable from attribute.
-func (p *importAliasPlan) addAttribute(attribute *expr.AttributeExpr, genpkg string, seen map[expr.UserType]struct{}) error {
+func planAttributeImports(attribute *expr.AttributeExpr, generation *codegen.Generation, seen map[expr.UserType]struct{}) error {
 	if attribute == nil || attribute.Type == expr.Empty {
 		return nil
 	}
 	if _, spec := codegen.GetMetaType(attribute); spec != nil {
-		if err := p.add(spec.Path, spec.Name, spec.Name != "", false); err != nil {
+		if err := generation.DeclareImport(spec); err != nil {
 			return err
 		}
 	}
 	switch actual := attribute.Type.(type) {
 	case expr.UserType:
 		if location := codegen.UserTypeLocation(actual); location != nil {
-			if err := p.add(
-				path.Join(genpkg, location.RelImportPath),
+			if err := generation.DeclareImport(codegen.NewImport(
 				location.PackageName(),
-				true,
-				false,
-			); err != nil {
+				path.Join(generation.GenPkg, location.RelImportPath),
+			)); err != nil {
 				return err
 			}
 		}
@@ -205,110 +181,39 @@ func (p *importAliasPlan) addAttribute(attribute *expr.AttributeExpr, genpkg str
 			return nil
 		}
 		seen[origin] = struct{}{}
-		return p.addAttribute(actual.Attribute(), genpkg, seen)
+		return planAttributeImports(actual.Attribute(), generation, seen)
 	case *expr.Object:
 		for _, named := range *actual {
-			if err := p.addAttribute(named.Attribute, genpkg, seen); err != nil {
+			if err := planAttributeImports(named.Attribute, generation, seen); err != nil {
 				return err
 			}
 		}
 	case *expr.Array:
-		return p.addAttribute(actual.ElemType, genpkg, seen)
+		return planAttributeImports(actual.ElemType, generation, seen)
 	case *expr.Map:
-		if err := p.addAttribute(actual.KeyType, genpkg, seen); err != nil {
+		if err := planAttributeImports(actual.KeyType, generation, seen); err != nil {
 			return err
 		}
-		return p.addAttribute(actual.ElemType, genpkg, seen)
+		return planAttributeImports(actual.ElemType, generation, seen)
 	case *expr.Union:
 		for _, named := range actual.Values {
-			if err := p.addAttribute(named.Attribute, genpkg, seen); err != nil {
+			if err := planAttributeImports(named.Attribute, generation, seen); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
-}
-
-// add records one complete import path and rejects contradictory preferred
-// package names before aliases are allocated.
-func (p *importAliasPlan) add(importPath, preferred string, explicit, fixed bool) error {
-	if importPath == "" {
-		return nil
-	}
-	if preferred == "" {
-		preferred = path.Base(importPath)
-	}
-	if existing, ok := p.candidates[importPath]; ok {
-		if existing.preferred != preferred {
-			return fmt.Errorf(
-				"import path %q cannot use both package names %q and %q",
-				importPath,
-				existing.preferred,
-				preferred,
-			)
-		}
-		existing.explicit = existing.explicit || explicit
-		existing.fixed = existing.fixed || fixed
-		p.candidates[importPath] = existing
-		return nil
-	}
-	p.candidates[importPath] = importAliasCandidate{
-		preferred: preferred,
-		explicit:  explicit,
-		fixed:     fixed,
-	}
-	return nil
-}
-
-// freeze allocates aliases in fixed-priority, full-path order and returns the
-// immutable lookup used throughout rendering.
-func (p *importAliasPlan) freeze() *importAliases {
-	paths := make([]string, 0, len(p.candidates))
-	for importPath := range p.candidates {
-		paths = append(paths, importPath)
-	}
-	sort.Slice(paths, func(i, j int) bool {
-		left, right := p.candidates[paths[i]], p.candidates[paths[j]]
-		if left.fixed != right.fixed {
-			return left.fixed
-		}
-		return paths[i] < paths[j]
-	})
-	scope := codegen.NewNameScope()
-	bindings := make(map[string]importBinding, len(paths))
-	for _, importPath := range paths {
-		candidate := p.candidates[importPath]
-		bindings[importPath] = importBinding{
-			name:      scope.Unique(candidate.preferred),
-			preferred: candidate.preferred,
-			explicit:  candidate.explicit,
-		}
-	}
-	scope.Freeze()
-	return &importAliases{bindings: bindings}
 }
 
 // name returns the frozen qualifier for importPath and panics when rendering
 // asks for a package that was absent from alias planning.
 func (a *importAliases) name(importPath string) string {
-	binding, ok := a.bindings[importPath]
-	if !ok {
-		panic(fmt.Sprintf("import path %q has no planned alias", importPath))
-	}
-	return binding.name
+	return a.generation.ImportName(importPath)
 }
 
 // spec returns the frozen import declaration for importPath.
 func (a *importAliases) spec(importPath string) *codegen.ImportSpec {
-	binding, ok := a.bindings[importPath]
-	if !ok {
-		panic(fmt.Sprintf("import path %q has no planned alias", importPath))
-	}
-	spec := &codegen.ImportSpec{Path: importPath}
-	if binding.explicit || binding.name != binding.preferred {
-		spec.Name = binding.name
-	}
-	return spec
+	return a.generation.Import(importPath)
 }
 
 // newImportCollector creates a file-scoped collector that omits imports of the
@@ -320,6 +225,14 @@ func newImportCollector(aliases *importAliases, genpkg, outputPackage string) *i
 		outputPackage: outputPackage,
 		paths:         make(map[string]struct{}),
 		legacy:        make(map[string]*codegen.ImportSpec),
+	}
+}
+
+// addPath records an explicitly referenced package unless it is the package
+// currently being emitted.
+func (c *importCollector) addPath(importPath string) {
+	if importPath != "" && importPath != c.outputPackage {
+		c.paths[importPath] = struct{}{}
 	}
 }
 

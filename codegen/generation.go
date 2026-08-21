@@ -18,8 +18,10 @@ type (
 		// Roots contains the evaluated DSL roots participating in the run.
 		Roots []eval.Root
 
-		packages map[string]*GeneratedPackage
-		frozen   bool
+		packages   map[string]*GeneratedPackage
+		importPlan *importAliasPlan
+		imports    map[string]importAliasBinding
+		frozen     bool
 	}
 )
 
@@ -29,6 +31,9 @@ func NewGeneration(genpkg string, roots []eval.Root) *Generation {
 		GenPkg:   genpkg,
 		Roots:    append([]eval.Root(nil), roots...),
 		packages: make(map[string]*GeneratedPackage),
+		importPlan: &importAliasPlan{
+			candidates: make(map[string]*importAliasCandidate),
+		},
 	}
 }
 
@@ -56,6 +61,7 @@ func (g *Generation) Freeze() error {
 	for _, generatedPackage := range g.packages {
 		generatedPackage.freeze()
 	}
+	g.freezeImports()
 	g.frozen = true
 	return nil
 }

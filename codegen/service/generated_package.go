@@ -5,6 +5,7 @@
 package service
 
 import (
+	"fmt"
 	"path"
 	"path/filepath"
 	"slices"
@@ -34,8 +35,7 @@ type (
 	// declaration identity allocated for it.
 	methodTypeCandidate struct {
 		attribute *expr.AttributeExpr
-		suffix    string
-		identity  func(expr.UserType) codegen.DerivedTypeID
+		identity  codegen.MethodTypeIdentity
 	}
 
 	// unionBranch identifies a generated user type that exists only to name one
@@ -75,6 +75,12 @@ type (
 // User types are declared across the complete root before any union so exact
 // user-authored names always take precedence over generated union names.
 func Plan(root *expr.RootExpr, generation *codegen.Generation) error {
+	if !generation.HasRoot(root) {
+		return rootMembershipError(root)
+	}
+	if err := planImports(root, generation); err != nil {
+		return err
+	}
 	inputs := planningInputs(root)
 	rootTypes := newRootTypeSet(root)
 	methodTypes, err := planMethodTypes(root, generation)
@@ -103,6 +109,12 @@ func Plan(root *expr.RootExpr, generation *codegen.Generation) error {
 	return planViews(root, generation, rootTypes)
 }
 
+// rootMembershipError reports an attempt to plan or analyze a design root
+// that the generation does not own.
+func rootMembershipError(root *expr.RootExpr) error {
+	return fmt.Errorf("service root %p does not belong to the generation", root)
+}
+
 // planMethodTypes declares the semantic wrappers created by NormalizeRoot as
 // derived service-package declarations. Exact user types in the same package
 // are planned separately and therefore keep their authored names.
@@ -112,24 +124,23 @@ func planMethodTypes(root *expr.RootExpr, generation *codegen.Generation) (map[e
 		generatedPackage := generation.GeneratedPackage(servicePackagePath(generation.GenPkg, service))
 		for _, method := range service.Methods {
 			attributes := []methodTypeCandidate{
-				{method.Payload, "Payload", codegen.NewMethodPayloadTypeID},
-				{method.StreamingPayload, "StreamingPayload", codegen.NewMethodStreamingPayloadTypeID},
-				{method.Result, "Result", codegen.NewMethodResultTypeID},
+				{method.Payload, codegen.NewMethodPayloadIdentity(service.Name, method.Name)},
+				{method.StreamingPayload, codegen.NewMethodStreamingPayloadIdentity(service.Name, method.Name)},
+				{method.Result, codegen.NewMethodResultIdentity(service.Name, method.Name)},
 			}
 			if method.HasMixedResults() {
 				attributes = append(attributes, methodTypeCandidate{
 					attribute: method.StreamingResult,
-					suffix:    "StreamingResult",
-					identity:  codegen.NewMethodStreamingResultTypeID,
+					identity:  codegen.NewMethodStreamingResultIdentity(service.Name, method.Name),
 				})
 			}
 			for _, candidate := range attributes {
 				userType, ok := candidate.attribute.Type.(expr.UserType)
-				if !ok || userType.ID() != normalizedMethodTypeID(service, method, candidate.suffix) {
+				if !ok || !candidate.identity.Matches(userType) {
 					continue
 				}
-				identity := candidate.identity(userType)
-				if _, err := generatedPackage.DeclareDerivedType(identity, codegen.Goify(userType.Name(), true)); err != nil {
+				_, identity, err := generatedPackage.DeclareMethodType(candidate.identity, userType)
+				if err != nil {
 					return nil, err
 				}
 				planned[userType.Origin()] = identity
@@ -454,7 +465,7 @@ func generatedPackagePath(genpkg string, service *expr.ServiceExpr, location *co
 // servicePackagePath returns the actual import path of service's generated Go
 // package.
 func servicePackagePath(genpkg string, service *expr.ServiceExpr) string {
-	return path.Join(genpkg, codegen.SnakeCase(service.Name))
+	return path.Join(genpkg, codegen.SnakeCase(codegen.Goify(service.Name, false)))
 }
 
 // generatedPackage returns the root-owned render data for the package selected

@@ -57,16 +57,9 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr, services *ServicesData)
 
 	path := filepath.Join(codegen.Gendir, svc.PathName, "views", "view.go")
 	outputPackage := genpkg + "/" + svc.PathName + "/views"
-	imports := []*codegen.ImportSpec{
-		codegen.GoaImport(""),
-		{Path: "unicode/utf8"},
-	}
+	importPaths := []string{codegen.GoaImport("").Path, "unicode/utf8"}
 	if len(unions) > 0 {
-		imports = append(imports,
-			codegen.SimpleImport("bytes"),
-			codegen.SimpleImport("encoding/json"),
-			codegen.SimpleImport("fmt"),
-		)
+		importPaths = append(importPaths, "bytes", "encoding/json", "fmt")
 	}
 	var attributes []*expr.AttributeExpr
 	for _, viewed := range svc.viewedResultTypes {
@@ -75,7 +68,7 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr, services *ServicesData)
 	for _, projected := range svc.projectedTypes {
 		attributes = append(attributes, projected.Type.Attribute())
 	}
-	imports = append(imports, services.AttributeImports(outputPackage, attributes...)...)
+	imports := services.fileImports(outputPackage, importPaths, attributes...)
 	header := codegen.Header(service.Name+" views", "views",
 		imports)
 	sections := []*codegen.SectionTemplate{header}

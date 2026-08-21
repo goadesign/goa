@@ -88,7 +88,7 @@ func TestExampleInterceptorsFiles(t *testing.T) {
 			require.NotNil(t, root)
 
 			// Generate files
-			fs := ExampleInterceptorsFiles("", root, services)
+			fs := ExampleInterceptorsFiles(services.generation.GenPkg, root, services)
 			require.Len(t, fs, len(c.ExpectedFiles))
 
 			// Verify file paths

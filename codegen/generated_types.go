@@ -33,6 +33,15 @@ type (
 		kind   derivedTypeKind
 	}
 
+	// MethodTypeIdentity identifies one closed normalized service method role.
+	// It supplies both the semantic expression UID and the compiler declaration
+	// kind used for the wrapper created from a raw object.
+	MethodTypeIdentity struct {
+		serviceName string
+		methodName  string
+		kind        derivedTypeKind
+	}
+
 	// TypeDeclaration records the canonical name and package path of one
 	// generated type declaration.
 	TypeDeclaration struct {
@@ -113,28 +122,42 @@ func NewViewedResultTypeID(source expr.UserType) DerivedTypeID {
 	return newDerivedTypeID(source, viewedResultTypeKind)
 }
 
-// NewMethodPayloadTypeID returns the generated declaration identity for a raw
-// object wrapped as a service method payload.
-func NewMethodPayloadTypeID(source expr.UserType) DerivedTypeID {
-	return newDerivedTypeID(source, methodPayloadTypeKind)
+// NewMethodPayloadIdentity returns the identity of a method payload wrapper.
+func NewMethodPayloadIdentity(serviceName, methodName string) MethodTypeIdentity {
+	return newMethodTypeIdentity(serviceName, methodName, methodPayloadTypeKind)
 }
 
-// NewMethodStreamingPayloadTypeID returns the generated declaration identity
-// for a raw object wrapped as a service method streaming payload.
-func NewMethodStreamingPayloadTypeID(source expr.UserType) DerivedTypeID {
-	return newDerivedTypeID(source, methodStreamingPayloadTypeKind)
+// NewMethodStreamingPayloadIdentity returns the identity of a method streaming
+// payload wrapper.
+func NewMethodStreamingPayloadIdentity(serviceName, methodName string) MethodTypeIdentity {
+	return newMethodTypeIdentity(serviceName, methodName, methodStreamingPayloadTypeKind)
 }
 
-// NewMethodResultTypeID returns the generated declaration identity for a raw
-// object wrapped as a service method result.
-func NewMethodResultTypeID(source expr.UserType) DerivedTypeID {
-	return newDerivedTypeID(source, methodResultTypeKind)
+// NewMethodResultIdentity returns the identity of a method result wrapper.
+func NewMethodResultIdentity(serviceName, methodName string) MethodTypeIdentity {
+	return newMethodTypeIdentity(serviceName, methodName, methodResultTypeKind)
 }
 
-// NewMethodStreamingResultTypeID returns the generated declaration identity
-// for a raw object wrapped as a service method streaming result.
-func NewMethodStreamingResultTypeID(source expr.UserType) DerivedTypeID {
-	return newDerivedTypeID(source, methodStreamingResultTypeKind)
+// NewMethodStreamingResultIdentity returns the identity of a method streaming
+// result wrapper.
+func NewMethodStreamingResultIdentity(serviceName, methodName string) MethodTypeIdentity {
+	return newMethodTypeIdentity(serviceName, methodName, methodStreamingResultTypeKind)
+}
+
+// Name returns the semantic wrapper name assigned during normalization.
+func (i MethodTypeIdentity) Name() string {
+	return Goify(i.methodName, true) + i.kind.methodSuffix()
+}
+
+// UID returns the semantic expression identifier assigned during
+// normalization.
+func (i MethodTypeIdentity) UID() string {
+	return i.serviceName + "#" + i.Name()
+}
+
+// Matches reports whether userType was normalized for this exact method role.
+func (i MethodTypeIdentity) Matches(userType expr.UserType) bool {
+	return userType.ID() == i.UID()
 }
 
 // Name returns the unqualified Go declaration name. It is empty until the
@@ -216,17 +239,19 @@ func (p *GeneratedPackage) DeclareUserType(userType expr.UserType) (*TypeDeclara
 			name,
 		)
 	}
-	p.scope.HashedUnique(userType, name, "")
 	declaration := &TypeDeclaration{name: name, packagePath: p.path}
+	if err := p.bindType(origin, declaration); err != nil {
+		return nil, err
+	}
+	p.scope.HashedUnique(userType, name, "")
 	p.userTypes[origin] = declaration
-	p.typeBindings[origin] = declaration
 	p.userTypeNames[name] = userType.Name()
 	return declaration, nil
 }
 
-// DeclareDerivedType records one generated view declaration. Rebuilding the
-// projected expression from a copy of the same source origin returns the same
-// declaration record.
+// DeclareDerivedType records one declaration produced by a closed compiler
+// transformation. Rebuilding it from the same source origin returns the same
+// canonical declaration record.
 func (p *GeneratedPackage) DeclareDerivedType(identity DerivedTypeID, name string) (*TypeDeclaration, error) {
 	if p.frozen {
 		return nil, fmt.Errorf("generated package %q is frozen", p.path)
@@ -254,12 +279,8 @@ func (p *GeneratedPackage) DeclareDerivedType(identity DerivedTypeID, name strin
 	}
 	declaration := &TypeDeclaration{packagePath: p.path}
 	if identity.kind.isMethodType() {
-		if _, ok := p.typeBindings[identity.origin]; ok {
-			return nil, fmt.Errorf(
-				"user type %q is already bound to another declaration in generated package %q",
-				identity.origin.Name(),
-				p.path,
-			)
+		if err := p.bindType(identity.origin, declaration); err != nil {
+			return nil, err
 		}
 	}
 	p.derivedTypes[identity] = &derivedTypeDeclaration{
@@ -268,10 +289,22 @@ func (p *GeneratedPackage) DeclareDerivedType(identity DerivedTypeID, name strin
 		order:       order,
 	}
 	p.derivedKeys[order] = identity
-	if identity.kind.isMethodType() {
-		p.typeBindings[identity.origin] = declaration
-	}
 	return declaration, nil
+}
+
+// DeclareMethodType records the declaration created for identity from source
+// and returns the derived identity used for later lookup.
+func (p *GeneratedPackage) DeclareMethodType(identity MethodTypeIdentity, source expr.UserType) (*TypeDeclaration, DerivedTypeID, error) {
+	if !identity.Matches(source) {
+		return nil, DerivedTypeID{}, fmt.Errorf(
+			"user type %q does not match method wrapper %q",
+			source.Name(),
+			identity.UID(),
+		)
+	}
+	derived := newDerivedTypeID(source, identity.kind)
+	declaration, err := p.DeclareDerivedType(derived, identity.Name())
+	return declaration, derived, err
 }
 
 // DeclareUnion records union's emitted definition and returns the same
@@ -334,21 +367,18 @@ func (p *GeneratedPackage) DeclareUnionBranchType(union *expr.Union, branchName 
 				name,
 			)
 		}
-		origin := userType.Origin()
-		if existing, ok := p.typeBindings[origin]; ok && existing != branch.branchType {
-			return nil, fmt.Errorf("user type %q is already bound to another declaration in generated package %q", userType.Name(), p.path)
+		if err := p.bindType(userType.Origin(), branch.branchType); err != nil {
+			return nil, err
 		}
-		p.typeBindings[origin] = branch.branchType
 		return branch.branchType, nil
 	}
 	declaration := &TypeDeclaration{packagePath: p.path}
 	origin := userType.Origin()
-	if existing, ok := p.typeBindings[origin]; ok && existing != declaration {
-		return nil, fmt.Errorf("user type %q is already bound to another declaration in generated package %q", userType.Name(), p.path)
+	if err := p.bindType(origin, declaration); err != nil {
+		return nil, err
 	}
 	branch.branchType = declaration
 	branch.typeName = Goify(userType.Name(), true)
-	p.typeBindings[origin] = declaration
 	return declaration, nil
 }
 
@@ -487,6 +517,24 @@ func (p *GeneratedPackage) freeze() {
 	p.frozen = true
 }
 
+// bindType gives one exact expression origin one canonical package
+// declaration. Repeating the same binding is harmless; claiming the origin for
+// another record is a planning error.
+func (p *GeneratedPackage) bindType(origin expr.UserType, declaration *TypeDeclaration) error {
+	if existing, ok := p.typeBindings[origin]; ok {
+		if existing == declaration {
+			return nil
+		}
+		return fmt.Errorf(
+			"user type %q is already bound to another declaration in generated package %q",
+			origin.Name(),
+			p.path,
+		)
+	}
+	p.typeBindings[origin] = declaration
+	return nil
+}
+
 // newDerivedTypeID validates and records the exact declaration origin used by
 // independently rebuilt planning and rendering graphs.
 func newDerivedTypeID(source expr.UserType, kind derivedTypeKind) DerivedTypeID {
@@ -494,6 +542,30 @@ func newDerivedTypeID(source expr.UserType, kind derivedTypeKind) DerivedTypeID 
 		panic("derived type source has no declaration origin")
 	}
 	return DerivedTypeID{origin: source.Origin(), kind: kind}
+}
+
+// newMethodTypeIdentity constructs one of the four compiler-owned method roles.
+func newMethodTypeIdentity(serviceName, methodName string, kind derivedTypeKind) MethodTypeIdentity {
+	if !kind.isMethodType() {
+		panic("method type identity requires a method role")
+	}
+	return MethodTypeIdentity{serviceName: serviceName, methodName: methodName, kind: kind}
+}
+
+// methodSuffix returns the semantic suffix for one closed method wrapper kind.
+func (k derivedTypeKind) methodSuffix() string {
+	switch k {
+	case methodPayloadTypeKind:
+		return "Payload"
+	case methodStreamingPayloadTypeKind:
+		return "StreamingPayload"
+	case methodResultTypeKind:
+		return "Result"
+	case methodStreamingResultTypeKind:
+		return "StreamingResult"
+	default:
+		panic("derived type kind is not a method role")
+	}
 }
 
 // isMethodType reports whether the derived declaration names a raw method

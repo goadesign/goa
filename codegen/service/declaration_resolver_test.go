@@ -173,12 +173,12 @@ func TestDeclarationResolverPanicsWhenPlanOmittedType(t *testing.T) {
 // service analysis for the package paths exercised by a focused resolver test.
 func aliasesForTest(t *testing.T, paths ...string) *importAliases {
 	t.Helper()
-	plan := &importAliasPlan{candidates: make(map[string]importAliasCandidate)}
-	require.NoError(t, plan.addFixedImports())
+	generation := codegen.NewGeneration("generated.local/gen", nil)
 	for _, importPath := range paths {
-		require.NoError(t, plan.add(importPath, codegen.Goify(path.Base(importPath), false), true, false))
+		require.NoError(t, generation.DeclareImport(codegen.NewImport(codegen.Goify(path.Base(importPath), false), importPath)))
 	}
-	return plan.freeze()
+	require.NoError(t, generation.Freeze())
+	return &importAliases{generation: generation}
 }
 
 // resolverUserType constructs one exact declaration for resolver tests.

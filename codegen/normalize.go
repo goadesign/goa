@@ -22,27 +22,18 @@ func NormalizeRoot(root *expr.RootExpr) {
 // one service without consulting or mutating any Go name scope.
 func normalizeService(service *expr.ServiceExpr) {
 	for _, method := range service.Methods {
-		name := Goify(method.Name, true)
-		normalizeMethodAttribute(method.Payload, name+"Payload", service.Name+"#"+name+"Payload")
-		normalizeMethodAttribute(
-			method.StreamingPayload,
-			name+"StreamingPayload",
-			service.Name+"#"+name+"StreamingPayload",
-		)
-		normalizeMethodAttribute(method.Result, name+"Result", service.Name+"#"+name+"Result")
+		normalizeMethodAttribute(method.Payload, NewMethodPayloadIdentity(service.Name, method.Name))
+		normalizeMethodAttribute(method.StreamingPayload, NewMethodStreamingPayloadIdentity(service.Name, method.Name))
+		normalizeMethodAttribute(method.Result, NewMethodResultIdentity(service.Name, method.Name))
 		if method.HasMixedResults() {
-			normalizeMethodAttribute(
-				method.StreamingResult,
-				name+"StreamingResult",
-				service.Name+"#"+name+"StreamingResult",
-			)
+			normalizeMethodAttribute(method.StreamingResult, NewMethodStreamingResultIdentity(service.Name, method.Name))
 		}
 	}
 }
 
 // normalizeMethodAttribute gives a raw method object its semantic identity.
 // Existing named and non-object method types remain unchanged.
-func normalizeMethodAttribute(attribute *expr.AttributeExpr, name, id string) {
+func normalizeMethodAttribute(attribute *expr.AttributeExpr, identity MethodTypeIdentity) {
 	if attribute == nil {
 		return
 	}
@@ -51,7 +42,7 @@ func normalizeMethodAttribute(attribute *expr.AttributeExpr, name, id string) {
 	}
 	attribute.Type = &expr.UserTypeExpr{
 		AttributeExpr: expr.DupAtt(attribute),
-		TypeName:      name,
-		UID:           id,
+		TypeName:      identity.Name(),
+		UID:           identity.UID(),
 	}
 }
