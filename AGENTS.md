@@ -59,6 +59,21 @@ No commented-out code—delete dead code.
 - Let Goa decide pointer/value semantics. Do not force `pointer=true` except in transport validation.
 - **Keep helper visibility minimal**: If logic is shared only inside one codegen area, keep it package-private or move it under an `internal` package. Do not export helpers from a parent package just to share them across sibling generators.
 - **Avoid pass-through wrappers**: When two helper functions differ only by forwarding arguments or hard-coding `nil`, collapse them into a single implementation instead of adding an extra layer.
+- **Generated packages own names**: When declarations from multiple services
+  compile into one Go package, that package owns their `NameScope`, canonical
+  declaration records, and emission. Definitions and HTTP/gRPC/JSON-RPC
+  references must consume the same package-owned record; independently primed
+  service scopes are invalid.
+- **Keep identity typed and explicit**: Do not encode declaration kind, package,
+  scope, or lifetime in decorated names or synthetic string map keys. Do not
+  change an expression's `Hash` semantics to satisfy code generation; pass an
+  explicit code-generation identity at the naming site.
+- **Trace the complete lifecycle**: Before changing relocated types, union
+  naming, generation roots, plugins, or file merging, follow the declaration
+  from the one evaluated design root through service analysis, package
+  ownership, service emission, HTTP and gRPC references, post-generation
+  plugins, and final path merging. A service-only rendering test is not enough.
+  See [`codegen/ARCHITECTURE.md`](codegen/ARCHITECTURE.md).
 
 ### Documentation
 
