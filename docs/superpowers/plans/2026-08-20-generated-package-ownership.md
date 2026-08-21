@@ -34,14 +34,14 @@
 - Consumes: current full generator, HTTP/gRPC DSL, and same-path file merging
 - Produces: a positive transport preservation test plus red tests for relocated declared-name collisions and same-label section preservation
 
-- [ ] **Step 1: Add the real generated-module regression**
+- [x] **Step 1: Add the real generated-module regression**
 
 Use one evaluated design root with two services. Put distinct user types in the
 same `struct:pkg:path` package and give each a different nested union whose
 natural name is `Value`. Enable HTTP and gRPC, generate the module, and run `go
 test ./...` inside it.
 
-- [ ] **Step 2: Prove the nested-union transport case remains valid**
+- [x] **Step 2: Prove the nested-union transport case remains valid**
 
 Run:
 
@@ -53,14 +53,14 @@ Expected on the current branch: PASS. This test preserves the valid two-service
 HTTP/gRPC case while the generation-owned catalog removes the independent name
 allocation that could make later generators diverge.
 
-- [ ] **Step 3: Add the collision and merge regressions**
+- [x] **Step 3: Add the collision and merge regressions**
 
 The collision test plans `foo-bar` and `foo_bar` into package `types` and
 expects an error naming both inputs and `FooBar`. The merge test contributes two
 different sections with the same `SectionTemplate.Name` and expects both
 rendered bodies to remain.
 
-- [ ] **Step 4: Prove both contracts fail before implementation**
+- [x] **Step 4: Prove both contracts fail before implementation**
 
 Run:
 
@@ -71,80 +71,35 @@ go test ./codegen ./codegen/generator -run 'TestGeneratedTypesRejectRelocatedNam
 Expected: FAIL because the generation-owned type catalog does not exist and the
 merger drops the second same-label section.
 
-### Task 2: Typed emitted-union identity
-
-**Files:**
-- Modify: `codegen/union.go`
-- Modify: `codegen/scope.go`
-- Modify: `codegen/scope_test.go`
-
-**Interfaces:**
-- Consumes: `expr.Union`, `NameScope.HashedUnique(Hasher, string, ...string)`
-- Produces: `type UnionTypeID string`, `func NewUnionTypeID(*expr.Union) UnionTypeID`, and generic `Hasher.Hash()` behavior
-
-- [ ] **Step 1: Add a focused `HashedUnique` contract test**
-
-Use a custom `Hasher` and assert that `HashedUnique` keys only on its exact
-`Hash()` result. Keep the existing tests that distinguish emitted unions by
-wire keys, branch order, branch Go shape, and relocated package.
-
-- [ ] **Step 2: Run the focused test and record the hidden special-case failure**
-
-Run:
-
-```bash
-go test ./codegen -run 'TestNameScope_HashedUnique|TestUnionTypeID' -count=1
-```
-
-- [ ] **Step 3: Introduce the typed identity and restore `HashedUnique`**
-
-Use this public contract:
-
-```go
-type UnionTypeID string
-
-func NewUnionTypeID(union *expr.Union) UnionTypeID
-```
-
-`NewUnionTypeID` contains the current emitted-definition hashing algorithm.
-`NameScope.HashedUnique` calls `key.Hash()` directly. `GoFullTypeName` may look
-up an already planned union through an explicit emitted-union key, but the
-generic scope API must not reinterpret arbitrary hashers.
-
-- [ ] **Step 4: Run all scope and union tests**
-
-Run:
-
-```bash
-go test ./codegen -run 'TestNameScope|TestUnionType' -count=1
-```
-
-Expected: PASS.
-
-### Task 3: Generation plan, freeze, and render contract
+### Task 2: Generation-owned type catalog
 
 **Files:**
 - Create: `codegen/generation.go`
 - Create: `codegen/generated_types.go`
-- Modify: `codegen/plugin.go`
-- Modify: `codegen/plugin_test.go`
-- Modify: `codegen/generator/generators.go`
-- Modify: `codegen/generator/generate.go`
-- Create: `codegen/generator/generation_test.go`
+- Modify: `codegen/generated_types_test.go`
 
 **Interfaces:**
-- Consumes: normalized `[]eval.Root`, `codegen.NameScope`, `codegen.UnionTypeID`
-- Produces: `Generation`, generated-package records, plan-aware core generator and plugin APIs
+- Consumes: `[]eval.Root`, `codegen.NameScope`, and the existing `UnionTypeHash`
+- Produces: `Generation`, generated-package records, collision errors, and immutable lookup after freeze
 
-- [ ] **Step 1: Add phase and declaration tests**
+- [ ] **Step 1: Extend the catalog contract tests**
 
-Test user-type idempotency, union idempotency, different same-base unions,
-exact relocated-name rejection, lookup before and after freeze, declaration
-after freeze rejection, and isolation between two standalone generations.
+Alongside the Task 1 collision test, cover user-type idempotency, union
+idempotency, different same-base unions, lookup before and after freeze,
+declaration after freeze rejection, and isolation between standalone
+generations.
 
-- [ ] **Step 2: Implement generation-owned package records**
+- [ ] **Step 2: Run the catalog tests and preserve the Task 1 RED evidence**
 
-Use these public contracts:
+Run:
+
+```bash
+go test ./codegen -run 'TestGeneration|TestGeneratedPackage|TestGeneratedTypes' -count=1
+```
+
+- [ ] **Step 3: Implement package records and freeze**
+
+Use this public contract:
 
 ```go
 type Generation struct {
@@ -170,10 +125,58 @@ type TypeDeclaration struct {
 }
 ```
 
-Declaration methods allocate only during planning. Lookup methods never
-allocate. `Freeze` makes every package immutable. User types reserve the exact
-`Goify(Name(), true)` name and report collisions; unions allocate through their
-typed emitted identity.
+Declaration methods allocate only before freeze. Lookup methods never allocate.
+User types reserve the exact `Goify(Name(), true)` name and report collisions;
+unions temporarily use the existing emitted-definition hash until Task 3 gives
+that identity a distinct type.
+
+- [ ] **Step 4: Run the catalog tests green**
+
+Run:
+
+```bash
+go test ./codegen -run 'TestGeneration|TestGeneratedPackage|TestGeneratedTypes' -count=1
+```
+
+Expected: PASS.
+
+### Task 3: Typed union identity and generation lifecycle
+
+**Files:**
+- Modify: `codegen/union.go`
+- Modify: `codegen/scope.go`
+- Modify: `codegen/scope_test.go`
+- Modify: `codegen/generated_types.go`
+- Modify: `codegen/plugin.go`
+- Modify: `codegen/plugin_test.go`
+- Modify: `codegen/generator/generators.go`
+- Modify: `codegen/generator/generate.go`
+- Create: `codegen/generator/generation_test.go`
+
+**Interfaces:**
+- Consumes: Task 2 `Generation` and package records, `expr.Union`, `NameScope.HashedUnique`
+- Produces: `UnionTypeID`, generic `Hasher.Hash()` behavior, and plan-aware core generator and plugin APIs
+
+- [ ] **Step 1: Add union identity and lifecycle tests**
+
+Use a custom `Hasher` to prove `HashedUnique` keys only on its exact `Hash()`.
+Keep emitted-union distinctions for wire keys, branch order, branch Go shape,
+and relocated package. Add generator/plugin tests that record plan, freeze, and
+render order and reject a render-time declaration.
+
+- [ ] **Step 2: Introduce the typed emitted-union identity**
+
+Use this public contract:
+
+```go
+type UnionTypeID string
+
+func NewUnionTypeID(union *expr.Union) UnionTypeID
+```
+
+Move the emitted-definition algorithm behind `NewUnionTypeID`, update Task 2's
+package records to key unions by it, and restore `HashedUnique` to direct
+`key.Hash()` behavior. `expr.Union.Hash()` remains unchanged.
 
 - [ ] **Step 3: Change core and plugin lifecycle APIs**
 
@@ -194,12 +197,12 @@ prepare, plan, and generate functions. `Generate` runs prepare, normalization,
 every core/plugin plan, `Freeze`, every core render, then every plugin render.
 No render callback may declare a new type.
 
-- [ ] **Step 4: Run lifecycle tests**
+- [ ] **Step 4: Run identity and lifecycle tests**
 
 Run:
 
 ```bash
-go test ./codegen ./codegen/generator -run 'TestGeneration|TestGeneratedPackage|TestRegisterPlugin|TestGeneratePhases' -count=1
+go test ./codegen ./codegen/generator -run 'TestNameScope|TestUnionType|TestRegisterPlugin|TestGeneratePhases' -count=1
 ```
 
 Expected: PASS.
