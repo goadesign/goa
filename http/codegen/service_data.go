@@ -2718,7 +2718,7 @@ func collectHTTPUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, un
 		collectHTTPUnionTypes(dt.KeyType, scope, unions, seen)
 		collectHTTPUnionTypes(dt.ElemType, scope, unions, seen)
 	case *expr.Union:
-		hash := dt.Hash()
+		hash := codegen.UnionTypeHash(dt)
 		if _, ok := unions[hash]; !ok {
 			unions[hash] = buildHTTPUnionTypeData(dt, scope)
 		}

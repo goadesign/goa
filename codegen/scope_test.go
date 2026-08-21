@@ -68,6 +68,183 @@ func TestNameScope_GoFullTypeName_UsesScopedNameWhenQualified(t *testing.T) {
 	}
 }
 
+func TestNameScope_GoFullTypeName_ReusesStructuralUnionNameWhenQualified(t *testing.T) {
+	scope := NewNameScope()
+	first := &expr.Union{TypeName: "Value"}
+	second := &expr.Union{TypeName: "Value"}
+	scope.GoTypeName(&expr.AttributeExpr{Type: first})
+	secondAtt := &expr.AttributeExpr{Type: second}
+	if got, want := scope.GoTypeName(secondAtt), "Value"; got != want {
+		t.Errorf("GoTypeName() = %q, want %q", got, want)
+	}
+	if got, want := scope.GoFullTypeName(secondAtt, "types"), "types.Value"; got != want {
+		t.Errorf("GoFullTypeName() = %q, want %q", got, want)
+	}
+}
+
+func TestNameScope_GoTypeNameDistinguishesUnionWireKeys(t *testing.T) {
+	scope := NewNameScope()
+	first := &expr.Union{TypeName: "Value", TypeKey: "type", ValueKey: "value"}
+	second := &expr.Union{TypeName: "Value", TypeKey: "kind", ValueKey: "data"}
+	assert.Equal(t, first.Hash(), second.Hash(), "compatibility hash should remain unchanged")
+	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: first}))
+	assert.Equal(t, "Value2", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
+}
+
+func TestNameScope_GoTypeNameDistinguishesUnionBranchPackages(t *testing.T) {
+	branch := func(path string) expr.UserType {
+		return &expr.UserTypeExpr{
+			TypeName: "Entry",
+			UID:      path,
+			AttributeExpr: &expr.AttributeExpr{
+				Type: expr.String,
+				Meta: expr.MetaExpr{"struct:pkg:path": {path}},
+			},
+		}
+	}
+	first := &expr.Union{
+		TypeName: "Value",
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "entry", Attribute: &expr.AttributeExpr{Type: branch("types/first")}},
+		},
+	}
+	second := &expr.Union{
+		TypeName: "Value",
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "entry", Attribute: &expr.AttributeExpr{Type: branch("types/second")}},
+		},
+	}
+	assert.Equal(t, first.Hash(), second.Hash(), "compatibility hash should remain unchanged")
+	scope := NewNameScope()
+	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: first}))
+	assert.Equal(t, "Value2", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
+}
+
+func TestNameScope_GoTypeNameDistinguishesUnionBranchOrder(t *testing.T) {
+	branch := func(name string) *expr.NamedAttributeExpr {
+		return &expr.NamedAttributeExpr{Name: name, Attribute: &expr.AttributeExpr{Type: expr.String}}
+	}
+	first := &expr.Union{TypeName: "Value", Values: []*expr.NamedAttributeExpr{branch("left"), branch("right")}}
+	second := &expr.Union{TypeName: "Value", Values: []*expr.NamedAttributeExpr{branch("right"), branch("left")}}
+	assert.Equal(t, first.Hash(), second.Hash(), "compatibility hash should remain unchanged")
+	scope := NewNameScope()
+	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: first}))
+	assert.Equal(t, "Value2", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
+}
+
+func TestNameScope_GoTypeNameDistinguishesInlineObjectFieldOrder(t *testing.T) {
+	object := func(names ...string) *expr.Object {
+		fields := make(expr.Object, len(names))
+		for i, name := range names {
+			fields[i] = &expr.NamedAttributeExpr{Name: name, Attribute: &expr.AttributeExpr{Type: expr.String}}
+		}
+		return &fields
+	}
+	union := func(fields *expr.Object) *expr.Union {
+		return &expr.Union{
+			TypeName: "Value",
+			Values: []*expr.NamedAttributeExpr{
+				{Name: "object", Attribute: &expr.AttributeExpr{Type: fields}},
+			},
+		}
+	}
+	first := union(object("left", "right"))
+	second := union(object("right", "left"))
+	assert.Equal(t, first.Hash(), second.Hash(), "compatibility hash should remain unchanged")
+	scope := NewNameScope()
+	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: first}))
+	assert.Equal(t, "Value2", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
+}
+
+func TestNameScope_GoTypeNameDistinguishesGoifiedBranchTypeCollisions(t *testing.T) {
+	branch := func(name, id string) expr.UserType {
+		return &expr.UserTypeExpr{
+			TypeName: name,
+			UID:      id,
+			AttributeExpr: &expr.AttributeExpr{
+				Type: expr.String,
+				Meta: expr.MetaExpr{"struct:pkg:path": {"types"}},
+			},
+		}
+	}
+	union := func(user expr.UserType) *expr.Union {
+		return &expr.Union{
+			TypeName: "Value",
+			Values: []*expr.NamedAttributeExpr{
+				{Name: "entry", Attribute: &expr.AttributeExpr{Type: user}},
+			},
+		}
+	}
+	first := union(branch("foo-bar", "first"))
+	second := union(branch("foo_bar", "second"))
+	scope := NewNameScope()
+	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: first}))
+	assert.Equal(t, "Value2", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
+}
+
+func TestUnionTypeHashIgnoresNonEmittedPointerSharing(t *testing.T) {
+	object := func() *expr.Object {
+		fields := expr.Object{
+			{Name: "text", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		}
+		return &fields
+	}
+	innerUnion := func() *expr.Union {
+		return &expr.Union{
+			TypeName: "Inner",
+			Values: []*expr.NamedAttributeExpr{
+				{Name: "text", Attribute: &expr.AttributeExpr{Type: expr.String}},
+			},
+		}
+	}
+	outerUnion := func(left, right expr.DataType) *expr.Union {
+		return &expr.Union{
+			TypeName: "Outer",
+			Values: []*expr.NamedAttributeExpr{
+				{Name: "left", Attribute: &expr.AttributeExpr{Type: left}},
+				{Name: "right", Attribute: &expr.AttributeExpr{Type: right}},
+			},
+		}
+	}
+
+	t.Run("inline object", func(t *testing.T) {
+		shared := object()
+		assert.Equal(t, UnionTypeHash(outerUnion(shared, shared)), UnionTypeHash(outerUnion(object(), object())))
+	})
+	t.Run("nested union", func(t *testing.T) {
+		shared := innerUnion()
+		assert.Equal(t, UnionTypeHash(outerUnion(shared, shared)), UnionTypeHash(outerUnion(innerUnion(), innerUnion())))
+	})
+}
+
+func TestNameScope_GoFullTypeName_UsesScopedRelocatedUserTypeNameWhenQualified(t *testing.T) {
+	scope := NewNameScope()
+	first := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{
+			Type: expr.String,
+			Meta: expr.MetaExpr{"struct:pkg:path": {"types"}},
+		},
+		TypeName: "foo-bar",
+		UID:      "first",
+	}
+	second := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{
+			Type: expr.String,
+			Meta: expr.MetaExpr{"struct:pkg:path": {"types"}},
+		},
+		TypeName: "foo_bar",
+		UID:      "second",
+	}
+	scope.GoTypeName(&expr.AttributeExpr{Type: first})
+	secondAtt := &expr.AttributeExpr{Type: second}
+	if got, want := scope.GoTypeName(secondAtt), "FooBar2"; got != want {
+		t.Fatalf("GoTypeName() = %q, want %q", got, want)
+	}
+	if got, want := scope.GoFullTypeName(secondAtt, "types"), "types.FooBar2"; got != want {
+		t.Errorf("GoFullTypeName() = %q, want %q", got, want)
+	}
+}
+
 func TestNameScope_PeekUnique_MatchesUniqueWithoutMutation(t *testing.T) {
 	seed := func(scope *NameScope) {
 		scope.Unique("a")

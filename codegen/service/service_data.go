@@ -35,6 +35,14 @@ type (
 	ServicesData struct {
 		Root     *expr.RootExpr
 		Services map[string]*Data
+
+		packageScopes *packageScopes
+	}
+
+	// packageScopes owns generated identifiers for every relocated Go package
+	// across a complete set of design roots.
+	packageScopes struct {
+		scopes map[string]*codegen.NameScope
 	}
 
 	// Data contains the data used to render the code related to a single
@@ -637,14 +645,51 @@ type (
 		// Validate is the validation code.
 		Validate string
 	}
+
+	// serviceNameScopes keeps service-local identifiers isolated while sharing
+	// the identifier namespace of every relocated Go package across services.
+	serviceNameScopes struct {
+		local    *codegen.NameScope
+		packages *packageScopes
+	}
+
+	// unionCompanionKey identifies a generated union companion, such as its kind
+	// type, by the emitted definition of its owning union and its role.
+	unionCompanionKey struct {
+		union *expr.Union
+		role  string
+	}
 )
 
-// NewServicesData creates a new ServicesData instance for the given root.
+// NewServicesData creates and analyzes service data for one design root.
 func NewServicesData(root *expr.RootExpr) *ServicesData {
-	return &ServicesData{
-		Services: make(map[string]*Data),
-		Root:     root,
+	return NewServicesDataForRoots([]*expr.RootExpr{root})[root]
+}
+
+// NewServicesDataForRoots creates service data for the complete ordered roots
+// set. All services are analyzed once in root and service declaration order so
+// relocated types share one package namespace and only emitted declarations
+// reserve names.
+func NewServicesDataForRoots(roots []*expr.RootExpr) map[*expr.RootExpr]*ServicesData {
+	packageScopes := &packageScopes{scopes: make(map[string]*codegen.NameScope)}
+	servicesByRoot := make(map[*expr.RootExpr]*ServicesData, len(roots))
+	for _, root := range roots {
+		if _, ok := servicesByRoot[root]; ok {
+			panic("duplicate root in complete service generation root set")
+		}
+		servicesByRoot[root] = &ServicesData{
+			Services:      make(map[string]*Data),
+			Root:          root,
+			packageScopes: packageScopes,
+		}
 	}
+	for _, root := range roots {
+		services := servicesByRoot[root]
+		for _, service := range root.Services {
+			services.Get(service.Name)
+		}
+	}
+	return servicesByRoot
 }
 
 // Get retrieves the data for the service with the given name computing it if
@@ -749,6 +794,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		viewedRTs  []*ViewedResultTypeData
 	)
 	scope := codegen.NewNameScope()
+	scopes := &serviceNameScopes{local: scope, packages: d.packageScopes}
 	scope.Unique("Use")       // Reserve "Use" for Endpoints struct Use method.
 	scope.Unique("websocket") // Reserve "websocket" to avoid collision with gorilla/websocket
 	viewScope := codegen.NewNameScope()
@@ -761,7 +807,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 
 	// A function to collect user types from an error expression
 	recordError := func(er *expr.ErrorExpr) {
-		errTypes = append(errTypes, collectTypes(er.AttributeExpr, scope, seen, nil)...)
+		errTypes = append(errTypes, collectTypes(er.AttributeExpr, scopes, seen, nil)...)
 		if er.Type == expr.ErrorResult {
 			if _, ok := seenErrors[er.Name]; ok {
 				return
@@ -784,7 +830,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 			loc = codegen.UserTypeLocation(ut)
 			att = ut.Attribute()
 		}
-		types = append(types, collectTypes(att, scope, seen, loc)...)
+		types = append(types, collectTypes(att, scopes, seen, loc)...)
 	}
 	for _, m := range service.Methods {
 		// collect inner user types
@@ -844,12 +890,12 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 		if len(svcs) > 0 {
 			// Force generate type only in the specified services
 			if slices.Contains(svcs, service.Name) {
-				types = append(types, collectTypes(att, scope, seen, nil)...)
+				types = append(types, collectTypes(att, scopes, seen, nil)...)
 			}
 			continue
 		}
 		// Force generate type in all the services
-		types = append(types, collectTypes(att, scope, seen, nil)...)
+		types = append(types, collectTypes(att, scopes, seen, nil)...)
 	}
 
 	var (
@@ -858,7 +904,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	)
 	methods = make([]*MethodData, len(service.Methods))
 	for i, e := range service.Methods {
-		m := d.buildMethodData(e, scope)
+		m := d.buildMethodData(e, scopes)
 		methods[i] = m
 		for _, s := range m.Schemes {
 			schemes = schemes.Append(s)
@@ -906,7 +952,7 @@ func (d *ServicesData) analyze(service *expr.ServiceExpr) *Data {
 	unionByPackage := make(map[string]*UnionTypeData)
 	seen = make(map[string]struct{})
 	collectUnions := func(att *expr.AttributeExpr, loc *codegen.Location) {
-		collectUnionTypes(att, scope, loc, unionByPackage, seen, false)
+		collectUnionTypes(att, scopes, loc, unionByPackage, seen, false)
 	}
 	for _, t := range types {
 		collectUnions(&expr.AttributeExpr{Type: t.Type}, t.Loc)
@@ -1025,12 +1071,12 @@ func projectedTypeContext(pkg string, ptr bool, scope *codegen.NameScope) *codeg
 
 // collectTypes recurses through the attribute to gather all user types and
 // records them in userTypes.
-func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[string]struct{}, loc *codegen.Location) (data []*UserTypeData) {
+func collectTypes(at *expr.AttributeExpr, scopes *serviceNameScopes, seen map[string]struct{}, loc *codegen.Location) (data []*UserTypeData) {
 	if at == nil || at.Type == expr.Empty {
 		return data
 	}
 	collect := func(at *expr.AttributeExpr, loc *codegen.Location) []*UserTypeData {
-		return collectTypes(at, scope, seen, loc)
+		return collectTypes(at, scopes, seen, loc)
 	}
 	switch dt := at.Type.(type) {
 	case expr.UserType:
@@ -1041,12 +1087,21 @@ func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[str
 		if typeLoc == nil {
 			typeLoc = loc
 		}
+		typeScope := scopes.forLocation(typeLoc)
+		if typeScope != scopes.local {
+			// Preserve the service-local reservations used by method, endpoint,
+			// and helper naming. Relocated declarations additionally use their
+			// owning package scope so cross-service files agree on type names.
+			scopes.local.GoTypeName(at)
+			scopes.local.GoTypeDef(dt.Attribute(), false, true)
+			scopes.local.GoTypeRef(at)
+		}
 		data = append(data, &UserTypeData{
 			Name:        dt.Name(),
-			VarName:     scope.GoTypeName(at),
+			VarName:     typeScope.GoTypeName(at),
 			Description: dt.Attribute().Description,
-			Def:         scope.GoTypeDef(dt.Attribute(), false, true),
-			Ref:         scope.GoTypeRef(at),
+			Def:         typeScope.GoTypeDef(dt.Attribute(), false, true),
+			Ref:         typeScope.GoTypeRef(at),
 			Loc:         typeLoc,
 			Type:        dt,
 		})
@@ -1070,13 +1125,13 @@ func collectTypes(at *expr.AttributeExpr, scope *codegen.NameScope, seen map[str
 }
 
 // collectUnionTypes traverses the attribute to gather all union sum-type
-// definitions referenced by the service. It records each union by its hash and
+// definitions referenced by the service. It records each emitted definition by
 // generated package so Extend can copy one union into multiple packages while
-// duplicate uses within one package still share a definition. When view is true
-// the provided location is used for all nested user types so that unions are
+// duplicate uses within one package share a definition. When view is true the
+// provided location is used for all nested user types so that unions are
 // generated in the views package and refer to view-local types (preventing
 // import cycles).
-func collectUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, loc *codegen.Location, unions map[string]*UnionTypeData, seen map[string]struct{}, view bool) {
+func collectUnionTypes(att *expr.AttributeExpr, scopes *serviceNameScopes, loc *codegen.Location, unions map[string]*UnionTypeData, seen map[string]struct{}, view bool) {
 	if att == nil || att.Type == expr.Empty {
 		return
 	}
@@ -1090,25 +1145,49 @@ func collectUnionTypes(att *expr.AttributeExpr, scope *codegen.NameScope, loc *c
 		if !view {
 			typeLoc = codegen.UserTypeLocation(dt)
 		}
-		collectUnionTypes(dt.Attribute(), scope, typeLoc, unions, seen, view)
+		collectUnionTypes(dt.Attribute(), scopes, typeLoc, unions, seen, view)
 	case *expr.Object:
 		for _, nat := range sortedNamedAttributes(*dt) {
-			collectUnionTypes(nat.Attribute, scope, loc, unions, seen, view)
+			collectUnionTypes(nat.Attribute, scopes, loc, unions, seen, view)
 		}
 	case *expr.Array:
-		collectUnionTypes(dt.ElemType, scope, loc, unions, seen, view)
+		collectUnionTypes(dt.ElemType, scopes, loc, unions, seen, view)
 	case *expr.Map:
-		collectUnionTypes(dt.KeyType, scope, loc, unions, seen, view)
-		collectUnionTypes(dt.ElemType, scope, loc, unions, seen, view)
+		collectUnionTypes(dt.KeyType, scopes, loc, unions, seen, view)
+		collectUnionTypes(dt.ElemType, scopes, loc, unions, seen, view)
 	case *expr.Union:
-		key := dt.Hash() + "\x00" + unionPackageKey(loc, view)
+		key := codegen.UnionTypeHash(dt) + "\x00" + unionPackageKey(loc, view)
 		if _, ok := unions[key]; !ok {
-			unions[key] = buildUnionTypeData(dt, scope, loc, view)
+			unionScope := scopes.local
+			if !view {
+				unionScope = scopes.forLocation(loc)
+			}
+			unions[key] = buildUnionTypeData(dt, unionScope, loc, view)
 		}
 		for _, nat := range dt.Values {
-			collectUnionTypes(nat.Attribute, scope, loc, unions, seen, view)
+			collectUnionTypes(nat.Attribute, scopes, loc, unions, seen, view)
 		}
 	}
+}
+
+// forLocation returns the identifier scope for the package that owns loc.
+// Relocated types from different services share a scope because their files
+// compile together; a nil location belongs to the current service package.
+func (s *serviceNameScopes) forLocation(loc *codegen.Location) *codegen.NameScope {
+	if loc == nil || loc.RelImportPath == "" {
+		return s.local
+	}
+	return s.packages.scope(loc.RelImportPath)
+}
+
+// scope returns the identifier scope for path, creating it on first use.
+func (s *packageScopes) scope(path string) *codegen.NameScope {
+	if scope, ok := s.scopes[path]; ok {
+		return scope
+	}
+	scope := codegen.NewNameScope()
+	s.scopes[path] = scope
+	return scope
 }
 
 // unionPackageKey identifies the generated package that owns a union. A nil
@@ -1132,7 +1211,7 @@ func unionPackageKey(loc *codegen.Location, view bool) string {
 func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Location, view bool) *UnionTypeData {
 	att := &expr.AttributeExpr{Type: u}
 	name := scope.GoTypeName(att)
-	kindName := scope.Unique(name + "Kind")
+	kindName := scope.HashedUnique(&unionCompanionKey{union: u, role: "kind"}, name+"Kind")
 	var unionPkg string
 	if !view {
 		unionPkg = loc.PackageName()
@@ -1175,6 +1254,11 @@ func buildUnionTypeData(u *expr.Union, scope *codegen.NameScope, loc *codegen.Lo
 		TypeKey:  u.GetTypeKey(),
 		ValueKey: u.GetValueKey(),
 	}
+}
+
+// Hash returns the structural identity of one generated union companion.
+func (k *unionCompanionKey) Hash() string {
+	return codegen.UnionTypeHash(k.union) + "\x00" + k.role
 }
 
 // sortedNamedAttributes returns object fields sorted by attribute name.
@@ -1230,7 +1314,7 @@ func buildErrorInitData(er *expr.ErrorExpr, scope *codegen.NameScope) *ErrorInit
 
 // buildMethodData creates the data needed to render the given endpoint. It
 // records the user types needed by the service definition in userTypes.
-func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameScope) *MethodData {
+func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scopes *serviceNameScopes) *MethodData {
 	var (
 		vname       string
 		desc        string
@@ -1252,18 +1336,20 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		reqs        = make(RequirementsData, 0, len(m.Requirements))
 		schemes     SchemesData
 	)
+	scope := scopes.local
 	vname = scope.Unique(codegen.Goify(m.Name, true), "Endpoint")
 	desc = m.Description
 	if desc == "" {
 		desc = codegen.Goify(m.Name, true) + " implements " + m.Name + "."
 	}
 	if m.Payload.Type != expr.Empty {
-		payloadName = scope.GoTypeName(m.Payload)
+		payloadLoc = codegen.UserTypeLocation(m.Payload.Type)
+		payloadScope := scopes.forLocation(payloadLoc)
+		payloadName = payloadScope.GoTypeName(m.Payload)
 		if dt, ok := m.Payload.Type.(expr.UserType); ok {
-			payloadDef = scope.GoTypeDef(dt.Attribute(), false, true)
-			payloadLoc = codegen.UserTypeLocation(dt)
+			payloadDef = payloadScope.GoTypeDef(dt.Attribute(), false, true)
 		}
-		payloadRef = scope.GoFullTypeRef(m.Payload, payloadLoc.PackageName())
+		payloadRef = payloadScope.GoFullTypeRef(m.Payload, payloadLoc.PackageName())
 		payloadDesc = m.Payload.Description
 		if payloadDesc == "" {
 			payloadDesc = fmt.Sprintf("%s is the payload type of the %s service %s method.",
@@ -1272,12 +1358,13 @@ func (d *ServicesData) buildMethodData(m *expr.MethodExpr, scope *codegen.NameSc
 		payloadEx = m.Payload.Example(d.Root.API.ExampleGenerator)
 	}
 	if m.Result.Type != expr.Empty {
-		rname = scope.GoTypeName(m.Result)
+		resultLoc = codegen.UserTypeLocation(m.Result.Type)
+		resultScope := scopes.forLocation(resultLoc)
+		rname = resultScope.GoTypeName(m.Result)
 		if dt, ok := m.Result.Type.(expr.UserType); ok {
-			resultDef = scope.GoTypeDef(dt.Attribute(), false, true)
-			resultLoc = codegen.UserTypeLocation(dt)
+			resultDef = resultScope.GoTypeDef(dt.Attribute(), false, true)
 		}
-		resultRef = scope.GoFullTypeRef(m.Result, resultLoc.PackageName())
+		resultRef = resultScope.GoFullTypeRef(m.Result, resultLoc.PackageName())
 		resultDesc = m.Result.Description
 		if resultDesc == "" {
 			resultDesc = fmt.Sprintf("%s is the result type of the %s service %s method.",

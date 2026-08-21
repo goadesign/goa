@@ -159,6 +159,53 @@ var PkgPathUnionDSL = func() {
 	})
 }
 
+// PkgPathUnionNameScopeDSL exercises services that independently declare the
+// same structural union in relocated files that compile in one Go package.
+var PkgPathUnionNameScopeDSL = func() {
+	var FirstValue = Type("FirstValue", func() {
+		Meta("struct:pkg:path", "types")
+		Meta("type:generate:force")
+		OneOf("Value", func() {
+			Attribute("Bool", Boolean)
+			Attribute("Enum", String)
+			Attribute("Number", Float64)
+		})
+	})
+	var SecondValue = Type("SecondValue", func() {
+		Meta("struct:pkg:path", "types")
+		Meta("type:generate:force")
+		OneOf("Value", func() {
+			Attribute("Bool", Boolean)
+			Attribute("Enum", String)
+			Attribute("Number", Float64)
+		})
+	})
+	var ThirdValue = Type("ThirdValue", func() {
+		Meta("struct:pkg:path", "types")
+		Meta("type:generate:force")
+		OneOf("Value", func() {
+			Attribute("Bool", Boolean)
+			Attribute("Enum", String)
+			Attribute("Number", Float64)
+		})
+	})
+	Service("FirstValueService", func() {
+		Method("Read", func() {
+			Payload(FirstValue)
+		})
+	})
+	Service("SecondValueService", func() {
+		Method("Read", func() {
+			Payload(SecondValue)
+		})
+	})
+	Service("ThirdValueService", func() {
+		Method("Read", func() {
+			Payload(ThirdValue)
+		})
+	})
+}
+
 // PkgPathUnionJSONFieldDSL tests OneOf branches declared with JSONField in a
 // struct:pkg:path type.
 var PkgPathUnionJSONFieldDSL = func() {

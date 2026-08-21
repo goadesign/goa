@@ -5,7 +5,6 @@ import (
 	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/eval"
-	"goa.design/goa/v3/expr"
 	grpccodegen "goa.design/goa/v3/grpc/codegen"
 	httpcodegen "goa.design/goa/v3/http/codegen"
 	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
@@ -15,14 +14,10 @@ import (
 // example service, server, and client.
 func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 	var files []*codegen.File
-	for _, root := range roots {
-		r, ok := root.(*expr.RootExpr)
-		if !ok {
-			continue // could be a plugin root expression
-		}
-
-		// Create service data
-		services := service.NewServicesData(r)
+	designRoots := serviceRoots(roots)
+	servicesByRoot := service.NewServicesDataForRoots(designRoots)
+	for _, r := range designRoots {
+		services := servicesByRoot[r]
 		for _, s := range r.Services {
 			service.SetUserTypeImports(genpkg, services.Get(s.Name))
 		}

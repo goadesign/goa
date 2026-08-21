@@ -64,9 +64,15 @@ func TestCollectUnionTypesDeterministicAcrossObjectOrder(t *testing.T) {
 
 func collectServiceUnionTypeNames(att *expr.AttributeExpr, loc *codegen.Location) map[string]string {
 	scope := codegen.NewNameScope()
+	scopes := &serviceNameScopes{
+		local: scope,
+		packages: &packageScopes{
+			scopes: make(map[string]*codegen.NameScope),
+		},
+	}
 	seen := make(map[string]struct{})
 	unionByHash := make(map[string]*UnionTypeData)
-	collectUnionTypes(att, scope, loc, unionByHash, seen, false)
+	collectUnionTypes(att, scopes, loc, unionByHash, seen, false)
 
 	names := make(map[string]string, len(unionByHash))
 	for hash, data := range unionByHash {
@@ -85,8 +91,5 @@ func makeUnionForOrderTest(typeName string, variants ...string) *expr.Union {
 			},
 		}
 	}
-	return &expr.Union{
-		TypeName: typeName,
-		Values:   values,
-	}
+	return &expr.Union{TypeName: typeName, Values: values}
 }

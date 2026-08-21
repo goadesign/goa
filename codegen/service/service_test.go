@@ -12,6 +12,7 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
 	"goa.design/goa/v3/codegen/testutil"
+	"goa.design/goa/v3/expr"
 )
 
 func TestService(t *testing.T) {
@@ -175,6 +176,58 @@ func TestStructPkgPath_UnionImportsJSON(t *testing.T) {
 	code := buf.String()
 	require.Contains(t, code, "\"bytes\"", "expected bytes import in generated file:\n%s", code)
 	require.Contains(t, code, "\"encoding/json\"", "expected encoding/json import in generated file:\n%s", code)
+}
+
+func TestStructPkgPath_UnionNamesSharePackageScopeAcrossServices(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.PkgPathUnionNameScopeDSL)
+	render := func(servicesToRender []*expr.ServiceExpr) string {
+		services := NewServicesData(root)
+		userTypePkgs := make(map[string][]string)
+		var generated strings.Builder
+		for _, service := range servicesToRender {
+			files := Files("goa.design/goa/example", service, services, userTypePkgs)
+			for _, file := range files {
+				if !strings.Contains(file.Path, filepath.Join("gen", "types")) {
+					continue
+				}
+				for _, section := range file.SectionTemplates {
+					require.NoError(t, section.Write(&generated))
+				}
+			}
+		}
+		return generated.String()
+	}
+
+	code := render(root.Services)
+	require.Equal(t, 1, strings.Count(code, "type Value struct {"), code)
+	require.Equal(t, 1, strings.Count(code, "type ValueKind string"), code)
+	firstUsesValue := unionFieldType(code, "FirstValue")
+	secondUsesValue := unionFieldType(code, "SecondValue")
+	thirdUsesValue := unionFieldType(code, "ThirdValue")
+	require.Equal(t, []string{"Value", "Value", "Value"}, []string{firstUsesValue, secondUsesValue, thirdUsesValue})
+
+	reversed := render([]*expr.ServiceExpr{root.Services[2], root.Services[1], root.Services[0]})
+	require.Equal(t, firstUsesValue, unionFieldType(reversed, "FirstValue"), reversed)
+	require.Equal(t, secondUsesValue, unionFieldType(reversed, "SecondValue"), reversed)
+	require.Equal(t, thirdUsesValue, unionFieldType(reversed, "ThirdValue"), reversed)
+
+	selective := render([]*expr.ServiceExpr{root.Services[1]})
+	require.Equal(t, 1, strings.Count(selective, "type Value struct {"), selective)
+	require.Equal(t, "Value", unionFieldType(selective, "SecondValue"), selective)
+}
+
+func unionFieldType(code, owner string) string {
+	prefix := "type " + owner + " struct {\n\tValue "
+	start := strings.Index(code, prefix)
+	if start == -1 {
+		return ""
+	}
+	start += len(prefix)
+	end := strings.IndexByte(code[start:], '\n')
+	if end == -1 {
+		return ""
+	}
+	return code[start : start+end]
 }
 
 func TestStructPkgPath_UnionJSONFieldBranchesGenerateAliases(t *testing.T) {

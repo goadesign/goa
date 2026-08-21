@@ -13,13 +13,10 @@ import (
 func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 	var files []*codegen.File
 	var userTypePkgs = make(map[string][]string)
-	for _, root := range roots {
-		r, ok := root.(*expr.RootExpr)
-		if !ok {
-			continue
-		}
-		// Create service data
-		services := service.NewServicesData(r)
+	designRoots := serviceRoots(roots)
+	servicesByRoot := service.NewServicesDataForRoots(designRoots)
+	for _, r := range designRoots {
+		services := servicesByRoot[r]
 
 		for _, s := range r.Services {
 			d := services.Get(s.Name)
@@ -50,6 +47,18 @@ func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
 		}
 	}
 	return files, nil
+}
+
+// serviceRoots returns every Goa design root that emits files into the same
+// generated package tree.
+func serviceRoots(roots []eval.Root) []*expr.RootExpr {
+	var designRoots []*expr.RootExpr
+	for _, root := range roots {
+		if design, ok := root.(*expr.RootExpr); ok {
+			designRoots = append(designRoots, design)
+		}
+	}
+	return designRoots
 }
 
 func addServiceImports(files []*codegen.File, d *service.Data) {

@@ -233,11 +233,13 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 		ts := typesByPath[p]
 		sort.Strings(ts)
 		for _, name := range ts {
-			if strings.HasPrefix(name, "~union:") {
-				hasUnion = true
+			registry := p
+			isUnion := strings.HasPrefix(name, "~union:")
+			if isUnion {
+				registry = unionRegistryKey(p)
 			}
 			hasName := false
-			for _, n := range userTypePkgs[p] {
+			for _, n := range userTypePkgs[registry] {
 				if hasName = n == name; hasName {
 					break
 				}
@@ -245,8 +247,9 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 			if hasName {
 				continue
 			}
-			userTypePkgs[p] = append(userTypePkgs[p], name)
+			userTypePkgs[registry] = append(userTypePkgs[registry], name)
 			secs = append(secs, typeDefSections[p][name])
+			hasUnion = hasUnion || isUnion
 		}
 		if len(secs) == 0 {
 			continue
@@ -269,6 +272,12 @@ func Files(genpkg string, service *expr.ServiceExpr, services *ServicesData, use
 	}
 
 	return files
+}
+
+// unionRegistryKey returns the render-lifetime registry key shared by every
+// relocated type file in the same generated Go package.
+func unionRegistryKey(path string) string {
+	return "\x00union-package:" + filepath.Dir(path)
 }
 
 // dedupeByResult returns a slice of methods where only a single representative

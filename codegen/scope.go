@@ -42,11 +42,12 @@ func NewNameScope() *NameScope {
 // appending suffix and - if still not unique - a counter value. It returns
 // the same value when called multiple times for a key returning the same hash.
 func (s *NameScope) HashedUnique(key Hasher, name string, suffix ...string) string {
-	if n, ok := s.names[key.Hash()]; ok {
+	hash := scopedTypeHash(key)
+	if n, ok := s.names[hash]; ok {
 		return n
 	}
 	name = s.Unique(name, suffix...)
-	s.names[key.Hash()] = name
+	s.names[hash] = name
 	return name
 }
 
@@ -293,10 +294,8 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 		if pkg == "" {
 			return s.HashedUnique(actual, base, "")
 		}
-		if UserTypeLocation(actual) == nil {
-			if n, ok := s.names[actual.Hash()]; ok {
-				return pkg + "." + n
-			}
+		if n, ok := s.names[scopedTypeHash(actual)]; ok {
+			return pkg + "." + n
 		}
 		return pkg + "." + base
 	case expr.CompositeExpr:
@@ -304,6 +303,15 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
+}
+
+// scopedTypeHash returns the emitted-definition identity for unions and the
+// existing type hash for every other scoped declaration.
+func scopedTypeHash(key Hasher) string {
+	if union, ok := key.(*expr.Union); ok {
+		return UnionTypeHash(union)
+	}
+	return key.Hash()
 }
 
 // pkgWithDefault returns the package defining the given type. If the types is a
