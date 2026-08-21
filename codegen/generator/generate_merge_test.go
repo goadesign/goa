@@ -7,10 +7,46 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/eval"
 	goa "goa.design/goa/v3/pkg"
 )
+
+func TestMergeFilesPreservesSameLabelSections(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{
+			func(_ string, _ []eval.Root) ([]*codegen.File, error) {
+				return []*codegen.File{{
+					Path: filepath.Join(codegen.Gendir, "types", "same_label.go"),
+					SectionTemplates: []*codegen.SectionTemplate{
+						codegen.Header("Types", "types", nil),
+						{Name: "type-def", Source: "type First struct{}\n"},
+					},
+				}}, nil
+			},
+			func(_ string, _ []eval.Root) ([]*codegen.File, error) {
+				return []*codegen.File{{
+					Path: filepath.Join(codegen.Gendir, "types", "same_label.go"),
+					SectionTemplates: []*codegen.SectionTemplate{
+						codegen.Header("Types", "types", nil),
+						{Name: "type-def", Source: "type Second struct{}\n"},
+					},
+				}}, nil
+			},
+		}, nil
+	}
+
+	dir := t.TempDir()
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	content, err := os.ReadFile(filepath.Join(dir, codegen.Gendir, "types", "same_label.go"))
+	require.NoError(t, err)
+	require.Contains(t, string(content), "type First struct{}")
+	require.Contains(t, string(content), "type Second struct{}")
+}
 
 // TestGenerateMergesSamePathFiles verifies that when two generators emit content
 // targeting the same output path, Generate merges the sections into a single

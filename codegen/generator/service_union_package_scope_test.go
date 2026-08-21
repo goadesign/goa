@@ -16,6 +16,62 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
+	t.Cleanup(func() { Generators = generators })
+	Generators = func(_ string) ([]Genfunc, error) {
+		return []Genfunc{Service, Transport}, nil
+	}
+
+	root := func() {
+		dsl.API("relocated union package names", func() {})
+
+		firstInput := dsl.Type("FirstInput", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.OneOf("Value", func() {
+				dsl.Field(1, "text", dsl.String)
+			})
+			dsl.Required("Value")
+		})
+		secondInput := dsl.Type("SecondInput", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.OneOf("Value", func() {
+				dsl.Field(1, "number", dsl.Int)
+			})
+			dsl.Required("Value")
+		})
+		dsl.Service("First", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(firstInput)
+				dsl.Result(dsl.String)
+				dsl.HTTP(func() {
+					dsl.POST("/first")
+					dsl.Response(200)
+				})
+				dsl.GRPC(func() {})
+			})
+		})
+		dsl.Service("Second", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(secondInput)
+				dsl.Result(dsl.String)
+				dsl.HTTP(func() {
+					dsl.POST("/second")
+					dsl.Response(200)
+				})
+				dsl.GRPC(func() {})
+			})
+		})
+	}
+	codegen.RunDSL(t, root)
+
+	dir := t.TempDir()
+	genDir := filepath.Join(dir, codegen.Gendir)
+	writeGeneratedModule(t, genDir, "gen")
+	_, err := Generate(dir, "gen", false)
+	require.NoError(t, err)
+	runGeneratedTests(t, genDir)
+}
+
 func TestServiceRelocatedUnionNamesSpanDesignRoots(t *testing.T) {
 	roots := []eval.Root{
 		codegen.RunDSL(t, unusedRelocatedValueRoot()),
