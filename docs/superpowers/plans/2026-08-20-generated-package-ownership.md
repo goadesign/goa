@@ -159,14 +159,14 @@ Expected: PASS.
 - Consumes: Task 2 `Generation` and package records, `expr.Union`, `NameScope.HashedUnique`
 - Produces: `UnionTypeID`, generic `Hasher.Hash()` behavior, and plan-aware core generator and plugin APIs
 
-- [ ] **Step 1: Add union identity and lifecycle tests**
+- [x] **Step 1: Add union identity and lifecycle tests**
 
 Use a custom `Hasher` to prove `HashedUnique` keys only on its exact `Hash()`.
 Keep emitted-union distinctions for wire keys, branch order, branch Go shape,
 and relocated package. Add generator/plugin tests that record plan, freeze, and
 render order and reject a render-time declaration.
 
-- [ ] **Step 2: Introduce the typed emitted-union identity**
+- [x] **Step 2: Introduce the typed emitted-union identity**
 
 Use this public contract:
 
@@ -180,7 +180,7 @@ Move the emitted-definition algorithm behind `NewUnionTypeID`, update Task 2's
 package records to key unions by it, and restore `HashedUnique` to direct
 `key.Hash()` behavior. `expr.Union.Hash()` remains unchanged.
 
-- [ ] **Step 3: Change core and plugin lifecycle APIs**
+- [x] **Step 3: Change core and plugin lifecycle APIs**
 
 Use these contracts:
 
@@ -199,7 +199,7 @@ prepare, plan, and generate functions. `Generate` runs prepare, normalization,
 every core/plugin plan, `Freeze`, every core render, then every plugin render.
 No render callback may declare a new type.
 
-- [ ] **Step 4: Run identity and lifecycle tests**
+- [x] **Step 4: Run identity and lifecycle tests**
 
 Run:
 
