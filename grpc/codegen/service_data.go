@@ -5,7 +5,6 @@ package codegen
 import (
 	"fmt"
 	"path"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service"
@@ -62,6 +61,10 @@ type (
 		ClientInterfaceInit string
 		// Scope is the name scope for protocol buffers
 		Scope *codegen.NameScope
+
+		// protobuf owns declarations emitted in this service's actual protobuf
+		// output package.
+		protobuf *protobufPackageCatalog
 
 		// transformHelpers is the list of transform functions required by the
 		// constructors.
@@ -451,9 +454,6 @@ const (
 	// validateClient generates the validation code for response messages in the
 	// client package.
 	validateClient
-	// validateBoth generates the validation code in both server and client
-	// packages.
-	validateBoth
 )
 
 // Get retrieves the transport data for the service with the given name
@@ -530,72 +530,23 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 		ClientInterfaceInit: fmt.Sprintf("%s.New%sClient", pkg, svcVarN),
 		Scope:               scope,
 	}
-	seen, imported := make(map[string]struct{}), make(map[string]struct{})
-	for _, e := range gs.GRPCEndpoints {
+	sd.protobuf = newProtobufPackageCatalog(pkg)
+	sd.protobuf.reserveName(sd.Name)
+	protobufMessages := prepareProtobufPackage(gs, sd)
+	for index, e := range gs.GRPCEndpoints {
 		hasRequestMessage := !isEmpty(e.Request.Type)
-		useStreamEnvelope := usesStreamEnvelope(e)
-
-		// Derive protocol buffer shaped copies of the request and response
-		// attributes. The design expressions are inputs to the analysis and
-		// must not be mutated: the shaped attributes are kept in locals and
-		// threaded explicitly to the data builders below.
-		requestMessage := makeProtoBufMessage(e.Request, protoBufify(e.Name()+"_request", true, true), sd)
-		streamingRequest := e.StreamingRequest
-		if e.MethodExpr.StreamingPayload.Type != expr.Empty {
-			streamMessageName := protoBufify(e.Name()+"_streaming_request", true, true)
-			if useStreamEnvelope {
-				streamMessageName = protoBufify(e.Name()+"_stream_item", true, true)
+		messages := protobufMessages[index]
+		requestMessage := messages.request
+		streamingRequest := messages.streamingRequest
+		requestEnvelope := messages.requestEnvelope
+		responseMessage := messages.response
+		errorMessages := messages.errors
+		collect := func(attribute *expr.AttributeExpr) *service.UserTypeData {
+			record := sd.protobuf.message(attribute)
+			if record == nil || record.data == nil {
+				panic(fmt.Sprintf("no protobuf message collected for attribute of type %q", attribute.Type.Name())) // bug
 			}
-			streamingRequest = makeProtoBufMessage(e.StreamingRequest, streamMessageName, sd)
-		}
-		var requestEnvelope *expr.AttributeExpr
-		if useStreamEnvelope {
-			requestEnvelope = makeProtoBufStreamEnvelope(
-				requestMessage,
-				streamingRequest,
-				protoBufify(e.Name()+"_streaming_request", true, true),
-				sd,
-			)
-		}
-		responseMessage := makeProtoBufMessage(e.Response.Message, protoBufify(e.Name()+"_response", true, true), sd)
-		errorMessages := make(map[string]*expr.AttributeExpr, len(e.GRPCErrors))
-		for _, er := range e.GRPCErrors {
-			if er.Type == expr.ErrorResult || !expr.IsObject(er.Type) {
-				continue
-			}
-			errorMessages[er.Name] = makeProtoBufMessage(er.Response.Message, protoBufify(e.Name()+"_"+er.Name+"_error", true, true), sd)
-		}
-
-		// collect all the nested messages and return the top-level message
-		// Also collect all proto imports specified via Meta.
-		collect := func(att *expr.AttributeExpr) *service.UserTypeData {
-			msgs, imports := collectMessages(att, sd, seen)
-			if len(imports) > 0 {
-				for _, imp := range imports {
-					if _, ok := imported[imp]; ok {
-						continue
-					}
-					imported[imp] = struct{}{}
-					sd.ProtoImports = append(sd.ProtoImports, imp)
-				}
-			}
-			if len(msgs) > 0 {
-				sd.Messages = append(sd.Messages, msgs...)
-				return msgs[0]
-			}
-			// lookup message in sd.Messages
-			if ut, ok := att.Type.(expr.UserType); ok {
-				name := ut.Name()
-				if n := att.Meta["struct:name:proto"]; n != nil {
-					name = n[0]
-				}
-				for _, t := range sd.Messages {
-					if t.Name == name {
-						return t
-					}
-				}
-			}
-			panic(fmt.Sprintf("no protobuf message collected for attribute of type %q", att.Type.Name())) // bug
+			return record.data
 		}
 
 		var (
@@ -616,13 +567,6 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			viewedResultRef = md.ViewedResult.FullRef
 		}
 		errors := d.buildErrorsData(e, errorMessages, sd)
-		for _, er := range e.GRPCErrors {
-			if er.Type == expr.ErrorResult || !expr.IsObject(er.Type) {
-				continue
-			}
-			collect(errorMessages[er.Name])
-		}
-
 		// build request data
 		reqMD := d.extractMetadata(e.Metadata, e.MethodExpr.Payload, sd, "server")
 		request := &RequestData{
@@ -639,8 +583,8 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 			request.CLIArgs = append(request.CLIArgs, &InitArgData{
 				Name:     "message",
 				Ref:      "message",
-				TypeName: protoBufGoFullTypeName(requestMessage, sd.PkgName, sd.Scope),
-				TypeRef:  protoBufGoFullTypeRef(requestMessage, sd.PkgName, sd.Scope),
+				TypeName: protoBufGoFullTypeName(requestMessage, sd.PkgName, sd),
+				TypeRef:  protoBufGoFullTypeRef(requestMessage, sd.PkgName, sd),
 				Example:  requestMessage.Example(d.Root.API.ExampleGenerator),
 			})
 		}
@@ -724,222 +668,151 @@ func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 	return sd
 }
 
-// collectMessages recurses through the attribute to gather all the messages.
-func collectMessages(at *expr.AttributeExpr, sd *ServiceData, seen map[string]struct{}) (data []*service.UserTypeData, imports []string) {
-	if at == nil {
-		return data, imports
-	}
-	if proto := at.Meta["struct:field:proto"]; len(proto) > 1 {
-		imp := proto[1]
-		found := false
-		for _, i := range sd.Service.ProtoImports {
-			if i.Path == imp {
-				found = true
-				break
+// prepareProtobufPackage shapes every endpoint message, collects the complete
+// package declaration set, and freezes messages and validators before any
+// conversion or template data resolves their names.
+func prepareProtobufPackage(serviceExpr *expr.GRPCServiceExpr, sd *ServiceData) []*protobufEndpointMessages {
+	prepared := make([]*protobufEndpointMessages, len(serviceExpr.GRPCEndpoints))
+	for index, endpoint := range serviceExpr.GRPCEndpoints {
+		useStreamEnvelope := usesStreamEnvelope(endpoint)
+		request := makeProtoBufMessage(endpoint.Request, protoBufify(endpoint.Name()+"_request", true, true), sd)
+		streamingRequest := endpoint.StreamingRequest
+		if endpoint.MethodExpr.StreamingPayload.Type != expr.Empty {
+			name := protoBufify(endpoint.Name()+"_streaming_request", true, true)
+			if useStreamEnvelope {
+				name = protoBufify(endpoint.Name()+"_stream_item", true, true)
 			}
+			streamingRequest = makeProtoBufMessage(endpoint.StreamingRequest, name, sd)
 		}
-		if !found {
-			imports = append(imports, imp)
-			if len(proto) > 3 {
-				elems := strings.Split(proto[3], "/")
-				sd.Service.ProtoImports = append(sd.Service.ProtoImports, &codegen.ImportSpec{Path: proto[3], Name: elems[len(elems)-1]})
+		var requestEnvelope *expr.AttributeExpr
+		if useStreamEnvelope {
+			requestEnvelope = makeProtoBufStreamEnvelope(
+				request,
+				streamingRequest,
+				protoBufify(endpoint.Name()+"_streaming_request", true, true),
+				sd,
+			)
+		}
+		response := makeProtoBufMessage(endpoint.Response.Message, protoBufify(endpoint.Name()+"_response", true, true), sd)
+		errors := make(map[string]*expr.AttributeExpr, len(endpoint.GRPCErrors))
+		for _, grpcError := range endpoint.GRPCErrors {
+			if grpcError.Type == expr.ErrorResult || !expr.IsObject(grpcError.Type) {
+				continue
 			}
+			errors[grpcError.Name] = makeProtoBufMessage(
+				grpcError.Response.Message,
+				protoBufify(endpoint.Name()+"_"+grpcError.Name+"_error", true, true),
+				sd,
+			)
+		}
+		prepared[index] = &protobufEndpointMessages{
+			request:          request,
+			streamingRequest: streamingRequest,
+			requestEnvelope:  requestEnvelope,
+			response:         response,
+			errors:           errors,
 		}
 	}
-	if expr.IsPrimitive(at.Type) {
-		// Add google.protobuf.Value import when Any type is used
-		if at.Type.Kind() == expr.AnyKind {
-			found := false
-			for _, imp := range imports {
-				if imp == "google/protobuf/struct.proto" {
-					found = true
-					break
-				}
+
+	imported := make(map[string]struct{})
+	collect := func(attribute *expr.AttributeExpr, source protobufMessageSource) {
+		for _, protobufImport := range sd.protobuf.collectMessage(attribute, source, sd) {
+			if _, ok := imported[protobufImport]; ok {
+				continue
 			}
-			if !found {
-				imports = append(imports, "google/protobuf/struct.proto")
+			imported[protobufImport] = struct{}{}
+			sd.ProtoImports = append(sd.ProtoImports, protobufImport)
+		}
+	}
+	for index, endpoint := range serviceExpr.GRPCEndpoints {
+		messages := prepared[index]
+		requestSource := protobufRootMessageSource(endpoint.Request, endpoint, nil, protobufRequestMessage)
+		streamingSource := protobufRootMessageSource(endpoint.StreamingRequest, endpoint, nil, protobufStreamingRequestMessage)
+		responseSource := protobufRootMessageSource(endpoint.Response.Message, endpoint, nil, protobufResponseMessage)
+		sd.protobuf.bindSyntheticSource(messages.request, requestSource)
+		if messages.streamingRequest.Type != expr.Empty {
+			sd.protobuf.bindSyntheticSource(messages.streamingRequest, streamingSource)
+		}
+		sd.protobuf.bindSyntheticSource(messages.response, responseSource)
+		for _, grpcError := range endpoint.GRPCErrors {
+			message := messages.errors[grpcError.Name]
+			if message == nil {
+				continue
 			}
+			errorSource := protobufRootMessageSource(
+				grpcError.Response.Message,
+				endpoint,
+				grpcError,
+				protobufErrorMessage,
+			)
+			sd.protobuf.bindSyntheticSource(message, errorSource)
+			collect(message, errorSource)
 		}
-		return data, imports
-	}
-	collect := func(at *expr.AttributeExpr) ([]*service.UserTypeData, []string) {
-		return collectMessages(at, sd, seen)
-	}
-	switch dt := at.Type.(type) {
-	case expr.UserType:
-		name := dt.Name()
-		if n := at.Meta["struct:name:proto"]; n != nil {
-			name = n[0]
+		requestNeeded := !isEmpty(endpoint.Request.Type) ||
+			(messages.requestEnvelope == nil && messages.streamingRequest.Type == expr.Empty)
+		if requestNeeded {
+			collect(messages.request, requestSource)
 		}
-		if _, ok := seen[name]; ok {
-			return data, imports
+		if messages.requestEnvelope != nil {
+			envelopeSource := protobufMessageSource{synthetic: protobufSyntheticMessage{
+				endpoint: endpoint,
+				role:     protobufStreamEnvelopeMessage,
+			}}
+			sd.protobuf.bindSyntheticSource(messages.requestEnvelope, envelopeSource)
+			collect(messages.requestEnvelope, envelopeSource)
 		}
-		att := userTypeAttribute(dt)
-		data = append(data, &service.UserTypeData{
-			Name:        name,
-			VarName:     protoBufMessageName(at, sd.Scope),
-			Description: dt.Attribute().Description,
-			Def:         protoBufMessageDef(att, sd),
-			Ref:         protoBufGoFullTypeRef(at, sd.PkgName, sd.Scope),
-			Type:        dt,
-		})
-		seen[name] = struct{}{}
-		d, i := collect(att)
-		data = append(data, d...)
-		imports = append(imports, i...)
-	case *expr.Object:
-		for _, nat := range *dt {
-			d, i := collect(nat.Attribute)
-			data = append(data, d...)
-			imports = append(imports, i...)
+		if messages.streamingRequest.Type != expr.Empty {
+			collect(messages.streamingRequest, streamingSource)
 		}
-	case *expr.Array:
-		d, i := collect(dt.ElemType)
-		data = append(data, d...)
-		imports = append(imports, i...)
-	case *expr.Map:
-		dk, ik := collect(dt.KeyType)
-		data = append(data, dk...)
-		imports = append(imports, ik...)
-		de, ie := collect(dt.ElemType)
-		data = append(data, de...)
-		imports = append(imports, ie...)
-	case *expr.Union:
-		for _, nat := range dt.Values {
-			d, i := collect(nat.Attribute)
-			data = append(data, d...)
-			imports = append(imports, i...)
+		if messages.response.Type != expr.Empty || !endpoint.MethodExpr.IsStreaming() {
+			collect(messages.response, responseSource)
 		}
 	}
-	return data, imports
+	sd.Messages = sd.protobuf.freezeMessages(sd)
+
+	for index, endpoint := range serviceExpr.GRPCEndpoints {
+		messages := prepared[index]
+		if sd.protobuf.message(messages.request) != nil {
+			sd.protobuf.collectValidation(messages.request, validateServer, "message", "message")
+		}
+		if sd.protobuf.message(messages.response) != nil {
+			sd.protobuf.collectValidation(messages.response, validateClient, "message", "message")
+		}
+		for _, message := range messages.errors {
+			sd.protobuf.collectValidation(message, validateClient, "errmsg", "errmsg")
+		}
+		if endpoint.MethodExpr.StreamingPayload.Type != expr.Empty {
+			sd.protobuf.collectValidation(messages.streamingRequest, validateServer, "stream", "stream")
+		}
+	}
+	sd.validations = sd.protobuf.freezeValidations(sd)
+	return prepared
 }
 
-// addValidation adds a validation function (if any) for the given user type
-// and recurses through the user type adding other validation functions
-// (if any).
+// protobufRootMessageSource retains authored declaration provenance and uses a
+// typed endpoint role only when message shaping created the root declaration.
+func protobufRootMessageSource(attribute *expr.AttributeExpr, endpoint *expr.GRPCEndpointExpr, grpcError *expr.GRPCErrorExpr, role protobufSyntheticRole) protobufMessageSource {
+	if userType, ok := attribute.Type.(expr.UserType); ok {
+		return protobufMessageSource{origin: userType.Origin()}
+	}
+	return protobufMessageSource{synthetic: protobufSyntheticMessage{
+		endpoint: endpoint,
+		error:    grpcError,
+		role:     role,
+	}}
+}
+
+// addValidation returns the frozen validation helper for the given protobuf
+// message on the generated server or client side.
 //
 // req if true indicates that the validation is generated for validating
 // request (server-side) messages.
-func addValidation(att *expr.AttributeExpr, attName string, sd *ServiceData, req bool) *ValidationData {
-	ut, ok := att.Type.(expr.UserType)
-	if !ok {
-		return nil
-	}
-	vtx := protoBufTypeContext(sd.PkgName, sd.Scope, false)
-	// Validation helper names must be derived from the same protobuf-aware
-	// scope used by the validation templates so that function declarations
-	// and call sites (e.g. Message_) stay in sync regardless of traversal
-	// order or reserved-name handling.
-	name := vtx.Scope.Name(att, "", vtx.Pointer, vtx.UseDefault)
-	ref := protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope)
+func addValidation(att *expr.AttributeExpr, sd *ServiceData, req bool) *ValidationData {
 	kind := validateClient
 	if req {
 		kind = validateServer
 	}
-	att = userTypeAttribute(ut)
-	for _, n := range sd.validations {
-		if n.SrcName == name {
-			if n.Kind != kind {
-				n.Kind = validateBoth
-				collectValidations(att, attName, req, sd)
-			}
-			return n
-		}
-	}
-	removeMeta(att)
-	if def := codegen.ValidationCode(att, ut, vtx, true, expr.IsAlias(att.Type), false, attName); def != "" {
-		v := &ValidationData{
-			// Validation function names must match the identifiers used by
-			// validation templates. The template uses the scoped type name
-			// directly (no Goify) to preserve proto-reserved names like Message_.
-			Name:    "Validate" + name,
-			Def:     def,
-			ArgName: attName,
-			SrcName: name,
-			SrcRef:  ref,
-			Kind:    kind,
-		}
-		sd.validations = append(sd.validations, v)
-		collectValidations(att, attName, req, sd)
-		return v
-	}
-	return nil
-}
-
-// collectValidations recurses through the attribute and collects the
-// validation functions.
-//
-// req if true indicates that the validations are generated for validating
-// request messages.
-func collectValidations(att *expr.AttributeExpr, attName string, req bool, sd *ServiceData) {
-	collectValidationsR(att, attName, req, sd, make(map[expr.UserType]struct{}))
-}
-
-// collectValidationsR recurses through the attribute and collects validation
-// functions with cycle detection using a seen set of declaration origins.
-func collectValidationsR(att *expr.AttributeExpr, attName string, req bool, sd *ServiceData, seen map[expr.UserType]struct{}) {
-	gattName := codegen.Goify(attName, false)
-	switch dt := att.Type.(type) {
-	case expr.UserType:
-		if expr.IsPrimitive(dt) {
-			// Alias type - validation is generate inline in parent type validation code.
-			return
-		}
-		// Cycle guard: avoid infinite recursion on recursive user types.
-		origin := dt.Origin()
-		if _, ok := seen[origin]; ok {
-			return
-		}
-		seen[origin] = struct{}{}
-		vtx := protoBufTypeContext(sd.PkgName, sd.Scope, false)
-		def := codegen.AttributeValidationCode(att, dt, vtx, true, false, gattName, attName)
-		// Match helper function identifiers with validation template calls by
-		// using the same protobuf-aware scope for the type name. This keeps
-		// names like Message_ consistent between declarations and call sites.
-		name := vtx.Scope.Name(att, "", vtx.Pointer, vtx.UseDefault)
-		kind := validateClient
-		if req {
-			kind = validateServer
-		}
-		for _, n := range sd.validations {
-			if n.SrcName == name {
-				if n.Kind != validateBoth && n.Kind != kind {
-					n.Kind = validateBoth
-					goto collect
-				}
-				return
-			}
-		}
-		if def != "" {
-			sd.validations = append(sd.validations, &ValidationData{
-				// Match helper function identifiers with validation template
-				// calls. The template uses the scoped type name directly (no
-				// Goify) to preserve proto-reserved names like Message_.
-				Name:    "Validate" + name,
-				Def:     def,
-				ArgName: gattName,
-				SrcName: name,
-				SrcRef:  protoBufGoFullTypeRef(att, sd.PkgName, sd.Scope),
-				Kind:    kind,
-			})
-		}
-	collect:
-		att := userTypeAttribute(dt)
-		collectValidationsR(att, attName, req, sd, seen)
-	case *expr.Object:
-		for _, nat := range *dt {
-			collectValidationsR(nat.Attribute, nat.Name, req, sd, seen)
-		}
-	case *expr.Array:
-		collectValidationsR(dt.ElemType, "elem", req, sd, seen)
-	case *expr.Map:
-		collectValidationsR(dt.KeyType, "key", req, sd, seen)
-		collectValidationsR(dt.ElemType, "val", req, sd, seen)
-	case *expr.Union:
-		for _, nat := range dt.Values {
-			collectValidationsR(nat.Attribute, nat.Name, req, sd, seen)
-		}
-	}
+	return sd.protobuf.validation(att, kind)
 }
 
 // userTypeAttribute returns the attribute of the given user type.
@@ -981,6 +854,7 @@ func (d *ServicesData) buildRequestConvertData(request, payload *expr.AttributeE
 	}
 
 	svc := sd.Service
+	method := svc.Method(e.Name())
 	side := "client"
 	if svr {
 		side = "server"
@@ -988,29 +862,29 @@ func (d *ServicesData) buildRequestConvertData(request, payload *expr.AttributeE
 	svcCtx := d.serviceTypeContext(sd, side).Enter(payload)
 	if svr {
 		// server side
-		data := d.buildInitData(request, payload, "message", "v", svcCtx, false, false, sd)
+		data := d.buildInitData(request, payload, "message", "v", svcCtx, method.Payload, false, false, sd)
 		data.Name = fmt.Sprintf("New%sPayload", codegen.Goify(e.Name(), true))
 		data.Description = fmt.Sprintf("%s builds the payload of the %q endpoint of the %q service from the gRPC request type.", data.Name, e.Name(), svc.Name)
 		// pass the metadata as arguments to payload constructor in server
 		data.Args = append(data.Args, initArgsFromMetadata(md)...)
 		return &ConvertData{
-			SrcName:    protoBufGoFullTypeName(request, sd.PkgName, sd.Scope),
-			SrcRef:     protoBufGoFullTypeRef(request, sd.PkgName, sd.Scope),
+			SrcName:    protoBufGoFullTypeName(request, sd.PkgName, sd),
+			SrcRef:     protoBufGoFullTypeRef(request, sd.PkgName, sd),
 			TgtName:    svcCtx.Scope.Name(payload, svcCtx.Pkg(payload), svcCtx.Pointer, svcCtx.UseDefault),
 			TgtRef:     svcCtx.Scope.Ref(payload, svcCtx.Pkg(payload)),
 			Init:       data,
-			Validation: addValidation(request, "message", sd, true),
+			Validation: addValidation(request, sd, true),
 		}
 	}
 
 	// client side
-	data := d.buildInitData(payload, request, "payload", "message", svcCtx, true, false, sd)
+	data := d.buildInitData(payload, request, "payload", "message", svcCtx, method.Payload, true, false, sd)
 	data.Description = fmt.Sprintf("%s builds the gRPC request type from the payload of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 	return &ConvertData{
 		SrcName: svcCtx.Scope.Name(payload, svcCtx.Pkg(payload), svcCtx.Pointer, svcCtx.UseDefault),
 		SrcRef:  svcCtx.Scope.Ref(payload, svcCtx.Pkg(payload)),
-		TgtName: protoBufGoFullTypeName(request, sd.PkgName, sd.Scope),
-		TgtRef:  protoBufGoFullTypeRef(request, sd.PkgName, sd.Scope),
+		TgtName: protoBufGoFullTypeName(request, sd.PkgName, sd),
+		TgtRef:  protoBufGoFullTypeRef(request, sd.PkgName, sd),
 		Init:    data,
 	}
 }
@@ -1046,7 +920,7 @@ func (d *ServicesData) buildLegacyDecodeData(e *expr.GRPCEndpointExpr, sd *Servi
 	}
 	if expr.IsObject(payload.Type) {
 		svcCtx := d.serviceTypeContext(sd, "server").Enter(payload)
-		init := d.buildInitData(&expr.AttributeExpr{Type: expr.Empty}, payload, "message", "v", svcCtx, false, false, sd)
+		init := d.buildInitData(&expr.AttributeExpr{Type: expr.Empty}, payload, "message", "v", svcCtx, sd.Service.Method(e.Name()).Payload, false, false, sd)
 		init.Name = fmt.Sprintf("New%sPayloadFromMetadata", codegen.Goify(e.Name(), true))
 		init.Description = fmt.Sprintf("%s builds the payload of the %q endpoint of the %q service from the gRPC request metadata sent by legacy stream protocol clients.", init.Name, e.Name(), svc.Name)
 		init.Args = append(init.Args, initArgsFromMetadata(md)...)
@@ -1072,21 +946,26 @@ func (d *ServicesData) buildResponseConvertData(response, result *expr.Attribute
 		return nil
 	}
 	svc := sd.Service
+	method := svc.Method(e.Name())
+	resultName := method.Result
+	if _, ok := result.Type.(expr.UserType); ok {
+		resultName = codegen.Goify(result.Type.Name(), true)
+	}
 	if svr {
 		// server side
-		data := d.buildInitData(result, response, "result", "message", svcCtx, true, false, sd)
+		data := d.buildInitData(result, response, "result", "message", svcCtx, resultName, true, false, sd)
 		data.Description = fmt.Sprintf("%s builds the gRPC response type from the result of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 		return &ConvertData{
 			SrcName: svcCtx.Scope.Name(result, svcCtx.Pkg(result), svcCtx.Pointer, svcCtx.UseDefault),
 			SrcRef:  svcCtx.Scope.Ref(result, svcCtx.Pkg(result)),
-			TgtName: protoBufGoFullTypeName(response, sd.PkgName, sd.Scope),
-			TgtRef:  protoBufGoFullTypeRef(response, sd.PkgName, sd.Scope),
+			TgtName: protoBufGoFullTypeName(response, sd.PkgName, sd),
+			TgtRef:  protoBufGoFullTypeRef(response, sd.PkgName, sd),
 			Init:    data,
 		}
 	}
 
 	// client side
-	data := d.buildInitData(response, result, "message", "result", svcCtx, false, false, sd)
+	data := d.buildInitData(response, result, "message", "result", svcCtx, resultName, false, false, sd)
 	data.Name = fmt.Sprintf("New%sResult", codegen.Goify(e.Name(), true))
 	data.Description = fmt.Sprintf("%s builds the result type of the %q endpoint of the %q service from the gRPC response type.", data.Name, e.Name(), svc.Name)
 	// pass the headers as arguments to result constructor in client
@@ -1094,12 +973,12 @@ func (d *ServicesData) buildResponseConvertData(response, result *expr.Attribute
 	// pass the trailers as arguments to result constructor in client
 	data.Args = append(data.Args, initArgsFromMetadata(trlrs)...)
 	return &ConvertData{
-		SrcName:    protoBufGoFullTypeName(response, sd.PkgName, sd.Scope),
-		SrcRef:     protoBufGoFullTypeRef(response, sd.PkgName, sd.Scope),
+		SrcName:    protoBufGoFullTypeName(response, sd.PkgName, sd),
+		SrcRef:     protoBufGoFullTypeRef(response, sd.PkgName, sd),
 		TgtName:    svcCtx.Scope.Name(result, svcCtx.Pkg(result), svcCtx.Pointer, svcCtx.UseDefault),
 		TgtRef:     svcCtx.Scope.Ref(result, svcCtx.Pkg(result)),
 		Init:       data,
-		Validation: addValidation(response, "message", sd, false),
+		Validation: addValidation(response, sd, false),
 	}
 }
 
@@ -1111,8 +990,8 @@ func (d *ServicesData) buildResponseConvertData(response, result *expr.Attribute
 // transformation
 // svcCtx is the attribute context for service type
 // proto if true indicates the target type is a protocol buffer type
-func (d *ServicesData) buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar string, svcCtx *codegen.AttributeContext, proto, usesrc bool, sd *ServiceData) *InitData {
-	pbCtx := protoBufTypeContext(sd.PkgName, sd.Scope, false)
+func (d *ServicesData) buildInitData(source, target *expr.AttributeExpr, sourceVar, targetVar string, svcCtx *codegen.AttributeContext, serviceTypeName string, proto, usesrc bool, sd *ServiceData) *InitData {
+	pbCtx := protoBufTypeContext(sd.PkgName, sd, false)
 	name := "New"
 	srcCtx := pbCtx
 	tgtCtx := svcCtx
@@ -1121,15 +1000,25 @@ func (d *ServicesData) buildInitData(source, target *expr.AttributeExpr, sourceV
 		tgtCtx = pbCtx
 		name += "Proto"
 	}
+	var sourceTypeName, targetTypeName func() string
+	if proto {
+		sourceTypeName = func() string { return serviceTypeName }
+		targetTypeName = func() string { return protoBufGoTypeName(target, sd) }
+	} else {
+		sourceTypeName = func() string { return protoBufGoTypeName(source, sd) }
+		targetTypeName = func() string { return serviceTypeName }
+	}
 	isStruct := expr.IsObject(target.Type) || expr.IsUnion(target.Type)
 	if _, ok := source.Type.(expr.UserType); ok && usesrc {
-		name += protoBufGoTypeName(source, sd.Scope)
+		name += sourceTypeName()
 	}
-	n := protoBufGoTypeName(target, sd.Scope)
-	if !isStruct {
+	n := serviceTypeName
+	if isStruct {
+		n = targetTypeName()
+	} else {
 		// If target is array, map, or primitive the name will be suffixed with
 		// the definition (e.g int, []string, map[int]string) which is incorrect.
-		n = protoBufGoTypeName(source, sd.Scope)
+		n = sourceTypeName()
 	}
 	name += n
 	code, helpers, err := protoBufTransform(source, target, sourceVar, targetVar, srcCtx, tgtCtx, proto, true)
@@ -1198,31 +1087,38 @@ func (d *ServicesData) buildErrorConvertData(ge *expr.GRPCErrorExpr, e *expr.GRP
 		side = "server"
 	}
 	svcCtx := d.serviceTypeContext(sd, side).Enter(ge.AttributeExpr)
+	errorTypeName := ""
+	for _, serviceError := range sd.Service.Method(e.Name()).Errors {
+		if serviceError.ErrName == ge.Name {
+			errorTypeName = serviceError.TypeName
+			break
+		}
+	}
 	if svr {
 		// server side
-		data := d.buildInitData(ge.AttributeExpr, message, "er", "message", svcCtx, true, false, sd)
+		data := d.buildInitData(ge.AttributeExpr, message, "er", "message", svcCtx, errorTypeName, true, false, sd)
 		data.Name = fmt.Sprintf("New%s%sError", codegen.Goify(e.Name(), true), codegen.Goify(ge.Name, true))
 		data.Description = fmt.Sprintf("%s builds the gRPC error response type from the error of the %q endpoint of the %q service.", data.Name, e.Name(), svc.Name)
 		return &ConvertData{
 			SrcName: svcCtx.Scope.Name(ge.AttributeExpr, svcCtx.Pkg(ge.AttributeExpr), svcCtx.Pointer, svcCtx.UseDefault),
 			SrcRef:  svcCtx.Scope.Ref(ge.AttributeExpr, svcCtx.Pkg(ge.AttributeExpr)),
-			TgtName: protoBufGoFullTypeName(message, sd.PkgName, sd.Scope),
-			TgtRef:  protoBufGoFullTypeRef(message, sd.PkgName, sd.Scope),
+			TgtName: protoBufGoFullTypeName(message, sd.PkgName, sd),
+			TgtRef:  protoBufGoFullTypeRef(message, sd.PkgName, sd),
 			Init:    data,
 		}
 	}
 
 	// client side
-	data := d.buildInitData(message, ge.AttributeExpr, "message", "er", svcCtx, false, false, sd)
+	data := d.buildInitData(message, ge.AttributeExpr, "message", "er", svcCtx, errorTypeName, false, false, sd)
 	data.Name = fmt.Sprintf("New%s%sError", codegen.Goify(e.Name(), true), codegen.Goify(ge.Name, true))
 	data.Description = fmt.Sprintf("%s builds the error type of the %q endpoint of the %q service from the gRPC error response type.", data.Name, e.Name(), svc.Name)
 	return &ConvertData{
-		SrcName:    protoBufGoFullTypeName(message, sd.PkgName, sd.Scope),
-		SrcRef:     protoBufGoFullTypeRef(message, sd.PkgName, sd.Scope),
+		SrcName:    protoBufGoFullTypeName(message, sd.PkgName, sd),
+		SrcRef:     protoBufGoFullTypeRef(message, sd.PkgName, sd),
 		TgtName:    svcCtx.Scope.Name(ge.AttributeExpr, svcCtx.Pkg(ge.AttributeExpr), svcCtx.Pointer, svcCtx.UseDefault),
 		TgtRef:     svcCtx.Scope.Ref(ge.AttributeExpr, svcCtx.Pkg(ge.AttributeExpr)),
 		Init:       data,
-		Validation: addValidation(message, "errmsg", sd, false),
+		Validation: addValidation(message, sd, false),
 	}
 }
 
@@ -1255,12 +1151,20 @@ func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, streamingReques
 	svc := sd.Service
 	ed := sd.Endpoint(e.Name())
 	md := ed.Method
+	streamingPayloadName := md.StreamingPayload
+	resultName := md.StreamingResult
+	if resultName == "" {
+		resultName = md.Result
+	}
 	side := "client"
 	if svr {
 		side = "server"
 	}
 	svcCtx := d.serviceTypeContext(sd, side).Enter(e.MethodExpr.StreamingPayload)
 	result, resCtx := d.resultContext(e, sd, side)
+	if _, ok := result.Type.(expr.UserType); ok {
+		resultName = codegen.Goify(result.Type.Name(), true)
+	}
 	resVar := "result"
 	if md.ViewedResult != nil {
 		resVar = "vresult"
@@ -1277,9 +1181,9 @@ func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, streamingReques
 			sendConvert = &ConvertData{
 				SrcName: resCtx.Scope.Name(result, resCtx.Pkg(result), resCtx.Pointer, resCtx.UseDefault),
 				SrcRef:  resCtx.Scope.Ref(result, resCtx.Pkg(result)),
-				TgtName: protoBufGoFullTypeName(responseMessage, sd.PkgName, sd.Scope),
-				TgtRef:  protoBufGoFullTypeRef(responseMessage, sd.PkgName, sd.Scope),
-				Init:    d.buildInitData(result, responseMessage, resVar, "v", resCtx, true, true, sd),
+				TgtName: protoBufGoFullTypeName(responseMessage, sd.PkgName, sd),
+				TgtRef:  protoBufGoFullTypeRef(responseMessage, sd.PkgName, sd),
+				Init:    d.buildInitData(result, responseMessage, resVar, "v", resCtx, resultName, true, true, sd),
 			}
 		}
 		if e.MethodExpr.StreamingPayload.Type != expr.Empty {
@@ -1287,12 +1191,12 @@ func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, streamingReques
 			recvWithContextName = md.ServerStream.RecvWithContextName
 			recvRef = svcCtx.Scope.Ref(e.MethodExpr.StreamingPayload, svcCtx.Pkg(e.MethodExpr.StreamingPayload))
 			recvConvert = &ConvertData{
-				SrcName:    protoBufGoFullTypeName(streamingRequest, sd.PkgName, sd.Scope),
-				SrcRef:     protoBufGoFullTypeRef(streamingRequest, sd.PkgName, sd.Scope),
+				SrcName:    protoBufGoFullTypeName(streamingRequest, sd.PkgName, sd),
+				SrcRef:     protoBufGoFullTypeRef(streamingRequest, sd.PkgName, sd),
 				TgtName:    svcCtx.Scope.Name(e.MethodExpr.StreamingPayload, svcCtx.Pkg(e.MethodExpr.StreamingPayload), svcCtx.Pointer, svcCtx.UseDefault),
 				TgtRef:     recvRef,
-				Init:       d.buildInitData(streamingRequest, e.MethodExpr.StreamingPayload, "v", "spayload", svcCtx, false, true, sd),
-				Validation: addValidation(streamingRequest, "stream", sd, true),
+				Init:       d.buildInitData(streamingRequest, e.MethodExpr.StreamingPayload, "v", "spayload", svcCtx, streamingPayloadName, false, true, sd),
+				Validation: addValidation(streamingRequest, sd, true),
 			}
 		}
 		mustClose = md.ServerStream.MustClose
@@ -1308,9 +1212,9 @@ func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, streamingReques
 			sendConvert = &ConvertData{
 				SrcName: svcCtx.Scope.Name(e.MethodExpr.StreamingPayload, svcCtx.Pkg(e.MethodExpr.StreamingPayload), svcCtx.Pointer, svcCtx.UseDefault),
 				SrcRef:  sendRef,
-				TgtName: protoBufGoFullTypeName(streamingRequest, sd.PkgName, sd.Scope),
-				TgtRef:  protoBufGoFullTypeRef(streamingRequest, sd.PkgName, sd.Scope),
-				Init:    d.buildInitData(e.MethodExpr.StreamingPayload, streamingRequest, "spayload", "v", svcCtx, true, true, sd),
+				TgtName: protoBufGoFullTypeName(streamingRequest, sd.PkgName, sd),
+				TgtRef:  protoBufGoFullTypeRef(streamingRequest, sd.PkgName, sd),
+				Init:    d.buildInitData(e.MethodExpr.StreamingPayload, streamingRequest, "spayload", "v", svcCtx, streamingPayloadName, true, true, sd),
 			}
 		}
 		if e.MethodExpr.Result.Type != expr.Empty {
@@ -1318,12 +1222,12 @@ func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, streamingReques
 			recvWithContextName = md.ClientStream.RecvWithContextName
 			recvRef = ed.ResultRef
 			recvConvert = &ConvertData{
-				SrcName:    protoBufGoFullTypeName(responseMessage, sd.PkgName, sd.Scope),
-				SrcRef:     protoBufGoFullTypeRef(responseMessage, sd.PkgName, sd.Scope),
+				SrcName:    protoBufGoFullTypeName(responseMessage, sd.PkgName, sd),
+				SrcRef:     protoBufGoFullTypeRef(responseMessage, sd.PkgName, sd),
 				TgtName:    resCtx.Scope.Name(result, resCtx.Pkg(result), resCtx.Pointer, resCtx.UseDefault),
 				TgtRef:     resCtx.Scope.Ref(result, resCtx.Pkg(result)),
-				Init:       d.buildInitData(responseMessage, result, "v", resVar, resCtx, false, true, sd),
-				Validation: addValidation(responseMessage, "stream", sd, false),
+				Init:       d.buildInitData(responseMessage, result, "v", resVar, resCtx, resultName, false, true, sd),
+				Validation: addValidation(responseMessage, sd, false),
 			}
 		}
 		mustClose = md.ClientStream.MustClose
@@ -1478,7 +1382,7 @@ func makeProtoBufStreamEnvelope(request, stream *expr.AttributeExpr, tname strin
 func buildStreamEnvelopeData(envelope *expr.AttributeExpr, message *service.UserTypeData, sd *ServiceData) *StreamEnvelopeData {
 	body := envelope.Find("body")
 	union := expr.AsUnion(body.Type)
-	scope := &protoBufScope{scope: sd.Scope}
+	scope := &protoBufScope{service: sd}
 	fieldName := scope.Field(body, union.TypeName, true)
 	initialFieldName := scope.Field(union.Values[0].Attribute, union.Values[0].Name, true)
 	streamItemFieldName := scope.Field(union.Values[1].Attribute, union.Values[1].Name, true)

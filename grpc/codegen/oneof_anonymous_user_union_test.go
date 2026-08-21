@@ -47,11 +47,12 @@ func TestAnonymousUserUnionArrayNoWrappersFromProto(t *testing.T) {
 
 	sd := &ServiceData{Name: "Svc", Scope: codegen.NewNameScope()}
 	svcCtx := codegen.NewAttributeContext(false, false, true, "proto", sd.Scope)
-	pbCtx := protoBufTypeContext("proto", sd.Scope, true)
 
 	// Transform protobuf -> Go for Container
 	target := &expr.AttributeExpr{Type: root.UserType("Container")}
 	source := makeProtoBufMessage(expr.DupAtt(target), target.Type.Name(), sd)
+	freezeProtoBufTransformMessages(sd, source)
+	pbCtx := protoBufTypeContext("proto", sd, true)
 
 	code, _, err := protoBufTransform(source, target, "source", "target", pbCtx, svcCtx, false, true)
 	require.NoError(t, err)

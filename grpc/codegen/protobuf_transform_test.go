@@ -56,7 +56,6 @@ func TestProtoBufTransform(t *testing.T) {
 		// attribute contexts used in test cases
 		svcCtx = codegen.NewAttributeContext(false, false, true, "proto", sd.Scope)
 		ptrCtx = pointerContext("proto", sd.Scope)
-		pbCtx  = protoBufTypeContext("proto", sd.Scope, true)
 	)
 
 	// gRPC does not support any
@@ -172,10 +171,12 @@ func TestProtoBufTransform(t *testing.T) {
 					tgtCtx := c.Ctx
 					if c.ToProto {
 						target = makeProtoBufMessage(expr.DupAtt(target), target.Type.Name(), sd)
-						tgtCtx = pbCtx
+						freezeProtoBufTransformMessages(sd, target)
+						tgtCtx = protoBufTypeContext("proto", sd, true)
 					} else {
 						source = makeProtoBufMessage(expr.DupAtt(source), source.Type.Name(), sd)
-						srcCtx = pbCtx
+						freezeProtoBufTransformMessages(sd, source)
+						srcCtx = protoBufTypeContext("proto", sd, true)
 					}
 					code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto, true)
 					require.NoError(t, err)
@@ -191,7 +192,7 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 	var (
 		sd     = &ServiceData{Name: "Service", Scope: codegen.NewNameScope()}
 		svcCtx = codegen.NewAttributeContext(false, false, true, "", sd.Scope)
-		pbCtx  = protoBufTypeContext("", sd.Scope, false)
+		pbCtx  = protoBufTypeContext("", sd, false)
 	)
 
 	cases := []struct {
@@ -237,6 +238,14 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 			}
 		})
 	}
+}
+
+// freezeProtoBufTransformMessages prepares the message names consumed by one
+// standalone transformation test outside full service analysis.
+func freezeProtoBufTransformMessages(sd *ServiceData, attribute *expr.AttributeExpr) {
+	sd.protobuf = newProtobufPackageCatalog("proto")
+	sd.protobuf.collectMessage(attribute, protobufMessageSource{}, sd)
+	sd.protobuf.freezeMessageNames()
 }
 
 func pointerContext(pkg string, scope *codegen.NameScope) *codegen.AttributeContext {

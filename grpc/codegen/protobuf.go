@@ -17,8 +17,8 @@ import (
 type (
 	// protoBufScope is the scope for protocol buffer attribute types.
 	protoBufScope struct {
-		scope *codegen.NameScope
-		pkg   string
+		service *ServiceData
+		pkg     string
 	}
 )
 
@@ -36,12 +36,12 @@ const (
 
 // Name returns the protocol buffer type name.
 func (p *protoBufScope) Name(att *expr.AttributeExpr, pkg string, _, _ bool) string {
-	return protoBufGoFullTypeName(att, pkg, p.scope)
+	return protoBufGoFullTypeName(att, pkg, p.service)
 }
 
 // Ref returns the protocol buffer type reference.
 func (p *protoBufScope) Ref(att *expr.AttributeExpr, pkg string) string {
-	return protoBufGoFullTypeRef(att, pkg, p.scope)
+	return protoBufGoFullTypeRef(att, pkg, p.service)
 }
 
 // Package returns the protocol buffer package qualifier for att.
@@ -69,13 +69,13 @@ func (*protoBufScope) Field(att *expr.AttributeExpr, name string, firstUpper boo
 
 // Scope returns the name scope.
 func (p *protoBufScope) Scope() *codegen.NameScope {
-	return p.scope
+	return p.service.Scope
 }
 
 // protoBufTypeContext returns a contextual attribute for the protocol buffer type.
-func protoBufTypeContext(pkg string, scope *codegen.NameScope, useDefault bool) *codegen.AttributeContext {
-	ctx := codegen.NewAttributeContext(false, true, useDefault, pkg, scope)
-	ctx.Scope = &protoBufScope{scope: scope, pkg: pkg}
+func protoBufTypeContext(pkg string, service *ServiceData, useDefault bool) *codegen.AttributeContext {
+	ctx := codegen.NewAttributeContext(false, true, useDefault, pkg, service.Scope)
+	ctx.Scope = &protoBufScope{service: service, pkg: pkg}
 	return ctx
 }
 
@@ -135,12 +135,12 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceDat
 		switch {
 		case expr.IsArray(att.Type):
 			wrapAttr(att, "ArrayOf"+tname+
-				protoBufify(protoBufMessageDef(expr.AsArray(att.Type).ElemType, sd), true, true), true, sd)
+				protoBufify(protoBufShapeTypeName(expr.AsArray(att.Type).ElemType), true, true), true, sd)
 		case expr.IsMap(att.Type):
 			m := expr.AsMap(att.Type)
 			wrapAttr(att, tname+"MapOf"+
-				protoBufify(protoBufMessageDef(m.KeyType, sd), true, true)+
-				protoBufify(protoBufMessageDef(m.ElemType, sd), true, true), true, sd)
+				protoBufify(protoBufShapeTypeName(m.KeyType), true, true)+
+				protoBufify(protoBufShapeTypeName(m.ElemType), true, true), true, sd)
 		}
 	}
 
@@ -254,40 +254,44 @@ func unwrapAttr(att *expr.AttributeExpr) *expr.AttributeExpr {
 
 // protoBufMessageName returns the protocol buffer message name of the given
 // attribute type.
-func protoBufMessageName(att *expr.AttributeExpr, s *codegen.NameScope) string {
-	return protoBufFullMessageName(att, "", s)
+func protoBufMessageName(att *expr.AttributeExpr, service *ServiceData) string {
+	return protoBufFullMessageName(att, "", service)
 }
 
 // protoBufFullMessageName returns the protocol buffer message name of the
 // given user type qualified with the given package name if applicable.
-func protoBufFullMessageName(att *expr.AttributeExpr, pkg string, s *codegen.NameScope) string {
+func protoBufFullMessageName(att *expr.AttributeExpr, pkg string, service *ServiceData) string {
 	switch actual := att.Type.(type) {
-	case expr.UserType, *expr.Union:
-		n := s.HashedUnique(actual, protoBufify(actual.Name(), true, true), "")
-		if name := att.Meta["struct:name:proto"]; len(name) > 0 {
-			n = name[0]
+	case expr.UserType:
+		if service.protobuf == nil {
+			panic(fmt.Sprintf("protobuf message %q has no package catalog", actual.Name()))
 		}
+		record := service.protobuf.message(att)
+		if record == nil {
+			panic(fmt.Sprintf("protobuf message %q has no frozen declaration", actual.Name()))
+		}
+		n := record.name
 		if pkg == "" {
 			return n
 		}
 		return pkg + "." + n
 	case expr.CompositeExpr:
-		return protoBufFullMessageName(actual.Attribute(), pkg, s)
+		return protoBufFullMessageName(actual.Attribute(), pkg, service)
 	default:
-		panic(fmt.Sprintf("data type is not a user type or union: received type %T", actual)) // bug
+		panic(fmt.Sprintf("data type is not a protobuf message: received type %T", actual)) // bug
 	}
 }
 
 // protoBufGoTypeName returns the protocol buffer type name for the given
 // attribute generated after compiling the proto file (in *.pb.go).
-func protoBufGoTypeName(att *expr.AttributeExpr, s *codegen.NameScope) string {
-	return protoBufGoFullTypeName(att, "", s)
+func protoBufGoTypeName(att *expr.AttributeExpr, service *ServiceData) string {
+	return protoBufGoFullTypeName(att, "", service)
 }
 
 // protoBufGoFullTypeName returns the protocol buffer type name qualified with
 // the given package name for the given attribute generated after compiling
 // the proto file (in *.pb.go).
-func protoBufGoFullTypeName(att *expr.AttributeExpr, pkg string, s *codegen.NameScope) string {
+func protoBufGoFullTypeName(att *expr.AttributeExpr, pkg string, service *ServiceData) string {
 	if proto := att.Meta["struct:field:proto"]; len(proto) > 2 {
 		typ := proto[2]
 		if len(att.Meta["struct:field:proto"]) > 3 {
@@ -296,21 +300,65 @@ func protoBufGoFullTypeName(att *expr.AttributeExpr, pkg string, s *codegen.Name
 		}
 		return typ
 	}
+	if primitive := getPrimitive(att); primitive != nil {
+		return protoBufGoFullTypeName(primitive, pkg, service)
+	}
 	switch actual := att.Type.(type) {
-	case expr.UserType, expr.CompositeExpr, *expr.Union:
-		return protoBufFullMessageName(att, pkg, s)
+	case *expr.Union:
+		if service.protobuf == nil {
+			panic(fmt.Sprintf("protobuf oneof %q has no package catalog", actual.Name()))
+		}
+		name := service.protobuf.unionName(att)
+		if pkg == "" {
+			return name
+		}
+		return pkg + "." + name
+	case expr.UserType, expr.CompositeExpr:
+		return protoBufFullMessageName(att, pkg, service)
 	case expr.Primitive:
 		return protoBufNativeGoTypeName(att.Type)
 	case *expr.Array:
-		return "[]" + protoBufGoFullTypeRef(actual.ElemType, pkg, s)
+		return "[]" + protoBufGoFullTypeRef(actual.ElemType, pkg, service)
 	case *expr.Map:
 		return fmt.Sprintf("map[%s]%s",
-			protoBufGoFullTypeRef(actual.KeyType, pkg, s),
-			protoBufGoFullTypeRef(actual.ElemType, pkg, s))
+			protoBufGoFullTypeRef(actual.KeyType, pkg, service),
+			protoBufGoFullTypeRef(actual.ElemType, pkg, service))
 	case *expr.Object:
-		return s.GoTypeDef(att, false, false)
+		return service.Scope.GoTypeDef(att, false, false)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
+	}
+}
+
+// protoBufShapeTypeName returns the stable type fragment used while wrapping
+// nested collection values before the package declaration catalog is frozen.
+// It reads authored type facts but never allocates an emitted message name.
+func protoBufShapeTypeName(att *expr.AttributeExpr) string {
+	if protos := att.Meta["struct:field:proto"]; len(protos) > 0 {
+		return protos[0]
+	}
+	switch actual := att.Type.(type) {
+	case expr.Primitive:
+		return protoNativeType(actual)
+	case expr.UserType:
+		if names := att.Meta["struct:name:proto"]; len(names) > 0 {
+			return names[0]
+		}
+		if names := actual.Attribute().Meta["struct:name:proto"]; len(names) > 0 {
+			return names[0]
+		}
+		return protoBufify(actual.Name(), true, true)
+	case expr.CompositeExpr:
+		return protoBufShapeTypeName(actual.Attribute())
+	case *expr.Object:
+		return "Object"
+	case *expr.Union:
+		if actual.TypeName != "" {
+			return protoBufify(actual.TypeName, true, true)
+		}
+		return "Union"
+	default:
+		panic(fmt.Sprintf("unknown protobuf shaping type %T", actual)) // bug
 	}
 }
 
@@ -370,7 +418,7 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 		if prim := getPrimitive(att); prim != nil {
 			return protoBufMessageDef(prim, sd)
 		}
-		return protoBufMessageName(att, sd.Scope)
+		return protoBufMessageName(att, sd)
 	case *expr.Object:
 		var ss []string
 		ss = append(ss, " {")
@@ -424,8 +472,8 @@ func protoJSONOption(att *expr.AttributeExpr) string {
 // protoBufGoFullTypeRef returns the Go code qualified with package name that
 // refers to the Go type generated by compiling the protocol buffer
 // (in *.pb.go) for the given attribute.
-func protoBufGoFullTypeRef(att *expr.AttributeExpr, pkg string, s *codegen.NameScope) string {
-	name := protoBufGoFullTypeName(att, pkg, s)
+func protoBufGoFullTypeRef(att *expr.AttributeExpr, pkg string, service *ServiceData) string {
+	name := protoBufGoFullTypeName(att, pkg, service)
 	if expr.IsObject(att.Type) || expr.IsUnion(att.Type) {
 		return "*" + name
 	}
