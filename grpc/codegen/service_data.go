@@ -452,16 +452,15 @@ const (
 	validateClient
 )
 
-// NewServicesData creates a new ServicesData instance for the given service data.
-func NewServicesData(services *service.ServicesData, plan *PreparedPlan) *ServicesData {
-	cliPlan := plan.roots[services.Root]
-	if cliPlan == nil {
-		panic(fmt.Sprintf("gRPC command-line names are missing for design %q", services.Root.API.Name))
+// newServicesData creates the render data owned by one retained gRPC plan.
+func newServicesData(services *service.ServicesData, plan *Plan) *ServicesData {
+	if services.Root != plan.root {
+		panic(fmt.Sprintf("gRPC service data does not belong to design %q", plan.root.API.Name))
 	}
 	return &ServicesData{
 		ServicesData: services,
 		GRPCServices: make(map[string]*ServiceData),
-		cliPlan:      cliPlan,
+		cliPlan:      plan.cli,
 	}
 }
 
@@ -1686,8 +1685,14 @@ func usesAnyType(endpoints []*expr.GRPCEndpointExpr, includeErrors bool) bool {
 	return false
 }
 
-// hasAnyType recursively checks if the given attribute uses the Any type.
+// hasAnyType reports whether the attribute uses Any without following a named
+// type more than once.
 func hasAnyType(att *expr.AttributeExpr) bool {
+	return hasAnyTypeR(att, make(map[expr.UserType]struct{}))
+}
+
+// hasAnyTypeR walks arrays, maps, objects, unions, and named types.
+func hasAnyTypeR(att *expr.AttributeExpr, seen map[expr.UserType]struct{}) bool {
 	if att == nil {
 		return false
 	}
@@ -1696,20 +1701,25 @@ func hasAnyType(att *expr.AttributeExpr) bool {
 	}
 	switch dt := att.Type.(type) {
 	case expr.UserType:
-		return hasAnyType(dt.Attribute())
+		origin := dt.Origin()
+		if _, ok := seen[origin]; ok {
+			return false
+		}
+		seen[origin] = struct{}{}
+		return hasAnyTypeR(dt.Attribute(), seen)
 	case *expr.Object:
 		for _, nat := range *dt {
-			if hasAnyType(nat.Attribute) {
+			if hasAnyTypeR(nat.Attribute, seen) {
 				return true
 			}
 		}
 	case *expr.Array:
-		return hasAnyType(dt.ElemType)
+		return hasAnyTypeR(dt.ElemType, seen)
 	case *expr.Map:
-		return hasAnyType(dt.KeyType) || hasAnyType(dt.ElemType)
+		return hasAnyTypeR(dt.KeyType, seen) || hasAnyTypeR(dt.ElemType, seen)
 	case *expr.Union:
 		for _, nat := range dt.Values {
-			if hasAnyType(nat.Attribute) {
+			if hasAnyTypeR(nat.Attribute, seen) {
 				return true
 			}
 		}

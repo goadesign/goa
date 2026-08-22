@@ -17,7 +17,6 @@ func transportFiles(plan *Plan) ([]*codegen.File, error) {
 	generation := plan.Generation()
 	designRoots := serviceRoots(generation.Roots())
 	for _, r := range designRoots {
-		services := plan.Service(r).Services()
 		// HTTP
 		if httpPlan := plan.http[r]; httpPlan != nil {
 			files = append(files, httpPlan.ServerFiles()...)
@@ -29,14 +28,13 @@ func transportFiles(plan *Plan) ([]*codegen.File, error) {
 		}
 
 		// GRPC
-		if plan.grpc != nil {
-			grpcServices := grpccodegen.NewServicesData(services, plan.grpc)
-			files = append(files, grpccodegen.ProtoFiles(grpcServices)...)
-			files = append(files, grpccodegen.ServerFiles(grpcServices)...)
-			files = append(files, grpccodegen.ClientFiles(grpcServices)...)
-			files = append(files, grpccodegen.ServerTypeFiles(grpcServices)...)
-			files = append(files, grpccodegen.ClientTypeFiles(grpcServices)...)
-			files = append(files, grpccodegen.ClientCLIFiles(grpcServices)...)
+		if grpcPlan := plan.grpc[r]; grpcPlan != nil {
+			files = append(files, grpcPlan.ProtoFiles()...)
+			files = append(files, grpcPlan.ServerFiles()...)
+			files = append(files, grpcPlan.ClientFiles()...)
+			files = append(files, grpcPlan.ServerTypeFiles()...)
+			files = append(files, grpcPlan.ClientTypeFiles()...)
+			files = append(files, grpcPlan.ClientCLIFiles()...)
 		}
 
 		// JSON-RPC
@@ -77,15 +75,23 @@ func planTransportData(plan *Plan) error {
 		hasGRPC = hasGRPC || len(root.API.GRPC.Services) > 0
 	}
 	if hasGRPC {
-		inputs := make([]grpccodegen.PlanInput, len(roots))
-		for index, root := range roots {
-			inputs[index] = grpccodegen.PlanInput{Root: root, Service: plan.Service(root)}
+		var inputs []grpccodegen.PlanInput
+		var plannedRoots []*expr.RootExpr
+		for _, root := range roots {
+			if len(root.API.GRPC.Services) == 0 {
+				continue
+			}
+			inputs = append(inputs, grpccodegen.PlanInput{Root: root, Service: plan.Service(root)})
+			plannedRoots = append(plannedRoots, root)
 		}
-		grpcPlan, err := grpccodegen.Plan(generation, inputs...)
+		grpcPlans, err := grpccodegen.NewPlans(generation, inputs...)
 		if err != nil {
 			return err
 		}
-		plan.grpc = grpcPlan
+		plan.grpc = make(map[*expr.RootExpr]*grpccodegen.Plan, len(grpcPlans))
+		for index, root := range plannedRoots {
+			plan.grpc[root] = grpcPlans[index]
+		}
 	}
 	plan.transportDone = true
 	return nil

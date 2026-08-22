@@ -44,7 +44,7 @@ func createServiceServicesForPackage(root *expr.RootExpr, genpkg string) *Servic
 	if err != nil {
 		panic(err)
 	}
-	grpcPlan, err := Plan(generation, PlanInput{Root: root, Service: servicePlan})
+	grpcPlans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
 	if err != nil {
 		panic(err)
 	}
@@ -57,7 +57,10 @@ func createServiceServicesForPackage(root *expr.RootExpr, genpkg string) *Servic
 	if err := servicePlan.Link(); err != nil {
 		panic(err)
 	}
-	return NewServicesData(servicePlan.Services(), grpcPlan)
+	if err := grpcPlans[0].Link(); err != nil {
+		panic(err)
+	}
+	return grpcPlans[0].services
 }
 
 func sectionCode(t *testing.T, section ...*codegen.SectionTemplate) string {

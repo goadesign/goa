@@ -6,7 +6,6 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/service"
-	grpccodegen "goa.design/goa/v3/grpc/codegen"
 )
 
 // exampleFiles returns example service, server, and client files described by
@@ -61,12 +60,11 @@ func exampleFiles(plan *Plan) ([]*codegen.File, error) {
 		}
 
 		// GRPC
-		if len(r.API.GRPC.Services) > 0 {
-			grpcServices := grpccodegen.NewServicesData(services, plan.grpc)
-			if fs := grpccodegen.ExampleServerFiles(grpcServices); len(fs) > 0 {
+		if grpcPlan := plan.grpc[r]; grpcPlan != nil {
+			if fs := grpcPlan.ExampleServerFiles(); len(fs) > 0 {
 				files = append(files, fs...)
 			}
-			if fs := grpccodegen.ExampleCLIFiles(grpcServices); len(fs) > 0 {
+			if fs := grpcPlan.ExampleCLIFiles(); len(fs) > 0 {
 				files = append(files, fs...)
 			}
 		}

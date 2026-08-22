@@ -25,7 +25,7 @@ type (
 		http          map[*expr.RootExpr]*httpcodegen.Plan
 		jsonrpcHTTP   map[*expr.RootExpr]*httpcodegen.Plan
 		jsonrpc       map[*expr.RootExpr]*jsonrpccodegen.Plan
-		grpc          *grpccodegen.PreparedPlan
+		grpc          map[*expr.RootExpr]*grpccodegen.Plan
 		transportDone bool
 		design        *designSnapshot
 	}
@@ -80,6 +80,11 @@ func (p *Plan) link() error {
 			}
 		}
 		if plan := p.jsonrpc[root]; plan != nil {
+			if err := plan.Link(); err != nil {
+				return err
+			}
+		}
+		if plan := p.grpc[root]; plan != nil {
 			if err := plan.Link(); err != nil {
 				return err
 			}

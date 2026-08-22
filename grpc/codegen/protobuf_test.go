@@ -186,6 +186,27 @@ func TestHasAnyType(t *testing.T) {
 	}
 }
 
+// TestHasAnyTypeStopsAtRecursiveTypes checks that a cycle does not hide an Any
+// field elsewhere in the same type.
+func TestHasAnyTypeStopsAtRecursiveTypes(t *testing.T) {
+	recursive := &expr.UserTypeExpr{TypeName: "Recursive", UID: "recursive"}
+	recursive.AttributeExpr = &expr.AttributeExpr{Type: &expr.Object{
+		&expr.NamedAttributeExpr{
+			Name:      "next",
+			Attribute: &expr.AttributeExpr{Type: recursive},
+		},
+		&expr.NamedAttributeExpr{
+			Name:      "data",
+			Attribute: &expr.AttributeExpr{Type: expr.Any},
+		},
+	}}
+	require.True(t, hasAnyType(recursive.Attribute()))
+
+	object := expr.AsObject(recursive.Attribute().Type)
+	*object = (*object)[:1]
+	require.False(t, hasAnyType(recursive.Attribute()))
+}
+
 func TestProtoBufMessageDefJSONNameOption(t *testing.T) {
 	attr := &expr.AttributeExpr{
 		Type: &expr.Object{
