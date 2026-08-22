@@ -697,7 +697,6 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	svc := sds.ServicesData.Get(httpSvc.ServiceExpr.Name)
 	transportService := *svc
 	transportService.PkgName = sds.ServiceImport(svc.Name).Name
-	transportService.ViewsPkg = sds.ViewImport(svc.Name).Name
 	svc = &transportService
 	scope := codegen.NewNameScope()
 	scope.Unique("c") // 'c' is reserved as the client's receiver name.
@@ -3145,6 +3144,20 @@ func upgradeParams(e *EndpointData, fn string) map[string]any {
 		"ViewedResult": e.Method.ViewedResult,
 		"Function":     fn,
 	}
+}
+
+// serviceHasViewedResult reports whether the selected endpoint sections
+// reference a projected result from the service views package.
+func serviceHasViewedResult(service *ServiceData, selected func(*EndpointData) bool) bool {
+	for _, endpoint := range service.Endpoints {
+		if selected != nil && !selected(endpoint) {
+			continue
+		}
+		if endpoint.Method.ViewedResult != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // NeedDialer returns true if at least one method in the defined services

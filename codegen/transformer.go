@@ -29,6 +29,9 @@ type (
 		Enter(att *expr.AttributeExpr) Attributor
 		// IsSumType reports whether unions use Goa's generated sum-type layout.
 		IsSumType() bool
+		// ValidatorName returns the package-level validation function for att and
+		// the selected result-type view.
+		ValidatorName(att *expr.AttributeExpr, view string) string
 	}
 
 	// AttributeContext contains properties which impacts the code generating
@@ -74,7 +77,38 @@ type (
 		// Hooks are optional generator specific extension points
 		// consulted by the transform engine. Nil selects the engine
 		// defaults.
-		Hooks *TransformHooks
+		Hooks   *TransformHooks
+		helpers map[TransformHelperID]TransformHelper
+		calls   *transformCallCursor
+	}
+
+	// TransformHelperID identifies one recursive helper selected by a transform
+	// plan. Its representation is deliberately private: generators may compare
+	// IDs or use them as map keys but cannot reconstruct them from generated
+	// names.
+	TransformHelperID struct {
+		plan  *TransformPlan
+		index int
+	}
+
+	// TransformHelper describes one recursive source-to-target operation
+	// retained by a transform plan. Render uses its ID and declaration for both
+	// calls and definitions.
+	TransformHelper struct {
+		// ID is the opaque identity owned by the transform plan.
+		ID TransformHelperID
+		// Source is the exact source attribute selected during planning.
+		Source *expr.AttributeExpr
+		// Target is the exact target attribute selected during planning.
+		Target *expr.AttributeExpr
+		// Required reports whether nil is rejected by the helper operation.
+		Required bool
+		// Occurrence is the one-based position of this helper operation in the
+		// transform plan's stable traversal.
+		Occurrence int
+		// Declaration is the canonical package-level function bound before render.
+		// Render rejects an unbound helper.
+		Declaration *NameDeclaration
 	}
 
 	// TransformFunctionData describes a helper function used to transform
@@ -95,10 +129,58 @@ type (
 	//    }
 	//
 	TransformFunctionData struct {
-		Name          string
-		ParamTypeRef  string
+		// ID is the retained helper identity used to render this definition.
+		ID TransformHelperID
+		// Declaration is the canonical package declaration for retained transforms.
+		// It is nil for the separate one-pass transform API.
+		Declaration *NameDeclaration
+		// Name is the generated helper name for staged legacy callers. It is empty
+		// when Declaration owns the final name.
+		Name string
+		// ParamTypeRef is the generated Go reference to the helper parameter type.
+		ParamTypeRef string
+		// ResultTypeRef is the generated Go reference to the helper result type.
 		ResultTypeRef string
-		Code          string
+		// Code is the helper body.
+		Code string
+	}
+
+	// TransformPlan retains the exact source-target operations and recursive
+	// helpers selected for one Go transformation. Generators build the plan
+	// before package names freeze and render it afterward with contexts that
+	// resolve the final declarations.
+	TransformPlan struct {
+		source     *expr.AttributeExpr
+		target     *expr.AttributeExpr
+		sourceCtx  *AttributeContext
+		targetCtx  *AttributeContext
+		helpers    []TransformHelper
+		operations []*transformOperation
+	}
+
+	// transformPair identifies one recursive source-target operation by its
+	// expression declarations rather than a provisional helper spelling.
+	transformPair struct {
+		source expr.DataType
+		target expr.DataType
+	}
+
+	// transformOperation retains the ordered helper calls made while rendering
+	// the top-level transform or one helper body.
+	transformOperation struct {
+		calls []transformCall
+	}
+
+	// transformCall binds one ordered call edge to the helper that renders its
+	// conversion.
+	transformCall struct {
+		helper TransformHelperID
+	}
+
+	// transformCallCursor tracks the retained calls consumed by one render.
+	transformCallCursor struct {
+		calls []transformCall
+		next  int
 	}
 )
 
@@ -161,7 +243,7 @@ func AppendHelpers(oldH, newH []*TransformFunctionData) []*TransformFunctionData
 	for _, h := range newH {
 		found := false
 		for _, h2 := range oldH {
-			if h.Name == h2.Name {
+			if sameTransformHelper(h, h2) {
 				found = true
 				break
 			}
@@ -171,6 +253,15 @@ func AppendHelpers(oldH, newH []*TransformFunctionData) []*TransformFunctionData
 		}
 	}
 	return oldH
+}
+
+// sameTransformHelper compares canonical declarations for catalog-backed
+// helpers and generated names for staged legacy helpers.
+func sameTransformHelper(left, right *TransformFunctionData) bool {
+	if left.Declaration != nil || right.Declaration != nil {
+		return left.ID == right.ID
+	}
+	return left.Name == right.Name
 }
 
 // MapDepth returns the level of nested maps. For unnested maps, it returns 0.
@@ -309,6 +400,12 @@ func (a *AttributeScope) Package(att *expr.AttributeExpr) string {
 		return loc.PackageName()
 	}
 	return a.pkg
+}
+
+// ValidatorName returns the deterministic validator convention used by
+// generators whose names are already isolated in a private transport scope.
+func (a *AttributeScope) ValidatorName(att *expr.AttributeExpr, view string) string {
+	return "Validate" + a.Name(att, "", false, true) + Goify(view, true)
 }
 
 // Enter returns a scope whose default qualifier follows att's explicit type

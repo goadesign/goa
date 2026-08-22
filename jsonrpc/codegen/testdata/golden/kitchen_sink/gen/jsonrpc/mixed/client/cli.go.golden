@@ -10,7 +10,8 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	mixed "kitchensink/mixed"
+
+	mixed "generated.local/gen/mixed"
 )
 
 // BuildLookupPayload builds the payload for the Mixed lookup endpoint from CLI

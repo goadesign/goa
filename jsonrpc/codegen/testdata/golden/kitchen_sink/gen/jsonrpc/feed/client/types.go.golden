@@ -8,7 +8,7 @@
 package client
 
 import (
-	feed "kitchensink/feed"
+	feed "generated.local/gen/feed"
 )
 
 // WatchRequestBody is the type of the "Feed" service "watch" endpoint HTTP

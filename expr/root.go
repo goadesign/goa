@@ -6,6 +6,7 @@ package expr
 import (
 	"fmt"
 	"maps"
+	"reflect"
 	"slices"
 	"sort"
 
@@ -217,7 +218,45 @@ func (r *RootExpr) Validate() error {
 	}
 
 	verr.Merge(r.validateRelocatedUserTypes())
+	verr.Merge(validateTypeMappings("conversion", r.Conversions))
+	verr.Merge(validateTypeMappings("creation", r.Creations))
 
+	return &verr
+}
+
+// validateTypeMappings rejects repeated declarations that would generate the
+// same method on one user type. The reflected type preserves package identity,
+// so equally named external types from different packages remain distinct.
+func validateTypeMappings(direction string, mappings []*TypeMap) *eval.ValidationErrors {
+	type mappingIdentity struct {
+		user     UserType
+		external reflect.Type
+	}
+	var verr eval.ValidationErrors
+	seen := make(map[mappingIdentity]struct{}, len(mappings))
+	for _, mapping := range mappings {
+		identity := mappingIdentity{
+			user:     mapping.User.Origin(),
+			external: reflect.TypeOf(mapping.External),
+		}
+		if _, ok := seen[identity]; ok {
+			if direction == "conversion" {
+				verr.Add(
+					mapping.User,
+					"conversion from user type %q to external type %q defined twice",
+					mapping.User.Name(), identity.external,
+				)
+			} else {
+				verr.Add(
+					mapping.User,
+					"creation from external type %q to user type %q defined twice",
+					identity.external, mapping.User.Name(),
+				)
+			}
+			continue
+		}
+		seen[identity] = struct{}{}
+	}
 	return &verr
 }
 

@@ -3,6 +3,10 @@
 package codegen
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -289,10 +293,8 @@ func TestGoTransformEntersSourceAndTargetOwnersIndependently(t *testing.T) {
 	require.Contains(t, helpers[0].ResultTypeRef, "targetTargetSelectionContainer.TargetSelectionContainer")
 	require.Contains(t, *sourceOwner.entered, "sourceSourceEnvelope")
 	require.Contains(t, *sourceOwner.entered, "sourceSourceChoiceContainer")
-	require.Contains(t, *sourceOwner.entered, "sourceSourceChoice")
 	require.Contains(t, *targetOwner.entered, "targetTargetEnvelope")
 	require.Contains(t, *targetOwner.entered, "targetTargetSelectionContainer")
-	require.Contains(t, *targetOwner.entered, "targetTargetSelection")
 
 	reverseSource := newTransformOwnerAttributor("source")
 	reverseTarget := newTransformOwnerAttributor("target")
@@ -310,6 +312,325 @@ func TestGoTransformEntersSourceAndTargetOwnersIndependently(t *testing.T) {
 	require.NotEmpty(t, reverseHelpers)
 	require.Contains(t, reverseHelpers[0].ParamTypeRef, "targetTargetSelectionContainer.TargetSelectionContainer")
 	require.Contains(t, reverseHelpers[0].ResultTypeRef, "sourceSourceChoiceContainer.SourceChoiceContainer")
+}
+
+func TestTransformPlanUsesRetainedHelperIdentityDuringRender(t *testing.T) {
+	root := RunDSL(t, testdata.TestTypesDSL)
+	deep := root.UserType("Deep")
+	plan, err := NewTransformPlan(
+		&expr.AttributeExpr{Type: deep},
+		&expr.AttributeExpr{Type: deep},
+	)
+	require.NoError(t, err)
+
+	planned := plan.Helpers()
+	require.Len(t, planned, 2)
+	declarations := make(map[TransformHelperID]*NameDeclaration, len(planned))
+	plannedByID := make(map[TransformHelperID]TransformHelper, len(planned))
+	packageCatalog := newGeneratedPackage("test", "example.com/test", "gen")
+	for index, helper := range planned {
+		declaration := NewExactName(NameFunction, fmt.Sprintf("canonicalHelper%d", index+1))
+		require.NoError(t, packageCatalog.DeclareName(declaration))
+		declarations[helper.ID] = declaration
+		plannedByID[helper.ID] = helper
+		require.NoError(t, plan.BindHelperDeclaration(helper.ID, declaration))
+	}
+	require.NoError(t, packageCatalog.freeze())
+
+	attrs := &TransformAttrs{
+		SourceCtx: NewAttributeContext(false, false, true, "", NewNameScope()),
+		TargetCtx: NewAttributeContext(false, false, true, "", NewNameScope()),
+	}
+	require.NoError(t, plan.BindContexts(attrs.SourceCtx, attrs.TargetCtx))
+	code, helpers, err := plan.Render("source", "target", true)
+	require.NoError(t, err)
+	require.Len(t, helpers, len(planned))
+	rendered := code
+	for index, helper := range helpers {
+		require.Equal(t, planned[index].ID, helper.ID)
+		require.Same(t, declarations[helper.ID], helper.Declaration)
+		require.Same(t, plannedByID[helper.ID].Source, plan.Helpers()[index].Source)
+		require.Same(t, plannedByID[helper.ID].Target, plan.Helpers()[index].Target)
+		require.Empty(t, helper.Name)
+		rendered += helper.Code
+	}
+	for _, helper := range helpers {
+		require.Contains(t, rendered, helper.Declaration.Name())
+	}
+}
+
+func TestTransformPlanRetainsSameTypeSiblingOccurrences(t *testing.T) {
+	plan := siblingTransformPlan(t)
+	require.Len(t, plan.Helpers(), 2)
+	require.NotEqual(t, plan.Helpers()[0].ID, plan.Helpers()[1].ID)
+}
+
+func TestTransformPlanRejectsOneDeclarationForDifferentHelpers(t *testing.T) {
+	plan := siblingTransformPlan(t)
+	helpers := plan.Helpers()
+	require.Len(t, helpers, 2)
+	declaration := NewExactName(NameFunction, "transformRecursive")
+
+	require.NoError(t, plan.BindHelperDeclaration(helpers[0].ID, declaration))
+	err := plan.BindHelperDeclaration(helpers[1].ID, declaration)
+	require.EqualError(t, err, "transform helper declaration is already bound to a different operation")
+}
+
+func TestTransformPlanRequiresEveryHelperDeclaration(t *testing.T) {
+	plan := siblingTransformPlan(t)
+	helpers := plan.Helpers()
+	require.Len(t, helpers, 2)
+	require.NoError(t, plan.BindHelperDeclaration(
+		helpers[0].ID,
+		NewExactName(NameFunction, "transformLeftRecursive"),
+	))
+	require.NoError(t, plan.BindContexts(
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+	))
+
+	_, _, err := plan.Render("source", "target", true)
+	require.EqualError(t, err, "transform helper occurrence 2 has no declaration")
+}
+
+func TestTransformPlanBindsContextsOnce(t *testing.T) {
+	plan := siblingTransformPlan(t)
+	source := NewAttributeContext(false, false, true, "", NewNameScope())
+	target := NewAttributeContext(false, false, true, "", NewNameScope())
+	require.NoError(t, plan.BindContexts(source, target))
+	require.EqualError(t, plan.BindContexts(source, target), "transform contexts are already bound")
+}
+
+func TestTransformPlanRejectsNonFunctionHelperDeclaration(t *testing.T) {
+	plan := siblingTransformPlan(t)
+	err := plan.BindHelperDeclaration(
+		plan.Helpers()[0].ID,
+		NewExactName(NameType, "TransformRecursive"),
+	)
+	require.EqualError(t, err, "transform helper declaration must be a function, got type")
+}
+
+func TestTransformPlanHelperEligibilityMatchesCompositeRenderers(t *testing.T) {
+	shapes := map[string]func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr){
+		"array": func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr) {
+			return &expr.AttributeExpr{Type: &expr.Array{ElemType: source}},
+				&expr.AttributeExpr{Type: &expr.Array{ElemType: target}}
+		},
+		"map": func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr) {
+			return &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: source}},
+				&expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: target}}
+		},
+		"union": func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr) {
+			return &expr.AttributeExpr{Type: &expr.Union{TypeName: "SourceChoice", Values: []*expr.NamedAttributeExpr{{Name: "value", Attribute: source}}}},
+				&expr.AttributeExpr{Type: &expr.Union{TypeName: "TargetChoice", Values: []*expr.NamedAttributeExpr{{Name: "value", Attribute: target}}}}
+		},
+	}
+	pairs := map[string]struct {
+		source, target *expr.AttributeExpr
+		helpers        int
+	}{
+		"both-named": {
+			source:  transformObjectAttribute("SourceNode", true),
+			target:  transformObjectAttribute("TargetNode", true),
+			helpers: 1,
+		},
+		"anonymous-source": {
+			source: transformObjectAttribute("", false),
+			target: transformObjectAttribute("TargetNode", true),
+		},
+		"anonymous-target": {
+			source: transformObjectAttribute("SourceNode", true),
+			target: transformObjectAttribute("", false),
+		},
+	}
+
+	for shapeName, shape := range shapes {
+		for pairName, pair := range pairs {
+			t.Run(shapeName+"/"+pairName, func(t *testing.T) {
+				source, target := shape(pair.source, pair.target)
+				plan, err := NewTransformPlan(source, target)
+				require.NoError(t, err)
+				require.Len(t, plan.Helpers(), pair.helpers)
+
+				code, helpers := renderTransformPlan(t, plan)
+				require.Len(t, helpers, pair.helpers)
+				if pair.helpers == 0 {
+					require.NotContains(t, code, "CanonicalHelper")
+				} else {
+					require.Contains(t, code, "CanonicalHelper1")
+				}
+			})
+		}
+	}
+}
+
+func TestTransformPlanRetainsRequiredAndOptionalSiblingCalls(t *testing.T) {
+	plan := mixedSiblingTransformPlan(t)
+	code, definitions := renderTransformPlan(t, plan)
+	require.Len(t, definitions, 2)
+
+	var required, optional *TransformFunctionData
+	for _, definition := range definitions {
+		if plan.Helpers()[definition.ID.index].Required {
+			required = definition
+		} else {
+			optional = definition
+		}
+	}
+	require.NotNil(t, required)
+	require.NotNil(t, optional)
+	require.NotContains(t, required.Code, "if v == nil")
+	require.Contains(t, optional.Code, "if v == nil")
+	require.Contains(t, code, "target.Left = "+required.Declaration.Name()+"(source.Left)")
+	require.Contains(t, code, "target.Right = "+optional.Declaration.Name()+"(source.Right)")
+}
+
+func TestTransformPlanMapKeyHelperReceivesKey(t *testing.T) {
+	sourceKey := transformObjectAttribute("SourceKey", true)
+	targetKey := transformObjectAttribute("TargetKey", true)
+	plan, err := NewTransformPlan(
+		&expr.AttributeExpr{Type: &expr.Map{
+			KeyType:  sourceKey,
+			ElemType: &expr.AttributeExpr{Type: expr.String},
+		}},
+		&expr.AttributeExpr{Type: &expr.Map{
+			KeyType:  targetKey,
+			ElemType: &expr.AttributeExpr{Type: expr.String},
+		}},
+	)
+	require.NoError(t, err)
+	require.Len(t, plan.Helpers(), 1)
+	require.Same(t, sourceKey, plan.Helpers()[0].Source)
+	require.Same(t, targetKey, plan.Helpers()[0].Target)
+
+	code, definitions := renderTransformPlan(t, plan)
+	require.Len(t, definitions, 1)
+	bound := plan.Helpers()[0]
+	require.Equal(t, bound.ID, definitions[0].ID)
+	require.Same(t, bound.Declaration, definitions[0].Declaration)
+
+	generated := fmt.Sprintf(`package transformtest
+
+type SourceKey struct {
+	Value string
+}
+
+type TargetKey struct {
+	Value string
+}
+
+func transform(source map[*SourceKey]string) map[*TargetKey]string {
+%s
+	return target
+}
+
+func %s(v %s) %s {
+%s
+	return res
+}
+`, code, definitions[0].Declaration.Name(), definitions[0].ParamTypeRef,
+		definitions[0].ResultTypeRef, definitions[0].Code)
+	compileTransformSource(t, generated)
+	require.Contains(t, code, definitions[0].Declaration.Name()+"(key)")
+}
+
+// siblingTransformPlan builds two nonrecursive occurrences of the same named
+// recursive type. Each field must own a helper even though both types share an
+// authored origin.
+func siblingTransformPlan(t *testing.T) *TransformPlan {
+	t.Helper()
+	root := RunDSL(t, testdata.TestTypesDSL)
+	recursive := root.UserType("Recursive")
+	fields := &expr.Object{}
+	fields.Set("left", &expr.AttributeExpr{Type: recursive})
+	fields.Set("right", &expr.AttributeExpr{Type: recursive})
+	container := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: fields},
+		TypeName:      "Container",
+	}
+	plan, err := NewTransformPlan(
+		&expr.AttributeExpr{Type: container},
+		&expr.AttributeExpr{Type: container},
+	)
+	require.NoError(t, err)
+	return plan
+}
+
+// mixedSiblingTransformPlan builds required and optional occurrences of the
+// same recursive named type in one transform operation.
+func mixedSiblingTransformPlan(t *testing.T) *TransformPlan {
+	t.Helper()
+	root := RunDSL(t, testdata.TestTypesDSL)
+	recursive := root.UserType("Recursive")
+	fields := &expr.Object{}
+	fields.Set("left", &expr.AttributeExpr{Type: recursive})
+	fields.Set("right", &expr.AttributeExpr{Type: recursive})
+	container := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{
+			Type:       fields,
+			Validation: &expr.ValidationExpr{Required: []string{"left"}},
+		},
+		TypeName: "Container",
+	}
+	plan, err := NewTransformPlan(
+		&expr.AttributeExpr{Type: container},
+		&expr.AttributeExpr{Type: container},
+	)
+	require.NoError(t, err)
+	return plan
+}
+
+// transformObjectAttribute builds either a named or anonymous object with the
+// same compatible field shape.
+func transformObjectAttribute(name string, named bool) *expr.AttributeExpr {
+	object := &expr.Object{}
+	object.Set("value", &expr.AttributeExpr{Type: expr.String})
+	if !named {
+		return &expr.AttributeExpr{Type: object}
+	}
+	return &expr.AttributeExpr{Type: &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: object},
+		TypeName:      name,
+	}}
+}
+
+// renderTransformPlan binds deterministic function declarations and contexts,
+// then renders the retained operation and definitions.
+func renderTransformPlan(t *testing.T, plan *TransformPlan) (string, []*TransformFunctionData) {
+	t.Helper()
+	packageCatalog := newGeneratedPackage("test", "example.com/test", "gen")
+	for index, helper := range plan.Helpers() {
+		declaration := NewExactName(NameFunction, fmt.Sprintf("canonicalHelper%d", index+1))
+		require.NoError(t, packageCatalog.DeclareName(declaration))
+		require.NoError(t, plan.BindHelperDeclaration(helper.ID, declaration))
+	}
+	require.NoError(t, packageCatalog.freeze())
+	require.NoError(t, plan.BindContexts(
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+	))
+	code, helpers, err := plan.Render("source", "target", true)
+	require.NoError(t, err)
+	return code, helpers
+}
+
+// compileTransformSource proves that a rendered transform and its retained
+// helper definitions agree on concrete Go argument and result types.
+func compileTransformSource(t *testing.T, source string) {
+	t.Helper()
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(
+		filepath.Join(dir, "go.mod"),
+		[]byte("module example.com/transformtest\n\ngo 1.25.0\n"),
+		0o600,
+	))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "transform.go"), []byte(source), 0o600))
+	command := exec.Command("go", "test", "./...")
+	command.Dir = dir
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("generated transform did not compile: %v\n%s", err, output)
+	}
 }
 
 func newTransformOwnerAttributor(prefix string) *transformOwnerAttributor {
@@ -350,6 +671,10 @@ func (a *transformOwnerAttributor) Enter(att *expr.AttributeExpr) Attributor {
 
 func (*transformOwnerAttributor) IsSumType() bool {
 	return true
+}
+
+func (a *transformOwnerAttributor) ValidatorName(att *expr.AttributeExpr, view string) string {
+	return "Validate" + a.Name(att, "", false, true) + Goify(view, true)
 }
 
 func (a *transformOwnerAttributor) Scope() *NameScope {

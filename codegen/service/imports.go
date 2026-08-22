@@ -5,6 +5,7 @@ package service
 
 import (
 	"path"
+	"slices"
 	"sort"
 	"strings"
 
@@ -26,6 +27,30 @@ type (
 		genpkg        string
 		outputPackage string
 		paths         map[string]struct{}
+		planning      bool
+		err           error
+	}
+
+	// retainedFileImports stores the complete package paths selected for one
+	// emitted file and their frozen import declarations after linking.
+	retainedFileImports struct {
+		paths []string
+		specs []*codegen.ImportSpec
+	}
+
+	// serviceFileImports keeps imports separate for files that emit different
+	// subsets of one service's types and runtime helpers.
+	serviceFileImports struct {
+		service                   retainedFileImports
+		endpoint                  retainedFileImports
+		client                    retainedFileImports
+		views                     retainedFileImports
+		serverInterceptors        retainedFileImports
+		clientInterceptors        retainedFileImports
+		interceptorWrappers       retainedFileImports
+		exampleService            retainedFileImports
+		exampleServerInterceptors retainedFileImports
+		exampleClientInterceptors retainedFileImports
 	}
 )
 
@@ -41,39 +66,6 @@ func (d *ServicesData) AttributeImports(outputPackage string, attributes ...*exp
 	return collector.imports()
 }
 
-// fileImports returns one canonical import per complete path used by a single
-// generated file. Explicit paths and attribute-derived paths are deduplicated
-// before their frozen aliases are materialized.
-func (d *ServicesData) fileImports(outputPackage string, paths []string, attributes ...*expr.AttributeExpr) []*codegen.ImportSpec {
-	collector := newImportCollector(d.aliases, d.generation.GenPkg(), outputPackage)
-	for _, importPath := range paths {
-		collector.addPath(importPath)
-	}
-	for _, attribute := range attributes {
-		collector.collectDefinition(attribute)
-	}
-	return collector.imports()
-}
-
-// serviceReferenceAttributes returns the method and error attributes whose
-// named declarations are referenced by service, endpoint, and client files.
-func serviceReferenceAttributes(service *expr.ServiceExpr) []*expr.AttributeExpr {
-	attributes := make([]*expr.AttributeExpr, 0, len(service.Methods)*4+len(service.Errors))
-	for _, serviceError := range service.Errors {
-		attributes = append(attributes, serviceError.AttributeExpr)
-	}
-	for _, method := range service.Methods {
-		attributes = append(attributes, method.Payload, method.StreamingPayload, method.Result)
-		if method.HasMixedResults() {
-			attributes = append(attributes, method.StreamingResult)
-		}
-		for _, methodError := range method.Errors {
-			attributes = append(attributes, methodError.AttributeExpr)
-		}
-	}
-	return attributes
-}
-
 // newImportAliases returns the generation-owned frozen alias binding used by
 // service analysis and rendering.
 func newImportAliases(root *expr.RootExpr, generation *codegen.Generation) (*importAliases, error) {
@@ -81,105 +73,6 @@ func newImportAliases(root *expr.RootExpr, generation *codegen.Generation) (*imp
 		return nil, rootMembershipError(root)
 	}
 	return &importAliases{generation: generation}, nil
-}
-
-// planImports registers every fixed package and every external or generated
-// package referenced by declarations selected for emission from root.
-func planImports(root *expr.RootExpr, inputs []plannedAttribute, generation *codegen.Generation) error {
-	fixed := []*codegen.ImportSpec{
-		codegen.SimpleImport("bytes"),
-		codegen.SimpleImport("context"),
-		codegen.SimpleImport("encoding/json"),
-		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport("io"),
-		codegen.SimpleImport("strings"),
-		codegen.SimpleImport("unicode/utf8"),
-		codegen.SimpleImport("goa.design/clue/log"),
-		codegen.GoaImport(""),
-		codegen.GoaImport("security"),
-	}
-	for _, spec := range fixed {
-		if err := generation.RequireImport(spec); err != nil {
-			return err
-		}
-	}
-	for _, service := range root.Services {
-		servicePath := servicePackagePath(generation.GenPkg(), service)
-		serviceName := strings.ToLower(codegen.Goify(service.Name, false))
-		if err := generation.ReserveGeneratedImport(codegen.NewImport(serviceName, servicePath)); err != nil {
-			return err
-		}
-		if err := generation.ReserveGeneratedImport(codegen.NewImport(serviceName+"views", servicePath+"/views")); err != nil {
-			return err
-		}
-	}
-	seen := make(map[expr.UserType]struct{})
-	for _, input := range inputs {
-		if err := planAttributeImports(input.attribute, generation, seen); err != nil {
-			return err
-		}
-	}
-	for _, typeMap := range append(append([]*expr.TypeMap(nil), root.Conversions...), root.Creations...) {
-		importPath, alias, err := getExternalTypeInfo(typeMap.External)
-		if err != nil {
-			return err
-		}
-		if err := generation.DeclareImport(codegen.NewImport(alias, importPath)); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// planAttributeImports recursively records every explicit generated location and
-// struct:field:type import reachable from attribute.
-func planAttributeImports(attribute *expr.AttributeExpr, generation *codegen.Generation, seen map[expr.UserType]struct{}) error {
-	if attribute == nil || attribute.Type == expr.Empty {
-		return nil
-	}
-	if _, spec := codegen.GetMetaType(attribute); spec != nil {
-		if err := generation.DeclareImport(spec); err != nil {
-			return err
-		}
-	}
-	switch actual := attribute.Type.(type) {
-	case expr.UserType:
-		if location := codegen.UserTypeLocation(actual); location != nil {
-			owner := generation.Package(path.Join(generation.GenPkg(), location.RelImportPath))
-			if err := generation.DeclareImport(codegen.NewImport(
-				strings.ToLower(codegen.Goify(path.Base(owner.ImportPath()), false)),
-				owner.ImportPath(),
-			)); err != nil {
-				return err
-			}
-		}
-		origin := actual.Origin()
-		if _, ok := seen[origin]; ok {
-			return nil
-		}
-		seen[origin] = struct{}{}
-		return planAttributeImports(actual.Attribute(), generation, seen)
-	case *expr.Object:
-		for _, named := range *actual {
-			if err := planAttributeImports(named.Attribute, generation, seen); err != nil {
-				return err
-			}
-		}
-	case *expr.Array:
-		return planAttributeImports(actual.ElemType, generation, seen)
-	case *expr.Map:
-		if err := planAttributeImports(actual.KeyType, generation, seen); err != nil {
-			return err
-		}
-		return planAttributeImports(actual.ElemType, generation, seen)
-	case *expr.Union:
-		for _, named := range actual.Values {
-			if err := planAttributeImports(named.Attribute, generation, seen); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 // name returns the frozen qualifier for importPath and panics when rendering
@@ -201,6 +94,19 @@ func newImportCollector(aliases *importAliases, genpkg, outputPackage string) *i
 		genpkg:        genpkg,
 		outputPackage: outputPackage,
 		paths:         make(map[string]struct{}),
+	}
+}
+
+// newPlanningImportCollector creates the same path walker used by rendering
+// and additionally declares each discovered metadata or generated-package
+// preference in the generation alias catalog.
+func newPlanningImportCollector(generation *codegen.Generation, outputPackage string) *importCollector {
+	return &importCollector{
+		aliases:       &importAliases{generation: generation},
+		genpkg:        generation.GenPkg(),
+		outputPackage: outputPackage,
+		paths:         make(map[string]struct{}),
+		planning:      true,
 	}
 }
 
@@ -267,6 +173,12 @@ func (c *importCollector) addLocation(location *codegen.Location) {
 	importPath := c.aliases.generation.Package(path.Join(c.genpkg, location.RelImportPath)).ImportPath()
 	if importPath != c.outputPackage {
 		c.paths[importPath] = struct{}{}
+		if c.planning && c.err == nil {
+			c.err = c.aliases.generation.ReserveGeneratedImport(codegen.NewImport(
+				strings.ToLower(codegen.Goify(path.Base(importPath), false)),
+				importPath,
+			))
+		}
 	}
 }
 
@@ -276,7 +188,418 @@ func (c *importCollector) addMetaImport(attribute *expr.AttributeExpr) {
 	_, spec := codegen.GetMetaType(attribute)
 	if spec != nil && spec.Path != c.outputPackage {
 		c.paths[spec.Path] = struct{}{}
+		if c.planning && c.err == nil {
+			c.err = c.aliases.generation.DeclareImport(spec)
+		}
 	}
+}
+
+// retainFileImports collects one emitted file's exact fixed, generated, type
+// definition, and recursive-reference package paths before names freeze.
+func retainFileImports(
+	generation *codegen.Generation,
+	outputPackage string,
+	fixed, generated []*codegen.ImportSpec,
+	definitions, references []*expr.AttributeExpr,
+) (retainedFileImports, error) {
+	collector := newPlanningImportCollector(generation, outputPackage)
+	for _, spec := range fixed {
+		collector.addPath(spec.Path)
+		if err := generation.RequireImport(spec); err != nil {
+			return retainedFileImports{}, err
+		}
+	}
+	for _, spec := range generated {
+		collector.addPath(spec.Path)
+		if err := generation.ReserveGeneratedImport(spec); err != nil {
+			return retainedFileImports{}, err
+		}
+	}
+	for _, attribute := range definitions {
+		collector.collectDefinition(attribute)
+	}
+	seen := make(map[expr.UserType]struct{})
+	for _, attribute := range references {
+		collector.collectReferences(attribute, seen)
+	}
+	if collector.err != nil {
+		return retainedFileImports{}, collector.err
+	}
+	paths := make([]string, 0, len(collector.paths))
+	for importPath := range collector.paths {
+		paths = append(paths, importPath)
+	}
+	sort.Strings(paths)
+	return retainedFileImports{paths: paths}, nil
+}
+
+// linkFileImports resolves one retained path list through the frozen
+// Generation alias catalog without traversing service attributes.
+func linkFileImports(imports *retainedFileImports, generation *codegen.Generation) {
+	imports.specs = make([]*codegen.ImportSpec, len(imports.paths))
+	for index, importPath := range imports.paths {
+		imports.specs[index] = generation.Import(importPath)
+	}
+}
+
+// addRetainedImportPath adds one explicitly declared package to a file's
+// retained path set while preserving deterministic order.
+func addRetainedImportPath(imports *retainedFileImports, importPath string) {
+	index, found := slices.BinarySearch(imports.paths, importPath)
+	if found {
+		return
+	}
+	imports.paths = slices.Insert(imports.paths, index, importPath)
+}
+
+// planServiceFileImports selects the package paths used by each concrete file
+// emitted for one retained service and declares their alias preferences before
+// generation freezes.
+func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generation *codegen.Generation) error {
+	service := facts.service
+	servicePath := servicePackagePath(generation.GenPkg(), service)
+	serviceImport := codegen.NewImport(strings.ToLower(codegen.Goify(service.Name, false)), servicePath)
+	viewsImport := codegen.NewImport(serviceImport.Name+"views", servicePath+"/views")
+	facts.generatedTypeImports = make(map[*codegen.TypeDeclaration]*retainedFileImports)
+
+	definitions := serviceDefinitionAttributes(facts)
+	serviceDefinitions := append([]*expr.AttributeExpr(nil), facts.referenceAttributes...)
+	serviceDefinitions = append(serviceDefinitions, definitions...)
+	viewDefinitions := viewDefinitionAttributes(facts)
+
+	contextImport := codegen.SimpleImport("context")
+	ioImport := codegen.SimpleImport("io")
+	goaImport := codegen.GoaImport("")
+	securityImport := codegen.GoaImport("security")
+	logImport := codegen.SimpleImport("goa.design/clue/log")
+
+	serviceFixed := []*codegen.ImportSpec{contextImport}
+	if serviceUsesIO(facts) {
+		serviceFixed = append(serviceFixed, ioImport)
+	}
+	if serviceUsesGoaErrors(facts) {
+		serviceFixed = append(serviceFixed, goaImport)
+	}
+	if serviceHasSchemes(facts) {
+		serviceFixed = append(serviceFixed, securityImport)
+	}
+	var serviceGenerated []*codegen.ImportSpec
+	if len(facts.projections) > 0 {
+		serviceGenerated = append(serviceGenerated, viewsImport)
+	}
+	var err error
+	facts.imports.service, err = retainFileImports(
+		generation, servicePath, serviceFixed, serviceGenerated, serviceDefinitions, nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	endpointFixed := []*codegen.ImportSpec{contextImport, goaImport}
+	if serviceUsesIO(facts) {
+		endpointFixed = append(endpointFixed, ioImport)
+	}
+	if serviceHasSchemes(facts) {
+		endpointFixed = append(endpointFixed, securityImport)
+	}
+	facts.imports.endpoint, err = retainFileImports(
+		generation, servicePath, endpointFixed, nil, facts.referenceAttributes, nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	clientFixed := []*codegen.ImportSpec{contextImport, goaImport}
+	if serviceUsesIO(facts) {
+		clientFixed = append(clientFixed, ioImport)
+	}
+	facts.imports.client, err = retainFileImports(
+		generation, servicePath, clientFixed, nil, facts.referenceAttributes, nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	if len(facts.projections) > 0 {
+		viewsFixed := []*codegen.ImportSpec{goaImport, codegen.SimpleImport("unicode/utf8")}
+		if len(facts.viewUnions) > 0 {
+			viewsFixed = append(viewsFixed,
+				codegen.SimpleImport("bytes"),
+				codegen.SimpleImport("encoding/json"),
+				codegen.SimpleImport("fmt"),
+			)
+		}
+		facts.imports.views, err = retainFileImports(
+			generation, servicePath+"/views", viewsFixed, nil, viewDefinitions, nil,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	interceptorFixed := []*codegen.ImportSpec{contextImport, goaImport}
+	if len(facts.serverInterceptors) > 0 {
+		facts.imports.serverInterceptors, err = retainFileImports(
+			generation, servicePath, interceptorFixed, nil, nil, nil,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	if len(facts.clientInterceptors) > 0 {
+		facts.imports.clientInterceptors, err = retainFileImports(
+			generation, servicePath, interceptorFixed, nil, nil, nil,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	if len(facts.serverInterceptors) > 0 || len(facts.clientInterceptors) > 0 {
+		facts.imports.interceptorWrappers, err = retainFileImports(
+			generation, servicePath, interceptorFixed, nil, nil, nil,
+		)
+		if err != nil {
+			return err
+		}
+	}
+
+	exampleFixed := []*codegen.ImportSpec{contextImport, logImport}
+	if serviceUsesIO(facts) {
+		exampleFixed = append(exampleFixed, ioImport)
+	}
+	if serviceUsesResponseBody(facts) {
+		exampleFixed = append(exampleFixed, codegen.SimpleImport("strings"))
+	}
+	if serviceHasSchemes(facts) {
+		exampleFixed = append(exampleFixed, codegen.SimpleImport("fmt"), securityImport)
+	}
+	facts.imports.exampleService, err = retainFileImports(
+		generation, path.Dir(generation.GenPkg()), exampleFixed,
+		[]*codegen.ImportSpec{serviceImport}, facts.referenceAttributes, nil,
+	)
+	if err != nil {
+		return err
+	}
+
+	exampleInterceptorFixed := []*codegen.ImportSpec{contextImport, logImport, goaImport}
+	if len(facts.serverInterceptors) > 0 {
+		facts.imports.exampleServerInterceptors, err = retainFileImports(
+			generation, path.Join(path.Dir(generation.GenPkg()), "interceptors"),
+			exampleInterceptorFixed, []*codegen.ImportSpec{serviceImport}, nil, nil,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	if len(facts.clientInterceptors) > 0 {
+		facts.imports.exampleClientInterceptors, err = retainFileImports(
+			generation, path.Join(path.Dir(generation.GenPkg()), "interceptors"),
+			exampleInterceptorFixed, []*codegen.ImportSpec{serviceImport}, nil, nil,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	for _, userType := range append(append([]*userTypeFacts(nil), facts.userTypes...), facts.errorTypes...) {
+		if userType.location == nil {
+			continue
+		}
+		userType.imports, err = retainFileImports(
+			generation,
+			userType.declaration.PackagePath(),
+			nil,
+			nil,
+			[]*expr.AttributeExpr{userType.userType.Attribute()},
+			nil,
+		)
+		if err != nil {
+			return err
+		}
+		facts.generatedTypeImports[userType.declaration] = &userType.imports
+	}
+	for _, method := range facts.methods {
+		attributes := []*expr.AttributeExpr{method.Payload, method.StreamingPayload, method.Result}
+		if method.HasMixedResults() {
+			attributes = append(attributes, method.StreamingResult)
+		}
+		for _, attribute := range attributes {
+			if attribute == nil || codegen.UserTypeLocation(attribute.Type) == nil {
+				continue
+			}
+			userType, ok := attribute.Type.(expr.UserType)
+			if !ok {
+				continue
+			}
+			if _, normalized := generation.NormalizedMethodType(userType); !normalized {
+				continue
+			}
+			owner := generation.Package(generatedPackagePath(
+				generation.GenPkg(), facts.service, codegen.UserTypeLocation(userType),
+			))
+			declaration, err := owner.UserType(rootTypes.canonical(userType))
+			if err != nil {
+				return err
+			}
+			if _, exists := facts.generatedTypeImports[declaration]; exists {
+				continue
+			}
+			retained, err := retainFileImports(
+				generation,
+				declaration.PackagePath(),
+				nil,
+				nil,
+				[]*expr.AttributeExpr{userType.Attribute()},
+				nil,
+			)
+			if err != nil {
+				return err
+			}
+			facts.generatedTypeImports[declaration] = &retained
+		}
+	}
+	unionFixed := []*codegen.ImportSpec{
+		codegen.SimpleImport("bytes"),
+		codegen.SimpleImport("encoding/json"),
+		codegen.SimpleImport("fmt"),
+		goaImport,
+	}
+	for _, union := range facts.unions {
+		definitions := make([]*expr.AttributeExpr, 0, len(union.union.Values)*2)
+		for _, branch := range union.union.Values {
+			definitions = append(definitions, branch.Attribute)
+			if userType, ok := branch.Attribute.Type.(expr.UserType); ok {
+				definitions = append(definitions, userType.Attribute())
+			}
+		}
+		union.imports, err = retainFileImports(
+			generation,
+			union.declaration.PackagePath(),
+			unionFixed,
+			nil,
+			definitions,
+			nil,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// linkServiceFileImports resolves every concrete file contribution after the
+// generation alias catalog freezes.
+func linkServiceFileImports(facts *serviceFacts, generation *codegen.Generation) {
+	imports := []*retainedFileImports{
+		&facts.imports.service,
+		&facts.imports.endpoint,
+		&facts.imports.client,
+		&facts.imports.views,
+		&facts.imports.serverInterceptors,
+		&facts.imports.clientInterceptors,
+		&facts.imports.interceptorWrappers,
+		&facts.imports.exampleService,
+		&facts.imports.exampleServerInterceptors,
+		&facts.imports.exampleClientInterceptors,
+	}
+	for _, retained := range imports {
+		linkFileImports(retained, generation)
+	}
+	for _, userType := range append(append([]*userTypeFacts(nil), facts.userTypes...), facts.errorTypes...) {
+		linkFileImports(&userType.imports, generation)
+	}
+	for _, union := range facts.unions {
+		linkFileImports(&union.imports, generation)
+	}
+	for _, imports := range facts.generatedTypeImports {
+		linkFileImports(imports, generation)
+	}
+}
+
+// serviceDefinitionAttributes returns the exact named definitions written to
+// service.go in addition to method references.
+func serviceDefinitionAttributes(facts *serviceFacts) []*expr.AttributeExpr {
+	var definitions []*expr.AttributeExpr
+	for _, method := range facts.methods {
+		attributes := []*expr.AttributeExpr{method.Payload, method.StreamingPayload, method.Result}
+		if method.HasMixedResults() {
+			attributes = append(attributes, method.StreamingResult)
+		}
+		for _, attribute := range attributes {
+			if attribute == nil || codegen.UserTypeLocation(attribute.Type) != nil {
+				continue
+			}
+			if userType, ok := attribute.Type.(expr.UserType); ok {
+				definitions = append(definitions, userType.Attribute())
+			}
+		}
+	}
+	for _, userType := range append(append([]*userTypeFacts(nil), facts.userTypes...), facts.errorTypes...) {
+		if userType.location == nil {
+			definitions = append(definitions, userType.userType.Attribute())
+		}
+	}
+	return definitions
+}
+
+// viewDefinitionAttributes returns each projected definition emitted in the
+// service views file exactly once by expression identity.
+func viewDefinitionAttributes(facts *serviceFacts) []*expr.AttributeExpr {
+	seen := make(map[*expr.AttributeExpr]struct{})
+	var definitions []*expr.AttributeExpr
+	for _, projection := range facts.projections {
+		for _, projected := range projection.types {
+			attribute := projected.pair.projectedAttribute
+			if userType, ok := attribute.Type.(expr.UserType); ok {
+				attribute = userType.Attribute()
+			}
+			if _, ok := seen[attribute]; ok {
+				continue
+			}
+			seen[attribute] = struct{}{}
+			definitions = append(definitions, attribute)
+		}
+	}
+	return definitions
+}
+
+// serviceUsesIO reports whether generated method signatures expose a raw
+// request or response body stream.
+func serviceUsesIO(facts *serviceFacts) bool {
+	for _, method := range facts.methodByExpr {
+		if method.skipRequestBodyEncodeDecode || method.skipResponseBodyEncodeDecode {
+			return true
+		}
+	}
+	return false
+}
+
+// serviceUsesResponseBody reports whether the starter implementation creates
+// a raw response body from a string reader.
+func serviceUsesResponseBody(facts *serviceFacts) bool {
+	for _, method := range facts.methodByExpr {
+		if method.skipResponseBodyEncodeDecode {
+			return true
+		}
+	}
+	return false
+}
+
+// serviceUsesGoaErrors reports whether service.go emits a constructor that
+// calls the Goa service-error runtime.
+func serviceUsesGoaErrors(facts *serviceFacts) bool {
+	for _, serviceError := range facts.errors {
+		if serviceError.Type == expr.ErrorResult {
+			return true
+		}
+	}
+	for _, method := range facts.methods {
+		for _, methodError := range method.Errors {
+			if methodError.Type == expr.ErrorResult {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // imports returns a deterministic snapshot of the packages collected for one

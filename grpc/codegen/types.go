@@ -98,8 +98,10 @@ func typesFile(svc *expr.GRPCServiceExpr, services *ServicesData, svr bool) *cod
 			{Path: "unicode/utf8"},
 			codegen.GoaImport(""),
 			services.ServiceImport(svc.Name()),
-			services.ViewImport(svc.Name()),
 			services.PackageImport(path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
+		}
+		if serviceHasViewedResult(sd) {
+			imports = append(imports, services.ViewImport(svc.Name()))
 		}
 		// Add imports if Any type is used
 		if usesAnyType(svc.GRPCEndpoints, true) {

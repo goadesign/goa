@@ -63,7 +63,6 @@ func serverFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
 		services.ServiceImport(svc.Name()),
-		services.ViewImport(svc.Name()),
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),
@@ -139,7 +138,9 @@ func ServerEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
 		services.ServiceImport(svc.Name()),
-		services.ViewImport(svc.Name()),
+	}
+	if serviceHasViewedResult(data, nil) {
+		imports = append(imports, services.ViewImport(svc.Name()))
 	}
 	sections := []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
 

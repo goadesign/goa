@@ -1,4 +1,4 @@
-// Baz is the payload type of the MultiplePkgPathMethod service B method.
+// Baz is a generated service type.
 type Baz struct {
 	IntField *int
 }

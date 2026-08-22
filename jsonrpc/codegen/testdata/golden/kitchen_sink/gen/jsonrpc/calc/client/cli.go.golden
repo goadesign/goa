@@ -10,7 +10,8 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	calc "kitchensink/calc"
+
+	calc "generated.local/gen/calc"
 )
 
 // BuildAddPayload builds the payload for the Calc add endpoint from CLI flags.

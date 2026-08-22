@@ -66,7 +66,7 @@ func TestNameDeclarationOwnsOnePackageNamespace(t *testing.T) {
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	types := mustClaimTestPackage(t, generation, "generated.local/gen/types")
 	exact := NewExactName(NameType, "Build")
-	preferred := NewPreferredName(NameFunction, "Build", testNameOrder{value: "build"})
+	preferred := NewPreferredName(NameFunction, "Build", ExportedName, testNameOrder{value: "build"})
 
 	require.NoError(t, types.DeclareName(exact))
 	require.NoError(t, types.DeclareName(exact))
@@ -89,6 +89,28 @@ func TestNameDeclarationOwnsOnePackageNamespace(t *testing.T) {
 	}
 }
 
+// TestDependentNameUsesFrozenBase verifies that companion declarations derive
+// their spelling from the exact final name selected for their base declaration.
+func TestDependentNameUsesFrozenBase(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	pkg := mustClaimTestPackage(t, generation, "generated.local/gen/types")
+	require.NoError(t, pkg.DeclareName(NewExactName(NameType, "Result")))
+	base := NewPreferredName(NameType, "Result", ExportedName, testNameOrder{value: "base"})
+	require.NoError(t, pkg.DeclareName(base))
+	validator, err := pkg.DeclareDependentName(
+		NameFunction,
+		base,
+		"Validate",
+		"",
+		testNameOrder{value: "validator"},
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, "Result2", base.Name())
+	require.Equal(t, "ValidateResult2", validator.Name())
+}
+
 // TestNameDeclarationRejectsUnownedPackageAccess verifies that only a package
 // catalog can make internal declaration ownership available to typed records.
 func TestNameDeclarationRejectsUnownedPackageAccess(t *testing.T) {
@@ -104,7 +126,7 @@ func TestNameDeclarationRejectsEmptyPreferredName(t *testing.T) {
 		declaration *NameDeclaration
 	}{
 		{"exact", NewExactName(NameType, "")},
-		{"preferred", NewPreferredName(NameFunction, "", testNameOrder{value: "empty"})},
+		{"preferred", NewPreferredName(NameFunction, "", ExportedName, testNameOrder{value: "empty"})},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -138,14 +160,14 @@ func TestNameDeclarationRejectsInvalidKind(t *testing.T) {
 		{
 			"preferred",
 			func(*testing.T, *GeneratedPackage) *NameDeclaration {
-				return NewPreferredName(NameVariable+1, "Value", testNameOrder{value: "invalid"})
+				return NewPreferredName(NameVariable+1, "Value", ExportedName, testNameOrder{value: "invalid"})
 			},
 			0,
 		},
 		{
 			"dependent",
 			func(t *testing.T, pkg *GeneratedPackage) *NameDeclaration {
-				base := NewPreferredName(NameType, "Value", testNameOrder{value: "base"})
+				base := NewPreferredName(NameType, "Value", ExportedName, testNameOrder{value: "base"})
 				require.NoError(t, pkg.DeclareName(base))
 				return newDependentName(0, base, "New", "", testNameOrder{value: "dependent"})
 			},
@@ -172,8 +194,8 @@ func TestNameDeclarationPreferredOrder(t *testing.T) {
 	declare := func(reverse bool) (string, string) {
 		generation := mustTestGeneration(t, "generated.local/gen", nil)
 		pkg := mustClaimTestPackage(t, generation, "generated.local/gen/types")
-		first := NewPreferredName(NameFunction, "Build", testNameOrder{value: "a"})
-		second := NewPreferredName(NameConstant, "Build", testNameOrder{value: "b"})
+		first := NewPreferredName(NameFunction, "Build", ExportedName, testNameOrder{value: "a"})
+		second := NewPreferredName(NameConstant, "Build", ExportedName, testNameOrder{value: "b"})
 		declarations := []*NameDeclaration{first, second}
 		if reverse {
 			declarations[0], declarations[1] = declarations[1], declarations[0]
@@ -197,14 +219,33 @@ func TestNameDeclarationPreferredOrder(t *testing.T) {
 	require.NoError(t, pkg.DeclareName(NewPreferredName(
 		NameFunction,
 		"Build",
+		ExportedName,
 		testNameOrder{value: "same"},
 	)))
 	err := pkg.DeclareName(NewPreferredName(
 		NameVariable,
 		"Build",
+		ExportedName,
 		testNameOrder{value: "same"},
 	))
 	require.ErrorContains(t, err, "cannot deterministically order")
+}
+
+// TestPreferredNameVisibility verifies preferred declarations preserve their
+// requested package visibility while sharing deterministic collision handling.
+func TestPreferredNameVisibility(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	pkg := mustClaimTestPackage(t, generation, "generated.local/gen/types")
+	exported := NewPreferredName(NameFunction, "build value", ExportedName, testNameOrder{value: "exported"})
+	privateFirst := NewPreferredName(NameFunction, "Build Value", UnexportedName, testNameOrder{value: "private-a"})
+	privateSecond := NewPreferredName(NameFunction, "build value", UnexportedName, testNameOrder{value: "private-b"})
+	require.NoError(t, pkg.DeclareName(exported))
+	require.NoError(t, pkg.DeclareName(privateSecond))
+	require.NoError(t, pkg.DeclareName(privateFirst))
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, "BuildValue", exported.Name())
+	require.Equal(t, "buildValue", privateFirst.Name())
+	require.Equal(t, "buildValue2", privateSecond.Name())
 }
 
 // TestNameDeclarationOrdersConcreteFamilies verifies that unrelated named
@@ -213,8 +254,8 @@ func TestNameDeclarationOrdersConcreteFamilies(t *testing.T) {
 	declare := func(reverse bool) (string, string) {
 		generation := mustTestGeneration(t, "generated.local/gen", nil)
 		pkg := mustClaimTestPackage(t, generation, "generated.local/gen/types")
-		alpha := NewPreferredName(NameFunction, "Build", alphaTestNameOrder("same"))
-		omega := NewPreferredName(NameConstant, "Build", omegaTestNameOrder("same"))
+		alpha := NewPreferredName(NameFunction, "Build", ExportedName, alphaTestNameOrder("same"))
+		omega := NewPreferredName(NameConstant, "Build", ExportedName, omegaTestNameOrder("same"))
 		declarations := []*NameDeclaration{alpha, omega}
 		if reverse {
 			declarations[0], declarations[1] = declarations[1], declarations[0]
@@ -252,7 +293,7 @@ func TestNameDeclarationRejectsUnstableOrderTypes(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			generation := mustTestGeneration(t, "generated.local/gen", nil)
 			pkg := mustClaimTestPackage(t, generation, "generated.local/gen/types")
-			declaration := NewPreferredName(NameFunction, "Build", test.order)
+			declaration := NewPreferredName(NameFunction, "Build", ExportedName, test.order)
 			err := pkg.DeclareName(declaration)
 			require.ErrorContains(t, err, "stable concrete named value type")
 		})
@@ -264,7 +305,7 @@ func TestNameDeclarationRejectsUnstableOrderTypes(t *testing.T) {
 func TestNameDeclarationRejectsDependentOrderTie(t *testing.T) {
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	pkg := mustClaimTestPackage(t, generation, "generated.local/gen/types")
-	base := NewPreferredName(NameType, "Value", testNameOrder{value: "base"})
+	base := NewPreferredName(NameType, "Value", ExportedName, testNameOrder{value: "base"})
 	first := newDependentName(NameFunction, base, "New", "First", testNameOrder{value: "same"})
 	second := newDependentName(NameFunction, base, "New", "Second", testNameOrder{value: "same"})
 	require.NoError(t, pkg.DeclareName(base))
@@ -279,7 +320,7 @@ func TestNameDeclarationRejectsInvalidDependentOwners(t *testing.T) {
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	first := mustClaimTestPackage(t, generation, "generated.local/gen/first")
 	second := mustClaimTestPackage(t, generation, "generated.local/gen/second")
-	unowned := NewPreferredName(NameType, "Value", testNameOrder{value: "unowned"})
+	unowned := NewPreferredName(NameType, "Value", ExportedName, testNameOrder{value: "unowned"})
 	dependent := newDependentName(NameFunction, unowned, "New", "", testNameOrder{value: "dependent"})
 	err := first.DeclareName(dependent)
 	require.ErrorContains(t, err, "base declaration is not owned")
@@ -370,6 +411,52 @@ func TestGeneratedOutputPathRejectsBackslashes(t *testing.T) {
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	_, err = generation.ClaimPackage(`generated.local\gen\types`)
 	require.ErrorContains(t, err, "contains a backslash")
+}
+
+// TestExplicitOutputPackageClaims verifies that packages outside GenPkg use
+// the same canonical import and portable output ownership as ordinary claims.
+func TestExplicitOutputPackageClaims(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	starter, err := generation.ClaimOutputPackage("generated.local", ".")
+	require.NoError(t, err)
+	reused, err := generation.ClaimOutputPackage("generated.local", "work/..")
+	require.NoError(t, err)
+	require.Same(t, starter, reused)
+	require.Equal(t, "generated.local", starter.ImportPath())
+	require.Equal(t, ".", starter.OutputDirectory())
+	require.Same(t, starter, generation.Package("generated.local"))
+
+	_, err = generation.ClaimOutputPackage("generated.local", "starter")
+	require.ErrorContains(t, err, "already mapped")
+	_, err = generation.ClaimOutputPackage("generated.local/../generated.local", ".")
+	require.ErrorContains(t, err, "normalize to import path")
+	require.NoError(t, generation.Freeze())
+	_, err = generation.ClaimOutputPackage("generated.local/late", "late")
+	require.ErrorContains(t, err, "after generation freeze")
+}
+
+// TestExplicitOutputPackageRejectsInvalidDirectories verifies that explicit
+// output packages cannot escape the generation working directory or rely on
+// host-specific path separators.
+func TestExplicitOutputPackageRejectsInvalidDirectories(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	for _, directory := range []string{"../starter", "/starter", `starter\service`} {
+		_, err := generation.ClaimOutputPackage("generated.local/starter", directory)
+		require.Error(t, err, directory)
+	}
+}
+
+// TestExplicitOutputPackageSharesOrdinaryOwnership verifies that ordinary and
+// explicit claims cannot assign one import path or portable directory twice.
+func TestExplicitOutputPackageSharesOrdinaryOwnership(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	ordinary := mustClaimTestPackage(t, generation, "generated.local/gen/service")
+	reused, err := generation.ClaimOutputPackage("generated.local/gen/service", ordinary.OutputDirectory())
+	require.NoError(t, err)
+	require.Same(t, ordinary, reused)
+
+	_, err = generation.ClaimOutputPackage("generated.local/other", "gen/SERVICE")
+	require.ErrorContains(t, err, "case-insensitive filesystem")
 }
 
 // TestGenerationRejectsImplicitLocalRoots verifies that only the exact local

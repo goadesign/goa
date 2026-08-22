@@ -506,12 +506,46 @@ func (sd *ServiceData) HasStreamingEndpoint() bool {
 	return false
 }
 
+// serviceHasViewedResult reports whether any generated transport section
+// references the service views package through a viewed method result.
+func serviceHasViewedResult(service *ServiceData) bool {
+	for _, endpoint := range service.Endpoints {
+		if endpoint.Method.ViewedResult != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// serviceHasUnaryViewedResult reports whether client/encode_decode.go emits a
+// response decoder that constructs and validates a viewed unary result.
+func serviceHasUnaryViewedResult(service *ServiceData) bool {
+	for _, endpoint := range service.Endpoints {
+		if endpoint.ClientStream == nil && endpoint.Method.ViewedResult != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// serviceHasViewedClientStream reports whether client.go emits a receive
+// method that constructs and validates a viewed streaming result.
+func serviceHasViewedClientStream(service *ServiceData) bool {
+	for _, endpoint := range service.Endpoints {
+		if endpoint.ClientStream != nil &&
+			endpoint.ClientStream.RecvConvert != nil &&
+			endpoint.Method.ViewedResult != nil {
+			return true
+		}
+	}
+	return false
+}
+
 // analyze creates the data necessary to render the code of the given service.
 func (d *ServicesData) analyze(gs *expr.GRPCServiceExpr) *ServiceData {
 	svc := d.ServicesData.Get(gs.Name())
 	transportService := *svc
 	transportService.PkgName = d.ServiceImport(svc.Name).Name
-	transportService.ViewsPkg = d.ViewImport(svc.Name).Name
 	svc = &transportService
 	scope := codegen.NewNameScope()
 	protobufPath := path.Join(d.GenPkg(), "grpc", svc.PathName, pbPkgName)

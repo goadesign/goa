@@ -3,7 +3,7 @@
 func NewMethodBodyInlineMapUserMapKeyTypeElemType(body map[*KeyType]*ElemType) map[*servicebodyinlinemapuser.KeyType]*servicebodyinlinemapuser.ElemType {
 	v := make(map[*servicebodyinlinemapuser.KeyType]*servicebodyinlinemapuser.ElemType, len(body))
 	for key, val := range body {
-		tk := unmarshalKeyTypeToServicebodyinlinemapuserKeyType(val)
+		tk := unmarshalKeyTypeToServicebodyinlinemapuserKeyType(key)
 		if val == nil {
 			v[tk] = nil
 			continue

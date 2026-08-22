@@ -2,8 +2,8 @@ package kitchensink
 
 import (
 	"context"
-	feed "kitchensink/feed"
 
+	feed "generated.local/gen/feed"
 	"goa.design/clue/log"
 )
 

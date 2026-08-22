@@ -12,5 +12,5 @@ func (e {{ .Ref }}) ErrorName() string {
 
 // GoaErrorName returns the error name.
 func (e {{ .Ref }}) GoaErrorName() string {
-	return {{ errorName . }}
+	return {{ .ErrorName }}
 }

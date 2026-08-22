@@ -34,9 +34,9 @@ func TestExampleServiceFiles(t *testing.T) {
 		for _, c := range cases {
 			t.Run(c.Name, func(t *testing.T) {
 				root := codegen.RunDSL(t, c.DSL)
-				services := mustServicesData(t, root)
+				plan := mustServicePlan(t, root)
 				require.Len(t, root.Services, 3)
-				fs := ExampleServiceFiles(services.generation.GenPkg(), root, services)
+				fs := ExampleServiceFiles(plan)
 				require.Len(t, fs, 3)
 				for _, f := range fs {
 					require.Greater(t, len(f.SectionTemplates), 0)

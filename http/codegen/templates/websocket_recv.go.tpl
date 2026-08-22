@@ -74,7 +74,7 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 			if err := {{ .ViewsPkg }}.Validate{{ $.Endpoint.Method.Result }}(vres); err != nil {
 				return rv, goahttp.ErrValidationError("{{ $.Endpoint.ServiceName }}", "{{ $.Endpoint.Method.Name }}", err)
 			}
-			return {{ $.PkgName }}.{{ .ResultInit.Name }}(vres){{ end }}, nil
+			return {{ $.PkgName }}.{{ .ResultInit.Declaration.Name }}(vres){{ end }}, nil
 		{{- else }}
 			return res, nil
 		{{- end }}

@@ -4,73 +4,29 @@ package service
 
 import (
 	"path/filepath"
-	"sort"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 )
 
 type viewedType struct {
-	// Name is the type name.
-	Name string
+	// Declaration is the exact package-level view map rendered for this type.
+	Declaration *codegen.NameDeclaration
+	// TypeName is the generated type whose fields the map indexes.
+	TypeName string
 	// Views is the view data for all views defined in the type.
 	Views []*ViewData
 }
 
-// ViewsFile returns the views file for the given service which contains
-// logic to render result types using the defined views.
-func ViewsFile(genpkg string, service *expr.ServiceExpr, services *ServicesData) *codegen.File {
-	svc := services.Get(service.Name)
+// viewsFile renders the views for the exact service retained by plan.
+func viewsFile(plan *Plan, facts *serviceFacts) *codegen.File {
+	services := plan.Services()
+	svc := services.Get(facts.name)
 	if len(svc.projectedTypes) == 0 {
 		return nil
 	}
 
-	// Collect union sum-type definitions for the views package.
-	//
-	// View-projected types cannot import the service package (which already
-	// depends on views), therefore unions must be generated in the views package
-	// when referenced by projected types.
-	unionByHash := make(map[unionDataKey]*UnionTypeData)
-	seenUnions := make(map[expr.UserType]struct{})
-	viewLoc := &codegen.Location{RelImportPath: "views"}
-	resolver := newViewResolver(services.generation, services.aliases, service, svc.viewDerived)
-	for _, t := range svc.projectedTypes {
-		if err := services.collectUnionTypes(
-			&expr.AttributeExpr{Type: t.Type},
-			service,
-			resolver,
-			viewLoc,
-			unionByHash,
-			seenUnions,
-			true,
-		); err != nil {
-			panic(err) // bug
-		}
-	}
-	unions := make([]*UnionTypeData, 0, len(unionByHash))
-	for _, u := range unionByHash {
-		unions = append(unions, u)
-	}
-	sort.Slice(unions, func(i, j int) bool {
-		return unions[i].Name < unions[j].Name
-	})
-
 	path := filepath.Join(codegen.Gendir, svc.PathName, "views", "view.go")
-	outputPackage := genpkg + "/" + svc.PathName + "/views"
-	importPaths := []string{codegen.GoaImport("").Path, "unicode/utf8"}
-	if len(unions) > 0 {
-		importPaths = append(importPaths, "bytes", "encoding/json", "fmt")
-	}
-	var attributes []*expr.AttributeExpr
-	for _, viewed := range svc.viewedResultTypes {
-		attributes = append(attributes, viewed.Type.Attribute())
-	}
-	for _, projected := range svc.projectedTypes {
-		attributes = append(attributes, projected.Type.Attribute())
-	}
-	imports := services.fileImports(outputPackage, importPaths, attributes...)
-	header := codegen.Header(service.Name+" views", "views",
-		imports)
+	header := codegen.Header(facts.name+" views", "views", facts.imports.views.specs)
 	sections := []*codegen.SectionTemplate{header}
 
 	// type definitions
@@ -88,7 +44,7 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr, services *ServicesData)
 			Data:   t.UserTypeData,
 		})
 	}
-	for _, u := range unions {
+	for _, u := range svc.viewUnions {
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "projected-union-type",
 			Source: serviceTemplates.Read(unionTypeT),
@@ -100,23 +56,31 @@ func ViewsFile(genpkg string, service *expr.ServiceExpr, services *ServicesData)
 	// rendered in the view as value.
 	var (
 		rtdata []*viewedType
-		seen   = make(map[string]struct{})
+		seen   = make(map[*codegen.NameDeclaration]struct{})
 	)
 	for _, t := range svc.viewedResultTypes {
-		name := t.Views[0].TypeVarName
-		if _, ok := seen[name]; !ok {
-			rtdata = append(rtdata, &viewedType{Name: name, Views: t.Views})
-			seen[name] = struct{}{}
+		declaration := t.Views[0].MapDeclaration
+		if _, ok := seen[declaration]; !ok {
+			rtdata = append(rtdata, &viewedType{
+				Declaration: declaration,
+				TypeName:    t.Views[0].TypeVarName,
+				Views:       t.Views,
+			})
+			seen[declaration] = struct{}{}
 		}
 	}
 	for _, t := range svc.projectedTypes {
 		if len(t.Views) == 0 {
 			continue
 		}
-		name := t.Views[0].TypeVarName
-		if _, ok := seen[name]; !ok {
-			rtdata = append(rtdata, &viewedType{Name: name, Views: t.Views})
-			seen[name] = struct{}{}
+		declaration := t.Views[0].MapDeclaration
+		if _, ok := seen[declaration]; !ok {
+			rtdata = append(rtdata, &viewedType{
+				Declaration: declaration,
+				TypeName:    t.Views[0].TypeVarName,
+				Views:       t.Views,
+			})
+			seen[declaration] = struct{}{}
 		}
 	}
 	sections = append(sections, &codegen.SectionTemplate{

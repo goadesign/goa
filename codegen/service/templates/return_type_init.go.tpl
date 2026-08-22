@@ -2,10 +2,10 @@
 	{{- if eq (len .Views) 1 }}
 		{{- with (index .Views 0) }}
 			{{- if $.ToViewed -}}
-	p := {{ $.InitName }}{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}({{ $.ArgVar }})
+	p := {{ .ToProjected.Name }}({{ $.ArgVar }})
 	return {{ if not $.IsCollection }}&{{ end }}{{ $.TargetType }}{Projected: p, View: {{ printf "%q" .Name }} }
  			{{- else -}}
-			return {{ $.InitName }}{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}({{ $.ArgVar }}.Projected)
+			return {{ .ToResult.Name }}({{ $.ArgVar }}.Projected)
 			{{- end }}
 		{{- end }}
 	{{- else -}}
@@ -14,10 +14,10 @@
 		{{- range .Views }}
 		case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:
 			{{- if $.ToViewed }}
-				p := {{ $.InitName }}{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}({{ $.ArgVar }})
+				p := {{ .ToProjected.Name }}({{ $.ArgVar }})
 				{{ $.ReturnVar }} = {{ if not $.IsCollection }}&{{ end }}{{ $.TargetType }}{Projected: p, View: {{ printf "%q" .Name }} }
 			{{- else }}
-				{{ $.ReturnVar }} = {{ $.InitName }}{{ if ne .Name "default" }}{{ goify .Name true }}{{ end }}({{ $.ArgVar }}.Projected)
+				{{ $.ReturnVar }} = {{ .ToResult.Name }}({{ $.ArgVar }}.Projected)
 			{{- end }}
 		{{- end }}
 	}
@@ -26,14 +26,14 @@
 {{- else if .IsCollection -}}
 	{{ .ReturnVar }} := make({{ .TargetType }}, len({{ .ArgVar }}))
 	for i, n := range {{ .ArgVar }} {
-		{{ .ReturnVar }}[i] = {{ .InitName }}(n)
+		{{ .ReturnVar }}[i] = {{ .Init.Name }}(n)
 	}
 	return {{ .ReturnVar }}
 {{- else -}}
 	{{ .Code }}
 	{{- range .Fields }}
 		if {{ $.Source }}.{{ .VarName }} != nil {
-			{{ $.Target }}.{{ .VarName }} = {{ .FieldInit }}({{ $.Source }}.{{ .VarName }})
+			{{ $.Target }}.{{ .VarName }} = {{ .Declaration.Name }}({{ $.Source }}.{{ .VarName }})
 		}
 	{{- end }}
 	return {{ .ReturnVar }}

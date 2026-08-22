@@ -5,8 +5,11 @@
 package generator
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -17,6 +20,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/eval"
+	"golang.org/x/mod/module"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -83,18 +87,9 @@ func generate(dir, cmd string, debug bool, registry *registry) (outputs []string
 		}
 
 		startPkgLoad := time.Now()
-		pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName}, path)
+		genpkg, err = generatedPackageImportPath(path)
 		if err != nil {
 			return nil, err
-		}
-		// In temporary workspaces (e.g., tests) and on Windows, PkgPath may resolve
-		// to an absolute filesystem path which is not a valid Go import path and
-		// would produce invalid imports (e.g., backslashes). Fall back to the
-		// relative generated package import path in that case.
-		if filepath.IsAbs(pkgs[0].PkgPath) {
-			genpkg = codegen.Gendir
-		} else {
-			genpkg = pkgs[0].PkgPath
 		}
 		if debug {
 			fmt.Fprintf(os.Stderr, "[TIMING]     [generate]   packages.Load took %v\n", time.Since(startPkgLoad))
@@ -239,6 +234,101 @@ func generate(dir, cmd string, debug bool, registry *registry) (outputs []string
 		fmt.Fprintf(os.Stderr, "[TIMING]     [generate] Total generator.Generate() took %v\n", time.Since(startGenerate))
 	}
 	return outputs, nil
+}
+
+// generatedPackageImportPath asks Go to identify the package in dir and
+// returns the exact canonical path that generated files can import.
+func generatedPackageImportPath(dir string) (string, error) {
+	pkgs, err := packages.Load(&packages.Config{
+		Mode: packages.NeedName | packages.NeedModule | packages.NeedFiles,
+		Dir:  dir,
+	}, ".")
+	if err != nil {
+		return "", fmt.Errorf("load generated Go package in %q: %w", dir, err)
+	}
+	if len(pkgs) != 1 {
+		return "", fmt.Errorf("load generated Go package in %q: expected exactly one package, got %d", dir, len(pkgs))
+	}
+	pkg := pkgs[0]
+	if len(pkg.Errors) != 0 {
+		packageErrors := make([]error, len(pkg.Errors))
+		for i, packageError := range pkg.Errors {
+			packageErrors[i] = packageError
+		}
+		return "", fmt.Errorf("load generated Go package in %q: %w", dir, errors.Join(packageErrors...))
+	}
+	importPath := pkg.PkgPath
+	if pkg.Module == nil && strings.HasPrefix(importPath, "_/") {
+		owned, err := gopathOwnsImportPath(pkg.Dir, importPath)
+		if err != nil {
+			return "", err
+		}
+		if !owned {
+			return "", fmt.Errorf("generated Go package in %q has synthetic import path %q", dir, importPath)
+		}
+	}
+	if path.Clean(importPath) != importPath {
+		return "", fmt.Errorf("generated Go package in %q has noncanonical import path %q", dir, importPath)
+	}
+	if err := module.CheckImportPath(importPath); err != nil {
+		return "", fmt.Errorf("generated Go package in %q has invalid import path %q: %w", dir, importPath, err)
+	}
+	return importPath, nil
+}
+
+// gopathOwnsImportPath asks the Go command for its effective GOPATH and reports
+// whether dir has the exact import identity it claims beneath a source root.
+func gopathOwnsImportPath(dir, importPath string) (bool, error) {
+	output, err := exec.Command("go", "env", "GOPATH").Output()
+	if err != nil {
+		return false, fmt.Errorf("read effective GOPATH: %w", err)
+	}
+	gopath := string(output)
+	if strings.HasSuffix(gopath, "\r\n") {
+		gopath = strings.TrimSuffix(gopath, "\r\n")
+	} else {
+		gopath = strings.TrimSuffix(gopath, "\n")
+	}
+	roots := filepath.SplitList(gopath)
+	for _, root := range roots {
+		if gopathSourceOwnsImportPath(filepath.Join(root, "src"), dir, importPath) {
+			return true, nil
+		}
+	}
+
+	resolvedDir, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return false, fmt.Errorf("resolve generated Go package directory %q: %w", dir, err)
+	}
+	var resolutionErrors []error
+	for _, root := range roots {
+		packagePath := filepath.Join(root, "src", filepath.FromSlash(importPath))
+		resolvedPackagePath, err := filepath.EvalSymlinks(packagePath)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
+			resolutionErrors = append(resolutionErrors, fmt.Errorf("resolve %q: %w", packagePath, err))
+			continue
+		}
+		if resolvedPackagePath == resolvedDir {
+			return true, nil
+		}
+	}
+	if len(resolutionErrors) != 0 {
+		return false, fmt.Errorf("resolve GOPATH package path for %q: %w", importPath, errors.Join(resolutionErrors...))
+	}
+	return false, nil
+}
+
+// gopathSourceOwnsImportPath reports whether dir is lexically beneath source
+// with the exact slash-separated relative import path.
+func gopathSourceOwnsImportPath(source, dir, importPath string) bool {
+	relative, err := filepath.Rel(source, dir)
+	if err != nil || relative == ".." || strings.HasPrefix(relative, ".."+string(filepath.Separator)) {
+		return false
+	}
+	return filepath.ToSlash(relative) == importPath
 }
 
 // mergeFilesByPath coalesces files that share the same output path by

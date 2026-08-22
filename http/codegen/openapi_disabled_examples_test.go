@@ -27,10 +27,11 @@ func TestOpenAPIDisabledExamplesDoNotConsumeServiceState(t *testing.T) {
 	examples := expr.NewExampleGenerator(factory)
 	generation, err := goacodegen.NewGeneration("generated.local/gen", []eval.Root{root})
 	require.NoError(t, err)
-	require.NoError(t, service.Plan(root, generation))
-	require.NoError(t, generation.Freeze())
-	services, err := service.NewServicesData(root, generation, examples)
+	servicePlan, err := service.NewPlan(root, generation, examples)
 	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, servicePlan.Link())
+	services := servicePlan.Services()
 	method := services.Get("testService").Methods[0]
 	payloadExample := method.PayloadEx
 	require.NotNil(t, payloadExample)

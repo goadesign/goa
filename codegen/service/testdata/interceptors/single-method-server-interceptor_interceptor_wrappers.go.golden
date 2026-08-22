@@ -1,6 +1,6 @@
 
 
-// wrapLoggingMethod applies the logging server interceptor to endpoints.
+// wrapMethodLogging applies the logging server interceptor to endpoints.
 func wrapMethodLogging(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &LoggingInfo{

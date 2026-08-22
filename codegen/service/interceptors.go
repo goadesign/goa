@@ -6,26 +6,46 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 )
 
-// InterceptorsFiles returns the interceptors files for the given service.
-func InterceptorsFiles(genpkg string, service *expr.ServiceExpr, services *ServicesData) []*codegen.File {
+type (
+	// endpointInterceptorWrapperData binds one public endpoint wrapper to the
+	// exact private interceptor wrappers it applies in order.
+	endpointInterceptorWrapperData struct {
+		Declaration             *codegen.NameDeclaration
+		InterceptorsDeclaration *codegen.NameDeclaration
+		Method                  string
+		Service                 string
+		Wrappers                []*codegen.NameDeclaration
+	}
+
+	// interceptorWrappersData supplies one side's exact interceptor interface
+	// and retained interceptor operations to its wrapper template.
+	interceptorWrappersData struct {
+		Service                 string
+		InterceptorsDeclaration *codegen.NameDeclaration
+		Interceptors            []*InterceptorData
+	}
+)
+
+// interceptorsFiles renders interceptors for the exact service retained by
+// plan.
+func interceptorsFiles(plan *Plan, facts *serviceFacts) []*codegen.File {
 	var files []*codegen.File
-	svc := services.Get(service.Name)
-	outputPackage := genpkg + "/" + svc.PathName
+	services := plan.Services()
+	svc := services.Get(facts.name)
 
 	// Generate service-specific interceptor files
 	if len(svc.ServerInterceptors) > 0 {
-		files = append(files, interceptorFile(svc, services, outputPackage, true))
+		files = append(files, interceptorFile(svc, facts.imports.serverInterceptors.specs, true))
 	}
 	if len(svc.ClientInterceptors) > 0 {
-		files = append(files, interceptorFile(svc, services, outputPackage, false))
+		files = append(files, interceptorFile(svc, facts.imports.clientInterceptors.specs, false))
 	}
 
 	// Generate wrapper file if this service has any interceptors
 	if len(svc.ServerInterceptors) > 0 || len(svc.ClientInterceptors) > 0 {
-		files = append(files, wrapperFile(svc, services, outputPackage))
+		files = append(files, wrapperFile(svc, facts.imports.interceptorWrappers.specs))
 	}
 
 	return files
@@ -33,7 +53,7 @@ func InterceptorsFiles(genpkg string, service *expr.ServiceExpr, services *Servi
 
 // interceptorFile returns the file defining the interceptors.
 // This method is called twice, once for the server and once for the client.
-func interceptorFile(svc *Data, services *ServicesData, outputPackage string, server bool) *codegen.File {
+func interceptorFile(svc *Data, imports []*codegen.ImportSpec, server bool) *codegen.File {
 	filename := "client_interceptors.go"
 	template := clientInterceptorsT
 	section := "client-interceptors-type"
@@ -51,6 +71,7 @@ func interceptorFile(svc *Data, services *ServicesData, outputPackage string, se
 	if !server {
 		interceptors = svc.ClientInterceptors
 	}
+	appliedInterceptors := interceptors
 
 	// We don't want to generate duplicate interceptor info data structures for
 	// interceptors that are both server and client side so remove interceptors
@@ -70,10 +91,7 @@ func interceptorFile(svc *Data, services *ServicesData, outputPackage string, se
 	}
 
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(desc, svc.PkgName, services.fileImports(outputPackage, []string{
-			"context",
-			codegen.GoaImport("").Path,
-		})),
+		codegen.Header(desc, svc.PkgName, imports),
 		{
 			Name:   section,
 			Source: serviceTemplates.Read(template),
@@ -99,20 +117,33 @@ func interceptorFile(svc *Data, services *ServicesData, outputPackage string, se
 	}
 	for _, m := range svc.Methods {
 		ints := m.ServerInterceptors
+		declaration := m.ServerEndpointWrapperDeclaration
+		interceptorsDeclaration := svc.ServerInterceptorsDeclaration
 		if !server {
 			ints = m.ClientInterceptors
+			declaration = m.ClientEndpointWrapperDeclaration
+			interceptorsDeclaration = svc.ClientInterceptorsDeclaration
 		}
 		if len(ints) == 0 {
 			continue
 		}
+		wrappers := make([]*codegen.NameDeclaration, len(ints))
+		for index, name := range ints {
+			interceptor := interceptorMethod(appliedInterceptors, name, m.VarName)
+			wrappers[index] = interceptor.ServerWrapperDeclaration
+			if !server {
+				wrappers[index] = interceptor.ClientWrapperDeclaration
+			}
+		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   section,
 			Source: serviceTemplates.Read(template),
-			Data: map[string]any{
-				"MethodVarName": m.VarName,
-				"Method":        m.Name,
-				"Service":       svc.Name,
-				"Interceptors":  ints,
+			Data: &endpointInterceptorWrapperData{
+				Declaration:             declaration,
+				InterceptorsDeclaration: interceptorsDeclaration,
+				Method:                  m.Name,
+				Service:                 svc.Name,
+				Wrappers:                wrappers,
 			},
 		})
 	}
@@ -133,14 +164,11 @@ func interceptorFile(svc *Data, services *ServicesData, outputPackage string, se
 }
 
 // wrapperFile returns the file containing the interceptor wrappers.
-func wrapperFile(svc *Data, services *ServicesData, outputPackage string) *codegen.File {
+func wrapperFile(svc *Data, imports []*codegen.ImportSpec) *codegen.File {
 	path := filepath.Join(codegen.Gendir, svc.PathName, "interceptor_wrappers.go")
 
 	var sections []*codegen.SectionTemplate
-	sections = append(sections, codegen.Header("Interceptor wrappers", svc.PkgName, services.fileImports(outputPackage, []string{
-		"context",
-		codegen.GoaImport("").Path,
-	})))
+	sections = append(sections, codegen.Header("Interceptor wrappers", svc.PkgName, imports))
 
 	// Generate any interceptor stream wrapper struct types first
 	var wrappedServerStreams, wrappedClientStreams []*StreamInterceptorData
@@ -174,9 +202,10 @@ func wrapperFile(svc *Data, services *ServicesData, outputPackage string) *codeg
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "server-interceptor-wrappers",
 			Source: serviceTemplates.Read(serverInterceptorWrappersT),
-			Data: map[string]any{
-				"Service":            svc.Name,
-				"ServerInterceptors": svc.ServerInterceptors,
+			Data: &interceptorWrappersData{
+				Service:                 svc.Name,
+				InterceptorsDeclaration: svc.ServerInterceptorsDeclaration,
+				Interceptors:            svc.ServerInterceptors,
 			},
 		})
 	}
@@ -184,9 +213,10 @@ func wrapperFile(svc *Data, services *ServicesData, outputPackage string) *codeg
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-interceptor-wrappers",
 			Source: serviceTemplates.Read(clientInterceptorWrappersT),
-			Data: map[string]any{
-				"Service":            svc.Name,
-				"ClientInterceptors": svc.ClientInterceptors,
+			Data: &interceptorWrappersData{
+				Service:                 svc.Name,
+				InterceptorsDeclaration: svc.ClientInterceptorsDeclaration,
+				Interceptors:            svc.ClientInterceptors,
 			},
 		})
 	}
@@ -215,6 +245,22 @@ func wrapperFile(svc *Data, services *ServicesData, outputPackage string) *codeg
 		Path:             path,
 		SectionTemplates: sections,
 	}
+}
+
+// interceptorMethod returns the retained method record for one named
+// interceptor application. Planning guarantees that both identities exist.
+func interceptorMethod(interceptors []*InterceptorData, name, method string) *MethodInterceptorData {
+	for _, interceptor := range interceptors {
+		if interceptor.DesignName != name {
+			continue
+		}
+		for _, candidate := range interceptor.Methods {
+			if candidate.MethodName == method {
+				return candidate
+			}
+		}
+	}
+	panic("retained interceptor method is missing")
 }
 
 // hasPrivateImplementationTypes returns true if any of the interceptors have
@@ -249,14 +295,14 @@ func collectWrappedStreams(interceptors []*InterceptorData, server bool) []*Stre
 		if intr.HasStreamingPayloadAccess || intr.HasStreamingResultAccess {
 			for _, method := range intr.Methods {
 				if server {
-					if _, ok := streamNames[method.ServerStream.Interface]; !ok {
+					if _, ok := streamNames[method.ServerStream.InterfaceDeclaration.Name()]; !ok {
 						streams = append(streams, method.ServerStream)
-						streamNames[method.ServerStream.Interface] = struct{}{}
+						streamNames[method.ServerStream.InterfaceDeclaration.Name()] = struct{}{}
 					}
 				} else {
-					if _, ok := streamNames[method.ClientStream.Interface]; !ok {
+					if _, ok := streamNames[method.ClientStream.InterfaceDeclaration.Name()]; !ok {
 						streams = append(streams, method.ClientStream)
-						streamNames[method.ClientStream.Interface] = struct{}{}
+						streamNames[method.ClientStream.InterfaceDeclaration.Name()] = struct{}{}
 					}
 				}
 			}

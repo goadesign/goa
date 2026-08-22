@@ -1,17 +1,17 @@
-// {{ .StructName }}ServerInterceptors implements the server interceptor for the {{ .ServiceName }} service.
-type {{ .StructName }}ServerInterceptors struct {
+// {{ .StructDeclaration.Name }} implements the server interceptor for the {{ .ServiceName }} service.
+type {{ .StructDeclaration.Name }} struct {
 }
 
-// New{{ .StructName }}ServerInterceptors creates a new server interceptor for the {{ .ServiceName }} service.
-func New{{ .StructName }}ServerInterceptors() *{{ .StructName }}ServerInterceptors {
-	return &{{ .StructName }}ServerInterceptors{}
+// {{ .ConstructorDeclaration.Name }} creates a new server interceptor for the {{ .ServiceName }} service.
+func {{ .ConstructorDeclaration.Name }}() *{{ .StructDeclaration.Name }} {
+	return &{{ .StructDeclaration.Name }}{}
 }
 
-{{- range .ServerInterceptors }}
+{{- range .Interceptors }}
 {{- if .Description }}
 {{ comment .Description }}
 {{- end }}
-func (i *{{ $.StructName }}ServerInterceptors) {{ .Name }}(ctx context.Context, info *{{ $.PkgName }}.{{ .Name }}Info, next goa.Endpoint) (any, error) {
+func (i *{{ $.StructDeclaration.Name }}) {{ .Name }}(ctx context.Context, info *{{ $.ServicePkg }}.{{ .Name }}Info, next goa.Endpoint) (any, error) {
 	log.Printf(ctx, "[{{ .Name }}] Processing request: %v", info.RawPayload())
 	resp, err := next(ctx, info.RawPayload())
 	if err != nil {

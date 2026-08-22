@@ -2,28 +2,28 @@
 {{- range . }}
 
 // Service returns the name of the service handling the request.
-func (info *{{ .Name }}Info) Service() string {
+func (info *{{ .InfoDeclaration.Name }}) Service() string {
 	return info.service
 }
 
 // Method returns the name of the method handling the request.
-func (info *{{ .Name }}Info) Method() string {
+func (info *{{ .InfoDeclaration.Name }}) Method() string {
 	return info.method
 }
 
 // CallType returns the type of call the interceptor is handling.
-func (info *{{ .Name }}Info) CallType() goa.InterceptorCallType {
+func (info *{{ .InfoDeclaration.Name }}) CallType() goa.InterceptorCallType {
 	return info.callType
 }
 
 // RawPayload returns the raw payload of the request.
-func (info *{{ .Name }}Info) RawPayload() any {
+func (info *{{ .InfoDeclaration.Name }}) RawPayload() any {
 	return info.rawPayload
 }
 	{{- if .HasPayloadAccess }}
 
 // Payload returns a type-safe accessor for the method payload.
-func (info *{{ .Name }}Info) Payload() {{ .Name }}Payload {
+func (info *{{ .InfoDeclaration.Name }}) Payload() {{ .PayloadDeclaration.Name }} {
 		{{- if gt (len .Methods) 1 }}
 		switch info.Method() {
 			{{- range .Methods }}
@@ -31,12 +31,12 @@ func (info *{{ .Name }}Info) Payload() {{ .Name }}Payload {
 				{{- if hasEndpointStruct . }}
 			switch pay := info.RawPayload().(type) {
 			case *{{ .ServerStream.EndpointStruct }}:
-				return &{{ .PayloadAccess }}{payload: pay.Payload}
+				return &{{ .PayloadAccessDeclaration.Name }}{payload: pay.Payload}
 			default:
-				return &{{ .PayloadAccess }}{payload: pay.({{ .PayloadRef }})}
+				return &{{ .PayloadAccessDeclaration.Name }}{payload: pay.({{ .PayloadRef }})}
 			}
 				{{- else }}
-			return &{{ .PayloadAccess }}{payload: info.RawPayload().({{ .PayloadRef }})}
+			return &{{ .PayloadAccessDeclaration.Name }}{payload: info.RawPayload().({{ .PayloadRef }})}
 				{{- end }}
 			{{- end }}
 		default:
@@ -46,12 +46,12 @@ func (info *{{ .Name }}Info) Payload() {{ .Name }}Payload {
 			{{- if hasEndpointStruct (index .Methods 0) }}
 	switch pay := info.RawPayload().(type) {
 	case *{{ (index .Methods 0).ServerStream.EndpointStruct }}:
-		return &{{ (index .Methods 0).PayloadAccess }}{payload: pay.Payload}
+		return &{{ (index .Methods 0).PayloadAccessDeclaration.Name }}{payload: pay.Payload}
 	default:
-		return &{{ (index .Methods 0).PayloadAccess }}{payload: pay.({{ (index .Methods 0).PayloadRef }})}
+		return &{{ (index .Methods 0).PayloadAccessDeclaration.Name }}{payload: pay.({{ (index .Methods 0).PayloadRef }})}
 	}
 			{{- else }}
-	return &{{ (index .Methods 0).PayloadAccess }}{payload: info.RawPayload().({{ (index .Methods 0).PayloadRef }})}
+	return &{{ (index .Methods 0).PayloadAccessDeclaration.Name }}{payload: info.RawPayload().({{ (index .Methods 0).PayloadRef }})}
 			{{- end }}
 		{{- end }}
 }
@@ -59,90 +59,90 @@ func (info *{{ .Name }}Info) Payload() {{ .Name }}Payload {
 
 	{{- if .HasResultAccess }}
 // Result returns a type-safe accessor for the method result.
-func (info *{{ .Name }}Info) Result(res any) {{ .Name }}Result {
+func (info *{{ .InfoDeclaration.Name }}) Result(res any) {{ .ResultDeclaration.Name }} {
 		{{- if gt (len .Methods) 1 }}
 	switch info.Method() {
 			{{- range .Methods }}
 	case "{{ .MethodName }}":
-		return &{{ .ResultAccess }}{result: res.({{ .ResultRef }})}
+		return &{{ .ResultAccessDeclaration.Name }}{result: res.({{ .ResultRef }})}
 			{{- end }}
 	default:
 		return nil
 	}
 		{{- else }}
-	return &{{ (index .Methods 0).ResultAccess }}{result: res.({{ (index .Methods 0).ResultRef }})}
+	return &{{ (index .Methods 0).ResultAccessDeclaration.Name }}{result: res.({{ (index .Methods 0).ResultRef }})}
 		{{- end }}
 }
 	{{- end }}
 
 	{{- if .HasStreamingPayloadAccess }}
 // ClientStreamingPayload returns a type-safe accessor for the method streaming payload for a client-side interceptor.
-func (info *{{ .Name }}Info) ClientStreamingPayload() {{ .Name }}StreamingPayload {
+func (info *{{ .InfoDeclaration.Name }}) ClientStreamingPayload() {{ .StreamingPayloadDeclaration.Name }} {
 		{{- if gt (len .Methods) 1 }}
 	switch info.Method() {
 			{{- range .Methods }}
 	case "{{ .MethodName }}":
-		return &{{ .StreamingPayloadAccess }}{payload: info.RawPayload().({{ .StreamingPayloadRef }})}
+		return &{{ .StreamingPayloadAccessDeclaration.Name }}{payload: info.RawPayload().({{ .StreamingPayloadRef }})}
 			{{- end }}
 	default:
 		return nil
 	}
 		{{- else }}
-	return &{{ (index .Methods 0).StreamingPayloadAccess }}{payload: info.RawPayload().({{ (index .Methods 0).StreamingPayloadRef }})}
+	return &{{ (index .Methods 0).StreamingPayloadAccessDeclaration.Name }}{payload: info.RawPayload().({{ (index .Methods 0).StreamingPayloadRef }})}
 		{{- end }}
 }
 	{{- end }}
 
 	{{- if .HasStreamingResultAccess }}
 // ClientStreamingResult returns a type-safe accessor for the method streaming result for a client-side interceptor.
-func (info *{{ .Name }}Info) ClientStreamingResult(res any) {{ .Name }}StreamingResult {
+func (info *{{ .InfoDeclaration.Name }}) ClientStreamingResult(res any) {{ .StreamingResultDeclaration.Name }} {
 		{{- if gt (len .Methods) 1 }}
 	switch info.Method() {
 			{{- range .Methods }}
 	case "{{ .MethodName }}":
-		return &{{ .StreamingResultAccess }}{result: res.({{ .StreamingResultRef }})}
+		return &{{ .StreamingResultAccessDeclaration.Name }}{result: res.({{ .StreamingResultRef }})}
 			{{- end }}
 	default:
 		return nil
 	}
 		{{- else }}
-	return &{{ (index .Methods 0).StreamingResultAccess }}{result: res.({{ (index .Methods 0).StreamingResultRef }})}
+	return &{{ (index .Methods 0).StreamingResultAccessDeclaration.Name }}{result: res.({{ (index .Methods 0).StreamingResultRef }})}
 		{{- end }}
 }
 	{{- end }}
 
 	{{- if .HasStreamingPayloadAccess }}
 // ServerStreamingPayload returns a type-safe accessor for the method streaming payload for a server-side interceptor.
-func (info *{{ .Name }}Info) ServerStreamingPayload(pay any) {{ .Name }}StreamingPayload {
+func (info *{{ .InfoDeclaration.Name }}) ServerStreamingPayload(pay any) {{ .StreamingPayloadDeclaration.Name }} {
 		{{- if gt (len .Methods) 1 }}
 	switch info.Method() {
 			{{- range .Methods }}
 	case "{{ .MethodName }}":
-		return &{{ .StreamingPayloadAccess }}{payload: pay.({{ .StreamingPayloadRef }})}
+		return &{{ .StreamingPayloadAccessDeclaration.Name }}{payload: pay.({{ .StreamingPayloadRef }})}
 			{{- end }}
 	default:
 		return nil
 	}
 		{{- else }}
-	return &{{ (index .Methods 0).StreamingPayloadAccess }}{payload: pay.({{ (index .Methods 0).StreamingPayloadRef }})}
+	return &{{ (index .Methods 0).StreamingPayloadAccessDeclaration.Name }}{payload: pay.({{ (index .Methods 0).StreamingPayloadRef }})}
 		{{- end }}
 }
 	{{- end }}
 
 	{{- if .HasStreamingResultAccess }}
 // ServerStreamingResult returns a type-safe accessor for the method streaming result for a server-side interceptor.
-func (info *{{ .Name }}Info) ServerStreamingResult() {{ .Name }}StreamingResult {
+func (info *{{ .InfoDeclaration.Name }}) ServerStreamingResult() {{ .StreamingResultDeclaration.Name }} {
 		{{- if gt (len .Methods) 1 }}
 	switch info.Method() {
 			{{- range .Methods }}
 	case "{{ .MethodName }}":
-		return &{{ .StreamingResultAccess }}{result: info.RawPayload().({{ .StreamingResultRef }})}
+		return &{{ .StreamingResultAccessDeclaration.Name }}{result: info.RawPayload().({{ .StreamingResultRef }})}
 			{{- end }}
 	default:
 		return nil
 	}
 		{{- else }}
-	return &{{ (index .Methods 0).StreamingResultAccess }}{result: info.RawPayload().({{ (index .Methods 0).StreamingResultRef }})}
+	return &{{ (index .Methods 0).StreamingResultAccessDeclaration.Name }}{result: info.RawPayload().({{ (index .Methods 0).StreamingResultRef }})}
 		{{- end }}
 }
 	{{- end }}
@@ -155,7 +155,7 @@ func (info *{{ .Name }}Info) ServerStreamingResult() {{ .Name }}StreamingResult 
 	{{- range .Methods }}
 		{{- $method := . }}
 		{{- range $interceptor.ReadPayload }}
-func (p *{{ $method.PayloadAccess }}) {{ .Name }}() {{ .TypeRef }} {
+func (p *{{ $method.PayloadAccessDeclaration.Name }}) {{ .Name }}() {{ .TypeRef }} {
 			{{- if .Pointer }}
 	if p.payload.{{ .Name }} == nil {
 		var zero {{ .TypeRef }}
@@ -169,7 +169,7 @@ func (p *{{ $method.PayloadAccess }}) {{ .Name }}() {{ .TypeRef }} {
 		{{- end }}
 
 		{{- range $interceptor.WritePayload }}
-func (p *{{ $method.PayloadAccess }}) Set{{ .Name }}(v {{ .TypeRef }}) {
+func (p *{{ $method.PayloadAccessDeclaration.Name }}) Set{{ .Name }}(v {{ .TypeRef }}) {
 			{{- if .Pointer }}
 	p.payload.{{ .Name }} = &v
 			{{- else }}
@@ -179,7 +179,7 @@ func (p *{{ $method.PayloadAccess }}) Set{{ .Name }}(v {{ .TypeRef }}) {
 		{{- end }}
 
 		{{- range $interceptor.ReadResult }}
-func (r *{{ $method.ResultAccess }}) {{ .Name }}() {{ .TypeRef }} {
+func (r *{{ $method.ResultAccessDeclaration.Name }}) {{ .Name }}() {{ .TypeRef }} {
 			{{- if .Pointer }}
 	if r.result.{{ .Name }} == nil {
 		var zero {{ .TypeRef }}
@@ -193,7 +193,7 @@ func (r *{{ $method.ResultAccess }}) {{ .Name }}() {{ .TypeRef }} {
 		{{- end }}
 
 		{{- range $interceptor.WriteResult }}
-func (r *{{ $method.ResultAccess }}) Set{{ .Name }}(v {{ .TypeRef }}) {
+func (r *{{ $method.ResultAccessDeclaration.Name }}) Set{{ .Name }}(v {{ .TypeRef }}) {
 			{{- if .Pointer }}
 	r.result.{{ .Name }} = &v
 			{{- else }}
@@ -203,7 +203,7 @@ func (r *{{ $method.ResultAccess }}) Set{{ .Name }}(v {{ .TypeRef }}) {
 		{{- end }}
 
 		{{- range $interceptor.ReadStreamingPayload }}
-func (p *{{ $method.StreamingPayloadAccess }}) {{ .Name }}() {{ .TypeRef }} {
+func (p *{{ $method.StreamingPayloadAccessDeclaration.Name }}) {{ .Name }}() {{ .TypeRef }} {
 			{{- if .Pointer }}
 	if p.payload.{{ .Name }} == nil {
 		var zero {{ .TypeRef }}
@@ -217,7 +217,7 @@ func (p *{{ $method.StreamingPayloadAccess }}) {{ .Name }}() {{ .TypeRef }} {
 		{{- end }}
 
 		{{- range $interceptor.WriteStreamingPayload }}
-func (p *{{ $method.StreamingPayloadAccess }}) Set{{ .Name }}(v {{ .TypeRef }}) {
+func (p *{{ $method.StreamingPayloadAccessDeclaration.Name }}) Set{{ .Name }}(v {{ .TypeRef }}) {
 			{{- if .Pointer }}
 	p.payload.{{ .Name }} = &v
 			{{- else }}
@@ -227,7 +227,7 @@ func (p *{{ $method.StreamingPayloadAccess }}) Set{{ .Name }}(v {{ .TypeRef }}) 
 		{{- end }}
 
 		{{- range $interceptor.ReadStreamingResult }}
-func (r *{{ $method.StreamingResultAccess }}) {{ .Name }}() {{ .TypeRef }} {
+func (r *{{ $method.StreamingResultAccessDeclaration.Name }}) {{ .Name }}() {{ .TypeRef }} {
 			{{- if .Pointer }}
 	if r.result.{{ .Name }} == nil {
 		var zero {{ .TypeRef }}
@@ -241,7 +241,7 @@ func (r *{{ $method.StreamingResultAccess }}) {{ .Name }}() {{ .TypeRef }} {
 		{{- end }}
 
 		{{- range $interceptor.WriteStreamingResult }}
-func (r *{{ $method.StreamingResultAccess }}) Set{{ .Name }}(v {{ .TypeRef }}) {
+func (r *{{ $method.StreamingResultAccessDeclaration.Name }}) Set{{ .Name }}(v {{ .TypeRef }}) {
 			{{- if .Pointer }}
 	r.result.{{ .Name }} = &v
 			{{- else }}

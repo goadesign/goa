@@ -2,8 +2,8 @@ package kitchensink
 
 import (
 	"context"
-	chat "kitchensink/chat"
 
+	chat "generated.local/gen/chat"
 	"goa.design/clue/log"
 )
 

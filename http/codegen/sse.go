@@ -163,21 +163,21 @@ func sseServerFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.F
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "server", "sse.go")
 	tmplSections := sseTemplateSections(data)
 	sections := make([]*codegen.SectionTemplate, 0, 1+len(tmplSections))
+	imports := []*codegen.ImportSpec{
+		{Path: "context"},
+		{Path: "io"},
+		{Path: "net/http"},
+		{Path: "sync"},
+		{Path: "time"},
+		{Path: "encoding/json"},
+		{Path: "fmt"},
+		services.ServiceImport(svc.Name()),
+	}
 	sections = append(sections,
 		codegen.Header(
 			"sse",
 			"server",
-			[]*codegen.ImportSpec{
-				{Path: "context"},
-				{Path: "io"},
-				{Path: "net/http"},
-				{Path: "sync"},
-				{Path: "time"},
-				{Path: "encoding/json"},
-				{Path: "fmt"},
-				services.ServiceImport(svc.Name()),
-				services.ViewImport(svc.Name()),
-			},
+			imports,
 		),
 	)
 	sections = append(sections, tmplSections...)

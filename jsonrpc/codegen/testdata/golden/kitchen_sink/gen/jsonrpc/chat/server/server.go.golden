@@ -10,9 +10,9 @@ package server
 import (
 	"context"
 	"fmt"
-	chat "kitchensink/chat"
 	"net/http"
 
+	chat "generated.local/gen/chat"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"
 	goa "goa.design/goa/v3/pkg"

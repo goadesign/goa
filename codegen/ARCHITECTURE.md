@@ -51,15 +51,21 @@ design. One run follows this order:
 6. Each subsystem completes collection, sorts declarations by stable typed
    identity, and declares every package-level symbol in its actual output
    package. The generation then freezes package names and import qualifiers.
-7. Core generators render their retained subsystem plans. Plugins render using
+7. Link each retained subsystem plan once. Linking converts recorded design
+   facts and frozen declaration references into immutable template data. It
+   cannot discover a declaration, reserve a name or import, mutate an
+   expression, or create another analysis graph.
+8. Core generators render their retained subsystem plans. Plugins render using
    the same `generator.Plan` and exact core service plans.
-8. Merge contributions with the same canonical output path and render files.
+9. Merge contributions with the same canonical output path and render files.
 
 Collection must be complete before freeze. Stable ordering makes preferred-name
 suffixes independent of map iteration, traversal order, plugin registration
 order, and process history. Freeze turns every declaration record into a
-read-only value. Render performs no expression mutation, graph analysis,
-declaration discovery, name allocation, or import allocation.
+read-only value. Linking resolves those records exactly once before rendering;
+it does not repeat collection or allocate another name. Render performs no
+expression mutation, graph analysis, declaration discovery, name allocation,
+or import allocation.
 
 ## Fresh run objects
 
@@ -113,11 +119,22 @@ A plugin that needs core service declarations consumes `Plan.Service(root)`;
 it may not call service analysis again or rebuild an equivalent plan from the
 root.
 
-Each subsystem has one retained plan constructor. The service contract is:
+Each subsystem has one retained planning entry point. Service files can be
+shared by several Goa roots in one generation, so service planning accepts the
+complete root batch:
 
 ```go
-func service.NewPlan(root *expr.RootExpr, generation *codegen.Generation) (*service.Plan, error)
+func service.NewPlans(generation *codegen.Generation, inputs ...service.PlanInput) ([]*service.Plan, error)
+func service.NewPlan(root *expr.RootExpr, generation *codegen.Generation, examples *expr.ExampleGenerator) (*service.Plan, error)
 ```
+
+`NewPlans` requires every service root owned by the generation exactly once.
+It assigns relocated declaration files and external conversion methods across
+the complete run before names freeze. Exact compiler copies with the same
+retained Go layout share one declaration; copies that bind one declaration to
+different fields, tags, pointer policies, union branches, or file facts are
+rejected. `NewPlan` is only the strict single-root convenience form and rejects
+a generation that contains more than one service root.
 
 HTTP, gRPC, JSON-RPC, OpenAPI, and example generation use equivalent typed
 constructors. A transport plan receives the exact `*service.Plan` for its root.
@@ -126,8 +143,9 @@ wire files, but it does not rebuild HTTP analysis. Render functions accept the
 retained subsystem plan, not a `Generation`, generated module path, expression
 root, or reconstructed `ServicesData`.
 
-The plan stores immutable render data and canonical declaration pointers. It
-does not store callbacks that repeat analysis. `NewServicesData`, `Genfunc`,
+The plan stores collected design facts, immutable linked render data, and
+canonical declaration pointers. It does not store callbacks that repeat
+analysis. `NewServicesData`, `Genfunc`,
 the replaceable `Generators` variable, `renderOnly`, and the callback plugin
 registry are transition mechanisms to delete.
 
@@ -176,6 +194,12 @@ Exact declarations reserve first. Preferred declarations are sorted by stable
 typed identity and allocated second. A subsystem must reject two distinct
 identities whose ordering facts are equal; pointer addresses, expression
 hashes, map order, and rendered text are not tie-breakers.
+
+A companion whose spelling includes another declaration, such as
+`Validate<Result>`, is registered as a dependent declaration before freeze.
+The package freezes the base declaration first, then derives and reserves the
+companion from that exact final name. Callers never rebuild the companion by
+concatenating a separately resolved type string.
 
 ### Imports and output paths
 

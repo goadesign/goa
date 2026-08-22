@@ -30,7 +30,7 @@ func CreateGRPCServices(root *expr.RootExpr) *ServicesData {
 // createServiceServices performs the complete package declaration lifecycle
 // required by transport test helpers.
 func createServiceServices(root *expr.RootExpr) *service.ServicesData {
-	return createServiceServicesForPackage(root, "/")
+	return createServiceServicesForPackage(root, "generated.local/gen")
 }
 
 // createServiceServicesForPackage builds test service analysis for the exact
@@ -40,7 +40,8 @@ func createServiceServicesForPackage(root *expr.RootExpr, genpkg string) *servic
 	if err != nil {
 		panic(err)
 	}
-	if err := service.Plan(root, generation); err != nil {
+	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	if err != nil {
 		panic(err)
 	}
 	if err := Plan(generation); err != nil {
@@ -52,11 +53,10 @@ func createServiceServicesForPackage(root *expr.RootExpr, genpkg string) *servic
 	if err := generation.Freeze(); err != nil {
 		panic(err)
 	}
-	services, err := service.NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
-	if err != nil {
+	if err := servicePlan.Link(); err != nil {
 		panic(err)
 	}
-	return services
+	return servicePlan.Services()
 }
 
 func sectionCode(t *testing.T, section ...*codegen.SectionTemplate) string {

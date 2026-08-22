@@ -19,10 +19,11 @@ type (
 	declarationResolver struct {
 		generation  *codegen.Generation
 		aliases     *importAliases
-		service     *expr.ServiceExpr
+		serviceName string
 		currentPath string
 		outputPath  string
 		derived     map[expr.UserType]codegen.DerivedTypeID
+		validators  map[validatorKey]*codegen.NameDeclaration
 		view        bool
 	}
 )
@@ -30,11 +31,23 @@ type (
 // newServiceResolver resolves declarations starting in service's generated
 // package and qualifies names relative to outputPath.
 func newServiceResolver(generation *codegen.Generation, aliases *importAliases, service *expr.ServiceExpr, outputPath string) *declarationResolver {
+	return newRetainedServiceResolver(
+		generation,
+		aliases,
+		service.Name,
+		servicePackagePath(generation.GenPkg(), service),
+		outputPath,
+	)
+}
+
+// newRetainedServiceResolver starts from a service package identity copied
+// during planning rather than reading the service expression after freeze.
+func newRetainedServiceResolver(generation *codegen.Generation, aliases *importAliases, serviceName, servicePath, outputPath string) *declarationResolver {
 	return &declarationResolver{
 		generation:  generation,
 		aliases:     aliases,
-		service:     service,
-		currentPath: servicePackagePath(generation.GenPkg(), service),
+		serviceName: serviceName,
+		currentPath: servicePath,
 		outputPath:  outputPath,
 	}
 }
@@ -44,10 +57,16 @@ func newServiceResolver(generation *codegen.Generation, aliases *importAliases, 
 // identities.
 func newViewResolver(generation *codegen.Generation, aliases *importAliases, service *expr.ServiceExpr, derived map[expr.UserType]codegen.DerivedTypeID) *declarationResolver {
 	viewsPath := servicePackagePath(generation.GenPkg(), service) + "/views"
+	return newRetainedViewResolver(generation, aliases, service.Name, viewsPath, derived)
+}
+
+// newRetainedViewResolver starts from the views package identity copied during
+// planning and never derives it from a mutable service name.
+func newRetainedViewResolver(generation *codegen.Generation, aliases *importAliases, serviceName, viewsPath string, derived map[expr.UserType]codegen.DerivedTypeID) *declarationResolver {
 	return &declarationResolver{
 		generation:  generation,
 		aliases:     aliases,
-		service:     service,
+		serviceName: serviceName,
 		currentPath: viewsPath,
 		outputPath:  viewsPath,
 		derived:     derived,
@@ -91,13 +110,13 @@ func (r *declarationResolver) Name(att *expr.AttributeExpr, _ string, ptr, useDe
 		owner := r.owner(att)
 		declaration, err := r.generation.Package(owner).Union(actual)
 		if err != nil {
-			panic(fmt.Sprintf("resolve union %q for service %q in package %q: %v", actual.Name(), r.service.Name, owner, err))
+			panic(fmt.Sprintf("resolve union %q for service %q in package %q: %v", actual.Name(), r.serviceName, owner, err))
 		}
 		return r.qualify(owner, declaration.Name())
 	case expr.CompositeExpr:
 		return r.Name(actual.Attribute(), "", ptr, useDefault)
 	default:
-		panic(fmt.Sprintf("resolve service type %T for service %q", actual, r.service.Name))
+		panic(fmt.Sprintf("resolve service type %T for service %q", actual, r.serviceName))
 	}
 }
 
@@ -149,7 +168,7 @@ func (r *declarationResolver) Def(att *expr.AttributeExpr, ptr, useDefault bool)
 	case expr.CompositeExpr:
 		return r.Def(actual.Attribute(), ptr, useDefault)
 	default:
-		panic(fmt.Sprintf("define service type %T for service %q", actual, r.service.Name))
+		panic(fmt.Sprintf("define service type %T for service %q", actual, r.serviceName))
 	}
 }
 
@@ -228,9 +247,43 @@ func (r *declarationResolver) bindDerived(origin expr.UserType, identity codegen
 	return &bound
 }
 
+// withValidators returns a resolver that maps nested validation calls to the
+// exact dependent declarations collected by the retained service plan.
+func (r *declarationResolver) withValidators(validators map[validatorKey]*codegen.NameDeclaration) *declarationResolver {
+	bound := *r
+	bound.validators = validators
+	return &bound
+}
+
 // IsSumType reports that service unions use Goa's generated sum-type structs.
 func (*declarationResolver) IsSumType() bool {
 	return true
+}
+
+// ValidatorName returns the exact package-level validator declared for att
+// and view before generation names froze.
+func (r *declarationResolver) ValidatorName(att *expr.AttributeExpr, view string) string {
+	declaration := r.validatorDeclaration(att, view)
+	return r.qualify(r.owner(att), declaration.Name())
+}
+
+// validatorDeclaration returns the exact retained validator record for att and
+// the canonical selected view.
+func (r *declarationResolver) validatorDeclaration(att *expr.AttributeExpr, view string) *codegen.NameDeclaration {
+	userType, ok := att.Type.(expr.UserType)
+	if !ok {
+		panic(fmt.Sprintf("resolve validator for non-user type %T", att.Type))
+	}
+	owner := r.owner(att)
+	declaration := r.userType(owner, userType)
+	validator := r.validators[validatorKey{declaration: declaration, view: canonicalValidatorView(view)}]
+	if validator == nil {
+		panic(fmt.Sprintf(
+			"validator for type %q view %q was not retained in generated package %q",
+			userType.Name(), view, owner,
+		))
+	}
+	return validator
 }
 
 // Scope returns the frozen name scope owned by the resolver's current package.
@@ -256,13 +309,13 @@ func (r *declarationResolver) userType(owner string, userType expr.UserType) *co
 	if identity, ok := r.derived[userType.Origin()]; ok {
 		declaration, err := generatedPackage.DerivedType(identity)
 		if err != nil {
-			panic(fmt.Sprintf("resolve derived type %q for service %q in package %q: %v", userType.Name(), r.service.Name, owner, err))
+			panic(fmt.Sprintf("resolve derived type %q for service %q in package %q: %v", userType.Name(), r.serviceName, owner, err))
 		}
 		return declaration
 	}
 	declaration, err := generatedPackage.Type(userType)
 	if err != nil {
-		panic(fmt.Sprintf("resolve user type %q for service %q in package %q: %v", userType.Name(), r.service.Name, owner, err))
+		panic(fmt.Sprintf("resolve user type %q for service %q in package %q: %v", userType.Name(), r.serviceName, owner, err))
 	}
 	return declaration
 }

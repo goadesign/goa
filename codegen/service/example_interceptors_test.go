@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
 )
 
@@ -86,12 +87,13 @@ func TestExampleInterceptorsFiles(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			// Run DSL
 			root := runDSL(t, c.DSL)
-			services := mustServicesData(t, root)
+			plan := mustServicePlan(t, root)
 			require.NotNil(t, root)
 
 			// Generate files
-			fs := ExampleInterceptorsFiles(services.generation.GenPkg(), root, services)
+			fs := ExampleInterceptorsFiles(plan)
 			require.Len(t, fs, len(c.ExpectedFiles))
+			assertExampleInterceptorDeclarations(t, plan, fs)
 
 			// Verify file paths
 			paths := make([]string, len(fs))
@@ -121,5 +123,27 @@ func TestExampleInterceptorsFiles(t *testing.T) {
 				compareOrUpdateGolden(t, code, golden)
 			}
 		})
+	}
+}
+
+// assertExampleInterceptorDeclarations verifies that starter definitions and
+// constructor bodies use the exact declarations retained by the service plan.
+func assertExampleInterceptorDeclarations(t *testing.T, plan *Plan, files []*codegen.File) {
+	t.Helper()
+	retained := make(map[*codegen.NameDeclaration]*codegen.NameDeclaration)
+	for _, facts := range plan.facts.services {
+		if facts.exampleServerStruct != nil {
+			retained[facts.exampleServerStruct] = facts.exampleServerConstructor
+		}
+		if facts.exampleClientStruct != nil {
+			retained[facts.exampleClientStruct] = facts.exampleClientConstructor
+		}
+	}
+	for _, file := range files {
+		data, ok := file.SectionTemplates[1].Data.(*exampleInterceptorData)
+		require.True(t, ok)
+		constructor, ok := retained[data.StructDeclaration]
+		require.True(t, ok, "starter interceptor struct was not retained by the plan")
+		require.Same(t, constructor, data.ConstructorDeclaration)
 	}
 }

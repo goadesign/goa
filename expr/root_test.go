@@ -11,6 +11,10 @@ import (
 	"goa.design/goa/v3/eval"
 )
 
+type rootExternalType struct {
+	Value string
+}
+
 func TestRelocatedDependenciesUseDeclarationOrigin(t *testing.T) {
 	dependency := &UserTypeExpr{
 		TypeName:      "Dependency",
@@ -96,6 +100,49 @@ func TestRootExprValidate(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+// TestRootExprValidateRejectsDuplicateTypeMappings catches two identical
+// conversion or creation declarations that would emit the same receiver method.
+func TestRootExprValidateRejectsDuplicateTypeMappings(t *testing.T) {
+	user := &UserTypeExpr{
+		TypeName:      "Value",
+		UID:           "value",
+		AttributeExpr: &AttributeExpr{Type: String},
+	}
+	for _, test := range []struct {
+		name        string
+		conversions []*TypeMap
+		creations   []*TypeMap
+	}{
+		{
+			name: "conversion",
+			conversions: []*TypeMap{
+				{User: user, External: rootExternalType{}},
+				{User: user, External: rootExternalType{}},
+			},
+		},
+		{
+			name: "creation",
+			creations: []*TypeMap{
+				{User: user, External: rootExternalType{}},
+				{User: user, External: rootExternalType{}},
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := &RootExpr{
+				API:         &APIExpr{Name: "test"},
+				Types:       []UserType{user},
+				Conversions: test.conversions,
+				Creations:   test.creations,
+			}
+			err := root.Validate()
+			if err == nil || !strings.Contains(err.Error(), test.name+" from") || !strings.Contains(err.Error(), "defined twice") {
+				t.Fatalf("expected precise duplicate %s error, got %v", test.name, err)
+			}
+		})
 	}
 }
 

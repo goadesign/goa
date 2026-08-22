@@ -2,7 +2,7 @@
 // communication between the server and client. It receives requests from the
 // client, dispatches them to the appropriate service methods, and can send
 // server-initiated messages back to the client as needed.
-func (s *{{ .VarName }}srvc) HandleStream(ctx context.Context, stream {{ .ServicePkg }}.Stream) error {
+func (s *{{ .ExampleStructDeclaration.Name }}) HandleStream(ctx context.Context, stream {{ .ServicePkg }}.{{ .StreamDeclaration.Name }}) error {
     log.Printf(ctx, "{{ .VarName }}.HandleStream")
 
     // Example: In a real implementation you might read from an event source

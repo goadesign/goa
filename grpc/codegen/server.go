@@ -45,7 +45,6 @@ func serverFile(svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File
 			codegen.GoaNamedImport("grpc", "goagrpc"),
 			{Path: "google.golang.org/grpc/codes"},
 			services.ServiceImport(svc.Name()),
-			services.ViewImport(svc.Name()),
 			services.PackageImport(path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
 		}
 		for _, e := range data.Endpoints {
@@ -146,8 +145,10 @@ func serverEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 			codegen.GoaImport(""),
 			codegen.GoaNamedImport("grpc", "goagrpc"),
 			services.ServiceImport(svc.Name()),
-			services.ViewImport(svc.Name()),
 			services.PackageImport(path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
+		}
+		if serviceHasViewedResult(data) {
+			imports = append(imports, services.ViewImport(svc.Name()))
 		}
 		if responseMetadataNeedsFormat(data) {
 			imports = append(imports, &codegen.ImportSpec{Path: "fmt"})

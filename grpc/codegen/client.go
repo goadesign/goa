@@ -43,8 +43,10 @@ func clientFile(svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File
 			codegen.GoaNamedImport("grpc", "goagrpc"),
 			codegen.GoaNamedImport("grpc/pb", "goapb"),
 			services.ServiceImport(svc.Name()),
-			services.ViewImport(svc.Name()),
 			services.PackageImport(path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
+		}
+		if serviceHasViewedClientStream(data) {
+			imports = append(imports, services.ViewImport(svc.Name()))
 		}
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC client", "client", imports),
@@ -133,8 +135,10 @@ func clientEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 			codegen.GoaImport(""),
 			codegen.GoaNamedImport("grpc", "goagrpc"),
 			services.ServiceImport(svc.Name()),
-			services.ViewImport(svc.Name()),
 			services.PackageImport(path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
+		}
+		if serviceHasUnaryViewedResult(data) {
+			imports = append(imports, services.ViewImport(svc.Name()))
 		}
 		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client encoders and decoders", "client", imports)}
 		fm := transTmplFuncs(svc, services)

@@ -6,11 +6,11 @@
 package client
 
 import (
-	payloadwithvalidation "/payload_with_validation"
 	"fmt"
 	"strconv"
 	"unicode/utf8"
 
+	payloadwithvalidation "generated.local/gen/payload_with_validation"
 	goa "goa.design/goa/v3/pkg"
 )
 

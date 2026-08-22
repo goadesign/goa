@@ -65,7 +65,7 @@ func TestGenerateGRPCMetadataAliasesCompile(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	if _, err := generate(dir, "gen", false, registry); err != nil {
 		t.Fatalf("generate gRPC metadata module: %v", err)
 	}
@@ -87,10 +87,10 @@ import (
 	"context"
 	"testing"
 
-	genclient "gen/grpc/metadata/client"
-	genserver "gen/grpc/metadata/server"
-	genmetadata "gen/metadata"
-	gentypes "gen/shared/types"
+	genclient "generated.local/gen/grpc/metadata/client"
+	genserver "generated.local/gen/grpc/metadata/server"
+	genmetadata "generated.local/gen/metadata"
+	gentypes "generated.local/gen/shared/types"
 	"google.golang.org/grpc/metadata"
 )
 

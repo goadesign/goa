@@ -18,17 +18,15 @@ func exampleFiles(plan *Plan) ([]*codegen.File, error) {
 	generation := plan.Generation()
 	designRoots := serviceRoots(generation.Roots())
 	for _, r := range designRoots {
-		services, err := service.NewServicesData(r, generation, plan.exampleGenerator(r))
-		if err != nil {
-			return nil, err
-		}
+		servicePlan := plan.Service(r)
+		services := servicePlan.Services()
 		// example service implementation
-		if fs := service.ExampleServiceFiles(generation.GenPkg(), r, services); len(fs) != 0 {
+		if fs := service.ExampleServiceFiles(servicePlan); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 
 		// example interceptors implementation
-		if fs := service.ExampleInterceptorsFiles(generation.GenPkg(), r, services); len(fs) != 0 {
+		if fs := service.ExampleInterceptorsFiles(servicePlan); len(fs) != 0 {
 			files = append(files, fs...)
 		}
 

@@ -88,15 +88,13 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 		{Path: "unicode/utf8"},
 		services.ServiceImport(svc.Name()),
 	}
+	if serviceHasViewedResult(data, nil) {
+		imports = append(imports, services.ViewImport(svc.Name()))
+	}
 	if len(unionTypes) > 0 {
 		imports = append(imports, &codegen.ImportSpec{Path: "bytes"})
 	}
-	views := services.ViewImport(svc.Name())
-	if svr {
-		imports = append(imports, codegen.GoaImport(""), views)
-	} else {
-		imports = append(imports, views, codegen.GoaImport(""))
-	}
+	imports = append(imports, codegen.GoaImport(""))
 	header := codegen.Header(svc.Name()+" "+services.label()+" "+side+" types", side, imports)
 
 	var (

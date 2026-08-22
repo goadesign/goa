@@ -64,7 +64,7 @@ func TestGenerateHTTPUnionUsedByRequestAndResponseCompiles(t *testing.T) {
 	_ = codegen.RunDSL(t, dsl)
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	if _, err := generate(dir, "gen", false, registry); err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}

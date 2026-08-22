@@ -1,4 +1,4 @@
-// Bar is the payload type of the MultiplePkgPathMethod service A method.
+// Bar is a generated service type.
 type Bar struct {
 	IntField *int
 }

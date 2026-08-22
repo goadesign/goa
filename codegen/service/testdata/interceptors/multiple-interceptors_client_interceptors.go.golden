@@ -31,8 +31,8 @@ type (
 // interceptors defined in the design.
 func WrapMethodClientEndpoint(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	if i != nil {
-		endpoint = wrapClientMethodtest2(endpoint, i)
-		endpoint = wrapClientMethodtest4(endpoint, i)
+		endpoint = wrapClientMethodTest2(endpoint, i)
+		endpoint = wrapClientMethodTest4(endpoint, i)
 	}
 	return endpoint
 }

@@ -14,6 +14,10 @@ type (
 	// Types, functions, constants, and variables still share one package namespace.
 	PackageNameKind uint8
 
+	// PackageNameVisibility specifies whether a preferred generated declaration
+	// is visible outside its Go package.
+	PackageNameVisibility uint8
+
 	// PackageNameOrder supplies a deterministic total order for preferred names
 	// in one subsystem-owned declaration family. Implementations must be named,
 	// non-pointer value types whose fields recursively contain immutable values.
@@ -30,17 +34,18 @@ type (
 	// NameDeclaration records one package-level Go identifier. Its final name is
 	// unavailable until the owning generation freezes.
 	NameDeclaration struct {
-		kind      PackageNameKind
-		preferred string
-		final     string
-		owner     *GeneratedPackage
-		exact     bool
-		order     PackageNameOrder
-		base      *NameDeclaration
-		prefix    string
-		suffix    string
-		hashes    []Hasher
-		frozen    bool
+		kind       PackageNameKind
+		visibility PackageNameVisibility
+		preferred  string
+		final      string
+		owner      *GeneratedPackage
+		exact      bool
+		order      PackageNameOrder
+		base       *NameDeclaration
+		prefix     string
+		suffix     string
+		hashes     []Hasher
+		frozen     bool
 	}
 )
 
@@ -53,6 +58,13 @@ const (
 	NameConstant
 	// NameVariable identifies a package-level variable declaration.
 	NameVariable
+)
+
+const (
+	// ExportedName makes the preferred generated identifier package-visible.
+	ExportedName PackageNameVisibility = iota + 1
+	// UnexportedName keeps the preferred generated identifier package-private.
+	UnexportedName
 )
 
 // NewExactName creates an authored or external declaration whose exported Go
@@ -69,11 +81,12 @@ func NewExactName(kind PackageNameKind, preferred string) *NameDeclaration {
 // identifier may receive a deterministic numeric suffix. order must be a
 // named, non-pointer value whose fields recursively contain immutable values;
 // the owning package validates that constraint when it accepts the record.
-func NewPreferredName(kind PackageNameKind, preferred string, order PackageNameOrder) *NameDeclaration {
+func NewPreferredName(kind PackageNameKind, preferred string, visibility PackageNameVisibility, order PackageNameOrder) *NameDeclaration {
 	return &NameDeclaration{
-		kind:      kind,
-		preferred: Goify(preferred, true),
-		order:     order,
+		kind:       kind,
+		visibility: visibility,
+		preferred:  Goify(preferred, visibility == ExportedName),
+		order:      order,
 	}
 }
 
@@ -142,10 +155,18 @@ func validateNameDeclaration(declaration *NameDeclaration) error {
 	if !declaration.kind.valid() {
 		return fmt.Errorf("invalid package name kind %d", declaration.kind)
 	}
+	if declaration.base == nil && !declaration.exact && !declaration.visibility.valid() {
+		return fmt.Errorf("invalid package name visibility %d", declaration.visibility)
+	}
 	if declaration.preferredName() == "" {
 		return fmt.Errorf("package name must not be empty")
 	}
 	return nil
+}
+
+// valid reports whether visibility is represented by the preferred-name catalog.
+func (v PackageNameVisibility) valid() bool {
+	return v == ExportedName || v == UnexportedName
 }
 
 // validatePackageNameOrder rejects ordering values whose identity or contents

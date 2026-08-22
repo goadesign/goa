@@ -8,23 +8,30 @@ import (
 	"strings"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 )
 
 type (
 	// EndpointsData contains the data necessary to render the
 	// service endpoints struct template.
 	EndpointsData struct {
+		// EndpointsDeclaration is the exact package-level endpoint collection.
+		EndpointsDeclaration *codegen.NameDeclaration
+		// NewEndpointsDeclaration is the exact endpoint constructor.
+		NewEndpointsDeclaration *codegen.NameDeclaration
+		// ClientDeclaration is the exact package-level client.
+		ClientDeclaration *codegen.NameDeclaration
+		// NewClientDeclaration is the exact client constructor.
+		NewClientDeclaration *codegen.NameDeclaration
+		// ServiceDeclaration is the exact service interface.
+		ServiceDeclaration *codegen.NameDeclaration
+		// ServerInterceptorsDeclaration is the exact server interceptor interface.
+		ServerInterceptorsDeclaration *codegen.NameDeclaration
+		// ClientInterceptorsDeclaration is the exact client interceptor interface.
+		ClientInterceptorsDeclaration *codegen.NameDeclaration
 		// Name is the service name.
 		Name string
 		// Description is the service description.
 		Description string
-		// VarName is the endpoint struct name.
-		VarName string
-		// ClientVarName is the client struct name.
-		ClientVarName string
-		// ServiceVarName is the service interface name.
-		ServiceVarName string
 		// Methods lists the endpoint struct methods.
 		Methods []*EndpointMethodData
 		// ClientInitArgs lists the arguments needed to instantiate the client.
@@ -43,6 +50,10 @@ type (
 	// EndpointMethodData describes a single endpoint method.
 	EndpointMethodData struct {
 		*MethodData
+		// ClientDeclaration is the exact package-level client used as the method receiver.
+		ClientDeclaration *codegen.NameDeclaration
+		// ServiceDeclaration is the exact service interface accepted by the endpoint constructor.
+		ServiceDeclaration *codegen.NameDeclaration
 		// ArgName is the name of the argument used to initialize the client
 		// struct method field.
 		ArgName string
@@ -51,42 +62,23 @@ type (
 		//
 		// It is only set when HasMixedResults is true.
 		StreamArgName string
-		// ClientVarName is the corresponding client struct field name.
-		ClientVarName string
 		// ServiceName is the name of the owner service.
 		ServiceName string
-		// ServiceVarName is the name of the owner service Go interface.
-		ServiceVarName string
 	}
 )
 
-const (
-	// endpointsStructName is the name of the generated endpoints data
-	// structure.
-	endpointsStructName = "Endpoints"
-
-	// serviceInterfaceName is the name of the generated service interface.
-	serviceInterfaceName = "Service"
-)
-
-// EndpointFile returns the endpoint file for the given service.
-func EndpointFile(genpkg string, service *expr.ServiceExpr, services *ServicesData) *codegen.File {
-	svc := services.Get(service.Name)
+// endpointFile renders the endpoints for the exact service retained by plan.
+func endpointFile(plan *Plan, facts *serviceFacts) *codegen.File {
+	services := plan.Services()
+	svc := services.Get(facts.name)
 	svcName := svc.PathName
 	path := filepath.Join(codegen.Gendir, svcName, "endpoints.go")
-	outputPackage := genpkg + "/" + svcName
 	data := endpointData(svc)
 	var (
 		sections []*codegen.SectionTemplate
 	)
 	{
-		imports := services.fileImports(outputPackage, []string{
-			"context",
-			"io",
-			codegen.GoaImport("").Path,
-			codegen.GoaImport("security").Path,
-		}, serviceReferenceAttributes(service)...)
-		header := codegen.Header(service.Name+" endpoints", svc.PkgName, imports)
+		header := codegen.Header(facts.name+" endpoints", svc.PkgName, facts.imports.endpoint.specs)
 		def := &codegen.SectionTemplate{
 			Name:   "endpoints-struct",
 			Source: serviceTemplates.Read(serviceEndpointsT),
@@ -158,26 +150,30 @@ func endpointData(svc *Data) *EndpointsData {
 			names = append(names, streamArgName)
 		}
 		methods[i] = &EndpointMethodData{
-			MethodData:     m,
-			ArgName:        argName,
-			StreamArgName:  streamArgName,
-			ServiceName:    svc.Name,
-			ServiceVarName: serviceInterfaceName,
-			ClientVarName:  clientStructName,
+			MethodData:         m,
+			ClientDeclaration:  svc.ClientDeclaration,
+			ServiceDeclaration: svc.ServiceDeclaration,
+			ArgName:            argName,
+			StreamArgName:      streamArgName,
+			ServiceName:        svc.Name,
 		}
 	}
-	desc := fmt.Sprintf("%s wraps the %q service endpoints.", endpointsStructName, svc.Name)
+	desc := fmt.Sprintf("%s wraps the %q service endpoints.", svc.EndpointsDeclaration.Name(), svc.Name)
 	return &EndpointsData{
-		Name:                  svc.Name,
-		Description:           desc,
-		VarName:               endpointsStructName,
-		ClientVarName:         clientStructName,
-		ServiceVarName:        serviceInterfaceName,
-		ClientInitArgs:        strings.Join(names, ", "),
-		Methods:               methods,
-		Schemes:               svc.Schemes,
-		HasServerInterceptors: len(svc.ServerInterceptors) > 0,
-		HasClientInterceptors: len(svc.ClientInterceptors) > 0,
+		EndpointsDeclaration:          svc.EndpointsDeclaration,
+		NewEndpointsDeclaration:       svc.NewEndpointsDeclaration,
+		ClientDeclaration:             svc.ClientDeclaration,
+		NewClientDeclaration:          svc.NewClientDeclaration,
+		ServiceDeclaration:            svc.ServiceDeclaration,
+		ServerInterceptorsDeclaration: svc.ServerInterceptorsDeclaration,
+		ClientInterceptorsDeclaration: svc.ClientInterceptorsDeclaration,
+		Name:                          svc.Name,
+		Description:                   desc,
+		ClientInitArgs:                strings.Join(names, ", "),
+		Methods:                       methods,
+		Schemes:                       svc.Schemes,
+		HasServerInterceptors:         len(svc.ServerInterceptors) > 0,
+		HasClientInterceptors:         len(svc.ClientInterceptors) > 0,
 	}
 }
 

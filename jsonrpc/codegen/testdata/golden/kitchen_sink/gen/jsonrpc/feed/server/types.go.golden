@@ -8,8 +8,7 @@
 package server
 
 import (
-	feed "kitchensink/feed"
-
+	feed "generated.local/gen/feed"
 	goa "goa.design/goa/v3/pkg"
 )
 

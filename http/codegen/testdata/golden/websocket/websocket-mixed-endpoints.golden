@@ -8,8 +8,8 @@
 package server
 
 import (
-	testservice "/test_service"
 	"context"
+	testservice "generated.local/gen/test_service"
 	"github.com/gorilla/websocket"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"

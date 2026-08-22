@@ -60,26 +60,26 @@ func clientFile(svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "jsonrpc", svcName, "client", "client.go")
 	title := fmt.Sprintf("%s client JSON-RPC transport", svc.Name())
+	imports := []*codegen.ImportSpec{
+		{Path: "bufio"},
+		{Path: "bytes"},
+		{Path: "context"},
+		{Path: "fmt"},
+		{Path: "io"},
+		{Path: "net/http"},
+		{Path: "strconv"},
+		{Path: "strings"},
+		{Path: "sync"},
+		{Path: "sync/atomic"},
+		{Path: "time"},
+		{Path: "github.com/gorilla/websocket"},
+		codegen.GoaImport(""),
+		codegen.GoaImport("jsonrpc"),
+		codegen.GoaNamedImport("http", "goahttp"),
+		services.ServiceImport(svc.Name()),
+	}
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", []*codegen.ImportSpec{
-			{Path: "bufio"},
-			{Path: "bytes"},
-			{Path: "context"},
-			{Path: "fmt"},
-			{Path: "io"},
-			{Path: "net/http"},
-			{Path: "strconv"},
-			{Path: "strings"},
-			{Path: "sync"},
-			{Path: "sync/atomic"},
-			{Path: "time"},
-			{Path: "github.com/gorilla/websocket"},
-			codegen.GoaImport(""),
-			codegen.GoaImport("jsonrpc"),
-			codegen.GoaNamedImport("http", "goahttp"),
-			services.ServiceImport(svc.Name()),
-			services.ViewImport(svc.Name()),
-		}),
+		codegen.Header(title, "client", imports),
 	}
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:   "jsonrpc-client-struct",

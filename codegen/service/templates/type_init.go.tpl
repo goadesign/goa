@@ -1,4 +1,4 @@
 {{ comment .Description }}
-func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .Ref }}, {{ end }}) {{ .ReturnTypeRef }} {
+func {{ .Declaration.Name }}({{ range .Args }}{{ .Name }} {{ .Ref }}, {{ end }}) {{ .ReturnTypeRef }} {
 	{{ .Code }}
 }

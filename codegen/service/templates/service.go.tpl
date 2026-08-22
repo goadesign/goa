@@ -1,6 +1,6 @@
 
 {{ comment .Description }}
-type Service interface {
+type {{ .ServiceDeclaration.Name }} interface {
 {{- if isJSONRPCWebSocket . }}
 	{{ comment "HandleStream handles the JSON-RPC WebSocket streaming connection. Calling Recv() on the stream will dispatch requests to the appropriate methods below." }}
 	HandleStream(context.Context, Stream) error
@@ -45,7 +45,7 @@ type Service interface {
 
 {{- if .Schemes }}
 // Auther defines the authorization functions to be implemented by the service.
-type Auther interface {
+type {{ .AutherDeclaration.Name }} interface {
 	{{- range .Schemes.DedupeByType }}
 	{{ printf "%sAuth implements the authorization logic for the %s security scheme." .Type .Type | comment }}
 	{{ .Type }}Auth(ctx context.Context, {{ if eq .Type "Basic" }}user, pass{{ else if eq .Type "APIKey" }}key{{ else }}token{{ end }} string, schema *security.{{ .Type }}Scheme) (context.Context, error)
@@ -54,20 +54,20 @@ type Auther interface {
 {{- end }}
 
 // APIName is the name of the API as defined in the design.
-const APIName = {{ printf "%q" .APIName }}
+const {{ .APINameDeclaration.Name }} = {{ printf "%q" .APIName }}
 
 // APIVersion is the version of the API as defined in the design.
-const APIVersion = {{ printf "%q" .APIVersion }}
+const {{ .APIVersionDeclaration.Name }} = {{ printf "%q" .APIVersion }}
 
 // ServiceName is the name of the service as defined in the design. This is the
 // same value that is set in the endpoint request contexts under the ServiceKey
 // key.
-const ServiceName = {{ printf "%q" .Name }}
+const {{ .ServiceNameDeclaration.Name }} = {{ printf "%q" .Name }}
 
 // MethodNames lists the service method names as defined in the design. These
 // are the same values that are set in the endpoint request contexts under the
 // MethodKey key.
-var MethodNames = [{{ len .Methods }}]string{ {{ range .Methods }}{{ printf "%q" .Name }}, {{ end }} }
+var {{ .MethodNamesDeclaration.Name }} = [{{ len .Methods }}]string{ {{ range .Methods }}{{ printf "%q" .Name }}, {{ end }} }
 
 {{- range .Methods }}
 	{{- if .ServerStream }}
@@ -162,7 +162,7 @@ type {{ .Stream.Interface }} interface {
 
 {{- define "jsonrpc_websocket_stream" }}
 {{ printf "Stream defines the interface for managing a WebSocket streaming connection in the %s server. It allows sending results, sending errors, receiving requests, and closing the connection. This interface is used by the service to interact with clients over WebSocket using JSON-RPC." .Name | comment }}
-type Stream interface {
+type {{ .StreamDeclaration.Name }} interface {
 {{- range .Methods }}
 	{{- if .Result }}
 	{{ printf "Send%sNotification sends a JSON-RPC notification for the %s method (no response expected)." .VarName .Name | comment }}
@@ -198,13 +198,13 @@ type Stream interface {
 	{{- if .Errors }}{{ $hasErrors = true }}{{ end }}
 {{- end }}
 {{ printf "Stream defines the interface for managing an SSE streaming connection in the %s server. It allows sending notifications and final responses. This interface is used by the service to interact with clients over SSE using JSON-RPC." .Name | comment }}
-type Stream interface {
+type {{ .StreamDeclaration.Name }} interface {
 {{- if $hasResults }}
 	{{ comment "Send sends an event (notification or response) to the client." }}
 	{{ comment "For notifications, the result should not have an ID field." }}
 	{{ comment "For responses, the result must have an ID field." }}
 	{{ printf "Accepted types: %s" $resultTypes | comment }}
-	Send(ctx context.Context, event Event) error
+	Send(ctx context.Context, event {{ .EventDeclaration.Name }}) error
 {{- end }}
 {{- if $hasErrors }}
 	{{ comment "SendError sends a JSON-RPC error response." }}
@@ -214,7 +214,7 @@ type Stream interface {
 
 {{- if $hasResults }}
 {{ printf "Event is the interface implemented by all result types that can be sent via the %s Stream." .Name | comment }}
-type Event interface {
+type {{ .EventDeclaration.Name }} interface {
     is{{ .VarName }}Event()
 }
 

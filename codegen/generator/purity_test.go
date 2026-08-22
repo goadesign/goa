@@ -42,7 +42,7 @@ func TestGeneratorsTreatDesignAsReadOnly(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
 
 			for _, cmd := range []string{"gen", "example"} {
-				_, err := executeGeneration("gen", []eval.Root{root}, cmd, newDefaultRegistry())
+				_, err := executeGeneration("generated.local/gen", []eval.Root{root}, cmd, newDefaultRegistry())
 				require.NoError(t, err)
 			}
 		})

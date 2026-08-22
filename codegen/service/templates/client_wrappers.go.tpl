@@ -1,9 +1,9 @@
 
-{{ comment (printf "Wrap%sClientEndpoint wraps the %s endpoint with the client interceptors defined in the design." .MethodVarName .Method) }}
-func Wrap{{ .MethodVarName }}ClientEndpoint(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
+{{ comment (printf "%s wraps the %s endpoint with the client interceptors defined in the design." .Declaration.Name .Method) }}
+func {{ .Declaration.Name }}(endpoint goa.Endpoint, i {{ .InterceptorsDeclaration.Name }}) goa.Endpoint {
 	if i != nil {
-		{{- range .Interceptors }}
-		endpoint = wrapClient{{ $.MethodVarName }}{{ . }}(endpoint, i)
+		{{- range .Wrappers }}
+		endpoint = {{ .Name }}(endpoint, i)
 		{{- end }}
 	}
 	return endpoint

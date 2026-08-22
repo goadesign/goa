@@ -21,11 +21,12 @@ func CreateJSONRPCServices(root *expr.RootExpr) *httpcodegen.ServicesData {
 // createServiceServices performs the complete package declaration lifecycle
 // required by transport test helpers.
 func createServiceServices(root *expr.RootExpr) *service.ServicesData {
-	generation, err := codegen.NewGeneration("/", []eval.Root{root})
+	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
 	if err != nil {
 		panic(err)
 	}
-	if err := service.Plan(root, generation); err != nil {
+	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	if err != nil {
 		panic(err)
 	}
 	if err := Plan(generation); err != nil {
@@ -34,9 +35,8 @@ func createServiceServices(root *expr.RootExpr) *service.ServicesData {
 	if err := generation.Freeze(); err != nil {
 		panic(err)
 	}
-	services, err := service.NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
-	if err != nil {
+	if err := servicePlan.Link(); err != nil {
 		panic(err)
 	}
-	return services
+	return servicePlan.Services()
 }

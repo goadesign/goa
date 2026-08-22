@@ -8,9 +8,9 @@
 package client
 
 import (
-	testservice "/test_service"
-	testserviceviews "/test_service/views"
 	"context"
+	testservice "generated.local/gen/test_service"
+	testserviceviews "generated.local/gen/test_service/views"
 	"github.com/gorilla/websocket"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"

@@ -6,30 +6,19 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 )
 
-const (
-	// clientStructName is the name of the generated client data structure.
-	clientStructName = "Client"
-)
-
-// ClientFile returns the client file for the given service.
-func ClientFile(genpkg string, service *expr.ServiceExpr, services *ServicesData) *codegen.File {
-	svc := services.Get(service.Name)
+// clientFile renders the client for the exact service retained by plan.
+func clientFile(plan *Plan, facts *serviceFacts) *codegen.File {
+	services := plan.Services()
+	svc := services.Get(facts.name)
 	data := endpointData(svc)
 	path := filepath.Join(codegen.Gendir, svc.PathName, "client.go")
-	outputPackage := genpkg + "/" + svc.PathName
 	var (
 		sections []*codegen.SectionTemplate
 	)
 	{
-		imports := services.fileImports(outputPackage, []string{
-			"context",
-			"io",
-			codegen.GoaImport("").Path,
-		}, serviceReferenceAttributes(service)...)
-		header := codegen.Header(service.Name+" client", svc.PkgName, imports)
+		header := codegen.Header(facts.name+" client", svc.PkgName, facts.imports.client.specs)
 		def := &codegen.SectionTemplate{
 			Name:   "client-struct",
 			Source: serviceTemplates.Read(serviceClientT),

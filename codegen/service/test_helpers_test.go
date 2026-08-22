@@ -9,6 +9,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
 )
 
 // mustTestGeneration creates one generation or fails the calling test.
@@ -25,4 +26,11 @@ func mustClaimTestPackage(t *testing.T, generation *codegen.Generation, path str
 	generatedPackage, err := generation.ClaimPackage(path)
 	require.NoError(t, err)
 	return generatedPackage
+}
+
+// planTestServices collects one retained service plan when the test exercises
+// declaration collection separately from post-freeze linking.
+func planTestServices(root *expr.RootExpr, generation *codegen.Generation) error {
+	_, err := NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	return err
 }

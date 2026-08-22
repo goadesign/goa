@@ -34,9 +34,9 @@ func TestViews(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := codegen.RunDSL(t, c.DSL)
-			services := mustServicesData(t, root)
+			plan := mustServicePlan(t, root)
 			require.Len(t, root.Services, 1)
-			fs := ViewsFile("goa.design/goa/example", root.Services[0], services)
+			fs := viewsFile(plan, plan.facts.services[0])
 			require.NotNil(t, fs)
 			buf := new(bytes.Buffer)
 			for _, s := range fs.SectionTemplates[1:] {

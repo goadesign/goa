@@ -46,7 +46,7 @@ type (
 // interceptors defined in the design.
 func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	if i != nil {
-		endpoint = wrapMethodlogging(endpoint, i)
+		endpoint = wrapMethodLogging(endpoint, i)
 	}
 	return endpoint
 }

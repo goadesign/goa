@@ -15,6 +15,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen/service/testdata"
+	aliasd "goa.design/goa/v3/codegen/service/testdata/alias-external"
+	"goa.design/goa/v3/codegen/service/testdata/external"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 )
@@ -345,32 +347,113 @@ func TestConvertFiles(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := runDSL(t, c.DSL)
-			services := mustServicesData(t, root)
+			plan := mustServicePlan(t, root)
+			retained, err := externalConversionFiles([]*Plan{plan})
+			require.NoError(t, err)
+			files := convertFiles(retained)
 
-			for _, svc := range root.Services {
-				files, err := ConvertFiles(root, svc, services)
-				require.NoError(t, err)
+			// Check expected number of files
+			require.Equal(t, len(c.ExpectedFiles), len(files))
 
-				// Check expected number of files
-				require.Equal(t, len(c.ExpectedFiles), len(files))
-
-				// Verify each expected file
-				for expectedPath, expectedSections := range c.ExpectedFiles {
-					found := false
-					// Normalize expected path for cross-platform compatibility
-					normalizedExpected := filepath.FromSlash(expectedPath)
-					for _, file := range files {
-						if strings.HasSuffix(file.Path, normalizedExpected) {
-							found = true
-							require.Equal(t, expectedSections, len(file.SectionTemplates))
-							// First section should be header
-							require.Equal(t, "source-header", file.SectionTemplates[0].Name)
-							break
-						}
+			// Verify each expected file
+			for expectedPath, expectedSections := range c.ExpectedFiles {
+				found := false
+				// Normalize expected path for cross-platform compatibility
+				normalizedExpected := filepath.FromSlash(expectedPath)
+				for _, file := range files {
+					if strings.HasSuffix(file.Path, normalizedExpected) {
+						found = true
+						require.Equal(t, expectedSections, len(file.SectionTemplates))
+						// First section should be header
+						require.Equal(t, "source-header", file.SectionTemplates[0].Name)
+						break
 					}
-					require.True(t, found, "Expected file %s not found", expectedPath)
 				}
+				require.True(t, found, "Expected file %s not found", expectedPath)
 			}
 		})
 	}
+}
+
+// TestConversionPlanSharesHelperDeclarations proves recursive call edges and
+// emitted helper definitions use the same package declaration retained by the
+// external conversion operation.
+func TestConversionPlanSharesHelperDeclarations(t *testing.T) {
+	root := runDSL(t, func() {
+		recursive := dsl.Type("Recursive", func() {
+			dsl.ConvertTo(objRecursiveT{})
+			dsl.CreateFrom(objRecursiveT{})
+			dsl.Attribute("Foo", dsl.String)
+			dsl.Attribute("Bar", dsl.Int)
+			dsl.Attribute("Goo", dsl.Float32)
+			dsl.Attribute("Goo2", dsl.UInt)
+			dsl.Attribute("Rec", "Recursive")
+			dsl.Required("Foo", "Bar", "Goo", "Goo2")
+		})
+		dsl.Service("RecursiveService", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(recursive)
+			})
+		})
+	})
+	plan := mustServicePlan(t, root)
+	files := plan.facts.externalConversions
+	require.Len(t, files, 1)
+	require.Len(t, files[0].operations, 2)
+	for _, operation := range files[0].operations {
+		planned := operation.plan.Helpers()
+		require.NotEmpty(t, planned)
+		require.Len(t, operation.helpers, len(planned))
+		for index := range planned {
+			require.Equal(t, planned[index].ID, operation.helpers[index].ID)
+			require.Same(t, planned[index].Declaration, operation.helpers[index].Declaration)
+		}
+	}
+}
+
+// TestConversionMethodNamesUseReceiverNamespaces verifies different receiver
+// types may use the same method spelling while collisions on one receiver are
+// resolved in stable external-package order.
+func TestConversionMethodNamesUseReceiverNamespaces(t *testing.T) {
+	root := runDSL(t, func() {
+		foo := dsl.Type("Foo", func() {
+			dsl.ConvertTo(external.ConvertModel{})
+			dsl.Attribute("Foo", dsl.String)
+		})
+		bar := dsl.Type("Bar", func() {
+			dsl.ConvertTo(aliasd.ConvertModel{})
+			dsl.Attribute("Bar", dsl.String)
+		})
+		empty := dsl.Type("Empty", func() {
+			dsl.ConvertTo(external.ConvertModel{})
+			dsl.ConvertTo(aliasd.ConvertModel{})
+		})
+		dsl.Service("Values", func() {
+			for _, method := range []struct {
+				name    string
+				payload expr.UserType
+			}{
+				{"Foo", foo},
+				{"Bar", bar},
+				{"Empty", empty},
+			} {
+				dsl.Method(method.name, func() {
+					dsl.Payload(method.payload)
+				})
+			}
+		})
+	})
+	plan := mustServicePlan(t, root)
+	var operations []*externalConversionFacts
+	for _, file := range plan.facts.externalConversions {
+		operations = append(operations, file.operations...)
+	}
+	names := make(map[string]string)
+	for _, operation := range operations {
+		names[operation.receiverType.Name()+":"+operation.externalPath] = operation.methodName
+	}
+	require.Equal(t, "ConvertToConvertModel", names["Foo:goa.design/goa/v3/codegen/service/testdata/external"])
+	require.Equal(t, "ConvertToConvertModel", names["Bar:goa.design/goa/v3/codegen/service/testdata/alias-external"])
+	require.Equal(t, "ConvertToConvertModel", names["Empty:goa.design/goa/v3/codegen/service/testdata/alias-external"])
+	require.Equal(t, "ConvertToConvertModel2", names["Empty:goa.design/goa/v3/codegen/service/testdata/external"])
 }

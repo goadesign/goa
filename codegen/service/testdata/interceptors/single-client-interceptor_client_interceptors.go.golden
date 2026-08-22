@@ -22,7 +22,7 @@ type (
 // interceptors defined in the design.
 func WrapMethodClientEndpoint(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	if i != nil {
-		endpoint = wrapClientMethodtracing(endpoint, i)
+		endpoint = wrapClientMethodTracing(endpoint, i)
 	}
 	return endpoint
 }

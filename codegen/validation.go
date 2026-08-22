@@ -12,6 +12,37 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+type (
+	// unionValidationCase describes one concrete type accepted by a generated
+	// interface-union switch.
+	unionValidationCase struct {
+		// Type is the generated concrete branch type.
+		Type string
+		// Field is the protobuf wrapper field that carries the branch payload.
+		Field string
+		// Name is the design branch name used in validation errors.
+		Name string
+		// PayloadRequiresPresence reports whether a selected wrapper must carry
+		// a non-nil message payload.
+		PayloadRequiresPresence bool
+		// Validation is the branch-specific validation code.
+		Validation string
+	}
+
+	// unionValidationData is the complete render input for one interface-union
+	// validation switch.
+	unionValidationData struct {
+		// Target is the generated union expression inspected by the switch.
+		Target string
+		// Context identifies the union in generated validation errors.
+		Context string
+		// Protobuf reports whether cases are pointer-backed protobuf wrappers.
+		Protobuf bool
+		// Cases lists every concrete branch accepted by the union.
+		Cases []unionValidationCase
+	}
+)
+
 var (
 	enumValT       *template.Template
 	formatValT     *template.Template
@@ -225,8 +256,7 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 		}
 
 		// Validate unions represented as interfaces (e.g., protobuf oneof wrappers).
-		var vals []string
-		var types []string
+		var cases []unionValidationCase
 		for _, v := range u.Values {
 			vatt := v.Attribute
 			if view {
@@ -235,25 +265,32 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 				unionCtx.Pointer = false
 				val := validateAttribute(unionCtx, vatt, put, "v", context+".value", true, view, seen)
 				if val != "" {
-					types = append(types, attCtx.Scope.Ref(vatt, attCtx.Pkg(vatt)))
-					vals = append(vals, val)
+					cases = append(cases, unionValidationCase{
+						Type:       attCtx.Scope.Ref(vatt, attCtx.Pkg(vatt)),
+						Validation: val,
+					})
 				}
 			} else {
 				fieldName := attCtx.Scope.Field(vatt, v.Name, true)
 				val := validateAttribute(attCtx, vatt, put, "v."+fieldName, context+".value", true, view, seen)
-				if val != "" {
-					tref := attCtx.Scope.Ref(&expr.AttributeExpr{Type: put}, attCtx.Pkg(&expr.AttributeExpr{Type: put}))
-					types = append(types, tref+"_"+fieldName)
-					vals = append(vals, val)
-				}
+				parent := &expr.AttributeExpr{Type: put}
+				tref := attCtx.Scope.Ref(parent, attCtx.Pkg(parent))
+				cases = append(cases, unionValidationCase{
+					Type:                    tref + "_" + fieldName,
+					Field:                   fieldName,
+					Name:                    v.Name,
+					PayloadRequiresPresence: protobufUnionPayloadRequiresPresence(vatt),
+					Validation:              val,
+				})
 			}
 		}
-		if len(vals) > 0 {
+		if len(cases) > 0 {
 			newline()
-			data := map[string]any{
-				"target": target,
-				"types":  types,
-				"values": vals,
+			data := unionValidationData{
+				Target:   target,
+				Context:  context,
+				Protobuf: !view,
+				Cases:    cases,
 			}
 			if err := unionValT.Execute(buf, data); err != nil {
 				panic(err) // bug
@@ -262,6 +299,14 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 	}
 
 	return buf
+}
+
+// protobufUnionPayloadRequiresPresence reports whether the generated oneof
+// wrapper field holds a protobuf message pointer. Protobuf scalar fields,
+// including primitive aliases and bytes, store their value directly. Any and
+// every non-primitive branch compile to message pointers.
+func protobufUnionPayloadRequiresPresence(att *expr.AttributeExpr) bool {
+	return !expr.IsPrimitive(att.Type) || unalias(att.Type).Kind() == expr.AnyKind
 }
 
 func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.UserType, target, context string, req, view bool, seen map[expr.UserType]*bytes.Buffer) string {
@@ -323,11 +368,7 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 		return ""
 	}
 	var buf bytes.Buffer
-	name := ctx.Scope.Name(att, "", ctx.Pointer, ctx.UseDefault)
-	// Use the scoped type name directly to preserve identifiers such as
-	// protocol buffer-reserved names that include a trailing underscore
-	// (e.g., Message_). Applying Goify here would drop underscores and
-	// cause mismatches between function declarations and call sites.
+	name := ctx.Scope.ValidatorName(att, "")
 	data := map[string]any{"name": name, "target": target}
 	if err := userValT.Execute(&buf, data); err != nil {
 		panic(err) // bug
@@ -436,7 +477,7 @@ func validationCode(att *expr.AttributeExpr, attCtx *AttributeContext, req, alia
 	}
 	if exclMax := validation.ExclusiveMaximum; exclMax != nil {
 		data["exclMax"] = *exclMax
-		data["isExclMax"] = true
+		data["isExclMin"] = false
 		if val := runTemplate(exclMinMaxValT, data); val != "" {
 			res = append(res, val)
 		}

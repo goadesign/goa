@@ -11,10 +11,10 @@ import (
 	"bytes"
 	"context"
 	"io"
-	calc "kitchensink/calc"
 	"net/http"
 	"net/url"
 
+	calc "generated.local/gen/calc"
 	"github.com/google/uuid"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"

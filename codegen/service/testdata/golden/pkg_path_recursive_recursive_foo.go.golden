@@ -1,5 +1,4 @@
-// RecursiveFoo is the payload type of the PkgPathRecursiveMethod service A
-// method.
+// RecursiveFoo is a generated service type.
 type RecursiveFoo struct {
 	Foo *Foo
 }

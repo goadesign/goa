@@ -10,11 +10,11 @@ package cli
 import (
 	"flag"
 	"fmt"
-	healthc "kitchensink/http/health/client"
-	mixedc "kitchensink/http/mixed/client"
 	"net/http"
 	"os"
 
+	healthc "generated.local/gen/http/health/client"
+	mixedc "generated.local/gen/http/mixed/client"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
 )

@@ -74,8 +74,10 @@ func serverFile(svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *
 		codegen.GoaImport("jsonrpc"),
 		codegen.GoaNamedImport("http", "goahttp"),
 		services.ServiceImport(svc.Name()),
-		services.ViewImport(svc.Name()),
 	)
+	if serviceHasViewedResult(data) {
+		imports = append(imports, services.ViewImport(svc.Name()))
+	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),
 	}
@@ -130,6 +132,17 @@ func serverFile(svc *expr.HTTPServiceExpr, services *httpcodegen.ServicesData) *
 	}
 
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
+}
+
+// serviceHasViewedResult reports whether server.go emits endpoint conversion
+// code that references the service views package.
+func serviceHasViewedResult(service *httpcodegen.ServiceData) bool {
+	for _, endpoint := range service.Endpoints {
+		if endpoint.Method.ViewedResult != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // lowerInitial returns the string with the first letter in lowercase.

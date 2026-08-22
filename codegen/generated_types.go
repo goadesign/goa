@@ -299,6 +299,18 @@ func (p *GeneratedPackage) DeclareName(declaration *NameDeclaration) error {
 	return nil
 }
 
+// DeclareDependentName registers a compiler-owned companion whose preferred
+// spelling is derived from base's final name. The base must already belong to
+// p. Freeze resolves base first, then reserves prefix+base+suffix in the same
+// package namespace.
+func (p *GeneratedPackage) DeclareDependentName(kind PackageNameKind, base *NameDeclaration, prefix, suffix string, order PackageNameOrder) (*NameDeclaration, error) {
+	declaration := newDependentName(kind, base, prefix, suffix, order)
+	if err := p.DeclareName(declaration); err != nil {
+		return nil, err
+	}
+	return declaration, nil
+}
+
 // DeclareUserType reserves userType's exact exported Go name and returns its
 // canonical package declaration. Repeated calls return the same declaration.
 func (p *GeneratedPackage) DeclareUserType(userType expr.UserType) (*TypeDeclaration, error) {
@@ -354,7 +366,7 @@ func (p *GeneratedPackage) DeclareDerivedType(identity DerivedTypeID, name strin
 		return declaration, nil
 	}
 	order := newDerivedTypeOrder(identity, canonicalName)
-	nameDeclaration := NewPreferredName(NameType, canonicalName, order)
+	nameDeclaration := NewPreferredName(NameType, canonicalName, ExportedName, order)
 	if err := p.DeclareName(nameDeclaration); err != nil {
 		return nil, err
 	}
@@ -395,7 +407,7 @@ func (p *GeneratedPackage) DeclareUnion(union *expr.Union) (*UnionDeclaration, e
 		return planned.declaration, nil
 	}
 
-	nameDeclaration := NewPreferredName(NameType, union.Name(), unionNameOrder{
+	nameDeclaration := NewPreferredName(NameType, union.Name(), ExportedName, unionNameOrder{
 		union: identity,
 		role:  unionTypeNameRole,
 	})
@@ -490,7 +502,7 @@ func (p *GeneratedPackage) DeclareUnionBranchType(union *expr.Union, branchName 
 		return branch.branchType, nil
 	}
 	typeName := Goify(userType.Name(), true)
-	nameDeclaration := NewPreferredName(NameType, typeName, unionNameOrder{
+	nameDeclaration := NewPreferredName(NameType, typeName, ExportedName, unionNameOrder{
 		union:  NewUnionTypeID(union),
 		role:   unionBranchTypeNameRole,
 		branch: branchName,

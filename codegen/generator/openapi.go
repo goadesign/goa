@@ -4,7 +4,6 @@ package generator
 
 import (
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/codegen/service"
 	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
@@ -14,9 +13,7 @@ func openAPIFiles(plan *Plan) ([]*codegen.File, error) {
 	generation := plan.Generation()
 	designRoots := serviceRoots(generation.Roots())
 	for _, root := range designRoots {
-		if _, err := service.NewServicesData(root, generation, plan.exampleGenerator(root)); err != nil {
-			return nil, err
-		}
+		plan.Service(root).Services()
 	}
 	if len(designRoots) > 0 {
 		root := designRoots[0]

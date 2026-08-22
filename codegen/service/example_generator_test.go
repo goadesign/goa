@@ -24,12 +24,12 @@ func TestServicesDataRetainsRunExampleGenerator(t *testing.T) {
 	root.API.RandomizerFactory = expr.NewDeterministicRandomizerFactory()
 	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
 	require.NoError(t, err)
-	require.NoError(t, Plan(root, generation))
-	require.NoError(t, generation.Freeze())
 	examples := expr.NewExampleGenerator(root.API.RandomizerFactory)
-
-	services, err := NewServicesData(root, generation, examples)
-
+	plan, err := NewPlan(root, generation, examples)
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, plan.Link())
+	services := plan.Services()
 	require.NoError(t, err)
 	attribute := &expr.AttributeExpr{Type: expr.String}
 	method := root.Services[0].Methods[0]
@@ -38,7 +38,7 @@ func TestServicesDataRetainsRunExampleGenerator(t *testing.T) {
 	require.Equal(t, "abc123", services.FieldExample(attribute, attribute, "value", owner))
 }
 
-func TestRepeatedServiceAnalysisKeepsAnonymousExamplesStable(t *testing.T) {
+func TestRepeatedServiceReadsKeepAnonymousExamplesStable(t *testing.T) {
 	root := codegen.RunDSL(t, func() {
 		dsl.Service("Values", func() {
 			dsl.Method("Primitive", func() {
@@ -57,14 +57,13 @@ func TestRepeatedServiceAnalysisKeepsAnonymousExamplesStable(t *testing.T) {
 	})
 	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
 	require.NoError(t, err)
-	require.NoError(t, Plan(root, generation))
-	require.NoError(t, generation.Freeze())
 	examples := expr.NewExampleGenerator(root.API.RandomizerFactory)
-
-	first, err := NewServicesData(root, generation, examples)
+	plan, err := NewPlan(root, generation, examples)
 	require.NoError(t, err)
-	second, err := NewServicesData(root, generation, examples)
-	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, plan.Link())
+	first := plan.Services()
+	second := plan.Services()
 	require.Len(t, first.Get("Values").Methods, 3)
 	require.Len(t, second.Get("Values").Methods, 3)
 	for index, firstMethod := range first.Get("Values").Methods {

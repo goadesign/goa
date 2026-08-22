@@ -31,9 +31,9 @@ func (s *{{ .SSE.StructName }}) {{ .SSE.SendWithContextName }}(ctx context.Conte
 
 	{{- if .Method.ViewedResult }}
 		{{- if .Method.ViewedResult.ViewName }}
-	res := {{ .Service.PkgName }}.{{ .Method.ViewedResult.Init.Name }}(v, {{ printf "%q" .Method.ViewedResult.ViewName }})
+	res := {{ .ServicePkgName }}.{{ .Method.ViewedResult.Init.Declaration.Name }}(v, {{ printf "%q" .Method.ViewedResult.ViewName }}).Projected
 		{{- else }}
-	res := {{ .Service.PkgName }}.{{ .Method.ViewedResult.Init.Name }}(v, "default")
+	res := {{ .ServicePkgName }}.{{ .Method.ViewedResult.Init.Declaration.Name }}(v, "default").Projected
 		{{- end }}
 	{{- else }}
 	res := v

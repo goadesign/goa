@@ -266,6 +266,36 @@ func TestValidationPredicatesPure(t *testing.T) {
 	assertValidationsUnchanged(t, before)
 }
 
+// TestValidationCodeUsesBothExclusiveBounds verifies that generating a lower
+// exclusive bound cannot leave the upper bound on the lower-bound template
+// branch.
+func TestValidationCodeUsesBothExclusiveBounds(t *testing.T) {
+	exclusiveMinimum := 1.0
+	exclusiveMaximum := 10.0
+	attribute := &expr.AttributeExpr{
+		Type: expr.Float64,
+		Validation: &expr.ValidationExpr{
+			ExclusiveMinimum: &exclusiveMinimum,
+			ExclusiveMaximum: &exclusiveMaximum,
+		},
+	}
+	context := NewAttributeContext(false, false, true, "", NewNameScope())
+	legacy := ValidationCode(attribute, nil, context, true, false, true, "target")
+	require.Contains(t, legacy, "target <= 1")
+	require.Contains(t, legacy, "target >= 10")
+
+	layout, err := PlanGoType(attribute, GoTypePlanOptions{
+		Owner:  "generated.local/gen/service",
+		Policy: GoLayoutPolicy{UseDefault: true, SumType: true},
+	})
+	require.NoError(t, err)
+	plan, err := NewValidationPlan(attribute, layout, ValidationPlanOptions{Required: true})
+	require.NoError(t, err)
+	linked, err := plan.Link(layout.Link("generated.local/gen/service", nil))
+	require.NoError(t, err)
+	require.Equal(t, legacy, linked.Render("target", "target"))
+}
+
 // validationSnapshot captures the identity and deep value of an attribute
 // validation so mutations can be detected after running codegen.
 type validationSnapshot struct {

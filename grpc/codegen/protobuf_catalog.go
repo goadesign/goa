@@ -374,6 +374,16 @@ func (s *protobufValidationScope) Name(attribute *expr.AttributeExpr, pkg string
 	return s.protoBufScope.Name(attribute, pkg, pointer, useDefault)
 }
 
+// ValidatorName returns the exact side-specific protobuf validator retained by
+// the package catalog.
+func (s *protobufValidationScope) ValidatorName(attribute *expr.AttributeExpr, _ string) string {
+	validator := s.catalog.validationRecord(attribute, s.side)
+	if validator == nil {
+		panic("protobuf validator was not retained")
+	}
+	return validator.name
+}
+
 // collectMessageRecursive gathers imports and declarations while using record
 // identity itself as the cycle guard.
 func (c *protobufPackageCatalog) collectMessageRecursive(attribute *expr.AttributeExpr, source protobufMessageSource, root bool, owner *protobufMessageRecord, fieldName string, sd *ServiceData) []string {

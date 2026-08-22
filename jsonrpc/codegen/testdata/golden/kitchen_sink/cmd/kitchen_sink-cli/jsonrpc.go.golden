@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	cli2 "kitchensink/jsonrpc/cli/kitchen_sink"
 	"net/http"
 	"time"
 
+	cli2 "generated.local/gen/jsonrpc/cli/kitchen_sink"
 	"github.com/gorilla/websocket"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"

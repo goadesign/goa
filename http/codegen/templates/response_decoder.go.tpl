@@ -46,7 +46,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 					return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 				}
 				{{- end }}
-			res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ResultInit.Name }}(vres)
+			res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ResultInit.Declaration.Name }}(vres)
 			{{- else }}
 			res := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 			{{- end }}

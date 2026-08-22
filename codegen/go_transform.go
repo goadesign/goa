@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"text/template"
 
@@ -73,13 +74,114 @@ func GoTransformWithAttrs(source, target *expr.AttributeExpr, sourceVar, targetV
 	if err != nil {
 		return "", nil, err
 	}
-
-	funcs, err := collectHelpers(source, target, true, true, ta, make(map[string]*TransformFunctionData))
+	helpers, err := collectLegacyHelpers(source, target, true, true, ta, make(map[string]*TransformFunctionData))
 	if err != nil {
 		return "", nil, err
 	}
+	return strings.TrimRight(code, "\n"), helpers, nil
+}
 
-	return strings.TrimRight(code, "\n"), funcs, nil
+// NewTransformPlan selects the exact recursive helper operations required to
+// transform source into target. It does not resolve generated names.
+func NewTransformPlan(source, target *expr.AttributeExpr) (*TransformPlan, error) {
+	plan := &TransformPlan{
+		source:     source,
+		target:     target,
+		operations: []*transformOperation{{}},
+	}
+	if err := planTransformOperation(source, target, true, true, plan.operations[0], make(map[transformPair]TransformHelperID), plan); err != nil {
+		return nil, err
+	}
+	return plan, nil
+}
+
+// Helpers returns the recursive helper operations selected by the plan. The
+// returned slice is independent of the plan; each descriptor and its ID are
+// the exact values Render uses for calls and definitions.
+func (p *TransformPlan) Helpers() []TransformHelper {
+	return slices.Clone(p.helpers)
+}
+
+// BindHelperDeclaration assigns the package-level function that defines one
+// retained helper operation. Binding happens during declaration planning so
+// calls and definitions cannot choose names independently at render time.
+func (p *TransformPlan) BindHelperDeclaration(id TransformHelperID, declaration *NameDeclaration) error {
+	if id.plan != p || id.index < 0 || id.index >= len(p.helpers) {
+		return fmt.Errorf("transform helper does not belong to this plan")
+	}
+	if declaration == nil {
+		return fmt.Errorf("transform helper declaration must not be nil")
+	}
+	if declaration.Kind() != NameFunction {
+		return fmt.Errorf("transform helper declaration must be a function, got %s", declaration.Kind())
+	}
+	helper := &p.helpers[id.index]
+	if helper.Declaration != nil && helper.Declaration != declaration {
+		return fmt.Errorf("transform helper already has a different declaration")
+	}
+	for index := range p.helpers {
+		if index != id.index && p.helpers[index].Declaration == declaration {
+			return fmt.Errorf("transform helper declaration is already bound to a different operation")
+		}
+	}
+	helper.Declaration = declaration
+	return nil
+}
+
+// BindContexts assigns the frozen source and target type resolvers used by
+// every call and helper definition in the retained plan. Contexts may be bound
+// only once so later renders cannot change pointer or package-name policy.
+func (p *TransformPlan) BindContexts(source, target *AttributeContext) error {
+	if source == nil || target == nil {
+		return fmt.Errorf("transform contexts must not be nil")
+	}
+	if p.sourceCtx != nil || p.targetCtx != nil {
+		return fmt.Errorf("transform contexts are already bound")
+	}
+	p.sourceCtx = source.Dup()
+	p.targetCtx = target.Dup()
+	return nil
+}
+
+// Render formats the transformation and its retained recursive helpers using
+// the contexts and declarations bound to the plan.
+func (p *TransformPlan) Render(sourceVar, targetVar string, newVar bool) (string, []*TransformFunctionData, error) {
+	if p.sourceCtx == nil || p.targetCtx == nil {
+		return "", nil, fmt.Errorf("transform contexts are not bound")
+	}
+	renderAttrs := TransformAttrs{
+		SourceCtx: p.sourceCtx.Dup(),
+		TargetCtx: p.targetCtx.Dup(),
+	}
+	renderAttrs.helpers = make(map[TransformHelperID]TransformHelper, len(p.helpers))
+	for _, planned := range p.helpers {
+		if planned.Declaration == nil {
+			return "", nil, fmt.Errorf("transform helper occurrence %d has no declaration", planned.Occurrence)
+		}
+		renderAttrs.helpers[planned.ID] = planned
+	}
+	renderAttrs.calls = &transformCallCursor{calls: p.operations[0].calls}
+	code, err := TransformAttribute(p.source, p.target, sourceVar, targetVar, newVar, &renderAttrs)
+	if err != nil {
+		return "", nil, err
+	}
+	if err := renderAttrs.calls.complete("top-level transform"); err != nil {
+		return "", nil, err
+	}
+	helpers := make([]*TransformFunctionData, 0, len(p.helpers))
+	for index, planned := range p.helpers {
+		entered := enterTransformAttrs(planned.Source, planned.Target, &renderAttrs)
+		entered.calls = &transformCallCursor{calls: p.operations[index+1].calls}
+		helper, err := generateRetainedHelper(planned, entered)
+		if err != nil {
+			return "", nil, err
+		}
+		if err := entered.calls.complete(fmt.Sprintf("transform helper occurrence %d", planned.Occurrence)); err != nil {
+			return "", nil, err
+		}
+		helpers = append(helpers, helper)
+	}
+	return strings.TrimRight(code, "\n"), helpers, nil
 }
 
 // TransformAttribute returns the code to transform source attribute to target
@@ -131,11 +233,24 @@ func TransformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 	return prelude + code, nil
 }
 
-// TransformHelperName returns the transformation function name to initialize a
-// target user type from an instance of a source user type. It is exported so
-// that TransformHooks implementations can compute the names of the helper
-// functions the engine collects.
+// TransformHelperName returns the retained or one-pass helper function used to
+// initialize target from source. Retained transforms call it only for named
+// object pairs; one-pass transform hooks retain their legacy naming contract.
 func TransformHelperName(source, target *expr.AttributeExpr, ta *TransformAttrs) string {
+	if ta.calls != nil {
+		call := ta.calls.consume()
+		helper, ok := ta.helpers[call.helper]
+		if !ok {
+			panic("retained transform call references an unknown helper") // bug
+		}
+		return helper.Declaration.Name()
+	}
+	return legacyTransformHelperName(source, target, ta)
+}
+
+// legacyTransformHelperName preserves the naming strategy used by generators
+// that have not yet bound their package-level helper declarations.
+func legacyTransformHelperName(source, target *expr.AttributeExpr, ta *TransformAttrs) string {
 	var (
 		sname  string
 		tname  string
@@ -154,6 +269,15 @@ func TransformHelperName(source, target *expr.AttributeExpr, ta *TransformAttrs)
 		}
 	}
 	return Goify(prefix+sname+"To"+tname, false)
+}
+
+// usesTransformHelper reports whether source and target can define one named
+// helper function signature. Anonymous objects are rendered inline because
+// they have no package-level parameter or result declaration.
+func usesTransformHelper(source, target *expr.AttributeExpr) bool {
+	_, sourceNamed := source.Type.(expr.UserType)
+	_, targetNamed := target.Type.(expr.UserType)
+	return sourceNamed && targetNamed && expr.IsObject(source.Type) && expr.IsObject(target.Type)
 }
 
 // transformPrimitive returns the code to transform source primitive type to
@@ -312,7 +436,6 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				dispatchTgtVar = unionVar
 				postlude = fmt.Sprintf("%s = &%s\n", tgtVar, unionVar)
 			}
-			_, ok := srcc.Type.(expr.UserType)
 			switch {
 			case expr.IsArray(srcc.Type):
 				if h != nil && h.TransformArray != nil {
@@ -332,10 +455,8 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				} else {
 					code, err = transformUnion(srcc, tgtc, dispatchSrcVar, dispatchTgtVar, dispatchNewVar, ta)
 				}
-			case ok:
-				if !expr.IsPrimitive(srcc.Type) {
-					code = fmt.Sprintf("%s = %s(%s)\n", dispatchTgtVar, TransformHelperName(srcc, tgtc, ta), dispatchSrcVar)
-				}
+			case usesTransformHelper(srcc, tgtc):
+				code = fmt.Sprintf("%s = %s(%s)\n", dispatchTgtVar, TransformHelperName(srcc, tgtc, ta), dispatchSrcVar)
 			case expr.IsObject(srcc.Type):
 				code, err = TransformAttribute(srcc, tgtc, dispatchSrcVar, dispatchTgtVar, dispatchNewVar, ta)
 			}
@@ -490,7 +611,8 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 		"NewVar":         newVar,
 		"TransformAttrs": ta,
 		"LoopVar":        string(rune(105 + strings.Count(targetVar, "["))),
-		"IsStruct":       expr.IsObject(target.ElemType.Type),
+		"SourceIsObject": expr.IsObject(source.ElemType.Type),
+		"UseHelper":      usesTransformHelper(source.ElemType, target.ElemType),
 	}
 	var buf bytes.Buffer
 	if err := transformGoArrayT.Execute(&buf, data); err != nil {
@@ -519,8 +641,9 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 		"NewVar":         newVar,
 		"TransformAttrs": ta,
 		"LoopVar":        "",
-		"IsKeyStruct":    expr.IsObject(target.KeyType.Type),
-		"IsElemStruct":   expr.IsObject(target.ElemType.Type),
+		"ElemIsObject":   expr.IsObject(source.ElemType.Type),
+		"UseKeyHelper":   usesTransformHelper(source.KeyType, target.KeyType),
+		"UseElemHelper":  usesTransformHelper(source.ElemType, target.ElemType),
 	}
 	if depth := MapDepth(target); depth > 0 {
 		data["LoopVar"] = string(rune(97 + depth))
@@ -569,17 +692,13 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	cases := make([]map[string]any, 0, len(srcUnion.Values))
 	for i, st := range srcUnion.Values {
 		tt := tgtUnion.Values[i]
-		branchAttrs := &TransformAttrs{
-			SourceCtx: ta.SourceCtx.Enter(st.Attribute),
-			TargetCtx: ta.TargetCtx.Enter(tt.Attribute),
-			Prefix:    ta.Prefix,
-			Hooks:     ta.Hooks,
-		}
-		useHelper := false
-		if _, ok := st.Attribute.Type.(expr.UserType); ok && expr.IsObject(st.Attribute.Type) {
-			if _, ok := tt.Attribute.Type.(expr.UserType); ok && expr.IsObject(tt.Attribute.Type) {
-				useHelper = true
-			}
+		branchAttrs := *ta
+		branchAttrs.SourceCtx = ta.SourceCtx.Enter(st.Attribute)
+		branchAttrs.TargetCtx = ta.TargetCtx.Enter(tt.Attribute)
+		useHelper := usesTransformHelper(st.Attribute, tt.Attribute)
+		helperName := ""
+		if useHelper {
+			helperName = TransformHelperName(st.Attribute, tt.Attribute, &branchAttrs)
 		}
 		cases = append(cases, map[string]any{
 			"CaseName":        st.Name,
@@ -589,7 +708,7 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 			"TargetAttr":      tt.Attribute,
 			"TargetCastType":  branchAttrs.TargetCtx.Scope.Ref(tt.Attribute, branchAttrs.TargetCtx.Pkg(tt.Attribute)),
 			"UseHelper":       useHelper,
-			"HelperName":      TransformHelperName(st.Attribute, tt.Attribute, branchAttrs),
+			"HelperName":      helperName,
 		})
 	}
 
@@ -612,75 +731,115 @@ func transformUnion(source, target *expr.AttributeExpr, sourceVar, targetVar str
 	return buf.String(), nil
 }
 
-// collectHelpers recurses through the given attributes and returns the
-// transform helper functions required by the code GoTransform produces. The
-// top-level call (topLevel true) does not generate a helper for the top-most
-// user type because the generated code inlines that transformation; children
-// of composite top-level types always get helpers.
-//
-// seen keeps track of generated transform functions to avoid infinite
-// recursion on recursive types.
-func collectHelpers(source, target *expr.AttributeExpr, req, topLevel bool, ta *TransformAttrs, seen map[string]*TransformFunctionData) (helpers []*TransformFunctionData, err error) {
-	if h := ta.Hooks; h != nil && h.UnwrapPair != nil {
-		source, target, _ = h.UnwrapPair(source, target)
+// planTransformOperation retains the helper call edges emitted by one
+// top-level transform or helper body. Every nonrecursive named object
+// occurrence gets a new helper. Only a source-target pair already active in
+// the current helper body becomes a back-edge to its ancestor helper.
+func planTransformOperation(source, target *expr.AttributeExpr, required, topLevel bool, operation *transformOperation, active map[transformPair]TransformHelperID, plan *TransformPlan) error {
+	if err := IsCompatible(source.Type, target.Type, "source", "target"); err != nil {
+		return err
 	}
-	ta = enterTransformAttrs(source, target, ta)
 	if topLevel {
-		req = true
-	} else {
-		name := TransformHelperName(source, target, ta)
-		if _, ok := seen[name]; ok {
-			return helpers, err
+		required = true
+	} else if usesTransformHelper(source, target) {
+		pair := transformPair{
+			source: transformIdentity(source.Type),
+			target: transformIdentity(target.Type),
 		}
-		if _, ok := source.Type.(expr.UserType); ok && expr.IsObject(source.Type) {
-			var h *TransformFunctionData
-			if h, err = generateHelper(source, target, req, ta, seen); h != nil {
-				helpers = append(helpers, h)
-			}
+		if ancestor, recursive := active[pair]; recursive {
+			operation.calls = append(operation.calls, transformCall{
+				helper: ancestor,
+			})
+			return nil
 		}
+
+		id := TransformHelperID{plan: plan, index: len(plan.helpers)}
+		plan.helpers = append(plan.helpers, TransformHelper{
+			ID:         id,
+			Source:     source,
+			Target:     target,
+			Required:   required,
+			Occurrence: id.index + 1,
+		})
+		operation.calls = append(operation.calls, transformCall{
+			helper: id,
+		})
+		body := &transformOperation{}
+		plan.operations = append(plan.operations, body)
+		active[pair] = id
+		err := planTransformChildren(source, target, required, body, active, plan)
+		delete(active, pair)
+		return err
 	}
-	// Renderers which inline composite element construction do not call
-	// element transform helpers: skip helper generation for the elements
-	// themselves by treating them as top-level attributes.
-	elemTop := ta.Hooks != nil && ta.Hooks.InlineCompositeElems
-	var other []*TransformFunctionData
+	return planTransformChildren(source, target, required, operation, active, plan)
+}
+
+// planTransformChildren walks child transformations in the same order as the
+// core templates consume helper names.
+func planTransformChildren(source, target *expr.AttributeExpr, required bool, operation *transformOperation, active map[transformPair]TransformHelperID, plan *TransformPlan) error {
+	collect := func(source, target *expr.AttributeExpr, childRequired bool, top bool) error {
+		return planTransformOperation(source, target, childRequired, top, operation, active, plan)
+	}
 	switch {
 	case expr.IsArray(source.Type):
-		if other, err = collectHelpers(expr.AsArray(source.Type).ElemType, expr.AsArray(target.Type).ElemType, req, elemTop, ta, seen); err == nil {
-			helpers = append(helpers, other...)
-		}
+		return collect(expr.AsArray(source.Type).ElemType, expr.AsArray(target.Type).ElemType, required, false)
 	case expr.IsMap(source.Type):
-		sm, tm := expr.AsMap(source.Type), expr.AsMap(target.Type)
-		if other, err = collectHelpers(sm.ElemType, tm.ElemType, req, elemTop, ta, seen); err == nil {
-			helpers = append(helpers, other...)
-			if other, err = collectHelpers(sm.KeyType, tm.KeyType, req, elemTop, ta, seen); err == nil {
-				helpers = append(helpers, other...)
-			}
+		sourceMap, targetMap := expr.AsMap(source.Type), expr.AsMap(target.Type)
+		if err := collect(sourceMap.KeyType, targetMap.KeyType, required, false); err != nil {
+			return err
 		}
+		return collect(sourceMap.ElemType, targetMap.ElemType, required, false)
 	case expr.IsUnion(source.Type):
-		tt := expr.AsUnion(target.Type)
-		if tt == nil {
-			return helpers, err
+		targetUnion := expr.AsUnion(target.Type)
+		if targetUnion == nil {
+			return nil
 		}
-		for i, st := range expr.AsUnion(source.Type).Values {
-			if other, err = collectHelpers(st.Attribute, tt.Values[i].Attribute, req, false, ta, seen); err == nil {
-				helpers = append(helpers, other...)
+		for index, branch := range expr.AsUnion(source.Type).Values {
+			if err := collect(branch.Attribute, targetUnion.Values[index].Attribute, required, false); err != nil {
+				return err
 			}
 		}
 	case expr.IsObject(source.Type):
 		if expr.IsUnion(target.Type) {
-			return helpers, err
+			return nil
 		}
-		walkMatches(source, target, func(srcMatt, _ *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
-			if err != nil {
-				return
-			}
-			if other, err = collectHelpers(srcc, tgtc, srcMatt.IsRequired(n), false, ta, seen); err == nil {
-				helpers = append(helpers, other...)
+		var walkErr error
+		walkMatches(source, target, func(sourceMapped, _ *expr.MappedAttributeExpr, sourceChild, targetChild *expr.AttributeExpr, name string) {
+			if walkErr == nil {
+				walkErr = collect(sourceChild, targetChild, sourceMapped.IsRequired(name), false)
 			}
 		})
+		return walkErr
 	}
-	return helpers, err
+	return nil
+}
+
+// transformIdentity returns the authored origin used only to detect a
+// source-target pair already active in the current recursive helper body.
+func transformIdentity(dataType expr.DataType) expr.DataType {
+	if userType, ok := dataType.(expr.UserType); ok {
+		return userType.Origin()
+	}
+	return dataType
+}
+
+// consume returns the next retained helper call. Cursor position and the
+// edge's typed helper ID select the exact operation.
+func (c *transformCallCursor) consume() transformCall {
+	if c.next >= len(c.calls) {
+		panic("transform render consumed more helper calls than the plan retained") // bug
+	}
+	call := c.calls[c.next]
+	c.next++
+	return call
+}
+
+// complete reports a render that skipped retained helper calls.
+func (c *transformCallCursor) complete(owner string) error {
+	if c.next != len(c.calls) {
+		return fmt.Errorf("%s rendered %d of %d retained helper calls", owner, c.next, len(c.calls))
+	}
+	return nil
 }
 
 // enterTransformAttrs returns transform attributes whose source and target
@@ -692,27 +851,109 @@ func enterTransformAttrs(source, target *expr.AttributeExpr, attributes *Transfo
 	return &entered
 }
 
-// generateHelper generates the code that transforms instances of source into
-// target. Both source and target must be user types. The caller
-// (collectHelpers) guarantees no helper was generated yet for the pair.
-func generateHelper(source, target *expr.AttributeExpr, req bool, ta *TransformAttrs, seen map[string]*TransformFunctionData) (*TransformFunctionData, error) {
-	name := TransformHelperName(source, target, ta)
-
-	code, err := TransformAttribute(source, target, "v", "res", true, ta)
+// generateRetainedHelper formats one helper operation retained by
+// TransformPlan.
+func generateRetainedHelper(helper TransformHelper, ta *TransformAttrs) (*TransformFunctionData, error) {
+	code, err := TransformAttribute(helper.Source, helper.Target, "v", "res", true, ta)
 	if err != nil {
 		return nil, err
 	}
-	if !req && !expr.IsPrimitive(source.Type) {
+	if !helper.Required && !expr.IsPrimitive(helper.Source.Type) {
 		code = "if v == nil {\n\treturn nil\n}\n" + code
 	}
 	tfd := &TransformFunctionData{
-		Name:          name,
-		ParamTypeRef:  ta.SourceCtx.Scope.Ref(source, ta.SourceCtx.Pkg(source)),
-		ResultTypeRef: ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target)),
+		ID:            helper.ID,
+		Declaration:   helper.Declaration,
+		ParamTypeRef:  ta.SourceCtx.Scope.Ref(helper.Source, ta.SourceCtx.Pkg(helper.Source)),
+		ResultTypeRef: ta.TargetCtx.Scope.Ref(helper.Target, ta.TargetCtx.Pkg(helper.Target)),
 		Code:          code,
 	}
-	seen[name] = tfd
 	return tfd, nil
+}
+
+// collectLegacyHelpers renders the unbound helper definitions used by
+// GoTransformWithAttrs. Hook-aware transports keep this one-pass contract
+// until they acquire an explicit retained planning API.
+func collectLegacyHelpers(source, target *expr.AttributeExpr, required, topLevel bool, attrs *TransformAttrs, seen map[string]*TransformFunctionData) (helpers []*TransformFunctionData, err error) {
+	if hooks := attrs.Hooks; hooks != nil && hooks.UnwrapPair != nil {
+		source, target, _ = hooks.UnwrapPair(source, target)
+	}
+	attrs = enterTransformAttrs(source, target, attrs)
+	if topLevel {
+		required = true
+	} else if usesTransformHelper(source, target) {
+		name := legacyTransformHelperName(source, target, attrs)
+		if _, exists := seen[name]; exists {
+			return nil, nil
+		}
+		helper, helperErr := generateLegacyHelper(source, target, required, attrs, seen)
+		if helperErr != nil {
+			return nil, helperErr
+		}
+		helpers = append(helpers, helper)
+	}
+
+	elementTop := attrs.Hooks != nil && attrs.Hooks.InlineCompositeElems
+	collect := func(childSource, childTarget *expr.AttributeExpr, childRequired bool, childTop bool) error {
+		other, collectErr := collectLegacyHelpers(childSource, childTarget, childRequired, childTop, attrs, seen)
+		helpers = append(helpers, other...)
+		return collectErr
+	}
+	switch {
+	case expr.IsArray(source.Type):
+		return helpers, collect(expr.AsArray(source.Type).ElemType, expr.AsArray(target.Type).ElemType, required, elementTop)
+	case expr.IsMap(source.Type):
+		sourceMap, targetMap := expr.AsMap(source.Type), expr.AsMap(target.Type)
+		if err := collect(sourceMap.ElemType, targetMap.ElemType, required, elementTop); err != nil {
+			return helpers, err
+		}
+		return helpers, collect(sourceMap.KeyType, targetMap.KeyType, required, elementTop)
+	case expr.IsUnion(source.Type):
+		targetUnion := expr.AsUnion(target.Type)
+		if targetUnion == nil {
+			return helpers, nil
+		}
+		for index, branch := range expr.AsUnion(source.Type).Values {
+			if err := collect(branch.Attribute, targetUnion.Values[index].Attribute, required, false); err != nil {
+				return helpers, err
+			}
+		}
+	case expr.IsObject(source.Type):
+		if expr.IsUnion(target.Type) {
+			return helpers, nil
+		}
+		var walkErr error
+		walkMatches(source, target, func(sourceMapped, _ *expr.MappedAttributeExpr, sourceChild, targetChild *expr.AttributeExpr, name string) {
+			if walkErr == nil {
+				walkErr = collect(sourceChild, targetChild, sourceMapped.IsRequired(name), false)
+			}
+		})
+		if walkErr != nil {
+			return helpers, walkErr
+		}
+	}
+	return helpers, nil
+}
+
+// generateLegacyHelper formats one helper definition and records its name
+// before rendering its body so recursive calls stop at that definition.
+func generateLegacyHelper(source, target *expr.AttributeExpr, required bool, attrs *TransformAttrs, seen map[string]*TransformFunctionData) (*TransformFunctionData, error) {
+	name := legacyTransformHelperName(source, target, attrs)
+	helper := &TransformFunctionData{
+		Name:          name,
+		ParamTypeRef:  attrs.SourceCtx.Scope.Ref(source, attrs.SourceCtx.Pkg(source)),
+		ResultTypeRef: attrs.TargetCtx.Scope.Ref(target, attrs.TargetCtx.Pkg(target)),
+	}
+	seen[name] = helper
+	code, err := TransformAttribute(source, target, "v", "res", true, attrs)
+	if err != nil {
+		return nil, err
+	}
+	if !required && !expr.IsPrimitive(source.Type) {
+		code = "if v == nil {\n\treturn nil\n}\n" + code
+	}
+	helper.Code = code
+	return helper, nil
 }
 
 // walkMatches iterates through the attributes of source and looks for

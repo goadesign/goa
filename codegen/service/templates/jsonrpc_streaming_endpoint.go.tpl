@@ -1,5 +1,5 @@
 {{ comment .Description }}
-func (s *{{ .ServiceVarName }}srvc) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}) ({{ if .Result }}res {{ .ResultFullRef }}, {{ end }}err error) {
+func (s *{{ .ExampleStructDeclaration.Name }}) {{ .VarName }}(ctx context.Context{{ if .PayloadFullRef }}, p {{ .PayloadFullRef }}{{ end }}) ({{ if .Result }}res {{ .ResultFullRef }}, {{ end }}err error) {
 {{- if and .Result .ResultIsStruct }}
 	res = &{{ .ResultFullName }}{}
 {{- end }}

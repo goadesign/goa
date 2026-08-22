@@ -10,13 +10,13 @@ package cli
 import (
 	"flag"
 	"fmt"
-	calcc "kitchensink/jsonrpc/calc/client"
-	chatc "kitchensink/jsonrpc/chat/client"
-	feedc "kitchensink/jsonrpc/feed/client"
-	mixedc2 "kitchensink/jsonrpc/mixed/client"
 	"net/http"
 	"os"
 
+	calcc "generated.local/gen/jsonrpc/calc/client"
+	chatc "generated.local/gen/jsonrpc/chat/client"
+	feedc "generated.local/gen/jsonrpc/feed/client"
+	mixedc2 "generated.local/gen/jsonrpc/mixed/client"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
 )

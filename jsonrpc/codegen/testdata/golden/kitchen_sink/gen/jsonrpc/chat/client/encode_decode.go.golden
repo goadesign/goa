@@ -11,10 +11,10 @@ import (
 	"bytes"
 	"context"
 	"io"
-	chat "kitchensink/chat"
 	"net/http"
 	"net/url"
 
+	chat "generated.local/gen/chat"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"
 )

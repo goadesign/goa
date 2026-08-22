@@ -11,10 +11,10 @@ import (
 	"bytes"
 	"context"
 	"io"
-	feed "kitchensink/feed"
 	"net/http"
 	"net/url"
 
+	feed "generated.local/gen/feed"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"
 )

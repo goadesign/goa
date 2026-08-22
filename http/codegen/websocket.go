@@ -286,8 +286,10 @@ func WebsocketClientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *cod
 		{Path: "github.com/gorilla/websocket"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
-		services.ViewImport(svc.Name()),
 		services.ServiceImport(svc.Name()),
+	}
+	if serviceHasViewedResult(data, IsWebSocketEndpoint) {
+		imports = append(imports, services.ViewImport(svc.Name()))
 	}
 	structSections := clientStructWSSections(data)
 	wsSections := clientWSSections(data)

@@ -15,9 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/service/testdata"
-	"goa.design/goa/v3/expr"
 )
 
 var updateGolden = flag.Bool("update-interceptors", false, "update golden files for interceptor tests")
@@ -49,10 +47,10 @@ func TestInterceptors(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := runDSL(t, c.DSL)
-			services := mustServicesData(t, root)
+			plan := mustServicePlan(t, root)
 			require.Len(t, root.Services, 1)
 
-			fs := InterceptorsFiles("goa.design/goa/example", root.Services[0], services)
+			fs := interceptorsFiles(plan, plan.facts.services[0])
 
 			require.Len(t, fs, c.expectedFileCount)
 			for _, f := range fs {
@@ -89,137 +87,6 @@ func TestInvalidInterceptors(t *testing.T) {
 			_, err := runDSLWithError(t, c.DSL)
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), c.ErrContains)
-		})
-	}
-}
-
-func TestCollectAttributes(t *testing.T) {
-	cases := []struct {
-		name      string
-		attrNames *expr.AttributeExpr
-		parent    *expr.AttributeExpr
-		want      []*AttributeData
-		panics    bool
-	}{
-		{
-			name:      "nil-attributes",
-			attrNames: nil,
-			parent:    &expr.AttributeExpr{Type: &expr.Object{}},
-			want:      nil,
-		},
-		{
-			name:      "non-object-attributes",
-			attrNames: &expr.AttributeExpr{Type: expr.Primitive(expr.StringKind)},
-			parent:    &expr.AttributeExpr{Type: &expr.Object{}},
-			want:      nil,
-		},
-		{
-			name: "simple-string-attribute",
-			attrNames: &expr.AttributeExpr{
-				Type: &expr.Object{
-					{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.Primitive(expr.StringKind)}},
-				},
-			},
-			parent: &expr.AttributeExpr{
-				Type: &expr.Object{
-					{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.Primitive(expr.StringKind)}},
-				},
-				Validation: &expr.ValidationExpr{Required: []string{"name"}},
-			},
-			want: []*AttributeData{
-				{Name: "Name", TypeRef: "string", Pointer: false},
-			},
-		},
-		{
-			name: "pointer-primitive",
-			attrNames: &expr.AttributeExpr{
-				Type: &expr.Object{
-					{Name: "age", Attribute: &expr.AttributeExpr{Type: expr.Primitive(expr.IntKind)}},
-				},
-			},
-			parent: &expr.AttributeExpr{
-				Type: &expr.Object{
-					{Name: "age", Attribute: &expr.AttributeExpr{Type: expr.Primitive(expr.IntKind), Meta: map[string][]string{"struct:field:pointer": {"true"}}}},
-				},
-			},
-			want: []*AttributeData{
-				{Name: "Age", TypeRef: "int", Pointer: true},
-			},
-		},
-		{
-			name: "multiple-attributes",
-			attrNames: &expr.AttributeExpr{
-				Type: &expr.Object{
-					{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.Primitive(expr.StringKind)}},
-					{Name: "age", Attribute: &expr.AttributeExpr{Type: expr.Primitive(expr.IntKind)}},
-				},
-			},
-			parent: &expr.AttributeExpr{
-				Type: &expr.Object{
-					{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.Primitive(expr.StringKind)}},
-					{Name: "age", Attribute: &expr.AttributeExpr{Type: expr.Primitive(expr.IntKind), Meta: map[string][]string{"struct:field:pointer": {"true"}}}},
-				},
-				Validation: &expr.ValidationExpr{Required: []string{"name"}},
-			},
-			want: []*AttributeData{
-				{Name: "Name", TypeRef: "string", Pointer: false},
-				{Name: "Age", TypeRef: "int", Pointer: true},
-			},
-		},
-		{
-			name: "attribute-not-in-parent",
-			attrNames: &expr.AttributeExpr{
-				Type: &expr.Object{
-					{Name: "missing", Attribute: &expr.AttributeExpr{Type: expr.Primitive(expr.StringKind)}},
-				},
-			},
-			parent: &expr.AttributeExpr{
-				Type: &expr.Object{
-					{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.Primitive(expr.StringKind)}},
-				},
-				Validation: &expr.ValidationExpr{Required: []string{"name"}},
-			},
-			panics: true,
-		},
-		{
-			name: "user-type-with-package",
-			attrNames: &expr.AttributeExpr{
-				Type: &expr.Object{
-					{Name: "user", Attribute: &expr.AttributeExpr{Type: expr.String}},
-				},
-			},
-			parent: &expr.AttributeExpr{
-				Type: &expr.Object{
-					{Name: "user", Attribute: &expr.AttributeExpr{
-						Type: &expr.UserTypeExpr{
-							AttributeExpr: &expr.AttributeExpr{
-								Type: &expr.Object{
-									{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.Primitive(expr.StringKind)}},
-								},
-								Meta: map[string][]string{
-									"struct:pkg:path": {"goa.design/goa/example/user"},
-								},
-							},
-							TypeName: "User",
-						},
-					}},
-				},
-			},
-			want: []*AttributeData{
-				{Name: "User", TypeRef: "*user.User", Pointer: false},
-			},
-		},
-	}
-
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			attributor := codegen.NewAttributeScope(codegen.NewNameScope())
-			if tc.panics {
-				assert.Panics(t, func() { collectAttributes(tc.attrNames, tc.parent, attributor) })
-				return
-			}
-			got := collectAttributes(tc.attrNames, tc.parent, attributor)
-			assert.Equal(t, tc.want, got)
 		})
 	}
 }

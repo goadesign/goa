@@ -5,7 +5,6 @@ package generator
 import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
-	"goa.design/goa/v3/codegen/service"
 	grpccodegen "goa.design/goa/v3/grpc/codegen"
 	httpcodegen "goa.design/goa/v3/http/codegen"
 	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
@@ -18,10 +17,7 @@ func transportFiles(plan *Plan) ([]*codegen.File, error) {
 	generation := plan.Generation()
 	designRoots := serviceRoots(generation.Roots())
 	for _, r := range designRoots {
-		services, err := service.NewServicesData(r, generation, plan.exampleGenerator(r))
-		if err != nil {
-			return nil, err
-		}
+		services := plan.Service(r).Services()
 		// HTTP
 		httpServices := httpcodegen.NewServicesData(services, r.API.HTTP)
 		files = append(files, httpcodegen.ServerFiles(httpServices)...)
@@ -54,10 +50,11 @@ func transportFiles(plan *Plan) ([]*codegen.File, error) {
 
 // planTransportData declares service packages and the fixed import qualifiers
 // required by each transport before the shared generation catalog freezes.
-func planTransportData(generation *codegen.Generation) error {
-	if err := planServiceData(generation); err != nil {
+func planTransportData(plan *Plan) error {
+	if err := planServiceData(plan); err != nil {
 		return err
 	}
+	generation := plan.Generation()
 	if err := example.Plan(generation); err != nil {
 		return err
 	}

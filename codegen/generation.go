@@ -81,37 +81,71 @@ func (g *Generation) ClaimPackage(path string) (*GeneratedPackage, error) {
 	if g.frozen {
 		return nil, fmt.Errorf("generated package %q cannot be claimed after generation freeze", path)
 	}
-	if generatedPackage, ok := g.packages[path]; ok {
-		return generatedPackage, nil
-	}
 	canonicalPath, err := canonicalGeneratedPackagePath(g.genpkg, path)
 	if err != nil {
 		return nil, err
+	}
+	outputDir, err := generatedOutputDirectory(g.genpkg, canonicalPath)
+	if err != nil {
+		return nil, err
+	}
+	return g.claimOutputPackage(path, canonicalPath, outputDir)
+}
+
+// ClaimOutputPackage claims a Go package emitted at an explicit directory
+// relative to the code generation working directory. It is used for generated
+// files such as starter implementations that intentionally live outside the
+// generated module import root while sharing the same declaration lifecycle.
+func (g *Generation) ClaimOutputPackage(importPath, outputDirectory string) (*GeneratedPackage, error) {
+	if g.frozen {
+		return nil, fmt.Errorf("output package %q cannot be claimed after generation freeze", importPath)
+	}
+	canonicalPath, err := canonicalOutputPackagePath(importPath)
+	if err != nil {
+		return nil, err
+	}
+	canonicalDirectory, err := canonicalOutputDirectory(outputDirectory)
+	if err != nil {
+		return nil, err
+	}
+	return g.claimOutputPackage(importPath, canonicalPath, canonicalDirectory)
+}
+
+// claimOutputPackage installs one package after its import path and output
+// directory have been validated by the public operation that owns their
+// relationship.
+func (g *Generation) claimOutputPackage(claim, canonicalPath, outputDir string) (*GeneratedPackage, error) {
+	if generatedPackage, ok := g.packages[claim]; ok {
+		if generatedPackage.outputDir != outputDir {
+			return nil, fmt.Errorf(
+				"generated package %q is already mapped to output directory %q, not %q",
+				claim,
+				generatedPackage.outputDir,
+				outputDir,
+			)
+		}
+		return generatedPackage, nil
 	}
 	if owner, ok := g.importOwners[canonicalPath]; ok {
 		return nil, fmt.Errorf(
 			"generated package paths %q and %q normalize to import path %q",
 			owner.claim,
-			path,
+			claim,
 			canonicalPath,
 		)
-	}
-	outputDir, err := generatedOutputDirectory(g.genpkg, canonicalPath)
-	if err != nil {
-		return nil, err
 	}
 	for existingDir, owner := range g.outputOwners {
 		if strings.EqualFold(existingDir, outputDir) {
 			return nil, fmt.Errorf(
 				"generated package paths %q and %q resolve to output directory %q on a case-insensitive filesystem",
 				owner.claim,
-				path,
+				claim,
 				outputDir,
 			)
 		}
 	}
-	generatedPackage := newGeneratedPackage(path, canonicalPath, outputDir)
-	g.packages[path] = generatedPackage
+	generatedPackage := newGeneratedPackage(claim, canonicalPath, outputDir)
+	g.packages[claim] = generatedPackage
 	g.importOwners[canonicalPath] = generatedPackage
 	g.outputOwners[outputDir] = generatedPackage
 	return generatedPackage, nil
@@ -149,6 +183,12 @@ func (g *Generation) Freeze() error {
 	}
 	g.frozen = true
 	return nil
+}
+
+// Frozen reports whether declaration and import collection has closed and all
+// canonical names are available for linking retained subsystem plans.
+func (g *Generation) Frozen() bool {
+	return g.frozen
 }
 
 // ImportPath returns the canonical Go import path owned by the package.
@@ -199,6 +239,35 @@ func canonicalGeneratedPackagePath(genpkg, importPath string) (string, error) {
 	}
 	if err := module.CheckImportPath(validated); err != nil {
 		return "", fmt.Errorf("generated package path %q is invalid: %w", importPath, err)
+	}
+	return canonical, nil
+}
+
+// canonicalOutputPackagePath validates the import identity of an explicitly
+// located generated output package without requiring it to be below GenPkg.
+func canonicalOutputPackagePath(importPath string) (string, error) {
+	canonical, err := cleanImportPath("output package path", importPath)
+	if err != nil {
+		return "", err
+	}
+	if err := module.CheckImportPath(canonical); err != nil {
+		return "", fmt.Errorf("output package path %q is invalid: %w", importPath, err)
+	}
+	return canonical, nil
+}
+
+// canonicalOutputDirectory accepts one relative output location and rejects
+// spellings that could escape or vary across host path conventions.
+func canonicalOutputDirectory(outputDirectory string) (string, error) {
+	if strings.Contains(outputDirectory, "\\") {
+		return "", fmt.Errorf("output directory %q contains a backslash", outputDirectory)
+	}
+	if filepath.IsAbs(outputDirectory) {
+		return "", fmt.Errorf("output directory %q must be relative", outputDirectory)
+	}
+	canonical := filepath.Clean(filepath.FromSlash(outputDirectory))
+	if canonical == ".." || strings.HasPrefix(canonical, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("output directory %q escapes the generation working directory", outputDirectory)
 	}
 	return canonical, nil
 }

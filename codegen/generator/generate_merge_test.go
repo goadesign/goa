@@ -43,6 +43,7 @@ func TestMergeFilesPreservesSameLabelSections(t *testing.T) {
 	})
 
 	dir := t.TempDir()
+	writeGeneratedModule(t, filepath.Join(dir, codegen.Gendir), "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	content, err := os.ReadFile(filepath.Join(dir, codegen.Gendir, "types", "same_label.go"))
@@ -243,6 +244,7 @@ func TestGenerateMergesSamePathFiles(t *testing.T) {
 	})
 
 	dir := t.TempDir()
+	writeGeneratedModule(t, filepath.Join(dir, codegen.Gendir), "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
@@ -294,6 +296,7 @@ func TestGenerateParallelManyFiles(t *testing.T) {
 	})
 
 	dir := t.TempDir()
+	writeGeneratedModule(t, filepath.Join(dir, codegen.Gendir), "generated.local/gen")
 	outputs, err := generate(dir, "gen", false, registry)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
@@ -356,6 +359,7 @@ func TestGenerateParallelWithMerge(t *testing.T) {
 	})
 
 	dir := t.TempDir()
+	writeGeneratedModule(t, filepath.Join(dir, codegen.Gendir), "generated.local/gen")
 	outputs, err := generate(dir, "gen", false, registry)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
@@ -425,6 +429,7 @@ func TestGenerateParallelErrorHandling(t *testing.T) {
 	})
 
 	dir := t.TempDir()
+	writeGeneratedModule(t, filepath.Join(dir, codegen.Gendir), "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	if err == nil {
 		t.Fatal("expected error from parallel generation, got nil")
@@ -452,6 +457,7 @@ func TestGenerateParallelSingleFile(t *testing.T) {
 	})
 
 	dir := t.TempDir()
+	writeGeneratedModule(t, filepath.Join(dir, codegen.Gendir), "generated.local/gen")
 	outputs, err := generate(dir, "gen", false, registry)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)

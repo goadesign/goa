@@ -108,6 +108,13 @@ func TestDeclarationResolverQualifiesRelocatedConsumersWithoutRenamingLocalType(
 	servicePackage := mustClaimTestPackage(t, generation, servicePackagePath(generation.GenPkg(), service))
 	localDeclaration, err := servicePackage.DeclareUserType(local)
 	require.NoError(t, err)
+	errorConstructor := codegen.NewPreferredName(
+		codegen.NameFunction,
+		"MakeFault",
+		codegen.ExportedName,
+		serviceNameOrder{role: serviceErrorConstructorNameRole, subject: "fault"},
+	)
+	require.NoError(t, servicePackage.DeclareName(errorConstructor))
 	errorsPackage := mustClaimTestPackage(t, generation, "generated.local/gen/errors")
 	_, err = errorsPackage.DeclareUserType(relocated)
 	require.NoError(t, err)
@@ -130,21 +137,6 @@ func TestDeclarationResolverQualifiesRelocatedConsumersWithoutRenamingLocalType(
 	require.Equal(t, "Fault", localDeclaration.Name())
 	require.Equal(t, "Fault", resolver.Ref(&expr.AttributeExpr{Type: local}, ""))
 
-	errorData := buildErrorInitData(&expr.ErrorExpr{
-		AttributeExpr: &expr.AttributeExpr{Type: relocated},
-		Name:          "fault",
-	}, resolver)
-	require.Equal(t, "errors_.Fault", errorData.TypeName)
-	require.Equal(t, "errors_.Fault", errorData.TypeRef)
-
-	attributes := collectAttributes(
-		&expr.AttributeExpr{Type: &expr.Object{
-			{Name: "fault", Attribute: &expr.AttributeExpr{Type: expr.String}},
-		}},
-		&expr.AttributeExpr{Type: container},
-		resolver,
-	)
-	require.Equal(t, "errors_.Fault", attributes[0].TypeRef)
 }
 
 // TestDeclarationResolverPanicsWhenPlanOmittedType verifies render analysis

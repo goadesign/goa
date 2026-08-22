@@ -10,7 +10,6 @@ import (
 	"path"
 	"path/filepath"
 	"reflect"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -32,258 +31,45 @@ type convertData struct {
 	Code string
 }
 
-// ConvertFiles returns multiple files containing conversion and creation functions,
-// grouped by target package as specified by struct:pkg:path metadata.
-func ConvertFiles(root *expr.RootExpr, service *expr.ServiceExpr, services *ServicesData) ([]*codegen.File, error) {
-	// Filter conversion and creation functions that are relevant for this service
-	svc := services.Get(service.Name)
-	conversions := relevantTypeMaps(root.Conversions, service, svc)
-	creations := relevantTypeMaps(root.Creations, service, svc)
-
-	if len(conversions) == 0 && len(creations) == 0 {
-		return nil, nil
-	}
-
-	// Group conversions and creations by the package claimed during planning.
-	allPackages := make(map[*codegen.GeneratedPackage]struct{})
-	conversionsByPackage := groupByConvertPackage(conversions, service, services, allPackages)
-	creationsByPackage := groupByConvertPackage(creations, service, services, allPackages)
-
-	// Generate one file for each owning package.
-	owners := make([]*codegen.GeneratedPackage, 0, len(allPackages))
-	for owner := range allPackages {
-		owners = append(owners, owner)
-	}
-	slices.SortFunc(owners, func(left, right *codegen.GeneratedPackage) int {
-		return strings.Compare(left.ImportPath(), right.ImportPath())
-	})
-	files := make([]*codegen.File, 0, len(owners))
-	for _, owner := range owners {
-		file, err := generateConvertFileForPath(
-			owner,
-			conversionsByPackage[owner],
-			creationsByPackage[owner],
-			service,
-			services,
-		)
-		if err != nil {
-			return nil, err
+// convertFiles formats the package-owned external conversion files aggregated
+// from every linked root plan. It does not inspect design mappings or allocate
+// generated names.
+func convertFiles(conversions []*externalConversionFileFacts) []*codegen.File {
+	files := make([]*codegen.File, len(conversions))
+	for index, retained := range conversions {
+		sections := []*codegen.SectionTemplate{
+			codegen.Header(
+				"External type conversion functions",
+				codegen.Goify(path.Base(retained.owner.ImportPath()), false),
+				retained.imports.specs,
+			),
 		}
-		if file != nil {
-			files = append(files, file)
+		for _, operation := range retained.operations {
+			name, source := "convert-to", serviceTemplates.Read(convertT)
+			if operation.direction == externalCreateFrom {
+				name, source = "create-from", serviceTemplates.Read(createT)
+			}
+			sections = append(sections, &codegen.SectionTemplate{
+				Name:   name,
+				Source: source,
+				Data:   operation.data,
+			})
+		}
+		for _, operation := range retained.operations {
+			for _, helper := range operation.helpers {
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "convert-create-helper",
+					Source: serviceTemplates.Read(transformHelperT),
+					Data:   helper,
+				})
+			}
+		}
+		files[index] = &codegen.File{
+			Path:             filepath.Join(retained.owner.OutputDirectory(), "convert.go"),
+			SectionTemplates: sections,
 		}
 	}
-
-	return files, nil
-}
-
-// relevantTypeMaps filters the type maps whose user type is a method payload,
-// a method result, or a user type of the given service. The returned slice
-// drives which ConvertTo/CreateFrom functions ConvertFiles generates.
-func relevantTypeMaps(maps []*expr.TypeMap, service *expr.ServiceExpr, svc *Data) []*expr.TypeMap {
-	var relevant []*expr.TypeMap
-	for _, c := range maps {
-		if typeMapMatchesService(c, service, svc) {
-			relevant = append(relevant, c)
-		}
-	}
-	return relevant
-}
-
-// typeMapMatchesService reports whether the type map's user type is used by
-// the service as a method payload, a method result, or a service user type.
-func typeMapMatchesService(c *expr.TypeMap, service *expr.ServiceExpr, svc *Data) bool {
-	for _, m := range service.Methods {
-		if ut, ok := m.Payload.Type.(expr.UserType); ok && ut.Name() == c.User.Name() {
-			return true
-		}
-		if ut, ok := m.Result.Type.(expr.UserType); ok && ut.Name() == c.User.Name() {
-			return true
-		}
-	}
-	for _, t := range svc.userTypes {
-		if c.User.Name() == t.Name {
-			return true
-		}
-	}
-	return false
-}
-
-// groupByConvertPackage groups type maps by the exact generated package that
-// planning assigned to their service type. The owner supplies both the import
-// identity and output directory used during rendering.
-func groupByConvertPackage(maps []*expr.TypeMap, service *expr.ServiceExpr, services *ServicesData, packages map[*codegen.GeneratedPackage]struct{}) map[*codegen.GeneratedPackage][]*expr.TypeMap {
-	byPackage := make(map[*codegen.GeneratedPackage][]*expr.TypeMap)
-	for _, typeMap := range maps {
-		location := codegen.UserTypeLocation(typeMap.User)
-		owner := services.generation.Package(generatedPackagePath(services.generation.GenPkg(), service, location))
-		byPackage[owner] = append(byPackage[owner], typeMap)
-		packages[owner] = struct{}{}
-	}
-	return byPackage
-}
-
-// generateConvertFileForPath generates a single convert.go file for the given path
-// containing the specified conversions and creations
-func generateConvertFileForPath(
-	owner *codegen.GeneratedPackage,
-	conversions []*expr.TypeMap,
-	creations []*expr.TypeMap,
-	service *expr.ServiceExpr,
-	services *ServicesData,
-) (*codegen.File, error) {
-	if len(conversions) == 0 && len(creations) == 0 {
-		return nil, nil
-	}
-
-	// Collect the complete external package paths referenced by this file.
-	externalPaths := make(map[string]struct{})
-	for _, c := range conversions {
-		pkgImport, _, err := getExternalTypeInfo(c.External)
-		if err != nil {
-			return nil, err
-		}
-		externalPaths[pkgImport] = struct{}{}
-	}
-	for _, c := range creations {
-		pkgImport, _, err := getExternalTypeInfo(c.External)
-		if err != nil {
-			return nil, err
-		}
-		externalPaths[pkgImport] = struct{}{}
-	}
-	paths := make([]string, 0, len(externalPaths))
-	for importPath := range externalPaths {
-		paths = append(paths, importPath)
-	}
-
-	outputPath := owner.ImportPath()
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(
-			service.Name+" service type conversion functions",
-			codegen.Goify(path.Base(outputPath), false),
-			services.fileImports(outputPath, paths),
-		),
-	}
-
-	var (
-		names      = map[string]struct{}{}
-		transFuncs []*codegen.TransformFunctionData
-	)
-
-	// Build conversion sections if any
-	for _, c := range conversions {
-		var dt expr.DataType
-		if err := buildDesignType(&dt, reflect.TypeOf(c.External), c.User); err != nil {
-			return nil, err
-		}
-		t := reflect.TypeOf(c.External)
-		pkgImport, _, err := getExternalTypeInfo(c.External)
-		if err != nil {
-			return nil, err
-		}
-		tgtPkg := services.aliases.name(pkgImport)
-
-		srcAtt := &expr.AttributeExpr{Type: c.User}
-		srcResolver := newServiceResolver(services.generation, services.aliases, service, outputPath).Enter(srcAtt)
-		srcCtx := &codegen.AttributeContext{
-			UseDefault: true,
-			Scope:      srcResolver,
-		}
-		tgtCtx := codegen.NewAttributeContext(false, false, false, tgtPkg, codegen.NewNameScope())
-		tgtAtt := &expr.AttributeExpr{Type: dt}
-		tgtAtt.AddMeta("struct:type:name", dt.Name()) // Used by transformer to generate the correct type name.
-		code, tf, err := codegen.GoTransform(
-			srcAtt, tgtAtt,
-			"t", "v", srcCtx, tgtCtx, "transform", true)
-		if err != nil {
-			return nil, err
-		}
-		transFuncs = codegen.AppendHelpers(transFuncs, tf)
-		base := "ConvertTo" + t.Name()
-		name := uniquify(base, names)
-		ref := tgtPkg + "." + t.Name()
-		if expr.IsObject(c.User) {
-			ref = "*" + ref
-		}
-		data := convertData{
-			Name:            name,
-			ReceiverTypeRef: srcCtx.Scope.Ref(srcAtt, ""),
-			TypeName:        t.Name(),
-			TypeRef:         ref,
-			Code:            code,
-		}
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "convert-to",
-			Source: serviceTemplates.Read(convertT),
-			Data:   data,
-		})
-	}
-
-	// Build creation sections if any
-	for _, c := range creations {
-		var dt expr.DataType
-		if err := buildDesignType(&dt, reflect.TypeOf(c.External), c.User); err != nil {
-			return nil, err
-		}
-		t := reflect.TypeOf(c.External)
-		pkgImport, _, err := getExternalTypeInfo(c.External)
-		if err != nil {
-			return nil, err
-		}
-		srcPkg := services.aliases.name(pkgImport)
-		srcCtx := codegen.NewAttributeContext(false, false, false, srcPkg, codegen.NewNameScope())
-
-		tgtAtt := &expr.AttributeExpr{Type: c.User}
-		tgtResolver := newServiceResolver(services.generation, services.aliases, service, outputPath).Enter(tgtAtt)
-		tgtCtx := &codegen.AttributeContext{
-			UseDefault: true,
-			Scope:      tgtResolver,
-		}
-		code, tf, err := codegen.GoTransform(
-			&expr.AttributeExpr{Type: dt}, tgtAtt,
-			"v", "temp", srcCtx, tgtCtx, "transform", true)
-		if err != nil {
-			return nil, err
-		}
-		transFuncs = codegen.AppendHelpers(transFuncs, tf)
-		base := "CreateFrom" + t.Name()
-		name := uniquify(base, names)
-		ref := srcPkg + "." + t.Name()
-		if expr.IsObject(c.User) {
-			ref = "*" + ref
-		}
-		data := convertData{
-			Name:            name,
-			ReceiverTypeRef: tgtCtx.Scope.Ref(tgtAtt, ""),
-			TypeRef:         ref,
-			Code:            code,
-		}
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "create-from",
-			Source: serviceTemplates.Read(createT),
-			Data:   data,
-		})
-	}
-
-	// Build transformation helper functions section if any.
-	seen := make(map[string]struct{})
-	for _, tf := range transFuncs {
-		if _, ok := seen[tf.Name]; ok {
-			continue
-		}
-		seen[tf.Name] = struct{}{}
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "convert-create-helper",
-			Source: serviceTemplates.Read(transformHelperT),
-			Data:   tf,
-		})
-	}
-
-	return &codegen.File{
-		Path:             filepath.Join(owner.OutputDirectory(), "convert.go"),
-		SectionTemplates: sections,
-	}, nil
+	return files
 }
 
 func commonPath(sep byte, paths ...string) string {
@@ -377,12 +163,13 @@ func getPkgImport(pkg, cwd string) string {
 	return pkg
 }
 
-func getExternalTypeInfo(external any) (string, string, error) {
+// getExternalReflectTypeInfo returns the source import path and authored
+// package qualifier for one named reflected type.
+func getExternalReflectTypeInfo(pkg reflect.Type) (string, string, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
 		return "", "", err
 	}
-	pkg := reflect.TypeOf(external)
 	pkgImport := getPkgImport(pkg.PkgPath(), cwd)
 	alias := strings.Split(pkg.String(), ".")[0]
 	return pkgImport, alias, nil
@@ -406,13 +193,30 @@ func uniquify(base string, taken map[string]struct{}) string {
 }
 
 type dtRec struct {
-	path string
-	seen map[string]expr.DataType
+	path  string
+	seen  map[reflect.Type]expr.DataType
+	named map[expr.UserType]reflect.Type
 }
 
 func appendPath(r dtRec, p string) dtRec {
 	r.path += p
 	return r
+}
+
+// buildExternalDesignType returns the reflected design graph and the exact Go
+// type behind every named node that may require a package-qualified reference.
+func buildExternalDesignType(t reflect.Type, ref expr.DataType) (expr.DataType, map[expr.UserType]reflect.Type, error) {
+	named := make(map[expr.UserType]reflect.Type)
+	rec := dtRec{
+		path:  "<value>",
+		seen:  make(map[reflect.Type]expr.DataType),
+		named: named,
+	}
+	var dataType expr.DataType
+	if err := buildDesignType(&dataType, t, ref, rec); err != nil {
+		return nil, nil, err
+	}
+	return dataType, named, nil
 }
 
 // buildDesignType builds a user type that represents the given external type.
@@ -431,13 +235,14 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 	var rec dtRec
 	if recs != nil {
 		rec = recs[0]
-		if s, ok := rec.seen[t.Name()]; ok {
+		if s, ok := rec.seen[t]; ok {
 			*dt = s
 			return nil
 		}
 	} else {
 		rec.path = "<value>"
-		rec.seen = make(map[string]expr.DataType)
+		rec.seen = make(map[reflect.Type]expr.DataType)
+		rec.named = make(map[expr.UserType]reflect.Type)
 	}
 
 	switch t.Kind() {
@@ -510,22 +315,26 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 			oref = expr.AsObject(ref)
 		}
 
-		// Build list of fields that should not be ignored.
+		// Retain only fields represented by the matching design object. External
+		// structs may contain additional fields, but generated transforms neither
+		// read nor write them and therefore must not reserve their package imports.
 		var fields []reflect.StructField
 		for i := 0; i < t.NumField(); i++ {
 			f := t.FieldByIndex([]int{i})
 			atn, _ := attributeName(oref, f.Name)
 			if oref != nil {
-				if at := oref.Attribute(atn); at != nil {
-					if m := at.Meta["struct:field:external"]; len(m) > 0 {
-						if m[0] == "-" {
-							continue
-						}
+				at := oref.Attribute(atn)
+				if at == nil {
+					continue
+				}
+				if m := at.Meta["struct:field:external"]; len(m) > 0 {
+					if m[0] == "-" {
+						continue
 					}
-					if m := at.Meta["struct.field.external"]; len(m) > 0 { // Deprecated syntax. Only present for backward compatibility.
-						if m[0] == "-" {
-							continue
-						}
+				}
+				if m := at.Meta["struct.field.external"]; len(m) > 0 { // Deprecated syntax. Only present for backward compatibility.
+					if m[0] == "-" {
+						continue
 					}
 				}
 			}
@@ -540,7 +349,8 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 			UID:           t.PkgPath() + "#" + t.Name(),
 		}
 		*dt = ut
-		rec.seen[t.Name()] = ut
+		rec.seen[t] = ut
+		rec.named[ut] = t
 		var required []string
 		for i, f := range fields {
 			recf := appendPath(rec, "."+f.Name)

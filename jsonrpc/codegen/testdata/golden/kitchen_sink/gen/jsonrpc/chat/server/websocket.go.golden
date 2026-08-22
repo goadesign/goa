@@ -10,10 +10,10 @@ package server
 import (
 	"context"
 	"fmt"
-	chat "kitchensink/chat"
 	"net/http"
 	"time"
 
+	chat "generated.local/gen/chat"
 	"github.com/gorilla/websocket"
 	"goa.design/goa/v3/jsonrpc"
 	goa "goa.design/goa/v3/pkg"

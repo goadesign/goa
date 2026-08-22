@@ -1,9 +1,9 @@
 import (
-	interceptors "//interceptors"
-	cli "/grpc/cli/test"
 	"fmt"
 	"os"
 
+	cli "generated.local/gen/grpc/cli/test"
+	interceptors "generated.local/interceptors"
 	goa "goa.design/goa/v3/pkg"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

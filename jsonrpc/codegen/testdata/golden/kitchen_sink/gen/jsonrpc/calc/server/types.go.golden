@@ -8,8 +8,7 @@
 package server
 
 import (
-	calc "kitchensink/calc"
-
+	calc "generated.local/gen/calc"
 	goa "goa.design/goa/v3/pkg"
 )
 

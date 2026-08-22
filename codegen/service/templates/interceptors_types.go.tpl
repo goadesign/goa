@@ -2,9 +2,9 @@
 // Access interfaces for interceptor payloads and results
 type (
 {{- range . }}
-	// {{ .Name }}Info provides metadata about the current interception.
+	// {{ .InfoDeclaration.Name }} provides metadata about the current interception.
 	// It includes service name, method name, and access to the endpoint.
-	{{ .Name }}Info struct {
+	{{ .InfoDeclaration.Name }} struct {
 		service    string
 		method     string
 		callType   goa.InterceptorCallType
@@ -12,10 +12,10 @@ type (
 	}
 	{{- if .HasPayloadAccess }}
 
-	// {{ .Name }}Payload provides type-safe access to the method payload.
+	// {{ .PayloadDeclaration.Name }} provides type-safe access to the method payload.
 	// It allows reading and writing specific fields of the payload as defined
 	// in the design.
-	{{ .Name }}Payload interface {
+	{{ .PayloadDeclaration.Name }} interface {
 		{{- range .ReadPayload }}
 		{{ .Name }}() {{ .TypeRef }}
 		{{- end }}
@@ -26,10 +26,10 @@ type (
 	{{- end }}
 	{{- if .HasResultAccess }}
 
-	// {{ .Name }}Result provides type-safe access to the method result.
+	// {{ .ResultDeclaration.Name }} provides type-safe access to the method result.
 	// It allows reading and writing specific fields of the result as defined
 	// in the design.
-	{{ .Name }}Result interface {
+	{{ .ResultDeclaration.Name }} interface {
 		{{- range .ReadResult }}
 		{{ .Name }}() {{ .TypeRef }}
 		{{- end }}
@@ -40,10 +40,10 @@ type (
 	{{- end }}
 	{{- if .HasStreamingPayloadAccess }}
 
-	// {{ .Name }}StreamingPayload provides type-safe access to the method streaming payload.
+	// {{ .StreamingPayloadDeclaration.Name }} provides type-safe access to the method streaming payload.
 	// It allows reading and writing specific fields of the streaming payload as defined
 	// in the design.
-	{{ .Name }}StreamingPayload interface {
+	{{ .StreamingPayloadDeclaration.Name }} interface {
 		{{- range .ReadStreamingPayload }}
 		{{ .Name }}() {{ .TypeRef }}
 		{{- end }}
@@ -54,10 +54,10 @@ type (
 	{{- end }}
 	{{- if .HasStreamingResultAccess }}
 
-	// {{ .Name }}StreamingResult provides type-safe access to the method streaming result.
+	// {{ .StreamingResultDeclaration.Name }} provides type-safe access to the method streaming result.
 	// It allows reading and writing specific fields of the streaming result as defined
 	// in the design.
-	{{ .Name }}StreamingResult interface {
+	{{ .StreamingResultDeclaration.Name }} interface {
 		{{- range .ReadStreamingResult }}
 		{{ .Name }}() {{ .TypeRef }}
 		{{- end }}
@@ -74,8 +74,8 @@ type (
 type (
 	{{- range . }}
 		{{- range .Methods }}
-			{{- if .PayloadAccess }}
-	{{ .PayloadAccess }} struct {
+			{{- if .PayloadAccessDeclaration }}
+	{{ .PayloadAccessDeclaration.Name }} struct {
 		payload {{ .PayloadRef }}
 	}
 			{{- end }}
@@ -84,8 +84,8 @@ type (
 
 	{{- range . }}
 		{{- range .Methods }}
-			{{- if .ResultAccess }}
-	{{ .ResultAccess }} struct {
+			{{- if .ResultAccessDeclaration }}
+	{{ .ResultAccessDeclaration.Name }} struct {
 		result {{ .ResultRef }}
 	}
 			{{- end }}
@@ -94,8 +94,8 @@ type (
 
 	{{- range . }}
 		{{- range .Methods }}
-			{{- if .StreamingPayloadAccess }}
-	{{ .StreamingPayloadAccess }} struct {
+			{{- if .StreamingPayloadAccessDeclaration }}
+	{{ .StreamingPayloadAccessDeclaration.Name }} struct {
 		payload {{ .StreamingPayloadRef }}
 	}
 			{{- end }}
@@ -104,8 +104,8 @@ type (
 
 	{{- range . }}
 		{{- range .Methods }}
-			{{- if .StreamingResultAccess }}
-	{{ .StreamingResultAccess }} struct {
+			{{- if .StreamingResultAccessDeclaration }}
+	{{ .StreamingResultAccessDeclaration.Name }} struct {
 		result {{ .StreamingResultRef }}
 	}
 			{{- end }}

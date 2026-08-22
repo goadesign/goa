@@ -116,6 +116,13 @@ func (r *generationRun) execute(genpkg string, roots []eval.Root) (*generationRe
 	if freezeErr != nil {
 		return nil, freezeErr
 	}
+	linkErr := plan.link()
+	if err := plan.verifyPreparedDesign("plan linking"); err != nil {
+		return nil, err
+	}
+	if linkErr != nil {
+		return nil, linkErr
+	}
 
 	var files []*codegen.File
 	for _, core := range r.cores {

@@ -435,7 +435,7 @@ var WithExplicitAndDefaultViewsDSL = func() {
 		Method("A", func() {
 			Result(RTWithViews)
 		})
-		Method("A", func() {
+		Method("B", func() {
 			Result(RTWithViews, func() {
 				View("tiny")
 			})

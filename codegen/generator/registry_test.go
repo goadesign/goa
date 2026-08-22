@@ -9,13 +9,13 @@ import (
 )
 
 type (
-	// testGenfunc retains the previous fixture shape while adapting callbacks
-	// into fresh core generator objects.
+	// testGenfunc describes one retained planner and renderer used by an
+	// isolated generator command.
 	testGenfunc struct {
-		// Plan declares package symbols through the fixture's Generation seam.
-		Plan func(*codegen.Generation) error
-		// Generate renders fixture files through the same Generation seam.
-		Generate func(*codegen.Generation) ([]*codegen.File, error)
+		// Plan declares package symbols and retains the analysis used by Generate.
+		Plan func(*Plan) error
+		// Generate renders fixture files from the linked plan.
+		Generate func(*Plan) ([]*codegen.File, error)
 	}
 )
 
@@ -37,26 +37,20 @@ func testRegistryFromGenfuncs(callbacks []testGenfunc) *registry {
 
 // testRenderOnly adapts a root-based rendering fixture into a test callback.
 func testRenderOnly(generate func(string, []eval.Root) ([]*codegen.File, error)) testGenfunc {
-	return testGenfunc{Generate: func(generation *codegen.Generation) ([]*codegen.File, error) {
+	return testGenfunc{Generate: func(plan *Plan) ([]*codegen.File, error) {
+		generation := plan.Generation()
 		return generate(generation.GenPkg(), generation.Roots())
 	}}
 }
 
-// testGenerator adapts the current Generation-based core callback functions to
-// a fresh run factory. Retained subsystem plans replace this adapter in Tasks 7–10.
-func testGenerator(plan func(*codegen.Generation) error, generate func(*codegen.Generation) ([]*codegen.File, error)) generatorFactory {
+// testGenerator returns a fresh core generator that receives one retained plan
+// from declaration collection through rendering.
+func testGenerator(plan func(*Plan) error, generate func(*Plan) ([]*codegen.File, error)) generatorFactory {
 	return func() coreGenerator {
-		generator := coreGenerator{name: "test"}
-		if plan != nil {
-			generator.Plan = func(retained *Plan) error {
-				return plan(retained.Generation())
-			}
+		return coreGenerator{
+			name:     "test",
+			Plan:     plan,
+			Generate: generate,
 		}
-		if generate != nil {
-			generator.Generate = func(retained *Plan) ([]*codegen.File, error) {
-				return generate(retained.Generation())
-			}
-		}
-		return generator
 	}
 }

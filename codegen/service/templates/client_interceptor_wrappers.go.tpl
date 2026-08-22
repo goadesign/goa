@@ -1,13 +1,13 @@
-{{- range .ClientInterceptors }}
+{{- range .Interceptors }}
 {{-  $interceptor := . }}
 {{- range .Methods }}
 
-{{ comment (printf "wrapClient%s%s applies the %s client interceptor to endpoints." $interceptor.Name .MethodName $interceptor.DesignName) }}
-func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
+{{ comment (printf "%s applies the %s client interceptor to endpoints." .ClientWrapperDeclaration.Name $interceptor.DesignName) }}
+func {{ .ClientWrapperDeclaration.Name }}(endpoint goa.Endpoint, i {{ $.InterceptorsDeclaration.Name }}) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 	{{- if or $interceptor.HasStreamingPayloadAccess $interceptor.HasStreamingResultAccess }}
 		{{- if $interceptor.HasPayloadAccess }}
-		info := &{{ $interceptor.Name }}Info{
+		info := &{{ $interceptor.InfoDeclaration.Name }}{
 			service:    "{{ $.Service }}",
 			method:     "{{ .MethodName }}",
 			callType:   goa.InterceptorUnary,
@@ -21,11 +21,11 @@ func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i
 			return res, err
 		}
 		stream := res.({{ .ClientStream.Interface }})
-		return &wrapped{{ .ClientStream.Interface }}{
+		return &{{ .ClientStream.WrapperDeclaration.Name }}{
 			ctx: ctx,
 		{{- if $interceptor.HasStreamingPayloadAccess }}
 			sendWithContext: func(ctx context.Context, req {{ .ClientStream.SendTypeRef }}) error {
-				info := &{{ $interceptor.Name }}Info{
+				info := &{{ $interceptor.InfoDeclaration.Name }}{
 					service:    "{{ $.Service }}",
 					method:     "{{ .MethodName }}",
 					callType:   goa.InterceptorStreamingSend,
@@ -40,7 +40,7 @@ func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i
 		{{- end }}
 		{{- if $interceptor.HasStreamingResultAccess }}
 			recvWithContext: func(ctx context.Context) ({{ .ClientStream.RecvTypeRef }}, error) {
-				info := &{{ $interceptor.Name }}Info{
+				info := &{{ $interceptor.InfoDeclaration.Name }}{
 					service:    "{{ $.Service }}",
 					method:     "{{ .MethodName }}",
 					callType:   goa.InterceptorStreamingRecv,
@@ -55,7 +55,7 @@ func wrapClient{{ .MethodName }}{{ $interceptor.Name }}(endpoint goa.Endpoint, i
 			stream: stream,
 		}, nil
 	{{- else }}
-		info := &{{ $interceptor.Name }}Info{
+		info := &{{ $interceptor.InfoDeclaration.Name }}{
 			service:    "{{ $.Service }}",
 			method:     "{{ .MethodName }}",
 			callType:   goa.InterceptorUnary,

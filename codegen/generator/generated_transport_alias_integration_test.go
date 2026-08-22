@@ -39,15 +39,13 @@ func TestGeneratedTransportPackagesCompileWithServiceAliasCollisions(t *testing.
 		}
 	})
 
-	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
-	require.NoError(t, planTransportData(generation))
-	require.NoError(t, generation.Freeze())
-	files, err := testServiceFiles(generation)
+	plan := mustTestPlan(t, "generated.local/gen", []eval.Root{root}, planTransportData)
+	files, err := testServiceFiles(plan)
 	require.NoError(t, err)
-	transport, err := testTransportFiles(generation)
+	transport, err := testTransportFiles(plan)
 	require.NoError(t, err)
 	files = append(files, transport...)
-	exampleFiles, err := assembleExampleFilesForTest(generation)
+	exampleFiles, err := assembleExampleFilesForTest(plan)
 	require.NoError(t, err)
 	files = append(files, exampleFiles...)
 

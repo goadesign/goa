@@ -1,4 +1,4 @@
-// Foo is the payload type of the PkgPathMethod service A method.
+// Foo is a generated service type.
 type Foo struct {
 	IntField *int
 }

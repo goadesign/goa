@@ -51,6 +51,21 @@ func NewViewedResultInlineValidation(res *ResultInlineValidation, view string) *
 	return &resultwithinlinevalidationviews.ResultInlineValidation{Projected: p, View: "default"}
 }
 
+// NewResultInlineValidationBResult initializes result type
+// ResultInlineValidationBResult from viewed result type
+// ResultInlineValidationBResult.
+func NewResultInlineValidationBResult(vres *resultwithinlinevalidationviews.ResultInlineValidationBResult) *ResultInlineValidationBResult {
+	return newResultInlineValidationBResult(vres.Projected)
+}
+
+// NewViewedResultInlineValidationBResult initializes viewed result type
+// ResultInlineValidationBResult from result type ResultInlineValidationBResult
+// using the given view.
+func NewViewedResultInlineValidationBResult(res *ResultInlineValidationBResult, view string) *resultwithinlinevalidationviews.ResultInlineValidationBResult {
+	p := newResultInlineValidationBResultView(res)
+	return &resultwithinlinevalidationviews.ResultInlineValidationBResult{Projected: p, View: "default"}
+}
+
 // newResultInlineValidation converts projected type ResultInlineValidation to
 // service type ResultInlineValidation.
 func newResultInlineValidation(vres *resultwithinlinevalidationviews.ResultInlineValidationView) *ResultInlineValidation {

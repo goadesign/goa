@@ -54,7 +54,9 @@ func ClientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
 		services.ServiceImport(svc.Name()),
-		services.ViewImport(svc.Name()),
+	}
+	if serviceHasViewedResult(data, nil) {
+		imports = append(imports, services.ViewImport(svc.Name()))
 	}
 	for _, e := range data.Endpoints {
 		if e.IsJSONRPC {
@@ -143,22 +145,22 @@ func clientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "client.go")
 	title := fmt.Sprintf("%s client HTTP transport", svc.Name())
+	imports := []*codegen.ImportSpec{
+		{Path: "context"},
+		{Path: "fmt"},
+		{Path: "io"},
+		{Path: "mime/multipart"},
+		{Path: "net/http"},
+		{Path: "strconv"},
+		{Path: "strings"},
+		{Path: "time"},
+		{Path: "github.com/gorilla/websocket"},
+		codegen.GoaImport(""),
+		codegen.GoaNamedImport("http", "goahttp"),
+		services.ServiceImport(svc.Name()),
+	}
 	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", []*codegen.ImportSpec{
-			{Path: "context"},
-			{Path: "fmt"},
-			{Path: "io"},
-			{Path: "mime/multipart"},
-			{Path: "net/http"},
-			{Path: "strconv"},
-			{Path: "strings"},
-			{Path: "time"},
-			{Path: "github.com/gorilla/websocket"},
-			codegen.GoaImport(""),
-			codegen.GoaNamedImport("http", "goahttp"),
-			services.ServiceImport(svc.Name()),
-			services.ViewImport(svc.Name()),
-		}),
+		codegen.Header(title, "client", imports),
 	}
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:   "client-struct",

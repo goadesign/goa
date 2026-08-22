@@ -8,8 +8,7 @@
 package client
 
 import (
-	mixed "kitchensink/mixed"
-
+	mixed "generated.local/gen/mixed"
 	goa "goa.design/goa/v3/pkg"
 )
 

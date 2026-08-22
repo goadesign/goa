@@ -11,10 +11,10 @@ import (
 	"bytes"
 	"context"
 	"io"
-	mixed "kitchensink/mixed"
 	"net/http"
 	"net/url"
 
+	mixed "generated.local/gen/mixed"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"
 )

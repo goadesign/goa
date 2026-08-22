@@ -13,9 +13,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	mixed "kitchensink/mixed"
 	"net/http"
 
+	mixed "generated.local/gen/mixed"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"
 	goa "goa.design/goa/v3/pkg"

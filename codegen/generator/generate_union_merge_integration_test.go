@@ -61,6 +61,7 @@ func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
 	_ = cg.RunDSL(t, dsl)
 
 	dir := t.TempDir()
+	writeGeneratedModule(t, filepath.Join(dir, cg.Gendir), "generated.local/gen")
 	if _, err := generate(dir, "gen", false, registry); err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}

@@ -1,4 +1,4 @@
-
+// Foo is a generated service type.
 type Foo struct {
 	IntField *int
 }

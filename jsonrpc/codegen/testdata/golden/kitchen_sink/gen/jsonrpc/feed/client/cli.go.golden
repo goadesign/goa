@@ -10,7 +10,8 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	feed "kitchensink/feed"
+
+	feed "generated.local/gen/feed"
 )
 
 // BuildWatchPayload builds the payload for the Feed watch endpoint from CLI

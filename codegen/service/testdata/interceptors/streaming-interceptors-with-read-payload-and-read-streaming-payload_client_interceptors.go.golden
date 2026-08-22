@@ -10,7 +10,7 @@ type ClientInterceptors interface {
 // interceptors defined in the design.
 func WrapMethodClientEndpoint(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	if i != nil {
-		endpoint = wrapClientMethodlogging(endpoint, i)
+		endpoint = wrapClientMethodLogging(endpoint, i)
 	}
 	return endpoint
 }

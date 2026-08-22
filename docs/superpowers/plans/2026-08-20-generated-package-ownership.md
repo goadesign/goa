@@ -4,7 +4,7 @@
 
 **Goal:** Make every generated package-level declaration and every reference use one name collected once, frozen once, and retained through rendering.
 
-**Architecture:** One generation run instantiates fresh core and plugin objects, permits root mutation only during preparation, and builds one typed `generator.Plan`. Service, HTTP, JSON-RPC, gRPC, OpenAPI, example, and goa-ai plans retain their complete render models and package-owned `NameDeclaration` records; render never rebuilds analysis or allocates a name.
+**Architecture:** One generation run instantiates fresh core and plugin objects, permits root mutation only during preparation, and builds one typed `generator.Plan`. Service, HTTP, JSON-RPC, gRPC, OpenAPI, example, and goa-ai plans collect package-owned `NameDeclaration` records, freeze them, link those records once into complete immutable render models, and render without rebuilding analysis or allocating a name.
 
 **Tech Stack:** Go 1.25, Goa evaluation and code generation, Protocol Buffers and `protoc-gen-go`, goa-ai plugins, `testify/require`
 
@@ -18,6 +18,7 @@
 - Every package-level type, function, constant, and variable has a package-owned `NameDeclaration` before freeze.
 - Exact symbols reject normalized collisions; preferred symbols receive deterministic suffixes from stable typed ordering.
 - `NameDeclaration.Name()` panics before freeze and is stable after freeze.
+- Linking resolves retained facts through frozen declarations exactly once; it cannot collect another declaration or import.
 - Render accepts retained typed plans. It does not accept roots, a generated module path, or callbacks that reconstruct analysis.
 - Complete import path is the only import identity. Different package identities that normalize to one output import path or directory are rejected.
 - Recursion uses `UserType.Origin()` only for cycle detection. Emitted declarations use complete typed declaration identities.
@@ -44,7 +45,7 @@ preserve those APIs.
 
 - [x] Added a real two-service generated-module test with relocated nested unions and HTTP/gRPC compilation.
 - [x] Added exact relocated-name collision coverage.
-- [x] Added the still-open same-label file-section preservation regression.
+- [x] Added the same-label file-section regression later resolved by Task 6.
 
 ### Task 2: Generation-owned type catalog — complete
 
@@ -222,7 +223,7 @@ go test ./... -run '^$'
 git diff --check
 ```
 
-The same-label merge test may remain the only unfiltered generator failure.
+All commands pass.
 Commit the common owner and fresh-run lifecycle together because retained plans
 depend on both contracts.
 
@@ -247,11 +248,13 @@ depend on both contracts.
 
 **Interfaces:**
 - Consumes: Task 6 `Generation`, `NameDeclaration`, and prepared root snapshot
-- Produces: `service.NewPlan(root, generation) (*service.Plan, error)`
+- Produces: `service.NewPlans(generation, inputs...) ([]*service.Plan, error)`
+- Produces: `service.NewPlan(root, generation, examples) (*service.Plan, error)`
 - Produces: `generator.Plan.Service(root) *service.Plan`
+- Produces: one post-freeze `service.Plan.Link()` operation before rendering
 - Produces: service render functions that accept retained plans only
 
-- [ ] **Step 1: Inventory and test every service package-level symbol**
+- [x] **Step 1: Inventory and test every service package-level symbol**
 
 Build a table from templates and render data covering service and views types,
 method wrappers, union families, endpoint constructors, clients,
@@ -272,22 +275,29 @@ go test ./codegen/service ./codegen/generator \
 Expected: FAIL where `NewServicesData` and private render scopes still allocate
 package-level endpoint, constructor, validator, conversion, or stream names.
 
-- [ ] **Step 2: Build and retain one service plan per root**
+- [x] **Step 2: Build and retain the complete service-plan batch**
 
 Replace the declaration-only `service.Plan` function and render-time
-`NewServicesData` reconstruction with:
+`NewServicesData` reconstruction with one run-wide constructor:
 
 ```go
-func NewPlan(root *expr.RootExpr, generation *codegen.Generation) (*Plan, error)
+func NewPlans(generation *codegen.Generation, inputs ...PlanInput) ([]*Plan, error)
 ```
 
-The constructor collects the complete immutable render model, all package
-imports and output files, and every package-level declaration. It performs
-stable ordering before registering preferred names. `generator.Plan` stores
-the exact result by root and returns it through `Service(root)`; unknown roots
-fail fast.
+The constructor requires every Goa root owned by the generation exactly once.
+It collects every root-local design fact, package import, output owner, and
+package-level declaration, then assigns shared conversion methods and relocated
+files across the complete run without reading provisional names. Structurally
+equivalent compiler copies may share one declaration; candidates with different
+retained Go layouts or union branch facts are rejected before freeze. Exact
+duplicate external conversions across roots are rejected rather than receiving
+an artificial numeric suffix. `NewPlan` remains only as the strict single-root
+form and rejects a multi-root generation. After Generation freezes, `Plan.Link`
+resolves the frozen records into the immutable render model without another
+declaration traversal. `generator.Plan` stores the exact result by root and
+returns it through `Service(root)`; unknown roots fail fast.
 
-- [ ] **Step 3: Render only the retained plan**
+- [x] **Step 3: Render only the retained plan**
 
 Change service, views, client, endpoint, conversion, validation, interceptor,
 and starter implementation renderers to accept `*service.Plan` or typed values
@@ -298,14 +308,18 @@ scopes only for locals, parameters, fields, and methods.
 Delete `NewServicesData`, the old `ServicesData` reconstruction constructor,
 duplicate planning traversals, and any record that carries a second final name.
 
-- [ ] **Step 4: Prove aggregation, order independence, and purity**
+- [x] **Step 4: Prove aggregation, order independence, and purity**
 
 Generate two roots contributing to one relocated package, reverse root and
-service traversal, and assert byte-identical declarations. Run planning once,
-mutate no expression, render twice, and assert identical files without new
-catalog entries. Compile service, views, and example implementation packages.
+service traversal, and assert byte-identical declarations. Mutate the source
+service, method, type-location, field, validation, and conversion expressions
+after planning, then assert core service output is byte-identical wherever the
+core service plan owns those facts. Preserve distinct transport validation as
+a valid counterexample: HTTP and gRPC own those validation programs when the
+shared service declaration's Go layout is unchanged. Render twice without new
+catalog entries and compile service, views, and example implementation packages.
 
-- [ ] **Step 5: Verify and commit Task 7**
+- [x] **Step 5: Verify and commit Task 7**
 
 Run:
 
@@ -316,7 +330,7 @@ go test ./... -run '^$'
 git diff --check
 ```
 
-Only the separately assigned same-label merge regression may fail.
+All commands must pass.
 
 ### Task 8: Retained HTTP and JSON-RPC plans
 
@@ -355,6 +369,27 @@ Only the separately assigned same-label merge regression may fail.
 - Produces: typed retained HTTP and JSON-RPC plans with complete package declarations
 - Preserves: independent wire/service transform ownership and detached HTTP bodies
 
+**Progress ledger (2026-08-21):**
+
+- Task 7 now reserves service-view imports only in the HTTP, JSON-RPC, and gRPC
+  files whose rendered sections reference them. The focused generated-module
+  proof covers viewed and ordinary services, unary and streaming gRPC, HTTP
+  SSE and WebSocket, and JSON-RPC unary code. The complete variable-view
+  transport behavior remains Task 8 work rather than an import-planning
+  exception.
+- JSON-RPC unary responses currently discard the selected view: the server
+  always renders the first retained response-body variant and sends no view,
+  while the client tries to read `goa-view` from the HTTP response header.
+  Task 8 must make the selected representation explicit and reconstruct the
+  same view-specific body on both sides.
+- JSON-RPC SSE and WebSocket clients currently decode `params` or `result`
+  bytes directly into the service result. This is not a valid shortcut. For
+  example, the generated Feed response body maps the wire property
+  `event_id` to `EventID`, but the service result has no JSON tag; direct
+  decoding silently leaves `EventID` unset. Task 8 must decode the retained
+  transport body, run its generated constructor and validation, then return
+  the canonical service result.
+
 - [ ] **Step 1: Add complete HTTP/JSON-RPC declaration REDs**
 
 Inventory request, response, WebSocket, SSE, error, union, constructor,
@@ -364,6 +399,25 @@ request and response policy for one origin, and between HTTP and JSON-RPC
 sections sharing an output package. Require stable names under reversed
 endpoint order and compile the full generated module.
 
+Add two-view streaming-result contracts for HTTP SSE, JSON-RPC SSE, and
+JSON-RPC WebSocket. Prove each method/request stream implements `SetView`,
+retains its own view, projects through the canonical service constructor, and
+selects the response-body declaration for that exact view. Use two concurrent
+requests on one JSON-RPC WebSocket connection as the counterexample: a view
+stored on the connection is invalid because one request may select `summary`
+while another selects `detailed`.
+
+Cover the direct JSON-RPC `StreamHandler` API separately. For a method whose
+view is not fixed by the design, each `Send<Method>Notification` and
+`Send<Method>Response` call must carry its own view; it must not inherit a
+connection-global or latest value. Fixed-view methods remain specialized and
+do not expose a redundant selector. Add client runtime proofs with nested and
+transport-mapped fields so SSE and WebSocket receivers cannot pass by decoding
+view-specific wire JSON directly into the service result. Include a required
+snake-case field such as `event_id`: decoding it into a service field named
+`EventID` must fail the test unless the generated transport-body constructor
+performs the mapping.
+
 - [ ] **Step 2: Build retained HTTP plans from exact service plans**
 
 Make HTTP `NewPlan` consume the prepared root's HTTP expressions and exact
@@ -372,12 +426,32 @@ validators, helpers, imports, and file membership once. Move every current
 `NewServicesData` and `wire_catalog` allocation into this constructor. Store
 canonical service and wire declaration records in transform data.
 
+Retain one method/request-scoped view value for variable-view SSE and
+WebSocket streams. The stream's `SetView` updates that value; send operations
+use it to select both the service projection and the already-retained
+view-specific response body. Never place mutable view selection on a shared
+connection.
+
 - [ ] **Step 3: Make JSON-RPC retain the HTTP plan it shares**
 
 Build one typed JSON-RPC plan that points at the exact HTTP plan used for HTTP
 codecs and body files, then collects JSON-RPC-only declarations. Do not invoke
 HTTP planning or analysis again. Make JSON-RPC render functions accept this
 plan and delete their root/service reconstruction paths.
+
+Define one explicit viewed-stream wire contract shared by JSON-RPC SSE and
+WebSocket. Every viewed streamed message carries the selected view together
+with its view-specific body. Generated clients must select the matching
+retained body decoder, reconstruct the projected value, validate the viewed
+result, and return the canonical service result. Do not decode a projected
+wire body directly into the service result, infer a default for a variable-view
+method, or ask callers to construct generated views-package values.
+
+Apply the same representation contract to unary JSON-RPC. A variable-view
+success response must carry the selected view with its view-specific body;
+the server cannot choose the first body variant and the client cannot recover
+the view from an unset HTTP header. Fixed-view unary methods remain fully
+specialized and need no runtime discriminator.
 
 - [ ] **Step 4: Remove context-dependent helper naming**
 
@@ -397,7 +471,7 @@ go test ./... -run '^$'
 git diff --check
 ```
 
-Only the same-label merge regression may fail.
+All commands must pass.
 
 ### Task 9: Versioned protobuf descriptor plan and retained gRPC plan
 
@@ -489,7 +563,7 @@ go test ./... -run '^$'
 git diff --check
 ```
 
-Only the same-label merge regression may fail.
+All commands must pass.
 
 ### Task 10: OpenAPI, examples, and selective lifecycle integration
 
@@ -660,7 +734,7 @@ pull request.
 - Consumes: complete retained plans and package-owned declaration deduplication
 - Produces: lossless same-path assembly and fully verified Goa, goa-ai, and AURA branches
 
-- [ ] **Step 1: Make same-path file assembly lossless**
+- [x] **Step 1: Make same-path file assembly lossless**
 
 Merge compatible headers and imports, then append every non-header section in
 producer order. Never deduplicate by `SectionTemplate.Name`. Require all
@@ -673,8 +747,10 @@ Run:
 go test ./codegen/generator -run TestMergeFilesPreservesSameLabelSections -count=1
 ```
 
-Expected before implementation: FAIL because the second same-label body is
-discarded. Expected after implementation: PASS with both bodies present.
+This was completed with Task 6 because lossless file assembly is part of the
+common run lifecycle. Both same-label bodies are preserved, all contributor
+finalizers run in order, and incompatible headers or output paths fail before
+rendering.
 
 - [ ] **Step 2: Delete every superseded mechanism**
 

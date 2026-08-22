@@ -89,7 +89,7 @@ func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	for _, path := range []string{
@@ -133,7 +133,7 @@ func TestInheritedTransportErrorMappingsCompileWithMethodErrors(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	runGeneratedTests(t, genDir)
@@ -151,7 +151,7 @@ func TestNestedTransportMetadataOwnsRecursiveImports(t *testing.T) {
 		outer := dsl.Type("Outer", func() {
 			dsl.Meta("struct:pkg:path", "domain/outer")
 			dsl.Field(1, "value", dsl.String, func() {
-				dsl.Meta("struct:field:type", "custom.Value", "gen/custom/value", "custom")
+				dsl.Meta("struct:field:type", "custom.Value", "generated.local/gen/custom/value", "custom")
 			})
 		})
 		dsl.Service("Values", func() {
@@ -172,7 +172,7 @@ func TestNestedTransportMetadataOwnsRecursiveImports(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	writeStubPackage(t, filepath.Join(genDir, "custom", "value"), "custom")
@@ -220,7 +220,7 @@ func TestTransportServiceImportsUseFrozenAliases(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	runGeneratedTests(t, genDir)
@@ -255,7 +255,7 @@ func TestInheritedTransportErrorsOwnImports(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	runGeneratedTests(t, genDir)
@@ -289,7 +289,7 @@ func TestServiceUnionGeneratedBranchShapesCompile(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	unionSource, err := os.ReadFile(filepath.Join(genDir, "types", "unions.go"))
@@ -323,7 +323,7 @@ func TestServiceUnionFamilyNamesAvoidExactDeclarations(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	runGeneratedTests(t, genDir)
@@ -371,7 +371,7 @@ func TestServiceFilesOwnTheirImports(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	runGeneratedTests(t, genDir)
@@ -422,7 +422,7 @@ func TestRawBodyStructsRemainInEndpointsPackage(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 
@@ -465,14 +465,14 @@ func TestServiceReferencesUseImportPathAliases(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	content, err := os.ReadFile(filepath.Join(genDir, "values", "service.go"))
 	require.NoError(t, err)
 	code := string(content)
-	require.Contains(t, code, `shared "gen/first/shared"`)
-	require.Contains(t, code, `shared2 "gen/second/shared"`)
+	require.Contains(t, code, `shared "generated.local/gen/first/shared"`)
+	require.Contains(t, code, `shared2 "generated.local/gen/second/shared"`)
 	require.Contains(t, code, `*shared.First`)
 	require.Contains(t, code, `*shared2.Second`)
 	runGeneratedTests(t, genDir)
@@ -539,13 +539,13 @@ func TestTransportReferencesUseImportPathAliases(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	for _, transport := range []string{"http", "grpc", "jsonrpc"} {
 		source := generatedTreeSource(t, filepath.Join(genDir, transport, "values"))
-		require.Contains(t, source, `shared "gen/first/shared"`)
-		require.Contains(t, source, `shared2 "gen/second/shared"`)
+		require.Contains(t, source, `shared "generated.local/gen/first/shared"`)
+		require.Contains(t, source, `shared2 "generated.local/gen/second/shared"`)
 		require.Contains(t, source, "shared.First")
 		require.Contains(t, source, "shared2.Second")
 	}
@@ -587,7 +587,7 @@ func TestNamedUnionBranchImportsReferenceOnly(t *testing.T) {
 		value := dsl.Type("Value", func() {
 			dsl.OneOf("choice", func() {
 				dsl.Attribute("external", dsl.String, func() {
-					dsl.Meta("struct:field:type", "json.Value", "gen/custom/json", "json")
+					dsl.Meta("struct:field:type", "json.Value", "generated.local/gen/custom/json", "json")
 				})
 			})
 		})
@@ -600,7 +600,7 @@ func TestNamedUnionBranchImportsReferenceOnly(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	writeStubPackage(t, filepath.Join(genDir, "custom", "json"), "json")
@@ -608,7 +608,7 @@ func TestNamedUnionBranchImportsReferenceOnly(t *testing.T) {
 	require.NoError(t, err)
 	code := string(content)
 	require.Contains(t, code, `"encoding/json"`)
-	require.NotContains(t, code, `"gen/custom/json"`)
+	require.NotContains(t, code, `"generated.local/gen/custom/json"`)
 	runGeneratedTests(t, genDir)
 }
 
@@ -651,7 +651,7 @@ func TestNormalizedMethodTypesUseServicePackageNames(t *testing.T) {
 
 		dir := t.TempDir()
 		genDir := filepath.Join(dir, codegen.Gendir)
-		writeGeneratedModule(t, genDir, "gen")
+		writeGeneratedModule(t, genDir, "generated.local/gen")
 		_, err := generate(dir, "gen", false, registry)
 		require.NoError(t, err)
 		content, err := os.ReadFile(filepath.Join(genDir, "values", "service.go"))
@@ -695,7 +695,7 @@ func TestNormalizedMethodTypesUseServicePackageNames(t *testing.T) {
 
 		dir := t.TempDir()
 		genDir := filepath.Join(dir, codegen.Gendir)
-		writeGeneratedModule(t, genDir, "gen")
+		writeGeneratedModule(t, genDir, "generated.local/gen")
 		_, err := generate(dir, "gen", false, registry)
 		require.NoError(t, err)
 		content, err := os.ReadFile(filepath.Join(genDir, "values", "service.go"))
@@ -718,13 +718,13 @@ func TestNestedRelocatedDeclarationsOwnTheirImports(t *testing.T) {
 		outer := dsl.Type("Outer", func() {
 			dsl.Meta("struct:pkg:path", "models")
 			dsl.Attribute("value", dsl.String, func() {
-				dsl.Meta("struct:field:type", "shared.Value", "gen/custom/first/shared", "shared")
+				dsl.Meta("struct:field:type", "shared.Value", "generated.local/gen/custom/first/shared", "shared")
 			})
 		})
 		inner := dsl.Type("Inner", func() {
 			dsl.Meta("struct:pkg:path", "models")
 			dsl.Attribute("value", dsl.String, func() {
-				dsl.Meta("struct:field:type", "shared.Value", "gen/custom/second/shared", "shared")
+				dsl.Meta("struct:field:type", "shared.Value", "generated.local/gen/custom/second/shared", "shared")
 			})
 		})
 		dsl.Service("Nested", func() {
@@ -739,7 +739,7 @@ func TestNestedRelocatedDeclarationsOwnTheirImports(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	writeStubPackage(t, filepath.Join(genDir, "custom", "first", "shared"), "shared")
@@ -778,10 +778,8 @@ func TestTransportSectionsOwnTheirImports(t *testing.T) {
 			})
 		})
 	})
-	generation := mustTestGeneration(t, "gen", []eval.Root{root})
-	require.NoError(t, planTransportData(generation))
-	require.NoError(t, generation.Freeze())
-	files, err := testTransportFiles(generation)
+	plan := mustTestPlan(t, "generated.local/gen", []eval.Root{root}, planTransportData)
+	files, err := testTransportFiles(plan)
 	require.NoError(t, err)
 
 	var header strings.Builder
@@ -793,8 +791,8 @@ func TestTransportSectionsOwnTheirImports(t *testing.T) {
 		break
 	}
 	require.NotEmpty(t, header.String())
-	require.Contains(t, header.String(), `"gen/stream/shared"`)
-	require.NotContains(t, header.String(), `"gen/request/shared"`)
+	require.Contains(t, header.String(), `"generated.local/gen/stream/shared"`)
+	require.NotContains(t, header.String(), `"generated.local/gen/request/shared"`)
 }
 
 // TestRelocatedStreamingUnionReferencesCompile verifies WebSocket and SSE
@@ -847,7 +845,7 @@ func TestRelocatedStreamingUnionReferencesCompile(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	for _, path := range []string{
@@ -894,10 +892,8 @@ func TestServiceRelocatedUnionNamesSpanDesignRoots(t *testing.T) {
 		codegen.RunDSL(t, relocatedDifferentUnionRoot()),
 		codegen.RunDSL(t, relocatedTopLevelValueRoot()),
 	}
-	generation := mustTestGeneration(t, "goa.design/goa/example", roots)
-	require.NoError(t, planServiceData(generation))
-	require.NoError(t, generation.Freeze())
-	files, err := testServiceFiles(generation)
+	plan := mustTestPlan(t, "goa.design/goa/example", roots, planServiceData)
+	files, err := testServiceFiles(plan)
 	require.NoError(t, err)
 
 	var generated strings.Builder
@@ -931,12 +927,9 @@ func TestServiceRelocatedUnionNamesSpanDesignRoots(t *testing.T) {
 // root analysis emits one shared relocated union for every referencing service.
 func TestServiceRelocatedUnionOwnerCompilesAcrossGeneration(t *testing.T) {
 	root := codegen.RunDSL(t, sharedRelocatedUnionRoot())
-	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
-	require.NoError(t, servicecodegen.Plan(root, generation))
-	require.NoError(t, generation.Freeze())
-	services, err := servicecodegen.NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	plan := mustTestPlan(t, "generated.local/gen", []eval.Root{root}, planServiceData)
+	files, err := servicecodegen.Files(plan.Service(root))
 	require.NoError(t, err)
-	files := servicecodegen.Files("generated.local/gen", []*servicecodegen.ServicesData{services})
 	dir := t.TempDir()
 	for _, file := range files {
 		_, err := file.Render(dir)
@@ -976,16 +969,13 @@ func TestServiceAndExamplesCompileWithImportQualifierCollisions(t *testing.T) {
 			})
 		})
 	})
-	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
-	require.NoError(t, servicecodegen.Plan(root, generation))
-	require.NoError(t, generation.Freeze())
-	services, err := servicecodegen.NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
-	require.NoError(t, err)
+	plan := mustTestPlan(t, "generated.local/gen", []eval.Root{root}, planServiceData)
+	servicePlan := plan.Service(root)
 
 	dir := t.TempDir()
-	files, err := testServiceFiles(generation)
+	files, err := testServiceFiles(plan)
 	require.NoError(t, err)
-	files = append(files, servicecodegen.ExampleServiceFiles(generation.GenPkg(), root, services)...)
+	files = append(files, servicecodegen.ExampleServiceFiles(servicePlan)...)
 	for _, file := range files {
 		_, err := file.Render(dir)
 		require.NoError(t, err)
@@ -1010,16 +1000,13 @@ func TestFixedRuntimeAliasesCompileWithGoaAndLogServices(t *testing.T) {
 			})
 		}
 	})
-	generation := mustTestGeneration(t, "generated.local/gen", []eval.Root{root})
-	require.NoError(t, servicecodegen.Plan(root, generation))
-	require.NoError(t, generation.Freeze())
-	services, err := servicecodegen.NewServicesData(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
-	require.NoError(t, err)
+	plan := mustTestPlan(t, "generated.local/gen", []eval.Root{root}, planServiceData)
+	servicePlan := plan.Service(root)
 
 	dir := t.TempDir()
-	files, err := testServiceFiles(generation)
+	files, err := testServiceFiles(plan)
 	require.NoError(t, err)
-	files = append(files, servicecodegen.ExampleInterceptorsFiles(generation.GenPkg(), root, services)...)
+	files = append(files, servicecodegen.ExampleInterceptorsFiles(servicePlan)...)
 	for _, file := range files {
 		_, err := file.Render(dir)
 		require.NoError(t, err)
@@ -1064,7 +1051,7 @@ func TestTransportStaticAliasesCompileWithHttpAndPathServices(t *testing.T) {
 
 	dir := t.TempDir()
 	genDir := filepath.Join(dir, codegen.Gendir)
-	writeGeneratedModule(t, genDir, "gen")
+	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
 	httpServers, err := filepath.Glob(filepath.Join(genDir, "http", "*", "server", "server.go"))
@@ -1076,8 +1063,8 @@ func TestTransportStaticAliasesCompileWithHttpAndPathServices(t *testing.T) {
 		require.NoError(t, err)
 		httpSource.Write(source)
 	}
-	require.Contains(t, httpSource.String(), `http_ "gen/http_"`)
-	require.Contains(t, httpSource.String(), `path2 "gen/path"`)
+	require.Contains(t, httpSource.String(), `http_ "generated.local/gen/http_"`)
+	require.Contains(t, httpSource.String(), `path2 "generated.local/gen/path"`)
 	runGeneratedTests(t, genDir)
 }
 

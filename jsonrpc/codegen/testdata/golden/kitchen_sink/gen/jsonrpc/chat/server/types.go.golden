@@ -8,7 +8,7 @@
 package server
 
 import (
-	chat "kitchensink/chat"
+	chat "generated.local/gen/chat"
 )
 
 // EchoStreamingBody is the type of the "Chat" service "echo" endpoint HTTP

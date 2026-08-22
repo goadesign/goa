@@ -9,9 +9,9 @@ func (s *{{ .VarName }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
 	{{- end }}
 	{{- if .Endpoint.Method.ViewedResult }}
 		{{- if .Endpoint.Method.ViewedResult.ViewName }}
-			res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, {{ printf "%q" .Endpoint.Method.ViewedResult.ViewName }})
+			res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Declaration.Name }}(v, {{ printf "%q" .Endpoint.Method.ViewedResult.ViewName }})
 		{{- else }}
-			res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Name }}(v, s.view)
+			res := {{ .PkgName }}.{{ .Endpoint.Method.ViewedResult.Init.Declaration.Name }}(v, s.view)
 		{{- end }}
 	{{- else }}
 	res := v

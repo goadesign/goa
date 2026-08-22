@@ -11,9 +11,9 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	feed "kitchensink/feed"
 	"net/http"
 
+	feed "generated.local/gen/feed"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"
 	goa "goa.design/goa/v3/pkg"

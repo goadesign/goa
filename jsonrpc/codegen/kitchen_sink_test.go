@@ -33,18 +33,18 @@ import (
 func TestJSONRPCKitchenSink(t *testing.T) {
 	root := expr.RunDSL(t, testdata.JSONRPCKitchenSinkDSL)
 	roots := []eval.Root{root}
-	generation, err := goacodegen.NewGeneration("kitchensink", roots)
+	generation, err := goacodegen.NewGeneration("generated.local/gen", roots)
 	require.NoError(t, err)
-	require.NoError(t, service.Plan(root, generation))
+	examples := expr.NewExampleGenerator(root.API.RandomizerFactory)
+	servicePlan, err := service.NewPlan(root, generation, examples)
+	require.NoError(t, err)
 	require.NoError(t, jsonrpccodegen.Plan(generation))
 	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
-
-	examples := expr.NewExampleGenerator(root.API.RandomizerFactory)
-	services, err := service.NewServicesData(root, generation, examples)
-	require.NoError(t, err)
+	require.NoError(t, servicePlan.Link())
+	services := servicePlan.Services()
 	tfiles := kitchenSinkTransportFiles(root, services)
-	efiles := kitchenSinkExampleFiles(root, services)
+	efiles := kitchenSinkExampleFiles(root, servicePlan)
 
 	tmp := t.TempDir()
 	for _, f := range append(tfiles, efiles...) {
@@ -108,9 +108,10 @@ func kitchenSinkTransportFiles(root *expr.RootExpr, services *service.ServicesDa
 
 // kitchenSinkExampleFiles assembles example service and transport files
 // through their public subsystem APIs.
-func kitchenSinkExampleFiles(root *expr.RootExpr, services *service.ServicesData) []*goacodegen.File {
-	files := service.ExampleServiceFiles(services.GenPkg(), root, services)
-	files = append(files, service.ExampleInterceptorsFiles(services.GenPkg(), root, services)...)
+func kitchenSinkExampleFiles(root *expr.RootExpr, plan *service.Plan) []*goacodegen.File {
+	services := plan.Services()
+	files := service.ExampleServiceFiles(plan)
+	files = append(files, service.ExampleInterceptorsFiles(plan)...)
 	files = append(files, example.ServerFiles(root, services)...)
 	files = append(files, example.CLIFiles(root)...)
 

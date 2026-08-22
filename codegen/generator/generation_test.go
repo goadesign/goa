@@ -4,6 +4,7 @@ package generator
 
 import (
 	"fmt"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -130,6 +131,7 @@ func TestPreparedRootsRejectFileRenderMutation(t *testing.T) {
 		t.Run(phase, func(t *testing.T) {
 			root := codegen.RunDSL(t, httpdata.AliasTypeDSL)
 			dir := t.TempDir()
+			writeGeneratedModule(t, filepath.Join(dir, codegen.Gendir), "generated.local/gen")
 			mutate := func() {
 				root.API.HTTP.Services[0].HTTPEndpoints[0].Routes[0].Path = "/changed"
 			}

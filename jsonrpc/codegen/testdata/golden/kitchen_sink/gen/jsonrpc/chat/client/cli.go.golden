@@ -10,7 +10,8 @@ package client
 import (
 	"encoding/json"
 	"fmt"
-	chat "kitchensink/chat"
+
+	chat "generated.local/gen/chat"
 )
 
 // BuildEchoPayload builds the payload for the Chat echo endpoint from CLI

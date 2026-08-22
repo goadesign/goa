@@ -59,7 +59,7 @@ func Decode{{ .Method.VarName }}Response(ctx context.Context, v any, hdr, trlr m
 		if err {{ if or .Response.Headers .Response.Trailers }}={{ else }}:={{ end }} {{ .Method.ViewedResult.ViewsPkg }}.Validate{{ .Method.Result }}(vres); err != nil {
 			return nil, err
 		}
-		return {{ .ServicePkgName }}.{{ .Method.ViewedResult.ResultInit.Name }}({{ range .Method.ViewedResult.ResultInit.Args}}{{ .Name }}, {{ end }}), nil
+		return {{ .ServicePkgName }}.{{ .Method.ViewedResult.ResultInit.Declaration.Name }}({{ range .Method.ViewedResult.ResultInit.Args}}{{ .Name }}, {{ end }}), nil
 	{{- else }}
 		return res, nil
 	{{- end }}

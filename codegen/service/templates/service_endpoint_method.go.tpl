@@ -1,7 +1,7 @@
 
 
-{{ printf "New%sEndpoint returns an endpoint function that calls the method %q of service %q." .VarName .Name .ServiceName | comment }}
-func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeByType }}, auth{{ .Type }}Fn security.Auth{{ .Type }}Func{{ end }}) goa.Endpoint {
+{{ printf "%s returns an endpoint function that calls the method %q of service %q." .EndpointDeclaration.Name .Name .ServiceName | comment }}
+func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .Schemes.DedupeByType }}, auth{{ .Type }}Fn security.Auth{{ .Type }}Func{{ end }}) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 {{- if .ServerStream }}
 	{{- if .ServerStream.EndpointStruct }}
@@ -127,9 +127,9 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 		}
 			{{- if .ViewedResult }}
 				{{- if .ViewedResult.ViewName }}
-		vres := {{ $.ViewedResult.Init.Name }}(res, {{ printf "%q" .ViewedResult.ViewName }})
+		vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, {{ printf "%q" .ViewedResult.ViewName }})
 				{{- else }}
-		vres := {{ $.ViewedResult.Init.Name }}(res, view)
+		vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, view)
 				{{- end }}
 		return vres, nil
 			{{- else }}
@@ -167,7 +167,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 	if err != nil {
 		return nil, err
 	}
-	vres := {{ $.ViewedResult.Init.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
+	vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
 	return vres, nil
 	{{- else }}
 	return {{ if not .ResultRef }}nil, {{ end }}s.{{ .VarName }}(ctx, {{ if .PayloadRef }}ep.Payload, {{ end }}ep.Body)
@@ -177,7 +177,7 @@ func New{{ .VarName }}Endpoint(s {{ .ServiceVarName }}{{ range .Schemes.DedupeBy
 	if err != nil {
 		return nil, err
 	}
-	vres := {{ $.ViewedResult.Init.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
+	vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
 	return vres, nil
 {{- else if .SkipResponseBodyEncodeDecode }}
 	{{ if .ResultRef }}res, {{ end }}body, err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload}}{{ end }})

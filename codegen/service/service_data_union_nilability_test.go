@@ -16,27 +16,19 @@ func TestBuildUnionTypeDataMarksNilableBranches(t *testing.T) {
 	union := unionWithBranchTypes()
 	generation := mustTestGeneration(t, "gen", nil)
 	pkg := mustClaimTestPackage(t, generation, "gen/service")
-	_, err := pkg.DeclareUnion(union)
+	declaration, err := pkg.DeclareUnion(union)
 	require.NoError(t, err)
+	facts := &unionFacts{
+		union:       union,
+		identity:    codegen.NewUnionTypeID(union),
+		typeKey:     union.GetTypeKey(),
+		valueKey:    union.GetValueKey(),
+		location:    &codegen.Location{RelImportPath: "gen/service"},
+		declaration: declaration,
+	}
+	require.NoError(t, planUnionRenderFacts(facts, nil, pkg))
 	require.NoError(t, generation.Freeze())
-	declaration, err := pkg.Union(union)
-	require.NoError(t, err)
-	data, err := buildUnionTypeData(
-		union,
-		declaration,
-		newServiceResolver(
-			generation,
-			aliasesForTest(t, "gen/service"),
-			&expr.ServiceExpr{Name: "service"},
-			"gen/service",
-		),
-		&codegen.Location{RelImportPath: "gen/service"},
-		false,
-		func(branch *expr.NamedAttributeExpr) (*codegen.UnionBranchDeclaration, error) {
-			return pkg.UnionBranch(union, branch.Name)
-		},
-	)
-	assert.NoError(t, err)
+	data := buildRetainedUnionTypeData(facts, &importAliases{generation: generation})
 
 	nilable := make(map[string]bool, len(data.Fields))
 	for _, field := range data.Fields {

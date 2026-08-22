@@ -65,7 +65,7 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvRef }}, error) {
 	if err := {{ .Endpoint.Method.ViewedResult.ViewsPkg }}.Validate{{ .Endpoint.Method.Result }}(vres); err != nil {
 	  return nil, err
 	}
-	return {{ .Endpoint.ServicePkgName }}.{{ .Endpoint.Method.ViewedResult.ResultInit.Name }}(vres), nil
+	return {{ .Endpoint.ServicePkgName }}.{{ .Endpoint.Method.ViewedResult.ResultInit.Declaration.Name }}(vres), nil
 {{- else }}
 {{- if .RecvConvert.Validation }}
 	if err = {{ .RecvConvert.Validation.Name }}(v); err != nil {

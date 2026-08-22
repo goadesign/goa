@@ -12,45 +12,32 @@ import (
 // serviceFiles returns the service files described by plan's frozen package
 // declarations and run-owned example state.
 func serviceFiles(plan *Plan) ([]*codegen.File, error) {
-	var files []*codegen.File
-	generation := plan.Generation()
-	designRoots := serviceRoots(generation.Roots())
-	analyses := make([]*service.ServicesData, len(designRoots))
-	for i, r := range designRoots {
-		services, err := service.NewServicesData(r, generation, plan.exampleGenerator(r))
-		if err != nil {
-			return nil, err
-		}
-		analyses[i] = services
-
-		for _, s := range r.Services {
-			endpointFiles := []*codegen.File{
-				service.EndpointFile(generation.GenPkg(), s, services),
-				service.ClientFile(generation.GenPkg(), s, services),
-			}
-			files = append(files, endpointFiles...)
-
-			if f := service.ViewsFile(generation.GenPkg(), s, services); f != nil {
-				files = append(files, f)
-			}
-			convFiles, err := service.ConvertFiles(r, s, services)
-			if err != nil {
-				return nil, err
-			}
-			files = append(files, convFiles...)
-		}
+	designRoots := serviceRoots(plan.Generation().Roots())
+	plans := make([]*service.Plan, len(designRoots))
+	for index, root := range designRoots {
+		plans[index] = plan.Service(root)
 	}
-	svcFiles := service.Files(generation.GenPkg(), analyses)
-	return append(svcFiles, files...), nil
+	return service.Files(plans...)
 }
 
 // planServiceData declares service-owned generated package types for every Goa
 // design root in generation.
-func planServiceData(generation *codegen.Generation) error {
-	for _, root := range serviceRoots(generation.Roots()) {
-		if err := service.Plan(root, generation); err != nil {
-			return err
-		}
+func planServiceData(plan *Plan) error {
+	if plan.services != nil {
+		return nil
+	}
+	plan.services = make(map[*expr.RootExpr]*service.Plan)
+	roots := serviceRoots(plan.Generation().Roots())
+	inputs := make([]service.PlanInput, len(roots))
+	for index, root := range roots {
+		inputs[index] = service.PlanInput{Root: root, Examples: plan.exampleGenerator(root)}
+	}
+	servicePlans, err := service.NewPlans(plan.Generation(), inputs...)
+	if err != nil {
+		return err
+	}
+	for index, root := range roots {
+		plan.services[root] = servicePlans[index]
 	}
 	return nil
 }

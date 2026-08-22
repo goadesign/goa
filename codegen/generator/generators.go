@@ -27,7 +27,7 @@ func genGeneratorFactories() []generatorFactory {
 			return coreGenerator{
 				name: "service",
 				Plan: func(plan *Plan) error {
-					return planServiceData(plan.Generation())
+					return planServiceData(plan)
 				},
 				Generate: func(plan *Plan) ([]*codegen.File, error) {
 					return serviceFiles(plan)
@@ -38,7 +38,7 @@ func genGeneratorFactories() []generatorFactory {
 			return coreGenerator{
 				name: "transport",
 				Plan: func(plan *Plan) error {
-					return planTransportData(plan.Generation())
+					return planTransportData(plan)
 				},
 				Generate: func(plan *Plan) ([]*codegen.File, error) {
 					return transportFiles(plan)
@@ -49,7 +49,7 @@ func genGeneratorFactories() []generatorFactory {
 			return coreGenerator{
 				name: "openapi",
 				Plan: func(plan *Plan) error {
-					return planServiceData(plan.Generation())
+					return planServiceData(plan)
 				},
 				Generate: func(plan *Plan) ([]*codegen.File, error) {
 					return openAPIFiles(plan)
@@ -66,7 +66,7 @@ func exampleGeneratorFactories() []generatorFactory {
 			return coreGenerator{
 				name: "example",
 				Plan: func(plan *Plan) error {
-					return planTransportData(plan.Generation())
+					return planTransportData(plan)
 				},
 				Generate: func(plan *Plan) ([]*codegen.File, error) {
 					return exampleFiles(plan)

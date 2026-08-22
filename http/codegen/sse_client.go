@@ -18,25 +18,25 @@ func sseClientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.F
 	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "sse.go")
 	tmplSections := sseClientTemplateSections(data)
 	sections := make([]*codegen.SectionTemplate, 0, 1+len(tmplSections))
+	imports := []*codegen.ImportSpec{
+		{Path: "bytes"},
+		{Path: "context"},
+		{Path: "encoding/json"},
+		{Path: "errors"},
+		{Path: "io"},
+		{Path: "net/http"},
+		{Path: "fmt"},
+		{Path: "strings"},
+		{Path: "strconv"},
+		{Path: "sync"},
+		services.ServiceImport(svc.Name()),
+		{Path: "goa.design/goa/v3/http", Name: "goahttp"},
+	}
 	sections = append(sections,
 		codegen.Header(
 			"sse-client",
 			"client",
-			[]*codegen.ImportSpec{
-				{Path: "bytes"},
-				{Path: "context"},
-				{Path: "encoding/json"},
-				{Path: "errors"},
-				{Path: "io"},
-				{Path: "net/http"},
-				{Path: "fmt"},
-				{Path: "strings"},
-				{Path: "strconv"},
-				{Path: "sync"},
-				services.ServiceImport(svc.Name()),
-				services.ViewImport(svc.Name()),
-				{Path: "goa.design/goa/v3/http", Name: "goahttp"},
-			},
+			imports,
 		),
 	)
 	sections = append(sections, tmplSections...) // add SSE client methods

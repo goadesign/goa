@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	cli "kitchensink/http/cli/kitchen_sink"
 	"net/http"
 	"time"
 
+	cli "generated.local/gen/http/cli/kitchen_sink"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
 )

@@ -13,9 +13,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	calc "kitchensink/calc"
 	"net/http"
 
+	calc "generated.local/gen/calc"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"
 	goa "goa.design/goa/v3/pkg"

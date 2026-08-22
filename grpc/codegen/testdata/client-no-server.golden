@@ -1,8 +1,8 @@
 import (
-	cli "/grpc/cli/test_api"
 	"fmt"
 	"os"
 
+	cli "generated.local/gen/grpc/cli/test_api"
 	goa "goa.design/goa/v3/pkg"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
