@@ -1,5 +1,5 @@
-// This file verifies generated gRPC client and server validators reject
-// incomplete required OneOf branches while accepting every complete branch.
+// This file checks that generated gRPC clients and servers reject an empty
+// required OneOf and reject a selected branch whose value is nil.
 package generator
 
 import (
@@ -33,8 +33,8 @@ func TestGenerateGRPCRequiredUnionValidators(t *testing.T) {
 	runGeneratedTests(t, dir)
 }
 
-// requiredGRPCUnionValidationDSL gives request and response unions the same
-// branch contract so generation must enforce it in both transport validators.
+// requiredGRPCUnionValidationDSL creates request and response unions with the
+// same branches so both generated checks must enforce the same rules.
 func requiredGRPCUnionValidationDSL() {
 	d.API("required-union", func() {})
 	token := d.Type("Token", d.String)
@@ -72,8 +72,8 @@ func requiredGRPCUnionValidationDSL() {
 	})
 }
 
-// writeGRPCRequiredUnionValidationTest adds a consumer test that invokes the
-// public validators generated into the server and client packages.
+// writeGRPCRequiredUnionValidationTest adds a test which calls the generated
+// server and client validation functions.
 func writeGRPCRequiredUnionValidationTest(t *testing.T, moduleDir string) {
 	t.Helper()
 	dir := filepath.Join(moduleDir, "uniontest")
@@ -97,7 +97,7 @@ func TestServerRequestValidator(t *testing.T) {
 		{Choice: &genpb.ExchangeRequest_Number{Number: 1}},
 		{Choice: &genpb.ExchangeRequest_Detail{Detail: &genpb.Detail{Label: "ready"}}},
 		{Choice: &genpb.ExchangeRequest_Inactive{Inactive: &genpb.Inactive{}}},
-		{Choice: &genpb.ExchangeRequest_Blob{Blob: nil}},
+		{Choice: &genpb.ExchangeRequest_Blob{Blob: []byte{}}},
 		{Choice: &genpb.ExchangeRequest_Token{Token: "ready"}},
 	}
 	for _, message := range valid {
@@ -112,6 +112,7 @@ func TestServerRequestValidator(t *testing.T) {
 	assertMissingField(t, genserver.ValidateExchangeRequest(&genpb.ExchangeRequest{Choice: nilNumber}), "number", "\"number\" is missing from message.choice")
 	assertMissingField(t, genserver.ValidateExchangeRequest(&genpb.ExchangeRequest{Choice: &genpb.ExchangeRequest_Detail{}}), "detail", "\"detail\" is missing from message.choice")
 	assertMissingField(t, genserver.ValidateExchangeRequest(&genpb.ExchangeRequest{Choice: &genpb.ExchangeRequest_Inactive{}}), "inactive", "\"inactive\" is missing from message.choice")
+	assertMissingField(t, genserver.ValidateExchangeRequest(&genpb.ExchangeRequest{Choice: &genpb.ExchangeRequest_Blob{}}), "blob", "\"blob\" is missing from message.choice")
 }
 
 func TestClientResponseValidator(t *testing.T) {
@@ -134,6 +135,7 @@ func TestClientResponseValidator(t *testing.T) {
 	assertMissingField(t, genclient.ValidateExchangeResponse(&genpb.ExchangeResponse{Choice: nilDetail}), "detail", "\"detail\" is missing from message.choice")
 	assertMissingField(t, genclient.ValidateExchangeResponse(&genpb.ExchangeResponse{Choice: &genpb.ExchangeResponse_Detail{}}), "detail", "\"detail\" is missing from message.choice")
 	assertMissingField(t, genclient.ValidateExchangeResponse(&genpb.ExchangeResponse{Choice: &genpb.ExchangeResponse_Inactive{}}), "inactive", "\"inactive\" is missing from message.choice")
+	assertMissingField(t, genclient.ValidateExchangeResponse(&genpb.ExchangeResponse{Choice: &genpb.ExchangeResponse_Blob{}}), "blob", "\"blob\" is missing from message.choice")
 }
 
 func assertErrorName(t *testing.T, err error, name string) {

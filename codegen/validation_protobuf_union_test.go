@@ -1,5 +1,5 @@
-// This file verifies the generic validator emitted for protobuf-style OneOf
-// interfaces, including wrapper and branch-payload presence.
+// This file checks the validation generated for protobuf OneOf values.
+// It rejects a missing selected branch and a selected branch whose value is nil.
 package codegen
 
 import (
@@ -12,8 +12,8 @@ import (
 )
 
 type (
-	// protobufUnionTestScope models the wrapper references used by protoc so
-	// the generic validation generator can be tested without transport setup.
+	// protobufUnionTestScope returns the Go names used by the generated struct for
+	// each selected branch. This lets the test run without generating a service.
 	protobufUnionTestScope struct {
 		scope *NameScope
 	}
@@ -36,7 +36,7 @@ func TestProtobufUnionValidationRequiresCompleteSelectedBranch(t *testing.T) {
 	require.Contains(t, generated, "if v.Detail == nil {")
 	require.Contains(t, generated, "if v.Inactive == nil {")
 	require.Contains(t, generated, "if v.Metadata == nil {")
-	require.NotContains(t, generated, "if v.Blob == nil {")
+	require.Contains(t, generated, "if v.Blob == nil {")
 	require.NotContains(t, generated, "if v.Token == nil {")
 }
 
@@ -76,8 +76,8 @@ func (s *protobufUnionTestScope) Scope() *NameScope {
 	return s.scope
 }
 
-// protobufUnionValidationDSL defines pointer-backed, scalar, and bytes OneOf
-// branches so the generator must preserve their distinct presence semantics.
+// protobufUnionValidationDSL creates OneOf branches stored as pointers,
+// scalars, and byte slices.
 func protobufUnionValidationDSL() {
 	token := d.Type("Token", d.String)
 	detail := d.Type("Detail", func() {

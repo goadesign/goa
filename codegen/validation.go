@@ -1,5 +1,6 @@
-// This file generates validation code for service, view, and transport
-// attributes using the package owner carried by each attribute context.
+// This file generates functions that check service values and values sent over
+// HTTP, gRPC, and JSON-RPC. Each function uses the Go names already chosen for
+// its package.
 package codegen
 
 import (
@@ -13,32 +14,33 @@ import (
 )
 
 type (
-	// unionValidationCase describes one concrete type accepted by a generated
-	// interface-union switch.
+	// unionValidationCase describes one possible union branch in generated
+	// validation code.
 	unionValidationCase struct {
-		// Type is the generated concrete branch type.
+		// Type is the generated Go type for the branch.
 		Type string
-		// Field is the protobuf wrapper field that carries the branch payload.
+		// Field is the field which stores the branch value.
 		Field string
-		// Name is the design branch name used in validation errors.
+		// Name is the branch name shown in validation errors.
 		Name string
-		// PayloadRequiresPresence reports whether a selected wrapper must carry
-		// a non-nil message payload.
+		// PayloadRequiresPresence is true when selecting this branch also
+		// requires a non-nil value.
 		PayloadRequiresPresence bool
-		// Validation is the branch-specific validation code.
+		// Validation checks the value stored by this branch.
 		Validation string
 	}
 
-	// unionValidationData is the complete render input for one interface-union
-	// validation switch.
+	// unionValidationData contains the information needed to write one union
+	// check.
 	unionValidationData struct {
-		// Target is the generated union expression inspected by the switch.
+		// Target is the generated union value being checked.
 		Target string
-		// Context identifies the union in generated validation errors.
+		// Context identifies the union in validation errors.
 		Context string
-		// Protobuf reports whether cases are pointer-backed protobuf wrappers.
+		// Protobuf is true when each selected branch is stored in its own generated
+		// protobuf struct.
 		Protobuf bool
-		// Cases lists every concrete branch accepted by the union.
+		// Cases lists every branch accepted by the union.
 		Cases []unionValidationCase
 	}
 )
@@ -69,12 +71,11 @@ func init() {
 			}
 			return expr.IsUnion(att.Type)
 		},
-		"isAttributeScope": func(scope Attributor) bool {
+		"isSumType": func(scope Attributor) bool {
 			if scope == nil {
 				return false
 			}
-			_, ok := scope.(*AttributeScope)
-			return ok
+			return scope.IsSumType()
 		},
 		"isUnionPointer": func(ctx *AttributeContext, required bool) bool {
 			return ctx.IsUnionPointer(required)
@@ -301,12 +302,12 @@ func recurseValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *A
 	return buf
 }
 
-// protobufUnionPayloadRequiresPresence reports whether the generated oneof
-// wrapper field holds a protobuf message pointer. Protobuf scalar fields,
-// including primitive aliases and bytes, store their value directly. Any and
-// every non-primitive branch compile to message pointers.
+// protobufUnionPayloadRequiresPresence reports whether selecting a protobuf
+// union branch requires a non-nil value. Messages, byte slices, and Any values
+// may be nil in Go, so their generated checks must reject nil explicitly.
 func protobufUnionPayloadRequiresPresence(att *expr.AttributeExpr) bool {
-	return !expr.IsPrimitive(att.Type) || unalias(att.Type).Kind() == expr.AnyKind
+	kind := unalias(att.Type).Kind()
+	return !expr.IsPrimitive(att.Type) || kind == expr.BytesKind || kind == expr.AnyKind
 }
 
 func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.UserType, target, context string, req, view bool, seen map[expr.UserType]*bytes.Buffer) string {

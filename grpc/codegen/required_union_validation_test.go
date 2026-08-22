@@ -1,5 +1,5 @@
-// This file verifies that the retained gRPC package plan renders complete
-// required-OneOf validation into both transport-side type packages.
+// This file checks the validation functions generated for gRPC server requests
+// and client responses which contain a required OneOf.
 package codegen
 
 import (
@@ -35,14 +35,14 @@ func TestRequiredUnionValidationUsesCompleteProtobufBranches(t *testing.T) {
 			require.Contains(t, generated, "if v.Detail == nil {")
 			require.Contains(t, generated, "if v.Inactive == nil {")
 			require.Contains(t, generated, "if v.Metadata == nil {")
-			require.NotContains(t, generated, "if v.Blob == nil {")
+			require.Contains(t, generated, "if v.Blob == nil {")
 			require.NotContains(t, generated, "if v.Token == nil {")
 		})
 	}
 }
 
-// requiredUnionValidationDSL covers constrained scalar, pointer-backed
-// message, empty-message, bytes, primitive-alias, and Any branches.
+// requiredUnionValidationDSL creates branches whose values include scalars,
+// messages, an empty message, a byte slice, a named string, and Any.
 func requiredUnionValidationDSL() {
 	token := d.Type("Token", d.String)
 	detail := d.Type("Detail", func() {
