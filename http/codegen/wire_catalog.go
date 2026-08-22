@@ -1,14 +1,14 @@
-// This file owns declaration identity and names for the wire types emitted by
-// one generated HTTP or JSON-RPC client or server package. The catalog first
-// collects detached shapes, then freezes names, and only then lets analysis
-// build declarations, references, and validators from those records.
+// This file assigns Go names to request and response types in one generated
+// HTTP or JSON-RPC package. Each copied type is recorded before names are
+// assigned. Its definition, references, and validation function then use the
+// same record.
 package codegen
 
 import (
+	"cmp"
 	"fmt"
 	"reflect"
 	"slices"
-	"strconv"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -17,20 +17,41 @@ import (
 )
 
 type (
-	// wireTypeCatalog owns the names and declarations emitted by one transport output package.
+	// wireTypeCatalog stores every request or response type written into one Go
+	// package and the Go name chosen for each type.
 	wireTypeCatalog struct {
+		pkg              *codegen.GeneratedPackage
 		scope            *codegen.NameScope
 		records          []*wireTypeRecord
+		transforms       []*wireTransformRecord
 		unionOccurrences []wireUnionOccurrence
 		unions           []*wireUnionRecord
-		names            map[string]int
-		frozen           bool
+		declared         bool
+		linked           bool
+		bindings         map[*expr.AttributeExpr]*wireTypeRecord
+		unionBindings    map[*expr.Union]*wireUnionRecord
 	}
 
-	// wireUnionRecord owns one emitted positional union in this output package.
+	// wireTransformRecord stores one value conversion and any extra functions it
+	// needs.
+	wireTransformRecord struct {
+		source *expr.AttributeExpr
+		target *expr.AttributeExpr
+		prefix string
+		owner  string
+		plan   *codegen.TransformPlan
+		used   bool
+	}
+
+	// wireUnionRecord stores one generated union and the Go names used for its
+	// type, branches, constants, and functions.
 	wireUnionRecord struct {
 		identity     wireUnionIdentity
 		union        *expr.Union
+		declaration  *codegen.NameDeclaration
+		kind         *codegen.NameDeclaration
+		kindDecls    []*codegen.NameDeclaration
+		ctorDecls    []*codegen.NameDeclaration
 		name         string
 		kindName     string
 		kindConsts   []string
@@ -38,32 +59,35 @@ type (
 		data         *service.UnionTypeData
 	}
 
-	// wireUnionOccurrence records one union use until branch declarations have names.
+	// wireUnionOccurrence stores one copied union until Goa assigns names to its branches.
 	wireUnionOccurrence struct {
 		union  *expr.Union
 		role   wireTypeRole
 		policy wireTypePolicy
 	}
 
-	// wireUnionIdentity combines the authored wire shape with the exact frozen
-	// declarations referenced by its branches.
+	// wireUnionIdentity pairs a union definition with the Go type used by each branch.
 	wireUnionIdentity struct {
 		definition   codegen.UnionTypeID
 		declarations []*wireTypeRecord
 	}
 
-	// wireTypeRecord is the canonical package-local declaration selected for a wire identity.
+	// wireTypeRecord stores one generated type and its optional functions.
 	wireTypeRecord struct {
-		identity wireTypeIdentity
-		name     string
-		ref      string
-		data     *TypeData
+		identity         wireTypeIdentity
+		declaration      *codegen.NameDeclaration
+		validator        *codegen.NameDeclaration
+		constructor      *codegen.NameDeclaration
+		needsValidator   bool
+		needsConstructor bool
+		name             string
+		ref              string
+		data             *TypeData
 	}
 
-	// wireTypeIdentity contains typed declaration provenance and every policy
-	// fact that changes the emitted Go type.
+	// wireTypeIdentity contains a designed type and the rules that change its Go definition.
 	wireTypeIdentity struct {
-		source    expr.UserType
+		sourceID  string
 		resultID  string
 		role      wireTypeRole
 		preferred string
@@ -71,7 +95,8 @@ type (
 		policy    wireTypePolicy
 	}
 
-	// wireTypePolicy describes the pointer, default, validation, and view rules applied to a wire shape.
+	// wireTypePolicy records how one copied type represents fields, pointers,
+	// default values, validation, and result views.
 	wireTypePolicy struct {
 		request    bool
 		pointer    bool
@@ -80,13 +105,37 @@ type (
 		view       string
 	}
 
-	// wireTypeRole identifies synthetic declarations that have no authored Origin.
+	// wireTypeRole says whether an unnamed designed type is used for a request,
+	// response, field, or stream value.
 	wireTypeRole uint8
 
-	// wireAttributePair identifies two recursive attributes already compared.
+	// wireAttributePair remembers two attributes already compared so values that
+	// refer back to themselves do not cause an endless loop.
 	wireAttributePair struct {
 		left  *expr.AttributeExpr
 		right *expr.AttributeExpr
+	}
+
+	// wireNameOrder contains designed values used to choose stable suffixes when
+	// several declarations ask for the same Go name.
+	wireNameOrder struct {
+		family    string
+		source    string
+		role      uint8
+		preferred string
+		shape     string
+		view      string
+		request   bool
+		pointer   bool
+		defaults  bool
+	}
+
+	// wireAttributeScope chooses the Go type name for each copied HTTP field.
+	wireAttributeScope struct {
+		catalog *wireTypeCatalog
+		base    codegen.Attributor
+		pkg     string
+		policy  wireTypePolicy
 	}
 )
 
@@ -97,38 +146,82 @@ const (
 	wireStreamPayload
 )
 
-// newWireTypeCatalog constructs an empty output-package catalog.
-func newWireTypeCatalog(reserved ...string) *wireTypeCatalog {
-	scope := codegen.NewNameScope()
-	names := make(map[string]int, len(reserved))
-	for _, name := range reserved {
-		scope.Unique(name)
-		names[name] = 1
+// newWireTypeCatalog creates the type list for one generated Go package. Tests
+// may omit the package when they only compare copied attributes.
+func newWireTypeCatalog(pkg ...*codegen.GeneratedPackage) *wireTypeCatalog {
+	catalog := &wireTypeCatalog{
+		bindings:      make(map[*expr.AttributeExpr]*wireTypeRecord),
+		unionBindings: make(map[*expr.Union]*wireUnionRecord),
 	}
-	return &wireTypeCatalog{scope: scope, names: names}
+	if len(pkg) > 0 {
+		catalog.pkg = pkg[0]
+	}
+	return catalog
 }
 
 // collect records attribute and every named type it contains.
 func (c *wireTypeCatalog) collect(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, preferred string) *wireTypeRecord {
-	if c.frozen {
-		panic("cannot collect HTTP wire type after catalog freeze")
+	if c.declared {
+		panic("cannot collect an HTTP type after its package declarations are submitted")
 	}
 	return c.collectRecursive(attribute, role, policy, preferred, make(map[expr.UserType]struct{}))
 }
 
-// Freeze assigns final names and binds copied user types to the catalog scope.
-func (c *wireTypeCatalog) Freeze() {
-	if c.frozen {
+// collectChildren records named types inside attribute without recording its
+// top-level named type a second time.
+func (c *wireTypeCatalog) collectChildren(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy) {
+	if userType, ok := attribute.Type.(expr.UserType); ok {
+		c.collectRecursive(userType.Attribute(), role, policy, "", make(map[expr.UserType]struct{}))
 		return
 	}
+	c.collectRecursive(attribute, role, policy, "", make(map[expr.UserType]struct{}))
+}
+
+// Declare requests every type and function name this HTTP package can write.
+// The caller invokes it before Goa chooses names so every file writing to the
+// same package can resolve conflicts together.
+func (c *wireTypeCatalog) Declare() error {
+	if c.declared {
+		return nil
+	}
+	if c.pkg == nil {
+		return fmt.Errorf("HTTP type declarations require a generated package")
+	}
 	for _, record := range c.records {
-		record.name = c.uniqueName(record.identity.preferred)
-		record.ref = wireTypeRef(record.name, record.identity.attribute.Type)
-		setWireTypeName(record.identity.attribute, record.name)
-		if userType, ok := record.identity.attribute.Type.(expr.UserType); ok {
-			c.scope.HashedUnique(userType, record.name)
-		} else {
-			c.scope.Unique(record.name)
+		record.declaration = codegen.NewPreferredName(
+			codegen.NameType,
+			record.identity.preferred,
+			codegen.ExportedName,
+			record.identity.order("type"),
+		)
+		if err := c.pkg.DeclareName(record.declaration); err != nil {
+			return err
+		}
+		if record.needsValidator {
+			declaration, err := c.pkg.DeclareDependentName(
+				codegen.NameFunction,
+				record.declaration,
+				"Validate",
+				"",
+				record.identity.order("validator"),
+			)
+			if err != nil {
+				return err
+			}
+			record.validator = declaration
+		}
+		if record.needsConstructor {
+			declaration, err := c.pkg.DeclareDependentName(
+				codegen.NameFunction,
+				record.declaration,
+				"New",
+				"",
+				record.identity.order("constructor"),
+			)
+			if err != nil {
+				return err
+			}
+			record.constructor = declaration
 		}
 	}
 	for _, occurrence := range c.unionOccurrences {
@@ -138,33 +231,199 @@ func (c *wireTypeCatalog) Freeze() {
 		}
 	}
 	for _, union := range c.unions {
-		union.name = c.uniqueName(codegen.Goify(union.union.Name(), true))
-		union.kindName = c.uniqueName(union.name + "Kind")
-		union.kindConsts = make([]string, len(union.union.Values))
-		union.constructors = make([]string, len(union.union.Values))
+		union.declaration = codegen.NewPreferredName(
+			codegen.NameType,
+			union.union.Name(),
+			codegen.ExportedName,
+			union.identity.order("union", union.union.Name(), ""),
+		)
+		if err := c.pkg.DeclareName(union.declaration); err != nil {
+			return err
+		}
+		kind, err := c.pkg.DeclareDependentName(
+			codegen.NameType,
+			union.declaration,
+			"",
+			"Kind",
+			union.identity.order("union kind", union.union.Name(), ""),
+		)
+		if err != nil {
+			return err
+		}
+		union.kind = kind
+		union.kindDecls = make([]*codegen.NameDeclaration, len(union.union.Values))
+		union.ctorDecls = make([]*codegen.NameDeclaration, len(union.union.Values))
 		for index, branch := range union.union.Values {
-			fieldName := codegen.Goify(branch.Name, true)
-			union.kindConsts[index] = c.uniqueName(union.kindName + fieldName)
-			union.constructors[index] = c.uniqueName("New" + union.name + fieldName)
+			kindDeclaration, err := c.pkg.DeclareDependentName(
+				codegen.NameConstant,
+				union.kind,
+				"",
+				codegen.Goify(branch.Name, true),
+				union.identity.order("union constant", union.union.Name(), branch.Name),
+			)
+			if err != nil {
+				return err
+			}
+			constructor, err := c.pkg.DeclareDependentName(
+				codegen.NameFunction,
+				union.declaration,
+				"New",
+				codegen.Goify(branch.Name, true),
+				union.identity.order("union constructor", union.union.Name(), branch.Name),
+			)
+			if err != nil {
+				return err
+			}
+			union.kindDecls[index] = kindDeclaration
+			union.ctorDecls[index] = constructor
 		}
 	}
-	for _, union := range c.unions {
-		c.applyUnionRecord(union.union, union)
-		c.scope.HashedUnique(codegen.NewUnionTypeID(union.union), union.name)
-		c.scope.Unique(union.kindName)
-		for index := range union.kindConsts {
-			c.scope.Unique(union.kindConsts[index])
-			c.scope.Unique(union.constructors[index])
+	for _, transform := range c.transforms {
+		for _, helper := range transform.plan.Helpers() {
+			preferred := transform.prefix + codegen.Goify(wireTransformTypeName(helper.Source), true) + "To" + codegen.Goify(wireTransformTypeName(helper.Target), true)
+			declaration := codegen.NewPreferredName(
+				codegen.NameFunction,
+				preferred,
+				codegen.UnexportedName,
+				wireNameOrder{
+					family:    "transform helper",
+					source:    expr.Hash(transform.source.Type, false, false, false),
+					preferred: preferred,
+					shape:     expr.Hash(transform.target.Type, false, false, false),
+					role:      uint8(helper.Occurrence),
+					view:      transform.owner,
+				},
+			)
+			if err := c.pkg.DeclareName(declaration); err != nil {
+				return err
+			}
+			if err := transform.plan.BindHelperDeclaration(helper.ID, declaration); err != nil {
+				return err
+			}
 		}
 	}
-	for _, union := range c.unions {
-		union.data = buildHTTPUnionTypeData(union.union, c.scope, union)
-	}
-	c.scope.Freeze()
-	c.frozen = true
+	c.declared = true
+	return nil
 }
 
-// wireTypeRef returns the Go reference owned by a frozen declaration record.
+// collectTransform records one request or response conversion before Goa
+// chooses the names of any extra conversion functions. Calls use these records
+// in the same order.
+func (c *wireTypeCatalog) collectTransform(source, target *expr.AttributeExpr, prefix, owner string) {
+	if c.declared {
+		panic("cannot collect an HTTP conversion after package declarations are submitted")
+	}
+	source = expr.DupAtt(source)
+	target = expr.DupAtt(target)
+	plan, err := codegen.NewTransformPlan(source, target)
+	if err != nil {
+		panic(err)
+	}
+	c.transforms = append(c.transforms, &wireTransformRecord{source: source, target: target, prefix: prefix, owner: owner, plan: plan})
+}
+
+// renderTransform writes the next matching conversion with the function names
+// chosen by Declare. It returns an error when collectTransform did not record
+// the conversion.
+func (c *wireTypeCatalog) renderTransform(source, target *expr.AttributeExpr, sourceVar, targetVar, prefix string, sourceContext, targetContext *codegen.AttributeContext) (string, []*codegen.TransformFunctionData, error) {
+	for _, transform := range c.transforms {
+		if transform.used || transform.prefix != prefix ||
+			!wireAttributesEqual(transform.source, source, make(map[wireAttributePair]struct{})) ||
+			!wireAttributesEqual(transform.target, target, make(map[wireAttributePair]struct{})) {
+			continue
+		}
+		if err := transform.plan.BindContexts(sourceContext, targetContext); err != nil {
+			return "", nil, err
+		}
+		c.bindTransformOccurrence(transform.source, source, sourceContext)
+		c.bindTransformOccurrence(transform.target, target, targetContext)
+		for _, helper := range transform.plan.Helpers() {
+			c.bindTransformHelper(helper.Source, sourceContext)
+			c.bindTransformHelper(helper.Target, targetContext)
+		}
+		transform.used = true
+		return transform.plan.Render(sourceVar, targetVar, true)
+	}
+	return "", nil, fmt.Errorf("HTTP %s conversion was not submitted before package names were assigned", prefix)
+}
+
+// bindTransformHelper gives a nested copied field the same Go type name used by
+// its generated conversion function. Service values already receive names from
+// the service generator.
+func (c *wireTypeCatalog) bindTransformHelper(attribute *expr.AttributeExpr, context *codegen.AttributeContext) {
+	scope, ok := context.Scope.(*wireAttributeScope)
+	if !ok || scope.catalog != c {
+		return
+	}
+	policy := scope.policy
+	policy.view = ""
+	c.applyNamesRecursive(attribute, wireAttribute, policy, make(map[expr.UserType]struct{}))
+}
+
+// bindTransformOccurrence records the Go type used by one copied conversion
+// value and each named field inside it.
+func (c *wireTypeCatalog) bindTransformOccurrence(planned, rendered *expr.AttributeExpr, context *codegen.AttributeContext) {
+	scope, ok := context.Scope.(*wireAttributeScope)
+	if !ok || scope.catalog != c {
+		return
+	}
+	record := c.bindings[rendered]
+	if record == nil {
+		c.applyNamesRecursive(planned, wireAttribute, scope.policy, make(map[expr.UserType]struct{}))
+		return
+	}
+	c.bindOccurrence(planned, record)
+	c.applyNamesRecursive(planned, record.identity.role, record.identity.policy, make(map[expr.UserType]struct{}))
+}
+
+// wireTransformTypeName returns the designed type name used in a generated
+// conversion function name.
+func wireTransformTypeName(attribute *expr.AttributeExpr) string {
+	if userType, ok := attribute.Type.(expr.UserType); ok {
+		name := wireTypeDeclaredName(userType)
+		if location := codegen.UserTypeLocation(userType); location != nil {
+			return location.PackageName() + codegen.Goify(name, true)
+		}
+		return name
+	}
+	if union, ok := attribute.Type.(*expr.Union); ok {
+		return union.Name()
+	}
+	return attribute.Type.Name()
+}
+
+// Link reads the assigned package names and builds the type definitions,
+// references, unions, and validation functions written to files.
+func (c *wireTypeCatalog) Link() {
+	if c.linked {
+		return
+	}
+	if !c.declared {
+		panic("cannot link HTTP types before declaring their package names")
+	}
+	c.scope = c.pkg.Scope()
+	for _, record := range c.records {
+		record.name = record.declaration.Name()
+		record.ref = wireTypeRef(record.name, record.identity.attribute.Type)
+	}
+	for _, union := range c.unions {
+		union.name = union.declaration.Name()
+		union.kindName = union.kind.Name()
+		union.kindConsts = make([]string, len(union.kindDecls))
+		union.constructors = make([]string, len(union.ctorDecls))
+		for index := range union.kindDecls {
+			union.kindConsts[index] = union.kindDecls[index].Name()
+			union.constructors[index] = union.ctorDecls[index].Name()
+		}
+		c.applyUnionRecord(union.union, union)
+	}
+	for _, union := range c.unions {
+		union.data = buildHTTPUnionTypeData(union.union, c.resolver(c.scope, wireTypePolicy{}), union)
+	}
+	c.linked = true
+}
+
+// wireTypeRef adds a pointer when the generated Go type requires one.
 func wireTypeRef(name string, dataType expr.DataType) string {
 	if _, inline := dataType.(*expr.Object); inline {
 		return name
@@ -175,22 +434,24 @@ func wireTypeRef(name string, dataType expr.DataType) string {
 	return name
 }
 
-// lookup returns the frozen record and applies its name to an equivalent occurrence.
+// lookup returns the chosen Go names for an equivalent copied type. It panics
+// when the type was not recorded before names were assigned.
 func (c *wireTypeCatalog) lookup(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, preferred string) *wireTypeRecord {
-	if !c.frozen {
-		panic("cannot resolve HTTP wire type before catalog freeze")
+	if !c.linked {
+		panic("cannot resolve an HTTP type before its generated package freezes")
 	}
 	identity := newWireTypeIdentity(attribute, role, policy, preferred)
 	record := c.find(identity)
 	if record != nil {
-		setWireTypeName(attribute, record.name)
+		c.bindOccurrence(attribute, record)
 		return record
 	}
-	panic(fmt.Sprintf("HTTP wire type %q was not collected before catalog freeze", preferred))
+	panic(fmt.Sprintf("HTTP type %q was not submitted before package names were assigned", preferred))
 }
 
-// lookupUser returns the frozen record for a named user type and nil for an
-// inline or primitive occurrence that has no top-level declaration.
+// lookupUser returns the generated name information for a named design type.
+// It returns nil for inline and primitive values because they define no named
+// type at the top level.
 func (c *wireTypeCatalog) lookupUser(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy) *wireTypeRecord {
 	if attribute.Type == expr.Empty {
 		return nil
@@ -206,13 +467,14 @@ func (c *wireTypeCatalog) lookupUser(attribute *expr.AttributeExpr, role wireTyp
 	return c.lookup(attribute, role, policy, codegen.Goify(preferred, true))
 }
 
-// applyNames writes every frozen nested declaration name onto one detached
-// occurrence before type definitions or transforms traverse it.
+// applyNames associates every copied nested attribute with the Go type name
+// used by its definition and conversions.
 func (c *wireTypeCatalog) applyNames(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy) {
 	c.applyNamesRecursive(attribute, role, policy, make(map[expr.UserType]struct{}))
 }
 
-// applyNamesRecursive follows named fields once per authored origin.
+// applyNamesRecursive follows each named field once, including fields that
+// refer back to an outer type.
 func (c *wireTypeCatalog) applyNamesRecursive(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, seen map[expr.UserType]struct{}) {
 	if attribute.Type == expr.Empty {
 		return
@@ -246,13 +508,13 @@ func (c *wireTypeCatalog) applyNamesRecursive(attribute *expr.AttributeExpr, rol
 		identity := c.unionIdentity(actual, role, policy)
 		record := c.findUnion(identity)
 		if record == nil {
-			panic(fmt.Sprintf("HTTP union %q was not collected before catalog freeze", actual.Name()))
+			panic(fmt.Sprintf("HTTP union %q was not submitted before package names were assigned", actual.Name()))
 		}
 		c.applyUnionRecord(actual, record)
 	}
 }
 
-// unionTypes returns the frozen union declarations in deterministic name order.
+// unionTypes returns the generated union definitions in Go name order.
 func (c *wireTypeCatalog) unionTypes() []*service.UnionTypeData {
 	unions := make([]*service.UnionTypeData, len(c.unions))
 	for index, record := range c.unions {
@@ -262,10 +524,18 @@ func (c *wireTypeCatalog) unionTypes() []*service.UnionTypeData {
 	return unions
 }
 
-// bind attaches occurrence-specific TypeData to its canonical declaration and
-// merges the validator generated by any occurrence of that declaration.
+// bind associates the data used to write a type with its chosen Go name. When
+// several equivalent copies need validation, it stores their shared validator.
 func (c *wireTypeCatalog) bind(record *wireTypeRecord, data *TypeData) *TypeData {
 	data.declaration = record
+	if data.ValidateDef != "" {
+		data.ValidatorName = record.validator.Name()
+		data.ValidateRef = strings.Replace(data.ValidateRef, "Validate"+record.name, data.ValidatorName, 1)
+	}
+	if data.Init != nil {
+		data.Init.Declaration = record.constructor
+		data.Init.Name = record.constructor.Name()
+	}
 	if record.data == nil {
 		if data.Def == "" && data.ValidateDef == "" {
 			return data
@@ -279,7 +549,7 @@ func (c *wireTypeCatalog) bind(record *wireTypeRecord, data *TypeData) *TypeData
 		if record.data.Def == "" {
 			record.data.Def = data.Def
 		} else if record.data.Def != data.Def {
-			panic(fmt.Sprintf("HTTP wire type %q produced conflicting declarations", record.name))
+			panic(fmt.Sprintf("HTTP type %q produced conflicting declarations", record.name))
 		}
 	}
 	if data.ValidateDef != "" {
@@ -287,13 +557,14 @@ func (c *wireTypeCatalog) bind(record *wireTypeRecord, data *TypeData) *TypeData
 			record.data.ValidateDef = data.ValidateDef
 			record.data.ValidateRef = data.ValidateRef
 		} else if record.data.ValidateDef != data.ValidateDef || record.data.ValidateRef != data.ValidateRef {
-			panic(fmt.Sprintf("HTTP wire type %q produced conflicting validators", record.name))
+			panic(fmt.Sprintf("HTTP type %q produced conflicting validators", record.name))
 		}
 	}
 	return data
 }
 
-// collectRecursive records named declarations and terminates cycles by source Origin.
+// collectRecursive records named types and stops when a type refers back to one
+// it is already reading.
 func (c *wireTypeCatalog) collectRecursive(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, preferred string, seen map[expr.UserType]struct{}) *wireTypeRecord {
 	if attribute.Type == expr.Empty {
 		return nil
@@ -348,17 +619,19 @@ func (c *wireTypeCatalog) collectRecursive(attribute *expr.AttributeExpr, role w
 	return record
 }
 
-// findOrAppend reuses a structurally equal typed record or appends a new one.
+// findOrAppend reuses a record with the same generated type definition or adds
+// a new record.
 func (c *wireTypeCatalog) findOrAppend(identity wireTypeIdentity) *wireTypeRecord {
 	if record := c.find(identity); record != nil {
+		record.needsValidator = record.needsValidator || identity.policy.validate
 		return record
 	}
-	record := &wireTypeRecord{identity: identity}
+	record := &wireTypeRecord{identity: identity, needsValidator: identity.policy.validate}
 	c.records = append(c.records, record)
 	return record
 }
 
-// find returns the declaration record equal to identity.
+// find returns the record for the same generated type definition.
 func (c *wireTypeCatalog) find(identity wireTypeIdentity) *wireTypeRecord {
 	for _, record := range c.records {
 		if wireTypeIdentitiesEqual(record.identity, identity) {
@@ -368,8 +641,8 @@ func (c *wireTypeCatalog) find(identity wireTypeIdentity) *wireTypeRecord {
 	return nil
 }
 
-// unionIdentity resolves every named declaration referenced by union without
-// changing the detached occurrence.
+// unionIdentity returns the Go type used by every named branch of
+// union without changing union.
 func (c *wireTypeCatalog) unionIdentity(union *expr.Union, role wireTypeRole, policy wireTypePolicy) wireUnionIdentity {
 	identity := wireUnionIdentity{definition: codegen.NewUnionTypeID(union)}
 	attribute := &expr.AttributeExpr{Type: union}
@@ -377,7 +650,7 @@ func (c *wireTypeCatalog) unionIdentity(union *expr.Union, role wireTypeRole, po
 	return identity
 }
 
-// collectUnionDeclarations records package declarations in branch traversal order.
+// collectUnionDeclarations records generated branch types in branch order.
 func (c *wireTypeCatalog) collectUnionDeclarations(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, declarations *[]*wireTypeRecord, seen map[expr.UserType]struct{}) {
 	if attribute.Type == expr.Empty {
 		return
@@ -389,7 +662,7 @@ func (c *wireTypeCatalog) collectUnionDeclarations(attribute *expr.AttributeExpr
 		}
 		record := c.find(newWireTypeIdentity(attribute, role, policy, codegen.Goify(preferred, true)))
 		if record == nil {
-			panic(fmt.Sprintf("HTTP union branch type %q was not collected before catalog freeze", preferred))
+			panic(fmt.Sprintf("HTTP union branch type %q was not submitted before package names were assigned", preferred))
 		}
 		*declarations = append(*declarations, record)
 		origin := userType.Origin()
@@ -422,33 +695,33 @@ func (c *wireTypeCatalog) collectUnionDeclarations(attribute *expr.AttributeExpr
 	}
 }
 
-// applyUnionRecord writes exactly the branch declarations captured by record
-// onto one equivalent union occurrence.
+// applyUnionRecord gives one copied union the exact branch type names stored in
+// record.
 func (c *wireTypeCatalog) applyUnionRecord(union *expr.Union, record *wireUnionRecord) {
-	union.TypeName = record.name
+	c.unionBindings[union] = record
 	index := 0
 	seen := make(map[expr.UserType]struct{})
 	for _, branch := range union.Values {
 		c.applyResolvedDeclarations(branch.Attribute, record.identity.declarations, &index, seen)
 	}
 	if index != len(record.identity.declarations) {
-		panic(fmt.Sprintf("HTTP union %q did not consume its frozen branch declarations", record.name))
+		panic(fmt.Sprintf("HTTP union %q did not use every submitted branch name", record.name))
 	}
 }
 
-// applyResolvedDeclarations consumes the typed declaration sequence captured
-// while the union identity was built.
+// applyResolvedDeclarations gives each named branch its previously chosen Go
+// type in the same order those types were recorded.
 func (c *wireTypeCatalog) applyResolvedDeclarations(attribute *expr.AttributeExpr, declarations []*wireTypeRecord, index *int, seen map[expr.UserType]struct{}) {
 	if attribute.Type == expr.Empty {
 		return
 	}
 	if userType, ok := attribute.Type.(expr.UserType); ok {
 		if *index >= len(declarations) {
-			panic(fmt.Sprintf("HTTP union branch %q has no frozen declaration", wireTypeDeclaredName(userType)))
+			panic(fmt.Sprintf("HTTP union branch %q has no submitted Go type name", wireTypeDeclaredName(userType)))
 		}
 		record := declarations[*index]
 		*index = *index + 1
-		setWireTypeName(attribute, record.name)
+		c.bindOccurrence(attribute, record)
 		origin := userType.Origin()
 		if _, ok := seen[origin]; ok {
 			return
@@ -477,13 +750,142 @@ func (c *wireTypeCatalog) applyResolvedDeclarations(attribute *expr.AttributeExp
 		identity := wireUnionIdentity{definition: definition, declarations: declarations[start:*index]}
 		record := c.findUnion(identity)
 		if record == nil {
-			panic(fmt.Sprintf("HTTP nested union %q has no frozen declaration", actual.Name()))
+			panic(fmt.Sprintf("HTTP nested union %q has no submitted Go type name", actual.Name()))
 		}
-		actual.TypeName = record.name
+		c.unionBindings[actual] = record
 	}
 }
 
-// findUnion returns the package union record equal to identity.
+// resolver returns the chosen HTTP type names. The supplied name list is used
+// only to keep local variable names unique.
+func (c *wireTypeCatalog) resolver(scope *codegen.NameScope, policy wireTypePolicy) codegen.Attributor {
+	return &wireAttributeScope{catalog: c, base: codegen.NewAttributeScope(scope), policy: policy}
+}
+
+// bindOccurrence records the Go type used by one copied named value and its fields.
+func (c *wireTypeCatalog) bindOccurrence(attribute *expr.AttributeExpr, record *wireTypeRecord) {
+	c.bindings[attribute] = record
+	if userType, ok := attribute.Type.(expr.UserType); ok {
+		c.bindings[userType.Attribute()] = record
+	}
+}
+
+// Name returns the type name selected for this HTTP attribute copy.
+func (s *wireAttributeScope) Name(attribute *expr.AttributeExpr, pkg string, pointer, useDefault bool) string {
+	if record := s.record(attribute); record != nil {
+		if pkg == "" {
+			return record.name
+		}
+		return pkg + "." + record.name
+	}
+	if union, ok := attribute.Type.(*expr.Union); ok {
+		if record := s.unionRecord(union); record != nil {
+			if pkg == "" {
+				return record.name
+			}
+			return pkg + "." + record.name
+		}
+	}
+	switch actual := attribute.Type.(type) {
+	case expr.Primitive:
+		if name, _ := codegen.GetMetaType(attribute); name != "" {
+			return name
+		}
+		return codegen.GoNativeTypeName(actual)
+	case *expr.Array, *expr.Map, *expr.Object:
+		context := &codegen.AttributeContext{
+			Pointer:      pointer,
+			UseDefault:   useDefault,
+			Scope:        s,
+			UnionPointer: true,
+		}
+		return goTypeDefForContext(attribute, context)
+	case expr.UserType:
+		panic(fmt.Sprintf("HTTP type %q has no package declaration", wireTypeDeclaredName(actual)))
+	default:
+		return s.base.Name(attribute, pkg, pointer, useDefault)
+	}
+}
+
+// Ref returns the pointer or value spelling for this HTTP attribute copy.
+func (s *wireAttributeScope) Ref(attribute *expr.AttributeExpr, pkg string) string {
+	return wireTypeRef(s.Name(attribute, pkg, s.policy.pointer, s.policy.useDefault), attribute.Type)
+}
+
+// Field returns the generated Go field for an HTTP attribute.
+func (*wireAttributeScope) Field(attribute *expr.AttributeExpr, name string, firstUpper bool) string {
+	return codegen.GoifyAtt(attribute, name, firstUpper)
+}
+
+// Package returns the Go package name written before the type for attribute.
+func (s *wireAttributeScope) Package(attribute *expr.AttributeExpr) string {
+	if location := codegen.UserTypeLocation(attribute.Type); location != nil {
+		return location.PackageName()
+	}
+	return s.pkg
+}
+
+// Enter returns type names with the Go package name needed by nested fields.
+func (s *wireAttributeScope) Enter(attribute *expr.AttributeExpr) codegen.Attributor {
+	pkg := s.pkg
+	if location := codegen.UserTypeLocation(attribute.Type); location != nil {
+		pkg = location.PackageName()
+	}
+	return &wireAttributeScope{catalog: s.catalog, base: s.base.Enter(attribute), pkg: pkg, policy: s.policy}
+}
+
+// IsSumType reports that HTTP unions use generated sum-type structs.
+func (*wireAttributeScope) IsSumType() bool {
+	return true
+}
+
+// ValidatorName returns the validation function chosen for this copied type.
+func (s *wireAttributeScope) ValidatorName(attribute *expr.AttributeExpr, view string) string {
+	if record := s.record(attribute); record != nil {
+		if record.validator == nil {
+			panic(fmt.Sprintf("HTTP type %q has no validator declaration", record.name))
+		}
+		return record.validator.Name()
+	}
+	if userType, ok := attribute.Type.(expr.UserType); ok {
+		panic(fmt.Sprintf("HTTP validator for %q has no package declaration", wireTypeDeclaredName(userType)))
+	}
+	return s.base.ValidatorName(attribute, view)
+}
+
+// record returns the chosen type for attribute. A copied nested value may reuse
+// a type when its pointer and default-value rules are the same.
+func (s *wireAttributeScope) record(attribute *expr.AttributeExpr) *wireTypeRecord {
+	if record := s.catalog.bindings[attribute]; record != nil {
+		return record
+	}
+	userType, ok := attribute.Type.(expr.UserType)
+	if !ok {
+		return nil
+	}
+	preferred := wireTypeDeclaredName(userType.Origin())
+	if s.policy.view != "" {
+		preferred = wireTypeDeclaredName(userType)
+	}
+	preferred = codegen.Goify(preferred, true)
+	return s.catalog.find(newWireTypeIdentity(attribute, wireAttribute, s.policy, preferred))
+}
+
+// unionRecord returns the chosen union for union. A copied nested union may
+// reuse it when its pointer and default-value rules are the same.
+func (s *wireAttributeScope) unionRecord(union *expr.Union) *wireUnionRecord {
+	if record := s.catalog.unionBindings[union]; record != nil {
+		return record
+	}
+	return s.catalog.findUnion(s.catalog.unionIdentity(union, wireAttribute, s.policy))
+}
+
+// Scope returns the list used to keep local variable names unique.
+func (s *wireAttributeScope) Scope() *codegen.NameScope {
+	return s.base.Scope()
+}
+
+// findUnion returns the package record for the same generated union.
 func (c *wireTypeCatalog) findUnion(identity wireUnionIdentity) *wireUnionRecord {
 	for _, record := range c.unions {
 		if wireUnionIdentitiesEqual(record.identity, identity) {
@@ -493,29 +895,14 @@ func (c *wireTypeCatalog) findUnion(identity wireUnionIdentity) *wireUnionRecord
 	return nil
 }
 
-// wireUnionIdentitiesEqual compares the typed declaration sequence referenced by a wire union.
+// wireUnionIdentitiesEqual reports whether two unions use the same definition
+// and the same generated branch types.
 func wireUnionIdentitiesEqual(left, right wireUnionIdentity) bool {
 	return left.definition == right.definition && slices.Equal(left.declarations, right.declarations)
 }
 
-// uniqueName allocates a package declaration without creating a second scope identity.
-func (c *wireTypeCatalog) uniqueName(preferred string) string {
-	count := c.names[preferred]
-	if count == 0 {
-		c.names[preferred] = 1
-		return preferred
-	}
-	for index := count + 1; ; index++ {
-		name := preferred + strconv.Itoa(index)
-		if c.names[name] == 0 {
-			c.names[preferred] = index
-			c.names[name] = 1
-			return name
-		}
-	}
-}
-
-// newWireTypeIdentity builds a typed identity from a detached occurrence.
+// newWireTypeIdentity records the designed value and the rules that determine
+// its generated Go type.
 func newWireTypeIdentity(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, preferred string) wireTypeIdentity {
 	identity := wireTypeIdentity{role: role, preferred: preferred, attribute: expr.DupAtt(attribute), policy: policy}
 	if userType, ok := attribute.Type.(expr.UserType); ok {
@@ -523,19 +910,19 @@ func newWireTypeIdentity(attribute *expr.AttributeExpr, role wireTypeRole, polic
 			identity.resultID = resultType.Identifier
 			identity.role = 0
 		} else if policy.view == "" {
-			identity.source = userType.Origin()
+			identity.sourceID = userType.Origin().ID()
 			identity.role = 0
 		}
 	}
 	return identity
 }
 
-// wireTypeIdentitiesEqual compares provenance, policy, and the detached attribute contract.
+// wireTypeIdentitiesEqual reports whether two records produce the same Go type.
 func wireTypeIdentitiesEqual(left, right wireTypeIdentity) bool {
-	if left.source != right.source || left.resultID != right.resultID || left.role != right.role || left.preferred != right.preferred || !wireTypePoliciesEqual(left.policy, right.policy) {
+	if left.sourceID != right.sourceID || left.resultID != right.resultID || left.role != right.role || left.preferred != right.preferred || !wireTypePoliciesEqual(left.policy, right.policy) {
 		return false
 	}
-	if left.source != nil {
+	if left.sourceID != "" {
 		leftType := left.attribute.Type.(expr.UserType)
 		rightType := right.attribute.Type.(expr.UserType)
 		return wireAttributesEqual(leftType.Attribute(), rightType.Attribute(), make(map[wireAttributePair]struct{}))
@@ -547,16 +934,90 @@ func wireTypeIdentitiesEqual(left, right wireTypeIdentity) bool {
 	return wireAttributesEqual(left.attribute, right.attribute, make(map[wireAttributePair]struct{}))
 }
 
-// wireTypePoliciesEqual compares only facts that change a Go declaration.
-// Validation helpers are separate package records and do not create a second
-// type when the wire representation is otherwise identical.
+// order returns the designed values used to choose a stable suffix when several
+// HTTP declarations ask for the same Go name.
+func (i wireTypeIdentity) order(family string) wireNameOrder {
+	return wireNameOrder{
+		family:    family,
+		source:    i.sourceID + i.resultID,
+		role:      uint8(i.role),
+		preferred: i.preferred,
+		shape:     expr.Hash(i.attribute.Type, false, false, false),
+		view:      i.policy.view,
+		request:   i.policy.request,
+		pointer:   i.policy.pointer,
+		defaults:  i.policy.useDefault,
+	}
+}
+
+// order returns the designed values used to choose stable suffixes for a union,
+// its constants, and its functions.
+func (i wireUnionIdentity) order(family, name, branch string) wireNameOrder {
+	declarations := make([]string, len(i.declarations))
+	for index, declaration := range i.declarations {
+		order := declaration.identity.order("type")
+		declarations[index] = fmt.Sprintf(
+			"%q:%d:%q:%q:%q:%t:%t:%t",
+			order.source,
+			order.role,
+			order.preferred,
+			order.shape,
+			order.view,
+			order.request,
+			order.pointer,
+			order.defaults,
+		)
+	}
+	return wireNameOrder{
+		family:    family,
+		source:    strings.Join(declarations, "\x00"),
+		preferred: name,
+		shape:     string(i.definition),
+		view:      branch,
+	}
+}
+
+// ComparePackageName orders HTTP declarations from designed values so memory
+// addresses and design reading order cannot change generated names.
+func (o wireNameOrder) ComparePackageName(other codegen.PackageNameOrder) int {
+	right := other.(wireNameOrder)
+	for _, compared := range []int{
+		cmp.Compare(o.family, right.family),
+		cmp.Compare(o.source, right.source),
+		cmp.Compare(o.role, right.role),
+		cmp.Compare(o.preferred, right.preferred),
+		cmp.Compare(o.shape, right.shape),
+		cmp.Compare(o.view, right.view),
+		cmp.Compare(boolOrder(o.request), boolOrder(right.request)),
+		cmp.Compare(boolOrder(o.pointer), boolOrder(right.pointer)),
+		cmp.Compare(boolOrder(o.defaults), boolOrder(right.defaults)),
+	} {
+		if compared != 0 {
+			return compared
+		}
+	}
+	return 0
+}
+
+// boolOrder converts false to zero and true to one for name ordering.
+func boolOrder(value bool) uint8 {
+	if value {
+		return 1
+	}
+	return 0
+}
+
+// wireTypePoliciesEqual compares only rules that change a Go type definition.
+// A validation function does not create a second type when every field is the
+// same.
 func wireTypePoliciesEqual(left, right wireTypePolicy) bool {
 	left.validate = false
 	right.validate = false
 	return left == right
 }
 
-// wireAttributesEqual compares facts that change a declaration or validator and terminates cycles.
+// wireAttributesEqual compares the designed facts that change a generated type
+// or its validation function. It handles types that refer back to themselves.
 func wireAttributesEqual(left, right *expr.AttributeExpr, seen map[wireAttributePair]struct{}) bool {
 	if left == right {
 		return true
@@ -615,7 +1076,7 @@ func wireAttributesEqual(left, right *expr.AttributeExpr, seen map[wireAttribute
 	}
 }
 
-// wireMetadataEqual compares authored metadata while ignoring the name written during Freeze.
+// wireMetadataEqual compares design metadata while ignoring the Go name added later.
 func wireMetadataEqual(left, right expr.MetaExpr) bool {
 	keys := make([]string, 0, len(left))
 	for key := range left {
@@ -642,7 +1103,8 @@ func wireMetadataEqual(left, right expr.MetaExpr) bool {
 	return true
 }
 
-// sortedWireAttributes makes declaration allocation independent of authored object field order.
+// sortedWireAttributes keeps generated Go names stable when object fields are
+// listed in a different order.
 func sortedWireAttributes(attributes []*expr.NamedAttributeExpr) []*expr.NamedAttributeExpr {
 	sorted := slices.Clone(attributes)
 	slices.SortFunc(sorted, func(left, right *expr.NamedAttributeExpr) int {
@@ -651,18 +1113,8 @@ func sortedWireAttributes(attributes []*expr.NamedAttributeExpr) []*expr.NamedAt
 	return sorted
 }
 
-// setWireTypeName records the package-owned name on a detached user type.
-func setWireTypeName(attribute *expr.AttributeExpr, name string) {
-	if attribute.Type == expr.Empty {
-		return
-	}
-	if userType, ok := attribute.Type.(expr.UserType); ok {
-		userType.Attribute().AddMeta("struct:type:name", name)
-	}
-}
-
-// wireTypeDeclaredName returns the stable expression declaration name rather
-// than a package name previously assigned through struct:type:name metadata.
+// wireTypeDeclaredName returns the type name written in the design instead of a
+// generated Go name saved in metadata.
 func wireTypeDeclaredName(userType expr.UserType) string {
 	switch actual := userType.(type) {
 	case *expr.UserTypeExpr:

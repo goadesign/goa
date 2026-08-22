@@ -33,7 +33,7 @@ func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.D
 			if cRaw != "" {
 				c = &cRaw
 			}
-			p := NewMethodTagMultipleViewsResulttypemultipleviewsAccepted(&body, c)
+			p := NewMethodTagMultipleViewsResultAccepted(&body, c)
 			tmp := "value"
 			p.B = &tmp
 			view := resp.Header.Get("goa-view")
@@ -52,7 +52,7 @@ func DecodeMethodTagMultipleViewsResponse(decoder func(*http.Response) goahttp.D
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("ServiceTagMultipleViews", "MethodTagMultipleViews", err)
 			}
-			p := NewMethodTagMultipleViewsResulttypemultipleviewsOK(&body)
+			p := NewMethodTagMultipleViewsResultOK(&body)
 			view := resp.Header.Get("goa-view")
 			vres := &servicetagmultipleviewsviews.Resulttypemultipleviews{Projected: p, View: view}
 			if err = servicetagmultipleviewsviews.ValidateResulttypemultipleviews(vres); err != nil {

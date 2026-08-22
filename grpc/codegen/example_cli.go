@@ -34,6 +34,10 @@ func exampleCLI(services *ServicesData, svr *expr.ServerExpr) *codegen.File {
 	}
 	rootPath := path.Dir(genpkg)
 	cliImport := services.PackageImport(path.Join(genpkg, "grpc", "cli", svrdata.Dir))
+	parser := services.cliPlan.parsers[svr]
+	if parser == nil {
+		panic("gRPC command parser names are missing for server " + svr.Name)
+	}
 
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
@@ -74,6 +78,7 @@ func exampleCLI(services *ServicesData, svr *expr.ServerExpr) *codegen.File {
 				"Services":         svcData,
 				"InterceptorsPkg":  interceptorsPkg,
 				"CLIPkg":           cliImport.Name,
+				"Parser":           parser.Declarations,
 			},
 		},
 	}

@@ -24,10 +24,10 @@ type Wrapper struct {
 func NewMethodResultUserTypeNestedResponseBody(res *serviceresultusertypenestedviews.ResulttypenestedView) *MethodResultUserTypeNestedResponseBody {
 	body := &MethodResultUserTypeNestedResponseBody{}
 	if res.A != nil {
-		body.A = marshalServiceresultusertypenestedviewsUserTypeViewToUserType(res.A)
+		body.A = marshalUserTypeViewToUserType(res.A)
 	}
 	if res.Nested != nil {
-		body.Nested = marshalServiceresultusertypenestedviewsWrapperViewToWrapper(res.Nested)
+		body.Nested = marshalWrapperViewToWrapper(res.Nested)
 	}
 	return body
 }

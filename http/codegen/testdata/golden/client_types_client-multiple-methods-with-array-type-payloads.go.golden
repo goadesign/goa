@@ -18,7 +18,7 @@ func NewPayloadA(p []*servicemultiplemethods.PayloadA) []*PayloadA {
 			body[i] = nil
 			continue
 		}
-		body[i] = marshalServicemultiplemethodsPayloadAToPayloadA(val)
+		body[i] = marshalPayloadAToPayloadA2(val)
 	}
 	return body
 }
@@ -32,7 +32,7 @@ func NewPayloadB(p []*servicemultiplemethods.PayloadB) []*PayloadB {
 			body[i] = nil
 			continue
 		}
-		body[i] = marshalServicemultiplemethodsPayloadBToPayloadB(val)
+		body[i] = marshalPayloadBToPayloadB2(val)
 	}
 	return body
 }

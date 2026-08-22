@@ -14,10 +14,10 @@ import (
 
 func TestSSE_MixedResults(t *testing.T) {
 	root := expr.RunDSL(t, testdata.MixedResultsDSL)
-	services := CreateHTTPServices(root)
+	plan := linkedHTTPPlanForRoot(t, root)
 
 	t.Run("server", func(t *testing.T) {
-		files := ServerFiles(services)
+		files := plan.ServerFiles()
 		var sseFile *codegen.File
 		for _, f := range files {
 			if strings.HasSuffix(f.Path, filepath.Join("server", "sse.go")) {
@@ -36,7 +36,7 @@ func TestSSE_MixedResults(t *testing.T) {
 	})
 
 	t.Run("client", func(t *testing.T) {
-		files := ClientFiles(services)
+		files := plan.ClientFiles()
 		var sseFile *codegen.File
 		for _, f := range files {
 			if strings.HasSuffix(f.Path, filepath.Join("client", "sse.go")) {

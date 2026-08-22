@@ -1,12 +1,12 @@
 {{- if and (not (isWebSocketEndpoint (index .Endpoints 0))) (not (hasMixedTransports)) }}
 // ServeHTTP handles JSON-RPC requests.
-func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *{{ .ServerStructDeclaration.Name }}) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.handleHTTP(w, r)
 }
 {{- end }}
 
 {{- comment "handleHTTP handles JSON-RPC requests." }}
-func (s *{{ .ServerStruct }}) handleHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *{{ .ServerStructDeclaration.Name }}) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	// Peek at the first byte to determine request type
 	bufReader := bufio.NewReader(r.Body)
 	peek, err := bufReader.Peek(1)
@@ -39,7 +39,7 @@ func (s *{{ .ServerStruct }}) handleHTTP(w http.ResponseWriter, r *http.Request)
 }
 
 // handleSingle handles a single JSON-RPC request.
-func (s *Server) handleSingle(w http.ResponseWriter, r *http.Request) {
+func (s *{{ .ServerStructDeclaration.Name }}) handleSingle(w http.ResponseWriter, r *http.Request) {
 	var req jsonrpc.RawRequest
 	if err := s.decoder(r).Decode(&req); err != nil {
 		// JSON-RPC parse error with null id and generic message
@@ -53,7 +53,7 @@ func (s *Server) handleSingle(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleBatch handles a batch of JSON-RPC requests.
-func (s *Server) handleBatch(w http.ResponseWriter, r *http.Request) {
+func (s *{{ .ServerStructDeclaration.Name }}) handleBatch(w http.ResponseWriter, r *http.Request) {
 	var reqs []jsonrpc.RawRequest
 	if err := s.decoder(r).Decode(&reqs); err != nil {
 		// JSON-RPC parse error for batch with null id and generic message
@@ -66,7 +66,7 @@ func (s *Server) handleBatch(w http.ResponseWriter, r *http.Request) {
 	
 	// Write responses
 	w.Header().Set("Content-Type", "application/json")
-	writer := &batchWriter{Writer: w}
+	writer := &{{ .BatchWriter.Name }}{Writer: w}
 	
 	for _, req := range reqs {
 		// Process the request with batch writer
@@ -80,7 +80,7 @@ func (s *Server) handleBatch(w http.ResponseWriter, r *http.Request) {
 }
 
 // ProcessRequest processes a single JSON-RPC request.
-func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) {
+func (s *{{ .ServerStructDeclaration.Name }}) processRequest(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) {
 	if req.JSONRPC != "2.0" {
 		s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 		return
@@ -103,29 +103,29 @@ func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonr
 	}
 }
 
-// batchWriter is a helper type that implements http.ResponseWriter for writing multiple JSON-RPC responses
-type batchWriter struct {
+{{ printf "%s joins the responses written for one JSON-RPC batch request." .BatchWriter.Name | comment }}
+type {{ .BatchWriter.Name }} struct {
 	io.Writer
 	header http.Header
 	statusCode int
 	written bool
 }
 
-func (rb *batchWriter) Header() http.Header {
+func (rb *{{ .BatchWriter.Name }}) Header() http.Header {
 	if rb.header == nil {
 		rb.header = make(http.Header)
 	}
 	return rb.header
 }
 
-func (rb *batchWriter) WriteHeader(statusCode int) {
+func (rb *{{ .BatchWriter.Name }}) WriteHeader(statusCode int) {
 	if rb.written {
 		return
 	}
 	rb.statusCode = statusCode
 }
 
-func (rb *batchWriter) Write(data []byte) (int, error) {
+func (rb *{{ .BatchWriter.Name }}) Write(data []byte) (int, error) {
 	if !rb.written {
 		rb.written = true
 		rb.Writer.Write([]byte{'['})

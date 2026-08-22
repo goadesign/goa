@@ -1,13 +1,13 @@
 {{- $retry := and .Method.Idempotent (eq .Method.StreamKind 1) (not .Method.SkipRequestBodyEncodeDecode) (not (isWebSocketEndpoint .)) (not (isSSEEndpoint .)) }}
 {{ printf "%s returns an endpoint that makes JSON-RPC requests to the %s service %s method." .EndpointInit .ServiceName .Method.Name | comment }}
-func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
+func (c *{{ .ClientStructDeclaration.Name }}) {{ .EndpointInit }}() goa.Endpoint {
 {{- if not (isWebSocketEndpoint .) }}
 	var (
-	{{- if .RequestEncoder }}
-		encodeRequest  = {{ .RequestEncoder }}(c.encoder)
+	{{- if .RequestEncoderDeclaration }}
+		encodeRequest  = {{ .RequestEncoderDeclaration.Name }}(c.encoder)
 	{{- end }}
 	{{- if not (isSSEEndpoint .) }}
-		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
+		decodeResponse = {{ .ResponseDecoderDeclaration.Name }}(c.decoder, c.RestoreResponseBody)
 	{{- end }}
 	)
 {{- end }}
@@ -21,7 +21,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-	{{- if .RequestEncoder }}
+	{{- if .RequestEncoderDeclaration }}
 		if err := encodeRequest(req, v); err != nil {
 			return nil, err
 		}
@@ -29,33 +29,30 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 {{- end }}
 {{- if isWebSocketEndpoint . }}
 	{{- if and .ClientWebSocket.RecvName .ClientWebSocket.RecvTypeRef }}
-		// For WebSocket, pass the base decoder to the stream and decode inner results
+		// The method stream uses the client response reader for each WebSocket result.
 		decodeResponse := c.decoder
 	{{- end }}
 		
-		// Get direct WebSocket connection
-		ws, err := c.getConn(ctx)
+		conn, err := c.getConn(ctx)
 		if err != nil {
 			return nil, err
 		}
 		
-		// Create context with cancellation for the stream
+		// Closing the method stream cancels this context.
 		streamCtx, cancel := context.WithCancel(ctx)
 		
-		// Create the stream with direct WebSocket handling
-		stream := &{{ .ClientWebSocket.VarName }}{
-			ws:     ws,
-			ctx:    streamCtx,
-			cancel: cancel,
-			done:   make(chan struct{}),
-			config: c.streamConfig,
+		stream := &{{ .ClientWebSocket.VarDeclaration.Name }}{
+			conn:         conn,
+			owner:        &{{ websocketRequestOwnerName }}{},
+			ctx:          streamCtx,
+			cancel:       cancel,
+			{{- if and .ClientWebSocket.SendName .ClientWebSocket.RecvName .ClientWebSocket.RecvTypeRef }}
+			pendingReady: make(chan struct{}, 1),
+			{{- end }}
 			{{- if and .ClientWebSocket.RecvName .ClientWebSocket.RecvTypeRef }}
 			decoder: decodeResponse,
 			{{- end }}
 		}
-		
-		// Start background response handler
-		go stream.responseHandler()
 		
 		return stream, nil
 {{- else if isSSEEndpoint . }}
@@ -78,13 +75,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}() goa.Endpoint {
 		}
 		
 		// Create the SSE client stream
-		stream := &{{ .Method.VarName }}ClientStream{
-			resp:    resp,
-			reader:  bufio.NewReader(resp.Body),
-			decoder: c.decoder,
-		}
-		
-		return stream, nil
+		return {{ .SSE.ClientInitDeclaration.Name }}(resp, c.decoder), nil
 {{- else }}
 		resp, err := c.Doer.Do(req)
 		if err != nil {

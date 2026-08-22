@@ -1,12 +1,12 @@
-// marshalFooserviceExtensionToExtension2 builds a value of type *Extension2
-// from a value of type *fooservice.Extension.
-func marshalFooserviceExtensionToExtension2(v *fooservice.Extension) *Extension2 {
+// marshalExtensionToExtension builds a value of type *Extension from a value
+// of type *fooservice.Extension.
+func marshalExtensionToExtension(v *fooservice.Extension) *Extension {
 	if v == nil {
 		return nil
 	}
-	res := &Extension2{}
+	res := &Extension{}
 	if v.Bar != nil {
-		res.Bar = marshalFooserviceBarToBar2(v.Bar)
+		res.Bar = marshalBarToBar(v.Bar)
 	}
 
 	return res

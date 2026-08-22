@@ -32,6 +32,12 @@ func sseClientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.F
 		services.ServiceImport(svc.Name()),
 		{Path: "goa.design/goa/v3/http", Name: "goahttp"},
 	}
+	if serviceHasViewedResult(data, IsSSEEndpoint) {
+		imports = append(imports, services.ViewImport(svc.Name()))
+	}
+	if serviceHasVariableViewedResult(data, IsSSEEndpoint) || serviceHasSSEResponseElements(data) {
+		imports = append(imports, codegen.GoaImport(""))
+	}
 	sections = append(sections,
 		codegen.Header(
 			"sse-client",
@@ -52,10 +58,13 @@ func sseClientTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "client-sse",
-			Source: httpTemplates.Read(clientSseT, sseParseP),
+			Source: httpTemplates.Read(clientSseT, sseParseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP),
 			Data:   ed,
 			FuncMap: map[string]any{
 				"dict": dict,
+				"goTypeRef": func(dataType expr.DataType) string {
+					return data.Scope.GoTypeRef(&expr.AttributeExpr{Type: dataType})
+				},
 				"deref": func(ref string) string {
 					return strings.TrimPrefix(ref, "*")
 				},
@@ -63,4 +72,16 @@ func sseClientTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 		})
 	}
 	return sections
+}
+
+// serviceHasSSEResponseElements reports whether a stream constructor reads
+// values from HTTP response headers or cookies in addition to event data.
+func serviceHasSSEResponseElements(service *ServiceData) bool {
+	for _, endpoint := range service.Endpoints {
+		if endpoint.SSE != nil && endpoint.SSE.Response != nil &&
+			(len(endpoint.SSE.Response.Headers) > 0 || len(endpoint.SSE.Response.Cookies) > 0) {
+			return true
+		}
+	}
+	return false
 }

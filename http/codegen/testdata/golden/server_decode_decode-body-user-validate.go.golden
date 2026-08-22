@@ -23,7 +23,7 @@ func DecodeMethodBodyUserValidateRequest(mux goahttp.Muxer, decoder func(*http.R
 		if err != nil {
 			return payload, err
 		}
-		payload = NewMethodBodyUserValidatePayloadType(body)
+		payload = NewMethodBodyUserValidatePayload(body)
 
 		return payload, nil
 	}

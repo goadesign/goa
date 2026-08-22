@@ -122,6 +122,13 @@ func NewCreateHandler(
 			}
 			_, err = endpoint(ctx, v)
 			if err != nil {
+				stream := v.Stream.(*CreateServerStream)
+				if stream.attempted {
+					if errhandler != nil {
+						errhandler(ctx, w, err)
+					}
+					return
+				}
 				if err := encodeError(ctx, w, err); err != nil && errhandler != nil {
 					errhandler(ctx, w, err)
 				}
@@ -160,8 +167,8 @@ func NewCreateHandler(
 
 // discardCreateServerStream implements the mixedresultsservice.CreateServerStream
 // interface and drops all events. It is used for mixed results endpoints in
-// unary (non-SSE) mode so service implementations can use the stream parameter
-// without nil checks.
+// regular HTTP requests so service implementations can use the stream
+// parameter without nil checks.
 type discardCreateServerStream struct{}
 
 // Send discards the event.
@@ -412,7 +419,7 @@ func (s *StreamingResultMethodClientStream) Recv() (*streamingresultservice.User
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultMethodUserTypeOK(&body)
+	res := NewStreamingResultMethodResultOK(&body)
 	return res, nil
 }
 
@@ -480,7 +487,7 @@ func (s *StreamingResultWithViewsMethodClientStream) Recv() (*streamingresultwit
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultWithViewsMethodUsertypeOK(&body)
+	res := NewStreamingResultWithViewsMethodResultOK(&body)
 	vres := &streamingresultwithviewsserviceviews.Usertype{Projected: res, View: s.view}
 	if err := streamingresultwithviewsserviceviews.ValidateUsertype(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingResultWithViewsService", "StreamingResultWithViewsMethod", err)
@@ -559,7 +566,7 @@ func (s *StreamingResultWithExplicitViewMethodClientStream) Recv() (*streamingre
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultWithExplicitViewMethodUsertypeOK(&body)
+	res := NewStreamingResultWithExplicitViewMethodResultOK(&body)
 	vres := &streamingresultwithexplicitviewserviceviews.Usertype{Projected: res, View: "extended"}
 	if err := streamingresultwithexplicitviewserviceviews.ValidateUsertype(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingResultWithExplicitViewService", "StreamingResultWithExplicitViewMethod", err)
@@ -685,7 +692,7 @@ func (s *StreamingResultCollectionWithViewsMethodClientStream) Recv() (streaming
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultCollectionWithViewsMethodUsertypeCollectionOK(body)
+	res := NewStreamingResultCollectionWithViewsMethodResultOK(body)
 	vres := streamingresultcollectionwithviewsserviceviews.UsertypeCollection{Projected: res, View: s.view}
 	if err := streamingresultcollectionwithviewsserviceviews.ValidateUsertypeCollection(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingResultCollectionWithViewsService", "StreamingResultCollectionWithViewsMethod", err)
@@ -803,7 +810,7 @@ func (s *StreamingResultCollectionWithExplicitViewMethodClientStream) Recv() (st
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultCollectionWithExplicitViewMethodUsertypeCollectionOK(body)
+	res := NewStreamingResultCollectionWithExplicitViewMethodResultOK(body)
 	vres := streamingresultcollectionwithexplicitviewserviceviews.UsertypeCollection{Projected: res, View: "tiny"}
 	if err := streamingresultcollectionwithexplicitviewserviceviews.ValidateUsertypeCollection(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingResultCollectionWithExplicitViewService", "StreamingResultCollectionWithExplicitViewMethod", err)
@@ -1053,7 +1060,7 @@ func (s *StreamingResultUserTypeArrayMethodClientStream) Recv() ([]*streamingres
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultUserTypeArrayMethodUserTypeOK(body)
+	res := NewStreamingResultUserTypeArrayMethodResultOK(body)
 	return res, nil
 }
 
@@ -1120,7 +1127,7 @@ func (s *StreamingResultUserTypeMapMethodClientStream) Recv() (map[string]*strea
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultUserTypeMapMethodMapStringUserTypeOK(body)
+	res := NewStreamingResultUserTypeMapMethodResultOK(body)
 	return res, nil
 }
 
@@ -1364,7 +1371,7 @@ func (s *StreamingPayloadMethodClientStream) CloseAndRecv() (*streamingpayloadse
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingPayloadMethodUserTypeOK(&body)
+	res := NewStreamingPayloadMethodResultOK(&body)
 	return res, nil
 }
 
@@ -1497,7 +1504,7 @@ func (s *StreamingPayloadNoPayloadMethodClientStream) CloseAndRecv() (*streaming
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingPayloadNoPayloadMethodUserTypeOK(&body)
+	res := NewStreamingPayloadNoPayloadMethodResultOK(&body)
 	return res, nil
 }
 
@@ -1711,7 +1718,7 @@ func (s *StreamingPayloadResultWithViewsMethodClientStream) CloseAndRecv() (*str
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingPayloadResultWithViewsMethodUsertypeOK(&body)
+	res := NewStreamingPayloadResultWithViewsMethodResultOK(&body)
 	vres := &streamingpayloadresultwithviewsserviceviews.Usertype{Projected: res, View: s.view}
 	if err := streamingpayloadresultwithviewsserviceviews.ValidateUsertype(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingPayloadResultWithViewsService", "StreamingPayloadResultWithViewsMethod", err)
@@ -1835,7 +1842,7 @@ func (s *StreamingPayloadResultWithExplicitViewMethodClientStream) CloseAndRecv(
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingPayloadResultWithExplicitViewMethodUsertypeOK(&body)
+	res := NewStreamingPayloadResultWithExplicitViewMethodResultOK(&body)
 	vres := &streamingpayloadresultwithexplicitviewserviceviews.Usertype{Projected: res, View: "extended"}
 	if err := streamingpayloadresultwithexplicitviewserviceviews.ValidateUsertype(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingPayloadResultWithExplicitViewService", "StreamingPayloadResultWithExplicitViewMethod", err)
@@ -1973,7 +1980,7 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) CloseAndRe
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingPayloadResultCollectionWithViewsMethodUsertypeCollectionOK(body)
+	res := NewStreamingPayloadResultCollectionWithViewsMethodResultOK(body)
 	vres := streamingpayloadresultcollectionwithviewsserviceviews.UsertypeCollection{Projected: res, View: s.view}
 	if err := streamingpayloadresultcollectionwithviewsserviceviews.ValidateUsertypeCollection(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingPayloadResultCollectionWithViewsService", "StreamingPayloadResultCollectionWithViewsMethod", err)
@@ -2102,7 +2109,7 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) Clo
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingPayloadResultCollectionWithExplicitViewMethodUsertypeCollectionOK(body)
+	res := NewStreamingPayloadResultCollectionWithExplicitViewMethodResultOK(body)
 	vres := streamingpayloadresultcollectionwithexplicitviewserviceviews.UsertypeCollection{Projected: res, View: "tiny"}
 	if err := streamingpayloadresultcollectionwithexplicitviewserviceviews.ValidateUsertypeCollection(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingPayloadResultCollectionWithExplicitViewService", "StreamingPayloadResultCollectionWithExplicitViewMethod", err)
@@ -2886,7 +2893,7 @@ func (s *BidirectionalStreamingMethodClientStream) Recv() (*bidirectionalstreami
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingMethodUserTypeOK(&body)
+	res := NewBidirectionalStreamingMethodResultOK(&body)
 	return res, nil
 }
 
@@ -3045,7 +3052,7 @@ func (s *BidirectionalStreamingNoPayloadMethodClientStream) Recv() (*bidirection
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingNoPayloadMethodUserTypeOK(&body)
+	res := NewBidirectionalStreamingNoPayloadMethodResultOK(&body)
 	return res, nil
 }
 
@@ -3217,7 +3224,7 @@ func (s *BidirectionalStreamingResultWithViewsMethodClientStream) Recv() (*bidir
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingResultWithViewsMethodUsertypeOK(&body)
+	res := NewBidirectionalStreamingResultWithViewsMethodResultOK(&body)
 	vres := &bidirectionalstreamingresultwithviewsserviceviews.Usertype{Projected: res, View: s.view}
 	if err := bidirectionalstreamingresultwithviewsserviceviews.ValidateUsertype(vres); err != nil {
 		return rv, goahttp.ErrValidationError("BidirectionalStreamingResultWithViewsService", "BidirectionalStreamingResultWithViewsMethod", err)
@@ -3367,7 +3374,7 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodClientStream) Recv() 
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingResultWithExplicitViewMethodUsertypeOK(&body)
+	res := NewBidirectionalStreamingResultWithExplicitViewMethodResultOK(&body)
 	vres := &bidirectionalstreamingresultwithexplicitviewserviceviews.Usertype{Projected: res, View: "extended"}
 	if err := bidirectionalstreamingresultwithexplicitviewserviceviews.ValidateUsertype(vres); err != nil {
 		return rv, goahttp.ErrValidationError("BidirectionalStreamingResultWithExplicitViewService", "BidirectionalStreamingResultWithExplicitViewMethod", err)
@@ -3518,7 +3525,7 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) Recv
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingResultCollectionWithViewsMethodUsertypeCollectionOK(body)
+	res := NewBidirectionalStreamingResultCollectionWithViewsMethodResultOK(body)
 	vres := bidirectionalstreamingresultcollectionwithviewsserviceviews.UsertypeCollection{Projected: res, View: s.view}
 	if err := bidirectionalstreamingresultcollectionwithviewsserviceviews.ValidateUsertypeCollection(vres); err != nil {
 		return rv, goahttp.ErrValidationError("BidirectionalStreamingResultCollectionWithViewsService", "BidirectionalStreamingResultCollectionWithViewsMethod", err)
@@ -3657,7 +3664,7 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStrea
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingResultCollectionWithExplicitViewMethodUsertypeCollectionOK(body)
+	res := NewBidirectionalStreamingResultCollectionWithExplicitViewMethodResultOK(body)
 	vres := bidirectionalstreamingresultcollectionwithexplicitviewserviceviews.UsertypeCollection{Projected: res, View: "tiny"}
 	if err := bidirectionalstreamingresultcollectionwithexplicitviewserviceviews.ValidateUsertypeCollection(vres); err != nil {
 		return rv, goahttp.ErrValidationError("BidirectionalStreamingResultCollectionWithExplicitViewService", "BidirectionalStreamingResultCollectionWithExplicitViewMethod", err)
@@ -4140,7 +4147,7 @@ func (s *BidirectionalStreamingUserTypeArrayMethodClientStream) Recv() ([]*bidir
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingUserTypeArrayMethodResultTypeOK(body)
+	res := NewBidirectionalStreamingUserTypeArrayMethodResultOK(body)
 	return res, nil
 }
 
@@ -4268,7 +4275,7 @@ func (s *BidirectionalStreamingUserTypeMapMethodClientStream) Recv() (map[string
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingUserTypeMapMethodMapStringResultTypeOK(body)
+	res := NewBidirectionalStreamingUserTypeMapMethodResultOK(body)
 	return res, nil
 }
 

@@ -1,8 +1,8 @@
 
 func {{ .VarPrefix }}UsageCommands() []string {
-  return {{ .CLIPkg }}.UsageCommands()
+  return {{ .CLIPkg }}.{{ .Parser.UsageCommands.Name }}()
 }
 
 func {{ .VarPrefix }}UsageExamples() string {
-  return {{ .CLIPkg }}.UsageExamples()
+  return {{ .CLIPkg }}.{{ .Parser.UsageExamples.Name }}()
 }

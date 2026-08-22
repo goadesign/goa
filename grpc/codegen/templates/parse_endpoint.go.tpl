@@ -1,6 +1,6 @@
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
-func ParseEndpoint(
+func {{ .Declaration.Name }}(
 	cc *grpc.ClientConn,
 {{-  range .Commands }}
 	{{- if .Interceptors }}
@@ -29,7 +29,7 @@ func ParseEndpoint(
 				endpoint = {{ .Interceptors.PkgName }}.Wrap{{ .MethodVarName }}ClientEndpoint(endpoint, {{ .Interceptors.VarName }})
 			{{- end }}
 			{{- if .BuildFunction }}
-				data, err = {{ $pkgName}}.{{ .BuildFunction.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
+				data, err = {{ $pkgName}}.{{ .BuildFunction.Declaration.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
 			{{- else if .Conversion }}
 				{{ .Conversion }}
 			{{- end }}

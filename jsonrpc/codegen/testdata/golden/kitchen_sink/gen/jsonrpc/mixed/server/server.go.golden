@@ -53,8 +53,8 @@ func New(
 		encoder:    encoder,
 		errhandler: errhandler,
 	}
-	// Default HTTP handler per transport kind
-	// Plain HTTP JSON-RPC
+	// Install the request handler required by this service's methods.
+	// ServeHTTP writes one JSON-RPC response for each request.
 	s.Handler = http.HandlerFunc(s.ServeHTTP)
 	return s
 }
@@ -169,7 +169,7 @@ func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonr
 	}
 }
 
-// batchWriter is a helper type that implements http.ResponseWriter for writing multiple JSON-RPC responses
+// batchWriter joins the responses written for one JSON-RPC batch request.
 type batchWriter struct {
 	io.Writer
 	header     http.Header
@@ -203,7 +203,7 @@ func (rb *batchWriter) Write(data []byte) (int, error) {
 
 // Mount configures the mux to serve the JSON-RPC Mixed service methods.
 func Mount(mux goahttp.Muxer, h *Server) {
-	// HTTP only
+	// Every method in this server writes one ordinary JSON-RPC response.
 	mux.Handle("POST", "/mixed/rpc/mixed/rpc", h.ServeHTTP)
 }
 
@@ -235,7 +235,7 @@ func NewLookupHandler(
 				}
 				encodeJSONRPCError(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
 			} else {
-				// No ID means notification - just log error
+				// A notification receives no JSON-RPC response, so pass the decode error to the configured error handler.
 				errhandler(ctx, w, fmt.Errorf("failed to decode parameters: %w", err))
 			}
 			return nil
@@ -265,7 +265,7 @@ func NewLookupHandler(
 					encodeJSONRPCError(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
 				}
 			} else {
-				// No ID means notification - just log error
+				// A notification receives no JSON-RPC response, so pass the service error to the configured error handler.
 				errhandler(ctx, w, fmt.Errorf("endpoint error: %w", err))
 			}
 			return nil
@@ -289,7 +289,7 @@ func NewLookupHandler(
 		}
 
 		// Send response with the result
-		// Convert result to response body with proper JSON tags
+		// Build the response body with the fields and JSON names declared by the service.
 		body := NewLookupResponseBody(res.(*mixed.LookupResult))
 		response := jsonrpc.MakeSuccessResponse(id, body)
 		if err := encoder(ctx, w).Encode(response); err != nil {
@@ -299,14 +299,14 @@ func NewLookupHandler(
 	}
 }
 
-// encodeJSONRPCError creates and sends a JSON-RPC error response (handles nil
-// ID gracefully)
+// encodeJSONRPCError writes one JSON-RPC error response and preserves a
+// missing request ID.
 func (s *Server) encodeJSONRPCError(ctx context.Context, w http.ResponseWriter, req *jsonrpc.RawRequest, code jsonrpc.Code, message string, data any) {
 	encodeJSONRPCError(ctx, w, req, code, message, data, s.encoder, s.errhandler)
 }
 
-// encodeJSONRPCError creates and sends a JSON-RPC error response (handles nil
-// ID gracefully)
+// encodeJSONRPCError writes one JSON-RPC error response and preserves a
+// missing request ID.
 func encodeJSONRPCError(
 	ctx context.Context,
 	w http.ResponseWriter,

@@ -29,6 +29,8 @@ type {{ .ServiceDeclaration.Name }} interface {
 			{{- /* Mixed results: the method may be invoked in a unary (JSON) or streaming (SSE) mode.
 			     The server stream is non-nil only when the transport negotiates streaming. */}}
 			{{ .VarName }}(context.Context{{ if .Payload }}, {{ .PayloadRef }}{{ end }}, {{ .ServerStream.Interface }}) ({{ if .Result }}res {{ .ResultRef }}, {{ end }}{{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view string, {{ end }}{{ end }}err error)
+		{{- else if and .IsJSONRPCWebSocket (eq .ServerStream.Kind 4) }}
+			{{ .VarName }}(context.Context, {{ .ServerStream.Interface }}) (err error)
 		{{- else }}
 			{{- if and .IsJSONRPC (not .IsJSONRPCSSE) (eq .ServerStream.Kind 3) .PayloadRef }}
 				{{- /* JSON-RPC WebSocket server streaming with non-streaming payload */ -}}
@@ -93,12 +95,12 @@ var {{ .MethodNamesDeclaration.Name }} = [{{ len .Methods }}]string{ {{ range .M
 
 {{- define "stream_interface" }}
 {{- if and .IsJSONRPCSSE (eq .Type "server") }}
-{{ printf "%sEvent is the interface implemented by the result type for the %s method." .MethodVarName .Endpoint | comment }}
-type {{ .MethodVarName }}Event interface {
+{{ printf "%s is the interface implemented by the result type for the %s method." .EventDeclaration.Name .Endpoint | comment }}
+type {{ .EventDeclaration.Name }} interface {
 	is{{ .MethodVarName }}Event()
 }
 
-{{ printf "is%sEvent implements the %sEvent interface." .MethodVarName .MethodVarName | comment }}
+{{ printf "is%sEvent implements the %s interface." .MethodVarName .EventDeclaration.Name | comment }}
 func ({{ .Stream.SendTypeRef }}) is{{ .MethodVarName }}Event() {}
 
 {{ printf "%s allows streaming instances of %s over SSE." .Stream.Interface .Stream.SendTypeRef | comment }}
@@ -106,16 +108,20 @@ type {{ .Stream.Interface }} interface {
 	{{- if .Stream.SendTypeRef }}
 	{{ comment .Stream.SendDesc }}
 	{{ comment "IMPORTANT: Send only sends JSON-RPC notifications. Use SendAndClose to send a final response." }}
-	Send(ctx context.Context, event {{ .MethodVarName }}Event) error
+	Send(ctx context.Context, event {{ .EventDeclaration.Name }}) error
 		{{- if .Stream.SendAndCloseName }}
 	{{ comment .Stream.SendAndCloseDesc }}
 	{{ comment "The result will be sent as a JSON-RPC response with the original request ID." }}
 	{{ comment "If the result has an ID field populated, that ID will be used instead of the request ID." }}
-	{{ .Stream.SendAndCloseName }}(ctx context.Context, event {{ .MethodVarName }}Event) error
+	{{ .Stream.SendAndCloseName }}(ctx context.Context, event {{ .EventDeclaration.Name }}) error
 		{{- end }}
 	{{- end }}
 	{{ comment "SendError sends a JSON-RPC error response." }}
 	SendError(ctx context.Context, id string, err error) error
+	{{- if .IsViewedResult }}
+	{{ comment "SetView sets the result view applied to later values sent on this stream." }}
+	SetView(view string)
+	{{- end }}
 }
 {{- else }}
 {{- $elemType := .Stream.SendTypeRef -}}
@@ -166,9 +172,9 @@ type {{ .StreamDeclaration.Name }} interface {
 {{- range .Methods }}
 	{{- if .Result }}
 	{{ printf "Send%sNotification sends a JSON-RPC notification for the %s method (no response expected)." .VarName .Name | comment }}
-	Send{{ .VarName }}Notification(ctx context.Context, result {{ .ResultRef }}) error
+	Send{{ .VarName }}Notification(ctx context.Context, result {{ .ResultRef }}{{ if and .ViewedResult (not .ViewedResult.ViewName) }}, view string{{ end }}) error
 	{{ printf "Send%sResponse sends a JSON-RPC response for the %s method with the given ID." .VarName .Name | comment }}
-	Send{{ .VarName }}Response(ctx context.Context, id any, result {{ .ResultRef }}) error
+	Send{{ .VarName }}Response(ctx context.Context, id any, result {{ .ResultRef }}{{ if and .ViewedResult (not .ViewedResult.ViewName) }}, view string{{ end }}) error
 	{{- end }}
 {{- end }}
 	{{ comment "SendError sends a JSON-RPC error response." }}

@@ -1,7 +1,7 @@
-// marshalFooserviceResultTypeToResultType2 builds a value of type *ResultType2
-// from a value of type *fooservice.ResultType.
-func marshalFooserviceResultTypeToResultType2(v *fooservice.ResultType) *ResultType2 {
-	res := &ResultType2{}
+// marshalResultTypeToResultType builds a value of type *ResultType from a
+// value of type *fooservice.ResultType.
+func marshalResultTypeToResultType(v *fooservice.ResultType) *ResultType {
+	res := &ResultType{}
 	if v.Foo != nil {
 		foo := string(*v.Foo)
 		res.Foo = &foo

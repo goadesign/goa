@@ -1,6 +1,5 @@
-// This file owns the service planning lifecycle across every Goa design root
-// in one generation. It validates complete input membership, collects each
-// root once, and assigns files shared by multiple roots before names freeze.
+// This file prepares every service design used by one run. It rejects missing
+// or repeated designs and chooses each shared Go name once.
 package service
 
 import (
@@ -11,9 +10,21 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// NewPlans collects every service root owned by generation in one operation.
-// Root-local facts remain in separate plans, while declarations and files that
-// can be shared across roots are assigned once across the complete input set.
+type (
+	// HTTPMethodNames contains the Go names used by one service method in an HTTP
+	// package. The HTTP generator reuses these names instead of choosing new ones.
+	HTTPMethodNames struct {
+		// Method is the name used for the service endpoint field and receiver method.
+		Method string
+		// ServerStream is the service's server stream type name.
+		ServerStream string
+		// ClientStream is the service's client stream type name.
+		ClientStream string
+	}
+)
+
+// NewPlans reads every service design in generation. It returns the data used
+// to write each service and chooses shared Go declaration names once.
 func NewPlans(generation *codegen.Generation, inputs ...PlanInput) ([]*Plan, error) {
 	owned := make(map[*expr.RootExpr]struct{})
 	for _, candidate := range generation.Roots() {
@@ -59,9 +70,8 @@ func NewPlans(generation *codegen.Generation, inputs ...PlanInput) ([]*Plan, err
 	return plans, nil
 }
 
-// NewPlan collects the only service root owned by generation. Generations
-// containing multiple service roots must use NewPlans so shared package files
-// and receiver methods are planned once across the complete run.
+// NewPlan reads the only service design in generation. Call NewPlans when a run
+// contains several designs so shared files and methods receive names only once.
 func NewPlan(root *expr.RootExpr, generation *codegen.Generation, examples *expr.ExampleGenerator) (*Plan, error) {
 	plans, err := NewPlans(generation, PlanInput{Root: root, Examples: examples})
 	if err != nil {
@@ -70,8 +80,54 @@ func NewPlan(root *expr.RootExpr, generation *codegen.Generation, examples *expr
 	return plans[0], nil
 }
 
-// collectRootFacts retains one root's service facts and declares its
-// root-owned symbols before run-wide file ownership is assigned.
+// Root returns the service design used by this plan. Other file writers use it
+// to reject a plan created for a different design.
+func (p *Plan) Root() *expr.RootExpr {
+	return p.facts.root
+}
+
+// ProjectedResult returns a copy of the result fields included in the views for
+// method. It reports an error when method is absent or has no views.
+func (p *Plan) ProjectedResult(method *expr.MethodExpr) (*expr.AttributeExpr, error) {
+	for _, service := range p.facts.services {
+		facts := service.methodByExpr[method]
+		if facts == nil {
+			continue
+		}
+		if facts.viewedResult == nil {
+			return nil, fmt.Errorf("service method %q does not have a viewed result", method.Name)
+		}
+		projected := expr.AsObject(facts.viewedResult.wrapped.Attribute().Type).Attribute("projected")
+		return expr.DupAtt(projected), nil
+	}
+	if method == nil {
+		return nil, fmt.Errorf("service method is not part of this plan")
+	}
+	return nil, fmt.Errorf("service method %q is not part of this plan", method.Name)
+}
+
+// HTTPMethodNames returns the Go names already chosen for method. It returns an
+// error when the service design does not contain method.
+func (p *Plan) HTTPMethodNames(method *expr.MethodExpr) (HTTPMethodNames, error) {
+	for _, service := range p.facts.services {
+		facts := service.methodByExpr[method]
+		if facts == nil {
+			continue
+		}
+		return HTTPMethodNames{
+			Method:       facts.varName,
+			ServerStream: facts.serverStreamVarName,
+			ClientStream: facts.clientStreamVarName,
+		}, nil
+	}
+	if method == nil {
+		return HTTPMethodNames{}, fmt.Errorf("service method is not part of this plan")
+	}
+	return HTTPMethodNames{}, fmt.Errorf("service method %q is not part of this plan", method.Name)
+}
+
+// collectRootFacts reads one service design and chooses names used only by that
+// design before shared files receive their names.
 func collectRootFacts(root *expr.RootExpr, generation *codegen.Generation, examples *expr.ExampleGenerator) (*rootFacts, error) {
 	examplePackageScope := codegen.NewNameScope()
 	for _, service := range root.Services {

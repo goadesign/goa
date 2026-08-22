@@ -37,10 +37,10 @@ func NewMethodARequestBody(p *servicemixedpayloadinbody.APayload) *MethodAReques
 		}
 	}
 	if p.Object != nil {
-		body.Object = marshalServicemixedpayloadinbodyBPayloadToBPayload(p.Object)
+		body.Object = marshalBPayloadToBPayload(p.Object)
 	}
 	if p.DupObj != nil {
-		body.DupObj = marshalServicemixedpayloadinbodyBPayloadToBPayload(p.DupObj)
+		body.DupObj = marshalBPayloadToBPayload2(p.DupObj)
 	}
 	return body
 }

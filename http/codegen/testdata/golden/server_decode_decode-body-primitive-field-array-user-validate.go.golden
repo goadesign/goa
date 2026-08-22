@@ -28,7 +28,7 @@ func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux goahttp.Muxer, decode
 		if err != nil {
 			return payload, err
 		}
-		payload = NewMethodBodyPrimitiveArrayUserValidatePayloadType(body)
+		payload = NewMethodBodyPrimitiveArrayUserValidatePayload(body)
 
 		return payload, nil
 	}

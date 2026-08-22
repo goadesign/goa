@@ -1,5 +1,5 @@
 {{ comment .SendDesc }}
-func (s *{{ .VarName }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
+func (s *{{ .VarDeclaration.Name }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
 {{- if eq .Type "server" }}
 	{{- if eq .SendName "Send" }}
 		var err error
@@ -54,6 +54,6 @@ func (s *{{ .VarName }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
 }
 
 {{ comment .SendWithContextDesc }}
-func (s *{{ .VarName }}) {{ .SendWithContextName }}(ctx context.Context, v {{ .SendTypeRef }}) error {
+func (s *{{ .VarDeclaration.Name }}) {{ .SendWithContextName }}(ctx context.Context, v {{ .SendTypeRef }}) error {
 	return s.{{ .SendName }}(v)
 }

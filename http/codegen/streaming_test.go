@@ -205,8 +205,7 @@ func TestServerStreaming(t *testing.T) {
 	}
 
 	filesFn := func(root *expr.RootExpr) []*codegen.File {
-		services := CreateHTTPServices(root)
-		return ServerFiles(services)
+		return linkedHTTPPlanForRoot(t, root).ServerFiles()
 	}
 	runTests(t, cases, filesFn)
 }
@@ -388,8 +387,7 @@ func TestClientStreaming(t *testing.T) {
 		}},
 	}
 	filesFn := func(root *expr.RootExpr) []*codegen.File {
-		services := CreateHTTPServices(root)
-		return ClientFiles(services)
+		return linkedHTTPPlanForRoot(t, root).ClientFiles()
 	}
 	runTests(t, cases, filesFn)
 }

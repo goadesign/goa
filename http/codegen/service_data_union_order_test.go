@@ -54,8 +54,8 @@ func TestCollectHTTPUnionTypesDeterministicAcrossObjectOrder(t *testing.T) {
 		},
 	}
 
-	forwardNames := collectHTTPUnionTypeNames(forward)
-	reverseNames := collectHTTPUnionTypeNames(reverse)
+	forwardNames := collectHTTPUnionTypeNames(t, forward)
+	reverseNames := collectHTTPUnionTypeNames(t, reverse)
 
 	require.Len(t, forwardNames, 2)
 	require.Equal(t, forwardNames, reverseNames)
@@ -77,9 +77,9 @@ func TestCollectHTTPUnionTypesReusesSameShapedDeclarationsAndReferences(t *testi
 		},
 	}
 
-	catalog := newWireTypeCatalog()
+	catalog, generation := testWireTypeCatalog(t)
 	catalog.collect(bodies, wireAttribute, wireTypePolicy{}, "")
-	catalog.Freeze()
+	linkTestWireTypeCatalog(t, generation, catalog)
 	catalog.applyNames(bodies, wireAttribute, wireTypePolicy{})
 
 	emitted := make([]string, 0, len(catalog.unions))
@@ -87,8 +87,8 @@ func TestCollectHTTPUnionTypesReusesSameShapedDeclarationsAndReferences(t *testi
 		emitted = append(emitted, union.Name)
 	}
 	references := []string{
-		catalog.scope.GoTypeName(&expr.AttributeExpr{Type: first}),
-		catalog.scope.GoTypeName(&expr.AttributeExpr{Type: second}),
+		catalog.resolver(catalog.scope, wireTypePolicy{}).Name(&expr.AttributeExpr{Type: first}, "", false, false),
+		catalog.resolver(catalog.scope, wireTypePolicy{}).Name(&expr.AttributeExpr{Type: second}, "", false, false),
 	}
 	require.Equal(t, []string{"Value"}, emitted)
 	require.Equal(t, []string{"Value", "Value"}, references)
@@ -116,7 +116,7 @@ func TestHTTPServiceDataReusesSameShapedMethodBodyUnions(t *testing.T) {
 		})
 	})
 
-	data := CreateHTTPServices(root).Get("values")
+	data := linkedHTTPPlanForRoot(t, root).services.Get("values")
 	require.NotNil(t, data)
 	for _, catalog := range []*wireTypeCatalog{data.serverWireTypes, data.clientWireTypes} {
 		unions := catalog.unionTypes()
@@ -124,10 +124,10 @@ func TestHTTPServiceDataReusesSameShapedMethodBodyUnions(t *testing.T) {
 		for i, union := range unions {
 			emitted[i] = union.Name
 		}
-		require.Equal(t, []string{"Value", "Value2"}, emitted)
+		require.Equal(t, []string{"Value"}, emitted)
 	}
 	require.Contains(t, data.Endpoint("first").Payload.Request.ServerBody.Def, "Value *Value ")
-	require.Contains(t, data.Endpoint("second").Payload.Request.ServerBody.Def, "Value *Value2 ")
+	require.Contains(t, data.Endpoint("second").Payload.Request.ServerBody.Def, "Value *Value ")
 }
 
 func TestMakeHTTPTypeRemovesServicePackageOwnershipFromWireCopy(t *testing.T) {
@@ -197,10 +197,11 @@ func sameShapedValueUnionDSL() {
 	dsl.Attribute("number", dsl.Float64)
 }
 
-func collectHTTPUnionTypeNames(att *expr.AttributeExpr) map[string]string {
-	catalog := newWireTypeCatalog()
+func collectHTTPUnionTypeNames(t *testing.T, att *expr.AttributeExpr) map[string]string {
+	t.Helper()
+	catalog, generation := testWireTypeCatalog(t)
 	catalog.collect(att, wireAttribute, wireTypePolicy{}, "")
-	catalog.Freeze()
+	linkTestWireTypeCatalog(t, generation, catalog)
 
 	names := make(map[string]string, len(catalog.unions))
 	for _, record := range catalog.unions {

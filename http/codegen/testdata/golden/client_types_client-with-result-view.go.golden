@@ -11,15 +11,15 @@ type Rt struct {
 	X *string `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"`
 }
 
-// NewMethodResultWithResultViewResulttypeOK builds a
-// "ServiceResultWithResultView" service "MethodResultWithResultView" endpoint
-// result from a HTTP "OK" response.
-func NewMethodResultWithResultViewResulttypeOK(body *MethodResultWithResultViewResponseBodyFull) *serviceresultwithresultviewviews.ResulttypeView {
+// NewMethodResultWithResultViewResultOK builds a "ServiceResultWithResultView"
+// service "MethodResultWithResultView" endpoint result from a HTTP "OK"
+// response.
+func NewMethodResultWithResultViewResultOK(body *MethodResultWithResultViewResponseBodyFull) *serviceresultwithresultviewviews.ResulttypeView {
 	v := &serviceresultwithresultviewviews.ResulttypeView{
 		Name: body.Name,
 	}
 	if body.Rt != nil {
-		v.Rt = unmarshalRtToServiceresultwithresultviewviewsRtView(body.Rt)
+		v.Rt = unmarshalRtToRtView(body.Rt)
 	}
 
 	return v

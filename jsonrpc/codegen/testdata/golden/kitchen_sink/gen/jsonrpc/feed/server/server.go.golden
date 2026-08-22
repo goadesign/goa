@@ -50,8 +50,8 @@ func New(
 		encoder:    encoder,
 		errhandler: errhandler,
 	}
-	// Default HTTP handler per transport kind
-	// SSE-only services route via handleSSE
+	// Install the request handler required by this service's methods.
+	// handleSSE writes each result as a server-sent event.
 	s.Handler = http.HandlerFunc(s.handleSSE)
 	return s
 }
@@ -67,55 +67,65 @@ func (s *Server) Use(m func(http.Handler) http.Handler) {
 // MethodNames returns the methods served.
 func (s *Server) MethodNames() []string { return feed.MethodNames[:] }
 
-// handleSSE handles JSON-RPC SSE requests by dispatching to the appropriate method.
+// handleSSE finds the requested method and writes its results as server-sent events.
 func (s *Server) handleSSE(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Read the JSON-RPC request
+	// Read the JSON-RPC request.
 	var req jsonrpc.RawRequest
 	if err := s.decoder(r).Decode(&req); err != nil {
-		// Emit JSON-RPC parse error as SSE event
-		stream := &sseServerStream{w: w, r: r, encoder: s.encoder}
-		_ = stream.sendError(ctx, nil, jsonrpc.ParseError, "Parse error", nil)
+		// Write the parse error as a server-sent event.
+		stream := &sseServerStream{w: w, encoder: s.encoder}
+		if err := stream.sendError(ctx, nil, jsonrpc.ParseError, "Parse error", nil); err != nil {
+			s.errhandler(ctx, w, fmt.Errorf("write parse error event: %w", err))
+		}
 		return
 	}
 
-	// Validate JSON-RPC request
+	// Reject requests that do not use JSON-RPC 2.0.
 	if req.JSONRPC != "2.0" {
-		stream := &sseServerStream{w: w, r: r, encoder: s.encoder}
-		_ = stream.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil)
+		stream := &sseServerStream{w: w, encoder: s.encoder}
+		if err := stream.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil); err != nil {
+			s.errhandler(ctx, w, fmt.Errorf("write invalid request event: %w", err))
+		}
 		return
 	}
 
 	if req.Method == "" {
-		stream := &sseServerStream{w: w, r: r, encoder: s.encoder}
-		_ = stream.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil)
+		stream := &sseServerStream{w: w, encoder: s.encoder}
+		if err := stream.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil); err != nil {
+			s.errhandler(ctx, w, fmt.Errorf("write invalid request event: %w", err))
+		}
 		return
 	}
 
-	// Find the appropriate handler based on method name
+	// Find the function for the requested method.
 	var handler func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error
 	switch req.Method {
 	case "watch":
 		handler = s.Watch
 	default:
-		stream := &sseServerStream{w: w, r: r, encoder: s.encoder}
-		_ = stream.sendError(ctx, req.ID, jsonrpc.MethodNotFound, "Method not found", nil)
+		stream := &sseServerStream{w: w, encoder: s.encoder}
+		if err := stream.sendError(ctx, req.ID, jsonrpc.MethodNotFound, "Method not found", nil); err != nil {
+			s.errhandler(ctx, w, fmt.Errorf("write method not found event: %w", err))
+		}
 		return
 	}
 
-	// Call the handler for the specific method
+	// Call the requested method.
 	if err := handler(ctx, r, &req, w); err != nil {
 		s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", req.Method, err))
 		return
 	}
 
-	// For notifications (requests without ID) that don't stream, return 204 No Content
+	// A request without an ID receives no response when the method sends one result.
 	switch req.Method {
 	}
-} // Mount configures the mux to serve the JSON-RPC Feed service methods.
+}
+
+// Mount configures the mux to serve the JSON-RPC Feed service methods.
 func Mount(mux goahttp.Muxer, h *Server) {
-	// SSE only: mount SSE handler
+	// Every method in this server writes server-sent events.
 	mux.Handle("POST", "/feed", h.handleSSE)
 }
 
@@ -136,11 +146,10 @@ func NewWatchHandler(
 	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
 		ctx = context.WithValue(ctx, goa.MethodKey, "watch")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "Feed")
-		// Initialize SSE stream early so decode errors can be sent as SSE error events
+		// Create the stream before decoding so a request error can be written to it.
 		strm := &WatchServerStream{
 			sseServerStream: sseServerStream{
 				w:       w,
-				r:       r,
 				encoder: encoder,
 			},
 			requestID: req.ID,
@@ -148,9 +157,11 @@ func NewWatchHandler(
 		decodeParams := DecodeWatchRequest(mux, decoder)
 		params, err := decodeParams(r, req)
 		if err != nil {
-			// Send error via SSE (JSON-RPC error event) to match SSE transport semantics
+			// Write the request error as a JSON-RPC server-sent event when the request has an ID.
 			if req.ID != nil && req.ID != "" {
-				strm.SendError(ctx, jsonrpc.IDToString(req.ID), err)
+				if err := strm.SendError(ctx, jsonrpc.IDToString(req.ID), err); err != nil {
+					return err
+				}
 			}
 			return nil
 		}
@@ -166,25 +177,20 @@ func NewWatchHandler(
 			Payload: params,
 		}
 		if _, err := endpoint(ctx, v); err != nil {
-			// Send the error as a JSON-RPC error event; SendError applies the
-			// design-driven error code mapping.
-			if req.ID != nil && req.ID != "" {
-				return strm.SendError(ctx, jsonrpc.IDToString(req.ID), err)
-			}
-			return nil
+			return err
 		}
 		return nil
 	}
 }
 
-// encodeJSONRPCError creates and sends a JSON-RPC error response (handles nil
-// ID gracefully)
+// encodeJSONRPCError writes one JSON-RPC error response and preserves a
+// missing request ID.
 func (s *Server) encodeJSONRPCError(ctx context.Context, w http.ResponseWriter, req *jsonrpc.RawRequest, code jsonrpc.Code, message string, data any) {
 	encodeJSONRPCError(ctx, w, req, code, message, data, s.encoder, s.errhandler)
 }
 
-// encodeJSONRPCError creates and sends a JSON-RPC error response (handles nil
-// ID gracefully)
+// encodeJSONRPCError writes one JSON-RPC error response and preserves a
+// missing request ID.
 func encodeJSONRPCError(
 	ctx context.Context,
 	w http.ResponseWriter,

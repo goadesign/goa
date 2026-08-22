@@ -3,6 +3,7 @@
 package codegen
 
 import (
+	"fmt"
 	"path"
 	"path/filepath"
 
@@ -27,8 +28,8 @@ func ClientCLIFiles(services *ServicesData) []*codegen.File {
 		}
 		sd := services.Get(svc.Name())
 		command := cli.BuildCommandData(sd.Service, sd.ClientPkgName)
-		for _, e := range sd.Endpoints {
-			flags, buildFunction := buildFlags(e)
+		for index, e := range sd.Endpoints {
+			flags, buildFunction := buildFlags(e, services.cliPlan.builders[svc.GRPCEndpoints[index]])
 			subcmd := cli.BuildSubcommandData(sd.Service, e.Method, buildFunction, flags)
 			command.Subcommands = append(command.Subcommands, subcmd)
 		}
@@ -92,18 +93,44 @@ func endpointParser(services *ServicesData, svr *expr.ServerExpr, data []*cli.Co
 		}
 	}
 
+	parser := services.cliPlan.parsers[svr]
+	if parser == nil {
+		panic(fmt.Sprintf("gRPC command parser names are missing for server %q", svr.Name))
+	}
+	plannedData := make([]*cli.CommandData, len(data))
+	for index, command := range data {
+		commandNames := parser.Commands[command.ServiceName]
+		if commandNames == nil {
+			panic(fmt.Sprintf("gRPC command names are missing for service %q", command.ServiceName))
+		}
+		commandCopy := *command
+		commandCopy.UsageDeclaration = commandNames.Usage
+		commandCopy.Subcommands = make([]*cli.SubcommandData, len(command.Subcommands))
+		for methodIndex, subcommand := range command.Subcommands {
+			usage := commandNames.Methods[subcommand.MethodName]
+			if usage == nil {
+				panic(fmt.Sprintf("gRPC method help name is missing for %q.%q", command.ServiceName, subcommand.Name))
+			}
+			subcommandCopy := *subcommand
+			subcommandCopy.UsageDeclaration = usage
+			commandCopy.Subcommands[methodIndex] = &subcommandCopy
+		}
+		plannedData[index] = &commandCopy
+	}
 	parseSection := &codegen.SectionTemplate{
 		Name:   "parse-endpoint-grpc",
 		Source: grpcTemplates.Read(grpcParseEndpointT),
 		Data: struct {
-			FlagsCode string
-			Commands  []*cli.CommandData
+			Declaration *codegen.NameDeclaration
+			FlagsCode   string
+			Commands    []*cli.CommandData
 		}{
-			cli.FlagsCode(data),
-			data,
+			parser.Declarations.ParseEndpoint,
+			cli.FlagsCode(plannedData),
+			plannedData,
 		},
 	}
-	return cli.EndpointParserFile(fpath, title, specs, data, parseSection)
+	return cli.EndpointParserFile(fpath, title, specs, plannedData, parser.Declarations, parseSection)
 }
 
 // payloadBuilders returns the file that contains the payload constructors that
@@ -131,9 +158,16 @@ func payloadBuilders(svc *expr.GRPCServiceExpr, data *cli.CommandData, services 
 	return addEndpointImports(cli.PayloadBuildersFile(fpath, title, specs, data), services, svc.GRPCEndpoints...)
 }
 
-func buildFlags(e *EndpointData) ([]*cli.FlagData, *cli.BuildFunctionData) {
+func buildFlags(e *EndpointData, declaration *codegen.NameDeclaration) ([]*cli.FlagData, *cli.BuildFunctionData) {
 	if e.Request != nil {
-		return makeFlags(e, e.Request.CLIArgs)
+		flags, buildFunction := makeFlags(e, e.Request.CLIArgs)
+		if buildFunction != nil {
+			if declaration == nil {
+				panic(fmt.Sprintf("gRPC payload builder name is missing for %q.%q", e.ServiceName, e.Method.Name))
+			}
+			buildFunction.Declaration = declaration
+		}
+		return flags, buildFunction
 	}
 	return nil, nil
 }

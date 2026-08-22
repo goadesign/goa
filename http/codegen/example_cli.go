@@ -13,21 +13,21 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// ExampleCLIFiles returns an example client tool implementation for the
-// transport described by services for each server expression.
-func ExampleCLIFiles(services *ServicesData) []*codegen.File {
+// exampleCLIFiles returns an example command-line client for the HTTP services
+// on each configured server.
+func exampleCLIFiles(services *ServicesData) []*codegen.File {
 	var files []*codegen.File
 	for _, svr := range services.Root.API.Servers {
-		if f := ExampleCLI(svr, services); f != nil {
+		if f := exampleCLI(svr, services); f != nil {
 			files = append(files, f)
 		}
 	}
 	return files
 }
 
-// ExampleCLI returns an example client tool implementation for the transport
-// described by services and the given server expression.
-func ExampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
+// exampleCLI returns an example command-line client for the HTTP services on
+// the given server.
+func exampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 	genpkg := services.GenPkg()
 	svrdata := example.Servers.Get(svr, services.Root)
 	outputPath := filepath.Join("cmd", svrdata.Dir+"-cli", services.dir()+".go")
@@ -40,6 +40,10 @@ func ExampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 	}
 	rootPath := path.Dir(genpkg)
 	cliImport := services.PackageImport(path.Join(genpkg, services.dir(), "cli", svrdata.Dir))
+	parser := services.cliParsers[svr]
+	if parser == nil {
+		panic("HTTP command parser names are missing for server " + svr.Name)
+	}
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
 		{Path: "encoding/json"},
@@ -106,6 +110,7 @@ func ExampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 				"Services": svcData,
 				"APIPkg":   apiPkg,
 				"CLIPkg":   cliImport.Name,
+				"Parser":   parser.Declarations,
 			},
 			FuncMap: map[string]any{
 				"needDialer":   NeedDialer,
@@ -118,6 +123,7 @@ func ExampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 			Data: map[string]any{
 				"VarPrefix": services.dir(),
 				"CLIPkg":    cliImport.Name,
+				"Parser":    parser.Declarations,
 			},
 		},
 	}

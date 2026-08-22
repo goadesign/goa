@@ -18,14 +18,14 @@ func addEndpointImports(file *codegen.File, services *ServicesData, endpoints ..
 	}
 	outputPath := strings.TrimPrefix(strings.ReplaceAll(file.Path, "\\", "/"), codegen.Gendir+"/")
 	outputPackage := path.Join(services.GenPkg(), path.Dir(outputPath))
-	codegen.AddImport(file.SectionTemplates[0], services.AttributeImports(outputPackage, ServiceReferenceAttributes(endpoints...)...)...)
+	codegen.AddImport(file.SectionTemplates[0], services.AttributeImports(outputPackage, serviceReferenceAttributes(endpoints...)...)...)
 	return file
 }
 
-// ServiceReferenceAttributes returns the named service attributes referenced
+// serviceReferenceAttributes returns the named service attributes referenced
 // by generated HTTP or JSON-RPC endpoint sections, including the nested result
 // field selected as SSE event data.
-func ServiceReferenceAttributes(endpoints ...*expr.HTTPEndpointExpr) []*expr.AttributeExpr {
+func serviceReferenceAttributes(endpoints ...*expr.HTTPEndpointExpr) []*expr.AttributeExpr {
 	var attributes []*expr.AttributeExpr
 	for _, endpoint := range endpoints {
 		method := endpoint.MethodExpr

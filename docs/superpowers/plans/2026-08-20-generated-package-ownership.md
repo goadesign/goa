@@ -390,7 +390,7 @@ All commands must pass.
   transport body, run its generated constructor and validation, then return
   the canonical service result.
 
-- [ ] **Step 1: Add complete HTTP/JSON-RPC declaration REDs**
+- [x] **Step 1: Add complete HTTP/JSON-RPC declaration REDs**
 
 Inventory request, response, WebSocket, SSE, error, union, constructor,
 validator, codec, stream, client, server, CLI, and example package symbols.
@@ -418,7 +418,7 @@ snake-case field such as `event_id`: decoding it into a service field named
 `EventID` must fail the test unless the generated transport-body constructor
 performs the mapping.
 
-- [ ] **Step 2: Build retained HTTP plans from exact service plans**
+- [x] **Step 2: Build retained HTTP plans from exact service plans**
 
 Make HTTP `NewPlan` consume the prepared root's HTTP expressions and exact
 `*service.Plan`. Collect detached client and server wire models, union families,
@@ -432,7 +432,7 @@ use it to select both the service projection and the already-retained
 view-specific response body. Never place mutable view selection on a shared
 connection.
 
-- [ ] **Step 3: Make JSON-RPC retain the HTTP plan it shares**
+- [x] **Step 3: Make JSON-RPC retain the HTTP plan it shares**
 
 Build one typed JSON-RPC plan that points at the exact HTTP plan used for HTTP
 codecs and body files, then collects JSON-RPC-only declarations. Do not invoke
@@ -453,14 +453,14 @@ the server cannot choose the first body variant and the client cannot recover
 the view from an unset HTTP header. Fixed-view unary methods remain fully
 specialized and need no runtime discriminator.
 
-- [ ] **Step 4: Remove context-dependent helper naming**
+- [x] **Step 4: Remove context-dependent helper naming**
 
 Validators, constructors, conversions, stream helpers, and codecs must read
 their `NameDeclaration`; call-site traversal selects a record but cannot name
 it. Keep local field and variable scopes. Prove request/response and
 WebSocket/SSE transforms enter service and wire owners independently.
 
-- [ ] **Step 5: Verify and commit Task 8**
+- [x] **Step 5: Verify and commit Task 8**
 
 Run:
 

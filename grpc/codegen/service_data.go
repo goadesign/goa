@@ -18,6 +18,7 @@ type (
 	ServicesData struct {
 		*service.ServicesData
 		GRPCServices map[string]*ServiceData
+		cliPlan      *grpcCLIPlan
 	}
 
 	// ServiceData contains the data used to render the code related to a
@@ -452,10 +453,15 @@ const (
 )
 
 // NewServicesData creates a new ServicesData instance for the given service data.
-func NewServicesData(services *service.ServicesData) *ServicesData {
+func NewServicesData(services *service.ServicesData, plan *PreparedPlan) *ServicesData {
+	cliPlan := plan.roots[services.Root]
+	if cliPlan == nil {
+		panic(fmt.Sprintf("gRPC command-line names are missing for design %q", services.Root.API.Name))
+	}
 	return &ServicesData{
 		ServicesData: services,
 		GRPCServices: make(map[string]*ServiceData),
+		cliPlan:      cliPlan,
 	}
 }
 

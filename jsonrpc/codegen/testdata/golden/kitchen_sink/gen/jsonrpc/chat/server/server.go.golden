@@ -61,8 +61,8 @@ func New(
 		upgrader:      upgrader,
 		configfn:      configfn,
 	}
-	// Default HTTP handler per transport kind
-	// WebSocket services implement ServeHTTP for upgrade
+	// Install the request handler required by this service's methods.
+	// ServeHTTP changes the HTTP connection to a WebSocket connection.
 	s.Handler = http.HandlerFunc(s.ServeHTTP)
 	return s
 }
@@ -105,7 +105,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Mount configures the mux to serve the JSON-RPC Chat service methods.
 func Mount(mux goahttp.Muxer, h *Server) {
-	// HTTP only
+	// Every method in this server writes one ordinary JSON-RPC response.
 	mux.Handle("GET", "/ws/ws", h.ServeHTTP)
 }
 

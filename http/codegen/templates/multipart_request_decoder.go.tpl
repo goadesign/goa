@@ -1,5 +1,5 @@
-{{ printf "%s returns a decoder to decode the multipart request for the %q service %q endpoint." .InitName .ServiceName .MethodName | comment }}
-func {{ .InitName }}(mux goahttp.Muxer, {{ .VarName }} {{ .FuncName }}) func(r *http.Request) goahttp.Decoder {
+{{ printf "%s returns a decoder to decode the multipart request for the %q service %q endpoint." .InitDeclaration.Name .ServiceName .MethodName | comment }}
+func {{ .InitDeclaration.Name }}(mux goahttp.Muxer, {{ .VarName }} {{ .FuncDeclaration.Name }}) func(r *http.Request) goahttp.Decoder {
 	return func(r *http.Request) goahttp.Decoder {
 		return goahttp.EncodingFunc(func(v any) error {
 			mr, merr := r.MultipartReader()

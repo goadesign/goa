@@ -20,7 +20,7 @@ func DecodeMethodBodyPrimitiveArrayUserRequest(mux goahttp.Muxer, decoder func(*
 				return payload, goa.DecodePayloadError(err.Error())
 			}
 		}
-		payload = NewMethodBodyPrimitiveArrayUserPayloadType(body)
+		payload = NewMethodBodyPrimitiveArrayUserPayload(body)
 
 		return payload, nil
 	}

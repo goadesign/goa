@@ -1,6 +1,6 @@
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
-func ParseEndpoint(
+func {{ .Declaration.Name }}(
 	scheme, host string,
 	doer goahttp.Doer,
 	enc func(*http.Request) goahttp.Encoder,
@@ -10,14 +10,14 @@ func ParseEndpoint(
 	dialer goahttp.Dialer,
 		{{- range .Commands }}
 			{{- if .NeedDialer }}
-				{{ if .JSONRPC }}{{ .VarName }}ConfigFn goahttp.ConnConfigureFunc,{{ else }}{{ .VarName }}Configurer *{{ .PkgName }}.ConnConfigurer,{{ end }}
+				{{ if .JSONRPC }}{{ .VarName }}ConfigFn goahttp.ConnConfigureFunc,{{ else }}{{ .VarName }}Configurer *{{ .PkgName }}.{{ .Configurer.Name }},{{ end }}
 			{{- end }}
 		{{- end }}
 	{{- end }}
 	{{- range $i, $c := .Commands }}
 	{{- range .Subcommands }}
 		{{- if .MultipartVarName }}
-	{{ .MultipartVarName }} {{ $c.PkgName }}.{{ .MultipartFuncName }},
+	{{ .MultipartVarName }} {{ $c.PkgName }}.{{ .MultipartFuncDeclaration.Name }},
 		{{- end }}
 	{{- end }}
 	{{- if .Interceptors }}
@@ -35,7 +35,7 @@ func ParseEndpoint(
 		switch svcn {
 	{{- range .Commands }}
 		case "{{ .Name }}":
-			c := {{ .PkgName }}.NewClient(scheme, host, doer, enc, dec, restore{{ if .NeedDialer }}, dialer, {{ if .JSONRPC }}{{ .VarName }}ConfigFn{{ else }}{{ .VarName }}Configurer{{ end }}{{ end }})
+			c := {{ .PkgName }}.{{ .ClientInit.Name }}(scheme, host, doer, enc, dec, restore{{ if .NeedDialer }}, dialer, {{ if .JSONRPC }}{{ .VarName }}ConfigFn{{ else }}{{ .VarName }}Configurer{{ end }}{{ end }})
 			switch epn {
 		{{- $pkgName := .PkgName }}
 		{{- range .Subcommands }}
@@ -45,7 +45,7 @@ func ParseEndpoint(
 				endpoint = {{ .Interceptors.PkgName }}.Wrap{{ .MethodVarName }}ClientEndpoint(endpoint, {{ .Interceptors.VarName }})
 			{{- end }}
 			{{- if .BuildFunction }}
-				data, err = {{ $pkgName }}.{{ .BuildFunction.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
+				data, err = {{ $pkgName }}.{{ .BuildFunction.Declaration.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
 			{{- else if .Conversion }}
 				{{ .Conversion }}
 			{{- end }}
@@ -53,7 +53,7 @@ func ParseEndpoint(
 				{{- if .BuildFunction }}
 				if err == nil {
 				{{- end }}
-					data, err = {{ $pkgName }}.{{ .BuildStreamPayload }}({{ if or .BuildFunction .Conversion }}data, {{ end }}*{{ .StreamFlag.FullName }}Flag)
+					data, err = {{ $pkgName }}.{{ .BuildStreamPayload.Name }}({{ if or .BuildFunction .Conversion }}data, {{ end }}*{{ .StreamFlag.FullName }}Flag)
 				{{- if .BuildFunction }}
 				}
 				{{- end }}

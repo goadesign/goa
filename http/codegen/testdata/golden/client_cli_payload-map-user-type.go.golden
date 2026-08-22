@@ -11,12 +11,12 @@ func BuildMethodBodyInlineMapUserPayload(serviceBodyInlineMapUserMethodBodyInlin
 	}
 	v := make(map[*servicebodyinlinemapuser.KeyType]*servicebodyinlinemapuser.ElemType, len(body))
 	for key, val := range body {
-		tk := marshalKeyTypeToServicebodyinlinemapuserKeyType(key)
+		tk := marshalKeyTypeToKeyType(key)
 		if val == nil {
 			v[tk] = nil
 			continue
 		}
-		v[tk] = marshalElemTypeToServicebodyinlinemapuserElemType(val)
+		v[tk] = marshalElemTypeToElemType(val)
 	}
 	return v, nil
 }

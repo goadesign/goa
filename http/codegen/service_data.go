@@ -1,5 +1,5 @@
-// This file analyzes HTTP endpoint designs into the immutable data consumed by
-// HTTP client, server, body, validation, and streaming templates.
+// This file turns HTTP endpoint designs into the data used to write client,
+// server, request, response, validation, and streaming code.
 package codegen
 
 import (
@@ -9,11 +9,11 @@ import (
 	"path"
 	"slices"
 	"sort"
-	"strconv"
 	"strings"
 	"text/template"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/cli"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 )
@@ -39,10 +39,22 @@ type (
 		*service.ServicesData
 		Expressions *expr.HTTPExpr
 		HTTPData    map[string]*ServiceData
-		// jsonrpc indicates that the data describes the JSON-RPC
-		// transport: generated files live under gen/jsonrpc and titles
-		// use the JSON-RPC label.
+		// jsonrpc is true when files are written under gen/jsonrpc and their
+		// headings use the JSON-RPC name.
 		jsonrpc bool
+		// viewedResultConstructors contains every client result function name
+		// chosen for the generated client package.
+		viewedResultConstructors map[viewedConstructorKey]*codegen.NameDeclaration
+		payloadConstructors      map[*expr.HTTPEndpointExpr]*codegen.NameDeclaration
+		streamConstructors       map[*expr.HTTPEndpointExpr]*codegen.NameDeclaration
+		errorConstructors        map[*expr.HTTPErrorExpr]*codegen.NameDeclaration
+		// plannedWireTypes contains each copied request and response field with
+		// the Go name used by both its definition and its references.
+		plannedWireTypes map[*expr.HTTPServiceExpr]*plannedWireTypes
+		// plannedSymbols contains the Go names used in each client and server package.
+		plannedSymbols map[*expr.HTTPServiceExpr]*httpSymbols
+		// cliParsers contains the function names for each command parser file.
+		cliParsers map[*expr.ServerExpr]*cli.ParserPlan
 	}
 
 	// ServiceData contains the data used to render the code related to a
@@ -50,29 +62,40 @@ type (
 	ServiceData struct {
 		// Service contains the related service data.
 		Service *service.Data
-		// ClientPkgName is the frozen qualifier for the generated transport
-		// client package.
+		// ClientPkgName is the Go package name written before client types.
 		ClientPkgName string
-		// ServerPkgName is the frozen qualifier for the generated transport
-		// server package.
+		// ServerPkgName is the Go package name written before server types.
 		ServerPkgName string
 		// Endpoints describes the endpoint data for this service.
 		Endpoints []*EndpointData
 		// FileServers lists the file servers for this service.
 		FileServers []*FileServerData
-		// ServerStruct is the name of the HTTP server struct.
-		ServerStruct string
-		// MountPointStruct is the name of the mount point struct.
-		MountPointStruct string
-		// ServerInit is the name of the constructor of the server
-		// struct.
-		ServerInit string
-		// MountServer is the name of the mount function.
-		MountServer string
+		// ServerStructDeclaration is the package name used by server definitions and calls.
+		ServerStructDeclaration *codegen.NameDeclaration
+		// MountPointStructDeclaration is the package name used by the mount point type.
+		MountPointStructDeclaration *codegen.NameDeclaration
+		// ServerInitDeclaration is the package name used by the server constructor.
+		ServerInitDeclaration *codegen.NameDeclaration
+		// MountServerDeclaration is the package name used by the route mount function.
+		MountServerDeclaration *codegen.NameDeclaration
 		// ServerService is the name of service function.
 		ServerService string
-		// ClientStruct is the name of the HTTP client struct.
-		ClientStruct string
+		// ClientStructDeclaration is the package name used by the client type.
+		ClientStructDeclaration *codegen.NameDeclaration
+		// ClientInitDeclaration is the package name used by the client constructor.
+		ClientInitDeclaration *codegen.NameDeclaration
+		// ServerConnConfigurerDeclaration names the server WebSocket configuration type.
+		ServerConnConfigurerDeclaration *codegen.NameDeclaration
+		// ServerConnConfigurerInitDeclaration names the server WebSocket configuration constructor.
+		ServerConnConfigurerInitDeclaration *codegen.NameDeclaration
+		// ClientConnConfigurerDeclaration names the client WebSocket configuration type.
+		ClientConnConfigurerDeclaration *codegen.NameDeclaration
+		// ClientConnConfigurerInitDeclaration names the client WebSocket configuration constructor.
+		ClientConnConfigurerInitDeclaration *codegen.NameDeclaration
+		// AppendFSDeclaration names the file system type used for mapped file paths.
+		AppendFSDeclaration *codegen.NameDeclaration
+		// AppendPrefixDeclaration names the function that adds a mapped file path prefix.
+		AppendPrefixDeclaration *codegen.NameDeclaration
 		// ServerBodyAttributeTypes is the list of user types used to
 		// define the request, response and error response type
 		// attributes in the server code.
@@ -95,10 +118,8 @@ type (
 		// clientWireTypes owns declarations emitted in the actual client
 		// package.
 		clientWireTypes *wireTypeCatalog
-		// bodies caches the shaped body attributes derived from the
-		// design expressions during analysis. Shaped bodies are detached
-		// copies: the analyze pass must never write them back onto the
-		// design expression tree.
+		// bodies stores copied request and response fields after applying the HTTP
+		// mappings. Building service data must never change the input design.
 		bodies shapedBodies
 	}
 
@@ -145,17 +166,18 @@ type (
 
 		// server
 
-		// MountHandler is the name of the mount handler function.
-		MountHandler string
-		// HandlerInit is the name of the constructor function for the
-		// http handler function.
-		HandlerInit string
-		// RequestDecoder is the name of the request decoder function.
-		RequestDecoder string
-		// ResponseEncoder is the name of the response encoder function.
-		ResponseEncoder string
-		// ErrorEncoder is the name of the error encoder function.
-		ErrorEncoder string
+		// MountHandlerDeclaration is the package name used by this endpoint's mount function.
+		MountHandlerDeclaration *codegen.NameDeclaration
+		// HandlerInitDeclaration is the package name used by this endpoint's handler constructor.
+		HandlerInitDeclaration *codegen.NameDeclaration
+		// RequestDecoderDeclaration is the package name used by this endpoint's request decoder.
+		RequestDecoderDeclaration *codegen.NameDeclaration
+		// ResponseEncoderDeclaration is the package name used by this endpoint's response encoder.
+		ResponseEncoderDeclaration *codegen.NameDeclaration
+		// ErrorEncoderDeclaration is the package name used by this endpoint's error encoder.
+		ErrorEncoderDeclaration *codegen.NameDeclaration
+		// DiscardStreamDeclaration names the no-output stream used by a mixed-result request.
+		DiscardStreamDeclaration *codegen.NameDeclaration
 		// MultipartRequestDecoder indicates the request decoder for
 		// multipart content type.
 		MultipartRequestDecoder *MultipartData
@@ -173,32 +195,33 @@ type (
 
 		// client
 
-		// ClientStruct is the name of the HTTP client struct.
-		ClientStruct string
+		// ClientStructDeclaration supplies the client type name used by endpoint methods.
+		ClientStructDeclaration *codegen.NameDeclaration
 		// EndpointInit is the name of the constructor function for the
 		// client endpoint.
 		EndpointInit string
 		// RequestInit is the request builder function.
 		RequestInit *InitData
-		// RequestEncoder is the name of the request encoder function.
-		RequestEncoder string
-		// ResponseDecoder is the name of the response decoder function.
-		ResponseDecoder string
+		// RequestEncoderDeclaration is the package name used by this endpoint's request encoder.
+		RequestEncoderDeclaration *codegen.NameDeclaration
+		// ResponseDecoderDeclaration is the package name used by this endpoint's response decoder.
+		ResponseDecoderDeclaration *codegen.NameDeclaration
 		// MultipartRequestEncoder indicates the request encoder for
 		// multipart content type.
 		MultipartRequestEncoder *MultipartData
 		// ClientWebSocket holds the data to render the client struct which
 		// implements the client stream interface.
 		ClientWebSocket *WebSocketData
-		// BuildStreamPayload is the name of the function used to create the
-		// payload for endpoints that use SkipRequestBodyEncodeDecode.
-		BuildStreamPayload string
+		// BuildStreamPayloadDeclaration is the package name used by the streamed request helper.
+		BuildStreamPayloadDeclaration *codegen.NameDeclaration
+		// CLIPayloadDeclaration is the package name used by the command-line payload helper.
+		CLIPayloadDeclaration *codegen.NameDeclaration
 	}
 
 	// FileServerData lists the data needed to generate file servers.
 	FileServerData struct {
-		// MountHandler is the name of the mount handler function.
-		MountHandler string
+		// MountHandlerDeclaration is the package name used by this file server's mount function.
+		MountHandlerDeclaration *codegen.NameDeclaration
 		// RequestPaths is the set of HTTP paths to the server.
 		RequestPaths []string
 		// Root is the root server file path.
@@ -393,10 +416,35 @@ type (
 		// ViewedResult indicates whether the response body type is a
 		// result type.
 		ViewedResult *service.ViewedResultTypeData
+		// ViewedRepresentations lists the body type and constructor used for each
+		// legal result view. A response that supports several views includes its
+		// view name so the client can choose the matching entry.
+		ViewedRepresentations []*ViewedRepresentationData
+	}
+
+	// ViewedRepresentationData describes the HTTP body used for one legal result
+	// view. The server constructor converts the service result into ServerBody.
+	// The client decodes ClientBody and ResultInit rebuilds the service result.
+	ViewedRepresentationData struct {
+		// View is the exact design view name carried on variable-view messages.
+		View string
+		// ResultAttr is the Go field selected by Body("name"). It is empty when
+		// the response body uses the complete projected result.
+		ResultAttr string
+		// ServerBody is the body type encoded by the server for View.
+		ServerBody *TypeData
+		// ClientBody is the body type decoded by the client for View.
+		ClientBody *TypeData
+		// ResultInit rebuilds the projected result from ClientBody.
+		ResultInit *InitData
 	}
 
 	// InitData contains the data required to render a constructor.
 	InitData struct {
+		// Declaration is the generated package function name used by this constructor.
+		Declaration *codegen.NameDeclaration
+		// ClientDeclaration is the client package name for a path function also emitted on the server.
+		ClientDeclaration *codegen.NameDeclaration
 		// Name is the constructor function name.
 		Name string
 		// Description is the function description.
@@ -455,6 +503,8 @@ type (
 		TypeName string
 		// TypeRef is the generated attribute type reference.
 		TypeRef string
+		// ElemTypeRef is the generated element type reference for an array.
+		ElemTypeRef string
 		// Description is the attribute description as defined in the design.
 		Description string
 		// FieldName is the name of the data structure field that should
@@ -472,9 +522,9 @@ type (
 		Validate string
 		// Example is an example attribute value
 		Example any
-		// IsAliased is true if the field type is a user-defined type (alias).
+		// IsAliased is true when the field uses a user-defined type.
 		IsAliased bool
-		// ServiceTypeRef is the service-aware type reference for cross-service resolution.
+		// ServiceTypeRef is the Go type used when the field comes from another service.
 		ServiceTypeRef string
 		// IsTextUnmarshaler is true if the attribute has a struct:field:type meta
 		// whose underlying DSL type is string and the custom type is expected to
@@ -531,7 +581,7 @@ type (
 	// HeaderData describes a HTTP request or response header.
 	HeaderData struct {
 		*Element
-		// CanonicalName is the canonical header key.
+		// CanonicalName is the standard HTTP header spelling.
 		CanonicalName string
 	}
 
@@ -571,6 +621,8 @@ type (
 		ValidateDef string
 		// ValidateRef contains the call to the validation code.
 		ValidateRef string
+		// ValidatorName is the package-level function that runs ValidateDef.
+		ValidatorName string
 		// Example is an example value for the type.
 		Example any
 		// View is the view used to render the (result) type if any.
@@ -583,10 +635,10 @@ type (
 	// MultipartData contains the data needed to render multipart
 	// encoder/decoder.
 	MultipartData struct {
-		// FuncName is the name used to generate function type.
-		FuncName string
-		// InitName is the name of the constructor.
-		InitName string
+		// FuncDeclaration is the package name used by the multipart function type or root helper.
+		FuncDeclaration *codegen.NameDeclaration
+		// InitDeclaration is the package name used by the multipart constructor.
+		InitDeclaration *codegen.NameDeclaration
 		// VarName is the name of the variable referring to the function.
 		VarName string
 		// ServiceName is the name of the service.
@@ -629,8 +681,9 @@ const (
 	cookieElement httpElementKind = "cookie"
 )
 
-// NewServicesData creates a new ServicesData instance for the given service data.
-func NewServicesData(services *service.ServicesData, expressions *expr.HTTPExpr) *ServicesData {
+// newServicesData creates the HTTP service map that Plan.Link fills before it
+// builds any generated file.
+func newServicesData(services *service.ServicesData, expressions *expr.HTTPExpr) *ServicesData {
 	return &ServicesData{
 		ServicesData: services,
 		Expressions:  expressions,
@@ -638,27 +691,10 @@ func NewServicesData(services *service.ServicesData, expressions *expr.HTTPExpr)
 	}
 }
 
-// NewJSONRPCServicesData creates a new ServicesData instance for the JSON-RPC
-// transport: file constructors write under gen/jsonrpc and use the JSON-RPC
-// label in generated file headers.
-func NewJSONRPCServicesData(services *service.ServicesData, expressions *expr.HTTPExpr) *ServicesData {
-	data := NewServicesData(services, expressions)
-	data.jsonrpc = true
-	return data
-}
-
-// Get retrieves the transport data for the service with the given name
-// computing it if needed. It returns nil if there is no service with the given
-// name.
+// Get returns the generated HTTP information for the service with the given
+// name. A missing entry means the design does not expose that service over the
+// protocol handled by this plan.
 func (sds *ServicesData) Get(name string) *ServiceData {
-	if data, ok := sds.HTTPData[name]; ok {
-		return data
-	}
-	svc := sds.Expressions.Service(name)
-	if svc == nil {
-		return nil
-	}
-	sds.HTTPData[name] = sds.analyze(svc)
 	return sds.HTTPData[name]
 }
 
@@ -705,21 +741,38 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	scope.Unique("websocket")
 	// Reserve the service package alias to avoid collision with parameter names in generated code.
 	scope.Unique(svc.PkgName)
-	sd := &ServiceData{
-		Service:          svc,
-		ClientPkgName:    sds.PackageImport(path.Join(sds.GenPkg(), sds.dir(), svc.PathName, "client")).Name,
-		ServerPkgName:    sds.PackageImport(path.Join(sds.GenPkg(), sds.dir(), svc.PathName, "server")).Name,
-		ServerStruct:     "Server",
-		MountPointStruct: "MountPoint",
-		ServerInit:       "New",
-		MountServer:      "Mount",
-		ServerService:    "Service",
-		ClientStruct:     "Client",
-		Scope:            scope,
-		serverWireTypes:  newWireTypeCatalog("c", "v", "websocket", svc.PkgName),
-		clientWireTypes:  newWireTypeCatalog("c", "v", "websocket", svc.PkgName),
+	planned := sds.plannedWireTypes[httpSvc]
+	if planned == nil {
+		panic(fmt.Sprintf("HTTP service %q has no planned generated types", httpSvc.Name()))
 	}
-	sds.collectWireTypes(httpSvc, sd)
+	planned.server.Link()
+	planned.client.Link()
+	symbols := sds.plannedSymbols[httpSvc]
+	if symbols == nil {
+		panic(fmt.Sprintf("HTTP service %q has no package names", httpSvc.Name()))
+	}
+	sd := &ServiceData{
+		Service:                             svc,
+		ClientPkgName:                       sds.PackageImport(path.Join(sds.GenPkg(), sds.dir(), svc.PathName, "client")).Name,
+		ServerPkgName:                       sds.PackageImport(path.Join(sds.GenPkg(), sds.dir(), svc.PathName, "server")).Name,
+		ServerStructDeclaration:             symbols.serverStruct,
+		MountPointStructDeclaration:         symbols.mountPoint,
+		ServerInitDeclaration:               symbols.serverInit,
+		MountServerDeclaration:              symbols.mountServer,
+		ServerService:                       "Service",
+		ClientStructDeclaration:             symbols.clientStruct,
+		ClientInitDeclaration:               symbols.clientInit,
+		ServerConnConfigurerDeclaration:     symbols.serverConfigurer,
+		ServerConnConfigurerInitDeclaration: symbols.serverConfigurerInit,
+		ClientConnConfigurerDeclaration:     symbols.clientConfigurer,
+		ClientConnConfigurerInitDeclaration: symbols.clientConfigurerInit,
+		AppendFSDeclaration:                 symbols.appendFS,
+		AppendPrefixDeclaration:             symbols.appendPrefix,
+		Scope:                               scope,
+		serverWireTypes:                     planned.server,
+		clientWireTypes:                     planned.client,
+		bodies:                              planned.bodies,
+	}
 
 	for _, s := range httpSvc.FileServers {
 		paths := make([]string, len(s.RequestPaths))
@@ -746,14 +799,14 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			}
 		}
 		data := &FileServerData{
-			MountHandler: scope.Unique(fmt.Sprintf("Mount%s", codegen.Goify(s.FilePath, true))),
-			RequestPaths: paths,
-			FilePath:     s.FilePath,
-			IsDir:        s.IsDir(),
-			PathParam:    pp,
-			Redirect:     redirect,
-			VarName:      scope.Unique(codegen.Goify(s.FilePath, true)),
-			ArgName:      scope.Unique(fmt.Sprintf("fileSystem%s", codegen.Goify(s.FilePath, true))),
+			MountHandlerDeclaration: symbols.fileServers[s],
+			RequestPaths:            paths,
+			FilePath:                s.FilePath,
+			IsDir:                   s.IsDir(),
+			PathParam:               pp,
+			Redirect:                redirect,
+			VarName:                 scope.Unique(codegen.Goify(s.FilePath, true)),
+			ArgName:                 scope.Unique(fmt.Sprintf("fileSystem%s", codegen.Goify(s.FilePath, true))),
 		}
 		sd.FileServers = append(sd.FileServers, data)
 	}
@@ -766,6 +819,10 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 			routesCap += len(r.FullPaths())
 		}
 		routes := make([]*RouteData, 0, routesCap)
+		endpointSymbols := symbols.endpoints[httpEndpoint]
+		if endpointSymbols == nil {
+			panic(fmt.Sprintf("HTTP endpoint %q has no package names", httpEndpoint.Name()))
+		}
 		pathCount := 0
 		for _, r := range httpEndpoint.Routes {
 			for _, rpath := range r.FullPaths() {
@@ -776,12 +833,8 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 				{
 					initArgs := make([]*InitArgData, len(params))
 					pathParamsObj := expr.AsObject(httpEndpoint.PathParams().Type)
-					suffix := ""
-					if pathCount > 0 {
-						suffix = strconv.Itoa(pathCount + 1)
-					}
-					pathCount++
-					name := fmt.Sprintf("%s%sPath%s", method.VarName, svc.StructName, suffix)
+					declaration := endpointSymbols.serverPaths[pathCount]
+					name := declaration.Name()
 					for j, arg := range params {
 						patt := pathParamsObj.Attribute(arg)
 						att := makeHTTPType(patt)
@@ -838,14 +891,16 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 						}
 					}
 					init = &InitData{
-						Name:           name,
-						Description:    fmt.Sprintf("%s returns the URL path to the %s service %s HTTP endpoint. ", name, svc.Name, method.Name),
-						ServerArgs:     initArgs,
-						ClientArgs:     clientArgs,
-						ReturnTypeName: "string",
-						ReturnTypeRef:  "string",
-						ServerCode:     buffer.String(),
-						ClientCode:     buffer.String(),
+						Declaration:       declaration,
+						ClientDeclaration: endpointSymbols.clientPaths[pathCount],
+						Name:              name,
+						Description:       fmt.Sprintf("%s returns the URL path to the %s service %s HTTP endpoint. ", name, svc.Name, method.Name),
+						ServerArgs:        initArgs,
+						ClientArgs:        clientArgs,
+						ReturnTypeName:    "string",
+						ReturnTypeRef:     "string",
+						ServerCode:        buffer.String(),
+						ClientCode:        buffer.String(),
 					}
 				}
 
@@ -854,6 +909,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 					Path:     rpath,
 					PathInit: init,
 				})
+				pathCount++
 			}
 		}
 
@@ -886,13 +942,6 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 				}
 			}
 			reqs = append(reqs, &service.RequirementData{Schemes: rs, Scopes: req.Scopes})
-		}
-
-		var requestEncoder string
-		if httpEndpoint.IsJSONRPC() || payload.Request.ClientBody != nil || len(payload.Request.Headers) > 0 || len(payload.Request.QueryParams) > 0 || len(payload.Request.Cookies) > 0 || basch != nil {
-			// JSON-RPC endpoints always need a request encoder to build
-			// the JSON-RPC envelope, even when the payload is empty.
-			requestEncoder = fmt.Sprintf("Encode%sRequest", method.VarName)
 		}
 
 		var requestInit *InitData
@@ -951,59 +1000,75 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		}
 
 		ed := &EndpointData{
-			Method:          method,
-			IsJSONRPC:       httpEndpoint.IsJSONRPC(),
-			ServiceName:     svc.Name,
-			ServiceVarName:  svc.VarName,
-			ServicePkgName:  svc.PkgName,
-			Payload:         payload,
-			Result:          sds.buildResultData(httpEndpoint, sd),
-			Errors:          sds.buildErrorsData(httpEndpoint, sd),
-			HeaderSchemes:   hsch,
-			BodySchemes:     bosch,
-			QuerySchemes:    qsch,
-			BasicScheme:     basch,
-			Routes:          routes,
-			MountHandler:    fmt.Sprintf("Mount%sHandler", method.VarName),
-			HandlerInit:     fmt.Sprintf("New%sHandler", method.VarName),
-			RequestDecoder:  fmt.Sprintf("Decode%sRequest", method.VarName),
-			ResponseEncoder: fmt.Sprintf("Encode%sResponse", method.VarName),
-			ErrorEncoder:    fmt.Sprintf("Encode%sError", method.VarName),
-			ClientStruct:    "Client",
-			EndpointInit:    method.VarName,
-			RequestInit:     requestInit,
-			HasMixedResults: httpEndpoint.MethodExpr.HasMixedResults(),
-			RequestEncoder:  requestEncoder,
-			ResponseDecoder: fmt.Sprintf("Decode%sResponse", method.VarName),
-			Requirements:    reqs,
+			Method:                     method,
+			IsJSONRPC:                  httpEndpoint.IsJSONRPC(),
+			ServiceName:                svc.Name,
+			ServiceVarName:             svc.VarName,
+			ServicePkgName:             svc.PkgName,
+			Payload:                    payload,
+			Result:                     sds.buildResultData(httpEndpoint, sd),
+			Errors:                     sds.buildErrorsData(httpEndpoint, sd),
+			HeaderSchemes:              hsch,
+			BodySchemes:                bosch,
+			QuerySchemes:               qsch,
+			BasicScheme:                basch,
+			Routes:                     routes,
+			MountHandlerDeclaration:    endpointSymbols.mountHandler,
+			HandlerInitDeclaration:     endpointSymbols.handlerInit,
+			RequestDecoderDeclaration:  endpointSymbols.requestDecoder,
+			ResponseEncoderDeclaration: endpointSymbols.responseEncoder,
+			ErrorEncoderDeclaration:    endpointSymbols.errorEncoder,
+			DiscardStreamDeclaration:   endpointSymbols.discardStream,
+			ClientStructDeclaration:    symbols.clientStruct,
+			EndpointInit:               method.VarName,
+			RequestInit:                requestInit,
+			HasMixedResults:            httpEndpoint.MethodExpr.HasMixedResults(),
+			RequestEncoderDeclaration:  endpointSymbols.requestEncoder,
+			ResponseDecoderDeclaration: endpointSymbols.responseDecoder,
+			Requirements:               reqs,
 		}
 		if httpEndpoint.MethodExpr.IsStreaming() {
 			sds.initWebSocketData(ed, httpEndpoint, sd)
 			sds.initSSEData(ed, httpEndpoint, sd)
+			if ed.ServerWebSocket != nil {
+				ed.ServerWebSocket.VarDeclaration = endpointSymbols.serverStream
+				ed.ServerWebSocket.VarName = endpointSymbols.serverStream.Name()
+			}
+			if ed.ClientWebSocket != nil {
+				ed.ClientWebSocket.VarDeclaration = endpointSymbols.clientStream
+				ed.ClientWebSocket.VarName = endpointSymbols.clientStream.Name()
+			}
+			if ed.SSE != nil {
+				ed.SSE.StructDeclaration = endpointSymbols.serverStream
+				ed.SSE.ClientInterfaceDeclaration = endpointSymbols.sseClientInterface
+				ed.SSE.ClientStructDeclaration = endpointSymbols.sseClientStruct
+				ed.SSE.ClientInitDeclaration = endpointSymbols.sseClientInit
+			}
 		}
 
 		if httpEndpoint.MultipartRequest {
 			ed.MultipartRequestDecoder = &MultipartData{
-				FuncName:    fmt.Sprintf("%s%sDecoderFunc", svc.StructName, method.VarName),
-				InitName:    fmt.Sprintf("New%s%sDecoder", svc.StructName, method.VarName),
-				VarName:     fmt.Sprintf("%s%sDecoderFn", svc.VarName, method.VarName),
-				ServiceName: svc.Name,
-				MethodName:  method.Name,
-				Payload:     ed.Payload,
+				FuncDeclaration: endpointSymbols.serverMultipart.functionType,
+				InitDeclaration: endpointSymbols.serverMultipart.constructor,
+				VarName:         fmt.Sprintf("%s%sDecoderFn", svc.VarName, method.VarName),
+				ServiceName:     svc.Name,
+				MethodName:      method.Name,
+				Payload:         ed.Payload,
 			}
 			ed.MultipartRequestEncoder = &MultipartData{
-				FuncName:    fmt.Sprintf("%s%sEncoderFunc", svc.StructName, method.VarName),
-				InitName:    fmt.Sprintf("New%s%sEncoder", svc.StructName, method.VarName),
-				VarName:     fmt.Sprintf("%s%sEncoderFn", svc.VarName, method.VarName),
-				ServiceName: svc.Name,
-				MethodName:  method.Name,
-				Payload:     ed.Payload,
+				FuncDeclaration: endpointSymbols.clientMultipart.functionType,
+				InitDeclaration: endpointSymbols.clientMultipart.constructor,
+				VarName:         fmt.Sprintf("%s%sEncoderFn", svc.VarName, method.VarName),
+				ServiceName:     svc.Name,
+				MethodName:      method.Name,
+				Payload:         ed.Payload,
 			}
 		}
 
 		if httpEndpoint.SkipRequestBodyEncodeDecode {
-			ed.BuildStreamPayload = scope.Unique("Build" + codegen.Goify(method.Name, true) + "StreamPayload")
+			ed.BuildStreamPayloadDeclaration = endpointSymbols.buildStreamPayload
 		}
+		ed.CLIPayloadDeclaration = endpointSymbols.cliPayload
 
 		if httpEndpoint.Redirect != nil {
 			ed.Redirect = &RedirectData{
@@ -1058,33 +1123,43 @@ func (sds *ServicesData) buildRequestAttributeTypes(body *expr.AttributeExpr, da
 	}
 }
 
-// collectWireTypes records every declaration that the service's actual client
-// and server packages may emit, then freezes both catalogs before endpoint
-// analysis builds TypeData or asks for a reference.
-func (sds *ServicesData) collectWireTypes(httpService *expr.HTTPServiceExpr, data *ServiceData) {
+// collectPlannedWireTypes records every request and response type written by
+// the generated client and server packages. NewPlans calls it before Goa
+// assigns package names, and Link later uses these same copied values.
+func collectPlannedWireTypes(httpService *expr.HTTPServiceExpr, planned *plannedWireTypes, servicePlan *service.Plan) {
+	bodies, server, client := &planned.bodies, planned.server, planned.client
 	for _, endpoint := range httpService.HTTPEndpoints {
-		request := expr.DupAtt(data.bodies.request(endpoint))
+		request := expr.DupAtt(bodies.request(endpoint))
 		addMarshalTags(request)
-		data.serverWireTypes.collect(request, wireRequestBody, wireTypePolicy{request: true, pointer: true, validate: true}, "")
-		data.clientWireTypes.collect(request, wireRequestBody, wireTypePolicy{request: true, useDefault: true, validate: true}, "")
-		data.serverWireTypes.collect(request, wireAttribute, wireTypePolicy{request: true, pointer: true, validate: true}, "")
-		data.clientWireTypes.collect(request, wireAttribute, wireTypePolicy{request: true, useDefault: true, validate: true}, "")
+		server.collect(request, wireRequestBody, wireTypePolicy{request: true, pointer: true, validate: true}, "")
+		clientRequest := client.collect(request, wireRequestBody, wireTypePolicy{request: true, useDefault: true, validate: true}, "")
+		if clientRequest != nil && needInit(request.Type) {
+			clientRequest.needsConstructor = true
+		}
+		server.collectChildren(request, wireAttribute, wireTypePolicy{request: true, pointer: true, validate: true})
+		client.collectChildren(request, wireAttribute, wireTypePolicy{request: true, useDefault: true, validate: true})
 		if endpoint.MethodExpr.StreamingPayload.Type != expr.Empty {
-			streaming := expr.DupAtt(data.bodies.streaming(endpoint))
+			streaming := expr.DupAtt(bodies.streaming(endpoint))
 			addMarshalTags(streaming)
-			data.serverWireTypes.collect(streaming, wireStreamPayload, wireTypePolicy{request: true, pointer: true, validate: true}, "")
-			data.clientWireTypes.collect(streaming, wireStreamPayload, wireTypePolicy{request: true, useDefault: true, validate: true}, "")
-			data.serverWireTypes.collect(streaming, wireAttribute, wireTypePolicy{request: true, pointer: true, validate: true}, "")
-			data.clientWireTypes.collect(streaming, wireAttribute, wireTypePolicy{request: true, useDefault: true, validate: true}, "")
+			serverStream := server.collect(streaming, wireStreamPayload, wireTypePolicy{request: true, pointer: true, validate: true}, "")
+			if endpoint.UsesWebSocket() && needInit(endpoint.MethodExpr.StreamingPayload.Type) && serverStream != nil {
+				serverStream.needsConstructor = true
+				planned.streamPayloads[endpoint] = serverStream
+			}
+			clientStream := client.collect(streaming, wireStreamPayload, wireTypePolicy{request: true, useDefault: true, validate: true}, "")
+			if clientStream != nil && needInit(streaming.Type) {
+				clientStream.needsConstructor = true
+			}
+			server.collectChildren(streaming, wireAttribute, wireTypePolicy{request: true, pointer: true, validate: true})
+			client.collectChildren(streaming, wireAttribute, wireTypePolicy{request: true, useDefault: true, validate: true})
 		}
 
-		method := data.Service.Method(endpoint.Name())
-		viewed := method.ViewedResult != nil
+		resultType, viewed := endpoint.MethodExpr.Result.Type.(*expr.ResultTypeExpr)
 		for _, response := range endpoint.Responses {
-			body := data.bodies.response(response)
+			body := bodies.response(response)
 			if !viewed {
-				sds.collectResponseWireType(body, endpoint, data, true, nil)
-				sds.collectResponseWireType(body, endpoint, data, false, nil)
+				collectResponseWireType(body, endpoint, server, true, nil)
+				collectResponseWireType(body, endpoint, client, false, nil)
 				continue
 			}
 			origin := ""
@@ -1094,40 +1169,200 @@ func (sds *ServicesData) collectWireTypes(httpService *expr.HTTPServiceExpr, dat
 			emptyView := ""
 			switch {
 			case origin != "":
-				sds.collectResponseWireType(body, endpoint, data, true, &emptyView)
+				collectResponseWireType(body, endpoint, server, true, &emptyView)
 			case endpoint.MethodExpr.Result.Meta != nil:
 				if view, ok := endpoint.MethodExpr.Result.Meta.Last(expr.ViewMetaKey); ok {
-					sds.collectResponseWireType(body, endpoint, data, true, &view)
+					collectResponseWireType(body, endpoint, server, true, &view)
 				} else {
-					for _, view := range method.ViewedResult.Views {
-						sds.collectResponseWireType(body, endpoint, data, true, &view.Name)
+					for _, view := range resultType.Views {
+						collectResponseWireType(body, endpoint, server, true, &view.Name)
 					}
 				}
 			default:
-				for _, view := range method.ViewedResult.Views {
-					sds.collectResponseWireType(body, endpoint, data, true, &view.Name)
+				for _, view := range resultType.Views {
+					collectResponseWireType(body, endpoint, server, true, &view.Name)
 				}
 			}
-			clientView := clientResponseViewName(endpoint, method)
-			clientBody := body
-			if clientView != "" {
-				clientBody = effectiveClientResponseBody(body, endpoint, method)
+			clientView := clientResponseViewNameExpr(endpoint, resultType)
+			if origin != "" {
+				emptyView := ""
+				collectResponseWireType(body, endpoint, client, false, &emptyView)
+				continue
 			}
-			sds.collectResponseWireType(clientBody, endpoint, data, false, &clientView)
+			if clientView == "" && !endpoint.UsesSSE() && !endpoint.IsJSONRPC() {
+				emptyView := ""
+				collectResponseWireType(body, endpoint, client, false, &emptyView)
+				continue
+			}
+			if clientView != "" {
+				clientBody := effectiveClientResponseBodyForView(body, clientView)
+				collectResponseWireType(clientBody, endpoint, client, false, &clientView)
+				continue
+			}
+			for _, view := range resultType.Views {
+				clientBody := effectiveClientResponseBodyForView(body, view.Name)
+				collectResponseWireType(clientBody, endpoint, client, false, &view.Name)
+			}
 		}
 		for _, transportError := range endpoint.HTTPErrors {
-			body := data.bodies.errorResponse(transportError)
-			sds.collectResponseWireType(body, endpoint, data, true, nil)
-			sds.collectResponseWireType(body, endpoint, data, false, nil)
+			body := bodies.errorResponse(transportError)
+			collectResponseWireType(body, endpoint, server, true, nil)
+			collectResponseWireType(body, endpoint, client, false, nil)
+		}
+		collectPlannedTransforms(endpoint, bodies, servicePlan, server, client)
+	}
+}
+
+// collectPlannedTransforms records each HTTP body conversion in the same order
+// that Link writes it. This lets the generated package name every extra
+// conversion function before Plan.Link.
+func collectPlannedTransforms(endpoint *expr.HTTPEndpointExpr, bodies *shapedBodies, servicePlan *service.Plan, server, client *wireTypeCatalog) {
+	methodName := endpoint.MethodExpr.Name
+	request := expr.DupAtt(bodies.request(endpoint))
+	addMarshalTags(request)
+	payload := endpoint.MethodExpr.Payload
+	if needInit(payload.Type) {
+		if request.Type != expr.Empty {
+			target := payload
+			if origin, ok := request.Meta["origin:attribute"]; ok {
+				target = expr.AsObject(payload.Type).Attribute(origin[0])
+			}
+			client.collectTransform(target, request, "marshal", methodName+" request body")
+			server.collectTransform(request, target, "unmarshal", methodName+" server payload")
+			client.collectTransform(request, target, "marshal", methodName+" command payload")
+		} else if expr.IsArray(payload.Type) || expr.IsMap(payload.Type) {
+			if params := expr.AsObject(endpoint.Params.Type); len(*params) > 0 {
+				server.collectTransform((*params)[0].Attribute, payload, "unmarshal", methodName+" server parameters")
+				client.collectTransform((*params)[0].Attribute, payload, "marshal", methodName+" command parameters")
+			}
 		}
 	}
-	data.serverWireTypes.Freeze()
-	data.clientWireTypes.Freeze()
+
+	result := endpoint.MethodExpr.Result
+	resultType, viewed := result.Type.(*expr.ResultTypeExpr)
+	if viewed {
+		var err error
+		result, err = servicePlan.ProjectedResult(endpoint.MethodExpr)
+		if err != nil {
+			panic(err)
+		}
+	}
+	for _, response := range endpoint.Responses {
+		body := bodies.response(response)
+		origin := ""
+		if value, ok := body.Meta["origin:attribute"]; ok {
+			origin = value[0]
+		}
+		resultAttribute := result
+		if origin != "" {
+			resultAttribute = expr.AsObject(result.Type).Attribute(origin)
+		}
+		var serverViews []*string
+		switch {
+		case !viewed:
+			serverViews = []*string{nil}
+		case origin != "":
+			empty := ""
+			serverViews = []*string{&empty}
+		case endpoint.MethodExpr.Result.Meta != nil:
+			if view, ok := endpoint.MethodExpr.Result.Meta.Last(expr.ViewMetaKey); ok {
+				serverViews = []*string{&view}
+			} else {
+				for index := range resultType.Views {
+					serverViews = append(serverViews, &resultType.Views[index].Name)
+				}
+			}
+		default:
+			for index := range resultType.Views {
+				serverViews = append(serverViews, &resultType.Views[index].Name)
+			}
+		}
+		for _, view := range serverViews {
+			prepared, _ := prepareResponseWireBody(body, view)
+			if prepared.Type != expr.Empty && resultAttribute.Type != expr.Empty && needInit(prepared.Type) {
+				server.collectTransform(resultAttribute, prepared, "marshal", transformResponseOwner(methodName, response, view, "server"))
+			}
+		}
+
+		if !needInit(result.Type) {
+			continue
+		}
+		var clientViews []*string
+		if !viewed {
+			clientViews = []*string{nil}
+		} else {
+			selected := clientResponseViewNameExpr(endpoint, resultType)
+			switch {
+			case origin != "":
+				empty := ""
+				clientViews = []*string{&empty}
+			case selected != "":
+				clientViews = []*string{&selected}
+			case !endpoint.UsesSSE() && !endpoint.IsJSONRPC():
+				empty := ""
+				clientViews = []*string{&empty}
+			default:
+				for index := range resultType.Views {
+					clientViews = append(clientViews, &resultType.Views[index].Name)
+				}
+			}
+		}
+		for _, view := range clientViews {
+			clientBody := body
+			if view != nil && *view != "" {
+				clientBody = effectiveClientResponseBodyForView(body, *view)
+			}
+			prepared, _ := prepareResponseWireBody(clientBody, view)
+			if prepared.Type != expr.Empty {
+				client.collectTransform(prepared, resultAttribute, "unmarshal", transformResponseOwner(methodName, response, view, "client"))
+			}
+		}
+		if body.Type == expr.Empty && (expr.IsArray(result.Type) || expr.IsMap(result.Type)) {
+			if params := expr.AsObject(endpoint.QueryParams().Type); len(*params) > 0 {
+				client.collectTransform((*params)[0].Attribute, result, "unmarshal", transformResponseOwner(methodName, response, nil, "client parameters"))
+			}
+		}
+	}
+
+	for _, transportError := range endpoint.HTTPErrors {
+		body, _ := prepareResponseWireBody(bodies.errorResponse(transportError), nil)
+		target := endpoint.MethodExpr.Error(transportError.Name).AttributeExpr
+		if origin, ok := body.Meta["origin:attribute"]; ok {
+			target = expr.AsObject(target.Type).Attribute(origin[0])
+		}
+		if body.Type != expr.Empty && needInit(transportError.Type) {
+			server.collectTransform(target, body, "marshal", methodName+" server error "+transportError.Name)
+			client.collectTransform(body, target, "unmarshal", methodName+" client error "+transportError.Name)
+		} else if body.Type == expr.Empty && (expr.IsArray(transportError.Type) || expr.IsMap(transportError.Type)) {
+			if params := expr.AsObject(endpoint.QueryParams().Type); len(*params) > 0 {
+				client.collectTransform((*params)[0].Attribute, endpoint.MethodExpr.Error(transportError.Name).AttributeExpr, "unmarshal", methodName+" client error parameters "+transportError.Name)
+			}
+		}
+	}
+
+	if endpoint.MethodExpr.StreamingPayload.Type != expr.Empty && endpoint.UsesWebSocket() {
+		body := expr.DupAtt(bodies.streaming(endpoint))
+		addMarshalTags(body)
+		if body.Type != expr.Empty && needInit(endpoint.MethodExpr.StreamingPayload.Type) {
+			server.collectTransform(body, endpoint.MethodExpr.StreamingPayload, "marshal", methodName+" server stream payload")
+			client.collectTransform(endpoint.MethodExpr.StreamingPayload, body, "marshal", methodName+" client stream body")
+		}
+	}
+}
+
+// transformResponseOwner returns the design values that distinguish helper
+// functions for two responses with the same generated Go types.
+func transformResponseOwner(method string, response *expr.HTTPResponseExpr, view *string, side string) string {
+	viewName := ""
+	if view != nil {
+		viewName = *view
+	}
+	return fmt.Sprintf("%s %s response %d %s %s %s", method, side, response.StatusCode, response.Tag[0], response.Tag[1], viewName)
 }
 
 // collectResponseWireType applies the selected view and records response body
 // declarations using the same policy later consumed by buildResponseBodyType.
-func (sds *ServicesData) collectResponseWireType(body *expr.AttributeExpr, endpoint *expr.HTTPEndpointExpr, data *ServiceData, server bool, view *string) {
+func collectResponseWireType(body *expr.AttributeExpr, endpoint *expr.HTTPEndpointExpr, catalog *wireTypeCatalog, server bool, view *string) {
 	body, viewName := prepareResponseWireBody(body, view)
 	policy := wireTypePolicy{pointer: !server, useDefault: server, validate: !server && view == nil, view: viewName}
 	preferred := ""
@@ -1136,9 +1371,12 @@ func (sds *ServicesData) collectResponseWireType(body *expr.AttributeExpr, endpo
 			preferred = codegen.Goify(endpoint.Name(), true) + "ResponseBody"
 		}
 	}
-	data.wireTypes(server).collect(body, wireResponseBody, policy, preferred)
+	record := catalog.collect(body, wireResponseBody, policy, preferred)
+	if server && record != nil && needInit(body.Type) {
+		record.needsConstructor = true
+	}
 	attributePolicy := wireTypePolicy{pointer: !server, useDefault: server, validate: !server}
-	data.wireTypes(server).collect(body, wireAttribute, attributePolicy, "")
+	catalog.collectChildren(body, wireAttribute, attributePolicy)
 }
 
 // prepareResponseWireBody returns the detached, projected, and tagged shape
@@ -1299,8 +1537,8 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		svc          = sd.Service
 		body         = httpBody.Type
 		ep           = svc.Method(e.MethodExpr.Name)
-		httpsvrctx   = httpContext(sd.serverWireTypes.scope, true, true)
-		httpclictx   = httpContext(sd.clientWireTypes.scope, true, false)
+		httpsvrctx   = wireHTTPContext(sd.serverWireTypes, sd.serverWireTypes.scope, true, true)
+		httpclictx   = wireHTTPContext(sd.clientWireTypes, sd.clientWireTypes.scope, true, false)
 		svcsvrctx    = sds.serviceTypeContext(sd, "server").Enter(payload)
 		svcclictx    = sds.serviceTypeContext(sd, "client").Enter(payload)
 		payloadOwner = expr.MethodPayloadExampleIdentity(e.MethodExpr)
@@ -1426,20 +1664,11 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			serverArgs []*InitArgData
 		)
 		argsCap := len(request.PathParams) + len(request.QueryParams) + len(request.Headers) + len(request.Cookies)
-		n := codegen.Goify(ep.Name, true)
-		p := codegen.Goify(ep.Payload, true)
-		// Raw payload object has type name prefixed with endpoint name. No need to
-		// prefix the type name again.
-		if strings.HasPrefix(p, n) {
-			if ep.PayloadDeclaration != nil {
-				p = ep.PayloadDeclaration.Name()
-			} else {
-				p = svc.Scope.HashedUnique(payload.Type, p)
-			}
-			name = fmt.Sprintf("New%s", p)
-		} else {
-			name = fmt.Sprintf("New%s%s", n, p)
+		declaration := sds.payloadConstructors[e]
+		if declaration == nil {
+			panic(fmt.Sprintf("payload constructor for %s.%s was not submitted", svc.Name, e.Name()))
 		}
+		name = declaration.Name()
 		desc = fmt.Sprintf("%s builds a %s service %s endpoint payload.",
 			name, svc.Name, e.Name())
 		isObject = expr.IsObject(payload.Type)
@@ -1447,9 +1676,27 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		clientArgs = make([]*InitArgData, 0, argsCap+1)
 		if body != expr.Empty {
 			var (
-				svcode string
-				cvcode string
+				svcode         string
+				cvcode         string
+				serverTypeName string
+				serverTypeRef  string
+				clientTypeName string
+				clientTypeRef  string
 			)
+			if record := sd.serverWireTypes.lookupUser(serverHTTPBody, wireRequestBody, wireTypePolicy{request: true, pointer: true, validate: true}); record != nil {
+				serverTypeName = record.name
+				serverTypeRef = record.ref
+			} else {
+				serverTypeName = httpsvrctx.Scope.Name(serverHTTPBody, "", httpsvrctx.Pointer, httpsvrctx.UseDefault)
+				serverTypeRef = httpsvrctx.Scope.Ref(serverHTTPBody, "")
+			}
+			if record := sd.clientWireTypes.lookupUser(clientHTTPBody, wireRequestBody, wireTypePolicy{request: true, useDefault: true, validate: true}); record != nil {
+				clientTypeName = record.name
+				clientTypeRef = record.ref
+			} else {
+				clientTypeName = httpclictx.Scope.Name(clientHTTPBody, "", httpclictx.Pointer, httpclictx.UseDefault)
+				clientTypeRef = httpclictx.Scope.Ref(clientHTTPBody, "")
+			}
 			if ut, ok := serverHTTPBody.Type.(expr.UserType); ok {
 				if val := ut.Attribute().Validation; val != nil {
 					svcode = codegen.ValidationCode(ut.Attribute(), ut, httpsvrctx, true, expr.IsAlias(ut), false, "body")
@@ -1465,8 +1712,8 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 				AttributeData: &AttributeData{
 					Name:     "body",
 					VarName:  "body",
-					TypeName: sd.serverWireTypes.scope.GoTypeName(serverHTTPBody),
-					TypeRef:  sd.serverWireTypes.scope.GoTypeRef(serverHTTPBody),
+					TypeName: serverTypeName,
+					TypeRef:  serverTypeRef,
 					Type:     serverHTTPBody.Type,
 					Required: true,
 					Example:  sds.Example(httpBody, bodyOwner),
@@ -1478,8 +1725,8 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 				AttributeData: &AttributeData{
 					Name:     "body",
 					VarName:  "body",
-					TypeName: sd.clientWireTypes.scope.GoTypeNameWithDefaults(clientHTTPBody),
-					TypeRef:  sd.clientWireTypes.scope.GoTypeRefWithDefaults(clientHTTPBody),
+					TypeName: clientTypeName,
+					TypeRef:  clientTypeRef,
 					Type:     clientHTTPBody.Type,
 					Required: true,
 					Example:  sds.Example(httpBody, bodyOwner),
@@ -1601,8 +1848,8 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			var (
 				helpers []*codegen.TransformFunctionData
 			)
-			transformctx := httpContext(sd.serverWireTypes.scope.Fork(), true, true)
-			serverCode, helpers, err = unmarshal(serverHTTPBody, pAtt, "body", transformctx, svcsvrctx)
+			transformctx := wireHTTPContext(sd.serverWireTypes, sd.serverWireTypes.scope, true, true)
+			serverCode, helpers, err = sd.serverWireTypes.renderTransform(serverHTTPBody, pAtt, "body", "v", "unmarshal", transformctx, svcsvrctx)
 			if err == nil {
 				sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
 			}
@@ -1610,21 +1857,21 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			// body is used by the CLI tool to build the payload given to the
 			// client endpoint. It differs because the body type there does not
 			// use pointers for all fields (no need to validate).
-			transformctx = httpContext(sd.clientWireTypes.scope.Fork(), true, false)
-			clientCode, helpers, err = marshal(clientHTTPBody, pAtt, "body", "v", transformctx, svcclictx)
+			transformctx = wireHTTPContext(sd.clientWireTypes, sd.clientWireTypes.scope, true, false)
+			clientCode, helpers, err = sd.clientWireTypes.renderTransform(clientHTTPBody, pAtt, "body", "v", "marshal", transformctx, svcclictx)
 			if err == nil {
 				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 			}
 		} else if expr.IsArray(payload.Type) || expr.IsMap(payload.Type) {
 			if params := expr.AsObject(e.Params.Type); len(*params) > 0 {
 				var helpers []*codegen.TransformFunctionData
-				transformctx := httpContext(sd.serverWireTypes.scope.Fork(), true, true)
-				serverCode, helpers, err = unmarshal((*params)[0].Attribute, payload, codegen.Goify((*params)[0].Name, false), transformctx, svcsvrctx)
+				transformctx := wireHTTPContext(sd.serverWireTypes, sd.serverWireTypes.scope, true, true)
+				serverCode, helpers, err = sd.serverWireTypes.renderTransform((*params)[0].Attribute, payload, codegen.Goify((*params)[0].Name, false), "v", "unmarshal", transformctx, svcsvrctx)
 				if err == nil {
 					sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
 				}
-				transformctx = httpContext(sd.clientWireTypes.scope.Fork(), true, false)
-				clientCode, helpers, err = marshal((*params)[0].Attribute, payload, codegen.Goify((*params)[0].Name, false), "v", transformctx, svcclictx)
+				transformctx = wireHTTPContext(sd.clientWireTypes, sd.clientWireTypes.scope, true, false)
+				clientCode, helpers, err = sd.clientWireTypes.renderTransform((*params)[0].Attribute, payload, codegen.Goify((*params)[0].Name, false), "v", "marshal", transformctx, svcclictx)
 				if err == nil {
 					sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 				}
@@ -1634,6 +1881,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			panic(err) // bug
 		}
 		init = &InitData{
+			Declaration:              declaration,
 			Name:                     name,
 			Description:              desc,
 			ServerArgs:               serverArgs,
@@ -1766,11 +2014,10 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 	var (
 		responses []*ResponseData
 
-		svc        = sd.Service
-		md         = svc.Method(e.Name())
-		httpclictx = httpContext(sd.clientWireTypes.scope, false, false)
-		scope      = svc.Scope
-		svcctx     = sds.serviceTypeContext(sd, "client").Enter(result)
+		svc    = sd.Service
+		md     = svc.Method(e.Name())
+		scope  = svc.Scope
+		svcctx = sds.serviceTypeContext(sd, "client").Enter(result)
 	)
 	{
 		if viewed {
@@ -1845,12 +2092,14 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 						}
 					}
 					if clientView != "" {
-						clientRespBody = effectiveClientResponseBody(respBody, e, md)
+						clientRespBody = effectiveClientResponseBodyForView(respBody, clientView)
 						clientBodyData = sds.buildResponseBodyType(respBody, result, e, false, &clientView, sd, resultOwner, bodyOwner)
 						clientBodyView = &clientView
-					} else {
+					} else if origin != "" || !e.UsesSSE() && !e.IsJSONRPC() {
 						clientBodyData = sds.buildResponseBodyType(respBody, result, e, false, &vname, sd, resultOwner, bodyOwner)
 						clientBodyView = &vname
+					} else {
+						clientRespBody = &expr.AttributeExpr{Type: expr.Empty}
 					}
 				} else {
 					if sbd := sds.buildResponseBodyType(respBody, result, e, true, nil, sd, resultOwner, bodyOwner); sbd != nil {
@@ -1858,7 +2107,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 					}
 					clientBodyData = sds.buildResponseBodyType(respBody, result, e, false, nil, sd, resultOwner, bodyOwner)
 				}
-				if clientRespBody.Type != expr.Empty {
+				if clientBodyData != nil && clientRespBody.Type != expr.Empty {
 					var viewName string
 					clientRespBody, viewName = prepareResponseWireBody(clientRespBody, clientBodyView)
 					policy := wireTypePolicy{pointer: true, validate: clientBodyView == nil, view: viewName}
@@ -1876,107 +2125,75 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 						break
 					}
 				}
-				if needInit(result.Type) {
-					// generate constructor function to transform response body,
-					// headers and cookies into the method result type
-					var (
-						name       string
-						desc       string
-						code       string
-						tname      string
-						tref       string
-						err        error
-						pointer    bool
-						clientArgs []*InitArgData
-						helpers    []*codegen.TransformFunctionData
+				variableWire := viewed && origin == "" && clientResponseViewName(e, md) == "" && (e.UsesSSE() || e.IsJSONRPC())
+				if needInit(result.Type) && !variableWire {
+					init = sds.buildResponseResultInit(
+						e, resp, result, resAttr, clientRespBody, origin,
+						headersData, cookiesData, sd, "", clientBodyData,
 					)
-					{
-						tname = svcctx.Scope.Name(result, svcctx.Pkg(result), false, true)
-						tref = svcctx.Scope.Ref(result, svcctx.Pkg(result))
-						status := codegen.Goify(http.StatusText(resp.StatusCode), true)
-						n := codegen.Goify(md.Name, true)
-						r := codegen.Goify(md.Result, true)
-						// Raw result object has type name prefixed with endpoint name. No need to
-						// prefix the type name again.
-						if strings.HasPrefix(r, n) {
-							if md.ResultDeclaration != nil {
-								r = md.ResultDeclaration.Name()
-							} else {
-								r = scope.HashedUnique(result.Type, r)
-							}
-							name = fmt.Sprintf("New%s%s", r, status)
-						} else {
-							name = fmt.Sprintf("New%s%s%s", n, r, status)
+				}
+
+				var representations []*ViewedRepresentationData
+				if viewed && (e.UsesSSE() || e.IsJSONRPC()) {
+					clientView := clientResponseViewName(e, md)
+					if origin != "" {
+						views := md.ViewedResult.Views
+						if clientView != "" {
+							views = []*service.ViewData{{Name: clientView}}
 						}
-						desc = fmt.Sprintf("%s builds a %q service %q endpoint result from a HTTP %q response.", name, svc.Name, e.Name(), status)
-						if clientRespBody.Type != expr.Empty {
-							if origin != "" {
-								pointer = result.IsPrimitivePointer(origin, true)
+						for _, view := range views {
+							representation := &ViewedRepresentationData{
+								View:       view.Name,
+								ResultAttr: codegen.Goify(origin, true),
+								ClientBody: clientBodyData,
+								ResultInit: init,
 							}
-							ref := "body"
-							if expr.IsObject(clientRespBody.Type) {
-								ref = "&body"
-								pointer = false
+							if len(serverBodyData) > 0 {
+								representation.ServerBody = serverBodyData[0]
 							}
-							var vcode string
-							if ut, ok := clientRespBody.Type.(expr.UserType); ok {
-								if val := ut.Attribute().Validation; val != nil {
-									vcode = codegen.ValidationCode(ut.Attribute(), ut, httpclictx, true, expr.IsAlias(ut), false, "body")
-								}
-							}
-							clientArgs = []*InitArgData{{
-								Ref: ref,
-								AttributeData: &AttributeData{
-									Name:     "body",
-									VarName:  "body",
-									TypeRef:  sd.clientWireTypes.scope.GoTypeRef(clientRespBody),
-									Validate: vcode,
-								},
-							}}
-							// If the method result is a
-							// * result type - we unmarshal the client response body to the
-							//   corresponding type in the views package so that view-specific
-							//   validation logic can be applied.
-							// * user type - we unmarshal the client response body to the
-							//   corresponding type in the service package after validating the
-							//   response body. Here, the transformation code must
-							//   rely on the fact that the required attributes are
-							//   set in the response body (otherwise validation
-							//   would fail).
-							transformctx := httpContext(sd.clientWireTypes.scope.Fork(), false, false)
-							code, helpers, err = unmarshal(clientRespBody, resAttr, "body", transformctx, svcctx)
-							if err == nil {
-								sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
-							}
-						} else if expr.IsArray(result.Type) || expr.IsMap(result.Type) {
-							if params := expr.AsObject(e.QueryParams().Type); len(*params) > 0 {
-								code, helpers, err = unmarshal((*params)[0].Attribute, result, codegen.Goify((*params)[0].Name, false), httpclictx, svcctx)
-								if err == nil {
-									sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
-								}
-							}
+							representations = append(representations, representation)
 						}
-						if err != nil {
-							panic(err) // bug
+					} else {
+						if clientView != "" {
+							representation := &ViewedRepresentationData{
+								View:       clientView,
+								ResultAttr: codegen.Goify(origin, true),
+								ClientBody: clientBodyData,
+								ResultInit: init,
+							}
+							if len(serverBodyData) > 0 {
+								representation.ServerBody = viewedServerBody(serverBodyData, clientView)
+							}
+							representations = append(representations, representation)
 						}
-						for _, h := range headersData {
-							clientArgs = append(clientArgs, resultInitArg(h.Element))
+						for _, view := range md.ViewedResult.Views {
+							if clientView != "" {
+								break
+							}
+							viewName := view.Name
+							body := effectiveClientResponseBodyForView(respBody, viewName)
+							clientBody := sds.buildResponseBodyType(
+								respBody, result, e, false, &viewName, sd, resultOwner, bodyOwner,
+							)
+							if body.Type != expr.Empty {
+								policy := wireTypePolicy{pointer: true, view: viewName}
+								sd.clientWireTypes.applyNames(body, wireResponseBody, policy)
+							}
+							resultInit := sds.buildResponseResultInit(
+								e, resp, result, resAttr, body, origin,
+								headersData, cookiesData, sd, viewName, clientBody,
+							)
+							representation := &ViewedRepresentationData{
+								View:       viewName,
+								ResultAttr: codegen.Goify(origin, true),
+								ClientBody: clientBody,
+								ResultInit: resultInit,
+							}
+							if len(serverBodyData) > 0 {
+								representation.ServerBody = viewedServerBody(serverBodyData, viewName)
+							}
+							representations = append(representations, representation)
 						}
-						for _, c := range cookiesData {
-							clientArgs = append(clientArgs, resultInitArg(c.Element))
-						}
-					}
-					init = &InitData{
-						Name:                     name,
-						Description:              desc,
-						ClientArgs:               clientArgs,
-						ReturnTypeName:           tname,
-						ReturnTypeRef:            tref,
-						ReturnIsStruct:           expr.IsObject(result.Type),
-						ReturnTypeAttribute:      codegen.Goify(origin, true),
-						ReturnTypePkg:            svcctx.Pkg(result),
-						ReturnIsPrimitivePointer: pointer,
-						ClientCode:               code,
 					}
 				}
 
@@ -1991,20 +2208,21 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 					tagPtr = viewed || result.IsPrimitivePointer(resp.Tag[0], true)
 				}
 				responses = append(responses, &ResponseData{
-					StatusCode:   statusCodeToHTTPConst(resp.StatusCode),
-					Description:  resp.Description,
-					Headers:      headersData,
-					Cookies:      cookiesData,
-					ContentType:  resp.ContentType,
-					ServerBody:   serverBodyData,
-					ClientBody:   clientBodyData,
-					ResultInit:   init,
-					TagName:      tagName,
-					TagValue:     tagVal,
-					TagPointer:   tagPtr,
-					MustValidate: mustValidate,
-					ResultAttr:   codegen.Goify(origin, true),
-					ViewedResult: md.ViewedResult,
+					StatusCode:            statusCodeToHTTPConst(resp.StatusCode),
+					Description:           resp.Description,
+					Headers:               headersData,
+					Cookies:               cookiesData,
+					ContentType:           resp.ContentType,
+					ServerBody:            serverBodyData,
+					ClientBody:            clientBodyData,
+					ResultInit:            init,
+					TagName:               tagName,
+					TagValue:              tagVal,
+					TagPointer:            tagPtr,
+					MustValidate:          mustValidate,
+					ResultAttr:            codegen.Goify(origin, true),
+					ViewedResult:          md.ViewedResult,
+					ViewedRepresentations: representations,
 				})
 			}
 		}
@@ -2017,14 +2235,109 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 	return responses
 }
 
+// buildResponseResultInit builds the data used to write one client result
+// function. It uses the name chosen by NewPlans and converts the decoded HTTP
+// body, headers, and cookies into the method result.
+func (sds *ServicesData) buildResponseResultInit(e *expr.HTTPEndpointExpr, resp *expr.HTTPResponseExpr, result, resAttr, clientBody *expr.AttributeExpr, origin string, headers []*HeaderData, cookies []*CookieData, sd *ServiceData, view string, bodyType *TypeData) *InitData {
+	var (
+		svc        = sd.Service
+		md         = svc.Method(e.Name())
+		httpclictx = wireHTTPContext(sd.clientWireTypes, sd.clientWireTypes.scope, false, false)
+		svcctx     = sds.serviceTypeContext(sd, "client").Enter(result)
+	)
+	if md.ViewedResult != nil {
+		svcctx = sds.viewTypeContext(sd, "client").Enter(result)
+	}
+	tname := svcctx.Scope.Name(result, svcctx.Pkg(result), false, true)
+	tref := svcctx.Scope.Ref(result, svcctx.Pkg(result))
+	status := codegen.Goify(http.StatusText(resp.StatusCode), true)
+	declaration := sds.viewedResultConstructors[viewedConstructorKey{endpoint: e, response: resp, view: view}]
+	if declaration == nil {
+		panic(fmt.Sprintf("result constructor for %s.%s view %q was not submitted", svc.Name, e.Name(), view))
+	}
+	name := declaration.Name()
+	desc := fmt.Sprintf("%s builds a %q service %q endpoint result from a HTTP %q response.", name, svc.Name, e.Name(), status)
+
+	var (
+		code       string
+		pointer    bool
+		clientArgs []*InitArgData
+	)
+	if clientBody.Type != expr.Empty {
+		if origin != "" {
+			pointer = svcctx.IsPrimitivePointer(origin, result)
+		}
+		ref := "body"
+		if expr.IsObject(clientBody.Type) {
+			ref = "&body"
+			pointer = false
+		}
+		var validate string
+		if ut, ok := clientBody.Type.(expr.UserType); ok && ut.Attribute().Validation != nil {
+			validate = codegen.ValidationCode(ut.Attribute(), ut, httpclictx, true, expr.IsAlias(ut), false, "body")
+		}
+		bodyTypeRef := bodyType.Ref
+		if bodyTypeRef == "" {
+			bodyTypeRef = bodyType.VarName
+		}
+		clientArgs = []*InitArgData{{
+			Ref: ref,
+			AttributeData: &AttributeData{
+				Name:     "body",
+				VarName:  "body",
+				TypeRef:  bodyTypeRef,
+				Validate: validate,
+			},
+		}}
+		transformctx := wireHTTPContext(sd.clientWireTypes, sd.clientWireTypes.scope, false, false)
+		transformctx.Scope = sd.clientWireTypes.resolver(sd.clientWireTypes.scope, wireTypePolicy{
+			pointer: transformctx.Pointer,
+			view:    bodyType.View,
+		})
+		converted, helpers, err := sd.clientWireTypes.renderTransform(clientBody, resAttr, "body", "v", "unmarshal", transformctx, svcctx)
+		if err != nil {
+			panic(err) // bug
+		}
+		code = converted
+		sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
+	} else if expr.IsArray(result.Type) || expr.IsMap(result.Type) {
+		if params := expr.AsObject(e.QueryParams().Type); len(*params) > 0 {
+			converted, helpers, err := sd.clientWireTypes.renderTransform((*params)[0].Attribute, result, codegen.Goify((*params)[0].Name, false), "v", "unmarshal", httpclictx, svcctx)
+			if err != nil {
+				panic(err) // bug
+			}
+			code = converted
+			sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
+		}
+	}
+	for _, header := range headers {
+		clientArgs = append(clientArgs, resultInitArg(header.Element))
+	}
+	for _, cookie := range cookies {
+		clientArgs = append(clientArgs, resultInitArg(cookie.Element))
+	}
+	return &InitData{
+		Declaration:              declaration,
+		Name:                     name,
+		Description:              desc,
+		ClientArgs:               clientArgs,
+		ReturnTypeName:           tname,
+		ReturnTypeRef:            tref,
+		ReturnIsStruct:           expr.IsObject(result.Type),
+		ReturnTypeAttribute:      codegen.Goify(origin, true),
+		ReturnTypePkg:            svcctx.Pkg(result),
+		ReturnIsPrimitivePointer: pointer,
+		ClientCode:               code,
+	}
+}
+
 // buildErrorsData builds the error data for all the error responses in the
 // endpoint expression. The response headers, cookies and body for each response
 // are inferred from the method's error expression if not specified explicitly.
 func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceData) []*ErrorGroupData {
 	var (
 		svc        = sd.Service
-		ep         = svc.Method(e.MethodExpr.Name)
-		httpclictx = httpContext(sd.clientWireTypes.scope, false, false)
+		httpclictx = wireHTTPContext(sd.clientWireTypes, sd.clientWireTypes.scope, false, false)
 	)
 
 	data := make(map[string][]*ErrorData)
@@ -2048,7 +2361,11 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 				isObject bool
 				args     []*InitArgData
 			)
-			name = fmt.Sprintf("New%s%s", codegen.Goify(ep.Name, true), codegen.Goify(v.ErrorExpr.Name, true))
+			declaration := sds.errorConstructors[v]
+			if declaration == nil {
+				panic(fmt.Sprintf("error constructor for %s.%s error %q was not submitted", svc.Name, e.Name(), v.Name))
+			}
+			name = declaration.Name()
 			desc = fmt.Sprintf("%s builds a %s service %s endpoint %s error.",
 				name, svc.Name, e.Name(), v.ErrorExpr.Name)
 			headers := sds.extractHeaders(v.Response.Headers, errorAttribute, errctx, sd.Scope, errorOwner)
@@ -2071,7 +2388,7 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 				if bodyRecord != nil {
 					bodyTypeRef = bodyRecord.ref
 				} else {
-					bodyTypeRef = sd.clientWireTypes.scope.GoTypeRef(respBody)
+					bodyTypeRef = httpclictx.Scope.Ref(respBody, "")
 				}
 				args = append(args, &InitArgData{
 					Ref:           ref,
@@ -2100,15 +2417,15 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 				}
 
 				var helpers []*codegen.TransformFunctionData
-				transformctx := httpContext(sd.clientWireTypes.scope.Fork(), false, false)
-				code, helpers, err = unmarshal(respBody, eAtt, "body", transformctx, errctx)
+				transformctx := wireHTTPContext(sd.clientWireTypes, sd.clientWireTypes.scope, false, false)
+				code, helpers, err = sd.clientWireTypes.renderTransform(respBody, eAtt, "body", "v", "unmarshal", transformctx, errctx)
 				if err == nil {
 					sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 				}
 			} else if expr.IsArray(v.Type) || expr.IsMap(v.Type) {
 				if params := expr.AsObject(e.QueryParams().Type); len(*params) > 0 {
 					var helpers []*codegen.TransformFunctionData
-					code, helpers, err = unmarshal((*params)[0].Attribute, errorAttribute, codegen.Goify((*params)[0].Name, false), httpclictx, errctx)
+					code, helpers, err = sd.clientWireTypes.renderTransform((*params)[0].Attribute, errorAttribute, codegen.Goify((*params)[0].Name, false), "v", "unmarshal", httpclictx, errctx)
 					if err == nil {
 						sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 					}
@@ -2119,6 +2436,7 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 			}
 
 			init = &InitData{
+				Declaration:         declaration,
 				Name:                name,
 				Description:         desc,
 				ClientArgs:          args,
@@ -2253,7 +2571,7 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 		svc     = sd.Service
 		catalog = sd.wireTypes(svr)
 		policy  = wireTypePolicy{request: true, pointer: svr, useDefault: !svr, validate: true}
-		httpctx = httpContext(catalog.scope, true, svr)
+		httpctx = wireHTTPContext(catalog, catalog.scope, true, svr)
 		side    = "client"
 	)
 	if svr {
@@ -2265,14 +2583,15 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 	catalog.applyNames(body, wireRequestBody, policy)
 	name = body.Type.Name()
 	if record != nil {
+		name = record.name
 		ref = record.ref
 	} else {
-		ref = catalog.scope.GoTypeRef(body)
+		ref = httpctx.Scope.Ref(body, "")
 	}
 
 	if ut, ok := body.Type.(expr.UserType); ok {
 		varname = record.name
-		def = goTypeDef(catalog.scope.Fork(), ut.Attribute(), svr, !svr)
+		def = goTypeDefForContext(ut.Attribute(), httpctx)
 		desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP request body.",
 			varname, svc.Name, e.Name())
 		if svr {
@@ -2284,7 +2603,9 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 		}
 	} else {
 		// Generate validation code first because inline struct validation is removed.
-		ctx := codegen.NewAttributeContext(!expr.IsPrimitive(body.Type), false, !svr, "", catalog.scope)
+		ctx := wireHTTPContext(catalog, catalog.scope, true, svr)
+		ctx.Pointer = !expr.IsPrimitive(body.Type)
+		ctx.UseDefault = !svr
 		validateRef = codegen.ValidationCode(body, nil, ctx, true, expr.IsAlias(body.Type), false, "body")
 		if svr && expr.IsObject(body.Type) {
 			// Body is an explicit object described in the design and in
@@ -2293,7 +2614,7 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 			// generating the server body type pre-validation.
 			body.Validation = nil
 		}
-		varname = catalog.scope.GoTypeRef(body)
+		varname = httpctx.Scope.Ref(body, "")
 		desc = body.Description
 	}
 	var init *InitData
@@ -2310,7 +2631,11 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 			svc       = sd.Service
 		)
 		{
-			name = fmt.Sprintf("New%s", codegen.Goify(catalog.scope.GoTypeName(body), true))
+			if record != nil {
+				name = fmt.Sprintf("New%s", record.name)
+			} else {
+				name = fmt.Sprintf("New%s", codegen.Goify(httpctx.Scope.Name(body, "", httpctx.Pointer, httpctx.UseDefault), true))
+			}
 			desc = fmt.Sprintf("%s builds the HTTP request body from the payload of the %q endpoint of the %q service.",
 				name, e.Name(), svc.Name)
 			src := sourceVar
@@ -2323,8 +2648,8 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 				srcAtt = srcObj.Attribute(origin)
 				src += "." + codegen.Goify(origin, true)
 			}
-			transformctx := httpContext(catalog.scope.Fork(), true, svr)
-			code, helpers, err = marshal(srcAtt, body, src, "body", svcctx, transformctx)
+			transformctx := wireHTTPContext(catalog, catalog.scope, true, svr)
+			code, helpers, err = catalog.renderTransform(srcAtt, body, src, "body", "marshal", svcctx, transformctx)
 			if err != nil {
 				panic(err) // bug
 			}
@@ -2402,9 +2727,8 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, e 
 	svcctx := sds.serviceTypeContext(sd, side).Enter(att)
 	catalog := sd.wireTypes(svr)
 	policy := wireTypePolicy{pointer: !svr, useDefault: svr, validate: !svr && view == nil, view: viewName}
-	// Build nested declarations before package names are applied to body. Each
-	// nested lookup consumes the collected authored shape, then applies the
-	// frozen names to its own detached occurrence.
+	// Add each nested named field before body receives its chosen Go names. This
+	// keeps each copied request or response field tied to its own definition.
 	topLevel, _ := body.Type.(expr.UserType)
 	collectUserTypes(body.Type, func(ut expr.UserType) {
 		if topLevel != nil && ut == topLevel {
@@ -2420,19 +2744,20 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, e 
 	})
 	record := catalog.lookupUser(body, wireResponseBody, policy)
 	catalog.applyNames(body, wireResponseBody, policy)
-	httpctx := httpContext(catalog.scope, false, svr)
+	httpctx := wireHTTPContext(catalog, catalog.scope, false, svr)
 	name = body.Type.Name()
 	if record != nil {
+		name = record.name
 		ref = record.ref
 	} else {
-		ref = catalog.scope.GoTypeRef(body)
+		ref = httpctx.Scope.Ref(body, "")
 	}
 	mustInit = att.Type != expr.Empty && needInit(body.Type)
 
 	if ut, ok := body.Type.(expr.UserType); ok {
 		// response body is a user type.
 		varname = record.name
-		def = goTypeDef(catalog.scope.Fork(), ut.Attribute(), !svr, svr)
+		def = goTypeDefForContext(ut.Attribute(), httpctx)
 		desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
 			varname, svc.Name, e.Name())
 		if !svr && view == nil {
@@ -2465,19 +2790,23 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, e 
 			name = record.name
 			desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
 				varname, svc.Name, e.Name())
-			def = goTypeDef(catalog.scope.Fork(), body, !svr, svr)
+			def = goTypeDefForContext(body, httpctx)
 		} else {
-			varname = catalog.scope.GoTypeRef(body)
+			varname = httpctx.Scope.Ref(body, "")
 			desc = body.Description
 			def = ""
 		}
-		validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), false, "body")
+		if !svr {
+			validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), false, "body")
+		}
 	} else {
 		// response body is a primitive type. They are used as non-pointers when
 		// encoding/decoding responses.
-		httpctx = httpContext(catalog.scope, false, true)
-		validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), false, "body")
-		varname = catalog.scope.GoTypeRef(body)
+		httpctx = wireHTTPContext(catalog, catalog.scope, false, true)
+		if !svr {
+			validateRef = codegen.ValidationCode(body, nil, httpctx, true, expr.IsAlias(body.Type), false, "body")
+		}
+		varname = httpctx.Scope.Ref(body, "")
 		desc = body.Description
 	}
 	var init *InitData
@@ -2500,7 +2829,7 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, e 
 				rtname = codegen.Goify(e.Name(), true) + "ResponseBody"
 				rtref = rtname
 			} else {
-				rtname = codegen.Goify(catalog.scope.GoTypeName(body), true)
+				rtname = record.name
 				rtref = ref
 			}
 			name = fmt.Sprintf("New%s", rtname)
@@ -2519,8 +2848,9 @@ func (sds *ServicesData) buildResponseBodyType(body, att *expr.AttributeExpr, e 
 				srcAtt = srcObj.Attribute(origin)
 				src += "." + codegen.Goify(origin, true)
 			}
-			transformctx := httpContext(catalog.scope.Fork(), false, svr)
-			code, helpers, err = marshal(srcAtt, body, src, "body", svcctx, transformctx)
+			transformctx := wireHTTPContext(catalog, catalog.scope, false, svr)
+			transformctx.Scope = catalog.resolver(catalog.scope, policy)
+			code, helpers, err = catalog.renderTransform(srcAtt, body, src, "body", "marshal", svcctx, transformctx)
 			if err != nil {
 				panic(err) // bug
 			}
@@ -2695,14 +3025,19 @@ func (sds *ServicesData) extractElements(kind httpElementKind, a *expr.MappedAtt
 		}
 		att := makeHTTPType(attr)
 		var (
-			varn    = scope.Name(codegen.Goify(name, false))
-			typeRef = scope.GoTypeRef(att)
-			ft      = svcAtt.Type
+			varn        = scope.Name(codegen.Goify(name, false))
+			typeRef     = scope.GoTypeRef(att)
+			elemTypeRef string
+			ft          = svcAtt.Type
 
 			slice   bool
 			pointer bool
 			fptr    bool
 		)
+		if arr := expr.AsArray(att.Type); arr != nil {
+			elemCtx := svcCtx.Enter(arr.ElemType)
+			elemTypeRef = elemCtx.Scope.Ref(arr.ElemType, elemCtx.Pkg(arr.ElemType))
+		}
 		if kind != cookieElement {
 			slice = expr.AsArray(att.Type) != nil
 		}
@@ -2751,6 +3086,7 @@ func (sds *ServicesData) extractElements(kind httpElementKind, a *expr.MappedAtt
 				Type:              att.Type,
 				TypeName:          scope.GoTypeName(att),
 				TypeRef:           typeRef,
+				ElemTypeRef:       elemTypeRef,
 				Pointer:           pointer,
 				Validate:          validate,
 				IsTextUnmarshaler: isText,
@@ -2831,15 +3167,10 @@ func collectUserTypesRecursive(dt expr.DataType, cb func(expr.UserType), seen ma
 	}
 }
 
-// effectiveClientResponseBody returns the response body shape used by client
-// code generation. When the design fixes the response to a single view, the
-// returned attribute uses that projected ResultType so type collection, union
-// collection, and client decode/init all agree on one transport body.
-func effectiveClientResponseBody(body *expr.AttributeExpr, e *expr.HTTPEndpointExpr, md *service.MethodData) *expr.AttributeExpr {
-	view := clientResponseViewName(e, md)
-	if view == "" {
-		return body
-	}
+// effectiveClientResponseBodyForView returns a copied response body containing
+// the fields visible in one selected view. Type naming and client decoding both
+// use this copy so they cannot disagree about its fields.
+func effectiveClientResponseBodyForView(body *expr.AttributeExpr, view string) *expr.AttributeExpr {
 	body = expr.DupAtt(body)
 	rt, ok := body.Type.(*expr.ResultTypeExpr)
 	if !ok {
@@ -2870,11 +3201,23 @@ func clientResponseViewName(e *expr.HTTPEndpointExpr, md *service.MethodData) st
 	return ""
 }
 
-func buildHTTPUnionTypeData(u *expr.Union, scope *codegen.NameScope, record *wireUnionRecord) *service.UnionTypeData {
+// clientResponseViewNameExpr returns the one view selected by the HTTP design.
+// An empty result means each streamed response may name any allowed view.
+func clientResponseViewNameExpr(e *expr.HTTPEndpointExpr, result *expr.ResultTypeExpr) string {
+	if view, ok := e.MethodExpr.Result.Meta.Last(expr.ViewMetaKey); ok {
+		return view
+	}
+	if len(result.Views) == 1 {
+		return result.Views[0].Name
+	}
+	return ""
+}
+
+func buildHTTPUnionTypeData(u *expr.Union, scope codegen.Attributor, record *wireUnionRecord) *service.UnionTypeData {
 	fields := make([]*service.UnionFieldData, len(u.Values))
 	for i, nat := range u.Values {
 		fieldName := codegen.Goify(nat.Name, true)
-		fieldType := scope.GoTypeRef(nat.Attribute)
+		fieldType := scope.Ref(nat.Attribute, scope.Package(nat.Attribute))
 		fields[i] = &service.UnionFieldData{
 			Name:        nat.Name,
 			KindConst:   record.kindConsts[i],
@@ -2919,7 +3262,7 @@ func (sds *ServicesData) attributeTypeDataView(ut expr.UserType, req, ptr, serve
 	ut = att.Type.(expr.UserType)
 	record := catalog.lookupUser(att, wireAttribute, policy)
 	catalog.applyNames(att, wireAttribute, policy)
-	hctx := httpContext(catalog.scope, req, server)
+	hctx := wireHTTPContext(catalog, catalog.scope, req, server)
 	name = record.name
 	ctx := "request"
 	if !req {
@@ -2939,7 +3282,7 @@ func (sds *ServicesData) attributeTypeDataView(ut expr.UserType, req, ptr, serve
 		Name:        ut.Name(),
 		VarName:     name,
 		Description: desc,
-		Def:         goTypeDef(catalog.scope.Fork(), ut.Attribute(), ptr, hctx.UseDefault),
+		Def:         goTypeDefForContext(ut.Attribute(), hctx),
 		Ref:         record.ref,
 		ValidateDef: validate,
 		ValidateRef: validateRef,
@@ -2947,7 +3290,7 @@ func (sds *ServicesData) attributeTypeDataView(ut expr.UserType, req, ptr, serve
 	})
 }
 
-// wireTypes returns the catalog for the generated server or client package.
+// wireTypes returns the request and response types for the server or client package.
 func (sd *ServiceData) wireTypes(server bool) *wireTypeCatalog {
 	if server {
 		return sd.serverWireTypes
@@ -2955,8 +3298,8 @@ func (sd *ServiceData) wireTypes(server bool) *wireTypeCatalog {
 	return sd.clientWireTypes
 }
 
-// hctxUseDefault mirrors httpContext's wire default policy without creating a
-// second scope during declaration collection.
+// hctxUseDefault reports whether missing HTTP values receive their design
+// defaults for the selected request or response side.
 func hctxUseDefault(request, server bool) bool {
 	return !request && server || request && !server
 }
@@ -2979,8 +3322,21 @@ func httpContext(scope *codegen.NameScope, request, svr bool) *codegen.Attribute
 	return ctx
 }
 
-// serviceTypeContext returns a context that resolves service declarations from
-// the generated transport package for side.
+// wireHTTPContext returns the pointer and default-value rules for one generated
+// HTTP package. It maps each copied field to the Go type name chosen for
+// that particular request or response.
+func wireHTTPContext(catalog *wireTypeCatalog, scope *codegen.NameScope, request, server bool) *codegen.AttributeContext {
+	context := httpContext(scope, request, server)
+	context.Scope = catalog.resolver(scope, wireTypePolicy{
+		request:    request,
+		pointer:    context.Pointer,
+		useDefault: context.UseDefault,
+	})
+	return context
+}
+
+// serviceTypeContext returns the service type names as referenced from the
+// generated client or server package named by side.
 func (sds *ServicesData) serviceTypeContext(sd *ServiceData, side string) *codegen.AttributeContext {
 	outputPackage := path.Join(sds.GenPkg(), sds.dir(), sd.Service.PathName, side)
 	return &codegen.AttributeContext{
@@ -2989,8 +3345,8 @@ func (sds *ServicesData) serviceTypeContext(sd *ServiceData, side string) *codeg
 	}
 }
 
-// viewTypeContext returns a context that resolves projected and viewed result
-// declarations from the generated transport package for side.
+// viewTypeContext returns the result-view type names as referenced from the
+// generated client or server package named by side.
 func (sds *ServicesData) viewTypeContext(sd *ServiceData, side string) *codegen.AttributeContext {
 	outputPackage := path.Join(sds.GenPkg(), sds.dir(), sd.Service.PathName, side)
 	return &codegen.AttributeContext{

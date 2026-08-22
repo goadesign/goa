@@ -147,10 +147,10 @@ func TestViewedTransportClientImportsCompile(t *testing.T) {
 	runGeneratedTests(t, genDir)
 }
 
-// assertViewedStreamingTransportFiles verifies that HTTP SSE and WebSocket
-// services render and that only the WebSocket receive file imports views
-// directly. Server send files call the service constructor and therefore do
-// not import the views package themselves.
+// assertViewedStreamingTransportFiles checks the generated HTTP SSE and
+// WebSocket files. Client files import the views package to validate each result
+// after rebuilding it. Server files use the service constructor, which performs
+// that validation without a direct views import.
 func assertViewedStreamingTransportFiles(t *testing.T, genDir string) {
 	t.Helper()
 	httpSSE := codegen.SnakeCase("ViewedHTTPSSE")
@@ -167,9 +167,13 @@ func assertViewedStreamingTransportFiles(t *testing.T, genDir string) {
 		filepath.Join(genDir, "http", httpWebSocket, "client", "websocket.go"),
 		"/"+httpWebSocket+"/views\"",
 	)
+	assertImportPath(
+		t,
+		filepath.Join(genDir, "http", httpSSE, "client", "sse.go"),
+		"/"+httpSSE+"/views\"",
+	)
 	assertFilesOmitImportPath(t, genDir, "/"+httpSSE+"/views\"", []string{
 		filepath.Join("http", httpSSE, "server", "sse.go"),
-		filepath.Join("http", httpSSE, "client", "sse.go"),
 	})
 	assertNoImportPath(
 		t,

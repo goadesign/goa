@@ -1,5 +1,5 @@
-// {{ .Method.VarName }}ClientStream is the interface for reading Server-Sent Events.
-type {{ .Method.VarName }}ClientStream interface {
+// {{ .SSE.ClientInterfaceDeclaration.Name }} is the interface for reading Server-Sent Events.
+type {{ .SSE.ClientInterfaceDeclaration.Name }} interface {
     // {{ .Method.ClientStream.RecvName }} reads and returns the next event from the SSE stream.
     {{ .Method.ClientStream.RecvName }}() ({{ .SSE.EventTypeRef }}, error)
     // {{ .Method.ClientStream.RecvWithContextName }} reads and returns the next event from the SSE stream with context.
@@ -9,39 +9,45 @@ type {{ .Method.VarName }}ClientStream interface {
 }
 
 type (
-        // {{ .Method.VarName }}StreamImpl implements the {{ .Method.VarName }}ClientStream interface.
-        {{ .Method.VarName }}StreamImpl struct {
+        // {{ .SSE.ClientStructDeclaration.Name }} implements the {{ .SSE.ClientInterfaceDeclaration.Name }} interface.
+        {{ .SSE.ClientStructDeclaration.Name }} struct {
                 resp *http.Response
                 decoder func(*http.Response) goahttp.Decoder
                 buffer []byte // Buffer for unprocessed data
                 lock sync.Mutex
                 closed bool
+		{{- if .SSE.VariableView }}
+		view string
+		{{- end }}
         }
 )
 
-// {{ .Method.VarName }}StreamImpl implements the {{ .Method.VarName }}ClientStream interface.
-var _ {{ .Method.VarName }}ClientStream = (*{{ .Method.VarName }}StreamImpl)(nil)
+// {{ .SSE.ClientStructDeclaration.Name }} implements the {{ .SSE.ClientInterfaceDeclaration.Name }} interface.
+var _ {{ .SSE.ClientInterfaceDeclaration.Name }} = (*{{ .SSE.ClientStructDeclaration.Name }})(nil)
 
-// {{ .Method.VarName }}StreamImpl implements the service client stream
+// {{ .SSE.ClientStructDeclaration.Name }} implements the service client stream
 // interface so the generated endpoint client can return it directly.
-var _ {{ .ServicePkgName }}.{{ .Method.ClientStream.Interface }} = (*{{ .Method.VarName }}StreamImpl)(nil)
+var _ {{ .ServicePkgName }}.{{ .Method.ClientStream.Interface }} = (*{{ .SSE.ClientStructDeclaration.Name }})(nil)
 
-// New{{ .Method.VarName }}Stream creates a new {{ .Method.VarName }}ClientStream.
-func New{{ .Method.VarName }}Stream(resp *http.Response, decoder func(*http.Response) goahttp.Decoder) {{ .Method.VarName }}ClientStream {
-        return &{{ .Method.VarName }}StreamImpl{
+// {{ .SSE.ClientInitDeclaration.Name }} creates a new {{ .SSE.ClientInterfaceDeclaration.Name }}.
+func {{ .SSE.ClientInitDeclaration.Name }}(resp *http.Response, decoder func(*http.Response) goahttp.Decoder) {{ .SSE.ClientInterfaceDeclaration.Name }} {
+        return &{{ .SSE.ClientStructDeclaration.Name }}{
                 resp: resp,
                 decoder: decoder,
                 buffer: make([]byte, 0, 4096), // Pre-allocate buffer
+		{{- if .SSE.VariableView }}
+		view: resp.Header.Get("goa-view"),
+		{{- end }}
         }
 }
 
 // {{ .Method.ClientStream.RecvName }} reads and returns the next event from the SSE stream.
-func (s *{{ .Method.VarName }}StreamImpl) {{ .Method.ClientStream.RecvName }}() ({{ .SSE.EventTypeRef }}, error) {
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) {{ .Method.ClientStream.RecvName }}() ({{ .SSE.EventTypeRef }}, error) {
         return s.{{ .Method.ClientStream.RecvWithContextName }}(context.Background())
 }
 
 // {{ .Method.ClientStream.RecvWithContextName }} reads and returns the next event from the SSE stream, respecting context cancellation.
-func (s *{{ .Method.VarName }}StreamImpl) {{ .Method.ClientStream.RecvWithContextName }}(ctx context.Context) (event {{ .SSE.EventTypeRef }}, err error) {
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) {{ .Method.ClientStream.RecvWithContextName }}(ctx context.Context) (event {{ .SSE.EventTypeRef }}, err error) {
         var byts []byte
         byts, err = s.readEvent(ctx)
         if err != nil {
@@ -61,7 +67,7 @@ func (s *{{ .Method.VarName }}StreamImpl) {{ .Method.ClientStream.RecvWithContex
 // the HTTP response body until it either finds an event boundary, reaches EOF,
 // or encounters an error. Any data after the event boundary is saved in the
 // buffer for the next call.
-func (s *{{ .Method.VarName }}StreamImpl) readEvent(ctx context.Context) ([]byte, error) {
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) readEvent(ctx context.Context) ([]byte, error) {
         const bufSize = 4096 // 4KB buffer size
 
         // Check for event in existing buffer
@@ -139,7 +145,7 @@ func (s *{{ .Method.VarName }}StreamImpl) readEvent(ctx context.Context) ([]byte
 // contents if no complete event is found), and a boolean indicating whether a
 // complete event was found. If a complete event is found, any remaining data
 // after the event is kept in the buffer for the next call.
-func (s *{{ .Method.VarName }}StreamImpl) checkBuffer() ([]byte, bool) {
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) checkBuffer() ([]byte, bool) {
         s.lock.Lock()
         defer s.lock.Unlock()
 
@@ -179,7 +185,7 @@ func (s *{{ .Method.VarName }}StreamImpl) checkBuffer() ([]byte, bool) {
 }
 
 // Close closes the SSE stream and releases any associated resources.
-func (s *{{ .Method.VarName }}StreamImpl) Close() error {
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) Close() error {
         s.lock.Lock()
         defer s.lock.Unlock()
         if s.closed {
@@ -190,7 +196,7 @@ func (s *{{ .Method.VarName }}StreamImpl) Close() error {
 }
 
 // processEvent processes a raw SSE event into the expected type
-func (s *{{ .Method.VarName }}StreamImpl) processEvent(eventData []byte) (event {{ .SSE.EventTypeRef }}, err error) {
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) processEvent(eventData []byte) (event {{ .SSE.EventTypeRef }}, err error) {
         {{- if .SSE.EventIsStruct }}
         event = new({{ deref .SSE.EventTypeRef }})
         {{- end }}
@@ -224,13 +230,31 @@ func (s *{{ .Method.VarName }}StreamImpl) processEvent(eventData []byte) (event 
                 }
                 {{- end }}
         }
+	{{- if .Method.ViewedResult }}
+	{{- template "viewed_sse_response_elements" . }}
+		{{- if .SSE.VariableView }}
+	view := s.view
+	switch view {
+		{{- range .SSE.Response.ViewedRepresentations }}
+	case {{ printf "%q" .View }}:
+		{{- template "viewed_sse_client_result" dict "Endpoint" $ "Representation" . }}
+		{{- end }}
+	default:
+		return event, goahttp.ErrValidationError("{{ .ServiceName }}", "{{ .Method.Name }}", goa.InvalidEnumValueError("view", view, []any{ {{ range .Method.ViewedResult.Views }}{{ printf "%q" .Name }}, {{ end }} }))
+	}
+		{{- else }}
+	view := {{ printf "%q" .Method.ViewedResult.ViewName }}
+			{{- range .SSE.Response.ViewedRepresentations }}
+	{{- template "viewed_sse_client_result" dict "Endpoint" $ "Representation" . }}
+			{{- end }}
+		{{- end }}
+	{{- else }}
         if len(dataLines) > 0 {
                 dataContent := strings.Join(dataLines, "\n")
                 {{- if .SSE.DataField }}
                 {{ template "partial_sse_parse" dict "Target" (printf "event.%s" .SSE.DataField) "TypeRef" .SSE.DataFieldTypeRef }}
-                {{- else }}
-                {{- if .SSE.EventIsStruct }}
-                // Decode JSON into the struct pointer directly
+                {{- else if .SSE.EventIsStruct }}
+                // Decode the event data into the result value returned by Recv.
                 respBody := &http.Response{
                         StatusCode: http.StatusOK,
                         Body:       io.NopCloser(bytes.NewReader([]byte(dataContent))),
@@ -242,13 +266,151 @@ func (s *{{ .Method.VarName }}StreamImpl) processEvent(eventData []byte) (event 
                 {{- else }}
                 {{ template "partial_sse_parse" dict "Target" "event" "TypeRef" .SSE.EventTypeRef }}
                 {{- end }}
-                {{- end }}
         }
+	{{- end }}
         return
 }
 
+{{- define "viewed_sse_client_result" }}
+	{{- $endpoint := .Endpoint }}
+	{{- with .Representation }}
+		{{- if .ClientBody }}
+		var body {{ .ClientBody.VarName }}
+		{{- if $endpoint.SSE.IDField }}
+		body.{{ $endpoint.SSE.IDField }} = event.{{ $endpoint.SSE.IDField }}
+		{{- end }}
+		{{- if $endpoint.SSE.EventField }}
+		body.{{ $endpoint.SSE.EventField }} = event.{{ $endpoint.SSE.EventField }}
+		{{- end }}
+		if len(dataLines) > 0 {
+			dataContent := strings.Join(dataLines, "\n")
+			respBody := &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewReader([]byte(dataContent))),
+			}
+			{{- if $endpoint.SSE.DataField }}
+			if err = s.decoder(respBody).Decode(&body.{{ $endpoint.SSE.DataField }}); err != nil {
+			{{- else }}
+			if err = s.decoder(respBody).Decode(&body); err != nil {
+			{{- end }}
+				return event, goahttp.ErrDecodingError("{{ $endpoint.ServiceName }}", "{{ $endpoint.Method.Name }}", err)
+			}
+		}
+		{{- end }}
+		projected := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }}, {{ end }})
+		viewed := {{ if not $endpoint.Method.ViewedResult.IsCollection }}&{{ end }}{{ $endpoint.Method.ViewedResult.ViewsPkg }}.{{ $endpoint.Method.ViewedResult.VarName }}{Projected: projected, View: view}
+			if err = {{ $endpoint.Method.ViewedResult.ViewsPkg }}.{{ $endpoint.Method.ViewedResult.Validate.Declaration.Name }}(viewed); err != nil {
+			return event, goahttp.ErrValidationError("{{ $endpoint.ServiceName }}", "{{ $endpoint.Method.Name }}", err)
+		}
+		result := {{ $endpoint.ServicePkgName }}.{{ $endpoint.Method.ViewedResult.ResultInit.Declaration.Name }}(viewed)
+		{{- if $endpoint.SSE.IDField }}
+		result.{{ $endpoint.SSE.IDField }} = event.{{ $endpoint.SSE.IDField }}
+		{{- end }}
+		{{- if $endpoint.SSE.EventField }}
+		result.{{ $endpoint.SSE.EventField }} = event.{{ $endpoint.SSE.EventField }}
+		{{- end }}
+		return result, nil
+	{{- end }}
+{{- end }}
+
+{{- define "viewed_sse_response_elements" }}
+	{{- with .SSE.Response }}
+		{{- if .Headers }}
+	var (
+			{{- range .Headers }}
+		{{ .VarName }} {{ .TypeRef }}
+			{{- end }}
+	)
+			{{- range .Headers }}
+				{{- if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
+	{{ .VarName }}Raw := s.resp.Header.Get("{{ .CanonicalName }}")
+					{{- if .Required }}
+	if {{ .VarName }}Raw == "" {
+		return event, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", goa.MissingFieldError("{{ .Name }}", "header"))
+	}
+	{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+					{{- else }}
+	if {{ .VarName }}Raw != "" {
+		{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+	}
+					{{- end }}
+				{{- else if .StringSlice }}
+	{{ .VarName }} = s.resp.Header["{{ .CanonicalName }}"]
+					{{- if .Required }}
+	if {{ .VarName }} == nil {
+		return event, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", goa.MissingFieldError("{{ .Name }}", "header"))
+	}
+					{{- end }}
+				{{- else if .Slice }}
+	{{ .VarName }}Raw := s.resp.Header["{{ .CanonicalName }}"]
+					{{- if .Required }}
+	if {{ .VarName }}Raw == nil {
+		return event, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", goa.MissingFieldError("{{ .Name }}", "header"))
+	}
+					{{- end }}
+	if {{ .VarName }}Raw != nil {
+		{{- template "partial_element_slice_conversion" . }}
+	}
+				{{- else }}
+	{{ .VarName }}Raw := s.resp.Header.Get("{{ .CanonicalName }}")
+					{{- if .Required }}
+	if {{ .VarName }}Raw == "" {
+		return event, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", goa.MissingFieldError("{{ .Name }}", "header"))
+	}
+					{{- end }}
+	if {{ .VarName }}Raw != "" {
+		{{- template "partial_query_type_conversion" . }}
+	}
+				{{- end }}
+				{{- if .Validate }}
+	{{ .Validate }}
+	if err != nil {
+		return event, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
+	}
+				{{- end }}
+			{{- end }}
+		{{- end }}
+		{{- if .Cookies }}
+	var (
+			{{- range .Cookies }}
+		{{ .VarName }} {{ .TypeRef }}
+		{{ .VarName }}Raw string
+			{{- end }}
+	)
+	for _, cookie := range s.resp.Cookies() {
+		switch cookie.Name {
+			{{- range .Cookies }}
+		case {{ printf "%q" .HTTPName }}:
+			{{ .VarName }}Raw = cookie.Value
+			{{- end }}
+		}
+	}
+			{{- range .Cookies }}
+				{{- if .Required }}
+	if {{ .VarName }}Raw == "" {
+		return event, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", goa.MissingFieldError("{{ .Name }}", "cookie"))
+	}
+				{{- end }}
+	if {{ .VarName }}Raw != "" {
+				{{- if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
+		{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+				{{- else }}
+		{{- template "partial_query_type_conversion" . }}
+				{{- end }}
+	}
+				{{- if .Validate }}
+	{{ .Validate }}
+	if err != nil {
+		return event, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
+	}
+				{{- end }}
+			{{- end }}
+		{{- end }}
+	{{- end }}
+{{- end }}
+
 // trimHeader removes the header prefix and optional leading space
-func (s *{{ .Method.VarName }}StreamImpl) trimHeader(size int, data []byte) string {
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) trimHeader(size int, data []byte) string {
         if len(data) < size {
                 return string(data)
         }

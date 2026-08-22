@@ -29,19 +29,19 @@
 			)
 		{{- range .Headers }}
 
-		{{- if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
+		{{- if (or (eq .TypeName "string") (eq .TypeName "any")) }}
 			{{ .VarName }}Raw := resp.Header.Get("{{ .CanonicalName }}")
 			{{- if .Required }}
 				if {{ .VarName }}Raw == "" {
 					err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "header"))
 				}
-				{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+				{{ .VarName }} = {{ if and (eq .TypeName "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 			{{- else }}
 				if {{ .VarName }}Raw != "" {
-					{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+					{{ .VarName }} = {{ if and (eq .TypeName "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 				}
 				{{- if .DefaultValue }} else {
-					{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
+					{{ .VarName }} = {{ if eq .TypeName "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
 				}
 				{{- end }}
 			{{- end }}
@@ -135,18 +135,18 @@
 		}
 		{{- range .Cookies }}
 
-		{{- if (or (eq .Type.Name "string") (eq .Type.Name "any")) }}
+		{{- if (or (eq .TypeName "string") (eq .TypeName "any")) }}
 			{{- if .Required }}
 				if {{ .VarName }}Raw == "" {
 					err = goa.MergeErrors(err, goa.MissingFieldError("{{ .Name }}", "cookie"))
 				}
-				{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+				{{ .VarName }} = {{ if and (eq .TypeName "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 			{{- else }}
 				if {{ .VarName }}Raw != "" {
-					{{ .VarName }} = {{ if and (eq .Type.Name "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
+					{{ .VarName }} = {{ if and (eq .TypeName "string") .Pointer }}&{{ end }}{{ .VarName }}Raw
 				}
 				{{- if .DefaultValue }} else {
-					{{ .VarName }} = {{ if eq .Type.Name "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
+					{{ .VarName }} = {{ if eq .TypeName "string" }}{{ printf "%q" .DefaultValue }}{{ else }}{{ printf "%#v" .DefaultValue }}{{ end }}
 				}
 				{{- end }}
 			{{- end }}

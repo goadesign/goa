@@ -40,7 +40,7 @@ func DecodeMethodExplicitBodyPrimitiveResultMultipleViewResponse(decoder func(*h
 			if cRaw != "" {
 				c = &cRaw
 			}
-			p := NewMethodExplicitBodyPrimitiveResultMultipleViewResulttypemultipleviewsOK(body, c)
+			p := NewMethodExplicitBodyPrimitiveResultMultipleViewResultOK(body, c)
 			view := resp.Header.Get("goa-view")
 			vres := &serviceexplicitbodyprimitiveresultmultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
 			if err = serviceexplicitbodyprimitiveresultmultipleviewviews.ValidateResulttypemultipleviews(vres); err != nil {

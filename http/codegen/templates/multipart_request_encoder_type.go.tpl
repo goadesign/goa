@@ -1,2 +1,2 @@
-{{ printf "%s is the type to encode multipart request for the %q service %q endpoint." .FuncName .ServiceName .MethodName | comment }}
-type {{ .FuncName }} func(*multipart.Writer, {{ .Payload.Ref }}) error
+{{ printf "%s is the type to encode multipart request for the %q service %q endpoint." .FuncDeclaration.Name .ServiceName .MethodName | comment }}
+type {{ .FuncDeclaration.Name }} func(*multipart.Writer, {{ .Payload.Ref }}) error

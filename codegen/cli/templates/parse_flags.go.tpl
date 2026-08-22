@@ -12,9 +12,9 @@ var (
 	)
 	{{ range . -}}
 	{{ $cmd := . -}}
-	{{ .VarName }}Flags.Usage = {{ .VarName }}Usage
+	{{ .VarName }}Flags.Usage = {{ .UsageDeclaration.Name }}
 	{{ range .Subcommands -}}
-	{{ .FullName }}Flags.Usage = {{ .FullName }}Usage
+	{{ .FullName }}Flags.Usage = {{ .UsageDeclaration.Name }}
 	{{ end }}
 	{{ end }}
 	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {

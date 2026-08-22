@@ -1,11 +1,11 @@
 {{- $retry := and .Method.Idempotent (eq .Method.StreamKind 1) (not .Method.SkipRequestBodyEncodeDecode) (not .MultipartRequestEncoder) (not (isWebSocketEndpoint .)) (not (isSSEEndpoint .)) }}
 {{ printf "%s returns an endpoint that makes HTTP requests to the %s service %s server." .EndpointInit .ServiceName .Method.Name | comment }}
-func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.VarName }} {{ .MultipartRequestEncoder.FuncName }}{{ end }}) goa.Endpoint {
+func (c *{{ .ClientStructDeclaration.Name }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.VarName }} {{ .MultipartRequestEncoder.FuncDeclaration.Name }}{{ end }}) goa.Endpoint {
 	var (
-		{{- if .RequestEncoder }}
-		encodeRequest  = {{ .RequestEncoder }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.InitName }}({{ .MultipartRequestEncoder.VarName }}){{ else }}c.encoder{{ end }})
+		{{- if .RequestEncoderDeclaration }}
+		encodeRequest  = {{ .RequestEncoderDeclaration.Name }}({{ if .MultipartRequestEncoder }}{{ .MultipartRequestEncoder.InitDeclaration.Name }}({{ .MultipartRequestEncoder.VarName }}){{ else }}c.encoder{{ end }})
 		{{- end }}
-		decodeResponse = {{ .ResponseDecoder }}(c.decoder, c.RestoreResponseBody)
+		decodeResponse = {{ .ResponseDecoderDeclaration.Name }}(c.decoder, c.RestoreResponseBody)
 	)
 	{{- if $retry }}
 	endpoint := func(ctx context.Context, v any) (any, error) {
@@ -16,7 +16,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 		if err != nil {
 			return nil, err
 		}
-	{{- if .RequestEncoder }}
+	{{- if .RequestEncoderDeclaration }}
 		err = encodeRequest(req, v)
 		if err != nil {
 			return nil, err
@@ -51,7 +51,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 			conn.Close()
 		}()
 		{{- end }}
-		stream := &{{ .ClientWebSocket.VarName }}{conn: conn}
+		stream := &{{ .ClientWebSocket.VarDeclaration.Name }}{conn: conn}
 		{{- if .Method.ViewedResult }}
 			{{- if not .Method.ViewedResult.ViewName }}
 		view := resp.Header.Get("goa-view")
@@ -81,7 +81,7 @@ func (c *{{ .ClientStruct }}) {{ .EndpointInit }}({{ if .MultipartRequestEncoder
 			return nil, fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
 		}
 		
-		return New{{ .Method.VarName }}Stream(resp, c.decoder), nil
+		return {{ .SSE.ClientInitDeclaration.Name }}(resp, c.decoder), nil
 	{{- else }}
 		resp, err := c.{{ .Method.VarName }}Doer.Do(req)
 		if err != nil {

@@ -1,4 +1,4 @@
-endpoint, payload, err := {{ .CLIPkg }}.ParseEndpoint(
+endpoint, payload, err := {{ .CLIPkg }}.{{ .Parser.ParseEndpoint.Name }}(
 		scheme,
 		host,
 		doer,
@@ -16,7 +16,7 @@ endpoint, payload, err := {{ .CLIPkg }}.ParseEndpoint(
 {{- range .Services }}
 	{{- range .Endpoints }}
 		{{- if .MultipartRequestDecoder }}
-		{{ $.APIPkg }}.{{ .MultipartRequestEncoder.FuncName }},
+		{{ $.APIPkg }}.{{ .MultipartRequestEncoder.FuncDeclaration.Name }},
 		{{- end }}
 	{{- end }}
 {{- end }}

@@ -19,6 +19,10 @@ import (
 type (
 	// CommandData contains the data needed to render a command.
 	CommandData struct {
+		// ServiceName is the design service selected by this command.
+		ServiceName string
+		// UsageDeclaration is the package function that prints help for this command.
+		UsageDeclaration *codegen.NameDeclaration
 		// Name of command e.g. "cellar-storage"
 		Name string
 		// VarName is the name of the command variable e.g.
@@ -39,6 +43,10 @@ type (
 
 	// SubcommandData contains the data needed to render a sub-command.
 	SubcommandData struct {
+		// MethodName is the design method selected by this command.
+		MethodName string
+		// UsageDeclaration is the package function that prints help for this subcommand.
+		UsageDeclaration *codegen.NameDeclaration
 		// Name is the sub-command name e.g. "add"
 		Name string
 		// FullName is the sub-command full name e.g. "storageAdd"
@@ -93,8 +101,8 @@ type (
 	// function that builds a service method payload type from the command-line
 	// flags.
 	BuildFunctionData struct {
-		// Name is the build payload function name.
-		Name string
+		// Declaration is the package name used by the function definition and calls.
+		Declaration *codegen.NameDeclaration
 		// Description describes the payload function.
 		Description string
 		// ActualParams is the list of passed build function parameters.
@@ -116,6 +124,17 @@ type (
 		// CheckErr is true if the payload initialization code requires an
 		// "err error" variable that must be checked.
 		CheckErr bool
+	}
+
+	// ParserDeclarations contains every package function written to one command
+	// parser file.
+	ParserDeclarations struct {
+		// ParseEndpoint is the function that selects and builds an endpoint call.
+		ParseEndpoint *codegen.NameDeclaration
+		// UsageCommands is the function that lists available commands.
+		UsageCommands *codegen.NameDeclaration
+		// UsageExamples is the function that prints example commands.
+		UsageExamples *codegen.NameDeclaration
 	}
 
 	// FlagArgData describes a payload initialization argument from which a
@@ -202,6 +221,7 @@ func BuildCommandData(data *service.Data, clientPkgName string) *CommandData {
 	}
 
 	return &CommandData{
+		ServiceName:  data.Name,
 		Name:         codegen.KebabCase(data.Name),
 		VarName:      codegen.Goify(data.Name, false),
 		Description:  description,
@@ -260,6 +280,7 @@ func BuildSubcommandData(data *service.Data, m *service.MethodData, buildFunctio
 		}
 	}
 	sub := &SubcommandData{
+		MethodName:    m.Name,
 		Name:          name,
 		FullName:      fullName,
 		Description:   description,
@@ -281,13 +302,14 @@ func EndpointParserFile(
 	path, title string,
 	specs []*codegen.ImportSpec,
 	data []*CommandData,
+	declarations *ParserDeclarations,
 	parseSection *codegen.SectionTemplate,
 ) *codegen.File {
 	sections := make([]*codegen.SectionTemplate, 0, 4+len(data))
 	sections = append(sections,
 		codegen.Header(title, "cli", specs),
-		UsageCommands(data),
-		UsageExamples(data),
+		UsageCommands(data, declarations.UsageCommands),
+		UsageExamples(data, declarations.UsageExamples),
 		parseSection,
 	)
 	for _, cmd := range data {
@@ -340,7 +362,6 @@ func MakeFlags(
 	}
 
 	return flags, &BuildFunctionData{
-		Name:         "Build" + m.VarName + "Payload",
 		ActualParams: params,
 		FormalParams: params,
 		ServiceName:  svcn,
@@ -368,7 +389,7 @@ func PayloadBuildersFile(path, title string, specs []*codegen.ImportSpec, data *
 
 // UsageCommands builds a section template that generates a help text showing
 // the list of allowed commands and sub-commands.
-func UsageCommands(data []*CommandData) *codegen.SectionTemplate {
+func UsageCommands(data []*CommandData, declaration *codegen.NameDeclaration) *codegen.SectionTemplate {
 	usages := make([]string, len(data))
 	for i, cmd := range data {
 		subs := make([]string, len(cmd.Subcommands))
@@ -383,12 +404,18 @@ func UsageCommands(data []*CommandData) *codegen.SectionTemplate {
 		usages[i] = fmt.Sprintf("%s %s%s%s", cmd.Name, lp, strings.Join(subs, "|"), rp)
 	}
 
-	return &codegen.SectionTemplate{Source: cliTemplates.Read(usageCommandsT), Data: usages}
+	return &codegen.SectionTemplate{
+		Source: cliTemplates.Read(usageCommandsT),
+		Data: struct {
+			Declaration *codegen.NameDeclaration
+			Usages      []string
+		}{declaration, usages},
+	}
 }
 
 // UsageExamples builds a section template that generates a help text showing
 // a valid invocation of the CLI tool.
-func UsageExamples(data []*CommandData) *codegen.SectionTemplate {
+func UsageExamples(data []*CommandData, declaration *codegen.NameDeclaration) *codegen.SectionTemplate {
 	var examples []string
 	for i, cmd := range data {
 		if i < 5 {
@@ -396,7 +423,13 @@ func UsageExamples(data []*CommandData) *codegen.SectionTemplate {
 		}
 	}
 
-	return &codegen.SectionTemplate{Source: cliTemplates.Read(usageExamplesT), Data: examples}
+	return &codegen.SectionTemplate{
+		Source: cliTemplates.Read(usageExamplesT),
+		Data: struct {
+			Declaration *codegen.NameDeclaration
+			Examples    []string
+		}{declaration, examples},
+	}
 }
 
 // FlagsCode returns a string containing the code that parses the command-line

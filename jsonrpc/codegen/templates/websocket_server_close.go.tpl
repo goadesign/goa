@@ -1,15 +1,16 @@
-{{ printf "Close closes the %s service websocket connection." .Service.Name | comment }}
-func (s *{{ lowerInitial .Service.StructName }}Stream) Close() error {
-	var err error
-	if s.conn == nil {
-		return nil
-	}
-	if err = s.conn.WriteControl(
+{{ printf "Close asks the %s client to close normally, closes the WebSocket, and returns errors from either operation." .Service.Name | comment }}
+func (s *{{ websocketServerStreamName }}) Close() error {
+	controlErr := s.conn.WriteControl(
 		websocket.CloseMessage,
-		websocket.FormatCloseMessage(websocket.CloseNormalClosure, "server closing connection"),
+		websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""),
 		time.Now().Add(time.Second),
-	); err != nil {
-		return err
+	)
+	if controlErr != nil {
+		controlErr = fmt.Errorf("write normal WebSocket close message: %w", controlErr)
 	}
-	return s.conn.Close()
+	closeErr := s.conn.Close()
+	if closeErr != nil {
+		closeErr = fmt.Errorf("close WebSocket connection: %w", closeErr)
+	}
+	return errors.Join(controlErr, closeErr)
 }

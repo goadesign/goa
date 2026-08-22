@@ -1,5 +1,5 @@
-{{ if and .IsJSONRPC (not .Payload.Ref) }}{{ printf "%s returns an encoder for requests sent to the %s service %s JSON-RPC method." .RequestEncoder .ServiceName .Method.Name | comment }}{{ else }}{{ printf "%s returns an encoder for requests sent to the %s %s server." .RequestEncoder .ServiceName .Method.Name | comment }}{{ end }}
-func {{ .RequestEncoder }}(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+{{ if and .IsJSONRPC (not .Payload.Ref) }}{{ printf "%s returns an encoder for requests sent to the %s service %s JSON-RPC method." .RequestEncoderDeclaration.Name .ServiceName .Method.Name | comment }}{{ else }}{{ printf "%s returns an encoder for requests sent to the %s %s server." .RequestEncoderDeclaration.Name .ServiceName .Method.Name | comment }}{{ end }}
+func {{ .RequestEncoderDeclaration.Name }}(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
 	return func(req *http.Request, v any) error {
 {{- if and .IsJSONRPC (not .Payload.Ref) }}
 		{{- template "partial_jsonrpc_request_envelope" . }}

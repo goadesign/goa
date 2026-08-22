@@ -29,7 +29,7 @@ func DecodeMethodBodyPrimitiveArrayUserRequiredRequest(mux goahttp.Muxer, decode
 		if err != nil {
 			return payload, err
 		}
-		payload = NewMethodBodyPrimitiveArrayUserRequiredPayloadType(body)
+		payload = NewMethodBodyPrimitiveArrayUserRequiredPayload(body)
 
 		return payload, nil
 	}

@@ -25,7 +25,7 @@ func DecodeMethodEmptyBodyResultMultipleViewResponse(decoder func(*http.Response
 			if cRaw != "" {
 				c = &cRaw
 			}
-			p := NewMethodEmptyBodyResultMultipleViewResulttypemultipleviewsOK(c)
+			p := NewMethodEmptyBodyResultMultipleViewResultOK(c)
 			view := resp.Header.Get("goa-view")
 			vres := &serviceemptybodyresultmultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
 			res := serviceemptybodyresultmultipleview.NewResulttypemultipleviews(vres)

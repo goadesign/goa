@@ -1,5 +1,5 @@
-{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .ResponseEncoder .ServiceName .Method.Name | comment }}
-func {{ .ResponseEncoder }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
+{{ printf "%s returns an encoder for responses returned by the %s %s endpoint." .ResponseEncoderDeclaration.Name .ServiceName .Method.Name | comment }}
+func {{ .ResponseEncoderDeclaration.Name }}(encoder func(context.Context, http.ResponseWriter) goahttp.Encoder) func(context.Context, http.ResponseWriter, any) error {
 	return func(ctx context.Context, w http.ResponseWriter, v any) error {
 	{{- if .Result.MustInit }}
 		{{- if .Method.ViewedResult }}

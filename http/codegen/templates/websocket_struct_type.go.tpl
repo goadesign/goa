@@ -1,5 +1,5 @@
-{{ printf "%s implements the %s interface." .VarName .Interface | comment }}
-type {{ .VarName }} struct {
+{{ printf "%s implements the %s interface." .VarDeclaration.Name .Interface | comment }}
+type {{ .VarDeclaration.Name }} struct {
 {{- if eq .Type "server" }}
 	once sync.Once
 	{{ comment "upgradeErr is the error returned by the websocket upgrade attempt." }}

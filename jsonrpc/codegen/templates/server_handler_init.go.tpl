@@ -1,5 +1,5 @@
-{{ printf "%s creates a JSON-RPC handler which calls the %q service %q endpoint." .HandlerInit .ServiceName .Method.Name | comment }}
-func {{ .HandlerInit }}(
+{{ printf "%s creates a JSON-RPC handler which calls the %q service %q endpoint." .HandlerInitDeclaration.Name .ServiceName .Method.Name | comment }}
+func {{ .HandlerInitDeclaration.Name }}(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	decoder func(*http.Request) goahttp.Decoder,
@@ -10,7 +10,7 @@ func {{ .HandlerInit }}(
 ) func(context.Context, *http.Request, *jsonrpc.RawRequest{{ if not (isWebSocketEndpoint .) }}, http.ResponseWriter{{ end }}) {{ if isWebSocketEndpoint . }}(any, error){{ else }}error{{ end }} {
 {{- if and (not (isSSEEndpoint .)) .Payload.Ref }}
 	{{- if not (and (isWebSocketEndpoint .) .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4))) }}
-	decodeParams := {{ .RequestDecoder }}(mux, decoder)
+	decodeParams := {{ .RequestDecoderDeclaration.Name }}(mux, decoder)
 	{{- end }}
 {{- end }}
 	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest{{ if not (isWebSocketEndpoint .) }}, w http.ResponseWriter{{ end }}) {{ if isWebSocketEndpoint . }}(any, error){{ else }}error{{ end }} {
@@ -18,22 +18,23 @@ func {{ .HandlerInit }}(
 		ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
 
 {{- if isSSEEndpoint . }}
-        // Initialize SSE stream early so decode errors can be sent as SSE error events
-        strm := &{{ .SSE.StructName }}{
-            sseServerStream: sseServerStream{
+		// Create the stream before decoding so a request error can be written to it.
+        strm := &{{ .SSE.StructDeclaration.Name }}{
+            {{ sseStreamName }}: {{ sseStreamName }}{
                 w:       w,
-                r:       r,
                 encoder: encoder,
             },
             requestID: req.ID,
         }
     {{- if .Payload.Ref }}
-        decodeParams := {{ .RequestDecoder }}(mux, decoder)
+        decodeParams := {{ .RequestDecoderDeclaration.Name }}(mux, decoder)
         params, err := decodeParams(r, req)
         if err != nil {
-            // Send error via SSE (JSON-RPC error event) to match SSE transport semantics
+			// Write the request error as a JSON-RPC server-sent event when the request has an ID.
             if req.ID != nil && req.ID != "" {
-                strm.SendError(ctx, jsonrpc.IDToString(req.ID), err)
+				if err := strm.SendError(ctx, jsonrpc.IDToString(req.ID), err); err != nil {
+					return err
+				}
             }
             return nil
         }
@@ -56,7 +57,7 @@ func {{ .HandlerInit }}(
 			ctx = context.WithValue(ctx, "last-event-id", lastEventID)
 		{{- if .Payload.Ref }}
 			{{- if .Payload.Request }}
-				{{- if eq .Payload.Request.PayloadType.Name "Object" }}
+				{{- if eq .Payload.Request.PayloadTypeName "Object" }}
 			params.{{ .SSE.RequestIDField }} = lastEventID
 				{{- end }}
 			{{- end }}
@@ -68,20 +69,15 @@ func {{ .HandlerInit }}(
         {{- if .Payload.Ref }}
             Payload: params,
         {{- end }}
-		}
+        }
         if _, err := endpoint(ctx, v); err != nil {
-            // Send the error as a JSON-RPC error event; SendError applies the
-            // design-driven error code mapping.
-            if req.ID != nil && req.ID != "" {
-                return strm.SendError(ctx, jsonrpc.IDToString(req.ID), err)
-            }
-            return nil
+			return err
         }
 		return nil
 {{- else }}
 	{{- if .Payload.Ref }}
 		{{- if and (isWebSocketEndpoint .) .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4)) }}
-		decodeParams := {{ .RequestDecoder }}(mux, decoder)
+		decodeParams := {{ .RequestDecoderDeclaration.Name }}(mux, decoder)
 		{{- end }}
 		params, err := decodeParams(r, req)
 		if err != nil {
@@ -94,9 +90,9 @@ func {{ .HandlerInit }}(
 				if _, ok := err.(*goa.ServiceError); ok {
 					code = jsonrpc.InvalidParams
 				}
-				encodeJSONRPCError(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
+				{{ encodeErrorName }}(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
 			} else {
-				// No ID means notification - just log error
+				// A notification receives no JSON-RPC response, so pass the decode error to the configured error handler.
 				errhandler(ctx, w, fmt.Errorf("failed to decode parameters: %w", err))
 			}
 			return nil
@@ -144,7 +140,7 @@ func {{ .HandlerInit }}(
 			if req.ID != nil && req.ID != "" {
 				var en goa.GoaErrorNamer
 				if !errors.As(err, &en) {
-					encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
+					{{ encodeErrorName }}(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
 					return nil
 				}
 			switch en.GoaErrorName() {
@@ -152,23 +148,23 @@ func {{ .HandlerInit }}(
 				{{- range $err := $gerr.Errors }}
 				case {{ printf "%q" .Name }}:
 					{{- with .Response}}
-					encodeJSONRPCError(ctx, w, req, {{ .Code }}, err.Error(), err, encoder, errhandler)
+					{{ encodeErrorName }}(ctx, w, req, {{ .Code }}, err.Error(), err, encoder, errhandler)
 					{{- end }}
 				{{- end }}
 			{{- end }}
 			case "invalid_params":
-				encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidParams, err.Error(), nil, encoder, errhandler)
+				{{ encodeErrorName }}(ctx, w, req, jsonrpc.InvalidParams, err.Error(), nil, encoder, errhandler)
 			case "method_not_found":
-				encodeJSONRPCError(ctx, w, req, jsonrpc.MethodNotFound, err.Error(), nil, encoder, errhandler)
+				{{ encodeErrorName }}(ctx, w, req, jsonrpc.MethodNotFound, err.Error(), nil, encoder, errhandler)
 				default:
 					code := jsonrpc.InternalError
 					if _, ok := err.(*goa.ServiceError); ok {
 						code = jsonrpc.InvalidParams
 					}
-					encodeJSONRPCError(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
+					{{ encodeErrorName }}(ctx, w, req, code, err.Error(), nil, encoder, errhandler)
 				}
 			} else {
-				// No ID means notification - just log error
+				// A notification receives no JSON-RPC response, so pass the service error to the configured error handler.
 				errhandler(ctx, w, fmt.Errorf("endpoint error: %w", err))
 			}
 			return nil
@@ -217,14 +213,19 @@ func {{ .HandlerInit }}(
 		}
 		
 		// Send response with the result
-		{{- if and .Result.Ref (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
-		// Convert result to response body with proper JSON tags
 		{{- if .Method.ViewedResult }}
 		viewedRes := res.({{ .Method.ViewedResult.FullRef }})
-		body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(viewedRes.Projected)
-		{{- else }}
-		body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(res.({{ .Result.Ref }}))
+		body, err := {{ viewedEncodeName .Method.Name }}(viewedRes)
+		if err != nil {
+			return err
+		}
+		{{- if viewedHasMetadata .Method.Name }}
+		{{ viewedMetadataName .Method.Name }}(w, viewedRes)
 		{{- end }}
+		response := jsonrpc.MakeSuccessResponse(id, body)
+		{{- else if and .Result.Ref (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
+		// Build the response body with the fields and JSON names declared by the service.
+		body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Name }}(res.({{ .Result.Ref }}))
 		response := jsonrpc.MakeSuccessResponse(id, body)
 		{{- else }}
 		response := jsonrpc.MakeSuccessResponse(id, res)

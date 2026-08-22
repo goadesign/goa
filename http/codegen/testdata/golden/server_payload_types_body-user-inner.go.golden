@@ -1,9 +1,9 @@
-// NewMethodBodyUserInnerPayloadType builds a ServiceBodyUserInner service
+// NewMethodBodyUserInnerPayload builds a ServiceBodyUserInner service
 // MethodBodyUserInner endpoint payload.
-func NewMethodBodyUserInnerPayloadType(body *MethodBodyUserInnerRequestBody) *servicebodyuserinner.PayloadType {
+func NewMethodBodyUserInnerPayload(body *MethodBodyUserInnerRequestBody) *servicebodyuserinner.PayloadType {
 	v := &servicebodyuserinner.PayloadType{}
 	if body.Inner != nil {
-		v.Inner = unmarshalInnerTypeToServicebodyuserinnerInnerType(body.Inner)
+		v.Inner = unmarshalInnerTypeToInnerType(body.Inner)
 	}
 
 	return v

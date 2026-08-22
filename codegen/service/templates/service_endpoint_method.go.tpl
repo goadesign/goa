@@ -131,12 +131,19 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 				{{- else }}
 		vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, view)
 				{{- end }}
+		if err := {{ .ViewedResult.ViewsPkg }}.{{ .ViewedResult.Validate.Declaration.Name }}(vres); err != nil {
+			return nil, err
+		}
 		return vres, nil
 			{{- else }}
 		return res, nil
 			{{- end }}
 		{{- else }}
+			{{- if and .IsJSONRPCWebSocket (eq .ServerStream.Kind 4) }}
+		return nil, s.{{ .VarName }}(ctx, ep.Stream)
+			{{- else }}
 		return nil, s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
+			{{- end }}
 		{{- end }}
 	{{- else }}
 		{{- /* JSON-RPC WebSocket client streaming: no stream parameter, just payload */ -}}
@@ -168,6 +175,9 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 		return nil, err
 	}
 	vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
+	if err := {{ .ViewedResult.ViewsPkg }}.{{ .ViewedResult.Validate.Declaration.Name }}(vres); err != nil {
+		return nil, err
+	}
 	return vres, nil
 	{{- else }}
 	return {{ if not .ResultRef }}nil, {{ end }}s.{{ .VarName }}(ctx, {{ if .PayloadRef }}ep.Payload, {{ end }}ep.Body)
@@ -178,6 +188,9 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 		return nil, err
 	}
 	vres := {{ $.ViewedResult.Init.Declaration.Name }}(res, {{ if .ViewedResult.ViewName }}{{ printf "%q" .ViewedResult.ViewName }}{{ else }}view{{ end }})
+	if err := {{ .ViewedResult.ViewsPkg }}.{{ .ViewedResult.Validate.Declaration.Name }}(vres); err != nil {
+		return nil, err
+	}
 	return vres, nil
 {{- else if .SkipResponseBodyEncodeDecode }}
 	{{ if .ResultRef }}res, {{ end }}body, err := s.{{ .VarName }}(ctx{{ if .PayloadRef }}, {{ $payload}}{{ end }})

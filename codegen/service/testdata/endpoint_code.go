@@ -149,6 +149,9 @@ func NewAEndpoint(s Service) goa.Endpoint {
 			return nil, err
 		}
 		vres := NewViewedRtype(res, "default")
+		if err := withresultviews.ValidateRtype(vres); err != nil {
+			return nil, err
+		}
 		return vres, nil
 	}
 }
@@ -185,6 +188,9 @@ func NewAEndpoint(s Service) goa.Endpoint {
 			return nil, err
 		}
 		vres := NewViewedViewtype(res, "tiny")
+		if err := withresultmultipleviewsviews.ValidateViewtype(vres); err != nil {
+			return nil, err
+		}
 		return vres, nil
 	}
 }
@@ -198,6 +204,9 @@ func NewBEndpoint(s Service) goa.Endpoint {
 			return nil, err
 		}
 		vres := NewViewedViewtype(res, "default")
+		if err := withresultmultipleviewsviews.ValidateViewtype(vres); err != nil {
+			return nil, err
+		}
 		return vres, nil
 	}
 }

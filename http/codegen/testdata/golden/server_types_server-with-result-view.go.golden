@@ -19,7 +19,7 @@ func NewMethodResultWithResultViewResponseBodyFull(res *serviceresultwithresultv
 		Name: res.Name,
 	}
 	if res.Rt != nil {
-		body.Rt = marshalServiceresultwithresultviewviewsRtViewToRt(res.Rt)
+		body.Rt = marshalRtViewToRt(res.Rt)
 	}
 	return body
 }

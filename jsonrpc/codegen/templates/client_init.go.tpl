@@ -1,5 +1,5 @@
-{{ printf "New%s instantiates HTTP clients for all the %s service servers." .ClientStruct .Service.Name | comment }}
-func New{{ .ClientStruct }}(
+{{ printf "%s creates HTTP clients for all the %s service servers." .ClientInitDeclaration.Name .Service.Name | comment }}
+func {{ .ClientInitDeclaration.Name }}(
 	scheme string,
 	host string,
 	doer goahttp.Doer,
@@ -11,13 +11,13 @@ func New{{ .ClientStruct }}(
 	cfn goahttp.ConnConfigureFunc,
 	streamOpts ...jsonrpc.StreamConfigOption,
 	{{- end }}
-) *{{ .ClientStruct }} {
+) *{{ .ClientStructDeclaration.Name }} {
 	{{- if hasWebSocket . }}
 	// Create stream configuration from options
 	streamConfig := jsonrpc.NewStreamConfig(streamOpts...)
 	{{- end }}
 	
-	return &{{ .ClientStruct }}{
+	return &{{ .ClientStructDeclaration.Name }}{
 		Doer:                doer,
 		{{- range .Endpoints }}
 		{{- if isSSEEndpoint . }}

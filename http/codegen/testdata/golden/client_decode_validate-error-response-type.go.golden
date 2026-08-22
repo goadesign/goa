@@ -38,7 +38,7 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			if err != nil {
 				return nil, goahttp.ErrValidationError("ValidateErrorResponseType", "MethodA", err)
 			}
-			p := NewMethodAAResultOK(required)
+			p := NewMethodAResultOK(required)
 			view := "default"
 			vres := &validateerrorresponsetypeviews.AResult{Projected: p, View: view}
 			res := validateerrorresponsetype.NewAResult(vres)

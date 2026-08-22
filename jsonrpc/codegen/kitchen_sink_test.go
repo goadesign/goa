@@ -38,13 +38,25 @@ func TestJSONRPCKitchenSink(t *testing.T) {
 	examples := expr.NewExampleGenerator(root.API.RandomizerFactory)
 	servicePlan, err := service.NewPlan(root, generation, examples)
 	require.NoError(t, err)
-	require.NoError(t, jsonrpccodegen.Plan(generation))
+	httpPlans, err := httpcodegen.NewPlans(generation, httpcodegen.PlanInput{Root: root, Service: servicePlan})
+	require.NoError(t, err)
+	jsonHTTPPlans, err := httpcodegen.NewJSONRPCPlans(generation, httpcodegen.PlanInput{Root: root, Service: servicePlan})
+	require.NoError(t, err)
+	jsonPlans, err := jsonrpccodegen.NewPlans(generation, jsonrpccodegen.PlanInput{
+		Root: root, Service: servicePlan, HTTP: jsonHTTPPlans[0], ApplicationHTTP: httpPlans[0],
+	})
+	require.NoError(t, err)
+	grpcPlan, err := grpccodegen.Plan(generation, grpccodegen.PlanInput{Root: root, Service: servicePlan})
+	require.NoError(t, err)
 	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
+	require.NoError(t, httpPlans[0].Link())
+	require.NoError(t, jsonHTTPPlans[0].Link())
+	require.NoError(t, jsonPlans[0].Link())
 	services := servicePlan.Services()
-	tfiles := kitchenSinkTransportFiles(root, services)
-	efiles := kitchenSinkExampleFiles(root, servicePlan)
+	tfiles := kitchenSinkTransportFiles(services, grpcPlan, httpPlans[0], jsonPlans[0])
+	efiles := kitchenSinkExampleFiles(root, servicePlan, grpcPlan, httpPlans[0], jsonPlans[0])
 
 	tmp := t.TempDir()
 	for _, f := range append(tfiles, efiles...) {
@@ -80,16 +92,15 @@ func TestJSONRPCKitchenSink(t *testing.T) {
 
 // kitchenSinkTransportFiles assembles every transport file through the public
 // subsystem APIs exercised by the golden fixture.
-func kitchenSinkTransportFiles(root *expr.RootExpr, services *service.ServicesData) []*goacodegen.File {
-	httpServices := httpcodegen.NewServicesData(services, root.API.HTTP)
-	files := httpcodegen.ServerFiles(httpServices)
-	files = append(files, httpcodegen.ClientFiles(httpServices)...)
-	files = append(files, httpcodegen.ServerTypeFiles(httpServices)...)
-	files = append(files, httpcodegen.ClientTypeFiles(httpServices)...)
-	files = append(files, httpcodegen.PathFiles(httpServices)...)
-	files = append(files, httpcodegen.ClientCLIFiles(httpServices)...)
+func kitchenSinkTransportFiles(services *service.ServicesData, grpcPlan *grpccodegen.PreparedPlan, httpPlan *httpcodegen.Plan, jsonPlan *jsonrpccodegen.Plan) []*goacodegen.File {
+	files := httpPlan.ServerFiles()
+	files = append(files, httpPlan.ClientFiles()...)
+	files = append(files, httpPlan.ServerTypeFiles()...)
+	files = append(files, httpPlan.ClientTypeFiles()...)
+	files = append(files, httpPlan.PathFiles()...)
+	files = append(files, httpPlan.ClientCLIFiles()...)
 
-	grpcServices := grpccodegen.NewServicesData(services)
+	grpcServices := grpccodegen.NewServicesData(services, grpcPlan)
 	files = append(files, grpccodegen.ProtoFiles(grpcServices)...)
 	files = append(files, grpccodegen.ServerFiles(grpcServices)...)
 	files = append(files, grpccodegen.ClientFiles(grpcServices)...)
@@ -97,18 +108,17 @@ func kitchenSinkTransportFiles(root *expr.RootExpr, services *service.ServicesDa
 	files = append(files, grpccodegen.ClientTypeFiles(grpcServices)...)
 	files = append(files, grpccodegen.ClientCLIFiles(grpcServices)...)
 
-	jsonrpcServices := httpcodegen.NewJSONRPCServicesData(services, &root.API.JSONRPC.HTTPExpr)
-	files = append(files, jsonrpccodegen.ServerFiles(jsonrpcServices)...)
-	files = append(files, jsonrpccodegen.ClientFiles(jsonrpcServices)...)
-	files = append(files, httpcodegen.ServerTypeFiles(jsonrpcServices)...)
-	files = append(files, httpcodegen.ClientTypeFiles(jsonrpcServices)...)
-	files = append(files, httpcodegen.PathFiles(jsonrpcServices)...)
-	return append(files, httpcodegen.ClientCLIFiles(jsonrpcServices)...)
+	files = append(files, jsonPlan.ServerFiles()...)
+	files = append(files, jsonPlan.ClientFiles()...)
+	files = append(files, jsonPlan.ServerTypeFiles()...)
+	files = append(files, jsonPlan.ClientTypeFiles()...)
+	files = append(files, jsonPlan.PathFiles()...)
+	return append(files, jsonPlan.ClientCLIFiles()...)
 }
 
 // kitchenSinkExampleFiles assembles example service and transport files
 // through their public subsystem APIs.
-func kitchenSinkExampleFiles(root *expr.RootExpr, plan *service.Plan) []*goacodegen.File {
+func kitchenSinkExampleFiles(root *expr.RootExpr, plan *service.Plan, grpcPlan *grpccodegen.PreparedPlan, httpPlan *httpcodegen.Plan, jsonPlan *jsonrpccodegen.Plan) []*goacodegen.File {
 	services := plan.Services()
 	files := service.ExampleServiceFiles(plan)
 	files = append(files, service.ExampleInterceptorsFiles(plan)...)
@@ -116,17 +126,14 @@ func kitchenSinkExampleFiles(root *expr.RootExpr, plan *service.Plan) []*goacode
 	files = append(files, example.CLIFiles(root)...)
 
 	if len(root.API.HTTP.Services) > 0 {
-		httpServices := httpcodegen.NewServicesData(services, root.API.HTTP)
-		files = append(files, httpcodegen.ExampleServerFiles(httpServices)...)
-		files = append(files, httpcodegen.ExampleCLIFiles(httpServices)...)
+		files = append(files, httpPlan.ExampleCLIFiles()...)
 	}
 	if len(root.API.JSONRPC.Services) > 0 {
-		jsonrpcServices := httpcodegen.NewJSONRPCServicesData(services, &root.API.JSONRPC.HTTPExpr)
-		files = append(files, jsonrpccodegen.ExampleServerFiles(jsonrpcServices, files)...)
-		files = append(files, httpcodegen.ExampleCLIFiles(jsonrpcServices)...)
+		files = append(files, jsonPlan.ExampleServerFiles()...)
+		files = append(files, jsonPlan.ExampleCLIFiles()...)
 	}
 	if len(root.API.GRPC.Services) > 0 {
-		grpcServices := grpccodegen.NewServicesData(services)
+		grpcServices := grpccodegen.NewServicesData(services, grpcPlan)
 		files = append(files, grpccodegen.ExampleServerFiles(grpcServices)...)
 		files = append(files, grpccodegen.ExampleCLIFiles(grpcServices)...)
 	}

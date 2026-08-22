@@ -21,10 +21,13 @@ const (
 	mixedServerHandlerT = "mixed_server_handler"
 
 	// Client
-	clientStructT       = "client_struct"
-	clientInitT         = "client_init"
-	clientEndpointInitT = "client_endpoint_init"
-	responseDecoderT    = "response_decoder"
+	clientStructT           = "client_struct"
+	clientInitT             = "client_init"
+	clientEndpointInitT     = "client_endpoint_init"
+	responseDecoderT        = "response_decoder"
+	viewedResultBodyDecodeT = "viewed_result_body_decode"
+	viewedResultDecodeT     = "viewed_result_decode"
+	viewedResultEncodeT     = "viewed_result_encode"
 
 	// WebSocket templates
 	websocketServerStreamT        = "websocket_server_stream"
@@ -50,6 +53,8 @@ const (
 	queryTypeConversionP    = "query_type_conversion"
 	elementSliceConversionP = "element_slice_conversion"
 	sliceItemConversionP    = "slice_item_conversion"
+	headerConversionP       = "header_conversion"
+	viewedResultMetadataP   = "viewed_result_metadata"
 )
 
 //go:embed templates/*

@@ -18,7 +18,7 @@ func DecodeMethodBodyUnionRequest(mux goahttp.Muxer, decoder func(*http.Request)
 			}
 			return payload, goa.DecodePayloadError(err.Error())
 		}
-		payload = NewMethodBodyUnionUnion(&body)
+		payload = NewMethodBodyUnionPayload(&body)
 
 		return payload, nil
 	}

@@ -78,9 +78,9 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 
 	t.Run("http codegen does not duplicate cookie-backed auth fields", func(t *testing.T) {
 		root := expr.RunDSL(t, cookieAPIKeySecurityDSL)
-		services := CreateHTTPServices(root)
+		plan := linkedHTTPPlanForRoot(t, root)
 
-		serverTypes := typesFile(root.API.HTTP.Services[0], true, services)
+		serverTypes := plan.ServerTypeFiles()[0]
 		var serverTypesBuf bytes.Buffer
 		for _, section := range serverTypes.SectionTemplates[1:] {
 			require.NoError(t, section.Write(&serverTypesBuf))
@@ -90,7 +90,7 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 		require.NotContains(t, serverTypesCode, "browserSession *string, browserSession *string")
 		require.NotContains(t, serverTypesCode, "browserSession string, browserSession string")
 
-		serverFiles := ServerFiles(services)
+		serverFiles := plan.ServerFiles()
 		require.Len(t, serverFiles, 2)
 		serverDecode := codegen.SectionCode(t, serverFiles[1].SectionTemplates[2])
 		require.Contains(t, serverDecode, `r.Cookie("__Host-ak_session")`)
@@ -98,7 +98,7 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 		require.NotContains(t, serverDecode, "browserSession *string, browserSession *string")
 		require.NotContains(t, serverDecode, "browserSession string, browserSession string")
 
-		clientFiles := ClientFiles(services)
+		clientFiles := plan.ClientFiles()
 		require.Len(t, clientFiles, 2)
 		clientEncode := codegen.SectionCode(t, clientFiles[1].SectionTemplates[2])
 		require.Contains(t, clientEncode, `req.AddCookie(&http.Cookie{`)

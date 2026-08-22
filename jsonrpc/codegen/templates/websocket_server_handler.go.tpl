@@ -1,5 +1,5 @@
 // ServeHTTP handles WebSocket JSON-RPC requests.
-func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *{{ .ServerStructDeclaration.Name }}) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := context.WithCancel(r.Context())
 	conn, err := s.upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -12,7 +12,7 @@ func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 	defer conn.Close()
 
-	stream := &{{ lowerInitial .Service.StructName }}Stream{
+	stream := &{{ websocketServerStreamName }}{
 	{{- range .Endpoints }}
 		{{ lowerInitial .Method.VarName }}: s.{{ lowerInitial .Method.VarName }},
 		{{- if and .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4)) }}

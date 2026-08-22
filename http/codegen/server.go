@@ -13,8 +13,18 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// ServerFiles returns the generated HTTP server files.
-func ServerFiles(data *ServicesData) []*codegen.File {
+type (
+	// appendFSData gives the server file its chosen file helper names and path
+	// replacements.
+	appendFSData struct {
+		*ServiceData
+		// Mappings pairs each requested path with the embedded file path opened for it.
+		Mappings map[string]string
+	}
+)
+
+// serverFiles builds the HTTP server files read by Plan.Link.
+func serverFiles(data *ServicesData) []*codegen.File {
 	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3)
 	for _, svc := range data.Expressions.Services {
 		files = append(files, addEndpointImports(serverFile(svc, data), data, svc.HTTPEndpoints...))
@@ -26,7 +36,7 @@ func ServerFiles(data *ServicesData) []*codegen.File {
 		}
 	}
 	for _, svc := range data.Expressions.Services {
-		if f := ServerEncodeDecodeFile(svc, data); f != nil {
+		if f := serverEncodeDecodeFile(svc, data); f != nil {
 			files = append(files, addEndpointImports(f, data, svc.HTTPEndpoints...))
 		}
 	}
@@ -108,7 +118,12 @@ func serverFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File
 				}
 			}
 		}
-		sections = append(sections, &codegen.SectionTemplate{Name: "append-fs", Source: httpTemplates.Read(appendFsT), FuncMap: funcs, Data: mappedFiles})
+		sections = append(sections, &codegen.SectionTemplate{
+			Name:    "append-fs",
+			Source:  httpTemplates.Read(appendFsT),
+			FuncMap: funcs,
+			Data:    appendFSData{ServiceData: data, Mappings: mappedFiles},
+		})
 	}
 	for _, s := range data.FileServers {
 		sections = append(sections, &codegen.SectionTemplate{Name: "server-files", Source: httpTemplates.Read(fileServerT), FuncMap: funcs, Data: s})
@@ -117,9 +132,9 @@ func serverFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }
 
-// ServerEncodeDecodeFile returns the file defining the HTTP server encoding and
+// serverEncodeDecodeFile returns the file defining the HTTP server encoding and
 // decoding logic.
-func ServerEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func serverEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, services.dir(), svcName, "server", "encode_decode.go")

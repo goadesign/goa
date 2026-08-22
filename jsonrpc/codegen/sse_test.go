@@ -24,10 +24,10 @@ func TestJSONRPCSSE(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateJSONRPCServices(root)
+			plan := CreateJSONRPCPlan(root)
 
 			// Generate server files (includes the SSE streams file)
-			fs := ServerFiles(services)
+			fs := plan.ServerFiles()
 			require.NotEmpty(t, fs, "expected server files to be generated")
 
 			// Debug: print all generated files

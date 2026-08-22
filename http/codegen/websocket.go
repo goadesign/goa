@@ -1,23 +1,32 @@
-// This file analyzes HTTP streaming endpoints into the WebSocket server and
-// client data rendered by their dedicated generated files.
+// This file builds the values used to write WebSocket client and server files
+// for streaming HTTP methods.
 package codegen
 
 import (
 	"fmt"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 )
 
 type (
+	// connConfigurerData gives WebSocket code the type and constructor names for
+	// either the client or server package.
+	connConfigurerData struct {
+		*ServiceData
+		Declaration     *codegen.NameDeclaration
+		InitDeclaration *codegen.NameDeclaration
+	}
+
 	// WebSocketData contains the data needed to render struct type that
 	// implements the server and client stream interfaces.
 	WebSocketData struct {
 		// VarName is the name of the struct.
 		VarName string
+		// VarDeclaration is the package name used by the stream implementation type.
+		VarDeclaration *codegen.NameDeclaration
 		// Type is type of the stream (server or client).
 		Type string
 		// Interface is the fully qualified name of the interface that
@@ -116,15 +125,11 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 				serverCode string
 				err        error
 			)
-			n := codegen.Goify(e.MethodExpr.Name, true)
-			p := codegen.Goify(svrPayload.Name, true)
-			// Raw payload object has type name prefixed with endpoint name. No need to
-			// prefix the type name again.
-			if strings.HasPrefix(p, n) {
-				name = fmt.Sprintf("New%s", p)
-			} else {
-				name = fmt.Sprintf("New%s%s", n, p)
+			declaration := sds.streamConstructors[e]
+			if declaration == nil {
+				panic(fmt.Sprintf("streaming payload constructor for %s.%s was not submitted", svc.Name, e.Name()))
 			}
+			name = declaration.Name()
 			desc = fmt.Sprintf("%s builds a %s service %s endpoint payload.", name, svc.Name, e.MethodExpr.Name)
 			if body != expr.Empty {
 				ref := "body"
@@ -134,7 +139,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 				var svcode string
 				if ut, ok := body.(expr.UserType); ok {
 					if val := ut.Attribute().Validation; val != nil {
-						httpctx := httpContext(sd.serverWireTypes.scope, true, true)
+						httpctx := wireHTTPContext(sd.serverWireTypes, sd.serverWireTypes.scope, true, true)
 						svcode = codegen.ValidationCode(ut.Attribute(), ut, httpctx, true, expr.IsAlias(ut), false, "body")
 					}
 				}
@@ -143,8 +148,8 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 					AttributeData: &AttributeData{
 						Name:     "payload",
 						VarName:  "body",
-						TypeName: sd.serverWireTypes.scope.GoTypeName(streamBody),
-						TypeRef:  sd.serverWireTypes.scope.GoTypeRef(streamBody),
+						TypeName: svrPayload.VarName,
+						TypeRef:  svrPayload.Ref,
 						Type:     streamBody.Type,
 						Required: true,
 						Example:  sds.Example(streamBody, streamOwner),
@@ -154,8 +159,8 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 			}
 			if body != expr.Empty {
 				var helpers []*codegen.TransformFunctionData
-				httpctx := httpContext(sd.serverWireTypes.scope, true, true)
-				serverCode, helpers, err = marshal(streamBody, e.MethodExpr.StreamingPayload, "body", "v", httpctx, svcctx)
+				httpctx := wireHTTPContext(sd.serverWireTypes, sd.serverWireTypes.scope, true, true)
+				serverCode, helpers, err = sd.serverWireTypes.renderTransform(streamBody, e.MethodExpr.StreamingPayload, "body", "v", "marshal", httpctx, svcctx)
 				if err == nil {
 					sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
 				}
@@ -164,6 +169,7 @@ func (sds *ServicesData) initWebSocketData(ed *EndpointData, e *expr.HTTPEndpoin
 				panic(err) // bug
 			}
 			svrPayload.Init = &InitData{
+				Declaration:    declaration,
 				Name:           name,
 				Description:    desc,
 				ServerArgs:     serverArgs,
@@ -268,9 +274,9 @@ func websocketServerFile(svc *expr.HTTPServiceExpr, services *ServicesData) *cod
 	}
 }
 
-// WebsocketClientFile returns the file implementing the WebSocket client
+// websocketClientFile returns the file implementing the WebSocket client
 // streaming implementation if any.
-func WebsocketClientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func websocketClientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	if !HasWebSocket(data) {
 		return nil
@@ -307,11 +313,12 @@ func WebsocketClientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *cod
 // serverStructWSSections return section templates that generate WebSocket
 // related struct type definitions for the server.
 func serverStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
+	configurer := &connConfigurerData{data, data.ServerConnConfigurerDeclaration, data.ServerConnConfigurerInitDeclaration}
 	var sections []*codegen.SectionTemplate
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "server-websocket-conn-configurer-struct",
 		Source:  httpTemplates.Read(websocketConnConfigurerStructT),
-		Data:    data,
+		Data:    configurer,
 		FuncMap: map[string]any{"isWebSocketEndpoint": IsWebSocketEndpoint},
 	})
 	for _, e := range data.Endpoints {
@@ -330,11 +337,12 @@ func serverStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 // serverWSSections returns section templates that contain server WebSocket
 // specific code for the given service.
 func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
+	configurer := &connConfigurerData{data, data.ServerConnConfigurerDeclaration, data.ServerConnConfigurerInitDeclaration}
 	var sections []*codegen.SectionTemplate
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "server-websocket-conn-configurer-struct-init",
 		Source:  httpTemplates.Read(websocketConnConfigurerStructInitT),
-		Data:    data,
+		Data:    configurer,
 		FuncMap: map[string]any{"isWebSocketEndpoint": IsWebSocketEndpoint},
 	})
 	for _, e := range data.Endpoints {
@@ -382,11 +390,12 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 // clientStructWSSections return section templates that generate WebSocket
 // related struct type definitions for the client.
 func clientStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
+	configurer := &connConfigurerData{data, data.ClientConnConfigurerDeclaration, data.ClientConnConfigurerInitDeclaration}
 	var sections []*codegen.SectionTemplate
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "client-websocket-conn-configurer-struct",
 		Source:  httpTemplates.Read(websocketConnConfigurerStructT),
-		Data:    data,
+		Data:    configurer,
 		FuncMap: map[string]any{"isWebSocketEndpoint": IsWebSocketEndpoint},
 	})
 	for _, e := range data.Endpoints {
@@ -404,11 +413,12 @@ func clientStructWSSections(data *ServiceData) []*codegen.SectionTemplate {
 // clientWSSections returns section templates that contain client WebSocket
 // specific code for the given service.
 func clientWSSections(data *ServiceData) []*codegen.SectionTemplate {
+	configurer := &connConfigurerData{data, data.ClientConnConfigurerDeclaration, data.ClientConnConfigurerInitDeclaration}
 	var sections []*codegen.SectionTemplate
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:    "client-websocket-conn-configurer-struct-init",
 		Source:  httpTemplates.Read(websocketConnConfigurerStructInitT),
-		Data:    data,
+		Data:    configurer,
 		FuncMap: map[string]any{"isWebSocketEndpoint": IsWebSocketEndpoint},
 	})
 	for _, e := range data.Endpoints {

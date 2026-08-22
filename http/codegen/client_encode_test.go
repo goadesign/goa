@@ -181,8 +181,8 @@ func TestClientEncode(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ClientFiles(services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ClientFiles()
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 2)
@@ -205,8 +205,8 @@ func TestClientBuildRequest(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ClientFiles(services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ClientFiles()
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
 			require.Greater(t, len(sections), 2)

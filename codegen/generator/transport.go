@@ -1,17 +1,17 @@
-// This file assembles HTTP, gRPC, and JSON-RPC files from service analysis;
-// each transport builder owns the imports of the file it returns.
+// This file builds the HTTP, gRPC, and JSON-RPC files for every service. Each
+// generated file lists the Go packages that it uses.
 package generator
 
 import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
+	"goa.design/goa/v3/expr"
 	grpccodegen "goa.design/goa/v3/grpc/codegen"
 	httpcodegen "goa.design/goa/v3/http/codegen"
 	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
 )
 
-// transportFiles returns HTTP, gRPC, and JSON-RPC files described by plan's
-// frozen package declarations and run-owned example state.
+// transportFiles returns all HTTP, gRPC, and JSON-RPC files for one run.
 func transportFiles(plan *Plan) ([]*codegen.File, error) {
 	var files []*codegen.File
 	generation := plan.Generation()
@@ -19,63 +19,142 @@ func transportFiles(plan *Plan) ([]*codegen.File, error) {
 	for _, r := range designRoots {
 		services := plan.Service(r).Services()
 		// HTTP
-		httpServices := httpcodegen.NewServicesData(services, r.API.HTTP)
-		files = append(files, httpcodegen.ServerFiles(httpServices)...)
-		files = append(files, httpcodegen.ClientFiles(httpServices)...)
-		files = append(files, httpcodegen.ServerTypeFiles(httpServices)...)
-		files = append(files, httpcodegen.ClientTypeFiles(httpServices)...)
-		files = append(files, httpcodegen.PathFiles(httpServices)...)
-		files = append(files, httpcodegen.ClientCLIFiles(httpServices)...)
+		if httpPlan := plan.http[r]; httpPlan != nil {
+			files = append(files, httpPlan.ServerFiles()...)
+			files = append(files, httpPlan.ClientFiles()...)
+			files = append(files, httpPlan.ServerTypeFiles()...)
+			files = append(files, httpPlan.ClientTypeFiles()...)
+			files = append(files, httpPlan.PathFiles()...)
+			files = append(files, httpPlan.ClientCLIFiles()...)
+		}
 
 		// GRPC
-		grpcServices := grpccodegen.NewServicesData(services)
-		files = append(files, grpccodegen.ProtoFiles(grpcServices)...)
-		files = append(files, grpccodegen.ServerFiles(grpcServices)...)
-		files = append(files, grpccodegen.ClientFiles(grpcServices)...)
-		files = append(files, grpccodegen.ServerTypeFiles(grpcServices)...)
-		files = append(files, grpccodegen.ClientTypeFiles(grpcServices)...)
-		files = append(files, grpccodegen.ClientCLIFiles(grpcServices)...)
+		if plan.grpc != nil {
+			grpcServices := grpccodegen.NewServicesData(services, plan.grpc)
+			files = append(files, grpccodegen.ProtoFiles(grpcServices)...)
+			files = append(files, grpccodegen.ServerFiles(grpcServices)...)
+			files = append(files, grpccodegen.ClientFiles(grpcServices)...)
+			files = append(files, grpccodegen.ServerTypeFiles(grpcServices)...)
+			files = append(files, grpccodegen.ClientTypeFiles(grpcServices)...)
+			files = append(files, grpccodegen.ClientCLIFiles(grpcServices)...)
+		}
 
 		// JSON-RPC
-		jsonrpcServices := httpcodegen.NewJSONRPCServicesData(services, &r.API.JSONRPC.HTTPExpr)
-		files = append(files, jsonrpccodegen.ServerFiles(jsonrpcServices)...)
-		files = append(files, jsonrpccodegen.ClientFiles(jsonrpcServices)...)
-		files = append(files, httpcodegen.ServerTypeFiles(jsonrpcServices)...)
-		files = append(files, httpcodegen.ClientTypeFiles(jsonrpcServices)...)
-		files = append(files, httpcodegen.PathFiles(jsonrpcServices)...)
-		files = append(files, httpcodegen.ClientCLIFiles(jsonrpcServices)...)
+		if jsonrpcPlan := plan.jsonrpc[r]; jsonrpcPlan != nil {
+			files = append(files, jsonrpcPlan.ServerFiles()...)
+			files = append(files, jsonrpcPlan.ClientFiles()...)
+			files = append(files, jsonrpcPlan.ServerTypeFiles()...)
+			files = append(files, jsonrpcPlan.ClientTypeFiles()...)
+			files = append(files, jsonrpcPlan.PathFiles()...)
+			files = append(files, jsonrpcPlan.ClientCLIFiles()...)
+		}
 	}
 	return files, nil
 }
 
-// planTransportData declares service packages and the fixed import qualifiers
-// required by each transport before the shared generation catalog freezes.
+// planTransportData chooses all Go package, import, type, and function names
+// before generated files use them.
 func planTransportData(plan *Plan) error {
 	if err := planServiceData(plan); err != nil {
 		return err
+	}
+	if plan.transportDone {
+		return nil
 	}
 	generation := plan.Generation()
 	if err := example.Plan(generation); err != nil {
 		return err
 	}
-	var hasHTTP, hasGRPC, hasJSONRPC bool
-	for _, root := range serviceRoots(generation.Roots()) {
-		hasHTTP = hasHTTP || len(root.API.HTTP.Services) > 0
-		hasGRPC = hasGRPC || len(root.API.GRPC.Services) > 0
-		hasJSONRPC = hasJSONRPC || len(root.API.JSONRPC.Services) > 0
+	roots := serviceRoots(generation.Roots())
+	if err := planHTTPTransports(plan, roots); err != nil {
+		return err
 	}
-	if hasHTTP {
-		if err := httpcodegen.Plan(generation); err != nil {
-			return err
-		}
+	if err := planJSONRPCTransports(plan, roots); err != nil {
+		return err
+	}
+	var hasGRPC bool
+	for _, root := range roots {
+		hasGRPC = hasGRPC || len(root.API.GRPC.Services) > 0
 	}
 	if hasGRPC {
-		if err := grpccodegen.Plan(generation); err != nil {
+		inputs := make([]grpccodegen.PlanInput, len(roots))
+		for index, root := range roots {
+			inputs[index] = grpccodegen.PlanInput{Root: root, Service: plan.Service(root)}
+		}
+		grpcPlan, err := grpccodegen.Plan(generation, inputs...)
+		if err != nil {
 			return err
 		}
+		plan.grpc = grpcPlan
 	}
-	if hasJSONRPC {
-		return jsonrpccodegen.Plan(generation)
+	plan.transportDone = true
+	return nil
+}
+
+// planHTTPTransports prepares every HTTP service together. When two services
+// write to the same Go package, Goa gives their types and functions different names.
+func planHTTPTransports(plan *Plan, roots []*expr.RootExpr) error {
+	var inputs []httpcodegen.PlanInput
+	var plannedRoots []*expr.RootExpr
+	for _, root := range roots {
+		if len(root.API.HTTP.Services) == 0 {
+			continue
+		}
+		inputs = append(inputs, httpcodegen.PlanInput{Root: root, Service: plan.Service(root)})
+		plannedRoots = append(plannedRoots, root)
+	}
+	if len(inputs) == 0 {
+		return nil
+	}
+	plans, err := httpcodegen.NewPlans(plan.Generation(), inputs...)
+	if err != nil {
+		return err
+	}
+	plan.http = make(map[*expr.RootExpr]*httpcodegen.Plan, len(plans))
+	for index, root := range plannedRoots {
+		plan.http[root] = plans[index]
+	}
+	return nil
+}
+
+// planJSONRPCTransports prepares the HTTP request and response types used by
+// JSON-RPC. It then gives those values to the JSON-RPC generator so function
+// definitions and calls use the same Go names.
+func planJSONRPCTransports(plan *Plan, roots []*expr.RootExpr) error {
+	var inputs []httpcodegen.PlanInput
+	var plannedRoots []*expr.RootExpr
+	for _, root := range roots {
+		if len(root.API.JSONRPC.Services) == 0 {
+			continue
+		}
+		inputs = append(inputs, httpcodegen.PlanInput{Root: root, Service: plan.Service(root)})
+		plannedRoots = append(plannedRoots, root)
+	}
+	if len(inputs) == 0 {
+		return nil
+	}
+	httpPlans, err := httpcodegen.NewJSONRPCPlans(plan.Generation(), inputs...)
+	if err != nil {
+		return err
+	}
+	jsonrpcInputs := make([]jsonrpccodegen.PlanInput, len(inputs))
+	plan.jsonrpcHTTP = make(map[*expr.RootExpr]*httpcodegen.Plan, len(httpPlans))
+	for index, root := range plannedRoots {
+		plan.jsonrpcHTTP[root] = httpPlans[index]
+		jsonrpcInputs[index] = jsonrpccodegen.PlanInput{
+			Root:            root,
+			Service:         plan.Service(root),
+			HTTP:            httpPlans[index],
+			ApplicationHTTP: plan.http[root],
+		}
+	}
+	jsonrpcPlans, err := jsonrpccodegen.NewPlans(plan.Generation(), jsonrpcInputs...)
+	if err != nil {
+		return err
+	}
+	plan.jsonrpc = make(map[*expr.RootExpr]*jsonrpccodegen.Plan, len(jsonrpcPlans))
+	for index, root := range plannedRoots {
+		plan.jsonrpc[root] = jsonrpcPlans[index]
 	}
 	return nil
 }

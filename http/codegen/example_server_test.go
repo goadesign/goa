@@ -35,8 +35,8 @@ func TestExampleServerFiles(t *testing.T) {
 				example.Servers = make(example.ServersData)
 				root := codegen.RunDSL(t, c.DSL)
 				require.Len(t, root.Services, 3)
-				httpServices := NewServicesData(createServiceServices(root), root.API.HTTP)
-				fs := ExampleServerFiles(httpServices)
+				plan := linkedHTTPPlanForRoot(t, root)
+				fs := plan.ExampleServerFiles()
 				require.Len(t, fs, 2)
 				for i, f := range fs {
 					if i < len(fs)-1 {
@@ -71,8 +71,8 @@ func TestExampleServerFiles(t *testing.T) {
 				// reset global variable
 				example.Servers = make(example.ServersData)
 				root := codegen.RunDSL(t, c.DSL)
-				httpServices := NewServicesData(createServiceServices(root), root.API.HTTP)
-				fs := ExampleServerFiles(httpServices)
+				plan := linkedHTTPPlanForRoot(t, root)
+				fs := plan.ExampleServerFiles()
 				require.Len(t, fs, 1)
 				require.Greater(t, len(fs[0].SectionTemplates), 0)
 				var buf bytes.Buffer

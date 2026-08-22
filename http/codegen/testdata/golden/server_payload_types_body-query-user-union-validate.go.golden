@@ -1,9 +1,9 @@
-// NewMethodBodyQueryUserUnionValidatePayloadType builds a
+// NewMethodBodyQueryUserUnionValidatePayload builds a
 // ServiceBodyQueryUserUnionValidate service MethodBodyQueryUserUnionValidate
 // endpoint payload.
-func NewMethodBodyQueryUserUnionValidatePayloadType(body *MethodBodyQueryUserUnionValidateRequestBody, b string) *servicebodyqueryuserunionvalidate.PayloadType {
+func NewMethodBodyQueryUserUnionValidatePayload(body *MethodBodyQueryUserUnionValidateRequestBody, b string) *servicebodyqueryuserunionvalidate.PayloadType {
 	v := &servicebodyqueryuserunionvalidate.PayloadType{}
-	v.A = unmarshalUnionToServicebodyqueryuserunionvalidateUnion(body.A)
+	v.A = unmarshalUnionToUnion(body.A)
 	v.B = b
 
 	return v

@@ -9,7 +9,7 @@
 			{{- end }}
 		{{- end }}
 	{{- else -}}
-	var {{ .ReturnVar }} {{ .ReturnTypeRef }}
+	{{ if .ToViewed }}{{ .ReturnVar }} := {{ if not .IsCollection }}&{{ end }}{{ .TargetType }}{View: view}{{ else }}var {{ .ReturnVar }} {{ .ReturnTypeRef }}{{ end }}
 	switch {{ if .ToResult }}{{ .ArgVar }}.View{{ else }}view{{ end }} {
 		{{- range .Views }}
 		case {{ printf "%q" .Name }}{{ if eq .Name "default" }}, ""{{ end }}:

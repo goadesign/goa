@@ -2,9 +2,9 @@
 //
 //    command (subcommand1|subcommand2|...)
 //
-func UsageCommands() []string {
+func {{ .Declaration.Name }}() []string {
         return []string{
-{{- range . }}
+{{- range .Usages }}
                 "{{ . }}",
 {{- end }}
         }

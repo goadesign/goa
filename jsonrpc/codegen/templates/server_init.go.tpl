@@ -1,9 +1,9 @@
-{{ printf "%s creates a JSON-RPC server which loads HTTP requests and calls the %q service methods." .ServerInit .Service.Name | comment }}
-func {{ .ServerInit }}(
+{{ printf "%s creates a JSON-RPC server which loads HTTP requests and calls the %q service methods." .ServerInitDeclaration.Name .Service.Name | comment }}
+func {{ .ServerInitDeclaration.Name }}(
 {{- if isWebSocketEndpoint (index .Endpoints 0) }}
-	streamHandler func(context.Context, {{ .Service.PkgName }}.Stream) error,
+	streamHandler func(context.Context, {{ .Service.PkgName }}.{{ .Service.StreamDeclaration.Name }}) error,
 {{- end }}
-	endpoints *{{ .Service.PkgName }}.Endpoints,
+	endpoints *{{ .Service.PkgName }}.{{ .Service.EndpointsDeclaration.Name }},
 	mux goahttp.Muxer,
 	decoder func(*http.Request) goahttp.Decoder,
 	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
@@ -12,8 +12,8 @@ func {{ .ServerInit }}(
 	upgrader goahttp.Upgrader,
 	configfn goahttp.ConnConfigureFunc,
 	{{- end }}
-) *{{ .ServerStruct }} {
-	s := &{{ .ServerStruct }}{
+) *{{ .ServerStructDeclaration.Name }} {
+	s := &{{ .ServerStructDeclaration.Name }}{
 		Methods: []string{
 			{{- range .Endpoints }}
 			{{ printf "%q" .Method.Name }},
@@ -24,12 +24,12 @@ func {{ .ServerInit }}(
 {{- end }}
 {{- range .Endpoints }}
 	{{- if isWebSocketEndpoint . }}
-		{{ lowerInitial .Method.VarName }}: {{ .HandlerInit }}(endpoints.{{ .Method.VarName }}, mux, decoder),
+		{{ lowerInitial .Method.VarName }}: {{ .HandlerInitDeclaration.Name }}(endpoints.{{ .Method.VarName }}, mux, decoder),
 		{{- if and .Method.ServerStream (or (eq .Method.ServerStream.Kind 3) (eq .Method.ServerStream.Kind 4)) }}
 		{{ lowerInitial .Method.VarName }}Endpoint: endpoints.{{ .Method.VarName }},
 		{{- end }}
 	{{- else }}
-		{{ .Method.VarName }}: {{ .HandlerInit }}(endpoints.{{ .Method.VarName }}, mux, decoder, encoder, errhandler),
+		{{ .Method.VarName }}: {{ .HandlerInitDeclaration.Name }}(endpoints.{{ .Method.VarName }}, mux, decoder, encoder, errhandler),
 	{{- end }}
 {{- end }}
 		decoder: decoder,
@@ -40,15 +40,15 @@ func {{ .ServerInit }}(
 		configfn: configfn,
 		{{- end }}
 	}
-	// Default HTTP handler per transport kind
+	// Install the request handler required by this service's methods.
 	{{- if isWebSocketEndpoint (index .Endpoints 0) }}
-	// WebSocket services implement ServeHTTP for upgrade
+	// ServeHTTP changes the HTTP connection to a WebSocket connection.
 	s.Handler = http.HandlerFunc(s.ServeHTTP)
 	{{- else if isSSEEndpoint (index .Endpoints 0) }}
-	// SSE-only services route via handleSSE
+	// handleSSE writes each result as a server-sent event.
 	s.Handler = http.HandlerFunc(s.handleSSE)
 	{{- else }}
-	// Plain HTTP JSON-RPC
+	// ServeHTTP writes one JSON-RPC response for each request.
 	s.Handler = http.HandlerFunc(s.ServeHTTP)
 	{{- end }}
 	return s

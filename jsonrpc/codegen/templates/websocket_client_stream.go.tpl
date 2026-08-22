@@ -1,428 +1,281 @@
 {{/*
-websocket_client_stream.go.tpl generates JSON-RPC WebSocket streaming client implementations.
-
-This template creates stream types that handle direct WebSocket connections for JSON-RPC
-streaming endpoints, providing:
-- Direct WebSocket transport without intermediate wrappers
-- Dual ID correlation (user payload ID + JSON-RPC request ID)
-- Comprehensive error handling with user-configurable error handlers
-- Generated decoder integration for consistent response parsing
-- Thread-safe operations with proper lifecycle management
-
-Template variables:
-- .VarName: Name of the generated stream struct
-- .Endpoint.Method.Name: Name of the endpoint method
-- .SendName/.SendTypeRef: Send method name and payload type (if stream accepts input)
-- .RecvName/.RecvTypeRef: Receive method name and result type (if stream produces output)
-- .Endpoint.ServiceVarName: Service name for JSON-RPC method naming
-
-The template handles three streaming patterns:
-1. Client streaming (send-only): $hasSend && !$hasRecv
-2. Server streaming (recv-only): !$hasSend && $hasRecv  
-3. Bidirectional streaming: $isBidirectional ($hasSend && $hasRecv)
+This file writes one JSON-RPC method stream. One shared connection reads and
+writes the socket and assigns request IDs. It finds the function waiting for
+each response. This stream turns response fields into service results, returns
+them in send order, and handles cancellation.
 */}}
-{{ printf "%s implements the %s client stream with direct WebSocket handling." .VarName .Endpoint.Method.Name | comment }}
 {{- $hasRecv := and .RecvName .RecvTypeRef }}
 {{- $hasSend := .SendName }}
 {{- $isBidirectional := and $hasSend $hasRecv }}
-type {{ .VarName }} struct {
-	// Direct WebSocket transport
-	ws          *websocket.Conn
-	writeMu     sync.Mutex              // Serialize WebSocket writes
-	
-	// JSON-RPC correlation  
-	pending     sync.Map                // map[jsonrpcID]*{{ .VarName }}PendingRequest
-	idGenerator atomic.Uint64           // JSON-RPC request ID generator
-	
-	// Lifecycle management
-	ctx         context.Context
-	cancel      context.CancelFunc
-	done        chan struct{}           // Signals stream closure
-	closeOnce   sync.Once
-	
-	// Error handling
-	errorOnce   sync.Once
-	lastError   atomic.Value            // Last error encountered
-	
-	// Stream configuration
-	config *jsonrpc.StreamConfig // Stream configuration options
+{{- $pendingType := .Pending.Name }}
+{{- $resultType := .Result.Name }}
+{{ printf "%s implements the %s client stream." .VarDeclaration.Name .Endpoint.Method.Name | comment }}
+type (
+	{{ .VarDeclaration.Name }} struct {
+		conn  *{{ .Connection.Name }}
+		owner *{{ .RequestOwner.Name }}
+
+		ctx       context.Context
+		cancel    context.CancelFunc
+		closeOnce sync.Once
+
+		{{- if $hasRecv }}
+		decoder func(*http.Response) goahttp.Decoder
+		{{- end }}
+		{{- if $isBidirectional }}
+
+		sendMu       sync.Mutex
+		pendingMu    sync.Mutex
+		pending      []*{{ $pendingType }}
+		pendingReady chan struct{}
+		{{- end }}
+	}
+
 	{{- if $hasRecv }}
-	decoder        func(*http.Response) goahttp.Decoder // User-provided decoder for result bodies
+	// {{ $pendingType }} stores the channel that receives the result or error
+	// for one request. The shared connection starts and stops its timer.
+	{{ $pendingType }} struct {
+		id         string
+		resultChan chan {{ $resultType }}
+	}
+
+	// {{ $resultType }} contains the decoded result or error returned by one
+	// request.
+	{{ $resultType }} struct {
+		result {{ .RecvTypeRef }}
+		err    error
+	}
 	{{- end }}
-}
-
-
-// Stream-specific types for {{ .VarName }}
-type {{ .VarName }}PendingRequest struct {
-	userID      string                  // User-provided payload ID
-	resultChan  chan {{ .VarName }}StreamResult    // Buffered result delivery
-	timeout     *time.Timer             // Request timeout handling
-}
-
-type {{ .VarName }}StreamResult struct {
-{{- if $hasRecv }}
-	result      {{ .RecvTypeRef }}
-{{- end }}
-	err         error
-}
+)
 
 {{- if $hasSend }}
-{{ printf "%s sends streaming data to the %s endpoint with dual ID correlation." .SendName .Endpoint.Method.Name | comment }}
-func (s *{{ .VarName }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
+{{ comment .SendDesc }}
+func (s *{{ .VarDeclaration.Name }}) {{ .SendName }}(v {{ .SendTypeRef }}) error {
 	return s.{{ .SendName }}WithContext(s.ctx, v)
 }
 
-{{ printf "%sWithContext sends streaming data to the %s endpoint with context." .SendName .Endpoint.Method.Name | comment }}
-func (s *{{ .VarName }}) {{ .SendName }}WithContext(ctx context.Context, v {{ .SendTypeRef }}) error {
-	// Check for stream-level errors first
-	if err := s.getError(); err != nil {
+{{ comment .SendWithContextDesc }}
+func (s *{{ .VarDeclaration.Name }}) {{ .SendName }}WithContext(ctx context.Context, v {{ .SendTypeRef }}) error {
+	request := &jsonrpc.Request{
+		JSONRPC: "2.0",
+		Method:  "{{ .Endpoint.Method.Name }}",
+		Params:  v,
+	}
+	{{- if $isBidirectional }}
+	pending := &{{ $pendingType }}{
+		resultChan: make(chan {{ $resultType }}, 1),
+	}
+
+	s.sendMu.Lock()
+	id, err := s.conn.sendRequest(ctx, request, s.owner, func(ctx context.Context, response *jsonrpc.RawResponse, err error) {
+		s.completeResponse(ctx, pending, response, err)
+	})
+	if err == nil {
+		pending.id = id
+		s.enqueuePending(pending)
+	}
+	s.sendMu.Unlock()
+	if err != nil {
 		return err
 	}
-	
-{{- if $isBidirectional }}
-	// Honor user-provided ID or generate one
-	userID := ""
-{{- if .SendTypeRef }}
-	{{- if .Endpoint.Payload }}
-	// Honor user-provided ID if it exists in the payload
-	userID = s.generateUserID()
-	{{- end }}
-{{- else }}
-	userID = s.generateUserID()
-{{- end }}
-	
-	// Generate JSON-RPC protocol ID
-	jsonrpcID := strconv.FormatUint(s.idGenerator.Add(1), 10)
-	// Create pending request tracking for bidirectional streaming
-	pending := &{{ .VarName }}PendingRequest{
-		userID:     userID,
-		resultChan: make(chan {{ .VarName }}StreamResult, s.config.ResultChannelBuffer),
-		timeout:    time.NewTimer(s.config.RequestTimeout),
-	}
-	
-	s.pending.Store(jsonrpcID, pending)
-	
-	// Construct JSON-RPC request
-	request := &jsonrpc.Request{
-		JSONRPC: "2.0",
-		Method:  "{{ .Endpoint.Method.Name }}",
-		Params:  v,
-		ID:      &jsonrpcID,
-	}
-{{- else }}
-	// For payload-only streaming, use notification (fire-and-forget)
-	request := &jsonrpc.Request{
-		JSONRPC: "2.0",
-		Method:  "{{ .Endpoint.Method.Name }}",
-		Params:  v,
-		// No ID field for notifications
-	}
-{{- end }}
-	
-	// Send with write protection
-	s.writeMu.Lock()
-	err := s.ws.WriteJSON(request)
-	s.writeMu.Unlock()
-	
-	if err != nil {
-{{- if $isBidirectional }}
-		s.pending.Delete(jsonrpcID)
-		pending.timeout.Stop()
-{{- end }}
-		s.setError(err)
-		// Report connection errors
-		s.handleError(jsonrpc.StreamErrorConnection, err, nil)
-		return fmt.Errorf("failed to send request: %w", err)
-	}
-	
 	return nil
+	{{- else }}
+	return s.conn.sendNotification(ctx, request, s.owner)
+	{{- end }}
 }
 {{- end }}
 
 {{- if $hasRecv }}
-{{ printf "%s receives streaming data from the %s endpoint." .RecvName .Endpoint.Method.Name | comment }}
-func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
+{{ comment .RecvDesc }}
+func (s *{{ .VarDeclaration.Name }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 	return s.{{ .RecvName }}WithContext(s.ctx)
 }
 
-{{ printf "%sWithContext receives streaming data from the %s endpoint with context." .RecvName .Endpoint.Method.Name | comment }}
-func (s *{{ .VarName }}) {{ .RecvName }}WithContext(ctx context.Context) ({{ .RecvTypeRef }}, error) {
-	// Check for stream-level errors first
-	if err := s.getError(); err != nil {
-		return nil, err
+{{ comment .RecvWithContextDesc }}
+func (s *{{ .VarDeclaration.Name }}) {{ .RecvName }}WithContext(ctx context.Context) ({{ .RecvTypeRef }}, error) {
+	{{- if $isBidirectional }}
+	pending, err := s.nextPending(ctx)
+	if err != nil {
+		var zero {{ .RecvTypeRef }}
+		return zero, err
 	}
-	
-{{- if $isBidirectional }}
-	// Find the oldest pending request (FIFO ordering)
-	var oldestPending *{{ .VarName }}PendingRequest
-	var oldestKey string
-	
-	s.pending.Range(func(key, value any) bool {
-		pending := value.(*{{ .VarName }}PendingRequest)
-		if oldestPending == nil {
-			oldestPending = pending
-			oldestKey = key.(string)
-		}
-		return false // Take first one for FIFO
-	})
-	
-	if oldestPending == nil {
-		return nil, fmt.Errorf("no pending requests - call {{ .SendName }}() first")
-	}
-	
-	// Wait for result with context cancellation
-	select {
-	case result := <-oldestPending.resultChan:
-		s.pending.Delete(oldestKey)
-		oldestPending.timeout.Stop()
-		return result.result, result.err
-		
-	case <-oldestPending.timeout.C:
-		s.pending.Delete(oldestKey)
-		timeoutErr := fmt.Errorf("request timeout after %v", s.config.RequestTimeout)
-		// Report timeout errors
-		s.handleError(jsonrpc.StreamErrorTimeout, timeoutErr, nil)
-		return nil, timeoutErr
-		
-	case <-ctx.Done():
-		return nil, ctx.Err()
-		
-	case <-s.done:
-		if err := s.getError(); err != nil {
-			return nil, err
-		}
-		return nil, fmt.Errorf("stream closed")
-	}
-{{- else }}
-	// For result-only streaming, make direct call
-	jsonrpcID := strconv.FormatUint(s.idGenerator.Add(1), 10)
-	
+	return s.awaitPending(ctx, pending)
+	{{- else }}
 	request := &jsonrpc.Request{
 		JSONRPC: "2.0",
 		Method:  "{{ .Endpoint.Method.Name }}",
-		Params:  nil,
-		ID:      &jsonrpcID,
 	}
-	
-	// Create result channel for this request
-	resultChan := make(chan {{ .VarName }}StreamResult, s.config.ResultChannelBuffer)
-	pending := &{{ .VarName }}PendingRequest{
-		userID:     jsonrpcID,
-		resultChan: resultChan,
-		timeout:    time.NewTimer(s.config.RequestTimeout),
+	pending := &{{ $pendingType }}{
+		resultChan: make(chan {{ $resultType }}, 1),
 	}
-	
-	s.pending.Store(jsonrpcID, pending)
-	defer func() {
-		s.pending.Delete(jsonrpcID)
-		pending.timeout.Stop()
-	}()
-	
-	// Send request
-	s.writeMu.Lock()
-	err := s.ws.WriteJSON(request)
-	s.writeMu.Unlock()
-	
+	id, err := s.conn.sendRequest(ctx, request, s.owner, func(ctx context.Context, response *jsonrpc.RawResponse, err error) {
+		s.completeResponse(ctx, pending, response, err)
+	})
 	if err != nil {
-		s.setError(err)
-		// Report connection errors
-		s.handleError(jsonrpc.StreamErrorConnection, err, nil)
-		return nil, fmt.Errorf("failed to send request: %w", err)
+		var zero {{ .RecvTypeRef }}
+		return zero, err
 	}
-	
-	// Wait for response
-	select {
-	case result := <-resultChan:
-		return result.result, result.err
-	case <-pending.timeout.C:
-		timeoutErr := fmt.Errorf("request timeout after %v", s.config.RequestTimeout)
-		// Report timeout errors
-		s.handleError(jsonrpc.StreamErrorTimeout, timeoutErr, nil)
-		return nil, timeoutErr
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-s.done:
-		if err := s.getError(); err != nil {
-			return nil, err
-		}
-		return nil, fmt.Errorf("stream closed")
-	}
-{{- end }}
+	pending.id = id
+	return s.awaitPending(ctx, pending)
+	{{- end }}
 }
-{{- end }}
 
-// responseHandler processes incoming WebSocket messages in a background goroutine
-func (s *{{ .VarName }}) responseHandler() {
-	defer close(s.done)
-	
+// awaitPending waits for pending to receive a result or error. It returns the
+// closed-stream error if Close runs, even when another cancellation is ready.
+func (s *{{ .VarDeclaration.Name }}) awaitPending(ctx context.Context, pending *{{ $pendingType }}) ({{ .RecvTypeRef }}, error) {
 	for {
+		if s.owner.closed.Load() {
+			var zero {{ .RecvTypeRef }}
+			return zero, {{ .ClosedError.Name }}
+		}
 		select {
+		case result := <-pending.resultChan:
+			return result.result, s.methodStreamError(result.err)
+		case <-ctx.Done():
+			err := s.methodStreamError(ctx.Err())
+			s.conn.cancelRequest(pending.id, err)
+			var zero {{ .RecvTypeRef }}
+			return zero, err
 		case <-s.ctx.Done():
-			s.cleanupPendingRequests(s.ctx.Err())
-			return
-		default:
-			var response jsonrpc.RawResponse
-			if err := s.ws.ReadJSON(&response); err != nil {
-				connectionErr := fmt.Errorf("failed to read response: %w", err)
-				s.setError(connectionErr)
-				
-				// Report connection errors
-				s.handleError(jsonrpc.StreamErrorConnection, connectionErr, nil)
-				
-				s.cleanupPendingRequests(connectionErr)
-				return
-			}
-			
-			s.handleResponse(&response)
+			err := s.methodStreamError(s.ctx.Err())
+			s.conn.cancelRequest(pending.id, err)
+			var zero {{ .RecvTypeRef }}
+			return zero, err
+		case <-s.conn.done:
+			var zero {{ .RecvTypeRef }}
+			return zero, s.methodStreamError(s.conn.terminalError())
 		}
 	}
 }
 
-func (s *{{ .VarName }}) handleResponse(response *jsonrpc.RawResponse) {
-	if response.ID == nil {
-		// This is a server-initiated notification
-		// For now, just report it as an event via the error handler
-		// In the future, we could add a dedicated notification handler
-		if s.config.ErrorHandler != nil {
-			s.config.ErrorHandler(s.ctx, jsonrpc.StreamErrorNotification, 
-				fmt.Errorf("received server notification"), response)
-		}
-		return
-	}
-	
-	jsonrpcID := response.ID
-	pendingInterface, exists := s.pending.LoadAndDelete(jsonrpcID)
-	if !exists {
-		// Orphaned response - report to error handler
-		s.handleError(jsonrpc.StreamErrorOrphaned, fmt.Errorf("received response for unknown ID: %s", jsonrpcID), response)
-		return
-	}
-	
-	pending := pendingInterface.(*{{ .VarName }}PendingRequest)
-	pending.timeout.Stop()
-	
-	var result {{ .VarName }}StreamResult
-	
-	if response.Error != nil {
+// completeResponse turns response into this method's service result, or uses
+// err when the request failed, and sends it to the Recv call waiting for pending.
+func (s *{{ .VarDeclaration.Name }}) completeResponse(ctx context.Context, pending *{{ $pendingType }}, response *jsonrpc.RawResponse, err error) {
+	var result {{ $resultType }}
+	switch {
+	case err != nil:
+		result.err = err
+	case response.Error != nil:
 		result.err = response.Error
-		// Report protocol-level JSON-RPC errors
-		s.handleError(jsonrpc.StreamErrorProtocol, response.Error, response)
-	} else {
-{{- if $hasRecv }}
-		// Use generated decoder for consistent response parsing
-		parsedResult, err := s.decodeResponse(response.Result)
-		if err != nil {
-			result.err = fmt.Errorf("failed to decode response: %w", err)
-			// Report parsing errors
-			s.handleError(jsonrpc.StreamErrorParsing, err, response)
+		s.conn.handleError(ctx, jsonrpc.StreamErrorProtocol, response.Error, response)
+	default:
+		parsedResult, decodeErr := s.decodeResponse(response.Result)
+		if decodeErr != nil {
+			result.err = fmt.Errorf("failed to decode JSON-RPC WebSocket response: %w", decodeErr)
+			s.conn.handleError(ctx, jsonrpc.StreamErrorParsing, result.err, response)
 		} else {
 			{{- if .Endpoint.Result.IDAttribute }}
-			// Backfill the result ID from the envelope when missing
 			{{- if .Endpoint.Result.IDAttributeRequired }}
 			if parsedResult.{{ .Endpoint.Result.IDAttribute }} == "" {
 				parsedResult.{{ .Endpoint.Result.IDAttribute }} = jsonrpc.IDToString(response.ID)
 			}
 			{{- else }}
 			if parsedResult.{{ .Endpoint.Result.IDAttribute }} == nil || *parsedResult.{{ .Endpoint.Result.IDAttribute }} == "" {
-				idCopy := jsonrpc.IDToString(response.ID)
-				parsedResult.{{ .Endpoint.Result.IDAttribute }} = &idCopy
+				id := jsonrpc.IDToString(response.ID)
+				parsedResult.{{ .Endpoint.Result.IDAttribute }} = &id
 			}
 			{{- end }}
 			{{- end }}
 			result.result = parsedResult
 		}
-{{- end }}
 	}
-	
-	// Non-blocking send to result channel
+	pending.resultChan <- result
+}
+
+{{- if $isBidirectional }}
+// enqueuePending adds pending to the requests waiting for Recv. It keeps their
+// send order even when the server responds in a different order.
+func (s *{{ .VarDeclaration.Name }}) enqueuePending(pending *{{ $pendingType }}) {
+	s.pendingMu.Lock()
+	s.pending = append(s.pending, pending)
+	if s.owner.closed.Load() {
+		s.pending = s.pending[:len(s.pending)-1]
+		s.pendingMu.Unlock()
+		return
+	}
+	s.pendingMu.Unlock()
 	select {
-	case pending.resultChan <- result:
+	case s.pendingReady <- struct{}{}:
 	default:
-		// Channel full - should not happen with buffer size 1
 	}
 }
 
-// Helper methods
-func (s *{{ .VarName }}) generateUserID() string {
-	return fmt.Sprintf("user-%d-%d", time.Now().UnixNano(), s.idGenerator.Load())
-}
-
-// handleError calls the user-provided error handler if available
-func (s *{{ .VarName }}) handleError(errorType jsonrpc.StreamErrorType, err error, response *jsonrpc.RawResponse) {
-	if s.config.ErrorHandler != nil {
-		s.config.ErrorHandler(s.ctx, errorType, err, response)
+// nextPending returns the first request sent by this method stream that has not
+// yet been passed to Recv. It returns an error if the caller cancels, Close
+// runs, or the socket fails first.
+func (s *{{ .VarDeclaration.Name }}) nextPending(ctx context.Context) (*{{ $pendingType }}, error) {
+	for {
+		if s.owner.closed.Load() {
+			return nil, {{ .ClosedError.Name }}
+		}
+		s.pendingMu.Lock()
+		if len(s.pending) > 0 {
+			if s.owner.closed.Load() {
+				s.pendingMu.Unlock()
+				return nil, {{ .ClosedError.Name }}
+			}
+			pending := s.pending[0]
+			s.pending = s.pending[1:]
+			s.pendingMu.Unlock()
+			return pending, nil
+		}
+		s.pendingMu.Unlock()
+		select {
+		case <-s.pendingReady:
+		case <-ctx.Done():
+			return nil, s.methodStreamError(ctx.Err())
+		case <-s.ctx.Done():
+			return nil, s.methodStreamError(s.ctx.Err())
+		case <-s.conn.done:
+			return nil, s.methodStreamError(s.conn.terminalError())
+		}
 	}
 }
+{{- end }}
 
+// methodStreamError returns the closed-stream error if Close has run.
+// Otherwise it returns the supplied err unchanged.
+func (s *{{ .VarDeclaration.Name }}) methodStreamError(err error) error {
+	if s.owner.closed.Load() {
+		return {{ .ClosedError.Name }}
+	}
+	return err
+}
 
-{{- if $hasRecv }}
-// decodeResponse decodes JSON-RPC response data using the user-provided decoder
-func (s *{{ .VarName }}) decodeResponse(data json.RawMessage) ({{ .RecvTypeRef }}, error) {
-	// Create minimal HTTP response with raw JSON data for user's decoder
+// decodeResponse reads data using this method's response format and returns the
+// service result.
+func (s *{{ .VarDeclaration.Name }}) decodeResponse(data json.RawMessage) ({{ .RecvTypeRef }}, error) {
+	{{- if .Endpoint.Method.ViewedResult }}
+	// The HTTP 200 status tells the configured decoder that this stream item is
+	// a successful JSON-RPC result. Streaming results cannot carry HTTP headers or cookies.
+	resp := &http.Response{StatusCode: http.StatusOK, Header: make(http.Header)}
+	return {{ viewedDecodeName .Endpoint.Method.Name }}(s.decoder, resp, data)
+	{{- else }}
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
 		Body:       io.NopCloser(bytes.NewReader(data)),
 	}
-
-	// Use user-provided decoder to decode the result (expects inner result JSON)
 	dec := s.decoder(resp)
 	var out {{ .RecvTypeRef }}
 	if err := dec.Decode(&out); err != nil {
-		return nil, err
+		var zero {{ .RecvTypeRef }}
+		return zero, err
 	}
 	return out, nil
+	{{- end }}
 }
 {{- end }}
 
-func (s *{{ .VarName }}) setError(err error) {
-	s.errorOnce.Do(func() {
-		s.lastError.Store(err)
-		s.cancel() // Cancel context to signal error state
-	})
-}
-
-func (s *{{ .VarName }}) getError() error {
-	if err, ok := s.lastError.Load().(error); ok {
-		return err
-	}
-	return nil
-}
-
-func (s *{{ .VarName }}) cleanupPendingRequests(err error) {
-	s.pending.Range(func(key, value any) bool {
-		pending := value.(*{{ .VarName }}PendingRequest)
-		pending.timeout.Stop()
-		
-		select {
-		case pending.resultChan <- {{ .VarName }}StreamResult{err: err}:
-		default:
-		}
-		
-		s.pending.Delete(key)
-		return true
-	})
-}
-
-{{ printf "Close closes the stream and cleans up resources." | comment }}
-func (s *{{ .VarName }}) Close() error {
-	var err error
+{{ printf "Close closes the %s method stream without closing the WebSocket shared by other methods." .Endpoint.Method.Name | comment }}
+func (s *{{ .VarDeclaration.Name }}) Close() error {
 	s.closeOnce.Do(func() {
+		s.conn.closeOwner(s.owner)
+		{{- if $isBidirectional }}
+		s.pendingMu.Lock()
+		s.pending = nil
+		s.pendingMu.Unlock()
+		{{- end }}
 		s.cancel()
-		
-		// Wait for response handler to finish
-		select {
-		case <-s.done:
-		case <-time.After(s.config.CloseTimeout):
-			// Force close if handler doesn't respond
-		}
-		
-		// Clean up any remaining pending requests
-		s.cleanupPendingRequests(fmt.Errorf("stream closed"))
-		
-		// Close the WebSocket connection
-		if s.ws != nil {
-			err = s.ws.Close()
-		}
 	})
-	return err
+	return nil
 }

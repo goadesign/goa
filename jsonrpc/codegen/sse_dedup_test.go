@@ -17,10 +17,10 @@ import (
 // endpoint.
 func TestJSONRPCSSE_DedupEventTypes(t *testing.T) {
 	root := expr.RunDSL(t, testdata.JSONRPCSSEDuplicateEventDSL)
-	services := CreateJSONRPCServices(root)
+	plan := CreateJSONRPCPlan(root)
 
 	// Generate JSON-RPC server files (includes the SSE streams file)
-	fs := ServerFiles(services)
+	fs := plan.ServerFiles()
 	require.NotEmpty(t, fs)
 
 	// Render the SSE streams file (sse.go)
@@ -40,8 +40,8 @@ func TestJSONRPCSSE_DedupEventTypes(t *testing.T) {
 	require.NotEmpty(t, code, "sse.go content not found")
 
 	// The shared machinery must be declared exactly once.
-	require.Equal(t, 1, strings.Count(code, "type sseServerStream struct"), "expected a single sseServerStream declaration\n%s", code)
-	require.Equal(t, 1, strings.Count(code, "type sseEventWriter struct"), "expected a single sseEventWriter declaration\n%s", code)
+	require.Equal(t, 1, strings.Count(code, "sseServerStream struct"), "expected a single sseServerStream declaration\n%s", code)
+	require.Equal(t, 1, strings.Count(code, "sseEventBuffer struct"), "expected a single sseEventBuffer declaration\n%s", code)
 
 	// Each endpoint gets its own stream type even when sharing the event type.
 	require.Equal(t, 1, strings.Count(code, "type StreamAServerStream struct"), "expected a single StreamA stream declaration\n%s", code)

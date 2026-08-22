@@ -15,7 +15,7 @@ func BuildMethodBodyInlineArrayUserPayload(serviceBodyInlineArrayUserMethodBodyI
 			v[i] = nil
 			continue
 		}
-		v[i] = marshalElemTypeToServicebodyinlinearrayuserElemType(val)
+		v[i] = marshalElemTypeToElemType(val)
 	}
 	return v, nil
 }

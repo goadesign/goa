@@ -1,13 +1,14 @@
-// ServeHTTP handles JSON-RPC requests with content negotiation for mixed HTTP/SSE transports.
-func (s *{{ .ServerStruct }}) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Check Accept header for SSE
+// ServeHTTP writes server-sent events when the Accept header requests them and
+// writes one ordinary JSON-RPC response for every other request.
+func (s *{{ .ServerStructDeclaration.Name }}) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// The event-stream media type asks this server to keep writing results.
 	accept := r.Header.Get("Accept")
 	if strings.Contains(accept, "text/event-stream") {
-		// Route to SSE handler for streaming methods
+		// handleSSE writes each streaming result as a server-sent event.
 		s.handleSSE(w, r)
 		return
 	}
 	
-	// Otherwise handle as regular JSON-RPC HTTP request
+	// handleHTTP writes one response and completes the request.
 	s.handleHTTP(w, r)
 }

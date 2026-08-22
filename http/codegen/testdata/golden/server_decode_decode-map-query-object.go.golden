@@ -52,7 +52,7 @@ func DecodeMethodMapQueryObjectRequest(mux goahttp.Muxer, decoder func(*http.Req
 		if err != nil {
 			return payload, err
 		}
-		payload = NewMethodMapQueryObjectPayloadType(&body, a, c)
+		payload = NewMethodMapQueryObjectPayload(&body, a, c)
 
 		return payload, nil
 	}

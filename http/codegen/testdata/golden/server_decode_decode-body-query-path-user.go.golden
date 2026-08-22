@@ -30,7 +30,7 @@ func DecodeMethodBodyQueryPathUserRequest(mux goahttp.Muxer, decoder func(*http.
 		if bRaw != "" {
 			b = &bRaw
 		}
-		payload = NewMethodBodyQueryPathUserPayloadType(&body, c2, b)
+		payload = NewMethodBodyQueryPathUserPayload(&body, c2, b)
 
 		return payload, nil
 	}

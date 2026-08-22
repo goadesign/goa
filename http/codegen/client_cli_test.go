@@ -56,8 +56,8 @@ func TestClientCLIFiles(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
-			fs := ClientCLIFiles(services)
+			plan := linkedHTTPPlanForRoot(t, root)
+			fs := plan.ClientCLIFiles()
 			sections := fs[c.FileIndex].SectionTemplates
 			code := codegen.SectionCode(t, sections[c.SectionIndex])
 			testutil.AssertGo(t, "testdata/golden/client_cli_"+c.Name+".go.golden", code)
@@ -67,8 +67,8 @@ func TestClientCLIFiles(t *testing.T) {
 
 func TestEmptyBodyCLIUsesPayloadFieldExample(t *testing.T) {
 	root := expr.RunDSL(t, testdata.PayloadBodyPrimitiveFieldEmptyDSL)
-	services := CreateHTTPServices(root)
-	endpoint := services.Get("ServiceBodyPrimitiveArrayUser").Endpoints[0]
+	plan := linkedHTTPPlanForRoot(t, root)
+	endpoint := plan.services.Get("ServiceBodyPrimitiveArrayUser").Endpoints[0]
 	require.NotNil(t, endpoint.Payload.Request.PayloadInit)
 	require.Len(t, endpoint.Payload.Request.PayloadInit.ClientArgs, 1)
 	example := endpoint.Payload.Request.PayloadInit.ClientArgs[0].Example

@@ -1,6 +1,5 @@
-// This file defines the run-private plan shared by core generators and plugins.
-// Task-specific retained analyses are added as typed private fields by the
-// subsystem tasks that consume this lifecycle foundation.
+// This file stores the input designs, chosen Go names, and output files for one
+// run. Built-in file writers and plugins read the same values.
 package generator
 
 import (
@@ -10,29 +9,36 @@ import (
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
+	grpccodegen "goa.design/goa/v3/grpc/codegen"
+	httpcodegen "goa.design/goa/v3/http/codegen"
+	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
 )
 
 type (
-	// Plan retains the typed state shared by planning and rendering in one run.
-	// Planning may add declarations to Generation; rendering receives the same
-	// plan only after those declarations are frozen.
+	// Plan holds the input designs, chosen Go names, and generated files for one
+	// run. Code that writes files receives it after all Go names are known.
 	Plan struct {
 		generation    *codegen.Generation
 		preparedRoots []eval.Root
 		examples      map[*expr.RootExpr]*expr.ExampleGenerator
 		services      map[*expr.RootExpr]*service.Plan
+		http          map[*expr.RootExpr]*httpcodegen.Plan
+		jsonrpcHTTP   map[*expr.RootExpr]*httpcodegen.Plan
+		jsonrpc       map[*expr.RootExpr]*jsonrpccodegen.Plan
+		grpc          *grpccodegen.PreparedPlan
+		transportDone bool
 		design        *designSnapshot
 	}
 )
 
-// Generation returns the declaration and import catalog for this run.
+// Generation returns the names chosen for Go declarations and imports in this
+// run.
 func (p *Plan) Generation() *codegen.Generation {
 	return p.generation
 }
 
-// Service returns the retained service plan collected for root. It panics for
-// an unplanned root because plugins and transports must consume the exact core
-// analysis rather than reconstructing one.
+// Service returns the generated service data for root. It panics when root was
+// not included in this run.
 func (p *Plan) Service(root *expr.RootExpr) *service.Plan {
 	plan, ok := p.services[root]
 	if !ok {
@@ -41,8 +47,8 @@ func (p *Plan) Service(root *expr.RootExpr) *service.Plan {
 	return plan
 }
 
-// exampleGenerator returns the mutable example state created for root in this
-// run. A root outside the prepared plan is an orchestration bug.
+// exampleGenerator returns the example values created for root. It panics when
+// root was not included in this run.
 func (p *Plan) exampleGenerator(root *expr.RootExpr) *expr.ExampleGenerator {
 	generator, ok := p.examples[root]
 	if !ok {
@@ -51,8 +57,7 @@ func (p *Plan) exampleGenerator(root *expr.RootExpr) *expr.ExampleGenerator {
 	return generator
 }
 
-// link resolves every collected subsystem plan through the frozen generation
-// before any core or plugin renderer receives it.
+// link completes each service and then builds the protocol files that use it.
 func (p *Plan) link() error {
 	for _, root := range serviceRoots(p.preparedRoots) {
 		plan, ok := p.services[root]
@@ -63,11 +68,28 @@ func (p *Plan) link() error {
 			return err
 		}
 	}
+	for _, root := range serviceRoots(p.preparedRoots) {
+		if plan := p.http[root]; plan != nil {
+			if err := plan.Link(); err != nil {
+				return err
+			}
+		}
+		if plan := p.jsonrpcHTTP[root]; plan != nil {
+			if err := plan.Link(); err != nil {
+				return err
+			}
+		}
+		if plan := p.jsonrpc[root]; plan != nil {
+			if err := plan.Link(); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
-// verifyPreparedDesign rejects the first expression change made after
-// preparation and identifies the callback or render operation that made it.
+// verifyPreparedDesign reports the first service design value changed after
+// planning and names the code that changed it.
 func (p *Plan) verifyPreparedDesign(operation string) error {
 	path, err := p.design.changedPath(p.preparedRoots)
 	if err != nil {

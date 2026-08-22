@@ -8,8 +8,8 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// PathFiles returns the service path files.
-func PathFiles(data *ServicesData) []*codegen.File {
+// pathFiles builds the service path files read by Plan.Link.
+func pathFiles(data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, 2*len(data.Expressions.Services))
 	for i := 0; i < len(data.Expressions.Services); i++ {
 		fw[i*2] = serverPath(data.Expressions.Services[i], data)
@@ -49,10 +49,17 @@ func pathSections(svc *expr.HTTPServiceExpr, pkg string, services *ServicesData)
 	)
 	sdata := services.Get(svc.Name())
 	for _, e := range svc.HTTPEndpoints {
+		data := struct {
+			*EndpointData
+			Client bool
+		}{
+			EndpointData: sdata.Endpoint(e.Name()),
+			Client:       pkg == "client",
+		}
 		sections = append(sections, &codegen.SectionTemplate{
 			Name:   "path",
 			Source: httpTemplates.Read(pathT),
-			Data:   sdata.Endpoint(e.Name()),
+			Data:   data,
 		})
 	}
 

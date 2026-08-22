@@ -1,5 +1,5 @@
-{{ printf "%s builds the payload for the %s %s endpoint from CLI flags." .Name .ServiceName .MethodName | comment }}
-func {{ .Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .ResultType }}, error) {
+{{ printf "%s builds the payload for the %s %s endpoint from CLI flags." .Declaration.Name .ServiceName .MethodName | comment }}
+func {{ .Declaration.Name }}({{ range .FormalParams }}{{ . }} string, {{ end }}) ({{ .ResultType }}, error) {
 {{- if .CheckErr }}
 	var err error
 {{- end }}

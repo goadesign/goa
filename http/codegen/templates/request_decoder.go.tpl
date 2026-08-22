@@ -1,5 +1,5 @@
-{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .RequestDecoder .ServiceName .Method.Name | comment }}
-func {{ .RequestDecoder }}(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request{{ if .IsJSONRPC }}, *jsonrpc.RawRequest{{ end }}) ({{ .Payload.Ref }}, error) {
+{{ printf "%s returns a decoder for requests sent to the %s %s endpoint." .RequestDecoderDeclaration.Name .ServiceName .Method.Name | comment }}
+func {{ .RequestDecoderDeclaration.Name }}(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request{{ if .IsJSONRPC }}, *jsonrpc.RawRequest{{ end }}) ({{ .Payload.Ref }}, error) {
 	return func(r *http.Request{{ if .IsJSONRPC }}, req *jsonrpc.RawRequest{{ end }}) ({{ .Payload.Ref }}, error) {
 {{- if .IsJSONRPC }}
 		r.Body = io.NopCloser(bytes.NewReader(req.Params))

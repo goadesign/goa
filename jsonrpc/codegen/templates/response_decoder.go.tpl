@@ -1,5 +1,5 @@
-{{ printf "%s returns a decoder for responses returned by the %s service %s JSON-RPC method. restoreBody controls whether the response body should be restored after having been read." .ResponseDecoder .ServiceName .Method.Name | comment }}
-func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+{{ printf "%s returns a decoder for responses returned by the %s service %s JSON-RPC method. restoreBody controls whether the response body should be restored after having been read." .ResponseDecoderDeclaration.Name .ServiceName .Method.Name | comment }}
+func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
@@ -47,39 +47,14 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 			}
 		}
 
-{{-  with index .Result.Responses 0 }}
+	{{- if .Method.ViewedResult }}
+		return {{ viewedDecodeName .Method.Name }}(decoder, resp, jresp.Result)
+	{{- else }}
+{{- with index .Result.Responses 0 }}
 		resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Result))
 		{{- template "partial_single_response" (buildResponseData . $.ServiceName $.Method) }}
 {{- if .ResultInit }}
-	{{- if .ViewedResult }}
-		p := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
-		{{- if .TagName }}
-		tmp := {{ printf "%q" .TagValue }}
-		p.{{ .TagName }} = &tmp
-		{{- end }}
-		{{- if $.Method.ViewedResult.ViewName }}
-		view := {{ printf "%q" $.Method.ViewedResult.ViewName }}
-		{{- else }}
-		view := resp.Header.Get("goa-view")
-		{{- end }}
-		vres := {{ if not $.Method.ViewedResult.IsCollection }}&{{ end }}{{ $.Method.ViewedResult.ViewsPkg}}.{{ $.Method.ViewedResult.VarName }}{Projected: p, View: view}
-		{{- if .ClientBody }}
-		if err = {{ $.Method.ViewedResult.ViewsPkg}}.Validate{{ $.Method.Result }}(vres); err != nil {
-			return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
-		}
-		{{- end }}
-		res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ResultInit.Declaration.Name }}(vres)
-	{{- else }}
 		res := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
-	{{- end }}
-	{{- if and .TagName (not .ViewedResult) }}
-		{{- if .TagPointer }}
-		tmp := {{ printf "%q" .TagValue }}
-		res.{{ .TagName }} = &tmp
-		{{- else }}
-		res.{{ .TagName }} = {{ printf "%q" .TagValue }}
-		{{- end }}
-	{{- end }}
 		return res, nil
 {{- else if .ClientBody }}
 		return body, nil
@@ -91,5 +66,6 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 		return nil, nil
 {{- end }}
 {{- end }}
+	{{- end }}
 	}
 }

@@ -302,8 +302,15 @@ func planServiceFileImports(facts *serviceFacts, rootTypes *rootTypeSet, generat
 	if serviceHasSchemes(facts) {
 		endpointFixed = append(endpointFixed, securityImport)
 	}
+	var endpointGenerated []*codegen.ImportSpec
+	for _, method := range facts.methods {
+		if facts.methodByExpr[method].viewedResult != nil {
+			endpointGenerated = append(endpointGenerated, viewsImport)
+			break
+		}
+	}
 	facts.imports.endpoint, err = retainFileImports(
-		generation, servicePath, endpointFixed, nil, facts.referenceAttributes, nil,
+		generation, servicePath, endpointFixed, endpointGenerated, facts.referenceAttributes, nil,
 	)
 	if err != nil {
 		return err

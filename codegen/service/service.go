@@ -464,6 +464,7 @@ func streamInterfaceFor(typ string, m *MethodData, stream *StreamData) map[strin
 		"Endpoint":           m.Name,
 		"Stream":             stream,
 		"MethodVarName":      m.VarName,
+		"EventDeclaration":   m.EventDeclaration,
 		"IsJSONRPC":          m.IsJSONRPC,
 		"IsJSONRPCSSE":       m.IsJSONRPCSSE && typ == "server",
 		"IsJSONRPCWebSocket": m.IsJSONRPCWebSocket,

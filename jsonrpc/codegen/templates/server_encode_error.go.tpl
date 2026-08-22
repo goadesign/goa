@@ -1,10 +1,10 @@
-{{ printf "encodeJSONRPCError creates and sends a JSON-RPC error response (handles nil ID gracefully)" | comment }}
-func (s *Server) encodeJSONRPCError(ctx context.Context, w http.ResponseWriter, req *jsonrpc.RawRequest, code jsonrpc.Code, message string, data any) {
-	encodeJSONRPCError(ctx, w, req, code, message, data, s.encoder, s.errhandler)
+{{ printf "encodeJSONRPCError writes one JSON-RPC error response and preserves a missing request ID." | comment }}
+func (s *{{ .ServerStructDeclaration.Name }}) encodeJSONRPCError(ctx context.Context, w http.ResponseWriter, req *jsonrpc.RawRequest, code jsonrpc.Code, message string, data any) {
+	{{ .EncodeError.Name }}(ctx, w, req, code, message, data, s.encoder, s.errhandler)
 }
 
-{{ printf "encodeJSONRPCError creates and sends a JSON-RPC error response (handles nil ID gracefully)" | comment }}
-func encodeJSONRPCError(
+{{ printf "%s writes one JSON-RPC error response and preserves a missing request ID." .EncodeError.Name | comment }}
+func {{ .EncodeError.Name }}(
 	ctx context.Context,
 	w http.ResponseWriter,
 	req *jsonrpc.RawRequest,

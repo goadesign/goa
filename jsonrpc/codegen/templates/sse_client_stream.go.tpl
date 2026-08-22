@@ -1,14 +1,37 @@
-{{ printf "%sClientStream implements the %s.%sClientStream interface using Server-Sent Events." .Method.VarName .ServicePkgName .Method.VarName | comment }}
-type {{ .Method.VarName }}ClientStream struct {
-	resp    *http.Response  // HTTP response object
-	reader  *bufio.Reader   // Buffered reader for SSE parsing
-	decoder func(*http.Response) goahttp.Decoder  // User-provided decoder
-	closed  bool            // Whether the stream has been closed
-	lock    sync.Mutex      // Mutex to protect state
+type (
+	{{ printf "%s reads results sent as server-sent events." .SSE.ClientInterfaceDeclaration.Name | comment }}
+	{{ .SSE.ClientInterfaceDeclaration.Name }} interface {
+		{{ .Method.ClientStream.RecvName }}() ({{ .Result.Ref }}, error)
+		{{ .Method.ClientStream.RecvWithContextName }}(context.Context) ({{ .Result.Ref }}, error)
+		Close() error
+	}
+
+	{{ printf "%s reads and decodes events for %s." .SSE.ClientStructDeclaration.Name .Method.Name | comment }}
+	{{ .SSE.ClientStructDeclaration.Name }} struct {
+		// resp is the open server response.
+		resp *http.Response
+		// reader reads one line at a time from resp.
+		reader *bufio.Reader
+		// decoder converts each result into its service type.
+		decoder func(*http.Response) goahttp.Decoder
+		// closed records whether Close was called or the response ended.
+		closed bool
+		// lock prevents two calls from reading or closing the response at once.
+		lock sync.Mutex
+	}
+)
+
+{{ printf "%s creates a stream that reads server-sent events from resp." .SSE.ClientInitDeclaration.Name | comment }}
+func {{ .SSE.ClientInitDeclaration.Name }}(resp *http.Response, decoder func(*http.Response) goahttp.Decoder) {{ .SSE.ClientInterfaceDeclaration.Name }} {
+	return &{{ .SSE.ClientStructDeclaration.Name }}{
+		resp:    resp,
+		reader:  bufio.NewReader(resp.Body),
+		decoder: decoder,
+	}
 }
 
-// parseSSEEvent parses a single SSE event from the stream
-func (s *{{ .Method.VarName }}ClientStream) parseSSEEvent() (eventType string, data []byte, err error) {
+// parseSSEEvent reads one complete event from the response.
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) parseSSEEvent() (eventType string, data []byte, err error) {
 	var event strings.Builder
 	var dataLines []string
 	
@@ -16,7 +39,7 @@ func (s *{{ .Method.VarName }}ClientStream) parseSSEEvent() (eventType string, d
 		line, err := s.reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF && len(dataLines) > 0 {
-				// Process final event
+				// Return the last event even when the response has no final blank line.
 				break
 			}
 			return "", nil, err
@@ -26,7 +49,7 @@ func (s *{{ .Method.VarName }}ClientStream) parseSSEEvent() (eventType string, d
 		line = strings.TrimSuffix(line, "\r")
 		
 		if line == "" {
-			// Empty line marks end of event
+			// A blank line ends the current event.
 			if len(dataLines) > 0 {
 				break
 			}
@@ -38,7 +61,7 @@ func (s *{{ .Method.VarName }}ClientStream) parseSSEEvent() (eventType string, d
 		} else if strings.HasPrefix(line, "data:") {
 			dataLines = append(dataLines, strings.TrimSpace(line[5:]))
 		}
-		// Ignore other fields like id:, retry:
+		// This client does not use the id and retry fields.
 	}
 	
 	if len(dataLines) > 0 {
@@ -49,7 +72,12 @@ func (s *{{ .Method.VarName }}ClientStream) parseSSEEvent() (eventType string, d
 }
 
 {{ comment .Method.ClientStream.RecvDesc }}
-func (s *{{ .Method.VarName }}ClientStream) {{ .Method.ClientStream.RecvName }}(ctx context.Context) ({{ .Result.Ref }}, error) {
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) {{ .Method.ClientStream.RecvName }}() ({{ .Result.Ref }}, error) {
+	return s.{{ .Method.ClientStream.RecvWithContextName }}(context.Background())
+}
+
+{{ comment .Method.ClientStream.RecvWithContextDesc }}
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) {{ .Method.ClientStream.RecvWithContextName }}(_ context.Context) ({{ .Result.Ref }}, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	
@@ -156,15 +184,20 @@ func (s *{{ .Method.VarName }}ClientStream) {{ .Method.ClientStream.RecvName }}(
 }
 
 {{- if .Method.Result }}
-// decodeResult decodes JSON-RPC result data using the user-provided decoder
-func (s *{{ .Method.VarName }}ClientStream) decodeResult(data json.RawMessage) ({{ .Result.Ref }}, error) {
-	// Create minimal HTTP response with raw JSON data for user's decoder
+// decodeResult passes one successful stream item to the decoder configured by NewClient.
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) decodeResult(data json.RawMessage) ({{ .Result.Ref }}, error) {
+	{{- if .Method.ViewedResult }}
+	// The HTTP 200 status tells the configured decoder that this stream item is
+	// a successful JSON-RPC result. Streaming results cannot carry HTTP headers or cookies.
+	resp := &http.Response{StatusCode: http.StatusOK, Header: make(http.Header)}
+	return {{ viewedDecodeName .Method.Name }}(s.decoder, resp, data)
+	{{- else }}
+	// Give the configured decoder the successful result bytes as an HTTP response body.
 	resp := &http.Response{
 		StatusCode: http.StatusOK,
 		Body:       io.NopCloser(bytes.NewReader(data)),
 	}
 	
-	// Use the user-provided decoder to decode the result
 	decoder := s.decoder(resp)
 	var result {{ .Result.Ref }}
 	if err := decoder.Decode(&result); err != nil {
@@ -172,11 +205,12 @@ func (s *{{ .Method.VarName }}ClientStream) decodeResult(data json.RawMessage) (
 	}
 	
 	return result, nil
+	{{- end }}
 }
 {{- end }}
 
 {{ comment "Close closes the stream." }}
-func (s *{{ .Method.VarName }}ClientStream) Close() error {
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) Close() error {
     s.lock.Lock()
     defer s.lock.Unlock()
     

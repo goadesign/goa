@@ -40,7 +40,7 @@ func DecodeMethodBodyQueryPathUserValidateRequest(mux goahttp.Muxer, decoder fun
 		if err != nil {
 			return payload, err
 		}
-		payload = NewMethodBodyQueryPathUserValidatePayloadType(&body, c2, b)
+		payload = NewMethodBodyQueryPathUserValidatePayload(&body, c2, b)
 
 		return payload, nil
 	}

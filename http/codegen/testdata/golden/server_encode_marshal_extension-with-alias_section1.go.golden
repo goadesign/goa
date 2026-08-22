@@ -1,6 +1,6 @@
-// unmarshalBarToFooserviceBar builds a value of type *fooservice.Bar from a
-// value of type *Bar.
-func unmarshalBarToFooserviceBar(v *Bar) *fooservice.Bar {
+// unmarshalBarToBar builds a value of type *fooservice.Bar from a value of
+// type *Bar2.
+func unmarshalBarToBar(v *Bar2) *fooservice.Bar {
 	if v == nil {
 		return nil
 	}

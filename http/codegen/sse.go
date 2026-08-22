@@ -1,6 +1,6 @@
-// This file builds HTTP server-sent event render data. Service event values
-// use frozen service declarations while encoded response bodies remain owned
-// by the HTTP transport package.
+// This file builds the values used to write HTTP server-sent event code.
+// Service event types keep the names chosen earlier, while the HTTP package
+// defines the request and response body types.
 package codegen
 
 import (
@@ -17,9 +17,14 @@ type (
 	// SSEData contains the data needed to render struct type that
 	// implements the server and client stream interface for SSE.
 	SSEData struct {
-		// StructName is the name of the generated struct which encapsulates the
-		// server implementation.
-		StructName string
+		// StructDeclaration is the package name used by the server stream type.
+		StructDeclaration *codegen.NameDeclaration
+		// ClientInterfaceDeclaration is the package name used by the client stream interface.
+		ClientInterfaceDeclaration *codegen.NameDeclaration
+		// ClientStructDeclaration is the package name used by the client stream implementation.
+		ClientStructDeclaration *codegen.NameDeclaration
+		// ClientInitDeclaration is the package name used by the client stream constructor.
+		ClientInitDeclaration *codegen.NameDeclaration
 		// Interface is the fully qualified name of the interface that
 		// the struct implements.
 		Interface string
@@ -33,7 +38,7 @@ type (
 		SendWithContextDesc string
 		// EventTypeRef is the fully qualified type ref for the event type.
 		EventTypeRef string
-		// EventTypeName is the name of the event type without package qualifier.
+		// EventTypeName is the event type name without its Go package name.
 		EventTypeName string
 		// EventIsStruct indicates whether the SSE method return type is a struct.
 		EventIsStruct bool
@@ -58,6 +63,14 @@ type (
 		RequestIDPointer bool
 		// HasResponseBody indicates whether an HTTP response body converter exists for this endpoint.
 		HasResponseBody bool
+		// Response is the successful HTTP response whose body types encode and
+		// decode stream events.
+		Response *ResponseData
+		// VariableView reports whether SetView selects the result body used by all
+		// events sent for one HTTP request.
+		VariableView bool
+		// DefaultView is used when SetView receives an empty string.
+		DefaultView string
 	}
 )
 
@@ -118,7 +131,6 @@ func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr,
 	}
 
 	ed.SSE = &SSEData{
-		StructName:          md.ServerStream.VarName,
 		Interface:           fmt.Sprintf("%s.%s", svc.PkgName, md.ServerStream.Interface),
 		SendName:            md.ServerStream.SendName,
 		SendDesc:            sendDesc,
@@ -134,6 +146,21 @@ func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr,
 		RetryField:          retryFieldVar,
 		RequestIDField:      e.SSE.RequestIDField,
 		RequestIDPointer:    ridPtr,
+		VariableView:        md.ViewedResult != nil && md.ViewedResult.ViewName == "",
+	}
+	if ed.SSE.VariableView {
+		for _, view := range md.ViewedResult.Views {
+			if view.Name == expr.DefaultView {
+				ed.SSE.DefaultView = view.Name
+				break
+			}
+		}
+		if ed.SSE.DefaultView == "" {
+			panic(fmt.Sprintf("viewed SSE method %q has no default view", md.Name))
+		}
+	}
+	if len(ed.Result.Responses) > 0 {
+		ed.SSE.Response = ed.Result.Responses[0]
 	}
 
 	// Mixed results SSE uses the streaming result type for events, not the unary
@@ -172,6 +199,9 @@ func sseServerFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.F
 		{Path: "encoding/json"},
 		{Path: "fmt"},
 		services.ServiceImport(svc.Name()),
+	}
+	if serviceHasVariableViewedResult(data, IsSSEEndpoint) {
+		imports = append(imports, codegen.GoaImport(""))
 	}
 	sections = append(sections,
 		codegen.Header(
@@ -230,4 +260,18 @@ func IsSSEEndpoint(ed *EndpointData) bool {
 // HasSSE returns true if at least one endpoint in the service uses SSE.
 func HasSSE(data *ServiceData) bool {
 	return slices.ContainsFunc(data.Endpoints, IsSSEEndpoint)
+}
+
+// serviceHasVariableViewedResult reports whether a selected endpoint carries
+// one of multiple legal views at runtime.
+func serviceHasVariableViewedResult(service *ServiceData, selected func(*EndpointData) bool) bool {
+	for _, endpoint := range service.Endpoints {
+		if selected != nil && !selected(endpoint) {
+			continue
+		}
+		if endpoint.Method.ViewedResult != nil && endpoint.Method.ViewedResult.ViewName == "" {
+			return true
+		}
+	}
+	return false
 }

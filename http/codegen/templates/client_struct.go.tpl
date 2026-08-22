@@ -1,5 +1,5 @@
-{{ printf "%s lists the %s service endpoint HTTP clients." .ClientStruct .Service.Name | comment }}
-type {{ .ClientStruct }} struct {
+{{ printf "%s lists the %s service endpoint HTTP clients." .ClientStructDeclaration.Name .Service.Name | comment }}
+type {{ .ClientStructDeclaration.Name }} struct {
 	{{- range .Endpoints }}
 	{{ printf "%s Doer is the HTTP client used to make requests to the %s endpoint." .Method.VarName .Method.Name | comment }}
 	{{ .Method.VarName }}Doer goahttp.Doer

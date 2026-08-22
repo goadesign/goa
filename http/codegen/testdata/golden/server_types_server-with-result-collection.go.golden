@@ -24,7 +24,7 @@ type Rt struct {
 func NewMethodResultWithResultCollectionResponseBody(res *serviceresultwithresultcollection.MethodResultWithResultCollectionResult) *MethodResultWithResultCollectionResponseBody {
 	body := &MethodResultWithResultCollectionResponseBody{}
 	if res.A != nil {
-		body.A = marshalServiceresultwithresultcollectionResulttypeToResulttype(res.A)
+		body.A = marshalResulttypeToResulttype(res.A)
 	}
 	return body
 }

@@ -14,9 +14,9 @@ type BPayload struct {
 	Bytes []byte `form:"bytes,omitempty" json:"bytes,omitempty" xml:"bytes,omitempty"`
 }
 
-// NewMethodAAPayload builds a ServiceMixedPayloadInBody service MethodA
+// NewMethodAPayload builds a ServiceMixedPayloadInBody service MethodA
 // endpoint payload.
-func NewMethodAAPayload(body *MethodARequestBody) *servicemixedpayloadinbody.APayload {
+func NewMethodAPayload(body *MethodARequestBody) *servicemixedpayloadinbody.APayload {
 	v := &servicemixedpayloadinbody.APayload{
 		Any: body.Any,
 	}
@@ -32,9 +32,9 @@ func NewMethodAAPayload(body *MethodARequestBody) *servicemixedpayloadinbody.APa
 			v.Map[tk] = tv
 		}
 	}
-	v.Object = unmarshalBPayloadToServicemixedpayloadinbodyBPayload(body.Object)
+	v.Object = unmarshalBPayloadToBPayload(body.Object)
 	if body.DupObj != nil {
-		v.DupObj = unmarshalBPayloadToServicemixedpayloadinbodyBPayload(body.DupObj)
+		v.DupObj = unmarshalBPayloadToBPayload2(body.DupObj)
 	}
 
 	return v

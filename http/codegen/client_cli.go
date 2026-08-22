@@ -14,6 +14,7 @@ import (
 // commandData wraps the common CommandData and adds HTTP-specific fields.
 type commandData struct {
 	*cli.CommandData
+	serviceName string
 	// Subcommands is the list of endpoint commands.
 	Subcommands []*subcommandData
 	// NeedDialer if true initializes the websocket dialer.
@@ -22,16 +23,19 @@ type commandData struct {
 	// streaming endpoints are configured with a goahttp.ConnConfigureFunc
 	// instead of a client package ConnConfigurer.
 	JSONRPC bool
+	// ClientInit is the client constructor called by ParseEndpoint.
+	ClientInit *codegen.NameDeclaration
+	// Configurer is the WebSocket configuration type accepted by ParseEndpoint.
+	Configurer *codegen.NameDeclaration
 }
 
 // commandData wraps the common SubcommandData and adds HTTP-specific fields.
 type subcommandData struct {
 	*cli.SubcommandData
-	// MultipartFuncName is the name of the function used to render a multipart
-	// request encoder.
-	MultipartFuncName string
-	// MultipartFuncName is the name of the variable used to render a multipart
-	// request encoder.
+	methodName string
+	// MultipartFuncDeclaration supplies the multipart request encoder type name.
+	MultipartFuncDeclaration *codegen.NameDeclaration
+	// MultipartVarName is the variable that holds the multipart request encoder.
 	MultipartVarName string
 	// StreamFlag is the flag used to identify the file to be streamed when
 	// the endpoint uses SkipRequestBodyEncodeDecode.
@@ -39,11 +43,11 @@ type subcommandData struct {
 	// BuildStreamPayload is the name of the generated function that builds the
 	// request data structure that wraps the payload and the file stream for
 	// endpoints that use SkipRequestBodyEncodeDecode.
-	BuildStreamPayload string
+	BuildStreamPayload *codegen.NameDeclaration
 }
 
-// ClientCLIFiles returns the client HTTP CLI support file.
-func ClientCLIFiles(data *ServicesData) []*codegen.File {
+// clientCLIFiles builds the client command file read by Plan.Link.
+func clientCLIFiles(data *ServicesData) []*codegen.File {
 	if len(data.Expressions.Services) == 0 {
 		return nil
 	}
@@ -56,8 +60,11 @@ func ClientCLIFiles(data *ServicesData) []*codegen.File {
 		if len(sd.Endpoints) > 0 {
 			command := &commandData{
 				CommandData: cli.BuildCommandData(sd.Service, sd.ClientPkgName),
+				serviceName: sd.Service.Name,
 				NeedDialer:  HasWebSocket(sd),
 				JSONRPC:     sd.Endpoints[0].IsJSONRPC,
+				ClientInit:  sd.ClientInitDeclaration,
+				Configurer:  sd.ClientConnConfigurerDeclaration,
 			}
 
 			for _, e := range sd.Endpoints {
@@ -92,17 +99,21 @@ func ClientCLIFiles(data *ServicesData) []*codegen.File {
 
 func buildSubcommandData(sd *ServiceData, e *EndpointData) *subcommandData {
 	flags, buildFunction := buildFlags(sd, e)
+	if buildFunction != nil {
+		buildFunction.Declaration = e.CLIPayloadDeclaration
+	}
 
 	sub := &subcommandData{
 		SubcommandData: cli.BuildSubcommandData(sd.Service, e.Method, buildFunction, flags),
+		methodName:     e.Method.Name,
 	}
 	if e.MultipartRequestEncoder != nil {
 		sub.MultipartVarName = e.MultipartRequestEncoder.VarName
-		sub.MultipartFuncName = e.MultipartRequestEncoder.FuncName
+		sub.MultipartFuncDeclaration = e.MultipartRequestEncoder.FuncDeclaration
 	}
 	if e.Method.SkipRequestBodyEncodeDecode {
 		sub.StreamFlag = streamFlag(sd.Service.Name, e.Method.Name)
-		sub.BuildStreamPayload = e.BuildStreamPayload
+		sub.BuildStreamPayload = e.BuildStreamPayloadDeclaration
 	}
 	return sub
 }
@@ -141,24 +152,54 @@ func endpointParser(root *expr.RootExpr, svr *expr.ServerExpr, data []*commandDa
 		}
 	}
 
+	parser := services.cliParsers[svr]
+	if parser == nil {
+		panic(fmt.Sprintf("HTTP CLI parser names are missing for server %q", svr.Name))
+	}
+	plannedData := make([]*commandData, len(data))
 	cliData := make([]*cli.CommandData, len(data))
-	for i, cmd := range data {
-		cliData[i] = cmd.CommandData
+	for i, command := range data {
+		commandNames := parser.Commands[command.serviceName]
+		if commandNames == nil {
+			panic(fmt.Sprintf("HTTP CLI command names are missing for service %q", command.serviceName))
+		}
+		commandCopy := *command
+		commonCommand := *command.CommandData
+		commonCommand.UsageDeclaration = commandNames.Usage
+		commandCopy.CommandData = &commonCommand
+		commandCopy.Subcommands = make([]*subcommandData, len(command.Subcommands))
+		commonCommand.Subcommands = make([]*cli.SubcommandData, len(command.Subcommands))
+		for j, subcommand := range command.Subcommands {
+			usage := commandNames.Methods[subcommand.methodName]
+			if usage == nil {
+				panic(fmt.Sprintf("HTTP CLI method help name is missing for %q.%q", command.serviceName, subcommand.methodName))
+			}
+			subcommandCopy := *subcommand
+			commonSubcommand := *subcommand.SubcommandData
+			commonSubcommand.UsageDeclaration = usage
+			subcommandCopy.SubcommandData = &commonSubcommand
+			commandCopy.Subcommands[j] = &subcommandCopy
+			commonCommand.Subcommands[j] = &commonSubcommand
+		}
+		plannedData[i] = &commandCopy
+		cliData[i] = &commonCommand
 	}
 
 	parseSection := &codegen.SectionTemplate{
 		Name:   "parse-endpoint",
 		Source: httpTemplates.Read(parseEndpointT),
 		Data: struct {
-			FlagsCode string
-			Commands  []*commandData
+			Declaration *codegen.NameDeclaration
+			FlagsCode   string
+			Commands    []*commandData
 		}{
+			parser.Declarations.ParseEndpoint,
 			cli.FlagsCode(cliData),
-			data,
+			plannedData,
 		},
 		FuncMap: map[string]any{"streamingCmdExists": streamingCmdExists},
 	}
-	return cli.EndpointParserFile(path, title, specs, cliData, parseSection)
+	return cli.EndpointParserFile(path, title, specs, cliData, parser.Declarations, parseSection)
 }
 
 // payloadBuilders returns the file that contains the payload constructors that

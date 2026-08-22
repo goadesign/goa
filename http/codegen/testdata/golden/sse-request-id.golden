@@ -8,6 +8,8 @@ type SSERequestIDMethodServerStream struct {
 	w http.ResponseWriter
 	// r is the HTTP request.
 	r *http.Request
+	// attempted is true after this stream writes the HTTP success status.
+	attempted bool
 }
 
 // Send Send streams instances of "string" to the "SSERequestIDMethod" endpoint
@@ -19,24 +21,11 @@ func (s *SSERequestIDMethodServerStream) Send(v string) error {
 // SendWithContext SendWithContext streams instances of "string" to the
 // "SSERequestIDMethod" endpoint SSE connection with context.
 func (s *SSERequestIDMethodServerStream) SendWithContext(ctx context.Context, v string) error {
-	s.once.Do(func() {
-		header := s.w.Header()
-		if header.Get("Content-Type") == "" {
-			header.Set("Content-Type", "text/event-stream")
-		}
-		if header.Get("Cache-Control") == "" {
-			header.Set("Cache-Control", "no-cache")
-		}
-		if header.Get("Connection") == "" {
-			header.Set("Connection", "keep-alive")
-		}
-		s.w.WriteHeader(http.StatusOK)
-	})
 	res := v
 
 	var data string
 	var payload any
-	body := NewSSERequestIDMethodResponseBody(res)
+	body := res
 	payload = body
 	switch v := payload.(type) {
 	case nil:
@@ -82,14 +71,33 @@ func (s *SSERequestIDMethodServerStream) SendWithContext(ctx context.Context, v 
 		}
 		data = string(byts)
 	}
-	fmt.Fprintf(s.w, "data: %s\n\n", data)
+	s.once.Do(func() {
+		header := s.w.Header()
+		if header.Get("Content-Type") == "" {
+			header.Set("Content-Type", "text/event-stream")
+		}
+		if header.Get("Cache-Control") == "" {
+			header.Set("Cache-Control", "no-cache")
+		}
+		if header.Get("Connection") == "" {
+			header.Set("Connection", "keep-alive")
+		}
+		s.w.WriteHeader(http.StatusOK)
+		s.attempted = true
+	})
 
-	http.NewResponseController(s.w).Flush()
+	if _, err := fmt.Fprintf(s.w, "data: %s\n\n", data); err != nil {
+		return err
+	}
+
+	if err := http.NewResponseController(s.w).Flush(); err != nil {
+		return err
+	}
 	return nil
 }
 
-// Close is a no-op for SSE. We keep the method for compatibility with other
-// stream types.
+// Close does nothing because an SSE stream closes with its HTTP response. The
+// common stream interface still requires this method.
 func (s *SSERequestIDMethodServerStream) Close() error {
 	return nil
 }

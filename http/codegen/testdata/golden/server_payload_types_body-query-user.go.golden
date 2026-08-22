@@ -1,6 +1,6 @@
-// NewMethodBodyQueryUserPayloadType builds a ServiceBodyQueryUser service
+// NewMethodBodyQueryUserPayload builds a ServiceBodyQueryUser service
 // MethodBodyQueryUser endpoint payload.
-func NewMethodBodyQueryUserPayloadType(body *MethodBodyQueryUserRequestBody, b *string) *servicebodyqueryuser.PayloadType {
+func NewMethodBodyQueryUserPayload(body *MethodBodyQueryUserRequestBody, b *string) *servicebodyqueryuser.PayloadType {
 	v := &servicebodyqueryuser.PayloadType{
 		A: body.A,
 	}

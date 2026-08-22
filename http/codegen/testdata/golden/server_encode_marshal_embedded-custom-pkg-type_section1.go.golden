@@ -1,10 +1,9 @@
-// marshalFooFooToFoo2 builds a value of type *Foo2 from a value of type
-// *foo.Foo.
-func marshalFooFooToFoo2(v *foo.Foo) *Foo2 {
+// marshalFooFooToFoo builds a value of type *Foo from a value of type *foo.Foo.
+func marshalFooFooToFoo(v *foo.Foo) *Foo {
 	if v == nil {
 		return nil
 	}
-	res := &Foo2{
+	res := &Foo{
 		Bar: v.Bar,
 	}
 

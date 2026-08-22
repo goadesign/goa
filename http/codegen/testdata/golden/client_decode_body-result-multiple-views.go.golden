@@ -33,7 +33,7 @@ func DecodeMethodBodyMultipleViewResponse(decoder func(*http.Response) goahttp.D
 			if cRaw != "" {
 				c = &cRaw
 			}
-			p := NewMethodBodyMultipleViewResulttypemultipleviewsOK(&body, c)
+			p := NewMethodBodyMultipleViewResultOK(&body, c)
 			view := resp.Header.Get("goa-view")
 			vres := &servicebodymultipleviewviews.Resulttypemultipleviews{Projected: p, View: view}
 			if err = servicebodymultipleviewviews.ValidateResulttypemultipleviews(vres); err != nil {

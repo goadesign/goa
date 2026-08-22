@@ -11,12 +11,12 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// ClientFiles returns the generated HTTP client files.
-func ClientFiles(data *ServicesData) []*codegen.File {
+// clientFiles builds the HTTP client files read by Plan.Link.
+func clientFiles(data *ServicesData) []*codegen.File {
 	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3) // preallocate for client files
 	for _, svc := range data.Expressions.Services {
 		files = append(files, addEndpointImports(clientFile(svc, data), data, svc.HTTPEndpoints...))
-		if f := WebsocketClientFile(svc, data); f != nil {
+		if f := websocketClientFile(svc, data); f != nil {
 			files = append(files, addEndpointImports(f, data, httpWebSocketEndpoints(svc)...))
 		}
 		if f := sseClientFile(svc, data); f != nil {
@@ -24,16 +24,16 @@ func ClientFiles(data *ServicesData) []*codegen.File {
 		}
 	}
 	for _, svc := range data.Expressions.Services {
-		if f := ClientEncodeDecodeFile(svc, data); f != nil {
+		if f := clientEncodeDecodeFile(svc, data); f != nil {
 			files = append(files, addEndpointImports(f, data, svc.HTTPEndpoints...))
 		}
 	}
 	return files
 }
 
-// ClientEncodeDecodeFile returns the file containing the HTTP client encoding
+// clientEncodeDecodeFile returns the file containing the HTTP client encoding
 // and decoding logic.
-func ClientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
+func clientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, services.dir(), svcName, "client", "encode_decode.go")
@@ -76,7 +76,7 @@ func ClientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 			Source: httpTemplates.Read(requestBuilderT),
 			Data:   e,
 		})
-		if e.RequestEncoder != "" && (e.Payload.Ref != "" || e.IsJSONRPC) {
+		if e.RequestEncoderDeclaration != nil && (e.Payload.Ref != "" || e.IsJSONRPC) {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "request-encoder",
 				Source: httpTemplates.Read(requestEncoderT, clientTypeConversionP, clientMapConversionP, jsonrpcRequestEnvelopeP),

@@ -7,8 +7,6 @@ import (
 	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/service"
 	grpccodegen "goa.design/goa/v3/grpc/codegen"
-	httpcodegen "goa.design/goa/v3/http/codegen"
-	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
 )
 
 // exampleFiles returns example service, server, and client files described by
@@ -41,30 +39,30 @@ func exampleFiles(plan *Plan) ([]*codegen.File, error) {
 		}
 
 		// HTTP
-		if len(r.API.HTTP.Services) > 0 {
-			httpServices := httpcodegen.NewServicesData(services, r.API.HTTP)
-			if fs := httpcodegen.ExampleServerFiles(httpServices); len(fs) != 0 {
-				files = append(files, fs...)
+		if httpPlan := plan.http[r]; httpPlan != nil {
+			if plan.jsonrpc[r] == nil {
+				if fs := httpPlan.ExampleServerFiles(); len(fs) != 0 {
+					files = append(files, fs...)
+				}
 			}
-			if fs := httpcodegen.ExampleCLIFiles(httpServices); len(fs) != 0 {
+			if fs := httpPlan.ExampleCLIFiles(); len(fs) != 0 {
 				files = append(files, fs...)
 			}
 		}
 
 		// JSON-RPC
-		if len(r.API.JSONRPC.Services) > 0 {
-			jsonrpcServices := httpcodegen.NewJSONRPCServicesData(services, &r.API.JSONRPC.HTTPExpr)
-			if fs := jsonrpccodegen.ExampleServerFiles(jsonrpcServices, files); len(fs) > 0 {
+		if jsonrpcPlan := plan.jsonrpc[r]; jsonrpcPlan != nil {
+			if fs := jsonrpcPlan.ExampleServerFiles(); len(fs) > 0 {
 				files = append(files, fs...)
 			}
-			if fs := httpcodegen.ExampleCLIFiles(jsonrpcServices); len(fs) > 0 {
+			if fs := jsonrpcPlan.ExampleCLIFiles(); len(fs) > 0 {
 				files = append(files, fs...)
 			}
 		}
 
 		// GRPC
 		if len(r.API.GRPC.Services) > 0 {
-			grpcServices := grpccodegen.NewServicesData(services)
+			grpcServices := grpccodegen.NewServicesData(services, plan.grpc)
 			if fs := grpccodegen.ExampleServerFiles(grpcServices); len(fs) > 0 {
 				files = append(files, fs...)
 			}

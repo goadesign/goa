@@ -10,17 +10,9 @@ import (
 	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
-// CreateJSONRPCServices creates a new ServicesData instance for JSON-RPC
-// testing. Generation construction normalizes the root before any planner
-// reads it.
-func CreateJSONRPCServices(root *expr.RootExpr) *httpcodegen.ServicesData {
-	services := createServiceServices(root)
-	return httpcodegen.NewJSONRPCServicesData(services, &root.API.JSONRPC.HTTPExpr)
-}
-
-// createServiceServices performs the complete package declaration lifecycle
-// required by transport test helpers.
-func createServiceServices(root *expr.RootExpr) *service.ServicesData {
+// CreateJSONRPCPlan builds and links the same service, HTTP, and JSON-RPC plans
+// that production generation uses.
+func CreateJSONRPCPlan(root *expr.RootExpr) *Plan {
 	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
 	if err != nil {
 		panic(err)
@@ -29,7 +21,31 @@ func createServiceServices(root *expr.RootExpr) *service.ServicesData {
 	if err != nil {
 		panic(err)
 	}
-	if err := Plan(generation); err != nil {
+	var applicationHTTP *httpcodegen.Plan
+	if len(root.API.HTTP.Services) > 0 {
+		applicationPlans, err := httpcodegen.NewPlans(generation, httpcodegen.PlanInput{
+			Root:    root,
+			Service: servicePlan,
+		})
+		if err != nil {
+			panic(err)
+		}
+		applicationHTTP = applicationPlans[0]
+	}
+	httpPlans, err := httpcodegen.NewJSONRPCPlans(generation, httpcodegen.PlanInput{
+		Root:    root,
+		Service: servicePlan,
+	})
+	if err != nil {
+		panic(err)
+	}
+	plans, err := NewPlans(generation, PlanInput{
+		Root:            root,
+		Service:         servicePlan,
+		HTTP:            httpPlans[0],
+		ApplicationHTTP: applicationHTTP,
+	})
+	if err != nil {
 		panic(err)
 	}
 	if err := generation.Freeze(); err != nil {
@@ -38,5 +54,16 @@ func createServiceServices(root *expr.RootExpr) *service.ServicesData {
 	if err := servicePlan.Link(); err != nil {
 		panic(err)
 	}
-	return servicePlan.Services()
+	if applicationHTTP != nil {
+		if err := applicationHTTP.Link(); err != nil {
+			panic(err)
+		}
+	}
+	if err := httpPlans[0].Link(); err != nil {
+		panic(err)
+	}
+	if err := plans[0].Link(); err != nil {
+		panic(err)
+	}
+	return plans[0]
 }

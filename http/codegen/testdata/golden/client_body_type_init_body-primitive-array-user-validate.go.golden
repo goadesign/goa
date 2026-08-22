@@ -8,7 +8,7 @@ func NewPayloadType(p []*servicebodyprimitivearrayuservalidate.PayloadType) []*P
 			body[i] = nil
 			continue
 		}
-		body[i] = marshalServicebodyprimitivearrayuservalidatePayloadTypeToPayloadType(val)
+		body[i] = marshalPayloadTypeToPayloadType2(val)
 	}
 	return body
 }

@@ -34,7 +34,7 @@ func NewMethodBRequestBody(p *servicemultiplemethods.PayloadType) *MethodBReques
 		B: p.B,
 	}
 	if p.C != nil {
-		body.C = marshalServicemultiplemethodsAPayloadToAPayload(p.C)
+		body.C = marshalAPayloadToAPayload2(p.C)
 	}
 	return body
 }

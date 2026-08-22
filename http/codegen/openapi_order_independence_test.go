@@ -1,5 +1,5 @@
-// This file verifies HTTP and OpenAPI analysis produce identical examples
-// regardless of which transport representation is analyzed first.
+// This file verifies that HTTP and OpenAPI generation produce the same examples
+// regardless of which one reads the design first.
 package codegen
 
 import (
@@ -15,49 +15,39 @@ import (
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
-// TestOpenAPIOrderIndependence verifies that the OpenAPI specifications do not
-// depend on whether the HTTP transport data was computed first: the HTTP
-// analyze pass must treat the design expression tree as read-only so the
-// OpenAPI generators always see the pristine design. The production "goa gen"
-// flow runs the transport generators before the OpenAPI one while the OpenAPI
-// golden tests run on pristine roots; any difference between the two
-// generations is output that production emits but no golden test covers.
+// TestOpenAPIOrderIndependence verifies that building HTTP files first does not
+// change the OpenAPI documents. HTTP generation must not change the design that
+// the OpenAPI generator reads afterward.
 func TestOpenAPIOrderIndependence(t *testing.T) {
 	cases := []struct {
 		Name string
 		DSL  func()
 	}{
-		// Aliased payload/result attributes: makeHTTPType used to flatten
-		// the aliases in place which changed the schemas OpenAPI generated.
+		// Named request and result fields used to be flattened in place, which
+		// changed the OpenAPI schemas generated afterward.
 		{"alias-type", testdata.AliasTypeDSL},
 		{"result-body-multiple-views", testdata.ResultBodyMultipleViewsDSL},
 		{"explicit-view", testdata.ExplicitViewDSL},
 		{"error-response", testdata.PrimitiveErrorResponseDSL},
 		{"streaming-result", testdata.StreamingResultDSL},
 		{"streaming-payload", testdata.StreamingPayloadDSL},
-		// NOTE: methods declaring anonymous object results (e.g.
-		// testdata.SSEObjectDSL) only pass this check because the raw
-		// object wrapping moved out of the service analyze pass into
-		// codegen.NewGeneration, which CreateHTTPServices constructs before
-		// computing the transport data. The pristine root below is rendered
-		// without generation ownership, so designs whose OpenAPI output depends
-		// on the wrapping must prepare both roots (see
-		// TestGeneratorsTreatDesignAsReadOnly in codegen/generator for the
-		// full read-only guarantee).
+		// Anonymous object results pass because codegen.NewGeneration prepares
+		// those result objects before HTTP generation starts. See
+		// TestGeneratorsTreatDesignAsReadOnly for the check that covers the whole
+		// generation run.
 		{"sse", testdata.SSEStringDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// Golden test order: generate the OpenAPI specifications from a
-			// pristine root.
+			// First build OpenAPI documents from an untouched design.
 			pristine := renderOpenAPI(t, expr.RunDSL(t, c.DSL))
 
-			// Production order: compute the HTTP transport data first, then
-			// generate the OpenAPI specifications from the same root.
+			// Then build HTTP files first and OpenAPI documents second from the
+			// same design.
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
+			plan := linkedHTTPPlanForRoot(t, root)
 			for _, svc := range root.API.HTTP.Services {
-				require.NotNil(t, services.Get(svc.Name()))
+				require.NotNil(t, plan.services.Get(svc.Name()))
 			}
 			produced := renderOpenAPI(t, root)
 

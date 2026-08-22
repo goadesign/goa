@@ -9,8 +9,8 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// ServerTypeFiles returns the HTTP transport type files.
-func ServerTypeFiles(data *ServicesData) []*codegen.File {
+// serverTypeFiles builds the server request and response types read by Plan.Link.
+func serverTypeFiles(data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(data.Expressions.Services))
 	for i, svc := range data.Expressions.Services {
 		fw[i] = addEndpointImports(typesFile(svc, true, data), data, svc.HTTPEndpoints...)
@@ -18,8 +18,8 @@ func ServerTypeFiles(data *ServicesData) []*codegen.File {
 	return fw
 }
 
-// ClientTypeFiles returns the HTTP transport client types files.
-func ClientTypeFiles(data *ServicesData) []*codegen.File {
+// clientTypeFiles builds the client request and response types read by Plan.Link.
+func clientTypeFiles(data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(data.Expressions.Services))
 	for i, svc := range data.Expressions.Services {
 		fw[i] = addEndpointImports(typesFile(svc, false, data), data, svc.HTTPEndpoints...)
@@ -185,11 +185,18 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 			bodies := resp.ServerBody
 			if !svr {
 				bodies = nil
-				if resp.ClientBody != nil {
+				if len(resp.ViewedRepresentations) > 0 {
+					for _, representation := range resp.ViewedRepresentations {
+						bodies = append(bodies, representation.ClientBody)
+					}
+				} else if resp.ClientBody != nil {
 					bodies = []*TypeData{resp.ClientBody}
 				}
 			}
 			for _, td := range bodies {
+				if td == nil {
+					continue
+				}
 				addDecl(responseBodySection, td)
 				if td.Init != nil {
 					if _, ok := seenInits[td.Init.Name]; !ok {
@@ -273,10 +280,16 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 		seenResultInits := make(map[string]struct{})
 		for _, adata := range data.Endpoints {
 			for _, resp := range adata.Result.Responses {
-				if init := resp.ResultInit; init != nil {
-					if _, ok := seenResultInits[init.Name]; !ok {
-						seenResultInits[init.Name] = struct{}{}
-						sections = append(sections, resultInitSection("client-result-init", init))
+				inits := []*InitData{resp.ResultInit}
+				for _, representation := range resp.ViewedRepresentations {
+					inits = append(inits, representation.ResultInit)
+				}
+				for _, init := range inits {
+					if init != nil {
+						if _, ok := seenResultInits[init.Name]; !ok {
+							seenResultInits[init.Name] = struct{}{}
+							sections = append(sections, resultInitSection("client-result-init", init))
+						}
 					}
 				}
 			}

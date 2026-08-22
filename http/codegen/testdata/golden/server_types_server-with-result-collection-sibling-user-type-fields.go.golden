@@ -26,7 +26,7 @@ func NewResulttypesiblingcollectionCollection(res serviceresultcollectionusertyp
 			body[i] = nil
 			continue
 		}
-		body[i] = marshalServiceresultcollectionusertypesiblingviewsResulttypesiblingcollectionViewToResulttypesiblingcollection(val)
+		body[i] = marshalResulttypesiblingcollectionViewToResulttypesiblingcollection(val)
 	}
 	return body
 }

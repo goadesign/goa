@@ -204,7 +204,7 @@ func (s *SSEObjectMethodStreamImpl) processEvent(eventData []byte) (event *sseob
 	}
 	if len(dataLines) > 0 {
 		dataContent := strings.Join(dataLines, "\n")
-		// Decode JSON into the struct pointer directly
+		// Decode the event data into the result value returned by Recv.
 		respBody := &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(bytes.NewReader([]byte(dataContent))),

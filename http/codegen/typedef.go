@@ -26,12 +26,12 @@ import (
 func goTypeDef(scope *codegen.NameScope, att *expr.AttributeExpr, ptr, useDefault bool) string {
 	ctx := codegen.NewAttributeContext(ptr, false, useDefault, "", scope)
 	ctx.UnionPointer = true
-	return goTypeDefForContext(scope, att, ctx)
+	return goTypeDefForContext(att, ctx)
 }
 
 // goTypeDefForContext recursively renders an HTTP body type using the same
 // field representation consulted by transport conversion and validation.
-func goTypeDefForContext(scope *codegen.NameScope, att *expr.AttributeExpr, ctx *codegen.AttributeContext) string {
+func goTypeDefForContext(att *expr.AttributeExpr, ctx *codegen.AttributeContext) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
 		if t, _ := codegen.GetMetaType(att); t != "" {
@@ -39,17 +39,17 @@ func goTypeDefForContext(scope *codegen.NameScope, att *expr.AttributeExpr, ctx 
 		}
 		return codegen.GoNativeTypeName(actual)
 	case *expr.Array:
-		d := goTypeDefForContext(scope, actual.ElemType, ctx)
+		d := goTypeDefForContext(actual.ElemType, ctx)
 		if expr.IsObject(actual.ElemType.Type) {
 			d = "*" + d
 		}
 		return "[]" + d
 	case *expr.Map:
-		keyDef := goTypeDefForContext(scope, actual.KeyType, ctx)
+		keyDef := goTypeDefForContext(actual.KeyType, ctx)
 		if expr.IsObject(actual.KeyType.Type) {
 			keyDef = "*" + keyDef
 		}
-		elemDef := goTypeDefForContext(scope, actual.ElemType, ctx)
+		elemDef := goTypeDefForContext(actual.ElemType, ctx)
 		if expr.IsObject(actual.ElemType.Type) {
 			elemDef = "*" + elemDef
 		}
@@ -67,7 +67,7 @@ func goTypeDefForContext(scope *codegen.NameScope, att *expr.AttributeExpr, ctx 
 			)
 			{
 				fn = codegen.GoifyAtt(at, name, true)
-				tdef = goTypeDefForContext(scope, at, ctx)
+				tdef = goTypeDefForContext(at, ctx)
 				if ctx.IsFieldPointer(name, att) {
 					tdef = "*" + tdef
 				}
@@ -93,7 +93,7 @@ func goTypeDefForContext(scope *codegen.NameScope, att *expr.AttributeExpr, ctx 
 		ss = append(ss, "}")
 		return strings.Join(ss, "\n")
 	case expr.UserType, *expr.Union:
-		return scope.GoTypeName(att)
+		return ctx.Scope.Name(att, ctx.Pkg(att), ctx.Pointer, ctx.UseDefault)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}

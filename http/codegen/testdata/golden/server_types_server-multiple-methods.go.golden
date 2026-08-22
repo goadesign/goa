@@ -17,9 +17,9 @@ type APayload struct {
 	A *string `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
 }
 
-// NewMethodAAPayload builds a ServiceMultipleMethods service MethodA endpoint
+// NewMethodAPayload builds a ServiceMultipleMethods service MethodA endpoint
 // payload.
-func NewMethodAAPayload(body *MethodARequestBody) *servicemultiplemethods.APayload {
+func NewMethodAPayload(body *MethodARequestBody) *servicemultiplemethods.APayload {
 	v := &servicemultiplemethods.APayload{
 		A: body.A,
 	}
@@ -27,14 +27,14 @@ func NewMethodAAPayload(body *MethodARequestBody) *servicemultiplemethods.APaylo
 	return v
 }
 
-// NewMethodBPayloadType builds a ServiceMultipleMethods service MethodB
-// endpoint payload.
-func NewMethodBPayloadType(body *MethodBRequestBody) *servicemultiplemethods.PayloadType {
+// NewMethodBPayload builds a ServiceMultipleMethods service MethodB endpoint
+// payload.
+func NewMethodBPayload(body *MethodBRequestBody) *servicemultiplemethods.PayloadType {
 	v := &servicemultiplemethods.PayloadType{
 		A: *body.A,
 		B: body.B,
 	}
-	v.C = unmarshalAPayloadToServicemultiplemethodsAPayload(body.C)
+	v.C = unmarshalAPayloadToAPayload(body.C)
 
 	return v
 }

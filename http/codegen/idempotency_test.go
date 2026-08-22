@@ -1,5 +1,5 @@
-// This file verifies repeated HTTP analysis produces the same package-owned
-// declarations and does not retain mutable state between runs.
+// This file verifies repeated HTTP generation produces the same Go names and
+// does not keep changeable values from an earlier run.
 package codegen
 
 import (
@@ -39,8 +39,8 @@ func TestIdempotentHTTPEndpointCodegen(t *testing.T) {
 			})
 		})
 	})
-	services := CreateHTTPServices(root)
-	clientFiles := ClientFiles(services)
+	plan := linkedHTTPPlanForRoot(t, root)
+	clientFiles := plan.ClientFiles()
 	require.NotEmpty(t, clientFiles)
 
 	clientCode := codegen.SectionsCode(t, clientFiles[0].Section("client-endpoint-init"))
@@ -66,14 +66,14 @@ func TestFileGenerationIdempotent(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.DSL)
-			services := CreateHTTPServices(root)
+			plan := linkedHTTPPlanForRoot(t, root)
 
 			render := func(dir string) {
-				files := PathFiles(services)
-				files = append(files, ServerFiles(services)...)
-				files = append(files, ClientFiles(services)...)
-				files = append(files, ServerTypeFiles(services)...)
-				files = append(files, ClientTypeFiles(services)...)
+				files := plan.PathFiles()
+				files = append(files, plan.ServerFiles()...)
+				files = append(files, plan.ClientFiles()...)
+				files = append(files, plan.ServerTypeFiles()...)
+				files = append(files, plan.ClientTypeFiles()...)
 				require.NotEmpty(t, files)
 				for _, f := range files {
 					_, err := f.Render(dir)

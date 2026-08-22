@@ -24,18 +24,18 @@ func RunGRPCDSL(t *testing.T, dsl func()) *expr.RootExpr {
 // CreateGRPCServices creates a new ServicesData instance for testing.
 // Generation construction normalizes the root before any planner reads it.
 func CreateGRPCServices(root *expr.RootExpr) *ServicesData {
-	return NewServicesData(createServiceServices(root))
+	return createServiceServices(root)
 }
 
 // createServiceServices performs the complete package declaration lifecycle
 // required by transport test helpers.
-func createServiceServices(root *expr.RootExpr) *service.ServicesData {
+func createServiceServices(root *expr.RootExpr) *ServicesData {
 	return createServiceServicesForPackage(root, "generated.local/gen")
 }
 
 // createServiceServicesForPackage builds test service analysis for the exact
 // generated module path whose imports the test renders.
-func createServiceServicesForPackage(root *expr.RootExpr, genpkg string) *service.ServicesData {
+func createServiceServicesForPackage(root *expr.RootExpr, genpkg string) *ServicesData {
 	generation, err := codegen.NewGeneration(genpkg, []eval.Root{root})
 	if err != nil {
 		panic(err)
@@ -44,7 +44,8 @@ func createServiceServicesForPackage(root *expr.RootExpr, genpkg string) *servic
 	if err != nil {
 		panic(err)
 	}
-	if err := Plan(generation); err != nil {
+	grpcPlan, err := Plan(generation, PlanInput{Root: root, Service: servicePlan})
+	if err != nil {
 		panic(err)
 	}
 	if err := example.Plan(generation); err != nil {
@@ -56,7 +57,7 @@ func createServiceServicesForPackage(root *expr.RootExpr, genpkg string) *servic
 	if err := servicePlan.Link(); err != nil {
 		panic(err)
 	}
-	return servicePlan.Services()
+	return NewServicesData(servicePlan.Services(), grpcPlan)
 }
 
 func sectionCode(t *testing.T, section ...*codegen.SectionTemplate) string {

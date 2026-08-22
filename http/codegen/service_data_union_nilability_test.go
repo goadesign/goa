@@ -19,7 +19,7 @@ func TestBuildHTTPUnionTypeDataMarksNilableBranches(t *testing.T) {
 		kindConsts:   []string{"ValueKindArray", "ValueKindBool", "ValueKindBytes", "ValueKindMap", "ValueKindObject", "ValueKindString"},
 		constructors: []string{"NewValueArray", "NewValueBool", "NewValueBytes", "NewValueMap", "NewValueObject", "NewValueString"},
 	}
-	data := buildHTTPUnionTypeData(union, codegen.NewNameScope(), record)
+	data := buildHTTPUnionTypeData(union, codegen.NewAttributeScope(codegen.NewNameScope()), record)
 
 	nilable := make(map[string]bool, len(data.Fields))
 	for _, field := range data.Fields {

@@ -73,13 +73,13 @@ func TestWebSocketGoldenFiles(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			root := expr.RunDSL(t, c.dsl)
-			services := CreateHTTPServices(root)
+			plan := linkedHTTPPlanForRoot(t, root)
 
 			var files []*codegen.File
 			if c.fileType == "server" {
-				files = ServerFiles(services)
+				files = plan.ServerFiles()
 			} else {
-				files = ClientFiles(services)
+				files = plan.ClientFiles()
 			}
 
 			// Find the websocket.go file
@@ -120,11 +120,11 @@ func TestWebSocketGoldenFiles(t *testing.T) {
 func TestWebSocketTemplateExercise(t *testing.T) {
 	// Run a comprehensive test that should exercise all templates
 	root := expr.RunDSL(t, comprehensiveWebSocketDSL)
-	services := CreateHTTPServices(root)
+	plan := linkedHTTPPlanForRoot(t, root)
 
 	// Generate both server and client files
-	serverFiles := ServerFiles(services)
-	clientFiles := ClientFiles(services)
+	serverFiles := plan.ServerFiles()
+	clientFiles := plan.ClientFiles()
 
 	// Verify WebSocket files were generated
 	var serverWSFile, clientWSFile *codegen.File

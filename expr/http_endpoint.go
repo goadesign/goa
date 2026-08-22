@@ -548,6 +548,14 @@ func (e *HTTPEndpointExpr) Validate() error {
 			hasTags = true
 		}
 		if r.StatusCode < 400 {
+			if e.MethodExpr.IsStreaming() {
+				if !r.Headers.IsEmpty() {
+					verr.Add(r, "streaming success response cannot map result attributes to HTTP headers")
+				}
+				if !r.Cookies.IsEmpty() {
+					verr.Add(r, "streaming success response cannot map result attributes to HTTP cookies")
+				}
+			}
 			if successResp && e.MethodExpr.Stream == ServerStreamKind {
 				verr.Add(r, "At most one success response can be defined for a streaming endpoint.")
 				if r.Body != nil && r.Body.Type == Empty {
@@ -783,20 +791,6 @@ func (e *HTTPEndpointExpr) validateErrorMappings() *eval.ValidationErrors {
 // types so that the response encoding code can properly use the type to infer
 // the response that it needs to build.
 func (e *HTTPEndpointExpr) Finalize() {
-	// For JSON-RPC WebSocket endpoints with server streaming and non-streaming payload,
-	// move the payload to streaming payload. This is because the payload is sent as
-	// JSON-RPC messages after the WebSocket connection is established, making it
-	// effectively a streaming payload from the transport perspective.
-	if _, isJSONRPC := e.MethodExpr.Meta["jsonrpc"]; isJSONRPC && e.UsesWebSocket() && e.MethodExpr.Stream == ServerStreamKind {
-		if e.MethodExpr.Payload.Type != Empty && e.MethodExpr.StreamingPayload.Type == Empty {
-			// Move payload to streaming payload
-			e.MethodExpr.StreamingPayload = e.MethodExpr.Payload
-			e.MethodExpr.Payload = &AttributeExpr{Type: Empty}
-			// Change stream kind to bidirectional since we now have both streaming payload and result
-			e.MethodExpr.Stream = BidirectionalStreamKind
-		}
-	}
-
 	// Compute security scheme attribute name and corresponding HTTP location
 	requirements := EffectiveSecurityRequirements(e.MethodExpr.Requirements)
 	if reqLen := len(requirements); reqLen > 0 {

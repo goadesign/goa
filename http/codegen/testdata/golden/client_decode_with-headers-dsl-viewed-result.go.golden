@@ -59,7 +59,7 @@ func DecodeMethodAResponse(decoder func(*http.Response) goahttp.Decoder, restore
 			if err != nil {
 				return nil, goahttp.ErrValidationError("ServiceWithHeadersBlockViewedResult", "MethodA", err)
 			}
-			p := NewMethodAAResultOK(required, optional, optionalButRequired)
+			p := NewMethodAResultOK(required, optional, optionalButRequired)
 			view := resp.Header.Get("goa-view")
 			vres := &servicewithheadersblockviewedresultviews.AResult{Projected: p, View: view}
 			res := servicewithheadersblockviewedresult.NewAResult(vres)

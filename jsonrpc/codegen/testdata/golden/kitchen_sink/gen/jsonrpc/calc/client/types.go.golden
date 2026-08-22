@@ -95,7 +95,7 @@ func NewAddResultOK(body *AddResponseBody) *calc.AddResult {
 
 // NewAddOverflow builds a Calc service add endpoint overflow error.
 func NewAddOverflow(body *AddOverflowResponseBody) *goa.ServiceError {
-	v := &goa.ServiceError{
+	v := &calc.Error{
 		Name:      *body.Name,
 		ID:        *body.ID,
 		Message:   *body.Message,
@@ -129,7 +129,7 @@ func ValidateAddResponseBody(body *AddResponseBody) (err error) {
 }
 
 // ValidateAddOverflowResponseBody runs the validations defined on
-// add_overflow_response_body
+// AddOverflowResponseBody
 func ValidateAddOverflowResponseBody(body *AddOverflowResponseBody) (err error) {
 	if body.Name == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))

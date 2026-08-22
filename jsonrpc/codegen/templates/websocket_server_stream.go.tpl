@@ -1,5 +1,5 @@
-{{ printf "%sStream implements the Stream interface." (lowerInitial .Service.StructName) | comment }}
-type {{ lowerInitial .Service.StructName }}Stream struct {
+{{ printf "%s implements the Stream interface." (websocketServerStreamName) | comment }}
+type {{ websocketServerStreamName }} struct {
 {{- range .Endpoints }}
 	{{ printf "%s decodes requests for the %s method" (lowerInitial .Method.VarName) .Method.Name | comment }}
 	{{ lowerInitial .Method.VarName }} func(context.Context, *http.Request, *jsonrpc.RawRequest) (any, error)
@@ -16,4 +16,6 @@ type {{ lowerInitial .Service.StructName }}Stream struct {
 	r *http.Request
 	{{ comment "conn is the underlying websocket connection." }}
 	conn *websocket.Conn
+	{{ comment "writeMu allows only one caller at a time to write a message to conn." }}
+	writeMu sync.Mutex
 }

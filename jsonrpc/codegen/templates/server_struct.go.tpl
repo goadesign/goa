@@ -1,11 +1,11 @@
-{{ printf "%s handles JSON-RPC requests for the %s service." .ServerStruct .Service.Name | comment }}
-type {{ .ServerStruct }} struct {
+{{ printf "%s handles JSON-RPC requests for the %s service." .ServerStructDeclaration.Name .Service.Name | comment }}
+type {{ .ServerStructDeclaration.Name }} struct {
 	http.Handler
 	// Methods is the list of methods served by this server.
 	Methods []string
 {{- if isWebSocketEndpoint (index .Endpoints 0) }}
 	// StreamHandler is the handler for the streaming service.
-	StreamHandler func(context.Context, {{ .Service.PkgName }}.Stream) error
+	StreamHandler func(context.Context, {{ .Service.PkgName }}.{{ .Service.StreamDeclaration.Name }}) error
 {{- end }}
 {{ range .Endpoints }}
 	{{- if isWebSocketEndpoint . }}

@@ -1,5 +1,5 @@
 {{ comment .RecvDesc }}
-func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
+func (s *{{ .VarDeclaration.Name }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 	var (
 		rv {{ .RecvTypeRef }}
 	{{- if eq .Type "server" }}
@@ -71,7 +71,7 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 		res := {{ .Response.ResultInit.Name }}({{ range .Response.ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 		{{- if .Endpoint.Method.ViewedResult }}{{ with .Endpoint.Method.ViewedResult }}
 			vres := {{ if not .IsCollection }}&{{ end }}{{ .ViewsPkg }}.{{ .VarName }}{Projected: res, View: {{ if .ViewName }}{{ printf "%q" .ViewName }}{{ else }}s.view{{ end }} }
-			if err := {{ .ViewsPkg }}.Validate{{ $.Endpoint.Method.Result }}(vres); err != nil {
+			if err := {{ .ViewsPkg }}.{{ .Validate.Declaration.Name }}(vres); err != nil {
 				return rv, goahttp.ErrValidationError("{{ $.Endpoint.ServiceName }}", "{{ $.Endpoint.Method.Name }}", err)
 			}
 			return {{ $.PkgName }}.{{ .ResultInit.Declaration.Name }}(vres){{ end }}, nil
@@ -85,6 +85,6 @@ func (s *{{ .VarName }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, error) {
 }
 
 {{ comment .RecvWithContextDesc }}
-func (s *{{ .VarName }}) {{ .RecvWithContextName }}(ctx context.Context) ({{ .RecvTypeRef }}, error) {
+func (s *{{ .VarDeclaration.Name }}) {{ .RecvWithContextName }}(ctx context.Context) ({{ .RecvTypeRef }}, error) {
 	return s.{{ .RecvName }}()
 }

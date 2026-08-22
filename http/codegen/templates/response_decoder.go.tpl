@@ -1,6 +1,6 @@
-{{ printf "%s returns a decoder for responses returned by the %s %s endpoint. restoreBody controls whether the response body should be restored after having been read." .ResponseDecoder .ServiceName .Method.Name | comment }}
+{{ printf "%s returns a decoder for responses returned by the %s %s endpoint. restoreBody controls whether the response body should be restored after having been read." .ResponseDecoderDeclaration.Name .ServiceName .Method.Name | comment }}
 {{- if .Errors }}
-{{ printf "%s may return the following errors:" .ResponseDecoder | comment }}
+{{ printf "%s may return the following errors:" .ResponseDecoderDeclaration.Name | comment }}
 	{{- range $gerr := .Errors }}
 	{{- range $errors := .Errors }}
 //	- {{ printf "%q" .Name }} (type {{ .Ref }}): {{ .Response.StatusCode }}{{ if .Response.Description }}, {{ .Response.Description }}{{ end }}
@@ -8,7 +8,7 @@
 	{{- end }}
 //	- error: internal error
 {{- end }}
-func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
+func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
 	return func(resp *http.Response) (any, error) {
 		if restoreBody {
 			b, err := io.ReadAll(resp.Body)
@@ -42,7 +42,7 @@ func {{ .ResponseDecoder }}(decoder func(*http.Response) goahttp.Decoder, restor
 				{{- end }}
 			vres := {{ if not $.Method.ViewedResult.IsCollection }}&{{ end }}{{ $.Method.ViewedResult.ViewsPkg}}.{{ $.Method.ViewedResult.VarName }}{Projected: p, View: view}
 				{{- if .ClientBody }}
-				if err = {{ $.Method.ViewedResult.ViewsPkg}}.Validate{{ $.Method.Result }}(vres); err != nil {
+				if err = {{ $.Method.ViewedResult.ViewsPkg}}.{{ $.Method.ViewedResult.Validate.Declaration.Name }}(vres); err != nil {
 					return nil, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 				}
 				{{- end }}

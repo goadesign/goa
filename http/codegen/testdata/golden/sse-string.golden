@@ -8,6 +8,8 @@ type SSEStringMethodServerStream struct {
 	w http.ResponseWriter
 	// r is the HTTP request.
 	r *http.Request
+	// attempted is true after this stream writes the HTTP success status.
+	attempted bool
 }
 
 // Send Send streams instances of "string" to the "SSEStringMethod" endpoint
@@ -19,24 +21,11 @@ func (s *SSEStringMethodServerStream) Send(v string) error {
 // SendWithContext SendWithContext streams instances of "string" to the
 // "SSEStringMethod" endpoint SSE connection with context.
 func (s *SSEStringMethodServerStream) SendWithContext(ctx context.Context, v string) error {
-	s.once.Do(func() {
-		header := s.w.Header()
-		if header.Get("Content-Type") == "" {
-			header.Set("Content-Type", "text/event-stream")
-		}
-		if header.Get("Cache-Control") == "" {
-			header.Set("Cache-Control", "no-cache")
-		}
-		if header.Get("Connection") == "" {
-			header.Set("Connection", "keep-alive")
-		}
-		s.w.WriteHeader(http.StatusOK)
-	})
 	res := v
 
 	var data string
 	var payload any
-	body := NewSSEStringMethodResponseBody(res)
+	body := res
 	payload = body
 	switch v := payload.(type) {
 	case nil:
@@ -82,14 +71,33 @@ func (s *SSEStringMethodServerStream) SendWithContext(ctx context.Context, v str
 		}
 		data = string(byts)
 	}
-	fmt.Fprintf(s.w, "data: %s\n\n", data)
+	s.once.Do(func() {
+		header := s.w.Header()
+		if header.Get("Content-Type") == "" {
+			header.Set("Content-Type", "text/event-stream")
+		}
+		if header.Get("Cache-Control") == "" {
+			header.Set("Cache-Control", "no-cache")
+		}
+		if header.Get("Connection") == "" {
+			header.Set("Connection", "keep-alive")
+		}
+		s.w.WriteHeader(http.StatusOK)
+		s.attempted = true
+	})
 
-	http.NewResponseController(s.w).Flush()
+	if _, err := fmt.Fprintf(s.w, "data: %s\n\n", data); err != nil {
+		return err
+	}
+
+	if err := http.NewResponseController(s.w).Flush(); err != nil {
+		return err
+	}
 	return nil
 }
 
-// Close is a no-op for SSE. We keep the method for compatibility with other
-// stream types.
+// Close does nothing because an SSE stream closes with its HTTP response. The
+// common stream interface still requires this method.
 func (s *SSEStringMethodServerStream) Close() error {
 	return nil
 }

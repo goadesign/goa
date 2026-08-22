@@ -1,5 +1,5 @@
 {{ printf "Close closes the %q endpoint websocket connection." .Endpoint.Method.Name | comment }}
-func (s *{{ .VarName }}) Close() error {
+func (s *{{ .VarDeclaration.Name }}) Close() error {
 	var err error
 {{- if eq .Type "server" }}
 	if s.conn == nil {
