@@ -5,6 +5,7 @@ package codegen
 
 import (
 	"fmt"
+	"go/token"
 	"reflect"
 	"strings"
 )
@@ -67,12 +68,12 @@ const (
 	UnexportedName
 )
 
-// NewExactName creates an authored or external declaration whose exported Go
-// identifier must not change. The owning generated package rejects collisions.
-func NewExactName(kind PackageNameKind, preferred string) *NameDeclaration {
+// NewExactName creates a declaration whose valid Go name must not change. The
+// owning generated package rejects invalid names and collisions.
+func NewExactName(kind PackageNameKind, name string) *NameDeclaration {
 	return &NameDeclaration{
 		kind:      kind,
-		preferred: Goify(preferred, true),
+		preferred: name,
 		exact:     true,
 	}
 }
@@ -160,6 +161,9 @@ func validateNameDeclaration(declaration *NameDeclaration) error {
 	}
 	if declaration.preferredName() == "" {
 		return fmt.Errorf("package name must not be empty")
+	}
+	if declaration.exact && !token.IsIdentifier(declaration.preferred) {
+		return fmt.Errorf("package name %q is not a valid Go identifier", declaration.preferred)
 	}
 	return nil
 }

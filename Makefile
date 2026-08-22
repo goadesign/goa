@@ -32,8 +32,8 @@ PROTOC_DEST=$(GOBIN_DIR)/$(PROTOC_BIN)
 # Only list test and build dependencies
 # Standard dependencies are installed via go get
 DEPEND=\
-	google.golang.org/protobuf/cmd/protoc-gen-go@latest \
-	google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest 
+	google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12 \
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
 
 all: lint test integration-test
 
@@ -177,4 +177,3 @@ release-plugins:
 		git tag v$(MAJOR).$(MINOR).$(BUILD) && \
 		git push origin v$(MAJOR) && \
 		git push origin v$(MAJOR).$(MINOR).$(BUILD)
-

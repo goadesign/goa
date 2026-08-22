@@ -89,6 +89,29 @@ func TestNameDeclarationOwnsOnePackageNamespace(t *testing.T) {
 	}
 }
 
+// TestGeneratedPackagePreservesExactGoNames checks that names produced by
+// another Go generator are stored without changing their spelling.
+func TestGeneratedPackagePreservesExactGoNames(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	types := mustClaimTestPackage(t, generation, "generated.local/gen/types")
+	private := NewExactName(NameType, "api2HttpClient")
+	handler := NewExactName(NameFunction, "_API2_HTTPHandler")
+	require.NoError(t, types.DeclareName(private))
+	require.NoError(t, types.DeclareName(handler))
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, "api2HttpClient", private.Name())
+	require.Equal(t, "_API2_HTTPHandler", handler.Name())
+}
+
+// TestGeneratedPackageRejectsInvalidExactGoName checks that an exact name
+// must already be a valid Go identifier.
+func TestGeneratedPackageRejectsInvalidExactGoName(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	types := mustClaimTestPackage(t, generation, "generated.local/gen/types")
+	err := types.DeclareName(NewExactName(NameType, "not a name"))
+	require.EqualError(t, err, `package name "not a name" is not a valid Go identifier`)
+}
+
 // TestDependentNameUsesFrozenBase verifies that companion declarations derive
 // their spelling from the exact final name selected for their base declaration.
 func TestDependentNameUsesFrozenBase(t *testing.T) {
