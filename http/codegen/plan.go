@@ -1912,10 +1912,10 @@ func (p *jsonRPCServicePlan) prepareFileImports(services *ServicesData) {
 	p.fileImports[clientPath] = cloneImportSpecs(services.fileImports[filepathKey(clientPath)])
 	p.fileImports[serverPath] = cloneImportSpecs(services.fileImports[filepathKey(serverPath)])
 	if p.clientCodec != nil {
-		p.fileImports[p.clientCodec.Path] = cloneImportSpecs(services.fileImports[filepathKey(p.clientCodec.Path)])
+		p.fileImports[filepathKey(p.clientCodec.Path)] = cloneImportSpecs(services.fileImports[filepathKey(p.clientCodec.Path)])
 	}
 	if p.serverCodec != nil {
-		p.fileImports[p.serverCodec.Path] = cloneImportSpecs(services.fileImports[filepathKey(p.serverCodec.Path)])
+		p.fileImports[filepathKey(p.serverCodec.Path)] = cloneImportSpecs(services.fileImports[filepathKey(p.serverCodec.Path)])
 	}
 	hasSSE := false
 	for _, endpoint := range p.data.Endpoints {

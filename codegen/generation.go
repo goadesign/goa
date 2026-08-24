@@ -194,7 +194,7 @@ func (g *Generation) OwnsName(declaration *NameDeclaration) bool {
 // second result is false when no package claimed the file's directory during
 // planning or when outputPath is not a valid relative output path.
 func (g *Generation) PackageForFile(outputPath string) (*GeneratedPackage, bool) {
-	directory, err := canonicalOutputDirectory(filepath.Dir(outputPath))
+	directory, err := canonicalOutputDirectory(path.Dir(filepath.ToSlash(outputPath)))
 	if err != nil {
 		return nil, false
 	}
@@ -280,11 +280,14 @@ func canonicalOutputDirectory(outputDirectory string) (string, error) {
 	if strings.Contains(outputDirectory, "\\") {
 		return "", fmt.Errorf("output directory %q contains a backslash", outputDirectory)
 	}
-	if filepath.IsAbs(outputDirectory) {
+	if path.IsAbs(outputDirectory) {
 		return "", fmt.Errorf("output directory %q must be relative", outputDirectory)
 	}
-	canonical := filepath.Clean(filepath.FromSlash(outputDirectory))
-	if canonical == ".." || strings.HasPrefix(canonical, ".."+string(filepath.Separator)) {
+	if strings.Contains(outputDirectory, ":") {
+		return "", fmt.Errorf("output directory %q is not portable", outputDirectory)
+	}
+	canonical := path.Clean(outputDirectory)
+	if canonical == ".." || strings.HasPrefix(canonical, "../") {
 		return "", fmt.Errorf("output directory %q escapes the generation working directory", outputDirectory)
 	}
 	return canonical, nil
@@ -340,5 +343,5 @@ func generatedOutputDirectory(genpkg, importPath string) (string, error) {
 			genpkg,
 		)
 	}
-	return filepath.Clean(filepath.FromSlash(path.Join(Gendir, relative))), nil
+	return canonicalOutputDirectory(path.Join(Gendir, relative))
 }

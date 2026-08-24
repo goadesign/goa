@@ -5,7 +5,6 @@ package codegen
 
 import (
 	"path"
-	"path/filepath"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -157,7 +156,7 @@ func planGRPCExampleImports(generation *codegen.Generation, plan *Plan, root *ex
 	rootPath := path.Dir(generation.GenPkg())
 	for _, server := range root.Servers {
 		serverPath := path.Join(rootPath, "cmd", server.Dir)
-		serverPackage, err := generation.ClaimOutputPackage(serverPath, filepath.Join("cmd", server.Dir))
+		serverPackage, err := generation.ClaimOutputPackage(serverPath, path.Join("cmd", server.Dir))
 		if err != nil {
 			return err
 		}
@@ -194,7 +193,7 @@ func planGRPCExampleImports(generation *codegen.Generation, plan *Plan, root *ex
 			continue
 		}
 		clientPath := path.Join(rootPath, "cmd", server.Dir+"-cli")
-		clientPackage, err := generation.ClaimOutputPackage(clientPath, filepath.Join("cmd", server.Dir+"-cli"))
+		clientPackage, err := generation.ClaimOutputPackage(clientPath, path.Join("cmd", server.Dir+"-cli"))
 		if err != nil {
 			return err
 		}

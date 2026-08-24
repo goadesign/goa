@@ -272,6 +272,7 @@ func TestJSONRPCCodecFilesAreIndependent(t *testing.T) {
 	clientPath := stored.clientCodec.Path
 	imports := service.FileImports(clientPath)
 	require.NotEmpty(t, imports)
+	require.Equal(t, imports, service.FileImports(strings.ReplaceAll(clientPath, "/", `\`)))
 	original := *imports[0]
 	imports[0].Path = "changed.example/package"
 	freshImports := service.FileImports(clientPath)

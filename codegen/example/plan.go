@@ -67,7 +67,7 @@ func (p *Plan) Root(servicePlan *service.Plan) (*Root, bool) {
 func planMainPackages(generation *codegen.Generation, servicePlan *service.Plan, server *Data) error {
 	rootPath := RootPath(generation.GenPkg())
 	serverPath := path.Join(rootPath, "cmd", server.Dir)
-	serverPackage, err := generation.ClaimOutputPackage(serverPath, filepath.Dir(server.serverMainPath))
+	serverPackage, err := generation.ClaimOutputPackage(serverPath, path.Dir(filepath.ToSlash(server.serverMainPath)))
 	if err != nil {
 		return err
 	}
@@ -98,7 +98,7 @@ func planMainPackages(generation *codegen.Generation, servicePlan *service.Plan,
 		return nil
 	}
 	clientPath := path.Join(rootPath, "cmd", server.Dir+"-cli")
-	clientPackage, err := generation.ClaimOutputPackage(clientPath, filepath.Dir(server.clientMainPath))
+	clientPackage, err := generation.ClaimOutputPackage(clientPath, path.Dir(filepath.ToSlash(server.clientMainPath)))
 	if err != nil {
 		return err
 	}

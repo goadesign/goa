@@ -3,6 +3,7 @@ package codegen
 
 import (
 	"bytes"
+	"path/filepath"
 	"testing"
 	"text/template"
 
@@ -74,10 +75,10 @@ func TestNewOpenAPIPlanFromSpecsUsesExactVersionsAndPaths(t *testing.T) {
 		paths[index] = file.Path
 	}
 	require.Equal(t, []string{
-		"gen/docs/api.v2.json",
-		"gen/docs/api.v2.yaml",
-		"gen/reference/api.json",
-		"gen/reference/api.yaml",
+		filepath.Join("gen", "docs", "api.v2.json"),
+		filepath.Join("gen", "docs", "api.v2.yaml"),
+		filepath.Join("gen", "reference", "api.json"),
+		filepath.Join("gen", "reference", "api.yaml"),
 	}, paths)
 }
 

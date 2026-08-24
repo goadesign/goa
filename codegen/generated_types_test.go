@@ -562,7 +562,7 @@ func TestExplicitOutputPackageClaims(t *testing.T) {
 // host-specific path separators.
 func TestExplicitOutputPackageRejectsInvalidDirectories(t *testing.T) {
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
-	for _, directory := range []string{"../starter", "/starter", `starter\service`} {
+	for _, directory := range []string{"../starter", "/starter", "C:/starter", `starter\service`} {
 		_, err := generation.ClaimOutputPackage("generated.local/starter", directory)
 		require.Error(t, err, directory)
 	}
