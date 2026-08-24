@@ -79,10 +79,20 @@ func (s *{{ .Declaration.Name }}) {{ .RecvName }}() ({{ .RecvRef }}, error) {
 	switch s.view {
 	{{- range .RecvConverts }}
 	case {{ printf "%q" .View }}{{ if eq .View "default" }}, ""{{ end }}:
+		{{- if .Convert.Validation }}
+		if err := {{ .Convert.Validation.Declaration.Name }}(v); err != nil {
+			return res, err
+		}
+		{{- end }}
 		proj = {{ .Convert.Init.Declaration.Name }}({{ range .Convert.Init.Args }}{{ .Name }}, {{ end }})
 	{{- end }}
 	}
 	{{- else }}
+	{{- if .RecvConvert.Validation }}
+	if err := {{ .RecvConvert.Validation.Declaration.Name }}(v); err != nil {
+		return res, err
+	}
+	{{- end }}
 	proj := {{ .RecvConvert.Init.Declaration.Name }}({{ range .RecvConvert.Init.Args }}{{ .Name }}, {{ end }})
 	{{- end }}
 	vres := {{ if not .Endpoint.Method.ViewedResult.IsCollection }}&{{ end }}{{ .Endpoint.Method.ViewedResult.FullName }}{Projected: proj, View: {{ if .Endpoint.Method.ViewedResult.ViewName }}"{{ .Endpoint.Method.ViewedResult.ViewName }}"{{ else }}s.view{{ end }} }

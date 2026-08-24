@@ -16,19 +16,11 @@ import (
 )
 
 type (
-	// transformSnapshot copies one expression graph without merging user types
-	// that happen to come from the same authored declaration.
-	transformSnapshot struct {
-		attributes map[*expr.AttributeExpr]*expr.AttributeExpr
-		originals  map[*expr.AttributeExpr]*expr.AttributeExpr
-		types      map[expr.DataType]expr.DataType
-	}
-
-	// transformSnapshotAttributor passes the original expression to name
+	// transformCopyAttributor passes the original expression to name
 	// lookups that recorded expressions before the transform copied them.
-	transformSnapshotAttributor struct {
+	transformCopyAttributor struct {
 		attributor Attributor
-		originals  map[*expr.AttributeExpr]*expr.AttributeExpr
+		copier     *expr.AttributeGraphCopier
 	}
 
 	// transformAttributePair identifies one exact pair in a plan.
@@ -52,20 +44,11 @@ type (
 		planUnionHelpers func(*expr.AttributeExpr, *expr.AttributeExpr, func(*expr.AttributeExpr, *expr.AttributeExpr))
 		unchanged        func() bool
 		mutationErr      error
-		sourceSnapshot   *transformSnapshot
-		targetSnapshot   *transformSnapshot
+		sourceCopier     *expr.AttributeGraphCopier
+		targetCopier     *expr.AttributeGraphCopier
 		unwrapPairs      map[transformAttributePair]transformUnwrapChoice
 		fieldPairs       map[transformAttributePair]transformAttributePair
 		planned          bool
-	}
-
-	// transformValueReference identifies one mutable value on the active copy
-	// path. Slice length and capacity distinguish separate views of one array.
-	transformValueReference struct {
-		typeOf   reflect.Type
-		pointer  uintptr
-		length   int
-		capacity int
 	}
 )
 
@@ -82,116 +65,58 @@ func init() {
 	transformGoUnionT = template.Must(template.New("transformGoUnion").Funcs(fm).Parse(codegenTemplates.Read(transformGoUnionTmplName)))
 }
 
-// newTransformSnapshot creates an exact, cycle-safe expression copier for one
-// side of a transform.
-func newTransformSnapshot() *transformSnapshot {
-	return &transformSnapshot{
-		attributes: make(map[*expr.AttributeExpr]*expr.AttributeExpr),
-		originals:  make(map[*expr.AttributeExpr]*expr.AttributeExpr),
-		types:      make(map[expr.DataType]expr.DataType),
-	}
-}
-
-// attribute copies attribute and every expression reachable from it. The
-// placeholder is recorded before child types are copied so a true recursive
-// edge points back to the same copied value.
-func (s *transformSnapshot) attribute(attribute *expr.AttributeExpr) *expr.AttributeExpr {
-	if attribute == nil {
-		return nil
-	}
-	if _, copied := s.originals[attribute]; copied {
-		return attribute
-	}
-	if copied, ok := s.attributes[attribute]; ok {
-		return copied
-	}
-	copied := &expr.AttributeExpr{}
-	s.attributes[attribute] = copied
-	s.originals[copied] = attribute
-	copied.Type = s.dataType(attribute.Type)
-	copied.Bases = s.dataTypes(attribute.Bases)
-	copied.References = s.dataTypes(attribute.References)
-	copied.Description = attribute.Description
-	if attribute.Docs != nil {
-		docs := *attribute.Docs
-		copied.Docs = &docs
-	}
-	if attribute.Validation != nil {
-		copied.Validation = attribute.Validation.Dup()
-		copied.Validation.Values = copyTransformValue(attribute.Validation.Values).([]any)
-	}
-	copied.Meta = copyTransformMeta(attribute.Meta)
-	copied.DefaultValue = copyTransformValue(attribute.DefaultValue)
-	copied.DSLFunc = attribute.DSLFunc
-	if len(attribute.UserExamples) > 0 {
-		copied.UserExamples = make([]*expr.ExampleExpr, len(attribute.UserExamples))
-		for index, example := range attribute.UserExamples {
-			if example == nil {
-				continue
-			}
-			value := *example
-			value.Value = copyTransformValue(example.Value)
-			copied.UserExamples[index] = &value
-		}
-	}
-	return copied
-}
-
 // original returns the caller expression that was copied into the plan.
-func (a *transformSnapshotAttributor) original(attribute *expr.AttributeExpr) *expr.AttributeExpr {
-	if original := a.originals[attribute]; original != nil {
-		return original
-	}
-	return attribute
+func (a *transformCopyAttributor) original(attribute *expr.AttributeExpr) *expr.AttributeExpr {
+	return a.copier.Original(attribute)
 }
 
 // Name gives the wrapped resolver the expression it used during name planning.
-func (a *transformSnapshotAttributor) Name(attribute *expr.AttributeExpr, pkg string, pointer, useDefault bool) string {
+func (a *transformCopyAttributor) Name(attribute *expr.AttributeExpr, pkg string, pointer, useDefault bool) string {
 	return a.attributor.Name(a.original(attribute), pkg, pointer, useDefault)
 }
 
 // Ref gives the wrapped resolver the expression it used during name planning.
-func (a *transformSnapshotAttributor) Ref(attribute *expr.AttributeExpr, pkg string) string {
+func (a *transformCopyAttributor) Ref(attribute *expr.AttributeExpr, pkg string) string {
 	return a.attributor.Ref(a.original(attribute), pkg)
 }
 
 // Field gives the wrapped resolver the field it used during name planning.
-func (a *transformSnapshotAttributor) Field(attribute *expr.AttributeExpr, name string, firstUpper bool) string {
+func (a *transformCopyAttributor) Field(attribute *expr.AttributeExpr, name string, firstUpper bool) string {
 	return a.attributor.Field(a.original(attribute), name, firstUpper)
 }
 
 // Package gives the wrapped resolver the expression it used during planning.
-func (a *transformSnapshotAttributor) Package(attribute *expr.AttributeExpr) string {
+func (a *transformCopyAttributor) Package(attribute *expr.AttributeExpr) string {
 	return a.attributor.Package(a.original(attribute))
 }
 
 // Enter retains the translation while entering the caller's planned child.
-func (a *transformSnapshotAttributor) Enter(attribute *expr.AttributeExpr) Attributor {
-	return &transformSnapshotAttributor{
+func (a *transformCopyAttributor) Enter(attribute *expr.AttributeExpr) Attributor {
+	return &transformCopyAttributor{
 		attributor: a.attributor.Enter(a.original(attribute)),
-		originals:  a.originals,
+		copier:     a.copier,
 	}
 }
 
 // IsSumType reports the layout selected by the caller's attributor.
-func (a *transformSnapshotAttributor) IsSumType() bool {
+func (a *transformCopyAttributor) IsSumType() bool {
 	return a.attributor.IsSumType()
 }
 
 // ValidatorCall gives the wrapped resolver the expression it used during
 // validation name planning.
-func (a *transformSnapshotAttributor) ValidatorCall(attribute *expr.AttributeExpr, view, target, path string) string {
+func (a *transformCopyAttributor) ValidatorCall(attribute *expr.AttributeExpr, view, target, path string) string {
 	return a.attributor.ValidatorCall(a.original(attribute), view, target, path)
 }
 
 // Scope returns the name scope owned by the caller's resolver.
-func (a *transformSnapshotAttributor) Scope() *NameScope {
+func (a *transformCopyAttributor) Scope() *NameScope {
 	return a.attributor.Scope()
 }
 
 // OneofWrapper forwards the gRPC oneof lookup when the wrapped resolver owns
 // that lookup. A different resolver cannot render a protobuf oneof.
-func (a *transformSnapshotAttributor) OneofWrapper(attribute *expr.AttributeExpr) string {
+func (a *transformCopyAttributor) OneofWrapper(attribute *expr.AttributeExpr) string {
 	resolver, ok := a.attributor.(interface {
 		OneofWrapper(*expr.AttributeExpr) string
 	})
@@ -201,219 +126,11 @@ func (a *transformSnapshotAttributor) OneofWrapper(attribute *expr.AttributeExpr
 	return resolver.OneofWrapper(a.original(attribute))
 }
 
-// dataTypes copies a list through the same graph so shared and recursive
-// declarations remain shared in the snapshot.
-func (s *transformSnapshot) dataTypes(dataTypes []expr.DataType) []expr.DataType {
-	if dataTypes == nil {
-		return nil
-	}
-	copied := make([]expr.DataType, len(dataTypes))
-	for index, dataType := range dataTypes {
-		copied[index] = s.dataType(dataType)
-	}
-	return copied
-}
-
-// dataType copies one type while preserving its exact graph identity.
-func (s *transformSnapshot) dataType(dataType expr.DataType) expr.DataType {
-	if dataType == nil || dataType == expr.Empty {
-		return dataType
-	}
-	if copied, ok := s.types[dataType]; ok {
-		return copied
-	}
-	switch actual := dataType.(type) {
-	case expr.Primitive:
-		return actual
-	case *expr.Array:
-		copied := &expr.Array{NonNullableElems: actual.NonNullableElems}
-		s.types[dataType] = copied
-		copied.ElemType = s.attribute(actual.ElemType)
-		return copied
-	case *expr.Object:
-		copied := &expr.Object{}
-		s.types[dataType] = copied
-		for _, named := range *actual {
-			copied.Set(named.Name, s.attribute(named.Attribute))
-		}
-		return copied
-	case *expr.Map:
-		copied := &expr.Map{}
-		s.types[dataType] = copied
-		copied.KeyType = s.attribute(actual.KeyType)
-		copied.ElemType = s.attribute(actual.ElemType)
-		return copied
-	case *expr.Union:
-		copied := &expr.Union{
-			TypeName: actual.TypeName,
-			TypeKey:  actual.TypeKey,
-			ValueKey: actual.ValueKey,
-			Values:   make([]*expr.NamedAttributeExpr, len(actual.Values)),
-		}
-		s.types[dataType] = copied
-		for index, named := range actual.Values {
-			copied.Values[index] = &expr.NamedAttributeExpr{
-				Name:      named.Name,
-				Attribute: s.attribute(named.Attribute),
-			}
-		}
-		return copied
-	case expr.UserType:
-		copied := actual.Dup(nil)
-		s.types[dataType] = copied
-		copied.SetAttribute(s.attribute(actual.Attribute()))
-		return copied
-	default:
-		panic(fmt.Sprintf("cannot snapshot transform type %T", dataType)) // bug
-	}
-}
-
-// copyTransformMeta copies both the metadata map and its value slices.
-func copyTransformMeta(meta expr.MetaExpr) expr.MetaExpr {
-	if meta == nil {
-		return nil
-	}
-	copied := meta.Dup()
-	for name, values := range copied {
-		copied[name] = slices.Clone(values)
-	}
-	return copied
-}
-
-// copyTransformValue copies the values accepted by Goa defaults, validations,
-// and examples without changing their concrete Go type.
-func copyTransformValue(value any) any {
-	if value == nil {
-		return nil
-	}
-	return copyTransformReflectValue(
-		reflect.ValueOf(value),
-		make(map[transformValueReference]struct{}),
-	).Interface()
-}
-
-// copyTransformReflectValue copies mutable JSON-compatible containers.
-// Values with unsupported mutable kinds are rejected instead of shared.
-func copyTransformReflectValue(value reflect.Value, active map[transformValueReference]struct{}) reflect.Value {
-	switch value.Kind() {
-	case reflect.Interface:
-		if value.IsNil() {
-			return reflect.Zero(value.Type())
-		}
-		copied := reflect.New(value.Type()).Elem()
-		copied.Set(copyTransformReflectValue(value.Elem(), active))
-		return copied
-	case reflect.Pointer:
-		if value.IsNil() {
-			return reflect.Zero(value.Type())
-		}
-		reference := enterTransformValueReference(value, active)
-		defer delete(active, reference)
-		copied := reflect.New(value.Type().Elem())
-		copied.Elem().Set(copyTransformReflectValue(value.Elem(), active))
-		return copied
-	case reflect.Slice:
-		if value.IsNil() {
-			return reflect.Zero(value.Type())
-		}
-		reference := enterTransformValueReference(value, active)
-		defer delete(active, reference)
-		copied := reflect.MakeSlice(value.Type(), value.Len(), value.Len())
-		for index := range value.Len() {
-			copied.Index(index).Set(copyTransformReflectValue(value.Index(index), active))
-		}
-		return copied
-	case reflect.Map:
-		if value.IsNil() {
-			return reflect.Zero(value.Type())
-		}
-		reference := enterTransformValueReference(value, active)
-		defer delete(active, reference)
-		copied := reflect.MakeMapWithSize(value.Type(), value.Len())
-		iterator := value.MapRange()
-		for iterator.Next() {
-			copied.SetMapIndex(
-				copyTransformReflectValue(iterator.Key(), active),
-				copyTransformReflectValue(iterator.Value(), active),
-			)
-		}
-		return copied
-	case reflect.Array:
-		copied := reflect.New(value.Type()).Elem()
-		for index := range value.Len() {
-			copied.Index(index).Set(copyTransformReflectValue(value.Index(index), active))
-		}
-		return copied
-	case reflect.Struct:
-		copied := reflect.New(value.Type()).Elem()
-		copied.Set(value)
-		for index := range value.NumField() {
-			field := value.Type().Field(index)
-			if !field.IsExported() {
-				if transformTypeContainsReference(field.Type) {
-					panic(fmt.Sprintf(
-						"cannot copy transform value of type %s: unexported field %s contains mutable data",
-						value.Type(),
-						field.Name,
-					))
-				}
-				continue
-			}
-			copied.Field(index).Set(copyTransformReflectValue(value.Field(index), active))
-		}
-		return copied
-	case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32,
-		reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32,
-		reflect.Uint64, reflect.Uintptr, reflect.Float32, reflect.Float64,
-		reflect.Complex64, reflect.Complex128, reflect.String:
-		return value
-	default:
-		panic(fmt.Sprintf("cannot copy transform value of type %s", value.Type()))
-	}
-}
-
-// enterTransformValueReference rejects a value that points back to one already
-// being copied. Repeated values outside the active path are copied separately.
-func enterTransformValueReference(value reflect.Value, active map[transformValueReference]struct{}) transformValueReference {
-	reference := transformValueReference{
-		typeOf:  value.Type(),
-		pointer: value.Pointer(),
-	}
-	if value.Kind() == reflect.Slice {
-		reference.length = value.Len()
-		reference.capacity = value.Cap()
-	}
-	if _, exists := active[reference]; exists {
-		panic(fmt.Sprintf("cannot copy cyclic transform value of type %s", value.Type()))
-	}
-	active[reference] = struct{}{}
-	return reference
-}
-
-// transformTypeContainsReference reports whether a private field could share
-// mutable state with the expression supplied by the caller.
-func transformTypeContainsReference(valueType reflect.Type) bool {
-	switch valueType.Kind() {
-	case reflect.Slice, reflect.Map, reflect.Pointer, reflect.Interface,
-		reflect.Func, reflect.Chan, reflect.UnsafePointer:
-		return true
-	case reflect.Array:
-		return transformTypeContainsReference(valueType.Elem())
-	case reflect.Struct:
-		for index := range valueType.NumField() {
-			if transformTypeContainsReference(valueType.Field(index).Type) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // captureTransformStructuralHooks copies the hook set and replaces planning
 // callbacks with memoized versions. Planning may add a choice; rendering may
 // only read one that planning already made. unchanged checks that a hook left
 // the plan-owned expression graphs intact.
-func captureTransformStructuralHooks(hooks *TransformHooks, sourceSnapshot, targetSnapshot *transformSnapshot, unchanged func() bool) (*TransformHooks, *transformStructuralChoices) {
+func captureTransformStructuralHooks(hooks *TransformHooks, sourceCopier, targetCopier *expr.AttributeGraphCopier, unchanged func() bool) (*TransformHooks, *transformStructuralChoices) {
 	if hooks == nil {
 		return nil, nil
 	}
@@ -423,8 +140,8 @@ func captureTransformStructuralHooks(hooks *TransformHooks, sourceSnapshot, targ
 		fieldPair:        copied.FieldPairAttrs,
 		planUnionHelpers: copied.PlanUnionHelpers,
 		unchanged:        unchanged,
-		sourceSnapshot:   sourceSnapshot,
-		targetSnapshot:   targetSnapshot,
+		sourceCopier:     sourceCopier,
+		targetCopier:     targetCopier,
 		unwrapPairs:      make(map[transformAttributePair]transformUnwrapChoice),
 		fieldPairs:       make(map[transformAttributePair]transformAttributePair),
 	}
@@ -452,11 +169,11 @@ func (c *transformStructuralChoices) unwrapPair(source, target *expr.AttributeEx
 	}
 	source, target, directive := c.unwrap(source, target)
 	c.recordMutation("UnwrapPair")
-	source = c.sourceSnapshot.attribute(source)
-	target = c.targetSnapshot.attribute(target)
+	source = c.sourceCopier.Copy(source)
+	target = c.targetCopier.Copy(target)
 	if directive != nil {
 		copy := *directive
-		copy.Target = c.targetSnapshot.attribute(directive.Target)
+		copy.Target = c.targetCopier.Copy(directive.Target)
 		directive = &copy
 	}
 	c.unwrapPairs[pair] = transformUnwrapChoice{
@@ -478,8 +195,8 @@ func (c *transformStructuralChoices) fieldPairAttrs(source, target *expr.Attribu
 	}
 	source, target = c.fieldPair(source, target)
 	c.recordMutation("FieldPairAttrs")
-	source = c.sourceSnapshot.attribute(source)
-	target = c.targetSnapshot.attribute(target)
+	source = c.sourceCopier.Copy(source)
+	target = c.targetCopier.Copy(target)
 	c.fieldPairs[pair] = transformAttributePair{source: source, target: target}
 	return source, target
 }
@@ -511,12 +228,9 @@ func (c *transformStructuralChoices) recordMutation(name string) {
 // returns an error if target is not compatible with source (different type,
 // fields of different type etc).
 //
-// As a special case GoTransform can map union types from and to object types
-// with two attributes, one called "Value" which stores the value and one called
-// "Type" which is of type string and contains the value type name (union types
-// are otherwise implemented as a struct containing a single field: the current
-// value - however having the kind explicitly stored is required to serialize to
-// JSON for example).
+// As a special case GoTransform can map a union to or from an object envelope.
+// The envelope has a string "Type" field that names the selected branch and a
+// "Value" field that contains that branch.
 //
 // source and target are the attributes used in the transformation
 //
@@ -605,24 +319,24 @@ func GoTransformWithAttrs(source, target *expr.AttributeExpr, sourceVar, targetV
 // those copies without changing them; this function returns an error if it
 // detects a mutation.
 func NewTransformPlan(source, target *expr.AttributeExpr, prefix string, hooks *TransformHooks) (*TransformPlan, error) {
-	sourceSnapshot := newTransformSnapshot()
-	targetSnapshot := newTransformSnapshot()
-	source = sourceSnapshot.attribute(source)
-	target = targetSnapshot.attribute(target)
-	baselineSource := newTransformSnapshot()
-	baselineTarget := newTransformSnapshot()
+	sourceCopier := expr.NewAttributeGraphCopier()
+	targetCopier := expr.NewAttributeGraphCopier()
+	source = sourceCopier.Copy(source)
+	target = targetCopier.Copy(target)
+	baselineSource := expr.NewAttributeGraphCopier()
+	baselineTarget := expr.NewAttributeGraphCopier()
 	plan := &TransformPlan{
-		source:          source,
-		target:          target,
-		sourceBaseline:  baselineSource.attribute(source),
-		targetBaseline:  baselineTarget.attribute(target),
-		sourceOriginals: sourceSnapshot.originals,
-		targetOriginals: targetSnapshot.originals,
-		prefix:          prefix,
-		operations:      []*transformOperation{{}},
-		renders:         make(map[transformRenderRequest]transformRenderResult),
+		source:         source,
+		target:         target,
+		sourceBaseline: baselineSource.Copy(source),
+		targetBaseline: baselineTarget.Copy(target),
+		sourceCopier:   sourceCopier,
+		targetCopier:   targetCopier,
+		prefix:         prefix,
+		operations:     []*transformOperation{{}},
+		renders:        make(map[transformRenderRequest]transformRenderResult),
 	}
-	retainedHooks, structuralChoices := captureTransformStructuralHooks(hooks, sourceSnapshot, targetSnapshot, func() bool {
+	retainedHooks, structuralChoices := captureTransformStructuralHooks(hooks, sourceCopier, targetCopier, func() bool {
 		return !plan.changed()
 	})
 	plan.hooks = retainedHooks
@@ -647,10 +361,10 @@ func NewTransformPlan(source, target *expr.AttributeExpr, prefix string, hooks *
 func (p *TransformPlan) Helpers() []TransformHelper {
 	helpers := slices.Clone(p.helpers)
 	for index := range helpers {
-		sourceSnapshot := newTransformSnapshot()
-		targetSnapshot := newTransformSnapshot()
-		helpers[index].Source = sourceSnapshot.attribute(helpers[index].Source)
-		helpers[index].Target = targetSnapshot.attribute(helpers[index].Target)
+		sourceCopier := expr.NewAttributeGraphCopier()
+		targetCopier := expr.NewAttributeGraphCopier()
+		helpers[index].Source = sourceCopier.Copy(helpers[index].Source)
+		helpers[index].Target = targetCopier.Copy(helpers[index].Target)
 	}
 	return helpers
 }
@@ -687,14 +401,14 @@ func (p *TransformPlan) BindContexts(source, target *AttributeContext) error {
 		return fmt.Errorf("transform contexts are already bound")
 	}
 	p.sourceCtx = source.Dup()
-	p.sourceCtx.Scope = &transformSnapshotAttributor{
+	p.sourceCtx.Scope = &transformCopyAttributor{
 		attributor: source.Scope,
-		originals:  p.sourceOriginals,
+		copier:     p.sourceCopier,
 	}
 	p.targetCtx = target.Dup()
-	p.targetCtx.Scope = &transformSnapshotAttributor{
+	p.targetCtx.Scope = &transformCopyAttributor{
 		attributor: target.Scope,
-		originals:  p.targetOriginals,
+		copier:     p.targetCopier,
 	}
 	return nil
 }
@@ -903,11 +617,22 @@ func transformDataTypesEqual(left, right expr.DataType, seen map[transformAttrib
 // transformation. It is exported so that TransformHooks implementations can
 // recurse into the transform engine from the code they render.
 func TransformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) (string, error) {
-	var prelude string
+	var (
+		prelude                      string
+		sourcePointer, targetPointer bool
+	)
 	if h := ta.Hooks; h != nil && h.UnwrapPair != nil {
+		wrappedSource, wrappedTarget := source, target
 		var dir *WrapDirective
 		source, target, dir = h.UnwrapPair(source, target)
 		prelude = dir.apply(&sourceVar, &targetVar, &newVar, ta)
+		if dir != nil {
+			if dir.WrapTarget {
+				targetPointer = wrappedPrimitivePointer(wrappedTarget, ta.TargetCtx)
+			} else {
+				sourcePointer = wrappedPrimitivePointer(wrappedSource, ta.SourceCtx)
+			}
+		}
 	}
 	ta = enterTransformAttrs(source, target, ta)
 	if err := IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
@@ -939,7 +664,7 @@ func TransformAttribute(source, target *expr.AttributeExpr, sourceVar, targetVar
 	case expr.IsObject(source.Type):
 		code, err = transformObject(source, target, sourceVar, targetVar, newVar, ta)
 	default:
-		code = transformPrimitive(source, target, sourceVar, targetVar, newVar, ta)
+		code = transformPrimitive(source, target, sourceVar, targetVar, newVar, sourcePointer, targetPointer, ta)
 	}
 	if err != nil {
 		return "", err
@@ -1001,24 +726,53 @@ func transformFunctionDefinitionsEqual(left, right *TransformFunctionData) bool 
 
 // transformPrimitive returns the code to transform source primitive type to
 // target primitive type. The caller (TransformAttribute) already verified that
-// source and target are compatible.
-func transformPrimitive(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, ta *TransformAttrs) string {
+// source and target are compatible. The pointer flags describe primitive
+// fields inside wrappers removed before this function runs.
+func transformPrimitive(
+	source, target *expr.AttributeExpr,
+	sourceVar, targetVar string,
+	newVar, sourcePointer, targetPointer bool,
+	ta *TransformAttrs,
+) string {
 	assign := "="
 	if newVar {
 		assign = ":="
 	}
 
+	handled := false
+	expression := sourceVar
 	if h := ta.Hooks; h != nil && h.ConvertPrimitive != nil {
-		if exp, ok := h.ConvertPrimitive(source, target, sourceVar, false, false, ta); ok {
-			return fmt.Sprintf("%s %s %s\n", targetVar, assign, exp)
+		if result, ok := h.ConvertPrimitive(source, target, sourceVar, sourcePointer, targetPointer, ta); ok {
+			expression = result
+			handled = true
 		}
 	}
-	srcRef := ta.SourceCtx.Scope.Ref(source, ta.SourceCtx.Pkg(source))
-	tgtRef := ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target))
-	if srcRef != tgtRef {
-		return fmt.Sprintf("%s %s %s(%s)\n", targetVar, assign, tgtRef, sourceVar)
+	if !handled {
+		srcRef := ta.SourceCtx.Scope.Ref(source, ta.SourceCtx.Pkg(source))
+		tgtRef := ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target))
+		if sourcePointer {
+			expression = "*" + expression
+		}
+		if srcRef != tgtRef {
+			expression = fmt.Sprintf("%s(%s)", tgtRef, expression)
+		}
 	}
-	return fmt.Sprintf("%s %s %s\n", targetVar, assign, sourceVar)
+	if targetPointer {
+		targetRef := ta.TargetCtx.Scope.Ref(target, ta.TargetCtx.Pkg(target))
+		return fmt.Sprintf("%s = new(%s)\n*%s = %s\n", targetVar, targetRef, targetVar, expression)
+	}
+	return fmt.Sprintf("%s %s %s\n", targetVar, assign, expression)
+}
+
+// wrappedPrimitivePointer reports whether the single field exposed by a
+// wrapper uses a pointer in the generated source or target type.
+func wrappedPrimitivePointer(wrapper *expr.AttributeExpr, context *AttributeContext) bool {
+	object := expr.AsObject(wrapper.Type)
+	if object == nil || len(*object) != 1 {
+		panic("transform wrapper must contain exactly one field")
+	}
+	field := (*object)[0]
+	return expr.IsPrimitive(field.Attribute.Type) && context.IsPrimitivePointer(field.Name, wrapper)
 }
 
 // transformObject generates Go code to transform source object to target
@@ -1232,8 +986,9 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 		// non-pointers) and has a default value set.
 		if tdef := tgtMatt.GetDefault(n); tdef != nil && ta.TargetCtx.UseDefault && !ta.TargetCtx.Pointer && !srcMatt.IsRequired(n) {
 			switch {
-			case ta.SourceCtx.IsPrimitivePointer(n, srcMatt.AttributeExpr) || !expr.IsPrimitive(srcc.Type):
-				// source attribute is a primitive pointer or not a primitive
+			case transformFieldUsesNilPresence(ta.SourceCtx, n, srcMatt.AttributeExpr):
+				// A nil source means the field was omitted. This includes
+				// slices and message values as well as explicit pointers.
 				code += fmt.Sprintf("if %s == nil {\n\t", srcVar)
 				switch {
 				case ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr) && expr.IsPrimitive(tgtc.Type):
@@ -1307,6 +1062,16 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 	}
 
 	return buffer.String(), nil
+}
+
+// transformFieldUsesNilPresence reports whether nil means that a generated
+// source field was omitted. Bytes and Any can preserve this distinction even
+// though Goa does not add another pointer around them.
+func transformFieldUsesNilPresence(context *AttributeContext, name string, parent *expr.AttributeExpr) bool {
+	field := expr.AsObject(parent.Type).Attribute(name)
+	return !expr.IsPrimitive(field.Type) ||
+		context.IsPrimitivePointer(name, parent) ||
+		!context.UseDefault && IsNilable(field.Type)
 }
 
 // valueIsNilable reports whether a typed default can be compared only with

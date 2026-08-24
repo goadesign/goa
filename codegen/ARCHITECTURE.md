@@ -208,13 +208,22 @@ An exact symbol is part of an authored or external contract. Two distinct
 exact declarations that normalize to the same Go identifier in one package are
 rejected before rendering. Examples include two relocated authored types named
 `foo-bar` and `foo_bar`, or two explicit external names that both require
-`FooBar`.
+`FooBar`. A Goa `OneOf` also owns one exact public family: the union type, its
+kind type, branch constants, constructors, and compiler-created branch types.
+For a union named `Value` with a `text` branch, these include `Value`,
+`ValueKind`, `ValueKindText`, `NewValueText`, and `ValueBranchText`.
+HTTP transport copies add the exact body role to the union name:
+`ValueRequestBody`, `ValueStreamingBody`, and `ValueResponseBody`. A response
+view named `detailed` uses `ValueDetailedResponseBody`. Copies of one authored
+union in the same role and view reuse that family. If those copies would emit
+different definitions, generation fails and the design must use separate
+`OneOf` declarations.
 
 A preferred symbol is generated from a semantic role. It may receive a stable
 numeric suffix when another declaration already owns the preferred spelling.
-Examples include a generated `ValidatePayload`, `NewValueText`, or protobuf
-request message. The declaration's typed identity—not discovery order—decides
-which record receives each spelling.
+Examples include a generated `ValidatePayload` or protobuf request message.
+The declaration's typed identity—not discovery order—decides which record
+receives each spelling.
 
 Exact declarations reserve first. Preferred declarations are sorted by stable
 typed identity and allocated second. A subsystem must reject two distinct
@@ -272,10 +281,13 @@ metadata as applicable. Equal semantic `ID()` values do not merge distinct
 origins. Conversely, the same authored origin may produce distinct request and
 response records when their emitted contracts differ.
 
-`expr.Union.Hash()` remains expression identity. Typed code-generation
-identities such as `UnionTypeID` describe emitted union families. Do not change
-expression hashes, decorate string keys, or add general expression provenance
-to coordinate code generation.
+`expr.Union.Hash()` remains expression identity. `UnionTypeID` describes the Go
+and JSON definition emitted for one union occurrence. `UnionDeclarationID`
+combines that definition with `AttributeExpr.AuthoredAttribute()`: copies of
+one authored `OneOf` share a declaration only while their emitted definitions
+also match, while separately authored unions remain separate even when every
+branch is equal. Do not change expression hashes, decorate string keys, or add
+general expression provenance to coordinate code generation.
 
 ## Example value identity
 
@@ -573,6 +585,7 @@ performing that step; the run or the owning retained plan now performs it once.
 | `codegen` | `AttributeContext.DefaultPkg` and `SamePackageConversion` | Removed. Package lookup belongs to the `Attributor`; enter the source or target attribute instead of setting a default package or a same-package mode. `ArrayElementPointer` is new and is only for a wire array that must distinguish JSON `null` from a primitive zero value. |
 | `codegen` | `TransformHooks.HelperNameAttrs` | Removed. Bind each recursive helper through `TransformPlan.Helpers` and `BindHelperDeclaration`; do not derive a helper name from a second attribute walk. A custom `TransformUnion` that calls `TransformHelperName` must also implement `PlanUnionHelpers` so planning can declare those functions before rendering. |
 | `codegen` | `WrapDirective.InitTypeName` | Set `WrapDirective.Target` to the wrapper attribute. Rendering resolves its already planned Go type name. |
+| `codegen` | `GeneratedPackage.DeclareUnion`, `Union`, `UnionBranch`, `DeclareUnionBranchType`, and `UnionBranchType` accepted `*expr.Union` | These methods accept the `*expr.AttributeExpr` that contains the union. Pass the authored owning attribute, or a copy that retains `AuthoredAttribute`; do not pass `attribute.Type.(*expr.Union)`. Goa needs the attribute to distinguish separately authored unions with equal branches and to make every copy of one declaration use the same exact names. |
 | `codegen` | `TransformFunctionData` contained only `Name`, parameter and result references, and code | It now also identifies the planned helper with `ID` and `Declaration`. `Name` remains as a deprecated copy of `Declaration.Name()` for every rendered helper. Unkeyed struct literals must be updated. |
 | `codegen/cli` | `BuildCommandData(data)`, `EndpointParserFile(..., data, parseSection)`, `UsageCommands(data)`, `UsageExamples(data)`, and `FlagsCode(data)` | These released signatures and section data remain available. Goa's HTTP and gRPC planners call private planned variants that carry final import, declaration, and local-variable names. |
 | `codegen/cli` | `BuildFunctionData.Name`, `ActualParams`, and `FormalParams` | These fields remain and contain the final generated name and parameter lists. New planning code may also read `BuildFunctionData.Declaration`. |
@@ -611,7 +624,7 @@ performing that step; the run or the owning retained plan now performs it once.
 | `jsonrpc/codegen` | `CreateJSONRPCServices` testing helper | Use `CreateJSONRPCPlan` when a test needs the linked production plan. |
 | `jsonrpc` | Positional literals for `RawRequest` | Use named fields. `RawRequest` now records whether JSON-RPC request validation failed so the server can return Invalid Request instead of treating the value as a notification. Existing named-field literals continue to compile. |
 | `jsonrpc` | WebSocket `StreamConfig`, `StreamConfigOption`, `StreamErrorType`, `StreamErrorHandler`, `StreamErrorConnection`, `StreamErrorProtocol`, `StreamErrorParsing`, `StreamErrorOrphaned`, `StreamErrorTimeout`, `StreamErrorNotification`, `NewStreamConfig`, `WithRequestTimeout`, `WithConnectionTimeout`, `WithCloseTimeout`, `WithResultChannelBuffer`, `WithWebSocketBuffers`, `WithRetryConfig`, `WithCompression`, `WithPingInterval`, `WithErrorHandler`, and `(*StreamConfig).Validate` | No replacement. JSON-RPC WebSocket generation was removed. JSON-RPC supports unary HTTP calls and server streams through explicit server-sent events. |
-| `codegen/service` | `UnionTypeData.Declaration` | Use `TypeDeclaration` for the generated value type and `KindDeclaration` for the type that records the selected branch. Each `UnionFieldData` now has `KindDeclaration` and `ConstructorDeclaration` for its generated constant and constructor. The old `Name`, `KindName`, `KindConst`, and `Constructor` strings remain final snapshots for existing plugin templates. |
+| `codegen/service` | `UnionTypeData.Declaration`; unkeyed `UnionFieldData` literals | Use `TypeDeclaration` for the generated value type and `KindDeclaration` for the type that records the selected branch. Each `UnionFieldData` has `KindDeclaration` and `ConstructorDeclaration` for its generated constant and constructor. `FieldName` is the public branch spelling used by accessors; `StorageName` is the private struct field that stores the selected value. `StorageName` is a new field, so positional literals no longer compile; use named fields. The old `Name`, `KindName`, `KindConst`, and `Constructor` strings remain final snapshots for existing plugin templates. |
 | `http/codegen/openapi` | Process-global `Definitions`; `APISchema`, `GenerateServiceDefinition`, `ResultTypeRef`, `ResultTypeRefWithPrefix`, `TypeRef`, `TypeRefWithPrefix`, `GenerateResultTypeDefinition`, `GenerateTypeDefinition`, `GenerateTypeDefinitionWithName`, `TypeSchema`, `TypeSchemaWithPrefix`, `AttributeTypeSchema`, and `AttributeTypeSchemaWithPrefix` | The global definition cache and its mutating helpers have no replacement. For OpenAPI 2 attribute schemas, use `v2.BuildAttributeSchema(api, attribute, exampleGenerator)`; otherwise build a complete v2 or v3 document so definitions remain local to that build. |
 | `http/codegen/openapi/v2` | `NewV2(root, host)` and `Files(root, path)` | These released signatures remain available and use the evaluated design's randomizer factory. Call `NewV2WithValues` or `FilesWithValues` when supplying translated values or a specific example generator. |
 | `http/codegen/openapi/v3` | `New(root, version)` and `Files(root, version, path)` | These released signatures remain available and use the evaluated design's randomizer factory. Call `NewWithValues` or `FilesWithValues` when supplying translated values or a specific example generator. |
@@ -631,7 +644,7 @@ that compiled with Goa v3 must be changed to named fields:
   `UnionTypeData`, `UserTypeData`, `ValidateData`, `ViewData`, and
   `ViewedResultTypeData`. `UnionTypeData` replaces `Declaration` with
   `TypeDeclaration` and `KindDeclaration`; `UnionFieldData` adds
-  `KindDeclaration` and `ConstructorDeclaration`.
+  `KindDeclaration`, `ConstructorDeclaration`, and `StorageName`.
 - `expr`: `APIExpr`, `ResultTypeExpr`, `SchemeExpr`, `ServiceExpr`, and
   `UserTypeExpr`.
 - `grpc/codegen`: `EndpointData`, `InitArgData`, `InitData`,
@@ -786,10 +799,27 @@ alias. Generated imports already carry the planned qualifier, and the file
 path and exported type names do not change.
 
 Union declarations requested in another generated package now live in that
-package's `unions.go` file. Their Go import path and declaration names remain
-the same unless a real package collision requires a suffix. Plugins and scripts
-that select generated files by filename must stop assuming a union is written
-beside the service that first used it.
+package's `unions.go` file. Their public family uses the exact `OneOf` name; Goa
+never adds a numeric suffix to resolve a collision. Separately authored unions
+that ask for the same family name now fail generation, even when their branches
+are equal. Give each declaration a distinct `TypeName`. Compiler-created branch
+types now use `<Union>Branch<Branch>`, such as `ValueBranchText`, instead of the
+old `<Union><Branch>` spelling. Authored branch type names remain unchanged.
+Plugins and scripts that select generated files by filename must stop assuming
+a union is written beside the service that first used it.
+
+HTTP union names now state which wire body owns them. A `Value` union becomes
+`ValueRequestBody` in an ordinary request, `ValueStreamingBody` in a streaming
+request, `ValueResponseBody` in a response, and `ValueDetailedResponseBody` in
+the `detailed` response view. Handwritten transport code and plugins that name
+the old union declaration must use the new exact name after regeneration.
+
+Generated union branch fields are now private so code cannot leave stale values
+in branches that are no longer selected. Handwritten code must replace reads
+such as `u.Text` with `u.AsText()` and writes such as `u.Text = value` with
+`u.SetText(value)` or `NewValueText(value)`. Plugin templates use `FieldName`
+for the public branch spelling and `StorageName` only when rendering the private
+field inside the union implementation. JSON and protobuf data are unchanged.
 
 Generated interceptor implementations must also change their method
 signatures. An argument such as `*LoggingInfo` is now the read-only
@@ -902,6 +932,7 @@ assumption.
 | Change | Mixed old and new programs | Rollback effect |
 | --- | --- | --- |
 | Required Goa `OneOf` validation | Generated service validators and HTTP and gRPC boundaries now reject a union with no selected branch. They also reject a selected message, bytes, or `Any` wrapper whose branch value is nil. The protobuf encoding is unchanged. Valid branches, including a selected empty message, work across versions. | Rolling back re-allows invalid union values; it requires no data migration. |
+| Required singular protobuf scalar presence | Goa now writes `optional` on singular protobuf booleans, numbers, strings, enums, and their aliases so a validator can distinguish an omitted field from an explicit zero value. Their generated `pb.go` fields become pointers. Bytes remain `[]byte`; `Any` and other message fields remain pointers. Goa service types do not change, and protobuf field numbers and binary tags stay compatible. An old client works with a new server when it sends an explicit nonzero value, but old generated code cannot mark a required zero value as present, so the new server rejects that omission. A new client can send an explicit zero value to an old server. Regenerate handwritten protobuf struct literals and replace direct scalar field reads with the generated accessors where needed. | Rolling back accepts omitted required zero values again. Protobuf data needs no migration. |
 | `ArrayOfRequired` for primitive values and primitive aliases in JSON bodies | Valid JSON is unchanged. Incoming JSON representations use pointer elements: server request bodies and client response bodies use values such as `[]*string`, then convert them to service value slices such as `[]string`. Outgoing client request bodies and server response bodies remain value slices. Incoming `[null]` is now rejected. Handwritten code that constructs incoming transport body values must supply pointers. gRPC repeated scalar fields and service arrays remain value slices. | Rolling back accepts `null` again; it requires no data migration. |
 | Exclusive maximum validation | Generated primitive validators now reject values equal to or above an exclusive maximum. Older validators accidentally repeated the exclusive minimum check and could accept those values. | Rolling back accepts values that violate the designed maximum; it requires no data migration. |
 | Caller-selected JSON-RPC result views | A successful response is `{ "jsonrpc": "2.0", "id": ..., "result": { "view": "detailed", "body": ... } }`. The envelope is the method value inside JSON-RPC's standard `result` member. It is generated only when the caller chooses among views. The `body` member is omitted when every selected field is carried in HTTP headers or cookies. The old result was the projected body alone; unary HTTP responses carried the view in the `goa-view` header, while stream messages had no reliable place for it. An old client and new server, or a new client and old server, are not compatible for these methods. Results without views and results whose view is fixed in the design keep their old body shape. The envelope is used consistently for unary and server-sent-event results. A configured response decoder now receives an HTTP response with status 200 instead of the previous zero status. | Deploy or roll back every client and server for a caller-selected view together. There is no dual decoder. A custom response decoder that inspected the synthetic status must accept 200. This generic Goa envelope is valid JSON-RPC, but a method that belongs to another protocol layered on JSON-RPC must still use that protocol's required result schema. |
@@ -913,7 +944,8 @@ assumption.
 | Nested HTTP validation paths | Generated validation errors now keep the complete field and array-index path while entering nested generated types instead of restarting the path at the nested value. | Invalid inputs may produce more precise error field names. Valid inputs and wire data are unchanged. |
 | HTTP float query text | Generated clients now use Go's shortest round-trip text for float32 and float64 query values. Ordinary values are unchanged, while very large or small values may use exponent form, such as `1e+100`, instead of a long decimal expansion. Servers decode the same number. | Systems that sign, cache, or compare the exact URL text must accept the compact form. Rolling back returns to the longer spelling. |
 | gRPC metadata text | Generated metadata conversions are specialized for the designed type. Bytes now use their string contents, so `[]byte{65, 66}` is sent as `"AB"` instead of `"[65 66]"`. Floating-point values use the designed width. Other scalar text remains equivalent. | Regenerate both sides when a metadata consumer parses the old byte-slice display or depends on the old floating-point spelling. Rolling back restores the old text. |
-| gRPC result views | Unary and streaming clients and servers now use the protobuf conversion for the selected view. Dynamic server streams send the view in initial `goa-view` metadata, and dynamic clients require that metadata before decoding the first message. The protobuf schema is unchanged. An old stream server does not send this value, while an old stream client assumes the default view. Older conversions can also fail when a selected view omits a field used by the default conversion. | Regenerate and deploy both sides of a dynamic viewed gRPC stream together. Also regenerate both sides of any viewed method whose selected view omits default-view fields. Fixed-view methods otherwise keep their wire choice. |
+| gRPC result views | Unary and streaming clients and servers now use the protobuf conversion and validation rules for the selected view. A client rejects a missing selected field before conversion instead of silently using a zero value or panicking; fields omitted by that view are not required. Dynamic server streams send the view in initial `goa-view` metadata, and dynamic clients require that metadata before decoding the first message. The protobuf schema is unchanged. An old stream server does not send this value, while an old stream client assumes the default view. Older conversions can also fail when a selected view omits a field used by the default conversion. A non-default view validator has a stable name such as `ValidateShowResponseTiny`; the default view keeps `ValidateShowResponse`. Identical validation functions share one name, so obsolete numeric duplicates such as `ValidateShowResponse2` disappear. Handwritten code that calls generated validators must use the validator for its selected view. | Regenerate and deploy both sides of a dynamic viewed gRPC stream together. Also regenerate both sides of any viewed method whose selected view omits default-view fields. Fixed-view methods otherwise keep their wire choice. |
+| Protobuf wrappers around repeated and map values | Protobuf does not record whether a repeated or map field was omitted, so Goa no longer invents a missing-field error for the generated wrapper field. A nil wrapper used as a map value decodes as an empty collection instead of panicking. Authored rules still apply: for example, nil and present-empty wrappers both fail an authored minimum length of one, and item rules still check every present item. A wrapper with no authored rule no longer emits an otherwise empty exported validator. Handwritten code that called that unnecessary validator must remove the call. Generated function signatures and protobuf data are otherwise unchanged. | Rolling back can panic while converting a nil map-value wrapper and can reject an empty repeated value as missing. No data migration is needed. |
 | Protobuf name collisions | Normal schemas keep their existing field encoding. A design whose protobuf declarations collide may receive stable numeric message, file, or generated Go suffixes instead of invalid source. Descriptor names, and a gRPC method path if its service or method itself needed a suffix, can therefore change for that formerly conflicting design. | Regenerate both sides from the same Goa version. A previously valid, collision-free schema needs no coordinated runtime rollout. |
 | Stricter design validation | Generation now rejects duplicate `ConvertTo` or `CreateFrom` mappings for the same Goa and external type, non-primitive gRPC metadata, streaming HTTP success fields mapped to headers or cookies, and inherited HTTP or gRPC error mappings whose concrete method error has a different type, validation, default, or metadata. Error metadata includes whether the error is temporary, a timeout, or a server fault. A service and its methods also cannot reuse one standard error name when those settings or value definitions differ, because Goa emits one shared `Make<Name>` constructor. Authored custom error types do not use that constructor and remain independent. gRPC and JSON-RPC reject a method that defines both `Result` and `StreamingResult`, even when both use the same Goa type. An ordinary HTTP method with both results must use `ServerSentEvents()`; the old same-type case could accidentally select WebSocket generation. JSON-RPC also rejects client and bidirectional streams and a server stream that does not call `ServerSentEvents()`. | These checks stop generation; they do not change a compiled program. Fix the design rather than rolling out mixed generated trees. |
 

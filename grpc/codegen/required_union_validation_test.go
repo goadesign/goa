@@ -3,6 +3,7 @@
 package codegen
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,28 +21,44 @@ func TestRequiredUnionValidationUsesCompleteProtobufBranches(t *testing.T) {
 		name        string
 		files       []*codegen.File
 		sectionName string
+		function    string
 		golden      string
 	}{
 		{
 			name:        "server",
 			files:       serverTypeFiles(services),
 			sectionName: "server-validate",
+			function:    "ValidateExchangeRequest",
 			golden:      "testdata/golden/server_types_server-required-union-validation.go.golden",
 		},
 		{
 			name:        "client",
 			files:       clientTypeFiles(services),
 			sectionName: "client-validate",
+			function:    "ValidateExchangeResponse",
 			golden:      "testdata/golden/client_types_client-required-union-validation.go.golden",
 		},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			require.Len(t, test.files, 1)
 			sections := test.files[0].Section(test.sectionName)
-			require.Len(t, sections, 1)
-			testutil.AssertGo(t, test.golden, codegen.SectionCode(t, sections[0]))
+			require.NotEmpty(t, sections)
+			testutil.AssertGo(t, test.golden, validationSection(t, sections, test.function))
 		})
 	}
+}
+
+// validationSection returns the generated validator named function.
+func validationSection(t *testing.T, sections []*codegen.SectionTemplate, function string) string {
+	t.Helper()
+	for _, section := range sections {
+		code := codegen.SectionCode(t, section)
+		if strings.Contains(code, "func "+function+"(") {
+			return code
+		}
+	}
+	t.Errorf("missing generated validator %s", function)
+	return ""
 }
 
 // requiredUnionValidationDSL creates branches whose values include scalars,
@@ -55,6 +72,7 @@ func requiredUnionValidationDSL() {
 	inactive := d.Type("Inactive", func() {})
 	request := d.Type("RequestChoice", func() {
 		d.OneOf("choice", func() {
+			d.TypeName("RequestChoiceValue")
 			d.Field(1, "number", d.Int, func() { d.Minimum(1) })
 			d.Field(2, "detail", detail)
 			d.Field(3, "inactive", inactive)
@@ -66,6 +84,7 @@ func requiredUnionValidationDSL() {
 	})
 	response := d.Type("ResponseChoice", func() {
 		d.OneOf("choice", func() {
+			d.TypeName("ResponseChoiceValue")
 			d.Field(1, "number", d.Int, func() { d.Minimum(1) })
 			d.Field(2, "detail", detail)
 			d.Field(3, "inactive", inactive)

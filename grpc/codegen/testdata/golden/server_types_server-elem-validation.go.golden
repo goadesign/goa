@@ -6,9 +6,12 @@ func NewMethodElemValidationPayload(message *service_elem_validationpb.MethodEle
 		v.Foo = make(map[string][]string, len(message.Foo))
 		for key, val := range message.Foo {
 			tk := key
-			tv := make([]string, len(val.Field))
-			for i, val := range val.Field {
-				tv[i] = val
+			var tv []string
+			if val != nil {
+				tv = make([]string, len(val.Field))
+				for i, val := range val.Field {
+					tv[i] = val
+				}
 			}
 			v.Foo[tk] = tv
 		}
@@ -27,10 +30,8 @@ func NewProtoMethodElemValidationResponse() *service_elem_validationpb.MethodEle
 // MethodElemValidationRequest.
 func ValidateMethodElemValidationRequest(message *service_elem_validationpb.MethodElemValidationRequest) (err error) {
 	for _, v := range message.Foo {
-		if v != nil {
-			if err2 := ValidateArrayOfString(v); err2 != nil {
-				err = goa.MergeErrors(err, err2)
-			}
+		if err2 := ValidateArrayOfString(v); err2 != nil {
+			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
@@ -38,11 +39,12 @@ func ValidateMethodElemValidationRequest(message *service_elem_validationpb.Meth
 
 // ValidateArrayOfString runs the validations defined on ArrayOfString.
 func ValidateArrayOfString(val *service_elem_validationpb.ArrayOfString) (err error) {
-	if val.Field == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("field", "val"))
+	var valField []string
+	if val != nil {
+		valField = val.Field
 	}
-	if len(val.Field) < 1 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("val.field", val.Field, len(val.Field), 1, true))
+	if len(valField) < 1 {
+		err = goa.MergeErrors(err, goa.InvalidLengthError("val.field", valField, len(valField), 1, true))
 	}
 	return
 }

@@ -28,6 +28,41 @@ func TestTypeFilesShareRepeatedConversions(t *testing.T) {
 	require.NotContains(t, server, "func NewMethodPayloadDuplicateBPayload(")
 }
 
+// TestTypeFilesShareRepeatedValidations checks that two endpoints using the
+// same protobuf message and validation rules emit one validator per package.
+func TestTypeFilesShareRepeatedValidations(t *testing.T) {
+	root := RunGRPCDSL(t, testdata.PayloadWithMultipleUseTypesDSL)
+	services := CreateGRPCServices(root)
+	client := codegen.SectionsCode(t, clientTypeFiles(services)[0].SectionTemplates[1:])
+	server := codegen.SectionsCode(t, serverTypeFiles(services)[0].SectionTemplates[1:])
+
+	require.Equal(t, 1, strings.Count(client, "func ValidateDupePayload("))
+	require.Equal(t, 1, strings.Count(server, "func ValidateDupePayload("))
+	require.NotContains(t, client, "func ValidateDupePayload2(")
+	require.NotContains(t, server, "func ValidateDupePayload2(")
+}
+
+// TestRepeatedWrapperValidationUsesAuthoredRules checks that protobuf arrays
+// keep length checks without inventing a missing-field check they cannot prove.
+func TestRepeatedWrapperValidationUsesAuthoredRules(t *testing.T) {
+	withoutLength := CreateGRPCServices(RunGRPCDSL(t, testdata.PayloadWithNestedTypesDSL))
+	withoutLengthCode := codegen.SectionsCode(t, serverTypeFiles(withoutLength)[0].SectionTemplates[1:])
+	require.NotContains(t, withoutLengthCode, "func ValidateArrayOfString(")
+	require.NotContains(t, withoutLengthCode, `MissingFieldError("field"`)
+	require.Contains(t, withoutLengthCode, "var tv []string")
+	require.Contains(t, withoutLengthCode, "if val != nil {")
+	require.Less(t,
+		strings.Index(withoutLengthCode, "if val != nil {"),
+		strings.Index(withoutLengthCode, "len(val.Field)"),
+	)
+
+	withLength := CreateGRPCServices(RunGRPCDSL(t, testdata.ElemValidationDSL))
+	withLengthCode := codegen.SectionsCode(t, serverTypeFiles(withLength)[0].SectionTemplates[1:])
+	require.Contains(t, withLengthCode, "func ValidateArrayOfString(")
+	require.Contains(t, withLengthCode, `InvalidLengthError("val.field"`)
+	require.NotContains(t, withLengthCode, `MissingFieldError("field", "val")`)
+}
+
 // TestCLIConversionsShareTypePair checks that command-line payload builders
 // for the same protobuf message and Goa type keep the same conversion plan.
 func TestCLIConversionsShareTypePair(t *testing.T) {

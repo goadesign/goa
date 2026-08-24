@@ -2,8 +2,8 @@
 // *service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse
 // from *servicemessageresulttypewithexplicitviewviews.RTView.
 func NewProtoMethodMessageResultTypeWithExplicitViewResponse(result *servicemessageresulttypewithexplicitviewviews.RTView) *service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse {
-	message := &service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse{
-		IntField: int32(*result.IntField),
-	}
+	message := &service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse{}
+	intField := int32(*result.IntField)
+	message.IntField = &intField
 	return message
 }

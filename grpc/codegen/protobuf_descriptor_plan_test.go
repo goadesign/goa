@@ -205,6 +205,7 @@ func protobufDescriptorPlanDSL(reverse bool) func() {
 		})
 		collision := dsl.Type("Collision", func() {
 			dsl.OneOf("fooBar", func() {
+				dsl.TypeName("CollisionFooBar")
 				dsl.Field(2, "text", dsl.String)
 			})
 			dsl.Field(3, "foo_bar", dsl.String, func() {
@@ -216,6 +217,7 @@ func protobufDescriptorPlanDSL(reverse bool) func() {
 				dsl.Meta("struct:field:name", "OtherFooBar")
 			})
 			dsl.OneOf("fooBar", func() {
+				dsl.TypeName("CollisionReverseFooBar")
 				dsl.Field(2, "text", dsl.String)
 			})
 		})

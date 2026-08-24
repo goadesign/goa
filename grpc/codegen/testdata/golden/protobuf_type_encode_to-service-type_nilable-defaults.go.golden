@@ -1,0 +1,18 @@
+func transform() {
+	target := &service.NilableDefaults{
+		Bytes: source.Bytes_,
+		Value: func() any {
+			// Convert protobuf Value to Go any directly
+			if source.Value != nil {
+				return source.Value.AsInterface()
+			}
+			return nil
+		}(),
+	}
+	if source.Bytes_ == nil {
+		target.Bytes = []byte{0x66, 0x61, 0x6c, 0x6c, 0x62, 0x61, 0x63, 0x6b}
+	}
+	if source.Value == nil {
+		target.Value = "fallback"
+	}
+}

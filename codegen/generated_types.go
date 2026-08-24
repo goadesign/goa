@@ -28,7 +28,7 @@ type (
 		userTypes    map[expr.UserType]*TypeDeclaration
 		typeBindings map[expr.UserType]*TypeDeclaration
 		derivedTypes map[DerivedTypeID]*TypeDeclaration
-		unions       map[UnionTypeID]*unionDeclaration
+		unions       map[UnionDeclarationID]*unionDeclaration
 		frozen       bool
 	}
 
@@ -97,18 +97,6 @@ type (
 		sourceID   string
 		api        string
 	}
-
-	// unionNameOrder sorts the type, kind, branch type, constant, and constructor
-	// generated for a union.
-	unionNameOrder struct {
-		union  UnionTypeID
-		role   unionNameRole
-		branch string
-	}
-
-	// unionNameRole records whether a name belongs to the union type, kind type,
-	// branch type, branch constant, or constructor.
-	unionNameRole uint8
 )
 
 const (
@@ -118,14 +106,6 @@ const (
 	methodStreamingPayloadTypeKind
 	methodResultTypeKind
 	methodStreamingResultTypeKind
-)
-
-const (
-	unionTypeNameRole unionNameRole = iota + 1
-	unionKindNameRole
-	unionBranchTypeNameRole
-	unionBranchKindNameRole
-	unionBranchConstructorNameRole
 )
 
 // NewProjectedTypeID returns the key used to find the view-specific copy of
@@ -423,61 +403,52 @@ func (p *GeneratedPackage) DeclareMethodType(identity MethodTypeIdentity, source
 }
 
 // DeclareUnion adds the generated union type, kind type, branch constants, and
-// branch constructors. Unions with the same UnionTypeID return the same
-// declaration. Reading generated names panics until Generation.Freeze chooses
-// every declaration name.
-func (p *GeneratedPackage) DeclareUnion(union *expr.Union) (*UnionDeclaration, error) {
+// branch constructors for the OneOf stored in attribute. Copies of the same
+// authored OneOf and emitted definition return the same declaration. Reading
+// generated names panics until Generation.Freeze chooses every declaration
+// name.
+func (p *GeneratedPackage) DeclareUnion(attribute *expr.AttributeExpr) (*UnionDeclaration, error) {
 	if p.frozen {
 		return nil, fmt.Errorf("generated package %q is frozen", p.path)
 	}
-	identity := NewUnionTypeID(union)
+	union, ok := attribute.Type.(*expr.Union)
+	if !ok {
+		return nil, fmt.Errorf("generated package %q can only declare a OneOf attribute", p.path)
+	}
+	if err := validateUnionBranchGoNames(union); err != nil {
+		return nil, err
+	}
+	identity := NewUnionDeclarationID(attribute)
 	if planned, ok := p.unions[identity]; ok {
 		return planned.declaration, nil
 	}
 
-	nameDeclaration := NewPreferredName(NameType, union.Name(), ExportedName, unionNameOrder{
-		union: identity,
-		role:  unionTypeNameRole,
-	})
-	kindDeclaration := newDependentName(NameType, nameDeclaration, "", "Kind", unionNameOrder{
-		union: identity,
-		role:  unionKindNameRole,
-	})
-	if err := p.DeclareName(nameDeclaration); err != nil {
+	name := Goify(union.Name(), true)
+	nameDeclaration := NewExactName(NameType, name)
+	kindDeclaration := NewExactName(NameType, name+"Kind")
+	if err := p.declareUnionName(union, nameDeclaration); err != nil {
 		return nil, err
 	}
-	if err := p.DeclareName(kindDeclaration); err != nil {
+	if err := p.declareUnionName(union, kindDeclaration); err != nil {
 		return nil, err
 	}
 	declaration := &UnionDeclaration{
 		declaration:     nameDeclaration,
 		kindDeclaration: kindDeclaration,
 	}
-	p.bindName(nameDeclaration, identity)
 	branches := make(map[unionBranchID]*UnionBranchDeclaration, len(union.Values))
 	for _, branch := range union.Values {
 		branchIdentity := unionBranchID{name: branch.Name}
 		if _, ok := branches[branchIdentity]; ok {
 			return nil, fmt.Errorf("union %q declares branch %q more than once", union.Name(), branch.Name)
 		}
-		kindDeclaration := newDependentName(
-			NameConstant,
-			declaration.kindDeclaration,
-			"",
-			Goify(branch.Name, true),
-			unionNameOrder{union: identity, role: unionBranchKindNameRole, branch: branch.Name},
-		)
-		constructorDeclaration := newDependentName(
-			NameFunction,
-			declaration.declaration,
-			"New",
-			Goify(branch.Name, true),
-			unionNameOrder{union: identity, role: unionBranchConstructorNameRole, branch: branch.Name},
-		)
-		if err := p.DeclareName(kindDeclaration); err != nil {
+		branchName := Goify(branch.Name, true)
+		kindDeclaration := NewExactName(NameConstant, name+"Kind"+branchName)
+		constructorDeclaration := NewExactName(NameFunction, "New"+name+branchName)
+		if err := p.declareUnionName(union, kindDeclaration); err != nil {
 			return nil, err
 		}
-		if err := p.DeclareName(constructorDeclaration); err != nil {
+		if err := p.declareUnionName(union, constructorDeclaration); err != nil {
 			return nil, err
 		}
 		branches[branchIdentity] = &UnionBranchDeclaration{
@@ -493,14 +464,20 @@ func (p *GeneratedPackage) DeclareUnion(union *expr.Union) (*UnionDeclaration, e
 	return declaration, nil
 }
 
-// DeclareUnionBranchType adds the generated type used by branchName in union.
-// Equivalent union expressions share that declaration. Types written directly
-// in the DSL must use DeclareUserType instead.
-func (p *GeneratedPackage) DeclareUnionBranchType(union *expr.Union, branchName string, userType expr.UserType) (*TypeDeclaration, error) {
+// DeclareUnionBranchType adds the generated type used by branchName in the
+// OneOf stored in attribute. Copies of that authored OneOf share the branch
+// declaration. Types written directly in the DSL must use DeclareUserType
+// instead.
+func (p *GeneratedPackage) DeclareUnionBranchType(attribute *expr.AttributeExpr, branchName string, userType expr.UserType) (*TypeDeclaration, error) {
 	if p.frozen {
 		return nil, fmt.Errorf("generated package %q is frozen", p.path)
 	}
-	planned, ok := p.unions[NewUnionTypeID(union)]
+	union, ok := attribute.Type.(*expr.Union)
+	if !ok {
+		return nil, fmt.Errorf("generated package %q can only use a OneOf attribute", p.path)
+	}
+	identity := NewUnionDeclarationID(attribute)
+	planned, ok := p.unions[identity]
 	if !ok {
 		return nil, fmt.Errorf("union %q is not declared in generated package %q", union.Name(), p.path)
 	}
@@ -508,13 +485,13 @@ func (p *GeneratedPackage) DeclareUnionBranchType(union *expr.Union, branchName 
 		return nil, fmt.Errorf("user type %q is not branch %q of union %q", userType.Name(), branchName, union.Name())
 	}
 
-	identity := unionBranchID{name: branchName}
-	branch, ok := planned.branches[identity]
+	branchIdentity := unionBranchID{name: branchName}
+	branch, ok := planned.branches[branchIdentity]
 	if !ok {
 		return nil, fmt.Errorf("branch %q of union %q is not declared in generated package %q", branchName, union.Name(), p.path)
 	}
 	if branch.branchType != nil {
-		name := Goify(userType.Name(), true)
+		name := unionBranchTypeName(union, branchName)
 		if branch.branchType.declaration.preferred != name {
 			return nil, fmt.Errorf(
 				"branch %q of union %q cannot declare both %q and %q",
@@ -529,13 +506,9 @@ func (p *GeneratedPackage) DeclareUnionBranchType(union *expr.Union, branchName 
 		}
 		return branch.branchType, nil
 	}
-	typeName := Goify(userType.Name(), true)
-	nameDeclaration := NewPreferredName(NameType, typeName, ExportedName, unionNameOrder{
-		union:  NewUnionTypeID(union),
-		role:   unionBranchTypeNameRole,
-		branch: branchName,
-	})
-	if err := p.DeclareName(nameDeclaration); err != nil {
+	typeName := unionBranchTypeName(union, branchName)
+	nameDeclaration := NewExactName(NameType, typeName)
+	if err := p.declareUnionName(union, nameDeclaration); err != nil {
 		return nil, err
 	}
 	declaration := &TypeDeclaration{declaration: nameDeclaration}
@@ -580,8 +553,12 @@ func (p *GeneratedPackage) DerivedType(identity DerivedTypeID) (*TypeDeclaration
 
 // UnionBranch returns the constant, constructor, and optional type previously
 // added for branchName. It does not add names.
-func (p *GeneratedPackage) UnionBranch(union *expr.Union, branchName string) (*UnionBranchDeclaration, error) {
-	planned, ok := p.unions[NewUnionTypeID(union)]
+func (p *GeneratedPackage) UnionBranch(attribute *expr.AttributeExpr, branchName string) (*UnionBranchDeclaration, error) {
+	union, ok := attribute.Type.(*expr.Union)
+	if !ok {
+		return nil, fmt.Errorf("generated package %q can only use a OneOf attribute", p.path)
+	}
+	planned, ok := p.unions[NewUnionDeclarationID(attribute)]
 	if !ok {
 		return nil, fmt.Errorf("union %q is not declared in generated package %q", union.Name(), p.path)
 	}
@@ -594,8 +571,12 @@ func (p *GeneratedPackage) UnionBranch(union *expr.Union, branchName string) (*U
 
 // Union returns the declaration previously added for union. It does not add a
 // name.
-func (p *GeneratedPackage) Union(union *expr.Union) (*UnionDeclaration, error) {
-	if planned, ok := p.unions[NewUnionTypeID(union)]; ok {
+func (p *GeneratedPackage) Union(attribute *expr.AttributeExpr) (*UnionDeclaration, error) {
+	union, ok := attribute.Type.(*expr.Union)
+	if !ok {
+		return nil, fmt.Errorf("generated package %q can only use a OneOf attribute", p.path)
+	}
+	if planned, ok := p.unions[NewUnionDeclarationID(attribute)]; ok {
 		return planned.declaration, nil
 	}
 	return nil, fmt.Errorf("union %q is not declared in generated package %q", union.Name(), p.path)
@@ -603,8 +584,12 @@ func (p *GeneratedPackage) Union(union *expr.Union) (*UnionDeclaration, error) {
 
 // UnionBranchType returns the generated type previously added for branchName.
 // It returns an error when the branch does not generate a type.
-func (p *GeneratedPackage) UnionBranchType(union *expr.Union, branchName string) (*TypeDeclaration, error) {
-	branch, err := p.UnionBranch(union, branchName)
+func (p *GeneratedPackage) UnionBranchType(attribute *expr.AttributeExpr, branchName string) (*TypeDeclaration, error) {
+	union, ok := attribute.Type.(*expr.Union)
+	if !ok {
+		return nil, fmt.Errorf("generated package %q can only use a OneOf attribute", p.path)
+	}
+	branch, err := p.UnionBranch(attribute, branchName)
 	if err != nil {
 		return nil, err
 	}
@@ -628,18 +613,6 @@ func (o derivedTypeOrder) ComparePackageName(other PackageNameOrder) int {
 	return compareDerivedTypeOrder(o, other.(derivedTypeOrder))
 }
 
-// ComparePackageName sorts two declarations generated for unions.
-func (o unionNameOrder) ComparePackageName(other PackageNameOrder) int {
-	right := other.(unionNameOrder)
-	if compared := strings.Compare(string(o.union), string(right.union)); compared != 0 {
-		return compared
-	}
-	if o.role != right.role {
-		return int(o.role) - int(right.role)
-	}
-	return strings.Compare(o.branch, right.branch)
-}
-
 // newGeneratedPackage returns an empty package record for path and outputDir.
 func newGeneratedPackage(claim, path, outputDir string) *GeneratedPackage {
 	return &GeneratedPackage{
@@ -655,7 +628,7 @@ func newGeneratedPackage(claim, path, outputDir string) *GeneratedPackage {
 		userTypes:    make(map[expr.UserType]*TypeDeclaration),
 		typeBindings: make(map[expr.UserType]*TypeDeclaration),
 		derivedTypes: make(map[DerivedTypeID]*TypeDeclaration),
-		unions:       make(map[UnionTypeID]*unionDeclaration),
+		unions:       make(map[UnionDeclarationID]*unionDeclaration),
 	}
 }
 
@@ -724,8 +697,45 @@ func (p *GeneratedPackage) freeze() error {
 			p.scope.bind(hash, declaration.final)
 		}
 	}
+	for identity, union := range p.unions {
+		p.scope.bindUnion(identity, union.declaration.declaration.final)
+	}
 	p.scope.Freeze()
 	p.frozen = true
+	return nil
+}
+
+// declareUnionName records one exact public name owned by union. A collision
+// tells the design author how to choose another complete union name.
+func (p *GeneratedPackage) declareUnionName(union *expr.Union, declaration *NameDeclaration) error {
+	if err := p.DeclareName(declaration); err != nil {
+		return fmt.Errorf(
+			"declare OneOf %q in generated package %q: %w; set TypeName on the OneOf to a unique name",
+			union.Name(),
+			p.path,
+			err,
+		)
+	}
+	return nil
+}
+
+// validateUnionBranchGoNames rejects branch spellings that would create the
+// same exported Go identifier and therefore the same public union functions.
+func validateUnionBranchGoNames(union *expr.Union) error {
+	branches := make(map[string]string, len(union.Values))
+	for _, branch := range union.Values {
+		goName := Goify(branch.Name, true)
+		if existing, ok := branches[goName]; ok {
+			return fmt.Errorf(
+				"OneOf %q branches %q and %q both generate Go name %q; rename one of the branches",
+				union.Name(),
+				existing,
+				branch.Name,
+				goName,
+			)
+		}
+		branches[goName] = branch.Name
+	}
 	return nil
 }
 
@@ -877,8 +887,8 @@ func compareDerivedTypeOrder(left, right derivedTypeOrder) int {
 	return 0
 }
 
-// unionHasBranchType reports whether branchName in this union expression uses
-// userType. UnionTypeID handles equivalent copies of the whole union.
+// unionHasBranchType reports whether branchName in this OneOf occurrence uses
+// userType. The caller has already found the authored OneOf declaration.
 func unionHasBranchType(union *expr.Union, branchName string, userType expr.UserType) bool {
 	for _, branch := range union.Values {
 		if branch.Name == branchName && branch.Attribute.Type == userType {
@@ -886,4 +896,10 @@ func unionHasBranchType(union *expr.Union, branchName string, userType expr.User
 		}
 	}
 	return false
+}
+
+// unionBranchTypeName separates a compiler-created branch type from the union
+// kind type and branch constants in the same Go package.
+func unionBranchTypeName(union *expr.Union, branchName string) string {
+	return Goify(union.Name(), true) + "Branch" + Goify(branchName, true)
 }

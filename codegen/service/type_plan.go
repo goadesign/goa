@@ -119,12 +119,15 @@ func planServiceTypeLayouts(facts *serviceFacts, rootTypes *rootTypeSet, generat
 // planUnionRenderFacts records every Goa OneOf branch, nil rule, and Go type
 // before Generation.Freeze chooses declaration and import names.
 func planUnionRenderFacts(facts *unionFacts, binder codegen.GoTypeBinder, generatedPackage *codegen.GeneratedPackage) error {
-	facts.identity = codegen.NewUnionTypeID(facts.union)
+	facts.identity = codegen.NewUnionDeclarationID(facts.attribute)
 	facts.typeKey = facts.union.GetTypeKey()
 	facts.valueKey = facts.union.GetValueKey()
 	facts.branches = make([]*unionBranchFacts, len(facts.union.Values))
+	storageNames := codegen.NewNameScope()
+	// Reserve kind for the selector so a branch named kind uses another field.
+	storageNames.Unique("kind")
 	for index, branch := range facts.union.Values {
-		declaration, err := generatedPackage.UnionBranch(facts.union, branch.Name)
+		declaration, err := generatedPackage.UnionBranch(facts.attribute, branch.Name)
 		if err != nil {
 			return err
 		}
@@ -145,6 +148,7 @@ func planUnionRenderFacts(facts *unionFacts, binder codegen.GoTypeBinder, genera
 		facts.branches[index] = &unionBranchFacts{
 			name:               branch.Name,
 			fieldName:          codegen.Goify(branch.Name, true),
+			storageName:        storageNames.Unique(codegen.Goify(branch.Name, false)),
 			declaration:        declaration,
 			layout:             layout,
 			nilable:            codegen.IsNilable(branch.Attribute.Type),
@@ -213,8 +217,7 @@ func serviceGoTypeBinder(rootTypes *rootTypeSet, generation *codegen.Generation)
 			}
 			return codegen.GoTypeBinding{Owner: owner, Type: declaration}, nil
 		case codegen.GoUnion:
-			union := request.Attribute.Type.(*expr.Union)
-			declaration, err := generatedPackage.Union(union)
+			declaration, err := generatedPackage.Union(request.Attribute)
 			if err != nil {
 				return codegen.GoTypeBinding{}, err
 			}
@@ -303,16 +306,18 @@ func collectUnionFacts(attribute *expr.AttributeExpr, servicePath string, locati
 		return recurse(actual.ElemType, location)
 	case *expr.Union:
 		packagePath := generatedPackagePath(generation.GenPkg(), servicePath, location)
-		key := unionDataKey{packagePath: packagePath, identity: codegen.NewUnionTypeID(actual)}
+		identity := codegen.NewUnionDeclarationID(attribute)
+		key := unionDataKey{packagePath: packagePath, identity: identity}
 		if _, exists := seenUnions[key]; !exists {
-			declaration, err := generation.Package(packagePath).Union(actual)
+			declaration, err := generation.Package(packagePath).Union(attribute)
 			if err != nil {
 				return err
 			}
 			seenUnions[key] = struct{}{}
 			*unions = append(*unions, &unionFacts{
+				attribute:   attribute,
 				union:       actual,
-				identity:    codegen.NewUnionTypeID(actual),
+				identity:    identity,
 				typeKey:     actual.GetTypeKey(),
 				valueKey:    actual.GetValueKey(),
 				location:    location,

@@ -11,7 +11,16 @@ func NewProtoMethodMessageResultTypeWithExplicitViewRequest() *service_message_r
 // *service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse.
 func NewMethodMessageResultTypeWithExplicitViewResult(message *service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse) *servicemessageresulttypewithexplicitviewviews.RTView {
 	result := &servicemessageresulttypewithexplicitviewviews.RTView{}
-	intField := int(message.IntField)
+	intField := int(*message.IntField)
 	result.IntField = &intField
 	return result
+}
+
+// ValidateMethodMessageResultTypeWithExplicitViewResponseTiny runs the
+// validations defined on MethodMessageResultTypeWithExplicitViewResponse.
+func ValidateMethodMessageResultTypeWithExplicitViewResponseTiny(message *service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse) (err error) {
+	if message.IntField == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("IntField", "message"))
+	}
+	return
 }

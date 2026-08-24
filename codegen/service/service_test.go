@@ -261,21 +261,25 @@ func TestFilesEmitsPackageDeclarationsOnce(t *testing.T) {
 	unionFile := findFile(files, filepath.Join("gen", "types", "unions.go"))
 	require.NotNil(t, unionFile)
 	code := renderSections(t, unionFile.SectionTemplates)
-	require.Equal(t, 1, strings.Count(code, "type Value struct {"), code)
-	require.Equal(t, 1, strings.Count(code, "type ValueKind string"), code)
+	for _, name := range []string{"FirstValueChoice", "SecondValueChoice", "ThirdValueChoice"} {
+		require.Equal(t, 1, strings.Count(code, "type "+name+" struct {"), code)
+		require.Equal(t, 1, strings.Count(code, "type "+name+"Kind string"), code)
+	}
 }
 
-func TestFilesEmitsDifferentSameBaseUnionsWithFrozenNames(t *testing.T) {
+func TestFilesEmitsDifferentExplicitlyNamedUnions(t *testing.T) {
 	root := codegen.RunDSL(t, func() {
 		first := dsl.Type("First", func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.OneOf("Value", func() {
+				dsl.TypeName("FirstChoice")
 				dsl.Attribute("text", dsl.String)
 			})
 		})
 		second := dsl.Type("Second", func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.OneOf("Value", func() {
+				dsl.TypeName("SecondChoice")
 				dsl.Attribute("number", dsl.Int)
 			})
 		})
@@ -295,10 +299,32 @@ func TestFilesEmitsDifferentSameBaseUnionsWithFrozenNames(t *testing.T) {
 	unionFile := findFile(files, filepath.Join("gen", "types", "unions.go"))
 	require.NotNil(t, unionFile)
 	code := renderSections(t, unionFile.SectionTemplates)
-	require.Equal(t, 1, strings.Count(code, "type Value struct {"), code)
-	require.Equal(t, 1, strings.Count(code, "type Value2 struct {"), code)
-	require.Equal(t, 1, strings.Count(code, "type ValueKind string"), code)
-	require.Equal(t, 1, strings.Count(code, "type Value2Kind string"), code)
+	require.Equal(t, 1, strings.Count(code, "type FirstChoice struct {"), code)
+	require.Equal(t, 1, strings.Count(code, "type SecondChoice struct {"), code)
+	require.Equal(t, 1, strings.Count(code, "type FirstChoiceKind string"), code)
+	require.Equal(t, 1, strings.Count(code, "type SecondChoiceKind string"), code)
+}
+
+func TestNewPlanRejectsUnionBranchesWithTheSameGoName(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(func() {
+					dsl.OneOf("Value", func() {
+						dsl.Attribute("foo-bar", dsl.String)
+						dsl.Attribute("foo_bar", dsl.Int)
+					})
+				})
+			})
+		})
+	})
+	generation := mustTestGeneration(t, "goa.design/goa/example", []eval.Root{root})
+
+	_, err := NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+
+	require.ErrorContains(t, err, `OneOf "Value" branches "foo-bar" and "foo_bar" both generate Go name "FooBar"`)
+	require.ErrorContains(t, err, "rename one of the branches")
+	require.NotContains(t, err.Error(), "TypeName")
 }
 
 func TestFilesEmitsSharedPackagesOnceAcrossRoots(t *testing.T) {
@@ -307,6 +333,7 @@ func TestFilesEmitsSharedPackagesOnceAcrossRoots(t *testing.T) {
 		firstType = dsl.Type("First", func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.OneOf("Value", func() {
+				dsl.TypeName("FirstChoice")
 				dsl.Attribute("text", dsl.String)
 			})
 		})
@@ -321,6 +348,7 @@ func TestFilesEmitsSharedPackagesOnceAcrossRoots(t *testing.T) {
 		secondType = dsl.Type("Second", func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.OneOf("Value", func() {
+				dsl.TypeName("SecondChoice")
 				dsl.Attribute("text", dsl.String)
 			})
 		})
@@ -339,14 +367,14 @@ func TestFilesEmitsSharedPackagesOnceAcrossRoots(t *testing.T) {
 	)
 	require.NoError(t, err)
 	firstPlan, secondPlan := plans[0], plans[1]
-	firstUnion := expr.AsObject(firstType).Attribute("Value").Type.(*expr.Union)
-	secondUnion := expr.AsObject(secondType).Attribute("Value").Type.(*expr.Union)
+	firstUnion := expr.AsObject(firstType).Attribute("Value")
+	secondUnion := expr.AsObject(secondType).Attribute("Value")
 	generatedPackage := mustClaimTestPackage(t, generation, "goa.design/goa/example/types")
 	firstBranch, err := generatedPackage.UnionBranchType(firstUnion, "text")
 	require.NoError(t, err)
 	secondBranch, err := generatedPackage.UnionBranchType(secondUnion, "text")
 	require.NoError(t, err)
-	require.Same(t, firstBranch, secondBranch)
+	require.NotSame(t, firstBranch, secondBranch)
 
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, firstPlan.Link())
@@ -355,7 +383,8 @@ func TestFilesEmitsSharedPackagesOnceAcrossRoots(t *testing.T) {
 
 	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "first.go")))
 	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "second.go")))
-	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "value_text.go")))
+	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "first_choice_text.go")))
+	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "second_choice_text.go")))
 	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "types", "unions.go")))
 	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "first_service", "service.go")))
 	require.Equal(t, 1, countFiles(files, filepath.Join("gen", "second_service", "service.go")))
@@ -628,7 +657,7 @@ func TestGeneratedUnionBranchCollisionDoesNotCanonicalizeToRootType(t *testing.T
 	generation := mustTestGeneration(t, "goa.design/goa/example", []eval.Root{root})
 	plan, err := NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
-	union := expr.AsObject(container).Attribute("Value").Type.(*expr.Union)
+	union := expr.AsObject(container).Attribute("Value")
 	generatedPackage := mustClaimTestPackage(t, generation, "goa.design/goa/example/types")
 	exactDeclaration, err := generatedPackage.UserType(exact)
 	require.NoError(t, err)
@@ -638,7 +667,7 @@ func TestGeneratedUnionBranchCollisionDoesNotCanonicalizeToRootType(t *testing.T
 
 	require.NoError(t, generation.Freeze())
 	require.Equal(t, "ValueText", exactDeclaration.Name())
-	require.Equal(t, "ValueText2", branchDeclaration.Name())
+	require.Equal(t, "ValueBranchText", branchDeclaration.Name())
 	require.NoError(t, plan.Link())
 	typeFile := findFile(
 		mustServiceFiles(t, plan),
@@ -647,7 +676,7 @@ func TestGeneratedUnionBranchCollisionDoesNotCanonicalizeToRootType(t *testing.T
 	require.NotNil(t, typeFile)
 	code := renderSections(t, typeFile.SectionTemplates)
 	require.Contains(t, code, "type ValueText string")
-	require.Contains(t, code, "type ValueText2 string")
+	require.Contains(t, code, "type ValueBranchText string")
 }
 
 // TestForcedRelocatedTypesUseTheirDeclaringPackageForNestedReferences verifies
@@ -877,7 +906,7 @@ func TestStructPkgPath_UnionImportsJSON(t *testing.T) {
 	require.Contains(t, code, "\"encoding/json\"", "expected encoding/json import in generated file:\n%s", code)
 }
 
-func TestStructPkgPath_UnionNamesSharePackageScopeAcrossServices(t *testing.T) {
+func TestStructPkgPath_UnionNamesRemainExactAcrossServices(t *testing.T) {
 	root := codegen.RunDSL(t, testdata.PkgPathUnionNameScopeDSL)
 	var generated strings.Builder
 	files := mustServiceFiles(t, mustServicePlan(t, root))
@@ -891,12 +920,14 @@ func TestStructPkgPath_UnionNamesSharePackageScopeAcrossServices(t *testing.T) {
 	}
 
 	code := generated.String()
-	require.Equal(t, 1, strings.Count(code, "type Value struct {"), code)
-	require.Equal(t, 1, strings.Count(code, "type ValueKind string"), code)
+	for _, name := range []string{"FirstValueChoice", "SecondValueChoice", "ThirdValueChoice"} {
+		require.Equal(t, 1, strings.Count(code, "type "+name+" struct {"), code)
+		require.Equal(t, 1, strings.Count(code, "type "+name+"Kind string"), code)
+	}
 	firstUsesValue := unionFieldType(code, "FirstValue")
 	secondUsesValue := unionFieldType(code, "SecondValue")
 	thirdUsesValue := unionFieldType(code, "ThirdValue")
-	require.Equal(t, []string{"Value", "Value", "Value"}, []string{firstUsesValue, secondUsesValue, thirdUsesValue})
+	require.Equal(t, []string{"FirstValueChoice", "SecondValueChoice", "ThirdValueChoice"}, []string{firstUsesValue, secondUsesValue, thirdUsesValue})
 }
 
 // unionFieldType returns the generated type of the Value field in the named
@@ -1025,8 +1056,8 @@ func TestStructPkgPath_UnionJSONFieldBranchesGenerateAliases(t *testing.T) {
 		require.NoError(t, s.Write(buf))
 	}
 	code := buf.String()
-	require.Contains(t, code, "A ValuesA", "expected union field A to use generated alias type:\n%s", code)
-	require.Contains(t, code, "B ValuesB", "expected union field B to use generated alias type:\n%s", code)
+	require.Contains(t, code, "a ValuesBranchA", "expected union branch A to use generated alias type:\n%s", code)
+	require.Contains(t, code, "b ValuesBranchB", "expected union branch B to use generated alias type:\n%s", code)
 
 	var hasValuesAFile, hasValuesBFile bool
 	for _, f := range files {

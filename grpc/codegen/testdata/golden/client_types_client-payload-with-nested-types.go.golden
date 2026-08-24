@@ -68,9 +68,12 @@ func transformProtoAParamsToAParams(v *service_payload_with_nested_typespb.APara
 		res.A = make(map[string][]string, len(v.A))
 		for key, val := range v.A {
 			tk := key
-			tv := make([]string, len(val.Field))
-			for i, val := range val.Field {
-				tv[i] = val
+			var tv []string
+			if val != nil {
+				tv = make([]string, len(val.Field))
+				for i, val := range val.Field {
+					tv[i] = val
+				}
 			}
 			res.A[tk] = tv
 		}

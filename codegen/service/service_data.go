@@ -584,8 +584,10 @@ type (
 		KindDeclaration *codegen.NameDeclaration
 		// ConstructorDeclaration supplies the generated constructor name for this branch.
 		ConstructorDeclaration *codegen.NameDeclaration
-		// FieldName is the struct field name in the union.
+		// FieldName is the branch name used by the public As and Set methods.
 		FieldName string
+		// StorageName is the private struct field that stores this branch value.
+		StorageName string
 		// FieldType is the Go type used in the union struct field and public API.
 		FieldType string
 		// Nilable is true when the Go branch value can be nil even though selecting
@@ -814,7 +816,7 @@ type (
 	// key and Go package path.
 	unionDataKey struct {
 		packagePath string
-		identity    codegen.UnionTypeID
+		identity    codegen.UnionDeclarationID
 	}
 
 	// userTypeDataKey distinguishes in-memory design types and the generated Go

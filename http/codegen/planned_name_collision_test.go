@@ -143,10 +143,9 @@ func TestHTTPPlannedNamesSurvivePackageCollisions(t *testing.T) {
 	testutil.AssertGo(t, "testdata/golden/planned_name_collisions.go.golden", strings.TrimSpace(source.String())+"\n")
 }
 
-// TestHTTPUnionPlannedNamesSurvivePackageCollisions checks that a union's type,
-// kind, constants, constructors, and every use share the names selected by the
-// generated package.
-func TestHTTPUnionPlannedNamesSurvivePackageCollisions(t *testing.T) {
+// TestHTTPUnionPlannedNamesRejectPackageCollisions checks that an authored
+// union name never receives a moving numeric suffix.
+func TestHTTPUnionPlannedNamesRejectPackageCollisions(t *testing.T) {
 	root := expr.RunDSL(t, func() {
 		dsl.Service("Names", func() {
 			dsl.Method("Choose", func() {
@@ -169,34 +168,11 @@ func TestHTTPUnionPlannedNamesSurvivePackageCollisions(t *testing.T) {
 	require.NoError(t, err)
 	serverPackage, err := generation.ClaimPackage("generated.local/gen/http/names/server")
 	require.NoError(t, err)
-	for _, declaration := range []*codegen.NameDeclaration{
-		codegen.NewExactName(codegen.NameType, "Choice"),
-		codegen.NewExactName(codegen.NameType, "ChoiceKind"),
-		codegen.NewExactName(codegen.NameConstant, "ChoiceKindText"),
-		codegen.NewExactName(codegen.NameConstant, "ChoiceKindCount"),
-		codegen.NewExactName(codegen.NameFunction, "NewChoiceText"),
-		codegen.NewExactName(codegen.NameFunction, "NewChoiceCount"),
-	} {
-		require.NoError(t, serverPackage.DeclareName(declaration))
-	}
-	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
-	require.NoError(t, err)
-	require.NoError(t, generation.Freeze())
-	require.NoError(t, servicePlan.Link())
-	require.NoError(t, plans[0].Link())
-
-	unions := plans[0].services.Get("Names").serverWireTypes.unionTypes()
-	require.Len(t, unions, 1)
-	union := unions[0]
-	require.NotEqual(t, "Choice", union.TypeDeclaration.Name())
-	require.NotEqual(t, "ChoiceKind", union.KindDeclaration.Name())
-	for _, field := range union.Fields {
-		require.NotEqual(t, "ChoiceKind"+codegen.Goify(field.Name, true), field.KindDeclaration.Name())
-		require.NotEqual(t, "NewChoice"+codegen.Goify(field.Name, true), field.ConstructorDeclaration.Name())
-	}
-	sections := codegentest.Sections(plans[0].ServerTypeFiles(), "types.go", "server-union-type")
-	require.Len(t, sections, 1)
-	testutil.AssertGo(t, "testdata/golden/planned_union_name_collisions.go.golden", codegen.SectionCode(t, sections[0]))
+	require.NoError(t, serverPackage.DeclareName(codegen.NewExactName(codegen.NameType, "ChoiceRequestBody")))
+	_, err = NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
+	require.ErrorContains(t, err, `declare HTTP OneOf "choice" for RequestBody`)
+	require.ErrorContains(t, err, `cannot declare exact type "ChoiceRequestBody"`)
+	require.ErrorContains(t, err, "set TypeName on the OneOf to a unique name")
 }
 
 // TestJSONRPCValidatorPlannedNamesSurvivePackageCollisions checks that the

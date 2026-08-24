@@ -48,7 +48,11 @@ func protoHooks(proto bool) *codegen.TransformHooks {
 		UnwrapPair: func(src, tgt *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr, *codegen.WrapDirective) {
 			if proto {
 				if isWrappedAttr(tgt) {
-					return src, unwrapAttr(tgt), &codegen.WrapDirective{WrapTarget: true, Target: tgt, FieldName: "Field"}
+					return src, unwrapAttr(tgt), &codegen.WrapDirective{
+						WrapTarget: true,
+						Target:     tgt,
+						FieldName:  "Field",
+					}
 				}
 				return src, tgt, nil
 			}
@@ -80,10 +84,10 @@ func protoHooks(proto bool) *codegen.TransformHooks {
 		},
 		TransformUnion: func(source, target *expr.AttributeExpr, sourceVar, targetVar string, _ bool, _, _ *expr.AttributeExpr, ta *codegen.TransformAttrs) (string, error) {
 			if proto {
-				// Service union fields are interfaces, so they are not dereferenced.
+				// The service union accessor returns the selected branch value.
 				return renderUnionToProtoTransform(source, target, sourceVar, targetVar, false, ta)
 			}
-			// Store the selected value directly in the service union interface.
+			// Select the matching branch in the service union.
 			return renderUnionFromProtoTransform(source, target, sourceVar, targetVar, ta)
 		},
 		PlanUnionHelpers: func(source, target *expr.AttributeExpr, record func(*expr.AttributeExpr, *expr.AttributeExpr)) {
@@ -172,21 +176,33 @@ func renderMapTransform(source, target *expr.Map, sourceVar, targetVar string, n
 		kt = unAlias(kt)
 		et = unAlias(et)
 	}
+	loopVar := ""
+	if depth := codegen.MapDepth(target); depth > 0 {
+		loopVar = string(rune(97 + depth))
+	}
+	elemTarget := "tv" + loopVar
+	elemNewVar := true
+	if !proto && isWrappedAttr(source.ElemType) {
+		elemNewVar = false
+	}
+	elemTransform, err := codegen.TransformAttribute(source.ElemType, target.ElemType, "val", elemTarget, elemNewVar, ta)
+	if err != nil {
+		return "", err
+	}
+	if !elemNewVar {
+		elemTransform = fmt.Sprintf("var %s %s\nif val != nil {\n%s}\n", elemTarget, ta.TargetCtx.Scope.Ref(et, ta.TargetCtx.Pkg(et)), elemTransform)
+	}
 	data := map[string]any{
 		"KeyTypeRef":     ta.TargetCtx.Scope.Ref(kt, ta.TargetCtx.Pkg(kt)),
 		"ElemTypeRef":    ta.TargetCtx.Scope.Ref(et, ta.TargetCtx.Pkg(et)),
 		"SourceKey":      source.KeyType,
 		"TargetKey":      target.KeyType,
-		"SourceElem":     source.ElemType,
-		"TargetElem":     target.ElemType,
 		"SourceVar":      sourceVar,
 		"TargetVar":      targetVar,
 		"NewVar":         newVar,
 		"TransformAttrs": ta,
-		"LoopVar":        "",
-	}
-	if depth := codegen.MapDepth(target); depth > 0 {
-		data["LoopVar"] = string(rune(97 + depth))
+		"LoopVar":        loopVar,
+		"ElemTransform":  elemTransform,
 	}
 	var buf bytes.Buffer
 	if err := renderGoMapT.Execute(&buf, data); err != nil {

@@ -22,6 +22,11 @@ func ValidateExchangeRequest(message *union_validationpb.ExchangeRequest) (err e
 			err = goa.MergeErrors(err, goa.MissingFieldError("detail", "message.choice"))
 			break
 		}
+		if v.Detail != nil {
+			if err2 := ValidateDetail(v.Detail); err2 != nil {
+				err = goa.MergeErrors(err, err2)
+			}
+		}
 
 	case *union_validationpb.ExchangeRequest_Inactive:
 		if v == nil {

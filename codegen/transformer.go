@@ -161,19 +161,19 @@ type (
 	// by Helpers cannot change the private expressions Render uses. Render caches
 	// each exact argument set, so repeated calls return the first generated code.
 	TransformPlan struct {
-		source          *expr.AttributeExpr
-		target          *expr.AttributeExpr
-		sourceBaseline  *expr.AttributeExpr
-		targetBaseline  *expr.AttributeExpr
-		sourceOriginals map[*expr.AttributeExpr]*expr.AttributeExpr
-		targetOriginals map[*expr.AttributeExpr]*expr.AttributeExpr
-		prefix          string
-		hooks           *TransformHooks
-		sourceCtx       *AttributeContext
-		targetCtx       *AttributeContext
-		helpers         []TransformHelper
-		operations      []*transformOperation
-		renders         map[transformRenderRequest]transformRenderResult
+		source         *expr.AttributeExpr
+		target         *expr.AttributeExpr
+		sourceBaseline *expr.AttributeExpr
+		targetBaseline *expr.AttributeExpr
+		sourceCopier   *expr.AttributeGraphCopier
+		targetCopier   *expr.AttributeGraphCopier
+		prefix         string
+		hooks          *TransformHooks
+		sourceCtx      *AttributeContext
+		targetCtx      *AttributeContext
+		helpers        []TransformHelper
+		operations     []*transformOperation
+		renders        map[transformRenderRequest]transformRenderResult
 	}
 
 	// transformRenderRequest identifies one Render invocation. Repeating the
@@ -359,8 +359,11 @@ func mapDepth(dt expr.DataType, depth int, seen ...map[expr.DataType]struct{}) i
 // IsPrimitivePointer returns true if the attribute with the given name is a
 // primitive pointer in the given parent attribute.
 func (a *AttributeContext) IsPrimitivePointer(name string, att *expr.AttributeExpr) bool {
-	if at := att.Find(name); at != nil && (at.Type == expr.Any || at.Type == expr.Bytes) {
-		return false
+	if at := att.Find(name); at != nil && expr.IsPrimitive(at.Type) {
+		kind := unalias(at.Type).Kind()
+		if kind == expr.AnyKind || kind == expr.BytesKind {
+			return false
+		}
 	}
 	if a.Pointer {
 		return true

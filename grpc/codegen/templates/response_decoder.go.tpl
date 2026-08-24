@@ -58,10 +58,20 @@ func {{ .ClientDecodeDeclaration.Name }}(ctx context.Context, v any, hdr, trlr m
 	switch view {
 	{{- range .Response.ClientConverts }}
 	case {{ printf "%q" .View }}{{ if eq .View "default" }}, ""{{ end }}:
+		{{- if .Convert.Validation }}
+		if err {{ if or $.Response.Headers $.Response.Trailers }}={{ else }}:={{ end }} {{ .Convert.Validation.Declaration.Name }}(message); err != nil {
+			return nil, err
+		}
+		{{- end }}
 		res = {{ .Convert.Init.Declaration.Name }}({{ range .Convert.Init.Args }}{{ .Name }}, {{ end }})
 	{{- end }}
 	}
 	{{- else }}
+	{{- if and .Response.ClientConvert.Validation .ViewedResultRef }}
+	if err {{ if or .Response.Headers .Response.Trailers }}={{ else }}:={{ end }} {{ .Response.ClientConvert.Validation.Declaration.Name }}(message); err != nil {
+		return nil, err
+	}
+	{{- end }}
 	res := {{ .Response.ClientConvert.Init.Declaration.Name }}({{ range .Response.ClientConvert.Init.Args }}{{ .Name }}, {{ end }})
 	{{- end }}
 	{{- if .ViewedResultRef }}

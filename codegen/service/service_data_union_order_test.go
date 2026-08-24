@@ -29,6 +29,7 @@ func retainedUnionNames(t *testing.T, reverse bool) map[string]string {
 		signals := dsl.Type("Signals", func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.OneOf("source", func() {
+				dsl.TypeName("SignalSource")
 				dsl.Attribute("physical_point", dsl.String)
 				dsl.Attribute("synthetic_series", dsl.String)
 			})
@@ -36,6 +37,7 @@ func retainedUnionNames(t *testing.T, reverse bool) map[string]string {
 		inputs := dsl.Type("Inputs", func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.OneOf("source", func() {
+				dsl.TypeName("InputSource")
 				dsl.Attribute("time_series", dsl.String)
 				dsl.Attribute("energy_rates", dsl.String)
 			})

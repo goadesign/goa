@@ -35,11 +35,12 @@ type (
 	// protobufEndpointMessages contains the copied request, response, and error
 	// values used to write one endpoint's protobuf code.
 	protobufEndpointMessages struct {
-		request          *expr.AttributeExpr
-		streamingRequest *expr.AttributeExpr
-		requestEnvelope  *expr.AttributeExpr
-		response         *expr.AttributeExpr
-		errors           map[string]*expr.AttributeExpr
+		request             *expr.AttributeExpr
+		streamingRequest    *expr.AttributeExpr
+		requestEnvelope     *expr.AttributeExpr
+		response            *expr.AttributeExpr
+		responseValidations map[string]*expr.AttributeExpr
+		errors              map[string]*expr.AttributeExpr
 	}
 
 	// protobufMessageRecord stores one protobuf message and every place that
@@ -113,6 +114,7 @@ type (
 		service string
 		method  string
 		error   string
+		view    string
 		path    string
 		role    protobufValidationRole
 	}
@@ -268,12 +270,13 @@ func (c *protobufPackageCatalog) freezeValidations(sd *ServiceData) []*Validatio
 		if record.declaration == nil {
 			panic(fmt.Sprintf("protobuf validator for %q has no generated declaration", record.message.plannedName))
 		}
-		validationAttribute := expr.DupAtt(record.attribute)
+		validationAttribute := expr.NewAttributeGraphCopier().Copy(record.attribute)
 		c.plan.bindAttributeCopy(record.attribute, validationAttribute)
 		c.bindCopiedValidationUses(record.attribute, validationAttribute, record.side)
+		collectionField := c.collectionWrapperField(validationAttribute)
 		removeMeta(validationAttribute)
 		userType := validationAttribute.Type.(expr.UserType)
-		context := protoBufTypeContext(c.packageName, sd, false)
+		context := protoBufTypeContext(c.packageName, sd)
 		context.Scope = &protobufValidationScope{
 			protoBufScope: context.Scope.(*protoBufScope),
 			catalog:       c,
@@ -281,15 +284,39 @@ func (c *protobufPackageCatalog) freezeValidations(sd *ServiceData) []*Validatio
 			message:       record.message,
 			parent:        userType,
 		}
-		definition := codegen.AttributeValidationCode(
-			userTypeAttribute(userType),
-			userType,
-			context,
-			true,
-			false,
-			record.targetName,
-			record.contextName,
-		)
+		var definition string
+		if collectionField != nil {
+			fieldTarget := record.targetName + codegen.Goify(collectionField.Name, true)
+			fieldRef := context.Scope.Ref(collectionField.Attribute, context.Pkg(collectionField.Attribute))
+			fieldName := context.Scope.Field(collectionField.Attribute, collectionField.Name, true)
+			definition = fmt.Sprintf("var %s %s\nif %s != nil {\n\t%s = %s.%s\n}\n%s",
+				fieldTarget,
+				fieldRef,
+				record.targetName,
+				fieldTarget,
+				record.targetName,
+				fieldName,
+				codegen.AttributeValidationCode(
+					collectionField.Attribute,
+					nil,
+					context,
+					false,
+					false,
+					fieldTarget,
+					record.contextName+"."+collectionField.Name,
+				),
+			)
+		} else {
+			definition = codegen.AttributeValidationCode(
+				userTypeAttribute(userType),
+				userType,
+				context,
+				true,
+				false,
+				record.targetName,
+				record.contextName,
+			)
+		}
 		if definition == "" {
 			continue
 		}
@@ -304,6 +331,24 @@ func (c *protobufPackageCatalog) freezeValidations(sd *ServiceData) []*Validatio
 		}
 	}
 	return c.validationData()
+}
+
+// collectionWrapperField returns the repeated or map field held by a
+// protobuf wrapper message. Authored one-field messages are not wrappers.
+func (c *protobufPackageCatalog) collectionWrapperField(attribute *expr.AttributeExpr) *expr.NamedAttributeExpr {
+	record := c.messageRecord(attribute)
+	if record == nil || record.identity.source.synthetic.role != protobufWrapperMessage {
+		return nil
+	}
+	object := expr.AsObject(attribute.Type)
+	if object == nil || len(*object) != 1 {
+		return nil
+	}
+	field := (*object)[0]
+	if !expr.IsArray(field.Attribute.Type) && !expr.IsMap(field.Attribute.Type) {
+		return nil
+	}
+	return field
 }
 
 // message returns the completed message used for attribute.
@@ -366,6 +411,12 @@ func (s *protobufValidationScope) ValidatorCall(attribute *expr.AttributeExpr, _
 		panic("protobuf validator was not retained")
 	}
 	return fmt.Sprintf("%s(%s)", validator.declaration.Name(), target)
+}
+
+// ValidationAcceptsNil reports whether a generated collection wrapper
+// validator treats a nil wrapper as an empty collection.
+func (s *protobufValidationScope) ValidationAcceptsNil(attribute *expr.AttributeExpr) bool {
+	return s.catalog.collectionWrapperField(attribute) != nil
 }
 
 // collectMessageRecursive records messages and oneofs. Existing message
@@ -504,7 +555,7 @@ func (c *protobufPackageCatalog) collectValidationRecursive(attribute *expr.Attr
 		if expr.IsPrimitive(actual) {
 			return
 		}
-		policy := codegen.GoLayoutPolicy{IgnoreRequired: true}
+		policy := codegen.GoLayoutPolicy{Pointer: true}
 		if !codegen.NeedsValidation(userTypeAttribute(actual), policy) {
 			return
 		}
@@ -512,7 +563,7 @@ func (c *protobufPackageCatalog) collectValidationRecursive(attribute *expr.Attr
 		if message == nil {
 			panic(fmt.Sprintf("no protobuf declaration collected for validation type %q", actual.Name()))
 		}
-		record := c.findValidation(message, attribute, side)
+		record := c.findValidation(message, attribute, side, targetName, contextName)
 		if record == nil {
 			record = &protobufValidationRecord{
 				message:     message,
@@ -563,9 +614,9 @@ func (c *protobufPackageCatalog) findMessage(identity protobufMessageIdentity) *
 
 // findValidation returns the existing function that checks the same message
 // rules in the same client or server package.
-func (c *protobufPackageCatalog) findValidation(declaration *protobufMessageRecord, attribute *expr.AttributeExpr, side validateKind) *protobufValidationRecord {
+func (c *protobufPackageCatalog) findValidation(declaration *protobufMessageRecord, attribute *expr.AttributeExpr, side validateKind, targetName, contextName string) *protobufValidationRecord {
 	for _, record := range c.validators {
-		if record.message == declaration && record.side == side &&
+		if record.message == declaration && record.side == side && record.targetName == targetName && record.contextName == contextName &&
 			sameProtobufValidationAttribute(record.attribute, attribute, make(map[protobufAttributePair]struct{})) {
 			return record
 		}
@@ -693,6 +744,9 @@ func (s protobufValidationSource) compare(other protobufValidationSource) int {
 	if result := strings.Compare(s.error, other.error); result != 0 {
 		return result
 	}
+	if result := strings.Compare(s.view, other.view); result != 0 {
+		return result
+	}
 	if s.role < other.role {
 		return -1
 	}
@@ -742,7 +796,7 @@ func sameProtobufMessageIdentity(left, right protobufMessageIdentity) bool {
 }
 
 // sameProtobufWireAttribute reports whether two values produce the same fields
-// and rules in a .proto message.
+// in a .proto message.
 func sameProtobufWireAttribute(left, right *expr.AttributeExpr, seen map[protobufAttributePair]struct{}) bool {
 	if left == right {
 		return true
@@ -757,13 +811,6 @@ func sameProtobufWireAttribute(left, right *expr.AttributeExpr, seen map[protobu
 	seen[pair] = struct{}{}
 	if !sameProtobufMeta(left.Meta, right.Meta) {
 		return false
-	}
-	if leftObject, rightObject := expr.AsObject(left.Type), expr.AsObject(right.Type); leftObject != nil && rightObject != nil {
-		for _, named := range *leftObject {
-			if expr.IsPrimitive(named.Attribute.Type) && left.IsRequired(named.Name) != right.IsRequired(named.Name) {
-				return false
-			}
-		}
 	}
 	return sameProtobufWireType(left.Type, right.Type, seen)
 }
@@ -842,7 +889,7 @@ func sameProtobufValidationAttribute(left, right *expr.AttributeExpr, seen map[p
 		return left == right.Type.(expr.Primitive)
 	case expr.UserType:
 		right := right.Type.(expr.UserType)
-		return left.Origin() == right.Origin() && sameProtobufValidationAttribute(left.Attribute(), right.Attribute(), seen)
+		return sameProtobufValidationAttribute(left.Attribute(), right.Attribute(), seen)
 	case *expr.Object:
 		right := right.Type.(*expr.Object)
 		if len(*left) != len(*right) {

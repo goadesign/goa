@@ -29,8 +29,8 @@ type Scope struct {
 // Values holds exactly one of its branch values.
 type Values struct {
 	kind   ValuesKind
-	Device alias.Alias
-	Metric alias.Alias
+	device alias.Alias
+	metric alias.Alias
 }
 
 // ValuesKind records which Values branch is selected.
@@ -52,7 +52,7 @@ func (u Values) Kind() ValuesKind {
 func NewValuesDevice(v alias.Alias) Values {
 	return Values{
 		kind:   ValuesKindDevice,
-		Device: v,
+		device: v,
 	}
 }
 
@@ -61,20 +61,22 @@ func (u Values) AsDevice() (_ alias.Alias, ok bool) {
 	if u.kind != ValuesKindDevice {
 		return
 	}
-	return u.Device, true
+	return u.device, true
 }
 
 // SetDevice selects the Device branch and stores v.
 func (u *Values) SetDevice(v alias.Alias) {
-	u.kind = ValuesKindDevice
-	u.Device = v
+	*u = Values{
+		kind:   ValuesKindDevice,
+		device: v,
+	}
 }
 
 // NewValuesMetric constructs Values with the Metric branch set.
 func NewValuesMetric(v alias.Alias) Values {
 	return Values{
 		kind:   ValuesKindMetric,
-		Metric: v,
+		metric: v,
 	}
 }
 
@@ -83,13 +85,15 @@ func (u Values) AsMetric() (_ alias.Alias, ok bool) {
 	if u.kind != ValuesKindMetric {
 		return
 	}
-	return u.Metric, true
+	return u.metric, true
 }
 
 // SetMetric selects the Metric branch and stores v.
 func (u *Values) SetMetric(v alias.Alias) {
-	u.kind = ValuesKindMetric
-	u.Metric = v
+	*u = Values{
+		kind:   ValuesKindMetric,
+		metric: v,
+	}
 }
 
 // Validate ensures exactly one valid branch is selected.
@@ -122,9 +126,9 @@ func (u Values) MarshalJSON() ([]byte, error) {
 	)
 	switch u.kind {
 	case ValuesKindDevice:
-		value = u.Device
+		value = u.device
 	case ValuesKindMetric:
-		value = u.Metric
+		value = u.metric
 	default:
 		return nil, fmt.Errorf("unexpected Values kind %q", u.kind)
 	}
@@ -158,15 +162,13 @@ func (u *Values) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = ValuesKindDevice
-		u.Device = v
+		u.SetDevice(v)
 	case string(ValuesKindMetric):
 		var v alias.Alias
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = ValuesKindMetric
-		u.Metric = v
+		u.SetMetric(v)
 	default:
 		if raw.Type == "" {
 			return goa.MissingFieldError("type", "Values")

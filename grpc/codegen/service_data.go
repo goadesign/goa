@@ -647,8 +647,8 @@ const (
 	// validateServer generates the validation code for request messages in the
 	// server package.
 	validateServer validateKind = iota + 1
-	// validateClient generates the validation code for response messages in the
-	// client package.
+	// validateClient generates response and command-line request validation in
+	// the client package.
 	validateClient
 )
 
@@ -930,13 +930,13 @@ func (d *ServicesData) analyze(servicePlan *grpcServicePlan) *ServiceData {
 			ClientConvert: d.buildRequestConvertData(requestMessage, e.MethodExpr.Payload, reqMD, e, sd, false),
 		}
 		if e.MethodExpr.Payload.Type != expr.Empty {
-			request.CLIInitCode = d.buildCLIRequestTransform(e, sd)
+			request.CLIInitCode = d.buildCLIRequestTransform(e, requestMessage, sd)
 		}
 		if hasRequestMessage {
 			request.PayloadMessage = collect(requestMessage).data
 			request.ServerPayloadMessageRef = protoBufGoFullTypeRef(requestMessage, sd.ServerProtobufPkgName, sd)
 		}
-		if obj := expr.AsObject(requestMessage.Type); (obj != nil && len(*obj) > 0) || expr.IsUnion(requestMessage.Type) {
+		if protobufCLIRequestNeedsMessage(requestMessage) {
 			// add the request message as the first argument to the CLI
 			typeName := protoBufGoFullTypeName(requestMessage, sd.PkgName, sd)
 			request.CLIArgs = append(request.CLIArgs, &InitArgData{
@@ -980,7 +980,7 @@ func (d *ServicesData) analyze(servicePlan *grpcServicePlan) *ServiceData {
 		hdrs := d.extractMetadata(e.Response.Headers, clientResult, sd, "client", "result", resultIdentity)
 		trlrs := d.extractMetadata(e.Response.Trailers, clientResult, sd, "client", "result", resultIdentity)
 		serverConverts := d.buildServerResponseConverts(responseMessage, serverResult, serverCtx, e, sd)
-		clientConverts := d.buildClientResponseConverts(responseMessage, clientResult, clientCtx, hdrs, trlrs, e, sd)
+		clientConverts := d.buildClientResponseConverts(responseMessage, messages.responseValidations, clientResult, clientCtx, hdrs, trlrs, e, sd)
 		var viewedServerConverts, viewedClientConverts []*ViewConvertData
 		if _, viewed := e.MethodExpr.Result.Type.(*expr.ResultTypeExpr); viewed {
 			viewedServerConverts = serverConverts
@@ -1076,10 +1076,10 @@ func (d *ServicesData) analyze(servicePlan *grpcServicePlan) *ServiceData {
 		ed.ServerEncodeDeclaration = endpointSymbols.serverEncode
 		sd.Endpoints = append(sd.Endpoints, ed)
 		if e.MethodExpr.IsStreaming() {
-			ed.ServerStream = d.buildStreamData(e, streamingRequest, responseMessage, sd, true)
+			ed.ServerStream = d.buildStreamData(e, streamingRequest, responseMessage, messages.responseValidations, sd, true)
 			ed.ServerStream.VarName = endpointSymbols.serverStream.Name()
 			ed.ServerStream.Declaration = endpointSymbols.serverStream
-			ed.ClientStream = d.buildStreamData(e, streamingRequest, responseMessage, sd, false)
+			ed.ClientStream = d.buildStreamData(e, streamingRequest, responseMessage, messages.responseValidations, sd, false)
 			ed.ClientStream.VarName = endpointSymbols.clientStream.Name()
 			ed.ClientStream.Declaration = endpointSymbols.clientStream
 		}
@@ -1200,6 +1200,18 @@ func collectProtobufPackage(serviceExpr *expr.GRPCServiceExpr, catalog *protobuf
 		if messages.response.Type != expr.Empty || !endpoint.MethodExpr.IsStreaming() {
 			if err := collect(messages.response, responseSource); err != nil {
 				return nil, err
+			}
+			if _, viewed := endpoint.MethodExpr.Result.Type.(*expr.ResultTypeExpr); viewed {
+				messages.responseValidations = make(map[string]*expr.AttributeExpr)
+				for _, view := range grpcResultViews(endpoint.MethodExpr) {
+					selected, err := grpcResultForView(endpoint.MethodExpr.Result, view)
+					if err != nil {
+						return nil, err
+					}
+					validation := grpcProtobufValidationForView(messages.response, selected)
+					catalog.bindCopiedMessageUses(messages.response, validation)
+					messages.responseValidations[view] = validation
+				}
 			}
 		}
 	}
@@ -1512,7 +1524,7 @@ func (d *ServicesData) buildServerResponseConvertData(response, result *expr.Att
 // buildClientResponseConverts builds one service conversion for each result
 // view the client may receive. Results without views have one unnamed
 // conversion.
-func (d *ServicesData) buildClientResponseConverts(response, result *expr.AttributeExpr, svcCtx *codegen.AttributeContext, hdrs, trlrs []*MetadataData, e *expr.GRPCEndpointExpr, sd *ServiceData) []*ViewConvertData {
+func (d *ServicesData) buildClientResponseConverts(response *expr.AttributeExpr, validations map[string]*expr.AttributeExpr, result *expr.AttributeExpr, svcCtx *codegen.AttributeContext, hdrs, trlrs []*MetadataData, e *expr.GRPCEndpointExpr, sd *ServiceData) []*ViewConvertData {
 	if e.MethodExpr.IsStreaming() || isEmpty(e.MethodExpr.Result.Type) {
 		return nil
 	}
@@ -1534,13 +1546,17 @@ func (d *ServicesData) buildClientResponseConverts(response, result *expr.Attrib
 		data := d.buildInitData(response, target, "message", "result", svcCtx, false, sd, expr.MethodResultExampleIdentity(e.MethodExpr), d.initDeclaration(e, false, key))
 		data.Args = append(data.Args, initArgsFromMetadata(hdrs)...)
 		data.Args = append(data.Args, initArgsFromMetadata(trlrs)...)
+		validation := response
+		if validations != nil {
+			validation = validations[view]
+		}
 		convert := &ConvertData{
 			SrcName:    protoBufGoFullTypeName(response, sd.ClientProtobufPkgName, sd),
 			SrcRef:     protoBufGoFullTypeRef(response, sd.ClientProtobufPkgName, sd),
 			TgtName:    svcCtx.Scope.Name(target, svcCtx.Pkg(target), svcCtx.Pointer, svcCtx.UseDefault),
 			TgtRef:     svcCtx.Scope.Ref(target, svcCtx.Pkg(target)),
 			Init:       data,
-			Validation: addValidation(response, sd, false),
+			Validation: addValidation(validation, sd, false),
 		}
 		converts = append(converts, &ViewConvertData{View: view, Convert: convert})
 	}
@@ -1560,7 +1576,7 @@ func (d *ServicesData) buildInitData(source, target *expr.AttributeExpr, sourceV
 	if conversion.side == grpcServerPackage {
 		protobufPackage = sd.ServerProtobufPkgName
 	}
-	pbCtx := protoBufTypeContext(protobufPackage, sd, false)
+	pbCtx := protoBufTypeContext(protobufPackage, sd)
 	srcCtx := pbCtx
 	tgtCtx := svcCtx
 	if proto {
@@ -1611,11 +1627,15 @@ func (d *ServicesData) buildInitData(source, target *expr.AttributeExpr, sourceV
 	}
 }
 
-// buildCLIRequestTransform renders the planned protobuf-to-payload conversion
-// in the client package where command-line payload builders use it.
-func (d *ServicesData) buildCLIRequestTransform(endpoint *expr.GRPCEndpointExpr, sd *ServiceData) string {
+// buildCLIRequestTransform checks a parsed protobuf request and then renders
+// the protobuf-to-payload conversion used by command-line clients.
+func (d *ServicesData) buildCLIRequestTransform(
+	endpoint *expr.GRPCEndpointExpr,
+	request *expr.AttributeExpr,
+	sd *ServiceData,
+) string {
 	conversion := d.symbols[endpoint.Service].endpoints[endpoint].cliPayload
-	pbCtx := protoBufTypeContext(sd.ClientProtobufPkgName, sd, false)
+	pbCtx := protoBufTypeContext(sd.ClientProtobufPkgName, sd)
 	svcCtx := d.serviceTypeContext(sd, "client").Enter(endpoint.MethodExpr.Payload)
 	if !conversion.bound {
 		if err := conversion.transform.BindContexts(pbCtx, svcCtx); err != nil {
@@ -1628,7 +1648,23 @@ func (d *ServicesData) buildCLIRequestTransform(endpoint *expr.GRPCEndpointExpr,
 		panic(err) // bug
 	}
 	sd.clientTransformHelpers = codegen.AppendHelpers(sd.clientTransformHelpers, helpers)
+	if protobufCLIRequestNeedsMessage(request) {
+		if validation := sd.protobuf.validation(request, validateClient); validation != nil {
+			payloadRef := svcCtx.Scope.Ref(endpoint.MethodExpr.Payload, svcCtx.Pkg(endpoint.MethodExpr.Payload))
+			code = fmt.Sprintf(
+				"if err := %s(&message); err != nil {\n\tvar zero %s\n\treturn zero, err\n}\n%s",
+				validation.Declaration.Name(), payloadRef, code,
+			)
+		}
+	}
 	return code
+}
+
+// protobufCLIRequestNeedsMessage reports whether the command-line client
+// parses a protobuf request before building the service payload.
+func protobufCLIRequestNeedsMessage(attribute *expr.AttributeExpr) bool {
+	object := expr.AsObject(attribute.Type)
+	return (object != nil && len(*object) > 0) || expr.IsUnion(attribute.Type)
 }
 
 // initDeclaration returns the constructor and conversion requested for one
@@ -1746,7 +1782,7 @@ func (d *ServicesData) buildServerStreamSendConverts(e *expr.GRPCEndpointExpr, r
 
 // buildClientStreamRecvConverts builds one service conversion for each result
 // view the client may receive through a stream.
-func (d *ServicesData) buildClientStreamRecvConverts(e *expr.GRPCEndpointExpr, response, result *expr.AttributeExpr, resultCtx *codegen.AttributeContext, sd *ServiceData) []*ViewConvertData {
+func (d *ServicesData) buildClientStreamRecvConverts(e *expr.GRPCEndpointExpr, response *expr.AttributeExpr, validations map[string]*expr.AttributeExpr, result *expr.AttributeExpr, resultCtx *codegen.AttributeContext, sd *ServiceData) []*ViewConvertData {
 	views := []string{""}
 	if _, viewed := e.MethodExpr.Result.Type.(*expr.ResultTypeExpr); viewed {
 		views = grpcResultViews(e.MethodExpr)
@@ -1764,13 +1800,17 @@ func (d *ServicesData) buildClientStreamRecvConverts(e *expr.GRPCEndpointExpr, r
 			targetVar = "vresult"
 		}
 		key := grpcInitKey{role: grpcStreamingResponseInit, view: view}
+		validation := response
+		if validations != nil {
+			validation = validations[view]
+		}
 		convert := &ConvertData{
 			SrcName:    protoBufGoFullTypeName(response, sd.ClientProtobufPkgName, sd),
 			SrcRef:     protoBufGoFullTypeRef(response, sd.ClientProtobufPkgName, sd),
 			TgtName:    resultCtx.Scope.Name(target, resultCtx.Pkg(target), resultCtx.Pointer, resultCtx.UseDefault),
 			TgtRef:     resultCtx.Scope.Ref(target, resultCtx.Pkg(target)),
 			Init:       d.buildInitData(response, target, "v", targetVar, resultCtx, false, sd, expr.MethodStreamingResultExampleIdentity(e.MethodExpr), d.initDeclaration(e, false, key)),
-			Validation: addValidation(response, sd, false),
+			Validation: addValidation(validation, sd, false),
 		}
 		converts = append(converts, &ViewConvertData{View: view, Convert: convert})
 	}
@@ -1783,7 +1823,7 @@ func (d *ServicesData) buildClientStreamRecvConverts(e *expr.GRPCEndpointExpr, r
 // endpoint streaming request and response message derived by analyze.
 //
 // svr param indicates that the stream data is built for the server.
-func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, streamingRequest, responseMessage *expr.AttributeExpr, sd *ServiceData, svr bool) *StreamData {
+func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, streamingRequest, responseMessage *expr.AttributeExpr, responseValidations map[string]*expr.AttributeExpr, sd *ServiceData, svr bool) *StreamData {
 	var (
 		varn                string
 		intName             string
@@ -1865,7 +1905,7 @@ func (d *ServicesData) buildStreamData(e *expr.GRPCEndpointExpr, streamingReques
 			recvName = md.ClientStream.RecvName
 			recvWithContextName = md.ClientStream.RecvWithContextName
 			recvRef = ed.ResultRef
-			recvConverts = d.buildClientStreamRecvConverts(e, responseMessage, result, resCtx, sd)
+			recvConverts = d.buildClientStreamRecvConverts(e, responseMessage, responseValidations, result, resCtx, sd)
 			recvConvert = primaryViewConvert(recvConverts)
 			if md.ViewedResult == nil {
 				recvConverts = nil

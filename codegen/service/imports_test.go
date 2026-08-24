@@ -405,11 +405,13 @@ func TestUnionFieldReferencesUseFixedImportAliases(t *testing.T) {
 			Attribute: branch,
 		}},
 	}
-	declaration, err := generatedPackage.DeclareUnion(union)
+	unionAttribute := &expr.AttributeExpr{Type: union}
+	declaration, err := generatedPackage.DeclareUnion(unionAttribute)
 	require.NoError(t, err)
 	facts := &unionFacts{
+		attribute:   unionAttribute,
 		union:       union,
-		identity:    codegen.NewUnionTypeID(union),
+		identity:    codegen.NewUnionDeclarationID(unionAttribute),
 		typeKey:     union.GetTypeKey(),
 		valueKey:    union.GetValueKey(),
 		declaration: declaration,

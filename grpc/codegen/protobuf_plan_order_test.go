@@ -80,24 +80,23 @@ func TestSortProtobufMessageGroupsRejectsEqualOrder(t *testing.T) {
 	require.EqualError(t, err, `protobuf messages named "Message" have the same source, name, and fields but come from separate declarations`)
 }
 
-// TestCompareProtobufMessageOrderReversesWithInputs checks objects whose fields
-// and required lists appear in opposite orders.
-func TestCompareProtobufMessageOrderReversesWithInputs(t *testing.T) {
+// TestProtobufMessageIdentityIgnoresRequiredFields checks that validation rules
+// do not split messages with the same protobuf fields.
+func TestProtobufMessageIdentityIgnoresRequiredFields(t *testing.T) {
 	source := protobufOrderUserType()
-	left := protobufRequiredOrderGroup(source, "a", "b")
-	right := protobufRequiredOrderGroup(source, "b", "a")
+	left := protobufRequiredOrderGroup(source, "a")
+	right := protobufRequiredOrderGroup(source, "b")
 
 	forward := compareProtobufMessageIdentity(left.message.identity, right.message.identity)
 	backward := compareProtobufMessageIdentity(right.message.identity, left.message.identity)
-	require.NotZero(t, forward)
-	require.Equal(t, -forward, backward)
-
-	forwardGroups := []*protobufNameGroup{left, right}
-	reverseGroups := []*protobufNameGroup{right, left}
-	require.NoError(t, sortProtobufMessageGroups(forwardGroups))
-	require.NoError(t, sortProtobufMessageGroups(reverseGroups))
-	require.Equal(t, []string{"a", "b"}, protobufFirstFieldNames(forwardGroups))
-	require.Equal(t, []string{"a", "b"}, protobufFirstFieldNames(reverseGroups))
+	require.Zero(t, forward)
+	require.Zero(t, backward)
+	require.True(t, sameProtobufMessageIdentity(left.message.identity, right.message.identity))
+	require.False(t, sameProtobufValidationAttribute(
+		left.message.identity.attribute,
+		right.message.identity.attribute,
+		make(map[protobufAttributePair]struct{}),
+	))
 }
 
 // TestNextAvailableProtobufNameUsesRetainedSuffix checks that collision retries
@@ -176,14 +175,14 @@ func protobufOrderGroup(source expr.UserType, name string, explicit bool, tag st
 	}
 }
 
-// protobufRequiredOrderGroup creates one message whose first field is required.
-func protobufRequiredOrderGroup(source expr.UserType, first, second string) *protobufNameGroup {
+// protobufRequiredOrderGroup creates one message with a selected required field.
+func protobufRequiredOrderGroup(source expr.UserType, required string) *protobufNameGroup {
 	attribute := &expr.AttributeExpr{
 		Type: &expr.Object{
-			{Name: first, Attribute: &expr.AttributeExpr{Type: expr.String}},
-			{Name: second, Attribute: &expr.AttributeExpr{Type: expr.String}},
+			{Name: "a", Attribute: &expr.AttributeExpr{Type: expr.String}},
+			{Name: "b", Attribute: &expr.AttributeExpr{Type: expr.String}},
 		},
-		Validation: &expr.ValidationExpr{Required: []string{first}},
+		Validation: &expr.ValidationExpr{Required: []string{required}},
 	}
 	return &protobufNameGroup{
 		preferred: "Message",
@@ -204,13 +203,4 @@ func protobufOrderValues(groups []*protobufNameGroup, value func(*protobufNameGr
 		values[index] = value(group)
 	}
 	return values
-}
-
-// protobufFirstFieldNames returns the first field from each ordered message.
-func protobufFirstFieldNames(groups []*protobufNameGroup) []string {
-	names := make([]string, len(groups))
-	for index, group := range groups {
-		names[index] = (*expr.AsObject(group.message.identity.attribute.Type))[0].Name
-	}
-	return names
 }

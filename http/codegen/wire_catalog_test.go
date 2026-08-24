@@ -320,6 +320,90 @@ func TestWireTypeCatalogRejectsLateAndUnknownDeclarations(t *testing.T) {
 	})
 }
 
+func TestBindCopiedUnionOccurrencesRejectsDifferentGraphs(t *testing.T) {
+	tests := []struct {
+		name     string
+		planned  *expr.AttributeExpr
+		rendered *expr.AttributeExpr
+		message  string
+	}{
+		{
+			name:     "different type",
+			planned:  &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}},
+			rendered: &expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.String}}},
+			message:  "planned array does not match rendered map at body",
+		},
+		{
+			name: "missing field",
+			planned: &expr.AttributeExpr{Type: &expr.Object{{
+				Name:      "value",
+				Attribute: &expr.AttributeExpr{Type: expr.String},
+			}}},
+			rendered: &expr.AttributeExpr{Type: &expr.Object{}},
+			message:  `rendered object has no field "value" at body.value`,
+		},
+		{
+			name:     "extra field",
+			planned:  &expr.AttributeExpr{Type: &expr.Object{}},
+			rendered: &expr.AttributeExpr{Type: &expr.Object{{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}}}},
+			message:  `planned object has no field "value" at body.value`,
+		},
+		{
+			name: "missing union branch",
+			planned: &expr.AttributeExpr{Type: &expr.Union{TypeName: "Choice", Values: []*expr.NamedAttributeExpr{{
+				Name:      "value",
+				Attribute: &expr.AttributeExpr{Type: expr.String},
+			}}}},
+			rendered: &expr.AttributeExpr{Type: &expr.Union{TypeName: "Choice"}},
+			message:  `rendered OneOf "Choice" has no branch "value" at body.value`,
+		},
+		{
+			name:     "extra union branch",
+			planned:  &expr.AttributeExpr{Type: &expr.Union{TypeName: "Choice"}},
+			rendered: &expr.AttributeExpr{Type: &expr.Union{TypeName: "Choice", Values: []*expr.NamedAttributeExpr{{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}}}}},
+			message:  `planned OneOf "Choice" has no branch "value" at body.value`,
+		},
+		{
+			name:     "different union envelope",
+			planned:  &expr.AttributeExpr{Type: &expr.Union{TypeName: "Choice", TypeKey: "type", ValueKey: "value"}},
+			rendered: &expr.AttributeExpr{Type: &expr.Union{TypeName: "Choice", TypeKey: "kind", ValueKey: "body"}},
+			message:  `planned OneOf "Choice" does not match rendered OneOf "Choice" at body`,
+		},
+		{
+			name:     "different primitive",
+			planned:  &expr.AttributeExpr{Type: expr.String},
+			rendered: &expr.AttributeExpr{Type: expr.Int},
+			message:  "planned string does not match rendered int at body",
+		},
+		{
+			name: "different user type",
+			planned: &expr.AttributeExpr{Type: &expr.UserTypeExpr{
+				TypeName:      "First",
+				AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+			}},
+			rendered: &expr.AttributeExpr{Type: &expr.UserTypeExpr{
+				TypeName:      "Second",
+				AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+			}},
+			message: `planned user type "First" does not match rendered user type "Second" at body`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			catalog := newWireTypeCatalog()
+
+			err := catalog.bindCopiedUnionOccurrences(
+				test.planned,
+				test.rendered,
+				"body",
+				make(map[wireAttributePair]struct{}),
+			)
+
+			require.EqualError(t, err, test.message)
+		})
+	}
+}
+
 // testWireTypeCatalog creates the generated package that assigns names for a test.
 // Reserved names simulate declarations contributed by another generator.
 func testWireTypeCatalog(t *testing.T, reserved ...string) (*wireTypeCatalog, *codegen.Generation) {

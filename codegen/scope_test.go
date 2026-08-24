@@ -117,7 +117,7 @@ func TestNameScope_GoFullTypeName_UsesScopedNameWhenQualified(t *testing.T) {
 	}
 }
 
-func TestNameScope_GoFullTypeName_ReusesStructuralUnionNameWhenQualified(t *testing.T) {
+func TestNameScope_GoFullTypeNameUsesAuthoredUnionNameBeforePlanning(t *testing.T) {
 	scope := NewNameScope()
 	first := &expr.Union{TypeName: "Value"}
 	second := &expr.Union{TypeName: "Value"}
@@ -131,13 +131,26 @@ func TestNameScope_GoFullTypeName_ReusesStructuralUnionNameWhenQualified(t *test
 	}
 }
 
-func TestNameScope_GoTypeNameDistinguishesUnionWireKeys(t *testing.T) {
+func TestNameScope_GoFullTypeNameRejectsUnplannedUnionAfterFreeze(t *testing.T) {
+	scope := NewNameScope()
+	attribute := &expr.AttributeExpr{Type: &expr.Union{TypeName: "Value"}}
+	require.Equal(t, "Value", scope.GoFullTypeName(attribute, ""))
+
+	scope.Freeze()
+	require.PanicsWithValue(t,
+		`union "Value" was not declared before the package name scope was frozen`,
+		func() { scope.GoFullTypeName(attribute, "") },
+	)
+}
+
+func TestNameScope_GoTypeNameDoesNotPlanUnionDeclarations(t *testing.T) {
 	scope := NewNameScope()
 	first := &expr.Union{TypeName: "Value", TypeKey: "type", ValueKey: "value"}
 	second := &expr.Union{TypeName: "Value", TypeKey: "kind", ValueKey: "data"}
 	assert.Equal(t, first.Hash(), second.Hash(), "compatibility hash should remain unchanged")
+	assert.NotEqual(t, NewUnionTypeID(first), NewUnionTypeID(second))
 	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: first}))
-	assert.Equal(t, "Value2", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
+	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
 }
 
 func TestNameScope_GoTypeNameDistinguishesUnionBranchPackages(t *testing.T) {
@@ -164,9 +177,10 @@ func TestNameScope_GoTypeNameDistinguishesUnionBranchPackages(t *testing.T) {
 		},
 	}
 	assert.Equal(t, first.Hash(), second.Hash(), "compatibility hash should remain unchanged")
+	assert.NotEqual(t, NewUnionTypeID(first), NewUnionTypeID(second))
 	scope := NewNameScope()
 	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: first}))
-	assert.Equal(t, "Value2", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
+	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
 }
 
 func TestNameScope_GoTypeNameDistinguishesUnionBranchOrder(t *testing.T) {
@@ -176,9 +190,10 @@ func TestNameScope_GoTypeNameDistinguishesUnionBranchOrder(t *testing.T) {
 	first := &expr.Union{TypeName: "Value", Values: []*expr.NamedAttributeExpr{branch("left"), branch("right")}}
 	second := &expr.Union{TypeName: "Value", Values: []*expr.NamedAttributeExpr{branch("right"), branch("left")}}
 	assert.Equal(t, first.Hash(), second.Hash(), "compatibility hash should remain unchanged")
+	assert.NotEqual(t, NewUnionTypeID(first), NewUnionTypeID(second))
 	scope := NewNameScope()
 	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: first}))
-	assert.Equal(t, "Value2", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
+	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
 }
 
 func TestNameScope_GoTypeNameDistinguishesInlineObjectFieldOrder(t *testing.T) {
@@ -200,14 +215,17 @@ func TestNameScope_GoTypeNameDistinguishesInlineObjectFieldOrder(t *testing.T) {
 	first := union(object("left", "right"))
 	second := union(object("right", "left"))
 	assert.Equal(t, first.Hash(), second.Hash(), "compatibility hash should remain unchanged")
+	assert.NotEqual(t, NewUnionTypeID(first), NewUnionTypeID(second))
 	scope := NewNameScope()
 	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: first}))
-	assert.Equal(t, "Value2", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
+	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
 }
 
-// TestNameScope_GoTypeNameSharesIdenticalEmittedUnionDefinitions verifies
-// semantically different branch declarations share a structurally equal union.
-func TestNameScope_GoTypeNameSharesIdenticalEmittedUnionDefinitions(t *testing.T) {
+// TestNameScope_GoTypeNameUsesAuthoredNameForEqualUnionDefinitions verifies
+// reference formatting does not decide whether two declarations can share a
+// package name. The generated package catalog makes that decision before the
+// scope is frozen.
+func TestNameScope_GoTypeNameUsesAuthoredNameForEqualUnionDefinitions(t *testing.T) {
 	branch := func(name, id string) expr.UserType {
 		return &expr.UserTypeExpr{
 			TypeName: name,
@@ -228,6 +246,7 @@ func TestNameScope_GoTypeNameSharesIdenticalEmittedUnionDefinitions(t *testing.T
 	}
 	first := union(branch("foo-bar", "first"))
 	second := union(branch("foo_bar", "second"))
+	assert.Equal(t, NewUnionTypeID(first), NewUnionTypeID(second))
 	scope := NewNameScope()
 	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: first}))
 	assert.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: second}))
@@ -312,6 +331,44 @@ func TestUnionTypeID(t *testing.T) {
 			require.NotEqual(t, NewUnionTypeID(test.first), NewUnionTypeID(test.second))
 		})
 	}
+}
+
+// TestUnionTypeIDIncludesDefaultDrivenPointerShape verifies that a default
+// which changes an inline service field from a pointer to a value also changes
+// the union definition identity.
+func TestUnionTypeIDIncludesDefaultDrivenPointerShape(t *testing.T) {
+	union := func(withDefault bool) (*expr.Union, *expr.AttributeExpr) {
+		field := &expr.AttributeExpr{Type: expr.String}
+		if withDefault {
+			field.DefaultValue = "ready"
+		}
+		branch := &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "label", Attribute: field},
+		}}
+		return &expr.Union{
+			TypeName: "Value",
+			Values: []*expr.NamedAttributeExpr{
+				{Name: "entry", Attribute: branch},
+			},
+		}, branch
+	}
+	withoutDefault, pointerBranch := union(false)
+	withDefault, valueBranch := union(true)
+	policy := GoLayoutPolicy{UseDefault: true, SumType: true}
+	pointerLayout, err := PlanGoType(pointerBranch, GoTypePlanOptions{
+		Owner:  "generated.local/gen/service",
+		Policy: policy,
+	})
+	require.NoError(t, err)
+	valueLayout, err := PlanGoType(valueBranch, GoTypePlanOptions{
+		Owner:  "generated.local/gen/service",
+		Policy: policy,
+	})
+	require.NoError(t, err)
+
+	require.True(t, pointerLayout.Fields()[0].IsPointer())
+	require.False(t, valueLayout.Fields()[0].IsPointer())
+	require.NotEqual(t, NewUnionTypeID(withoutDefault), NewUnionTypeID(withDefault))
 }
 
 func TestUnionTypeIDIgnoresNonEmittedPointerSharing(t *testing.T) {

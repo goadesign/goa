@@ -93,6 +93,16 @@ func TestProtoBufNativeGoTypeName(t *testing.T) {
 	}
 }
 
+// TestProtoBufTypeContextPreservesPrimitivePresence checks that protobuf Go
+// values always retain scalar presence and never apply service defaults.
+func TestProtoBufTypeContextPreservesPrimitivePresence(t *testing.T) {
+	sd := &ServiceData{Scope: codegen.NewNameScope()}
+	ctx := protoBufTypeContext("proto", sd)
+	require.True(t, ctx.Pointer)
+	require.False(t, ctx.IgnoreRequired)
+	require.False(t, ctx.UseDefault)
+}
+
 func TestHasAnyType(t *testing.T) {
 	cases := []struct {
 		Name     string

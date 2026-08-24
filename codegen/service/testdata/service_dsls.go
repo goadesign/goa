@@ -169,13 +169,14 @@ var PkgPathUnionDSL = func() {
 	})
 }
 
-// PkgPathUnionNameScopeDSL exercises services that independently declare the
-// same structural union in relocated files that compile in one Go package.
+// PkgPathUnionNameScopeDSL exercises services that place separately named
+// unions in relocated files that compile in one Go package.
 var PkgPathUnionNameScopeDSL = func() {
 	var FirstValue = Type("FirstValue", func() {
 		Meta("struct:pkg:path", "types")
 		Meta("type:generate:force")
 		OneOf("Value", func() {
+			TypeName("FirstValueChoice")
 			Attribute("Bool", Boolean)
 			Attribute("Enum", String)
 			Attribute("Number", Float64)
@@ -185,6 +186,7 @@ var PkgPathUnionNameScopeDSL = func() {
 		Meta("struct:pkg:path", "types")
 		Meta("type:generate:force")
 		OneOf("Value", func() {
+			TypeName("SecondValueChoice")
 			Attribute("Bool", Boolean)
 			Attribute("Enum", String)
 			Attribute("Number", Float64)
@@ -194,6 +196,7 @@ var PkgPathUnionNameScopeDSL = func() {
 		Meta("struct:pkg:path", "types")
 		Meta("type:generate:force")
 		OneOf("Value", func() {
+			TypeName("ThirdValueChoice")
 			Attribute("Bool", Boolean)
 			Attribute("Enum", String)
 			Attribute("Number", Float64)

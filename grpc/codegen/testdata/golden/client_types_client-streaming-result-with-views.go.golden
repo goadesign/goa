@@ -11,9 +11,9 @@ func NewProtoMethodServerStreamingUserTypeRPCRequest() *service_server_streaming
 // *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse.
 func NewMethodServerStreamingUserTypeRPCResponseResultTypeView(v *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse) *serviceserverstreamingusertyperpcviews.ResultTypeView {
 	vresult := &serviceserverstreamingusertyperpcviews.ResultTypeView{
-		DoubleField: &v.DoubleField,
+		DoubleField: v.DoubleField,
 	}
-	intField := int(v.IntField)
+	intField := int(*v.IntField)
 	vresult.IntField = &intField
 	return vresult
 }
@@ -23,7 +23,28 @@ func NewMethodServerStreamingUserTypeRPCResponseResultTypeView(v *service_server
 // *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse.
 func NewMethodServerStreamingUserTypeRPCResponseResultTypeViewTiny(v *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse) *serviceserverstreamingusertyperpcviews.ResultTypeView {
 	vresult := &serviceserverstreamingusertyperpcviews.ResultTypeView{}
-	intField := int(v.IntField)
+	intField := int(*v.IntField)
 	vresult.IntField = &intField
 	return vresult
+}
+
+// ValidateMethodServerStreamingUserTypeRPCResponseTiny runs the validations
+// defined on MethodServerStreamingUserTypeRPCResponse.
+func ValidateMethodServerStreamingUserTypeRPCResponseTiny(message *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse) (err error) {
+	if message.IntField == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("IntField", "message"))
+	}
+	return
+}
+
+// ValidateMethodServerStreamingUserTypeRPCResponse runs the validations
+// defined on MethodServerStreamingUserTypeRPCResponse.
+func ValidateMethodServerStreamingUserTypeRPCResponse(message *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse) (err error) {
+	if message.IntField == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("IntField", "message"))
+	}
+	if message.DoubleField == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("DoubleField", "message"))
+	}
+	return
 }

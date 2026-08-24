@@ -41,8 +41,8 @@ type U struct {
 // Result holds exactly one of its branch values.
 type Result struct {
 	kind ResultKind
-	T    *T
-	U    *U
+	t    *T
+	u    *U
 }
 
 // ResultKind records which Result branch is selected.
@@ -64,7 +64,7 @@ func (u Result) Kind() ResultKind {
 func NewResultT(v *T) Result {
 	return Result{
 		kind: ResultKindT,
-		T:    v,
+		t:    v,
 	}
 }
 
@@ -73,20 +73,22 @@ func (u Result) AsT() (_ *T, ok bool) {
 	if u.kind != ResultKindT {
 		return
 	}
-	return u.T, true
+	return u.t, true
 }
 
 // SetT selects the t branch and stores v.
 func (u *Result) SetT(v *T) {
-	u.kind = ResultKindT
-	u.T = v
+	*u = Result{
+		kind: ResultKindT,
+		t:    v,
+	}
 }
 
 // NewResultU constructs Result with the u branch set.
 func NewResultU(v *U) Result {
 	return Result{
 		kind: ResultKindU,
-		U:    v,
+		u:    v,
 	}
 }
 
@@ -95,13 +97,15 @@ func (u Result) AsU() (_ *U, ok bool) {
 	if u.kind != ResultKindU {
 		return
 	}
-	return u.U, true
+	return u.u, true
 }
 
 // SetU selects the u branch and stores v.
 func (u *Result) SetU(v *U) {
-	u.kind = ResultKindU
-	u.U = v
+	*u = Result{
+		kind: ResultKindU,
+		u:    v,
+	}
 }
 
 // Validate ensures exactly one valid branch is selected.
@@ -113,12 +117,12 @@ func (u Result) Validate() error {
 			string(ResultKindU),
 		})
 	case ResultKindT:
-		if u.T == nil {
+		if u.t == nil {
 			return goa.MissingFieldError("value", "Result")
 		}
 		return nil
 	case ResultKindU:
-		if u.U == nil {
+		if u.u == nil {
 			return goa.MissingFieldError("value", "Result")
 		}
 		return nil
@@ -140,9 +144,9 @@ func (u Result) MarshalJSON() ([]byte, error) {
 	)
 	switch u.kind {
 	case ResultKindT:
-		value = u.T
+		value = u.t
 	case ResultKindU:
-		value = u.U
+		value = u.u
 	default:
 		return nil, fmt.Errorf("unexpected Result kind %q", u.kind)
 	}
@@ -176,15 +180,13 @@ func (u *Result) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = ResultKindT
-		u.T = v
+		u.SetT(v)
 	case string(ResultKindU):
 		var v *U
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = ResultKindU
-		u.U = v
+		u.SetU(v)
 	default:
 		if raw.Type == "" {
 			return goa.MissingFieldError("type", "Result")

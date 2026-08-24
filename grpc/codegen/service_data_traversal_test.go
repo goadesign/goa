@@ -303,6 +303,41 @@ func TestAddValidationDistinguishesRulesForOneWireDeclaration(t *testing.T) {
 	require.Contains(t, secondValidation.Def, `InvalidLengthError("message.value", *message.Value, utf8.RuneCountInString(*message.Value), 5, true)`)
 }
 
+func TestAddValidationDistinguishesRequirednessForOneWireDeclaration(t *testing.T) {
+	minimum := 2
+	original := grpcMessageTraversalType("Shared", "shared", expr.String, "1")
+	first := expr.Dup(original).(expr.UserType)
+	second := expr.Dup(original).(expr.UserType)
+	first.Attribute().Validation = &expr.ValidationExpr{Required: []string{"value"}}
+	expr.AsObject(first).Attribute("value").Validation = &expr.ValidationExpr{MinLength: &minimum}
+	expr.AsObject(second).Attribute("value").Validation = &expr.ValidationExpr{MinLength: &minimum}
+	firstAttribute := &expr.AttributeExpr{Type: first}
+	secondAttribute := &expr.AttributeExpr{Type: second}
+	sd := grpcTraversalServiceData()
+	root := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "first", Attribute: firstAttribute},
+		{Name: "second", Attribute: secondAttribute},
+	}}
+	freezeTraversalMessages(t, sd, root)
+	firstSource := grpcTraversalValidationSource()
+	secondSource := grpcTraversalValidationSource()
+	secondSource.method = "OtherCall"
+	sd.protobuf.collectValidation(firstAttribute, validateServer, firstSource, "message", "message")
+	sd.protobuf.collectValidation(secondAttribute, validateServer, secondSource, "message", "message")
+	planTraversalValidations(t, sd)
+	sd.validations = sd.protobuf.freezeValidations(sd)
+
+	firstValidation := addValidation(firstAttribute, sd, true)
+	secondValidation := addValidation(secondAttribute, sd, true)
+	require.NotNil(t, firstValidation)
+	require.NotNil(t, secondValidation)
+	require.Len(t, sd.validations, 2)
+	require.NotEqual(t, firstValidation.Declaration.Name(), secondValidation.Declaration.Name())
+	require.Contains(t, firstValidation.Def, `MissingFieldError("value", "message")`)
+	require.NotContains(t, secondValidation.Def, "MissingFieldError")
+	require.Contains(t, secondValidation.Def, "if message.Value != nil")
+}
+
 func TestAddValidationDistinguishesGeneratedSide(t *testing.T) {
 	minimum := 2
 	message := grpcMessageTraversalType("Shared", "shared", expr.String, "1")
@@ -347,6 +382,43 @@ func TestAddValidationReusesIdenticalRulesOnOneSide(t *testing.T) {
 
 	require.Len(t, sd.validations, 1)
 	require.Same(t, addValidation(first, sd, true), addValidation(second, sd, true))
+}
+
+// TestAddValidationKeepsDistinctErrorPaths checks that one shared protobuf
+// message gets separate validators when its callers need different field paths.
+func TestAddValidationKeepsDistinctErrorPaths(t *testing.T) {
+	minimum := 2
+	shared := grpcValidationTraversalType("Shared", "shared", &expr.AttributeExpr{
+		Type:       expr.String,
+		Validation: &expr.ValidationExpr{MinLength: &minimum},
+	})
+	first := &expr.AttributeExpr{Type: shared, Meta: expr.MetaExpr{"rpc:tag": {"1"}}}
+	second := &expr.AttributeExpr{Type: shared, Meta: expr.MetaExpr{"rpc:tag": {"2"}}}
+	rootType := &expr.UserTypeExpr{
+		TypeName: "Root",
+		UID:      "root",
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "first", Attribute: first},
+			{Name: "second", Attribute: second},
+		}},
+	}
+	root := &expr.AttributeExpr{Type: rootType}
+	sd := grpcTraversalServiceData()
+	freezeTraversalMessages(t, sd, root)
+	sd.protobuf.collectValidation(root, validateServer, grpcTraversalValidationSource(), "message", "message")
+	planTraversalValidations(t, sd)
+	sd.validations = sd.protobuf.freezeValidations(sd)
+
+	firstValidation := addValidation(first, sd, true)
+	secondValidation := addValidation(second, sd, true)
+	require.NotNil(t, firstValidation)
+	require.NotNil(t, secondValidation)
+	require.NotSame(t, firstValidation, secondValidation)
+	require.Contains(t, firstValidation.Def, `InvalidLengthError("first.value"`)
+	require.Contains(t, secondValidation.Def, `InvalidLengthError("second.value"`)
+	rootValidation := addValidation(root, sd, true)
+	require.Contains(t, rootValidation.Def, firstValidation.Declaration.Name()+"(message.First)")
+	require.Contains(t, rootValidation.Def, secondValidation.Declaration.Name()+"(message.Second)")
 }
 
 func TestCollectValidationsDistinguishesEqualUIDOrigins(t *testing.T) {
@@ -412,12 +484,17 @@ func planTraversalValidations(t *testing.T, sd *ServiceData) {
 			service:   record.source.service,
 			method:    record.source.method,
 			subject:   record.source.error,
+			view:      record.source.view,
 			path:      record.source.path,
 			operation: int(record.source.role),
 		}
+		preferred := "Validate" + record.message.plannedName
+		if record.source.view != "" && record.source.view != expr.DefaultView {
+			preferred += codegen.Goify(record.source.view, true)
+		}
 		record.declaration = codegen.NewPreferredName(
 			codegen.NameFunction,
-			"Validate"+record.message.plannedName,
+			preferred,
 			codegen.ExportedName,
 			grpcSymbolOrder(id),
 		)

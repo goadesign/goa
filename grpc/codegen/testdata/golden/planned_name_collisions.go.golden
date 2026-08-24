@@ -215,7 +215,7 @@ type WatchServerStream2 struct {
 // *savedtransport.SavedPayload.
 func NewProtoWatchRequest2(payload *savedtransport.SavedPayload) *saved_transportpb.WatchRequest {
 	message := &saved_transportpb.WatchRequest{
-		Value: payload.Value,
+		Value: &payload.Value,
 	}
 	return message
 }
@@ -231,7 +231,7 @@ func NewWatchResponseSavedResult() *savedtransport.SavedResult {
 // from *savedtransport.SavedStream.
 func NewProtoSavedStreamWatchStreamItem(spayload *savedtransport.SavedStream) *saved_transportpb.WatchStreamItem {
 	v := &saved_transportpb.WatchStreamItem{
-		Value: spayload.Value,
+		Value: &spayload.Value,
 	}
 	return v
 }
@@ -240,7 +240,7 @@ func NewProtoSavedStreamWatchStreamItem(spayload *savedtransport.SavedStream) *s
 // *saved_transportpb.WatchRequest.
 func NewWatchPayload(message *saved_transportpb.WatchRequest, token string) *savedtransport.SavedPayload {
 	v := &savedtransport.SavedPayload{
-		Value: message.Value,
+		Value: *message.Value,
 	}
 	v.Token = token
 	return v
@@ -257,15 +257,28 @@ func NewProtoSavedResult() *saved_transportpb.WatchResponse {
 // *saved_transportpb.WatchStreamItem.
 func NewWatchStreamItemSavedStream(v *saved_transportpb.WatchStreamItem) *savedtransport.SavedStream {
 	spayload := &savedtransport.SavedStream{
-		Value: v.Value,
+		Value: *v.Value,
 	}
 	return spayload
 }
 
 // ValidateWatchRequest2 runs the validations defined on WatchRequest.
 func ValidateWatchRequest2(message *saved_transportpb.WatchRequest) (err error) {
-	if utf8.RuneCountInString(message.Value) < 2 {
-		err = goa.MergeErrors(err, goa.InvalidLengthError("message.value", message.Value, utf8.RuneCountInString(message.Value), 2, true))
+	if message.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "message"))
+	}
+	if message.Value != nil {
+		if utf8.RuneCountInString(*message.Value) < 2 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("message.value", *message.Value, utf8.RuneCountInString(*message.Value), 2, true))
+		}
+	}
+	return
+}
+
+// ValidateWatchStreamItem runs the validations defined on WatchStreamItem.
+func ValidateWatchStreamItem(stream *saved_transportpb.WatchStreamItem) (err error) {
+	if stream.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "stream"))
 	}
 	return
 }

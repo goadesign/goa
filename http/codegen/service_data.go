@@ -1269,10 +1269,10 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 	}
 
 	for _, a := range httpSvc.HTTPEndpoints {
-		sds.buildRequestAttributeTypes(sd.bodies.request(a), sd)
+		sds.buildRequestAttributeTypes(sd.bodies.request(a), wireRequestBody, sd)
 
 		if a.MethodExpr.StreamingPayload.Type != expr.Empty {
-			sds.buildRequestAttributeTypes(sd.bodies.streaming(a), sd)
+			sds.buildRequestAttributeTypes(sd.bodies.streaming(a), wireStreamPayload, sd)
 		}
 	}
 
@@ -1282,7 +1282,7 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 // buildRequestAttributeTypes builds nested request declarations from separate
 // tagged copies because server and client packages apply different pointer and
 // default policies to the same authored body graph.
-func (sds *ServicesData) buildRequestAttributeTypes(body *expr.AttributeExpr, data *ServiceData) {
+func (sds *ServicesData) buildRequestAttributeTypes(body *expr.AttributeExpr, role wireTypeRole, data *ServiceData) {
 	for _, side := range []struct {
 		server  bool
 		pointer bool
@@ -1297,7 +1297,7 @@ func (sds *ServicesData) buildRequestAttributeTypes(body *expr.AttributeExpr, da
 			if top != nil && userType.Origin() == top.Origin() {
 				return
 			}
-			declaration := sds.attributeTypeData(userType, true, side.pointer, side.server, data)
+			declaration := sds.attributeTypeData(userType, true, side.pointer, side.server, wireUnionUse{role: role}, data)
 			if declaration == nil {
 				return
 			}
@@ -1333,8 +1333,9 @@ func collectPlannedWireTypes(api string, httpService *expr.HTTPServiceExpr, plan
 			key := clientBodyConstructorKey{endpoint: endpoint, role: wireRequestBody}
 			planned.clientBodyConstructorNames[key] = anonymousClientBodyConstructorName(request, clientRequestPolicy)
 		}
-		server.collectChildren(request, jsonBodyPolicy(true, true, true, ""), api)
-		client.collectChildren(request, jsonBodyPolicy(true, false, true, ""), api)
+		requestUse := wireUnionUse{role: wireRequestBody}
+		server.collectChildren(request, requestUse, jsonBodyPolicy(true, true, true, ""), api)
+		client.collectChildren(request, requestUse, jsonBodyPolicy(true, false, true, ""), api)
 		if endpoint.MethodExpr.StreamingPayload.Type != expr.Empty {
 			streaming := expr.DupAtt(bodies.streaming(endpoint))
 			addMarshalTags(streaming)
@@ -1356,8 +1357,9 @@ func collectPlannedWireTypes(api string, httpService *expr.HTTPServiceExpr, plan
 				key := clientBodyConstructorKey{endpoint: endpoint, role: wireStreamPayload}
 				planned.clientBodyConstructorNames[key] = anonymousClientBodyConstructorName(streaming, clientStreamPolicy)
 			}
-			server.collectChildren(streaming, jsonBodyPolicy(true, true, true, ""), api)
-			client.collectChildren(streaming, jsonBodyPolicy(true, false, true, ""), api)
+			streamUse := wireUnionUse{role: wireStreamPayload}
+			server.collectChildren(streaming, streamUse, jsonBodyPolicy(true, true, true, ""), api)
+			client.collectChildren(streaming, streamUse, jsonBodyPolicy(true, false, true, ""), api)
 		}
 		if endpoint.UsesSSE() && endpoint.MethodExpr.HasMixedResults() {
 			body := bodies.streamingResult(endpoint)
@@ -1463,17 +1465,20 @@ func collectPlannedTransforms(
 				requestTransforms.clientEncode = client.collectTransform(target, request, "marshal", methodName+" request body", wireTransformLayout{
 					wireSide:       wireTransformTarget,
 					wirePolicy:     jsonBodyPolicy(true, false, false, ""),
+					wireUse:        wireUnionUse{role: wireRequestBody},
 					servicePackage: *servicePackage,
 				})
 			}
 			requestTransforms.serverDecode = server.collectTransform(request, target, "unmarshal", methodName+" server payload", wireTransformLayout{
 				wireSide:       wireTransformSource,
 				wirePolicy:     jsonBodyPolicy(true, true, false, ""),
+				wireUse:        wireUnionUse{role: wireRequestBody},
 				servicePackage: *servicePackage,
 			})
 			requestTransforms.clientDecode = client.collectTransform(request, target, "marshal", methodName+" command payload", wireTransformLayout{
 				wireSide:       wireTransformSource,
 				wirePolicy:     jsonBodyPolicy(true, false, false, ""),
+				wireUse:        wireUnionUse{role: wireRequestBody},
 				servicePackage: *servicePackage,
 			})
 		} else if expr.IsArray(payload.Type) || expr.IsMap(payload.Type) {
@@ -1482,11 +1487,13 @@ func collectPlannedTransforms(
 				requestTransforms.serverDecode = server.collectTransform((*params)[0].Attribute, payload, "unmarshal", methodName+" server parameters", wireTransformLayout{
 					wireSide:       wireTransformSource,
 					wirePolicy:     wireTypePolicy{request: true, pointer: true},
+					wireUse:        wireUnionUse{role: wireRequestBody},
 					servicePackage: *servicePackage,
 				})
 				requestTransforms.clientDecode = client.collectTransform((*params)[0].Attribute, payload, "marshal", methodName+" command parameters", wireTransformLayout{
 					wireSide:       wireTransformSource,
 					wirePolicy:     wireTypePolicy{request: true, useDefault: true},
+					wireUse:        wireUnionUse{role: wireRequestBody},
 					servicePackage: *servicePackage,
 				})
 			}
@@ -1543,6 +1550,7 @@ func collectPlannedTransforms(
 				responseTransforms.serverEncode = server.collectTransform(resultAttribute, prepared, "marshal", transformResponseOwner(methodName, response, view, "server"), wireTransformLayout{
 					wireSide:       wireTransformTarget,
 					wirePolicy:     jsonBodyPolicy(false, true, false, viewName),
+					wireUse:        wireUnionUse{role: wireResponseBody, view: viewName},
 					servicePointer: view != nil,
 					servicePackage: resultPackage,
 				})
@@ -1587,6 +1595,7 @@ func collectPlannedTransforms(
 				responseTransforms.clientDecode = client.collectTransform(prepared, resultAttribute, "unmarshal", transformResponseOwner(methodName, response, view, "client"), wireTransformLayout{
 					wireSide:       wireTransformSource,
 					wirePolicy:     jsonBodyPolicy(false, false, false, viewName),
+					wireUse:        wireUnionUse{role: wireResponseBody, view: viewName},
 					servicePointer: viewed,
 					servicePackage: resultPackage,
 				})
@@ -1598,6 +1607,7 @@ func collectPlannedTransforms(
 				responseTransforms.clientDecode = client.collectTransform((*params)[0].Attribute, result, "unmarshal", transformResponseOwner(methodName, response, nil, "client parameters"), wireTransformLayout{
 					wireSide:       wireTransformSource,
 					wirePolicy:     wireTypePolicy{pointer: true},
+					wireUse:        wireUnionUse{role: wireResponseBody},
 					servicePointer: viewed,
 					servicePackage: resultPackage,
 				})
@@ -1617,12 +1627,14 @@ func collectPlannedTransforms(
 				errorTransforms.serverEncode = server.collectTransform(target, body, "marshal", methodName+" server error "+transportError.Name, wireTransformLayout{
 					wireSide:       wireTransformTarget,
 					wirePolicy:     jsonBodyPolicy(false, true, false, ""),
+					wireUse:        wireUnionUse{role: wireResponseBody},
 					servicePackage: *servicePackage,
 				})
 			}
 			errorTransforms.clientDecode = client.collectTransform(body, target, "unmarshal", methodName+" client error "+transportError.Name, wireTransformLayout{
 				wireSide:       wireTransformSource,
 				wirePolicy:     jsonBodyPolicy(false, false, false, ""),
+				wireUse:        wireUnionUse{role: wireResponseBody},
 				servicePackage: *servicePackage,
 			})
 		} else if body.Type == expr.Empty && (expr.IsArray(transportError.Type) || expr.IsMap(transportError.Type)) {
@@ -1631,6 +1643,7 @@ func collectPlannedTransforms(
 				errorTransforms.clientDecode = client.collectTransform((*params)[0].Attribute, endpoint.MethodExpr.Error(transportError.Name).AttributeExpr, "unmarshal", methodName+" client error parameters "+transportError.Name, wireTransformLayout{
 					wireSide:       wireTransformSource,
 					wirePolicy:     wireTypePolicy{pointer: true},
+					wireUse:        wireUnionUse{role: wireResponseBody},
 					servicePackage: *servicePackage,
 				})
 			}
@@ -1645,11 +1658,13 @@ func collectPlannedTransforms(
 			requestTransforms.serverDecode = server.collectTransform(body, endpoint.MethodExpr.StreamingPayload, "marshal", methodName+" server stream payload", wireTransformLayout{
 				wireSide:       wireTransformSource,
 				wirePolicy:     jsonBodyPolicy(true, true, false, ""),
+				wireUse:        wireUnionUse{role: wireStreamPayload},
 				servicePackage: *servicePackage,
 			})
 			requestTransforms.clientEncode = client.collectTransform(endpoint.MethodExpr.StreamingPayload, body, "marshal", methodName+" client stream body", wireTransformLayout{
 				wireSide:       wireTransformTarget,
 				wirePolicy:     jsonBodyPolicy(true, false, false, ""),
+				wireUse:        wireUnionUse{role: wireStreamPayload},
 				servicePackage: *servicePackage,
 			})
 		}
@@ -1674,12 +1689,14 @@ func collectPlannedTransforms(
 				streamTransforms.serverEncode = server.collectTransform(result, body, "marshal", methodName+" server streaming result", wireTransformLayout{
 					wireSide:       wireTransformTarget,
 					wirePolicy:     jsonBodyPolicy(false, true, false, ""),
+					wireUse:        wireUnionUse{role: wireResponseBody},
 					servicePackage: *servicePackage,
 				})
 			}
 			streamTransforms.clientDecode = client.collectTransform(body, result, "unmarshal", methodName+" client streaming result", wireTransformLayout{
 				wireSide:       wireTransformSource,
 				wirePolicy:     jsonBodyPolicy(false, false, false, ""),
+				wireUse:        wireUnionUse{role: wireResponseBody},
 				servicePackage: *servicePackage,
 			})
 		}
@@ -1823,7 +1840,8 @@ func collectResponseWireType(
 		record.needsConstructor = true
 	}
 	attributePolicy := jsonBodyPolicy(false, server, !server, "")
-	catalog.collectChildrenWithReleasedNames(body, attributePolicy, releasedNames)
+	responseUse := wireUnionUse{role: wireResponseBody, view: viewName}
+	catalog.collectChildrenWithReleasedNames(body, responseUse, attributePolicy, releasedNames)
 }
 
 // prepareResponseWireBody copies the response body, selects the requested view
@@ -1955,7 +1973,7 @@ func collectReleasedWireNames(current, released expr.DataType, names map[expr.Us
 // makeHTTPType traverses the attribute recursively and performs these actions:
 //
 // * removes aliased user type by replacing them with the underlying type.
-// * changes unions into structs with Type and Value fields.
+// * keeps unions as generated values with one selected branch.
 func makeHTTPType(att *expr.AttributeExpr) *expr.AttributeExpr {
 	att = expr.DupAtt(att)
 	return makeHTTPTypeRecursive(att, make(map[expr.UserType]struct{}))
@@ -2003,8 +2021,8 @@ func makeHTTPTypeRecursive(att *expr.AttributeExpr, seen map[expr.UserType]struc
 		}
 		att.Type = &obj
 	case *expr.Union:
-		// Unions are represented as first-class sum types; HTTP uses the same
-		// type for request and response bodies.
+		// The HTTP package catalog gives this union the exact name for its request,
+		// streaming request, response, or response-view use.
 	}
 	return att
 }
@@ -2114,6 +2132,16 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 
 		request       *RequestData
 		mapQueryParam *ParamData
+	)
+	httpsvrctx.Scope = sd.serverWireTypes.resolverForUse(
+		sd.serverWireTypes.scope,
+		jsonBodyPolicy(true, true, true, ""),
+		wireUnionUse{role: wireRequestBody},
+	)
+	httpclictx.Scope = sd.clientWireTypes.resolverForUse(
+		sd.clientWireTypes.scope,
+		jsonBodyPolicy(true, false, true, ""),
+		wireUnionUse{role: wireRequestBody},
 	)
 	{
 		var (
@@ -2906,9 +2934,10 @@ func (sds *ServicesData) buildResponseResultInit(e *expr.HTTPEndpointExpr, resp 
 			arrayElementPointer: transformctx.ArrayElementPointer,
 			view:                bodyType.View,
 		}
-		transformctx.Scope = sd.clientWireTypes.resolver(sd.clientWireTypes.scope, bodyPolicy)
+		responseUse := wireUnionUse{role: wireResponseBody, view: bodyType.View}
+		transformctx.Scope = sd.clientWireTypes.resolverForUse(sd.clientWireTypes.scope, bodyPolicy, responseUse)
 		if bodyPolicy.view != "" {
-			transformctx.Scope = sd.clientWireTypes.rootResolver(sd.clientWireTypes.scope, bodyPolicy, bodyType.declaration)
+			transformctx.Scope = sd.clientWireTypes.rootResolver(sd.clientWireTypes.scope, bodyPolicy, responseUse, bodyType.declaration)
 		}
 		transforms := sd.transforms.responses[viewedConstructorKey{endpoint: e, response: resp, view: bodyType.View}]
 		converted, helpers, err := sd.clientWireTypes.renderTransform(transforms.clientDecode, clientBody, "body", "v", transformctx, svcctx)
@@ -3198,6 +3227,7 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 	addMarshalTags(body)
 	record := catalog.lookupUser(body, role, policy)
 	catalog.applyNames(body, role, policy)
+	httpctx.Scope = catalog.resolverForUse(catalog.scope, policy, wireUnionUse{role: role})
 	name = body.Type.Name()
 	if record != nil {
 		name = record.name
@@ -3226,6 +3256,7 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 			// Generate validation code first because inline struct validation is removed.
 			ctx := jsonBodyContext(catalog, catalog.scope, true, true)
 			ctx.Pointer = !expr.IsPrimitive(body.Type)
+			ctx.Scope = catalog.resolverForUse(catalog.scope, policy, wireUnionUse{role: role})
 			validateRef = codegen.ValidationCode(body, nil, ctx, true, expr.IsAlias(body.Type), false, "body")
 		}
 		if svr && expr.IsObject(body.Type) {
@@ -3272,6 +3303,7 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 				src += "." + codegen.Goify(origin, true)
 			}
 			transformctx := jsonBodyContext(catalog, catalog.scope, true, svr)
+			transformctx.Scope = catalog.resolverForUse(catalog.scope, policy, wireUnionUse{role: role})
 			transforms := sd.transforms.requests[clientBodyConstructorKey{endpoint: e, role: role}]
 			code, helpers, err = catalog.renderTransform(transforms.clientEncode, body, src, "body", svcctx, transformctx)
 			if err != nil {
@@ -3372,7 +3404,7 @@ func (sds *ServicesData) buildResponseBodyType(
 		if topLevel != nil && ut == topLevel {
 			return
 		}
-		if d := sds.attributeTypeData(ut, false, !svr, svr, sd); d != nil {
+		if d := sds.attributeTypeData(ut, false, !svr, svr, wireUnionUse{role: wireResponseBody, view: viewName}, sd); d != nil {
 			if svr {
 				sd.ServerBodyAttributeTypes = append(sd.ServerBodyAttributeTypes, d)
 			} else {
@@ -3383,6 +3415,10 @@ func (sds *ServicesData) buildResponseBodyType(
 	record := catalog.lookupUser(body, wireResponseBody, policy)
 	catalog.applyNames(body, wireResponseBody, policy)
 	httpctx := jsonBodyContext(catalog, catalog.scope, false, svr)
+	responseUse := wireUnionUse{role: wireResponseBody, view: viewName}
+	httpctxPolicy := policy
+	httpctxPolicy.view = ""
+	httpctx.Scope = catalog.resolverForUse(catalog.scope, httpctxPolicy, responseUse)
 	name = body.Type.Name()
 	if record != nil {
 		name = record.name
@@ -3487,9 +3523,9 @@ func (sds *ServicesData) buildResponseBodyType(
 				src += "." + codegen.Goify(origin, true)
 			}
 			transformctx := jsonBodyContext(catalog, catalog.scope, false, svr)
-			transformctx.Scope = catalog.resolver(catalog.scope, policy)
+			transformctx.Scope = catalog.resolverForUse(catalog.scope, policy, responseUse)
 			if policy.view != "" {
-				transformctx.Scope = catalog.rootResolver(catalog.scope, policy, record)
+				transformctx.Scope = catalog.rootResolver(catalog.scope, policy, responseUse, record)
 			}
 			code, helpers, err = catalog.renderTransform(transforms.serverEncode, body, src, "body", svcctx, transformctx)
 			if err != nil {
@@ -3908,6 +3944,7 @@ func buildHTTPUnionTypeData(u *expr.Union, scope codegen.Attributor, record *wir
 			KindDeclaration:        record.kindDecls[i],
 			ConstructorDeclaration: record.ctorDecls[i],
 			FieldName:              fieldName,
+			StorageName:            record.storageNames[i],
 			FieldType:              fieldType,
 			Nilable:                codegen.IsNilable(nat.Attribute.Type),
 			TypeTag:                nat.Name,
@@ -3925,13 +3962,9 @@ func buildHTTPUnionTypeData(u *expr.Union, scope codegen.Attributor, record *wir
 	}
 }
 
-func (sds *ServicesData) attributeTypeData(ut expr.UserType, req, ptr, server bool, rd *ServiceData) *TypeData {
-	return sds.attributeTypeDataView(ut, req, ptr, server, "", rd)
-}
-
-// attributeTypeDataView builds a nested declaration using the view policy
-// that selected its enclosing response shape.
-func (sds *ServicesData) attributeTypeDataView(ut expr.UserType, req, ptr, server bool, view string, rd *ServiceData) *TypeData {
+// attributeTypeData builds a nested declaration and keeps the HTTP body use
+// that owns any union below it.
+func (sds *ServicesData) attributeTypeData(ut expr.UserType, req, ptr, server bool, use wireUnionUse, rd *ServiceData) *TypeData {
 	if ut == expr.Empty {
 		return nil
 	}
@@ -3945,12 +3978,13 @@ func (sds *ServicesData) attributeTypeDataView(ut expr.UserType, req, ptr, serve
 
 		att     = expr.DupAtt(&expr.AttributeExpr{Type: ut})
 		catalog = rd.wireTypes(server)
-		policy  = wireTypePolicy{request: req, pointer: ptr, useDefault: hctxUseDefault(req, server), validate: req || !server, arrayElementPointer: req == server, view: view}
+		policy  = wireTypePolicy{request: req, pointer: ptr, useDefault: hctxUseDefault(req, server), validate: req || !server, arrayElementPointer: req == server}
 	)
 	ut = att.Type.(expr.UserType)
 	record := catalog.lookupUser(att, wireAttribute, policy)
-	catalog.applyNames(att, wireAttribute, policy)
+	catalog.applyNamesRecursive(att, wireAttribute, policy, use, make(map[expr.UserType]struct{}))
 	hctx := jsonBodyContext(catalog, catalog.scope, req, server)
+	hctx.Scope = catalog.resolverForUse(catalog.scope, policy, use)
 	name = record.name
 	ctx := "request"
 	if !req {
@@ -4188,6 +4222,8 @@ func needInit(dt expr.DataType) bool {
 			}
 		}
 		return false
+	case *expr.Union:
+		return true
 	case expr.UserType:
 		return true
 	default:

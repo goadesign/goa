@@ -10,10 +10,32 @@ import (
 )
 
 type (
+	// UnionDeclarationID identifies one authored OneOf declaration and the Go
+	// definition emitted for the current copy. Copies of the same authored
+	// attribute share an identity, while separate OneOf declarations do not.
+	UnionDeclarationID struct {
+		authored   *expr.AttributeExpr
+		definition UnionTypeID
+	}
+
 	// UnionTypeID identifies the Go and JSON definition emitted for a union.
 	// It is distinct from expr.Union.Hash, which describes design compatibility.
 	UnionTypeID string
 )
+
+// NewUnionDeclarationID returns the identity of the OneOf stored in attribute.
+// Transport copies keep the authored attribute, so they find the same
+// declaration when their emitted definitions also match.
+func NewUnionDeclarationID(attribute *expr.AttributeExpr) UnionDeclarationID {
+	union, ok := attribute.Type.(*expr.Union)
+	if !ok {
+		panic("union declaration identity requires a OneOf attribute")
+	}
+	return UnionDeclarationID{
+		authored:   attribute.AuthoredAttribute(),
+		definition: NewUnionTypeID(union),
+	}
+}
 
 // NewUnionTypeID returns a repeatable key for union's generated Go and JSON
 // definitions. The key includes the effective JSON envelope keys and every
@@ -29,12 +51,6 @@ func NewUnionTypeID(union *expr.Union) UnionTypeID {
 		make(map[expr.UserType]int),
 	)
 	return UnionTypeID(key.String())
-}
-
-// Hash returns the repeatable key used to look up this union's Go name in a
-// generated package.
-func (id UnionTypeID) Hash() string {
-	return string(id)
 }
 
 // writeUnionTypeID appends one union definition using length-prefixed values
@@ -119,7 +135,7 @@ func writeUnionObjectID(key *strings.Builder, parent *expr.AttributeExpr, object
 	for _, field := range *object {
 		writeUnionIDPart(key, GoifyAtt(field.Attribute, field.Name, true))
 		writeUnionIDPart(key, AttributeTagsWithName(parent, field.Name, field.Attribute))
-		writeUnionIDPart(key, strconv.FormatBool(goFieldIsPointer(parent, field.Name, false, false)))
+		writeUnionIDPart(key, strconv.FormatBool(goFieldIsPointer(parent, field.Name, false, true)))
 		writeUnionAttributeID(key, field.Attribute, objects, unions, userTypes)
 	}
 }

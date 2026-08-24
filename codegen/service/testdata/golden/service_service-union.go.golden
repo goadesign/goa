@@ -26,21 +26,21 @@ type AUnion struct {
 	Values Values
 }
 
-type ValuesBoolean bool
+type ValuesBranchBoolean bool
 
-type ValuesBytes []byte
+type ValuesBranchBytes []byte
 
-type ValuesInt int
+type ValuesBranchInt int
 
-type ValuesString string
+type ValuesBranchString string
 
 // Values holds exactly one of its branch values.
 type Values struct {
 	kind    ValuesKind
-	Int     ValuesInt
-	String  ValuesString
-	Boolean ValuesBoolean
-	Bytes   ValuesBytes
+	int_    ValuesBranchInt
+	string_ ValuesBranchString
+	boolean ValuesBranchBoolean
+	bytes   ValuesBranchBytes
 }
 
 // ValuesKind records which Values branch is selected.
@@ -63,91 +63,99 @@ func (u Values) Kind() ValuesKind {
 }
 
 // NewValuesInt constructs Values with the Int branch set.
-func NewValuesInt(v ValuesInt) Values {
+func NewValuesInt(v ValuesBranchInt) Values {
 	return Values{
 		kind: ValuesKindInt,
-		Int:  v,
+		int_: v,
 	}
 }
 
 // AsInt returns the value when the Int branch is selected.
-func (u Values) AsInt() (_ ValuesInt, ok bool) {
+func (u Values) AsInt() (_ ValuesBranchInt, ok bool) {
 	if u.kind != ValuesKindInt {
 		return
 	}
-	return u.Int, true
+	return u.int_, true
 }
 
 // SetInt selects the Int branch and stores v.
-func (u *Values) SetInt(v ValuesInt) {
-	u.kind = ValuesKindInt
-	u.Int = v
+func (u *Values) SetInt(v ValuesBranchInt) {
+	*u = Values{
+		kind: ValuesKindInt,
+		int_: v,
+	}
 }
 
 // NewValuesString constructs Values with the String branch set.
-func NewValuesString(v ValuesString) Values {
+func NewValuesString(v ValuesBranchString) Values {
 	return Values{
-		kind:   ValuesKindString,
-		String: v,
+		kind:    ValuesKindString,
+		string_: v,
 	}
 }
 
 // AsString returns the value when the String branch is selected.
-func (u Values) AsString() (_ ValuesString, ok bool) {
+func (u Values) AsString() (_ ValuesBranchString, ok bool) {
 	if u.kind != ValuesKindString {
 		return
 	}
-	return u.String, true
+	return u.string_, true
 }
 
 // SetString selects the String branch and stores v.
-func (u *Values) SetString(v ValuesString) {
-	u.kind = ValuesKindString
-	u.String = v
+func (u *Values) SetString(v ValuesBranchString) {
+	*u = Values{
+		kind:    ValuesKindString,
+		string_: v,
+	}
 }
 
 // NewValuesBoolean constructs Values with the Boolean branch set.
-func NewValuesBoolean(v ValuesBoolean) Values {
+func NewValuesBoolean(v ValuesBranchBoolean) Values {
 	return Values{
 		kind:    ValuesKindBoolean,
-		Boolean: v,
+		boolean: v,
 	}
 }
 
 // AsBoolean returns the value when the Boolean branch is selected.
-func (u Values) AsBoolean() (_ ValuesBoolean, ok bool) {
+func (u Values) AsBoolean() (_ ValuesBranchBoolean, ok bool) {
 	if u.kind != ValuesKindBoolean {
 		return
 	}
-	return u.Boolean, true
+	return u.boolean, true
 }
 
 // SetBoolean selects the Boolean branch and stores v.
-func (u *Values) SetBoolean(v ValuesBoolean) {
-	u.kind = ValuesKindBoolean
-	u.Boolean = v
+func (u *Values) SetBoolean(v ValuesBranchBoolean) {
+	*u = Values{
+		kind:    ValuesKindBoolean,
+		boolean: v,
+	}
 }
 
 // NewValuesBytes constructs Values with the Bytes branch set.
-func NewValuesBytes(v ValuesBytes) Values {
+func NewValuesBytes(v ValuesBranchBytes) Values {
 	return Values{
 		kind:  ValuesKindBytes,
-		Bytes: v,
+		bytes: v,
 	}
 }
 
 // AsBytes returns the value when the Bytes branch is selected.
-func (u Values) AsBytes() (_ ValuesBytes, ok bool) {
+func (u Values) AsBytes() (_ ValuesBranchBytes, ok bool) {
 	if u.kind != ValuesKindBytes {
 		return
 	}
-	return u.Bytes, true
+	return u.bytes, true
 }
 
 // SetBytes selects the Bytes branch and stores v.
-func (u *Values) SetBytes(v ValuesBytes) {
-	u.kind = ValuesKindBytes
-	u.Bytes = v
+func (u *Values) SetBytes(v ValuesBranchBytes) {
+	*u = Values{
+		kind:  ValuesKindBytes,
+		bytes: v,
+	}
 }
 
 // Validate ensures exactly one valid branch is selected.
@@ -167,7 +175,7 @@ func (u Values) Validate() error {
 	case ValuesKindBoolean:
 		return nil
 	case ValuesKindBytes:
-		if u.Bytes == nil {
+		if u.bytes == nil {
 			return goa.MissingFieldError("value", "Values")
 		}
 		return nil
@@ -191,13 +199,13 @@ func (u Values) MarshalJSON() ([]byte, error) {
 	)
 	switch u.kind {
 	case ValuesKindInt:
-		value = u.Int
+		value = u.int_
 	case ValuesKindString:
-		value = u.String
+		value = u.string_
 	case ValuesKindBoolean:
-		value = u.Boolean
+		value = u.boolean
 	case ValuesKindBytes:
-		value = u.Bytes
+		value = u.bytes
 	default:
 		return nil, fmt.Errorf("unexpected Values kind %q", u.kind)
 	}
@@ -227,33 +235,29 @@ func (u *Values) UnmarshalJSON(data []byte) error {
 	}
 	switch raw.Type {
 	case string(ValuesKindInt):
-		var v ValuesInt
+		var v ValuesBranchInt
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = ValuesKindInt
-		u.Int = v
+		u.SetInt(v)
 	case string(ValuesKindString):
-		var v ValuesString
+		var v ValuesBranchString
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = ValuesKindString
-		u.String = v
+		u.SetString(v)
 	case string(ValuesKindBoolean):
-		var v ValuesBoolean
+		var v ValuesBranchBoolean
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = ValuesKindBoolean
-		u.Boolean = v
+		u.SetBoolean(v)
 	case string(ValuesKindBytes):
-		var v ValuesBytes
+		var v ValuesBranchBytes
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = ValuesKindBytes
-		u.Bytes = v
+		u.SetBytes(v)
 	default:
 		if raw.Type == "" {
 			return goa.MissingFieldError("type", "Values")

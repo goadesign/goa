@@ -16,10 +16,12 @@ func TestCollectHTTPUnionTypesDeterministicAcrossObjectOrder(t *testing.T) {
 		"physical_point",
 		"synthetic_series",
 	)
+	sourceFromSignals.TypeName = "SignalSource"
 	sourceFromInputs := makeUnionForOrderTest("source",
 		"time_series",
 		"energy_rates",
 	)
+	sourceFromInputs.TypeName = "InputSource"
 
 	forward := &expr.AttributeExpr{
 		Type: &expr.Object{
@@ -61,7 +63,7 @@ func TestCollectHTTPUnionTypesDeterministicAcrossObjectOrder(t *testing.T) {
 	require.Equal(t, forwardNames, reverseNames)
 }
 
-func TestCollectHTTPUnionTypesReusesSameShapedDeclarationsAndReferences(t *testing.T) {
+func TestCollectHTTPUnionTypesRejectsUnrelatedSameShapedDeclarations(t *testing.T) {
 	first := makeUnionForOrderTest("Value", "bool", "number")
 	second := makeUnionForOrderTest("Value", "bool", "number")
 	bodies := &expr.AttributeExpr{
@@ -77,38 +79,79 @@ func TestCollectHTTPUnionTypesReusesSameShapedDeclarationsAndReferences(t *testi
 		},
 	}
 
-	catalog, generation := testWireTypeCatalog(t)
+	catalog, _ := testWireTypeCatalog(t)
 	catalog.collect(bodies, wireAttribute, wireTypePolicy{})
-	linkTestWireTypeCatalog(t, generation, catalog)
-	catalog.applyNames(bodies, wireAttribute, wireTypePolicy{})
-
-	emitted := make([]string, 0, len(catalog.unions))
-	for _, union := range catalog.unionTypes() {
-		emitted = append(emitted, union.Name)
-	}
-	references := []string{
-		catalog.resolver(catalog.scope, wireTypePolicy{}).Name(&expr.AttributeExpr{Type: first}, "", false, false),
-		catalog.resolver(catalog.scope, wireTypePolicy{}).Name(&expr.AttributeExpr{Type: second}, "", false, false),
-	}
-	require.Equal(t, []string{"Value"}, emitted)
-	require.Equal(t, []string{"Value", "Value"}, references)
+	err := catalog.Declare()
+	require.ErrorContains(t, err, `declare HTTP OneOf "Value" for direct attribute`)
+	require.ErrorContains(t, err, `cannot declare exact type "Value"`)
+	require.ErrorContains(t, err, "set TypeName on the OneOf to a unique name")
 }
 
-func TestHTTPServiceDataReusesSameShapedMethodBodyUnions(t *testing.T) {
+func TestCollectHTTPUnionTypesRejectsBranchesWithTheSameGoName(t *testing.T) {
+	union := makeUnionForOrderTest("Value", "foo-bar", "foo_bar")
+	catalog, _ := testWireTypeCatalog(t)
+	catalog.collect(&expr.AttributeExpr{Type: union}, wireAttribute, wireTypePolicy{})
+
+	err := catalog.Declare()
+
+	require.ErrorContains(t, err, `OneOf "Value" branches "foo-bar" and "foo_bar" both generate Go name "FooBar"`)
+	require.ErrorContains(t, err, "rename one of the branches")
+	require.NotContains(t, err.Error(), "TypeName")
+}
+
+func TestCollectHTTPUnionTypesUsesExactRootRoleNames(t *testing.T) {
+	authored := &expr.AttributeExpr{Type: makeUnionForOrderTest("Scope", "site_set", "all_sites")}
+	catalog, generation := testWireTypeCatalog(t)
+
+	catalog.collect(authored, wireAttribute, wireTypePolicy{})
+	catalog.collect(expr.DupAtt(authored), wireRequestBody, wireTypePolicy{request: true})
+	catalog.collect(expr.DupAtt(authored), wireRequestBody, wireTypePolicy{request: true})
+	catalog.collect(expr.DupAtt(authored), wireStreamPayload, wireTypePolicy{request: true})
+	catalog.collect(expr.DupAtt(authored), wireResponseBody, wireTypePolicy{})
+	catalog.collect(expr.DupAtt(authored), wireResponseBody, wireTypePolicy{view: "detailed"})
+	linkTestWireTypeCatalog(t, generation, catalog)
+
+	names := make([]string, 0, len(catalog.unions))
+	for _, union := range catalog.unionTypes() {
+		names = append(names, union.Name)
+	}
+	require.Equal(t, []string{
+		"Scope",
+		"ScopeDetailedResponseBody",
+		"ScopeRequestBody",
+		"ScopeResponseBody",
+		"ScopeStreamingBody",
+	}, names)
+}
+
+func TestCollectHTTPUnionTypesRejectsConflictingShapesInOneRootRole(t *testing.T) {
+	authored := &expr.AttributeExpr{Type: makeUnionForOrderTest("Scope", "site_set", "all_sites")}
+	first := expr.DupAtt(authored)
+	second := expr.DupAtt(authored)
+	second.Type.(*expr.Union).ValueKey = "data"
+	catalog, _ := testWireTypeCatalog(t)
+
+	catalog.collect(first, wireRequestBody, wireTypePolicy{request: true})
+	catalog.collect(second, wireRequestBody, wireTypePolicy{request: true})
+	err := catalog.Declare()
+	require.ErrorContains(t, err, "OneOf \"Scope\" produces different RequestBody definitions")
+	require.ErrorContains(t, err, "use separate OneOf declarations")
+}
+
+func TestHTTPServiceDataReusesOneAuthoredUnionAcrossMethods(t *testing.T) {
 	root := expr.RunDSL(t, func() {
+		payload := dsl.Type("SharedPayload", func() {
+			dsl.OneOf("Value", sameShapedValueUnionDSL)
+		})
 		dsl.Service("values", func() {
 			dsl.Method("first", func() {
-				dsl.Payload(func() {
-					dsl.OneOf("Value", sameShapedValueUnionDSL)
-				})
+				dsl.Payload(payload)
 				dsl.HTTP(func() {
 					dsl.POST("/first")
 				})
 			})
 			dsl.Method("second", func() {
-				dsl.Payload(func() {
-					dsl.OneOf("Value", sameShapedValueUnionDSL)
-				})
+				dsl.Payload(payload)
 				dsl.HTTP(func() {
 					dsl.POST("/second")
 				})
@@ -124,10 +167,69 @@ func TestHTTPServiceDataReusesSameShapedMethodBodyUnions(t *testing.T) {
 		for i, union := range unions {
 			emitted[i] = union.Name
 		}
-		require.Equal(t, []string{"Value"}, emitted)
+		require.Equal(t, []string{"ValueRequestBody"}, emitted)
 	}
-	require.Contains(t, data.Endpoint("first").Payload.Request.ServerBody.Def, "Value *Value ")
-	require.Contains(t, data.Endpoint("second").Payload.Request.ServerBody.Def, "Value *Value ")
+	require.Contains(t, data.Endpoint("first").Payload.Request.ServerBody.Def, "Value *ValueRequestBody ")
+	require.Contains(t, data.Endpoint("second").Payload.Request.ServerBody.Def, "Value *ValueRequestBody ")
+}
+
+func TestHTTPServiceDataReusesOneAuthoredUnionAcrossExplicitRequestBodies(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		payload := dsl.Type("SharedPayload", func() {
+			dsl.OneOf("Choice", sameShapedValueUnionDSL)
+			dsl.Attribute("note", dsl.String)
+		})
+		dsl.Service("values", func() {
+			for _, method := range []string{"first", "second"} {
+				dsl.Method(method, func() {
+					dsl.Payload(payload)
+					dsl.HTTP(func() {
+						dsl.POST("/" + method)
+						dsl.Body(func() {
+							if method == "first" {
+								dsl.Attribute("Choice")
+								dsl.Attribute("note")
+								return
+							}
+							dsl.Attribute("note")
+							dsl.Attribute("Choice")
+						})
+					})
+				})
+			}
+		})
+	})
+
+	data := linkedHTTPPlanForRoot(t, root).services.Get("values")
+	for _, catalog := range []*wireTypeCatalog{data.serverWireTypes, data.clientWireTypes} {
+		require.Len(t, catalog.unionTypes(), 1)
+		require.Equal(t, "ChoiceRequestBody", catalog.unionTypes()[0].Name)
+	}
+}
+
+func TestHTTPServiceDataReusesOneAuthoredUnionAcrossErrors(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		failure := dsl.Type("SharedFailure", func() {
+			dsl.OneOf("Cause", sameShapedValueUnionDSL)
+		})
+		dsl.Service("values", func() {
+			for _, method := range []string{"first", "second"} {
+				dsl.Method(method, func() {
+					dsl.Error("failed", failure)
+					dsl.HTTP(func() {
+						dsl.GET("/" + method)
+						dsl.Response("failed", dsl.StatusBadRequest)
+					})
+				})
+			}
+		})
+	})
+
+	data := linkedHTTPPlanForRoot(t, root).services.Get("values")
+	for _, catalog := range []*wireTypeCatalog{data.serverWireTypes, data.clientWireTypes} {
+		require.Len(t, catalog.unionTypes(), 1)
+		require.Equal(t, "CauseResponseBody", catalog.unionTypes()[0].Name)
+	}
 }
 
 func TestMakeHTTPTypeRemovesServicePackageOwnershipFromWireCopy(t *testing.T) {
@@ -205,7 +307,7 @@ func collectHTTPUnionTypeNames(t *testing.T, att *expr.AttributeExpr) map[string
 
 	names := make(map[string]string, len(catalog.unions))
 	for _, record := range catalog.unions {
-		names[record.identity.definition.Hash()] = record.data.Name
+		names[record.attribute.Type.Name()] = record.data.Name
 	}
 	return names
 }

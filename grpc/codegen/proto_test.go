@@ -36,6 +36,7 @@ func TestProtoFiles(t *testing.T) {
 		{"protofiles-custom-package-name", testdata.ServiceWithPackageDSL},
 		{"protofiles-struct-meta-type", testdata.StructMetaTypeDSL},
 		{"protofiles-default-fields", testdata.DefaultFieldsDSL},
+		{"protofiles-required-primitive-presence", testdata.RequiredPrimitivePresenceDSL},
 		{"protofiles-custom-message-name", testdata.CustomMessageNameDSL},
 		{"protofiles-distinct-custom-message-names", testdata.DistinctCustomMessageNamesDSL},
 	}

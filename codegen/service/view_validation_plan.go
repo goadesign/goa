@@ -66,7 +66,7 @@ func planServiceValidations(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			}
 			return codegen.GoTypeBinding{Owner: facts.viewsPath, Type: declaration}, nil
 		case codegen.GoUnion:
-			declaration, err := views.Union(request.Attribute.Type.(*expr.Union))
+			declaration, err := views.Union(request.Attribute)
 			if err != nil {
 				return codegen.GoTypeBinding{}, err
 			}

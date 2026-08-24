@@ -19,7 +19,7 @@ func NewProtoResultTypeCollection(result serviceclientstreamingresulttypecollect
 // builds string from
 // *service_client_streaming_result_type_collection_with_explicit_viewpb.MethodClientStreamingResultTypeCollectionWithExplicitViewStreamingRequest.
 func NewMethodClientStreamingResultTypeCollectionWithExplicitViewStreamingRequestMethodClientStreamingResultTypeCollectionWithExplicitViewStreamingRequest(v *service_client_streaming_result_type_collection_with_explicit_viewpb.MethodClientStreamingResultTypeCollectionWithExplicitViewStreamingRequest) string {
-	spayload := v.Field
+	spayload := *v.Field
 	return spayload
 }
 

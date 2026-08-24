@@ -11,6 +11,8 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/testutil"
+	d "goa.design/goa/v3/dsl"
+	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/grpc/codegen/testdata"
 )
 
@@ -62,6 +64,24 @@ func TestUnaryViewedResultSpecialization(t *testing.T) {
 		require.Len(t, response.ClientConverts, 2)
 		require.Equal(t, "default", response.ClientConverts[1].View)
 		require.Same(t, response.ClientConverts[1].Convert, response.ClientConvert)
+		tinyValidation := response.ClientConverts[0].Convert.Validation
+		fullValidation := response.ClientConverts[1].Convert.Validation
+		require.NotNil(t, tinyValidation)
+		require.NotNil(t, fullValidation)
+		require.NotSame(t, tinyValidation, fullValidation)
+		require.Equal(t, "ValidateMethodMessageResultTypeWithViewsResponseTiny", tinyValidation.Declaration.Name())
+		require.Equal(t, "ValidateMethodMessageResultTypeWithViewsResponse", fullValidation.Declaration.Name())
+		assert.Contains(t, tinyValidation.Def, `MissingFieldError("IntField", "message")`)
+		assert.NotContains(t, tinyValidation.Def, `MissingFieldError("StringField", "message")`)
+		assert.Contains(t, fullValidation.Def, `MissingFieldError("StringField", "message")`)
+		require.Less(t,
+			strings.Index(decoder, tinyValidation.Declaration.Name()+"(message)"),
+			strings.Index(decoder, "NewMethodMessageResultTypeWithViewsResultTiny(message)"),
+		)
+		require.Less(t,
+			strings.Index(decoder, fullValidation.Declaration.Name()+"(message)"),
+			strings.Index(decoder, "NewMethodMessageResultTypeWithViewsResult(message)"),
+		)
 	})
 }
 
@@ -123,5 +143,130 @@ func TestStreamingViewedResultSpecialization(t *testing.T) {
 		require.Len(t, clientStream.RecvConverts, 2)
 		require.Equal(t, "default", clientStream.RecvConverts[1].View)
 		require.Same(t, clientStream.RecvConverts[1].Convert, clientStream.RecvConvert)
+		tinyValidation := clientStream.RecvConverts[0].Convert.Validation
+		fullValidation := clientStream.RecvConverts[1].Convert.Validation
+		require.NotNil(t, tinyValidation)
+		require.NotNil(t, fullValidation)
+		require.NotSame(t, tinyValidation, fullValidation)
+		require.Equal(t, "ValidateMethodServerStreamingUserTypeRPCResponseTiny", tinyValidation.Declaration.Name())
+		require.Equal(t, "ValidateMethodServerStreamingUserTypeRPCResponse", fullValidation.Declaration.Name())
+		assert.Contains(t, tinyValidation.Def, `MissingFieldError("IntField", "message")`)
+		assert.NotContains(t, tinyValidation.Def, `MissingFieldError("DoubleField", "message")`)
+		assert.Contains(t, fullValidation.Def, `MissingFieldError("DoubleField", "message")`)
+		require.Less(t,
+			strings.Index(recv, tinyValidation.Declaration.Name()+"(v)"),
+			strings.Index(recv, "NewMethodServerStreamingUserTypeRPCResponseResultTypeViewTiny(v)"),
+		)
+		require.Less(t,
+			strings.Index(recv, fullValidation.Declaration.Name()+"(v)"),
+			strings.Index(recv, "NewMethodServerStreamingUserTypeRPCResponseResultTypeView(v)"),
+		)
 	})
+}
+
+// TestViewedResponseValidationNamesIgnoreViewOrder checks that each generated
+// name describes its selected view regardless of DSL declaration order.
+func TestViewedResponseValidationNamesIgnoreViewOrder(t *testing.T) {
+	namesFor := func(views []string) map[string]string {
+		root := RunGRPCDSL(t, func() {
+			result := d.ResultType("application/vnd.validation-order", func() {
+				d.TypeName("ValidationOrder")
+				d.Attributes(func() {
+					d.Field(1, "first", d.String)
+					d.Field(2, "second", d.String)
+					d.Required("first", "second")
+				})
+				for _, view := range views {
+					d.View(view, func() {
+						if view == "tiny" {
+							d.Attribute("first")
+						} else {
+							d.Attribute("second")
+						}
+					})
+				}
+			})
+			d.Service("ValidationOrderService", func() {
+				d.Method("Show", func() {
+					d.Result(result)
+					d.GRPC(func() {})
+				})
+			})
+		})
+		response := CreateGRPCServices(root).Get("ValidationOrderService").Endpoints[0].Response
+		names := make(map[string]string, len(response.ClientConverts))
+		for _, conversion := range response.ClientConverts {
+			names[conversion.View] = conversion.Convert.Validation.Declaration.Name()
+		}
+		return names
+	}
+
+	forward := namesFor([]string{"tiny", "compact"})
+	reverse := namesFor([]string{"compact", "tiny"})
+	require.Equal(t, forward, reverse)
+	require.Equal(t, "ValidateShowResponseTiny", forward["tiny"])
+	require.Equal(t, "ValidateShowResponseCompact", forward["compact"])
+	require.Equal(t, "ValidateShowResponse", forward[expr.DefaultView])
+}
+
+// TestGRPCProtobufValidationForRecursiveView checks that selected and omitted
+// recursive fields are each visited once while their validation rules are kept
+// or removed.
+func TestGRPCProtobufValidationForRecursiveView(t *testing.T) {
+	responseType := &expr.UserTypeExpr{TypeName: "Response", UID: "response"}
+	responseValue := &expr.AttributeExpr{Type: expr.String}
+	responseChild := &expr.AttributeExpr{Type: responseType}
+	responseType.AttributeExpr = &expr.AttributeExpr{
+		Type: &expr.Object{
+			{Name: "value", Attribute: responseValue},
+			{Name: "child", Attribute: responseChild},
+		},
+		Validation: &expr.ValidationExpr{Required: []string{"value", "child"}},
+	}
+	selectedType := &expr.UserTypeExpr{TypeName: "Selected", UID: "selected"}
+	selectedChild := &expr.AttributeExpr{Type: selectedType}
+	selectedType.AttributeExpr = &expr.AttributeExpr{
+		Type:       &expr.Object{{Name: "child", Attribute: selectedChild}},
+		Validation: &expr.ValidationExpr{Required: []string{"child"}},
+	}
+
+	validation := grpcProtobufValidationForView(
+		&expr.AttributeExpr{Type: responseType},
+		&expr.AttributeExpr{Type: selectedType},
+	)
+	validationObject := validation.Type.(expr.UserType).Attribute()
+	require.Equal(t, []string{"child"}, validationObject.Validation.Required)
+	require.Nil(t, expr.AsObject(validationObject.Type).Attribute("value").Validation)
+}
+
+// TestGRPCProtobufValidationForSharedViewField checks that omitting one field
+// does not remove checks from a selected sibling with the same nested type.
+func TestGRPCProtobufValidationForSharedViewField(t *testing.T) {
+	nested := &expr.UserTypeExpr{
+		TypeName: "Nested",
+		UID:      "nested",
+		AttributeExpr: &expr.AttributeExpr{
+			Type:       &expr.Object{{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}}},
+			Validation: &expr.ValidationExpr{Required: []string{"value"}},
+		},
+	}
+	response := &expr.AttributeExpr{
+		Type: &expr.Object{
+			{Name: "selected", Attribute: &expr.AttributeExpr{Type: nested}},
+			{Name: "omitted", Attribute: &expr.AttributeExpr{Type: nested}},
+		},
+		Validation: &expr.ValidationExpr{Required: []string{"selected", "omitted"}},
+	}
+	selected := &expr.AttributeExpr{
+		Type:       &expr.Object{{Name: "selected", Attribute: &expr.AttributeExpr{Type: nested}}},
+		Validation: &expr.ValidationExpr{Required: []string{"selected"}},
+	}
+
+	validation := grpcProtobufValidationForView(response, selected)
+	fields := expr.AsObject(validation.Type)
+	selectedType := fields.Attribute("selected").Type.(expr.UserType)
+	omittedType := fields.Attribute("omitted").Type.(expr.UserType)
+	require.NotNil(t, selectedType.Attribute().Validation)
+	require.Equal(t, []string{"value"}, selectedType.Attribute().Validation.Required)
+	require.Nil(t, omittedType.Attribute().Validation)
 }

@@ -31,8 +31,10 @@ func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 		firstInput := dsl.Type("FirstInput", func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.OneOf("Value", func() {
+				dsl.TypeName("FirstValueChoice")
 				dsl.Field(1, "record", func() {
 					dsl.OneOf("Nested", func() {
+						dsl.TypeName("FirstNestedChoice")
 						dsl.Field(1, "text", dsl.String)
 					})
 					dsl.Required("Nested")
@@ -43,8 +45,10 @@ func TestRelocatedUnionPackageNamesCompile(t *testing.T) {
 		secondInput := dsl.Type("SecondInput", func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.OneOf("Value", func() {
+				dsl.TypeName("SecondValueChoice")
 				dsl.Field(1, "record", func() {
 					dsl.OneOf("Nested", func() {
+						dsl.TypeName("SecondNestedChoice")
 						dsl.Field(1, "text", dsl.Int)
 					})
 					dsl.Required("Nested")
@@ -270,12 +274,14 @@ func TestServiceUnionGeneratedBranchShapesCompile(t *testing.T) {
 		first := dsl.Type("FirstValue", func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.OneOf("Value", func() {
+				dsl.TypeName("FirstValueChoice")
 				dsl.Attribute("text", dsl.String)
 			})
 		})
 		second := dsl.Type("SecondValue", func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.OneOf("Value", func() {
+				dsl.TypeName("SecondValueChoice")
 				dsl.Attribute("text", dsl.Int)
 			})
 		})
@@ -292,16 +298,25 @@ func TestServiceUnionGeneratedBranchShapesCompile(t *testing.T) {
 	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
 	require.NoError(t, err)
-	unionSource, err := os.ReadFile(filepath.Join(genDir, "types", "unions.go"))
+	unionFiles, err := filepath.Glob(filepath.Join(genDir, "types", "*.go"))
 	require.NoError(t, err)
-	require.Contains(t, string(unionSource), "type Value struct")
-	require.Contains(t, string(unionSource), "type Value2 struct")
+	var unionSource strings.Builder
+	for _, path := range unionFiles {
+		source, err := os.ReadFile(path)
+		require.NoError(t, err)
+		unionSource.Write(source)
+	}
+	require.Contains(t, unionSource.String(), "type FirstValueChoice struct")
+	require.Contains(t, unionSource.String(), "type FirstValueChoiceBranchText string")
+	require.Contains(t, unionSource.String(), "type SecondValueChoice struct")
+	require.Contains(t, unionSource.String(), "type SecondValueChoiceBranchText int")
 	runGeneratedTests(t, genDir)
 }
 
-// TestServiceUnionFamilyNamesAvoidExactDeclarations verifies that union
-// constants and constructors cannot collide with exact DSL type names.
-func TestServiceUnionFamilyNamesAvoidExactDeclarations(t *testing.T) {
+// TestServiceUnionFamilyNamesRejectExactDeclarationCollisions verifies that a
+// union never renames its public constants and constructors to avoid another
+// exact DSL declaration.
+func TestServiceUnionFamilyNamesRejectExactDeclarationCollisions(t *testing.T) {
 	registry := testRegistryFromGenfuncs([]testGenfunc{{Plan: planServiceData, Generate: testServiceFiles}})
 
 	codegen.RunDSL(t, func() {
@@ -325,8 +340,8 @@ func TestServiceUnionFamilyNamesAvoidExactDeclarations(t *testing.T) {
 	genDir := filepath.Join(dir, codegen.Gendir)
 	writeGeneratedModule(t, genDir, "generated.local/gen")
 	_, err := generate(dir, "gen", false, registry)
-	require.NoError(t, err)
-	runGeneratedTests(t, genDir)
+	require.ErrorContains(t, err, `cannot declare exact constant "ValueKindText"`)
+	require.ErrorContains(t, err, "set TypeName on the OneOf to a unique name")
 }
 
 // TestServiceFilesOwnTheirImports verifies that imports used by one service do
@@ -900,12 +915,22 @@ func TestServiceRelocatedUnionNamesSpanDesignRoots(t *testing.T) {
 	code := generated.String()
 	require.Equal(t, 1, strings.Count(code, "type Value struct {"), code)
 	require.Contains(t, code, "type Value struct {\n\tText string", code)
-	require.Equal(t, 1, strings.Count(code, "type Value2 struct {"), code)
-	require.Equal(t, 1, strings.Count(code, "type Value3 struct {"), code)
-	require.Equal(t, 1, strings.Count(code, "type Value2Kind string"), code)
-	require.Equal(t, 1, strings.Count(code, "type Value3Kind string"), code)
+	for _, name := range []string{
+		"ZExistingValueChoice",
+		"MExistingValueChoice",
+		"AAddedValueChoice",
+		"DifferentValueChoice",
+	} {
+		require.Equal(t, 1, strings.Count(code, "type "+name+" struct {"), code)
+		require.Equal(t, 1, strings.Count(code, "type "+name+"Kind string"), code)
+	}
 	require.Equal(t,
-		[]string{"Value2", "Value2", "Value2", "Value3"},
+		[]string{
+			"ZExistingValueChoice",
+			"MExistingValueChoice",
+			"AAddedValueChoice",
+			"DifferentValueChoice",
+		},
 		[]string{
 			unionFieldType(code, "ZExistingValue"),
 			unionFieldType(code, "MExistingValue"),
@@ -1071,32 +1096,32 @@ func unusedRelocatedValueRoot() func() {
 	}
 }
 
-// sharedRelocatedUnionRoot declares the same relocated union from two services
-// so one generation-wide render emits its definition exactly once.
+// sharedRelocatedUnionRoot uses one relocated union from two services so one
+// generation-wide render emits its definition exactly once.
 func sharedRelocatedUnionRoot() func() {
 	return func() {
-		first := relocatedValueType("FirstValue")
-		second := relocatedValueType("SecondValue")
+		value := relocatedValueType("SharedValue", "SharedValueChoice")
 		dsl.Service("FirstService", func() {
 			dsl.Method("Read", func() {
-				dsl.Payload(first)
+				dsl.Payload(value)
 			})
 		})
 		dsl.Service("SecondService", func() {
 			dsl.Method("Read", func() {
-				dsl.Payload(second)
+				dsl.Payload(value)
 			})
 		})
 	}
 }
 
-// relocatedValueType defines one force-generated owner of the shared Value
-// union in the generated types package.
-func relocatedValueType(name string) expr.UserType {
+// relocatedValueType defines one force-generated owner of an exact union in
+// the generated types package.
+func relocatedValueType(name, unionName string) expr.UserType {
 	return dsl.Type(name, func() {
 		dsl.Meta("struct:pkg:path", "types")
 		dsl.Meta("type:generate:force")
 		dsl.OneOf("Value", func() {
+			dsl.TypeName(unionName)
 			dsl.Attribute("Bool", dsl.Boolean)
 			dsl.Attribute("Enum", dsl.String)
 			dsl.Attribute("Number", dsl.Float64)
@@ -1104,8 +1129,8 @@ func relocatedValueType(name string) expr.UserType {
 	})
 }
 
-// relocatedTopLevelValueRoot declares an emitted top-level Value after the
-// union definitions, so it receives the next available package-wide name.
+// relocatedTopLevelValueRoot declares an emitted top-level Value alongside
+// explicitly named union declarations.
 func relocatedTopLevelValueRoot() func() {
 	return func() {
 		value := dsl.Type("Value", func() {
@@ -1121,14 +1146,15 @@ func relocatedTopLevelValueRoot() func() {
 	}
 }
 
-// relocatedDifferentUnionRoot defines a union with the same natural name but
-// a different branch shape, so it must receive the next package-wide name.
+// relocatedDifferentUnionRoot defines a union with a different exact name and
+// branch shape.
 func relocatedDifferentUnionRoot() func() {
 	return func() {
 		value := dsl.Type("DifferentValue", func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.Meta("type:generate:force")
 			dsl.OneOf("Value", func() {
+				dsl.TypeName("DifferentValueChoice")
 				dsl.Attribute("Bool", dsl.Boolean)
 				dsl.Attribute("Text", dsl.String)
 			})
@@ -1141,14 +1167,15 @@ func relocatedDifferentUnionRoot() func() {
 	}
 }
 
-// relocatedUnionRoot defines one independently declared union with the same
-// name and branch shape as the declarations in the other design roots.
+// relocatedUnionRoot defines one independently declared union with an exact
+// name that remains stable across design-root ordering.
 func relocatedUnionRoot(typeName, serviceName string) func() {
 	return func() {
 		value := dsl.Type(typeName, func() {
 			dsl.Meta("struct:pkg:path", "types")
 			dsl.Meta("type:generate:force")
 			dsl.OneOf("Value", func() {
+				dsl.TypeName(typeName + "Choice")
 				dsl.Attribute("Bool", dsl.Boolean)
 				dsl.Attribute("Enum", dsl.String)
 				dsl.Attribute("Number", dsl.Float64)

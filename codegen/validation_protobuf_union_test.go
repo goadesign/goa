@@ -23,7 +23,7 @@ type (
 func TestProtobufUnionValidationRequiresCompleteSelectedBranch(t *testing.T) {
 	root := RunDSL(t, protobufUnionValidationDSL)
 	message := root.UserType("Message")
-	ctx := NewAttributeContext(false, true, false, "pb", NewNameScope())
+	ctx := NewAttributeContext(true, false, false, "pb", NewNameScope())
 	ctx.Scope = &protobufUnionTestScope{scope: NewNameScope()}
 
 	generated := AttributeValidationCode(message.Attribute(), message, ctx, true, false, "message", "message")
@@ -39,6 +39,8 @@ func TestProtobufUnionValidationRequiresCompleteSelectedBranch(t *testing.T) {
 	require.Contains(t, generated, "if v.Metadata == nil {")
 	require.Contains(t, generated, "if v.Blob == nil {")
 	require.NotContains(t, generated, "if v.Token == nil {")
+	require.NotContains(t, generated, "if v.Number != nil {")
+	require.NotContains(t, generated, "if v.Token != nil {")
 }
 
 func (s *protobufUnionTestScope) Name(att *expr.AttributeExpr, pkg string, _, _ bool) string {

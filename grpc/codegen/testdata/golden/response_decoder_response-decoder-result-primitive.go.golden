@@ -5,6 +5,9 @@ func DecodeMethodUnaryRPCNoPayloadResponse(ctx context.Context, v any, hdr, trlr
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceUnaryRPCNoPayload", "MethodUnaryRPCNoPayload", "*service_unary_rpc_no_payloadpb.MethodUnaryRPCNoPayloadResponse", v)
 	}
+	if err := ValidateMethodUnaryRPCNoPayloadResponse(message); err != nil {
+		return nil, err
+	}
 	res := NewMethodUnaryRPCNoPayloadResult(message)
 	return res, nil
 }

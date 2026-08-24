@@ -687,12 +687,12 @@ func planUnions(attribute *expr.AttributeExpr, service *serviceFacts, location *
 		if err != nil {
 			return err
 		}
-		if _, err := generatedPackage.DeclareUnion(actual); err != nil {
+		if _, err := generatedPackage.DeclareUnion(attribute); err != nil {
 			return err
 		}
 		for _, named := range actual.Values {
 			if userType, ok := generatedUnionBranch(named, rootTypes); ok {
-				if _, err := generatedPackage.DeclareUnionBranchType(actual, named.Name, userType); err != nil {
+				if _, err := generatedPackage.DeclareUnionBranchType(attribute, named.Name, userType); err != nil {
 					return err
 				}
 				if err := recurse(userType.Attribute(), location); err != nil {
@@ -780,7 +780,7 @@ func planViews(facts *rootFacts, generation *codegen.Generation) error {
 			}
 		}
 		seenUnions := make(map[expr.UserType]struct{})
-		retainedUnions := make(map[codegen.UnionTypeID]struct{})
+		retainedUnions := make(map[codegen.UnionDeclarationID]struct{})
 		for _, projected := range projectedRoots {
 			if err := planViewUnions(projected, views, derived, seenUnions, retainedUnions, &serviceFacts.viewUnions); err != nil {
 				return err
@@ -1002,7 +1002,7 @@ func collectViewConversionFacts(projected, service *expr.AttributeExpr, toResult
 // planViewUnions submits every Goa OneOf type reachable from view-specific
 // result types. Existing view types keep their declarations; a branch without
 // one receives a generated alias declaration.
-func planViewUnions(attribute *expr.AttributeExpr, generatedPackage *codegen.GeneratedPackage, derived map[expr.UserType]codegen.DerivedTypeID, seen map[expr.UserType]struct{}, retained map[codegen.UnionTypeID]struct{}, unions *[]*unionFacts) error {
+func planViewUnions(attribute *expr.AttributeExpr, generatedPackage *codegen.GeneratedPackage, derived map[expr.UserType]codegen.DerivedTypeID, seen map[expr.UserType]struct{}, retained map[codegen.UnionDeclarationID]struct{}, unions *[]*unionFacts) error {
 	if attribute == nil || attribute.Type == expr.Empty {
 		return nil
 	}
@@ -1031,17 +1031,18 @@ func planViewUnions(attribute *expr.AttributeExpr, generatedPackage *codegen.Gen
 		}
 		return recurse(actual.ElemType)
 	case *expr.Union:
-		if _, err := generatedPackage.DeclareUnion(actual); err != nil {
+		if _, err := generatedPackage.DeclareUnion(attribute); err != nil {
 			return err
 		}
-		identity := codegen.NewUnionTypeID(actual)
+		identity := codegen.NewUnionDeclarationID(attribute)
 		if _, exists := retained[identity]; !exists {
 			retained[identity] = struct{}{}
-			declaration, err := generatedPackage.Union(actual)
+			declaration, err := generatedPackage.Union(attribute)
 			if err != nil {
 				return err
 			}
 			*unions = append(*unions, &unionFacts{
+				attribute:   attribute,
 				union:       actual,
 				identity:    identity,
 				typeKey:     actual.GetTypeKey(),
@@ -1053,7 +1054,7 @@ func planViewUnions(attribute *expr.AttributeExpr, generatedPackage *codegen.Gen
 		for _, branch := range actual.Values {
 			if userType, ok := branch.Attribute.Type.(expr.UserType); ok {
 				if _, projected := derived[userType.Origin()]; !projected {
-					if _, err := generatedPackage.DeclareUnionBranchType(actual, branch.Name, userType); err != nil {
+					if _, err := generatedPackage.DeclareUnionBranchType(attribute, branch.Name, userType); err != nil {
 						return err
 					}
 				}

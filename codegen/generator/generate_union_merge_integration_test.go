@@ -36,6 +36,7 @@ func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
 		var MyUnion = d.Type("MyUnion", func() {
 			d.Meta("struct:pkg:path", "types")
 			d.OneOf("MyUnion", func() {
+				d.TypeName("MyUnionChoice")
 				d.Attribute("sum", Summary)
 			})
 		})

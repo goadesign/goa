@@ -32,6 +32,14 @@ func NewMethodResult(message *using_meta_typespb.MethodResponse) *usingmetatypes
 	return result
 }
 
+// ValidateMethodRequest runs the validations defined on MethodRequest.
+func ValidateMethodRequest(message *using_meta_typespb.MethodRequest) (err error) {
+	if message.B == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("b", "message"))
+	}
+	return
+}
+
 // ValidateMethodResponse runs the validations defined on MethodResponse.
 func ValidateMethodResponse(message *using_meta_typespb.MethodResponse) (err error) {
 	if message.B == nil {

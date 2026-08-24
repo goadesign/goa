@@ -37,8 +37,8 @@ type (
 		// returned expression must dereference srcVar when srcPtr is
 		// true. ok must be false to use the engine default conversion.
 		// The expression may be srcVar itself when no conversion is
-		// needed; the engine compares the result against srcVar to
-		// decide whether a conversion is taking place.
+		// needed. When ok is true, the engine uses the expression as
+		// returned.
 		ConvertPrimitive func(src, tgt *expr.AttributeExpr, srcVar string, srcPtr, tgtPtr bool, ta *TransformAttrs) (string, bool)
 
 		// TransformArray overrides the rendering of array

@@ -6,6 +6,9 @@ func DecodeMethodMessageResultTypeWithExplicitViewResponse(ctx context.Context, 
 	if !ok {
 		return nil, goagrpc.ErrInvalidType("ServiceMessageResultTypeWithExplicitView", "MethodMessageResultTypeWithExplicitView", "*service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse", v)
 	}
+	if err := ValidateMethodMessageResultTypeWithExplicitViewResponseTiny(message); err != nil {
+		return nil, err
+	}
 	res := NewMethodMessageResultTypeWithExplicitViewResult(message)
 	vres := &servicemessageresulttypewithexplicitviewviews.RT{Projected: res, View: "tiny"}
 	if err := servicemessageresulttypewithexplicitviewviews.ValidateRT(vres); err != nil {

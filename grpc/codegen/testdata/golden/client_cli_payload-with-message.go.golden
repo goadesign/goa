@@ -26,9 +26,13 @@ func BuildShowPayload(payloadWithMessageShowMessage string) (*payloadwithmessage
 			}
 		}
 	}
+	if err := ValidateShowRequest(&message); err != nil {
+		var zero *payloadwithmessage.ShowPayload
+		return zero, err
+	}
 	v := &payloadwithmessage.ShowPayload{
-		TenantID: message.TenantId,
-		RecordID: message.RecordId,
+		TenantID: *message.TenantId,
+		RecordID: *message.RecordId,
 	}
 
 	return v, nil

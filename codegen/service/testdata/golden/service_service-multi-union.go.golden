@@ -37,8 +37,8 @@ type Union struct {
 // Values holds exactly one of its branch values.
 type Values struct {
 	kind ValuesKind
-	A    *TypeA
-	B    *TypeB
+	a    *TypeA
+	b    *TypeB
 }
 
 // ValuesKind records which Values branch is selected.
@@ -60,7 +60,7 @@ func (u Values) Kind() ValuesKind {
 func NewValuesA(v *TypeA) Values {
 	return Values{
 		kind: ValuesKindA,
-		A:    v,
+		a:    v,
 	}
 }
 
@@ -69,20 +69,22 @@ func (u Values) AsA() (_ *TypeA, ok bool) {
 	if u.kind != ValuesKindA {
 		return
 	}
-	return u.A, true
+	return u.a, true
 }
 
 // SetA selects the a branch and stores v.
 func (u *Values) SetA(v *TypeA) {
-	u.kind = ValuesKindA
-	u.A = v
+	*u = Values{
+		kind: ValuesKindA,
+		a:    v,
+	}
 }
 
 // NewValuesB constructs Values with the b branch set.
 func NewValuesB(v *TypeB) Values {
 	return Values{
 		kind: ValuesKindB,
-		B:    v,
+		b:    v,
 	}
 }
 
@@ -91,13 +93,15 @@ func (u Values) AsB() (_ *TypeB, ok bool) {
 	if u.kind != ValuesKindB {
 		return
 	}
-	return u.B, true
+	return u.b, true
 }
 
 // SetB selects the b branch and stores v.
 func (u *Values) SetB(v *TypeB) {
-	u.kind = ValuesKindB
-	u.B = v
+	*u = Values{
+		kind: ValuesKindB,
+		b:    v,
+	}
 }
 
 // Validate ensures exactly one valid branch is selected.
@@ -109,12 +113,12 @@ func (u Values) Validate() error {
 			string(ValuesKindB),
 		})
 	case ValuesKindA:
-		if u.A == nil {
+		if u.a == nil {
 			return goa.MissingFieldError("value", "Values")
 		}
 		return nil
 	case ValuesKindB:
-		if u.B == nil {
+		if u.b == nil {
 			return goa.MissingFieldError("value", "Values")
 		}
 		return nil
@@ -136,9 +140,9 @@ func (u Values) MarshalJSON() ([]byte, error) {
 	)
 	switch u.kind {
 	case ValuesKindA:
-		value = u.A
+		value = u.a
 	case ValuesKindB:
-		value = u.B
+		value = u.b
 	default:
 		return nil, fmt.Errorf("unexpected Values kind %q", u.kind)
 	}
@@ -172,15 +176,13 @@ func (u *Values) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = ValuesKindA
-		u.A = v
+		u.SetA(v)
 	case string(ValuesKindB):
 		var v *TypeB
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = ValuesKindB
-		u.B = v
+		u.SetB(v)
 	default:
 		if raw.Type == "" {
 			return goa.MissingFieldError("type", "Values")

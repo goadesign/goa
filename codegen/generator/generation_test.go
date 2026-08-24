@@ -26,8 +26,8 @@ func TestGeneratePhasesShareOneGeneration(t *testing.T) {
 		preparedRoots []eval.Root
 	)
 	typesPath := "generated.local/gen/types"
-	union := &expr.Union{TypeName: "Value", TypeKey: "type", ValueKey: "value"}
-	lateUnion := &expr.Union{TypeName: "Late", TypeKey: "kind", ValueKey: "data"}
+	union := &expr.AttributeExpr{Type: &expr.Union{TypeName: "Value", TypeKey: "type", ValueKey: "value"}}
+	lateUnion := &expr.AttributeExpr{Type: &expr.Union{TypeName: "Late", TypeKey: "kind", ValueKey: "data"}}
 
 	assertGeneration := func(generation *codegen.Generation) error {
 		if planned != generation {

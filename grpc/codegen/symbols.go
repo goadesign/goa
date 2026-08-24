@@ -567,6 +567,130 @@ func grpcViewAttribute(full, selected *expr.AttributeExpr, seen map[expr.UserTyp
 	return filtered
 }
 
+// grpcProtobufValidationForView keeps the full protobuf message layout while
+// retaining checks only for fields selected by one result view.
+func grpcProtobufValidationForView(response, selected *expr.AttributeExpr) *expr.AttributeExpr {
+	validation := expr.DupAtt(response)
+	limitGRPCProtobufValidation(validation, selected, make(map[protobufAttributePair]struct{}))
+	return validation
+}
+
+// limitGRPCProtobufValidation removes checks for response fields that the
+// selected result view does not carry.
+func limitGRPCProtobufValidation(response, selected *expr.AttributeExpr, seen map[protobufAttributePair]struct{}) {
+	pair := protobufAttributePair{left: response, right: selected}
+	if _, ok := seen[pair]; ok {
+		return
+	}
+	seen[pair] = struct{}{}
+	if responseType, ok := response.Type.(expr.UserType); ok {
+		if isWrappedAttr(response) {
+			selected = unwrapSelectedGRPCView(selected, unwrapAttr(response).Type.Kind())
+			limitGRPCProtobufValidation(unwrapAttr(response), selected, seen)
+			return
+		}
+		if selectedType, ok := selected.Type.(expr.UserType); ok {
+			limitGRPCProtobufValidation(responseType.Attribute(), selectedType.Attribute(), seen)
+			return
+		}
+		limitGRPCProtobufValidation(responseType.Attribute(), selected, seen)
+		return
+	}
+	if selectedType, ok := selected.Type.(expr.UserType); ok {
+		limitGRPCProtobufValidation(response, selectedType.Attribute(), seen)
+		return
+	}
+
+	switch responseType := response.Type.(type) {
+	case *expr.Object:
+		selectedObject := expr.AsObject(selected.Type)
+		if selectedObject == nil {
+			panic("selected gRPC result view does not match its protobuf response")
+		}
+		if response.Validation != nil {
+			required := response.Validation.Required[:0]
+			for _, name := range response.Validation.Required {
+				if selectedObject.Attribute(name) != nil && selected.IsRequired(name) {
+					required = append(required, name)
+				}
+			}
+			response.Validation.Required = required
+		}
+		for _, field := range *responseType {
+			selectedField := selectedObject.Attribute(field.Name)
+			if selectedField == nil {
+				// A selected sibling may use the same nested type. Copy this
+				// field before removing checks so the sibling keeps its rules.
+				field.Attribute = expr.DupAtt(field.Attribute)
+				clearGRPCProtobufValidation(field.Attribute, make(map[*expr.AttributeExpr]struct{}))
+				continue
+			}
+			limitGRPCProtobufValidation(field.Attribute, selectedField, seen)
+		}
+	case *expr.Array:
+		selectedArray := expr.AsArray(selected.Type)
+		if selectedArray == nil {
+			panic("selected gRPC result view does not match its protobuf response array")
+		}
+		limitGRPCProtobufValidation(responseType.ElemType, selectedArray.ElemType, seen)
+	case *expr.Map:
+		selectedMap := expr.AsMap(selected.Type)
+		if selectedMap == nil {
+			panic("selected gRPC result view does not match its protobuf response map")
+		}
+		limitGRPCProtobufValidation(responseType.KeyType, selectedMap.KeyType, seen)
+		limitGRPCProtobufValidation(responseType.ElemType, selectedMap.ElemType, seen)
+	case *expr.Union:
+		selectedUnion := expr.AsUnion(selected.Type)
+		if selectedUnion == nil || len(responseType.Values) != len(selectedUnion.Values) {
+			panic("selected gRPC result view does not match its protobuf response union")
+		}
+		for index, branch := range responseType.Values {
+			limitGRPCProtobufValidation(branch.Attribute, selectedUnion.Values[index].Attribute, seen)
+		}
+	}
+}
+
+// unwrapSelectedGRPCView follows generated service type names until the value
+// has the same collection shape as a protobuf wrapper field.
+func unwrapSelectedGRPCView(selected *expr.AttributeExpr, kind expr.Kind) *expr.AttributeExpr {
+	for selected.Type.Kind() != kind {
+		userType, ok := selected.Type.(expr.UserType)
+		if !ok {
+			panic("selected gRPC result view does not match its protobuf wrapper")
+		}
+		selected = userType.Attribute()
+	}
+	return selected
+}
+
+// clearGRPCProtobufValidation removes checks from an unselected protobuf field
+// without changing the message fields or their generated Go types.
+func clearGRPCProtobufValidation(attribute *expr.AttributeExpr, seen map[*expr.AttributeExpr]struct{}) {
+	if _, ok := seen[attribute]; ok {
+		return
+	}
+	seen[attribute] = struct{}{}
+	attribute.Validation = nil
+	switch actual := attribute.Type.(type) {
+	case expr.UserType:
+		clearGRPCProtobufValidation(actual.Attribute(), seen)
+	case *expr.Object:
+		for _, field := range *actual {
+			clearGRPCProtobufValidation(field.Attribute, seen)
+		}
+	case *expr.Array:
+		clearGRPCProtobufValidation(actual.ElemType, seen)
+	case *expr.Map:
+		clearGRPCProtobufValidation(actual.KeyType, seen)
+		clearGRPCProtobufValidation(actual.ElemType, seen)
+	case *expr.Union:
+		for _, branch := range actual.Values {
+			clearGRPCProtobufValidation(branch.Attribute, seen)
+		}
+	}
+}
+
 // declareGRPCTransforms keeps a released response name when one method owns
 // it. Conversions shared by several methods use names based on their types.
 func declareGRPCTransforms(conversions map[grpcConversionKey]*grpcConversion, helpers []*grpcTransform) error {
@@ -771,11 +895,24 @@ func planGRPCValidations(generation *codegen.Generation, input PlanInput, servic
 			request := source
 			request.role = protobufRequestValidation
 			protobuf.catalog.collectValidation(messages.request, validateServer, request, "message", "message")
+			if protobufCLIRequestNeedsMessage(messages.request) {
+				// Command-line clients parse this request without a server, so
+				// they need the same check before converting it.
+				protobuf.catalog.collectValidation(messages.request, validateClient, request, "message", "message")
+			}
 		}
 		if protobuf.catalog.messageRecord(messages.response) != nil {
 			response := source
 			response.role = protobufResponseValidation
-			protobuf.catalog.collectValidation(messages.response, validateClient, response, "message", "message")
+			if messages.responseValidations == nil {
+				protobuf.catalog.collectValidation(messages.response, validateClient, response, "message", "message")
+			} else {
+				for _, view := range grpcResultViews(endpoint.MethodExpr) {
+					viewSource := response
+					viewSource.view = view
+					protobuf.catalog.collectValidation(messages.responseValidations[view], validateClient, viewSource, "message", "message")
+				}
+			}
 		}
 		for _, grpcError := range endpoint.GRPCErrors {
 			message := messages.errors[grpcError.Name]
@@ -807,12 +944,17 @@ func planGRPCValidations(generation *codegen.Generation, input PlanInput, servic
 			service:   validator.source.service,
 			method:    validator.source.method,
 			subject:   validator.source.error,
+			view:      validator.source.view,
 			path:      validator.source.path,
 			operation: int(validator.source.role),
 		}
+		preferred := "Validate" + validator.message.plannedName
+		if validator.source.view != "" && validator.source.view != expr.DefaultView {
+			preferred += codegen.Goify(validator.source.view, true)
+		}
 		validator.declaration = codegen.NewPreferredName(
 			codegen.NameFunction,
-			"Validate"+validator.message.plannedName,
+			preferred,
 			codegen.ExportedName,
 			grpcSymbolOrder(id),
 		)

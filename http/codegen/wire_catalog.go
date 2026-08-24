@@ -62,6 +62,7 @@ type (
 	wireTransformLayout struct {
 		wireSide       wireTransformSide
 		wirePolicy     wireTypePolicy
+		wireUse        wireUnionUse
 		servicePointer bool
 		servicePackage codegen.ImportSpec
 	}
@@ -98,7 +99,7 @@ type (
 	// type, branches, constants, and functions.
 	wireUnionRecord struct {
 		identity     wireUnionIdentity
-		union        *expr.Union
+		attribute    *expr.AttributeExpr
 		declaration  *codegen.NameDeclaration
 		kind         *codegen.NameDeclaration
 		kindDecls    []*codegen.NameDeclaration
@@ -107,15 +108,29 @@ type (
 		kindName     string
 		kindConsts   []string
 		constructors []string
+		storageNames []string
 		data         *service.UnionTypeData
 	}
 
 	// wireUnionOccurrence stores one copied union until Goa assigns names to its branches.
 	wireUnionOccurrence struct {
-		union  *expr.Union
-		role   wireTypeRole
-		policy wireTypePolicy
-		api    string
+		attribute *expr.AttributeExpr
+		use       wireUnionUse
+		role      wireTypeRole
+		policy    wireTypePolicy
+	}
+
+	// wireUnionUse identifies the HTTP body role that owns a union declaration.
+	wireUnionUse struct {
+		role wireTypeRole
+		view string
+	}
+
+	// wireUnionOwner identifies one authored OneOf in one HTTP body role and
+	// response view.
+	wireUnionOwner struct {
+		authored *expr.AttributeExpr
+		use      wireUnionUse
 	}
 
 	// wireValidationRoot stores one HTTP value whose generated code runs
@@ -125,12 +140,12 @@ type (
 		policy    wireTypePolicy
 	}
 
-	// wireUnionIdentity pairs a union definition with the Go type used by each branch.
+	// wireUnionIdentity records which OneOf was written, where HTTP uses it, and
+	// the Go type used by each branch.
 	wireUnionIdentity struct {
-		definition    codegen.UnionTypeID
-		declarations  []*wireTypeRecord
-		releasedOrder uint8
-		api           string
+		declaration  codegen.UnionDeclarationID
+		owner        wireUnionOwner
+		declarations []*wireTypeRecord
 	}
 
 	// wireTypeRecord stores one generated type and its optional functions.
@@ -203,7 +218,6 @@ type (
 	// several declarations ask for the same Go name.
 	wireNameOrder struct {
 		kind                wireNameKind
-		unionUse            uint8
 		api                 string
 		source              string
 		target              string
@@ -224,6 +238,7 @@ type (
 		base            codegen.Attributor
 		pkg             string
 		policy          wireTypePolicy
+		use             wireUnionUse
 		viewRoot        *wireTypeRecord
 		exactOccurrence bool
 	}
@@ -241,17 +256,11 @@ const (
 	wireTransformTarget
 )
 
-// These values preserve the former alphabetical category order so replacing
-// text keys does not change generated names.
 const (
 	wireNameConstructor wireNameKind = iota + 1
 	wireNameNestedValidator
 	wireNameTransformHelper
 	wireNameType
-	wireNameUnion
-	wireNameUnionConstant
-	wireNameUnionConstructor
-	wireNameUnionKind
 	wireNameValidator
 )
 
@@ -287,28 +296,29 @@ func (c *wireTypeCatalog) collectWithReleasedNames(attribute *expr.AttributeExpr
 	if len(api) > 0 {
 		root = api[0]
 	}
-	return c.collectRecursive(attribute, role, policy, preferred, suffix, root, true, releasedNames, make(map[expr.UserType]struct{}))
+	use := wireUnionUse{role: role, view: policy.view}
+	return c.collectRecursive(attribute, role, policy, use, preferred, suffix, root, true, releasedNames, make(map[expr.UserType]struct{}))
 }
 
 // collectChildren records named types inside attribute without recording its
 // top-level named type a second time.
-func (c *wireTypeCatalog) collectChildren(attribute *expr.AttributeExpr, policy wireTypePolicy, api ...string) {
-	c.collectChildrenWithReleasedNames(attribute, policy, nil, api...)
+func (c *wireTypeCatalog) collectChildren(attribute *expr.AttributeExpr, use wireUnionUse, policy wireTypePolicy, api ...string) {
+	c.collectChildrenWithReleasedNames(attribute, use, policy, nil, api...)
 }
 
 // collectChildrenWithReleasedNames records response fields with their released
 // names when selecting a view changed the order of name suffixes.
-func (c *wireTypeCatalog) collectChildrenWithReleasedNames(attribute *expr.AttributeExpr, policy wireTypePolicy, releasedNames map[expr.UserType]string, api ...string) {
+func (c *wireTypeCatalog) collectChildrenWithReleasedNames(attribute *expr.AttributeExpr, use wireUnionUse, policy wireTypePolicy, releasedNames map[expr.UserType]string, api ...string) {
 	suffix := c.releasedSuffixes[attribute]
 	root := ""
 	if len(api) > 0 {
 		root = api[0]
 	}
 	if userType, ok := attribute.Type.(expr.UserType); ok {
-		c.collectRecursive(userType.Attribute(), wireAttribute, policy, "", suffix, root, false, releasedNames, make(map[expr.UserType]struct{}))
+		c.collectRecursive(userType.Attribute(), wireAttribute, policy, use, "", suffix, root, false, releasedNames, make(map[expr.UserType]struct{}))
 		return
 	}
-	c.collectRecursive(attribute, wireAttribute, policy, "", suffix, root, false, releasedNames, make(map[expr.UserType]struct{}))
+	c.collectRecursive(attribute, wireAttribute, policy, use, "", suffix, root, false, releasedNames, make(map[expr.UserType]struct{}))
 }
 
 // Declare requests every type and function name this HTTP package can write.
@@ -373,62 +383,53 @@ func (c *wireTypeCatalog) Declare() error {
 		}
 	}
 	for _, occurrence := range c.unionOccurrences {
-		identity := c.unionIdentity(occurrence.union, occurrence.role, occurrence.policy, occurrence.api)
-		if record := c.findUnion(identity); record != nil {
-			record.identity.releasedOrder = min(record.identity.releasedOrder, identity.releasedOrder)
-			if record.identity.api == "" || identity.api != "" && identity.api < record.identity.api {
-				record.identity.api = identity.api
-			}
-		} else {
-			c.unions = append(c.unions, &wireUnionRecord{identity: identity, union: occurrence.union})
-		}
-	}
-	for _, union := range c.unions {
-		union.declaration = codegen.NewPreferredName(
-			codegen.NameType,
-			union.union.Name(),
-			codegen.ExportedName,
-			union.identity.order(wireNameUnion, union.union.Name(), ""),
-		)
-		if err := c.pkg.DeclareName(union.declaration); err != nil {
+		if err := validateHTTPUnionBranchGoNames(occurrence.attribute.Type.(*expr.Union)); err != nil {
 			return err
 		}
-		kind, err := c.pkg.DeclareDependentName(
-			codegen.NameType,
-			union.declaration,
-			"",
-			"Kind",
-			union.identity.order(wireNameUnionKind, union.union.Name(), ""),
-		)
-		if err != nil {
+		identity := c.unionIdentity(occurrence.attribute, occurrence.use, occurrence.role, occurrence.policy)
+		if record := c.findUnion(identity); record != nil {
+			continue
+		}
+		if record := c.findUnionOwner(identity.owner); record != nil {
+			return fmt.Errorf(
+				"HTTP OneOf %q produces different %s definitions; use separate OneOf declarations",
+				occurrence.attribute.Type.Name(),
+				occurrence.use.description(),
+			)
+		}
+		c.unions = append(c.unions, &wireUnionRecord{identity: identity, attribute: occurrence.attribute})
+	}
+	for _, union := range c.unions {
+		actual := union.attribute.Type.(*expr.Union)
+		name := union.identity.owner.use.nameFor(actual)
+		union.declaration = codegen.NewExactName(codegen.NameType, name)
+		if err := c.declareUnionName(actual, union.identity.owner.use, union.declaration); err != nil {
+			return err
+		}
+		kind := codegen.NewExactName(codegen.NameType, name+"Kind")
+		if err := c.declareUnionName(actual, union.identity.owner.use, kind); err != nil {
 			return err
 		}
 		union.kind = kind
-		union.kindDecls = make([]*codegen.NameDeclaration, len(union.union.Values))
-		union.ctorDecls = make([]*codegen.NameDeclaration, len(union.union.Values))
-		for index, branch := range union.union.Values {
-			kindDeclaration, err := c.pkg.DeclareDependentName(
-				codegen.NameConstant,
-				union.kind,
-				"",
-				codegen.Goify(branch.Name, true),
-				union.identity.order(wireNameUnionConstant, union.union.Name(), branch.Name),
-			)
-			if err != nil {
+		union.kindDecls = make([]*codegen.NameDeclaration, len(actual.Values))
+		union.ctorDecls = make([]*codegen.NameDeclaration, len(actual.Values))
+		union.storageNames = make([]string, len(actual.Values))
+		storageNames := codegen.NewNameScope()
+		// Reserve kind for the selector so a branch named kind uses another field.
+		storageNames.Unique("kind")
+		for index, branch := range actual.Values {
+			branchName := codegen.Goify(branch.Name, true)
+			kindDeclaration := codegen.NewExactName(codegen.NameConstant, name+"Kind"+branchName)
+			if err := c.declareUnionName(actual, union.identity.owner.use, kindDeclaration); err != nil {
 				return err
 			}
-			constructor, err := c.pkg.DeclareDependentName(
-				codegen.NameFunction,
-				union.declaration,
-				"New",
-				codegen.Goify(branch.Name, true),
-				union.identity.order(wireNameUnionConstructor, union.union.Name(), branch.Name),
-			)
-			if err != nil {
+			constructor := codegen.NewExactName(codegen.NameFunction, "New"+name+branchName)
+			if err := c.declareUnionName(actual, union.identity.owner.use, constructor); err != nil {
 				return err
 			}
 			union.kindDecls[index] = kindDeclaration
 			union.ctorDecls[index] = constructor
+			union.storageNames[index] = storageNames.Unique(codegen.Goify(branch.Name, false))
 		}
 	}
 	for _, transform := range c.transforms {
@@ -731,13 +732,17 @@ func (c *wireTypeCatalog) renderTransform(
 		return "", nil, err
 	}
 	if transform.layout.wireSide == wireTransformSource {
-		c.bindTransformOccurrence(transform.source, wireAttribute, sourceContext)
+		if err := c.bindTransformOccurrence(transform.source, wireAttribute, sourceContext, transform.layout.wireUse); err != nil {
+			return "", nil, err
+		}
 	} else {
-		c.bindTransformOccurrence(transform.target, wireAttribute, targetContext)
+		if err := c.bindTransformOccurrence(transform.target, wireAttribute, targetContext, transform.layout.wireUse); err != nil {
+			return "", nil, err
+		}
 	}
 	for _, helper := range transform.plan.Helpers() {
-		c.bindTransformHelper(helper.Source, sourceContext)
-		c.bindTransformHelper(helper.Target, targetContext)
+		c.bindTransformHelper(helper.Source, sourceContext, transform.layout.wireUse)
+		c.bindTransformHelper(helper.Target, targetContext, transform.layout.wireUse)
 	}
 	code, helpers, err := transform.plan.Render(sourceVar, targetVar, true)
 	if err != nil {
@@ -800,30 +805,182 @@ func wireTransformDefinitionsEqual(left, right *codegen.TransformFunctionData) b
 // bindTransformHelper gives a nested copied field the same Go type name used by
 // its generated conversion function. Service values already receive names from
 // the service generator.
-func (c *wireTypeCatalog) bindTransformHelper(attribute *expr.AttributeExpr, context *codegen.AttributeContext) {
+func (c *wireTypeCatalog) bindTransformHelper(attribute *expr.AttributeExpr, context *codegen.AttributeContext, use wireUnionUse) {
 	scope, ok := context.Scope.(*wireAttributeScope)
 	if !ok || scope.catalog != c {
 		return
 	}
 	policy := scope.policy
 	policy.view = ""
-	c.applyNamesRecursive(attribute, wireAttribute, policy, make(map[expr.UserType]struct{}))
+	c.applyNamesRecursive(attribute, wireAttribute, policy, use, make(map[expr.UserType]struct{}))
 }
 
 // bindTransformOccurrence records the Go type used by one copied conversion
 // value and each named field inside it.
-func (c *wireTypeCatalog) bindTransformOccurrence(planned, rendered *expr.AttributeExpr, context *codegen.AttributeContext) {
+func (c *wireTypeCatalog) bindTransformOccurrence(planned, rendered *expr.AttributeExpr, context *codegen.AttributeContext, use wireUnionUse) error {
 	scope, ok := context.Scope.(*wireAttributeScope)
 	if !ok || scope.catalog != c {
-		return
+		return nil
+	}
+	// The transform planner works on its own copy. Carry each union's planned
+	// declaration from the rendered HTTP body to that copy before rendering.
+	if err := c.bindCopiedUnionOccurrences(planned, rendered, "body", make(map[wireAttributePair]struct{})); err != nil {
+		return err
 	}
 	record := c.bindings[rendered]
 	if record == nil {
-		c.applyNamesRecursive(planned, wireAttribute, scope.policy, make(map[expr.UserType]struct{}))
-		return
+		c.applyNamesRecursive(planned, wireAttribute, scope.policy, use, make(map[expr.UserType]struct{}))
+		return nil
 	}
 	c.bindOccurrence(planned, record)
-	c.applyNamesRecursive(planned, record.identity.role, record.identity.policy, make(map[expr.UserType]struct{}))
+	c.applyNamesRecursive(planned, record.identity.role, record.identity.policy, use, make(map[expr.UserType]struct{}))
+	return nil
+}
+
+// bindCopiedUnionOccurrences gives unions in a transform copy the declarations
+// already selected for the matching fields in the rendered HTTP body. It
+// rejects a mismatch because a declaration from another field would generate
+// a conversion with the wrong public type.
+func (c *wireTypeCatalog) bindCopiedUnionOccurrences(planned, rendered *expr.AttributeExpr, path string, seen map[wireAttributePair]struct{}) error {
+	if planned == nil || rendered == nil {
+		switch {
+		case planned == nil && rendered == nil:
+			return nil
+		case planned == nil:
+			return fmt.Errorf("planned attribute is missing at %s", path)
+		default:
+			return fmt.Errorf("rendered attribute is missing at %s", path)
+		}
+	}
+	if planned.Type == expr.Empty || rendered.Type == expr.Empty {
+		if planned.Type == rendered.Type {
+			return nil
+		}
+		return copiedUnionTypeMismatch(planned, rendered, path)
+	}
+	pair := wireAttributePair{left: planned, right: rendered}
+	if _, ok := seen[pair]; ok {
+		return nil
+	}
+	seen[pair] = struct{}{}
+
+	if plannedType, ok := planned.Type.(expr.UserType); ok {
+		renderedType, ok := rendered.Type.(expr.UserType)
+		if !ok {
+			return copiedUnionTypeMismatch(planned, rendered, path)
+		}
+		if plannedType.Name() != renderedType.Name() {
+			return copiedUnionTypeMismatch(planned, rendered, path)
+		}
+		return c.bindCopiedUnionOccurrences(plannedType.Attribute(), renderedType.Attribute(), path, seen)
+	}
+	if _, ok := rendered.Type.(expr.UserType); ok {
+		return copiedUnionTypeMismatch(planned, rendered, path)
+	}
+	switch plannedType := planned.Type.(type) {
+	case *expr.Object:
+		renderedType, ok := rendered.Type.(*expr.Object)
+		if !ok {
+			return copiedUnionTypeMismatch(planned, rendered, path)
+		}
+		for _, field := range *plannedType {
+			renderedField := renderedType.Attribute(field.Name)
+			fieldPath := path + "." + field.Name
+			if renderedField == nil {
+				return fmt.Errorf("rendered object has no field %q at %s", field.Name, fieldPath)
+			}
+			if err := c.bindCopiedUnionOccurrences(field.Attribute, renderedField, fieldPath, seen); err != nil {
+				return err
+			}
+		}
+		for _, field := range *renderedType {
+			if plannedType.Attribute(field.Name) == nil {
+				return fmt.Errorf("planned object has no field %q at %s.%s", field.Name, path, field.Name)
+			}
+		}
+	case *expr.Array:
+		renderedType, ok := rendered.Type.(*expr.Array)
+		if !ok {
+			return copiedUnionTypeMismatch(planned, rendered, path)
+		}
+		return c.bindCopiedUnionOccurrences(plannedType.ElemType, renderedType.ElemType, path+"[]", seen)
+	case *expr.Map:
+		renderedType, ok := rendered.Type.(*expr.Map)
+		if !ok {
+			return copiedUnionTypeMismatch(planned, rendered, path)
+		}
+		if err := c.bindCopiedUnionOccurrences(plannedType.KeyType, renderedType.KeyType, path+" key", seen); err != nil {
+			return err
+		}
+		return c.bindCopiedUnionOccurrences(plannedType.ElemType, renderedType.ElemType, path+" value", seen)
+	case *expr.Union:
+		renderedType, ok := rendered.Type.(*expr.Union)
+		if !ok {
+			return copiedUnionTypeMismatch(planned, rendered, path)
+		}
+		if plannedType.Name() != renderedType.Name() || plannedType.TypeKey != renderedType.TypeKey || plannedType.ValueKey != renderedType.ValueKey {
+			return copiedUnionTypeMismatch(planned, rendered, path)
+		}
+		if record := c.unionBindings[renderedType]; record != nil {
+			c.unionBindings[plannedType] = record
+		}
+		for _, branch := range plannedType.Values {
+			renderedBranch := unionBranchAttribute(renderedType, branch.Name)
+			branchPath := path + "." + branch.Name
+			if renderedBranch == nil {
+				return fmt.Errorf("rendered OneOf %q has no branch %q at %s", renderedType.Name(), branch.Name, branchPath)
+			}
+			if err := c.bindCopiedUnionOccurrences(branch.Attribute, renderedBranch, branchPath, seen); err != nil {
+				return err
+			}
+		}
+		for _, branch := range renderedType.Values {
+			if unionBranchAttribute(plannedType, branch.Name) == nil {
+				return fmt.Errorf("planned OneOf %q has no branch %q at %s.%s", plannedType.Name(), branch.Name, path, branch.Name)
+			}
+		}
+	default:
+		if planned.Type != rendered.Type {
+			return copiedUnionTypeMismatch(planned, rendered, path)
+		}
+	}
+	return nil
+}
+
+// copiedUnionTypeMismatch describes two expression nodes that cannot represent
+// the same field in a planned and rendered HTTP conversion.
+func copiedUnionTypeMismatch(planned, rendered *expr.AttributeExpr, path string) error {
+	return fmt.Errorf(
+		"planned %s does not match rendered %s at %s",
+		copiedUnionTypeName(planned.Type),
+		copiedUnionTypeName(rendered.Type),
+		path,
+	)
+}
+
+// copiedUnionTypeName returns a short concrete name for a mismatch diagnostic.
+func copiedUnionTypeName(dataType expr.DataType) string {
+	if dataType == expr.Empty {
+		return "empty type"
+	}
+	if userType, ok := dataType.(expr.UserType); ok {
+		return fmt.Sprintf("user type %q", userType.Name())
+	}
+	if union, ok := dataType.(*expr.Union); ok {
+		return fmt.Sprintf("OneOf %q", union.Name())
+	}
+	return dataType.Name()
+}
+
+// unionBranchAttribute returns the branch with name, or nil when two transform
+// copies do not have the same fields.
+func unionBranchAttribute(union *expr.Union, name string) *expr.AttributeExpr {
+	for _, branch := range union.Values {
+		if branch.Name == name {
+			return branch.Attribute
+		}
+	}
+	return nil
 }
 
 // Link reads the assigned package names and builds the type definitions,
@@ -849,10 +1006,11 @@ func (c *wireTypeCatalog) Link() {
 			union.kindConsts[index] = union.kindDecls[index].Name()
 			union.constructors[index] = union.ctorDecls[index].Name()
 		}
-		c.applyUnionRecord(union.union, union)
+		c.applyUnionRecord(union.attribute, union)
 	}
 	for _, union := range c.unions {
-		union.data = buildHTTPUnionTypeData(union.union, c.occurrenceResolver(c.scope), union)
+		actual := union.attribute.Type.(*expr.Union)
+		union.data = buildHTTPUnionTypeData(actual, c.occurrenceResolver(c.scope, union.identity.owner.use), union)
 	}
 	c.linked = true
 }
@@ -900,12 +1058,13 @@ func (c *wireTypeCatalog) lookupUser(attribute *expr.AttributeExpr, role wireTyp
 // applyNames associates every copied nested attribute with the Go type name
 // used by its definition and conversions.
 func (c *wireTypeCatalog) applyNames(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy) {
-	c.applyNamesRecursive(attribute, role, policy, make(map[expr.UserType]struct{}))
+	use := wireUnionUse{role: role, view: policy.view}
+	c.applyNamesRecursive(attribute, role, policy, use, make(map[expr.UserType]struct{}))
 }
 
 // applyNamesRecursive follows each named field once, including fields that
 // refer back to an outer type.
-func (c *wireTypeCatalog) applyNamesRecursive(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, seen map[expr.UserType]struct{}) {
+func (c *wireTypeCatalog) applyNamesRecursive(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, use wireUnionUse, seen map[expr.UserType]struct{}) {
 	if attribute.Type == expr.Empty {
 		return
 	}
@@ -918,7 +1077,7 @@ func (c *wireTypeCatalog) applyNamesRecursive(attribute *expr.AttributeExpr, rol
 		seen[origin] = struct{}{}
 		nestedPolicy := policy
 		nestedPolicy.view = ""
-		c.applyNamesRecursive(userType.Attribute(), wireAttribute, nestedPolicy, seen)
+		c.applyNamesRecursive(userType.Attribute(), wireAttribute, nestedPolicy, use, seen)
 		delete(seen, origin)
 		return
 	}
@@ -927,20 +1086,24 @@ func (c *wireTypeCatalog) applyNamesRecursive(attribute *expr.AttributeExpr, rol
 	switch actual := attribute.Type.(type) {
 	case *expr.Object:
 		for _, named := range *actual {
-			c.applyNamesRecursive(named.Attribute, wireAttribute, nestedPolicy, seen)
+			c.applyNamesRecursive(named.Attribute, wireAttribute, nestedPolicy, use, seen)
 		}
 	case *expr.Array:
-		c.applyNamesRecursive(actual.ElemType, wireAttribute, nestedPolicy, seen)
+		c.applyNamesRecursive(actual.ElemType, wireAttribute, nestedPolicy, use, seen)
 	case *expr.Map:
-		c.applyNamesRecursive(actual.KeyType, wireAttribute, nestedPolicy, seen)
-		c.applyNamesRecursive(actual.ElemType, wireAttribute, nestedPolicy, seen)
+		c.applyNamesRecursive(actual.KeyType, wireAttribute, nestedPolicy, use, seen)
+		c.applyNamesRecursive(actual.ElemType, wireAttribute, nestedPolicy, use, seen)
 	case *expr.Union:
-		identity := c.unionIdentity(actual, role, policy)
+		if record := c.unionBindings[actual]; record != nil {
+			c.applyUnionRecord(attribute, record)
+			return
+		}
+		identity := c.unionIdentity(attribute, use, role, policy)
 		record := c.findUnion(identity)
 		if record == nil {
 			panic(fmt.Sprintf("HTTP union %q was not submitted before package names were assigned", actual.Name()))
 		}
-		c.applyUnionRecord(actual, record)
+		c.applyUnionRecord(attribute, record)
 	}
 }
 
@@ -1077,7 +1240,7 @@ func (r *wireTypeRecord) errorDescription() string {
 // collectRecursive records named types and stops when a type refers back to one
 // it is already reading. Released names are kept separately from current type
 // identity so several old declarations can share one current declaration.
-func (c *wireTypeCatalog) collectRecursive(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, preferred, releasedSuffix, api string, root bool, releasedNames map[expr.UserType]string, seen map[expr.UserType]struct{}) *wireTypeRecord {
+func (c *wireTypeCatalog) collectRecursive(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, use wireUnionUse, preferred, releasedSuffix, api string, root bool, releasedNames map[expr.UserType]string, seen map[expr.UserType]struct{}) *wireTypeRecord {
 	if attribute.Type == expr.Empty {
 		return nil
 	}
@@ -1101,7 +1264,7 @@ func (c *wireTypeCatalog) collectRecursive(attribute *expr.AttributeExpr, role w
 		seen[origin] = struct{}{}
 		nestedPolicy := policy
 		nestedPolicy.view = ""
-		c.collectRecursive(userType.Attribute(), wireAttribute, nestedPolicy, "", releasedSuffix, api, false, releasedNames, seen)
+		c.collectRecursive(userType.Attribute(), wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen)
 		delete(seen, origin)
 		return record
 	}
@@ -1116,24 +1279,29 @@ func (c *wireTypeCatalog) collectRecursive(attribute *expr.AttributeExpr, role w
 		nestedPolicy := policy
 		nestedPolicy.view = ""
 		for _, named := range sortedWireAttributes(*actual) {
-			c.collectRecursive(named.Attribute, wireAttribute, nestedPolicy, "", releasedSuffix, api, false, releasedNames, seen)
+			c.collectRecursive(named.Attribute, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen)
 		}
 	case *expr.Array:
 		nestedPolicy := policy
 		nestedPolicy.view = ""
-		c.collectRecursive(actual.ElemType, wireAttribute, nestedPolicy, "", releasedSuffix, api, false, releasedNames, seen)
+		c.collectRecursive(actual.ElemType, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen)
 	case *expr.Map:
 		nestedPolicy := policy
 		nestedPolicy.view = ""
-		c.collectRecursive(actual.KeyType, wireAttribute, nestedPolicy, "", releasedSuffix, api, false, releasedNames, seen)
-		c.collectRecursive(actual.ElemType, wireAttribute, nestedPolicy, "", releasedSuffix, api, false, releasedNames, seen)
+		c.collectRecursive(actual.KeyType, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen)
+		c.collectRecursive(actual.ElemType, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen)
 	case *expr.Union:
 		nestedPolicy := policy
 		nestedPolicy.view = ""
-		union := expr.Dup(actual).(*expr.Union)
-		c.unionOccurrences = append(c.unionOccurrences, wireUnionOccurrence{union: union, role: role, policy: policy, api: api})
+		unionAttribute := expr.DupAtt(attribute)
+		c.unionOccurrences = append(c.unionOccurrences, wireUnionOccurrence{
+			attribute: unionAttribute,
+			use:       use,
+			role:      role,
+			policy:    policy,
+		})
 		for _, named := range actual.Values {
-			c.collectRecursive(named.Attribute, wireAttribute, nestedPolicy, "", releasedSuffix, api, false, releasedNames, seen)
+			c.collectRecursive(named.Attribute, wireAttribute, nestedPolicy, use, "", releasedSuffix, api, false, releasedNames, seen)
 		}
 	}
 	return record
@@ -1266,28 +1434,18 @@ func (c *wireTypeCatalog) find(identity wireTypeIdentity) *wireTypeRecord {
 	return nil
 }
 
-// unionIdentity returns the Go type used by every named branch of
-// union without changing union.
-func (c *wireTypeCatalog) unionIdentity(union *expr.Union, role wireTypeRole, policy wireTypePolicy, api ...string) wireUnionIdentity {
+// unionIdentity returns the authored declaration, HTTP use, and Go type used
+// by every named branch without changing attribute.
+func (c *wireTypeCatalog) unionIdentity(attribute *expr.AttributeExpr, use wireUnionUse, role wireTypeRole, policy wireTypePolicy) wireUnionIdentity {
 	identity := wireUnionIdentity{
-		definition:    codegen.NewUnionTypeID(union),
-		releasedOrder: releasedUnionOrder(policy),
+		declaration: codegen.NewUnionDeclarationID(attribute),
+		owner: wireUnionOwner{
+			authored: attribute.AuthoredAttribute(),
+			use:      use,
+		},
 	}
-	if len(api) > 0 {
-		identity.api = api[0]
-	}
-	attribute := &expr.AttributeExpr{Type: union}
 	c.collectUnionDeclarations(attribute, role, policy, &identity.declarations, make(map[expr.UserType]struct{}))
 	return identity
-}
-
-// releasedUnionOrder keeps the request union name when request and response
-// copies of the same designed union need different Go declarations.
-func releasedUnionOrder(policy wireTypePolicy) uint8 {
-	if policy.request {
-		return 1
-	}
-	return 2
 }
 
 // collectUnionDeclarations records generated branch types in branch order.
@@ -1334,12 +1492,13 @@ func (c *wireTypeCatalog) collectUnionDeclarations(attribute *expr.AttributeExpr
 
 // applyUnionRecord gives one copied union the exact branch type names stored in
 // record.
-func (c *wireTypeCatalog) applyUnionRecord(union *expr.Union, record *wireUnionRecord) {
+func (c *wireTypeCatalog) applyUnionRecord(attribute *expr.AttributeExpr, record *wireUnionRecord) {
+	union := attribute.Type.(*expr.Union)
 	c.unionBindings[union] = record
 	index := 0
 	seen := make(map[expr.UserType]struct{})
 	for _, branch := range union.Values {
-		c.applyResolvedDeclarations(branch.Attribute, record.identity.declarations, &index, seen)
+		c.applyResolvedDeclarations(branch.Attribute, record.identity.owner.use, record.identity.declarations, &index, seen)
 	}
 	if index != len(record.identity.declarations) {
 		panic(fmt.Sprintf("HTTP union %q did not use every submitted branch name", record.name))
@@ -1348,7 +1507,7 @@ func (c *wireTypeCatalog) applyUnionRecord(union *expr.Union, record *wireUnionR
 
 // applyResolvedDeclarations gives each named branch its previously chosen Go
 // type in the same order those types were recorded.
-func (c *wireTypeCatalog) applyResolvedDeclarations(attribute *expr.AttributeExpr, declarations []*wireTypeRecord, index *int, seen map[expr.UserType]struct{}) {
+func (c *wireTypeCatalog) applyResolvedDeclarations(attribute *expr.AttributeExpr, use wireUnionUse, declarations []*wireTypeRecord, index *int, seen map[expr.UserType]struct{}) {
 	if attribute.Type == expr.Empty {
 		return
 	}
@@ -1364,27 +1523,33 @@ func (c *wireTypeCatalog) applyResolvedDeclarations(attribute *expr.AttributeExp
 			return
 		}
 		seen[origin] = struct{}{}
-		c.applyResolvedDeclarations(userType.Attribute(), declarations, index, seen)
+		c.applyResolvedDeclarations(userType.Attribute(), use, declarations, index, seen)
 		delete(seen, origin)
 		return
 	}
 	switch actual := attribute.Type.(type) {
 	case *expr.Object:
 		for _, named := range *actual {
-			c.applyResolvedDeclarations(named.Attribute, declarations, index, seen)
+			c.applyResolvedDeclarations(named.Attribute, use, declarations, index, seen)
 		}
 	case *expr.Array:
-		c.applyResolvedDeclarations(actual.ElemType, declarations, index, seen)
+		c.applyResolvedDeclarations(actual.ElemType, use, declarations, index, seen)
 	case *expr.Map:
-		c.applyResolvedDeclarations(actual.KeyType, declarations, index, seen)
-		c.applyResolvedDeclarations(actual.ElemType, declarations, index, seen)
+		c.applyResolvedDeclarations(actual.KeyType, use, declarations, index, seen)
+		c.applyResolvedDeclarations(actual.ElemType, use, declarations, index, seen)
 	case *expr.Union:
-		definition := codegen.NewUnionTypeID(actual)
 		start := *index
 		for _, branch := range actual.Values {
-			c.applyResolvedDeclarations(branch.Attribute, declarations, index, seen)
+			c.applyResolvedDeclarations(branch.Attribute, use, declarations, index, seen)
 		}
-		identity := wireUnionIdentity{definition: definition, declarations: declarations[start:*index]}
+		identity := wireUnionIdentity{
+			declaration: codegen.NewUnionDeclarationID(attribute),
+			owner: wireUnionOwner{
+				authored: attribute.AuthoredAttribute(),
+				use:      use,
+			},
+			declarations: declarations[start:*index],
+		}
 		record := c.findUnion(identity)
 		if record == nil {
 			panic(fmt.Sprintf("HTTP nested union %q has no submitted Go type name", actual.Name()))
@@ -1399,20 +1564,27 @@ func (c *wireTypeCatalog) resolver(scope *codegen.NameScope, policy wireTypePoli
 	return &wireAttributeScope{catalog: c, base: codegen.NewAttributeScope(scope), policy: policy}
 }
 
+// resolverForUse names unions from copies made while rendering one exact HTTP
+// body role and response view.
+func (c *wireTypeCatalog) resolverForUse(scope *codegen.NameScope, policy wireTypePolicy, use wireUnionUse) codegen.Attributor {
+	return &wireAttributeScope{catalog: c, base: codegen.NewAttributeScope(scope), policy: policy, use: use}
+}
+
 // occurrenceResolver uses only the exact type records attached to one copied
 // expression. Union declarations use it after their branch records are fixed.
-func (c *wireTypeCatalog) occurrenceResolver(scope *codegen.NameScope) codegen.Attributor {
+func (c *wireTypeCatalog) occurrenceResolver(scope *codegen.NameScope, use wireUnionUse) codegen.Attributor {
 	return &wireAttributeScope{
 		catalog:         c,
 		base:            codegen.NewAttributeScope(scope),
+		use:             use,
 		exactOccurrence: true,
 	}
 }
 
 // rootResolver applies a selected result view only to root. Nested fields use
 // their normal type definitions without that view.
-func (c *wireTypeCatalog) rootResolver(scope *codegen.NameScope, policy wireTypePolicy, root *wireTypeRecord) codegen.Attributor {
-	return &wireAttributeScope{catalog: c, base: codegen.NewAttributeScope(scope), policy: policy, viewRoot: root}
+func (c *wireTypeCatalog) rootResolver(scope *codegen.NameScope, policy wireTypePolicy, use wireUnionUse, root *wireTypeRecord) codegen.Attributor {
+	return &wireAttributeScope{catalog: c, base: codegen.NewAttributeScope(scope), policy: policy, use: use, viewRoot: root}
 }
 
 // bindOccurrence records the Go type used by one copied named value and its fields.
@@ -1489,8 +1661,8 @@ func (s *wireAttributeScope) Name(attribute *expr.AttributeExpr, pkg string, poi
 		}
 		return pkg + "." + record.name
 	}
-	if union, ok := attribute.Type.(*expr.Union); ok {
-		if record := s.unionRecord(union); record != nil {
+	if _, ok := attribute.Type.(*expr.Union); ok {
+		if record := s.unionRecord(attribute); record != nil {
 			if pkg == "" {
 				return record.name
 			}
@@ -1557,6 +1729,7 @@ func (s *wireAttributeScope) Enter(attribute *expr.AttributeExpr) codegen.Attrib
 		base:            s.base.Enter(attribute),
 		pkg:             pkg,
 		policy:          policy,
+		use:             s.use,
 		viewRoot:        viewRoot,
 		exactOccurrence: s.exactOccurrence,
 	}
@@ -1606,13 +1779,21 @@ func (s *wireAttributeScope) record(attribute *expr.AttributeExpr) *wireTypeReco
 	return s.catalog.find(identity)
 }
 
-// unionRecord returns the chosen union for union. A copied nested union may
-// reuse it when its pointer and default-value rules are the same.
-func (s *wireAttributeScope) unionRecord(union *expr.Union) *wireUnionRecord {
+// unionRecord returns the declaration assigned to this exact copied union.
+func (s *wireAttributeScope) unionRecord(attribute *expr.AttributeExpr) *wireUnionRecord {
+	union := attribute.Type.(*expr.Union)
 	if record := s.catalog.unionBindings[union]; record != nil {
 		return record
 	}
-	return s.catalog.findUnion(s.catalog.unionIdentity(union, wireAttribute, s.policy))
+	identity := s.catalog.unionIdentity(attribute, s.use, wireAttribute, s.policy)
+	if record := s.catalog.findUnion(identity); record != nil {
+		s.catalog.applyUnionRecord(attribute, record)
+		return record
+	}
+	if s.catalog.linked {
+		panic(fmt.Sprintf("HTTP union %q was not bound to its planned declaration", union.Name()))
+	}
+	return nil
 }
 
 // Scope returns the list used to keep local variable names unique.
@@ -1630,10 +1811,83 @@ func (c *wireTypeCatalog) findUnion(identity wireUnionIdentity) *wireUnionRecord
 	return nil
 }
 
-// wireUnionIdentitiesEqual reports whether two unions use the same definition
-// and the same generated branch types.
+// findUnionOwner returns the declaration for one authored OneOf in one HTTP
+// body role and response view.
+func (c *wireTypeCatalog) findUnionOwner(owner wireUnionOwner) *wireUnionRecord {
+	for _, record := range c.unions {
+		if record.identity.owner == owner {
+			return record
+		}
+	}
+	return nil
+}
+
+// wireUnionIdentitiesEqual reports whether two copies come from the same OneOf,
+// serve the same HTTP use, and emit the same branch declarations.
 func wireUnionIdentitiesEqual(left, right wireUnionIdentity) bool {
-	return left.definition == right.definition && slices.Equal(left.declarations, right.declarations)
+	return left.declaration == right.declaration && left.owner.use == right.owner.use && slices.Equal(left.declarations, right.declarations)
+}
+
+// nameFor returns the exact public name for one union in this HTTP body role.
+func (u wireUnionUse) nameFor(union *expr.Union) string {
+	return codegen.Goify(union.Name(), true) + u.suffix()
+}
+
+// suffix returns the fixed public suffix for one HTTP body role and response
+// view.
+func (u wireUnionUse) suffix() string {
+	switch u.role {
+	case wireRequestBody:
+		return "RequestBody"
+	case wireStreamPayload:
+		return "StreamingBody"
+	case wireResponseBody:
+		return codegen.Goify(u.view, true) + "ResponseBody"
+	default:
+		return ""
+	}
+}
+
+// description names one HTTP use in an error shown to a design author.
+func (u wireUnionUse) description() string {
+	if suffix := u.suffix(); suffix != "" {
+		return suffix
+	}
+	return "direct attribute"
+}
+
+// declareUnionName reserves one exact public name and explains how the design
+// author can resolve a collision.
+func (c *wireTypeCatalog) declareUnionName(union *expr.Union, use wireUnionUse, declaration *codegen.NameDeclaration) error {
+	if err := c.pkg.DeclareName(declaration); err != nil {
+		return fmt.Errorf(
+			"declare HTTP OneOf %q for %s: %w; set TypeName on the OneOf to a unique name",
+			union.Name(),
+			use.description(),
+			err,
+		)
+	}
+	return nil
+}
+
+// validateHTTPUnionBranchGoNames rejects branch spellings that would create
+// the same exported Go identifier and therefore the same public union names.
+func validateHTTPUnionBranchGoNames(union *expr.Union) error {
+	branches := make(map[string]string, len(union.Values))
+	for _, branch := range union.Values {
+		goName := codegen.Goify(branch.Name, true)
+		if existing, ok := branches[goName]; ok {
+			return fmt.Errorf(
+				"OneOf %q branches %q and %q both generate Go name %q; rename one of the branches",
+				union.Name(),
+				existing,
+				branch.Name,
+				goName,
+			)
+		}
+		branches[goName] = branch.Name
+	}
+	return nil
 }
 
 // newWireTypeIdentity records the designed value and the rules that determine
@@ -1722,44 +1976,12 @@ func (i wireTypeIdentity) order(kind wireNameKind) wireNameOrder {
 	}
 }
 
-// order returns the designed values used to choose stable suffixes for a union,
-// its constants, and its functions.
-func (i wireUnionIdentity) order(kind wireNameKind, name, branch string) wireNameOrder {
-	declarations := make([]string, len(i.declarations))
-	for index, declaration := range i.declarations {
-		order := declaration.identity.order(wireNameType)
-		declarations[index] = fmt.Sprintf(
-			"%q:%q:%d:%q:%q:%q:%t:%t:%t:%t",
-			order.api,
-			order.source,
-			order.role,
-			order.preferred,
-			order.shape,
-			order.view,
-			order.request,
-			order.pointer,
-			order.arrayElementPointer,
-			order.defaults,
-		)
-	}
-	return wireNameOrder{
-		kind:      kind,
-		unionUse:  i.releasedOrder,
-		api:       i.api,
-		source:    strings.Join(declarations, "\x00"),
-		preferred: name,
-		shape:     string(i.definition),
-		view:      branch,
-	}
-}
-
 // ComparePackageName orders HTTP declarations from designed values so memory
 // addresses and design reading order cannot change generated names.
 func (o wireNameOrder) ComparePackageName(other codegen.PackageNameOrder) int {
 	right := other.(wireNameOrder)
 	for _, compared := range []int{
 		cmp.Compare(o.kind, right.kind),
-		cmp.Compare(o.unionUse, right.unionUse),
 		cmp.Compare(o.api, right.api),
 		cmp.Compare(o.source, right.source),
 		cmp.Compare(o.target, right.target),

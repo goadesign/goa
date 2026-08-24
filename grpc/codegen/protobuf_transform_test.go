@@ -11,6 +11,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	ctestdata "goa.design/goa/v3/codegen/testdata"
+	d "goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 )
 
@@ -175,7 +176,7 @@ func TestProtoBufTransform(t *testing.T) {
 							testGRPCMessageExampleIdentity(name+"/"+c.Name+"/target"),
 						)
 						freezeProtoBufTransformMessages(t, sd, target)
-						tgtCtx = protoBufTypeContext("proto", sd, true)
+						tgtCtx = protoBufTypeContext("proto", sd)
 					} else {
 						source = makeProtoBufMessage(
 							expr.DupAtt(source),
@@ -183,9 +184,9 @@ func TestProtoBufTransform(t *testing.T) {
 							testGRPCMessageExampleIdentity(name+"/"+c.Name+"/source"),
 						)
 						freezeProtoBufTransformMessages(t, sd, source)
-						srcCtx = protoBufTypeContext("proto", sd, true)
+						srcCtx = protoBufTypeContext("proto", sd)
 					}
-					code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto, true)
+					code, _, err := protoBufTransform(source, target, srcCtx, tgtCtx, c.ToProto, true)
 					require.NoError(t, err)
 					code = codegen.FormatTestCode(t, "package foo\nfunc transform(){\n"+code+"}")
 					testutil.AssertGo(t, "testdata/golden/protobuf_type_encode_"+name+"_"+c.Name+".go.golden", code)
@@ -207,7 +208,7 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 		wrappers: make(map[*expr.AttributeExpr]protocNameKey),
 		oneofs:   make(map[*expr.AttributeExpr]protocNameKey),
 	}
-	pbCtx := protoBufTypeContext("", sd, false)
+	pbCtx := protoBufTypeContext("", sd)
 
 	cases := []struct {
 		Name    string
@@ -232,7 +233,7 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 			} else {
 				srcCtx = pbCtx
 			}
-			code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto, c.NewVar)
+			code, _, err := protoBufTransform(source, target, srcCtx, tgtCtx, c.ToProto, c.NewVar)
 			require.NoError(t, err)
 			t.Logf("Generated code: %s", code)
 
@@ -252,6 +253,39 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestProtoBufTransformNilableDefaults checks that absent protobuf bytes and
+// Any fields use their service defaults without treating present empty or null
+// values as absent.
+func TestProtoBufTransformNilableDefaults(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		d.API("nilable-defaults", func() {})
+		d.Type("NilableDefaults", func() {
+			d.Field(1, "bytes", d.Bytes, func() {
+				d.Default([]byte("fallback"))
+			})
+			d.Field(2, "value", d.Any, func() {
+				d.Default("fallback")
+			})
+		})
+	})
+	defaults := root.UserType("NilableDefaults")
+	source := makeProtoBufMessage(
+		&expr.AttributeExpr{Type: defaults},
+		"NilableDefaults",
+		testGRPCMessageExampleIdentity("nilable-defaults/source"),
+	)
+	target := &expr.AttributeExpr{Type: defaults}
+	sd := &ServiceData{Name: "Service", Scope: codegen.NewNameScope()}
+	freezeProtoBufTransformMessages(t, sd, source)
+	sourceCtx := protoBufTypeContext("proto", sd)
+	targetCtx := codegen.NewAttributeContext(false, false, true, "service", sd.Scope)
+
+	generated, _, err := protoBufTransform(source, target, sourceCtx, targetCtx, false, true)
+	require.NoError(t, err)
+	generated = codegen.FormatTestCode(t, "package foo\nfunc transform(){\n"+generated+"}")
+	testutil.AssertGo(t, "testdata/golden/protobuf_type_encode_to-service-type_nilable-defaults.go.golden", generated)
 }
 
 // freezeProtoBufTransformMessages prepares the message names consumed by one

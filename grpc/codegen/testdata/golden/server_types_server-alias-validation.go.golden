@@ -1,7 +1,7 @@
 // NewMethodElemValidationPayload builds serviceelemvalidation.UUID from
 // *service_elem_validationpb.UUID.
 func NewMethodElemValidationPayload(message *service_elem_validationpb.UUID) serviceelemvalidation.UUID {
-	v := serviceelemvalidation.UUID(message.Field)
+	v := serviceelemvalidation.UUID(*message.Field)
 	return v
 }
 
@@ -14,6 +14,11 @@ func NewProtoMethodElemValidationResponse() *service_elem_validationpb.MethodEle
 
 // ValidateUUID runs the validations defined on UUID.
 func ValidateUUID(message *service_elem_validationpb.UUID) (err error) {
-	err = goa.MergeErrors(err, goa.ValidateFormat("message.field", message.Field, goa.FormatUUID))
+	if message.Field == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("field", "message"))
+	}
+	if message.Field != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("message.field", *message.Field, goa.FormatUUID))
+	}
 	return
 }

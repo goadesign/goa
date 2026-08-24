@@ -10,12 +10,17 @@ func NewProtoMethodResultWithAliasValidationRequest() *service_result_with_alias
 // serviceresultwithaliasvalidation.UUID from
 // *service_result_with_alias_validationpb.UUID.
 func NewMethodResultWithAliasValidationResult(message *service_result_with_alias_validationpb.UUID) serviceresultwithaliasvalidation.UUID {
-	result := serviceresultwithaliasvalidation.UUID(message.Field)
+	result := serviceresultwithaliasvalidation.UUID(*message.Field)
 	return result
 }
 
 // ValidateUUID runs the validations defined on UUID.
 func ValidateUUID(message *service_result_with_alias_validationpb.UUID) (err error) {
-	err = goa.MergeErrors(err, goa.ValidateFormat("message.field", message.Field, goa.FormatUUID))
+	if message.Field == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("field", "message"))
+	}
+	if message.Field != nil {
+		err = goa.MergeErrors(err, goa.ValidateFormat("message.field", *message.Field, goa.FormatUUID))
+	}
 	return
 }

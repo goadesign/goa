@@ -2,8 +2,8 @@
 // from *service_payload_with_mixed_attributespb.UnaryMethodRequest.
 func NewUnaryMethodPayload(message *service_payload_with_mixed_attributespb.UnaryMethodRequest) *servicepayloadwithmixedattributes.APayload {
 	v := &servicepayloadwithmixedattributes.APayload{
-		Required:        int(message.Required),
-		RequiredDefault: int(message.RequiredDefault),
+		Required:        int(*message.Required),
+		RequiredDefault: int(*message.RequiredDefault),
 	}
 	if message.Optional != nil {
 		optional := int(*message.Optional)
@@ -39,8 +39,8 @@ func NewProtoStreamingMethodResponse() *service_payload_with_mixed_attributespb.
 // *service_payload_with_mixed_attributespb.StreamingMethodStreamingRequest.
 func NewStreamingMethodStreamingRequestAPayload(v *service_payload_with_mixed_attributespb.StreamingMethodStreamingRequest) *servicepayloadwithmixedattributes.APayload {
 	spayload := &servicepayloadwithmixedattributes.APayload{
-		Required:        int(v.Required),
-		RequiredDefault: int(v.RequiredDefault),
+		Required:        int(*v.Required),
+		RequiredDefault: int(*v.RequiredDefault),
 	}
 	if v.Optional != nil {
 		optional := int(*v.Optional)
@@ -53,4 +53,28 @@ func NewStreamingMethodStreamingRequestAPayload(v *service_payload_with_mixed_at
 		spayload.Default = 100
 	}
 	return spayload
+}
+
+// ValidateUnaryMethodRequest runs the validations defined on
+// UnaryMethodRequest.
+func ValidateUnaryMethodRequest(message *service_payload_with_mixed_attributespb.UnaryMethodRequest) (err error) {
+	if message.Required == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required", "message"))
+	}
+	if message.RequiredDefault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_default", "message"))
+	}
+	return
+}
+
+// ValidateStreamingMethodStreamingRequest runs the validations defined on
+// StreamingMethodStreamingRequest.
+func ValidateStreamingMethodStreamingRequest(stream *service_payload_with_mixed_attributespb.StreamingMethodStreamingRequest) (err error) {
+	if stream.Required == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required", "stream"))
+	}
+	if stream.RequiredDefault == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required_default", "stream"))
+	}
+	return
 }

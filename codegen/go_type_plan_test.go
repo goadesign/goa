@@ -546,7 +546,7 @@ func declareGoTypeTestUnion(t *testing.T, generation *Generation, owner string, 
 	t.Helper()
 	generatedPackage, err := generation.ClaimPackage(owner)
 	require.NoError(t, err)
-	declaration, err := generatedPackage.DeclareUnion(union)
+	declaration, err := generatedPackage.DeclareUnion(&expr.AttributeExpr{Type: union})
 	require.NoError(t, err)
 	return declaration
 }

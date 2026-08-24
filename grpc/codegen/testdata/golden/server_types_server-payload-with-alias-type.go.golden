@@ -3,7 +3,7 @@
 // *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasRequest.
 func NewMethodMessageUserTypeWithAliasPayload(message *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasRequest) *servicemessageusertypewithalias.PayloadAliasT {
 	v := &servicemessageusertypewithalias.PayloadAliasT{
-		IntAliasField: servicemessageusertypewithalias.IntAlias(message.IntAliasField),
+		IntAliasField: servicemessageusertypewithalias.IntAlias(*message.IntAliasField),
 	}
 	if message.OptionalIntAliasField != nil {
 		optionalIntAliasField := servicemessageusertypewithalias.IntAlias(*message.OptionalIntAliasField)
@@ -16,12 +16,21 @@ func NewMethodMessageUserTypeWithAliasPayload(message *service_message_user_type
 // *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse
 // from *servicemessageusertypewithalias.PayloadAliasT.
 func NewProtoMethodMessageUserTypeWithAliasResponse(result *servicemessageusertypewithalias.PayloadAliasT) *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse {
-	message := &service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse{
-		IntAliasField: int32(result.IntAliasField),
-	}
+	message := &service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse{}
+	intAliasField := int32(result.IntAliasField)
+	message.IntAliasField = &intAliasField
 	if result.OptionalIntAliasField != nil {
 		optionalIntAliasField := int32(*result.OptionalIntAliasField)
 		message.OptionalIntAliasField = &optionalIntAliasField
 	}
 	return message
+}
+
+// ValidateMethodMessageUserTypeWithAliasRequest runs the validations defined
+// on MethodMessageUserTypeWithAliasRequest.
+func ValidateMethodMessageUserTypeWithAliasRequest(message *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasRequest) (err error) {
+	if message.IntAliasField == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("IntAliasField", "message"))
+	}
+	return
 }

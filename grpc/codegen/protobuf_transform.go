@@ -8,10 +8,10 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// protoBufTransform writes code that copies sourceVar into targetVar. One side
-// is a service value and the other is a protobuf value. proto is true when the
+// protoBufTransform writes code that copies source into target. One side is a
+// service value and the other is a protobuf value. proto is true when the
 // target is the protobuf value. newVar chooses between := and =.
-func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar string, sourceCtx, targetCtx *codegen.AttributeContext, proto, newVar bool) (string, []*codegen.TransformFunctionData, error) {
+func protoBufTransform(source, target *expr.AttributeExpr, sourceCtx, targetCtx *codegen.AttributeContext, proto, newVar bool) (string, []*codegen.TransformFunctionData, error) {
 	prefix := "protobuf"
 	if proto {
 		original := target
@@ -31,7 +31,7 @@ func protoBufTransform(source, target *expr.AttributeExpr, sourceVar, targetVar 
 		Prefix:    prefix,
 		Hooks:     protoHooks(proto),
 	}
-	return codegen.GoTransformWithAttrs(source, target, sourceVar, targetVar, ta, newVar)
+	return codegen.GoTransformWithAttrs(source, target, "source", "target", ta, newVar)
 }
 
 // removeMeta removes service field and package settings from a protobuf copy.
@@ -68,6 +68,9 @@ func convertType(src, tgt *expr.AttributeExpr, srcPtr, tgtPtr bool, srcVar strin
 	tgtType, _ := codegen.GetMetaType(tgt)
 	if srcType == "" && tgtType == "" && (src.Type != expr.Int) && (src.Type != expr.UInt) && (src.Type != expr.Any) {
 		// Any values need a protobuf conversion. Other matching values do not.
+		if !proto && srcPtr && !tgtPtr {
+			return "*" + srcVar
+		}
 		return srcVar
 	}
 

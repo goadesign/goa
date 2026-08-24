@@ -150,8 +150,14 @@ func (s *MethodServerStreamingUserTypeRPCClientStream) Recv() (*serviceserverstr
 	var proj *serviceserverstreamingusertyperpcviews.ResultTypeView
 	switch s.view {
 	case "tiny":
+		if err := ValidateMethodServerStreamingUserTypeRPCResponseTiny(v); err != nil {
+			return res, err
+		}
 		proj = NewMethodServerStreamingUserTypeRPCResponseResultTypeViewTiny(v)
 	case "default", "":
+		if err := ValidateMethodServerStreamingUserTypeRPCResponse(v); err != nil {
+			return res, err
+		}
 		proj = NewMethodServerStreamingUserTypeRPCResponseResultTypeView(v)
 	}
 	vres := &serviceserverstreamingusertyperpcviews.ResultType{Projected: proj, View: s.view}
@@ -246,6 +252,9 @@ func (s *MethodServerStreamingRPCClientStream) Recv() (string, error) {
 	var res string
 	v, err := s.stream.Recv()
 	if err != nil {
+		return res, err
+	}
+	if err = ValidateMethodServerStreamingRPCResponse(v); err != nil {
 		return res, err
 	}
 	return NewMethodServerStreamingRPCResponseMethodServerStreamingRPCResponse(v), nil
@@ -402,6 +411,9 @@ func (s *MethodClientStreamingRPCServerStream) Recv() (int, error) {
 	if err != nil {
 		return res, err
 	}
+	if err = ValidateMethodClientStreamingRPCStreamingRequest(v); err != nil {
+		return res, err
+	}
 	return NewMethodClientStreamingRPCStreamingRequestMethodClientStreamingRPCStreamingRequest(v), nil
 }
 
@@ -443,6 +455,9 @@ func (s *MethodClientStreamingRPCClientStream) CloseAndRecv() (string, error) {
 	var res string
 	v, err := s.stream.CloseAndRecv()
 	if err != nil {
+		return res, err
+	}
+	if err = ValidateMethodClientStreamingRPCResponse(v); err != nil {
 		return res, err
 	}
 	return NewMethodClientStreamingRPCResponseMethodClientStreamingRPCResponse(v), nil
@@ -501,6 +516,9 @@ func (s *MethodBidirectionalStreamingRPCServerStream) Recv() (int, error) {
 	var res int
 	v, err := s.stream.Recv()
 	if err != nil {
+		return res, err
+	}
+	if err = ValidateMethodBidirectionalStreamingRPCStreamingRequest(v); err != nil {
 		return res, err
 	}
 	return NewMethodBidirectionalStreamingRPCStreamingRequestMethodBidirectionalStreamingRPCStreamingRequest(v), nil

@@ -339,6 +339,7 @@ func buildRetainedUnionTypeData(facts *unionFacts, aliases *importAliases) *Unio
 			KindDeclaration:        branch.declaration.KindDeclaration(),
 			ConstructorDeclaration: branch.declaration.ConstructorDeclaration(),
 			FieldName:              branch.fieldName,
+			StorageName:            branch.storageName,
 			FieldType:              branch.layout.Link(facts.declaration.PackagePath(), retainedTypeQualifier(aliases, facts.declaration.PackagePath())).Ref(),
 			Nilable:                branch.nilable,
 			EmitPrimitiveAlias:     branch.emitPrimitiveAlias,

@@ -89,7 +89,7 @@ func (r *declarationResolver) Name(att *expr.AttributeExpr, _ string, ptr, useDe
 		return r.qualify(owner, declaration.Name())
 	case *expr.Union:
 		owner := r.owner(att)
-		declaration, err := r.generation.Package(owner).Union(actual)
+		declaration, err := r.generation.Package(owner).Union(att)
 		if err != nil {
 			panic(fmt.Sprintf("resolve union %q for service %q in package %q: %v", actual.Name(), r.serviceName, owner, err))
 		}

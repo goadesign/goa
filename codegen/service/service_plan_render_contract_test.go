@@ -136,7 +136,7 @@ func orderedServicePlans(t *testing.T, reverse bool) []*Plan {
 	return plans
 }
 
-// orderedServiceRoot defines two services that emit distinct same-base unions
+// orderedServiceRoot defines two services that emit separately named unions
 // into one relocated package.
 func orderedServiceRoot(t *testing.T, reverse bool) *expr.RootExpr {
 	t.Helper()
@@ -175,13 +175,14 @@ func singleServiceRoot(t *testing.T) *expr.RootExpr {
 	})
 }
 
-// relocatedOrderType creates one force-generated type with a Value union in
-// the shared generated types package.
+// relocatedOrderType creates one force-generated type with an exact union name
+// in the shared generated types package.
 func relocatedOrderType(name, branch string, dataType expr.DataType) expr.UserType {
 	return dsl.Type(name, func() {
 		dsl.Meta("struct:pkg:path", "types")
 		dsl.Meta("type:generate:force")
 		dsl.OneOf("Value", func() {
+			dsl.TypeName(name + "Value")
 			dsl.Attribute(branch, dataType)
 		})
 	})

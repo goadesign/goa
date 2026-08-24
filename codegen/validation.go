@@ -14,6 +14,13 @@ import (
 )
 
 type (
+	// nilUserTypeValidationAttributor reports generated user types whose
+	// validator defines what nil means. Other user-type validators are called
+	// only for a present value.
+	nilUserTypeValidationAttributor interface {
+		ValidationAcceptsNil(*expr.AttributeExpr) bool
+	}
+
 	// unionValidationCase describes one possible union branch in generated
 	// validation code.
 	unionValidationCase struct {
@@ -301,7 +308,14 @@ func renderValidationCode(att *expr.AttributeExpr, put expr.UserType, attCtx *At
 				}
 			} else {
 				fieldName := attCtx.Scope.Field(vatt, v.Name, true)
-				val := validateAttribute(attCtx, vatt, put, "v."+fieldName, context.child(".value"), true, view, seen)
+				branchCtx := attCtx
+				if expr.IsPrimitive(vatt.Type) {
+					// A union wrapper stores its scalar directly. The wrapper
+					// itself records whether that branch was selected.
+					branchCtx = attCtx.Dup()
+					branchCtx.Pointer = false
+				}
+				val := validateAttribute(branchCtx, vatt, put, "v."+fieldName, context.child(".value"), true, view, seen)
 				parent := &expr.AttributeExpr{Type: put}
 				tref := attCtx.Scope.Ref(parent, attCtx.Pkg(parent))
 				cases = append(cases, unionValidationCase{
@@ -383,6 +397,9 @@ func validateAttribute(ctx *AttributeContext, att *expr.AttributeExpr, put expr.
 	data := map[string]any{"call": call, "goa": "goa"}
 	if err := userValT.Execute(&buf, data); err != nil {
 		panic(err) // bug
+	}
+	if resolver, ok := ctx.Scope.(nilUserTypeValidationAttributor); ok && resolver.ValidationAcceptsNil(att) {
+		return buf.String()
 	}
 	return fmt.Sprintf("if %s != nil {\n\t%s\n}", target, buf.String())
 }

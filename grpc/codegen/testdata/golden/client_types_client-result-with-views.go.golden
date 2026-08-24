@@ -11,9 +11,9 @@ func NewProtoMethodMessageResultTypeWithViewsRequest() *service_message_result_t
 // *service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse.
 func NewMethodMessageResultTypeWithViewsResult(message *service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse) *servicemessageresulttypewithviewsviews.RTView {
 	result := &servicemessageresulttypewithviewsviews.RTView{
-		StringField: &message.StringField,
+		StringField: message.StringField,
 	}
-	intField := int(message.IntField)
+	intField := int(*message.IntField)
 	result.IntField = &intField
 	return result
 }
@@ -23,7 +23,28 @@ func NewMethodMessageResultTypeWithViewsResult(message *service_message_result_t
 // *service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse.
 func NewMethodMessageResultTypeWithViewsResultTiny(message *service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse) *servicemessageresulttypewithviewsviews.RTView {
 	result := &servicemessageresulttypewithviewsviews.RTView{}
-	intField := int(message.IntField)
+	intField := int(*message.IntField)
 	result.IntField = &intField
 	return result
+}
+
+// ValidateMethodMessageResultTypeWithViewsResponseTiny runs the validations
+// defined on MethodMessageResultTypeWithViewsResponse.
+func ValidateMethodMessageResultTypeWithViewsResponseTiny(message *service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse) (err error) {
+	if message.IntField == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("IntField", "message"))
+	}
+	return
+}
+
+// ValidateMethodMessageResultTypeWithViewsResponse runs the validations
+// defined on MethodMessageResultTypeWithViewsResponse.
+func ValidateMethodMessageResultTypeWithViewsResponse(message *service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse) (err error) {
+	if message.IntField == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("IntField", "message"))
+	}
+	if message.StringField == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("StringField", "message"))
+	}
+	return
 }

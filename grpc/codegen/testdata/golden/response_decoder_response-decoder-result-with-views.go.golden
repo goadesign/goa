@@ -14,8 +14,14 @@ func DecodeMethodMessageResultTypeWithViewsResponse(ctx context.Context, v any, 
 	var res *servicemessageresulttypewithviewsviews.RTView
 	switch view {
 	case "tiny":
+		if err := ValidateMethodMessageResultTypeWithViewsResponseTiny(message); err != nil {
+			return nil, err
+		}
 		res = NewMethodMessageResultTypeWithViewsResultTiny(message)
 	case "default", "":
+		if err := ValidateMethodMessageResultTypeWithViewsResponse(message); err != nil {
+			return nil, err
+		}
 		res = NewMethodMessageResultTypeWithViewsResult(message)
 	}
 	vres := &servicemessageresulttypewithviewsviews.RT{Projected: res, View: view}

@@ -30,6 +30,7 @@ func TestBuildHTTPUnionTypeDataMarksNilableBranches(t *testing.T) {
 		kindName:     "ValueKind",
 		kindConsts:   kindNames,
 		constructors: constructorNames,
+		storageNames: []string{"array", "bool_", "bytes", "map_", "object", "string_"},
 	}
 	data := buildHTTPUnionTypeData(union, codegen.NewAttributeScope(codegen.NewNameScope()), record)
 
@@ -45,6 +46,19 @@ func TestBuildHTTPUnionTypeDataMarksNilableBranches(t *testing.T) {
 		"object": true,
 		"string": false,
 	}, nilable)
+
+	storageNames := make(map[string]string, len(data.Fields))
+	for _, field := range data.Fields {
+		storageNames[field.Name] = field.StorageName
+	}
+	assert.Equal(t, map[string]string{
+		"array":  "array",
+		"bool":   "bool_",
+		"bytes":  "bytes",
+		"map":    "map_",
+		"object": "object",
+		"string": "string_",
+	}, storageNames)
 }
 
 func unionWithBranchTypes() *expr.Union {

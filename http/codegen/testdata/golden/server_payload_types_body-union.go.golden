@@ -6,17 +6,17 @@ func NewMethodBodyUnionUnion(body *MethodBodyUnionRequestBody) *servicebodyunion
 		switch string(body.Values.Kind()) {
 		case "String":
 			actual, _ := body.Values.AsString()
-			obj := servicebodyunion.ValuesString(actual)
+			obj := servicebodyunion.ValuesBranchString(actual)
 
 			u := v.Values
-			u.SetString((servicebodyunion.ValuesString)(obj))
+			u.SetString((servicebodyunion.ValuesBranchString)(obj))
 			v.Values = u
 		case "Int":
 			actual, _ := body.Values.AsInt()
-			obj := servicebodyunion.ValuesInt(actual)
+			obj := servicebodyunion.ValuesBranchInt(actual)
 
 			u := v.Values
-			u.SetInt((servicebodyunion.ValuesInt)(obj))
+			u.SetInt((servicebodyunion.ValuesBranchInt)(obj))
 			v.Values = u
 		}
 	}

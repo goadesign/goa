@@ -2,19 +2,33 @@
 // *defaultfields.MethodPayload.
 func NewProtoMethodRequest(payload *defaultfields.MethodPayload) *default_fieldspb.MethodRequest {
 	message := &default_fieldspb.MethodRequest{
-		Req:  payload.Req,
+		Req:  &payload.Req,
 		Opt:  payload.Opt,
 		Def0: &payload.Def0,
 		Def1: &payload.Def1,
 		Def2: &payload.Def2,
-		Reqs: payload.Reqs,
+		Reqs: &payload.Reqs,
 		Opts: payload.Opts,
 		Defs: &payload.Defs,
 		Defe: &payload.Defe,
-		Rat:  payload.Rat,
+		Rat:  &payload.Rat,
 		Flt:  payload.Flt,
 		Flt0: &payload.Flt0,
 		Flt1: &payload.Flt1,
 	}
 	return message
+}
+
+// ValidateMethodRequest runs the validations defined on MethodRequest.
+func ValidateMethodRequest(message *default_fieldspb.MethodRequest) (err error) {
+	if message.Req == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("req", "message"))
+	}
+	if message.Reqs == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("reqs", "message"))
+	}
+	if message.Rat == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("rat", "message"))
+	}
+	return
 }

@@ -45,6 +45,7 @@ func requiredGRPCUnionValidationDSL() {
 	inactive := d.Type("Inactive", func() {})
 	request := d.Type("RequestChoice", func() {
 		d.OneOf("choice", func() {
+			d.TypeName("RequestChoiceValue")
 			d.Field(1, "number", d.Int, func() { d.Minimum(1) })
 			d.Field(2, "detail", detail)
 			d.Field(3, "inactive", inactive)
@@ -55,6 +56,7 @@ func requiredGRPCUnionValidationDSL() {
 	})
 	response := d.Type("ResponseChoice", func() {
 		d.OneOf("choice", func() {
+			d.TypeName("ResponseChoiceValue")
 			d.Field(1, "number", d.Int, func() { d.Minimum(1) })
 			d.Field(2, "detail", detail)
 			d.Field(3, "inactive", inactive)
@@ -93,9 +95,10 @@ import (
 )
 
 func TestServerRequestValidator(t *testing.T) {
+	label := "ready"
 	valid := []*genpb.ExchangeRequest{
 		{Choice: &genpb.ExchangeRequest_Number{Number: 1}},
-		{Choice: &genpb.ExchangeRequest_Detail{Detail: &genpb.Detail{Label: "ready"}}},
+		{Choice: &genpb.ExchangeRequest_Detail{Detail: &genpb.Detail{Label: &label}}},
 		{Choice: &genpb.ExchangeRequest_Inactive{Inactive: &genpb.Inactive{}}},
 		{Choice: &genpb.ExchangeRequest_Blob{Blob: []byte{}}},
 		{Choice: &genpb.ExchangeRequest_Token{Token: "ready"}},
@@ -116,9 +119,10 @@ func TestServerRequestValidator(t *testing.T) {
 }
 
 func TestClientResponseValidator(t *testing.T) {
+	label := "ready"
 	valid := []*genpb.ExchangeResponse{
 		{Choice: &genpb.ExchangeResponse_Number{Number: 1}},
-		{Choice: &genpb.ExchangeResponse_Detail{Detail: &genpb.Detail{Label: "ready"}}},
+		{Choice: &genpb.ExchangeResponse_Detail{Detail: &genpb.Detail{Label: &label}}},
 		{Choice: &genpb.ExchangeResponse_Inactive{Inactive: &genpb.Inactive{}}},
 		{Choice: &genpb.ExchangeResponse_Blob{Blob: []byte{}}},
 		{Choice: &genpb.ExchangeResponse_Token{Token: "ready"}},

@@ -30,20 +30,19 @@ func TestDeclarationResolverTransformsRelocatedUnionBranches(t *testing.T) {
 	relocated := resolverUserType("Record", &expr.Object{
 		{Name: "value", Attribute: &expr.AttributeExpr{Type: union}},
 	})
+	unionAttribute := expr.AsObject(relocated.Attribute().Type).Attribute("value")
 	relocated.Attribute().AddMeta("struct:pkg:path", "types")
 
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	types := mustClaimTestPackage(t, generation, "generated.local/gen/types")
 	_, err := types.DeclareUserType(relocated)
 	require.NoError(t, err)
-	_, err = types.DeclareUserType(resolverUserType("ValueText", expr.Int))
+	_, err = types.DeclareUnion(unionAttribute)
 	require.NoError(t, err)
-	_, err = types.DeclareUnion(union)
-	require.NoError(t, err)
-	branchDeclaration, err := types.DeclareUnionBranchType(union, "text", generatedBranch)
+	branchDeclaration, err := types.DeclareUnionBranchType(unionAttribute, "text", generatedBranch)
 	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
-	require.Equal(t, "ValueText2", branchDeclaration.Name())
+	require.Equal(t, "ValueBranchText", branchDeclaration.Name())
 
 	externalBranch := resolverUserType("ExternalValueText", expr.String)
 	externalUnion := &expr.Union{
@@ -91,7 +90,7 @@ func TestDeclarationResolverTransformsRelocatedUnionBranches(t *testing.T) {
 		true,
 	)
 	require.NoError(t, err)
-	require.Contains(t, transformSource(toRelocated, toRelocatedHelpers), "ValueText2")
+	require.Contains(t, transformSource(toRelocated, toRelocatedHelpers), "ValueBranchText")
 }
 
 // TestDeclarationResolverQualifiesRelocatedConsumersWithoutRenamingLocalType

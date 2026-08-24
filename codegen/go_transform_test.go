@@ -34,18 +34,6 @@ type (
 		Attributor
 		fields *[]*expr.AttributeExpr
 	}
-
-	// transformTypedValue exercises an accepted object value with a mutable
-	// exported field.
-	transformTypedValue struct {
-		Values []string
-	}
-
-	// transformPrivateMutableValue cannot be copied without reading private
-	// mutable state.
-	transformPrivateMutableValue struct {
-		values []string
-	}
 )
 
 func TestGoTransform(t *testing.T) {
@@ -759,52 +747,6 @@ func TestTransformPlanCopiesTypedCollectionDefaults(t *testing.T) {
 	}
 }
 
-func TestCopyTransformValueCopiesNestedTypedShapes(t *testing.T) {
-	values := []string{"planned"}
-	object := transformTypedValue{Values: []string{"planned"}}
-	source := [2]any{&values, object}
-	copied := copyTransformValue(source).([2]any)
-	values[0] = "changed"
-	object.Values[0] = "changed"
-
-	require.Equal(t, "planned", (*copied[0].(*[]string))[0])
-	require.Equal(t, "planned", copied[1].(transformTypedValue).Values[0])
-}
-
-func TestCopyTransformValueRejectsUnsupportedMutableShape(t *testing.T) {
-	require.PanicsWithValue(
-		t,
-		"cannot copy transform value of type chan int",
-		func() { copyTransformValue(make(chan int)) },
-	)
-}
-
-func TestCopyTransformValueRejectsPrivateMutableField(t *testing.T) {
-	require.PanicsWithValue(
-		t,
-		"cannot copy transform value of type codegen.transformPrivateMutableValue: unexported field values contains mutable data",
-		func() { copyTransformValue(transformPrivateMutableValue{values: []string{"value"}}) },
-	)
-}
-
-func TestCopyTransformValueRejectsCycle(t *testing.T) {
-	value := make(map[string]any)
-	value["self"] = value
-	require.PanicsWithValue(
-		t,
-		"cannot copy cyclic transform value of type map[string]interface {}",
-		func() { copyTransformValue(value) },
-	)
-}
-
-func TestCopyTransformValueRejectsFunction(t *testing.T) {
-	require.PanicsWithValue(
-		t,
-		"cannot copy transform value of type func()",
-		func() { copyTransformValue(func() {}) },
-	)
-}
-
 func TestTransformPlanNameLookupsUseOriginalAttributes(t *testing.T) {
 	sourceField := &expr.AttributeExpr{Type: expr.String}
 	targetField := &expr.AttributeExpr{Type: expr.String}
@@ -867,6 +809,81 @@ func TestTransformPlanCapturesStructuralHookChoices(t *testing.T) {
 	require.Contains(t, code, "Value: source.Value")
 	require.Equal(t, plannedUnwrapCalls, unwrapCalls)
 	require.Equal(t, plannedFieldCalls, fieldCalls)
+}
+
+// TestTransformPrimitiveUsesHandledHookExpression checks that a hook may
+// intentionally return the source expression without triggering Goa's normal
+// type conversion.
+func TestTransformPrimitiveUsesHandledHookExpression(t *testing.T) {
+	source := &expr.AttributeExpr{Type: &expr.UserTypeExpr{
+		TypeName:      "SourceAlias",
+		AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+	}}
+	target := &expr.AttributeExpr{Type: &expr.UserTypeExpr{
+		TypeName:      "TargetAlias",
+		AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+	}}
+	context := NewAttributeContext(false, false, false, "", NewNameScope())
+	attributes := &TransformAttrs{
+		SourceCtx: context,
+		TargetCtx: context,
+		Hooks: &TransformHooks{
+			ConvertPrimitive: func(_, _ *expr.AttributeExpr, sourceVar string, _, _ bool, _ *TransformAttrs) (string, bool) {
+				return sourceVar, true
+			},
+		},
+	}
+
+	generated, err := TransformAttribute(source, target, "source", "target", true, attributes)
+	require.NoError(t, err)
+	require.Equal(t, "target := source\n", generated)
+}
+
+// TestTransformAttributeDerivesWrappedPrimitivePointers checks that wrapper
+// conversion follows the pointer layout defined by each type context.
+func TestTransformAttributeDerivesWrappedPrimitivePointers(t *testing.T) {
+	wrapper := &expr.UserTypeExpr{
+		TypeName: "PrimitiveWrapper",
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "field", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		}},
+	}
+	wrapperAttribute := &expr.AttributeExpr{Type: wrapper}
+	primitiveAttribute := &expr.AttributeExpr{Type: expr.String}
+	valueContext := NewAttributeContext(false, false, false, "", NewNameScope())
+	pointerContext := NewAttributeContext(true, false, false, "", NewNameScope())
+
+	t.Run("target wrapper", func(t *testing.T) {
+		attributes := &TransformAttrs{
+			SourceCtx: valueContext,
+			TargetCtx: pointerContext,
+			Hooks: &TransformHooks{UnwrapPair: func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr, *WrapDirective) {
+				return source, expr.AsObject(target.Type).Attribute("field"), &WrapDirective{
+					WrapTarget: true,
+					Target:     target,
+					FieldName:  "Field",
+				}
+			}},
+		}
+
+		generated, err := TransformAttribute(primitiveAttribute, wrapperAttribute, "source", "target", true, attributes)
+		require.NoError(t, err)
+		require.Equal(t, "target := &PrimitiveWrapper{}\ntarget.Field = new(string)\n*target.Field = source\n", generated)
+	})
+
+	t.Run("source wrapper", func(t *testing.T) {
+		attributes := &TransformAttrs{
+			SourceCtx: pointerContext,
+			TargetCtx: valueContext,
+			Hooks: &TransformHooks{UnwrapPair: func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr, *WrapDirective) {
+				return expr.AsObject(source.Type).Attribute("field"), target, &WrapDirective{FieldName: "Field"}
+			}},
+		}
+
+		generated, err := TransformAttribute(wrapperAttribute, primitiveAttribute, "source", "target", true, attributes)
+		require.NoError(t, err)
+		require.Equal(t, "target := *source.Field\n", generated)
+	})
 }
 
 func TestTransformPlanRejectsPlanningUnwrapPairMutation(t *testing.T) {

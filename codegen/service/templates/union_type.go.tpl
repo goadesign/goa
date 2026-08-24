@@ -9,7 +9,7 @@ type {{ .FieldType }} {{ .PrimitiveAliasType }}
 type {{ .TypeDeclaration.Name }} struct {
 	kind {{ .KindDeclaration.Name }}
 	{{- range .Fields }}
-	{{ .FieldName }} {{ .FieldType }}
+	{{ .StorageName }} {{ .FieldType }}
 	{{- end }}
 }
 
@@ -32,8 +32,8 @@ func (u {{ .TypeDeclaration.Name }}) Kind() {{ .KindDeclaration.Name }} {
 // {{ .ConstructorDeclaration.Name }} constructs {{ $.TypeDeclaration.Name }} with the {{ .Name }} branch set.
 func {{ .ConstructorDeclaration.Name }}(v {{ .FieldType }}) {{ $.TypeDeclaration.Name }} {
 	return {{ $.TypeDeclaration.Name }}{
-		kind:      {{ .KindDeclaration.Name }},
-		{{ .FieldName }}: v,
+		kind: {{ .KindDeclaration.Name }},
+		{{ .StorageName }}: v,
 	}
 }
 
@@ -42,13 +42,15 @@ func (u {{ $.TypeDeclaration.Name }}) As{{ .FieldName }}() (_ {{ .FieldType }}, 
 	if u.kind != {{ .KindDeclaration.Name }} {
 		return
 	}
-	return u.{{ .FieldName }}, true
+	return u.{{ .StorageName }}, true
 }
 
 // Set{{ .FieldName }} selects the {{ .Name }} branch and stores v.
 func (u *{{ $.TypeDeclaration.Name }}) Set{{ .FieldName }}(v {{ .FieldType }}) {
-	u.kind = {{ .KindDeclaration.Name }}
-	u.{{ .FieldName }} = v
+	*u = {{ $.TypeDeclaration.Name }}{
+		kind: {{ .KindDeclaration.Name }},
+		{{ .StorageName }}: v,
+	}
 }
 {{- end }}
 
@@ -64,7 +66,7 @@ func (u {{ .TypeDeclaration.Name }}) Validate() error {
 	{{- range .Fields }}
 	case {{ .KindDeclaration.Name }}:
 		{{- if .Nilable }}
-		if u.{{ .FieldName }} == nil {
+		if u.{{ .StorageName }} == nil {
 			return goa.MissingFieldError({{ printf "%q" $.ValueKey }}, "{{ $.TypeDeclaration.Name }}")
 		}
 		{{- end }}
@@ -90,7 +92,7 @@ func (u {{ .TypeDeclaration.Name }}) MarshalJSON() ([]byte, error) {
 	switch u.kind {
 	{{- range .Fields }}
 	case {{ .KindDeclaration.Name }}:
-		value = u.{{ .FieldName }}
+		value = u.{{ .StorageName }}
 	{{- end }}
 	default:
 		return nil, fmt.Errorf("unexpected {{ .TypeDeclaration.Name }} kind %q", u.kind)
@@ -126,8 +128,7 @@ func (u *{{ .TypeDeclaration.Name }}) UnmarshalJSON(data []byte) error {
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = {{ .KindDeclaration.Name }}
-		u.{{ .FieldName }} = v
+		u.Set{{ .FieldName }}(v)
 	{{- end }}
 	default:
 		if raw.Type == "" {

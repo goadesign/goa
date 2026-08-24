@@ -95,9 +95,12 @@ func (p *protoBufScope) Scope() *codegen.NameScope {
 	return p.service.Scope
 }
 
-// protoBufTypeContext returns a contextual attribute for the protocol buffer type.
-func protoBufTypeContext(pkg string, service *ServiceData, useDefault bool) *codegen.AttributeContext {
-	ctx := codegen.NewAttributeContext(false, true, useDefault, pkg, service.Scope)
+// protoBufTypeContext describes Go fields generated from protobuf messages.
+// Singular booleans, numbers, strings, enums, and their aliases use pointers
+// so validation can tell an omitted field from an explicit zero value. Bytes
+// remain slices. Message fields, including Any, already use pointers.
+func protoBufTypeContext(pkg string, service *ServiceData) *codegen.AttributeContext {
+	ctx := codegen.NewAttributeContext(true, false, false, pkg, service.Scope)
 	ctx.Scope = &protoBufScope{service: service, pkg: pkg}
 	return ctx
 }
@@ -208,7 +211,7 @@ func wrapAttr(att *expr.AttributeExpr, tname string, req bool, owner expr.Exampl
 			},
 			Meta: expr.MetaExpr{wrappedAttrMeta: []string{wrappedField}},
 		}
-		if req {
+		if req && !expr.IsArray(attr.Type) && !expr.IsMap(attr.Type) {
 			res.Validation = &expr.ValidationExpr{
 				Required: []string{wrappedField},
 			}
@@ -477,7 +480,7 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 				} else {
 					typ = protoType(nat.Attribute, sd)
 				}
-				if !att.IsRequired(nat.Name) && expr.IsPrimitive(nat.Attribute.Type) {
+				if expr.IsPrimitive(nat.Attribute.Type) && unAlias(nat.Attribute).Type.Kind() != expr.AnyKind {
 					opt = "optional "
 				}
 				if nat.Attribute.Description != "" {

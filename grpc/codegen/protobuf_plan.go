@@ -625,7 +625,7 @@ func compareProtobufErrorSource(left, right *expr.GRPCErrorExpr) int {
 }
 
 // compareProtobufWireAttribute orders values by the description, protobuf
-// settings, required primitive fields, and type written to the .proto file.
+// settings, and type written to the .proto file.
 func compareProtobufWireAttribute(left, right *expr.AttributeExpr, seen map[protobufAttributePair]struct{}) int {
 	if left == right {
 		return 0
@@ -646,18 +646,6 @@ func compareProtobufWireAttribute(left, right *expr.AttributeExpr, seen map[prot
 	}
 	if order := compareProtobufWireType(left.Type, right.Type, seen); order != 0 {
 		return order
-	}
-	leftObject, rightObject := expr.AsObject(left.Type), expr.AsObject(right.Type)
-	if leftObject == nil || rightObject == nil {
-		return 0
-	}
-	for _, field := range *leftObject {
-		if !expr.IsPrimitive(field.Attribute.Type) {
-			continue
-		}
-		if order := compareBool(left.IsRequired(field.Name), right.IsRequired(field.Name)); order != 0 {
-			return order
-		}
 	}
 	return 0
 }

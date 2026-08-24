@@ -309,8 +309,9 @@ type (
 
 	// unionFacts records one Goa OneOf type and its generated Go declaration.
 	unionFacts struct {
+		attribute   *expr.AttributeExpr
 		union       *expr.Union
-		identity    codegen.UnionTypeID
+		identity    codegen.UnionDeclarationID
 		typeKey     string
 		valueKey    string
 		branches    []*unionBranchFacts
@@ -325,6 +326,7 @@ type (
 	unionBranchFacts struct {
 		name               string
 		fieldName          string
+		storageName        string
 		declaration        *codegen.UnionBranchDeclaration
 		layout             *codegen.GoTypePlan
 		nilable            bool

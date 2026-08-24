@@ -549,6 +549,44 @@ var MessageUserTypeWithAliasMessageDSL = func() {
 	})
 }
 
+// RequiredPrimitivePresenceDSL defines required request and response fields
+// whose zero values must remain distinguishable from omitted protobuf fields.
+var RequiredPrimitivePresenceDSL = func() {
+	var StringAlias = Type("StringAlias", String)
+	var BytesAlias = Type("BytesAlias", Bytes)
+	var AnyAlias = Type("AnyAlias", Any)
+	var Message = Type("PresenceMessage", func() {
+		Field(1, "BooleanField", Boolean)
+		Field(2, "IntegerField", Int)
+		Field(3, "StringField", String)
+		Field(4, "BytesField", Bytes)
+		Field(5, "StringAliasField", StringAlias)
+		Field(6, "BytesAliasField", BytesAlias)
+		Field(7, "AnyAliasField", AnyAlias)
+		Required(
+			"BooleanField",
+			"IntegerField",
+			"StringField",
+			"BytesField",
+			"StringAliasField",
+			"BytesAliasField",
+			"AnyAliasField",
+		)
+	})
+	Service("RequiredPrimitivePresence", func() {
+		Method("Exchange", func() {
+			Payload(Message)
+			Result(Message)
+			GRPC(func() {})
+		})
+		Method("Echo", func() {
+			Payload(StringAlias)
+			Result(StringAlias)
+			GRPC(func() {})
+		})
+	})
+}
+
 var MessageUserTypeWithNestedUserTypesDSL = func() {
 	var UTLevel2 = Type("UTLevel2", func() {
 		Field(2, "Int64Field", Int64)

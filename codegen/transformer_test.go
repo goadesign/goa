@@ -77,6 +77,15 @@ func TestAppendHelpersRejectsConflictingLegacyDefinitions(t *testing.T) {
 }
 
 func TestIsPrimitivePointer(t *testing.T) {
+	primitiveAlias := func(name string, primitive expr.Primitive) expr.DataType {
+		return &expr.UserTypeExpr{
+			TypeName: name,
+			UID:      name,
+			AttributeExpr: &expr.AttributeExpr{
+				Type: primitive,
+			},
+		}
+	}
 	newObj := func(fieldName string, fieldType expr.DataType, req bool) *expr.AttributeExpr {
 		attr := &expr.AttributeExpr{
 			Type: &expr.Object{
@@ -122,6 +131,20 @@ func TestIsPrimitivePointer(t *testing.T) {
 			Attr:     newObj("foo", expr.String, true),
 			Name:     "foo",
 			Expected: true,
+		},
+		{
+			Test:     "pointer context with bytes alias",
+			Context:  &AttributeContext{Pointer: true},
+			Attr:     newObj("foo", primitiveAlias("BytesAlias", expr.Bytes), true),
+			Name:     "foo",
+			Expected: false,
+		},
+		{
+			Test:     "pointer context with any alias",
+			Context:  &AttributeContext{Pointer: true},
+			Attr:     newObj("foo", primitiveAlias("AnyAlias", expr.Any), true),
+			Name:     "foo",
+			Expected: false,
 		},
 		{
 			Test:     "ignore required context with pointer attribute",

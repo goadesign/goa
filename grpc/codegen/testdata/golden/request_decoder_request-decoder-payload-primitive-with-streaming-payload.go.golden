@@ -25,6 +25,9 @@ func DecodeMethodClientStreamingRPCWithPayloadRequest(ctx context.Context, v any
 		default:
 			return nil, goa.MissingFieldError("initial_payload", "stream")
 		}
+		if err := ValidateMethodClientStreamingRPCWithPayloadRequest(message); err != nil {
+			return nil, err
+		}
 	}
 	var payload int
 	{

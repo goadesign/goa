@@ -56,9 +56,9 @@ func TestAnonymousUserUnionArrayNoWrappersFromProto(t *testing.T) {
 		testGRPCMessageExampleIdentity("anonymous-user-union"),
 	)
 	freezeProtoBufTransformMessages(t, sd, source)
-	pbCtx := protoBufTypeContext("proto", sd, true)
+	pbCtx := protoBufTypeContext("proto", sd)
 
-	code, _, err := protoBufTransform(source, target, "source", "target", pbCtx, svcCtx, false, true)
+	code, _, err := protoBufTransform(source, target, pbCtx, svcCtx, false, true)
 	require.NoError(t, err)
 	out := codegen.FormatTestCode(t, "package foo\nfunc transform(){\n"+code+"}")
 

@@ -16,9 +16,10 @@ import (
 type (
 	// NameScope defines a naming scope.
 	NameScope struct {
-		names  map[string]string // type hash to unique name
-		counts map[string]int    // raw type name to occurrence count
-		frozen bool              // true after this set rejects new names
+		names      map[string]string             // type hash to unique name
+		unionNames map[UnionDeclarationID]string // authored OneOf to exact name
+		counts     map[string]int                // raw type name to occurrence count
+		frozen     bool                          // true after this set rejects new names
 	}
 
 	// Hasher is the interface implemented by the objects that must be
@@ -38,8 +39,9 @@ type (
 // NewNameScope creates an empty name scope.
 func NewNameScope() *NameScope {
 	return &NameScope{
-		names:  make(map[string]string),
-		counts: make(map[string]int),
+		names:      make(map[string]string),
+		unionNames: make(map[UnionDeclarationID]string),
+		counts:     make(map[string]int),
 	}
 }
 
@@ -50,6 +52,9 @@ func (s *NameScope) Fork() *NameScope {
 	fork := NewNameScope()
 	for hash, name := range s.names {
 		fork.names[hash] = name
+	}
+	for identity, name := range s.unionNames {
+		fork.unionNames[identity] = name
 	}
 	for name, count := range s.counts {
 		fork.counts[name] = count
@@ -107,6 +112,20 @@ func (s *NameScope) bind(key Hasher, name string) {
 		panic(fmt.Sprintf("package name %q must be reserved before hash binding", name))
 	}
 	s.names[hash] = name
+}
+
+// bindUnion makes copies of one authored OneOf return its exact generated name.
+func (s *NameScope) bindUnion(identity UnionDeclarationID, name string) {
+	if s.frozen {
+		panic("cannot bind a union name in a frozen name scope")
+	}
+	if existing, ok := s.unionNames[identity]; ok && existing != name {
+		panic(fmt.Sprintf("union declaration is already bound to package name %q", existing))
+	}
+	if _, ok := s.counts[name]; !ok {
+		panic(fmt.Sprintf("package name %q must be reserved before union binding", name))
+	}
+	s.unionNames[identity] = name
 }
 
 // PeekUnique returns the name that Unique would return for the same inputs,
@@ -340,12 +359,28 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 		// payload type defined as Request2).
 		return s.scopedTypeName(actual, Goify(actual.Name(), true), pkg)
 	case *expr.Union:
-		return s.scopedTypeName(NewUnionTypeID(actual), Goify(actual.Name(), true), pkg)
+		return s.scopedUnionTypeName(NewUnionDeclarationID(att), Goify(actual.Name(), true), pkg)
 	case expr.CompositeExpr:
 		return s.GoFullTypeName(actual.Attribute(), pkgWithDefault(actual.Attribute().Type, pkg))
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
+}
+
+// scopedUnionTypeName returns the declaration recorded for one authored OneOf
+// occurrence. A package qualifier is added when the caller names another Go
+// package.
+func (s *NameScope) scopedUnionTypeName(identity UnionDeclarationID, base, pkg string) string {
+	name := base
+	if selected, ok := s.unionNames[identity]; ok {
+		name = selected
+	} else if s.frozen {
+		panic(fmt.Sprintf("union %q was not declared before the package name scope was frozen", base))
+	}
+	if pkg == "" {
+		return name
+	}
+	return pkg + "." + name
 }
 
 // scopedTypeName returns a local or package-qualified generated declaration
