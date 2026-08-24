@@ -276,6 +276,14 @@ and generating examples. It keeps unrelated same-named types separate, but it
 does not by itself prove that two generated declarations have the same fields
 or behavior.
 
+Plugins that write a named type call `DeclareGeneratedType` to reserve its Go
+name, then call `BindGeneratedType` for every user type expression that must
+refer to that declaration. The binding follows `UserType.Origin()`, so copies
+reuse one name while unrelated equal-shaped types may use different names. Do
+not pass a user type to `DeclareName` to express this ownership: that older
+lookup compares the type definition and can treat unrelated declarations as
+the same type.
+
 An emitted declaration identity contains every fact that changes its generated
 source: owning package and role, source provenance, wire shape, validation,
 defaults, views, pointer policy, ordered union branches, and protocol-specific

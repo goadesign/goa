@@ -480,6 +480,26 @@ func TestNameScope_GoFullTypeName_UsesScopedRelocatedUserTypeNameWhenQualified(t
 	}
 }
 
+// TestNameScopeForkPreservesUserTypeBindings verifies that a child scope keeps
+// the exact generated name chosen for an original user type and all its copies.
+func TestNameScopeForkPreservesUserTypeBindings(t *testing.T) {
+	scope := NewNameScope()
+	original := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+		TypeName:      "Value",
+		UID:           "value",
+	}
+	copy := original.Dup(expr.DupAtt(original.Attribute()))
+	require.Equal(t, "Value", scope.Unique("Value"))
+	scope.bindUserType(original, "Value")
+
+	fork := scope.Fork()
+	scope.Freeze()
+	fork.Freeze()
+	require.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: copy}))
+	require.Equal(t, "types.Value", fork.GoFullTypeName(&expr.AttributeExpr{Type: copy}, "types"))
+}
+
 func TestNameScope_PeekUnique_MatchesUniqueWithoutMutation(t *testing.T) {
 	seed := func(scope *NameScope) {
 		scope.Unique("a")

@@ -1,7 +1,8 @@
-// Code generators use this file to turn caller-supplied type lookup keys and
-// attributes into unique Go names and type references. Hashed names use the
-// caller's exact Hash value. After Freeze, callers can read existing names but
-// cannot reserve new ones.
+// Code generators use this file to turn type declarations and attributes into
+// unique Go names and type references. Generated user types keep the identity
+// of the declaration they came from. Other lookups use the caller's exact Hash
+// value. After Freeze, callers can read existing names but cannot reserve new
+// ones.
 package codegen
 
 import (
@@ -16,10 +17,11 @@ import (
 type (
 	// NameScope defines a naming scope.
 	NameScope struct {
-		names      map[string]string             // type hash to unique name
-		unionNames map[UnionDeclarationID]string // authored OneOf to exact name
-		counts     map[string]int                // raw type name to occurrence count
-		frozen     bool                          // true after this set rejects new names
+		names         map[string]string             // type hash to unique name
+		userTypeNames map[expr.UserType]string      // original user type to exact name
+		unionNames    map[UnionDeclarationID]string // authored OneOf to exact name
+		counts        map[string]int                // raw type name to occurrence count
+		frozen        bool                          // true after this set rejects new names
 	}
 
 	// Hasher is the interface implemented by the objects that must be
@@ -39,9 +41,10 @@ type (
 // NewNameScope creates an empty name scope.
 func NewNameScope() *NameScope {
 	return &NameScope{
-		names:      make(map[string]string),
-		unionNames: make(map[UnionDeclarationID]string),
-		counts:     make(map[string]int),
+		names:         make(map[string]string),
+		userTypeNames: make(map[expr.UserType]string),
+		unionNames:    make(map[UnionDeclarationID]string),
+		counts:        make(map[string]int),
 	}
 }
 
@@ -52,6 +55,9 @@ func (s *NameScope) Fork() *NameScope {
 	fork := NewNameScope()
 	for hash, name := range s.names {
 		fork.names[hash] = name
+	}
+	for origin, name := range s.userTypeNames {
+		fork.userTypeNames[origin] = name
 	}
 	for identity, name := range s.unionNames {
 		fork.unionNames[identity] = name
@@ -112,6 +118,22 @@ func (s *NameScope) bind(key Hasher, name string) {
 		panic(fmt.Sprintf("package name %q must be reserved before hash binding", name))
 	}
 	s.names[hash] = name
+}
+
+// bindUserType makes a user type and copies made from it return the same exact
+// generated name.
+func (s *NameScope) bindUserType(userType expr.UserType, name string) {
+	if s.frozen {
+		panic("cannot bind a user type name in a frozen name scope")
+	}
+	origin := userType.Origin()
+	if existing, ok := s.userTypeNames[origin]; ok && existing != name {
+		panic(fmt.Sprintf("user type %q is already bound to package name %q", origin.Name(), existing))
+	}
+	if _, ok := s.counts[name]; !ok {
+		panic(fmt.Sprintf("package name %q must be reserved before user type binding", name))
+	}
+	s.userTypeNames[origin] = name
 }
 
 // bindUnion makes copies of one authored OneOf return its exact generated name.
@@ -251,22 +273,15 @@ func (s *NameScope) goTypeDefWithPkgOverride(att *expr.AttributeExpr, ptr, useDe
 		if actual == expr.Empty {
 			return "struct {}"
 		}
-		var prefix string
+		var referencedPkg string
 		if loc := UserTypeLocation(actual); loc != nil {
 			if targetPkg != "" || loc.PackageName() != pkg {
-				prefix = loc.PackageName() + "."
+				referencedPkg = loc.PackageName()
 			}
 		} else if targetPkg != "" {
-			prefix = targetPkg + "."
+			referencedPkg = targetPkg
 		}
-		// Qualified references (pkg.Type) do not compete in the local identifier
-		// namespace. Never apply local scoping (suffixing) to the type name portion
-		// of an external reference, otherwise we can emit identifiers that do not
-		// exist in the referenced package (e.g., pkg.Foo2).
-		if prefix == "" {
-			return s.GoTypeName(att)
-		}
-		return prefix + Goify(actual.Name(), true)
+		return s.scopedTypeName(actual, Goify(actual.Name(), true), referencedPkg)
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
@@ -344,19 +359,6 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 		if expr.IsErrorResult(actual) {
 			return "goa.ServiceError"
 		}
-		// Qualified type references (pkg.Type) do not compete in the local
-		// identifier namespace.
-		//
-		// When generating qualified references, we must not blindly apply local
-		// scoping (suffixing) to the referenced type name, otherwise we can emit
-		// identifiers that do not exist in the referenced package (e.g., pkg.Foo2).
-		//
-		// However, when the scope already assigned a unique name to the referenced
-		// type (i.e., the type is defined in this scope and got suffixed due to a
-		// collision), qualified references must use that assigned name to stay
-		// consistent across packages. This is critical for transport packages that
-		// refer to types defined in the service package (e.g., grpc referencing a
-		// payload type defined as Request2).
 		return s.scopedTypeName(actual, Goify(actual.Name(), true), pkg)
 	case *expr.Union:
 		return s.scopedUnionTypeName(NewUnionDeclarationID(att), Goify(actual.Name(), true), pkg)
@@ -383,14 +385,20 @@ func (s *NameScope) scopedUnionTypeName(identity UnionDeclarationID, base, pkg s
 	return pkg + "." + name
 }
 
-// scopedTypeName returns a local or package-qualified generated declaration
-// name. key must be the lookup key recorded by the package containing that
-// declaration.
-func (s *NameScope) scopedTypeName(key Hasher, base, pkg string) string {
-	if pkg == "" {
-		return s.HashedUnique(key, base, "")
+// scopedTypeName returns the generated name recorded for userType. A copied
+// user type first uses the name of its original declaration. Types without an
+// explicit declaration binding keep the existing Hash-based lookup.
+func (s *NameScope) scopedTypeName(userType expr.UserType, base, pkg string) string {
+	if name, ok := s.userTypeNames[userType.Origin()]; ok {
+		if pkg == "" {
+			return name
+		}
+		return pkg + "." + name
 	}
-	if name, ok := s.names[key.Hash()]; ok {
+	if pkg == "" {
+		return s.HashedUnique(userType, base, "")
+	}
+	if name, ok := s.names[userType.Hash()]; ok {
 		return pkg + "." + name
 	}
 	return pkg + "." + base

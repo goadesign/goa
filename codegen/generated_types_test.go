@@ -159,6 +159,80 @@ func TestDeclareGeneratedTypeUsesStablePackageNames(t *testing.T) {
 	require.Equal(t, second, reversedSecond)
 }
 
+// TestBindGeneratedTypeUsesOriginalTypeIdentity verifies that equal generated
+// types can use different declarations while copies use the declaration chosen
+// for their original type.
+func TestBindGeneratedTypeUsesOriginalTypeIdentity(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	types := mustClaimTestPackage(t, generation, "generated.local/gen/types")
+	firstType := generatedUserType("Value", "shared")
+	secondType := generatedUserType("Value", "shared")
+	firstCopy := firstType.Dup(expr.DupAtt(firstType.Attribute()))
+	require.NotSame(t, firstType.Origin(), secondType.Origin())
+	require.Equal(t, firstType.Hash(), secondType.Hash())
+
+	first, err := types.DeclareGeneratedType("Value", testNameOrder{value: "first"})
+	require.NoError(t, err)
+	second, err := types.DeclareGeneratedType("Value", testNameOrder{value: "second"})
+	require.NoError(t, err)
+	require.NoError(t, types.BindGeneratedType(firstType, first))
+	require.NoError(t, types.BindGeneratedType(firstCopy, first))
+	require.NoError(t, types.BindGeneratedType(secondType, second))
+	require.NoError(t, generation.Freeze())
+
+	require.Equal(t, "Value", first.Name())
+	require.Equal(t, "Value2", second.Name())
+	boundCopy, err := types.Type(firstCopy)
+	require.NoError(t, err)
+	require.Same(t, first, boundCopy)
+
+	scope := types.Scope()
+	require.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: firstType}))
+	require.Equal(t, "Value", scope.GoTypeName(&expr.AttributeExpr{Type: firstCopy}))
+	require.Equal(t, "Value2", scope.GoTypeName(&expr.AttributeExpr{Type: secondType}))
+	require.Equal(t, "types.Value", scope.GoFullTypeRef(&expr.AttributeExpr{Type: firstCopy}, "types"))
+	require.Equal(t, "types.Value2", scope.GoFullTypeRef(&expr.AttributeExpr{Type: secondType}, "types"))
+	require.Equal(t, "Value", scope.GoTypeDef(&expr.AttributeExpr{Type: firstType}, false, false))
+	require.Equal(t, "Value2", scope.GoTypeDef(&expr.AttributeExpr{Type: secondType}, false, false))
+	require.Equal(t, "types.Value2", scope.goTypeDefWithPkgOverride(
+		&expr.AttributeExpr{Type: secondType},
+		false,
+		false,
+		"",
+		"types",
+	))
+}
+
+// TestBindGeneratedTypeRejectsInvalidBindings verifies that a package only
+// accepts complete, package-owned bindings before its names are final.
+func TestBindGeneratedTypeRejectsInvalidBindings(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	types := mustClaimTestPackage(t, generation, "generated.local/gen/types")
+	other := mustClaimTestPackage(t, generation, "generated.local/gen/other")
+	userType := generatedUserType("Value", "value")
+	first, err := types.DeclareGeneratedType("Value", testNameOrder{value: "first"})
+	require.NoError(t, err)
+	second, err := types.DeclareGeneratedType("Value", testNameOrder{value: "second"})
+	require.NoError(t, err)
+	foreign, err := other.DeclareGeneratedType("Value", testNameOrder{value: "foreign"})
+	require.NoError(t, err)
+
+	require.ErrorContains(t, types.BindGeneratedType(nil, first), "nil user type")
+	var nilUserType *expr.UserTypeExpr
+	require.ErrorContains(t, types.BindGeneratedType(nilUserType, first), "nil user type")
+	require.ErrorContains(t, types.BindGeneratedType(userType, nil), "nil type declaration")
+	require.ErrorContains(t, types.BindGeneratedType(
+		userType,
+		&TypeDeclaration{declaration: NewExactName(NameType, "Value")},
+	), "declaration is not owned")
+	require.ErrorContains(t, types.BindGeneratedType(userType, foreign), "generated.local/gen/other")
+	require.NoError(t, types.BindGeneratedType(userType, first))
+	require.ErrorContains(t, types.BindGeneratedType(userType, second), "already bound")
+
+	require.NoError(t, generation.Freeze())
+	require.ErrorContains(t, types.BindGeneratedType(userType, first), "frozen")
+}
+
 // TestGeneratedPackagePreservesExactGoNames checks that names produced by
 // another Go generator are stored without changing their spelling.
 func TestGeneratedPackagePreservesExactGoNames(t *testing.T) {

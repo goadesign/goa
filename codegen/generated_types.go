@@ -311,6 +311,38 @@ func (p *GeneratedPackage) DeclareGeneratedType(preferredName string, order Pack
 	return &TypeDeclaration{declaration: declaration}, nil
 }
 
+// BindGeneratedType makes userType and copies made from it use declaration
+// when Goa writes type definitions and references. The declaration must belong
+// to this package. Repeating the same binding has no effect.
+func (p *GeneratedPackage) BindGeneratedType(userType expr.UserType, declaration *TypeDeclaration) error {
+	if p.frozen {
+		return fmt.Errorf("generated package %q is frozen", p.path)
+	}
+	userTypeValue := reflect.ValueOf(userType)
+	if userType == nil || (userTypeValue.Kind() == reflect.Ptr && userTypeValue.IsNil()) {
+		return fmt.Errorf("generated package %q cannot bind a nil user type", p.path)
+	}
+	if declaration == nil || declaration.declaration == nil {
+		return fmt.Errorf("generated package %q cannot bind a nil type declaration", p.path)
+	}
+	if declaration.declaration.owner == nil {
+		return fmt.Errorf(
+			"generated package %q cannot bind type %q: declaration is not owned",
+			p.path,
+			userType.Name(),
+		)
+	}
+	if declaration.declaration.owner != p {
+		return fmt.Errorf(
+			"generated package %q cannot bind type %q: declaration belongs to generated package %q",
+			p.path,
+			userType.Name(),
+			declaration.declaration.owner.path,
+		)
+	}
+	return p.bindType(userType.Origin(), declaration)
+}
+
 // DeclareUserType adds userType with its exact exported Go name and returns the
 // generated declaration. Repeated calls for the same source type return the
 // same declaration.
@@ -696,6 +728,9 @@ func (p *GeneratedPackage) freeze() error {
 		for _, hash := range declaration.hashes {
 			p.scope.bind(hash, declaration.final)
 		}
+	}
+	for origin, declaration := range p.typeBindings {
+		p.scope.bindUserType(origin, declaration.declaration.final)
 	}
 	for identity, union := range p.unions {
 		p.scope.bindUnion(identity, union.declaration.declaration.final)
