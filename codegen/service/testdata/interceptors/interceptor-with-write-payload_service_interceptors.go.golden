@@ -3,18 +3,23 @@
 // payload is sent to the service. The implementation is responsible for calling
 // next to complete the request.
 type ServerInterceptors interface {
-	Validation(ctx context.Context, info *ValidationInfo, next goa.Endpoint) (any, error)
+	Validation(ctx context.Context, info ValidationInfo, next goa.Endpoint) (any, error)
 }
 
 // Access interfaces for interceptor payloads and results
 type (
-	// ValidationInfo provides metadata about the current interception.
-	// It includes service name, method name, and access to the endpoint.
-	ValidationInfo struct {
-		service    string
-		method     string
-		callType   goa.InterceptorCallType
-		rawPayload any
+	// ValidationInfo describes the service call currently passed to the interceptor.
+	ValidationInfo interface {
+		// Service returns the service selected for this call.
+		Service() string
+		// Method returns the method selected for this call.
+		Method() string
+		// CallType returns whether this is an endpoint call, stream send, or stream receive.
+		CallType() goa.InterceptorCallType
+		// RawPayload returns the value passed to the interceptor.
+		RawPayload() any
+		// Payload returns the selected fields from the method payload.
+		Payload() ValidationPayload
 	}
 
 	// ValidationPayload provides type-safe access to the method payload.
@@ -25,8 +30,17 @@ type (
 	}
 )
 
-// Private implementation types
+// Types used to provide information about each service call
 type (
+	validationMethodInfo struct {
+		rawPayload any
+	}
+	validationMethodServerUnaryInfo struct {
+		*validationMethodInfo
+	}
+	validationMethodClientUnaryInfo struct {
+		*validationMethodInfo
+	}
 	validationMethodPayload struct {
 		payload *MethodPayload
 	}
@@ -41,34 +55,39 @@ func WrapMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoin
 	return endpoint
 }
 
-// Public accessor methods for Info types
+// Methods that provide information about each service call
 
-// Service returns the name of the service handling the request.
-func (info *ValidationInfo) Service() string {
-	return info.service
+// Service returns the service selected for this interceptor call.
+func (info *validationMethodInfo) Service() string {
+	return "InterceptorWithWritePayload"
 }
 
-// Method returns the name of the method handling the request.
-func (info *ValidationInfo) Method() string {
-	return info.method
+// Method returns the method selected for this interceptor call.
+func (info *validationMethodInfo) Method() string {
+	return "Method"
 }
 
-// CallType returns the type of call the interceptor is handling.
-func (info *ValidationInfo) CallType() goa.InterceptorCallType {
-	return info.callType
-}
-
-// RawPayload returns the raw payload of the request.
-func (info *ValidationInfo) RawPayload() any {
+// RawPayload returns the payload supplied for this interceptor call.
+func (info *validationMethodInfo) RawPayload() any {
 	return info.rawPayload
 }
 
-// Payload returns a type-safe accessor for the method payload.
-func (info *ValidationInfo) Payload() ValidationPayload {
-	return &validationMethodPayload{payload: info.RawPayload().(*MethodPayload)}
+// CallType reports that this is a server endpoint call.
+func (info *validationMethodServerUnaryInfo) CallType() goa.InterceptorCallType {
+	return goa.InterceptorUnary
 }
 
-// Private implementation methods
+// CallType reports that this is a client endpoint call.
+func (info *validationMethodClientUnaryInfo) CallType() goa.InterceptorCallType {
+	return goa.InterceptorUnary
+}
+
+// Payload returns this method's payload fields.
+func (info *validationMethodInfo) Payload() ValidationPayload {
+	return &validationMethodPayload{payload: info.rawPayload.(*MethodPayload)}
+}
+
+// Methods that read and write the selected payload and result fields
 
 func (p *validationMethodPayload) SetName(v string) {
 	p.payload.Name = v

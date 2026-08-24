@@ -14,7 +14,7 @@
 		{{- range .Cookies }}
 			{{ .VarName }} {{ .TypeRef }}
 		{{- end }}
-		{{- if and .MustValidate (or (not .ServerBody) .Multipart) }}
+		{{- if and .MustValidate (not .ServerBody) }}
 			err error
 		{{- end }}
 		{{- if .Cookies }}

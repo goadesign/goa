@@ -14,8 +14,6 @@ func Validate() (err error) {
 		if *target.ExclusiveFloat64 <= 1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_float64", *target.ExclusiveFloat64, 1, true))
 		}
-	}
-	if target.ExclusiveFloat64 != nil {
 		if *target.ExclusiveFloat64 >= 100.1 {
 			err = goa.MergeErrors(err, goa.InvalidRangeError("target.exclusive_float64", *target.ExclusiveFloat64, 100.1, false))
 		}

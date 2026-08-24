@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/expr"
-	openapi "goa.design/goa/v3/http/codegen/openapi"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -23,12 +22,10 @@ func TestOpenAPI(t *testing.T) {
 		"valid": {DSL: testdata.SimpleDSL, NilSpec: false},
 	}
 	for k, c := range cases {
-		// Reset global variables
-		openapi.Definitions = make(map[string]*openapi.Schema)
 		root := expr.RunDSL(t, c.DSL)
-		spec, err := OpenAPIFiles(root, expr.NewExampleGenerator(root.API.RandomizerFactory))
+		plan, err := NewOpenAPIPlan(root, expr.NewExampleGenerator(root.API.RandomizerFactory))
 		require.NoError(t, err)
-		assert.Equal(t, c.NilSpec, spec == nil, k)
+		assert.Equal(t, c.NilSpec, len(plan.Files()) == 0, k)
 	}
 }
 
@@ -74,15 +71,14 @@ func TestOutputPath(t *testing.T) {
 	}}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// Reset global variables
-			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
-			o, err := OpenAPIFiles(root, expr.NewExampleGenerator(root.API.RandomizerFactory))
+			plan, err := NewOpenAPIPlan(root, expr.NewExampleGenerator(root.API.RandomizerFactory))
 			if c.Err != "" {
 				require.EqualError(t, err, c.Err)
 				return
 			}
 			require.NoError(t, err)
+			o := plan.Files()
 			require.Len(t, o, len(c.Paths))
 			for i, p := range c.Paths {
 				assert.Equal(t, p, o[i].Path)

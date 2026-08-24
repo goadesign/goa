@@ -3,11 +3,11 @@
     "schemas": {
       "UserType": {
         "example": {
-          "a": "Voluptas molestiae aliquam at."
+          "a": "event"
         },
         "properties": {
           "a": {
-            "example": "Voluptas molestiae aliquam at.",
+            "example": "event",
             "type": "string"
           }
         },
@@ -26,12 +26,12 @@
         "operationId": "StreamingResultService#StreamingResultMethod",
         "parameters": [
           {
-            "example": "Aut deleniti enim veritatis asperiores sit.",
+            "example": "request",
             "in": "path",
             "name": "x",
             "required": true,
             "schema": {
-              "example": "Aut deleniti enim veritatis asperiores sit.",
+              "example": "request",
               "type": "string"
             }
           }
@@ -41,7 +41,7 @@
             "content": {
               "application/json": {
                 "example": {
-                  "a": "Voluptas molestiae aliquam at."
+                  "a": "event"
                 },
                 "schema": {
                   "$ref": "#/components/schemas/UserType"

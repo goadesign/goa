@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/codegen/example"
 	ctestdata "goa.design/goa/v3/codegen/example/testdata"
 	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/grpc/codegen/testdata"
@@ -27,14 +26,15 @@ func TestExampleCLIFiles(t *testing.T) {
 		{"server-hosting-service-subset-pkgpath", ctestdata.ServerHostingServiceSubsetDSL, "my/pkg/path"},
 		{"server-hosting-multiple-services-pkgpath", ctestdata.ServerHostingMultipleServicesDSL, "my/pkg/path"},
 		{"interceptors", testdata.InterceptorsDSL, "generated.local/gen"},
+		{"server-streaming", testdata.ServerStreamingRPCDSL, "generated.local/gen"},
+		{"client-streaming", testdata.ClientStreamingRPCDSL, "generated.local/gen"},
+		{"bidirectional-streaming", testdata.BidirectionalStreamingRPCDSL, "generated.local/gen"},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// reset global variable
-			example.Servers = make(example.ServersData)
 			root := codegen.RunDSL(t, c.DSL)
-			services := createServiceServicesForPackage(root, c.PkgPath)
-			fs := ExampleCLIFiles(services)
+			examples := createExamplePlan(root, c.PkgPath)
+			fs := examples.CLIFiles()
 			require.Greater(t, len(fs), 0)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer

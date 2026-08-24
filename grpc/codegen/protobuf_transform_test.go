@@ -68,7 +68,6 @@ func TestProtoBufTransform(t *testing.T) {
 			nat.Attribute.Type = expr.String
 		}
 	}
-
 	tc := map[string][]struct {
 		Name    string
 		Source  expr.DataType
@@ -175,7 +174,7 @@ func TestProtoBufTransform(t *testing.T) {
 							target.Type.Name(),
 							testGRPCMessageExampleIdentity(name+"/"+c.Name+"/target"),
 						)
-						freezeProtoBufTransformMessages(sd, target)
+						freezeProtoBufTransformMessages(t, sd, target)
 						tgtCtx = protoBufTypeContext("proto", sd, true)
 					} else {
 						source = makeProtoBufMessage(
@@ -183,7 +182,7 @@ func TestProtoBufTransform(t *testing.T) {
 							source.Type.Name(),
 							testGRPCMessageExampleIdentity(name+"/"+c.Name+"/source"),
 						)
-						freezeProtoBufTransformMessages(sd, source)
+						freezeProtoBufTransformMessages(t, sd, source)
 						srcCtx = protoBufTypeContext("proto", sd, true)
 					}
 					code, _, err := protoBufTransform(source, target, "source", "target", srcCtx, tgtCtx, c.ToProto, true)
@@ -200,8 +199,15 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 	var (
 		sd     = &ServiceData{Name: "Service", Scope: codegen.NewNameScope()}
 		svcCtx = codegen.NewAttributeContext(false, false, true, "", sd.Scope)
-		pbCtx  = protoBufTypeContext("", sd, false)
 	)
+	sd.protobuf = newProtobufPackageCatalog("")
+	sd.protobuf.plan = &protobufServicePlan{
+		catalog:  sd.protobuf,
+		fields:   make(map[*expr.AttributeExpr]protocNameKey),
+		wrappers: make(map[*expr.AttributeExpr]protocNameKey),
+		oneofs:   make(map[*expr.AttributeExpr]protocNameKey),
+	}
+	pbCtx := protoBufTypeContext("", sd, false)
 
 	cases := []struct {
 		Name    string
@@ -250,9 +256,10 @@ func TestProtoBufTransformAnyType(t *testing.T) {
 
 // freezeProtoBufTransformMessages prepares the message names consumed by one
 // standalone transformation test outside full service analysis.
-func freezeProtoBufTransformMessages(sd *ServiceData, attribute *expr.AttributeExpr) {
+func freezeProtoBufTransformMessages(t *testing.T, sd *ServiceData, attribute *expr.AttributeExpr) {
 	sd.protobuf = newProtobufPackageCatalog("proto")
-	sd.protobuf.collectMessage(attribute, protobufMessageSource{}, sd)
+	require.NoError(t, sd.protobuf.collectMessage(attribute, protobufMessageSource{}))
+	planTestProtobufCatalog(t, sd)
 	sd.protobuf.freezeMessageNames()
 }
 

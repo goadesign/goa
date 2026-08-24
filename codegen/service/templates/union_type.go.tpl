@@ -1,71 +1,71 @@
-{{- /* Union sum-type definition and helpers. */ -}}
+{{- /* Definition and helpers for a value that holds exactly one branch. */ -}}
 {{- range .Fields }}
 {{- if .EmitPrimitiveAlias }}
 type {{ .FieldType }} {{ .PrimitiveAliasType }}
 
 {{- end }}
 {{- end }}
-// {{ .Name }} is a sum-type union.
-type {{ .Name }} struct {
-	kind {{ .KindName }}
+// {{ .TypeDeclaration.Name }} holds exactly one of its branch values.
+type {{ .TypeDeclaration.Name }} struct {
+	kind {{ .KindDeclaration.Name }}
 	{{- range .Fields }}
 	{{ .FieldName }} {{ .FieldType }}
 	{{- end }}
 }
 
-// {{ .KindName }} enumerates the union variants for {{ .Name }}.
-type {{ .KindName }} string
+// {{ .KindDeclaration.Name }} records which {{ .TypeDeclaration.Name }} branch is selected.
+type {{ .KindDeclaration.Name }} string
 
 const (
 	{{- range .Fields }}
-	// {{ .KindConst }} identifies the {{ .Name }} branch of the union.
-	{{ .KindConst }} {{ $.KindName }} = "{{ .TypeTag }}"
+	// {{ .KindDeclaration.Name }} identifies the {{ .Name }} branch.
+	{{ .KindDeclaration.Name }} {{ $.KindDeclaration.Name }} = "{{ .TypeTag }}"
 	{{- end }}
 )
 
-// Kind returns the discriminator value of the union.
-func (u {{ .Name }}) Kind() {{ .KindName }} {
+// Kind returns the selected branch.
+func (u {{ .TypeDeclaration.Name }}) Kind() {{ .KindDeclaration.Name }} {
 	return u.kind
 }
 
 {{- range .Fields }}
-// {{ .Constructor }} constructs {{ $.Name }} with the {{ .Name }} branch set.
-func {{ .Constructor }}(v {{ .FieldType }}) {{ $.Name }} {
-	return {{ $.Name }}{
-		kind:      {{ .KindConst }},
+// {{ .ConstructorDeclaration.Name }} constructs {{ $.TypeDeclaration.Name }} with the {{ .Name }} branch set.
+func {{ .ConstructorDeclaration.Name }}(v {{ .FieldType }}) {{ $.TypeDeclaration.Name }} {
+	return {{ $.TypeDeclaration.Name }}{
+		kind:      {{ .KindDeclaration.Name }},
 		{{ .FieldName }}: v,
 	}
 }
 
-// As{{ .FieldName }} returns the value of the {{ .Name }} branch if set.
-func (u {{ $.Name }}) As{{ .FieldName }}() (_ {{ .FieldType }}, ok bool) {
-	if u.kind != {{ .KindConst }} {
+// As{{ .FieldName }} returns the value when the {{ .Name }} branch is selected.
+func (u {{ $.TypeDeclaration.Name }}) As{{ .FieldName }}() (_ {{ .FieldType }}, ok bool) {
+	if u.kind != {{ .KindDeclaration.Name }} {
 		return
 	}
 	return u.{{ .FieldName }}, true
 }
 
-// Set{{ .FieldName }} sets the {{ .Name }} branch of the union.
-func (u *{{ $.Name }}) Set{{ .FieldName }}(v {{ .FieldType }}) {
-	u.kind = {{ .KindConst }}
+// Set{{ .FieldName }} selects the {{ .Name }} branch and stores v.
+func (u *{{ $.TypeDeclaration.Name }}) Set{{ .FieldName }}(v {{ .FieldType }}) {
+	u.kind = {{ .KindDeclaration.Name }}
 	u.{{ .FieldName }} = v
 }
 {{- end }}
 
-// Validate ensures the union discriminant is valid.
-func (u {{ .Name }}) Validate() error {
+// Validate ensures exactly one valid branch is selected.
+func (u {{ .TypeDeclaration.Name }}) Validate() error {
 	switch u.kind {
 	case "":
 		return goa.InvalidEnumValueError({{ printf "%q" .TypeKey }}, "", []any{
 			{{- range .Fields }}
-			string({{ .KindConst }}),
+			string({{ .KindDeclaration.Name }}),
 			{{- end }}
 		})
 	{{- range .Fields }}
-	case {{ .KindConst }}:
+	case {{ .KindDeclaration.Name }}:
 		{{- if .Nilable }}
 		if u.{{ .FieldName }} == nil {
-			return goa.MissingFieldError({{ printf "%q" $.ValueKey }}, "{{ $.Name }}")
+			return goa.MissingFieldError({{ printf "%q" $.ValueKey }}, "{{ $.TypeDeclaration.Name }}")
 		}
 		{{- end }}
 		return nil
@@ -73,14 +73,14 @@ func (u {{ .Name }}) Validate() error {
 	default:
 		return goa.InvalidEnumValueError({{ printf "%q" $.TypeKey }}, u.kind, []any{
 			{{- range .Fields }}
-			string({{ .KindConst }}),
+			string({{ .KindDeclaration.Name }}),
 			{{- end }}
 		})
 	}
 }
 
 // MarshalJSON marshals the union into the canonical {type,value} JSON shape.
-func (u {{ .Name }}) MarshalJSON() ([]byte, error) {
+func (u {{ .TypeDeclaration.Name }}) MarshalJSON() ([]byte, error) {
 	if err := u.Validate(); err != nil {
 		return nil, err
 	}
@@ -89,11 +89,11 @@ func (u {{ .Name }}) MarshalJSON() ([]byte, error) {
 	)
 	switch u.kind {
 	{{- range .Fields }}
-	case {{ .KindConst }}:
+	case {{ .KindDeclaration.Name }}:
 		value = u.{{ .FieldName }}
 	{{- end }}
 	default:
-		return nil, fmt.Errorf("unexpected {{ .Name }} discriminant %q", u.kind)
+		return nil, fmt.Errorf("unexpected {{ .TypeDeclaration.Name }} kind %q", u.kind)
 	}
 	return json.Marshal(struct {
 		Type  string {{ printf "`json:\"%s\"`" .TypeKey }}
@@ -105,7 +105,7 @@ func (u {{ .Name }}) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON unmarshals the union from the canonical {type,value} JSON shape.
-func (u *{{ .Name }}) UnmarshalJSON(data []byte) error {
+func (u *{{ .TypeDeclaration.Name }}) UnmarshalJSON(data []byte) error {
 	var raw struct {
 		Type  string          {{ printf "`json:\"%s\"`" .TypeKey }}
 		Value json.RawMessage {{ printf "`json:\"%s\"`" .ValueKey }}
@@ -114,28 +114,28 @@ func (u *{{ .Name }}) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(raw.Value) == 0 {
-		return goa.MissingFieldError({{ printf "%q" .ValueKey }}, "{{ .Name }}")
+		return goa.MissingFieldError({{ printf "%q" .ValueKey }}, "{{ .TypeDeclaration.Name }}")
 	}
 	if bytes.Equal(bytes.TrimSpace(raw.Value), []byte("null")) {
 		return goa.InvalidFieldTypeError({{ printf "%q" .ValueKey }}, nil, "non-null JSON value")
 	}
 	switch raw.Type {
 	{{- range .Fields }}
-	case string({{ .KindConst }}):
+	case string({{ .KindDeclaration.Name }}):
 		var v {{ .FieldType }}
 		if err := json.Unmarshal(raw.Value, &v); err != nil {
 			return err
 		}
-		u.kind = {{ .KindConst }}
+		u.kind = {{ .KindDeclaration.Name }}
 		u.{{ .FieldName }} = v
 	{{- end }}
 	default:
 		if raw.Type == "" {
-			return goa.MissingFieldError({{ printf "%q" .TypeKey }}, "{{ .Name }}")
+			return goa.MissingFieldError({{ printf "%q" .TypeKey }}, "{{ .TypeDeclaration.Name }}")
 		}
 		return goa.InvalidEnumValueError({{ printf "%q" .TypeKey }}, raw.Type, []any{
 			{{- range .Fields }}
-			string({{ .KindConst }}),
+			string({{ .KindDeclaration.Name }}),
 			{{- end }}
 		})
 	}

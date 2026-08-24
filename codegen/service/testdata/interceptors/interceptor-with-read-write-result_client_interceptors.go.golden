@@ -3,7 +3,7 @@
 // is sent to the server. The implementation is responsible for calling next to
 // complete the request.
 type ClientInterceptors interface {
-	Caching(ctx context.Context, info *CachingInfo, next goa.Endpoint) (any, error)
+	Caching(ctx context.Context, info CachingInfo, next goa.Endpoint) (any, error)
 }
 
 // WrapMethodClientEndpoint wraps the Method endpoint with the client

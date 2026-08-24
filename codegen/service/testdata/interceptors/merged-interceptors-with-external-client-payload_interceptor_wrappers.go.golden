@@ -1,0 +1,23 @@
+
+
+// wrapServerMethodIdentify applies the identify server interceptor to
+// endpoints.
+func wrapServerMethodIdentify(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		info := &identifyServerMethodServerUnaryInfo{
+			identifyServerMethodInfo: &identifyServerMethodInfo{rawPayload: req},
+		}
+		return i.Identify(ctx, info, endpoint)
+	}
+}
+
+// wrapClientClientMethodIdentify applies the identify client interceptor to
+// endpoints.
+func wrapClientClientMethodIdentify(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		info := &identifyClientMethodClientUnaryInfo{
+			identifyClientMethodInfo: &identifyClientMethodInfo{rawPayload: req},
+		}
+		return i.Identify(ctx, info, endpoint)
+	}
+}

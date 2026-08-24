@@ -138,6 +138,7 @@ func TestClientResponseValidator(t *testing.T) {
 	assertMissingField(t, genclient.ValidateExchangeResponse(&genpb.ExchangeResponse{Choice: &genpb.ExchangeResponse_Blob{}}), "blob", "\"blob\" is missing from message.choice")
 }
 
+// assertErrorName checks that generated validation returned the expected Goa error name.
 func assertErrorName(t *testing.T, err error, name string) {
 	t.Helper()
 	if err == nil {
@@ -154,6 +155,7 @@ func assertErrorName(t *testing.T, err error, name string) {
 	}
 }
 
+// assertMissingField checks the error name, field, and message returned for a missing protobuf value.
 func assertMissingField(t *testing.T, err error, field, message string) {
 	t.Helper()
 	if err == nil {

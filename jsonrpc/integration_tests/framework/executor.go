@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -21,8 +20,7 @@ type executor struct {
 // newExecutor creates a new test executor
 func newExecutor(serverURL string, opts ...executorOption) *executor {
 	config := executorConfig{
-		WebSocketTimeout: 30 * time.Second,
-		Debug:            false,
+		Debug: false,
 	}
 
 	for _, opt := range opts {
@@ -62,8 +60,6 @@ func (e *executor) executeSimple(t *testing.T, scenario Scenario) {
 	switch scenario.Transport {
 	case TransportHTTP:
 		e.executeHTTP(ctx, t, scenario)
-	case TransportWebSocket:
-		e.executeWebSocket(ctx, t, scenario)
 	case TransportSSE:
 		e.executeSSE(ctx, t, scenario)
 	default:
@@ -169,35 +165,6 @@ func (e *executor) executeHTTP(ctx context.Context, t *testing.T, scenario Scena
 	}
 }
 
-// executeWebSocket handles WebSocket transport scenarios
-func (e *executor) executeWebSocket(ctx context.Context, t *testing.T, scenario Scenario) {
-	t.Helper()
-
-	// WebSocket scenarios always use sequence
-	if len(scenario.Sequence) > 0 {
-		e.executeWebSocketSequence(ctx, t, scenario)
-		return
-	}
-
-	// If no sequence, create a simple send/receive sequence from request/expect
-	if scenario.Request.Params != nil {
-		// Pass method, params, and id as separate fields
-		data := map[string]any{
-			"method": scenario.Method,
-			"params": scenario.Request.Params,
-		}
-		if scenario.Request.ID != nil {
-			data["id"] = scenario.Request.ID
-		}
-
-		scenario.Sequence = []Action{
-			{Type: "send", Data: data},
-			{Type: "receive", Expect: scenario.Expect},
-		}
-		e.executeWebSocketSequence(ctx, t, scenario)
-	}
-}
-
 // executeSSE handles Server-Sent Events scenarios
 func (e *executor) executeSSE(_ context.Context, t *testing.T, _ Scenario) {
 	t.Helper()
@@ -213,99 +180,12 @@ func (e *executor) executeStreaming(t *testing.T, scenario Scenario) {
 
 	ctx := context.Background()
 
-	// Only WebSocket and SSE support streaming
+	// JSON-RPC streaming uses server-sent events.
 	switch scenario.Transport {
-	case TransportWebSocket:
-		e.executeWebSocketSequence(ctx, t, scenario)
 	case TransportSSE:
 		e.executeSSESequence(ctx, t, scenario)
 	default:
 		require.Failf(t, "Unsupported transport", "Transport %s does not support streaming", scenario.Transport)
-	}
-}
-
-// executeWebSocketSequence handles WebSocket streaming sequences
-func (e *executor) executeWebSocketSequence(ctx context.Context, t *testing.T, scenario Scenario) {
-	t.Helper()
-
-	client, err := harness.NewClient(e.serverURL, nil)
-	require.NoError(t, err, "Failed to create client")
-
-	// Execute sequence steps
-	for i, step := range scenario.Sequence {
-		switch step.Type {
-		case "connect":
-			err := client.ConnectWebSocket(ctx)
-			require.NoErrorf(t, err, "Step %d: failed to connect WebSocket", i)
-
-		case "send":
-			// Auto-connect if not connected
-			if !client.IsConnected() {
-				err := client.ConnectWebSocket(ctx)
-				require.NoErrorf(t, err, "Step %d: failed to auto-connect WebSocket", i)
-			}
-
-			require.NotNilf(t, step.Data, "Step %d: send step requires data", i)
-
-			// Extract method, params, and id from the data
-			reqData, ok := step.Data.(map[string]any)
-			require.Truef(t, ok, "Step %d: invalid request data format", i)
-
-			req := harness.JSONRPCRequest{
-				Method: reqData["method"].(string),
-				Params: reqData["params"],
-				ID:     reqData["id"],
-			}
-
-			// Mark HasID when id key present (even if it's null)
-			if _, hasID := reqData["id"]; hasID {
-				req.HasID = true
-			}
-
-			// Handle custom jsonrpc field if specified
-			if jsonrpcVal, ok := reqData["jsonrpc"]; ok {
-				if jsonrpcStr, ok := jsonrpcVal.(string); ok {
-					if jsonrpcStr == "-" {
-						// Special value to omit the field
-						emptyStr := ""
-						req.JSONRPC = &emptyStr
-					} else {
-						req.JSONRPC = &jsonrpcStr
-					}
-				}
-			}
-			// If not specified, JSONRPC remains nil and defaults to "2.0"
-
-			err := client.SendWebSocket(ctx, req)
-			require.NoErrorf(t, err, "Step %d: failed to send", i)
-
-		case "receive":
-			msg, err := client.ReceiveWebSocket(ctx)
-			require.NoErrorf(t, err, "Step %d: failed to receive", i)
-
-			var response map[string]any
-			err = json.Unmarshal(msg, &response)
-			require.NoErrorf(t, err, "Step %d: failed to unmarshal response", i)
-
-			// Compare the response with expected
-			if expected, ok := step.Expect.(map[string]any); ok {
-				e.compareJSONRPCMessages(t, response, expected)
-			} else {
-				require.Failf(t, "Invalid expected value", "Step %d: expected value must be a map", i)
-			}
-
-		case "close":
-			err := client.CloseWebSocket()
-			require.NoErrorf(t, err, "Step %d: failed to close WebSocket", i)
-
-		default:
-			require.Failf(t, "Unknown step type", "Step %d: unknown step type: %s", i, step.Type)
-		}
-
-		// Apply delay if specified
-		if step.Delay > 0 {
-			time.Sleep(step.Delay)
-		}
 	}
 }
 
@@ -480,7 +360,7 @@ func (e *executor) validateJSONRPCResponse(t *testing.T, response any, expect Ex
 	}
 }
 
-// compareJSONRPCMessages compares two JSON-RPC messages (used for SSE/WebSocket validation)
+// compareJSONRPCMessages compares two JSON-RPC messages from an SSE stream.
 func (e *executor) compareJSONRPCMessages(t *testing.T, actual, expected map[string]any) {
 	t.Helper()
 

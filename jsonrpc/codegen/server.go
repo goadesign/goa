@@ -30,14 +30,12 @@ type (
 func serverFiles(services []*servicePlan) []*codegen.File {
 	files := make([]*codegen.File, 0, len(services)*3)
 	for _, planned := range services {
-		files = append(files, addFileImports(serverFile(planned), planned.data))
-		// A service uses either a WebSocket file or an SSE file for streaming.
-		if planned.hasSSE {
-			if f := sseServerFile(planned); f != nil {
+		renderPlan := servicePlanForOutput(planned, false)
+		files = append(files, addFileImports(serverFile(renderPlan), planned.data))
+		if renderPlan.hasSSE {
+			if f := sseServerFile(renderPlan); f != nil {
 				files = append(files, addFileImports(f, planned.data))
 			}
-		} else if f := websocketServerFile(planned); f != nil {
-			files = append(files, addFileImports(f, planned.data))
 		}
 	}
 	for _, planned := range services {
@@ -72,14 +70,11 @@ func serverFile(planned *servicePlan) *codegen.File {
 	fpath := filepath.Join(codegen.Gendir, "jsonrpc", svcName, "server", "server.go")
 	title := fmt.Sprintf("%s JSON-RPC server", planned.name)
 	funcs := map[string]any{
-		"isWebSocketEndpoint":       isJSONRPCWebSocketEndpoint,
-		"isSSEEndpoint":             isJSONRPCSSEEndpoint,
-		"lowerInitial":              lowerInitial,
-		"encodeErrorName":           planned.encodeErrorName,
-		"sseStreamName":             planned.sseStreamName,
-		"websocketServerStreamName": planned.websocketServerStreamName,
-		"websocketWrapperName":      planned.websocketWrapperName,
-		"hasMixedTransports":        planned.hasMixedTransports,
+		"isSSEEndpoint":      isJSONRPCSSEEndpoint,
+		"lowerInitial":       lowerInitial,
+		"encodeErrorName":    planned.encodeErrorName,
+		"sseStreamName":      planned.sseStreamName,
+		"hasMixedTransports": planned.hasMixedTransports,
 	}
 	for name, function := range viewedResultFuncs(planned) {
 		funcs[name] = function
@@ -92,6 +87,7 @@ func serverFile(planned *servicePlan) *codegen.File {
 		&codegen.ImportSpec{Path: "errors"},
 		&codegen.ImportSpec{Path: "fmt"},
 		&codegen.ImportSpec{Path: "io"},
+		&codegen.ImportSpec{Path: "mime"},
 		&codegen.ImportSpec{Path: "mime/multipart"},
 		&codegen.ImportSpec{Path: "net/http"},
 		&codegen.ImportSpec{Path: "path"},
@@ -99,13 +95,13 @@ func serverFile(planned *servicePlan) *codegen.File {
 		codegen.GoaImport(""),
 		codegen.GoaImport("jsonrpc"),
 		codegen.GoaNamedImport("http", "goahttp"),
-		data.ServiceImport(),
+		data.ServerServiceImport(),
 	)
-	if serviceNeedsMetadataStrconv(planned) {
+	if serviceNeedsMetadataStrconv(planned) || planned.hasHTTP && planned.hasSSE {
 		imports = append(imports, &codegen.ImportSpec{Path: "strconv"})
 	}
 	if serviceHasViewedResult(data) {
-		imports = append(imports, data.ViewImport())
+		imports = append(imports, data.ServerViewImport())
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),
@@ -130,8 +126,6 @@ func serverFile(planned *servicePlan) *codegen.File {
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-sse-server-handler", Source: jsonrpcTemplates.Read(sseServerHandlerT), FuncMap: funcs, Data: renderData})
 	case planned.hasSSE:
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-sse-server-handler", Source: jsonrpcTemplates.Read(sseServerHandlerT), FuncMap: funcs, Data: renderData})
-	case planned.hasWebSocket:
-		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-websocket-server-handler", Source: jsonrpcTemplates.Read(websocketServerHandlerT), FuncMap: funcs, Data: renderData})
 	default:
 		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-handler", Source: jsonrpcTemplates.Read(serverHandlerT), FuncMap: funcs, Data: renderData})
 	}
@@ -157,9 +151,7 @@ func serverFile(planned *servicePlan) *codegen.File {
 	}
 	sections = append(sections, serverViewedResultSections(planned)...)
 
-	if !planned.hasWebSocket {
-		sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-encode-error", Source: jsonrpcTemplates.Read(serverEncodeErrorT), Data: renderData})
-	}
+	sections = append(sections, &codegen.SectionTemplate{Name: "jsonrpc-server-encode-error", Source: jsonrpcTemplates.Read(serverEncodeErrorT), Data: renderData})
 
 	return &codegen.File{Path: fpath, SectionTemplates: sections}
 }

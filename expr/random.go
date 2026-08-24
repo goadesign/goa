@@ -1,5 +1,6 @@
-// This file defines immutable example-randomizer configuration and the
-// mutable value streams owned by one code generation run.
+// This file creates the repeatable example values used by one code generation
+// run. Each ExampleGenerator has its own sequence of values and shares only the
+// map used while building recursive types.
 package expr
 
 import (
@@ -14,9 +15,9 @@ import (
 )
 
 type (
-	// Randomizer generates values used in generated examples. Implementations
-	// must return the same sequence when constructed from the same configuration
-	// and identity.
+	// Randomizer produces the primitive values used in generated examples. Two
+	// Randomizer values created with the same settings and equal ExampleIdentity
+	// keys must produce the same sequence.
 	Randomizer interface {
 		// ArrayLength decides how long an example array will be.
 		ArrayLength() int
@@ -58,74 +59,105 @@ type (
 		UUID() string
 	}
 
-	// RandomizerFactory is immutable example configuration. NewRandomizer must
-	// create a new mutable stream for every call. identity identifies a stable
-	// design location so separate runs produce identical examples without
-	// sharing consumed stream state.
+	// RandomizerFactory stores settings used to create Randomizer values.
+	// NewRandomizer must return a new Randomizer on every call. Its
+	// ExampleIdentity argument selects a repeatable sequence without sharing
+	// values already consumed by another call.
 	RandomizerFactory interface {
-		// NewRandomizer creates an independent value stream for identity.
+		// NewRandomizer creates an independent value sequence for the supplied
+		// ExampleIdentity.
 		NewRandomizer(identity ExampleIdentity) Randomizer
 	}
 
-	// exampleRandomizer hides the mutable stream field while promoting its
-	// value methods to ExampleGenerator.
+	// exampleRandomizer lets ExampleGenerator expose Randomizer methods without
+	// exposing its stored Randomizer field.
 	exampleRandomizer interface {
 		Randomizer
 	}
 
-	// ExampleGenerator generates examples from one run-owned value stream.
-	// Derived generators use stable design identities and share only this run's
-	// recursion cache, so unrelated analysis order does not change examples.
-	// One planning thread owns each generator; concurrent runs use distinct
-	// generators.
+	// ExampleGenerator builds examples from one value sequence. Child generators
+	// use separate repeatable keys for fields and collection entries, and share
+	// the map of values currently being built so recursive types can stop. One
+	// planning thread uses each generator; concurrent runs use separate values.
 	ExampleGenerator struct {
 		exampleRandomizer
 		factory  RandomizerFactory
 		identity ExampleIdentity
-		// root points to the generator this one was derived from so that all
-		// derived generators share the root's seen cache. It is nil on roots.
+		// root points to the first generator so child generators share its map of
+		// values currently being built. It is nil on the first generator.
 		root *ExampleGenerator
 		seen map[UserType]*any
 	}
 
-	// fakerRandomizer implements Randomizer using the faker library.
-	fakerRandomizer struct {
+	// FakerRandomizer produces repeatable example values with the faker library.
+	FakerRandomizer struct {
+		// Seed is the input used to create this value sequence.
+		Seed  string
 		faker *faker.Faker
 		rand  *rand.Rand
 	}
 
-	// deterministicRandomizer returns fixed values for every requested kind.
-	deterministicRandomizer struct{}
+	// DeterministicRandomizer returns the same fixed value from every method.
+	DeterministicRandomizer struct{}
 
-	// fakerRandomizerFactory retains only the seed configured by the API DSL.
+	// fakerRandomizerFactory stores the seed configured by the API DSL.
 	fakerRandomizerFactory struct {
 		seed string
 	}
 
-	// deterministicRandomizerFactory carries no mutable run state.
+	// deterministicRandomizerFactory needs no settings.
 	deterministicRandomizerFactory struct{}
 )
 
-// NewExampleGenerator creates an unanchored mutable run object with an empty
-// recursion cache. Call At before requesting an example value.
+// NewExampleGenerator returns a generator with no selected example sequence and
+// no values currently being built. Call At with an ExampleIdentity before
+// requesting a value.
 func NewExampleGenerator(factory RandomizerFactory) *ExampleGenerator {
 	return &ExampleGenerator{factory: factory}
 }
 
-// NewFakerRandomizerFactory returns immutable configuration that creates
-// independent faker streams rooted at seed.
+// NewFakerRandomizerFactory returns settings that create independent faker
+// value sequences from seed.
 func NewFakerRandomizerFactory(seed string) RandomizerFactory {
 	return fakerRandomizerFactory{seed: seed}
 }
 
-// NewDeterministicRandomizerFactory returns immutable configuration that
-// creates independent streams of fixed values.
+// NewDeterministicRandomizerFactory returns settings that create independent
+// Randomizer values whose methods return fixed values.
 func NewDeterministicRandomizerFactory() RandomizerFactory {
 	return deterministicRandomizerFactory{}
 }
 
-// At returns a generator whose stream is anchored to identity. Anchored
-// generators share this run's recursion cache but never consumed stream state.
+// NewFakerRandomizer returns a repeatable faker value sequence created from
+// seed.
+func NewFakerRandomizer(seed string) Randomizer {
+	hasher := md5.New()
+	hasher.Write([]byte(seed))
+	sint := int64(binary.BigEndian.Uint64(hasher.Sum(nil)))
+	source := rand.NewSource(sint)
+	ran := rand.New(source)
+	faker := &faker.Faker{
+		Language: "end",
+		Dict:     faker.Dict["en"],
+		Rand:     ran,
+	}
+
+	return &FakerRandomizer{
+		Seed:  seed,
+		faker: faker,
+		rand:  ran,
+	}
+}
+
+// NewDeterministicRandomizer returns a value sequence whose methods return
+// fixed values.
+func NewDeterministicRandomizer() Randomizer {
+	return &DeterministicRandomizer{}
+}
+
+// At returns a generator whose value sequence is selected by the supplied
+// ExampleIdentity. The result shares the map of values currently being built
+// in this run, but gets a new Randomizer with no consumed values.
 func (r *ExampleGenerator) At(identity ExampleIdentity) *ExampleGenerator {
 	root := r.store()
 	if root.factory == nil {
@@ -142,8 +174,8 @@ func (r *ExampleGenerator) At(identity ExampleIdentity) *ExampleGenerator {
 	}
 }
 
-// Member returns a generator for the named object member below the current
-// anchored identity.
+// Member returns a generator whose repeatable sequence is selected by the
+// current ExampleIdentity plus the named field.
 func (r *ExampleGenerator) Member(name string) *ExampleGenerator {
 	if r.factory == nil {
 		return r
@@ -151,8 +183,8 @@ func (r *ExampleGenerator) Member(name string) *ExampleGenerator {
 	return r.structural(r.identity.Member(name))
 }
 
-// ArrayElement returns a generator for the indexed array element below the
-// current anchored identity.
+// ArrayElement returns a generator whose repeatable sequence is selected by
+// the current ExampleIdentity plus the array index.
 func (r *ExampleGenerator) ArrayElement(index int) *ExampleGenerator {
 	if r.factory == nil {
 		return r
@@ -160,8 +192,8 @@ func (r *ExampleGenerator) ArrayElement(index int) *ExampleGenerator {
 	return r.structural(r.identity.ArrayElement(index))
 }
 
-// MapKey returns a generator for the indexed map key below the current
-// anchored identity.
+// MapKey returns a generator whose repeatable sequence is selected by the
+// current ExampleIdentity plus the map key index.
 func (r *ExampleGenerator) MapKey(index int) *ExampleGenerator {
 	if r.factory == nil {
 		return r
@@ -169,8 +201,8 @@ func (r *ExampleGenerator) MapKey(index int) *ExampleGenerator {
 	return r.structural(r.identity.MapKey(index))
 }
 
-// MapValue returns a generator for the indexed map value below the current
-// anchored identity.
+// MapValue returns a generator whose repeatable sequence is selected by the
+// current ExampleIdentity plus the map value index.
 func (r *ExampleGenerator) MapValue(index int) *ExampleGenerator {
 	if r.factory == nil {
 		return r
@@ -178,8 +210,8 @@ func (r *ExampleGenerator) MapValue(index int) *ExampleGenerator {
 	return r.structural(r.identity.MapValue(index))
 }
 
-// UnionMember returns a generator for the named union member below the current
-// anchored identity.
+// UnionMember returns a generator whose repeatable sequence is selected by the
+// current ExampleIdentity plus the union branch name.
 func (r *ExampleGenerator) UnionMember(name string) *ExampleGenerator {
 	if r.factory == nil {
 		return r
@@ -187,126 +219,177 @@ func (r *ExampleGenerator) UnionMember(name string) *ExampleGenerator {
 	return r.structural(r.identity.UnionMember(name))
 }
 
-func (r *fakerRandomizer) ArrayLength() int {
+// ArrayLength returns a small positive array length.
+func (r *FakerRandomizer) ArrayLength() int {
 	return r.Int()%3 + 2
 }
-func (r *fakerRandomizer) Int() int {
+
+// Int returns the next int value.
+func (r *FakerRandomizer) Int() int {
 	return r.rand.Int()
 }
-func (r *fakerRandomizer) Int32() int32 {
+
+// Int32 returns the next int32 value.
+func (r *FakerRandomizer) Int32() int32 {
 	return r.rand.Int31()
 }
-func (r *fakerRandomizer) Int64() int64 {
+
+// Int64 returns the next int64 value.
+func (r *FakerRandomizer) Int64() int64 {
 	return r.rand.Int63()
 }
-func (r *fakerRandomizer) String() string {
+
+// String returns the next short sentence.
+func (r *FakerRandomizer) String() string {
 	return r.faker.Sentence(2, false)
 }
-func (r *fakerRandomizer) Bool() bool {
+
+// Bool returns the next boolean value.
+func (r *FakerRandomizer) Bool() bool {
 	return r.rand.Int()%2 == 0
 }
-func (r *fakerRandomizer) Float32() float32 {
+
+// Float32 returns the next float32 value.
+func (r *FakerRandomizer) Float32() float32 {
 	return r.rand.Float32()
 }
-func (r *fakerRandomizer) Float64() float64 {
+
+// Float64 returns the next float64 value.
+func (r *FakerRandomizer) Float64() float64 {
 	return r.rand.Float64()
 }
-func (r *fakerRandomizer) UInt() uint {
+
+// UInt returns the next uint value.
+func (r *FakerRandomizer) UInt() uint {
 	return uint(r.UInt64())
 }
-func (r *fakerRandomizer) UInt32() uint32 {
+
+// UInt32 returns the next uint32 value.
+func (r *FakerRandomizer) UInt32() uint32 {
 	return r.rand.Uint32()
 }
-func (r *fakerRandomizer) UInt64() uint64 {
+
+// UInt64 returns the next uint64 value.
+func (r *FakerRandomizer) UInt64() uint64 {
 	return r.rand.Uint64()
 }
-func (r *fakerRandomizer) Email() string {
+
+// Email returns the next email address.
+func (r *FakerRandomizer) Email() string {
 	return r.faker.Email()
 }
-func (r *fakerRandomizer) Hostname() string {
+
+// Hostname returns the next hostname.
+func (r *FakerRandomizer) Hostname() string {
 	return r.faker.DomainName() + "." + r.faker.DomainSuffix()
 }
-func (r *fakerRandomizer) IPv4Address() net.IP {
+
+// IPv4Address returns the next IPv4 address.
+func (r *FakerRandomizer) IPv4Address() net.IP {
 	return r.faker.IPv4Address()
 }
-func (r *fakerRandomizer) IPv6Address() net.IP {
+
+// IPv6Address returns the next IPv6 address.
+func (r *FakerRandomizer) IPv6Address() net.IP {
 	return r.faker.IPv6Address()
 }
-func (r *fakerRandomizer) URL() string {
+
+// URL returns the next URL.
+func (r *FakerRandomizer) URL() string {
 	return r.faker.URL()
 }
-func (r *fakerRandomizer) Characters(n int) string {
+
+// Characters returns the next string containing n characters.
+func (r *FakerRandomizer) Characters(n int) string {
 	return r.faker.Characters(n)
 }
-func (r *fakerRandomizer) UUID() string {
+
+// UUID returns the next random version 4 UUID.
+func (r *FakerRandomizer) UUID() string {
 	uuid := make([]byte, 16)
 	r.rand.Read(uuid)
 	uuid[6] = (uuid[6] & 0x0f) | 0x40
 	uuid[8] = (uuid[8] & 0x3f) | 0x80
 	return fmt.Sprintf("%x-%x-%x-%x-%x", uuid[0:4], uuid[4:6], uuid[6:8], uuid[8:10], uuid[10:])
 }
-func (r *fakerRandomizer) Name() string {
+
+// Name returns the next human name.
+func (r *FakerRandomizer) Name() string {
 	return r.faker.Name()
 }
 
-func (deterministicRandomizer) ArrayLength() int        { return 1 }
-func (deterministicRandomizer) Int() int                { return 1 }
-func (deterministicRandomizer) Int32() int32            { return 1 }
-func (deterministicRandomizer) Int64() int64            { return 1 }
-func (deterministicRandomizer) String() string          { return "abc123" }
-func (deterministicRandomizer) Bool() bool              { return false }
-func (deterministicRandomizer) Float32() float32        { return 1 }
-func (deterministicRandomizer) Float64() float64        { return 1 }
-func (deterministicRandomizer) UInt() uint              { return 1 }
-func (deterministicRandomizer) UInt32() uint32          { return 1 }
-func (deterministicRandomizer) UInt64() uint64          { return 1 }
-func (deterministicRandomizer) Name() string            { return "Alice" }
-func (deterministicRandomizer) Email() string           { return "alice@example.com" }
-func (deterministicRandomizer) Hostname() string        { return "example.com" }
-func (deterministicRandomizer) IPv4Address() net.IP     { return net.IPv4zero }
-func (deterministicRandomizer) IPv6Address() net.IP     { return net.IPv6zero }
-func (deterministicRandomizer) URL() string             { return "https://example.com/foo" }
-func (deterministicRandomizer) Characters(n int) string { return strings.Repeat("a", n) }
-func (deterministicRandomizer) UUID() string            { return "550e8400-e29b-41d4-a716-446655440000" }
+// ArrayLength returns one.
+func (DeterministicRandomizer) ArrayLength() int { return 1 }
 
-// NewRandomizer creates an independent faker stream for identity.
+// Int returns one.
+func (DeterministicRandomizer) Int() int { return 1 }
+
+// Int32 returns one.
+func (DeterministicRandomizer) Int32() int32 { return 1 }
+
+// Int64 returns one.
+func (DeterministicRandomizer) Int64() int64 { return 1 }
+
+// String returns a fixed string.
+func (DeterministicRandomizer) String() string { return "abc123" }
+
+// Bool returns false.
+func (DeterministicRandomizer) Bool() bool { return false }
+
+// Float32 returns one.
+func (DeterministicRandomizer) Float32() float32 { return 1 }
+
+// Float64 returns one.
+func (DeterministicRandomizer) Float64() float64 { return 1 }
+
+// UInt returns one.
+func (DeterministicRandomizer) UInt() uint { return 1 }
+
+// UInt32 returns one.
+func (DeterministicRandomizer) UInt32() uint32 { return 1 }
+
+// UInt64 returns one.
+func (DeterministicRandomizer) UInt64() uint64 { return 1 }
+
+// Name returns a fixed human name.
+func (DeterministicRandomizer) Name() string { return "Alice" }
+
+// Email returns a fixed email address.
+func (DeterministicRandomizer) Email() string { return "alice@example.com" }
+
+// Hostname returns a fixed hostname.
+func (DeterministicRandomizer) Hostname() string { return "example.com" }
+
+// IPv4Address returns the unspecified IPv4 address.
+func (DeterministicRandomizer) IPv4Address() net.IP { return net.IPv4zero }
+
+// IPv6Address returns the unspecified IPv6 address.
+func (DeterministicRandomizer) IPv6Address() net.IP { return net.IPv6zero }
+
+// URL returns a fixed URL.
+func (DeterministicRandomizer) URL() string { return "https://example.com/foo" }
+
+// Characters returns n copies of "a".
+func (DeterministicRandomizer) Characters(n int) string { return strings.Repeat("a", n) }
+
+// UUID returns a fixed version 4 UUID.
+func (DeterministicRandomizer) UUID() string { return "550e8400-e29b-41d4-a716-446655440000" }
+
+// NewRandomizer creates an independent faker value sequence selected by the
+// supplied ExampleIdentity key.
 func (f fakerRandomizerFactory) NewRandomizer(identity ExampleIdentity) Randomizer {
-	return newFakerRandomizer(f.seed + identity.Seed())
+	return NewFakerRandomizer(f.seed + identity.Seed())
 }
 
-// NewRandomizer creates an independent deterministic stream. identity does
-// not affect fixed deterministic values.
+// NewRandomizer creates an independent Randomizer whose methods return fixed
+// values. The supplied ExampleIdentity does not change those values.
 func (deterministicRandomizerFactory) NewRandomizer(ExampleIdentity) Randomizer {
-	return newDeterministicRandomizer()
+	return NewDeterministicRandomizer()
 }
 
-// newFakerRandomizer creates a mutable faker stream from exact seed material.
-func newFakerRandomizer(seed string) Randomizer {
-	hasher := md5.New()
-	hasher.Write([]byte(seed))
-	sint := int64(binary.BigEndian.Uint64(hasher.Sum(nil)))
-	source := rand.NewSource(sint)
-	ran := rand.New(source)
-	faker := &faker.Faker{
-		Language: "end",
-		Dict:     faker.Dict["en"],
-		Rand:     ran,
-	}
-
-	return &fakerRandomizer{
-		faker: faker,
-		rand:  ran,
-	}
-}
-
-// newDeterministicRandomizer builds a stream that returns fixed values.
-func newDeterministicRandomizer() Randomizer {
-	return &deterministicRandomizer{}
-}
-
-// previouslySeen returns the value already being built for typ in this run.
-// Declaration origins, rather than authored string IDs, distinguish graph
-// nodes while still breaking recursive cycles through copied types.
+// previouslySeen returns the value already being built for typ in this run. It
+// uses the original type declaration so copied types find the same in-progress
+// value and recursive definitions stop.
 func (r *ExampleGenerator) previouslySeen(typ UserType) (*any, bool) {
 	s := r.store()
 	if s.seen == nil {
@@ -316,8 +399,8 @@ func (r *ExampleGenerator) previouslySeen(typ UserType) (*any, bool) {
 	return val, haveSeen
 }
 
-// haveSeen records the value being built for typ so recursive descent can
-// reuse it before construction finishes.
+// haveSeen records the value currently being built for typ so a recursive use
+// can return it before construction finishes.
 func (r *ExampleGenerator) haveSeen(typ UserType, val *any) {
 	s := r.store()
 	if s.seen == nil {
@@ -327,8 +410,8 @@ func (r *ExampleGenerator) haveSeen(typ UserType, val *any) {
 	s.seen[typ.Origin()] = val
 }
 
-// store returns the generator owning the seen cache and factory: the generator
-// this one was derived from, or the generator itself when it is a root.
+// store returns the first generator, which stores the RandomizerFactory and the
+// map of values currently being built. It returns r when r has no parent.
 func (r *ExampleGenerator) store() *ExampleGenerator {
 	if r.root != nil {
 		return r.root
@@ -336,8 +419,8 @@ func (r *ExampleGenerator) store() *ExampleGenerator {
 	return r
 }
 
-// structural returns a generator drawing from the structural identity and
-// sharing this generator's run-local recursion cache.
+// structural returns a generator for the sequence selected by the supplied
+// ExampleIdentity. It shares this run's map of values currently being built.
 func (r *ExampleGenerator) structural(identity ExampleIdentity) *ExampleGenerator {
 	if r.factory == nil {
 		return r

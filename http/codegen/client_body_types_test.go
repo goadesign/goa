@@ -14,8 +14,6 @@ import (
 )
 
 func TestBodyTypeDecl(t *testing.T) {
-	const genpkg = "gen"
-
 	cases := []struct {
 		Name string
 		DSL  func()
@@ -36,7 +34,6 @@ func TestBodyTypeDecl(t *testing.T) {
 }
 
 func TestBodyTypeInit(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name         string
 		DSL          func()
@@ -96,12 +93,11 @@ func TestRequiredViewedPrimitiveBodyConstructorUsesProjectedPointer(t *testing.T
 	}
 	definition := codegen.FormatTestCode(t, "package client\n"+generated.String())
 
-	require.Contains(t, definition, `func NewFetchResultOK(body string) *valuesviews.RequiredViewedPrimitiveView`)
+	require.Contains(t, definition, `func NewFetchRequiredViewedPrimitiveOK(body string) *valuesviews.RequiredViewedPrimitiveView`)
 	require.Contains(t, definition, "Value: &v,")
 }
 
 func TestClientTypes(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()
@@ -116,6 +112,7 @@ func TestClientTypes(t *testing.T) {
 		{"client-empty-error-response-body", testdata.EmptyErrorResponseBodyDSL},
 		{"client-with-error-custom-pkg", testdata.WithErrorCustomPkgDSL},
 		{"client-body-custom-name", testdata.PayloadBodyCustomNameDSL},
+		{"client-required-primitive-arrays", testdata.RequiredPrimitiveArrayDSL},
 		{"client-path-custom-name", testdata.PayloadPathCustomNameDSL},
 		{"client-query-custom-name", testdata.PayloadQueryCustomNameDSL},
 		{"client-header-custom-name", testdata.PayloadHeaderCustomNameDSL},
@@ -138,7 +135,6 @@ func TestClientTypes(t *testing.T) {
 }
 
 func TestClientTypeFiles(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()

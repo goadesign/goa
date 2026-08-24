@@ -198,28 +198,34 @@ func (s *SSEAllFieldsMethodStreamImpl) processEvent(eventData []byte) (event *ss
 			continue
 		}
 		if bytes.HasPrefix(line, []byte("data:")) {
-			dataLines = append(dataLines, s.trimHeader(len("data:"), line))
+			dataLines = append(dataLines, s.trimHeader(line[len("data:"):]))
 			continue
 		}
 		if bytes.HasPrefix(line, []byte("id:")) {
-			event.ID = s.trimHeader(len("id:"), line)
+			event.ID = s.trimHeader(line[len("id:"):])
 			continue
 		}
 		if bytes.HasPrefix(line, []byte("event:")) {
-			event.Event = s.trimHeader(len("event:"), line)
+			event.Event = s.trimHeader(line[len("event:"):])
 			continue
 		}
 		if bytes.HasPrefix(line, []byte("retry:")) {
-			// Note: retry value parsing depends on the field type; client currently expects integer-like types.
-			// We deliberately leave conversion to a future enhancement that includes the field type reference.
-			// For now this branch is kept for completeness; services using RetryField should be handled server-side.
+			retryContent := s.trimHeader(line[len("retry:"):])
+
+			var val int64
+			val, err = strconv.ParseInt(retryContent, 10, 0)
+			if err != nil {
+				return
+			}
+			value := int(val)
+			event.Retry = &value
 			continue
 		}
 	}
 	if len(dataLines) > 0 {
 		dataContent := strings.Join(dataLines, "\n")
 
-		// Use user-provided decoder for complex types
+		// The configured decoder handles structured event data.
 		respBody := &http.Response{
 			StatusCode: http.StatusOK,
 			Body:       io.NopCloser(bytes.NewReader([]byte(dataContent))),
@@ -232,12 +238,8 @@ func (s *SSEAllFieldsMethodStreamImpl) processEvent(eventData []byte) (event *ss
 	return
 }
 
-// trimHeader removes the header prefix and optional leading space
-func (s *SSEAllFieldsMethodStreamImpl) trimHeader(size int, data []byte) string {
-	if len(data) < size {
-		return string(data)
-	}
-	data = data[size:]
+// trimHeader removes the optional space after an SSE field name.
+func (s *SSEAllFieldsMethodStreamImpl) trimHeader(data []byte) string {
 	if len(data) > 0 && data[0] == ' ' {
 		data = data[1:]
 	}

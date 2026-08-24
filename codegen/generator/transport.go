@@ -4,7 +4,6 @@ package generator
 
 import (
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/expr"
 	grpccodegen "goa.design/goa/v3/grpc/codegen"
 	httpcodegen "goa.design/goa/v3/http/codegen"
@@ -14,11 +13,9 @@ import (
 // transportFiles returns all HTTP, gRPC, and JSON-RPC files for one run.
 func transportFiles(plan *Plan) ([]*codegen.File, error) {
 	var files []*codegen.File
-	generation := plan.Generation()
-	designRoots := serviceRoots(generation.Roots())
-	for _, r := range designRoots {
+	for _, transport := range plan.transports {
 		// HTTP
-		if httpPlan := plan.http[r]; httpPlan != nil {
+		if httpPlan := transport.http; httpPlan != nil {
 			files = append(files, httpPlan.ServerFiles()...)
 			files = append(files, httpPlan.ClientFiles()...)
 			files = append(files, httpPlan.ServerTypeFiles()...)
@@ -28,7 +25,7 @@ func transportFiles(plan *Plan) ([]*codegen.File, error) {
 		}
 
 		// GRPC
-		if grpcPlan := plan.grpc[r]; grpcPlan != nil {
+		if grpcPlan := transport.grpc; grpcPlan != nil {
 			files = append(files, grpcPlan.ProtoFiles()...)
 			files = append(files, grpcPlan.ServerFiles()...)
 			files = append(files, grpcPlan.ClientFiles()...)
@@ -38,7 +35,7 @@ func transportFiles(plan *Plan) ([]*codegen.File, error) {
 		}
 
 		// JSON-RPC
-		if jsonrpcPlan := plan.jsonrpc[r]; jsonrpcPlan != nil {
+		if jsonrpcPlan := transport.jsonrpc; jsonrpcPlan != nil {
 			files = append(files, jsonrpcPlan.ServerFiles()...)
 			files = append(files, jsonrpcPlan.ClientFiles()...)
 			files = append(files, jsonrpcPlan.ServerTypeFiles()...)
@@ -60,9 +57,6 @@ func planTransportData(plan *Plan) error {
 		return nil
 	}
 	generation := plan.Generation()
-	if err := example.Plan(generation); err != nil {
-		return err
-	}
 	roots := serviceRoots(generation.Roots())
 	if err := planHTTPTransports(plan, roots); err != nil {
 		return err
@@ -91,6 +85,15 @@ func planTransportData(plan *Plan) error {
 		plan.grpc = make(map[*expr.RootExpr]*grpccodegen.Plan, len(grpcPlans))
 		for index, root := range plannedRoots {
 			plan.grpc[root] = grpcPlans[index]
+		}
+	}
+	plan.transports = make([]*transportPlanEntry, len(roots))
+	for index, root := range roots {
+		plan.transports[index] = &transportPlanEntry{
+			http:        plan.http[root],
+			jsonrpcHTTP: plan.jsonrpcHTTP[root],
+			jsonrpc:     plan.jsonrpc[root],
+			grpc:        plan.grpc[root],
 		}
 	}
 	plan.transportDone = true

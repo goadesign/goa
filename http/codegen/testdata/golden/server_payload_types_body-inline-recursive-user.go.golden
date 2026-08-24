@@ -1,9 +1,9 @@
-// NewMethodBodyInlineRecursiveUserPayload builds a
+// NewMethodBodyInlineRecursiveUserPayloadType builds a
 // ServiceBodyInlineRecursiveUser service MethodBodyInlineRecursiveUser
 // endpoint payload.
-func NewMethodBodyInlineRecursiveUserPayload(body *MethodBodyInlineRecursiveUserRequestBody, a string, b *string) *servicebodyinlinerecursiveuser.PayloadType {
+func NewMethodBodyInlineRecursiveUserPayloadType(body *MethodBodyInlineRecursiveUserRequestBody, a string, b *string) *servicebodyinlinerecursiveuser.PayloadType {
 	v := &servicebodyinlinerecursiveuser.PayloadType{}
-	v.C = unmarshalPayloadTypeToPayloadType(body.C)
+	v.C = unmarshalPayloadTypeRequestBodyToServicebodyinlinerecursiveuserPayloadType(body.C)
 	v.A = a
 	v.B = b
 

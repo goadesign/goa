@@ -1,0 +1,64 @@
+// MethodMultipartValidationRequestBody is the type of the
+// "ServiceMultipartValidation" service "MethodMultipartValidation" endpoint
+// HTTP request body.
+type MethodMultipartValidationRequestBody struct {
+	Name *string                   `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	Part *MultipartPartRequestBody `form:"part,omitempty" json:"part,omitempty" xml:"part,omitempty"`
+}
+
+// MultipartPartRequestBody is used to define fields on request body types.
+type MultipartPartRequestBody struct {
+	Code *string `form:"code,omitempty" json:"code,omitempty" xml:"code,omitempty"`
+}
+
+// NewMethodMultipartValidationPayload builds a ServiceMultipartValidation
+// service MethodMultipartValidation endpoint payload.
+func NewMethodMultipartValidationPayload(body *MethodMultipartValidationRequestBody) *servicemultipartvalidation.MethodMultipartValidationPayload {
+	v := &servicemultipartvalidation.MethodMultipartValidationPayload{
+		Name: *body.Name,
+	}
+	v.Part = unmarshalMultipartPartRequestBodyToServicemultipartvalidationMultipartPart(body.Part)
+
+	return v
+}
+
+// ValidateMethodMultipartValidationRequestBody runs the validations defined on
+// MethodMultipartValidationRequestBody
+func ValidateMethodMultipartValidationRequestBody(body *MethodMultipartValidationRequestBody) (err error) {
+	if body.Name == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("name", "body"))
+	}
+	if body.Part == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("part", "body"))
+	}
+	if body.Part != nil {
+		if err2 := validateMultipartPartRequestBody(body.Part, "body.part"); err2 != nil {
+			err = goa.MergeErrors(err, err2)
+		}
+	}
+	return
+}
+
+// ValidateMultipartPartRequestBody runs the validations defined on
+// MultipartPart
+func ValidateMultipartPartRequestBody(body *MultipartPartRequestBody) (err error) {
+	if body.Code == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("code", "body"))
+	}
+	if body.Code != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern("body.code", *body.Code, "^[a-z]+$"))
+	}
+	return
+}
+
+// validateMultipartPartRequestBody checks MultipartPart and reports errors
+// using the path supplied by its caller
+func validateMultipartPartRequestBody(body *MultipartPartRequestBody, path string) (err error) {
+	if body.Code == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("code", path))
+	}
+	if body.Code != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".code", *body.Code, "^[a-z]+$"))
+	}
+	return
+}

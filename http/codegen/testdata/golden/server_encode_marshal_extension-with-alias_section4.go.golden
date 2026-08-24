@@ -1,10 +1,10 @@
-// marshalBarToBar builds a value of type *Bar from a value of type
-// *fooservice.Bar.
-func marshalBarToBar(v *fooservice.Bar) *Bar {
+// marshalFooserviceBarToBarResponseOptional builds a value of type
+// *BarResponse from a value of type *fooservice.Bar.
+func marshalFooserviceBarToBarResponseOptional(v *fooservice.Bar) *BarResponse {
 	if v == nil {
 		return nil
 	}
-	res := &Bar{
+	res := &BarResponse{
 		Bar: v.Bar,
 	}
 

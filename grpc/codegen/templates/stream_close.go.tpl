@@ -1,5 +1,5 @@
 
-func (s *{{ .VarName }}) Close() error {
+func (s *{{ .Declaration.Name }}) Close() error {
 {{- if eq .Type "client" }}
 {{- if .Endpoint.Method.Result }}
 	{{ comment "Close the send direction of the stream" }}

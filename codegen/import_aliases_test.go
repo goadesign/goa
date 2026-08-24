@@ -14,15 +14,17 @@ import (
 func TestImportAliasPrioritiesIgnoreRegistrationOrder(t *testing.T) {
 	freeze := func(reverse bool) map[string]string {
 		generation := mustTestGeneration(t, "generated.local/gen", nil)
+		pkg, err := generation.ClaimPackage("generated.local/gen/service")
+		require.NoError(t, err)
 		declare := []func() error{
 			func() error {
-				return generation.RequireImport(NewImport("goa", "goa.design/goa/v3/pkg"))
+				return pkg.RequireImport(NewImport("goa", "goa.design/goa/v3/pkg"))
 			},
 			func() error {
-				return generation.ReserveGeneratedImport(NewImport("goa", "generated.local/gen/goa"))
+				return pkg.ReserveGeneratedImport(NewImport("goa", "generated.local/gen/goa"))
 			},
 			func() error {
-				return generation.DeclareImport(NewImport("goa", "example.com/custom/goa"))
+				return pkg.DeclareImport(NewImport("goa", "example.com/custom/goa"))
 			},
 		}
 		if reverse {
@@ -33,9 +35,9 @@ func TestImportAliasPrioritiesIgnoreRegistrationOrder(t *testing.T) {
 		}
 		require.NoError(t, generation.Freeze())
 		return map[string]string{
-			"fixed":     generation.ImportName("goa.design/goa/v3/pkg"),
-			"generated": generation.ImportName("generated.local/gen/goa"),
-			"metadata":  generation.ImportName("example.com/custom/goa"),
+			"fixed":     pkg.ImportName("goa.design/goa/v3/pkg"),
+			"generated": pkg.ImportName("generated.local/gen/goa"),
+			"metadata":  pkg.ImportName("example.com/custom/goa"),
 		}
 	}
 
@@ -53,15 +55,17 @@ func TestImportAliasPrioritiesIgnoreRegistrationOrder(t *testing.T) {
 func TestImportAliasHighestPriorityWinsPerPath(t *testing.T) {
 	freeze := func(reverse bool) string {
 		generation := mustTestGeneration(t, "generated.local/gen", nil)
+		pkg, err := generation.ClaimPackage("generated.local/gen/service")
+		require.NoError(t, err)
 		declare := []func() error{
 			func() error {
-				return generation.RequireImport(NewImport("json", "encoding/json"))
+				return pkg.RequireImport(NewImport("json", "encoding/json"))
 			},
 			func() error {
-				return generation.ReserveGeneratedImport(NewImport("jason", "encoding/json"))
+				return pkg.ReserveGeneratedImport(NewImport("jason", "encoding/json"))
 			},
 			func() error {
-				return generation.DeclareImport(NewImport("jsonp", "encoding/json"))
+				return pkg.DeclareImport(NewImport("jsonp", "encoding/json"))
 			},
 		}
 		if reverse {
@@ -71,7 +75,7 @@ func TestImportAliasHighestPriorityWinsPerPath(t *testing.T) {
 			require.NoError(t, register())
 		}
 		require.NoError(t, generation.Freeze())
-		return generation.ImportName("encoding/json")
+		return pkg.ImportName("encoding/json")
 	}
 
 	require.Equal(t, "json", freeze(false))
@@ -83,10 +87,12 @@ func TestImportAliasHighestPriorityWinsPerPath(t *testing.T) {
 func TestGeneratedImportPreferenceIsOrderIndependent(t *testing.T) {
 	freeze := func(first, second string) string {
 		generation := mustTestGeneration(t, "generated.local/gen", nil)
-		require.NoError(t, generation.ReserveGeneratedImport(NewImport(first, "generated.local/gen/value")))
-		require.NoError(t, generation.ReserveGeneratedImport(NewImport(second, "generated.local/gen/value")))
+		pkg, err := generation.ClaimPackage("generated.local/gen/service")
+		require.NoError(t, err)
+		require.NoError(t, pkg.ReserveGeneratedImport(NewImport(first, "generated.local/gen/value")))
+		require.NoError(t, pkg.ReserveGeneratedImport(NewImport(second, "generated.local/gen/value")))
 		require.NoError(t, generation.Freeze())
-		return generation.ImportName("generated.local/gen/value")
+		return pkg.ImportName("generated.local/gen/value")
 	}
 
 	require.Equal(t, freeze("alpha", "zeta"), freeze("zeta", "alpha"))
@@ -96,10 +102,12 @@ func TestGeneratedImportPreferenceIsOrderIndependent(t *testing.T) {
 // templates cannot request two different mandatory spellings for one path.
 func TestImportAliasRejectsIncompatibleFixedRequirements(t *testing.T) {
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
-	require.NoError(t, generation.RequireImport(NewImport("json", "encoding/json")))
+	pkg, err := generation.ClaimPackage("generated.local/gen/service")
+	require.NoError(t, err)
+	require.NoError(t, pkg.RequireImport(NewImport("json", "encoding/json")))
 	require.ErrorContains(
 		t,
-		generation.RequireImport(NewImport("jason", "encoding/json")),
+		pkg.RequireImport(NewImport("jason", "encoding/json")),
 		"requires qualifier",
 	)
 }
@@ -108,7 +116,30 @@ func TestImportAliasRejectsIncompatibleFixedRequirements(t *testing.T) {
 // packages cannot both require the same qualifier.
 func TestImportAliasRejectsFixedQualifierCollision(t *testing.T) {
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
-	require.NoError(t, generation.RequireImport(NewImport("runtime", "example.com/first")))
-	require.NoError(t, generation.RequireImport(NewImport("runtime", "example.com/second")))
+	pkg, err := generation.ClaimPackage("generated.local/gen/service")
+	require.NoError(t, err)
+	require.NoError(t, pkg.RequireImport(NewImport("runtime", "example.com/first")))
+	require.NoError(t, pkg.RequireImport(NewImport("runtime", "example.com/second")))
 	require.ErrorContains(t, generation.Freeze(), "required by both")
+}
+
+// TestImportAliasesAreIndependentAcrossOutputPackages verifies that packages
+// which never compile together may use the same natural import name.
+func TestImportAliasesAreIndependentAcrossOutputPackages(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	httpPackage, err := generation.ClaimPackage("generated.local/gen/http/cli/calc")
+	require.NoError(t, err)
+	grpcPackage, err := generation.ClaimPackage("generated.local/gen/grpc/cli/calc")
+	require.NoError(t, err)
+	require.NoError(t, httpPackage.ReserveGeneratedImport(NewImport(
+		"calcc",
+		"generated.local/gen/http/calc/client",
+	)))
+	require.NoError(t, grpcPackage.ReserveGeneratedImport(NewImport(
+		"calcc",
+		"generated.local/gen/grpc/calc/client",
+	)))
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, "calcc", httpPackage.ImportName("generated.local/gen/http/calc/client"))
+	require.Equal(t, "calcc", grpcPackage.ImportName("generated.local/gen/grpc/calc/client"))
 }

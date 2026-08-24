@@ -16,7 +16,7 @@
                 "itemSchema": {
                   "properties": {
                     "data": {
-                      "example": "Ipsa libero est ipsum blanditiis.",
+                      "example": "event",
                       "type": "string"
                     }
                   },

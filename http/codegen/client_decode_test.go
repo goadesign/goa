@@ -34,6 +34,8 @@ func TestClientDecode(t *testing.T) {
 		{"with-headers-dsl-viewed-result", testdata.WithHeadersBlockViewedResultDSL},
 		{"validate-error-response-type", testdata.ValidateErrorResponseTypeDSL},
 		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL},
+		{"required-primitive-arrays", testdata.RequiredPrimitiveArrayDSL},
+		{"skip-response-body-encode-decode", testdata.ServerSkipResponseBodyEncodeDecodeDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -42,8 +44,14 @@ func TestClientDecode(t *testing.T) {
 			fs := plan.ClientFiles()
 			require.Len(t, fs, 2)
 			sections := fs[1].SectionTemplates
-			require.Greater(t, len(sections), 2)
-			code := codegen.SectionCode(t, sections[2])
+			var section *codegen.SectionTemplate
+			for _, s := range sections {
+				if s.Name == "response-decoder" {
+					section = s
+				}
+			}
+			require.NotNil(t, section)
+			code := codegen.SectionCode(t, section)
 			testutil.AssertGo(t, "testdata/golden/client_decode_"+c.Name+".go.golden", code)
 		})
 	}

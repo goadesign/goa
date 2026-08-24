@@ -1,3 +1,6 @@
+// This file lets generators change the few conversion steps that differ from
+// Goa's normal Go type conversion. The gRPC generator uses these functions for
+// protobuf wrapper messages, fields, collections, unions, and nil checks.
 package codegen
 
 import (
@@ -7,37 +10,23 @@ import (
 )
 
 type (
-	// TransformHooks are optional extension points consulted by the Go
-	// transform engine (GoTransformWithAttrs and the functions it drives).
-	// They let transport-specific generators—today the gRPC generator—alter
-	// well-defined aspects of the generated transformation code while
-	// sharing the engine driver (attribute walking, struct initialization,
-	// nil guards, default value handling and helper function collection).
-	//
-	// All fields are optional: a nil hook (or a nil Hooks pointer
-	// altogether) selects the engine default so that consumers which do not
-	// set hooks generate exactly the same code as before the hooks were
-	// introduced.
+	// TransformHooks lets a generator change specific parts of
+	// GoTransformWithAttrs. A nil function uses Goa's normal conversion. Hooks
+	// may inspect their expression arguments but must not mutate or retain them
+	// for later mutation. NewTransformPlan rejects a planning hook that changes
+	// its copied expressions. Render rejects later rendering mutations and caches
+	// each exact Render request, so hook state cannot produce different code when
+	// that request is repeated.
 	TransformHooks struct {
-		// UnwrapPair adapts a source/target attribute pair before
-		// compatibility checks and code generation. It returns the
-		// attributes to use in place of src and tgt and a non-nil
-		// WrapDirective when one side referenced a synthetic wrapper
-		// message that was unwrapped (the gRPC generator wraps
-		// non-object protobuf message types in single-field messages).
-		// The engine applies the directive by initializing the wrapper
-		// and redirecting the source or target variable to the wrapper
-		// field. UnwrapPair is consulted by TransformAttribute, by
-		// transformObject for each matched field pair and by
-		// collectHelpers for each attribute pair it recurses into.
+		// UnwrapPair replaces a source and target before Goa checks or
+		// converts them. It also tells Goa whether generated code must
+		// create or read a protobuf wrapper message.
 		UnwrapPair func(src, tgt *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr, *WrapDirective)
 
-		// FieldPairAttrs normalizes a matched object field attribute
-		// pair before the engine generates the field transformation,
-		// the nil guard and the default value handling. The gRPC
-		// generator resolves primitive alias user types to their
-		// underlying primitive attribute. The hook runs before
-		// UnwrapPair when transforming object fields.
+		// FieldPairAttrs changes a matched pair after their field names
+		// are known and before their values are converted. The gRPC
+		// generator replaces primitive aliases with their primitive
+		// types. The hook runs before UnwrapPair.
 		FieldPairAttrs func(src, tgt *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr)
 
 		// ConvertPrimitive returns the expression that initializes a
@@ -65,26 +54,27 @@ type (
 		// TransformUnion overrides the rendering of union
 		// transformations. srcParent and tgtParent are the attributes
 		// of the object being transformed when the union is an object
-		// field and nil when the union is transformed directly: the
-		// gRPC generator derives the protoc-generated oneof wrapper
-		// type names from the parent message type name.
+		// field and nil when the union is transformed directly. A
+		// generator can use them when its union conversion depends on
+		// the enclosing object.
 		TransformUnion func(source, target *expr.AttributeExpr, sourceVar, targetVar string, newVar bool, srcParent, tgtParent *expr.AttributeExpr, ta *TransformAttrs) (string, error)
 
-		// HelperNameAttrs normalizes a source/target attribute pair
-		// before the transform helper function name is computed. The
-		// gRPC generator strips struct:pkg:path metadata from the
-		// protobuf side because protoc-generated types ignore package
-		// overrides.
-		HelperNameAttrs func(src, tgt *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr)
+		// PlanUnionHelpers lists the helper-name calls made by TransformUnion.
+		// It is called only when TransformUnion is set. Call record once for each
+		// source and target branch pair, in the same order that TransformUnion
+		// calls TransformHelperName. The shared planner writes each helper body
+		// and records any recursive calls it makes. A nil function means the
+		// custom union renderer does not call TransformHelperName.
+		PlanUnionHelpers func(source, target *expr.AttributeExpr, record func(source, target *expr.AttributeExpr))
 
 		// GuardCondition returns the condition that guards the
 		// transformation code of an object field, e.g.
 		// "if p.Name != nil {\n". src is the (possibly normalized)
 		// field attribute, srcVar the source field variable, required
 		// reports whether the field is required and srcPtr whether the
-		// source field is pointer-backed. An empty condition
+		// source field uses a pointer. An empty condition
 		// with ok true means the field transformation must not be
-		// guarded. ok must be false to use the engine default policy
+		// guarded. ok must be false to use Goa's normal check
 		// (the gRPC generator always guards non-primitives because
 		// proto3 message fields are always nilable).
 		GuardCondition func(src *expr.AttributeExpr, srcVar string, required, srcPtr bool) (string, bool)
@@ -113,8 +103,8 @@ type (
 		InlineCompositeElems bool
 	}
 
-	// WrapDirective describes how the engine must account for a synthetic
-	// wrapper message unwrapped by the UnwrapPair hook.
+	// WrapDirective tells TransformAttribute how to create or read a protobuf
+	// wrapper message removed by UnwrapPair.
 	WrapDirective struct {
 		// WrapTarget is true when the target attribute was the
 		// wrapper: the engine initializes the wrapper value and
@@ -122,19 +112,19 @@ type (
 		// the source attribute was the wrapper and the engine reads
 		// the value being transformed from the wrapper field.
 		WrapTarget bool
-		// InitTypeName is the Go type name used to initialize the
-		// wrapper when WrapTarget is true.
-		InitTypeName string
+		// Target is the wrapper type initialized when WrapTarget is true.
+		// The transform resolves its Go name after package names are fixed.
+		Target *expr.AttributeExpr
 		// FieldName is the Go name of the wrapper field holding the
 		// wrapped value.
 		FieldName string
 	}
 )
 
-// apply rewrites the transformation variables per the directive and returns
-// the code that initializes the wrapper when the target is wrapped. A nil
-// directive leaves the variables untouched and returns an empty string.
-func (d *WrapDirective) apply(sourceVar, targetVar *string, newVar *bool) string {
+// apply changes the source or target variable to use the wrapper field. It
+// returns the code that creates the wrapper when the target uses one. A nil
+// WrapDirective leaves the variables unchanged and returns an empty string.
+func (d *WrapDirective) apply(sourceVar, targetVar *string, newVar *bool, attrs *TransformAttrs) string {
 	if d == nil {
 		return ""
 	}
@@ -146,7 +136,8 @@ func (d *WrapDirective) apply(sourceVar, targetVar *string, newVar *bool) string
 	if *newVar {
 		assign = ":="
 	}
-	code := fmt.Sprintf("%s %s &%s{}\n", *targetVar, assign, d.InitTypeName)
+	name := attrs.TargetCtx.Scope.Name(d.Target, attrs.TargetCtx.Pkg(d.Target), attrs.TargetCtx.Pointer, attrs.TargetCtx.UseDefault)
+	code := fmt.Sprintf("%s %s &%s{}\n", *targetVar, assign, name)
 	*targetVar += "." + d.FieldName
 	*newVar = false
 	return code

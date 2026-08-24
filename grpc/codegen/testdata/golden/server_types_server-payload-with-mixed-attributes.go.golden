@@ -1,5 +1,5 @@
-// NewUnaryMethodPayload builds the payload of the "UnaryMethod" endpoint of
-// the "ServicePayloadWithMixedAttributes" service from the gRPC request type.
+// NewUnaryMethodPayload builds *servicepayloadwithmixedattributes.APayload
+// from *service_payload_with_mixed_attributespb.UnaryMethodRequest.
 func NewUnaryMethodPayload(message *service_payload_with_mixed_attributespb.UnaryMethodRequest) *servicepayloadwithmixedattributes.APayload {
 	v := &servicepayloadwithmixedattributes.APayload{
 		Required:        int(message.Required),
@@ -18,22 +18,25 @@ func NewUnaryMethodPayload(message *service_payload_with_mixed_attributespb.Unar
 	return v
 }
 
-// NewProtoUnaryMethodResponse builds the gRPC response type from the result of
-// the "UnaryMethod" endpoint of the "ServicePayloadWithMixedAttributes"
-// service.
+// NewProtoUnaryMethodResponse builds
+// *service_payload_with_mixed_attributespb.UnaryMethodResponse from metadata
+// values.
 func NewProtoUnaryMethodResponse() *service_payload_with_mixed_attributespb.UnaryMethodResponse {
 	message := &service_payload_with_mixed_attributespb.UnaryMethodResponse{}
 	return message
 }
 
-// NewProtoStreamingMethodResponse builds the gRPC response type from the
-// result of the "StreamingMethod" endpoint of the
-// "ServicePayloadWithMixedAttributes" service.
+// NewProtoStreamingMethodResponse builds
+// *service_payload_with_mixed_attributespb.StreamingMethodResponse from
+// metadata values.
 func NewProtoStreamingMethodResponse() *service_payload_with_mixed_attributespb.StreamingMethodResponse {
 	message := &service_payload_with_mixed_attributespb.StreamingMethodResponse{}
 	return message
 }
 
+// NewStreamingMethodStreamingRequestAPayload builds
+// *servicepayloadwithmixedattributes.APayload from
+// *service_payload_with_mixed_attributespb.StreamingMethodStreamingRequest.
 func NewStreamingMethodStreamingRequestAPayload(v *service_payload_with_mixed_attributespb.StreamingMethodStreamingRequest) *servicepayloadwithmixedattributes.APayload {
 	spayload := &servicepayloadwithmixedattributes.APayload{
 		Required:        int(v.Required),

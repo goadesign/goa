@@ -1,3 +1,4 @@
+// This file contains expected gRPC stream code used by generator tests.
 package testdata
 
 var ServerStreamingServerStructCode = `// MethodServerStreamingUserTypeRPCServerStream implements the
@@ -12,7 +13,7 @@ var ServerStreamingServerSendCode = `// Send streams instances of
 // "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
 // to the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream.
 func (s *MethodServerStreamingUserTypeRPCServerStream) Send(res *serviceserverstreamingusertyperpc.UserType) error {
-	v := NewProtoUserTypeMethodServerStreamingUserTypeRPCResponse(res)
+	v := NewProtoMethodServerStreamingUserTypeRPCResponse(res)
 	return s.stream.Send(v)
 }
 
@@ -65,6 +66,9 @@ var ServerStreamingResultWithViewsServerStructCode = `// MethodServerStreamingUs
 type MethodServerStreamingUserTypeRPCServerStream struct {
 	stream service_server_streaming_user_type_rpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCServer
 	view   string
+	// sentView is the result view named in the response header. Later sends must
+	// use the same view.
+	sentView string
 }
 `
 
@@ -72,8 +76,29 @@ var ServerStreamingResultWithViewsServerSendCode = `// Send streams instances of
 // "service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse"
 // to the "MethodServerStreamingUserTypeRPC" endpoint gRPC stream.
 func (s *MethodServerStreamingUserTypeRPCServerStream) Send(res *serviceserverstreamingusertyperpc.ResultType) error {
-	vres := serviceserverstreamingusertyperpc.NewViewedResultType(res, s.view)
-	v := NewProtoResultTypeViewMethodServerStreamingUserTypeRPCResponse(vres.Projected)
+	view := s.view
+	if view == "" {
+		view = "default"
+	}
+	if s.sentView != "" && view != s.sentView {
+		return goa.InvalidEnumValueError("view", view, []any{s.sentView})
+	}
+	vres := serviceserverstreamingusertyperpc.NewViewedResultType(res, view)
+	var v *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse
+	switch view {
+	case "tiny":
+		v = NewProtoMethodServerStreamingUserTypeRPCResponseTiny(vres.Projected)
+	case "default", "":
+		v = NewProtoMethodServerStreamingUserTypeRPCResponse(vres.Projected)
+	default:
+		return goa.InvalidEnumValueError("view", view, []any{"tiny", "default"})
+	}
+	if s.sentView == "" {
+		if err := s.stream.SetHeader(metadata.Pairs("goa-view", view)); err != nil {
+			return err
+		}
+		s.sentView = view
+	}
 	return s.stream.Send(v)
 }
 
@@ -95,8 +120,9 @@ var ServerStreamingResultWithViewsClientStructCode = `// MethodServerStreamingUs
 // serviceserverstreamingusertyperpc.MethodServerStreamingUserTypeRPCClientStream
 // interface.
 type MethodServerStreamingUserTypeRPCClientStream struct {
-	stream service_server_streaming_user_type_rpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient
-	view   string
+	stream  service_server_streaming_user_type_rpcpb.ServiceServerStreamingUserTypeRPC_MethodServerStreamingUserTypeRPCClient
+	view    string
+	viewSet bool
 }
 `
 
@@ -109,7 +135,25 @@ func (s *MethodServerStreamingUserTypeRPCClientStream) Recv() (*serviceserverstr
 	if err != nil {
 		return res, err
 	}
-	proj := NewMethodServerStreamingUserTypeRPCResponseResultTypeView(v)
+	if !s.viewSet {
+		hdr, err := s.stream.Header()
+		if err != nil {
+			return res, err
+		}
+		views := hdr.Get("goa-view")
+		if len(views) == 0 {
+			return res, goa.MissingFieldError("goa-view", "metadata")
+		}
+		s.view = views[0]
+		s.viewSet = true
+	}
+	var proj *serviceserverstreamingusertyperpcviews.ResultTypeView
+	switch s.view {
+	case "tiny":
+		proj = NewMethodServerStreamingUserTypeRPCResponseResultTypeViewTiny(v)
+	case "default", "":
+		proj = NewMethodServerStreamingUserTypeRPCResponseResultTypeView(v)
+	}
 	vres := &serviceserverstreamingusertyperpcviews.ResultType{Projected: proj, View: s.view}
 	if err := serviceserverstreamingusertyperpcviews.ValidateResultType(vres); err != nil {
 		return nil, err
@@ -129,6 +173,7 @@ func (s *MethodServerStreamingUserTypeRPCClientStream) RecvWithContext(ctx conte
 var ServerStreamingResultWithViewsClientSetViewCode = `// SetView sets the view.
 func (s *MethodServerStreamingUserTypeRPCClientStream) SetView(view string) {
 	s.view = view
+	s.viewSet = true
 }
 `
 
@@ -138,7 +183,7 @@ var ServerStreamingResultCollectionWithExplicitViewServerSendCode = `// Send str
 // gRPC stream.
 func (s *MethodServerStreamingResultTypeCollectionWithExplicitViewServerStream) Send(res serviceserverstreamingresulttypecollectionwithexplicitview.ResultTypeCollection) error {
 	vres := serviceserverstreamingresulttypecollectionwithexplicitview.NewViewedResultTypeCollection(res, "tiny")
-	v := NewProtoResultTypeCollectionViewResultTypeCollection(vres.Projected)
+	v := NewProtoResultTypeCollection(vres.Projected)
 	return s.stream.Send(v)
 }
 
@@ -429,7 +474,6 @@ var BidirectionalStreamingServerStructCode = `// MethodBidirectionalStreamingRPC
 // interface.
 type MethodBidirectionalStreamingRPCServerStream struct {
 	stream service_bidirectional_streaming_rpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCServer
-	view   string
 }
 `
 
@@ -438,7 +482,7 @@ var BidirectionalStreamingServerSendCode = `// Send streams instances of
 // to the "MethodBidirectionalStreamingRPC" endpoint gRPC stream.
 func (s *MethodBidirectionalStreamingRPCServerStream) Send(res *servicebidirectionalstreamingrpc.ID) error {
 	vres := servicebidirectionalstreamingrpc.NewViewedID(res, "default")
-	v := NewProtoIDViewMethodBidirectionalStreamingRPCResponse(vres.Projected)
+	v := NewProtoMethodBidirectionalStreamingRPCResponse(vres.Projected)
 	return s.stream.Send(v)
 }
 
@@ -481,7 +525,6 @@ var BidirectionalStreamingClientStructCode = `// MethodBidirectionalStreamingRPC
 // interface.
 type MethodBidirectionalStreamingRPCClientStream struct {
 	stream service_bidirectional_streaming_rpcpb.ServiceBidirectionalStreamingRPC_MethodBidirectionalStreamingRPCClient
-	view   string
 }
 `
 

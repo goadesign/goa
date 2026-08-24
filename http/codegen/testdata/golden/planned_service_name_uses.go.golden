@@ -1,0 +1,370 @@
+===== service method names definition =====
+// Service is the Collisions service interface.
+type Service interface {
+	// Read implements Read.
+	Read(context.Context, *ReadPayload) (res string, err error)
+}
+
+// APIName is the name of the API as defined in the design.
+const APIName = "Name Test"
+
+// APIVersion is the version of the API as defined in the design.
+const APIVersion = "0.0.1"
+
+// ServiceName is the name of the service as defined in the design. This is the
+// same value that is set in the endpoint request contexts under the ServiceKey
+// key.
+const ServiceName = "Collisions"
+
+// MethodNames lists the service method names as defined in the design. These
+// are the same values that are set in the endpoint request contexts under the
+// MethodKey key.
+var MethodNames2 = [1]string{"Read"}
+
+===== service endpoints definition =====
+// Endpoints2 wraps the "Collisions" service endpoints.
+type Endpoints2 struct {
+	Read goa.Endpoint
+}
+
+===== client interceptors definition =====
+// ClientInterceptors defines the interface for all client-side interceptors.
+// Client interceptors execute after the payload is encoded and before the request
+// is sent to the server. The implementation is responsible for calling next to
+// complete the request.
+type ClientInterceptors2 interface {
+	Trace(ctx context.Context, info TraceInfo, next goa.Endpoint) (any, error)
+}
+
+===== client endpoint wrapper definition =====
+// WrapReadClientEndpoint2 wraps the Read endpoint with the client interceptors
+// defined in the design.
+func WrapReadClientEndpoint2(endpoint goa.Endpoint, i ClientInterceptors2) goa.Endpoint {
+	if i != nil {
+		endpoint = wrapClientReadTrace(endpoint, i)
+	}
+	return endpoint
+}
+
+===== HTTP server endpoints use =====
+// New instantiates HTTP handlers for all the Collisions service endpoints
+// using the provided encoder and decoder. The handlers are mounted on the
+// given mux using the HTTP verb and path defined in the design. errhandler is
+// called whenever a response fails to be encoded. formatter is used to format
+// errors returned by the service methods prior to encoding. Both errhandler
+// and formatter are optional and can be nil.
+func New(
+	e *collisions.Endpoints2,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+	formatter func(ctx context.Context, err error) goahttp.Statuser,
+) *Server {
+	return &Server{
+		Mounts: []*MountPoint{
+			{"Read", "POST", "/read"},
+		},
+		Read: NewReadHandler(e.Read, mux, decoder, encoder, errhandler, formatter),
+	}
+}
+
+===== HTTP server method names use =====
+// MethodNames returns the methods served.
+func (s *Server) MethodNames() []string { return collisions.MethodNames2[:] }
+
+===== HTTP command parser =====
+// ParseEndpoint returns the endpoint and payload as specified on the command
+// line.
+func ParseEndpoint(
+	scheme, host string,
+	doer goahttp.Doer,
+	enc func(*http.Request) goahttp.Encoder,
+	dec func(*http.Response) goahttp.Decoder,
+	restore bool,
+	collisionsInter collisions.ClientInterceptors2,
+) (goa.Endpoint, any, error) {
+	var (
+		collisionsFlags = flag.NewFlagSet("collisions", flag.ContinueOnError)
+
+		collisionsReadFlags    = flag.NewFlagSet("read", flag.ExitOnError)
+		collisionsReadBodyFlag = collisionsReadFlags.String("body", "REQUIRED", "")
+	)
+	collisionsFlags.Usage = collisionsUsage
+	collisionsReadFlags.Usage = collisionsReadUsage
+
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	if flag.NArg() < 2 { // two non flag args are required: SERVICE and ENDPOINT (aka COMMAND)
+		return nil, nil, fmt.Errorf("not enough arguments")
+	}
+
+	var (
+		svcn string
+		svcf *flag.FlagSet
+	)
+	{
+		svcn = flag.Arg(0)
+		switch svcn {
+		case "collisions":
+			svcf = collisionsFlags
+		default:
+			return nil, nil, fmt.Errorf("unknown service %q", svcn)
+		}
+	}
+	if err := svcf.Parse(flag.Args()[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		epn string
+		epf *flag.FlagSet
+	)
+	{
+		epn = svcf.Arg(0)
+		switch svcn {
+		case "collisions":
+			switch epn {
+			case "read":
+				epf = collisionsReadFlags
+
+			}
+
+		}
+	}
+	if epf == nil {
+		return nil, nil, fmt.Errorf("unknown %q endpoint %q", svcn, epn)
+	}
+
+	// Parse endpoint flags if any
+	if svcf.NArg() > 1 {
+		if err := epf.Parse(svcf.Args()[1:]); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var (
+		data     any
+		endpoint goa.Endpoint
+		err      error
+	)
+	{
+		switch svcn {
+		case "collisions":
+			c := collisionsc.NewClient(scheme, host, doer, enc, dec, restore)
+			switch epn {
+			case "read":
+				endpoint = c.Read()
+				endpoint = collisions.WrapReadClientEndpoint2(endpoint, collisionsInter)
+				data, err = collisionsc.BuildReadPayload(*collisionsReadBodyFlag)
+			}
+		}
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return endpoint, data, nil
+}
+
+===== HTTP example client interceptor use =====
+func doHTTP(ctx context.Context, scheme, host string, timeout int, debug bool, stdout io.Writer) error {
+	var (
+		doer                   goahttp.Doer
+		collisionsInterceptors collisions.ClientInterceptors2
+	)
+	{
+		doer = &http.Client{Timeout: time.Duration(timeout) * time.Second}
+		if debug {
+			doer = goahttp.NewDebugDoer(doer)
+		}
+		collisionsInterceptors = interceptors.NewCollisionsClientInterceptors()
+	}
+
+	endpoint, payload, err := cli2.ParseEndpoint(
+		scheme,
+		host,
+		doer,
+		goahttp.RequestEncoder,
+		goahttp.ResponseDecoder,
+		debug,
+		collisionsInterceptors,
+	)
+	if err != nil {
+		return fmt.Errorf("parse endpoint: %w", err)
+	}
+
+	switch flag.Arg(0) {
+	case "collisions":
+		switch flag.Arg(1) {
+		case "read":
+			return writeEndpointResult(ctx, stdout, endpoint, payload)
+		}
+	}
+	panic("parsed HTTP command has no generated result writer")
+}
+
+func httpUsageExamples() string {
+	return cli2.UsageExamples()
+}
+
+===== gRPC server endpoints use =====
+// New instantiates the server struct with the Collisions service endpoints.
+func New(e *collisions.Endpoints2, uh goagrpc.UnaryHandler) *Server {
+	return &Server{
+		ReadH: NewReadHandler(e.Read, uh),
+	}
+}
+
+===== gRPC example server endpoints use =====
+// handleGRPCServer starts configures and starts a gRPC server on the given
+// URL. It shuts down the server if any error is received in the error channel.
+func handleGRPCServer(ctx context.Context, u *url.URL, collisionsEndpoints *collisions.Endpoints2, wg *sync.WaitGroup, errc chan error, dbg bool) {
+
+	// Wrap the endpoints with the transport specific layers. The generated
+	// server packages contains code generated from the design which maps
+	// the service input and output data structures to gRPC requests and
+	// responses.
+	var (
+		collisionsServer *collisionssvr.Server
+	)
+	{
+		collisionsServer = collisionssvr.New(collisionsEndpoints, nil)
+	}
+
+	// Create interceptor which sets up the logger in each request context.
+	chain := grpc.ChainUnaryInterceptor(log.UnaryServerInterceptor(ctx))
+	if dbg {
+		// Log request and response content if debug logs are enabled.
+		chain = grpc.ChainUnaryInterceptor(log.UnaryServerInterceptor(ctx), debug.UnaryServerInterceptor())
+	}
+
+	// Initialize gRPC server
+	srv := grpc.NewServer(chain)
+
+	// Register the servers.
+	collisionspb.RegisterCollisionsServer(srv, collisionsServer)
+	log.Printf(ctx, "serving gRPC method %s", "collisions.Collisions/Read")
+
+	// Register the server reflection service on the server.
+	// See https://grpc.github.io/grpc/core/md_doc_server-reflection.html.
+	reflection.Register(srv)
+
+	(*wg).Add(1)
+	go func() {
+		defer (*wg).Done()
+
+		// Start gRPC server in a separate goroutine.
+		go func() {
+			lis, err := net.Listen("tcp", u.Host)
+			if err != nil {
+				errc <- err
+			}
+			if lis == nil {
+				errc <- fmt.Errorf("failed to listen on %q", u.Host)
+			}
+			log.Printf(ctx, "gRPC server listening on %q", u.Host)
+			errc <- srv.Serve(lis)
+		}()
+
+		<-ctx.Done()
+		log.Printf(ctx, "shutting down gRPC server at %q", u.Host)
+		srv.Stop()
+	}()
+}
+
+===== gRPC command parser =====
+// ParseEndpoint returns the endpoint and payload as specified on the command
+// line.
+func ParseEndpoint(
+	cc *grpc.ClientConn,
+	collisionsInter collisions.ClientInterceptors2,
+	opts ...grpc.CallOption,
+) (goa.Endpoint, any, error) {
+	var (
+		collisionsFlags = flag.NewFlagSet("collisions", flag.ContinueOnError)
+
+		collisionsReadFlags       = flag.NewFlagSet("read", flag.ExitOnError)
+		collisionsReadMessageFlag = collisionsReadFlags.String("message", "", "")
+	)
+	collisionsFlags.Usage = collisionsUsage
+	collisionsReadFlags.Usage = collisionsReadUsage
+
+	if err := flag.CommandLine.Parse(os.Args[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	if flag.NArg() < 2 { // two non flag args are required: SERVICE and ENDPOINT (aka COMMAND)
+		return nil, nil, fmt.Errorf("not enough arguments")
+	}
+
+	var (
+		svcn string
+		svcf *flag.FlagSet
+	)
+	{
+		svcn = flag.Arg(0)
+		switch svcn {
+		case "collisions":
+			svcf = collisionsFlags
+		default:
+			return nil, nil, fmt.Errorf("unknown service %q", svcn)
+		}
+	}
+	if err := svcf.Parse(flag.Args()[1:]); err != nil {
+		return nil, nil, err
+	}
+
+	var (
+		epn string
+		epf *flag.FlagSet
+	)
+	{
+		epn = svcf.Arg(0)
+		switch svcn {
+		case "collisions":
+			switch epn {
+			case "read":
+				epf = collisionsReadFlags
+
+			}
+
+		}
+	}
+	if epf == nil {
+		return nil, nil, fmt.Errorf("unknown %q endpoint %q", svcn, epn)
+	}
+
+	// Parse endpoint flags if any
+	if svcf.NArg() > 1 {
+		if err := epf.Parse(svcf.Args()[1:]); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	var (
+		data     any
+		endpoint goa.Endpoint
+		err      error
+	)
+	{
+		switch svcn {
+		case "collisions":
+			c := collisionsc.NewClient(cc, opts...)
+			switch epn {
+			case "read":
+				endpoint = c.Read()
+				endpoint = collisions.WrapReadClientEndpoint2(endpoint, collisionsInter)
+				data, err = collisionsc.BuildReadPayload(*collisionsReadMessageFlag)
+			}
+		}
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return endpoint, data, nil
+}
+

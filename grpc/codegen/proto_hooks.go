@@ -1,3 +1,5 @@
+// This file tells the shared Go conversion code how protobuf wrappers,
+// collections, unions, and nil values differ from service values.
 package codegen
 
 import (
@@ -10,22 +12,27 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+type (
+	// protobufOneofAttributor returns the Go wrapper type generated for one
+	// protobuf union branch.
+	protobufOneofAttributor interface {
+		OneofWrapper(*expr.AttributeExpr) string
+	}
+)
+
 var (
-	// renderGoArrayT is the template rendering protocol buffer array
-	// transformations driven by the shared transform engine.
+	// renderGoArrayT writes a conversion between service and protobuf arrays.
 	renderGoArrayT *template.Template
-	// renderGoMapT is the template rendering protocol buffer map
-	// transformations driven by the shared transform engine.
+	// renderGoMapT writes a conversion between service and protobuf maps.
 	renderGoMapT *template.Template
-	// renderGoUnionToProtoT is the template rendering Go union to protobuf
-	// oneof transformations.
+	// renderGoUnionToProtoT writes a service union into a protobuf oneof.
 	renderGoUnionToProtoT *template.Template
-	// renderGoUnionFromProtoT is the template rendering protobuf oneof to
-	// Go union transformations.
+	// renderGoUnionFromProtoT writes a protobuf oneof into a service union.
 	renderGoUnionFromProtoT *template.Template
 )
 
-// NOTE: can't initialize inline because https://github.com/golang/go/issues/1817
+// The templates are initialized here because Go cannot initialize this cycle
+// of template functions in the variable declarations.
 func init() {
 	fm := template.FuncMap{"transformAttribute": codegen.TransformAttribute}
 	renderGoArrayT = template.Must(template.New("renderGoArray").Funcs(fm).Parse(grpcTemplates.Read(grpcTransformGoArrayT)))
@@ -34,24 +41,19 @@ func init() {
 	renderGoUnionFromProtoT = template.Must(template.New("renderGoUnionFromProto").Parse(grpcTemplates.Read(grpcTransformGoUnionFromProtoT)))
 }
 
-// protoHooks returns the transform hooks that specialize the shared Go
-// transform engine for protocol buffer transformations. proto is true when
-// the transformation initializes a protocol buffer type from a service type
-// and false when it initializes a service type from a protocol buffer type.
-// targetCtx is the target attribute context of the transformation; it is used
-// to name the synthetic wrapper messages initialized by the generated code.
-func protoHooks(proto bool, targetCtx *codegen.AttributeContext) *codegen.TransformHooks {
+// protoHooks returns the functions that convert between service and protobuf
+// values. proto is true when the target is the protobuf value.
+func protoHooks(proto bool) *codegen.TransformHooks {
 	return &codegen.TransformHooks{
 		UnwrapPair: func(src, tgt *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr, *codegen.WrapDirective) {
 			if proto {
 				if isWrappedAttr(tgt) {
-					name := targetCtx.Scope.Name(tgt, targetCtx.Pkg(tgt), targetCtx.Pointer, targetCtx.UseDefault)
-					return src, unwrapAttr(expr.DupAtt(tgt)), &codegen.WrapDirective{WrapTarget: true, InitTypeName: name, FieldName: "Field"}
+					return src, unwrapAttr(tgt), &codegen.WrapDirective{WrapTarget: true, Target: tgt, FieldName: "Field"}
 				}
 				return src, tgt, nil
 			}
 			if isWrappedAttr(src) {
-				return unwrapAttr(expr.DupAtt(src)), tgt, &codegen.WrapDirective{FieldName: "Field"}
+				return unwrapAttr(src), tgt, &codegen.WrapDirective{FieldName: "Field"}
 			}
 			return src, tgt, nil
 		},
@@ -61,8 +63,7 @@ func protoHooks(proto bool, targetCtx *codegen.AttributeContext) *codegen.Transf
 		ConvertPrimitive: func(src, tgt *expr.AttributeExpr, srcVar string, srcPtr, tgtPtr bool, ta *codegen.TransformAttrs) (string, bool) {
 			exp := convertType(src, tgt, srcPtr, tgtPtr, srcVar, proto, ta)
 			if _, isSrcUT := src.Type.(expr.UserType); isSrcUT && !proto {
-				// If the source is an alias type and the code is initializing a
-				// service type then we must cast to the alias type.
+				// A service alias must keep its named Go type.
 				deref := ""
 				if srcPtr {
 					deref = "*"
@@ -77,37 +78,25 @@ func protoHooks(proto bool, targetCtx *codegen.AttributeContext) *codegen.Transf
 		TransformMap: func(source, target *expr.Map, sourceVar, targetVar string, newVar bool, ta *codegen.TransformAttrs) (string, error) {
 			return renderMapTransform(source, target, sourceVar, targetVar, newVar, proto, ta)
 		},
-		TransformUnion: func(source, target *expr.AttributeExpr, sourceVar, targetVar string, _ bool, srcParent, tgtParent *expr.AttributeExpr, ta *codegen.TransformAttrs) (string, error) {
+		TransformUnion: func(source, target *expr.AttributeExpr, sourceVar, targetVar string, _ bool, _, _ *expr.AttributeExpr, ta *codegen.TransformAttrs) (string, error) {
 			if proto {
-				// Go service union fields are interfaces (nil when absent); do
-				// not dereference.
-				return renderUnionToProtoTransform(source, target, sourceVar, targetVar, false, oneofMessageName(tgtParent, proto, ta), ta)
+				// Service union fields are interfaces, so they are not dereferenced.
+				return renderUnionToProtoTransform(source, target, sourceVar, targetVar, false, ta)
 			}
-			// Service unions in Goa are represented as interface types, not
-			// *interface. Always assign concrete values to the interface (no
-			// pointer-to-interface).
-			return renderUnionFromProtoTransform(source, target, sourceVar, targetVar, oneofMessageName(srcParent, proto, ta), ta)
+			// Store the selected value directly in the service union interface.
+			return renderUnionFromProtoTransform(source, target, sourceVar, targetVar, ta)
 		},
-		HelperNameAttrs: func(src, tgt *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr) {
-			// Do not consider package overrides for protogen generated types.
-			if proto {
-				tgt = expr.DupAtt(tgt)
-				codegen.Walk(tgt, func(att *expr.AttributeExpr) error { // nolint: errcheck
-					delete(att.Meta, "struct:pkg:path")
-					return nil
-				})
-			} else {
-				src = expr.DupAtt(src)
-				codegen.Walk(src, func(att *expr.AttributeExpr) error { // nolint: errcheck
-					delete(att.Meta, "struct:pkg:path")
-					return nil
-				})
+		PlanUnionHelpers: func(source, target *expr.AttributeExpr, record func(*expr.AttributeExpr, *expr.AttributeExpr)) {
+			sourceUnion, targetUnion := expr.AsUnion(source.Type), expr.AsUnion(target.Type)
+			for index, sourceBranch := range sourceUnion.Values {
+				targetBranch := targetUnion.Values[index]
+				if protoUnionBranchUsesHelper(sourceBranch.Attribute, targetBranch.Attribute) {
+					record(sourceBranch.Attribute, targetBranch.Attribute)
+				}
 			}
-			return src, tgt
 		},
 		GuardCondition: func(src *expr.AttributeExpr, srcVar string, _, srcPtr bool) (string, bool) {
-			// Non-primitives are always guarded (proto3 message fields are
-			// always nilable).
+			// Protobuf message fields can be nil, so check them before use.
 			if expr.IsPrimitive(src.Type) && !srcPtr {
 				return "", true
 			}
@@ -126,7 +115,7 @@ func protoHooks(proto bool, targetCtx *codegen.AttributeContext) *codegen.Transf
 			return "", false
 		},
 		ObjectDeref: func(tgt *expr.AttributeExpr) (string, bool) {
-			// if the target is a raw struct no need to return a pointer
+			// An unnamed struct value does not need a pointer.
 			if _, ok := tgt.Type.(*expr.Object); ok {
 				return "", true
 			}
@@ -136,28 +125,9 @@ func protoHooks(proto bool, targetCtx *codegen.AttributeContext) *codegen.Transf
 	}
 }
 
-// oneofMessageName returns the reference to the protoc generated Go type of
-// the message containing the oneof being transformed: protoc builds the union
-// wrapper struct type names from the parent message type name. parent is the
-// attribute of the object owning the union field, nil when the union is
-// transformed directly in which case there is no message context.
-func oneofMessageName(parent *expr.AttributeExpr, proto bool, ta *codegen.TransformAttrs) string {
-	if parent == nil {
-		return ""
-	}
-	if _, ok := parent.Type.(expr.UserType); !ok {
-		return ""
-	}
-	if proto {
-		return ta.TargetCtx.Scope.Name(parent, ta.TargetCtx.Pkg(parent), false, false)
-	}
-	return ta.SourceCtx.Scope.Ref(parent, ta.SourceCtx.Pkg(parent))
-}
-
-// renderArrayTransform renders the code transforming the source array held by
-// sourceVar into the target array held by targetVar. proto is true when the
-// target is the protocol buffer type. Wrapped element types are passed
-// through to the engine which unwraps them when recursing.
+// renderArrayTransform writes code that copies sourceVar into the target array.
+// proto is true when the target is a protobuf array. The shared conversion code
+// opens any protobuf wrapper around an array element.
 func renderArrayTransform(source, target *expr.Array, sourceVar, targetVar string, newVar, proto bool, ta *codegen.TransformAttrs) (string, error) {
 	elem := target.ElemType
 	if proto {
@@ -170,15 +140,16 @@ func renderArrayTransform(source, target *expr.Array, sourceVar, targetVar strin
 		valVar = ""
 	}
 
+	loopVar, childAttrs := ta.EnterCollection()
 	data := map[string]any{
 		"ElemTypeRef":    targetRef,
 		"SourceElem":     source.ElemType,
-		"TargetElem":     elem,
+		"TargetElem":     target.ElemType,
 		"SourceVar":      sourceVar,
 		"TargetVar":      targetVar,
 		"NewVar":         newVar,
-		"TransformAttrs": ta,
-		"LoopVar":        string(rune(105 + strings.Count(targetVar, "["))),
+		"TransformAttrs": childAttrs,
+		"LoopVar":        loopVar,
 		"ValVar":         valVar,
 	}
 	var buf bytes.Buffer
@@ -188,11 +159,9 @@ func renderArrayTransform(source, target *expr.Array, sourceVar, targetVar strin
 	return ensureTrailingNewline(buf.String()), nil
 }
 
-// renderMapTransform renders the code transforming the source map held by
-// sourceVar into the target map held by targetVar. proto is true when the
-// target is the protocol buffer type. Wrapped element types are passed
-// through to the engine which unwraps them when recursing; map keys cannot be
-// nested in protocol buffers so only elements may be wrapped.
+// renderMapTransform writes code that copies sourceVar into the target map.
+// proto is true when the target is a protobuf map. Protobuf map values may use
+// wrapper messages; protobuf map keys may not.
 func renderMapTransform(source, target *expr.Map, sourceVar, targetVar string, newVar, proto bool, ta *codegen.TransformAttrs) (string, error) {
 	if err := codegen.IsCompatible(source.KeyType.Type, target.KeyType.Type, sourceVar+"[key]", targetVar+"[key]"); err != nil {
 		return "", err
@@ -226,11 +195,9 @@ func renderMapTransform(source, target *expr.Map, sourceVar, targetVar string, n
 	return ensureTrailingNewline(buf.String()), nil
 }
 
-// renderUnionToProtoTransform renders the code transforming the source Goa
-// union held by sourceVar into the protoc generated oneof field held by
-// targetVar. message is the reference to the protoc generated Go type of the
-// message containing the oneof.
-func renderUnionToProtoTransform(source, target *expr.AttributeExpr, sourceVar, targetVar string, sourcePtr bool, message string, ta *codegen.TransformAttrs) (string, error) {
+// renderUnionToProtoTransform writes a service union from sourceVar into the
+// protobuf oneof in targetVar.
+func renderUnionToProtoTransform(source, target *expr.AttributeExpr, sourceVar, targetVar string, sourcePtr bool, ta *codegen.TransformAttrs) (string, error) {
 	if err := codegen.IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
 		return "", err
 	}
@@ -239,10 +206,12 @@ func renderUnionToProtoTransform(source, target *expr.AttributeExpr, sourceVar, 
 	for i, sv := range src.Values {
 		tv := tgt.Values[i]
 		fieldName := ta.TargetCtx.Scope.Field(tv.Attribute, tv.Name, true)
+		scope := ta.TargetCtx.Scope.(protobufOneofAttributor)
+		wrapperType := scope.OneofWrapper(tv.Attribute)
 		cases = append(cases, map[string]any{
 			"TypeTag":           sv.Name,
 			"SourceFieldName":   codegen.Goify(sv.Name, true),
-			"TargetWrapperType": protocOneofWrapperRef(message, fieldName),
+			"TargetWrapperType": wrapperType,
 			"TargetFieldName":   fieldName,
 			"ConvertedValue":    convertType(sv.Attribute, tv.Attribute, false, false, "actual", true, ta),
 		})
@@ -261,11 +230,9 @@ func renderUnionToProtoTransform(source, target *expr.AttributeExpr, sourceVar, 
 	return ensureTrailingNewline(buf.String()), nil
 }
 
-// renderUnionFromProtoTransform renders the code transforming the protoc
-// generated oneof field held by sourceVar into the target Goa union held by
-// targetVar. message is the reference to the protoc generated Go type of the
-// message containing the oneof.
-func renderUnionFromProtoTransform(source, target *expr.AttributeExpr, sourceVar, targetVar, message string, ta *codegen.TransformAttrs) (string, error) {
+// renderUnionFromProtoTransform writes the protobuf oneof in sourceVar into the
+// service union in targetVar.
+func renderUnionFromProtoTransform(source, target *expr.AttributeExpr, sourceVar, targetVar string, ta *codegen.TransformAttrs) (string, error) {
 	if err := codegen.IsCompatible(source.Type, target.Type, sourceVar, targetVar); err != nil {
 		return "", err
 	}
@@ -274,8 +241,10 @@ func renderUnionFromProtoTransform(source, target *expr.AttributeExpr, sourceVar
 	for i, sv := range src.Values {
 		tv := tgt.Values[i]
 		sourceFieldName := ta.SourceCtx.Scope.Field(sv.Attribute, sv.Name, true)
+		scope := ta.SourceCtx.Scope.(protobufOneofAttributor)
+		wrapperType := scope.OneofWrapper(sv.Attribute)
 		cases = append(cases, map[string]any{
-			"SourceValueTypeRef": protocOneofWrapperRef(message, sourceFieldName),
+			"SourceValueTypeRef": "*" + wrapperType,
 			"TargetFieldName":    codegen.Goify(tv.Name, true),
 			"ConvertedValue":     convertType(sv.Attribute, tv.Attribute, false, false, "val."+sourceFieldName, false, ta),
 		})
@@ -292,9 +261,8 @@ func renderUnionFromProtoTransform(source, target *expr.AttributeExpr, sourceVar
 	return ensureTrailingNewline(buf.String()), nil
 }
 
-// ensureTrailingNewline appends a newline to code when missing so that the
-// rendered transformations compose with the code the engine emits around
-// them.
+// ensureTrailingNewline appends a newline when surrounding generated code must
+// continue on the next line.
 func ensureTrailingNewline(code string) string {
 	if code != "" && !strings.HasSuffix(code, "\n") {
 		code += "\n"

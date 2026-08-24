@@ -21,7 +21,6 @@ func TestPreparedDesignSnapshotRejectsUnsupportedState(t *testing.T) {
 		value any
 		want  string
 	}{
-		{"function", func() {}, "unsupported non-nil function"},
 		{"channel", make(chan int), "unsupported non-nil channel"},
 		{"unsafe pointer", unsafe.Pointer(&value), "unsupported non-nil unsafe pointer"},
 	}
@@ -41,14 +40,16 @@ func TestPreparedDesignSnapshotRejectsUnsupportedState(t *testing.T) {
 	}
 }
 
-// TestPreparedDesignSnapshotAcceptsEvaluatedDSLFunctions proves dormant DSL
-// closures remain valid prepared input after evaluation completes.
-func TestPreparedDesignSnapshotAcceptsEvaluatedDSLFunctions(t *testing.T) {
+// TestPreparedDesignSnapshotTracksFunctions proves unchanged functions remain
+// valid while replacement and nilness changes are reported as mutations.
+func TestPreparedDesignSnapshotTracksFunctions(t *testing.T) {
+	first := func(string) string { return "first" }
+	second := func(string) string { return "second" }
 	root := &expr.RootExpr{Types: []expr.UserType{&expr.UserTypeExpr{
 		TypeName: "Value",
 		AttributeExpr: &expr.AttributeExpr{
-			Type:    expr.String,
-			DSLFunc: eval.DSLFunc(func() {}),
+			Type:         expr.String,
+			DefaultValue: first,
 		},
 	}}}
 
@@ -57,6 +58,35 @@ func TestPreparedDesignSnapshotAcceptsEvaluatedDSLFunctions(t *testing.T) {
 	changed, err := snapshot.changedPath([]eval.Root{root})
 	require.NoError(t, err)
 	require.Empty(t, changed)
+
+	root.Types[0].Attribute().DefaultValue = second
+	changed, err = snapshot.changedPath([]eval.Root{root})
+	require.NoError(t, err)
+	require.Equal(t, "roots[0].Types[0].AttributeExpr.DefaultValue", changed)
+
+	root.Types[0].Attribute().DefaultValue = (func(string) string)(nil)
+	changed, err = snapshot.changedPath([]eval.Root{root})
+	require.NoError(t, err)
+	require.Equal(t, "roots[0].Types[0].AttributeExpr.DefaultValue", changed)
+}
+
+// TestPreparedDesignSnapshotDetectsNilFunctionReplacement proves a function
+// added where the prepared design stored nil is reported as a mutation.
+func TestPreparedDesignSnapshotDetectsNilFunctionReplacement(t *testing.T) {
+	root := &expr.RootExpr{Types: []expr.UserType{&expr.UserTypeExpr{
+		TypeName: "Value",
+		AttributeExpr: &expr.AttributeExpr{
+			Type:         expr.String,
+			DefaultValue: (func(string) string)(nil),
+		},
+	}}}
+	snapshot, err := snapshotPreparedDesign([]eval.Root{root})
+	require.NoError(t, err)
+
+	root.Types[0].Attribute().DefaultValue = func(string) string { return "added" }
+	changed, err := snapshot.changedPath([]eval.Root{root})
+	require.NoError(t, err)
+	require.Equal(t, "roots[0].Types[0].AttributeExpr.DefaultValue", changed)
 }
 
 // TestPreparedDesignSnapshotTreatsConversionExternalAsTypeToken proves that

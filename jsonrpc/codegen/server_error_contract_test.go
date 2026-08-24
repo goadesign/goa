@@ -14,24 +14,41 @@ import (
 	"goa.design/goa/v3/jsonrpc/codegen/testdata"
 )
 
-// TestServerErrorResponses verifies request decoding writes JSON-RPC errors,
-// service code can explicitly write a server-sent event error, service method
-// failures return to the server, and unary failures still become responses.
+// TestServerErrorResponses verifies the transport writes request and service
+// failures without exposing JSON-RPC error methods through the service stream.
 func TestServerErrorResponses(t *testing.T) {
 	root := expr.RunDSL(t, testdata.JSONRPCKitchenSinkDSL)
 	plan := CreateJSONRPCPlan(root)
 
 	feedServer := renderPlannedFile(t, plan.ServerFiles(), "feed", "server.go")
-	require.Contains(t, feedServer, "if err := strm.SendError(ctx, jsonrpc.IDToString(req.ID), err); err != nil {\n\t\t\t\t\treturn err\n\t\t\t\t}")
-	require.Contains(t, feedServer, "if _, err := endpoint(ctx, v); err != nil {\n\t\t\treturn err")
-	require.NotContains(t, feedServer, "return strm.SendError")
+	require.Contains(t, feedServer, "return strm.sendError(ctx, req.ID, jsonrpc.InvalidParams, err.Error(), nil)")
+	require.Contains(t, feedServer, `"result":  nil`)
+	require.NotContains(t, feedServer, "jsonrpc.MakeSuccessResponse(req.ID, nil)")
+	require.Contains(t, feedServer, "return strm.sendSSEEvent(ctx, \"response\", response)")
+	require.Contains(t, feedServer, "jsonrpc.MakeSuccessResponse(id, res)")
+	require.Equal(t, 1, strings.Count(feedServer, `mux.Handle("POST", "/feed", h.ServeHTTP)`))
+	require.NotContains(t, feedServer, "SendError")
 
 	feedStream := renderPlannedFile(t, plan.ServerFiles(), "feed", "sse.go")
-	require.Contains(t, feedStream, "func (s *WatchServerStream) SendError(")
+	require.Contains(t, feedStream, "func (s *WatchServerStream) Send(event *feed.WatchResult) error")
+	require.Contains(t, feedStream, "func (s *WatchServerStream) SendWithContext(ctx context.Context, event *feed.WatchResult) error")
+	require.Contains(t, feedStream, "func (s *WatchServerStream) Close() error")
+	require.NotContains(t, feedStream, "SendAndClose")
+	require.NotContains(t, feedStream, "SendError")
 
 	calcServer := renderPlannedFile(t, plan.ServerFiles(), "calc", "server.go")
 	require.Contains(t, calcServer, "if err != nil {")
 	require.Contains(t, calcServer, "encodeJSONRPCError(ctx, w, req,")
+}
+
+// TestNamedSSEPayloadReceivesLastEventID verifies a named payload receives the
+// event ID in its designed pointer field before the endpoint runs.
+func TestNamedSSEPayloadReceivesLastEventID(t *testing.T) {
+	root := expr.RunDSL(t, testdata.JSONRPCKitchenSinkDSL)
+	plan := CreateJSONRPCPlan(root)
+	feedServer := renderPlannedFile(t, plan.ServerFiles(), "feed", "server.go")
+
+	require.Contains(t, feedServer, "params.LastEventID = &lastEventID")
 }
 
 // renderPlannedFile renders one file stored by the plan into memory without

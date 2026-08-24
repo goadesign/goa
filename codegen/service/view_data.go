@@ -1,4 +1,5 @@
-// This file formats retained projected types, views, constructors, validators, and their exact declaration references.
+// This file builds generated view types, constructors, and validation
+// functions from the data selected during planning.
 package service
 
 import (
@@ -62,9 +63,10 @@ func projectTypePairs(projected, source *expr.AttributeExpr, seen map[expr.UserT
 	}
 }
 
-// projectedResultRoot returns the root attribute used to collect projected
-// view types for m.Result. Compiler-created method wrappers retain their exact
-// provenance in generation, so authored types with matching text stay intact.
+// projectedResultRoot returns the root attribute used to build result types
+// containing only the fields in each view of m.Result. Generation records
+// which method wrappers Goa created, so authored types with matching text stay
+// unchanged.
 func projectedResultRoot(generation *codegen.Generation, m *expr.MethodExpr) (*expr.AttributeExpr, *expr.AttributeExpr) {
 	if ut, ok := m.Result.Type.(*expr.UserTypeExpr); ok {
 		if _, normalized := generation.NormalizedMethodType(ut); !normalized {
@@ -114,9 +116,10 @@ func hasResultType(att *expr.AttributeExpr, seens ...map[expr.UserType]struct{})
 	return false
 }
 
-// buildProjectedType returns the render data for one pointer-backed view
-// declaration and its conversions to the exact source service type.
-func buildProjectedType(facts *projectedTypeFacts, serviceResolver, viewResolver *declarationResolver, declaration *codegen.TypeDeclaration) *ProjectedTypeData {
+// buildProjectedType returns render data for one view-specific declaration
+// whose fields use pointers, plus conversions to and from the source service
+// type.
+func buildProjectedType(facts *projectedTypeFacts, serviceResolver, viewResolver *declarationResolver, declaration *codegen.TypeDeclaration, viewsPkg string) *ProjectedTypeData {
 	var (
 		projections []*InitData
 		typeInits   []*InitData
@@ -130,13 +133,13 @@ func buildProjectedType(facts *projectedTypeFacts, serviceResolver, viewResolver
 		projections = buildViewConversions(facts, serviceResolver, viewResolver, false)
 		serviceName := facts.source.Link(
 			serviceResolver.outputPath,
-			retainedTypeQualifier(serviceResolver.aliases),
+			retainedTypeQualifier(serviceResolver.aliases, serviceResolver.outputPath),
 		).Name()
 		views = buildViews(facts.views, serviceName, facts.mapDeclaration, facts.conversions)
 	}
 	validations := buildValidations(facts, viewResolver)
-	linked := facts.projected.Link(viewResolver.outputPath, retainedTypeQualifier(viewResolver.aliases))
-	definition := facts.definition.Link(viewResolver.outputPath, retainedTypeQualifier(viewResolver.aliases))
+	linked := facts.projected.Link(viewResolver.outputPath, retainedTypeQualifier(viewResolver.aliases, viewResolver.outputPath))
+	definition := facts.definition.Link(viewResolver.outputPath, retainedTypeQualifier(viewResolver.aliases, viewResolver.outputPath))
 	return &ProjectedTypeData{
 		UserTypeData: &UserTypeData{
 			Declaration: declaration,
@@ -150,6 +153,7 @@ func buildProjectedType(facts *projectedTypeFacts, serviceResolver, viewResolver
 		Projections: projections,
 		TypeInits:   typeInits,
 		Validations: validations,
+		ViewsPkg:    viewsPkg,
 		Views:       views,
 	}
 }
@@ -180,15 +184,16 @@ func buildViews(facts []*viewRenderFacts, typeName string, mapDeclaration *codeg
 	return views
 }
 
-// buildViewedResultType formats the retained viewed result wrapper and its
-// constructors without consulting the mutable design expression.
+// buildViewedResultType formats the viewed-result wrapper copied during
+// planning and its constructors without rereading the mutable design
+// expression.
 func buildViewedResultType(facts *viewedResultFacts, viewspkg string, serviceResolver, viewResolver *declarationResolver, declaration *codegen.TypeDeclaration) *ViewedResultTypeData {
 	isarr := facts.isCollection
 	viewName := facts.viewName
 	views := buildViews(facts.views, declaration.Name(), facts.mapDeclaration, facts.conversions)
 
 	// build validation data
-	qualifier := retainedTypeQualifier(serviceResolver.aliases)
+	qualifier := retainedTypeQualifier(serviceResolver.aliases, serviceResolver.outputPath)
 	serviceType := facts.source.layout.Link(serviceResolver.outputPath, qualifier)
 	resvar, serviceRef := declaration.Name(), serviceType.Ref()
 	projT := facts.wrapped
@@ -215,6 +220,7 @@ func buildViewedResultType(facts *viewedResultFacts, viewspkg string, serviceRes
 	name := validatorDeclaration.Name()
 	validate := &ValidateData{
 		Declaration: validatorDeclaration,
+		Name:        validatorDeclaration.Name(),
 		Description: fmt.Sprintf("%s runs the validations defined on the viewed result type %s.", name, resvar),
 		Ref:         resref,
 		Validate:    buf.String(),
@@ -243,6 +249,7 @@ func buildViewedResultType(facts *viewedResultFacts, viewspkg string, serviceRes
 	name = facts.toViewed.Name()
 	init := &InitData{
 		Declaration: facts.toViewed,
+		Name:        facts.toViewed.Name(),
 		Description: fmt.Sprintf("%s initializes viewed result type %s from result type %s using the given view.", name, resvar, resvar),
 		Args: []*InitArgData{
 			{Name: "res", Ref: serviceRef},
@@ -268,6 +275,7 @@ func buildViewedResultType(facts *viewedResultFacts, viewspkg string, serviceRes
 	name = facts.toResult.Name()
 	resinit := &InitData{
 		Declaration:   facts.toResult,
+		Name:          facts.toResult.Name(),
 		Description:   fmt.Sprintf("%s initializes result type %s from viewed result type %s.", name, resvar, resvar),
 		Args:          []*InitArgData{{Name: "vres", Ref: vresref}},
 		ReturnTypeRef: resref,
@@ -296,8 +304,8 @@ func buildViewedResultType(facts *viewedResultFacts, viewspkg string, serviceRes
 	}
 }
 
-// wrapProjected builds a viewed result type by wrapping the given projected
-// in a result type with "projected" and "view" attributes.
+// wrapProjected builds a viewed result type with two fields: "projected" holds
+// the supplied view-specific result, and "view" records the selected view name.
 func wrapProjected(projected expr.UserType) expr.UserType {
 	rt := projected.(*expr.ResultTypeExpr)
 	pratt := &expr.NamedAttributeExpr{
@@ -321,17 +329,16 @@ func wrapProjected(projected expr.UserType) expr.UserType {
 	}
 }
 
-// buildViewConversions builds the data to generate the constructor code that
-// converts between a result type and its projected type, one constructor per
-// view. When toResult is true the constructors initialize the result type from
-// the projected type, otherwise they project the result type to the projected
-// type based on the view.
+// buildViewConversions builds one constructor per view to convert between a
+// complete service result and the result fields selected by that view. When
+// toResult is true, each constructor rebuilds the service result. Otherwise it
+// copies only the selected view fields from the service result.
 func buildViewConversions(facts *projectedTypeFacts, serviceResolver, viewResolver *declarationResolver, toResult bool) []*InitData {
 	init := make([]*InitData, 0, len(facts.conversions)/2)
-	serviceType := facts.source.Link(serviceResolver.outputPath, retainedTypeQualifier(serviceResolver.aliases))
+	serviceType := facts.source.Link(serviceResolver.outputPath, retainedTypeQualifier(serviceResolver.aliases, serviceResolver.outputPath))
 	serviceName, serviceRef := serviceType.Name(), serviceType.Ref()
 	projectedDeclaration := facts.declaration
-	projectedRef := facts.projected.Link(serviceResolver.outputPath, retainedTypeQualifier(serviceResolver.aliases)).Ref()
+	projectedRef := facts.projected.Link(serviceResolver.outputPath, retainedTypeQualifier(serviceResolver.aliases, serviceResolver.outputPath)).Ref()
 	serviceViewResolver := viewResolver.withOutputPackage(serviceResolver.outputPath)
 	for _, conversion := range facts.conversions {
 		if conversion.toResult != toResult {
@@ -343,7 +350,7 @@ func buildViewConversions(facts *projectedTypeFacts, serviceResolver, viewResolv
 		}
 		targetType := conversion.targetLayout.Link(
 			serviceResolver.outputPath,
-			retainedTypeQualifier(serviceResolver.aliases),
+			retainedTypeQualifier(serviceResolver.aliases, serviceResolver.outputPath),
 		).Name()
 		if toResult {
 			srcCtx := declarationContext(viewedResolver, true)
@@ -360,6 +367,7 @@ func buildViewConversions(facts *projectedTypeFacts, serviceResolver, viewResolv
 			)
 			init = append(init, &InitData{
 				Declaration:   conversion.constructor,
+				Name:          conversion.constructor.Name(),
 				Description:   fmt.Sprintf("%s converts projected type %s to service type %s.", name, resvar, resvar),
 				Args:          []*InitArgData{{Name: "vres", Ref: projectedRef}},
 				ReturnTypeRef: serviceRef,
@@ -381,6 +389,7 @@ func buildViewConversions(facts *projectedTypeFacts, serviceResolver, viewResolv
 			)
 			init = append(init, &InitData{
 				Declaration:   conversion.constructor,
+				Name:          conversion.constructor.Name(),
 				Description:   fmt.Sprintf("%s projects result type %s to projected type %s using the %q view.", name, serviceName, tname, conversion.viewName),
 				Args:          []*InitArgData{{Name: "res", Ref: serviceRef}},
 				ReturnTypeRef: projectedRef,
@@ -392,16 +401,19 @@ func buildViewConversions(facts *projectedTypeFacts, serviceResolver, viewResolv
 	return init
 }
 
-// buildValidations builds the data required to generate validations for the
-// projected types.
+// buildValidations builds the data required to validate result types containing
+// only the fields in their selected views.
 func buildValidations(projected *projectedTypeFacts, resolver *declarationResolver) []*ValidateData {
-	linkedType := projected.projected.Link(resolver.outputPath, retainedTypeQualifier(resolver.aliases))
+	linkedType := projected.projected.Link(resolver.outputPath, retainedTypeQualifier(resolver.aliases, resolver.outputPath))
 	tname := linkedType.Name()
 	var validations []*ValidateData
 	if projected.resultType {
 		// for result types we create a validation function containing view
 		// specific validation logic for each view
 		for _, facts := range projected.validations {
+			if !facts.needed {
+				continue
+			}
 			viewName := facts.viewName
 			data := map[string]any{
 				"Projected":    tname,
@@ -422,13 +434,21 @@ func buildValidations(projected *projectedTypeFacts, resolver *declarationResolv
 			} else {
 				fields := make([]*validationFieldData, 0, len(facts.fields))
 				for _, field := range facts.fields {
-					call := newRetainedValidationCall(field.call, field.view)
+					if !field.required && field.call == nil {
+						continue
+					}
+					var call *ValidationCallData
+					if field.call != nil {
+						call = newRetainedValidationCall(field.call, field.view)
+					}
 					fields = append(fields, &validationFieldData{
 						Name:       field.name,
 						Call:       call,
 						IsRequired: field.required,
 					})
-					calls = append(calls, call)
+					if call != nil {
+						calls = append(calls, call)
+					}
 				}
 				data["Validate"] = renderRetainedValidation(facts, resolver)
 				data["Fields"] = fields
@@ -441,6 +461,7 @@ func buildValidations(projected *projectedTypeFacts, resolver *declarationResolv
 
 			validations = append(validations, &ValidateData{
 				Declaration: declaration,
+				Name:        declaration.Name(),
 				Description: fmt.Sprintf("%s runs the validations defined on %s using the %q view.", name, tname, viewName),
 				Ref:         linkedType.Ref(),
 				Validate:    buf.String(),
@@ -451,10 +472,14 @@ func buildValidations(projected *projectedTypeFacts, resolver *declarationResolv
 		// for a user type or a result type with single view, we generate only one validation
 		// function containing the validation logic
 		facts := projected.validations[0]
+		if !facts.needed {
+			return nil
+		}
 		declaration := facts.declaration
 		name := declaration.Name()
 		validations = append(validations, &ValidateData{
 			Declaration: declaration,
+			Name:        declaration.Name(),
 			Description: fmt.Sprintf("%s runs the validations defined on %s.", name, tname),
 			Ref:         linkedType.Ref(),
 			Validate:    renderRetainedValidation(facts, resolver),
@@ -463,10 +488,10 @@ func buildValidations(projected *projectedTypeFacts, resolver *declarationResolv
 	return validations
 }
 
-// renderRetainedValidation formats a symbolic validation plan against the
-// frozen view-package declarations and aliases.
+// This helper formats a saved validation plan using the completed declarations
+// and import names from the views package.
 func renderRetainedValidation(facts *validationFacts, resolver *declarationResolver) string {
-	linkedLayout := facts.layout.Link(resolver.outputPath, retainedTypeQualifier(resolver.aliases))
+	linkedLayout := facts.layout.Link(resolver.outputPath, retainedTypeQualifier(resolver.aliases, resolver.outputPath))
 	linked, err := facts.plan.Link(linkedLayout)
 	if err != nil {
 		panic(err) // bug
@@ -474,8 +499,8 @@ func renderRetainedValidation(facts *validationFacts, resolver *declarationResol
 	return linked.Render("result", "result")
 }
 
-// newRetainedValidationCall formats one nested call from the exact declaration
-// bound during planning.
+// This helper formats one nested validation call from the exact function
+// declaration recorded during planning.
 func newRetainedValidationCall(declaration *codegen.NameDeclaration, view string) *ValidationCallData {
 	return &ValidationCallData{
 		Declaration: declaration,
@@ -484,12 +509,11 @@ func newRetainedValidationCall(declaration *codegen.NameDeclaration, view string
 	}
 }
 
-// newValidationCall binds a nested call spelling to the exact validator
-// declaration retained for attribute and view.
-// buildConstructorCode builds the transformation code to create a projected
-// type from a service type and vice versa.
+// buildConstructorCode builds code that copies fields between a complete
+// service result and a result containing only one view's fields.
 //
-// source and target contains the projected/service contextual attributes
+// sourceCtx and targetCtx provide the package names, pointer rules, and field
+// names used to read the source value and write the target value.
 //
 // sourceVar and targetVar contains the variable name that holds the source and
 // target data structures in the transformation code.

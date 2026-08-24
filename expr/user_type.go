@@ -1,34 +1,40 @@
-// This file defines user-authored type declarations and the distinction
-// between their stable semantic IDs and in-memory copy provenance.
+// This file defines user types and records the original declaration from
+// which each copied type was created.
 package expr
 
 type (
-	// UserTypeExpr describes user defined types. While a given design must
-	// ensure that the names are unique the code used to generate code can
-	// create multiple user types that share the same name (for example because
-	// generated in different packages). When supplied, UID is a stable semantic
-	// identifier used by authored examples and media-type behavior; generated
-	// types retain a separate opaque example owner. Origin identifies copied
-	// in-memory declarations.
+	// UserTypeExpr describes a type declared in a Goa design or created by a
+	// generator. One design cannot declare two types with the same name, but
+	// generators may create same-named types in different Go packages. UID keeps
+	// authored examples and result-type behavior tied to the declared type.
+	// Generated types use exampleIdentity instead. Origin points to the first
+	// UserTypeExpr from which a copied type was made.
 	UserTypeExpr struct {
 		// The embedded attribute expression.
 		*AttributeExpr
 		// Name of type
 		TypeName string
-		// UID is the optional stable semantic identifier of the type.
+		// UID identifies an authored type across copies of its expression.
 		UID string
 		// origin is the earliest declaration copied to create this type.
 		origin UserType
-		// exampleIdentity is the semantic owner of a type synthesized by a
-		// transport generator. Authored types leave it empty and use ID.
+		// exampleIdentity selects the repeatable example sequence for a type created
+		// by a transport generator. Authored types leave it empty and use ID.
 		exampleIdentity ExampleIdentity
 	}
 )
 
-// NewGeneratedUserType creates a synthesized user type whose stable ID and
-// examples are derived from identity. Code generators use this constructor so
-// a copied wire type cannot accidentally inherit an authored type's identity.
+// NewGeneratedUserType creates a user type for generated transport data.
+// The supplied ExampleIdentity selects the generated type's ID and repeatable
+// example sequence. Copies of a request or response type therefore do not use
+// examples belonging to the authored service type.
 func NewGeneratedUserType(name string, attribute *AttributeExpr, identity ExampleIdentity) *UserTypeExpr {
+	return newGeneratedUserType(name, attribute, identity, nil)
+}
+
+// newGeneratedUserType creates one generated wrapper. origin identifies a
+// prior wrapper that represents the same generated Go declaration.
+func newGeneratedUserType(name string, attribute *AttributeExpr, identity ExampleIdentity, origin UserType) *UserTypeExpr {
 	if identity.seed == "" {
 		panic("generated user type requires an example identity")
 	}
@@ -36,6 +42,7 @@ func NewGeneratedUserType(name string, attribute *AttributeExpr, identity Exampl
 		AttributeExpr:   attribute,
 		TypeName:        name,
 		UID:             "generated:" + identity.Seed(),
+		origin:          origin,
 		exampleIdentity: identity,
 	}
 }

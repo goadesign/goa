@@ -33,6 +33,9 @@ type (
 	indirectTestNameOrder struct {
 		value *string
 	}
+
+	// testNameKey supplies the lookup key used by generated type formatters.
+	testNameKey string
 )
 
 // ComparePackageName orders declarations from the same test family.
@@ -58,6 +61,39 @@ func (o unstableTestNameOrder) ComparePackageName(other PackageNameOrder) int {
 // ComparePackageName orders an invalid pointer-backed test value.
 func (o indirectTestNameOrder) ComparePackageName(other PackageNameOrder) int {
 	return strings.Compare(*o.value, *other.(indirectTestNameOrder).value)
+}
+
+// Hash returns the lookup key used by a generated package.
+func (k testNameKey) Hash() string {
+	return string(k)
+}
+
+// TestDeclareNameBindsLookupKeys checks that a plugin can declare a name and
+// use the same final name through its normal typed lookup.
+func TestDeclareNameBindsLookupKeys(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	pkg := mustClaimTestPackage(t, generation, "generated.local/gen/specs")
+	key := testNameKey("request")
+	declaration := NewPreferredName(NameType, "Request", ExportedName, testNameOrder{value: "request"})
+
+	require.NoError(t, pkg.DeclareName(declaration, key))
+	require.NoError(t, pkg.DeclareName(declaration, key))
+	require.NoError(t, generation.Freeze())
+	require.Equal(t, declaration.Name(), pkg.Scope().HashedUnique(key, "Ignored"))
+}
+
+// TestDeclareNameRejectsAnotherDeclarationForOneKey checks that one lookup
+// key cannot select two package-level names.
+func TestDeclareNameRejectsAnotherDeclarationForOneKey(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	pkg := mustClaimTestPackage(t, generation, "generated.local/gen/specs")
+	key := testNameKey("request")
+	first := NewPreferredName(NameType, "Request", ExportedName, testNameOrder{value: "first"})
+	second := NewPreferredName(NameType, "Request", ExportedName, testNameOrder{value: "second"})
+
+	require.NoError(t, pkg.DeclareName(first, key))
+	err := pkg.DeclareName(second, key)
+	require.ErrorContains(t, err, "lookup key")
 }
 
 // TestNameDeclarationOwnsOnePackageNamespace verifies that exact and preferred
@@ -87,6 +123,40 @@ func TestNameDeclarationOwnsOnePackageNamespace(t *testing.T) {
 		err := pkg.DeclareName(NewExactName(kind, "Shared"))
 		require.ErrorContains(t, err, "Shared")
 	}
+}
+
+// TestDeclareGeneratedTypeUsesStablePackageNames verifies that plugins can
+// declare generated types without claiming that they are authored Goa types.
+func TestDeclareGeneratedTypeUsesStablePackageNames(t *testing.T) {
+	declare := func(reverse bool) (string, string) {
+		generation := mustTestGeneration(t, "generated.local/gen", nil)
+		pkg := mustClaimTestPackage(t, generation, "generated.local/gen/types")
+		firstOrder := testNameOrder{value: "first"}
+		secondOrder := testNameOrder{value: "second"}
+		var first, second *TypeDeclaration
+		var err error
+		if reverse {
+			second, err = pkg.DeclareGeneratedType("Value", secondOrder)
+			require.NoError(t, err)
+			first, err = pkg.DeclareGeneratedType("Value", firstOrder)
+		} else {
+			first, err = pkg.DeclareGeneratedType("Value", firstOrder)
+			require.NoError(t, err)
+			second, err = pkg.DeclareGeneratedType("Value", secondOrder)
+		}
+		require.NoError(t, err)
+		require.NoError(t, generation.Freeze())
+		_, err = pkg.DeclareGeneratedType("Other", testNameOrder{value: "other"})
+		require.ErrorContains(t, err, "frozen")
+		return first.Name(), second.Name()
+	}
+
+	first, second := declare(false)
+	reversedFirst, reversedSecond := declare(true)
+	require.Equal(t, "Value", first)
+	require.Equal(t, "Value2", second)
+	require.Equal(t, first, reversedFirst)
+	require.Equal(t, second, reversedSecond)
 }
 
 // TestGeneratedPackagePreservesExactGoNames checks that names produced by
@@ -375,6 +445,35 @@ func TestNameDeclarationRejectsSameImportAcrossGenerations(t *testing.T) {
 	require.ErrorContains(t, err, "already belongs")
 }
 
+// TestGenerationOwnsName checks declaration ownership before and after names
+// are frozen without treating a matching package path as ownership.
+func TestGenerationOwnsName(t *testing.T) {
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	declaration := NewExactName(NameType, "Value")
+	pkg := mustClaimTestPackage(t, generation, "generated.local/gen/types")
+	require.NoError(t, pkg.DeclareName(declaration))
+
+	foreignGeneration := mustTestGeneration(t, "generated.local/gen", nil)
+	foreign := NewExactName(NameType, "Foreign")
+	require.NoError(t, mustClaimTestPackage(t, foreignGeneration, "generated.local/gen/types").DeclareName(foreign))
+
+	require.True(t, generation.OwnsName(declaration))
+	require.False(t, generation.OwnsName(foreign))
+	require.False(t, generation.OwnsName(NewExactName(NameType, "Unregistered")))
+	require.False(t, generation.OwnsName(nil))
+	require.True(t, pkg.OwnsName(declaration))
+	require.False(t, pkg.OwnsName(foreign))
+	require.False(t, pkg.OwnsName(nil))
+	filePackage, ok := generation.PackageForFile("gen/types/value.go")
+	require.True(t, ok)
+	require.Same(t, pkg, filePackage)
+	_, ok = generation.PackageForFile("gen/other/value.go")
+	require.False(t, ok)
+
+	require.NoError(t, generation.Freeze())
+	require.True(t, generation.OwnsName(declaration))
+}
+
 // TestGeneratedOutputPathRejectsNormalizedCollisions verifies that equivalent
 // import spellings cannot make two requested package identities share output.
 func TestGeneratedOutputPathRejectsNormalizedCollisions(t *testing.T) {
@@ -502,7 +601,7 @@ func TestGeneratedTypeFamiliesContainCanonicalNames(t *testing.T) {
 	pkg := mustClaimTestPackage(t, generation, "generated.local/gen/types")
 	user, err := pkg.DeclareUserType(generatedUserType("Widget", "widget"))
 	require.NoError(t, err)
-	union, alias := generatedUnionWithBranch("Value", "text", "text", expr.String)
+	union, alias := generatedUnionWithBranch("text")
 	unionDeclaration, err := pkg.DeclareUnion(union)
 	require.NoError(t, err)
 	branchType, err := pkg.DeclareUnionBranchType(union, "text", alias)
@@ -777,8 +876,8 @@ func TestGeneratedPackageRejectsAmbiguousDerivedOrder(t *testing.T) {
 func TestGeneratedPackageUnionBranchesShareDeclaration(t *testing.T) {
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	types := mustClaimTestPackage(t, generation, "generated.local/gen/types")
-	firstUnion, firstAlias := generatedUnionWithBranch("Value", "text", "first", expr.String)
-	secondUnion, secondAlias := generatedUnionWithBranch("Value", "text", "second", expr.String)
+	firstUnion, firstAlias := generatedUnionWithBranch("first")
+	secondUnion, secondAlias := generatedUnionWithBranch("second")
 
 	_, err := types.DeclareUnion(firstUnion)
 	require.NoError(t, err)
@@ -803,8 +902,8 @@ func TestGeneratedPackageUnionBranchesShareDeclaration(t *testing.T) {
 func TestGeneratedPackageUnionBranchesAreIsolatedByUnion(t *testing.T) {
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	types := mustClaimTestPackage(t, generation, "generated.local/gen/types")
-	firstUnion, firstAlias := generatedUnionWithBranch("Value", "text", "first", expr.String)
-	secondUnion, secondAlias := generatedUnionWithBranch("Value", "text", "second", expr.String)
+	firstUnion, firstAlias := generatedUnionWithBranch("first")
+	secondUnion, secondAlias := generatedUnionWithBranch("second")
 	secondUnion.TypeKey = "kind"
 
 	_, err := types.DeclareUnion(firstUnion)
@@ -834,7 +933,7 @@ func TestGeneratedPackageUnionFamilyAvoidsExactTypeNames(t *testing.T) {
 		_, err := types.DeclareUserType(generatedUserType(name, name))
 		require.NoError(t, err)
 	}
-	union, alias := generatedUnionWithBranch("Value", "text", "text", expr.String)
+	union, alias := generatedUnionWithBranch("text")
 	_, err := types.DeclareUnion(union)
 	require.NoError(t, err)
 	aliasDeclaration, err := types.DeclareUnionBranchType(union, "text", alias)
@@ -856,9 +955,9 @@ func TestGeneratedPackageUnionFamilyAvoidsExactTypeNames(t *testing.T) {
 func TestGeneratedPackageUnions(t *testing.T) {
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	types := mustClaimTestPackage(t, generation, "generated.local/gen/types")
-	first := generatedUnion("Value", "type", "value")
-	equivalent := generatedUnion("Value", "type", "value")
-	different := generatedUnion("Value", "kind", "data")
+	first := generatedUnion("type", "value")
+	equivalent := generatedUnion("type", "value")
+	different := generatedUnion("kind", "data")
 
 	firstDeclaration, err := types.DeclareUnion(first)
 	require.NoError(t, err)
@@ -888,9 +987,9 @@ func TestGeneratedPackageUnions(t *testing.T) {
 
 	reversedGeneration := mustTestGeneration(t, "generated.local/gen", nil)
 	reversedTypes := mustClaimTestPackage(t, reversedGeneration, "generated.local/gen/types")
-	reversedDifferent, err := reversedTypes.DeclareUnion(generatedUnion("Value", "kind", "data"))
+	reversedDifferent, err := reversedTypes.DeclareUnion(generatedUnion("kind", "data"))
 	require.NoError(t, err)
-	reversedFirst, err := reversedTypes.DeclareUnion(generatedUnion("Value", "type", "value"))
+	reversedFirst, err := reversedTypes.DeclareUnion(generatedUnion("type", "value"))
 	require.NoError(t, err)
 	require.NoError(t, reversedGeneration.Freeze())
 	require.Equal(t, firstDeclaration.Name(), reversedFirst.Name())
@@ -907,7 +1006,7 @@ func TestGeneratedPackageUserTypeWinsUnionNamesRegardlessOfOrder(t *testing.T) {
 			types := mustClaimTestPackage(t, generation, "generated.local/gen/types")
 			userType := generatedUserType("Value", "value")
 			kindUserType := generatedUserType("ValueKind", "value-kind")
-			union := generatedUnion("Value", "type", "value")
+			union := generatedUnion("type", "value")
 			var (
 				userDeclaration  *TypeDeclaration
 				kindDeclaration  *TypeDeclaration
@@ -958,7 +1057,7 @@ func TestGeneratedPackageLookupAcrossFreeze(t *testing.T) {
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	types := mustClaimTestPackage(t, generation, "generated.local/gen/types")
 	widget := generatedUserType("Widget", "widget")
-	union := generatedUnion("Value", "type", "value")
+	union := generatedUnion("type", "value")
 	userDeclaration, err := types.DeclareUserType(widget)
 	require.NoError(t, err)
 	unionDeclaration, err := types.DeclareUnion(union)
@@ -1103,14 +1202,26 @@ func TestMethodTypeIdentityPreservesRawOwner(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			first := newMethodTypeIdentity(firstMethod.Name, tc.kind, tc.first)
-			second := newMethodTypeIdentity(secondMethod.Name, tc.kind, tc.second)
+			first := newMethodTypeIdentity("test api", firstMethod.Name, tc.kind, tc.first)
+			second := newMethodTypeIdentity("test api", secondMethod.Name, tc.kind, tc.second)
 
 			require.Equal(t, first.Name(), second.Name())
 			require.NotEqual(t, first.UID(), second.UID())
-			require.Equal(t, first.UID(), newMethodTypeIdentity(firstMethod.Name, tc.kind, tc.first).UID())
+			require.Equal(t, first.UID(), newMethodTypeIdentity("test api", firstMethod.Name, tc.kind, tc.first).UID())
 		})
 	}
+}
+
+// TestMethodTypeNamesUseAPIToBreakTies verifies two APIs can write equal
+// service and method wrapper names to one package without using input order.
+func TestMethodTypeNamesUseAPIToBreakTies(t *testing.T) {
+	forwardFirst, forwardSecond := methodTypeNamesByAPI(t, false)
+	reverseFirst, reverseSecond := methodTypeNamesByAPI(t, true)
+
+	require.Equal(t, "ReadPayload", forwardFirst)
+	require.Equal(t, "ReadPayload2", forwardSecond)
+	require.Equal(t, forwardFirst, reverseFirst)
+	require.Equal(t, forwardSecond, reverseSecond)
 }
 
 // TestGenerationPreservesRawMethodOwner proves synthesized wrappers retain
@@ -1208,8 +1319,8 @@ func TestGenerationCatalogsAreIsolated(t *testing.T) {
 	first := mustClaimTestPackage(t, firstGeneration, "generated.local/gen/types")
 	secondGeneration := mustTestGeneration(t, "generated.local/gen", nil)
 	second := mustClaimTestPackage(t, secondGeneration, "generated.local/gen/types")
-	firstUnion := generatedUnion("Value", "type", "value")
-	secondUnion := generatedUnion("Value", "type", "value")
+	firstUnion := generatedUnion("type", "value")
+	secondUnion := generatedUnion("type", "value")
 
 	firstDeclaration, err := first.DeclareUnion(firstUnion)
 	require.NoError(t, err)
@@ -1221,6 +1332,51 @@ func TestGenerationCatalogsAreIsolated(t *testing.T) {
 	require.Equal(t, "Value", secondDeclaration.Name())
 	require.NotSame(t, firstDeclaration, secondDeclaration)
 	require.NotSame(t, first.Scope(), second.Scope())
+}
+
+// methodTypeNamesByAPI declares equal method wrappers in the requested order
+// and returns the name assigned to each API.
+func methodTypeNamesByAPI(t *testing.T, reverse bool) (string, string) {
+	t.Helper()
+	generation := mustTestGeneration(t, "generated.local/gen", nil)
+	generatedPackage := mustClaimTestPackage(t, generation, "generated.local/gen/shared")
+	method := &expr.MethodExpr{Name: "Read", Service: &expr.ServiceExpr{Name: "Shared"}}
+	example := expr.MethodPayloadExampleIdentity(method)
+	firstIdentity, firstWrapper := testMethodTypeWrapper("first api", method.Name, example)
+	secondIdentity, secondWrapper := testMethodTypeWrapper("second api", method.Name, example)
+	var first, second *TypeDeclaration
+	if reverse {
+		second = declareTestMethodType(t, generatedPackage, secondIdentity, secondWrapper)
+		first = declareTestMethodType(t, generatedPackage, firstIdentity, firstWrapper)
+	} else {
+		first = declareTestMethodType(t, generatedPackage, firstIdentity, firstWrapper)
+		second = declareTestMethodType(t, generatedPackage, secondIdentity, secondWrapper)
+	}
+	require.NoError(t, generation.Freeze())
+	return first.Name(), second.Name()
+}
+
+// testMethodTypeWrapper creates one generated method wrapper with an API name
+// that is used only to order equal wrapper names.
+func testMethodTypeWrapper(api, method string, example expr.ExampleIdentity) (MethodTypeIdentity, expr.UserType) {
+	identity := newMethodTypeIdentity(api, method, methodPayloadTypeKind, example)
+	wrapper := expr.NewGeneratedUserType(
+		identity.Name(),
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		}},
+		example,
+	)
+	return identity.bind(wrapper), wrapper
+}
+
+// declareTestMethodType submits one generated wrapper and returns its stored
+// type declaration.
+func declareTestMethodType(t *testing.T, generatedPackage *GeneratedPackage, identity MethodTypeIdentity, wrapper expr.UserType) *TypeDeclaration {
+	t.Helper()
+	declaration, _, err := generatedPackage.DeclareMethodType(identity, wrapper)
+	require.NoError(t, err)
+	return declaration
 }
 
 // generatedUserType builds a distinct user type for catalog tests.
@@ -1239,21 +1395,21 @@ func generatedUserTypeOf(name, id string, dataType expr.DataType) expr.UserType 
 
 // generatedUnion builds a union whose emitted identity includes the supplied
 // JSON envelope keys.
-func generatedUnion(name, typeKey, valueKey string) *expr.Union {
+func generatedUnion(typeKey, valueKey string) *expr.Union {
 	return &expr.Union{
-		TypeName: name,
+		TypeName: "Value",
 		TypeKey:  typeKey,
 		ValueKey: valueKey,
 	}
 }
 
 // generatedUnionWithBranch builds a union with one generated branch alias.
-func generatedUnionWithBranch(unionName, branchName, aliasID string, dataType expr.DataType) (*expr.Union, expr.UserType) {
-	alias := generatedUserTypeOf(unionName+expr.Title(branchName), aliasID, dataType)
+func generatedUnionWithBranch(aliasID string) (*expr.Union, expr.UserType) {
+	alias := generatedUserTypeOf("ValueText", aliasID, expr.String)
 	return &expr.Union{
-		TypeName: unionName,
+		TypeName: "Value",
 		Values: []*expr.NamedAttributeExpr{{
-			Name:      branchName,
+			Name:      "text",
 			Attribute: &expr.AttributeExpr{Type: alias},
 		}},
 	}, alias

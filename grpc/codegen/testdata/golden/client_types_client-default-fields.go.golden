@@ -1,5 +1,5 @@
-// NewProtoMethodRequest builds the gRPC request type from the payload of the
-// "Method" endpoint of the "DefaultFields" service.
+// NewProtoMethodRequest builds *default_fieldspb.MethodRequest from
+// *defaultfields.MethodPayload.
 func NewProtoMethodRequest(payload *defaultfields.MethodPayload) *default_fieldspb.MethodRequest {
 	message := &default_fieldspb.MethodRequest{
 		Req:  payload.Req,

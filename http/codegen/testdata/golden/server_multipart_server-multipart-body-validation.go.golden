@@ -1,0 +1,18 @@
+// NewServiceMultipartValidationMethodMultipartValidationDecoder returns a
+// decoder to decode the multipart request for the "ServiceMultipartValidation"
+// service "MethodMultipartValidation" endpoint.
+func NewServiceMultipartValidationMethodMultipartValidationDecoder(_ goahttp.Muxer, serviceMultipartValidationMethodMultipartValidationDecoderFn ServiceMultipartValidationMethodMultipartValidationDecoderFunc) func(r *http.Request) goahttp.Decoder {
+	return func(r *http.Request) goahttp.Decoder {
+		return goahttp.EncodingFunc(func(v any) error {
+			mr, merr := r.MultipartReader()
+			if merr != nil {
+				return merr
+			}
+			body := v.(*MethodMultipartValidationRequestBody)
+			if err := serviceMultipartValidationMethodMultipartValidationDecoderFn(mr, body); err != nil {
+				return err
+			}
+			return nil
+		})
+	}
+}

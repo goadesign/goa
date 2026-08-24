@@ -191,7 +191,6 @@ func camelCaseUncached(name string, firstUpper, acronym bool) string {
 		// advance to next word
 		w = i
 	}
-
 	return string(runes)
 }
 

@@ -1,5 +1,5 @@
 // This file verifies HTTP union records preserve the nilability of every
-// branch when rendering their package-owned sum type.
+// branch when rendering a value that holds one selected branch.
 package codegen
 
 import (
@@ -13,11 +13,23 @@ import (
 
 func TestBuildHTTPUnionTypeDataMarksNilableBranches(t *testing.T) {
 	union := unionWithBranchTypes()
+	kindNames := []string{"ValueKindArray", "ValueKindBool", "ValueKindBytes", "ValueKindMap", "ValueKindObject", "ValueKindString"}
+	constructorNames := []string{"NewValueArray", "NewValueBool", "NewValueBytes", "NewValueMap", "NewValueObject", "NewValueString"}
+	kindDeclarations := make([]*codegen.NameDeclaration, len(kindNames))
+	constructorDeclarations := make([]*codegen.NameDeclaration, len(constructorNames))
+	for index := range kindNames {
+		kindDeclarations[index] = codegen.NewExactName(codegen.NameConstant, kindNames[index])
+		constructorDeclarations[index] = codegen.NewExactName(codegen.NameFunction, constructorNames[index])
+	}
 	record := &wireUnionRecord{
+		declaration:  codegen.NewExactName(codegen.NameType, "Value"),
+		kind:         codegen.NewExactName(codegen.NameType, "ValueKind"),
+		kindDecls:    kindDeclarations,
+		ctorDecls:    constructorDeclarations,
 		name:         "Value",
 		kindName:     "ValueKind",
-		kindConsts:   []string{"ValueKindArray", "ValueKindBool", "ValueKindBytes", "ValueKindMap", "ValueKindObject", "ValueKindString"},
-		constructors: []string{"NewValueArray", "NewValueBool", "NewValueBytes", "NewValueMap", "NewValueObject", "NewValueString"},
+		kindConsts:   kindNames,
+		constructors: constructorNames,
 	}
 	data := buildHTTPUnionTypeData(union, codegen.NewAttributeScope(codegen.NewNameScope()), record)
 

@@ -18,9 +18,6 @@ func() {
 {{- if $required }}
 	Required({{ range $i, $f := $required }}{{ if $i }}, {{ end }}"{{ $f }}"{{ end }})
 {{- end }}
-{{- if .NeedsID }}
-	ID("id")
-{{- end }}
 }
 {{- else if eq .Kind "map" -}}
 func() {

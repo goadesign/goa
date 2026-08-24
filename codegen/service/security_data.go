@@ -64,8 +64,8 @@ func BuildSchemeData(s *expr.SchemeExpr, m *expr.MethodExpr) *SchemeData {
 	return data
 }
 
-// schemeScopes returns the scope names defined by the scheme, nil when the
-// scheme defines none.
+// schemeScopes returns the authorization scope names defined by the scheme. It
+// returns nil when the scheme defines none.
 func schemeScopes(s *expr.SchemeExpr) []string {
 	if len(s.Scopes) == 0 {
 		return nil

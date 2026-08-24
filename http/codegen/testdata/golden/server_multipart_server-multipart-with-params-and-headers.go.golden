@@ -2,69 +2,17 @@
 // returns a decoder to decode the multipart request for the
 // "ServiceMultipartWithParamsAndHeaders" service
 // "MethodMultipartWithParamsAndHeaders" endpoint.
-func NewServiceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersDecoder(mux goahttp.Muxer, serviceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersDecoderFn ServiceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersDecoderFunc) func(r *http.Request) goahttp.Decoder {
+func NewServiceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersDecoder(_ goahttp.Muxer, serviceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersDecoderFn ServiceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersDecoderFunc) func(r *http.Request) goahttp.Decoder {
 	return func(r *http.Request) goahttp.Decoder {
 		return goahttp.EncodingFunc(func(v any) error {
 			mr, merr := r.MultipartReader()
 			if merr != nil {
 				return merr
 			}
-			p := v.(**servicemultipartwithparamsandheaders.PayloadType)
-			if err := serviceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersDecoderFn(mr, p); err != nil {
+			body := v.(*MethodMultipartWithParamsAndHeadersRequestBody)
+			if err := serviceMultipartWithParamsAndHeadersMethodMultipartWithParamsAndHeadersDecoderFn(mr, body); err != nil {
 				return err
 			}
-			var (
-				a   string
-				c2  map[int][]string
-				b   *string
-				err error
-
-				params = mux.Vars(r)
-			)
-			a = params["a"]
-			err = goa.MergeErrors(err, goa.ValidatePattern("a", a, "patterna"))
-			{
-				c2Raw := r.URL.Query()
-				if len(c2Raw) == 0 {
-					err = goa.MergeErrors(err, goa.MissingFieldError("c", "query string"))
-				}
-				for keyRaw, valRaw := range c2Raw {
-					if strings.HasPrefix(keyRaw, "c[") {
-						if c2 == nil {
-							c2 = make(map[int][]string)
-						}
-						var keya int
-						{
-							openIdx := strings.IndexRune(keyRaw, '[')
-							closeIdx := strings.IndexRune(keyRaw, ']')
-							if openIdx == -1 || closeIdx == -1 || closeIdx <= openIdx {
-								err = goa.MergeErrors(err, goa.DecodePayloadError("invalid query string: malformed brackets"))
-							} else {
-								keyaRaw := keyRaw[openIdx+1 : closeIdx]
-								v, err2 := strconv.ParseInt(keyaRaw, 10, strconv.IntSize)
-								if err2 != nil {
-									err = goa.MergeErrors(err, goa.InvalidFieldTypeError("query", keyaRaw, "integer"))
-								}
-								keya = int(v)
-							}
-						}
-						c2[keya] = valRaw
-					}
-				}
-			}
-			bRaw := r.Header.Get("Authorization")
-			if bRaw != "" {
-				b = &bRaw
-			}
-			if b != nil {
-				err = goa.MergeErrors(err, goa.ValidatePattern("b", *b, "patternb"))
-			}
-			if err != nil {
-				return err
-			}
-			(*p).A = a
-			(*p).C = c2
-			(*p).B = b
 			return nil
 		})
 	}

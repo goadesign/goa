@@ -2,14 +2,14 @@ func main() {
 	// Define command line flags, add any other flag required to configure the
 	// service.
 	var (
-		hostF     = flag.String("host", "dev", "Server host (valid values: dev, stage)")
-		domainF   = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
-		httpPortF = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
-		versionF  = flag.String("version", "v1", "Version (valid values: v1, v2)")
-		domainF   = flag.String("domain", "test", "Domain")
-		portF     = flag.String("port", "8080", "Port")
-		secureF   = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
-		dbgF      = flag.Bool("debug", false, "Log request and response bodies")
+		hostF      = flag.String("host", "dev", "Server host (valid values: dev, stage)")
+		domainF    = flag.String("domain", "", "Host domain name (overrides host domain specified in service design)")
+		httpPortF  = flag.String("http-port", "", "HTTP port (overrides host HTTP port specified in service design)")
+		versionF   = flag.String("version", "v1", "Version (valid values: v1, v2)")
+		urlDomainF = flag.String("url-domain", "test", "Domain")
+		portF      = flag.String("port", "8080", "Port")
+		secureF    = flag.Bool("secure", false, "Use secure scheme (https or grpcs)")
+		dbgF       = flag.Bool("debug", false, "Log request and response bodies")
 	)
 	flag.Parse()
 
@@ -64,16 +64,9 @@ func main() {
 	case "dev":
 		{
 			addr := "http://example-{version}:8090"
-			var versionSeen bool
-			{
-				for _, v := range []string{"v1", "v2"} {
-					if v == *versionF {
-						versionSeen = true
-						break
-					}
-				}
-			}
-			if !versionSeen {
+			switch *versionF {
+			case "v1", "v2":
+			default:
 				log.Fatal(ctx, fmt.Errorf("invalid value for URL 'version' variable: %q (valid values: v1,v2)\n", *versionF))
 			}
 			addr = strings.ReplaceAll(addr, "{version}", *versionF)
@@ -102,7 +95,7 @@ func main() {
 	case "stage":
 		{
 			addr := "https://example-{domain}:{port}"
-			addr = strings.ReplaceAll(addr, "{domain}", *domainF)
+			addr = strings.ReplaceAll(addr, "{domain}", *urlDomainF)
 			addr = strings.ReplaceAll(addr, "{port}", *portF)
 			u, err := url.Parse(addr)
 			if err != nil {

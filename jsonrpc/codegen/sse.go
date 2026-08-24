@@ -35,15 +35,19 @@ func sseServerFile(planned *servicePlan) *codegen.File {
 	imports = append(imports,
 		&codegen.ImportSpec{Path: "bytes"},
 		&codegen.ImportSpec{Path: "context"},
-		&codegen.ImportSpec{Path: "errors"},
 		&codegen.ImportSpec{Path: "fmt"},
 		&codegen.ImportSpec{Path: "net/http"},
 		&codegen.ImportSpec{Path: "sync"},
-		codegen.GoaImport(""),
 		codegen.GoaImport("jsonrpc"),
 		codegen.GoaNamedImport("http", "goahttp"),
-		data.ServiceImport(),
+		data.ServerServiceImport(),
 	)
+	for _, endpoint := range planned.endpoints {
+		if endpoint.SSE != nil && endpoint.Method.ViewedResult != nil && endpoint.Method.ViewedResult.ViewName == "" {
+			imports = append(imports, codegen.GoaImport(""))
+			break
+		}
+	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),
 		{
@@ -91,6 +95,7 @@ func sseClientFile(planned *servicePlan) *codegen.File {
 				{Path: "bytes"},
 				{Path: "context"},
 				{Path: "encoding/json"},
+				{Path: "errors"},
 				{Path: "fmt"},
 				{Path: "io"},
 				{Path: "net/http"},
@@ -98,7 +103,7 @@ func sseClientFile(planned *servicePlan) *codegen.File {
 				{Path: "sync"},
 				codegen.GoaImport("jsonrpc"),
 				codegen.GoaNamedImport("http", "goahttp"),
-				data.ServiceImport(),
+				data.ClientServiceImport(),
 			},
 		),
 	)

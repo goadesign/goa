@@ -1,11 +1,11 @@
 // MethodStreamingBody is the type of the "ServicePayloadValidatedAlias"
 // service "Method" endpoint HTTP request body.
 type MethodStreamingBody struct {
-	Name *ValidatedString `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	Name *ValidatedStringStreamingBody `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
 }
 
-// ValidatedString is used to define fields on request body types.
-type ValidatedString string
+// ValidatedStringStreamingBody is used to define fields on request body types.
+type ValidatedStringStreamingBody string
 
 // NewMethodStreamingBody builds a ServicePayloadValidatedAlias service Method
 // endpoint payload.
@@ -24,8 +24,6 @@ func NewMethodStreamingBody(body *MethodStreamingBody) *servicepayloadvalidateda
 func ValidateMethodStreamingBody(body *MethodStreamingBody) (err error) {
 	if body.Name != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.name", string(*body.Name), "^[a-zA-Z]+$"))
-	}
-	if body.Name != nil {
 		if utf8.RuneCountInString(string(*body.Name)) < 10 {
 			err = goa.MergeErrors(err, goa.InvalidLengthError("body.name", string(*body.Name), utf8.RuneCountInString(string(*body.Name)), 10, true))
 		}

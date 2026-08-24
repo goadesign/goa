@@ -11,3 +11,8 @@ package server
 func WatchFeedPath() string {
 	return "/feed"
 }
+
+// SnapshotFeedPath returns the URL path to the Feed service snapshot HTTP endpoint.
+func SnapshotFeedPath() string {
+	return "/feed"
+}

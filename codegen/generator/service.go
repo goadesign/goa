@@ -1,5 +1,5 @@
-// This file assembles service-owned generated files after every participating
-// Goa design root has planned and frozen its package declarations.
+// This file assembles generated service files after every participating Goa
+// design root has submitted its declarations and all package names are final.
 package generator
 
 import (
@@ -9,15 +9,10 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// serviceFiles returns the service files described by plan's frozen package
-// declarations and run-owned example state.
+// serviceFiles returns the service files described by plan's completed package
+// declarations and the example generator created for this run.
 func serviceFiles(plan *Plan) ([]*codegen.File, error) {
-	designRoots := serviceRoots(plan.Generation().Roots())
-	plans := make([]*service.Plan, len(designRoots))
-	for index, root := range designRoots {
-		plans[index] = plan.Service(root)
-	}
-	return service.Files(plans...)
+	return service.Files(plan.serviceOrder...)
 }
 
 // planServiceData declares service-owned generated package types for every Goa
@@ -39,6 +34,7 @@ func planServiceData(plan *Plan) error {
 	for index, root := range roots {
 		plan.services[root] = servicePlans[index]
 	}
+	plan.serviceOrder = servicePlans
 	return nil
 }
 

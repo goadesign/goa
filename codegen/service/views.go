@@ -1,5 +1,5 @@
-// This file renders projected and viewed result declarations in one service's
-// views package, including unions required by those declarations.
+// This file renders result types containing only the fields in selected views,
+// their viewed-result wrappers, and any unions those declarations require.
 package service
 
 import (
@@ -17,7 +17,7 @@ type viewedType struct {
 	Views []*ViewData
 }
 
-// viewsFile renders the views for the exact service retained by plan.
+// viewsFile renders views from the service data copied into plan.
 func viewsFile(plan *Plan, facts *serviceFacts) *codegen.File {
 	services := plan.Services()
 	svc := services.Get(facts.name)

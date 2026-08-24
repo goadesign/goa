@@ -100,10 +100,11 @@ func generateProtocNameFixture(t *testing.T) (*descriptorpb.FileDescriptorProto,
 	require.NoError(t, err)
 	protoPath := filepath.Join(directory, "protoc_names.proto")
 	require.NoError(t, os.WriteFile(protoPath, source, 0o600))
-	require.NoError(t, protoc(defaultProtocCmd, protoPath, nil))
+	require.NoError(t, protoc(defaultProtocCmd, protoPath))
 
 	descriptorPath := filepath.Join(directory, "descriptor.pb")
-	args := append(defaultProtocCmd[1:len(defaultProtocCmd):len(defaultProtocCmd)],
+	args := defaultProtocCmd[1:len(defaultProtocCmd):len(defaultProtocCmd)]
+	args = append(args,
 		"--proto_path", directory,
 		"--descriptor_set_out", descriptorPath,
 		protoPath,

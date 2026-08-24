@@ -22,7 +22,6 @@ type (
 const (
 	jsonRPCUnary jsonRPCSharedPackageMode = iota
 	jsonRPCSSE
-	jsonRPCWebSocket
 )
 
 // ComparePackageName orders names added by the collision test.
@@ -56,12 +55,82 @@ func TestGeneratedTransportPackagesCompileWithServiceAliasCollisions(t *testing.
 		}
 	})
 
-	plan := mustTestPlan(t, "generated.local/gen", []eval.Root{root}, planTransportData)
+	plan := mustTestPlan(t, "generated.local/gen", []eval.Root{root}, planExampleData)
 	files, err := testServiceFiles(plan)
 	require.NoError(t, err)
 	transport, err := testTransportFiles(plan)
 	require.NoError(t, err)
 	files = append(files, transport...)
+	exampleFiles, err := assembleExampleFilesForTest(plan)
+	require.NoError(t, err)
+	files = append(files, exampleFiles...)
+
+	dir := t.TempDir()
+	writeGeneratedModule(t, dir, "generated.local")
+	for _, file := range files {
+		_, err := file.Render(dir)
+		require.NoError(t, err)
+	}
+	runGeneratedTests(t, dir)
+}
+
+// TestGeneratedCLICompilesWhenImportsMatchLocalNames verifies that endpoint
+// parsers keep using package imports when a generated local prefers the same name.
+func TestGeneratedCLICompilesWhenImportsMatchLocalNames(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		trace := dsl.Interceptor("Trace", func() {})
+		message := dsl.Type("Message", func() {
+			dsl.Field(1, "value", dsl.String)
+		})
+		dsl.Service("C", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(message)
+				dsl.StreamingResult(message)
+				dsl.GRPC(func() {})
+			})
+		})
+		dsl.Service("Data", func() {
+			dsl.ClientInterceptor(trace)
+			dsl.Method("Read", func() {
+				dsl.HTTP(func() { dsl.GET("/data") })
+			})
+		})
+	})
+
+	plan := mustTestPlan(t, "generated.local/gen", []eval.Root{root}, planServiceData, planTransportData)
+	files, err := testServiceFiles(plan)
+	require.NoError(t, err)
+	transportFiles, err := testTransportFiles(plan)
+	require.NoError(t, err)
+	files = append(files, transportFiles...)
+
+	directory := t.TempDir()
+	writeGeneratedModule(t, directory, "generated.local")
+	for _, file := range files {
+		_, err := file.Render(directory)
+		require.NoError(t, err)
+	}
+	runGeneratedTests(t, directory)
+}
+
+// TestGRPCOnlyExamplesCompile checks that a server with no HTTP service does
+// not refer to an HTTP command-line flag.
+func TestGRPCOnlyExamplesCompile(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		dsl.Service("Echo", func() {
+			dsl.Method("Read", func() {
+				dsl.Payload(dsl.String)
+				dsl.Result(dsl.String)
+				dsl.GRPC(func() {})
+			})
+		})
+	})
+	plan := mustTestPlan(t, "generated.local/gen", []eval.Root{root}, planExampleData)
+	files, err := testServiceFiles(plan)
+	require.NoError(t, err)
+	transportFiles, err := testTransportFiles(plan)
+	require.NoError(t, err)
+	files = append(files, transportFiles...)
 	exampleFiles, err := assembleExampleFilesForTest(plan)
 	require.NoError(t, err)
 	files = append(files, exampleFiles...)
@@ -121,12 +190,11 @@ func TestGeneratedJSONRPCPackagesCompileAcrossSharedPackageRoots(t *testing.T) {
 	}{
 		{name: "ordinary", mode: jsonRPCUnary},
 		{name: "server sent events", mode: jsonRPCSSE},
-		{name: "web socket", mode: jsonRPCWebSocket},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			first := jsonRPCSharedPackageRoot(t, "Foo Bar", "First", test.mode)
-			second := jsonRPCSharedPackageRoot(t, "Foo-Bar", "Second", test.mode)
+			first := jsonRPCSharedPackageRoot(t, "Shared", "First", test.mode)
+			second := jsonRPCSharedPackageRoot(t, "Shared", "Second", test.mode)
 			plan := mustTestPlan(t, "generated.local/gen", []eval.Root{first, second}, planTransportData)
 			files, err := testServiceFiles(plan)
 			require.NoError(t, err)
@@ -158,6 +226,7 @@ func TestGeneratedJSONRPCPackagesCompileAcrossSharedPackageRoots(t *testing.T) {
 func jsonRPCSharedPackageRoot(t *testing.T, serviceName, typePrefix string, mode jsonRPCSharedPackageMode) *expr.RootExpr {
 	t.Helper()
 	return expr.RunDSL(t, func() {
+		dsl.API(typePrefix, func() {})
 		payload := dsl.Type(typePrefix+"Payload", func() {
 			dsl.Attribute("value", dsl.String)
 		})
@@ -175,10 +244,6 @@ func jsonRPCSharedPackageRoot(t *testing.T, serviceName, typePrefix string, mode
 					dsl.Payload(payload)
 					dsl.StreamingResult(result)
 					dsl.JSONRPC(func() { dsl.ServerSentEvents() })
-				case jsonRPCWebSocket:
-					dsl.StreamingPayload(payload)
-					dsl.StreamingResult(result)
-					dsl.JSONRPC(func() {})
 				default:
 					panic("unknown JSON-RPC test mode")
 				}

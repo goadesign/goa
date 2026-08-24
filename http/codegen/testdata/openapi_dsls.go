@@ -146,6 +146,49 @@ var ExplicitViewDSL = func() {
 	})
 }
 
+// ReleasedResponseCollectionNamesDSL exercises the public OpenAPI component
+// names for response collections whose elements use fixed views.
+var ReleasedResponseCollectionNamesDSL = func() {
+	var StoredBottle = ResultType("application/vnd.stored-bottle", func() {
+		TypeName("StoredBottle")
+		Attributes(func() {
+			Attribute("name", String, func() {
+				Example("Blue's Cuvee")
+			})
+			Attribute("vintage", UInt32, func() {
+				Example(2003)
+			})
+			Required("name", "vintage")
+		})
+		View("default", func() {
+			Attribute("name")
+			Attribute("vintage")
+		})
+		View("tiny", func() {
+			Attribute("name")
+		})
+	})
+
+	Service("storage", func() {
+		Method("list_default", func() {
+			Result(CollectionOf(StoredBottle), func() {
+				View("default")
+			})
+			HTTP(func() {
+				GET("/default")
+			})
+		})
+		Method("list_tiny", func() {
+			Result(CollectionOf(StoredBottle), func() {
+				View("tiny")
+			})
+			HTTP(func() {
+				GET("/tiny")
+			})
+		})
+	})
+}
+
 var InvalidDSL = func() {
 	var _ = API("test", func() {
 		Server("test", func() {
@@ -264,20 +307,26 @@ var IntValidationDSL = func() {
 
 var ArrayValidationDSL = func() {
 	var Bar = Type("bar", func() {
+		Example(Val{"string": "item"})
 		Attribute("string", String, func() {
 			MinLength(0)
 			MaxLength(42)
-			Example("")
+			Example("item")
 		})
 	})
 	var FooBar = Type("foobar", func() {
-		Attribute("foo", ArrayOf(String), func() {
+		Example(Val{"foo": []any{"item"}, "bar": []any{Val{"string": "item"}}})
+		Attribute("foo", ArrayOf(String, func() {
+			Example("item")
+		}), func() {
 			MinLength(0)
 			MaxLength(42)
+			Example([]any{"item"})
 		})
 		Attribute("bar", ArrayOf(Bar), func() {
 			MinLength(0)
 			MaxLength(42)
+			Example([]any{Val{"string": "item"}})
 		})
 	})
 	var _ = API("test", func() {
@@ -289,7 +338,9 @@ var ArrayValidationDSL = func() {
 	})
 	Service("testService", func() {
 		Method("testEndpoint", func() {
-			Payload(ArrayOf(FooBar))
+			Payload(ArrayOf(FooBar), func() {
+				Example([]any{Val{"foo": []any{"item"}, "bar": []any{Val{"string": "item"}}}})
+			})
 			Result(String, func() {
 				MinLength(0)
 				MaxLength(42)
@@ -504,6 +555,7 @@ var ServerHostWithVariablesDSL = func() {
 
 var WithSpacesDSL = func() {
 	var Bar = Type("bar", func() {
+		Example(Val{"string": "item"})
 		Attribute("string", String, func() {
 			Example("")
 		})
@@ -513,12 +565,16 @@ var WithSpacesDSL = func() {
 		Attribute("foo", String, func() {
 			Example("")
 		})
-		Attribute("bar", ArrayOf(Bar))
+		Attribute("bar", ArrayOf(Bar), func() {
+			Example([]any{Val{"string": "item"}})
+		})
 	})
 	Service("test service", func() {
 		Method("test endpoint", func() {
 			Payload(Bar)
-			Result(FooBar)
+			Result(FooBar, func() {
+				Example(Val{"foo": "", "bar": []any{Val{"string": "item"}}})
+			})
 			HTTP(func() {
 				POST("/")
 				Response(StatusOK)
@@ -580,25 +636,33 @@ var WithAnyDSL = func() {
 	Service("testService", func() {
 		Method("testEndpoint", func() {
 			Payload(func() {
+				Example(Val{"any": "", "any_array": []any{""}, "any_map": Val{"key": ""}})
 				Attribute("any", Any, func() {
 					Example("")
 				})
 				Attribute("any_array", ArrayOf(Any, func() {
 					Example("")
-				}))
+				}), func() {
+					Example([]any{""})
+				})
 				Attribute("any_map", MapOf(String, Any), func() {
+					Example(Val{"key": ""})
 					Key(func() { Example("") })
 					Elem(func() { Example("") })
 				})
 			})
 			Result(func() {
+				Example(Val{"any": "", "any_array": []any{""}, "any_map": Val{"key": ""}})
 				Attribute("any", Any, func() {
 					Example("")
 				})
 				Attribute("any_array", ArrayOf(Any, func() {
 					Example("")
-				}))
+				}), func() {
+					Example([]any{""})
+				})
 				Attribute("any_map", MapOf(String, Any), func() {
+					Example(Val{"key": ""})
 					Key(func() { Example("") })
 					Elem(func() { Example("") })
 				})
@@ -614,7 +678,9 @@ var PathWithWildcardDSL = func() {
 	Service("test service", func() {
 		Method("test endpoint", func() {
 			Payload(func() {
-				Attribute("int_map", Int)
+				Attribute("int_map", Int, func() {
+					Example(1)
+				})
 			})
 			HTTP(func() {
 				POST("/{*int_map}")
@@ -627,8 +693,12 @@ var PathWithMultipleWildcardDSL = func() {
 	Service("test service", func() {
 		Method("test endpoint", func() {
 			Payload(func() {
-				Attribute("foo", Int)
-				Attribute("bar", Int)
+				Attribute("foo", Int, func() {
+					Example(1)
+				})
+				Attribute("bar", Int, func() {
+					Example(2)
+				})
 			})
 			HTTP(func() {
 				POST("/{bar}")
@@ -644,8 +714,12 @@ var PathWithMultipleExplicitWildcardDSL = func() {
 	Service("test service", func() {
 		Method("test endpoint", func() {
 			Payload(func() {
-				Attribute("foo", Int)
-				Attribute("bar", Int)
+				Attribute("foo", Int, func() {
+					Example(1)
+				})
+				Attribute("bar", Int, func() {
+					Example(2)
+				})
 			})
 			HTTP(func() {
 				POST("/{bar}")
@@ -663,8 +737,12 @@ var HeadersDSL = func() {
 	Service("test service", func() {
 		Method("test endpoint", func() {
 			Payload(func() {
-				Attribute("foo", Int)
-				Attribute("bar", Int)
+				Attribute("foo", Int, func() {
+					Example(1)
+				})
+				Attribute("bar", Int, func() {
+					Example(2)
+				})
 			})
 			HTTP(func() {
 				POST("/")
@@ -687,7 +765,9 @@ var WithTagsDSL = func() {
 		})
 		Method("test endpoint", func() {
 			Payload(func() {
-				Attribute("int_map", Int)
+				Attribute("int_map", Int, func() {
+					Example(1)
+				})
 			})
 			HTTP(func() {
 				Meta("openapi:tag:SomeTag")
@@ -732,7 +812,9 @@ var WithTagsSwaggerDSL = func() {
 		})
 		Method("test endpoint", func() {
 			Payload(func() {
-				Attribute("int_map", Int)
+				Attribute("int_map", Int, func() {
+					Example(1)
+				})
 			})
 			HTTP(func() {
 				Meta("swagger:tag:SomeTag")
@@ -872,7 +954,9 @@ var NotGenerateServerDSL = func() {
 	})
 	Service("testService", func() {
 		Method("testEndpoint", func() {
-			Result(String)
+			Result(String, func() {
+				Example("ok")
+			})
 			HTTP(func() {
 				GET("/")
 			})
@@ -891,7 +975,9 @@ var NotGenerateHostDSL = func() {
 	})
 	Service("testService", func() {
 		Method("testEndpoint", func() {
-			Result(String)
+			Result(String, func() {
+				Example("ok")
+			})
 			HTTP(func() {
 				GET("/")
 			})
@@ -1167,7 +1253,9 @@ var OpenAPIInvalidVersionDSL = func() {
 var TypeExtensionDSL = func() {
 	var Notification = Type("Notification", func() {
 		Meta("openapi:extension:x-test-include", "true")
-		Attribute("id", String)
+		Attribute("id", String, func() {
+			Example("notice")
+		})
 	})
 	Service("testService", func() {
 		Method("testEndpoint", func() {
@@ -1184,10 +1272,14 @@ var AliasTypeDSL = func() {
 	var Stage = Type("Stage", String, func() {
 		Description("Setup stage.")
 		Enum("who", "when", "where", "what")
+		Example("who")
 	})
 	var Setup = Type("Setup", func() {
+		Example(Val{"current": "who", "completed": []any{"when"}})
 		Attribute("current", Stage)
-		Attribute("completed", ArrayOf(Stage))
+		Attribute("completed", ArrayOf(Stage), func() {
+			Example([]any{"when"})
+		})
 	})
 	Service("testService", func() {
 		Method("testEndpoint", func() {

@@ -1,0 +1,22 @@
+
+
+// wrapMethodLogging applies the logging server interceptor to endpoints.
+func wrapMethodLogging(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		info := &loggingMethodServerUnaryInfo{
+			loggingMethodInfo: &loggingMethodInfo{rawPayload: req},
+		}
+		return i.Logging(ctx, info, endpoint)
+	}
+}
+
+// wrapClientMethodAuthorization applies the authorization client interceptor
+// to endpoints.
+func wrapClientMethodAuthorization(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
+	return func(ctx context.Context, req any) (any, error) {
+		info := &authorizationMethodClientUnaryInfo{
+			authorizationMethodInfo: &authorizationMethodInfo{rawPayload: req},
+		}
+		return i.Authorization(ctx, info, endpoint)
+	}
+}

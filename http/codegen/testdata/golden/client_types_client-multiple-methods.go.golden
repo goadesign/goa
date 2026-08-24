@@ -7,13 +7,13 @@ type MethodARequestBody struct {
 // MethodBRequestBody is the type of the "ServiceMultipleMethods" service
 // "MethodB" endpoint HTTP request body.
 type MethodBRequestBody struct {
-	A string    `form:"a" json:"a" xml:"a"`
-	B *string   `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"`
-	C *APayload `form:"c" json:"c" xml:"c"`
+	A string               `form:"a" json:"a" xml:"a"`
+	B *string              `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"`
+	C *APayloadRequestBody `form:"c" json:"c" xml:"c"`
 }
 
-// APayload is used to define fields on request body types.
-type APayload struct {
+// APayloadRequestBody is used to define fields on request body types.
+type APayloadRequestBody struct {
 	A *string `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
 }
 
@@ -34,15 +34,24 @@ func NewMethodBRequestBody(p *servicemultiplemethods.PayloadType) *MethodBReques
 		B: p.B,
 	}
 	if p.C != nil {
-		body.C = marshalAPayloadToAPayload2(p.C)
+		body.C = marshalServicemultiplemethodsAPayloadToAPayloadRequestBody(p.C)
 	}
 	return body
 }
 
-// ValidateAPayload runs the validations defined on APayload
-func ValidateAPayload(body *APayload) (err error) {
+// ValidateAPayloadRequestBody runs the validations defined on APayload
+func ValidateAPayloadRequestBody(body *APayloadRequestBody) (err error) {
 	if body.A != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.a", *body.A, "patterna"))
+	}
+	return
+}
+
+// validateAPayloadRequestBody checks APayload and reports errors using the
+// path supplied by its caller
+func validateAPayloadRequestBody(body *APayloadRequestBody, path string) (err error) {
+	if body.A != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".a", *body.A, "patterna"))
 	}
 	return
 }

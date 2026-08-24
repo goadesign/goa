@@ -1,5 +1,5 @@
 {{ comment .Description }}
-func {{ .Name }}({{- range .ServerArgs }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+func {{ .Declaration.Name }}({{- range .ServerArgs }}{{ .VarName }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
 {{- if .ServerCode }}
 	{{ .ServerCode }}
 	{{- if .ReturnTypeAttribute }}

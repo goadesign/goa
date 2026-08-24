@@ -7,7 +7,15 @@ func EncodeMethodMessageUserTypeWithNestedUserTypesResponse(ctx context.Context,
 		return nil, goagrpc.ErrInvalidType("ServiceMessageUserTypeWithNestedUserTypes", "MethodMessageUserTypeWithNestedUserTypes", "servicemessageusertypewithnestedusertypesviews.RTCollection", v)
 	}
 	result := vres.Projected
+	var resp *service_message_user_type_with_nested_user_typespb.RTCollection
+	switch vres.View {
+	case "default", "":
+		resp = NewProtoRTCollection(result)
+	case "tiny":
+		resp = NewProtoRTCollectionTiny(result)
+	default:
+		return nil, goa.InvalidEnumValueError("view", vres.View, []any{"default", "tiny"})
+	}
 	(*hdr).Append("goa-view", vres.View)
-	resp := NewProtoRTCollection(result)
 	return resp, nil
 }

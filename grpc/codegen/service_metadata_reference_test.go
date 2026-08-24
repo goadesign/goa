@@ -32,10 +32,12 @@ func TestMetadataConversionUsesDetachedWireAndFrozenServiceDeclaration(t *testin
 
 	metadata := CreateGRPCServices(root).Get("Values").Endpoint("Read").Request.Metadata
 	require.Len(t, metadata, 1)
+	require.False(t, metadata[0].Map)
+	require.False(t, metadata[0].MapStringSlice)
 	require.Equal(t, "string", metadata[0].TypeRef)
 	require.NotContains(t, metadata[0].WireAttribute.Meta, "struct:pkg:path")
 	require.Contains(t, metadata[0].EncodeCode, "string(payload.Value)")
-	require.Contains(t, initArgsFromMetadata(metadata, "v")[0].InitCode, "shared.Value(value)")
+	require.Contains(t, initArgsFromMetadata(metadata)[0].InitCode, "shared.Value(value)")
 }
 
 func TestMetadataConversionRecursivelyDetachesNamedArrayElements(t *testing.T) {
@@ -71,7 +73,7 @@ func TestMetadataConversionRecursivelyDetachesNamedArrayElements(t *testing.T) {
 	require.NotContains(t, metadata[0].WireAttribute.Meta, "struct:pkg:path")
 	require.NotContains(t, wireArray.ElemType.Meta, "struct:pkg:path")
 	require.Contains(t, metadata[0].EncodeCode, "int(val)")
-	require.Contains(t, initArgsFromMetadata(metadata, "v")[0].InitCode, "shared.Value(val)")
+	require.Contains(t, initArgsFromMetadata(metadata)[0].InitCode, "shared.Value(val)")
 	require.Contains(t, serviceField.Type.(expr.UserType).Attribute().Meta, "struct:pkg:path")
 	require.Contains(t, expr.AsArray(serviceField.Type).ElemType.Type.(expr.UserType).Attribute().Meta, "struct:pkg:path")
 }

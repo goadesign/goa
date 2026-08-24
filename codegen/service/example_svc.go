@@ -3,10 +3,10 @@
 package service
 
 import (
-	"os"
 	"path"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/expr"
 )
 
 type (
@@ -38,13 +38,14 @@ type (
 	// name from the qualifier used by this example file.
 	exampleServiceData struct {
 		*Data
-		// ServicePkg is the canonical generated service package qualifier.
+		// ServicePkg is the import name used for the generated service package in
+		// this example file.
 		ServicePkg string
 	}
 )
 
 // ExampleServiceFiles returns a basic implementation for every service
-// retained by plan.
+// copied into plan.
 func ExampleServiceFiles(plan *Plan) []*codegen.File {
 	var fw []*codegen.File
 	for _, facts := range plan.facts.services {
@@ -55,19 +56,17 @@ func ExampleServiceFiles(plan *Plan) []*codegen.File {
 	return fw
 }
 
-// exampleServiceFile renders a basic implementation from one retained service.
+// exampleServiceFile renders a basic implementation from one service copied
+// into plan.
 func exampleServiceFile(plan *Plan, facts *serviceFacts, apipkg string) *codegen.File {
 	genpkg := plan.generation.GenPkg()
 	services := plan.Services()
 	data := services.Get(facts.name)
 	svcName := data.PathName
 	servicePath := path.Join(genpkg, svcName)
-	servicePkg := services.aliases.name(servicePath)
+	servicePkg := services.aliases.name(path.Dir(genpkg), servicePath)
 	renderData := &exampleServiceData{Data: data, ServicePkg: servicePkg}
 	fpath := svcName + ".go"
-	if _, err := os.Stat(fpath); !os.IsNotExist(err) {
-		return nil // file already exists, skip it.
-	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", apipkg, facts.imports.exampleService.specs),
 		{
@@ -92,15 +91,6 @@ func exampleServiceFile(plan *Plan, facts *serviceFacts, apipkg string) *codegen
 		sections = append(sections, basicEndpointSection(method, data, outputPath, services.aliases, servicePkg))
 	}
 
-	// Add HandleStream method for JSON-RPC WebSocket services (not SSE)
-	if hasJSONRPCWebSocket(data) {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "jsonrpc-handle-stream",
-			Source: serviceTemplates.Read(jsonrpcHandleStreamT),
-			Data:   renderData,
-		})
-	}
-
 	return &codegen.File{
 		Path:             fpath,
 		SectionTemplates: sections,
@@ -109,7 +99,8 @@ func exampleServiceFile(plan *Plan, facts *serviceFacts, apipkg string) *codegen
 }
 
 // basicEndpointSection returns a starter implementation whose payload and
-// result references come from the method's frozen generated-package records.
+// result references come from the method records after all generated package
+// and declaration names have been chosen.
 func basicEndpointSection(facts *methodFacts, svcData *Data, outputPath string, aliases *importAliases, servicePkg string) *codegen.SectionTemplate {
 	md := svcData.Method(facts.name)
 	ed := &basicEndpointData{
@@ -118,15 +109,18 @@ func basicEndpointSection(facts *methodFacts, svcData *Data, outputPath string, 
 		ExampleStructDeclaration: svcData.ExampleStructDeclaration,
 	}
 	if facts.payload != nil && facts.payload.layout.Kind() != codegen.GoEmpty {
-		ed.PayloadFullRef = facts.payload.layout.Link(outputPath, retainedTypeQualifier(aliases)).Ref()
+		ed.PayloadFullRef = facts.payload.layout.Link(outputPath, retainedTypeQualifier(aliases, outputPath)).Ref()
 	}
 	if facts.result != nil && facts.result.layout.Kind() != codegen.GoEmpty {
-		linked := facts.result.layout.Link(outputPath, retainedTypeQualifier(aliases))
+		linked := facts.result.layout.Link(outputPath, retainedTypeQualifier(aliases, outputPath))
 		ed.ResultFullName = linked.Name()
 		ed.ResultFullRef = linked.Ref()
 		ed.ResultIsStruct = facts.result.isObject
 		if md.ViewedResult != nil {
 			ed.ResultView = facts.viewedResult.viewName
+			if ed.ResultView == "" {
+				ed.ResultView = expr.DefaultView
+			}
 		}
 	}
 	if md.ServerStream != nil {

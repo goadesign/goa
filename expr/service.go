@@ -1,10 +1,11 @@
-// This file defines service and error expressions, including the distinct
-// ownership of authored errors and compiler-wrapped inline method errors.
+// This file defines services and their errors. It also distinguishes errors
+// named in the design from errors created for one method.
 package expr
 
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"goa.design/goa/v3/eval"
 )
@@ -36,6 +37,8 @@ type (
 		// Meta is a set of key/value pairs with semantic that is
 		// specific to each generator.
 		Meta MetaExpr
+		// design points to the root containing this service.
+		design *RootExpr
 	}
 
 	// ErrorExpr defines an error response. It consists of a named
@@ -74,7 +77,7 @@ func (s *ServiceExpr) Error(name string) *ErrorExpr {
 			return erro
 		}
 	}
-	return Root.Error(name)
+	return s.design.Error(name)
 }
 
 // Hash returns a unique hash value for s.
@@ -93,7 +96,57 @@ func (s *ServiceExpr) Validate() error {
 			}
 		}
 	}
+	verr.Merge(s.validateInlineMethodErrors())
 	return verr
+}
+
+// validateInlineMethodErrors rejects two inline errors that request one public
+// Go error name but define different values.
+func (s *ServiceExpr) validateInlineMethodErrors() *eval.ValidationErrors {
+	verr := new(eval.ValidationErrors)
+	seen := make(map[string]*ErrorExpr)
+	for _, serviceError := range s.Errors {
+		if standardErrorUsesGeneratedConstructor(serviceError) {
+			seen[serviceError.Name] = serviceError
+		}
+	}
+	for _, method := range s.Methods {
+		for _, methodError := range method.Errors {
+			if !standardErrorUsesGeneratedConstructor(methodError) {
+				continue
+			}
+			if previous := seen[methodError.Name]; previous != nil {
+				if !equivalentErrorAttributes(previous.AttributeExpr, methodError.AttributeExpr) {
+					if settings := differingErrorQualifierSettings(previous.AttributeExpr, methodError.AttributeExpr); len(settings) > 0 {
+						verr.Add(
+							methodError,
+							"error %q cannot use one generated constructor because its %s setting differs in service %q",
+							methodError.Name,
+							strings.Join(settings, ", "),
+							s.Name,
+						)
+					} else {
+						verr.Add(
+							methodError,
+							"inline error %q must define the same value contract in every method of service %q",
+							methodError.Name,
+							s.Name,
+						)
+					}
+				}
+				continue
+			}
+			seen[methodError.Name] = methodError
+		}
+	}
+	return verr
+}
+
+// standardErrorUsesGeneratedConstructor reports whether Goa generates the
+// shared Make<Name> function whose behavior repeated declarations could change.
+func standardErrorUsesGeneratedConstructor(errorExpression *ErrorExpr) bool {
+	userType, authored := errorExpression.Type.(UserType)
+	return !authored || IsErrorResult(userType)
 }
 
 // Finalize finalizes all the service methods and errors.
@@ -136,7 +189,7 @@ func (e *ErrorExpr) Finalize() {
 	att := e.AttributeExpr
 	switch dt := att.Type.(type) {
 	case UserType:
-		if dt != ErrorResult {
+		if !IsErrorResult(dt) {
 			// If this type contains an attribute with "struct:error:name" meta
 			// then no need to do anything.
 			if IsObject(dt) {
@@ -161,12 +214,36 @@ func (e *ErrorExpr) Finalize() {
 	}
 }
 
-// finalizeMethodType wraps an inline method error with the exact method-error
-// owner used by service and transport example generation.
+// finalizeMethodType wraps an inline method error and assigns the repeatable
+// example key used by service and transport generators for that method error.
 func (e *ErrorExpr) finalizeMethodType(method *MethodExpr) {
-	e.AttributeExpr = &AttributeExpr{Type: NewGeneratedUserType(
+	e.AttributeExpr = &AttributeExpr{Type: newGeneratedUserType(
 		e.Name,
 		e.AttributeExpr,
 		MethodErrorExampleIdentity(method, e),
+		previousInlineMethodErrorOrigin(method, e.Name),
 	)}
+}
+
+// previousInlineMethodErrorOrigin returns the declaration already created for
+// the same inline error by an earlier method in this service.
+func previousInlineMethodErrorOrigin(method *MethodExpr, name string) UserType {
+	for _, previousMethod := range method.Service.Methods {
+		if previousMethod == method {
+			return nil
+		}
+		for _, previousError := range previousMethod.Errors {
+			if previousError.Name != name {
+				continue
+			}
+			userType, ok := previousError.Type.(UserType)
+			if !ok {
+				continue
+			}
+			if _, generated := GeneratedUserTypeExampleIdentity(userType); generated {
+				return userType.Origin()
+			}
+		}
+	}
+	return nil
 }

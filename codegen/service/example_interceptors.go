@@ -4,7 +4,6 @@ package service
 
 import (
 	"fmt"
-	"os"
 	"path"
 	"path/filepath"
 
@@ -12,8 +11,8 @@ import (
 )
 
 type (
-	// exampleInterceptorData contains the canonical declarations and service
-	// metadata rendered by one starter interceptor implementation.
+	// exampleInterceptorData contains the generated type and constructor names
+	// plus service metadata rendered by one starter interceptor implementation.
 	exampleInterceptorData struct {
 		// ServiceName is the design service name described by the comments.
 		ServiceName string
@@ -29,7 +28,7 @@ type (
 )
 
 // ExampleInterceptorsFiles returns starter server and client interceptor files
-// for every service retained by plan.
+// for every service copied into plan.
 func ExampleInterceptorsFiles(plan *Plan) []*codegen.File {
 	var fw []*codegen.File
 	for _, facts := range plan.facts.services {
@@ -40,18 +39,21 @@ func ExampleInterceptorsFiles(plan *Plan) []*codegen.File {
 	return fw
 }
 
-// exampleInterceptorsFile renders starter interceptors from one retained
-// service.
+// exampleInterceptorsFile renders starter interceptors from one service copied
+// into plan.
 func exampleInterceptorsFile(plan *Plan, facts *serviceFacts) []*codegen.File {
+	if len(facts.serverInterceptors) == 0 && len(facts.clientInterceptors) == 0 {
+		return nil
+	}
 	genpkg := plan.generation.GenPkg()
 	services := plan.Services()
 	sdata := services.Get(facts.name)
 	servicePath := path.Join(genpkg, sdata.PathName)
-	servicePkg := services.aliases.name(servicePath)
+	servicePkg := services.aliases.name(path.Join(path.Dir(genpkg), "interceptors"), servicePath)
 
 	var files []*codegen.File
 
-	// Generate server interceptor if needed and file doesn't exist
+	// Generate the server interceptor starter when the service uses one.
 	if len(sdata.ServerInterceptors) > 0 {
 		data := &exampleInterceptorData{
 			ServiceName:            sdata.Name,
@@ -61,22 +63,21 @@ func exampleInterceptorsFile(plan *Plan, facts *serviceFacts) []*codegen.File {
 			Interceptors:           sdata.ServerInterceptors,
 		}
 		serverPath := filepath.Join("interceptors", sdata.PathName+"_server.go")
-		if _, err := os.Stat(serverPath); os.IsNotExist(err) {
-			files = append(files, &codegen.File{
-				Path: serverPath,
-				SectionTemplates: []*codegen.SectionTemplate{
-					codegen.Header(fmt.Sprintf("%s example server interceptors", sdata.Name), "interceptors", facts.imports.exampleServerInterceptors.specs),
-					{
-						Name:   "example-server-interceptor",
-						Source: serviceTemplates.Read(exampleServerInterceptorT),
-						Data:   data,
-					},
+		files = append(files, &codegen.File{
+			Path: serverPath,
+			SectionTemplates: []*codegen.SectionTemplate{
+				codegen.Header(fmt.Sprintf("%s example server interceptors", sdata.Name), "interceptors", facts.imports.exampleServerInterceptors.specs),
+				{
+					Name:   "example-server-interceptor",
+					Source: serviceTemplates.Read(exampleServerInterceptorT),
+					Data:   data,
 				},
-			})
-		}
+			},
+			SkipExist: true,
+		})
 	}
 
-	// Generate client interceptor if needed and file doesn't exist
+	// Generate the client interceptor starter when the service uses one.
 	if len(sdata.ClientInterceptors) > 0 {
 		data := &exampleInterceptorData{
 			ServiceName:            sdata.Name,
@@ -86,19 +87,18 @@ func exampleInterceptorsFile(plan *Plan, facts *serviceFacts) []*codegen.File {
 			Interceptors:           sdata.ClientInterceptors,
 		}
 		clientPath := filepath.Join("interceptors", sdata.PathName+"_client.go")
-		if _, err := os.Stat(clientPath); os.IsNotExist(err) {
-			files = append(files, &codegen.File{
-				Path: clientPath,
-				SectionTemplates: []*codegen.SectionTemplate{
-					codegen.Header(fmt.Sprintf("%s example client interceptors", sdata.Name), "interceptors", facts.imports.exampleClientInterceptors.specs),
-					{
-						Name:   "example-client-interceptor",
-						Source: serviceTemplates.Read(exampleClientInterceptorT),
-						Data:   data,
-					},
+		files = append(files, &codegen.File{
+			Path: clientPath,
+			SectionTemplates: []*codegen.SectionTemplate{
+				codegen.Header(fmt.Sprintf("%s example client interceptors", sdata.Name), "interceptors", facts.imports.exampleClientInterceptors.specs),
+				{
+					Name:   "example-client-interceptor",
+					Source: serviceTemplates.Read(exampleClientInterceptorT),
+					Data:   data,
 				},
-			})
-		}
+			},
+			SkipExist: true,
+		})
 	}
 
 	return files

@@ -82,6 +82,16 @@ var MultipleMethodsDSL = func() {
 	})
 }
 
+var RepeatedInlineErrorsDSL = func() {
+	Service("Secured", func() {
+		for _, method := range []string{"Read", "Write", "Delete"} {
+			Method(method, func() {
+				Error("invalid_scopes", String)
+			})
+		}
+	})
+}
+
 var UnionMethodDSL = func() {
 	var AUnion = Type("AUnion", func() {
 		OneOf("Values", func() {
@@ -1082,6 +1092,22 @@ var PkgPathDupeDSL = func() {
 		Method("B", func() {
 			Payload(Foo)
 			Result(Foo)
+		})
+	})
+}
+
+var PkgPathSharedRolesDSL = func() {
+	var Shared = Type("Shared", func() {
+		Attribute("IntField", Int)
+		Meta("struct:pkg:path", "shared")
+	})
+
+	Service("PkgPathSharedRoles", func() {
+		Method("Exchange", func() {
+			Payload(Shared)
+			StreamingPayload(Shared)
+			Result(Shared)
+			StreamingResult(Shared)
 		})
 	})
 }

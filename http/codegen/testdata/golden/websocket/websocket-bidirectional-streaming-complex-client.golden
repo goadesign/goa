@@ -59,7 +59,7 @@ func (s *BidirectionalComplexClientStream) Recv() (*testservice.Response, error)
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalComplexResultOK(&body)
+	res := NewBidirectionalComplexResponseOK(&body)
 	return res, nil
 }
 

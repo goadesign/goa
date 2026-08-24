@@ -1,8 +1,8 @@
-{{ printf "Encode%sRequest encodes requests sent to %s %s endpoint." .Method.VarName .ServiceName .Method.Name | comment }}
-func Encode{{ .Method.VarName }}Request(ctx context.Context, v any, md *metadata.MD) (any, error) {
-	payload, ok := v.({{ .PayloadRef }})
+{{ printf "%s encodes requests sent to %s %s endpoint." .ClientEncodeDeclaration.Name .ServiceName .Method.Name | comment }}
+func {{ .ClientEncodeDeclaration.Name }}(ctx context.Context, v any, md *metadata.MD) (any, error) {
+	payload, ok := v.({{ .ClientPayloadRef }})
 	if !ok {
-		return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .PayloadRef }}", v)
+		return nil, goagrpc.ErrInvalidType("{{ .ServiceName }}", "{{ .Method.Name }}", "{{ .ClientPayloadRef }}", v)
 	}
 {{- range .Request.Metadata }}
 	{{- if .Pointer }}
@@ -15,7 +15,7 @@ func Encode{{ .Method.VarName }}Request(ctx context.Context, v any, md *metadata
 		}
 	{{- else if .Slice }}
 		for _, value := range {{ .WireVarName }} {
-			{{ template "partial_convert_type_to_string" (typeConversionData .Type.ElemType.Type "valueStr" "value") }}
+			valueStr := {{ template "partial_type_to_string_expression" (typeStringExpressionData .Type.ElemType.Type "value") }}
 			(*md).Append({{ printf "%q" .Name }}, valueStr)
 		}
 	{{- else }}
@@ -24,13 +24,7 @@ func Encode{{ .Method.VarName }}Request(ctx context.Context, v any, md *metadata
 					(*md).Append(ctx, {{ printf "%q" .Name }}, "Bearer "+{{ .WireVarName }})
 				} else {
 			{{- end }}
-				(*md).Append({{ printf "%q" .Name }},
-					{{- if eq .Type.Name "bytes" }} string(
-					{{- else if not (eq .Type.Name "string") }} fmt.Sprintf("%v",
-					{{- end }}
-					{{ .WireVarName }}
-					{{- if or (eq .Type.Name "bytes") (not (eq .Type.Name "string")) }})
-					{{- end }})
+				(*md).Append({{ printf "%q" .Name }}, {{ template "partial_type_to_string_expression" (typeStringExpressionData .Type .WireVarName) }})
 			{{- if (and (eq .Name "Authorization") (isBearer $.MetadataSchemes)) }}
 				}
 			{{- end }}
@@ -44,14 +38,14 @@ func Encode{{ .Method.VarName }}Request(ctx context.Context, v any, md *metadata
 {{- end }}
 {{- if .Request.ClientConvert }}
 	{{- if .Request.StreamEnvelope }}
-	message := {{ .Request.ClientConvert.Init.Name }}({{ range .Request.ClientConvert.Init.Args }}{{ .Name }}, {{ end }})
-	return &{{ .PkgName }}.{{ .Request.Message.VarName }}{
-		{{ .Request.StreamEnvelope.FieldName }}: &{{ .Request.StreamEnvelope.InitialWrapperRef }}{
+	message := {{ .Request.ClientConvert.Init.Declaration.Name }}({{ range .Request.ClientConvert.Init.Args }}{{ .Name }}, {{ end }})
+	return &{{ .ClientProtobufPkgName }}.{{ .Request.Message.VarName }}{
+		{{ .Request.StreamEnvelope.FieldName }}: &{{ .Request.StreamEnvelope.ClientInitialWrapperRef }}{
 			{{ .Request.StreamEnvelope.InitialFieldName }}: message,
 		},
 	}, nil
 	{{- else }}
-	return {{ .Request.ClientConvert.Init.Name }}({{ range .Request.ClientConvert.Init.Args }}{{ .Name }}, {{ end }}), nil
+	return {{ .Request.ClientConvert.Init.Declaration.Name }}({{ range .Request.ClientConvert.Init.Args }}{{ .Name }}, {{ end }}), nil
 	{{- end }}
 {{- else }}
 	return nil, nil

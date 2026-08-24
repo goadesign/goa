@@ -21,6 +21,10 @@ type {{ .VarDeclaration.Name }} struct {
 		{{- if not .Endpoint.Method.ViewedResult.ViewName }}
 	{{ printf "view is the view to render %s result type before sending to the websocket connection." .SendTypeName | comment }}
 	view string
+			{{- if eq .Type "server" }}
+	{{ comment "sentView is the result view named during the WebSocket upgrade. Later sends must use the same view." }}
+	sentView string
+			{{- end }}
 		{{- end }}
 	{{- end }}
 }

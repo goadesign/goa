@@ -1,23 +1,21 @@
-// NewProtoMethodUnaryRPCWithErrorsRequest builds the gRPC request type from
-// the payload of the "MethodUnaryRPCWithErrors" endpoint of the
-// "ServiceUnaryRPCWithErrors" service.
+// NewProtoMethodUnaryRPCWithErrorsRequest builds
+// *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsRequest from string.
 func NewProtoMethodUnaryRPCWithErrorsRequest(payload string) *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsRequest {
 	message := &service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsRequest{}
 	message.Field = payload
 	return message
 }
 
-// NewMethodUnaryRPCWithErrorsResult builds the result type of the
-// "MethodUnaryRPCWithErrors" endpoint of the "ServiceUnaryRPCWithErrors"
-// service from the gRPC response type.
+// NewMethodUnaryRPCWithErrorsResult builds string from
+// *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsResponse.
 func NewMethodUnaryRPCWithErrorsResult(message *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsResponse) string {
 	result := message.Field
 	return result
 }
 
-// NewMethodUnaryRPCWithErrorsInternalError builds the error type of the
-// "MethodUnaryRPCWithErrors" endpoint of the "ServiceUnaryRPCWithErrors"
-// service from the gRPC error response type.
+// NewMethodUnaryRPCWithErrorsInternalError builds
+// *serviceunaryrpcwitherrors.AnotherError from
+// *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError.
 func NewMethodUnaryRPCWithErrorsInternalError(message *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsInternalError) *serviceunaryrpcwitherrors.AnotherError {
 	er := &serviceunaryrpcwitherrors.AnotherError{
 		Name:        message.Name,
@@ -26,9 +24,9 @@ func NewMethodUnaryRPCWithErrorsInternalError(message *service_unary_rpc_with_er
 	return er
 }
 
-// NewMethodUnaryRPCWithErrorsBadRequestError builds the error type of the
-// "MethodUnaryRPCWithErrors" endpoint of the "ServiceUnaryRPCWithErrors"
-// service from the gRPC error response type.
+// NewMethodUnaryRPCWithErrorsBadRequestError builds
+// *serviceunaryrpcwitherrors.AnotherError from
+// *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError.
 func NewMethodUnaryRPCWithErrorsBadRequestError(message *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsBadRequestError) *serviceunaryrpcwitherrors.AnotherError {
 	er := &serviceunaryrpcwitherrors.AnotherError{
 		Name:        message.Name,
@@ -37,9 +35,9 @@ func NewMethodUnaryRPCWithErrorsBadRequestError(message *service_unary_rpc_with_
 	return er
 }
 
-// NewMethodUnaryRPCWithErrorsCustomErrorError builds the error type of the
-// "MethodUnaryRPCWithErrors" endpoint of the "ServiceUnaryRPCWithErrors"
-// service from the gRPC error response type.
+// NewMethodUnaryRPCWithErrorsCustomErrorError builds
+// *serviceunaryrpcwitherrors.ErrorType from
+// *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError.
 func NewMethodUnaryRPCWithErrorsCustomErrorError(message *service_unary_rpc_with_errorspb.MethodUnaryRPCWithErrorsCustomErrorError) *serviceunaryrpcwitherrors.ErrorType {
 	er := &serviceunaryrpcwitherrors.ErrorType{
 		A: message.A,

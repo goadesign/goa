@@ -1,22 +1,57 @@
-// This file renders example CLI entrypoints from the retained server analysis.
-// Generated service and transport imports are already frozen by planning; the
-// CLI renderer receives no separate generated-module path.
+// This file writes example command-line programs from copied server data and
+// the package names already chosen for this generation.
 package example
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 )
 
-// CLIFiles returns example client tool main implementation for each server
-// expression in the design.
-func CLIFiles(root *expr.RootExpr) []*codegen.File {
+type (
+	// clientMainData contains all design values selected before one example
+	// command-line client is rendered.
+	clientMainData struct {
+		// APIName is the API name written in help text.
+		APIName string
+		// Server contains the copied host, transport, and URL variable settings.
+		Server *clientMainServerData
+		// HasJSONRPC reports whether the client includes JSON-RPC commands.
+		HasJSONRPC bool
+		// HasHTTP reports whether the client includes ordinary HTTP commands.
+		HasHTTP bool
+		// UsageCommands is the sorted command list written in help text.
+		UsageCommands []string
+		// JSONRPCOnly lists commands handled only by the JSON-RPC client.
+		JSONRPCOnly []*jsonRPCServiceData
+		// WritesEndpointResult reports whether a command returns one result.
+		WritesEndpointResult bool
+		// WritesStreamResults reports whether a command receives server results.
+		WritesStreamResults bool
+	}
+
+	// clientMainServerData contains the URL variables planned for one client
+	// main and the hosts that use them.
+	clientMainServerData struct {
+		*Data
+		// Variables lists every URL variable with its client flag names.
+		Variables []*mainVariableData
+		// Hosts lists each host with the same planned URL variables.
+		Hosts []*clientMainHostData
+	}
+
+	// clientMainHostData contains one host and its planned URL variables.
+	clientMainHostData struct {
+		*HostData
+		// Variables lists the URL variables used by this host.
+		Variables []*mainVariableData
+	}
+)
+
+// CLIFiles returns one example command-line program for each copied server.
+func CLIFiles(root *Root) []*codegen.File {
 	var fw []*codegen.File
-	for _, svr := range root.API.Servers {
+	for _, svr := range root.Servers {
 		if m := exampleCLIMain(root, svr); m != nil {
 			fw = append(fw, m)
 		}
@@ -24,64 +59,45 @@ func CLIFiles(root *expr.RootExpr) []*codegen.File {
 	return fw
 }
 
-// exampleCLIMain returns an example client tool main implementation for the
-// given server expression.
-func exampleCLIMain(root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
-	svrdata := Servers.Get(svr, root)
-
-	// Skip CLI generation for servers with no transports (e.g., agent-only services)
-	if svrdata.DefaultTransport() == nil {
+// exampleCLIMain writes the command-line program for server.
+func exampleCLIMain(root *Root, server *Data) *codegen.File {
+	// A server with no HTTP, JSON-RPC, or gRPC service has no client to run.
+	if server.DefaultTransport() == nil {
 		return nil
 	}
 
-	path := filepath.Join("cmd", svrdata.Dir+"-cli", "main.go")
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		return nil // file already exists, skip it.
+	path := server.clientMainPath
+	main := &clientMainData{
+		APIName:              root.APIName,
+		Server:               planClientMainServer(server),
+		HasJSONRPC:           server.HasJSONRPC,
+		HasHTTP:              server.HasHTTP,
+		UsageCommands:        server.usageCommands,
+		JSONRPCOnly:          server.jsonRPCOnly,
+		WritesEndpointResult: server.writesEndpointResult,
+		WritesStreamResults:  server.writesStreamResults,
 	}
-	specs := []*codegen.ImportSpec{
-		{Path: "context"},
-		{Path: "encoding/json"},
-		{Path: "errors"},
-		{Path: "flag"},
-		{Path: "fmt"},
-		{Path: "net/url"},
-		{Path: "os"},
-		{Path: "sort"},
-		{Path: "slices"},
-		{Path: "strings"},
-		codegen.GoaImport(""),
-	}
+	specs := packageImports(server.clientPackage, clientMainFixedImports(server))
 	sections := []*codegen.SectionTemplate{
 		codegen.Header("", "main", specs),
 		{
 			Name:   "cli-main-start",
 			Source: exampleTemplates.Read(clientStartT),
-			Data: map[string]any{
-				"Server":     svrdata,
-				"HasJSONRPC": hasJSONRPC(root, svr),
-				"HasHTTP":    hasHTTP(root, svr),
-			},
+			Data:   main,
 			FuncMap: map[string]any{
 				"join": strings.Join,
 			},
 		}, {
 			Name:   "cli-main-var-init",
 			Source: exampleTemplates.Read(clientVarInitT),
-			Data: map[string]any{
-				"Server": svrdata,
-			},
+			Data:   main,
 			FuncMap: map[string]any{
 				"join": strings.Join,
 			},
 		}, {
 			Name:   "cli-main-endpoint-init",
 			Source: exampleTemplates.Read(clientEndpointInitT),
-			Data: map[string]any{
-				"Server":     svrdata,
-				"Root":       root,
-				"HasJSONRPC": hasJSONRPC(root, svr),
-				"HasHTTP":    hasHTTP(root, svr),
-			},
+			Data:   main,
 			FuncMap: map[string]any{
 				"join":    strings.Join,
 				"toUpper": strings.ToUpper,
@@ -89,15 +105,11 @@ func exampleCLIMain(root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
 		}, {
 			Name:   "cli-main-end",
 			Source: exampleTemplates.Read(clientEndT),
+			Data:   main,
 		}, {
 			Name:   "cli-main-usage",
 			Source: exampleTemplates.Read(clientUsageT),
-			Data: map[string]any{
-				"APIName":    root.API.Name,
-				"Server":     svrdata,
-				"HasJSONRPC": hasJSONRPC(root, svr),
-				"HasHTTP":    hasHTTP(root, svr),
-			},
+			Data:   main,
 			FuncMap: map[string]any{
 				"toUpper": strings.ToUpper,
 				"join":    strings.Join,
@@ -107,22 +119,52 @@ func exampleCLIMain(root *expr.RootExpr, svr *expr.ServerExpr) *codegen.File {
 	return &codegen.File{Path: path, SectionTemplates: sections, SkipExist: true}
 }
 
-// hasJSONRPC returns true if the server expression has a JSON-RPC server.
-func hasJSONRPC(root *expr.RootExpr, svr *expr.ServerExpr) bool {
-	for _, s := range svr.Services {
-		if root.API.JSONRPC.Service(s) != nil {
-			return true
-		}
+// clientMainFixedImports lists packages whose names are written directly by
+// the command-line client templates.
+func clientMainFixedImports(server *Data) []*codegen.ImportSpec {
+	specs := []*codegen.ImportSpec{
+		{Path: "context"},
+		{Path: "errors"},
+		{Path: "flag"},
+		{Path: "fmt"},
+		{Path: "net/url"},
+		{Path: "os"},
+		{Path: "strings"},
 	}
-	return false
+	if server.writesEndpointResult || server.writesStreamResults {
+		specs = append(specs,
+			&codegen.ImportSpec{Path: "encoding/json"},
+			&codegen.ImportSpec{Path: "io"},
+		)
+	}
+	if server.writesEndpointResult {
+		specs = append(specs, codegen.GoaImport(""))
+	}
+	return specs
 }
 
-// hasHTTP returns true if the server expression has an HTTP server.
-func hasHTTP(root *expr.RootExpr, svr *expr.ServerExpr) bool {
-	for _, s := range svr.Services {
-		if root.API.HTTP.Service(s) != nil {
-			return true
-		}
+// planClientMainServer selects URL flag names that are distinct from the
+// built-in client flags.
+func planClientMainServer(server *Data) *clientMainServerData {
+	fixedFlags := []string{"host", "url", "timeout", "verbose", "v"}
+	if server.HasJSONRPC {
+		fixedFlags = append(fixedFlags, "jsonrpc", "j")
 	}
-	return false
+	variables := planMainVariables(server.Variables, fixedFlags)
+	planned := &clientMainServerData{
+		Data:      server,
+		Variables: variables.all,
+		Hosts:     make([]*clientMainHostData, len(server.Hosts)),
+	}
+	for index, host := range server.Hosts {
+		plannedHost := &clientMainHostData{
+			HostData:  host,
+			Variables: make([]*mainVariableData, len(host.Variables)),
+		}
+		for variableIndex, variable := range host.Variables {
+			plannedHost.Variables[variableIndex] = variables.byName[variable.Name]
+		}
+		planned.Hosts[index] = plannedHost
+	}
+	return planned
 }

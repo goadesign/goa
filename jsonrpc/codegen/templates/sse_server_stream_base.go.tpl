@@ -16,11 +16,14 @@ type (
 	}
 )
 
+// Header returns the headers written while the event is being encoded.
 func (b *{{ .Buffer.Name }}) Header() http.Header {
 	return b.header
 }
 
-func (b *{{ .Buffer.Name }}) WriteHeader(int) {}
+// WriteHeader leaves the response status for the real HTTP response writer.
+func (b *{{ .Buffer.Name }}) WriteHeader(int) {
+}
 
 // initSSEHeaders writes the response headers before the first event.
 func (s *{{ .Stream.Name }}) initSSEHeaders() {
@@ -43,10 +46,8 @@ func (s *{{ .Stream.Name }}) sendSSEEvent(ctx context.Context, eventType string,
 	}
 
 	s.initSSEHeaders()
-	if eventType != "" {
-		if _, err := fmt.Fprintf(s.w, "event: %s\n", eventType); err != nil {
-			return fmt.Errorf("write server-sent event name: %w", err)
-		}
+	if _, err := fmt.Fprintf(s.w, "event: %s\n", eventType); err != nil {
+		return fmt.Errorf("write server-sent event name: %w", err)
 	}
 	if _, err := s.w.Write([]byte("data: ")); err != nil {
 		return fmt.Errorf("write server-sent event data label: %w", err)

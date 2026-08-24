@@ -1,155 +1,100 @@
-// Public accessor methods for Info types
+// Methods that provide information about each service call
 {{- range . }}
+	{{- $interceptor := . }}
+	{{- range .Methods }}
 
-// Service returns the name of the service handling the request.
+// Service returns the service selected for this interceptor call.
 func (info *{{ .InfoDeclaration.Name }}) Service() string {
-	return info.service
+	return "{{ $interceptor.Service }}"
 }
 
-// Method returns the name of the method handling the request.
+// Method returns the method selected for this interceptor call.
 func (info *{{ .InfoDeclaration.Name }}) Method() string {
-	return info.method
+	return "{{ .MethodName }}"
 }
 
-// CallType returns the type of call the interceptor is handling.
-func (info *{{ .InfoDeclaration.Name }}) CallType() goa.InterceptorCallType {
-	return info.callType
-}
-
-// RawPayload returns the raw payload of the request.
+// RawPayload returns the payload supplied for this interceptor call.
 func (info *{{ .InfoDeclaration.Name }}) RawPayload() any {
 	return info.rawPayload
 }
-	{{- if .HasPayloadAccess }}
+		{{- if .ServerUnaryInfoDeclaration }}
 
-// Payload returns a type-safe accessor for the method payload.
-func (info *{{ .InfoDeclaration.Name }}) Payload() {{ .PayloadDeclaration.Name }} {
-		{{- if gt (len .Methods) 1 }}
-		switch info.Method() {
-			{{- range .Methods }}
-		case "{{ .MethodName }}":
-				{{- if hasEndpointStruct . }}
-			switch pay := info.RawPayload().(type) {
-			case *{{ .ServerStream.EndpointStruct }}:
-				return &{{ .PayloadAccessDeclaration.Name }}{payload: pay.Payload}
-			default:
-				return &{{ .PayloadAccessDeclaration.Name }}{payload: pay.({{ .PayloadRef }})}
-			}
-				{{- else }}
-			return &{{ .PayloadAccessDeclaration.Name }}{payload: info.RawPayload().({{ .PayloadRef }})}
-				{{- end }}
-			{{- end }}
-		default:
-			return nil
-		}
-		{{- else }}
-			{{- if hasEndpointStruct (index .Methods 0) }}
-	switch pay := info.RawPayload().(type) {
-	case *{{ (index .Methods 0).ServerStream.EndpointStruct }}:
-		return &{{ (index .Methods 0).PayloadAccessDeclaration.Name }}{payload: pay.Payload}
-	default:
-		return &{{ (index .Methods 0).PayloadAccessDeclaration.Name }}{payload: pay.({{ (index .Methods 0).PayloadRef }})}
-	}
-			{{- else }}
-	return &{{ (index .Methods 0).PayloadAccessDeclaration.Name }}{payload: info.RawPayload().({{ (index .Methods 0).PayloadRef }})}
+// CallType reports that this is a server endpoint call.
+func (info *{{ .ServerUnaryInfoDeclaration.Name }}) CallType() goa.InterceptorCallType {
+	return goa.InterceptorUnary
+}
+		{{- end }}
+		{{- if .ClientUnaryInfoDeclaration }}
+
+// CallType reports that this is a client endpoint call.
+func (info *{{ .ClientUnaryInfoDeclaration.Name }}) CallType() goa.InterceptorCallType {
+	return goa.InterceptorUnary
+}
+		{{- end }}
+		{{- if .StreamingSendInfoDeclaration }}
+
+// CallType reports that this is a stream send.
+func (info *{{ .StreamingSendInfoDeclaration.Name }}) CallType() goa.InterceptorCallType {
+	return goa.InterceptorStreamingSend
+}
+		{{- end }}
+		{{- if .StreamingRecvInfoDeclaration }}
+
+// CallType reports that this is a stream receive.
+func (info *{{ .StreamingRecvInfoDeclaration.Name }}) CallType() goa.InterceptorCallType {
+	return goa.InterceptorStreamingRecv
+}
+		{{- end }}
+		{{- if $interceptor.HasPayloadAccess }}
+
+// Payload returns this method's payload fields.
+func (info *{{ .InfoDeclaration.Name }}) Payload() {{ $interceptor.PayloadDeclaration.Name }} {
+	return &{{ .PayloadAccessDeclaration.Name }}{payload: info.rawPayload.({{ .PayloadRef }})}
+}
+			{{- if and .ServerUnaryInfoDeclaration (hasEndpointStruct .) }}
+
+// Payload returns this server method's payload fields.
+func (info *{{ .ServerUnaryInfoDeclaration.Name }}) Payload() {{ $interceptor.PayloadDeclaration.Name }} {
+	return &{{ .PayloadAccessDeclaration.Name }}{payload: info.rawPayload.(*{{ .ServerStream.EndpointStruct }}).Payload}
+}
 			{{- end }}
 		{{- end }}
-}
-	{{- end }}
+		{{- if $interceptor.HasResultAccess }}
 
-	{{- if .HasResultAccess }}
-// Result returns a type-safe accessor for the method result.
-func (info *{{ .InfoDeclaration.Name }}) Result(res any) {{ .ResultDeclaration.Name }} {
-		{{- if gt (len .Methods) 1 }}
-	switch info.Method() {
-			{{- range .Methods }}
-	case "{{ .MethodName }}":
-		return &{{ .ResultAccessDeclaration.Name }}{result: res.({{ .ResultRef }})}
-			{{- end }}
-	default:
-		return nil
-	}
-		{{- else }}
-	return &{{ (index .Methods 0).ResultAccessDeclaration.Name }}{result: res.({{ (index .Methods 0).ResultRef }})}
-		{{- end }}
+// Result returns this method's result fields.
+func (info *{{ .InfoDeclaration.Name }}) Result(res any) {{ $interceptor.ResultDeclaration.Name }} {
+	return &{{ .ResultAccessDeclaration.Name }}{result: res.({{ .ResultRef }})}
 }
-	{{- end }}
+		{{- end }}
+		{{- if $interceptor.HasStreamingPayloadAccess }}
 
-	{{- if .HasStreamingPayloadAccess }}
-// ClientStreamingPayload returns a type-safe accessor for the method streaming payload for a client-side interceptor.
-func (info *{{ .InfoDeclaration.Name }}) ClientStreamingPayload() {{ .StreamingPayloadDeclaration.Name }} {
-		{{- if gt (len .Methods) 1 }}
-	switch info.Method() {
-			{{- range .Methods }}
-	case "{{ .MethodName }}":
-		return &{{ .StreamingPayloadAccessDeclaration.Name }}{payload: info.RawPayload().({{ .StreamingPayloadRef }})}
-			{{- end }}
-	default:
-		return nil
-	}
-		{{- else }}
-	return &{{ (index .Methods 0).StreamingPayloadAccessDeclaration.Name }}{payload: info.RawPayload().({{ (index .Methods 0).StreamingPayloadRef }})}
-		{{- end }}
+// ClientStreamingPayload returns this method's outgoing streaming payload fields.
+func (info *{{ .InfoDeclaration.Name }}) ClientStreamingPayload() {{ $interceptor.StreamingPayloadDeclaration.Name }} {
+	return &{{ .StreamingPayloadAccessDeclaration.Name }}{payload: info.rawPayload.({{ .StreamingPayloadRef }})}
 }
-	{{- end }}
 
-	{{- if .HasStreamingResultAccess }}
-// ClientStreamingResult returns a type-safe accessor for the method streaming result for a client-side interceptor.
-func (info *{{ .InfoDeclaration.Name }}) ClientStreamingResult(res any) {{ .StreamingResultDeclaration.Name }} {
-		{{- if gt (len .Methods) 1 }}
-	switch info.Method() {
-			{{- range .Methods }}
-	case "{{ .MethodName }}":
-		return &{{ .StreamingResultAccessDeclaration.Name }}{result: res.({{ .StreamingResultRef }})}
-			{{- end }}
-	default:
-		return nil
-	}
-		{{- else }}
-	return &{{ (index .Methods 0).StreamingResultAccessDeclaration.Name }}{result: res.({{ (index .Methods 0).StreamingResultRef }})}
-		{{- end }}
+// ServerStreamingPayload returns this method's incoming streaming payload fields.
+func (info *{{ .InfoDeclaration.Name }}) ServerStreamingPayload(payload any) {{ $interceptor.StreamingPayloadDeclaration.Name }} {
+	return &{{ .StreamingPayloadAccessDeclaration.Name }}{payload: payload.({{ .StreamingPayloadRef }})}
 }
-	{{- end }}
+		{{- end }}
+		{{- if $interceptor.HasStreamingResultAccess }}
 
-	{{- if .HasStreamingPayloadAccess }}
-// ServerStreamingPayload returns a type-safe accessor for the method streaming payload for a server-side interceptor.
-func (info *{{ .InfoDeclaration.Name }}) ServerStreamingPayload(pay any) {{ .StreamingPayloadDeclaration.Name }} {
-		{{- if gt (len .Methods) 1 }}
-	switch info.Method() {
-			{{- range .Methods }}
-	case "{{ .MethodName }}":
-		return &{{ .StreamingPayloadAccessDeclaration.Name }}{payload: pay.({{ .StreamingPayloadRef }})}
-			{{- end }}
-	default:
-		return nil
-	}
-		{{- else }}
-	return &{{ (index .Methods 0).StreamingPayloadAccessDeclaration.Name }}{payload: pay.({{ (index .Methods 0).StreamingPayloadRef }})}
-		{{- end }}
+// ClientStreamingResult returns this method's incoming streaming result fields.
+func (info *{{ .InfoDeclaration.Name }}) ClientStreamingResult(result any) {{ $interceptor.StreamingResultDeclaration.Name }} {
+	return &{{ .StreamingResultAccessDeclaration.Name }}{result: result.({{ .StreamingResultRef }})}
 }
-	{{- end }}
 
-	{{- if .HasStreamingResultAccess }}
-// ServerStreamingResult returns a type-safe accessor for the method streaming result for a server-side interceptor.
-func (info *{{ .InfoDeclaration.Name }}) ServerStreamingResult() {{ .StreamingResultDeclaration.Name }} {
-		{{- if gt (len .Methods) 1 }}
-	switch info.Method() {
-			{{- range .Methods }}
-	case "{{ .MethodName }}":
-		return &{{ .StreamingResultAccessDeclaration.Name }}{result: info.RawPayload().({{ .StreamingResultRef }})}
-			{{- end }}
-	default:
-		return nil
-	}
-		{{- else }}
-	return &{{ (index .Methods 0).StreamingResultAccessDeclaration.Name }}{result: info.RawPayload().({{ (index .Methods 0).StreamingResultRef }})}
-		{{- end }}
+// ServerStreamingResult returns this method's outgoing streaming result fields.
+func (info *{{ .InfoDeclaration.Name }}) ServerStreamingResult() {{ $interceptor.StreamingResultDeclaration.Name }} {
+	return &{{ .StreamingResultAccessDeclaration.Name }}{result: info.rawPayload.({{ .StreamingResultRef }})}
 }
+		{{- end }}
 	{{- end }}
 {{- end }}
 
-{{- if hasPrivateImplementationTypes . }}
-// Private implementation methods
+{{- if hasPrivateAccessorMethods . }}
+// Methods that read and write the selected payload and result fields
 {{- range . }}
 	{{ $interceptor := . }}
 	{{- range .Methods }}

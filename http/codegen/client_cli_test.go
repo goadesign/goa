@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/cli"
 	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -65,6 +66,35 @@ func TestClientCLIFiles(t *testing.T) {
 	}
 }
 
+// TestClientCLIBuildNameMatchesDeclaration verifies released plugins can read
+// the final payload builder name without choosing that name themselves.
+func TestClientCLIBuildNameMatchesDeclaration(t *testing.T) {
+	root := expr.RunDSL(t, testdata.MultiSimpleDSL)
+	plan := linkedHTTPPlanForRoot(t, root)
+	files := plan.ClientCLIFiles()
+	require.Greater(t, len(files), 1)
+
+	build, ok := files[1].SectionTemplates[1].Data.(*cli.BuildFunctionData)
+	require.True(t, ok)
+	endpoint := plan.services.Get("ServiceMultiSimple1").Endpoint("MethodMultiSimplePayload")
+	require.Equal(t, endpoint.CLIPayloadDeclaration.Name(), build.Name)
+}
+
+// TestClientCLITransportNamesMatchDeclarations checks the released multipart
+// and stream helper names exposed to plugin templates.
+func TestClientCLITransportNamesMatchDeclarations(t *testing.T) {
+	plan := linkedHTTPPlanForRoot(t, releasedHTTPNamesRoot(t))
+	service := plan.services.Get("Names")
+
+	multipart := buildSubcommandData(service, service.Endpoint("Multipart"))
+	require.NotNil(t, multipart.MultipartFuncDeclaration)
+	require.Equal(t, multipart.MultipartFuncDeclaration.Name(), multipart.MultipartFuncName)
+
+	stream := buildSubcommandData(service, service.Endpoint("Raw"))
+	require.NotNil(t, stream.BuildStreamPayloadDeclaration)
+	require.Equal(t, stream.BuildStreamPayloadDeclaration.Name(), stream.BuildStreamPayload)
+}
+
 func TestEmptyBodyCLIUsesPayloadFieldExample(t *testing.T) {
 	root := expr.RunDSL(t, testdata.PayloadBodyPrimitiveFieldEmptyDSL)
 	plan := linkedHTTPPlanForRoot(t, root)
@@ -75,4 +105,24 @@ func TestEmptyBodyCLIUsesPayloadFieldExample(t *testing.T) {
 
 	require.IsType(t, []string{}, example)
 	require.NotEmpty(t, example)
+}
+
+// TestClientCLINestedBodyWithoutValidationEmitsNoChecks verifies that a body
+// with no top-level checks does not add validation to the payload builder.
+func TestClientCLINestedBodyWithoutValidationEmitsNoChecks(t *testing.T) {
+	root := expr.RunDSL(t, testdata.PayloadBodyUserInnerDSL)
+	plan := linkedHTTPPlanForRoot(t, root)
+	files := plan.ClientCLIFiles()
+	require.NotEmpty(t, files)
+	service := plan.services.Get("ServiceBodyUserInner")
+	endpoint := service.Endpoints[0]
+	require.NotNil(t, endpoint.Payload.Request.PayloadInit)
+	require.Len(t, endpoint.Payload.Request.PayloadInit.ClientArgs, 1)
+	arg := endpoint.Payload.Request.PayloadInit.ClientArgs[0]
+	require.Empty(t, arg.Validate)
+	require.NotNil(t, arg.CLIPlan)
+	_, builder := buildFlags(service, endpoint)
+	require.NotNil(t, builder)
+	require.Len(t, builder.Fields, 1)
+	require.NotContains(t, builder.Fields[0].Init, "goa.")
 }

@@ -7,8 +7,7 @@ func EncodeMethodMessageWithValidateRequest(ctx context.Context, v any, md *meta
 	}
 	if payload.InMetadata != nil {
 		inMetadataWire := *payload.InMetadata
-		(*md).Append("Authorization", fmt.Sprintf("%v",
-			inMetadataWire))
+		(*md).Append("Authorization", strconv.Itoa(inMetadataWire))
 	}
 	return NewProtoMethodMessageWithValidateRequest(payload), nil
 }

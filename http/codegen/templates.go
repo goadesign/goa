@@ -96,6 +96,7 @@ const (
 	sseParseP               = "sse_parse"
 	websocketUpgradeP       = "websocket_upgrade"
 	clientTypeConversionP   = "client_type_conversion"
+	clientTypeExpressionP   = "client_type_expression"
 	clientMapConversionP    = "client_map_conversion"
 	singleResponseP         = "single_response"
 	queryTypeConversionP    = "query_type_conversion"

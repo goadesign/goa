@@ -1,16 +1,18 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
 	cli "generated.local/gen/http/cli/kitchen_sink"
 	goahttp "goa.design/goa/v3/http"
-	goa "goa.design/goa/v3/pkg"
 )
 
-func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, error) {
+func doHTTP(ctx context.Context, scheme, host string, timeout int, debug bool, stdout io.Writer) error {
 	var (
 		doer goahttp.Doer
 	)
@@ -30,13 +32,22 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, er
 		debug,
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("parse endpoint: %w", err)
+		return fmt.Errorf("parse endpoint: %w", err)
 	}
-	return endpoint, payload, nil
-}
 
-func httpUsageCommands() []string {
-	return cli.UsageCommands()
+	switch flag.Arg(0) {
+	case "mixed":
+		switch flag.Arg(1) {
+		case "lookup":
+			return writeEndpointResult(ctx, stdout, endpoint, payload)
+		}
+	case "health":
+		switch flag.Arg(1) {
+		case "check":
+			return writeEndpointResult(ctx, stdout, endpoint, payload)
+		}
+	}
+	panic("parsed HTTP command has no generated result writer")
 }
 
 func httpUsageExamples() string {

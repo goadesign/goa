@@ -1,5 +1,6 @@
-// This file renders service declarations and aggregates relocated declarations
-// into the exact generated Go packages and files that own them.
+// This file renders service declarations and groups declarations with explicit
+// package locations into the generated Go package and file where each one is
+// written.
 package service
 
 import (
@@ -15,7 +16,7 @@ import (
 )
 
 type (
-	// serviceTypeSectionPhase identifies the stable group that owns a service
+	// serviceTypeSectionPhase identifies the stable group containing a service
 	// type-file section. Type declarations must precede methods defined on them.
 	serviceTypeSectionPhase uint8
 
@@ -34,8 +35,8 @@ const (
 )
 
 // Files renders every service file described by plans. Each plan must be
-// linked so every renderer reads the exact declarations retained before names
-// froze instead of rebuilding service analysis from the expression root.
+// linked so every renderer reads the declarations copied before their names
+// were chosen instead of rebuilding service analysis from the expression root.
 func Files(plans ...*Plan) ([]*codegen.File, error) {
 	var files []*codegen.File
 	if len(plans) == 0 {
@@ -247,10 +248,7 @@ func serviceFiles(plan *Plan, facts *serviceFacts) []*codegen.File {
 		Source: serviceTemplates.Read(serviceT),
 		Data:   svc,
 		FuncMap: map[string]any{
-			"hasJSONRPCStreaming": hasJSONRPCStreaming,
-			"isJSONRPCWebSocket":  hasJSONRPCWebSocket,
-			"streamInterfaceFor":  streamInterfaceFor,
-			"dedupeByResult":      dedupeByResult,
+			"streamInterfaceFor": streamInterfaceFor,
 		},
 	}
 
@@ -266,8 +264,10 @@ func serviceFiles(plan *Plan, facts *serviceFacts) []*codegen.File {
 		sections = append(sections, record.section)
 	}
 	sections = append(sections, svcSections...)
-	files := []*codegen.File{{Path: svcPath, SectionTemplates: sections}}
-	return append(files, interceptorsFiles(plan, facts)...)
+	interceptors := interceptorsFiles(plan, facts)
+	files := make([]*codegen.File, 1, 1+len(interceptors))
+	files[0] = &codegen.File{Path: svcPath, SectionTemplates: sections}
+	return append(files, interceptors...)
 }
 
 // generatedPackageFiles renders each relocated user type in its configured
@@ -291,7 +291,7 @@ func generatedPackageFiles(analyses []*ServicesData) ([]*codegen.File, error) {
 	var files []*codegen.File
 	for _, owner := range packageOwners {
 		packagePath := owner.ImportPath()
-		packageName := codegen.Goify(path.Base(packagePath), false)
+		packageName := strings.ToLower(codegen.Goify(path.Base(packagePath), false))
 		generatedPackage := packages[owner]
 		typesByFile := make(map[string][]*generatedTypeData)
 		for _, generatedType := range generatedPackage.types {
@@ -351,8 +351,9 @@ func generatedPackageFiles(analyses []*ServicesData) ([]*codegen.File, error) {
 	return files, nil
 }
 
-// aggregateGeneratedPackages selects one render section per canonical package
-// declaration across all analyzed roots without mutating generation state.
+// aggregateGeneratedPackages selects one render section for each generated
+// package declaration across all analyzed roots without changing generation
+// state.
 func aggregateGeneratedPackages(analyses []*ServicesData) (map[*codegen.GeneratedPackage]*generatedPackageData, error) {
 	packages := make(map[*codegen.GeneratedPackage]*generatedPackageData)
 	for _, services := range analyses {
@@ -411,63 +412,13 @@ func appendImportSpecs(existing, added []*codegen.ImportSpec) []*codegen.ImportS
 	return result
 }
 
-// dedupeByResult returns a slice of methods where only a single representative
-// per unique ResultRef is kept (first occurrence wins). Methods without a
-// ResultRef are ignored.
-func dedupeByResult(ms []*MethodData) []*MethodData {
-	seen := make(map[string]struct{})
-	out := make([]*MethodData, 0, len(ms))
-	for _, m := range ms {
-		key := m.Result
-		if key == "" {
-			key = m.StreamingResult
-		}
-		if key == "" {
-			continue
-		}
-		if _, ok := seen[key]; ok {
-			continue
-		}
-		seen[key] = struct{}{}
-		out = append(out, m)
-	}
-	return out
-}
-
-// hasJSONRPCStreaming returns true if the service has a JSON-RPC streaming
-// endpoint (WebSocket or SSE).
-func hasJSONRPCStreaming(sd *Data) bool {
-	for _, m := range sd.Methods {
-		if m.IsJSONRPC && m.ServerStream != nil {
-			return true
-		}
-	}
-	return false
-}
-
-// hasJSONRPCWebSocket returns true if the service has a JSON-RPC streaming
-// endpoint that uses the WebSocket transport.
-func hasJSONRPCWebSocket(sd *Data) bool {
-	for _, m := range sd.Methods {
-		if m.IsJSONRPCWebSocket {
-			return true
-		}
-	}
-	return false
-}
-
 // streamInterfaceFor builds the data to generate the client and server stream
 // interfaces for the given endpoint.
 func streamInterfaceFor(typ string, m *MethodData, stream *StreamData) map[string]any {
 	return map[string]any{
-		"Type":               typ,
-		"Endpoint":           m.Name,
-		"Stream":             stream,
-		"MethodVarName":      m.VarName,
-		"EventDeclaration":   m.EventDeclaration,
-		"IsJSONRPC":          m.IsJSONRPC,
-		"IsJSONRPCSSE":       m.IsJSONRPCSSE && typ == "server",
-		"IsJSONRPCWebSocket": m.IsJSONRPCWebSocket,
+		"Type":     typ,
+		"Endpoint": m.Name,
+		"Stream":   stream,
 		// If a view is explicitly set (ViewName is not empty) in the Result
 		// expression, we can use that view to render the result type instead
 		// of iterating through the list of views defined in the result type.

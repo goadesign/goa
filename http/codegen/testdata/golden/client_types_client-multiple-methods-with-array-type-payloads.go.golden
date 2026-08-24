@@ -1,52 +1,52 @@
-// PayloadA is used to define fields on request body types.
-type PayloadA struct {
+// PayloadARequestBody is used to define fields on request body types.
+type PayloadARequestBody struct {
 	A *string `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
 }
 
-// PayloadB is used to define fields on request body types.
-type PayloadB struct {
+// PayloadBRequestBody is used to define fields on request body types.
+type PayloadBRequestBody struct {
 	A string `form:"a" json:"a" xml:"a"`
 	B string `form:"b" json:"b" xml:"b"`
 }
 
-// NewPayloadA builds the HTTP request body from the payload of the "MethodA"
-// endpoint of the "ServiceMultipleMethods" service.
-func NewPayloadA(p []*servicemultiplemethods.PayloadA) []*PayloadA {
-	body := make([]*PayloadA, len(p))
+// NewPayloadARequestBody builds the HTTP request body from the payload of the
+// "MethodA" endpoint of the "ServiceMultipleMethods" service.
+func NewPayloadARequestBody(p []*servicemultiplemethods.PayloadA) []*PayloadARequestBody {
+	body := make([]*PayloadARequestBody, len(p))
 	for i, val := range p {
 		if val == nil {
 			body[i] = nil
 			continue
 		}
-		body[i] = marshalPayloadAToPayloadA2(val)
+		body[i] = marshalServicemultiplemethodsPayloadAToPayloadARequestBody(val)
 	}
 	return body
 }
 
-// NewPayloadB builds the HTTP request body from the payload of the "MethodB"
-// endpoint of the "ServiceMultipleMethods" service.
-func NewPayloadB(p []*servicemultiplemethods.PayloadB) []*PayloadB {
-	body := make([]*PayloadB, len(p))
+// NewPayloadBRequestBody builds the HTTP request body from the payload of the
+// "MethodB" endpoint of the "ServiceMultipleMethods" service.
+func NewPayloadBRequestBody(p []*servicemultiplemethods.PayloadB) []*PayloadBRequestBody {
+	body := make([]*PayloadBRequestBody, len(p))
 	for i, val := range p {
 		if val == nil {
 			body[i] = nil
 			continue
 		}
-		body[i] = marshalPayloadBToPayloadB2(val)
+		body[i] = marshalServicemultiplemethodsPayloadBToPayloadBRequestBody(val)
 	}
 	return body
 }
 
-// ValidatePayloadA runs the validations defined on PayloadA
-func ValidatePayloadA(body *PayloadA) (err error) {
+// ValidatePayloadARequestBody runs the validations defined on PayloadA
+func ValidatePayloadARequestBody(body *PayloadARequestBody) (err error) {
 	if body.A != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.a", *body.A, "patterna"))
 	}
 	return
 }
 
-// ValidatePayloadB runs the validations defined on PayloadB
-func ValidatePayloadB(body *PayloadB) (err error) {
+// ValidatePayloadBRequestBody runs the validations defined on PayloadB
+func ValidatePayloadBRequestBody(body *PayloadBRequestBody) (err error) {
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.a", body.A, "patterna"))
 	err = goa.MergeErrors(err, goa.ValidatePattern("body.b", body.B, "patternb"))
 	return

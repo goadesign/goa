@@ -7,23 +7,19 @@ func EncodeMethodMessageWithSecurityRequest(ctx context.Context, v any, md *meta
 	}
 	if payload.Token != nil {
 		tokenWire := *payload.Token
-		(*md).Append("authorization",
-			tokenWire)
+		(*md).Append("authorization", tokenWire)
 	}
 	if payload.Key != nil {
 		keyWire := *payload.Key
-		(*md).Append("authorization",
-			keyWire)
+		(*md).Append("authorization", keyWire)
 	}
 	if payload.Username != nil {
 		usernameWire := *payload.Username
-		(*md).Append("username",
-			usernameWire)
+		(*md).Append("username", usernameWire)
 	}
 	if payload.Password != nil {
 		passwordWire := *payload.Password
-		(*md).Append("password",
-			passwordWire)
+		(*md).Append("password", passwordWire)
 	}
 	return NewProtoMethodMessageWithSecurityRequest(payload), nil
 }

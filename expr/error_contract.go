@@ -1,7 +1,6 @@
-// This file defines the transport-independent error contract used when an
-// endpoint inherits HTTP or gRPC response policy from its service or API.
-// Transport policy may select status codes and wire fields, but the method's
-// effective error remains the concrete service value encoded on every path.
+// This file builds the error definition that a method inherits from its
+// service or API. HTTP and gRPC settings may change how the error is sent, but
+// they do not change the service error value.
 package expr
 
 import (
@@ -17,10 +16,8 @@ type (
 		second *AttributeExpr
 	}
 
-	// effectiveErrorCopier owns a detached graph while inherited error
-	// attributes are materialized for comparison. Both maps are keyed by the
-	// source node so recursive declarations and inheritance edges reconnect to
-	// their copied counterparts.
+	// effectiveErrorCopier copies an inherited error without changing the
+	// evaluated design. The maps reconnect recursive types to their copies.
 	effectiveErrorCopier struct {
 		attributes map[*AttributeExpr]*AttributeExpr
 		userTypes  map[UserType]UserType
@@ -41,6 +38,30 @@ func equivalentErrorAttributes(first, second *AttributeExpr) bool {
 	first = effectiveErrorAttribute(first)
 	second = effectiveErrorAttribute(second)
 	return equivalentErrorAttributeNodes(first, second, make(map[attributePair]struct{}))
+}
+
+// differingErrorQualifierSettings lists error settings that would change the
+// generated service error returned to callers.
+func differingErrorQualifierSettings(first, second *AttributeExpr) []string {
+	first = effectiveErrorAttribute(first)
+	second = effectiveErrorAttribute(second)
+	qualifiers := []struct {
+		name string
+		key  string
+	}{
+		{name: "temporary", key: "goa:error:temporary"},
+		{name: "timeout", key: "goa:error:timeout"},
+		{name: "fault", key: "goa:error:fault"},
+	}
+	var different []string
+	for _, qualifier := range qualifiers {
+		_, firstSet := first.Meta[qualifier.key]
+		_, secondSet := second.Meta[qualifier.key]
+		if firstSet != secondSet {
+			different = append(different, qualifier.name)
+		}
+	}
+	return different
 }
 
 // effectiveErrorAttribute returns a detached copy with References and Bases

@@ -51,9 +51,8 @@ type (
 		// StreamingPayload is the payload sent across the stream.
 		StreamingPayload *AttributeExpr
 		// StreamingResult is the result sent across the stream when using SSE.
-		// When both Result and StreamingResult are defined with different types,
-		// the method supports content negotiation between standard HTTP responses
-		// (using Result) and SSE streams (using StreamingResult).
+		// When Result and StreamingResult are both defined, the method supports
+		// normal HTTP responses using Result and SSE streams using StreamingResult.
 		StreamingResult *AttributeExpr
 	}
 )
@@ -151,8 +150,8 @@ func (m *MethodExpr) validateRequirements() *eval.ValidationErrors {
 		requirements = m.Requirements
 	case len(m.Service.Requirements) > 0:
 		requirements = m.Service.Requirements
-	case len(Root.API.Requirements) > 0:
-		requirements = Root.API.Requirements
+	case len(m.Service.design.API.Requirements) > 0:
+		requirements = m.Service.design.API.Requirements
 	}
 	var (
 		hasBasicAuth bool
@@ -278,11 +277,19 @@ func (m *MethodExpr) validateErrors() *eval.ValidationErrors {
 // validateInterceptors validates the method interceptors.
 func (m *MethodExpr) validateInterceptors() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
-	m.ClientInterceptors = mergeInterceptors(m.ClientInterceptors, m.Service.ClientInterceptors, Root.API.ClientInterceptors)
+	m.ClientInterceptors = mergeInterceptors(
+		m.ClientInterceptors,
+		m.Service.ClientInterceptors,
+		m.Service.design.API.ClientInterceptors,
+	)
 	for _, i := range m.ClientInterceptors {
 		verr.Merge(i.validate(m))
 	}
-	m.ServerInterceptors = mergeInterceptors(m.ServerInterceptors, m.Service.ServerInterceptors, Root.API.ServerInterceptors)
+	m.ServerInterceptors = mergeInterceptors(
+		m.ServerInterceptors,
+		m.Service.ServerInterceptors,
+		m.Service.design.API.ServerInterceptors,
+	)
 	for _, i := range m.ServerInterceptors {
 		verr.Merge(i.validate(m))
 	}
@@ -417,8 +424,8 @@ func (m *MethodExpr) Finalize() {
 	if len(m.Requirements) == 0 {
 		if len(m.Service.Requirements) > 0 {
 			m.Requirements = copyReqs(m.Service.Requirements)
-		} else if len(Root.API.Requirements) > 0 {
-			m.Requirements = copyReqs(Root.API.Requirements)
+		} else if len(m.Service.design.API.Requirements) > 0 {
+			m.Requirements = copyReqs(m.Service.design.API.Requirements)
 		}
 	}
 }
@@ -438,8 +445,8 @@ func (m *MethodExpr) IsResultStreaming() bool {
 	return m.Stream == ServerStreamKind || m.Stream == BidirectionalStreamKind
 }
 
-// HasMixedResults returns true if the method has both Result and StreamingResult
-// defined with different types, indicating support for content negotiation.
+// HasMixedResults returns true if the method defines Result and StreamingResult
+// separately so HTTP clients can choose a normal response or an SSE stream.
 func (m *MethodExpr) HasMixedResults() bool {
 	return m.Result != nil && m.StreamingResult != nil && m.Result != m.StreamingResult
 }

@@ -13,7 +13,6 @@ import (
 )
 
 func TestServerInit(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name       string
 		DSL        func()

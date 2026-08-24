@@ -21,7 +21,7 @@ type MultipleServicesInterceptorsServiceClientInterceptors struct {
 func NewMultipleServicesInterceptorsServiceClientInterceptors() *MultipleServicesInterceptorsServiceClientInterceptors {
 	return &MultipleServicesInterceptorsServiceClientInterceptors{}
 }
-func (i *MultipleServicesInterceptorsServiceClientInterceptors) Test2(ctx context.Context, info *multipleservicesinterceptorsservice.Test2Info, next goa.Endpoint) (any, error) {
+func (i *MultipleServicesInterceptorsServiceClientInterceptors) Test2(ctx context.Context, info multipleservicesinterceptorsservice.Test2Info, next goa.Endpoint) (any, error) {
 	log.Printf(ctx, "[Test2] Sending request: %v", info.RawPayload())
 	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
@@ -31,7 +31,7 @@ func (i *MultipleServicesInterceptorsServiceClientInterceptors) Test2(ctx contex
 	log.Printf(ctx, "[Test2] Received response: %v", resp)
 	return resp, nil
 }
-func (i *MultipleServicesInterceptorsServiceClientInterceptors) Test4(ctx context.Context, info *multipleservicesinterceptorsservice.Test4Info, next goa.Endpoint) (any, error) {
+func (i *MultipleServicesInterceptorsServiceClientInterceptors) Test4(ctx context.Context, info multipleservicesinterceptorsservice.Test4Info, next goa.Endpoint) (any, error) {
 	log.Printf(ctx, "[Test4] Sending request: %v", info.RawPayload())
 	resp, err := next(ctx, info.RawPayload())
 	if err != nil {

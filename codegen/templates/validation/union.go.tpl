@@ -3,12 +3,12 @@ switch v := {{ .Target }}.(type) {
 	case {{ .Type }}:
 		{{- if $.Protobuf }}
 		if v == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError({{ printf "%q" .Name }}, {{ printf "%q" $.Context }}))
+			err = {{ $.Goa }}.MergeErrors(err, {{ $.Goa }}.MissingFieldError({{ printf "%q" .Name }}, {{ validationPath $.Context }}))
 			break
 		}
 		{{- if .PayloadRequiresPresence }}
 		if v.{{ .Field }} == nil {
-			err = goa.MergeErrors(err, goa.MissingFieldError({{ printf "%q" .Name }}, {{ printf "%q" $.Context }}))
+			err = {{ $.Goa }}.MergeErrors(err, {{ $.Goa }}.MissingFieldError({{ printf "%q" .Name }}, {{ validationPath $.Context }}))
 			break
 		}
 		{{- end }}

@@ -31,8 +31,13 @@ func TestInterceptors(t *testing.T) {
 		{"single-service-server-interceptor", testdata.SingleServiceServerInterceptorDSL, 2},
 		{"single-method-server-interceptor", testdata.SingleMethodServerInterceptorDSL, 2},
 		{"single-client-interceptor", testdata.SingleClientInterceptorDSL, 2},
+		{"leading-initialism-interceptor", testdata.LeadingInitialismInterceptorDSL, 3},
 		{"multiple-interceptors", testdata.MultipleInterceptorsExampleDSL, 3},
 		{"interceptor-with-read-payload", testdata.InterceptorWithReadPayloadDSL, 3},
+		{"interceptor-with-external-read-payload", testdata.InterceptorWithExternalReadPayloadDSL, 2},
+		{"interceptor-with-external-payload", testdata.InterceptorWithExternalPayloadDSL, 2},
+		{"mixed-interceptors-with-external-client-payload", testdata.MixedInterceptorsWithExternalClientPayloadDSL, 3},
+		{"merged-interceptors-with-external-client-payload", testdata.MergedInterceptorsWithExternalClientPayloadDSL, 3},
 		{"interceptor-with-write-payload", testdata.InterceptorWithWritePayloadDSL, 3},
 		{"interceptor-with-read-write-payload", testdata.InterceptorWithReadWritePayloadDSL, 3},
 		{"interceptor-with-read-result", testdata.InterceptorWithReadResultDSL, 3},
@@ -41,6 +46,7 @@ func TestInterceptors(t *testing.T) {
 		{"streaming-interceptors", testdata.StreamingInterceptorsDSL, 3},
 		{"streaming-interceptors-with-read-payload-and-read-streaming-payload", testdata.StreamingInterceptorsWithReadPayloadAndReadStreamingPayloadDSL, 3},
 		{"streaming-interceptors-with-read-streaming-result", testdata.StreamingInterceptorsWithReadStreamingResultDSL, 3},
+		{"mixed-result-streaming-interceptors", testdata.MixedResultStreamingInterceptorsDSL, 3},
 		{"streaming-interceptors-with-read-payload", testdata.StreamingInterceptorsWithReadPayloadDSL, 2},
 		{"streaming-interceptors-with-read-result", testdata.StreamingInterceptorsWithReadResultDSL, 2},
 	}
@@ -54,6 +60,35 @@ func TestInterceptors(t *testing.T) {
 
 			require.Len(t, fs, c.expectedFileCount)
 			for _, f := range fs {
+				base := filepath.Base(f.Path)
+				if c.Name == "interceptor-with-external-read-payload" && base == "service_interceptors.go" {
+					header := new(bytes.Buffer)
+					require.NoError(t, f.SectionTemplates[0].Write(header))
+					require.Contains(t, header.String(), `types "goa.design/goa/example/types"`)
+				}
+				if c.Name == "interceptor-with-external-payload" && base == "service_interceptors.go" {
+					header := new(bytes.Buffer)
+					require.NoError(t, f.SectionTemplates[0].Write(header))
+					require.Contains(t, header.String(), `types "goa.design/goa/example/types"`)
+				}
+				if c.Name == "mixed-interceptors-with-external-client-payload" {
+					header := new(bytes.Buffer)
+					require.NoError(t, f.SectionTemplates[0].Write(header))
+					if base == "client_interceptors.go" {
+						require.Contains(t, header.String(), `types "goa.design/goa/example/types"`)
+					} else {
+						require.NotContains(t, header.String(), `"goa.design/goa/example/types"`)
+					}
+				}
+				if c.Name == "merged-interceptors-with-external-client-payload" {
+					header := new(bytes.Buffer)
+					require.NoError(t, f.SectionTemplates[0].Write(header))
+					if base == "service_interceptors.go" {
+						require.Contains(t, header.String(), `types "goa.design/goa/example/types"`)
+					} else {
+						require.NotContains(t, header.String(), `"goa.design/goa/example/types"`)
+					}
+				}
 				buf := new(bytes.Buffer)
 				for _, s := range f.SectionTemplates[1:] {
 					require.NoError(t, s.Write(buf))

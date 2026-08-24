@@ -26,8 +26,8 @@ func defaultRequestHeaderAttributes(e *HTTPEndpointExpr) map[string]bool {
 		requirements = e.MethodExpr.Requirements
 	case len(e.Service.ServiceExpr.Requirements) > 0:
 		requirements = e.Service.ServiceExpr.Requirements
-	case len(Root.API.Requirements) > 0:
-		requirements = Root.API.Requirements
+	case len(e.MethodExpr.Service.design.API.Requirements) > 0:
+		requirements = e.MethodExpr.Service.design.API.Requirements
 	}
 	if len(requirements) == 0 {
 		return nil
@@ -142,6 +142,7 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		Type:         ut,
 		Validation:   att.Validation,
 		UserExamples: att.UserExamples,
+		authored:     payload.AuthoredAttribute(),
 	}
 }
 
@@ -175,6 +176,7 @@ func httpStreamingBody(e *HTTPEndpointExpr) *AttributeExpr {
 		Type:         ut,
 		Validation:   dupped.Validation,
 		UserExamples: att.UserExamples,
+		authored:     att.AuthoredAttribute(),
 	}
 }
 
@@ -257,12 +259,14 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 
 	// 5. Build computed user type
 	bodyAtt := body.Attribute()
-	if bodyAtt.Description == "" {
-		if t, ok := attr.Type.(UserType); ok {
-			bodyAtt.Description = t.Attribute().Description
-		}
-	}
-	if bodyAtt.Description == "" {
+	if t, ok := attr.Type.(UserType); ok {
+		// The generated body type describes the named Goa type after fields used
+		// by headers and cookies have been removed. Keep the type description
+		// separate from text that explains one method response.
+		typeAtt := t.Attribute()
+		bodyAtt.Description = typeAtt.Description
+		bodyAtt.authored = typeAtt.AuthoredAttribute()
+	} else if bodyAtt.Description == "" {
 		bodyAtt.Description = attr.Description
 	}
 	userType := NewGeneratedUserType(name, bodyAtt, identity)
@@ -280,6 +284,7 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 			Description: userType.Description,
 			Validation:  userType.Validation,
 			Meta:        attr.Meta,
+			authored:    attr.AuthoredAttribute(),
 		}
 	}
 	views := make([]*ViewExpr, len(rt.Views))
@@ -307,11 +312,12 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		Description: userType.Description,
 		Validation:  userType.Validation,
 		Meta:        attr.Meta,
+		authored:    attr.AuthoredAttribute(),
 	}
 }
 
 // generatedUserType preserves result-type behavior while giving a computed
-// transport type a fresh declaration origin and exact example owner.
+// transport type its own original declaration and repeatable example sequence.
 func generatedUserType(typ UserType, identity ExampleIdentity) UserType {
 	generated := NewGeneratedUserType(typ.Name(), typ.Attribute(), identity)
 	if result, ok := typ.(*ResultTypeExpr); ok {

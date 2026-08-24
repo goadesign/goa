@@ -5,7 +5,7 @@ func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux goahttp.Muxer, decode
 	return func(r *http.Request) ([]*servicebodyprimitivearrayuservalidate.PayloadType, error) {
 		var payload []*servicebodyprimitivearrayuservalidate.PayloadType
 		var (
-			body []*PayloadType
+			body []*PayloadTypeRequestBody
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -24,7 +24,7 @@ func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux goahttp.Muxer, decode
 		}
 		for _, e := range body {
 			if e != nil {
-				if err2 := ValidatePayloadType(e); err2 != nil {
+				if err2 := validatePayloadTypeRequestBody(e, "body[*]"); err2 != nil {
 					err = goa.MergeErrors(err, err2)
 				}
 			}
@@ -32,7 +32,7 @@ func DecodeMethodBodyPrimitiveArrayUserValidateRequest(mux goahttp.Muxer, decode
 		if err != nil {
 			return payload, err
 		}
-		payload = NewMethodBodyPrimitiveArrayUserValidatePayload(body)
+		payload = NewMethodBodyPrimitiveArrayUserValidatePayloadType(body)
 
 		return payload, nil
 	}

@@ -11,23 +11,23 @@
         "operationId": "test service#test endpoint",
         "parameters": [
           {
-            "example": 2401899298232532500,
+            "example": 1,
             "in": "path",
             "name": "foo",
             "required": true,
             "schema": {
-              "example": 2401899298232532500,
+              "example": 1,
               "format": "int64",
               "type": "integer"
             }
           },
           {
-            "example": 2467648858559780400,
+            "example": 2,
             "in": "path",
             "name": "bar",
             "required": true,
             "schema": {
-              "example": 2467648858559780400,
+              "example": 2,
               "format": "int64",
               "type": "integer"
             }

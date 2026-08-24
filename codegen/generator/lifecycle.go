@@ -1,6 +1,5 @@
-// This file executes the prepare, plan, freeze, and render phases for explicit
-// roots. The public filesystem-facing generator and isolated tests both use
-// this path, so lifecycle behavior has one implementation.
+// This file runs plugin preparation, name selection, file planning, and file
+// writing in one order shared by production generation and tests.
 package generator
 
 import (
@@ -11,40 +10,39 @@ import (
 )
 
 type (
-	// generationRun owns every fresh core and plugin instance for one execution.
+	// generationRun stores the new core generators and plugins used by one run.
 	generationRun struct {
 		cores   []coreGenerator
 		plugins []runPlugin
 	}
 
-	// runPlugin retains one plugin's registered owner name with its fresh callbacks.
+	// runPlugin stores one plugin's registered name and its Prepare, Plan, and
+	// Generate functions for this run.
 	runPlugin struct {
 		name string
 		Plugin
 	}
 
-	// generationResult retains the exact plan needed to verify later file renders.
+	// generationResult stores the generation state and files produced by one
+	// run.
 	generationResult struct {
 		plan  *Plan
 		files []*codegen.File
 	}
 )
 
-// executeGeneration instantiates fresh core and plugin objects, prepares roots,
-// and produces file descriptions from one retained frozen plan.
-func executeGeneration(genpkg string, roots []eval.Root, command string, registry *registry) ([]*codegen.File, error) {
+// executeGeneration creates new core generators and plugins, prepares the
+// designs, chooses all names, and reports whether generation succeeded.
+func executeGeneration(genpkg string, roots []eval.Root, command string, registry *registry) error {
 	run, err := newGenerationRun(command, registry)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	result, err := run.execute(genpkg, roots)
-	if err != nil {
-		return nil, err
-	}
-	return result.files, nil
+	_, err = run.execute(genpkg, roots)
+	return err
 }
 
-// newGenerationRun snapshots immutable factories and invokes each exactly once.
+// newGenerationRun copies the registered factories and calls each one once.
 func newGenerationRun(command string, registry *registry) (*generationRun, error) {
 	coreFactories, pluginDescriptors, err := registry.snapshot(command)
 	if err != nil {
@@ -61,7 +59,7 @@ func newGenerationRun(command string, registry *registry) (*generationRun, error
 	return &generationRun{cores: cores, plugins: plugins}, nil
 }
 
-// execute runs all phases for explicit prepared-root inputs.
+// execute prepares the supplied designs, chooses names, and builds files.
 func (r *generationRun) execute(genpkg string, roots []eval.Root) (*generationResult, error) {
 	for _, plugin := range r.plugins {
 		if plugin.Prepare != nil {

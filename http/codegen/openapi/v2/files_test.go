@@ -35,6 +35,7 @@ func TestSections(t *testing.T) {
 		{"multiple-services", testdata.MultipleServicesDSL},
 		{"multiple-views", testdata.MultipleViewsDSL},
 		{"explicit-view", testdata.ExplicitViewDSL},
+		{"released-response-collection-names", testdata.ReleasedResponseCollectionNamesDSL},
 		{"security", testdata.SecurityDSL},
 		{"server-host-with-variables", testdata.ServerHostWithVariablesDSL},
 		{"with-spaces", testdata.WithSpacesDSL},
@@ -54,13 +55,13 @@ func TestSections(t *testing.T) {
 		{"additional-properties-type", testdata.AdditionalPropertiesTypeDSL},
 		{"additional-properties-payload-result", testdata.AdditionalPropertiesPayloadResultDSL},
 		{"additional-properties-embedded-payload-result", testdata.AdditionalPropertiesPayloadResultDSL},
+		{"error-examples", testdata.ErrorExamplesDSL},
+		{"shared-error-description", testdata.SharedErrorDescriptionDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// Reset global variables
-			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
-			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20, expr.NewExampleGenerator(root.API.RandomizerFactory))
+			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
 			if err != nil {
 				t.Fatalf("OpenAPI failed with %s", err)
 			}
@@ -114,10 +115,8 @@ func TestValidations(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// Reset global variables
-			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
-			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20, expr.NewExampleGenerator(root.API.RandomizerFactory))
+			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
 			require.NoError(t, err, "OpenAPI failed")
 			require.NotEmpty(t, oFiles, "No swagger files")
 			for i, o := range oFiles {
@@ -158,10 +157,8 @@ func TestExtensions(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// Reset global variables
-			openapi.Definitions = make(map[string]*openapi.Schema)
 			root := expr.RunDSL(t, c.DSL)
-			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20, expr.NewExampleGenerator(root.API.RandomizerFactory))
+			oFiles, err := openapiv2.Files(root, openapi.DefaultPath20)
 			require.NoError(t, err, "OpenAPI failed")
 			require.NotEmpty(t, oFiles, "No swagger files")
 			for i, o := range oFiles {
@@ -191,9 +188,6 @@ func TestExtensions(t *testing.T) {
 }
 
 func TestNamedPrimitiveParamsAndHeadersUseOpenAPIBaseTypes(t *testing.T) {
-	// Reset global variables
-	openapi.Definitions = make(map[string]*openapi.Schema)
-
 	root := expr.RunDSL(t, func() {
 		var UUID = dsl.Type("UUID", dsl.String, func() {
 			dsl.Format(dsl.FormatUUID)
@@ -235,7 +229,7 @@ func TestNamedPrimitiveParamsAndHeadersUseOpenAPIBaseTypes(t *testing.T) {
 		})
 	})
 
-	spec, err := openapiv2.NewV2(root, root.API.Servers[0].Hosts[0], expr.NewExampleGenerator(root.API.RandomizerFactory))
+	spec, err := openapiv2.NewV2(root, root.API.Servers[0].Hosts[0])
 	require.NoError(t, err)
 
 	path, ok := spec.Paths["/repro"]

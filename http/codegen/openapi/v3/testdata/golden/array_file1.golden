@@ -22,46 +22,14 @@ paths:
                                 $ref: '#/components/schemas/Foobar'
                             example:
                                 - bar:
-                                    - string: ""
-                                    - string: ""
+                                    - string: item
                                   foo:
-                                    - Molestiae labore nihil sunt.
-                                - bar:
-                                    - string: ""
-                                    - string: ""
-                                  foo:
-                                    - Molestiae labore nihil sunt.
-                                - bar:
-                                    - string: ""
-                                    - string: ""
-                                  foo:
-                                    - Molestiae labore nihil sunt.
-                                - bar:
-                                    - string: ""
-                                    - string: ""
-                                  foo:
-                                    - Molestiae labore nihil sunt.
+                                    - item
                         example:
                             - bar:
-                                - string: ""
-                                - string: ""
+                                - string: item
                               foo:
-                                - Molestiae labore nihil sunt.
-                            - bar:
-                                - string: ""
-                                - string: ""
-                              foo:
-                                - Molestiae labore nihil sunt.
-                            - bar:
-                                - string: ""
-                                - string: ""
-                              foo:
-                                - Molestiae labore nihil sunt.
-                            - bar:
-                                - string: ""
-                                - string: ""
-                              foo:
-                                - Molestiae labore nihil sunt.
+                                - item
             responses:
                 "200":
                     description: OK response.
@@ -80,11 +48,11 @@ components:
             properties:
                 string:
                     type: string
-                    example: ""
+                    example: item
                     minLength: 0
                     maxLength: 42
             example:
-                string: ""
+                string: item
         Foobar:
             type: object
             properties:
@@ -93,24 +61,22 @@ components:
                     items:
                         $ref: '#/components/schemas/Bar'
                     example:
-                        - string: ""
-                        - string: ""
+                        - string: item
                     minItems: 0
                     maxItems: 42
                 foo:
                     type: array
                     items:
                         type: string
-                        example: Molestiae labore nihil sunt.
+                        example: item
                     example:
-                        - Molestiae labore nihil sunt.
+                        - item
                     minItems: 0
                     maxItems: 42
             example:
                 bar:
-                    - string: ""
-                    - string: ""
+                    - string: item
                 foo:
-                    - Molestiae labore nihil sunt.
+                    - item
 tags:
     - name: testService

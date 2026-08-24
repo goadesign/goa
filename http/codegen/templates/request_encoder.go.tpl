@@ -126,13 +126,11 @@ func {{ .RequestEncoderDeclaration.Name }}(encoder func(*http.Request) goahttp.E
 			{{- if .FieldPointer }}
 		if p.{{ .FieldName }} != nil {
 			{{- end }}
-		values.Add("{{ .HTTPName }}",
-			{{- if or (eq .Type.Name "bytes") (and (isAlias .FieldType) (eq (underlyingType .FieldType).Name "string")) }} string(
-			{{- else if not (eq .Type.Name "string") }} fmt.Sprintf("%v",
+			{{- $target := printf "p.%s" .FieldName }}
+			{{- if .FieldPointer }}
+				{{- $target = printf "*p.%s" .FieldName }}
 			{{- end }}
-			{{- if .FieldPointer }}*{{ end }}p.{{ .FieldName }}
-			{{- if or (eq .Type.Name "bytes") (not (eq .Type.Name "string")) (and (isAlias .FieldType) (eq (underlyingType .FieldType).Name "string")) }})
-			{{- end }})
+		values.Add("{{ .HTTPName }}", {{ template "partial_client_type_expression" (typeConversionData .Type .FieldType "" $target) }})
 			{{- if .FieldPointer }}
 		}
 			{{- end }}
@@ -156,7 +154,7 @@ func {{ .RequestEncoderDeclaration.Name }}(encoder func(*http.Request) goahttp.E
 		}
 	{{- else if .Payload.Request.ClientBody }}
 		{{- if .Payload.Request.ClientBody.Init }}
-		{{ if .IsJSONRPC }}b{{ else }}body{{ end }} := {{ .Payload.Request.ClientBody.Init.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .FieldPointer }}&{{ end }}{{ .VarName }}, {{ end }})
+		{{ if .IsJSONRPC }}b{{ else }}body{{ end }} := {{ .Payload.Request.ClientBody.Init.Declaration.Name }}({{ range .Payload.Request.ClientBody.Init.ClientArgs }}{{ if .FieldPointer }}&{{ end }}{{ .VarName }}, {{ end }})
 		{{- else }}
 		{{ if .IsJSONRPC }}b{{ else }}body{{ end }} := p{{ if .Payload.Request.PayloadAttr }}.{{ .Payload.Request.PayloadAttr }}{{ end }}
 		{{- end }}

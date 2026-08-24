@@ -38,7 +38,7 @@ func (e *GRPCErrorExpr) Validate() *eval.ValidationErrors {
 			verr.Add(e, "Error %#v does not match an error defined in the service", e.Name)
 		}
 	case *RootExpr:
-		if Root.Error(e.Name) == nil {
+		if p.Error(e.Name) == nil {
 			verr.Add(e, "Error %#v does not match an error defined in the API", e.Name)
 		}
 	}
@@ -51,16 +51,18 @@ func (e *GRPCErrorExpr) Finalize(a *GRPCEndpointExpr) {
 	e.Response.Finalize(a, e.AttributeExpr)
 }
 
-// mappedError returns the error declaration that owns this reusable gRPC
-// response policy before the policy is applied to an endpoint method.
-func (e *GRPCErrorExpr) mappedError() (*ErrorExpr, string) {
+// mappedError returns the error declaration described by this reusable gRPC
+// response before it is copied to an endpoint.
+func (e *GRPCErrorExpr) mappedError(root *RootExpr) (*ErrorExpr, string) {
 	switch parent := e.Response.Parent.(type) {
 	case *GRPCEndpointExpr:
 		return parent.MethodExpr.Error(e.Name), "method"
 	case *GRPCServiceExpr:
 		return parent.Error(e.Name), "service"
-	case *GRPCExpr, *RootExpr:
-		return Root.Error(e.Name), "API"
+	case *GRPCExpr:
+		return root.Error(e.Name), "API"
+	case *RootExpr:
+		return parent.Error(e.Name), "API"
 	}
 	return nil, ""
 }

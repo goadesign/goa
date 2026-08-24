@@ -4,11 +4,11 @@ package codegen
 import (
 	"bytes"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/codegen/example"
 	ctestdata "goa.design/goa/v3/codegen/example/testdata"
 	"goa.design/goa/v3/codegen/testutil"
 )
@@ -24,11 +24,9 @@ func TestExampleServerFiles(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// reset global variable
-			example.Servers = make(example.ServersData)
 			root := codegen.RunDSL(t, c.DSL)
-			services := createServiceServices(root)
-			fs := ExampleServerFiles(services)
+			examples := createExamplePlan(root, "generated.local/gen")
+			fs := examples.ServerFiles()
 			require.Greater(t, len(fs), 0)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer
@@ -36,6 +34,12 @@ func TestExampleServerFiles(t *testing.T) {
 				require.NoError(t, s.Write(&buf))
 			}
 			code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
+			if strings.Contains(code, "GetServiceInfo") {
+				t.Errorf("generated server discovers methods at runtime:\n%s", code)
+			}
+			if !strings.Contains(code, "serving gRPC method") {
+				t.Errorf("generated server does not log its planned methods:\n%s", code)
+			}
 			golden := filepath.Join("testdata", "server-"+c.Name+".golden")
 			testutil.AssertGo(t, golden, code)
 		})

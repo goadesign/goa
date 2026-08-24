@@ -1,0 +1,96 @@
+{
+  "components": {
+    "schemas": {
+      "SharedError": {
+        "description": "Shared error value",
+        "example": {
+          "message": "shared failure"
+        },
+        "properties": {
+          "message": {
+            "description": "Error message",
+            "example": "shared failure",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Goa API",
+    "version": "0.0.1"
+  },
+  "openapi": "3.2.0",
+  "paths": {
+    "/first": {
+      "get": {
+        "operationId": "errors#first",
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "shared failure"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SharedError"
+                }
+              }
+            },
+            "description": "first_error: First failure"
+          }
+        },
+        "summary": "first errors",
+        "tags": [
+          "errors"
+        ]
+      }
+    },
+    "/second": {
+      "get": {
+        "operationId": "errors#second",
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "message": "shared failure"
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/SharedError"
+                }
+              }
+            },
+            "description": "second_error: Second failure"
+          }
+        },
+        "summary": "second errors",
+        "tags": [
+          "errors"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Default server for test api",
+      "name": "test api",
+      "url": "http://localhost:80"
+    }
+  ],
+  "tags": [
+    {
+      "name": "errors"
+    }
+  ]
+}

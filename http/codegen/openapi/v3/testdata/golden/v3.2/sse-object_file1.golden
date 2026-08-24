@@ -32,15 +32,15 @@ paths:
                                                     example: true
                                                 id:
                                                     type: string
-                                                    example: Ipsa sed perferendis rerum.
+                                                    example: event
                                                 value:
                                                     type: integer
-                                                    example: 5784889851462556968
+                                                    example: 1
                                                     format: int64
                                             example:
                                                 flag: true
-                                                id: Ipsa sed perferendis rerum.
-                                                value: 5784889851462556968
+                                                id: event
+                                                value: 1
                                 required:
                                     - data
 components:
@@ -53,14 +53,14 @@ components:
                     example: true
                 id:
                     type: string
-                    example: Aut non.
+                    example: event
                 value:
                     type: integer
-                    example: 8434029765132757469
+                    example: 1
                     format: int64
             example:
                 flag: true
-                id: Aut non.
-                value: 8434029765132757469
+                id: event
+                value: 1
 tags:
     - name: SSEObjectService

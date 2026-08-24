@@ -4,7 +4,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"goa.design/goa/v3/dsl"
+	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/expr/testdata"
 )
@@ -45,6 +48,115 @@ func TestServiceExprMethod(t *testing.T) {
 	}
 }
 
+func TestEquivalentInlineMethodErrorsShareOrigin(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		dsl.Service("secured", func() {
+			for _, method := range []string{"read", "write"} {
+				dsl.Method(method, func() {
+					dsl.Error("invalid_scopes", dsl.String)
+				})
+			}
+		})
+	})
+	service := root.Service("secured")
+	first := service.Method("read").Error("invalid_scopes").Type.(expr.UserType)
+	second := service.Method("write").Error("invalid_scopes").Type.(expr.UserType)
+
+	require.NotSame(t, first, second)
+	require.Same(t, first.Origin(), second.Origin())
+	firstIdentity, ok := expr.GeneratedUserTypeExampleIdentity(first)
+	require.True(t, ok)
+	secondIdentity, ok := expr.GeneratedUserTypeExampleIdentity(second)
+	require.True(t, ok)
+	require.NotEqual(t, firstIdentity, secondIdentity)
+}
+
+func TestIncompatibleInlineMethodErrorsAreRejected(t *testing.T) {
+	expr.ResetDSL(t)
+	design := func() {
+		dsl.Service("secured", func() {
+			dsl.Method("read", func() {
+				dsl.Error("invalid_scopes", dsl.String)
+			})
+			dsl.Method("write", func() {
+				dsl.Error("invalid_scopes", dsl.Int)
+			})
+		})
+	}
+	require.True(t, eval.Execute(design, nil))
+	err := eval.RunDSL()
+	require.ErrorContains(t, err, `inline error "invalid_scopes" must define the same value contract in every method of service "secured"`)
+}
+
+func TestRepeatedStandardErrorsMustUseSameQualifiers(t *testing.T) {
+	qualifiers := []struct {
+		name  string
+		apply func()
+	}{
+		{name: "temporary", apply: dsl.Temporary},
+		{name: "timeout", apply: func() { dsl.Timeout() }},
+		{name: "fault", apply: dsl.Fault},
+	}
+	for _, qualifier := range qualifiers {
+		t.Run("service and method "+qualifier.name, func(t *testing.T) {
+			expr.ResetDSL(t)
+			design := func() {
+				dsl.Service("jobs", func() {
+					dsl.Error("busy", qualifier.apply)
+					dsl.Method("run", func() {
+						dsl.Error("busy")
+					})
+				})
+			}
+			require.True(t, eval.Execute(design, nil))
+			err := eval.RunDSL()
+			require.ErrorContains(t, err, qualifier.name+" setting differs")
+		})
+
+		t.Run("two methods "+qualifier.name, func(t *testing.T) {
+			expr.ResetDSL(t)
+			design := func() {
+				dsl.Service("jobs", func() {
+					dsl.Method("start", func() {
+						dsl.Error("busy", qualifier.apply)
+					})
+					dsl.Method("resume", func() {
+						dsl.Error("busy")
+					})
+				})
+			}
+			require.True(t, eval.Execute(design, nil))
+			err := eval.RunDSL()
+			require.ErrorContains(t, err, qualifier.name+" setting differs")
+		})
+
+		t.Run("matching "+qualifier.name, func(t *testing.T) {
+			expr.RunDSL(t, func() {
+				dsl.Service("jobs", func() {
+					dsl.Error("busy", qualifier.apply)
+					dsl.Method("run", func() {
+						dsl.Error("busy", qualifier.apply)
+					})
+				})
+			})
+		})
+	}
+}
+
+func TestRepeatedAuthoredErrorTypesDoNotShareGeneratedConstructors(t *testing.T) {
+	custom := dsl.Type("CustomError", func() {
+		dsl.Attribute("message", dsl.String)
+	})
+	expr.RunDSL(t, func() {
+		dsl.Service("jobs", func() {
+			dsl.Error("busy", custom, dsl.Temporary)
+			dsl.Method("run", func() {
+				dsl.Error("busy", custom)
+			})
+		})
+	})
+}
+
 func TestServiceExprError(t *testing.T) {
 	var (
 		errorFoo = &expr.ErrorExpr{
@@ -72,14 +184,17 @@ func TestServiceExprError(t *testing.T) {
 		},
 	}
 
-	expr.Root.Errors = []*expr.ErrorExpr{
-		errorBar,
-	}
 	s := expr.ServiceExpr{
 		Errors: []*expr.ErrorExpr{
 			errorFoo,
 		},
 	}
+	design := &expr.RootExpr{
+		API:      expr.NewAPIExpr("test", func() {}),
+		Errors:   []*expr.ErrorExpr{errorBar},
+		Services: []*expr.ServiceExpr{&s},
+	}
+	design.WalkSets(func(eval.ExpressionSet) {})
 	for k, tc := range cases {
 		t.Run(k, func(t *testing.T) {
 			if actual := s.Error(tc.name); actual != tc.expected {

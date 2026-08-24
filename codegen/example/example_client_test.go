@@ -5,31 +5,49 @@ package example
 import (
 	"bytes"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example/testdata"
+	"goa.design/goa/v3/codegen/service"
+	dsl "goa.design/goa/v3/dsl"
+	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/expr"
 )
 
 func TestExampleCLIFiles(t *testing.T) {
 	cases := []struct {
-		Name string
-		DSL  func()
+		Name               string
+		DSL                func()
+		HasEndpointResults bool
+		HasStreamResults   bool
 	}{
-		{"no-server", testdata.NoServerDSL},
-		{"single-server-single-host", testdata.SingleServerSingleHostDSL},
-		{"single-server-single-host-with-variables", testdata.SingleServerSingleHostWithVariablesDSL},
-		{"single-server-multiple-hosts", testdata.SingleServerMultipleHostsDSL},
-		{"single-server-multiple-hosts-with-variables", testdata.SingleServerMultipleHostsWithVariablesDSL},
+		{"no-server", testdata.NoServerDSL, true, false},
+		{"single-server-single-host", testdata.SingleServerSingleHostDSL, true, false},
+		{"single-server-single-host-with-variables", testdata.SingleServerSingleHostWithVariablesDSL, true, false},
+		{"single-server-multiple-hosts", testdata.SingleServerMultipleHostsDSL, true, false},
+		{"single-server-multiple-hosts-with-variables", testdata.SingleServerMultipleHostsWithVariablesDSL, true, false},
+		{"server-stream", serverStreamClientDSL, false, true},
+		{"input-stream", inputStreamClientDSL, false, false},
+		{"mixed-results", mixedResultClientDSL, true, false},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// reset global variable
-			Servers = make(ServersData)
 			root := codegen.RunDSL(t, c.DSL)
-			fs := CLIFiles(root)
+			generation, err := codegen.NewGeneration("goa.design/goa/example", []eval.Root{root})
+			require.NoError(t, err)
+			servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+			require.NoError(t, err)
+			plan, err := NewPlan(generation, servicePlan)
+			require.NoError(t, err)
+			require.NoError(t, generation.Freeze())
+			require.NoError(t, servicePlan.Link())
+			rootData, ok := plan.Root(servicePlan)
+			require.True(t, ok)
+			fs := CLIFiles(rootData)
 			require.Len(t, fs, 1)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer
@@ -37,8 +55,118 @@ func TestExampleCLIFiles(t *testing.T) {
 				require.NoError(t, s.Write(&buf))
 			}
 			code := codegen.FormatTestCode(t, "package foo\n"+buf.String())
+			require.Equal(t, c.HasEndpointResults, strings.Contains(code, "func writeEndpointResult("))
+			require.Equal(t, c.HasStreamResults, strings.Contains(code, "func writeStreamResults["))
+			require.Equal(t, c.HasEndpointResults || c.HasStreamResults, strings.Contains(code, "func writeJSON("))
 			golden := filepath.Join("testdata", "client-"+c.Name+".golden")
 			compareOrUpdateGolden(t, code, golden)
 		})
 	}
+}
+
+var serverStreamClientDSL = func() {
+	dsl.Service("events", func() {
+		dsl.Method("watch", func() {
+			dsl.StreamingResult(dsl.String)
+			dsl.GRPC(func() {})
+		})
+	})
+}
+
+var inputStreamClientDSL = func() {
+	dsl.Service("events", func() {
+		dsl.Method("upload", func() {
+			dsl.StreamingPayload(dsl.String)
+			dsl.Result(dsl.String)
+			dsl.HTTP(func() {
+				dsl.POST("/upload")
+			})
+			dsl.GRPC(func() {})
+		})
+	})
+}
+
+var mixedResultClientDSL = func() {
+	dsl.Service("events", func() {
+		dsl.Method("create", func() {
+			dsl.Result(dsl.String)
+			dsl.StreamingResult(dsl.Int)
+			dsl.HTTP(func() {
+				dsl.POST("/create")
+				dsl.ServerSentEvents()
+			})
+		})
+	})
+}
+
+func TestMixedClientRoutesJSONRPCCommandsFromPlannedEndpoints(t *testing.T) {
+	root := codegen.RunDSL(t, mixedClientRoutingDSL)
+	generation, err := codegen.NewGeneration("example.local/gen", []eval.Root{root})
+	require.NoError(t, err)
+	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	require.NoError(t, err)
+	plan, err := NewPlan(generation, servicePlan)
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, servicePlan.Link())
+	plannedRoot, ok := plan.Root(servicePlan)
+	require.True(t, ok)
+
+	files := CLIFiles(plannedRoot)
+	require.Len(t, files, 1)
+	code := renderExampleSections(t, files[0])
+	require.NotContains(t, code, "strings.HasPrefix(err.Error()")
+	require.Contains(t, code, `case "catalog":`)
+	require.Contains(t, code, `case "watch":`)
+	require.Contains(t, code, "err = doJSONRPC(context.Background(), scheme, host, timeout, debug, os.Stdout)")
+	require.Contains(t, code, `usageCommands := []string{`)
+	require.NotContains(t, code, "sort.Strings(usageCommands)")
+	require.NotContains(t, code, "slices.Compact(usageCommands)")
+	first := strings.Index(code, `"catalog read"`)
+	second := strings.Index(code, `"catalog watch"`)
+	require.GreaterOrEqual(t, first, 0)
+	require.Greater(t, second, first)
+}
+
+func TestClientHostVariableValidationEmitsFixedCases(t *testing.T) {
+	root := codegen.RunDSL(t, testdata.SingleServerMultipleHostsWithVariablesDSL)
+	generation, err := codegen.NewGeneration("example.local/gen", []eval.Root{root})
+	require.NoError(t, err)
+	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	require.NoError(t, err)
+	plan, err := NewPlan(generation, servicePlan)
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, servicePlan.Link())
+	plannedRoot, ok := plan.Root(servicePlan)
+	require.True(t, ok)
+
+	code := renderExampleSections(t, CLIFiles(plannedRoot)[0])
+	require.Contains(t, code, `switch *versionF`)
+	require.Contains(t, code, `case "v1", "v2":`)
+	require.NotContains(t, code, "for _, v := range []string")
+}
+
+var mixedClientRoutingDSL = func() {
+	dsl.API("mixed client", func() {
+		dsl.Server("public", func() {
+			dsl.Services("catalog")
+			dsl.Host("development", func() {
+				dsl.URI("http://localhost:8080")
+			})
+		})
+	})
+	dsl.Service("catalog", func() {
+		dsl.JSONRPC(func() {
+			dsl.POST("/rpc")
+		})
+		dsl.Method("read", func() {
+			dsl.HTTP(func() {
+				dsl.GET("/catalog")
+			})
+		})
+		dsl.Method("watch", func() {
+			dsl.JSONRPC(func() {})
+		})
+	})
 }

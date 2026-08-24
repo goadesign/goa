@@ -22,6 +22,22 @@ func TestGRPCEndpointValidation(t *testing.T) {
 			DSL:    testdata.GRPCEndpointWithAnyType,
 			Errors: []string{}, // Any type is now supported in gRPC
 		},
+		"endpoint-with-mixed-results": {
+			DSL: testdata.GRPCEndpointWithMixedResults,
+			Errors: []string{
+				`service "Service" gRPC endpoint "Method": gRPC method "Method" cannot define both Result and StreamingResult because one gRPC call cannot return a separate result after its response stream`,
+			},
+		},
+		"endpoint-with-matching-mixed-results": {
+			DSL: testdata.GRPCEndpointWithMatchingMixedResults,
+			Errors: []string{
+				`service "Service" gRPC endpoint "Method": gRPC method "Method" cannot define both Result and StreamingResult because one gRPC call cannot return a separate result after its response stream`,
+			},
+		},
+		"endpoint-with-streaming-result": {
+			DSL:    testdata.GRPCEndpointWithStreamingResult,
+			Errors: []string{},
+		},
 		"endpoint-with-untagged-fields": {
 			DSL: testdata.GRPCEndpointWithUntaggedFields,
 			Errors: []string{`service "Service" gRPC endpoint "Method": attribute "req_not_field" does not have "rpc:tag" defined in the meta, use "Field" to define the attribute of a type used in a gRPC method

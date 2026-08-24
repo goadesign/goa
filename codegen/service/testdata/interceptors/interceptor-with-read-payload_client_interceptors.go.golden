@@ -3,7 +3,7 @@
 // is sent to the server. The implementation is responsible for calling next to
 // complete the request.
 type ClientInterceptors interface {
-	Validation(ctx context.Context, info *ValidationInfo, next goa.Endpoint) (any, error)
+	Validation(ctx context.Context, info ValidationInfo, next goa.Endpoint) (any, error)
 }
 
 // WrapMethodClientEndpoint wraps the Method endpoint with the client

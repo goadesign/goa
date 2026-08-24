@@ -26,7 +26,7 @@ type retainedExpressionFixture struct {
 // security, example, or stream expressions after NewPlan returns.
 func TestServicePlanIgnoresRetainedExpressionMutation(t *testing.T) {
 	baselineFixture := retainedExpressionMutationFixture(t)
-	baselinePlan := retainedServicePlanForPackage(t, baselineFixture.root, "generated.local/gen")
+	baselinePlan := retainedServicePlanForPackage(t, baselineFixture.root)
 	baseline := renderedPlanAndExamples(t, baselinePlan)
 	baselineMethod := baselinePlan.Services().Get("RetainedMutable").Methods[0]
 

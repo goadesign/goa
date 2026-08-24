@@ -1,5 +1,6 @@
-// This file binds projected service validation rules to exact view-package
-// layouts and validator declarations before generated names freeze.
+// This file records validation for result types narrowed to their declared
+// views. Each field check and child call uses the Go type and function
+// declarations submitted for the generated views package.
 package service
 
 import (
@@ -9,8 +10,19 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// planServiceValidations retains every rule and nested validator call emitted
-// by core service view validation after all view declarations exist.
+// viewValidationPolicy states that generated view fields use pointers, apply
+// defaults, and represent Goa OneOf values with generated structs. Both type
+// layout and validation use these same choices.
+func viewValidationPolicy() codegen.GoLayoutPolicy {
+	return codegen.GoLayoutPolicy{
+		Pointer:    true,
+		UseDefault: true,
+		SumType:    true,
+	}
+}
+
+// planServiceValidations records every field check and child validation call
+// written for service result views after all view type names are submitted.
 func planServiceValidations(facts *serviceFacts, rootTypes *rootTypeSet, generation *codegen.Generation) error {
 	hasProjection := false
 	for _, method := range facts.orderedMethods {
@@ -63,13 +75,8 @@ func planServiceValidations(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			return codegen.GoTypeBinding{}, fmt.Errorf("bind unsupported view validation type %s", request.Kind)
 		}
 	}
-	viewPolicy := codegen.GoLayoutPolicy{
-		Pointer:    true,
-		UseDefault: true,
-		SumType:    true,
-	}
 	planLayout := func(attribute *expr.AttributeExpr, pointer bool) (*codegen.GoTypePlan, error) {
-		policy := viewPolicy
+		policy := viewValidationPolicy()
 		policy.Pointer = pointer
 		return codegen.PlanGoType(attribute, codegen.GoTypePlanOptions{
 			Owner:  facts.viewsPath,
@@ -92,16 +99,24 @@ func planServiceValidations(facts *serviceFacts, rootTypes *rootTypeSet, generat
 		}
 		return retained, nil
 	}
-	validatorCall := func(attribute *expr.AttributeExpr, view string) (*codegen.NameDeclaration, error) {
+	validatorCall := func(attribute *expr.AttributeExpr, view string, required bool) (*codegen.NameDeclaration, error) {
 		layout, err := planLayout(attribute, true)
 		if err != nil {
 			return nil, err
 		}
-		return validator(codegen.ValidatorBindingRequest{
+		request := codegen.ValidatorBindingRequest{
 			Attribute: attribute,
 			Layout:    layout,
 			View:      view,
-		})
+		}
+		declaration := facts.validators[validatorKey{
+			declaration: layout.TypeDeclaration(),
+			view:        canonicalValidatorView(view),
+		}]
+		if declaration == nil && required {
+			return validator(request)
+		}
+		return declaration, nil
 	}
 	for _, method := range facts.orderedMethods {
 		if method.projection == nil {
@@ -173,8 +188,11 @@ func planServiceValidations(facts *serviceFacts, rootTypes *rootTypeSet, generat
 				}
 			}
 			for _, validation := range projected.validations {
+				if !validation.needed {
+					continue
+				}
 				if validation.collectionElem != nil {
-					declaration, err := validatorCall(validation.collectionElem, validation.viewName)
+					declaration, err := validatorCall(validation.collectionElem, validation.viewName, true)
 					if err != nil {
 						return err
 					}
@@ -200,7 +218,7 @@ func planServiceValidations(facts *serviceFacts, rootTypes *rootTypeSet, generat
 				validation.layout = layout
 				validation.plan = plan
 				for _, field := range validation.fields {
-					declaration, err := validatorCall(field.attribute, field.view)
+					declaration, err := validatorCall(field.attribute, field.view, false)
 					if err != nil {
 						return err
 					}

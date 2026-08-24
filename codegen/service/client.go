@@ -1,5 +1,5 @@
-// This file renders one service's in-process client and keeps its type imports
-// scoped to that generated client file.
+// This file renders one service's in-process client and includes only the type
+// imports used by that generated client file.
 package service
 
 import (
@@ -8,7 +8,7 @@ import (
 	"goa.design/goa/v3/codegen"
 )
 
-// clientFile renders the client for the exact service retained by plan.
+// clientFile renders the client from the service data copied into plan.
 func clientFile(plan *Plan, facts *serviceFacts) *codegen.File {
 	services := plan.Services()
 	svc := services.Get(facts.name)

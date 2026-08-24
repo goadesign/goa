@@ -25,13 +25,14 @@ type (
 		// Package returns the qualifier used to reference att from the current
 		// generated file, or the empty string for a same-package declaration.
 		Package(att *expr.AttributeExpr) string
-		// Enter returns the resolver that owns att and declarations nested in it.
+		// Enter returns the resolver for the package containing att and declarations
+		// nested in it.
 		Enter(att *expr.AttributeExpr) Attributor
 		// IsSumType reports whether unions use Goa's generated sum-type layout.
 		IsSumType() bool
-		// ValidatorName returns the package-level validation function for att and
-		// the selected result-type view.
-		ValidatorName(att *expr.AttributeExpr, view string) string
+		// ValidatorCall returns the complete call that validates target as att.
+		// path is the generated expression used as the start of nested error paths.
+		ValidatorCall(att *expr.AttributeExpr, view, target, path string) string
 	}
 
 	// AttributeContext contains properties which impacts the code generating
@@ -57,6 +58,9 @@ type (
 		// use pointers when Pointer is true. Service types leave this false because
 		// the empty union discriminator represents omission after decoding.
 		UnionPointer bool
+		// ArrayElementPointer keeps primitive array elements as pointers when
+		// generated validation must distinguish null from the primitive zero value.
+		ArrayElementPointer bool
 	}
 
 	// AttributeScope contains the scope of an attribute. It implements the
@@ -77,37 +81,39 @@ type (
 		// Hooks are optional generator specific extension points
 		// consulted by the transform engine. Nil selects the engine
 		// defaults.
-		Hooks   *TransformHooks
-		helpers map[TransformHelperID]TransformHelper
-		calls   *transformCallCursor
+		Hooks           *TransformHooks
+		helpers         map[TransformHelperID]TransformHelper
+		calls           *transformCallCursor
+		collectionDepth int
+		unionDepth      int
 	}
 
-	// TransformHelperID identifies one recursive helper selected by a transform
-	// plan. Its representation is deliberately private: generators may compare
-	// IDs or use them as map keys but cannot reconstruct them from generated
-	// names.
+	// TransformHelperID selects one recursive function in a TransformPlan. Its
+	// fields are private so callers cannot rebuild it from a generated name.
 	TransformHelperID struct {
 		plan  *TransformPlan
 		index int
 	}
 
-	// TransformHelper describes one recursive source-to-target operation
-	// retained by a transform plan. Render uses its ID and declaration for both
-	// calls and definitions.
+	// TransformHelper describes one generated function that converts a nested or
+	// recursive value. The same chosen function name is used at every call and at
+	// its definition.
 	TransformHelper struct {
-		// ID is the opaque identity owned by the transform plan.
+		// ID selects this function in its TransformPlan.
 		ID TransformHelperID
-		// Source is the exact source attribute selected during planning.
+		// Source describes the source attribute selected for this function.
+		// Helpers returns a detached copy, so changing it does not affect Render.
 		Source *expr.AttributeExpr
-		// Target is the exact target attribute selected during planning.
+		// Target describes the target attribute selected for this function.
+		// Helpers returns a detached copy, so changing it does not affect Render.
 		Target *expr.AttributeExpr
 		// Required reports whether nil is rejected by the helper operation.
 		Required bool
 		// Occurrence is the one-based position of this helper operation in the
 		// transform plan's stable traversal.
 		Occurrence int
-		// Declaration is the canonical package-level function bound before render.
-		// Render rejects an unbound helper.
+		// Declaration holds the package-level function name chosen before source
+		// is written. Render returns an error when it is missing.
 		Declaration *NameDeclaration
 	}
 
@@ -129,13 +135,15 @@ type (
 	//    }
 	//
 	TransformFunctionData struct {
-		// ID is the retained helper identity used to render this definition.
+		// ID selects the recursive function rendered by this value.
 		ID TransformHelperID
-		// Declaration is the canonical package declaration for retained transforms.
-		// It is nil for the separate one-pass transform API.
+		// Declaration is the package-level function chosen before writing code.
+		// It is nil when GoTransformWithAttrs created this value while writing
+		// code.
 		Declaration *NameDeclaration
-		// Name is the generated helper name for staged legacy callers. It is empty
-		// when Declaration owns the final name.
+		// Name is the final helper name kept for existing plugins.
+		//
+		// Deprecated: Use Declaration.Name() after planning.
 		Name string
 		// ParamTypeRef is the generated Go reference to the helper parameter type.
 		ParamTypeRef string
@@ -145,39 +153,63 @@ type (
 		Code string
 	}
 
-	// TransformPlan retains the exact source-target operations and recursive
-	// helpers selected for one Go transformation. Generators build the plan
-	// before package names freeze and render it afterward with contexts that
-	// resolve the final declarations.
+	// TransformPlan owns copied source and target expressions plus every
+	// recursive function needed to convert between them. Create a plan, inspect
+	// the detached helper descriptions from Helpers and declare their names, bind
+	// those declarations and the completed type resolvers, then call Render.
+	// A helper ID remains bound to this plan, but changing a description returned
+	// by Helpers cannot change the private expressions Render uses. Render caches
+	// each exact argument set, so repeated calls return the first generated code.
 	TransformPlan struct {
-		source     *expr.AttributeExpr
-		target     *expr.AttributeExpr
-		sourceCtx  *AttributeContext
-		targetCtx  *AttributeContext
-		helpers    []TransformHelper
-		operations []*transformOperation
+		source          *expr.AttributeExpr
+		target          *expr.AttributeExpr
+		sourceBaseline  *expr.AttributeExpr
+		targetBaseline  *expr.AttributeExpr
+		sourceOriginals map[*expr.AttributeExpr]*expr.AttributeExpr
+		targetOriginals map[*expr.AttributeExpr]*expr.AttributeExpr
+		prefix          string
+		hooks           *TransformHooks
+		sourceCtx       *AttributeContext
+		targetCtx       *AttributeContext
+		helpers         []TransformHelper
+		operations      []*transformOperation
+		renders         map[transformRenderRequest]transformRenderResult
 	}
 
-	// transformPair identifies one recursive source-target operation by its
-	// expression declarations rather than a provisional helper spelling.
+	// transformRenderRequest identifies one Render invocation. Repeating the
+	// same invocation returns its first result instead of invoking hooks again.
+	transformRenderRequest struct {
+		sourceVar string
+		targetVar string
+		newVar    bool
+	}
+
+	// transformRenderResult is the private immutable cache for one Render call.
+	transformRenderResult struct {
+		code    string
+		helpers []*TransformFunctionData
+		err     error
+	}
+
+	// transformPair holds the exact copied source and target types whose fields
+	// are currently being visited.
 	transformPair struct {
 		source expr.DataType
 		target expr.DataType
 	}
 
-	// transformOperation retains the ordered helper calls made while rendering
-	// the top-level transform or one helper body.
+	// transformOperation stores the recursive calls made by the top-level
+	// conversion or one function body, in call order.
 	transformOperation struct {
 		calls []transformCall
 	}
 
-	// transformCall binds one ordered call edge to the helper that renders its
-	// conversion.
+	// transformCall selects the recursive function used by one call.
 	transformCall struct {
 		helper TransformHelperID
 	}
 
-	// transformCallCursor tracks the retained calls consumed by one render.
+	// transformCallCursor counts the planned calls used by one render.
 	transformCallCursor struct {
 		calls []transformCall
 		next  int
@@ -197,6 +229,14 @@ func NewAttributeContext(pointer, reqIgnore, useDefault bool, pkg string, scope 
 // NewAttributeScope initializes an attribute scope.
 func NewAttributeScope(scope *NameScope) *AttributeScope {
 	return newAttributeScope(scope, "")
+}
+
+// EnterCollection returns the loop variable for the current array and a copy
+// used to render values nested inside that array.
+func (a *TransformAttrs) EnterCollection() (string, *TransformAttrs) {
+	child := *a
+	child.collectionDepth++
+	return string(rune('i' + a.collectionDepth)), &child
 }
 
 // IsCompatible returns an error if a and b are not both objects, both arrays,
@@ -237,13 +277,19 @@ func IsCompatible(a, b expr.DataType, actx, bctx string) error {
 	return nil
 }
 
-// AppendHelpers takes care of only appending helper functions from newH that
-// are not already in oldH.
+// AppendHelpers appends functions from newH that oldH does not already contain.
+// Planned functions are the same when they use the same package declaration.
+// Older functions without a declaration are the same when their names match.
+// It panics when one declaration or released name has different parameter,
+// result, or body text because one Go function cannot implement both values.
 func AppendHelpers(oldH, newH []*TransformFunctionData) []*TransformFunctionData {
 	for _, h := range newH {
 		found := false
 		for _, h2 := range oldH {
 			if sameTransformHelper(h, h2) {
+				if !transformFunctionDefinitionsEqual(h, h2) {
+					panic(fmt.Sprintf("transform helper %q has different definitions", h.Name))
+				}
 				found = true
 				break
 			}
@@ -255,11 +301,15 @@ func AppendHelpers(oldH, newH []*TransformFunctionData) []*TransformFunctionData
 	return oldH
 }
 
-// sameTransformHelper compares canonical declarations for catalog-backed
-// helpers and generated names for staged legacy helpers.
+// sameTransformHelper compares the chosen package declarations when both
+// helpers have one. Values created while writing code have no declaration and
+// keep using their generated names.
 func sameTransformHelper(left, right *TransformFunctionData) bool {
+	if left.Declaration != nil && right.Declaration != nil {
+		return left.Declaration == right.Declaration
+	}
 	if left.Declaration != nil || right.Declaration != nil {
-		return left.ID == right.ID
+		return false
 	}
 	return left.Name == right.Name
 }
@@ -337,6 +387,12 @@ func (a *AttributeContext) IsUnionPointer(required bool) bool {
 	return a.UnionPointer && (!required || a.Pointer)
 }
 
+// IsArrayElementPointer reports whether primitive elements in array use
+// pointers so generated validation can reject null before conversion.
+func (a *AttributeContext) IsArrayElementPointer(array *expr.Array) bool {
+	return arrayElementIsPointer(array, a.ArrayElementPointer)
+}
+
 // Pkg returns the package name of the given type.
 func (a *AttributeContext) Pkg(att *expr.AttributeExpr) string {
 	return a.Scope.Package(att)
@@ -353,11 +409,12 @@ func (a *AttributeContext) Enter(att *expr.AttributeExpr) *AttributeContext {
 // Dup creates a shallow copy of the AttributeContext.
 func (a *AttributeContext) Dup() *AttributeContext {
 	return &AttributeContext{
-		Pointer:        a.Pointer,
-		IgnoreRequired: a.IgnoreRequired,
-		UseDefault:     a.UseDefault,
-		Scope:          a.Scope,
-		UnionPointer:   a.UnionPointer,
+		Pointer:             a.Pointer,
+		IgnoreRequired:      a.IgnoreRequired,
+		UseDefault:          a.UseDefault,
+		Scope:               a.Scope,
+		UnionPointer:        a.UnionPointer,
+		ArrayElementPointer: a.ArrayElementPointer,
 	}
 }
 
@@ -402,10 +459,11 @@ func (a *AttributeScope) Package(att *expr.AttributeExpr) string {
 	return a.pkg
 }
 
-// ValidatorName returns the deterministic validator convention used by
-// generators whose names are already isolated in a private transport scope.
-func (a *AttributeScope) ValidatorName(att *expr.AttributeExpr, view string) string {
-	return "Validate" + a.Name(att, "", false, true) + Goify(view, true)
+// ValidatorCall returns a call to the validation function selected from the
+// generated type and view names.
+func (a *AttributeScope) ValidatorCall(att *expr.AttributeExpr, view, target, _ string) string {
+	name := "Validate" + a.Name(att, "", false, true) + Goify(view, true)
+	return fmt.Sprintf("%s(%s)", name, target)
 }
 
 // Enter returns a scope whose default qualifier follows att's explicit type

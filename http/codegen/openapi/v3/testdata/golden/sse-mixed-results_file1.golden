@@ -20,7 +20,7 @@ paths:
                         schema:
                             $ref: '#/components/schemas/Payload'
                         example:
-                            x: Quis distinctio vitae ut.
+                            x: request
             responses:
                 "200":
                     description: OK response.
@@ -29,7 +29,7 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/Result'
                             example:
-                                id: Delectus eum inventore illum velit et.
+                                id: result
 components:
     schemas:
         Payload:
@@ -37,10 +37,10 @@ components:
             properties:
                 x:
                     type: string
-                    example: Quis distinctio vitae ut.
+                    example: request
             description: Request body for Create.
             example:
-                x: Quis distinctio vitae ut.
+                x: request
             required:
                 - x
         Result:
@@ -48,9 +48,9 @@ components:
             properties:
                 id:
                     type: string
-                    example: Delectus eum inventore illum velit et.
+                    example: result
             example:
-                id: Delectus eum inventore illum velit et.
+                id: result
             required:
                 - id
 tags:

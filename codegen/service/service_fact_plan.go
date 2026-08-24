@@ -1,4 +1,5 @@
-// This file copies service method, error, streaming, and interceptor membership before generated package names freeze.
+// This file copies the methods, errors, stream settings, and interceptors used
+// by one service before generated Go names are chosen.
 package service
 
 import (
@@ -8,11 +9,13 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// collectServiceFacts copies service membership and the transport decisions
-// that renderers need so linking never consults mutable root collections.
+// collectServiceFacts copies the service fields and transport choices needed by
+// templates, so later steps do not walk design collections that plugins could
+// change.
 func collectServiceFacts(root *expr.RootExpr, service *expr.ServiceExpr, examples *expr.ExampleGenerator) *serviceFacts {
 	facts := &serviceFacts{
 		service:        service,
+		apiName:        root.API.Name,
 		name:           service.Name,
 		description:    service.Description,
 		methods:        append([]*expr.MethodExpr(nil), service.Methods...),
@@ -51,7 +54,6 @@ func collectServiceFacts(root *expr.RootExpr, service *expr.ServiceExpr, example
 			method.StreamingResult,
 			examples.At(expr.MethodStreamingResultExampleIdentity(method)),
 		)
-		_, methodFacts.isJSONRPC = method.Meta["jsonrpc"]
 		methodFacts.requirements, methodFacts.schemes = retainMethodSecurity(method)
 		for _, methodError := range method.Errors {
 			methodFacts.errors = append(methodFacts.errors, retainErrorRenderFacts(methodError))
@@ -59,17 +61,6 @@ func collectServiceFacts(root *expr.RootExpr, service *expr.ServiceExpr, example
 		if method.IsStreaming() || method.HasMixedResults() {
 			methodFacts.serverStreamVarName = methodScope.Unique(codegen.Goify(method.Name, true), "ServerStream")
 			methodFacts.clientStreamVarName = methodScope.Unique(codegen.Goify(method.Name, true), "ClientStream")
-		}
-		if _, jsonRPC := method.Meta["jsonrpc"]; jsonRPC && method.IsStreaming() {
-			if jsonRPCService := root.API.JSONRPC.HTTPExpr.Service(service.Name); jsonRPCService != nil {
-				for _, endpoint := range jsonRPCService.HTTPEndpoints {
-					if endpoint.MethodExpr == method {
-						methodFacts.isJSONRPCSSE = endpoint.SSE != nil
-						methodFacts.isJSONRPCWebSocket = endpoint.SSE == nil
-						break
-					}
-				}
-			}
 		}
 		for _, httpService := range root.API.HTTP.Services {
 			if httpService.Name() != service.Name {
@@ -115,9 +106,9 @@ func collectServiceFacts(root *expr.RootExpr, service *expr.ServiceExpr, example
 	return facts
 }
 
-// retainServiceValueTypes records every named type reachable from one service
-// value contract. External mappings use this set so stream and error values
-// receive the same generated conversion ownership as payloads and results.
+// retainServiceValueTypes records every named type reachable from a payload,
+// result, error, or stream value. User-supplied Go type mappings use this set to
+// generate conversions for all four kinds of service data.
 func retainServiceValueTypes(facts *serviceFacts, attribute *expr.AttributeExpr) {
 	if attribute == nil || attribute.Type == expr.Empty {
 		return
@@ -133,8 +124,8 @@ func retainServiceValueTypes(facts *serviceFacts, attribute *expr.AttributeExpr)
 	}
 }
 
-// collectInterceptorFacts fixes method applicability during planning so
-// linking never walks service methods or interceptor expression lists again.
+// collectInterceptorFacts records the methods that call each interceptor, so
+// template data can be built without walking the design again.
 func collectInterceptorFacts(interceptors []*expr.InterceptorExpr, methods []*expr.MethodExpr, methodFacts map[*expr.MethodExpr]*methodFacts, server bool) []*interceptorFacts {
 	result := make([]*interceptorFacts, len(interceptors))
 	for index, interceptor := range interceptors {
@@ -164,9 +155,8 @@ func collectInterceptorFacts(interceptors []*expr.InterceptorExpr, methods []*ex
 	return result
 }
 
-// retainMethodAttribute copies the top-level method contract and evaluates its
-// example during collection. Nested type layout is retained separately by the
-// generated Go type plan.
+// retainMethodAttribute copies one payload or result's description, metadata,
+// default, and example. GoTypePlan separately records its nested Go fields.
 func retainMethodAttribute(attribute *expr.AttributeExpr, examples *expr.ExampleGenerator) *methodAttributeFacts {
 	if attribute == nil {
 		return nil
@@ -186,8 +176,9 @@ func retainMethodAttribute(attribute *expr.AttributeExpr, examples *expr.Example
 	}
 }
 
-// retainErrorRenderFacts copies the error text, type wrapper, location, and
-// marker flags that generated constructors and client comments consume.
+// retainErrorRenderFacts copies the error description, type, output location,
+// and temporary, timeout, and fault settings used by generated constructors
+// and client comments.
 func retainErrorRenderFacts(errorExpression *expr.ErrorExpr) *errorRenderFacts {
 	_, temporary := errorExpression.Meta["goa:error:temporary"]
 	_, timeout := errorExpression.Meta["goa:error:timeout"]
@@ -204,12 +195,12 @@ func retainErrorRenderFacts(errorExpression *expr.ErrorExpr) *errorRenderFacts {
 		temporary:   temporary,
 		timeout:     timeout,
 		fault:       fault,
-		serviceType: errorExpression.Type == expr.ErrorResult,
+		serviceType: expr.IsErrorResult(errorExpression.Type),
 	}
 }
 
-// retainMethodSecurity evaluates scheme credential fields and scopes while
-// the finalized method payload and requirements are still collection inputs.
+// retainMethodSecurity copies credential fields and required authorization
+// scope names from the evaluated method before template data is built.
 func retainMethodSecurity(method *expr.MethodExpr) (RequirementsData, SchemesData) {
 	requirements := make(RequirementsData, 0, len(method.Requirements))
 	var schemes SchemesData
@@ -228,7 +219,8 @@ func retainMethodSecurity(method *expr.MethodExpr) (RequirementsData, SchemesDat
 	return requirements, schemes
 }
 
-// cloneSchemeData detaches the collection values retained in one scheme.
+// cloneSchemeData copies one security scheme and its slices so later changes to
+// the design cannot change generated template data.
 func cloneSchemeData(source *SchemeData) *SchemeData {
 	if source == nil {
 		return nil
@@ -243,8 +235,8 @@ func cloneSchemeData(source *SchemeData) *SchemeData {
 	return &cloned
 }
 
-// cloneRetainedValue copies the collection shapes accepted by Goa examples
-// and defaults. Primitive values are immutable and may be shared.
+// This helper copies maps and slices used in Goa examples and defaults.
+// Numbers, strings, booleans, and other value types may be shared.
 func cloneRetainedValue(source any) any {
 	switch actual := source.(type) {
 	case expr.Val:
@@ -290,8 +282,8 @@ func cloneRetainedValue(source any) any {
 	}
 }
 
-// retainedInterceptors returns one stable, name-ordered interceptor set without
-// sorting or appending into any expression-owned slice.
+// This helper returns each applicable interceptor once, sorted by name, without
+// changing a slice stored in the design.
 func retainedInterceptors(api, service []*expr.InterceptorExpr, methods []*expr.MethodExpr, server bool) []*expr.InterceptorExpr {
 	interceptors := append([]*expr.InterceptorExpr(nil), api...)
 	interceptors = append(interceptors, service...)

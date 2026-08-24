@@ -1,15 +1,15 @@
 // ClientStreamStreamingBody is the type of the
 // "StreamingPayloadRequiredFieldsService" service "ClientStream" endpoint HTTP
 // request body.
-type ClientStreamStreamingBody StreamingRequest
+type ClientStreamStreamingBody StreamingRequestStreamingBody
 
 // BidirectionalStreamStreamingBody is the type of the
 // "StreamingPayloadRequiredFieldsService" service "BidirectionalStream"
 // endpoint HTTP request body.
-type BidirectionalStreamStreamingBody StreamingRequest
+type BidirectionalStreamStreamingBody StreamingRequestStreamingBody
 
-// StreamingRequest is used to define fields on request body types.
-type StreamingRequest struct {
+// StreamingRequestStreamingBody is used to define fields on request body types.
+type StreamingRequestStreamingBody struct {
 	Required     *string `form:"required,omitempty" json:"required,omitempty" xml:"required,omitempty"`
 	Optional     *string `form:"optional,omitempty" json:"optional,omitempty" xml:"optional,omitempty"`
 	BaseRequired *string `form:"baseRequired,omitempty" json:"baseRequired,omitempty" xml:"baseRequired,omitempty"`
@@ -64,13 +64,26 @@ func ValidateBidirectionalStreamStreamingBody(body *BidirectionalStreamStreaming
 	return
 }
 
-// ValidateStreamingRequest runs the validations defined on StreamingRequest
-func ValidateStreamingRequest(body *StreamingRequest) (err error) {
+// ValidateStreamingRequestStreamingBody runs the validations defined on
+// StreamingRequest
+func ValidateStreamingRequestStreamingBody(body *StreamingRequestStreamingBody) (err error) {
 	if body.Required == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("required", "body"))
 	}
 	if body.BaseRequired == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("baseRequired", "body"))
+	}
+	return
+}
+
+// validateStreamingRequestStreamingBody checks StreamingRequest and reports
+// errors using the path supplied by its caller
+func validateStreamingRequestStreamingBody(body *StreamingRequestStreamingBody, path string) (err error) {
+	if body.Required == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("required", path))
+	}
+	if body.BaseRequired == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("baseRequired", path))
 	}
 	return
 }

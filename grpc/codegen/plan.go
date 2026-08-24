@@ -1,14 +1,14 @@
-// This file retains one gRPC design, its chosen Go names, and every generated
-// file from planning through rendering.
+// This file stores one gRPC design, its chosen Go names, and every file built
+// from it.
 package codegen
 
 import (
 	"fmt"
 	"path"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/cli"
+	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 )
@@ -22,21 +22,32 @@ type (
 		Service *service.Plan
 	}
 
-	// Plan retains one design root and every gRPC file built from it.
+	// Plan stores one design and every gRPC file built from it.
 	Plan struct {
-		generation *codegen.Generation
-		root       *expr.RootExpr
-		service    *service.Plan
-		cli        *grpcCLIPlan
-		services   *ServicesData
-		proto      []*codegen.File
-		server     []*codegen.File
-		client     []*codegen.File
-		serverType []*codegen.File
-		clientType []*codegen.File
-		clientCLI  []*codegen.File
-		example    []*codegen.File
-		exampleCLI []*codegen.File
+		generation   *codegen.Generation
+		root         *expr.RootExpr
+		service      *service.Plan
+		cli          *grpcCLIPlan
+		protobuf     map[*expr.GRPCServiceExpr]*protobufServicePlan
+		packages     map[*expr.GRPCServiceExpr]*grpcServicePackage
+		tools        map[*expr.GRPCServiceExpr]*protobufToolPlan
+		symbols      map[*expr.GRPCServiceExpr]*grpcSymbols
+		expressions  []*expr.GRPCServiceExpr
+		servicesPlan []*grpcServicePlan
+		services     *ServicesData
+		proto        []*codegen.File
+		server       []*codegen.File
+		client       []*codegen.File
+		serverType   []*codegen.File
+		clientType   []*codegen.File
+		clientCLI    []*codegen.File
+	}
+
+	// ExamplePlan builds runnable gRPC programs from server data and generated
+	// services that came from the same design.
+	ExamplePlan struct {
+		root      *example.Root
+		transport *Plan
 	}
 
 	// grpcCLIPlan contains the command parser and payload function names for one
@@ -44,12 +55,47 @@ type (
 	grpcCLIPlan struct {
 		parsers  map[*expr.ServerExpr]*cli.ParserPlan
 		builders map[*expr.GRPCEndpointExpr]*codegen.NameDeclaration
+		servers  []*grpcCLIServerPlan
+	}
+
+	// grpcCLIServerPlan stores one server name and the command parser declared
+	// for that server before generated files are built.
+	grpcCLIServerPlan struct {
+		expression *expr.ServerExpr
+		name       string
+		parser     *cli.ParserPlan
+	}
+
+	// grpcServicePackage stores the generated service import and the directory
+	// used by every gRPC package for that service.
+	grpcServicePackage struct {
+		service  *codegen.ImportSpec
+		views    *codegen.ImportSpec
+		pathName string
 	}
 )
 
-// NewPlans reads every service design in generation and retains one plan for
-// each input. It chooses shared package names before generation freezes.
+// NewPlans reads every service design and stores one plan for each input. It
+// chooses all shared package names before files are built.
 func NewPlans(generation *codegen.Generation, inputs ...PlanInput) ([]*Plan, error) {
+	return newPlans(generation, systemProtobufTools(), inputs...)
+}
+
+// NewExamplePlan returns an example renderer only when examples contains the
+// server data copied from transport's service design.
+func NewExamplePlan(transport *Plan, examples *example.Plan) (*ExamplePlan, error) {
+	root, ok := examples.Root(transport.service)
+	if !ok {
+		return nil, fmt.Errorf("gRPC examples require server data created from the same service design")
+	}
+	if err := planGRPCExampleImports(transport.generation, transport, root); err != nil {
+		return nil, err
+	}
+	return &ExamplePlan{root: root, transport: transport}, nil
+}
+
+// newPlans lets tests provide fixed protobuf executable paths and versions.
+func newPlans(generation *codegen.Generation, resolver protobufToolResolver, inputs ...PlanInput) ([]*Plan, error) {
 	owned := make(map[*expr.RootExpr]struct{})
 	for _, candidate := range generation.Roots() {
 		if root, ok := candidate.(*expr.RootExpr); ok && len(root.API.GRPC.Services) > 0 {
@@ -72,20 +118,69 @@ func NewPlans(generation *codegen.Generation, inputs ...PlanInput) ([]*Plan, err
 		}
 		seen[input.Root] = struct{}{}
 	}
-	if err := requireGRPCImports(generation); err != nil {
+	toolPlans, err := planProtobufTools(inputs, resolver)
+	if err != nil {
 		return nil, err
 	}
 	plans := make([]*Plan, len(inputs))
 	for index, input := range inputs {
-		cliPlan, err := planGRPCCLI(generation, input)
+		packages, err := planGRPCServicePackages(input)
 		if err != nil {
 			return nil, err
 		}
+		cliPlan, err := planGRPCCLI(generation, input, packages)
+		if err != nil {
+			return nil, err
+		}
+		tools := make(map[*expr.GRPCServiceExpr]*protobufToolPlan, len(input.Root.API.GRPC.Services))
+		for _, grpcService := range input.Root.API.GRPC.Services {
+			tools[grpcService] = toolPlans[grpcService]
+		}
 		plans[index] = &Plan{
-			generation: generation,
-			root:       input.Root,
-			service:    input.Service,
-			cli:        cliPlan,
+			generation:  generation,
+			root:        input.Root,
+			service:     input.Service,
+			cli:         cliPlan,
+			protobuf:    make(map[*expr.GRPCServiceExpr]*protobufServicePlan),
+			packages:    packages,
+			tools:       tools,
+			symbols:     make(map[*expr.GRPCServiceExpr]*grpcSymbols),
+			expressions: append([]*expr.GRPCServiceExpr(nil), input.Root.API.GRPC.Services...),
+		}
+	}
+	if err := planProtobufServices(generation, plans); err != nil {
+		return nil, err
+	}
+	conversions := make(map[grpcConversionKey]*grpcConversion)
+	var helpers []*grpcTransform
+	for _, plan := range plans {
+		input := PlanInput{Root: plan.root, Service: plan.service}
+		for _, grpcService := range plan.expressions {
+			pathName := plan.packages[grpcService].pathName
+			symbols, err := collectGRPCSymbols(generation, input, grpcService, pathName)
+			if err != nil {
+				return nil, err
+			}
+			if err := planGRPCValidations(generation, input, grpcService, plan.protobuf[grpcService], pathName); err != nil {
+				return nil, err
+			}
+			if err := planGRPCTransforms(generation, input, grpcService, plan.protobuf[grpcService], symbols, conversions, &helpers, pathName); err != nil {
+				return nil, err
+			}
+			plan.symbols[grpcService] = symbols
+		}
+	}
+	if err := declareGRPCTransforms(conversions, helpers); err != nil {
+		return nil, err
+	}
+	for _, plan := range plans {
+		servicesPlan, err := collectGRPCServicePlans(generation, plan)
+		if err != nil {
+			return nil, err
+		}
+		plan.servicesPlan = servicesPlan
+		if err := planGRPCImports(generation, plan); err != nil {
+			return nil, err
 		}
 	}
 	return plans, nil
@@ -106,8 +201,16 @@ func (p *Plan) Service() *service.Plan {
 	return p.service
 }
 
-// Link builds the gRPC render data and files after all names are frozen. The
-// service plan must already be linked.
+// ServiceData returns the finalized gRPC data for the exact service used to
+// build this plan. Callers must call Link before reading the service data.
+func (p *Plan) ServiceData(service *expr.GRPCServiceExpr) (*ServiceData, bool) {
+	p.requireLinked()
+	data, ok := p.services.serviceByExpr[service]
+	return data, ok
+}
+
+// Link builds the gRPC files after all generated Go names are fixed. The
+// service plan must already have built its files.
 func (p *Plan) Link() error {
 	if !p.generation.Frozen() {
 		return fmt.Errorf("gRPC plan cannot link before generation freeze")
@@ -116,18 +219,13 @@ func (p *Plan) Link() error {
 		return fmt.Errorf("gRPC plan is already linked")
 	}
 	services := newServicesData(p.service.Services(), p)
-	for _, grpcService := range p.root.API.GRPC.Services {
-		services.Get(grpcService.Name())
-	}
 	p.services = services
-	p.proto = ProtoFiles(services)
-	p.server = ServerFiles(services)
-	p.client = ClientFiles(services)
-	p.serverType = ServerTypeFiles(services)
-	p.clientType = ClientTypeFiles(services)
-	p.clientCLI = ClientCLIFiles(services)
-	p.example = ExampleServerFiles(services)
-	p.exampleCLI = ExampleCLIFiles(services)
+	p.proto = protoFiles(services)
+	p.server = serverFiles(services)
+	p.client = clientFiles(services)
+	p.serverType = serverTypeFiles(services)
+	p.clientType = clientTypeFiles(services)
+	p.clientCLI = clientCLIFiles(services)
 	return nil
 }
 
@@ -167,74 +265,27 @@ func (p *Plan) ClientCLIFiles() []*codegen.File {
 	return p.clientCLI
 }
 
-// ExampleServerFiles returns the runnable gRPC server files built by Link.
-func (p *Plan) ExampleServerFiles() []*codegen.File {
-	p.requireLinked()
-	return p.example
+// ServerFiles builds runnable gRPC servers from the copied server data.
+func (p *ExamplePlan) ServerFiles() []*codegen.File {
+	p.transport.requireLinked()
+	return exampleServerFiles(p.root, p.transport.services)
 }
 
-// ExampleCLIFiles returns the runnable gRPC client files built by Link.
-func (p *Plan) ExampleCLIFiles() []*codegen.File {
-	p.requireLinked()
-	return p.exampleCLI
-}
-
-// requireGRPCImports records packages used by gRPC files before names freeze.
-func requireGRPCImports(generation *codegen.Generation) error {
-	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("context"),
-		codegen.SimpleImport("encoding/json"),
-		codegen.SimpleImport("errors"),
-		codegen.SimpleImport("flag"),
-		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport("io"),
-		codegen.SimpleImport("net"),
-		codegen.SimpleImport("net/url"),
-		codegen.SimpleImport("os"),
-		codegen.SimpleImport("strconv"),
-		codegen.SimpleImport("strings"),
-		codegen.SimpleImport("sync"),
-		codegen.SimpleImport("time"),
-		codegen.SimpleImport("unicode/utf8"),
-		codegen.SimpleImport("goa.design/clue/debug"),
-		codegen.SimpleImport("goa.design/clue/log"),
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("grpc", "goagrpc"),
-		codegen.GoaNamedImport("grpc/pb", "goapb"),
-		codegen.SimpleImport("google.golang.org/grpc"),
-		codegen.SimpleImport("google.golang.org/grpc/codes"),
-		codegen.SimpleImport("google.golang.org/grpc/credentials/insecure"),
-		codegen.SimpleImport("google.golang.org/grpc/metadata"),
-		codegen.SimpleImport("google.golang.org/grpc/reflection"),
-		codegen.SimpleImport("google.golang.org/protobuf/types/known/structpb"),
-	}
-	for _, spec := range imports {
-		if err := generation.RequireImport(spec); err != nil {
-			return err
-		}
-	}
-	return nil
+// CLIFiles builds runnable gRPC clients from the copied server data.
+func (p *ExamplePlan) CLIFiles() []*codegen.File {
+	p.transport.requireLinked()
+	return exampleCLIFiles(p.root, p.transport.services)
 }
 
 // planGRPCCLI chooses parser and payload builder names for one design.
-func planGRPCCLI(generation *codegen.Generation, input PlanInput) (*grpcCLIPlan, error) {
+func planGRPCCLI(generation *codegen.Generation, input PlanInput, packages map[*expr.GRPCServiceExpr]*grpcServicePackage) (*grpcCLIPlan, error) {
 	design := input.Root
 	plan := &grpcCLIPlan{
 		parsers:  make(map[*expr.ServerExpr]*cli.ParserPlan),
 		builders: make(map[*expr.GRPCEndpointExpr]*codegen.NameDeclaration),
 	}
 	for _, grpcService := range design.API.GRPC.Services {
-		pathName := codegen.SnakeCase(codegen.Goify(grpcService.Name(), false))
-		packageName := strings.ToLower(codegen.Goify(grpcService.Name(), false))
-		if err := generation.ReserveGeneratedImport(codegen.NewImport(packageName+"c", path.Join(generation.GenPkg(), "grpc", pathName, "client"))); err != nil {
-			return nil, err
-		}
-		if err := generation.ReserveGeneratedImport(codegen.NewImport(packageName+"svr", path.Join(generation.GenPkg(), "grpc", pathName, "server"))); err != nil {
-			return nil, err
-		}
-		if err := generation.ReserveGeneratedImport(codegen.NewImport(pathName+"pb", path.Join(generation.GenPkg(), "grpc", pathName, pbPkgName))); err != nil {
-			return nil, err
-		}
+		pathName := packages[grpcService].pathName
 		clientPackage, err := generation.ClaimPackage(path.Join(generation.GenPkg(), "grpc", pathName, "client"))
 		if err != nil {
 			return nil, err
@@ -259,15 +310,16 @@ func planGRPCCLI(generation *codegen.Generation, input PlanInput) (*grpcCLIPlan,
 	}
 	for _, server := range design.API.Servers {
 		serverName := codegen.SnakeCase(codegen.Goify(server.Name, true))
-		if err := generation.ReserveGeneratedImport(codegen.NewImport("cli", path.Join(generation.GenPkg(), "grpc", "cli", serverName))); err != nil {
-			return nil, err
-		}
 		serverPackage, err := generation.ClaimPackage(path.Join(generation.GenPkg(), "grpc", "cli", serverName))
 		if err != nil {
 			return nil, err
 		}
 		var commands []cli.CommandDeclarationInput
-		for _, grpcService := range design.API.GRPC.Services {
+		for _, serviceName := range server.Services {
+			grpcService := design.API.GRPC.Service(serviceName)
+			if grpcService == nil {
+				continue
+			}
 			if len(grpcService.GRPCEndpoints) == 0 {
 				continue
 			}
@@ -282,8 +334,31 @@ func planGRPCCLI(generation *codegen.Generation, input PlanInput) (*grpcCLIPlan,
 			return nil, err
 		}
 		plan.parsers[server] = parser
+		plan.servers = append(plan.servers, &grpcCLIServerPlan{
+			expression: server,
+			name:       server.Name,
+			parser:     parser,
+		})
 	}
 	return plan, nil
+}
+
+// planGRPCServicePackages records the exact service imports before generated
+// package names become final. Every later gRPC planning step uses these paths.
+func planGRPCServicePackages(input PlanInput) (map[*expr.GRPCServiceExpr]*grpcServicePackage, error) {
+	packages := make(map[*expr.GRPCServiceExpr]*grpcServicePackage, len(input.Root.API.GRPC.Services))
+	for _, transportService := range input.Root.API.GRPC.Services {
+		serviceImport, viewsImport, err := input.Service.ServicePackageImports(transportService.ServiceExpr)
+		if err != nil {
+			return nil, err
+		}
+		packages[transportService] = &grpcServicePackage{
+			service:  serviceImport,
+			views:    viewsImport,
+			pathName: path.Base(serviceImport.Path),
+		}
+	}
+	return packages, nil
 }
 
 // requireLinked stops file reads before Link stores the files.

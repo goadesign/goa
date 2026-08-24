@@ -21,6 +21,13 @@ type WatchRequestBody struct {
 	LastEventID *string `form:"last_event_id,omitempty" json:"last_event_id,omitempty" xml:"last_event_id,omitempty"`
 }
 
+// SnapshotRequestBody is the type of the "Feed" service "snapshot" endpoint
+// HTTP request body.
+type SnapshotRequestBody struct {
+	// Request ID
+	RequestID *string `form:"request_id,omitempty" json:"request_id,omitempty" xml:"request_id,omitempty"`
+}
+
 // WatchResponseBody is the type of the "Feed" service "watch" endpoint HTTP
 // response body.
 type WatchResponseBody struct {
@@ -50,8 +57,26 @@ func NewWatchPayload(body *WatchRequestBody) *feed.WatchPayload {
 	return v
 }
 
+// NewSnapshotPayload builds a Feed service snapshot endpoint payload.
+func NewSnapshotPayload(body *SnapshotRequestBody) *feed.SnapshotPayload {
+	v := &feed.SnapshotPayload{
+		RequestID: *body.RequestID,
+	}
+
+	return v
+}
+
 // ValidateWatchRequestBody runs the validations defined on WatchRequestBody
 func ValidateWatchRequestBody(body *WatchRequestBody) (err error) {
+	if body.RequestID == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("request_id", "body"))
+	}
+	return
+}
+
+// ValidateSnapshotRequestBody runs the validations defined on
+// SnapshotRequestBody
+func ValidateSnapshotRequestBody(body *SnapshotRequestBody) (err error) {
 	if body.RequestID == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("request_id", "body"))
 	}

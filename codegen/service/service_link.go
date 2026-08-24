@@ -1,4 +1,5 @@
-// This file links retained service facts into immutable render data after names and import aliases freeze.
+// This file turns stored service information into the data used by templates
+// after all generated names and imported package names are final.
 package service
 
 import (
@@ -6,13 +7,15 @@ import (
 	"path"
 	"slices"
 	"sort"
+	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
 )
 
-// Link resolves the plan's collected facts through frozen declarations into
-// the immutable template data consumed by renderers.
+// Link reads the final Go declaration and import names and builds the data used
+// by service templates. Generation.Freeze must run first so each definition
+// and every reference to it use the same name.
 func (p *Plan) Link() error {
 	if !p.generation.Frozen() {
 		return fmt.Errorf("service plan cannot link before generation freeze")
@@ -38,8 +41,8 @@ func (p *Plan) Link() error {
 	return nil
 }
 
-// Services returns the linked service render model. It panics before Link
-// because no renderer or transport may observe provisional generated names.
+// Services returns the service data passed to templates. It panics before Link
+// because that data does not exist until the final Go names are available.
 func (p *Plan) Services() *ServicesData {
 	if p.services == nil {
 		panic("service render model requested before plan linking")
@@ -62,7 +65,8 @@ func (d *ServicesData) analyze(facts *serviceFacts) (*Data, error) {
 	viewScope := d.generation.Package(
 		facts.viewsPath,
 	).Scope()
-	pkgName := codegen.Goify(path.Base(servicePackage.ImportPath()), false)
+	pkgName := strings.ToLower(codegen.Goify(path.Base(servicePackage.ImportPath()), false))
+	var viewsPkg string
 	seenErrors := make(map[string]struct{})
 	type viewedResultKey struct {
 		origin expr.UserType
@@ -71,15 +75,15 @@ func (d *ServicesData) analyze(facts *serviceFacts) (*Data, error) {
 	seenViewed := make(map[viewedResultKey]*ViewedResultTypeData)
 	seenViewedDeclarations := make(map[*codegen.TypeDeclaration]struct{})
 	viewDerived := make(map[expr.UserType]codegen.DerivedTypeID)
-	serviceResolver := newRetainedServiceResolver(
+	serviceResolver := newServiceResolver(
 		d.generation,
 		d.aliases,
 		facts.name,
 		facts.packagePath,
 		facts.packagePath,
 	).withValidators(facts.validators)
-	types = formatUserTypeFacts(facts.userTypes, facts.packagePath, d.aliases)
-	errTypes = formatUserTypeFacts(facts.errorTypes, facts.packagePath, d.aliases)
+	types = formatUserTypeFacts(facts.userTypes, d.aliases)
+	errTypes = formatUserTypeFacts(facts.errorTypes, d.aliases)
 
 	// recordError formats each selected ErrorResult constructor once.
 	recordError := func(errorFacts *errorRenderFacts) {
@@ -100,15 +104,16 @@ func (d *ServicesData) analyze(facts *serviceFacts) (*Data, error) {
 	}
 
 	for _, method := range facts.orderedMethods {
-		// Collect projected types
+		// Build template data for each result type containing only a view's fields.
 		if projection := method.projection; projection != nil {
+			viewsPkg = d.aliases.spec(facts.packagePath, facts.viewsPath).Name
 			views := d.generation.Package(facts.viewsPath)
 			for _, projectedFacts := range projection.types {
 				pair := projectedFacts.pair
 				identity := codegen.NewProjectedTypeID(pair.source)
 				viewDerived[pair.projected.Origin()] = identity
 			}
-			viewResolver := newRetainedViewResolver(
+			viewResolver := newViewResolver(
 				d.generation,
 				d.aliases,
 				facts.name,
@@ -128,6 +133,7 @@ func (d *ServicesData) analyze(facts *serviceFacts) (*Data, error) {
 					serviceResolver,
 					viewResolver,
 					declaration,
+					viewsPkg,
 				)
 				projTypes = append(projTypes, projectedType)
 			}
@@ -136,10 +142,7 @@ func (d *ServicesData) analyze(facts *serviceFacts) (*Data, error) {
 			recordError(errorFacts)
 		}
 	}
-	viewUnions, err := d.formatViewUnions(facts)
-	if err != nil {
-		return nil, err
-	}
+	viewUnions := d.formatViewUnions(facts)
 
 	var (
 		methods []*MethodData
@@ -148,10 +151,7 @@ func (d *ServicesData) analyze(facts *serviceFacts) (*Data, error) {
 	methods = make([]*MethodData, len(facts.orderedMethods))
 	methodDataByFacts := make(map[*methodFacts]*MethodData, len(facts.orderedMethods))
 	for i, method := range facts.orderedMethods {
-		m, err := d.buildMethodData(method, serviceResolver, facts)
-		if err != nil {
-			return nil, err
-		}
+		m := buildMethodData(method, serviceResolver, facts)
 		methods[i] = m
 		methodDataByFacts[method] = m
 		for _, s := range m.Schemes {
@@ -161,6 +161,7 @@ func (d *ServicesData) analyze(facts *serviceFacts) (*Data, error) {
 		if viewedFacts == nil {
 			continue
 		}
+		viewsPkg = d.aliases.spec(facts.packagePath, facts.viewsPath).Name
 		key := viewedResultKey{origin: viewedFacts.origin, view: viewedFacts.viewName}
 		if vrt, ok := seenViewed[key]; ok {
 			m.ViewedResult = vrt
@@ -168,9 +169,9 @@ func (d *ServicesData) analyze(facts *serviceFacts) (*Data, error) {
 		}
 		vrt := buildViewedResultType(
 			viewedFacts,
-			d.aliases.spec(facts.viewsPath).Name,
+			viewsPkg,
 			serviceResolver,
-			newRetainedViewResolver(
+			newViewResolver(
 				d.generation,
 				d.aliases,
 				facts.name,
@@ -188,10 +189,7 @@ func (d *ServicesData) analyze(facts *serviceFacts) (*Data, error) {
 		seenViewed[key] = vrt
 	}
 
-	unions, err := d.formatServiceUnions(facts)
-	if err != nil {
-		return nil, err
-	}
+	unions := d.formatServiceUnions(facts)
 
 	desc := facts.description
 	if desc == "" {
@@ -210,38 +208,38 @@ func (d *ServicesData) analyze(facts *serviceFacts) (*Data, error) {
 		NewEndpointsDeclaration: facts.names.declaration(serviceSymbolID{role: serviceNewEndpointsNameRole, service: facts.name}),
 		ClientDeclaration:       facts.names.declaration(serviceSymbolID{role: serviceClientNameRole, service: facts.name}),
 		NewClientDeclaration:    facts.names.declaration(serviceSymbolID{role: serviceNewClientNameRole, service: facts.name}),
-		StreamDeclaration:       facts.names[serviceSymbolID{role: serviceStreamNameRole, service: facts.name}].declaration,
-		EventDeclaration:        facts.names[serviceSymbolID{role: serviceEventNameRole, service: facts.name}].declaration,
 		ServerInterceptorsDeclaration: facts.names[serviceSymbolID{
 			role: serviceServerInterceptorsNameRole, service: facts.name,
 		}].declaration,
 		ClientInterceptorsDeclaration: facts.names[serviceSymbolID{
 			role: serviceClientInterceptorsNameRole, service: facts.name,
 		}].declaration,
-		ExampleStructDeclaration:      facts.exampleStruct,
-		ExampleConstructorDeclaration: facts.exampleConstructor,
-		Name:                          facts.name,
-		Description:                   desc,
-		APIName:                       d.facts.apiName,
-		APIVersion:                    d.facts.apiVersion,
-		VarName:                       varName,
-		PathName:                      codegen.SnakeCase(varName),
-		StructName:                    codegen.Goify(facts.name, true),
-		PkgName:                       pkgName,
-		Methods:                       methods,
-		Schemes:                       schemes,
-		ServerInterceptors:            d.collectInterceptors(facts, facts.serverInterceptorFacts, methodDataByFacts, serviceResolver, true),
-		ClientInterceptors:            d.collectInterceptors(facts, facts.clientInterceptorFacts, methodDataByFacts, serviceResolver, false),
-		Scope:                         scope,
-		ViewScope:                     viewScope,
-		errorTypes:                    errTypes,
-		errorInits:                    errorInits,
-		userTypes:                     types,
-		projectedTypes:                projTypes,
-		viewedResultTypes:             viewedRTs,
-		unions:                        unions,
-		viewUnions:                    viewUnions,
-		viewDerived:                   viewDerived,
+		ExampleStructDeclaration:                        facts.exampleStruct,
+		ExampleConstructorDeclaration:                   facts.exampleConstructor,
+		ExampleServerInterceptorsConstructorDeclaration: facts.exampleServerConstructor,
+		Name:               facts.name,
+		Description:        desc,
+		APIName:            d.facts.apiName,
+		APIVersion:         d.facts.apiVersion,
+		VarName:            varName,
+		PathName:           path.Base(facts.packagePath),
+		StructName:         codegen.Goify(facts.name, true),
+		PkgName:            pkgName,
+		ViewsPkg:           viewsPkg,
+		Methods:            methods,
+		Schemes:            schemes,
+		ServerInterceptors: d.collectInterceptors(facts, facts.serverInterceptorFacts, methodDataByFacts, serviceResolver, true),
+		ClientInterceptors: d.collectInterceptors(facts, facts.clientInterceptorFacts, methodDataByFacts, serviceResolver, false),
+		Scope:              scope,
+		ViewScope:          viewScope,
+		errorTypes:         errTypes,
+		errorInits:         errorInits,
+		userTypes:          types,
+		projectedTypes:     projTypes,
+		viewedResultTypes:  viewedRTs,
+		unions:             unions,
+		viewUnions:         viewUnions,
+		viewDerived:        viewDerived,
 	}
 	return data, nil
 }
@@ -266,32 +264,24 @@ func declarationContext(resolver codegen.Attributor, pointer bool) *codegen.Attr
 	}
 }
 
-// formatUserTypeFacts resolves the final names and definitions of types whose
-// reachability and declaration ownership were fixed during collection.
-func formatUserTypeFacts(facts []*userTypeFacts, outputPath string, aliases *importAliases) []*UserTypeData {
+// formatUserTypeFacts resolves the final names and definitions of types that
+// collection already selected and assigned to generated packages.
+func formatUserTypeFacts(facts []*userTypeFacts, aliases *importAliases) []*UserTypeData {
 	data := make([]*UserTypeData, len(facts))
 	for index, facts := range facts {
-		description := facts.description
-		if description == "" && facts.location != nil {
-			description = fmt.Sprintf("%s is a generated service type.", facts.declaration.Name())
-		}
-		definition := facts.layout.Link(
+		linked := facts.layout.Link(
 			facts.declaration.PackagePath(),
-			retainedTypeQualifier(aliases),
-		)
-		reference := facts.reference.Link(
-			outputPath,
-			retainedTypeQualifier(aliases),
+			retainedTypeQualifier(aliases, facts.declaration.PackagePath()),
 		)
 		data[index] = &UserTypeData{
 			Declaration:    facts.declaration,
 			Name:           facts.name,
 			VarName:        facts.declaration.Name(),
-			Description:    description,
+			Description:    facts.description,
 			ErrorName:      facts.errorName,
 			IsServiceError: facts.serviceError,
-			Def:            definition.Def(),
-			Ref:            reference.Ref(),
+			Def:            linked.Def(),
+			Ref:            facts.declaration.Ref(facts.userType),
 			Loc:            facts.location,
 			Type:           facts.userType,
 		}
@@ -299,9 +289,9 @@ func formatUserTypeFacts(facts []*userTypeFacts, outputPath string, aliases *imp
 	return data
 }
 
-// formatServiceUnions resolves the exact service union declarations retained
-// during collection and registers one render record per generated package.
-func (d *ServicesData) formatServiceUnions(facts *serviceFacts) ([]*UnionTypeData, error) {
+// formatServiceUnions builds template data for the Goa OneOf declarations
+// recorded during collection and adds one entry for each generated package.
+func (d *ServicesData) formatServiceUnions(facts *serviceFacts) []*UnionTypeData {
 	unions := make([]*UnionTypeData, 0, len(facts.unions))
 	for _, facts := range facts.unions {
 		union := buildRetainedUnionTypeData(facts, d.aliases)
@@ -321,12 +311,12 @@ func (d *ServicesData) formatServiceUnions(facts *serviceFacts) ([]*UnionTypeDat
 		}
 		return left < right
 	})
-	return unions, nil
+	return unions
 }
 
-// formatViewUnions resolves the exact view union expressions retained while
-// their declarations were collected. It does not traverse projected types.
-func (d *ServicesData) formatViewUnions(facts *serviceFacts) ([]*UnionTypeData, error) {
+// formatViewUnions builds template data for the Goa OneOf declarations found
+// while collecting result views. It does not walk the result types again.
+func (d *ServicesData) formatViewUnions(facts *serviceFacts) []*UnionTypeData {
 	unions := make([]*UnionTypeData, len(facts.viewUnions))
 	for index, union := range facts.viewUnions {
 		unions[index] = buildRetainedUnionTypeData(union, d.aliases)
@@ -334,34 +324,37 @@ func (d *ServicesData) formatViewUnions(facts *serviceFacts) ([]*UnionTypeData, 
 	sort.Slice(unions, func(i, j int) bool {
 		return unions[i].Name < unions[j].Name
 	})
-	return unions, nil
+	return unions
 }
 
-// buildRetainedUnionTypeData formats one union from the branch declarations
-// and Go layouts selected before the generation froze.
+// This helper builds template data for one Goa OneOf type from the branch names
+// and Go types selected during planning.
 func buildRetainedUnionTypeData(facts *unionFacts, aliases *importAliases) *UnionTypeData {
 	fields := make([]*UnionFieldData, len(facts.branches))
 	for index, branch := range facts.branches {
 		fields[index] = &UnionFieldData{
-			Name:               branch.name,
-			KindConst:          branch.declaration.KindConst(),
-			Constructor:        branch.declaration.Constructor(),
-			FieldName:          branch.fieldName,
-			FieldType:          branch.layout.Link(facts.declaration.PackagePath(), retainedTypeQualifier(aliases)).Ref(),
-			Nilable:            branch.nilable,
-			EmitPrimitiveAlias: branch.emitPrimitiveAlias,
-			PrimitiveAliasType: branch.primitiveAliasType,
-			TypeTag:            branch.name,
+			Name:                   branch.name,
+			KindConst:              branch.declaration.KindConst(),
+			Constructor:            branch.declaration.Constructor(),
+			KindDeclaration:        branch.declaration.KindDeclaration(),
+			ConstructorDeclaration: branch.declaration.ConstructorDeclaration(),
+			FieldName:              branch.fieldName,
+			FieldType:              branch.layout.Link(facts.declaration.PackagePath(), retainedTypeQualifier(aliases, facts.declaration.PackagePath())).Ref(),
+			Nilable:                branch.nilable,
+			EmitPrimitiveAlias:     branch.emitPrimitiveAlias,
+			PrimitiveAliasType:     branch.primitiveAliasType,
+			TypeTag:                branch.name,
 		}
 	}
 	return &UnionTypeData{
-		Declaration: facts.declaration,
-		Name:        facts.declaration.Name(),
-		KindName:    facts.declaration.KindName(),
-		Fields:      fields,
-		Loc:         facts.location,
-		TypeKey:     facts.typeKey,
-		ValueKey:    facts.valueKey,
+		TypeDeclaration: facts.declaration.Declaration(),
+		KindDeclaration: facts.declaration.KindDeclaration(),
+		Name:            facts.declaration.Name(),
+		KindName:        facts.declaration.KindName(),
+		Fields:          fields,
+		Loc:             facts.location,
+		TypeKey:         facts.typeKey,
+		ValueKey:        facts.valueKey,
 	}
 }
 
@@ -395,15 +388,20 @@ func primitiveAliasGoType(dt expr.DataType) (string, bool) {
 	}
 }
 
-// buildRetainedErrorInitData formats an error selected during collection
-// without consulting the mutable design expression.
+// This helper builds constructor data for an error copied during collection
+// without reading the design expression again.
 func buildRetainedErrorInitData(facts *errorRenderFacts, resolver *declarationResolver, declaration *codegen.NameDeclaration) *ErrorInitData {
 	if facts.layout == nil {
 		panic(fmt.Sprintf("retained error %q has no Go type layout", facts.name))
 	}
-	linked := facts.layout.Link(resolver.outputPath, retainedTypeQualifier(resolver.aliases))
+	linked := facts.layout.Link(resolver.outputPath, retainedTypeQualifier(resolver.aliases, resolver.outputPath))
+	name := ""
+	if facts.serviceType {
+		name = declaration.Name()
+	}
 	return &ErrorInitData{
 		Declaration: declaration,
+		Name:        name,
 		Description: facts.description,
 		ErrName:     facts.name,
 		TypeName:    linked.Name(),
@@ -414,10 +412,10 @@ func buildRetainedErrorInitData(facts *errorRenderFacts, resolver *declarationRe
 	}
 }
 
-// retainedTypeQualifier returns the frozen qualifier assigned to one retained
-// Go type import.
-func retainedTypeQualifier(aliases *importAliases) codegen.GoTypeQualifier {
+// This helper returns the Go import name chosen for a type recorded during
+// planning.
+func retainedTypeQualifier(aliases *importAliases, outputPackage string) codegen.GoTypeQualifier {
 	return func(importPath string) string {
-		return aliases.name(importPath)
+		return aliases.name(outputPackage, importPath)
 	}
 }

@@ -16,12 +16,12 @@ func TestStreamingWithErrors(t *testing.T) {
 	cases := []struct {
 		name     string
 		dsl      func()
-		testFunc func(t *testing.T, code string)
+		testFunc func(t *testing.T, code string, services *ServicesData)
 	}{
 		{
 			name: "server streaming with custom errors",
 			dsl:  testdata.ServerStreamingWithCustomErrorsDSL,
-			testFunc: func(t *testing.T, code string) {
+			testFunc: func(t *testing.T, code string, services *ServicesData) {
 				// Verify error decoding is present
 				assert.Contains(t, code, "goagrpc.DecodeError(err)",
 					"should decode errors from stream")
@@ -36,17 +36,20 @@ func TestStreamingWithErrors(t *testing.T) {
 				assert.Contains(t, code, "case *goapb.ErrorResponse:",
 					"should handle generic goa errors")
 
-				// Verify proper error construction
-				assert.Contains(t, code, "NewServerStreamCustomErrorError(message",
-					"should construct custom error")
-				assert.Contains(t, code, "NewServerStreamValidationErrorError(message",
-					"should construct validation error")
+				// Each custom error uses the constructor chosen for the client package.
+				endpoint := services.Get("StreamingErrorService").Endpoint("ServerStream")
+				for _, errorData := range endpoint.Errors {
+					if errorData.Response.ClientConvert != nil {
+						name := errorData.Response.ClientConvert.Init.Declaration.Name()
+						assert.Contains(t, code, name+"(message", "should construct "+errorData.Name)
+					}
+				}
 			},
 		},
 		{
 			name: "bidirectional streaming with errors",
 			dsl:  testdata.BidirectionalStreamingRPCWithErrorsDSL,
-			testFunc: func(t *testing.T, code string) {
+			testFunc: func(t *testing.T, code string, _ *ServicesData) {
 				// Bidirectional streaming with simple errors should still decode
 				assert.Contains(t, code, "goagrpc.DecodeError(err)",
 					"should decode errors from bidirectional stream")
@@ -60,7 +63,7 @@ func TestStreamingWithErrors(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.dsl)
 			services := CreateGRPCServices(root)
-			clientfs := ClientFiles(services)
+			clientfs := clientFiles(services)
 			require.Greater(t, len(clientfs), 0)
 
 			// Get recv method implementations
@@ -75,7 +78,7 @@ func TestStreamingWithErrors(t *testing.T) {
 			code := codeBuilder.String()
 
 			// Run test-specific assertions
-			c.testFunc(t, code)
+			c.testFunc(t, code, services)
 		})
 	}
 }
@@ -94,7 +97,7 @@ func TestStreamingErrorsWithValidation(t *testing.T) {
 	require.Greater(t, len(method.Errors), 0, "method should have errors defined")
 
 	// Generate client code
-	clientfs := ClientFiles(services)
+	clientfs := clientFiles(services)
 	require.Greater(t, len(clientfs), 0)
 
 	// Check recv implementations
@@ -148,7 +151,7 @@ func TestStreamingErrorComparison(t *testing.T) {
 
 	root := RunGRPCDSL(t, dsl)
 	services := CreateGRPCServices(root)
-	clientfs := ClientFiles(services)
+	clientfs := clientFiles(services)
 	require.Greater(t, len(clientfs), 0, "should have client files")
 
 	// Find unary and streaming code in different sections

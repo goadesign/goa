@@ -10,14 +10,19 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// addEndpointImports adds the named service-type references used by endpoints
-// to file's header. The output package is computed from the generated path.
-// Current gRPC server, client, codec, type, and CLI files each render every
-// endpoint; callers pass that complete endpoint list explicitly.
-func addEndpointImports(file *codegen.File, services *ServicesData, endpoints ...*expr.GRPCEndpointExpr) *codegen.File {
+// addEndpointImports adds the packages recorded for one service to a generated
+// file and omits the package that contains the file itself.
+func addEndpointImports(file *codegen.File, services *ServicesData, service *grpcServicePlan) *codegen.File {
 	outputPath := strings.TrimPrefix(strings.ReplaceAll(file.Path, "\\", "/"), codegen.Gendir+"/")
 	outputPackage := path.Join(services.GenPkg(), path.Dir(outputPath))
-	codegen.AddImport(file.SectionTemplates[0], services.AttributeImports(outputPackage, grpcEndpointAttributes(endpoints...)...)...)
+	owner := services.generation.Package(outputPackage)
+	imports := make([]*codegen.ImportSpec, 0, len(service.imports))
+	for _, importPath := range service.imports {
+		if importPath != outputPackage {
+			imports = append(imports, owner.Import(importPath))
+		}
+	}
+	codegen.AddImport(file.SectionTemplates[0], imports...)
 	return file
 }
 

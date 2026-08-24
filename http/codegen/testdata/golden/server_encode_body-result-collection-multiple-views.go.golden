@@ -8,9 +8,9 @@ func EncodeMethodBodyCollectionResponse(encoder func(context.Context, http.Respo
 		var body any
 		switch res.View {
 		case "default", "":
-			body = NewResulttypecollectionCollection(res.Projected)
+			body = NewResulttypecollectionResponseCollection(res.Projected)
 		case "tiny":
-			body = NewResulttypecollectionTinyCollection(res.Projected)
+			body = NewResulttypecollectionResponseTinyCollection(res.Projected)
 		}
 		w.WriteHeader(http.StatusOK)
 		return enc.Encode(body)

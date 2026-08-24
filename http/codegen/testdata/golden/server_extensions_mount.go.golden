@@ -1,0 +1,14 @@
+// Mount configures the mux to serve the Files endpoints.
+func Mount(mux goahttp.Muxer, h *Server) {
+	MountReadHandler(mux, h.Read)
+	MountAssets(mux, http.StripPrefix("/assets", h.Assets))
+	MountOldHTML(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/new", http.StatusMovedPermanently)
+	}))
+	MountPreflight(mux)
+}
+
+// Mount configures the mux to serve the Files endpoints.
+func (s *Server) Mount(mux goahttp.Muxer) {
+	Mount(mux, s)
+}

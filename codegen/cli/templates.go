@@ -8,11 +8,12 @@ import (
 
 // Template constants
 const (
-	usageCommandsT = "usage_commands"
-	usageExamplesT = "usage_examples"
-	parseFlagsT    = "parse_flags"
-	commandUsageT  = "command_usage"
-	buildPayloadT  = "build_payload"
+	usageCommandsT     = "usage_commands"
+	usageExamplesT     = "usage_examples"
+	parseFlagsT        = "parse_flags"
+	parseFlagsPlannedT = "parse_flags_planned"
+	commandUsageT      = "command_usage"
+	buildPayloadT      = "build_payload"
 )
 
 //go:embed templates/*.go.tpl

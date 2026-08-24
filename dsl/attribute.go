@@ -138,7 +138,7 @@ func Attribute(name string, args ...any) {
 	var attr *expr.AttributeExpr
 	{
 		if ref := parent.Find(name); ref != nil {
-			attr = expr.DupAtt(ref)
+			attr = expr.DupAttForDSL(ref)
 		}
 
 		dataType, description, fn := parseAttributeArgs(attr, args...)
@@ -170,7 +170,7 @@ func Attribute(name string, args ...any) {
 	}
 	union := parent.Type.(*expr.Union)
 	if _, ok := attr.Type.(expr.UserType); !ok {
-		att := expr.DupAtt(attr)
+		att := expr.DupAttForDSL(attr)
 		attr.Type = &expr.UserTypeExpr{AttributeExpr: att, TypeName: union.TypeName + expr.Title(name)}
 	}
 	union.Values = append(union.Values, &expr.NamedAttributeExpr{Name: name, Attribute: attr})

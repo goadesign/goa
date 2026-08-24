@@ -1,11 +1,9 @@
-// This file owns the service analysis retained by one generation run. It
-// collects declarations before names freeze, links those exact records into
-// immutable template data afterward, and exposes that data to service and
-// transport renderers without rebuilding the expression graph.
+// This file stores the service declarations and file data selected for one
+// generation run. File writers use this stored data without rereading the
+// design.
 package service
 
 import (
-	"fmt"
 	"path"
 	"strings"
 
@@ -14,31 +12,32 @@ import (
 )
 
 type (
-	// PlanInput supplies one evaluated Goa root and the example generator whose
-	// stable identities belong to that root.
+	// PlanInput supplies one evaluated Goa design and the generator used to make
+	// examples for types in that design.
 	PlanInput struct {
-		// Root is one service design root owned by the generation.
+		// Root is one evaluated Goa design included in this generation command.
 		Root *expr.RootExpr
-		// Examples produces the examples retained in that root's render plan.
+		// Examples produces the values written as examples for Root.
 		Examples *expr.ExampleGenerator
 	}
 
-	// Plan retains one design root's service declarations and linked render
-	// model from collection through generated file rendering.
+	// Plan stores one design's services, generated Go declarations, and template
+	// data from name collection through file rendering.
 	Plan struct {
 		generation *codegen.Generation
 		facts      *rootFacts
 		services   *ServicesData
 	}
 
-	// rootFacts retains the exact service membership selected during collection.
-	// Expression nodes are immutable after generator preparation; copying the
-	// containing slices prevents linking from rediscovering later membership.
+	// rootFacts stores the services and API values selected from one design.
+	// Copying its slices prevents later steps from walking the design again and
+	// finding a different set of services.
 	rootFacts struct {
 		root                *expr.RootExpr
 		apiName             string
 		apiVersion          string
 		examplePackageName  string
+		exampleImports      []*codegen.ImportSpec
 		services            []*serviceFacts
 		serviceByID         map[string]*serviceFacts
 		types               []expr.UserType
@@ -49,13 +48,16 @@ type (
 		generatedUnions     []*generatedUnionEmissionFacts
 	}
 
-	// serviceFacts retains the exact service inputs selected during collection.
+	// serviceFacts stores the service values needed to name and write its files.
 	serviceFacts struct {
 		service                  *expr.ServiceExpr
+		apiName                  string
 		name                     string
 		description              string
 		packagePath              string
 		viewsPath                string
+		packageImport            *codegen.ImportSpec
+		viewsImport              *codegen.ImportSpec
 		methods                  []*expr.MethodExpr
 		orderedMethods           []*methodFacts
 		methodByExpr             map[*expr.MethodExpr]*methodFacts
@@ -86,7 +88,7 @@ type (
 		data                     *Data
 	}
 
-	// methodFacts retains transport decisions that belong to one service method.
+	// methodFacts stores the method values used by service and transport files.
 	methodFacts struct {
 		method                       *expr.MethodExpr
 		serviceName                  string
@@ -103,7 +105,6 @@ type (
 		streamKind                   expr.StreamKind
 		isStreaming                  bool
 		hasMixedResults              bool
-		isJSONRPC                    bool
 		varName                      string
 		serverStreamVarName          string
 		clientStreamVarName          string
@@ -111,14 +112,12 @@ type (
 		streamEndpointField          string
 		viewedResult                 *viewedResultFacts
 		projection                   *projectionFacts
-		isJSONRPCSSE                 bool
-		isJSONRPCWebSocket           bool
 		skipRequestBodyEncodeDecode  bool
 		skipResponseBodyEncodeDecode bool
 	}
 
-	// methodAttributeFacts retains one method value's top-level contract and
-	// example while its nested Go layout is owned by codegen.GoTypePlan.
+	// methodAttributeFacts stores one payload or result description, default, and
+	// example. GoTypePlan separately stores the Go fields nested inside it.
 	methodAttributeFacts struct {
 		attribute    *expr.AttributeExpr
 		layout       *codegen.GoTypePlan
@@ -132,8 +131,8 @@ type (
 		example      any
 	}
 
-	// errorRenderFacts retains the exact error behavior and type selected for
-	// service, client, and endpoint output.
+	// errorRenderFacts stores the error type, description, and marker fields
+	// written to service, client, and endpoint files.
 	errorRenderFacts struct {
 		attribute   *expr.AttributeExpr
 		layout      *codegen.GoTypePlan
@@ -146,8 +145,8 @@ type (
 		serviceType bool
 	}
 
-	// interceptorFacts retains the exact methods to which one interceptor
-	// applies on one side of the service boundary.
+	// interceptorFacts stores the methods that call one interceptor on either the
+	// client or server side.
 	interceptorFacts struct {
 		name                        string
 		description                 string
@@ -170,23 +169,25 @@ type (
 		methods                     []*methodFacts
 	}
 
-	// interceptorAccessFacts retains one generated accessor field and its exact
-	// type layout from the first method to which the interceptor applies.
+	// interceptorAccessFacts stores one field exposed to an interceptor and the
+	// Go type written for that field.
 	interceptorAccessFacts struct {
-		name    string
-		pointer bool
-		layout  *codegen.GoTypePlan
+		attribute *expr.AttributeExpr
+		name      string
+		pointer   bool
+		layout    *codegen.GoTypePlan
 	}
 
-	// projectionFacts owns the single projected graph built for one method.
-	// Planning declares names from this graph; linking formats the same nodes.
+	// projectionFacts stores copies of one method's result types containing only
+	// the fields in each selected view. Name collection and template data both
+	// read these same copies.
 	projectionFacts struct {
 		pairs []*projectedTypePair
 		types []*projectedTypeFacts
 	}
 
-	// projectedTypeFacts retains one projected declaration graph and the exact
-	// validation and conversion operations selected from it.
+	// projectedTypeFacts stores one result type containing the fields selected by
+	// a view, together with the validation and conversion code generated for it.
 	projectedTypeFacts struct {
 		pair           *projectedTypePair
 		projectedType  expr.UserType
@@ -201,22 +202,23 @@ type (
 		declaration    *codegen.TypeDeclaration
 	}
 
-	// viewRenderFacts retains the authored view text and ordered field names
-	// used by service and views templates.
+	// viewRenderFacts stores the description and ordered field names from one
+	// declared result view for the service and views templates.
 	viewRenderFacts struct {
 		name        string
 		description string
 		attributes  []string
 	}
 
-	// validationFacts retains one projected validator's selected fields and
-	// nested validator calls without resolving function names.
+	// validationFacts stores the field checks and child validation calls emitted
+	// by one view-specific validation function. Function names are added later.
 	validationFacts struct {
 		viewName       string
 		attribute      *expr.AttributeExpr
 		layout         *codegen.GoTypePlan
 		plan           *codegen.ValidationPlan
 		declaration    *codegen.NameDeclaration
+		needed         bool
 		alias          bool
 		pointer        bool
 		collectionElem *expr.AttributeExpr
@@ -224,7 +226,8 @@ type (
 		fields         []*validationFieldFacts
 	}
 
-	// validationFieldFacts retains one nested result-type field call.
+	// validationFieldFacts stores one child result field and the validation call
+	// emitted for it.
 	validationFieldFacts struct {
 		name      string
 		attribute *expr.AttributeExpr
@@ -233,8 +236,15 @@ type (
 		call      *codegen.NameDeclaration
 	}
 
-	// viewConversionFacts retains one view-narrowed conversion and its exact
-	// recursive transform plan.
+	// viewValidationKey identifies one result type and view while Goa decides
+	// whether its generated validation function can return an error.
+	viewValidationKey struct {
+		origin expr.UserType
+		view   string
+	}
+
+	// viewConversionFacts stores one conversion between a service result and a
+	// selected result view, including conversions for nested fields.
 	viewConversionFacts struct {
 		toResult        bool
 		viewName        string
@@ -253,8 +263,8 @@ type (
 		elementCall     *codegen.NameDeclaration
 	}
 
-	// viewConversionFieldFacts retains one nested result constructor call that
-	// is emitted outside the general type transform.
+	// viewConversionFieldFacts stores one child result constructor call emitted
+	// separately from the general type conversion.
 	viewConversionFieldFacts struct {
 		name      string
 		attribute *expr.AttributeExpr
@@ -262,8 +272,8 @@ type (
 		call      *codegen.NameDeclaration
 	}
 
-	// viewedResultFacts retains the wrapper type and selected view behavior for
-	// one method result.
+	// viewedResultFacts stores the wrapper type and selected view written for one
+	// method result.
 	viewedResultFacts struct {
 		wrapped         expr.UserType
 		wrappedLayout   *codegen.GoTypePlan
@@ -283,8 +293,8 @@ type (
 		isCollection    bool
 	}
 
-	// userTypeFacts binds one selected expression type to the exact package
-	// declaration and inherited output location chosen during collection.
+	// userTypeFacts records one selected design type, its generated Go type, and
+	// the file location inherited from an enclosing type when needed.
 	userTypeFacts struct {
 		userType     expr.UserType
 		name         string
@@ -294,11 +304,10 @@ type (
 		location     *codegen.Location
 		declaration  *codegen.TypeDeclaration
 		layout       *codegen.GoTypePlan
-		reference    *codegen.GoTypePlan
 		imports      retainedFileImports
 	}
 
-	// unionFacts binds one selected sum type to its exact package declaration.
+	// unionFacts records one Goa OneOf type and its generated Go declaration.
 	unionFacts struct {
 		union       *expr.Union
 		identity    codegen.UnionTypeID
@@ -311,8 +320,8 @@ type (
 		data        *UnionTypeData
 	}
 
-	// unionBranchFacts retains one emitted union branch and its exact generated
-	// declaration and Go layout.
+	// unionBranchFacts stores one Goa OneOf branch, its generated names, and the
+	// Go type written for its value.
 	unionBranchFacts struct {
 		name               string
 		fieldName          string
@@ -323,8 +332,9 @@ type (
 		primitiveAliasType string
 	}
 
-	// validatorKey identifies the exact generated type and result view whose
-	// validation function is called by projected validation code.
+	// validatorKey selects the validation function for one generated result type
+	// and view. Validation code for view-specific result copies uses that exact
+	// function.
 	validatorKey struct {
 		declaration *codegen.TypeDeclaration
 		view        string
@@ -338,20 +348,22 @@ type (
 		toResult bool
 	}
 
-	// streamWrapperKey identifies one side of a retained method stream.
+	// streamWrapperKey identifies the client or server wrapper for one method's
+	// stream.
 	streamWrapperKey struct {
 		method *expr.MethodExpr
 		server bool
 	}
 )
 
-// collectServiceNames declares every package-level symbol emitted for one
-// core service and its views package before generation names freeze.
+// collectServiceNames submits every package-level Go declaration written for
+// one service and its views before Generation.Freeze chooses the final Go
+// names.
 func collectServiceNames(facts *serviceFacts, rootTypes *rootTypeSet, generation *codegen.Generation) error {
 	service := facts.service
 	serviceName := service.Name
-	servicePackage := generation.Package(servicePackagePath(generation.GenPkg(), service))
-	viewsPackage := generation.Package(servicePackagePath(generation.GenPkg(), service) + "/views")
+	servicePackage := generation.Package(facts.packagePath)
+	viewsPackage := generation.Package(facts.viewsPath)
 	examplePackage, err := generation.ClaimOutputPackage(path.Dir(generation.GenPkg()), ".")
 	if err != nil {
 		return err
@@ -369,7 +381,7 @@ func collectServiceNames(facts *serviceFacts, rootTypes *rootTypeSet, generation
 	declare := func(pkg *codegen.GeneratedPackage, role serviceNameRole, preferred string, id serviceSymbolID) error {
 		id.role = role
 		id.service = serviceName
-		_, err := facts.names.declare(pkg, id, preferred)
+		_, err := facts.names.declareForAPI(pkg, id, preferred, facts.apiName)
 		return err
 	}
 	static := []struct {
@@ -390,62 +402,52 @@ func collectServiceNames(facts *serviceFacts, rootTypes *rootTypeSet, generation
 		static = append(static, struct {
 			role      serviceNameRole
 			preferred string
-		}{serviceAutherNameRole, "Auther"})
+		}{serviceAutherNameRole, "Auther"}) //nolint:misspell // Keep Goa's existing generated interface name.
 	}
 	for _, symbol := range static {
 		if err := declare(servicePackage, symbol.role, symbol.preferred, serviceSymbolID{}); err != nil {
 			return err
 		}
 	}
-	facts.exampleStruct, err = facts.names.declare(examplePackage, serviceSymbolID{
+	facts.exampleStruct, err = facts.names.declareForAPI(examplePackage, serviceSymbolID{
 		role: serviceExampleStructNameRole, service: serviceName,
-	}, codegen.Goify(serviceName, false)+"srvc")
+	}, codegen.Goify(serviceName, false)+"srvc", facts.apiName)
 	if err != nil {
 		return err
 	}
-	facts.exampleConstructor, err = facts.names.declare(examplePackage, serviceSymbolID{
+	facts.exampleConstructor, err = facts.names.declareForAPI(examplePackage, serviceSymbolID{
 		role: serviceExampleConstructorNameRole, service: serviceName,
-	}, "New"+codegen.Goify(serviceName, true))
+	}, "New"+codegen.Goify(serviceName, true), facts.apiName)
 	if err != nil {
 		return err
 	}
 	structName := codegen.Goify(serviceName, true)
 	if len(facts.serverInterceptors) > 0 {
-		facts.exampleServerStruct, err = facts.names.declare(exampleInterceptorsPackage, serviceSymbolID{
+		facts.exampleServerStruct, err = facts.names.declareForAPI(exampleInterceptorsPackage, serviceSymbolID{
 			role: serviceExampleServerInterceptorsStructNameRole, service: serviceName,
-		}, structName+"ServerInterceptors")
+		}, structName+"ServerInterceptors", facts.apiName)
 		if err != nil {
 			return err
 		}
-		facts.exampleServerConstructor, err = facts.names.declare(exampleInterceptorsPackage, serviceSymbolID{
+		facts.exampleServerConstructor, err = facts.names.declareForAPI(exampleInterceptorsPackage, serviceSymbolID{
 			role: serviceExampleServerInterceptorsConstructorNameRole, service: serviceName,
-		}, "New"+structName+"ServerInterceptors")
+		}, "New"+structName+"ServerInterceptors", facts.apiName)
 		if err != nil {
 			return err
 		}
 	}
 	if len(facts.clientInterceptors) > 0 {
-		facts.exampleClientStruct, err = facts.names.declare(exampleInterceptorsPackage, serviceSymbolID{
+		facts.exampleClientStruct, err = facts.names.declareForAPI(exampleInterceptorsPackage, serviceSymbolID{
 			role: serviceExampleClientInterceptorsStructNameRole, service: serviceName,
-		}, structName+"ClientInterceptors")
+		}, structName+"ClientInterceptors", facts.apiName)
 		if err != nil {
 			return err
 		}
-		facts.exampleClientConstructor, err = facts.names.declare(exampleInterceptorsPackage, serviceSymbolID{
+		facts.exampleClientConstructor, err = facts.names.declareForAPI(exampleInterceptorsPackage, serviceSymbolID{
 			role: serviceExampleClientInterceptorsConstructorNameRole, service: serviceName,
-		}, "New"+structName+"ClientInterceptors")
+		}, "New"+structName+"ClientInterceptors", facts.apiName)
 		if err != nil {
 			return err
-		}
-	}
-	if hasRetainedJSONRPCStreaming(facts) {
-		if err := declare(servicePackage, serviceStreamNameRole, "Stream", serviceSymbolID{}); err != nil {
-			return err
-		}
-		if hasRetainedJSONRPCSSEResults(facts) {
-			if err := declare(servicePackage, serviceEventNameRole, "Event", serviceSymbolID{}); err != nil {
-				return err
-			}
 		}
 	}
 	for _, method := range facts.methods {
@@ -458,14 +460,7 @@ func collectServiceNames(facts *serviceFacts, rootTypes *rootTypeSet, generation
 			if err := declare(servicePackage, serviceClientStreamNameRole, methodFacts.varName+"ClientStream", methodID); err != nil {
 				return err
 			}
-			if !methodFacts.isJSONRPCWebSocket || method.Stream != expr.ClientStreamKind {
-				if err := declare(servicePackage, serviceEndpointInputNameRole, methodFacts.varName+"EndpointInput", methodID); err != nil {
-					return err
-				}
-			}
-		}
-		if methodFacts.isJSONRPCSSE {
-			if err := declare(servicePackage, serviceMethodEventNameRole, methodFacts.varName+"Event", methodID); err != nil {
+			if err := declare(servicePackage, serviceEndpointInputNameRole, methodFacts.varName+"EndpointInput", methodID); err != nil {
 				return err
 			}
 		}
@@ -502,18 +497,7 @@ func collectServiceNames(facts *serviceFacts, rootTypes *rootTypeSet, generation
 	return collectViewNames(facts, servicePackage, viewsPackage, rootTypes, generation)
 }
 
-// hasRetainedJSONRPCSSEResults reports whether the SSE service template emits
-// its package-level Event interface for at least one concrete result.
-func hasRetainedJSONRPCSSEResults(facts *serviceFacts) bool {
-	for method, retained := range facts.methodByExpr {
-		if retained.isJSONRPCSSE && method.Result.Type != expr.Empty {
-			return true
-		}
-	}
-	return false
-}
-
-// serviceHasSchemes reports whether any retained method requires generated
+// serviceHasSchemes reports whether any selected method needs generated
 // authorization functions.
 func serviceHasSchemes(facts *serviceFacts) bool {
 	for _, method := range facts.methods {
@@ -533,18 +517,18 @@ func collectErrorNames(facts *serviceFacts, servicePackage *codegen.GeneratedPac
 		errors = append(errors, method.Errors...)
 	}
 	for _, serviceError := range errors {
-		if serviceError.Type != expr.ErrorResult {
+		if !expr.IsErrorResult(serviceError.Type) {
 			continue
 		}
 		if _, exists := seen[serviceError.Name]; exists {
 			continue
 		}
 		seen[serviceError.Name] = struct{}{}
-		declaration, err := facts.names.declare(servicePackage, serviceSymbolID{
+		declaration, err := facts.names.declareForAPI(servicePackage, serviceSymbolID{
 			role:    serviceErrorConstructorNameRole,
 			service: facts.service.Name,
 			subject: serviceError.Name,
-		}, "Make"+codegen.Goify(serviceError.Name, true))
+		}, "Make"+codegen.Goify(serviceError.Name, true), facts.apiName)
 		if err != nil {
 			return err
 		}
@@ -559,7 +543,7 @@ func collectInterceptorNames(facts *serviceFacts, servicePackage *codegen.Genera
 	declare := func(role serviceNameRole, preferred string, id serviceSymbolID) error {
 		id.role = role
 		id.service = facts.service.Name
-		_, err := facts.names.declare(servicePackage, id, preferred)
+		_, err := facts.names.declareForAPI(servicePackage, id, preferred, facts.apiName)
 		return err
 	}
 	if len(facts.serverInterceptors) > 0 {
@@ -605,17 +589,26 @@ func collectInterceptorNames(facts *serviceFacts, servicePackage *codegen.Genera
 				continue
 			}
 			methodName := facts.methodByExpr[method].varName
-			base := codegen.Goify(interceptor.Name, false) + methodName
+			base := codegen.Goify(codegen.SnakeCase(interceptor.Name), false) + methodName
 			methodID := serviceSymbolID{method: facts.methodByExpr[method].varName, subject: interceptor.Name}
+			streamingAccess := interceptorHasStreamingAccess(interceptor) && (method.IsStreaming() || method.HasMixedResults())
+			hasPayloadAccess := interceptor.ReadPayload != nil || interceptor.WritePayload != nil
+			hasStreamingPayloadAccess := interceptor.ReadStreamingPayload != nil || interceptor.WriteStreamingPayload != nil
+			hasStreamingResultAccess := interceptor.ReadStreamingResult != nil || interceptor.WriteStreamingResult != nil
 			for _, symbol := range []struct {
 				role   serviceNameRole
 				suffix string
 				emit   bool
 			}{
-				{serviceInterceptorPayloadAccessNameRole, "Payload", interceptor.ReadPayload != nil || interceptor.WritePayload != nil},
+				{serviceInterceptorPayloadAccessNameRole, "Payload", hasPayloadAccess},
 				{serviceInterceptorResultAccessNameRole, "Result", interceptor.ReadResult != nil || interceptor.WriteResult != nil},
-				{serviceInterceptorStreamingPayloadAccessNameRole, "StreamingPayload", interceptor.ReadStreamingPayload != nil || interceptor.WriteStreamingPayload != nil},
-				{serviceInterceptorStreamingResultAccessNameRole, "StreamingResult", interceptor.ReadStreamingResult != nil || interceptor.WriteStreamingResult != nil},
+				{serviceInterceptorStreamingPayloadAccessNameRole, "StreamingPayload", hasStreamingPayloadAccess},
+				{serviceInterceptorStreamingResultAccessNameRole, "StreamingResult", hasStreamingResultAccess},
+				{serviceInterceptorMethodInfoNameRole, "Info", true},
+				{serviceInterceptorServerUnaryInfoNameRole, "ServerUnaryInfo", server && (!streamingAccess || hasPayloadAccess)},
+				{serviceInterceptorClientUnaryInfoNameRole, "ClientUnaryInfo", client && (!streamingAccess || hasPayloadAccess)},
+				{serviceInterceptorStreamingSendInfoNameRole, "StreamingSendInfo", streamingAccess && (server && hasStreamingResultAccess || client && hasStreamingPayloadAccess)},
+				{serviceInterceptorStreamingRecvInfoNameRole, "StreamingRecvInfo", streamingAccess && (server && hasStreamingPayloadAccess || client && hasStreamingResultAccess)},
 			} {
 				if !symbol.emit {
 					continue
@@ -662,6 +655,7 @@ func collectInterceptorNames(facts *serviceFacts, servicePackage *codegen.Genera
 // collectViewNames declares validators and constructor/map companions from
 // the exact service and view type declarations allocated during view planning.
 func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen.GeneratedPackage, rootTypes *rootTypeSet, generation *codegen.Generation) error {
+	markNeededViewValidators(facts)
 	for _, method := range facts.methods {
 		projection := facts.projections[method]
 		if projection == nil {
@@ -674,15 +668,11 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 				return err
 			}
 			projectedFacts.declaration = declaration
-			views := []string{""}
-			if resultType, ok := pair.projected.(*expr.ResultTypeExpr); ok {
-				views = views[:0]
-				for _, view := range resultType.Views {
-					views = append(views, view.Name)
+			for _, validation := range projectedFacts.validations {
+				if !validation.needed {
+					continue
 				}
-			}
-			for _, view := range views {
-				view = canonicalValidatorView(view)
+				view := canonicalValidatorView(validation.viewName)
 				suffix := ""
 				if view != "" {
 					suffix = codegen.Goify(view, true)
@@ -699,25 +689,20 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 					view:    view,
 					side:    "projected",
 				}
-				validator, err := facts.names.declareDependent(viewsPackage, id, declaration.Declaration(), "Validate", suffix)
+				validator, err := facts.names.declareDependentForAPI(viewsPackage, id, declaration.Declaration(), "Validate", suffix, facts.apiName)
 				if err != nil {
 					return err
 				}
 				facts.validators[key] = validator
-				for _, validation := range projectedFacts.validations {
-					if canonicalValidatorView(validation.viewName) == view {
-						validation.declaration = validator
-						break
-					}
-				}
+				validation.declaration = validator
 			}
 			if _, ok := pair.projected.(*expr.ResultTypeExpr); ok {
-				projectedFacts.mapDeclaration, err = facts.names.declare(viewsPackage, serviceSymbolID{
+				projectedFacts.mapDeclaration, err = facts.names.declareForAPI(viewsPackage, serviceSymbolID{
 					role:    serviceViewMapNameRole,
 					service: facts.service.Name,
 					subject: pair.source.ID(),
 					source:  pair.source.Name(),
-				}, codegen.Goify(pair.source.Name(), true)+"Map")
+				}, codegen.Goify(pair.source.Name(), true)+"Map", facts.apiName)
 				if err != nil {
 					return err
 				}
@@ -733,14 +718,14 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 				if conversion.viewName != expr.DefaultView {
 					suffix = codegen.Goify(conversion.viewName, true)
 				}
-				conversion.constructor, err = facts.names.declare(servicePackage, serviceSymbolID{
+				conversion.constructor, err = facts.names.declareForAPI(servicePackage, serviceSymbolID{
 					role:    servicePrivateProjectionConstructorNameRole,
 					service: facts.service.Name,
 					subject: pair.source.ID(),
 					source:  pair.source.Name(),
 					view:    canonicalValidatorView(conversion.viewName),
 					side:    side,
-				}, "new"+preferredBase+suffix)
+				}, "new"+preferredBase+suffix, facts.apiName)
 				if err != nil {
 					return err
 				}
@@ -758,7 +743,7 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 					} else {
 						targetPreferred = viewsPackageName + codegen.Goify(targetName, true)
 					}
-					declaration, err := facts.names.declare(servicePackage, serviceSymbolID{
+					declaration, err := facts.names.declareForAPI(servicePackage, serviceSymbolID{
 						role:       serviceTransformHelperNameRole,
 						service:    facts.service.Name,
 						subject:    pair.source.ID(),
@@ -768,7 +753,7 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 						side:       side,
 						occurrence: helper.Occurrence,
 						required:   helper.Required,
-					}, "transform"+codegen.Goify(sourcePreferred, true)+"To"+codegen.Goify(targetPreferred, true))
+					}, "transform"+codegen.Goify(sourcePreferred, true)+"To"+codegen.Goify(targetPreferred, true), facts.apiName)
 					if err != nil {
 						return err
 					}
@@ -803,7 +788,7 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 				source:  resultType.Name(),
 				side:    "viewed",
 			}
-			validator, err := facts.names.declareDependent(viewsPackage, validatorID, viewedDeclaration.Declaration(), "Validate", "")
+			validator, err := facts.names.declareDependentForAPI(viewsPackage, validatorID, viewedDeclaration.Declaration(), "Validate", "", facts.apiName)
 			if err != nil {
 				return err
 			}
@@ -818,13 +803,13 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 			{serviceViewConstructorNameRole, "NewViewed", "to-viewed"},
 			{serviceViewConstructorNameRole, "New", "to-result"},
 		} {
-			constructor, err := facts.names.declare(servicePackage, serviceSymbolID{
+			constructor, err := facts.names.declareForAPI(servicePackage, serviceSymbolID{
 				role:    symbol.role,
 				service: facts.service.Name,
 				subject: resultType.ID(),
 				source:  resultType.Name(),
 				side:    symbol.side,
-			}, symbol.prefix+codegen.Goify(resultType.Name(), true))
+			}, symbol.prefix+codegen.Goify(resultType.Name(), true), facts.apiName)
 			if err != nil {
 				return err
 			}
@@ -834,12 +819,12 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 				facts.methodByExpr[method].viewedResult.toResult = constructor
 			}
 		}
-		facts.methodByExpr[method].viewedResult.mapDeclaration, err = facts.names.declare(viewsPackage, serviceSymbolID{
+		facts.methodByExpr[method].viewedResult.mapDeclaration, err = facts.names.declareForAPI(viewsPackage, serviceSymbolID{
 			role:    serviceViewMapNameRole,
 			service: facts.service.Name,
 			subject: resultType.ID(),
 			source:  resultType.Name(),
-		}, codegen.Goify(resultType.Name(), true)+"Map")
+		}, codegen.Goify(resultType.Name(), true)+"Map", facts.apiName)
 		if err != nil {
 			return err
 		}
@@ -849,9 +834,6 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 				declaration: viewedFacts.projected.declaration,
 				view:        canonicalValidatorView(view.name),
 			}]
-			if declaration == nil {
-				return fmt.Errorf("validator for viewed result %q view %q was not declared", resultType.Name(), view.name)
-			}
 			viewedFacts.validationCalls = append(viewedFacts.validationCalls, declaration)
 		}
 	}
@@ -859,8 +841,8 @@ func collectViewNames(facts *serviceFacts, servicePackage, viewsPackage *codegen
 	return planServiceValidations(facts, rootTypes, generation)
 }
 
-// linkViewConversionCalls binds collection and nested constructor calls to the
-// exact retained function records selected for their projected type and view.
+// linkViewConversionCalls gives collection and child constructor calls the Go
+// function names chosen for their result type and view.
 func linkViewConversionCalls(facts *serviceFacts) {
 	lookup := make(map[viewConversionCallKey]*codegen.NameDeclaration)
 	for _, method := range facts.methods {
@@ -919,17 +901,6 @@ func linkViewConversionCalls(facts *serviceFacts) {
 func interceptorHasStreamingAccess(interceptor *expr.InterceptorExpr) bool {
 	return interceptor.ReadStreamingPayload != nil || interceptor.WriteStreamingPayload != nil ||
 		interceptor.ReadStreamingResult != nil || interceptor.WriteStreamingResult != nil
-}
-
-// hasRetainedJSONRPCStreaming reports whether the retained methods emit the
-// package-level JSON-RPC Stream declaration.
-func hasRetainedJSONRPCStreaming(facts *serviceFacts) bool {
-	for _, method := range facts.methods {
-		if _, jsonRPC := method.Meta["jsonrpc"]; jsonRPC && (method.IsStreaming() || method.HasMixedResults()) {
-			return true
-		}
-	}
-	return false
 }
 
 // interceptorNamed reports whether interceptors contains name.

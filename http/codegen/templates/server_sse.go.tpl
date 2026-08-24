@@ -1,3 +1,7 @@
+{{/*
+server_sse.go.tpl writes the HTTP server stream for one SSE endpoint. The plan
+provides the exact response value and selected view used for each event.
+*/ -}}
 {{ printf "%s implements the %s interface using Server-Sent Events." .SSE.StructDeclaration.Name .SSE.Interface | comment }}
 type {{ .SSE.StructDeclaration.Name }} struct {
 	{{ comment "once ensures the headers are written once." }}
@@ -59,7 +63,9 @@ func (s *{{ .SSE.StructDeclaration.Name }}) {{ .SSE.SendWithContextName }}(ctx c
 	{{- end }}
 
 	var data string
-	var payload any
+	{{- if .SSE.Data.Pointer }}
+	hasData := true
+	{{- end }}
 	{{- if .SSE.HasResponseBody }}
 		{{- if .Method.ViewedResult }}
 			{{- if .SSE.VariableView }}
@@ -76,67 +82,31 @@ func (s *{{ .SSE.StructDeclaration.Name }}) {{ .SSE.SendWithContextName }}(ctx c
 			{{- end }}
 		{{- else }}
 			{{- if (index .SSE.Response.ServerBody 0).Init }}
-	body := {{ (index .SSE.Response.ServerBody 0).Init.Name }}({{ range (index .SSE.Response.ServerBody 0).Init.ServerArgs }}{{ .Ref }}, {{ end }})
+	body := {{ (index .SSE.Response.ServerBody 0).Init.Declaration.Name }}({{ range (index .SSE.Response.ServerBody 0).Init.ServerArgs }}{{ .Ref }}, {{ end }})
 			{{- else }}
 	body := res
 			{{- end }}
 			{{- if .SSE.DataField }}
-	payload = body.{{ .SSE.DataField }}
+	{{ template "partial_sse_format" dict "Value" (printf "body.%s" .SSE.DataField) "Encoding" .SSE.Data }}
 			{{- else }}
-	payload = body
+	{{ template "partial_sse_format" dict "Value" "body" "Encoding" .SSE.Data }}
 			{{- end }}
 		{{- end }}
 	{{- else }}
 		{{- if .SSE.DataField }}
-	payload = {{ if .Method.ViewedResult }}projected{{ else }}res{{ end }}.{{ .SSE.DataField }}
+			{{- if .Method.ViewedResult }}
+	{{ template "partial_sse_format" dict "Value" (printf "projected.%s" .SSE.DataField) "Encoding" .SSE.Data }}
+			{{- else }}
+	{{ template "partial_sse_format" dict "Value" (printf "res.%s" .SSE.DataField) "Encoding" .SSE.Data }}
+			{{- end }}
 		{{- else }}
-	payload = {{ if .Method.ViewedResult }}projected{{ else }}res{{ end }}
+			{{- if .Method.ViewedResult }}
+	{{ template "partial_sse_format" dict "Value" "projected" "Encoding" .SSE.Data }}
+			{{- else }}
+	{{ template "partial_sse_format" dict "Value" "res" "Encoding" .SSE.Data }}
+			{{- end }}
 		{{- end }}
 	{{- end }}
-	switch v := payload.(type) {
-	case nil:
-		data = "null"
-	case string:
-		data = v
-	case []byte:
-		data = string(v)
-	case bool:
-		if v {
-			data = "true"
-		} else {
-			data = "false"
-		}
-	case int:
-		data = fmt.Sprintf("%d", v)
-	case int8:
-		data = fmt.Sprintf("%d", v)
-	case int16:
-		data = fmt.Sprintf("%d", v)
-	case int32:
-		data = fmt.Sprintf("%d", v)
-	case int64:
-		data = fmt.Sprintf("%d", v)
-	case uint:
-		data = fmt.Sprintf("%d", v)
-	case uint8:
-		data = fmt.Sprintf("%d", v)
-	case uint16:
-		data = fmt.Sprintf("%d", v)
-	case uint32:
-		data = fmt.Sprintf("%d", v)
-	case uint64:
-		data = fmt.Sprintf("%d", v)
-	case float32:
-		data = fmt.Sprintf("%g", v)
-	case float64:
-		data = fmt.Sprintf("%g", v)
-	default:
-		byts, err := json.Marshal(payload)
-		if err != nil {
-			return err
-		}
-		data = string(byts)
-	}
 	{{- if .SSE.VariableView }}
 	s.sentView = view
 	{{- end }}
@@ -175,15 +145,26 @@ func (s *{{ .SSE.StructDeclaration.Name }}) {{ .SSE.SendWithContextName }}(ctx c
 	{{- end }}
 
 	{{- if .SSE.RetryField }}
-	if retry := {{ if .Method.ViewedResult }}projected{{ else }}res{{ end }}.{{ .SSE.RetryField }}; retry > 0 {
-		if _, err := fmt.Fprintf(s.w, "retry: %d\n", retry); err != nil {
+	if retry := {{ if .Method.ViewedResult }}projected{{ else }}res{{ end }}.{{ .SSE.RetryField }}; {{ if .SSE.Retry.Pointer }}retry != nil && *{{ end }}retry > 0 {
+		if _, err := fmt.Fprintf(s.w, "retry: %d\n", {{ if .SSE.Retry.Pointer }}*{{ end }}retry); err != nil {
 			return err
 		}
 	}
 	{{- end }}
+	{{- if .SSE.Data.Pointer }}
+	if hasData {
+		if _, err := fmt.Fprintf(s.w, "data: %s\n", data); err != nil {
+			return err
+		}
+	}
+	if _, err := fmt.Fprintln(s.w); err != nil {
+		return err
+	}
+	{{- else }}
 	if _, err := fmt.Fprintf(s.w, "data: %s\n\n", data); err != nil {
 		return err
 	}
+	{{- end }}
 
 	if err := http.NewResponseController(s.w).Flush(); err != nil {
 		return err
@@ -194,11 +175,11 @@ func (s *{{ .SSE.StructDeclaration.Name }}) {{ .SSE.SendWithContextName }}(ctx c
 {{- define "viewed_sse_server_body" }}
 	{{- $endpoint := .Endpoint }}
 	{{- with .Representation }}
-		body := {{ .ServerBody.Init.Name }}({{ range .ServerBody.Init.ServerArgs }}{{ .Ref }}, {{ end }})
+		body := {{ .ServerBody.Init.Declaration.Name }}({{ range .ServerBody.Init.ServerArgs }}{{ .Ref }}, {{ end }})
 		{{- if $endpoint.SSE.DataField }}
-		payload = body.{{ $endpoint.SSE.DataField }}
+		{{ template "partial_sse_format" dict "Value" (printf "body.%s" $endpoint.SSE.DataField) "Encoding" $endpoint.SSE.Data }}
 		{{- else }}
-		payload = body
+		{{ template "partial_sse_format" dict "Value" "body" "Encoding" $endpoint.SSE.Data }}
 		{{- end }}
 	{{- end }}
 {{- end }}

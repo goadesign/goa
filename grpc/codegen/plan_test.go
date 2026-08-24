@@ -4,6 +4,7 @@ package codegen
 
 import (
 	"fmt"
+	"path"
 	"sort"
 	"testing"
 
@@ -31,6 +32,23 @@ func TestNewPlansKeepsExactInputs(t *testing.T) {
 	require.Same(t, services[1], plans[0].Service())
 	require.Same(t, roots[0], plans[1].Root())
 	require.Same(t, services[0], plans[1].Service())
+}
+
+// TestNewExamplePlanRejectsAnotherServicePlan checks that server names and
+// URLs cannot come from a different design with the same authored names.
+func TestNewExamplePlanRejectsAnotherServicePlan(t *testing.T) {
+	roots := grpcPlanRoots(t, "Service")
+	generation, services := grpcServicePlans(t, roots)
+	plans, err := newPlans(generation, fixedProtobufToolResolver(), PlanInput{Root: roots[0], Service: services[0]})
+	require.NoError(t, err)
+
+	otherRoots := grpcPlanRoots(t, "Service")
+	otherGeneration, otherServices := grpcServicePlans(t, otherRoots)
+	examples, err := example.NewPlan(otherGeneration, otherServices[0])
+	require.NoError(t, err)
+
+	_, err = NewExamplePlan(plans[0], examples)
+	require.EqualError(t, err, "gRPC examples require server data created from the same service design")
 }
 
 // TestNewPlansRequiresEveryRoot checks that a batch cannot omit a design.
@@ -70,11 +88,29 @@ func TestPlanLinksOnceAfterFreeze(t *testing.T) {
 	plans, err := NewPlans(generation, PlanInput{Root: roots[0], Service: services[0]})
 	require.NoError(t, err)
 	require.EqualError(t, plans[0].Link(), "gRPC plan cannot link before generation freeze")
-	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, services[0].Link())
 	require.NoError(t, plans[0].Link())
 	require.EqualError(t, plans[0].Link(), "gRPC plan is already linked")
+}
+
+// TestPlanLinksStoredServicesAfterRootListRemoved checks that Link builds the
+// services selected by NewPlans without reading the root service list again.
+func TestPlanLinksStoredServicesAfterRootListRemoved(t *testing.T) {
+	roots := grpcPlanRoots(t, "Calc")
+	generation, services := grpcServicePlans(t, roots)
+	plans, err := NewPlans(generation, PlanInput{Root: roots[0], Service: services[0]})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, services[0].Link())
+
+	roots[0].API.GRPC.Services = nil
+	require.NoError(t, plans[0].Link())
+	require.NotEmpty(t, plans[0].ProtoFiles())
+	require.NotEmpty(t, plans[0].ServerFiles())
+	require.NotEmpty(t, plans[0].ClientFiles())
+	require.NotEmpty(t, plans[0].ServerTypeFiles())
+	require.NotEmpty(t, plans[0].ClientTypeFiles())
 }
 
 // TestPlanReturnsStoredFiles checks that later reads reuse the linked files.
@@ -83,7 +119,6 @@ func TestPlanReturnsStoredFiles(t *testing.T) {
 	generation, services := grpcServicePlans(t, roots)
 	plans, err := NewPlans(generation, PlanInput{Root: roots[0], Service: services[0]})
 	require.NoError(t, err)
-	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, services[0].Link())
 	require.NoError(t, plans[0].Link())
@@ -101,6 +136,73 @@ func TestNewPlansIsIndependentOfInputOrder(t *testing.T) {
 	require.Empty(t, forwardErr)
 	require.Empty(t, reverseErr)
 	require.Equal(t, forwardNames, reverseNames)
+}
+
+// TestGRPCCLIImportAliasesBelongToOutputPackage checks that a name used by an
+// unrelated HTTP package cannot change the qualifier written by the gRPC
+// command parser package.
+func TestGRPCCLIImportAliasesBelongToOutputPackage(t *testing.T) {
+	roots := grpcPlanRoots(t, "Echo")
+	generation, services := grpcServicePlans(t, roots)
+	httpPackage, err := generation.ClaimPackage("generated.local/gen/http/unrelated/client")
+	require.NoError(t, err)
+	require.NoError(t, httpPackage.ReserveGeneratedImport(codegen.NewImport("echoc", "example.com/unrelated/client")))
+
+	plans, err := NewPlans(generation, PlanInput{Root: roots[0], Service: services[0]})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, services[0].Link())
+	require.NoError(t, plans[0].Link())
+
+	serverName := codegen.SnakeCase(codegen.Goify(roots[0].API.Servers[0].Name, true))
+	cliPackage := generation.Package(path.Join(generation.GenPkg(), "grpc", "cli", serverName))
+	clientPath := path.Join(generation.GenPkg(), "grpc", "echo", "client")
+	require.Equal(t, "echoc", cliPackage.ImportName(clientPath))
+}
+
+// TestGRPCReferencesUseTheirOutputPackageAlias checks that client and server
+// source use their own service import names when only the server package also
+// imports the standard strings package.
+func TestGRPCReferencesUseTheirOutputPackageAlias(t *testing.T) {
+	roots := grpcPlanRoots(t, "Strings")
+	generation, services := grpcServicePlans(t, roots)
+	plans, err := NewPlans(generation, PlanInput{Root: roots[0], Service: services[0]})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, services[0].Link())
+	require.NoError(t, plans[0].Link())
+
+	clientCode := sectionCode(t, plans[0].ClientFiles()[1].SectionTemplates...)
+	serverCode := sectionCode(t, plans[0].ServerFiles()[0].SectionTemplates...)
+	require.Contains(t, clientCode, `strings "generated.local/gen/strings"`)
+	require.Contains(t, clientCode, `*strings.ReadPayload`)
+	require.Contains(t, serverCode, `strings2 "generated.local/gen/strings"`)
+	require.Contains(t, serverCode, `*strings2.Endpoints`)
+}
+
+// TestGRPCServerUsesItsOwnProtobufAlias checks that the runtime protobuf
+// import used by a client cannot carry its suffixed alias into server source.
+func TestGRPCServerUsesItsOwnProtobufAlias(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		for _, serviceName := range []string{"Goa", "Goapb"} {
+			dsl.Service(serviceName, func() {
+				dsl.Method("Read", func() {
+					dsl.Payload(func() { dsl.Field(1, "value", dsl.String) })
+					dsl.GRPC(func() {})
+				})
+			})
+		}
+	})
+	generation, services := grpcServicePlans(t, []*expr.RootExpr{root})
+	plans, err := NewPlans(generation, PlanInput{Root: root, Service: services[0]})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, services[0].Link())
+	require.NoError(t, plans[0].Link())
+
+	serverCode := sectionCode(t, plans[0].ServerFiles()[0].SectionTemplates...)
+	require.Contains(t, serverCode, `goapb "generated.local/gen/grpc/goa/pb"`)
+	require.NotContains(t, serverCode, "goapb2.")
 }
 
 // grpcPlanRoots creates independent designs with one unary gRPC method.
@@ -149,8 +251,6 @@ func grpcPlanFileSignatures(t *testing.T, plan *Plan) []string {
 	files = append(files, plan.ServerTypeFiles()...)
 	files = append(files, plan.ClientTypeFiles()...)
 	files = append(files, plan.ClientCLIFiles()...)
-	files = append(files, plan.ExampleServerFiles()...)
-	files = append(files, plan.ExampleCLIFiles()...)
 	signatures := make([]string, len(files))
 	for index, file := range files {
 		signatures[index] = file.Path + "\n" + sectionCode(t, file.SectionTemplates...)
@@ -175,7 +275,6 @@ func collidingGRPCPlanResult(t *testing.T, reverse bool) ([]string, string) {
 			dsl.Service(serviceName, func() {
 				dsl.Method("Sync2URL", func() {
 					dsl.Payload(choice)
-					dsl.Result(choice)
 					dsl.StreamingPayload(choice)
 					dsl.StreamingResult(choice)
 					dsl.GRPC(func() {})
@@ -193,7 +292,6 @@ func collidingGRPCPlanResult(t *testing.T, reverse bool) ([]string, string) {
 	if err != nil {
 		return nil, err.Error()
 	}
-	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	for _, servicePlan := range services {
 		require.NoError(t, servicePlan.Link())

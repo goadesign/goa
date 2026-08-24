@@ -13,7 +13,6 @@ import (
 
 	kitchensink "generated.local"
 	calc "generated.local/gen/calc"
-	chat "generated.local/gen/chat"
 	feed "generated.local/gen/feed"
 	health "generated.local/gen/health"
 	mixed "generated.local/gen/mixed"
@@ -48,14 +47,12 @@ func main() {
 	// Initialize the services.
 	var (
 		calcSvc   calc.Service
-		chatSvc   chat.Service
 		feedSvc   feed.Service
 		mixedSvc  mixed.Service
 		healthSvc health.Service
 	)
 	{
 		calcSvc = kitchensink.NewCalc()
-		chatSvc = kitchensink.NewChat()
 		feedSvc = kitchensink.NewFeed()
 		mixedSvc = kitchensink.NewMixed()
 		healthSvc = kitchensink.NewHealth()
@@ -65,7 +62,6 @@ func main() {
 	// potentially running in different processes.
 	var (
 		calcEndpoints   *calc.Endpoints
-		chatEndpoints   *chat.Endpoints
 		feedEndpoints   *feed.Endpoints
 		mixedEndpoints  *mixed.Endpoints
 		healthEndpoints *health.Endpoints
@@ -74,9 +70,6 @@ func main() {
 		calcEndpoints = calc.NewEndpoints(calcSvc)
 		calcEndpoints.Use(debug.LogPayloads())
 		calcEndpoints.Use(log.Endpoint)
-		chatEndpoints = chat.NewEndpoints(chatSvc)
-		chatEndpoints.Use(debug.LogPayloads())
-		chatEndpoints.Use(log.Endpoint)
 		feedEndpoints = feed.NewEndpoints(feedSvc)
 		feedEndpoints.Use(debug.LogPayloads())
 		feedEndpoints.Use(log.Endpoint)
@@ -127,7 +120,7 @@ func main() {
 			} else if u.Port() == "" {
 				u.Host = net.JoinHostPort(u.Host, "80")
 			}
-			handleHTTPServer(ctx, u, mixedEndpoints, healthEndpoints, calcSvc, calcEndpoints, chatSvc, chatEndpoints, feedSvc, feedEndpoints, mixedSvc, &wg, errc, *dbgF)
+			handleHTTPServer(ctx, u, mixedEndpoints, healthEndpoints, calcSvc, calcEndpoints, feedSvc, feedEndpoints, mixedSvc, &wg, errc, *dbgF)
 		}
 
 	default:

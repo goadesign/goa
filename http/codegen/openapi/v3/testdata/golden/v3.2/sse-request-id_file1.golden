@@ -18,8 +18,8 @@ paths:
                   in: header
                   schema:
                     type: string
-                    example: Mollitia saepe expedita quas sed maxime.
-                  example: Mollitia saepe expedita quas sed maxime.
+                    example: request
+                  example: request
             requestBody:
                 description: Request body for SSERequestIDMethod.
                 required: true
@@ -28,7 +28,7 @@ paths:
                         schema:
                             $ref: '#/components/schemas/SSERequestIDMethodRequestBody'
                         example:
-                            id: Fugit totam mollitia perspiciatis sit sit.
+                            id: request
             responses:
                 "200":
                     description: OK response.
@@ -39,7 +39,7 @@ paths:
                                 properties:
                                     data:
                                         type: string
-                                        example: Nam odio.
+                                        example: event
                                 required:
                                     - data
 components:
@@ -49,9 +49,9 @@ components:
             properties:
                 id:
                     type: string
-                    example: Fugit totam mollitia perspiciatis sit sit.
+                    example: request
             description: Request body for SSERequestIDMethod.
             example:
-                id: Fugit totam mollitia perspiciatis sit sit.
+                id: request
 tags:
     - name: SSERequestIDService

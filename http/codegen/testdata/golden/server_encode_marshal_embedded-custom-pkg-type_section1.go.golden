@@ -1,9 +1,10 @@
-// marshalFooFooToFoo builds a value of type *Foo from a value of type *foo.Foo.
-func marshalFooFooToFoo(v *foo.Foo) *Foo {
+// marshalFooFooToFooResponseBodyOptional builds a value of type
+// *FooResponseBody from a value of type *foo.Foo.
+func marshalFooFooToFooResponseBodyOptional(v *foo.Foo) *FooResponseBody {
 	if v == nil {
 		return nil
 	}
-	res := &Foo{
+	res := &FooResponseBody{
 		Bar: v.Bar,
 	}
 

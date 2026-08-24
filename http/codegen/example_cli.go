@@ -1,24 +1,23 @@
-// This file renders runnable HTTP and JSON-RPC client examples whose generated
-// CLI, service, application, and interceptor imports use the qualifiers
-// selected during planning.
+// This file writes runnable HTTP and JSON-RPC command-line examples with the
+// package names already chosen for this generation.
 package codegen
 
 import (
-	"os"
 	"path"
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
+	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 )
 
 // exampleCLIFiles returns an example command-line client for the HTTP services
 // on each configured server.
-func exampleCLIFiles(services *ServicesData) []*codegen.File {
+func exampleCLIFiles(root *example.Root, services *ServicesData) []*codegen.File {
 	var files []*codegen.File
-	for _, svr := range services.Root.API.Servers {
-		if f := exampleCLI(svr, services); f != nil {
+	for _, server := range root.Servers {
+		if f := exampleCLI(root, server, services); f != nil {
 			files = append(files, f)
 		}
 	}
@@ -27,28 +26,26 @@ func exampleCLIFiles(services *ServicesData) []*codegen.File {
 
 // exampleCLI returns an example command-line client for the HTTP services on
 // the given server.
-func exampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
+func exampleCLI(root *example.Root, server *example.Data, services *ServicesData) *codegen.File {
 	genpkg := services.GenPkg()
-	svrdata := example.Servers.Get(svr, services.Root)
-	outputPath := filepath.Join("cmd", svrdata.Dir+"-cli", services.dir()+".go")
-	if _, err := os.Stat(outputPath); !os.IsNotExist(err) {
-		return nil // file already exists, skip it.
-	}
+	outputPath := filepath.Join("cmd", server.Dir+"-cli", services.dir()+".go")
+	outputPackage := path.Join(path.Dir(genpkg), "cmd", server.Dir+"-cli")
 	funcSuffix := "HTTP"
 	if services.jsonrpc {
 		funcSuffix = "JSONRPC"
 	}
 	rootPath := path.Dir(genpkg)
-	cliImport := services.PackageImport(path.Join(genpkg, services.dir(), "cli", svrdata.Dir))
-	parser := services.cliParsers[svr]
+	cliImport := services.PackageImport(outputPackage, path.Join(genpkg, services.dir(), "cli", server.Dir))
+	parser := services.cliParsers[server.Name]
 	if parser == nil {
-		panic("HTTP command parser names are missing for server " + svr.Name)
+		panic("HTTP command parser names are missing for server " + server.Name)
 	}
 	specs := []*codegen.ImportSpec{
 		{Path: "context"},
-		{Path: "encoding/json"},
+		{Path: "errors"},
 		{Path: "flag"},
 		{Path: "fmt"},
+		{Path: "io"},
 		{Path: "net/http"},
 		{Path: "net/url"},
 		{Path: "os"},
@@ -60,26 +57,26 @@ func exampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 		cliImport,
 	}
 	hasClientInterceptors := false
-	for _, svc := range services.Root.Services {
-		data := services.ServicesData.Get(svc.Name)
-		serviceImport := services.ServiceImport(svc.Name)
+	for _, name := range root.Services {
+		data := services.ServicesData.Get(name)
+		serviceImport := services.ServiceImport(outputPackage, name)
 		specs = append(specs, serviceImport)
 		hasClientInterceptors = hasClientInterceptors || len(data.ClientInterceptors) > 0
 	}
 	var interceptorsPkg string
 	if hasClientInterceptors {
-		interceptorImport := services.PackageImport(rootPath + "/interceptors")
+		interceptorImport := services.PackageImport(outputPackage, rootPath+"/interceptors")
 		interceptorsPkg = interceptorImport.Name
 		specs = append(specs, interceptorImport)
 	}
-	apiImport := services.PackageImport(rootPath)
+	apiImport := services.PackageImport(outputPackage, rootPath)
 	apiPkg := apiImport.Name
 	specs = append(specs, apiImport)
 
 	var svcData []*ServiceData
-	for _, svc := range svr.Services {
+	for _, svc := range server.Services {
 		if data := services.Get(svc); data != nil {
-			svcData = append(svcData, data)
+			svcData = append(svcData, exampleServiceDataForOutput(data, services, outputPackage))
 		}
 	}
 	sections := []*codegen.SectionTemplate{
@@ -107,14 +104,22 @@ func exampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 			Name:   "cli-http-end",
 			Source: httpTemplates.Read(cliEndT),
 			Data: map[string]any{
-				"Services": svcData,
-				"APIPkg":   apiPkg,
-				"CLIPkg":   cliImport.Name,
-				"Parser":   parser.Declarations,
+				"Services":  svcData,
+				"APIPkg":    apiPkg,
+				"CLIPkg":    cliImport.Name,
+				"Parser":    parser.Declarations,
+				"Transport": services.label(),
 			},
 			FuncMap: map[string]any{
-				"needDialer":   NeedDialer,
-				"hasWebSocket": HasWebSocket,
+				"hasAnyInputStreams": cliHasAnyInputStreams,
+				"hasInputStreams":    cliHasInputStreams,
+				"hasRunnable":        cliHasRunnableCommands,
+				"hasRunnableService": cliHasRunnableService,
+				"needDialer":         NeedDialer,
+				"hasWebSocket":       HasWebSocket,
+				"kebab":              codegen.KebabCase,
+				"streamsInput":       cliStreamsInput,
+				"streamsOutput":      cliStreamsOutput,
 			},
 		},
 		{
@@ -132,4 +137,60 @@ func exampleCLI(svr *expr.ServerExpr, services *ServicesData) *codegen.File {
 		SectionTemplates: sections,
 		SkipExist:        true,
 	}
+}
+
+// cliStreamsInput reports whether an example command would need to send more
+// payload values after the endpoint call starts.
+func cliStreamsInput(method *service.MethodData) bool {
+	return method.StreamKind == expr.ClientStreamKind || method.StreamKind == expr.BidirectionalStreamKind
+}
+
+// cliStreamsOutput reports whether an example command receives a sequence of
+// results from the server.
+func cliStreamsOutput(method *service.MethodData) bool {
+	return method.StreamKind == expr.ServerStreamKind
+}
+
+// cliHasInputStreams reports whether a service has commands that the example
+// client must reject before parsing an endpoint.
+func cliHasInputStreams(data *ServiceData) bool {
+	for _, endpoint := range data.Endpoints {
+		if cliStreamsInput(endpoint.Method) {
+			return true
+		}
+	}
+	return false
+}
+
+// cliHasAnyInputStreams reports whether any service has a command that the
+// example client must reject before parsing an endpoint.
+func cliHasAnyInputStreams(services []*ServiceData) bool {
+	for _, data := range services {
+		if cliHasInputStreams(data) {
+			return true
+		}
+	}
+	return false
+}
+
+// cliHasRunnableCommands reports whether the example client can invoke at
+// least one generated endpoint.
+func cliHasRunnableCommands(services []*ServiceData) bool {
+	for _, data := range services {
+		if cliHasRunnableService(data) {
+			return true
+		}
+	}
+	return false
+}
+
+// cliHasRunnableService reports whether the example client can invoke at
+// least one endpoint in the service.
+func cliHasRunnableService(data *ServiceData) bool {
+	for _, endpoint := range data.Endpoints {
+		if !cliStreamsInput(endpoint.Method) {
+			return true
+		}
+	}
+	return false
 }

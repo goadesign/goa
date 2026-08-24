@@ -1,6 +1,7 @@
 // This file generates ConvertTo and CreateFrom functions for service types
-// mapped to external Go structs. Service-side names come from the frozen
-// package catalog, including nested types relocated by design metadata.
+// mapped to external Go structs. Service-side names come from the completed
+// package records, including nested types placed in packages by design
+// metadata.
 package service
 
 import (
@@ -315,7 +316,7 @@ func buildDesignType(dt *expr.DataType, t reflect.Type, ref expr.DataType, recs 
 			oref = expr.AsObject(ref)
 		}
 
-		// Retain only fields represented by the matching design object. External
+		// Keep only fields represented by the matching design object. External
 		// structs may contain additional fields, but generated transforms neither
 		// read nor write them and therefore must not reserve their package imports.
 		var fields []reflect.StructField

@@ -38,24 +38,24 @@ type U struct {
 	Item *Item
 }
 
-// Result is a sum-type union.
+// Result holds exactly one of its branch values.
 type Result struct {
 	kind ResultKind
 	T    *T
 	U    *U
 }
 
-// ResultKind enumerates the union variants for Result.
+// ResultKind records which Result branch is selected.
 type ResultKind string
 
 const (
-	// ResultKindT identifies the t branch of the union.
+	// ResultKindT identifies the t branch.
 	ResultKindT ResultKind = "t"
-	// ResultKindU identifies the u branch of the union.
+	// ResultKindU identifies the u branch.
 	ResultKindU ResultKind = "u"
 )
 
-// Kind returns the discriminator value of the union.
+// Kind returns the selected branch.
 func (u Result) Kind() ResultKind {
 	return u.kind
 }
@@ -68,7 +68,7 @@ func NewResultT(v *T) Result {
 	}
 }
 
-// AsT returns the value of the t branch if set.
+// AsT returns the value when the t branch is selected.
 func (u Result) AsT() (_ *T, ok bool) {
 	if u.kind != ResultKindT {
 		return
@@ -76,7 +76,7 @@ func (u Result) AsT() (_ *T, ok bool) {
 	return u.T, true
 }
 
-// SetT sets the t branch of the union.
+// SetT selects the t branch and stores v.
 func (u *Result) SetT(v *T) {
 	u.kind = ResultKindT
 	u.T = v
@@ -90,7 +90,7 @@ func NewResultU(v *U) Result {
 	}
 }
 
-// AsU returns the value of the u branch if set.
+// AsU returns the value when the u branch is selected.
 func (u Result) AsU() (_ *U, ok bool) {
 	if u.kind != ResultKindU {
 		return
@@ -98,13 +98,13 @@ func (u Result) AsU() (_ *U, ok bool) {
 	return u.U, true
 }
 
-// SetU sets the u branch of the union.
+// SetU selects the u branch and stores v.
 func (u *Result) SetU(v *U) {
 	u.kind = ResultKindU
 	u.U = v
 }
 
-// Validate ensures the union discriminant is valid.
+// Validate ensures exactly one valid branch is selected.
 func (u Result) Validate() error {
 	switch u.kind {
 	case "":
@@ -144,7 +144,7 @@ func (u Result) MarshalJSON() ([]byte, error) {
 	case ResultKindU:
 		value = u.U
 	default:
-		return nil, fmt.Errorf("unexpected Result discriminant %q", u.kind)
+		return nil, fmt.Errorf("unexpected Result kind %q", u.kind)
 	}
 	return json.Marshal(struct {
 		Type  string `json:"type"`
@@ -218,13 +218,19 @@ func newResultOneof(vres *resultwithoneoftypeviews.ResultOneofView) *ResultOneof
 		switch string(vres.Result.Kind()) {
 		case "t":
 			actual, _ := vres.Result.AsT()
-			obj := transformResultwithoneoftypeviewsTViewToT(actual)
+			var obj *T
+			if actual != nil {
+				obj = transformResultwithoneoftypeviewsTViewToT(actual)
+			}
 			u := res.Result
 			u.SetT((*T)(obj))
 			res.Result = u
 		case "u":
 			actual, _ := vres.Result.AsU()
-			obj := transformResultwithoneoftypeviewsUViewToU(actual)
+			var obj *U
+			if actual != nil {
+				obj = transformResultwithoneoftypeviewsUViewToU(actual)
+			}
 			u := res.Result
 			u.SetU((*U)(obj))
 			res.Result = u
@@ -241,13 +247,19 @@ func newResultOneofView(res *ResultOneof) *resultwithoneoftypeviews.ResultOneofV
 		switch string(res.Result.Kind()) {
 		case "t":
 			actual, _ := res.Result.AsT()
-			obj := transformTToResultwithoneoftypeviewsTView(actual)
+			var obj *resultwithoneoftypeviews.TView
+			if actual != nil {
+				obj = transformTToResultwithoneoftypeviewsTView(actual)
+			}
 			u := vres.Result
 			u.SetT((*resultwithoneoftypeviews.TView)(obj))
 			vres.Result = u
 		case "u":
 			actual, _ := res.Result.AsU()
-			obj := transformUToResultwithoneoftypeviewsUView(actual)
+			var obj *resultwithoneoftypeviews.UView
+			if actual != nil {
+				obj = transformUToResultwithoneoftypeviewsUView(actual)
+			}
 			u := vres.Result
 			u.SetU((*resultwithoneoftypeviews.UView)(obj))
 			vres.Result = u

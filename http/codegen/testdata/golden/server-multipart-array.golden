@@ -1,0 +1,22 @@
+import (
+	"mime/multipart"
+
+	servicemultipartarraytypesvr "generated.local/gen/http/service_multipart_array_type/server"
+	servicemultipartarraytype "generated.local/gen/service_multipart_array_type"
+)
+
+// ServiceMultipartArrayTypeMethodMultipartArrayTypeDecoderFunc reads the
+// multipart request body for service "ServiceMultipartArrayType" endpoint
+// "MethodMultipartArrayType" into body.
+func ServiceMultipartArrayTypeMethodMultipartArrayTypeDecoderFunc(mr *multipart.Reader, body *[]*servicemultipartarraytypesvr.PayloadTypeRequestBody) error {
+	// Add multipart request decoder logic here
+	return nil
+}
+
+// ServiceMultipartArrayTypeMethodMultipartArrayTypeEncoderFunc implements the
+// multipart encoder for service "ServiceMultipartArrayType" endpoint
+// "MethodMultipartArrayType".
+func ServiceMultipartArrayTypeMethodMultipartArrayTypeEncoderFunc(mw *multipart.Writer, p []*servicemultipartarraytype.PayloadType) error {
+	// Add multipart request encoder logic here
+	return nil
+}

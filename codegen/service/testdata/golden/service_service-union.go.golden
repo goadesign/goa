@@ -34,7 +34,7 @@ type ValuesInt int
 
 type ValuesString string
 
-// Values is a sum-type union.
+// Values holds exactly one of its branch values.
 type Values struct {
 	kind    ValuesKind
 	Int     ValuesInt
@@ -43,21 +43,21 @@ type Values struct {
 	Bytes   ValuesBytes
 }
 
-// ValuesKind enumerates the union variants for Values.
+// ValuesKind records which Values branch is selected.
 type ValuesKind string
 
 const (
-	// ValuesKindInt identifies the Int branch of the union.
+	// ValuesKindInt identifies the Int branch.
 	ValuesKindInt ValuesKind = "Int"
-	// ValuesKindString identifies the String branch of the union.
+	// ValuesKindString identifies the String branch.
 	ValuesKindString ValuesKind = "String"
-	// ValuesKindBoolean identifies the Boolean branch of the union.
+	// ValuesKindBoolean identifies the Boolean branch.
 	ValuesKindBoolean ValuesKind = "Boolean"
-	// ValuesKindBytes identifies the Bytes branch of the union.
+	// ValuesKindBytes identifies the Bytes branch.
 	ValuesKindBytes ValuesKind = "Bytes"
 )
 
-// Kind returns the discriminator value of the union.
+// Kind returns the selected branch.
 func (u Values) Kind() ValuesKind {
 	return u.kind
 }
@@ -70,7 +70,7 @@ func NewValuesInt(v ValuesInt) Values {
 	}
 }
 
-// AsInt returns the value of the Int branch if set.
+// AsInt returns the value when the Int branch is selected.
 func (u Values) AsInt() (_ ValuesInt, ok bool) {
 	if u.kind != ValuesKindInt {
 		return
@@ -78,7 +78,7 @@ func (u Values) AsInt() (_ ValuesInt, ok bool) {
 	return u.Int, true
 }
 
-// SetInt sets the Int branch of the union.
+// SetInt selects the Int branch and stores v.
 func (u *Values) SetInt(v ValuesInt) {
 	u.kind = ValuesKindInt
 	u.Int = v
@@ -92,7 +92,7 @@ func NewValuesString(v ValuesString) Values {
 	}
 }
 
-// AsString returns the value of the String branch if set.
+// AsString returns the value when the String branch is selected.
 func (u Values) AsString() (_ ValuesString, ok bool) {
 	if u.kind != ValuesKindString {
 		return
@@ -100,7 +100,7 @@ func (u Values) AsString() (_ ValuesString, ok bool) {
 	return u.String, true
 }
 
-// SetString sets the String branch of the union.
+// SetString selects the String branch and stores v.
 func (u *Values) SetString(v ValuesString) {
 	u.kind = ValuesKindString
 	u.String = v
@@ -114,7 +114,7 @@ func NewValuesBoolean(v ValuesBoolean) Values {
 	}
 }
 
-// AsBoolean returns the value of the Boolean branch if set.
+// AsBoolean returns the value when the Boolean branch is selected.
 func (u Values) AsBoolean() (_ ValuesBoolean, ok bool) {
 	if u.kind != ValuesKindBoolean {
 		return
@@ -122,7 +122,7 @@ func (u Values) AsBoolean() (_ ValuesBoolean, ok bool) {
 	return u.Boolean, true
 }
 
-// SetBoolean sets the Boolean branch of the union.
+// SetBoolean selects the Boolean branch and stores v.
 func (u *Values) SetBoolean(v ValuesBoolean) {
 	u.kind = ValuesKindBoolean
 	u.Boolean = v
@@ -136,7 +136,7 @@ func NewValuesBytes(v ValuesBytes) Values {
 	}
 }
 
-// AsBytes returns the value of the Bytes branch if set.
+// AsBytes returns the value when the Bytes branch is selected.
 func (u Values) AsBytes() (_ ValuesBytes, ok bool) {
 	if u.kind != ValuesKindBytes {
 		return
@@ -144,13 +144,13 @@ func (u Values) AsBytes() (_ ValuesBytes, ok bool) {
 	return u.Bytes, true
 }
 
-// SetBytes sets the Bytes branch of the union.
+// SetBytes selects the Bytes branch and stores v.
 func (u *Values) SetBytes(v ValuesBytes) {
 	u.kind = ValuesKindBytes
 	u.Bytes = v
 }
 
-// Validate ensures the union discriminant is valid.
+// Validate ensures exactly one valid branch is selected.
 func (u Values) Validate() error {
 	switch u.kind {
 	case "":
@@ -167,6 +167,9 @@ func (u Values) Validate() error {
 	case ValuesKindBoolean:
 		return nil
 	case ValuesKindBytes:
+		if u.Bytes == nil {
+			return goa.MissingFieldError("value", "Values")
+		}
 		return nil
 	default:
 		return goa.InvalidEnumValueError("type", u.kind, []any{
@@ -196,7 +199,7 @@ func (u Values) MarshalJSON() ([]byte, error) {
 	case ValuesKindBytes:
 		value = u.Bytes
 	default:
-		return nil, fmt.Errorf("unexpected Values discriminant %q", u.kind)
+		return nil, fmt.Errorf("unexpected Values kind %q", u.kind)
 	}
 	return json.Marshal(struct {
 		Type  string `json:"type"`

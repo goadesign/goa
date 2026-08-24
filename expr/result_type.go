@@ -1,5 +1,5 @@
-// This file defines result types and views, including the declaration origin
-// retained when code generation rebuilds projected result graphs.
+// This file defines result types and views and records the original
+// declaration used when a result type is copied.
 package expr
 
 import (
@@ -62,6 +62,7 @@ var (
 				Type:        errorResultType,
 				Description: "Error response result type",
 				Validation:  &ValidationExpr{Required: []string{"name", "id", "message", "temporary", "timeout", "fault"}},
+				finalized:   true,
 			},
 			TypeName: "error",
 		},
@@ -119,6 +120,13 @@ func NewResultTypeExpr(name, identifier string, fn func()) *ResultTypeExpr {
 	}
 }
 
+// IsErrorResult reports whether dataType is Goa's built-in service error type
+// or a generator copy made from it.
+func IsErrorResult(dataType DataType) bool {
+	userType, ok := dataType.(UserType)
+	return ok && userType.Origin() == ErrorResult
+}
+
 // CanonicalIdentifier returns the result type identifier sans suffix
 // which is what the DSL uses to store and lookup result types.
 func CanonicalIdentifier(identifier string) string {
@@ -147,8 +155,8 @@ func (rt *ResultTypeExpr) Dup(att *AttributeExpr) UserType {
 }
 
 // Origin returns the earliest result type declaration from which rt was
-// copied. Result types override their embedded user-type origin so the dynamic
-// result-type identity is preserved.
+// copied. Result types override their embedded user-type origin so later copies
+// still point to the original result declaration.
 func (rt *ResultTypeExpr) Origin() UserType {
 	if rt.origin != nil {
 		return rt.origin
@@ -381,8 +389,9 @@ func projectCollection(rt *ResultTypeExpr, view string, seen map[string]UserType
 	return proj, nil
 }
 
-// projectedUserType preserves the exact example owner of a synthesized result
-// type while authored projections retain their media-type-derived UID.
+// projectedUserType makes a synthesized result type use the same repeatable
+// example sequence as source. A view-specific type authored in the design keeps
+// its media-type-derived UID instead.
 func projectedUserType(source UserType, name, uid string, attribute *AttributeExpr) *UserTypeExpr {
 	if identity, ok := GeneratedUserTypeExampleIdentity(source); ok {
 		return NewGeneratedUserType(name, attribute, identity)

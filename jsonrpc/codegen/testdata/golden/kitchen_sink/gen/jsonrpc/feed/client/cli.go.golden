@@ -32,3 +32,21 @@ func BuildWatchPayload(feedWatchBody string) (*feed.WatchPayload, error) {
 
 	return v, nil
 }
+
+// BuildSnapshotPayload builds the payload for the Feed snapshot endpoint from
+// CLI flags.
+func BuildSnapshotPayload(feedSnapshotBody string) (*feed.SnapshotPayload, error) {
+	var err error
+	var body SnapshotRequestBody
+	{
+		err = json.Unmarshal([]byte(feedSnapshotBody), &body)
+		if err != nil {
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"request_id\": \"Sed assumenda enim quod.\"\n   }'")
+		}
+	}
+	v := &feed.SnapshotPayload{
+		RequestID: body.RequestID,
+	}
+
+	return v, nil
+}

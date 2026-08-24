@@ -1,7 +1,7 @@
-// Code generators use this file to turn caller-supplied type identities and
-// attributes into unique Go names and type references. Hashed names use exactly
-// the caller's Hash value; after Freeze, existing names remain readable but no
-// new name may be reserved.
+// Code generators use this file to turn caller-supplied type lookup keys and
+// attributes into unique Go names and type references. Hashed names use the
+// caller's exact Hash value. After Freeze, callers can read existing names but
+// cannot reserve new ones.
 package codegen
 
 import (
@@ -18,7 +18,7 @@ type (
 	NameScope struct {
 		names  map[string]string // type hash to unique name
 		counts map[string]int    // raw type name to occurrence count
-		frozen bool              // whether new names may be reserved
+		frozen bool              // true after this set rejects new names
 	}
 
 	// Hasher is the interface implemented by the objects that must be
@@ -43,9 +43,9 @@ func NewNameScope() *NameScope {
 	}
 }
 
-// Fork returns a mutable naming scope containing every name and hashed binding
-// already recorded in s. Generators use it for private helpers that must avoid
-// declarations owned by a frozen generated package.
+// Fork returns a new scope containing every lookup key and name already
+// recorded in s. The new scope can add private helper names without changing s
+// or colliding with names already chosen there.
 func (s *NameScope) Fork() *NameScope {
 	fork := NewNameScope()
 	for hash, name := range s.names {
@@ -92,8 +92,9 @@ func (s *NameScope) Freeze() {
 	s.frozen = true
 }
 
-// bind associates an already reserved name with one hash without allocating a
-// second package identifier. Generated packages call it only during freeze.
+// bind makes key return an already reserved Go name without reserving another
+// name. Generated packages call it while Generation.Freeze assigns final
+// declaration names.
 func (s *NameScope) bind(key Hasher, name string) {
 	if s.frozen {
 		panic("cannot bind a hashed name in a frozen name scope")
@@ -321,7 +322,7 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 	case *expr.Object:
 		return s.GoTypeDef(att, false, false)
 	case expr.UserType:
-		if actual == expr.ErrorResult {
+		if expr.IsErrorResult(actual) {
 			return "goa.ServiceError"
 		}
 		// Qualified type references (pkg.Type) do not compete in the local
@@ -348,7 +349,8 @@ func (s *NameScope) GoFullTypeName(att *expr.AttributeExpr, pkg string) string {
 }
 
 // scopedTypeName returns a local or package-qualified generated declaration
-// name. The caller supplies the exact identity owned by the target package.
+// name. key must be the lookup key recorded by the package containing that
+// declaration.
 func (s *NameScope) scopedTypeName(key Hasher, base, pkg string) string {
 	if pkg == "" {
 		return s.HashedUnique(key, base, "")

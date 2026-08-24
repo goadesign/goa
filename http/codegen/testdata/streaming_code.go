@@ -241,13 +241,27 @@ func (s *StreamingResultMethodServerStream) Close() error {
 var StreamingResultWithViewsServerStreamSendCode = `// Send streams instances of "streamingresultwithviewsservice.Usertype" to the
 // "StreamingResultWithViewsMethod" endpoint websocket connection.
 func (s *StreamingResultWithViewsMethodServerStream) Send(v *streamingresultwithviewsservice.Usertype) error {
+	view := s.view
+	if view == "" {
+		view = "default"
+	}
+	if s.sentView != "" && view != s.sentView {
+		return goa.InvalidEnumValueError("view", view, []any{s.sentView})
+	}
+	switch view {
+	case "tiny":
+	case "extended":
+	case "default":
+	default:
+		return goa.InvalidEnumValueError("view", view, []any{"tiny", "extended", "default"})
+	}
 	var err error
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
 	// before calling the actual service method which may call Send().
 	s.once.Do(func() {
 		respHdr := make(http.Header)
-		respHdr.Add("goa-view", s.view)
+		respHdr.Add("goa-view", view)
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
 		if err != nil {
@@ -262,17 +276,22 @@ func (s *StreamingResultWithViewsMethodServerStream) Send(v *streamingresultwith
 	if s.upgradeErr != nil {
 		return s.upgradeErr
 	}
-	res := streamingresultwithviewsservice.NewViewedUsertype(v, s.view)
-	var body any
-	switch s.view {
-	case "tiny":
-		body = NewStreamingResultWithViewsMethodResponseBodyTiny(res.Projected)
-	case "extended":
-		body = NewStreamingResultWithViewsMethodResponseBodyExtended(res.Projected)
-	case "default", "":
-		body = NewStreamingResultWithViewsMethodResponseBody(res.Projected)
+	if s.sentView == "" {
+		s.sentView = view
 	}
-	return s.conn.WriteJSON(body)
+	switch view {
+	case "tiny":
+		res := streamingresultwithviewsservice.NewViewedUsertype(v, "tiny")
+		return s.conn.WriteJSON(NewStreamingResultWithViewsMethodResponseBodyTiny(res.Projected))
+	case "extended":
+		res := streamingresultwithviewsservice.NewViewedUsertype(v, "extended")
+		return s.conn.WriteJSON(NewStreamingResultWithViewsMethodResponseBodyExtended(res.Projected))
+	case "default", "":
+		res := streamingresultwithviewsservice.NewViewedUsertype(v, "default")
+		return s.conn.WriteJSON(NewStreamingResultWithViewsMethodResponseBody(res.Projected))
+	default:
+		return goa.InvalidEnumValueError("view", view, []any{"tiny", "extended", "default"})
+	}
 }
 
 // SendWithContext streams instances of
@@ -419,7 +438,7 @@ func (s *StreamingResultMethodClientStream) Recv() (*streamingresultservice.User
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultMethodResultOK(&body)
+	res := NewStreamingResultMethodUserTypeOK(&body)
 	return res, nil
 }
 
@@ -487,7 +506,7 @@ func (s *StreamingResultWithViewsMethodClientStream) Recv() (*streamingresultwit
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultWithViewsMethodResultOK(&body)
+	res := NewStreamingResultWithViewsMethodUsertypeOK(&body)
 	vres := &streamingresultwithviewsserviceviews.Usertype{Projected: res, View: s.view}
 	if err := streamingresultwithviewsserviceviews.ValidateUsertype(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingResultWithViewsService", "StreamingResultWithViewsMethod", err)
@@ -566,7 +585,7 @@ func (s *StreamingResultWithExplicitViewMethodClientStream) Recv() (*streamingre
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultWithExplicitViewMethodResultOK(&body)
+	res := NewStreamingResultWithExplicitViewMethodUsertypeOK(&body)
 	vres := &streamingresultwithexplicitviewserviceviews.Usertype{Projected: res, View: "extended"}
 	if err := streamingresultwithexplicitviewserviceviews.ValidateUsertype(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingResultWithExplicitViewService", "StreamingResultWithExplicitViewMethod", err)
@@ -623,13 +642,27 @@ var StreamingResultCollectionWithViewsServerStreamSendCode = `// Send streams in
 // "streamingresultcollectionwithviewsservice.UsertypeCollection" to the
 // "StreamingResultCollectionWithViewsMethod" endpoint websocket connection.
 func (s *StreamingResultCollectionWithViewsMethodServerStream) Send(v streamingresultcollectionwithviewsservice.UsertypeCollection) error {
+	view := s.view
+	if view == "" {
+		view = "default"
+	}
+	if s.sentView != "" && view != s.sentView {
+		return goa.InvalidEnumValueError("view", view, []any{s.sentView})
+	}
+	switch view {
+	case "tiny":
+	case "extended":
+	case "default":
+	default:
+		return goa.InvalidEnumValueError("view", view, []any{"tiny", "extended", "default"})
+	}
 	var err error
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
 	// before calling the actual service method which may call Send().
 	s.once.Do(func() {
 		respHdr := make(http.Header)
-		respHdr.Add("goa-view", s.view)
+		respHdr.Add("goa-view", view)
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
 		if err != nil {
@@ -644,17 +677,22 @@ func (s *StreamingResultCollectionWithViewsMethodServerStream) Send(v streamingr
 	if s.upgradeErr != nil {
 		return s.upgradeErr
 	}
-	res := streamingresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, s.view)
-	var body any
-	switch s.view {
-	case "tiny":
-		body = NewUsertypeTinyCollection(res.Projected)
-	case "extended":
-		body = NewUsertypeExtendedCollection(res.Projected)
-	case "default", "":
-		body = NewUsertypeCollection(res.Projected)
+	if s.sentView == "" {
+		s.sentView = view
 	}
-	return s.conn.WriteJSON(body)
+	switch view {
+	case "tiny":
+		res := streamingresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, "tiny")
+		return s.conn.WriteJSON(NewUsertypeResponseTinyCollection(res.Projected))
+	case "extended":
+		res := streamingresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, "extended")
+		return s.conn.WriteJSON(NewUsertypeResponseExtendedCollection(res.Projected))
+	case "default", "":
+		res := streamingresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, "default")
+		return s.conn.WriteJSON(NewUsertypeResponseCollection(res.Projected))
+	default:
+		return goa.InvalidEnumValueError("view", view, []any{"tiny", "extended", "default"})
+	}
 }
 
 // SendWithContext streams instances of
@@ -681,7 +719,7 @@ var StreamingResultCollectionWithViewsClientStreamRecvCode = `// Recv reads inst
 func (s *StreamingResultCollectionWithViewsMethodClientStream) Recv() (streamingresultcollectionwithviewsservice.UsertypeCollection, error) {
 	var (
 		rv   streamingresultcollectionwithviewsservice.UsertypeCollection
-		body StreamingResultCollectionWithViewsMethodResponseBody
+		body UsertypeResponseCollection
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -692,7 +730,7 @@ func (s *StreamingResultCollectionWithViewsMethodClientStream) Recv() (streaming
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultCollectionWithViewsMethodResultOK(body)
+	res := NewStreamingResultCollectionWithViewsMethodUsertypeCollectionOK(body)
 	vres := streamingresultcollectionwithviewsserviceviews.UsertypeCollection{Projected: res, View: s.view}
 	if err := streamingresultcollectionwithviewsserviceviews.ValidateUsertypeCollection(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingResultCollectionWithViewsService", "StreamingResultCollectionWithViewsMethod", err)
@@ -741,7 +779,7 @@ func (s *StreamingResultCollectionWithExplicitViewMethodServerStream) Send(v str
 		return s.upgradeErr
 	}
 	res := streamingresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
-	body := NewUsertypeTinyCollection(res.Projected)
+	body := NewUsertypeResponseTinyCollection(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 
@@ -799,7 +837,7 @@ var StreamingResultCollectionWithExplicitViewClientStreamRecvCode = `// Recv rea
 func (s *StreamingResultCollectionWithExplicitViewMethodClientStream) Recv() (streamingresultcollectionwithexplicitviewservice.UsertypeCollection, error) {
 	var (
 		rv   streamingresultcollectionwithexplicitviewservice.UsertypeCollection
-		body UsertypeTinyCollection
+		body UsertypeResponseTinyCollection
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -810,7 +848,7 @@ func (s *StreamingResultCollectionWithExplicitViewMethodClientStream) Recv() (st
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultCollectionWithExplicitViewMethodResultOK(body)
+	res := NewStreamingResultCollectionWithExplicitViewMethodUsertypeCollectionOK(body)
 	vres := streamingresultcollectionwithexplicitviewserviceviews.UsertypeCollection{Projected: res, View: "tiny"}
 	if err := streamingresultcollectionwithexplicitviewserviceviews.ValidateUsertypeCollection(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingResultCollectionWithExplicitViewService", "StreamingResultCollectionWithExplicitViewMethod", err)
@@ -1049,7 +1087,7 @@ var StreamingResultUserTypeArrayClientStreamRecvCode = `// Recv reads instances 
 func (s *StreamingResultUserTypeArrayMethodClientStream) Recv() ([]*streamingresultusertypearrayservice.UserType, error) {
 	var (
 		rv   []*streamingresultusertypearrayservice.UserType
-		body []*UserType
+		body []*UserTypeResponse
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -1060,7 +1098,7 @@ func (s *StreamingResultUserTypeArrayMethodClientStream) Recv() ([]*streamingres
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultUserTypeArrayMethodResultOK(body)
+	res := NewStreamingResultUserTypeArrayMethodUserTypeOK(body)
 	return res, nil
 }
 
@@ -1116,7 +1154,7 @@ var StreamingResultUserTypeMapClientStreamRecvCode = `// Recv reads instances of
 func (s *StreamingResultUserTypeMapMethodClientStream) Recv() (map[string]*streamingresultusertypemapservice.UserType, error) {
 	var (
 		rv   map[string]*streamingresultusertypemapservice.UserType
-		body map[string]*UserType
+		body map[string]*UserTypeResponse
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -1127,7 +1165,7 @@ func (s *StreamingResultUserTypeMapMethodClientStream) Recv() (map[string]*strea
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingResultUserTypeMapMethodResultOK(body)
+	res := NewStreamingResultUserTypeMapMethodMapStringUserTypeOK(body)
 	return res, nil
 }
 
@@ -1371,7 +1409,7 @@ func (s *StreamingPayloadMethodClientStream) CloseAndRecv() (*streamingpayloadse
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingPayloadMethodResultOK(&body)
+	res := NewStreamingPayloadMethodUserTypeOK(&body)
 	return res, nil
 }
 
@@ -1504,7 +1542,7 @@ func (s *StreamingPayloadNoPayloadMethodClientStream) CloseAndRecv() (*streaming
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingPayloadNoPayloadMethodResultOK(&body)
+	res := NewStreamingPayloadNoPayloadMethodUserTypeOK(&body)
 	return res, nil
 }
 
@@ -1608,16 +1646,8 @@ var StreamingPayloadResultWithViewsServerStreamSendCode = `// SendAndClose strea
 // closes the connection.
 func (s *StreamingPayloadResultWithViewsMethodServerStream) SendAndClose(v *streamingpayloadresultwithviewsservice.Usertype) error {
 	defer s.conn.Close()
-	res := streamingpayloadresultwithviewsservice.NewViewedUsertype(v, s.view)
-	var body any
-	switch s.view {
-	case "tiny":
-		body = NewStreamingPayloadResultWithViewsMethodResponseBodyTiny(res.Projected)
-	case "extended":
-		body = NewStreamingPayloadResultWithViewsMethodResponseBodyExtended(res.Projected)
-	case "default", "":
-		body = NewStreamingPayloadResultWithViewsMethodResponseBody(res.Projected)
-	}
+	res := streamingpayloadresultwithviewsservice.NewViewedUsertype(v, "tiny")
+	body := NewStreamingPayloadResultWithViewsMethodResponseBodyTiny(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 
@@ -1702,7 +1732,7 @@ var StreamingPayloadResultWithViewsClientStreamRecvCode = `// CloseAndRecv stops
 func (s *StreamingPayloadResultWithViewsMethodClientStream) CloseAndRecv() (*streamingpayloadresultwithviewsservice.Usertype, error) {
 	var (
 		rv   *streamingpayloadresultwithviewsservice.Usertype
-		body StreamingPayloadResultWithViewsMethodResponseBody
+		body StreamingPayloadResultWithViewsMethodResponseBodyTiny
 		err  error
 	)
 	defer s.conn.Close()
@@ -1718,8 +1748,8 @@ func (s *StreamingPayloadResultWithViewsMethodClientStream) CloseAndRecv() (*str
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingPayloadResultWithViewsMethodResultOK(&body)
-	vres := &streamingpayloadresultwithviewsserviceviews.Usertype{Projected: res, View: s.view}
+	res := NewStreamingPayloadResultWithViewsMethodUsertypeOK(&body)
+	vres := &streamingpayloadresultwithviewsserviceviews.Usertype{Projected: res, View: "tiny"}
 	if err := streamingpayloadresultwithviewsserviceviews.ValidateUsertype(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingPayloadResultWithViewsService", "StreamingPayloadResultWithViewsMethod", err)
 	}
@@ -1842,7 +1872,7 @@ func (s *StreamingPayloadResultWithExplicitViewMethodClientStream) CloseAndRecv(
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingPayloadResultWithExplicitViewMethodResultOK(&body)
+	res := NewStreamingPayloadResultWithExplicitViewMethodUsertypeOK(&body)
 	vres := &streamingpayloadresultwithexplicitviewserviceviews.Usertype{Projected: res, View: "extended"}
 	if err := streamingpayloadresultwithexplicitviewserviceviews.ValidateUsertype(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingPayloadResultWithExplicitViewService", "StreamingPayloadResultWithExplicitViewMethod", err)
@@ -1866,16 +1896,8 @@ var StreamingPayloadResultCollectionWithViewsServerStreamSendCode = `// SendAndC
 // connection and closes the connection.
 func (s *StreamingPayloadResultCollectionWithViewsMethodServerStream) SendAndClose(v streamingpayloadresultcollectionwithviewsservice.UsertypeCollection) error {
 	defer s.conn.Close()
-	res := streamingpayloadresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, s.view)
-	var body any
-	switch s.view {
-	case "tiny":
-		body = NewUsertypeTinyCollection(res.Projected)
-	case "extended":
-		body = NewUsertypeExtendedCollection(res.Projected)
-	case "default", "":
-		body = NewUsertypeCollection(res.Projected)
-	}
+	res := streamingpayloadresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, "tiny")
+	body := NewUsertypeResponseTinyCollection(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 
@@ -1964,7 +1986,7 @@ var StreamingPayloadResultCollectionWithViewsClientStreamRecvCode = `// CloseAnd
 func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) CloseAndRecv() (streamingpayloadresultcollectionwithviewsservice.UsertypeCollection, error) {
 	var (
 		rv   streamingpayloadresultcollectionwithviewsservice.UsertypeCollection
-		body StreamingPayloadResultCollectionWithViewsMethodResponseBody
+		body UsertypeResponseTinyCollection
 		err  error
 	)
 	defer s.conn.Close()
@@ -1980,8 +2002,8 @@ func (s *StreamingPayloadResultCollectionWithViewsMethodClientStream) CloseAndRe
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingPayloadResultCollectionWithViewsMethodResultOK(body)
-	vres := streamingpayloadresultcollectionwithviewsserviceviews.UsertypeCollection{Projected: res, View: s.view}
+	res := NewStreamingPayloadResultCollectionWithViewsMethodUsertypeCollectionOK(body)
+	vres := streamingpayloadresultcollectionwithviewsserviceviews.UsertypeCollection{Projected: res, View: "tiny"}
 	if err := streamingpayloadresultcollectionwithviewsserviceviews.ValidateUsertypeCollection(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingPayloadResultCollectionWithViewsService", "StreamingPayloadResultCollectionWithViewsMethod", err)
 	}
@@ -2013,7 +2035,7 @@ var StreamingPayloadResultCollectionWithExplicitViewServerStreamSendCode = `// S
 func (s *StreamingPayloadResultCollectionWithExplicitViewMethodServerStream) SendAndClose(v streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection) error {
 	defer s.conn.Close()
 	res := streamingpayloadresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
-	body := NewUsertypeTinyCollection(res.Projected)
+	body := NewUsertypeResponseTinyCollection(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 
@@ -2093,7 +2115,7 @@ var StreamingPayloadResultCollectionWithExplicitViewClientStreamRecvCode = `// C
 func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) CloseAndRecv() (streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection, error) {
 	var (
 		rv   streamingpayloadresultcollectionwithexplicitviewservice.UsertypeCollection
-		body UsertypeTinyCollection
+		body UsertypeResponseTinyCollection
 		err  error
 	)
 	defer s.conn.Close()
@@ -2109,7 +2131,7 @@ func (s *StreamingPayloadResultCollectionWithExplicitViewMethodClientStream) Clo
 	if err != nil {
 		return rv, err
 	}
-	res := NewStreamingPayloadResultCollectionWithExplicitViewMethodResultOK(body)
+	res := NewStreamingPayloadResultCollectionWithExplicitViewMethodUsertypeCollectionOK(body)
 	vres := streamingpayloadresultcollectionwithexplicitviewserviceviews.UsertypeCollection{Projected: res, View: "tiny"}
 	if err := streamingpayloadresultcollectionwithexplicitviewserviceviews.ValidateUsertypeCollection(vres); err != nil {
 		return rv, goahttp.ErrValidationError("StreamingPayloadResultCollectionWithExplicitViewService", "StreamingPayloadResultCollectionWithExplicitViewMethod", err)
@@ -2893,7 +2915,7 @@ func (s *BidirectionalStreamingMethodClientStream) Recv() (*bidirectionalstreami
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingMethodResultOK(&body)
+	res := NewBidirectionalStreamingMethodUserTypeOK(&body)
 	return res, nil
 }
 
@@ -3052,7 +3074,7 @@ func (s *BidirectionalStreamingNoPayloadMethodClientStream) Recv() (*bidirection
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingNoPayloadMethodResultOK(&body)
+	res := NewBidirectionalStreamingNoPayloadMethodUserTypeOK(&body)
 	return res, nil
 }
 
@@ -3086,10 +3108,8 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Send(v *bidire
 	// upgrade is done here so that authorization logic in the endpoint is executed
 	// before calling the actual service method which may call Send().
 	s.once.Do(func() {
-		respHdr := make(http.Header)
-		respHdr.Add("goa-view", s.view)
 		var conn *websocket.Conn
-		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
+		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
 			s.upgradeErr = err
 			return
@@ -3102,16 +3122,8 @@ func (s *BidirectionalStreamingResultWithViewsMethodServerStream) Send(v *bidire
 	if s.upgradeErr != nil {
 		return s.upgradeErr
 	}
-	res := bidirectionalstreamingresultwithviewsservice.NewViewedUsertype(v, s.view)
-	var body any
-	switch s.view {
-	case "tiny":
-		body = NewBidirectionalStreamingResultWithViewsMethodResponseBodyTiny(res.Projected)
-	case "extended":
-		body = NewBidirectionalStreamingResultWithViewsMethodResponseBodyExtended(res.Projected)
-	case "default", "":
-		body = NewBidirectionalStreamingResultWithViewsMethodResponseBody(res.Projected)
-	}
+	res := bidirectionalstreamingresultwithviewsservice.NewViewedUsertype(v, "tiny")
+	body := NewBidirectionalStreamingResultWithViewsMethodResponseBodyTiny(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 
@@ -3214,7 +3226,7 @@ var BidirectionalStreamingResultWithViewsClientStreamRecvCode = `// Recv reads i
 func (s *BidirectionalStreamingResultWithViewsMethodClientStream) Recv() (*bidirectionalstreamingresultwithviewsservice.Usertype, error) {
 	var (
 		rv   *bidirectionalstreamingresultwithviewsservice.Usertype
-		body BidirectionalStreamingResultWithViewsMethodResponseBody
+		body BidirectionalStreamingResultWithViewsMethodResponseBodyTiny
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -3224,8 +3236,8 @@ func (s *BidirectionalStreamingResultWithViewsMethodClientStream) Recv() (*bidir
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingResultWithViewsMethodResultOK(&body)
-	vres := &bidirectionalstreamingresultwithviewsserviceviews.Usertype{Projected: res, View: s.view}
+	res := NewBidirectionalStreamingResultWithViewsMethodUsertypeOK(&body)
+	vres := &bidirectionalstreamingresultwithviewsserviceviews.Usertype{Projected: res, View: "tiny"}
 	if err := bidirectionalstreamingresultwithviewsserviceviews.ValidateUsertype(vres); err != nil {
 		return rv, goahttp.ErrValidationError("BidirectionalStreamingResultWithViewsService", "BidirectionalStreamingResultWithViewsMethod", err)
 	}
@@ -3374,7 +3386,7 @@ func (s *BidirectionalStreamingResultWithExplicitViewMethodClientStream) Recv() 
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingResultWithExplicitViewMethodResultOK(&body)
+	res := NewBidirectionalStreamingResultWithExplicitViewMethodUsertypeOK(&body)
 	vres := &bidirectionalstreamingresultwithexplicitviewserviceviews.Usertype{Projected: res, View: "extended"}
 	if err := bidirectionalstreamingresultwithexplicitviewserviceviews.ValidateUsertype(vres); err != nil {
 		return rv, goahttp.ErrValidationError("BidirectionalStreamingResultWithExplicitViewService", "BidirectionalStreamingResultWithExplicitViewMethod", err)
@@ -3401,10 +3413,8 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 	// upgrade is done here so that authorization logic in the endpoint is executed
 	// before calling the actual service method which may call Send().
 	s.once.Do(func() {
-		respHdr := make(http.Header)
-		respHdr.Add("goa-view", s.view)
 		var conn *websocket.Conn
-		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
+		conn, err = s.upgrader.Upgrade(s.w, s.r, nil)
 		if err != nil {
 			s.upgradeErr = err
 			return
@@ -3417,16 +3427,8 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodServerStream) Send
 	if s.upgradeErr != nil {
 		return s.upgradeErr
 	}
-	res := bidirectionalstreamingresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, s.view)
-	var body any
-	switch s.view {
-	case "tiny":
-		body = NewUsertypeTinyCollection(res.Projected)
-	case "extended":
-		body = NewUsertypeExtendedCollection(res.Projected)
-	case "default", "":
-		body = NewUsertypeCollection(res.Projected)
-	}
+	res := bidirectionalstreamingresultcollectionwithviewsservice.NewViewedUsertypeCollection(v, "tiny")
+	body := NewUsertypeResponseTinyCollection(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 
@@ -3515,7 +3517,7 @@ var BidirectionalStreamingResultCollectionWithViewsClientStreamRecvCode = `// Re
 func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) Recv() (bidirectionalstreamingresultcollectionwithviewsservice.UsertypeCollection, error) {
 	var (
 		rv   bidirectionalstreamingresultcollectionwithviewsservice.UsertypeCollection
-		body BidirectionalStreamingResultCollectionWithViewsMethodResponseBody
+		body UsertypeResponseTinyCollection
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -3525,8 +3527,8 @@ func (s *BidirectionalStreamingResultCollectionWithViewsMethodClientStream) Recv
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingResultCollectionWithViewsMethodResultOK(body)
-	vres := bidirectionalstreamingresultcollectionwithviewsserviceviews.UsertypeCollection{Projected: res, View: s.view}
+	res := NewBidirectionalStreamingResultCollectionWithViewsMethodUsertypeCollectionOK(body)
+	vres := bidirectionalstreamingresultcollectionwithviewsserviceviews.UsertypeCollection{Projected: res, View: "tiny"}
 	if err := bidirectionalstreamingresultcollectionwithviewsserviceviews.ValidateUsertypeCollection(vres); err != nil {
 		return rv, goahttp.ErrValidationError("BidirectionalStreamingResultCollectionWithViewsService", "BidirectionalStreamingResultCollectionWithViewsMethod", err)
 	}
@@ -3575,7 +3577,7 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodServerStrea
 		return s.upgradeErr
 	}
 	res := bidirectionalstreamingresultcollectionwithexplicitviewservice.NewViewedUsertypeCollection(v, "tiny")
-	body := NewUsertypeTinyCollection(res.Projected)
+	body := NewUsertypeResponseTinyCollection(res.Projected)
 	return s.conn.WriteJSON(body)
 }
 
@@ -3654,7 +3656,7 @@ var BidirectionalStreamingResultCollectionWithExplicitViewClientStreamRecvCode =
 func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStream) Recv() (bidirectionalstreamingresultcollectionwithexplicitviewservice.UsertypeCollection, error) {
 	var (
 		rv   bidirectionalstreamingresultcollectionwithexplicitviewservice.UsertypeCollection
-		body UsertypeTinyCollection
+		body UsertypeResponseTinyCollection
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -3664,7 +3666,7 @@ func (s *BidirectionalStreamingResultCollectionWithExplicitViewMethodClientStrea
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingResultCollectionWithExplicitViewMethodResultOK(body)
+	res := NewBidirectionalStreamingResultCollectionWithExplicitViewMethodUsertypeCollectionOK(body)
 	vres := bidirectionalstreamingresultcollectionwithexplicitviewserviceviews.UsertypeCollection{Projected: res, View: "tiny"}
 	if err := bidirectionalstreamingresultcollectionwithexplicitviewserviceviews.ValidateUsertypeCollection(vres); err != nil {
 		return rv, goahttp.ErrValidationError("BidirectionalStreamingResultCollectionWithExplicitViewService", "BidirectionalStreamingResultCollectionWithExplicitViewMethod", err)
@@ -4137,7 +4139,7 @@ var BidirectionalStreamingUserTypeArrayClientStreamRecvCode = `// Recv reads ins
 func (s *BidirectionalStreamingUserTypeArrayMethodClientStream) Recv() ([]*bidirectionalstreamingusertypearrayservice.ResultType, error) {
 	var (
 		rv   []*bidirectionalstreamingusertypearrayservice.ResultType
-		body []*ResultType
+		body []*ResultTypeResponse
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -4147,7 +4149,7 @@ func (s *BidirectionalStreamingUserTypeArrayMethodClientStream) Recv() ([]*bidir
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingUserTypeArrayMethodResultOK(body)
+	res := NewBidirectionalStreamingUserTypeArrayMethodResultTypeOK(body)
 	return res, nil
 }
 
@@ -4265,7 +4267,7 @@ var BidirectionalStreamingUserTypeMapClientStreamRecvCode = `// Recv reads insta
 func (s *BidirectionalStreamingUserTypeMapMethodClientStream) Recv() (map[string]*bidirectionalstreamingusertypemapservice.ResultType, error) {
 	var (
 		rv   map[string]*bidirectionalstreamingusertypemapservice.ResultType
-		body map[string]*ResultType
+		body map[string]*ResultTypeResponse
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -4275,7 +4277,7 @@ func (s *BidirectionalStreamingUserTypeMapMethodClientStream) Recv() (map[string
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalStreamingUserTypeMapMethodResultOK(body)
+	res := NewBidirectionalStreamingUserTypeMapMethodMapStringResultTypeOK(body)
 	return res, nil
 }
 

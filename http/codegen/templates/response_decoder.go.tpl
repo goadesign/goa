@@ -9,19 +9,25 @@
 //	- error: internal error
 {{- end }}
 func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
-	return func(resp *http.Response) (any, error) {
+	return func(resp *http.Response) {{ if .Method.SkipResponseBodyEncodeDecode }}(any, error){{ else }}(result any, decodeErr error){{ end }} {
+		{{- if not .Method.SkipResponseBodyEncodeDecode }}
+		responseBody := resp.Body
 		if restoreBody {
-			b, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return nil, err
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 			}
 			resp.Body = io.NopCloser(bytes.NewBuffer(b))
 			defer func() {
 				resp.Body = io.NopCloser(bytes.NewBuffer(b))
 			}()
-		}
-		{{- if not .Method.SkipResponseBodyEncodeDecode }} else {
-			defer resp.Body.Close()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err))
+				}
+			}()
 		}
 		{{- end }}
 		switch resp.StatusCode {
@@ -30,7 +36,7 @@ func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp
 			{{- template "partial_single_response" (buildResponseData . $.ServiceName $.Method) }}
 		{{- if .ResultInit }}
 			{{- if .ViewedResult }}
-			p := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+			p := {{ .ResultInit.Declaration.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 				{{- if .TagName }}
 				tmp := {{ printf "%q" .TagValue }}
 				p.{{ .TagName }} = &tmp
@@ -48,7 +54,7 @@ func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp
 				{{- end }}
 			res := {{ $.ServicePkgName }}.{{ $.Method.ViewedResult.ResultInit.Declaration.Name }}(vres)
 			{{- else }}
-			res := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+			res := {{ .ResultInit.Declaration.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 			{{- end }}
 			{{- if and .TagName (not .ViewedResult) }}
 				{{- if .TagPointer }}
@@ -79,7 +85,7 @@ func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp
 				{{- with .Response }}
 					{{- template "partial_single_response" (buildResponseData . $.ServiceName $.Method) }}
 					{{- if .ResultInit }}
-			return nil, {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+			return nil, {{ .ResultInit.Declaration.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 					{{- else if .ClientBody }}
 			return nil, body
 					{{- else }}
@@ -88,14 +94,17 @@ func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp
 				{{- end }}
 			{{- end }}
 		default:
-			body, _ := io.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
+			}
 			return nil, goahttp.ErrInvalidResponse({{ printf "%q" $.ServiceName }}, {{ printf "%q" $.Method.Name }}, resp.StatusCode, string(body))
 		}
 		{{- else }}
 			{{- with (index .Errors 0).Response }}
 				{{- template "partial_single_response" (buildResponseData . $.ServiceName $.Method) }}
 				{{- if .ResultInit }}
-			return nil, {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+			return nil, {{ .ResultInit.Declaration.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 				{{- else if .ClientBody }}
 			return nil, body
 				{{- else }}
@@ -105,7 +114,10 @@ func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp
 		{{- end }}
 	{{- end }}
 		default:
-			body, _ := io.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+			}
 			return nil, goahttp.ErrInvalidResponse({{ printf "%q" .ServiceName }}, {{ printf "%q" .Method.Name }}, resp.StatusCode, string(body))
 		}
 	}

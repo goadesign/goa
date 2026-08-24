@@ -1,0 +1,85 @@
+// decodeFetchViewedResult decodes the JSON body selected by the result view
+// for the viewed service fetch method.
+func decodeFetchViewedResult(decoder func(*http.Response) goahttp.Decoder, resp *http.Response, data json.RawMessage) (*viewed.ViewedGolden, error) {
+	var representation struct {
+		View *string          `json:"view"`
+		Body *json.RawMessage `json:"body"`
+	}
+	if err := decodeJSONRPCResult(decoder, data, &representation); err != nil {
+		return nil, err
+	}
+	if representation.View == nil {
+		return nil, goa.MissingFieldError("view", "result")
+	}
+	view := *representation.View
+	switch view {
+	case "summary":
+		if representation.Body == nil {
+			return nil, goa.MissingFieldError("body", "result")
+		}
+		resp.Body = io.NopCloser(bytes.NewBuffer(*representation.Body))
+		var (
+			body FetchResponseBodySummary
+			err  error
+		)
+		err = decoder(resp).Decode(&body)
+		if err != nil {
+			return nil, goahttp.ErrDecodingError("viewed", "fetch", err)
+		}
+		projected := NewFetchResultSummaryOK(&body)
+		viewed2 := &viewedviews.ViewedGolden{
+			Projected: projected,
+			View:      view,
+		}
+		if err := viewedviews.ValidateViewedGolden(viewed2); err != nil {
+			return nil, err
+		}
+		return viewed.NewViewedGolden(viewed2), nil
+	case "detailed":
+		if representation.Body == nil {
+			return nil, goa.MissingFieldError("body", "result")
+		}
+		resp.Body = io.NopCloser(bytes.NewBuffer(*representation.Body))
+		var (
+			body FetchResponseBodyDetailed
+			err  error
+		)
+		err = decoder(resp).Decode(&body)
+		if err != nil {
+			return nil, goahttp.ErrDecodingError("viewed", "fetch", err)
+		}
+		projected := NewFetchResultDetailedOK(&body)
+		viewed2 := &viewedviews.ViewedGolden{
+			Projected: projected,
+			View:      view,
+		}
+		if err := viewedviews.ValidateViewedGolden(viewed2); err != nil {
+			return nil, err
+		}
+		return viewed.NewViewedGolden(viewed2), nil
+	case "default":
+		if representation.Body == nil {
+			return nil, goa.MissingFieldError("body", "result")
+		}
+		resp.Body = io.NopCloser(bytes.NewBuffer(*representation.Body))
+		var (
+			body FetchResponseBody
+			err  error
+		)
+		err = decoder(resp).Decode(&body)
+		if err != nil {
+			return nil, goahttp.ErrDecodingError("viewed", "fetch", err)
+		}
+		projected := NewFetchResultDefaultOK(&body)
+		viewed2 := &viewedviews.ViewedGolden{
+			Projected: projected,
+			View:      view,
+		}
+		if err := viewedviews.ValidateViewedGolden(viewed2); err != nil {
+			return nil, err
+		}
+		return viewed.NewViewedGolden(viewed2), nil
+	default:
+		return nil, goa.InvalidEnumValueError("view", view, []any{"summary", "detailed", "default"})
+	}
+}

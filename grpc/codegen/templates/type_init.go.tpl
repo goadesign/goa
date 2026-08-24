@@ -1,5 +1,5 @@
 {{ comment .Description }}
-func {{ .Name }}({{ range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
+func {{ .Declaration.Name }}({{ range .Args }}{{ .Name }} {{ .TypeRef }}, {{ end }}) {{ .ReturnTypeRef }} {
 	{{ .Code }}
 {{- if .ReturnIsStruct }}
 	{{- range .Args }}

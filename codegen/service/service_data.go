@@ -1,6 +1,6 @@
-// This file analyzes evaluated service designs into immutable render data.
-// Public type declarations and references come from the frozen generated
-// package catalog; mutable scopes are used only for private helper names.
+// This file builds the values passed to service templates. Package-level Go
+// names are shared by every file in the package, while each file may choose
+// additional private helper names.
 package service
 
 import (
@@ -66,10 +66,6 @@ type (
 		ClientDeclaration *codegen.NameDeclaration
 		// NewClientDeclaration is the exact client constructor record.
 		NewClientDeclaration *codegen.NameDeclaration
-		// StreamDeclaration is the shared JSON-RPC stream record when emitted.
-		StreamDeclaration *codegen.NameDeclaration
-		// EventDeclaration is the shared JSON-RPC SSE event record when emitted.
-		EventDeclaration *codegen.NameDeclaration
 		// ServerInterceptorsDeclaration is the server interceptor interface record.
 		ServerInterceptorsDeclaration *codegen.NameDeclaration
 		// ClientInterceptorsDeclaration is the client interceptor interface record.
@@ -78,6 +74,10 @@ type (
 		ExampleStructDeclaration *codegen.NameDeclaration
 		// ExampleConstructorDeclaration is the starter constructor record.
 		ExampleConstructorDeclaration *codegen.NameDeclaration
+		// ExampleServerInterceptorsConstructorDeclaration creates the starter
+		// server interceptor implementation. It is nil when the service has no
+		// server interceptors.
+		ExampleServerInterceptorsConstructorDeclaration *codegen.NameDeclaration
 		// Name is the service name.
 		Name string
 		// Description is the service description.
@@ -88,13 +88,17 @@ type (
 		APIVersion string
 		// StructName is the service struct name.
 		StructName string
-		// VarName is the service variable name (first letter in lowercase).
+		// VarName is the local Go variable that holds the service implementation in
+		// generated starter programs.
 		VarName string
 		// PathName is the service name as used in file and import paths.
 		PathName string
 		// PkgName is the name of the package containing the generated service
 		// code.
 		PkgName string
+		// ViewsPkg is the final views package name kept for existing plugins. It
+		// is empty when the service does not generate a views package.
+		ViewsPkg string
 		// Methods lists the service interface methods.
 		Methods []*MethodData
 		// Schemes is the list of security schemes required by the service methods.
@@ -122,9 +126,9 @@ type (
 		// projectedTypes lists the types which uses pointers for all fields to
 		// define view specific validation logic.
 		projectedTypes []*ProjectedTypeData
-		// unions lists the sum-type unions defined for the service.
+		// unions lists the values that hold one selected branch for the service.
 		unions []*UnionTypeData
-		// viewUnions lists the sum-type unions emitted by the views package.
+		// viewUnions lists the values that hold one selected branch in the views package.
 		viewUnions []*UnionTypeData
 		// viewedResultTypes lists all the viewed method result types.
 		viewedResultTypes []*ViewedResultTypeData
@@ -143,8 +147,6 @@ type (
 		ServerStreamDeclaration *codegen.NameDeclaration
 		// ClientStreamDeclaration is the exact client stream interface record.
 		ClientStreamDeclaration *codegen.NameDeclaration
-		// EventDeclaration is the exact JSON-RPC SSE event record.
-		EventDeclaration *codegen.NameDeclaration
 		// RequestDeclaration is the exact JSON-RPC request data record.
 		RequestDeclaration *codegen.NameDeclaration
 		// ResponseDeclaration is the exact JSON-RPC response data record.
@@ -171,8 +173,8 @@ type (
 		PayloadDef string
 		// PayloadRef is a reference to the payload type if any,
 		PayloadRef string
-		// PayloadDeclaration is the immutable generated declaration for a named
-		// payload type. It is nil for primitive payloads.
+		// PayloadDeclaration supplies the generated Go type name for a named payload.
+		// It is nil for primitive payloads.
 		PayloadDeclaration *codegen.TypeDeclaration
 		// PayloadDesc is the payload type description if any.
 		PayloadDesc string
@@ -186,8 +188,8 @@ type (
 		StreamingPayloadDef string
 		// StreamingPayloadRef is a reference to the streaming payload type if any.
 		StreamingPayloadRef string
-		// StreamingPayloadDeclaration is the immutable generated declaration for
-		// a named streaming payload type. It is nil for primitive payloads.
+		// StreamingPayloadDeclaration supplies the generated Go type name for a
+		// named streaming payload. It is nil for primitive payloads.
 		StreamingPayloadDeclaration *codegen.TypeDeclaration
 		// StreamingPayloadDesc is the streaming payload type description if any.
 		StreamingPayloadDesc string
@@ -199,8 +201,8 @@ type (
 		StreamingResultDef string
 		// StreamingResultRef is the reference to the streaming result type if any.
 		StreamingResultRef string
-		// StreamingResultDeclaration is the immutable generated declaration for a
-		// named streaming result type. It is nil for primitive results.
+		// StreamingResultDeclaration supplies the generated Go type name for a named
+		// streaming result. It is nil for primitive results.
 		StreamingResultDeclaration *codegen.TypeDeclaration
 		// StreamingResultDesc is the streaming result type description if any.
 		StreamingResultDesc string
@@ -215,8 +217,8 @@ type (
 		ResultDef string
 		// ResultRef is the reference to the result type if any.
 		ResultRef string
-		// ResultDeclaration is the immutable generated declaration for a named
-		// result type. It is nil for primitive results.
+		// ResultDeclaration supplies the generated Go type name for a named result.
+		// It is nil for primitive results.
 		ResultDeclaration *codegen.TypeDeclaration
 		// ResultDesc is the result type description if any.
 		ResultDesc string
@@ -227,12 +229,6 @@ type (
 		// ErrorLocs lists the file and Go package of the error type
 		// if overridden via Meta indexed by error name.
 		ErrorLocs map[string]*codegen.Location
-		// IsJSONRPC indicates if the endpoint is a JSON-RPC endpoint.
-		IsJSONRPC bool
-		// IsJSONRPCSSE indicates if the JSON-RPC endpoint uses SSE transport.
-		IsJSONRPCSSE bool
-		// IsJSONRPCWebSocket indicates if the JSON-RPC endpoint uses WebSocket transport.
-		IsJSONRPCWebSocket bool
 		// Requirements contains the security requirements for the
 		// method.
 		Requirements RequirementsData
@@ -257,9 +253,9 @@ type (
 		// StreamKind is the kind of the stream (payload or result or
 		// bidirectional).
 		StreamKind expr.StreamKind
-		// HasMixedResults indicates whether the method defines both Result and
-		// StreamingResult with different types, enabling content negotiation at
-		// the transport layer (e.g. JSON vs SSE over HTTP).
+		// HasMixedResults indicates whether the method defines Result and
+		// StreamingResult separately so HTTP can return one normal response or an
+		// SSE stream.
 		HasMixedResults bool
 		// SkipRequestBodyEncodeDecode is true if the method payload includes
 		// the raw HTTP request body reader.
@@ -294,8 +290,8 @@ type (
 	StreamData struct {
 		// Interface is the name of the stream interface.
 		Interface string
-		// VarName is the lexical implementation type name retained during service
-		// planning for transport generators.
+		// VarName is the unexported Go type name used by transport packages for this
+		// stream implementation.
 		VarName string
 		// SendName is the name of the send function.
 		SendName string
@@ -309,14 +305,6 @@ type (
 		SendTypeName string
 		// SendTypeRef is the reference to the type sent through the stream.
 		SendTypeRef string
-		// SendAndCloseName is the name of the send and close function (SSE only).
-		SendAndCloseName string
-		// SendAndCloseDesc is the description for the send and close function.
-		SendAndCloseDesc string
-		// SendAndCloseWithContextName is the name of the send and close function with context.
-		SendAndCloseWithContextName string
-		// SendAndCloseWithContextDesc is the description for the send and close function with context.
-		SendAndCloseWithContextDesc string
 		// RecvName is the name of the receive function.
 		RecvName string
 		// RecvDesc is the description for the recv function.
@@ -339,12 +327,18 @@ type (
 		Kind expr.StreamKind
 	}
 
-	// ErrorInitData describes an error returned by a service method of type
-	// ErrorResult.
+	// ErrorInitData describes an error returned by a service method.
 	ErrorInitData struct {
-		// Declaration is the exact package-level constructor record retained while
-		// the service was planned.
+		// Declaration is the package-level constructor submitted while the service
+		// was planned. It is nil for custom errors because the service package does
+		// not generate constructors for them.
 		Declaration *codegen.NameDeclaration
+		// Name is a read-only copy of the final constructor name kept for existing
+		// plugins. It is empty for custom errors because they have no generated
+		// service constructor.
+		//
+		// Deprecated: Use Declaration.Name().
+		Name string
 		// Description is the error description.
 		Description string
 		// ErrName is the name of the error.
@@ -380,6 +374,8 @@ type (
 		DesignName string
 		// Description is the description of the interceptor from the design.
 		Description string
+		// Service is the service name returned to this interceptor.
+		Service string
 		// Methods
 		Methods []*MethodInterceptorData
 		// ReadPayload contains payload attributes that the interceptor can
@@ -418,6 +414,21 @@ type (
 	// MethodInterceptorData contains the data required to render the
 	// method-level interceptor code.
 	MethodInterceptorData struct {
+		// InfoDeclaration is the private type that returns this method's name and
+		// provides its field access methods.
+		InfoDeclaration *codegen.NameDeclaration
+		// ServerUnaryInfoDeclaration is the private call information type used by
+		// the server endpoint call.
+		ServerUnaryInfoDeclaration *codegen.NameDeclaration
+		// ClientUnaryInfoDeclaration is the private call information type used by
+		// the client endpoint call.
+		ClientUnaryInfoDeclaration *codegen.NameDeclaration
+		// StreamingSendInfoDeclaration is the private call information type used
+		// while a stream value is sent.
+		StreamingSendInfoDeclaration *codegen.NameDeclaration
+		// StreamingRecvInfoDeclaration is the private call information type used
+		// while a stream value is received.
+		StreamingRecvInfoDeclaration *codegen.NameDeclaration
 		// PayloadAccessDeclaration is the exact private payload accessor struct.
 		PayloadAccessDeclaration *codegen.NameDeclaration
 		// ResultAccessDeclaration is the exact private result accessor struct.
@@ -509,8 +520,7 @@ type (
 
 	// UserTypeData contains the data describing a user-defined type.
 	UserTypeData struct {
-		// Declaration is the immutable generated-package record that owns this
-		// type in a service, views, or relocated package.
+		// Declaration supplies this type's generated Go name and output package.
 		Declaration *codegen.TypeDeclaration
 		// Name is the type name.
 		Name string
@@ -518,7 +528,7 @@ type (
 		VarName string
 		// Description is the type human description.
 		Description string
-		// ErrorName is the retained Go expression returned by GoaErrorName.
+		// ErrorName is the Go expression returned by GoaErrorName during planning.
 		ErrorName string
 		// IsServiceError reports whether this is Goa's built-in service error.
 		IsServiceError bool
@@ -533,21 +543,26 @@ type (
 		Type expr.UserType
 	}
 
-	// UnionTypeData describes a generated sum-type union for a service.
+	// UnionTypeData describes a generated value that holds exactly one branch.
 	UnionTypeData struct {
-		// Declaration is the immutable generated-package record that owns this
-		// union in a service, views, or relocated package.
-		Declaration *codegen.UnionDeclaration
-		// Name is the Go type name of the union struct.
+		// TypeDeclaration supplies the generated union type name.
+		TypeDeclaration *codegen.NameDeclaration
+		// KindDeclaration supplies the generated type that records the selected branch.
+		KindDeclaration *codegen.NameDeclaration
+		// Name is the final union type name copied for existing plugins.
+		//
+		// Deprecated: Use TypeDeclaration.
 		Name string
-		// KindName is the Go type name of the discriminator kind.
+		// KindName is the final selected-branch type name copied for existing plugins.
+		//
+		// Deprecated: Use KindDeclaration.
 		KindName string
 		// Fields describes each union branch.
 		Fields []*UnionFieldData
 		// Loc defines the file and Go package of the union type if overridden via
 		// Meta. When nil the type is generated in the default service file.
 		Loc *codegen.Location
-		// TypeKey is the discriminator field name for JSON marshaling (defaults to "type").
+		// TypeKey is the field that records the selected branch in JSON (defaults to "type").
 		TypeKey string
 		// ValueKey is the value field name for JSON marshaling (defaults to "value").
 		ValueKey string
@@ -557,16 +572,24 @@ type (
 	UnionFieldData struct {
 		// Name is the branch name as defined in the DSL.
 		Name string
-		// KindConst is the Go identifier for the kind constant of this branch.
+		// KindConst is the final branch constant name copied for existing plugins.
+		//
+		// Deprecated: Use KindDeclaration.
 		KindConst string
-		// Constructor is the Go identifier for the branch constructor function.
+		// Constructor is the final branch constructor name copied for existing plugins.
+		//
+		// Deprecated: Use ConstructorDeclaration.
 		Constructor string
+		// KindDeclaration supplies the generated constant name for this branch.
+		KindDeclaration *codegen.NameDeclaration
+		// ConstructorDeclaration supplies the generated constructor name for this branch.
+		ConstructorDeclaration *codegen.NameDeclaration
 		// FieldName is the struct field name in the union.
 		FieldName string
 		// FieldType is the Go type used in the union struct field and public API.
 		FieldType string
-		// Nilable is true when the Go branch value can be nil even though the
-		// canonical union value is required.
+		// Nilable is true when the Go branch value can be nil even though selecting
+		// a non-nil Goa OneOf branch value is required.
 		Nilable bool
 		// EmitPrimitiveAlias is true when the branch uses a generated primitive alias
 		// that must be declared in the same file as the union type.
@@ -574,11 +597,8 @@ type (
 		// PrimitiveAliasType is the underlying Go type used by the generated branch
 		// alias (for example "string" or "float64").
 		PrimitiveAliasType string
-		// TypeTag is the JSON "type" discriminator value for this branch.
+		// TypeTag is the JSON "type" value that selects this branch.
 		TypeTag string
-
-		reference  *expr.AttributeExpr
-		definition *expr.AttributeExpr
 	}
 
 	// SchemeData describes a single security scheme.
@@ -677,7 +697,8 @@ type (
 		TypeVarName string
 		// MapDeclaration is the exact package-level view map record for this type.
 		MapDeclaration *codegen.NameDeclaration
-		// ToProjected is the exact private constructor that applies this view.
+		// ToProjected is the private constructor that copies only this view's
+		// fields from a service result.
 		ToProjected *codegen.NameDeclaration
 		// ToResult is the exact private constructor that removes this view.
 		ToResult *codegen.NameDeclaration
@@ -704,6 +725,8 @@ type (
 		// corresponding service type. If the projected type corresponds to a
 		// result type, then a function for each view is generated.
 		TypeInits []*InitData
+		// ViewsPkg is the final views package name kept for existing plugins.
+		ViewsPkg string
 		// Views lists the views defined on the projected type.
 		Views []*ViewData
 	}
@@ -711,9 +734,14 @@ type (
 	// InitData contains the data to render a constructor to initialize service
 	// types from viewed result types and vice versa.
 	InitData struct {
-		// Declaration is the exact package-level constructor record retained while
-		// the service was planned.
+		// Declaration is the package-level constructor submitted while the service
+		// was planned.
 		Declaration *codegen.NameDeclaration
+		// Name is a read-only copy of the final constructor name kept for existing
+		// plugins.
+		//
+		// Deprecated: Use Declaration.Name().
+		Name string
 		// Description is the function description.
 		Description string
 		// Args lists arguments to this function.
@@ -737,9 +765,14 @@ type (
 	// ValidateData contains data to render a validate function to validate a
 	// projected type or a viewed result type based on views.
 	ValidateData struct {
-		// Declaration is the exact package-level function record retained while
-		// the service was planned.
+		// Declaration is the package-level validation function submitted while the
+		// service was planned.
 		Declaration *codegen.NameDeclaration
+		// Name is a read-only copy of the final validation function name kept for
+		// existing plugins.
+		//
+		// Deprecated: Use Declaration.Name().
+		Name string
 		// Ref is the reference to the type on which the validation function
 		// is defined.
 		Ref string
@@ -751,8 +784,8 @@ type (
 		Calls []*ValidationCallData
 	}
 
-	// ValidationCallData binds one nested validation call to the exact function
-	// declaration that owns the rendered name.
+	// ValidationCallData records the exact generated function called to validate
+	// one nested result value.
 	ValidationCallData struct {
 		// Declaration is the exact package-level validator function record.
 		Declaration *codegen.NameDeclaration
@@ -762,37 +795,37 @@ type (
 		Default bool
 	}
 
-	// validationFieldData describes a nested result field validated by a
-	// projected parent validator.
+	// validationFieldData describes a nested result field checked by the
+	// validation function for its parent's selected view.
 	validationFieldData struct {
 		Name       string
 		Call       *ValidationCallData
 		IsRequired bool
 	}
 
-	// constructorFieldData binds one nested result field to the exact retained
-	// private constructor called by its parent conversion.
+	// constructorFieldData associates one child result field with the private
+	// constructor called by its parent conversion.
 	constructorFieldData struct {
 		VarName     string
 		Declaration *codegen.NameDeclaration
 	}
 
-	// unionDataKey identifies one emitted union definition in one generated Go
-	// package without encoding either fact into a string sentinel.
+	// unionDataKey selects one Goa OneOf definition by its generated definition
+	// key and Go package path.
 	unionDataKey struct {
 		packagePath string
 		identity    codegen.UnionTypeID
 	}
 
-	// userTypeDataKey distinguishes exact in-memory declarations and the frozen
-	// package declaration selected for each one.
+	// userTypeDataKey distinguishes in-memory design types and the generated Go
+	// declaration selected for each one.
 	userTypeDataKey struct {
 		origin      expr.UserType
 		declaration *codegen.TypeDeclaration
 	}
 
-	// projectedTypePair binds one rebuilt view declaration to the exact source
-	// declaration that gives it a stable DerivedTypeID.
+	// projectedTypePair records one result type rebuilt with only a view's fields
+	// and the exact source declaration used to find its DerivedTypeID.
 	projectedTypePair struct {
 		source             expr.UserType
 		projected          expr.UserType
@@ -801,8 +834,8 @@ type (
 	}
 )
 
-// linkServicesData resolves the exact service facts retained before generation
-// freeze into immutable render data.
+// linkServicesData builds service template data from the values copied during
+// planning and the Go names chosen by Generation.Freeze.
 func linkServicesData(facts *rootFacts, generation *codegen.Generation, aliases *importAliases) (*ServicesData, error) {
 	root := facts.root
 	data := &ServicesData{
@@ -826,14 +859,15 @@ func linkServicesData(facts *rootFacts, generation *codegen.Generation, aliases 
 	return data, nil
 }
 
-// Example computes attribute's example below the explicit semantic owner.
+// Example computes an example for attribute. The supplied ExampleIdentity
+// selects the repeatable sequence from which the values are drawn.
 func (d *ServicesData) Example(attribute *expr.AttributeExpr, owner expr.ExampleIdentity) any {
 	return attribute.Example(d.examples.At(owner))
 }
 
-// FieldExample computes attribute's example using the same stable field
-// identity as the corresponding field in parent. Named user types own their
-// fields globally; anonymous parents keep the caller-supplied owner.
+// FieldExample computes attribute's example from the same repeatable sequence
+// as the matching field in parent. Fields of a named user type use that type's
+// ExampleIdentity; fields of an anonymous parent use the caller's value.
 func (d *ServicesData) FieldExample(attribute, parent *expr.AttributeExpr, name string, owner expr.ExampleIdentity) any {
 	if typ, ok := parent.Type.(expr.UserType); ok {
 		owner = expr.UserTypeExampleIdentity(typ)
@@ -853,57 +887,70 @@ func (d *ServicesData) GenPkg() string {
 	return d.generation.GenPkg()
 }
 
-// ServiceImport returns the frozen import alias for name's generated service
-// package. The returned value is a copy that callers may add to one file.
-func (d *ServicesData) ServiceImport(name string) *codegen.ImportSpec {
+// ServiceImport returns the import path and Go name used by outputPackage for
+// the generated package of service name. The returned value is a copy that
+// callers may add to one file.
+func (d *ServicesData) ServiceImport(outputPackage, name string) *codegen.ImportSpec {
 	serviceFacts := d.facts.serviceByID[name]
 	if serviceFacts == nil {
 		panic(fmt.Sprintf("service %q is not part of the analyzed design root", name))
 	}
-	spec := d.aliases.spec(serviceFacts.packagePath)
+	spec := d.aliases.spec(outputPackage, serviceFacts.packagePath)
 	return &codegen.ImportSpec{Name: spec.Name, Path: spec.Path}
 }
 
-// ViewImport returns the frozen import alias for name's generated views
-// package. The returned value is a copy that callers may add to one file.
-func (d *ServicesData) ViewImport(name string) *codegen.ImportSpec {
+// ViewImport returns the import path and Go name used by outputPackage for the
+// views package of service name. The returned value is a copy that callers may
+// add to one file.
+func (d *ServicesData) ViewImport(outputPackage, name string) *codegen.ImportSpec {
 	serviceFacts := d.facts.serviceByID[name]
 	if serviceFacts == nil {
 		panic(fmt.Sprintf("service %q is not part of the analyzed design root", name))
 	}
-	spec := d.aliases.spec(serviceFacts.viewsPath)
+	spec := d.aliases.spec(outputPackage, serviceFacts.viewsPath)
 	return &codegen.ImportSpec{Name: spec.Name, Path: spec.Path}
 }
 
-// PackageImport returns the frozen import alias for importPath. The returned
-// value is a copy that callers may add to one generated file.
-func (d *ServicesData) PackageImport(importPath string) *codegen.ImportSpec {
-	spec := d.aliases.spec(importPath)
+// PackageImport returns the import path and Go name used by outputPackage for
+// importPath. The returned value is a copy that callers may add to one file.
+func (d *ServicesData) PackageImport(outputPackage, importPath string) *codegen.ImportSpec {
+	spec := d.aliases.spec(outputPackage, importPath)
 	return &codegen.ImportSpec{Name: spec.Name, Path: spec.Path}
 }
 
-// ServiceAttributor returns the frozen service declaration resolver for name
-// as referenced from outputPackage. The returned resolver follows explicit
-// generated package locations and uses the same import aliases as service
-// rendering.
+// ServiceAttributor returns a type writer for service name as referenced from
+// outputPackage. It follows explicit generated package locations and uses the
+// same import names as service templates.
 func (d *ServicesData) ServiceAttributor(name, outputPackage string) codegen.Attributor {
 	serviceFacts := d.facts.serviceByID[name]
 	if serviceFacts == nil {
 		panic(fmt.Sprintf("service %q is not part of the analyzed design root", name))
 	}
-	return newServiceResolver(d.generation, d.aliases, serviceFacts.service, outputPackage).
+	return newServiceResolver(
+		d.generation,
+		d.aliases,
+		serviceFacts.name,
+		serviceFacts.packagePath,
+		outputPackage,
+	).
 		withValidators(serviceFacts.validators)
 }
 
-// ViewAttributor returns the frozen projected and viewed result declaration
-// resolver for name as referenced from outputPackage.
+// ViewAttributor returns a type writer for service name's result views as
+// referenced from outputPackage.
 func (d *ServicesData) ViewAttributor(name, outputPackage string) codegen.Attributor {
 	serviceFacts := d.facts.serviceByID[name]
 	if serviceFacts == nil {
 		panic(fmt.Sprintf("service %q is not part of the analyzed design root", name))
 	}
 	data := d.Services[name]
-	return newViewResolver(d.generation, d.aliases, serviceFacts.service, data.viewDerived).
+	return newViewResolver(
+		d.generation,
+		d.aliases,
+		serviceFacts.name,
+		serviceFacts.viewsPath,
+		data.viewDerived,
+	).
 		withValidators(serviceFacts.validators).
 		withOutputPackage(outputPackage)
 }

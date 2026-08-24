@@ -1,7 +1,8 @@
 // The goa command calls this file with an output directory, command, and debug
 // flag; it reads the evaluated design roots and returns the files it wrote.
-// Every core generator and plugin plans against one Generation, which is frozen
-// before any callback renders files or can add another declaration.
+// Every core generator and plugin plans against one Generation. Before any
+// callback renders files, Goa chooses every package and declaration name and
+// rejects attempts to add another declaration.
 package generator
 
 import (
@@ -97,8 +98,9 @@ func generate(dir, cmd string, debug bool, registry *registry) (outputs []string
 		}
 	}
 
-	// 3. Prepare roots, build and freeze one plan, then render core and plugin
-	// files through the fresh run objects instantiated before root evaluation.
+	// 3. Prepare roots and build one plan. Choose every package and declaration
+	// name, then render core and plugin files through the fresh run objects
+	// created before root evaluation.
 	startLifecycle := time.Now()
 	result, err := run.execute(genpkg, roots)
 	if err != nil {
@@ -159,6 +161,9 @@ func generate(dir, cmd string, debug bool, registry *registry) (outputs []string
 				for work := range workChan {
 					renderStart := time.Now()
 					filename, err := work.file.Render(dir)
+					if err != nil {
+						err = fmt.Errorf("render %s: %w", work.file.Path, err)
+					}
 					resultChan <- renderResult{
 						index:    work.index,
 						filename: filename,
@@ -237,7 +242,7 @@ func generate(dir, cmd string, debug bool, registry *registry) (outputs []string
 }
 
 // generatedPackageImportPath asks Go to identify the package in dir and
-// returns the exact canonical path that generated files can import.
+// returns its cleaned import path for generated files.
 func generatedPackageImportPath(dir string) (string, error) {
 	pkgs, err := packages.Load(&packages.Config{
 		Mode: packages.NeedName | packages.NeedModule | packages.NeedFiles,
@@ -277,7 +282,7 @@ func generatedPackageImportPath(dir string) (string, error) {
 }
 
 // gopathOwnsImportPath asks the Go command for its effective GOPATH and reports
-// whether dir has the exact import identity it claims beneath a source root.
+// whether dir appears at importPath beneath one of GOPATH's source directories.
 func gopathOwnsImportPath(dir, importPath string) (bool, error) {
 	output, err := exec.Command("go", "env", "GOPATH").Output()
 	if err != nil {
@@ -459,9 +464,9 @@ func recordImportSpec(paths, names map[string]string, spec *codegen.ImportSpec) 
 	return false, nil
 }
 
-// canonicalOutputFilePath returns the one portable relative spelling used to
-// group and render a generated file. The second result is case-folded so two
-// paths cannot overwrite one another on a case-insensitive filesystem.
+// canonicalOutputFilePath cleans rawPath into the portable relative path used
+// to group and render a generated file. The second result is case-folded so
+// two paths cannot overwrite one another on a case-insensitive filesystem.
 func canonicalOutputFilePath(rawPath string) (string, string, error) {
 	portable := filepath.ToSlash(rawPath)
 	portable = strings.ReplaceAll(portable, `\`, "/")

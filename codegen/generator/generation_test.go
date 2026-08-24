@@ -1,5 +1,5 @@
-// This file verifies that the generator plans every declaration before any
-// core generator or plugin renders files from the frozen generation catalog.
+// This file checks that every package name is chosen before core generators or
+// plugins write files.
 package generator
 
 import (
@@ -110,7 +110,7 @@ func TestGeneratePhasesShareOneGeneration(t *testing.T) {
 		},
 	)
 
-	_, err := executeGeneration("generated.local/gen", []eval.Root{root}, command, registry)
+	err := executeGeneration("generated.local/gen", []eval.Root{root}, command, registry)
 	require.NoError(t, err)
 	require.ErrorContains(t, lateDeclare, "frozen")
 	require.Equal(t, []string{
@@ -122,6 +122,51 @@ func TestGeneratePhasesShareOneGeneration(t *testing.T) {
 		"core-render-second",
 		"plugin-render",
 	}, events)
+}
+
+func TestCommandsPlanOnlyTheirFiles(t *testing.T) {
+	root := codegen.RunDSL(t, httpdata.AliasTypeDSL)
+
+	genRun, err := newGenerationRun("gen", newDefaultRegistry())
+	require.NoError(t, err)
+	genResult, err := genRun.execute("generated.local/gen", []eval.Root{root})
+	require.NoError(t, err)
+	require.Nil(t, genResult.plan.example)
+	require.NotNil(t, genResult.plan.openapi)
+
+	exampleRun, err := newGenerationRun("example", newDefaultRegistry())
+	require.NoError(t, err)
+	exampleResult, err := exampleRun.execute("generated.local/gen", []eval.Root{root})
+	require.NoError(t, err)
+	require.NotNil(t, exampleResult.plan.example)
+	require.Nil(t, exampleResult.plan.openapi)
+}
+
+// TestRenderUsesRetainedPlans proves that file rendering does not look up
+// services or transports from the prepared design after planning finishes.
+func TestRenderUsesRetainedPlans(t *testing.T) {
+	root := codegen.RunDSL(t, httpdata.AliasTypeDSL)
+	plan := mustTestPlan(
+		t,
+		"generated.local/gen",
+		[]eval.Root{root},
+		planServiceData,
+		planTransportData,
+	)
+
+	plan.preparedRoots = nil
+	plan.services = nil
+	plan.http = nil
+	plan.jsonrpcHTTP = nil
+	plan.jsonrpc = nil
+	plan.grpc = nil
+
+	serviceFiles, err := serviceFiles(plan)
+	require.NoError(t, err)
+	require.NotEmpty(t, serviceFiles)
+	transportFiles, err := transportFiles(plan)
+	require.NoError(t, err)
+	require.NotEmpty(t, transportFiles)
 }
 
 // TestPreparedRootsRejectFileRenderMutation proves that persistent mutations

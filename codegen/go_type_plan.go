@@ -1,6 +1,6 @@
-// This file retains Go type layouts and exact generated declaration bindings
-// before package names freeze. Linked formatters render only these copied facts;
-// they never inspect the mutable Goa expression graph.
+// This file records each Go type before generated package names are final.
+// Formatting later uses the copied field names, package paths, and child types
+// without reading the Goa expressions again.
 package codegen
 
 import (
@@ -13,51 +13,46 @@ import (
 )
 
 type (
-	// GoTypeKind identifies one retained Go layout category.
+	// GoTypeKind states how a planned value is represented in Go.
 	GoTypeKind uint8
 
-	// GoTypeImport identifies one package used by a retained type spelling.
-	// Name is the preferred qualifier supplied by the type contract; generated
-	// declaration owners leave Name empty.
+	// GoTypeImport describes one package used in a planned Go type.
 	GoTypeImport struct {
-		// Name is the preferred package qualifier, when the design supplied one.
+		// Name is the package name requested before the type, when present.
 		Name string
-		// Path is the canonical Go import path.
+		// Path is the Go import path.
 		Path string
 	}
 
-	// GoTypeBindingRequest describes one named or union occurrence whose owning
-	// subsystem must bind an exact generated declaration during planning.
+	// GoTypeBindingRequest asks which generated declaration and package contain
+	// one attribute's named type or union.
 	GoTypeBindingRequest struct {
-		// Attribute is the exact expression occurrence being planned. Binders may
-		// inspect it during planning; linked formatters never do.
+		// Attribute is the expression being planned.
 		Attribute *expr.AttributeExpr
-		// InheritedOwner is the package inherited from the enclosing layout.
+		// InheritedOwner is the package path inherited from the enclosing type.
 		InheritedOwner string
-		// Kind distinguishes named types from union declarations.
+		// Kind says whether Attribute contains a named type or a union.
 		Kind GoTypeKind
 	}
 
-	// GoTypeBinding binds one planned occurrence to its exact generated package
-	// declaration. Named occurrences require Type; union occurrences require
-	// Union. The other declaration field must be nil.
+	// GoTypeBinding gives a planned attribute the package path and generated
+	// declaration that will represent it. A named type sets Type, and a union
+	// sets Union.
 	GoTypeBinding struct {
-		// Owner is the canonical import path that owns the declaration.
+		// Owner is the import path of the package containing the declaration.
 		Owner string
-		// Type is the exact generated declaration for a named user type.
+		// Type is the generated declaration for a named user type.
 		Type *TypeDeclaration
-		// Union is the exact generated declaration for a sum type.
+		// Union is the generated declaration for a union.
 		Union *UnionDeclaration
 	}
 
-	// GoTypeBinder supplies package ownership and canonical declaration records
-	// for named and union occurrences. The subsystem that owns those catalogs
-	// must provide this callback; core layout planning never infers ownership.
+	// GoTypeBinder returns the package path and generated declaration for a named
+	// type or union. PlanGoType does not choose these values itself.
 	GoTypeBinder func(GoTypeBindingRequest) (GoTypeBinding, error)
 
-	// GoLayoutPolicy records the complete generated Go field and validation
-	// representation selected for one plan. A shared named value keeps service,
-	// view, and transport planners from independently reconstructing policy.
+	// GoLayoutPolicy contains the pointer and validation choices used throughout
+	// one planned Go type.
 	GoLayoutPolicy struct {
 		// Pointer forces primitive object fields to use pointers.
 		Pointer bool
@@ -68,26 +63,29 @@ type (
 		// UnionPointer uses pointers for optional sum-type union fields and for
 		// required union fields when Pointer is also true.
 		UnionPointer bool
-		// SumType reports that unions use Goa's generated struct representation.
+		// ArrayElementPointer uses pointers for required primitive array elements
+		// when generated input validation must distinguish null from a zero value.
+		ArrayElementPointer bool
+		// SumType reports whether unions use Goa's generated struct form.
 		SumType bool
 	}
 
-	// GoTypePlanOptions configures one exact layout occurrence.
+	// GoTypePlanOptions supplies the package, field name, and rules used to plan
+	// one attribute.
 	GoTypePlanOptions struct {
-		// Owner is the package inherited by the root occurrence.
+		// Owner is the package path that will contain the top-level attribute.
 		Owner string
-		// FieldName is the optional design field name of the root occurrence.
+		// FieldName is the design field name of the top-level attribute, when set.
 		FieldName string
-		// Policy is the complete Go representation selected by the caller.
+		// Policy contains the pointer and validation choices selected by the caller.
 		Policy GoLayoutPolicy
-		// Bind resolves every named type and union to an exact declaration.
+		// Bind returns the generated declaration for every named type and union.
 		Bind GoTypeBinder
 	}
 
-	// GoTypePlan is an immutable symbolic Go layout built while expressions are
-	// available and package declarations remain mutable. It retains source
-	// pointers only for occurrence identity; no method reads an expression after
-	// PlanGoType returns.
+	// GoTypePlan stores the complete Go form copied from one attribute. It keeps
+	// expression pointers only so callers can find which plans came from the same
+	// attribute; its methods do not read those expressions.
 	GoTypePlan struct {
 		kind              GoTypeKind
 		owner             string
@@ -113,19 +111,19 @@ type (
 		key               *GoTypePlan
 	}
 
-	// GoTypeQualifier returns the final package qualifier for one canonical
-	// import path after the generation freezes its shared import aliases.
+	// GoTypeQualifier returns the final package name written before a type from
+	// the given import path.
 	GoTypeQualifier func(importPath string) string
 
-	// LinkedGoType formats one retained plan relative to an output package. It
-	// resolves only frozen declaration names and retained import identities.
+	// LinkedGoType formats a planned type for one output package after all type
+	// names and imported package names are final.
 	LinkedGoType struct {
 		plan       *GoTypePlan
 		outputPath string
 		qualifier  GoTypeQualifier
 	}
 
-	// goTypePlanner owns the expression-reading planning phase.
+	// goTypePlanner reads attributes and builds GoTypePlan values.
 	goTypePlanner struct {
 		policy GoLayoutPolicy
 		bind   GoTypeBinder
@@ -133,17 +131,17 @@ type (
 )
 
 const (
-	// GoPrimitive is a built-in or explicitly imported primitive spelling.
+	// GoPrimitive is a built-in or explicitly imported primitive type.
 	GoPrimitive GoTypeKind = iota + 1
-	// GoArray is a slice layout with one retained element occurrence.
+	// GoArray is a slice with one planned element type.
 	GoArray
-	// GoMap is a map layout with retained key and element occurrences.
+	// GoMap is a map with planned key and element types.
 	GoMap
-	// GoStruct is an anonymous struct with retained ordered field occurrences.
+	// GoStruct is an anonymous struct with fields in source order.
 	GoStruct
-	// GoNamed is a user type bound to an exact generated type declaration.
+	// GoNamed is a user type with a generated type declaration.
 	GoNamed
-	// GoUnion is a sum type bound to an exact generated union declaration.
+	// GoUnion is a union with a generated union declaration.
 	GoUnion
 	// GoEmpty is Goa's built-in empty service type.
 	GoEmpty
@@ -151,9 +149,9 @@ const (
 	GoServiceError
 )
 
-// PlanGoType copies the complete Go layout for attribute while generated
-// packages are still mutable. Callers link and format the returned plan only
-// after the generation freezes its declaration and import-alias catalogs.
+// PlanGoType copies the Go form of attribute before generated type and imported
+// package names are final. Callers format the result after Generation.Freeze
+// chooses those names.
 func PlanGoType(attribute *expr.AttributeExpr, options GoTypePlanOptions) (*GoTypePlan, error) {
 	if attribute == nil {
 		return nil, fmt.Errorf("plan Go type: attribute must not be nil")
@@ -168,7 +166,7 @@ func PlanGoType(attribute *expr.AttributeExpr, options GoTypePlanOptions) (*GoTy
 	return planner.plan(attribute, options.Owner, options.FieldName, nil, false)
 }
 
-// String returns the layout category used in planning diagnostics.
+// String returns the name of the Go type kind used in error messages.
 func (k GoTypeKind) String() string {
 	switch k {
 	case GoPrimitive:
@@ -192,32 +190,30 @@ func (k GoTypeKind) String() string {
 	}
 }
 
-// Kind returns the retained layout category.
+// Kind returns how this planned value is represented in Go.
 func (p *GoTypePlan) Kind() GoTypeKind {
 	return p.kind
 }
 
-// Owner returns the canonical import path inherited or selected for this
-// exact occurrence.
+// Owner returns the import path of the package containing this type.
 func (p *GoTypePlan) Owner() string {
 	return p.owner
 }
 
-// Policy returns the complete generated representation selected for this
-// occurrence.
+// Policy returns the pointer and validation choices used for this type.
 func (p *GoTypePlan) Policy() GoLayoutPolicy {
 	return p.policy
 }
 
-// MatchesOccurrence reports whether attribute is the exact expression pointer
-// used to build this plan. It never reads the expression.
+// MatchesOccurrence reports whether PlanGoType built this plan from attribute.
+// It compares pointers without reading the expression.
 func (p *GoTypePlan) MatchesOccurrence(attribute *expr.AttributeExpr) bool {
 	return p.occurrence == attribute
 }
 
-// PlansForOccurrence returns every plan in this retained layout that was built
-// from attribute. Separate entries preserve distinct field, owner, or pointer
-// policies when one expression pointer is reused.
+// PlansForOccurrence returns every child plan built from attribute. The same
+// attribute may produce several plans with different field names, package
+// paths, or pointer choices.
 func (p *GoTypePlan) PlansForOccurrence(attribute *expr.AttributeExpr) []*GoTypePlan {
 	var matches []*GoTypePlan
 	p.walk(func(candidate *GoTypePlan) {
@@ -228,20 +224,20 @@ func (p *GoTypePlan) PlansForOccurrence(attribute *expr.AttributeExpr) []*GoType
 	return matches
 }
 
-// TypeDeclaration returns the exact named declaration retained for this
-// occurrence, or nil for layouts that are not named user types.
+// TypeDeclaration returns the generated declaration for a named user type. It
+// returns nil for every other kind.
 func (p *GoTypePlan) TypeDeclaration() *TypeDeclaration {
 	return p.typeDeclaration
 }
 
-// UnionDeclaration returns the exact union declaration retained for this
-// occurrence, or nil for layouts that are not unions.
+// UnionDeclaration returns the generated declaration for a union. It returns
+// nil for every other kind.
 func (p *GoTypePlan) UnionDeclaration() *UnionDeclaration {
 	return p.unionDeclaration
 }
 
-// FieldName returns the retained Go field identifier. It returns the exported
-// spelling when firstUpper is true and the package-local spelling otherwise.
+// FieldName returns the copied Go field name. It returns an exported name when
+// firstUpper is true and an unexported name otherwise.
 func (p *GoTypePlan) FieldName(firstUpper bool) string {
 	if firstUpper {
 		return p.fieldNameUpper
@@ -249,32 +245,31 @@ func (p *GoTypePlan) FieldName(firstUpper bool) string {
 	return p.fieldNameLower
 }
 
-// Description returns the copied design description for this occurrence.
+// Description returns the description copied from the attribute.
 func (p *GoTypePlan) Description() string {
 	return p.description
 }
 
-// Tag returns the complete retained Go struct tag, including leading space.
+// Tag returns the complete copied Go struct tag, including its leading space.
 func (p *GoTypePlan) Tag() string {
 	return p.tag
 }
 
-// IsPointer reports whether an enclosing struct field stores this occurrence
-// through a pointer under the planned pointer/default policy.
+// IsPointer reports whether an enclosing struct stores this value through a
+// pointer under the selected pointer and default rules.
 func (p *GoTypePlan) IsPointer() bool {
 	return p.fieldPointer
 }
 
-// Import returns the package imported directly by this type spelling. The
-// boolean is false for native and generated declaration spellings.
+// Import returns the package written directly in this type name. The second
+// result is false for built-in types and generated declarations.
 func (p *GoTypePlan) Import() (GoTypeImport, bool) {
 	return p.directImport, p.hasDirectImport
 }
 
-// ImportPreferences returns every distinct authored alias preference and
-// generated declaration path reachable from this plan in stable layout order.
-// Multiple preferences for one path remain distinct so generation can resolve
-// them before freezing its import aliases.
+// ImportPreferences returns each requested imported package name and each
+// generated type package found in this plan, in field order. It keeps different
+// requested names for the same path so Generation can choose the final name.
 func (p *GoTypePlan) ImportPreferences() []GoTypeImport {
 	seen := make(map[GoTypeImport]struct{})
 	var imports []GoTypeImport
@@ -297,31 +292,30 @@ func (p *GoTypePlan) ImportPreferences() []GoTypeImport {
 	return imports
 }
 
-// Fields returns a copy of the ordered anonymous struct field plans.
+// Fields returns a copy of the anonymous struct fields in source order.
 func (p *GoTypePlan) Fields() []*GoTypePlan {
 	return append([]*GoTypePlan(nil), p.fields...)
 }
 
-// Branches returns a copy of the ordered union branch plans.
+// Branches returns a copy of the union branches in source order.
 func (p *GoTypePlan) Branches() []*GoTypePlan {
 	return append([]*GoTypePlan(nil), p.branches...)
 }
 
-// Elem returns the retained array or map element plan, or nil for other kinds.
+// Elem returns the planned array or map element type. It returns nil for other
+// kinds.
 func (p *GoTypePlan) Elem() *GoTypePlan {
 	return p.element
 }
 
-// Key returns the retained map key plan, or nil for other kinds.
+// Key returns the planned map key type. It returns nil for other kinds.
 func (p *GoTypePlan) Key() *GoTypePlan {
 	return p.key
 }
 
-// Equivalent reports whether p and other retain the same complete Go layout.
-// Source expression pointers are deliberately excluded: independently built
-// compiler copies are equivalent when they bind the same declarations and
-// retain identical owners, policies, field spellings, tags, pointer choices,
-// imports, and ordered child layouts.
+// Equivalent reports whether p and other produce the same Go type. It compares
+// declarations, package paths, pointer choices, field names, tags, imports, and
+// child types, but does not compare source expression pointers.
 func (p *GoTypePlan) Equivalent(other *GoTypePlan) bool {
 	if p == nil || other == nil {
 		return p == other
@@ -353,16 +347,14 @@ func (p *GoTypePlan) Equivalent(other *GoTypePlan) bool {
 	return true
 }
 
-// Link binds this retained layout to one generated output package after the
-// owning generation freezes declarations and import aliases. Link itself is a
-// pure binding operation; declaration access remains governed by the catalog's
-// freeze contract. The returned formatter contains no expression traversal or
-// metadata decisions.
+// Link prepares this plan for formatting in outputPath after generated type and
+// imported package names are final. The returned value uses only data already
+// copied into the plan.
 func (p *GoTypePlan) Link(outputPath string, qualifier GoTypeQualifier) LinkedGoType {
 	return LinkedGoType{plan: p, outputPath: outputPath, qualifier: qualifier}
 }
 
-// Name returns the Go type spelling selected by the retained layout.
+// Name returns the Go type name selected by the plan.
 func (l LinkedGoType) Name() string {
 	switch l.plan.kind {
 	case GoPrimitive:
@@ -397,7 +389,7 @@ func (l LinkedGoType) Name() string {
 	}
 }
 
-// Def returns the Go definition selected by the retained layout.
+// Def returns the complete Go type definition selected by the plan.
 func (l LinkedGoType) Def() string {
 	switch l.plan.kind {
 	case GoArray:
@@ -441,8 +433,8 @@ func (l LinkedGoType) Def() string {
 	}
 }
 
-// Ref returns the retained Go reference spelling, including named object and
-// union pointer semantics.
+// Ref returns the Go type reference, including any pointer required for a named
+// object or union.
 func (l LinkedGoType) Ref() string {
 	name := l.Name()
 	if l.plan.referencePointer {
@@ -451,13 +443,14 @@ func (l LinkedGoType) Ref() string {
 	return name
 }
 
-// Field returns the retained field identifier for this exact occurrence.
+// Field returns the copied Go field name for this planned value.
 func (l LinkedGoType) Field(firstUpper bool) string {
 	return l.plan.FieldName(firstUpper)
 }
 
-// Package returns the qualifier for this occurrence's owner relative to the
-// linked output package, or the empty string for a same-package occurrence.
+// Package returns the package name written before this type when referenced
+// from the output package. It returns an empty string when both types are in the
+// same package.
 func (l LinkedGoType) Package() string {
 	if l.plan.owner == l.outputPath {
 		return ""
@@ -465,8 +458,8 @@ func (l LinkedGoType) Package() string {
 	return l.qualify(l.plan.owner)
 }
 
-// Enter links an exact retained child while preserving the output package and
-// frozen import alias lookup.
+// Enter returns a formatter for child that uses the same output package and
+// imported package name lookup.
 func (l LinkedGoType) Enter(child *GoTypePlan) LinkedGoType {
 	if child == nil {
 		panic("enter nil retained Go type plan")
@@ -474,8 +467,8 @@ func (l LinkedGoType) Enter(child *GoTypePlan) LinkedGoType {
 	return LinkedGoType{plan: child, outputPath: l.outputPath, qualifier: l.qualifier}
 }
 
-// Imports returns every recursively retained import except the linked output
-// package itself.
+// Imports returns every package used by this type and its children except the
+// output package itself.
 func (l LinkedGoType) Imports() []GoTypeImport {
 	preferences := l.plan.ImportPreferences()
 	seen := make(map[string]struct{})
@@ -496,8 +489,8 @@ func (l LinkedGoType) Imports() []GoTypeImport {
 	return imports
 }
 
-// plan copies one exact occurrence and recursively retains anonymous child
-// layouts. Named types terminate at their canonical declaration binding.
+// plan copies one attribute and recursively plans anonymous child types. Named
+// types stop at their generated declaration.
 func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName string, parent *expr.AttributeExpr, definitionPointer bool) (*GoTypePlan, error) {
 	layoutAttribute := attribute
 	for {
@@ -553,7 +546,9 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 		}
 	case *expr.Array:
 		plan.kind = GoArray
-		element, err := p.plan(actual.ElemType, owner, "", nil, expr.IsObject(actual.ElemType.Type))
+		elementPointer := expr.IsObject(actual.ElemType.Type) ||
+			arrayElementIsPointer(actual, p.policy.ArrayElementPointer)
+		element, err := p.plan(actual.ElemType, owner, "", nil, elementPointer)
 		if err != nil {
 			return nil, err
 		}
@@ -620,7 +615,8 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 	return plan, nil
 }
 
-// binding obtains and validates one exact subsystem-owned declaration record.
+// The planner asks the caller for the generated declaration and checks that its
+// package path and type match the request.
 func (p goTypePlanner) binding(attribute *expr.AttributeExpr, inheritedOwner string, kind GoTypeKind) (GoTypeBinding, error) {
 	if p.bind == nil {
 		return GoTypeBinding{}, fmt.Errorf("plan Go %s: declaration binder must not be nil", kind)
@@ -661,8 +657,7 @@ func (p goTypePlanner) binding(attribute *expr.AttributeExpr, inheritedOwner str
 	return binding, nil
 }
 
-// walk visits retained plans in stable pre-order without consulting expression
-// contents.
+// walk visits this plan and then its children in their stored order.
 func (p *GoTypePlan) walk(visit func(*GoTypePlan)) {
 	visit(p)
 	if p.key != nil {
@@ -679,9 +674,9 @@ func (p *GoTypePlan) walk(visit func(*GoTypePlan)) {
 	}
 }
 
-// walkImports visits type spellings owned by the referring file. A named
-// union's declaration file, not each file that refers to the union, owns the
-// imports required by its branch definitions.
+// walkImports visits the types whose packages must be imported by the current
+// file. It stops at a union because the file that declares the union imports
+// the packages used by its branches.
 func (p *GoTypePlan) walkImports(visit func(*GoTypePlan)) {
 	visit(p)
 	if p.kind == GoUnion {
@@ -698,9 +693,8 @@ func (p *GoTypePlan) walkImports(visit func(*GoTypePlan)) {
 	}
 }
 
-// customTypeQualifier returns the package identifier authored in a custom Go
-// type. An explicit metadata alias wins; otherwise the first selector supplies
-// the identifier while pointer and container syntax remains untouched.
+// customTypeQualifier returns the package name written in a custom Go type. It
+// uses alias when provided; otherwise it reads the name before the first dot.
 func customTypeQualifier(typeName, alias string) string {
 	if alias != "" {
 		return alias
@@ -725,7 +719,8 @@ func goIdentifierRune(char rune) bool {
 	return char == '_' || unicode.IsLetter(char) || unicode.IsDigit(char)
 }
 
-// qualify resolves one retained external import and rejects an unusable alias.
+// qualify returns the package name written before types from importPath. It
+// panics when no usable name was planned.
 func (l LinkedGoType) qualify(importPath string) string {
 	if l.qualifier == nil {
 		panic(fmt.Sprintf("format retained Go type import %q without qualifier lookup", importPath))
@@ -737,8 +732,8 @@ func (l LinkedGoType) qualify(importPath string) string {
 	return qualifier
 }
 
-// qualifiedDeclaration renders one exact frozen declaration relative to the
-// linked output package.
+// qualifiedDeclaration adds the declaring package name before a generated type
+// when that type is outside the output package.
 func (l LinkedGoType) qualifiedDeclaration(declaration *NameDeclaration) string {
 	name := declaration.Name()
 	if l.plan.owner == l.outputPath {

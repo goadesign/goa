@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/expr"
+	"goa.design/goa/v3/http/codegen/openapi"
 )
 
 func TestParamForAllowEmptyValue(t *testing.T) {
@@ -35,6 +36,7 @@ func TestParamForAllowEmptyValue(t *testing.T) {
 				false,
 				generator,
 				identity,
+				openapi.Values{},
 			)
 
 			require.Equal(t, test.want, param.AllowEmptyValue)
@@ -58,6 +60,7 @@ func TestHeaderSchemaAndDisplayedExampleShareIdentity(t *testing.T) {
 		parent,
 		expr.MethodResultExampleIdentity(method),
 		generator,
+		openapi.Values{},
 	)["request-id"].Value
 
 	require.Equal(t, actual.Schema.Example, actual.Example)

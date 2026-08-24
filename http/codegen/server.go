@@ -27,17 +27,17 @@ type (
 func serverFiles(data *ServicesData) []*codegen.File {
 	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3)
 	for _, svc := range data.Expressions.Services {
-		files = append(files, addEndpointImports(serverFile(svc, data), data, svc.HTTPEndpoints...))
+		files = append(files, addPlannedFileImports(serverFile(svc, data), data))
 		if f := websocketServerFile(svc, data); f != nil {
-			files = append(files, addEndpointImports(f, data, httpWebSocketEndpoints(svc)...))
+			files = append(files, addPlannedFileImports(f, data))
 		}
 		if f := sseServerFile(svc, data); f != nil {
-			files = append(files, addEndpointImports(f, data, httpSSEEndpoints(svc)...))
+			files = append(files, addPlannedFileImports(f, data))
 		}
 	}
 	for _, svc := range data.Expressions.Services {
 		if f := serverEncodeDecodeFile(svc, data); f != nil {
-			files = append(files, addEndpointImports(f, data, svc.HTTPEndpoints...))
+			files = append(files, addPlannedFileImports(f, data))
 		}
 	}
 	return files
@@ -48,6 +48,8 @@ func serverFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	fpath := filepath.Join(codegen.Gendir, "http", svcName, "server", "server.go")
+	outputPackage := generatedFileOutputPackage(services, fpath)
+	data = serviceDataForOutput(data, services, outputPackage)
 	title := fmt.Sprintf("%s HTTP server", svc.Name())
 	funcs := map[string]any{
 		"join":                strings.Join,
@@ -72,7 +74,7 @@ func serverFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File
 		{Path: "github.com/gorilla/websocket"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
-		services.ServiceImport(svc.Name()),
+		services.ServiceImport(outputPackage, svc.Name()),
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),
@@ -138,6 +140,8 @@ func serverEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, services.dir(), svcName, "server", "encode_decode.go")
+	outputPackage := generatedFileOutputPackage(services, path)
+	data = serviceDataForOutput(data, services, outputPackage)
 	title := fmt.Sprintf("%s %s server encoders and decoders", svc.Name(), services.label())
 	imports := []*codegen.ImportSpec{
 		{Path: "context"},
@@ -152,10 +156,10 @@ func serverEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 		{Path: "unicode/utf8"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
-		services.ServiceImport(svc.Name()),
+		services.ServiceImport(outputPackage, svc.Name()),
 	}
 	if serviceHasViewedResult(data, nil) {
-		imports = append(imports, services.ViewImport(svc.Name()))
+		imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
 	}
 	sections := []*codegen.SectionTemplate{codegen.Header(title, "server", imports)}
 

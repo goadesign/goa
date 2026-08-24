@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/eval"
@@ -22,7 +21,7 @@ import (
 func TestViewedSSEServerLocksFirstView(t *testing.T) {
 	root := expr.RunDSL(t, viewedSSEDSL)
 	plan := linkedHTTPPlanForRoot(t, root)
-	code := renderedFile(t, plan.ServerFiles(), "sse.go")
+	code := renderedFile(t, plan.ServerFiles())
 
 	require.Contains(t, code, `if s.sentView != "" && view != s.sentView`)
 	require.Contains(t, code, `goa.InvalidEnumValueError("view", view, []any{s.sentView})`)
@@ -42,7 +41,7 @@ func TestViewedSSEServerLocksFirstView(t *testing.T) {
 func TestViewedSSEClientReconstructsCollections(t *testing.T) {
 	root := expr.RunDSL(t, viewedSSECollectionDSL)
 	plan := linkedHTTPPlanForRoot(t, root)
-	code := renderedFile(t, plan.ClientFiles(), "sse.go")
+	code := renderedFile(t, plan.ClientFiles())
 
 	require.Contains(t, code, "switch view {")
 	require.Contains(t, code, "Decode(&body)")
@@ -57,13 +56,15 @@ func TestViewedSSEClientReconstructsCollections(t *testing.T) {
 func TestViewedSSEUsesConfiguredDataField(t *testing.T) {
 	root := expr.RunDSL(t, viewedSSEDataFieldDSL)
 	plan := linkedHTTPPlanForRoot(t, root)
-	client := renderedFile(t, plan.ClientFiles(), "sse.go")
-	server := renderedFile(t, plan.ServerFiles(), "sse.go")
+	client := renderedFile(t, plan.ClientFiles())
+	server := renderedFile(t, plan.ServerFiles())
 
-	require.Contains(t, client, "Decode(&body.Data)")
+	require.Contains(t, client, "value := dataContent")
+	require.Contains(t, client, "body.Data = &value")
 	require.Contains(t, client, "projected := New")
 	require.Contains(t, client, "views.Validate")
-	require.Contains(t, server, "payload = body.Data")
+	require.Contains(t, server, "data = string(body.Data)")
+	require.NotContains(t, server, "var payload any")
 }
 
 // TestViewedSSERebuildsRequiredResponseFields checks that the client reads the
@@ -72,12 +73,13 @@ func TestViewedSSEUsesConfiguredDataField(t *testing.T) {
 func TestViewedSSERebuildsRequiredResponseFields(t *testing.T) {
 	root := expr.RunDSL(t, viewedSSERequiredFieldsDSL)
 	plan := linkedHTTPPlanForRoot(t, root)
-	client := renderedFile(t, plan.ClientFiles(), "sse.go")
+	client := renderedFile(t, plan.ClientFiles())
 
 	for _, assignment := range []string{
 		"body.ID = event.ID",
 		"body.Kind = event.Kind",
-		"Decode(&body.Data)",
+		"value := dataContent",
+		"body.Data = &value",
 	} {
 		require.Contains(t, client, assignment)
 		require.Less(t, strings.Index(client, assignment), strings.Index(client, "projected := New"))
@@ -100,7 +102,6 @@ func TestViewedClientsUseAssignedValidator(t *testing.T) {
 	require.NoError(t, viewsPackage.DeclareName(codegen.NewExactName(codegen.NameFunction, preferred)))
 	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
 	require.NoError(t, err)
-	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	require.NoError(t, plans[0].Link())
@@ -142,7 +143,6 @@ func TestViewedResultConstructorsUsePackageDeclarations(t *testing.T) {
 	require.NoError(t, err)
 	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
 	require.NoError(t, err)
-	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	require.NoError(t, plans[0].Link())
@@ -155,7 +155,7 @@ func TestViewedResultConstructorsUsePackageDeclarations(t *testing.T) {
 	names := make(map[string]struct{}, len(retained.Representations))
 	collidingNames := make(map[string]string, 2)
 	definitions := renderedFiles(t, plans[0].ClientTypeFiles())
-	calls := renderedFile(t, plans[0].ClientFiles(), "sse.go")
+	calls := renderedFile(t, plans[0].ClientFiles())
 	for _, representation := range retained.Representations {
 		declaration := plans[0].constructors[viewedConstructorKey{
 			endpoint: endpoint,
@@ -175,15 +175,15 @@ func TestViewedResultConstructorsUsePackageDeclarations(t *testing.T) {
 	require.NotEqual(t, collidingNames["foo-bar"], collidingNames["foo bar"])
 }
 
-// renderedFile renders all sections of the file whose base name is suffix.
-func renderedFile(t *testing.T, files []*codegen.File, suffix string) string {
+// renderedFile renders the generated sse.go file.
+func renderedFile(t *testing.T, files []*codegen.File) string {
 	t.Helper()
 	for _, file := range files {
-		if strings.HasSuffix(file.Path, suffix) {
+		if strings.HasSuffix(file.Path, "sse.go") {
 			return renderedFiles(t, []*codegen.File{file})
 		}
 	}
-	t.Fatalf("generated file ending in %q was not planned", suffix)
+	t.Error("generated sse.go file was not planned")
 	return ""
 }
 
@@ -258,6 +258,32 @@ func viewedSSEDataFieldDSL() {
 		})
 	})
 	dsl.Service("Viewed SSE Data", func() {
+		dsl.Method("Watch", func() {
+			dsl.StreamingResult(event)
+			dsl.HTTP(func() {
+				dsl.GET("/watch")
+				dsl.ServerSentEvents("data")
+			})
+		})
+	})
+}
+
+// viewedSSEPrimitiveAliasDataFieldDSL defines a viewed stream whose data line
+// carries a required field declared with a named string type.
+func viewedSSEPrimitiveAliasDataFieldDSL() {
+	text := dsl.Type("ViewedEventText", dsl.String)
+	event := dsl.ResultType("application/vnd.viewed-sse-alias-data", func() {
+		dsl.TypeName("ViewedSSEAliasData")
+		dsl.Attribute("data", text)
+		dsl.Attribute("detail", dsl.String)
+		dsl.Required("data")
+		dsl.View("summary", func() { dsl.Attribute("data") })
+		dsl.View("detailed", func() {
+			dsl.Attribute("data")
+			dsl.Attribute("detail")
+		})
+	})
+	dsl.Service("Viewed SSE Alias Data", func() {
 		dsl.Method("Watch", func() {
 			dsl.StreamingResult(event)
 			dsl.HTTP(func() {

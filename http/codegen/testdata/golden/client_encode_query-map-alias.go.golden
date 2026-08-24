@@ -8,7 +8,7 @@ func EncodeMethodARequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 		}
 		values := req.URL.Query()
 		for kRaw, value := range p.Map {
-			k := strconv.FormatFloat(float64(kRaw), 'f', -1, 32)
+			k := strconv.FormatFloat(float64(kRaw), 'g', -1, 32)
 			key := fmt.Sprintf("map[%s]", k)
 			valueStr := strconv.FormatBool(value)
 			values.Add(key, valueStr)

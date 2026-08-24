@@ -200,14 +200,16 @@ func TestGoTypePlanRetainsServiceErrorImport(t *testing.T) {
 
 	generation, err := NewGeneration("generated.local/gen", nil)
 	require.NoError(t, err)
-	require.NoError(t, generation.RequireImport(NewImport("goa", "example.com/fixed/goa")))
+	pkg, err := generation.ClaimPackage(owner)
+	require.NoError(t, err)
+	require.NoError(t, pkg.RequireImport(NewImport("goa", "example.com/fixed/goa")))
 	for _, preference := range plan.ImportPreferences() {
-		require.NoError(t, generation.DeclareImport(NewImport(preference.Name, preference.Path)))
+		require.NoError(t, pkg.DeclareImport(NewImport(preference.Name, preference.Path)))
 	}
 	require.NoError(t, generation.Freeze())
-	require.Equal(t, "goa2", generation.ImportName(goaPath))
+	require.Equal(t, "goa2", pkg.ImportName(goaPath))
 
-	linked := plan.Link(owner, generation.ImportName)
+	linked := plan.Link(owner, pkg.ImportName)
 	require.Equal(t, "goa2.ServiceError", linked.Name())
 	require.Equal(t, "*goa2.ServiceError", linked.Ref())
 	require.Equal(t, []GoTypeImport{{Name: "goa2", Path: goaPath}}, linked.Imports())
@@ -266,6 +268,79 @@ func TestGoTypePlanRetainsPointerAndDefaultPolicy(t *testing.T) {
 				require.Equal(t, want, fields[index].IsPointer(), fields[index].FieldName(true))
 			}
 			require.Equal(t, test.def, plan.Link(plan.Owner(), goTypeTestQualifier).Def())
+		})
+	}
+}
+
+// TestGoTypePlanRetainsRequiredArrayElementPointers verifies that only JSON
+// input layouts add pointers to primitive elements that must reject null.
+func TestGoTypePlanRetainsRequiredArrayElementPointers(t *testing.T) {
+	const owner = "generated.local/gen/types"
+	generation, err := NewGeneration("generated.local/gen", nil)
+	require.NoError(t, err)
+	alias := goTypeTestUserType("Alias", expr.String)
+	bytesAlias := goTypeTestUserType("BytesAlias", expr.Bytes)
+	binder := goTypeTestBinder(map[expr.DataType]GoTypeBinding{
+		alias: {
+			Owner: owner,
+			Type:  declareGoTypeTestUserType(t, generation, owner, alias),
+		},
+		bytesAlias: {
+			Owner: owner,
+			Type:  declareGoTypeTestUserType(t, generation, owner, bytesAlias),
+		},
+	})
+	require.NoError(t, generation.Freeze())
+
+	tests := []struct {
+		name     string
+		array    *expr.Array
+		jsonBody bool
+		want     string
+	}{
+		{
+			name:     "built-in string in JSON input",
+			array:    &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}, NonNullableElems: true},
+			jsonBody: true,
+			want:     "[]*string",
+		},
+		{
+			name:     "string alias in JSON input",
+			array:    &expr.Array{ElemType: &expr.AttributeExpr{Type: alias}, NonNullableElems: true},
+			jsonBody: true,
+			want:     "[]*Alias",
+		},
+		{
+			name:     "ordinary string alias array",
+			array:    &expr.Array{ElemType: &expr.AttributeExpr{Type: alias}},
+			jsonBody: true,
+			want:     "[]Alias",
+		},
+		{
+			name:  "service string alias array",
+			array: &expr.Array{ElemType: &expr.AttributeExpr{Type: alias}, NonNullableElems: true},
+			want:  "[]Alias",
+		},
+		{
+			name:     "bytes alias already represents null",
+			array:    &expr.Array{ElemType: &expr.AttributeExpr{Type: bytesAlias}, NonNullableElems: true},
+			jsonBody: true,
+			want:     "[]BytesAlias",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			plan, err := PlanGoType(&expr.AttributeExpr{Type: test.array}, GoTypePlanOptions{
+				Owner: owner,
+				Policy: GoLayoutPolicy{
+					UseDefault:          true,
+					SumType:             true,
+					ArrayElementPointer: test.jsonBody,
+				},
+				Bind: binder,
+			})
+			require.NoError(t, err)
+			require.Equal(t, test.want, plan.Link(owner, goTypeTestQualifier).Def())
 		})
 	}
 }

@@ -28,6 +28,18 @@ type (
 		ServerInterceptorsDeclaration *codegen.NameDeclaration
 		// ClientInterceptorsDeclaration is the exact client interceptor interface.
 		ClientInterceptorsDeclaration *codegen.NameDeclaration
+		// VarName is the generated endpoint collection name kept for existing plugins.
+		//
+		// Deprecated: Use EndpointsDeclaration.Name() after planning.
+		VarName string
+		// ClientVarName is the generated client name kept for existing plugins.
+		//
+		// Deprecated: Use ClientDeclaration.Name() after planning.
+		ClientVarName string
+		// ServiceVarName is the generated service interface name kept for existing plugins.
+		//
+		// Deprecated: Use ServiceDeclaration.Name() after planning.
+		ServiceVarName string
 		// Name is the service name.
 		Name string
 		// Description is the service description.
@@ -54,6 +66,14 @@ type (
 		ClientDeclaration *codegen.NameDeclaration
 		// ServiceDeclaration is the exact service interface accepted by the endpoint constructor.
 		ServiceDeclaration *codegen.NameDeclaration
+		// ClientVarName is the generated client name kept for existing plugins.
+		//
+		// Deprecated: Use ClientDeclaration.Name() after planning.
+		ClientVarName string
+		// ServiceVarName is the generated service interface name kept for existing plugins.
+		//
+		// Deprecated: Use ServiceDeclaration.Name() after planning.
+		ServiceVarName string
 		// ArgName is the name of the argument used to initialize the client
 		// struct method field.
 		ArgName string
@@ -62,12 +82,12 @@ type (
 		//
 		// It is only set when HasMixedResults is true.
 		StreamArgName string
-		// ServiceName is the name of the owner service.
+		// ServiceName is the name of the service that declares this method.
 		ServiceName string
 	}
 )
 
-// endpointFile renders the endpoints for the exact service retained by plan.
+// endpointFile renders endpoints from the service data copied into plan.
 func endpointFile(plan *Plan, facts *serviceFacts) *codegen.File {
 	services := plan.Services()
 	svc := services.Get(facts.name)
@@ -87,18 +107,11 @@ func endpointFile(plan *Plan, facts *serviceFacts) *codegen.File {
 		sections = []*codegen.SectionTemplate{header, def}
 		for _, m := range data.Methods {
 			if m.ServerStream != nil {
-				// Generate endpoint input struct for streaming methods
-				// For JSON-RPC WebSocket with StreamingResult: generate struct (needed for stream handle)
-				// For JSON-RPC WebSocket without StreamingResult (client streaming only): no struct needed
-				// For JSON-RPC SSE: always generate struct (methods have stream params)
-				// For HTTP/gRPC: always generate endpoint input struct
-				if !m.IsJSONRPCWebSocket || m.ServerStream.EndpointStruct != "" {
-					sections = append(sections, &codegen.SectionTemplate{
-						Name:   "endpoint-input-struct",
-						Source: serviceTemplates.Read(serviceEndpointStreamStructT),
-						Data:   m,
-					})
-				}
+				sections = append(sections, &codegen.SectionTemplate{
+					Name:   "endpoint-input-struct",
+					Source: serviceTemplates.Read(serviceEndpointStreamStructT),
+					Data:   m,
+				})
 			}
 			if m.SkipRequestBodyEncodeDecode {
 				sections = append(sections, &codegen.SectionTemplate{
@@ -153,6 +166,8 @@ func endpointData(svc *Data) *EndpointsData {
 			MethodData:         m,
 			ClientDeclaration:  svc.ClientDeclaration,
 			ServiceDeclaration: svc.ServiceDeclaration,
+			ClientVarName:      svc.ClientDeclaration.Name(),
+			ServiceVarName:     svc.ServiceDeclaration.Name(),
 			ArgName:            argName,
 			StreamArgName:      streamArgName,
 			ServiceName:        svc.Name,
@@ -167,6 +182,9 @@ func endpointData(svc *Data) *EndpointsData {
 		ServiceDeclaration:            svc.ServiceDeclaration,
 		ServerInterceptorsDeclaration: svc.ServerInterceptorsDeclaration,
 		ClientInterceptorsDeclaration: svc.ClientInterceptorsDeclaration,
+		VarName:                       svc.EndpointsDeclaration.Name(),
+		ClientVarName:                 svc.ClientDeclaration.Name(),
+		ServiceVarName:                svc.ServiceDeclaration.Name(),
 		Name:                          svc.Name,
 		Description:                   desc,
 		ClientInitArgs:                strings.Join(names, ", "),
@@ -179,11 +197,7 @@ func endpointData(svc *Data) *EndpointsData {
 
 func payloadVar(e *EndpointMethodData) string {
 	if e.ServerStream != nil {
-		if e.ServerStream.EndpointStruct != "" {
-			return "ep.Payload"
-		}
-		// JSON-RPC WebSocket has no payload for server streaming
-		return ""
+		return "ep.Payload"
 	}
 	if e.SkipRequestBodyEncodeDecode {
 		return "ep.Payload"

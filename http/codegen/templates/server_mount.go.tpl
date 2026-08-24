@@ -1,7 +1,7 @@
 {{ printf "%s configures the mux to serve the %s endpoints." .MountServerDeclaration.Name .Service.Name | comment }}
 func {{ .MountServerDeclaration.Name }}(mux goahttp.Muxer, h *{{ .ServerStructDeclaration.Name }}) {
 	{{- range .Endpoints }}
-	{{ .MountHandlerDeclaration.Name }}(mux, h.{{ .Method.VarName }})
+	{{ if .MountHandlerDeclaration }}{{ .MountHandlerDeclaration.Name }}{{ else }}{{ .MountHandler }}{{ end }}(mux, h.{{ .Method.VarName }})
 	{{- end }}
 	{{- range .FileServers }}
 		{{- if .Redirect }}
@@ -18,12 +18,15 @@ func {{ .MountServerDeclaration.Name }}(mux goahttp.Muxer, h *{{ .ServerStructDe
 					{{- $stripped = (dir $stripped) }}
 				{{- end }}
 				{{- if eq $stripped "/" }}
-	{{ $mountHandler }}(mux, h.{{ $varName }}) 
+	{{ $mountHandler }}(mux, h.{{ $varName }})
 				{{- else }}
 	{{ $mountHandler }}(mux, http.StripPrefix("{{ $stripped }}", h.{{ $varName }}))
 				{{- end }}
 			{{- end }}
 		{{- end }}
+	{{- end }}
+	{{- range .ServerMounts }}
+	{{ .Declaration.Name }}(mux)
 	{{- end }}
 }
 

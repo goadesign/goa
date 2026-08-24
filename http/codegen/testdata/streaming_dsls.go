@@ -34,6 +34,22 @@ var SkipRequestBodyEncodeDecodeDSL = func() {
 	})
 }
 
+var SkipRequestBodyEncodeDecodeHeaderDSL = func() {
+	Service("SkipRequestBodyEncodeDecodeHeader", func() {
+		Method("Upload", func() {
+			Payload(func() {
+				Attribute("contentType", String)
+			})
+			HTTP(func() {
+				POST("/")
+				Header("contentType:Content-Type")
+				SkipRequestBodyEncodeDecode()
+				Response(StatusNoContent)
+			})
+		})
+	})
+}
+
 var StreamingMultipleServicesDSL = func() {
 	Service("StreamingServiceA", func() {
 		Method("Method", func() {
@@ -57,10 +73,14 @@ var StreamingMultipleServicesDSL = func() {
 
 var StreamingResultDSL = func() {
 	var Request = Type("Request", func() {
-		Attribute("x", String)
+		Attribute("x", String, func() {
+			Example("request")
+		})
 	})
 	var Result = Type("UserType", func() {
-		Attribute("a", String)
+		Attribute("a", String, func() {
+			Example("event")
+		})
 	})
 	Service("StreamingResultService", func() {
 		Method("StreamingResultMethod", func() {
@@ -76,15 +96,21 @@ var StreamingResultDSL = func() {
 
 var MixedResultsDSL = func() {
 	var PayloadType = Type("Payload", func() {
-		Attribute("x", String)
+		Attribute("x", String, func() {
+			Example("request")
+		})
 		Required("x")
 	})
 	var ResultType = Type("Result", func() {
-		Attribute("id", String)
+		Attribute("id", String, func() {
+			Example("result")
+		})
 		Required("id")
 	})
 	var EventType = Type("Event", func() {
-		Attribute("message", String)
+		Attribute("message", String, func() {
+			Example("event")
+		})
 		Required("message")
 	})
 	Service("MixedResultsService", func() {
@@ -491,7 +517,9 @@ var StreamingPayloadResultWithViewsDSL = func() {
 	Service("StreamingPayloadResultWithViewsService", func() {
 		Method("StreamingPayloadResultWithViewsMethod", func() {
 			StreamingPayload(Float32)
-			Result(ResultT)
+			Result(ResultT, func() {
+				View("tiny")
+			})
 			HTTP(func() {
 				GET("/")
 				Response(StatusOK)
@@ -549,7 +577,9 @@ var StreamingPayloadResultCollectionWithViewsDSL = func() {
 	Service("StreamingPayloadResultCollectionWithViewsService", func() {
 		Method("StreamingPayloadResultCollectionWithViewsMethod", func() {
 			StreamingPayload(Any)
-			Result(CollectionOf(ResultT))
+			Result(CollectionOf(ResultT), func() {
+				View("tiny")
+			})
 			HTTP(func() {
 				GET("/")
 				Response(StatusOK)
@@ -730,7 +760,9 @@ var BidirectionalStreamingResultWithViewsDSL = func() {
 	Service("BidirectionalStreamingResultWithViewsService", func() {
 		Method("BidirectionalStreamingResultWithViewsMethod", func() {
 			StreamingPayload(Float32)
-			StreamingResult(ResultT)
+			StreamingResult(ResultT, func() {
+				View("tiny")
+			})
 			HTTP(func() {
 				GET("/")
 				Response(StatusOK)
@@ -788,7 +820,9 @@ var BidirectionalStreamingResultCollectionWithViewsDSL = func() {
 	Service("BidirectionalStreamingResultCollectionWithViewsService", func() {
 		Method("BidirectionalStreamingResultCollectionWithViewsMethod", func() {
 			StreamingPayload(Any)
-			StreamingResult(CollectionOf(ResultT))
+			StreamingResult(CollectionOf(ResultT), func() {
+				View("tiny")
+			})
 			HTTP(func() {
 				GET("/")
 				Response(StatusOK)

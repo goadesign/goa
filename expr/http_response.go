@@ -348,7 +348,7 @@ func (r *HTTPResponseExpr) Dup() *HTTPResponseExpr {
 // attributes are mapped to special goa headers in the form of
 // "Goa-Attribute(-<Attribute Name>)".
 func (r *HTTPResponseExpr) mapUnmappedAttrs(svcAtt *AttributeExpr) {
-	if svcAtt.Type != ErrorResult {
+	if !IsErrorResult(svcAtt.Type) {
 		return
 	}
 

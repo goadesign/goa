@@ -21,7 +21,7 @@ type ChainedInterceptorServiceClientInterceptors struct {
 func NewChainedInterceptorServiceClientInterceptors() *ChainedInterceptorServiceClientInterceptors {
 	return &ChainedInterceptorServiceClientInterceptors{}
 }
-func (i *ChainedInterceptorServiceClientInterceptors) API(ctx context.Context, info *chainedinterceptorservice.APIInfo, next goa.Endpoint) (any, error) {
+func (i *ChainedInterceptorServiceClientInterceptors) API(ctx context.Context, info chainedinterceptorservice.APIInfo, next goa.Endpoint) (any, error) {
 	log.Printf(ctx, "[API] Sending request: %v", info.RawPayload())
 	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
@@ -31,7 +31,7 @@ func (i *ChainedInterceptorServiceClientInterceptors) API(ctx context.Context, i
 	log.Printf(ctx, "[API] Received response: %v", resp)
 	return resp, nil
 }
-func (i *ChainedInterceptorServiceClientInterceptors) Method(ctx context.Context, info *chainedinterceptorservice.MethodInfo, next goa.Endpoint) (any, error) {
+func (i *ChainedInterceptorServiceClientInterceptors) Method(ctx context.Context, info chainedinterceptorservice.MethodInfo, next goa.Endpoint) (any, error) {
 	log.Printf(ctx, "[Method] Sending request: %v", info.RawPayload())
 	resp, err := next(ctx, info.RawPayload())
 	if err != nil {
@@ -41,7 +41,7 @@ func (i *ChainedInterceptorServiceClientInterceptors) Method(ctx context.Context
 	log.Printf(ctx, "[Method] Received response: %v", resp)
 	return resp, nil
 }
-func (i *ChainedInterceptorServiceClientInterceptors) Service(ctx context.Context, info *chainedinterceptorservice.ServiceInfo, next goa.Endpoint) (any, error) {
+func (i *ChainedInterceptorServiceClientInterceptors) Service(ctx context.Context, info chainedinterceptorservice.ServiceInfo, next goa.Endpoint) (any, error) {
 	log.Printf(ctx, "[Service] Sending request: %v", info.RawPayload())
 	resp, err := next(ctx, info.RawPayload())
 	if err != nil {

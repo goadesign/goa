@@ -20,7 +20,7 @@ func TestClientCLIInlinesOneOfRequestValidation(t *testing.T) {
 
 	require.Contains(t, code, "BuildMethodBodyUnionUserValidatePayload")
 	require.Contains(t, code, "if body.A == nil")
-	require.Contains(t, code, "marshalUnionUserValidateTo")
+	require.Contains(t, code, "marshalUnionUserValidateRequestBodyToServicebodyunionuservalidateUnionUserValidate")
 	require.NotContains(t, code, "ValidateMethodBodyUnionUserValidateRequestBody")
 }
 
@@ -75,8 +75,6 @@ func renderClientCLISectionCode(t *testing.T, dsl func(), fileIndex, sectionInde
 // renderClientTypesCode renders the client type file for a single-service DSL.
 func renderClientTypesCode(t *testing.T, dsl func()) string {
 	t.Helper()
-
-	const genpkg = "gen"
 
 	root := expr.RunDSL(t, dsl)
 	plan := linkedHTTPPlanForRoot(t, root)

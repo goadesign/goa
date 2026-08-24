@@ -1,3 +1,4 @@
+// This file adds authored or generated examples to OpenAPI 3 values.
 package openapiv3
 
 import (
@@ -15,8 +16,13 @@ type (
 )
 
 // initExample sets the example or examples of the given object.
-func initExamples(obj exampler, attr *expr.AttributeExpr, r *expr.ExampleGenerator) {
-	examples := attr.ExtractUserExamples()
+func initExamples(obj exampler, attr *expr.AttributeExpr, r *expr.ExampleGenerator, values openapi.Values) {
+	selected := values.Example(attr, r)
+	if selected == nil {
+		obj.setExample(nil)
+		return
+	}
+	examples := values.Examples(attr, attr.ExtractUserExamples())
 	switch {
 	case len(examples) > 1:
 		refs := make(map[string]*ExampleRef, len(examples))
@@ -33,6 +39,6 @@ func initExamples(obj exampler, attr *expr.AttributeExpr, r *expr.ExampleGenerat
 	case len(examples) > 0:
 		obj.setExample(openapi.ProjectExample(attr, examples[0].Value))
 	default:
-		obj.setExample(openapi.Example(attr, r))
+		obj.setExample(openapi.ProjectExample(attr, selected))
 	}
 }

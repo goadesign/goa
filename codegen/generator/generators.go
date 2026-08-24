@@ -1,76 +1,69 @@
-// This file defines the fresh core generator objects selected by each command.
-// Factories are immutable; every run receives new callback values and retains
-// one Plan from declaration planning through rendering.
+// This file lists the generators used by each command. Every command run gets
+// new functions, and both functions receive the same Plan.
 package generator
 
-import "goa.design/goa/v3/codegen"
+import (
+	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/eval"
+)
 
 type (
-	// coreGenerator plans and renders one core subsystem for a single run.
+	// Genfunc is the released signature of a standalone generator function.
+	// The current generator uses the run-wide Plan instead.
+	//
+	// Deprecated: Register a PluginFactory to add generated files.
+	Genfunc func(genpkg string, roots []eval.Root) ([]*codegen.File, error)
+
+	// coreGenerator chooses names and then builds one group of generated files.
 	coreGenerator struct {
-		// name identifies the subsystem in lifecycle diagnostics.
+		// name identifies the file group in error messages.
 		name string
-		// Plan declares package symbols and retains run-specific analysis.
+		// Plan chooses generated names and saves the data needed to build files.
 		Plan func(*Plan) error
-		// Generate renders files from the same frozen plan.
+		// Generate builds files from that same Plan after all names are final.
 		Generate func(*Plan) ([]*codegen.File, error)
 	}
 
-	// generatorFactory creates one core generator instance for a run.
+	// generatorFactory returns a new pair of generator functions when called.
 	generatorFactory func() coreGenerator
 )
 
-// genGeneratorFactories returns fresh service, transport, and OpenAPI factories.
+// genGeneratorFactories returns the service, transport, and OpenAPI generators
+// used by the gen command.
 func genGeneratorFactories() []generatorFactory {
 	return []generatorFactory{
 		func() coreGenerator {
 			return coreGenerator{
-				name: "service",
-				Plan: func(plan *Plan) error {
-					return planServiceData(plan)
-				},
-				Generate: func(plan *Plan) ([]*codegen.File, error) {
-					return serviceFiles(plan)
-				},
+				name:     "service",
+				Plan:     planServiceData,
+				Generate: serviceFiles,
 			}
 		},
 		func() coreGenerator {
 			return coreGenerator{
-				name: "transport",
-				Plan: func(plan *Plan) error {
-					return planTransportData(plan)
-				},
-				Generate: func(plan *Plan) ([]*codegen.File, error) {
-					return transportFiles(plan)
-				},
+				name:     "transport",
+				Plan:     planTransportData,
+				Generate: transportFiles,
 			}
 		},
 		func() coreGenerator {
 			return coreGenerator{
-				name: "openapi",
-				Plan: func(plan *Plan) error {
-					return planServiceData(plan)
-				},
-				Generate: func(plan *Plan) ([]*codegen.File, error) {
-					return openAPIFiles(plan)
-				},
+				name:     "openapi",
+				Plan:     planOpenAPIData,
+				Generate: openAPIFiles,
 			}
 		},
 	}
 }
 
-// exampleGeneratorFactories returns a fresh example generator factory.
+// exampleGeneratorFactories returns the generator used by the example command.
 func exampleGeneratorFactories() []generatorFactory {
 	return []generatorFactory{
 		func() coreGenerator {
 			return coreGenerator{
-				name: "example",
-				Plan: func(plan *Plan) error {
-					return planTransportData(plan)
-				},
-				Generate: func(plan *Plan) ([]*codegen.File, error) {
-					return exampleFiles(plan)
-				},
+				name:     "example",
+				Plan:     planExampleData,
+				Generate: exampleFiles,
 			}
 		},
 	}

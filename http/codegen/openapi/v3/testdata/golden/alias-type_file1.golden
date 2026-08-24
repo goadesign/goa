@@ -21,10 +21,8 @@ paths:
                             $ref: '#/components/schemas/Setup'
                         example:
                             completed:
-                                - what
-                                - what
-                                - what
-                            current: what
+                                - when
+                            current: who
             responses:
                 "200":
                     description: OK response.
@@ -34,11 +32,8 @@ paths:
                                 $ref: '#/components/schemas/Setup'
                             example:
                                 completed:
-                                    - what
-                                    - what
-                                    - what
-                                    - what
-                                current: what
+                                    - when
+                                current: who
 components:
     schemas:
         Setup:
@@ -49,20 +44,18 @@ components:
                     items:
                         type: string
                         description: Setup stage.
-                        example: what
+                        example: who
                         enum:
                             - who
                             - when
                             - where
                             - what
                     example:
-                        - what
-                        - what
-                        - what
+                        - when
                 current:
                     type: string
                     description: Setup stage.
-                    example: what
+                    example: who
                     enum:
                         - who
                         - when
@@ -71,9 +64,7 @@ components:
             description: Request body for testEndpoint.
             example:
                 completed:
-                    - what
-                    - what
-                    - what
-                current: what
+                    - when
+                current: who
 tags:
     - name: testService

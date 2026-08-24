@@ -12,7 +12,7 @@ type ListResponseBody struct {
 }
 
 // ListSomethingWentWrongResponseBody is the type of the "ServiceB" service
-// "list" endpoint HTTP response body.
+// "list" endpoint HTTP response body for the "something_went_wrong" error.
 type ListSomethingWentWrongResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
@@ -52,7 +52,7 @@ func NewListResultOK(body *ListResponseBody) *serviceb.ListResult {
 // NewListSomethingWentWrong builds a ServiceB service list endpoint
 // something_went_wrong error.
 func NewListSomethingWentWrong(body *ListSomethingWentWrongResponseBody) *goa.ServiceError {
-	v := &serviceb.Error{
+	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
 		Message:   *body.Message,

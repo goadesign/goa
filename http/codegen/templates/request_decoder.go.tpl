@@ -5,17 +5,9 @@ func {{ .RequestDecoderDeclaration.Name }}(mux goahttp.Muxer, decoder func(*http
 		r.Body = io.NopCloser(bytes.NewReader(req.Params))
 {{- end }}
 		var payload {{ .Payload.Ref }}
-{{- if .MultipartRequestDecoder }}
-		if err := decoder(r).Decode(&payload); err != nil {
-			var gerr *goa.ServiceError
-			if errors.As(err, &gerr) {
-				return payload, gerr
-			}
-			return payload, goa.DecodePayloadError(err.Error())
-		}
-{{- else if .Payload.Request.ServerBody }}
+{{- if .Payload.Request.ServerBody }}
 		var (
-			body {{ .Payload.Request.ServerBody.VarName }}
+			body {{ if .Payload.Request.ServerBody.Declaration }}{{ .Payload.Request.ServerBody.Declaration.Name }}{{ else }}{{ .Payload.Request.ServerBody.VarName }}{{ end }}
 			err  error
 		)
 		err = decoder(r).Decode(&body)
@@ -38,14 +30,18 @@ func {{ .RequestDecoderDeclaration.Name }}(mux goahttp.Muxer, decoder func(*http
 			}
 	{{- end }}
 		}
-	{{- if .Payload.Request.ServerBody.ValidateRef }}
+	{{- if and .Payload.Request.ServerBody.ValidatorDeclaration .Payload.Request.ServerBody.ValidationTarget }}
+		err = {{ .Payload.Request.ServerBody.ValidatorDeclaration.Name }}({{ .Payload.Request.ServerBody.ValidationTarget }})
+		if err != nil {
+			return payload, err
+		}
+	{{- else if .Payload.Request.ServerBody.ValidateRef }}
 		{{ .Payload.Request.ServerBody.ValidateRef }}
 		if err != nil {
 			return payload, err
 		}
 	{{- end }}
 {{- end }}
-{{- if not .MultipartRequestDecoder }}
 	{{- template "partial_request_elements" .Payload.Request }}
 	{{- if .Payload.Request.MustValidate }}
 		if err != nil {
@@ -53,13 +49,12 @@ func {{ .RequestDecoderDeclaration.Name }}(mux goahttp.Muxer, decoder func(*http
 		}
 	{{- end }}
 	{{- if .Payload.Request.PayloadInit }}
-	payload = {{ .Payload.Request.PayloadInit.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }}, {{ end }})
+	payload = {{ .Payload.Request.PayloadInit.Declaration.Name }}({{ range .Payload.Request.PayloadInit.ServerArgs }}{{ .Ref }}, {{ end }})
 	{{- else if .Payload.DecoderReturnValue }}
 	payload = {{ .Payload.DecoderReturnValue }}
 	{{- else }}
 	payload = body
 	{{- end }}
-{{- end }}
 {{- if .BasicScheme }}{{ with .BasicScheme }}
 	user, pass, {{ if or .UsernameRequired .PasswordRequired }}ok{{ else }}_{{ end }} := r.BasicAuth()
 		{{- if or .UsernameRequired .PasswordRequired}}

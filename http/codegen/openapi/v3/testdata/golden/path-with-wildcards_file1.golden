@@ -18,9 +18,9 @@ paths:
                   required: true
                   schema:
                     type: integer
-                    example: 6827506417626806316
+                    example: 1
                     format: int64
-                  example: 6827506417626806316
+                  example: 1
             responses:
                 "204":
                     description: No Content response.

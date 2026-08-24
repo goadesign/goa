@@ -1,0 +1,20 @@
+// NewProtoMethodMessageResultTypeWithViewsResponse builds
+// *service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse
+// from *servicemessageresulttypewithviewsviews.RTView.
+func NewProtoMethodMessageResultTypeWithViewsResponse(result *servicemessageresulttypewithviewsviews.RTView) *service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse {
+	message := &service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse{
+		IntField:    int32(*result.IntField),
+		StringField: *result.StringField,
+	}
+	return message
+}
+
+// NewProtoMethodMessageResultTypeWithViewsResponseTiny builds
+// *service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse
+// from *servicemessageresulttypewithviewsviews.RTView.
+func NewProtoMethodMessageResultTypeWithViewsResponseTiny(result *servicemessageresulttypewithviewsviews.RTView) *service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse {
+	message := &service_message_result_type_with_viewspb.MethodMessageResultTypeWithViewsResponse{
+		IntField: int32(*result.IntField),
+	}
+	return message
+}

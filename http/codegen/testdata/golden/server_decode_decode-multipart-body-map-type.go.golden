@@ -3,13 +3,22 @@
 func DecodeMethodMultipartMapTypeRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request) (map[string]int, error) {
 	return func(r *http.Request) (map[string]int, error) {
 		var payload map[string]int
-		if err := decoder(r).Decode(&payload); err != nil {
+		var (
+			body map[string]int
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
 			var gerr *goa.ServiceError
 			if errors.As(err, &gerr) {
 				return payload, gerr
 			}
 			return payload, goa.DecodePayloadError(err.Error())
 		}
+		payload = body
 
 		return payload, nil
 	}

@@ -13,9 +13,9 @@
           "200": {
             "content": {
               "text/event-stream": {
-                "example": "Voluptatem non provident rem consequatur.",
+                "example": "event",
                 "schema": {
-                  "example": "Voluptatem non provident rem consequatur.",
+                  "example": "event",
                   "type": "string"
                 }
               }

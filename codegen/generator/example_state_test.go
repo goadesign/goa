@@ -37,7 +37,7 @@ func TestGenerationRejectsFactoryMutationWhenStreamIsCreated(t *testing.T) {
 		}}
 	})
 
-	_, err := executeGeneration("generated.local/gen", []eval.Root{root}, "test", registry)
+	err := executeGeneration("generated.local/gen", []eval.Root{root}, "test", registry)
 
 	require.ErrorContains(t, err, `core "examples" plan mutated prepared design`)
 }
@@ -64,7 +64,7 @@ func TestGenerationRunsOwnIndependentExampleGenerators(t *testing.T) {
 	})
 
 	for range 2 {
-		_, err := executeGeneration("generated.local/gen", []eval.Root{root}, "test", registry)
+		err := executeGeneration("generated.local/gen", []eval.Root{root}, "test", registry)
 		require.NoError(t, err)
 	}
 
@@ -123,7 +123,7 @@ func TestConcurrentGenerationRunsOwnIndependentExampleGenerators(t *testing.T) {
 		runs.Add(1)
 		go func(root *expr.RootExpr) {
 			defer runs.Done()
-			_, err := executeGeneration("generated.local/gen", []eval.Root{root}, "test", registry)
+			err := executeGeneration("generated.local/gen", []eval.Root{root}, "test", registry)
 			errs <- err
 		}(root)
 	}

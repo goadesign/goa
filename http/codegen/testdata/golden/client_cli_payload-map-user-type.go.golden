@@ -2,7 +2,7 @@
 // ServiceBodyInlineMapUser MethodBodyInlineMapUser endpoint from CLI flags.
 func BuildMethodBodyInlineMapUserPayload(serviceBodyInlineMapUserMethodBodyInlineMapUserBody string) (map[*servicebodyinlinemapuser.KeyType]*servicebodyinlinemapuser.ElemType, error) {
 	var err error
-	var body map[*KeyType]*ElemType
+	var body map[*KeyTypeRequestBody]*ElemTypeRequestBody
 	{
 		err = json.Unmarshal([]byte(serviceBodyInlineMapUserMethodBodyInlineMapUserBody), &body)
 		if err != nil {
@@ -11,12 +11,12 @@ func BuildMethodBodyInlineMapUserPayload(serviceBodyInlineMapUserMethodBodyInlin
 	}
 	v := make(map[*servicebodyinlinemapuser.KeyType]*servicebodyinlinemapuser.ElemType, len(body))
 	for key, val := range body {
-		tk := marshalKeyTypeToKeyType(key)
+		tk := marshalKeyTypeRequestBodyToServicebodyinlinemapuserKeyType(key)
 		if val == nil {
 			v[tk] = nil
 			continue
 		}
-		v[tk] = marshalElemTypeToElemType(val)
+		v[tk] = marshalElemTypeRequestBodyToServicebodyinlinemapuserElemType(val)
 	}
 	return v, nil
 }

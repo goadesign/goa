@@ -1,8 +1,8 @@
 type (
 	{{ printf "%s reads results sent as server-sent events." .SSE.ClientInterfaceDeclaration.Name | comment }}
 	{{ .SSE.ClientInterfaceDeclaration.Name }} interface {
-		{{ .Method.ClientStream.RecvName }}() ({{ .Result.Ref }}, error)
-		{{ .Method.ClientStream.RecvWithContextName }}(context.Context) ({{ .Result.Ref }}, error)
+		{{ .Method.ClientStream.RecvName }}() ({{ .SSE.EventTypeRef }}, error)
+		{{ .Method.ClientStream.RecvWithContextName }}(context.Context) ({{ .SSE.EventTypeRef }}, error)
 		Close() error
 	}
 
@@ -16,6 +16,10 @@ type (
 		decoder func(*http.Response) goahttp.Decoder
 		// closed records whether Close was called or the response ended.
 		closed bool
+		// closeOnce ensures the response body is closed only once.
+		closeOnce sync.Once
+		// closeErr stores the response body close error.
+		closeErr error
 		// lock prevents two calls from reading or closing the response at once.
 		lock sync.Mutex
 	}
@@ -30,8 +34,25 @@ func {{ .SSE.ClientInitDeclaration.Name }}(resp *http.Response, decoder func(*ht
 	}
 }
 
-// parseSSEEvent reads one complete event from the response.
-func (s *{{ .SSE.ClientStructDeclaration.Name }}) parseSSEEvent() (eventType string, data []byte, err error) {
+// parseSSEEvent reads one complete event from the response. Ending ctx closes
+// the response body so a blocked read returns.
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) parseSSEEvent(ctx context.Context) (eventType string, data []byte, err error) {
+	closeResult := make(chan struct{}, 1)
+	stopClose := context.AfterFunc(ctx, func() {
+		s.closeBody()
+		closeResult <- struct{}{}
+	})
+	defer func() {
+		if stopClose() {
+			return
+		}
+		<-closeResult
+		if contextErr := ctx.Err(); contextErr != nil {
+			eventType = ""
+			data = nil
+			err = contextErr
+		}
+	}()
 	var event strings.Builder
 	var dataLines []string
 	
@@ -72,120 +93,103 @@ func (s *{{ .SSE.ClientStructDeclaration.Name }}) parseSSEEvent() (eventType str
 }
 
 {{ comment .Method.ClientStream.RecvDesc }}
-func (s *{{ .SSE.ClientStructDeclaration.Name }}) {{ .Method.ClientStream.RecvName }}() ({{ .Result.Ref }}, error) {
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) {{ .Method.ClientStream.RecvName }}() ({{ .SSE.EventTypeRef }}, error) {
 	return s.{{ .Method.ClientStream.RecvWithContextName }}(context.Background())
 }
 
 {{ comment .Method.ClientStream.RecvWithContextDesc }}
-func (s *{{ .SSE.ClientStructDeclaration.Name }}) {{ .Method.ClientStream.RecvWithContextName }}(_ context.Context) ({{ .Result.Ref }}, error) {
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) {{ .Method.ClientStream.RecvWithContextName }}(ctx context.Context) ({{ .SSE.EventTypeRef }}, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	
-	var zero {{ .Result.Ref }}
+	var zero {{ .SSE.EventTypeRef }}
 	
 	if s.closed {
 		return zero, io.EOF
 	}
 	
 	for {
-		eventType, data, err := s.parseSSEEvent()
+		eventType, data, err := s.parseSSEEvent(ctx)
 		if err != nil {
-			s.closed = true
-			return zero, err
+			return zero, s.endStream(err)
 		}
 		
 		switch eventType {
 		case "notification":
-			// Parse JSON-RPC notification
+			// Read the streamed service result from the notification parameters.
 			var notification struct {
 				JSONRPC string          `json:"jsonrpc"`
 				Method  string          `json:"method"`
 				Params  json.RawMessage `json:"params"`
 			}
 			if err := json.Unmarshal(data, &notification); err != nil {
-				return zero, fmt.Errorf("failed to parse notification: %w", err)
+				return zero, s.endStream(fmt.Errorf("failed to parse notification: %w", err))
 			}
 			
-			// Validate notification
 			if notification.JSONRPC != "2.0" {
-				return zero, fmt.Errorf("invalid JSON-RPC version: %s", notification.JSONRPC)
+				return zero, s.endStream(fmt.Errorf("invalid JSON-RPC version: %s", notification.JSONRPC))
 			}
 			
 			if notification.Method != {{ printf "%q" .Method.Name }} {
-				// Skip notifications for other methods
-				continue
+				return zero, s.endStream(fmt.Errorf("received notification for JSON-RPC method %q", notification.Method))
 			}
 			
-			// Decode the result from params
-			{{- if .Method.Result }}
 			result, err := s.decodeResult(notification.Params)
 			if err != nil {
-				return zero, fmt.Errorf("failed to decode result: %w", err)
+				return zero, s.endStream(fmt.Errorf("failed to decode result: %w", err))
 			}
 			return result, nil
-			{{- else }}
-			// Method has no result
-			return zero, nil
-			{{- end }}
 			
 		case "response":
-			// Final response - parse and return
+			// A successful response completes the stream. Stream values arrive in
+			// the notifications handled above.
 			var response jsonrpc.Response
 			if err := json.Unmarshal(data, &response); err != nil {
-				return zero, fmt.Errorf("failed to parse response: %w", err)
+				return zero, s.endStream(fmt.Errorf("failed to parse response: %w", err))
 			}
 			
 			if response.Error != nil {
-				return zero, response.Error
+				return zero, s.endStream(response.Error)
 			}
-			
-			{{- if .Method.Result }}
-			// Decode the final result
-			if response.Result == nil {
-				return zero, fmt.Errorf("missing result in response")
-			}
-			// Convert response.Result to json.RawMessage
-			resultBytes, err := json.Marshal(response.Result)
-			if err != nil {
-				return zero, fmt.Errorf("failed to marshal result: %w", err)
-			}
-			result, err := s.decodeResult(json.RawMessage(resultBytes))
-			if err != nil {
-				return zero, fmt.Errorf("failed to decode final result: %w", err)
-			}
-			
-			// Mark stream as closed after final response
-			s.closed = true
-			return result, nil
-			{{- else }}
-			// Method has no result
-			s.closed = true
-			return zero, nil
-			{{- end }}
+			return zero, s.endStream(io.EOF)
 			
 		case "error":
-			// Error response
+			// A JSON-RPC error completes the stream.
 			var response jsonrpc.Response
 			if err := json.Unmarshal(data, &response); err != nil {
-				return zero, fmt.Errorf("failed to parse error response: %w", err)
+				return zero, s.endStream(fmt.Errorf("failed to parse error response: %w", err))
 			}
-			
-			s.closed = true
 			if response.Error != nil {
-				return zero, response.Error
+				return zero, s.endStream(response.Error)
 			}
-			return zero, fmt.Errorf("unexpected error response")
+			return zero, s.endStream(fmt.Errorf("JSON-RPC error event did not contain an error"))
 			
 		default:
-			// Ignore unknown event types
-			continue
+			return zero, s.endStream(fmt.Errorf("unsupported server-sent event type %q", eventType))
 		}
 	}
 }
 
-{{- if .Method.Result }}
+// closeBody closes the HTTP response body once and returns its close error.
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) closeBody() error {
+	s.closeOnce.Do(func() {
+		s.closeErr = s.resp.Body.Close()
+	})
+	return s.closeErr
+}
+
+// endStream marks the stream closed and preserves both the receive error and
+// any error returned while closing the HTTP response body.
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) endStream(err error) error {
+	s.closed = true
+	if closeErr := s.closeBody(); closeErr != nil {
+		return errors.Join(err, closeErr)
+	}
+	return err
+}
+
 // decodeResult passes one successful stream item to the decoder configured by NewClient.
-func (s *{{ .SSE.ClientStructDeclaration.Name }}) decodeResult(data json.RawMessage) ({{ .Result.Ref }}, error) {
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) decodeResult(data json.RawMessage) ({{ .SSE.EventTypeRef }}, error) {
 	{{- if .Method.ViewedResult }}
 	// The HTTP 200 status tells the configured decoder that this stream item is
 	// a successful JSON-RPC result. Streaming results cannot carry HTTP headers or cookies.
@@ -199,7 +203,7 @@ func (s *{{ .SSE.ClientStructDeclaration.Name }}) decodeResult(data json.RawMess
 	}
 	
 	decoder := s.decoder(resp)
-	var result {{ .Result.Ref }}
+	var result {{ .SSE.EventTypeRef }}
 	if err := decoder.Decode(&result); err != nil {
 		return result, err
 	}
@@ -207,18 +211,15 @@ func (s *{{ .SSE.ClientStructDeclaration.Name }}) decodeResult(data json.RawMess
 	return result, nil
 	{{- end }}
 }
-{{- end }}
 
 {{ comment "Close closes the stream." }}
 func (s *{{ .SSE.ClientStructDeclaration.Name }}) Close() error {
     s.lock.Lock()
     defer s.lock.Unlock()
     
-    if !s.closed {
-        s.closed = true
-        if s.resp != nil && s.resp.Body != nil {
-            return s.resp.Body.Close()
-        }
-    }
+	if !s.closed {
+		s.closed = true
+		return s.closeBody()
+	}
     return nil
 }

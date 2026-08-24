@@ -43,11 +43,19 @@ func GoNativeTypeName(t expr.DataType) string {
 
 // IsNilable reports whether the Go type generated for t can be nil.
 func IsNilable(t expr.DataType) bool {
+	underlying := unalias(t)
 	return expr.IsObject(t) ||
 		expr.IsArray(t) ||
 		expr.IsMap(t) ||
-		t.Kind() == expr.BytesKind ||
-		t.Kind() == expr.AnyKind
+		underlying.Kind() == expr.BytesKind ||
+		underlying.Kind() == expr.AnyKind
+}
+
+// arrayElementIsPointer reports whether validation needs a pointer to tell a
+// null element apart from the element type's zero value.
+func arrayElementIsPointer(array *expr.Array, enabled bool) bool {
+	return enabled && array.NonNullableElems && expr.IsPrimitive(array.ElemType.Type) &&
+		!IsNilable(array.ElemType.Type)
 }
 
 // goFieldIsPointer reports whether a field in a generated Goa service struct

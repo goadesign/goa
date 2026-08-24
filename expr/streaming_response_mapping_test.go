@@ -12,8 +12,8 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// TestStreamingSuccessResponseRejectsHeadersAndCookies checks both HTTP and
-// JSON-RPC methods over SSE and WebSocket connections.
+// TestStreamingSuccessResponseRejectsHeadersAndCookies checks HTTP methods over
+// SSE and WebSocket connections and JSON-RPC methods over SSE.
 func TestStreamingSuccessResponseRejectsHeadersAndCookies(t *testing.T) {
 	transports := []struct {
 		name string
@@ -22,7 +22,6 @@ func TestStreamingSuccessResponseRejectsHeadersAndCookies(t *testing.T) {
 		{name: "HTTP server-sent events", dsl: httpStreamingResponseMappingDSL(true)},
 		{name: "HTTP WebSocket", dsl: httpStreamingResponseMappingDSL(false)},
 		{name: "JSON-RPC server-sent events", dsl: jsonRPCStreamingResponseMappingDSL(true)},
-		{name: "JSON-RPC WebSocket", dsl: jsonRPCStreamingResponseMappingDSL(false)},
 	}
 	mappings := []struct {
 		name  string

@@ -1,4 +1,8 @@
-// Foo is a generated service type.
+// Foo is used by these service methods:
+// - PkgPathDupeMethod A: payload and result
+// - PkgPathDupeMethod B: payload and result
+// - PkgPathDupeMethod2 A: payload and result
+// - PkgPathDupeMethod2 B: payload and result
 type Foo struct {
 	IntField *int
 }

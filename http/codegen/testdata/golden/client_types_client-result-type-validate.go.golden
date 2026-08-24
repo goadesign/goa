@@ -5,9 +5,9 @@ type MethodResultTypeValidateResponseBody struct {
 	A *string `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
 }
 
-// NewMethodResultTypeValidateResultOK builds a "ServiceResultTypeValidate"
+// NewMethodResultTypeValidateResultTypeOK builds a "ServiceResultTypeValidate"
 // service "MethodResultTypeValidate" endpoint result from a HTTP "OK" response.
-func NewMethodResultTypeValidateResultOK(body *MethodResultTypeValidateResponseBody) *serviceresulttypevalidate.ResultType {
+func NewMethodResultTypeValidateResultTypeOK(body *MethodResultTypeValidateResponseBody) *serviceresulttypevalidate.ResultType {
 	v := &serviceresulttypevalidate.ResultType{
 		A: body.A,
 	}

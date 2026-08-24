@@ -1,6 +1,6 @@
-// This file resolves service type definitions and references through the
-// frozen generated-package catalog. It follows explicit type locations by
-// import path and keeps unlocated nested declarations in their enclosing
+// This file writes service type definitions and references using the Go names
+// chosen for each generated package. A type with an explicit package location
+// uses that import path; a child type without one stays in its enclosing type's
 // package.
 package service
 
@@ -14,8 +14,8 @@ import (
 )
 
 type (
-	// declarationResolver renders service-side attributes from the package
-	// records selected during Plan.
+	// declarationResolver writes service fields and type references from the
+	// package declarations recorded by Plan.
 	declarationResolver struct {
 		generation  *codegen.Generation
 		aliases     *importAliases
@@ -28,21 +28,9 @@ type (
 	}
 )
 
-// newServiceResolver resolves declarations starting in service's generated
-// package and qualifies names relative to outputPath.
-func newServiceResolver(generation *codegen.Generation, aliases *importAliases, service *expr.ServiceExpr, outputPath string) *declarationResolver {
-	return newRetainedServiceResolver(
-		generation,
-		aliases,
-		service.Name,
-		servicePackagePath(generation.GenPkg(), service),
-		outputPath,
-	)
-}
-
-// newRetainedServiceResolver starts from a service package identity copied
-// during planning rather than reading the service expression after freeze.
-func newRetainedServiceResolver(generation *codegen.Generation, aliases *importAliases, serviceName, servicePath, outputPath string) *declarationResolver {
+// newServiceResolver starts in the assigned service package and qualifies type
+// references for the package that will contain the generated file.
+func newServiceResolver(generation *codegen.Generation, aliases *importAliases, serviceName, servicePath, outputPath string) *declarationResolver {
 	return &declarationResolver{
 		generation:  generation,
 		aliases:     aliases,
@@ -52,17 +40,9 @@ func newRetainedServiceResolver(generation *codegen.Generation, aliases *importA
 	}
 }
 
-// newViewResolver resolves every declaration in service's views package.
-// derived binds rebuilt projected expression origins to their typed catalog
-// identities.
-func newViewResolver(generation *codegen.Generation, aliases *importAliases, service *expr.ServiceExpr, derived map[expr.UserType]codegen.DerivedTypeID) *declarationResolver {
-	viewsPath := servicePackagePath(generation.GenPkg(), service) + "/views"
-	return newRetainedViewResolver(generation, aliases, service.Name, viewsPath, derived)
-}
-
-// newRetainedViewResolver starts from the views package identity copied during
-// planning and never derives it from a mutable service name.
-func newRetainedViewResolver(generation *codegen.Generation, aliases *importAliases, serviceName, viewsPath string, derived map[expr.UserType]codegen.DerivedTypeID) *declarationResolver {
+// newViewResolver starts in the assigned views package and associates each
+// generated view type with the service result type from which it was built.
+func newViewResolver(generation *codegen.Generation, aliases *importAliases, serviceName, viewsPath string, derived map[expr.UserType]codegen.DerivedTypeID) *declarationResolver {
 	return &declarationResolver{
 		generation:  generation,
 		aliases:     aliases,
@@ -74,8 +54,9 @@ func newRetainedViewResolver(generation *codegen.Generation, aliases *importAlia
 	}
 }
 
-// Name returns the generated Go type name for att. Package ownership comes
-// from the resolver's current import path, not from the textual pkg argument.
+// Name returns the generated Go type name for att. The resolver's current
+// import path chooses the package containing the declaration; the textual pkg
+// argument does not.
 func (r *declarationResolver) Name(att *expr.AttributeExpr, _ string, ptr, useDefault bool) string {
 	switch actual := att.Type.(type) {
 	case expr.Primitive:
@@ -87,7 +68,7 @@ func (r *declarationResolver) Name(att *expr.AttributeExpr, _ string, ptr, useDe
 			if !qualified {
 				return custom
 			}
-			return r.aliases.name(spec.Path) + "." + typeName
+			return r.aliases.name(r.outputPath, spec.Path) + "." + typeName
 		}
 		return codegen.GoNativeTypeName(actual)
 	case *expr.Array:
@@ -100,7 +81,7 @@ func (r *declarationResolver) Name(att *expr.AttributeExpr, _ string, ptr, useDe
 		if actual == expr.Empty {
 			return "struct {}"
 		}
-		if actual == expr.ErrorResult {
+		if expr.IsErrorResult(actual) {
 			return "goa.ServiceError"
 		}
 		owner := r.owner(att)
@@ -198,7 +179,7 @@ func (r *declarationResolver) Package(att *expr.AttributeExpr) string {
 	if owner == r.outputPath {
 		return ""
 	}
-	return r.aliases.name(owner)
+	return r.aliases.name(r.outputPath, owner)
 }
 
 // Enter returns a resolver whose current package owns att and its unlocated
@@ -213,19 +194,8 @@ func (r *declarationResolver) Enter(att *expr.AttributeExpr) codegen.Attributor 
 	return &entered
 }
 
-// inOutputPackage returns a resolver for a file emitted in packagePath.
-func (r *declarationResolver) inOutputPackage(packagePath string) *declarationResolver {
-	if packagePath == r.currentPath && packagePath == r.outputPath {
-		return r
-	}
-	output := *r
-	output.currentPath = packagePath
-	output.outputPath = packagePath
-	return &output
-}
-
-// withOutputPackage returns a resolver that keeps its current declaration
-// owner but qualifies references for a file emitted in packagePath.
+// withOutputPackage returns a resolver that keeps declarations in the current
+// package but qualifies references for a file emitted in packagePath.
 func (r *declarationResolver) withOutputPackage(packagePath string) *declarationResolver {
 	if packagePath == r.outputPath {
 		return r
@@ -247,28 +217,28 @@ func (r *declarationResolver) bindDerived(origin expr.UserType, identity codegen
 	return &bound
 }
 
-// withValidators returns a resolver that maps nested validation calls to the
-// exact dependent declarations collected by the retained service plan.
+// withValidators returns a resolver that maps each child validation call to the
+// Go function declaration submitted during service planning.
 func (r *declarationResolver) withValidators(validators map[validatorKey]*codegen.NameDeclaration) *declarationResolver {
 	bound := *r
 	bound.validators = validators
 	return &bound
 }
 
-// IsSumType reports that service unions use Goa's generated sum-type structs.
+// IsSumType reports that service unions use generated values that hold one branch.
 func (*declarationResolver) IsSumType() bool {
 	return true
 }
 
-// ValidatorName returns the exact package-level validator declared for att
-// and view before generation names froze.
-func (r *declarationResolver) ValidatorName(att *expr.AttributeExpr, view string) string {
+// ValidatorCall returns a call to the validation function submitted for att
+// and view before Generation.Freeze chose the function's Go name.
+func (r *declarationResolver) ValidatorCall(att *expr.AttributeExpr, view, target, _ string) string {
 	declaration := r.validatorDeclaration(att, view)
-	return r.qualify(r.owner(att), declaration.Name())
+	return fmt.Sprintf("%s(%s)", r.qualify(r.owner(att), declaration.Name()), target)
 }
 
-// validatorDeclaration returns the exact retained validator record for att and
-// the canonical selected view.
+// validatorDeclaration returns the NameDeclaration recorded for att and the
+// selected view. The default view uses the same empty key as its call sites.
 func (r *declarationResolver) validatorDeclaration(att *expr.AttributeExpr, view string) *codegen.NameDeclaration {
 	userType, ok := att.Type.(expr.UserType)
 	if !ok {
@@ -286,13 +256,14 @@ func (r *declarationResolver) validatorDeclaration(att *expr.AttributeExpr, view
 	return validator
 }
 
-// Scope returns the frozen name scope owned by the resolver's current package.
+// Scope returns the name set for the resolver's current generated package.
 func (r *declarationResolver) Scope() *codegen.NameScope {
 	return r.generation.Package(r.currentPath).Scope()
 }
 
-// owner returns the import path that owns att. View projections stay in the
-// views package after their original struct:pkg:path metadata is removed.
+// owner returns the import path of the package containing att. View-specific
+// result copies stay in the views package after Goa removes their original
+// struct:pkg:path metadata.
 func (r *declarationResolver) owner(att *expr.AttributeExpr) string {
 	if r.view {
 		return r.currentPath
@@ -326,27 +297,11 @@ func (r *declarationResolver) qualify(owner, name string) string {
 	if owner == r.outputPath {
 		return name
 	}
-	return r.aliases.name(owner) + "." + name
+	return r.aliases.name(r.outputPath, owner) + "." + name
 }
 
-// refDeclaration qualifies declaration for the resolver's output file while
-// preserving the pointer or value semantics of dataType.
-func (r *declarationResolver) refDeclaration(declaration *codegen.TypeDeclaration, dataType expr.DataType) string {
-	qualified := r.qualify(declaration.PackagePath(), declaration.Name())
-	if strings.HasPrefix(declaration.Ref(dataType), "*") {
-		return "*" + qualified
-	}
-	return qualified
-}
-
-// declarationName returns the unqualified planned name for one named type.
-func (r *declarationResolver) declarationName(attribute *expr.AttributeExpr) string {
-	entered := r.Enter(attribute).(*declarationResolver)
-	return entered.userType(entered.currentPath, attribute.Type.(expr.UserType)).Name()
-}
-
-// serviceFieldIsPointer matches Goa service struct pointer semantics for one
-// field definition.
+// serviceFieldIsPointer applies Goa's service-struct pointer rules to one field
+// definition.
 func serviceFieldIsPointer(parent *expr.AttributeExpr, name string, pointer, useDefault bool) bool {
 	field := expr.AsObject(parent.Type).Attribute(name)
 	return expr.IsObject(field.Type) ||

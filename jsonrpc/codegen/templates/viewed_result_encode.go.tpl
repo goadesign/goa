@@ -10,7 +10,7 @@ func {{ .Encode.Name }}(viewed {{ .ViewedTypeRef }}) (any, error) {
 		{{- if .ServerBody }}
 		{{- if .ServerBody.Init }}
 		res := viewed
-		body := {{ .ServerBody.Init.Name }}({{ range .ServerBody.Init.ServerArgs }}{{ .Ref }},{{ end }})
+		body := {{ .ServerBody.Init.Declaration.Name }}({{ range .ServerBody.Init.ServerArgs }}{{ .Ref }},{{ end }})
 		{{- else }}
 		body := viewed.Projected{{ if .ResultAttr }}.{{ .ResultAttr }}{{ end }}
 		{{- end }}
@@ -37,7 +37,7 @@ func {{ .Encode.Name }}(viewed {{ .ViewedTypeRef }}) (any, error) {
 	{{- if .ServerBody }}
 	{{- if .ServerBody.Init }}
 	res := viewed
-	return {{ .ServerBody.Init.Name }}({{ range .ServerBody.Init.ServerArgs }}{{ .Ref }},{{ end }}), nil
+	return {{ .ServerBody.Init.Declaration.Name }}({{ range .ServerBody.Init.ServerArgs }}{{ .Ref }},{{ end }}), nil
 	{{- else }}
 	return viewed.Projected{{ if .ResultAttr }}.{{ .ResultAttr }}{{ end }}, nil
 	{{- end }}

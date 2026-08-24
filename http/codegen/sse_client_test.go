@@ -41,3 +41,62 @@ func TestSSEClient(t *testing.T) {
 		})
 	}
 }
+
+// TestSSEClientSpecializesDataAndRetryParsing checks that generated clients
+// parse each designed field into its exact Go type.
+func TestSSEClientSpecializesDataAndRetryParsing(t *testing.T) {
+	tests := []struct {
+		name     string
+		design   func()
+		contains []string
+	}{
+		{
+			name:     "string alias",
+			design:   ssePrimitiveAliasDSL,
+			contains: []string{"event = sseprimitivealias.EventText(dataContent)"},
+		},
+		{
+			name:   "optional data field",
+			design: testdata.SSEDataFieldDSL,
+			contains: []string{
+				"value := dataContent",
+				"event.Data = &value",
+			},
+		},
+		{
+			name:   "viewed data field",
+			design: viewedSSEDataFieldDSL,
+			contains: []string{
+				"value := dataContent",
+				"body.Data = &value",
+			},
+		},
+		{
+			name:   "viewed alias data field",
+			design: viewedSSEPrimitiveAliasDataFieldDSL,
+			contains: []string{
+				"value := viewedssealiasdata.ViewedEventText(dataContent)",
+				"body.Data = &value",
+			},
+		},
+		{
+			name:   "retry",
+			design: testdata.SSEAllFieldsDSL,
+			contains: []string{
+				`retryContent := s.trimHeader(line[len("retry:"):])`,
+				`strconv.ParseInt(retryContent, 10, 0)`,
+				"event.Retry = &value",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := expr.RunDSL(t, test.design)
+			code := renderedFile(t, linkedHTTPPlanForRoot(t, root).ClientFiles())
+			for _, expected := range test.contains {
+				require.Contains(t, code, expected)
+			}
+			require.NotContains(t, code, "retry value parsing depends on the field type")
+		})
+	}
+}

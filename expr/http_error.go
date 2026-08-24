@@ -39,7 +39,7 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 			verr.Add(e, "Error %#v does not match an error defined in the service", e.Name)
 		}
 	case *RootExpr:
-		if Root.Error(e.Name) == nil {
+		if p.Error(e.Name) == nil {
 			verr.Add(e, "Error %#v does not match an error defined in the API", e.Name)
 		}
 	}
@@ -51,7 +51,7 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 	case *HTTPServiceExpr:
 		ee = p.Error(e.Name)
 	case *RootExpr:
-		ee = Root.Error(e.Name)
+		ee = p.Error(e.Name)
 	}
 
 	// validate headers
@@ -121,7 +121,7 @@ func (e *HTTPErrorExpr) mappedError() (*ErrorExpr, string) {
 	case *HTTPServiceExpr:
 		return parent.Error(e.Name), "service"
 	case *RootExpr:
-		return Root.Error(e.Name), "API"
+		return parent.Error(e.Name), "API"
 	}
 	return nil, ""
 }

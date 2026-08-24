@@ -10,6 +10,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
@@ -63,21 +64,31 @@ func EncodeLookupRequest(encoder func(*http.Request) goahttp.Encoder) func(*http
 // service lookup JSON-RPC method. restoreBody controls whether the response
 // body should be restored after having been read.
 func DecodeLookupResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
-	return func(resp *http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
 		if restoreBody {
-			b, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return nil, err
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("Mixed", "lookup", err)
 			}
 			resp.Body = io.NopCloser(bytes.NewBuffer(b))
 			defer func() {
 				resp.Body = io.NopCloser(bytes.NewBuffer(b))
 			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("Mixed", "lookup", err))
+				}
+			}()
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("Mixed", "lookup", err)
+			}
 			return nil, goahttp.ErrInvalidResponse("Mixed", "lookup", resp.StatusCode, string(body))
 		}
 
@@ -89,8 +100,7 @@ func DecodeLookupResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 		if jresp.Error != nil {
 			switch jresp.Error.Code {
 			default:
-				body, _ := io.ReadAll(resp.Body)
-				return nil, goahttp.ErrInvalidResponse("Mixed", "lookup", resp.StatusCode, string(body))
+				return nil, goahttp.ErrInvalidResponse("Mixed", "lookup", resp.StatusCode, string(jresp.Error.Data))
 			}
 		}
 		resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Result))

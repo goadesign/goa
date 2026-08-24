@@ -82,20 +82,24 @@ func assertGeneratedUnionDeclarations(t *testing.T, genDir string) {
 		t.Fatalf("read generated server types: %v", err)
 	}
 	code := string(content)
-	if strings.Count(code, "type Scope struct {") != 1 {
-		t.Fatalf("expected one request Scope declaration:\n%s", code)
-	}
-	if strings.Count(code, "type Scope2 struct {") != 1 {
-		t.Fatalf("expected one response Scope2 declaration:\n%s", code)
+	if strings.Count(code, "type Scope struct {") != 1 ||
+		strings.Count(code, "type Scope2 struct {") != 1 {
+		t.Fatalf("expected one request union and one response union:\n%s", code)
 	}
 	if strings.Contains(code, "type Scope3 struct {") {
 		t.Fatalf("identical request derivation produced a third union declaration:\n%s", code)
 	}
-	if strings.Contains(code, "SiteSetRequestBody") {
-		t.Fatalf("identical request derivation produced a second branch declaration:\n%s", code)
+	if strings.Count(code, "type SiteSetRequestBody struct {") != 1 ||
+		strings.Count(code, "type SiteSetResponseBody struct {") != 1 {
+		t.Fatalf("expected one request branch and one response branch declaration:\n%s", code)
 	}
-	if strings.Count(code, "\tSiteSet  *SiteSet\n") != 1 {
-		t.Fatalf("request union does not reference its canonical branch declaration:\n%s", code)
+	if !strings.Contains(code, "Scope *Scope `") ||
+		!strings.Contains(code, "Scope Scope2 `") {
+		t.Fatalf("request and response bodies do not use their released union names:\n%s", code)
+	}
+	if strings.Count(code, "\tSiteSet  *SiteSetRequestBody\n") != 1 ||
+		strings.Count(code, "\tSiteSet  *SiteSetResponseBody\n") != 1 {
+		t.Fatalf("unions do not reference their request and response branches:\n%s", code)
 	}
 }
 

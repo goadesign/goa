@@ -72,6 +72,56 @@ func TestCamelCase(t *testing.T) {
 	}
 }
 
+func TestProtobufNames(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{name: "empty", want: "Val"},
+		{name: "leading digits", source: "123_message", want: "_123Message"},
+		{name: "acronym", source: "api_message", want: "APIMessage"},
+		{name: "mixed Unicode", source: "café_message", want: "CafMessage"},
+		{name: "only Unicode", source: "東京", want: "Val"},
+		{name: "field keyword is a legal declaration", source: "string", want: "String"},
+		{name: "invalid characters", source: "---", want: "Val"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual := ProtobufName(test.source)
+			if actual != test.want {
+				t.Errorf("got %q, expected %q", actual, test.want)
+			}
+		})
+	}
+}
+
+func TestProtobufFieldNames(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		want   string
+	}{
+		{name: "empty", want: "val"},
+		{name: "leading digits", source: "123Field", want: "_123_field"},
+		{name: "acronym", source: "HTTPServer", want: "http_server"},
+		{name: "mixed Unicode", source: "caféField", want: "caf_field"},
+		{name: "only Unicode", source: "東京", want: "val"},
+		{name: "reserved word", source: "string", want: "string_"},
+		{name: "invalid characters", source: "---", want: "val"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual := ProtobufFieldName(test.source)
+			if actual != test.want {
+				t.Errorf("got %q, expected %q", actual, test.want)
+			}
+		})
+	}
+}
+
 func TestKebabCase(t *testing.T) {
 	cases := map[string]struct {
 		str      string

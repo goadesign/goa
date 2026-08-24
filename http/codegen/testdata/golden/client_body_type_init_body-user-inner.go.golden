@@ -4,7 +4,7 @@
 func NewMethodBodyUserInnerRequestBody(p *servicebodyuserinner.PayloadType) *MethodBodyUserInnerRequestBody {
 	body := &MethodBodyUserInnerRequestBody{}
 	if p.Inner != nil {
-		body.Inner = marshalInnerTypeToInnerType2(p.Inner)
+		body.Inner = marshalServicebodyuserinnerInnerTypeToInnerTypeRequestBodyOptional(p.Inner)
 	}
 	return body
 }

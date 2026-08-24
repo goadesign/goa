@@ -8,7 +8,7 @@ func EncodeMethodQueryIntRequest(encoder func(*http.Request) goahttp.Encoder) fu
 		}
 		values := req.URL.Query()
 		if p.Q != nil {
-			values.Add("q", fmt.Sprintf("%v", *p.Q))
+			values.Add("q", strconv.Itoa(*p.Q))
 		}
 		req.URL.RawQuery = values.Encode()
 		return nil

@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/testutil"
 	d "goa.design/goa/v3/dsl"
 )
 
@@ -16,27 +17,29 @@ func TestRequiredUnionValidationUsesCompleteProtobufBranches(t *testing.T) {
 	services := CreateGRPCServices(root)
 
 	for _, test := range []struct {
-		Name  string
-		Files []*codegen.File
+		name        string
+		files       []*codegen.File
+		sectionName string
+		golden      string
 	}{
-		{Name: "server", Files: ServerTypeFiles(services)},
-		{Name: "client", Files: ClientTypeFiles(services)},
+		{
+			name:        "server",
+			files:       serverTypeFiles(services),
+			sectionName: "server-validate",
+			golden:      "testdata/golden/server_types_server-required-union-validation.go.golden",
+		},
+		{
+			name:        "client",
+			files:       clientTypeFiles(services),
+			sectionName: "client-validate",
+			golden:      "testdata/golden/client_types_client-required-union-validation.go.golden",
+		},
 	} {
-		t.Run(test.Name, func(t *testing.T) {
-			require.Len(t, test.Files, 1)
-			generated := sectionCode(t, test.Files[0].SectionTemplates[1:]...)
-
-			require.Contains(t, generated, `goa.MissingFieldError("choice", "message")`)
-			require.Contains(t, generated, `goa.MissingFieldError("detail", "message.choice")`)
-			require.Contains(t, generated, `goa.MissingFieldError("inactive", "message.choice")`)
-			require.Contains(t, generated, `goa.MissingFieldError("blob", "message.choice")`)
-			require.Contains(t, generated, `goa.MissingFieldError("metadata", "message.choice")`)
-			require.Contains(t, generated, "if v == nil {")
-			require.Contains(t, generated, "if v.Detail == nil {")
-			require.Contains(t, generated, "if v.Inactive == nil {")
-			require.Contains(t, generated, "if v.Metadata == nil {")
-			require.Contains(t, generated, "if v.Blob == nil {")
-			require.NotContains(t, generated, "if v.Token == nil {")
+		t.Run(test.name, func(t *testing.T) {
+			require.Len(t, test.files, 1)
+			sections := test.files[0].Section(test.sectionName)
+			require.Len(t, sections, 1)
+			testutil.AssertGo(t, test.golden, codegen.SectionCode(t, sections[0]))
 		})
 	}
 }

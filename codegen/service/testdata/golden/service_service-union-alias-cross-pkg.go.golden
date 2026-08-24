@@ -26,24 +26,24 @@ type Scope struct {
 	Values Values
 }
 
-// Values is a sum-type union.
+// Values holds exactly one of its branch values.
 type Values struct {
 	kind   ValuesKind
 	Device alias.Alias
 	Metric alias.Alias
 }
 
-// ValuesKind enumerates the union variants for Values.
+// ValuesKind records which Values branch is selected.
 type ValuesKind string
 
 const (
-	// ValuesKindDevice identifies the Device branch of the union.
+	// ValuesKindDevice identifies the Device branch.
 	ValuesKindDevice ValuesKind = "Device"
-	// ValuesKindMetric identifies the Metric branch of the union.
+	// ValuesKindMetric identifies the Metric branch.
 	ValuesKindMetric ValuesKind = "Metric"
 )
 
-// Kind returns the discriminator value of the union.
+// Kind returns the selected branch.
 func (u Values) Kind() ValuesKind {
 	return u.kind
 }
@@ -56,7 +56,7 @@ func NewValuesDevice(v alias.Alias) Values {
 	}
 }
 
-// AsDevice returns the value of the Device branch if set.
+// AsDevice returns the value when the Device branch is selected.
 func (u Values) AsDevice() (_ alias.Alias, ok bool) {
 	if u.kind != ValuesKindDevice {
 		return
@@ -64,7 +64,7 @@ func (u Values) AsDevice() (_ alias.Alias, ok bool) {
 	return u.Device, true
 }
 
-// SetDevice sets the Device branch of the union.
+// SetDevice selects the Device branch and stores v.
 func (u *Values) SetDevice(v alias.Alias) {
 	u.kind = ValuesKindDevice
 	u.Device = v
@@ -78,7 +78,7 @@ func NewValuesMetric(v alias.Alias) Values {
 	}
 }
 
-// AsMetric returns the value of the Metric branch if set.
+// AsMetric returns the value when the Metric branch is selected.
 func (u Values) AsMetric() (_ alias.Alias, ok bool) {
 	if u.kind != ValuesKindMetric {
 		return
@@ -86,13 +86,13 @@ func (u Values) AsMetric() (_ alias.Alias, ok bool) {
 	return u.Metric, true
 }
 
-// SetMetric sets the Metric branch of the union.
+// SetMetric selects the Metric branch and stores v.
 func (u *Values) SetMetric(v alias.Alias) {
 	u.kind = ValuesKindMetric
 	u.Metric = v
 }
 
-// Validate ensures the union discriminant is valid.
+// Validate ensures exactly one valid branch is selected.
 func (u Values) Validate() error {
 	switch u.kind {
 	case "":
@@ -126,7 +126,7 @@ func (u Values) MarshalJSON() ([]byte, error) {
 	case ValuesKindMetric:
 		value = u.Metric
 	default:
-		return nil, fmt.Errorf("unexpected Values discriminant %q", u.kind)
+		return nil, fmt.Errorf("unexpected Values kind %q", u.kind)
 	}
 	return json.Marshal(struct {
 		Type  string `json:"type"`

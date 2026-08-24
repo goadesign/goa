@@ -98,6 +98,49 @@ func TestGRPCInheritedErrorMappingRejectsIncompatibleError(t *testing.T) {
 	require.ErrorContains(t, err, "must define the same error attribute")
 }
 
+func TestInheritedErrorMappingReportsDifferentQualifiers(t *testing.T) {
+	qualifiers := []struct {
+		name  string
+		apply func()
+	}{
+		{name: "temporary", apply: Temporary},
+		{name: "timeout", apply: func() { Timeout() }},
+		{name: "fault", apply: Fault},
+	}
+	for _, transport := range []string{"HTTP", "gRPC"} {
+		for _, qualifier := range qualifiers {
+			t.Run(transport+" "+qualifier.name, func(t *testing.T) {
+				err := expr.RunInvalidDSL(t, qualifierErrorMappingDSL(transport, qualifier.apply))
+				require.ErrorContains(t, err, transport+` error mapping "busy"`)
+				require.ErrorContains(t, err, qualifier.name+" setting differs")
+			})
+		}
+	}
+}
+
+func qualifierErrorMappingDSL(transport string, qualifier func()) func() {
+	return func() {
+		API("errors", func() {
+			Error("busy", qualifier)
+			if transport == "HTTP" {
+				HTTP(func() { Response(StatusServiceUnavailable, "busy") })
+			} else {
+				GRPC(func() { Response("busy", CodeUnavailable) })
+			}
+		})
+		Service("Jobs", func() {
+			Method("Run", func() {
+				Error("busy")
+				if transport == "HTTP" {
+					HTTP(func() { POST("/run") })
+				} else {
+					GRPC(func() {})
+				}
+			})
+		})
+	}
+}
+
 var equivalentHTTPErrorMappingDSL = func() {
 	API("errors", func() {
 		Error("bad_request", String)

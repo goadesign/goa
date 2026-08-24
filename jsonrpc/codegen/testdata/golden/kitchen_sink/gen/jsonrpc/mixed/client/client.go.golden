@@ -45,7 +45,6 @@ func NewClient(
 	dec func(*http.Response) goahttp.Decoder,
 	restoreBody bool,
 ) *Client {
-
 	return &Client{
 		Doer:                doer,
 		RestoreResponseBody: restoreBody,

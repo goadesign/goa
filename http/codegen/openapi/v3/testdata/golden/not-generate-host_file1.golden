@@ -16,8 +16,8 @@ paths:
                         application/json:
                             schema:
                                 type: string
-                                example: A et aut.
-                            example: A et aut.
+                                example: ok
+                            example: ok
 components: {}
 tags:
     - name: testService

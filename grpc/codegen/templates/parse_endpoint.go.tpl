@@ -1,35 +1,35 @@
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func {{ .Declaration.Name }}(
-	cc *grpc.ClientConn,
+	{{ .Variables.Connection }} *grpc.ClientConn,
 {{-  range .Commands }}
 	{{- if .Interceptors }}
-	{{ .Interceptors.VarName }} {{ .Interceptors.PkgName }}.ClientInterceptors,
+	{{ .Interceptors.ParserVar }} {{ .Interceptors.PkgName }}.{{ .Interceptors.ClientInterceptorsDeclaration.Name }},
 	{{- end }}
 {{- end }}
-	opts ...grpc.CallOption,
+	{{ .Variables.Options }} ...grpc.CallOption,
 ) (goa.Endpoint, any, error) {
 	{{ .FlagsCode }}
 	var (
-		data     any
-		endpoint goa.Endpoint
-		err      error
+		{{ .Variables.Data }}     any
+		{{ .Variables.Endpoint }} goa.Endpoint
+		{{ .Variables.Error }}      error
 	)
 	{
-		switch svcn {
+		switch {{ .Variables.ServiceName }} {
 	{{- range .Commands }}
 		case "{{ .Name }}":
-			c := {{ .PkgName }}.NewClient(cc, opts...)
-			switch epn {
+			{{ $.Variables.Client }} := {{ .PkgName }}.{{ .ClientInit.Name }}({{ $.Variables.Connection }}, {{ $.Variables.Options }}...)
+			switch {{ $.Variables.MethodName }} {
 		{{- $pkgName := .PkgName }}
 		{{- range .Subcommands }}
 			case "{{ .Name }}":
-				endpoint = c.{{ .MethodVarName }}()
+				{{ $.Variables.Endpoint }} = {{ $.Variables.Client }}.{{ .MethodVarName }}()
 			{{- if .Interceptors }}
-				endpoint = {{ .Interceptors.PkgName }}.Wrap{{ .MethodVarName }}ClientEndpoint(endpoint, {{ .Interceptors.VarName }})
+				{{ $.Variables.Endpoint }} = {{ .Interceptors.PkgName }}.{{ .Interceptors.ClientEndpointWrapperDeclaration.Name }}({{ $.Variables.Endpoint }}, {{ .Interceptors.ParserVar }})
 			{{- end }}
 			{{- if .BuildFunction }}
-				data, err = {{ $pkgName}}.{{ .BuildFunction.Declaration.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
+				{{ $.Variables.Data }}, {{ $.Variables.Error }} = {{ $pkgName}}.{{ .BuildFunction.Name }}({{ range .ActualPointerVars }}*{{ . }}, {{ end }})
 			{{- else if .Conversion }}
 				{{ .Conversion }}
 			{{- end }}
@@ -38,9 +38,9 @@ func {{ .Declaration.Name }}(
 	{{- end }}
 		}
 	}
-	if err != nil {
-		return nil, nil, err
+	if {{ .Variables.Error }} != nil {
+		return nil, nil, {{ .Variables.Error }}
 	}
 
-	return endpoint, data, nil
+	return {{ .Variables.Endpoint }}, {{ .Variables.Data }}, nil
 }

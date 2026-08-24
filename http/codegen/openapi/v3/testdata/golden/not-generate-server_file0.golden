@@ -13,9 +13,9 @@
           "200": {
             "content": {
               "application/json": {
-                "example": "A et aut.",
+                "example": "ok",
                 "schema": {
-                  "example": "A et aut.",
+                  "example": "ok",
                   "type": "string"
                 }
               }

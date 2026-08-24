@@ -26,7 +26,8 @@
       "url": "https://{version}.goa.design",
       "variables": {
         "version": {
-          "default": "v1"
+          "default": "v1",
+          "description": "API Version"
         }
       }
     }

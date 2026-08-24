@@ -18,8 +18,8 @@ paths:
                   required: true
                   schema:
                     type: string
-                    example: Aut deleniti enim veritatis asperiores sit.
-                  example: Aut deleniti enim veritatis asperiores sit.
+                    example: request
+                  example: request
             responses:
                 "101":
                     description: Switching Protocols response.
@@ -28,7 +28,7 @@ paths:
                             schema:
                                 $ref: '#/components/schemas/UserType'
                             example:
-                                a: Voluptas molestiae aliquam at.
+                                a: event
 components:
     schemas:
         UserType:
@@ -36,8 +36,8 @@ components:
             properties:
                 a:
                     type: string
-                    example: Voluptas molestiae aliquam at.
+                    example: event
             example:
-                a: Voluptas molestiae aliquam at.
+                a: event
 tags:
     - name: StreamingResultService

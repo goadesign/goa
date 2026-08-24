@@ -388,7 +388,9 @@ func bidirectionalStreamingWithViewsDSL() {
 	Service("TestService", func() {
 		Method("BidirectionalWithViews", func() {
 			StreamingPayload(Request)
-			StreamingResult(Response)
+			StreamingResult(Response, func() {
+				View("minimal")
+			})
 			HTTP(func() {
 				GET("/bidirectional/views")
 			})
@@ -511,7 +513,9 @@ func comprehensiveWebSocketDSL() {
 
 		Method("BidirectionalStreaming", func() {
 			StreamingPayload(UserType)
-			StreamingResult(UserType)
+			StreamingResult(UserType, func() {
+				View("tiny")
+			})
 			HTTP(func() {
 				GET("/bidirectional")
 			})

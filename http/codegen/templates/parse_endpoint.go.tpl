@@ -1,59 +1,59 @@
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func {{ .Declaration.Name }}(
-	scheme, host string,
-	doer goahttp.Doer,
-	enc func(*http.Request) goahttp.Encoder,
-	dec func(*http.Response) goahttp.Decoder,
-	restore bool,
+	{{ .Variables.Scheme }}, {{ .Variables.Host }} string,
+	{{ .Variables.Doer }} goahttp.Doer,
+	{{ .Variables.Encoder }} func(*http.Request) goahttp.Encoder,
+	{{ .Variables.Decoder }} func(*http.Response) goahttp.Decoder,
+	{{ .Variables.Restore }} bool,
 	{{- if streamingCmdExists .Commands }}
-	dialer goahttp.Dialer,
+	{{ .Variables.Dialer }} goahttp.Dialer,
 		{{- range .Commands }}
 			{{- if .NeedDialer }}
-				{{ if .JSONRPC }}{{ .VarName }}ConfigFn goahttp.ConnConfigureFunc,{{ else }}{{ .VarName }}Configurer *{{ .PkgName }}.{{ .Configurer.Name }},{{ end }}
+				{{ if .JSONRPC }}{{ .ConfigurerLocal.VarName }} goahttp.ConnConfigureFunc,{{ else }}{{ .ConfigurerLocal.VarName }} *{{ .PkgName }}.{{ .Configurer.Name }},{{ end }}
 			{{- end }}
 		{{- end }}
 	{{- end }}
 	{{- range $i, $c := .Commands }}
 	{{- range .Subcommands }}
 		{{- if .MultipartVarName }}
-	{{ .MultipartVarName }} {{ $c.PkgName }}.{{ .MultipartFuncDeclaration.Name }},
+	{{ .MultipartLocal.VarName }} {{ $c.PkgName }}.{{ .MultipartFuncDeclaration.Name }},
 		{{- end }}
 	{{- end }}
 	{{- if .Interceptors }}
-	{{ .Interceptors.VarName }} {{ .Interceptors.PkgName }}.ClientInterceptors,
+	{{ .Interceptors.ParserVar }} {{ .Interceptors.PkgName }}.{{ .Interceptors.ClientInterceptorsDeclaration.Name }},
 	{{- end }}
 	{{- end }}
 ) (goa.Endpoint, any, error) {
 	{{ .FlagsCode }}
     var (
-		data     any
-		endpoint goa.Endpoint
-		err      error
+		{{ .Variables.Data }}     any
+		{{ .Variables.Endpoint }} goa.Endpoint
+		{{ .Variables.Error }}      error
 	)
 	{
-		switch svcn {
+		switch {{ .Variables.ServiceName }} {
 	{{- range .Commands }}
 		case "{{ .Name }}":
-			c := {{ .PkgName }}.{{ .ClientInit.Name }}(scheme, host, doer, enc, dec, restore{{ if .NeedDialer }}, dialer, {{ if .JSONRPC }}{{ .VarName }}ConfigFn{{ else }}{{ .VarName }}Configurer{{ end }}{{ end }})
-			switch epn {
+			{{ $.Variables.Client }} := {{ .PkgName }}.{{ .ClientInit.Name }}({{ $.Variables.Scheme }}, {{ $.Variables.Host }}, {{ $.Variables.Doer }}, {{ $.Variables.Encoder }}, {{ $.Variables.Decoder }}, {{ $.Variables.Restore }}{{ if .NeedDialer }}, {{ $.Variables.Dialer }}, {{ .ConfigurerLocal.VarName }}{{ end }})
+			switch {{ $.Variables.MethodName }} {
 		{{- $pkgName := .PkgName }}
 		{{- range .Subcommands }}
 			case "{{ .Name }}":
-				endpoint = c.{{ .MethodVarName }}({{ if .MultipartVarName }}{{ .MultipartVarName }}{{ end }})
+				{{ $.Variables.Endpoint }} = {{ $.Variables.Client }}.{{ .MethodVarName }}({{ if .MultipartLocal }}{{ .MultipartLocal.VarName }}{{ end }})
 			{{- if .Interceptors }}
-				endpoint = {{ .Interceptors.PkgName }}.Wrap{{ .MethodVarName }}ClientEndpoint(endpoint, {{ .Interceptors.VarName }})
+				{{ $.Variables.Endpoint }} = {{ .Interceptors.PkgName }}.{{ .Interceptors.ClientEndpointWrapperDeclaration.Name }}({{ $.Variables.Endpoint }}, {{ .Interceptors.ParserVar }})
 			{{- end }}
 			{{- if .BuildFunction }}
-				data, err = {{ $pkgName }}.{{ .BuildFunction.Declaration.Name }}({{ range .BuildFunction.ActualParams }}*{{ . }}Flag, {{ end }})
+				{{ $.Variables.Data }}, {{ $.Variables.Error }} = {{ $pkgName }}.{{ .BuildFunction.Name }}({{ range .ActualPointerVars }}*{{ . }}, {{ end }})
 			{{- else if .Conversion }}
 				{{ .Conversion }}
 			{{- end }}
 			{{- if .StreamFlag }}
 				{{- if .BuildFunction }}
-				if err == nil {
+				if {{ $.Variables.Error }} == nil {
 				{{- end }}
-					data, err = {{ $pkgName }}.{{ .BuildStreamPayload.Name }}({{ if or .BuildFunction .Conversion }}data, {{ end }}*{{ .StreamFlag.FullName }}Flag)
+					{{ $.Variables.Data }}, {{ $.Variables.Error }} = {{ $pkgName }}.{{ .BuildStreamPayloadDeclaration.Name }}({{ if or .BuildFunction .Conversion }}{{ $.Variables.Data }}, {{ end }}*{{ .StreamPointerVar }})
 				{{- if .BuildFunction }}
 				}
 				{{- end }}
@@ -63,9 +63,9 @@ func {{ .Declaration.Name }}(
 	{{- end }}
 		}
 	}
-	if err != nil {
-		return nil, nil, err
+	if {{ .Variables.Error }} != nil {
+		return nil, nil, {{ .Variables.Error }}
 	}
 
-	return endpoint, data, nil
+	return {{ .Variables.Endpoint }}, {{ .Variables.Data }}, nil
 }

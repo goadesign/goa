@@ -38,13 +38,13 @@ func TestExternalConversionsBelongToGeneratedReceiverPackage(t *testing.T) {
 	require.NotContains(t, conversion, "goa.design/goa/v3/codegen/service/testdata/a-nested-alpha")
 	require.Contains(t, conversion, "nestedalpha.Child")
 	require.NotContains(t, conversion, "nestedalpha2.Child")
-	compileGeneratedServiceFiles(t, "generated.local", files)
+	compileGeneratedServiceFiles(t, files)
 }
 
 // TestExternalConversionPlanIgnoresLaterTypeMapMutation proves linked output
 // is byte-for-byte determined by facts retained in NewPlan.
 func TestExternalConversionPlanIgnoresLaterTypeMapMutation(t *testing.T) {
-	baseline := retainedServicePlanForPackage(t, externalConversionContractRoot(t), "generated.local/gen")
+	baseline := retainedServicePlanForPackage(t, externalConversionContractRoot(t))
 	baselineFiles, err := Files(baseline)
 	require.NoError(t, err)
 	conversionPath := filepath.Join(codegen.Gendir, "shared", "types", "convert.go")
@@ -74,12 +74,12 @@ func TestExternalConversionPlanIgnoresLaterTypeMapMutation(t *testing.T) {
 	root.Creations = nil
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, plan.Link())
-	require.Equal(t, "generated.local/gen/alpha", plan.Services().ServiceImport(originalServiceName).Path)
+	require.Equal(t, "generated.local/gen/alpha", plan.Services().ServiceImport("generated.local", originalServiceName).Path)
 	afterFiles, err := Files(plan)
 	require.NoError(t, err)
 	after := renderSingleFileAtPath(t, afterFiles, conversionPath)
 	require.Equal(t, before, after)
-	compileGeneratedServiceFiles(t, "generated.local", afterFiles)
+	compileGeneratedServiceFiles(t, afterFiles)
 }
 
 // TestExternalConversionOperationsHaveCanonicalOrder catches convert.go output
@@ -89,8 +89,8 @@ func TestExternalConversionOperationsHaveCanonicalOrder(t *testing.T) {
 	reverse := externalConversionContractRoot(t)
 	slices.Reverse(reverse.Conversions)
 	slices.Reverse(reverse.Creations)
-	forwardPlan := retainedServicePlanForPackage(t, forward, "generated.local/gen")
-	reversePlan := retainedServicePlanForPackage(t, reverse, "generated.local/gen")
+	forwardPlan := retainedServicePlanForPackage(t, forward)
+	reversePlan := retainedServicePlanForPackage(t, reverse)
 	forwardFiles, err := Files(forwardPlan)
 	require.NoError(t, err)
 	reverseFiles, err := Files(reversePlan)
@@ -147,12 +147,12 @@ func TestExternalConversionReachabilityCoversEveryServiceValue(t *testing.T) {
 				})
 				use(mapped)
 			})
-			plan := retainedServicePlanForPackage(t, root, "generated.local/gen")
+			plan := retainedServicePlanForPackage(t, root)
 			files, err := Files(plan)
 			require.NoError(t, err)
 			conversionPath := filepath.Join(codegen.Gendir, "reach", "convert.go")
 			require.Len(t, filesAtPath(files, conversionPath), 1)
-			compileGeneratedServiceFiles(t, "generated.local", files)
+			compileGeneratedServiceFiles(t, files)
 		})
 	}
 }
@@ -174,7 +174,7 @@ func TestExternalConversionsAggregateAcrossRoots(t *testing.T) {
 	require.Equal(t, forward, renderSingleFileAtPath(t, reverseFiles, conversionPath))
 	require.Contains(t, forward, "func (t *AlphaMapped) ConvertToChild()")
 	require.Contains(t, forward, "func (t *BetaMapped) ConvertToChild()")
-	compileGeneratedServiceFiles(t, "generated.local", forwardFiles)
+	compileGeneratedServiceFiles(t, forwardFiles)
 }
 
 // TestExternalConversionsShareReceiverMethodNamesAcrossRoots catches method
@@ -195,7 +195,7 @@ func TestExternalConversionsShareReceiverMethodNamesAcrossRoots(t *testing.T) {
 	require.Equal(t, forward, renderSingleFileAtPath(t, reverseFiles, conversionPath))
 	require.Contains(t, forward, "func (t *SharedMapped) ConvertToChild()")
 	require.Contains(t, forward, "func (t *SharedMapped) ConvertToChild2()")
-	compileGeneratedServiceFiles(t, "generated.local", forwardFiles)
+	compileGeneratedServiceFiles(t, forwardFiles)
 }
 
 // TestNewPlansRejectDuplicateExternalConversionsAcrossRoots proves the batch

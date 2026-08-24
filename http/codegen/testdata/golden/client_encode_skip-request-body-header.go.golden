@@ -1,0 +1,16 @@
+// EncodeUploadRequest returns an encoder for requests sent to the
+// SkipRequestBodyEncodeDecodeHeader Upload server.
+func EncodeUploadRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
+	return func(req *http.Request, v any) error {
+		data, ok := v.(*skiprequestbodyencodedecodeheader.UploadRequestData)
+		if !ok {
+			return goahttp.ErrInvalidType("SkipRequestBodyEncodeDecodeHeader", "Upload", "*skiprequestbodyencodedecodeheader.UploadRequestData", v)
+		}
+		p := data.Payload
+		if p.ContentType != nil {
+			head := *p.ContentType
+			req.Header.Set("Content-Type", head)
+		}
+		return nil
+	}
+}

@@ -3,6 +3,7 @@
 package service
 
 import (
+	"path"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -33,4 +34,10 @@ func mustClaimTestPackage(t *testing.T, generation *codegen.Generation, path str
 func planTestServices(root *expr.RootExpr, generation *codegen.Generation) error {
 	_, err := NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	return err
+}
+
+// servicePackagePath returns the natural generated package path used by tests
+// that build one noncolliding service package directly.
+func servicePackagePath(genpkg string, service *expr.ServiceExpr) string {
+	return path.Join(genpkg, servicePackageName(service.Name))
 }

@@ -177,6 +177,7 @@ func TestClientEncode(t *testing.T) {
 		{"query-custom-name", testdata.PayloadQueryCustomNameDSL},
 		{"header-custom-name", testdata.PayloadHeaderCustomNameDSL},
 		{"cookie-custom-name", testdata.PayloadCookieCustomNameDSL},
+		{"skip-request-body-header", testdata.SkipRequestBodyEncodeDecodeHeaderDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -190,6 +191,25 @@ func TestClientEncode(t *testing.T) {
 			testutil.AssertGo(t, "testdata/golden/client_encode_"+c.Name+".go.golden", code)
 		})
 	}
+}
+
+// TestSkipRequestBodyEncoderSelection verifies raw body access keeps encoders
+// needed for headers while omitting an encoder that would do no work.
+func TestSkipRequestBodyEncoderSelection(t *testing.T) {
+	t.Run("mapped header", func(t *testing.T) {
+		root := expr.RunDSL(t, testdata.SkipRequestBodyEncodeDecodeHeaderDSL)
+		plan := linkedHTTPPlanForRoot(t, root)
+		service, ok := plan.Service(root.API.HTTP.Service("SkipRequestBodyEncodeDecodeHeader"))
+		require.True(t, ok)
+		require.NotNil(t, service.Endpoints[0].RequestEncoderDeclaration)
+	})
+	t.Run("raw body only", func(t *testing.T) {
+		root := expr.RunDSL(t, testdata.SkipRequestBodyEncodeDecodeDSL)
+		plan := linkedHTTPPlanForRoot(t, root)
+		service, ok := plan.Service(root.API.HTTP.Service("SkipRequestBodyEncodeDecode"))
+		require.True(t, ok)
+		require.Nil(t, service.Endpoints[0].RequestEncoderDeclaration)
+	})
 }
 
 func TestClientBuildRequest(t *testing.T) {

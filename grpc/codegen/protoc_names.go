@@ -56,7 +56,7 @@ const (
 	protocMethodServerStreamName
 )
 
-const protocNameVersionGo1_36GRPC1_6 = "protoc-gen-go-v1.36/protoc-gen-go-grpc-v1.6"
+const protocNameVersionGo1_36GRPC1_6 = "protoc-gen-go-v1.36.12/protoc-gen-go-grpc-v1.6.2"
 
 // newProtocNameRules returns the name reader for a supported protobuf tool
 // pair. An unknown value is rejected because its Go names may differ.

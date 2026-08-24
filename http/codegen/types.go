@@ -13,7 +13,7 @@ import (
 func serverTypeFiles(data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(data.Expressions.Services))
 	for i, svc := range data.Expressions.Services {
-		fw[i] = addEndpointImports(typesFile(svc, true, data), data, svc.HTTPEndpoints...)
+		fw[i] = addPlannedFileImports(typesFile(svc, true, data), data)
 	}
 	return fw
 }
@@ -22,7 +22,7 @@ func serverTypeFiles(data *ServicesData) []*codegen.File {
 func clientTypeFiles(data *ServicesData) []*codegen.File {
 	fw := make([]*codegen.File, len(data.Expressions.Services))
 	for i, svc := range data.Expressions.Services {
-		fw[i] = addEndpointImports(typesFile(svc, false, data), data, svc.HTTPEndpoints...)
+		fw[i] = addPlannedFileImports(typesFile(svc, false, data), data)
 	}
 	return fw
 }
@@ -82,14 +82,16 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 	}
 	unionTypes := data.wireTypes(svr).unionTypes()
 	path := filepath.Join(codegen.Gendir, services.dir(), svcName, side, "types.go")
+	outputPackage := generatedFileOutputPackage(services, path)
+	data = serviceDataForOutput(data, services, outputPackage)
 	imports := []*codegen.ImportSpec{
 		{Path: "encoding/json"},
 		{Path: "fmt"},
 		{Path: "unicode/utf8"},
-		services.ServiceImport(svc.Name()),
+		services.ServiceImport(outputPackage, svc.Name()),
 	}
 	if serviceHasViewedResult(data, nil) {
-		imports = append(imports, services.ViewImport(svc.Name()))
+		imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
 	}
 	if len(unionTypes) > 0 {
 		imports = append(imports, &codegen.ImportSpec{Path: "bytes"})
@@ -103,9 +105,9 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 
 		sections = []*codegen.SectionTemplate{header}
 
-		// seen tracks the canonical package records already emitted. Type names
-		// and references are outputs of these records, never declaration
-		// identity.
+		// seen records each generated type declaration already written to this
+		// file. Two declarations may have similar Go type text, so the declaration
+		// itself decides whether another definition is needed.
 		seen          = make(map[*wireTypeRecord]struct{})
 		seenInits     = make(map[string]struct{})
 		seenValidated = make(map[*wireTypeRecord]struct{})
@@ -129,7 +131,8 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 			})
 		}
 	}
-	// addValidated records each package-owned validation helper once.
+	// addValidated records each validation helper declared in this generated
+	// package once.
 	addValidated := func(td *TypeData) {
 		if td.declaration == nil || td.ValidateDef == "" {
 			return
@@ -147,7 +150,7 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 		var body, wsPayload *TypeData
 		if svr {
 			body = adata.Payload.Request.ServerBody
-			if adata.ServerWebSocket != nil && !adata.IsJSONRPC {
+			if adata.ServerWebSocket != nil {
 				wsPayload = adata.ServerWebSocket.Payload
 			}
 		} else {
@@ -206,6 +209,28 @@ func typesFile(svc *expr.HTTPServiceExpr, svr bool, services *ServicesData) *cod
 				}
 				addValidated(td)
 			}
+		}
+		if !adata.HasMixedResults || adata.SSE == nil || adata.SSE.Response == nil {
+			continue
+		}
+		var bodies []*TypeData
+		if svr {
+			bodies = adata.SSE.Response.ServerBody
+		} else if adata.SSE.Response.ClientBody != nil {
+			bodies = []*TypeData{adata.SSE.Response.ClientBody}
+		}
+		for _, td := range bodies {
+			if td == nil {
+				continue
+			}
+			addDecl(responseBodySection, td)
+			if td.Init != nil {
+				if _, ok := seenInits[td.Init.Name]; !ok {
+					seenInits[td.Init.Name] = struct{}{}
+					initData = append(initData, td.Init)
+				}
+			}
+			addValidated(td)
 		}
 	}
 

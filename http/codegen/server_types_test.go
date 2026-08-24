@@ -14,7 +14,6 @@ import (
 )
 
 func TestServerTypes(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()
@@ -36,6 +35,8 @@ func TestServerTypes(t *testing.T) {
 		{"server-header-custom-name", testdata.PayloadHeaderCustomNameDSL},
 		{"server-cookie-custom-name", testdata.PayloadCookieCustomNameDSL},
 		{"server-payload-with-validated-alias", testdata.PayloadWithValidatedAliasDSL},
+		{"server-required-primitive-arrays", testdata.RequiredPrimitiveArrayDSL},
+		{"server-multipart-validation", testdata.PayloadMultipartValidationDSL},
 		{"server-streaming-payload-required-fields", testdata.StreamingPayloadRequiredFieldsDSL},
 	}
 	for _, c := range cases {

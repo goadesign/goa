@@ -795,9 +795,9 @@ func TestTransportSectionsOwnTheirImports(t *testing.T) {
 	require.NotContains(t, header.String(), `"generated.local/gen/request/shared"`)
 }
 
-// TestRelocatedStreamingUnionReferencesCompile verifies WebSocket and SSE
-// files resolve relocated streaming declarations through the frozen service
-// packages while their event and frame bodies remain transport-owned.
+// TestRelocatedStreamingUnionReferencesCompile verifies ordinary HTTP
+// WebSocket and SSE files and JSON-RPC SSE files resolve relocated streaming
+// declarations through the frozen service packages.
 func TestRelocatedStreamingUnionReferencesCompile(t *testing.T) {
 	registry := testRegistryFromGenfuncs([]testGenfunc{
 		{Plan: planServiceData, Generate: testServiceFiles},
@@ -826,13 +826,6 @@ func TestRelocatedStreamingUnionReferencesCompile(t *testing.T) {
 				})
 			})
 		})
-		dsl.Service("JSONSockets", func() {
-			dsl.Method("Socket", func() {
-				dsl.StreamingPayload(streamInput)
-				dsl.StreamingResult(streamOutput)
-				dsl.JSONRPC(func() {})
-			})
-		})
 		dsl.Service("JSONEvents", func() {
 			dsl.Method("Events", func() {
 				dsl.StreamingResult(sseEvent)
@@ -851,7 +844,6 @@ func TestRelocatedStreamingUnionReferencesCompile(t *testing.T) {
 	for _, path := range []string{
 		filepath.Join("http", "http_streams", "server", "websocket.go"),
 		filepath.Join("http", "http_streams", "server", "sse.go"),
-		filepath.Join("jsonrpc", "json_sockets", "server", "websocket.go"),
 		filepath.Join("jsonrpc", "json_events", "server", "sse.go"),
 	} {
 		require.FileExists(t, filepath.Join(genDir, path))

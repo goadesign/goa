@@ -1,9 +1,9 @@
-func do{{ .FuncSuffix }}(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, error) {
+func do{{ .FuncSuffix }}(ctx context.Context, scheme, host string, timeout int, debug bool, stdout io.Writer) error {
 	var (
 		doer goahttp.Doer
 {{- range .Services }}
 	{{- if .Service.ClientInterceptors }}
-		{{ .Service.VarName }}Interceptors {{ .Service.PkgName }}.ClientInterceptors
+		{{ .Service.VarName }}Interceptors {{ .Service.PkgName }}.{{ .Service.ClientInterceptorsDeclaration.Name }}
 	{{- end }}
 {{- end }}
 	)

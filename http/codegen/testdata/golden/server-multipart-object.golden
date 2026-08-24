@@ -1,0 +1,22 @@
+import (
+	"mime/multipart"
+
+	servicemultipartvalidationsvr "generated.local/gen/http/service_multipart_validation/server"
+	servicemultipartvalidation "generated.local/gen/service_multipart_validation"
+)
+
+// ServiceMultipartValidationMethodMultipartValidationDecoderFunc reads the
+// multipart request body for service "ServiceMultipartValidation" endpoint
+// "MethodMultipartValidation" into body.
+func ServiceMultipartValidationMethodMultipartValidationDecoderFunc(mr *multipart.Reader, body *servicemultipartvalidationsvr.MethodMultipartValidationRequestBody) error {
+	// Add multipart request decoder logic here
+	return nil
+}
+
+// ServiceMultipartValidationMethodMultipartValidationEncoderFunc implements
+// the multipart encoder for service "ServiceMultipartValidation" endpoint
+// "MethodMultipartValidation".
+func ServiceMultipartValidationMethodMultipartValidationEncoderFunc(mw *multipart.Writer, p *servicemultipartvalidation.MethodMultipartValidationPayload) error {
+	// Add multipart request encoder logic here
+	return nil
+}

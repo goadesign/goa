@@ -126,6 +126,18 @@ func TestExampleInterceptorsFiles(t *testing.T) {
 	}
 }
 
+func TestServerInterceptorConstructorIsAvailableToExampleMain(t *testing.T) {
+	root := runDSL(t, testdata.ServerInterceptorExampleDSL)
+	plan := mustServicePlan(t, root)
+	facts := plan.facts.services[0]
+
+	require.Same(
+		t,
+		facts.exampleServerConstructor,
+		plan.Services().Get(facts.name).ExampleServerInterceptorsConstructorDeclaration,
+	)
+}
+
 // assertExampleInterceptorDeclarations verifies that starter definitions and
 // constructor bodies use the exact declarations retained by the service plan.
 func assertExampleInterceptorDeclarations(t *testing.T, plan *Plan, files []*codegen.File) {

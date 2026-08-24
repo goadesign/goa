@@ -22,15 +22,15 @@ func {{ .Decode.Name }}(decoder func(*http.Response) goahttp.Decoder, resp *http
 		resp.Body = io.NopCloser(bytes.NewBuffer(*representation.Body))
 		{{- end }}
 		{{- template "partial_single_response" (viewedResponseData . $.ServiceName $.MethodName) }}
-		projected := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
-		viewed := {{ if not $.IsCollection }}&{{ end }}{{ $.ViewedPkg }}.{{ $.ViewedVarName }}{
+		projected := {{ .ResultInit.Declaration.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+		{{ $.ViewedValue }} := {{ if not $.IsCollection }}&{{ end }}{{ $.ViewedPkg }}.{{ $.ViewedVarName }}{
 			Projected: projected,
 			View:      view,
 		}
-		if err := {{ $.ViewedPkg }}.{{ $.ViewedValidator }}(viewed); err != nil {
+		if err := {{ $.ViewedPkg }}.{{ $.ViewedValidator }}({{ $.ViewedValue }}); err != nil {
 			return nil, err
 		}
-		return {{ $.ServicePkg }}.{{ $.ServiceResultConstructor }}(viewed), nil
+		return {{ $.ServicePkg }}.{{ $.ServiceResultConstructor }}({{ $.ViewedValue }}), nil
 	{{- end }}
 	default:
 		return nil, goa.InvalidEnumValueError("view", view, []any{
@@ -43,15 +43,15 @@ func {{ .Decode.Name }}(decoder func(*http.Response) goahttp.Decoder, resp *http
 	resp.Body = io.NopCloser(bytes.NewBuffer(data))
 	{{- end }}
 	{{- template "partial_single_response" (viewedResponseData . $.ServiceName $.MethodName) }}
-	projected := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
-	viewed := {{ if not $.IsCollection }}&{{ end }}{{ $.ViewedPkg }}.{{ $.ViewedVarName }}{
+	projected := {{ .ResultInit.Declaration.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+	{{ $.ViewedValue }} := {{ if not $.IsCollection }}&{{ end }}{{ $.ViewedPkg }}.{{ $.ViewedVarName }}{
 		Projected: projected,
 		View:      {{ printf "%q" $.FixedView }},
 	}
-	if err := {{ $.ViewedPkg }}.{{ $.ViewedValidator }}(viewed); err != nil {
+	if err := {{ $.ViewedPkg }}.{{ $.ViewedValidator }}({{ $.ViewedValue }}); err != nil {
 		return nil, err
 	}
-	return {{ $.ServicePkg }}.{{ $.ServiceResultConstructor }}(viewed), nil
+	return {{ $.ServicePkg }}.{{ $.ServiceResultConstructor }}({{ $.ViewedValue }}), nil
 	{{- end }}
 	{{- end }}
 }

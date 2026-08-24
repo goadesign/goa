@@ -28,11 +28,11 @@ func BuildMethodAPayload(payloadWithValidationMethodAMetadataInt string, payload
 			if err != nil {
 				return nil, fmt.Errorf("invalid value for metadataInt, must be INT")
 			}
-			if *metadataInt < 0 {
-				err = goa.MergeErrors(err, goa.InvalidRangeError("MetadataInt", *metadataInt, 0, true))
+			if val < 0 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("MetadataInt", val, 0, true))
 			}
-			if *metadataInt > 100 {
-				err = goa.MergeErrors(err, goa.InvalidRangeError("MetadataInt", *metadataInt, 100, false))
+			if val > 100 {
+				err = goa.MergeErrors(err, goa.InvalidRangeError("MetadataInt", val, 100, false))
 			}
 			if err != nil {
 				return nil, err
@@ -43,11 +43,11 @@ func BuildMethodAPayload(payloadWithValidationMethodAMetadataInt string, payload
 	{
 		if payloadWithValidationMethodAMetadataString != "" {
 			metadataString = &payloadWithValidationMethodAMetadataString
-			if utf8.RuneCountInString(*metadataString) < 5 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("MetadataString", *metadataString, utf8.RuneCountInString(*metadataString), 5, true))
+			if utf8.RuneCountInString(payloadWithValidationMethodAMetadataString) < 5 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("MetadataString", payloadWithValidationMethodAMetadataString, utf8.RuneCountInString(payloadWithValidationMethodAMetadataString), 5, true))
 			}
-			if utf8.RuneCountInString(*metadataString) > 10 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("MetadataString", *metadataString, utf8.RuneCountInString(*metadataString), 10, false))
+			if utf8.RuneCountInString(payloadWithValidationMethodAMetadataString) > 10 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("MetadataString", payloadWithValidationMethodAMetadataString, utf8.RuneCountInString(payloadWithValidationMethodAMetadataString), 10, false))
 			}
 			if err != nil {
 				return nil, err

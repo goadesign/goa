@@ -2,7 +2,6 @@ package codegen
 
 import (
 	"path/filepath"
-	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/expr"
@@ -15,7 +14,9 @@ func sseClientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.F
 	if !HasSSE(data) {
 		return nil
 	}
-	path := filepath.Join(codegen.Gendir, "http", codegen.SnakeCase(svc.Name()), "client", "sse.go")
+	path := filepath.Join(codegen.Gendir, "http", data.Service.PathName, "client", "sse.go")
+	outputPackage := generatedFileOutputPackage(services, path)
+	data = serviceDataForOutput(data, services, outputPackage)
 	tmplSections := sseClientTemplateSections(data)
 	sections := make([]*codegen.SectionTemplate, 0, 1+len(tmplSections))
 	imports := []*codegen.ImportSpec{
@@ -29,11 +30,11 @@ func sseClientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.F
 		{Path: "strings"},
 		{Path: "strconv"},
 		{Path: "sync"},
-		services.ServiceImport(svc.Name()),
+		services.ServiceImport(outputPackage, svc.Name()),
 		{Path: "goa.design/goa/v3/http", Name: "goahttp"},
 	}
 	if serviceHasViewedResult(data, IsSSEEndpoint) {
-		imports = append(imports, services.ViewImport(svc.Name()))
+		imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
 	}
 	if serviceHasVariableViewedResult(data, IsSSEEndpoint) || serviceHasSSEResponseElements(data) {
 		imports = append(imports, codegen.GoaImport(""))
@@ -56,19 +57,16 @@ func sseClientTemplateSections(data *ServiceData) []*codegen.SectionTemplate {
 		if ed.SSE == nil {
 			continue
 		}
+		funcs := sseTemplateFuncs()
+		funcs["dict"] = dict
+		funcs["goTypeRef"] = func(dataType expr.DataType) string {
+			return data.Scope.GoTypeRef(&expr.AttributeExpr{Type: dataType})
+		}
 		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "client-sse",
-			Source: httpTemplates.Read(clientSseT, sseParseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP),
-			Data:   ed,
-			FuncMap: map[string]any{
-				"dict": dict,
-				"goTypeRef": func(dataType expr.DataType) string {
-					return data.Scope.GoTypeRef(&expr.AttributeExpr{Type: dataType})
-				},
-				"deref": func(ref string) string {
-					return strings.TrimPrefix(ref, "*")
-				},
-			},
+			Name:    "client-sse",
+			Source:  httpTemplates.Read(clientSseT, sseParseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP),
+			Data:    ed,
+			FuncMap: funcs,
 		})
 	}
 	return sections

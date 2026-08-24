@@ -19,8 +19,8 @@ paths:
                         text/event-stream:
                             schema:
                                 type: string
-                                example: Voluptatem non provident rem consequatur.
-                            example: Voluptatem non provident rem consequatur.
+                                example: event
+                            example: event
 components: {}
 tags:
     - name: SSEStringService

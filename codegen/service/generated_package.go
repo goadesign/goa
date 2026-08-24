@@ -1,7 +1,5 @@
-// This file binds service types selected by one design root to the generated
-// packages that declare them. Planning records relocated user types and unions
-// before names freeze; rendering stores one canonical section per declaration
-// record so each package emits that declaration once.
+// This file assigns service types and unions to the generated packages that
+// write them. Each generated package writes each declaration once.
 package service
 
 import (
@@ -16,12 +14,12 @@ import (
 )
 
 type (
-	// generatedTypeEmissionKind identifies the template family that defines one
-	// retained relocated type declaration.
+	// generatedTypeEmissionKind identifies the template that writes one type
+	// outside its service package.
 	generatedTypeEmissionKind uint8
 
-	// generatedTypeEmissionFacts selects one canonical relocated declaration
-	// before names freeze and retains the linked data owner used by rendering.
+	// generatedTypeEmissionFacts records one type declaration written outside its
+	// service package and the service data used to render it.
 	generatedTypeEmissionFacts struct {
 		kind        generatedTypeEmissionKind
 		declaration *codegen.TypeDeclaration
@@ -31,55 +29,60 @@ type (
 		method      *methodFacts
 		attribute   *methodAttributeFacts
 		userType    *userTypeFacts
+		uses        []generatedTypeMethodUse
 		error       bool
 	}
 
-	// generatedUnionEmissionFacts selects one canonical union definition before
-	// names freeze and retains its linked render data.
+	// generatedTypeMethodUse records how one service method directly uses an
+	// authored type written outside the service package.
+	generatedTypeMethodUse struct {
+		service string
+		method  string
+		roles   generatedTypeMethodRoles
+	}
+
+	// generatedTypeMethodRoles records the method fields whose declared type is
+	// the authored type being written.
+	generatedTypeMethodRoles uint8
+
+	// generatedUnionEmissionFacts records one Goa OneOf declaration and the data
+	// used to write it outside its service package.
 	generatedUnionEmissionFacts struct {
 		root    *rootFacts
 		service *serviceFacts
 		union   *unionFacts
 	}
 
-	// plannedAttribute identifies one service attribute and the package inherited
-	// by nested types that do not select their own struct:pkg:path location.
+	// plannedAttribute records one service field and the Go package used by child
+	// types that do not declare their own struct:pkg:path location.
 	plannedAttribute struct {
 		attribute *expr.AttributeExpr
-		service   *expr.ServiceExpr
+		service   *serviceFacts
 		location  *codegen.Location
 	}
 
-	// plannedUserType identifies one user type emitted in one generated package.
-	// The same expression may be copied into two packages through Extend.
+	// plannedUserType identifies one user type written to one generated package.
+	// Extend may copy the same expression into more than one package.
 	plannedUserType struct {
 		userType expr.UserType
 		owner    *codegen.GeneratedPackage
 	}
 
-	// unionBranch identifies a generated user type that exists only to name one
-	// branch of its owning union.
-	unionBranch struct {
-		union *expr.Union
-		name  string
-	}
-
-	// rootTypeSet maps compiler-created copies back to the exact DSL declaration
-	// in the same design root. Generated union aliases have different typed
-	// origins and are not included.
+	// rootTypeSet maps compiler-created copies back to the user type declared in
+	// the same design. Generated Goa OneOf branch aliases are not included.
 	rootTypeSet struct {
 		byOrigin map[expr.UserType]expr.UserType
 	}
 
-	// generatedPackageData owns the render data emitted into one Go package.
+	// generatedPackageData stores the render data emitted into one Go package.
 	generatedPackageData struct {
 		types        map[*codegen.TypeDeclaration]*generatedTypeData
 		unions       map[*codegen.UnionDeclaration]*UnionTypeData
 		unionImports []*codegen.ImportSpec
 	}
 
-	// generatedTypeData owns one relocated user-type declaration and optional
-	// error behavior at its metadata-selected file.
+	// generatedTypeData stores one user-type declaration placed in the file
+	// selected by its metadata, plus optional error behavior.
 	generatedTypeData struct {
 		declaration *codegen.TypeDeclaration
 		location    *codegen.Location
@@ -98,9 +101,16 @@ const (
 	generatedErrorTypeEmission
 )
 
-// collectServiceDeclarations declares every relocated user type and union reachable from root.
-// User types are declared across the complete root before any union so exact
-// user-authored names always take precedence over generated union names.
+const (
+	generatedPayloadRole generatedTypeMethodRoles = 1 << iota
+	generatedStreamingPayloadRole
+	generatedResultRole
+	generatedStreamingResultRole
+)
+
+// collectServiceDeclarations submits every user type and Goa OneOf declaration
+// reachable from root. It submits authored type names first, so generated union
+// names receive a number when both request the same Go name.
 func collectServiceDeclarations(facts *rootFacts, generation *codegen.Generation) error {
 	if !generation.HasRoot(facts.root) {
 		return rootMembershipError(facts.root)
@@ -108,10 +118,9 @@ func collectServiceDeclarations(facts *rootFacts, generation *codegen.Generation
 	inputs := planningInputs(facts)
 	rootTypes := facts.rootTypes
 	for _, serviceFacts := range facts.services {
-		service := serviceFacts.service
-		// The service package record makes NewServicesData a render-only contract:
-		// its scope is unavailable until the generation freezes.
-		if _, err := generation.ClaimPackage(servicePackagePath(generation.GenPkg(), service)); err != nil {
+		// Record the service package now. File building reads its Go names after all
+		// generators finish submitting declarations.
+		if _, err := generation.ClaimPackage(serviceFacts.packagePath); err != nil {
 			return err
 		}
 	}
@@ -139,8 +148,9 @@ func collectServiceDeclarations(facts *rootFacts, generation *codegen.Generation
 	return nil
 }
 
-// collectGeneratedPackageEmissions selects one owner for every relocated type
-// and union declaration across all roots before the generation freezes.
+// collectGeneratedPackageEmissions selects the one service that supplies the
+// definition for each type and Goa OneOf declaration shared across the designs
+// in this generation command.
 func collectGeneratedPackageEmissions(roots []*rootFacts) error {
 	types := make(map[*codegen.TypeDeclaration]*generatedTypeEmissionFacts)
 	unions := make(map[*codegen.UnionDeclaration]*generatedUnionEmissionFacts)
@@ -206,6 +216,7 @@ func collectGeneratedPackageEmissions(roots []*rootFacts) error {
 					root:        root,
 					service:     service,
 					userType:    userType,
+					uses:        generatedTypeMethodUses(service, userType.declaration),
 				}
 				if err := selectGeneratedTypeEmission(types, emission); err != nil {
 					return err
@@ -247,8 +258,8 @@ func collectGeneratedPackageEmissions(roots []*rootFacts) error {
 	return nil
 }
 
-// selectGeneratedTypeEmission coalesces identical declaration candidates and
-// rejects candidates that would give one declaration two emitted contracts.
+// selectGeneratedTypeEmission keeps one copy when two services would write the
+// same type declaration and rejects them when their definitions differ.
 func selectGeneratedTypeEmission(selected map[*codegen.TypeDeclaration]*generatedTypeEmissionFacts, candidate *generatedTypeEmissionFacts) error {
 	existing := selected[candidate.declaration]
 	if existing == nil {
@@ -258,14 +269,72 @@ func selectGeneratedTypeEmission(selected map[*codegen.TypeDeclaration]*generate
 	if err := validateGeneratedTypeEmission(existing, candidate); err != nil {
 		return err
 	}
+	uses := mergeGeneratedTypeMethodUses(existing.uses, candidate.uses)
 	if generatedTypeEmissionLess(candidate, existing) {
+		candidate.uses = uses
 		selected[candidate.declaration] = candidate
+	} else {
+		existing.uses = uses
 	}
 	return nil
 }
 
-// validateGeneratedTypeEmission enforces the one-definition contract for one
-// canonical generated type declaration.
+// generatedTypeMethodUses records each method that declares the authored type
+// as its payload, result, or streamed value. Types used only inside another
+// type do not match these declarations.
+func generatedTypeMethodUses(service *serviceFacts, declaration *codegen.TypeDeclaration) []generatedTypeMethodUse {
+	uses := make([]generatedTypeMethodUse, 0, len(service.orderedMethods))
+	for _, method := range service.orderedMethods {
+		var roles generatedTypeMethodRoles
+		roles = addGeneratedTypeMethodRole(roles, method.payload, declaration, generatedPayloadRole)
+		roles = addGeneratedTypeMethodRole(roles, method.streamingPayload, declaration, generatedStreamingPayloadRole)
+		roles = addGeneratedTypeMethodRole(roles, method.result, declaration, generatedResultRole)
+		roles = addGeneratedTypeMethodRole(roles, method.streamingResult, declaration, generatedStreamingResultRole)
+		if roles == 0 {
+			continue
+		}
+		uses = append(uses, generatedTypeMethodUse{
+			service: service.name,
+			method:  method.name,
+			roles:   roles,
+		})
+	}
+	return mergeGeneratedTypeMethodUses(nil, uses)
+}
+
+// addGeneratedTypeMethodRole records role when the method field directly uses
+// declaration.
+func addGeneratedTypeMethodRole(roles generatedTypeMethodRoles, attribute *methodAttributeFacts, declaration *codegen.TypeDeclaration, role generatedTypeMethodRoles) generatedTypeMethodRoles {
+	if attribute != nil && attribute.layout != nil && attribute.layout.TypeDeclaration() == declaration {
+		return roles | role
+	}
+	return roles
+}
+
+// mergeGeneratedTypeMethodUses combines the methods found through different
+// services or design roots and returns them in a stable order.
+func mergeGeneratedTypeMethodUses(left, right []generatedTypeMethodUse) []generatedTypeMethodUse {
+	uses := append(append(make([]generatedTypeMethodUse, 0, len(left)+len(right)), left...), right...)
+	sort.Slice(uses, func(i, j int) bool {
+		if uses[i].service != uses[j].service {
+			return uses[i].service < uses[j].service
+		}
+		return uses[i].method < uses[j].method
+	})
+	merged := uses[:0]
+	for _, use := range uses {
+		last := len(merged) - 1
+		if last >= 0 && merged[last].service == use.service && merged[last].method == use.method {
+			merged[last].roles |= use.roles
+			continue
+		}
+		merged = append(merged, use)
+	}
+	return merged
+}
+
+// validateGeneratedTypeEmission returns an error when two services would write
+// different definitions for the same generated Go type declaration.
 func validateGeneratedTypeEmission(left, right *generatedTypeEmissionFacts) error {
 	if left.kind != right.kind || !sameGeneratedLocation(left.location, right.location) ||
 		!sameGeneratedTypeEmissionSource(left, right) ||
@@ -287,9 +356,9 @@ func validateGeneratedTypeEmission(left, right *generatedTypeEmissionFacts) erro
 	return nil
 }
 
-// generatedTypeEmissionLayout returns the exact retained definition written by
-// one emission candidate. References belong to consuming service files and do
-// not participate in ownership of this declaration's definition.
+// generatedTypeEmissionLayout returns the Go type definition supplied by one
+// service. References from other service files do not affect which definition
+// is written.
 func generatedTypeEmissionLayout(emission *generatedTypeEmissionFacts) *codegen.GoTypePlan {
 	if emission.userType != nil {
 		return emission.userType.layout
@@ -297,8 +366,8 @@ func generatedTypeEmissionLayout(emission *generatedTypeEmissionFacts) *codegen.
 	return emission.attribute.definition
 }
 
-// sameGeneratedTypeEmissionContent compares the retained comments and error
-// behavior that can change the bytes emitted for one declaration.
+// sameGeneratedTypeEmissionContent reports whether two services would write
+// the same comment and error behavior for one type declaration.
 func sameGeneratedTypeEmissionContent(left, right *generatedTypeEmissionFacts) bool {
 	if left.error != right.error {
 		return false
@@ -315,9 +384,9 @@ func sameGeneratedTypeEmissionContent(left, right *generatedTypeEmissionFacts) b
 		left.attribute.description == right.attribute.description
 }
 
-// sameGeneratedTypeEmissionSource compares exact authored sources while
-// recognizing generated union branch aliases already proven compatible by the
-// package's canonical branch declaration.
+// sameGeneratedTypeEmissionSource reports whether two candidates came from the
+// same authored type. Generated aliases for the same Goa OneOf branch also
+// match because the package already owns one declaration for that branch.
 func sameGeneratedTypeEmissionSource(left, right *generatedTypeEmissionFacts) bool {
 	if generatedTypeEmissionOrigin(left) == generatedTypeEmissionOrigin(right) {
 		return true
@@ -327,8 +396,8 @@ func sameGeneratedTypeEmissionSource(left, right *generatedTypeEmissionFacts) bo
 		!right.root.rootTypes.contains(right.userType.userType)
 }
 
-// generatedTypeEmissionName describes the exact authored or normalized source
-// in a planning conflict diagnostic.
+// generatedTypeEmissionName describes the design type that caused a conflict
+// while selecting one generated definition.
 func generatedTypeEmissionName(emission *generatedTypeEmissionFacts) string {
 	origin := generatedTypeEmissionOrigin(emission)
 	if origin == nil {
@@ -337,8 +406,9 @@ func generatedTypeEmissionName(emission *generatedTypeEmissionFacts) string {
 	return origin.Name()
 }
 
-// validateGeneratedUnionEmission enforces one location and shape for a
-// canonical generated union declaration.
+// validateGeneratedUnionEmission returns an error when two services would
+// write the same Goa OneOf declaration in different files or with different
+// fields.
 func validateGeneratedUnionEmission(left, right *generatedUnionEmissionFacts) error {
 	if left.union.declaration != right.union.declaration ||
 		left.union.identity != right.union.identity ||
@@ -360,8 +430,9 @@ func validateGeneratedUnionEmission(left, right *generatedUnionEmissionFacts) er
 	return nil
 }
 
-// sameGeneratedUnionBranches compares every fact that changes one canonical
-// union declaration's type, constructors, validation, or JSON helpers.
+// sameGeneratedUnionBranches reports whether two services would write the same
+// branch fields, constructors, validation, and JSON functions for one Goa OneOf
+// declaration.
 func sameGeneratedUnionBranches(left, right []*unionBranchFacts) bool {
 	if len(left) != len(right) {
 		return false
@@ -383,7 +454,7 @@ func sameGeneratedUnionBranches(left, right []*unionBranchFacts) bool {
 
 // generatedLocationPath returns the generated package selected by location.
 // Union declarations always emit in unions.go, so their enclosing type's file
-// name is not part of union ownership.
+// name does not affect which generated package contains the union.
 func generatedLocationPath(location *codegen.Location) string {
 	if location == nil {
 		return ""
@@ -403,8 +474,8 @@ func generatedTypeEmissionOrigin(emission *generatedTypeEmissionFacts) expr.User
 	return nil
 }
 
-// generatedTypeEmissionLess orders equivalent candidates by stable service
-// and method facts, never by root traversal position.
+// generatedTypeEmissionLess orders equal definitions by service and method
+// names, so walking designs in another order does not change the selected copy.
 func generatedTypeEmissionLess(left, right *generatedTypeEmissionFacts) bool {
 	if left.declaration.PackagePath() != right.declaration.PackagePath() {
 		return left.declaration.PackagePath() < right.declaration.PackagePath()
@@ -425,8 +496,8 @@ func generatedTypeEmissionLess(left, right *generatedTypeEmissionFacts) bool {
 	return leftMethod < rightMethod
 }
 
-// generatedUnionEmissionLess orders equivalent union candidates by their
-// stable package and service ownership facts.
+// generatedUnionEmissionLess orders equal Goa OneOf definitions by package and
+// service names.
 func generatedUnionEmissionLess(left, right *generatedUnionEmissionFacts) bool {
 	if left.union.declaration.PackagePath() != right.union.declaration.PackagePath() {
 		return left.union.declaration.PackagePath() < right.union.declaration.PackagePath()
@@ -434,20 +505,19 @@ func generatedUnionEmissionLess(left, right *generatedUnionEmissionFacts) bool {
 	return left.service.packagePath < right.service.packagePath
 }
 
-// rootMembershipError reports an attempt to plan or analyze a design root
-// that the generation does not own.
+// rootMembershipError reports an attempt to generate files from a design that
+// was not supplied to this generation command.
 func rootMembershipError(root *expr.RootExpr) error {
 	return fmt.Errorf("service root %p does not belong to the generation", root)
 }
 
-// planMethodTypes declares the semantic wrappers created when NewGeneration
-// takes ownership of raw method objects. Exact user types in the same package
-// are planned separately and therefore keep their authored names.
+// planMethodTypes submits the payload and result wrapper types created for raw
+// object definitions. Authored user types are submitted separately and keep
+// their requested names when no declaration conflicts.
 func planMethodTypes(facts *rootFacts, generation *codegen.Generation) (map[expr.UserType]codegen.DerivedTypeID, error) {
 	planned := make(map[expr.UserType]codegen.DerivedTypeID)
 	for _, serviceFacts := range facts.services {
-		service := serviceFacts.service
-		generatedPackage := generation.Package(servicePackagePath(generation.GenPkg(), service))
+		generatedPackage := generation.Package(serviceFacts.packagePath)
 		for _, method := range serviceFacts.methods {
 			attributes := []*expr.AttributeExpr{
 				method.Payload,
@@ -477,45 +547,44 @@ func planMethodTypes(facts *rootFacts, generation *codegen.Generation) (map[expr
 	return planned, nil
 }
 
-// planningInputs returns the service attributes that can cause service types
-// to be emitted. Unused root types are deliberately excluded.
+// planningInputs returns the payloads, results, errors, and stream values that
+// can write service types. It excludes design types that no service uses.
 func planningInputs(facts *rootFacts) []plannedAttribute {
 	var inputs []plannedAttribute
 	for _, serviceFacts := range facts.services {
-		service := serviceFacts.service
 		for _, serviceError := range serviceFacts.errors {
-			inputs = append(inputs, plannedAttribute{attribute: serviceError.AttributeExpr, service: service})
+			inputs = append(inputs, plannedAttribute{attribute: serviceError.AttributeExpr, service: serviceFacts})
 		}
 		for _, method := range serviceFacts.methods {
 			inputs = append(inputs,
-				plannedAttribute{attribute: method.Payload, service: service},
-				plannedAttribute{attribute: method.StreamingPayload, service: service},
-				plannedAttribute{attribute: method.Result, service: service},
+				plannedAttribute{attribute: method.Payload, service: serviceFacts},
+				plannedAttribute{attribute: method.StreamingPayload, service: serviceFacts},
+				plannedAttribute{attribute: method.Result, service: serviceFacts},
 			)
 			if method.HasMixedResults() {
-				inputs = append(inputs, plannedAttribute{attribute: method.StreamingResult, service: service})
+				inputs = append(inputs, plannedAttribute{attribute: method.StreamingResult, service: serviceFacts})
 			}
 			for _, methodError := range method.Errors {
-				inputs = append(inputs, plannedAttribute{attribute: methodError.AttributeExpr, service: service})
+				inputs = append(inputs, plannedAttribute{attribute: methodError.AttributeExpr, service: serviceFacts})
 			}
 		}
 		for _, userType := range facts.types {
 			services, ok := userType.Attribute().Meta["type:generate:force"]
-			if !ok || len(services) > 0 && !slices.Contains(services, service.Name) {
+			if !ok || len(services) > 0 && !slices.Contains(services, serviceFacts.name) {
 				continue
 			}
 			inputs = append(inputs, plannedAttribute{
 				attribute: &expr.AttributeExpr{Type: userType},
-				service:   service,
+				service:   serviceFacts,
 			})
 		}
 	}
 	return inputs
 }
 
-// planUserTypes traverses attribute and declares each relocated user type in
-// the package selected by its own or its enclosing type's metadata.
-func planUserTypes(attribute *expr.AttributeExpr, service *expr.ServiceExpr, location *codegen.Location, generation *codegen.Generation, rootTypes *rootTypeSet, methodTypes map[expr.UserType]codegen.DerivedTypeID, seen map[plannedUserType]struct{}) error {
+// planUserTypes walks attribute and submits each user type to the Go package
+// selected by its own metadata or by its enclosing type.
+func planUserTypes(attribute *expr.AttributeExpr, service *serviceFacts, location *codegen.Location, generation *codegen.Generation, rootTypes *rootTypeSet, methodTypes map[expr.UserType]codegen.DerivedTypeID, seen map[plannedUserType]struct{}) error {
 	if attribute == nil || attribute.Type == expr.Empty {
 		return nil
 	}
@@ -532,7 +601,7 @@ func planUserTypes(attribute *expr.AttributeExpr, service *expr.ServiceExpr, loc
 		if typeLocation == nil {
 			typeLocation = location
 		}
-		owner, err := claimGeneratedPackage(generation, service, typeLocation)
+		owner, err := claimGeneratedPackage(generation, service.packagePath, typeLocation)
 		if err != nil {
 			return err
 		}
@@ -574,9 +643,9 @@ func planUserTypes(attribute *expr.AttributeExpr, service *expr.ServiceExpr, loc
 	return nil
 }
 
-// planUnions traverses attribute after all user types have been declared and
-// records each relocated union in its owning package.
-func planUnions(attribute *expr.AttributeExpr, service *expr.ServiceExpr, location *codegen.Location, generation *codegen.Generation, rootTypes *rootTypeSet, seen map[plannedUserType]struct{}) error {
+// planUnions walks attribute after authored user type names have been submitted
+// and records each Goa OneOf declaration in the package that writes it.
+func planUnions(attribute *expr.AttributeExpr, service *serviceFacts, location *codegen.Location, generation *codegen.Generation, rootTypes *rootTypeSet, seen map[plannedUserType]struct{}) error {
 	if attribute == nil || attribute.Type == expr.Empty {
 		return nil
 	}
@@ -590,7 +659,7 @@ func planUnions(attribute *expr.AttributeExpr, service *expr.ServiceExpr, locati
 		if typeLocation == nil {
 			typeLocation = location
 		}
-		owner, err := claimGeneratedPackage(generation, service, typeLocation)
+		owner, err := claimGeneratedPackage(generation, service.packagePath, typeLocation)
 		if err != nil {
 			return err
 		}
@@ -614,7 +683,7 @@ func planUnions(attribute *expr.AttributeExpr, service *expr.ServiceExpr, locati
 		}
 		return recurse(actual.ElemType, location)
 	case *expr.Union:
-		generatedPackage, err := claimGeneratedPackage(generation, service, location)
+		generatedPackage, err := claimGeneratedPackage(generation, service.packagePath, location)
 		if err != nil {
 			return err
 		}
@@ -639,14 +708,11 @@ func planUnions(attribute *expr.AttributeExpr, service *expr.ServiceExpr, locati
 	return nil
 }
 
-// planViews rebuilds the same projected expression graph used by rendering,
-// declares every derived view type, and then declares view-local union
-// families after the derived type names have been recorded.
+// planViews builds the result types for each declared view, submits their Go
+// type names, and then submits Goa OneOf types written in the views package.
 func planViews(facts *rootFacts, generation *codegen.Generation) error {
 	for _, serviceFacts := range facts.services {
-		service := serviceFacts.service
-		viewsPath := servicePackagePath(generation.GenPkg(), service) + "/views"
-		views, err := generation.ClaimPackage(viewsPath)
+		views, err := generation.ClaimPackage(serviceFacts.viewsPath)
 		if err != nil {
 			return err
 		}
@@ -724,8 +790,8 @@ func planViews(facts *rootFacts, generation *codegen.Generation) error {
 	return nil
 }
 
-// collectProjectedTypeFacts selects validators and view-narrowed conversions
-// from one projected graph before package names freeze.
+// collectProjectedTypeFacts selects validation and conversion code for one set
+// of result types containing only the fields in their declared views.
 func collectProjectedTypeFacts(pair *projectedTypePair) (*projectedTypeFacts, error) {
 	facts := &projectedTypeFacts{
 		pair:          pair,
@@ -758,8 +824,8 @@ func collectProjectedTypeFacts(pair *projectedTypePair) (*projectedTypeFacts, er
 	return facts, nil
 }
 
-// collectValidationFacts retains the exact attributes and child validators
-// selected for each projected type view.
+// collectValidationFacts stores the field checks and child validation calls
+// selected for each result type and view.
 func collectValidationFacts(projected *expr.AttributeExpr) []*validationFacts {
 	userType := projected.Type.(expr.UserType)
 	resultType, viewed := userType.(*expr.ResultTypeExpr)
@@ -781,7 +847,7 @@ func collectValidationFacts(projected *expr.AttributeExpr) []*validationFacts {
 		}
 		object := &expr.Object{}
 		walkViewAttrs(expr.AsObject(projected.Type), view, func(name string, attribute, viewAttribute *expr.AttributeExpr) {
-			if nested, ok := attribute.Type.(*expr.ResultTypeExpr); ok {
+			if _, ok := attribute.Type.(*expr.ResultTypeExpr); ok {
 				selectedView := ""
 				if explicit, ok := viewAttribute.Meta.Last(expr.ViewMetaKey); ok && explicit != expr.DefaultView {
 					selectedView = explicit
@@ -790,7 +856,7 @@ func collectValidationFacts(projected *expr.AttributeExpr) []*validationFacts {
 					name:      name,
 					attribute: attribute,
 					view:      selectedView,
-					required:  nested.Attribute().IsRequired(name),
+					required:  resultType.Attribute().IsRequired(name),
 				})
 				return
 			}
@@ -802,8 +868,66 @@ func collectValidationFacts(projected *expr.AttributeExpr) []*validationFacts {
 	return facts
 }
 
-// collectViewConversionFacts narrows a projected result to each declared view
-// and retains the transform operation used in the selected direction.
+// markNeededViewValidators keeps only functions that can return an error. A
+// parent is needed when it checks one of its own fields or calls a needed child.
+func markNeededViewValidators(facts *serviceFacts) {
+	validations := make(map[viewValidationKey]*validationFacts)
+	for _, projection := range facts.projections {
+		for _, projected := range projection.types {
+			for _, validation := range projected.validations {
+				key := viewValidationKey{
+					origin: projected.pair.projected.Origin(),
+					view:   canonicalValidatorView(validation.viewName),
+				}
+				validations[key] = validation
+				if validation.collectionElem == nil && codegen.NeedsValidation(validation.attribute, viewValidationPolicy()) {
+					validation.needed = true
+				}
+				for _, field := range validation.fields {
+					validation.needed = validation.needed || field.required
+				}
+			}
+		}
+	}
+
+	for changed := true; changed; {
+		changed = false
+		for _, validation := range validations {
+			if validation.needed {
+				continue
+			}
+			if validation.collectionElem != nil && neededValidation(validations, validation.collectionElem, validation.viewName) {
+				validation.needed = true
+				changed = true
+				continue
+			}
+			for _, field := range validation.fields {
+				if neededValidation(validations, field.attribute, field.view) {
+					validation.needed = true
+					changed = true
+					break
+				}
+			}
+		}
+	}
+}
+
+// neededValidation reports whether the selected view-specific result type can
+// return a validation error.
+func neededValidation(validations map[viewValidationKey]*validationFacts, attribute *expr.AttributeExpr, view string) bool {
+	userType, ok := attribute.Type.(expr.UserType)
+	if !ok {
+		return false
+	}
+	validation := validations[viewValidationKey{
+		origin: userType.Origin(),
+		view:   canonicalValidatorView(view),
+	}]
+	return validation != nil && validation.needed
+}
+
+// collectViewConversionFacts selects the fields in each declared result view
+// and stores the conversion used in each direction.
 func collectViewConversionFacts(projected, service *expr.AttributeExpr, toResult bool) ([]*viewConversionFacts, error) {
 	views := service.Type.(*expr.ResultTypeExpr).Views
 	projectedObject := expr.AsObject(projected.Type)
@@ -864,7 +988,7 @@ func collectViewConversionFacts(projected, service *expr.AttributeExpr, toResult
 				})
 				targetObject.Delete(field.Name)
 			}
-			plan, err := codegen.NewTransformPlan(source, conversion.transformTarget)
+			plan, err := codegen.NewTransformPlan(source, conversion.transformTarget, "", nil)
 			if err != nil {
 				return nil, err
 			}
@@ -875,9 +999,9 @@ func collectViewConversionFacts(projected, service *expr.AttributeExpr, toResult
 	return result, nil
 }
 
-// planViewUnions declares every union family reachable from one projected
-// graph. Projected user types already own their derived declarations; only a
-// branch without one is a generated alias owned by its union family.
+// planViewUnions submits every Goa OneOf type reachable from view-specific
+// result types. Existing view types keep their declarations; a branch without
+// one receives a generated alias declaration.
 func planViewUnions(attribute *expr.AttributeExpr, generatedPackage *codegen.GeneratedPackage, derived map[expr.UserType]codegen.DerivedTypeID, seen map[expr.UserType]struct{}, retained map[codegen.UnionTypeID]struct{}, unions *[]*unionFacts) error {
 	if attribute == nil || attribute.Type == expr.Empty {
 		return nil
@@ -942,9 +1066,9 @@ func planViewUnions(attribute *expr.AttributeExpr, generatedPackage *codegen.Gen
 	return nil
 }
 
-// newRootTypeSet records the exact declarations whose compiler-created copies
-// share package records. Generated union aliases have independent origins
-// and never enter this set.
+// newRootTypeSet records the authored types in one design so compiler-created
+// copies can use the same generated Go declarations. Generated Goa OneOf branch
+// aliases are not added.
 func newRootTypeSet(root *expr.RootExpr) *rootTypeSet {
 	userTypes := &rootTypeSet{
 		byOrigin: make(map[expr.UserType]expr.UserType, len(root.Types)+len(root.ResultTypes)+1),
@@ -959,8 +1083,8 @@ func newRootTypeSet(root *expr.RootExpr) *rootTypeSet {
 	return userTypes
 }
 
-// generatedUnionBranch identifies the user type synthesized by OneOf around a
-// branch that was not itself an exact DSL user-type declaration.
+// generatedUnionBranch reports whether OneOf created a user type around a
+// branch that was not declared as a user type in the design.
 func generatedUnionBranch(branch *expr.NamedAttributeExpr, rootTypes *rootTypeSet) (expr.UserType, bool) {
 	userType, ok := branch.Attribute.Type.(expr.UserType)
 	if !ok {
@@ -969,13 +1093,14 @@ func generatedUnionBranch(branch *expr.NamedAttributeExpr, rootTypes *rootTypeSe
 	return userType, !rootTypes.contains(userType)
 }
 
-// add records one exact root declaration under its typed origin.
+// add records one user type declared in this design under its original type.
 func (s *rootTypeSet) add(userType expr.UserType) {
 	s.byOrigin[userType.Origin()] = userType
 }
 
-// canonical maps only a compiler copy whose typed origin belongs to this root
-// back to its exact declaration.
+// canonical returns the original authored declaration for a compiler-created
+// copy from this design. Types originating in another design are returned
+// unchanged.
 func (s *rootTypeSet) canonical(userType expr.UserType) expr.UserType {
 	if canonical, ok := s.byOrigin[userType.Origin()]; ok {
 		return canonical
@@ -983,20 +1108,20 @@ func (s *rootTypeSet) canonical(userType expr.UserType) expr.UserType {
 	return userType
 }
 
-// contains reports whether userType is an exact root declaration or one of
-// its compiler copies.
+// contains reports whether userType was declared in this design or copied from
+// one of its declarations.
 func (s *rootTypeSet) contains(userType expr.UserType) bool {
 	_, ok := s.byOrigin[userType.Origin()]
 	return ok
 }
 
-// claimGeneratedPackage preserves the relative path spelling supplied by
-// design metadata so Generation can reject two claims that resolve to one
-// output package. An absolute path violates the metadata contract instead of
-// selecting a package beneath the generated module by string concatenation.
-func claimGeneratedPackage(generation *codegen.Generation, service *expr.ServiceExpr, location *codegen.Location) (*codegen.GeneratedPackage, error) {
+// claimGeneratedPackage passes the relative path from design metadata to
+// Generation unchanged. Generation can then reject two different path strings
+// that resolve to the same output package. An absolute path is invalid metadata
+// and does not select a package under the generated module.
+func claimGeneratedPackage(generation *codegen.Generation, servicePath string, location *codegen.Location) (*codegen.GeneratedPackage, error) {
 	if location == nil {
-		return generation.ClaimPackage(servicePackagePath(generation.GenPkg(), service))
+		return generation.ClaimPackage(servicePath)
 	}
 	if path.IsAbs(location.RelImportPath) {
 		return nil, fmt.Errorf("generated package location %q must be relative", location.RelImportPath)
@@ -1005,17 +1130,11 @@ func claimGeneratedPackage(generation *codegen.Generation, service *expr.Service
 	return generation.ClaimPackage(claim)
 }
 
-// generatedPackagePath returns the canonical import path selected by location,
+// generatedPackagePath returns the cleaned import path selected by location,
 // or the service package when location is nil.
-func generatedPackagePath(genpkg string, service *expr.ServiceExpr, location *codegen.Location) string {
+func generatedPackagePath(genpkg, servicePath string, location *codegen.Location) string {
 	if location != nil {
 		return path.Join(genpkg, location.RelImportPath)
 	}
-	return servicePackagePath(genpkg, service)
-}
-
-// servicePackagePath returns the actual import path of service's generated Go
-// package.
-func servicePackagePath(genpkg string, service *expr.ServiceExpr) string {
-	return path.Join(genpkg, codegen.SnakeCase(codegen.Goify(service.Name, false)))
+	return servicePath
 }

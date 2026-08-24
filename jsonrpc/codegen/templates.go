@@ -29,19 +29,6 @@ const (
 	viewedResultDecodeT     = "viewed_result_decode"
 	viewedResultEncodeT     = "viewed_result_encode"
 
-	// WebSocket templates
-	websocketServerStreamT        = "websocket_server_stream"
-	websocketServerStreamWrapperT = "websocket_server_stream_wrapper"
-	websocketServerHandlerT       = "websocket_server_handler"
-	websocketServerSendT          = "websocket_server_send"
-	websocketServerRecvT          = "websocket_server_recv"
-	websocketServerCloseT         = "websocket_server_close"
-
-	// JSON-RPC WebSocket client templates
-	websocketClientConnT       = "websocket_client_conn"
-	websocketClientStreamT     = "websocket_client_stream"
-	websocketStreamErrorTypesT = "websocket_stream_error_types"
-
 	// SSE templates
 	sseServerStreamBaseT = "sse_server_stream_base"
 	sseServerStreamT     = "sse_server_stream"

@@ -175,6 +175,7 @@ func TestDecode(t *testing.T) {
 		{"decode-body-primitive-bool-validate", testdata.PayloadBodyPrimitiveBoolValidateDSL},
 		{"decode-body-primitive-array-string-validate", testdata.PayloadBodyPrimitiveArrayStringValidateDSL},
 		{"decode-body-primitive-array-bool-validate", testdata.PayloadBodyPrimitiveArrayBoolValidateDSL},
+		{"decode-body-required-primitive-arrays", testdata.RequiredPrimitiveArrayDSL},
 
 		{"decode-body-primitive-array-user-required", testdata.PayloadBodyPrimitiveArrayUserRequiredDSL},
 		{"decode-body-primitive-array-user-validate", testdata.PayloadBodyPrimitiveArrayUserValidateDSL},
@@ -203,8 +204,11 @@ func TestDecode(t *testing.T) {
 		{"decode-map-query-object", testdata.PayloadMapQueryObjectDSL},
 		{"decode-multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL},
 		{"decode-multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL},
+		{"decode-multipart-body-validation", testdata.PayloadMultipartValidationDSL},
 		{"decode-multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL},
 		{"decode-multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL},
+		{"decode-multipart-with-param", testdata.PayloadMultipartWithParamDSL},
+		{"decode-multipart-with-params-and-headers", testdata.PayloadMultipartWithParamsAndHeadersDSL},
 		{"decode-with-params-and-headers-dsl", testdata.WithParamsAndHeadersBlockDSL},
 
 		{"decode-query-int-alias", testdata.QueryIntAliasDSL},

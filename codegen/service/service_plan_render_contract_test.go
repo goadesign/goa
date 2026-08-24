@@ -55,7 +55,7 @@ func TestServicePlansRenderByteIdenticallyAcrossRootAndServiceOrder(t *testing.T
 	for _, plan := range forwardPlans {
 		compileFiles = append(compileFiles, ExampleServiceFiles(plan)...)
 	}
-	compileGeneratedServiceFiles(t, "generated.local", compileFiles)
+	compileGeneratedServiceFiles(t, compileFiles)
 }
 
 // TestServicePlanRenderingIsPure catches renderers that rebuild analysis,

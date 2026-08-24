@@ -10,6 +10,7 @@ package client
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -50,7 +51,6 @@ func NewClient(
 	dec func(*http.Response) goahttp.Decoder,
 	restoreBody bool,
 ) *Client {
-
 	return &Client{
 		Doer:                doer,
 		WatchDoer:           doer,
@@ -83,18 +83,47 @@ func (c *Client) Watch() goa.Endpoint {
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			resp.Body.Close()
+			body, readErr := io.ReadAll(resp.Body)
+			closeErr := resp.Body.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("Feed", "watch", err)
+			}
 			return nil, goahttp.ErrInvalidResponse("Feed", "watch", resp.StatusCode, string(body))
 		}
 
 		contentType := resp.Header.Get("Content-Type")
 		if contentType != "" && !strings.HasPrefix(contentType, "text/event-stream") {
-			resp.Body.Close()
-			return nil, fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
+			contentTypeErr := fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
+			if err := resp.Body.Close(); err != nil {
+				return nil, errors.Join(contentTypeErr, goahttp.ErrDecodingError("Feed", "watch", err))
+			}
+			return nil, contentTypeErr
 		}
 
 		// Create the SSE client stream
 		return NewWatchStream(resp, c.decoder), nil
+	}
+}
+
+// Snapshot returns an endpoint that makes JSON-RPC requests to the Feed
+// service snapshot method.
+func (c *Client) Snapshot() goa.Endpoint {
+	var (
+		encodeRequest  = EncodeSnapshotRequest(c.encoder)
+		decodeResponse = DecodeSnapshotResponse(c.decoder, c.RestoreResponseBody)
+	)
+	return func(ctx context.Context, v any) (any, error) {
+		req, err := c.BuildSnapshotRequest(ctx, v)
+		if err != nil {
+			return nil, err
+		}
+		if err := encodeRequest(req, v); err != nil {
+			return nil, err
+		}
+		resp, err := c.Doer.Do(req)
+		if err != nil {
+			return nil, goahttp.ErrRequestError("Feed", "snapshot", err)
+		}
+		return decodeResponse(resp)
 	}
 }

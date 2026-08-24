@@ -1,0 +1,9 @@
+// NewProtoMethodMessageResultTypeWithExplicitViewResponse builds
+// *service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse
+// from *servicemessageresulttypewithexplicitviewviews.RTView.
+func NewProtoMethodMessageResultTypeWithExplicitViewResponse(result *servicemessageresulttypewithexplicitviewviews.RTView) *service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse {
+	message := &service_message_result_type_with_explicit_viewpb.MethodMessageResultTypeWithExplicitViewResponse{
+		IntField: int32(*result.IntField),
+	}
+	return message
+}

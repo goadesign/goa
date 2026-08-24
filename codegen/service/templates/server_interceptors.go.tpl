@@ -7,6 +7,6 @@ type {{ .ServerInterceptorsDeclaration.Name }} interface {
 	{{- if .Description }}
 	{{ comment .Description }}
 	{{- end }}
-	{{ .Name }}(ctx context.Context, info *{{ .InfoDeclaration.Name }}, next goa.Endpoint) (any, error)
+	{{ .Name }}(ctx context.Context, info {{ .InfoDeclaration.Name }}, next goa.Endpoint) (any, error)
 {{- end }}
 }

@@ -113,15 +113,8 @@ func ApplyOptions(config *RunnerConfig, opts ...RunnerOption) {
 type executorOption func(*executorConfig)
 
 type executorConfig struct {
-	WebSocketTimeout time.Duration
-	Debug            bool
-	WorkDir          string
-}
-
-func withWebSocketTimeout(d time.Duration) executorOption {
-	return func(c *executorConfig) {
-		c.WebSocketTimeout = d
-	}
+	Debug   bool
+	WorkDir string
 }
 
 func withExecutorDebug(debug bool) executorOption {

@@ -1,4 +1,5 @@
-// This file formats retained service method and stream facts for service and transport templates.
+// This file builds the template data for service methods and their streams from
+// the values and Go declarations recorded during planning.
 package service
 
 import (
@@ -8,9 +9,9 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// buildMethodData creates the data needed to render the given endpoint. It
-// records the user types needed by the service definition in userTypes.
-func (d *ServicesData) buildMethodData(facts *methodFacts, resolver *declarationResolver, serviceFacts *serviceFacts) (*MethodData, error) {
+// buildMethodData formats one method using the names and types chosen during
+// service planning.
+func buildMethodData(facts *methodFacts, resolver *declarationResolver, serviceFacts *serviceFacts) *MethodData {
 	var (
 		vname       string
 		desc        string
@@ -28,7 +29,6 @@ func (d *ServicesData) buildMethodData(facts *methodFacts, resolver *declaration
 		resultEx    any
 		errors      []*ErrorInitData
 		errorLocs   map[string]*codegen.Location
-		isJSONRPC   bool
 		reqs        = facts.requirements
 		schemes     = facts.schemes
 	)
@@ -65,8 +65,6 @@ func (d *ServicesData) buildMethodData(facts *methodFacts, resolver *declaration
 			errorLocs[errorFacts.name] = errorFacts.location
 		}
 	}
-	isJSONRPC = facts.isJSONRPC
-
 	data := &MethodData{
 		EndpointDeclaration: serviceFacts.names.declaration(serviceSymbolID{
 			role: serviceMethodEndpointNameRole, service: serviceFacts.name, method: facts.varName,
@@ -79,9 +77,6 @@ func (d *ServicesData) buildMethodData(facts *methodFacts, resolver *declaration
 		}].declaration,
 		ClientStreamDeclaration: serviceFacts.names[serviceSymbolID{
 			role: serviceClientStreamNameRole, service: serviceFacts.name, method: facts.varName,
-		}].declaration,
-		EventDeclaration: serviceFacts.names[serviceSymbolID{
-			role: serviceMethodEventNameRole, service: serviceFacts.name, method: facts.varName,
 		}].declaration,
 		RequestDeclaration: serviceFacts.names[serviceSymbolID{
 			role: serviceRequestNameRole, service: serviceFacts.name, method: facts.varName,
@@ -116,9 +111,6 @@ func (d *ServicesData) buildMethodData(facts *methodFacts, resolver *declaration
 		ResultEx:                     resultEx,
 		Errors:                       errors,
 		ErrorLocs:                    errorLocs,
-		IsJSONRPC:                    isJSONRPC,
-		IsJSONRPCSSE:                 facts.isJSONRPCSSE,
-		IsJSONRPCWebSocket:           facts.isJSONRPCWebSocket,
 		Requirements:                 reqs,
 		Schemes:                      schemes,
 		StreamKind:                   facts.streamKind,
@@ -131,16 +123,14 @@ func (d *ServicesData) buildMethodData(facts *methodFacts, resolver *declaration
 		StreamEndpointField:          facts.streamEndpointField,
 	}
 
-	if err := d.initStreamData(data, facts, vname, rname, resultRef, resolver); err != nil {
-		return nil, err
-	}
-	return data, nil
+	initStreamData(data, facts, resolver)
+	return data
 }
 
 // initStreamData initializes the streaming payload data structures and methods.
-func (d *ServicesData) initStreamData(data *MethodData, facts *methodFacts, vname, rname, resultRef string, resolver *declarationResolver) error {
+func initStreamData(data *MethodData, facts *methodFacts, resolver *declarationResolver) {
 	if !facts.isStreaming && !facts.hasMixedResults {
-		return nil
+		return
 	}
 	var (
 		spayloadName string
@@ -148,15 +138,20 @@ func (d *ServicesData) initStreamData(data *MethodData, facts *methodFacts, vnam
 		spayloadDef  string
 		spayloadDesc string
 		spayloadEx   any
-		srname       = rname     // streaming result name
-		srref        = resultRef // streaming result ref
+		srname       string
+		srref        string
+		srdef        string
 	)
+	if facts.streamingResult != nil && facts.streamingResult.present {
+		srname, srdef, srref = retainedMethodTypeData(facts.streamingResult, resolver)
+	}
+	data.StreamingResultRef = srref
 
-	// If StreamingResult is different from Result, use it for streaming
+	// Mixed-result methods return StreamingResult from their streaming endpoint
+	// and Result from their ordinary endpoint.
 	if facts.hasMixedResults && facts.streamingResult != nil && facts.streamingResult.present {
-		srname, data.StreamingResultDef, srref = retainedMethodTypeData(facts.streamingResult, resolver)
 		data.StreamingResult = srname
-		data.StreamingResultRef = srref
+		data.StreamingResultDef = srdef
 		data.StreamingResultDeclaration = facts.streamingResult.layout.TypeDeclaration()
 		data.StreamingResultDesc = facts.streamingResult.description
 		if data.StreamingResultDesc == "" {
@@ -176,17 +171,15 @@ func (d *ServicesData) initStreamData(data *MethodData, facts *methodFacts, vnam
 		}
 		spayloadEx = facts.streamingPayload.example
 	}
-	// For JSON-RPC WebSocket:
-	// - Client streaming (no result streaming): no endpoint struct needed, just payload
-	// - Bidirectional streaming: endpoint struct needed for both payload and stream
+	// Streaming endpoint calls carry the request value and stream together.
 	var endpointStruct string
 	if data.EndpointInputDeclaration != nil {
 		endpointStruct = data.EndpointInputDeclaration.Name()
 	}
-	// For mixed results with SSE, treat as server streaming
+	// A mixed-result SSE method sends results from the server even though its
+	// service method is not otherwise marked as streaming.
 	streamKind := facts.streamKind
 	if facts.hasMixedResults && !facts.isStreaming {
-		// Mixed results with SSE should be treated as server streaming
 		streamKind = expr.ServerStreamKind
 	}
 	svrStream := &StreamData{
@@ -212,16 +205,6 @@ func (d *ServicesData) initStreamData(data *MethodData, facts *methodFacts, vnam
 		RecvWithContextDesc: fmt.Sprintf("RecvWithContext reads instances of %q from the stream with context.", srname),
 		RecvTypeName:        srname,
 		RecvTypeRef:         srref,
-	}
-	// For SSE server streaming, we need both Send (for notifications) and SendAndClose (for final response)
-	if data.IsJSONRPCSSE && facts.streamKind == expr.ServerStreamKind && resultRef != "" {
-		svrStream.SendAndCloseName = "SendAndClose"
-		svrStream.SendAndCloseDesc = fmt.Sprintf("SendAndClose sends a final response with %q and closes the stream.", srname)
-		// For JSON-RPC SSE, methods take context directly; align names accordingly
-		svrStream.SendWithContextName = "Send"
-		svrStream.RecvWithContextName = "Recv"
-		// Update Send description to clarify it's for notifications only
-		svrStream.SendDesc = fmt.Sprintf("Send streams JSON-RPC notifications with %q. Notifications do not expect a response.", srname)
 	}
 	if streamKind == expr.ClientStreamKind || streamKind == expr.BidirectionalStreamKind {
 		switch streamKind {
@@ -262,16 +245,16 @@ func (d *ServicesData) initStreamData(data *MethodData, facts *methodFacts, vnam
 	data.StreamingPayloadRef = spayloadRef
 	data.StreamingPayloadDesc = spayloadDesc
 	data.StreamingPayloadEx = spayloadEx
-	return nil
 }
 
-// retainedMethodTypeData formats one preplanned method type relative to the
-// service output package without consulting its source expression.
+// This helper returns the Go name, definition, and reference for one payload or
+// result relative to the service output package. It reads the type layout
+// copied during planning instead of rereading the design expression.
 func retainedMethodTypeData(facts *methodAttributeFacts, resolver *declarationResolver) (string, string, string) {
-	linked := facts.layout.Link(resolver.outputPath, retainedTypeQualifier(resolver.aliases))
+	linked := facts.layout.Link(resolver.outputPath, retainedTypeQualifier(resolver.aliases, resolver.outputPath))
 	definition := ""
 	if facts.definition != nil {
-		definition = facts.definition.Link(facts.layout.Owner(), retainedTypeQualifier(resolver.aliases)).Def()
+		definition = facts.definition.Link(facts.layout.Owner(), retainedTypeQualifier(resolver.aliases, facts.layout.Owner())).Def()
 	}
 	return linked.Name(), definition, linked.Ref()
 }

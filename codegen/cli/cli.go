@@ -28,6 +28,9 @@ type (
 		// VarName is the name of the command variable e.g.
 		// "cellarStorage"
 		VarName string
+		// FlagSetVar is the exact local variable that stores this command's flags
+		// in the generated endpoint parser.
+		FlagSetVar string
 		// Description is the help text.
 		Description string
 		// Subcommands is the list of endpoint commands.
@@ -51,6 +54,9 @@ type (
 		Name string
 		// FullName is the sub-command full name e.g. "storageAdd"
 		FullName string
+		// FlagSetVar is the exact local variable that stores this method's flags
+		// in the generated endpoint parser.
+		FlagSetVar string
 		// Description is the help text.
 		Description string
 		// Flags is the list of flags supported by the subcommand.
@@ -60,6 +66,8 @@ type (
 		// BuildFunction contains the data to generate a payload builder function
 		// if any. Exclusive with Conversion.
 		BuildFunction *BuildFunctionData
+		// ActualPointerVars lists the exact parser variables passed to BuildFunction.
+		ActualPointerVars []string
 		// Conversion contains the flag value to payload conversion function if
 		// any. Exclusive with BuildFunction.
 		Conversion string
@@ -67,14 +75,23 @@ type (
 		Example string
 		// Interceptors contains the data for client interceptors if any apply to the endpoint method.
 		Interceptors *InterceptorData
+		// conversionFlag is the parsed flag converted directly into a primitive payload.
+		conversionFlag *FlagData
 	}
 
 	// InterceptorData contains the data needed to generate interceptor code.
 	InterceptorData struct {
 		// VarName is the name of the interceptor variable.
 		VarName string
+		// ParserVar is the exact parameter name used by the generated endpoint parser.
+		ParserVar string
 		// PkgName is the package name containing the interceptor type.
 		PkgName string
+		// ClientInterceptorsDeclaration is the exact client interceptor interface.
+		ClientInterceptorsDeclaration *codegen.NameDeclaration
+		// ClientEndpointWrapperDeclaration is the exact wrapper applied to one
+		// client endpoint. It is nil for service-level command data.
+		ClientEndpointWrapperDeclaration *codegen.NameDeclaration
 	}
 
 	// FlagData contains the data needed to render a command-line flag.
@@ -87,6 +104,8 @@ type (
 		Type string
 		// FullName is the flag full name e.g. "storageAddVintage"
 		FullName string
+		// PointerVar is the exact local variable that points to the parsed flag value.
+		PointerVar string
 		// Description is the flag help text.
 		Description string
 		// Required is true if the flag is required.
@@ -95,14 +114,16 @@ type (
 		Example string
 		// Default returns the default value if any.
 		Default any
+		// value describes how the flag text becomes a Go value.
+		value *flagValuePlan
 	}
 
 	// BuildFunctionData contains the data needed to generate a constructor
 	// function that builds a service method payload type from the command-line
 	// flags.
 	BuildFunctionData struct {
-		// Declaration is the package name used by the function definition and calls.
-		Declaration *codegen.NameDeclaration
+		// Name is the build payload function name.
+		Name string
 		// Description describes the payload function.
 		Description string
 		// ActualParams is the list of passed build function parameters.
@@ -146,6 +167,9 @@ type (
 		Name string
 		// TypeName is the argument Go type name.
 		TypeName string
+		// Plan contains the conversion and validation selected by Goa's transport
+		// generators. Plugins may continue to use TypeName and Validate.
+		Plan *FlagPlan
 		// TypeRef is the reference to the argument type.
 		TypeRef string
 		// FieldName is the name of the payload field initialized with the
@@ -159,11 +183,30 @@ type (
 		Example any
 		// DefaultValue is the default value of the argument if any.
 		DefaultValue any
-		// Validate contains the validation code for the argument value if any.
+		// Validate contains validation code kept for plugins built against the
+		// released CLI data. It cannot be used with Plan.
+		//
+		// Deprecated: Goa transport generators use Plan so checks receive the
+		// exact parsed value name. Plugins may continue to use Validate.
 		Validate string
 		// OmitField if true generates the flag without a corresponding payload
 		// builder field.
 		OmitField bool
+	}
+
+	// FlagPlan contains the conversion and validation choices made by Goa's
+	// transport generators.
+	FlagPlan struct {
+		value      *flagValuePlan
+		validation func(string) string
+	}
+
+	// flagValuePlan records how command-line text becomes one generated Go value.
+	flagValuePlan struct {
+		kind     expr.Kind
+		typeName string
+		typeRef  string
+		alias    bool
 	}
 
 	// FieldData contains the data needed to generate the code that initializes a
@@ -201,12 +244,33 @@ type (
 		// Args is the list of arguments for the constructor.
 		Args []*codegen.InitArgData
 	}
+
+	// conversionData describes the Go value produced from command-line flag text.
+	conversionData struct {
+		code          string
+		value         string
+		declaresError bool
+		canError      bool
+	}
+
+	// conversionVariableNames contains local names used while parsing one flag.
+	conversionVariableNames struct {
+		error     string
+		parsed    string
+		converted string
+	}
+
+	// parserFlagsData gives the shared flag template its commands and the fixed
+	// local names chosen for the surrounding endpoint parser.
+	parserFlagsData struct {
+		Commands  []*CommandData
+		Variables *ParserVariablesData
+	}
 )
 
 // BuildCommandData builds the data needed by CLI code generators to render the
-// parsing of the service command. clientPkgName is the frozen qualifier for
-// the generated transport client package.
-func BuildCommandData(data *service.Data, clientPkgName string) *CommandData {
+// parsing of the service command.
+func BuildCommandData(data *service.Data) *CommandData {
 	description := data.Description
 	if description == "" {
 		description = fmt.Sprintf("Make requests to the %q service", data.Name)
@@ -215,17 +279,18 @@ func BuildCommandData(data *service.Data, clientPkgName string) *CommandData {
 	var interceptors *InterceptorData
 	if len(data.ClientInterceptors) > 0 {
 		interceptors = &InterceptorData{
-			VarName: codegen.Goify(data.Name, false) + "Inter",
-			PkgName: data.PkgName,
+			VarName:                       codegen.Goify(data.Name, false) + "Inter",
+			PkgName:                       data.PkgName,
+			ClientInterceptorsDeclaration: data.ClientInterceptorsDeclaration,
 		}
 	}
 
 	return &CommandData{
 		ServiceName:  data.Name,
-		Name:         codegen.KebabCase(data.Name),
+		Name:         codegen.KebabCase(data.PathName),
 		VarName:      codegen.Goify(data.Name, false),
 		Description:  description,
-		PkgName:      clientPkgName,
+		PkgName:      data.PkgName + "c",
 		Interceptors: interceptors,
 	}
 }
@@ -241,54 +306,30 @@ func BuildSubcommandData(data *service.Data, m *service.MethodData, buildFunctio
 		description = fmt.Sprintf("Make request to the %q endpoint", m.Name)
 	}
 
-	var conversion string
+	var conversionFlag *FlagData
 	if m.Payload != "" && buildFunction == nil && len(flags) > 0 {
-		// No build function, just convert the arg to the body type
-		var convPre, convSuff string
-		target := "data"
-		if flagType(m.Payload) == "JSON" {
-			target = "val"
-			convPre = fmt.Sprintf("var val %s\n", m.Payload)
-			convSuff = "\ndata = val"
-		}
-		conv, _, check := conversionCode(
-			"*"+flags[0].FullName+"Flag",
-			target,
-			m.Payload,
-			false,
-		)
-		conversion = convPre + conv + convSuff
-		if check {
-			conversion = "var err error\n" + conversion
-			conversion += "\nif err != nil {\n"
-			if flagType(m.Payload) == "JSON" {
-				conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", err, %q)`,
-					flags[0].FullName+"Flag", flags[0].Example)
-			} else {
-				conversion += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid value for %s, must be %s")`,
-					flags[0].FullName+"Flag", flags[0].Type)
-			}
-			conversion += "\n}"
-		}
+		conversionFlag = flags[0]
 	}
 
 	var interceptors *InterceptorData
 	if len(m.ClientInterceptors) > 0 {
 		interceptors = &InterceptorData{
-			VarName: codegen.Goify(data.Name, false) + "Inter",
-			PkgName: data.PkgName,
+			VarName:                          codegen.Goify(data.Name, false) + "Inter",
+			PkgName:                          data.PkgName,
+			ClientInterceptorsDeclaration:    data.ClientInterceptorsDeclaration,
+			ClientEndpointWrapperDeclaration: m.ClientEndpointWrapperDeclaration,
 		}
 	}
 	sub := &SubcommandData{
-		MethodName:    m.Name,
-		Name:          name,
-		FullName:      fullName,
-		Description:   description,
-		Flags:         flags,
-		MethodVarName: m.VarName,
-		BuildFunction: buildFunction,
-		Conversion:    conversion,
-		Interceptors:  interceptors,
+		MethodName:     m.Name,
+		Name:           name,
+		FullName:       fullName,
+		Description:    description,
+		Flags:          flags,
+		MethodVarName:  m.VarName,
+		BuildFunction:  buildFunction,
+		conversionFlag: conversionFlag,
+		Interceptors:   interceptors,
 	}
 	generateExample(sub, data.Name)
 
@@ -302,14 +343,44 @@ func EndpointParserFile(
 	path, title string,
 	specs []*codegen.ImportSpec,
 	data []*CommandData,
-	declarations *ParserDeclarations,
 	parseSection *codegen.SectionTemplate,
+) *codegen.File {
+	return endpointParserFile(path, title, specs, data, parseSection, releasedUsageCommandsName, releasedUsageExamplesName)
+}
+
+// EndpointParserFile returns a parser file that uses the function names chosen
+// for this parser plan.
+func (p *ParserPlan) EndpointParserFile(
+	path, title string,
+	specs []*codegen.ImportSpec,
+	data []*CommandData,
+	parseSection *codegen.SectionTemplate,
+) *codegen.File {
+	return endpointParserFile(
+		path,
+		title,
+		specs,
+		data,
+		parseSection,
+		p.Declarations.UsageCommands.Name,
+		p.Declarations.UsageExamples.Name,
+	)
+}
+
+// endpointParserFile assembles one parser file with the supplied help function
+// names.
+func endpointParserFile(
+	path, title string,
+	specs []*codegen.ImportSpec,
+	data []*CommandData,
+	parseSection *codegen.SectionTemplate,
+	usageCommandsName, usageExamplesName func() string,
 ) *codegen.File {
 	sections := make([]*codegen.SectionTemplate, 0, 4+len(data))
 	sections = append(sections,
 		codegen.Header(title, "cli", specs),
-		UsageCommands(data, declarations.UsageCommands),
-		UsageExamples(data, declarations.UsageExamples),
+		usageCommands(data, usageCommandsName),
+		usageExamples(data, usageExamplesName),
 		parseSection,
 	)
 	for _, cmd := range data {
@@ -338,20 +409,33 @@ func MakeFlags(
 		check  bool
 	)
 	for i, arg := range args {
-		f := NewFlagData(svcn, m.Name, arg.Name, arg.TypeName, arg.Description, arg.Required, arg.Example, arg.DefaultValue)
+		value := (*flagValuePlan)(nil)
+		validation := func(string) string {
+			return arg.Validate
+		}
+		if arg.Plan == nil {
+			value = legacyFlagValuePlan(arg.TypeName)
+		} else {
+			if arg.Validate != "" {
+				panic("CLI flag validation cannot use both Validate and Plan")
+			}
+			value = arg.Plan.value
+			validation = arg.Plan.validation
+		}
+		f := newFlagData(svcn, m.Name, arg.Name, value, arg.Description, arg.Required, arg.Example, arg.DefaultValue)
 		flags[i] = f
 		params[i] = f.FullName
 		if arg.OmitField {
 			continue
 		}
-		code, chek := FieldLoadCode(f, arg.Name, arg.TypeName, arg.Validate, arg.DefaultValue, payload, payloadRef)
+		code, chek := fieldLoadCode(f, arg.Name, value, validation, arg.DefaultValue, payload, payloadRef)
 		check = check || chek
 		tn := arg.TypeRef
-		if f.Type == "JSON" {
+		if value.isJSON() {
 			// We need to declare the variable without
 			// a pointer to be able to unmarshal the JSON
 			// using its address.
-			tn = arg.TypeName
+			tn = value.typeName
 		}
 		fdata = append(fdata, &FieldData{
 			Name:    arg.Name,
@@ -362,6 +446,7 @@ func MakeFlags(
 	}
 
 	return flags, &BuildFunctionData{
+		Name:         "Build" + m.VarName + "Payload",
 		ActualParams: params,
 		FormalParams: params,
 		ServiceName:  svcn,
@@ -389,7 +474,13 @@ func PayloadBuildersFile(path, title string, specs []*codegen.ImportSpec, data *
 
 // UsageCommands builds a section template that generates a help text showing
 // the list of allowed commands and sub-commands.
-func UsageCommands(data []*CommandData, declaration *codegen.NameDeclaration) *codegen.SectionTemplate {
+func UsageCommands(data []*CommandData) *codegen.SectionTemplate {
+	return usageCommands(data, releasedUsageCommandsName)
+}
+
+// usageCommands renders command help with the function name chosen for its
+// generated package.
+func usageCommands(data []*CommandData, name func() string) *codegen.SectionTemplate {
 	usages := make([]string, len(data))
 	for i, cmd := range data {
 		subs := make([]string, len(cmd.Subcommands))
@@ -406,16 +497,22 @@ func UsageCommands(data []*CommandData, declaration *codegen.NameDeclaration) *c
 
 	return &codegen.SectionTemplate{
 		Source: cliTemplates.Read(usageCommandsT),
-		Data: struct {
-			Declaration *codegen.NameDeclaration
-			Usages      []string
-		}{declaration, usages},
+		Data:   usages,
+		FuncMap: map[string]any{
+			"usageName": name,
+		},
 	}
 }
 
 // UsageExamples builds a section template that generates a help text showing
 // a valid invocation of the CLI tool.
-func UsageExamples(data []*CommandData, declaration *codegen.NameDeclaration) *codegen.SectionTemplate {
+func UsageExamples(data []*CommandData) *codegen.SectionTemplate {
+	return usageExamples(data, releasedUsageExamplesName)
+}
+
+// usageExamples renders example help with the function name chosen for its
+// generated package.
+func usageExamples(data []*CommandData, name func() string) *codegen.SectionTemplate {
 	var examples []string
 	for i, cmd := range data {
 		if i < 5 {
@@ -425,11 +522,23 @@ func UsageExamples(data []*CommandData, declaration *codegen.NameDeclaration) *c
 
 	return &codegen.SectionTemplate{
 		Source: cliTemplates.Read(usageExamplesT),
-		Data: struct {
-			Declaration *codegen.NameDeclaration
-			Examples    []string
-		}{declaration, examples},
+		Data:   examples,
+		FuncMap: map[string]any{
+			"usageName": name,
+		},
 	}
+}
+
+// releasedUsageCommandsName returns the help function name used by the
+// released parser helper.
+func releasedUsageCommandsName() string {
+	return "UsageCommands"
+}
+
+// releasedUsageExamplesName returns the example function name used by the
+// released parser helper.
+func releasedUsageExamplesName() string {
+	return "UsageExamples"
 }
 
 // FlagsCode returns a string containing the code that parses the command-line
@@ -449,6 +558,28 @@ func FlagsCode(data []*CommandData) string {
 		panic(err)
 	}
 
+	return flagsCode.String()
+}
+
+// FlagsCode renders flag parsing with the exact local names chosen by this
+// parser plan.
+func (p *ParserPlan) FlagsCode(data []*CommandData) string {
+	if p.Variables == nil {
+		panic("CLI parser variables must be planned before rendering flags")
+	}
+	section := codegen.SectionTemplate{
+		Name:   "parse-endpoint-flags",
+		Source: cliTemplates.Read(parseFlagsPlannedT),
+		Data: &parserFlagsData{
+			Commands:  data,
+			Variables: p.Variables,
+		},
+		FuncMap: map[string]any{"printDescription": printDescription},
+	}
+	var flagsCode bytes.Buffer
+	if err := section.Write(&flagsCode); err != nil {
+		panic(err)
+	}
 	return flagsCode.String()
 }
 
@@ -476,7 +607,35 @@ func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTem
 	}
 }
 
-// NewFlagData creates a new FlagData from the given argument attributes.
+// NewFlagPlan records the conversion and validation selected for one command-
+// line flag. typeName is the concrete local type used for JSON values. typeRef
+// is the concrete non-pointer reference used for primitive casts.
+func NewFlagPlan(attribute *expr.AttributeExpr, typeName, typeRef string, validation func(string) string) *FlagPlan {
+	kind := expr.AnyKind
+	alias := expr.IsAlias(attribute.Type)
+	if custom, _ := codegen.GetMetaType(attribute); custom == "" && expr.IsPrimitive(attribute.Type) {
+		dataType := attribute.Type
+		for {
+			userType, ok := dataType.(expr.UserType)
+			if !ok {
+				break
+			}
+			dataType = userType.Attribute().Type
+		}
+		kind = dataType.Kind()
+	}
+	return &FlagPlan{
+		value: &flagValuePlan{
+			kind:     kind,
+			typeName: typeName,
+			typeRef:  typeRef,
+			alias:    alias,
+		},
+		validation: validation,
+	}
+}
+
+// NewFlagData creates flag data from the released string type description.
 //
 // svcn is the service name
 // en is the endpoint name
@@ -486,102 +645,139 @@ func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTem
 // required determines if the flag is required
 // example is an example value for the flag
 func NewFlagData(svcn, en, name, typeName, description string, required bool, example, def any) *FlagData {
-	ex := jsonExample(example)
-	fn := goifyTerms(svcn, en, name)
-	return &FlagData{
-		Name:        codegen.KebabCase(name),
-		VarName:     codegen.Goify(name, false),
-		Type:        flagType(typeName),
-		FullName:    fn,
-		Description: description,
-		Required:    required,
-		Example:     ex,
-		Default:     def,
-	}
+	return newFlagData(svcn, en, name, legacyFlagValuePlan(typeName), description, required, example, def)
+}
+
+// NewFlagDataForPlan creates flag data from the given conversion and
+// validation choices.
+func NewFlagDataForPlan(svcn, en, name string, plan *FlagPlan, description string, required bool, example, def any) *FlagData {
+	return newFlagData(svcn, en, name, plan.value, description, required, example, def)
 }
 
 // FieldLoadCode returns the code used in the build payload function that
 // initializes one of the payload object fields. It returns the initialization
 // code and a boolean indicating whether the code requires an "err" variable.
 func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultValue any, payload expr.DataType, payloadRef string) (string, bool) {
+	var validation func(string) string
+	if validate != "" {
+		validation = func(string) string {
+			return validate
+		}
+	}
+	return fieldLoadCode(f, argName, legacyFlagValuePlan(argTypeName), validation, defaultValue, payload, payloadRef)
+}
+
+// newFlagData creates flag data from the conversion selected during planning.
+func newFlagData(svcn, en, name string, value *flagValuePlan, description string, required bool, example, def any) *FlagData {
+	ex := jsonExample(example)
+	fn := goifyTerms(svcn, en, name)
+	return &FlagData{
+		Name:        codegen.KebabCase(name),
+		VarName:     codegen.Goify(name, false),
+		Type:        value.flagType(),
+		FullName:    fn,
+		Description: description,
+		Required:    required,
+		Example:     ex,
+		Default:     def,
+		value:       value,
+	}
+}
+
+// legacyFlagValuePlan reproduces the released string-based flag conversion.
+func legacyFlagValuePlan(typeName string) *flagValuePlan {
+	kind := expr.AnyKind
+	switch typeName {
+	case codegen.GoNativeTypeName(expr.Boolean):
+		kind = expr.BooleanKind
+	case codegen.GoNativeTypeName(expr.Int):
+		kind = expr.IntKind
+	case codegen.GoNativeTypeName(expr.Int32):
+		kind = expr.Int32Kind
+	case codegen.GoNativeTypeName(expr.Int64):
+		kind = expr.Int64Kind
+	case codegen.GoNativeTypeName(expr.UInt):
+		kind = expr.UIntKind
+	case codegen.GoNativeTypeName(expr.UInt32):
+		kind = expr.UInt32Kind
+	case codegen.GoNativeTypeName(expr.UInt64):
+		kind = expr.UInt64Kind
+	case codegen.GoNativeTypeName(expr.Float32):
+		kind = expr.Float32Kind
+	case codegen.GoNativeTypeName(expr.Float64):
+		kind = expr.Float64Kind
+	case codegen.GoNativeTypeName(expr.String):
+		kind = expr.StringKind
+	case codegen.GoNativeTypeName(expr.Bytes):
+		kind = expr.BytesKind
+	}
+	return &flagValuePlan{
+		kind:     kind,
+		typeName: typeName,
+		typeRef:  typeName,
+	}
+}
+
+// fieldLoadCode writes a field conversion from its complete generation plan.
+func fieldLoadCode(
+	f *FlagData,
+	argName string,
+	value *flagValuePlan,
+	validation func(string) string,
+	defaultValue any,
+	payload expr.DataType,
+	payloadRef string,
+) (string, bool) {
 	var (
-		code    string
-		declErr bool
-		startIf string
-		endIf   string
+		code             string
+		validationTarget string
+		declErr          bool
+		startIf          string
+		endIf            string
 	)
 	if !f.Required {
 		startIf = fmt.Sprintf("if %s != \"\" {\n", f.FullName)
 		endIf = "\n}"
 	}
-	if argTypeName == codegen.GoNativeTypeName(expr.String) {
-		ref := "&"
-		if f.Required || defaultValue != nil {
-			ref = ""
-		}
-		code = argName + " = " + ref + f.FullName
-		declErr = validate != ""
-	} else {
-		var checkErr bool
-		code, declErr, checkErr = conversionCode(f.FullName, argName, argTypeName, !f.Required && defaultValue == nil)
-		if checkErr {
-			code += "\nif err != nil {\n"
-			nilVal := "nil"
-			if expr.IsPrimitive(payload) {
-				code += fmt.Sprintf("var zero %s\n", payloadRef)
-				nilVal = "zero"
-			}
-			if flagType(argTypeName) == "JSON" {
-				code += fmt.Sprintf(`return %s, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", err, %q)`,
-					nilVal, argName, f.Example)
-			} else {
-				code += fmt.Sprintf(`return %s, fmt.Errorf("invalid value for %s, must be %s")`,
-					nilVal, argName, f.Type)
-			}
-			code += "\n}"
-		}
-	}
-	if validate != "" {
-		nilCheck := "if " + argName + " != nil {"
-		if strings.HasPrefix(validate, nilCheck) {
-			// hackety hack... the validation code is generated for the client and needs to
-			// account for the fact that the field could be nil in this case. We are reusing
-			// that code to validate a CLI flag which can never be nil.  Lint tools complain
-			// about that so remove the if statements. Ideally we'd have a better way to do
-			// this but that requires a lot of changes and the added complexity might not be
-			// worth it.
-			var lines []string
-			ls := strings.Split(validate, "\n")
-			for i := 1; i < len(ls)-1; i++ {
-				if ls[i+1] == nilCheck {
-					i++ // skip both closing brace on previous line and check
-					continue
-				}
-				lines = append(lines, ls[i])
-			}
-			validate = strings.Join(lines, "\n")
-		}
-		code += "\n" + validate + "\n"
+	pointer := value.kind != expr.BytesKind && !value.isJSON() && !f.Required && defaultValue == nil
+	conversion := conversionCode(f.FullName, argName, value, pointer, conversionVariableNames{
+		error:     "err",
+		parsed:    "v",
+		converted: "val",
+	})
+	code = conversion.code
+	validationTarget = conversion.value
+	declErr = conversion.declaresError
+	if conversion.canError {
+		code += "\nif err != nil {\n"
 		nilVal := "nil"
 		if expr.IsPrimitive(payload) {
 			code += fmt.Sprintf("var zero %s\n", payloadRef)
 			nilVal = "zero"
 		}
-		code += fmt.Sprintf("if err != nil {\n\treturn %s, err\n}", nilVal)
+		if value.isJSON() {
+			code += fmt.Sprintf(`return %s, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", err, %q)`,
+				nilVal, argName, f.Example)
+		} else {
+			code += fmt.Sprintf(`return %s, fmt.Errorf("invalid value for %s, must be %s")`,
+				nilVal, argName, f.Type)
+		}
+		code += "\n}"
+	}
+	if validation != nil {
+		validate := validation(validationTarget)
+		if validate != "" {
+			declErr = true
+			code += "\n" + validate + "\n"
+			nilVal := "nil"
+			if expr.IsPrimitive(payload) {
+				code += fmt.Sprintf("var zero %s\n", payloadRef)
+				nilVal = "zero"
+			}
+			code += fmt.Sprintf("if err != nil {\n\treturn %s, err\n}", nilVal)
+		}
 	}
 	return fmt.Sprintf("%s%s%s", startIf, code, endIf), declErr
-}
-
-// flagType calculates the type of a flag
-func flagType(tname string) string {
-	switch tname {
-	case boolN, intN, int32N, int64N, uintN, uint32N, uint64N, float32N, float64N, stringN:
-		return strings.ToUpper(tname)
-	case bytesN:
-		return "STRING"
-	default: // Any, Array, Map, Object, User
-		return "JSON"
-	}
 }
 
 // jsonExample generates a json example
@@ -626,96 +822,171 @@ func jsonExample(v any) string {
 	return ex
 }
 
-var (
-	boolN    = codegen.GoNativeTypeName(expr.Boolean)
-	intN     = codegen.GoNativeTypeName(expr.Int)
-	int32N   = codegen.GoNativeTypeName(expr.Int32)
-	int64N   = codegen.GoNativeTypeName(expr.Int64)
-	uintN    = codegen.GoNativeTypeName(expr.UInt)
-	uint32N  = codegen.GoNativeTypeName(expr.UInt32)
-	uint64N  = codegen.GoNativeTypeName(expr.UInt64)
-	float32N = codegen.GoNativeTypeName(expr.Float32)
-	float64N = codegen.GoNativeTypeName(expr.Float64)
-	stringN  = codegen.GoNativeTypeName(expr.String)
-	bytesN   = codegen.GoNativeTypeName(expr.Bytes)
-)
-
-// conversionCode produces the code that converts the string contained in the
-// variable named from to the value stored in the variable "to" of type
-// typeName. The second return value indicates whether the "err" variable must
-// be declared prior to the conversion code being rendered. The last return
-// value indicates whether the generated code can produce errors (i.e.
-// initialize the err variable).
-func conversionCode(from, to, typeName string, pointer bool) (string, bool, bool) {
-	var (
-		parse string
-		cast  string
-
-		target   = to
-		needCast = typeName != stringN && typeName != bytesN && flagType(typeName) != "JSON"
-		declErr  = true
-		checkErr = true
-		decl     = ""
-	)
-	if needCast && pointer {
-		target = "val"
-		decl = ":"
+// directPayloadConversion writes the primitive payload conversion after the
+// parser has chosen the exact flag pointer variable used by this method.
+func directPayloadConversion(flag *FlagData, variables *ParserVariablesData) string {
+	var prefix, suffix string
+	target := variables.Data
+	if flag.value.isJSON() {
+		target = variables.ConvertedValue
+		prefix = fmt.Sprintf("var %s %s\n", variables.ConvertedValue, flag.value.typeName)
+		suffix = fmt.Sprintf("\n%s = %s", variables.Data, variables.ConvertedValue)
 	}
-	switch typeName {
-	case boolN:
-		if pointer {
-			parse = fmt.Sprintf("var %s bool\n", target)
+	converted := conversionCode("*"+flag.PointerVar, target, flag.value, false, conversionVariableNames{
+		error:     variables.Error,
+		parsed:    variables.ParsedValue,
+		converted: variables.ConvertedValue,
+	})
+	code := prefix + converted.code + suffix
+	if !converted.canError {
+		return code
+	}
+	code = fmt.Sprintf("var %s error\n%s\nif %s != nil {\n", variables.Error, code, variables.Error)
+	if flag.value.isJSON() {
+		code += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid JSON for %s, \nerror: %%s, \nexample of valid JSON:\n%%s", %s, %q)`,
+			flag.PointerVar, variables.Error, flag.Example)
+	} else {
+		code += fmt.Sprintf(`return nil, nil, fmt.Errorf("invalid value for %s, must be %s")`,
+			flag.PointerVar, flag.Type)
+	}
+	return code + "\n}"
+}
+
+// conversionCode describes the code and concrete Go value produced from the
+// flag text in from. The result also reports how the conversion uses err.
+func conversionCode(from, to string, value *flagValuePlan, pointer bool, variables conversionVariableNames) conversionData {
+	var parse string
+	switch value.kind {
+	case expr.BooleanKind:
+		if !value.alias {
+			return directParsedConversion(to, value.typeRef, fmt.Sprintf("strconv.ParseBool(%s)", from), pointer, variables)
 		}
-		parse += fmt.Sprintf("%s, err = strconv.ParseBool(%s)", target, from)
-	case intN:
-		parse = fmt.Sprintf("var v int64\nv, err = strconv.ParseInt(%s, 10, strconv.IntSize)", from)
-		cast = fmt.Sprintf("%s %s= int(v)", target, decl)
-	case int32N:
-		parse = fmt.Sprintf("var v int64\nv, err = strconv.ParseInt(%s, 10, 32)", from)
-		cast = fmt.Sprintf("%s %s= int32(v)", target, decl)
-	case int64N:
-		parse = fmt.Sprintf("%s, err %s= strconv.ParseInt(%s, 10, 64)", target, decl, from)
-		declErr = decl == ""
-	case uintN:
-		parse = fmt.Sprintf("var v uint64\nv, err = strconv.ParseUint(%s, 10, strconv.IntSize)", from)
-		cast = fmt.Sprintf("%s %s= uint(v)", target, decl)
-	case uint32N:
-		parse = fmt.Sprintf("var v uint64\nv, err = strconv.ParseUint(%s, 10, 32)", from)
-		cast = fmt.Sprintf("%s %s= uint32(v)", target, decl)
-	case uint64N:
-		parse = fmt.Sprintf("%s, err %s= strconv.ParseUint(%s, 10, 64)", target, decl, from)
-		declErr = decl == ""
-	case float32N:
-		parse = fmt.Sprintf("var v float64\nv, err = strconv.ParseFloat(%s, 32)", from)
-		cast = fmt.Sprintf("%s %s= float32(v)", target, decl)
-	case float64N:
-		parse = fmt.Sprintf("%s, err %s= strconv.ParseFloat(%s, 64)", target, decl, from)
-		declErr = decl == ""
-	case stringN:
-		parse = fmt.Sprintf("%s %s= %s", target, decl, from)
-		declErr = false
-		checkErr = false
-	case bytesN:
-		parse = fmt.Sprintf("%s %s= []byte(%s)", target, decl, from)
-		declErr = false
-		checkErr = false
+		parse = fmt.Sprintf("var %s bool\n%s, %s = strconv.ParseBool(%s)", variables.parsed, variables.parsed, variables.error, from)
+	case expr.IntKind, expr.Int32Kind, expr.Int64Kind:
+		bits := "64"
+		if value.kind == expr.IntKind {
+			bits = "strconv.IntSize"
+		} else if value.kind == expr.Int32Kind {
+			bits = "32"
+		}
+		if value.kind == expr.Int64Kind && !value.alias {
+			return directParsedConversion(to, value.typeRef, fmt.Sprintf("strconv.ParseInt(%s, 10, 64)", from), pointer, variables)
+		}
+		parse = fmt.Sprintf("var %s int64\n%s, %s = strconv.ParseInt(%s, 10, %s)", variables.parsed, variables.parsed, variables.error, from, bits)
+	case expr.UIntKind, expr.UInt32Kind, expr.UInt64Kind:
+		bits := "64"
+		if value.kind == expr.UIntKind {
+			bits = "strconv.IntSize"
+		} else if value.kind == expr.UInt32Kind {
+			bits = "32"
+		}
+		if value.kind == expr.UInt64Kind && !value.alias {
+			return directParsedConversion(to, value.typeRef, fmt.Sprintf("strconv.ParseUint(%s, 10, 64)", from), pointer, variables)
+		}
+		parse = fmt.Sprintf("var %s uint64\n%s, %s = strconv.ParseUint(%s, 10, %s)", variables.parsed, variables.parsed, variables.error, from, bits)
+	case expr.Float32Kind, expr.Float64Kind:
+		bits := "64"
+		if value.kind == expr.Float32Kind {
+			bits = "32"
+		}
+		if value.kind == expr.Float64Kind && !value.alias {
+			return directParsedConversion(to, value.typeRef, fmt.Sprintf("strconv.ParseFloat(%s, 64)", from), pointer, variables)
+		}
+		parse = fmt.Sprintf("var %s float64\n%s, %s = strconv.ParseFloat(%s, %s)", variables.parsed, variables.parsed, variables.error, from, bits)
+	case expr.StringKind:
+		converted := from
+		if value.alias {
+			converted = fmt.Sprintf("%s(%s)", value.typeRef, from)
+		}
+		if pointer && !value.alias {
+			return conversionData{code: fmt.Sprintf("%s = &%s", to, from), value: from}
+		}
+		code, target := assignConvertedValue(to, converted, pointer, variables.converted)
+		return conversionData{code: code, value: target}
+	case expr.BytesKind:
+		converted := fmt.Sprintf("[]byte(%s)", from)
+		if value.alias {
+			converted = fmt.Sprintf("%s(%s)", value.typeRef, from)
+		}
+		return conversionData{code: fmt.Sprintf("%s = %s", to, converted), value: to}
 	default:
-		parse = fmt.Sprintf("err = json.Unmarshal([]byte(%s), &%s)", from, target)
+		parse = fmt.Sprintf("%s = json.Unmarshal([]byte(%s), &%s)", variables.error, from, to)
+		return conversionData{code: parse, value: to, declaresError: true, canError: true}
 	}
-	if !needCast {
-		return parse, declErr, checkErr
+	converted := fmt.Sprintf("%s(%s)", value.typeRef, variables.parsed)
+	assignment, target := assignConvertedValue(to, converted, pointer, variables.converted)
+	return conversionData{
+		code:          parse + "\n" + assignment,
+		value:         target,
+		declaresError: true,
+		canError:      true,
 	}
-	if cast != "" {
-		parse = parse + "\n" + cast
-	}
-	if to != target {
-		ref := ""
-		if pointer {
-			ref = "&"
+}
+
+// directParsedConversion writes a parser result directly into its final value
+// when the parser already returns the generated Go type.
+func directParsedConversion(target, typeRef, parser string, pointer bool, variables conversionVariableNames) conversionData {
+	if !pointer {
+		return conversionData{
+			code:          fmt.Sprintf("%s, %s = %s", target, variables.error, parser),
+			value:         target,
+			declaresError: true,
+			canError:      true,
 		}
-		parse += fmt.Sprintf("\n%s = %s%s", to, ref, target)
 	}
-	return parse, declErr, checkErr
+	return conversionData{
+		code:          fmt.Sprintf("var %s %s\n%s, %s = %s\n%s = &%s", variables.converted, typeRef, variables.converted, variables.error, parser, target, variables.converted),
+		value:         variables.converted,
+		declaresError: true,
+		canError:      true,
+	}
+}
+
+// assignConvertedValue writes a converted scalar into its final local and
+// returns the concrete value expression used by validation.
+func assignConvertedValue(target, converted string, pointer bool, valueVariable string) (string, string) {
+	if !pointer {
+		return fmt.Sprintf("%s = %s", target, converted), target
+	}
+	return fmt.Sprintf("%s := %s\n%s = &%s", valueVariable, converted, target, valueVariable), valueVariable
+}
+
+// flagType returns the command-line type shown in help and conversion errors.
+func (p *flagValuePlan) flagType() string {
+	switch p.kind {
+	case expr.BooleanKind:
+		return "BOOL"
+	case expr.IntKind:
+		return "INT"
+	case expr.Int32Kind:
+		return "INT32"
+	case expr.Int64Kind:
+		return "INT64"
+	case expr.UIntKind:
+		return "UINT"
+	case expr.UInt32Kind:
+		return "UINT32"
+	case expr.UInt64Kind:
+		return "UINT64"
+	case expr.Float32Kind:
+		return "FLOAT32"
+	case expr.Float64Kind:
+		return "FLOAT64"
+	case expr.StringKind, expr.BytesKind:
+		return "STRING"
+	default:
+		return "JSON"
+	}
+}
+
+// isJSON reports whether flag text uses JSON decoding.
+func (p *flagValuePlan) isJSON() bool {
+	return p.kind != expr.BooleanKind && p.kind != expr.IntKind &&
+		p.kind != expr.Int32Kind && p.kind != expr.Int64Kind &&
+		p.kind != expr.UIntKind && p.kind != expr.UInt32Kind &&
+		p.kind != expr.UInt64Kind && p.kind != expr.Float32Kind &&
+		p.kind != expr.Float64Kind && p.kind != expr.StringKind &&
+		p.kind != expr.BytesKind
 }
 
 // goifyTerms makes valid go identifiers out of the supplied terms
@@ -730,10 +1001,19 @@ func goifyTerms(terms ...string) string {
 	return res
 }
 
+// printDescription indents each line embedded in generated Go code while
+// keeping blank lines free of whitespace.
 func printDescription(desc string) string {
-	res := strings.ReplaceAll(desc, "`", "`+\"`\"+`")
-	res = strings.ReplaceAll(res, "\n", "\n\t")
-	return res
+	desc = strings.TrimRight(desc, " \t\r\n")
+	lines := strings.Split(strings.ReplaceAll(desc, "`", "`+\"`\"+`"), "\n")
+	for i := 1; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) == "" {
+			lines[i] = ""
+			continue
+		}
+		lines[i] = "\t" + lines[i]
+	}
+	return strings.Join(lines, "\n")
 }
 
 func generateExample(sub *SubcommandData, svc string) {

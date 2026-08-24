@@ -462,6 +462,20 @@ var EndpointPayloadMissingRequired = func() {
 	})
 }
 
+var EndpointMultipartWithoutBody = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Payload(func() {
+				Attribute("id", String)
+			})
+			HTTP(func() {
+				POST("/{id}")
+				MultipartRequest()
+			})
+		})
+	})
+}
+
 var StreamingEndpointRequestBody = func() {
 	var PT = Type("Payload", func() {
 		Attribute("foo", String)
@@ -622,6 +636,35 @@ var GRPCEndpointWithAnyType = func() {
 			Result(CollectionOf(InvalidRT))
 			Error("invalid_error_type", Any)
 			Error("invalid_map_type", MapOf(Int, Any))
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointWithMixedResults = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Result(String)
+			StreamingResult(Int)
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointWithMatchingMixedResults = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			Result(String)
+			StreamingResult(String)
+			GRPC(func() {})
+		})
+	})
+}
+
+var GRPCEndpointWithStreamingResult = func() {
+	Service("Service", func() {
+		Method("Method", func() {
+			StreamingResult(String)
 			GRPC(func() {})
 		})
 	})

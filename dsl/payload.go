@@ -88,9 +88,9 @@ func Payload(val any, args ...any) {
 //
 // The arguments to a StreamingPayload DSL is same as the Payload DSL.
 //
-// StreamingPayload requires a transport that supports client-to-server streaming
-// such as gRPC or WebSockets. When using HTTP or JSON-RPC transports, methods
-// with StreamingPayload must use WebSockets (via GET endpoints).
+// StreamingPayload requires a transport that supports client-to-server
+// streaming. gRPC supports it directly. Ordinary HTTP methods use a WebSocket
+// through a GET endpoint. JSON-RPC methods do not support StreamingPayload.
 // For gRPC methods that define both Payload and StreamingPayload, the ordinary
 // method payload is sent once as the initial typed stream frame and the
 // StreamingPayload values are sent as subsequent stream item frames.
@@ -175,7 +175,7 @@ func methodDSL(m *expr.MethodExpr, suffix string, p any, args ...any) *expr.Attr
 			// Do not duplicate type if it is not customized
 			return &expr.AttributeExpr{Type: actual}
 		}
-		dupped := expr.Dup(actual)
+		dupped := expr.DupForDSL(actual)
 		att = &expr.AttributeExpr{Type: dupped}
 		if f, ok := args[len(args)-1].(func()); ok {
 			numreqs := 0

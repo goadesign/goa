@@ -79,8 +79,8 @@ type (
 		CompositeExpr
 		// ID returns the identifier for the user type.
 		ID() string
-		// Origin returns the earliest comparable user type declaration from
-		// which this value was copied.
+		// Origin returns the first user type declaration from which this value
+		// was copied. An authored value returns itself.
 		Origin() UserType
 		// Rename changes the type name to the given value.
 		Rename(string)
@@ -185,6 +185,7 @@ var Empty = &UserTypeExpr{
 	AttributeExpr: &AttributeExpr{
 		Description: "Empty represents empty values",
 		Type:        &Object{},
+		finalized:   true,
 	},
 }
 

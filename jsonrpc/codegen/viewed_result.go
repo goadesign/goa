@@ -1,7 +1,7 @@
 // This file connects each JSON-RPC result view to the HTTP JSON body and
-// service constructor chosen for that endpoint. Unary calls, SSE streams, and
-// WebSocket streams use the same generated functions, so clients decode the
-// same JSON shape that servers encode.
+// service constructor chosen for that endpoint. Unary calls and SSE streams
+// use the same generated functions, so clients decode the same JSON shape that
+// servers encode.
 package codegen
 
 import (
@@ -34,6 +34,7 @@ type (
 		ServiceResultConstructor string
 		ServiceViewedConstructor string
 		ServicePkg               string
+		ViewedValue              string
 		ResultRef                string
 		IsCollection             bool
 		HasResponseMetadata      bool
@@ -171,6 +172,10 @@ func viewedResultData(service *servicePlan, endpoint *endpointPlan) *viewedResul
 			Cookies:    branch.cookies,
 		}
 	}
+	localScope := codegen.NewNameScope()
+	localScope.Unique(representation.servicePkg)
+	localScope.Unique(viewed.ViewsPkg)
+
 	return &viewedResultTemplateData{
 		ServiceName:              endpoint.ServiceName,
 		MethodName:               endpoint.Method.Name,
@@ -189,6 +194,7 @@ func viewedResultData(service *servicePlan, endpoint *endpointPlan) *viewedResul
 		ServiceResultConstructor: viewed.ResultInit.Name(),
 		ServiceViewedConstructor: viewed.Init.Name(),
 		ServicePkg:               representation.servicePkg,
+		ViewedValue:              localScope.Unique("viewed"),
 		ResultRef:                representation.resultRef,
 		IsCollection:             viewed.IsCollection,
 		HasResponseMetadata:      representationHasMetadata(representation),

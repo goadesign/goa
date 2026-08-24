@@ -1,6 +1,7 @@
-// NewMethodBodyQueryUserValidatePayload builds a ServiceBodyQueryUserValidate
-// service MethodBodyQueryUserValidate endpoint payload.
-func NewMethodBodyQueryUserValidatePayload(body *MethodBodyQueryUserValidateRequestBody, b string) *servicebodyqueryuservalidate.PayloadType {
+// NewMethodBodyQueryUserValidatePayloadType builds a
+// ServiceBodyQueryUserValidate service MethodBodyQueryUserValidate endpoint
+// payload.
+func NewMethodBodyQueryUserValidatePayloadType(body *MethodBodyQueryUserValidateRequestBody, b string) *servicebodyqueryuservalidate.PayloadType {
 	v := &servicebodyqueryuservalidate.PayloadType{
 		A: *body.A,
 	}

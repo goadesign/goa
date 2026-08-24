@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/expr/testdata"
 )
@@ -80,11 +81,6 @@ func TestMethodExprFinalizeInheritsBearerFormat(t *testing.T) {
 		},
 	}
 
-	root := expr.Root
-	t.Cleanup(func() {
-		expr.Root = root
-	})
-
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			scheme := &expr.SchemeExpr{
@@ -96,7 +92,10 @@ func TestMethodExprFinalizeInheritsBearerFormat(t *testing.T) {
 			}
 			req := &expr.SecurityExpr{Schemes: []*expr.SchemeExpr{scheme}}
 			api, service := tc.setup(req)
-			expr.Root = &expr.RootExpr{API: api}
+			designAPI := expr.NewAPIExpr("test", func() {})
+			designAPI.Requirements = api.Requirements
+			design := &expr.RootExpr{API: designAPI, Services: []*expr.ServiceExpr{service}}
+			design.WalkSets(func(eval.ExpressionSet) {})
 
 			method := &expr.MethodExpr{
 				Name:    "Method",
@@ -114,27 +113,22 @@ func TestMethodExprFinalizeInheritsBearerFormat(t *testing.T) {
 }
 
 func TestMethodExprFinalizePreservesNoSecurityMarker(t *testing.T) {
-	root := expr.Root
-	t.Cleanup(func() {
-		expr.Root = root
-	})
-
-	expr.Root = &expr.RootExpr{
-		API: &expr.APIExpr{
-			Requirements: []*expr.SecurityExpr{{
-				Schemes: []*expr.SchemeExpr{{
-					Kind:       expr.JWTKind,
-					SchemeName: "jwt",
-				}},
-			}},
-		},
-	}
+	service := &expr.ServiceExpr{Name: "Service"}
+	api := expr.NewAPIExpr("test", func() {})
+	api.Requirements = []*expr.SecurityExpr{{
+		Schemes: []*expr.SchemeExpr{{
+			Kind:       expr.JWTKind,
+			SchemeName: "jwt",
+		}},
+	}}
+	design := &expr.RootExpr{API: api, Services: []*expr.ServiceExpr{service}}
+	design.WalkSets(func(eval.ExpressionSet) {})
 	method := &expr.MethodExpr{
 		Name: "Health",
 		Requirements: []*expr.SecurityExpr{{
 			Schemes: []*expr.SchemeExpr{{Kind: expr.NoKind}},
 		}},
-		Service: &expr.ServiceExpr{Name: "Service"},
+		Service: service,
 	}
 
 	method.Finalize()
@@ -180,14 +174,17 @@ func TestMethodExprError(t *testing.T) {
 		},
 	}
 
-	expr.Root.Errors = []*expr.ErrorExpr{
-		errorBaz,
-	}
 	s := expr.ServiceExpr{
 		Errors: []*expr.ErrorExpr{
 			errorBar,
 		},
 	}
+	design := &expr.RootExpr{
+		API:      expr.NewAPIExpr("test", func() {}),
+		Errors:   []*expr.ErrorExpr{errorBaz},
+		Services: []*expr.ServiceExpr{&s},
+	}
+	design.WalkSets(func(eval.ExpressionSet) {})
 	m := expr.MethodExpr{
 		Errors: []*expr.ErrorExpr{
 			errorFoo,

@@ -40,6 +40,7 @@ type (
 		discardStream      *codegen.NameDeclaration
 		requestEncoder     *codegen.NameDeclaration
 		responseDecoder    *codegen.NameDeclaration
+		requestBuilder     *codegen.NameDeclaration
 		buildStreamPayload *codegen.NameDeclaration
 		cliPayload         *codegen.NameDeclaration
 		serverMultipart    *httpMultipartSymbols
@@ -65,6 +66,7 @@ type (
 	httpSymbolID struct {
 		transport transportKind
 		role      httpSymbolRole
+		api       string
 		service   string
 		method    string
 		subject   string
@@ -99,6 +101,7 @@ const (
 	httpDiscardStreamRole
 	httpRequestEncoderRole
 	httpResponseDecoderRole
+	httpRequestBuilderRole
 	httpBuildStreamPayloadRole
 	httpCLIPayloadRole
 	httpMultipartTypeRole
@@ -127,7 +130,7 @@ func collectHTTPSymbols(plan *Plan, service *expr.HTTPServiceExpr, clientPackage
 		}
 		return declaration, nil
 	}
-	serviceID := httpSymbolID{transport: plan.transport, service: service.Name()}
+	serviceID := httpSymbolID{transport: plan.transport, api: plan.root.API.Name, service: service.Name()}
 	var err error
 	if symbols.serverStruct, err = declare(serverPackage, codegen.NameType, "Server", codegen.ExportedName, serviceID.withRole(httpServerStructRole)); err != nil {
 		return nil, err
@@ -234,6 +237,10 @@ func collectHTTPSymbols(plan *Plan, service *expr.HTTPServiceExpr, clientPackage
 		if err != nil {
 			return nil, err
 		}
+		endpointSymbols.requestBuilder, err = declare(clientPackage, codegen.NameFunction, "Build"+names.Method+"Request", codegen.ExportedName, id.withRole(httpRequestBuilderRole))
+		if err != nil {
+			return nil, err
+		}
 		if endpoint.SkipRequestBodyEncodeDecode {
 			endpointSymbols.buildStreamPayload, err = declare(clientPackage, codegen.NameFunction, "Build"+names.Method+"StreamPayload", codegen.ExportedName, id.withRole(httpBuildStreamPayloadRole))
 			if err != nil {
@@ -332,10 +339,8 @@ func clientRequestEncoderSelected(endpoint *expr.HTTPEndpointExpr) bool {
 	if endpoint.IsJSONRPC() {
 		return true
 	}
-	if endpoint.SkipRequestBodyEncodeDecode {
-		return false
-	}
-	if endpoint.Body.Type != expr.Empty || endpoint.MapQueryParams != nil ||
+	if (!endpoint.SkipRequestBodyEncodeDecode && endpoint.Body.Type != expr.Empty) ||
+		endpoint.MapQueryParams != nil ||
 		len(*expr.AsObject(endpoint.QueryParams().Type)) > 0 ||
 		len(*expr.AsObject(endpoint.Headers.Type)) > 0 ||
 		len(*expr.AsObject(endpoint.Cookies.Type)) > 0 {
@@ -382,6 +387,7 @@ func (order httpSymbolOrder) ComparePackageName(other codegen.PackageNameOrder) 
 	right := httpSymbolID(other.(httpSymbolOrder))
 	for _, compared := range []int{
 		cmp.Compare(left.transport, right.transport),
+		cmp.Compare(left.api, right.api),
 		cmp.Compare(left.service, right.service),
 		cmp.Compare(left.method, right.method),
 		cmp.Compare(left.role, right.role),

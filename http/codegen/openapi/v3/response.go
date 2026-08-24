@@ -11,7 +11,7 @@ import (
 	"goa.design/goa/v3/http/codegen/openapi"
 )
 
-func headersFromAttr(attr *expr.MappedAttributeExpr, parent *expr.AttributeExpr, owner expr.ExampleIdentity, rand *expr.ExampleGenerator) map[string]*HeaderRef {
+func headersFromAttr(attr *expr.MappedAttributeExpr, parent *expr.AttributeExpr, owner expr.ExampleIdentity, rand *expr.ExampleGenerator, values openapi.Values) map[string]*HeaderRef {
 	o := expr.AsObject(attr.Type)
 	if len(*o) == 0 {
 		return nil
@@ -22,22 +22,22 @@ func headersFromAttr(attr *expr.MappedAttributeExpr, parent *expr.AttributeExpr,
 		// example survives generator reorderings.
 		identity := exampleFieldIdentity(parent, name, owner)
 		header := &Header{
-			Description: hattr.Description,
+			Description: values.Description(hattr.AuthoredAttribute(), hattr.Description),
 			Required:    hattr.IsRequiredNoDefault(name),
-			Schema:      newSchemafier(rand.At(identity)).schemafy(hattr),
+			Schema:      newSchemafier(rand.At(identity), values).schemafy(hattr),
 			Extensions:  openapi.ExtensionsFromExpr(hattr.Meta),
 		}
-		initExamples(header, hattr, rand.At(identity))
+		initExamples(header, hattr, rand.At(identity), values)
 		headers[elem] = &HeaderRef{Value: header}
 		return nil
 	})
 	return headers
 }
 
-func responseFromExpr(r *expr.HTTPResponseExpr, body *openapi.Schema, rand *expr.ExampleGenerator, parent *expr.AttributeExpr, fieldOwner, bodyOwner expr.ExampleIdentity) *Response {
-	ct := responseContentType(r)
-	headers := headersFromAttr(r.Headers, parent, fieldOwner, rand)
-	cookies := headersFromAttr(r.Cookies, parent, fieldOwner, rand)
+func responseFromExpr(r *expr.HTTPResponseExpr, body *openapi.Schema, rand *expr.ExampleGenerator, parent *expr.AttributeExpr, fieldOwner, bodyOwner expr.ExampleIdentity, fallbackDescription string, values openapi.Values) *Response {
+	ct := openapi.ResponseContentType(r)
+	headers := headersFromAttr(r.Headers, parent, fieldOwner, rand, values)
+	cookies := headersFromAttr(r.Cookies, parent, fieldOwner, rand, values)
 	if len(cookies) > 0 {
 		if headers == nil {
 			headers = make(map[string]*HeaderRef)
@@ -68,7 +68,7 @@ func responseFromExpr(r *expr.HTTPResponseExpr, body *openapi.Schema, rand *expr
 				Schema:     body,
 				Extensions: openapi.ExtensionsFromExpr(r.Body.Meta),
 			}
-			initExamples(content[ct], staticViewBody(r), rand.At(bodyOwner))
+			initExamples(content[ct], staticViewBody(r), rand.At(bodyOwner), values)
 		} else if r.StatusCode != expr.StatusNoContent &&
 			isSkipResponseBodyEncodeDecode(r.Parent) {
 			// When SkipResponseBodyEncodeDecode is declared, the response type
@@ -83,7 +83,10 @@ func responseFromExpr(r *expr.HTTPResponseExpr, body *openapi.Schema, rand *expr
 			}
 		}
 	}
-	desc := r.Description
+	desc := values.Description(r, r.Description)
+	if desc == "" {
+		desc = fallbackDescription
+	}
 	if desc == "" {
 		desc = fmt.Sprintf("%s response.", http.StatusText(r.StatusCode))
 	}
@@ -95,28 +98,12 @@ func responseFromExpr(r *expr.HTTPResponseExpr, body *openapi.Schema, rand *expr
 	}
 }
 
-// responseContentType computes the content type of the given response: the
-// explicitly defined content type if any, the content type of the response
-// result type otherwise, defaulting to application/json. The result type is
-// the view-projected one when the design pins the response to a single view;
-// projected result types carry no content type.
-func responseContentType(r *expr.HTTPResponseExpr) string {
-	if r.ContentType != "" {
-		return r.ContentType
-	}
-	if rt, ok := staticViewBody(r).Type.(*expr.ResultTypeExpr); ok && rt.ContentType != "" {
-		return rt.ContentType
-	}
-	return "application/json"
-}
-
 // setSSEContent rewrites the content of a successful server-sent events
 // response for OpenAPI 3.2 documents. The text/event-stream media type
 // describes each streamed event with an itemSchema instead of a whole-stream
-// schema. When the method defines mixed results (distinct unary and streaming
-// result types) the unary result is documented under its own content type
-// (ct) next to the event stream to reflect the content negotiation performed
-// by the generated handler.
+// schema. When the method defines separate normal and streaming results, the
+// normal result is documented under its own content type next to the event
+// stream to match the response selected by the generated handler.
 func setSSEContent(resp *Response, bodies *EndpointBodies, ct string, mixed bool) {
 	sse := &MediaType{ItemSchema: bodies.SSEItemSchema}
 	if !mixed {

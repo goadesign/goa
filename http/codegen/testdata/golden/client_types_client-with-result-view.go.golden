@@ -2,24 +2,24 @@
 // "ServiceResultWithResultView" service "MethodResultWithResultView" endpoint
 // HTTP response body.
 type MethodResultWithResultViewResponseBodyFull struct {
-	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
-	Rt   *Rt     `form:"rt,omitempty" json:"rt,omitempty" xml:"rt,omitempty"`
+	Name *string         `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
+	Rt   *RtResponseBody `form:"rt,omitempty" json:"rt,omitempty" xml:"rt,omitempty"`
 }
 
-// Rt is used to define fields on response body types.
-type Rt struct {
+// RtResponseBody is used to define fields on response body types.
+type RtResponseBody struct {
 	X *string `form:"x,omitempty" json:"x,omitempty" xml:"x,omitempty"`
 }
 
-// NewMethodResultWithResultViewResultOK builds a "ServiceResultWithResultView"
-// service "MethodResultWithResultView" endpoint result from a HTTP "OK"
-// response.
-func NewMethodResultWithResultViewResultOK(body *MethodResultWithResultViewResponseBodyFull) *serviceresultwithresultviewviews.ResulttypeView {
+// NewMethodResultWithResultViewResulttypeOK builds a
+// "ServiceResultWithResultView" service "MethodResultWithResultView" endpoint
+// result from a HTTP "OK" response.
+func NewMethodResultWithResultViewResulttypeOK(body *MethodResultWithResultViewResponseBodyFull) *serviceresultwithresultviewviews.ResulttypeView {
 	v := &serviceresultwithresultviewviews.ResulttypeView{
 		Name: body.Name,
 	}
 	if body.Rt != nil {
-		v.Rt = unmarshalRtToRtView(body.Rt)
+		v.Rt = unmarshalRtResponseBodyToServiceresultwithresultviewviewsRtViewOptional(body.Rt)
 	}
 
 	return v

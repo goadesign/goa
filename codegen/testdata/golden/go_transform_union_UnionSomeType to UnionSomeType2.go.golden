@@ -3,7 +3,10 @@ func transform() {
 	switch string(source.Kind()) {
 	case "SomeType":
 		actual, _ := source.AsSomeType()
-		obj := transformSomeTypeToSomeType(actual)
+		var obj *SomeType
+		if actual != nil {
+			obj = transformSomeTypeToSomeType(actual)
+		}
 		var u UnionSomeType2
 		u.SetSomeType((*SomeType)(obj))
 		target = &u

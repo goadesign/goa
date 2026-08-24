@@ -1,5 +1,5 @@
-{{ printf "%s creates a HTTP handler which loads the HTTP request and calls the %q service %q endpoint." .HandlerInitDeclaration.Name .ServiceName .Method.Name | comment }}
-func {{ .HandlerInitDeclaration.Name }}(
+{{ printf "%s creates a HTTP handler which loads the HTTP request and calls the %q service %q endpoint." .HandlerInit .ServiceName .Method.Name | comment }}
+func {{ .HandlerInit }}(
 	endpoint goa.Endpoint,
 	mux goahttp.Muxer,
 	decoder func(*http.Request) goahttp.Decoder,
@@ -183,7 +183,7 @@ func {{ .HandlerInitDeclaration.Name }}(
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithCancel(ctx)
 		v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
-			Stream: &{{ .ServerWebSocket.VarName }}{
+			Stream: &{{ .ServerWebSocket.VarDeclaration.Name }}{
 				upgrader: upgrader,
 				configurer: configurer,
 				cancel: cancel,
@@ -232,11 +232,11 @@ func {{ .HandlerInitDeclaration.Name }}(
 	{{- if not .Redirect }}
 		if err != nil {
 			{{- if isWebSocketEndpoint . }}
-			var stream *{{ .ServerWebSocket.VarName }}
+			var stream *{{ .ServerWebSocket.VarDeclaration.Name }}
 			if wrapper, ok := v.Stream.(interface{ Unwrap() any }); ok {
-				stream = wrapper.Unwrap().(*{{ .ServerWebSocket.VarName }})
+				stream = wrapper.Unwrap().(*{{ .ServerWebSocket.VarDeclaration.Name }})
 			} else {
-				stream = v.Stream.(*{{ .ServerWebSocket.VarName }})
+				stream = v.Stream.(*{{ .ServerWebSocket.VarDeclaration.Name }})
 			}
 			if stream != nil && stream.conn != nil {
 				// Response writer has been hijacked, do not encode the error

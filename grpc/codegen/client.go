@@ -11,16 +11,15 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// ClientFiles returns the client files that contain client methods to call the
-// corresponding service methods along with the encoding and decoding logic.
-func ClientFiles(services *ServicesData) []*codegen.File {
-	svcLen := len(services.Root.API.GRPC.Services)
+// clientFiles returns the planned client methods and their encoders and decoders.
+func clientFiles(services *ServicesData) []*codegen.File {
+	svcLen := len(services.servicePlans)
 	fw := make([]*codegen.File, 2*svcLen)
-	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = addEndpointImports(clientFile(svc, services), services, svc.GRPCEndpoints...)
+	for i, servicePlan := range services.servicePlans {
+		fw[i] = addEndpointImports(clientFile(servicePlan.expression, services), services, servicePlan)
 	}
-	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i+svcLen] = addEndpointImports(clientEncodeDecode(svc, services), services, svc.GRPCEndpoints...)
+	for i, servicePlan := range services.servicePlans {
+		fw[i+svcLen] = addEndpointImports(clientEncodeDecode(servicePlan.expression, services), services, servicePlan)
 	}
 	return fw
 }
@@ -35,6 +34,7 @@ func clientFile(svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File
 	)
 	{
 		svcName := data.Service.PathName
+		outputPackage := path.Join(services.GenPkg(), "grpc", svcName, "client")
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "client.go")
 		imports := []*codegen.ImportSpec{
 			{Path: "context"},
@@ -42,11 +42,11 @@ func clientFile(svc *expr.GRPCServiceExpr, services *ServicesData) *codegen.File
 			codegen.GoaImport(""),
 			codegen.GoaNamedImport("grpc", "goagrpc"),
 			codegen.GoaNamedImport("grpc/pb", "goapb"),
-			services.ServiceImport(svc.Name()),
-			services.PackageImport(path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
+			services.ServiceImport(outputPackage, svc.Name()),
+			services.PackageImport(outputPackage, path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
 		}
 		if serviceHasViewedClientStream(data) {
-			imports = append(imports, services.ViewImport(svc.Name()))
+			imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
 		}
 		sections = []*codegen.SectionTemplate{
 			codegen.Header(svc.Name()+" gRPC client", "client", imports),
@@ -124,9 +124,9 @@ func clientEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 	)
 	{
 		svcName := data.Service.PathName
+		outputPackage := path.Join(services.GenPkg(), "grpc", svcName, "client")
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, "client", "encode_decode.go")
 		imports := []*codegen.ImportSpec{
-			{Path: "fmt"},
 			{Path: "context"},
 			{Path: "strconv"},
 			{Path: "unicode/utf8"},
@@ -134,17 +134,20 @@ func clientEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 			{Path: "google.golang.org/grpc/metadata"},
 			codegen.GoaImport(""),
 			codegen.GoaNamedImport("grpc", "goagrpc"),
-			services.ServiceImport(svc.Name()),
-			services.PackageImport(path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
+			services.ServiceImport(outputPackage, svc.Name()),
+			services.PackageImport(outputPackage, path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
+		}
+		if requestMetadataNeedsFormat(data) {
+			imports = append(imports, &codegen.ImportSpec{Path: "fmt"})
 		}
 		if serviceHasUnaryViewedResult(data) {
-			imports = append(imports, services.ViewImport(svc.Name()))
+			imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
 		}
 		sections = []*codegen.SectionTemplate{codegen.Header(svc.Name()+" gRPC client encoders and decoders", "client", imports)}
-		fm := transTmplFuncs(svc, services)
+		fm := transTmplFuncs(data)
 		fm["hasInitArg"] = hasInitArg
 		fm["metadataEncodeDecodeData"] = metadataEncodeDecodeData
-		fm["typeConversionData"] = typeConversionData
+		fm["typeStringExpressionData"] = typeStringExpressionData
 		fm["isBearer"] = isBearer
 		for _, e := range data.Endpoints {
 			sections = append(sections, &codegen.SectionTemplate{
@@ -155,7 +158,7 @@ func clientEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 			if e.PayloadRef != "" {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:    "request-encoder",
-					Source:  grpcTemplates.Read(grpcRequestEncoderT, grpcConvertTypeToStringP, "string_conversion"),
+					Source:  grpcTemplates.Read(grpcRequestEncoderT, grpcTypeToStringExpressionP),
 					Data:    e,
 					FuncMap: fm,
 				})
@@ -174,8 +177,8 @@ func clientEncodeDecode(svc *expr.GRPCServiceExpr, services *ServicesData) *code
 }
 
 // hasInitArg reports whether a generated constructor consumes the named
-// source variable. Templates use it to avoid binding an empty protobuf
-// message that only carries response metadata.
+// source variable. Templates use it to avoid declaring an unused variable for
+// an empty protobuf message that only carries response metadata.
 func hasInitArg(args []*InitArgData, name string) bool {
 	for _, arg := range args {
 		if arg.Name == name {

@@ -1,6 +1,6 @@
-// NewMethodMessageUserTypeWithAliasPayload builds the payload of the
-// "MethodMessageUserTypeWithAlias" endpoint of the
-// "ServiceMessageUserTypeWithAlias" service from the gRPC request type.
+// NewMethodMessageUserTypeWithAliasPayload builds
+// *servicemessageusertypewithalias.PayloadAliasT from
+// *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasRequest.
 func NewMethodMessageUserTypeWithAliasPayload(message *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasRequest) *servicemessageusertypewithalias.PayloadAliasT {
 	v := &servicemessageusertypewithalias.PayloadAliasT{
 		IntAliasField: servicemessageusertypewithalias.IntAlias(message.IntAliasField),
@@ -12,9 +12,9 @@ func NewMethodMessageUserTypeWithAliasPayload(message *service_message_user_type
 	return v
 }
 
-// NewProtoMethodMessageUserTypeWithAliasResponse builds the gRPC response type
-// from the result of the "MethodMessageUserTypeWithAlias" endpoint of the
-// "ServiceMessageUserTypeWithAlias" service.
+// NewProtoMethodMessageUserTypeWithAliasResponse builds
+// *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse
+// from *servicemessageusertypewithalias.PayloadAliasT.
 func NewProtoMethodMessageUserTypeWithAliasResponse(result *servicemessageusertypewithalias.PayloadAliasT) *service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse {
 	message := &service_message_user_type_with_aliaspb.MethodMessageUserTypeWithAliasResponse{
 		IntAliasField: int32(result.IntAliasField),

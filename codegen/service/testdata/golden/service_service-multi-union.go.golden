@@ -34,24 +34,24 @@ type Union struct {
 	Values Values
 }
 
-// Values is a sum-type union.
+// Values holds exactly one of its branch values.
 type Values struct {
 	kind ValuesKind
 	A    *TypeA
 	B    *TypeB
 }
 
-// ValuesKind enumerates the union variants for Values.
+// ValuesKind records which Values branch is selected.
 type ValuesKind string
 
 const (
-	// ValuesKindA identifies the a branch of the union.
+	// ValuesKindA identifies the a branch.
 	ValuesKindA ValuesKind = "a"
-	// ValuesKindB identifies the b branch of the union.
+	// ValuesKindB identifies the b branch.
 	ValuesKindB ValuesKind = "b"
 )
 
-// Kind returns the discriminator value of the union.
+// Kind returns the selected branch.
 func (u Values) Kind() ValuesKind {
 	return u.kind
 }
@@ -64,7 +64,7 @@ func NewValuesA(v *TypeA) Values {
 	}
 }
 
-// AsA returns the value of the a branch if set.
+// AsA returns the value when the a branch is selected.
 func (u Values) AsA() (_ *TypeA, ok bool) {
 	if u.kind != ValuesKindA {
 		return
@@ -72,7 +72,7 @@ func (u Values) AsA() (_ *TypeA, ok bool) {
 	return u.A, true
 }
 
-// SetA sets the a branch of the union.
+// SetA selects the a branch and stores v.
 func (u *Values) SetA(v *TypeA) {
 	u.kind = ValuesKindA
 	u.A = v
@@ -86,7 +86,7 @@ func NewValuesB(v *TypeB) Values {
 	}
 }
 
-// AsB returns the value of the b branch if set.
+// AsB returns the value when the b branch is selected.
 func (u Values) AsB() (_ *TypeB, ok bool) {
 	if u.kind != ValuesKindB {
 		return
@@ -94,13 +94,13 @@ func (u Values) AsB() (_ *TypeB, ok bool) {
 	return u.B, true
 }
 
-// SetB sets the b branch of the union.
+// SetB selects the b branch and stores v.
 func (u *Values) SetB(v *TypeB) {
 	u.kind = ValuesKindB
 	u.B = v
 }
 
-// Validate ensures the union discriminant is valid.
+// Validate ensures exactly one valid branch is selected.
 func (u Values) Validate() error {
 	switch u.kind {
 	case "":
@@ -140,7 +140,7 @@ func (u Values) MarshalJSON() ([]byte, error) {
 	case ValuesKindB:
 		value = u.B
 	default:
-		return nil, fmt.Errorf("unexpected Values discriminant %q", u.kind)
+		return nil, fmt.Errorf("unexpected Values kind %q", u.kind)
 	}
 	return json.Marshal(struct {
 		Type  string `json:"type"`

@@ -1,3 +1,7 @@
+{{/*
+client_sse.go.tpl writes the HTTP client stream for one SSE endpoint. The plan
+provides the exact data and retry types used to rebuild each service result.
+*/ -}}
 // {{ .SSE.ClientInterfaceDeclaration.Name }} is the interface for reading Server-Sent Events.
 type {{ .SSE.ClientInterfaceDeclaration.Name }} interface {
     // {{ .Method.ClientStream.RecvName }} reads and returns the next event from the SSE stream.
@@ -197,35 +201,53 @@ func (s *{{ .SSE.ClientStructDeclaration.Name }}) Close() error {
 
 // processEvent processes a raw SSE event into the expected type
 func (s *{{ .SSE.ClientStructDeclaration.Name }}) processEvent(eventData []byte) (event {{ .SSE.EventTypeRef }}, err error) {
-        {{- if .SSE.EventIsStruct }}
-        event = new({{ deref .SSE.EventTypeRef }})
-        {{- end }}
+	{{- if and .SSE.EventIsStruct (not .HasMixedResults) }}
+		event = new({{ .SSE.EventTypeName }})
+	{{- end }}
+	{{- if .HasMixedResults }}
+		{{- with .SSE.Response.ClientBody }}
+	var body {{ if .Declaration }}{{ .Declaration.Name }}{{ else }}{{ .VarName }}{{ end }}
+		{{- end }}
+	{{- end }}
         var dataLines []string
         for _, line := range bytes.Split(eventData, []byte("\n")) {
                 if len(line) == 0 {
                         continue
                 }
                 if bytes.HasPrefix(line, []byte("data:")) {
-                        dataLines = append(dataLines, s.trimHeader(len("data:"), line))
+                        dataLines = append(dataLines, s.trimHeader(line[len("data:"):]))
                         continue
                 }
                 {{- if .SSE.IDField }}
                 if bytes.HasPrefix(line, []byte("id:")) {
-                        event.{{ .SSE.IDField }} = s.trimHeader(len("id:"), line)
+			{{- if and $.HasMixedResults $.SSE.ClientIDPointer }}
+			idContent := s.trimHeader(line[len("id:"):])
+			body.{{ .SSE.IDField }} = &idContent
+			{{- else }}
+                        {{ if $.HasMixedResults }}body{{ else }}event{{ end }}.{{ .SSE.IDField }} = s.trimHeader(line[len("id:"):])
+			{{- end }}
                         continue
                 }
                 {{- end }}
                 {{- if .SSE.EventField }}
                 if bytes.HasPrefix(line, []byte("event:")) {
-                        event.{{ .SSE.EventField }} = s.trimHeader(len("event:"), line)
+			{{- if and $.HasMixedResults $.SSE.ClientEventPointer }}
+			eventContent := s.trimHeader(line[len("event:"):])
+			body.{{ .SSE.EventField }} = &eventContent
+			{{- else }}
+                        {{ if $.HasMixedResults }}body{{ else }}event{{ end }}.{{ .SSE.EventField }} = s.trimHeader(line[len("event:"):])
+			{{- end }}
                         continue
                 }
                 {{- end }}
                 {{- if .SSE.RetryField }}
                 if bytes.HasPrefix(line, []byte("retry:")) {
-                        // Note: retry value parsing depends on the field type; client currently expects integer-like types.
-                        // We deliberately leave conversion to a future enhancement that includes the field type reference.
-                        // For now this branch is kept for completeness; services using RetryField should be handled server-side.
+			retryContent := s.trimHeader(line[len("retry:"):])
+			{{- if $.HasMixedResults }}
+			{{ template "partial_sse_parse" dict "Target" (printf "body.%s" .SSE.RetryField) "Source" "retryContent" "Encoding" .SSE.Retry "Nullable" false "TargetPointer" .SSE.Retry.ClientPointer }}
+			{{- else }}
+			{{ template "partial_sse_parse" dict "Target" (printf "event.%s" .SSE.RetryField) "Source" "retryContent" "Encoding" .SSE.Retry "Nullable" false "TargetPointer" .SSE.Retry.Pointer }}
+			{{- end }}
                         continue
                 }
                 {{- end }}
@@ -248,11 +270,45 @@ func (s *{{ .SSE.ClientStructDeclaration.Name }}) processEvent(eventData []byte)
 	{{- template "viewed_sse_client_result" dict "Endpoint" $ "Representation" . }}
 			{{- end }}
 		{{- end }}
+	{{- else if .HasMixedResults }}
+	{{- with .SSE.Response.ClientBody }}
+        if len(dataLines) > 0 {
+                dataContent := strings.Join(dataLines, "\n")
+                {{- if $.SSE.DataField }}
+		{{ template "partial_sse_parse" dict "Target" (printf "body.%s" $.SSE.DataField) "Source" "dataContent" "Encoding" $.SSE.Data "Nullable" $.SSE.Data.Pointer "TargetPointer" $.SSE.Data.ClientPointer }}
+                {{- else if ssePrimitive $.SSE.Data }}
+		{{ template "partial_sse_parse" dict "Target" "body" "Source" "dataContent" "Encoding" $.SSE.Data "Nullable" $.SSE.Data.Pointer "TargetPointer" $.SSE.Data.Pointer }}
+                {{- else }}
+                respBody := &http.Response{
+                        StatusCode: http.StatusOK,
+                        Body:       io.NopCloser(bytes.NewReader([]byte(dataContent))),
+                }
+		if err = s.decoder(respBody).Decode(&body); err != nil {
+			return event, goahttp.ErrDecodingError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
+		}
+                {{- end }}
+        }
+		{{- if and .ValidatorDeclaration .ValidationTarget }}
+	err = {{ .ValidatorDeclaration.Name }}({{ .ValidationTarget }})
+	if err != nil {
+		return event, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
+	}
+		{{- else if .ValidateRef }}
+	{{ .ValidateRef }}
+	if err != nil {
+		return event, goahttp.ErrValidationError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
+	}
+		{{- end }}
+	{{ $.SSE.ClientEventCode }}
+	return result, nil
+	{{- else }}
+	return event, nil
+	{{- end }}
 	{{- else }}
         if len(dataLines) > 0 {
                 dataContent := strings.Join(dataLines, "\n")
                 {{- if .SSE.DataField }}
-                {{ template "partial_sse_parse" dict "Target" (printf "event.%s" .SSE.DataField) "TypeRef" .SSE.DataFieldTypeRef }}
+		{{ template "partial_sse_parse" dict "Target" (printf "event.%s" .SSE.DataField) "Source" "dataContent" "Encoding" .SSE.Data "Nullable" .SSE.Data.Pointer "TargetPointer" .SSE.Data.Pointer }}
                 {{- else if .SSE.EventIsStruct }}
                 // Decode the event data into the result value returned by Recv.
                 respBody := &http.Response{
@@ -264,18 +320,20 @@ func (s *{{ .SSE.ClientStructDeclaration.Name }}) processEvent(eventData []byte)
                         return
                 }
                 {{- else }}
-                {{ template "partial_sse_parse" dict "Target" "event" "TypeRef" .SSE.EventTypeRef }}
+		{{ template "partial_sse_parse" dict "Target" "event" "Source" "dataContent" "Encoding" .SSE.Data "Nullable" .SSE.Data.Pointer "TargetPointer" .SSE.Data.Pointer }}
                 {{- end }}
         }
 	{{- end }}
-        return
+	{{- if not .HasMixedResults }}
+	return
+	{{- end }}
 }
 
 {{- define "viewed_sse_client_result" }}
 	{{- $endpoint := .Endpoint }}
 	{{- with .Representation }}
 		{{- if .ClientBody }}
-		var body {{ .ClientBody.VarName }}
+		var body {{ if .ClientBody.Declaration }}{{ .ClientBody.Declaration.Name }}{{ else }}{{ .ClientBody.VarName }}{{ end }}
 		{{- if $endpoint.SSE.IDField }}
 		body.{{ $endpoint.SSE.IDField }} = event.{{ $endpoint.SSE.IDField }}
 		{{- end }}
@@ -284,20 +342,28 @@ func (s *{{ .SSE.ClientStructDeclaration.Name }}) processEvent(eventData []byte)
 		{{- end }}
 		if len(dataLines) > 0 {
 			dataContent := strings.Join(dataLines, "\n")
+			{{- if ssePrimitive $endpoint.SSE.Data }}
+				{{- if $endpoint.SSE.DataField }}
+			{{ template "partial_sse_parse" dict "Target" (printf "body.%s" $endpoint.SSE.DataField) "Source" "dataContent" "Encoding" $endpoint.SSE.Data "Nullable" $endpoint.SSE.Data.Pointer "TargetPointer" .ClientDataPointer }}
+				{{- else }}
+			{{ template "partial_sse_parse" dict "Target" "body" "Source" "dataContent" "Encoding" $endpoint.SSE.Data "Nullable" $endpoint.SSE.Data.Pointer "TargetPointer" .ClientDataPointer }}
+				{{- end }}
+			{{- else }}
 			respBody := &http.Response{
 				StatusCode: http.StatusOK,
 				Body:       io.NopCloser(bytes.NewReader([]byte(dataContent))),
 			}
-			{{- if $endpoint.SSE.DataField }}
+				{{- if $endpoint.SSE.DataField }}
 			if err = s.decoder(respBody).Decode(&body.{{ $endpoint.SSE.DataField }}); err != nil {
-			{{- else }}
+				{{- else }}
 			if err = s.decoder(respBody).Decode(&body); err != nil {
-			{{- end }}
+				{{- end }}
 				return event, goahttp.ErrDecodingError("{{ $endpoint.ServiceName }}", "{{ $endpoint.Method.Name }}", err)
 			}
+			{{- end }}
 		}
 		{{- end }}
-		projected := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }}, {{ end }})
+		projected := {{ .ResultInit.Declaration.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }}, {{ end }})
 		viewed := {{ if not $endpoint.Method.ViewedResult.IsCollection }}&{{ end }}{{ $endpoint.Method.ViewedResult.ViewsPkg }}.{{ $endpoint.Method.ViewedResult.VarName }}{Projected: projected, View: view}
 			if err = {{ $endpoint.Method.ViewedResult.ViewsPkg }}.{{ $endpoint.Method.ViewedResult.Validate.Declaration.Name }}(viewed); err != nil {
 			return event, goahttp.ErrValidationError("{{ $endpoint.ServiceName }}", "{{ $endpoint.Method.Name }}", err)
@@ -409,12 +475,8 @@ func (s *{{ .SSE.ClientStructDeclaration.Name }}) processEvent(eventData []byte)
 	{{- end }}
 {{- end }}
 
-// trimHeader removes the header prefix and optional leading space
-func (s *{{ .SSE.ClientStructDeclaration.Name }}) trimHeader(size int, data []byte) string {
-        if len(data) < size {
-                return string(data)
-        }
-        data = data[size:]
+// trimHeader removes the optional space after an SSE field name.
+func (s *{{ .SSE.ClientStructDeclaration.Name }}) trimHeader(data []byte) string {
         if len(data) > 0 && data[0] == ' ' {
                 data = data[1:]
         }

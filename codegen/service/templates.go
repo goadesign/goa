@@ -36,7 +36,6 @@ const (
 	exampleServiceInitT       = "example_service_init"
 	exampleSecurityAuthfuncsT = "example_security_authfuncs"
 	endpointT                 = "endpoint"
-	jsonrpcHandleStreamT      = "jsonrpc_handle_stream"
 
 	// Service templates
 	serviceT          = "service"

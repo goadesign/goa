@@ -197,7 +197,7 @@ func (s *SSEIntMethodStreamImpl) processEvent(eventData []byte) (event int, err 
 			continue
 		}
 		if bytes.HasPrefix(line, []byte("data:")) {
-			dataLines = append(dataLines, s.trimHeader(len("data:"), line))
+			dataLines = append(dataLines, s.trimHeader(line[len("data:"):]))
 			continue
 		}
 	}
@@ -214,12 +214,8 @@ func (s *SSEIntMethodStreamImpl) processEvent(eventData []byte) (event int, err 
 	return
 }
 
-// trimHeader removes the header prefix and optional leading space
-func (s *SSEIntMethodStreamImpl) trimHeader(size int, data []byte) string {
-	if len(data) < size {
-		return string(data)
-	}
-	data = data[size:]
+// trimHeader removes the optional space after an SSE field name.
+func (s *SSEIntMethodStreamImpl) trimHeader(data []byte) string {
 	if len(data) > 0 && data[0] == ' ' {
 		data = data[1:]
 	}

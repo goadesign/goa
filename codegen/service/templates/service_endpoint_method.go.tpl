@@ -121,6 +121,7 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 {{- if .ServerStream }}
 	{{- if .ServerStream.EndpointStruct }}
 		{{- if .HasMixedResults }}
+			{{- if .ResultRef }}
 		res, {{ if .ViewedResult }}{{ if not .ViewedResult.ViewName }}view, {{ end }}{{ end }}err := s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
 		if err != nil {
 			return nil, err
@@ -138,28 +139,11 @@ func {{ .EndpointDeclaration.Name }}(s {{ .ServiceDeclaration.Name }}{{ range .S
 			{{- else }}
 		return res, nil
 			{{- end }}
-		{{- else }}
-			{{- if and .IsJSONRPCWebSocket (eq .ServerStream.Kind 4) }}
-		return nil, s.{{ .VarName }}(ctx, ep.Stream)
 			{{- else }}
 		return nil, s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
 			{{- end }}
-		{{- end }}
-	{{- else }}
-		{{- /* JSON-RPC WebSocket client streaming: no stream parameter, just payload */ -}}
-		{{- if .PayloadRef }}
-			p := req.({{ .PayloadRef }})
-			{{- if .ResultRef }}
-				return s.{{ .VarName }}(ctx, p)
-			{{- else }}
-				return nil, s.{{ .VarName }}(ctx, p)
-			{{- end }}
 		{{- else }}
-			{{- if .ResultRef }}
-				return s.{{ .VarName }}(ctx)
-			{{- else }}
-				return nil, s.{{ .VarName }}(ctx)
-			{{- end }}
+		return nil, s.{{ .VarName }}(ctx, {{ if .PayloadRef }}{{ $payload }}, {{ end }}ep.Stream)
 		{{- end }}
 	{{- end }}
 {{- else if .SkipRequestBodyEncodeDecode }}

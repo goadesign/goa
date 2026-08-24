@@ -1,0 +1,49 @@
+// ChooseRequestBody2 is the type of the "Names" service "Choose" endpoint HTTP
+// request body.
+type ChooseRequestBody2 struct {
+	Value *string `form:"value,omitempty" json:"value,omitempty" xml:"value,omitempty"`
+}
+
+// ValidateChooseRequestBody2 runs the validations defined on ChooseRequestBody2
+func ValidateChooseRequestBody2(body *ChooseRequestBody2) (err error) {
+	if body.Value == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("value", "body"))
+	}
+	if body.Value != nil {
+		if utf8.RuneCountInString(*body.Value) < 2 {
+			err = goa.MergeErrors(err, goa.InvalidLengthError("body.value", *body.Value, utf8.RuneCountInString(*body.Value), 2, true))
+		}
+	}
+	return
+}
+
+// DecodeChooseRequest2 returns a decoder for requests sent to the Names Choose
+// endpoint.
+func DecodeChooseRequest2(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request, *jsonrpc.RawRequest) (*names.ChoosePayload, error) {
+	return func(r *http.Request, req *jsonrpc.RawRequest) (*names.ChoosePayload, error) {
+		r.Body = io.NopCloser(bytes.NewReader(req.Params))
+		var payload *names.ChoosePayload
+		var (
+			body ChooseRequestBody2
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateChooseRequestBody2(&body)
+		if err != nil {
+			return payload, err
+		}
+		payload = NewChoosePayload(&body)
+
+		return payload, nil
+	}
+}

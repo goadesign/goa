@@ -12,6 +12,7 @@ import (
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/dsl"
+	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 )
 
@@ -60,7 +61,8 @@ func TestDeclarationResolverTransformsRelocatedUnionBranches(t *testing.T) {
 	resolver := newServiceResolver(
 		generation,
 		aliasesForTest(t, "generated.local/gen/types"),
-		service,
+		service.Name,
+		servicePackagePath(generation.GenPkg(), service),
 		"generated.local/gen/types",
 	)
 	relocatedContext := declarationContext(resolver.Enter(relocatedAttribute), false)
@@ -131,12 +133,12 @@ func TestDeclarationResolverQualifiesRelocatedConsumersWithoutRenamingLocalType(
 			"generated.local/gen/errors",
 			"generated.local/gen/types",
 		),
-		service,
+		service.Name,
+		servicePackagePath(generation.GenPkg(), service),
 		servicePackagePath(generation.GenPkg(), service),
 	)
 	require.Equal(t, "Fault", localDeclaration.Name())
 	require.Equal(t, "Fault", resolver.Ref(&expr.AttributeExpr{Type: local}, ""))
-
 }
 
 // TestDeclarationResolverPanicsWhenPlanOmittedType verifies render analysis
@@ -149,7 +151,8 @@ func TestDeclarationResolverPanicsWhenPlanOmittedType(t *testing.T) {
 	resolver := newServiceResolver(
 		generation,
 		aliasesForTest(t, servicePackagePath(generation.GenPkg(), service)),
-		service,
+		service.Name,
+		servicePackagePath(generation.GenPkg(), service),
 		servicePackagePath(generation.GenPkg(), service),
 	)
 	missing := resolverUserType("Missing", expr.String)
@@ -184,7 +187,16 @@ func TestServicesDataServiceAttributorUsesFrozenPackageDeclarations(t *testing.T
 			})
 		})
 	})
-	services := mustServicesData(t, root)
+	generation := mustTestGeneration(t, "goa.design/goa/example", []eval.Root{root})
+	plan, err := NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	require.NoError(t, err)
+	consumer, err := generation.ClaimOutputPackage("example.com/consumer", "consumer")
+	require.NoError(t, err)
+	require.NoError(t, consumer.ReserveGeneratedImport(codegen.NewImport("types", "goa.design/goa/example/types")))
+	require.NoError(t, consumer.DeclareImport(codegen.NewImport("custom", "example.com/custom")))
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, plan.Link())
+	services := plan.Services()
 	external := services.ServiceAttributor("Values", "example.com/consumer")
 	recordAttribute := &expr.AttributeExpr{Type: record}
 	recordResolver := external.Enter(recordAttribute)
@@ -206,8 +218,16 @@ func TestServicesDataServiceAttributorUsesFrozenPackageDeclarations(t *testing.T
 func aliasesForTest(t *testing.T, paths ...string) *importAliases {
 	t.Helper()
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
-	for _, importPath := range paths {
-		require.NoError(t, generation.DeclareImport(codegen.NewImport(codegen.Goify(path.Base(importPath), false), importPath)))
+	packages := make([]*codegen.GeneratedPackage, len(paths))
+	for index, importPath := range paths {
+		packages[index] = mustClaimTestPackage(t, generation, importPath)
+	}
+	for _, pkg := range packages {
+		for _, importPath := range paths {
+			if importPath != pkg.ImportPath() {
+				require.NoError(t, pkg.DeclareImport(codegen.NewImport(codegen.Goify(path.Base(importPath), false), importPath)))
+			}
+		}
 	}
 	require.NoError(t, generation.Freeze())
 	return &importAliases{generation: generation}

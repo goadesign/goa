@@ -91,6 +91,9 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	walk(rtypes)
 
 	// Services
+	for _, service := range r.Services {
+		service.design = r
+	}
 	walk(eval.ToExpressionSet(r.Services))
 
 	// Methods (must be done after services)
@@ -225,8 +228,8 @@ func (r *RootExpr) Validate() error {
 }
 
 // validateTypeMappings rejects repeated declarations that would generate the
-// same method on one user type. The reflected type preserves package identity,
-// so equally named external types from different packages remain distinct.
+// same method on one user type. A reflected type includes its package path, so
+// equally named external types from different packages remain distinct.
 func validateTypeMappings(direction string, mappings []*TypeMap) *eval.ValidationErrors {
 	type mappingIdentity struct {
 		user     UserType

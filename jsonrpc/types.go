@@ -36,9 +36,12 @@ type (
 		Method  string          `json:"method"`
 		Params  json.RawMessage `json:"params,omitempty"`
 		ID      any             `json:"id"`
-		// HasID is true when the "id" key is present in the incoming JSON (even if null).
-		// It is consumed by generated templates (WebSocket/SSE/HTTP) to decide whether
-		// to send a response for this request. Do not remove even if unused by this package.
+		// Invalid is true when the JSON value is not shaped like a JSON-RPC
+		// request object.
+		Invalid bool `json:"-"`
+		// HasID is true when the "id" key is present in the incoming JSON, even
+		// when its value is null. Generated servers use it to decide whether to
+		// send a response for this request.
 		HasID bool `json:"-"`
 	}
 
@@ -114,6 +117,31 @@ func MakeNotification(method string, params any) *Request {
 	}
 }
 
+// MarshalJSON writes the result member for every success response, including
+// responses whose result is null, and writes only the error for failures.
+func (r *Response) MarshalJSON() ([]byte, error) {
+	if r.Error != nil {
+		return json.Marshal(struct {
+			JSONRPC string         `json:"jsonrpc"`
+			Error   *ErrorResponse `json:"error"`
+			ID      any            `json:"id"`
+		}{
+			JSONRPC: r.JSONRPC,
+			Error:   r.Error,
+			ID:      r.ID,
+		})
+	}
+	return json.Marshal(struct {
+		JSONRPC string `json:"jsonrpc"`
+		Result  any    `json:"result"`
+		ID      any    `json:"id"`
+	}{
+		JSONRPC: r.JSONRPC,
+		Result:  r.Result,
+		ID:      r.ID,
+	})
+}
+
 // Error returns a string representation of the error.
 func (e *ErrorResponse) Error() string {
 	return fmt.Sprintf("jsonrpc: code %d: %s", e.Code, e.Message)
@@ -137,40 +165,50 @@ func IDToString(id any) string {
 	}
 }
 
-// UnmarshalJSON decodes RawRequest and records whether the id field was present.
+// UnmarshalJSON decodes one request and records invalid input and ID presence.
 func (r *RawRequest) UnmarshalJSON(data []byte) error {
+	*r = RawRequest{}
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(data, &raw); err != nil {
+		if json.Valid(data) {
+			r.Invalid = true
+			return nil
+		}
 		return err
+	}
+	if raw == nil {
+		r.Invalid = true
+		return nil
+	}
+	if v, ok := raw["id"]; ok {
+		r.HasID = true
+		if string(v) != "null" {
+			if err := json.Unmarshal(v, &r.ID); err != nil {
+				r.Invalid = true
+				return nil
+			}
+			switch r.ID.(type) {
+			case string, float64:
+			default:
+				r.ID = nil
+				r.Invalid = true
+			}
+		}
 	}
 	if v, ok := raw["jsonrpc"]; ok {
 		if err := json.Unmarshal(v, &r.JSONRPC); err != nil {
-			return err
+			r.Invalid = true
+			return nil
 		}
 	}
 	if v, ok := raw["method"]; ok {
 		if err := json.Unmarshal(v, &r.Method); err != nil {
-			return err
+			r.Invalid = true
+			return nil
 		}
 	}
 	if v, ok := raw["params"]; ok {
 		r.Params = v
-	}
-	if v, ok := raw["id"]; ok {
-		r.HasID = true
-		// Preserve null vs non-null values
-		if string(v) == "null" {
-			r.ID = nil
-		} else {
-			var id any
-			if err := json.Unmarshal(v, &id); err != nil {
-				return err
-			}
-			r.ID = id
-		}
-	} else {
-		r.HasID = false
-		r.ID = nil
 	}
 	return nil
 }

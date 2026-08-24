@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	goacodegen "goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/eval"
@@ -25,18 +24,24 @@ import (
 	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
 )
 
-// TestGeneratedViewedClientDecodersReceiveOKStatus renders a unary call, an
-// SSE stream, and a WebSocket stream, then runs each generated client.
+// TestGeneratedViewedClientDecodersReceiveOKStatus renders a unary call and an
+// SSE stream, then runs each generated client.
 func TestGeneratedViewedClientDecodersReceiveOKStatus(t *testing.T) {
 	dir := renderViewedResultRuntimeModule(t)
 	writeViewedResultRuntimeTest(t, dir, "unary_status", unaryStatusRuntimeTest)
 	writeViewedResultRuntimeTest(t, dir, "sse_status", sseStatusRuntimeTest)
-	writeViewedResultRuntimeTest(t, dir, "web_socket_status", webSocketStatusRuntimeTest)
 	runViewedResultRuntimeTests(t, dir,
 		"./jsonrpc/unary_status/client",
 		"./jsonrpc/sse_status/client",
-		"./jsonrpc/web_socket_status/client",
 	)
+}
+
+// TestGeneratedSSELifecycle renders a result stream and checks every JSON-RPC
+// message written when the service sends values and returns.
+func TestGeneratedSSELifecycle(t *testing.T) {
+	dir := renderViewedResultRuntimeModule(t)
+	writeViewedResultServerRuntimeTest(t, dir, "sse_decode", sseLifecycleRuntimeTest)
+	runViewedResultRuntimeTests(t, dir, "./jsonrpc/sse_decode/server")
 }
 
 // TestGeneratedMappedObjectBodyValidatesRequiredFields renders an explicit
@@ -57,6 +62,14 @@ func TestGeneratedViewedUnaryResponseMetadata(t *testing.T) {
 	runViewedResultRuntimeTests(t, dir, "./jsonrpc/unary_metadata/server")
 }
 
+// TestGeneratedServerReturnsRequestBodyFailures makes reading and closing one
+// request body fail and checks that the generated server reports both errors.
+func TestGeneratedServerReturnsRequestBodyFailures(t *testing.T) {
+	dir := renderViewedResultRuntimeModule(t)
+	writeViewedResultServerRuntimeTest(t, dir, "unary_status", requestBodyFailureRuntimeTest)
+	runViewedResultRuntimeTests(t, dir, "./jsonrpc/unary_status/server")
+}
+
 // TestGeneratedSSEDecodeErrorReturnsWriteFailure sends a request that omits a
 // required parameter and makes writing the JSON-RPC error event fail. The
 // generated server must report that failure once without starting a new
@@ -65,6 +78,14 @@ func TestGeneratedSSEDecodeErrorReturnsWriteFailure(t *testing.T) {
 	dir := renderViewedResultRuntimeModule(t)
 	writeViewedResultServerRuntimeTest(t, dir, "sse_decode", sseDecodeErrorRuntimeTest)
 	runViewedResultRuntimeTests(t, dir, "./jsonrpc/sse_decode/server")
+}
+
+// TestGeneratedSSERecvWithContextStopsBlockedRead renders an SSE client and
+// checks that canceling a receive closes its response body and ends the stream.
+func TestGeneratedSSERecvWithContextStopsBlockedRead(t *testing.T) {
+	dir := renderViewedResultRuntimeModule(t)
+	writeViewedResultRuntimeTest(t, dir, "sse_status", sseCancellationRuntimeTest)
+	runViewedResultRuntimeTests(t, dir, "./jsonrpc/sse_status/client")
 }
 
 // renderViewedResultRuntimeModule writes the generated service and JSON-RPC
@@ -88,7 +109,6 @@ func renderViewedResultRuntimeModule(t *testing.T) string {
 		HTTP:    httpPlans[0],
 	})
 	require.NoError(t, err)
-	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	require.NoError(t, httpPlans[0].Link())
@@ -148,8 +168,8 @@ func runViewedResultRuntimeTests(t *testing.T, moduleDir string, patterns ...str
 	require.NoError(t, err, string(output))
 }
 
-// viewedResultRuntimeDSL defines separate services because JSON-RPC WebSocket
-// methods cannot share one service endpoint with HTTP or SSE methods.
+// viewedResultRuntimeDSL defines the JSON-RPC methods rendered into the
+// temporary module used by these tests.
 func viewedResultRuntimeDSL() {
 	result := viewedStatusResult()
 	dsl.Service("Unary Status", func() {
@@ -190,20 +210,20 @@ func viewedResultRuntimeDSL() {
 			})
 		})
 	})
-	dsl.Service("Web Socket Status", func() {
+	dsl.Service("Protocol", func() {
 		dsl.JSONRPC(func() {
-			dsl.Path("/websocket")
+			dsl.POST("/protocol")
 		})
-		dsl.Method("watch", func() {
-			dsl.StreamingPayload(func() {
-				dsl.Attribute("key", dsl.String)
-				dsl.Required("key")
-			})
-			dsl.StreamingResult(result)
+		dsl.Method("ping", func() {
 			dsl.JSONRPC(func() {})
 		})
+		dsl.Method("watch", func() {
+			dsl.StreamingResult(dsl.String)
+			dsl.JSONRPC(func() {
+				dsl.ServerSentEvents(func() {})
+			})
+		})
 	})
-
 	mapped := dsl.ResultType("application/vnd.mapped-body", func() {
 		dsl.TypeName("MappedBody")
 		dsl.Attribute("id", func() {
@@ -310,6 +330,7 @@ const unaryStatusRuntimeTest = `package client
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -324,6 +345,19 @@ type doerFunc func(*http.Request) (*http.Response, error)
 
 func (f doerFunc) Do(request *http.Request) (*http.Response, error) {
 	return f(request)
+}
+
+type trackedResponseBody struct {
+	reader   io.Reader
+	closeErr error
+}
+
+func (body *trackedResponseBody) Read(buffer []byte) (int, error) {
+	return body.reader.Read(buffer)
+}
+
+func (body *trackedResponseBody) Close() error {
+	return body.closeErr
 }
 
 func TestUnaryViewedDecoderReceivesHTTPStatusOK(t *testing.T) {
@@ -349,12 +383,67 @@ func TestUnaryViewedDecoderReceivesHTTPStatusOK(t *testing.T) {
 		require.Equal(t, http.StatusOK, status)
 	}
 }
+
+func TestUnaryDecoderReturnsResponseCloseFailure(t *testing.T) {
+	closeErr := errors.New("close failed")
+	doer := doerFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     make(http.Header),
+			Body: &trackedResponseBody{
+				reader: strings.NewReader(
+					` + "`" + `{"jsonrpc":"2.0","id":"1","result":{"view":"summary","body":{"label":"ready"}}}` + "`" + `,
+				),
+				closeErr: closeErr,
+			},
+		}, nil
+	})
+	client := NewClient("http", "example.test", doer, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
+	_, err := client.Fetch()(context.Background(), nil)
+	assertDecodingError(t, err)
+	require.ErrorIs(t, err, closeErr)
+}
+
+func TestUnaryDecoderReturnsDecodeAndCloseFailures(t *testing.T) {
+	decodeErr := errors.New("decode failed")
+	closeErr := errors.New("close failed")
+	doer := doerFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     make(http.Header),
+			Body: &trackedResponseBody{
+				reader:   strings.NewReader("ignored"),
+				closeErr: closeErr,
+			},
+		}, nil
+	})
+	decoder := func(*http.Response) goahttp.Decoder {
+		return goahttp.EncodingFunc(func(any) error {
+			return decodeErr
+		})
+	}
+	client := NewClient("http", "example.test", doer, goahttp.RequestEncoder, decoder, false)
+
+	_, err := client.Fetch()(context.Background(), nil)
+
+	assertDecodingError(t, err)
+	require.ErrorIs(t, err, decodeErr)
+	require.ErrorIs(t, err, closeErr)
+}
+
+func assertDecodingError(t *testing.T, err error) {
+	t.Helper()
+	var clientErr *goahttp.ClientError
+	require.ErrorAs(t, err, &clientErr)
+	require.Equal(t, "decoding_error", clientErr.Name)
+}
 `
 
 const sseStatusRuntimeTest = `package client
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -364,12 +453,32 @@ import (
 
 	service "generated.local/gen/sse_status"
 	goahttp "goa.design/goa/v3/http"
+	"goa.design/goa/v3/jsonrpc"
 )
 
 type doerFunc func(*http.Request) (*http.Response, error)
 
 func (f doerFunc) Do(request *http.Request) (*http.Response, error) {
 	return f(request)
+}
+
+type failingResponseBody struct {
+	reader   io.Reader
+	readErr  error
+	closeErr error
+	closes   int
+}
+
+func (body *failingResponseBody) Read(buffer []byte) (int, error) {
+	if body.reader != nil {
+		return body.reader.Read(buffer)
+	}
+	return 0, body.readErr
+}
+
+func (body *failingResponseBody) Close() error {
+	body.closes++
+	return body.closeErr
 }
 
 func TestSSEViewedDecoderReceivesHTTPStatusOK(t *testing.T) {
@@ -383,7 +492,8 @@ func TestSSEViewedDecoderReceivesHTTPStatusOK(t *testing.T) {
 			StatusCode: http.StatusOK,
 			Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
 			Body: io.NopCloser(strings.NewReader(
-				"event: notification\ndata: " + ` + "`" + `{"jsonrpc":"2.0","method":"watch","params":{"view":"summary","body":{"label":"ready"}}}` + "`" + ` + "\n\n",
+				"event: notification\ndata: " + ` + "`" + `{"jsonrpc":"2.0","method":"watch","params":{"view":"summary","body":{"label":"ready"}}}` + "`" + ` + "\n\n" +
+					"event: response\ndata: " + ` + "`" + `{"jsonrpc":"2.0","id":"1","result":null}` + "`" + ` + "\n\n",
 			)),
 		}, nil
 	})
@@ -394,96 +504,272 @@ func TestSSEViewedDecoderReceivesHTTPStatusOK(t *testing.T) {
 	var serviceStream service.WatchClientStream = stream
 	_, err = serviceStream.Recv()
 	require.NoError(t, err)
+	_, err = serviceStream.Recv()
+	require.ErrorIs(t, err, io.EOF)
 	require.NotEmpty(t, statuses)
 	for _, status := range statuses {
 		require.Equal(t, http.StatusOK, status)
 	}
 }
+
+func TestSSETerminalErrorIsReturned(t *testing.T) {
+	stream := NewWatchStream(&http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+		Body: io.NopCloser(strings.NewReader(
+			"event: error\ndata: " + ` + "`" + `{"jsonrpc":"2.0","id":"1","error":{"code":-32603,"message":"watch failed"}}` + "`" + ` + "\n\n",
+		)),
+	}, goahttp.ResponseDecoder)
+
+	_, err := stream.Recv()
+	var responseError *jsonrpc.ErrorResponse
+	require.ErrorAs(t, err, &responseError)
+	require.Equal(t, jsonrpc.InternalError, responseError.Code)
+	require.Equal(t, "watch failed", responseError.Message)
+}
+
+func TestSSETerminalErrorPreservesCloseFailure(t *testing.T) {
+	closeErr := errors.New("close failed")
+	body := &failingResponseBody{
+		reader: strings.NewReader(
+			"event: error\ndata: " + ` + "`" + `{"jsonrpc":"2.0","id":"1","error":{"code":-32603,"message":"watch failed"}}` + "`" + ` + "\n\n",
+		),
+		closeErr: closeErr,
+	}
+	stream := NewWatchStream(&http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+		Body:       body,
+	}, goahttp.ResponseDecoder)
+
+	_, err := stream.Recv()
+	var responseError *jsonrpc.ErrorResponse
+	require.ErrorAs(t, err, &responseError)
+	require.Equal(t, "watch failed", responseError.Message)
+	require.ErrorIs(t, err, closeErr)
+	require.Equal(t, 1, body.closes)
+	_, err = stream.Recv()
+	require.Equal(t, io.EOF, err)
+}
+
+func TestSSEInvalidEventClosesBody(t *testing.T) {
+	tests := []struct {
+		name  string
+		event string
+		error string
+	}{
+		{"malformed notification", "event: notification\ndata: {\n\n", "failed to parse notification"},
+		{"wrong method", "event: notification\ndata: " + ` + "`" + `{"jsonrpc":"2.0","method":"other","params":{}}` + "`" + ` + "\n\n", "received notification for JSON-RPC method"},
+		{"unsupported event", "event: other\ndata: {}\n\n", "unsupported server-sent event type"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			body := &failingResponseBody{reader: strings.NewReader(test.event)}
+			stream := NewWatchStream(&http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+				Body:       body,
+			}, goahttp.ResponseDecoder)
+
+			_, err := stream.Recv()
+			require.ErrorContains(t, err, test.error)
+			require.Equal(t, 1, body.closes)
+			_, err = stream.Recv()
+			require.Equal(t, io.EOF, err)
+		})
+	}
+}
+
+func TestSSEReadFailureClosesBody(t *testing.T) {
+	readErr := errors.New("read failed")
+	body := &failingResponseBody{readErr: readErr}
+	stream := NewWatchStream(&http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+		Body:       body,
+	}, goahttp.ResponseDecoder)
+
+	_, err := stream.Recv()
+	require.ErrorIs(t, err, readErr)
+	require.Equal(t, 1, body.closes)
+	_, err = stream.Recv()
+	require.Equal(t, io.EOF, err)
+}
+
+func TestSSEValidNotificationKeepsBodyOpen(t *testing.T) {
+	body := &failingResponseBody{reader: strings.NewReader(
+		"event: notification\ndata: " + ` + "`" + `{"jsonrpc":"2.0","method":"watch","params":{"view":"summary","body":{"label":"ready"}}}` + "`" + ` + "\n\n" +
+			"event: response\ndata: " + ` + "`" + `{"jsonrpc":"2.0","id":"1","result":null}` + "`" + ` + "\n\n",
+	)}
+	stream := NewWatchStream(&http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+		Body:       body,
+	}, goahttp.ResponseDecoder)
+
+	_, err := stream.Recv()
+	require.NoError(t, err)
+	require.Zero(t, body.closes)
+	_, err = stream.Recv()
+	require.Equal(t, io.EOF, err)
+	require.Equal(t, 1, body.closes)
+}
+
+func TestSSEEndpointReturnsResponseBodyFailures(t *testing.T) {
+	readErr := errors.New("read failed")
+	closeErr := errors.New("close failed")
+	doer := doerFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusBadGateway,
+			Header:     make(http.Header),
+			Body:       &failingResponseBody{readErr: readErr, closeErr: closeErr},
+		}, nil
+	})
+	client := NewClient("http", "example.test", doer, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
+	_, err := client.Watch()(context.Background(), nil)
+	assertDecodingError(t, err)
+	require.ErrorIs(t, err, readErr)
+	require.ErrorIs(t, err, closeErr)
+}
+
+func TestSSEEndpointReturnsContentTypeAndCloseFailures(t *testing.T) {
+	closeErr := errors.New("close failed")
+	doer := doerFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body:       &failingResponseBody{closeErr: closeErr},
+		}, nil
+	})
+	client := NewClient("http", "example.test", doer, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
+
+	_, err := client.Watch()(context.Background(), nil)
+
+	require.ErrorContains(t, err, "unexpected content type")
+	require.ErrorIs(t, err, closeErr)
+	assertDecodingError(t, err)
+}
+
+func TestSSEEndpointContentTypeRemainsPlainWhenCloseSucceeds(t *testing.T) {
+	doer := doerFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Header:     http.Header{"Content-Type": []string{"application/json"}},
+			Body:       &failingResponseBody{},
+		}, nil
+	})
+	client := NewClient("http", "example.test", doer, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
+
+	_, err := client.Watch()(context.Background(), nil)
+
+	require.EqualError(t, err, "unexpected content type: application/json (expected text/event-stream)")
+	var clientErr *goahttp.ClientError
+	require.NotErrorAs(t, err, &clientErr)
+}
+
+func assertDecodingError(t *testing.T, err error) {
+	t.Helper()
+	var clientErr *goahttp.ClientError
+	require.ErrorAs(t, err, &clientErr)
+	require.Equal(t, "decoding_error", clientErr.Name)
+}
 `
 
-const webSocketStatusRuntimeTest = `package client
+const sseCancellationRuntimeTest = `package client
 
 import (
 	"context"
+	"errors"
+	"io"
 	"net/http"
-	"net/http/httptest"
-	"strings"
+	"sync"
 	"testing"
 	"time"
 
-	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
 
-	service "generated.local/gen/web_socket_status"
 	goahttp "goa.design/goa/v3/http"
 )
 
-func TestWebSocketViewedDecoderReceivesHTTPStatusOK(t *testing.T) {
-	acknowledged := make(chan struct{})
-	serverErrors := make(chan error, 2)
-	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		connection, err := (&websocket.Upgrader{}).Upgrade(writer, request, nil)
-		if err != nil {
-			serverErrors <- err
-			return
-		}
-		defer func() {
-			if err := connection.Close(); err != nil {
-				serverErrors <- err
-			}
-		}()
-		var message struct {
-			ID any ` + "`" + `json:"id"` + "`" + `
-		}
-		if err := connection.ReadJSON(&message); err != nil {
-			serverErrors <- err
-			return
-		}
-		if err := connection.WriteJSON(map[string]any{
-			"jsonrpc": "2.0",
-			"id":      message.ID,
-			"result": map[string]any{
-				"view": "summary",
-				"body": map[string]any{"label": "ready"},
-			},
-		}); err != nil {
-			serverErrors <- err
-			return
-		}
-		<-acknowledged
-	}))
-	t.Cleanup(server.Close)
+type blockingResponseBody struct {
+	readStarted chan struct{}
+	closed      chan struct{}
+	readOnce    sync.Once
+	closeOnce   sync.Once
+	closeErr    error
+	closes      int
+}
 
-	statuses := make([]int, 0, 2)
-	decoder := func(response *http.Response) goahttp.Decoder {
-		statuses = append(statuses, response.StatusCode)
-		return goahttp.ResponseDecoder(response)
+func newBlockingResponseBody(closeErr error) *blockingResponseBody {
+	return &blockingResponseBody{
+		readStarted: make(chan struct{}),
+		closed:      make(chan struct{}),
+		closeErr:    closeErr,
 	}
-	client := NewClient(
-		"http", strings.TrimPrefix(server.URL, "http://"), http.DefaultClient,
-		goahttp.RequestEncoder, decoder, false, websocket.DefaultDialer, nil,
-	)
-	t.Cleanup(func() {
-		close(acknowledged)
-		require.NoError(t, client.Close())
+}
+
+func (body *blockingResponseBody) Read([]byte) (int, error) {
+	body.readOnce.Do(func() {
+		close(body.readStarted)
 	})
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	<-body.closed
+	return 0, io.ErrClosedPipe
+}
+
+func (body *blockingResponseBody) Close() error {
+	body.closeOnce.Do(func() {
+		body.closes++
+		close(body.closed)
+	})
+	return body.closeErr
+}
+
+func TestRecvWithContextReturnsCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	assertBlockedReceiveEndsWithContext(t, ctx, cancel, context.Canceled)
+}
+
+func TestRecvWithContextReturnsDeadlineExceeded(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Millisecond)
 	defer cancel()
-	raw, err := client.Watch()(ctx, nil)
-	require.NoError(t, err)
-	stream := raw.(*WatchClientStream)
-	require.NoError(t, stream.Send(&service.WatchPayload{Key: "status"}))
-	_, err = stream.Recv()
+	assertBlockedReceiveEndsWithContext(t, ctx, func() {}, context.DeadlineExceeded)
+}
+
+func assertBlockedReceiveEndsWithContext(t *testing.T, ctx context.Context, endContext func(), want error) {
+	t.Helper()
+	closeErr := errors.New("close failed")
+	body := newBlockingResponseBody(closeErr)
+	stream := NewWatchStream(&http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": []string{"text/event-stream"}},
+		Body:       body,
+	}, goahttp.ResponseDecoder)
+
+	received := make(chan error, 1)
+	go func() {
+		_, err := stream.RecvWithContext(ctx)
+		received <- err
+	}()
+	<-body.readStarted
+	endContext()
+
 	select {
-	case serverErr := <-serverErrors:
-		require.NoError(t, serverErr)
+	case err := <-received:
+		require.ErrorIs(t, err, want)
+		require.ErrorIs(t, err, closeErr)
+	case <-time.After(time.Second):
+		require.NoError(t, body.Close())
+		err := <-received
+		t.Fatalf("receive remained blocked after context ended; returned %v after closing body", err)
+	}
+	select {
+	case <-body.closed:
 	default:
+		t.Fatal("receive returned without closing response body")
 	}
-	require.NoError(t, err)
-	require.NotEmpty(t, statuses)
-	for _, status := range statuses {
-		require.Equal(t, http.StatusOK, status)
-	}
+	_, err := stream.Recv()
+	require.ErrorIs(t, err, io.EOF)
+	require.Equal(t, 1, body.closes)
 }
 `
 
@@ -668,6 +954,223 @@ func TestSSEEventReturnsEveryWriteAndFlushError(t *testing.T) {
 			require.Equal(t, 1, writer.headerCalls)
 		})
 	}
+}
+`
+
+const requestBodyFailureRuntimeTest = `package server
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	goahttp "goa.design/goa/v3/http"
+)
+
+type failingRequestBody struct {
+	readErr  error
+	closeErr error
+}
+
+type failingResponseWriter struct {
+	*httptest.ResponseRecorder
+	failAt   int
+	writes   int
+	writeErr error
+}
+
+func (writer *failingResponseWriter) Write(data []byte) (int, error) {
+	writer.writes++
+	if writer.writes == writer.failAt {
+		return 0, writer.writeErr
+	}
+	return writer.ResponseRecorder.Write(data)
+}
+
+func (body *failingRequestBody) Read([]byte) (int, error) {
+	return 0, body.readErr
+}
+
+func (body *failingRequestBody) Close() error {
+	return body.closeErr
+}
+
+func TestServerReportsRequestReadAndCloseFailures(t *testing.T) {
+	readErr := errors.New("read failed")
+	closeErr := errors.New("close failed")
+	var reported error
+	server := &Server{
+		errhandler: func(_ context.Context, _ http.ResponseWriter, err error) {
+			reported = err
+		},
+	}
+	request := httptest.NewRequest(http.MethodPost, "/unary", nil)
+	request.Body = &failingRequestBody{readErr: readErr, closeErr: closeErr}
+
+	server.handleHTTP(httptest.NewRecorder(), request)
+
+	require.ErrorIs(t, reported, readErr)
+	require.ErrorIs(t, reported, closeErr)
+}
+
+func TestBatchWriterReturnsOpeningDelimiterFailure(t *testing.T) {
+	writeErr := errors.New("write failed")
+	response := &failingResponseWriter{
+		ResponseRecorder: httptest.NewRecorder(),
+		failAt:           1,
+		writeErr:         writeErr,
+	}
+	writer := &batchWriter{Writer: response}
+
+	_, err := writer.Write([]byte("{\"jsonrpc\":\"2.0\",\"result\":null}"))
+
+	require.ErrorIs(t, err, writeErr)
+}
+
+func TestServerReportsBatchClosingDelimiterFailure(t *testing.T) {
+	writeErr := errors.New("write failed")
+	var reported []error
+	server := &Server{
+		decoder: goahttp.RequestDecoder,
+		encoder: goahttp.ResponseEncoder,
+		errhandler: func(_ context.Context, _ http.ResponseWriter, err error) {
+			reported = append(reported, err)
+		},
+	}
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/unary",
+		strings.NewReader("[{\"jsonrpc\":\"2.0\",\"id\":\"1\",\"method\":\"missing\"}]"),
+	)
+	response := &failingResponseWriter{
+		ResponseRecorder: httptest.NewRecorder(),
+		failAt:           3,
+		writeErr:         writeErr,
+	}
+
+	server.handleHTTP(response, request)
+
+	require.ErrorIs(t, errors.Join(reported...), writeErr)
+}
+`
+
+const sseLifecycleRuntimeTest = `package server
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	service "generated.local/gen/sse_decode"
+	goahttp "goa.design/goa/v3/http"
+	goa "goa.design/goa/v3/pkg"
+)
+
+var errWatch = goa.NewServiceError(errors.New("watch failed"), "watch_failed", false, false, false)
+
+type lifecycleService struct {
+	fail bool
+}
+
+func (s *lifecycleService) Watch(_ context.Context, _ *service.WatchPayload, stream service.WatchServerStream) error {
+	if err := stream.Send(&service.WatchResult{Message: "ready"}); err != nil {
+		return err
+	}
+	if s.fail {
+		return errWatch
+	}
+	return nil
+}
+
+func TestSSEStreamWritesNotificationThenNullCompletion(t *testing.T) {
+	body, reported := serveLifecycle(&lifecycleService{}, ` + "`" + `{"jsonrpc":"2.0","id":"request-1","method":"watch","params":{"topic":"alerts"}}` + "`" + `)
+	require.Empty(t, reported)
+	notification := strings.Index(body, "event: notification")
+	response := strings.Index(body, "event: response")
+	require.NotEqual(t, -1, notification)
+	require.Greater(t, response, notification)
+	require.Contains(t, body, ` + "`" + `"method":"watch"` + "`" + `)
+	require.Contains(t, body, ` + "`" + `"params":{"message":"ready"}` + "`" + `)
+	require.Contains(t, body, ` + "`" + `"id":"request-1"` + "`" + `)
+	require.Contains(t, body, ` + "`" + `"result":null` + "`" + `)
+}
+
+func TestSSEStreamWritesReturnedErrorAsTerminalResponse(t *testing.T) {
+	body, reported := serveLifecycle(&lifecycleService{fail: true}, ` + "`" + `{"jsonrpc":"2.0","id":"request-1","method":"watch","params":{"topic":"alerts"}}` + "`" + `)
+	require.Empty(t, reported)
+	notification := strings.Index(body, "event: notification")
+	response := strings.Index(body, "event: error")
+	require.NotEqual(t, -1, notification)
+	require.Greater(t, response, notification)
+	require.Contains(t, body, ` + "`" + `"code":-32603` + "`" + `)
+	require.Contains(t, body, ` + "`" + `"message":"watch failed"` + "`" + `)
+}
+
+func TestSSENotificationRequestHasNoTerminalResponse(t *testing.T) {
+	body, reported := serveLifecycle(&lifecycleService{}, ` + "`" + `{"jsonrpc":"2.0","method":"watch","params":{"topic":"alerts"}}` + "`" + `)
+	require.Empty(t, reported)
+	require.Contains(t, body, "event: notification")
+	require.NotContains(t, body, "event: response")
+	require.NotContains(t, body, "event: error")
+}
+
+func TestSSENotificationServiceErrorHasNoTerminalResponse(t *testing.T) {
+	body, reported := serveLifecycle(&lifecycleService{fail: true}, ` + "`" + `{"jsonrpc":"2.0","method":"watch","params":{"topic":"alerts"}}` + "`" + `)
+	require.Empty(t, reported)
+	require.Contains(t, body, "event: notification")
+	require.NotContains(t, body, "event: response")
+	require.NotContains(t, body, "event: error")
+}
+
+func TestSSENotificationDecodeErrorHasNoResponse(t *testing.T) {
+	body, reported := serveLifecycle(&lifecycleService{}, ` + "`" + `{"jsonrpc":"2.0","method":"watch","params":{}}` + "`" + `)
+	require.Empty(t, reported)
+	require.Empty(t, body)
+}
+
+func TestSSEUnknownNotificationReceivesNoResponse(t *testing.T) {
+	body, reported := serveLifecycle(&lifecycleService{}, ` + "`" + `{"jsonrpc":"2.0","method":"missing"}` + "`" + `)
+	require.Empty(t, reported)
+	require.Empty(t, body)
+}
+
+func TestSSEInvalidRequestsReceiveError(t *testing.T) {
+	for _, request := range []string{
+		` + "`" + `{"jsonrpc":"2.0"}` + "`" + `,
+		` + "`" + `{"jsonrpc":"1.0","method":"watch","params":{"topic":"alerts"}}` + "`" + `,
+	} {
+		body, reported := serveLifecycle(&lifecycleService{}, request)
+		require.Empty(t, reported)
+		require.Contains(t, body, "event: error")
+		require.Contains(t, body, ` + "`" + `"id":null` + "`" + `)
+		require.Contains(t, body, ` + "`" + `"code":-32600` + "`" + `)
+	}
+}
+
+func serveLifecycle(svc *lifecycleService, body string) (string, []error) {
+	reported := make([]error, 0, 1)
+	server := New(
+		service.NewEndpoints(svc),
+		goahttp.NewMuxer(),
+		goahttp.RequestDecoder,
+		goahttp.ResponseEncoder,
+		func(_ context.Context, _ http.ResponseWriter, err error) {
+			reported = append(reported, err)
+		},
+	)
+	writer := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodPost, "/decode", strings.NewReader(body))
+	server.ServeHTTP(writer, request)
+	return writer.Body.String(), reported
 }
 `
 

@@ -7,25 +7,22 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/expr"
 )
 
-// ServerTypeFiles returns the server types files containing all the server
-// interfaces and types needed to implement gRPC server.
-func ServerTypeFiles(services *ServicesData) []*codegen.File {
-	fw := make([]*codegen.File, len(services.Root.API.GRPC.Services))
-	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = addEndpointImports(typesFile(svc, services, true), services, svc.GRPCEndpoints...)
+// serverTypeFiles returns the planned conversion types used by gRPC servers.
+func serverTypeFiles(services *ServicesData) []*codegen.File {
+	fw := make([]*codegen.File, len(services.servicePlans))
+	for i, servicePlan := range services.servicePlans {
+		fw[i] = addEndpointImports(typesFile(servicePlan, services, true), services, servicePlan)
 	}
 	return fw
 }
 
-// ClientTypeFiles returns the client types files containing all the client
-// interfaces and types needed to implement gRPC client.
-func ClientTypeFiles(services *ServicesData) []*codegen.File {
-	fw := make([]*codegen.File, len(services.Root.API.GRPC.Services))
-	for i, svc := range services.Root.API.GRPC.Services {
-		fw[i] = addEndpointImports(typesFile(svc, services, false), services, svc.GRPCEndpoints...)
+// clientTypeFiles returns the planned conversion types used by gRPC clients.
+func clientTypeFiles(services *ServicesData) []*codegen.File {
+	fw := make([]*codegen.File, len(services.servicePlans))
+	for i, servicePlan := range services.servicePlans {
+		fw[i] = addEndpointImports(typesFile(servicePlan, services, false), services, servicePlan)
 	}
 	return fw
 }
@@ -33,22 +30,23 @@ func ClientTypeFiles(services *ServicesData) []*codegen.File {
 // typesFile returns the file defining the gRPC types for the given service.
 // svr indicates whether the file is generated for the server (true) or the
 // client (false) package.
-func typesFile(svc *expr.GRPCServiceExpr, services *ServicesData, svr bool) *codegen.File {
+func typesFile(servicePlan *grpcServicePlan, services *ServicesData, svr bool) *codegen.File {
+	svc := servicePlan.expression
 	var (
 		initData []*InitData
 
 		sd = services.Get(svc.Name())
 	)
 	{
-		seen := make(map[string]struct{})
+		seen := make(map[*codegen.NameDeclaration]struct{})
 		collect := func(c *ConvertData) {
 			if c == nil || c.Init == nil {
 				return
 			}
-			if _, ok := seen[c.Init.Name]; ok {
+			if _, ok := seen[c.Init.Declaration]; ok {
 				return
 			}
-			seen[c.Init.Name] = struct{}{}
+			seen[c.Init.Declaration] = struct{}{}
 			initData = append(initData, c.Init)
 		}
 		for _, a := range svc.GRPCEndpoints {
@@ -59,8 +57,14 @@ func typesFile(svc *expr.GRPCServiceExpr, services *ServicesData, svr bool) *cod
 					collect(ed.Request.LegacyDecode.ServerConvert)
 				}
 				collect(ed.Response.ServerConvert)
+				for _, conversion := range ed.Response.ServerConverts {
+					collect(conversion.Convert)
+				}
 				if ed.ServerStream != nil {
 					collect(ed.ServerStream.SendConvert)
+					for _, conversion := range ed.ServerStream.SendConverts {
+						collect(conversion.Convert)
+					}
 					collect(ed.ServerStream.RecvConvert)
 				}
 				for _, e := range ed.Errors {
@@ -69,8 +73,14 @@ func typesFile(svc *expr.GRPCServiceExpr, services *ServicesData, svr bool) *cod
 			} else {
 				collect(ed.Request.ClientConvert)
 				collect(ed.Response.ClientConvert)
+				for _, conversion := range ed.Response.ClientConverts {
+					collect(conversion.Convert)
+				}
 				if ed.ClientStream != nil {
 					collect(ed.ClientStream.RecvConvert)
+					for _, conversion := range ed.ClientStream.RecvConverts {
+						collect(conversion.Convert)
+					}
 					collect(ed.ClientStream.SendConvert)
 				}
 				for _, e := range ed.Errors {
@@ -93,18 +103,19 @@ func typesFile(svc *expr.GRPCServiceExpr, services *ServicesData, svr bool) *cod
 	)
 	{
 		svcName := sd.Service.PathName
+		outputPackage := path.Join(services.GenPkg(), "grpc", svcName, side)
 		fpath = filepath.Join(codegen.Gendir, "grpc", svcName, side, "types.go")
 		imports := []*codegen.ImportSpec{
 			{Path: "unicode/utf8"},
 			codegen.GoaImport(""),
-			services.ServiceImport(svc.Name()),
-			services.PackageImport(path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
+			services.ServiceImport(outputPackage, svc.Name()),
+			services.PackageImport(outputPackage, path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
 		}
 		if serviceHasViewedResult(sd) {
-			imports = append(imports, services.ViewImport(svc.Name()))
+			imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
 		}
 		// Add imports if Any type is used
-		if usesAnyType(svc.GRPCEndpoints, true) {
+		if servicePlan.usesAnyInErrors {
 			imports = append(imports, &codegen.ImportSpec{Path: "fmt"})
 			imports = append(imports, &codegen.ImportSpec{Path: "google.golang.org/protobuf/types/known/structpb", Name: "structpb"})
 		}
@@ -127,7 +138,11 @@ func typesFile(svc *expr.GRPCServiceExpr, services *ServicesData, svr bool) *cod
 				Data:   data,
 			})
 		}
-		for _, h := range sd.transformHelpers {
+		helpers := sd.clientTransformHelpers
+		if svr {
+			helpers = sd.serverTransformHelpers
+		}
+		for _, h := range helpers {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   side + "-transform-helper",
 				Source: grpcTemplates.Read(grpcTransformHelperT),

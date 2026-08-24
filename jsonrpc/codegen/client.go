@@ -15,20 +15,8 @@ type (
 	// one client package.
 	clientTemplateData struct {
 		httpcodegen.JSONRPCServiceSnapshot
-		// BufferPool is the byte buffer variable used by clients without WebSockets.
+		// BufferPool is the byte buffer variable used while encoding requests.
 		BufferPool *codegen.NameDeclaration
-		// WebSocketConnection is the shared WebSocket connection type.
-		WebSocketConnection *codegen.NameDeclaration
-		// WebSocketRequestOwner is the type that marks one method stream closed.
-		WebSocketRequestOwner *codegen.NameDeclaration
-		// WebSocketPendingRequest is the type that stores one waiting request.
-		WebSocketPendingRequest *codegen.NameDeclaration
-		// WebSocketMessage is the type that reads one incoming WebSocket message.
-		WebSocketMessage *codegen.NameDeclaration
-		// WebSocketClosedError is the error returned after a method stream closes.
-		WebSocketClosedError *codegen.NameDeclaration
-		// NewWebSocketConnection is the shared WebSocket connection constructor.
-		NewWebSocketConnection *codegen.NameDeclaration
 	}
 )
 
@@ -37,11 +25,9 @@ type (
 func clientFiles(services []*servicePlan) []*codegen.File {
 	files := make([]*codegen.File, 0, len(services)*3)
 	for _, planned := range services {
-		files = append(files, addFileImports(clientFile(planned), planned.data))
-		if f := websocketClientFile(planned); f != nil {
-			files = append(files, addFileImports(f, planned.data))
-		}
-		if f := sseClientFile(planned); f != nil {
+		renderPlan := servicePlanForOutput(planned, true)
+		files = append(files, addFileImports(clientFile(renderPlan), planned.data))
+		if f := sseClientFile(renderPlan); f != nil {
 			files = append(files, addFileImports(f, planned.data))
 		}
 	}
@@ -50,31 +36,38 @@ func clientFiles(services []*servicePlan) []*codegen.File {
 		if f == nil {
 			continue
 		}
-		var swapped int
+		sections := make([]*codegen.SectionTemplate, 0, len(f.SectionTemplates))
+		var decoders int
 		for _, s := range f.SectionTemplates {
 			switch s.Name {
 			case "source-header":
 				codegen.AddImport(s, &codegen.ImportSpec{Path: "bufio"})
 				codegen.AddImport(s, &codegen.ImportSpec{Path: "bytes"})
+				codegen.AddImport(s, &codegen.ImportSpec{Path: "errors"})
 				codegen.AddImport(s, &codegen.ImportSpec{Path: "sync"})
-				codegen.AddImport(s, &codegen.ImportSpec{Path: "sync/atomic"})
 				codegen.AddImport(s, codegen.GoaImport("jsonrpc"))
 			case "response-decoder":
+				endpoint := s.Data.(*httpcodegen.JSONRPCEndpointSnapshot)
+				if endpoint.SSE != nil {
+					continue
+				}
 				s.Source = jsonrpcTemplates.Read(responseDecoderT, singleResponseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP)
 				s.FuncMap["buildResponseData"] = buildJSONRPCResponseData
 				for name, function := range viewedResultFuncs(planned) {
 					s.FuncMap[name] = function
 				}
-				swapped++
+				decoders++
 			}
 			s.Name = "jsonrpc-" + s.Name
+			sections = append(sections, s)
 		}
+		f.SectionTemplates = sections
 		viewed := clientViewedResultSections(planned)
 		if len(viewed) > 0 {
 			header := f.SectionTemplates[0]
 			codegen.AddImport(header, &codegen.ImportSpec{Path: "encoding/json"})
 			codegen.AddImport(header, codegen.GoaImport(""))
-			codegen.AddImport(header, planned.data.ViewImport())
+			codegen.AddImport(header, planned.data.ClientViewImport())
 			f.SectionTemplates = append(f.SectionTemplates, &codegen.SectionTemplate{
 				Name:   "jsonrpc-viewed-result-body-decoder",
 				Source: jsonrpcTemplates.Read(viewedResultBodyDecodeT),
@@ -82,10 +75,15 @@ func clientFiles(services []*servicePlan) []*codegen.File {
 			})
 			f.SectionTemplates = append(f.SectionTemplates, viewed...)
 		}
-		// The HTTP client file emits exactly one response decoder per
-		// endpoint. Guard against the two generators drifting apart.
-		if n := len(planned.data.Endpoints); swapped != n {
-			panic(fmt.Sprintf("jsonrpc: swapped %d response decoders for service %q, expected %d", swapped, planned.name, n))
+		// Each method that returns one response needs exactly one decoder.
+		var expected int
+		for _, endpoint := range planned.data.Endpoints {
+			if endpoint.SSE == nil {
+				expected++
+			}
+		}
+		if decoders != expected {
+			panic(fmt.Sprintf("jsonrpc: wrote %d response decoders for service %q, expected %d", decoders, planned.name, expected))
 		}
 		files = append(files, addFileImports(f, planned.data))
 	}
@@ -106,14 +104,8 @@ func buildJSONRPCResponseData(data httpcodegen.JSONRPCResponseData, serviceName 
 func clientFile(planned *servicePlan) *codegen.File {
 	data := planned.data
 	renderData := &clientTemplateData{
-		JSONRPCServiceSnapshot:  data,
-		BufferPool:              planned.clientNames.bufferPool,
-		WebSocketConnection:     planned.clientNames.websocketConnection,
-		WebSocketRequestOwner:   planned.clientNames.websocketRequestOwner,
-		WebSocketPendingRequest: planned.clientNames.websocketPendingRequest,
-		WebSocketMessage:        planned.clientNames.websocketMessage,
-		WebSocketClosedError:    planned.clientNames.websocketClosedError,
-		NewWebSocketConnection:  planned.clientNames.newWebsocketConnection,
+		JSONRPCServiceSnapshot: data,
+		BufferPool:             planned.clientNames.bufferPool,
 	}
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "jsonrpc", svcName, "client", "client.go")
@@ -130,13 +122,10 @@ func clientFile(planned *servicePlan) *codegen.File {
 		{Path: "strconv"},
 		{Path: "strings"},
 		{Path: "sync"},
-		{Path: "sync/atomic"},
-		{Path: "time"},
-		{Path: "github.com/gorilla/websocket"},
 		codegen.GoaImport(""),
 		codegen.GoaImport("jsonrpc"),
 		codegen.GoaNamedImport("http", "goahttp"),
-		data.ServiceImport(),
+		data.ClientServiceImport(),
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", imports),
@@ -146,7 +135,6 @@ func clientFile(planned *servicePlan) *codegen.File {
 		Source: jsonrpcTemplates.Read(clientStructT),
 		Data:   renderData,
 		FuncMap: map[string]any{
-			"hasWebSocket":  hasJSONRPCWebSocket,
 			"hasSSE":        hasJSONRPCSSE,
 			"isSSEEndpoint": isJSONRPCSSEEndpoint,
 		},
@@ -157,7 +145,6 @@ func clientFile(planned *servicePlan) *codegen.File {
 		Source: jsonrpcTemplates.Read(clientInitT),
 		Data:   renderData,
 		FuncMap: map[string]any{
-			"hasWebSocket":  hasJSONRPCWebSocket,
 			"hasSSE":        hasJSONRPCSSE,
 			"isSSEEndpoint": isJSONRPCSSEEndpoint,
 		},
@@ -170,46 +157,17 @@ func clientFile(planned *servicePlan) *codegen.File {
 			Source: jsonrpcTemplates.Read(clientEndpointInitT),
 			Data:   &e.JSONRPCEndpointSnapshot,
 			FuncMap: map[string]any{
-				"isWebSocketEndpoint":       isJSONRPCWebSocketEndpoint,
-				"isSSEEndpoint":             isJSONRPCSSEEndpoint,
-				"viewedDecodeName":          funcs["viewedDecodeName"],
-				"websocketRequestOwnerName": planned.websocketRequestOwnerName,
+				"isSSEEndpoint":    isJSONRPCSSEEndpoint,
+				"viewedDecodeName": funcs["viewedDecodeName"],
 			},
-		})
-	}
-
-	if hasJSONRPCWebSocket(data) {
-		sections = append(sections, &codegen.SectionTemplate{
-			Name:   "jsonrpc-client-websocket-conn",
-			Source: jsonrpcTemplates.Read(websocketClientConnT),
-			Data:   renderData,
 		})
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-// websocketRequestOwnerName returns the type used to mark one method stream
-// closed.
-func (s *servicePlan) websocketRequestOwnerName() string {
-	return s.clientNames.websocketRequestOwner.Name()
-}
-
-// hasJSONRPCWebSocket reports whether service has a method that uses WebSocket.
-// Generated clients include shared connection fields only when one is needed.
-func hasJSONRPCWebSocket(data any) bool {
-	service := jsonRPCClientService(data)
-	for index := range service.Endpoints {
-		if isJSONRPCWebSocketEndpoint(service.Endpoints[index]) {
-			return true
-		}
-	}
-	return false
-}
-
 // hasJSONRPCSSE reports whether service has a method that sends server-sent
 // events. Generated clients include stream fields only when one is needed.
-
 func hasJSONRPCSSE(data any) bool {
 	service := jsonRPCClientService(data)
 	for _, endpoint := range service.Endpoints {

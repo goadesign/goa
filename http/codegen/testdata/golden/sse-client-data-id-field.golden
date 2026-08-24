@@ -198,28 +198,25 @@ func (s *SSEDataIDFieldMethodStreamImpl) processEvent(eventData []byte) (event *
 			continue
 		}
 		if bytes.HasPrefix(line, []byte("data:")) {
-			dataLines = append(dataLines, s.trimHeader(len("data:"), line))
+			dataLines = append(dataLines, s.trimHeader(line[len("data:"):]))
 			continue
 		}
 		if bytes.HasPrefix(line, []byte("id:")) {
-			event.ID = s.trimHeader(len("id:"), line)
+			event.ID = s.trimHeader(line[len("id:"):])
 			continue
 		}
 	}
 	if len(dataLines) > 0 {
 		dataContent := strings.Join(dataLines, "\n")
 
-		event.Data = dataContent
+		value := dataContent
+		event.Data = &value
 	}
 	return
 }
 
-// trimHeader removes the header prefix and optional leading space
-func (s *SSEDataIDFieldMethodStreamImpl) trimHeader(size int, data []byte) string {
-	if len(data) < size {
-		return string(data)
-	}
-	data = data[size:]
+// trimHeader removes the optional space after an SSE field name.
+func (s *SSEDataIDFieldMethodStreamImpl) trimHeader(data []byte) string {
 	if len(data) > 0 && data[0] == ' ' {
 		data = data[1:]
 	}

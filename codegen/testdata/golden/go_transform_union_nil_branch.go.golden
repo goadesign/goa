@@ -1,0 +1,78 @@
+func transform() {
+	var target *State
+	switch string(source.Kind()) {
+	case "details":
+		actual, _ := source.AsDetails()
+		var obj *Details
+		if actual != nil {
+			obj = transformDetailsToDetails(actual)
+		}
+		var u State
+		u.SetDetails((*Details)(obj))
+		target = &u
+	case "empty":
+		actual, _ := source.AsEmpty()
+		var obj *Empty
+		if actual != nil {
+			obj = transformEmptyToEmpty(actual)
+		}
+		var u State
+		u.SetEmpty((*Empty)(obj))
+		target = &u
+	case "aliases":
+		actual, _ := source.AsAliases()
+		var obj []string
+		if actual != nil {
+			obj = make([]string, len(actual))
+			for i, val := range actual {
+				obj[i] = val
+			}
+
+		}
+		var u State
+		u.SetAliases(([]string)(obj))
+		target = &u
+	case "labels":
+		actual, _ := source.AsLabels()
+		var obj map[string]string
+		if actual != nil {
+			obj = make(map[string]string, len(actual))
+			for key, val := range actual {
+				tk := key
+				tv := val
+				obj[tk] = tv
+			}
+
+		}
+		var u State
+		u.SetLabels((map[string]string)(obj))
+		target = &u
+	case "blob":
+		actual, _ := source.AsBlob()
+		var obj []byte
+		if actual != nil {
+			obj = actual
+
+		}
+		var u State
+		u.SetBlob(([]byte)(obj))
+		target = &u
+	case "anything":
+		actual, _ := source.AsAnything()
+		var obj any
+		if actual != nil {
+			obj = actual
+
+		}
+		var u State
+		u.SetAnything((any)(obj))
+		target = &u
+	case "name":
+		actual, _ := source.AsName()
+		obj := actual
+
+		var u State
+		u.SetName((string)(obj))
+		target = &u
+	}
+}

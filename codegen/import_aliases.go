@@ -1,6 +1,7 @@
-// This file owns the import qualifiers shared by every file rendered in one
-// generation. Generators declare complete package paths during planning, then
-// render headers and references from the immutable bindings after freeze.
+// This file chooses the Go name written before each imported type or function.
+// Generators submit complete import paths before source is written. After
+// Generation.Freeze chooses each name, every file in the output package reads
+// the same result.
 package codegen
 
 import (
@@ -12,24 +13,24 @@ import (
 )
 
 type (
-	// importPriority identifies the closed import ownership classes used during
-	// deterministic qualifier allocation.
+	// importPriority states why a generator requested an import name. A smaller
+	// value wins when the same import path has several requested names.
 	importPriority uint8
 
-	// importAliasPlan records every preferred spelling for a complete package
-	// path before qualifiers are allocated.
+	// importAliasPlan records every requested Go name for each complete import
+	// path before Generation.Freeze chooses the result.
 	importAliasPlan struct {
 		candidates map[string]*importAliasCandidate
 	}
 
-	// importAliasCandidate retains requested names by ownership class so the
-	// highest-priority request for one complete path wins.
+	// importAliasCandidate groups requested Go names by their reason so the
+	// strongest requirement for one complete import path wins.
 	importAliasCandidate struct {
 		spellings [importPriorityCount]map[string]bool
 	}
 
-	// importAliasBinding records the qualifier and whether its import declaration
-	// must spell that qualifier explicitly.
+	// importAliasBinding records the Go name written before identifiers from one
+	// imported package and whether the import line must include that name.
 	importAliasBinding struct {
 		name     string
 		explicit bool
@@ -43,36 +44,37 @@ const (
 	importPriorityCount
 )
 
-// RequireImport declares an import whose qualifier is required by static
-// generated code. Two different required qualifiers for one path are rejected.
-func (g *Generation) RequireImport(spec *ImportSpec) error {
-	return g.declareImport(spec, fixedImportPriority)
+// RequireImport records an import name that generated source already refers
+// to. It returns an error when the same path is required with a different name.
+func (p *GeneratedPackage) RequireImport(spec *ImportSpec) error {
+	return p.declareImport(spec, fixedImportPriority)
 }
 
-// ReserveGeneratedImport declares a preferred qualifier for a generated
-// package. Required static imports take priority and may cause it to be
-// suffixed.
-func (g *Generation) ReserveGeneratedImport(spec *ImportSpec) error {
-	return g.declareImport(spec, generatedImportPriority)
+// ReserveGeneratedImport requests a Go name for a generated package. A name
+// required by source that is already fixed takes priority, so this request may
+// receive a number at the end.
+func (p *GeneratedPackage) ReserveGeneratedImport(spec *ImportSpec) error {
+	return p.declareImport(spec, generatedImportPriority)
 }
 
-// DeclareImport declares a design-owned import. Repeated declarations of one
-// complete path are merged before freeze.
-func (g *Generation) DeclareImport(spec *ImportSpec) error {
-	return g.declareImport(spec, metadataImportPriority)
+// DeclareImport requests the Go name supplied by design metadata. Repeated
+// requests for the same complete path are combined before Generation.Freeze.
+func (p *GeneratedPackage) DeclareImport(spec *ImportSpec) error {
+	return p.declareImport(spec, metadataImportPriority)
 }
 
-// Import returns the frozen import declaration for importPath. It panics when
-// called before freeze or for a path that planning did not declare.
-func (g *Generation) Import(importPath string) *ImportSpec {
-	binding := g.importBinding(importPath)
+// Import returns the import line data chosen for importPath. It panics before
+// Generation.Freeze or when no generator submitted that path.
+func (p *GeneratedPackage) Import(importPath string) *ImportSpec {
+	binding := p.importBinding(importPath)
 	return &ImportSpec{Name: explicitImportName(importPath, binding), Path: importPath}
 }
 
-// ImportName returns the frozen Go qualifier for importPath. It panics when
-// called before freeze or for a path that planning did not declare.
-func (g *Generation) ImportName(importPath string) string {
-	return g.importBinding(importPath).name
+// ImportName returns the Go name written before identifiers imported from
+// importPath. It panics before Generation.Freeze or when no generator submitted
+// that path.
+func (p *GeneratedPackage) ImportName(importPath string) string {
+	return p.importBinding(importPath).name
 }
 
 // HasRoot reports whether root is one of the exact evaluated roots registered
@@ -86,10 +88,10 @@ func (g *Generation) HasRoot(root eval.Root) bool {
 	return false
 }
 
-// declareImport merges one path spelling into the generation plan.
-func (g *Generation) declareImport(spec *ImportSpec, priority importPriority) error {
-	if g.frozen {
-		return fmt.Errorf("generation imports are frozen")
+// declareImport records one requested Go name for an import path.
+func (p *GeneratedPackage) declareImport(spec *ImportSpec, priority importPriority) error {
+	if p.frozen {
+		return fmt.Errorf("generated package %q is frozen", p.path)
 	}
 	importPath, preferred := spec.Path, spec.Name
 	if importPath == "" {
@@ -98,10 +100,10 @@ func (g *Generation) declareImport(spec *ImportSpec, priority importPriority) er
 	if preferred == "" {
 		preferred = path.Base(importPath)
 	}
-	candidate, ok := g.importPlan.candidates[importPath]
+	candidate, ok := p.importPlan.candidates[importPath]
 	if !ok {
 		candidate = &importAliasCandidate{}
-		g.importPlan.candidates[importPath] = candidate
+		p.importPlan.candidates[importPath] = candidate
 	}
 	spellings := candidate.spellings[priority]
 	if spellings == nil {
@@ -123,16 +125,16 @@ func (g *Generation) declareImport(spec *ImportSpec, priority importPriority) er
 	return nil
 }
 
-// freezeImports validates fixed requirements, then allocates qualifiers by
-// ownership class and complete import path.
-func (g *Generation) freezeImports() error {
-	paths := make([]string, 0, len(g.importPlan.candidates))
-	for importPath := range g.importPlan.candidates {
+// freezeImports rejects conflicting required names, then chooses one unused Go
+// name for every import path. No import name changes afterward.
+func (p *GeneratedPackage) freezeImports() error {
+	paths := make([]string, 0, len(p.importPlan.candidates))
+	for importPath := range p.importPlan.candidates {
 		paths = append(paths, importPath)
 	}
 	sort.Slice(paths, func(i, j int) bool {
-		left := g.importPlan.candidates[paths[i]].priority()
-		right := g.importPlan.candidates[paths[j]].priority()
+		left := p.importPlan.candidates[paths[i]].priority()
+		right := p.importPlan.candidates[paths[j]].priority()
 		if left != right {
 			return left < right
 		}
@@ -140,7 +142,7 @@ func (g *Generation) freezeImports() error {
 	})
 	fixedPaths := make(map[string]string)
 	for _, importPath := range paths {
-		candidate := g.importPlan.candidates[importPath]
+		candidate := p.importPlan.candidates[importPath]
 		if candidate.priority() != fixedImportPriority {
 			continue
 		}
@@ -158,7 +160,7 @@ func (g *Generation) freezeImports() error {
 	scope := NewNameScope()
 	bindings := make(map[string]importAliasBinding, len(paths))
 	for _, importPath := range paths {
-		candidate := g.importPlan.candidates[importPath]
+		candidate := p.importPlan.candidates[importPath]
 		spellings := candidate.spellings[candidate.priority()]
 		preferred, explicit := firstImportSpelling(spellings)
 		name := scope.Unique(preferred)
@@ -168,24 +170,25 @@ func (g *Generation) freezeImports() error {
 		}
 	}
 	scope.Freeze()
-	g.imports = bindings
+	p.imports = bindings
 	return nil
 }
 
-// importBinding returns one planned binding after generation freeze.
-func (g *Generation) importBinding(importPath string) importAliasBinding {
-	if !g.frozen {
-		panic("generation imports requested before freeze")
+// importBinding returns the Go package name chosen for one import path after
+// Generation.Freeze chooses all import names.
+func (p *GeneratedPackage) importBinding(importPath string) importAliasBinding {
+	if !p.frozen {
+		panic(fmt.Sprintf("generated package %q imports requested before freeze", p.path))
 	}
-	binding, ok := g.imports[importPath]
+	binding, ok := p.imports[importPath]
 	if !ok {
 		panic(fmt.Sprintf("import path %q has no planned alias", importPath))
 	}
 	return binding
 }
 
-// firstImportSpelling returns the lexicographically first spelling so plan
-// registration order cannot affect generated qualifiers.
+// firstImportSpelling returns the alphabetically first requested name so the
+// order in which generators submit requests cannot change generated source.
 func firstImportSpelling(spellings map[string]bool) (string, bool) {
 	names := make([]string, 0, len(spellings))
 	for name := range spellings {
@@ -196,7 +199,7 @@ func firstImportSpelling(spellings map[string]bool) (string, bool) {
 	return name, spellings[name]
 }
 
-// priority returns the strongest ownership class that requested this path.
+// priority returns the strongest reason for a requested import name.
 func (c *importAliasCandidate) priority() importPriority {
 	for priority := fixedImportPriority; priority < importPriorityCount; priority++ {
 		if len(c.spellings[priority]) > 0 {
@@ -206,8 +209,9 @@ func (c *importAliasCandidate) priority() importPriority {
 	panic("import alias candidate has no spellings")
 }
 
-// explicitImportName omits a redundant alias unless planning or collision
-// resolution requires one.
+// explicitImportName returns an empty string when the import path already ends
+// in the chosen Go name; otherwise it returns the name written on the import
+// line.
 func explicitImportName(importPath string, binding importAliasBinding) string {
 	if binding.explicit || binding.name != path.Base(importPath) {
 		return binding.name

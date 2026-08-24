@@ -27,7 +27,7 @@ const (
 // JSONRPC configures a service to use JSON-RPC 2.0 transport.
 // The generated code handles JSON-RPC protocol details: request parsing, method dispatch,
 // response formatting, and batch processing. All service JSON-RPC methods share
-// a single HTTP endpoint and must use the same transport (HTTP, WebSocket or SSE).
+// a single HTTP POST endpoint. Methods may stream results over Server-Sent Events.
 //
 // JSONRPC can be used at three levels:
 //
@@ -61,47 +61,21 @@ const (
 // notifications), and marshal the responses into a single array of JSON-RPC
 // response objects in the HTTP response body.
 //
-// WebSocket:
-//
-// For WebSocket transport, methods that use StreamingPayload() and/or StreamingResult()
-// enable bidirectional streaming: each payload or result element is sent as a separate,
-// complete JSON-RPC message over the WebSocket connection. When using WebSockets, all
-// methods must use StreamingPayload() for their payload (if any) and StreamingResult()
-// for their result (if any), because a single WebSocket connection is shared by all
-// methods of a service and client. Non-streaming methods are not supported over WebSockets.
-//
-// WebSocket methods can have three patterns:
-//   - StreamingPayload() only: Client-to-server notifications (no response)
-//   - StreamingResult() only: Server-to-client notifications (no request ID, sent without client request)
-//   - Both StreamingPayload() and StreamingResult(): Bidirectional request/response streaming
-//
-// Server-side notifications (methods with StreamingResult() but no StreamingPayload()) are
-// sent from the server to the client without an associated request ID, as they are not
-// responses to client requests but rather server-initiated messages.
-//
 // Server-Sent Events:
 //
-// For Server-Sent Events (SSE), enable SSE by calling the ServerSentEvents() function
-// within the JSONRPC expression. In this mode, each element of the result is sent as a
-// separate JSON-RPC response within its own SSE event. The SSE id field is mapped to
-// the result's ID attribute. Because all methods for a given service and client
-// share the same HTTP endpoint, every method must use both StreamingResult() and
-// ServerSentEvents() to ensure correct streaming behavior.
+// A JSON-RPC method may stream results by defining StreamingResult() and calling
+// ServerSentEvents() in its method-level JSONRPC expression. The client sends one
+// JSON-RPC request. Each streamed value is sent as a complete JSON-RPC message in
+// a separate SSE event. The SSE id field may be mapped to a result attribute.
+// JSON-RPC does not support StreamingPayload(), bidirectional streaming, or one
+// method that defines both Result() and StreamingResult(). Use
+// separate methods when clients need both a stream and a final resource.
 //
 // Using JSON-RPC with Other Transports:
 //
 // Goa allows you to expose a single service or method over multiple transports.
 // For example, a method can have both standard HTTP or gRPC endpoints in addition
 // to a JSON-RPC endpoint.
-//
-// Important WebSocket Limitation:
-//
-// A service cannot mix JSON-RPC WebSocket endpoints with pure HTTP WebSocket endpoints.
-// This is because JSON-RPC WebSocket uses a single underlying WebSocket connection
-// for all methods in the service, with method dispatch happening at the protocol level
-// through JSON-RPC message routing. In contrast, pure HTTP WebSocket creates individual
-// connections per streaming endpoint. These two approaches are fundamentally incompatible
-// and cannot coexist in the same service.
 //
 // Error Codes:
 //
@@ -112,7 +86,7 @@ const (
 //   - RPCInvalidParams (-32602): Invalid method parameters
 //   - RPCInternalError (-32603): Internal JSON-RPC error (default for unmapped errors)
 //
-// Example - Complete service with request/notification handling and streaming:
+// Example - Service with request and notification handling:
 //
 //	Service("calc", func() {
 //	    Error("timeout", ErrTimeout, "Request timed out") // Define an error that all service methods can return
@@ -144,44 +118,6 @@ const (
 //	    })
 //	})
 //
-// Example - WebSocket streaming service:
-//
-//	Service("chat", func() {
-//	    JSONRPC(func() {
-//	        GET("/ws") // Use GET for WebSocket endpoint
-//	    })
-//	    Method("send", func() {
-//	        StreamingPayload(func() {
-//	            Attribute("message", String, "Message to send")
-//	        })
-//	        JSONRPC(func() {
-//	            // Client-to-server notification (no response)
-//	        })
-//	    })
-//	    Method("notify", func() {
-//	        StreamingResult(func() {
-//	            Attribute("event", String, "Server notification")
-//	            Attribute("data", Any, "Notification data")
-//	        })
-//	        JSONRPC(func() {
-//	            // Server-to-client notification (no request ID, server-initiated)
-//	        })
-//	    })
-//	    Method("echo", func() {
-//	        StreamingPayload(func() {
-//	            ID("req_id", String, "Request ID")
-//	            Attribute("message", String, "Message to echo")
-//	        })
-//	        StreamingResult(func() {
-//	            ID("req_id", String, "Request ID")
-//	            Attribute("echo", String, "Echoed message")
-//	        })
-//	        JSONRPC(func() {
-//	            // Bidirectional request/response streaming
-//	        })
-//	    })
-//	})
-//
 // Example - SSE streaming service:
 //
 //	Service("updater", func() {
@@ -198,7 +134,7 @@ const (
 //	            Attribute("data", Data, "Event data")
 //	        })
 //	        JSONRPC(func() {
-//	            ServerSentEvents(func() {         // Use SSE instead of WebSocket
+//	            ServerSentEvents(func() {         // Stream results as server-sent events
 //	                SSERequestID("last_event_id") // Map SSE Last-Event-ID header to payload "last_event_id" attribute
 //	                SSEEventID("id")              // Use "id" result attribute as SSE event ID
 //	            })

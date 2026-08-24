@@ -1,0 +1,29 @@
+// NewProtoMethodServerStreamingUserTypeRPCRequest builds
+// *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCRequest
+// from metadata values.
+func NewProtoMethodServerStreamingUserTypeRPCRequest() *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCRequest {
+	message := &service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCRequest{}
+	return message
+}
+
+// NewMethodServerStreamingUserTypeRPCResponseResultTypeView builds
+// *serviceserverstreamingusertyperpcviews.ResultTypeView from
+// *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse.
+func NewMethodServerStreamingUserTypeRPCResponseResultTypeView(v *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse) *serviceserverstreamingusertyperpcviews.ResultTypeView {
+	vresult := &serviceserverstreamingusertyperpcviews.ResultTypeView{
+		DoubleField: &v.DoubleField,
+	}
+	intField := int(v.IntField)
+	vresult.IntField = &intField
+	return vresult
+}
+
+// NewMethodServerStreamingUserTypeRPCResponseResultTypeViewTiny builds
+// *serviceserverstreamingusertyperpcviews.ResultTypeView from
+// *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse.
+func NewMethodServerStreamingUserTypeRPCResponseResultTypeViewTiny(v *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse) *serviceserverstreamingusertyperpcviews.ResultTypeView {
+	vresult := &serviceserverstreamingusertyperpcviews.ResultTypeView{}
+	intField := int(v.IntField)
+	vresult.IntField = &intField
+	return vresult
+}

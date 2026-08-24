@@ -138,10 +138,10 @@ func (e *HTTPEndpointExpr) UsesSSE() bool {
 	return e.SSE != nil && (e.MethodExpr.IsResultStreaming() || e.MethodExpr.HasMixedResults())
 }
 
-// UsesWebSocket returns true if the endpoint streams payloads or results over a
-// WebSocket connection.
+// UsesWebSocket returns true if an ordinary HTTP endpoint streams payloads or
+// results over a WebSocket connection.
 func (e *HTTPEndpointExpr) UsesWebSocket() bool {
-	return e.MethodExpr.IsStreaming() && e.SSE == nil
+	return !e.IsJSONRPC() && e.MethodExpr.IsStreaming() && e.SSE == nil
 }
 
 // HasAbsoluteRoutes returns true if all the endpoint routes are absolute.
@@ -230,15 +230,15 @@ func (e *HTTPEndpointExpr) Prepare() {
 
 	// Inherit headers, cookies and params from parent service and API
 	headers := NewEmptyMappedAttributeExpr()
-	headers.Merge(Root.API.HTTP.Headers)
+	headers.Merge(e.MethodExpr.Service.design.API.HTTP.Headers)
 	headers.Merge(e.Service.Headers)
 
 	cookies := NewEmptyMappedAttributeExpr()
-	cookies.Merge(Root.API.HTTP.Cookies)
+	cookies.Merge(e.MethodExpr.Service.design.API.HTTP.Cookies)
 	cookies.Merge(e.Service.Cookies)
 
 	params := NewEmptyMappedAttributeExpr()
-	params.Merge(Root.API.HTTP.Params)
+	params.Merge(e.MethodExpr.Service.design.API.HTTP.Params)
 	params.Merge(e.Service.Params)
 
 	if p := e.Service.Parent(); p != nil {
@@ -310,8 +310,8 @@ func (e *HTTPEndpointExpr) Prepare() {
 	if e.MethodExpr.Stream == ServerStreamKind && e.SSE == nil {
 		if e.Service.SSE != nil {
 			e.SSE = e.Service.SSE
-		} else if Root.API.HTTP.SSE != nil {
-			e.SSE = Root.API.HTTP.SSE
+		} else if e.MethodExpr.Service.design.API.HTTP.SSE != nil {
+			e.SSE = e.MethodExpr.Service.design.API.HTTP.SSE
 		}
 	}
 
@@ -357,7 +357,7 @@ func (e *HTTPEndpointExpr) Prepare() {
 			}
 		}
 		if !found {
-			for _, ae := range Root.API.HTTP.Errors {
+			for _, ae := range e.MethodExpr.Service.design.API.HTTP.Errors {
 				if se.Name == ae.Name {
 					e.HTTPErrors = append(e.HTTPErrors, ae.Dup())
 					break
@@ -366,8 +366,7 @@ func (e *HTTPEndpointExpr) Prepare() {
 		}
 	}
 
-	// Make sure JSON-RPC HTTP verb is set to GET if the endpoint is a
-	// WebSocket endpoint
+	// WebSocket endpoints use GET for the HTTP upgrade request.
 	if e.UsesWebSocket() && len(e.Routes) > 0 {
 		e.Routes[0].Method = "GET"
 	}
@@ -391,7 +390,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 
 	// SkipRequestBodyEncodeDecode is not compatible with gRPC or WebSocket
 	if e.SkipRequestBodyEncodeDecode {
-		if s := Root.API.GRPC.Service(e.Service.Name()); s != nil {
+		if s := e.MethodExpr.Service.design.API.GRPC.Service(e.Service.Name()); s != nil {
 			if s.Endpoint(e.Name()) != nil {
 				verr.Add(e, "Endpoint cannot use SkipRequestBodyEncodeDecode and define a gRPC transport.")
 			}
@@ -406,7 +405,7 @@ func (e *HTTPEndpointExpr) Validate() error {
 
 	// SkipResponseBodyEncodeDecode is not compatible with gRPC or WebSocket.
 	if e.SkipResponseBodyEncodeDecode {
-		if s := Root.API.GRPC.Service(e.Service.Name()); s != nil {
+		if s := e.MethodExpr.Service.design.API.GRPC.Service(e.Service.Name()); s != nil {
 			if s.Endpoint(e.Name()) != nil {
 				verr.Add(e, "Endpoint response cannot use SkipResponseBodyEncodeDecode and define a gRPC transport.")
 			}
@@ -420,6 +419,23 @@ func (e *HTTPEndpointExpr) Validate() error {
 		if rt, ok := e.MethodExpr.Result.Type.(*ResultTypeExpr); ok {
 			if len(rt.Views) > 1 {
 				verr.Add(e, "Endpoint cannot use SkipResponseBodyEncodeDecode when method result type defines multiple views.")
+			}
+		}
+	}
+
+	// A WebSocket client learns the result view from the connection handshake.
+	// Receiving a streamed payload starts that connection before the service can
+	// choose a result view, so the design must select the view in advance.
+	if e.UsesWebSocket() && e.MethodExpr.IsPayloadStreaming() && !e.MethodExpr.HasMixedResults() {
+		if result, ok := e.MethodExpr.Result.Type.(*ResultTypeExpr); ok {
+			viewCount := len(result.Views)
+			if result.View(DefaultView) == nil {
+				viewCount++
+			}
+			_, selectedByMethod := e.MethodExpr.Result.Meta.Last(ViewMetaKey)
+			_, selectedByType := result.Meta.Last(ViewMetaKey)
+			if viewCount > 1 && !selectedByMethod && !selectedByType {
+				verr.Add(e, "Endpoint cannot choose a result view at runtime when the method defines StreamingPayload because the WebSocket connection starts before the result view is known. Select a view in Result or StreamingResult.")
 			}
 		}
 	}
@@ -438,9 +454,9 @@ func (e *HTTPEndpointExpr) Validate() error {
 
 	// Validate mixed results configuration
 	if e.MethodExpr.HasMixedResults() {
-		// Mixed results (different Result and StreamingResult types) requires SSE
+		// A separate streaming result requires SSE.
 		if e.SSE == nil {
-			verr.Add(e, "Methods with both Result and StreamingResult defined with different types must use ServerSentEvents()")
+			verr.Add(e, "Methods with both Result and StreamingResult must use ServerSentEvents()")
 		}
 		// Cannot have bidirectional streaming with mixed results
 		if e.MethodExpr.IsPayloadStreaming() {
@@ -464,10 +480,17 @@ func (e *HTTPEndpointExpr) Validate() error {
 
 	// JSON-RPC validation
 	if e.IsJSONRPC() {
-		// JSON-RPC WebSocket endpoints with server streaming cannot have both Payload and StreamingPayload
-		if e.UsesWebSocket() && e.MethodExpr.Stream == ServerStreamKind {
-			if e.MethodExpr.Payload.Type != Empty && e.MethodExpr.StreamingPayload.Type != Empty {
-				verr.Add(e, "JSON-RPC WebSocket server streaming method %q cannot define both Payload and StreamingPayload. Use Payload for the request data", e.MethodExpr.Name)
+		if e.MethodExpr.HasMixedResults() {
+			verr.Add(e, "JSON-RPC method %q cannot define both Result and StreamingResult because its client stream cannot return a separate final result", e.MethodExpr.Name)
+		}
+		switch e.MethodExpr.Stream {
+		case ClientStreamKind:
+			verr.Add(e, "JSON-RPC method %q cannot use client streaming because one JSON-RPC request contains one params value", e.MethodExpr.Name)
+		case BidirectionalStreamKind:
+			verr.Add(e, "JSON-RPC method %q cannot use bidirectional streaming because one JSON-RPC request contains one params value", e.MethodExpr.Name)
+		case ServerStreamKind:
+			if e.SSE == nil {
+				verr.Add(e, "JSON-RPC method %q with a streaming result must use ServerSentEvents()", e.MethodExpr.Name)
 			}
 		}
 
@@ -742,18 +765,16 @@ func (e *HTTPEndpointExpr) Validate() error {
 	}
 
 	body := httpRequestBody(e)
+	if e.MultipartRequest && body.Type == Empty {
+		verr.Add(e, "MultipartRequest requires a request body.")
+	}
 	if e.SkipRequestBodyEncodeDecode && body.Type != Empty {
 		verr.Add(e, "HTTP endpoint request body must be empty when using SkipRequestBodyEncodeDecode but not all method payload attributes are mapped to headers and params. Make sure to define Headers and Params as needed.")
 	}
 
-	// For streaming endpoints, check if request body is allowed
+	// WebSocket upgrade requests cannot carry a request body.
 	if e.MethodExpr.IsStreaming() && body.Type != Empty {
-		// SSE endpoints can have request bodies, but WebSocket endpoints cannot
-		// Refer WebSocket protocol - https://tools.ietf.org/html/rfc6455
-		// Exception: JSON-RPC WebSocket endpoints can have payloads as they are sent
-		// as JSON-RPC messages after the WebSocket connection is established
-		_, isJSONRPC := e.MethodExpr.Meta["jsonrpc"]
-		if e.UsesWebSocket() && !isJSONRPC {
+		if e.UsesWebSocket() {
 			verr.Add(e, "HTTP endpoint request body must be empty when the endpoint uses streaming. Payload attributes must be mapped to headers and/or params.")
 		}
 	}
@@ -773,16 +794,26 @@ func (e *HTTPEndpointExpr) validateErrorMappings() *eval.ValidationErrors {
 		}
 		verr.Add(
 			mapping.Response,
-			`HTTP error mapping %q inherited from the %s uses error type %q, but method %q of service %q uses %q; both definitions must define the same error attribute (type, validations, defaults, and struct metadata)`,
+			`HTTP error mapping %q inherited from the %s uses error type %q, but method %q of service %q uses %q; both definitions must define the same error attribute; %s`,
 			mapping.Name,
 			owner,
 			mapped.Type.Name(),
 			e.MethodExpr.Name,
 			e.MethodExpr.Service.Name,
 			method.Type.Name(),
+			errorAttributeDifference(mapped.AttributeExpr, method.AttributeExpr),
 		)
 	}
 	return verr
+}
+
+// errorAttributeDifference names qualifier settings when they are the reason
+// two reusable error definitions disagree.
+func errorAttributeDifference(first, second *AttributeExpr) string {
+	if settings := differingErrorQualifierSettings(first, second); len(settings) > 0 {
+		return "the " + strings.Join(settings, ", ") + " setting differs"
+	}
+	return "their type, validations, defaults, or metadata differ"
 }
 
 // Finalize is run post DSL execution. It merges response definitions, creates
@@ -847,17 +878,6 @@ func (e *HTTPEndpointExpr) Finalize() {
 	e.StreamingBody = httpStreamingBody(e)
 	if e.StreamingBody != nil {
 		e.StreamingBody.Finalize()
-	}
-
-	// For JSON-RPC, WebSocket handling is managed at the server level.
-	// Each endpoint is treated as a standard HTTP endpoint; the server is responsible
-	// for upgrading the connection, decoding incoming JSON-RPC requests, and dispatching
-	// them to the appropriate endpoint handlers.
-	if e.IsJSONRPC() {
-		if e.MethodExpr.IsPayloadStreaming() {
-			e.MethodExpr.Payload = e.MethodExpr.StreamingPayload
-			e.Body = e.StreamingBody
-		}
 	}
 
 	// Initialize responses parent, headers and body
@@ -1171,6 +1191,7 @@ func initAttrFromDesign(att, patt *AttributeExpr) {
 	if patt == nil || patt.Type == Empty {
 		return
 	}
+	att.authored = patt.AuthoredAttribute()
 	att.Type = patt.Type
 	if att.Description == "" {
 		att.Description = patt.Description

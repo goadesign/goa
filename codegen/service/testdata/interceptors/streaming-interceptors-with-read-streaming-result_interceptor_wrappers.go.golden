@@ -23,11 +23,8 @@ func wrapMethodLogging(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint
 		req.(*MethodEndpointInput).Stream = &wrappedMethodServerStream{
 			ctx: ctx,
 			sendWithContext: func(ctx context.Context, req *MethodResult) error {
-				info := &LoggingInfo{
-					service:    "StreamingInterceptorsWithReadStreamingResult",
-					method:     "Method",
-					callType:   goa.InterceptorStreamingSend,
-					rawPayload: req,
+				info := &loggingMethodStreamingSendInfo{
+					loggingMethodInfo: &loggingMethodInfo{rawPayload: req},
 				}
 				_, err := i.Logging(ctx, info, func(ctx context.Context, req any) (any, error) {
 					castReq, _ := req.(*MethodResult)
@@ -52,10 +49,8 @@ func wrapClientMethodLogging(endpoint goa.Endpoint, i ClientInterceptors) goa.En
 		return &wrappedMethodClientStream{
 			ctx: ctx,
 			recvWithContext: func(ctx context.Context) (*MethodResult, error) {
-				info := &LoggingInfo{
-					service:  "StreamingInterceptorsWithReadStreamingResult",
-					method:   "Method",
-					callType: goa.InterceptorStreamingRecv,
+				info := &loggingMethodStreamingRecvInfo{
+					loggingMethodInfo: &loggingMethodInfo{},
 				}
 				res, err := i.Logging(ctx, info, func(ctx context.Context, _ any) (any, error) {
 					return stream.RecvWithContext(ctx)

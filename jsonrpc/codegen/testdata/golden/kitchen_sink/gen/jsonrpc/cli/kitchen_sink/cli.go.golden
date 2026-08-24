@@ -14,9 +14,8 @@ import (
 	"os"
 
 	calcc "generated.local/gen/jsonrpc/calc/client"
-	chatc "generated.local/gen/jsonrpc/chat/client"
 	feedc "generated.local/gen/jsonrpc/feed/client"
-	mixedc2 "generated.local/gen/jsonrpc/mixed/client"
+	mixedc "generated.local/gen/jsonrpc/mixed/client"
 	goahttp "goa.design/goa/v3/http"
 	goa "goa.design/goa/v3/pkg"
 )
@@ -27,8 +26,7 @@ import (
 func UsageCommands() []string {
 	return []string{
 		"calc (add|ping|log)",
-		"chat echo",
-		"feed watch",
+		"feed (watch|snapshot)",
 		"mixed lookup",
 	}
 }
@@ -36,7 +34,6 @@ func UsageCommands() []string {
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
 	return os.Args[0] + " " + "calc add --body '{\n      \"a\": 5718665059814127631,\n      \"b\": 5455021967244844938,\n      \"id\": \"Assumenda molestias optio.\"\n   }'" + "\n" +
-		os.Args[0] + " " + "chat echo --body '{\n      \"id\": \"Cum omnis ut dolor doloremque velit.\",\n      \"msg\": \"Soluta illum.\"\n   }'" + "\n" +
 		os.Args[0] + " " + "feed watch --body '{\n      \"last_event_id\": \"Aliquam eius.\",\n      \"request_id\": \"Fugit laborum dignissimos dolore.\"\n   }'" + "\n" +
 		os.Args[0] + " " + "mixed lookup --body '{\n      \"id\": \"Et rerum porro qui explicabo ut.\",\n      \"key\": \"Earum amet voluptatum ad soluta.\"\n   }'" + "\n" +
 		""
@@ -50,8 +47,6 @@ func ParseEndpoint(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restore bool,
-	dialer goahttp.Dialer,
-	chatConfigFn goahttp.ConnConfigureFunc,
 ) (goa.Endpoint, any, error) {
 	var (
 		calcFlags = flag.NewFlagSet("calc", flag.ContinueOnError)
@@ -64,15 +59,13 @@ func ParseEndpoint(
 		calcLogFlags    = flag.NewFlagSet("log", flag.ExitOnError)
 		calcLogBodyFlag = calcLogFlags.String("body", "REQUIRED", "")
 
-		chatFlags = flag.NewFlagSet("chat", flag.ContinueOnError)
-
-		chatEchoFlags    = flag.NewFlagSet("echo", flag.ExitOnError)
-		chatEchoBodyFlag = chatEchoFlags.String("body", "REQUIRED", "")
-
 		feedFlags = flag.NewFlagSet("feed", flag.ContinueOnError)
 
 		feedWatchFlags    = flag.NewFlagSet("watch", flag.ExitOnError)
 		feedWatchBodyFlag = feedWatchFlags.String("body", "REQUIRED", "")
+
+		feedSnapshotFlags    = flag.NewFlagSet("snapshot", flag.ExitOnError)
+		feedSnapshotBodyFlag = feedSnapshotFlags.String("body", "REQUIRED", "")
 
 		mixedFlags = flag.NewFlagSet("mixed", flag.ContinueOnError)
 
@@ -84,11 +77,9 @@ func ParseEndpoint(
 	calcPingFlags.Usage = calcPingUsage
 	calcLogFlags.Usage = calcLogUsage
 
-	chatFlags.Usage = chatUsage
-	chatEchoFlags.Usage = chatEchoUsage
-
 	feedFlags.Usage = feedUsage
 	feedWatchFlags.Usage = feedWatchUsage
+	feedSnapshotFlags.Usage = feedSnapshotUsage
 
 	mixedFlags.Usage = mixedUsage
 	mixedLookupFlags.Usage = mixedLookupUsage
@@ -110,8 +101,6 @@ func ParseEndpoint(
 		switch svcn {
 		case "calc":
 			svcf = calcFlags
-		case "chat":
-			svcf = chatFlags
 		case "feed":
 			svcf = feedFlags
 		case "mixed":
@@ -144,17 +133,13 @@ func ParseEndpoint(
 
 			}
 
-		case "chat":
-			switch epn {
-			case "echo":
-				epf = chatEchoFlags
-
-			}
-
 		case "feed":
 			switch epn {
 			case "watch":
 				epf = feedWatchFlags
+
+			case "snapshot":
+				epf = feedSnapshotFlags
 
 			}
 
@@ -197,26 +182,22 @@ func ParseEndpoint(
 				endpoint = c.Log()
 				data, err = calcc.BuildLogPayload(*calcLogBodyFlag)
 			}
-		case "chat":
-			c := chatc.NewClient(scheme, host, doer, enc, dec, restore, dialer, chatConfigFn)
-			switch epn {
-			case "echo":
-				endpoint = c.Echo()
-				data, err = chatc.BuildEchoPayload(*chatEchoBodyFlag)
-			}
 		case "feed":
 			c := feedc.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
 			case "watch":
 				endpoint = c.Watch()
 				data, err = feedc.BuildWatchPayload(*feedWatchBodyFlag)
+			case "snapshot":
+				endpoint = c.Snapshot()
+				data, err = feedc.BuildSnapshotPayload(*feedSnapshotBodyFlag)
 			}
 		case "mixed":
-			c := mixedc2.NewClient(scheme, host, doer, enc, dec, restore)
+			c := mixedc.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
 			case "lookup":
 				endpoint = c.Lookup()
-				data, err = mixedc2.BuildLookupPayload(*mixedLookupBodyFlag)
+				data, err = mixedc.BuildLookupPayload(*mixedLookupBodyFlag)
 			}
 		}
 	}
@@ -291,40 +272,13 @@ func calcLogUsage() {
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "calc log --body '{\n      \"id\": \"Quae consectetur.\",\n      \"message\": \"Quo excepturi.\"\n   }'")
 }
 
-// chatUsage displays the usage of the chat command and its subcommands.
-func chatUsage() {
-	fmt.Fprintln(os.Stderr, `Service is the Chat service interface.`)
-	fmt.Fprintf(os.Stderr, "Usage:\n    %s [globalflags] chat COMMAND [flags]\n\n", os.Args[0])
-	fmt.Fprintln(os.Stderr, "COMMAND:")
-	fmt.Fprintln(os.Stderr, `    echo: Echo implements echo.`)
-	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, "Additional help:")
-	fmt.Fprintf(os.Stderr, "    %s chat COMMAND --help\n", os.Args[0])
-}
-func chatEchoUsage() {
-	// Header with flags
-	fmt.Fprintf(os.Stderr, "%s [flags] chat echo", os.Args[0])
-	fmt.Fprint(os.Stderr, " -body JSON")
-	fmt.Fprintln(os.Stderr)
-
-	// Description
-	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, `Echo implements echo.`)
-
-	// Flags list
-	fmt.Fprintln(os.Stderr, `    -body JSON: `)
-
-	fmt.Fprintln(os.Stderr)
-	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "chat echo --body '{\n      \"id\": \"Cum omnis ut dolor doloremque velit.\",\n      \"msg\": \"Soluta illum.\"\n   }'")
-}
-
 // feedUsage displays the usage of the feed command and its subcommands.
 func feedUsage() {
 	fmt.Fprintln(os.Stderr, `Service is the Feed service interface.`)
 	fmt.Fprintf(os.Stderr, "Usage:\n    %s [globalflags] feed COMMAND [flags]\n\n", os.Args[0])
 	fmt.Fprintln(os.Stderr, "COMMAND:")
 	fmt.Fprintln(os.Stderr, `    watch: Watch implements watch.`)
+	fmt.Fprintln(os.Stderr, `    snapshot: Snapshot implements snapshot.`)
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Additional help:")
 	fmt.Fprintf(os.Stderr, "    %s feed COMMAND --help\n", os.Args[0])
@@ -345,6 +299,24 @@ func feedWatchUsage() {
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
 	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "feed watch --body '{\n      \"last_event_id\": \"Aliquam eius.\",\n      \"request_id\": \"Fugit laborum dignissimos dolore.\"\n   }'")
+}
+
+func feedSnapshotUsage() {
+	// Header with flags
+	fmt.Fprintf(os.Stderr, "%s [flags] feed snapshot", os.Args[0])
+	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprintln(os.Stderr)
+
+	// Description
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, `Snapshot implements snapshot.`)
+
+	// Flags list
+	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+
+	fmt.Fprintln(os.Stderr)
+	fmt.Fprintln(os.Stderr, "Example:")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "feed snapshot --body '{\n      \"request_id\": \"Sed assumenda enim quod.\"\n   }'")
 }
 
 // mixedUsage displays the usage of the mixed command and its subcommands.

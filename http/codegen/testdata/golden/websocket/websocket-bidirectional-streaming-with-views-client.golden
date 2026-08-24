@@ -31,9 +31,6 @@ type ConnConfigurer struct {
 type BidirectionalWithViewsClientStream struct {
 	// conn is the underlying websocket connection.
 	conn *websocket.Conn
-	// view is the view to render testservice.Request result type before sending to
-	// the websocket connection.
-	view string
 }
 
 // NewConnConfigurer initializes the websocket connection configurer function
@@ -49,7 +46,7 @@ func NewConnConfigurer(fn goahttp.ConnConfigureFunc) *ConnConfigurer {
 func (s *BidirectionalWithViewsClientStream) Recv() (*testservice.Response, error) {
 	var (
 		rv   *testservice.Response
-		body BidirectionalWithViewsResponseBody
+		body BidirectionalWithViewsResponseBodyMinimal
 		err  error
 	)
 	err = s.conn.ReadJSON(&body)
@@ -59,8 +56,8 @@ func (s *BidirectionalWithViewsClientStream) Recv() (*testservice.Response, erro
 	if err != nil {
 		return rv, err
 	}
-	res := NewBidirectionalWithViewsResultOK(&body)
-	vres := &testserviceviews.Response{Projected: res, View: s.view}
+	res := NewBidirectionalWithViewsResponseOK(&body)
+	vres := &testserviceviews.Response{Projected: res, View: "minimal"}
 	if err := testserviceviews.ValidateResponse(vres); err != nil {
 		return rv, goahttp.ErrValidationError("TestService", "BidirectionalWithViews", err)
 	}
@@ -94,10 +91,4 @@ func (s *BidirectionalWithViewsClientStream) Close() error {
 		return err
 	}
 	return s.conn.Close()
-}
-
-// SetView sets the view to render the testservice.Request type before sending
-// to the "BidirectionalWithViews" endpoint websocket connection.
-func (s *BidirectionalWithViewsClientStream) SetView(view string) {
-	s.view = view
 }

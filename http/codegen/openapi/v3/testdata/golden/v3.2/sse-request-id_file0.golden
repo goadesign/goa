@@ -4,11 +4,11 @@
       "SSERequestIDMethodRequestBody": {
         "description": "Request body for SSERequestIDMethod.",
         "example": {
-          "id": "Fugit totam mollitia perspiciatis sit sit."
+          "id": "request"
         },
         "properties": {
           "id": {
-            "example": "Fugit totam mollitia perspiciatis sit sit.",
+            "example": "request",
             "type": "string"
           }
         },
@@ -27,11 +27,11 @@
         "operationId": "SSERequestIDService#SSERequestIDMethod",
         "parameters": [
           {
-            "example": "Mollitia saepe expedita quas sed maxime.",
+            "example": "request",
             "in": "header",
             "name": "Last-Event-ID",
             "schema": {
-              "example": "Mollitia saepe expedita quas sed maxime.",
+              "example": "request",
               "type": "string"
             }
           }
@@ -40,7 +40,7 @@
           "content": {
             "application/json": {
               "example": {
-                "id": "Fugit totam mollitia perspiciatis sit sit."
+                "id": "request"
               },
               "schema": {
                 "$ref": "#/components/schemas/SSERequestIDMethodRequestBody"
@@ -57,7 +57,7 @@
                 "itemSchema": {
                   "properties": {
                     "data": {
-                      "example": "Nam odio.",
+                      "example": "event",
                       "type": "string"
                     }
                   },

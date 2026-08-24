@@ -7,19 +7,19 @@ type MethodARequestBody struct {
 // MethodBRequestBody is the type of the "ServiceMultipleMethods" service
 // "MethodB" endpoint HTTP request body.
 type MethodBRequestBody struct {
-	A *string   `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
-	B *string   `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"`
-	C *APayload `form:"c,omitempty" json:"c,omitempty" xml:"c,omitempty"`
+	A *string              `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+	B *string              `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"`
+	C *APayloadRequestBody `form:"c,omitempty" json:"c,omitempty" xml:"c,omitempty"`
 }
 
-// APayload is used to define fields on request body types.
-type APayload struct {
+// APayloadRequestBody is used to define fields on request body types.
+type APayloadRequestBody struct {
 	A *string `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
 }
 
-// NewMethodAPayload builds a ServiceMultipleMethods service MethodA endpoint
+// NewMethodAAPayload builds a ServiceMultipleMethods service MethodA endpoint
 // payload.
-func NewMethodAPayload(body *MethodARequestBody) *servicemultiplemethods.APayload {
+func NewMethodAAPayload(body *MethodARequestBody) *servicemultiplemethods.APayload {
 	v := &servicemultiplemethods.APayload{
 		A: body.A,
 	}
@@ -27,14 +27,14 @@ func NewMethodAPayload(body *MethodARequestBody) *servicemultiplemethods.APayloa
 	return v
 }
 
-// NewMethodBPayload builds a ServiceMultipleMethods service MethodB endpoint
-// payload.
-func NewMethodBPayload(body *MethodBRequestBody) *servicemultiplemethods.PayloadType {
+// NewMethodBPayloadType builds a ServiceMultipleMethods service MethodB
+// endpoint payload.
+func NewMethodBPayloadType(body *MethodBRequestBody) *servicemultiplemethods.PayloadType {
 	v := &servicemultiplemethods.PayloadType{
 		A: *body.A,
 		B: body.B,
 	}
-	v.C = unmarshalAPayloadToAPayload(body.C)
+	v.C = unmarshalAPayloadRequestBodyToServicemultiplemethodsAPayload(body.C)
 
 	return v
 }
@@ -62,17 +62,26 @@ func ValidateMethodBRequestBody(body *MethodBRequestBody) (err error) {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.b", *body.B, "patternb"))
 	}
 	if body.C != nil {
-		if err2 := ValidateAPayload(body.C); err2 != nil {
+		if err2 := validateAPayloadRequestBody(body.C, "body.c"); err2 != nil {
 			err = goa.MergeErrors(err, err2)
 		}
 	}
 	return
 }
 
-// ValidateAPayload runs the validations defined on APayload
-func ValidateAPayload(body *APayload) (err error) {
+// ValidateAPayloadRequestBody runs the validations defined on APayload
+func ValidateAPayloadRequestBody(body *APayloadRequestBody) (err error) {
 	if body.A != nil {
 		err = goa.MergeErrors(err, goa.ValidatePattern("body.a", *body.A, "patterna"))
+	}
+	return
+}
+
+// validateAPayloadRequestBody checks APayload and reports errors using the
+// path supplied by its caller
+func validateAPayloadRequestBody(body *APayloadRequestBody, path string) (err error) {
+	if body.A != nil {
+		err = goa.MergeErrors(err, goa.ValidatePattern(path+".a", *body.A, "patterna"))
 	}
 	return
 }

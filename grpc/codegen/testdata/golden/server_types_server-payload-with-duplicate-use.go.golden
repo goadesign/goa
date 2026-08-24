@@ -1,30 +1,21 @@
-// NewMethodPayloadDuplicateAPayload builds the payload of the
-// "MethodPayloadDuplicateA" endpoint of the "ServicePayloadWithNestedTypes"
-// service from the gRPC request type.
-func NewMethodPayloadDuplicateAPayload(message *service_payload_with_nested_typespb.DupePayload) servicepayloadwithnestedtypes.DupePayload {
+// NewDupePayload builds servicepayloadwithnestedtypes.DupePayload from
+// *service_payload_with_nested_typespb.DupePayload.
+func NewDupePayload(message *service_payload_with_nested_typespb.DupePayload) servicepayloadwithnestedtypes.DupePayload {
 	v := servicepayloadwithnestedtypes.DupePayload(message.Field)
 	return v
 }
 
-// NewProtoMethodPayloadDuplicateAResponse builds the gRPC response type from
-// the result of the "MethodPayloadDuplicateA" endpoint of the
-// "ServicePayloadWithNestedTypes" service.
+// NewProtoMethodPayloadDuplicateAResponse builds
+// *service_payload_with_nested_typespb.MethodPayloadDuplicateAResponse from
+// metadata values.
 func NewProtoMethodPayloadDuplicateAResponse() *service_payload_with_nested_typespb.MethodPayloadDuplicateAResponse {
 	message := &service_payload_with_nested_typespb.MethodPayloadDuplicateAResponse{}
 	return message
 }
 
-// NewMethodPayloadDuplicateBPayload builds the payload of the
-// "MethodPayloadDuplicateB" endpoint of the "ServicePayloadWithNestedTypes"
-// service from the gRPC request type.
-func NewMethodPayloadDuplicateBPayload(message *service_payload_with_nested_typespb.DupePayload) servicepayloadwithnestedtypes.DupePayload {
-	v := servicepayloadwithnestedtypes.DupePayload(message.Field)
-	return v
-}
-
-// NewProtoMethodPayloadDuplicateBResponse builds the gRPC response type from
-// the result of the "MethodPayloadDuplicateB" endpoint of the
-// "ServicePayloadWithNestedTypes" service.
+// NewProtoMethodPayloadDuplicateBResponse builds
+// *service_payload_with_nested_typespb.MethodPayloadDuplicateBResponse from
+// metadata values.
 func NewProtoMethodPayloadDuplicateBResponse() *service_payload_with_nested_typespb.MethodPayloadDuplicateBResponse {
 	message := &service_payload_with_nested_typespb.MethodPayloadDuplicateBResponse{}
 	return message

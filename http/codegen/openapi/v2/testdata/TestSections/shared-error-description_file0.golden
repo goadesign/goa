@@ -1,0 +1,92 @@
+{
+  "consumes": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "definitions": {
+    "SharedError": {
+      "description": "Shared error value",
+      "example": {
+        "message": "shared failure"
+      },
+      "properties": {
+        "message": {
+          "description": "Error message",
+          "example": "shared failure",
+          "type": "string"
+        }
+      },
+      "required": [
+        "message"
+      ],
+      "title": "SharedError",
+      "type": "object"
+    }
+  },
+  "host": "localhost:80",
+  "info": {
+    "title": "",
+    "version": "0.0.1"
+  },
+  "paths": {
+    "/first": {
+      "get": {
+        "operationId": "errors#first",
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          },
+          "400": {
+            "description": "first_error: First failure",
+            "schema": {
+              "$ref": "#/definitions/SharedError",
+              "required": [
+                "message"
+              ]
+            }
+          }
+        },
+        "schemes": [
+          "http"
+        ],
+        "summary": "first errors",
+        "tags": [
+          "errors"
+        ]
+      }
+    },
+    "/second": {
+      "get": {
+        "operationId": "errors#second",
+        "responses": {
+          "204": {
+            "description": "No Content response."
+          },
+          "400": {
+            "description": "second_error: Second failure",
+            "schema": {
+              "$ref": "#/definitions/SharedError",
+              "required": [
+                "message"
+              ]
+            }
+          }
+        },
+        "schemes": [
+          "http"
+        ],
+        "summary": "second errors",
+        "tags": [
+          "errors"
+        ]
+      }
+    }
+  },
+  "produces": [
+    "application/json",
+    "application/xml",
+    "application/gob"
+  ],
+  "swagger": "2.0"
+}

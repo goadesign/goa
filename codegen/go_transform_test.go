@@ -3,10 +3,12 @@
 package codegen
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,11 +19,32 @@ import (
 )
 
 type (
+	// transformOwnerAttributor records each nested type name selected while a
+	// test plans and writes a conversion.
 	transformOwnerAttributor struct {
 		prefix  string
 		owner   string
 		scope   *NameScope
 		entered *[]string
+	}
+
+	// transformIdentityAttributor records the exact attributes passed to field
+	// name lookups while a plan renders its copied expressions.
+	transformIdentityAttributor struct {
+		Attributor
+		fields *[]*expr.AttributeExpr
+	}
+
+	// transformTypedValue exercises an accepted object value with a mutable
+	// exported field.
+	transformTypedValue struct {
+		Values []string
+	}
+
+	// transformPrivateMutableValue cannot be copied without reading private
+	// mutable state.
+	transformPrivateMutableValue struct {
+		values []string
 	}
 )
 
@@ -271,6 +294,166 @@ func TestGoTransformUnionAcrossTransportBoundary(t *testing.T) {
 	require.NotContains(t, transportToService, "target.Scope = &")
 }
 
+// TestGoTransformUnionKeepsNilSelectedBranch verifies that conversion leaves a
+// selected nil branch for the destination validator to report.
+func TestGoTransformUnionKeepsNilSelectedBranch(t *testing.T) {
+	details := goTypeTestUserType("Details", &expr.Object{
+		{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	})
+	union := &expr.Union{
+		TypeName: "State",
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "details", Attribute: &expr.AttributeExpr{Type: details}},
+			{Name: "empty", Attribute: &expr.AttributeExpr{Type: expr.Empty}},
+			{Name: "aliases", Attribute: &expr.AttributeExpr{Type: &expr.Array{
+				ElemType: &expr.AttributeExpr{Type: expr.String},
+			}}},
+			{Name: "labels", Attribute: &expr.AttributeExpr{Type: &expr.Map{
+				KeyType:  &expr.AttributeExpr{Type: expr.String},
+				ElemType: &expr.AttributeExpr{Type: expr.String},
+			}}},
+			{Name: "blob", Attribute: &expr.AttributeExpr{Type: expr.Bytes}},
+			{Name: "anything", Attribute: &expr.AttributeExpr{Type: expr.Any}},
+			{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		},
+	}
+	context := NewAttributeContext(false, false, true, "", NewNameScope())
+
+	code, _, err := GoTransform(
+		&expr.AttributeExpr{Type: union},
+		&expr.AttributeExpr{Type: union},
+		"source",
+		"target",
+		context,
+		context,
+		"",
+		true,
+	)
+	require.NoError(t, err)
+	code = FormatTestCode(t, "package foo\nfunc transform(){\n"+code+"}")
+	testutil.AssertGo(t, "testdata/golden/go_transform_union_nil_branch.go.golden", code)
+}
+
+// TestGoTransformRequiredPrimitiveArrayElements verifies that JSON presence
+// pointers are removed after validation and added only when encoding that form.
+func TestGoTransformRequiredPrimitiveArrayElements(t *testing.T) {
+	alias := goTypeTestUserType("Alias", expr.String)
+	array := &expr.AttributeExpr{Type: &expr.Array{
+		ElemType:         &expr.AttributeExpr{Type: alias},
+		NonNullableElems: true,
+	}}
+	scope := NewNameScope()
+	service := NewAttributeContext(false, false, true, "", scope)
+	jsonBody := service.Dup()
+	jsonBody.ArrayElementPointer = true
+
+	decode, _, err := GoTransform(array, array, "source", "target", jsonBody, service, "", true)
+	require.NoError(t, err)
+	require.Contains(t, decode, "target := make([]Alias, len(source))")
+	require.Contains(t, decode, "target[i] = *val")
+
+	encode, _, err := GoTransform(array, array, "source", "target", service, jsonBody, "", true)
+	require.NoError(t, err)
+	require.Contains(t, encode, "target := make([]*Alias, len(source))")
+	require.Contains(t, encode, "var transformed Alias")
+	require.Contains(t, encode, "target[i] = &transformed")
+
+	ordinary := expr.DupAtt(array)
+	expr.AsArray(ordinary.Type).NonNullableElems = false
+	unchanged, _, err := GoTransform(ordinary, ordinary, "source", "target", jsonBody, service, "", true)
+	require.NoError(t, err)
+	require.NotContains(t, unchanged, "*val")
+}
+
+// TestGoTransformUsesDesignNilabilityForCustomTypes verifies that default
+// handling does not infer comparability from a generated Go type spelling.
+func TestGoTransformUsesDesignNilabilityForCustomTypes(t *testing.T) {
+	raw := &expr.AttributeExpr{
+		Type:         expr.String,
+		DefaultValue: json.RawMessage("foo"),
+		Meta: expr.MetaExpr{
+			"struct:field:type": {"json.RawMessage", "encoding/json", "json"},
+		},
+	}
+	defaults := goTypeTestUserType("WithRaw", &expr.Object{
+		{Name: "raw", Attribute: raw},
+	})
+	context := NewAttributeContext(false, false, true, "", NewNameScope())
+
+	code, _, err := GoTransform(
+		&expr.AttributeExpr{Type: defaults},
+		&expr.AttributeExpr{Type: defaults},
+		"source",
+		"target",
+		context,
+		context,
+		"",
+		true,
+	)
+	require.NoError(t, err)
+	require.Contains(t, code, "if target.Raw == nil")
+	require.NotContains(t, code, "var zero json.RawMessage")
+	compileTransformSource(t, `package transformtest
+
+import "encoding/json"
+
+type WithRaw struct {
+	Raw json.RawMessage
+}
+
+func transform(source *WithRaw) *WithRaw {
+`+code+`
+	return target
+}
+`)
+}
+
+// TestGoTransformArrayLoopNameUsesNestingDepth verifies that brackets in a
+// caller expression do not change the generated loop variable.
+func TestGoTransformArrayLoopNameUsesNestingDepth(t *testing.T) {
+	array := &expr.AttributeExpr{Type: &expr.Array{
+		ElemType: &expr.AttributeExpr{Type: expr.String},
+	}}
+	context := NewAttributeContext(false, false, true, "", NewNameScope())
+
+	code, _, err := GoTransform(array, array, "source", "target[index]", context, context, "", false)
+	require.NoError(t, err)
+	require.Contains(t, code, "for i, val := range source")
+	require.NotContains(t, code, "for j, val := range source")
+}
+
+// TestGoTransformUnionTemporaryUsesNestingDepth verifies that a caller's
+// destination spelling does not select the local used for a union branch.
+func TestGoTransformUnionTemporaryUsesNestingDepth(t *testing.T) {
+	source := &expr.AttributeExpr{Type: &expr.Union{
+		TypeName: "SourceChoice",
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		},
+	}}
+	target := &expr.AttributeExpr{Type: &expr.Union{
+		TypeName: "TargetChoice",
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		},
+	}}
+	context := NewAttributeContext(false, false, true, "", NewNameScope())
+
+	code, _, err := GoTransform(source, target, "source", "target.Selected", context, context, "", false)
+	require.NoError(t, err)
+	require.Contains(t, code, "obj := actual")
+	require.NotContains(t, code, "tmp := actual")
+
+	nested, err := transformUnion(source, target, "source", "target.Selected", false, &TransformAttrs{
+		SourceCtx:  context,
+		TargetCtx:  context,
+		unionDepth: 1,
+	})
+	require.NoError(t, err)
+	require.Contains(t, nested, "tmp2 := actual")
+	require.NotContains(t, nested, "obj := actual")
+}
+
 func TestGoTransformEntersSourceAndTargetOwnersIndependently(t *testing.T) {
 	source := transformOwnerTestType("SourceEnvelope", "SourceChoice", "source/types")
 	target := transformOwnerTestType("TargetEnvelope", "TargetSelection", "target/models")
@@ -314,12 +497,52 @@ func TestGoTransformEntersSourceAndTargetOwnersIndependently(t *testing.T) {
 	require.Contains(t, reverseHelpers[0].ResultTypeRef, "sourceSourceChoiceContainer.SourceChoiceContainer")
 }
 
+// TestGoTransformEntersArrayFieldOwners verifies that a named array element
+// is resolved from the array field rather than the object that contains it.
+func TestGoTransformEntersArrayFieldOwners(t *testing.T) {
+	sourceComponent := goTypeTestUserType("SourceComponent", &expr.Object{
+		{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	})
+	targetComponent := goTypeTestUserType("TargetComponent", &expr.Object{
+		{Name: "name", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	})
+	source := goTypeTestUserType("SourceEnvelope", &expr.Object{
+		{Name: "components", Attribute: &expr.AttributeExpr{Type: &expr.Array{
+			ElemType: &expr.AttributeExpr{Type: sourceComponent},
+		}}},
+	})
+	target := goTypeTestUserType("TargetEnvelope", &expr.Object{
+		{Name: "components", Attribute: &expr.AttributeExpr{Type: &expr.Array{
+			ElemType: &expr.AttributeExpr{Type: targetComponent},
+		}}},
+	})
+	sourceOwner := newTransformOwnerAttributor("source")
+	targetOwner := newTransformOwnerAttributor("target")
+
+	code, _, err := GoTransform(
+		&expr.AttributeExpr{Type: source},
+		&expr.AttributeExpr{Type: target},
+		"source",
+		"target",
+		&AttributeContext{UseDefault: true, Scope: sourceOwner},
+		&AttributeContext{UseDefault: true, Scope: targetOwner},
+		"",
+		true,
+	)
+	require.NoError(t, err)
+	require.Contains(t, code, "make([]*targetArray.TargetComponent")
+	require.Contains(t, *sourceOwner.entered, "sourceArray")
+	require.Contains(t, *targetOwner.entered, "targetArray")
+}
+
 func TestTransformPlanUsesRetainedHelperIdentityDuringRender(t *testing.T) {
 	root := RunDSL(t, testdata.TestTypesDSL)
 	deep := root.UserType("Deep")
 	plan, err := NewTransformPlan(
 		&expr.AttributeExpr{Type: deep},
 		&expr.AttributeExpr{Type: deep},
+		"",
+		nil,
 	)
 	require.NoError(t, err)
 
@@ -349,14 +572,566 @@ func TestTransformPlanUsesRetainedHelperIdentityDuringRender(t *testing.T) {
 	for index, helper := range helpers {
 		require.Equal(t, planned[index].ID, helper.ID)
 		require.Same(t, declarations[helper.ID], helper.Declaration)
-		require.Same(t, plannedByID[helper.ID].Source, plan.Helpers()[index].Source)
-		require.Same(t, plannedByID[helper.ID].Target, plan.Helpers()[index].Target)
-		require.Empty(t, helper.Name)
+		require.NotSame(t, plannedByID[helper.ID].Source, plan.Helpers()[index].Source)
+		require.NotSame(t, plannedByID[helper.ID].Target, plan.Helpers()[index].Target)
+		require.Equal(t, plannedByID[helper.ID].Source.Type.Name(), plan.Helpers()[index].Source.Type.Name())
+		require.Equal(t, plannedByID[helper.ID].Target.Type.Name(), plan.Helpers()[index].Target.Type.Name())
+		require.Equal(t, helper.Declaration.Name(), helper.Name)
 		rendered += helper.Code
 	}
 	for _, helper := range helpers {
 		require.Contains(t, rendered, helper.Declaration.Name())
 	}
+}
+
+func TestTransformPlanKeepsDistinctCopiesWithOneOrigin(t *testing.T) {
+	sourceOrigin := transformObjectAttribute("SourceNode", true).Type.(expr.UserType)
+	targetOrigin := transformObjectAttribute("TargetNode", true).Type.(expr.UserType)
+	sourceOuter := sourceOrigin.Dup(nil)
+	sourceInner := sourceOrigin.Dup(nil)
+	targetOuter := targetOrigin.Dup(nil)
+	targetInner := targetOrigin.Dup(nil)
+	sourceInner.SetAttribute(&expr.AttributeExpr{Type: &expr.Object{
+		{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	}})
+	targetInner.SetAttribute(&expr.AttributeExpr{Type: &expr.Object{
+		{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	}})
+	sourceOuter.SetAttribute(&expr.AttributeExpr{Type: &expr.Object{
+		{Name: "child", Attribute: &expr.AttributeExpr{Type: sourceInner}},
+	}})
+	targetOuter.SetAttribute(&expr.AttributeExpr{Type: &expr.Object{
+		{Name: "child", Attribute: &expr.AttributeExpr{Type: targetInner}},
+	}})
+
+	plan, err := NewTransformPlan(
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "root", Attribute: &expr.AttributeExpr{Type: sourceOuter}},
+		}},
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "root", Attribute: &expr.AttributeExpr{Type: targetOuter}},
+		}},
+		"",
+		nil,
+	)
+	require.NoError(t, err)
+	require.Len(t, plan.Helpers(), 2)
+	require.NotSame(t, plan.Helpers()[0].Source.Type, plan.Helpers()[1].Source.Type)
+	require.NotSame(t, plan.Helpers()[0].Target.Type, plan.Helpers()[1].Target.Type)
+
+	code, definitions := renderTransformPlan(t, plan)
+	require.Len(t, definitions, 2)
+	require.Contains(t, code, definitions[0].Declaration.Name()+"(source.Root)")
+	require.Contains(t, definitions[0].Code, definitions[1].Declaration.Name()+"(v.Child)")
+}
+
+func TestTransformPlanClosesExactRecursiveCycle(t *testing.T) {
+	sourceNode := &expr.UserTypeExpr{TypeName: "SourceNode"}
+	targetNode := &expr.UserTypeExpr{TypeName: "TargetNode"}
+	sourceNode.SetAttribute(&expr.AttributeExpr{Type: &expr.Object{
+		{Name: "next", Attribute: &expr.AttributeExpr{Type: sourceNode}},
+	}})
+	targetNode.SetAttribute(&expr.AttributeExpr{Type: &expr.Object{
+		{Name: "next", Attribute: &expr.AttributeExpr{Type: targetNode}},
+	}})
+
+	plan, err := NewTransformPlan(
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "root", Attribute: &expr.AttributeExpr{Type: sourceNode}},
+		}},
+		&expr.AttributeExpr{Type: &expr.Object{
+			{Name: "root", Attribute: &expr.AttributeExpr{Type: targetNode}},
+		}},
+		"",
+		nil,
+	)
+	require.NoError(t, err)
+	require.Len(t, plan.Helpers(), 1)
+
+	code, definitions := renderTransformPlan(t, plan)
+	require.Len(t, definitions, 1)
+	require.Contains(t, code, definitions[0].Declaration.Name()+"(source.Root)")
+	require.Contains(t, definitions[0].Code, definitions[0].Declaration.Name()+"(v.Next)")
+}
+
+func TestTransformPlanCopiesCallerExpressions(t *testing.T) {
+	sourceObject := &expr.Object{
+		{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	}
+	targetObject := &expr.Object{
+		{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	}
+	sourceType := &expr.UserTypeExpr{
+		TypeName:      "Source",
+		AttributeExpr: &expr.AttributeExpr{Type: sourceObject},
+	}
+	targetType := &expr.UserTypeExpr{
+		TypeName:      "Target",
+		AttributeExpr: &expr.AttributeExpr{Type: targetObject},
+	}
+	plan, err := NewTransformPlan(
+		&expr.AttributeExpr{Type: sourceType},
+		&expr.AttributeExpr{Type: targetType},
+		"",
+		nil,
+	)
+	require.NoError(t, err)
+	sourceObject.Set("late", &expr.AttributeExpr{Type: expr.String})
+	targetObject.Set("late", &expr.AttributeExpr{Type: expr.String})
+
+	code, definitions := renderTransformPlan(t, plan)
+	require.Empty(t, definitions)
+	require.Contains(t, code, "Value: source.Value")
+	require.NotContains(t, code, "Late")
+}
+
+func TestTransformPlanCopiesTypedCollectionDefaults(t *testing.T) {
+	tests := []struct {
+		name         string
+		dataType     expr.DataType
+		defaultValue any
+		planned      string
+		changed      string
+	}{
+		{
+			name:         "slice",
+			dataType:     &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}},
+			defaultValue: []string{"planned"},
+			planned:      `[]string{"planned"}`,
+			changed:      `[]string{"changed"}`,
+		},
+		{
+			name: "string-keyed-map",
+			dataType: &expr.Map{
+				KeyType:  &expr.AttributeExpr{Type: expr.String},
+				ElemType: &expr.AttributeExpr{Type: expr.Int},
+			},
+			defaultValue: map[string]int{"value": 1},
+			planned:      `map[string]int{"value":1}`,
+			changed:      `map[string]int{"value":2}`,
+		},
+		{
+			name: "integer-keyed-map",
+			dataType: &expr.Map{
+				KeyType:  &expr.AttributeExpr{Type: expr.Int},
+				ElemType: &expr.AttributeExpr{Type: expr.String},
+			},
+			defaultValue: map[int]string{1: "planned"},
+			planned:      `map[int]string{1:"planned"}`,
+			changed:      `map[int]string{1:"changed"}`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			sourceField := &expr.AttributeExpr{Type: test.dataType}
+			targetField := &expr.AttributeExpr{Type: test.dataType, DefaultValue: test.defaultValue}
+			source := &expr.AttributeExpr{Type: &expr.UserTypeExpr{
+				TypeName: "Source",
+				AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+					{Name: "value", Attribute: sourceField},
+				}},
+			}}
+			target := &expr.AttributeExpr{Type: &expr.UserTypeExpr{
+				TypeName: "Target",
+				AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+					{Name: "value", Attribute: targetField},
+				}},
+			}}
+			plan, err := NewTransformPlan(source, target, "", nil)
+			require.NoError(t, err)
+
+			switch value := test.defaultValue.(type) {
+			case []string:
+				value[0] = "changed"
+			case map[string]int:
+				value["value"] = 2
+			case map[int]string:
+				value[1] = "changed"
+			default:
+				t.Fatalf("missing mutation for %T", test.defaultValue)
+			}
+			code, definitions := renderTransformPlan(t, plan)
+			require.Empty(t, definitions)
+			require.Contains(t, code, test.planned)
+			require.NotContains(t, code, test.changed)
+		})
+	}
+}
+
+func TestCopyTransformValueCopiesNestedTypedShapes(t *testing.T) {
+	values := []string{"planned"}
+	object := transformTypedValue{Values: []string{"planned"}}
+	source := [2]any{&values, object}
+	copied := copyTransformValue(source).([2]any)
+	values[0] = "changed"
+	object.Values[0] = "changed"
+
+	require.Equal(t, "planned", (*copied[0].(*[]string))[0])
+	require.Equal(t, "planned", copied[1].(transformTypedValue).Values[0])
+}
+
+func TestCopyTransformValueRejectsUnsupportedMutableShape(t *testing.T) {
+	require.PanicsWithValue(
+		t,
+		"cannot copy transform value of type chan int",
+		func() { copyTransformValue(make(chan int)) },
+	)
+}
+
+func TestCopyTransformValueRejectsPrivateMutableField(t *testing.T) {
+	require.PanicsWithValue(
+		t,
+		"cannot copy transform value of type codegen.transformPrivateMutableValue: unexported field values contains mutable data",
+		func() { copyTransformValue(transformPrivateMutableValue{values: []string{"value"}}) },
+	)
+}
+
+func TestCopyTransformValueRejectsCycle(t *testing.T) {
+	value := make(map[string]any)
+	value["self"] = value
+	require.PanicsWithValue(
+		t,
+		"cannot copy cyclic transform value of type map[string]interface {}",
+		func() { copyTransformValue(value) },
+	)
+}
+
+func TestCopyTransformValueRejectsFunction(t *testing.T) {
+	require.PanicsWithValue(
+		t,
+		"cannot copy transform value of type func()",
+		func() { copyTransformValue(func() {}) },
+	)
+}
+
+func TestTransformPlanNameLookupsUseOriginalAttributes(t *testing.T) {
+	sourceField := &expr.AttributeExpr{Type: expr.String}
+	targetField := &expr.AttributeExpr{Type: expr.String}
+	source := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "value", Attribute: sourceField},
+	}}
+	target := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "value", Attribute: targetField},
+	}}
+	plan, err := NewTransformPlan(source, target, "", nil)
+	require.NoError(t, err)
+
+	var sourceFields, targetFields []*expr.AttributeExpr
+	sourceContext := NewAttributeContext(false, false, true, "", NewNameScope())
+	sourceContext.Scope = &transformIdentityAttributor{
+		Attributor: sourceContext.Scope,
+		fields:     &sourceFields,
+	}
+	targetContext := NewAttributeContext(false, false, true, "", NewNameScope())
+	targetContext.Scope = &transformIdentityAttributor{
+		Attributor: targetContext.Scope,
+		fields:     &targetFields,
+	}
+	require.NoError(t, plan.BindContexts(sourceContext, targetContext))
+	_, _, err = plan.Render("source", "target", true)
+	require.NoError(t, err)
+	require.NotEmpty(t, sourceFields)
+	require.NotEmpty(t, targetFields)
+	for _, field := range sourceFields {
+		require.Same(t, sourceField, field)
+	}
+	for _, field := range targetFields {
+		require.Same(t, targetField, field)
+	}
+}
+
+func TestTransformPlanCapturesStructuralHookChoices(t *testing.T) {
+	attribute := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "value", Attribute: &expr.AttributeExpr{Type: expr.String}},
+	}}
+	var unwrapCalls, fieldCalls int
+	hooks := &TransformHooks{
+		UnwrapPair: func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr, *WrapDirective) {
+			unwrapCalls++
+			return source, target, nil
+		},
+		FieldPairAttrs: func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr) {
+			fieldCalls++
+			return source, target
+		},
+	}
+	plan, err := NewTransformPlan(attribute, attribute, "", hooks)
+	require.NoError(t, err)
+	plannedUnwrapCalls, plannedFieldCalls := unwrapCalls, fieldCalls
+	require.Positive(t, plannedUnwrapCalls)
+	require.Positive(t, plannedFieldCalls)
+
+	code, definitions := renderTransformPlan(t, plan)
+	require.Empty(t, definitions)
+	require.Contains(t, code, "Value: source.Value")
+	require.Equal(t, plannedUnwrapCalls, unwrapCalls)
+	require.Equal(t, plannedFieldCalls, fieldCalls)
+}
+
+func TestTransformPlanRejectsPlanningUnwrapPairMutation(t *testing.T) {
+	sourceField := &expr.AttributeExpr{Type: expr.String, DefaultValue: "before"}
+	targetField := &expr.AttributeExpr{Type: expr.String}
+	source := &expr.AttributeExpr{Type: &expr.Object{{Name: "value", Attribute: sourceField}}}
+	target := &expr.AttributeExpr{Type: &expr.Object{{Name: "value", Attribute: targetField}}}
+
+	_, err := NewTransformPlan(source, target, "", &TransformHooks{
+		UnwrapPair: func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr, *WrapDirective) {
+			if object := expr.AsObject(source.Type); object != nil {
+				object.Attribute("value").DefaultValue = "after"
+			}
+			return source, target, nil
+		},
+	})
+
+	require.EqualError(t, err, "transform planning hook UnwrapPair changed the retained plan")
+}
+
+func TestTransformPlanRejectsPlanningFieldPairMutation(t *testing.T) {
+	sourceField := &expr.AttributeExpr{Type: expr.String}
+	targetField := &expr.AttributeExpr{Type: expr.String}
+	source := &expr.AttributeExpr{Type: &expr.Object{{Name: "value", Attribute: sourceField}}}
+	target := &expr.AttributeExpr{Type: &expr.Object{{Name: "value", Attribute: targetField}}}
+
+	_, err := NewTransformPlan(source, target, "", &TransformHooks{
+		FieldPairAttrs: func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr) {
+			target.Meta = expr.MetaExpr{"mutated": {"yes"}}
+			return source, target
+		},
+	})
+
+	require.EqualError(t, err, "transform planning hook FieldPairAttrs changed the retained plan")
+}
+
+func TestTransformPlanRejectsPlanningUnionHelperMutation(t *testing.T) {
+	sourceBranch := &expr.AttributeExpr{Type: expr.String}
+	targetBranch := &expr.AttributeExpr{Type: expr.String}
+	source := &expr.AttributeExpr{Type: &expr.Union{Values: []*expr.NamedAttributeExpr{{Name: "value", Attribute: sourceBranch}}}}
+	target := &expr.AttributeExpr{Type: &expr.Union{Values: []*expr.NamedAttributeExpr{{Name: "value", Attribute: targetBranch}}}}
+
+	_, err := NewTransformPlan(source, target, "", &TransformHooks{
+		TransformUnion: func(_ *expr.AttributeExpr, _ *expr.AttributeExpr, _, _ string, _ bool, _, _ *expr.AttributeExpr, _ *TransformAttrs) (string, error) {
+			return "", nil
+		},
+		PlanUnionHelpers: func(source, target *expr.AttributeExpr, _ func(*expr.AttributeExpr, *expr.AttributeExpr)) {
+			expr.AsUnion(source.Type).Values[0].Attribute.DefaultValue = "after"
+			expr.AsUnion(target.Type).Values[0].Attribute.Meta = expr.MetaExpr{"mutated": {"yes"}}
+		},
+	})
+
+	require.EqualError(t, err, "transform planning hook PlanUnionHelpers changed the retained plan")
+}
+
+func TestGoTransformWithAttrsCallsStructuralHookOnce(t *testing.T) {
+	attribute := &expr.AttributeExpr{Type: expr.String}
+	var calls int
+	attrs := &TransformAttrs{
+		SourceCtx: NewAttributeContext(false, false, true, "", NewNameScope()),
+		TargetCtx: NewAttributeContext(false, false, true, "", NewNameScope()),
+		Hooks: &TransformHooks{
+			UnwrapPair: func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr, *WrapDirective) {
+				calls++
+				return source, target, nil
+			},
+		},
+	}
+
+	code, helpers, err := GoTransformWithAttrs(attribute, attribute, "source", "target", attrs, true)
+	require.NoError(t, err)
+	require.Empty(t, helpers)
+	require.Equal(t, "target := source", code)
+	require.Equal(t, 1, calls)
+}
+
+func TestGoTransformWithAttrsRejectsConflictingHelperBodies(t *testing.T) {
+	root := RunDSL(t, testdata.TestTypesDSL)
+	recursive := root.UserType("Recursive")
+	fields := &expr.Object{}
+	fields.Set("left", &expr.AttributeExpr{Type: recursive})
+	fields.Set("right", &expr.AttributeExpr{Type: recursive})
+	container := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{
+			Type:       fields,
+			Validation: &expr.ValidationExpr{Required: []string{"left"}},
+		},
+		TypeName: "Container",
+	}
+	attribute := &expr.AttributeExpr{Type: container}
+	context := NewAttributeContext(false, false, true, "", NewNameScope())
+
+	_, _, err := GoTransformWithAttrs(attribute, attribute, "source", "target", &TransformAttrs{
+		SourceCtx: context,
+		TargetCtx: context,
+	}, true)
+	require.EqualError(t, err, "transform helper declaration \"transformRecursiveToRecursive\" has different definitions")
+}
+
+func TestTransformPlanUsesCustomUnionHelperOrderForNamedArraysAndAliases(t *testing.T) {
+	sourceAlias := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+		TypeName:      "SourceAlias",
+	}
+	targetAlias := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: expr.String},
+		TypeName:      "TargetAlias",
+	}
+	sourceArray := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}},
+		TypeName:      "SourceArray",
+	}
+	targetArray := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}},
+		TypeName:      "TargetArray",
+	}
+	source := &expr.AttributeExpr{Type: &expr.Union{Values: []*expr.NamedAttributeExpr{
+		{Name: "alias", Attribute: &expr.AttributeExpr{Type: sourceAlias}},
+		{Name: "array", Attribute: &expr.AttributeExpr{Type: sourceArray}},
+	}}}
+	target := &expr.AttributeExpr{Type: &expr.Union{Values: []*expr.NamedAttributeExpr{
+		{Name: "alias", Attribute: &expr.AttributeExpr{Type: targetAlias}},
+		{Name: "array", Attribute: &expr.AttributeExpr{Type: targetArray}},
+	}}}
+	hooks := &TransformHooks{
+		PlanUnionHelpers: func(source, target *expr.AttributeExpr, record func(*expr.AttributeExpr, *expr.AttributeExpr)) {
+			sourceUnion, targetUnion := expr.AsUnion(source.Type), expr.AsUnion(target.Type)
+			record(sourceUnion.Values[1].Attribute, targetUnion.Values[1].Attribute)
+			record(sourceUnion.Values[0].Attribute, targetUnion.Values[0].Attribute)
+		},
+		TransformUnion: func(source, target *expr.AttributeExpr, _, _ string, _ bool, _, _ *expr.AttributeExpr, attrs *TransformAttrs) (string, error) {
+			sourceUnion, targetUnion := expr.AsUnion(source.Type), expr.AsUnion(target.Type)
+			arrayName := TransformHelperName(sourceUnion.Values[1].Attribute, targetUnion.Values[1].Attribute, attrs)
+			aliasName := TransformHelperName(sourceUnion.Values[0].Attribute, targetUnion.Values[0].Attribute, attrs)
+			return arrayName + "(source.Array)\n" + aliasName + "(source.Alias)\n", nil
+		},
+	}
+	plan, err := NewTransformPlan(source, target, "", hooks)
+	require.NoError(t, err)
+	helpers := plan.Helpers()
+	require.Len(t, helpers, 2)
+	require.Equal(t, "SourceArray", helpers[0].Source.Type.Name())
+	require.Equal(t, "SourceAlias", helpers[1].Source.Type.Name())
+	arrayDeclaration := NewExactName(NameFunction, "arrayHelper")
+	aliasDeclaration := NewExactName(NameFunction, "aliasHelper")
+	generatedPackage := newGeneratedPackage("test", "example.com/test", "gen")
+	require.NoError(t, generatedPackage.DeclareName(arrayDeclaration))
+	require.NoError(t, generatedPackage.DeclareName(aliasDeclaration))
+	require.NoError(t, plan.BindHelperDeclaration(helpers[0].ID, arrayDeclaration))
+	require.NoError(t, plan.BindHelperDeclaration(helpers[1].ID, aliasDeclaration))
+	require.NoError(t, generatedPackage.freeze())
+	require.NoError(t, plan.BindContexts(
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+	))
+
+	code, definitions, err := plan.Render("source", "target", true)
+	require.NoError(t, err)
+	require.Len(t, definitions, 2)
+	require.Contains(t, code, "arrayHelper")
+	require.Contains(t, code, "aliasHelper")
+	require.Less(t, strings.Index(code, "arrayHelper"), strings.Index(code, "aliasHelper"))
+}
+
+func TestTransformPlanCapturesUnwrappedHelperBody(t *testing.T) {
+	sourceNode := transformObjectAttribute("SourceNode", true)
+	targetNode := transformObjectAttribute("TargetNode", true)
+	wrapper := &expr.UserTypeExpr{
+		TypeName: "TargetWrapper",
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "field", Attribute: targetNode},
+		}},
+	}
+	source := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "root", Attribute: sourceNode},
+	}}
+	target := &expr.AttributeExpr{Type: &expr.Object{
+		{Name: "root", Attribute: &expr.AttributeExpr{Type: wrapper}},
+	}}
+	hooks := &TransformHooks{
+		UnwrapPair: func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr, *WrapDirective) {
+			if target.Type.Name() != wrapper.TypeName {
+				return source, target, nil
+			}
+			return source, expr.AsObject(target.Type).Attribute("field"), &WrapDirective{
+				WrapTarget: true,
+				Target:     target,
+				FieldName:  "Field",
+			}
+		},
+	}
+	plan, err := NewTransformPlan(source, target, "", hooks)
+	require.NoError(t, err)
+	require.Len(t, plan.Helpers(), 1)
+
+	code, definitions := renderTransformPlan(t, plan)
+	require.Len(t, definitions, 1)
+	require.Contains(t, code, definitions[0].Declaration.Name()+"(source.Root)")
+}
+
+func TestTransformPlanRetainsWrapperAndInlineArrayCalls(t *testing.T) {
+	node := &expr.UserTypeExpr{TypeName: "Node"}
+	node.AttributeExpr = &expr.AttributeExpr{Type: &expr.Object{}}
+	expr.AsObject(node.Type).Set("next", &expr.AttributeExpr{Type: node})
+	source := &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: node}}}
+	target := expr.DupAtt(source)
+	hooks := &TransformHooks{
+		InlineCompositeElems: true,
+		TransformArray: func(source, target *expr.Array, sourceVar, targetVar string, newVar bool, attrs *TransformAttrs) (string, error) {
+			return TransformAttribute(source.ElemType, target.ElemType, sourceVar+"[0]", targetVar+"[0]", newVar, attrs)
+		},
+	}
+	plan, err := NewTransformPlan(source, target, "copied", hooks)
+	require.NoError(t, err)
+	require.Len(t, plan.Helpers(), 1)
+
+	declaration := NewExactName(NameFunction, "copyNode")
+	packageCatalog := newGeneratedPackage("test", "example.com/test", "gen")
+	require.NoError(t, packageCatalog.DeclareName(declaration))
+	require.NoError(t, plan.BindHelperDeclaration(plan.Helpers()[0].ID, declaration))
+	require.NoError(t, packageCatalog.freeze())
+	require.NoError(t, plan.BindContexts(
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+	))
+	code, helpers, err := plan.Render("source", "target", true)
+	require.NoError(t, err)
+	require.Len(t, helpers, 1)
+	require.Contains(t, code+helpers[0].Code, "copyNode")
+
+	wrapper := &expr.UserTypeExpr{
+		TypeName: "WrappedNode",
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+			&expr.NamedAttributeExpr{Name: "field", Attribute: &expr.AttributeExpr{Type: node}},
+		}},
+	}
+	wrapperTarget := &expr.AttributeExpr{Type: wrapper}
+	wrapperHooks := &TransformHooks{
+		UnwrapPair: func(source, target *expr.AttributeExpr) (*expr.AttributeExpr, *expr.AttributeExpr, *WrapDirective) {
+			if target.Type.Name() != wrapper.TypeName {
+				return source, target, nil
+			}
+			return source, expr.AsObject(target.Type).Attribute("field"), &WrapDirective{
+				WrapTarget: true,
+				Target:     target,
+				FieldName:  "Field",
+			}
+		},
+	}
+	wrapperPlan, err := NewTransformPlan(&expr.AttributeExpr{Type: node}, wrapperTarget, "wrapped", wrapperHooks)
+	require.NoError(t, err)
+	require.Len(t, wrapperPlan.Helpers(), 1)
+	wrapperDeclaration := NewExactName(NameFunction, "copyWrappedNode")
+	wrapperPackage := newGeneratedPackage("wrapper", "example.com/wrapper", "gen")
+	require.NoError(t, wrapperPackage.DeclareName(wrapperDeclaration))
+	require.NoError(t, wrapperPlan.BindHelperDeclaration(wrapperPlan.Helpers()[0].ID, wrapperDeclaration))
+	require.NoError(t, wrapperPackage.freeze())
+	require.NoError(t, wrapperPlan.BindContexts(
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+	))
+	wrapperCode, _, err := wrapperPlan.Render("source", "target", true)
+	require.NoError(t, err)
+	require.Contains(t, wrapperCode, "target := &WrappedNode{}")
+	require.Contains(t, wrapperCode, "target.Field")
 }
 
 func TestTransformPlanRetainsSameTypeSiblingOccurrences(t *testing.T) {
@@ -365,15 +1140,127 @@ func TestTransformPlanRetainsSameTypeSiblingOccurrences(t *testing.T) {
 	require.NotEqual(t, plan.Helpers()[0].ID, plan.Helpers()[1].ID)
 }
 
-func TestTransformPlanRejectsOneDeclarationForDifferentHelpers(t *testing.T) {
+func TestTransformPlanHelperDescriptionsCannotChangeRenderGraph(t *testing.T) {
+	plan := siblingTransformPlan(t)
+	helpers := plan.Helpers()
+	require.Len(t, helpers, 2)
+
+	// Helper descriptions are used to choose declarations. Mutating one must
+	// never alter the private attributes that Render uses to write those
+	// declarations.
+	helpers[0].Source.Type = expr.String
+
+	_, definitions := renderTransformPlan(t, plan)
+	require.Len(t, definitions, 2)
+	require.Equal(t, "*Recursive", definitions[0].ParamTypeRef)
+}
+
+func TestTransformPlanRejectsRenderHookMutation(t *testing.T) {
+	source := &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}}
+	target := expr.DupAtt(source)
+	plan, err := NewTransformPlan(source, target, "", &TransformHooks{
+		TransformArray: func(source, _ *expr.Array, _, _ string, _ bool, _ *TransformAttrs) (string, error) {
+			source.ElemType.Type = expr.Int
+			return "", nil
+		},
+	})
+	require.NoError(t, err)
+	require.NoError(t, plan.BindContexts(
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+	))
+
+	_, _, err = plan.Render("source", "target", true)
+	require.EqualError(t, err, "transform render hook changed the retained plan")
+}
+
+func TestTransformPlanCachesResultAgainstMutationRetainedByRenderHook(t *testing.T) {
+	source := &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}}
+	target := expr.DupAtt(source)
+	var retained *expr.Array
+	plan, err := NewTransformPlan(source, target, "", &TransformHooks{
+		TransformArray: func(source, _ *expr.Array, _, _ string, _ bool, _ *TransformAttrs) (string, error) {
+			retained = source
+			return "", nil
+		},
+	})
+	require.NoError(t, err)
+	require.NoError(t, plan.BindContexts(
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+	))
+	_, _, err = plan.Render("source", "target", true)
+	require.NoError(t, err)
+
+	retained.ElemType.Type = expr.Int
+	_, _, err = plan.Render("source", "target", true)
+	require.NoError(t, err)
+}
+
+func TestTransformPlanCachesRepeatedRender(t *testing.T) {
+	source := &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}}
+	target := expr.DupAtt(source)
+	var renders int
+	plan, err := NewTransformPlan(source, target, "", &TransformHooks{
+		TransformArray: func(_ *expr.Array, _ *expr.Array, _, _ string, _ bool, _ *TransformAttrs) (string, error) {
+			renders++
+			return fmt.Sprintf("render%d", renders), nil
+		},
+	})
+	require.NoError(t, err)
+	require.NoError(t, plan.BindContexts(
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+	))
+
+	code, _, err := plan.Render("source", "target", true)
+	require.NoError(t, err)
+	require.Equal(t, "render1", code)
+	code, _, err = plan.Render("source", "target", true)
+	require.NoError(t, err)
+	require.Equal(t, "render1", code)
+	require.Equal(t, 1, renders)
+}
+
+func TestTransformPlanSharesOneDeclarationForEquivalentHelpers(t *testing.T) {
 	plan := siblingTransformPlan(t)
 	helpers := plan.Helpers()
 	require.Len(t, helpers, 2)
 	declaration := NewExactName(NameFunction, "transformRecursive")
+	pkg := newGeneratedPackage("test", "example.com/test", "gen")
+	require.NoError(t, pkg.DeclareName(declaration))
+	require.NoError(t, pkg.freeze())
 
 	require.NoError(t, plan.BindHelperDeclaration(helpers[0].ID, declaration))
-	err := plan.BindHelperDeclaration(helpers[1].ID, declaration)
-	require.EqualError(t, err, "transform helper declaration is already bound to a different operation")
+	require.NoError(t, plan.BindHelperDeclaration(helpers[1].ID, declaration))
+	require.NoError(t, plan.BindContexts(
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+	))
+	code, definitions, err := plan.Render("source", "target", true)
+	require.NoError(t, err)
+	require.Len(t, definitions, 1)
+	require.Contains(t, code, "target.Left = transformRecursive(source.Left)")
+	require.Contains(t, code, "target.Right = transformRecursive(source.Right)")
+}
+
+func TestTransformPlanRejectsSharedDeclarationForDifferentBehavior(t *testing.T) {
+	plan := mixedSiblingTransformPlan(t)
+	helpers := plan.Helpers()
+	require.Len(t, helpers, 2)
+	declaration := NewExactName(NameFunction, "transformRecursive")
+	pkg := newGeneratedPackage("test", "example.com/test", "gen")
+	require.NoError(t, pkg.DeclareName(declaration))
+	require.NoError(t, pkg.freeze())
+
+	require.NoError(t, plan.BindHelperDeclaration(helpers[0].ID, declaration))
+	require.NoError(t, plan.BindHelperDeclaration(helpers[1].ID, declaration))
+	require.NoError(t, plan.BindContexts(
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+		NewAttributeContext(false, false, true, "", NewNameScope()),
+	))
+	_, _, err := plan.Render("source", "target", true)
+	require.EqualError(t, err, "transform helper declaration \"transformRecursive\" has different definitions")
 }
 
 func TestTransformPlanRequiresEveryHelperDeclaration(t *testing.T) {
@@ -448,16 +1335,16 @@ func TestTransformPlanHelperEligibilityMatchesCompositeRenderers(t *testing.T) {
 		for pairName, pair := range pairs {
 			t.Run(shapeName+"/"+pairName, func(t *testing.T) {
 				source, target := shape(pair.source, pair.target)
-				plan, err := NewTransformPlan(source, target)
+				plan, err := NewTransformPlan(source, target, "", nil)
 				require.NoError(t, err)
 				require.Len(t, plan.Helpers(), pair.helpers)
 
 				code, helpers := renderTransformPlan(t, plan)
 				require.Len(t, helpers, pair.helpers)
 				if pair.helpers == 0 {
-					require.NotContains(t, code, "CanonicalHelper")
+					require.NotContains(t, code, "canonicalHelper")
 				} else {
-					require.Contains(t, code, "CanonicalHelper1")
+					require.Contains(t, code, "canonicalHelper1")
 				}
 			})
 		}
@@ -497,11 +1384,15 @@ func TestTransformPlanMapKeyHelperReceivesKey(t *testing.T) {
 			KeyType:  targetKey,
 			ElemType: &expr.AttributeExpr{Type: expr.String},
 		}},
+		"",
+		nil,
 	)
 	require.NoError(t, err)
 	require.Len(t, plan.Helpers(), 1)
-	require.Same(t, sourceKey, plan.Helpers()[0].Source)
-	require.Same(t, targetKey, plan.Helpers()[0].Target)
+	require.NotSame(t, sourceKey, plan.Helpers()[0].Source)
+	require.NotSame(t, targetKey, plan.Helpers()[0].Target)
+	require.Equal(t, sourceKey.Type.Name(), plan.Helpers()[0].Source.Type.Name())
+	require.Equal(t, targetKey.Type.Name(), plan.Helpers()[0].Target.Type.Name())
 
 	code, definitions := renderTransformPlan(t, plan)
 	require.Len(t, definitions, 1)
@@ -551,6 +1442,8 @@ func siblingTransformPlan(t *testing.T) *TransformPlan {
 	plan, err := NewTransformPlan(
 		&expr.AttributeExpr{Type: container},
 		&expr.AttributeExpr{Type: container},
+		"",
+		nil,
 	)
 	require.NoError(t, err)
 	return plan
@@ -575,6 +1468,8 @@ func mixedSiblingTransformPlan(t *testing.T) *TransformPlan {
 	plan, err := NewTransformPlan(
 		&expr.AttributeExpr{Type: container},
 		&expr.AttributeExpr{Type: container},
+		"",
+		nil,
 	)
 	require.NoError(t, err)
 	return plan
@@ -594,8 +1489,8 @@ func transformObjectAttribute(name string, named bool) *expr.AttributeExpr {
 	}}
 }
 
-// renderTransformPlan binds deterministic function declarations and contexts,
-// then renders the retained operation and definitions.
+// renderTransformPlan assigns fixed function declarations and contexts, then
+// renders the stored operation and definitions.
 func renderTransformPlan(t *testing.T, plan *TransformPlan) (string, []*TransformFunctionData) {
 	t.Helper()
 	packageCatalog := newGeneratedPackage("test", "example.com/test", "gen")
@@ -614,7 +1509,7 @@ func renderTransformPlan(t *testing.T, plan *TransformPlan) (string, []*Transfor
 	return code, helpers
 }
 
-// compileTransformSource proves that a rendered transform and its retained
+// compileTransformSource proves that a rendered transform and its stored
 // helper definitions agree on concrete Go argument and result types.
 func compileTransformSource(t *testing.T, source string) {
 	t.Helper()
@@ -633,6 +1528,8 @@ func compileTransformSource(t *testing.T, source string) {
 	}
 }
 
+// newTransformOwnerAttributor creates a test type-name provider and records
+// every nested type it enters.
 func newTransformOwnerAttributor(prefix string) *transformOwnerAttributor {
 	entered := make([]string, 0)
 	return &transformOwnerAttributor{
@@ -673,14 +1570,31 @@ func (*transformOwnerAttributor) IsSumType() bool {
 	return true
 }
 
-func (a *transformOwnerAttributor) ValidatorName(att *expr.AttributeExpr, view string) string {
-	return "Validate" + a.Name(att, "", false, true) + Goify(view, true)
+func (a *transformOwnerAttributor) ValidatorCall(att *expr.AttributeExpr, view, target, _ string) string {
+	name := "Validate" + a.Name(att, "", false, true) + Goify(view, true)
+	return fmt.Sprintf("%s(%s)", name, target)
 }
 
 func (a *transformOwnerAttributor) Scope() *NameScope {
 	return a.scope
 }
 
+// Field records the expression identity before delegating the field name.
+func (a *transformIdentityAttributor) Field(attribute *expr.AttributeExpr, name string, firstUpper bool) string {
+	*a.fields = append(*a.fields, attribute)
+	return a.Attributor.Field(attribute, name, firstUpper)
+}
+
+// Enter keeps recording identities below the supplied object.
+func (a *transformIdentityAttributor) Enter(attribute *expr.AttributeExpr) Attributor {
+	return &transformIdentityAttributor{
+		Attributor: a.Attributor.Enter(attribute),
+		fields:     a.fields,
+	}
+}
+
+// transformOwnerTestType builds a nested union type assigned to the requested
+// generated package.
 func transformOwnerTestType(name, unionName, location string) expr.UserType {
 	union := &expr.Union{
 		TypeName: unionName,
@@ -709,6 +1623,8 @@ func transformOwnerTestType(name, unionName, location string) expr.UserType {
 	}
 }
 
+// codegenTypeName returns the Go name used by transformOwnerAttributor for one
+// test type.
 func codegenTypeName(att *expr.AttributeExpr) string {
 	if att.Type.Name() == "object" {
 		return "Object"

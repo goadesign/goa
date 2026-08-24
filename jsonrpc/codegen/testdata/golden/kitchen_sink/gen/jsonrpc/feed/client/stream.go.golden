@@ -12,6 +12,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -41,6 +42,10 @@ type (
 		decoder func(*http.Response) goahttp.Decoder
 		// closed records whether Close was called or the response ended.
 		closed bool
+		// closeOnce ensures the response body is closed only once.
+		closeOnce sync.Once
+		// closeErr stores the response body close error.
+		closeErr error
 		// lock prevents two calls from reading or closing the response at once.
 		lock sync.Mutex
 	}
@@ -55,8 +60,25 @@ func NewWatchStream(resp *http.Response, decoder func(*http.Response) goahttp.De
 	}
 }
 
-// parseSSEEvent reads one complete event from the response.
-func (s *WatchStreamImpl) parseSSEEvent() (eventType string, data []byte, err error) {
+// parseSSEEvent reads one complete event from the response. Ending ctx closes
+// the response body so a blocked read returns.
+func (s *WatchStreamImpl) parseSSEEvent(ctx context.Context) (eventType string, data []byte, err error) {
+	closeResult := make(chan struct{}, 1)
+	stopClose := context.AfterFunc(ctx, func() {
+		s.closeBody()
+		closeResult <- struct{}{}
+	})
+	defer func() {
+		if stopClose() {
+			return
+		}
+		<-closeResult
+		if contextErr := ctx.Err(); contextErr != nil {
+			eventType = ""
+			data = nil
+			err = contextErr
+		}
+	}()
 	var event strings.Builder
 	var dataLines []string
 
@@ -103,7 +125,7 @@ func (s *WatchStreamImpl) Recv() (*feed.WatchResult, error) {
 
 // RecvWithContext reads instances of "WatchResult" from the stream with
 // context.
-func (s *WatchStreamImpl) RecvWithContext(_ context.Context) (*feed.WatchResult, error) {
+func (s *WatchStreamImpl) RecvWithContext(ctx context.Context) (*feed.WatchResult, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -114,87 +136,83 @@ func (s *WatchStreamImpl) RecvWithContext(_ context.Context) (*feed.WatchResult,
 	}
 
 	for {
-		eventType, data, err := s.parseSSEEvent()
+		eventType, data, err := s.parseSSEEvent(ctx)
 		if err != nil {
-			s.closed = true
-			return zero, err
+			return zero, s.endStream(err)
 		}
 
 		switch eventType {
 		case "notification":
-			// Parse JSON-RPC notification
+			// Read the streamed service result from the notification parameters.
 			var notification struct {
 				JSONRPC string          `json:"jsonrpc"`
 				Method  string          `json:"method"`
 				Params  json.RawMessage `json:"params"`
 			}
 			if err := json.Unmarshal(data, &notification); err != nil {
-				return zero, fmt.Errorf("failed to parse notification: %w", err)
+				return zero, s.endStream(fmt.Errorf("failed to parse notification: %w", err))
 			}
 
-			// Validate notification
 			if notification.JSONRPC != "2.0" {
-				return zero, fmt.Errorf("invalid JSON-RPC version: %s", notification.JSONRPC)
+				return zero, s.endStream(fmt.Errorf("invalid JSON-RPC version: %s", notification.JSONRPC))
 			}
 
 			if notification.Method != "watch" {
-				// Skip notifications for other methods
-				continue
+				return zero, s.endStream(fmt.Errorf("received notification for JSON-RPC method %q", notification.Method))
 			}
 
-			// Decode the result from params
 			result, err := s.decodeResult(notification.Params)
 			if err != nil {
-				return zero, fmt.Errorf("failed to decode result: %w", err)
+				return zero, s.endStream(fmt.Errorf("failed to decode result: %w", err))
 			}
 			return result, nil
 
 		case "response":
-			// Final response - parse and return
+			// A successful response completes the stream. Stream values arrive in
+			// the notifications handled above.
 			var response jsonrpc.Response
 			if err := json.Unmarshal(data, &response); err != nil {
-				return zero, fmt.Errorf("failed to parse response: %w", err)
+				return zero, s.endStream(fmt.Errorf("failed to parse response: %w", err))
 			}
 
 			if response.Error != nil {
-				return zero, response.Error
+				return zero, s.endStream(response.Error)
 			}
-			// Decode the final result
-			if response.Result == nil {
-				return zero, fmt.Errorf("missing result in response")
-			}
-			// Convert response.Result to json.RawMessage
-			resultBytes, err := json.Marshal(response.Result)
-			if err != nil {
-				return zero, fmt.Errorf("failed to marshal result: %w", err)
-			}
-			result, err := s.decodeResult(json.RawMessage(resultBytes))
-			if err != nil {
-				return zero, fmt.Errorf("failed to decode final result: %w", err)
-			}
-
-			// Mark stream as closed after final response
-			s.closed = true
-			return result, nil
+			return zero, s.endStream(io.EOF)
 
 		case "error":
-			// Error response
+			// A JSON-RPC error completes the stream.
 			var response jsonrpc.Response
 			if err := json.Unmarshal(data, &response); err != nil {
-				return zero, fmt.Errorf("failed to parse error response: %w", err)
+				return zero, s.endStream(fmt.Errorf("failed to parse error response: %w", err))
 			}
-
-			s.closed = true
 			if response.Error != nil {
-				return zero, response.Error
+				return zero, s.endStream(response.Error)
 			}
-			return zero, fmt.Errorf("unexpected error response")
+			return zero, s.endStream(fmt.Errorf("JSON-RPC error event did not contain an error"))
 
 		default:
-			// Ignore unknown event types
-			continue
+			return zero, s.endStream(fmt.Errorf("unsupported server-sent event type %q", eventType))
 		}
 	}
+}
+
+// closeBody closes the HTTP response body once and returns its close error.
+func (s *WatchStreamImpl) closeBody() error {
+	s.closeOnce.Do(func() {
+		s.closeErr = s.resp.Body.Close()
+	})
+	return s.closeErr
+}
+
+// endStream marks the stream closed and preserves both the receive error and
+// any error returned while closing the HTTP response body.
+func (s *WatchStreamImpl) endStream(err error) error {
+	s.closed = true
+	if closeErr := s.closeBody(); closeErr != nil {
+		return errors.Join(err, closeErr)
+	}
+	return err
 }
 
 // decodeResult passes one successful stream item to the decoder configured by NewClient.
@@ -221,9 +239,7 @@ func (s *WatchStreamImpl) Close() error {
 
 	if !s.closed {
 		s.closed = true
-		if s.resp != nil && s.resp.Body != nil {
-			return s.resp.Body.Close()
-		}
+		return s.closeBody()
 	}
 	return nil
 }

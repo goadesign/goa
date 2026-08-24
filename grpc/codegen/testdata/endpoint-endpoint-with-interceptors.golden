@@ -27,7 +27,7 @@ func UsageCommands() []string {
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
-	return os.Args[0] + " " + "service-with-interceptors method-a --message '{\n      \"field\": \"Voluptatem officia aut.\"\n   }'" + "\n" +
+	return os.Args[0] + " " + "service-with-interceptors method-a --message \"hello\"" + "\n" +
 		""
 }
 
@@ -161,7 +161,7 @@ func serviceWithInterceptorsMethodAUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "service-with-interceptors method-a --message '{\n      \"field\": \"Voluptatem officia aut.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "service-with-interceptors method-a --message \"hello\"")
 }
 
 func serviceWithInterceptorsMethodBUsage() {
@@ -179,5 +179,5 @@ func serviceWithInterceptorsMethodBUsage() {
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "service-with-interceptors method-b --message '{\n      \"field\": 3200818835133106279\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "service-with-interceptors method-b --message 42")
 }

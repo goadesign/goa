@@ -1,4 +1,5 @@
-// This file formats retained interceptor applicability and access facts for interceptor templates.
+// This file builds the values used to generate interceptor interfaces and
+// wrappers.
 package service
 
 import (
@@ -7,20 +8,21 @@ import (
 
 // buildInterceptorData creates the data needed to generate interceptor code.
 func buildInterceptorData(service *serviceFacts, facts *interceptorFacts, methods map[*methodFacts]*MethodData, resolver *declarationResolver, server bool) *InterceptorData {
-	lookup := func(role serviceNameRole, method, subject string) *codegen.NameDeclaration {
+	lookup := func(role serviceNameRole, subject string) *codegen.NameDeclaration {
 		return service.names[serviceSymbolID{
-			role: role, service: service.name, method: method, subject: subject,
+			role: role, service: service.name, subject: subject,
 		}].declaration
 	}
 	data := &InterceptorData{
-		InfoDeclaration:             lookup(serviceInterceptorInfoNameRole, "", facts.name),
-		PayloadDeclaration:          lookup(serviceInterceptorPayloadNameRole, "", facts.name),
-		ResultDeclaration:           lookup(serviceInterceptorResultNameRole, "", facts.name),
-		StreamingPayloadDeclaration: lookup(serviceInterceptorStreamingPayloadNameRole, "", facts.name),
-		StreamingResultDeclaration:  lookup(serviceInterceptorStreamingResultNameRole, "", facts.name),
+		InfoDeclaration:             lookup(serviceInterceptorInfoNameRole, facts.name),
+		PayloadDeclaration:          lookup(serviceInterceptorPayloadNameRole, facts.name),
+		ResultDeclaration:           lookup(serviceInterceptorResultNameRole, facts.name),
+		StreamingPayloadDeclaration: lookup(serviceInterceptorStreamingPayloadNameRole, facts.name),
+		StreamingResultDeclaration:  lookup(serviceInterceptorStreamingResultNameRole, facts.name),
 		Name:                        codegen.Goify(facts.name, true),
 		DesignName:                  facts.name,
 		Description:                 facts.description,
+		Service:                     service.name,
 	}
 	if len(facts.methods) == 0 {
 		return data
@@ -49,8 +51,8 @@ func buildInterceptorData(service *serviceFacts, facts *interceptorFacts, method
 	return data
 }
 
-// formatInterceptorAccess resolves the frozen type spelling for fields chosen
-// during interceptor planning.
+// formatInterceptorAccess returns the generated name and type for each field
+// that an interceptor may read or write.
 func formatInterceptorAccess(facts []*interceptorAccessFacts, resolver *declarationResolver) []*AttributeData {
 	if len(facts) == 0 {
 		return nil
@@ -59,7 +61,7 @@ func formatInterceptorAccess(facts []*interceptorAccessFacts, resolver *declarat
 	for index, field := range facts {
 		data[index] = &AttributeData{
 			Name:    field.name,
-			TypeRef: field.layout.Link(resolver.outputPath, retainedTypeQualifier(resolver.aliases)).Ref(),
+			TypeRef: field.layout.Link(resolver.outputPath, retainedTypeQualifier(resolver.aliases, resolver.outputPath)).Ref(),
 			Pointer: field.pointer,
 		}
 	}
@@ -126,6 +128,11 @@ func buildInterceptorMethodData(service *serviceFacts, interceptorName string, m
 		streamingResultAccess = streamingResultAccessDeclaration.Name()
 	}
 	return &MethodInterceptorData{
+		InfoDeclaration:                   declaration(serviceInterceptorMethodInfoNameRole),
+		ServerUnaryInfoDeclaration:        declaration(serviceInterceptorServerUnaryInfoNameRole),
+		ClientUnaryInfoDeclaration:        declaration(serviceInterceptorClientUnaryInfoNameRole),
+		StreamingSendInfoDeclaration:      declaration(serviceInterceptorStreamingSendInfoNameRole),
+		StreamingRecvInfoDeclaration:      declaration(serviceInterceptorStreamingRecvInfoNameRole),
 		PayloadAccessDeclaration:          payloadAccessDeclaration,
 		ResultAccessDeclaration:           resultAccessDeclaration,
 		StreamingPayloadAccessDeclaration: streamingPayloadAccessDeclaration,
@@ -140,7 +147,7 @@ func buildInterceptorMethodData(service *serviceFacts, interceptorName string, m
 		StreamingPayloadAccess:            streamingPayloadAccess,
 		StreamingPayloadRef:               md.StreamingPayloadRef,
 		StreamingResultAccess:             streamingResultAccess,
-		StreamingResultRef:                md.ResultRef,
+		StreamingResultRef:                md.StreamingResultRef,
 		ClientStream:                      clientStream,
 		ServerStream:                      serverStream,
 	}

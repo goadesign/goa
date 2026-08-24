@@ -15,14 +15,14 @@ func TestIdempotentRPCCodegen(t *testing.T) {
 	root := RunGRPCDSL(t, testdata.IdempotentRPCsDSL)
 	services := CreateGRPCServices(root)
 
-	protoFiles := ProtoFiles(services)
+	protoFiles := protoFiles(services)
 	require.Len(t, protoFiles, 1)
 	protoCode := sectionCode(t, protoFiles[0].SectionTemplates[1:]...)
 	assert.Equal(t, 2, strings.Count(protoCode, "option idempotency_level = IDEMPOTENT;"))
 	protoPath := codegen.CreateTempFile(t, protoCode)
-	assert.NoError(t, protoc(defaultProtocCmd, protoPath, nil))
+	assert.NoError(t, protoc(defaultProtocCmd, protoPath))
 
-	clientFiles := ClientFiles(services)
+	clientFiles := clientFiles(services)
 	require.Len(t, clientFiles, 2)
 	clientCode := codegen.SectionsCode(t, clientFiles[0].Section("client-endpoint-init"))
 	assert.Contains(t, clientCode, `goa.RetryEndpoint(endpoint, "busy")`)

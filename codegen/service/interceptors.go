@@ -1,5 +1,5 @@
-// This file renders service interceptor interfaces, information records, and
-// endpoint wrappers from the interceptor data collected during service analysis.
+// This file generates service interceptor interfaces, call information, and
+// endpoint wrappers.
 package service
 
 import (
@@ -9,8 +9,8 @@ import (
 )
 
 type (
-	// endpointInterceptorWrapperData binds one public endpoint wrapper to the
-	// exact private interceptor wrappers it applies in order.
+	// endpointInterceptorWrapperData lists the interceptor wrappers called by
+	// one generated endpoint wrapper, in call order.
 	endpointInterceptorWrapperData struct {
 		Declaration             *codegen.NameDeclaration
 		InterceptorsDeclaration *codegen.NameDeclaration
@@ -19,8 +19,8 @@ type (
 		Wrappers                []*codegen.NameDeclaration
 	}
 
-	// interceptorWrappersData supplies one side's exact interceptor interface
-	// and retained interceptor operations to its wrapper template.
+	// interceptorWrappersData identifies the server or client interceptor
+	// interface and the interceptors called through it.
 	interceptorWrappersData struct {
 		Service                 string
 		InterceptorsDeclaration *codegen.NameDeclaration
@@ -28,8 +28,7 @@ type (
 	}
 )
 
-// interceptorsFiles renders interceptors for the exact service retained by
-// plan.
+// interceptorsFiles generates interceptor files for one service.
 func interceptorsFiles(plan *Plan, facts *serviceFacts) []*codegen.File {
 	var files []*codegen.File
 	services := plan.Services()
@@ -67,9 +66,9 @@ func interceptorFile(svc *Data, imports []*codegen.ImportSpec, server bool) *cod
 	desc = svc.Name + desc
 	path := filepath.Join(codegen.Gendir, svc.PathName, filename)
 
-	interceptors := svc.ServerInterceptors
-	if !server {
-		interceptors = svc.ClientInterceptors
+	interceptors := svc.ClientInterceptors
+	if server {
+		interceptors = mergeInterceptorDefinitions(svc.ServerInterceptors, svc.ClientInterceptors)
 	}
 	appliedInterceptors := interceptors
 
@@ -154,13 +153,42 @@ func interceptorFile(svc *Data, imports []*codegen.ImportSpec, server bool) *cod
 			Source: serviceTemplates.Read(interceptorsT),
 			Data:   interceptors,
 			FuncMap: map[string]any{
-				"hasPrivateImplementationTypes": hasPrivateImplementationTypes,
-				"hasEndpointStruct":             hasEndpointStruct(server),
+				"hasPrivateAccessorMethods": hasPrivateAccessorMethods,
+				"hasEndpointStruct":         hasEndpointStruct(server),
 			},
 		})
 	}
 
 	return &codegen.File{Path: path, SectionTemplates: sections}
+}
+
+// mergeInterceptorDefinitions adds client-only methods when the shared
+// interceptor interface is written in the server file. This keeps every method
+// that uses that interface in the same generated file.
+func mergeInterceptorDefinitions(server, client []*InterceptorData) []*InterceptorData {
+	merged := make([]*InterceptorData, len(server))
+	for index, interceptor := range server {
+		copy := *interceptor
+		copy.Methods = append([]*MethodInterceptorData(nil), interceptor.Methods...)
+		seen := make(map[string]struct{}, len(copy.Methods))
+		for _, method := range copy.Methods {
+			seen[method.MethodName] = struct{}{}
+		}
+		for _, candidate := range client {
+			if candidate.DesignName != interceptor.DesignName {
+				continue
+			}
+			for _, method := range candidate.Methods {
+				if _, exists := seen[method.MethodName]; exists {
+					continue
+				}
+				copy.Methods = append(copy.Methods, method)
+				seen[method.MethodName] = struct{}{}
+			}
+		}
+		merged[index] = &copy
+	}
+	return merged
 }
 
 // wrapperFile returns the file containing the interceptor wrappers.
@@ -247,8 +275,9 @@ func wrapperFile(svc *Data, imports []*codegen.ImportSpec) *codegen.File {
 	}
 }
 
-// interceptorMethod returns the retained method record for one named
-// interceptor application. Planning guarantees that both identities exist.
+// interceptorMethod returns the generated call information for one interceptor
+// and service method. The design has already linked the interceptor to the
+// method, so a missing entry is a generator bug.
 func interceptorMethod(interceptors []*InterceptorData, name, method string) *MethodInterceptorData {
 	for _, interceptor := range interceptors {
 		if interceptor.DesignName != name {
@@ -263,11 +292,23 @@ func interceptorMethod(interceptors []*InterceptorData, name, method string) *Me
 	panic("retained interceptor method is missing")
 }
 
-// hasPrivateImplementationTypes returns true if any of the interceptors have
-// private implementation types.
+// hasPrivateImplementationTypes reports whether the file needs private structs
+// that hold call information for a service method.
 func hasPrivateImplementationTypes(interceptors []*InterceptorData) bool {
 	for _, intr := range interceptors {
-		if intr.ReadPayload != nil || intr.WritePayload != nil || intr.ReadResult != nil || intr.WriteResult != nil || intr.ReadStreamingPayload != nil || intr.WriteStreamingPayload != nil || intr.ReadStreamingResult != nil || intr.WriteStreamingResult != nil {
+		if len(intr.Methods) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// hasPrivateAccessorMethods reports whether an interceptor exposes selected
+// payload or result fields through private accessor methods.
+func hasPrivateAccessorMethods(interceptors []*InterceptorData) bool {
+	for _, interceptor := range interceptors {
+		if interceptor.HasPayloadAccess || interceptor.HasResultAccess ||
+			interceptor.HasStreamingPayloadAccess || interceptor.HasStreamingResultAccess {
 			return true
 		}
 	}

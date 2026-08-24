@@ -1,6 +1,5 @@
-// NewProtoDupePayload builds the gRPC request type from the payload of the
-// "MethodPayloadDuplicateA" endpoint of the "ServicePayloadWithNestedTypes"
-// service.
+// NewProtoDupePayload builds *service_payload_with_nested_typespb.DupePayload
+// from servicepayloadwithnestedtypes.DupePayload.
 func NewProtoDupePayload(payload servicepayloadwithnestedtypes.DupePayload) *service_payload_with_nested_typespb.DupePayload {
 	message := &service_payload_with_nested_typespb.DupePayload{}
 	message.Field = string(payload)

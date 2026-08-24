@@ -1,5 +1,4 @@
-// This file provides strict construction helpers for generator lifecycle tests
-// whose package roots and planning claims are deliberately valid.
+// This file builds complete generator plans for tests.
 package generator
 
 import (
@@ -11,8 +10,8 @@ import (
 	"goa.design/goa/v3/eval"
 )
 
-// mustTestPlan runs the production declaration, freeze, and link lifecycle for
-// focused assembler tests and fails the calling test on any invalid phase.
+// mustTestPlan chooses package names, finishes each selected generator, and
+// fails the calling test if any step is invalid.
 func mustTestPlan(t *testing.T, genpkg string, roots []eval.Root, planners ...func(*Plan) error) *Plan {
 	t.Helper()
 	generation, err := codegen.NewGeneration(genpkg, roots)
@@ -30,22 +29,22 @@ func mustTestPlan(t *testing.T, genpkg string, roots []eval.Root, planners ...fu
 	return plan
 }
 
-// testServiceFiles renders service files from the retained plan under test.
+// testServiceFiles returns service files from the plan under test.
 func testServiceFiles(plan *Plan) ([]*codegen.File, error) {
 	return serviceFiles(plan)
 }
 
-// testTransportFiles renders transport files from the retained plan under test.
+// testTransportFiles returns transport files from the plan under test.
 func testTransportFiles(plan *Plan) ([]*codegen.File, error) {
 	return transportFiles(plan)
 }
 
-// testOpenAPIFiles renders OpenAPI files from the retained plan under test.
+// testOpenAPIFiles returns OpenAPI files from the plan under test.
 func testOpenAPIFiles(plan *Plan) ([]*codegen.File, error) {
 	return openAPIFiles(plan)
 }
 
-// assembleExampleFilesForTest renders example files from the retained plan.
+// assembleExampleFilesForTest returns example files from the plan under test.
 func assembleExampleFilesForTest(plan *Plan) ([]*codegen.File, error) {
 	return exampleFiles(plan)
 }

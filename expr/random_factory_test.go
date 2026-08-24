@@ -61,6 +61,21 @@ func TestRandomizerFactoriesCreateIndependentStreams(t *testing.T) {
 	}
 }
 
+// TestReleasedStandaloneRandomizers checks the released concrete randomizer
+// types, seed, and repeatable values.
+func TestReleasedStandaloneRandomizers(t *testing.T) {
+	faker := expr.NewFakerRandomizer("seed")
+	concrete, ok := faker.(*expr.FakerRandomizer)
+	require.True(t, ok)
+	require.Equal(t, "seed", concrete.Seed)
+	require.Equal(t, expr.NewFakerRandomizer("seed").String(), faker.String())
+
+	deterministic := expr.NewDeterministicRandomizer()
+	_, ok = deterministic.(*expr.DeterministicRandomizer)
+	require.True(t, ok)
+	require.Equal(t, "abc123", deterministic.String())
+}
+
 func TestRandomizerFactoriesPreserveDerivedExampleStability(t *testing.T) {
 	factory := expr.NewFakerRandomizerFactory("seed")
 	identity := expr.MethodPayloadExampleIdentity(exampleMethod("service", "method"))

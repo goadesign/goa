@@ -47,6 +47,9 @@ type StreamUserWithViewsServerStream struct {
 	// view is the view to render testservice.User result type before sending to
 	// the websocket connection.
 	view string
+	// sentView is the result view named during the WebSocket upgrade. Later sends
+	// must use the same view.
+	sentView string
 }
 
 // NewConnConfigurer initializes the websocket connection configurer function
@@ -60,13 +63,26 @@ func NewConnConfigurer(fn goahttp.ConnConfigureFunc) *ConnConfigurer {
 // Send streams instances of "testservice.User" to the "StreamUserWithViews"
 // endpoint websocket connection.
 func (s *StreamUserWithViewsServerStream) Send(v *testservice.User) error {
+	view := s.view
+	if view == "" {
+		view = "default"
+	}
+	if s.sentView != "" && view != s.sentView {
+		return goa.InvalidEnumValueError("view", view, []any{s.sentView})
+	}
+	switch view {
+	case "default":
+	case "tiny":
+	default:
+		return goa.InvalidEnumValueError("view", view, []any{"default", "tiny"})
+	}
 	var err error
 	// Upgrade the HTTP connection to a websocket connection only once. Connection
 	// upgrade is done here so that authorization logic in the endpoint is executed
 	// before calling the actual service method which may call Send().
 	s.once.Do(func() {
 		respHdr := make(http.Header)
-		respHdr.Add("goa-view", s.view)
+		respHdr.Add("goa-view", view)
 		var conn *websocket.Conn
 		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
 		if err != nil {
@@ -81,15 +97,19 @@ func (s *StreamUserWithViewsServerStream) Send(v *testservice.User) error {
 	if s.upgradeErr != nil {
 		return s.upgradeErr
 	}
-	res := testservice.NewViewedUser(v, s.view)
-	var body any
-	switch s.view {
-	case "default", "":
-		body = NewStreamUserWithViewsResponseBody(res.Projected)
-	case "tiny":
-		body = NewStreamUserWithViewsResponseBodyTiny(res.Projected)
+	if s.sentView == "" {
+		s.sentView = view
 	}
-	return s.conn.WriteJSON(body)
+	switch view {
+	case "default", "":
+		res := testservice.NewViewedUser(v, "default")
+		return s.conn.WriteJSON(NewStreamUserWithViewsResponseBody(res.Projected))
+	case "tiny":
+		res := testservice.NewViewedUser(v, "tiny")
+		return s.conn.WriteJSON(NewStreamUserWithViewsResponseBodyTiny(res.Projected))
+	default:
+		return goa.InvalidEnumValueError("view", view, []any{"default", "tiny"})
+	}
 }
 
 // SendWithContext streams instances of "testservice.User" to the

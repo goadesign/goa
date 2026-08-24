@@ -25,7 +25,7 @@ func DecodeMethodBodyPathUserRequest(mux goahttp.Muxer, decoder func(*http.Reque
 			params = mux.Vars(r)
 		)
 		b = params["b"]
-		payload = NewMethodBodyPathUserPayload(&body, b)
+		payload = NewMethodBodyPathUserPayloadType(&body, b)
 
 		return payload, nil
 	}

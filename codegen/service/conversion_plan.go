@@ -1,6 +1,5 @@
-// This file retains external Go type conversions before package names freeze.
-// The root plan assigns each operation to its generated receiver package,
-// declares recursive helpers, and records every reflected package import.
+// This file records external Go type conversions before generated names are
+// chosen. It stores each conversion, its recursive functions, and its imports.
 package service
 
 import (
@@ -15,12 +14,12 @@ import (
 )
 
 type (
-	// externalConversionDirection identifies which side of a retained mapping
-	// owns the generated receiver method.
+	// externalConversionDirection identifies whether a generated method converts
+	// to or from a user-supplied Go type.
 	externalConversionDirection uint8
 
-	// externalConversionNameOrder gives every recursive helper a stable place
-	// in its generated package without depending on service traversal.
+	// externalConversionNameOrder orders child conversion helpers by their
+	// service, method, and field position instead of discovery order.
 	externalConversionNameOrder struct {
 		receiverID  string
 		externalPkg string
@@ -32,8 +31,8 @@ type (
 		required    bool
 	}
 
-	// externalConversionFacts retains one exact reflected mapping and transform
-	// graph from collection through linked render data.
+	// externalConversionFacts stores one conversion between a Goa type and a
+	// user-supplied Go type, including conversions for nested fields.
 	externalConversionFacts struct {
 		direction         externalConversionDirection
 		serviceName       string
@@ -61,8 +60,9 @@ type (
 		imports    retainedFileImports
 	}
 
-	// externalConversionIdentity identifies one receiver method contract across
-	// every root in a service planning batch.
+	// externalConversionIdentity selects one generated method by its receiver,
+	// conversion direction, and user-supplied Go type across all designs in the
+	// generation command.
 	externalConversionIdentity struct {
 		receiver     *codegen.TypeDeclaration
 		direction    externalConversionDirection
@@ -70,8 +70,8 @@ type (
 		externalPath string
 	}
 
-	// externalConversionResolver qualifies each reflected named type with the
-	// frozen alias for that type's own Go package.
+	// externalConversionResolver writes each user-supplied type with the import
+	// name chosen for the package that declares it.
 	externalConversionResolver struct {
 		scope    *codegen.AttributeScope
 		packages map[expr.UserType]string
@@ -83,9 +83,9 @@ const (
 	externalCreateFrom
 )
 
-// collectExternalConversions plans every mapping across the complete service
-// run once per exact generated receiver package. A relocated receiver shared
-// by roots therefore receives one method namespace and one convert.go file.
+// collectExternalConversions records every conversion once in the package that
+// declares its receiver type. When several designs use the same receiver
+// package, Goa writes one set of method names and one convert.go file.
 func collectExternalConversions(roots []*rootFacts, generation *codegen.Generation) error {
 	files := make(map[*codegen.GeneratedPackage]*externalConversionFileFacts)
 	fileRoots := make(map[*codegen.GeneratedPackage]*rootFacts)
@@ -106,7 +106,7 @@ func collectExternalConversions(roots []*rootFacts, generation *codegen.Generati
 						continue
 					}
 					owner := generation.Package(generatedPackagePath(
-						generation.GenPkg(), service.service, codegen.UserTypeLocation(mapping.User),
+						generation.GenPkg(), service.packagePath, codegen.UserTypeLocation(mapping.User),
 					))
 					selected := owners[owner]
 					if selected == nil || service.packagePath < selected.packagePath {
@@ -180,8 +180,8 @@ func collectExternalConversions(roots []*rootFacts, generation *codegen.Generati
 	return nil
 }
 
-// identifyExternalConversion resolves the complete run-wide receiver method
-// identity before planning can declare helpers or imports for the operation.
+// identifyExternalConversion identifies the generated receiver method before
+// Goa submits its helper names and imports.
 func identifyExternalConversion(mapping *expr.TypeMap, owner *codegen.GeneratedPackage, direction externalConversionDirection) (externalConversionIdentity, string, error) {
 	externalType := reflect.TypeOf(mapping.External)
 	if externalType == nil {
@@ -203,8 +203,8 @@ func identifyExternalConversion(mapping *expr.TypeMap, owner *codegen.GeneratedP
 	}, externalAlias, nil
 }
 
-// rootFactsOrder returns the stable service identity that owns shared file
-// contributions selected from a root.
+// rootFactsOrder returns the API and service names used to order definitions
+// shared by several designs.
 func rootFactsOrder(facts *rootFacts) string {
 	paths := make([]string, len(facts.services))
 	for index, service := range facts.services {
@@ -214,8 +214,8 @@ func rootFactsOrder(facts *rootFacts) string {
 	return facts.apiName + "\x00" + strings.Join(paths, "\x00")
 }
 
-// externalConversionFiles returns the package files assigned by batch
-// planning and rejects duplicate ownership instead of merging after freeze.
+// externalConversionFiles returns one convert.go description per receiver
+// package and rejects two service plans that both try to write that file.
 func externalConversionFiles(plans []*Plan) ([]*externalConversionFileFacts, error) {
 	byOwner := make(map[*codegen.GeneratedPackage]struct{})
 	var files []*externalConversionFileFacts
@@ -237,8 +237,8 @@ func externalConversionFiles(plans []*Plan) ([]*externalConversionFileFacts, err
 	return files, nil
 }
 
-// planExternalConversion reflects one external shape, builds its immutable
-// transform graph, and binds each recursive helper to the receiver package.
+// planExternalConversion reads one user-supplied Go type, records the complete
+// field conversion, and submits each child helper to the receiver's package.
 func planExternalConversion(
 	service *serviceFacts,
 	mapping *expr.TypeMap,
@@ -258,7 +258,7 @@ func planExternalConversion(
 		if err != nil {
 			return nil, err
 		}
-		if err := generation.DeclareImport(codegen.NewImport(alias, importPath)); err != nil {
+		if err := owner.DeclareImport(codegen.NewImport(alias, importPath)); err != nil {
 			return nil, err
 		}
 		externalPackages[userType.Origin()] = importPath
@@ -274,7 +274,7 @@ func planExternalConversion(
 	if identity.direction == externalCreateFrom {
 		source, target = externalAttribute, source
 	}
-	transform, err := codegen.NewTransformPlan(source, target)
+	transform, err := codegen.NewTransformPlan(source, target, "", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -327,8 +327,9 @@ func planExternalConversion(
 	return operation, nil
 }
 
-// finishExternalConversionFile fixes canonical operation order, assigns
-// receiver-scoped method names, and plans the exact imports used by convert.go.
+// finishExternalConversionFile sorts the generated methods, assigns child
+// helper names within each receiver method, and records the imports used by
+// convert.go.
 func finishExternalConversionFile(file *externalConversionFileFacts, generation *codegen.Generation) error {
 	sort.Slice(file.operations, func(i, j int) bool {
 		return externalConversionOperationLess(file.operations[i], file.operations[j])
@@ -374,8 +375,8 @@ func finishExternalConversionFile(file *externalConversionFileFacts, generation 
 	return nil
 }
 
-// externalConversionOperationLess orders retained receiver operations by their
-// complete semantic identity independently of root and service traversal.
+// externalConversionOperationLess orders generated receiver methods by their
+// source and target types, service, method, and direction.
 func externalConversionOperationLess(left, right *externalConversionFacts) bool {
 	if left.receiverID != right.receiverID {
 		return left.receiverID < right.receiverID
@@ -389,8 +390,8 @@ func externalConversionOperationLess(left, right *externalConversionFacts) bool 
 	return left.externalType.Name() < right.externalType.Name()
 }
 
-// linkExternalConversions binds frozen type resolvers and formats every
-// retained operation without reflecting types or discovering helpers.
+// linkExternalConversions adds the chosen import names and formats every
+// previously recorded conversion without reading Go types or creating helpers.
 func linkExternalConversions(
 	facts *rootFacts,
 	generation *codegen.Generation,
@@ -399,7 +400,7 @@ func linkExternalConversions(
 	for _, file := range facts.externalConversions {
 		linkFileImports(&file.imports, generation)
 		for _, operation := range file.operations {
-			serviceResolver := newRetainedServiceResolver(
+			serviceResolver := newServiceResolver(
 				generation,
 				aliases,
 				operation.serviceName,
@@ -414,8 +415,8 @@ func linkExternalConversions(
 	return nil
 }
 
-// linkExternalConversion renders one retained graph with frozen service and
-// reflected-package aliases selected for its output file.
+// linkExternalConversion formats one recorded field conversion with the Go
+// type and import names selected for its output file.
 func linkExternalConversion(
 	operation *externalConversionFacts,
 	serviceResolver *declarationResolver,
@@ -425,6 +426,7 @@ func linkExternalConversion(
 		operation.externalScope,
 		operation.externalPackages,
 		aliases,
+		serviceResolver.outputPath,
 	)
 	externalContext := &codegen.AttributeContext{
 		Scope: externalResolver,
@@ -462,16 +464,17 @@ func linkExternalConversion(
 	return nil
 }
 
-// newExternalConversionResolver binds reflected user types to aliases selected
-// by the generation-wide import catalog.
+// newExternalConversionResolver associates each user-supplied Go type with the
+// import name selected for its package.
 func newExternalConversionResolver(
 	scope *codegen.NameScope,
 	packages map[expr.UserType]string,
 	aliases *importAliases,
+	outputPackage string,
 ) *externalConversionResolver {
 	resolved := make(map[expr.UserType]string, len(packages))
 	for userType, importPath := range packages {
-		resolved[userType.Origin()] = aliases.name(importPath)
+		resolved[userType.Origin()] = aliases.name(outputPackage, importPath)
 	}
 	return &externalConversionResolver{
 		scope:    codegen.NewAttributeScope(scope),
@@ -500,7 +503,7 @@ func (r *externalConversionResolver) Field(att *expr.AttributeExpr, name string,
 	return r.scope.Field(att, name, firstUpper)
 }
 
-// Package returns the frozen alias for an external named type.
+// Package returns the Go name written before a user-supplied named type.
 func (r *externalConversionResolver) Package(att *expr.AttributeExpr) string {
 	if userType, ok := att.Type.(expr.UserType); ok {
 		return r.packageName(userType)
@@ -508,8 +511,8 @@ func (r *externalConversionResolver) Package(att *expr.AttributeExpr) string {
 	return ""
 }
 
-// Enter keeps the resolver because each nested named type selects its package
-// independently from the attribute currently being transformed.
+// Enter returns the same resolver because each child named type already records
+// the package that declares it.
 func (r *externalConversionResolver) Enter(*expr.AttributeExpr) codegen.Attributor {
 	return r
 }
@@ -519,17 +522,18 @@ func (r *externalConversionResolver) IsSumType() bool {
 	return r.scope.IsSumType()
 }
 
-// ValidatorName is not part of external conversion rendering.
-func (*externalConversionResolver) ValidatorName(*expr.AttributeExpr, string) string {
+// ValidatorCall is not part of external conversion rendering.
+func (*externalConversionResolver) ValidatorCall(*expr.AttributeExpr, string, string, string) string {
 	panic("external conversion resolver does not own validators")
 }
 
-// Scope returns the lexical scope used for reflected field and local names.
+// Scope returns the name set used to prevent generated field and local variable
+// names from colliding.
 func (r *externalConversionResolver) Scope() *codegen.NameScope {
 	return r.scope.Scope()
 }
 
-// packageName returns the exact frozen alias for one reflected user type.
+// packageName returns the Go import name chosen for one user-supplied type.
 func (r *externalConversionResolver) packageName(userType expr.UserType) string {
 	name, ok := r.packages[userType.Origin()]
 	if !ok {
@@ -538,8 +542,8 @@ func (r *externalConversionResolver) packageName(userType expr.UserType) string 
 	return name
 }
 
-// ComparePackageName orders external conversion helpers by complete semantic
-// operation identity rather than discovery order.
+// ComparePackageName orders conversion helpers by their source and target
+// types, service, method, and direction instead of discovery order.
 func (o externalConversionNameOrder) ComparePackageName(other codegen.PackageNameOrder) int {
 	right := other.(externalConversionNameOrder)
 	required := 0

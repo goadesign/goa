@@ -1,5 +1,5 @@
-// This file renders OpenAPI documents from the same evaluated roots and frozen
-// service declaration data used by the transport generators.
+// This file builds each requested OpenAPI document while the evaluated design
+// is available. File generation later returns the documents already built.
 package generator
 
 import (
@@ -7,17 +7,33 @@ import (
 	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
-// openAPIFiles returns OpenAPI files described by plan's frozen package
-// declarations and run-owned example state.
+// openAPIFiles returns the OpenAPI files built during planning.
 func openAPIFiles(plan *Plan) ([]*codegen.File, error) {
-	generation := plan.Generation()
-	designRoots := serviceRoots(generation.Roots())
-	for _, root := range designRoots {
-		plan.Service(root).Services()
+	if len(plan.openapiReplacements) > 0 {
+		var files []*codegen.File
+		for _, openapi := range plan.openapiReplacements {
+			files = append(files, openapi.Files()...)
+		}
+		return files, nil
 	}
-	if len(designRoots) > 0 {
-		root := designRoots[0]
-		return httpcodegen.OpenAPIFiles(root, plan.exampleGenerator(root))
+	return plan.openapi.Files(), nil
+}
+
+// planOpenAPIData builds the OpenAPI files for the application's design root.
+// Later roots contain generated support services and do not describe another
+// application API.
+func planOpenAPIData(plan *Plan) error {
+	roots := serviceRoots(plan.Generation().Roots())
+	if len(roots) == 0 {
+		plan.openapi = new(httpcodegen.OpenAPIPlan)
+		plan.openapiRoot = nil
+		return nil
 	}
-	return nil, nil
+	openapi, err := httpcodegen.NewOpenAPIPlan(roots[0], plan.exampleGenerator(roots[0]))
+	if err != nil {
+		return err
+	}
+	plan.openapi = openapi
+	plan.openapiRoot = roots[0]
+	return nil
 }

@@ -18,8 +18,8 @@ paths:
                   in: header
                   schema:
                     type: string
-                    example: Corrupti possimus quas ut.
-                  example: Corrupti possimus quas ut.
+                    example: request
+                  example: request
             requestBody:
                 description: Request body for SSEAllFieldsMethod.
                 required: true
@@ -28,7 +28,7 @@ paths:
                         schema:
                             $ref: '#/components/schemas/SSEAllFieldsMethodRequestBody'
                         example:
-                            id: Voluptatem deleniti.
+                            id: request
             responses:
                 "200":
                     description: OK response.
@@ -58,8 +58,6 @@ paths:
                                         type: integer
                                         example: 3000
                                         format: int64
-                                required:
-                                    - data
 components:
     schemas:
         SSEAllFieldsMethodRequestBody:
@@ -67,10 +65,10 @@ components:
             properties:
                 id:
                     type: string
-                    example: Voluptatem deleniti.
+                    example: request
             description: Request body for SSEAllFieldsMethod.
             example:
-                id: Voluptatem deleniti.
+                id: request
         SSEAllFieldsMethodResponseBody:
             type: object
             properties:

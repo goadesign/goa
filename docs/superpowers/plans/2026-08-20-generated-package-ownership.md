@@ -590,7 +590,7 @@ All commands must pass.
 - Produces: retained OpenAPI and example plans
 - Produces: one core command plan with no render-time root or generation reconstruction
 
-- [ ] **Step 1: Add selective-command and plan-identity REDs**
+- [x] **Step 1: Add selective-command and plan-identity REDs**
 
 For `gen`, `example`, and focused test commands, assert each selected subsystem
 is planned once, each renderer receives the exact retained pointer, unselected
@@ -598,7 +598,7 @@ subsystems allocate nothing, and the prepared root remains unchanged after the
 plan boundary. Cover OpenAPI-only semantic example IDs separately from Go
 declaration identity.
 
-- [ ] **Step 2: Retain OpenAPI and example analysis**
+- [x] **Step 2: Retain OpenAPI and example analysis**
 
 Build typed OpenAPI plans from prepared expressions and typed example plans
 from exact service/transport plans. The example plan owns its server
@@ -610,7 +610,7 @@ build cannot mutate it. Use the typed example identities established in Task
 6. Collect every example and CLI package-level constructor, variable, and
 helper through the owning package catalog.
 
-- [ ] **Step 3: Make the core plan the only command execution model**
+- [x] **Step 3: Make the core plan the only command execution model**
 
 Have command factories construct one private-field `generator.Plan` containing
 the exact selected subsystem plans. Core render dispatch reads those fields;
@@ -618,7 +618,7 @@ it does not call `NewPlan`, `NewServicesData`, `Generation.Roots`, or accept a
 second generated module path. Remove all remaining generator adapters and
 callback-shaped lifecycle tests.
 
-- [ ] **Step 4: Prove purity, selection, repeated runs, and compilation**
+- [x] **Step 4: Prove purity, selection, repeated runs, and compilation**
 
 Run each command twice and concurrently with different roots. Assert byte-
 identical output per input, no cross-run state, no late declarations, and no
@@ -628,7 +628,7 @@ design appears in the other and the first returned result remains unchanged
 after the second build. Run both concurrency tests with the race detector.
 Compile full HTTP/gRPC/JSON-RPC examples and validate both OpenAPI versions.
 
-- [ ] **Step 5: Verify and commit Task 10**
+- [x] **Step 5: Verify and commit Task 10**
 
 Run:
 

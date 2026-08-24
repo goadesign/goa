@@ -13,13 +13,13 @@ import (
 )
 
 func TestServerMultipartFuncType(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()
 	}{
 		{"multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL},
 		{"multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL},
+		{"multipart-body-validation", testdata.PayloadMultipartValidationDSL},
 		{"multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL},
 		{"multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL},
 	}
@@ -38,7 +38,6 @@ func TestServerMultipartFuncType(t *testing.T) {
 }
 
 func TestClientMultipartFuncType(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()
@@ -63,13 +62,13 @@ func TestClientMultipartFuncType(t *testing.T) {
 }
 
 func TestServerMultipartNewFunc(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()
 	}{
 		{"server-multipart-body-primitive", testdata.PayloadMultipartPrimitiveDSL},
 		{"server-multipart-body-user-type", testdata.PayloadMultipartUserTypeDSL},
+		{"server-multipart-body-validation", testdata.PayloadMultipartValidationDSL},
 		{"server-multipart-body-array-type", testdata.PayloadMultipartArrayTypeDSL},
 		{"server-multipart-body-map-type", testdata.PayloadMultipartMapTypeDSL},
 		{"server-multipart-with-param", testdata.PayloadMultipartWithParamDSL},
@@ -90,7 +89,6 @@ func TestServerMultipartNewFunc(t *testing.T) {
 }
 
 func TestClientMultipartNewFunc(t *testing.T) {
-	const genpkg = "gen"
 	cases := []struct {
 		Name string
 		DSL  func()

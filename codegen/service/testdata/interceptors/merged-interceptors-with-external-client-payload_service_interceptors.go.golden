@@ -1,0 +1,123 @@
+// ServerInterceptors defines the interface for all server-side interceptors.
+// Server interceptors execute after the request is decoded and before the
+// payload is sent to the service. The implementation is responsible for calling
+// next to complete the request.
+type ServerInterceptors interface {
+	Identify(ctx context.Context, info IdentifyInfo, next goa.Endpoint) (any, error)
+}
+
+// Access interfaces for interceptor payloads and results
+type (
+	// IdentifyInfo describes the service call currently passed to the interceptor.
+	IdentifyInfo interface {
+		// Service returns the service selected for this call.
+		Service() string
+		// Method returns the method selected for this call.
+		Method() string
+		// CallType returns whether this is an endpoint call, stream send, or stream receive.
+		CallType() goa.InterceptorCallType
+		// RawPayload returns the value passed to the interceptor.
+		RawPayload() any
+		// Payload returns the selected fields from the method payload.
+		Payload() IdentifyPayload
+	}
+
+	// IdentifyPayload provides type-safe access to the method payload.
+	// It allows reading and writing specific fields of the payload as defined
+	// in the design.
+	IdentifyPayload interface {
+		RuntimeSessionID() string
+	}
+)
+
+// Types used to provide information about each service call
+type (
+	identifyServerMethodInfo struct {
+		rawPayload any
+	}
+	identifyServerMethodServerUnaryInfo struct {
+		*identifyServerMethodInfo
+	}
+	identifyClientMethodInfo struct {
+		rawPayload any
+	}
+	identifyClientMethodClientUnaryInfo struct {
+		*identifyClientMethodInfo
+	}
+	identifyServerMethodPayload struct {
+		payload *ServerMethodPayload
+	}
+	identifyClientMethodPayload struct {
+		payload *types.Event
+	}
+)
+
+// WrapServerMethodEndpoint wraps the ServerMethod endpoint with the
+// server-side interceptors defined in the design.
+func WrapServerMethodEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	if i != nil {
+		endpoint = wrapServerMethodIdentify(endpoint, i)
+	}
+	return endpoint
+}
+
+// Methods that provide information about each service call
+
+// Service returns the service selected for this interceptor call.
+func (info *identifyServerMethodInfo) Service() string {
+	return "MergedInterceptorsWithExternalClientPayload"
+}
+
+// Method returns the method selected for this interceptor call.
+func (info *identifyServerMethodInfo) Method() string {
+	return "ServerMethod"
+}
+
+// RawPayload returns the payload supplied for this interceptor call.
+func (info *identifyServerMethodInfo) RawPayload() any {
+	return info.rawPayload
+}
+
+// CallType reports that this is a server endpoint call.
+func (info *identifyServerMethodServerUnaryInfo) CallType() goa.InterceptorCallType {
+	return goa.InterceptorUnary
+}
+
+// Payload returns this method's payload fields.
+func (info *identifyServerMethodInfo) Payload() IdentifyPayload {
+	return &identifyServerMethodPayload{payload: info.rawPayload.(*ServerMethodPayload)}
+}
+
+// Service returns the service selected for this interceptor call.
+func (info *identifyClientMethodInfo) Service() string {
+	return "MergedInterceptorsWithExternalClientPayload"
+}
+
+// Method returns the method selected for this interceptor call.
+func (info *identifyClientMethodInfo) Method() string {
+	return "ClientMethod"
+}
+
+// RawPayload returns the payload supplied for this interceptor call.
+func (info *identifyClientMethodInfo) RawPayload() any {
+	return info.rawPayload
+}
+
+// CallType reports that this is a client endpoint call.
+func (info *identifyClientMethodClientUnaryInfo) CallType() goa.InterceptorCallType {
+	return goa.InterceptorUnary
+}
+
+// Payload returns this method's payload fields.
+func (info *identifyClientMethodInfo) Payload() IdentifyPayload {
+	return &identifyClientMethodPayload{payload: info.rawPayload.(*types.Event)}
+}
+
+// Methods that read and write the selected payload and result fields
+
+func (p *identifyServerMethodPayload) RuntimeSessionID() string {
+	return p.payload.RuntimeSessionID
+}
+func (p *identifyClientMethodPayload) RuntimeSessionID() string {
+	return p.payload.RuntimeSessionID
+}

@@ -40,7 +40,7 @@ func goTypeDefForContext(att *expr.AttributeExpr, ctx *codegen.AttributeContext)
 		return codegen.GoNativeTypeName(actual)
 	case *expr.Array:
 		d := goTypeDefForContext(actual.ElemType, ctx)
-		if expr.IsObject(actual.ElemType.Type) {
+		if expr.IsObject(actual.ElemType.Type) || ctx.IsArrayElementPointer(actual) {
 			d = "*" + d
 		}
 		return "[]" + d

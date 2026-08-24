@@ -1,4 +1,4 @@
-func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, error) {
+func doHTTP(ctx context.Context, scheme, host string, timeout int, debug bool, stdout io.Writer) error {
 	var (
 		doer goahttp.Doer
 	)
@@ -16,6 +16,13 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, er
 		dialer = websocket.DefaultDialer
 	}
 
+	switch flag.Arg(0) {
+	case "streaming-service-b":
+		switch flag.Arg(1) {
+		case "method":
+			return errors.New("example client does not support streamed input for service \"StreamingServiceB\" method \"Method\"")
+		}
+	}
 	endpoint, payload, err := cli.ParseEndpoint(
 		scheme,
 		host,
@@ -28,13 +35,22 @@ func doHTTP(scheme, host string, timeout int, debug bool) (goa.Endpoint, any, er
 		nil,
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("parse endpoint: %w", err)
+		return fmt.Errorf("parse endpoint: %w", err)
 	}
-	return endpoint, payload, nil
-}
 
-func httpUsageCommands() []string {
-	return cli.UsageCommands()
+	switch flag.Arg(0) {
+	case "streaming-service-a":
+		switch flag.Arg(1) {
+		case "method":
+			data, err := endpoint(ctx, payload)
+			if err != nil {
+				return err
+			}
+			stream := data.(streamingservicea.MethodClientStream)
+			return writeStreamResults(ctx, stdout, stream.RecvWithContext)
+		}
+	}
+	panic("parsed HTTP command has no generated result writer")
 }
 
 func httpUsageExamples() string {

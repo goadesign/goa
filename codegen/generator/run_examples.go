@@ -1,6 +1,6 @@
-// This file creates the mutable example state owned by one generation plan.
-// Evaluated API roots retain only immutable factories, so repeated and
-// concurrent runs never share consumed streams or recursion caches.
+// This file creates a separate example generator for each evaluated Goa root
+// in one command. Repeated or concurrent commands therefore do not share the
+// random value sequence or the record of types currently being visited.
 package generator
 
 import (

@@ -15,7 +15,6 @@ import (
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
-	"goa.design/goa/v3/http/codegen/openapi"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -36,9 +35,9 @@ func TestOpenAPIDisabledExamplesDoNotConsumeServiceState(t *testing.T) {
 	payloadExample := method.PayloadEx
 	require.NotNil(t, payloadExample)
 
-	openapi.Definitions = make(map[string]*openapi.Schema)
-	files, err := OpenAPIFiles(root, examples)
+	plan, err := NewOpenAPIPlan(root, examples)
 	require.NoError(t, err)
+	files := plan.Files()
 	require.Len(t, files, 6)
 	for _, file := range files {
 		require.Len(t, file.SectionTemplates, 1)

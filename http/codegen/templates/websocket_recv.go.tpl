@@ -4,12 +4,12 @@ func (s *{{ .VarDeclaration.Name }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, erro
 		rv {{ .RecvTypeRef }}
 	{{- if eq .Type "server" }}
 		{{- if .RecvTypeIsPointer }}
-		body {{ .Payload.VarName }}
+		body {{ if .Payload.Declaration }}{{ .Payload.Declaration.Name }}{{ else }}{{ .Payload.VarName }}{{ end }}
 		{{- else }}
-		msg *{{ .Payload.VarName }}
+		msg *{{ if .Payload.Declaration }}{{ .Payload.Declaration.Name }}{{ else }}{{ .Payload.VarName }}{{ end }}
 		{{- end }}
 	{{- else }}
-		body {{ .Response.ClientBody.VarName }}
+		body {{ if .Response.ClientBody.Declaration }}{{ .Response.ClientBody.Declaration.Name }}{{ else }}{{ .Response.ClientBody.VarName }}{{ end }}
 	{{- end }}
 		err error
 	)
@@ -29,22 +29,26 @@ func (s *{{ .VarDeclaration.Name }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, erro
 	{{- end }}
 		return rv, io.EOF
 	}
-	{{- if .Payload.ValidateRef }}
+	{{- if or (and .Payload.ValidatorDeclaration .Payload.ValidationTarget) .Payload.ValidateRef }}
 		{{- if not .RecvTypeIsPointer }}
 	body := *msg
 		{{- end }}
-		{{ .Payload.ValidateRef }}
+		{{- if and .Payload.ValidatorDeclaration .Payload.ValidationTarget }}
+	err = {{ .Payload.ValidatorDeclaration.Name }}({{ .Payload.ValidationTarget }})
+		{{- else }}
+	{{ .Payload.ValidateRef }}
+		{{- end }}
 		if err != nil {
 			return rv, err
 		}
 	{{- end }}
 	{{- if .Payload.Init }}
-		return {{ .Payload.Init.Name }}({{ if .RecvTypeIsPointer }}body{{ else }}msg{{ end }}), nil
+		return {{ .Payload.Init.Declaration.Name }}({{ if .RecvTypeIsPointer }}body{{ else }}msg{{ end }}), nil
 	{{- else }}
 		return {{ if .RecvTypeIsPointer }}body{{ else }}*msg{{ end }}, nil
 	{{- end }}
 {{- else }} {{/* client side code */}}
-	{{- if eq .RecvName "CloseAndRecv" }}
+	{{- if isClientStreamKind .Kind }}
 		defer s.conn.Close()
 		{{ comment "Send a nil payload to the server implying end of message" }}
 		if err = s.conn.WriteJSON(nil); err != nil {
@@ -61,14 +65,18 @@ func (s *{{ .VarDeclaration.Name }}) {{ .RecvName }}() ({{ .RecvTypeRef }}, erro
 	if err != nil {
 		return rv, err
 	}
-	{{- if and .Response.ClientBody.ValidateRef (not .Endpoint.Method.ViewedResult) }}
+	{{- if and (or (and .Response.ClientBody.ValidatorDeclaration .Response.ClientBody.ValidationTarget) .Response.ClientBody.ValidateRef) (not .Endpoint.Method.ViewedResult) }}
+	{{- if and .Response.ClientBody.ValidatorDeclaration .Response.ClientBody.ValidationTarget }}
+	err = {{ .Response.ClientBody.ValidatorDeclaration.Name }}({{ .Response.ClientBody.ValidationTarget }})
+	{{- else }}
 	{{ .Response.ClientBody.ValidateRef }}
+	{{- end }}
 	if err != nil {
 		return rv, err
 	}
 	{{- end }}
 	{{- if .Response.ResultInit }}
-		res := {{ .Response.ResultInit.Name }}({{ range .Response.ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+		res := {{ .Response.ResultInit.Declaration.Name }}({{ range .Response.ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 		{{- if .Endpoint.Method.ViewedResult }}{{ with .Endpoint.Method.ViewedResult }}
 			vres := {{ if not .IsCollection }}&{{ end }}{{ .ViewsPkg }}.{{ .VarName }}{Projected: res, View: {{ if .ViewName }}{{ printf "%q" .ViewName }}{{ else }}s.view{{ end }} }
 			if err := {{ .ViewsPkg }}.{{ .Validate.Declaration.Name }}(vres); err != nil {

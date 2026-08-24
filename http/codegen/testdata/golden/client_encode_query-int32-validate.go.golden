@@ -7,7 +7,7 @@ func EncodeMethodQueryInt32ValidateRequest(encoder func(*http.Request) goahttp.E
 			return goahttp.ErrInvalidType("ServiceQueryInt32Validate", "MethodQueryInt32Validate", "*servicequeryint32validate.MethodQueryInt32ValidatePayload", v)
 		}
 		values := req.URL.Query()
-		values.Add("q", fmt.Sprintf("%v", p.Q))
+		values.Add("q", strconv.FormatInt(int64(p.Q), 10))
 		req.URL.RawQuery = values.Encode()
 		return nil
 	}

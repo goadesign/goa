@@ -3,7 +3,7 @@
 	{{- if and .ViewedResult (eq .Function "Send") }}
 		{{- if not .ViewedResult.ViewName }}
 			respHdr := make(http.Header)
-			respHdr.Add("goa-view", s.view)
+			respHdr.Add("goa-view", view)
 		{{- end }}
 	{{- end }}
 		var conn *websocket.Conn

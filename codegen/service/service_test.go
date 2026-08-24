@@ -64,7 +64,8 @@ func TestServicesDataUsesFrozenPackageDeclarations(t *testing.T) {
 	require.Same(t, firstShared.Declaration, secondShared.Declaration)
 	require.Len(t, first.unions, 1)
 	require.Len(t, second.unions, 1)
-	require.Same(t, first.unions[0].Declaration, second.unions[0].Declaration)
+	require.Same(t, first.unions[0].TypeDeclaration, second.unions[0].TypeDeclaration)
+	require.Same(t, first.unions[0].KindDeclaration, second.unions[0].KindDeclaration)
 	require.Equal(t, "Value", first.unions[0].Name)
 	require.Equal(t, "ValueKind", first.unions[0].KindName)
 
@@ -366,6 +367,7 @@ func TestFilesEmitCanonicalSharedDeclarationAcrossRoots(t *testing.T) {
 	sharedPath := filepath.Join("gen", "types", "shared.go")
 	require.Equal(t, 1, countFiles(forwardFiles, sharedPath))
 	forward := renderSingleFileAtPath(t, forwardFiles, sharedPath)
+	require.Contains(t, forward, "// The canonical shared declaration.")
 
 	reversePlans := sharedDeclarationPlans(t, true)
 	reverseFiles := mustServiceFiles(t, reversePlans...)
@@ -455,15 +457,17 @@ func TestNewPlansRejectSharedUnionBranchLayoutConflicts(t *testing.T) {
 }
 
 func TestNewPlanRejectsPartialMultiRootPlanning(t *testing.T) {
-	_, firstRoot, secondRoot := sharedDeclarationRoots(t)
+	firstRoot, secondRoot := sharedDeclarationRoots(t)
 	generation := mustTestGeneration(t, "goa.design/goa/example", []eval.Root{firstRoot, secondRoot})
 	_, err := NewPlan(firstRoot, generation, expr.NewExampleGenerator(firstRoot.API.RandomizerFactory))
 	require.ErrorContains(t, err, "requires all 2 generation roots")
 }
 
+// sharedDeclarationPlans builds and links both service plans, optionally in
+// reverse order.
 func sharedDeclarationPlans(t *testing.T, reverse bool) []*Plan {
 	t.Helper()
-	_, firstRoot, secondRoot := sharedDeclarationRoots(t)
+	firstRoot, secondRoot := sharedDeclarationRoots(t)
 	roots := []*expr.RootExpr{firstRoot, secondRoot}
 	if reverse {
 		slices.Reverse(roots)
@@ -486,7 +490,9 @@ func sharedDeclarationPlans(t *testing.T, reverse bool) []*Plan {
 	return plans
 }
 
-func sharedDeclarationRoots(t *testing.T) (expr.UserType, *expr.RootExpr, *expr.RootExpr) {
+// sharedDeclarationRoots builds two services that use the same type declared
+// by the first service.
+func sharedDeclarationRoots(t *testing.T) (*expr.RootExpr, *expr.RootExpr) {
 	t.Helper()
 	var shared expr.UserType
 	firstRoot := codegen.RunDSL(t, func() {
@@ -508,9 +514,11 @@ func sharedDeclarationRoots(t *testing.T) (expr.UserType, *expr.RootExpr, *expr.
 			})
 		})
 	})
-	return shared, firstRoot, secondRoot
+	return firstRoot, secondRoot
 }
 
+// conflictingSharedDeclarationRoots builds two services whose copies of the
+// same type have different definitions.
 func conflictingSharedDeclarationRoots(t *testing.T) (*expr.RootExpr, *expr.RootExpr) {
 	t.Helper()
 	var shared expr.UserType
@@ -526,7 +534,7 @@ func conflictingSharedDeclarationRoots(t *testing.T) (*expr.RootExpr, *expr.Root
 			})
 		})
 	})
-	conflicting := shared.Dup(expr.DupAtt(shared.Attribute())).(expr.UserType)
+	conflicting := shared.Dup(expr.DupAtt(shared.Attribute()))
 	conflicting.Attribute().Description = "The conflicting retained declaration."
 	secondRoot := codegen.RunDSL(t, func() {
 		dsl.Service("SecondService", func() {
@@ -553,7 +561,7 @@ func copiedSharedDeclarationRoots(t *testing.T, mutate func(expr.UserType)) (*ex
 			dsl.Method("Read", func() { dsl.Payload(shared) })
 		})
 	})
-	copy := shared.Dup(expr.DupAtt(shared.Attribute())).(expr.UserType)
+	copy := shared.Dup(expr.DupAtt(shared.Attribute()))
 	if mutate != nil {
 		mutate(copy)
 	}
@@ -581,7 +589,7 @@ func copiedSharedUnionRoots(t *testing.T, mutate func(*expr.Union)) (*expr.RootE
 			dsl.Method("Read", func() { dsl.Payload(container) })
 		})
 	})
-	copy := container.Dup(expr.DupAtt(container.Attribute())).(expr.UserType)
+	copy := container.Dup(expr.DupAtt(container.Attribute()))
 	union := expr.AsObject(copy).Attribute("value").Type.(*expr.Union)
 	if mutate != nil {
 		mutate(union)
@@ -642,6 +650,39 @@ func TestGeneratedUnionBranchCollisionDoesNotCanonicalizeToRootType(t *testing.T
 	require.Contains(t, code, "type ValueText2 string")
 }
 
+// TestForcedRelocatedTypesUseTheirDeclaringPackageForNestedReferences verifies
+// that a generated types package can render one forced type nested in another
+// without importing the package currently being written.
+func TestForcedRelocatedTypesUseTheirDeclaringPackageForNestedReferences(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		inner := dsl.Type("Inner", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.Meta("type:generate:force")
+			dsl.Attribute("value", dsl.String)
+		})
+		dsl.Type("Outer", func() {
+			dsl.Meta("struct:pkg:path", "types")
+			dsl.Meta("type:generate:force")
+			dsl.Attribute("inner", inner)
+		})
+		dsl.Service("Values", func() {
+			dsl.Method("Read", func() {})
+		})
+	})
+
+	plan := retainedServicePlanForPackage(t, root)
+	typeFile := findFile(
+		mustServiceFiles(t, plan),
+		filepath.Join("gen", "types", "outer.go"),
+	)
+	require.NotNil(t, typeFile)
+	code := renderSections(t, typeFile.SectionTemplates)
+	require.Contains(t, code, "Inner *Inner")
+	files := mustServiceFiles(t, plan)
+	files = append(files, ExampleServiceFiles(plan)...)
+	compileGeneratedServiceFiles(t, files)
+}
+
 func TestService(t *testing.T) {
 	cases := []struct {
 		Name string
@@ -668,6 +709,7 @@ func TestService(t *testing.T) {
 		{"service-service-level-error", testdata.ServiceErrorDSL},
 		{"service-custom-errors", testdata.CustomErrorsDSL},
 		{"service-custom-errors-custom-field", testdata.CustomErrorsCustomFieldDSL},
+		{"service-repeated-inline-errors", testdata.RepeatedInlineErrorsDSL},
 		{"service-force-generate-type", testdata.ForceGenerateTypeDSL},
 		{"service-force-generate-type-explicit", testdata.ForceGenerateTypeExplicitDSL},
 		{"service-streaming-result", testdata.StreamingResultMethodDSL},
@@ -710,6 +752,7 @@ func TestStructPkgPath(t *testing.T) {
 	recursiveFooPath := filepath.Join("gen", "foo", "recursive_foo.go")
 	barPath := filepath.Join("gen", "bar", "bar.go")
 	bazPath := filepath.Join("gen", "baz", "baz.go")
+	sharedPath := filepath.Join("gen", "shared", "shared.go")
 	cases := []struct {
 		Name      string
 		DSL       func()
@@ -722,6 +765,7 @@ func TestStructPkgPath(t *testing.T) {
 		{"multiple", testdata.PkgPathMultipleDSL, []string{barPath, bazPath}},
 		{"nopkg", testdata.PkgPathNoDirDSL, nil},
 		{"dupes", testdata.PkgPathDupeDSL, []string{fooPath}},
+		{"shared_roles", testdata.PkgPathSharedRolesDSL, []string{sharedPath}},
 		{"payload_attribute", testdata.PkgPathPayloadAttributeDSL, []string{fooPath}},
 	}
 	for _, c := range cases {
@@ -761,6 +805,53 @@ func TestStructPkgPath(t *testing.T) {
 				require.NoError(t, err)
 				testutil.AssertGo(t, "testdata/golden/pkg_path_"+c.Name+"_service2.go.golden", string(bs))
 			}
+		})
+	}
+}
+
+func TestRelocatedTypeDescriptions(t *testing.T) {
+	cases := []struct {
+		name string
+		dsl  func()
+		path string
+		want string
+	}{
+		{
+			name: "payload and result",
+			dsl:  testdata.PkgPathDSL,
+			path: filepath.Join("gen", "foo", "foo.go"),
+			want: "Foo is the payload and result type of the PkgPathMethod service A method.",
+		},
+		{
+			name: "nested only",
+			dsl:  testdata.PkgPathArrayDSL,
+			path: filepath.Join("gen", "foo", "foo.go"),
+			want: "Foo is a named type defined in the service design.",
+		},
+		{
+			name: "all method roles",
+			dsl:  testdata.PkgPathSharedRolesDSL,
+			path: filepath.Join("gen", "shared", "shared.go"),
+			want: "Shared is the payload, streaming payload, result, and streaming result type\n// of the PkgPathSharedRoles service Exchange method.",
+		},
+		{
+			name: "several methods and services",
+			dsl:  testdata.PkgPathDupeDSL,
+			path: filepath.Join("gen", "foo", "foo.go"),
+			want: "Foo is used by these service methods:\n" +
+				"// - PkgPathDupeMethod A: payload and result\n" +
+				"// - PkgPathDupeMethod B: payload and result\n" +
+				"// - PkgPathDupeMethod2 A: payload and result\n" +
+				"// - PkgPathDupeMethod2 B: payload and result",
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			root := codegen.RunDSL(t, test.dsl)
+			plan := mustServicePlan(t, root)
+			file := findFile(mustServiceFiles(t, plan), test.path)
+			require.NotNil(t, file)
+			require.Contains(t, renderSections(t, file.SectionTemplates), test.want)
 		})
 	}
 }
@@ -807,6 +898,8 @@ func TestStructPkgPath_UnionNamesSharePackageScopeAcrossServices(t *testing.T) {
 	require.Equal(t, []string{"Value", "Value", "Value"}, []string{firstUsesValue, secondUsesValue, thirdUsesValue})
 }
 
+// unionFieldType returns the generated type of the Value field in the named
+// struct.
 func unionFieldType(code, owner string) string {
 	prefix := "type " + owner + " struct {\n\tValue "
 	start := strings.Index(code, prefix)

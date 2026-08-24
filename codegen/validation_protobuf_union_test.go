@@ -3,6 +3,7 @@
 package codegen
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -68,8 +69,9 @@ func (*protobufUnionTestScope) IsSumType() bool {
 	return false
 }
 
-func (s *protobufUnionTestScope) ValidatorName(att *expr.AttributeExpr, view string) string {
-	return "Validate" + s.Name(att, "", false, false) + Goify(view, true)
+func (s *protobufUnionTestScope) ValidatorCall(att *expr.AttributeExpr, view, target, _ string) string {
+	name := "Validate" + s.Name(att, "", false, false) + Goify(view, true)
+	return fmt.Sprintf("%s(%s)", name, target)
 }
 
 func (s *protobufUnionTestScope) Scope() *NameScope {

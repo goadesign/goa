@@ -1,0 +1,86 @@
+// ServerInterceptors defines the interface for all server-side interceptors.
+// Server interceptors execute after the request is decoded and before the
+// payload is sent to the service. The implementation is responsible for calling
+// next to complete the request.
+type ServerInterceptors interface {
+	Identify(ctx context.Context, info IdentifyInfo, next goa.Endpoint) (any, error)
+}
+
+// Access interfaces for interceptor payloads and results
+type (
+	// IdentifyInfo describes the service call currently passed to the interceptor.
+	IdentifyInfo interface {
+		// Service returns the service selected for this call.
+		Service() string
+		// Method returns the method selected for this call.
+		Method() string
+		// CallType returns whether this is an endpoint call, stream send, or stream receive.
+		CallType() goa.InterceptorCallType
+		// RawPayload returns the value passed to the interceptor.
+		RawPayload() any
+		// Payload returns the selected fields from the method payload.
+		Payload() IdentifyPayload
+	}
+
+	// IdentifyPayload provides type-safe access to the method payload.
+	// It allows reading and writing specific fields of the payload as defined
+	// in the design.
+	IdentifyPayload interface {
+		RuntimeSessionID() string
+	}
+)
+
+// Types used to provide information about each service call
+type (
+	identifyAppendInfo struct {
+		rawPayload any
+	}
+	identifyAppendServerUnaryInfo struct {
+		*identifyAppendInfo
+	}
+	identifyAppendPayload struct {
+		payload *types.Event
+	}
+)
+
+// WrapAppendEndpoint wraps the Append endpoint with the server-side
+// interceptors defined in the design.
+func WrapAppendEndpoint(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
+	if i != nil {
+		endpoint = wrapAppendIdentify(endpoint, i)
+	}
+	return endpoint
+}
+
+// Methods that provide information about each service call
+
+// Service returns the service selected for this interceptor call.
+func (info *identifyAppendInfo) Service() string {
+	return "InterceptorWithExternalPayload"
+}
+
+// Method returns the method selected for this interceptor call.
+func (info *identifyAppendInfo) Method() string {
+	return "Append"
+}
+
+// RawPayload returns the payload supplied for this interceptor call.
+func (info *identifyAppendInfo) RawPayload() any {
+	return info.rawPayload
+}
+
+// CallType reports that this is a server endpoint call.
+func (info *identifyAppendServerUnaryInfo) CallType() goa.InterceptorCallType {
+	return goa.InterceptorUnary
+}
+
+// Payload returns this method's payload fields.
+func (info *identifyAppendInfo) Payload() IdentifyPayload {
+	return &identifyAppendPayload{payload: info.rawPayload.(*types.Event)}
+}
+
+// Methods that read and write the selected payload and result fields
+
+func (p *identifyAppendPayload) RuntimeSessionID() string {
+	return p.payload.RuntimeSessionID
+}

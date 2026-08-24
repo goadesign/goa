@@ -1,0 +1,41 @@
+// marshalServicebodyuserinnerdefaultInnerTypeToInnerTypeRequestBodyOptional
+// builds a value of type *InnerTypeRequestBody from a value of type
+// *servicebodyuserinnerdefault.InnerType.
+func marshalServicebodyuserinnerdefaultInnerTypeToInnerTypeRequestBodyOptional(v *servicebodyuserinnerdefault.InnerType) *InnerTypeRequestBody {
+	if v == nil {
+		return nil
+	}
+	res := &InnerTypeRequestBody{
+		A: v.A,
+		B: v.B,
+	}
+	{
+		var zero string
+		if res.B == zero {
+			res.B = "defaultb"
+		}
+	}
+
+	return res
+}
+
+// marshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerTypeOptional
+// builds a value of type *servicebodyuserinnerdefault.InnerType from a value
+// of type *InnerTypeRequestBody.
+func marshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerTypeOptional(v *InnerTypeRequestBody) *servicebodyuserinnerdefault.InnerType {
+	if v == nil {
+		return nil
+	}
+	res := &servicebodyuserinnerdefault.InnerType{
+		A: v.A,
+		B: v.B,
+	}
+	{
+		var zero string
+		if res.B == zero {
+			res.B = "defaultb"
+		}
+	}
+
+	return res
+}

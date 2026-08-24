@@ -22,7 +22,7 @@ func TestGenerateUnionUserTypeSamePathMerged(t *testing.T) {
 		"gen",
 		testGenerator(planServiceData, testServiceFiles),
 		testGenerator(planTransportData, testTransportFiles),
-		testGenerator(planServiceData, testOpenAPIFiles),
+		testGenerator(planOpenAPIData, testOpenAPIFiles),
 	)
 
 	dsl := func() {

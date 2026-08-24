@@ -2,13 +2,36 @@
 // Access interfaces for interceptor payloads and results
 type (
 {{- range . }}
-	// {{ .InfoDeclaration.Name }} provides metadata about the current interception.
-	// It includes service name, method name, and access to the endpoint.
-	{{ .InfoDeclaration.Name }} struct {
-		service    string
-		method     string
-		callType   goa.InterceptorCallType
-		rawPayload any
+	// {{ .InfoDeclaration.Name }} describes the service call currently passed to the interceptor.
+	{{ .InfoDeclaration.Name }} interface {
+		// Service returns the service selected for this call.
+		Service() string
+		// Method returns the method selected for this call.
+		Method() string
+		// CallType returns whether this is an endpoint call, stream send, or stream receive.
+		CallType() goa.InterceptorCallType
+		// RawPayload returns the value passed to the interceptor.
+		RawPayload() any
+		{{- if .HasPayloadAccess }}
+		// Payload returns the selected fields from the method payload.
+		Payload() {{ .PayloadDeclaration.Name }}
+		{{- end }}
+		{{- if .HasResultAccess }}
+		// Result returns the selected fields from the method result.
+		Result(any) {{ .ResultDeclaration.Name }}
+		{{- end }}
+		{{- if .HasStreamingPayloadAccess }}
+		// ClientStreamingPayload returns selected fields from the outgoing stream payload.
+		ClientStreamingPayload() {{ .StreamingPayloadDeclaration.Name }}
+		// ServerStreamingPayload returns selected fields from the incoming stream payload.
+		ServerStreamingPayload(any) {{ .StreamingPayloadDeclaration.Name }}
+		{{- end }}
+		{{- if .HasStreamingResultAccess }}
+		// ClientStreamingResult returns selected fields from the incoming stream result.
+		ClientStreamingResult(any) {{ .StreamingResultDeclaration.Name }}
+		// ServerStreamingResult returns selected fields from the outgoing stream result.
+		ServerStreamingResult() {{ .StreamingResultDeclaration.Name }}
+		{{- end }}
 	}
 	{{- if .HasPayloadAccess }}
 
@@ -70,8 +93,36 @@ type (
 )
 {{- if hasPrivateImplementationTypes . }}
 
-// Private implementation types
+// Types used to provide information about each service call
 type (
+	{{- range . }}
+		{{- range .Methods }}
+	{{ .InfoDeclaration.Name }} struct {
+		rawPayload any
+	}
+			{{- if .ServerUnaryInfoDeclaration }}
+	{{ .ServerUnaryInfoDeclaration.Name }} struct {
+		*{{ .InfoDeclaration.Name }}
+	}
+			{{- end }}
+			{{- if .ClientUnaryInfoDeclaration }}
+	{{ .ClientUnaryInfoDeclaration.Name }} struct {
+		*{{ .InfoDeclaration.Name }}
+	}
+			{{- end }}
+			{{- if .StreamingSendInfoDeclaration }}
+	{{ .StreamingSendInfoDeclaration.Name }} struct {
+		*{{ .InfoDeclaration.Name }}
+	}
+			{{- end }}
+			{{- if .StreamingRecvInfoDeclaration }}
+	{{ .StreamingRecvInfoDeclaration.Name }} struct {
+		*{{ .InfoDeclaration.Name }}
+	}
+			{{- end }}
+		{{- end }}
+	{{- end }}
+
 	{{- range . }}
 		{{- range .Methods }}
 			{{- if .PayloadAccessDeclaration }}

@@ -11,7 +11,7 @@ func {{ .ConstructorDeclaration.Name }}() *{{ .StructDeclaration.Name }} {
 {{- if .Description }}
 {{ comment .Description }}
 {{- end }}
-func (i *{{ $.StructDeclaration.Name }}) {{ .Name }}(ctx context.Context, info *{{ $.ServicePkg }}.{{ .Name }}Info, next goa.Endpoint) (any, error) {
+func (i *{{ $.StructDeclaration.Name }}) {{ .Name }}(ctx context.Context, info {{ $.ServicePkg }}.{{ .Name }}Info, next goa.Endpoint) (any, error) {
 	log.Printf(ctx, "[{{ .Name }}] Sending request: %v", info.RawPayload())
 	resp, err := next(ctx, info.RawPayload())
 	if err != nil {

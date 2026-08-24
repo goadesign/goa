@@ -1,0 +1,62 @@
+swagger: "2.0"
+info:
+    title: ""
+    version: 0.0.1
+host: localhost:80
+consumes:
+    - application/json
+    - application/xml
+    - application/gob
+produces:
+    - application/json
+    - application/xml
+    - application/gob
+paths:
+    /first:
+        get:
+            tags:
+                - errors
+            summary: first errors
+            operationId: errors#first
+            responses:
+                "204":
+                    description: No Content response.
+                "400":
+                    description: 'first_error: First failure'
+                    schema:
+                        $ref: '#/definitions/SharedError'
+                        required:
+                            - message
+            schemes:
+                - http
+    /second:
+        get:
+            tags:
+                - errors
+            summary: second errors
+            operationId: errors#second
+            responses:
+                "204":
+                    description: No Content response.
+                "400":
+                    description: 'second_error: Second failure'
+                    schema:
+                        $ref: '#/definitions/SharedError'
+                        required:
+                            - message
+            schemes:
+                - http
+definitions:
+    SharedError:
+        title: SharedError
+        type: object
+        properties:
+            message:
+                type: string
+                description: Error message
+                example: shared failure
+        description: Shared error value
+        example:
+            message: shared failure
+        required:
+            - message

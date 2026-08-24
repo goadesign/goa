@@ -1,0 +1,5 @@
+// Shared is the payload, streaming payload, result, and streaming result type
+// of the PkgPathSharedRoles service Exchange method.
+type Shared struct {
+	IntField *int
+}

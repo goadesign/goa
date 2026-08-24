@@ -83,6 +83,9 @@ type (
 		Flows []*FlowExpr
 		// Meta is a list of key/value pairs
 		Meta MetaExpr
+		// authored points to the security scheme copied for a transport. It is
+		// nil while this value is the scheme declared by the design.
+		authored *SchemeExpr
 	}
 
 	// FlowExpr describes a specific OAuth2 flow.
@@ -141,8 +144,18 @@ func DupScheme(sch *SchemeExpr) *SchemeExpr {
 		Scopes:       sch.Scopes,
 		Flows:        sch.Flows,
 		Meta:         sch.Meta,
+		authored:     sch.AuthoredScheme(),
 	}
 	return &dup
+}
+
+// AuthoredScheme returns the security scheme declared by the design. It
+// returns s when s has not been copied for a transport.
+func (s *SchemeExpr) AuthoredScheme() *SchemeExpr {
+	if s.authored != nil {
+		return s.authored
+	}
+	return s
 }
 
 // HasNoSecurity returns true if the security requirements explicitly disable

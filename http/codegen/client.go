@@ -15,17 +15,17 @@ import (
 func clientFiles(data *ServicesData) []*codegen.File {
 	files := make([]*codegen.File, 0, len(data.Expressions.Services)*3) // preallocate for client files
 	for _, svc := range data.Expressions.Services {
-		files = append(files, addEndpointImports(clientFile(svc, data), data, svc.HTTPEndpoints...))
+		files = append(files, addPlannedFileImports(clientFile(svc, data), data))
 		if f := websocketClientFile(svc, data); f != nil {
-			files = append(files, addEndpointImports(f, data, httpWebSocketEndpoints(svc)...))
+			files = append(files, addPlannedFileImports(f, data))
 		}
 		if f := sseClientFile(svc, data); f != nil {
-			files = append(files, addEndpointImports(f, data, httpSSEEndpoints(svc)...))
+			files = append(files, addPlannedFileImports(f, data))
 		}
 	}
 	for _, svc := range data.Expressions.Services {
 		if f := clientEncodeDecodeFile(svc, data); f != nil {
-			files = append(files, addEndpointImports(f, data, svc.HTTPEndpoints...))
+			files = append(files, addPlannedFileImports(f, data))
 		}
 	}
 	return files
@@ -37,6 +37,8 @@ func clientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, services.dir(), svcName, "client", "encode_decode.go")
+	outputPackage := generatedFileOutputPackage(services, path)
+	data = serviceDataForOutput(data, services, outputPackage)
 	title := fmt.Sprintf("%s %s client encoders and decoders", svc.Name(), services.label())
 	imports := []*codegen.ImportSpec{
 		{Path: "bytes"},
@@ -53,10 +55,16 @@ func clientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 		{Path: "unicode/utf8"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
-		services.ServiceImport(svc.Name()),
+		services.ServiceImport(outputPackage, svc.Name()),
+	}
+	for _, endpoint := range data.Endpoints {
+		if !endpoint.Method.SkipResponseBodyEncodeDecode {
+			imports = append(imports, &codegen.ImportSpec{Path: "errors"})
+			break
+		}
 	}
 	if serviceHasViewedResult(data, nil) {
-		imports = append(imports, services.ViewImport(svc.Name()))
+		imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
 	}
 	for _, e := range data.Endpoints {
 		if e.IsJSONRPC {
@@ -79,7 +87,7 @@ func clientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 		if e.RequestEncoderDeclaration != nil && (e.Payload.Ref != "" || e.IsJSONRPC) {
 			sections = append(sections, &codegen.SectionTemplate{
 				Name:   "request-encoder",
-				Source: httpTemplates.Read(requestEncoderT, clientTypeConversionP, clientMapConversionP, jsonrpcRequestEnvelopeP),
+				Source: httpTemplates.Read(requestEncoderT, clientTypeExpressionP, clientTypeConversionP, clientMapConversionP, jsonrpcRequestEnvelopeP),
 				FuncMap: map[string]any{
 					"typeConversionData": typeConversionData,
 					"mapConversionData":  mapConversionData,
@@ -139,11 +147,13 @@ func clientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 	return &codegen.File{Path: path, SectionTemplates: sections}
 }
 
-// clientFile returns the client HTTP transport file
+// clientFile returns the client HTTP transport file.
 func clientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File {
 	data := services.Get(svc.Name())
 	svcName := data.Service.PathName
 	path := filepath.Join(codegen.Gendir, "http", svcName, "client", "client.go")
+	outputPackage := generatedFileOutputPackage(services, path)
+	data = serviceDataForOutput(data, services, outputPackage)
 	title := fmt.Sprintf("%s client HTTP transport", svc.Name())
 	imports := []*codegen.ImportSpec{
 		{Path: "context"},
@@ -157,7 +167,13 @@ func clientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File
 		{Path: "github.com/gorilla/websocket"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
-		services.ServiceImport(svc.Name()),
+		services.ServiceImport(outputPackage, svc.Name()),
+	}
+	for _, endpoint := range data.Endpoints {
+		if endpoint.SSE != nil || endpoint.Method.SkipResponseBodyEncodeDecode {
+			imports = append(imports, &codegen.ImportSpec{Path: "errors"})
+			break
+		}
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "client", imports),
@@ -211,6 +227,7 @@ func clientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File
 				FuncMap: map[string]any{
 					"isWebSocketEndpoint": IsWebSocketEndpoint,
 					"isSSEEndpoint":       IsSSEEndpoint,
+					"isServerStreamKind":  isServerStreamKind,
 				},
 			})
 		}

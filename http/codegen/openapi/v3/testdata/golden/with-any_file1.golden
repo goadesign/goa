@@ -23,10 +23,8 @@ paths:
                             any: ""
                             any_array:
                                 - ""
-                                - ""
-                                - ""
                             any_map:
-                                "": ""
+                                key: ""
             responses:
                 "200":
                     description: OK response.
@@ -38,10 +36,8 @@ paths:
                                 any: ""
                                 any_array:
                                     - ""
-                                    - ""
-                                    - ""
                                 any_map:
-                                    "": ""
+                                    key: ""
 components:
     schemas:
         TestEndpointRequestBody:
@@ -55,21 +51,17 @@ components:
                         example: ""
                     example:
                         - ""
-                        - ""
-                        - ""
                 any_map:
                     type: object
                     example:
-                        "": ""
+                        key: ""
                     additionalProperties: true
             description: Request body for testEndpoint.
             example:
                 any: ""
                 any_array:
                     - ""
-                    - ""
-                    - ""
                 any_map:
-                    "": ""
+                    key: ""
 tags:
     - name: testService

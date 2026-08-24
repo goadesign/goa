@@ -1,6 +1,7 @@
 package codegen
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -108,7 +109,7 @@ func TestServerStreaming(t *testing.T) {
 			{"server-websocket-send", &testdata.StreamingPayloadResultWithViewsServerStreamSendCode},
 			{"server-websocket-recv", &testdata.StreamingPayloadResultWithViewsServerStreamRecvCode},
 			{"server-websocket-close", nil},
-			{"server-websocket-set-view", &testdata.StreamingPayloadResultWithViewsServerStreamSetViewCode},
+			{"server-websocket-set-view", nil},
 		}},
 		{"streaming-payload-result-with-explicit-view", testdata.StreamingPayloadResultWithExplicitViewDSL, []*sectionExpectation{
 			{"server-websocket-send", &testdata.StreamingPayloadResultWithExplicitViewServerStreamSendCode},
@@ -118,7 +119,7 @@ func TestServerStreaming(t *testing.T) {
 		{"streaming-payload-result-collection-with-views", testdata.StreamingPayloadResultCollectionWithViewsDSL, []*sectionExpectation{
 			{"server-websocket-send", &testdata.StreamingPayloadResultCollectionWithViewsServerStreamSendCode},
 			{"server-websocket-recv", &testdata.StreamingPayloadResultCollectionWithViewsServerStreamRecvCode},
-			{"server-websocket-set-view", &testdata.StreamingPayloadResultCollectionWithViewsServerStreamSetViewCode},
+			{"server-websocket-set-view", nil},
 		}},
 		{"streaming-payload-result-collection-with-explicit-view", testdata.StreamingPayloadResultCollectionWithExplicitViewDSL, []*sectionExpectation{
 			{"server-websocket-send", &testdata.StreamingPayloadResultCollectionWithExplicitViewServerStreamSendCode},
@@ -164,7 +165,7 @@ func TestServerStreaming(t *testing.T) {
 			{"server-websocket-send", &testdata.BidirectionalStreamingResultWithViewsServerStreamSendCode},
 			{"server-websocket-recv", &testdata.BidirectionalStreamingResultWithViewsServerStreamRecvCode},
 			{"server-websocket-close", &testdata.BidirectionalStreamingResultWithViewsServerStreamCloseCode},
-			{"server-websocket-set-view", &testdata.BidirectionalStreamingResultWithViewsServerStreamSetViewCode},
+			{"server-websocket-set-view", nil},
 		}},
 		{"bidirectional-streaming-result-with-explicit-view", testdata.BidirectionalStreamingResultWithExplicitViewDSL, []*sectionExpectation{
 			{"server-websocket-send", &testdata.BidirectionalStreamingResultWithExplicitViewServerStreamSendCode},
@@ -174,7 +175,7 @@ func TestServerStreaming(t *testing.T) {
 		{"bidirectional-streaming-result-collection-with-views", testdata.BidirectionalStreamingResultCollectionWithViewsDSL, []*sectionExpectation{
 			{"server-websocket-send", &testdata.BidirectionalStreamingResultCollectionWithViewsServerStreamSendCode},
 			{"server-websocket-recv", &testdata.BidirectionalStreamingResultCollectionWithViewsServerStreamRecvCode},
-			{"server-websocket-set-view", &testdata.BidirectionalStreamingResultCollectionWithViewsServerStreamSetViewCode},
+			{"server-websocket-set-view", nil},
 		}},
 		{"bidirectional-streaming-result-collection-with-explicit-view", testdata.BidirectionalStreamingResultCollectionWithExplicitViewDSL, []*sectionExpectation{
 			{"server-websocket-send", &testdata.BidirectionalStreamingResultCollectionWithExplicitViewServerStreamSendCode},
@@ -208,6 +209,36 @@ func TestServerStreaming(t *testing.T) {
 		return linkedHTTPPlanForRoot(t, root).ServerFiles()
 	}
 	runTests(t, cases, filesFn)
+}
+
+// TestVariableViewWebSocketSendWritesTypedBranches checks that the selected
+// view is the only runtime choice and that an unknown view writes nothing.
+func TestVariableViewWebSocketSendWritesTypedBranches(t *testing.T) {
+	root := expr.RunDSL(t, testdata.StreamingResultWithViewsDSL)
+	files := linkedHTTPPlanForRoot(t, root).ServerFiles()
+	var code string
+	for _, file := range files {
+		for _, section := range file.SectionTemplates {
+			if section.Name == "server-websocket-send" {
+				code = codegen.SectionCode(t, section)
+			}
+		}
+	}
+	require.NotEmpty(t, code)
+	require.NotContains(t, code, "var body any")
+	require.Contains(t, code, `if view == "" {`)
+	require.Contains(t, code, `view = "default"`)
+	require.Contains(t, code, `if s.sentView != "" && view != s.sentView`)
+	require.Contains(t, code, `respHdr.Add("goa-view", view)`)
+	require.Contains(t, code, `case "tiny":`)
+	require.Contains(t, code, `res := streamingresultwithviewsservice.NewViewedUsertype(v, "tiny")`)
+	require.Contains(t, code, "return s.conn.WriteJSON(NewStreamingResultWithViewsMethodResponseBodyTiny(res.Projected))")
+	require.Contains(t, code, `default:`)
+	require.Contains(t, code, `return goa.InvalidEnumValueError("view", view`)
+	require.Less(t,
+		strings.Index(code, `InvalidEnumValueError("view", view`),
+		strings.Index(code, "s.once.Do"),
+	)
 }
 
 func TestClientStreaming(t *testing.T) {
@@ -289,7 +320,7 @@ func TestClientStreaming(t *testing.T) {
 			{"client-websocket-send", &testdata.StreamingPayloadResultWithViewsClientStreamSendCode},
 			{"client-websocket-recv", &testdata.StreamingPayloadResultWithViewsClientStreamRecvCode},
 			{"client-websocket-close", nil},
-			{"client-websocket-set-view", &testdata.StreamingPayloadResultWithViewsClientStreamSetViewCode},
+			{"client-websocket-set-view", nil},
 		}},
 		{"client-streaming-payload-result-with-explicit-view", testdata.StreamingPayloadResultWithExplicitViewDSL, []*sectionExpectation{
 			{"client-websocket-send", &testdata.StreamingPayloadResultWithExplicitViewClientStreamSendCode},
@@ -299,7 +330,7 @@ func TestClientStreaming(t *testing.T) {
 		{"client-streaming-payload-result-collection-with-views", testdata.StreamingPayloadResultCollectionWithViewsDSL, []*sectionExpectation{
 			{"client-websocket-send", &testdata.StreamingPayloadResultCollectionWithViewsClientStreamSendCode},
 			{"client-websocket-recv", &testdata.StreamingPayloadResultCollectionWithViewsClientStreamRecvCode},
-			{"client-websocket-set-view", &testdata.StreamingPayloadResultCollectionWithViewsClientStreamSetViewCode},
+			{"client-websocket-set-view", nil},
 		}},
 		{"client-streaming-payload-result-collection-with-explicit-view", testdata.StreamingPayloadResultCollectionWithExplicitViewDSL, []*sectionExpectation{
 			{"client-websocket-send", &testdata.StreamingPayloadResultCollectionWithExplicitViewClientStreamSendCode},
@@ -347,7 +378,7 @@ func TestClientStreaming(t *testing.T) {
 			{"client-websocket-send", &testdata.BidirectionalStreamingResultWithViewsClientStreamSendCode},
 			{"client-websocket-recv", &testdata.BidirectionalStreamingResultWithViewsClientStreamRecvCode},
 			{"client-websocket-close", &testdata.BidirectionalStreamingResultWithViewsClientStreamCloseCode},
-			{"client-websocket-set-view", &testdata.BidirectionalStreamingResultWithViewsClientStreamSetViewCode},
+			{"client-websocket-set-view", nil},
 		}},
 		{"client-bidirectional-streaming-result-with-explicit-view", testdata.BidirectionalStreamingResultWithExplicitViewDSL, []*sectionExpectation{
 			{"client-websocket-send", &testdata.BidirectionalStreamingResultWithExplicitViewClientStreamSendCode},
@@ -357,7 +388,7 @@ func TestClientStreaming(t *testing.T) {
 		{"client-bidirectional-streaming-result-collection-with-views", testdata.BidirectionalStreamingResultCollectionWithViewsDSL, []*sectionExpectation{
 			{"client-websocket-send", &testdata.BidirectionalStreamingResultCollectionWithViewsClientStreamSendCode},
 			{"client-websocket-recv", &testdata.BidirectionalStreamingResultCollectionWithViewsClientStreamRecvCode},
-			{"client-websocket-set-view", &testdata.BidirectionalStreamingResultCollectionWithViewsClientStreamSetViewCode},
+			{"client-websocket-set-view", nil},
 		}},
 		{"client-bidirectional-streaming-result-collection-with-explicit-view", testdata.BidirectionalStreamingResultCollectionWithExplicitViewDSL, []*sectionExpectation{
 			{"client-websocket-send", &testdata.BidirectionalStreamingResultCollectionWithExplicitViewClientStreamSendCode},

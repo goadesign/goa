@@ -38,9 +38,8 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 
 	t.Run("openapi uses cookie security scheme", func(t *testing.T) {
 		root := expr.RunDSL(t, cookieAPIKeySecurityDSL)
-		openapi.Definitions = make(map[string]*openapi.Schema)
 
-		v2Files, err := openapiv2.Files(root, openapi.DefaultPath20, expr.NewExampleGenerator(root.API.RandomizerFactory))
+		v2Files, err := openapiv2.Files(root, openapi.DefaultPath20)
 		require.NoError(t, err)
 		v2JSON := renderOpenAPIJSON(t, v2Files)
 		var swagger openapi2.T
@@ -57,8 +56,7 @@ func TestCookieAPIKeySecurity(t *testing.T) {
 			require.Contains(t, (*swagger.Paths["/auth/profile"].Get.Security)[0], name)
 		}
 
-		openapi.Definitions = make(map[string]*openapi.Schema)
-		v3JSON := renderOpenAPIJSON(t, openapiv3.Files(root, openapi.Version30, openapi.DefaultPath30, expr.NewExampleGenerator(root.API.RandomizerFactory)))
+		v3JSON := renderOpenAPIJSON(t, openapiv3.Files(root, openapi.Version30, openapi.DefaultPath30))
 		loader := openapi3.NewLoader()
 		doc, err := loader.LoadFromData(v3JSON)
 		require.NoError(t, err)

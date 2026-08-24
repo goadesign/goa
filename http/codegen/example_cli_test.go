@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/codegen/example"
 	ctestdata "goa.design/goa/v3/codegen/example/testdata"
 	"goa.design/goa/v3/codegen/testutil"
 	"goa.design/goa/v3/http/codegen/testdata"
@@ -25,14 +24,14 @@ func TestExampleCLIFiles(t *testing.T) {
 		{"server-hosting-multiple-services", ctestdata.ServerHostingMultipleServicesDSL},
 		{"streaming", testdata.StreamingResultDSL},
 		{"streaming-multiple-services", testdata.StreamingMultipleServicesDSL},
+		{"streaming-input-only", testdata.StreamingPayloadDSL},
+		{"mixed-results", testdata.MixedResultsDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			// reset global variable
-			example.Servers = make(example.ServersData)
 			root := codegen.RunDSL(t, c.DSL)
-			plan := linkedHTTPPlanForRoot(t, root)
-			fs := plan.ExampleCLIFiles()
+			examples := linkedHTTPExamplePlanForRoot(t, root)
+			fs := examples.CLIFiles()
 			require.Len(t, fs, 1)
 			require.Greater(t, len(fs[0].SectionTemplates), 0)
 			var buf bytes.Buffer
@@ -44,4 +43,23 @@ func TestExampleCLIFiles(t *testing.T) {
 			testutil.CompareOrUpdateGolden(t, code, golden)
 		})
 	}
+}
+
+func TestExampleCLIUsesServicePathsForCommands(t *testing.T) {
+	root := codegen.RunDSL(t, collidingServiceNamesDSL)
+	examples := linkedHTTPExamplePlanForRoot(t, root)
+	files := examples.CLIFiles()
+	require.Len(t, files, 1)
+
+	var output bytes.Buffer
+	for _, section := range files[0].SectionTemplates {
+		require.NoError(t, section.Write(&output))
+	}
+	first := examples.transport.services.Get("read_value").Service
+	second := examples.transport.services.Get("read-value").Service
+	firstCommand := codegen.KebabCase(first.PathName)
+	secondCommand := codegen.KebabCase(second.PathName)
+	require.NotEqual(t, firstCommand, secondCommand)
+	require.Contains(t, output.String(), `case "`+firstCommand+`":`)
+	require.Contains(t, output.String(), `case "`+secondCommand+`":`)
 }

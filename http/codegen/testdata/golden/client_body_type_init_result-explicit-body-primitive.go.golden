@@ -1,8 +1,8 @@
-// NewMethodExplicitBodyPrimitiveResultMultipleViewResultOK builds a
-// "ServiceExplicitBodyPrimitiveResultMultipleView" service
+// NewMethodExplicitBodyPrimitiveResultMultipleViewResulttypemultipleviewsOK
+// builds a "ServiceExplicitBodyPrimitiveResultMultipleView" service
 // "MethodExplicitBodyPrimitiveResultMultipleView" endpoint result from a HTTP
 // "OK" response.
-func NewMethodExplicitBodyPrimitiveResultMultipleViewResultOK(body string, c *string) *serviceexplicitbodyprimitiveresultmultipleviewviews.ResulttypemultipleviewsView {
+func NewMethodExplicitBodyPrimitiveResultMultipleViewResulttypemultipleviewsOK(body string, c *string) *serviceexplicitbodyprimitiveresultmultipleviewviews.ResulttypemultipleviewsView {
 	v := body
 	res := &serviceexplicitbodyprimitiveresultmultipleviewviews.ResulttypemultipleviewsView{
 		A: &v,

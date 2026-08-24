@@ -21,7 +21,7 @@ func TestCollectMessagesDistinguishesEqualNameAndUIDOrigins(t *testing.T) {
 	}}
 	sd := grpcTraversalServiceData()
 
-	messages := freezeTraversalMessages(sd, root)
+	messages := freezeTraversalMessages(t, sd, root)
 	require.Len(t, messages, 2)
 	require.NotEqual(t, messages[0].VarName, messages[1].VarName)
 	require.NotEqual(t, messages[0].Ref, messages[1].Ref)
@@ -40,7 +40,7 @@ func TestCollectMessagesDistinguishesOneOriginWithDifferentWireShape(t *testing.
 	}}
 	sd := grpcTraversalServiceData()
 
-	messages := freezeTraversalMessages(sd, root)
+	messages := freezeTraversalMessages(t, sd, root)
 	require.Len(t, messages, 2)
 	require.NotEqual(t, messages[0].VarName, messages[1].VarName)
 	require.Contains(t, messages[0].Def, "string value = 1")
@@ -56,7 +56,7 @@ func TestCollectMessagesReusesIdenticalDeclaration(t *testing.T) {
 		{Name: "second", Attribute: &expr.AttributeExpr{Type: second}},
 	}}
 
-	messages := freezeTraversalMessages(grpcTraversalServiceData(), root)
+	messages := freezeTraversalMessages(t, grpcTraversalServiceData(), root)
 	require.Len(t, messages, 1)
 }
 
@@ -75,7 +75,7 @@ func TestCollectMessagesDistinguishesProtoOverrides(t *testing.T) {
 		{Name: "second", Attribute: second},
 	}}
 
-	messages := freezeTraversalMessages(grpcTraversalServiceData(), root)
+	messages := freezeTraversalMessages(t, grpcTraversalServiceData(), root)
 	require.Len(t, messages, 2)
 	require.Equal(t, "FirstWire", messages[0].VarName)
 	require.Equal(t, "SecondWire", messages[1].VarName)
@@ -95,7 +95,7 @@ func TestCollectMessagesDistinguishesSharedExplicitNameWithDifferentSchemas(t *t
 		{Name: "second", Attribute: second},
 	}}
 
-	messages := freezeTraversalMessages(grpcTraversalServiceData(), root)
+	messages := freezeTraversalMessages(t, grpcTraversalServiceData(), root)
 	require.Len(t, messages, 2)
 	require.Equal(t, "SharedWire", messages[0].VarName)
 	require.Equal(t, "SharedWire2", messages[1].VarName)
@@ -117,7 +117,7 @@ func TestCollectMessagesDistinguishesSharedExplicitNameWithDifferentOrigins(t *t
 		{Name: "second", Attribute: second},
 	}}
 
-	messages := freezeTraversalMessages(grpcTraversalServiceData(), root)
+	messages := freezeTraversalMessages(t, grpcTraversalServiceData(), root)
 	require.Len(t, messages, 2)
 	require.Equal(t, "SharedWire", messages[0].VarName)
 	require.Equal(t, "SharedWire2", messages[1].VarName)
@@ -145,8 +145,9 @@ func TestCollectMessagesUsesUnaryResultSourceForMixedResults(t *testing.T) {
 	}
 	sd := grpcTraversalServiceData()
 	sd.protobuf = newProtobufPackageCatalog(sd.PkgName)
-	sd.protobuf.collectMessage(firstWire, protobufRootMessageSource(firstWire, firstEndpoint, nil, protobufResponseMessage), sd)
-	sd.protobuf.collectMessage(secondWire, protobufRootMessageSource(secondWire, secondEndpoint, nil, protobufResponseMessage), sd)
+	require.NoError(t, sd.protobuf.collectMessage(firstWire, protobufRootMessageSource(firstWire, firstEndpoint, nil, protobufResponseMessage)))
+	require.NoError(t, sd.protobuf.collectMessage(secondWire, protobufRootMessageSource(secondWire, secondEndpoint, nil, protobufResponseMessage)))
+	planTestProtobufCatalog(t, sd)
 
 	messages := sd.protobuf.freezeMessages(sd)
 	require.Len(t, messages, 2)
@@ -165,7 +166,7 @@ func TestCollectMessagesStopsAtRecursiveCopy(t *testing.T) {
 		},
 	})
 
-	messages := freezeTraversalMessages(grpcTraversalServiceData(), &expr.AttributeExpr{Type: expr.Dup(message)})
+	messages := freezeTraversalMessages(t, grpcTraversalServiceData(), &expr.AttributeExpr{Type: expr.Dup(message)})
 	require.Len(t, messages, 1)
 	require.Contains(t, messages[0].Def, "Recursive next = 2")
 }
@@ -183,11 +184,91 @@ func TestProtoBufMessageNameIgnoresLateScopeAllocations(t *testing.T) {
 	message := grpcMessageTraversalType("Shared", "shared", expr.String, "1")
 	attribute := &expr.AttributeExpr{Type: message}
 	sd := grpcTraversalServiceData()
-	messages := freezeTraversalMessages(sd, attribute)
+	messages := freezeTraversalMessages(t, sd, attribute)
 	require.Len(t, messages, 1)
 
 	sd.Scope.HashedUnique(grpcMessageTraversalType("Other", "other", expr.Int, "1"), "Shared")
 	require.Equal(t, messages[0].VarName, protoBufMessageName(attribute, sd))
+}
+
+// TestProtobufCopiesRequireRegistration checks that a copied protobuf value
+// uses names only after the copy is connected to the original value.
+func TestProtobufCopiesRequireRegistration(t *testing.T) {
+	minimum := 2
+	state := &expr.AttributeExpr{Type: &expr.Union{
+		TypeName: "State",
+		Values: []*expr.NamedAttributeExpr{
+			{
+				Name: "active",
+				Attribute: &expr.AttributeExpr{
+					Type:       expr.String,
+					Meta:       expr.MetaExpr{"rpc:tag": {"1"}},
+					Validation: &expr.ValidationExpr{MinLength: &minimum},
+				},
+			},
+		},
+	}}
+	message := &expr.UserTypeExpr{
+		AttributeExpr: &expr.AttributeExpr{Type: &expr.Object{
+			{Name: "state", Attribute: state},
+		}},
+		TypeName: "Message",
+		UID:      "message",
+	}
+	attribute := &expr.AttributeExpr{Type: message}
+	sd := grpcTraversalServiceData()
+	freezeTraversalMessages(t, sd, attribute)
+	sd.protobuf.collectValidation(attribute, validateServer, grpcTraversalValidationSource(), "message", "message")
+	planTraversalValidations(t, sd)
+	sd.validations = sd.protobuf.freezeValidations(sd)
+
+	copy := expr.DupAtt(attribute)
+	copyState := expr.AsObject(copy.Type.(expr.UserType)).Attribute("state")
+	branch := state.Type.(*expr.Union).Values[0].Attribute
+	copyBranch := copyState.Type.(*expr.Union).Values[0].Attribute
+	require.Nil(t, sd.protobuf.messageRecord(copy))
+	require.Panics(t, func() {
+		sd.protobuf.unionName(copyState)
+	})
+	_, ok := sd.protobuf.plan.wrapperName(copyBranch)
+	require.False(t, ok)
+
+	sd.protobuf.plan.bindAttributeCopy(attribute, copy)
+	require.Same(t, sd.protobuf.messageRecord(attribute), sd.protobuf.messageRecord(copy))
+	require.Equal(t, sd.protobuf.unionName(state), sd.protobuf.unionName(copyState))
+	require.Nil(t, sd.protobuf.validationRecord(copy, validateServer))
+	originalWrapper, ok := sd.protobuf.plan.wrapperName(branch)
+	require.True(t, ok)
+	copyWrapper, ok := sd.protobuf.plan.wrapperName(copyBranch)
+	require.True(t, ok)
+	require.Equal(t, originalWrapper, copyWrapper)
+}
+
+// TestProtobufValidationScopeKeepsMessageNameSeparate checks that a validation
+// function collision cannot change the protobuf message name used in its body.
+func TestProtobufValidationScopeKeepsMessageNameSeparate(t *testing.T) {
+	minimum := 2
+	message := grpcValidationTraversalType("Message", "message", &expr.AttributeExpr{
+		Type:       expr.String,
+		Validation: &expr.ValidationExpr{MinLength: &minimum},
+	})
+	attribute := &expr.AttributeExpr{Type: message}
+	sd := grpcTraversalServiceData()
+	freezeTraversalMessages(t, sd, attribute)
+	sd.protobuf.collectValidation(attribute, validateServer, grpcTraversalValidationSource(), "message", "message")
+	planTraversalValidations(t, sd)
+	record := sd.protobuf.validationRecord(attribute, validateServer)
+	require.NotNil(t, record)
+	record.message.name = "RetainedMessage2"
+	scope := &protobufValidationScope{
+		protoBufScope: &protoBufScope{service: sd},
+		catalog:       sd.protobuf,
+		side:          validateServer,
+		message:       record.message,
+		parent:        message,
+	}
+
+	require.Equal(t, record.message.name, scope.Name(attribute, "", false, false))
 }
 
 func TestAddValidationDistinguishesRulesForOneWireDeclaration(t *testing.T) {
@@ -205,9 +286,11 @@ func TestAddValidationDistinguishesRulesForOneWireDeclaration(t *testing.T) {
 		{Name: "first", Attribute: firstAttribute},
 		{Name: "second", Attribute: secondAttribute},
 	}}
-	freezeTraversalMessages(sd, root)
-	sd.protobuf.collectValidation(firstAttribute, validateServer, "message", "message")
-	sd.protobuf.collectValidation(secondAttribute, validateServer, "message", "message")
+	freezeTraversalMessages(t, sd, root)
+	source := grpcTraversalValidationSource()
+	sd.protobuf.collectValidation(firstAttribute, validateServer, source, "message", "message")
+	sd.protobuf.collectValidation(secondAttribute, validateServer, source.child("second"), "message", "message")
+	planTraversalValidations(t, sd)
 	sd.validations = sd.protobuf.freezeValidations(sd)
 
 	firstValidation := addValidation(firstAttribute, sd, true)
@@ -215,7 +298,7 @@ func TestAddValidationDistinguishesRulesForOneWireDeclaration(t *testing.T) {
 	require.NotNil(t, firstValidation)
 	require.NotNil(t, secondValidation)
 	require.Len(t, sd.validations, 2)
-	require.NotEqual(t, firstValidation.Name, secondValidation.Name)
+	require.NotEqual(t, firstValidation.Declaration.Name(), secondValidation.Declaration.Name())
 	require.Contains(t, firstValidation.Def, `InvalidLengthError("message.value", *message.Value, utf8.RuneCountInString(*message.Value), 2, true)`)
 	require.Contains(t, secondValidation.Def, `InvalidLengthError("message.value", *message.Value, utf8.RuneCountInString(*message.Value), 5, true)`)
 }
@@ -226,9 +309,13 @@ func TestAddValidationDistinguishesGeneratedSide(t *testing.T) {
 	expr.AsObject(message).Attribute("value").Validation = &expr.ValidationExpr{MinLength: &minimum}
 	attribute := &expr.AttributeExpr{Type: message}
 	sd := grpcTraversalServiceData()
-	freezeTraversalMessages(sd, attribute)
-	sd.protobuf.collectValidation(attribute, validateServer, "message", "message")
-	sd.protobuf.collectValidation(attribute, validateClient, "message", "message")
+	freezeTraversalMessages(t, sd, attribute)
+	source := grpcTraversalValidationSource()
+	sd.protobuf.collectValidation(attribute, validateServer, source, "message", "message")
+	response := source
+	response.role = protobufResponseValidation
+	sd.protobuf.collectValidation(attribute, validateClient, response, "message", "message")
+	planTraversalValidations(t, sd)
 	sd.validations = sd.protobuf.freezeValidations(sd)
 
 	server := addValidation(attribute, sd, true)
@@ -251,9 +338,11 @@ func TestAddValidationReusesIdenticalRulesOnOneSide(t *testing.T) {
 		{Name: "first", Attribute: first},
 		{Name: "second", Attribute: second},
 	}}
-	freezeTraversalMessages(sd, root)
-	sd.protobuf.collectValidation(first, validateServer, "message", "message")
-	sd.protobuf.collectValidation(second, validateServer, "message", "message")
+	freezeTraversalMessages(t, sd, root)
+	source := grpcTraversalValidationSource()
+	sd.protobuf.collectValidation(first, validateServer, source, "message", "message")
+	sd.protobuf.collectValidation(second, validateServer, source.child("second"), "message", "message")
+	planTraversalValidations(t, sd)
 	sd.validations = sd.protobuf.freezeValidations(sd)
 
 	require.Len(t, sd.validations, 1)
@@ -277,14 +366,64 @@ func TestCollectValidationsDistinguishesEqualUIDOrigins(t *testing.T) {
 	}}
 	sd := &ServiceData{PkgName: "pb", Scope: codegen.NewNameScope()}
 
-	freezeTraversalMessages(sd, root)
-	sd.protobuf.collectValidation(root, validateServer, "message", "message")
+	freezeTraversalMessages(t, sd, root)
+	sd.protobuf.collectValidation(root, validateServer, grpcTraversalValidationSource(), "message", "message")
+	planTraversalValidations(t, sd)
 	sd.validations = sd.protobuf.freezeValidations(sd)
-	var names []string
+	names := make([]string, 0, len(sd.validations))
 	for _, validation := range sd.validations {
 		names = append(names, validation.SrcName)
 	}
 	require.ElementsMatch(t, []string{"First", "Second"}, names)
+}
+
+// grpcTraversalValidationSource describes the request used by focused
+// validation tests.
+func grpcTraversalValidationSource() protobufValidationSource {
+	return protobufValidationSource{
+		api:     "TestAPI",
+		service: "TestService",
+		method:  "Call",
+		role:    protobufRequestValidation,
+	}
+}
+
+// planTraversalValidations chooses the function names used by these focused
+// message and validation tests before building the function bodies.
+func planTraversalValidations(t *testing.T, sd *ServiceData) {
+	t.Helper()
+	generation, err := codegen.NewGeneration("generated.local/gen", nil)
+	require.NoError(t, err)
+	client, err := generation.ClaimPackage("generated.local/gen/grpc/test/client")
+	require.NoError(t, err)
+	server, err := generation.ClaimPackage("generated.local/gen/grpc/test/server")
+	require.NoError(t, err)
+	for _, record := range sd.protobuf.validators {
+		pkg := client
+		side := grpcClientPackage
+		if record.side == validateServer {
+			pkg = server
+			side = grpcServerPackage
+		}
+		id := grpcSymbolID{
+			side:      side,
+			role:      grpcValidationRole,
+			api:       record.source.api,
+			service:   record.source.service,
+			method:    record.source.method,
+			subject:   record.source.error,
+			path:      record.source.path,
+			operation: int(record.source.role),
+		}
+		record.declaration = codegen.NewPreferredName(
+			codegen.NameFunction,
+			"Validate"+record.message.plannedName,
+			codegen.ExportedName,
+			grpcSymbolOrder(id),
+		)
+		require.NoError(t, pkg.DeclareName(record.declaration))
+	}
+	require.NoError(t, generation.Freeze())
 }
 
 // grpcValidationTraversalType builds an authored message declaration with one
@@ -331,9 +470,51 @@ func grpcTraversalServiceData() *ServiceData {
 
 // freezeTraversalMessages collects and freezes every message reachable from
 // root in the focused test protobuf package.
-func freezeTraversalMessages(sd *ServiceData, root *expr.AttributeExpr) []*service.UserTypeData {
+func freezeTraversalMessages(t *testing.T, sd *ServiceData, root *expr.AttributeExpr) []*service.UserTypeData {
 	sd.protobuf = newProtobufPackageCatalog(sd.PkgName)
-	sd.protobuf.collectMessage(root, protobufMessageSource{}, sd)
+	require.NoError(t, sd.protobuf.collectMessage(root, protobufMessageSource{}))
+	planTestProtobufCatalog(t, sd)
 	sd.Messages = sd.protobuf.freezeMessages(sd)
 	return sd.Messages
+}
+
+// planTestProtobufCatalog chooses names for the messages and validation
+// functions created directly by these focused tests.
+func planTestProtobufCatalog(t *testing.T, sd *ServiceData) {
+	t.Helper()
+	require.NotEmpty(t, sd.protobuf.messages)
+	message := sd.protobuf.messages[0].uses[0]
+	serviceExpr := &expr.ServiceExpr{Name: "GoaCatalogTestService"}
+	grpcService := &expr.GRPCServiceExpr{ServiceExpr: serviceExpr}
+	method := &expr.MethodExpr{
+		Name:             "Call",
+		Service:          serviceExpr,
+		Payload:          &expr.AttributeExpr{Type: expr.Empty},
+		StreamingPayload: &expr.AttributeExpr{Type: expr.Empty},
+		Result:           &expr.AttributeExpr{Type: expr.Empty},
+		StreamingResult:  &expr.AttributeExpr{Type: expr.Empty},
+	}
+	endpoint := &expr.GRPCEndpointExpr{MethodExpr: method, Service: grpcService}
+	grpcService.GRPCEndpoints = []*expr.GRPCEndpointExpr{endpoint}
+	plan := &protobufServicePlan{
+		expression:   grpcService,
+		catalog:      sd.protobuf,
+		messages:     []*protobufEndpointMessages{{request: message, response: message}},
+		protoPackage: "goa_catalog_test",
+		methods:      map[*expr.GRPCEndpointExpr]string{},
+		names:        make(map[protocNameKey]*codegen.NameDeclaration),
+		localNames:   make(map[protocNameKey]string),
+		fields:       make(map[*expr.AttributeExpr]protocNameKey),
+		sourceFields: make(map[*expr.AttributeExpr]string),
+		sourceOneofs: make(map[*expr.AttributeExpr]string),
+		wrappers:     make(map[*expr.AttributeExpr]protocNameKey),
+		oneofs:       make(map[*expr.AttributeExpr]protocNameKey),
+	}
+	sd.protobuf.plan = plan
+	generation, err := codegen.NewGeneration("generated.local/gen", nil)
+	require.NoError(t, err)
+	pkg, err := generation.ClaimPackage("generated.local/gen/grpc/test/pb")
+	require.NoError(t, err)
+	require.NoError(t, plan.chooseNames(pkg, make(map[string]struct{})))
+	require.NoError(t, generation.Freeze())
 }

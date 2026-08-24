@@ -27,8 +27,8 @@ func CreateGRPCServices(root *expr.RootExpr) *ServicesData {
 	return createServiceServices(root)
 }
 
-// createServiceServices performs the complete package declaration lifecycle
-// required by transport test helpers.
+// createServiceServices chooses every package name and builds the gRPC service
+// data required by transport tests.
 func createServiceServices(root *expr.RootExpr) *ServicesData {
 	return createServiceServicesForPackage(root, "generated.local/gen")
 }
@@ -48,7 +48,39 @@ func createServiceServicesForPackage(root *expr.RootExpr, genpkg string) *Servic
 	if err != nil {
 		panic(err)
 	}
-	if err := example.Plan(generation); err != nil {
+	if err := generation.Freeze(); err != nil {
+		panic(err)
+	}
+	if err := servicePlan.Link(); err != nil {
+		panic(err)
+	}
+	if err := grpcPlans[0].Link(); err != nil {
+		panic(err)
+	}
+	return grpcPlans[0].services
+}
+
+// createExamplePlan builds linked gRPC data and copied server data that belong
+// to the same service plan.
+func createExamplePlan(root *expr.RootExpr, genpkg string) *ExamplePlan {
+	generation, err := codegen.NewGeneration(genpkg, []eval.Root{root})
+	if err != nil {
+		panic(err)
+	}
+	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	if err != nil {
+		panic(err)
+	}
+	grpcPlans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
+	if err != nil {
+		panic(err)
+	}
+	examplePlan, err := example.NewPlan(generation, servicePlan)
+	if err != nil {
+		panic(err)
+	}
+	examples, err := NewExamplePlan(grpcPlans[0], examplePlan)
+	if err != nil {
 		panic(err)
 	}
 	if err := generation.Freeze(); err != nil {
@@ -60,7 +92,7 @@ func createServiceServicesForPackage(root *expr.RootExpr, genpkg string) *Servic
 	if err := grpcPlans[0].Link(); err != nil {
 		panic(err)
 	}
-	return grpcPlans[0].services
+	return examples
 }
 
 func sectionCode(t *testing.T, section ...*codegen.SectionTemplate) string {

@@ -13,7 +13,7 @@
 	)
 	{
 		eh := errorHandler(ctx)
-	{{- if or (needDialer .Services) (needDialer .JSONRPCServices) }}
+	{{- if needDialer .Services }}
 		upgrader := &websocket.Upgrader{}
 	{{- end }}
 	{{- range $svc := .Services }}
@@ -23,12 +23,11 @@
 		{{ .Service.VarName }}Server = {{ .ServerPkgName }}.{{ .ServerInitDeclaration.Name }}(nil, mux, dec, enc, eh, nil{{ range .FileServers }}, nil{{ end }})
 		{{-  end }}
 	{{- end }}
-	{{- range $svcData := .JSONRPCServices }}
-		{{-  if .Endpoints }}
-		{{- $svc := . }}
-		{{ .Service.VarName }}JSONRPCServer = {{ .ServerPkgName }}.{{ .ServerInitDeclaration.Name }}({{ if hasWebSocket $svc }}{{ .Service.VarName }}Svc.HandleStream, {{ end }}{{ .Service.VarName }}Endpoints, mux, dec, enc, eh{{ if hasWebSocket $svc }}, upgrader, nil{{ end }})
-		{{-  end }}
-	{{- end }}
+		{{- range .JSONRPCServices }}
+			{{-  if .Endpoints }}
+			{{ .Service.VarName }}JSONRPCServer = {{ .ServerPkgName }}.{{ .ServerInitDeclaration.Name }}({{ .Service.VarName }}Endpoints, mux, dec, enc, eh)
+			{{-  end }}
+		{{- end }}
 	}
 
 	// Configure the mux.

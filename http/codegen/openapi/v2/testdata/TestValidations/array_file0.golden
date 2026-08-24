@@ -7,11 +7,11 @@
   "definitions": {
     "Bar": {
       "example": {
-        "string": ""
+        "string": "item"
       },
       "properties": {
         "string": {
-          "example": "",
+          "example": "item",
           "maxLength": 42,
           "minLength": 0,
           "type": "string"
@@ -24,24 +24,18 @@
       "example": {
         "bar": [
           {
-            "string": ""
-          },
-          {
-            "string": ""
+            "string": "item"
           }
         ],
         "foo": [
-          "Molestiae labore nihil sunt."
+          "item"
         ]
       },
       "properties": {
         "bar": {
           "example": [
             {
-              "string": ""
-            },
-            {
-              "string": ""
+              "string": "item"
             }
           ],
           "items": {
@@ -53,10 +47,10 @@
         },
         "foo": {
           "example": [
-            "Molestiae labore nihil sunt."
+            "item"
           ],
           "items": {
-            "example": "Molestiae labore nihil sunt.",
+            "example": "item",
             "type": "string"
           },
           "maxItems": 42,

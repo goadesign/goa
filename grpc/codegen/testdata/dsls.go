@@ -203,10 +203,7 @@ var ServerStreamingResultWithViewsDSL = func() {
 		Attributes(func() {
 			Field(1, "IntField", Int)
 			Field(2, "DoubleField", Float64)
-		})
-		View("default", func() {
-			Attribute("IntField")
-			Attribute("DoubleField")
+			Required("IntField", "DoubleField")
 		})
 		View("tiny", func() {
 			Attribute("IntField")
@@ -245,6 +242,32 @@ var ServerStreamingResultCollectionWithExplicitViewDSL = func() {
 	})
 }
 
+var ClientStreamingResultCollectionWithExplicitViewDSL = func() {
+	var RT = ResultType("application/vnd.client-streaming-result", func() {
+		TypeName("ResultType")
+		Attributes(func() {
+			Field(1, "IntField", Int)
+			Field(2, "DoubleField", Float64)
+		})
+		View("default", func() {
+			Attribute("IntField")
+			Attribute("DoubleField")
+		})
+		View("tiny", func() {
+			Attribute("IntField")
+		})
+	})
+	Service("ServiceClientStreamingResultTypeCollectionWithExplicitView", func() {
+		Method("MethodClientStreamingResultTypeCollectionWithExplicitView", func() {
+			StreamingPayload(String)
+			Result(CollectionOf(RT), func() {
+				View("tiny")
+			})
+			GRPC(func() {})
+		})
+	})
+}
+
 var ClientStreamingRPCDSL = func() {
 	Service("ServiceClientStreamingRPC", func() {
 		Method("MethodClientStreamingRPC", func() {
@@ -262,6 +285,24 @@ var ClientStreamingRPCWithPayloadDSL = func() {
 			StreamingPayload(Int)
 			Result(String)
 			GRPC(func() {})
+		})
+	})
+}
+
+var ClientStreamingRPCWithMetadataOnlyPayloadDSL = func() {
+	Service("ServiceClientStreamingRPCWithMetadataOnlyPayload", func() {
+		Method("MethodClientStreamingRPCWithMetadataOnlyPayload", func() {
+			Payload(func() {
+				Field(1, "token", String)
+				Required("token")
+			})
+			StreamingPayload(String)
+			Result(String)
+			GRPC(func() {
+				Metadata(func() {
+					Attribute("token")
+				})
+			})
 		})
 	})
 }
@@ -543,10 +584,7 @@ var MessageResultTypeWithViewsDSL = func() {
 		Attributes(func() {
 			Field(1, "IntField", Int)
 			Field(2, "StringField", String)
-		})
-		View("default", func() {
-			Attribute("IntField")
-			Attribute("StringField")
+			Required("IntField", "StringField")
 		})
 		View("tiny", func() {
 			Attribute("IntField")
@@ -566,6 +604,7 @@ var MessageResultTypeWithExplicitViewDSL = func() {
 		Attributes(func() {
 			Field(1, "IntField", Int)
 			Field(2, "StringField", String)
+			Required("IntField", "StringField")
 		})
 		View("default", func() {
 			Attribute("IntField")
@@ -1181,12 +1220,16 @@ var InterceptorsDSL = func() {
 		ClientInterceptor(LogInterceptor)
 		Method("MethodA", func() {
 			ClientInterceptor(MetricsInterceptor)
-			Payload(String)
+			Payload(String, func() {
+				Example("hello")
+			})
 			Result(String)
 			GRPC(func() {})
 		})
 		Method("MethodB", func() {
-			Payload(Int)
+			Payload(Int, func() {
+				Example(42)
+			})
 			Result(Int)
 			GRPC(func() {})
 		})

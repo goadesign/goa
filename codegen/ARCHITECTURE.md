@@ -31,8 +31,9 @@ records. Rendering reads that analysis; it never reconstructs it.
 The `goa` command compiles and runs a temporary generator for one evaluated
 design. One run follows this order:
 
-1. Resolve the command and instantiate fresh core generator and plugin objects
-   from immutable registered factories.
+1. Resolve the command and create fresh core generator and factory-plugin
+   objects. Copy plugins registered through the released callback API into the
+   same run.
 2. Evaluate and validate the design roots.
 3. Run preparation plugins, which may add or change expressions. Construct one
    `codegen.Generation` with exclusive access to those evaluated roots. Its
@@ -46,17 +47,20 @@ design. One run follows this order:
    copied or made immutable.
 5. Build one typed `generator.Plan`. It creates and retains the core service
    plan for each root, then the selected HTTP, gRPC, JSON-RPC, OpenAPI, and
-   example plans that consume those exact service plans. Plugin planning
-   receives the same typed plan.
+   example plans that consume those exact service plans. Factory plugins
+   receive the same plan when they declare their output.
 6. Each subsystem completes collection, sorts declarations by stable typed
    identity, and declares every package-level symbol in its actual output
    package. The generation then freezes package names and import qualifiers.
 7. Link each retained subsystem plan once. Linking converts recorded design
-   facts and frozen declaration references into immutable template data. It
-   cannot discover a declaration, reserve a name or import, mutate an
-   expression, or create another analysis graph.
-8. Core generators render their retained subsystem plans. Plugins render using
-   the same `generator.Plan` and exact core service plans.
+   facts and final declaration references into template data. All generated
+   names are fixed, but later plugin callbacks may still make the permitted
+   edits to ordinary section values. Linking cannot discover a declaration,
+   reserve a name or import, mutate an expression, or create another analysis
+   graph.
+8. Core generators and factory plugins render from the same `generator.Plan`
+   and exact core service plans. Released callbacks receive their original
+   generated package, roots, and current file list instead.
 9. Merge contributions with the same canonical output path and render files.
 
 Collection must be complete before freeze. Stable ordering makes preferred-name
@@ -86,15 +90,18 @@ func RegisterPluginFirst(name, command string, factory PluginFactory)
 func RegisterPluginLast(name, command string, factory PluginFactory)
 ```
 
-These APIs belong to `codegen/generator`, which owns command orchestration.
-The `codegen` package owns generated declarations and files; it does not own a
-process-global plugin lifecycle. Core generator factories follow the same
-fresh-instance rule.
+These factory APIs belong to `codegen/generator`, which runs generation
+commands. Goa also keeps the released four-argument registration functions in
+`codegen`. Those functions store callback pairs in an internal registry; the
+generator copies them into the same run when generation starts. Plugin authors
+cannot inspect the registry or run callbacks themselves. Core generator
+factories follow the same fresh-instance rule.
 
-Plugin names are non-empty and unique within one command across the First,
-normal, and Last groups. Registration rejects unknown commands and stops after
-the first run snapshots the registry. This makes alphabetical order a complete
-ordering rule instead of relying on mutable registration sequence.
+Factory plugin names are non-empty and unique within one command across the
+First, normal, and Last groups. Released callback registrations may repeat a
+name, as Goa v3 allowed; equal names keep registration order. Both APIs reject
+unknown commands and stop accepting registrations when generation first
+starts.
 
 A factory may close over immutable configuration. Per-run roots, plans, files,
 caches, and errors belong to the returned object. Concurrent and repeated
@@ -143,11 +150,11 @@ wire files, but it does not rebuild HTTP analysis. Render functions accept the
 retained subsystem plan, not a `Generation`, generated module path, expression
 root, or reconstructed `ServicesData`.
 
-The plan stores collected design facts, immutable linked render data, and
-canonical declaration pointers. It does not store callbacks that repeat
-analysis. `NewServicesData`, `Genfunc`,
-the replaceable `Generators` variable, `renderOnly`, and the callback plugin
-registry are transition mechanisms to delete.
+The plan stores collected design facts, linked render data, and final
+declaration pointers. It does not store callbacks that repeat
+analysis. `NewServicesData`, `Genfunc`, the replaceable `Generators` variable,
+`renderOnly`, and the released functions that ran plugin callbacks are old
+entry points that the retained plan replaces.
 
 ## Generated package ownership
 
@@ -167,14 +174,31 @@ union, branch, HTTP wire, protobuf, validator, and helper records contain or
 reference `NameDeclaration`; they do not carry another independently mutable
 name.
 
-Package-level declarations include less obvious symbols: union discriminator
-constants and constructors, endpoint constructors, error and
+Package-level declarations include less obvious symbols: constants that record
+a union's selected branch, union constructors, endpoint constructors, error and
 result constructors, validation functions, conversion functions, stream
 interfaces and helpers, HTTP body constructors, protobuf oneof wrappers,
 client and server constructors, and package variables emitted by templates.
 Local variables, parameters, struct fields, and method names remain owned by
 their lexical render scope because they cannot collide with package-level
 declarations.
+
+Service package paths are assigned once across every prepared design root in a
+generation run. Equal authored service names share one generated package even
+when they come from different APIs. Different names that reduce to the same Go
+package name receive stable numeric suffixes. Natural package names are
+reserved first, so an authored service whose normal package is `read_value2`
+keeps that path while another collision advances to `read_value3`. The linked
+service data exposes the final directory as `PathName`. HTTP, gRPC, JSON-RPC,
+MCP, examples, and command-line generators read that retained path and its
+saved import; they never rebuild a package path from the service name.
+
+Generated command-line parsers also plan names at the scope that Go checks:
+the complete `ParseEndpoint` function. The parser reserves imported package
+names first, then parameters and fixed local variables, then each command's
+flag variables and conversion variables. Templates receive those exact names
+and write the selected conversion directly. They do not search generated text,
+replace variable names, or decide a conversion from a type name at runtime.
 
 ### Exact and preferred symbols
 
@@ -230,11 +254,14 @@ Expression identity answers a design question. Declaration identity answers
 whether two generated package-level symbols are the same emitted contract.
 They are deliberately separate.
 
-`UserType.Origin()` identifies one authored declaration across exact compiler
-copies. Recursion walkers use Origin only to detect a cycle in the current
-graph traversal. A cycle set answers “have I entered this declaration on this
-path?” It never proves that two emitted wire declarations, validators, or
-helpers are interchangeable.
+`UserType.Origin()` identifies the first declaration in one family of exact
+copies. A generated transport type may start a new family, and renaming a type
+deliberately starts another one. Goa uses this identity while binding types,
+normalizing designs, planning service and transport declarations, creating
+protobuf messages, transforming values, validating fields, building views,
+and generating examples. It keeps unrelated same-named types separate, but it
+does not by itself prove that two generated declarations have the same fields
+or behavior.
 
 An emitted declaration identity contains every fact that changes its generated
 source: owning package and role, source provenance, wire shape, validation,
@@ -290,6 +317,46 @@ When multiple prepared roots contribute to one generated package, the core
 plan collects all their declarations before the package freezes and emits the
 package once. A root not present in the Generation snapshot is rejected.
 
+## Value conversion plans
+
+`TransformPlan` records one conversion from a source Go value to a target Go
+value. Creating the plan copies both type graphs, finds every recursive helper
+function the conversion will call, and records the choices made by hooks that
+change the type shape. Later edits to the design types or hook value cannot
+change the planned conversion. Two generated copies remain separate even when
+they came from the same authored type; only an edge back to the exact copied
+value closes a recursive cycle.
+
+Planning hooks may return a different source or target attribute for one
+conversion step, but they must not edit either graph they receive. The planner
+checks this immediately after each hook returns, including changes to nested
+defaults and metadata, and rejects the plan when a hook mutates its input.
+This makes the returned choice explicit without letting one hook change what a
+later hook or the renderer sees.
+
+The caller declares every helper function in the package that will contain it,
+binds those declarations and the final source and target type resolvers, and
+then renders the conversion. Planning and rendering therefore use the same
+function declarations and final package qualifiers. `GoTransformWithAttrs`
+keeps its released interface, but now performs these same steps internally and
+returns the released helper data after rendering once.
+
+`Helpers` returns detached type descriptions together with plan-owned helper
+IDs. A caller may inspect or change those descriptions while choosing a
+function declaration, but cannot change the type graph used for rendering.
+Rendering also rejects a hook that changes the retained graph. When one plan is
+rendered again with the same source variable, target variable, and assignment
+choice, it returns a copy of the first result instead of calling hooks again.
+This lets one conversion plan serve repeated template requests without letting
+hook state change previously generated code.
+
+Most conversions can discover their helper calls from the source and target
+types. A custom union renderer that calls helpers itself must also implement
+`TransformHooks.PlanUnionHelpers`. That hook records the exact branch pairs for
+which the renderer will request helpers. This keeps union rendering
+specialized: generated code contains only the branch conversions selected
+during generation and performs no runtime lookup by branch name or package.
+
 ## HTTP and JSON-RPC plans
 
 Each actual HTTP client or server output package owns a retained wire plan. It
@@ -302,6 +369,21 @@ HTTP transforms enter the service and wire owners independently. Detached HTTP
 bodies do not carry service package metadata. JSON-RPC consumes the exact HTTP
 plan for the files and codecs it shares, then adds its own package declarations
 to typed JSON-RPC plans. It does not create a second HTTP catalog.
+
+Every HTTP and JSON-RPC output file records the service, views, and authored
+package paths it will use before package names become final. Linking resolves
+only those saved paths to their final qualifiers; it does not inspect design
+expressions again or rebuild a service path from its name. Public plan snapshots
+return detached nested values, so changing a snapshot cannot change a later
+read or rendered file.
+
+A method with separate ordinary and streamed results plans the streamed SSE
+body independently. When the retained service value and HTTP body have the
+same Go layout, the client assigns the decoded value directly. When their Go
+layouts differ, the client validates the decoded body and uses the exact saved
+conversion. An empty streamed result emits its explicit zero-value return.
+These choices are made while generating source; the generated client does not
+inspect types or select a conversion at runtime.
 
 Every validator and helper reference stores its canonical declaration. A call
 site's traversal context may select which declaration it needs, but it never
@@ -350,11 +432,53 @@ plugin that adds a service, method, type, or transport mapping attaches it to a
 registered root during preparation. Core normalization then observes it before
 planning.
 
-Plugin planning receives `*generator.Plan`. It may declare plugin-owned output
-through the same Generation, and it consumes core declarations through the
-exact retained service plan. Plugin rendering receives the same plan after
-freeze. It may add files and sections, but it cannot create another root,
-re-run service or transport analysis, reserve a name, or change an expression.
+After adding services and any new user types to that root, the preparation
+plugin calls `(*expr.RootExpr).EvaluateAttachedServices`. This checks that the
+new expressions belong to the same root, prepares and validates all of them,
+and finishes none of them when any one is invalid. It is the public operation
+for adding evaluated services; plugins must not run individual expression
+steps or use the package-global root.
+
+Factory plugin planning receives `*generator.Plan`. It may declare plugin-owned
+output through the same Generation, and it consumes core declarations through
+the exact retained service plan. Factory plugin rendering receives the same
+plan after names are final. It may add files and sections, but it cannot create
+another root, re-run service or transport analysis, reserve a name, or change
+an expression. Released callbacks keep their original arguments and do not
+gain a planning phase.
+
+An HTTP plugin calls `Plan.HTTP(root)` with the exact prepared service root it
+received. The method returns the ordinary HTTP plan for that root. It returns
+false for a different root value and for a root that only has JSON-RPC methods.
+During `Plugin.Plan`, the plugin may declare an exported server handler wrapper
+for an exact HTTP service, an unexported handler wrapper for one exact HTTP
+endpoint, or an extra server mount for an exact HTTP service in that plan. Goa
+submits those function names to the service's generated server package, so
+collisions are settled with Goa's own names before source is written.
+
+A declared handler wrapper has the shape `func(http.Handler) http.Handler`.
+Goa writes direct nested calls inside each exported endpoint and file mount
+helper. Direct callers of those helpers therefore receive the same wrapping as
+callers of the service's `Mount` function. Endpoint handlers, file handlers,
+and redirects defined by the design are covered, and the first declared
+wrapper is the outermost. The service's `Mount` function passes each handler to
+its helper unchanged, so wrappers run exactly once.
+The linked HTTP service data retains that exact declaration list and copies it
+into each generated endpoint and file mount helper, so plugin output can match
+the declaration by pointer even for a service that contains only files.
+An endpoint handler wrapper also has the shape
+`func(http.Handler) http.Handler`, but Goa writes it only in that endpoint's
+exported mount helper. Service wrappers surround endpoint wrappers. File mount
+helpers receive service wrappers only. This lets a plugin add behavior to one
+designed endpoint without changing another endpoint, a file route, or an extra
+plugin mount.
+An extra server mount has the shape `func(goahttp.Muxer)` and supplies the
+method label, HTTP verb, and path that Goa adds to the generated server's
+`Mounts` list. Goa calls extra mounts after routes from the design, in
+declaration order. Extra mounts are separate calls and are not passed through
+the declared handler wrappers. Both declarations must happen before generation
+freezes; later calls, JSON-RPC plans, foreign services, missing route fields,
+and changes to the linked declarations are generation errors.
 
 MCP generation therefore attaches its generated service expressions during
 prepare and later consumes `Plan.Service(root)`. Agent tool specifications use
@@ -362,6 +486,14 @@ one retained typed specification plan for each output package; public specs and
 transport specs are distinct packages with distinct declaration owners. No
 plugin coordinates through a process-global map, a latest result, a decorated
 hash, `PlanKey`, or render order.
+
+When a plugin needs a generated payload field, it asks the retained service
+plan for `MethodPayloadLayout`. The returned `GoTypePlan` contains the exact Go
+field spelling and pointer choice already selected by service generation. For
+example, a design field sent as JSON `cursor` may be generated as
+`OriginalCursor` because of field metadata; the plugin keeps `cursor` on the
+wire and emits `payload.OriginalCursor`. It must not call `Goify`, inspect the
+JSON name, or repeat the service pointer rules.
 
 ## File assembly
 
@@ -374,16 +506,414 @@ of disappearing silently.
 
 ## Compatibility and operations
 
-This architecture intentionally breaks external generators and plugins that
-register callback instances, replace `Generators`, call `NewServicesData`, or
-render from roots and generated module paths. They must register factories,
-retain typed plans, and render those plans.
+Goa keeps the released callback registration API alongside the retained-plan
+API. Both registration styles enter the same generation run, use the same
+prepared designs and current file list, and run in the released first, normal,
+and last order. The released API still accepts the same name more than once for
+one command. Registrations with the same position and name run in registration
+order, matching released Goa v3. Factory plugin names remain unique, and Goa rejects
+a released registration whose command and name match a factory registration so
+the same plugin cannot run twice through two APIs. Goa does not restore the
+released functions that ran plugins; the generator remains the only code that
+executes them.
 
-Generated Go names may change where prior suffix ownership depended on
-traversal or reconstruction. Goa, goa-ai, and applications must regenerate
-together. There is no runtime fallback, persisted-data migration, or staged
-dual mode. A normalized output-path collision now fails during planning rather
-than overwriting or combining unrelated packages.
+This compatibility is deliberately limited. A released preparation callback
+may change a design before Goa chooses names. A released generation callback
+may edit ordinary values and remove or reorder files, sections, or list
+entries. A nil file entry is ignored for every list size. Released Goa ignored
+nil among several files but accidentally panicked when nil was the only file.
+Goa's own templates read declarations chosen during planning rather than the
+released string copies, so changing only a released name field does not rename
+Goa's code. The public strings remain final name snapshots for existing plugin
+templates. A plugin may deliberately replace declaration fields, sections,
+templates, source, or file finalizers; as in released Goa, that plugin owns the
+correctness of the resulting source.
+
+An ordinary callback error is returned unchanged and stops the run. If the
+same callback also changes a prepared design after planning, Goa reports that
+forbidden change instead. The changed root remains visible after the failed
+run, so hiding it behind the callback error could corrupt a later run.
+
+A plugin that adds package declarations or chooses Go names must use a
+`generator.PluginFactory` and declare that work through `Plugin.Plan` before
+names become final. Rebuilding Goa's private service or transport records is
+not supported; plugins should render their own typed values instead. Upgrade
+those plugins with Goa, then regenerate the whole generated tree from an empty
+output directory.
+
+A gRPC plugin that renders viewed-result conversions must use
+`ResponseData.ServerConverts` and `ClientConverts`, or
+`StreamData.SendConverts` and `RecvConverts`, as appropriate. The singular
+conversion fields remain available for existing templates, but they describe
+the default or fixed view only. Reusing one singular conversion for every view
+can read a field that the selected view deliberately omitted.
+
+The remaining breaks are limited to generation and generated source except
+where the runtime changes are listed below. There is no persisted-data
+migration or staged generator mode. Already compiled programs do not start
+using the new generator merely because the Goa module is updated.
+
+### Generator library migration
+
+The following table lists the preserved, removed, or signature-changed
+exported APIs in this change. “No direct replacement” means callers must stop
+performing that step; the run or the owning retained plan now performs it once.
+
+| Package | Old API | New API or required change |
+| --- | --- | --- |
+| `codegen` and `codegen/generator` | `codegen.RegisterPlugin`, `RegisterPluginFirst`, and `RegisterPluginLast` accepted prepare and generate callbacks | These four-argument functions remain available. Goa runs their callbacks in the same run as plugins registered through `codegen/generator`. Registration now panics for an empty name, an unknown command, a nil generate callback, or a call made after generation has started. Use the factory API when a plugin must plan new package declarations or read service and transport plans from the current run. |
+| `codegen` | `PrepareFunc`, `GenerateFunc`, `RunPluginsPrepare`, and `RunPlugins` | `PrepareFunc` and `GenerateFunc` remain available for registration. The two run functions have no replacement because `generator.Generate` owns the complete plugin lifecycle. |
+| `codegen/generator` | `Genfunc`, the replaceable `Generators` variable, and the exported `Example`, `Service`, `Transport`, and `OpenAPI` functions | `Genfunc` remains as an exported function type so existing declarations compile, but the generator command no longer accepts or calls it. The variable and four core functions have no replacement because calling or replacing them would split one generation into separate name plans. Register a plugin factory when adding output; the command chooses and runs the core generators. |
+| `codegen` | `NormalizeRoot` | No direct replacement. `codegen.NewGeneration` performs normalization once and records the exact generated method types. |
+| `codegen` | `AddServiceMetaTypeImports` | No direct replacement. The owning service or transport plan records the imports used by each output file. |
+| `codegen` | `NewAttributeContextForConversion` | No direct replacement. Build and bind a `TransformPlan`; its source and target contexts retain the correct package owners. |
+| `codegen` | Custom `Attributor` implementations needed only `Scoper`, `Name`, `Ref`, and `Field` | Implement `Package`, `Enter`, `IsSumType`, and `ValidatorCall` too. These methods make package ownership and exact validator calls explicit. |
+| `codegen` | `AttributeContext.DefaultPkg` and `SamePackageConversion` | Removed. Package lookup belongs to the `Attributor`; enter the source or target attribute instead of setting a default package or a same-package mode. `ArrayElementPointer` is new and is only for a wire array that must distinguish JSON `null` from a primitive zero value. |
+| `codegen` | `TransformHooks.HelperNameAttrs` | Removed. Bind each recursive helper through `TransformPlan.Helpers` and `BindHelperDeclaration`; do not derive a helper name from a second attribute walk. A custom `TransformUnion` that calls `TransformHelperName` must also implement `PlanUnionHelpers` so planning can declare those functions before rendering. |
+| `codegen` | `WrapDirective.InitTypeName` | Set `WrapDirective.Target` to the wrapper attribute. Rendering resolves its already planned Go type name. |
+| `codegen` | `TransformFunctionData` contained only `Name`, parameter and result references, and code | It now also identifies the planned helper with `ID` and `Declaration`. `Name` remains as a deprecated copy of `Declaration.Name()` for every rendered helper. Unkeyed struct literals must be updated. |
+| `codegen/cli` | `BuildCommandData(data)`, `EndpointParserFile(..., data, parseSection)`, `UsageCommands(data)`, `UsageExamples(data)`, and `FlagsCode(data)` | These released signatures and section data remain available. Goa's HTTP and gRPC planners call private planned variants that carry final import, declaration, and local-variable names. |
+| `codegen/cli` | `BuildFunctionData.Name`, `ActualParams`, and `FormalParams` | These fields remain and contain the final generated name and parameter lists. New planning code may also read `BuildFunctionData.Declaration`. |
+| `codegen/cli` | `NewFlagData` accepted a type name; `FieldLoadCode` accepted type and validation source strings; `FlagArgData.TypeName` and `Validate`; positional `FlagData` literals | The released functions and fields remain available and keep their string-based behavior. Goa's transport planners use one opaque `FlagPlan`, created by `NewFlagPlan`, so validation is written against the exact parsed value without rewriting generated text. Supplying both `Validate` and `Plan` is rejected. Use named fields when constructing `FlagData` because it now contains private planning state. |
+| `codegen/example` | Global `Servers`, `ServersData`, `ServersData.Get`, and `APIPkg` | No direct replacement. Create `example.Plan` with `example.NewPlan`, then get its copied `example.Root`. Package names come from the associated service plan. The pure `RootPath(genpkg)` helper remains available. |
+| `codegen/example` | `CLIFiles(genpkg, root)` and `ServerFiles(genpkg, root, services)` | Call `CLIFiles(root)` and `ServerFiles(root, services)` with the `*example.Root` returned by the retained example plan. |
+| `codegen/example` | `VariableData.VarName`; `HandlerArg.Endpoint` and `Service` contained generated local variable names | `VariableData.VarName` is removed. `HandlerArg.Service` contains the design service name, `Endpoint` reports whether the endpoint collection is needed, and `Variable` contains the final local variable name after the example plan is linked. `Data` also reports whether the server uses HTTP or JSON-RPC. |
+| `codegen/service` | `NewServicesData` | Create one `codegen.Generation`, then call `service.NewPlans` for the complete root batch. Use `service.NewPlan` only when the generation has exactly one service root. After freeze and `Link`, use `Plan.Services`. |
+| `codegen/service` | `ClientFile`, `EndpointFile`, `ConvertFiles`, `InterceptorsFiles`, and `ViewsFile`; `Files(genpkg, service, services, userTypePkgs)` | No direct per-file replacement. Call `service.Files(plans...)` after every supplied plan is linked and handle its `([]*codegen.File, error)` result. The plans decide the complete file set. |
+| `codegen/service` | `SetUserTypeImports`, `AddServiceDataMetaTypeImports`, and `AddUserTypeImports` | No direct replacement. Imports are retained per file by the service plan. |
+| `codegen/service` | `ExampleServiceFiles(genpkg, root, services)` and `ExampleInterceptorsFiles(genpkg, root, services)` | Pass the linked `*service.Plan` to `ExampleServiceFiles(plan)` or `ExampleInterceptorsFiles(plan)`. |
+| `codegen/service` | Public render-data fields `Data.UserTypeImports`; `MethodData.IsJSONRPC`, `IsJSONRPCSSE`, and `IsJSONRPCWebSocket`; `EndpointMethodData.IsJSONRPC`, `IsJSONRPCSSE`, and `IsJSONRPCWebSocket`; and `StreamData.SendAndCloseName`, `SendAndCloseDesc`, `SendAndCloseWithContextName`, and `SendAndCloseWithContextDesc` | Removed. Factory plugins inspect the HTTP or JSON-RPC plan's endpoint data. Released service-template plugins must update templates that read these fields. There is no JSON-RPC WebSocket replacement because design validation rejects that transport combination. `EndpointsData.VarName`, `ClientVarName`, and `ServiceVarName` and `EndpointMethodData.ClientVarName` and `ServiceVarName` remain as deprecated copies of their final declarations. `Data.ViewsPkg` and `ProjectedTypeData.ViewsPkg` remain available when Goa generates a views package. `ErrorInitData.Name`, `InitData.Name`, and `ValidateData.Name` also remain as deprecated copies of real planned declarations. A custom error has no generated service constructor, so both its constructor declaration and compatibility name are empty. `ValidateData` contains function calls now, so it cannot be compared with `==` or used as a map key. |
+| `codegen/service` interceptor section data | Interceptor wrapper sections exposed `map[string]any` values with keys such as `Method`, `Service`, and `Interceptors` | The sections now use private typed data built for the exact method and call kind. Plugins that replace only a section's source must update to the current section contract; plugins cannot type-assert the old map. This lets generated accessors use exact payload, result, and stream types without runtime method checks. |
+| Generated service interceptors | An interceptor method accepted `info *NameInfo`, where `NameInfo` was an exported struct with private fields | The method accepts `info NameInfo`, where `NameInfo` is an interface with the same public accessor methods. Update handwritten interceptor signatures by removing `*`. Goa now writes a private implementation for each service method and call kind, so payload and stream accessors use the exact generated types without inspecting the method at runtime. |
+| `expr` and `dsl` | `APIExpr.ExampleGenerator`; `dsl.Randomizer(expr.Randomizer)`; `NewRandom` | Store an immutable `APIExpr.RandomizerFactory`. Pass `NewFakerRandomizerFactory` or `NewDeterministicRandomizerFactory` to the DSL. For direct example generation, call `NewExampleGenerator(factory).At(identity)`. The standalone `NewFakerRandomizer` and `NewDeterministicRandomizer` constructors remain available. |
+| `expr` | Exported concrete `FakerRandomizer` and `DeterministicRandomizer`; the embedded `ExampleGenerator.Randomizer`; `ExampleGenerator.Derived`, `Rebased`, `Field`, `PreviouslySeen`, and `HaveSeen` | The two standalone randomizer types and their released constructors remain available. Generation uses `RandomizerFactory` so every typed example identity receives a fresh value sequence. The embedded stream and recursion methods are removed; select a public typed `ExampleIdentity`, then descend with `Member`, `ArrayElement`, `MapKey`, `MapValue`, or `UnionMember`. |
+| `expr` | Custom implementations of `UserType` | Add `Origin() UserType`. A copy returns the first declaration in its current family. An independently created or intentionally renamed type returns itself. Goa uses this identity to recognize copies without treating unrelated types with the same name as one type. |
+| `expr` | Repeated calls to `(*AttributeExpr).Validate` in one process could skip errors reported by an earlier call | Every call now validates the supplied expression and reports its errors. Direct users must not rely on a previous call hiding a later validation failure. |
+| `expr` | A non-pointer `ResultTypeExpr` value satisfied `UserType` through its embedded `*UserTypeExpr` | Use `*ResultTypeExpr`. Renaming a result must also clear the result's stored copy origin, so `Rename` now belongs to the pointer and a value no longer satisfies `UserType`. Ordinary result expressions were already created and passed as pointers. |
+| `expr` | Preparation plugins added services and called expression steps themselves | After adding the services and any new user types to their owning root, call `(*RootExpr).EvaluateAttachedServices`. It prepares and validates the complete added set before finishing any of it. |
+| `expr` | Positional struct literals for `ResultTypeExpr`, `SchemeExpr`, `ServiceExpr`, and `UserTypeExpr` | Use literals with named fields or the package constructors. These structs now contain private identity fields, so code outside `expr` cannot initialize every field by position. |
+| `expr` | `UnionToObject` | No direct replacement. HTTP and gRPC plans retain their own wire representation for a union. |
+| `codegen` | Comparing `TransformAttrs` values or using them as map keys | `TransformAttrs` now stores maps and function-planning state, so it is no longer comparable. Pass pointers or compare the specific public fields that matter to the caller. Positional literals also need to become named-field literals. |
+| `grpc/codegen` | `NewServicesData(serviceData)` | Create `grpc/codegen.Plan` values with `NewPlans`. `ServicesData.GRPCServices` and `ServicesData.Get` remain available, but callers should read the instance built by the plan instead of rebuilding gRPC analysis. |
+| `grpc/codegen` | `ClientFiles(genpkg, data)`, `ClientCLIFiles(genpkg, data)`, `ProtoFiles(genpkg, data)`, `ServerFiles(genpkg, data)`, `ServerTypeFiles(genpkg, data)`, and `ClientTypeFiles(genpkg, data)` | These released signatures remain available. They render the files already recorded by `data` and panic when `genpkg` differs from `data.GenPkg()`. New plugin code should prefer the corresponding linked `Plan` methods. |
+| `grpc/codegen` | `ExampleCLIFiles` and `ExampleServerFiles` | Create an `ExamplePlan` with `NewExamplePlan`; call its `CLIFiles` and `ServerFiles` methods. |
+| `grpc/codegen` | `EndpointData.ClientMethodName`, `MetadataData.Map`, `MetadataData.MapStringSlice`, and `ValidationData.Name` | All four remain as deprecated copies of final generated data. Valid designs now reject map-shaped gRPC metadata, so `Map` and `MapStringSlice` are false after successful generation. `InitArgData` and `MetadataData` now contain a validation function, so they cannot be compared with `==` or used as map keys. |
+| gRPC generation tools | `protoc-gen-go` and `protoc-gen-go-grpc` were discovered by `protoc`; the Makefile installed their latest releases | Install `protoc-gen-go v1.36.12` and `protoc-gen-go-grpc 1.6.2`. Goa resolves those programs before planning and rejects another reported version or an attempt to replace them through `Meta("protoc:cmd")`. The exact pair is the tool contract currently covered by generated-module tests; version text alone is not a general proof that another binary would produce different or compatible declarations. |
+| `http/codegen` | `NewServicesData` and `NewJSONRPCServicesData` | Create HTTP plans with `NewPlans` or JSON-RPC HTTP plans with `NewJSONRPCPlans`. Both require the exact `*service.Plan` for the root. |
+| `http/codegen` | `ClientFiles`, `ClientEncodeDecodeFile`, `ClientCLIFiles`, `ServerFiles`, `ServerEncodeDecodeFile`, `ServerTypeFiles`, `ClientTypeFiles`, `PathFiles`, and `WebsocketClientFile` | These released signatures remain available. They return files already built by the retained plan and reject a generated package argument that differs from the supplied `ServicesData`. New plugin code should prefer the linked HTTP plan methods. |
+| `http/codegen` | `ExampleCLI`, `ExampleCLIFiles`, `ExampleServer`, and `ExampleServerFiles` | Create an HTTP `ExamplePlan` and call its `CLIFiles`, `ServerFiles`, or `CombinedServerFiles` methods. |
+| `http/codegen` | `OpenAPIFiles(root)` | Call `NewOpenAPIPlan(root, exampleGenerator)`, then `Files`. |
+| `http/codegen` | `CreateHTTPServices` testing helper | No direct replacement. Tests must construct, freeze, and link service and HTTP plans like production. |
+| `http/codegen` | `SSEData.DataFieldTypeRef`; `ServiceData.ServerTypeNames`, `ClientTypeNames`, and `UnionTypes` | `DataFieldTypeRef` remains as a deprecated copy of `SSEData.Data.TypeRef` for an explicitly mapped data field. The three service-wide type lists are removed; read the generated type declarations supplied by the linked HTTP plan. `AttributeData` now contains a validation function, so it cannot be compared with `==` or used as a map key. |
+| `jsonrpc/codegen` | `ClientFiles`, `ServerFiles`, and `ExampleServerFiles` | Create and link a JSON-RPC plan; call its `ClientFiles` and `ServerFiles` methods. Use `NewExamplePlan` for example files. |
+| `jsonrpc/codegen` | `CreateJSONRPCServices` testing helper | Use `CreateJSONRPCPlan` when a test needs the linked production plan. |
+| `jsonrpc` | Positional literals for `RawRequest` | Use named fields. `RawRequest` now records whether JSON-RPC request validation failed so the server can return Invalid Request instead of treating the value as a notification. Existing named-field literals continue to compile. |
+| `jsonrpc` | WebSocket `StreamConfig`, `StreamConfigOption`, `StreamErrorType`, `StreamErrorHandler`, `StreamErrorConnection`, `StreamErrorProtocol`, `StreamErrorParsing`, `StreamErrorOrphaned`, `StreamErrorTimeout`, `StreamErrorNotification`, `NewStreamConfig`, `WithRequestTimeout`, `WithConnectionTimeout`, `WithCloseTimeout`, `WithResultChannelBuffer`, `WithWebSocketBuffers`, `WithRetryConfig`, `WithCompression`, `WithPingInterval`, `WithErrorHandler`, and `(*StreamConfig).Validate` | No replacement. JSON-RPC WebSocket generation was removed. JSON-RPC supports unary HTTP calls and server streams through explicit server-sent events. |
+| `codegen/service` | `UnionTypeData.Declaration` | Use `TypeDeclaration` for the generated value type and `KindDeclaration` for the type that records the selected branch. Each `UnionFieldData` now has `KindDeclaration` and `ConstructorDeclaration` for its generated constant and constructor. The old `Name`, `KindName`, `KindConst`, and `Constructor` strings remain final snapshots for existing plugin templates. |
+| `http/codegen/openapi` | Process-global `Definitions`; `APISchema`, `GenerateServiceDefinition`, `ResultTypeRef`, `ResultTypeRefWithPrefix`, `TypeRef`, `TypeRefWithPrefix`, `GenerateResultTypeDefinition`, `GenerateTypeDefinition`, `GenerateTypeDefinitionWithName`, `TypeSchema`, `TypeSchemaWithPrefix`, `AttributeTypeSchema`, and `AttributeTypeSchemaWithPrefix` | The global definition cache and its mutating helpers have no replacement. For OpenAPI 2 attribute schemas, use `v2.BuildAttributeSchema(api, attribute, exampleGenerator)`; otherwise build a complete v2 or v3 document so definitions remain local to that build. |
+| `http/codegen/openapi/v2` | `NewV2(root, host)` and `Files(root, path)` | These released signatures remain available and use the evaluated design's randomizer factory. Call `NewV2WithValues` or `FilesWithValues` when supplying translated values or a specific example generator. |
+| `http/codegen/openapi/v3` | `New(root, version)` and `Files(root, version, path)` | These released signatures remain available and use the evaluated design's randomizer factory. Call `NewWithValues` or `FilesWithValues` when supplying translated values or a specific example generator. |
+| `codegen`, `codegen/cli`, `codegen/example`, `codegen/service`, `expr`, `grpc/codegen`, and `http/codegen` | Positional literals for changed render-data structs | Use named fields or, preferably, the owning plan constructor. The exact affected types are listed below. Some now contain private state and cannot be fully constructed outside their package. |
+
+The following exported structs gained or replaced fields, so an unkeyed literal
+that compiled with Goa v3 must be changed to named fields:
+
+- `codegen`: `AttributeContext`, `TransformAttrs`, `TransformFunctionData`,
+  `WrapDirective`.
+- `codegen/cli`: `BuildFunctionData`, `CommandData`, `FlagArgData`, `FlagData`,
+  `InterceptorData`, `SubcommandData`.
+- `codegen/example`: `Data`, `HandlerArg`.
+- `codegen/service`: `EndpointMethodData`, `EndpointsData`, `ErrorInitData`,
+  `InitData`, `InterceptorData`, `MethodData`, `MethodInterceptorData`,
+  `ProjectedTypeData`, `ServicesData`, `StreamInterceptorData`, `UnionFieldData`,
+  `UnionTypeData`, `UserTypeData`, `ValidateData`, `ViewData`, and
+  `ViewedResultTypeData`. `UnionTypeData` replaces `Declaration` with
+  `TypeDeclaration` and `KindDeclaration`; `UnionFieldData` adds
+  `KindDeclaration` and `ConstructorDeclaration`.
+- `expr`: `APIExpr`, `ResultTypeExpr`, `SchemeExpr`, `ServiceExpr`, and
+  `UserTypeExpr`.
+- `grpc/codegen`: `EndpointData`, `InitArgData`, `InitData`,
+  `LegacyDecodeData`, `MetadataData`, `RequestData`, `ResponseData`,
+  `ServiceData`, `ServicesData`, `StreamData`, and `ValidationData`.
+- `http/codegen`: `AttributeData`, `CookieData`, `Element`, `EndpointData`,
+  `FileServerData`, `HeaderData`, `InitArgData`, `InitData`, `JSONRPCBodyData`,
+  `MultipartData`, `ParamData`, `PayloadData`, `ResponseData`, `ServiceData`,
+  `ServicesData`, `SSEData`, `TypeData`, and `WebSocketData`.
+
+`TransformAttrs`, `codegen/cli.FlagArgData`, `service.ValidateData`,
+`grpc/codegen.InitArgData`, `grpc/codegen.MetadataData`,
+`grpc/codegen.StreamData`, and `http/codegen.AttributeData` now contain maps,
+slices, or functions. They can no longer be compared with `==` or used as map
+keys.
+
+Several exported template-data structures now carry `*codegen.NameDeclaration`
+records so every use reads the exact name chosen during planning. Goa keeps
+public name fields when they can be copied from one real declaration after
+names are final. This includes HTTP names, service constructors and validators,
+CLI payload builders, and gRPC client methods and validators. For HTTP data,
+plugins may edit ordinary render values and remove or reorder entries.
+Goa's templates read the declaration field for each generated name rather than
+its released string copy. A planning plugin may create a simple template value
+for its own declaration, such as an HTTP constructor or gRPC constructor or
+validator. The returned file must be in the generated package that reserved
+that declaration.
+
+The preserved HTTP name fields are `ServiceData.ServerStruct`,
+`MountPointStruct`, `ServerInit`, `MountServer`, and `ClientStruct`;
+`EndpointData.MountHandler`, `HandlerInit`, `RequestDecoder`,
+`ResponseEncoder`, `ErrorEncoder`, `ClientStruct`, `RequestEncoder`,
+`ResponseDecoder`, and `BuildStreamPayload`; `MultipartData.FuncName` and
+`InitName`; `SSEData.StructName`; `FileServerData.MountHandler`;
+`WebSocketData.VarName`; `InitData.Name`; and `TypeData.VarName`,
+`ValidatorName`, and `NestedValidatorName`. Existing templates that read these
+fields continue to work. Copied JSON-RPC service data also keeps
+`ServerStruct`, `ServerInit`, `MountServer`, and `ClientStruct`. Copied
+JSON-RPC endpoint data keeps `HandlerInit`, `ClientStruct`, `RequestEncoder`,
+`RequestDecoder`, and `ResponseDecoder`. Each string contains the final name
+from its declaration. A plugin that creates a new package-level declaration
+must use the factory API and declare it during `Plugin.Plan`.
+Typed service, endpoint, and file values copied from Goa keep the wrappers and
+extra mounts saved with them. Plugins may still remove the files or sections
+that render those values.
+Plugins should use their own template values for plugin-owned types rather than
+constructing Goa transport data.
+
+HTTP package definitions and uses read the same planned declarations. This
+includes WebSocket stream types, request builders and conversion functions,
+body types, and their public and nested validators. The released `VarName`,
+`Name`, `ValidatorName`, and `NestedValidatorName` strings mirror those
+declarations, but Goa's templates do not use those copies as declaration
+identity. A primitive or inline composite Go type such as `string` or
+`[]string` has no package declaration;
+the plan records that complete type expression instead. JSON-RPC receives a
+copy of the same body declaration when one exists. Request builders and body
+conversion functions are declared before names freeze, including constructors
+for inline request bodies, so another generator claiming the preferred name
+changes both the generated definition and every call.
+
+HTTP client command sections also keep the released `MultipartFuncName` and
+`BuildStreamPayload` strings. They copy the matching declarations after names
+are final, while Goa's templates read the declaration records directly.
+
+gRPC preserves the same name snapshots. `ServiceData.ServerStruct`,
+`ClientStruct`, `ServerInit`, and `ClientInit`; `EndpointData.ServerStruct`,
+`ClientStruct`, `ClientBuild`, `ClientEncode`, `ClientDecode`, `ServerHandler`,
+`ServerDecode`, and `ServerEncode`; `StreamData.VarName`; and
+`LegacyDecodeData.FuncName` each contain a final planned name. Goa's own gRPC
+templates read the declaration saved for each role. Plugin templates may
+continue to read the public snapshots, and plugin-owned source remains the
+plugin's responsibility.
+
+Other affected data includes `service.EndpointsData`, `EndpointMethodData`,
+`ErrorInitData`, view and interceptor data; gRPC service, method, request,
+response, and transform data; and CLI parser and payload-builder data. Call
+`Name()` only after the generation is frozen. Existing unkeyed literals for
+changed exported data must become keyed literals or, preferably, be replaced
+with the owning plan constructor. `NameScope.Unique` and a previously unseen
+`HashedUnique` call now panic after that scope freezes. Use `NameScope.Fork`
+only for private render-local helpers; package declarations must be collected
+through their `GeneratedPackage`.
+
+### Protobuf tools
+
+Every gRPC generation run now requires these exact programs on `PATH`:
+
+```text
+protoc-gen-go v1.36.12
+protoc-gen-go-grpc 1.6.2
+```
+
+Install them with:
+
+```sh
+go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12
+go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
+```
+
+Goa resolves each program to an absolute path and verifies its `--version`
+output before planning protobuf names. `Meta("protoc:cmd", ...)` may still
+select the protobuf compiler or add compiler arguments, but it may not replace
+either required Go plugin with `--plugin`. A missing program, another version,
+or a plugin override now stops generation before files are written.
+
+### Regenerated application source
+
+Regenerate all Goa-owned files together. Do not copy a subset of a new `gen`
+tree over an old one: generated declarations and their callers use the same
+frozen name records and are not designed to compile across generations.
+`goa example` deliberately keeps existing starter files, so separately update
+handwritten starter code and any application code that imports generated
+transport packages.
+
+Generated command starters now run an endpoint and write its result instead of
+returning `(goa.Endpoint, any, error)` to their caller. The private `doHTTP`,
+`doGRPC`, and `doJSONRPC` functions accept a context and output writer, print
+unary or streamed values, and return endpoint, stream receive, output, and
+connection-close errors. Regenerate or update the whole command directory
+together; an existing kept `main.go` cannot call a newly generated private
+transport function with the old signature. HTTP and gRPC input-only or
+bidirectional stream commands now return a clear unsupported-input error before
+parsing an endpoint or opening a connection.
+
+An HTTP method that defines both an ordinary `Result` and a `StreamingResult`
+uses the ordinary result for a normal HTTP response and the stream for its SSE
+response. A regenerated example service now returns that ordinary result from
+its method and uses the default result view when the service owns view
+selection. Existing kept service starters for such a method must be updated;
+regenerating `gen` alone does not rewrite them.
+
+Most generated declarations that have one clear released name keep that name,
+including HTTP request and response types, validators, body constructors,
+handler constructors, and mount functions. Names still change when preserving
+the old spelling would preserve a false conflict or require two declarations
+for one generated operation. A service method named `FooEndpoint` becomes
+`Foo` when `Foo` no longer exists in that package. When two gRPC methods perform
+the same conversion, their two method-based constructors become one constructor
+named from the source and target types. Real name collisions receive stable
+numeric suffixes instead of suffixes determined by discovery order. These are
+Go source breaks for handwritten code that names the affected declarations.
+They do not change the wire format by themselves.
+
+A relocated service type written to a package selected with `struct:pkg:path`
+now uses the lowercase final path segment as its Go package clause. For
+example, a path ending in `APIKeyService` now declares `package
+apikeyservice`. The older mixed-case spelling could differ from the package
+name used by the generated import. Handwritten imports that rely on the old
+implicit qualifier must use the new lowercase name or add an explicit import
+alias. Generated imports already carry the planned qualifier, and the file
+path and exported type names do not change.
+
+Union declarations requested in another generated package now live in that
+package's `unions.go` file. Their Go import path and declaration names remain
+the same unless a real package collision requires a suffix. Plugins and scripts
+that select generated files by filename must stop assuming a union is written
+beside the service that first used it.
+
+Generated interceptor implementations must also change their method
+signatures. An argument such as `*LoggingInfo` is now the read-only
+`LoggingInfo` interface. Goa supplies a private implementation for the exact
+service method and for an endpoint call, stream send, or stream receive.
+Handwritten interceptors should accept the interface and continue calling its
+accessor methods. These known values are no longer stored in a public struct at
+runtime.
+
+A handwritten multipart request decoder now fills the generated HTTP request
+body instead of the service payload. For example,
+`func(*multipart.Reader, **service.UploadPayload) error` becomes
+`func(*multipart.Reader, *UploadRequestBody) error`. Goa validates that body
+and then builds the service payload, just as it does for JSON requests. Array
+and map bodies use pointers to the complete generated body value. Regenerate
+first, then update each handwritten decoder to its new generated parameter
+type. The multipart bytes on the network do not change.
+
+Some exported helpers disappear when Goa can prove that they do no work. For
+example, Goa no longer writes an empty `ValidateUserTypeView` function. Code
+that called an empty generated validator must remove that call. JSON-RPC
+server-stream methods no longer receive a unary `Decode<Method>Response`
+function because their generated endpoint returns a client stream and never
+calls that decoder. Generated gRPC conversion constructors may also be renamed
+or combined when several methods perform the same conversion. Handwritten code
+should normally enter through the generated client, server, or endpoint
+constructors instead of calling transport conversion helpers directly.
+
+Generated gRPC response encoders with mapped metadata now read the actual
+result variable and use code specialized for the metadata type. Some older
+combinations generated references to nonexistent `res` or `p` variables and
+did not compile. Scalar text remains equivalent, but bytes now use their string
+contents instead of Go's slice display: `[]byte{65, 66}` changes from
+`"[65 66]"` to `"AB"`. Floating-point values use the exact width selected by
+the design. A metadata consumer that compared the old text must update. For a
+fixed-view result, generated gRPC encoders and decoders use the view selected in
+the design instead of trusting a runtime `goa-view` metadata value. Valid peers
+already send the designed view and keep the same result body.
+
+For caller-selected gRPC result views, Goa now generates one protobuf
+conversion for each view. The server writes only the fields in the selected
+view, and the client uses the matching constructor instead of applying the
+default-view constructor to every response. A dynamic gRPC server stream sends
+the selected view in its initial `goa-view` metadata before its first message;
+the generated client reads that value before decoding the first message. The
+protobuf schema does not change. Regenerate both sides of a dynamic viewed
+stream together because an older server does not send this metadata and an
+older client always decodes the default view. Regenerate both sides of any
+viewed method whose selected view omits default-view fields: older generated
+conversions can read an omitted field and fail. Fixed-view methods otherwise
+keep their existing view choice.
+
+One generated command-line flag changes only for a design that used `domain`
+for both a server variable and a URL variable. The URL variable is now
+`-url-domain`; the old starter registered `-domain` twice and did not run.
+
+Generated examples also change because each example now uses the exact design
+declaration that owns it rather than a value consumed earlier in a shared
+random stream. Design-authored example inputs are unchanged, but generated
+OpenAPI documents, CLI examples, array lengths, and decoding-error examples may
+change because Goa now uses the authored value for that declaration.
+
+OpenAPI 3 documents may place generated examples under `examples.default`
+instead of the single `example` field. OpenAPI 3.2 server-sent-event schemas
+mark the event data field as required only when the selected stream field is
+required. Snapshot consumers should regenerate and review the documents; the
+service's accepted requests and returned results do not change from this
+documentation-only difference.
+
+OpenAPI server variables now include the descriptions written in the design.
+Reusable viewed-result schemas use the designed result type name in their
+description instead of the generated HTTP response-body type name. These are
+documentation text changes only.
+
+When examples are disabled, OpenAPI generation now omits examples written in
+the design as well as examples computed by Goa. Security definitions used only
+by excluded services or methods are also omitted. Each server variable now
+uses only its own allowed values; an older document could accidentally copy
+allowed values from the preceding variable. These changes affect generated
+documents, not the service wire format.
+
+When several methods use one error type, the shared OpenAPI schema now keeps
+the reusable type's description. Each OpenAPI 3 operation keeps the description
+written for that method's error response. This changes generated API
+documentation only; it does not change response data or status codes.
+
+A viewed-result constructor now returns a nonnil value carrying an unknown
+requested view. Generated boundary validation can therefore report the precise
+invalid view instead of receiving nil or panicking first. Valid view values and
+their projected bodies are unchanged.
+
+Generated gRPC starters now print the designed method names directly instead of
+asking the running gRPC server which methods it registered. Goa-designed
+methods keep correct startup logs. A plugin that registers additional gRPC
+methods at runtime must print its own log lines; those methods are not part of
+Goa's generated service plan.
+
+A normalized output-path collision, conflicting same-file package or import,
+conflicting keep-existing-file setting, or path that is absolute, escapes the
+generation root, contains a backslash, or differs only by filesystem case now
+fails during planning. Previously, one file could overwrite another or the
+merge could produce invalid Go. Same-path contributions now keep every body
+section even when two sections have the same diagnostic label, and every file
+finalizer runs in contributor order. A plugin that relied on a duplicate label
+to suppress output or on only the first finalizer running must remove that
+assumption.
+
+### Wire and runtime compatibility
+
+| Change | Mixed old and new programs | Rollback effect |
+| --- | --- | --- |
+| Required Goa `OneOf` validation | Generated service validators and HTTP and gRPC boundaries now reject a union with no selected branch. They also reject a selected message, bytes, or `Any` wrapper whose branch value is nil. The protobuf encoding is unchanged. Valid branches, including a selected empty message, work across versions. | Rolling back re-allows invalid union values; it requires no data migration. |
+| `ArrayOfRequired` for primitive values and primitive aliases in JSON bodies | Valid JSON is unchanged. Incoming JSON representations use pointer elements: server request bodies and client response bodies use values such as `[]*string`, then convert them to service value slices such as `[]string`. Outgoing client request bodies and server response bodies remain value slices. Incoming `[null]` is now rejected. Handwritten code that constructs incoming transport body values must supply pointers. gRPC repeated scalar fields and service arrays remain value slices. | Rolling back accepts `null` again; it requires no data migration. |
+| Exclusive maximum validation | Generated primitive validators now reject values equal to or above an exclusive maximum. Older validators accidentally repeated the exclusive minimum check and could accept those values. | Rolling back accepts values that violate the designed maximum; it requires no data migration. |
+| Caller-selected JSON-RPC result views | A successful response is `{ "jsonrpc": "2.0", "id": ..., "result": { "view": "detailed", "body": ... } }`. The envelope is the method value inside JSON-RPC's standard `result` member. It is generated only when the caller chooses among views. The `body` member is omitted when every selected field is carried in HTTP headers or cookies. The old result was the projected body alone; unary HTTP responses carried the view in the `goa-view` header, while stream messages had no reliable place for it. An old client and new server, or a new client and old server, are not compatible for these methods. Results without views and results whose view is fixed in the design keep their old body shape. The envelope is used consistently for unary and server-sent-event results. A configured response decoder now receives an HTTP response with status 200 instead of the previous zero status. | Deploy or roll back every client and server for a caller-selected view together. There is no dual decoder. A custom response decoder that inspected the synthetic status must accept 200. This generic Goa envelope is valid JSON-RPC, but a method that belongs to another protocol layered on JSON-RPC must still use that protocol's required result schema. |
+| HTTP server-sent events | Event-write and flush failures are now returned instead of ignored, and clients decode retry values into the exact optional integer type. Primitive and primitive-alias data use raw SSE text; an optional nil primitive omits the data line, while a present empty string writes an empty data line. The old optional-pointer server accidentally wrote JSON strings or `null`, so a new client reads the JSON quotes or `null` as part of the raw value; a new server remains readable by the old raw-text client. OpenAPI 3.2 now marks optional mapped data as optional and describes primitive data as raw text rather than JSON. For viewed results, the server writes one `goa-view` header, chooses the default when empty, rejects an unknown view before writing, and rejects changing the view after the first event. | Regenerate both sides for a stream with optional primitive data. Regenerate an OpenAPI 3.2 document if tooling relies on the event item schema. Other non-viewed event data keeps its shape, but code may now observe write errors and retry values. Do not mix versions for a variable-view stream. Invalid or partly written streams now fail instead of being accepted or followed by a second HTTP error response. |
+| Viewed HTTP streams | HTTP SSE and WebSocket servers now reject an unknown requested view before encoding an event instead of writing a nil or `null` body. Valid fixed and selected views keep their existing body shape. | A new server can reject an invalid view that an old server accepted. No valid request needs a coordinated rollout. |
+| JSON-RPC server-sent-event lifecycle | Each server `Send` accepts the streaming result directly and writes one JSON-RPC notification. When the service method returns, the transport writes one terminal response for a request with an ID: `result: null` for success or a JSON-RPC error for a returned error. A request without an ID receives no terminal response. Client `Recv(ctx)` becomes `Recv()` plus `RecvWithContext(ctx)`. Stream constructors return an interface that also implements the service client stream. After notifications, the client returns `io.EOF` or the terminal error. The client now rejects an unknown server-sent-event name or a notification for another JSON-RPC method instead of silently skipping it. Body read and close failures are returned instead of discarded. Unary request reads and batch response delimiter writes now report failures through the server error handler. An unknown JSON-RPC error code now includes the received `error.data` in its invalid-response error. | Generated service implementations must use the standard typed `Send`, `SendWithContext`, and `Close` methods. Client callers must use the new receive methods or service stream interface. The old JSON-RPC-only `StreamEvent`, `SendAndClose`, `SendError`, request ID, marker event, concrete client stream, and WebSocket service APIs are removed. Regenerate clients and servers together. Custom peers must stop sending unknown event names or notifications for another method. Valid Goa peers already satisfy this rule. |
+| JSON-RPC request and response rules | A structurally valid request without `id` remains a notification and receives no response. An invalid request object receives Invalid Request with `id: null`, including over server-sent events. A present empty-string or null `id` receives a response with that exact value. A success with no value includes `"result": null`. Leading JSON whitespace no longer changes an array into a single request, `[]` returns one Invalid Request response, and valid and invalid batch members are handled independently. A batch cannot start a server stream: a streaming call with an ID receives Method Not Found with “Method is not available in a batch request,” and its notification form is ignored. In a server that has both ordinary and streaming methods, no `Accept` header or `*/*` permits each method's designed response format. A unary method requires an acceptable JSON media type, a streaming method requires an acceptable server-sent-event media type, and an unacceptable format returns HTTP 406. Media type spelling is case-insensitive and `q=0` rejects that format. Invalid method arguments map to Invalid Params; an undeclared service failure maps to Internal Error. | Valid requests with ordinary IDs keep the same response. Send every streaming call separately as a server-sent-event request instead of including it in a batch. Clients that incorrectly treated an empty or null ID as a notification will now receive a response. Clients that expected no error for an invalid object, one Parse Error for a mixed batch, an omitted `result`, an empty body for `[]`, or selection of a format the method cannot return must follow JSON-RPC 2.0 and HTTP Accept rules. A custom caller of `RawRequest.UnmarshalJSON` must inspect `Invalid`: structurally invalid JSON-RPC objects and IDs other than strings, numbers, or null now set that field without returning a Go JSON decoding error. No data migration is needed. |
+| HTTP and JSON-RPC response bodies | Generated clients close response bodies they fully consume and return read and close failures as decoding errors. When decoding and closing both fail, the returned error preserves both. A successful method that deliberately returns the raw body leaves it open for the caller. | Successful decoded responses are unchanged. Failure handling may now return a nonnil error, or `decoding_error` instead of a raw or request error, where older code discarded or mislabeled a read or close failure. |
+| Nested HTTP validation paths | Generated validation errors now keep the complete field and array-index path while entering nested generated types instead of restarting the path at the nested value. | Invalid inputs may produce more precise error field names. Valid inputs and wire data are unchanged. |
+| HTTP float query text | Generated clients now use Go's shortest round-trip text for float32 and float64 query values. Ordinary values are unchanged, while very large or small values may use exponent form, such as `1e+100`, instead of a long decimal expansion. Servers decode the same number. | Systems that sign, cache, or compare the exact URL text must accept the compact form. Rolling back returns to the longer spelling. |
+| gRPC metadata text | Generated metadata conversions are specialized for the designed type. Bytes now use their string contents, so `[]byte{65, 66}` is sent as `"AB"` instead of `"[65 66]"`. Floating-point values use the designed width. Other scalar text remains equivalent. | Regenerate both sides when a metadata consumer parses the old byte-slice display or depends on the old floating-point spelling. Rolling back restores the old text. |
+| gRPC result views | Unary and streaming clients and servers now use the protobuf conversion for the selected view. Dynamic server streams send the view in initial `goa-view` metadata, and dynamic clients require that metadata before decoding the first message. The protobuf schema is unchanged. An old stream server does not send this value, while an old stream client assumes the default view. Older conversions can also fail when a selected view omits a field used by the default conversion. | Regenerate and deploy both sides of a dynamic viewed gRPC stream together. Also regenerate both sides of any viewed method whose selected view omits default-view fields. Fixed-view methods otherwise keep their wire choice. |
+| Protobuf name collisions | Normal schemas keep their existing field encoding. A design whose protobuf declarations collide may receive stable numeric message, file, or generated Go suffixes instead of invalid source. Descriptor names, and a gRPC method path if its service or method itself needed a suffix, can therefore change for that formerly conflicting design. | Regenerate both sides from the same Goa version. A previously valid, collision-free schema needs no coordinated runtime rollout. |
+| Stricter design validation | Generation now rejects duplicate `ConvertTo` or `CreateFrom` mappings for the same Goa and external type, non-primitive gRPC metadata, streaming HTTP success fields mapped to headers or cookies, and inherited HTTP or gRPC error mappings whose concrete method error has a different type, validation, default, or metadata. Error metadata includes whether the error is temporary, a timeout, or a server fault. A service and its methods also cannot reuse one standard error name when those settings or value definitions differ, because Goa emits one shared `Make<Name>` constructor. Authored custom error types do not use that constructor and remain independent. gRPC and JSON-RPC reject a method that defines both `Result` and `StreamingResult`, even when both use the same Goa type. An ordinary HTTP method with both results must use `ServerSentEvents()`; the old same-type case could accidentally select WebSocket generation. JSON-RPC also rejects client and bidirectional streams and a server stream that does not call `ServerSentEvents()`. | These checks stop generation; they do not change a compiled program. Fix the design rather than rolling out mixed generated trees. |
 
 Fresh factories make repeated and concurrent generation independent. The main
 operational risks are an uncollected template symbol, an incomplete emitted

@@ -61,10 +61,10 @@ func TestRecursiveTransformHelpersRetainRequiredness(t *testing.T) {
 
 	compileFiles := append([]*codegen.File(nil), forwardFiles...)
 	compileFiles = append(compileFiles, ExampleServiceFiles(forwardPlan)...)
-	compileGeneratedServiceFiles(t, "generated.local", compileFiles)
+	compileGeneratedServiceFiles(t, compileFiles)
 	reverseCompileFiles := append([]*codegen.File(nil), reverseFiles...)
 	reverseCompileFiles = append(reverseCompileFiles, ExampleServiceFiles(reversePlan)...)
-	compileGeneratedServiceFiles(t, "generated.local", reverseCompileFiles)
+	compileGeneratedServiceFiles(t, reverseCompileFiles)
 }
 
 // TestRecursiveTransformHelpersRetainSiblingOccurrences catches package-name
@@ -92,7 +92,7 @@ func TestRecursiveTransformHelpersRetainSiblingOccurrences(t *testing.T) {
 			})
 		})
 	})
-	plan := retainedServicePlanForPackage(t, root, "generated.local/gen")
+	plan := retainedServicePlanForPackage(t, root)
 	facts := plan.facts.serviceByID["Trees"]
 	require.NotNil(t, facts)
 	projected := facts.projections[facts.methods[0]].types[0]
@@ -139,7 +139,7 @@ func TestRecursiveTransformHelpersRetainSiblingOccurrences(t *testing.T) {
 	files, err := Files(plan)
 	require.NoError(t, err)
 	files = append(files, ExampleServiceFiles(plan)...)
-	compileGeneratedServiceFiles(t, "generated.local", files)
+	compileGeneratedServiceFiles(t, files)
 }
 
 // recursiveTransformPlan builds equivalent result designs in either field and
@@ -193,7 +193,7 @@ func recursiveTransformPlan(t *testing.T, reverse bool) *Plan {
 			})
 		})
 	})
-	return retainedServicePlanForPackage(t, root, "generated.local/gen")
+	return retainedServicePlanForPackage(t, root)
 }
 
 // retainedRecursiveTransformOperations returns the service-to-view helper

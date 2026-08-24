@@ -1,7 +1,6 @@
-// This file records prepared design state so generation can audit persistent
-// semantic mutations after callbacks and completed file rendering. Snapshot
-// entries retain pointer topology and use deterministic map ordering so the
-// first changed path can be reported.
+// This file records the prepared design so Goa can report if a generator
+// changes it. Map entries are sorted so repeated runs report the same first
+// changed field.
 package generator
 
 import (
@@ -18,7 +17,7 @@ import (
 )
 
 type (
-	// designSnapshot is the immutable prepared-state reference for one run.
+	// designSnapshot stores the prepared design values for one run.
 	designSnapshot struct {
 		states     []designState
 		references []reflect.Value
@@ -31,16 +30,16 @@ type (
 		value string
 	}
 
-	// designSnapshotter walks one evaluated graph while preserving aliases and
-	// terminating cycles.
+	// designSnapshotter records each design value once, even when pointers form
+	// a cycle or several fields point to the same value.
 	designSnapshotter struct {
 		states     []designState
 		references []reflect.Value
 		visited    map[designVisit]struct{}
 	}
 
-	// designVisit identifies one reference node. Slice capacity distinguishes
-	// overlapping views whose reachable backing-array ranges differ.
+	// designVisit identifies one pointer, map, or slice. Slice capacity separates
+	// slices that can reach different parts of the same underlying array.
 	designVisit struct {
 		typ    reflect.Type
 		kind   reflect.Kind
@@ -48,7 +47,7 @@ type (
 		extent int
 	}
 
-	// mapSnapshotEntry retains a map pair after deterministic ordering.
+	// mapSnapshotEntry stores one map pair after the entries are sorted.
 	mapSnapshotEntry struct {
 		key      reflect.Value
 		value    reflect.Value
@@ -56,8 +55,8 @@ type (
 		order    mapOrderValue
 	}
 
-	// mapOrderValue is a structured shallow value used only for deterministic
-	// map traversal. References are compared by identity; values by exact bits.
+	// mapOrderValue stores enough of a map key or value to sort entries. Pointers
+	// are compared by address and other values by their exact contents.
 	mapOrderValue struct {
 		typ       reflect.Type
 		kind      reflect.Kind
@@ -73,13 +72,10 @@ type (
 	}
 )
 
-var (
-	dslFuncType = reflect.TypeFor[eval.DSLFunc]()
-	typeMapType = reflect.TypeFor[expr.TypeMap]()
-)
+var typeMapType = reflect.TypeFor[expr.TypeMap]()
 
-// snapshotPreparedDesign captures every value reachable from roots after
-// preparation and normalization have completed.
+// snapshotPreparedDesign records every value reachable from roots after the
+// designs have been prepared.
 func snapshotPreparedDesign(roots []eval.Root) (*designSnapshot, error) {
 	snapshotter := &designSnapshotter{visited: make(map[designVisit]struct{})}
 	for i, root := range roots {
@@ -93,8 +89,8 @@ func snapshotPreparedDesign(roots []eval.Root) (*designSnapshot, error) {
 	}, nil
 }
 
-// changedPath returns the first deterministic semantic path whose value or
-// reference topology differs from the prepared snapshot.
+// orderedMapEntries returns map entries in an order that does not depend on
+// how Go stores the map.
 func orderedMapEntries(value reflect.Value) ([]mapSnapshotEntry, error) {
 	entries := make([]mapSnapshotEntry, 0, value.Len())
 	iterator := value.MapRange()
@@ -128,9 +124,8 @@ func orderedMapEntries(value reflect.Value) ([]mapSnapshotEntry, error) {
 	return entries, nil
 }
 
-// validateMapOrderTypes rejects reflected types that have no stable ordering.
-// This can only arise when separately constructed dynamic types have the same
-// printed identity; silently tying them would expose randomized map iteration.
+// validateMapOrderTypes rejects two runtime types that print the same name but
+// cannot be compared. Treating them as equal would make map order vary by run.
 func validateMapOrderTypes(entries []mapSnapshotEntry) error {
 	for i := range entries {
 		for j := i + 1; j < len(entries); j++ {
@@ -145,8 +140,8 @@ func validateMapOrderTypes(entries []mapSnapshotEntry) error {
 	return nil
 }
 
-// validateMapOrderType checks exact reflected type identity recursively,
-// including concrete values stored below interface map keys and values.
+// validateMapOrderType checks a runtime type and the concrete values stored in
+// interface map keys and values.
 func validateMapOrderType(left, right mapOrderValue) error {
 	if left.typ != right.typ && stableTypeName(left.typ) == stableTypeName(right.typ) {
 		return fmt.Errorf("cannot deterministically order distinct reflected map types %q", stableTypeName(left.typ))
@@ -160,8 +155,8 @@ func validateMapOrderType(left, right mapOrderValue) error {
 	return nil
 }
 
-// mapValueOrder encodes comparable map keys and shallow value identity without
-// traversing mutable targets. It is used only to make map traversal stable.
+// mapValueOrder records enough of a map key or value to sort entries without
+// reading through pointers.
 func mapValueOrder(value reflect.Value) (mapOrderValue, error) {
 	if !value.IsValid() {
 		return mapOrderValue{}, nil
@@ -255,7 +250,7 @@ func mapValueOrder(value reflect.Value) (mapOrderValue, error) {
 	return order, nil
 }
 
-// compareMapOrderValue provides a total order over structured reflected values.
+// compareMapOrderValue sorts the recorded runtime values.
 func compareMapOrderValue(left, right mapOrderValue) int {
 	if left.typ != right.typ {
 		return strings.Compare(stableTypeName(left.typ), stableTypeName(right.typ))
@@ -311,8 +306,7 @@ func compareMapOrderValue(left, right mapOrderValue) int {
 	return len(left.children) - len(right.children)
 }
 
-// stableTypeName is used only when distinct reflected types need map order.
-// Exact type identity remains in the snapshot state itself.
+// stableTypeName returns the package path and name used to sort runtime types.
 func stableTypeName(typ reflect.Type) string {
 	if typ == nil {
 		return ""
@@ -320,7 +314,7 @@ func stableTypeName(typ reflect.Type) string {
 	return typ.PkgPath() + ":" + typ.String()
 }
 
-// mapEntryPath returns a readable diagnostic path without using its label for ordering.
+// mapEntryPath returns the field path shown when a map entry changes.
 func mapEntryPath(path string, index int, key reflect.Value) string {
 	if key.Kind() == reflect.String {
 		return path + "[" + strconv.Quote(key.String()) + "]"
@@ -328,10 +322,12 @@ func mapEntryPath(path string, index int, key reflect.Value) string {
 	return fmt.Sprintf("%s{%d}", path, index)
 }
 
-// formatPointer renders reference identity without treating it as order data.
+// formatPointer returns a pointer address as text for a change report.
 func formatPointer(pointer uintptr) string {
 	return "0x" + strconv.FormatUint(uint64(pointer), 16)
 }
+
+// changedPath returns the first design field that differs from the saved copy.
 func (s *designSnapshot) changedPath(roots []eval.Root) (string, error) {
 	defer runtime.KeepAlive(s.references)
 
@@ -467,12 +463,9 @@ func (s *designSnapshotter) appendValue(path string, value reflect.Value) error 
 			s.append(path, typ, "nil")
 			return nil
 		}
-		if typ != dslFuncType {
-			return fmt.Errorf("snapshot prepared design at %s: unsupported non-nil function %s", path, typ)
-		}
-		// DSL evaluation has already completed. The function body and captured
-		// environment are dormant input, so only nilness and code identity are
-		// part of the prepared semantic design audit.
+		// Design evaluation has finished, so functions stored by Goa or a plugin
+		// will not run here. Record their type and pointer address without invoking
+		// them.
 		s.append(path, typ, formatPointer(value.Pointer()))
 	case reflect.Chan:
 		if !value.IsNil() {
@@ -490,9 +483,8 @@ func (s *designSnapshotter) appendValue(path string, value reflect.Value) error 
 	return nil
 }
 
-// appendExternalType records the only semantic fact carried by a conversion
-// exemplar: its exact dynamic Go type. Conversion generators never inspect
-// the exemplar's runtime fields, locks, channels, or other instance state.
+// appendExternalType records the concrete Go type of a conversion example.
+// Generators do not read fields or other runtime state from that value.
 func (s *designSnapshotter) appendExternalType(path string, value reflect.Value) {
 	if value.IsNil() {
 		s.append(path, value.Type(), "nil")
@@ -515,5 +507,5 @@ func (s *designSnapshotter) seen(visit designVisit) bool {
 	return false
 }
 
-// orderedMapEntries returns map pairs in an order derived from exact key and
-// shallow value facts rather than Go's randomized iteration order.
+// orderedMapEntries returns map pairs in the same order on every run without
+// reading through pointers stored in the map.

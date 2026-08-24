@@ -1,20 +1,30 @@
 {{ printf "%s returns a decoder for responses returned by the %s service %s JSON-RPC method. restoreBody controls whether the response body should be restored after having been read." .ResponseDecoderDeclaration.Name .ServiceName .Method.Name | comment }}
 func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
-	return func(resp *http.Response) (any, error) {
+	return func(resp *http.Response) (result any, decodeErr error) {
+		responseBody := resp.Body
 		if restoreBody {
-			b, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return nil, err
+			b, readErr := io.ReadAll(responseBody)
+			closeErr := responseBody.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 			}
 			resp.Body = io.NopCloser(bytes.NewBuffer(b))
 			defer func() {
 				resp.Body = io.NopCloser(bytes.NewBuffer(b))
 			}()
+		} else {
+			defer func() {
+				if err := responseBody.Close(); err != nil {
+					decodeErr = errors.Join(decodeErr, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err))
+				}
+			}()
 		}
-		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				return nil, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+			}
 			return nil, goahttp.ErrInvalidResponse("{{ .ServiceName }}", "{{ .Method.Name }}", resp.StatusCode, string(body))
 		}
 
@@ -32,7 +42,7 @@ func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp
 				resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Error.Data))
 				{{- template "partial_single_response" (buildResponseData . $.ServiceName $.Method) }}
 			{{- if .ResultInit }}
-				return nil, {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+				return nil, {{ .ResultInit.Declaration.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 			{{- else if .ClientBody }}
 				return nil, body
 			{{- else }}
@@ -42,8 +52,7 @@ func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp
 	{{- end }}
 {{- end }}
 			default:
-				body, _ := io.ReadAll(resp.Body)
-				return nil, goahttp.ErrInvalidResponse({{ printf "%q" .ServiceName }}, {{ printf "%q" .Method.Name }}, resp.StatusCode, string(body))
+				return nil, goahttp.ErrInvalidResponse({{ printf "%q" .ServiceName }}, {{ printf "%q" .Method.Name }}, resp.StatusCode, string(jresp.Error.Data))
 			}
 		}
 
@@ -54,7 +63,7 @@ func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp
 		resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Result))
 		{{- template "partial_single_response" (buildResponseData . $.ServiceName $.Method) }}
 {{- if .ResultInit }}
-		res := {{ .ResultInit.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+		res := {{ .ResultInit.Declaration.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 		return res, nil
 {{- else if .ClientBody }}
 		return body, nil

@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 	grpcdata "goa.design/goa/v3/grpc/codegen/testdata"
@@ -31,6 +32,7 @@ func TestGeneratorsTreatDesignAsReadOnly(t *testing.T) {
 	}{
 		{"alias-chains", httpdata.AliasTypeDSL},
 		{"result-views", httpdata.ResultBodyMultipleViewsDSL},
+		{"result-collection-custom-view", resultCollectionCustomViewDSL},
 		{"websocket-bidirectional", httpdata.BidirectionalStreamingDSL},
 		{"sse-anonymous-object", httpdata.SSEObjectDSL},
 		{"jsonrpc-mixed-transport", jsonrpcdata.JSONRPCKitchenSinkDSL},
@@ -39,14 +41,41 @@ func TestGeneratorsTreatDesignAsReadOnly(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			root := expr.RunDSL(t, c.DSL)
+			expr.RunDSL(t, c.DSL)
+			roots, err := eval.Context.Roots()
+			require.NoError(t, err)
 
 			for _, cmd := range []string{"gen", "example"} {
-				_, err := executeGeneration("generated.local/gen", []eval.Root{root}, cmd, newDefaultRegistry())
+				err := executeGeneration("generated.local/gen", roots, cmd, newDefaultRegistry())
 				require.NoError(t, err)
 			}
 		})
 	}
+}
+
+// resultCollectionCustomViewDSL defines a generated collection whose method
+// result selects a non-default view. Copying this result during planning must
+// not add another collection to the evaluated design.
+func resultCollectionCustomViewDSL() {
+	item := dsl.ResultType("application/vnd.item", func() {
+		dsl.Attribute("name", expr.String)
+		dsl.View("default", func() {
+			dsl.Attribute("name")
+		})
+		dsl.View("tiny", func() {
+			dsl.Attribute("name")
+		})
+	})
+	dsl.Service("items", func() {
+		dsl.Method("list", func() {
+			dsl.Result(dsl.CollectionOf(item), func() {
+				dsl.View("tiny")
+			})
+			dsl.HTTP(func() {
+				dsl.GET("/items")
+			})
+		})
+	})
 }
 
 // TestPreparedRootsRejectAttributeMutation proves that generation stops when
@@ -72,7 +101,7 @@ func TestPreparedRootsRejectAttributeMutation(t *testing.T) {
 		},
 	)
 
-	_, err := executeGeneration("generated.local/gen", []eval.Root{root}, "test", registry)
+	err := executeGeneration("generated.local/gen", []eval.Root{root}, "test", registry)
 	require.ErrorContains(t, err, `core "attribute-mutator" plan mutated prepared design`)
 	require.False(t, followingRan)
 }

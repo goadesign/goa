@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/expr"
-	"goa.design/goa/v3/http/codegen/openapi"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
 
@@ -60,14 +59,13 @@ func TestOpenAPIOrderIndependence(t *testing.T) {
 }
 
 // renderOpenAPI generates and renders all the OpenAPI specification files for
-// the given root and returns their content indexed by file path. The global
-// schema registry is reset first and the call receives a fresh example
-// generator so two identical design trees yield identical documents.
+// the given root and returns their content indexed by file path. The call uses
+// a fresh example generator so two identical designs yield identical documents.
 func renderOpenAPI(t *testing.T, root *expr.RootExpr) map[string]string {
 	t.Helper()
-	openapi.Definitions = make(map[string]*openapi.Schema)
-	files, err := OpenAPIFiles(root, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	plan, err := NewOpenAPIPlan(root, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
+	files := plan.Files()
 	out := make(map[string]string, len(files))
 	for _, f := range files {
 		require.Len(t, f.SectionTemplates, 1)

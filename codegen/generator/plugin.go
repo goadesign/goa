@@ -1,6 +1,6 @@
-// This file owns immutable plugin factories and creates fresh callback objects
-// for every generation run. The registry seals when its first run snapshots
-// factories, preventing process history from changing later runs.
+// This file stores the generator functions registered for each command and
+// creates a separate plugin value for each run. Registration closes when
+// generation first starts.
 package generator
 
 import (
@@ -10,37 +10,34 @@ import (
 	"sync"
 
 	"goa.design/goa/v3/codegen"
-	"goa.design/goa/v3/eval"
+	"goa.design/goa/v3/codegen/internal/pluginregistry"
 )
 
 type (
-	// PrepareFunc may amend evaluated roots before normalization and planning.
-	// Preparation is the only plugin phase allowed to mutate design expressions.
-	PrepareFunc func(genpkg string, roots []eval.Root) error
-
-	// Plugin contains the optional callbacks run on one fresh plugin instance.
-	// Plan and Generate receive the same retained Plan pointer.
+	// Plugin contains the optional functions run for one new plugin instance.
+	// Plan and Generate receive the same Plan pointer.
 	Plugin struct {
-		// Prepare may amend roots before the Generation snapshot is created.
-		Prepare PrepareFunc
-		// Plan declares plugin-owned package symbols before generation freeze.
+		// Prepare may change designs before Goa records their prepared values.
+		Prepare codegen.PrepareFunc
+		// Plan adds the plugin's package-level names before all names are final.
 		Plan func(*Plan) error
-		// Generate appends or transforms files using the frozen retained plan.
+		// Generate adds or changes files after all names are final.
 		Generate func(*Plan, []*codegen.File) ([]*codegen.File, error)
 	}
 
 	// PluginFactory creates one independent plugin instance for each run.
 	PluginFactory func() Plugin
 
-	// registry owns core and plugin factories used by one command namespace.
+	// registry stores the core and plugin factories used by each command.
 	registry struct {
-		mu       sync.Mutex
-		commands map[string][]generatorFactory
-		plugins  []pluginDescriptor
-		sealed   bool
+		mu                sync.Mutex
+		commands          map[string][]generatorFactory
+		plugins           []pluginDescriptor
+		registeredPlugins func() []registeredPluginDescriptor
+		sealed            bool
 	}
 
-	// pluginDescriptor is immutable registration metadata retained globally.
+	// pluginDescriptor stores one plugin registration.
 	pluginDescriptor struct {
 		name     string
 		command  string
@@ -48,7 +45,17 @@ type (
 		factory  PluginFactory
 	}
 
-	// pluginPosition defines the three stable registration groups.
+	// registeredPluginDescriptor copies one plugin registered through the
+	// released Goa v3 API before adapting it to a per-run plugin.
+	registeredPluginDescriptor struct {
+		name     string
+		command  string
+		position pluginPosition
+		prepare  codegen.PrepareFunc
+		generate codegen.GenerateFunc
+	}
+
+	// pluginPosition defines the three plugin ordering groups.
 	pluginPosition uint8
 )
 
@@ -79,7 +86,7 @@ func RegisterPluginLast(name, command string, factory PluginFactory) {
 	defaultRegistry.registerPlugin(name, command, pluginLast, factory)
 }
 
-// newRegistry creates an empty mutable registry for init-time setup or tests.
+// newRegistry creates an empty list of commands and plugins for setup or tests.
 func newRegistry() *registry {
 	return &registry{commands: make(map[string][]generatorFactory)}
 }
@@ -90,10 +97,11 @@ func newDefaultRegistry() *registry {
 	registry := newRegistry()
 	registry.commands["gen"] = genGeneratorFactories()
 	registry.commands["example"] = exampleGeneratorFactories()
+	registry.registeredPlugins = snapshotRegisteredPlugins
 	return registry
 }
 
-// addCommand installs private core factories in an isolated test registry.
+// addCommand adds core generators to a command used by a test.
 func (r *registry) addCommand(command string, factories ...generatorFactory) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -103,8 +111,8 @@ func (r *registry) addCommand(command string, factories ...generatorFactory) {
 	r.commands[command] = slices.Clone(factories)
 }
 
-// registerPlugin records one named factory for a known command before the
-// first snapshot. Plugin names uniquely identify their owner within a command.
+// registerPlugin adds one named factory to a known command before generation
+// starts. A command cannot contain two plugins with the same name.
 func (r *registry) registerPlugin(name, command string, position pluginPosition, factory PluginFactory) {
 	if factory == nil {
 		panic("plugin factory is nil")
@@ -133,7 +141,7 @@ func (r *registry) registerPlugin(name, command string, position pluginPosition,
 	})
 }
 
-// snapshot seals the registry and returns copied factories in stable order.
+// snapshot closes registration and returns copied factories in a repeatable order.
 func (r *registry) snapshot(command string) ([]generatorFactory, []pluginDescriptor, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -142,17 +150,72 @@ func (r *registry) snapshot(command string) ([]generatorFactory, []pluginDescrip
 		return nil, nil, fmt.Errorf("unknown command %q", command)
 	}
 	r.sealed = true
-	plugins := make([]pluginDescriptor, 0, len(r.plugins))
+	selected := make([]pluginDescriptor, 0, len(r.plugins))
+	factoryNames := make(map[string]struct{}, len(r.plugins))
 	for _, plugin := range r.plugins {
-		if plugin.command == command {
-			plugins = append(plugins, plugin)
+		if plugin.command != command {
+			continue
+		}
+		selected = append(selected, plugin)
+		factoryNames[plugin.name] = struct{}{}
+	}
+	if r.registeredPlugins != nil {
+		for _, registered := range r.registeredPlugins() {
+			if registered.command != command {
+				continue
+			}
+			if _, ok := factoryNames[registered.name]; ok {
+				return nil, nil, fmt.Errorf("plugin %q is already registered for command %q", registered.name, command)
+			}
+			selected = append(selected, registered.pluginDescriptor())
 		}
 	}
-	slices.SortFunc(plugins, func(left, right pluginDescriptor) int {
+	slices.SortStableFunc(selected, func(left, right pluginDescriptor) int {
 		if left.position != right.position {
 			return int(left.position) - int(right.position)
 		}
 		return strings.Compare(left.name, right.name)
 	})
-	return slices.Clone(factories), plugins, nil
+	return slices.Clone(factories), selected, nil
+}
+
+// snapshotRegisteredPlugins stops further callback registration and copies
+// each registered callback into the list used by this generation run.
+func snapshotRegisteredPlugins() []registeredPluginDescriptor {
+	plugins := pluginregistry.Snapshot[codegen.PrepareFunc, codegen.GenerateFunc]()
+	descriptors := make([]registeredPluginDescriptor, len(plugins))
+	for index, plugin := range plugins {
+		position := pluginNormal
+		if plugin.Position == pluginregistry.First {
+			position = pluginFirst
+		} else if plugin.Position == pluginregistry.Last {
+			position = pluginLast
+		}
+		descriptors[index] = registeredPluginDescriptor{
+			name:     plugin.Name,
+			command:  plugin.Command,
+			position: position,
+			prepare:  plugin.Prepare,
+			generate: plugin.Generate,
+		}
+	}
+	return descriptors
+}
+
+// pluginDescriptor adapts a released callback pair to the same factory and
+// per-run Plan used by newer plugins.
+func (p registeredPluginDescriptor) pluginDescriptor() pluginDescriptor {
+	return pluginDescriptor{
+		name:     p.name,
+		command:  p.command,
+		position: p.position,
+		factory: func() Plugin {
+			return Plugin{
+				Prepare: p.prepare,
+				Generate: func(plan *Plan, files []*codegen.File) ([]*codegen.File, error) {
+					return p.generate(plan.Generation().GenPkg(), plan.preparedRoots, files)
+				},
+			}
+		},
+	}
 }

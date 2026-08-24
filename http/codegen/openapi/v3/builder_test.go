@@ -69,7 +69,7 @@ func TestBuildInfo(t *testing.T) {
 				License:        &expr.LicenseExpr{Name: licenseName, URL: licenseURL},
 			}
 
-			info := buildInfo(api, openapi.Version30)
+			info := buildInfo(api, openapi.Version30, openapi.Values{})
 
 			expected := c.Title
 			if api.Title == "" {
@@ -94,9 +94,49 @@ func TestBuildInfo(t *testing.T) {
 	}
 }
 
+func TestNewWithValues(t *testing.T) {
+	root := codegen.RunDSL(t, localizedValuesDSL)
+	service := root.Service("messages")
+	method := service.Method("show")
+	values := (openapi.Values{}).
+		WithTitle(root.API, "Localized API").
+		WithDescription(root.API, "Localized API description").
+		WithDescription(service, "Localized service description").
+		WithDescription(method, "Localized method description")
+
+	spec := NewWithValues(
+		root,
+		openapi.Version30,
+		expr.NewExampleGenerator(root.API.RandomizerFactory),
+		values,
+	)
+	require.Equal(t, "Localized API", spec.Info.Title)
+	require.Equal(t, "Localized API description", spec.Info.Description)
+	require.Equal(t, "Localized method description", spec.Paths["/messages"].Get.Description)
+	require.Contains(t, spec.Paths["/messages"].Get.Tags, "messages")
+	require.Equal(t, "Original API", root.API.Title)
+	require.Equal(t, "Original method description", method.Description)
+}
+
+var localizedValuesDSL = func() {
+	dsl.API("messages", func() {
+		dsl.Title("Original API")
+		dsl.Description("Original API description")
+	})
+	dsl.Service("messages", func() {
+		dsl.Description("Original service description")
+		dsl.Method("show", func() {
+			dsl.Description("Original method description")
+			dsl.HTTP(func() {
+				dsl.GET("/messages")
+			})
+		})
+	})
+}
+
 func TestNoSecurityOverridesAPISecurity(t *testing.T) {
 	root := codegen.RunDSL(t, noSecurityOverridesAPISecurityDSL)
-	spec := New(root, openapi.Version30, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	spec := New(root, openapi.Version30)
 
 	cases := map[string]struct {
 		marshal   func(any) ([]byte, error)
@@ -133,7 +173,7 @@ func TestNoSecurityOverridesAPISecurity(t *testing.T) {
 
 func TestNoSecurityOverridesServiceSecurity(t *testing.T) {
 	root := codegen.RunDSL(t, noSecurityOverridesServiceSecurityDSL)
-	spec := New(root, openapi.Version30, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	spec := New(root, openapi.Version30)
 
 	cases := map[string]struct {
 		marshal   func(any) ([]byte, error)
@@ -170,7 +210,7 @@ func TestNoSecurityOverridesServiceSecurity(t *testing.T) {
 
 func TestStreamingResponseStatusCodes(t *testing.T) {
 	root := codegen.RunDSL(t, streamingResponseStatusDSL)
-	spec := New(root, openapi.Version30, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	spec := New(root, openapi.Version30)
 
 	sseResponses := spec.Paths["/sse"].Get.Responses
 	require.Contains(t, sseResponses, "200")
@@ -181,6 +221,62 @@ func TestStreamingResponseStatusCodes(t *testing.T) {
 	websocketResponses := spec.Paths["/websocket"].Get.Responses
 	require.Contains(t, websocketResponses, "101")
 	require.NotContains(t, websocketResponses, "200")
+}
+
+// TestSSEItemSchemaMatchesDataContract verifies OpenAPI describes the same
+// presence and encoding used by generated SSE clients and servers.
+func TestSSEItemSchemaMatchesDataContract(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		count := dsl.Type("EventCount", dsl.Int)
+		dsl.Service("Events", func() {
+			dsl.Method("Optional", func() {
+				dsl.StreamingResult(func() {
+					dsl.Attribute("value", dsl.String)
+				})
+				dsl.HTTP(func() {
+					dsl.GET("/optional")
+					dsl.ServerSentEvents("value")
+				})
+			})
+			dsl.Method("RequiredAlias", func() {
+				dsl.StreamingResult(func() {
+					dsl.Attribute("value", count)
+					dsl.Required("value")
+				})
+				dsl.HTTP(func() {
+					dsl.GET("/required-alias")
+					dsl.ServerSentEvents("value")
+				})
+			})
+			dsl.Method("Structured", func() {
+				dsl.StreamingResult(func() {
+					dsl.Attribute("value", func() {
+						dsl.Attribute("message", dsl.String)
+					})
+					dsl.Required("value")
+				})
+				dsl.HTTP(func() {
+					dsl.GET("/structured")
+					dsl.ServerSentEvents("value")
+				})
+			})
+		})
+	})
+	spec := New(root, openapi.Version32)
+
+	optional := spec.Paths["/optional"].Get.Responses["200"].Value.Content["text/event-stream"].ItemSchema
+	require.NotContains(t, optional.Required, "data")
+	require.Equal(t, openapi.Type(openapi.String), optional.Properties["data"].Type)
+	require.Empty(t, optional.Properties["data"].ContentMediaType)
+
+	requiredAlias := spec.Paths["/required-alias"].Get.Responses["200"].Value.Content["text/event-stream"].ItemSchema
+	require.Contains(t, requiredAlias.Required, "data")
+	require.Empty(t, requiredAlias.Properties["data"].ContentMediaType)
+
+	structured := spec.Paths["/structured"].Get.Responses["200"].Value.Content["text/event-stream"].ItemSchema
+	require.Contains(t, structured.Required, "data")
+	require.Equal(t, "application/json", structured.Properties["data"].ContentMediaType)
+	require.NotNil(t, structured.Properties["data"].ContentSchema)
 }
 
 func TestOperationSecurityMarshal(t *testing.T) {
@@ -229,6 +325,34 @@ func TestOperationSecurityMarshal(t *testing.T) {
 	}
 }
 
+func TestSecuritySchemesIncludeVisibleOperationsOnly(t *testing.T) {
+	root := codegen.RunDSL(t, visibleSecuritySchemesDSL)
+	spec := New(root, openapi.Version30)
+
+	visible := root.Service("visible").Method("read").Requirements[0].Schemes[0].Hash()
+	hiddenMethod := root.Service("mixed").Method("hidden").Requirements[0].Schemes[0].Hash()
+	hiddenService := root.Service("hidden").Method("read").Requirements[0].Schemes[0].Hash()
+	require.Contains(t, spec.Components.SecuritySchemes, visible)
+	require.NotContains(t, spec.Components.SecuritySchemes, hiddenMethod)
+	require.NotContains(t, spec.Components.SecuritySchemes, hiddenService)
+}
+
+func TestBuildServersKeepsVariableValuesSeparate(t *testing.T) {
+	root := codegen.RunDSL(t, serverVariablesDSL)
+	servers := buildServers(root.API.Servers, openapi.Version30, openapi.Values{})
+	require.Len(t, servers, 1)
+
+	region := servers[0].Variables["region"]
+	require.Equal(t, []any{"west", "east"}, region.Enum)
+	require.Equal(t, "west", region.Default)
+	require.Equal(t, "Deployment region", region.Description)
+
+	stage := servers[0].Variables["stage"]
+	require.Equal(t, []any{"test", "production"}, stage.Enum)
+	require.Equal(t, "production", stage.Default)
+	require.Equal(t, "Deployment stage", stage.Description)
+}
+
 type param struct {
 	Name        string
 	In          string
@@ -236,6 +360,75 @@ type param struct {
 	Style       string
 	Required    bool
 	Type        typ
+}
+
+var visibleSecuritySchemesDSL = func() {
+	var (
+		VisibleAuth       = dsl.JWTSecurity("visible_auth")
+		HiddenMethodAuth  = dsl.JWTSecurity("hidden_method_auth")
+		HiddenServiceAuth = dsl.JWTSecurity("hidden_service_auth")
+	)
+
+	dsl.Service("visible", func() {
+		dsl.Method("read", func() {
+			dsl.Security(VisibleAuth)
+			dsl.Payload(func() {
+				dsl.Token("token", dsl.String)
+			})
+			dsl.HTTP(func() {
+				dsl.GET("/visible")
+			})
+		})
+	})
+	dsl.Service("mixed", func() {
+		dsl.Method("hidden", func() {
+			dsl.Meta("openapi:generate", "false")
+			dsl.Security(HiddenMethodAuth)
+			dsl.Payload(func() {
+				dsl.Token("token", dsl.String)
+			})
+			dsl.HTTP(func() {
+				dsl.GET("/hidden-method")
+			})
+		})
+	})
+	dsl.Service("hidden", func() {
+		dsl.Meta("openapi:generate", "false")
+		dsl.Method("read", func() {
+			dsl.Security(HiddenServiceAuth)
+			dsl.Payload(func() {
+				dsl.Token("token", dsl.String)
+			})
+			dsl.HTTP(func() {
+				dsl.GET("/hidden-service")
+			})
+		})
+	})
+}
+
+var serverVariablesDSL = func() {
+	dsl.API("server variables", func() {
+		dsl.Server("public", func() {
+			dsl.Host("production", func() {
+				dsl.URI("https://{region}.{stage}.example.com")
+				dsl.Variable("region", dsl.String, "Deployment region", func() {
+					dsl.Default("west")
+					dsl.Enum("west", "east")
+				})
+				dsl.Variable("stage", dsl.String, "Deployment stage", func() {
+					dsl.Default("production")
+					dsl.Enum("test", "production")
+				})
+			})
+		})
+	})
+	dsl.Service("status", func() {
+		dsl.Method("read", func() {
+			dsl.HTTP(func() {
+				dsl.GET("/status")
+			})
+		})
+	})
 }
 
 type requestBody struct {
@@ -336,7 +529,7 @@ func TestBuildOperation(t *testing.T) {
 			var types map[string]*openapi.Schema
 			{
 				var bds map[string]map[string]*EndpointBodies
-				bds, types = buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30, expr.NewExampleGenerator(root.API.RandomizerFactory))
+				bds, types = buildBodyTypes(root.API, root.Types, root.ResultTypes, openapi.Version30, expr.NewExampleGenerator(root.API.RandomizerFactory), openapi.Values{})
 				if svc, ok := bds[svcName]; ok {
 					bodies, ok = svc[c.Name]
 					if !ok {
@@ -369,7 +562,7 @@ func TestBuildOperation(t *testing.T) {
 			}
 
 			generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory(c.Name))
-			op := buildOperation(c.Name, route, bodies, generator, root.API.Meta, openapi.Version30)
+			op := buildOperation(c.Name, route, bodies, generator, root.API.Meta, openapi.Version30, openapi.Values{})
 
 			if op.Description != c.ExpectedDescription {
 				t.Errorf("got description %q for method %q, expected %q", op.Description, c.Name, c.ExpectedDescription)
@@ -459,7 +652,7 @@ func TestBuildOperationID(t *testing.T) {
 					for _, e := range s.HTTPEndpoints {
 						for i, r := range e.Routes {
 							generator := expr.NewExampleGenerator(expr.NewFakerRandomizerFactory(c.Name))
-							op := buildOperation(c.Name, r, &EndpointBodies{}, generator, api.Meta, openapi.Version30)
+							op := buildOperation(c.Name, r, &EndpointBodies{}, generator, api.Meta, openapi.Version30, openapi.Values{})
 
 							if len(c.ExpectedOperationIDs) == 0 {
 								t.Error("no expected operation IDs")

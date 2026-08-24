@@ -5,6 +5,8 @@ package codegen
 import (
 	"fmt"
 	"path"
+	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -20,20 +22,23 @@ import (
 func TestPlanReservesStaticAliasesBeforeFreeze(t *testing.T) {
 	root := expr.RunDSL(t, func() {
 		dsl.Service("Path", func() {
-			dsl.Method("Read", func() {})
+			dsl.Method("Read", func() { dsl.HTTP(func() { dsl.GET("/") }) })
 		})
 	})
 	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
 	require.NoError(t, err)
 	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
 	require.NoError(t, err)
-	_, err = NewPlans(generation)
+	_, err = NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
 	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	services := servicePlan.Services()
 
-	require.Equal(t, "path2", services.ServiceImport("Path").Name)
+	clientOutput := "generated.local/gen/http/path/client"
+	require.Equal(t, "path", services.ServiceImport(clientOutput, "Path").Name)
+	serverOutput := "generated.local/gen/http/path/server"
+	require.Equal(t, "path2", services.ServiceImport(serverOutput, "Path").Name)
 }
 
 func TestPlanRejectsFrozenGeneration(t *testing.T) {
@@ -43,6 +48,74 @@ func TestPlanRejectsFrozenGeneration(t *testing.T) {
 
 	_, err = NewPlans(generation)
 	require.Error(t, err)
+}
+
+func TestEndpointPayloadConstructorUsesReleasedTypeName(t *testing.T) {
+	cases := []struct {
+		name    string
+		method  string
+		payload string
+		want    string
+	}{
+		{
+			name:    "named payload",
+			method:  "MethodBodyUnion",
+			payload: "Union",
+			want:    "NewMethodBodyUnionUnion",
+		},
+		{
+			name:    "overlapping payload",
+			method:  "MethodA",
+			payload: "APayload",
+			want:    "NewMethodAAPayload",
+		},
+	}
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			endpoint := &expr.HTTPEndpointExpr{MethodExpr: &expr.MethodExpr{
+				Name:    test.method,
+				Payload: &expr.AttributeExpr{Type: wireCatalogType(test.payload, test.payload, "value", true)},
+			}}
+			require.Equal(t, test.want, endpointPayloadConstructorName(endpoint))
+		})
+	}
+}
+
+func TestViewedResultConstructorUsesReleasedTypeName(t *testing.T) {
+	endpoint := &expr.HTTPEndpointExpr{MethodExpr: &expr.MethodExpr{
+		Name:   "MethodBodyInlineObject",
+		Result: &expr.AttributeExpr{Type: wireCatalogType("ResultType", "result", "value", true)},
+	}}
+	response := &expr.HTTPResponseExpr{StatusCode: 200}
+
+	require.Equal(t, "NewMethodBodyInlineObjectResultTypeOK", viewedResultConstructorName(endpoint, response, ""))
+	require.Equal(t, "NewMethodBodyInlineObjectResultTinyOK", viewedResultConstructorName(endpoint, response, "tiny"))
+}
+
+// TestNewExamplePlanRejectsAnotherServicePlan checks that server names and
+// URLs cannot come from a different design with the same authored names.
+func TestNewExamplePlanRejectsAnotherServicePlan(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		dsl.Service("Service", func() {
+			dsl.Method("Read", func() { dsl.HTTP(func() { dsl.GET("/") }) })
+		})
+	})
+	transport := linkedHTTPPlanForRoot(t, root)
+
+	otherRoot := codegen.RunDSL(t, func() {
+		dsl.Service("Service", func() {
+			dsl.Method("Read", func() { dsl.HTTP(func() { dsl.GET("/") }) })
+		})
+	})
+	otherGeneration, err := codegen.NewGeneration("other.local/gen", []eval.Root{otherRoot})
+	require.NoError(t, err)
+	otherService, err := service.NewPlan(otherRoot, otherGeneration, expr.NewExampleGenerator(otherRoot.API.RandomizerFactory))
+	require.NoError(t, err)
+	examples, err := example.NewPlan(otherGeneration, otherService)
+	require.NoError(t, err)
+
+	_, err = NewExamplePlan(transport, examples)
+	require.EqualError(t, err, "HTTP examples require server data created from the same service design")
 }
 
 // TestNewPlansRequiresEveryHTTPRoot proves package names cannot be requested
@@ -112,15 +185,15 @@ func TestPlanReservesGeneratedHTTPPackages(t *testing.T) {
 	require.NoError(t, servicePlan.Link())
 	services := servicePlan.Services()
 
-	client := services.PackageImport("generated.local/gen/http/foo/client")
-	server := services.PackageImport("generated.local/gen/http/foo/server")
-	cli := services.PackageImport(path.Join(
+	cliOutput := path.Join(
 		"generated.local/gen/http/cli",
 		codegen.SnakeCase(codegen.Goify(root.API.Servers[0].Name, true)),
-	))
-	require.NotEqual(t, services.ServiceImport("Fooc").Name, client.Name)
-	require.NotEqual(t, services.ServiceImport("Foosvr").Name, server.Name)
-	require.NotEmpty(t, cli.Name)
+	)
+	client := services.PackageImport(cliOutput, "generated.local/gen/http/foo/client")
+	serverOutput := path.Join("generated.local", "cmd", codegen.SnakeCase(codegen.Goify(root.API.Servers[0].Name, true)))
+	server := services.PackageImport(serverOutput, "generated.local/gen/http/foo/server")
+	require.Equal(t, "fooc", client.Name)
+	require.Equal(t, "foosvr", server.Name)
 }
 
 // TestPlanLinkEagerlyRetainsHTTPFiles proves Link analyzes every HTTP service
@@ -141,15 +214,18 @@ func TestPlanLinkEagerlyRetainsHTTPFiles(t *testing.T) {
 	require.NoError(t, err)
 	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
 	require.NoError(t, err)
-	require.NoError(t, example.Plan(generation))
+	examplePlan, err := example.NewPlan(generation, servicePlan)
+	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	plan := plans[0]
 	require.NoError(t, plan.Link())
+	examples, err := NewExamplePlan(plan, examplePlan)
+	require.NoError(t, err)
 	_, ok := plan.JSONRPCService("Calc")
 	require.True(t, ok)
-	require.NotEmpty(t, plan.ExampleServerFiles())
-	require.NotEmpty(t, plan.ExampleCLIFiles())
+	require.NotEmpty(t, examples.ServerFiles())
+	require.NotEmpty(t, examples.CLIFiles())
 	serverCount := len(plan.ServerFiles())
 	clientCount := len(plan.ClientFiles())
 
@@ -180,13 +256,15 @@ func TestJSONRPCCodecFilesAreIndependent(t *testing.T) {
 	require.NoError(t, err)
 	plans, err := NewJSONRPCPlans(generation, PlanInput{Root: root, Service: servicePlan})
 	require.NoError(t, err)
-	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	require.NoError(t, plans[0].Link())
 
 	service, ok := plans[0].JSONRPCService("Calc")
 	require.True(t, ok)
+	serverBody := service.Endpoints[0].Payload.Request.ServerBody
+	require.NotNil(t, serverBody.Declaration)
+	require.Equal(t, serverBody.Declaration.Name(), serverBody.VarName)
 	stored := plans[0].jsonServices["Calc"]
 	assertIndependentCodecFile(t, stored.clientCodec, service.ClientCodecFile)
 	assertIndependentCodecFile(t, stored.serverCodec, service.ServerCodecFile)
@@ -215,6 +293,131 @@ func TestJSONRPCCodecFilesAreIndependent(t *testing.T) {
 	require.Empty(t, fresh.Endpoints[0].Payload.Request.Headers)
 }
 
+// TestPlanRetainsAttributeImportsBeforeFreeze proves ordinary HTTP and
+// JSON-RPC files use the type packages recorded during planning, even if the
+// design expression is changed before linking.
+func TestPlanRetainsAttributeImportsBeforeFreeze(t *testing.T) {
+	for _, transport := range []struct {
+		name string
+		plan func(*codegen.Generation, PlanInput) ([]*Plan, error)
+		file func(*Plan) []*codegen.ImportSpec
+	}{
+		{
+			name: "HTTP",
+			plan: func(generation *codegen.Generation, input PlanInput) ([]*Plan, error) {
+				return NewPlans(generation, input)
+			},
+			file: func(plan *Plan) []*codegen.ImportSpec {
+				for _, file := range plan.ClientFiles() {
+					if strings.HasSuffix(filepath.ToSlash(file.Path), "/client/client.go") {
+						return file.SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec)
+					}
+				}
+				return nil
+			},
+		},
+		{
+			name: "JSON-RPC",
+			plan: func(generation *codegen.Generation, input PlanInput) ([]*Plan, error) {
+				return NewJSONRPCPlans(generation, input)
+			},
+			file: func(plan *Plan) []*codegen.ImportSpec {
+				service, ok := plan.JSONRPCService("Calc")
+				require.True(t, ok)
+				return service.FileImports("gen/jsonrpc/calc/client/client.go")
+			},
+		},
+	} {
+		t.Run(transport.name, func(t *testing.T) {
+			root := expr.RunDSL(t, func() {
+				dsl.Service("Calc", func() {
+					dsl.Method("Add", func() {
+						dsl.Payload(func() {
+							dsl.Attribute("number", dsl.Int, func() {
+								dsl.Meta("struct:field:type", "values.Number", "example.com/values", "values")
+							})
+						})
+						dsl.Result(dsl.Int)
+						if transport.name == "HTTP" {
+							dsl.HTTP(func() { dsl.POST("/add") })
+						} else {
+							dsl.JSONRPC(func() {})
+						}
+					})
+				})
+			})
+			generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+			require.NoError(t, err)
+			servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+			require.NoError(t, err)
+			plans, err := transport.plan(generation, PlanInput{Root: root, Service: servicePlan})
+			require.NoError(t, err)
+
+			payload := root.Service("Calc").Method("Add").Payload
+			delete(expr.AsObject(payload.Type).Attribute("number").Meta, "struct:field:type")
+			require.NoError(t, generation.Freeze())
+			require.NoError(t, servicePlan.Link())
+			require.NoError(t, plans[0].Link())
+
+			imports := transport.file(plans[0])
+			require.Contains(t, importPaths(imports), "example.com/values")
+		})
+	}
+}
+
+// importPaths returns the package paths from one generated file header.
+func importPaths(imports []*codegen.ImportSpec) []string {
+	paths := make([]string, len(imports))
+	for index, spec := range imports {
+		paths[index] = spec.Path
+	}
+	return paths
+}
+
+// TestJSONRPCSnapshotsExposeReleasedNames checks that copied JSON-RPC data
+// gives existing plugins the final Go name stored in each declaration.
+func TestJSONRPCSnapshotsExposeReleasedNames(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		dsl.Service("Calc", func() {
+			for _, name := range []string{"read-data", "read_data"} {
+				dsl.Method(name, func() {
+					dsl.Payload(func() {
+						dsl.Attribute("value", dsl.Int)
+					})
+					dsl.Result(dsl.Int)
+					dsl.JSONRPC(func() {})
+				})
+			}
+		})
+	})
+	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, err)
+	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	require.NoError(t, err)
+	plans, err := NewJSONRPCPlans(generation, PlanInput{Root: root, Service: servicePlan})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, servicePlan.Link())
+	require.NoError(t, plans[0].Link())
+
+	snapshot, ok := plans[0].JSONRPCService("Calc")
+	require.True(t, ok)
+	assertReleasedName(t, snapshot.ServerStruct, snapshot.ServerStructDeclaration)
+	assertReleasedName(t, snapshot.ServerInit, snapshot.ServerInitDeclaration)
+	assertReleasedName(t, snapshot.MountServer, snapshot.MountServerDeclaration)
+	assertReleasedName(t, snapshot.ClientStruct, snapshot.ClientStructDeclaration)
+	require.Len(t, snapshot.Endpoints, 2)
+	for index := range snapshot.Endpoints {
+		endpoint := &snapshot.Endpoints[index]
+		assertReleasedName(t, endpoint.HandlerInit, endpoint.HandlerInitDeclaration)
+		assertReleasedName(t, endpoint.ClientStruct, endpoint.ClientStructDeclaration)
+		assertReleasedName(t, endpoint.RequestEncoder, endpoint.RequestEncoderDeclaration)
+		assertReleasedName(t, endpoint.RequestDecoder, endpoint.RequestDecoderDeclaration)
+		assertReleasedName(t, endpoint.ResponseDecoder, endpoint.ResponseDecoderDeclaration)
+	}
+	require.NotEqual(t, snapshot.Endpoints[0].HandlerInit, snapshot.Endpoints[1].HandlerInit)
+}
+
 // TestViewedResultSnapshotsPreserveMissingBodies checks that a successful
 // response containing only a mapped header keeps both body values absent. It
 // also changes the returned header and confirms a later copy is unchanged.
@@ -240,7 +443,6 @@ func TestViewedResultSnapshotsPreserveMissingBodies(t *testing.T) {
 	require.NoError(t, err)
 	plans, err := NewJSONRPCPlans(generation, PlanInput{Root: root, Service: servicePlan})
 	require.NoError(t, err)
-	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	require.NoError(t, plans[0].Link())
@@ -289,7 +491,6 @@ func TestViewedResultCopiesBodyFieldSelection(t *testing.T) {
 	require.NoError(t, err)
 	plans, err := NewJSONRPCPlans(generation, PlanInput{Root: root, Service: servicePlan})
 	require.NoError(t, err)
-	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	require.NoError(t, plans[0].Link())
@@ -319,11 +520,10 @@ func TestViewedResultCopiesBodyFieldSelection(t *testing.T) {
 func TestEndpointConstructorsUsePackageDeclarations(t *testing.T) {
 	root := expr.RunDSL(t, func() {
 		dsl.Service("Calc", func() {
-			dsl.Error("BadInput", func() { dsl.Attribute("message", dsl.String) })
 			dsl.Method("Add", func() {
 				dsl.Payload(func() { dsl.Attribute("value", dsl.Int) })
 				dsl.Result(func() { dsl.Attribute("total", dsl.Int) })
-				dsl.Error("BadInput")
+				dsl.Error("BadInput", func() { dsl.Attribute("message", dsl.String) })
 				dsl.HTTP(func() {
 					dsl.POST("/add")
 					dsl.Response("BadInput", dsl.StatusBadRequest)
@@ -337,7 +537,6 @@ func TestEndpointConstructorsUsePackageDeclarations(t *testing.T) {
 	require.NoError(t, err)
 	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
 	require.NoError(t, err)
-	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	require.NoError(t, plans[0].Link())
@@ -372,7 +571,6 @@ func TestHTTPTypeAndConstructorNamesShareOnePackage(t *testing.T) {
 	require.NoError(t, err)
 	plans, err := NewPlans(generation, PlanInput{Root: root, Service: servicePlan})
 	require.NoError(t, err)
-	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	require.NoError(t, plans[0].Link())
@@ -390,9 +588,10 @@ func TestHTTPTypeAndConstructorNamesShareOnePackage(t *testing.T) {
 // resolve to the same generated directory. NewPlans must submit both sets of
 // function names together so definitions and calls remain distinct.
 func TestNewPlansAssignsNamesAcrossRoots(t *testing.T) {
-	makeRoot := func(serviceName string) *expr.RootExpr {
+	makeRoot := func(apiName string) *expr.RootExpr {
 		return expr.RunDSL(t, func() {
-			dsl.Service(serviceName, func() {
+			dsl.API(apiName, func() {})
+			dsl.Service("Shared", func() {
 				dsl.Method("Add", func() {
 					dsl.Payload(func() { dsl.Attribute("value", dsl.Int) })
 					dsl.HTTP(func() { dsl.POST("/add") })
@@ -400,8 +599,8 @@ func TestNewPlansAssignsNamesAcrossRoots(t *testing.T) {
 			})
 		})
 	}
-	first := makeRoot("Foo Bar")
-	second := makeRoot("Foo-Bar")
+	first := makeRoot("First")
+	second := makeRoot("Second")
 	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{first, second})
 	require.NoError(t, err)
 	servicePlans, err := service.NewPlans(generation,
@@ -414,15 +613,14 @@ func TestNewPlansAssignsNamesAcrossRoots(t *testing.T) {
 		PlanInput{Root: second, Service: servicePlans[1]},
 	)
 	require.NoError(t, err)
-	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	for index := range plans {
 		require.NoError(t, servicePlans[index].Link())
 		require.NoError(t, plans[index].Link())
 	}
 
-	firstService := plans[0].services.Get("Foo Bar")
-	secondService := plans[1].services.Get("Foo-Bar")
+	firstService := plans[0].services.Get("Shared")
+	secondService := plans[1].services.Get("Shared")
 	firstInit := firstService.Endpoints[0].Payload.Request.PayloadInit
 	secondInit := secondService.Endpoints[0].Payload.Request.PayloadInit
 	require.NotEqual(t, firstInit.Name, secondInit.Name)
@@ -478,7 +676,6 @@ func TestHTTPHelperDefinitionsUseAssignedNames(t *testing.T) {
 		PlanInput{Root: second, Service: servicePlans[1]},
 	)
 	require.NoError(t, err)
-	require.NoError(t, example.Plan(generation))
 	require.NoError(t, generation.Freeze())
 	for index := range plans {
 		require.NoError(t, servicePlans[index].Link())

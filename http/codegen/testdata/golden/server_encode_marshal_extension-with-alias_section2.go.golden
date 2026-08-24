@@ -1,9 +1,9 @@
-// marshalResultTypeToResultType builds a value of type *ResultType from a
-// value of type *fooservice.ResultType.
-func marshalResultTypeToResultType(v *fooservice.ResultType) *ResultType {
-	res := &ResultType{}
+// marshalFooserviceResultTypeToResultTypeResponse builds a value of type
+// *ResultTypeResponse from a value of type *fooservice.ResultType.
+func marshalFooserviceResultTypeToResultTypeResponse(v *fooservice.ResultType) *ResultTypeResponse {
+	res := &ResultTypeResponse{}
 	if v.Extension != nil {
-		res.Extension = marshalExtensionToExtension(v.Extension)
+		res.Extension = marshalFooserviceExtensionToExtensionResponseOptional(v.Extension)
 	}
 
 	return res

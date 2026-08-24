@@ -1,3 +1,6 @@
+// This file defines Goa attributes and their validation rules. It also lets
+// transport and generated-type copies point back to the exact attribute
+// written in the evaluated design.
 package expr
 
 import (
@@ -32,9 +35,12 @@ type (
 		DefaultValue any
 		// UserExample set in DSL or computed in Finalize
 		UserExamples []*ExampleExpr
-		// finalized is true if the attribute has been finalized - only
-		// applies if attribute type is an object
+		// finalized reports whether bases and references have already been
+		// applied to this attribute.
 		finalized bool
+		// authored points to the first attribute copied from the evaluated
+		// design. It is nil while this value is that original attribute.
+		authored *AttributeExpr
 	}
 
 	// ExampleExpr represents an example.
@@ -109,6 +115,15 @@ type (
 	CookieSameSiteValue string
 )
 
+// AuthoredAttribute returns the first attribute from which a was copied. It
+// returns a when a was written directly in the evaluated design.
+func (a *AttributeExpr) AuthoredAttribute() *AttributeExpr {
+	if a.authored != nil {
+		return a.authored
+	}
+	return a
+}
+
 const (
 	// FormatDate describes RFC3339 date values.
 	FormatDate ValidationFormat = "date"
@@ -159,9 +174,6 @@ const (
 	CookieSameSiteNone    CookieSameSiteValue = "none"
 	CookieSameSiteDefault CookieSameSiteValue = "default"
 )
-
-// validated keeps track of validated attributes to handle cyclical definitions.
-var validated = make(map[*AttributeExpr]bool)
 
 // TaggedAttribute returns the name of the child attribute of a with the given
 // tag if a is an object.
@@ -237,10 +249,20 @@ func (a *AttributeExpr) EvalName() string {
 // to be used in error messages.  The parent definition context is automatically
 // added to error messages.
 func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.ValidationErrors {
-	if validated[a] {
+	return a.validate(ctx, parent, make(map[*AttributeExpr]struct{}))
+}
+
+// validate checks attributes reached from a. The map stops a type that refers
+// to itself from being checked forever.
+func (a *AttributeExpr) validate(
+	ctx string,
+	parent eval.Expression,
+	visited map[*AttributeExpr]struct{},
+) *eval.ValidationErrors {
+	if _, ok := visited[a]; ok {
 		return nil
 	}
-	validated[a] = true
+	visited[a] = struct{}{}
 	verr := new(eval.ValidationErrors)
 	if a.Type == nil {
 		verr.Add(parent, "attribute type is nil")
@@ -269,14 +291,14 @@ func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.Valid
 		for _, nat := range *o {
 			verr.Merge(a.validatePkgPath(pkgPath, nat.Attribute.Type))
 			ctx = fmt.Sprintf("field %s", nat.Name)
-			verr.Merge(nat.Attribute.Validate(ctx, parent))
+			verr.Merge(nat.Attribute.validate(ctx, parent, visited))
 		}
 	} else if ar := AsArray(a.Type); ar != nil {
 		elemType := ar.ElemType
-		verr.Merge(elemType.Validate(ctx, a))
+		verr.Merge(elemType.validate(ctx, a, visited))
 	} else if u := AsUnion(a.Type); u != nil {
 		for _, ut := range u.Values {
-			verr.Merge(ut.Attribute.Validate(ctx, parent))
+			verr.Merge(ut.Attribute.validate(ctx, parent, visited))
 		}
 	}
 

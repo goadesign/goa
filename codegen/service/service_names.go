@@ -1,7 +1,6 @@
-// This file defines stable identities for every package-level declaration
-// emitted by the core service and views generators. Retained service plans
-// declare these records before generation freeze and render their final names
-// from the same records afterward.
+// This file records every package-level Go declaration written by the service
+// and views generators. Each definition and reference reads its name from the
+// same NameDeclaration.
 package service
 
 import (
@@ -13,15 +12,17 @@ import (
 )
 
 type (
-	// serviceNameRole identifies one closed family of package-level declarations
-	// emitted by the core service and views generators.
+	// serviceNameRole identifies what one package-level declaration does in the
+	// generated service or views package.
 	serviceNameRole uint8
 
-	// serviceNameOrder contains only stable semantic values, giving colliding
-	// service declarations a deterministic total order across traversals.
+	// serviceNameOrder contains design names and fixed categories that order two
+	// declarations requesting the same Go name. It does not depend on the order
+	// in which generators find them.
 	serviceNameOrder struct {
 		role       serviceNameRole
 		service    string
+		api        string
 		method     string
 		subject    string
 		view       string
@@ -32,13 +33,13 @@ type (
 		required   bool
 	}
 
-	// serviceSymbolID identifies one package declaration without using its
-	// provisional Go spelling. Source and target distinguish transform helpers;
-	// subject and view distinguish constructors and validators.
+	// serviceSymbolID identifies one package declaration without using the Go
+	// name that will be chosen later. Source and target distinguish conversion
+	// helpers; subject and view distinguish constructors and validators.
 	serviceSymbolID serviceNameOrder
 
-	// serviceName retains the preferred spelling with its canonical declaration
-	// so repeated collection cannot silently rename one semantic symbol.
+	// serviceName stores the requested Go name and the NameDeclaration created
+	// for it. Repeated collection must return that same declaration.
 	serviceName struct {
 		preferred   string
 		base        *codegen.NameDeclaration
@@ -47,8 +48,8 @@ type (
 		declaration *codegen.NameDeclaration
 	}
 
-	// serviceNames owns the core declarations collected for one retained service
-	// plan. The declaration itself remains owned by its generated Go package.
+	// serviceNames maps each service declaration purpose to the NameDeclaration
+	// stored in its generated Go package.
 	serviceNames map[serviceSymbolID]serviceName
 )
 
@@ -59,11 +60,8 @@ const (
 	serviceAPIVersionNameRole
 	serviceNameConstantRole
 	serviceMethodNamesRole
-	serviceMethodEventNameRole
 	serviceServerStreamNameRole
 	serviceClientStreamNameRole
-	serviceStreamNameRole
-	serviceEventNameRole
 	serviceErrorConstructorNameRole
 	serviceViewConstructorNameRole
 	servicePrivateProjectionConstructorNameRole
@@ -88,6 +86,11 @@ const (
 	serviceInterceptorResultAccessNameRole
 	serviceInterceptorStreamingPayloadAccessNameRole
 	serviceInterceptorStreamingResultAccessNameRole
+	serviceInterceptorMethodInfoNameRole
+	serviceInterceptorServerUnaryInfoNameRole
+	serviceInterceptorClientUnaryInfoNameRole
+	serviceInterceptorStreamingSendInfoNameRole
+	serviceInterceptorStreamingRecvInfoNameRole
 	serviceServerEndpointWrapperNameRole
 	serviceClientEndpointWrapperNameRole
 	serviceServerInterceptorWrapperNameRole
@@ -103,14 +106,17 @@ const (
 	serviceExampleClientInterceptorsConstructorNameRole
 )
 
-// ComparePackageName orders declarations from the core service generator by
-// their complete stable semantic identity.
+// ComparePackageName orders service declarations by their purpose and design
+// names, so discovery order cannot change generated Go names.
 func (o serviceNameOrder) ComparePackageName(other codegen.PackageNameOrder) int {
 	right := other.(serviceNameOrder)
 	if compared := cmp.Compare(o.role, right.role); compared != 0 {
 		return compared
 	}
 	if compared := cmp.Compare(o.service, right.service); compared != 0 {
+		return compared
+	}
+	if compared := cmp.Compare(o.api, right.api); compared != 0 {
 		return compared
 	}
 	if compared := cmp.Compare(o.method, right.method); compared != 0 {
@@ -143,8 +149,8 @@ func (o serviceNameOrder) ComparePackageName(other codegen.PackageNameOrder) int
 	return 1
 }
 
-// kind returns the package declaration category fixed by this service symbol
-// family. An unknown role is an internal planner bug.
+// kind returns whether this role writes a Go type, function, constant, or
+// variable. An unknown role means the generator omitted a supported case.
 func (r serviceNameRole) kind() codegen.PackageNameKind {
 	switch r {
 	case serviceAPINameRole, serviceAPIVersionNameRole, serviceNameConstantRole:
@@ -169,11 +175,8 @@ func (r serviceNameRole) kind() codegen.PackageNameKind {
 		return codegen.NameFunction
 	case serviceInterfaceNameRole,
 		serviceAutherNameRole,
-		serviceMethodEventNameRole,
 		serviceServerStreamNameRole,
 		serviceClientStreamNameRole,
-		serviceStreamNameRole,
-		serviceEventNameRole,
 		serviceEndpointsNameRole,
 		serviceClientNameRole,
 		serviceEndpointInputNameRole,
@@ -190,6 +193,11 @@ func (r serviceNameRole) kind() codegen.PackageNameKind {
 		serviceInterceptorResultAccessNameRole,
 		serviceInterceptorStreamingPayloadAccessNameRole,
 		serviceInterceptorStreamingResultAccessNameRole,
+		serviceInterceptorMethodInfoNameRole,
+		serviceInterceptorServerUnaryInfoNameRole,
+		serviceInterceptorClientUnaryInfoNameRole,
+		serviceInterceptorStreamingSendInfoNameRole,
+		serviceInterceptorStreamingRecvInfoNameRole,
 		serviceServerStreamWrapperNameRole,
 		serviceClientStreamWrapperNameRole,
 		serviceExampleStructNameRole,
@@ -201,8 +209,8 @@ func (r serviceNameRole) kind() codegen.PackageNameKind {
 	}
 }
 
-// visibility reports whether the emitted declaration is part of the generated
-// package API or an implementation detail used only by neighboring sections.
+// visibility reports whether callers outside the generated package can use the
+// declaration.
 func (r serviceNameRole) visibility() codegen.PackageNameVisibility {
 	switch r {
 	case servicePrivateProjectionConstructorNameRole,
@@ -210,6 +218,11 @@ func (r serviceNameRole) visibility() codegen.PackageNameVisibility {
 		serviceInterceptorResultAccessNameRole,
 		serviceInterceptorStreamingPayloadAccessNameRole,
 		serviceInterceptorStreamingResultAccessNameRole,
+		serviceInterceptorMethodInfoNameRole,
+		serviceInterceptorServerUnaryInfoNameRole,
+		serviceInterceptorClientUnaryInfoNameRole,
+		serviceInterceptorStreamingSendInfoNameRole,
+		serviceInterceptorStreamingRecvInfoNameRole,
 		serviceServerInterceptorWrapperNameRole,
 		serviceClientInterceptorWrapperNameRole,
 		serviceServerStreamWrapperNameRole,
@@ -222,9 +235,15 @@ func (r serviceNameRole) visibility() codegen.PackageNameVisibility {
 	}
 }
 
-// declare records id in pkg and returns the same canonical declaration when a
-// planning traversal encounters that exact semantic symbol again.
+// declare submits one requested Go name to pkg. Repeated calls for the same id
+// return the same NameDeclaration and reject a different requested name.
 func (n serviceNames) declare(pkg *codegen.GeneratedPackage, id serviceSymbolID, preferred string) (*codegen.NameDeclaration, error) {
+	return n.declareForAPI(pkg, id, preferred, "")
+}
+
+// declareForAPI submits one generated name using the API to distinguish two
+// roots that intentionally contribute to the same service package.
+func (n serviceNames) declareForAPI(pkg *codegen.GeneratedPackage, id serviceSymbolID, preferred, api string) (*codegen.NameDeclaration, error) {
 	if existing, ok := n[id]; ok {
 		if existing.base != nil || existing.preferred != preferred {
 			return nil, fmt.Errorf(
@@ -240,11 +259,13 @@ func (n serviceNames) declare(pkg *codegen.GeneratedPackage, id serviceSymbolID,
 		return existing.declaration, nil
 	}
 
+	order := serviceNameOrder(id)
+	order.api = api
 	declaration := codegen.NewPreferredName(
 		id.role.kind(),
 		preferred,
 		id.role.visibility(),
-		serviceNameOrder(id),
+		order,
 	)
 	if err := pkg.DeclareName(declaration); err != nil {
 		return nil, err
@@ -253,10 +274,16 @@ func (n serviceNames) declare(pkg *codegen.GeneratedPackage, id serviceSymbolID,
 	return declaration, nil
 }
 
-// declareDependent records a companion whose preferred spelling follows the
-// exact final name of base. Repeated collection must use the same base record
-// and affixes, so one semantic symbol cannot silently change families.
+// declareDependent submits a declaration whose Go name is built by adding
+// prefix and suffix to base's final name. Repeated calls for the same id must
+// use the same base, prefix, and suffix.
 func (n serviceNames) declareDependent(pkg *codegen.GeneratedPackage, id serviceSymbolID, base *codegen.NameDeclaration, prefix, suffix string) (*codegen.NameDeclaration, error) {
+	return n.declareDependentForAPI(pkg, id, base, prefix, suffix, "")
+}
+
+// declareDependentForAPI submits one dependent generated name using the API to
+// distinguish two roots that intentionally contribute to the same package.
+func (n serviceNames) declareDependentForAPI(pkg *codegen.GeneratedPackage, id serviceSymbolID, base *codegen.NameDeclaration, prefix, suffix, api string) (*codegen.NameDeclaration, error) {
 	if existing, ok := n[id]; ok {
 		if existing.base != base || existing.prefix != prefix || existing.suffix != suffix {
 			return nil, fmt.Errorf("service symbol role %d cannot change its dependent declaration family", id.role)
@@ -267,12 +294,14 @@ func (n serviceNames) declareDependent(pkg *codegen.GeneratedPackage, id service
 		return existing.declaration, nil
 	}
 
+	order := serviceNameOrder(id)
+	order.api = api
 	declaration, err := pkg.DeclareDependentName(
 		id.role.kind(),
 		base,
 		prefix,
 		suffix,
-		serviceNameOrder(id),
+		order,
 	)
 	if err != nil {
 		return nil, err
@@ -286,8 +315,8 @@ func (n serviceNames) declareDependent(pkg *codegen.GeneratedPackage, id service
 	return declaration, nil
 }
 
-// declaration returns the canonical record for id. Calling it for a symbol
-// that collection did not declare is an internal retained-plan bug.
+// declaration returns the NameDeclaration previously stored for id. It panics
+// when name collection did not submit that id.
 func (n serviceNames) declaration(id serviceSymbolID) *codegen.NameDeclaration {
 	name, ok := n[id]
 	if !ok {
@@ -296,16 +325,8 @@ func (n serviceNames) declaration(id serviceSymbolID) *codegen.NameDeclaration {
 	return name.declaration
 }
 
-// transformDataTypeIdentity returns the authored declaration identity used by
-// TransformPlan when the operation crosses copied named attributes.
-func transformDataTypeIdentity(dataType expr.DataType) expr.DataType {
-	if userType, ok := dataType.(expr.UserType); ok {
-		return userType.Origin()
-	}
-	return dataType
-}
-
-// transformDataTypeName returns stable semantic labels for one helper side.
+// transformDataTypeName returns the design name and ID used to order one side
+// of a generated conversion helper.
 func transformDataTypeName(dataType expr.DataType) (string, string) {
 	if userType, ok := dataType.(expr.UserType); ok {
 		return userType.Name(), userType.ID()
@@ -313,8 +334,8 @@ func transformDataTypeName(dataType expr.DataType) (string, string) {
 	return dataType.Name(), ""
 }
 
-// canonicalValidatorView gives a default result view the same identity used by
-// validation calls that omit an explicit view.
+// canonicalValidatorView returns an empty string for the default result view
+// so it matches validation calls that omit a view name.
 func canonicalValidatorView(view string) string {
 	if view == expr.DefaultView {
 		return ""

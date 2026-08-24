@@ -44,7 +44,7 @@ type PingResponseBody struct {
 }
 
 // AddOverflowResponseBody is the type of the "Calc" service "add" endpoint
-// HTTP response body.
+// HTTP response body for the "overflow" error.
 type AddOverflowResponseBody struct {
 	// Name is the name of this class of errors.
 	Name *string `form:"name,omitempty" json:"name,omitempty" xml:"name,omitempty"`
@@ -95,7 +95,7 @@ func NewAddResultOK(body *AddResponseBody) *calc.AddResult {
 
 // NewAddOverflow builds a Calc service add endpoint overflow error.
 func NewAddOverflow(body *AddOverflowResponseBody) *goa.ServiceError {
-	v := &calc.Error{
+	v := &goa.ServiceError{
 		Name:      *body.Name,
 		ID:        *body.ID,
 		Message:   *body.Message,

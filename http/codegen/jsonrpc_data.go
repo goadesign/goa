@@ -33,6 +33,14 @@ type (
 // copyJSONRPCEndpoint returns the values read by JSON-RPC files for endpoint.
 // Changing the returned value cannot change endpoint.
 func copyJSONRPCEndpoint(endpoint *EndpointData) JSONRPCEndpointSnapshot {
+	requestEncoder := ""
+	if endpoint.RequestEncoderDeclaration != nil {
+		requestEncoder = endpoint.RequestEncoderDeclaration.Name()
+	}
+	requestDecoder := ""
+	if endpoint.RequestDecoderDeclaration != nil {
+		requestDecoder = endpoint.RequestDecoderDeclaration.Name()
+	}
 	result := JSONRPCEndpointSnapshot{
 		IsJSONRPC:                  endpoint.IsJSONRPC,
 		Method:                     copyJSONRPCMethod(endpoint.Method),
@@ -44,14 +52,17 @@ func copyJSONRPCEndpoint(endpoint *EndpointData) JSONRPCEndpointSnapshot {
 		Routes:                     copyJSONRPCRoutes(endpoint.Routes),
 		RequestInit:                copyInitData(endpoint.RequestInit),
 		EndpointInit:               endpoint.EndpointInit,
+		HandlerInit:                endpoint.HandlerInitDeclaration.Name(),
 		HandlerInitDeclaration:     endpoint.HandlerInitDeclaration,
+		ClientStruct:               endpoint.ClientStructDeclaration.Name(),
 		ClientStructDeclaration:    endpoint.ClientStructDeclaration,
+		RequestEncoder:             requestEncoder,
 		RequestEncoderDeclaration:  endpoint.RequestEncoderDeclaration,
+		RequestDecoder:             requestDecoder,
 		RequestDecoderDeclaration:  endpoint.RequestDecoderDeclaration,
+		ResponseDecoder:            endpoint.ResponseDecoderDeclaration.Name(),
 		ResponseDecoderDeclaration: endpoint.ResponseDecoderDeclaration,
 		SSE:                        copyJSONRPCSSE(endpoint.SSE),
-		ClientWebSocket:            copyJSONRPCWebSocket(endpoint.ClientWebSocket),
-		ServerWebSocket:            copyJSONRPCWebSocket(endpoint.ServerWebSocket),
 	}
 	return result
 }
@@ -111,8 +122,8 @@ func copyJSONRPCMethod(method *service.MethodData) JSONRPCMethodData {
 	result := JSONRPCMethodData{
 		Name:                        method.Name,
 		VarName:                     method.VarName,
-		EventDeclaration:            method.EventDeclaration,
 		Result:                      method.Result,
+		HasMixedResults:             method.HasMixedResults,
 		Idempotent:                  method.Idempotent,
 		ServerStream:                copyJSONRPCStream(method.ServerStream),
 		ClientStream:                copyJSONRPCStream(method.ClientStream),
@@ -199,9 +210,6 @@ func copyJSONRPCPayload(payload *PayloadData) *JSONRPCPayloadData {
 			MustHaveBody: request.MustHaveBody,
 			MustValidate: request.MustValidate,
 		}
-		if request.PayloadType != nil {
-			result.Request.PayloadTypeName = request.PayloadType.Name()
-		}
 	}
 	return result
 }
@@ -279,31 +287,20 @@ func copyJSONRPCSSE(stream *SSEData) *JSONRPCSSEData {
 		ClientStructDeclaration:    stream.ClientStructDeclaration,
 		ClientInitDeclaration:      stream.ClientInitDeclaration,
 		EventTypeRef:               stream.EventTypeRef,
+		HasResponseBody:            stream.HasResponseBody,
+		Response:                   copyJSONRPCResponsePtr(stream.Response),
 		RequestIDField:             stream.RequestIDField,
+		RequestIDPointer:           stream.RequestIDPointer,
 	}
 }
 
-// copyJSONRPCWebSocket returns the WebSocket stream names read by JSON-RPC files.
-func copyJSONRPCWebSocket(stream *WebSocketData) *JSONRPCWebSocketData {
-	if stream == nil {
+// copyJSONRPCResponsePtr returns an independent copy of response.
+func copyJSONRPCResponsePtr(response *ResponseData) *JSONRPCResponseData {
+	if response == nil {
 		return nil
 	}
-	return &JSONRPCWebSocketData{
-		VarDeclaration:      stream.VarDeclaration,
-		VarName:             stream.VarName,
-		SendName:            stream.SendName,
-		SendDesc:            stream.SendDesc,
-		SendWithContextName: stream.SendWithContextName,
-		SendWithContextDesc: stream.SendWithContextDesc,
-		SendTypeName:        stream.SendTypeName,
-		SendTypeRef:         stream.SendTypeRef,
-		RecvName:            stream.RecvName,
-		RecvDesc:            stream.RecvDesc,
-		RecvWithContextName: stream.RecvWithContextName,
-		RecvWithContextDesc: stream.RecvWithContextDesc,
-		RecvTypeName:        stream.RecvTypeName,
-		RecvTypeRef:         stream.RecvTypeRef,
-	}
+	copy := copyJSONRPCResponse(response)
+	return &copy
 }
 
 // copyJSONRPCBody returns the generated body names and the code that converts
@@ -313,10 +310,13 @@ func copyJSONRPCBody(body *TypeData) *JSONRPCBodyData {
 		return nil
 	}
 	return &JSONRPCBodyData{
-		VarName:     body.VarName,
-		Ref:         body.Ref,
-		ValidateRef: body.ValidateRef,
-		Init:        copyInitData(body.Init),
+		Declaration:          body.Declaration,
+		VarName:              body.VarName,
+		Ref:                  body.Ref,
+		ValidateRef:          body.ValidateRef,
+		ValidatorDeclaration: body.ValidatorDeclaration,
+		ValidationTarget:     body.ValidationTarget,
+		Init:                 copyInitData(body.Init),
 	}
 }
 

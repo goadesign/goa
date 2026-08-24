@@ -1,14 +1,14 @@
-// NewProtoMethodResultWithAliasValidationRequest builds the gRPC request type
-// from the payload of the "MethodResultWithAliasValidation" endpoint of the
-// "ServiceResultWithAliasValidation" service.
+// NewProtoMethodResultWithAliasValidationRequest builds
+// *service_result_with_alias_validationpb.MethodResultWithAliasValidationRequest
+// from metadata values.
 func NewProtoMethodResultWithAliasValidationRequest() *service_result_with_alias_validationpb.MethodResultWithAliasValidationRequest {
 	message := &service_result_with_alias_validationpb.MethodResultWithAliasValidationRequest{}
 	return message
 }
 
-// NewMethodResultWithAliasValidationResult builds the result type of the
-// "MethodResultWithAliasValidation" endpoint of the
-// "ServiceResultWithAliasValidation" service from the gRPC response type.
+// NewMethodResultWithAliasValidationResult builds
+// serviceresultwithaliasvalidation.UUID from
+// *service_result_with_alias_validationpb.UUID.
 func NewMethodResultWithAliasValidationResult(message *service_result_with_alias_validationpb.UUID) serviceresultwithaliasvalidation.UUID {
 	result := serviceresultwithaliasvalidation.UUID(message.Field)
 	return result

@@ -1,4 +1,5 @@
-// This file collects retained service user-type and union emission facts before generated package names freeze.
+// This file records the fields, pointers, tags, declarations, and unions
+// needed to write generated service types.
 package service
 
 import (
@@ -9,8 +10,9 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
-// planServiceTypeLayouts retains every field, pointer, tag, owner, and exact
-// declaration used to spell core service types after names freeze.
+// planServiceTypeLayouts records every field, pointer, struct tag, package, and
+// declaration needed to write service types after Generation.Freeze chooses
+// every declaration and import name.
 func planServiceTypeLayouts(facts *serviceFacts, rootTypes *rootTypeSet, generation *codegen.Generation) error {
 	binder := serviceGoTypeBinder(rootTypes, generation)
 	plan := func(attribute *expr.AttributeExpr, owner string) (*codegen.GoTypePlan, error) {
@@ -33,11 +35,6 @@ func planServiceTypeLayouts(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			return err
 		}
 		userType.layout = layout
-		reference, err := plan(&expr.AttributeExpr{Type: userType.userType}, facts.packagePath)
-		if err != nil {
-			return err
-		}
-		userType.reference = reference
 	}
 	for _, errorFacts := range facts.errorFacts {
 		layout, err := plan(errorFacts.attribute, facts.packagePath)
@@ -100,8 +97,8 @@ func planServiceTypeLayouts(facts *serviceFacts, rootTypes *rootTypeSet, generat
 			{interceptor.writeResult, method.result, &interceptor.writeResultFields},
 			{interceptor.readStreamingPayload, method.streamingPayload, &interceptor.readStreamingPayloadFields},
 			{interceptor.writeStreamingPayload, method.streamingPayload, &interceptor.writeStreamingPayloadFields},
-			{interceptor.readStreamingResult, method.result, &interceptor.readStreamingResultFields},
-			{interceptor.writeStreamingResult, method.result, &interceptor.writeStreamingResultFields},
+			{interceptor.readStreamingResult, method.streamingResult, &interceptor.readStreamingResultFields},
+			{interceptor.writeStreamingResult, method.streamingResult, &interceptor.writeStreamingResultFields},
 		}
 		for _, access := range accesses {
 			planned, err := planInterceptorAccess(access.selection, access.parent, facts.packagePath, binder)
@@ -119,8 +116,8 @@ func planServiceTypeLayouts(facts *serviceFacts, rootTypes *rootTypeSet, generat
 	return nil
 }
 
-// planUnionRenderFacts retains every semantic branch decision and exact type
-// layout before generated names and import aliases freeze.
+// planUnionRenderFacts records every Goa OneOf branch, nil rule, and Go type
+// before Generation.Freeze chooses declaration and import names.
 func planUnionRenderFacts(facts *unionFacts, binder codegen.GoTypeBinder, generatedPackage *codegen.GeneratedPackage) error {
 	facts.identity = codegen.NewUnionTypeID(facts.union)
 	facts.typeKey = facts.union.GetTypeKey()
@@ -158,8 +155,8 @@ func planUnionRenderFacts(facts *unionFacts, binder codegen.GoTypeBinder, genera
 	return nil
 }
 
-// planInterceptorAccess retains the selected generated field names, pointer
-// behavior, and exact type layouts while the design expressions are inputs.
+// planInterceptorAccess records the field names, pointer choices, and Go types
+// exposed to an interceptor while the design expressions are available.
 func planInterceptorAccess(selection *expr.AttributeExpr, parent *methodAttributeFacts, owner string, binder codegen.GoTypeBinder) ([]*interceptorAccessFacts, error) {
 	if selection == nil {
 		return nil, nil
@@ -189,16 +186,17 @@ func planInterceptorAccess(selection *expr.AttributeExpr, parent *methodAttribut
 			return nil, err
 		}
 		result[index] = &interceptorAccessFacts{
-			name:    codegen.Goify(field.Name, true),
-			pointer: parent.attribute.IsPrimitivePointer(field.Name, true),
-			layout:  layout,
+			attribute: expr.DupAtt(attribute),
+			name:      codegen.Goify(field.Name, true),
+			pointer:   parent.attribute.IsPrimitivePointer(field.Name, true),
+			layout:    layout,
 		}
 	}
 	return result, nil
 }
 
-// serviceGoTypeBinder binds authored and normalized service occurrences to
-// the package declarations selected during collection.
+// serviceGoTypeBinder maps authored service types and compiler-created copies
+// to the generated Go declarations selected during collection.
 func serviceGoTypeBinder(rootTypes *rootTypeSet, generation *codegen.Generation) codegen.GoTypeBinder {
 	return func(request codegen.GoTypeBindingRequest) (codegen.GoTypeBinding, error) {
 		owner := request.InheritedOwner
@@ -227,13 +225,13 @@ func serviceGoTypeBinder(rootTypes *rootTypeSet, generation *codegen.Generation)
 	}
 }
 
-// collectServiceUnionFacts selects every service sum type once per generated
-// package and retains the declaration allocated during planning.
+// collectServiceUnionFacts selects each service Goa OneOf type once in every
+// package that writes it and records its generated declaration.
 func collectServiceUnionFacts(facts *serviceFacts, rootTypes *rootTypeSet, generation *codegen.Generation) error {
 	seenTypes := make(map[plannedUserType]struct{})
 	seenUnions := make(map[unionDataKey]struct{})
 	collect := func(attribute *expr.AttributeExpr, location *codegen.Location) error {
-		return collectUnionFacts(attribute, facts.service, location, rootTypes, generation, seenTypes, seenUnions, &facts.unions)
+		return collectUnionFacts(attribute, facts.packagePath, location, rootTypes, generation, seenTypes, seenUnions, &facts.unions)
 	}
 	for _, userType := range facts.userTypes {
 		if err := collect(&expr.AttributeExpr{Type: userType.userType}, userType.location); err != nil {
@@ -270,12 +268,12 @@ func collectServiceUnionFacts(facts *serviceFacts, rootTypes *rootTypeSet, gener
 
 // collectUnionFacts recursively records union declarations while keeping
 // unlocated nested types in the package inherited from their enclosing type.
-func collectUnionFacts(attribute *expr.AttributeExpr, service *expr.ServiceExpr, location *codegen.Location, rootTypes *rootTypeSet, generation *codegen.Generation, seenTypes map[plannedUserType]struct{}, seenUnions map[unionDataKey]struct{}, unions *[]*unionFacts) error {
+func collectUnionFacts(attribute *expr.AttributeExpr, servicePath string, location *codegen.Location, rootTypes *rootTypeSet, generation *codegen.Generation, seenTypes map[plannedUserType]struct{}, seenUnions map[unionDataKey]struct{}, unions *[]*unionFacts) error {
 	if attribute == nil || attribute.Type == expr.Empty {
 		return nil
 	}
 	recurse := func(attribute *expr.AttributeExpr, location *codegen.Location) error {
-		return collectUnionFacts(attribute, service, location, rootTypes, generation, seenTypes, seenUnions, unions)
+		return collectUnionFacts(attribute, servicePath, location, rootTypes, generation, seenTypes, seenUnions, unions)
 	}
 	switch actual := attribute.Type.(type) {
 	case expr.UserType:
@@ -283,7 +281,7 @@ func collectUnionFacts(attribute *expr.AttributeExpr, service *expr.ServiceExpr,
 		if typeLocation == nil {
 			typeLocation = location
 		}
-		owner := generation.Package(generatedPackagePath(generation.GenPkg(), service, typeLocation))
+		owner := generation.Package(generatedPackagePath(generation.GenPkg(), servicePath, typeLocation))
 		key := plannedUserType{userType: rootTypes.canonical(actual), owner: owner}
 		if _, exists := seenTypes[key]; exists {
 			return nil
@@ -304,7 +302,7 @@ func collectUnionFacts(attribute *expr.AttributeExpr, service *expr.ServiceExpr,
 		}
 		return recurse(actual.ElemType, location)
 	case *expr.Union:
-		packagePath := generatedPackagePath(generation.GenPkg(), service, location)
+		packagePath := generatedPackagePath(generation.GenPkg(), servicePath, location)
 		key := unionDataKey{packagePath: packagePath, identity: codegen.NewUnionTypeID(actual)}
 		if _, exists := seenUnions[key]; !exists {
 			declaration, err := generation.Package(packagePath).Union(actual)
@@ -330,20 +328,21 @@ func collectUnionFacts(attribute *expr.AttributeExpr, service *expr.ServiceExpr,
 	return nil
 }
 
-// typeMapMatchesFacts reports whether a mapping's user type belongs to the
-// retained method or nested service types selected during collection.
+// typeMapMatchesFacts reports whether a user-supplied Go type mapping applies
+// to a payload, result, error, stream value, or child type selected for this
+// service.
 func typeMapMatchesFacts(typeMap *expr.TypeMap, facts *serviceFacts) bool {
 	_, reachable := facts.reachableTypes[typeMap.User.Origin()]
 	return reachable
 }
 
 // collectServiceTypeFacts selects the exact named types emitted for one
-// service. Linking later formats these records without repeating reachability
-// or package-ownership decisions.
+// service. Linking later formats these records without searching for the types
+// again or deciding which generated package contains them.
 func collectServiceTypeFacts(facts *serviceFacts, rootTypes []expr.UserType, canonical *rootTypeSet, generation *codegen.Generation) error {
 	seen := make(map[userTypeDataKey]struct{})
 	for _, serviceError := range facts.errors {
-		selected, err := collectUserTypeFacts(serviceError.AttributeExpr, facts.service, nil, canonical, generation, seen)
+		selected, err := collectUserTypeFacts(serviceError.AttributeExpr, facts.packagePath, nil, canonical, generation, seen)
 		if err != nil {
 			return err
 		}
@@ -366,14 +365,14 @@ func collectServiceTypeFacts(facts *serviceFacts, rootTypes []expr.UserType, can
 					inner = userType.Attribute()
 				}
 			}
-			selected, err := collectUserTypeFacts(inner, facts.service, location, canonical, generation, seen)
+			selected, err := collectUserTypeFacts(inner, facts.packagePath, location, canonical, generation, seen)
 			if err != nil {
 				return err
 			}
 			facts.userTypes = append(facts.userTypes, selected...)
 		}
 		for _, methodError := range method.Errors {
-			selected, err := collectUserTypeFacts(methodError.AttributeExpr, facts.service, nil, canonical, generation, seen)
+			selected, err := collectUserTypeFacts(methodError.AttributeExpr, facts.packagePath, nil, canonical, generation, seen)
 			if err != nil {
 				return err
 			}
@@ -396,7 +395,7 @@ func collectServiceTypeFacts(facts *serviceFacts, rootTypes []expr.UserType, can
 			}
 			if userType, ok := attribute.Type.(expr.UserType); ok {
 				declaration, err := generation.Package(generatedPackagePath(
-					generation.GenPkg(), facts.service, codegen.UserTypeLocation(userType),
+					generation.GenPkg(), facts.packagePath, codegen.UserTypeLocation(userType),
 				)).Type(userType)
 				if err != nil {
 					return err
@@ -411,7 +410,7 @@ func collectServiceTypeFacts(facts *serviceFacts, rootTypes []expr.UserType, can
 			continue
 		}
 		selected, err := collectUserTypeFacts(
-			&expr.AttributeExpr{Type: userType}, facts.service, nil, canonical, generation, seen,
+			&expr.AttributeExpr{Type: userType}, facts.packagePath, nil, canonical, generation, seen,
 		)
 		if err != nil {
 			return err
@@ -426,12 +425,12 @@ func collectServiceTypeFacts(facts *serviceFacts, rootTypes []expr.UserType, can
 
 // collectUserTypeFacts recursively selects named types while carrying the
 // package location inherited from an enclosing generated type.
-func collectUserTypeFacts(attribute *expr.AttributeExpr, service *expr.ServiceExpr, location *codegen.Location, canonical *rootTypeSet, generation *codegen.Generation, seen map[userTypeDataKey]struct{}) ([]*userTypeFacts, error) {
+func collectUserTypeFacts(attribute *expr.AttributeExpr, servicePath string, location *codegen.Location, canonical *rootTypeSet, generation *codegen.Generation, seen map[userTypeDataKey]struct{}) ([]*userTypeFacts, error) {
 	if attribute == nil || attribute.Type == expr.Empty {
 		return nil, nil
 	}
 	collect := func(attribute *expr.AttributeExpr, location *codegen.Location) ([]*userTypeFacts, error) {
-		return collectUserTypeFacts(attribute, service, location, canonical, generation, seen)
+		return collectUserTypeFacts(attribute, servicePath, location, canonical, generation, seen)
 	}
 	var result []*userTypeFacts
 	switch actual := attribute.Type.(type) {
@@ -441,7 +440,7 @@ func collectUserTypeFacts(attribute *expr.AttributeExpr, service *expr.ServiceEx
 			typeLocation = location
 		}
 		declaration, err := generation.Package(
-			generatedPackagePath(generation.GenPkg(), service, typeLocation),
+			generatedPackagePath(generation.GenPkg(), servicePath, typeLocation),
 		).Type(canonical.canonical(actual))
 		if err != nil {
 			return nil, err
@@ -456,7 +455,7 @@ func collectUserTypeFacts(attribute *expr.AttributeExpr, service *expr.ServiceEx
 			name:         actual.Name(),
 			description:  actual.Attribute().Description,
 			errorName:    retainedErrorName(actual),
-			serviceError: actual == expr.ErrorResult,
+			serviceError: expr.IsErrorResult(actual),
 			location:     typeLocation,
 			declaration:  declaration,
 		})
@@ -499,8 +498,8 @@ func collectUserTypeFacts(attribute *expr.AttributeExpr, service *expr.ServiceEx
 	return result, nil
 }
 
-// retainedErrorName copies the exact Go expression returned by GoaErrorName
-// before error metadata can be changed by a later generator phase.
+// This helper copies the Go expression returned by GoaErrorName while the
+// design error metadata is still available.
 func retainedErrorName(userType expr.UserType) string {
 	if object := expr.AsObject(userType); object != nil {
 		for _, field := range *object {

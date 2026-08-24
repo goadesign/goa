@@ -1,5 +1,6 @@
-// This file generates JSON-compatible examples from evaluated attributes using
-// streams anchored to exact semantic design owners.
+// This file generates JSON-compatible examples from evaluated attributes. Each
+// service, method, type, and field uses its own repeatable sequence so changes
+// elsewhere do not change its example values.
 package expr
 
 import (

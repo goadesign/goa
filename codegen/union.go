@@ -1,5 +1,5 @@
-// This file defines the emitted Go and JSON identity used to name and emit Goa
-// unions consistently. It is separate from expression-type compatibility.
+// This file builds a repeatable key from every detail that changes a generated
+// union's Go or JSON definition.
 package codegen
 
 import (
@@ -15,10 +15,10 @@ type (
 	UnionTypeID string
 )
 
-// NewUnionTypeID returns the generated-definition identity for union. The
-// identity includes the effective JSON envelope keys and details that change
-// generated Go branch types, including package locations, field type metadata,
-// and nilability.
+// NewUnionTypeID returns a repeatable key for union's generated Go and JSON
+// definitions. The key includes the effective JSON envelope keys and every
+// detail that changes a generated Go branch type: package location, field type
+// metadata, and whether the value may be nil.
 func NewUnionTypeID(union *expr.Union) UnionTypeID {
 	var key strings.Builder
 	writeUnionTypeID(
@@ -31,7 +31,8 @@ func NewUnionTypeID(union *expr.Union) UnionTypeID {
 	return UnionTypeID(key.String())
 }
 
-// Hash returns the exact identity used by a generated package's name scope.
+// Hash returns the repeatable key used to look up this union's Go name in a
+// generated package.
 func (id UnionTypeID) Hash() string {
 	return string(id)
 }
@@ -56,7 +57,8 @@ func writeUnionTypeID(key *strings.Builder, union *expr.Union, objects map[*expr
 	}
 }
 
-// writeUnionAttributeID appends the generated Go identity of an attribute.
+// writeUnionAttributeID appends every attribute detail that changes generated
+// Go code.
 func writeUnionAttributeID(key *strings.Builder, att *expr.AttributeExpr, objects map[*expr.Object]int, unions map[*expr.Union]int, userTypes map[expr.UserType]int) {
 	writeUnionIDPart(key, strconv.FormatBool(IsNilable(att.Type)))
 	if metaType, ok := att.Meta["struct:field:type"]; ok {

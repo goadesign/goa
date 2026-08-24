@@ -6,17 +6,7 @@ func {{ .ClientInitDeclaration.Name }}(
 	enc func(*http.Request) goahttp.Encoder,
 	dec func(*http.Response) goahttp.Decoder,
 	restoreBody bool,
-	{{- if hasWebSocket . }}
-	dialer goahttp.Dialer,
-	cfn goahttp.ConnConfigureFunc,
-	streamOpts ...jsonrpc.StreamConfigOption,
-	{{- end }}
 ) *{{ .ClientStructDeclaration.Name }} {
-	{{- if hasWebSocket . }}
-	// Create stream configuration from options
-	streamConfig := jsonrpc.NewStreamConfig(streamOpts...)
-	{{- end }}
-	
 	return &{{ .ClientStructDeclaration.Name }}{
 		Doer:                doer,
 		{{- range .Endpoints }}
@@ -29,10 +19,5 @@ func {{ .ClientInitDeclaration.Name }}(
 		host:                host,
 		decoder:             dec,
 		encoder:             enc,
-		{{- if hasWebSocket . }}
-		dialer:              dialer,
-		configfn:            cfn,
-		streamConfig:        streamConfig,
-		{{- end }}
 	}
 }

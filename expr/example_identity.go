@@ -1,5 +1,5 @@
-// This file defines stable, typed identities for the example values emitted
-// from evaluated design expressions.
+// This file builds repeatable keys for example values from evaluated service,
+// method, type, field, and transport names.
 package expr
 
 import (
@@ -8,8 +8,9 @@ import (
 )
 
 type (
-	// ExampleIdentity identifies one semantic example stream. Its representation
-	// is opaque so callers cannot manufacture identities by joining names.
+	// ExampleIdentity selects a repeatable sequence of generated example values.
+	// Equal values select the same sequence. Its fields are private so callers
+	// must use the constructors below.
 	ExampleIdentity struct {
 		seed string
 	}
@@ -44,7 +45,7 @@ const (
 	unionMemberExampleKind
 )
 
-// UserTypeExampleIdentity returns the example identity owned by typ.
+// UserTypeExampleIdentity returns the example key for typ.
 func UserTypeExampleIdentity(typ UserType) ExampleIdentity {
 	if identity, ok := GeneratedUserTypeExampleIdentity(typ); ok {
 		return identity
@@ -52,8 +53,9 @@ func UserTypeExampleIdentity(typ UserType) ExampleIdentity {
 	return newExampleIdentity(userTypeExampleKind, []byte(typ.ID()))
 }
 
-// GeneratedUserTypeExampleIdentity returns the exact semantic owner retained
-// by a synthesized user type. The second result is false for authored types.
+// GeneratedUserTypeExampleIdentity returns the example key stored on a user
+// type created by Goa. The second result is false for types written in the
+// design.
 func GeneratedUserTypeExampleIdentity(typ UserType) (ExampleIdentity, bool) {
 	var identity ExampleIdentity
 	switch generated := typ.(type) {
@@ -65,32 +67,29 @@ func GeneratedUserTypeExampleIdentity(typ UserType) (ExampleIdentity, bool) {
 	return identity, identity.seed != ""
 }
 
-// MethodPayloadExampleIdentity returns the payload example identity owned by
-// method.
+// MethodPayloadExampleIdentity returns the example key for method's payload.
 func MethodPayloadExampleIdentity(method *MethodExpr) ExampleIdentity {
 	return methodExampleIdentity(methodPayloadExampleKind, method)
 }
 
-// MethodResultExampleIdentity returns the result example identity owned by
-// method.
+// MethodResultExampleIdentity returns the example key for method's result.
 func MethodResultExampleIdentity(method *MethodExpr) ExampleIdentity {
 	return methodExampleIdentity(methodResultExampleKind, method)
 }
 
-// MethodStreamingPayloadExampleIdentity returns the streaming payload example
-// identity owned by method.
+// MethodStreamingPayloadExampleIdentity returns the example key for method's
+// streaming payload.
 func MethodStreamingPayloadExampleIdentity(method *MethodExpr) ExampleIdentity {
 	return methodExampleIdentity(methodStreamingPayloadExampleKind, method)
 }
 
-// MethodStreamingResultExampleIdentity returns the streaming result example
-// identity owned by method.
+// MethodStreamingResultExampleIdentity returns the example key for method's
+// streaming result.
 func MethodStreamingResultExampleIdentity(method *MethodExpr) ExampleIdentity {
 	return methodExampleIdentity(methodStreamingResultExampleKind, method)
 }
 
-// MethodErrorExampleIdentity returns the example identity owned by err in
-// method.
+// MethodErrorExampleIdentity returns the example key for err in method.
 func MethodErrorExampleIdentity(method *MethodExpr, err *ErrorExpr) ExampleIdentity {
 	return newExampleIdentity(
 		methodErrorExampleKind,
@@ -100,8 +99,8 @@ func MethodErrorExampleIdentity(method *MethodExpr, err *ErrorExpr) ExampleIdent
 	)
 }
 
-// RequestBodyExampleIdentity returns the request body example identity owned
-// by endpoint. HTTP and JSON-RPC mappings receive distinct identities.
+// RequestBodyExampleIdentity returns the example key for endpoint's request
+// body. HTTP and JSON-RPC endpoints receive different keys.
 func RequestBodyExampleIdentity(endpoint *HTTPEndpointExpr) ExampleIdentity {
 	kind := httpRequestBodyExampleKind
 	if endpoint.IsJSONRPC() {
@@ -114,10 +113,9 @@ func RequestBodyExampleIdentity(endpoint *HTTPEndpointExpr) ExampleIdentity {
 	)
 }
 
-// ResponseBodyExampleIdentity returns the successful response body example
-// identity owned by response in endpoint. HTTP and JSON-RPC mappings receive
-// distinct identities. Endpoint validation makes each successful status code
-// unique.
+// ResponseBodyExampleIdentity returns the example key for a successful response
+// body. HTTP and JSON-RPC endpoints receive different keys, and each successful
+// status code receives its own key.
 func ResponseBodyExampleIdentity(endpoint *HTTPEndpointExpr, response *HTTPResponseExpr) ExampleIdentity {
 	kind := httpResponseBodyExampleKind
 	if endpoint.IsJSONRPC() {
@@ -131,10 +129,9 @@ func ResponseBodyExampleIdentity(endpoint *HTTPEndpointExpr, response *HTTPRespo
 	)
 }
 
-// ErrorResponseBodyExampleIdentity returns the error response body example
-// identity owned by response in endpoint. HTTP and JSON-RPC mappings receive
-// distinct identities. Error names distinguish errors that intentionally
-// share an HTTP status.
+// ErrorResponseBodyExampleIdentity returns the example key for an error response
+// body. HTTP and JSON-RPC endpoints receive different keys. The error name keeps
+// two errors with the same HTTP status separate.
 func ErrorResponseBodyExampleIdentity(endpoint *HTTPEndpointExpr, response *HTTPErrorExpr) ExampleIdentity {
 	kind := httpErrorResponseBodyExampleKind
 	if endpoint.IsJSONRPC() {
@@ -149,32 +146,32 @@ func ErrorResponseBodyExampleIdentity(endpoint *HTTPEndpointExpr, response *HTTP
 	)
 }
 
-// GRPCRequestMessageExampleIdentity returns the gRPC request message example
-// identity owned by method.
+// GRPCRequestMessageExampleIdentity returns the example key for method's gRPC
+// request message.
 func GRPCRequestMessageExampleIdentity(method *MethodExpr) ExampleIdentity {
 	return methodExampleIdentity(grpcRequestMessageExampleKind, method)
 }
 
-// GRPCResponseMessageExampleIdentity returns the gRPC response message example
-// identity owned by method.
+// GRPCResponseMessageExampleIdentity returns the example key for method's gRPC
+// response message.
 func GRPCResponseMessageExampleIdentity(method *MethodExpr) ExampleIdentity {
 	return methodExampleIdentity(grpcResponseMessageExampleKind, method)
 }
 
-// GRPCStreamingRequestMessageExampleIdentity returns the gRPC streaming
-// request message example identity owned by method.
+// GRPCStreamingRequestMessageExampleIdentity returns the example key for
+// method's streaming gRPC request message.
 func GRPCStreamingRequestMessageExampleIdentity(method *MethodExpr) ExampleIdentity {
 	return methodExampleIdentity(grpcStreamingRequestMessageExampleKind, method)
 }
 
-// GRPCStreamingResponseMessageExampleIdentity returns the gRPC streaming
-// response message example identity owned by method.
+// GRPCStreamingResponseMessageExampleIdentity returns the example key for
+// method's streaming gRPC response message.
 func GRPCStreamingResponseMessageExampleIdentity(method *MethodExpr) ExampleIdentity {
 	return methodExampleIdentity(grpcStreamingResponseMessageExampleKind, method)
 }
 
-// GRPCErrorMessageExampleIdentity returns the gRPC error message example
-// identity owned by err in method.
+// GRPCErrorMessageExampleIdentity returns the example key for err's gRPC
+// message in method.
 func GRPCErrorMessageExampleIdentity(method *MethodExpr, err *ErrorExpr) ExampleIdentity {
 	return newExampleIdentity(
 		grpcErrorMessageExampleKind,
@@ -184,8 +181,8 @@ func GRPCErrorMessageExampleIdentity(method *MethodExpr, err *ErrorExpr) Example
 	)
 }
 
-// GRPCArrayWrapperExampleIdentity returns the stable gRPC wrapper identity for
-// an authored array alias shared across message fields.
+// GRPCArrayWrapperExampleIdentity returns the example key for the gRPC message
+// that wraps an array type written in the design.
 func GRPCArrayWrapperExampleIdentity(typ UserType) ExampleIdentity {
 	if !IsArray(typ) {
 		panic("gRPC array wrapper identity requires an array user type")
@@ -193,8 +190,8 @@ func GRPCArrayWrapperExampleIdentity(typ UserType) ExampleIdentity {
 	return newExampleIdentity(grpcArrayWrapperExampleKind, []byte(typ.Origin().ID()))
 }
 
-// GRPCMapWrapperExampleIdentity returns the stable gRPC wrapper identity for
-// an authored map alias shared across message fields.
+// GRPCMapWrapperExampleIdentity returns the example key for the gRPC message
+// that wraps a map type written in the design.
 func GRPCMapWrapperExampleIdentity(typ UserType) ExampleIdentity {
 	if !IsMap(typ) {
 		panic("gRPC map wrapper identity requires a map user type")
@@ -202,56 +199,54 @@ func GRPCMapWrapperExampleIdentity(typ UserType) ExampleIdentity {
 	return newExampleIdentity(grpcMapWrapperExampleKind, []byte(typ.Origin().ID()))
 }
 
-// Seed returns the complete stable seed material custom randomizer factories
-// use to create the stream for this identity.
+// Seed returns the complete encoded key passed to custom randomizer factories.
 func (i ExampleIdentity) Seed() string {
 	return base64.RawURLEncoding.EncodeToString([]byte(i.seed))
 }
 
-// Member returns the identity of the named object member below i.
+// Member returns the example key for name within i.
 func (i ExampleIdentity) Member(name string) ExampleIdentity {
 	return i.append(memberExampleKind, []byte(name))
 }
 
-// ArrayElement returns the identity of the indexed array element below i.
+// ArrayElement returns the example key for index within the array at i.
 func (i ExampleIdentity) ArrayElement(index int) ExampleIdentity {
 	return i.append(arrayElementExampleKind, exampleIdentityInt(index))
 }
 
-// MapKey returns the identity of the indexed map key below i.
+// MapKey returns the example key for key index within the map at i.
 func (i ExampleIdentity) MapKey(index int) ExampleIdentity {
 	return i.append(mapKeyExampleKind, exampleIdentityInt(index))
 }
 
-// MapValue returns the identity of the indexed map value below i.
+// MapValue returns the example key for value index within the map at i.
 func (i ExampleIdentity) MapValue(index int) ExampleIdentity {
 	return i.append(mapValueExampleKind, exampleIdentityInt(index))
 }
 
-// UnionMember returns the identity of the named union member below i.
+// UnionMember returns the example key for name within the union at i.
 func (i ExampleIdentity) UnionMember(name string) ExampleIdentity {
 	return i.append(unionMemberExampleKind, []byte(name))
 }
 
-// newExampleIdentity serializes one typed segment with independently framed
-// components so punctuation and component boundaries cannot collide.
+// A new example key encodes a value kind and each component's byte length so
+// different component lists cannot produce the same key.
 func newExampleIdentity(kind exampleIdentityKind, components ...[]byte) ExampleIdentity {
 	return ExampleIdentity{seed: string(appendExampleIdentitySegment(nil, kind, components...))}
 }
 
-// methodExampleIdentity derives a method-owned identity from the evaluated
-// service and method names rather than accepting caller-supplied components.
+// Method example keys are built from the evaluated service and method names.
 func methodExampleIdentity(kind exampleIdentityKind, method *MethodExpr) ExampleIdentity {
 	return newExampleIdentity(kind, []byte(method.Service.Name), []byte(method.Name))
 }
 
-// exampleIdentityInt returns a stable fixed-width encoding of value.
+// Integers in example keys are written as eight bytes in big-endian order.
 func exampleIdentityInt(value int) []byte {
 	return binary.BigEndian.AppendUint64(nil, uint64(value))
 }
 
-// appendExampleIdentitySegment writes the segment kind, component count, and
-// byte length of each component before its data.
+// Each added part writes its kind, number of components, and every component's
+// byte length before the component bytes.
 func appendExampleIdentitySegment(seed []byte, kind exampleIdentityKind, components ...[]byte) []byte {
 	seed = append(seed, byte(kind))
 	seed = binary.BigEndian.AppendUint64(seed, uint64(len(components)))
@@ -262,8 +257,7 @@ func appendExampleIdentitySegment(seed []byte, kind exampleIdentityKind, compone
 	return seed
 }
 
-// append adds one structural segment without exposing the serialized form to
-// callers.
+// append adds one member, array, map, or union part to the current key.
 func (i ExampleIdentity) append(kind exampleIdentityKind, components ...[]byte) ExampleIdentity {
 	if i.seed == "" {
 		panic("example identity must have a semantic owner before structural descent")

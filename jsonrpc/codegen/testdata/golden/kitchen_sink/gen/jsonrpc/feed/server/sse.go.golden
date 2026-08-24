@@ -17,7 +17,6 @@ import (
 	feed "generated.local/gen/feed"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"
-	goa "goa.design/goa/v3/pkg"
 )
 
 type (
@@ -38,11 +37,14 @@ type (
 	}
 )
 
+// Header returns the headers written while the event is being encoded.
 func (b *sseEventBuffer) Header() http.Header {
 	return b.header
 }
 
-func (b *sseEventBuffer) WriteHeader(int) {}
+// WriteHeader leaves the response status for the real HTTP response writer.
+func (b *sseEventBuffer) WriteHeader(int) {
+}
 
 // initSSEHeaders writes the response headers before the first event.
 func (s *sseServerStream) initSSEHeaders() {
@@ -65,10 +67,8 @@ func (s *sseServerStream) sendSSEEvent(ctx context.Context, eventType string, va
 	}
 
 	s.initSSEHeaders()
-	if eventType != "" {
-		if _, err := fmt.Fprintf(s.w, "event: %s\n", eventType); err != nil {
-			return fmt.Errorf("write server-sent event name: %w", err)
-		}
+	if _, err := fmt.Fprintf(s.w, "event: %s\n", eventType); err != nil {
+		return fmt.Errorf("write server-sent event name: %w", err)
 	}
 	if _, err := s.w.Write([]byte("data: ")); err != nil {
 		return fmt.Errorf("write server-sent event data label: %w", err)
@@ -96,86 +96,28 @@ func (s *sseServerStream) sendError(ctx context.Context, id any, code jsonrpc.Co
 type WatchServerStream struct {
 	// sseServerStream writes JSON-RPC messages as server-sent events.
 	sseServerStream
-	// requestID identifies the request in the final response.
-	requestID any
-	// closed records whether SendAndClose has written the final response.
-	closed bool
-	// mu protects closed and view while service code sends results.
-	mu sync.Mutex
 }
 
-// Send sends a JSON-RPC notification to the client.
-// Notifications do not expect a response from the client.
-func (s *WatchServerStream) Send(ctx context.Context, event feed.WatchEvent) error {
-	// Reject a send after SendAndClose wrote the final response.
-	s.mu.Lock()
-	if s.closed {
-		s.mu.Unlock()
-		return fmt.Errorf("stream closed")
-	}
-	s.mu.Unlock()
+// Send streams instances of "WatchResult".
+func (s *WatchServerStream) Send(event *feed.WatchResult) error {
+	return s.SendWithContext(context.Background(), event)
+}
 
-	// Read the service result value from the event.
-	result, ok := event.(*feed.WatchResult)
-	if !ok {
-		return fmt.Errorf("unexpected event type: %T", event)
-	}
-	// Build the JSON body declared for this service result.
+// SendWithContext streams instances of "WatchResult" with context.
+func (s *WatchServerStream) SendWithContext(ctx context.Context, event *feed.WatchResult) error {
+	result := event
 	body := NewWatchResponseBody(result)
 
-	// Write a notification without a request ID.
 	message := map[string]any{
 		"jsonrpc": "2.0",
 		"method":  "watch",
 		"params":  body,
 	}
-
 	return s.sendSSEEvent(ctx, "notification", message)
 }
 
-// SendAndClose sends a final JSON-RPC response to the client and closes the
-// stream.
-// The response will include the original request ID unless the result has an
-// ID field populated.
-// After calling this method, no more events can be sent on this stream.
-func (s *WatchServerStream) SendAndClose(ctx context.Context, event feed.WatchEvent) error {
-	// Reject a second final response.
-	s.mu.Lock()
-	if s.closed {
-		s.mu.Unlock()
-		return fmt.Errorf("stream already closed")
-	}
-	s.closed = true
-	s.mu.Unlock()
-
-	// Read the service result value from the event.
-	result, ok := event.(*feed.WatchResult)
-	if !ok {
-		return fmt.Errorf("unexpected event type: %T", event)
-	}
-
-	// Start with the ID of the request that opened this stream.
-	var id any = s.requestID
-	// Build the JSON body declared for this service result.
-	body := NewWatchResponseBody(result)
-
-	// Write the final response with its request ID.
-	message := map[string]any{
-		"jsonrpc": "2.0",
-		"id":      id,
-		"result":  body,
-	}
-
-	return s.sendSSEEvent(ctx, "response", message)
-}
-
-// SendError sends a JSON-RPC error response.
-func (s *WatchServerStream) SendError(ctx context.Context, id string, err error) error {
-	// Report request validation failures as invalid parameters and all other
-	// failures as internal errors.
-	code := jsonrpc.InternalError
-	if _, ok := err.(*goa.ServiceError); ok {
-		code = jsonrpc.InvalidParams
-	}
-	return s.sendError(ctx, id, code, err.Error(), nil)
+// Close does nothing because the HTTP response closes when the service method
+// returns.
+func (s *WatchServerStream) Close() error {
+	return nil
 }

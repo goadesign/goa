@@ -62,12 +62,7 @@ func (svc *GRPCServiceExpr) EndpointFor(name string, m *MethodExpr) *GRPCEndpoin
 
 // Error returns the error with the given name.
 func (svc *GRPCServiceExpr) Error(name string) *ErrorExpr {
-	for _, erro := range svc.ServiceExpr.Errors {
-		if erro.Name == name {
-			return erro
-		}
-	}
-	return Root.Error(name)
+	return svc.ServiceExpr.Error(name)
 }
 
 // GRPCError returns the service gRPC error with given name if any.
@@ -102,7 +97,7 @@ func (svc *GRPCServiceExpr) Validate() error {
 	for _, er := range svc.GRPCErrors {
 		verr.Merge(er.Validate())
 	}
-	for _, er := range Root.API.GRPC.Errors {
+	for _, er := range svc.ServiceExpr.design.API.GRPC.Errors {
 		// This may result in the same error being validated multiple
 		// times however service is the top level expression being
 		// walked and errors cannot be walked until all expressions have

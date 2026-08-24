@@ -1,0 +1,20 @@
+// NewProtoMethodServerStreamingUserTypeRPCResponse builds
+// *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse
+// from *serviceserverstreamingusertyperpcviews.ResultTypeView.
+func NewProtoMethodServerStreamingUserTypeRPCResponse(result *serviceserverstreamingusertyperpcviews.ResultTypeView) *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse {
+	message := &service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse{
+		IntField:    int32(*result.IntField),
+		DoubleField: *result.DoubleField,
+	}
+	return message
+}
+
+// NewProtoMethodServerStreamingUserTypeRPCResponseTiny builds
+// *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse
+// from *serviceserverstreamingusertyperpcviews.ResultTypeView.
+func NewProtoMethodServerStreamingUserTypeRPCResponseTiny(result *serviceserverstreamingusertyperpcviews.ResultTypeView) *service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse {
+	message := &service_server_streaming_user_type_rpcpb.MethodServerStreamingUserTypeRPCResponse{
+		IntField: int32(*result.IntField),
+	}
+	return message
+}

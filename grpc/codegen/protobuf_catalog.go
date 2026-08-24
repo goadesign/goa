@@ -1,12 +1,12 @@
-// This file owns the protobuf declarations and validation helpers emitted by
-// one generated gRPC protobuf package. It separates declaration identity from
-// traversal identity and freezes names before conversion data refers to them.
+// This file records the protobuf messages and validation functions written for
+// one gRPC service. It chooses every package-level name before conversion code
+// refers to that name.
 package codegen
 
 import (
 	"fmt"
 	"reflect"
-	"strconv"
+	"regexp"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -15,24 +15,25 @@ import (
 )
 
 type (
-	// protobufPackageCatalog owns every protobuf message and validator emitted
-	// into one generated protobuf package.
+	// protobufPackageCatalog stores every message and validation function that
+	// Goa writes for one service.
 	protobufPackageCatalog struct {
 		packageName       string
+		plan              *protobufServicePlan
 		messages          []*protobufMessageRecord
 		messageUses       map[*expr.AttributeExpr]*protobufMessageRecord
 		unions            []*protobufUnionRecord
 		unionUses         map[*expr.AttributeExpr]*protobufUnionRecord
 		rootSources       map[expr.UserType]protobufMessageSource
-		reservedNames     []string
 		validators        []*protobufValidationRecord
+		validationUses    map[protobufValidationUse]*protobufValidationRecord
 		frozen            bool
 		messagesRendered  bool
 		validationsFrozen bool
 	}
 
-	// protobufEndpointMessages contains every detached protobuf-shaped value for
-	// one endpoint before conversion and render records are built.
+	// protobufEndpointMessages contains the copied request, response, and error
+	// values used to write one endpoint's protobuf code.
 	protobufEndpointMessages struct {
 		request          *expr.AttributeExpr
 		streamingRequest *expr.AttributeExpr
@@ -41,18 +42,22 @@ type (
 		errors           map[string]*expr.AttributeExpr
 	}
 
-	// protobufMessageRecord is the canonical declaration selected for one typed
-	// protobuf wire contract.
+	// protobufMessageRecord stores one protobuf message and every place that
+	// uses it.
 	protobufMessageRecord struct {
-		identity protobufMessageIdentity
-		uses     []*expr.AttributeExpr
-		name     string
-		goRef    string
-		data     *service.UserTypeData
+		identity    protobufMessageIdentity
+		uses        []*expr.AttributeExpr
+		protoName   string
+		plannedName string
+		declaration *codegen.NameDeclaration
+		name        string
+		goRef       string
+		data        *service.UserTypeData
 	}
 
-	// protobufMessageIdentity contains the source declaration and the wire facts
-	// that can change the emitted protobuf message.
+	// This record stores the source declaration, requested name, explicit-name
+	// flag, and type fields used to decide whether two values can share one
+	// protobuf message.
 	protobufMessageIdentity struct {
 		source        protobufMessageSource
 		preferredName string
@@ -61,9 +66,7 @@ type (
 		attribute     *expr.AttributeExpr
 	}
 
-	// protobufUnionRecord identifies one oneof declaration nested in an owning
-	// protobuf message. Generated transformation helpers use this typed owner
-	// instead of allocating a name during lookup.
+	// protobufUnionRecord stores one oneof inside its protobuf message.
 	protobufUnionRecord struct {
 		owner     *protobufMessageRecord
 		attribute *expr.AttributeExpr
@@ -72,50 +75,73 @@ type (
 		name      string
 	}
 
-	// protobufMessageSource identifies either an authored declaration or a
-	// synthetic endpoint message whose declaration does not exist in the design.
+	// protobufMessageSource points to either an authored declaration or an
+	// endpoint message created by the generator.
 	protobufMessageSource struct {
 		origin    expr.UserType
 		synthetic protobufSyntheticMessage
 	}
 
-	// protobufSyntheticMessage identifies a compiler-created endpoint message.
+	// protobufSyntheticMessage stores a message that Goa creates for an endpoint.
 	protobufSyntheticMessage struct {
 		endpoint *expr.GRPCEndpointExpr
 		error    *expr.GRPCErrorExpr
 		role     protobufSyntheticRole
 	}
 
-	// protobufSyntheticRole identifies which endpoint wire value a synthetic
-	// protobuf message represents.
+	// protobufSyntheticRole says which endpoint value a Goa-created message holds.
 	protobufSyntheticRole uint8
 
-	// protobufValidationRecord is the canonical validation helper emitted in one
-	// generated client or server package.
+	// protobufValidationRecord stores one validation function written to a
+	// client or server package.
 	protobufValidationRecord struct {
-		declaration *protobufMessageRecord
+		message     *protobufMessageRecord
+		declaration *codegen.NameDeclaration
 		attribute   *expr.AttributeExpr
+		source      protobufValidationSource
 		side        validateKind
 		targetName  string
 		contextName string
 		uses        []*expr.AttributeExpr
-		name        string
 		data        *ValidationData
 	}
 
-	// protobufAttributePair breaks cycles while comparing two typed wire or
-	// validation graphs.
+	// protobufValidationSource records the endpoint value and nested field that
+	// first needs one validation function.
+	protobufValidationSource struct {
+		api     string
+		service string
+		method  string
+		error   string
+		path    string
+		role    protobufValidationRole
+	}
+
+	// protobufValidationRole says which endpoint value is checked.
+	protobufValidationRole uint8
+
+	// protobufValidationUse records which function checks one copied value in a
+	// generated client or server package.
+	protobufValidationUse struct {
+		attribute *expr.AttributeExpr
+		side      validateKind
+	}
+
+	// protobufAttributePair stops a comparison when recursive values lead back
+	// to the same pair.
 	protobufAttributePair struct {
 		left  *expr.AttributeExpr
 		right *expr.AttributeExpr
 	}
 
-	// protobufValidationScope resolves nested validation calls through frozen
-	// validator records while delegating fields and type references to protobuf.
+	// This value supplies the protobuf message names and validation function
+	// names used while Goa writes validation code.
 	protobufValidationScope struct {
 		*protoBufScope
 		catalog *protobufPackageCatalog
 		side    validateKind
+		message *protobufMessageRecord
+		parent  expr.UserType
 	}
 )
 
@@ -128,29 +154,29 @@ const (
 	protobufWrapperMessage
 )
 
-// newProtobufPackageCatalog constructs the declaration owner for one actual
-// generated protobuf package.
+var protobufExactNamePattern = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*$`)
+
+const (
+	protobufRequestValidation protobufValidationRole = iota + 1
+	protobufResponseValidation
+	protobufErrorValidation
+	protobufStreamingRequestValidation
+)
+
+// newProtobufPackageCatalog creates the protobuf messages for one service and
+// the functions that validate those messages in its client and server.
 func newProtobufPackageCatalog(packageName string) *protobufPackageCatalog {
 	return &protobufPackageCatalog{
-		packageName: packageName,
-		messageUses: make(map[*expr.AttributeExpr]*protobufMessageRecord),
-		unionUses:   make(map[*expr.AttributeExpr]*protobufUnionRecord),
-		rootSources: make(map[expr.UserType]protobufMessageSource),
+		packageName:    packageName,
+		messageUses:    make(map[*expr.AttributeExpr]*protobufMessageRecord),
+		unionUses:      make(map[*expr.AttributeExpr]*protobufUnionRecord),
+		rootSources:    make(map[expr.UserType]protobufMessageSource),
+		validationUses: make(map[protobufValidationUse]*protobufValidationRecord),
 	}
 }
 
-// reserveName prevents message declarations from colliding with another
-// package-level protobuf declaration such as the service interface.
-func (c *protobufPackageCatalog) reserveName(name string) {
-	if c.frozen {
-		panic("cannot reserve a protobuf package name after the catalog freezes")
-	}
-	c.reservedNames = append(c.reservedNames, name)
-}
-
-// bindRootSource associates a shaped root declaration and all of its later
-// copies with the authored service declaration or synthetic endpoint role
-// whose value it carries.
+// bindRootSource records which service or endpoint value a generated top-level
+// message carries. Copies of that message use the same information.
 func (c *protobufPackageCatalog) bindRootSource(attribute *expr.AttributeExpr, source protobufMessageSource) {
 	if attribute.Type == expr.Empty {
 		return
@@ -162,18 +188,18 @@ func (c *protobufPackageCatalog) bindRootSource(attribute *expr.AttributeExpr, s
 	c.rootSources[userType.Origin()] = source
 }
 
-// collectMessage records every protobuf declaration reachable from attribute.
-// source identifies the service declaration or synthetic role carried by the
-// root; nested authored declarations retain their own origins.
-func (c *protobufPackageCatalog) collectMessage(attribute *expr.AttributeExpr, source protobufMessageSource, sd *ServiceData) []string {
+// collectMessage records every protobuf message reachable from an endpoint's
+// request, response, or error attribute. source identifies that top-level
+// attribute. Nested user types keep their own declarations.
+func (c *protobufPackageCatalog) collectMessage(attribute *expr.AttributeExpr, source protobufMessageSource) error {
 	if c.frozen {
 		panic("cannot collect a protobuf message after the package catalog is frozen")
 	}
-	return c.collectMessageRecursive(attribute, source, true, nil, "", sd)
+	return c.collectMessageRecursive(attribute, source, true, nil, "")
 }
 
-// freezeMessages assigns every declaration its final protobuf and generated Go
-// names, binds all occurrences, and builds immutable template records.
+// freezeMessages chooses the final protobuf and Go names for every message. It
+// then connects each copied value to its message and prepares template data.
 func (c *protobufPackageCatalog) freezeMessages(sd *ServiceData) []*service.UserTypeData {
 	c.freezeMessageNames()
 	if c.messagesRendered {
@@ -202,63 +228,49 @@ func (c *protobufPackageCatalog) freezeMessages(sd *ServiceData) []*service.User
 	return c.messageData()
 }
 
-// freezeMessageNames assigns every declaration its final package-level name
-// without rendering .proto definitions. Transformation-only consumers use
-// this phase because they need references but do not emit declarations.
+// freezeMessageNames chooses the final package-level name for every message
+// without creating its .proto definition. Conversion code uses this when it
+// needs the Go type name but another service writes the message.
 func (c *protobufPackageCatalog) freezeMessageNames() {
 	if c.frozen {
 		return
 	}
 	c.frozen = true
-	used := make(map[string]struct{}, len(c.messages))
-	counts := make(map[string]int, len(c.messages))
-	for _, name := range c.reservedNames {
-		used[name] = struct{}{}
-		counts[name] = 1
+	if c.plan == nil {
+		panic("protobuf message names were not planned")
 	}
 	for _, record := range c.messages {
-		record.name = uniqueProtobufName(record.identity.preferredName, used, counts)
+		record.name = record.declaration.Name()
 		record.goRef = "*" + c.packageName + "." + record.name
 	}
 	for _, record := range c.unions {
-		record.name = record.owner.name + "_" + protoBufify(record.fieldName, true, true)
+		record.name = c.plan.oneofInterfaceName(record)
 	}
 }
 
-// collectValidation records the validation helper needed for attribute and all
-// nested protobuf message declarations on one generated side.
-func (c *protobufPackageCatalog) collectValidation(attribute *expr.AttributeExpr, side validateKind, targetName, contextName string) {
-	if !c.frozen {
-		panic("cannot collect protobuf validators before message declarations freeze")
-	}
+// collectValidation records the validation function needed for attribute and
+// every nested protobuf message it can call.
+func (c *protobufPackageCatalog) collectValidation(attribute *expr.AttributeExpr, side validateKind, source protobufValidationSource, targetName, contextName string) {
 	if c.validationsFrozen {
 		panic("cannot collect a protobuf validator after validators freeze")
 	}
-	c.collectValidationRecursive(attribute, side, targetName, contextName, make(map[*protobufValidationRecord]struct{}))
+	c.collectValidationRecursive(attribute, side, source, targetName, contextName, make(map[*protobufValidationRecord]struct{}))
 }
 
-// freezeValidations assigns helper names independently in the generated client
-// and server packages, then renders definitions through those frozen records.
+// freezeValidations builds each validation function with the name already
+// chosen for its generated client or server package.
 func (c *protobufPackageCatalog) freezeValidations(sd *ServiceData) []*ValidationData {
 	if c.validationsFrozen {
 		return c.validationData()
 	}
 	c.validationsFrozen = true
-	used := map[validateKind]map[string]struct{}{
-		validateServer: {},
-		validateClient: {},
-	}
-	counts := map[validateKind]map[string]int{
-		validateServer: {},
-		validateClient: {},
-	}
 	for _, record := range c.validators {
-		base := "Validate" + record.declaration.name
-		record.name = uniqueProtobufName(base, used[record.side], counts[record.side])
-	}
-	for _, record := range c.validators {
+		if record.declaration == nil {
+			panic(fmt.Sprintf("protobuf validator for %q has no generated declaration", record.message.plannedName))
+		}
 		validationAttribute := expr.DupAtt(record.attribute)
-		c.bindEquivalentMessageUses(record.attribute, validationAttribute, make(map[protobufAttributePair]struct{}))
+		c.plan.bindAttributeCopy(record.attribute, validationAttribute)
+		c.bindCopiedValidationUses(record.attribute, validationAttribute, record.side)
 		removeMeta(validationAttribute)
 		userType := validationAttribute.Type.(expr.UserType)
 		context := protoBufTypeContext(c.packageName, sd, false)
@@ -266,6 +278,8 @@ func (c *protobufPackageCatalog) freezeValidations(sd *ServiceData) []*Validatio
 			protoBufScope: context.Scope.(*protoBufScope),
 			catalog:       c,
 			side:          record.side,
+			message:       record.message,
+			parent:        userType,
 		}
 		definition := codegen.AttributeValidationCode(
 			userTypeAttribute(userType),
@@ -280,122 +294,88 @@ func (c *protobufPackageCatalog) freezeValidations(sd *ServiceData) []*Validatio
 			continue
 		}
 		record.data = &ValidationData{
-			Name:    record.name,
-			Def:     definition,
-			ArgName: record.targetName,
-			SrcName: record.declaration.name,
-			SrcRef:  record.declaration.goRef,
-			Kind:    record.side,
+			Declaration: record.declaration,
+			Name:        record.declaration.Name(),
+			Def:         definition,
+			ArgName:     record.targetName,
+			SrcName:     record.message.name,
+			SrcRef:      record.message.goRef,
+			Kind:        record.side,
 		}
 	}
 	return c.validationData()
 }
 
-// message returns the frozen declaration bound to attribute.
+// message returns the completed message used for attribute.
 func (c *protobufPackageCatalog) message(attribute *expr.AttributeExpr) *protobufMessageRecord {
 	if !c.frozen {
 		panic("cannot resolve a protobuf message before the package catalog freezes")
 	}
-	if record := c.messageUses[attribute]; record != nil {
-		return record
-	}
-	if _, ok := attribute.Type.(expr.UserType); !ok {
-		return nil
-	}
-	userType := attribute.Type.(expr.UserType)
-	source := protobufMessageSource{origin: userType.Origin()}
-	if synthetic, ok := c.rootSources[userType.Origin()]; ok {
-		source = synthetic
-	}
-	identity := protobufMessageIdentityFor(attribute, source)
-	for _, record := range c.messages {
-		if sameProtobufMessageIdentity(record.identity, identity) {
-			return record
-		}
-	}
-	if len(userType.Attribute().Meta[wrappedAttrMeta]) > 0 {
-		identity.source = protobufMessageSource{synthetic: protobufSyntheticMessage{role: protobufWrapperMessage}}
-		for _, record := range c.messages {
-			if sameProtobufMessageIdentity(record.identity, identity) {
-				return record
-			}
-		}
-	}
-	return nil
+	return c.messageRecord(attribute)
 }
 
-// unionName returns the frozen helper identity for one oneof declaration.
+// messageRecord returns the protobuf message collected for attribute. It may
+// be called before package names are fixed.
+func (c *protobufPackageCatalog) messageRecord(attribute *expr.AttributeExpr) *protobufMessageRecord {
+	return c.messageUses[attribute]
+}
+
+// unionName returns the chosen Go interface name for one oneof declaration.
 func (c *protobufPackageCatalog) unionName(attribute *expr.AttributeExpr) string {
 	if !c.frozen {
 		panic("cannot resolve a protobuf oneof before the package catalog freezes")
 	}
 	record := c.unionUses[attribute]
 	if record == nil {
-		for _, candidate := range c.unions {
-			if !sameProtobufWireAttribute(candidate.attribute, attribute, make(map[protobufAttributePair]struct{})) {
-				continue
-			}
-			if record != nil && record != candidate {
-				panic(fmt.Sprintf("protobuf oneof %q matches multiple frozen declarations", attribute.Type.Name()))
-			}
-			record = candidate
-		}
-	}
-	if record == nil {
 		panic(fmt.Sprintf("protobuf oneof %q has no frozen declaration", attribute.Type.Name()))
 	}
 	return record.name
 }
 
-// validation returns the frozen validator bound to attribute on side.
+// validation returns the completed validation function used for attribute in
+// the client or server package.
 func (c *protobufPackageCatalog) validation(attribute *expr.AttributeExpr, side validateKind) *ValidationData {
 	if !c.validationsFrozen {
 		panic("cannot resolve a protobuf validator before validators freeze")
 	}
-	declaration := c.message(attribute)
-	if declaration == nil {
+	record := c.validationUses[protobufValidationUse{attribute: attribute, side: side}]
+	if record == nil {
 		return nil
 	}
-	for _, record := range c.validators {
-		if record.side == side && record.declaration == declaration &&
-			sameProtobufValidationAttribute(record.attribute, attribute, make(map[protobufAttributePair]struct{})) {
-			return record.data
+	return record.data
+}
+
+// Ref returns the current message name when union validation asks for its
+// parent type. Other values use the protobuf package records.
+func (s *protobufValidationScope) Ref(attribute *expr.AttributeExpr, pkg string) string {
+	if attribute.Type == s.parent {
+		name := s.message.name
+		if pkg != "" {
+			name = pkg + "." + name
 		}
+		return "*" + name
 	}
-	return nil
+	return s.protoBufScope.Ref(attribute, pkg)
 }
 
-// Name returns the frozen protobuf declaration name, or the validator-specific
-// source name while validation code is being rendered.
-func (s *protobufValidationScope) Name(attribute *expr.AttributeExpr, pkg string, pointer, useDefault bool) string {
-	if validator := s.catalog.validationRecord(attribute, s.side); validator != nil {
-		return strings.TrimPrefix(validator.name, "Validate")
-	}
-	return s.protoBufScope.Name(attribute, pkg, pointer, useDefault)
-}
-
-// ValidatorName returns the exact side-specific protobuf validator retained by
-// the package catalog.
-func (s *protobufValidationScope) ValidatorName(attribute *expr.AttributeExpr, _ string) string {
+// ValidatorCall returns a call to the validation function written to the
+// current client or server package.
+func (s *protobufValidationScope) ValidatorCall(attribute *expr.AttributeExpr, _, target, _ string) string {
 	validator := s.catalog.validationRecord(attribute, s.side)
 	if validator == nil {
 		panic("protobuf validator was not retained")
 	}
-	return validator.name
+	return fmt.Sprintf("%s(%s)", validator.declaration.Name(), target)
 }
 
-// collectMessageRecursive gathers imports and declarations while using record
-// identity itself as the cycle guard.
-func (c *protobufPackageCatalog) collectMessageRecursive(attribute *expr.AttributeExpr, source protobufMessageSource, root bool, owner *protobufMessageRecord, fieldName string, sd *ServiceData) []string {
+// collectMessageRecursive records messages and oneofs. Existing message
+// records stop recursive user types.
+func (c *protobufPackageCatalog) collectMessageRecursive(attribute *expr.AttributeExpr, source protobufMessageSource, root bool, owner *protobufMessageRecord, fieldName string) error {
 	if attribute == nil {
 		return nil
 	}
-	imports := protobufAttributeImports(attribute, sd)
 	if expr.IsPrimitive(attribute.Type) {
-		if attribute.Type.Kind() == expr.AnyKind {
-			imports = append(imports, "google/protobuf/struct.proto")
-		}
-		return imports
+		return nil
 	}
 	switch actual := attribute.Type.(type) {
 	case expr.UserType:
@@ -413,27 +393,34 @@ func (c *protobufPackageCatalog) collectMessageRecursive(attribute *expr.Attribu
 			identitySource = source
 			c.rootSources[origin] = source
 		}
-		identity := protobufMessageIdentityFor(attribute, identitySource)
+		identity, err := protobufMessageIdentityFor(attribute, identitySource)
+		if err != nil {
+			return err
+		}
 		record := c.findMessage(identity)
 		if record != nil {
 			record.uses = append(record.uses, attribute)
 			c.messageUses[attribute] = record
-			c.bindEquivalentMessageUses(record.uses[0], attribute, make(map[protobufAttributePair]struct{}))
-			return imports
+			c.bindCopiedMessageUses(record.uses[0], attribute)
+			return nil
 		}
 		record = &protobufMessageRecord{identity: identity, uses: []*expr.AttributeExpr{attribute}}
 		c.messages = append(c.messages, record)
 		c.messageUses[attribute] = record
-		imports = append(imports, c.collectMessageRecursive(userTypeAttribute(actual), protobufMessageSource{}, false, record, "", sd)...)
+		return c.collectMessageRecursive(userTypeAttribute(actual), protobufMessageSource{}, false, record, "")
 	case *expr.Object:
 		for _, named := range *actual {
-			imports = append(imports, c.collectMessageRecursive(named.Attribute, protobufMessageSource{}, false, owner, named.Name, sd)...)
+			if err := c.collectMessageRecursive(named.Attribute, protobufMessageSource{}, false, owner, named.Name); err != nil {
+				return err
+			}
 		}
 	case *expr.Array:
-		imports = append(imports, c.collectMessageRecursive(actual.ElemType, protobufMessageSource{}, false, owner, fieldName+"Elem", sd)...)
+		return c.collectMessageRecursive(actual.ElemType, protobufMessageSource{}, false, owner, fieldName+"Elem")
 	case *expr.Map:
-		imports = append(imports, c.collectMessageRecursive(actual.KeyType, protobufMessageSource{}, false, owner, fieldName+"Key", sd)...)
-		imports = append(imports, c.collectMessageRecursive(actual.ElemType, protobufMessageSource{}, false, owner, fieldName+"Elem", sd)...)
+		if err := c.collectMessageRecursive(actual.KeyType, protobufMessageSource{}, false, owner, fieldName+"Key"); err != nil {
+			return err
+		}
+		return c.collectMessageRecursive(actual.ElemType, protobufMessageSource{}, false, owner, fieldName+"Elem")
 	case *expr.Union:
 		if owner == nil {
 			panic(fmt.Sprintf("protobuf oneof %q has no owning message", actual.Name()))
@@ -453,56 +440,52 @@ func (c *protobufPackageCatalog) collectMessageRecursive(attribute *expr.Attribu
 		record.uses = append(record.uses, attribute)
 		c.unionUses[attribute] = record
 		for _, named := range actual.Values {
-			imports = append(imports, c.collectMessageRecursive(named.Attribute, protobufMessageSource{}, false, owner, fieldName+named.Name, sd)...)
-		}
-	}
-	return imports
-}
-
-// bindEquivalentMessageUses associates every nested declaration occurrence in
-// a reused wire graph with the canonical records already collected for the
-// first occurrence.
-func (c *protobufPackageCatalog) bindEquivalentMessageUses(canonical, duplicate *expr.AttributeExpr, seen map[protobufAttributePair]struct{}) {
-	pair := protobufAttributePair{left: canonical, right: duplicate}
-	if _, ok := seen[pair]; ok {
-		return
-	}
-	seen[pair] = struct{}{}
-	switch canonicalType := canonical.Type.(type) {
-	case expr.UserType:
-		if record := c.messageUses[canonical]; record != nil {
-			if c.messageUses[duplicate] == nil {
-				c.messageUses[duplicate] = record
-				record.uses = append(record.uses, duplicate)
+			if err := c.collectMessageRecursive(named.Attribute, protobufMessageSource{}, false, owner, fieldName+named.Name); err != nil {
+				return err
 			}
 		}
-		duplicateType := duplicate.Type.(expr.UserType)
-		c.bindEquivalentMessageUses(userTypeAttribute(canonicalType), userTypeAttribute(duplicateType), seen)
-	case *expr.Object:
-		duplicateType := duplicate.Type.(*expr.Object)
-		for index, named := range *canonicalType {
-			c.bindEquivalentMessageUses(named.Attribute, (*duplicateType)[index].Attribute, seen)
-		}
-	case *expr.Array:
-		c.bindEquivalentMessageUses(canonicalType.ElemType, duplicate.Type.(*expr.Array).ElemType, seen)
-	case *expr.Map:
-		duplicateType := duplicate.Type.(*expr.Map)
-		c.bindEquivalentMessageUses(canonicalType.KeyType, duplicateType.KeyType, seen)
-		c.bindEquivalentMessageUses(canonicalType.ElemType, duplicateType.ElemType, seen)
-	case *expr.Union:
-		if record := c.unionUses[canonical]; record != nil {
-			c.unionUses[duplicate] = record
-			record.uses = append(record.uses, duplicate)
-		}
-		duplicateType := duplicate.Type.(*expr.Union)
-		for index, named := range canonicalType.Values {
-			c.bindEquivalentMessageUses(named.Attribute, duplicateType.Values[index].Attribute, seen)
-		}
 	}
+	return nil
 }
 
-// findUnion returns the oneof declaration with the same owning message, field,
-// and typed wire schema.
+// bindCopiedMessageUses records the message, choice, field, and wrapper names
+// for every part of a copied protobuf value.
+func (c *protobufPackageCatalog) bindCopiedMessageUses(original, copy *expr.AttributeExpr) {
+	walkProtobufCopy(original, copy, func(original, copy *expr.AttributeExpr) {
+		if record := c.messageUses[original]; record != nil {
+			if existing := c.messageUses[copy]; existing != nil && existing != record {
+				panic("protobuf copy is connected to two message declarations")
+			}
+			if c.messageUses[copy] == nil {
+				c.messageUses[copy] = record
+				record.uses = append(record.uses, copy)
+			}
+		}
+		if record := c.unionUses[original]; record != nil {
+			if existing := c.unionUses[copy]; existing != nil && existing != record {
+				panic("protobuf copy is connected to two oneof declarations")
+			}
+			if c.unionUses[copy] == nil {
+				c.unionUses[copy] = record
+				record.uses = append(record.uses, copy)
+			}
+		}
+	})
+}
+
+// bindCopiedValidationUses records the validation function for each matching
+// part of a copied protobuf value.
+func (c *protobufPackageCatalog) bindCopiedValidationUses(original, copy *expr.AttributeExpr, side validateKind) {
+	walkProtobufCopy(original, copy, func(original, copy *expr.AttributeExpr) {
+		record := c.validationUses[protobufValidationUse{attribute: original, side: side}]
+		if record != nil {
+			c.bindValidationUse(copy, side, record)
+		}
+	})
+}
+
+// findUnion returns the oneof with the same parent message, field name, and
+// branch types.
 func (c *protobufPackageCatalog) findUnion(owner *protobufMessageRecord, fieldName string, attribute *expr.AttributeExpr) *protobufUnionRecord {
 	for _, record := range c.unions {
 		if record.owner == owner && record.fieldName == fieldName &&
@@ -513,54 +496,62 @@ func (c *protobufPackageCatalog) findUnion(owner *protobufMessageRecord, fieldNa
 	return nil
 }
 
-// collectValidationRecursive declares one validator per message, rule graph,
-// and generated side, then descends to the nested declarations it may call.
-func (c *protobufPackageCatalog) collectValidationRecursive(attribute *expr.AttributeExpr, side validateKind, targetName, contextName string, seen map[*protobufValidationRecord]struct{}) {
+// collectValidationRecursive records one function per message, set of rules,
+// and client or server package, then visits the nested messages it may call.
+func (c *protobufPackageCatalog) collectValidationRecursive(attribute *expr.AttributeExpr, side validateKind, source protobufValidationSource, targetName, contextName string, seen map[*protobufValidationRecord]struct{}) {
 	switch actual := attribute.Type.(type) {
 	case expr.UserType:
 		if expr.IsPrimitive(actual) {
 			return
 		}
-		declaration := c.message(attribute)
-		if declaration == nil {
+		policy := codegen.GoLayoutPolicy{IgnoreRequired: true}
+		if !codegen.NeedsValidation(userTypeAttribute(actual), policy) {
+			return
+		}
+		message := c.messageRecord(attribute)
+		if message == nil {
 			panic(fmt.Sprintf("no protobuf declaration collected for validation type %q", actual.Name()))
 		}
-		record := c.findValidation(declaration, attribute, side)
+		record := c.findValidation(message, attribute, side)
 		if record == nil {
 			record = &protobufValidationRecord{
-				declaration: declaration,
+				message:     message,
 				attribute:   attribute,
+				source:      source,
 				side:        side,
 				targetName:  targetName,
 				contextName: contextName,
-				uses:        []*expr.AttributeExpr{attribute},
 			}
 			c.validators = append(c.validators, record)
-		} else {
-			record.uses = append(record.uses, attribute)
+		} else if source.compare(record.source) < 0 {
+			record.source = source
+			record.targetName = targetName
+			record.contextName = contextName
 		}
+		c.bindValidationUse(attribute, side, record)
 		if _, ok := seen[record]; ok {
 			return
 		}
 		seen[record] = struct{}{}
-		c.collectValidationRecursive(userTypeAttribute(actual), side, targetName, contextName, seen)
+		c.collectValidationRecursive(userTypeAttribute(actual), side, source, targetName, contextName, seen)
 	case *expr.Object:
 		for _, named := range *actual {
-			c.collectValidationRecursive(named.Attribute, side, codegen.Goify(named.Name, false), named.Name, seen)
+			c.collectValidationRecursive(named.Attribute, side, source.child(named.Name), codegen.Goify(named.Name, false), named.Name, seen)
 		}
 	case *expr.Array:
-		c.collectValidationRecursive(actual.ElemType, side, "elem", "elem", seen)
+		c.collectValidationRecursive(actual.ElemType, side, source.child("element"), "elem", "elem", seen)
 	case *expr.Map:
-		c.collectValidationRecursive(actual.KeyType, side, "key", "key", seen)
-		c.collectValidationRecursive(actual.ElemType, side, "val", "val", seen)
+		c.collectValidationRecursive(actual.KeyType, side, source.child("key"), "key", "key", seen)
+		c.collectValidationRecursive(actual.ElemType, side, source.child("value"), "val", "val", seen)
 	case *expr.Union:
 		for _, named := range actual.Values {
-			c.collectValidationRecursive(named.Attribute, side, codegen.Goify(named.Name, false), named.Name, seen)
+			c.collectValidationRecursive(named.Attribute, side, source.child(named.Name), codegen.Goify(named.Name, false), named.Name, seen)
 		}
 	}
 }
 
-// findMessage returns the existing declaration with the same typed identity.
+// findMessage returns the message written for the same source type, requested
+// name, and protobuf fields.
 func (c *protobufPackageCatalog) findMessage(identity protobufMessageIdentity) *protobufMessageRecord {
 	for _, record := range c.messages {
 		if sameProtobufMessageIdentity(record.identity, identity) {
@@ -570,11 +561,11 @@ func (c *protobufPackageCatalog) findMessage(identity protobufMessageIdentity) *
 	return nil
 }
 
-// findValidation returns the existing validator with the same declaration,
-// validation contract, and generated side.
+// findValidation returns the existing function that checks the same message
+// rules in the same client or server package.
 func (c *protobufPackageCatalog) findValidation(declaration *protobufMessageRecord, attribute *expr.AttributeExpr, side validateKind) *protobufValidationRecord {
 	for _, record := range c.validators {
-		if record.declaration == declaration && record.side == side &&
+		if record.message == declaration && record.side == side &&
 			sameProtobufValidationAttribute(record.attribute, attribute, make(map[protobufAttributePair]struct{})) {
 			return record
 		}
@@ -582,16 +573,63 @@ func (c *protobufPackageCatalog) findValidation(declaration *protobufMessageReco
 	return nil
 }
 
-// validationRecord resolves the validator called for a nested message use.
+// validationRecord returns the validation function called for one copied
+// message value.
 func (c *protobufPackageCatalog) validationRecord(attribute *expr.AttributeExpr, side validateKind) *protobufValidationRecord {
-	declaration := c.message(attribute)
-	if declaration == nil {
-		return nil
-	}
-	return c.findValidation(declaration, attribute, side)
+	return c.validationUses[protobufValidationUse{attribute: attribute, side: side}]
 }
 
-// messageData returns only declarations with completed immutable render data.
+// bindValidationUse records the function that checks one protobuf value in a
+// generated client or server package.
+func (c *protobufPackageCatalog) bindValidationUse(attribute *expr.AttributeExpr, side validateKind, record *protobufValidationRecord) {
+	key := protobufValidationUse{attribute: attribute, side: side}
+	if existing := c.validationUses[key]; existing != nil && existing != record {
+		panic("protobuf value is connected to two validation functions")
+	}
+	if c.validationUses[key] == nil {
+		c.validationUses[key] = record
+		record.uses = append(record.uses, attribute)
+	}
+}
+
+// walkProtobufCopy visits matching parts of an original protobuf value and its
+// copy. Recursive user types are visited once.
+func walkProtobufCopy(original, copy *expr.AttributeExpr, visit func(*expr.AttributeExpr, *expr.AttributeExpr)) {
+	seen := make(map[protobufAttributePair]struct{})
+	var walk func(*expr.AttributeExpr, *expr.AttributeExpr)
+	walk = func(original, copy *expr.AttributeExpr) {
+		pair := protobufAttributePair{left: original, right: copy}
+		if _, ok := seen[pair]; ok {
+			return
+		}
+		seen[pair] = struct{}{}
+		visit(original, copy)
+		switch originalType := original.Type.(type) {
+		case expr.UserType:
+			copyType := copy.Type.(expr.UserType)
+			walk(userTypeAttribute(originalType), userTypeAttribute(copyType))
+		case *expr.Object:
+			copyType := copy.Type.(*expr.Object)
+			for index, field := range *originalType {
+				walk(field.Attribute, (*copyType)[index].Attribute)
+			}
+		case *expr.Array:
+			walk(originalType.ElemType, copy.Type.(*expr.Array).ElemType)
+		case *expr.Map:
+			copyType := copy.Type.(*expr.Map)
+			walk(originalType.KeyType, copyType.KeyType)
+			walk(originalType.ElemType, copyType.ElemType)
+		case *expr.Union:
+			copyType := copy.Type.(*expr.Union)
+			for index, branch := range originalType.Values {
+				walk(branch.Attribute, copyType.Values[index].Attribute)
+			}
+		}
+	}
+	walk(original, copy)
+}
+
+// messageData returns only messages whose names and template data are complete.
 func (c *protobufPackageCatalog) messageData() []*service.UserTypeData {
 	data := make([]*service.UserTypeData, 0, len(c.messages))
 	for _, record := range c.messages {
@@ -602,7 +640,23 @@ func (c *protobufPackageCatalog) messageData() []*service.UserTypeData {
 	return data
 }
 
-// validationData returns only validators whose typed rules emit code.
+// protoMessageData returns message records with the names written to the
+// protobuf source file.
+func (c *protobufPackageCatalog) protoMessageData() []*service.UserTypeData {
+	data := make([]*service.UserTypeData, 0, len(c.messages))
+	for _, record := range c.messages {
+		if record.data == nil {
+			continue
+		}
+		message := *record.data
+		message.Name = record.protoName
+		message.VarName = record.protoName
+		data = append(data, &message)
+	}
+	return data
+}
+
+// validationData returns only validation functions that contain checks.
 func (c *protobufPackageCatalog) validationData() []*ValidationData {
 	data := make([]*ValidationData, 0, len(c.validators))
 	for _, record := range c.validators {
@@ -613,20 +667,58 @@ func (c *protobufPackageCatalog) validationData() []*ValidationData {
 	return data
 }
 
-// protobufMessageIdentityFor derives message identity without consulting a
-// naming scope or rendered source.
-func protobufMessageIdentityFor(attribute *expr.AttributeExpr, source protobufMessageSource) protobufMessageIdentity {
+// child returns the same endpoint value at one nested field or collection
+// part.
+func (s protobufValidationSource) child(name string) protobufValidationSource {
+	if s.path == "" {
+		s.path = name
+	} else {
+		s.path += "." + name
+	}
+	return s
+}
+
+// compare orders endpoint values and their nested fields the same way even when
+// the design lists them in a different order.
+func (s protobufValidationSource) compare(other protobufValidationSource) int {
+	if result := strings.Compare(s.api, other.api); result != 0 {
+		return result
+	}
+	if result := strings.Compare(s.service, other.service); result != 0 {
+		return result
+	}
+	if result := strings.Compare(s.method, other.method); result != 0 {
+		return result
+	}
+	if result := strings.Compare(s.error, other.error); result != 0 {
+		return result
+	}
+	if s.role < other.role {
+		return -1
+	}
+	if s.role > other.role {
+		return 1
+	}
+	return strings.Compare(s.path, other.path)
+}
+
+// protobufMessageIdentityFor records the source type, requested name, and
+// protobuf fields that decide whether two uses share one message.
+func protobufMessageIdentityFor(attribute *expr.AttributeExpr, source protobufMessageSource) (protobufMessageIdentity, error) {
 	userType := attribute.Type.(expr.UserType)
 	if source.origin == nil && source.synthetic.role == 0 {
 		source.origin = userType.Origin()
 	}
-	preferred := protoBufify(userType.Name(), true, true)
+	preferred := codegen.ProtobufName(userType.Name())
 	explicit := false
 	names := attribute.Meta["struct:name:proto"]
 	if len(names) == 0 {
 		names = userType.Attribute().Meta["struct:name:proto"]
 	}
 	if len(names) > 0 {
+		if !protobufExactNamePattern.MatchString(names[0]) {
+			return protobufMessageIdentity{}, fmt.Errorf("protobuf message name %q from struct:name:proto is not a valid protobuf identifier", names[0])
+		}
 		preferred = names[0]
 		explicit = true
 	}
@@ -636,11 +728,12 @@ func protobufMessageIdentityFor(attribute *expr.AttributeExpr, source protobufMe
 		explicitName:  explicit,
 		userType:      userType,
 		attribute:     userTypeAttribute(userType),
-	}
+	}, nil
 }
 
-// sameProtobufMessageIdentity compares the typed source and every protobuf
-// schema fact rather than expression hashes or generated names.
+// sameProtobufMessageIdentity reports whether two requests have the same source
+// type, requested name, and protobuf fields. It does not compare generated Go
+// names.
 func sameProtobufMessageIdentity(left, right protobufMessageIdentity) bool {
 	if left.source != right.source || left.preferredName != right.preferredName || left.explicitName != right.explicitName {
 		return false
@@ -648,7 +741,8 @@ func sameProtobufMessageIdentity(left, right protobufMessageIdentity) bool {
 	return sameProtobufWireAttribute(left.attribute, right.attribute, make(map[protobufAttributePair]struct{}))
 }
 
-// sameProtobufWireAttribute compares facts that affect a protobuf declaration.
+// sameProtobufWireAttribute reports whether two values produce the same fields
+// and rules in a .proto message.
 func sameProtobufWireAttribute(left, right *expr.AttributeExpr, seen map[protobufAttributePair]struct{}) bool {
 	if left == right {
 		return true
@@ -674,8 +768,8 @@ func sameProtobufWireAttribute(left, right *expr.AttributeExpr, seen map[protobu
 	return sameProtobufWireType(left.Type, right.Type, seen)
 }
 
-// sameProtobufWireType compares protobuf-native type, ordered field, oneof,
-// collection, and nested declaration contracts.
+// sameProtobufWireType reports whether two types produce the same protobuf type,
+// including ordered fields, choices, arrays, maps, and nested messages.
 func sameProtobufWireType(left, right expr.DataType, seen map[protobufAttributePair]struct{}) bool {
 	if left.Kind() != right.Kind() {
 		return false
@@ -724,8 +818,8 @@ func sameProtobufWireType(left, right expr.DataType, seen map[protobufAttributeP
 	}
 }
 
-// sameProtobufValidationAttribute compares typed validation provenance and
-// rules independently from protobuf wire declaration identity.
+// sameProtobufValidationAttribute compares the source types and validation
+// rules without comparing the protobuf message name.
 func sameProtobufValidationAttribute(left, right *expr.AttributeExpr, seen map[protobufAttributePair]struct{}) bool {
 	if left == right {
 		return true
@@ -781,46 +875,6 @@ func sameProtobufValidationAttribute(left, right *expr.AttributeExpr, seen map[p
 		return true
 	default:
 		panic(fmt.Sprintf("unknown protobuf validation type %T", left))
-	}
-}
-
-// protobufAttributeImports returns imports declared directly on attribute.
-func protobufAttributeImports(attribute *expr.AttributeExpr, sd *ServiceData) []string {
-	proto := attribute.Meta["struct:field:proto"]
-	if len(proto) <= 1 {
-		return nil
-	}
-	protobufImport := proto[1]
-	for _, spec := range sd.Service.ProtoImports {
-		if spec.Path == protobufImport {
-			return nil
-		}
-	}
-	if len(proto) > 3 {
-		elements := strings.Split(proto[3], "/")
-		sd.Service.ProtoImports = append(sd.Service.ProtoImports, &codegen.ImportSpec{
-			Path: proto[3],
-			Name: elements[len(elements)-1],
-		})
-	}
-	return []string{protobufImport}
-}
-
-// uniqueProtobufName reserves one deterministic package-level identifier.
-func uniqueProtobufName(base string, used map[string]struct{}, counts map[string]int) string {
-	if _, ok := used[base]; !ok {
-		used[base] = struct{}{}
-		counts[base] = 1
-		return base
-	}
-	for index := counts[base] + 1; ; index++ {
-		candidate := base + strconv.Itoa(index)
-		if _, ok := used[candidate]; ok {
-			continue
-		}
-		used[candidate] = struct{}{}
-		counts[base] = index
-		return candidate
 	}
 }
 

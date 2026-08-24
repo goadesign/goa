@@ -783,6 +783,8 @@ func MapParams(args ...any) {
 // MIME multipart encoding as defined in RFC 2046.
 //
 // MultipartRequest must appear in a HTTP endpoint expression.
+// At least one payload value must remain in the request body after path,
+// query, header, and cookie mappings are applied.
 //
 // goa generates a custom encoder that writes the payload for requests made to
 // HTTP endpoints that use MultipartRequest. The generated encoder accept a
@@ -790,11 +792,11 @@ func MapParams(args ...any) {
 // multipart content. The user provided function accepts a multipart writer
 // and a reference to the payload and is responsible for encoding the payload.
 // goa also generates a custom decoder that reads back the multipart content
-// into the payload struct. The generated decoder also accepts a user provided
-// function that takes a multipart reader and a reference to the payload struct
-// as parameter. The user provided decoder is responsible for decoding the
-// multipart content into the payload. The example command generates a default
-// implementation for the user decoder and encoder.
+// into the generated HTTP request body. The generated decoder accepts a user
+// provided function that takes a multipart reader and a reference to that body
+// as parameters. Goa validates the decoded body before it builds the service
+// payload. The example command generates a default implementation for the user
+// decoder and encoder.
 func MultipartRequest() {
 	e, ok := eval.Current().(*expr.HTTPEndpointExpr)
 	if !ok {
@@ -979,7 +981,7 @@ func Body(args ...any) {
 			eval.ReportError("%s type does not have an attribute named %#v", kind, a)
 			return
 		}
-		attr = expr.DupAtt(attr)
+		attr = expr.DupAttForDSL(attr)
 		attr.AddMeta("origin:attribute", a)
 		if rt, ok := attr.Type.(*expr.ResultTypeExpr); ok && expr.IsArray(rt.Type) {
 			// If the attribute type is a result type collection add the type to the

@@ -44,7 +44,7 @@ type PingResponseBody struct {
 }
 
 // AddOverflowResponseBody is the type of the "Calc" service "add" endpoint
-// HTTP response body.
+// HTTP response body for the "overflow" error.
 type AddOverflowResponseBody struct {
 	// Name is the name of this class of errors.
 	Name string `form:"name" json:"name" xml:"name"`

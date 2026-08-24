@@ -10,6 +10,6 @@
 		ctx = log.Context(ctx, log.WithDebug())
 		log.Debugf(ctx, "debug logs enabled")
 	}
-{{- if .Server.Transports }}
-	log.Print(ctx, log.KV{K: "http-port", V: *httpPortF})
+{{- range .Server.Transports }}
+	log.Print(ctx, log.KV{K: "{{ .Type }}-port", V: *{{ .Type }}PortF})
 {{- end }}

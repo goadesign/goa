@@ -4,8 +4,8 @@
       "SSEObjectMethodResponseBody": {
         "example": {
           "flag": true,
-          "id": "Aut non.",
-          "value": 8434029765132757000
+          "id": "event",
+          "value": 1
         },
         "properties": {
           "flag": {
@@ -13,11 +13,11 @@
             "type": "boolean"
           },
           "id": {
-            "example": "Aut non.",
+            "example": "event",
             "type": "string"
           },
           "value": {
-            "example": 8434029765132757000,
+            "example": 1,
             "format": "int64",
             "type": "integer"
           }
@@ -46,8 +46,8 @@
                       "contentSchema": {
                         "example": {
                           "flag": true,
-                          "id": "Ipsa sed perferendis rerum.",
-                          "value": 5784889851462557000
+                          "id": "event",
+                          "value": 1
                         },
                         "properties": {
                           "flag": {
@@ -55,11 +55,11 @@
                             "type": "boolean"
                           },
                           "id": {
-                            "example": "Ipsa sed perferendis rerum.",
+                            "example": "event",
                             "type": "string"
                           },
                           "value": {
-                            "example": 5784889851462557000,
+                            "example": 1,
                             "format": "int64",
                             "type": "integer"
                           }

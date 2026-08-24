@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/eval"
@@ -37,7 +38,52 @@ func TestPlanIncludesSharedHTTPImportAliases(t *testing.T) {
 	require.NoError(t, servicePlan.Link())
 	services := servicePlan.Services()
 
-	require.Equal(t, "uuid2", services.ServiceImport("UUID").Name)
+	clientOutput := "generated.local/gen/jsonrpc/uuid/client"
+	require.Equal(t, "uuid2", services.ServiceImport(clientOutput, "UUID").Name)
+}
+
+// TestPlanRetainsServicePackageImport verifies JSON-RPC output packages use
+// the service package selected before later expression changes. The retained
+// preferred name must still resolve around the client's sync import.
+func TestPlanRetainsServicePackageImport(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		dsl.Service("Sync", func() {
+			dsl.Method("Read", func() {
+				dsl.JSONRPC(func() {})
+			})
+		})
+	})
+	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
+	require.NoError(t, err)
+	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	require.NoError(t, err)
+	httpPlans, err := httpcodegen.NewJSONRPCPlans(generation, httpcodegen.PlanInput{Root: root, Service: servicePlan})
+	require.NoError(t, err)
+
+	transport := root.API.JSONRPC.Services[0]
+	transport.ServiceExpr.Name = "Changed"
+	_, err = NewPlans(generation, PlanInput{Root: root, Service: servicePlan, HTTP: httpPlans[0]})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+
+	client := generation.Package("generated.local/gen/jsonrpc/sync/client")
+	require.Equal(t, "sync2", client.ImportName("generated.local/gen/sync"))
+}
+
+// TestNewExamplePlanRejectsAnotherServicePlan checks that server names and
+// URLs cannot come from a different design with the same authored names.
+func TestNewExamplePlanRejectsAnotherServicePlan(t *testing.T) {
+	_, transport := linkedJSONRPCPlan(t, viewedJSONRPCPlanDSL)
+	otherRoot := expr.RunDSL(t, viewedJSONRPCPlanDSL)
+	otherGeneration, err := codegen.NewGeneration("other.local/gen", []eval.Root{otherRoot})
+	require.NoError(t, err)
+	otherService, err := service.NewPlan(otherRoot, otherGeneration, expr.NewExampleGenerator(otherRoot.API.RandomizerFactory))
+	require.NoError(t, err)
+	examples, err := example.NewPlan(otherGeneration, otherService)
+	require.NoError(t, err)
+
+	_, err = NewExamplePlan(transport, examples)
+	require.EqualError(t, err, "JSON-RPC examples require server data created from the same service design")
 }
 
 // TestPlanReservesGeneratedJSONRPCPackages verifies that the JSON-RPC client,
@@ -62,15 +108,15 @@ func TestPlanReservesGeneratedJSONRPCPackages(t *testing.T) {
 	require.NoError(t, servicePlan.Link())
 	services := servicePlan.Services()
 
-	client := services.PackageImport("generated.local/gen/jsonrpc/foo/client")
-	server := services.PackageImport("generated.local/gen/jsonrpc/foo/server")
-	cli := services.PackageImport(path.Join(
+	cliOutput := path.Join(
 		"generated.local/gen/jsonrpc/cli",
 		codegen.SnakeCase(codegen.Goify(root.API.Servers[0].Name, true)),
-	))
-	require.NotEqual(t, services.ServiceImport("Fooc").Name, client.Name)
-	require.NotEqual(t, services.ServiceImport("Foojssvr").Name, server.Name)
-	require.Equal(t, "cli", cli.Name)
+	)
+	client := services.PackageImport(cliOutput, "generated.local/gen/jsonrpc/foo/client")
+	serverOutput := path.Join("generated.local", "cmd", codegen.SnakeCase(codegen.Goify(root.API.Servers[0].Name, true)))
+	server := services.PackageImport(serverOutput, "generated.local/gen/jsonrpc/foo/server")
+	require.Equal(t, "fooc", client.Name)
+	require.Equal(t, "foojssvr", server.Name)
 }
 
 // TestNewPlansRequiresEveryJSONRPCRoot verifies that planning cannot reserve
@@ -86,7 +132,7 @@ func TestNewPlansRequiresEveryJSONRPCRoot(t *testing.T) {
 		ApplicationHTTP: applicationPlans[0],
 	})
 	require.EqualError(t, err, "JSON-RPC planning requires all 2 JSON-RPC roots, got 1")
-	assertViewedHelperNameAvailable(t, generation, "first")
+	assertViewedHelperNameAvailable(t, generation)
 }
 
 // TestNewPlansRejectsDuplicateRoot verifies that two inputs cannot plan the
@@ -103,7 +149,7 @@ func TestNewPlansRejectsDuplicateRoot(t *testing.T) {
 
 	_, err := NewPlans(generation, input, input)
 	require.EqualError(t, err, "JSON-RPC root is planned more than once: First")
-	assertViewedHelperNameAvailable(t, generation, "first")
+	assertViewedHelperNameAvailable(t, generation)
 }
 
 // TestNewPlansRejectsRootWithoutJSONRPC verifies that inputs contain only
@@ -118,7 +164,7 @@ func TestNewPlansRejectsRootWithoutJSONRPC(t *testing.T) {
 		PlanInput{Root: roots[2], Service: services[2], HTTP: jsonPlans[0], ApplicationHTTP: applicationPlans[2]},
 	)
 	require.EqualError(t, err, "root does not declare JSON-RPC services")
-	assertViewedHelperNameAvailable(t, generation, "first")
+	assertViewedHelperNameAvailable(t, generation)
 }
 
 // TestNewPlansRejectsMismatchedInputPlans verifies that every service and HTTP
@@ -186,7 +232,7 @@ func TestNewPlansRejectsMismatchedInputPlans(t *testing.T) {
 			generation, roots, services, jsonPlans, applicationPlans := jsonRPCPlanningInputs(t)
 			_, err := NewPlans(generation, test.change(roots, services, jsonPlans, applicationPlans)...)
 			require.EqualError(t, err, test.error)
-			assertViewedHelperNameAvailable(t, generation, "first")
+			assertViewedHelperNameAvailable(t, generation)
 		})
 	}
 }
@@ -261,12 +307,16 @@ func TestPlanBuildsCombinedExampleWithoutChangingHTTP(t *testing.T) {
 		ApplicationHTTP: applicationPlans[0],
 	})
 	require.NoError(t, err)
+	examplePlan, err := example.NewPlan(generation, servicePlan)
+	require.NoError(t, err)
 	require.NoError(t, generation.Freeze())
 	require.NoError(t, servicePlan.Link())
 	require.NoError(t, applicationPlans[0].Link())
 	require.NoError(t, httpPlans[0].Link())
 
-	httpFile := applicationPlans[0].ExampleServerFiles()[0]
+	httpExamples, err := httpcodegen.NewExamplePlan(applicationPlans[0], examplePlan)
+	require.NoError(t, err)
+	httpFile := httpExamples.ServerFiles()[0]
 	httpImports := append([]*codegen.ImportSpec(nil), httpFile.SectionTemplates[0].Data.(map[string]any)["Imports"].([]*codegen.ImportSpec)...)
 	require.NoError(t, plans[0].Link())
 
@@ -277,7 +327,9 @@ func TestPlanBuildsCombinedExampleWithoutChangingHTTP(t *testing.T) {
 			require.Empty(t, section.Data.(map[string]any)["JSONRPCServices"])
 		}
 	}
-	combined := plans[0].ExampleServerFiles()[0]
+	examples, err := NewExamplePlan(plans[0], examplePlan)
+	require.NoError(t, err)
+	combined := examples.ServerFiles()[0]
 	require.NotSame(t, httpFile, combined)
 	for _, section := range combined.SectionTemplates {
 		switch section.Name {
@@ -290,7 +342,7 @@ func TestPlanBuildsCombinedExampleWithoutChangingHTTP(t *testing.T) {
 // TestPlanUsesHTTPViewedRepresentationBranches verifies each method uses the
 // body types and constructors that the HTTP plan prepared for its result views.
 func TestPlanUsesHTTPViewedRepresentationBranches(t *testing.T) {
-	_, _, shared, plan := linkedJSONRPCPlan(t, viewedJSONRPCPlanDSL)
+	shared, plan := linkedJSONRPCPlan(t, viewedJSONRPCPlanDSL)
 	require.Len(t, plan.services, 1)
 
 	endpoints := make(map[string]*endpointPlan)
@@ -323,7 +375,7 @@ func TestPlanUsesHTTPViewedRepresentationBranches(t *testing.T) {
 // service method may return. Each branch uses the mapped field's JSON body and
 // result constructor supplied by the HTTP plan.
 func TestPlanUsesEveryViewForMappedResultField(t *testing.T) {
-	_, _, shared, plan := linkedJSONRPCPlan(t, viewedJSONRPCMappedFieldPlanDSL)
+	shared, plan := linkedJSONRPCPlan(t, viewedJSONRPCMappedFieldPlanDSL)
 	httpViewed, ok := shared.ViewedResult("mapped", "fetch")
 	require.True(t, ok)
 	representations := httpViewed.Representations
@@ -350,7 +402,7 @@ func TestPlanUsesEveryViewForMappedResultField(t *testing.T) {
 // supplies that one view name, and JSON-RPC copies it without deriving a value
 // from the first response branch.
 func TestPlanTreatsSoleResultViewAsFixed(t *testing.T) {
-	_, _, shared, plan := linkedJSONRPCPlan(t, viewedJSONRPCSoleViewPlanDSL)
+	shared, plan := linkedJSONRPCPlan(t, viewedJSONRPCSoleViewPlanDSL)
 	httpViewed, ok := shared.ViewedResult("sole", "fetch")
 	require.True(t, ok)
 	representations := httpViewed.Representations
@@ -414,9 +466,8 @@ func TestPlanUsesAssignedViewedHelperNames(t *testing.T) {
 }
 
 // linkedJSONRPCPlan evaluates one design, assigns all generated Go names, and
-// links the service, HTTP, and JSON-RPC plans used by a test. It returns the
-// completed plans and service data so each test can inspect generated facts.
-func linkedJSONRPCPlan(t *testing.T, design func()) (*expr.RootExpr, *service.Plan, *httpcodegen.Plan, *Plan) {
+// links the service, HTTP, and JSON-RPC plans used by a test.
+func linkedJSONRPCPlan(t *testing.T, design func()) (*httpcodegen.Plan, *Plan) {
 	t.Helper()
 	root := expr.RunDSL(t, design)
 	generation, err := codegen.NewGeneration("generated.local/gen", []eval.Root{root})
@@ -431,7 +482,7 @@ func linkedJSONRPCPlan(t *testing.T, design func()) (*expr.RootExpr, *service.Pl
 	require.NoError(t, servicePlan.Link())
 	require.NoError(t, httpPlans[0].Link())
 	require.NoError(t, plans[0].Link())
-	return root, servicePlan, httpPlans[0], plans[0]
+	return httpPlans[0], plans[0]
 }
 
 // jsonRPCPlanningInputs builds two roots and their matching service, ordinary
@@ -466,9 +517,9 @@ func jsonRPCPlanningInputs(t *testing.T) (*codegen.Generation, []*expr.RootExpr,
 
 // assertViewedHelperNameAvailable submits the helper name that a rejected plan
 // would have used and verifies no earlier JSON-RPC input consumed it.
-func assertViewedHelperNameAvailable(t *testing.T, generation *codegen.Generation, serviceName string) {
+func assertViewedHelperNameAvailable(t *testing.T, generation *codegen.Generation) {
 	t.Helper()
-	client, err := generation.ClaimPackage(path.Join("generated.local/gen/jsonrpc", serviceName, "client"))
+	client, err := generation.ClaimPackage(path.Join("generated.local/gen/jsonrpc/first/client"))
 	require.NoError(t, err)
 	declaration := codegen.NewPreferredName(
 		codegen.NameFunction,

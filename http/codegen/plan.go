@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"slices"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/cli"
+	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/service"
 	"goa.design/goa/v3/expr"
 )
@@ -25,39 +27,73 @@ type (
 		Service *service.Plan
 	}
 
-	// Plan records package names for one design and later builds its HTTP files.
+	// Plan records the generated Go declarations for one design and later builds
+	// its HTTP files.
 	Plan struct {
-		root         *expr.RootExpr
-		servicePlan  *service.Plan
-		generation   *codegen.Generation
-		transport    transportKind
-		constructors map[viewedConstructorKey]*codegen.NameDeclaration
-		payloads     map[*expr.HTTPEndpointExpr]*codegen.NameDeclaration
-		streams      map[*expr.HTTPEndpointExpr]*codegen.NameDeclaration
-		errors       map[*expr.HTTPErrorExpr]*codegen.NameDeclaration
-		wireTypes    map[*expr.HTTPServiceExpr]*plannedWireTypes
-		symbols      map[*expr.HTTPServiceExpr]*httpSymbols
-		cliParsers   map[*expr.ServerExpr]*cli.ParserPlan
-		services     *ServicesData
-		viewed       map[viewedMethodKey]*viewedResultPlan
-		jsonServices map[string]*jsonRPCServicePlan
-		server       []*codegen.File
-		client       []*codegen.File
-		serverTypes  []*codegen.File
-		clientTypes  []*codegen.File
-		paths        []*codegen.File
-		clientCLI    []*codegen.File
-		example      []*codegen.File
-		exampleCLI   []*codegen.File
+		root           *expr.RootExpr
+		servicePlan    *service.Plan
+		generation     *codegen.Generation
+		transport      transportKind
+		serverPackages map[*expr.HTTPServiceExpr]*codegen.GeneratedPackage
+		extensions     map[*expr.HTTPServiceExpr]*serverExtensions
+		constructors   map[viewedConstructorKey]*codegen.NameDeclaration
+		payloads       map[*expr.HTTPEndpointExpr]*codegen.NameDeclaration
+		streams        map[*expr.HTTPEndpointExpr]*codegen.NameDeclaration
+		errors         map[*expr.HTTPErrorExpr]*codegen.NameDeclaration
+		wireTypes      map[*expr.HTTPServiceExpr]*plannedWireTypes
+		symbols        map[*expr.HTTPServiceExpr]*httpSymbols
+		servicePaths   map[*expr.HTTPServiceExpr]string
+		cliParsers     map[string]*cli.ParserPlan
+		fileImports    map[string]*plannedFileImports
+		services       *ServicesData
+		viewed         map[viewedMethodKey]*viewedResultPlan
+		jsonServices   map[string]*jsonRPCServicePlan
+		server         []*codegen.File
+		client         []*codegen.File
+		serverTypes    []*codegen.File
+		clientTypes    []*codegen.File
+		paths          []*codegen.File
+		clientCLI      []*codegen.File
+	}
+
+	// ServerMountPoint describes one route added by a declared server mount.
+	// Goa includes it in Server.Mounts so logs and startup output list the added
+	// route with the routes defined in the design.
+	ServerMountPoint struct {
+		// Method is the operation name shown for the route.
+		Method string
+		// Verb is the HTTP method accepted by the route.
+		Verb string
+		// Pattern is the path pattern accepted by the route.
+		Pattern string
+	}
+
+	// ServerMount gives server templates the chosen mount function name and
+	// the routes that function adds.
+	ServerMount struct {
+		// Declaration supplies the generated mount function name.
+		Declaration *codegen.NameDeclaration
+		// MountPoints lists the routes added by Declaration.
+		MountPoints []ServerMountPoint
+	}
+
+	// ExamplePlan builds runnable HTTP programs from server data and generated
+	// services that came from the same design.
+	ExamplePlan struct {
+		root      *example.Root
+		transport *Plan
 	}
 
 	// jsonRPCServicePlan stores the HTTP data copied for the JSON-RPC file writer.
 	jsonRPCServicePlan struct {
-		data        *ServiceData
-		services    *ServicesData
-		fileImports map[string][]*codegen.ImportSpec
-		clientCodec *codegen.File
-		serverCodec *codegen.File
+		data                *ServiceData
+		fileImports         map[string][]*codegen.ImportSpec
+		clientCodec         *codegen.File
+		serverCodec         *codegen.File
+		clientServiceImport *codegen.ImportSpec
+		serverServiceImport *codegen.ImportSpec
+		clientViewImport    *codegen.ImportSpec
+		serverViewImport    *codegen.ImportSpec
 	}
 
 	// viewedResultPlan stores the HTTP response data copied for the JSON-RPC file
@@ -77,6 +113,15 @@ type (
 		cookies []*CookieData
 	}
 
+	// serverExtensions stores declarations submitted for one HTTP service before
+	// Generation.Freeze chooses their Go names. Link copies these values into
+	// template data.
+	serverExtensions struct {
+		handlerWrappers         []*codegen.NameDeclaration
+		endpointHandlerWrappers map[*expr.HTTPEndpointExpr][]*codegen.NameDeclaration
+		mounts                  []*ServerMount
+	}
+
 	// JSONRPCServiceSnapshot holds a separate copy of the HTTP service data used to write
 	// JSON-RPC client and server files. Callers may change it without changing
 	// the HTTP plan or a later copy.
@@ -85,23 +130,45 @@ type (
 		Service JSONRPCServiceData
 		// Endpoints contains the JSON-RPC method data in design order.
 		Endpoints []JSONRPCEndpointSnapshot
+		// ClientStruct is the client type name kept for existing plugins. Goa
+		// copies it after choosing all names. Changing it does not rename generated code.
+		//
+		// Deprecated: Use ClientStructDeclaration.Name() after planning.
+		ClientStruct string
 		// ClientStructDeclaration supplies the client type name written in HTTP files.
 		ClientStructDeclaration *codegen.NameDeclaration
 		// ClientInitDeclaration supplies the client constructor name.
 		ClientInitDeclaration *codegen.NameDeclaration
+		// ServerStruct is the server type name kept for existing plugins. Goa
+		// copies it after choosing all names. Changing it does not rename generated code.
+		//
+		// Deprecated: Use ServerStructDeclaration.Name() after planning.
+		ServerStruct string
 		// ServerStructDeclaration supplies the server type name written in HTTP files.
 		ServerStructDeclaration *codegen.NameDeclaration
+		// ServerInit is the server constructor name kept for existing plugins. Goa
+		// copies it after choosing all names. Changing it does not rename generated code.
+		//
+		// Deprecated: Use ServerInitDeclaration.Name() after planning.
+		ServerInit string
 		// ServerInitDeclaration supplies the server constructor name written in HTTP files.
 		ServerInitDeclaration *codegen.NameDeclaration
+		// MountServer is the route mount function name kept for existing plugins.
+		// Goa copies it after choosing all names. Changing it does not rename generated code.
+		//
+		// Deprecated: Use MountServerDeclaration.Name() after planning.
+		MountServer string
 		// MountServerDeclaration supplies the route mounting function name written in HTTP files.
 		MountServerDeclaration *codegen.NameDeclaration
 		// ServerService is the generated function that returns the service implementation.
-		ServerService string
-		serviceImport *codegen.ImportSpec
-		viewImport    *codegen.ImportSpec
-		fileImports   map[string][]*codegen.ImportSpec
-		clientCodec   *codegen.File
-		serverCodec   *codegen.File
+		ServerService       string
+		clientServiceImport *codegen.ImportSpec
+		serverServiceImport *codegen.ImportSpec
+		clientViewImport    *codegen.ImportSpec
+		serverViewImport    *codegen.ImportSpec
+		fileImports         map[string][]*codegen.ImportSpec
+		clientCodec         *codegen.File
+		serverCodec         *codegen.File
 	}
 
 	// JSONRPCServiceData contains the service names written in JSON-RPC files.
@@ -112,8 +179,6 @@ type (
 		StructName string
 		// EndpointsDeclaration supplies the service endpoint collection name.
 		EndpointsDeclaration *codegen.NameDeclaration
-		// StreamDeclaration supplies the shared service stream name.
-		StreamDeclaration *codegen.NameDeclaration
 		// MethodNamesDeclaration supplies the service method name list.
 		MethodNamesDeclaration *codegen.NameDeclaration
 		// PkgName is the import name of the generated service package.
@@ -145,22 +210,45 @@ type (
 		RequestInit *InitData
 		// EndpointInit is the client method that builds the Goa endpoint.
 		EndpointInit string
+		// HandlerInit is the handler constructor name kept for existing plugins.
+		// Goa copies it after choosing all names. Changing it does not rename generated code.
+		//
+		// Deprecated: Use HandlerInitDeclaration.Name() after planning.
+		HandlerInit string
 		// HandlerInitDeclaration supplies the server handler constructor name.
 		HandlerInitDeclaration *codegen.NameDeclaration
+		// ClientStruct is the client type name kept for existing plugins. Goa
+		// copies it after choosing all names. Changing it does not rename generated code.
+		//
+		// Deprecated: Use ClientStructDeclaration.Name() after planning.
+		ClientStruct string
 		// ClientStructDeclaration supplies the client type name used by request builders.
 		ClientStructDeclaration *codegen.NameDeclaration
+		// RequestEncoder is the request encoder name kept for existing plugins.
+		// Goa copies it after choosing all names. Changing it does not rename
+		// generated code. It is empty when Goa does not generate a request encoder.
+		//
+		// Deprecated: Use RequestEncoderDeclaration.Name() after planning.
+		RequestEncoder string
 		// RequestEncoderDeclaration supplies the request encoder name written in HTTP files.
 		RequestEncoderDeclaration *codegen.NameDeclaration
+		// RequestDecoder is the request decoder name kept for existing plugins.
+		// Goa copies it after choosing all names. Changing it does not rename
+		// generated code. It is empty when Goa does not generate a request decoder.
+		//
+		// Deprecated: Use RequestDecoderDeclaration.Name() after planning.
+		RequestDecoder string
 		// RequestDecoderDeclaration supplies the request decoder name written in HTTP files.
 		RequestDecoderDeclaration *codegen.NameDeclaration
+		// ResponseDecoder is the response decoder name kept for existing plugins.
+		// Goa copies it after choosing all names. Changing it does not rename generated code.
+		//
+		// Deprecated: Use ResponseDecoderDeclaration.Name() after planning.
+		ResponseDecoder string
 		// ResponseDecoderDeclaration supplies the response decoder name written in HTTP files.
 		ResponseDecoderDeclaration *codegen.NameDeclaration
 		// SSE contains event-stream values when the method uses server-sent events.
 		SSE *JSONRPCSSEData
-		// ClientWebSocket contains client stream names when the method uses WebSocket.
-		ClientWebSocket *JSONRPCWebSocketData
-		// ServerWebSocket contains server stream names when the method uses WebSocket.
-		ServerWebSocket *JSONRPCWebSocketData
 	}
 
 	// JSONRPCMethodData contains the service method values written in JSON-RPC files.
@@ -169,11 +257,11 @@ type (
 		Name string
 		// VarName is the exported Go method name.
 		VarName string
-		// EventDeclaration supplies the service event interface name used by
-		// server-sent-event streams.
-		EventDeclaration *codegen.NameDeclaration
 		// Result is the generated service result type name.
 		Result string
+		// HasMixedResults reports whether the method returns one synchronous type
+		// and streams another type.
+		HasMixedResults bool
 		// Idempotent reports whether the client may retry the same call.
 		Idempotent bool
 		// Errors lists the retry properties of the method errors.
@@ -265,8 +353,6 @@ type (
 		ServerBody *JSONRPCBodyData
 		// PayloadInit builds the service payload from decoded request values.
 		PayloadInit *InitData
-		// PayloadTypeName is the Goa name for the payload type.
-		PayloadTypeName string
 		// Headers contains the HTTP request headers read by shared JSON code.
 		Headers []JSONRPCHeaderData
 		// Cookies contains the HTTP request cookies read by shared JSON code.
@@ -355,50 +441,32 @@ type (
 		ClientInitDeclaration *codegen.NameDeclaration
 		// EventTypeRef is the service result type carried by each event.
 		EventTypeRef string
+		// HasResponseBody reports whether Response converts the service result to JSON.
+		HasResponseBody bool
+		// Response is the successful response used to encode stream events.
+		Response *JSONRPCResponseData
 		// RequestIDField is the payload field that receives Last-Event-ID.
 		RequestIDField string
-	}
-
-	// JSONRPCWebSocketData contains the stream names read by JSON-RPC WebSocket files.
-	JSONRPCWebSocketData struct {
-		// VarName is the generated stream implementation type name.
-		VarName string
-		// VarDeclaration supplies the stream implementation type name.
-		VarDeclaration *codegen.NameDeclaration
-		// SendName is the method that sends a stream value.
-		SendName string
-		// SendDesc documents SendName.
-		SendDesc string
-		// SendWithContextName is the send method that accepts a context.
-		SendWithContextName string
-		// SendWithContextDesc documents SendWithContextName.
-		SendWithContextDesc string
-		// SendTypeName is the sent service type name.
-		SendTypeName string
-		// SendTypeRef is the sent service type reference.
-		SendTypeRef string
-		// RecvName is the method that receives a stream value.
-		RecvName string
-		// RecvDesc documents RecvName.
-		RecvDesc string
-		// RecvWithContextName is the receive method that accepts a context.
-		RecvWithContextName string
-		// RecvWithContextDesc documents RecvWithContextName.
-		RecvWithContextDesc string
-		// RecvTypeName is the received service type name.
-		RecvTypeName string
-		// RecvTypeRef is the received service type reference.
-		RecvTypeRef string
+		// RequestIDPointer reports whether RequestIDField stores a pointer.
+		RequestIDPointer bool
 	}
 
 	// JSONRPCBodyData contains only the JSON body fields read by JSON-RPC files.
 	JSONRPCBodyData struct {
+		// Declaration supplies the generated body type name. It is nil when the
+		// body uses a Go type expression that does not declare a named type.
+		Declaration *codegen.NameDeclaration
 		// VarName is the generated body type name.
 		VarName string
 		// Ref is the generated body type reference.
 		Ref string
-		// ValidateRef is the validation statement run after decoding.
+		// ValidateRef is inline validation code run after decoding.
 		ValidateRef string
+		// ValidatorDeclaration supplies the named validator called after decoding.
+		ValidatorDeclaration *codegen.NameDeclaration
+		// ValidationTarget is the decoded value passed to ValidatorDeclaration. It
+		// is empty when this body does not need a named validator call.
+		ValidationTarget string
 		// Init converts between the body and the service value.
 		Init *InitData
 	}
@@ -535,6 +603,7 @@ type (
 	// constructor preferences in one generated client package.
 	viewedConstructorOrder struct {
 		transport string
+		api       string
 		service   string
 		method    string
 		status    int
@@ -546,12 +615,53 @@ type (
 
 	// plannedWireTypes stores each copied request and response field with the
 	// client or server package that defines it. Plan.Link uses the same copies
-	// after Goa assigns every generated package name.
+	// after Generation.Freeze chooses every generated Go name.
 	plannedWireTypes struct {
-		bodies         shapedBodies
-		server         *wireTypeCatalog
-		client         *wireTypeCatalog
-		streamPayloads map[*expr.HTTPEndpointExpr]*wireTypeRecord
+		bodies                     shapedBodies
+		server                     *wireTypeCatalog
+		client                     *wireTypeCatalog
+		transforms                 plannedWireTransforms
+		streamPayloads             map[*expr.HTTPEndpointExpr]*wireTypeRecord
+		clientBodyConstructors     map[clientBodyConstructorKey]*codegen.NameDeclaration
+		clientBodyConstructorNames map[clientBodyConstructorKey]string
+	}
+
+	// plannedFileImports stores the package that writes one generated file and
+	// every design-derived package path referenced by that file.
+	plannedFileImports struct {
+		output *codegen.GeneratedPackage
+		paths  []string
+	}
+
+	// plannedWireTransforms retains the exact conversion selected while HTTP
+	// request and response shapes are collected.
+	plannedWireTransforms struct {
+		requests         map[clientBodyConstructorKey]*plannedRequestTransforms
+		responses        map[viewedConstructorKey]*plannedResponseTransforms
+		errors           map[*expr.HTTPErrorExpr]*plannedResponseTransforms
+		streamingResults map[*expr.HTTPEndpointExpr]*plannedResponseTransforms
+	}
+
+	// plannedRequestTransforms contains each direction used by request body and
+	// streaming payload code.
+	plannedRequestTransforms struct {
+		clientEncode wireTransformHandle
+		serverDecode wireTransformHandle
+		clientDecode wireTransformHandle
+	}
+
+	// plannedResponseTransforms contains the server encoder and client decoder
+	// for one response representation.
+	plannedResponseTransforms struct {
+		serverEncode       wireTransformHandle
+		clientDecode       wireTransformHandle
+		clientDecodeDirect bool
+	}
+
+	// clientBodyConstructorKey identifies an unnamed request body constructor.
+	clientBodyConstructorKey struct {
+		endpoint *expr.HTTPEndpointExpr
+		role     wireTypeRole
 	}
 
 	// transportKind records whether a plan writes HTTP or JSON-RPC files.
@@ -576,6 +686,16 @@ func NewJSONRPCPlans(generation *codegen.Generation, inputs ...PlanInput) ([]*Pl
 	return newPlans(generation, jsonrpcTransport, inputs)
 }
 
+// NewExamplePlan returns an example renderer only when examples contains the
+// server data copied from transport's service design.
+func NewExamplePlan(transport *Plan, examples *example.Plan) (*ExamplePlan, error) {
+	root, ok := examples.Root(transport.servicePlan)
+	if !ok {
+		return nil, fmt.Errorf("HTTP examples require server data created from the same service design")
+	}
+	return &ExamplePlan{root: root, transport: transport}, nil
+}
+
 // MatchesHTTP reports whether NewPlans created p for root and servicePlan.
 func (p *Plan) MatchesHTTP(root *expr.RootExpr, servicePlan *service.Plan) bool {
 	return p.transport == httpTransport && p.root == root && p.servicePlan == servicePlan
@@ -587,8 +707,76 @@ func (p *Plan) MatchesJSONRPC(root *expr.RootExpr, servicePlan *service.Plan) bo
 	return p.transport == jsonrpcTransport && p.root == root && p.servicePlan == servicePlan
 }
 
-// Link reads the assigned package names, builds data for each HTTP service once, and
-// builds every file returned by this plan.
+// DeclareServerHandlerWrapper records an exported func(http.Handler)
+// http.Handler that wraps each designed endpoint handler, file handler, and
+// redirect mounted for service. Wrappers are applied in registration order,
+// with the first registered function surrounding the others. Routes added by
+// DeclareServerMount are not wrapped automatically.
+func (p *Plan) DeclareServerHandlerWrapper(service *expr.HTTPServiceExpr, preferred string, order codegen.PackageNameOrder) (*codegen.NameDeclaration, error) {
+	pkg, err := p.serverExtensionPackage(service)
+	if err != nil {
+		return nil, err
+	}
+	declaration := codegen.NewPreferredName(codegen.NameFunction, preferred, codegen.ExportedName, order)
+	if err := pkg.DeclareName(declaration); err != nil {
+		return nil, err
+	}
+	p.extensions[service].handlerWrappers = append(p.extensions[service].handlerWrappers, declaration)
+	return declaration, nil
+}
+
+// DeclareServerEndpointHandlerWrapper records an unexported func(http.Handler)
+// http.Handler that wraps the designed routes for endpoint. Service wrappers
+// surround endpoint wrappers. File handlers and routes added by plugins are not
+// affected.
+func (p *Plan) DeclareServerEndpointHandlerWrapper(endpoint *expr.HTTPEndpointExpr, preferred string, order codegen.PackageNameOrder) (*codegen.NameDeclaration, error) {
+	pkg, service, err := p.serverEndpointExtensionPackage(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	declaration := codegen.NewPreferredName(codegen.NameFunction, preferred, codegen.UnexportedName, order)
+	if err := pkg.DeclareName(declaration); err != nil {
+		return nil, err
+	}
+	extensions := p.extensions[service]
+	extensions.endpointHandlerWrappers[endpoint] = append(extensions.endpointHandlerWrappers[endpoint], declaration)
+	return declaration, nil
+}
+
+// DeclareServerMount records an exported func(goahttp.Muxer) that adds routes
+// to the HTTP server mux. Goa calls the function after mounting routes from the
+// design and includes mountPoints in the server's route list.
+func (p *Plan) DeclareServerMount(service *expr.HTTPServiceExpr, preferred string, order codegen.PackageNameOrder, mountPoints []ServerMountPoint) (*codegen.NameDeclaration, error) {
+	pkg, err := p.serverExtensionPackage(service)
+	if err != nil {
+		return nil, err
+	}
+	if len(mountPoints) == 0 {
+		return nil, fmt.Errorf("HTTP server mount requires at least one mount point")
+	}
+	for index, mount := range mountPoints {
+		switch {
+		case mount.Method == "":
+			return nil, fmt.Errorf("HTTP server mount point %d has an empty method", index)
+		case mount.Verb == "":
+			return nil, fmt.Errorf("HTTP server mount point %d has an empty verb", index)
+		case mount.Pattern == "":
+			return nil, fmt.Errorf("HTTP server mount point %d has an empty pattern", index)
+		}
+	}
+	declaration := codegen.NewPreferredName(codegen.NameFunction, preferred, codegen.ExportedName, order)
+	if err := pkg.DeclareName(declaration); err != nil {
+		return nil, err
+	}
+	p.extensions[service].mounts = append(p.extensions[service].mounts, &ServerMount{
+		Declaration: declaration,
+		MountPoints: append([]ServerMountPoint(nil), mountPoints...),
+	})
+	return declaration, nil
+}
+
+// Link reads the chosen Go declaration and import names, builds template data
+// for each HTTP service once, and builds every file returned by this plan.
 func (p *Plan) Link() error {
 	if !p.generation.Frozen() {
 		return fmt.Errorf("HTTP plan cannot link before generation freeze")
@@ -596,13 +784,27 @@ func (p *Plan) Link() error {
 	if p.services != nil {
 		return fmt.Errorf("HTTP plan is already linked")
 	}
-	return p.link()
+	if err := p.link(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ServerFiles returns the HTTP server files built by Link.
 func (p *Plan) ServerFiles() []*codegen.File {
 	p.requireLinked()
 	return p.server
+}
+
+// Service returns the template data built by Link for the supplied HTTP service
+// expression. Callers must call Link before reading the service data.
+func (p *Plan) Service(service *expr.HTTPServiceExpr) (*ServiceData, bool) {
+	p.requireLinked()
+	if _, ok := p.extensions[service]; !ok {
+		return nil, false
+	}
+	data := p.services.Get(service.Name())
+	return data, data != nil
 }
 
 // ClientFiles returns the HTTP client files built by Link.
@@ -635,35 +837,35 @@ func (p *Plan) ClientCLIFiles() []*codegen.File {
 	return p.clientCLI
 }
 
-// ExampleServerFiles returns the runnable HTTP server files built by Link.
-func (p *Plan) ExampleServerFiles() []*codegen.File {
-	p.requireLinked()
-	return p.example
+// ServerFiles builds runnable HTTP servers from the copied server data.
+func (p *ExamplePlan) ServerFiles() []*codegen.File {
+	p.transport.requireLinked()
+	return exampleServerFiles(p.root, p.transport.services)
 }
 
-// ExampleCLIFiles returns the runnable HTTP client files built by Link.
-func (p *Plan) ExampleCLIFiles() []*codegen.File {
-	p.requireLinked()
-	return p.exampleCLI
+// CLIFiles builds runnable HTTP clients from the copied server data.
+func (p *ExamplePlan) CLIFiles() []*codegen.File {
+	p.transport.requireLinked()
+	return exampleCLIFiles(p.root, p.transport.services)
 }
 
-// CombinedExampleServerFiles returns new runnable server files containing this
-// plan's JSON-RPC services and application's ordinary HTTP services. Pass nil
-// when the design has no ordinary HTTP services.
-func (p *Plan) CombinedExampleServerFiles(application *Plan) []*codegen.File {
-	p.requireLinked()
-	if p.transport != jsonrpcTransport {
+// CombinedServerFiles returns new runnable server files containing this plan's
+// JSON-RPC services and application's ordinary HTTP services. Pass nil when
+// the design has no ordinary HTTP services.
+func (p *ExamplePlan) CombinedServerFiles(application *Plan) []*codegen.File {
+	p.transport.requireLinked()
+	if p.transport.transport != jsonrpcTransport {
 		panic("combined example servers require a JSON-RPC HTTP plan")
 	}
 	var applicationServices *ServicesData
 	if application != nil {
 		application.requireLinked()
-		if application.transport != httpTransport || application.root != p.root || application.servicePlan != p.servicePlan {
+		if application.transport != httpTransport || application.root != p.transport.root || application.servicePlan != p.transport.servicePlan {
 			panic("ordinary HTTP and JSON-RPC plans must use the same design root and service plan")
 		}
 		applicationServices = application.services
 	}
-	return combinedExampleServerFiles(p.services, applicationServices)
+	return combinedExampleServerFiles(p.root, p.transport.services, applicationServices)
 }
 
 // ViewedResult returns copied HTTP response data for the named method's result
@@ -714,46 +916,60 @@ func (p *Plan) JSONRPCService(name string) (JSONRPCServiceSnapshot, bool) {
 	for filePath, imports := range planned.fileImports {
 		fileImports[filePath] = cloneImportSpecs(imports)
 	}
-	var viewImport *codegen.ImportSpec
-	if serviceHasViewedResult(planned.data, nil) {
-		viewImport = planned.services.ViewImport(planned.data.Service.Name)
-	}
 	return JSONRPCServiceSnapshot{
 		Service: JSONRPCServiceData{
 			Name:                   planned.data.Service.Name,
 			StructName:             planned.data.Service.StructName,
 			EndpointsDeclaration:   planned.data.Service.EndpointsDeclaration,
-			StreamDeclaration:      planned.data.Service.StreamDeclaration,
 			MethodNamesDeclaration: planned.data.Service.MethodNamesDeclaration,
 			PkgName:                planned.data.Service.PkgName,
 			PathName:               planned.data.Service.PathName,
 		},
 		Endpoints:               endpoints,
+		ClientStruct:            planned.data.ClientStructDeclaration.Name(),
 		ClientStructDeclaration: planned.data.ClientStructDeclaration,
 		ClientInitDeclaration:   planned.data.ClientInitDeclaration,
+		ServerStruct:            planned.data.ServerStructDeclaration.Name(),
 		ServerStructDeclaration: planned.data.ServerStructDeclaration,
+		ServerInit:              planned.data.ServerInitDeclaration.Name(),
 		ServerInitDeclaration:   planned.data.ServerInitDeclaration,
+		MountServer:             planned.data.MountServerDeclaration.Name(),
 		MountServerDeclaration:  planned.data.MountServerDeclaration,
 		ServerService:           planned.data.ServerService,
-		serviceImport:           cloneImportSpec(planned.services.ServiceImport(planned.data.Service.Name)),
-		viewImport:              cloneImportSpec(viewImport),
+		clientServiceImport:     cloneImportSpec(planned.clientServiceImport),
+		serverServiceImport:     cloneImportSpec(planned.serverServiceImport),
+		clientViewImport:        cloneImportSpec(planned.clientViewImport),
+		serverViewImport:        cloneImportSpec(planned.serverViewImport),
 		fileImports:             fileImports,
 		clientCodec:             planned.clientCodec,
 		serverCodec:             planned.serverCodec,
 	}, true
 }
 
-// ServiceImport returns the import for the generated Goa service package.
-func (p JSONRPCServiceSnapshot) ServiceImport() *codegen.ImportSpec {
-	return cloneImportSpec(p.serviceImport)
+// ClientServiceImport returns the service import used by the JSON-RPC client package.
+func (p JSONRPCServiceSnapshot) ClientServiceImport() *codegen.ImportSpec {
+	return cloneImportSpec(p.clientServiceImport)
 }
 
-// ViewImport returns the import for the generated result-view package.
-func (p JSONRPCServiceSnapshot) ViewImport() *codegen.ImportSpec {
-	if p.viewImport == nil {
+// ServerServiceImport returns the service import used by the JSON-RPC server package.
+func (p JSONRPCServiceSnapshot) ServerServiceImport() *codegen.ImportSpec {
+	return cloneImportSpec(p.serverServiceImport)
+}
+
+// ClientViewImport returns the result-view import used by the JSON-RPC client package.
+func (p JSONRPCServiceSnapshot) ClientViewImport() *codegen.ImportSpec {
+	if p.clientViewImport == nil {
 		panic("JSON-RPC service does not use result views")
 	}
-	return cloneImportSpec(p.viewImport)
+	return cloneImportSpec(p.clientViewImport)
+}
+
+// ServerViewImport returns the result-view import used by the JSON-RPC server package.
+func (p JSONRPCServiceSnapshot) ServerViewImport() *codegen.ImportSpec {
+	if p.serverViewImport == nil {
+		panic("JSON-RPC service does not use result views")
+	}
+	return cloneImportSpec(p.serverViewImport)
 }
 
 // FileImports returns a new copy of the service-type imports needed by one
@@ -780,74 +996,449 @@ func (p JSONRPCServiceSnapshot) ServerCodecFile() *codegen.File {
 	return cloneJSONRPCCodecFile(p.serverCodec)
 }
 
-// planImports requests every import name written directly in an HTTP file.
-// This happens before generated service packages receive their import names.
-func planImports(generation *codegen.Generation, transport transportKind) error {
-	imports := []*codegen.ImportSpec{
-		codegen.SimpleImport("bufio"),
-		codegen.SimpleImport("bytes"),
-		codegen.SimpleImport("context"),
-		codegen.SimpleImport("encoding/json"),
-		codegen.SimpleImport("errors"),
-		codegen.SimpleImport("flag"),
-		codegen.SimpleImport("fmt"),
-		codegen.SimpleImport("io"),
-		codegen.SimpleImport("mime/multipart"),
-		codegen.SimpleImport("net/http"),
-		codegen.SimpleImport("net/url"),
-		codegen.SimpleImport("os"),
-		codegen.SimpleImport("path"),
-		codegen.SimpleImport("strconv"),
-		codegen.SimpleImport("strings"),
-		codegen.SimpleImport("sync"),
-		codegen.SimpleImport("time"),
-		codegen.SimpleImport("unicode/utf8"),
-		codegen.SimpleImport("github.com/google/uuid"),
-		codegen.SimpleImport("github.com/gorilla/websocket"),
-		codegen.SimpleImport("goa.design/clue/debug"),
-		codegen.SimpleImport("goa.design/clue/log"),
-		codegen.GoaImport(""),
-		codegen.GoaNamedImport("http", "goahttp"),
-		codegen.GoaImport("middleware"),
+// serverExtensionPackage returns the generated server package that will contain
+// service's extension functions. It first checks that this ordinary HTTP plan
+// still accepts new declarations.
+func (p *Plan) serverExtensionPackage(service *expr.HTTPServiceExpr) (*codegen.GeneratedPackage, error) {
+	if err := p.validateServerExtensionLifecycle(); err != nil {
+		return nil, err
 	}
-	for _, spec := range imports {
-		if err := generation.RequireImport(spec); err != nil {
-			return err
+	if service == nil {
+		return nil, fmt.Errorf("HTTP server extension requires a service from this plan")
+	}
+	pkg, ok := p.serverPackages[service]
+	if !ok {
+		return nil, fmt.Errorf("HTTP service does not belong to this plan")
+	}
+	return pkg, nil
+}
+
+// serverEndpointExtensionPackage returns the generated server package and
+// service that contain endpoint. It first checks that this ordinary HTTP plan
+// still accepts new declarations.
+func (p *Plan) serverEndpointExtensionPackage(endpoint *expr.HTTPEndpointExpr) (*codegen.GeneratedPackage, *expr.HTTPServiceExpr, error) {
+	if err := p.validateServerExtensionLifecycle(); err != nil {
+		return nil, nil, err
+	}
+	if endpoint == nil {
+		return nil, nil, fmt.Errorf("HTTP server endpoint wrapper requires an endpoint from this plan")
+	}
+	for service, symbols := range p.symbols {
+		if _, ok := symbols.endpoints[endpoint]; ok {
+			return p.serverPackages[service], service, nil
 		}
 	}
-	for _, root := range generation.Roots() {
-		design, ok := root.(*expr.RootExpr)
+	return nil, nil, fmt.Errorf("HTTP endpoint does not belong to this plan")
+}
+
+// validateServerExtensionLifecycle checks that the plan still accepts new Go
+// declarations and that it writes ordinary HTTP files.
+func (p *Plan) validateServerExtensionLifecycle() error {
+	if p.transport != httpTransport {
+		return fmt.Errorf("JSON-RPC HTTP plans do not support server extensions")
+	}
+	if p.services != nil {
+		return fmt.Errorf("HTTP server extension cannot be declared after plan linking")
+	}
+	if p.generation.Frozen() {
+		return fmt.Errorf("HTTP server extension cannot be declared after generation freeze")
+	}
+	return nil
+}
+
+// planImports records each import on the generated package that writes the
+// reference. NewPlans calls it after those packages have been claimed.
+func planImports(generation *codegen.Generation, transport transportKind, plans []*Plan) error {
+	for _, candidate := range generation.Roots() {
+		design, ok := candidate.(*expr.RootExpr)
 		if !ok {
 			continue
 		}
 		expressions := transportExpressions(design, transport)
-		dir := transportDirectory(transport)
-		for _, service := range expressions.Services {
-			pathName := codegen.SnakeCase(codegen.Goify(service.Name(), false))
-			packageName := strings.ToLower(codegen.Goify(service.Name(), false))
-			if err := generation.ReserveGeneratedImport(codegen.NewImport(packageName+"c", path.Join(generation.GenPkg(), dir, pathName, "client"))); err != nil {
-				return err
-			}
-			if err := generation.ReserveGeneratedImport(codegen.NewImport(packageName+"svr", path.Join(generation.GenPkg(), dir, pathName, "server"))); err != nil {
-				return err
-			}
+		if len(expressions.Services) == 0 {
+			continue
 		}
-		if len(expressions.Services) > 0 {
-			for _, server := range design.API.Servers {
-				serverName := codegen.SnakeCase(codegen.Goify(server.Name, true))
-				if err := generation.ReserveGeneratedImport(codegen.NewImport("cli", path.Join(generation.GenPkg(), dir, "cli", serverName))); err != nil {
+		plan := planForRoot(plans, design)
+		if plan == nil {
+			return fmt.Errorf("%s design has no HTTP plan", transportLabel(transport))
+		}
+		dir := transportDirectory(transport)
+		for _, transportService := range expressions.Services {
+			pathName := plan.servicePaths[transportService]
+			clientPath := path.Join(generation.GenPkg(), dir, pathName, "client")
+			serverPath := path.Join(generation.GenPkg(), dir, pathName, "server")
+			servicePackage, viewsPackage, err := servicePackagePreferences(plan.servicePlan, transportService)
+			if err != nil {
+				return err
+			}
+			for index, outputPackage := range []*codegen.GeneratedPackage{
+				generation.Package(clientPath),
+				generation.Package(serverPath),
+			} {
+				if err := requireHTTPTransportImports(outputPackage, transportService, index == 0); err != nil {
 					return err
 				}
+				if err := outputPackage.ReserveGeneratedImport(servicePackage); err != nil {
+					return err
+				}
+				if viewsPackage != nil {
+					if err := outputPackage.ReserveGeneratedImport(viewsPackage); err != nil {
+						return err
+					}
+				}
+				allPaths, err := planHTTPAttributeImports(generation, outputPackage, serviceReferenceAttributes(transportService.HTTPEndpoints...)...)
+				if err != nil {
+					return err
+				}
+				side := "server"
+				if index == 0 {
+					side = "client"
+				}
+				retainPlannedFileImports(plan, outputPackage, allPaths,
+					path.Join(codegen.Gendir, dir, pathName, side, side+".go"),
+					path.Join(codegen.Gendir, dir, pathName, side, "encode_decode.go"),
+					path.Join(codegen.Gendir, dir, pathName, side, "types.go"),
+				)
+				if index == 0 {
+					retainPlannedFileImports(plan, outputPackage, allPaths, path.Join(codegen.Gendir, dir, pathName, side, "cli.go"))
+				}
+				webSocketPaths, err := planHTTPAttributeImports(generation, outputPackage, serviceReferenceAttributes(httpWebSocketEndpoints(transportService)...)...)
+				if err != nil {
+					return err
+				}
+				retainPlannedFileImports(plan, outputPackage, webSocketPaths, path.Join(codegen.Gendir, dir, pathName, side, "websocket.go"))
+				ssePaths, err := planHTTPAttributeImports(generation, outputPackage, serviceReferenceAttributes(httpSSEEndpoints(transportService)...)...)
+				if err != nil {
+					return err
+				}
+				sseFile := "sse.go"
+				if transport == jsonrpcTransport && index == 0 {
+					sseFile = "stream.go"
+				}
+				retainPlannedFileImports(plan, outputPackage, ssePaths, path.Join(codegen.Gendir, dir, pathName, side, sseFile))
+			}
+		}
+		if transport == httpTransport {
+			var rootOutput *codegen.GeneratedPackage
+			for _, transportService := range expressions.Services {
+				if !serviceHasMultipartRequest(transportService) {
+					continue
+				}
+				rootPath := path.Dir(generation.GenPkg())
+				if rootOutput == nil {
+					var err error
+					rootOutput, err = generation.ClaimOutputPackage(rootPath, ".")
+					if err != nil {
+						return err
+					}
+				}
+				if err := rootOutput.RequireImport(codegen.SimpleImport("mime/multipart")); err != nil {
+					return err
+				}
+				servicePackage, _, err := servicePackagePreferences(plan.servicePlan, transportService)
+				if err != nil {
+					return err
+				}
+				servicePath := plan.servicePaths[transportService]
+				if err := rootOutput.ReserveGeneratedImport(codegen.NewImport(
+					servicePackage.Name+"svr",
+					path.Join(generation.GenPkg(), "http", servicePath, "server"),
+				)); err != nil {
+					return err
+				}
+				var multipartEndpoints []*expr.HTTPEndpointExpr
+				for _, endpoint := range transportService.HTTPEndpoints {
+					if endpoint.MultipartRequest {
+						multipartEndpoints = append(multipartEndpoints, endpoint)
+					}
+				}
+				importPaths, err := planHTTPAttributeImports(generation, rootOutput, serviceReferenceAttributes(multipartEndpoints...)...)
+				if err != nil {
+					return err
+				}
+				retainPlannedFileImports(plan, rootOutput, importPaths, "multipart.go")
+			}
+		}
+		for _, server := range design.API.Servers {
+			serverName := codegen.SnakeCase(codegen.Goify(server.Name, true))
+			cliPath := path.Join(generation.GenPkg(), dir, "cli", serverName)
+			cliPackage := generation.Package(cliPath)
+			if err := requireHTTPCLIImports(cliPackage); err != nil {
+				return err
+			}
+			for _, serviceName := range server.Services {
+				transportService := expressions.Service(serviceName)
+				if transportService == nil {
+					continue
+				}
+				pathName := plan.servicePaths[transportService]
+				servicePackage, _, err := servicePackagePreferences(plan.servicePlan, transportService)
+				if err != nil {
+					return err
+				}
+				if err := cliPackage.ReserveGeneratedImport(codegen.NewImport(
+					servicePackage.Name+"c",
+					path.Join(generation.GenPkg(), dir, pathName, "client"),
+				)); err != nil {
+					return err
+				}
+				if len(transportService.ServiceExpr.ClientInterceptors) > 0 {
+					servicePackage, _, err := plan.servicePlan.ServicePackageImports(transportService.ServiceExpr)
+					if err != nil {
+						return err
+					}
+					if err := cliPackage.ReserveGeneratedImport(servicePackage); err != nil {
+						return err
+					}
+				}
+			}
+
+			rootPath := path.Dir(generation.GenPkg())
+			serverOutput, err := generation.ClaimOutputPackage(
+				path.Join(rootPath, "cmd", serverName),
+				path.Join("cmd", serverName),
+			)
+			if err != nil {
+				return err
+			}
+			for _, serviceName := range server.Services {
+				transportService := expressions.Service(serviceName)
+				if transportService == nil {
+					continue
+				}
+				pathName := plan.servicePaths[transportService]
+				servicePackage, _, err := servicePackagePreferences(plan.servicePlan, transportService)
+				if err != nil {
+					return err
+				}
+				preferred := servicePackage.Name + "svr"
+				if transport == jsonrpcTransport {
+					preferred = servicePackage.Name + "jssvr"
+				}
+				if err := serverOutput.ReserveGeneratedImport(codegen.NewImport(
+					preferred,
+					path.Join(generation.GenPkg(), dir, pathName, "server"),
+				)); err != nil {
+					return err
+				}
+			}
+			clientOutput, err := generation.ClaimOutputPackage(
+				path.Join(rootPath, "cmd", serverName+"-cli"),
+				path.Join("cmd", serverName+"-cli"),
+			)
+			if err != nil {
+				return err
+			}
+			if err := clientOutput.ReserveGeneratedImport(codegen.NewImport("cli", cliPath)); err != nil {
+				return err
+			}
+			for _, service := range design.Services {
+				servicePackage, _, err := plan.servicePlan.ServicePackageImports(service)
+				if err != nil {
+					return err
+				}
+				if err := clientOutput.ReserveGeneratedImport(servicePackage); err != nil {
+					return err
+				}
+			}
+			if err := clientOutput.ReserveGeneratedImport(codegen.NewImport(examplePackageImportName(design), rootPath)); err != nil {
+				return err
+			}
+			for _, service := range design.Services {
+				if len(service.ClientInterceptors) == 0 {
+					continue
+				}
+				if err := clientOutput.ReserveGeneratedImport(codegen.NewImport("interceptors", rootPath+"/interceptors")); err != nil {
+					return err
+				}
+				break
 			}
 		}
 	}
 	return nil
 }
 
+// planForRoot returns the transport plan that owns one evaluated design.
+func planForRoot(plans []*Plan, root *expr.RootExpr) *Plan {
+	for _, plan := range plans {
+		if plan.root == root {
+			return plan
+		}
+	}
+	return nil
+}
+
+// servicePackagePreferences returns the service package and optional views
+// package recorded for every transport method. All methods in one service must
+// agree because their generated files share imports.
+func servicePackagePreferences(plan *service.Plan, transportService *expr.HTTPServiceExpr) (*codegen.ImportSpec, *codegen.ImportSpec, error) {
+	servicePackage, availableViewsPackage, err := plan.ServicePackageImports(transportService.ServiceExpr)
+	if err != nil {
+		return nil, nil, err
+	}
+	var viewsPackage *codegen.ImportSpec
+	for _, endpoint := range transportService.HTTPEndpoints {
+		methodService, methodViews, err := plan.MethodPackageImports(endpoint.MethodExpr)
+		if err != nil {
+			return nil, nil, err
+		}
+		if *servicePackage != *methodService {
+			return nil, nil, fmt.Errorf("HTTP service %q methods use different generated service packages", transportService.Name())
+		}
+		if methodViews == nil {
+			continue
+		}
+		if *availableViewsPackage != *methodViews {
+			return nil, nil, fmt.Errorf("HTTP service %q methods use different generated views packages", transportService.Name())
+		}
+		viewsPackage = availableViewsPackage
+	}
+	return servicePackage, viewsPackage, nil
+}
+
+// retainPlannedFileImports records each package path referenced by the named
+// generated files. Repeated calls merge paths when several services contribute
+// declarations to one output file such as multipart.go.
+func retainPlannedFileImports(plan *Plan, output *codegen.GeneratedPackage, importPaths []string, filePaths ...string) {
+	for _, filePath := range filePaths {
+		key := filepathKey(filePath)
+		retained := plan.fileImports[key]
+		if retained == nil {
+			retained = &plannedFileImports{output: output}
+			plan.fileImports[key] = retained
+		}
+		seen := make(map[string]struct{}, len(retained.paths))
+		for _, importPath := range retained.paths {
+			seen[importPath] = struct{}{}
+		}
+		for _, importPath := range importPaths {
+			if _, ok := seen[importPath]; ok {
+				continue
+			}
+			seen[importPath] = struct{}{}
+			retained.paths = append(retained.paths, importPath)
+		}
+		slices.Sort(retained.paths)
+	}
+}
+
+// examplePackageImportName returns the package name imported by runnable
+// examples for the starter service implementations at the module root.
+func examplePackageImportName(root *expr.RootExpr) string {
+	scope := codegen.NewNameScope()
+	for _, service := range root.Services {
+		scope.Unique(strings.ToLower(codegen.Goify(service.Name, false)))
+	}
+	return scope.Unique(strings.ToLower(codegen.Goify(root.API.Name, false)), "api")
+}
+
+// requireHTTPTransportImports records the fixed package names used by one
+// service's generated client or server files.
+func requireHTTPTransportImports(outputPackage *codegen.GeneratedPackage, service *expr.HTTPServiceExpr, client bool) error {
+	imports := []*codegen.ImportSpec{
+		codegen.SimpleImport("context"),
+		codegen.SimpleImport("encoding/json"),
+		codegen.SimpleImport("errors"),
+		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("io"),
+		codegen.SimpleImport("mime/multipart"),
+		codegen.SimpleImport("net/http"),
+		codegen.SimpleImport("strconv"),
+		codegen.SimpleImport("strings"),
+		codegen.SimpleImport("unicode/utf8"),
+		codegen.SimpleImport("github.com/gorilla/websocket"),
+		codegen.GoaImport(""),
+		codegen.GoaNamedImport("http", "goahttp"),
+	}
+	if client {
+		imports = append(imports,
+			codegen.SimpleImport("bytes"),
+			codegen.SimpleImport("net/url"),
+			codegen.SimpleImport("os"),
+			codegen.SimpleImport("time"),
+		)
+	} else {
+		imports = append(imports,
+			codegen.SimpleImport("bufio"),
+			codegen.SimpleImport("path"),
+		)
+	}
+	hasStream := false
+	for _, endpoint := range service.HTTPEndpoints {
+		if endpoint.UsesWebSocket() || endpoint.UsesSSE() {
+			hasStream = true
+		}
+		if client && endpoint.IsJSONRPC() {
+			imports = append(imports,
+				codegen.SimpleImport("github.com/google/uuid"),
+				codegen.GoaImport("jsonrpc"),
+			)
+		}
+	}
+	if hasStream {
+		imports = append(imports, codegen.SimpleImport("sync"))
+		if !client {
+			imports = append(imports, codegen.SimpleImport("time"))
+		}
+	}
+	for _, spec := range imports {
+		if err := outputPackage.RequireImport(spec); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// requireHTTPCLIImports records the fixed imports used by a generated command
+// parser and its payload builders.
+func requireHTTPCLIImports(outputPackage *codegen.GeneratedPackage) error {
+	for _, spec := range []*codegen.ImportSpec{
+		codegen.SimpleImport("encoding/json"),
+		codegen.SimpleImport("flag"),
+		codegen.SimpleImport("fmt"),
+		codegen.SimpleImport("net/http"),
+		codegen.SimpleImport("os"),
+		codegen.SimpleImport("strconv"),
+		codegen.SimpleImport("unicode/utf8"),
+		codegen.GoaImport(""),
+		codegen.GoaNamedImport("http", "goahttp"),
+	} {
+		if err := outputPackage.RequireImport(spec); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// serviceHasResultViews reports whether transport files reference the service
+// views package.
+func serviceHasResultViews(service *expr.HTTPServiceExpr) bool {
+	for _, endpoint := range service.HTTPEndpoints {
+		if _, ok := endpoint.MethodExpr.Result.Type.(*expr.ResultTypeExpr); ok {
+			return true
+		}
+	}
+	return false
+}
+
+// serviceHasMultipartRequest reports whether the example package writes a
+// multipart callback whose signature uses this service's generated server.
+func serviceHasMultipartRequest(service *expr.HTTPServiceExpr) bool {
+	for _, endpoint := range service.HTTPEndpoints {
+		if endpoint.MultipartRequest {
+			return true
+		}
+	}
+	return false
+}
+
 // newPlans validates the full input set and submits names for every plan.
 func newPlans(generation *codegen.Generation, transport transportKind, inputs []PlanInput) ([]*Plan, error) {
 	if generation == nil {
 		return nil, fmt.Errorf("HTTP plans require a generation")
+	}
+	if generation.Frozen() {
+		return nil, fmt.Errorf("HTTP plans must be collected before generation freeze")
 	}
 	owned := make(map[*expr.RootExpr]struct{})
 	for _, candidate := range generation.Roots() {
@@ -878,9 +1469,6 @@ func newPlans(generation *codegen.Generation, transport transportKind, inputs []
 	if len(inputs) != len(owned) {
 		return nil, fmt.Errorf("%s planning requires all %d transport roots, got %d", transportLabel(transport), len(owned), len(inputs))
 	}
-	if err := planImports(generation, transport); err != nil {
-		return nil, err
-	}
 	packages := make(map[string]*wireTypeCatalog)
 	plans := make([]*Plan, len(inputs))
 	for index, input := range inputs {
@@ -889,6 +1477,9 @@ func newPlans(generation *codegen.Generation, transport transportKind, inputs []
 			return nil, err
 		}
 		plans[index] = plan
+	}
+	if err := planImports(generation, transport, plans); err != nil {
+		return nil, err
 	}
 	for _, catalog := range packages {
 		if err := catalog.Declare(); err != nil {
@@ -909,30 +1500,44 @@ func newPlans(generation *codegen.Generation, transport transportKind, inputs []
 // that its generated client and server packages will define.
 func newPlan(generation *codegen.Generation, transport transportKind, input PlanInput, packages map[string]*wireTypeCatalog) (*Plan, error) {
 	plan := &Plan{
-		root:         input.Root,
-		servicePlan:  input.Service,
-		generation:   generation,
-		transport:    transport,
-		constructors: make(map[viewedConstructorKey]*codegen.NameDeclaration),
-		payloads:     make(map[*expr.HTTPEndpointExpr]*codegen.NameDeclaration),
-		streams:      make(map[*expr.HTTPEndpointExpr]*codegen.NameDeclaration),
-		errors:       make(map[*expr.HTTPErrorExpr]*codegen.NameDeclaration),
-		wireTypes:    make(map[*expr.HTTPServiceExpr]*plannedWireTypes),
-		symbols:      make(map[*expr.HTTPServiceExpr]*httpSymbols),
-		cliParsers:   make(map[*expr.ServerExpr]*cli.ParserPlan),
+		root:           input.Root,
+		servicePlan:    input.Service,
+		generation:     generation,
+		transport:      transport,
+		serverPackages: make(map[*expr.HTTPServiceExpr]*codegen.GeneratedPackage),
+		extensions:     make(map[*expr.HTTPServiceExpr]*serverExtensions),
+		constructors:   make(map[viewedConstructorKey]*codegen.NameDeclaration),
+		payloads:       make(map[*expr.HTTPEndpointExpr]*codegen.NameDeclaration),
+		streams:        make(map[*expr.HTTPEndpointExpr]*codegen.NameDeclaration),
+		errors:         make(map[*expr.HTTPErrorExpr]*codegen.NameDeclaration),
+		wireTypes:      make(map[*expr.HTTPServiceExpr]*plannedWireTypes),
+		symbols:        make(map[*expr.HTTPServiceExpr]*httpSymbols),
+		servicePaths:   make(map[*expr.HTTPServiceExpr]string),
+		cliParsers:     make(map[string]*cli.ParserPlan),
+		fileImports:    make(map[string]*plannedFileImports),
 	}
 	expressions := transportExpressions(input.Root, transport)
 	dir := transportDirectory(transport)
 	for _, transportService := range expressions.Services {
-		clientPath := path.Join(generation.GenPkg(), dir, codegen.SnakeCase(transportService.Name()), "client")
+		servicePackage, _, err := input.Service.ServicePackageImports(transportService.ServiceExpr)
+		if err != nil {
+			return nil, err
+		}
+		servicePath := path.Base(servicePackage.Path)
+		plan.servicePaths[transportService] = servicePath
+		clientPath := path.Join(generation.GenPkg(), dir, servicePath, "client")
 		clientPackage, err := generation.ClaimPackage(clientPath)
 		if err != nil {
 			return nil, err
 		}
-		serverPath := path.Join(generation.GenPkg(), dir, codegen.SnakeCase(transportService.Name()), "server")
+		serverPath := path.Join(generation.GenPkg(), dir, servicePath, "server")
 		serverPackage, err := generation.ClaimPackage(serverPath)
 		if err != nil {
 			return nil, err
+		}
+		plan.serverPackages[transportService] = serverPackage
+		plan.extensions[transportService] = &serverExtensions{
+			endpointHandlerWrappers: make(map[*expr.HTTPEndpointExpr][]*codegen.NameDeclaration),
 		}
 		clientCatalog := packages[clientPath]
 		if clientCatalog == nil {
@@ -945,11 +1550,19 @@ func newPlan(generation *codegen.Generation, transport transportKind, input Plan
 			packages[serverPath] = serverCatalog
 		}
 		planned := &plannedWireTypes{
-			server:         serverCatalog,
-			client:         clientCatalog,
-			streamPayloads: make(map[*expr.HTTPEndpointExpr]*wireTypeRecord),
+			server: serverCatalog,
+			client: clientCatalog,
+			transforms: plannedWireTransforms{
+				requests:         make(map[clientBodyConstructorKey]*plannedRequestTransforms),
+				responses:        make(map[viewedConstructorKey]*plannedResponseTransforms),
+				errors:           make(map[*expr.HTTPErrorExpr]*plannedResponseTransforms),
+				streamingResults: make(map[*expr.HTTPEndpointExpr]*plannedResponseTransforms),
+			},
+			streamPayloads:             make(map[*expr.HTTPEndpointExpr]*wireTypeRecord),
+			clientBodyConstructors:     make(map[clientBodyConstructorKey]*codegen.NameDeclaration),
+			clientBodyConstructorNames: make(map[clientBodyConstructorKey]string),
 		}
-		collectPlannedWireTypes(transportService, planned, input.Service)
+		collectPlannedWireTypes(input.Root.API.Name, transportService, planned, input.Service)
 		plan.wireTypes[transportService] = planned
 		symbols, err := collectHTTPSymbols(plan, transportService, clientPackage, serverPackage)
 		if err != nil {
@@ -959,8 +1572,30 @@ func newPlan(generation *codegen.Generation, transport transportKind, input Plan
 		for _, endpoint := range transportService.HTTPEndpoints {
 			order := viewedConstructorOrder{
 				transport: dir,
+				api:       input.Root.API.Name,
 				service:   transportService.Name(),
 				method:    endpoint.Name(),
+			}
+			for _, role := range []wireTypeRole{wireRequestBody, wireStreamPayload} {
+				key := clientBodyConstructorKey{endpoint: endpoint, role: role}
+				preferred := planned.clientBodyConstructorNames[key]
+				if preferred == "" {
+					continue
+				}
+				body := planned.bodies.request(endpoint)
+				if role == wireStreamPayload {
+					body = planned.bodies.streaming(endpoint)
+				}
+				preferred = planned.client.releasedCompositeConstructorName(body, jsonBodyPolicy(true, false, false, ""))
+				orderRole := "request body"
+				if role == wireStreamPayload {
+					orderRole = "streaming body"
+				}
+				declaration, err := declareHTTPConstructor(clientPackage, preferred, order.withRole(orderRole))
+				if err != nil {
+					return nil, err
+				}
+				planned.clientBodyConstructors[key] = declaration
 			}
 			if needInit(endpoint.MethodExpr.Payload.Type) {
 				declaration, err := declareHTTPConstructor(serverPackage, endpointPayloadConstructorName(endpoint), order.withRole("payload"))
@@ -1049,7 +1684,7 @@ func newPlan(generation *codegen.Generation, transport transportKind, input Plan
 		if err != nil {
 			return nil, err
 		}
-		plan.cliParsers[server] = parser
+		plan.cliParsers[server.Name] = parser
 	}
 	return plan, nil
 }
@@ -1071,11 +1706,37 @@ func (p *Plan) link() error {
 	services.plannedWireTypes = p.wireTypes
 	services.plannedSymbols = p.symbols
 	services.cliParsers = p.cliParsers
+	services.fileImports = make(map[string][]*codegen.ImportSpec, len(p.fileImports))
+	for filePath, retained := range p.fileImports {
+		imports := make([]*codegen.ImportSpec, len(retained.paths))
+		for index, importPath := range retained.paths {
+			imports[index] = retained.output.Import(importPath)
+		}
+		services.fileImports[filePath] = imports
+	}
 	for _, transportService := range services.Expressions.Services {
 		if services.ServicesData.Get(transportService.Name()) == nil {
 			return fmt.Errorf("HTTP service %q has no linked service model", transportService.Name())
 		}
-		services.HTTPData[transportService.Name()] = services.analyze(transportService)
+		data := services.analyze(transportService)
+		if services.linkErr != nil {
+			return services.linkErr
+		}
+		extensions := p.extensions[transportService]
+		data.ServerHandlerWrappers = append([]*codegen.NameDeclaration(nil), extensions.handlerWrappers...)
+		for index, endpoint := range data.Endpoints {
+			endpoint.ServerHandlerWrappers = combinedHandlerWrappers(extensions, transportService.HTTPEndpoints[index])
+		}
+		for _, fileServer := range data.FileServers {
+			fileServer.ServerHandlerWrappers = append([]*codegen.NameDeclaration(nil), extensions.handlerWrappers...)
+		}
+		data.ServerMounts = copyServerMounts(extensions.mounts)
+		services.HTTPData[transportService.Name()] = data
+	}
+	for _, planned := range p.wireTypes {
+		if err := planned.checkTransformsUsed(); err != nil {
+			return err
+		}
 	}
 	p.services = services
 	p.viewed = make(map[viewedMethodKey]*viewedResultPlan)
@@ -1090,13 +1751,23 @@ func (p *Plan) link() error {
 		}
 		jsonService := &jsonRPCServicePlan{
 			data:        serviceData,
-			services:    services,
 			fileImports: make(map[string][]*codegen.ImportSpec),
 			clientCodec: clientEncodeDecodeFile(transportService, services),
 			serverCodec: serverEncodeDecodeFile(transportService, services),
 		}
+		servicePackage, viewsPackage, err := servicePackagePreferences(p.servicePlan, transportService)
+		if err != nil {
+			return err
+		}
+		planned := p.wireTypes[transportService]
+		jsonService.clientServiceImport = planned.client.pkg.Import(servicePackage.Path)
+		jsonService.serverServiceImport = planned.server.pkg.Import(servicePackage.Path)
+		if viewsPackage != nil {
+			jsonService.clientViewImport = planned.client.pkg.Import(viewsPackage.Path)
+			jsonService.serverViewImport = planned.server.pkg.Import(viewsPackage.Path)
+		}
 		if p.transport == jsonrpcTransport {
-			jsonService.prepareFileImports(transportService, services)
+			jsonService.prepareFileImports(services)
 		}
 		p.jsonServices[serviceName] = jsonService
 		for _, endpoint := range serviceData.Endpoints {
@@ -1128,14 +1799,87 @@ func (p *Plan) link() error {
 	if p.transport == httpTransport {
 		p.server = serverFiles(services)
 		p.client = clientFiles(services)
-		p.example = exampleServerFiles(services)
 	}
-	p.exampleCLI = exampleCLIFiles(services)
 	p.serverTypes = serverTypeFiles(services)
 	p.clientTypes = clientTypeFiles(services)
 	p.paths = pathFiles(services)
 	p.clientCLI = clientCLIFiles(services)
 	return nil
+}
+
+// checkTransformsUsed verifies that every conversion retained by this service
+// plan was written exactly once while its template data was built.
+func (p *plannedWireTypes) checkTransformsUsed() error {
+	checkRequest := func(transforms *plannedRequestTransforms) error {
+		for _, use := range []struct {
+			catalog *wireTypeCatalog
+			handle  wireTransformHandle
+		}{
+			{p.client, transforms.clientEncode},
+			{p.server, transforms.serverDecode},
+			{p.client, transforms.clientDecode},
+		} {
+			if err := use.catalog.checkTransformUsed(use.handle); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	checkResponse := func(transforms *plannedResponseTransforms) error {
+		for _, use := range []struct {
+			catalog *wireTypeCatalog
+			handle  wireTransformHandle
+		}{
+			{p.server, transforms.serverEncode},
+			{p.client, transforms.clientDecode},
+		} {
+			if err := use.catalog.checkTransformUsed(use.handle); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	for _, transforms := range p.transforms.requests {
+		if err := checkRequest(transforms); err != nil {
+			return err
+		}
+	}
+	for _, transforms := range p.transforms.responses {
+		if err := checkResponse(transforms); err != nil {
+			return err
+		}
+	}
+	for _, transforms := range p.transforms.errors {
+		if err := checkResponse(transforms); err != nil {
+			return err
+		}
+	}
+	for _, transforms := range p.transforms.streamingResults {
+		if err := checkResponse(transforms); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// combinedHandlerWrappers copies the service wrappers followed by the wrappers
+// declared for one endpoint. Templates nest the first entry outermost.
+func combinedHandlerWrappers(extensions *serverExtensions, endpoint *expr.HTTPEndpointExpr) []*codegen.NameDeclaration {
+	wrappers := make([]*codegen.NameDeclaration, 0, len(extensions.handlerWrappers)+len(extensions.endpointHandlerWrappers[endpoint]))
+	wrappers = append(wrappers, extensions.handlerWrappers...)
+	return append(wrappers, extensions.endpointHandlerWrappers[endpoint]...)
+}
+
+// copyServerMounts gives render code its own mount functions and route entries.
+func copyServerMounts(source []*ServerMount) []*ServerMount {
+	result := make([]*ServerMount, len(source))
+	for index, mount := range source {
+		result[index] = &ServerMount{
+			Declaration: mount.Declaration,
+			MountPoints: append([]ServerMountPoint(nil), mount.MountPoints...),
+		}
+	}
+	return result
 }
 
 // transportExpressions returns the HTTP or JSON-RPC designs requested
@@ -1170,43 +1914,32 @@ func (p *Plan) requireLinked() {
 	}
 }
 
-// prepareFileImports computes the service-type imports for every JSON-RPC file
-// that this service can generate. JSON-RPC later reads these lists without
-// walking the HTTP endpoint types again.
-func (p *jsonRPCServicePlan) prepareFileImports(transportService *expr.HTTPServiceExpr, services *ServicesData) {
-	var all, sse, websocket []*expr.AttributeExpr
-	for index, endpoint := range transportService.HTTPEndpoints {
-		references := serviceReferenceAttributes(endpoint)
-		all = append(all, references...)
-		switch {
-		case p.data.Endpoints[index].SSE != nil:
-			sse = append(sse, references...)
-		case IsWebSocketEndpoint(p.data.Endpoints[index]):
-			websocket = append(websocket, references...)
-		}
-	}
+// prepareFileImports copies the package paths collected for each JSON-RPC file
+// before generation names were frozen.
+func (p *jsonRPCServicePlan) prepareFileImports(services *ServicesData) {
 	servicePath := p.data.Service.PathName
-	clientPackage := path.Join(services.GenPkg(), "jsonrpc", servicePath, "client")
-	serverPackage := path.Join(services.GenPkg(), "jsonrpc", servicePath, "server")
-	clientAll := services.AttributeImports(clientPackage, all...)
-	serverAll := services.AttributeImports(serverPackage, all...)
-	p.fileImports[path.Join(codegen.Gendir, "jsonrpc", servicePath, "client", "client.go")] = clientAll
-	p.fileImports[path.Join(codegen.Gendir, "jsonrpc", servicePath, "server", "server.go")] = serverAll
+	clientPath := path.Join(codegen.Gendir, "jsonrpc", servicePath, "client", "client.go")
+	serverPath := path.Join(codegen.Gendir, "jsonrpc", servicePath, "server", "server.go")
+	p.fileImports[clientPath] = cloneImportSpecs(services.fileImports[filepathKey(clientPath)])
+	p.fileImports[serverPath] = cloneImportSpecs(services.fileImports[filepathKey(serverPath)])
 	if p.clientCodec != nil {
-		p.fileImports[p.clientCodec.Path] = clientAll
+		p.fileImports[p.clientCodec.Path] = cloneImportSpecs(services.fileImports[filepathKey(p.clientCodec.Path)])
 	}
 	if p.serverCodec != nil {
-		p.fileImports[p.serverCodec.Path] = serverAll
+		p.fileImports[p.serverCodec.Path] = cloneImportSpecs(services.fileImports[filepathKey(p.serverCodec.Path)])
 	}
-	if len(sse) > 0 {
-		p.fileImports[path.Join(codegen.Gendir, "jsonrpc", servicePath, "client", "stream.go")] = services.AttributeImports(clientPackage, sse...)
-		p.fileImports[path.Join(codegen.Gendir, "jsonrpc", servicePath, "server", "sse.go")] = services.AttributeImports(serverPackage, sse...)
-	}
-	if len(websocket) > 0 {
-		p.fileImports[path.Join(codegen.Gendir, "jsonrpc", servicePath, "client", "websocket.go")] = services.AttributeImports(clientPackage, websocket...)
-		if len(sse) == 0 {
-			p.fileImports[path.Join(codegen.Gendir, "jsonrpc", servicePath, "server", "websocket.go")] = services.AttributeImports(serverPackage, websocket...)
+	hasSSE := false
+	for _, endpoint := range p.data.Endpoints {
+		if endpoint.SSE != nil {
+			hasSSE = true
+			break
 		}
+	}
+	if hasSSE {
+		clientStreamPath := path.Join(codegen.Gendir, "jsonrpc", servicePath, "client", "stream.go")
+		serverStreamPath := path.Join(codegen.Gendir, "jsonrpc", servicePath, "server", "sse.go")
+		p.fileImports[clientStreamPath] = cloneImportSpecs(services.fileImports[filepathKey(clientStreamPath)])
+		p.fileImports[serverStreamPath] = cloneImportSpecs(services.fileImports[filepathKey(serverStreamPath)])
 	}
 }
 
@@ -1234,13 +1967,46 @@ func cloneImportSpec(source *codegen.ImportSpec) *codegen.ImportSpec {
 // viewedResultConstructorName returns the preferred constructor spelling for
 // one client response body selected by a result view.
 func viewedResultConstructorName(endpoint *expr.HTTPEndpointExpr, response *expr.HTTPResponseExpr, view string) string {
-	return "New" + codegen.Goify(endpoint.Name(), true) + "Result" + codegen.Goify(view, true) + codegen.Goify(http.StatusText(response.StatusCode), true)
+	status := codegen.Goify(http.StatusText(response.StatusCode), true)
+	if view != "" {
+		return "New" + codegen.Goify(endpoint.Name(), true) + "Result" + codegen.Goify(view, true) + status
+	}
+	return releasedMethodTypeConstructorName(endpoint.Name(), releasedMethodTypeName(endpoint.MethodExpr.Result, "Result"), "Result") + status
 }
 
 // endpointPayloadConstructorName returns the preferred server function name
 // that builds one method payload from its HTTP request values.
 func endpointPayloadConstructorName(endpoint *expr.HTTPEndpointExpr) string {
-	return "New" + codegen.Goify(endpoint.Name(), true) + "Payload"
+	method := codegen.Goify(endpoint.Name(), true)
+	payload := codegen.Goify(releasedMethodTypeName(endpoint.MethodExpr.Payload, "Payload"), true)
+	if strings.HasPrefix(payload, method) {
+		return "New" + payload
+	}
+	return "New" + method + payload
+}
+
+// releasedMethodTypeName returns the service-side spelling used before HTTP
+// constructors were planned separately. It specializes arrays and maps from
+// their element types, such as ElemType and MapKeyTypeElemType.
+func releasedMethodTypeName(attribute *expr.AttributeExpr, role string) string {
+	name := codegen.NewNameScope().GoTypeName(attribute)
+	if name == "" {
+		return role
+	}
+	return name
+}
+
+// releasedMethodTypeConstructorName joins a method and its service type while
+// avoiding a repeated type stem. For example, FetchCustomer and Customer
+// produce NewFetchCustomerResult.
+func releasedMethodTypeConstructorName(method, typeName, role string) string {
+	method = codegen.Goify(method, true)
+	typeName = codegen.Goify(typeName, true)
+	stem := strings.TrimSuffix(typeName, role)
+	if stem != typeName && stem != "" && strings.HasSuffix(method, stem) {
+		return "New" + method + role
+	}
+	return "New" + method + typeName
 }
 
 // declareHTTPConstructor submits one constructor name to the generated package
@@ -1265,6 +2031,7 @@ func (o viewedConstructorOrder) ComparePackageName(other codegen.PackageNameOrde
 	right := other.(viewedConstructorOrder)
 	for _, compared := range []int{
 		cmp.Compare(o.transport, right.transport),
+		cmp.Compare(o.api, right.api),
 		cmp.Compare(o.service, right.service),
 		cmp.Compare(o.method, right.method),
 		cmp.Compare(o.role, right.role),

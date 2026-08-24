@@ -8,13 +8,13 @@ func EncodeMethodARequest(encoder func(*http.Request) goahttp.Encoder) func(*htt
 		}
 		values := req.URL.Query()
 		if p.Int != nil {
-			values.Add("int", fmt.Sprintf("%v", *p.Int))
+			values.Add("int", strconv.Itoa(int(*p.Int)))
 		}
 		if p.Int32 != nil {
-			values.Add("int32", fmt.Sprintf("%v", *p.Int32))
+			values.Add("int32", strconv.FormatInt(int64(*p.Int32), 10))
 		}
 		if p.Int64 != nil {
-			values.Add("int64", fmt.Sprintf("%v", *p.Int64))
+			values.Add("int64", strconv.FormatInt(int64(*p.Int64), 10))
 		}
 		req.URL.RawQuery = values.Encode()
 		return nil

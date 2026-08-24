@@ -1,7 +1,6 @@
-{{- $retry := and .Method.Idempotent (eq .Method.StreamKind 1) (not .Method.SkipRequestBodyEncodeDecode) (not (isWebSocketEndpoint .)) (not (isSSEEndpoint .)) }}
+{{- $retry := and .Method.Idempotent (eq .Method.StreamKind 1) (not .Method.SkipRequestBodyEncodeDecode) (not (isSSEEndpoint .)) }}
 {{ printf "%s returns an endpoint that makes JSON-RPC requests to the %s service %s method." .EndpointInit .ServiceName .Method.Name | comment }}
 func (c *{{ .ClientStructDeclaration.Name }}) {{ .EndpointInit }}() goa.Endpoint {
-{{- if not (isWebSocketEndpoint .) }}
 	var (
 	{{- if .RequestEncoderDeclaration }}
 		encodeRequest  = {{ .RequestEncoderDeclaration.Name }}(c.encoder)
@@ -10,14 +9,12 @@ func (c *{{ .ClientStructDeclaration.Name }}) {{ .EndpointInit }}() goa.Endpoint
 		decodeResponse = {{ .ResponseDecoderDeclaration.Name }}(c.decoder, c.RestoreResponseBody)
 	{{- end }}
 	)
-{{- end }}
 	{{- if $retry }}
 	endpoint := func(ctx context.Context, v any) (any, error) {
 	{{- else }}
 	return func(ctx context.Context, v any) (any, error) {
 	{{- end }}
-{{- if not (isWebSocketEndpoint .) }}
-		req, err := c.{{ .RequestInit.Name }}(ctx, {{ range .RequestInit.ClientArgs }}{{ .Ref }}, {{ end }})
+		req, err := c.{{ .RequestInit.Declaration.Name }}(ctx, {{ range .RequestInit.ClientArgs }}{{ .Ref }}, {{ end }})
 		if err != nil {
 			return nil, err
 		}
@@ -26,36 +23,7 @@ func (c *{{ .ClientStructDeclaration.Name }}) {{ .EndpointInit }}() goa.Endpoint
 			return nil, err
 		}
 	{{- end }}
-{{- end }}
-{{- if isWebSocketEndpoint . }}
-	{{- if and .ClientWebSocket.RecvName .ClientWebSocket.RecvTypeRef }}
-		// The method stream uses the client response reader for each WebSocket result.
-		decodeResponse := c.decoder
-	{{- end }}
-		
-		conn, err := c.getConn(ctx)
-		if err != nil {
-			return nil, err
-		}
-		
-		// Closing the method stream cancels this context.
-		streamCtx, cancel := context.WithCancel(ctx)
-		
-		stream := &{{ .ClientWebSocket.VarDeclaration.Name }}{
-			conn:         conn,
-			owner:        &{{ websocketRequestOwnerName }}{},
-			ctx:          streamCtx,
-			cancel:       cancel,
-			{{- if and .ClientWebSocket.SendName .ClientWebSocket.RecvName .ClientWebSocket.RecvTypeRef }}
-			pendingReady: make(chan struct{}, 1),
-			{{- end }}
-			{{- if and .ClientWebSocket.RecvName .ClientWebSocket.RecvTypeRef }}
-			decoder: decodeResponse,
-			{{- end }}
-		}
-		
-		return stream, nil
-{{- else if isSSEEndpoint . }}
+{{- if isSSEEndpoint . }}
 		// For SSE endpoints, send JSON-RPC request and establish stream
 		resp, err := c.Doer.Do(req)
 		if err != nil {
@@ -63,15 +31,21 @@ func (c *{{ .ClientStructDeclaration.Name }}) {{ .EndpointInit }}() goa.Endpoint
 		}
 		
 		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			resp.Body.Close()
+			body, readErr := io.ReadAll(resp.Body)
+			closeErr := resp.Body.Close()
+			if err := errors.Join(readErr, closeErr); err != nil {
+				return nil, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
+			}
 			return nil, goahttp.ErrInvalidResponse("{{ .ServiceName }}", "{{ .Method.Name }}", resp.StatusCode, string(body))
 		}
 		
 		contentType := resp.Header.Get("Content-Type")
 		if contentType != "" && !strings.HasPrefix(contentType, "text/event-stream") {
-			resp.Body.Close()
-			return nil, fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
+			contentTypeErr := fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
+			if err := resp.Body.Close(); err != nil {
+				return nil, errors.Join(contentTypeErr, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err))
+			}
+			return nil, contentTypeErr
 		}
 		
 		// Create the SSE client stream

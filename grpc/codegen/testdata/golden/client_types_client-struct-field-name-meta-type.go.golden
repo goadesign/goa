@@ -1,5 +1,5 @@
-// NewProtoMethodRequest builds the gRPC request type from the payload of the
-// "Method" endpoint of the "UsingMetaTypes" service.
+// NewProtoMethodRequest builds *using_meta_typespb.MethodRequest from
+// *usingmetatypes.MethodPayload.
 func NewProtoMethodRequest(payload *usingmetatypes.MethodPayload) *using_meta_typespb.MethodRequest {
 	message := &using_meta_typespb.MethodRequest{
 		A: &payload.Foo,
@@ -13,8 +13,8 @@ func NewProtoMethodRequest(payload *usingmetatypes.MethodPayload) *using_meta_ty
 	return message
 }
 
-// NewMethodResult builds the result type of the "Method" endpoint of the
-// "UsingMetaTypes" service from the gRPC response type.
+// NewMethodResult builds *usingmetatypes.MethodResult from
+// *using_meta_typespb.MethodResponse.
 func NewMethodResult(message *using_meta_typespb.MethodResponse) *usingmetatypes.MethodResult {
 	result := &usingmetatypes.MethodResult{}
 	if message.A != nil {

@@ -107,11 +107,11 @@ func TestStreaming(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			root := RunGRPCDSL(t, c.DSL)
 			services := CreateGRPCServices(root)
-			serverfs := ServerFiles(services)
+			serverfs := serverFiles(services)
 			if len(serverfs) < 2 {
 				t.Fatalf("got %d server files, expected 2", len(serverfs))
 			}
-			clientfs := ClientFiles(services)
+			clientfs := clientFiles(services)
 			if len(clientfs) < 2 {
 				t.Fatalf("got %d client files, expected 2", len(clientfs))
 			}
@@ -154,11 +154,11 @@ func TestStreamingPayloadEnvelopeWithUnionPayload(t *testing.T) {
 	root := RunGRPCDSL(t, testdata.ClientStreamingRPCWithUnionPayloadDSL)
 	services := CreateGRPCServices(root)
 
-	clientfs := ClientFiles(services)
+	clientfs := clientFiles(services)
 	require.Len(t, clientfs, 2)
-	serverfs := ServerFiles(services)
+	serverfs := serverFiles(services)
 	require.Len(t, serverfs, 2)
-	protofs := ProtoFiles(services)
+	protofs := protoFiles(services)
 	require.Len(t, protofs, 1)
 
 	requestEncoder := codegen.SectionsCode(t, clientfs[1].Section("request-encoder"))
@@ -185,16 +185,16 @@ func TestStreamingPayloadEnvelopeWithUnionPayload(t *testing.T) {
 	assert.Contains(t, proto, "MethodClientStreamingRPCWithUnionPayloadStreamItem stream_item")
 
 	fpath := codegen.CreateTempFile(t, proto)
-	assert.NoError(t, protoc(defaultProtocCmd, fpath, nil))
+	assert.NoError(t, protoc(defaultProtocCmd, fpath))
 }
 
 func TestStreamingPayloadLegacyCompat(t *testing.T) {
 	root := RunGRPCDSL(t, testdata.BidirectionalStreamingRPCWithPayloadLegacyCompatDSL)
 	services := CreateGRPCServices(root)
 
-	serverfs := ServerFiles(services)
+	serverfs := serverFiles(services)
 	require.Len(t, serverfs, 2)
-	clientfs := ClientFiles(services)
+	clientfs := clientFiles(services)
 	require.Len(t, clientfs, 2)
 
 	// The server stream tracks the protocol spoken by the client.
@@ -216,14 +216,16 @@ func TestStreamingPayloadLegacyCompat(t *testing.T) {
 	requestDecoder := codegen.SectionsCode(t, serverfs[1].Section("request-decoder"))
 	assert.Contains(t, requestDecoder, "LegacyRequest(ctx, md)")
 	assert.Contains(t, requestDecoder, `md.Get("a")`)
-	assert.Contains(t, requestDecoder, "PayloadFromMetadata(")
+	service := services.Get("ServiceBidirectionalStreamingRPCWithPayloadLegacyCompat")
+	legacyConstructor := service.Endpoints[0].Request.LegacyDecode.ServerConvert.Init.Declaration.Name()
+	assert.Contains(t, requestDecoder, legacyConstructor+"(")
 
 	// Generated clients declare the envelope protocol in request metadata.
 	requestEncoder := codegen.SectionsCode(t, clientfs[1].Section("request-encoder"))
 	assert.Contains(t, requestEncoder, "goagrpc.StreamProtocolMetadataKey")
 
 	// The wire contract for envelope clients is unchanged.
-	protofs := ProtoFiles(services)
+	protofs := protoFiles(services)
 	require.Len(t, protofs, 1)
 	proto := sectionCode(t, protofs[0].SectionTemplates[1:]...)
 	assert.Contains(t, proto, "oneof body")
