@@ -2147,7 +2147,6 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			validate := codegen.AttributeValidationCode(pAtt, nil, httpsvrctx, required, expr.IsAlias(pAtt.Type), varn, name)
 			mapQueryParam = &ParamData{
 				MapQueryParams: e.MapQueryParams,
-				Map:            expr.AsMap(payload.Type) != nil,
 				Element: &Element{
 					HTTPName: name,
 					AttributeData: &AttributeData{
