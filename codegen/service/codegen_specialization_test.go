@@ -42,7 +42,10 @@ func TestInterceptorAccessorsDoNotRediscoverPlannedMethods(t *testing.T) {
 	}
 
 	code := rendered.String()
-	require.Contains(t, code, "InspectInfo interface")
+	require.Contains(t, code, "InspectInfo interface {\n\t\tgoa.InterceptorInfo")
+	require.Contains(t, code, "inspectFirstServerUnaryInfo struct {\n\t\tinspectFirstInfo")
+	require.NotContains(t, code, "inspectFirstServerUnaryInfo struct {\n\t\t*inspectFirstInfo")
+	require.NotContains(t, code, "inspectFirstInfo: &inspectFirstInfo")
 	require.NotContains(t, code, "method     string")
 	require.NotContains(t, code, "callType   goa.InterceptorCallType")
 
@@ -240,7 +243,7 @@ func TestSpecializedInterceptorInfo(t *testing.T) {
 	streamingPayload := &FirstStreamingPayload{Input: &input}
 	streamingResult := &FirstResult{Output: &output}
 
-	server := &inspectFirstServerUnaryInfo{inspectFirstInfo: &inspectFirstInfo{
+	server := &inspectFirstServerUnaryInfo{inspectFirstInfo: inspectFirstInfo{
 		rawPayload: &FirstEndpointInput{Payload: payload},
 	}}
 	if server.Service() != "InterceptorSpecialization" || server.Method() != "First" || server.CallType() != goa.InterceptorUnary {
@@ -250,26 +253,26 @@ func TestSpecializedInterceptorInfo(t *testing.T) {
 		t.Errorf("server payload = %q, want %q", actual, initial)
 	}
 
-	client := &inspectFirstClientUnaryInfo{inspectFirstInfo: &inspectFirstInfo{rawPayload: payload}}
+	client := &inspectFirstClientUnaryInfo{inspectFirstInfo: inspectFirstInfo{rawPayload: payload}}
 	if client.CallType() != goa.InterceptorUnary || client.Payload().Initial() != initial {
 		t.Errorf("unexpected client endpoint metadata")
 	}
 
-	send := &inspectFirstStreamingSendInfo{inspectFirstInfo: &inspectFirstInfo{rawPayload: streamingResult}}
+	send := &inspectFirstStreamingSendInfo{inspectFirstInfo: inspectFirstInfo{rawPayload: streamingResult}}
 	if send.CallType() != goa.InterceptorStreamingSend || send.ServerStreamingResult().Output() != output {
 		t.Errorf("unexpected server send metadata")
 	}
 
-	recv := &inspectFirstStreamingRecvInfo{inspectFirstInfo: &inspectFirstInfo{}}
+	recv := &inspectFirstStreamingRecvInfo{inspectFirstInfo: inspectFirstInfo{}}
 	if recv.CallType() != goa.InterceptorStreamingRecv || recv.ServerStreamingPayload(streamingPayload).Input() != input {
 		t.Errorf("unexpected server receive metadata")
 	}
 
-	clientSend := &inspectFirstStreamingSendInfo{inspectFirstInfo: &inspectFirstInfo{rawPayload: streamingPayload}}
+	clientSend := &inspectFirstStreamingSendInfo{inspectFirstInfo: inspectFirstInfo{rawPayload: streamingPayload}}
 	if clientSend.ClientStreamingPayload().Input() != input {
 		t.Errorf("unexpected client send metadata")
 	}
-	clientRecv := &inspectFirstStreamingRecvInfo{inspectFirstInfo: &inspectFirstInfo{}}
+	clientRecv := &inspectFirstStreamingRecvInfo{inspectFirstInfo: inspectFirstInfo{}}
 	if clientRecv.ClientStreamingResult(streamingResult).Output() != output {
 		t.Errorf("unexpected client receive metadata")
 	}

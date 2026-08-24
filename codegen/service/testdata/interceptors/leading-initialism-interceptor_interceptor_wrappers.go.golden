@@ -4,7 +4,7 @@
 func wrapGetInfoJWTAuth(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &jwtAuthGetInfoServerUnaryInfo{
-			jwtAuthGetInfoInfo: &jwtAuthGetInfoInfo{rawPayload: req},
+			jwtAuthGetInfoInfo: jwtAuthGetInfoInfo{rawPayload: req},
 		}
 		return i.JWTAuth(ctx, info, endpoint)
 	}
@@ -14,7 +14,7 @@ func wrapGetInfoJWTAuth(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoin
 func wrapClientGetInfoJWTAuth(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &jwtAuthGetInfoClientUnaryInfo{
-			jwtAuthGetInfoInfo: &jwtAuthGetInfoInfo{rawPayload: req},
+			jwtAuthGetInfoInfo: jwtAuthGetInfoInfo{rawPayload: req},
 		}
 		return i.JWTAuth(ctx, info, endpoint)
 	}

@@ -4,7 +4,7 @@
 func wrapMethodTest(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &testMethodServerUnaryInfo{
-			testMethodInfo: &testMethodInfo{rawPayload: req},
+			testMethodInfo: testMethodInfo{rawPayload: req},
 		}
 		return i.Test(ctx, info, endpoint)
 	}
@@ -14,7 +14,7 @@ func wrapMethodTest(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 func wrapMethodTest3(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &test3MethodServerUnaryInfo{
-			test3MethodInfo: &test3MethodInfo{rawPayload: req},
+			test3MethodInfo: test3MethodInfo{rawPayload: req},
 		}
 		return i.Test3(ctx, info, endpoint)
 	}
@@ -24,7 +24,7 @@ func wrapMethodTest3(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 func wrapClientMethodTest2(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &test2MethodClientUnaryInfo{
-			test2MethodInfo: &test2MethodInfo{rawPayload: req},
+			test2MethodInfo: test2MethodInfo{rawPayload: req},
 		}
 		return i.Test2(ctx, info, endpoint)
 	}
@@ -34,7 +34,7 @@ func wrapClientMethodTest2(endpoint goa.Endpoint, i ClientInterceptors) goa.Endp
 func wrapClientMethodTest4(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &test4MethodClientUnaryInfo{
-			test4MethodInfo: &test4MethodInfo{rawPayload: req},
+			test4MethodInfo: test4MethodInfo{rawPayload: req},
 		}
 		return i.Test4(ctx, info, endpoint)
 	}

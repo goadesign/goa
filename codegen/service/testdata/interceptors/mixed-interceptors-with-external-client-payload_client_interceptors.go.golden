@@ -10,14 +10,7 @@ type ClientInterceptors interface {
 type (
 	// AuthorizationInfo describes the service call currently passed to the interceptor.
 	AuthorizationInfo interface {
-		// Service returns the service selected for this call.
-		Service() string
-		// Method returns the method selected for this call.
-		Method() string
-		// CallType returns whether this is an endpoint call, stream send, or stream receive.
-		CallType() goa.InterceptorCallType
-		// RawPayload returns the value passed to the interceptor.
-		RawPayload() any
+		goa.InterceptorInfo
 		// Payload returns the selected fields from the method payload.
 		Payload() AuthorizationPayload
 	}
@@ -36,7 +29,7 @@ type (
 		rawPayload any
 	}
 	authorizationMethodClientUnaryInfo struct {
-		*authorizationMethodInfo
+		authorizationMethodInfo
 	}
 	authorizationMethodPayload struct {
 		payload *MethodPayload

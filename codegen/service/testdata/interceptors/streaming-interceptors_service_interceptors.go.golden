@@ -10,14 +10,7 @@ type ServerInterceptors interface {
 type (
 	// LoggingInfo describes the service call currently passed to the interceptor.
 	LoggingInfo interface {
-		// Service returns the service selected for this call.
-		Service() string
-		// Method returns the method selected for this call.
-		Method() string
-		// CallType returns whether this is an endpoint call, stream send, or stream receive.
-		CallType() goa.InterceptorCallType
-		// RawPayload returns the value passed to the interceptor.
-		RawPayload() any
+		goa.InterceptorInfo
 		// ClientStreamingPayload returns selected fields from the outgoing stream payload.
 		ClientStreamingPayload() LoggingStreamingPayload
 		// ServerStreamingPayload returns selected fields from the incoming stream payload.
@@ -51,10 +44,10 @@ type (
 		rawPayload any
 	}
 	loggingMethodStreamingSendInfo struct {
-		*loggingMethodInfo
+		loggingMethodInfo
 	}
 	loggingMethodStreamingRecvInfo struct {
-		*loggingMethodInfo
+		loggingMethodInfo
 	}
 	loggingMethodStreamingPayload struct {
 		payload *MethodStreamingPayload

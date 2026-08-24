@@ -5,7 +5,7 @@
 func wrapServerMethodIdentify(endpoint goa.Endpoint, i ServerInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &identifyServerMethodServerUnaryInfo{
-			identifyServerMethodInfo: &identifyServerMethodInfo{rawPayload: req},
+			identifyServerMethodInfo: identifyServerMethodInfo{rawPayload: req},
 		}
 		return i.Identify(ctx, info, endpoint)
 	}
@@ -16,7 +16,7 @@ func wrapServerMethodIdentify(endpoint goa.Endpoint, i ServerInterceptors) goa.E
 func wrapClientClientMethodIdentify(endpoint goa.Endpoint, i ClientInterceptors) goa.Endpoint {
 	return func(ctx context.Context, req any) (any, error) {
 		info := &identifyClientMethodClientUnaryInfo{
-			identifyClientMethodInfo: &identifyClientMethodInfo{rawPayload: req},
+			identifyClientMethodInfo: identifyClientMethodInfo{rawPayload: req},
 		}
 		return i.Identify(ctx, info, endpoint)
 	}

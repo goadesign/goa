@@ -8,7 +8,7 @@ func {{ .ClientWrapperDeclaration.Name }}(endpoint goa.Endpoint, i {{ $.Intercep
 	{{- if or $interceptor.HasStreamingPayloadAccess $interceptor.HasStreamingResultAccess }}
 		{{- if $interceptor.HasPayloadAccess }}
 		info := &{{ .ClientUnaryInfoDeclaration.Name }}{
-			{{ .InfoDeclaration.Name }}: &{{ .InfoDeclaration.Name }}{rawPayload: req},
+			{{ .InfoDeclaration.Name }}: {{ .InfoDeclaration.Name }}{rawPayload: req},
 		}
 		res, err := i.{{ $interceptor.Name }}(ctx, info, endpoint)
 		{{- else }}
@@ -23,7 +23,7 @@ func {{ .ClientWrapperDeclaration.Name }}(endpoint goa.Endpoint, i {{ $.Intercep
 		{{- if $interceptor.HasStreamingPayloadAccess }}
 			sendWithContext: func(ctx context.Context, req {{ .ClientStream.SendTypeRef }}) error {
 				info := &{{ .StreamingSendInfoDeclaration.Name }}{
-					{{ .InfoDeclaration.Name }}: &{{ .InfoDeclaration.Name }}{rawPayload: req},
+					{{ .InfoDeclaration.Name }}: {{ .InfoDeclaration.Name }}{rawPayload: req},
 				}
 				_, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, req any) (any, error) {
 					castReq, _ := req.({{ .ClientStream.SendTypeRef }})
@@ -35,7 +35,7 @@ func {{ .ClientWrapperDeclaration.Name }}(endpoint goa.Endpoint, i {{ $.Intercep
 		{{- if $interceptor.HasStreamingResultAccess }}
 			recvWithContext: func(ctx context.Context) ({{ .ClientStream.RecvTypeRef }}, error) {
 				info := &{{ .StreamingRecvInfoDeclaration.Name }}{
-					{{ .InfoDeclaration.Name }}: &{{ .InfoDeclaration.Name }}{},
+					{{ .InfoDeclaration.Name }}: {{ .InfoDeclaration.Name }}{},
 				}
 				res, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, _ any) (any, error) {
 					return stream.{{ .ClientStream.RecvWithContextName }}(ctx)
@@ -48,7 +48,7 @@ func {{ .ClientWrapperDeclaration.Name }}(endpoint goa.Endpoint, i {{ $.Intercep
 		}, nil
 	{{- else }}
 		info := &{{ .ClientUnaryInfoDeclaration.Name }}{
-			{{ .InfoDeclaration.Name }}: &{{ .InfoDeclaration.Name }}{rawPayload: req},
+			{{ .InfoDeclaration.Name }}: {{ .InfoDeclaration.Name }}{rawPayload: req},
 		}
 		return i.{{ $interceptor.Name }}(ctx, info, endpoint)
 	{{- end }}

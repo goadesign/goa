@@ -10,14 +10,7 @@ type ServerInterceptors interface {
 type (
 	// CachingInfo describes the service call currently passed to the interceptor.
 	CachingInfo interface {
-		// Service returns the service selected for this call.
-		Service() string
-		// Method returns the method selected for this call.
-		Method() string
-		// CallType returns whether this is an endpoint call, stream send, or stream receive.
-		CallType() goa.InterceptorCallType
-		// RawPayload returns the value passed to the interceptor.
-		RawPayload() any
+		goa.InterceptorInfo
 		// Result returns the selected fields from the method result.
 		Result(any) CachingResult
 	}
@@ -37,10 +30,10 @@ type (
 		rawPayload any
 	}
 	cachingMethodServerUnaryInfo struct {
-		*cachingMethodInfo
+		cachingMethodInfo
 	}
 	cachingMethodClientUnaryInfo struct {
-		*cachingMethodInfo
+		cachingMethodInfo
 	}
 	cachingMethodResult struct {
 		result *MethodResult

@@ -12,7 +12,7 @@ func {{ .ServerWrapperDeclaration.Name }}(endpoint goa.Endpoint, i {{ $.Intercep
 		{{- if $interceptor.HasStreamingResultAccess }}
 			sendWithContext: func(ctx context.Context, req {{ .ServerStream.SendTypeRef }}) error {
 				info := &{{ .StreamingSendInfoDeclaration.Name }}{
-					{{ .InfoDeclaration.Name }}: &{{ .InfoDeclaration.Name }}{rawPayload: req},
+					{{ .InfoDeclaration.Name }}: {{ .InfoDeclaration.Name }}{rawPayload: req},
 				}
 				_, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, req any) (any, error) {
 					castReq, _ := req.({{ .ServerStream.SendTypeRef }})
@@ -24,7 +24,7 @@ func {{ .ServerWrapperDeclaration.Name }}(endpoint goa.Endpoint, i {{ $.Intercep
 		{{- if $interceptor.HasStreamingPayloadAccess }}
 			recvWithContext: func(ctx context.Context) ({{ .ServerStream.RecvTypeRef }}, error) {
 				info := &{{ .StreamingRecvInfoDeclaration.Name }}{
-					{{ .InfoDeclaration.Name }}: &{{ .InfoDeclaration.Name }}{},
+					{{ .InfoDeclaration.Name }}: {{ .InfoDeclaration.Name }}{},
 				}
 				res, err := i.{{ $interceptor.Name }}(ctx, info, func(ctx context.Context, _ any) (any, error) {
 					return stream.{{ .ServerStream.RecvWithContextName }}(ctx)
@@ -37,7 +37,7 @@ func {{ .ServerWrapperDeclaration.Name }}(endpoint goa.Endpoint, i {{ $.Intercep
 		}
 		{{- if $interceptor.HasPayloadAccess }}
 		info := &{{ .ServerUnaryInfoDeclaration.Name }}{
-			{{ .InfoDeclaration.Name }}: &{{ .InfoDeclaration.Name }}{rawPayload: req},
+			{{ .InfoDeclaration.Name }}: {{ .InfoDeclaration.Name }}{rawPayload: req},
 		}
 		return i.{{ $interceptor.Name }}(ctx, info, endpoint)
 		{{- else }}
@@ -45,7 +45,7 @@ func {{ .ServerWrapperDeclaration.Name }}(endpoint goa.Endpoint, i {{ $.Intercep
 		{{- end }}
 	{{- else }}
 		info := &{{ .ServerUnaryInfoDeclaration.Name }}{
-			{{ .InfoDeclaration.Name }}: &{{ .InfoDeclaration.Name }}{rawPayload: req},
+			{{ .InfoDeclaration.Name }}: {{ .InfoDeclaration.Name }}{rawPayload: req},
 		}
 		return i.{{ $interceptor.Name }}(ctx, info, endpoint)
 	{{- end }}

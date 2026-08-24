@@ -4,14 +4,7 @@ type (
 {{- range . }}
 	// {{ .InfoDeclaration.Name }} describes the service call currently passed to the interceptor.
 	{{ .InfoDeclaration.Name }} interface {
-		// Service returns the service selected for this call.
-		Service() string
-		// Method returns the method selected for this call.
-		Method() string
-		// CallType returns whether this is an endpoint call, stream send, or stream receive.
-		CallType() goa.InterceptorCallType
-		// RawPayload returns the value passed to the interceptor.
-		RawPayload() any
+		goa.InterceptorInfo
 		{{- if .HasPayloadAccess }}
 		// Payload returns the selected fields from the method payload.
 		Payload() {{ .PayloadDeclaration.Name }}
@@ -102,22 +95,22 @@ type (
 	}
 			{{- if .ServerUnaryInfoDeclaration }}
 	{{ .ServerUnaryInfoDeclaration.Name }} struct {
-		*{{ .InfoDeclaration.Name }}
+		{{ .InfoDeclaration.Name }}
 	}
 			{{- end }}
 			{{- if .ClientUnaryInfoDeclaration }}
 	{{ .ClientUnaryInfoDeclaration.Name }} struct {
-		*{{ .InfoDeclaration.Name }}
+		{{ .InfoDeclaration.Name }}
 	}
 			{{- end }}
 			{{- if .StreamingSendInfoDeclaration }}
 	{{ .StreamingSendInfoDeclaration.Name }} struct {
-		*{{ .InfoDeclaration.Name }}
+		{{ .InfoDeclaration.Name }}
 	}
 			{{- end }}
 			{{- if .StreamingRecvInfoDeclaration }}
 	{{ .StreamingRecvInfoDeclaration.Name }} struct {
-		*{{ .InfoDeclaration.Name }}
+		{{ .InfoDeclaration.Name }}
 	}
 			{{- end }}
 		{{- end }}
