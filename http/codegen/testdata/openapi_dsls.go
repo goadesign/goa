@@ -31,6 +31,28 @@ var SimpleDSL = func() {
 	})
 }
 
+// BytesExampleDSL defines a response whose OpenAPI example must remain a
+// string in both JSON and YAML documents.
+var BytesExampleDSL = func() {
+	var _ = API("bytes", func() {
+		Server("bytes", func() {
+			Host("localhost", func() {
+				URI("https://goa.design")
+			})
+		})
+	})
+	Service("bytes", func() {
+		Method("download", func() {
+			Result(Bytes, func() {
+				Example([]byte("hello"))
+			})
+			HTTP(func() {
+				GET("/download")
+			})
+		})
+	})
+}
+
 var MultipleServicesDSL = func() {
 	var PayloadT = Type("Payload", func() {
 		Attribute("string", String, func() {

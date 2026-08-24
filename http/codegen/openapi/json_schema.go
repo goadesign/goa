@@ -3,6 +3,7 @@
 package openapi
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"reflect"
 	"strconv"
@@ -299,6 +300,11 @@ func AdditionalPropertiesFromExpr(meta expr.MetaExpr) any {
 
 func projectExample(t expr.DataType, val any) any {
 	switch actual := t.(type) {
+	case expr.Primitive:
+		if actual.Kind() == expr.BytesKind {
+			return base64.StdEncoding.EncodeToString(reflect.ValueOf(val).Bytes())
+		}
+		return ToStringMap(val)
 	case *expr.UserTypeExpr:
 		return ProjectExample(actual.Attribute(), val)
 	case *expr.ResultTypeExpr:

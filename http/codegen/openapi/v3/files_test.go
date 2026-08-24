@@ -34,6 +34,7 @@ func TestFiles(t *testing.T) {
 		{"file-service-swagger", testdata.FileServiceSwaggerDSL},
 		{"file-service-wildcard", testdata.FileServiceWildcardDSL},
 		{"valid", testdata.SimpleDSL},
+		{"bytes-example", testdata.BytesExampleDSL},
 		{"multiple-services", testdata.MultipleServicesDSL},
 		{"multiple-views", testdata.MultipleViewsDSL},
 		{"explicit-view", testdata.ExplicitViewDSL},
@@ -125,6 +126,7 @@ func TestFilesV32(t *testing.T) {
 		DSL  func()
 	}{
 		{"valid", testdata.SimpleDSL},
+		{"bytes-example", testdata.BytesExampleDSL},
 		{"v3.2-meta", testdata.OpenAPIV32MetaDSL},
 		{"with-tags", testdata.WithTagsDSL},
 		{"server-host-with-variables", testdata.ServerHostWithVariablesDSL},
