@@ -32,6 +32,7 @@ type (
 	registry struct {
 		mu                sync.Mutex
 		commands          map[string][]generatorFactory
+		commandGenerators func(string) ([]generatorFactory, error)
 		plugins           []pluginDescriptor
 		registeredPlugins func() []registeredPluginDescriptor
 		sealed            bool
@@ -97,6 +98,7 @@ func newDefaultRegistry() *registry {
 	registry := newRegistry()
 	registry.commands["gen"] = genGeneratorFactories()
 	registry.commands["example"] = exampleGeneratorFactories()
+	registry.commandGenerators = generatorFactories
 	registry.registeredPlugins = snapshotRegisteredPlugins
 	return registry
 }
@@ -143,9 +145,25 @@ func (r *registry) registerPlugin(name, command string, position pluginPosition,
 
 // snapshot closes registration and returns copied factories in a repeatable order.
 func (r *registry) snapshot(command string) ([]generatorFactory, []pluginDescriptor, error) {
+	var (
+		selectedFactories []generatorFactory
+		hasSelection      bool
+	)
+	if r.commandGenerators != nil {
+		var err error
+		selectedFactories, err = r.commandGenerators(command)
+		if err != nil {
+			return nil, nil, err
+		}
+		hasSelection = true
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	factories, ok := r.commands[command]
+	if hasSelection {
+		factories = selectedFactories
+		ok = true
+	}
 	if !ok {
 		return nil, nil, fmt.Errorf("unknown command %q", command)
 	}

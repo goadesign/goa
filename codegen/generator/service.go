@@ -9,6 +9,12 @@ import (
 	"goa.design/goa/v3/expr"
 )
 
+// Service returns the files that define service types, endpoints, clients, and
+// result views for roots.
+func Service(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+	return runStandaloneGenerator(genpkg, roots, serviceGeneratorFactory)
+}
+
 // serviceFiles returns the service files described by plan's completed package
 // declarations and the example generator created for this run.
 func serviceFiles(plan *Plan) ([]*codegen.File, error) {

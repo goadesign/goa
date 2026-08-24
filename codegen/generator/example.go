@@ -8,10 +8,16 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/example"
 	"goa.design/goa/v3/codegen/service"
+	"goa.design/goa/v3/eval"
 	grpccodegen "goa.design/goa/v3/grpc/codegen"
 	httpcodegen "goa.design/goa/v3/http/codegen"
 	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
 )
+
+// Example returns example service, server, and client files for roots.
+func Example(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+	return runStandaloneGenerator(genpkg, roots, exampleGeneratorFactory)
+}
 
 // exampleFiles returns the service, server, and client examples selected for
 // this generation.

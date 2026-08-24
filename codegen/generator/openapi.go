@@ -4,8 +4,14 @@ package generator
 
 import (
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/eval"
 	httpcodegen "goa.design/goa/v3/http/codegen"
 )
+
+// OpenAPI returns the OpenAPI documents for roots.
+func OpenAPI(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+	return runStandaloneGenerator(genpkg, roots, openAPIGeneratorFactory)
+}
 
 // openAPIFiles returns the OpenAPI files built during planning.
 func openAPIFiles(plan *Plan) ([]*codegen.File, error) {

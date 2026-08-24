@@ -4,11 +4,17 @@ package generator
 
 import (
 	"goa.design/goa/v3/codegen"
+	"goa.design/goa/v3/eval"
 	"goa.design/goa/v3/expr"
 	grpccodegen "goa.design/goa/v3/grpc/codegen"
 	httpcodegen "goa.design/goa/v3/http/codegen"
 	jsonrpccodegen "goa.design/goa/v3/jsonrpc/codegen"
 )
+
+// Transport returns the HTTP, gRPC, and JSON-RPC files for roots.
+func Transport(genpkg string, roots []eval.Root) ([]*codegen.File, error) {
+	return runStandaloneGenerator(genpkg, roots, transportGeneratorFactory)
+}
 
 // transportFiles returns all HTTP, gRPC, and JSON-RPC files for one run.
 func transportFiles(plan *Plan) ([]*codegen.File, error) {

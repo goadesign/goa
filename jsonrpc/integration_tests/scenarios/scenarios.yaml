@@ -333,7 +333,7 @@ scenarios:
           jsonrpc: "2.0"
           id: "sse-err-1"
           error:
-            code: -32602
+            code: -32603
             message: "Streaming error occurred"
 
   # SSE with no ID (pure notifications)
@@ -704,24 +704,28 @@ scenarios:
   # (to be added in harness/runner extensions if we choose to assert both paths here).
 
   # Additional HTTP protocol edge cases
-  - name: "http_invalid_version_notification"
+  - name: "http_invalid_version_request"
     transport: "http"
     request:
       jsonrpc: "-"  # Omit version field
       method: "echo_string"
       params: "notify"
-      # No id -> notification
+      # No ID. The malformed object is still an invalid request, not a notification.
     expect:
-      no_response: true
+      error:
+        code: -32600
+        message: "Invalid request"
 
-  - name: "http_missing_method_notification"
+  - name: "http_missing_method_request"
     transport: "http"
     request:
       jsonrpc: "2.0"
-      # No method field (invalid request) but notification (no id)
+      # No method or ID. A notification must still be a valid request object.
       params: "notify"
     expect:
-      no_response: true
+      error:
+        code: -32600
+        message: "Missing method field"
 
   - name: "http_missing_method_with_id_raw"
     transport: "http"
