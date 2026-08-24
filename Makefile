@@ -25,6 +25,7 @@ GOLANGCI_LINT_VERSION?=v2.11.3
 GOLANGCI_LINT=$(GOBIN_DIR)/golangci-lint
 PROTOC_BIN=protoc
 PROTOC_DEST=$(GOBIN_DIR)/$(PROTOC_BIN)
+PROTOC_INCLUDE_DEST=$(GOPATH)/include
 
 .PHONY: all all-tests ci depend lint test test-release integration-test build-goa release release-preflight release-goa release-examples release-plugins
 .NOTPARALLEL: release release-goa release-examples release-plugins
@@ -80,6 +81,8 @@ depend:
 	$(UNZIP) $(PROTOC).zip
 	@rm -f "$(PROTOC_DEST)" && \
 		cp $(PROTOC_EXEC) "$(PROTOC_DEST)" && \
+		mkdir -p "$(PROTOC_INCLUDE_DEST)" && \
+		cp -R "$(PROTOC)/include/." "$(PROTOC_INCLUDE_DEST)" && \
 		chmod 0755 "$(PROTOC_DEST)" && \
 		rm -rf $(PROTOC) && \
 		"$(PROTOC_DEST)" --version
