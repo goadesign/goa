@@ -148,9 +148,6 @@ func TestMethodExprError(t *testing.T) {
 		errorBar = &expr.ErrorExpr{
 			Name: "bar",
 		}
-		errorBaz = &expr.ErrorExpr{
-			Name: "baz",
-		}
 	)
 	cases := map[string]struct {
 		name     string
@@ -164,10 +161,6 @@ func TestMethodExprError(t *testing.T) {
 			name:     "bar",
 			expected: errorBar,
 		},
-		"exist in root": {
-			name:     "baz",
-			expected: errorBaz,
-		},
 		"not exist": {
 			name:     "qux",
 			expected: nil,
@@ -179,12 +172,6 @@ func TestMethodExprError(t *testing.T) {
 			errorBar,
 		},
 	}
-	design := &expr.RootExpr{
-		API:      expr.NewAPIExpr("test", func() {}),
-		Errors:   []*expr.ErrorExpr{errorBaz},
-		Services: []*expr.ServiceExpr{&s},
-	}
-	design.WalkSets(func(eval.ExpressionSet) {})
 	m := expr.MethodExpr{
 		Errors: []*expr.ErrorExpr{
 			errorFoo,

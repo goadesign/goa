@@ -31,15 +31,15 @@ func (e *GRPCErrorExpr) Validate() *eval.ValidationErrors {
 	switch p := e.Response.Parent.(type) {
 	case *GRPCEndpointExpr:
 		if p.MethodExpr.Error(e.Name) == nil {
-			verr.Add(e, "Error %#v does not match an error defined in the method", e.Name)
+			verr.Add(e.Response, "Error %#v does not match an error defined in the method", e.Name)
 		}
 	case *GRPCServiceExpr:
 		if p.Error(e.Name) == nil {
-			verr.Add(e, "Error %#v does not match an error defined in the service", e.Name)
+			verr.Add(e.Response, "Error %#v does not match an error defined in the service", e.Name)
 		}
 	case *RootExpr:
 		if p.Error(e.Name) == nil {
-			verr.Add(e, "Error %#v does not match an error defined in the API", e.Name)
+			verr.Add(e.Response, "Error %#v does not match an error defined in the API", e.Name)
 		}
 	}
 	return verr

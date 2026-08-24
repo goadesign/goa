@@ -98,19 +98,17 @@ func TestRepeatedStandardErrorsMustUseSameQualifiers(t *testing.T) {
 		{name: "fault", apply: dsl.Fault},
 	}
 	for _, qualifier := range qualifiers {
-		t.Run("service and method "+qualifier.name, func(t *testing.T) {
-			expr.ResetDSL(t)
-			design := func() {
+		t.Run("service reference inherits "+qualifier.name, func(t *testing.T) {
+			root := expr.RunDSL(t, func() {
 				dsl.Service("jobs", func() {
 					dsl.Error("busy", qualifier.apply)
 					dsl.Method("run", func() {
 						dsl.Error("busy")
 					})
 				})
-			}
-			require.True(t, eval.Execute(design, nil))
-			err := eval.RunDSL()
-			require.ErrorContains(t, err, qualifier.name+" setting differs")
+			})
+			service := root.Service("jobs")
+			require.Same(t, service.Error("busy"), service.Method("run").Error("busy"))
 		})
 
 		t.Run("two methods "+qualifier.name, func(t *testing.T) {
@@ -143,6 +141,25 @@ func TestRepeatedStandardErrorsMustUseSameQualifiers(t *testing.T) {
 	}
 }
 
+func TestAPIErrorDoesNotAddErrorsToServicesOrMethods(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		dsl.API("jobs", func() {
+			dsl.Error("busy", dsl.Temporary)
+		})
+		dsl.Service("jobs", func() {
+			dsl.Method("run", func() {})
+			dsl.Method("retry", func() {
+				dsl.Error("busy")
+			})
+		})
+	})
+	service := root.Service("jobs")
+
+	require.Empty(t, service.Errors)
+	require.Empty(t, service.Method("run").Errors)
+	require.Equal(t, []*expr.ErrorExpr{root.Error("busy")}, service.Method("retry").Errors)
+}
+
 func TestRepeatedAuthoredErrorTypesDoNotShareGeneratedConstructors(t *testing.T) {
 	custom := dsl.Type("CustomError", func() {
 		dsl.Attribute("message", dsl.String)
@@ -162,9 +179,6 @@ func TestServiceExprError(t *testing.T) {
 		errorFoo = &expr.ErrorExpr{
 			Name: "foo",
 		}
-		errorBar = &expr.ErrorExpr{
-			Name: "bar",
-		}
 	)
 	cases := map[string]struct {
 		name     string
@@ -173,10 +187,6 @@ func TestServiceExprError(t *testing.T) {
 		"exist in service": {
 			name:     "foo",
 			expected: errorFoo,
-		},
-		"exist in root": {
-			name:     "bar",
-			expected: errorBar,
 		},
 		"not exist": {
 			name:     "qux",
@@ -189,12 +199,6 @@ func TestServiceExprError(t *testing.T) {
 			errorFoo,
 		},
 	}
-	design := &expr.RootExpr{
-		API:      expr.NewAPIExpr("test", func() {}),
-		Errors:   []*expr.ErrorExpr{errorBar},
-		Services: []*expr.ServiceExpr{&s},
-	}
-	design.WalkSets(func(eval.ExpressionSet) {})
 	for k, tc := range cases {
 		t.Run(k, func(t *testing.T) {
 			if actual := s.Error(tc.name); actual != tc.expected {

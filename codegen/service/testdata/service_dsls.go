@@ -341,6 +341,22 @@ var ServiceErrorDSL = func() {
 	})
 }
 
+var APIErrorReferenceDSL = func() {
+	API("ErrorReference", func() {
+		Error("busy", func() {
+			Temporary()
+			Timeout()
+			Fault()
+		})
+	})
+	Service("ErrorReference", func() {
+		Error("busy")
+		Method("Run", func() {
+			Error("busy")
+		})
+	})
+}
+
 var CustomErrorsDSL = func() {
 	var APayload = Type("APayload", func() {
 		Attribute("IntField", Int)

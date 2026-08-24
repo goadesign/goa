@@ -707,6 +707,7 @@ func TestService(t *testing.T) {
 		{"service-result-with-one-of-type", testdata.ResultWithOneOfTypeMethodDSL},
 		{"service-result-with-inline-validation", testdata.ResultWithInlineValidationDSL},
 		{"service-service-level-error", testdata.ServiceErrorDSL},
+		{"service-api-error-reference", testdata.APIErrorReferenceDSL},
 		{"service-custom-errors", testdata.CustomErrorsDSL},
 		{"service-custom-errors-custom-field", testdata.CustomErrorsCustomFieldDSL},
 		{"service-repeated-inline-errors", testdata.RepeatedInlineErrorsDSL},

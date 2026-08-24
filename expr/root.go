@@ -29,8 +29,8 @@ type (
 		Services []*ServiceExpr
 		// Interceptors contains the list of interceptors.
 		Interceptors []*InterceptorExpr
-		// Errors contains the list of errors returned by all the API
-		// methods.
+		// Errors contains reusable error definitions. Services and methods
+		// select these errors by naming them in their own Error DSL.
 		Errors []*ErrorExpr
 		// Types contains the user types described in the DSL.
 		Types []UserType

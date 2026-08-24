@@ -26,7 +26,6 @@ func TestHTTPInheritedErrorMappingRejectsIncompatibleError(t *testing.T) {
 		{"different type", incompatibleHTTPErrorMappingDSL},
 		{"different validation", incompatibleHTTPErrorValidationDSL},
 		{"different named type", incompatibleHTTPNamedErrorMappingDSL},
-		{"different object", incompatibleHTTPObjectErrorMappingDSL},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			err := expr.RunInvalidDSL(t, test.dsl)
@@ -35,6 +34,13 @@ func TestHTTPInheritedErrorMappingRejectsIncompatibleError(t *testing.T) {
 			require.ErrorContains(t, err, "must define the same error attribute")
 		})
 	}
+}
+
+func TestHTTPInheritedErrorMappingAcceptsServiceReference(t *testing.T) {
+	root := expr.RunDSL(t, inheritedHTTPObjectErrorMappingDSL)
+	endpoint := root.API.HTTP.Services[0].HTTPEndpoints[0]
+
+	require.Same(t, root.Error("bad_request"), endpoint.HTTPErrors[0].ErrorExpr)
 }
 
 func TestGRPCInheritedErrorMappingUsesMethodError(t *testing.T) {
@@ -98,7 +104,7 @@ func TestGRPCInheritedErrorMappingRejectsIncompatibleError(t *testing.T) {
 	require.ErrorContains(t, err, "must define the same error attribute")
 }
 
-func TestInheritedErrorMappingReportsDifferentQualifiers(t *testing.T) {
+func TestInheritedErrorMappingRetainsQualifiers(t *testing.T) {
 	qualifiers := []struct {
 		name  string
 		apply func()
@@ -110,11 +116,70 @@ func TestInheritedErrorMappingReportsDifferentQualifiers(t *testing.T) {
 	for _, transport := range []string{"HTTP", "gRPC"} {
 		for _, qualifier := range qualifiers {
 			t.Run(transport+" "+qualifier.name, func(t *testing.T) {
-				err := expr.RunInvalidDSL(t, qualifierErrorMappingDSL(transport, qualifier.apply))
-				require.ErrorContains(t, err, transport+` error mapping "busy"`)
-				require.ErrorContains(t, err, qualifier.name+" setting differs")
+				root := expr.RunDSL(t, qualifierErrorMappingDSL(transport, qualifier.apply))
+				if transport == "HTTP" {
+					require.Same(t, root.Error("busy"), root.API.HTTP.Services[0].HTTPEndpoints[0].HTTPErrors[0].ErrorExpr)
+				} else {
+					require.Same(t, root.Error("busy"), root.API.GRPC.Services[0].GRPCEndpoints[0].GRPCErrors[0].ErrorExpr)
+				}
 			})
 		}
+	}
+}
+
+func TestInheritedErrorMappingRejectsExplicitQualifierOverride(t *testing.T) {
+	for _, transport := range []string{"HTTP", "gRPC"} {
+		t.Run(transport, func(t *testing.T) {
+			err := expr.RunInvalidDSL(t, explicitQualifierOverrideDSL(transport))
+			require.ErrorContains(t, err, transport+` error mapping "busy"`)
+			require.ErrorContains(t, err, "temporary setting differs")
+		})
+	}
+}
+
+func TestTransportErrorResponseRequiresSelectedError(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		dsl  func()
+	}{
+		{
+			name: "HTTP service",
+			dsl: unselectedErrorResponseDSL(
+				func() { HTTP(func() { Response(StatusServiceUnavailable, "busy") }) },
+				func() { HTTP(func() { POST("/run") }) },
+			),
+		},
+		{
+			name: "HTTP method",
+			dsl: unselectedErrorResponseDSL(
+				func() {},
+				func() {
+					HTTP(func() {
+						POST("/run")
+						Response(StatusServiceUnavailable, "busy")
+					})
+				},
+			),
+		},
+		{
+			name: "gRPC service",
+			dsl: unselectedErrorResponseDSL(
+				func() { GRPC(func() { Response("busy", CodeUnavailable) }) },
+				func() { GRPC(func() {}) },
+			),
+		},
+		{
+			name: "gRPC method",
+			dsl: unselectedErrorResponseDSL(
+				func() {},
+				func() { GRPC(func() { Response("busy", CodeUnavailable) }) },
+			),
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			err := expr.RunInvalidDSL(t, test.dsl)
+			require.ErrorContains(t, err, "does not match an error defined in")
+		})
 	}
 }
 
@@ -136,6 +201,43 @@ func qualifierErrorMappingDSL(transport string, qualifier func()) func() {
 				} else {
 					GRPC(func() {})
 				}
+			})
+		})
+	}
+}
+
+func explicitQualifierOverrideDSL(transport string) func() {
+	return func() {
+		API("errors", func() {
+			Error("busy", Temporary)
+			if transport == "HTTP" {
+				HTTP(func() { Response(StatusServiceUnavailable, "busy") })
+			} else {
+				GRPC(func() { Response("busy", CodeUnavailable) })
+			}
+		})
+		Service("Jobs", func() {
+			Method("Run", func() {
+				Error("busy", ErrorResult)
+				if transport == "HTTP" {
+					HTTP(func() { POST("/run") })
+				} else {
+					GRPC(func() {})
+				}
+			})
+		})
+	}
+}
+
+func unselectedErrorResponseDSL(serviceTransport, methodTransport func()) func() {
+	return func() {
+		API("errors", func() {
+			Error("busy", Temporary)
+		})
+		Service("Jobs", func() {
+			serviceTransport()
+			Method("Run", func() {
+				methodTransport()
 			})
 		})
 	}
@@ -208,7 +310,7 @@ var incompatibleHTTPNamedErrorMappingDSL = func() {
 	})
 }
 
-var incompatibleHTTPObjectErrorMappingDSL = func() {
+var inheritedHTTPObjectErrorMappingDSL = func() {
 	stringError := Type("StringError", func() { Attribute("header") })
 	API("errors", func() {
 		Error("bad_request", stringError)

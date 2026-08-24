@@ -70,14 +70,14 @@ func (s *ServiceExpr) EvalName() string {
 	return fmt.Sprintf("service %#v", s.Name)
 }
 
-// Error returns the error with the given name if any.
+// Error returns the error with the given name declared by the service, if any.
 func (s *ServiceExpr) Error(name string) *ErrorExpr {
 	for _, erro := range s.Errors {
 		if erro.Name == name {
 			return erro
 		}
 	}
-	return s.design.Error(name)
+	return nil
 }
 
 // Hash returns a unique hash value for s.

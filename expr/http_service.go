@@ -64,7 +64,7 @@ func (svc *HTTPServiceExpr) Description() string {
 	return svc.ServiceExpr.Description
 }
 
-// Error returns the error with the given name.
+// Error returns the error with the given name declared by the service, if any.
 func (svc *HTTPServiceExpr) Error(name string) *ErrorExpr {
 	return svc.ServiceExpr.Error(name)
 }

@@ -71,8 +71,8 @@ const (
 	BidirectionalStreamKind
 )
 
-// Error returns the error with the given name. It looks up recursively in the
-// endpoint then the service and finally the root expression.
+// Error returns the error with the given name declared by the method or its
+// service, if any.
 func (m *MethodExpr) Error(name string) *ErrorExpr {
 	for _, err := range m.Errors {
 		if err.Name == name {

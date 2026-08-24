@@ -65,13 +65,12 @@ const (
 // the service methods) or Method expressions. Error may also appear under the API
 // expression to create reusable error definitions.
 //
-// A reusable API or service transport response mapping is matched to a method
-// error by name, but it does not replace the method's error type. If a method or
-// service shadows the reusable error with the same name, both error attributes
-// must define the same effective type, validations, defaults, and struct
-// metadata after Reference and Extend inheritance is applied. Goa compares a
-// detached finalized copy and rejects incompatible definitions during design
-// validation without changing the authored declarations.
+// Error with only a name refers to an error with that name in the parent scope
+// when one exists. A service may refer to an API error, and a method may refer
+// to a service or API error. The reference uses the parent's complete error
+// definition, including its type, validation, default values, description, and
+// Temporary, Timeout, and Fault settings. Supplying any additional argument
+// defines a separate error in the current scope instead.
 //
 // See Attribute for details on the Error arguments.
 //
@@ -95,7 +94,24 @@ const (
 //	    })
 //	})
 func Error(name string, args ...any) {
+	current := eval.Current()
 	if len(args) == 0 {
+		switch actual := current.(type) {
+		case *expr.ServiceExpr:
+			if inherited := expr.Root.Error(name); inherited != nil {
+				actual.Errors = append(actual.Errors, inherited)
+				return
+			}
+		case *expr.MethodExpr:
+			inherited := actual.Service.Error(name)
+			if inherited == nil {
+				inherited = expr.Root.Error(name)
+			}
+			if inherited != nil {
+				actual.Errors = append(actual.Errors, inherited)
+				return
+			}
+		}
 		args = []any{expr.ErrorResult}
 	}
 	dt, desc, fn := parseAttributeArgs(nil, args...)
@@ -110,7 +126,7 @@ func Error(name string, args ...any) {
 		att.Type = expr.ErrorResult
 	}
 	erro := &expr.ErrorExpr{AttributeExpr: att, Name: name}
-	switch actual := eval.Current().(type) {
+	switch actual := current.(type) {
 	case *expr.APIExpr:
 		expr.Root.Errors = append(expr.Root.Errors, erro)
 	case *expr.ServiceExpr:

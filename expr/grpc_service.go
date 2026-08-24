@@ -60,7 +60,7 @@ func (svc *GRPCServiceExpr) EndpointFor(name string, m *MethodExpr) *GRPCEndpoin
 	return a
 }
 
-// Error returns the error with the given name.
+// Error returns the error with the given name declared by the service, if any.
 func (svc *GRPCServiceExpr) Error(name string) *ErrorExpr {
 	return svc.ServiceExpr.Error(name)
 }
