@@ -122,6 +122,20 @@ func TestNewPlansChecksProtobufPluginVersions(t *testing.T) {
 	}
 }
 
+// TestResolveProtobufPluginAcceptsWindowsExecutableName checks the version text
+// printed when Windows adds its executable suffix to the plugin name.
+func TestResolveProtobufPluginAcceptsWindowsExecutableName(t *testing.T) {
+	resolver := fixedProtobufToolResolver()
+	resolver.version = func(string) (string, error) {
+		return "protoc-gen-go.exe v1.36.12", nil
+	}
+
+	plugin, err := resolveProtobufPlugin(resolver, protocGenGoName, protocGenGoVersion)
+
+	require.NoError(t, err)
+	require.Equal(t, "/tools/protoc-gen-go", plugin)
+}
+
 // TestNewPlansRejectsGoPluginOverrides checks every protoc flag form that
 // could replace either required Go plugin.
 func TestNewPlansRejectsGoPluginOverrides(t *testing.T) {

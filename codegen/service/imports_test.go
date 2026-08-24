@@ -5,6 +5,7 @@ package service
 import (
 	"go/format"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -163,7 +164,7 @@ func TestRegisteredRootsShareImportAliases(t *testing.T) {
 
 	files := mustServiceFiles(t, firstPlan, secondPlan)
 	for _, name := range []string{"first_payload.go", "second_payload.go"} {
-		file := findFile(files, path.Join("gen", "types", name))
+		file := findFile(files, filepath.Join("gen", "types", name))
 		require.NotNil(t, file)
 		code := renderSections(t, file.SectionTemplates)
 		require.Contains(t, code, `alpha "example.com/shared/value"`)
@@ -237,7 +238,7 @@ func TestDocumentedJSONMetadataUsesCanonicalAlias(t *testing.T) {
 		})
 	})
 	plan := mustServicePlan(t, root)
-	file := findFile(mustServiceFiles(t, plan), path.Join("gen", "values", "service.go"))
+	file := findFile(mustServiceFiles(t, plan), filepath.Join("gen", "values", "service.go"))
 	require.NotNil(t, file)
 	code := renderSections(t, file.SectionTemplates)
 	require.Contains(t, code, "jason.RawMessage")
@@ -341,7 +342,7 @@ func TestServiceUsesCanonicalViewsQualifier(t *testing.T) {
 	require.Equal(t, "valuesviews", services.aliases.name(servicePath, viewsPath))
 	require.Equal(t, "valuesviews2", services.aliases.name(servicePath, "example.com/custom/views"))
 
-	file := findFile(mustServiceFiles(t, plan), path.Join("gen", "values", "service.go"))
+	file := findFile(mustServiceFiles(t, plan), filepath.Join("gen", "values", "service.go"))
 	require.NotNil(t, file)
 	code := renderSections(t, file.SectionTemplates)
 	_, err := format.Source([]byte(code))
@@ -378,7 +379,7 @@ func TestViewValidationReservesOnlyUsedImports(t *testing.T) {
 	outputPackage := servicePackagePath(plan.Services().generation.GenPkg(), root.Service("Values")) + "/views"
 	require.Equal(t, "utf8", plan.Services().aliases.name(outputPackage, customUTF8))
 
-	file := findFile(mustServiceFiles(t, plan), path.Join("gen", "values", "views", "view.go"))
+	file := findFile(mustServiceFiles(t, plan), filepath.Join("gen", "values", "views", "view.go"))
 	require.NotNil(t, file)
 	code := renderSections(t, file.SectionTemplates)
 	require.Contains(t, code, `"`+customUTF8+`"`)

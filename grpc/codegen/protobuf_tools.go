@@ -111,10 +111,17 @@ func resolveProtobufPlugin(resolver protobufToolResolver, name, wantVersion stri
 	if err != nil {
 		return "", fmt.Errorf("read protobuf plugin %s version: %w", name, err)
 	}
-	if version != wantVersion {
+	if !protobufPluginVersionMatches(name, version, wantVersion) {
 		return "", fmt.Errorf("protobuf plugin %s reports version %s, want %s", name, version, wantVersion)
 	}
 	return path, nil
+}
+
+// protobufPluginVersionMatches accepts the program name printed on Unix and
+// the same name with the executable suffix printed on Windows.
+func protobufPluginVersionMatches(name, version, wantVersion string) bool {
+	windowsVersion := name + ".exe" + strings.TrimPrefix(wantVersion, name)
+	return version == wantVersion || version == windowsVersion
 }
 
 // resolveProtobufExecutable returns an absolute path for one executable.
