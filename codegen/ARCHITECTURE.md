@@ -105,9 +105,11 @@ starts.
 
 A factory may close over immutable configuration. Per-run roots, plans, files,
 caches, and errors belong to the returned object. Concurrent and repeated
-generation runs must not observe one another. The registry itself is immutable
-while runs execute; tests install isolated registries rather than replacing a
-public global `Generators` function.
+generation runs must not observe one another. The factory registry is immutable
+while runs execute, and tests install isolated registries. The released
+`Generators` variable remains replaceable for compatibility. Callers configure
+it before starting concurrent runs; each run reads its function list once and
+turns that list into fresh internal generators.
 
 ## The retained core plan
 
