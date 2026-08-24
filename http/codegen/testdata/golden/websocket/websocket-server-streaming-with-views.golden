@@ -31,6 +31,11 @@ type StreamUserWithViewsServerStream struct {
 	once sync.Once
 	// upgradeErr is the error returned by the websocket upgrade attempt.
 	upgradeErr error
+	// closeOnce makes repeated Close calls return the first close result without
+	// writing again.
+	closeOnce sync.Once
+	// closeErr is the result of the first Close call.
+	closeErr error
 	// upgrader is the websocket connection upgrader.
 	upgrader goahttp.Upgrader
 	// configurer is the websocket connection configurer.
@@ -120,9 +125,45 @@ func (s *StreamUserWithViewsServerStream) SendWithContext(ctx context.Context, v
 
 // Close closes the "StreamUserWithViews" endpoint websocket connection.
 func (s *StreamUserWithViewsServerStream) Close() error {
+	s.closeOnce.Do(func() {
+		s.closeErr = s.close()
+	})
+	return s.closeErr
+}
+
+// close opens the websocket connection when needed, sends its normal close
+// message, and closes it.
+func (s *StreamUserWithViewsServerStream) close() error {
 	var err error
-	if s.conn == nil {
-		return nil
+	view := s.view
+	if view == "" {
+		view = "default"
+	}
+	switch view {
+	case "default":
+	case "tiny":
+	default:
+		return goa.InvalidEnumValueError("view", view, []any{"default", "tiny"})
+	}
+	// Upgrade the HTTP connection to a websocket connection only once. Connection
+	// upgrade is done here so that authorization logic in the endpoint is executed
+	// before calling the actual service method which may call Close().
+	s.once.Do(func() {
+		respHdr := make(http.Header)
+		respHdr.Add("goa-view", view)
+		var conn *websocket.Conn
+		conn, err = s.upgrader.Upgrade(s.w, s.r, respHdr)
+		if err != nil {
+			s.upgradeErr = err
+			return
+		}
+		if s.configurer != nil {
+			conn = s.configurer(conn, s.cancel)
+		}
+		s.conn = conn
+	})
+	if s.upgradeErr != nil {
+		return s.upgradeErr
 	}
 	if err = s.conn.WriteControl(
 		websocket.CloseMessage,

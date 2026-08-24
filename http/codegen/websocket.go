@@ -383,7 +383,7 @@ func serverWSSections(data *ServiceData) []*codegen.SectionTemplate {
 			if e.ServerWebSocket.MustClose {
 				sections = append(sections, &codegen.SectionTemplate{
 					Name:   "server-websocket-close",
-					Source: httpTemplates.Read(websocketCloseT),
+					Source: httpTemplates.Read(websocketCloseT, websocketUpgradeP),
 					Data:   e.ServerWebSocket,
 					FuncMap: map[string]any{
 						"upgradeParams":      upgradeParams,

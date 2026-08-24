@@ -114,6 +114,11 @@ type SocketServerStream2 struct {
 	once sync.Once
 	// upgradeErr is the error returned by the websocket upgrade attempt.
 	upgradeErr error
+	// closeOnce makes repeated Close calls return the first close result without
+	// writing again.
+	closeOnce sync.Once
+	// closeErr is the result of the first Close call.
+	closeErr error
 	// upgrader is the websocket connection upgrader.
 	upgrader goahttp.Upgrader
 	// configurer is the websocket connection configurer.

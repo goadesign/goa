@@ -4,6 +4,12 @@ type {{ .VarDeclaration.Name }} struct {
 	once sync.Once
 	{{ comment "upgradeErr is the error returned by the websocket upgrade attempt." }}
 	upgradeErr error
+	{{- if .MustClose }}
+	{{ comment "closeOnce makes repeated Close calls return the first close result without writing again." }}
+	closeOnce sync.Once
+	{{ comment "closeErr is the result of the first Close call." }}
+	closeErr error
+	{{- end }}
 	{{ comment "upgrader is the websocket connection upgrader." }}
 	upgrader goahttp.Upgrader
 	{{ comment "configurer is the websocket connection configurer." }}
