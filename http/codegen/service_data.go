@@ -1321,9 +1321,9 @@ func collectPlannedWireTypes(api string, httpService *expr.HTTPServiceExpr, plan
 		addMarshalTags(request)
 		serverRequestPolicy := jsonBodyPolicy(true, true, true, "")
 		clientRequestPolicy := jsonBodyPolicy(true, false, false, "")
-		server.collect(request, wireRequestBody, serverRequestPolicy, "", api)
+		server.collect(request, wireRequestBody, serverRequestPolicy, api)
 		server.addValidationRoot(request, serverRequestPolicy)
-		clientRequest := client.collect(request, wireRequestBody, clientRequestPolicy, "", api)
+		clientRequest := client.collect(request, wireRequestBody, clientRequestPolicy, api)
 		if userType, named := request.Type.(expr.UserType); named && userType.Attribute().Validation != nil {
 			client.addValidationRoot(request, clientRequestPolicy)
 		}
@@ -1340,13 +1340,13 @@ func collectPlannedWireTypes(api string, httpService *expr.HTTPServiceExpr, plan
 			addMarshalTags(streaming)
 			serverStreamPolicy := jsonBodyPolicy(true, true, true, "")
 			clientStreamPolicy := jsonBodyPolicy(true, false, false, "")
-			serverStream := server.collect(streaming, wireStreamPayload, serverStreamPolicy, "", api)
+			serverStream := server.collect(streaming, wireStreamPayload, serverStreamPolicy, api)
 			server.addValidationRoot(streaming, serverStreamPolicy)
 			if endpoint.UsesWebSocket() && needInit(endpoint.MethodExpr.StreamingPayload.Type) && serverStream != nil {
 				serverStream.needsConstructor = true
 				planned.streamPayloads[endpoint] = serverStream
 			}
-			clientStream := client.collect(streaming, wireStreamPayload, clientStreamPolicy, "", api)
+			clientStream := client.collect(streaming, wireStreamPayload, clientStreamPolicy, api)
 			if userType, named := streaming.Type.(expr.UserType); !named || userType.Attribute().Validation != nil {
 				client.addValidationRoot(streaming, clientStreamPolicy)
 			}
@@ -2743,7 +2743,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 				variableWire := viewed && origin == "" && clientResponseViewName(e, md) == "" && (e.UsesSSE() || e.IsJSONRPC())
 				if needInit(result.Type) && !variableWire {
 					init = sds.buildResponseResultInit(
-						e, resp, result, resAttr, clientRespBody, origin,
+						e, resp, result, clientRespBody, origin,
 						headersData, cookiesData, sd, "", clientBodyData,
 					)
 				}
@@ -2797,7 +2797,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 								sd.clientWireTypes.applyNames(body, wireResponseBody, policy)
 							}
 							resultInit := sds.buildResponseResultInit(
-								e, resp, result, resAttr, body, origin,
+								e, resp, result, body, origin,
 								headersData, cookiesData, sd, viewName, clientBody,
 							)
 							representation := &ViewedRepresentationData{
@@ -2856,7 +2856,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 // buildResponseResultInit builds the data used to write one client result
 // function. It uses the name chosen by NewPlans and converts the decoded HTTP
 // body, headers, and cookies into the method result.
-func (sds *ServicesData) buildResponseResultInit(e *expr.HTTPEndpointExpr, resp *expr.HTTPResponseExpr, result, resAttr, clientBody *expr.AttributeExpr, origin string, headers []*HeaderData, cookies []*CookieData, sd *ServiceData, view string, bodyType *TypeData) *InitData {
+func (sds *ServicesData) buildResponseResultInit(e *expr.HTTPEndpointExpr, resp *expr.HTTPResponseExpr, result, clientBody *expr.AttributeExpr, origin string, headers []*HeaderData, cookies []*CookieData, sd *ServiceData, view string, bodyType *TypeData) *InitData {
 	var (
 		svc    = sd.Service
 		md     = svc.Method(e.Name())

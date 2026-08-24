@@ -19,10 +19,10 @@ func TestWireTypeCatalogIdentity(t *testing.T) {
 
 	catalog, generation := testWireTypeCatalog(t)
 	firstBody := makeHTTPType(&expr.AttributeExpr{Type: first})
-	catalog.collect(firstBody, wireRequestBody, request, "")
-	catalog.collect(makeHTTPType(&expr.AttributeExpr{Type: first}), wireRequestBody, request, "")
-	catalog.collect(makeHTTPType(&expr.AttributeExpr{Type: second}), wireRequestBody, request, "")
-	catalog.collect(makeHTTPType(&expr.AttributeExpr{Type: first}), wireResponseBody, response, "")
+	catalog.collect(firstBody, wireRequestBody, request)
+	catalog.collect(makeHTTPType(&expr.AttributeExpr{Type: first}), wireRequestBody, request)
+	catalog.collect(makeHTTPType(&expr.AttributeExpr{Type: second}), wireRequestBody, request)
+	catalog.collect(makeHTTPType(&expr.AttributeExpr{Type: first}), wireResponseBody, response)
 	linkTestWireTypeCatalog(t, generation, catalog)
 	firstRecord := catalog.lookupUser(firstBody, wireRequestBody, request)
 	reusedRecord := catalog.lookupUser(makeHTTPType(&expr.AttributeExpr{Type: first}), wireRequestBody, request)
@@ -44,7 +44,7 @@ func TestWireTypeCatalogRecursiveIdentityTerminates(t *testing.T) {
 	catalog, generation := testWireTypeCatalog(t)
 	body := makeHTTPType(&expr.AttributeExpr{Type: recursive})
 	policy := wireTypePolicy{request: true, pointer: true}
-	catalog.collect(body, wireRequestBody, policy, "")
+	catalog.collect(body, wireRequestBody, policy)
 	linkTestWireTypeCatalog(t, generation, catalog)
 	record := catalog.lookupUser(body, wireRequestBody, policy)
 
@@ -89,7 +89,7 @@ func TestWireTypeCatalogPreservesReleasedNestedNames(t *testing.T) {
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
 			catalog, generation := testWireTypeCatalog(t)
-			catalog.collect(test.body, test.role, wireTypePolicy{}, "")
+			catalog.collect(test.body, test.role, wireTypePolicy{})
 			linkTestWireTypeCatalog(t, generation, catalog)
 
 			child := firstWireUserType(test.body)
@@ -105,8 +105,8 @@ func TestWireTypeCatalogKeepsCurrentNameForSharedReleasedDeclarations(t *testing
 	stream := wireCatalogContainer(child)
 	catalog, generation := testWireTypeCatalog(t)
 
-	catalog.collect(request, wireRequestBody, wireTypePolicy{}, "")
-	catalog.collect(stream, wireStreamPayload, wireTypePolicy{}, "")
+	catalog.collect(request, wireRequestBody, wireTypePolicy{})
+	catalog.collect(stream, wireStreamPayload, wireTypePolicy{})
 	linkTestWireTypeCatalog(t, generation, catalog)
 
 	record := catalog.lookupUser(firstWireUserType(request), wireAttribute, wireTypePolicy{})
@@ -116,7 +116,7 @@ func TestWireTypeCatalogKeepsCurrentNameForSharedReleasedDeclarations(t *testing
 func TestWireTypeCatalogSuffixesReleasedNameAfterPackageCollision(t *testing.T) {
 	body := wireCatalogContainer(wireCatalogType("Child", "child", "value", true))
 	catalog, generation := testWireTypeCatalog(t, "ChildRequestBody")
-	catalog.collect(body, wireRequestBody, wireTypePolicy{}, "")
+	catalog.collect(body, wireRequestBody, wireTypePolicy{})
 	linkTestWireTypeCatalog(t, generation, catalog)
 
 	record := catalog.lookupUser(firstWireUserType(body), wireAttribute, wireTypePolicy{})
@@ -129,8 +129,8 @@ func TestWireTypeCatalogSeparatesDeclarationIdentityFromValidatorPlacement(t *te
 	withValidator := wireTypePolicy{pointer: true, validate: true}
 	catalog, generation := testWireTypeCatalog(t)
 
-	first := catalog.collect(typeAttribute, wireResponseBody, withoutValidator, "")
-	second := catalog.collect(expr.DupAtt(typeAttribute), wireAttribute, withValidator, "")
+	first := catalog.collect(typeAttribute, wireResponseBody, withoutValidator)
+	second := catalog.collect(expr.DupAtt(typeAttribute), wireAttribute, withValidator)
 	catalog.addValidationRoot(&expr.AttributeExpr{Type: &expr.Object{
 		{Name: "shared", Attribute: expr.DupAtt(typeAttribute)},
 	}}, withValidator)
@@ -180,7 +180,7 @@ func TestWireTypeCatalogErrorDescriptionUsesAllPlannedErrors(t *testing.T) {
 			attribute := &expr.AttributeExpr{Type: wireCatalogType("Shared", "shared", "value", true)}
 			policy := wireTypePolicy{pointer: true}
 			catalog, generation := testWireTypeCatalog(t)
-			record := catalog.collect(attribute, wireResponseBody, policy, "")
+			record := catalog.collect(attribute, wireResponseBody, policy)
 			for _, use := range test.uses {
 				record.addErrorUse(use)
 			}
@@ -201,7 +201,7 @@ func TestWireTypeCatalogPlansNestedValidatorNameWithPackageNames(t *testing.T) {
 	attribute := &expr.AttributeExpr{Type: wireCatalogType("Shared", "shared", "value", true)}
 	policy := wireTypePolicy{pointer: true, validate: true}
 	catalog, generation := testWireTypeCatalog(t, "validateShared")
-	record := catalog.collect(attribute, wireAttribute, policy, "")
+	record := catalog.collect(attribute, wireAttribute, policy)
 	catalog.addValidationRoot(&expr.AttributeExpr{Type: &expr.Object{
 		{Name: "shared", Attribute: expr.DupAtt(attribute)},
 	}}, policy)
@@ -219,7 +219,7 @@ func TestWireTypeCatalogDoesNotRewriteValidationCalls(t *testing.T) {
 	attribute := &expr.AttributeExpr{Type: wireCatalogType("Shared", "shared", "value", true)}
 	policy := wireTypePolicy{pointer: true, validate: true}
 	catalog, generation := testWireTypeCatalog(t, "ValidateShared")
-	record := catalog.collect(attribute, wireAttribute, policy, "")
+	record := catalog.collect(attribute, wireAttribute, policy)
 	linkTestWireTypeCatalog(t, generation, catalog)
 
 	catalog.bind(record, &TypeData{
@@ -242,7 +242,7 @@ func TestWireTypeCatalogCollectsUnionsBeforeFreeze(t *testing.T) {
 	attribute := &expr.AttributeExpr{Type: union}
 	catalog, generation := testWireTypeCatalog(t)
 
-	catalog.collect(attribute, wireAttribute, wireTypePolicy{}, "")
+	catalog.collect(attribute, wireAttribute, wireTypePolicy{})
 	require.Len(t, catalog.unionOccurrences, 1)
 	linkTestWireTypeCatalog(t, generation, catalog)
 	catalog.applyNames(attribute, wireAttribute, wireTypePolicy{})
@@ -254,7 +254,7 @@ func TestWireTypeCatalogLookupDoesNotDeriveIdentityFromAssignedName(t *testing.T
 	attribute := &expr.AttributeExpr{Type: wireCatalogType("Shared", "shared", "value", true)}
 	policy := wireTypePolicy{pointer: true}
 	catalog, generation := testWireTypeCatalog(t, "Shared")
-	catalog.collect(attribute, wireAttribute, policy, "")
+	catalog.collect(attribute, wireAttribute, policy)
 	linkTestWireTypeCatalog(t, generation, catalog)
 
 	first := catalog.lookupUser(attribute, wireAttribute, policy)
@@ -269,8 +269,8 @@ func TestWireTypeCatalogBindingUsesCurrentLayoutPolicy(t *testing.T) {
 	valuePolicy := wireTypePolicy{}
 	pointerPolicy := wireTypePolicy{pointer: true}
 	catalog, generation := testWireTypeCatalog(t)
-	catalog.collect(attribute, wireAttribute, valuePolicy, "")
-	catalog.collect(attribute, wireAttribute, pointerPolicy, "")
+	catalog.collect(attribute, wireAttribute, valuePolicy)
+	catalog.collect(attribute, wireAttribute, pointerPolicy)
 	linkTestWireTypeCatalog(t, generation, catalog)
 
 	valueRecord := catalog.lookupUser(attribute, wireAttribute, valuePolicy)
@@ -291,7 +291,7 @@ func TestWireTypeCatalogDoesNotNameTheSharedEmptySentinel(t *testing.T) {
 	}}
 	catalog, generation := testWireTypeCatalog(t)
 
-	catalog.collect(attribute, wireAttribute, wireTypePolicy{}, "")
+	catalog.collect(attribute, wireAttribute, wireTypePolicy{})
 	linkTestWireTypeCatalog(t, generation, catalog)
 	catalog.applyNames(attribute, wireAttribute, wireTypePolicy{})
 
@@ -306,11 +306,11 @@ func TestWireTypeCatalogRejectsLateAndUnknownDeclarations(t *testing.T) {
 	typeAttribute := &expr.AttributeExpr{Type: wireCatalogType("Known", "known", "value", true)}
 	policy := wireTypePolicy{request: true, pointer: true}
 	catalog, generation := testWireTypeCatalog(t)
-	catalog.collect(typeAttribute, wireRequestBody, policy, "")
+	catalog.collect(typeAttribute, wireRequestBody, policy)
 	linkTestWireTypeCatalog(t, generation, catalog)
 
 	require.Panics(t, func() {
-		catalog.collect(&expr.AttributeExpr{Type: wireCatalogType("Late", "late", "value", true)}, wireRequestBody, policy, "")
+		catalog.collect(&expr.AttributeExpr{Type: wireCatalogType("Late", "late", "value", true)}, wireRequestBody, policy)
 	})
 	require.Panics(t, func() {
 		catalog.lookupUser(&expr.AttributeExpr{Type: wireCatalogType("Unknown", "unknown", "value", true)}, wireRequestBody, policy)

@@ -78,7 +78,7 @@ func TestCollectHTTPUnionTypesReusesSameShapedDeclarationsAndReferences(t *testi
 	}
 
 	catalog, generation := testWireTypeCatalog(t)
-	catalog.collect(bodies, wireAttribute, wireTypePolicy{}, "")
+	catalog.collect(bodies, wireAttribute, wireTypePolicy{})
 	linkTestWireTypeCatalog(t, generation, catalog)
 	catalog.applyNames(bodies, wireAttribute, wireTypePolicy{})
 
@@ -200,7 +200,7 @@ func sameShapedValueUnionDSL() {
 func collectHTTPUnionTypeNames(t *testing.T, att *expr.AttributeExpr) map[string]string {
 	t.Helper()
 	catalog, generation := testWireTypeCatalog(t)
-	catalog.collect(att, wireAttribute, wireTypePolicy{}, "")
+	catalog.collect(att, wireAttribute, wireTypePolicy{})
 	linkTestWireTypeCatalog(t, generation, catalog)
 
 	names := make(map[string]string, len(catalog.unions))

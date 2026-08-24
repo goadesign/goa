@@ -267,7 +267,8 @@ func planServerMain(
 // planServerMainHandlers copies each host and replaces service names with the
 // local variables chosen for this main function.
 func planServerMainHandlers(server *Data, services map[string]*serverMainServiceData) *serverMainServerData {
-	fixedFlags := []string{"host", "domain", "secure", "debug"}
+	fixedFlags := make([]string, 0, 4+len(server.Transports))
+	fixedFlags = append(fixedFlags, "host", "domain", "secure", "debug")
 	for _, transport := range server.Transports {
 		fixedFlags = append(fixedFlags, string(transport.Type)+"-port")
 	}

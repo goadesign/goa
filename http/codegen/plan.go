@@ -1410,17 +1410,6 @@ func requireHTTPCLIImports(outputPackage *codegen.GeneratedPackage) error {
 	return nil
 }
 
-// serviceHasResultViews reports whether transport files reference the service
-// views package.
-func serviceHasResultViews(service *expr.HTTPServiceExpr) bool {
-	for _, endpoint := range service.HTTPEndpoints {
-		if _, ok := endpoint.MethodExpr.Result.Type.(*expr.ResultTypeExpr); ok {
-			return true
-		}
-	}
-	return false
-}
-
 // serviceHasMultipartRequest reports whether the example package writes a
 // multipart callback whose signature uses this service's generated server.
 func serviceHasMultipartRequest(service *expr.HTTPServiceExpr) bool {

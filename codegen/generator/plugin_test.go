@@ -515,11 +515,13 @@ func TestReleasedPluginCallbackReceivesEachRun(t *testing.T) {
 		generatedRoots    [][]eval.Root
 		generatedFiles    [][]*codegen.File
 	)
+	//nolint:unparam // The released callback signature includes an error result.
 	prepare := func(genpkg string, roots []eval.Root) error {
 		preparedPackages = append(preparedPackages, genpkg)
 		preparedRoots = append(preparedRoots, append([]eval.Root(nil), roots...))
 		return nil
 	}
+	//nolint:unparam // The released callback signature includes an error result.
 	generate := func(genpkg string, roots []eval.Root, files []*codegen.File) ([]*codegen.File, error) {
 		generatedPackages = append(generatedPackages, genpkg)
 		generatedRoots = append(generatedRoots, append([]eval.Root(nil), roots...))

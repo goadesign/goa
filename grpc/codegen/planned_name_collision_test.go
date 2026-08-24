@@ -104,7 +104,7 @@ func TestGRPCPlannedNamesSurvivePackageCollisions(t *testing.T) {
 
 // namedGRPCSections returns every section with name in file order.
 func namedGRPCSections(files []*codegen.File, name string) []*codegen.SectionTemplate {
-	var result []*codegen.SectionTemplate
+	result := make([]*codegen.SectionTemplate, 0, len(files))
 	for _, file := range files {
 		result = append(result, file.Section(name)...)
 	}

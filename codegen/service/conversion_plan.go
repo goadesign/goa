@@ -136,7 +136,7 @@ func collectExternalConversions(roots []*rootFacts, generation *codegen.Generati
 				}
 				operations[identity] = struct{}{}
 				operation, err := planExternalConversion(
-					owners[owner], mapping, owner, identity, externalAlias, generation,
+					owners[owner], mapping, owner, identity, externalAlias,
 				)
 				if err != nil {
 					return err
@@ -245,7 +245,6 @@ func planExternalConversion(
 	owner *codegen.GeneratedPackage,
 	identity externalConversionIdentity,
 	externalAlias string,
-	generation *codegen.Generation,
 ) (*externalConversionFacts, error) {
 	externalType := identity.externalType
 	externalDataType, reflectedTypes, err := buildExternalDesignType(externalType, mapping.User)

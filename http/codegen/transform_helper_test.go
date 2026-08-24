@@ -24,7 +24,7 @@ func TestTransformHelperOrderingSupportsMoreThan255Functions(t *testing.T) {
 	source, target := manyDistinctTransformChildren(257, false)
 	catalog, generation := testWireTypeCatalog(t)
 	policy := jsonBodyPolicy(true, false, false, "")
-	catalog.collect(target, wireRequestBody, policy, "")
+	catalog.collect(target, wireRequestBody, policy)
 	catalog.collectTransform(source, target, "marshal", "many helpers", wireTransformLayout{
 		wireSide:       wireTransformTarget,
 		wirePolicy:     policy,
@@ -41,7 +41,7 @@ func TestTransformHandleSelectsTheCollectedPlan(t *testing.T) {
 	source, target := manyDistinctTransformChildren(1, false)
 	catalog, generation := testWireTypeCatalog(t)
 	policy := jsonBodyPolicy(true, false, false, "")
-	catalog.collect(target, wireRequestBody, policy, "")
+	catalog.collect(target, wireRequestBody, policy)
 	first := catalog.collectTransform(source, target, "marshal", "first", wireTransformLayout{
 		wireSide:       wireTransformTarget,
 		wirePolicy:     policy,
@@ -68,7 +68,7 @@ func TestTransformHandleRejectsAnotherCatalog(t *testing.T) {
 	source, target := manyDistinctTransformChildren(1, false)
 	first, firstGeneration := testWireTypeCatalog(t)
 	policy := jsonBodyPolicy(true, false, false, "")
-	first.collect(target, wireRequestBody, policy, "")
+	first.collect(target, wireRequestBody, policy)
 	handle := first.collectTransform(source, target, "marshal", "first", wireTransformLayout{
 		wireSide:       wireTransformTarget,
 		wirePolicy:     policy,
@@ -196,7 +196,7 @@ func TestTransformHelperUsesRetainedServicePackagePreference(t *testing.T) {
 			source, target := manyDistinctTransformChildren(1, false)
 			catalog, generation := testWireTypeCatalog(t)
 			policy := jsonBodyPolicy(true, false, false, "")
-			catalog.collect(target, wireRequestBody, policy, "")
+			catalog.collect(target, wireRequestBody, policy)
 			catalog.collectTransform(source, target, "marshal", test.name, wireTransformLayout{
 				wireSide:       wireTransformTarget,
 				wirePolicy:     policy,
@@ -239,7 +239,7 @@ func TestViewedTransformHelpersNameViewsPackage(t *testing.T) {
 	root := expr.RunDSL(t, testdata.ExplicitBodyUserResultObjectDSL)
 	plan := linkedHTTPPlanForRoot(t, root)
 	service := plan.services.Get("ServiceExplicitBodyUserResultObject")
-	var names []string
+	names := make([]string, 0, len(service.ClientTransformHelpers))
 	for _, helper := range service.ClientTransformHelpers {
 		names = append(names, helper.Name)
 	}
@@ -250,7 +250,7 @@ func TestTransformHelpersUseConciseServiceAndWireTypeNames(t *testing.T) {
 	root := expr.RunDSL(t, conciseTransformHelperDSL)
 	plan := linkedHTTPPlanForRoot(t, root)
 	service := plan.services.Get("Storage")
-	var names []string
+	names := make([]string, 0, len(service.ClientTransformHelpers))
 	for _, helper := range service.ClientTransformHelpers {
 		names = append(names, helper.Name)
 	}
@@ -496,7 +496,7 @@ func plannedTransformHelperNames(t *testing.T, reverse bool) map[string]string {
 	source, target := manyDistinctTransformChildren(3, reverse)
 	catalog, generation := testWireTypeCatalog(t)
 	policy := jsonBodyPolicy(true, false, false, "")
-	catalog.collect(target, wireRequestBody, policy, "")
+	catalog.collect(target, wireRequestBody, policy)
 	catalog.collectTransform(source, target, "marshal", "ordered helpers", wireTransformLayout{
 		wireSide:       wireTransformTarget,
 		wirePolicy:     policy,
@@ -521,7 +521,7 @@ func plannedMatchingTransforms(
 	source, target := manyDistinctTransformChildren(1, false)
 	catalog, generation := testWireTypeCatalog(t)
 	policy := jsonBodyPolicy(true, false, false, "")
-	catalog.collect(target, wireRequestBody, policy, "")
+	catalog.collect(target, wireRequestBody, policy)
 	layout := wireTransformLayout{
 		wireSide:       wireTransformTarget,
 		wirePolicy:     policy,

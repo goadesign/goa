@@ -127,9 +127,8 @@ func clientFile(planned *servicePlan) *codegen.File {
 		codegen.GoaNamedImport("http", "goahttp"),
 		data.ClientServiceImport(),
 	}
-	sections := []*codegen.SectionTemplate{
-		codegen.Header(title, "client", imports),
-	}
+	sections := make([]*codegen.SectionTemplate, 0, 3+len(planned.endpoints))
+	sections = append(sections, codegen.Header(title, "client", imports))
 	sections = append(sections, &codegen.SectionTemplate{
 		Name:   "jsonrpc-client-struct",
 		Source: jsonrpcTemplates.Read(clientStructT),

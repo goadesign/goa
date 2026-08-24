@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -36,7 +37,8 @@ func TestGeneratedSSEFieldWireFormat(t *testing.T) {
 
 	serviceFiles, err := service.Files(servicePlan)
 	require.NoError(t, err)
-	files := append(serviceFiles, httpPlans[0].ServerFiles()...)
+	files := slices.Clone(serviceFiles)
+	files = append(files, httpPlans[0].ServerFiles()...)
 	files = append(files, httpPlans[0].ClientFiles()...)
 	files = append(files, httpPlans[0].ServerTypeFiles()...)
 	files = append(files, httpPlans[0].ClientTypeFiles()...)

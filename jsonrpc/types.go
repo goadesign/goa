@@ -185,26 +185,24 @@ func (r *RawRequest) UnmarshalJSON(data []byte) error {
 		if string(v) != "null" {
 			if err := json.Unmarshal(v, &r.ID); err != nil {
 				r.Invalid = true
-				return nil
-			}
-			switch r.ID.(type) {
-			case string, float64:
-			default:
-				r.ID = nil
-				r.Invalid = true
+			} else {
+				switch r.ID.(type) {
+				case string, float64:
+				default:
+					r.ID = nil
+					r.Invalid = true
+				}
 			}
 		}
 	}
 	if v, ok := raw["jsonrpc"]; ok {
-		if err := json.Unmarshal(v, &r.JSONRPC); err != nil {
+		if json.Unmarshal(v, &r.JSONRPC) != nil {
 			r.Invalid = true
-			return nil
 		}
 	}
 	if v, ok := raw["method"]; ok {
-		if err := json.Unmarshal(v, &r.Method); err != nil {
+		if json.Unmarshal(v, &r.Method) != nil {
 			r.Invalid = true
-			return nil
 		}
 	}
 	if v, ok := raw["params"]; ok {

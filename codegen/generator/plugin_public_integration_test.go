@@ -99,11 +99,10 @@ func runPublicLegacyHTTPEndpointChild(t *testing.T) {
 					MountHandler: "MountCORSHandler",
 					HandlerInit:  "NewCORSHandler",
 				})
-				section.Source = strings.Replace(
+				section.Source = strings.ReplaceAll(
 					section.Source,
 					`e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}decoder{{ end }}, encoder, errhandler, formatter{{ if isWebSocketEndpoint . }}, upgrader, configurer.{{ .Method.VarName }}Fn{{ end }})`,
 					`{{ if ne .Method.VarName "CORS" }}e.{{ .Method.VarName }}, mux, {{ if .MultipartRequestDecoder }}{{ .MultipartRequestDecoder.InitName }}(mux, {{ .MultipartRequestDecoder.VarName }}){{ else }}decoder{{ end }}, encoder, errhandler, formatter{{ if isWebSocketEndpoint . }}, upgrader, configurer.{{ .Method.VarName }}Fn{{ end }}{{ end }})`,
-					-1,
 				)
 			}
 		}

@@ -44,7 +44,7 @@ func TestPluginRegistryRejectsInvalidRegistration(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			registry := pluginregistry.New()
 			require.PanicsWithValue(t, test.error, func() {
-				registerPluginIn(registry, test.plugin, test.command, pluginNormal, nil, test.generate)
+				registerPluginIn(registry, test.plugin, test.command, pluginNormal, test.generate)
 			})
 		})
 	}
@@ -54,8 +54,8 @@ func TestPluginRegistryRejectsInvalidRegistration(t *testing.T) {
 // API keeps every callback when packages reuse the same command and name.
 func TestPluginRegistryKeepsDuplicateRegistrationOrder(t *testing.T) {
 	registry := pluginregistry.New()
-	registerPluginIn(registry, "plugin", "gen", pluginFirst, nil, unchangedFiles)
-	registerPluginIn(registry, "plugin", "gen", pluginLast, nil, changedFiles)
+	registerPluginIn(registry, "plugin", "gen", pluginFirst, unchangedFiles)
+	registerPluginIn(registry, "plugin", "gen", pluginLast, changedFiles)
 
 	registrations := pluginregistry.SnapshotFrom[PrepareFunc, GenerateFunc](registry)
 	require.Len(t, registrations, 2)
@@ -65,7 +65,7 @@ func TestPluginRegistryKeepsDuplicateRegistrationOrder(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "changed", files[0].Path)
 	require.PanicsWithValue(t, "plugin registry is sealed", func() {
-		registerPluginIn(registry, "late", "gen", pluginNormal, nil, unchangedFiles)
+		registerPluginIn(registry, "late", "gen", pluginNormal, unchangedFiles)
 	})
 }
 
@@ -73,7 +73,7 @@ func TestPluginRegistryKeepsDuplicateRegistrationOrder(t *testing.T) {
 // registrations retained for later generation runs.
 func TestPluginRegistrySnapshotIsCopied(t *testing.T) {
 	registry := pluginregistry.New()
-	registerPluginIn(registry, "plugin", "gen", pluginNormal, nil, unchangedFiles)
+	registerPluginIn(registry, "plugin", "gen", pluginNormal, unchangedFiles)
 
 	first := pluginregistry.SnapshotFrom[PrepareFunc, GenerateFunc](registry)
 	first[0].Name = "changed"
@@ -86,9 +86,9 @@ func TestPluginRegistrySnapshotIsCopied(t *testing.T) {
 
 // registerPluginIn applies the public registration checks to an isolated
 // registry so the test does not stop later process-wide registrations.
-func registerPluginIn(registry *pluginregistry.Registry, name, command string, position pluginPosition, prepare PrepareFunc, generate GenerateFunc) {
+func registerPluginIn(registry *pluginregistry.Registry, name, command string, position pluginPosition, generate GenerateFunc) {
 	validatePlugin(name, command, generate)
-	pluginregistry.RegisterIn(registry, name, command, position, prepare, generate)
+	pluginregistry.RegisterIn[PrepareFunc, GenerateFunc](registry, name, command, position, nil, generate)
 }
 
 // unchangedFiles provides a valid generation callback for registration tests.

@@ -522,11 +522,10 @@ func collectServicePlan(generation *codegen.Generation, input PlanInput, transpo
 		pathName: pathName,
 		helpers:  make(map[string]*viewedHelperDeclarations),
 	}
-	declare := func(pkg *codegen.GeneratedPackage, kind codegen.PackageNameKind, preferred string, visibility codegen.PackageNameVisibility, method string, role uint8) (*codegen.NameDeclaration, error) {
-		declaration := codegen.NewPreferredName(kind, preferred, visibility, jsonRPCNameOrder{
+	declare := func(pkg *codegen.GeneratedPackage, kind codegen.PackageNameKind, preferred string, role uint8) (*codegen.NameDeclaration, error) {
+		declaration := codegen.NewPreferredName(kind, preferred, codegen.UnexportedName, jsonRPCNameOrder{
 			api:     planned.api,
 			service: planned.name,
-			method:  method,
 			role:    role,
 		})
 		if err := pkg.DeclareName(declaration); err != nil {
@@ -542,26 +541,26 @@ func collectServicePlan(generation *codegen.Generation, input PlanInput, transpo
 			hasHTTP = true
 		}
 	}
-	planned.clientNames.bufferPool, err = declare(client, codegen.NameVariable, "bufferPool", codegen.UnexportedName, "", jsonRPCBufferPoolRole)
+	planned.clientNames.bufferPool, err = declare(client, codegen.NameVariable, "bufferPool", jsonRPCBufferPoolRole)
 	if err != nil {
 		return nil, err
 	}
-	planned.serverNames.encodeError, err = declare(server, codegen.NameFunction, "encodeJSONRPCError", codegen.UnexportedName, "", jsonRPCEncodeErrorRole)
+	planned.serverNames.encodeError, err = declare(server, codegen.NameFunction, "encodeJSONRPCError", jsonRPCEncodeErrorRole)
 	if err != nil {
 		return nil, err
 	}
 	if hasHTTP {
-		planned.serverNames.batchWriter, err = declare(server, codegen.NameType, "batchWriter", codegen.UnexportedName, "", jsonRPCBatchWriterRole)
+		planned.serverNames.batchWriter, err = declare(server, codegen.NameType, "batchWriter", jsonRPCBatchWriterRole)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if hasSSE {
-		planned.serverNames.sseStream, err = declare(server, codegen.NameType, "sseServerStream", codegen.UnexportedName, "", jsonRPCSSEStreamRole)
+		planned.serverNames.sseStream, err = declare(server, codegen.NameType, "sseServerStream", jsonRPCSSEStreamRole)
 		if err != nil {
 			return nil, err
 		}
-		planned.serverNames.sseBuffer, err = declare(server, codegen.NameType, "sseEventBuffer", codegen.UnexportedName, "", jsonRPCSSEBufferRole)
+		planned.serverNames.sseBuffer, err = declare(server, codegen.NameType, "sseEventBuffer", jsonRPCSSEBufferRole)
 		if err != nil {
 			return nil, err
 		}

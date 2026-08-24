@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -56,7 +57,8 @@ func TestGeneratedClientFormatsFloatQueriesCompactly(t *testing.T) {
 
 	serviceFiles, err := service.Files(servicePlan)
 	require.NoError(t, err)
-	files := append(serviceFiles, httpPlans[0].ClientFiles()...)
+	files := slices.Clone(serviceFiles)
+	files = append(files, httpPlans[0].ClientFiles()...)
 	files = append(files, httpPlans[0].ClientTypeFiles()...)
 	files = append(files, httpPlans[0].PathFiles()...)
 	runGeneratedFloatQueryTest(t, files)

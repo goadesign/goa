@@ -110,5 +110,4 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 		require.NotNil(t, svc.Meta)
 		assert.NotNil(t, svc.Meta["jsonrpc:service"], "service should be auto-marked as JSON-RPC")
 	})
-
 }

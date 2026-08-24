@@ -926,12 +926,6 @@ func mustServicePlan(t *testing.T, root *expr.RootExpr) *Plan {
 	return plan
 }
 
-// mustServicesData returns the linked render model for focused analysis tests.
-func mustServicesData(t *testing.T, root *expr.RootExpr) *ServicesData {
-	t.Helper()
-	return mustServicePlan(t, root).Services()
-}
-
 // mustServiceFiles renders linked plans or fails the calling test.
 func mustServiceFiles(t *testing.T, plans ...*Plan) []*codegen.File {
 	t.Helper()

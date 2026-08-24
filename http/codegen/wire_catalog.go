@@ -271,8 +271,8 @@ func newWireTypeCatalog(pkg ...*codegen.GeneratedPackage) *wireTypeCatalog {
 }
 
 // collect records attribute and every named type it contains.
-func (c *wireTypeCatalog) collect(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, preferred string, api ...string) *wireTypeRecord {
-	return c.collectWithReleasedNames(attribute, role, policy, preferred, nil, api...)
+func (c *wireTypeCatalog) collect(attribute *expr.AttributeExpr, role wireTypeRole, policy wireTypePolicy, api ...string) *wireTypeRecord {
+	return c.collectWithReleasedNames(attribute, role, policy, "", nil, api...)
 }
 
 // collectWithReleasedNames records a response while keeping the public names
@@ -1146,15 +1146,6 @@ func (r *wireTypeRecord) addReleasedName(name string) {
 	}
 	r.releasedNames = append(r.releasedNames, name)
 	slices.Sort(r.releasedNames)
-}
-
-// replaceReleasedName records the public spelling used for one response after
-// removing the name that the shared type planner first assigned to that use.
-func (r *wireTypeRecord) replaceReleasedName(current, released string) {
-	r.releasedNames = slices.DeleteFunc(r.releasedNames, func(name string) bool {
-		return name == current
-	})
-	r.addReleasedName(released)
 }
 
 // preferredName keeps a released spelling only when it still names exactly one

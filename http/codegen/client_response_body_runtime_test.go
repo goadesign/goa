@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -42,7 +43,8 @@ func TestGeneratedClientResponseBodyLifecycle(t *testing.T) {
 
 	serviceFiles, err := service.Files(servicePlan)
 	require.NoError(t, err)
-	files := append(serviceFiles, clientFiles...)
+	files := slices.Clone(serviceFiles)
+	files = append(files, clientFiles...)
 	files = append(files, httpPlans[0].ClientTypeFiles()...)
 	files = append(files, httpPlans[0].PathFiles()...)
 	runGeneratedResponseBodyLifecycleTest(t, files)
