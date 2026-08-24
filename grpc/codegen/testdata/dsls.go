@@ -1062,6 +1062,23 @@ var PayloadWithValidationsDSL = func() {
 	})
 }
 
+var PayloadWithMessageDSL = func() {
+	Service("PayloadWithMessage", func() {
+		Method("show", func() {
+			Payload(func() {
+				Field(1, "tenantID", String, func() {
+					Example("tenant")
+				})
+				Field(2, "recordID", String, func() {
+					Example("record")
+				})
+				Required("tenantID", "recordID")
+			})
+			GRPC(func() {})
+		})
+	})
+}
+
 var StructMetaTypeDSL = func() {
 	Service("UsingMetaTypes", func() {
 		Method("Method", func() {

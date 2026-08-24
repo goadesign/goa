@@ -37,6 +37,7 @@ func planGRPCImports(generation *codegen.Generation, plan *Plan) error {
 			clientFixed = append(clientFixed,
 				codegen.SimpleImport("encoding/json"),
 				codegen.SimpleImport("fmt"),
+				codegen.SimpleImport("google.golang.org/protobuf/encoding/protojson"),
 			)
 		}
 		if servicePlan.usesAny {

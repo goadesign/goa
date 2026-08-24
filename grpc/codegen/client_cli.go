@@ -194,6 +194,7 @@ func payloadBuilders(servicePlan *grpcServicePlan, data *cli.CommandData, servic
 		codegen.GoaImport(""),
 		services.ServiceImport(outputPackage, svc.Name()),
 		services.PackageImport(outputPackage, path.Join(services.GenPkg(), "grpc", svcName, pbPkgName)),
+		{Path: "google.golang.org/protobuf/encoding/protojson"},
 	}
 	// Add structpb import if Any type is used
 	if servicePlan.usesAny {

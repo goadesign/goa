@@ -5,6 +5,7 @@ package codegen
 import (
 	"fmt"
 	"path"
+	"reflect"
 	"strings"
 
 	"goa.design/goa/v3/codegen"
@@ -943,8 +944,8 @@ func (d *ServicesData) analyze(servicePlan *grpcServicePlan) *ServiceData {
 				Ref:      "message",
 				TypeName: typeName,
 				TypeRef:  protoBufGoFullTypeRef(requestMessage, sd.PkgName, sd),
-				CLIPlan:  cli.NewFlagPlan(requestMessage, typeName, typeName, nil),
-				Example:  d.Example(requestMessage, payloadIdentity),
+				CLIPlan:  cli.NewProtobufFlagPlan(requestMessage, typeName),
+				Example:  protobufCLIExample(requestMessage, d.Example(requestMessage, payloadIdentity), sd.protobuf.plan),
 			})
 		}
 		// pass the metadata as arguments to client CLI args
@@ -1277,6 +1278,108 @@ func userTypeAttribute(ut expr.UserType) *expr.AttributeExpr {
 		}
 	}
 	return att
+}
+
+// protobufCLIExample writes object field names exactly as they appear in the
+// protobuf file. For example, a Goa field named "tenantID" is shown as
+// "tenant_id" in command help.
+func protobufCLIExample(attribute *expr.AttributeExpr, value any, plan *protobufServicePlan) any {
+	return protobufCLIExampleValue(attribute, value, plan, false)
+}
+
+// protobufCLIExampleValue avoids adding the same protobuf object twice while
+// visiting its field. Values inside arrays and maps are converted separately.
+func protobufCLIExampleValue(attribute *expr.AttributeExpr, value any, plan *protobufServicePlan, skipWrapper bool) any {
+	if value == nil {
+		return nil
+	}
+	if !skipWrapper && isWrappedAttr(attribute) {
+		field := unwrapAttr(attribute)
+		fieldValue := value
+		if !field.Type.IsCompatible(value) {
+			var ok bool
+			fieldValue, ok = namedExampleValue(value, wrappedField)
+			if !ok {
+				panic("protobuf CLI wrapper example has no field value")
+			}
+		}
+		return map[string]any{
+			plan.sourceFieldName(field): protobufCLIExampleValue(field, fieldValue, plan, true),
+		}
+	}
+	if object := expr.AsObject(attribute.Type); object != nil {
+		result := make(map[string]any, len(*object))
+		for _, field := range *object {
+			fieldValue, ok := namedExampleValue(value, field.Name)
+			if !ok {
+				continue
+			}
+			if expr.AsUnion(field.Attribute.Type) != nil {
+				for name, branchValue := range protobufCLIExampleValue(field.Attribute, fieldValue, plan, false).(map[string]any) {
+					result[name] = branchValue
+				}
+				continue
+			}
+			result[plan.sourceFieldName(field.Attribute)] = protobufCLIExampleValue(field.Attribute, fieldValue, plan, false)
+		}
+		return result
+	}
+	if union := expr.AsUnion(attribute.Type); union != nil {
+		branchName, ok := namedExampleValue(value, union.GetTypeKey())
+		if !ok {
+			panic("protobuf CLI union example has no branch name")
+		}
+		branchValue, ok := namedExampleValue(value, union.GetValueKey())
+		if !ok {
+			panic("protobuf CLI union example has no branch value")
+		}
+		for _, branch := range union.Values {
+			if branch.Name != branchName {
+				continue
+			}
+			return map[string]any{
+				plan.sourceFieldName(branch.Attribute): protobufCLIExampleValue(branch.Attribute, branchValue, plan, false),
+			}
+		}
+		panic(fmt.Sprintf("protobuf CLI union example selects unknown branch %q", branchName))
+	}
+	if array := expr.AsArray(attribute.Type); array != nil {
+		items := reflect.ValueOf(value)
+		if items.Kind() != reflect.Array && items.Kind() != reflect.Slice {
+			panic(fmt.Sprintf("protobuf CLI array example has type %T", value))
+		}
+		result := make([]any, items.Len())
+		for index := range items.Len() {
+			result[index] = protobufCLIExampleValue(array.ElemType, items.Index(index).Interface(), plan, false)
+		}
+		return result
+	}
+	if mapped := expr.AsMap(attribute.Type); mapped != nil {
+		entries := reflect.ValueOf(value)
+		if entries.Kind() != reflect.Map {
+			panic(fmt.Sprintf("protobuf CLI map example has type %T", value))
+		}
+		result := make(map[string]any, entries.Len())
+		for _, key := range entries.MapKeys() {
+			result[fmt.Sprint(key.Interface())] = protobufCLIExampleValue(mapped.ElemType, entries.MapIndex(key).Interface(), plan, false)
+		}
+		return result
+	}
+	return value
+}
+
+// namedExampleValue returns the value stored under one Goa object or union
+// field name.
+func namedExampleValue(example any, name string) (any, bool) {
+	fields := reflect.ValueOf(example)
+	if fields.Kind() != reflect.Map || fields.Type().Key().Kind() != reflect.String {
+		panic(fmt.Sprintf("protobuf CLI object example has type %T", example))
+	}
+	value := fields.MapIndex(reflect.ValueOf(name).Convert(fields.Type().Key()))
+	if !value.IsValid() {
+		return nil, false
+	}
+	return value.Interface(), true
 }
 
 // buildRequestConvertData builds the convert data for the server and client

@@ -203,10 +203,11 @@ type (
 
 	// flagValuePlan records how command-line text becomes one generated Go value.
 	flagValuePlan struct {
-		kind     expr.Kind
-		typeName string
-		typeRef  string
-		alias    bool
+		kind            expr.Kind
+		typeName        string
+		typeRef         string
+		alias           bool
+		protobufMessage bool
 	}
 
 	// FieldData contains the data needed to generate the code that initializes a
@@ -635,6 +636,15 @@ func NewFlagPlan(attribute *expr.AttributeExpr, typeName, typeRef string, valida
 	}
 }
 
+// NewProtobufFlagPlan records a command-line flag whose JSON value is a
+// protobuf message. The generated code uses protobuf's JSON decoder so the
+// accepted field names and values match the message contract.
+func NewProtobufFlagPlan(attribute *expr.AttributeExpr, typeName string) *FlagPlan {
+	plan := NewFlagPlan(attribute, typeName, typeName, nil)
+	plan.value.protobufMessage = true
+	return plan
+}
+
 // NewFlagData creates flag data from the released string type description.
 //
 // svcn is the service name
@@ -780,7 +790,8 @@ func fieldLoadCode(
 	return fmt.Sprintf("%s%s%s", startIf, code, endIf), declErr
 }
 
-// jsonExample generates a json example
+// jsonExample turns a generated value into the JSON text shown in CLI help and
+// invalid-value errors.
 func jsonExample(v any) string {
 	// In JSON, keys must be a string. But goa allows map keys to be anything.
 	r := reflect.ValueOf(v)
@@ -790,21 +801,17 @@ func jsonExample(v any) string {
 			a := make(map[string]any, len(keys))
 			var kstr string
 			for _, k := range keys {
-				switch t := k.Interface().(type) {
-				case bool:
-					kstr = strconv.FormatBool(t)
-				case int32:
-					kstr = strconv.FormatInt(int64(t), 10)
-				case int64:
-					kstr = strconv.FormatInt(t, 10)
-				case int:
-					kstr = strconv.Itoa(t)
-				case float32:
-					kstr = strconv.FormatFloat(float64(t), 'f', -1, 32)
-				case float64:
-					kstr = strconv.FormatFloat(t, 'f', -1, 64)
+				switch k.Kind() {
+				case reflect.Bool:
+					kstr = strconv.FormatBool(k.Bool())
+				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+					kstr = strconv.FormatInt(k.Int(), 10)
+				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+					kstr = strconv.FormatUint(k.Uint(), 10)
+				case reflect.Float32, reflect.Float64:
+					kstr = strconv.FormatFloat(k.Float(), 'f', -1, k.Type().Bits())
 				default:
-					kstr = k.String()
+					panic(fmt.Sprintf("unsupported CLI example map key kind %s", k.Kind()))
 				}
 				a[kstr] = r.MapIndex(k).Interface()
 			}
@@ -910,7 +917,11 @@ func conversionCode(from, to string, value *flagValuePlan, pointer bool, variabl
 		}
 		return conversionData{code: fmt.Sprintf("%s = %s", to, converted), value: to}
 	default:
-		parse = fmt.Sprintf("%s = json.Unmarshal([]byte(%s), &%s)", variables.error, from, to)
+		if value.protobufMessage {
+			parse = fmt.Sprintf("%s = protojson.Unmarshal([]byte(%s), &%s)", variables.error, from, to)
+		} else {
+			parse = fmt.Sprintf("%s = json.Unmarshal([]byte(%s), &%s)", variables.error, from, to)
+		}
 		return conversionData{code: parse, value: to, declaresError: true, canError: true}
 	}
 	converted := fmt.Sprintf("%s(%s)", value.typeRef, variables.parsed)

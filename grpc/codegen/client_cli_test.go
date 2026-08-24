@@ -18,6 +18,7 @@ func TestClientCLIFiles(t *testing.T) {
 		DSL  func()
 	}{
 		{"payload-with-validations", testdata.PayloadWithValidationsDSL},
+		{"payload-with-message", testdata.PayloadWithMessageDSL},
 	}
 
 	for _, c := range cases {
