@@ -911,28 +911,26 @@ func fieldLoadCode(
 func jsonExample(v any) string {
 	// In JSON, keys must be a string. But goa allows map keys to be anything.
 	r := reflect.ValueOf(v)
-	if r.Kind() == reflect.Map {
+	if r.Kind() == reflect.Map && r.Type().Key().Kind() != reflect.String {
 		keys := r.MapKeys()
-		if keys[0].Kind() != reflect.String {
-			a := make(map[string]any, len(keys))
-			var kstr string
-			for _, k := range keys {
-				switch k.Kind() {
-				case reflect.Bool:
-					kstr = strconv.FormatBool(k.Bool())
-				case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-					kstr = strconv.FormatInt(k.Int(), 10)
-				case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
-					kstr = strconv.FormatUint(k.Uint(), 10)
-				case reflect.Float32, reflect.Float64:
-					kstr = strconv.FormatFloat(k.Float(), 'f', -1, k.Type().Bits())
-				default:
-					panic(fmt.Sprintf("unsupported CLI example map key kind %s", k.Kind()))
-				}
-				a[kstr] = r.MapIndex(k).Interface()
+		a := make(map[string]any, len(keys))
+		var kstr string
+		for _, k := range keys {
+			switch k.Kind() {
+			case reflect.Bool:
+				kstr = strconv.FormatBool(k.Bool())
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				kstr = strconv.FormatInt(k.Int(), 10)
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+				kstr = strconv.FormatUint(k.Uint(), 10)
+			case reflect.Float32, reflect.Float64:
+				kstr = strconv.FormatFloat(k.Float(), 'f', -1, k.Type().Bits())
+			default:
+				panic(fmt.Sprintf("unsupported CLI example map key kind %s", k.Kind()))
 			}
-			v = a
+			a[kstr] = r.MapIndex(k).Interface()
 		}
+		v = a
 	}
 	b, err := json.MarshalIndent(v, "   ", "   ")
 	ex := "?"

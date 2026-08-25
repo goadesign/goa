@@ -31,6 +31,7 @@ func TestJSONExampleFormatsPrimitiveMapKeys(t *testing.T) {
 		{"floating-point alias", map[exampleFloat]string{1.25: "one", 2.5: "two"}},
 		{"string", map[string]string{"first": "one", "second": "two"}},
 		{"string alias", map[exampleString]string{"left": "one", "right": "two"}},
+		{"empty object", map[string]any{}},
 	}
 
 	var actual strings.Builder

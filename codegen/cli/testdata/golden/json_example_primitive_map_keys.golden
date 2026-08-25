@@ -33,3 +33,5 @@ string alias:
       "left": "one",
       "right": "two"
    }'
+empty object:
+{}
