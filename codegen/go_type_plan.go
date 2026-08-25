@@ -261,6 +261,13 @@ func (p *GoTypePlan) IsPointer() bool {
 	return p.fieldPointer
 }
 
+// ReferenceIsPointer reports whether this type is written with a leading
+// pointer when it is used as a value. Named objects and unions use pointers;
+// primitive aliases, arrays, and maps use values.
+func (p *GoTypePlan) ReferenceIsPointer() bool {
+	return p.referencePointer
+}
+
 // Import returns the package written directly in this type name. The second
 // result is false for built-in types and generated declarations.
 func (p *GoTypePlan) Import() (GoTypeImport, bool) {

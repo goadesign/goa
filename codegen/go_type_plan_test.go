@@ -272,6 +272,69 @@ func TestGoTypePlanRetainsPointerAndDefaultPolicy(t *testing.T) {
 	}
 }
 
+// TestGoTypePlanReportsReferencePointers verifies that callers can use the
+// planned pointer choice without parsing a formatted Go type.
+func TestGoTypePlanReportsReferencePointers(t *testing.T) {
+	const owner = "example.com/gen/service"
+	generation, err := NewGeneration("example.com/gen", nil)
+	require.NoError(t, err)
+	object := goTypeTestUserType("Message", &expr.Object{})
+	alias := goTypeTestUserType("Label", expr.String)
+	union := &expr.Union{
+		TypeName: "Choice",
+		Values: []*expr.NamedAttributeExpr{
+			{Name: "label", Attribute: &expr.AttributeExpr{Type: expr.String}},
+		},
+	}
+	binder := goTypeTestBinder(map[expr.DataType]GoTypeBinding{
+		object: {Owner: owner, Type: declareGoTypeTestUserType(t, generation, owner, object)},
+		alias:  {Owner: owner, Type: declareGoTypeTestUserType(t, generation, owner, alias)},
+		union:  {Owner: owner, Union: declareGoTypeTestUnion(t, generation, owner, union)},
+	})
+	tests := []struct {
+		name      string
+		attribute *expr.AttributeExpr
+		pointer   bool
+	}{
+		{
+			name:      "object",
+			attribute: &expr.AttributeExpr{Type: object},
+			pointer:   true,
+		},
+		{
+			name:      "anonymous object",
+			attribute: &expr.AttributeExpr{Type: &expr.Object{}},
+			pointer:   false,
+		},
+		{
+			name:      "union",
+			attribute: &expr.AttributeExpr{Type: union},
+			pointer:   true,
+		},
+		{
+			name:      "primitive alias",
+			attribute: &expr.AttributeExpr{Type: alias},
+			pointer:   false,
+		},
+		{
+			name:      "array",
+			attribute: &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}},
+			pointer:   false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			plan, err := PlanGoType(test.attribute, GoTypePlanOptions{
+				Owner: owner,
+				Bind:  binder,
+			})
+			require.NoError(t, err)
+			require.Equal(t, test.pointer, plan.ReferenceIsPointer())
+		})
+	}
+}
+
 // TestGoTypePlanRetainsRequiredArrayElementPointers verifies that only JSON
 // input layouts add pointers to primitive elements that must reject null.
 func TestGoTypePlanRetainsRequiredArrayElementPointers(t *testing.T) {
