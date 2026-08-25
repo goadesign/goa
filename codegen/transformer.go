@@ -294,6 +294,19 @@ func (a *TransformAttrs) EnterCollection() (string, *TransformAttrs) {
 	return string(rune('i' + a.collectionDepth)), &child
 }
 
+// EnterLocalBlock returns a copy whose temporary names are limited to one
+// generated Go block. expressions and names are the values that code in that
+// block must continue to reference after declaring a temporary.
+func (a *TransformAttrs) EnterLocalBlock(expressionsAndNames ...string) (*TransformAttrs, error) {
+	child := *a
+	var err error
+	child.locals, err = newTransformLocalScope(expressionsAndNames...)
+	if err != nil {
+		return nil, err
+	}
+	return &child, nil
+}
+
 // enterLocalBlock returns a copy that can declare names visible only inside a
 // generated Go block. Names already visible outside the block remain reserved.
 func (a *TransformAttrs) enterLocalBlock() *TransformAttrs {

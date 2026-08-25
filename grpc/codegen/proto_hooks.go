@@ -178,6 +178,10 @@ func renderArrayTransform(source, target *expr.Array, sourceVar, targetVar strin
 	}
 
 	loopVar, childAttrs := ta.EnterCollection()
+	childAttrs, err := childAttrs.EnterLocalBlock(sourceVar, targetVar, loopVar, "val")
+	if err != nil {
+		return "", err
+	}
 	data := map[string]any{
 		"ElemTypeRef":    targetRef,
 		"SourceElem":     source.ElemType,
@@ -214,11 +218,15 @@ func renderMapTransform(source, target *expr.Map, sourceVar, targetVar string, n
 		loopVar = string(rune(97 + depth))
 	}
 	elemTarget := "tv" + loopVar
+	blockAttrs, err := ta.EnterLocalBlock(sourceVar, targetVar, "key", "val", "tk", elemTarget)
+	if err != nil {
+		return "", err
+	}
 	elemNewVar := true
 	if !proto && isWrappedAttr(source.ElemType) {
 		elemNewVar = false
 	}
-	elemTransform, err := codegen.TransformAttribute(source.ElemType, target.ElemType, "val", elemTarget, elemNewVar, ta)
+	elemTransform, err := codegen.TransformAttribute(source.ElemType, target.ElemType, "val", elemTarget, elemNewVar, blockAttrs)
 	if err != nil {
 		return "", err
 	}
@@ -233,7 +241,7 @@ func renderMapTransform(source, target *expr.Map, sourceVar, targetVar string, n
 		"SourceVar":      sourceVar,
 		"TargetVar":      targetVar,
 		"NewVar":         newVar,
-		"TransformAttrs": ta,
+		"TransformAttrs": blockAttrs,
 		"LoopVar":        loopVar,
 		"ElemTransform":  elemTransform,
 	}

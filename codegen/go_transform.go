@@ -1251,8 +1251,7 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 	if ta.TargetCtx.IsArrayElementPointer(target) {
 		localExpressions = append(localExpressions, "transformed")
 	}
-	var err error
-	childAttrs.locals, err = newTransformLocalScope(localExpressions...)
+	childAttrs, err := childAttrs.EnterLocalBlock(localExpressions...)
 	if err != nil {
 		return "", err
 	}
@@ -1289,9 +1288,7 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 	if depth := MapDepth(target); depth > 0 {
 		loopVar = string(rune(97 + depth))
 	}
-	mapAttrs := *ta
-	var err error
-	mapAttrs.locals, err = newTransformLocalScope(sourceVar, targetVar, "key", "val", "tk", "tv"+loopVar)
+	mapAttrs, err := ta.EnterLocalBlock(sourceVar, targetVar, "key", "val", "tk", "tv"+loopVar)
 	if err != nil {
 		return "", err
 	}
@@ -1305,7 +1302,7 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 		"SourceVar":      sourceVar,
 		"TargetVar":      targetVar,
 		"NewVar":         newVar,
-		"TransformAttrs": &mapAttrs,
+		"TransformAttrs": mapAttrs,
 		"LoopVar":        loopVar,
 		"ElemIsObject":   expr.IsObject(source.ElemType.Type),
 		"UseKeyHelper":   usesTransformHelper(source.KeyType, target.KeyType),
