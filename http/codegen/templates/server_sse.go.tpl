@@ -25,16 +25,9 @@ type {{ .SSE.StructDeclaration.Name }} struct {
 func (s *{{ .SSE.StructDeclaration.Name }}) SetView(view string) {
 	s.view = view
 }
-{{- end }}
 
-{{ printf "%s %s" .SSE.SendName .SSE.SendDesc | comment }}
-func (s *{{ .SSE.StructDeclaration.Name }}) {{ .SSE.SendName }}(v {{ .SSE.EventTypeRef }}) error {
-    return s.{{ .SSE.SendWithContextName }}(context.Background(), v)
-}
-
-{{ printf "%s %s" .SSE.SendWithContextName .SSE.SendWithContextDesc | comment }}
-func (s *{{ .SSE.StructDeclaration.Name }}) {{ .SSE.SendWithContextName }}(ctx context.Context, v {{ .SSE.EventTypeRef }}) error {
-	{{- if .SSE.VariableView }}
+{{ comment "selectedView returns the valid result view for this HTTP response." }}
+func (s *{{ .SSE.StructDeclaration.Name }}) selectedView() (string, error) {
 	view := s.view
 	if view == "" {
 		view = {{ printf "%q" .SSE.DefaultView }}
@@ -44,7 +37,61 @@ func (s *{{ .SSE.StructDeclaration.Name }}) {{ .SSE.SendWithContextName }}(ctx c
 	case {{ printf "%q" .Name }}:
 		{{- end }}
 	default:
-		return goa.InvalidEnumValueError("view", view, []any{ {{ range .Method.ViewedResult.Views }}{{ printf "%q" .Name }}, {{ end }} })
+		return "", goa.InvalidEnumValueError("view", view, []any{ {{ range .Method.ViewedResult.Views }}{{ printf "%q" .Name }}, {{ end }} })
+	}
+	return view, nil
+}
+{{- end }}
+
+{{ comment "start writes the headers that identify a successful SSE response." }}
+func (s *{{ .SSE.StructDeclaration.Name }}) start({{ if .SSE.VariableView }}view string{{ end }}) {
+	s.once.Do(func() {
+		header := s.w.Header()
+		if header.Get("Content-Type") == "" {
+			header.Set("Content-Type", "text/event-stream")
+		}
+		if header.Get("Cache-Control") == "" {
+			header.Set("Cache-Control", "no-cache")
+		}
+		if header.Get("Connection") == "" {
+			header.Set("Connection", "keep-alive")
+		}
+		{{- if .SSE.VariableView }}
+		header.Set("goa-view", view)
+		{{- end }}
+		s.w.WriteHeader(http.StatusOK)
+		s.attempted = true
+	})
+}
+
+{{ comment "finish writes an empty successful SSE response when the service sent no events." }}
+func (s *{{ .SSE.StructDeclaration.Name }}) finish() error {
+	if s.attempted {
+		return nil
+	}
+	{{- if .SSE.VariableView }}
+	view, err := s.selectedView()
+	if err != nil {
+		return err
+	}
+	s.start(view)
+	{{- else }}
+	s.start()
+	{{- end }}
+	return nil
+}
+
+{{ printf "%s %s" .SSE.SendName .SSE.SendDesc | comment }}
+func (s *{{ .SSE.StructDeclaration.Name }}) {{ .SSE.SendName }}(v {{ .SSE.EventTypeRef }}) error {
+    return s.{{ .SSE.SendWithContextName }}(context.Background(), v)
+}
+
+{{ printf "%s %s" .SSE.SendWithContextName .SSE.SendWithContextDesc | comment }}
+func (s *{{ .SSE.StructDeclaration.Name }}) {{ .SSE.SendWithContextName }}(ctx context.Context, v {{ .SSE.EventTypeRef }}) error {
+	{{- if .SSE.VariableView }}
+	view, err := s.selectedView()
+	if err != nil {
+		return err
 	}
 	if s.sentView != "" && view != s.sentView {
 		return goa.InvalidEnumValueError("view", view, []any{s.sentView})
@@ -158,23 +205,7 @@ func (s *{{ .SSE.StructDeclaration.Name }}) {{ .SSE.SendWithContextName }}(ctx c
 	}
 		{{- end }}
 	{{- end }}
-	s.once.Do(func() {
-		header := s.w.Header()
-		if header.Get("Content-Type") == "" {
-			header.Set("Content-Type", "text/event-stream")
-		}
-		if header.Get("Cache-Control") == "" {
-			header.Set("Cache-Control", "no-cache")
-		}
-		if header.Get("Connection") == "" {
-			header.Set("Connection", "keep-alive")
-		}
-		{{- if .SSE.VariableView }}
-		header.Set("goa-view", view)
-		{{- end }}
-		s.w.WriteHeader(http.StatusOK)
-		s.attempted = true
-	})
+	s.start({{ if .SSE.VariableView }}view{{ end }})
 
 	{{ if .SSE.IDField }}
 		{{- if .SSE.ID.Pointer }}

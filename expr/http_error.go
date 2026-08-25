@@ -32,7 +32,7 @@ func (e *HTTPErrorExpr) IsJSONRPC() bool {
 	case *JSONRPCExpr:
 		return true
 	case *HTTPServiceExpr:
-		return parent.Root == &Root.API.JSONRPC.HTTPExpr
+		return parent.IsJSONRPC()
 	case *HTTPEndpointExpr:
 		return parent.IsJSONRPC()
 	default:

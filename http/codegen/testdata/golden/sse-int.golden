@@ -11,6 +11,34 @@ type SSEIntMethodServerStream struct {
 	attempted bool
 }
 
+// start writes the headers that identify a successful SSE response.
+func (s *SSEIntMethodServerStream) start() {
+	s.once.Do(func() {
+		header := s.w.Header()
+		if header.Get("Content-Type") == "" {
+			header.Set("Content-Type", "text/event-stream")
+		}
+		if header.Get("Cache-Control") == "" {
+			header.Set("Cache-Control", "no-cache")
+		}
+		if header.Get("Connection") == "" {
+			header.Set("Connection", "keep-alive")
+		}
+		s.w.WriteHeader(http.StatusOK)
+		s.attempted = true
+	})
+}
+
+// finish writes an empty successful SSE response when the service sent no
+// events.
+func (s *SSEIntMethodServerStream) finish() error {
+	if s.attempted {
+		return nil
+	}
+	s.start()
+	return nil
+}
+
 // Send Send streams instances of "int" to the "SSEIntMethod" endpoint SSE
 // connection.
 func (s *SSEIntMethodServerStream) Send(v int) error {
@@ -26,20 +54,7 @@ func (s *SSEIntMethodServerStream) SendWithContext(ctx context.Context, v int) e
 	body := res
 
 	data = fmt.Sprintf("%d", body)
-	s.once.Do(func() {
-		header := s.w.Header()
-		if header.Get("Content-Type") == "" {
-			header.Set("Content-Type", "text/event-stream")
-		}
-		if header.Get("Cache-Control") == "" {
-			header.Set("Cache-Control", "no-cache")
-		}
-		if header.Get("Connection") == "" {
-			header.Set("Connection", "keep-alive")
-		}
-		s.w.WriteHeader(http.StatusOK)
-		s.attempted = true
-	})
+	s.start()
 
 	remaining := data
 	for {

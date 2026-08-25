@@ -107,6 +107,7 @@ func TestClientTypes(t *testing.T) {
 		{"client-multiple-methods-with-array-type-payloads", testdata.MultipleMethodsWithArrayTypePayloadsDSL},
 		{"client-payload-extend-validate", testdata.PayloadExtendedValidateDSL},
 		{"client-result-type-validate", testdata.ResultTypeValidateDSL},
+		{"client-status-tag-required", testdata.ResultStatusTagRequiredDSL},
 		{"client-with-result-collection", testdata.ResultWithResultCollectionDSL},
 		{"client-with-result-view", testdata.ResultWithResultViewDSL},
 		{"client-empty-error-response-body", testdata.EmptyErrorResponseBodyDSL},

@@ -25,14 +25,15 @@ func TestViewedSSEServerLocksFirstView(t *testing.T) {
 
 	require.Contains(t, code, `if s.sentView != "" && view != s.sentView`)
 	require.Contains(t, code, `goa.InvalidEnumValueError("view", view, []any{s.sentView})`)
+	start := strings.LastIndex(code, `s.start(view)`)
+	require.NotEqual(t, -1, start)
 	require.Less(t,
 		strings.Index(code, `if s.sentView != "" && view != s.sentView`),
-		strings.Index(code, `s.once.Do(func()`),
+		start,
 	)
-	require.Less(t, strings.Index(code, "res := "), strings.Index(code, `s.once.Do(func()`))
-	require.Less(t, strings.Index(code, "body := "), strings.Index(code, `s.once.Do(func()`))
-	require.Less(t, strings.Index(code, `s.sentView = view`), strings.Index(code, `s.once.Do(func()`))
-	require.Less(t, strings.Index(code, `s.once.Do(func()`), strings.Index(code, `s.attempted = true`))
+	require.Less(t, strings.Index(code, "res := "), start)
+	require.Less(t, strings.Index(code, "body := "), start)
+	require.Less(t, strings.Index(code, `s.sentView = view`), start)
 }
 
 // TestViewedSSEClientReconstructsCollections verifies collection events decode

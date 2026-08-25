@@ -121,8 +121,11 @@ func NewCreateHandler(
 				Payload: payload,
 			}
 			_, err = endpoint(ctx, v)
+			stream := v.Stream.(*CreateServerStream)
+			if err == nil {
+				err = stream.finish()
+			}
 			if err != nil {
-				stream := v.Stream.(*CreateServerStream)
 				if stream.attempted {
 					if errhandler != nil {
 						errhandler(ctx, w, err)

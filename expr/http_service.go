@@ -169,10 +169,15 @@ func (svc *HTTPServiceExpr) EvalName() string {
 	return fmt.Sprintf("service %#v", svc.Name())
 }
 
+// IsJSONRPC reports whether svc describes the JSON-RPC transport for its service.
+func (svc *HTTPServiceExpr) IsJSONRPC() bool {
+	return svc.ServiceExpr.Meta != nil && svc.ServiceExpr.Meta["jsonrpc:service"] != nil
+}
+
 // Prepare initializes the error responses.
 func (svc *HTTPServiceExpr) Prepare() {
 	// Create routes for JSON-RPC endpoints if needed
-	if svc.ServiceExpr.Meta != nil && svc.ServiceExpr.Meta["jsonrpc:service"] != nil {
+	if svc.IsJSONRPC() {
 		svc.prepareJSONRPCRoutes()
 	}
 
@@ -277,7 +282,7 @@ func (svc *HTTPServiceExpr) validateErrors(verr *eval.ValidationErrors) {
 
 // validateTransports validates JSON-RPC route constraints.
 func (svc *HTTPServiceExpr) validateTransports(verr *eval.ValidationErrors) {
-	if svc.ServiceExpr.Meta != nil && svc.ServiceExpr.Meta["jsonrpc:service"] != nil {
+	if svc.IsJSONRPC() {
 		svc.validateJSONRPCRoutes(verr)
 	}
 }

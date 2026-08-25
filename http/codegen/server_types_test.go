@@ -22,6 +22,7 @@ func TestServerTypes(t *testing.T) {
 		{"server-multiple-methods", testdata.MultipleMethodsDSL},
 		{"server-payload-extend-validate", testdata.PayloadExtendedValidateDSL},
 		{"server-result-type-validate", testdata.ResultTypeValidateDSL},
+		{"server-status-tag-required", testdata.ResultStatusTagRequiredDSL},
 		{"server-with-result-collection", testdata.ResultWithResultCollectionDSL},
 		{"server-with-result-view", testdata.ResultWithResultViewDSL},
 		{"server-with-result-sibling-user-type-fields", testdata.ResultTypeSiblingUserTypeFieldsDSL},

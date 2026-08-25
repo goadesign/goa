@@ -1463,6 +1463,27 @@ var ResultTagStringRequiredDSL = func() {
 	})
 }
 
+var ResultStatusTagRequiredDSL = func() {
+	result := ResultType("application/vnd.status-tag", func() {
+		TypeName("StatusTagResult")
+		Attribute("message", String)
+		Attribute("outcome", String)
+		Required("message", "outcome")
+	})
+	Service("ServiceStatusTagRequired", func() {
+		Method("MethodStatusTagRequired", func() {
+			Result(result)
+			HTTP(func() {
+				GET("/")
+				Response(StatusCreated, func() {
+					Tag("outcome", "created")
+				})
+				Response(StatusOK)
+			})
+		})
+	})
+}
+
 var ResultMultipleViewsTagDSL = func() {
 	var ResultType = ResultType("ResultTypeMultipleViews", func() {
 		Attribute("a", String)

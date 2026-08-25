@@ -133,12 +133,12 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 		}
 	}
 
-	// 4. Return empty type if no attribute left
+	// 5. Return empty type if no attribute left
 	if len(*AsObject(body.Type)) == 0 {
 		return &AttributeExpr{Type: Empty}
 	}
 
-	// 5. Build computed user type
+	// 6. Build computed user type
 	att := body.Attribute()
 	ut := NewGeneratedUserType(name, att, RequestBodyExampleIdentity(a))
 	if t, ok := payload.Type.(UserType); ok {
@@ -255,9 +255,12 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 	RemovePkgPath(body.AttributeExpr)
 	extendBodyAttribute(body)
 
-	// 4. Remove header and cookie attributes
+	// 4. Remove values supplied outside the response body.
 	removeAttributes(body, resp.Headers)
 	removeAttributes(body, resp.Cookies)
+	if resp.Tag[0] != "" {
+		removeAttribute(body, resp.Tag[0])
+	}
 
 	// 4. Return empty type if no attribute left
 	if len(*AsObject(body.Type)) == 0 {
@@ -299,6 +302,9 @@ func buildHTTPResponseBody(name string, attr *AttributeExpr, resp *HTTPResponseE
 		mv := NewMappedAttributeExpr(v.AttributeExpr)
 		removeAttributes(mv, resp.Headers)
 		removeAttributes(mv, resp.Cookies)
+		if resp.Tag[0] != "" {
+			removeAttribute(mv, resp.Tag[0])
+		}
 		nv := &ViewExpr{
 			AttributeExpr: mv.Attribute(),
 			Name:          v.Name,

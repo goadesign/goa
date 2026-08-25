@@ -72,8 +72,11 @@ func {{ .HandlerInit }}(
 			{{- end }}
 			}
 			_, err = endpoint(ctx, v)
+			stream := v.Stream.(*{{ .SSE.StructDeclaration.Name }})
+			if err == nil {
+				err = stream.finish()
+			}
 			if err != nil {
-				stream := v.Stream.(*{{ .SSE.StructDeclaration.Name }})
 				if stream.attempted {
 					if errhandler != nil {
 						errhandler(ctx, w, err)
@@ -221,6 +224,10 @@ func {{ .HandlerInit }}(
 		{{- end }}
 		}
 		_, err = endpoint(ctx, v)
+		if err == nil {
+			stream := v.Stream.(*{{ .SSE.StructDeclaration.Name }})
+			err = stream.finish()
+		}
 	{{- else if .Method.SkipRequestBodyEncodeDecode }}
 		data := &{{ .ServicePkgName }}.{{ .Method.RequestStruct }}{ {{ if .Payload.Ref }}Payload: payload, {{ end }}Body: r.Body }
 		res, err := endpoint(ctx, data)

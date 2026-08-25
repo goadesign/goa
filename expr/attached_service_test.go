@@ -38,6 +38,31 @@ func TestEvaluateAttachedServicesDoesNotReadPackageRoot(t *testing.T) {
 	require.NotNil(t, AsObject(endpoint.Headers.Type).Attribute("owner_header"))
 }
 
+func TestEvaluateAttachedJSONRPCErrorDoesNotReadPackageRoot(t *testing.T) {
+	originalRoot := Root
+	t.Cleanup(func() {
+		Root = originalRoot
+	})
+	owner := &RootExpr{API: NewAPIExpr("test", func() {})}
+	service := attachTestJSONRPCService(owner, "generated", "/rpc")
+	serviceError := &ErrorExpr{
+		AttributeExpr: &AttributeExpr{Type: ErrorResult},
+		Name:          "failed",
+	}
+	service.Errors = append(service.Errors, serviceError)
+	transport := owner.API.JSONRPC.Service(service.Name)
+	transport.HTTPErrors = append(transport.HTTPErrors, &HTTPErrorExpr{
+		Name: "failed",
+		Response: &HTTPResponseExpr{
+			StatusCode: RPCInternalError,
+			Parent:     transport,
+		},
+	})
+	Root = nil
+
+	require.NoError(t, owner.EvaluateAttachedServices([]*ServiceExpr{service}))
+}
+
 func TestEvaluateAttachedGRPCServiceUsesOwningRootForAPIErrors(t *testing.T) {
 	originalRoot := Root
 	t.Cleanup(func() {

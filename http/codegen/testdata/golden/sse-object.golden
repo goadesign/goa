@@ -12,6 +12,34 @@ type SSEObjectMethodServerStream struct {
 	attempted bool
 }
 
+// start writes the headers that identify a successful SSE response.
+func (s *SSEObjectMethodServerStream) start() {
+	s.once.Do(func() {
+		header := s.w.Header()
+		if header.Get("Content-Type") == "" {
+			header.Set("Content-Type", "text/event-stream")
+		}
+		if header.Get("Cache-Control") == "" {
+			header.Set("Cache-Control", "no-cache")
+		}
+		if header.Get("Connection") == "" {
+			header.Set("Connection", "keep-alive")
+		}
+		s.w.WriteHeader(http.StatusOK)
+		s.attempted = true
+	})
+}
+
+// finish writes an empty successful SSE response when the service sent no
+// events.
+func (s *SSEObjectMethodServerStream) finish() error {
+	if s.attempted {
+		return nil
+	}
+	s.start()
+	return nil
+}
+
 // Send Send streams instances of "sseobjectservice.SSEObjectMethodResult" to
 // the "SSEObjectMethod" endpoint SSE connection.
 func (s *SSEObjectMethodServerStream) Send(v *sseobjectservice.SSEObjectMethodResult) error {
@@ -32,20 +60,7 @@ func (s *SSEObjectMethodServerStream) SendWithContext(ctx context.Context, v *ss
 		return err
 	}
 	data = string(byts)
-	s.once.Do(func() {
-		header := s.w.Header()
-		if header.Get("Content-Type") == "" {
-			header.Set("Content-Type", "text/event-stream")
-		}
-		if header.Get("Cache-Control") == "" {
-			header.Set("Cache-Control", "no-cache")
-		}
-		if header.Get("Connection") == "" {
-			header.Set("Connection", "keep-alive")
-		}
-		s.w.WriteHeader(http.StatusOK)
-		s.attempted = true
-	})
+	s.start()
 
 	remaining := data
 	for {

@@ -240,6 +240,7 @@ func runGeneratedSSEFieldWireTests(t *testing.T, files []*codegen.File) {
 const generatedSSEServerWireTest = `package server
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -280,6 +281,19 @@ func TestPrimitiveFieldsUseRawSSEData(t *testing.T) {
 			require.Equal(t, test.want, test.send())
 		})
 	}
+}
+
+func TestEmptyStreamWritesSuccessfulSSEResponse(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	stream := &RequiredServerStream{w: recorder}
+
+	require.NoError(t, stream.finish())
+
+	response := recorder.Result()
+	require.Equal(t, http.StatusOK, response.StatusCode)
+	require.Equal(t, "text/event-stream", response.Header.Get("Content-Type"))
+	require.Equal(t, "no-cache", response.Header.Get("Cache-Control"))
+	require.Equal(t, "keep-alive", response.Header.Get("Connection"))
 }
 
 func TestOptionalPrimitiveFieldPreservesPresence(t *testing.T) {

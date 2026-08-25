@@ -12,6 +12,34 @@ type SSEDataIDFieldMethodServerStream struct {
 	attempted bool
 }
 
+// start writes the headers that identify a successful SSE response.
+func (s *SSEDataIDFieldMethodServerStream) start() {
+	s.once.Do(func() {
+		header := s.w.Header()
+		if header.Get("Content-Type") == "" {
+			header.Set("Content-Type", "text/event-stream")
+		}
+		if header.Get("Cache-Control") == "" {
+			header.Set("Cache-Control", "no-cache")
+		}
+		if header.Get("Connection") == "" {
+			header.Set("Connection", "keep-alive")
+		}
+		s.w.WriteHeader(http.StatusOK)
+		s.attempted = true
+	})
+}
+
+// finish writes an empty successful SSE response when the service sent no
+// events.
+func (s *SSEDataIDFieldMethodServerStream) finish() error {
+	if s.attempted {
+		return nil
+	}
+	s.start()
+	return nil
+}
+
 // Send Send streams instances of
 // "ssedataidfieldservice.SSEDataIDFieldMethodResult" to the
 // "SSEDataIDFieldMethod" endpoint SSE connection.
@@ -42,20 +70,7 @@ func (s *SSEDataIDFieldMethodServerStream) SendWithContext(ctx context.Context, 
 			}
 		}
 	}
-	s.once.Do(func() {
-		header := s.w.Header()
-		if header.Get("Content-Type") == "" {
-			header.Set("Content-Type", "text/event-stream")
-		}
-		if header.Get("Cache-Control") == "" {
-			header.Set("Cache-Control", "no-cache")
-		}
-		if header.Get("Connection") == "" {
-			header.Set("Connection", "keep-alive")
-		}
-		s.w.WriteHeader(http.StatusOK)
-		s.attempted = true
-	})
+	s.start()
 
 	if id != nil {
 		if _, err := fmt.Fprintf(s.w, "id: %s\n", *id); err != nil {
