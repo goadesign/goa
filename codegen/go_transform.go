@@ -1247,6 +1247,15 @@ func transformArray(source, target *expr.Array, sourceVar, targetVar string, new
 		sourceElement = "*val"
 	}
 	loopVar, childAttrs := ta.EnterCollection()
+	localExpressions := []string{sourceVar, targetVar, loopVar, "val"}
+	if ta.TargetCtx.IsArrayElementPointer(target) {
+		localExpressions = append(localExpressions, "transformed")
+	}
+	var err error
+	childAttrs.locals, err = newTransformLocalScope(localExpressions...)
+	if err != nil {
+		return "", err
+	}
 	data := map[string]any{
 		"ElemTypeRef":       ta.TargetCtx.Scope.Ref(target.ElemType, ta.TargetCtx.Pkg(target.ElemType)),
 		"SourceElem":        source.ElemType,
@@ -1276,6 +1285,16 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 	if err := IsCompatible(source.ElemType.Type, target.ElemType.Type, sourceVar+"[*]", targetVar+"[*]"); err != nil {
 		return "", err
 	}
+	loopVar := ""
+	if depth := MapDepth(target); depth > 0 {
+		loopVar = string(rune(97 + depth))
+	}
+	mapAttrs := *ta
+	var err error
+	mapAttrs.locals, err = newTransformLocalScope(sourceVar, targetVar, "key", "val", "tk", "tv"+loopVar)
+	if err != nil {
+		return "", err
+	}
 	data := map[string]any{
 		"KeyTypeRef":     ta.TargetCtx.Scope.Ref(target.KeyType, ta.TargetCtx.Pkg(target.KeyType)),
 		"ElemTypeRef":    ta.TargetCtx.Scope.Ref(target.ElemType, ta.TargetCtx.Pkg(target.ElemType)),
@@ -1286,14 +1305,11 @@ func transformMap(source, target *expr.Map, sourceVar, targetVar string, newVar 
 		"SourceVar":      sourceVar,
 		"TargetVar":      targetVar,
 		"NewVar":         newVar,
-		"TransformAttrs": ta,
-		"LoopVar":        "",
+		"TransformAttrs": &mapAttrs,
+		"LoopVar":        loopVar,
 		"ElemIsObject":   expr.IsObject(source.ElemType.Type),
 		"UseKeyHelper":   usesTransformHelper(source.KeyType, target.KeyType),
 		"UseElemHelper":  usesTransformHelper(source.ElemType, target.ElemType),
-	}
-	if depth := MapDepth(target); depth > 0 {
-		data["LoopVar"] = string(rune(97 + depth))
 	}
 	var buf bytes.Buffer
 	if err := transformGoMapT.Execute(&buf, data); err != nil {
