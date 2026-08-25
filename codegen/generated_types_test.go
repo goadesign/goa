@@ -278,6 +278,48 @@ func TestDependentNameUsesFrozenBase(t *testing.T) {
 	require.Equal(t, "ValidateResult2", validator.Name())
 }
 
+// TestDependentNameUsesFrozenBaseAcrossPackages verifies that one generated
+// package can name a declaration from the exact type chosen in another package
+// in the same generation run.
+func TestDependentNameUsesFrozenBaseAcrossPackages(t *testing.T) {
+	freeze := func(reverse bool) (string, string) {
+		generation := mustTestGeneration(t, "generated.local/gen", nil)
+		paths := []string{
+			"generated.local/gen/service/views",
+			"generated.local/gen/http/service/client",
+		}
+		if reverse {
+			paths[0], paths[1] = paths[1], paths[0]
+		}
+		packages := make(map[string]*GeneratedPackage, len(paths))
+		for _, packagePath := range paths {
+			packages[packagePath] = mustClaimTestPackage(t, generation, packagePath)
+		}
+		views := packages["generated.local/gen/service/views"]
+		client := packages["generated.local/gen/http/service/client"]
+		require.NoError(t, views.DeclareName(NewExactName(NameType, "ResultView")))
+		base := NewPreferredName(NameType, "ResultView", ExportedName, testNameOrder{value: "base"})
+		require.NoError(t, views.DeclareName(base))
+		constructor, err := client.DeclareDependentName(
+			NameFunction,
+			base,
+			"New",
+			"OK",
+			testNameOrder{value: "constructor"},
+		)
+		require.NoError(t, err)
+		require.NoError(t, generation.Freeze())
+		return base.Name(), constructor.Name()
+	}
+
+	base, constructor := freeze(false)
+	reversedBase, reversedConstructor := freeze(true)
+	require.Equal(t, "ResultView2", base)
+	require.Equal(t, "NewResultView2OK", constructor)
+	require.Equal(t, base, reversedBase)
+	require.Equal(t, constructor, reversedConstructor)
+}
+
 // TestNameDeclarationRejectsUnownedPackageAccess verifies that only a package
 // catalog can make internal declaration ownership available to typed records.
 func TestNameDeclarationRejectsUnownedPackageAccess(t *testing.T) {
@@ -482,20 +524,21 @@ func TestNameDeclarationRejectsDependentOrderTie(t *testing.T) {
 }
 
 // TestNameDeclarationRejectsInvalidDependentOwners verifies that a dependent
-// declaration derives its spelling only from a base already owned by its package.
+// declaration uses a base owned by the same generation run.
 func TestNameDeclarationRejectsInvalidDependentOwners(t *testing.T) {
 	generation := mustTestGeneration(t, "generated.local/gen", nil)
 	first := mustClaimTestPackage(t, generation, "generated.local/gen/first")
-	second := mustClaimTestPackage(t, generation, "generated.local/gen/second")
 	unowned := NewPreferredName(NameType, "Value", ExportedName, testNameOrder{value: "unowned"})
 	dependent := newDependentName(NameFunction, unowned, "New", "", testNameOrder{value: "dependent"})
 	err := first.DeclareName(dependent)
 	require.ErrorContains(t, err, "base declaration is not owned")
 
 	require.NoError(t, first.DeclareName(unowned))
-	crossPackage := newDependentName(NameFunction, unowned, "New", "", testNameOrder{value: "cross-package"})
-	err = second.DeclareName(crossPackage)
-	require.ErrorContains(t, err, "base declaration belongs to generated package")
+	otherGeneration := mustTestGeneration(t, "other.local/gen", nil)
+	otherPackage := mustClaimTestPackage(t, otherGeneration, "other.local/gen/types")
+	crossGeneration := newDependentName(NameFunction, unowned, "New", "", testNameOrder{value: "cross-generation"})
+	err = otherPackage.DeclareName(crossGeneration)
+	require.ErrorContains(t, err, "base declaration belongs to another generation")
 }
 
 // TestNameDeclarationRejectsMultipleOwners verifies that one canonical name

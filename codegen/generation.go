@@ -16,9 +16,13 @@ import (
 )
 
 type (
+	// generationOwner identifies one run without retaining its evaluated design.
+	generationOwner byte
+
 	// Generation stores the evaluated design roots and output packages used by
 	// one code generation run.
 	Generation struct {
+		owner        *generationOwner
 		genpkg       string
 		roots        []eval.Root
 		packages     map[string]*GeneratedPackage
@@ -39,6 +43,7 @@ func NewGeneration(genpkg string, roots []eval.Root) (*Generation, error) {
 	}
 	ownedRoots := append([]eval.Root(nil), roots...)
 	return &Generation{
+		owner:        new(generationOwner),
 		genpkg:       canonicalGenPkg,
 		roots:        ownedRoots,
 		packages:     make(map[string]*GeneratedPackage),
@@ -138,6 +143,7 @@ func (g *Generation) claimOutputPackage(claim, canonicalPath, outputDir string) 
 		}
 	}
 	generatedPackage := newGeneratedPackage(claim, canonicalPath, outputDir)
+	generatedPackage.generation = g.owner
 	g.packages[claim] = generatedPackage
 	g.importOwners[canonicalPath] = generatedPackage
 	g.outputOwners[outputDir] = generatedPackage
@@ -166,10 +172,12 @@ func (g *Generation) Freeze() error {
 	if g.frozen {
 		return nil
 	}
+	packages := make([]*GeneratedPackage, 0, len(g.packages))
 	for _, generatedPackage := range g.packages {
-		if err := generatedPackage.freeze(); err != nil {
-			return err
-		}
+		packages = append(packages, generatedPackage)
+	}
+	if err := freezeGeneratedPackages(packages); err != nil {
+		return err
 	}
 	g.frozen = true
 	return nil

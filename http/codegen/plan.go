@@ -1603,6 +1603,13 @@ func newPlan(generation *codegen.Generation, transport transportKind, input Plan
 			}
 			if needInit(endpoint.MethodExpr.Result.Type) {
 				resultType, viewed := endpoint.MethodExpr.Result.Type.(*expr.ResultTypeExpr)
+				var projectedResult *codegen.TypeDeclaration
+				if viewed {
+					projectedResult, err = input.Service.ProjectedResultDeclaration(endpoint.MethodExpr)
+					if err != nil {
+						return nil, err
+					}
+				}
 				noTagSeen := false
 				for _, response := range endpoint.Responses {
 					if response.Tag[0] == "" {
@@ -1627,7 +1634,7 @@ func newPlan(generation *codegen.Generation, transport transportKind, input Plan
 						responseOrder.tagName = response.Tag[0]
 						responseOrder.tagValue = response.Tag[1]
 						responseOrder.view = view
-						declaration, err := declareHTTPConstructor(clientPackage, viewedResultConstructorName(endpoint, response, view), responseOrder)
+						declaration, err := declareViewedResultConstructor(clientPackage, endpoint, response, view, projectedResult, responseOrder)
 						if err != nil {
 							return nil, err
 						}
@@ -1953,8 +1960,28 @@ func cloneImportSpec(source *codegen.ImportSpec) *codegen.ImportSpec {
 	return &copy
 }
 
+// declareViewedResultConstructor records the function that converts one HTTP
+// response into a service result. Released overlapping method and result names
+// use the exact projected view type selected by the service plan.
+func declareViewedResultConstructor(
+	pkg *codegen.GeneratedPackage,
+	endpoint *expr.HTTPEndpointExpr,
+	response *expr.HTTPResponseExpr,
+	view string,
+	projectedResult *codegen.TypeDeclaration,
+	order viewedConstructorOrder,
+) (*codegen.NameDeclaration, error) {
+	status := codegen.Goify(http.StatusText(response.StatusCode), true)
+	method := codegen.Goify(endpoint.Name(), true)
+	result := codegen.Goify(releasedMethodTypeName(endpoint.MethodExpr.Result, "Result"), true)
+	if view == "" && projectedResult != nil && strings.HasPrefix(result, method) {
+		return pkg.DeclareDependentName(codegen.NameFunction, projectedResult.Declaration(), "New", status, order)
+	}
+	return declareHTTPConstructor(pkg, viewedResultConstructorName(endpoint, response, view), order)
+}
+
 // viewedResultConstructorName returns the preferred constructor spelling for
-// one client response body selected by a result view.
+// results whose released name does not depend on a projected view type.
 func viewedResultConstructorName(endpoint *expr.HTTPEndpointExpr, response *expr.HTTPResponseExpr, view string) string {
 	status := codegen.Goify(http.StatusText(response.StatusCode), true)
 	if view != "" {

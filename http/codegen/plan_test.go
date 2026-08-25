@@ -81,17 +81,6 @@ func TestEndpointPayloadConstructorUsesReleasedTypeName(t *testing.T) {
 	}
 }
 
-func TestViewedResultConstructorUsesReleasedTypeName(t *testing.T) {
-	endpoint := &expr.HTTPEndpointExpr{MethodExpr: &expr.MethodExpr{
-		Name:   "MethodBodyInlineObject",
-		Result: &expr.AttributeExpr{Type: wireCatalogType("ResultType", "result", "value", true)},
-	}}
-	response := &expr.HTTPResponseExpr{StatusCode: 200}
-
-	require.Equal(t, "NewMethodBodyInlineObjectResultTypeOK", viewedResultConstructorName(endpoint, response, ""))
-	require.Equal(t, "NewMethodBodyInlineObjectResultTinyOK", viewedResultConstructorName(endpoint, response, "tiny"))
-}
-
 // TestNewExamplePlanRejectsAnotherServicePlan checks that server names and
 // URLs cannot come from a different design with the same authored names.
 func TestNewExamplePlanRejectsAnotherServicePlan(t *testing.T) {

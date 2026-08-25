@@ -16,6 +16,7 @@ type (
 	// GeneratedPackage stores declarations, final names, and the output location
 	// for one generated Go package.
 	GeneratedPackage struct {
+		generation   *generationOwner
 		claim        string
 		path         string
 		outputDir    string
@@ -240,9 +241,9 @@ func (p *GeneratedPackage) DeclareName(declaration *NameDeclaration, keys ...Has
 				declaration.kind,
 				declaration.preferredName(),
 			)
-		case declaration.base.owner != p:
+		case declaration.base.owner != p && (p.generation == nil || declaration.base.owner.generation != p.generation):
 			return fmt.Errorf(
-				"generated package %q cannot declare preferred %s %q: base declaration belongs to generated package %q",
+				"generated package %q cannot declare preferred %s %q: base declaration belongs to another generation in package %q",
 				p.path,
 				declaration.kind,
 				declaration.preferredName(),
@@ -291,7 +292,7 @@ func (p *GeneratedPackage) DeclareName(declaration *NameDeclaration, keys ...Has
 }
 
 // DeclareDependentName adds a generated declaration named by placing prefix and
-// suffix around base's final name. base must already be declared in p.
+// suffix around base's final name. base must belong to the same generation run.
 func (p *GeneratedPackage) DeclareDependentName(kind PackageNameKind, base *NameDeclaration, prefix, suffix string, order PackageNameOrder) (*NameDeclaration, error) {
 	declaration := newDependentName(kind, base, prefix, suffix, order)
 	if err := p.DeclareName(declaration); err != nil {
@@ -664,12 +665,17 @@ func newGeneratedPackage(claim, path, outputDir string) *GeneratedPackage {
 	}
 }
 
-// freeze chooses exact names first, then names that may receive a number, and
-// finally names built from another chosen name. It then rejects any attempt to
-// add or change a name.
+// freeze chooses every name in this standalone package and then rejects later
+// changes.
 func (p *GeneratedPackage) freeze() error {
+	return freezeGeneratedPackages([]*GeneratedPackage{p})
+}
+
+// freezeIndependentNames chooses names that do not depend on another generated
+// declaration and returns the names that still need their base to be chosen.
+func (p *GeneratedPackage) freezeIndependentNames() ([]*NameDeclaration, error) {
 	if err := p.freezeImports(); err != nil {
-		return err
+		return nil, err
 	}
 	exact := make([]*NameDeclaration, 0, len(p.names))
 	preferred := make([]*NameDeclaration, 0, len(p.names))
@@ -690,7 +696,7 @@ func (p *GeneratedPackage) freeze() error {
 	for _, declaration := range exact {
 		declaration.final = p.scope.Unique(declaration.preferred)
 		if declaration.final != declaration.preferred {
-			return fmt.Errorf(
+			return nil, fmt.Errorf(
 				"generated package %q cannot preserve exact %s name %q",
 				p.path,
 				declaration.kind,
@@ -704,26 +710,12 @@ func (p *GeneratedPackage) freeze() error {
 		declaration.final = p.scope.Unique(declaration.preferred)
 		declaration.frozen = true
 	}
-	for len(dependent) > 0 {
-		ready := dependent[:0]
-		waiting := make([]*NameDeclaration, 0, len(dependent))
-		for _, declaration := range dependent {
-			if declaration.base.frozen {
-				ready = append(ready, declaration)
-			} else {
-				waiting = append(waiting, declaration)
-			}
-		}
-		if len(ready) == 0 {
-			return fmt.Errorf("generated package %q contains a package-name dependency cycle", p.path)
-		}
-		slices.SortFunc(ready, comparePackageNames)
-		for _, declaration := range ready {
-			declaration.final = p.scope.Unique(declaration.preferredName())
-			declaration.frozen = true
-		}
-		dependent = waiting
-	}
+	return dependent, nil
+}
+
+// finishFreeze records the chosen names in the package lookup tables and
+// prevents later code from changing the package.
+func (p *GeneratedPackage) finishFreeze() {
 	for _, declaration := range p.names {
 		for _, hash := range declaration.hashes {
 			p.scope.bind(hash, declaration.final)
@@ -737,6 +729,50 @@ func (p *GeneratedPackage) freeze() error {
 	}
 	p.scope.Freeze()
 	p.frozen = true
+}
+
+// freezeGeneratedPackages chooses independent names in every package before it
+// resolves names based on declarations elsewhere in the same generation run.
+func freezeGeneratedPackages(packages []*GeneratedPackage) error {
+	slices.SortFunc(packages, func(left, right *GeneratedPackage) int {
+		return strings.Compare(left.path, right.path)
+	})
+	var dependent []*NameDeclaration
+	for _, generatedPackage := range packages {
+		remaining, err := generatedPackage.freezeIndependentNames()
+		if err != nil {
+			return err
+		}
+		dependent = append(dependent, remaining...)
+	}
+	for len(dependent) > 0 {
+		ready := dependent[:0]
+		waiting := make([]*NameDeclaration, 0, len(dependent))
+		for _, declaration := range dependent {
+			if declaration.base.frozen {
+				ready = append(ready, declaration)
+			} else {
+				waiting = append(waiting, declaration)
+			}
+		}
+		if len(ready) == 0 {
+			return fmt.Errorf("generated packages contain a package-name dependency cycle")
+		}
+		slices.SortFunc(ready, func(left, right *NameDeclaration) int {
+			if compared := strings.Compare(left.owner.path, right.owner.path); compared != 0 {
+				return compared
+			}
+			return comparePackageNames(left, right)
+		})
+		for _, declaration := range ready {
+			declaration.final = declaration.owner.scope.Unique(declaration.preferredName())
+			declaration.frozen = true
+		}
+		dependent = waiting
+	}
+	for _, generatedPackage := range packages {
+		generatedPackage.finishFreeze()
+	}
 	return nil
 }
 

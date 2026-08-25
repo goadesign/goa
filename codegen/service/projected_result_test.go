@@ -38,14 +38,22 @@ func TestPlanProjectedResultBeforeLink(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEqual(t, first.Description, second.Description)
 	require.NotSame(t, first, second)
+	declaration, err := plan.ProjectedResultDeclaration(viewed)
+	require.NoError(t, err)
+	require.NotNil(t, declaration)
 
 	_, err = plan.ProjectedResult(plain)
+	require.EqualError(t, err, `service method "Plain" does not have a viewed result`)
+	_, err = plan.ProjectedResultDeclaration(plain)
 	require.EqualError(t, err, `service method "Plain" does not have a viewed result`)
 	foreign := &expr.MethodExpr{Name: "Foreign"}
 	_, err = plan.ProjectedResult(foreign)
 	require.EqualError(t, err, `service method "Foreign" is not part of this plan`)
+	_, err = plan.ProjectedResultDeclaration(foreign)
+	require.EqualError(t, err, `service method "Foreign" is not part of this plan`)
 
 	require.NoError(t, generation.Freeze())
+	require.Equal(t, "ProjectedResultView", declaration.Name())
 	require.NoError(t, plan.Link())
 	linked := plan.Services().Get("Values").Method("Viewed").ViewedResult
 	require.NotNil(t, linked)

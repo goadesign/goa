@@ -234,9 +234,12 @@ hashes, map order, and rendered text are not tie-breakers.
 
 A companion whose spelling includes another declaration, such as
 `Validate<Result>`, is registered as a dependent declaration before freeze.
-The package freezes the base declaration first, then derives and reserves the
-companion from that exact final name. Callers never rebuild the companion by
-concatenating a separately resolved type string.
+The base and companion may live in different generated packages when both
+belong to the same generation run. Goa first chooses every independent name in
+every package, then derives and reserves each companion from its base's exact
+final name. A declaration from another generation run is rejected. Callers
+never rebuild the companion by concatenating a separately resolved type
+string.
 
 ### Imports and output paths
 

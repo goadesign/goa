@@ -105,21 +105,23 @@ func (p *Plan) ExampleImports() []*codegen.ImportSpec {
 // ProjectedResult returns a copy of the result fields included in the views for
 // method. It reports an error when method is absent or has no views.
 func (p *Plan) ProjectedResult(method *expr.MethodExpr) (*expr.AttributeExpr, error) {
-	for _, service := range p.facts.services {
-		facts := service.methodByExpr[method]
-		if facts == nil {
-			continue
-		}
-		if facts.viewedResult == nil {
-			return nil, fmt.Errorf("service method %q does not have a viewed result", method.Name)
-		}
-		projected := expr.AsObject(facts.viewedResult.wrapped.Attribute().Type).Attribute("projected")
-		return expr.DupAtt(projected), nil
+	viewed, err := p.projectedResultFacts(method)
+	if err != nil {
+		return nil, err
 	}
-	if method == nil {
-		return nil, fmt.Errorf("service method is not part of this plan")
+	projected := expr.AsObject(viewed.wrapped.Attribute().Type).Attribute("projected")
+	return expr.DupAtt(projected), nil
+}
+
+// ProjectedResultDeclaration returns the generated view type used by method.
+// HTTP and gRPC generators use the same record so references and names follow
+// the exact type chosen by the service plan.
+func (p *Plan) ProjectedResultDeclaration(method *expr.MethodExpr) (*codegen.TypeDeclaration, error) {
+	viewed, err := p.projectedResultFacts(method)
+	if err != nil {
+		return nil, err
 	}
-	return nil, fmt.Errorf("service method %q is not part of this plan", method.Name)
+	return viewed.projected.declaration, nil
 }
 
 // HTTPMethodNames returns the Go names already chosen for method. It returns an
@@ -234,6 +236,25 @@ func (p *Plan) MethodPackageImports(
 		return nil, nil, fmt.Errorf("service method is not part of this plan")
 	}
 	return nil, nil, fmt.Errorf("service method %q is not part of this plan", method.Name)
+}
+
+// projectedResultFacts returns the stored view plan for one method and reports
+// whether the method is missing or has no viewed result.
+func (p *Plan) projectedResultFacts(method *expr.MethodExpr) (*viewedResultFacts, error) {
+	for _, service := range p.facts.services {
+		facts := service.methodByExpr[method]
+		if facts == nil {
+			continue
+		}
+		if facts.viewedResult == nil {
+			return nil, fmt.Errorf("service method %q does not have a viewed result", method.Name)
+		}
+		return facts.viewedResult, nil
+	}
+	if method == nil {
+		return nil, fmt.Errorf("service method is not part of this plan")
+	}
+	return nil, fmt.Errorf("service method %q is not part of this plan", method.Name)
 }
 
 // collectRootFacts reads one service design and chooses names used only by that
