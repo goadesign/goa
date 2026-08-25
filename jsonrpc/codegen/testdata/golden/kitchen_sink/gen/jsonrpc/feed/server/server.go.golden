@@ -42,6 +42,11 @@ type (
 		bytes.Buffer
 		header http.Header
 	}
+	// noOutputResponseWriter accepts notification output without storing or
+	// sending it.
+	noOutputResponseWriter struct {
+		header http.Header
+	}
 )
 
 // Header returns the headers written while the event is being encoded.
@@ -51,6 +56,24 @@ func (b *sseEventBuffer) Header() http.Header {
 
 // WriteHeader leaves the response status for the real HTTP response writer.
 func (b *sseEventBuffer) WriteHeader(int) {
+}
+
+// Header returns the private headers written while a notification is encoded.
+func (w *noOutputResponseWriter) Header() http.Header {
+	return w.header
+}
+
+// Write accepts notification bytes without storing or sending them.
+func (w *noOutputResponseWriter) Write(data []byte) (int, error) {
+	return len(data), nil
+}
+
+// WriteHeader accepts a notification status without sending it.
+func (w *noOutputResponseWriter) WriteHeader(int) {
+}
+
+// Flush completes successfully because notification bytes are not sent.
+func (w *noOutputResponseWriter) Flush() {
 }
 
 // initSSEHeaders writes the response headers before the first event.
@@ -186,6 +209,13 @@ func New(
 
 // Service returns the name of the service served.
 func (s *Server) Service() string { return "Feed" }
+
+// reportRejectedNotification reports a notification sent to a request-only
+// method without allowing the error handler to write a response.
+func (s *Server) reportRejectedNotification(ctx context.Context, req *jsonrpc.RawRequest) {
+	outputWriter := &noOutputResponseWriter{header: make(http.Header)}
+	s.errhandler(ctx, outputWriter, fmt.Errorf("JSON-RPC notification cannot call request method %q", req.Method))
+}
 
 // Use wraps the server handlers with the given middleware.
 func (s *Server) Use(m func(http.Handler) http.Handler) {
@@ -389,13 +419,21 @@ func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonr
 
 	switch req.Method {
 	case "watch":
-		if !req.HasID || req.ID == nil {
+		if !req.HasID {
+			s.reportRejectedNotification(ctx, req)
+			return
+		}
+		if req.ID == nil {
 			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 			return
 		}
 		s.encodeJSONRPCError(ctx, w, req, jsonrpc.MethodNotFound, "Method is not available in a batch request", nil)
 	case "snapshot":
-		if !req.HasID || req.ID == nil {
+		if !req.HasID {
+			s.reportRejectedNotification(ctx, req)
+			return
+		}
+		if req.ID == nil {
 			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 			return
 		}
@@ -468,7 +506,11 @@ func (s *Server) processSSERequest(ctx context.Context, r *http.Request, req *js
 	var handler func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error
 	switch req.Method {
 	case "watch":
-		if !req.HasID || req.ID == nil {
+		if !req.HasID {
+			s.reportRejectedNotification(ctx, req)
+			return
+		}
+		if req.ID == nil {
 			stream := &sseServerStream{w: w, encoder: s.encoder}
 			if err := stream.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil); err != nil {
 				s.errhandler(ctx, w, fmt.Errorf("write invalid request event: %w", err))

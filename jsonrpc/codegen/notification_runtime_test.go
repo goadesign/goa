@@ -422,18 +422,22 @@ func TestOrdinaryVoidRequestReturnsNullWithMatchingID(t *testing.T) {
 	require.Equal(t, 1, svc.pingCalls)
 }
 
-func TestOrdinaryMethodRequiresANonNullIDBeforeDispatch(t *testing.T) {
-	for _, request := range []string{
-		` + "`" + `{"jsonrpc":"2.0","method":"ping"}` + "`" + `,
-		` + "`" + `{"jsonrpc":"2.0","id":null,"method":"ping"}` + "`" + `,
-	} {
-		svc := &requestContractService{}
-		response, reported := serveRequestContract(svc, request)
-		require.Empty(t, reported)
-		require.Contains(t, response.Body.String(), ` + "`" + `"code":-32600` + "`" + `)
-		require.Contains(t, response.Body.String(), ` + "`" + `"id":null` + "`" + `)
-		require.Zero(t, svc.pingCalls)
-	}
+func TestOrdinaryMethodRejectsNotificationWithoutAResponse(t *testing.T) {
+	svc := &requestContractService{}
+	response, reported := serveRequestContract(svc, ` + "`" + `{"jsonrpc":"2.0","method":"ping"}` + "`" + `)
+	require.Len(t, reported, 1)
+	require.ErrorContains(t, reported[0], "notification cannot call request method")
+	require.Empty(t, response.Body.String())
+	require.Zero(t, svc.pingCalls)
+}
+
+func TestOrdinaryMethodRejectsNullIDWithAResponse(t *testing.T) {
+	svc := &requestContractService{}
+	response, reported := serveRequestContract(svc, ` + "`" + `{"jsonrpc":"2.0","id":null,"method":"ping"}` + "`" + `)
+	require.Empty(t, reported)
+	require.Contains(t, response.Body.String(), ` + "`" + `"code":-32600` + "`" + `)
+	require.Contains(t, response.Body.String(), ` + "`" + `"id":null` + "`" + `)
+	require.Zero(t, svc.pingCalls)
 }
 
 func TestOrdinaryMethodAcceptsAnEmptyStringID(t *testing.T) {
@@ -452,10 +456,10 @@ func TestBatchEnforcesEachDeclaredMethodIDContract(t *testing.T) {
 		{"jsonrpc":"2.0","method":"ping"},
 		{"jsonrpc":"2.0","id":42,"method":"ping"}
 	]` + "`" + `)
-	require.Empty(t, reported)
+	require.Len(t, reported, 1)
+	require.ErrorContains(t, reported[0], "notification cannot call request method")
 	require.JSONEq(t, ` + "`" + `[
 		{"jsonrpc":"2.0","id":"wrong","error":{"code":-32600,"message":"Invalid request"}},
-		{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}},
 		{"jsonrpc":"2.0","id":42,"result":null}
 	]` + "`" + `, response.Body.String())
 	require.Equal(t, 1, svc.notifyCalls)
@@ -515,10 +519,11 @@ func TestRequiredNumericIDKeepsItsExactDigits(t *testing.T) {
 
 func TestMappedIDRejectsMissingAndNullEnvelopeIDsBeforeDispatch(t *testing.T) {
 	tests := []struct {
-		name     string
-		request  string
+		name         string
+		request      string
+		notification bool
 	}{
-		{name: "missing", request: ` + "`" + `{"jsonrpc":"2.0","method":"required_id","params":{"id":"params","message":"ready"}}` + "`" + `},
+		{name: "missing", request: ` + "`" + `{"jsonrpc":"2.0","method":"required_id","params":{"id":"params","message":"ready"}}` + "`" + `, notification: true},
 		{name: "null", request: ` + "`" + `{"jsonrpc":"2.0","id":null,"method":"required_id","params":{"id":"params","message":"ready"}}` + "`" + `},
 	}
 	for _, test := range tests {
@@ -526,6 +531,11 @@ func TestMappedIDRejectsMissingAndNullEnvelopeIDsBeforeDispatch(t *testing.T) {
 				svc := &requestContractService{}
 				response, reported := serveRequestContract(svc, test.request)
 				require.Zero(t, svc.requiredIDCalls)
+				if test.notification {
+					require.Len(t, reported, 1)
+					require.Empty(t, response.Body.String())
+					return
+				}
 				require.Empty(t, reported)
 				require.Contains(t, response.Body.String(), ` + "`" + `"code":-32600` + "`" + `)
 				require.Contains(t, response.Body.String(), ` + "`" + `"id":null` + "`" + `)
@@ -536,8 +546,8 @@ func TestMappedIDRejectsMissingAndNullEnvelopeIDsBeforeDispatch(t *testing.T) {
 func TestOptionalMappedIDDoesNotMakeAnOrdinaryMethodANotification(t *testing.T) {
 	svc := &requestContractService{}
 	response, reported := serveRequestContract(svc, ` + "`" + `{"jsonrpc":"2.0","method":"optional_id","params":{"id":"params"}}` + "`" + `)
-	require.Empty(t, reported)
-	require.Contains(t, response.Body.String(), ` + "`" + `"code":-32600` + "`" + `)
+	require.Len(t, reported, 1)
+	require.Empty(t, response.Body.String())
 	require.Zero(t, svc.optionalIDCalls)
 	require.Nil(t, svc.optionalID)
 }
@@ -545,8 +555,8 @@ func TestOptionalMappedIDDoesNotMakeAnOrdinaryMethodANotification(t *testing.T) 
 func TestDefaultedMappedIDDoesNotMakeAnOrdinaryMethodANotification(t *testing.T) {
 	svc := &requestContractService{}
 	response, reported := serveRequestContract(svc, ` + "`" + `{"jsonrpc":"2.0","method":"defaulted_id"}` + "`" + `)
-	require.Empty(t, reported)
-	require.Contains(t, response.Body.String(), ` + "`" + `"code":-32600` + "`" + `)
+	require.Len(t, reported, 1)
+	require.Empty(t, response.Body.String())
 	require.Zero(t, svc.defaultedIDCalls)
 }
 

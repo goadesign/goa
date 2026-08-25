@@ -39,17 +39,24 @@ import (
 
 func TestOrdinaryMethodsRequireNonNullRequestIDs(t *testing.T) {
 	tests := []struct {
-		name string
-		body string
-		want string
+		name         string
+		body         string
+		want         string
+		notification bool
 	}{
-		{name: "missing ID", body: ` + "`" + `{"jsonrpc":"2.0","method":"ping"}` + "`" + `, want: ` + "`" + `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}}` + "`" + `},
+		{name: "missing ID", body: ` + "`" + `{"jsonrpc":"2.0","method":"ping"}` + "`" + `, notification: true},
 		{name: "empty string ID", body: ` + "`" + `{"jsonrpc":"2.0","id":"","method":"ping"}` + "`" + `, want: ` + "`" + `{"jsonrpc":"2.0","id":"","result":null}` + "`" + `},
 		{name: "null ID", body: ` + "`" + `{"jsonrpc":"2.0","id":null,"method":"ping"}` + "`" + `, want: ` + "`" + `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}}` + "`" + `},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			response := serveProtocol(test.body, "")
+			response, reported := serveProtocolWithReports(test.body, "")
+			if test.notification {
+				require.Len(t, reported, 1)
+				require.Empty(t, response.Body.String())
+				return
+			}
+			require.Empty(t, reported)
 			require.JSONEq(t, test.want, response.Body.String())
 		})
 	}
@@ -84,8 +91,9 @@ func TestBatchFormFollowsJSONWhitespaceAndEmptyArrayRules(t *testing.T) {
 	response = serveProtocol("[]", "")
 	require.JSONEq(t, ` + "`" + `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}}` + "`" + `, response.Body.String())
 
-	response = serveProtocol(` + "`" + `[{"jsonrpc":"2.0","method":"ping"}]` + "`" + `, "")
-	require.JSONEq(t, ` + "`" + `[{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}}]` + "`" + `, response.Body.String())
+	response, reported := serveProtocolWithReports(` + "`" + `[{"jsonrpc":"2.0","method":"ping"}]` + "`" + `, "")
+	require.Len(t, reported, 1)
+	require.Empty(t, response.Body.String())
 }
 
 func TestInvalidRequestsReturnErrors(t *testing.T) {
@@ -102,10 +110,10 @@ func TestBatchProcessesInvalidMembersIndependently(t *testing.T) {
 	response := serveProtocol("[1]", "")
 	require.JSONEq(t, ` + "`" + `[{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}}]` + "`" + `, response.Body.String())
 
-	response = serveProtocol(` + "`" + `[{"jsonrpc":"2.0","id":"one","method":"ping"},1,{"jsonrpc":"2.0","method":"ping"}]` + "`" + `, "")
+	response, reported := serveProtocolWithReports(` + "`" + `[{"jsonrpc":"2.0","id":"one","method":"ping"},1,{"jsonrpc":"2.0","method":"ping"}]` + "`" + `, "")
+	require.Len(t, reported, 1)
 	require.JSONEq(t, ` + "`" + `[
 		{"jsonrpc":"2.0","id":"one","result":null},
-		{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}},
 		{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}}
 	]` + "`" + `, response.Body.String())
 }
@@ -198,14 +206,14 @@ func TestMixedServerKeepsBatchesOnJSON(t *testing.T) {
 		{"jsonrpc":"2.0","method":"watch"},
 		{"jsonrpc":"2.0","id":"three","method":"ping"}
 	]` + "`" + `
-	response, calls := serveProtocolWithCalls(body, "application/json, text/event-stream")
+	response, calls, reported := serveProtocolBody(io.NopCloser(strings.NewReader(body)), "application/json, text/event-stream")
 	require.Equal(t, http.StatusOK, response.Code)
+	require.Len(t, reported, 1)
 	require.Equal(t, 2, calls.ping)
 	require.Zero(t, calls.watch)
 	require.JSONEq(t, ` + "`" + `[
 		{"jsonrpc":"2.0","id":"one","result":null},
 		{"jsonrpc":"2.0","id":"two","error":{"code":-32601,"message":"Method is not available in a batch request"}},
-		{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}},
 		{"jsonrpc":"2.0","id":"three","result":null}
 	]` + "`" + `, response.Body.String())
 
@@ -277,6 +285,11 @@ func TestMixedServerClosesTheBodySuppliedByTheHTTPServer(t *testing.T) {
 func serveProtocol(body, accept string) *httptest.ResponseRecorder {
 	response, _ := serveProtocolWithCalls(body, accept)
 	return response
+}
+
+func serveProtocolWithReports(body, accept string) (*httptest.ResponseRecorder, []error) {
+	response, _, reported := serveProtocolBody(io.NopCloser(strings.NewReader(body)), accept)
+	return response, reported
 }
 
 type protocolCalls struct {

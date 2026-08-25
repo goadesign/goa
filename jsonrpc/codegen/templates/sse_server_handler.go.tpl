@@ -61,7 +61,11 @@ func (s *{{ .ServerStructDeclaration.Name }}) processSSERequest(ctx context.Cont
 			return
 		}
 		{{- else }}
-		if !req.HasID || req.ID == nil {
+		if !req.HasID {
+			s.reportRejectedNotification(ctx, req)
+			return
+		}
+		if req.ID == nil {
 			stream := &{{ $.SSEStream.Name }}{w: w, encoder: s.encoder}
 			if err := stream.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil); err != nil {
 				s.errhandler(ctx, w, fmt.Errorf("write invalid request event: %w", err))

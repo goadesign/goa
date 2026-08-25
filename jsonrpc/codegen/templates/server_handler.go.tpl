@@ -121,7 +121,11 @@ func (s *{{ .ServerStructDeclaration.Name }}) processRequest(ctx context.Context
 			return
 		}
 		{{- else }}
-		if !req.HasID || req.ID == nil {
+		if !req.HasID {
+			s.reportRejectedNotification(ctx, req)
+			return
+		}
+		if req.ID == nil {
 			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 			return
 		}
@@ -137,7 +141,11 @@ func (s *{{ .ServerStructDeclaration.Name }}) processRequest(ctx context.Context
 			return
 		}
 		{{- else }}
-		if !req.HasID || req.ID == nil {
+		if !req.HasID {
+			s.reportRejectedNotification(ctx, req)
+			return
+		}
+		if req.ID == nil {
 			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 			return
 		}

@@ -129,7 +129,11 @@ func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonr
 			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", "without_payload", err))
 		}
 	case "ordinary_void":
-		if !req.HasID || req.ID == nil {
+		if !req.HasID {
+			s.reportRejectedNotification(ctx, req)
+			return
+		}
+		if req.ID == nil {
 			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 			return
 		}
@@ -137,7 +141,11 @@ func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonr
 			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", "ordinary_void", err))
 		}
 	case "required_id":
-		if !req.HasID || req.ID == nil {
+		if !req.HasID {
+			s.reportRejectedNotification(ctx, req)
+			return
+		}
+		if req.ID == nil {
 			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 			return
 		}
@@ -145,7 +153,11 @@ func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonr
 			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", "required_id", err))
 		}
 	case "optional_id":
-		if !req.HasID || req.ID == nil {
+		if !req.HasID {
+			s.reportRejectedNotification(ctx, req)
+			return
+		}
+		if req.ID == nil {
 			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 			return
 		}
@@ -153,7 +165,11 @@ func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonr
 			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", "optional_id", err))
 		}
 	case "defaulted_id":
-		if !req.HasID || req.ID == nil {
+		if !req.HasID {
+			s.reportRejectedNotification(ctx, req)
+			return
+		}
+		if req.ID == nil {
 			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 			return
 		}
@@ -161,7 +177,11 @@ func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonr
 			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", "defaulted_id", err))
 		}
 	case "validated_id":
-		if !req.HasID || req.ID == nil {
+		if !req.HasID {
+			s.reportRejectedNotification(ctx, req)
+			return
+		}
+		if req.ID == nil {
 			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 			return
 		}

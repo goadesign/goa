@@ -1457,19 +1457,22 @@ func TestSSEStreamWritesReturnedErrorAsTerminalResponse(t *testing.T) {
 	require.Contains(t, body, ` + "`" + `"message":"watch failed"` + "`" + `)
 }
 
-func TestSSEMethodRejectsMissingAndNullIDsBeforeDispatch(t *testing.T) {
-	for _, request := range []string{
-		` + "`" + `{"jsonrpc":"2.0","method":"watch","params":{"topic":"alerts"}}` + "`" + `,
-		` + "`" + `{"jsonrpc":"2.0","id":null,"method":"watch","params":{"topic":"alerts"}}` + "`" + `,
-	} {
-		svc := &lifecycleService{}
-		body, reported := serveLifecycle(svc, request)
-		require.Empty(t, reported)
-		require.Zero(t, svc.calls)
-		require.Contains(t, body, "data: ")
-		require.Contains(t, body, ` + "`" + `"id":null` + "`" + `)
-		require.Contains(t, body, ` + "`" + `"code":-32600` + "`" + `)
-	}
+func TestSSEMethodRejectsNotificationWithoutAResponse(t *testing.T) {
+	svc := &lifecycleService{}
+	body, reported := serveLifecycle(svc, ` + "`" + `{"jsonrpc":"2.0","method":"watch","params":{"topic":"alerts"}}` + "`" + `)
+	require.Len(t, reported, 1)
+	require.Zero(t, svc.calls)
+	require.Empty(t, body)
+}
+
+func TestSSEMethodRejectsNullIDWithAResponse(t *testing.T) {
+	svc := &lifecycleService{}
+	body, reported := serveLifecycle(svc, ` + "`" + `{"jsonrpc":"2.0","id":null,"method":"watch","params":{"topic":"alerts"}}` + "`" + `)
+	require.Empty(t, reported)
+	require.Zero(t, svc.calls)
+	require.Contains(t, body, "data: ")
+	require.Contains(t, body, ` + "`" + `"id":null` + "`" + `)
+	require.Contains(t, body, ` + "`" + `"code":-32600` + "`" + `)
 }
 
 func TestSSEUnknownNotificationReceivesNoResponse(t *testing.T) {

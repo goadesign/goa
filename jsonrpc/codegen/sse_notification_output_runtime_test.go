@@ -39,29 +39,39 @@ import (
 	goa "goa.design/goa/v3/pkg"
 )
 
-func TestSSEMethodRejectsMissingAndNullIDsBeforeDispatch(t *testing.T) {
-	for _, body := range []string{
+func TestSSEMethodRejectsNotificationWithoutAResponse(t *testing.T) {
+	response, calls, sends, encodes, reported := serveStreamText(
 		` + "`" + `{"jsonrpc":"2.0","method":"stream_text"}` + "`" + `,
+	)
+	require.Zero(t, calls)
+	require.NoError(t, sends)
+	require.Zero(t, encodes)
+	require.Len(t, reported, 1)
+	require.Empty(t, response.Body.String())
+}
+
+func TestSSEMethodRejectsNullIDWithAResponse(t *testing.T) {
+	response, calls, sends, encodes, reported := serveStreamText(
 		` + "`" + `{"jsonrpc":"2.0","id":null,"method":"stream_text"}` + "`" + `,
-	} {
-		response, calls, sends, encodes := serveStreamText(body)
-		require.Zero(t, calls)
-		require.NoError(t, sends)
-		require.Equal(t, 1, encodes)
-		require.Equal(t, "text/event-stream", response.Header().Get("Content-Type"))
-		require.Contains(t, response.Body.String(), ` + "`" + `"id":null` + "`" + `)
-		require.Contains(t, response.Body.String(), ` + "`" + `"code":-32600` + "`" + `)
-		require.True(t, response.Flushed)
-	}
+	)
+	require.Zero(t, calls)
+	require.NoError(t, sends)
+	require.Equal(t, 1, encodes)
+	require.Empty(t, reported)
+	require.Equal(t, "text/event-stream", response.Header().Get("Content-Type"))
+	require.Contains(t, response.Body.String(), ` + "`" + `"id":null` + "`" + `)
+	require.Contains(t, response.Body.String(), ` + "`" + `"code":-32600` + "`" + `)
+	require.True(t, response.Flushed)
 }
 
 func TestSSERequestStillStreams(t *testing.T) {
-	response, calls, sends, encodes := serveStreamText(
+	response, calls, sends, encodes, reported := serveStreamText(
 		` + "`" + `{"jsonrpc":"2.0","id":"request-1","method":"stream_text"}` + "`" + `,
 	)
 	require.Equal(t, 1, calls)
 	require.NoError(t, sends)
 	require.Equal(t, 2, encodes)
+	require.Empty(t, reported)
 	require.Equal(t, "text/event-stream", response.Header().Get("Content-Type"))
 	events := strings.Split(strings.TrimSpace(response.Body.String()), "\n\n")
 	require.Len(t, events, 2)
@@ -76,7 +86,7 @@ func TestSSERequestStillStreams(t *testing.T) {
 	require.True(t, response.Flushed)
 }
 
-func serveStreamText(body string) (*httptest.ResponseRecorder, int, error, int) {
+func serveStreamText(body string) (*httptest.ResponseRecorder, int, error, int, []error) {
 	var calls int
 	var sendErr error
 	var encodes int
@@ -84,7 +94,9 @@ func serveStreamText(body string) (*httptest.ResponseRecorder, int, error, int) 
 		encodes++
 		return goahttp.ResponseEncoder(ctx, writer)
 	}
-	errhandler := func(context.Context, http.ResponseWriter, error) {
+	reported := make([]error, 0, 1)
+	errhandler := func(_ context.Context, _ http.ResponseWriter, err error) {
+		reported = append(reported, err)
 	}
 	server := &Server{
 		StreamText: NewStreamTextHandler(
@@ -107,6 +119,6 @@ func serveStreamText(body string) (*httptest.ResponseRecorder, int, error, int) 
 	request.Header.Set("Accept", "text/event-stream")
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, request)
-	return response, calls, sendErr, encodes
+	return response, calls, sendErr, encodes, reported
 }
 `

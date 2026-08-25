@@ -336,20 +336,14 @@ scenarios:
             code: -32603
             message: "Streaming error occurred"
 
-  # SSE methods require a non-null request ID.
+  # A missing ID makes the message a notification. Request-only methods reject
+  # it without sending an event.
   - name: "stream_string_missing_id_sse"
     method: "stream_string_sse"
     transport: "sse"
     request:
       params: "abc"
-    sequence:
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          id: null
-          error:
-            code: -32600
-            message: "Invalid request"
+    sequence: []
 
   # SSE edge cases and additional tests
   # Empty array test - streams single "empty" notification
