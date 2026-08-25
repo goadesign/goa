@@ -29,12 +29,14 @@ type (
 	}
 )
 
-// NewPlan copies the server information from each service plan and records the
-// imports used by every generated server and command-line client.
+// NewPlan copies the server information and final service paths from each
+// service plan, then records the imports used by every generated server and
+// command-line client.
 func NewPlan(generation *codegen.Generation, services ...*service.Plan) (*Plan, error) {
 	plan := &Plan{rootByService: make(map[*service.Plan]*Root, len(services))}
 	for _, servicePlan := range services {
 		design := servicePlan.Root()
+		serviceCommands := make(map[string]string, len(design.Services))
 		plannedRoot := &Root{
 			APIName:  design.API.Name,
 			Services: make([]string, len(design.Services)),
@@ -42,9 +44,14 @@ func NewPlan(generation *codegen.Generation, services ...*service.Plan) (*Plan, 
 		}
 		for i, service := range design.Services {
 			plannedRoot.Services[i] = service.Name
+			serviceImport, _, err := servicePlan.ServicePackageImports(service)
+			if err != nil {
+				return nil, err
+			}
+			serviceCommands[service.Name] = codegen.KebabCase(path.Base(serviceImport.Path))
 		}
 		for i, server := range design.API.Servers {
-			planned := buildServerData(server, design)
+			planned := buildServerData(server, design, serviceCommands)
 			if err := planMainPackages(generation, servicePlan, planned); err != nil {
 				return nil, err
 			}

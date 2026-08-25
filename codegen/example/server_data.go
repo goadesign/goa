@@ -216,9 +216,10 @@ func (h *HostData) DefaultURL(transport Transport) string {
 	return ""
 }
 
-// buildServerData copies one server's service names, hosts, URL variables,
-// transports, and handler arguments for the example templates.
-func buildServerData(svr *expr.ServerExpr, root *expr.RootExpr) *Data {
+// buildServerData copies one server's service names, generated command names,
+// hosts, URL variables, transports, and handler arguments for the example
+// templates.
+func buildServerData(svr *expr.ServerExpr, root *expr.RootExpr, serviceCommands map[string]string) *Data {
 	hosts := make([]*HostData, 0, len(svr.Hosts))
 	for _, h := range svr.Hosts {
 		hosts = append(hosts, buildHostData(h))
@@ -299,8 +300,8 @@ func buildServerData(svr *expr.ServerExpr, root *expr.RootExpr) *Data {
 		clientMainPath: filepath.Join("cmd", dir+"-cli", "main.go"),
 		HasHTTP:        hasHTTP,
 		HasJSONRPC:     hasJSONRPC,
-		usageCommands:  usageCommands(svr, root),
-		jsonRPCOnly:    jsonRPCOnlyCommands(svr, root),
+		usageCommands:  usageCommands(svr, root, serviceCommands),
+		jsonRPCOnly:    jsonRPCOnlyCommands(svr, root, serviceCommands),
 	}
 	sd.writesEndpointResult, sd.writesStreamResults = clientResultWriters(svr, root)
 	// Keep the handler argument order while the complete design is still available.
@@ -348,21 +349,21 @@ func clientResultWriters(server *expr.ServerExpr, root *expr.RootExpr) (endpoint
 
 // usageCommands returns the complete help list for one server. Each transport
 // contributes the commands accepted by its generated client.
-func usageCommands(server *expr.ServerExpr, root *expr.RootExpr) []string {
+func usageCommands(server *expr.ServerExpr, root *expr.RootExpr, serviceCommands map[string]string) []string {
 	var commands []string
 	for _, serviceName := range server.Services {
 		if service := root.API.HTTP.Service(serviceName); service != nil {
-			commands = appendUsageCommand(commands, serviceName, httpEndpointNames(service.HTTPEndpoints))
+			commands = appendUsageCommand(commands, serviceCommands[serviceName], httpEndpointNames(service.HTTPEndpoints))
 		}
 		if service := root.API.JSONRPC.Service(serviceName); service != nil {
-			commands = appendUsageCommand(commands, serviceName, httpEndpointNames(service.HTTPEndpoints))
+			commands = appendUsageCommand(commands, serviceCommands[serviceName], httpEndpointNames(service.HTTPEndpoints))
 		}
 		if service := root.API.GRPC.Service(serviceName); service != nil {
 			endpoints := make([]string, len(service.GRPCEndpoints))
 			for i, endpoint := range service.GRPCEndpoints {
 				endpoints[i] = codegen.KebabCase(endpoint.Name())
 			}
-			commands = appendUsageCommand(commands, serviceName, endpoints)
+			commands = appendUsageCommand(commands, serviceCommands[serviceName], endpoints)
 		}
 	}
 	sort.Strings(commands)
@@ -371,7 +372,7 @@ func usageCommands(server *expr.ServerExpr, root *expr.RootExpr) []string {
 
 // jsonRPCOnlyCommands returns the service and endpoint pairs handled only by
 // the JSON-RPC client.
-func jsonRPCOnlyCommands(server *expr.ServerExpr, root *expr.RootExpr) []*jsonRPCServiceData {
+func jsonRPCOnlyCommands(server *expr.ServerExpr, root *expr.RootExpr, serviceCommands map[string]string) []*jsonRPCServiceData {
 	var services []*jsonRPCServiceData
 	for _, serviceName := range server.Services {
 		jsonRPC := root.API.JSONRPC.Service(serviceName)
@@ -392,7 +393,7 @@ func jsonRPCOnlyCommands(server *expr.ServerExpr, root *expr.RootExpr) []*jsonRP
 		}
 		if len(endpoints) > 0 {
 			services = append(services, &jsonRPCServiceData{
-				Service:   codegen.KebabCase(serviceName),
+				Service:   serviceCommands[serviceName],
 				Endpoints: endpoints,
 			})
 		}
@@ -411,7 +412,7 @@ func httpEndpointNames(endpoints []*expr.HTTPEndpointExpr) []string {
 }
 
 // appendUsageCommand adds one client's help entry when it has endpoints.
-func appendUsageCommand(commands []string, serviceName string, endpoints []string) []string {
+func appendUsageCommand(commands []string, serviceCommand string, endpoints []string) []string {
 	if len(endpoints) == 0 {
 		return commands
 	}
@@ -421,7 +422,7 @@ func appendUsageCommand(commands []string, serviceName string, endpoints []strin
 	}
 	return append(commands, fmt.Sprintf(
 		"%s %s%s%s",
-		codegen.KebabCase(serviceName),
+		serviceCommand,
 		left,
 		strings.Join(endpoints, "|"),
 		right,

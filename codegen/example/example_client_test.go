@@ -128,6 +128,31 @@ func TestMixedClientRoutesJSONRPCCommandsFromPlannedEndpoints(t *testing.T) {
 	require.Greater(t, second, first)
 }
 
+func TestMixedClientRoutesCollidingServicesByPlannedPaths(t *testing.T) {
+	root := codegen.RunDSL(t, mixedClientCollidingServicesDSL)
+	generation, err := codegen.NewGeneration("example.local/gen", []eval.Root{root})
+	require.NoError(t, err)
+	servicePlan, err := service.NewPlan(root, generation, expr.NewExampleGenerator(root.API.RandomizerFactory))
+	require.NoError(t, err)
+	plan, err := NewPlan(generation, servicePlan)
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	require.NoError(t, servicePlan.Link())
+	plannedRoot, ok := plan.Root(servicePlan)
+	require.True(t, ok)
+
+	first := servicePlan.Services().Get("read_value").PathName
+	second := servicePlan.Services().Get("read-value").PathName
+	require.NotEqual(t, first, second)
+	code := renderExampleSections(t, CLIFiles(plannedRoot)[0])
+	require.Contains(t, code, `case "`+codegen.KebabCase(first)+`":`)
+	require.Contains(t, code, `case "`+codegen.KebabCase(second)+`":`)
+	require.Contains(t, code, `"`+codegen.KebabCase(first)+` read"`)
+	require.Contains(t, code, `"`+codegen.KebabCase(first)+` watch"`)
+	require.Contains(t, code, `"`+codegen.KebabCase(second)+` read"`)
+	require.Contains(t, code, `"`+codegen.KebabCase(second)+` watch"`)
+}
+
 func TestClientHostVariableValidationEmitsFixedCases(t *testing.T) {
 	root := codegen.RunDSL(t, testdata.SingleServerMultipleHostsWithVariablesDSL)
 	generation, err := codegen.NewGeneration("example.local/gen", []eval.Root{root})
@@ -169,4 +194,27 @@ var mixedClientRoutingDSL = func() {
 			dsl.JSONRPC(func() {})
 		})
 	})
+}
+
+var mixedClientCollidingServicesDSL = func() {
+	dsl.API("mixed client collisions", func() {
+		dsl.Server("public", func() {
+			dsl.Services("read_value", "read-value")
+		})
+	})
+	for _, name := range []string{"read_value", "read-value"} {
+		dsl.Service(name, func() {
+			dsl.JSONRPC(func() {
+				dsl.POST("/" + name)
+			})
+			dsl.Method("read", func() {
+				dsl.HTTP(func() {
+					dsl.GET("/" + name)
+				})
+			})
+			dsl.Method("watch", func() {
+				dsl.JSONRPC(func() {})
+			})
+		})
+	}
 }
