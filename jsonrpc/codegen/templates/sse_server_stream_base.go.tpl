@@ -1,3 +1,4 @@
+{{- if or .SSEStream .NoOutputWriter }}
 type (
 	{{- if .SSEStream }}
 	{{ printf "%s writes JSON-RPC messages as server-sent events." .SSEStream.Name | comment }}
@@ -17,11 +18,14 @@ type (
 	}
 	{{- end }}
 
+	{{- if .NoOutputWriter }}
 	{{ printf "%s accepts notification output without storing or sending it." .NoOutputWriter.Name | comment }}
 	{{ .NoOutputWriter.Name }} struct {
 		header http.Header
 	}
+	{{- end }}
 )
+{{- end }}
 
 {{- if .SSEStream }}
 // Header returns the headers written while the event is being encoded.
@@ -34,6 +38,7 @@ func (b *{{ .SSEBuffer.Name }}) WriteHeader(int) {
 }
 {{- end }}
 
+{{- if .NoOutputWriter }}
 // Header returns the private headers written while a notification is encoded.
 func (w *{{ .NoOutputWriter.Name }}) Header() http.Header {
 	return w.header
@@ -51,6 +56,7 @@ func (w *{{ .NoOutputWriter.Name }}) WriteHeader(int) {
 // Flush completes successfully because notification bytes are not sent.
 func (w *{{ .NoOutputWriter.Name }}) Flush() {
 }
+{{- end }}
 
 {{- if .SSEStream }}
 // initSSEHeaders writes the response headers before the first event.

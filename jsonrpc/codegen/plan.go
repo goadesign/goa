@@ -527,12 +527,15 @@ func collectServicePlan(generation *codegen.Generation, input PlanInput, transpo
 		}
 		return declaration, nil
 	}
-	hasHTTP, hasSSE := false, false
+	hasHTTP, hasSSE, hasNotification := false, false, false
 	for _, endpoint := range transport.HTTPEndpoints {
 		if endpoint.UsesSSE() {
 			hasSSE = true
 		} else {
 			hasHTTP = true
+		}
+		if endpoint.IsJSONRPCNotification() {
+			hasNotification = true
 		}
 	}
 	planned.clientNames.bufferPool, err = declare(client, codegen.NameVariable, "bufferPool", jsonRPCBufferPoolRole)
@@ -543,9 +546,11 @@ func collectServicePlan(generation *codegen.Generation, input PlanInput, transpo
 	if err != nil {
 		return nil, err
 	}
-	planned.serverNames.noOutputWriter, err = declare(server, codegen.NameType, "noOutputResponseWriter", jsonRPCNoOutputWriterRole)
-	if err != nil {
-		return nil, err
+	if hasNotification {
+		planned.serverNames.noOutputWriter, err = declare(server, codegen.NameType, "noOutputResponseWriter", jsonRPCNoOutputWriterRole)
+		if err != nil {
+			return nil, err
+		}
 	}
 	if hasHTTP {
 		planned.serverNames.batchWriter, err = declare(server, codegen.NameType, "batchWriter", jsonRPCBatchWriterRole)

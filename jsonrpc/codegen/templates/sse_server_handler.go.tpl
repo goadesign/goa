@@ -52,6 +52,23 @@ func (s *{{ .ServerStructDeclaration.Name }}) processSSERequest(ctx context.Cont
 {{- range .Endpoints }}
 	{{- if .SSE }}
 	case {{ printf "%q" .Method.Name }}:
+		{{- if .IsJSONRPCNotification }}
+		if req.HasID {
+			stream := &{{ $.SSEStream.Name }}{w: w, encoder: s.encoder}
+			if err := stream.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil); err != nil {
+				s.errhandler(ctx, w, fmt.Errorf("write invalid request event: %w", err))
+			}
+			return
+		}
+		{{- else }}
+		if !req.HasID || req.ID == nil {
+			stream := &{{ $.SSEStream.Name }}{w: w, encoder: s.encoder}
+			if err := stream.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil); err != nil {
+				s.errhandler(ctx, w, fmt.Errorf("write invalid request event: %w", err))
+			}
+			return
+		}
+		{{- end }}
 		handler = s.{{ .Method.VarName }}
 	{{- end }}
 	{{- end }}

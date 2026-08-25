@@ -33,6 +33,24 @@ func newExecutor(serverURL string, opts ...executorOption) *executor {
 	}
 }
 
+// jsonRPCParams writes primitive payloads as the one-item positional array
+// used by the generated JSON-RPC request decoder.
+func jsonRPCParams(method string, params any) any {
+	if params == nil {
+		return nil
+	}
+	info, err := ParseMethod(method)
+	if err != nil || info.Modifier == ModifierIDMap {
+		return params
+	}
+	switch info.Type {
+	case TypeString, TypeInt, TypeBool:
+		return []any{params}
+	default:
+		return params
+	}
+}
+
 // Execute runs a test scenario
 func (e *executor) Execute(t *testing.T, scenario Scenario) {
 	t.Helper()
@@ -123,7 +141,7 @@ func (e *executor) executeHTTP(ctx context.Context, t *testing.T, scenario Scena
 
 	req := harness.JSONRPCRequest{
 		Method: method,
-		Params: scenario.Request.Params,
+		Params: jsonRPCParams(method, scenario.Request.Params),
 		ID:     scenario.Request.ID,
 	}
 	// Handle JSONRPC field:
@@ -203,7 +221,7 @@ func (e *executor) executeSSESequence(ctx context.Context, t *testing.T, scenari
 	method := scenario.Request.GetMethod(scenario.Method)
 	req := harness.JSONRPCRequest{
 		Method: method,
-		Params: scenario.Request.Params,
+		Params: jsonRPCParams(method, scenario.Request.Params),
 		ID:     scenario.Request.ID,
 	}
 	// Handle JSONRPC field:
@@ -262,7 +280,9 @@ func (e *executor) executeBatch(t *testing.T, scenario Scenario) {
 		jsonReq := map[string]any{
 			"jsonrpc": "2.0",
 			"method":  method,
-			"params":  req.Params,
+		}
+		if req.Params != nil {
+			jsonReq["params"] = jsonRPCParams(method, req.Params)
 		}
 		if req.ID != nil {
 			jsonReq["id"] = req.ID

@@ -1417,9 +1417,11 @@ var errWatch = goa.NewServiceError(errors.New("watch failed"), "watch_failed", f
 
 type lifecycleService struct {
 	fail bool
+	calls int
 }
 
 func (s *lifecycleService) Watch(_ context.Context, _ *service.WatchPayload, stream service.WatchServerStream) error {
+	s.calls++
 	if err := stream.Send(&service.WatchResult{Message: "ready"}); err != nil {
 		return err
 	}
@@ -1455,24 +1457,19 @@ func TestSSEStreamWritesReturnedErrorAsTerminalResponse(t *testing.T) {
 	require.Contains(t, body, ` + "`" + `"message":"watch failed"` + "`" + `)
 }
 
-func TestSSENotificationRequestHasNoTerminalResponse(t *testing.T) {
-	body, reported := serveLifecycle(&lifecycleService{}, ` + "`" + `{"jsonrpc":"2.0","method":"watch","params":{"topic":"alerts"}}` + "`" + `)
-	require.Empty(t, reported)
-	require.Empty(t, body)
-}
-
-func TestSSENotificationServiceErrorHasNoTerminalResponse(t *testing.T) {
-	body, reported := serveLifecycle(&lifecycleService{fail: true}, ` + "`" + `{"jsonrpc":"2.0","method":"watch","params":{"topic":"alerts"}}` + "`" + `)
-	require.Len(t, reported, 1)
-	require.ErrorIs(t, reported[0], errWatch)
-	require.Empty(t, body)
-}
-
-func TestSSENotificationDecodeErrorHasNoResponse(t *testing.T) {
-	body, reported := serveLifecycle(&lifecycleService{}, ` + "`" + `{"jsonrpc":"2.0","method":"watch","params":{}}` + "`" + `)
-	require.Len(t, reported, 1)
-	require.ErrorContains(t, reported[0], ` + "`" + `"topic" is missing from body` + "`" + `)
-	require.Empty(t, body)
+func TestSSEMethodRejectsMissingAndNullIDsBeforeDispatch(t *testing.T) {
+	for _, request := range []string{
+		` + "`" + `{"jsonrpc":"2.0","method":"watch","params":{"topic":"alerts"}}` + "`" + `,
+		` + "`" + `{"jsonrpc":"2.0","id":null,"method":"watch","params":{"topic":"alerts"}}` + "`" + `,
+	} {
+		svc := &lifecycleService{}
+		body, reported := serveLifecycle(svc, request)
+		require.Empty(t, reported)
+		require.Zero(t, svc.calls)
+		require.Contains(t, body, "data: ")
+		require.Contains(t, body, ` + "`" + `"id":null` + "`" + `)
+		require.Contains(t, body, ` + "`" + `"code":-32600` + "`" + `)
+	}
 }
 
 func TestSSEUnknownNotificationReceivesNoResponse(t *testing.T) {

@@ -43,8 +43,8 @@ type (
 		// request object.
 		Invalid bool `json:"-"`
 		// HasID is true when the "id" key is present in the incoming JSON, even
-		// when its value is null. Generated servers use it to decide whether to
-		// send a response for this request.
+		// when its value is null. Generated servers compare it with the method's
+		// declared request or notification contract before calling the service.
 		HasID bool `json:"-"`
 		// HasMethod is true when the "method" key is present, including when its
 		// value is an empty string.

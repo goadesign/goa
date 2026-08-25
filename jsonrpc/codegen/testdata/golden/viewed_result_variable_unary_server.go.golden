@@ -10,23 +10,9 @@ func NewFetchHandler(
 	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
 		ctx = context.WithValue(ctx, goa.MethodKey, "fetch")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "viewed")
-		outputWriter := w
-		if !req.HasID {
-			// A notification runs the same service and error reporting code without
-			// sending a response.
-			outputWriter = &noOutputResponseWriter{header: make(http.Header)}
-		}
 		res, err := endpoint(ctx, nil)
 		if err != nil {
-			if req.HasID {
-				encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
-			} else {
-				errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
-			}
-			return nil
-		}
-		if !req.HasID {
-			// A notification has no ID field and receives no response.
+			encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
 			return nil
 		}
 

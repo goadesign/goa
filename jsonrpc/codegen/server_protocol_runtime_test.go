@@ -1,5 +1,5 @@
-// This file renders a JSON-RPC server and runs requests whose wire form decides
-// whether the server returns one response, a batch, no body, or an event stream.
+// This file renders a JSON-RPC server and runs requests that exercise request
+// IDs, batches, invalid messages, and event streams.
 package codegen_test
 
 import "testing"
@@ -37,23 +37,19 @@ import (
 	goa "goa.design/goa/v3/pkg"
 )
 
-func TestRequestIDPresenceControlsResponses(t *testing.T) {
+func TestOrdinaryMethodsRequireNonNullRequestIDs(t *testing.T) {
 	tests := []struct {
 		name string
 		body string
 		want string
 	}{
-		{name: "missing ID", body: ` + "`" + `{"jsonrpc":"2.0","method":"ping"}` + "`" + `},
+		{name: "missing ID", body: ` + "`" + `{"jsonrpc":"2.0","method":"ping"}` + "`" + `, want: ` + "`" + `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}}` + "`" + `},
 		{name: "empty string ID", body: ` + "`" + `{"jsonrpc":"2.0","id":"","method":"ping"}` + "`" + `, want: ` + "`" + `{"jsonrpc":"2.0","id":"","result":null}` + "`" + `},
-		{name: "null ID", body: ` + "`" + `{"jsonrpc":"2.0","id":null,"method":"ping"}` + "`" + `, want: ` + "`" + `{"jsonrpc":"2.0","id":null,"result":null}` + "`" + `},
+		{name: "null ID", body: ` + "`" + `{"jsonrpc":"2.0","id":null,"method":"ping"}` + "`" + `, want: ` + "`" + `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}}` + "`" + `},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			response := serveProtocol(test.body, "")
-			if test.want == "" {
-				require.Empty(t, response.Body.String())
-				return
-			}
 			require.JSONEq(t, test.want, response.Body.String())
 		})
 	}
@@ -89,7 +85,7 @@ func TestBatchFormFollowsJSONWhitespaceAndEmptyArrayRules(t *testing.T) {
 	require.JSONEq(t, ` + "`" + `{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}}` + "`" + `, response.Body.String())
 
 	response = serveProtocol(` + "`" + `[{"jsonrpc":"2.0","method":"ping"}]` + "`" + `, "")
-	require.Empty(t, response.Body.String())
+	require.JSONEq(t, ` + "`" + `[{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}}]` + "`" + `, response.Body.String())
 }
 
 func TestInvalidRequestsReturnErrors(t *testing.T) {
@@ -109,6 +105,7 @@ func TestBatchProcessesInvalidMembersIndependently(t *testing.T) {
 	response = serveProtocol(` + "`" + `[{"jsonrpc":"2.0","id":"one","method":"ping"},1,{"jsonrpc":"2.0","method":"ping"}]` + "`" + `, "")
 	require.JSONEq(t, ` + "`" + `[
 		{"jsonrpc":"2.0","id":"one","result":null},
+		{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}},
 		{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}}
 	]` + "`" + `, response.Body.String())
 }
@@ -208,6 +205,7 @@ func TestMixedServerKeepsBatchesOnJSON(t *testing.T) {
 	require.JSONEq(t, ` + "`" + `[
 		{"jsonrpc":"2.0","id":"one","result":null},
 		{"jsonrpc":"2.0","id":"two","error":{"code":-32601,"message":"Method is not available in a batch request"}},
+		{"jsonrpc":"2.0","id":null,"error":{"code":-32600,"message":"Invalid request"}},
 		{"jsonrpc":"2.0","id":"three","result":null}
 	]` + "`" + `, response.Body.String())
 

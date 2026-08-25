@@ -336,32 +336,20 @@ scenarios:
             code: -32603
             message: "Streaming error occurred"
 
-  # SSE with no ID (pure notifications)
-  - name: "stream_string_notify_sse"
-    method: "stream_string_notify_sse"
+  # SSE methods require a non-null request ID.
+  - name: "stream_string_missing_id_sse"
+    method: "stream_string_sse"
     transport: "sse"
     request:
-      params: "abc"  # 3 chars = 3 notifications
-      # No ID - pure notification stream
+      params: "abc"
     sequence:
       - type: "receive"
         expect:
           jsonrpc: "2.0"
-          method: "stream_string_notify_sse"
-          params:
-            value: "Stream 1 of 3"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_string_notify_sse"
-          params:
-            value: "Stream 2 of 3"
-      - type: "receive"
-        expect:
-          jsonrpc: "2.0"
-          method: "stream_string_notify_sse"
-          params:
-            value: "Stream 3 of 3"
+          id: null
+          error:
+            code: -32600
+            message: "Invalid request"
 
   # SSE edge cases and additional tests
   # Empty array test - streams single "empty" notification
@@ -536,9 +524,9 @@ scenarios:
         id: "batch-1"
       - method: "generate_array"
         id: "batch-2"
-      - method: "echo_string"
+      - method: "echo_string_notify"
         params: "notification in batch"
-        # No ID for notifications
+        # Declared notifications omit the ID.
     expect_batch:
       - id: "batch-1"
         result: "hello"
@@ -585,13 +573,12 @@ scenarios:
   # Edge case tests
   - name: "null_id"
     transport: "http"
-    request:
-      method: "echo_string"
-      params: "test with null id"
-      id: null
+    raw_request: '{"jsonrpc":"2.0","method":"echo_string","params":["test with null id"],"id":null}'
     expect:
       id: null
-      result: "test with null id"
+      error:
+        code: -32600
+        message: "Invalid request"
 
   - name: "numeric_string_id"
     transport: "http"
@@ -718,10 +705,7 @@ scenarios:
 
   - name: "http_missing_method_request"
     transport: "http"
-    request:
-      jsonrpc: "2.0"
-      # No method or ID. A notification must still be a valid request object.
-      params: "notify"
+    raw_request: '{"jsonrpc":"2.0","params":["notify"]}'
     expect:
       error:
         code: -32600

@@ -1,5 +1,5 @@
-// This file renders a JSON-RPC SSE server and proves that notifications run
-// service streaming code without writing an HTTP response.
+// This file renders a JSON-RPC SSE server and proves that streaming methods
+// require request IDs before any service code runs.
 package codegen_test
 
 import (
@@ -10,25 +10,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestGeneratedSSENotificationProducesNoHTTPOutput checks that a no-ID call
-// still runs Send through the configured encoder while an ID call keeps the
-// ordinary event stream response.
-func TestGeneratedSSENotificationProducesNoHTTPOutput(t *testing.T) {
+// TestGeneratedSSERequiresRequestID checks both rejected missing IDs and a
+// valid stream with a response ID.
+func TestGeneratedSSERequiresRequestID(t *testing.T) {
 	dir := renderParamsRuntimeModule(t)
 	serverDir := filepath.Join(dir, "jsonrpc", "param_shapes", "server")
 	require.NoError(t, os.WriteFile(
 		filepath.Join(serverDir, "sse_notification_output_runtime_test.go"),
-		[]byte(sseNotificationOutputRuntimeTest),
+		[]byte(sseRequestIDRuntimeTest),
 		0o600,
 	))
 	runParamsRuntimeTests(t, dir)
 }
 
-const sseNotificationOutputRuntimeTest = `package server
+const sseRequestIDRuntimeTest = `package server
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -41,16 +39,20 @@ import (
 	goa "goa.design/goa/v3/pkg"
 )
 
-func TestSSENotificationRunsServiceWithoutHTTPOutput(t *testing.T) {
-	response, calls, sends, encodes := serveStreamText(
+func TestSSEMethodRejectsMissingAndNullIDsBeforeDispatch(t *testing.T) {
+	for _, body := range []string{
 		` + "`" + `{"jsonrpc":"2.0","method":"stream_text"}` + "`" + `,
-	)
-	require.Equal(t, 1, calls)
-	require.NoError(t, sends)
-	require.Equal(t, 1, encodes)
-	require.Empty(t, response.Header())
-	require.Empty(t, response.Body.String())
-	require.False(t, response.Flushed)
+		` + "`" + `{"jsonrpc":"2.0","id":null,"method":"stream_text"}` + "`" + `,
+	} {
+		response, calls, sends, encodes := serveStreamText(body)
+		require.Zero(t, calls)
+		require.NoError(t, sends)
+		require.Equal(t, 1, encodes)
+		require.Equal(t, "text/event-stream", response.Header().Get("Content-Type"))
+		require.Contains(t, response.Body.String(), ` + "`" + `"id":null` + "`" + `)
+		require.Contains(t, response.Body.String(), ` + "`" + `"code":-32600` + "`" + `)
+		require.True(t, response.Flushed)
+	}
 }
 
 func TestSSERequestStillStreams(t *testing.T) {
@@ -72,73 +74,6 @@ func TestSSERequestStillStreams(t *testing.T) {
 		strings.TrimPrefix(events[1], "data: "),
 	)
 	require.True(t, response.Flushed)
-}
-
-func TestSSENotificationReportsFailuresWithoutHTTPOutput(t *testing.T) {
-	tests := []struct {
-		name         string
-		body         string
-		serviceError error
-		wantCalls    int
-	}{
-		{
-			name:      "decode failure",
-			body:      ` + "`" + `{"jsonrpc":"2.0","method":"required_resume"}` + "`" + `,
-		},
-		{
-			name:         "service failure",
-			body:         ` + "`" + `{"jsonrpc":"2.0","method":"stream_text"}` + "`" + `,
-			serviceError: errors.New("service failed"),
-			wantCalls:    1,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			response, calls, reports, writeErrors := serveSSEFailure(test.body, test.serviceError)
-			require.Equal(t, test.wantCalls, calls)
-			require.Equal(t, 1, reports)
-			require.Empty(t, writeErrors)
-			require.Empty(t, response.Header())
-			require.Empty(t, response.Body.String())
-			require.False(t, response.Flushed)
-		})
-	}
-}
-
-func TestUnaryNotificationReportsDecodeFailureWithoutHTTPOutput(t *testing.T) {
-	response, calls, reports, writeErrors := serveTextNotification(
-		` + "`" + `{"jsonrpc":"2.0","method":"text","params":{}}` + "`" + `,
-		nil,
-	)
-	require.Zero(t, calls)
-	require.Equal(t, 1, reports)
-	require.Empty(t, writeErrors)
-	require.Empty(t, response.Header())
-	require.Empty(t, response.Body.String())
-}
-
-func TestUnaryNotificationReportsServiceFailureWithoutHTTPOutput(t *testing.T) {
-	response, calls, reports, writeErrors := serveTextNotification(
-		` + "`" + `{"jsonrpc":"2.0","method":"text","params":["value"]}` + "`" + `,
-		errors.New("service failed"),
-	)
-	require.Equal(t, 1, calls)
-	require.Equal(t, 1, reports)
-	require.Empty(t, writeErrors)
-	require.Empty(t, response.Header())
-	require.Empty(t, response.Body.String())
-}
-
-func TestSuccessfulUnaryNotificationDoesNotReportAnError(t *testing.T) {
-	response, calls, reports, writeErrors := serveTextNotification(
-		` + "`" + `{"jsonrpc":"2.0","method":"text","params":["value"]}` + "`" + `,
-		nil,
-	)
-	require.Equal(t, 1, calls)
-	require.Zero(t, reports)
-	require.Empty(t, writeErrors)
-	require.Empty(t, response.Header())
-	require.Empty(t, response.Body.String())
 }
 
 func serveStreamText(body string) (*httptest.ResponseRecorder, int, error, int) {
@@ -173,84 +108,5 @@ func serveStreamText(body string) (*httptest.ResponseRecorder, int, error, int) 
 	response := httptest.NewRecorder()
 	server.ServeHTTP(response, request)
 	return response, calls, sendErr, encodes
-}
-
-func serveTextNotification(body string, endpointErr error) (*httptest.ResponseRecorder, int, int, []error) {
-	var calls int
-	var reports int
-	var writeErrors []error
-	errhandler := func(_ context.Context, writer http.ResponseWriter, _ error) {
-		reports++
-		writer.Header().Set("X-Error", "reported")
-		writer.WriteHeader(http.StatusInternalServerError)
-		if _, err := writer.Write([]byte("reported")); err != nil {
-			writeErrors = append(writeErrors, err)
-		}
-	}
-	server := &Server{
-		Text: NewTextHandler(
-			goa.Endpoint(func(context.Context, any) (any, error) {
-				calls++
-				return nil, endpointErr
-			}),
-			goahttp.NewMuxer(),
-			goahttp.RequestDecoder,
-			goahttp.ResponseEncoder,
-			errhandler,
-		),
-		decoder:    goahttp.RequestDecoder,
-		encoder:    goahttp.ResponseEncoder,
-		errhandler: errhandler,
-	}
-	request := httptest.NewRequest(http.MethodPost, "/rpc", strings.NewReader(body))
-	request.Header.Set("Accept", "application/json")
-	response := httptest.NewRecorder()
-	server.ServeHTTP(response, request)
-	return response, calls, reports, writeErrors
-}
-
-func serveSSEFailure(body string, endpointErr error) (*httptest.ResponseRecorder, int, int, []error) {
-	var calls int
-	var reports int
-	var writeErrors []error
-	errhandler := func(_ context.Context, writer http.ResponseWriter, _ error) {
-		reports++
-		writer.Header().Set("X-Error", "reported")
-		writer.WriteHeader(http.StatusInternalServerError)
-		if _, err := writer.Write([]byte("reported")); err != nil {
-			writeErrors = append(writeErrors, err)
-		}
-	}
-	endpoint := goa.Endpoint(func(context.Context, any) (any, error) {
-		calls++
-		return nil, endpointErr
-	})
-	server := &Server{
-		decoder:    goahttp.RequestDecoder,
-		encoder:    goahttp.ResponseEncoder,
-		errhandler: errhandler,
-	}
-	if endpointErr == nil {
-		server.RequiredResume = NewRequiredResumeHandler(
-			endpoint,
-			goahttp.NewMuxer(),
-			goahttp.RequestDecoder,
-			goahttp.ResponseEncoder,
-			errhandler,
-		)
-	} else {
-		server.StreamText = NewStreamTextHandler(
-			endpoint,
-			goahttp.NewMuxer(),
-			goahttp.RequestDecoder,
-			goahttp.ResponseEncoder,
-			errhandler,
-		)
-	}
-	request := httptest.NewRequest(http.MethodPost, "/rpc", strings.NewReader(body))
-	request.Header.Set("Accept", "text/event-stream")
-	response := httptest.NewRecorder()
-	server.ServeHTTP(response, request)
-	return response, calls, reports, writeErrors
 }
 `

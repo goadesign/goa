@@ -1,11 +1,12 @@
-{{- if not (hasMixedTransports) }}
+package server
+
 // ServeHTTP handles JSON-RPC requests.
-func (s *{{ .ServerStructDeclaration.Name }}) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.handleHTTP(w, r)
 }
 
-{{ comment "handleHTTP reads one JSON-RPC request object or one array of requests." }}
-func (s *{{ .ServerStructDeclaration.Name }}) handleHTTP(w http.ResponseWriter, r *http.Request) {
+// handleHTTP reads one JSON-RPC request object or one array of requests.
+func (s *Server) handleHTTP(w http.ResponseWriter, r *http.Request) {
 	originalBody := r.Body
 
 	// Find the first JSON byte so leading whitespace does not change whether the
@@ -29,7 +30,7 @@ func (s *{{ .ServerStructDeclaration.Name }}) handleHTTP(w http.ResponseWriter, 
 			return
 		}
 	}
-	
+
 	// The generated handler owns the original body. Decoders receive a wrapper
 	// whose Close method cannot close it a second time.
 	r.Body = io.NopCloser(bufReader)
@@ -38,7 +39,7 @@ func (s *{{ .ServerStructDeclaration.Name }}) handleHTTP(w http.ResponseWriter, 
 			s.errhandler(r.Context(), w, fmt.Errorf("failed to close request body: %w", err))
 		}
 	}()
-	
+
 	// A leading '[' starts an array of requests.
 	if len(peek) > 0 && peek[0] == '[' {
 		s.handleBatch(w, r)
@@ -48,7 +49,7 @@ func (s *{{ .ServerStructDeclaration.Name }}) handleHTTP(w http.ResponseWriter, 
 }
 
 // handleSingle decodes and runs one JSON-RPC request.
-func (s *{{ .ServerStructDeclaration.Name }}) handleSingle(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleSingle(w http.ResponseWriter, r *http.Request) {
 	var req jsonrpc.RawRequest
 	if err := s.decoder(r).Decode(&req); err != nil {
 		// A request that cannot be decoded receives the JSON-RPC parse error.
@@ -60,10 +61,9 @@ func (s *{{ .ServerStructDeclaration.Name }}) handleSingle(w http.ResponseWriter
 	}
 	s.processRequest(r.Context(), r, &req, w)
 }
-{{- end }}
 
 // handleBatch handles an array of JSON-RPC values and writes the required responses.
-func (s *{{ .ServerStructDeclaration.Name }}) handleBatch(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleBatch(w http.ResponseWriter, r *http.Request) {
 	var reqs []jsonrpc.RawRequest
 	if err := s.decoder(r).Decode(&reqs); err != nil {
 		// An array that cannot be decoded receives the JSON-RPC parse error.
@@ -81,16 +81,16 @@ func (s *{{ .ServerStructDeclaration.Name }}) handleBatch(w http.ResponseWriter,
 		}
 		return
 	}
-	
+
 	// Write every response into one JSON array.
 	w.Header().Set("Content-Type", "application/json")
-	writer := &{{ .BatchWriter.Name }}{Writer: w}
-	
+	writer := &batchWriter{Writer: w}
+
 	for _, req := range reqs {
 		// The writer inserts the array separators around each response.
 		s.processRequest(r.Context(), r, &req, writer)
 	}
-	
+
 	// Write the closing bracket only when at least one request produced a response.
 	if writer.written {
 		if _, err := writer.Writer.Write([]byte{']'}); err != nil {
@@ -100,7 +100,7 @@ func (s *{{ .ServerStructDeclaration.Name }}) handleBatch(w http.ResponseWriter,
 }
 
 // processRequest validates the JSON-RPC version and method, then calls the matching handler.
-func (s *{{ .ServerStructDeclaration.Name }}) processRequest(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) {
+func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) {
 	if req.Invalid || req.JSONRPC != "2.0" {
 		s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 		return
@@ -112,39 +112,62 @@ func (s *{{ .ServerStructDeclaration.Name }}) processRequest(ctx context.Context
 	}
 
 	switch req.Method {
-	{{- range .Endpoints }}
-	{{- if not .SSE }}
-	case {{ printf "%q" .Method.Name }}:
-		{{- if .IsJSONRPCNotification }}
+	case "with_payload":
 		if req.HasID {
 			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 			return
 		}
-		{{- else }}
-		if !req.HasID || req.ID == nil {
-			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
-			return
+		if err := s.WithPayload(ctx, r, req, w); err != nil {
+			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", "with_payload", err))
 		}
-		{{- end }}
-		if err := s.{{ .Method.VarName }}(ctx, r, req, w); err != nil {
-			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", {{ printf "%q" .Method.Name }}, err))
-		}
-	{{- else }}
-	case {{ printf "%q" .Method.Name }}:
-		{{- if .IsJSONRPCNotification }}
+	case "without_payload":
 		if req.HasID {
 			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 			return
 		}
-		{{- else }}
+		if err := s.WithoutPayload(ctx, r, req, w); err != nil {
+			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", "without_payload", err))
+		}
+	case "ordinary_void":
 		if !req.HasID || req.ID == nil {
 			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
 			return
 		}
-		{{- end }}
-		s.encodeJSONRPCError(ctx, w, req, jsonrpc.MethodNotFound, "Method is not available in a batch request", nil)
-	{{- end }}
-	{{- end }}
+		if err := s.OrdinaryVoid(ctx, r, req, w); err != nil {
+			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", "ordinary_void", err))
+		}
+	case "required_id":
+		if !req.HasID || req.ID == nil {
+			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
+			return
+		}
+		if err := s.RequiredID(ctx, r, req, w); err != nil {
+			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", "required_id", err))
+		}
+	case "optional_id":
+		if !req.HasID || req.ID == nil {
+			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
+			return
+		}
+		if err := s.OptionalID(ctx, r, req, w); err != nil {
+			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", "optional_id", err))
+		}
+	case "defaulted_id":
+		if !req.HasID || req.ID == nil {
+			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
+			return
+		}
+		if err := s.DefaultedID(ctx, r, req, w); err != nil {
+			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", "defaulted_id", err))
+		}
+	case "validated_id":
+		if !req.HasID || req.ID == nil {
+			s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Invalid request", nil)
+			return
+		}
+		if err := s.ValidatedID(ctx, r, req, w); err != nil {
+			s.errhandler(ctx, w, fmt.Errorf("handler error for %s: %w", "validated_id", err))
+		}
 	default:
 		if req.HasID {
 			s.encodeJSONRPCError(ctx, w, req, jsonrpc.MethodNotFound, "Method not found", nil)
@@ -152,29 +175,30 @@ func (s *{{ .ServerStructDeclaration.Name }}) processRequest(ctx context.Context
 	}
 }
 
-{{ printf "%s inserts JSON array separators around responses from one request array." .BatchWriter.Name | comment }}
-type {{ .BatchWriter.Name }} struct {
+// batchWriter inserts JSON array separators around responses from one request
+// array.
+type batchWriter struct {
 	io.Writer
-	header http.Header
+	header     http.Header
 	statusCode int
-	written bool
+	written    bool
 }
 
-func (rb *{{ .BatchWriter.Name }}) Header() http.Header {
+func (rb *batchWriter) Header() http.Header {
 	if rb.header == nil {
 		rb.header = make(http.Header)
 	}
 	return rb.header
 }
 
-func (rb *{{ .BatchWriter.Name }}) WriteHeader(statusCode int) {
+func (rb *batchWriter) WriteHeader(statusCode int) {
 	if rb.written {
 		return
 	}
 	rb.statusCode = statusCode
 }
 
-func (rb *{{ .BatchWriter.Name }}) Write(data []byte) (int, error) {
+func (rb *batchWriter) Write(data []byte) (int, error) {
 	separator := byte(',')
 	if !rb.written {
 		separator = '['

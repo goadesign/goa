@@ -44,7 +44,7 @@ Adding a new test requires only a small addition to the scenarios file; no Go co
   transport: "http"
   request:
     params: "hello world"  # What to send
-    id: 123                # Request ID (omit for notifications)
+    id: 123                # Required unless the method name ends in _notify
   expect:
     result: "hello world"  # Echo returns the same value
     id: 123                # Response has same ID
@@ -134,12 +134,12 @@ SSE tests need both:
 - `request`: Initiates the SSE connection
 - `sequence`: Defines expected stream events
 
-### Notifications Have No ID
-For fire-and-forget messages:
+### Declared Notifications Have No ID
+For a fire-and-forget method whose name ends in `_notify`:
 ```yaml
 request:
   params: "notification"
-  # No id field = notification
+  # A declared notification must omit the id field.
 expect:
   no_response: true
 ```
@@ -529,7 +529,7 @@ Describes a single JSON-RPC request.
 
 | Key | Type | Description |
 | :--- | :--- | :--- |
-| `id` | `any` | The JSON-RPC request ID. If omitted, the request is treated as a notification. |
+| `id` | `any` | The JSON-RPC request ID. It is required and non-null unless the generated method is declared as a notification with the `_notify` suffix. Declared notifications must omit it. |
 | `params` | `array` or `object` | The parameters for the method call. See **Parameter Structures** below. |
 | `method` | `string` | An optional override for the JSON-RPC `method` field in the payload. Defaults to the scenario's `method` value. |
 

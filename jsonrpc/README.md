@@ -108,12 +108,12 @@ Payload(func() {
 ```
 
 An ID mapping must be one direct string field. A required field with no default
-rejects an absent or null incoming ID. An optional field with no default is a
-pointer: nil makes the generated client create an ID, while a non-nil value is
-sent exactly, including an empty string. A field with an authored default is a
-value; the client sends that value and the server uses the default when the
-incoming request has no ID. Without a mapped field, the client generates an
-ID. The generated server sets a mapped field before calling the service.
+is a value. An optional field with no default is a pointer: nil makes the
+generated client create an ID, while a non-nil value is sent exactly, including
+an empty string. A field with an authored default is a value, and the client
+sends that value. Without a mapped field, the client generates an ID. The
+generated server requires a non-null ID for every ordinary method and sets a
+mapped field before calling the service.
 
 Results cannot declare an `ID` field. The transport owns correlation and copies
 the exact incoming ID, including its JSON type, into every response.
@@ -124,11 +124,12 @@ repeat the string ID sent by that client call. Parse errors and invalid-request
 errors may use a null ID because the server may be unable to recover the
 request ID from malformed input. A response for a different call is rejected.
 
-Servers still accept a notification for any JSON-RPC method because the
-protocol defines notification per incoming message. The method runs normally,
-but the server does not write a JSON-RPC response. A method whose payload marks
-its ID field as required rejects such a notification because the service
-payload cannot be constructed without an ID.
+The method declaration and incoming message must agree. An ordinary method
+rejects a missing or null ID with `-32600` before it decodes parameters or calls
+the service. A method declared with `Notification()` rejects every present ID,
+including null, with `-32600`. A valid declared notification omits the ID, runs
+the service, and never writes a JSON-RPC response. Empty string IDs remain valid
+for ordinary methods.
 
 ## Server streaming with SSE
 
@@ -187,11 +188,10 @@ transport writes one terminal event:
 - success writes `result: null`;
 - a returned error writes a JSON-RPC error.
 
-A request without an ID is a JSON-RPC notification and receives no HTTP output.
-The service still runs, and its `Send` calls still encode their values so the
-service observes the same success or failure, but the transport discards those
-bytes. Decode, encode, and service failures still reach the configured server
-error handler for logging.
+Server-streaming methods are ordinary methods and require a non-null ID. A
+missing or null ID receives an Invalid Request event with code `-32600`, and
+the service does not start. The DSL does not allow a method declared with
+`Notification()` to stream.
 
 The generated client returns streamed notification values from `Recv`. After a
 successful terminal response it returns `io.EOF`; after an error response it
@@ -290,10 +290,11 @@ decoded values that fail a field or view rule as `validation_error`.
 
 ## Batch requests
 
-Unary JSON-RPC methods accept a JSON array of requests and notifications. The
-generated server dispatches each item and returns an array containing responses
-only for items with an ID. An all-notification batch receives no JSON-RPC
-response body.
+Unary JSON-RPC methods accept a JSON array of requests and declared
+notifications. The generated server checks each item against its method
+declaration and returns an array containing ordinary responses and contract
+errors. Valid declared notifications produce no array item. A batch containing
+only valid declared notifications receives no JSON-RPC response body.
 
 SSE streams are opened by one request and are not batch operations.
 

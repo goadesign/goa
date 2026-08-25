@@ -57,6 +57,16 @@ func TestNotificationClientGeneratedSource(t *testing.T) {
 	require.Contains(t, serverSource, "MakeSuccessResponse(req.ID,")
 	testutil.AssertGo(t, "testdata/golden/notification_server.go.golden", serverSource)
 
+	var dispatchSource string
+	for _, file := range plan.ServerFiles() {
+		if filepath.Base(file.Path) == "server.go" {
+			dispatchSource = "package server\n\n" + goacodegen.SectionsCode(t, file.Section("jsonrpc-server-handler"))
+			break
+		}
+	}
+	require.NotEmpty(t, dispatchSource)
+	testutil.AssertGo(t, "testdata/golden/notification_dispatch.go.golden", dispatchSource)
+
 	var decoderSource string
 	for _, file := range plan.ServerFiles() {
 		if filepath.Base(file.Path) == "encode_decode.go" {

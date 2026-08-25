@@ -12,31 +12,29 @@ func {{ .HandlerInit }}(
 	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
 		ctx = context.WithValue(ctx, goa.MethodKey, {{ printf "%q" .Method.Name }})
 		ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
-		outputWriter := w
-		if !req.HasID {
-			// A notification runs the same service and error reporting code without
-			// sending a response.
-			outputWriter = &{{ noOutputWriterName }}{header: make(http.Header)}
-		}
+		{{- if .IsJSONRPCNotification }}
+		// A declared notification reports failures without writing an HTTP response.
+		outputWriter := &{{ noOutputWriterName }}{header: make(http.Header)}
+		{{- end }}
 {{- if isSSEEndpoint . }}
 		// Create the stream before decoding so request failures can be sent on the
 		// same HTTP response.
         strm := &{{ .SSE.StructDeclaration.Name }}{
             {{ sseStreamName }}: {{ sseStreamName }}{
-				w:       outputWriter,
+				w:       {{ if .IsJSONRPCNotification }}outputWriter{{ else }}w{{ end }},
                 encoder: encoder,
             },
         }
     {{- if .Payload.Ref }}
         decodeParams := {{ .RequestDecoderDeclaration.Name }}(mux, decoder)
-        params, err := decodeParams(r, req)
+		params, err := decodeParams(r, req)
 		if err != nil {
-			if req.HasID {
-				return strm.sendError(ctx, req.ID, jsonrpc.InvalidParams, err.Error(), nil)
-			} else {
-				errhandler(ctx, outputWriter, fmt.Errorf("failed to decode parameters: %w", err))
-			}
+			{{- if .IsJSONRPCNotification }}
+			errhandler(ctx, outputWriter, fmt.Errorf("failed to decode parameters: %w", err))
 			return nil
+			{{- else }}
+			return strm.sendError(ctx, req.ID, jsonrpc.InvalidParams, err.Error(), nil)
+			{{- end }}
         }
 	{{- end }}
         v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
@@ -51,10 +49,10 @@ func {{ .HandlerInit }}(
 		_, err := endpoint(ctx, v)
 		{{- end }}
 		if err != nil {
-			if !req.HasID {
+			{{- if .IsJSONRPCNotification }}
 				errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
 				return nil
-			}
+			{{- else }}
 			{{- if .Errors }}
 			var named goa.GoaErrorNamer
 			if errors.As(err, &named) {
@@ -72,22 +70,23 @@ func {{ .HandlerInit }}(
 			}
 			{{- end }}
 			return strm.sendError(ctx, req.ID, jsonrpc.InternalError, err.Error(), nil)
+			{{- end }}
 		}
-		if !req.HasID {
+		{{- if .IsJSONRPCNotification }}
 			return nil
-		}
-
+		{{- else }}
 		response := jsonrpc.MakeSuccessResponse(req.ID, nil)
 		return strm.sendSSEEvent(ctx, response, nil, nil, nil)
+		{{- end }}
 {{- else }}
 	{{- if .Payload.Ref }}
 	params, err := decodeParams(r, req)
 		if err != nil {
-			if req.HasID {
-				{{ encodeErrorName }}(ctx, w, req, jsonrpc.InvalidParams, err.Error(), nil, encoder, errhandler)
-			} else {
-				errhandler(ctx, outputWriter, fmt.Errorf("failed to decode parameters: %w", err))
-			}
+			{{- if .IsJSONRPCNotification }}
+			errhandler(ctx, outputWriter, fmt.Errorf("failed to decode parameters: %w", err))
+			{{- else }}
+			{{ encodeErrorName }}(ctx, w, req, jsonrpc.InvalidParams, err.Error(), nil, encoder, errhandler)
+			{{- end }}
 			return nil
 		}
 	{{- end }}
@@ -101,7 +100,9 @@ func {{ .HandlerInit }}(
 	res, err := endpoint(ctx, {{ if .Payload.Ref }}params{{ else }}nil{{ end }})
 	{{- end }}
 		if err != nil {
-			if req.HasID {
+			{{- if .IsJSONRPCNotification }}
+			errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
+			{{- else }}
 				{{- if .Errors }}
 				var en goa.GoaErrorNamer
 				if errors.As(err, &en) {
@@ -120,16 +121,13 @@ func {{ .HandlerInit }}(
 				}
 				{{- end }}
 				{{ encodeErrorName }}(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
-			} else {
-				errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
-			}
+			{{- end }}
 			return nil
 		}
-		if !req.HasID {
-			// A notification has no ID field and receives no response.
+		{{- if .IsJSONRPCNotification }}
+			// A declared notification receives no response.
 			return nil
-		}
-
+		{{- else }}
 		{{- if not .Result.Ref }}
 		// A method with no result returns a JSON null result.
 		response := jsonrpc.MakeSuccessResponse(req.ID, nil)
@@ -158,6 +156,7 @@ func {{ .HandlerInit }}(
 			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
 		}
 		return nil
+		{{- end }}
 		{{- end }}
 {{- end }}
 	}
