@@ -123,6 +123,18 @@ func TestEvaluateAttachedServicesChecksAllBeforeFinishing(t *testing.T) {
 	require.Empty(t, firstTransport.Paths)
 }
 
+func TestEvaluateAttachedServicesRejectsMixedHTTPRouteCollision(t *testing.T) {
+	root := newRootExprForTest("owner_header")
+	_, _, httpEndpoint := attachTestService(root, "ordinary")
+	httpEndpoint.Routes[0].Path = "/tasks/{taskID}"
+	jsonrpcService := attachTestJSONRPCService(root, "generated", "/tasks/{id}")
+
+	err := root.EvaluateAttachedServices([]*ServiceExpr{jsonrpcService})
+
+	require.ErrorContains(t, err, "ordinary HTTP route POST \"/tasks/{taskID}\"")
+	require.ErrorContains(t, err, "JSON-RPC route POST \"/tasks/{id}\"")
+}
+
 func TestEvaluateAttachedServicesRunsDifferentRootsTogether(t *testing.T) {
 	originalRoot := Root
 	t.Cleanup(func() {
@@ -184,6 +196,28 @@ func attachTestService(root *RootExpr, name string) (*ServiceExpr, *HTTPServiceE
 		Endpoint: endpoint,
 	}}
 	return service, transport, endpoint
+}
+
+// attachTestJSONRPCService adds one JSON-RPC method at routePath.
+func attachTestJSONRPCService(root *RootExpr, name, routePath string) *ServiceExpr {
+	service := &ServiceExpr{Name: name}
+	method := &MethodExpr{
+		Name:    "run",
+		Payload: &AttributeExpr{Type: Empty},
+		Result:  &AttributeExpr{Type: Empty},
+		Service: service,
+		Stream:  NoStreamKind,
+	}
+	service.Methods = []*MethodExpr{method}
+	root.Services = append(root.Services, service)
+	transport := root.API.JSONRPC.ServiceFor(service, &root.API.JSONRPC.HTTPExpr)
+	endpoint := transport.EndpointFor(method)
+	endpoint.Routes = []*RouteExpr{{
+		Method:   "POST",
+		Path:     routePath,
+		Endpoint: endpoint,
+	}}
+	return service
 }
 
 // attachTestGRPCServiceWithAPIError adds one gRPC method that uses an error

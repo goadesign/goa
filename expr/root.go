@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"slices"
 	"sort"
+	"strings"
 
 	"goa.design/goa/v3/eval"
 	goa "goa.design/goa/v3/pkg"
@@ -55,6 +56,13 @@ type (
 
 		// External is an instance of the type being converted from or to.
 		External any
+	}
+
+	// mountedHTTPRoute identifies one final route and the service that owns it.
+	mountedHTTPRoute struct {
+		service string
+		route   *RouteExpr
+		path    string
 	}
 )
 
@@ -223,8 +231,94 @@ func (r *RootExpr) Validate() error {
 	verr.Merge(r.validateRelocatedUserTypes())
 	verr.Merge(validateTypeMappings("conversion", r.Conversions))
 	verr.Merge(validateTypeMappings("creation", r.Creations))
+	if r.API != nil {
+		verr.Merge(r.validateSharedHTTPRoutes())
+	}
 
 	return &verr
+}
+
+// validateSharedHTTPRoutes rejects ordinary HTTP and JSON-RPC routes that
+// would replace one another when mounted on the same server.
+func (r *RootExpr) validateSharedHTTPRoutes() *eval.ValidationErrors {
+	var verr eval.ValidationErrors
+	if r.API.HTTP == nil || r.API.JSONRPC == nil {
+		return &verr
+	}
+
+	servers := r.API.Servers
+	if len(servers) == 0 {
+		// Goa creates this server after validation when the design does not
+		// declare one. It hosts every service.
+		servers = []*ServerExpr{{Name: r.API.Name}}
+	}
+
+	for _, server := range servers {
+		httpRoutes := routesMountedOnServer(server, r.API.HTTP.Services)
+		jsonrpcRoutes := routesMountedOnServer(server, r.API.JSONRPC.Services)
+		for _, httpRoute := range httpRoutes {
+			for _, jsonrpcRoute := range jsonrpcRoutes {
+				if httpRoute.route.Method != jsonrpcRoute.route.Method ||
+					routePatternWithoutParameterNames(httpRoute.path) !=
+						routePatternWithoutParameterNames(jsonrpcRoute.path) {
+					continue
+				}
+				verr.Add(
+					jsonrpcRoute.route,
+					"server %q mounts ordinary HTTP route %s %q from service %q "+
+						"and JSON-RPC route %s %q from service %q; both routes match the same requests",
+					server.Name,
+					httpRoute.route.Method,
+					httpRoute.path,
+					httpRoute.service,
+					jsonrpcRoute.route.Method,
+					jsonrpcRoute.path,
+					jsonrpcRoute.service,
+				)
+			}
+		}
+	}
+	return &verr
+}
+
+// routesMountedOnServer returns every final route owned by services mounted on
+// server.
+func routesMountedOnServer(server *ServerExpr, services []*HTTPServiceExpr) []mountedHTTPRoute {
+	var routes []mountedHTTPRoute
+	for _, service := range services {
+		if !serverHostsService(server, service.Name()) {
+			continue
+		}
+		for _, endpoint := range service.HTTPEndpoints {
+			for _, route := range endpoint.Routes {
+				for _, routePath := range route.FullPaths() {
+					routes = append(routes, mountedHTTPRoute{
+						service: service.Name(),
+						route:   route,
+						path:    routePath,
+					})
+				}
+			}
+		}
+	}
+	return routes
+}
+
+// serverHostsService reports whether server mounts service. An empty service
+// list means that the server mounts every service in the design.
+func serverHostsService(server *ServerExpr, service string) bool {
+	return len(server.Services) == 0 || slices.Contains(server.Services, service)
+}
+
+// routePatternWithoutParameterNames returns the path form used to detect
+// router replacement. Parameter names do not change which requests match.
+func routePatternWithoutParameterNames(routePath string) string {
+	return HTTPWildcardRegex.ReplaceAllStringFunc(routePath, func(wildcard string) string {
+		if strings.HasPrefix(wildcard, "/{*") {
+			return "/{*wildcard}"
+		}
+		return "/{parameter}"
+	})
 }
 
 // validateTypeMappings rejects repeated declarations that would generate the

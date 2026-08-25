@@ -167,6 +167,29 @@ func (p *Plan) MethodPayloadLayout(method *expr.MethodExpr) (*codegen.GoTypePlan
 	return nil, fmt.Errorf("service method %q is not part of this plan", method.Name)
 }
 
+// MethodResultLayout returns the Go fields stored by method's result. For a
+// named result, it returns the definition containing those fields instead of
+// the outer reference to the named type.
+func (p *Plan) MethodResultLayout(method *expr.MethodExpr) (*codegen.GoTypePlan, error) {
+	for _, service := range p.facts.services {
+		facts := service.methodByExpr[method]
+		if facts == nil {
+			continue
+		}
+		if facts.result == nil || facts.result.layout == nil {
+			return nil, fmt.Errorf("service method %q does not have a result", method.Name)
+		}
+		if facts.result.definition != nil {
+			return facts.result.definition, nil
+		}
+		return facts.result.layout, nil
+	}
+	if method == nil {
+		return nil, fmt.Errorf("service method is not part of this plan")
+	}
+	return nil, fmt.Errorf("service method %q is not part of this plan", method.Name)
+}
+
 // StreamingResultLayout returns the Go type layout used by method's stream.
 // An explicitly empty streaming result uses the ordinary result layout, which
 // is the type implemented by the generated client and server stream methods.

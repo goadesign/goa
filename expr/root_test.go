@@ -1,5 +1,5 @@
-// This file verifies root validation, including exact-origin dependency
-// traversal for explicitly relocated user types.
+// This file verifies root validation, including shared HTTP routes and
+// exact-origin dependency traversal for explicitly relocated user types.
 package expr
 
 import (
@@ -103,6 +103,111 @@ func TestRootExprValidate(t *testing.T) {
 	}
 }
 
+func TestRootExprValidateMixedHTTPRoutes(t *testing.T) {
+	tests := []struct {
+		name          string
+		httpMethod    string
+		httpPath      string
+		jsonrpcMethod string
+		jsonrpcPath   string
+		servers       []*ServerExpr
+		wantError     bool
+	}{
+		{
+			name:          "same route on the default server",
+			httpMethod:    "POST",
+			httpPath:      "/tasks",
+			jsonrpcMethod: "POST",
+			jsonrpcPath:   "/tasks",
+			wantError:     true,
+		},
+		{
+			name:          "wildcards with different names",
+			httpMethod:    "POST",
+			httpPath:      "/tasks/{taskID}",
+			jsonrpcMethod: "POST",
+			jsonrpcPath:   "/tasks/{id}",
+			wantError:     true,
+		},
+		{
+			name:          "catch-all wildcards with different names",
+			httpMethod:    "POST",
+			httpPath:      "/assets/{*assetPath}",
+			jsonrpcMethod: "POST",
+			jsonrpcPath:   "/assets/{*path}",
+			wantError:     true,
+		},
+		{
+			name:          "different wildcard kinds",
+			httpMethod:    "POST",
+			httpPath:      "/assets/{asset}",
+			jsonrpcMethod: "POST",
+			jsonrpcPath:   "/assets/{*path}",
+		},
+		{
+			name:          "different methods",
+			httpMethod:    "GET",
+			httpPath:      "/tasks",
+			jsonrpcMethod: "POST",
+			jsonrpcPath:   "/tasks",
+		},
+		{
+			name:          "different paths",
+			httpMethod:    "POST",
+			httpPath:      "/tasks",
+			jsonrpcMethod: "POST",
+			jsonrpcPath:   "/rpc",
+		},
+		{
+			name:          "same route on different servers",
+			httpMethod:    "POST",
+			httpPath:      "/tasks",
+			jsonrpcMethod: "POST",
+			jsonrpcPath:   "/tasks",
+			servers: []*ServerExpr{
+				{Name: "http", Services: []string{"http_service"}},
+				{Name: "jsonrpc", Services: []string{"jsonrpc_service"}},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := mixedHTTPRoot(
+				test.httpMethod,
+				test.httpPath,
+				test.jsonrpcMethod,
+				test.jsonrpcPath,
+				test.servers,
+			)
+			err := root.Validate()
+			var validationErrors *eval.ValidationErrors
+			errors.As(err, &validationErrors)
+			if !test.wantError {
+				if len(validationErrors.Errors) > 0 {
+					t.Errorf("expected routes to coexist, got %v", err)
+				}
+				return
+			}
+			if len(validationErrors.Errors) == 0 {
+				t.Errorf("expected conflicting routes to be rejected")
+				return
+			}
+			for _, text := range []string{
+				"server \"test\"",
+				"ordinary HTTP route " + test.httpMethod,
+				test.httpPath,
+				"JSON-RPC route " + test.jsonrpcMethod,
+				test.jsonrpcPath,
+			} {
+				if !strings.Contains(err.Error(), text) {
+					t.Errorf("expected error to contain %q, got %v", text, err)
+				}
+			}
+		})
+	}
+}
+
 // TestRootExprValidateRejectsDuplicateTypeMappings catches two identical
 // conversion or creation declarations that would emit the same receiver method.
 func TestRootExprValidateRejectsDuplicateTypeMappings(t *testing.T) {
@@ -197,4 +302,40 @@ func TestMetaExpr_Last(t *testing.T) {
 			}
 		})
 	}
+}
+
+// mixedHTTPRoot returns a design with one ordinary HTTP route and one
+// JSON-RPC route.
+func mixedHTTPRoot(
+	httpMethod, httpPath, jsonrpcMethod, jsonrpcPath string,
+	servers []*ServerExpr,
+) *RootExpr {
+	api := NewAPIExpr("test", func() {})
+	api.Servers = servers
+	root := &RootExpr{API: api}
+
+	addMixedHTTPRoute(root, api.HTTP, "http_service", httpMethod, httpPath)
+	addMixedHTTPRoute(root, &api.JSONRPC.HTTPExpr, "jsonrpc_service", jsonrpcMethod, jsonrpcPath)
+	return root
+}
+
+// addMixedHTTPRoute adds one service method to transport for route validation.
+func addMixedHTTPRoute(root *RootExpr, transport *HTTPExpr, serviceName, method, routePath string) {
+	service := &ServiceExpr{Name: serviceName}
+	methodExpr := &MethodExpr{
+		Name:    "run",
+		Payload: &AttributeExpr{Type: Empty},
+		Result:  &AttributeExpr{Type: Empty},
+		Service: service,
+		Stream:  NoStreamKind,
+	}
+	service.Methods = []*MethodExpr{methodExpr}
+	root.Services = append(root.Services, service)
+	httpService := transport.ServiceFor(service, transport)
+	endpoint := httpService.EndpointFor(methodExpr)
+	endpoint.Routes = []*RouteExpr{{
+		Method:   method,
+		Path:     routePath,
+		Endpoint: endpoint,
+	}}
 }
