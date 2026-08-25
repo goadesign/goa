@@ -1,6 +1,8 @@
 package codegen
 
 import (
+	"os"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -8,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"goa.design/goa/v3/codegen"
+	. "goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 )
 
@@ -229,6 +232,133 @@ func TestProtoBufMessageDefJSONNameOptionOneOf(t *testing.T) {
 	if !strings.Contains(def, `json_name = "cat"`) {
 		t.Fatalf("expected json_name option in oneof, got %q", def)
 	}
+}
+
+func TestProtoBufMessageDefOneOfUsesAttributeName(t *testing.T) {
+	tests := []struct {
+		name          string
+		unionName     string
+		members       []string
+		wantOneof     string
+		wantGoField   string
+		unwantedOneof string
+	}{
+		{
+			name:          "custom service name",
+			unionName:     "subject",
+			members:       []string{"equipment", "facility"},
+			wantOneof:     "subject",
+			wantGoField:   "Subject",
+			unwantedOneof: "alarm_info_subject",
+		},
+		{
+			name:        "member name collision",
+			unionName:   "subject",
+			members:     []string{"subject", "facility"},
+			wantOneof:   "subject_oneof",
+			wantGoField: "SubjectOneof",
+		},
+		{
+			name:        "repeated member name collision",
+			unionName:   "subject",
+			members:     []string{"subject", "subject_oneof", "facility"},
+			wantOneof:   "subject_oneof_oneof",
+			wantGoField: "SubjectOneofOneof",
+		},
+		{
+			name:        "generated method collision",
+			unionName:   "reset",
+			members:     []string{"value"},
+			wantOneof:   "reset",
+			wantGoField: "Reset_",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := codegen.RunDSL(t, func() {
+				Type("Alarm", func() {
+					OneOf(test.unionName, func() {
+						TypeName("AlarmInfoSubject")
+						for i, member := range test.members {
+							Field(i+1, member, String)
+						}
+					})
+				})
+			})
+			alarm := root.UserType("Alarm")
+			subject := alarm.Attribute().Find(test.unionName)
+			require.Equal(t, "AlarmInfoSubject", subject.Type.Name())
+
+			sd := &ServiceData{Scope: codegen.NewNameScope()}
+			def := protoBufMessageDef(alarm.Attribute(), sd)
+
+			require.Contains(t, def, "oneof "+test.wantOneof+" {")
+			if test.unwantedOneof != "" {
+				require.NotContains(t, def, "oneof "+test.unwantedOneof+" {")
+			}
+
+			proto := "syntax = \"proto3\";\npackage test;\noption go_package = \"example.com/test;test\";\nmessage Alarm" + def
+			fpath := codegen.CreateTempFile(t, proto)
+			require.NoError(t, protoc(defaultProtocCmd, fpath, nil))
+			generated, err := os.ReadFile(fpath + ".pb.go")
+			require.NoError(t, err)
+			require.Regexp(
+				t,
+				regexp.MustCompile(`\n\t`+regexp.QuoteMeta(test.wantGoField)+`\s+isAlarm_`),
+				string(generated),
+			)
+
+			source := makeProtoBufMessage(expr.DupAtt(alarm.Attribute()), alarm.Name(), sd)
+			transform, _, err := protoBufTransform(
+				source,
+				alarm.Attribute(),
+				"source",
+				"target",
+				protoBufTypeContext("test", sd.Scope, true),
+				serviceTypeContext("test", sd.Scope),
+				false,
+				true,
+			)
+			require.NoError(t, err)
+			code := codegen.FormatTestCode(t, "package test\nfunc transform() {\n"+transform+"}")
+			require.Contains(t, code, "source."+test.wantGoField)
+			require.NotContains(t, code, "source.AlarmInfoSubject")
+
+			transform, _, err = protoBufTransform(
+				alarm.Attribute(),
+				source,
+				"source",
+				"target",
+				serviceTypeContext("test", sd.Scope),
+				protoBufTypeContext("test", sd.Scope, true),
+				true,
+				true,
+			)
+			require.NoError(t, err)
+			code = codegen.FormatTestCode(t, "package test\nfunc transform() {\n"+transform+"}")
+			require.Contains(t, code, "target."+test.wantGoField)
+			require.NotContains(t, code, "target.AlarmInfoSubject")
+		})
+	}
+}
+
+func TestProtoBufMessageDefReservations(t *testing.T) {
+	root := codegen.RunDSL(t, func() {
+		Type("Activation", func() {
+			Meta("rpc:reserved:number", "20", "3", "15")
+			Meta("rpc:reserved:name", "linked_control_point_id", "deployment_id")
+			Field(1, "id", String)
+		})
+	})
+	activation := root.UserType("Activation")
+	sd := &ServiceData{Scope: codegen.NewNameScope()}
+	def := protoBufMessageDef(activation.Attribute(), sd)
+	require.Contains(t, def, "reserved 3, 15, 20;")
+	require.Contains(t, def, `reserved "deployment_id", "linked_control_point_id";`)
+
+	proto := "syntax = \"proto3\";\npackage test;\noption go_package = \"example.com/test;test\";\nmessage Activation" + def
+	fpath := codegen.CreateTempFile(t, proto)
+	require.NoError(t, protoc(defaultProtocCmd, fpath, nil))
 }
 
 func TestMakeProtoBufMessageMarksWrappers(t *testing.T) {

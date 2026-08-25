@@ -17,6 +17,10 @@ type (
 	protoBufScope struct {
 		scope *codegen.NameScope
 	}
+
+	// protoBufGoFieldNames tracks names occupied by generated message methods,
+	// fields, and getters while visiting one protobuf message.
+	protoBufGoFieldNames map[string]bool
 )
 
 const (
@@ -29,6 +33,15 @@ const (
 	// used by isWrappedAttr and unwrapAttr to identify wrapper messages
 	// deterministically.
 	wrappedAttrMeta = "grpc:wrapped"
+
+	// protoBufGoFieldNameMeta records the Go field name selected by
+	// protoc-gen-go after resolving message method and getter conflicts.
+	protoBufGoFieldNameMeta = "grpc:protobuf:go:field:name"
+
+	// protoBufReservedNumberMeta and protoBufReservedNameMeta let an owning Goa
+	// type preserve removed protobuf tags and field names across regeneration.
+	protoBufReservedNumberMeta = "rpc:reserved:number"
+	protoBufReservedNameMeta   = "rpc:reserved:name"
 )
 
 // Name returns the protocol buffer type name.
@@ -45,6 +58,12 @@ func (p *protoBufScope) Ref(att *expr.AttributeExpr, pkg string) string {
 // NOTE: protoc does not care about common initialisms like api -> API so we
 // first transform the name into snake case to end up with Api.
 func (*protoBufScope) Field(att *expr.AttributeExpr, name string, firstUpper bool) string {
+	if expr.IsUnion(att.Type) {
+		if fieldName, ok := att.Meta[protoBufGoFieldNameMeta]; ok && len(fieldName) > 0 {
+			return fieldName[0]
+		}
+		name = protoBufUnionName(name, expr.AsUnion(att.Type))
+	}
 	return protoBufifyAtt(att, codegen.SnakeCase(name), firstUpper)
 }
 
@@ -96,6 +115,7 @@ func makeProtoBufMessage(att *expr.AttributeExpr, tname string, sd *ServiceData)
 	}
 	n := ""
 	makeProtoBufMessageR(att, &n, sd, make(map[string]struct{}))
+	planProtoBufGoFieldNames(att, make(map[string]struct{}))
 	return att
 }
 
@@ -149,6 +169,103 @@ func makeProtoBufMessageR(att *expr.AttributeExpr, tname *string, sd *ServiceDat
 			makeProtoBufMessageR(nat.Attribute, tname, sd, seen)
 		}
 	}
+}
+
+// planProtoBufGoFieldNames walks every generated protobuf message and records
+// the field names that protoc-gen-go will emit. Transforms consume these names
+// instead of independently guessing from one attribute at a time.
+func planProtoBufGoFieldNames(att *expr.AttributeExpr, seen map[string]struct{}) {
+	if ut, ok := att.Type.(expr.UserType); ok {
+		if _, exists := seen[ut.ID()]; exists {
+			return
+		}
+		seen[ut.ID()] = struct{}{}
+		planProtoBufGoFieldNames(ut.Attribute(), seen)
+		return
+	}
+	switch {
+	case expr.IsArray(att.Type):
+		planProtoBufGoFieldNames(expr.AsArray(att.Type).ElemType, seen)
+	case expr.IsMap(att.Type):
+		planProtoBufGoFieldNames(expr.AsMap(att.Type).ElemType, seen)
+	case expr.IsUnion(att.Type):
+		planProtoBufUnionGoFieldNames(att.Type.Name(), att, expr.AsUnion(att.Type), seen)
+	case expr.IsObject(att.Type):
+		usedNames := newProtoBufGoFieldNames()
+		for _, nat := range *expr.AsObject(att.Type) {
+			if union := expr.AsUnion(nat.Attribute.Type); union != nil {
+				planProtoBufUnionMemberGoFieldNames(nat.Name, nat.Attribute, union, usedNames, seen)
+				continue
+			}
+			usedNames.makeUnique(protoBufRawGoFieldName(nat.Attribute, nat.Name), true)
+			planProtoBufGoFieldNames(nat.Attribute, seen)
+		}
+	}
+}
+
+// planProtoBufUnionGoFieldNames handles a message whose complete body is one
+// union, such as a standalone result type.
+func planProtoBufUnionGoFieldNames(name string, att *expr.AttributeExpr, union *expr.Union, seen map[string]struct{}) {
+	planProtoBufUnionMemberGoFieldNames(name, att, union, newProtoBufGoFieldNames(), seen)
+}
+
+// planProtoBufUnionMemberGoFieldNames flattens oneof members into their
+// containing message in declaration order, then reserves the oneof interface
+// field after its first member exactly as protoc-gen-go does.
+func planProtoBufUnionMemberGoFieldNames(name string, att *expr.AttributeExpr, union *expr.Union, usedNames *protoBufGoFieldNames, seen map[string]struct{}) {
+	oneofName, memberNames := protoBufUnionNames(name, union)
+	for i, nat := range union.Values {
+		usedNames.makeUnique(protoBufify(memberNames[i], true, false), true)
+		if i == 0 {
+			setProtoBufGoFieldName(
+				att,
+				usedNames.makeUnique(protoBufify(oneofName, true, false), false),
+			)
+		}
+		planProtoBufGoFieldNames(nat.Attribute, seen)
+	}
+}
+
+// protoBufRawGoFieldName computes the initial Go name before message-level
+// collision resolution.
+func protoBufRawGoFieldName(att *expr.AttributeExpr, name string) string {
+	return protoBufifyAtt(att, codegen.SnakeCase(name), true)
+}
+
+// setProtoBufGoFieldName stores the resolved name on the protobuf-side
+// attribute used by generated transforms.
+func setProtoBufGoFieldName(att *expr.AttributeExpr, name string) {
+	if att.Meta == nil {
+		att.Meta = make(expr.MetaExpr)
+	}
+	att.Meta[protoBufGoFieldNameMeta] = []string{name}
+}
+
+// newProtoBufGoFieldNames starts with the method names reserved by
+// protoc-gen-go's open-struct API.
+func newProtoBufGoFieldNames() *protoBufGoFieldNames {
+	names := protoBufGoFieldNames{
+		"Reset":               true,
+		"String":              true,
+		"ProtoMessage":        true,
+		"Marshal":             true,
+		"Unmarshal":           true,
+		"ExtensionRangeArray": true,
+		"ExtensionMap":        true,
+		"Descriptor":          true,
+	}
+	return &names
+}
+
+// makeUnique appends underscores until the field and its generated getter do
+// not conflict with a name already assigned in the message.
+func (n *protoBufGoFieldNames) makeUnique(name string, hasGetter bool) string {
+	for (*n)[name] || hasGetter && (*n)["Get"+name] {
+		name += "_"
+	}
+	(*n)[name] = true
+	(*n)["Get"+name] = hasGetter
+	return name
 }
 
 // wrapAttr makes the attribute type a user type by wrapping the given
@@ -314,35 +431,7 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	case *expr.Map:
 		return fmt.Sprintf("map<%s, %s>", protoType(actual.KeyType, sd), protoType(actual.ElemType, sd))
 	case *expr.Union:
-		// Compute oneof name and ensure it does not collide with any of the member field names
-		oneofName := codegen.SnakeCase(protoBufify(actual.Name(), false, false))
-		var fieldNames []string
-		for _, nat := range actual.Values {
-			fn := codegen.SnakeCase(protoBufify(nat.Name, false, false))
-			fieldNames = append(fieldNames, fn)
-		}
-		for slices.Contains(fieldNames, oneofName) {
-			oneofName += "_oneof"
-		}
-		def := "\toneof " + oneofName + " {"
-		for i, nat := range actual.Values {
-			fn := fieldNames[i]
-			fnum := rpcTag(nat.Attribute)
-			var typ string
-			if prim := getPrimitive(nat.Attribute); prim != nil {
-				typ = protoType(prim, sd)
-			} else {
-				typ = protoType(nat.Attribute, sd)
-			}
-			var desc string
-			if d := nat.Attribute.Description; d != "" {
-				desc = codegen.Comment(d) + "\n\t"
-			}
-			opt := protoJSONOption(nat.Attribute)
-			def += fmt.Sprintf("\n\t\t%s%s %s = %d%s;", desc, typ, fn, fnum, opt)
-		}
-		def += "\n\t}"
-		return def
+		return protoBufUnionDef(actual.Name(), actual, sd)
 	case expr.UserType:
 		if actual == expr.Empty {
 			return " {}"
@@ -354,9 +443,10 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	case *expr.Object:
 		var ss []string
 		ss = append(ss, " {")
+		ss = append(ss, protoBufReservations(att)...)
 		for _, nat := range *actual {
 			if expr.IsUnion(nat.Attribute.Type) {
-				ss = append(ss, protoBufMessageDef(nat.Attribute, sd))
+				ss = append(ss, protoBufUnionDef(nat.Name, expr.AsUnion(nat.Attribute.Type), sd))
 				continue
 			}
 			var (
@@ -389,6 +479,87 @@ func protoBufMessageDef(att *expr.AttributeExpr, sd *ServiceData) string {
 	default:
 		panic(fmt.Sprintf("unknown data type %T", actual)) // bug
 	}
+}
+
+// protoBufReservations renders removed field numbers and names declared on a
+// Goa type. Sorting keeps generated schemas stable when metadata values are
+// assembled from multiple design files.
+func protoBufReservations(att *expr.AttributeExpr) []string {
+	var reservations []string
+	if values := att.Meta[protoBufReservedNumberMeta]; len(values) > 0 {
+		numbers := make([]uint64, len(values))
+		for i, value := range values {
+			number, err := strconv.ParseUint(value, 10, 64)
+			if err != nil {
+				panic(fmt.Sprintf("invalid protobuf reserved field number %q: %v", value, err))
+			}
+			numbers[i] = number
+		}
+		slices.Sort(numbers)
+		parts := make([]string, len(numbers))
+		for i, number := range numbers {
+			parts[i] = strconv.FormatUint(number, 10)
+		}
+		reservations = append(reservations, "\treserved "+strings.Join(parts, ", ")+";")
+	}
+	if values := att.Meta[protoBufReservedNameMeta]; len(values) > 0 {
+		names := slices.Clone(values)
+		slices.Sort(names)
+		parts := make([]string, len(names))
+		for i, name := range names {
+			parts[i] = strconv.Quote(name)
+		}
+		reservations = append(reservations, "\treserved "+strings.Join(parts, ", ")+";")
+	}
+	return reservations
+}
+
+// protoBufUnionDef renders a protobuf oneof using the field name selected by
+// its caller. Nested unions pass their containing attribute name so a custom
+// service type name cannot rename the protobuf field used by transforms.
+// Standalone unions pass their service type name because no field contains them.
+func protoBufUnionDef(name string, union *expr.Union, sd *ServiceData) string {
+	oneofName, fieldNames := protoBufUnionNames(name, union)
+	def := "\toneof " + oneofName + " {"
+	for i, nat := range union.Values {
+		fn := fieldNames[i]
+		fnum := rpcTag(nat.Attribute)
+		var typ string
+		if prim := getPrimitive(nat.Attribute); prim != nil {
+			typ = protoType(prim, sd)
+		} else {
+			typ = protoType(nat.Attribute, sd)
+		}
+		var desc string
+		if d := nat.Attribute.Description; d != "" {
+			desc = codegen.Comment(d) + "\n\t"
+		}
+		opt := protoJSONOption(nat.Attribute)
+		def += fmt.Sprintf("\n\t\t%s%s %s = %d%s;", desc, typ, fn, fnum, opt)
+	}
+	return def + "\n\t}"
+}
+
+// protoBufUnionName returns the oneof name emitted by protoc. When a member
+// has the same normalized name, it adds a suffix so protoc can generate both
+// the oneof interface field and the member wrapper.
+func protoBufUnionName(name string, union *expr.Union) string {
+	oneofName, _ := protoBufUnionNames(name, union)
+	return oneofName
+}
+
+// protoBufUnionNames returns the oneof name and member names emitted by protoc
+// so schema generation and transform field access use the same normalization.
+func protoBufUnionNames(name string, union *expr.Union) (string, []string) {
+	oneofName := codegen.SnakeCase(protoBufify(name, false, false))
+	fieldNames := make([]string, len(union.Values))
+	for i, nat := range union.Values {
+		fieldNames[i] = codegen.SnakeCase(protoBufify(nat.Name, false, false))
+	}
+	for slices.Contains(fieldNames, oneofName) {
+		oneofName += "_oneof"
+	}
+	return oneofName, fieldNames
 }
 
 func protoJSONOption(att *expr.AttributeExpr) string {

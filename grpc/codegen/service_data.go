@@ -1442,7 +1442,7 @@ func buildStreamEnvelopeData(envelope *expr.AttributeExpr, message *service.User
 	body := envelope.Find("body")
 	union := expr.AsUnion(body.Type)
 	scope := &protoBufScope{scope: sd.Scope}
-	fieldName := scope.Field(body, union.TypeName, true)
+	fieldName := scope.Field(body, "body", true)
 	initialFieldName := scope.Field(union.Values[0].Attribute, union.Values[0].Name, true)
 	streamItemFieldName := scope.Field(union.Values[1].Attribute, union.Values[1].Name, true)
 	return &StreamEnvelopeData{
