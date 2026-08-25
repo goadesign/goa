@@ -302,9 +302,8 @@ func Default(def any) {
 		eval.IncompatibleDSL()
 		return
 	}
-	if a.Type != nil && !a.Type.IsCompatible(def) {
-		eval.ReportError("default value %#v is incompatible with attribute of type %s",
-			def, expr.QualifiedTypeName(a.Type))
+	if def == nil {
+		eval.ReportError("default value must not be nil")
 		return
 	}
 	a.SetDefault(def)

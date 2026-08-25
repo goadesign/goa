@@ -15,12 +15,12 @@ import (
 
 // BuildShowPayload builds the payload for the PayloadWithMessage show endpoint
 // from CLI flags.
-func BuildShowPayload(payloadWithMessageShowMessage string) (*payloadwithmessage.ShowPayload, error) {
+func BuildShowPayload(payloadWithMessageShowMessage *string) (*payloadwithmessage.ShowPayload, error) {
 	var err error
 	var message payload_with_messagepb.ShowRequest
 	{
-		if payloadWithMessageShowMessage != "" {
-			err = protojson.Unmarshal([]byte(payloadWithMessageShowMessage), &message)
+		if payloadWithMessageShowMessage != nil {
+			err = protojson.Unmarshal([]byte(*payloadWithMessageShowMessage), &message)
 			if err != nil {
 				return nil, fmt.Errorf("invalid JSON for message, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"record_id\": \"record\",\n      \"tenant_id\": \"tenant\"\n   }'")
 			}

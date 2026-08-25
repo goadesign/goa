@@ -67,14 +67,15 @@ func (c *Client) Add() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		if err := encodeRequest(req, v); err != nil {
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
 			return nil, err
 		}
 		resp, err := c.Doer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("Calc", "add", err)
 		}
-		return decodeResponse(resp)
+		return decodeResponse(resp, requestID)
 	}
 }
 
@@ -90,14 +91,15 @@ func (c *Client) Ping() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		if err := encodeRequest(req, v); err != nil {
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
 			return nil, err
 		}
 		resp, err := c.Doer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("Calc", "ping", err)
 		}
-		return decodeResponse(resp)
+		return decodeResponse(resp, requestID)
 	}
 }
 
@@ -113,13 +115,14 @@ func (c *Client) Log() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		if err := encodeRequest(req, v); err != nil {
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
 			return nil, err
 		}
 		resp, err := c.Doer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("Calc", "log", err)
 		}
-		return decodeResponse(resp)
+		return decodeResponse(resp, requestID)
 	}
 }

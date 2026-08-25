@@ -16,11 +16,14 @@ import (
 
 // BuildLookupPayload builds the payload for the Mixed lookup endpoint from CLI
 // flags.
-func BuildLookupPayload(mixedLookupBody string) (*mixed.LookupPayload, error) {
+func BuildLookupPayload(mixedLookupBody *string) (*mixed.LookupPayload, error) {
 	var err error
 	var body LookupRequestBody
 	{
-		err = json.Unmarshal([]byte(mixedLookupBody), &body)
+		if mixedLookupBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*mixedLookupBody), &body)
 		if err != nil {
 			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"id\": \"Cupiditate cupiditate minus veniam sed officia qui.\",\n      \"key\": \"Numquam iusto molestias nulla quod nobis molestias.\"\n   }'")
 		}

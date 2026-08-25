@@ -30,5 +30,5 @@ const (
 	ModifierNotify   = "notify"   // No response expected
 	ModifierError    = "error"    // Always returns error
 	ModifierValidate = "validate" // Includes validation
-	ModifierIDMap    = "idmap"    // Map envelope ID to payload/result field
+	ModifierIDMap    = "idmap"    // Map the request ID to a payload field
 )

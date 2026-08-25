@@ -396,6 +396,19 @@ func (a *AttributeContext) IsArrayElementPointer(array *expr.Array) bool {
 	return arrayElementIsPointer(array, a.ArrayElementPointer)
 }
 
+// LayoutPolicy returns the exact pointer and default rules used by this
+// generated value.
+func (a *AttributeContext) LayoutPolicy() GoLayoutPolicy {
+	return GoLayoutPolicy{
+		Pointer:             a.Pointer,
+		IgnoreRequired:      a.IgnoreRequired,
+		UseDefault:          a.UseDefault,
+		UnionPointer:        a.UnionPointer,
+		ArrayElementPointer: a.ArrayElementPointer,
+		SumType:             a.Scope.IsSumType(),
+	}
+}
+
 // Pkg returns the package name of the given type.
 func (a *AttributeContext) Pkg(att *expr.AttributeExpr) string {
 	return a.Scope.Package(att)
@@ -448,6 +461,12 @@ func (a *AttributeScope) Name(att *expr.AttributeExpr, pkg string, ptr, useDefau
 // Ref returns the type name for the given attribute.
 func (a *AttributeScope) Ref(att *expr.AttributeExpr, pkg string) string {
 	return a.scope.GoFullTypeRef(att, pkg)
+}
+
+// GoTypeLayout records the exact names from this scope with the pointer policy
+// selected by the caller.
+func (a *AttributeScope) GoTypeLayout(attribute *expr.AttributeExpr, policy GoLayoutPolicy) (LinkedGoType, error) {
+	return planGoTypeWithAttributor(attribute, policy, a)
 }
 
 // Package returns the qualifier selected by att's explicit type location or

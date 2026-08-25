@@ -278,6 +278,45 @@ func TestStreamContentTypeRemainsPlainWhenCloseSucceeds(t *testing.T) {
 	require.Equal(t, 1, body.closeCalls)
 }
 
+func TestStreamContentTypeIsExact(t *testing.T) {
+	tests := []struct {
+		name        string
+		contentType string
+		valid       bool
+	}{
+		{name: "event stream", contentType: "text/event-stream", valid: true},
+		{name: "event stream parameters", contentType: "text/event-stream; charset=utf-8", valid: true},
+		{name: "missing"},
+		{name: "malformed", contentType: "text/event-stream; charset=\""},
+		{name: "prefix lookalike", contentType: "text/event-streaming"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			body := &controlledBody{reader: strings.NewReader("ignored")}
+			doer := doerFunc(func(*http.Request) (*http.Response, error) {
+				response := response(http.StatusOK, body)
+				if test.contentType != "" {
+					response.Header.Set("Content-Type", test.contentType)
+				}
+				return response, nil
+			})
+			client := NewClient("http", "example.test", doer, goahttp.RequestEncoder, goahttp.ResponseDecoder, false)
+
+			result, err := client.Watch()(context.Background(), nil)
+			if test.valid {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				require.NoError(t, result.(interface{ Close() error }).Close())
+				require.Equal(t, 1, body.closeCalls)
+				return
+			}
+			require.EqualError(t, err, "unexpected content type: "+test.contentType+" (expected text/event-stream)")
+			require.Nil(t, result)
+			require.Equal(t, 1, body.closeCalls)
+		})
+	}
+}
+
 func TestRawEndpointReturnsDecoderAndCloseFailures(t *testing.T) {
 	decodeErr := errors.New("decode failed")
 	closeErr := errors.New("close failed")

@@ -25,10 +25,42 @@ func (e *HTTPErrorExpr) EvalName() string {
 	return "HTTP error " + e.Name
 }
 
+// IsJSONRPC reports whether the response maps an error for a JSON-RPC API,
+// service, or method.
+func (e *HTTPErrorExpr) IsJSONRPC() bool {
+	switch parent := e.Response.Parent.(type) {
+	case *JSONRPCExpr:
+		return true
+	case *HTTPServiceExpr:
+		return parent.Root == &Root.API.JSONRPC.HTTPExpr
+	case *HTTPEndpointExpr:
+		return parent.IsJSONRPC()
+	default:
+		return false
+	}
+}
+
 // Validate makes sure there is a error expression that matches the HTTP error
 // expression.
 func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 	verr := new(eval.ValidationErrors)
+	if e.IsJSONRPC() {
+		if jsonRPCErrorCodeReserved(e.Response.StatusCode) {
+			verr.Add(
+				e.Response,
+				"JSON-RPC error code %d is reserved; use a standard protocol code, a code from -32099 through -32000, or an application code outside -32768 through -32000",
+				e.Response.StatusCode,
+			)
+		}
+		// One JSON-RPC error message cannot add HTTP headers or cookies to the
+		// shared response used for a batch or server-sent-event connection.
+		if e.Response.Headers != nil && !e.Response.Headers.IsEmpty() {
+			verr.Add(e.Response, "JSON-RPC error response cannot map error attributes to HTTP headers")
+		}
+		if e.Response.Cookies != nil && !e.Response.Cookies.IsEmpty() {
+			verr.Add(e.Response, "JSON-RPC error response cannot map error attributes to HTTP cookies")
+		}
+	}
 	switch p := e.Response.Parent.(type) {
 	case *HTTPEndpointExpr:
 		if p.MethodExpr.Error(e.Name) == nil {
@@ -42,6 +74,10 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 		if p.Error(e.Name) == nil {
 			verr.Add(e.Response, "Error %#v does not match an error defined in the API", e.Name)
 		}
+	case *JSONRPCExpr:
+		if Root.Error(e.Name) == nil {
+			verr.Add(e.Response, "Error %#v does not match an error defined in the API", e.Name)
+		}
 	}
 
 	var ee *ErrorExpr
@@ -52,6 +88,11 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 		ee = p.Error(e.Name)
 	case *RootExpr:
 		ee = p.Error(e.Name)
+	case *JSONRPCExpr:
+		ee = Root.Error(e.Name)
+	}
+	if ee == nil {
+		return verr
 	}
 
 	// validate headers
@@ -85,6 +126,23 @@ func (e *HTTPErrorExpr) Validate() *eval.ValidationErrors {
 		}
 	}
 	return verr
+}
+
+// jsonRPCErrorCodeReserved reports whether code belongs to the part of the
+// JSON-RPC reserved range that an application cannot use.
+func jsonRPCErrorCodeReserved(code int) bool {
+	if code < -32768 || code > -32000 {
+		return false
+	}
+	if code >= -32099 {
+		return false
+	}
+	switch code {
+	case RPCParseError, RPCInvalidRequest, RPCMethodNotFound, RPCInvalidParams, RPCInternalError:
+		return false
+	default:
+		return true
+	}
 }
 
 // Finalize looks up the corresponding method error expression.
@@ -122,6 +180,8 @@ func (e *HTTPErrorExpr) mappedError() (*ErrorExpr, string) {
 		return parent.Error(e.Name), "service"
 	case *RootExpr:
 		return parent.Error(e.Name), "API"
+	case *JSONRPCExpr:
+		return Root.Error(e.Name), "API"
 	}
 	return nil, ""
 }

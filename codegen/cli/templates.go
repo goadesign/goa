@@ -12,6 +12,7 @@ const (
 	usageExamplesT     = "usage_examples"
 	parseFlagsT        = "parse_flags"
 	parseFlagsPlannedT = "parse_flags_planned"
+	presenceFlagT      = "presence_flag"
 	commandUsageT      = "command_usage"
 	buildPayloadT      = "build_payload"
 )

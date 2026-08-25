@@ -51,16 +51,20 @@ func TestSSEClientSpecializesDataAndRetryParsing(t *testing.T) {
 		contains []string
 	}{
 		{
-			name:     "string alias",
-			design:   ssePrimitiveAliasDSL,
-			contains: []string{"event = sseprimitivealias.EventText(dataContent)"},
+			name:   "string alias",
+			design: ssePrimitiveAliasDSL,
+			contains: []string{
+				"body = dataContent",
+				"event = NewWatchEventTextOK(body)",
+			},
 		},
 		{
 			name:   "optional data field",
 			design: testdata.SSEDataFieldDSL,
 			contains: []string{
 				"value := dataContent",
-				"event.Data = &value",
+				"body.Data = &value",
+				"event = NewSSEDataFieldMethodResultOK(&body)",
 			},
 		},
 		{
@@ -75,7 +79,7 @@ func TestSSEClientSpecializesDataAndRetryParsing(t *testing.T) {
 			name:   "viewed alias data field",
 			design: viewedSSEPrimitiveAliasDataFieldDSL,
 			contains: []string{
-				"value := viewedssealiasdata.ViewedEventText(dataContent)",
+				"value := dataContent",
 				"body.Data = &value",
 			},
 		},
@@ -83,9 +87,9 @@ func TestSSEClientSpecializesDataAndRetryParsing(t *testing.T) {
 			name:   "retry",
 			design: testdata.SSEAllFieldsDSL,
 			contains: []string{
-				`retryContent := s.trimHeader(line[len("retry:"):])`,
+				`retryContent := string(value)`,
 				`strconv.ParseInt(retryContent, 10, 0)`,
-				"event.Retry = &value",
+				"body.Retry = &value",
 			},
 		},
 	}

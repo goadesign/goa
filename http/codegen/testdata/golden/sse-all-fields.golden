@@ -33,6 +33,26 @@ func (s *SSEAllFieldsMethodServerStream) SendWithContext(ctx context.Context, v 
 		return err
 	}
 	data = string(byts)
+	id := res.ID
+	if id != nil {
+		for i := 0; i < len(*id); i++ {
+			if (*id)[i] == '\r' || (*id)[i] == '\n' || (*id)[i] == 0 {
+				return fmt.Errorf("SSE event ID contains a character that cannot appear on an id line")
+			}
+		}
+	}
+	event := res.Event
+	if event != nil {
+		for i := 0; i < len(*event); i++ {
+			if (*event)[i] == '\r' || (*event)[i] == '\n' {
+				return fmt.Errorf("SSE event type contains a line break")
+			}
+		}
+	}
+	retry := res.Retry
+	if retry != nil && *retry < 0 {
+		return fmt.Errorf("SSE retry value cannot be negative")
+	}
 	s.once.Do(func() {
 		header := s.w.Header()
 		if header.Get("Content-Type") == "" {
@@ -48,22 +68,40 @@ func (s *SSEAllFieldsMethodServerStream) SendWithContext(ctx context.Context, v 
 		s.attempted = true
 	})
 
-	if id := res.ID; id != "" {
-		if _, err := fmt.Fprintf(s.w, "id: %s\n", id); err != nil {
+	if id != nil {
+		if _, err := fmt.Fprintf(s.w, "id: %s\n", *id); err != nil {
 			return err
 		}
 	}
-	if event := res.Event; event != "" {
-		if _, err := fmt.Fprintf(s.w, "event: %s\n", event); err != nil {
+	if event != nil {
+		if _, err := fmt.Fprintf(s.w, "event: %s\n", *event); err != nil {
 			return err
 		}
 	}
-	if retry := res.Retry; retry != nil && *retry > 0 {
+	if retry != nil {
 		if _, err := fmt.Fprintf(s.w, "retry: %d\n", *retry); err != nil {
 			return err
 		}
 	}
-	if _, err := fmt.Fprintf(s.w, "data: %s\n\n", data); err != nil {
+	remaining := data
+	for {
+		lineEnd := 0
+		for lineEnd < len(remaining) && remaining[lineEnd] != '\r' && remaining[lineEnd] != '\n' {
+			lineEnd++
+		}
+		if _, err := fmt.Fprintf(s.w, "data: %s\n", remaining[:lineEnd]); err != nil {
+			return err
+		}
+		if lineEnd == len(remaining) {
+			break
+		}
+		next := lineEnd + 1
+		if remaining[lineEnd] == '\r' && next < len(remaining) && remaining[next] == '\n' {
+			next++
+		}
+		remaining = remaining[next:]
+	}
+	if _, err := fmt.Fprintln(s.w); err != nil {
 		return err
 	}
 

@@ -1,12 +1,12 @@
 // BuildMethodBodyPrimitiveArrayUserPayload builds the payload for the
 // ServiceBodyPrimitiveArrayUser MethodBodyPrimitiveArrayUser endpoint from CLI
 // flags.
-func BuildMethodBodyPrimitiveArrayUserPayload(serviceBodyPrimitiveArrayUserMethodBodyPrimitiveArrayUserA string) (*servicebodyprimitivearrayuser.PayloadType, error) {
+func BuildMethodBodyPrimitiveArrayUserPayload(serviceBodyPrimitiveArrayUserMethodBodyPrimitiveArrayUserA *string) (*servicebodyprimitivearrayuser.PayloadType, error) {
 	var err error
 	var a []string
 	{
-		if serviceBodyPrimitiveArrayUserMethodBodyPrimitiveArrayUserA != "" {
-			err = json.Unmarshal([]byte(serviceBodyPrimitiveArrayUserMethodBodyPrimitiveArrayUserA), &a)
+		if serviceBodyPrimitiveArrayUserMethodBodyPrimitiveArrayUserA != nil {
+			err = json.Unmarshal([]byte(*serviceBodyPrimitiveArrayUserMethodBodyPrimitiveArrayUserA), &a)
 			if err != nil {
 				return nil, fmt.Errorf("invalid JSON for a, \nerror: %s, \nexample of valid JSON:\n%s", err, "'[\n      \"Enim ut qui quaerat assumenda voluptatum.\",\n      \"Ut iste molestiae.\"\n   ]'")
 			}

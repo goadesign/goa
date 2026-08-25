@@ -105,20 +105,9 @@ func TestServerStreaming(t *testing.T) {
 			{"server-websocket-close", &testdata.StreamingPayloadNoResultServerStreamCloseCode},
 			{"server-websocket-set-view", nil},
 		}},
-		{"streaming-payload-result-with-views", testdata.StreamingPayloadResultWithViewsDSL, []*sectionExpectation{
-			{"server-websocket-send", &testdata.StreamingPayloadResultWithViewsServerStreamSendCode},
-			{"server-websocket-recv", &testdata.StreamingPayloadResultWithViewsServerStreamRecvCode},
-			{"server-websocket-close", nil},
-			{"server-websocket-set-view", nil},
-		}},
 		{"streaming-payload-result-with-explicit-view", testdata.StreamingPayloadResultWithExplicitViewDSL, []*sectionExpectation{
 			{"server-websocket-send", &testdata.StreamingPayloadResultWithExplicitViewServerStreamSendCode},
 			{"server-websocket-recv", &testdata.StreamingPayloadResultWithExplicitViewServerStreamRecvCode},
-			{"server-websocket-set-view", nil},
-		}},
-		{"streaming-payload-result-collection-with-views", testdata.StreamingPayloadResultCollectionWithViewsDSL, []*sectionExpectation{
-			{"server-websocket-send", &testdata.StreamingPayloadResultCollectionWithViewsServerStreamSendCode},
-			{"server-websocket-recv", &testdata.StreamingPayloadResultCollectionWithViewsServerStreamRecvCode},
 			{"server-websocket-set-view", nil},
 		}},
 		{"streaming-payload-result-collection-with-explicit-view", testdata.StreamingPayloadResultCollectionWithExplicitViewDSL, []*sectionExpectation{
@@ -161,20 +150,9 @@ func TestServerStreaming(t *testing.T) {
 			{"server-handler-init", &testdata.BidirectionalStreamingNoPayloadServerHandlerInitCode},
 			{"server-websocket-close", &testdata.BidirectionalStreamingNoPayloadServerStreamCloseCode},
 		}},
-		{"bidirectional-streaming-result-with-views", testdata.BidirectionalStreamingResultWithViewsDSL, []*sectionExpectation{
-			{"server-websocket-send", &testdata.BidirectionalStreamingResultWithViewsServerStreamSendCode},
-			{"server-websocket-recv", &testdata.BidirectionalStreamingResultWithViewsServerStreamRecvCode},
-			{"server-websocket-close", &testdata.BidirectionalStreamingResultWithViewsServerStreamCloseCode},
-			{"server-websocket-set-view", nil},
-		}},
 		{"bidirectional-streaming-result-with-explicit-view", testdata.BidirectionalStreamingResultWithExplicitViewDSL, []*sectionExpectation{
 			{"server-websocket-send", &testdata.BidirectionalStreamingResultWithExplicitViewServerStreamSendCode},
 			{"server-websocket-recv", &testdata.BidirectionalStreamingResultWithExplicitViewServerStreamRecvCode},
-			{"server-websocket-set-view", nil},
-		}},
-		{"bidirectional-streaming-result-collection-with-views", testdata.BidirectionalStreamingResultCollectionWithViewsDSL, []*sectionExpectation{
-			{"server-websocket-send", &testdata.BidirectionalStreamingResultCollectionWithViewsServerStreamSendCode},
-			{"server-websocket-recv", &testdata.BidirectionalStreamingResultCollectionWithViewsServerStreamRecvCode},
 			{"server-websocket-set-view", nil},
 		}},
 		{"bidirectional-streaming-result-collection-with-explicit-view", testdata.BidirectionalStreamingResultCollectionWithExplicitViewDSL, []*sectionExpectation{
@@ -316,20 +294,9 @@ func TestClientStreaming(t *testing.T) {
 			{"client-websocket-close", &testdata.StreamingPayloadNoResultClientStreamCloseCode},
 			{"client-websocket-set-view", nil},
 		}},
-		{"client-streaming-payload-result-with-views", testdata.StreamingPayloadResultWithViewsDSL, []*sectionExpectation{
-			{"client-websocket-send", &testdata.StreamingPayloadResultWithViewsClientStreamSendCode},
-			{"client-websocket-recv", &testdata.StreamingPayloadResultWithViewsClientStreamRecvCode},
-			{"client-websocket-close", nil},
-			{"client-websocket-set-view", nil},
-		}},
 		{"client-streaming-payload-result-with-explicit-view", testdata.StreamingPayloadResultWithExplicitViewDSL, []*sectionExpectation{
 			{"client-websocket-send", &testdata.StreamingPayloadResultWithExplicitViewClientStreamSendCode},
 			{"client-websocket-recv", &testdata.StreamingPayloadResultWithExplicitViewClientStreamRecvCode},
-			{"client-websocket-set-view", nil},
-		}},
-		{"client-streaming-payload-result-collection-with-views", testdata.StreamingPayloadResultCollectionWithViewsDSL, []*sectionExpectation{
-			{"client-websocket-send", &testdata.StreamingPayloadResultCollectionWithViewsClientStreamSendCode},
-			{"client-websocket-recv", &testdata.StreamingPayloadResultCollectionWithViewsClientStreamRecvCode},
 			{"client-websocket-set-view", nil},
 		}},
 		{"client-streaming-payload-result-collection-with-explicit-view", testdata.StreamingPayloadResultCollectionWithExplicitViewDSL, []*sectionExpectation{
@@ -374,20 +341,9 @@ func TestClientStreaming(t *testing.T) {
 			{"client-websocket-recv", &testdata.BidirectionalStreamingNoPayloadClientStreamRecvCode},
 			{"client-websocket-close", &testdata.BidirectionalStreamingNoPayloadClientStreamCloseCode},
 		}},
-		{"client-bidirectional-streaming-result-with-views", testdata.BidirectionalStreamingResultWithViewsDSL, []*sectionExpectation{
-			{"client-websocket-send", &testdata.BidirectionalStreamingResultWithViewsClientStreamSendCode},
-			{"client-websocket-recv", &testdata.BidirectionalStreamingResultWithViewsClientStreamRecvCode},
-			{"client-websocket-close", &testdata.BidirectionalStreamingResultWithViewsClientStreamCloseCode},
-			{"client-websocket-set-view", nil},
-		}},
 		{"client-bidirectional-streaming-result-with-explicit-view", testdata.BidirectionalStreamingResultWithExplicitViewDSL, []*sectionExpectation{
 			{"client-websocket-send", &testdata.BidirectionalStreamingResultWithExplicitViewClientStreamSendCode},
 			{"client-websocket-recv", &testdata.BidirectionalStreamingResultWithExplicitViewClientStreamRecvCode},
-			{"client-websocket-set-view", nil},
-		}},
-		{"client-bidirectional-streaming-result-collection-with-views", testdata.BidirectionalStreamingResultCollectionWithViewsDSL, []*sectionExpectation{
-			{"client-websocket-send", &testdata.BidirectionalStreamingResultCollectionWithViewsClientStreamSendCode},
-			{"client-websocket-recv", &testdata.BidirectionalStreamingResultCollectionWithViewsClientStreamRecvCode},
 			{"client-websocket-set-view", nil},
 		}},
 		{"client-bidirectional-streaming-result-collection-with-explicit-view", testdata.BidirectionalStreamingResultCollectionWithExplicitViewDSL, []*sectionExpectation{

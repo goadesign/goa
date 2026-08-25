@@ -56,7 +56,7 @@ func TestSSE_MixedResults(t *testing.T) {
 		require.Contains(t, code, "var body Event")
 		require.Contains(t, code, "err = ValidateEvent(&body)")
 		require.Contains(t, code, "result := &mixedresultsservice.Event{")
-		require.Contains(t, code, "return result, nil")
+		require.Contains(t, code, "return result, true, nil")
 	})
 }
 
@@ -74,7 +74,7 @@ func TestSSE_MixedResultConversionSelection(t *testing.T) {
 		{"primitive", dsl.Int, "result := body", "result := &"},
 		{"primitive collection", dsl.ArrayOf(dsl.Int), "result := body", "result := &"},
 		{"inline object", func() { dsl.Attribute("value", dsl.Int) }, "result := &", "result := body"},
-		{"empty body", func() {}, "return event, nil", "var body"},
+		{"empty body", func() {}, "return event, true, nil", "var body"},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

@@ -12,7 +12,11 @@ func() {
 {{- else if eq .Kind "object" -}}
 func() {
 {{- range .Fields }}
+{{- if .JSONRPCID }}
+	ID("{{ .Name }}", {{ template "partial_type" .Type }}{{ if .Description }}, "{{ .Description }}"{{ end }})
+{{- else }}
 	Field({{ .Position }}, "{{ .Name }}", {{ template "partial_type" .Type }}{{ if .Description }}, "{{ .Description }}"{{ end }})
+{{- end }}
 {{- end }}
 {{- $required := collectRequired .Fields }}
 {{- if $required }}

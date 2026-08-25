@@ -1,19 +1,6 @@
 {
   "components": {
     "schemas": {
-      "SSEAllFieldsMethodRequestBody": {
-        "description": "Request body for SSEAllFieldsMethod.",
-        "example": {
-          "id": "request"
-        },
-        "properties": {
-          "id": {
-            "example": "request",
-            "type": "string"
-          }
-        },
-        "type": "object"
-      },
       "SSEAllFieldsMethodResponseBody": {
         "example": {
           "data": {
@@ -74,20 +61,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "example": {
-                "id": "request"
-              },
-              "schema": {
-                "$ref": "#/components/schemas/SSEAllFieldsMethodRequestBody"
-              }
-            }
-          },
-          "description": "Request body for SSEAllFieldsMethod.",
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {

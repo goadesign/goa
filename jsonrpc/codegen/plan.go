@@ -83,10 +83,11 @@ type (
 
 	// jsonRPCServerNames stores the Go names written once for one server.
 	jsonRPCServerNames struct {
-		batchWriter *codegen.NameDeclaration
-		encodeError *codegen.NameDeclaration
-		sseStream   *codegen.NameDeclaration
-		sseBuffer   *codegen.NameDeclaration
+		batchWriter    *codegen.NameDeclaration
+		encodeError    *codegen.NameDeclaration
+		sseStream      *codegen.NameDeclaration
+		sseBuffer      *codegen.NameDeclaration
+		noOutputWriter *codegen.NameDeclaration
 	}
 
 	// viewedRepresentation lists the JSON body type and constructor used for
@@ -145,6 +146,7 @@ const (
 	jsonRPCEncodeErrorRole
 	jsonRPCSSEStreamRole
 	jsonRPCSSEBufferRole
+	jsonRPCNoOutputWriterRole
 )
 
 // NewPlans checks that inputs contain every design with JSON-RPC services once,
@@ -546,6 +548,10 @@ func collectServicePlan(generation *codegen.Generation, input PlanInput, transpo
 		return nil, err
 	}
 	planned.serverNames.encodeError, err = declare(server, codegen.NameFunction, "encodeJSONRPCError", jsonRPCEncodeErrorRole)
+	if err != nil {
+		return nil, err
+	}
+	planned.serverNames.noOutputWriter, err = declare(server, codegen.NameType, "noOutputResponseWriter", jsonRPCNoOutputWriterRole)
 	if err != nil {
 		return nil, err
 	}

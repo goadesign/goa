@@ -66,15 +66,21 @@ func clientEncodeDecodeFile(svc *expr.HTTPServiceExpr, services *ServicesData) *
 	if serviceHasViewedResult(data, nil) {
 		imports = append(imports, services.ViewImport(outputPackage, svc.Name()))
 	}
-	for _, e := range data.Endpoints {
-		if e.IsJSONRPC {
-			// JSON-RPC request encoders build the JSON-RPC envelope.
-			imports = append(imports,
-				&codegen.ImportSpec{Path: "github.com/google/uuid"},
-				codegen.GoaImport("jsonrpc"),
-			)
-			break
+	needsJSONRPC, needsUUID := false, false
+	for _, endpoint := range data.Endpoints {
+		if !endpoint.IsJSONRPC {
+			continue
 		}
+		needsJSONRPC = true
+		if endpoint.JSONRPCRequestID != nil && endpoint.JSONRPCRequestID.Generate {
+			needsUUID = true
+		}
+	}
+	if needsJSONRPC {
+		imports = append(imports, codegen.GoaImport("jsonrpc"))
+	}
+	if needsUUID {
+		imports = append(imports, &codegen.ImportSpec{Path: "github.com/google/uuid"})
 	}
 	sections := []*codegen.SectionTemplate{codegen.Header(title, "client", imports)}
 
@@ -162,12 +168,14 @@ func clientFile(svc *expr.HTTPServiceExpr, services *ServicesData) *codegen.File
 		{Path: "mime/multipart"},
 		{Path: "net/http"},
 		{Path: "strconv"},
-		{Path: "strings"},
 		{Path: "time"},
 		{Path: "github.com/gorilla/websocket"},
 		codegen.GoaImport(""),
 		codegen.GoaNamedImport("http", "goahttp"),
 		services.ServiceImport(outputPackage, svc.Name()),
+	}
+	if HasSSE(data) {
+		imports = append(imports, &codegen.ImportSpec{Path: "mime"})
 	}
 	for _, endpoint := range data.Endpoints {
 		if endpoint.SSE != nil || endpoint.Method.SkipResponseBodyEncodeDecode {

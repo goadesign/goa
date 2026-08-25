@@ -38,6 +38,7 @@ type (
 		ResultRef                string
 		IsCollection             bool
 		HasResponseMetadata      bool
+		SSE                      *httpcodegen.JSONRPCSSEData
 	}
 
 	// viewBranchTemplateData contains one view's server body, client body, and
@@ -67,6 +68,8 @@ func clientViewedResultSections(service *servicePlan) []*codegen.SectionTemplate
 			Data:   viewedResultData(service, endpoint),
 			FuncMap: map[string]any{
 				"viewedResponseData": viewedResponseData,
+				"sseRetryBits":       sseRetryBits,
+				"sseRetrySigned":     sseRetrySigned,
 			},
 		})
 	}
@@ -198,6 +201,7 @@ func viewedResultData(service *servicePlan, endpoint *endpointPlan) *viewedResul
 		ResultRef:                representation.resultRef,
 		IsCollection:             viewed.IsCollection,
 		HasResponseMetadata:      representationHasMetadata(representation),
+		SSE:                      endpoint.SSE,
 	}
 }
 
@@ -246,7 +250,7 @@ func metadataTypeNeedsStrconv(typeName, elementTypeName string) bool {
 
 // viewedResponseData gives the response reader one view's body, header, and
 // cookie fields together with the service and method names used in errors.
-func viewedResponseData(branch *viewBranchTemplateData, serviceName, methodName string) map[string]any {
+func viewedResponseData(branch *viewBranchTemplateData, serviceName, methodName string, sse *httpcodegen.JSONRPCSSEData) map[string]any {
 	return map[string]any{
 		"Data": map[string]any{
 			"ClientBody":   branch.ClientBody,
@@ -256,6 +260,7 @@ func viewedResponseData(branch *viewBranchTemplateData, serviceName, methodName 
 		},
 		"ServiceName": serviceName,
 		"Method":      map[string]any{"Name": methodName},
+		"SSE":         sse,
 	}
 }
 

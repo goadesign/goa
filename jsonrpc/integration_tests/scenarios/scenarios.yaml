@@ -783,13 +783,11 @@ scenarios:
     request:
       jsonrpc: "2.0"
       params:
-        id: "12345"
-        request_id: "ignored-by-client" # mapping should come from envelope, not this field
         value: "hello"
       id: "env-1"
     expect:
       id: "env-1"
-      result: "hello"
+      result: "env-1"
 
   - name: "http_params_id_with_request_id_mapping_numeric_env_id"
     method: "echo_string_idmap"
@@ -797,13 +795,11 @@ scenarios:
     request:
       jsonrpc: "2.0"
       params:
-        id: "biz-123"
-        request_id: "ignored"
         value: "hello-num"
       id: 101
     expect:
       id: 101
-      result: "hello-num"
+      result: "101"
 
   - name: "sse_params_id_with_request_id_mapping"
     method: "stream_string_sse"

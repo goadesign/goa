@@ -1,10 +1,13 @@
 // BuildMethodMapQueryObjectPayload builds the payload for the
 // ServiceMapQueryObject MethodMapQueryObject endpoint from CLI flags.
-func BuildMethodMapQueryObjectPayload(serviceMapQueryObjectMethodMapQueryObjectBody string, serviceMapQueryObjectMethodMapQueryObjectA string, serviceMapQueryObjectMethodMapQueryObjectC string) (*servicemapqueryobject.PayloadType, error) {
+func BuildMethodMapQueryObjectPayload(serviceMapQueryObjectMethodMapQueryObjectBody *string, serviceMapQueryObjectMethodMapQueryObjectA *string, serviceMapQueryObjectMethodMapQueryObjectC *string) (*servicemapqueryobject.PayloadType, error) {
 	var err error
 	var body MethodMapQueryObjectRequestBody
 	{
-		err = json.Unmarshal([]byte(serviceMapQueryObjectMethodMapQueryObjectBody), &body)
+		if serviceMapQueryObjectMethodMapQueryObjectBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*serviceMapQueryObjectMethodMapQueryObjectBody), &body)
 		if err != nil {
 			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"b\": \"patternb\"\n   }'")
 		}
@@ -17,7 +20,10 @@ func BuildMethodMapQueryObjectPayload(serviceMapQueryObjectMethodMapQueryObjectB
 	}
 	var a string
 	{
-		a = serviceMapQueryObjectMethodMapQueryObjectA
+		if serviceMapQueryObjectMethodMapQueryObjectA == nil {
+			return nil, fmt.Errorf("missing required flag --a")
+		}
+		a = *serviceMapQueryObjectMethodMapQueryObjectA
 		err = goa.MergeErrors(err, goa.ValidatePattern("a", a, "patterna"))
 		if err != nil {
 			return nil, err
@@ -25,7 +31,10 @@ func BuildMethodMapQueryObjectPayload(serviceMapQueryObjectMethodMapQueryObjectB
 	}
 	var c map[int][]string
 	{
-		err = json.Unmarshal([]byte(serviceMapQueryObjectMethodMapQueryObjectC), &c)
+		if serviceMapQueryObjectMethodMapQueryObjectC == nil {
+			return nil, fmt.Errorf("missing required flag --c")
+		}
+		err = json.Unmarshal([]byte(*serviceMapQueryObjectMethodMapQueryObjectC), &c)
 		if err != nil {
 			return nil, fmt.Errorf("invalid JSON for c, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"1025921908706477149\": [\n         \"Nostrum et.\",\n         \"Reiciendis rerum aliquam vitae esse.\",\n         \"Omnis alias cumque nulla rerum.\"\n      ]\n   }'")
 		}

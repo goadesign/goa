@@ -11,22 +11,6 @@ import (
 	feed "generated.local/gen/feed"
 )
 
-// WatchRequestBody is the type of the "Feed" service "watch" endpoint HTTP
-// request body.
-type WatchRequestBody struct {
-	// Request ID
-	RequestID string `form:"request_id,omitempty" json:"request_id,omitempty" xml:"request_id,omitempty"`
-	// Last received event ID
-	LastEventID *string `form:"last_event_id,omitempty" json:"last_event_id,omitempty" xml:"last_event_id,omitempty"`
-}
-
-// SnapshotRequestBody is the type of the "Feed" service "snapshot" endpoint
-// HTTP request body.
-type SnapshotRequestBody struct {
-	// Request ID
-	RequestID string `form:"request_id,omitempty" json:"request_id,omitempty" xml:"request_id,omitempty"`
-}
-
 // WatchResponseBody is the type of the "Feed" service "watch" endpoint HTTP
 // response body.
 type WatchResponseBody struct {
@@ -34,25 +18,6 @@ type WatchResponseBody struct {
 	EventID *string `form:"event_id,omitempty" json:"event_id,omitempty" xml:"event_id,omitempty"`
 	// Event data
 	Data *string `form:"data,omitempty" json:"data,omitempty" xml:"data,omitempty"`
-}
-
-// NewWatchRequestBody builds the HTTP request body from the payload of the
-// "watch" endpoint of the "Feed" service.
-func NewWatchRequestBody(p *feed.WatchPayload) *WatchRequestBody {
-	body := &WatchRequestBody{
-		RequestID:   p.RequestID,
-		LastEventID: p.LastEventID,
-	}
-	return body
-}
-
-// NewSnapshotRequestBody builds the HTTP request body from the payload of the
-// "snapshot" endpoint of the "Feed" service.
-func NewSnapshotRequestBody(p *feed.SnapshotPayload) *SnapshotRequestBody {
-	body := &SnapshotRequestBody{
-		RequestID: p.RequestID,
-	}
-	return body
 }
 
 // NewWatchResultOK builds a "Feed" service "watch" endpoint result from a HTTP

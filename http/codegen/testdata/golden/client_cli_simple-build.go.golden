@@ -1,10 +1,13 @@
 // BuildMethodMultiSimplePayloadPayload builds the payload for the
 // ServiceMultiSimple1 MethodMultiSimplePayload endpoint from CLI flags.
-func BuildMethodMultiSimplePayloadPayload(serviceMultiSimple1MethodMultiSimplePayloadBody string) (*servicemultisimple1.MethodMultiSimplePayloadPayload, error) {
+func BuildMethodMultiSimplePayloadPayload(serviceMultiSimple1MethodMultiSimplePayloadBody *string) (*servicemultisimple1.MethodMultiSimplePayloadPayload, error) {
 	var err error
 	var body MethodMultiSimplePayloadRequestBody
 	{
-		err = json.Unmarshal([]byte(serviceMultiSimple1MethodMultiSimplePayloadBody), &body)
+		if serviceMultiSimple1MethodMultiSimplePayloadBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*serviceMultiSimple1MethodMultiSimplePayloadBody), &body)
 		if err != nil {
 			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": true\n   }'")
 		}

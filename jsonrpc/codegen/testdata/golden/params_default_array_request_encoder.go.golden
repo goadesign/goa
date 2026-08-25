@@ -1,0 +1,25 @@
+// EncodeDefaultArrayRequest returns an encoder for requests sent to the
+// defaults service default_array JSON-RPC method. The encoder returns the
+// request ID written into the JSON-RPC message.
+func EncodeDefaultArrayRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
+		p, ok := v.(*defaults.DefaultArrayPayload)
+		if !ok {
+			return "", goahttp.ErrInvalidType("defaults", "default_array", "*defaults.DefaultArrayPayload", v)
+		}
+		body := &jsonrpc.Request{
+			JSONRPC: "2.0",
+			Method:  "default_array",
+		}
+		requestID := uuid.New().String()
+		body.ID = requestID
+		if p.Value != nil {
+			b := p.Value
+			body.Params = b
+		}
+		if err := encoder(req).Encode(&body); err != nil {
+			return "", goahttp.ErrEncodingError("defaults", "default_array", err)
+		}
+		return requestID, nil
+	}
+}

@@ -10,13 +10,18 @@ func NewFetchHandler(
 	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
 		ctx = context.WithValue(ctx, goa.MethodKey, "fetch")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "viewed")
+		outputWriter := w
+		if !req.HasID {
+			// A notification runs the same service and error reporting code without
+			// sending a response.
+			outputWriter = &noOutputResponseWriter{header: make(http.Header)}
+		}
 		res, err := endpoint(ctx, nil)
 		if err != nil {
 			if req.HasID {
 				encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
 			} else {
-				// A notification receives no JSON-RPC response, so pass the service error to the configured error handler.
-				errhandler(ctx, w, fmt.Errorf("endpoint error: %w", err))
+				errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
 			}
 			return nil
 		}
@@ -25,18 +30,13 @@ func NewFetchHandler(
 			return nil
 		}
 
-		// For methods with results, determine the ID to use for the response
-		var id any
-		// No ID field in result - use request ID
-		id = req.ID
-
-		// Send response with the result
+		// The response repeats the exact request ID.
 		viewedRes := res.(*viewedviews.ViewedGolden)
 		body, err := encodeFetchViewedResult(viewedRes)
 		if err != nil {
 			return err
 		}
-		response := jsonrpc.MakeSuccessResponse(id, body)
+		response := jsonrpc.MakeSuccessResponse(req.ID, body)
 		if err := encoder(ctx, w).Encode(response); err != nil {
 			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
 		}

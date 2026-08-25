@@ -9,6 +9,15 @@ import (
 )
 
 type (
+	// jsonRPCRequestIDPolicy records the request-ID choice made from the
+	// validated endpoint expression before generated packages reserve imports.
+	jsonRPCRequestIDPolicy struct {
+		attribute    *expr.NamedAttributeExpr
+		defaultValue any
+		required     bool
+		pointer      bool
+	}
+
 	// jsonRPCRequestCodecData contains the values used to write JSON-RPC request
 	// builders, encoders, and decoders.
 	jsonRPCRequestCodecData struct {
@@ -43,6 +52,8 @@ func copyJSONRPCEndpoint(endpoint *EndpointData) JSONRPCEndpointSnapshot {
 	}
 	result := JSONRPCEndpointSnapshot{
 		IsJSONRPC:                  endpoint.IsJSONRPC,
+		IsJSONRPCNotification:      endpoint.IsJSONRPCNotification,
+		JSONRPCRequestID:           copyJSONRPCRequestID(endpoint.JSONRPCRequestID),
 		Method:                     copyJSONRPCMethod(endpoint.Method),
 		ServiceName:                endpoint.ServiceName,
 		ServicePkgName:             endpoint.ServicePkgName,
@@ -65,6 +76,44 @@ func copyJSONRPCEndpoint(endpoint *EndpointData) JSONRPCEndpointSnapshot {
 		SSE:                        copyJSONRPCSSE(endpoint.SSE),
 	}
 	return result
+}
+
+// copyJSONRPCRequestID returns a detached request-ID plan.
+func copyJSONRPCRequestID(id *JSONRPCRequestIDData) *JSONRPCRequestIDData {
+	if id == nil {
+		return nil
+	}
+	copy := *id
+	return &copy
+}
+
+// jsonRPCRequestIDPolicyFor returns nil for notifications and otherwise
+// records the direct payload field that supplies the ID, when one exists.
+func jsonRPCRequestIDPolicyFor(endpoint *expr.HTTPEndpointExpr) *jsonRPCRequestIDPolicy {
+	if !endpoint.IsJSONRPC() || endpoint.IsJSONRPCNotification() {
+		return nil
+	}
+	policy := &jsonRPCRequestIDPolicy{}
+	object := expr.AsObject(endpoint.MethodExpr.Payload.Type)
+	if object == nil {
+		return policy
+	}
+	for _, field := range *object {
+		if _, ok := field.Attribute.Meta["jsonrpc:id"]; ok {
+			policy.attribute = field
+			policy.defaultValue = endpoint.MethodExpr.Payload.GetDefault(field.Name)
+			policy.required = endpoint.MethodExpr.Payload.IsRequired(field.Name)
+			policy.pointer = endpoint.MethodExpr.Payload.IsPrimitivePointer(field.Name, true)
+			return policy
+		}
+	}
+	return policy
+}
+
+// generates reports whether the client must create an ID for every call or
+// when an optional payload ID is absent.
+func (p *jsonRPCRequestIDPolicy) generates() bool {
+	return p != nil && (p.attribute == nil || p.pointer)
 }
 
 // copyJSONRPCRequestCodec returns the values used to write one JSON-RPC request.
@@ -195,20 +244,27 @@ func copyJSONRPCPayload(payload *PayloadData) *JSONRPCPayloadData {
 	result := &JSONRPCPayloadData{
 		Ref:                 payload.Ref,
 		IDAttribute:         payload.IDAttribute,
+		IDAttributeTypeRef:  payload.IDAttributeTypeRef,
 		IDAttributeRequired: payload.IDAttributeRequired,
 		DecoderReturnValue:  payload.DecoderReturnValue,
 	}
+	result.JSONRPCRequestID = copyJSONRPCRequestID(payload.JSONRPCRequestID)
 	if payload.Request != nil {
 		request := payload.Request
 		result.Request = &JSONRPCRequestData{
-			ClientBody:   copyJSONRPCBody(request.ClientBody),
-			ServerBody:   copyJSONRPCBody(request.ServerBody),
-			PayloadInit:  copyInitData(request.PayloadInit),
-			Headers:      copyJSONRPCHeaders(request.Headers),
-			Cookies:      copyJSONRPCCookies(request.Cookies),
-			PayloadAttr:  request.PayloadAttr,
-			MustHaveBody: request.MustHaveBody,
-			MustValidate: request.MustValidate,
+			ClientBody:           copyJSONRPCBody(request.ClientBody),
+			ServerBody:           copyJSONRPCBody(request.ServerBody),
+			PayloadInit:          copyInitData(request.PayloadInit),
+			Headers:              copyJSONRPCHeaders(request.Headers),
+			Cookies:              copyJSONRPCCookies(request.Cookies),
+			PayloadAttr:          request.PayloadAttr,
+			MustHaveBody:         request.MustHaveBody,
+			OptionalBody:         request.OptionalBody,
+			BodyIsUnion:          request.BodyIsUnion,
+			BodyFieldPointer:     request.BodyFieldPointer,
+			BodyFieldCanBeAbsent: request.BodyFieldCanBeAbsent,
+			MustValidate:         request.MustValidate,
+			Params:               copyJSONRPCParams(request.JSONRPCParams),
 		}
 	}
 	return result
@@ -220,11 +276,9 @@ func copyJSONRPCResult(result *ResultData) *JSONRPCResultData {
 		return nil
 	}
 	copy := &JSONRPCResultData{
-		Ref:                 result.Ref,
-		IDAttribute:         result.IDAttribute,
-		IDAttributeRequired: result.IDAttributeRequired,
-		View:                result.View,
-		Responses:           make([]JSONRPCResponseData, len(result.Responses)),
+		Ref:       result.Ref,
+		View:      result.View,
+		Responses: make([]JSONRPCResponseData, len(result.Responses)),
 	}
 	for index, response := range result.Responses {
 		copy.Responses[index] = copyJSONRPCResponse(response)
@@ -246,6 +300,7 @@ func copyJSONRPCResponse(response *ResponseData) JSONRPCResponseData {
 		ServerBody:   serverBodies,
 		ClientBody:   copyJSONRPCBody(response.ClientBody),
 		ResultInit:   copyInitData(response.ResultInit),
+		ResultAttr:   response.ResultAttr,
 		MustValidate: response.MustValidate,
 	}
 }
@@ -287,11 +342,43 @@ func copyJSONRPCSSE(stream *SSEData) *JSONRPCSSEData {
 		ClientStructDeclaration:    stream.ClientStructDeclaration,
 		ClientInitDeclaration:      stream.ClientInitDeclaration,
 		EventTypeRef:               stream.EventTypeRef,
+		EventTypeName:              stream.EventTypeName,
+		EventIsStruct:              stream.EventIsStruct,
+		DataField:                  stream.DataField,
+		Data:                       stream.Data,
+		IDField:                    stream.IDField,
+		ID:                         copySSEValue(stream.ID),
+		ClientIDPointer:            stream.ClientIDPointer,
+		EventField:                 stream.EventField,
+		Event:                      copySSEValue(stream.Event),
+		ClientEventPointer:         stream.ClientEventPointer,
+		RetryField:                 stream.RetryField,
+		Retry:                      copySSEValue(stream.Retry),
 		HasResponseBody:            stream.HasResponseBody,
 		Response:                   copyJSONRPCResponsePtr(stream.Response),
 		RequestIDField:             stream.RequestIDField,
 		RequestIDPointer:           stream.RequestIDPointer,
+		Params:                     copyJSONRPCParams(stream.JSONRPCParams),
+		ClientEventCode:            stream.ClientEventCode,
 	}
+}
+
+// copySSEValue returns a detached SSE value plan.
+func copySSEValue(value *SSEValueData) *SSEValueData {
+	if value == nil {
+		return nil
+	}
+	copy := *value
+	return &copy
+}
+
+// copyJSONRPCParams returns a detached parameter-shape plan.
+func copyJSONRPCParams(params *JSONRPCParamsData) *JSONRPCParamsData {
+	if params == nil {
+		return nil
+	}
+	copy := *params
+	return &copy
 }
 
 // copyJSONRPCResponsePtr returns an independent copy of response.
@@ -366,6 +453,7 @@ func copyJSONRPCHeaders(source []*HeaderData) []JSONRPCHeaderData {
 		result[index] = JSONRPCHeaderData{
 			JSONRPCElementData: copyJSONRPCElement(header.Element),
 			CanonicalName:      header.CanonicalName,
+			PreserveEmpty:      header.PreserveEmpty,
 		}
 	}
 	return result
@@ -395,14 +483,18 @@ func copyJSONRPCElement(element *Element) JSONRPCElementData {
 		Name:         element.Name,
 		VarName:      element.VarName,
 		TypeName:     dataType.Name(),
+		Type:         copyDataType(element.Type),
+		FieldType:    copyDataType(element.FieldType),
 		ElemTypeRef:  element.ElemTypeRef,
 		TypeRef:      element.TypeRef,
+		ValueTypeRef: element.ValueTypeRef,
 		Pointer:      element.Pointer,
 		FieldName:    element.FieldName,
 		FieldPointer: element.FieldPointer,
 		IsAliased:    expr.IsAlias(element.FieldType),
 		Required:     element.Required,
 		DefaultValue: cloneRenderData(element.DefaultValue),
+		HasDefault:   element.HasDefault,
 		Validate:     element.Validate,
 		HTTPName:     element.HTTPName,
 		StringSlice:  element.StringSlice,

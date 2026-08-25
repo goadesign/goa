@@ -49,12 +49,17 @@ type (
 		// StreamingBody describes the body transferred through the websocket
 		// stream.
 		StreamingBody *AttributeExpr
-		// PayloadIDAttribute is the name of the JSON-RPC request ID
-		// payload attribute.
+		// PayloadIDAttribute is retained for generator compatibility.
+		//
+		// Deprecated: inspect the payload field marked with "jsonrpc:id".
 		PayloadIDAttribute string
-		// ResultIDAttribute is the name of the JSON-RPC result ID
-		// result attribute.
+		// ResultIDAttribute is retained for generator compatibility.
+		//
+		// Deprecated: JSON-RPC results cannot define an ID field.
 		ResultIDAttribute string
+		// JSONRPCNotification is true when generated clients send this method
+		// without an ID and do not wait for a JSON-RPC response.
+		JSONRPCNotification bool
 		// SkipRequestBodyEncodeDecode indicates that the service method accepts
 		// a reader and that the client provides a reader to stream the request
 		// body.
@@ -100,7 +105,18 @@ type (
 		// dsl.Meta
 		Meta MetaExpr
 	}
+
+	// jsonRPCIDField records where one ID declaration appears so validation can
+	// reject declarations that code generation cannot represent.
+	jsonRPCIDField struct {
+		name      string
+		attribute *AttributeExpr
+		depth     int
+	}
 )
+
+// A generated JSON-RPC request ID uses the standard 36-character UUID form.
+const generatedJSONRPCRequestIDLength = 36
 
 // Name of HTTP endpoint
 func (e *HTTPEndpointExpr) Name() string {
@@ -130,6 +146,12 @@ func (e *HTTPEndpointExpr) EvalName() string {
 func (e *HTTPEndpointExpr) IsJSONRPC() bool {
 	_, ok := e.Meta["jsonrpc"]
 	return ok
+}
+
+// IsJSONRPCNotification reports whether generated clients call the JSON-RPC
+// method without an ID and do not wait for a JSON-RPC response.
+func (e *HTTPEndpointExpr) IsJSONRPCNotification() bool {
+	return e.IsJSONRPC() && e.JSONRPCNotification
 }
 
 // UsesSSE returns true if the endpoint streams result events over Server-Sent
@@ -449,6 +471,27 @@ func (e *HTTPEndpointExpr) Validate() error {
 					verr.Merge(valErr)
 				}
 			}
+			if e.IsJSONRPC() && e.SSE.DataField != "" {
+				result := e.MethodExpr.StreamingResult
+				if result == nil {
+					result = e.MethodExpr.Result
+				}
+				if _, viewed := result.Type.(*ResultTypeExpr); viewed {
+					verr.Add(e, "SSE event data cannot select one field from a viewed streaming result because the selected data would omit the result view needed to decode the stream")
+				}
+			}
+			if e.SSE.RequestIDField != "" {
+				for _, field := range *AsObject(e.Headers.Type) {
+					header := e.Headers.ElemName(field.Name)
+					if field.Name == e.SSE.RequestIDField {
+						verr.Add(e, "SSE request ID field %q cannot also be mapped with Header because ServerSentEvents maps it to Last-Event-ID", field.Name)
+						continue
+					}
+					if strings.EqualFold(header, "Last-Event-ID") {
+						verr.Add(e, "HTTP header %q is reserved for SSE request ID field %q", header, e.SSE.RequestIDField)
+					}
+				}
+			}
 		}
 	}
 
@@ -480,6 +523,71 @@ func (e *HTTPEndpointExpr) Validate() error {
 
 	// JSON-RPC validation
 	if e.IsJSONRPC() {
+		if strings.HasPrefix(e.MethodExpr.Name, "rpc.") {
+			verr.Add(e, "JSON-RPC method %q cannot begin with %q because JSON-RPC reserves that namespace", e.MethodExpr.Name, "rpc.")
+		}
+		requestIDs := jsonRPCIDFields(e.MethodExpr.Payload)
+		if len(requestIDs) > 1 {
+			verr.Add(e, "JSON-RPC method %q cannot define more than one request ID field", e.MethodExpr.Name)
+		}
+		for _, id := range requestIDs {
+			if id.depth != 1 {
+				verr.Add(e, "JSON-RPC request ID field %q must be a direct payload field", id.name)
+			}
+			if !isJSONRPCIDString(id.attribute.Type) {
+				verr.Add(e, "JSON-RPC request ID field %q must be a string", id.name)
+			}
+		}
+		if len(requestIDs) == 1 {
+			id := requestIDs[0]
+			name := id.name
+			if id.depth == 1 && isJSONRPCIDString(id.attribute.Type) &&
+				!e.MethodExpr.Payload.IsRequired(name) && e.MethodExpr.Payload.GetDefault(name) == nil {
+				if incompatible := incompatibleGeneratedJSONRPCRequestIDValidations(id.attribute); len(incompatible) > 0 {
+					verr.Add(e, "JSON-RPC request ID field %q is optional and has no default, so generated clients create a UUID when it is absent; the following validation rules may reject that UUID: %s; make the field required or give it a default", name, strings.Join(incompatible, ", "))
+				}
+			}
+			if e.Body != nil && jsonRPCBodyContainsID(e.Body, name) {
+				verr.Add(e, "JSON-RPC request ID field %q cannot also appear in params", name)
+			}
+			if _, ok := e.Params.FindKey(name); ok {
+				verr.Add(e, "JSON-RPC request ID field %q cannot also be mapped as an HTTP parameter", name)
+			}
+			if _, ok := e.Headers.FindKey(name); ok {
+				verr.Add(e, "JSON-RPC request ID field %q cannot also be mapped as an HTTP header", name)
+			}
+			if _, ok := e.Cookies.FindKey(name); ok {
+				verr.Add(e, "JSON-RPC request ID field %q cannot also be mapped as an HTTP cookie", name)
+			}
+			if e.SSE != nil && e.SSE.RequestIDField == name {
+				verr.Add(e, "JSON-RPC request ID field %q cannot also be mapped to the Last-Event-ID header", name)
+			}
+		}
+		if len(jsonRPCIDFields(e.MethodExpr.Result)) > 0 || len(jsonRPCIDFields(e.MethodExpr.StreamingResult)) > 0 {
+			verr.Add(e, "JSON-RPC method %q cannot define an ID field in its result because the transport copies the request ID", e.MethodExpr.Name)
+		}
+		seenErrors := make(map[string]struct{})
+		for _, mapped := range e.HTTPErrors {
+			if _, ok := seenErrors[mapped.Name]; ok {
+				continue
+			}
+			seenErrors[mapped.Name] = struct{}{}
+			designError := e.MethodExpr.Error(mapped.Name)
+			if designError != nil && len(jsonRPCIDFields(designError.AttributeExpr)) > 0 {
+				verr.Add(e, "JSON-RPC error %q cannot define an ID field because the transport copies the request ID", mapped.Name)
+			}
+		}
+		if e.IsJSONRPCNotification() {
+			if e.MethodExpr.Result.Type != Empty {
+				verr.Add(e, "JSON-RPC notification %q cannot define a result because notifications receive no response", e.MethodExpr.Name)
+			}
+			if e.MethodExpr.IsStreaming() {
+				verr.Add(e, "JSON-RPC notification %q cannot stream because notifications send one message and receive no response", e.MethodExpr.Name)
+			}
+			if hasJSONRPCIDField(e.MethodExpr.Payload) || hasJSONRPCIDField(e.MethodExpr.StreamingPayload) {
+				verr.Add(e, "JSON-RPC notification %q cannot define an ID field because notifications omit the request ID", e.MethodExpr.Name)
+			}
+		}
 		if e.MethodExpr.HasMixedResults() {
 			verr.Add(e, "JSON-RPC method %q cannot define both Result and StreamingResult because its client stream cannot return a separate final result", e.MethodExpr.Name)
 		}
@@ -491,22 +599,6 @@ func (e *HTTPEndpointExpr) Validate() error {
 		case ServerStreamKind:
 			if e.SSE == nil {
 				verr.Add(e, "JSON-RPC method %q with a streaming result must use ServerSentEvents()", e.MethodExpr.Name)
-			}
-		}
-
-		// JSON-RPC ID field validation:
-		// Result may only define an ID field if the corresponding request type (Payload or StreamingPayload) also defines one
-		if e.MethodExpr.Result != nil && e.MethodExpr.Result.Type != Empty && hasJSONRPCIDField(e.MethodExpr.Result) {
-			// Check if request has ID field
-			requestHasID := false
-			if e.MethodExpr.IsPayloadStreaming() {
-				requestHasID = hasJSONRPCIDField(e.MethodExpr.StreamingPayload)
-			} else {
-				requestHasID = hasJSONRPCIDField(e.MethodExpr.Payload)
-			}
-
-			if !requestHasID {
-				verr.Add(e, "JSON-RPC method %q result defines an ID field but the request (payload) does not. Result may only have ID field if request does", e.MethodExpr.Name)
 			}
 		}
 	}
@@ -871,6 +963,22 @@ func (e *HTTPEndpointExpr) Finalize() {
 	initAttr(e.Params, e.MethodExpr.Payload)
 	initAttr(e.Headers, e.MethodExpr.Payload)
 	initAttr(e.Cookies, e.MethodExpr.Payload)
+	if e.SSE != nil && e.SSE.RequestIDField != "" {
+		name := e.SSE.RequestIDField
+		attribute := DupAtt(e.MethodExpr.Payload.Find(name))
+		if attribute.Meta == nil {
+			attribute.Meta = make(MetaExpr)
+		}
+		attribute.Meta["sse:last-event-id"] = []string{"true"}
+		AsObject(e.Headers.Type).Set(name, attribute)
+		e.Headers.Map("Last-Event-ID", name)
+		if e.MethodExpr.Payload.IsRequired(name) {
+			if e.Headers.Validation == nil {
+				e.Headers.Validation = &ValidationExpr{}
+			}
+			e.Headers.Validation.AddRequired(name)
+		}
+	}
 
 	e.Body = httpRequestBody(e)
 	e.Body.Finalize()
@@ -1237,43 +1345,112 @@ func isEmpty(a *AttributeExpr) bool {
 	return true
 }
 
-// hasJSONRPCIDField returns true if an attribute or any of its nested attributes
-// has the "jsonrpc:id" meta tag, indicating it's designated as the JSON-RPC ID field.
+// hasJSONRPCIDField reports whether an attribute graph contains an ID
+// declaration.
 func hasJSONRPCIDField(attr *AttributeExpr) bool {
-	return hasJSONRPCIDFieldRec(attr, make(map[*AttributeExpr]struct{}))
+	return len(jsonRPCIDFields(attr)) > 0
 }
 
-// hasJSONRPCIDFieldRec walks the attribute graph looking for the jsonrpc:id meta
-// while guarding against cycles that may occur with recursive user types.
-func hasJSONRPCIDFieldRec(attr *AttributeExpr, seen map[*AttributeExpr]struct{}) bool {
+// jsonRPCIDFields lists every ID declaration and its distance from the root
+// attribute. A direct payload field has depth one.
+func jsonRPCIDFields(attr *AttributeExpr) []jsonRPCIDField {
+	var fields []jsonRPCIDField
+	collectJSONRPCIDFields(attr, "", 0, make(map[*AttributeExpr]struct{}), &fields)
+	return fields
+}
+
+// collectJSONRPCIDFields walks one attribute path at a time so a shared type
+// can be checked at each place it is used while recursive types still stop.
+func collectJSONRPCIDFields(attr *AttributeExpr, name string, depth int, active map[*AttributeExpr]struct{}, fields *[]jsonRPCIDField) {
 	if attr == nil || attr.Type == Empty {
-		return false
+		return
 	}
-	if _, ok := seen[attr]; ok {
-		return false
+	if _, ok := active[attr]; ok {
+		return
 	}
-	seen[attr] = struct{}{}
+	active[attr] = struct{}{}
+	defer delete(active, attr)
 
-	// Check if this attribute itself has the jsonrpc:id meta tag
-	if attr.Meta != nil {
-		if _, hasID := attr.Meta["jsonrpc:id"]; hasID {
+	if _, ok := attr.Meta["jsonrpc:id"]; ok {
+		*fields = append(*fields, jsonRPCIDField{name: name, attribute: attr, depth: depth})
+	}
+	if userType, ok := attr.Type.(UserType); ok {
+		collectJSONRPCIDFields(userType.Attribute(), name, depth, active, fields)
+		return
+	}
+	if object := AsObject(attr.Type); object != nil {
+		for _, field := range *object {
+			collectJSONRPCIDFields(field.Attribute, field.Name, depth+1, active, fields)
+		}
+		return
+	}
+	if array := AsArray(attr.Type); array != nil {
+		collectJSONRPCIDFields(array.ElemType, name, depth+1, active, fields)
+		return
+	}
+	if mapped := AsMap(attr.Type); mapped != nil {
+		collectJSONRPCIDFields(mapped.KeyType, name, depth+1, active, fields)
+		collectJSONRPCIDFields(mapped.ElemType, name, depth+1, active, fields)
+		return
+	}
+	if union := AsUnion(attr.Type); union != nil {
+		for _, field := range union.Values {
+			collectJSONRPCIDFields(field.Attribute, field.Name, depth+1, active, fields)
+		}
+	}
+}
+
+// isJSONRPCIDString reports whether an ID field is a string or a named string.
+func isJSONRPCIDString(dataType DataType) bool {
+	switch actual := dataType.(type) {
+	case Primitive:
+		return actual == String
+	case UserType:
+		return isJSONRPCIDString(actual.Attribute().Type)
+	default:
+		return false
+	}
+}
+
+// incompatibleGeneratedJSONRPCRequestIDValidations lists the rules that are
+// not guaranteed by the UUID generated when an optional request ID is absent.
+func incompatibleGeneratedJSONRPCRequestIDValidations(attribute *AttributeExpr) []string {
+	validation := EffectiveValidation(attribute)
+	if validation == nil {
+		return nil
+	}
+	var incompatible []string
+	if len(validation.Values) > 0 {
+		incompatible = append(incompatible, "enum")
+	}
+	if validation.Format != "" && validation.Format != FormatUUID {
+		incompatible = append(incompatible, fmt.Sprintf("format %q", validation.Format))
+	}
+	if validation.Pattern != "" {
+		incompatible = append(incompatible, "pattern")
+	}
+	if validation.MinLength != nil && *validation.MinLength > generatedJSONRPCRequestIDLength {
+		incompatible = append(incompatible, fmt.Sprintf("minimum length %d", *validation.MinLength))
+	}
+	if validation.MaxLength != nil && *validation.MaxLength < generatedJSONRPCRequestIDLength {
+		incompatible = append(incompatible, fmt.Sprintf("maximum length %d", *validation.MaxLength))
+	}
+	return incompatible
+}
+
+// jsonRPCBodyContainsID reports whether an explicitly designed params body
+// includes the payload field carried by the JSON-RPC envelope.
+func jsonRPCBodyContainsID(body *AttributeExpr, name string) bool {
+	if origin, ok := body.Meta["origin:attribute"]; ok {
+		return len(origin) > 0 && origin[0] == name
+	}
+	object := AsObject(body.Type)
+	if object == nil {
+		return false
+	}
+	for _, field := range *object {
+		if strings.Split(field.Name, ":")[0] == name {
 			return true
-		}
-	}
-
-	// For object types, check all nested attributes
-	if obj := AsObject(attr.Type); obj != nil {
-		for _, nat := range *obj {
-			if hasJSONRPCIDFieldRec(nat.Attribute, seen) {
-				return true
-			}
-		}
-	}
-
-	// For user types, check the underlying attribute (guarding for recursion)
-	if ut, ok := attr.Type.(UserType); ok {
-		if ut != nil {
-			return hasJSONRPCIDFieldRec(ut.Attribute(), seen)
 		}
 	}
 	return false

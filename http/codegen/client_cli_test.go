@@ -10,6 +10,7 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/cli"
 	"goa.design/goa/v3/codegen/testutil"
+	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/expr"
 	"goa.design/goa/v3/http/codegen/testdata"
 )
@@ -36,6 +37,7 @@ func TestClientCLIFiles(t *testing.T) {
 		{"string-required-build", testdata.PayloadQueryStringValidateDSL, 1, 1},
 		{"string-default-build", testdata.PayloadQueryStringDefaultDSL, 1, 1},
 		{"body-query-path-object-build", testdata.PayloadBodyQueryPathObjectDSL, 1, 1},
+		{"body-nested-user-build", testdata.PayloadBodyNestedUserDSL, 1, 1},
 		{"param-validation-build", testdata.ParamValidateDSL, 1, 1},
 		{"payload-primitive-type", testdata.PayloadBodyPrimitiveBoolValidateDSL, 0, 3},
 		{"payload-array-primitive-type", testdata.PayloadBodyPrimitiveArrayStringValidateDSL, 0, 3},
@@ -62,6 +64,102 @@ func TestClientCLIFiles(t *testing.T) {
 			sections := fs[c.FileIndex].SectionTemplates
 			code := codegen.SectionCode(t, sections[c.SectionIndex])
 			testutil.AssertGo(t, "testdata/golden/client_cli_"+c.Name+".go.golden", code)
+		})
+	}
+}
+
+// TestClientCLIFlagPresenceGolden shows how generated HTTP commands preserve
+// explicit empty values while applying every authored zero-valued default.
+func TestClientCLIFlagPresenceGolden(t *testing.T) {
+	root := expr.RunDSL(t, func() {
+		dsl.Service("FlagPresence", func() {
+			dsl.Method("check", func() {
+				dsl.Payload(func() {
+					dsl.Field(1, "required", dsl.String)
+					dsl.Field(2, "optional", dsl.String)
+					dsl.Field(3, "empty", dsl.String, func() {
+						dsl.Default("")
+					})
+					dsl.Field(4, "disabled", dsl.Boolean, func() {
+						dsl.Default(false)
+					})
+					dsl.Field(5, "zero", dsl.Int, func() {
+						dsl.Default(0)
+					})
+					dsl.Required("required")
+				})
+				dsl.HTTP(func() {
+					dsl.GET("/")
+					dsl.Param("required")
+					dsl.Param("optional")
+					dsl.Param("empty")
+					dsl.Param("disabled")
+					dsl.Param("zero")
+				})
+			})
+		})
+	})
+	files := linkedHTTPPlanForRoot(t, root).ClientCLIFiles()
+	require.Len(t, files, 2)
+
+	parser := codegen.SectionsCode(t, files[0].Section("parse-endpoint"))
+	testutil.AssertGo(t, "testdata/golden/client_cli_flag-presence-parse.go.golden", parser)
+	builder := codegen.SectionsCode(t, files[1].Section("cli-build-payload"))
+	testutil.AssertGo(t, "testdata/golden/client_cli_flag-presence-build.go.golden", builder)
+}
+
+// TestJSONRPCRequestIDCLIFlagPresence checks that a defaulted request ID uses
+// an ordinary string flag while an optional ID keeps omission distinct from an
+// explicitly empty string.
+func TestJSONRPCRequestIDCLIFlagPresence(t *testing.T) {
+	tests := []struct {
+		name          string
+		defaultID     bool
+		wantPresence  bool
+		wantParamType string
+	}{
+		{"defaulted", true, false, "string"},
+		{"optional", false, true, "*string"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			root := expr.RunDSL(t, func() {
+				dsl.Service("Requests", func() {
+					dsl.JSONRPC(func() {
+						dsl.POST("/rpc")
+					})
+					dsl.Method("send", func() {
+						dsl.Payload(func() {
+							if test.defaultID {
+								dsl.ID("id", dsl.String, func() {
+									dsl.Default("default-id")
+								})
+								return
+							}
+							dsl.ID("id", dsl.String)
+						})
+						dsl.JSONRPC(func() {})
+					})
+				})
+			})
+			plan, generation, servicePlan := plannedHTTPPlan(t, root, true)
+			parser := plan.cliParsers[root.API.Servers[0].Name]
+			require.NotNil(t, parser)
+			require.Equal(t, test.wantPresence, parser.Declarations.PresenceFlagType != nil)
+
+			require.NoError(t, generation.Freeze())
+			require.NoError(t, servicePlan.Link())
+			require.NoError(t, plan.Link())
+
+			service := plan.services.Get("Requests")
+			require.NotNil(t, service)
+			command := buildSubcommandData(service, service.Endpoint("send"))
+			require.Len(t, command.Flags, 1)
+			require.Equal(t, test.defaultID, command.Flags[0].HasDefault)
+			require.Equal(t, test.wantPresence, command.Flags[0].TracksPresence)
+			require.NotNil(t, command.BuildFunction)
+			require.Equal(t, []string{test.wantParamType}, command.BuildFunction.FormalParamTypes)
 		})
 	}
 }

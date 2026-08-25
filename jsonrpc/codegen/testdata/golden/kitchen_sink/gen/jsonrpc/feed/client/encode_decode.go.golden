@@ -18,6 +18,7 @@ import (
 	feed "generated.local/gen/feed"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"
+	goa "goa.design/goa/v3/pkg"
 )
 
 // BuildWatchRequest instantiates a HTTP request object with method and path
@@ -35,28 +36,34 @@ func (c *Client) BuildWatchRequest(ctx context.Context, v any) (*http.Request, e
 	return req, nil
 }
 
-// EncodeWatchRequest returns an encoder for requests sent to the Feed watch
-// server.
-func EncodeWatchRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
-	return func(req *http.Request, v any) error {
+// EncodeWatchRequest returns an encoder for requests sent to the Feed service
+// watch JSON-RPC method. The encoder returns the request ID written into the
+// JSON-RPC message.
+func EncodeWatchRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
 		p, ok := v.(*feed.WatchPayload)
 		if !ok {
-			return goahttp.ErrInvalidType("Feed", "watch", "*feed.WatchPayload", v)
+			return "", goahttp.ErrInvalidType("Feed", "watch", "*feed.WatchPayload", v)
 		}
-		b := NewWatchRequestBody(p)
+		if p.LastEventID != nil {
+			head := *p.LastEventID
+			for _, character := range head {
+				if character == 0 || character == '\r' || character == '\n' {
+					return "", goahttp.ErrValidationError("Feed", "watch", goa.InvalidPatternError("last_event_id", string(head), "[^\\x00\\r\\n]*"))
+				}
+			}
+			req.Header.Set("Last-Event-ID", head)
+		}
 		body := &jsonrpc.Request{
 			JSONRPC: "2.0",
 			Method:  "watch",
-			Params:  b,
 		}
-		if p.RequestID != "" {
-			body.ID = p.RequestID
-		}
-		// If ID is empty, this is a notification - no ID field
+		requestID := p.RequestID
+		body.ID = requestID
 		if err := encoder(req).Encode(&body); err != nil {
-			return goahttp.ErrEncodingError("Feed", "watch", err)
+			return "", goahttp.ErrEncodingError("Feed", "watch", err)
 		}
-		return nil
+		return requestID, nil
 	}
 }
 
@@ -76,35 +83,33 @@ func (c *Client) BuildSnapshotRequest(ctx context.Context, v any) (*http.Request
 }
 
 // EncodeSnapshotRequest returns an encoder for requests sent to the Feed
-// snapshot server.
-func EncodeSnapshotRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
-	return func(req *http.Request, v any) error {
+// service snapshot JSON-RPC method. The encoder returns the request ID written
+// into the JSON-RPC message.
+func EncodeSnapshotRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
 		p, ok := v.(*feed.SnapshotPayload)
 		if !ok {
-			return goahttp.ErrInvalidType("Feed", "snapshot", "*feed.SnapshotPayload", v)
+			return "", goahttp.ErrInvalidType("Feed", "snapshot", "*feed.SnapshotPayload", v)
 		}
-		b := NewSnapshotRequestBody(p)
 		body := &jsonrpc.Request{
 			JSONRPC: "2.0",
 			Method:  "snapshot",
-			Params:  b,
 		}
-		if p.RequestID != "" {
-			body.ID = p.RequestID
-		}
-		// If ID is empty, this is a notification - no ID field
+		requestID := p.RequestID
+		body.ID = requestID
 		if err := encoder(req).Encode(&body); err != nil {
-			return goahttp.ErrEncodingError("Feed", "snapshot", err)
+			return "", goahttp.ErrEncodingError("Feed", "snapshot", err)
 		}
-		return nil
+		return requestID, nil
 	}
 }
 
 // DecodeSnapshotResponse returns a decoder for responses returned by the Feed
-// service snapshot JSON-RPC method. restoreBody controls whether the response
-// body should be restored after having been read.
-func DecodeSnapshotResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
-	return func(resp *http.Response) (result any, decodeErr error) {
+// service snapshot JSON-RPC method. The decoder rejects responses that do not
+// repeat requestID. restoreBody controls whether the response body should be
+// restored after having been read.
+func DecodeSnapshotResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response, string) (any, error) {
+	return func(resp *http.Response, requestID string) (result any, decodeErr error) {
 		responseBody := resp.Body
 		if restoreBody {
 			b, readErr := io.ReadAll(responseBody)
@@ -136,12 +141,12 @@ func DecodeSnapshotResponse(decoder func(*http.Response) goahttp.Decoder, restor
 		if err := decoder(resp).Decode(&jresp); err != nil {
 			return nil, goahttp.ErrDecodingError("Feed", "snapshot", err)
 		}
+		if err := jresp.Validate(requestID); err != nil {
+			return nil, goahttp.ErrInvalidResponse("Feed", "snapshot", resp.StatusCode, err.Error())
+		}
 
 		if jresp.Error != nil {
-			switch jresp.Error.Code {
-			default:
-				return nil, goahttp.ErrInvalidResponse("Feed", "snapshot", resp.StatusCode, string(jresp.Error.Data))
-			}
+			return nil, jresp.Error
 		}
 		resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Result))
 		var (

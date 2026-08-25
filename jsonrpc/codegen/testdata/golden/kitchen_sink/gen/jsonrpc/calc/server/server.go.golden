@@ -21,6 +21,33 @@ import (
 	goa "goa.design/goa/v3/pkg"
 )
 
+type (
+
+	// noOutputResponseWriter accepts notification output without storing or
+	// sending it.
+	noOutputResponseWriter struct {
+		header http.Header
+	}
+)
+
+// Header returns the private headers written while a notification is encoded.
+func (w *noOutputResponseWriter) Header() http.Header {
+	return w.header
+}
+
+// Write accepts notification bytes without storing or sending them.
+func (w *noOutputResponseWriter) Write(data []byte) (int, error) {
+	return len(data), nil
+}
+
+// WriteHeader accepts a notification status without sending it.
+func (w *noOutputResponseWriter) WriteHeader(int) {
+}
+
+// Flush completes successfully because notification bytes are not sent.
+func (w *noOutputResponseWriter) Flush() {
+}
+
 // Server handles JSON-RPC requests for the Calc service.
 type Server struct {
 	http.Handler
@@ -184,7 +211,7 @@ func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonr
 		return
 	}
 
-	if req.Method == "" {
+	if !req.HasMethod {
 		s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Missing method field", nil)
 		return
 	}
@@ -268,18 +295,20 @@ func NewAddHandler(
 	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
 		ctx = context.WithValue(ctx, goa.MethodKey, "add")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "Calc")
+		outputWriter := w
+		if !req.HasID {
+			// A notification runs the same service and error reporting code without
+			// sending a response.
+			outputWriter = &noOutputResponseWriter{header: make(http.Header)}
+		}
 		params, err := decodeParams(r, req)
 		if err != nil {
 			if req.HasID {
 				encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidParams, err.Error(), nil, encoder, errhandler)
 			} else {
-				// A notification receives no JSON-RPC response, so pass the decode error to the configured error handler.
-				errhandler(ctx, w, fmt.Errorf("failed to decode parameters: %w", err))
+				errhandler(ctx, outputWriter, fmt.Errorf("failed to decode parameters: %w", err))
 			}
 			return nil
-		}
-		if req.ID != nil {
-			params.ID = jsonrpc.IDToString(req.ID)
 		}
 		res, err := endpoint(ctx, params)
 		if err != nil {
@@ -288,14 +317,25 @@ func NewAddHandler(
 				if errors.As(err, &en) {
 					switch en.GoaErrorName() {
 					case "overflow":
-						encodeJSONRPCError(ctx, w, req, -32602, err.Error(), err, encoder, errhandler)
+						var res *goa.ServiceError
+						if !errors.As(err, &res) {
+							panic("JSON-RPC error name does not match its generated service error type")
+						}
+						body := NewAddOverflowResponseBody(res)
+						data := struct {
+							Name string                   `json:"name"`
+							Body *AddOverflowResponseBody `json:"body"`
+						}{
+							Name: "overflow",
+							Body: body,
+						}
+						encodeJSONRPCError(ctx, w, req, -32602, err.Error(), data, encoder, errhandler)
 						return nil
 					}
 				}
 				encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
 			} else {
-				// A notification receives no JSON-RPC response, so pass the service error to the configured error handler.
-				errhandler(ctx, w, fmt.Errorf("endpoint error: %w", err))
+				errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
 			}
 			return nil
 		}
@@ -304,20 +344,10 @@ func NewAddHandler(
 			return nil
 		}
 
-		// For methods with results, determine the ID to use for the response
-		var id any
-		// Result has an ID field - use it if set, otherwise fall back to request ID
-		actual := res.(*calc.AddResult)
-		if actual.ID != "" {
-			id = actual.ID
-		} else {
-			id = req.ID
-		}
-
-		// Send response with the result
+		// The response repeats the exact request ID.
 		// Build the response body with the fields and JSON names declared by the service.
 		body := NewAddResponseBody(res.(*calc.AddResult))
-		response := jsonrpc.MakeSuccessResponse(id, body)
+		response := jsonrpc.MakeSuccessResponse(req.ID, body)
 		if err := encoder(ctx, w).Encode(response); err != nil {
 			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
 		}
@@ -337,13 +367,18 @@ func NewPingHandler(
 	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
 		ctx = context.WithValue(ctx, goa.MethodKey, "ping")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "Calc")
+		outputWriter := w
+		if !req.HasID {
+			// A notification runs the same service and error reporting code without
+			// sending a response.
+			outputWriter = &noOutputResponseWriter{header: make(http.Header)}
+		}
 		res, err := endpoint(ctx, nil)
 		if err != nil {
 			if req.HasID {
 				encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
 			} else {
-				// A notification receives no JSON-RPC response, so pass the service error to the configured error handler.
-				errhandler(ctx, w, fmt.Errorf("endpoint error: %w", err))
+				errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
 			}
 			return nil
 		}
@@ -352,15 +387,10 @@ func NewPingHandler(
 			return nil
 		}
 
-		// For methods with results, determine the ID to use for the response
-		var id any
-		// No ID field in result - use request ID
-		id = req.ID
-
-		// Send response with the result
+		// The response repeats the exact request ID.
 		// Build the response body with the fields and JSON names declared by the service.
 		body := NewPingResponseBody(res.(*calc.PingResult))
-		response := jsonrpc.MakeSuccessResponse(id, body)
+		response := jsonrpc.MakeSuccessResponse(req.ID, body)
 		if err := encoder(ctx, w).Encode(response); err != nil {
 			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
 		}
@@ -381,27 +411,27 @@ func NewLogHandler(
 	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
 		ctx = context.WithValue(ctx, goa.MethodKey, "log")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "Calc")
+		outputWriter := w
+		if !req.HasID {
+			// A notification runs the same service and error reporting code without
+			// sending a response.
+			outputWriter = &noOutputResponseWriter{header: make(http.Header)}
+		}
 		params, err := decodeParams(r, req)
 		if err != nil {
 			if req.HasID {
 				encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidParams, err.Error(), nil, encoder, errhandler)
 			} else {
-				// A notification receives no JSON-RPC response, so pass the decode error to the configured error handler.
-				errhandler(ctx, w, fmt.Errorf("failed to decode parameters: %w", err))
+				errhandler(ctx, outputWriter, fmt.Errorf("failed to decode parameters: %w", err))
 			}
 			return nil
-		}
-		if req.ID != nil {
-			idStr := jsonrpc.IDToString(req.ID)
-			params.ID = &idStr
 		}
 		_, err = endpoint(ctx, params)
 		if err != nil {
 			if req.HasID {
 				encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
 			} else {
-				// A notification receives no JSON-RPC response, so pass the service error to the configured error handler.
-				errhandler(ctx, w, fmt.Errorf("endpoint error: %w", err))
+				errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
 			}
 			return nil
 		}

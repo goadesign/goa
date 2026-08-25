@@ -35,9 +35,11 @@ import (
 // JSON-RPC response structure. The JSON-RPC protocol defines a fixed envelope
 // with "id", "result" and "error" fields.
 //
-// - Success responses: The entire method result is used as the "result" field
-// - Error responses: Map errors to JSON-RPC error codes using Response
-// - The response "id" automatically matches the request "id" if present
+//   - Success responses: The entire method result is used as the "result" field
+//   - Error responses: Map errors to JSON-RPC error codes using Response
+//   - The response "id" automatically matches the request "id" if present
+//   - Header and Cookie cannot appear in a JSON-RPC Response because a batch or
+//     stream may carry several messages in one HTTP response
 //
 // The valid invocations for successful response are thus:
 //
@@ -178,12 +180,14 @@ func Response(val any, args ...any) {
 			return
 		}
 		code, fn := parseResponseArgs(val, args...)
-		if code == 0 {
+		_, codeSet := val.(int)
+		if !codeSet {
 			code = expr.StatusOK
 		}
 		resp := &expr.HTTPResponseExpr{
-			StatusCode: code,
-			Parent:     t,
+			StatusCode:    code,
+			StatusCodeSet: codeSet,
+			Parent:        t,
 		}
 		if fn != nil {
 			eval.Execute(fn, resp)
@@ -220,8 +224,14 @@ func Code(code int) {
 	switch t := eval.Current().(type) {
 	case *expr.HTTPResponseExpr:
 		t.StatusCode = code
+		t.StatusCodeSet = true
+	case *expr.HTTPErrorExpr:
+		t.Response.StatusCode = code
+		t.Response.StatusCodeSet = true
 	case *expr.GRPCResponseExpr:
 		t.StatusCode = code
+	case *expr.GRPCErrorExpr:
+		t.Response.StatusCode = code
 	default:
 		eval.IncompatibleDSL()
 	}
@@ -247,13 +257,15 @@ func grpcError(n string, p eval.Expression, args ...any) *expr.GRPCErrorExpr {
 		StatusCode: code,
 		Parent:     p,
 	}
+	mapping := &expr.GRPCErrorExpr{
+		ErrorExpr: errorForResponse(n, p),
+		Name:      n,
+		Response:  resp,
+	}
 	if fn != nil {
-		eval.Execute(fn, resp)
+		eval.Execute(fn, mapping)
 	}
-	return &expr.GRPCErrorExpr{
-		Name:     n,
-		Response: resp,
-	}
+	return mapping
 }
 
 func parseResponseArgs(val any, args ...any) (code int, fn func()) {
@@ -298,18 +310,47 @@ func httpOrJSONRPCError(n string, p eval.Expression, args ...any) *expr.HTTPErro
 	val = args[0]
 	args = args[1:]
 	code, fn = parseResponseArgs(val, args...)
-	if code == 0 {
+	_, codeSet := val.(int)
+	if !codeSet {
 		code = expr.StatusBadRequest
 	}
 	resp := &expr.HTTPResponseExpr{
-		StatusCode: code,
-		Parent:     p,
+		StatusCode:    code,
+		StatusCodeSet: codeSet,
+		Parent:        p,
+	}
+	mapping := &expr.HTTPErrorExpr{
+		ErrorExpr: errorForResponse(n, p),
+		Name:      n,
+		Response:  resp,
+	}
+	if !codeSet && mapping.IsJSONRPC() {
+		resp.StatusCode = expr.RPCInternalError
 	}
 	if fn != nil {
-		eval.Execute(fn, resp)
+		eval.Execute(fn, mapping)
 	}
-	return &expr.HTTPErrorExpr{
-		Name:     n,
-		Response: resp,
+	return mapping
+}
+
+// errorForResponse returns the declared error available where a transport
+// response is defined. The response callback uses this error immediately, so
+// inherited API and service mappings must resolve it before endpoint creation.
+func errorForResponse(name string, parent eval.Expression) *expr.ErrorExpr {
+	switch actual := parent.(type) {
+	case *expr.HTTPEndpointExpr:
+		return actual.MethodExpr.Error(name)
+	case *expr.GRPCEndpointExpr:
+		return actual.MethodExpr.Error(name)
+	case *expr.HTTPServiceExpr:
+		return actual.Error(name)
+	case *expr.GRPCServiceExpr:
+		return actual.Error(name)
+	case *expr.RootExpr:
+		return actual.Error(name)
+	case *expr.HTTPExpr, *expr.JSONRPCExpr, *expr.GRPCExpr:
+		return expr.Root.Error(name)
+	default:
+		return nil
 	}
 }

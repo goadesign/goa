@@ -15,8 +15,8 @@ func {{ .Encode.Name }}(viewed {{ .ViewedTypeRef }}) (any, error) {
 		body := viewed.Projected{{ if .ResultAttr }}.{{ .ResultAttr }}{{ end }}
 		{{- end }}
 		return struct {
-			View string `json:"view"`
-			Body any    `json:"body"`
+			View string              `json:"view"`
+			Body {{ .ServerBody.Ref }} `json:"body"`
 		}{
 			View: {{ printf "%q" .View }},
 			Body: body,

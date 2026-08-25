@@ -12,13 +12,18 @@ func {{ .HandlerInit }}(
 	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
 		ctx = context.WithValue(ctx, goa.MethodKey, {{ printf "%q" .Method.Name }})
 		ctx = context.WithValue(ctx, goa.ServiceKey, {{ printf "%q" .ServiceName }})
-
+		outputWriter := w
+		if !req.HasID {
+			// A notification runs the same service and error reporting code without
+			// sending a response.
+			outputWriter = &{{ noOutputWriterName }}{header: make(http.Header)}
+		}
 {{- if isSSEEndpoint . }}
 		// Create the stream before decoding so request failures can be sent on the
 		// same HTTP response.
         strm := &{{ .SSE.StructDeclaration.Name }}{
             {{ sseStreamName }}: {{ sseStreamName }}{
-                w:       w,
+				w:       outputWriter,
                 encoder: encoder,
             },
         }
@@ -28,34 +33,11 @@ func {{ .HandlerInit }}(
 		if err != nil {
 			if req.HasID {
 				return strm.sendError(ctx, req.ID, jsonrpc.InvalidParams, err.Error(), nil)
+			} else {
+				errhandler(ctx, outputWriter, fmt.Errorf("failed to decode parameters: %w", err))
 			}
 			return nil
         }
-		{{- if .Payload.IDAttribute }}
-		{{- if .Payload.IDAttributeRequired }}
-		if req.ID != nil {
-			params.{{ .Payload.IDAttribute }} = jsonrpc.IDToString(req.ID)
-		}
-		{{- else }}
-		if req.ID != nil {
-			idStr := jsonrpc.IDToString(req.ID)
-			params.{{ .Payload.IDAttribute }} = &idStr
-		}
-		{{- end }}
-		{{- end }}
-	{{- end }}
-	{{- if .SSE.RequestIDField }}
-		// Set Last-Event-ID header if present
-		if lastEventID := r.Header.Get("Last-Event-ID"); lastEventID != "" {
-			ctx = context.WithValue(ctx, "last-event-id", lastEventID)
-		{{- if .Payload.Ref }}
-			{{- if .SSE.RequestIDPointer }}
-			params.{{ .SSE.RequestIDField }} = &lastEventID
-			{{- else }}
-			params.{{ .SSE.RequestIDField }} = lastEventID
-			{{- end }}
-		{{- end }}
-		}
 	{{- end }}
         v := &{{ .ServicePkgName }}.{{ .Method.ServerStream.EndpointStruct }}{
             Stream: strm,
@@ -70,6 +52,7 @@ func {{ .HandlerInit }}(
 		{{- end }}
 		if err != nil {
 			if !req.HasID {
+				errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
 				return nil
 			}
 			{{- if .Errors }}
@@ -80,7 +63,8 @@ func {{ .HandlerInit }}(
 					{{- range $mapped := $group.Errors }}
 				case {{ printf "%q" $mapped.Name }}:
 					{{- with $mapped.Response }}
-					return strm.sendError(ctx, req.ID, {{ .Code }}, err.Error(), err)
+					{{- template "designed_error_data" $mapped }}
+					return strm.sendError(ctx, req.ID, {{ .Code }}, err.Error(), data)
 					{{- end }}
 					{{- end }}
 				{{- end }}
@@ -93,36 +77,19 @@ func {{ .HandlerInit }}(
 			return nil
 		}
 
-		response := map[string]any{
-			"jsonrpc": "2.0",
-			"id":      req.ID,
-			"result":  nil,
-		}
-		return strm.sendSSEEvent(ctx, "response", response)
+		response := jsonrpc.MakeSuccessResponse(req.ID, nil)
+		return strm.sendSSEEvent(ctx, response, nil, nil, nil)
 {{- else }}
 	{{- if .Payload.Ref }}
-		params, err := decodeParams(r, req)
+	params, err := decodeParams(r, req)
 		if err != nil {
 			if req.HasID {
 				{{ encodeErrorName }}(ctx, w, req, jsonrpc.InvalidParams, err.Error(), nil, encoder, errhandler)
 			} else {
-				// A notification receives no JSON-RPC response, so pass the decode error to the configured error handler.
-				errhandler(ctx, w, fmt.Errorf("failed to decode parameters: %w", err))
+				errhandler(ctx, outputWriter, fmt.Errorf("failed to decode parameters: %w", err))
 			}
 			return nil
 		}
-		{{- if .Payload.IDAttribute }}
-		{{- if .Payload.IDAttributeRequired }}
-		if req.ID != nil {
-			params.{{ .Payload.IDAttribute }} = jsonrpc.IDToString(req.ID)
-		}
-		{{- else }}
-		if req.ID != nil {
-			idStr := jsonrpc.IDToString(req.ID)
-			params.{{ .Payload.IDAttribute }} = &idStr
-		}
-		{{- end }}
-		{{- end }}
 	{{- end }}
 	{{- if not .Result.Ref }}
 		{{- if .Payload.Ref }}
@@ -143,7 +110,8 @@ func {{ .HandlerInit }}(
 				{{- range $err := $gerr.Errors }}
 					case {{ printf "%q" .Name }}:
 					{{- with .Response}}
-						{{ encodeErrorName }}(ctx, w, req, {{ .Code }}, err.Error(), err, encoder, errhandler)
+						{{- template "designed_error_data" $err }}
+						{{ encodeErrorName }}(ctx, w, req, {{ .Code }}, err.Error(), data, encoder, errhandler)
 						return nil
 					{{- end }}
 				{{- end }}
@@ -153,8 +121,7 @@ func {{ .HandlerInit }}(
 				{{- end }}
 				{{ encodeErrorName }}(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
 			} else {
-				// A notification receives no JSON-RPC response, so pass the service error to the configured error handler.
-				errhandler(ctx, w, fmt.Errorf("endpoint error: %w", err))
+				errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
 			}
 			return nil
 		}
@@ -172,30 +139,7 @@ func {{ .HandlerInit }}(
 		return nil
 		{{- else }}
 
-		// For methods with results, determine the ID to use for the response
-		var id any
-		{{- if .Result.IDAttribute }}
-		// Result has an ID field - use it if set, otherwise fall back to request ID
-		actual := res.({{ .Result.Ref }})
-		{{- if .Result.IDAttributeRequired }}
-		if actual.{{ .Result.IDAttribute }} != "" {
-			id = actual.{{ .Result.IDAttribute }}
-		} else {
-			id = req.ID
-		}
-		{{- else }}
-		if actual.{{ .Result.IDAttribute }} != nil && *actual.{{ .Result.IDAttribute }} != "" {
-			id = *actual.{{ .Result.IDAttribute }}
-		} else {
-			id = req.ID
-		}
-		{{- end }}
-		{{- else }}
-		// No ID field in result - use request ID
-		id = req.ID
-		{{- end }}
-		
-		// Send response with the result
+		// The response repeats the exact request ID.
 		{{- if .Method.ViewedResult }}
 		viewedRes := res.({{ .Method.ViewedResult.FullRef }})
 		body, err := {{ viewedEncodeName .Method.Name }}(viewedRes)
@@ -205,13 +149,13 @@ func {{ .HandlerInit }}(
 		{{- if viewedHasMetadata .Method.Name }}
 		{{ viewedMetadataName .Method.Name }}(w, viewedRes)
 		{{- end }}
-		response := jsonrpc.MakeSuccessResponse(id, body)
+		response := jsonrpc.MakeSuccessResponse(req.ID, body)
 		{{- else if and .Result.Ref (index .Result.Responses 0).ServerBody (index (index .Result.Responses 0).ServerBody 0).Init }}
 		// Build the response body with the fields and JSON names declared by the service.
 		body := {{ (index (index .Result.Responses 0).ServerBody 0).Init.Declaration.Name }}(res.({{ .Result.Ref }}))
-		response := jsonrpc.MakeSuccessResponse(id, body)
+		response := jsonrpc.MakeSuccessResponse(req.ID, body)
 		{{- else }}
-		response := jsonrpc.MakeSuccessResponse(id, res)
+		response := jsonrpc.MakeSuccessResponse(req.ID, res)
 		{{- end }}
 		if err := encoder(ctx, w).Encode(response); err != nil {
 			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
@@ -221,3 +165,28 @@ func {{ .HandlerInit }}(
 {{- end }}
 	}
 }
+
+{{- define "designed_error_data" }}
+	var res {{ .Ref }}
+	if !errors.As(err, &res) {
+		panic("JSON-RPC error name does not match its generated service error type")
+	}
+	{{- if .Response.ServerBody }}
+		{{- with index .Response.ServerBody 0 }}
+			{{- if .Init }}
+	body := {{ .Init.Declaration.Name }}({{ range .Init.ServerArgs }}{{ .Ref }},{{ end }})
+			{{- else }}
+	body := res{{ if $.Response.ResultAttr }}.{{ $.Response.ResultAttr }}{{ end }}
+			{{- end }}
+		{{- end }}
+	{{- else }}
+	var body *struct{}
+	{{- end }}
+	data := struct {
+		Name string `json:"name"`
+		Body {{ if .Response.ServerBody }}{{ (index .Response.ServerBody 0).Ref }}{{ else }}*struct{}{{ end }} `json:"body"`
+	}{
+		Name: {{ printf "%q" .Name }},
+		Body: body,
+	}
+{{- end }}

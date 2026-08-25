@@ -20,15 +20,6 @@ paths:
                     type: string
                     example: request
                   example: request
-            requestBody:
-                description: Request body for SSEAllFieldsMethod.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/SSEAllFieldsMethodRequestBody'
-                        example:
-                            id: request
             responses:
                 "200":
                     description: OK response.
@@ -60,15 +51,6 @@ paths:
                                         format: int64
 components:
     schemas:
-        SSEAllFieldsMethodRequestBody:
-            type: object
-            properties:
-                id:
-                    type: string
-                    example: request
-            description: Request body for SSEAllFieldsMethod.
-            example:
-                id: request
         SSEAllFieldsMethodResponseBody:
             type: object
             properties:

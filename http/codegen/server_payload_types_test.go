@@ -118,6 +118,10 @@ func TestPayloadConstructor(t *testing.T) {
 		{"body-inline-array-user", testdata.PayloadBodyInlineArrayUserDSL},
 		{"body-inline-map-user", testdata.PayloadBodyInlineMapUserDSL},
 		{"body-inline-recursive-user", testdata.PayloadBodyInlineRecursiveUserDSL},
+		{"selected-body-defaults", testdata.PayloadSelectedBodyDefaultsDSL},
+		{"selected-body-object-default", testdata.PayloadSelectedBodyObjectDefaultDSL},
+		{"selected-body-map-default", testdata.PayloadSelectedBodyMapDefaultDSL},
+		{"selected-body-bytes-default", testdata.PayloadSelectedBodyBytesDefaultDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

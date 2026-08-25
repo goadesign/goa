@@ -38,7 +38,7 @@ var JSONRPCSSEObjectDSL = func() {
 				Attribute("last_event_id", String, "Last event ID")
 			})
 			StreamingResult(func() {
-				ID("id", String, "Event ID")
+				Attribute("id", String, "Event ID")
 				Attribute("data", String, "Event data")
 			})
 			JSONRPC(func() {

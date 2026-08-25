@@ -4,14 +4,14 @@ generated client contains only the conversion required by that value.
 */ -}}
 {{- if sseString .Encoding }}
 	{{- if .TargetPointer }}
-		{{- if .Encoding.Named }}
-	value := {{ .Encoding.TypeRef }}({{ .Source }})
+		{{- if .Named }}
+	value := {{ .TypeRef }}({{ .Source }})
 		{{- else }}
 	value := {{ .Source }}
 		{{- end }}
 	{{ .Target }} = &value
-	{{- else if .Encoding.Named }}
-	{{ .Target }} = {{ .Encoding.TypeRef }}({{ .Source }})
+	{{- else if .Named }}
+	{{ .Target }} = {{ .TypeRef }}({{ .Source }})
 	{{- else }}
 	{{ .Target }} = {{ .Source }}
 	{{- end }}
@@ -22,19 +22,19 @@ generated client contains only the conversion required by that value.
 		return
 	}
 	{{- if .TargetPointer }}
-	value := {{ .Encoding.TypeRef }}(val)
+	value := {{ .TypeRef }}(val)
 	{{ .Target }} = &value
-	{{- else if .Encoding.Named }}
-	{{ .Target }} = {{ .Encoding.TypeRef }}(val)
+	{{- else if .Named }}
+	{{ .Target }} = {{ .TypeRef }}(val)
 	{{- else }}
 	{{ .Target }} = val
 	{{- end }}
 {{- else if sseBytes .Encoding }}
 	{{- if .TargetPointer }}
-	value := {{ .Encoding.TypeRef }}([]byte({{ .Source }}))
+	value := {{ .TypeRef }}([]byte({{ .Source }}))
 	{{ .Target }} = &value
-	{{- else if .Encoding.Named }}
-	{{ .Target }} = {{ .Encoding.TypeRef }}([]byte({{ .Source }}))
+	{{- else if .Named }}
+	{{ .Target }} = {{ .TypeRef }}([]byte({{ .Source }}))
 	{{- else }}
 	{{ .Target }} = []byte({{ .Source }})
 	{{- end }}
@@ -45,10 +45,10 @@ generated client contains only the conversion required by that value.
 		return
 	}
 	{{- if .TargetPointer }}
-	value := {{ .Encoding.TypeRef }}(val)
+	value := {{ .TypeRef }}(val)
 	{{ .Target }} = &value
 	{{- else }}
-	{{ .Target }} = {{ .Encoding.TypeRef }}(val)
+	{{ .Target }} = {{ .TypeRef }}(val)
 	{{- end }}
 {{- else if sseUnsignedInteger .Encoding }}
 	var val uint64
@@ -57,10 +57,10 @@ generated client contains only the conversion required by that value.
 		return
 	}
 	{{- if .TargetPointer }}
-	value := {{ .Encoding.TypeRef }}(val)
+	value := {{ .TypeRef }}(val)
 	{{ .Target }} = &value
 	{{- else }}
-	{{ .Target }} = {{ .Encoding.TypeRef }}(val)
+	{{ .Target }} = {{ .TypeRef }}(val)
 	{{- end }}
 {{- else if sseFloat .Encoding }}
 	var val float64
@@ -69,10 +69,10 @@ generated client contains only the conversion required by that value.
 		return
 	}
 	{{- if .TargetPointer }}
-	value := {{ .Encoding.TypeRef }}(val)
+	value := {{ .TypeRef }}(val)
 	{{ .Target }} = &value
 	{{- else }}
-	{{ .Target }} = {{ .Encoding.TypeRef }}(val)
+	{{ .Target }} = {{ .TypeRef }}(val)
 	{{- end }}
 {{- else }}
 	// The configured decoder handles structured event data.

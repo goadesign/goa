@@ -29,7 +29,7 @@ func {{ .Declaration.Name }}(
 				{{ $.Variables.Endpoint }} = {{ .Interceptors.PkgName }}.{{ .Interceptors.ClientEndpointWrapperDeclaration.Name }}({{ $.Variables.Endpoint }}, {{ .Interceptors.ParserVar }})
 			{{- end }}
 			{{- if .BuildFunction }}
-				{{ $.Variables.Data }}, {{ $.Variables.Error }} = {{ $pkgName}}.{{ .BuildFunction.Name }}({{ range .ActualPointerVars }}*{{ . }}, {{ end }})
+				{{ $.Variables.Data }}, {{ $.Variables.Error }} = {{ $pkgName}}.{{ .BuildFunction.Name }}({{- if .ActualArgs }}{{ range $index, $argument := .ActualArgs }}{{ if $index }}, {{ end }}{{ $argument }}{{ end }}{{ else }}{{ range $index, $variable := .ActualPointerVars }}{{ if $index }}, {{ end }}*{{ $variable }}{{ end }}{{ end }})
 			{{- else if .Conversion }}
 				{{ .Conversion }}
 			{{- end }}

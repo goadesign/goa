@@ -1,25 +1,28 @@
 // BuildMethodMultiPayloadPayload builds the payload for the ServiceMulti
 // MethodMultiPayload endpoint from CLI flags.
-func BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody string, serviceMultiMethodMultiPayloadB string, serviceMultiMethodMultiPayloadA string) (*servicemulti.MethodMultiPayloadPayload, error) {
+func BuildMethodMultiPayloadPayload(serviceMultiMethodMultiPayloadBody *string, serviceMultiMethodMultiPayloadB *string, serviceMultiMethodMultiPayloadA *string) (*servicemulti.MethodMultiPayloadPayload, error) {
 	var err error
 	var body MethodMultiPayloadRequestBody
 	{
-		err = json.Unmarshal([]byte(serviceMultiMethodMultiPayloadBody), &body)
+		if serviceMultiMethodMultiPayloadBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*serviceMultiMethodMultiPayloadBody), &body)
 		if err != nil {
 			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"c\": {\n         \"att\": false,\n         \"att10\": \"Fugiat deserunt qui unde odit blanditiis aut.\",\n         \"att11\": \"SXBzYSBtaW51cyBpdXJlIHZlcml0YXRpcyByZXJ1bS4=\",\n         \"att12\": \"Illum nulla alias.\",\n         \"att13\": [\n            \"Quod quos architecto.\",\n            \"Deleniti numquam.\",\n            \"Similique voluptatibus non quaerat eum nobis.\"\n         ],\n         \"att14\": {\n            \"Libero laboriosam.\": \"Et nesciunt corrupti.\"\n         },\n         \"att15\": {\n            \"inline\": \"Labore hic unde.\"\n         },\n         \"att2\": 7364427417869607579,\n         \"att3\": 1230775405,\n         \"att4\": 7548751036052687007,\n         \"att5\": 13421568780903955996,\n         \"att6\": 955870894,\n         \"att7\": 5943663396465067570,\n         \"att8\": 0.45085564,\n         \"att9\": 0.9928171957403447\n      }\n   }'")
 		}
 	}
 	var b *string
 	{
-		if serviceMultiMethodMultiPayloadB != "" {
-			b = &serviceMultiMethodMultiPayloadB
+		if serviceMultiMethodMultiPayloadB != nil {
+			b = serviceMultiMethodMultiPayloadB
 		}
 	}
 	var a *bool
 	{
-		if serviceMultiMethodMultiPayloadA != "" {
+		if serviceMultiMethodMultiPayloadA != nil {
 			var val bool
-			val, err = strconv.ParseBool(serviceMultiMethodMultiPayloadA)
+			val, err = strconv.ParseBool(*serviceMultiMethodMultiPayloadA)
 			a = &val
 			if err != nil {
 				return nil, fmt.Errorf("invalid value for a, must be BOOL")

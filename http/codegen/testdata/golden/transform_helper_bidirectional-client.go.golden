@@ -12,7 +12,7 @@ func marshalServicebodyuserinnerdefaultInnerTypeToInnerTypeRequestBodyOptional(v
 	{
 		var zero string
 		if res.B == zero {
-			res.B = "defaultb"
+			res.B = "patternb"
 		}
 	}
 
@@ -33,7 +33,7 @@ func marshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerTypeOptional(v
 	{
 		var zero string
 		if res.B == zero {
-			res.B = "defaultb"
+			res.B = "patternb"
 		}
 	}
 

@@ -1,21 +1,5 @@
 {
-  "components": {
-    "schemas": {
-      "SSERequestIDMethodRequestBody": {
-        "description": "Request body for SSERequestIDMethod.",
-        "example": {
-          "id": "request"
-        },
-        "properties": {
-          "id": {
-            "example": "request",
-            "type": "string"
-          }
-        },
-        "type": "object"
-      }
-    }
-  },
+  "components": {},
   "info": {
     "title": "Goa API",
     "version": "0.0.1"
@@ -36,20 +20,6 @@
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "example": {
-                "id": "request"
-              },
-              "schema": {
-                "$ref": "#/components/schemas/SSERequestIDMethodRequestBody"
-              }
-            }
-          },
-          "description": "Request body for SSERequestIDMethod.",
-          "required": true
-        },
         "responses": {
           "200": {
             "content": {

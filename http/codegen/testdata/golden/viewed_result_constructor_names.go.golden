@@ -29,3 +29,20 @@ func NewReadArchiveMediaOK(body *ReadResponseBody) *archiverviews.ArchiveMediaVi
 
 	return v
 }
+
+// ValidateArchiveResponseBody runs the validations defined on
+// ArchiveResponseBody
+func ValidateArchiveResponseBody(body *ArchiveResponseBody) (err error) {
+	if body.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	return
+}
+
+// ValidateReadResponseBody runs the validations defined on ReadResponseBody
+func ValidateReadResponseBody(body *ReadResponseBody) (err error) {
+	if body.Status == nil {
+		err = goa.MergeErrors(err, goa.MissingFieldError("status", "body"))
+	}
+	return
+}

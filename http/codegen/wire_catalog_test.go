@@ -52,6 +52,49 @@ func TestWireTypeCatalogRecursiveIdentityTerminates(t *testing.T) {
 	require.Len(t, catalog.records, 1)
 }
 
+func TestOptionalWireTypeRefUsesLinkedLayout(t *testing.T) {
+	catalog, generation := testWireTypeCatalog(t)
+	linkTestWireTypeCatalog(t, generation, catalog)
+	resolver := catalog.resolver(catalog.scope, wireTypePolicy{}).(*wireAttributeScope)
+
+	tests := []struct {
+		name        string
+		attribute   *expr.AttributeExpr
+		want        string
+		preserve    bool
+		dereference bool
+	}{
+		{
+			name:      "anonymous object",
+			attribute: &expr.AttributeExpr{Type: &expr.Object{}},
+			want:      "*struct {\n}",
+			preserve:  true,
+		},
+		{
+			name:        "primitive",
+			attribute:   &expr.AttributeExpr{Type: expr.String},
+			want:        "*string",
+			preserve:    true,
+			dereference: true,
+		},
+		{
+			name:      "array already preserves absence",
+			attribute: &expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}},
+			want:      "[]string",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			layout, err := resolver.GoTypeLayout(test.attribute, wireGoLayoutPolicy(wireTypePolicy{}))
+			require.NoError(t, err)
+			ref, preserve, dereference := optionalWireTypeRef(layout, true)
+			require.Equal(t, test.want, ref)
+			require.Equal(t, test.preserve, preserve)
+			require.Equal(t, test.dereference, dereference)
+		})
+	}
+}
+
 func TestWireTypeCatalogPreservesReleasedNestedNames(t *testing.T) {
 	cases := []struct {
 		name string

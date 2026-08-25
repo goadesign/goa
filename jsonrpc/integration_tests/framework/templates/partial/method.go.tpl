@@ -17,5 +17,8 @@ Method("{{ .Name }}", func() {
 {{- if .IsSSE }}
 		ServerSentEvents()
 {{- end }}
+{{- if .IsNotification }}
+		Notification()
+{{- end }}
 	})
 })

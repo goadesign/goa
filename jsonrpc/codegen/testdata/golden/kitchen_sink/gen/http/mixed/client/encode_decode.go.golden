@@ -83,10 +83,6 @@ func DecodeLookupResponse(decoder func(*http.Response) goahttp.Decoder, restoreB
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("Mixed", "lookup", err)
 			}
-			err = ValidateLookupResponseBody(&body)
-			if err != nil {
-				return nil, goahttp.ErrValidationError("Mixed", "lookup", err)
-			}
 			res := NewLookupResultOK(&body)
 			return res, nil
 		default:

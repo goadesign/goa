@@ -132,34 +132,37 @@ func (g *Generator) buildMethodData(info MethodInfo) *MethodData {
 		GoName:         goify(info.Name()),
 		Description:    g.getMethodDescription(info),
 		Info:           info,
-		IsNotification: info.Modifier == ModifierNotify,
+		IsNotification: info.Modifier == ModifierNotify && !info.IsStreaming(),
 		ReturnsError:   info.Modifier == ModifierError,
 		HasValidation:  info.Modifier == ModifierValidate,
 		Transport:      info.Transport,
 		IsStreaming:    info.IsStreaming(),
 	}
-	if info.Modifier != ModifierNotify && info.Action != ActionGenerate {
+	if info.Action != ActionGenerate {
 		data.Payload = g.buildTypeSpec(info.Type, info.Modifier)
 	}
 	if info.IsStreaming() {
 		data.Result = g.buildStreamingTypeSpec(info.Type)
 	} else if info.Modifier != ModifierNotify && info.Modifier != ModifierError {
-		data.Result = g.buildTypeSpec(info.Type, "")
+		if info.Modifier == ModifierIDMap {
+			data.Result = g.buildTypeSpec(TypeString, "")
+		} else {
+			data.Result = g.buildTypeSpec(info.Type, "")
+		}
 	}
 	return data
 }
 
 // buildTypeSpec creates a TypeSpec based on the type string and modifier.
 func (g *Generator) buildTypeSpec(typeStr, modifier string) *TypeSpec {
-	// Special handling for id mapping: force object with value + id + request_id (strings)
+	// ID mapping wraps the input with the field populated from the request envelope.
 	if modifier == ModifierIDMap {
 		wrap := func(val *TypeSpec) *TypeSpec {
 			return &TypeSpec{
 				Kind: "object",
 				Fields: []FieldSpec{
 					{Position: 1, Name: "value", GoName: "Value", Type: val, Required: true},
-					{Position: 2, Name: "id", GoName: "ID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
-					{Position: 3, Name: "request_id", GoName: "RequestID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}},
+					{Position: 2, Name: "request_id", GoName: "RequestID", Type: &TypeSpec{Kind: "primitive", Primitive: "String"}, Required: true, JSONRPCID: true},
 				},
 			}
 		}

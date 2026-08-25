@@ -1,0 +1,17 @@
+// NewMapPayload builds a SelectedMapBodyDefault service Map endpoint payload.
+func NewMapPayload(body map[string]string) *selectedmapbodydefault.MapPayload {
+	res := &selectedmapbodydefault.MapPayload{}
+	if body != nil {
+		v := make(map[string]string, len(body))
+		for key, val := range body {
+			tk := key
+			tv := val
+			v[tk] = tv
+		}
+		res.Value = v
+	} else {
+		res.Value = selectedmapbodydefault.SelectedMapDefault{"mode": "safe"}
+	}
+
+	return res
+}

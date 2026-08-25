@@ -14,13 +14,17 @@ func (s *StreamServerStream) Send(event *jsonrpcsseobjectservice.StreamResult) e
 func (s *StreamServerStream) SendWithContext(ctx context.Context, event *jsonrpcsseobjectservice.StreamResult) error {
 	result := event
 	body := NewStreamResponseBody(result)
-
-	message := map[string]any{
-		"jsonrpc": "2.0",
-		"method":  "Stream",
-		"params":  body,
+	var eventID *string
+	if result.ID != nil {
+		value := string(*result.ID)
+		eventID = &value
 	}
-	return s.sendSSEEvent(ctx, "notification", message)
+
+	message := jsonrpc.MakeNotification(
+		"Stream",
+		body,
+	)
+	return s.sendSSEEvent(ctx, message, eventID, nil, nil)
 }
 
 // Close does nothing because the HTTP response closes when the service method

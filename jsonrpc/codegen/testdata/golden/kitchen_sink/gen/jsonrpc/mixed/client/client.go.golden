@@ -67,13 +67,14 @@ func (c *Client) Lookup() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		if err := encodeRequest(req, v); err != nil {
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
 			return nil, err
 		}
 		resp, err := c.Doer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("Mixed", "lookup", err)
 		}
-		return decodeResponse(resp)
+		return decodeResponse(resp, requestID)
 	}
 }

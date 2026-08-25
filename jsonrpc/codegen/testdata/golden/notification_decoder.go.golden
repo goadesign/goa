@@ -1,0 +1,142 @@
+package server
+
+// DecodeWithPayloadRequest returns a decoder for requests sent to the
+// notifications with_payload endpoint.
+func DecodeWithPayloadRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request, *jsonrpc.RawRequest) (*notifications.WithPayloadPayload, error) {
+	return func(r *http.Request, req *jsonrpc.RawRequest) (*notifications.WithPayloadPayload, error) {
+		r.Body = io.NopCloser(bytes.NewReader(req.Params))
+		var payload *notifications.WithPayloadPayload
+		var (
+			body WithPayloadRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateWithPayloadRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+		payload = NewWithPayloadPayload(&body)
+
+		return payload, nil
+	}
+}
+
+// DecodeRequiredIDRequest returns a decoder for requests sent to the
+// notifications required_id endpoint.
+func DecodeRequiredIDRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request, *jsonrpc.RawRequest) (*notifications.RequiredIDPayload, error) {
+	return func(r *http.Request, req *jsonrpc.RawRequest) (*notifications.RequiredIDPayload, error) {
+		r.Body = io.NopCloser(bytes.NewReader(req.Params))
+		var payload *notifications.RequiredIDPayload
+		if !req.HasID || req.ID == nil {
+			return payload, goa.MissingFieldError("id", "JSON-RPC request")
+		}
+		var requestID notifications.RequestID
+		decodedID, decodeErr := jsonrpc.IDToString(req.ID)
+		if decodeErr != nil {
+			return payload, goa.DecodePayloadError(decodeErr.Error())
+		}
+		requestID = notifications.RequestID(decodedID)
+		var (
+			body RequiredIDRequestBody
+			err  error
+		)
+		err = decoder(r).Decode(&body)
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				return payload, goa.MissingPayloadError()
+			}
+			var gerr *goa.ServiceError
+			if errors.As(err, &gerr) {
+				return payload, gerr
+			}
+			return payload, goa.DecodePayloadError(err.Error())
+		}
+		err = ValidateRequiredIDRequestBody(&body)
+		if err != nil {
+			return payload, err
+		}
+		payload = NewRequiredIDPayload(&body, requestID)
+
+		return payload, nil
+	}
+}
+
+// DecodeOptionalIDRequest returns a decoder for requests sent to the
+// notifications optional_id endpoint.
+func DecodeOptionalIDRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request, *jsonrpc.RawRequest) (*notifications.OptionalIDPayload, error) {
+	return func(r *http.Request, req *jsonrpc.RawRequest) (*notifications.OptionalIDPayload, error) {
+		r.Body = io.NopCloser(bytes.NewReader(req.Params))
+		var payload *notifications.OptionalIDPayload
+		var requestID *notifications.RequestID
+		if req.ID != nil {
+			decodedID, decodeErr := jsonrpc.IDToString(req.ID)
+			if decodeErr != nil {
+				return payload, goa.DecodePayloadError(decodeErr.Error())
+			}
+			value := notifications.RequestID(decodedID)
+			requestID = &value
+		}
+		payload = NewOptionalIDPayload(requestID)
+
+		return payload, nil
+	}
+}
+
+// DecodeDefaultedIDRequest returns a decoder for requests sent to the
+// notifications defaulted_id endpoint.
+func DecodeDefaultedIDRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request, *jsonrpc.RawRequest) (*notifications.DefaultedIDPayload, error) {
+	return func(r *http.Request, req *jsonrpc.RawRequest) (*notifications.DefaultedIDPayload, error) {
+		r.Body = io.NopCloser(bytes.NewReader(req.Params))
+		var payload *notifications.DefaultedIDPayload
+		var requestID notifications.RequestID
+		requestID = notifications.RequestID("default-id")
+		if req.ID != nil {
+			decodedID, decodeErr := jsonrpc.IDToString(req.ID)
+			if decodeErr != nil {
+				return payload, goa.DecodePayloadError(decodeErr.Error())
+			}
+			requestID = notifications.RequestID(decodedID)
+		}
+		payload = NewDefaultedIDPayload(requestID)
+
+		return payload, nil
+	}
+}
+
+// DecodeValidatedIDRequest returns a decoder for requests sent to the
+// notifications validated_id endpoint.
+func DecodeValidatedIDRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.Decoder) func(*http.Request, *jsonrpc.RawRequest) (*notifications.ValidatedIDPayload, error) {
+	return func(r *http.Request, req *jsonrpc.RawRequest) (*notifications.ValidatedIDPayload, error) {
+		r.Body = io.NopCloser(bytes.NewReader(req.Params))
+		var payload *notifications.ValidatedIDPayload
+		if !req.HasID || req.ID == nil {
+			return payload, goa.MissingFieldError("id", "JSON-RPC request")
+		}
+		var requestID notifications.ValidatedRequestID
+		decodedID, decodeErr := jsonrpc.IDToString(req.ID)
+		if decodeErr != nil {
+			return payload, goa.DecodePayloadError(decodeErr.Error())
+		}
+		requestID = notifications.ValidatedRequestID(decodedID)
+		{
+			var err error
+			err = goa.MergeErrors(err, goa.ValidatePattern("id", string(requestID), "^req-[0-9]+$"))
+			if err != nil {
+				return payload, err
+			}
+		}
+		payload = NewValidatedIDPayload(requestID)
+
+		return payload, nil
+	}
+}

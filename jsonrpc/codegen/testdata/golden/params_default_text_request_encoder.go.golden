@@ -1,0 +1,23 @@
+// EncodeDefaultTextRequest returns an encoder for requests sent to the
+// defaults service default_text JSON-RPC method. The encoder returns the
+// request ID written into the JSON-RPC message.
+func EncodeDefaultTextRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
+		p, ok := v.(*defaults.DefaultTextPayload)
+		if !ok {
+			return "", goahttp.ErrInvalidType("defaults", "default_text", "*defaults.DefaultTextPayload", v)
+		}
+		b := p.Value
+		body := &jsonrpc.Request{
+			JSONRPC: "2.0",
+			Method:  "default_text",
+			Params:  []defaults.Mode{b},
+		}
+		requestID := uuid.New().String()
+		body.ID = requestID
+		if err := encoder(req).Encode(&body); err != nil {
+			return "", goahttp.ErrEncodingError("defaults", "default_text", err)
+		}
+		return requestID, nil
+	}
+}

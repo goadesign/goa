@@ -326,6 +326,7 @@ func planGRPCCLI(generation *codegen.Generation, input PlanInput, packages map[*
 			command := cli.CommandDeclarationInput{Service: grpcService.Name()}
 			for _, endpoint := range grpcService.GRPCEndpoints {
 				command.Methods = append(command.Methods, endpoint.Name())
+				command.NeedsFlagPresence = command.NeedsFlagPresence || grpcEndpointNeedsCLIFlagPresence(endpoint)
 			}
 			commands = append(commands, command)
 		}
@@ -341,6 +342,22 @@ func planGRPCCLI(generation *codegen.Generation, input PlanInput, packages map[*
 		})
 	}
 	return plan, nil
+}
+
+// grpcEndpointNeedsCLIFlagPresence reports whether the generated command must
+// distinguish a missing flag from a flag whose value is empty. Protobuf request
+// messages have no CLI default. Metadata fields use the default from the design
+// when one is present.
+func grpcEndpointNeedsCLIFlagPresence(endpoint *expr.GRPCEndpointExpr) bool {
+	if endpoint.Request.Type != expr.Empty {
+		return true
+	}
+	for _, field := range *expr.AsObject(endpoint.Metadata.Type) {
+		if field.Attribute.DefaultValue == nil {
+			return true
+		}
+	}
+	return false
 }
 
 // planGRPCServicePackages records the exact service imports before generated

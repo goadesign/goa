@@ -74,6 +74,25 @@ func New(
 func (s *Server) MethodNames() []string { return collisions.MethodNames2[:] }
 
 ===== HTTP command parser =====
+// cliStringFlag keeps an omitted command-line flag distinct from an explicitly empty flag.
+type cliStringFlag struct {
+	value *string
+}
+
+// String returns the flag text shown by the standard flag package.
+func (f *cliStringFlag) String() string {
+	if f.value == nil {
+		return ""
+	}
+	return *f.value
+}
+
+// Set records that the user supplied the flag, even when value is empty.
+func (f *cliStringFlag) Set(value string) error {
+	f.value = &value
+	return nil
+}
+
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func ParseEndpoint(
@@ -88,8 +107,10 @@ func ParseEndpoint(
 		collisionsFlags = flag.NewFlagSet("collisions", flag.ContinueOnError)
 
 		collisionsReadFlags    = flag.NewFlagSet("read", flag.ExitOnError)
-		collisionsReadBodyFlag = collisionsReadFlags.String("body", "REQUIRED", "")
+		collisionsReadBodyFlag = new(cliStringFlag)
 	)
+	collisionsReadFlags.Var(collisionsReadBodyFlag, "body", "")
+
 	collisionsFlags.Usage = collisionsUsage
 	collisionsReadFlags.Usage = collisionsReadUsage
 
@@ -158,7 +179,7 @@ func ParseEndpoint(
 			case "read":
 				endpoint = c.Read()
 				endpoint = collisions.WrapReadClientEndpoint2(endpoint, collisionsInter)
-				data, err = collisionsc.BuildReadPayload(*collisionsReadBodyFlag)
+				data, err = collisionsc.BuildReadPayload(collisionsReadBodyFlag.value)
 			}
 		}
 	}
@@ -276,6 +297,25 @@ func handleGRPCServer(ctx context.Context, u *url.URL, collisionsEndpoints *coll
 }
 
 ===== gRPC command parser =====
+// cliStringFlag keeps an omitted command-line flag distinct from an explicitly empty flag.
+type cliStringFlag struct {
+	value *string
+}
+
+// String returns the flag text shown by the standard flag package.
+func (f *cliStringFlag) String() string {
+	if f.value == nil {
+		return ""
+	}
+	return *f.value
+}
+
+// Set records that the user supplied the flag, even when value is empty.
+func (f *cliStringFlag) Set(value string) error {
+	f.value = &value
+	return nil
+}
+
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func ParseEndpoint(
@@ -287,8 +327,10 @@ func ParseEndpoint(
 		collisionsFlags = flag.NewFlagSet("collisions", flag.ContinueOnError)
 
 		collisionsReadFlags       = flag.NewFlagSet("read", flag.ExitOnError)
-		collisionsReadMessageFlag = collisionsReadFlags.String("message", "", "")
+		collisionsReadMessageFlag = new(cliStringFlag)
 	)
+	collisionsReadFlags.Var(collisionsReadMessageFlag, "message", "")
+
 	collisionsFlags.Usage = collisionsUsage
 	collisionsReadFlags.Usage = collisionsReadUsage
 
@@ -357,7 +399,7 @@ func ParseEndpoint(
 			case "read":
 				endpoint = c.Read()
 				endpoint = collisions.WrapReadClientEndpoint2(endpoint, collisionsInter)
-				data, err = collisionsc.BuildReadPayload(*collisionsReadMessageFlag)
+				data, err = collisionsc.BuildReadPayload(collisionsReadMessageFlag.value)
 			}
 		}
 	}

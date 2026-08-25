@@ -36,8 +36,8 @@ type (
 	}
 
 	// GoTypeBinding gives a planned attribute the package path and generated
-	// declaration that will represent it. A named type sets Type, and a union
-	// sets Union.
+	// declaration that will represent it. Service types set Type or Union;
+	// other generators set Declaration.
 	GoTypeBinding struct {
 		// Owner is the import path of the package containing the declaration.
 		Owner string
@@ -45,6 +45,10 @@ type (
 		Type *TypeDeclaration
 		// Union is the generated declaration for a union.
 		Union *UnionDeclaration
+		// Declaration is the generated type declaration when the owning generator
+		// does not register a service TypeDeclaration or UnionDeclaration.
+		Declaration *NameDeclaration
+		name        string
 	}
 
 	// GoTypeBinder returns the package path and generated declaration for a named
@@ -81,6 +85,9 @@ type (
 		Policy GoLayoutPolicy
 		// Bind returns the generated declaration for every named type and union.
 		Bind GoTypeBinder
+		// RetainNamedValue records the fields or elements beneath named types for
+		// callers that render complete values.
+		RetainNamedValue bool
 	}
 
 	// GoTypePlan stores the complete Go form copied from one attribute. It keeps
@@ -99,16 +106,20 @@ type (
 		fieldPointer      bool
 		definitionPointer bool
 		referencePointer  bool
+		referenceNilable  bool
 		primitive         string
 		directImport      GoTypeImport
 		hasDirectImport   bool
 		customQualifier   string
 		typeDeclaration   *TypeDeclaration
 		unionDeclaration  *UnionDeclaration
+		declaration       *NameDeclaration
+		fixedName         string
 		fields            []*GoTypePlan
 		branches          []*GoTypePlan
 		element           *GoTypePlan
 		key               *GoTypePlan
+		value             *GoTypePlan
 	}
 
 	// GoTypeQualifier returns the final package name written before a type from
@@ -125,8 +136,10 @@ type (
 
 	// goTypePlanner reads attributes and builds GoTypePlan values.
 	goTypePlanner struct {
-		policy GoLayoutPolicy
-		bind   GoTypeBinder
+		policy           GoLayoutPolicy
+		bind             GoTypeBinder
+		namedValues      map[expr.UserType]*GoTypePlan
+		retainNamedValue bool
 	}
 )
 
@@ -160,8 +173,10 @@ func PlanGoType(attribute *expr.AttributeExpr, options GoTypePlanOptions) (*GoTy
 		return nil, fmt.Errorf("plan Go type: inherited owner must not be empty")
 	}
 	planner := goTypePlanner{
-		policy: options.Policy,
-		bind:   options.Bind,
+		policy:           options.Policy,
+		bind:             options.Bind,
+		namedValues:      make(map[expr.UserType]*GoTypePlan),
+		retainNamedValue: options.RetainNamedValue,
 	}
 	return planner.plan(attribute, options.Owner, options.FieldName, nil, false)
 }
@@ -268,6 +283,12 @@ func (p *GoTypePlan) ReferenceIsPointer() bool {
 	return p.referencePointer
 }
 
+// ReferenceCanBeNil reports whether the generated reference can represent an
+// absent value without another pointer.
+func (p *GoTypePlan) ReferenceCanBeNil() bool {
+	return p.referenceNilable
+}
+
 // Import returns the package written directly in this type name. The second
 // result is false for built-in types and generated declarations.
 func (p *GoTypePlan) Import() (GoTypeImport, bool) {
@@ -285,7 +306,7 @@ func (p *GoTypePlan) ImportPreferences() []GoTypeImport {
 		switch {
 		case candidate.hasDirectImport:
 			goImport = candidate.directImport
-		case candidate.typeDeclaration != nil || candidate.unionDeclaration != nil:
+		case candidate.declaration != nil:
 			goImport = GoTypeImport{Path: candidate.owner}
 		default:
 			return
@@ -331,10 +352,10 @@ func (p *GoTypePlan) Equivalent(other *GoTypePlan) bool {
 		p.fieldNameUpper != other.fieldNameUpper || p.fieldNameLower != other.fieldNameLower ||
 		p.description != other.description || p.comment != other.comment || p.tag != other.tag ||
 		p.fieldPointer != other.fieldPointer || p.definitionPointer != other.definitionPointer ||
-		p.referencePointer != other.referencePointer || p.primitive != other.primitive ||
+		p.referencePointer != other.referencePointer || p.referenceNilable != other.referenceNilable || p.primitive != other.primitive ||
 		p.directImport != other.directImport || p.hasDirectImport != other.hasDirectImport ||
 		p.customQualifier != other.customQualifier || p.typeDeclaration != other.typeDeclaration ||
-		p.unionDeclaration != other.unionDeclaration || len(p.fields) != len(other.fields) ||
+		p.unionDeclaration != other.unionDeclaration || p.declaration != other.declaration || p.fixedName != other.fixedName || len(p.fields) != len(other.fields) ||
 		len(p.branches) != len(other.branches) {
 		return false
 	}
@@ -363,6 +384,9 @@ func (p *GoTypePlan) Link(outputPath string, qualifier GoTypeQualifier) LinkedGo
 
 // Name returns the Go type name selected by the plan.
 func (l LinkedGoType) Name() string {
+	if l.plan.fixedName != "" {
+		return l.plan.fixedName
+	}
 	switch l.plan.kind {
 	case GoPrimitive:
 		if !l.plan.hasDirectImport || l.plan.customQualifier == "" {
@@ -384,9 +408,9 @@ func (l LinkedGoType) Name() string {
 	case GoStruct:
 		return l.Def()
 	case GoNamed:
-		return l.qualifiedDeclaration(l.plan.typeDeclaration.Declaration())
+		return l.qualifiedDeclaration(l.plan.declaration)
 	case GoUnion:
-		return l.qualifiedDeclaration(l.plan.unionDeclaration.Declaration())
+		return l.qualifiedDeclaration(l.plan.declaration)
 	case GoEmpty:
 		return "struct {}"
 	case GoServiceError:
@@ -443,11 +467,32 @@ func (l LinkedGoType) Def() string {
 // Ref returns the Go type reference, including any pointer required for a named
 // object or union.
 func (l LinkedGoType) Ref() string {
-	name := l.Name()
-	if l.plan.referencePointer {
-		return "*" + name
+	return l.RefWithPointer(l.plan.referencePointer)
+}
+
+// RefWithPointer returns this planned type with the requested top-level
+// pointer. Child pointer choices remain unchanged.
+func (l LinkedGoType) RefWithPointer(pointer bool) string {
+	if pointer {
+		return "*" + l.Name()
 	}
-	return name
+	return l.Name()
+}
+
+// Kind returns how this linked value is represented in Go.
+func (l LinkedGoType) Kind() GoTypeKind {
+	return l.plan.Kind()
+}
+
+// ReferenceIsPointer reports whether the ordinary reference uses a pointer.
+func (l LinkedGoType) ReferenceIsPointer() bool {
+	return l.plan.ReferenceIsPointer()
+}
+
+// ReferenceCanBeNil reports whether the ordinary reference can represent an
+// absent value.
+func (l LinkedGoType) ReferenceCanBeNil() bool {
+	return l.plan.ReferenceCanBeNil()
 }
 
 // Field returns the copied Go field name for this planned value.
@@ -539,6 +584,7 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 	dataType := layoutAttribute.Type
 	_, rawObject := dataType.(*expr.Object)
 	plan.referencePointer = !rawObject && (expr.IsObject(dataType) || expr.IsUnion(dataType))
+	plan.referenceNilable = plan.referencePointer || !rawObject && IsNilable(dataType)
 	switch actual := dataType.(type) {
 	case expr.Primitive:
 		plan.kind = GoPrimitive
@@ -599,6 +645,22 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 			}
 			plan.owner = binding.Owner
 			plan.typeDeclaration = binding.Type
+			plan.declaration = binding.declaration()
+			plan.fixedName = binding.name
+			if p.retainNamedValue {
+				origin := actual.Origin()
+				value := p.namedValues[origin]
+				if value == nil {
+					value = &GoTypePlan{}
+					p.namedValues[origin] = value
+					planned, err := p.plan(actual.Attribute(), binding.Owner, "", nil, false)
+					if err != nil {
+						return nil, err
+					}
+					*value = *planned
+				}
+				plan.value = value
+			}
 		}
 	case *expr.Union:
 		plan.kind = GoUnion
@@ -608,6 +670,8 @@ func (p goTypePlanner) plan(attribute *expr.AttributeExpr, owner, fieldName stri
 		}
 		plan.owner = binding.Owner
 		plan.unionDeclaration = binding.Union
+		plan.declaration = binding.declaration()
+		plan.fixedName = binding.name
 		plan.branches = make([]*GoTypePlan, len(actual.Values))
 		for index, branch := range actual.Values {
 			child, err := p.plan(branch.Attribute, binding.Owner, branch.Name, nil, false)
@@ -641,20 +705,22 @@ func (p goTypePlanner) binding(attribute *expr.AttributeExpr, inheritedOwner str
 	}
 	switch kind {
 	case GoNamed:
-		if binding.Type == nil || binding.Union != nil {
-			return GoTypeBinding{}, fmt.Errorf("plan Go named type %q: binding requires only a type declaration", attribute.Type.Name())
+		if binding.declarationCount() != 1 || binding.Union != nil {
+			return GoTypeBinding{}, fmt.Errorf("plan Go named type %q: binding requires one type declaration", attribute.Type.Name())
 		}
-		if declarationOwner := binding.Type.PackagePath(); declarationOwner != binding.Owner {
+		if binding.name == "" && binding.declaration().packagePath() != binding.Owner {
+			declarationOwner := binding.declaration().packagePath()
 			return GoTypeBinding{}, fmt.Errorf(
 				"plan Go named type %q: binding owner %q does not match declaration owner %q",
 				attribute.Type.Name(), binding.Owner, declarationOwner,
 			)
 		}
 	case GoUnion:
-		if binding.Union == nil || binding.Type != nil {
-			return GoTypeBinding{}, fmt.Errorf("plan Go union %q: binding requires only a union declaration", attribute.Type.Name())
+		if binding.declarationCount() != 1 || binding.Type != nil {
+			return GoTypeBinding{}, fmt.Errorf("plan Go union %q: binding requires one union declaration", attribute.Type.Name())
 		}
-		if declarationOwner := binding.Union.PackagePath(); declarationOwner != binding.Owner {
+		if binding.name == "" && binding.declaration().packagePath() != binding.Owner {
+			declarationOwner := binding.declaration().packagePath()
 			return GoTypeBinding{}, fmt.Errorf(
 				"plan Go union %q: binding owner %q does not match declaration owner %q",
 				attribute.Type.Name(), binding.Owner, declarationOwner,
@@ -662,6 +728,38 @@ func (p goTypePlanner) binding(attribute *expr.AttributeExpr, inheritedOwner str
 		}
 	}
 	return binding, nil
+}
+
+// declaration returns the generated name selected for this type binding.
+func (b GoTypeBinding) declaration() *NameDeclaration {
+	if b.Declaration != nil {
+		return b.Declaration
+	}
+	if b.Type != nil {
+		return b.Type.Declaration()
+	}
+	if b.Union != nil {
+		return b.Union.Declaration()
+	}
+	return nil
+}
+
+// declarationCount reports how many mutually exclusive name sources are set.
+func (b GoTypeBinding) declarationCount() int {
+	count := 0
+	if b.Type != nil {
+		count++
+	}
+	if b.Union != nil {
+		count++
+	}
+	if b.Declaration != nil {
+		count++
+	}
+	if b.name != "" {
+		count++
+	}
+	return count
 }
 
 // walk visits this plan and then its children in their stored order.

@@ -16,13 +16,13 @@ import (
 
 // BuildMethodAPayload builds the payload for the PayloadWithValidation
 // method_a endpoint from CLI flags.
-func BuildMethodAPayload(payloadWithValidationMethodAMetadataInt string, payloadWithValidationMethodAMetadataString string) (*payloadwithvalidation.MethodAPayload, error) {
+func BuildMethodAPayload(payloadWithValidationMethodAMetadataInt *string, payloadWithValidationMethodAMetadataString *string) (*payloadwithvalidation.MethodAPayload, error) {
 	var err error
 	var metadataInt *int
 	{
-		if payloadWithValidationMethodAMetadataInt != "" {
+		if payloadWithValidationMethodAMetadataInt != nil {
 			var v int64
-			v, err = strconv.ParseInt(payloadWithValidationMethodAMetadataInt, 10, strconv.IntSize)
+			v, err = strconv.ParseInt(*payloadWithValidationMethodAMetadataInt, 10, strconv.IntSize)
 			val := int(v)
 			metadataInt = &val
 			if err != nil {
@@ -41,13 +41,13 @@ func BuildMethodAPayload(payloadWithValidationMethodAMetadataInt string, payload
 	}
 	var metadataString *string
 	{
-		if payloadWithValidationMethodAMetadataString != "" {
-			metadataString = &payloadWithValidationMethodAMetadataString
-			if utf8.RuneCountInString(payloadWithValidationMethodAMetadataString) < 5 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("MetadataString", payloadWithValidationMethodAMetadataString, utf8.RuneCountInString(payloadWithValidationMethodAMetadataString), 5, true))
+		if payloadWithValidationMethodAMetadataString != nil {
+			metadataString = payloadWithValidationMethodAMetadataString
+			if utf8.RuneCountInString(*payloadWithValidationMethodAMetadataString) < 5 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("MetadataString", *payloadWithValidationMethodAMetadataString, utf8.RuneCountInString(*payloadWithValidationMethodAMetadataString), 5, true))
 			}
-			if utf8.RuneCountInString(payloadWithValidationMethodAMetadataString) > 10 {
-				err = goa.MergeErrors(err, goa.InvalidLengthError("MetadataString", payloadWithValidationMethodAMetadataString, utf8.RuneCountInString(payloadWithValidationMethodAMetadataString), 10, false))
+			if utf8.RuneCountInString(*payloadWithValidationMethodAMetadataString) > 10 {
+				err = goa.MergeErrors(err, goa.InvalidLengthError("MetadataString", *payloadWithValidationMethodAMetadataString, utf8.RuneCountInString(*payloadWithValidationMethodAMetadataString), 10, false))
 			}
 			if err != nil {
 				return nil, err

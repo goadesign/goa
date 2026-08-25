@@ -497,3 +497,276 @@ func TestCustomGoTypeFlagPlanUsesJSON(t *testing.T) {
 	require.Contains(t, generated, "json.Unmarshal([]byte(serviceMethodAt), &at)")
 	require.True(t, declaresError)
 }
+
+// TestPlannedFlagsPreservePresence checks that generated parsers keep an
+// omitted flag distinct from a flag whose text is empty.
+func TestPlannedFlagsPreservePresence(t *testing.T) {
+	generation, err := codegen.NewGeneration("generated.local/gen", nil)
+	require.NoError(t, err)
+	pkg, err := generation.ClaimPackage("generated.local/gen/http/cli/server")
+	require.NoError(t, err)
+	parser, err := DeclareParser(pkg, "http", "api", "server", []CommandDeclarationInput{
+		{Service: "calc", Methods: []string{"add"}, NeedsFlagPresence: true},
+	})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+
+	plan := NewFlagPlan(&expr.AttributeExpr{Type: expr.String}, "string", "string", nil)
+	flag := NewFlagDataForPlan("calc", "add", "label", plan, "label to add", false, "sample", nil)
+	command := &CommandData{
+		ServiceName: "calc",
+		Name:        "calc",
+		VarName:     "calc",
+		Subcommands: []*SubcommandData{{
+			MethodName: "add",
+			Name:       "add",
+			FullName:   "calcAdd",
+			Flags:      []*FlagData{flag},
+		}},
+	}
+	command.UsageDeclaration = parser.Commands["calc"].Usage
+	command.Subcommands[0].UsageDeclaration = parser.Commands["calc"].Methods["add"]
+	parser.PlanVariables([]*CommandData{command}, nil)
+
+	generated := parser.FlagsCode([]*CommandData{command})
+	require.Contains(t, generated, "new(cliStringFlag)")
+	require.Contains(t, generated, `.Var(calcAddLabelFlag, "label", "label to add")`)
+	require.NotContains(t, generated, `.String("label"`)
+}
+
+// TestFieldLoadCodePreservesPlannedFlagPresence checks the generated builder
+// branches on flag presence, not on whether the flag text is empty.
+func TestFieldLoadCodePreservesPlannedFlagPresence(t *testing.T) {
+	plan := NewFlagPlan(&expr.AttributeExpr{Type: expr.String}, "string", "string", nil)
+	tests := []struct {
+		name        string
+		required    bool
+		want        []string
+		doesNotWant []string
+	}{
+		{
+			name:     "required",
+			required: true,
+			want: []string{
+				`if serviceMethodLabel == nil {`,
+				`fmt.Errorf("missing required flag --label")`,
+				`label = *serviceMethodLabel`,
+			},
+			doesNotWant: []string{`serviceMethodLabel != ""`},
+		},
+		{
+			name:     "optional",
+			required: false,
+			want: []string{
+				`if serviceMethodLabel != nil {`,
+				`label = serviceMethodLabel`,
+			},
+			doesNotWant: []string{`serviceMethodLabel != ""`},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			flag := NewFlagDataForPlan(
+				"Service",
+				"Method",
+				"label",
+				plan,
+				"",
+				test.required,
+				"sample",
+				nil,
+			)
+			generated, _ := fieldLoadCode(
+				flag,
+				"label",
+				plan.value,
+				nil,
+				nil,
+				&expr.Object{},
+				"*Payload",
+			)
+
+			for _, want := range test.want {
+				require.Contains(t, generated, want)
+			}
+			for _, unwanted := range test.doesNotWant {
+				require.NotContains(t, generated, unwanted)
+			}
+		})
+	}
+}
+
+// TestFlagDefaultsUseTheirText checks that zero-valued defaults are emitted as
+// real defaults instead of the placeholder used for missing required flags.
+func TestFlagDefaultsUseTheirText(t *testing.T) {
+	tests := []struct {
+		name string
+		plan *FlagPlan
+		def  any
+		want string
+	}{
+		{
+			name: "empty string",
+			plan: NewFlagPlan(&expr.AttributeExpr{Type: expr.String}, "string", "string", nil),
+			def:  "",
+			want: `.String("value", "", "")`,
+		},
+		{
+			name: "false",
+			plan: NewFlagPlan(&expr.AttributeExpr{Type: expr.Boolean}, "bool", "bool", nil),
+			def:  false,
+			want: `.String("value", "false", "")`,
+		},
+		{
+			name: "zero",
+			plan: NewFlagPlan(&expr.AttributeExpr{Type: expr.Int}, "int", "int", nil),
+			def:  0,
+			want: `.String("value", "0", "")`,
+		},
+		{
+			name: "array JSON",
+			plan: NewFlagPlan(&expr.AttributeExpr{Type: &expr.Array{ElemType: &expr.AttributeExpr{Type: expr.String}}}, "[]string", "[]string", nil),
+			def:  []string{"one", "two"},
+			want: `.String("value", "[\"one\",\"two\"]", "")`,
+		},
+		{
+			name: "map JSON",
+			plan: NewFlagPlan(&expr.AttributeExpr{Type: &expr.Map{KeyType: &expr.AttributeExpr{Type: expr.String}, ElemType: &expr.AttributeExpr{Type: expr.Int}}}, "map[string]int", "map[string]int", nil),
+			def:  map[string]int{"one": 1},
+			want: `.String("value", "{\"one\":1}", "")`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			flag := NewFlagDataForPlan("calc", "add", "value", test.plan, "", true, "sample", test.def)
+			command := &CommandData{
+				ServiceName: "calc",
+				Name:        "calc",
+				VarName:     "calc",
+				Subcommands: []*SubcommandData{{
+					MethodName: "add",
+					Name:       "add",
+					FullName:   "calcAdd",
+					Flags:      []*FlagData{flag},
+				}},
+			}
+
+			generated := FlagsCode([]*CommandData{command})
+			require.Contains(t, generated, test.want)
+			require.NotContains(t, generated, `"REQUIRED"`)
+		})
+	}
+}
+
+// TestMakeFlagsPlansPresenceBeforeRendering checks that builders and parser
+// calls receive exact types and expressions without inspecting values at run
+// time.
+func TestMakeFlagsPlansPresenceBeforeRendering(t *testing.T) {
+	stringPlan := NewFlagPlan(&expr.AttributeExpr{Type: expr.String}, "string", "string", nil)
+	boolPlan := NewFlagPlan(&expr.AttributeExpr{Type: expr.Boolean}, "bool", "bool", nil)
+	intPlan := NewFlagPlan(&expr.AttributeExpr{Type: expr.Int}, "int", "int", nil)
+	flags, builder := MakeFlags(
+		"Service",
+		&service.MethodData{Name: "Method", VarName: "Method"},
+		[]*FlagArgData{
+			{
+				Name:     "required",
+				TypeName: "string",
+				Plan:     stringPlan,
+				TypeRef:  "string",
+				Required: true,
+				Example:  "value",
+			},
+			{
+				Name:     "optional",
+				TypeName: "string",
+				Plan:     stringPlan,
+				TypeRef:  "*string",
+				Example:  "value",
+			},
+			{
+				Name:         "emptyDefault",
+				TypeName:     "string",
+				Plan:         stringPlan,
+				TypeRef:      "string",
+				Example:      "value",
+				DefaultValue: "",
+			},
+			{
+				Name:         "falseDefault",
+				TypeName:     "bool",
+				Plan:         boolPlan,
+				TypeRef:      "bool",
+				Example:      true,
+				DefaultValue: false,
+			},
+			{
+				Name:         "zeroDefault",
+				TypeName:     "int",
+				Plan:         intPlan,
+				TypeRef:      "int",
+				Example:      1,
+				DefaultValue: 0,
+			},
+		},
+		&expr.Object{},
+		"*Payload",
+		nil,
+	)
+
+	require.Equal(t, []string{"*string", "*string", "string", "string", "string"}, builder.FormalParamTypes)
+	require.True(t, flags[0].TracksPresence)
+	require.True(t, flags[1].TracksPresence)
+	for _, flag := range flags[2:] {
+		require.False(t, flag.TracksPresence)
+		require.True(t, flag.HasDefault)
+	}
+	require.Contains(t, builder.Fields[0].Init, `if serviceMethodRequired == nil {`)
+	require.Contains(t, builder.Fields[0].Init, `required = *serviceMethodRequired`)
+	require.Contains(t, builder.Fields[1].Init, `if serviceMethodOptional != nil {`)
+	require.Contains(t, builder.Fields[1].Init, `optional = serviceMethodOptional`)
+	require.NotContains(t, builder.Fields[2].Init, "if ")
+	require.Contains(t, builder.Fields[2].Init, `emptyDefault = serviceMethodEmptyDefault`)
+	require.Contains(t, builder.Fields[3].Init, `strconv.ParseBool(serviceMethodFalseDefault)`)
+	require.Contains(t, builder.Fields[4].Init, `strconv.ParseInt(serviceMethodZeroDefault, 10, strconv.IntSize)`)
+	var builderCode strings.Builder
+	require.NoError(t, PayloadBuilderSection(builder).Write(&builderCode))
+	require.Contains(t, builderCode.String(), "serviceMethodRequired *string")
+	require.Contains(t, builderCode.String(), "serviceMethodOptional *string")
+	require.Contains(t, builderCode.String(), "serviceMethodEmptyDefault string")
+
+	generation, err := codegen.NewGeneration("generated.local/gen", nil)
+	require.NoError(t, err)
+	pkg, err := generation.ClaimPackage("generated.local/gen/http/cli/server")
+	require.NoError(t, err)
+	parser, err := DeclareParser(pkg, "http", "api", "server", []CommandDeclarationInput{
+		{Service: "Service", Methods: []string{"Method"}, NeedsFlagPresence: true},
+	})
+	require.NoError(t, err)
+	require.NoError(t, generation.Freeze())
+	subcommand := &SubcommandData{
+		MethodName:    "Method",
+		FullName:      "serviceMethod",
+		Flags:         flags,
+		BuildFunction: builder,
+	}
+	parser.PlanVariables([]*CommandData{{
+		ServiceName: "Service",
+		VarName:     "service",
+		Subcommands: []*SubcommandData{subcommand},
+	}}, nil)
+	require.Equal(t, []string{
+		"serviceMethodRequiredFlag.value",
+		"serviceMethodOptionalFlag.value",
+		"*serviceMethodEmptyDefaultFlag",
+		"*serviceMethodFalseDefaultFlag",
+		"*serviceMethodZeroDefaultFlag",
+	}, subcommand.ActualArgs)
+
+	var rendered strings.Builder
+	require.NoError(t, presenceFlagSection(parser.Declarations.PresenceFlagType.Name()).Write(&rendered))
+	require.Contains(t, rendered.String(), "type cliStringFlag struct")
+	require.Contains(t, rendered.String(), "f.value = &value")
+}

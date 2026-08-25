@@ -36,12 +36,14 @@ func (c *Client) BuildAddRequest(ctx context.Context, v any) (*http.Request, err
 	return req, nil
 }
 
-// EncodeAddRequest returns an encoder for requests sent to the Calc add server.
-func EncodeAddRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
-	return func(req *http.Request, v any) error {
+// EncodeAddRequest returns an encoder for requests sent to the Calc service
+// add JSON-RPC method. The encoder returns the request ID written into the
+// JSON-RPC message.
+func EncodeAddRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
 		p, ok := v.(*calc.AddPayload)
 		if !ok {
-			return goahttp.ErrInvalidType("Calc", "add", "*calc.AddPayload", v)
+			return "", goahttp.ErrInvalidType("Calc", "add", "*calc.AddPayload", v)
 		}
 		b := NewAddRequestBody(p)
 		body := &jsonrpc.Request{
@@ -49,22 +51,21 @@ func EncodeAddRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Re
 			Method:  "add",
 			Params:  b,
 		}
-		if p.ID != "" {
-			body.ID = p.ID
-		}
-		// If ID is empty, this is a notification - no ID field
+		requestID := p.ID
+		body.ID = requestID
 		if err := encoder(req).Encode(&body); err != nil {
-			return goahttp.ErrEncodingError("Calc", "add", err)
+			return "", goahttp.ErrEncodingError("Calc", "add", err)
 		}
-		return nil
+		return requestID, nil
 	}
 }
 
 // DecodeAddResponse returns a decoder for responses returned by the Calc
-// service add JSON-RPC method. restoreBody controls whether the response body
-// should be restored after having been read.
-func DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
-	return func(resp *http.Response) (result any, decodeErr error) {
+// service add JSON-RPC method. The decoder rejects responses that do not
+// repeat requestID. restoreBody controls whether the response body should be
+// restored after having been read.
+func DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response, string) (any, error) {
+	return func(resp *http.Response, requestID string) (result any, decodeErr error) {
 		responseBody := resp.Body
 		if restoreBody {
 			b, readErr := io.ReadAll(responseBody)
@@ -96,26 +97,38 @@ func DecodeAddResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody
 		if err := decoder(resp).Decode(&jresp); err != nil {
 			return nil, goahttp.ErrDecodingError("Calc", "add", err)
 		}
+		if err := jresp.Validate(requestID); err != nil {
+			return nil, goahttp.ErrInvalidResponse("Calc", "add", resp.StatusCode, err.Error())
+		}
 
 		if jresp.Error != nil {
+			serviceErrorName, serviceErrorBody, ok := jsonrpc.DecodeServiceErrorData(jresp.Error.Data)
+			if !ok {
+				return nil, jresp.Error
+			}
 			switch jresp.Error.Code {
 			case -32602:
-				resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Error.Data))
-				var (
-					body AddOverflowResponseBody
-					err  error
-				)
-				err = decoder(resp).Decode(&body)
-				if err != nil {
-					return nil, goahttp.ErrDecodingError("Calc", "add", err)
+				switch serviceErrorName {
+				case "overflow":
+					resp.Body = io.NopCloser(bytes.NewReader(serviceErrorBody))
+					var (
+						body AddOverflowResponseBody
+						err  error
+					)
+					err = decoder(resp).Decode(&body)
+					if err != nil {
+						return nil, goahttp.ErrDecodingError("Calc", "add", err)
+					}
+					err = ValidateAddOverflowResponseBody(&body)
+					if err != nil {
+						return nil, goahttp.ErrValidationError("Calc", "add", err)
+					}
+					return nil, NewAddOverflow(&body)
+				default:
+					return nil, jresp.Error
 				}
-				err = ValidateAddOverflowResponseBody(&body)
-				if err != nil {
-					return nil, goahttp.ErrValidationError("Calc", "add", err)
-				}
-				return nil, NewAddOverflow(&body)
 			default:
-				return nil, goahttp.ErrInvalidResponse("Calc", "add", resp.StatusCode, string(jresp.Error.Data))
+				return nil, jresp.Error
 			}
 		}
 		resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Result))
@@ -152,29 +165,29 @@ func (c *Client) BuildPingRequest(ctx context.Context, v any) (*http.Request, er
 }
 
 // EncodePingRequest returns an encoder for requests sent to the Calc service
-// ping JSON-RPC method.
-func EncodePingRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
-	return func(req *http.Request, v any) error {
-		// For JSON-RPC methods without payloads, we still need to send the method envelope
-		// Generate a unique ID for the request
-		id := uuid.New().String()
+// ping JSON-RPC method. The encoder returns the request ID written into the
+// JSON-RPC message.
+func EncodePingRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
+		requestID := uuid.New().String()
 		body := &jsonrpc.Request{
 			JSONRPC: "2.0",
 			Method:  "ping",
-			ID:      id,
+			ID:      requestID,
 		}
 		if err := encoder(req).Encode(body); err != nil {
-			return goahttp.ErrEncodingError("Calc", "ping", err)
+			return "", goahttp.ErrEncodingError("Calc", "ping", err)
 		}
-		return nil
+		return requestID, nil
 	}
 }
 
 // DecodePingResponse returns a decoder for responses returned by the Calc
-// service ping JSON-RPC method. restoreBody controls whether the response body
-// should be restored after having been read.
-func DecodePingResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
-	return func(resp *http.Response) (result any, decodeErr error) {
+// service ping JSON-RPC method. The decoder rejects responses that do not
+// repeat requestID. restoreBody controls whether the response body should be
+// restored after having been read.
+func DecodePingResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response, string) (any, error) {
+	return func(resp *http.Response, requestID string) (result any, decodeErr error) {
 		responseBody := resp.Body
 		if restoreBody {
 			b, readErr := io.ReadAll(responseBody)
@@ -206,12 +219,12 @@ func DecodePingResponse(decoder func(*http.Response) goahttp.Decoder, restoreBod
 		if err := decoder(resp).Decode(&jresp); err != nil {
 			return nil, goahttp.ErrDecodingError("Calc", "ping", err)
 		}
+		if err := jresp.Validate(requestID); err != nil {
+			return nil, goahttp.ErrInvalidResponse("Calc", "ping", resp.StatusCode, err.Error())
+		}
 
 		if jresp.Error != nil {
-			switch jresp.Error.Code {
-			default:
-				return nil, goahttp.ErrInvalidResponse("Calc", "ping", resp.StatusCode, string(jresp.Error.Data))
-			}
+			return nil, jresp.Error
 		}
 		resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Result))
 		var (
@@ -242,12 +255,14 @@ func (c *Client) BuildLogRequest(ctx context.Context, v any) (*http.Request, err
 	return req, nil
 }
 
-// EncodeLogRequest returns an encoder for requests sent to the Calc log server.
-func EncodeLogRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) error {
-	return func(req *http.Request, v any) error {
+// EncodeLogRequest returns an encoder for requests sent to the Calc service
+// log JSON-RPC method. The encoder returns the request ID written into the
+// JSON-RPC message.
+func EncodeLogRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Request, any) (string, error) {
+	return func(req *http.Request, v any) (string, error) {
 		p, ok := v.(*calc.LogPayload)
 		if !ok {
-			return goahttp.ErrInvalidType("Calc", "log", "*calc.LogPayload", v)
+			return "", goahttp.ErrInvalidType("Calc", "log", "*calc.LogPayload", v)
 		}
 		b := NewLogRequestBody(p)
 		body := &jsonrpc.Request{
@@ -255,22 +270,26 @@ func EncodeLogRequest(encoder func(*http.Request) goahttp.Encoder) func(*http.Re
 			Method:  "log",
 			Params:  b,
 		}
-		if p.ID != nil && *p.ID != "" {
-			body.ID = p.ID
+		var requestID string
+		if p.ID == nil {
+			requestID = uuid.New().String()
+		} else {
+			requestID = *p.ID
 		}
-		// If ID is nil or empty, this is a notification - no ID field
+		body.ID = requestID
 		if err := encoder(req).Encode(&body); err != nil {
-			return goahttp.ErrEncodingError("Calc", "log", err)
+			return "", goahttp.ErrEncodingError("Calc", "log", err)
 		}
-		return nil
+		return requestID, nil
 	}
 }
 
 // DecodeLogResponse returns a decoder for responses returned by the Calc
-// service log JSON-RPC method. restoreBody controls whether the response body
-// should be restored after having been read.
-func DecodeLogResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
-	return func(resp *http.Response) (result any, decodeErr error) {
+// service log JSON-RPC method. The decoder rejects responses that do not
+// repeat requestID. restoreBody controls whether the response body should be
+// restored after having been read.
+func DecodeLogResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response, string) (any, error) {
+	return func(resp *http.Response, requestID string) (result any, decodeErr error) {
 		responseBody := resp.Body
 		if restoreBody {
 			b, readErr := io.ReadAll(responseBody)
@@ -302,12 +321,12 @@ func DecodeLogResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody
 		if err := decoder(resp).Decode(&jresp); err != nil {
 			return nil, goahttp.ErrDecodingError("Calc", "log", err)
 		}
+		if err := jresp.Validate(requestID); err != nil {
+			return nil, goahttp.ErrInvalidResponse("Calc", "log", resp.StatusCode, err.Error())
+		}
 
 		if jresp.Error != nil {
-			switch jresp.Error.Code {
-			default:
-				return nil, goahttp.ErrInvalidResponse("Calc", "log", resp.StatusCode, string(jresp.Error.Data))
-			}
+			return nil, jresp.Error
 		}
 		resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Result))
 		return nil, nil

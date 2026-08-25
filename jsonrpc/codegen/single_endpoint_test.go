@@ -25,7 +25,6 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 						dsl.Attribute("b", dsl.Int)
 					})
 					dsl.Result(func() {
-						dsl.ID("id")
 						dsl.Attribute("sum", dsl.Int)
 					})
 					dsl.JSONRPC(func() {})
@@ -38,7 +37,6 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 						dsl.Attribute("b", dsl.Int)
 					})
 					dsl.Result(func() {
-						dsl.ID("id")
 						dsl.Attribute("diff", dsl.Int)
 					})
 					dsl.JSONRPC(func() {})
@@ -96,7 +94,6 @@ func TestJSONRPCSingleEndpoint(t *testing.T) {
 						dsl.Attribute("b", dsl.Int)
 					})
 					dsl.Result(func() {
-						dsl.ID("id")
 						dsl.Attribute("product", dsl.Int)
 					})
 					dsl.JSONRPC(func() {}) // Should auto-enable service

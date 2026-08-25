@@ -189,12 +189,14 @@ import (
 func TestMappedEventBodyIsValidated(t *testing.T) {
 	stream := &WatchStreamImpl{}
 
-	event, err := stream.processEvent([]byte("id: event-1\ndata: ready\n\n"))
+	event, hasData, err := stream.processEvent([]byte("id: event-1\ndata: ready\n\n"))
 	require.NoError(t, err)
+	require.True(t, hasData)
 	require.Equal(t, "event-1", event.EventID)
 	require.Equal(t, "ready", event.Message)
 
-	_, err = stream.processEvent([]byte("data: ready\n\n"))
+	stream = &WatchStreamImpl{}
+	_, _, err = stream.processEvent([]byte("data: ready\n\n"))
 	require.Error(t, err)
 }
 `

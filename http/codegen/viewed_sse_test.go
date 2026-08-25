@@ -74,16 +74,30 @@ func TestViewedSSERebuildsRequiredResponseFields(t *testing.T) {
 	root := expr.RunDSL(t, viewedSSERequiredFieldsDSL)
 	plan := linkedHTTPPlanForRoot(t, root)
 	client := renderedFile(t, plan.ClientFiles())
+	service := plan.services.Get("Viewed SSE Required")
+	require.Len(t, service.Endpoints, 1)
+	require.Len(t, service.Endpoints[0].Result.Responses, 1)
+	representations := service.Endpoints[0].Result.Responses[0].ViewedRepresentations
+	require.Len(t, representations, 3)
+	for _, representation := range representations {
+		require.NotNil(t, representation.ClientBody)
+		require.NotNil(t, representation.ClientBody.ValidatorDeclaration)
+		require.NotEmpty(t, representation.ClientBody.ValidationTarget)
+	}
 
 	for _, assignment := range []string{
-		"body.ID = event.ID",
-		"body.Kind = event.Kind",
+		"idContent = s.lastEventID",
+		"eventContent = string(value)",
+		"body.ID = &idContent",
+		"body.Kind = &eventContent",
 		"value := dataContent",
 		"body.Data = &value",
 	} {
 		require.Contains(t, client, assignment)
 		require.Less(t, strings.Index(client, assignment), strings.Index(client, "projected := New"))
 	}
+	require.NotContains(t, client, "result.ID =")
+	require.NotContains(t, client, "result.Kind =")
 	require.Less(t, strings.Index(client, "projected := New"), strings.Index(client, "views.Validate"))
 }
 
@@ -302,7 +316,8 @@ func viewedSSERequiredFieldsDSL() {
 		dsl.Attribute("id", dsl.String)
 		dsl.Attribute("kind", dsl.String)
 		dsl.Attribute("data", dsl.String)
-		dsl.Required("id", "kind", "data")
+		dsl.Attribute("hidden", dsl.String)
+		dsl.Required("id", "kind", "data", "hidden")
 		for _, name := range []string{"summary", "detailed"} {
 			dsl.View(name, func() {
 				dsl.Attribute("id")

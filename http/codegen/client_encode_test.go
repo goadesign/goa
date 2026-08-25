@@ -121,6 +121,7 @@ func TestClientEncode(t *testing.T) {
 		{"body-string", testdata.PayloadBodyStringDSL},
 		{"body-string-validate", testdata.PayloadBodyStringValidateDSL},
 		{"body-user", testdata.PayloadBodyUserDSL},
+		{"body-user-nested", testdata.PayloadBodyNestedUserDSL},
 		{"body-user-validate", testdata.PayloadBodyUserValidateDSL},
 		{"body-array-string", testdata.PayloadBodyArrayStringDSL},
 		{"body-array-string-validate", testdata.PayloadBodyArrayStringValidateDSL},

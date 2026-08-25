@@ -45,7 +45,25 @@ func (s *SSEBoolMethodServerStream) SendWithContext(ctx context.Context, v bool)
 		s.attempted = true
 	})
 
-	if _, err := fmt.Fprintf(s.w, "data: %s\n\n", data); err != nil {
+	remaining := data
+	for {
+		lineEnd := 0
+		for lineEnd < len(remaining) && remaining[lineEnd] != '\r' && remaining[lineEnd] != '\n' {
+			lineEnd++
+		}
+		if _, err := fmt.Fprintf(s.w, "data: %s\n", remaining[:lineEnd]); err != nil {
+			return err
+		}
+		if lineEnd == len(remaining) {
+			break
+		}
+		next := lineEnd + 1
+		if remaining[lineEnd] == '\r' && next < len(remaining) && remaining[next] == '\n' {
+			next++
+		}
+		remaining = remaining[next:]
+	}
+	if _, err := fmt.Fprintln(s.w); err != nil {
 		return err
 	}
 

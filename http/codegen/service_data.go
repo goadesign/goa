@@ -169,6 +169,12 @@ type (
 		// method exposed over both plain HTTP and JSON-RPC yields two
 		// endpoints with different values.
 		IsJSONRPC bool
+		// IsJSONRPCNotification reports whether every call omits the request
+		// ID and receives no JSON-RPC response.
+		IsJSONRPCNotification bool
+		// JSONRPCRequestID contains the complete request-ID plan. It is nil for
+		// explicit notifications and non-JSON-RPC endpoints.
+		JSONRPCRequestID *JSONRPCRequestIDData
 		// ServiceName is the name of the service exposing the endpoint.
 		ServiceName string
 		// ServiceVarName is the goified service name (first letter
@@ -355,8 +361,45 @@ type (
 		// IDAttribute is the name of the attribute where the ID of the
 		// JSON-RPC request is stored.
 		IDAttribute string
+		// IDAttributeTypeRef is the named string type assigned from the
+		// JSON-RPC request ID. It is empty for a plain string field.
+		IDAttributeTypeRef string
 		// IDAttributeRequired is true if the ID attribute is required.
 		IDAttributeRequired bool
+		// JSONRPCRequestID contains the typed payload field and generated-client
+		// behavior for the JSON-RPC request ID.
+		JSONRPCRequestID *JSONRPCRequestIDData
+	}
+
+	// JSONRPCRequestIDData contains the generation-time choices for one
+	// JSON-RPC request ID.
+	JSONRPCRequestIDData struct {
+		// Attribute is the service payload field that receives the ID. It is
+		// empty when the generated client creates every ID.
+		Attribute string
+		// Variable is the local constructor argument that carries the ID.
+		Variable string
+		// ValueTypeRef is the generated Go type for the ID value.
+		ValueTypeRef string
+		// Aliased is true when ValueTypeRef is a named string type.
+		Aliased bool
+		// Required is true when the design marks the payload field as required.
+		Required bool
+		// MustHave is true when the JSON-RPC request must contain an ID because
+		// the service field has no default.
+		MustHave bool
+		// Pointer is true when the service payload stores the ID as a pointer.
+		Pointer bool
+		// HasDefault is true when an absent request ID uses the design default.
+		HasDefault bool
+		// DefaultValue is the string used when HasDefault is true.
+		DefaultValue string
+		// Generate is true when the client creates an ID if the payload does not
+		// supply one.
+		Generate bool
+		// Validate contains the service-field checks emitted after decoding the
+		// envelope ID.
+		Validate string
 	}
 
 	// ResultData contains the result information required to generate the
@@ -375,10 +418,13 @@ type (
 		// Responses contains the data for the corresponding HTTP
 		// responses.
 		Responses []*ResponseData
-		// IDAttribute is the name of the attribute where the ID of the
-		// JSON-RPC request is stored.
+		// IDAttribute is retained for generator compatibility.
+		//
+		// Deprecated: JSON-RPC results cannot define an ID field.
 		IDAttribute string
-		// IDAttributeRequired is true if the ID attribute is required.
+		// IDAttributeRequired is retained for generator compatibility.
+		//
+		// Deprecated: JSON-RPC results cannot define an ID field.
 		IDAttributeRequired bool
 		// View is the view used to render the result.
 		View string
@@ -424,13 +470,13 @@ type (
 		// Cookies contains the HTTP request cookies used to build the
 		// method payload.
 		Cookies []*CookieData
-		// ServerBody describes the request body type used by server
-		// code. The type is generated using pointers for all fields so
-		// that it can be validated.
+		// ServerBody describes the request body decoded by server code.
+		// Scalar fields use pointers when validation must distinguish an
+		// omitted value from zero. Byte slices and Any fields remain values.
 		ServerBody *TypeData
-		// ClientBody describes the request body type used by client
-		// code. The type does NOT use pointers for every fields since
-		// no validation is required.
+		// ClientBody describes the request body encoded by client code. Its
+		// fields follow the client transport shape because no body decoding
+		// validation runs there.
 		ClientBody *TypeData
 		// PayloadInit contains the data required to render the
 		// payload constructor used by server code if any.
@@ -443,12 +489,27 @@ type (
 		PayloadAttr string
 		// MustHaveBody is true if the request body cannot be empty.
 		MustHaveBody bool
+		// OptionalBody reports whether Body selects an optional payload field.
+		OptionalBody bool
+		// BodyIsUnion reports whether the selected optional field is a union whose
+		// empty kind represents absence.
+		BodyIsUnion bool
+		// BodyFieldPointer reports whether the selected service payload field is
+		// a pointer to a primitive value.
+		BodyFieldPointer bool
+		// BodyFieldCanBeAbsent reports whether the selected service payload field
+		// can represent absence.
+		BodyFieldCanBeAbsent bool
 		// MustValidate is true if the request body or at least one
 		// parameter or header requires validation.
 		MustValidate bool
 		// Multipart if true indicates the request is a multipart
 		// request.
 		Multipart bool
+		// JSONRPCParams describes how the request body is carried in JSON-RPC
+		// params. It is nil for ordinary HTTP requests and requests without a
+		// body.
+		JSONRPCParams *JSONRPCParamsData
 	}
 
 	// ResponseData describes a response.
@@ -469,9 +530,9 @@ type (
 		// ErrorHeader contains the value of the response "goa-error"
 		// header if any.
 		ErrorHeader string
-		// ServerBody is the type of the response body used by server
-		// code, nil if body should be empty. The type does NOT use
-		// pointers for all fields. If the method result is a result
+		// ServerBody is the response body encoded by server code, or nil when
+		// the body is empty. Its fields follow the server transport shape.
+		// If the method result is a result
 		// type and the response data describes a success response, then
 		// this field contains a type for every view in the result type.
 		// The type name is suffixed with the name of the view (except
@@ -482,9 +543,10 @@ type (
 		// describes an error response, then this field contains at most
 		// one item.
 		ServerBody []*TypeData
-		// ClientBody is the type of the response body used by client
-		// code, nil if body should be empty. The type uses pointers for
-		// all fields so they can be validated.
+		// ClientBody is the response body decoded by client code, or nil when
+		// the body is empty. Scalar fields use pointers when validation must
+		// distinguish an omitted value from zero. Byte slices and Any fields
+		// remain values. Service result fields keep their own pointer rules.
 		ClientBody *TypeData
 		// Init contains the data required to render the result or error
 		// constructor if any.
@@ -583,6 +645,17 @@ type (
 		// ReturnIsPrimitivePointer indicates whether the payload, result or error
 		// type is a primitive pointer.
 		ReturnIsPrimitivePointer bool
+		// ReturnIsUnion reports whether the selected body field is a union value.
+		ReturnIsUnion bool
+		// OptionalBody reports whether body is the value of an optional payload
+		// field and may be nil.
+		OptionalBody bool
+		// ClientBodyOptional reports whether the service field supplied by a
+		// client can represent absence.
+		ClientBodyOptional bool
+		// BodyDefault is the specialized Go value assigned when an optional
+		// request body is absent. It is nil when the field has no authored default.
+		BodyDefault *codegen.GoValueCode
 	}
 
 	// AttributeData contains the information needed to generate the code
@@ -602,6 +675,8 @@ type (
 		TypeName string
 		// TypeRef is the generated attribute type reference.
 		TypeRef string
+		// ValueTypeRef is TypeRef without the pointer used for optional fields.
+		ValueTypeRef string
 		// ElemTypeRef is the generated element type reference for an array.
 		ElemTypeRef string
 		// Description is the attribute description as defined in the design.
@@ -617,6 +692,8 @@ type (
 		FieldPointer bool
 		// DefaultValue is the default value of the attribute if any.
 		DefaultValue any
+		// HasDefault reports whether DefaultValue was authored, including a zero value.
+		HasDefault bool
 		// Validate contains the validation code for the attribute value if any.
 		Validate string
 		// CLIPlan describes how command-line text becomes this attribute value and
@@ -685,6 +762,9 @@ type (
 		*Element
 		// CanonicalName is the standard HTTP header spelling.
 		CanonicalName string
+		// PreserveEmpty reports whether an empty header value is different from
+		// an absent header.
+		PreserveEmpty bool
 	}
 
 	// CookieData describes a HTTP request or response cookie.
@@ -1168,6 +1248,8 @@ func (sds *ServicesData) analyze(httpSvc *expr.HTTPServiceExpr) *ServiceData {
 		ed := &EndpointData{
 			Method:                     method,
 			IsJSONRPC:                  httpEndpoint.IsJSONRPC(),
+			IsJSONRPCNotification:      httpEndpoint.IsJSONRPCNotification(),
+			JSONRPCRequestID:           payload.JSONRPCRequestID,
 			ServiceName:                svc.Name,
 			ServiceVarName:             svc.VarName,
 			ServicePkgName:             svc.PkgName,
@@ -1408,12 +1490,12 @@ func collectPlannedWireTypes(api string, httpService *expr.HTTPServiceExpr, plan
 				continue
 			}
 			if clientView != "" {
-				clientBody := effectiveClientResponseBodyForView(body, clientView)
+				clientBody := effectiveClientResponseBodyForView(body, clientView, endpoint)
 				collectResponseWireType(api, clientBody, body, endpoint, client, false, &clientView, "")
 				continue
 			}
 			for _, view := range resultType.Views {
-				clientBody := effectiveClientResponseBodyForView(body, view.Name)
+				clientBody := effectiveClientResponseBodyForView(body, view.Name, endpoint)
 				collectResponseWireType(api, clientBody, body, endpoint, client, false, &view.Name, "")
 			}
 		}
@@ -1587,14 +1669,14 @@ func collectPlannedTransforms(
 		for _, view := range clientViews {
 			clientBody := body
 			if view != nil && *view != "" {
-				clientBody = effectiveClientResponseBodyForView(body, *view)
+				clientBody = effectiveClientResponseBodyForView(body, *view, endpoint)
 			}
 			prepared, viewName := prepareResponseWireBody(clientBody, view)
 			if prepared.Type != expr.Empty {
 				responseTransforms := planned.transforms.response(endpoint, response, viewName)
 				responseTransforms.clientDecode = client.collectTransform(prepared, resultAttribute, "unmarshal", transformResponseOwner(methodName, response, view, "client"), wireTransformLayout{
 					wireSide:       wireTransformSource,
-					wirePolicy:     jsonBodyPolicy(false, false, false, viewName),
+					wirePolicy:     jsonBodyPolicy(false, false, true, viewName),
 					wireUse:        wireUnionUse{role: wireResponseBody, view: viewName},
 					servicePointer: viewed,
 					servicePackage: resultPackage,
@@ -1633,7 +1715,7 @@ func collectPlannedTransforms(
 			}
 			errorTransforms.clientDecode = client.collectTransform(body, target, "unmarshal", methodName+" client error "+transportError.Name, wireTransformLayout{
 				wireSide:       wireTransformSource,
-				wirePolicy:     jsonBodyPolicy(false, false, false, ""),
+				wirePolicy:     jsonBodyPolicy(false, false, true, ""),
 				wireUse:        wireUnionUse{role: wireResponseBody},
 				servicePackage: *servicePackage,
 			})
@@ -1695,7 +1777,7 @@ func collectPlannedTransforms(
 			}
 			streamTransforms.clientDecode = client.collectTransform(body, result, "unmarshal", methodName+" client streaming result", wireTransformLayout{
 				wireSide:       wireTransformSource,
-				wirePolicy:     jsonBodyPolicy(false, false, false, ""),
+				wirePolicy:     jsonBodyPolicy(false, false, true, ""),
 				wireUse:        wireUnionUse{role: wireResponseBody},
 				servicePackage: *servicePackage,
 			})
@@ -1817,8 +1899,8 @@ func collectResponseWireType(
 	errorName string,
 ) {
 	body, viewName := prepareResponseWireBody(body, view)
-	releasedNames := releasedResponseWireNames(releasedBody, body, view)
-	policy := jsonBodyPolicy(false, server, !server && view == nil, viewName)
+	releasedNames := releasedResponseWireNames(releasedBody, body, view, endpoint)
+	policy := jsonBodyPolicy(false, server, !server, viewName)
 	preferred := ""
 	if server && !expr.IsPrimitive(body.Type) && needInit(body.Type) {
 		if _, userType := body.Type.(expr.UserType); !userType {
@@ -1866,7 +1948,7 @@ func prepareResponseWireBody(body *expr.AttributeExpr, view *string) (*expr.Attr
 
 // releasedResponseWireNames returns the response type names produced when Goa
 // added transport suffixes before selecting a result view.
-func releasedResponseWireNames(original, prepared *expr.AttributeExpr, view *string) map[expr.UserType]string {
+func releasedResponseWireNames(original, prepared *expr.AttributeExpr, view *string, endpoint *expr.HTTPEndpointExpr) map[expr.UserType]string {
 	released := expr.DupAtt(original)
 	suffix := releasedWireTypeSuffix(released, wireResponseBody)
 	if userType, ok := released.Type.(expr.UserType); ok {
@@ -1875,6 +1957,7 @@ func releasedResponseWireNames(original, prepared *expr.AttributeExpr, view *str
 		appendReleasedWireSuffix(released.Type, suffix, make(map[expr.UserType]struct{}))
 	}
 	released, _ = prepareResponseWireBody(released, view)
+	addJSONRPCSSEViewFields(released.Type, original.Type, endpoint)
 	names := make(map[expr.UserType]string)
 	collectReleasedWireNames(prepared.Type, released.Type, names, make(map[releasedWireTypePair]struct{}))
 	if collection, ok := prepared.Type.(*expr.ResultTypeExpr); ok {
@@ -2133,8 +2216,11 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		payloadOwner = expr.MethodPayloadExampleIdentity(e.MethodExpr)
 		bodyOwner    = expr.RequestBodyExampleIdentity(e)
 
-		request       *RequestData
-		mapQueryParam *ParamData
+		request         *RequestData
+		mapQueryParam   *ParamData
+		origin          string
+		originAttribute *expr.AttributeExpr
+		bodyDefault     any
 	)
 	httpsvrctx.Scope = sd.serverWireTypes.resolverForUse(
 		sd.serverWireTypes.scope,
@@ -2146,6 +2232,28 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		jsonBodyPolicy(true, false, true, ""),
 		wireUnionUse{role: wireRequestBody},
 	)
+	idPolicy := jsonRPCRequestIDPolicyFor(e)
+	var idData *JSONRPCRequestIDData
+	if idPolicy != nil {
+		idData = &JSONRPCRequestIDData{Generate: idPolicy.generates()}
+		if idPolicy.attribute != nil {
+			field := idPolicy.attribute
+			attribute := field.Attribute
+			variable := sd.Scope.Name("requestID")
+			idData.Attribute = codegen.Goify(field.Name, true)
+			idData.Variable = variable
+			idData.ValueTypeRef = svcsvrctx.Scope.Ref(attribute, svcsvrctx.Pkg(attribute))
+			idData.Aliased = expr.IsAlias(attribute.Type)
+			idData.Required = idPolicy.required
+			idData.HasDefault = idPolicy.defaultValue != nil
+			idData.MustHave = idPolicy.required && !idData.HasDefault
+			idData.Pointer = idPolicy.pointer
+			if idData.HasDefault {
+				idData.DefaultValue = idPolicy.defaultValue.(string)
+			}
+			idData.Validate = codegen.AttributeValidationCode(attribute, nil, svcsvrctx, idPolicy.required, idData.Aliased, variable, field.Name)
+		}
+	}
 	{
 		var (
 			serverBodyData = sds.buildRequestBodyType(httpBody, payload, e, wireRequestBody, true, sd, payloadOwner, bodyOwner)
@@ -2154,10 +2262,8 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			queryData      = sds.extractQueryParams(e.QueryParams(), payload, sd, payloadOwner)
 			headersData    = sds.extractHeaders(e.Headers, payload, svcsvrctx, sd.Scope, payloadOwner)
 			cookiesData    = sds.extractCookies(e.Cookies, payload, svcsvrctx, sd.Scope, payloadOwner)
-			origin         string
-
-			mustValidate bool
-			mustHaveBody = true
+			mustValidate   bool
+			mustHaveBody   = true
 		)
 		if e.MapQueryParams != nil {
 			var (
@@ -2227,7 +2333,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		}
 		if !mustValidate {
 			for _, h := range headersData {
-				if h.Validate != "" || h.Required || needConversion(h.Type) {
+				if h.PreserveEmpty || h.Validate != "" || h.Required || needConversion(h.Type) {
 					mustValidate = true
 					break
 				}
@@ -2239,23 +2345,48 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			// transformation.
 			if o, ok := serverHTTPBody.Meta["origin:attribute"]; ok {
 				origin = o[0]
+				originAttribute = expr.AsObject(payload.Type).Attribute(origin)
+				bodyDefault = payload.GetDefault(origin)
 				if !payload.IsRequired(o[0]) {
 					mustHaveBody = false
 				}
 			}
 		}
+		bodyIsUnion := originAttribute != nil && expr.AsUnion(originAttribute.Type) != nil
+		bodyFieldPointer := origin != "" && payload.IsPrimitivePointer(origin, true)
+		bodyFieldCanBeAbsent := originAttribute != nil && !payload.IsRequired(origin) &&
+			(bodyFieldPointer || codegen.IsNilable(originAttribute.Type) || bodyIsUnion)
 		request = &RequestData{
-			PathParams:   paramsData,
-			QueryParams:  queryData,
-			Headers:      headersData,
-			Cookies:      cookiesData,
-			ServerBody:   serverBodyData,
-			ClientBody:   clientBodyData,
-			PayloadAttr:  codegen.Goify(origin, true),
-			PayloadType:  e.MethodExpr.Payload.Type,
-			MustHaveBody: mustHaveBody,
-			MustValidate: mustValidate,
-			Multipart:    e.MultipartRequest,
+			PathParams:           paramsData,
+			QueryParams:          queryData,
+			Headers:              headersData,
+			Cookies:              cookiesData,
+			ServerBody:           serverBodyData,
+			ClientBody:           clientBodyData,
+			PayloadAttr:          codegen.Goify(origin, true),
+			PayloadType:          e.MethodExpr.Payload.Type,
+			MustHaveBody:         mustHaveBody,
+			OptionalBody:         origin != "" && !payload.IsRequired(origin),
+			BodyIsUnion:          bodyIsUnion,
+			BodyFieldPointer:     bodyFieldPointer,
+			BodyFieldCanBeAbsent: bodyFieldCanBeAbsent,
+			MustValidate:         mustValidate,
+			Multipart:            e.MultipartRequest,
+		}
+		if e.IsJSONRPC() && clientBodyData != nil {
+			paramsTypeRef := clientBodyData.Ref
+			if clientBodyData.Init == nil {
+				paramsAttribute := payload
+				if origin != "" {
+					paramsAttribute = expr.AsObject(payload.Type).Attribute(origin)
+				}
+				paramsContext := svcclictx.Enter(paramsAttribute)
+				paramsTypeRef = paramsContext.Scope.Ref(paramsAttribute, paramsContext.Pkg(paramsAttribute))
+				if origin != "" && payload.IsPrimitivePointer(origin, true) {
+					paramsTypeRef = "*" + paramsTypeRef
+				}
+			}
+			request.JSONRPCParams = jsonRPCParams(httpBody.Type, paramsTypeRef, mustHaveBody, !mustHaveBody)
 		}
 	}
 
@@ -2264,11 +2395,13 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		// generate constructor function to transform request body,
 		// params, headers and cookies into the method payload type
 		var (
-			name       string
-			desc       string
-			isObject   bool
-			clientArgs []*InitArgData
-			serverArgs []*InitArgData
+			name                  string
+			desc                  string
+			isObject              bool
+			clientArgs            []*InitArgData
+			serverArgs            []*InitArgData
+			serverBodyDereference bool
+			clientBodyDereference bool
 		)
 		argsCap := len(request.PathParams) + len(request.QueryParams) + len(request.Headers) + len(request.Cookies)
 		declaration := sds.payloadConstructors[e]
@@ -2283,26 +2416,27 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		clientArgs = make([]*InitArgData, 0, argsCap+1)
 		if body != expr.Empty {
 			var (
-				svcode         string
-				cvcode         string
-				serverTypeName string
-				serverTypeRef  string
-				clientTypeName string
-				clientTypeRef  string
+				svcode            string
+				cvcode            string
+				serverTypeName    string
+				serverTypeRef     string
+				clientTypeName    string
+				clientTypeRef     string
+				clientBodyPointer bool
 			)
-			if record := sd.serverWireTypes.lookupUser(serverHTTPBody, wireRequestBody, jsonBodyPolicy(true, true, true, "")); record != nil {
-				serverTypeName = record.name
-				serverTypeRef = record.ref
+			serverLayout, layoutErr := httpsvrctx.Scope.(codegen.GoTypeLayoutResolver).GoTypeLayout(serverHTTPBody, httpsvrctx.LayoutPolicy())
+			if layoutErr != nil {
+				sds.recordLinkError(layoutErr)
 			} else {
-				serverTypeName = httpsvrctx.Scope.Name(serverHTTPBody, "", httpsvrctx.Pointer, httpsvrctx.UseDefault)
-				serverTypeRef = httpsvrctx.Scope.Ref(serverHTTPBody, "")
+				serverTypeName = serverLayout.Name()
+				serverTypeRef, _, serverBodyDereference = optionalWireTypeRef(serverLayout, request.OptionalBody)
 			}
-			if record := sd.clientWireTypes.lookupUser(clientHTTPBody, wireRequestBody, jsonBodyPolicy(true, false, true, "")); record != nil {
-				clientTypeName = record.name
-				clientTypeRef = record.ref
+			clientLayout, layoutErr := httpclictx.Scope.(codegen.GoTypeLayoutResolver).GoTypeLayout(clientHTTPBody, httpclictx.LayoutPolicy())
+			if layoutErr != nil {
+				sds.recordLinkError(layoutErr)
 			} else {
-				clientTypeName = httpclictx.Scope.Name(clientHTTPBody, "", httpclictx.Pointer, httpclictx.UseDefault)
-				clientTypeRef = httpclictx.Scope.Ref(clientHTTPBody, "")
+				clientTypeName = clientLayout.Name()
+				clientTypeRef, clientBodyPointer, clientBodyDereference = optionalWireTypeRef(clientLayout, request.BodyFieldCanBeAbsent)
 			}
 			if ut, ok := serverHTTPBody.Type.(expr.UserType); ok {
 				if val := ut.Attribute().Validation; val != nil {
@@ -2315,30 +2449,42 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 				}
 			}
 			cliValidation := cliValidationRenderer(cvcode != "", clientHTTPBody, httpclictx, "body")
+			clientDefault := clientBodyDefault(httpBody, bodyDefault)
+			serverBodyRef := sd.serverWireTypes.scope.GoVar("body", serverHTTPBody.Type)
+			if request.OptionalBody {
+				serverBodyRef = "body"
+			}
 			serverArgs = append(serverArgs, &InitArgData{
-				Ref: sd.serverWireTypes.scope.GoVar("body", serverHTTPBody.Type),
+				Ref: serverBodyRef,
 				AttributeData: &AttributeData{
-					Name:     "body",
-					VarName:  "body",
-					TypeName: serverTypeName,
-					TypeRef:  serverTypeRef,
-					Type:     serverHTTPBody.Type,
-					Required: true,
-					Example:  sds.Example(httpBody, bodyOwner),
-					Validate: svcode,
+					Name:         "body",
+					VarName:      "body",
+					TypeName:     serverTypeName,
+					TypeRef:      serverTypeRef,
+					Type:         serverHTTPBody.Type,
+					Required:     !request.OptionalBody,
+					DefaultValue: bodyDefault,
+					Example:      sds.Example(httpBody, bodyOwner),
+					Validate:     svcode,
 				},
 			})
+			clientBodyArgRef := sd.clientWireTypes.scope.GoVar("body", clientHTTPBody.Type)
+			if request.OptionalBody {
+				clientBodyArgRef = "body"
+			}
 			clientArgs = append(clientArgs, &InitArgData{
-				Ref: sd.clientWireTypes.scope.GoVar("body", clientHTTPBody.Type),
+				Ref: clientBodyArgRef,
 				AttributeData: &AttributeData{
-					Name:     "body",
-					VarName:  "body",
-					TypeName: clientTypeName,
-					TypeRef:  clientTypeRef,
-					Type:     clientHTTPBody.Type,
-					Required: true,
-					Example:  sds.Example(httpBody, bodyOwner),
-					Validate: cvcode,
+					Name:         "body",
+					VarName:      "body",
+					TypeName:     clientTypeName,
+					TypeRef:      clientTypeRef,
+					Type:         clientHTTPBody.Type,
+					Required:     !request.OptionalBody,
+					Pointer:      clientBodyPointer,
+					DefaultValue: clientDefault,
+					Example:      sds.Example(httpBody, bodyOwner),
+					Validate:     cvcode,
 					CLIPlan: cli.NewFlagPlan(
 						clientHTTPBody,
 						clientTypeName,
@@ -2375,6 +2521,10 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		}
 		serverArgs = append(serverArgs, args...)
 		clientArgs = append(clientArgs, args...)
+		if idPolicy != nil && idPolicy.attribute != nil {
+			serverArgs = append(serverArgs, sds.jsonRPCRequestIDInitArg(idPolicy, idData.Variable, payload, svcsvrctx, payloadOwner, false))
+			clientArgs = append(clientArgs, sds.jsonRPCRequestIDInitArg(idPolicy, idData.Variable, payload, svcclictx, payloadOwner, true))
+		}
 
 		var (
 			cliArgs []*InitArgData
@@ -2461,24 +2611,23 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			serverCode string
 			clientCode string
 			err        error
-			origin     string
 			pointer    bool
 		)
 		requestTransforms := sd.transforms.requests[clientBodyConstructorKey{endpoint: e, role: wireRequestBody}]
 		if body != expr.Empty {
-			// If design uses Body("name") syntax then need to use payload
-			// attribute to transform.
-			if o, ok := httpBody.Meta["origin:attribute"]; ok {
-				origin = o[0]
-				attribute := expr.AsObject(payload.Type).Attribute(origin)
-				pointer = !payload.IsRequired(o[0]) && expr.IsPrimitive(attribute.Type)
+			if origin != "" {
+				pointer = payload.IsPrimitivePointer(origin, true)
 			}
 
 			var (
 				helpers []*codegen.TransformFunctionData
 			)
 			transformctx := jsonBodyContext(sd.serverWireTypes, sd.serverWireTypes.scope, true, true)
-			serverCode, helpers, err = sd.serverWireTypes.renderTransform(requestTransforms.serverDecode, serverHTTPBody, "body", "v", transformctx, svcsvrctx)
+			serverBodyRef := "body"
+			if serverBodyDereference {
+				serverBodyRef = "*body"
+			}
+			serverCode, helpers, err = sd.serverWireTypes.renderTransform(requestTransforms.serverDecode, serverHTTPBody, serverBodyRef, "v", transformctx, svcsvrctx)
 			if err == nil {
 				sd.ServerTransformHelpers = codegen.AppendHelpers(sd.ServerTransformHelpers, helpers)
 			} else {
@@ -2486,10 +2635,14 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			}
 			// The client code for building the method payload from a request
 			// body is used by the CLI tool to build the payload given to the
-			// client endpoint. It differs because the body type there does not
-			// use pointers for all fields (no need to validate).
+			// client endpoint. It follows the encoded request shape because this
+			// path does not validate a decoded body.
 			transformctx = jsonBodyContext(sd.clientWireTypes, sd.clientWireTypes.scope, true, false)
-			clientCode, helpers, err = sd.clientWireTypes.renderTransform(requestTransforms.clientDecode, clientHTTPBody, "body", "v", transformctx, svcclictx)
+			clientBodyRef := "body"
+			if clientBodyDereference {
+				clientBodyRef = "*body"
+			}
+			clientCode, helpers, err = sd.clientWireTypes.renderTransform(requestTransforms.clientDecode, clientHTTPBody, clientBodyRef, "v", transformctx, svcclictx)
 			if err == nil {
 				sd.ClientTransformHelpers = codegen.AppendHelpers(sd.ClientTransformHelpers, helpers)
 			} else {
@@ -2517,6 +2670,36 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		if err != nil {
 			sds.recordLinkError(err)
 		}
+		var renderedBodyDefault *codegen.GoValueCode
+		if bodyDefault != nil {
+			var resolveUnion codegen.UnionConstructorResolver
+			if resolver, ok := svcsvrctx.Scope.(interface {
+				UnionConstructor(*expr.AttributeExpr, string) (string, error)
+			}); ok {
+				resolveUnion = resolver.UnionConstructor
+			}
+			fieldPointer := origin != "" && svcsvrctx.IsFieldPointer(origin, payload)
+			layoutResolver, ok := svcsvrctx.Scope.(codegen.GoTypeLayoutResolver)
+			if !ok {
+				sds.recordLinkError(fmt.Errorf("service package cannot resolve the Go layout for %s", originAttribute.Type.Name()))
+			} else if layout, layoutErr := layoutResolver.GoTypeLayout(originAttribute, svcsvrctx.LayoutPolicy()); layoutErr != nil {
+				sds.recordLinkError(layoutErr)
+			} else {
+				rendered, renderErr := codegen.RenderGoValue(
+					originAttribute,
+					bodyDefault,
+					layout,
+					fieldPointer,
+					resolveUnion,
+					"bodyDefault",
+				)
+				if renderErr != nil {
+					sds.recordLinkError(renderErr)
+				} else {
+					renderedBodyDefault = &rendered
+				}
+			}
+		}
 		init = &InitData{
 			Declaration:              declaration,
 			Name:                     name,
@@ -2532,6 +2715,10 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			ServerCode:               serverCode,
 			ClientCode:               clientCode,
 			ReturnIsPrimitivePointer: pointer,
+			ReturnIsUnion:            request.BodyIsUnion,
+			OptionalBody:             request.OptionalBody,
+			ClientBodyOptional:       request.BodyFieldCanBeAbsent,
+			BodyDefault:              renderedBodyDefault,
 		}
 	}
 	request.PayloadInit = init
@@ -2564,6 +2751,7 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		CLIPlan:            cliPlan,
 		Request:            request,
 		DecoderReturnValue: returnValue,
+		JSONRPCRequestID:   idData,
 	}
 	if e.IsJSONRPC() {
 		obj := expr.AsObject(e.MethodExpr.Payload.Type)
@@ -2571,6 +2759,9 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 			for _, att := range *obj {
 				if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
 					data.IDAttribute = codegen.Goify(att.Name, true)
+					if expr.IsAlias(att.Attribute.Type) {
+						data.IDAttributeTypeRef = svcsvrctx.Scope.Ref(att.Attribute, svcsvrctx.Pkg(att.Attribute))
+					}
 					data.IDAttributeRequired = e.MethodExpr.Payload.IsRequired(att.Name)
 					break
 				}
@@ -2578,6 +2769,60 @@ func (sds *ServicesData) buildPayloadData(e *expr.HTTPEndpointExpr, sd *ServiceD
 		}
 	}
 	return data
+}
+
+// jsonRPCParams returns the exact JSON-RPC params shape for one service value.
+// Primitive values use one positional item. Nil optional objects, arrays, and
+// maps omit params because JSON-RPC does not allow params to be null.
+func jsonRPCParams(dataType expr.DataType, typeRef string, rejectNull, allowAbsent bool) *JSONRPCParamsData {
+	union := expr.AsUnion(dataType) != nil
+	return &JSONRPCParamsData{
+		Positional:  expr.IsPrimitive(dataType),
+		TypeRef:     typeRef,
+		RejectNull:  rejectNull,
+		AllowAbsent: allowAbsent,
+		OmitAbsent:  allowAbsent && !expr.IsPrimitive(dataType) && (codegen.IsNilable(dataType) || union),
+	}
+}
+
+// jsonRPCRequestIDInitArg builds the payload-constructor argument that carries
+// the envelope ID separately from params. Client arguments also describe the
+// command-line flag used to supply a caller-chosen ID.
+func (sds *ServicesData) jsonRPCRequestIDInitArg(policy *jsonRPCRequestIDPolicy, variable string, payload *expr.AttributeExpr, context *codegen.AttributeContext, owner expr.ExampleIdentity, client bool) *InitArgData {
+	field := policy.attribute
+	attribute := field.Attribute
+	required := policy.required
+	pointer := policy.pointer
+	valueTypeRef := context.Scope.Ref(attribute, context.Pkg(attribute))
+	typeRef := valueTypeRef
+	if pointer {
+		typeRef = "*" + typeRef
+	}
+	data := &AttributeData{
+		Name:         field.Name,
+		VarName:      variable,
+		Pointer:      pointer,
+		Required:     required,
+		Type:         attribute.Type,
+		TypeName:     context.Scope.Name(attribute, context.Pkg(attribute), false, true),
+		TypeRef:      typeRef,
+		Description:  attribute.Description,
+		FieldName:    codegen.Goify(field.Name, true),
+		FieldType:    attribute.Type,
+		FieldPointer: pointer,
+		DefaultValue: policy.defaultValue,
+		Example:      sds.FieldExample(attribute, payload, field.Name, owner),
+	}
+	if client {
+		validate := codegen.AttributeValidationCode(attribute, nil, context, required, expr.IsAlias(attribute.Type), variable, field.Name)
+		data.CLIPlan = cli.NewFlagPlan(
+			attribute,
+			data.TypeName,
+			valueTypeRef,
+			cliValidationRenderer(validate != "", attribute, context, field.Name),
+		)
+	}
+	return &InitArgData{AttributeData: data, Ref: variable}
 }
 
 // buildResultData builds the result data for the given service endpoint.
@@ -2619,29 +2864,13 @@ func (sds *ServicesData) buildResultData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 			}
 		}
 	}
-	idAtt := ""
-	idAttRequired := false
-	if e.IsJSONRPC() && result.Type != expr.Empty {
-		obj := expr.AsObject(result.Type)
-		if obj != nil {
-			for _, att := range *obj {
-				if _, ok := att.Attribute.Meta["jsonrpc:id"]; ok {
-					idAtt = codegen.Goify(att.Name, true)
-					idAttRequired = result.IsRequired(att.Name)
-					break
-				}
-			}
-		}
-	}
 	return &ResultData{
-		IsStruct:            expr.IsObject(result.Type),
-		Name:                name,
-		Ref:                 ref,
-		IDAttribute:         idAtt,
-		IDAttributeRequired: idAttRequired,
-		Responses:           responses,
-		View:                view,
-		MustInit:            mustInit,
+		IsStruct:  expr.IsObject(result.Type),
+		Name:      name,
+		Ref:       ref,
+		Responses: responses,
+		View:      view,
+		MustInit:  mustInit,
 	}
 }
 
@@ -2736,8 +2965,8 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 					}
 					switch {
 					case clientView != "":
-						clientRespBody = effectiveClientResponseBodyForView(respBody, clientView)
-						clientBodyData = sds.buildResponseBodyType(respBody, result, e, false, &clientView, sd, nil, resultOwner, bodyOwner)
+						clientRespBody = effectiveClientResponseBodyForView(respBody, clientView, e)
+						clientBodyData = sds.buildResponseBodyType(clientRespBody, result, e, false, &clientView, sd, nil, resultOwner, bodyOwner)
 						clientBodyView = &clientView
 					case origin != "" || !e.UsesSSE() && !e.IsJSONRPC():
 						clientBodyData = sds.buildResponseBodyType(respBody, result, e, false, &vname, sd, nil, resultOwner, bodyOwner)
@@ -2755,7 +2984,7 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 				if clientBodyData != nil && clientRespBody.Type != expr.Empty {
 					var viewName string
 					clientRespBody, viewName = prepareResponseWireBody(clientRespBody, clientBodyView)
-					policy := jsonBodyPolicy(false, false, clientBodyView == nil, viewName)
+					policy := jsonBodyPolicy(false, false, true, viewName)
 					sd.clientWireTypes.applyNames(clientRespBody, wireResponseBody, policy)
 				}
 				for _, h := range headersData {
@@ -2818,12 +3047,12 @@ func (sds *ServicesData) buildResponses(e *expr.HTTPEndpointExpr, result *expr.A
 								break
 							}
 							viewName := view.Name
-							body := effectiveClientResponseBodyForView(respBody, viewName)
+							body := effectiveClientResponseBodyForView(respBody, viewName, e)
 							clientBody := sds.buildResponseBodyType(
-								respBody, result, e, false, &viewName, sd, nil, resultOwner, bodyOwner,
+								body, result, e, false, &viewName, sd, nil, resultOwner, bodyOwner,
 							)
 							if body.Type != expr.Empty {
-								policy := jsonBodyPolicy(false, false, false, viewName)
+								policy := jsonBodyPolicy(false, false, true, viewName)
 								sd.clientWireTypes.applyNames(body, wireResponseBody, policy)
 							}
 							resultInit := sds.buildResponseResultInit(
@@ -2999,9 +3228,13 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 		errorOwner := expr.MethodErrorExampleIdentity(e.MethodExpr, v.ErrorExpr)
 		bodyOwner := expr.ErrorResponseBodyExampleIdentity(e, v)
 		var (
-			init *InitData
-			body = respBody.Type
+			init   *InitData
+			body   = respBody.Type
+			origin string
 		)
+		if values, ok := respBody.Meta["origin:attribute"]; ok {
+			origin = values[0]
+		}
 
 		errctx := sds.serviceTypeContext(sd, "client").Enter(errorAttribute)
 
@@ -3054,17 +3287,10 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 			}
 
 			var (
-				code   string
-				origin string
-				err    error
+				code string
+				err  error
 			)
 			if body != expr.Empty {
-				// If design uses Body("name") syntax then need to use payload
-				// attribute to transform.
-				if o, ok := respBody.Meta["origin:attribute"]; ok {
-					origin = o[0]
-				}
-
 				var helpers []*codegen.TransformFunctionData
 				transformctx := jsonBodyContext(sd.clientWireTypes, sd.clientWireTypes.scope, false, false)
 				transforms := sd.transforms.errors[v]
@@ -3147,6 +3373,7 @@ func (sds *ServicesData) buildErrorsData(e *expr.HTTPEndpointExpr, sd *ServiceDa
 				ClientBody:   clientBodyData,
 				ResultInit:   init,
 				MustValidate: mustValidate,
+				ResultAttr:   codegen.Goify(origin, true),
 			}
 		}
 
@@ -3231,13 +3458,17 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 	record := catalog.lookupUser(body, role, policy)
 	catalog.applyNames(body, role, policy)
 	httpctx.Scope = catalog.resolverForUse(catalog.scope, policy, wireUnionUse{role: role})
+	layoutResolver := httpctx.Scope.(codegen.GoTypeLayoutResolver)
+	bodyLayout, layoutErr := layoutResolver.GoTypeLayout(body, httpctx.LayoutPolicy())
+	if layoutErr != nil {
+		sds.recordLinkError(layoutErr)
+		return nil
+	}
 	name = body.Type.Name()
 	if record != nil {
 		name = record.name
-		ref = record.ref
-	} else {
-		ref = httpctx.Scope.Ref(body, "")
 	}
+	ref = bodyLayout.Ref()
 
 	if ut, ok := body.Type.(expr.UserType); ok {
 		varname = record.name
@@ -3260,13 +3491,17 @@ func (sds *ServicesData) buildRequestBodyType(body, att *expr.AttributeExpr, e *
 			ctx := jsonBodyContext(catalog, catalog.scope, true, true)
 			ctx.Pointer = !expr.IsPrimitive(body.Type)
 			ctx.Scope = catalog.resolverForUse(catalog.scope, policy, wireUnionUse{role: role})
-			validateRef = codegen.ValidationCode(body, nil, ctx, true, expr.IsAlias(body.Type), false, "body")
+			validationSource := "body"
+			if origin, ok := body.Meta["origin:attribute"]; ok && !att.IsRequired(origin[0]) && !bodyLayout.ReferenceCanBeNil() {
+				validationSource = "*body"
+			}
+			validateRef = codegen.AttributeValidationCode(body, nil, ctx, true, expr.IsAlias(body.Type), validationSource, "body")
 		}
 		if svr && expr.IsObject(body.Type) {
 			// Body is an explicit object described in the design and in
-			// this case the GoTypeRef is an inline struct definition. We
-			// want to force all attributes to be pointers because we are
-			// generating the server body type pre-validation.
+			// this case the GoTypeRef is an inline struct definition. Keep
+			// scalar fields pointer-backed until server validation checks
+			// whether each value was present.
 			body.Validation = nil
 		}
 		varname = httpctx.Scope.Ref(body, "")
@@ -3399,7 +3634,7 @@ func (sds *ServicesData) buildResponseBodyType(
 	}
 	svcctx := sds.serviceTypeContext(sd, side).Enter(att)
 	catalog := sd.wireTypes(svr)
-	policy := jsonBodyPolicy(false, svr, !svr && view == nil, viewName)
+	policy := jsonBodyPolicy(false, svr, !svr, viewName)
 	// Add each nested named field before body receives its chosen Go names. This
 	// keeps each copied request or response field tied to its own definition.
 	topLevel, _ := body.Type.(expr.UserType)
@@ -3437,7 +3672,7 @@ func (sds *ServicesData) buildResponseBodyType(
 		def = goTypeDefForContext(ut.Attribute(), httpctx)
 		desc = fmt.Sprintf("%s is the type of the %q service %q endpoint HTTP response body.",
 			varname, svc.Name, e.Name())
-		if !svr && view == nil {
+		if !svr {
 			// generate validation code for unmarshaled type (client-side).
 			validateDef = codegen.ValidationCode(body, ut, httpctx, true, expr.IsAlias(body.Type), false, "body")
 			if record.needsNestedCall {
@@ -3614,8 +3849,10 @@ func (sds *ServicesData) extractQueryParams(a *expr.MappedAttributeExpr, service
 func (sds *ServicesData) extractHeaders(a *expr.MappedAttributeExpr, svcAtt *expr.AttributeExpr, svcCtx *codegen.AttributeContext, scope *codegen.NameScope, owner expr.ExampleIdentity) []*HeaderData {
 	var headers []*HeaderData
 	sds.extractElements(headerElement, a, svcAtt, svcCtx, scope, owner, func(el *Element, _ *expr.AttributeExpr) {
+		_, preserveEmpty := a.Find(el.Name).Meta["sse:last-event-id"]
 		headers = append(headers, &HeaderData{
 			CanonicalName: http.CanonicalHeaderKey(el.HTTPName),
+			PreserveEmpty: preserveEmpty,
 			Element:       el,
 		})
 	})
@@ -3742,6 +3979,7 @@ func (sds *ServicesData) extractElements(kind httpElementKind, a *expr.MappedAtt
 			}
 		}
 		validationAttribute := att
+		defaultValue := requestElementDefault(svcAtt, name, att)
 		validate := codegen.AttributeValidationCode(att, nil, svcCtx, required, expr.IsAlias(att.Type), varn, name)
 		isText := (kind == pathElement || kind == queryElement) && isStringMetaType(att)
 		if isText {
@@ -3771,6 +4009,7 @@ func (sds *ServicesData) extractElements(kind httpElementKind, a *expr.MappedAtt
 				Type:         att.Type,
 				TypeName:     scope.GoTypeName(att),
 				TypeRef:      typeRef,
+				ValueTypeRef: valueTypeRef,
 				ElemTypeRef:  elemTypeRef,
 				Pointer:      pointer,
 				Validate:     validate,
@@ -3781,7 +4020,9 @@ func (sds *ServicesData) extractElements(kind httpElementKind, a *expr.MappedAtt
 					cliValidationRenderer(validate != "", validationAttribute, svcCtx, name),
 				),
 				IsTextUnmarshaler: isText,
-				DefaultValue:      att.DefaultValue,
+				DefaultValue:      defaultValue,
+				HasDefault:        defaultValue != nil,
+				IsAliased:         expr.IsAlias(att.Type),
 				Example:           sds.FieldExample(att, svcAtt, name, owner),
 			},
 		}, att)
@@ -3874,7 +4115,7 @@ func collectUserTypesRecursive(dt expr.DataType, cb func(expr.UserType), seen ma
 // effectiveClientResponseBodyForView returns a copied response body containing
 // the fields visible in one selected view. Type naming and client decoding both
 // use this copy so they cannot disagree about its fields.
-func effectiveClientResponseBodyForView(body *expr.AttributeExpr, view string) *expr.AttributeExpr {
+func effectiveClientResponseBodyForView(body *expr.AttributeExpr, view string, endpoint *expr.HTTPEndpointExpr) *expr.AttributeExpr {
 	body = expr.DupAtt(body)
 	rt, ok := body.Type.(*expr.ResultTypeExpr)
 	if !ok {
@@ -3884,8 +4125,47 @@ func effectiveClientResponseBodyForView(body *expr.AttributeExpr, view string) *
 	if err != nil {
 		panic(err) // bug
 	}
+	addJSONRPCSSEViewFields(projected, rt, endpoint)
 	body.Type = projected
 	return body
+}
+
+// addJSONRPCSSEViewFields adds values carried by outer SSE lines to a client-only view body.
+func addJSONRPCSSEViewFields(projected, result expr.DataType, endpoint *expr.HTTPEndpointExpr) {
+	if !endpoint.IsJSONRPC() || endpoint.SSE == nil {
+		return
+	}
+	if endpoint.SSE.IDField == "" && endpoint.SSE.EventField == "" && endpoint.SSE.RetryField == "" {
+		return
+	}
+	resultObject := expr.AsObject(result)
+	projectedResult, ok := projected.(*expr.ResultTypeExpr)
+	resultType, resultOK := result.(expr.UserType)
+	if !ok || !resultOK || resultObject == nil {
+		return
+	}
+	addFields := func(attribute *expr.AttributeExpr) {
+		object := expr.AsObject(attribute.Type)
+		if object == nil {
+			return
+		}
+		for _, name := range []string{endpoint.SSE.IDField, endpoint.SSE.EventField, endpoint.SSE.RetryField} {
+			if name == "" || object.Attribute(name) != nil {
+				continue
+			}
+			object.Set(name, expr.DupAtt(resultObject.Attribute(name)))
+			if resultType.Attribute().IsRequired(name) {
+				if attribute.Validation == nil {
+					attribute.Validation = &expr.ValidationExpr{}
+				}
+				attribute.Validation.AddRequired(name)
+			}
+		}
+	}
+	addFields(projectedResult.Attribute())
+	for _, view := range projectedResult.Views {
+		addFields(view.AttributeExpr)
+	}
 }
 
 // clientSSEDataPointer reports whether a configured SSE data field uses the
@@ -3903,7 +4183,7 @@ func clientSSEDataPointer(endpoint *expr.HTTPEndpointExpr, body *expr.AttributeE
 	if attribute == nil {
 		panic(fmt.Sprintf("SSE data field %q is missing from the client response body", endpoint.SSE.DataField))
 	}
-	return expr.IsPrimitive(attribute.Type)
+	return sseBodyFieldPointer(attribute)
 }
 
 // clientResponseViewName returns the response view used by client code

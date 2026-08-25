@@ -1,10 +1,10 @@
 // BuildMethodQueryCustomNamePayload builds the payload for the
 // ServiceQueryCustomName MethodQueryCustomName endpoint from CLI flags.
-func BuildMethodQueryCustomNamePayload(serviceQueryCustomNameMethodQueryCustomNameQ string) (*servicequerycustomname.MethodQueryCustomNamePayload, error) {
+func BuildMethodQueryCustomNamePayload(serviceQueryCustomNameMethodQueryCustomNameQ *string) (*servicequerycustomname.MethodQueryCustomNamePayload, error) {
 	var q *string
 	{
-		if serviceQueryCustomNameMethodQueryCustomNameQ != "" {
-			q = &serviceQueryCustomNameMethodQueryCustomNameQ
+		if serviceQueryCustomNameMethodQueryCustomNameQ != nil {
+			q = serviceQueryCustomNameMethodQueryCustomNameQ
 		}
 	}
 	v := &servicequerycustomname.MethodQueryCustomNamePayload{}

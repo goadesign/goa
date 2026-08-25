@@ -15,26 +15,20 @@ import (
 // AddRequestBody is the type of the "Calc" service "add" endpoint HTTP request
 // body.
 type AddRequestBody struct {
-	// Request ID
-	ID *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
-	A  *int    `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
-	B  *int    `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"`
+	A *int `form:"a,omitempty" json:"a,omitempty" xml:"a,omitempty"`
+	B *int `form:"b,omitempty" json:"b,omitempty" xml:"b,omitempty"`
 }
 
 // LogRequestBody is the type of the "Calc" service "log" endpoint HTTP request
 // body.
 type LogRequestBody struct {
-	// Optional request ID
-	ID      *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
 	Message *string `form:"message,omitempty" json:"message,omitempty" xml:"message,omitempty"`
 }
 
 // AddResponseBody is the type of the "Calc" service "add" endpoint HTTP
 // response body.
 type AddResponseBody struct {
-	// Request ID
-	ID  string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
-	Sum int    `form:"sum" json:"sum" xml:"sum"`
+	Sum int `form:"sum" json:"sum" xml:"sum"`
 }
 
 // PingResponseBody is the type of the "Calc" service "ping" endpoint HTTP
@@ -65,7 +59,6 @@ type AddOverflowResponseBody struct {
 // "add" endpoint of the "Calc" service.
 func NewAddResponseBody(res *calc.AddResult) *AddResponseBody {
 	body := &AddResponseBody{
-		ID:  res.ID,
 		Sum: res.Sum,
 	}
 	return body
@@ -95,31 +88,28 @@ func NewAddOverflowResponseBody(res *goa.ServiceError) *AddOverflowResponseBody 
 }
 
 // NewAddPayload builds a Calc service add endpoint payload.
-func NewAddPayload(body *AddRequestBody) *calc.AddPayload {
+func NewAddPayload(body *AddRequestBody, requestID string) *calc.AddPayload {
 	v := &calc.AddPayload{
-		ID: *body.ID,
-		A:  *body.A,
-		B:  *body.B,
+		A: *body.A,
+		B: *body.B,
 	}
+	v.ID = requestID
 
 	return v
 }
 
 // NewLogPayload builds a Calc service log endpoint payload.
-func NewLogPayload(body *LogRequestBody) *calc.LogPayload {
+func NewLogPayload(body *LogRequestBody, requestID *string) *calc.LogPayload {
 	v := &calc.LogPayload{
-		ID:      body.ID,
 		Message: *body.Message,
 	}
+	v.ID = requestID
 
 	return v
 }
 
 // ValidateAddRequestBody runs the validations defined on AddRequestBody
 func ValidateAddRequestBody(body *AddRequestBody) (err error) {
-	if body.ID == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
-	}
 	if body.A == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("a", "body"))
 	}

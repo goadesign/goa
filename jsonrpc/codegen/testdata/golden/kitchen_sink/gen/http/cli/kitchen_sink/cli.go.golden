@@ -36,6 +36,25 @@ func UsageExamples() string {
 		""
 }
 
+// cliStringFlag keeps an omitted command-line flag distinct from an explicitly empty flag.
+type cliStringFlag struct {
+	value *string
+}
+
+// String returns the flag text shown by the standard flag package.
+func (f *cliStringFlag) String() string {
+	if f.value == nil {
+		return ""
+	}
+	return *f.value
+}
+
+// Set records that the user supplied the flag, even when value is empty.
+func (f *cliStringFlag) Set(value string) error {
+	f.value = &value
+	return nil
+}
+
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func ParseEndpoint(
@@ -49,12 +68,14 @@ func ParseEndpoint(
 		mixedFlags = flag.NewFlagSet("mixed", flag.ContinueOnError)
 
 		mixedLookupFlags    = flag.NewFlagSet("lookup", flag.ExitOnError)
-		mixedLookupBodyFlag = mixedLookupFlags.String("body", "REQUIRED", "")
+		mixedLookupBodyFlag = new(cliStringFlag)
 
 		healthFlags = flag.NewFlagSet("health", flag.ContinueOnError)
 
 		healthCheckFlags = flag.NewFlagSet("check", flag.ExitOnError)
 	)
+	mixedLookupFlags.Var(mixedLookupBodyFlag, "body", "")
+
 	mixedFlags.Usage = mixedUsage
 	mixedLookupFlags.Usage = mixedLookupUsage
 
@@ -134,7 +155,7 @@ func ParseEndpoint(
 			switch epn {
 			case "lookup":
 				endpoint = c.Lookup()
-				data, err = mixedc.BuildLookupPayload(*mixedLookupBodyFlag)
+				data, err = mixedc.BuildLookupPayload(mixedLookupBodyFlag.value)
 			}
 		case "health":
 			c := healthc.NewClient(scheme, host, doer, enc, dec, restore)

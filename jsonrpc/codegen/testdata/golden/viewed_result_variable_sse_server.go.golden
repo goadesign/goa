@@ -35,13 +35,15 @@ func (s *WatchServerStream) SendWithContext(ctx context.Context, event *viewed.V
 		return err
 	}
 	s.sentView = view
+	var eventID *string
+	valueID := string(result.EventID)
+	eventID = &valueID
 
-	message := map[string]any{
-		"jsonrpc": "2.0",
-		"method":  "watch",
-		"params":  body,
-	}
-	return s.sendSSEEvent(ctx, "notification", message)
+	message := jsonrpc.MakeNotification(
+		"watch",
+		body,
+	)
+	return s.sendSSEEvent(ctx, message, eventID, nil, nil)
 }
 
 // Close does nothing because the HTTP response closes when the service method

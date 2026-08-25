@@ -38,7 +38,7 @@ func (s *{{ .ServerStructDeclaration.Name }}) processSSERequest(ctx context.Cont
 		return
 	}
 	
-	if req.Method == "" {
+	if !req.HasMethod {
 		stream := &{{ .SSEStream.Name }}{w: w, encoder: s.encoder}
 		if err := stream.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil); err != nil {
 			s.errhandler(ctx, w, fmt.Errorf("write invalid request event: %w", err))

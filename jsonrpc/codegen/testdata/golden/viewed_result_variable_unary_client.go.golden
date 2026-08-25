@@ -1,8 +1,9 @@
 // DecodeFetchResponse returns a decoder for responses returned by the viewed
-// service fetch JSON-RPC method. restoreBody controls whether the response
-// body should be restored after having been read.
-func DecodeFetchResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
-	return func(resp *http.Response) (result any, decodeErr error) {
+// service fetch JSON-RPC method. The decoder rejects responses that do not
+// repeat requestID. restoreBody controls whether the response body should be
+// restored after having been read.
+func DecodeFetchResponse(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response, string) (any, error) {
+	return func(resp *http.Response, requestID string) (result any, decodeErr error) {
 		responseBody := resp.Body
 		if restoreBody {
 			b, readErr := io.ReadAll(responseBody)
@@ -34,12 +35,12 @@ func DecodeFetchResponse(decoder func(*http.Response) goahttp.Decoder, restoreBo
 		if err := decoder(resp).Decode(&jresp); err != nil {
 			return nil, goahttp.ErrDecodingError("viewed", "fetch", err)
 		}
+		if err := jresp.Validate(requestID); err != nil {
+			return nil, goahttp.ErrInvalidResponse("viewed", "fetch", resp.StatusCode, err.Error())
+		}
 
 		if jresp.Error != nil {
-			switch jresp.Error.Code {
-			default:
-				return nil, goahttp.ErrInvalidResponse("viewed", "fetch", resp.StatusCode, string(jresp.Error.Data))
-			}
+			return nil, jresp.Error
 		}
 		return decodeFetchViewedResult(decoder, resp, jresp.Result)
 	}

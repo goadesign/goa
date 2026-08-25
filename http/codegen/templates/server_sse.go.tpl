@@ -110,6 +110,54 @@ func (s *{{ .SSE.StructDeclaration.Name }}) {{ .SSE.SendWithContextName }}(ctx c
 	{{- if .SSE.VariableView }}
 	s.sentView = view
 	{{- end }}
+	{{- if .SSE.IDField }}
+	id := {{ if .Method.ViewedResult }}projected{{ else }}res{{ end }}.{{ .SSE.IDField }}
+		{{- if .SSE.ID.Pointer }}
+	if id != nil {
+		for i := 0; i < len(*id); i++ {
+			if (*id)[i] == '\r' || (*id)[i] == '\n' || (*id)[i] == 0 {
+				return fmt.Errorf("SSE event ID contains a character that cannot appear on an id line")
+			}
+		}
+	}
+		{{- else }}
+	for i := 0; i < len(id); i++ {
+		if id[i] == '\r' || id[i] == '\n' || id[i] == 0 {
+			return fmt.Errorf("SSE event ID contains a character that cannot appear on an id line")
+		}
+	}
+		{{- end }}
+	{{- end }}
+	{{- if .SSE.EventField }}
+	event := {{ if .Method.ViewedResult }}projected{{ else }}res{{ end }}.{{ .SSE.EventField }}
+		{{- if .SSE.Event.Pointer }}
+	if event != nil {
+		for i := 0; i < len(*event); i++ {
+			if (*event)[i] == '\r' || (*event)[i] == '\n' {
+				return fmt.Errorf("SSE event type contains a line break")
+			}
+		}
+	}
+		{{- else }}
+	for i := 0; i < len(event); i++ {
+		if event[i] == '\r' || event[i] == '\n' {
+			return fmt.Errorf("SSE event type contains a line break")
+		}
+	}
+		{{- end }}
+	{{- end }}
+	{{- if .SSE.RetryField }}
+	retry := {{ if .Method.ViewedResult }}projected{{ else }}res{{ end }}.{{ .SSE.RetryField }}
+		{{- if and (sseSignedInteger .SSE.Retry) .SSE.Retry.Pointer }}
+	if retry != nil && *retry < 0 {
+		return fmt.Errorf("SSE retry value cannot be negative")
+	}
+		{{- else if sseSignedInteger .SSE.Retry }}
+	if retry < 0 {
+		return fmt.Errorf("SSE retry value cannot be negative")
+	}
+		{{- end }}
+	{{- end }}
 	s.once.Do(func() {
 		header := s.w.Header()
 		if header.Get("Content-Type") == "" {
@@ -129,39 +177,56 @@ func (s *{{ .SSE.StructDeclaration.Name }}) {{ .SSE.SendWithContextName }}(ctx c
 	})
 
 	{{ if .SSE.IDField }}
-	if id := {{ if .Method.ViewedResult }}projected{{ else }}res{{ end }}.{{ .SSE.IDField }}; id != "" {
-		if _, err := fmt.Fprintf(s.w, "id: %s\n", id); err != nil {
+		{{- if .SSE.ID.Pointer }}
+	if id != nil {
+		if _, err := fmt.Fprintf(s.w, "id: %s\n", *id); err != nil {
 			return err
 		}
 	}
+		{{- else }}
+	if _, err := fmt.Fprintf(s.w, "id: %s\n", id); err != nil {
+		return err
+	}
+		{{- end }}
 	{{- end }}
 
 	{{- if .SSE.EventField }}
-	if event := {{ if .Method.ViewedResult }}projected{{ else }}res{{ end }}.{{ .SSE.EventField }}; event != "" {
-		if _, err := fmt.Fprintf(s.w, "event: %s\n", event); err != nil {
+		{{- if .SSE.Event.Pointer }}
+	if event != nil {
+		if _, err := fmt.Fprintf(s.w, "event: %s\n", *event); err != nil {
 			return err
 		}
 	}
+		{{- else }}
+	if _, err := fmt.Fprintf(s.w, "event: %s\n", event); err != nil {
+		return err
+	}
+		{{- end }}
 	{{- end }}
 
 	{{- if .SSE.RetryField }}
-	if retry := {{ if .Method.ViewedResult }}projected{{ else }}res{{ end }}.{{ .SSE.RetryField }}; {{ if .SSE.Retry.Pointer }}retry != nil && *{{ end }}retry > 0 {
+		{{- if .SSE.Retry.Pointer }}
+	if retry != nil {
 		if _, err := fmt.Fprintf(s.w, "retry: %d\n", {{ if .SSE.Retry.Pointer }}*{{ end }}retry); err != nil {
 			return err
 		}
 	}
+		{{- else }}
+	if _, err := fmt.Fprintf(s.w, "retry: %d\n", retry); err != nil {
+		return err
+	}
+		{{- end }}
 	{{- end }}
 	{{- if .SSE.Data.Pointer }}
 	if hasData {
-		if _, err := fmt.Fprintf(s.w, "data: %s\n", data); err != nil {
-			return err
-		}
+		{{- template "write_sse_data" . }}
 	}
 	if _, err := fmt.Fprintln(s.w); err != nil {
 		return err
 	}
 	{{- else }}
-	if _, err := fmt.Fprintf(s.w, "data: %s\n\n", data); err != nil {
+	{{- template "write_sse_data" . }}
+	if _, err := fmt.Fprintln(s.w); err != nil {
 		return err
 	}
 	{{- end }}
@@ -171,6 +236,27 @@ func (s *{{ .SSE.StructDeclaration.Name }}) {{ .SSE.SendWithContextName }}(ctx c
 	}
 	return nil
 }
+
+{{- define "write_sse_data" }}
+	remaining := data
+	for {
+		lineEnd := 0
+		for lineEnd < len(remaining) && remaining[lineEnd] != '\r' && remaining[lineEnd] != '\n' {
+			lineEnd++
+		}
+		if _, err := fmt.Fprintf(s.w, "data: %s\n", remaining[:lineEnd]); err != nil {
+			return err
+		}
+		if lineEnd == len(remaining) {
+			break
+		}
+		next := lineEnd + 1
+		if remaining[lineEnd] == '\r' && next < len(remaining) && remaining[next] == '\n' {
+			next++
+		}
+		remaining = remaining[next:]
+	}
+{{- end }}
 
 {{- define "viewed_sse_server_body" }}
 	{{- $endpoint := .Endpoint }}

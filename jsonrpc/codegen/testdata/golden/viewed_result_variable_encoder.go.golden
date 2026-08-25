@@ -9,8 +9,8 @@ func encodeFetchViewedResult(viewed *viewedviews.ViewedGolden) (any, error) {
 		res := viewed
 		body := NewFetchResponseBodySummary(res.Projected)
 		return struct {
-			View string `json:"view"`
-			Body any    `json:"body"`
+			View string                    `json:"view"`
+			Body *FetchResponseBodySummary `json:"body"`
 		}{
 			View: "summary",
 			Body: body,
@@ -19,8 +19,8 @@ func encodeFetchViewedResult(viewed *viewedviews.ViewedGolden) (any, error) {
 		res := viewed
 		body := NewFetchResponseBodyDetailed(res.Projected)
 		return struct {
-			View string `json:"view"`
-			Body any    `json:"body"`
+			View string                     `json:"view"`
+			Body *FetchResponseBodyDetailed `json:"body"`
 		}{
 			View: "detailed",
 			Body: body,
@@ -29,8 +29,8 @@ func encodeFetchViewedResult(viewed *viewedviews.ViewedGolden) (any, error) {
 		res := viewed
 		body := NewFetchResponseBody(res.Projected)
 		return struct {
-			View string `json:"view"`
-			Body any    `json:"body"`
+			View string             `json:"view"`
+			Body *FetchResponseBody `json:"body"`
 		}{
 			View: "default",
 			Body: body,

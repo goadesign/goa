@@ -283,14 +283,6 @@ func buildOperation(key string, r *expr.RouteExpr, bodies *EndpointBodies, rand 
 	{
 		ps := paramsFromPath(e, key, rand, values)
 		ps = append(ps, paramsFromHeadersAndCookies(e, rand, values)...)
-		if ver == openapi.Version32 && e.UsesSSE() && e.SSE.RequestIDField != "" {
-			// The generated handler reads the Last-Event-ID header directly so
-			// the header does not appear in the endpoint headers expression.
-			att := expr.AsObject(m.Payload.Type).Attribute(e.SSE.RequestIDField)
-			owner := expr.MethodPayloadExampleIdentity(m)
-			identity := exampleFieldIdentity(m.Payload, e.SSE.RequestIDField, owner)
-			ps = append(ps, paramFor(att, "Last-Event-ID", "header", false, rand, identity, values))
-		}
 		if e.MapQueryParams != nil {
 			name := *e.MapQueryParams
 			if name == "" {

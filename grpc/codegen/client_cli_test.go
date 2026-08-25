@@ -9,6 +9,7 @@ import (
 	"goa.design/goa/v3/codegen"
 	"goa.design/goa/v3/codegen/cli"
 	"goa.design/goa/v3/codegen/testutil"
+	"goa.design/goa/v3/dsl"
 	"goa.design/goa/v3/grpc/codegen/testdata"
 )
 
@@ -36,6 +37,48 @@ func TestClientCLIFiles(t *testing.T) {
 			testutil.AssertGo(t, "testdata/golden/client_cli_"+c.Name+".go.golden", code)
 		})
 	}
+}
+
+// TestClientCLIFlagPresenceGolden shows how generated gRPC commands preserve
+// explicit empty metadata while applying every authored zero-valued default.
+func TestClientCLIFlagPresenceGolden(t *testing.T) {
+	root := RunGRPCDSL(t, func() {
+		dsl.Service("FlagPresence", func() {
+			dsl.Method("check", func() {
+				dsl.Payload(func() {
+					dsl.Field(1, "required", dsl.String)
+					dsl.Field(2, "optional", dsl.String)
+					dsl.Field(3, "empty", dsl.String, func() {
+						dsl.Default("")
+					})
+					dsl.Field(4, "disabled", dsl.Boolean, func() {
+						dsl.Default(false)
+					})
+					dsl.Field(5, "zero", dsl.Int, func() {
+						dsl.Default(0)
+					})
+					dsl.Required("required")
+				})
+				dsl.GRPC(func() {
+					dsl.Metadata(func() {
+						dsl.Attribute("required")
+						dsl.Attribute("optional")
+						dsl.Attribute("empty")
+						dsl.Attribute("disabled")
+						dsl.Attribute("zero")
+					})
+				})
+			})
+		})
+	})
+	services := CreateGRPCServices(root)
+	files := clientCLIFiles(services)
+	require.Len(t, files, 2)
+
+	parser := codegen.SectionsCode(t, files[0].Section("parse-endpoint-grpc"))
+	testutil.AssertGo(t, "testdata/golden/client_cli_flag-presence-parse.go.golden", parser)
+	builder := codegen.SectionsCode(t, files[1].Section("cli-build-payload"))
+	testutil.AssertGo(t, "testdata/golden/client_cli_flag-presence-build.go.golden", builder)
 }
 
 // TestReleasedGRPCNamesMatchDeclarations verifies released plugins can read

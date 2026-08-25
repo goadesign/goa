@@ -1,3 +1,22 @@
+// cliStringFlag keeps an omitted command-line flag distinct from an explicitly empty flag.
+type cliStringFlag struct {
+	value *string
+}
+
+// String returns the flag text shown by the standard flag package.
+func (f *cliStringFlag) String() string {
+	if f.value == nil {
+		return ""
+	}
+	return *f.value
+}
+
+// Set records that the user supplied the flag, even when value is empty.
+func (f *cliStringFlag) Set(value string) error {
+	f.value = &value
+	return nil
+}
+
 // ParseEndpoint returns the endpoint and payload as specified on the command
 // line.
 func ParseEndpoint(
@@ -11,8 +30,10 @@ func ParseEndpoint(
 		serviceBodyPrimitiveArrayStringValidateFlags = flag.NewFlagSet("service-body-primitive-array-string-validate", flag.ContinueOnError)
 
 		serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateFlags = flag.NewFlagSet("method-body-primitive-array-string-validate", flag.ExitOnError)
-		serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidatePFlag = serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateFlags.String("p", "REQUIRED", "[]string is the payload type of the ServiceBodyPrimitiveArrayStringValidate service MethodBodyPrimitiveArrayStringValidate method.")
+		serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidatePFlag = new(cliStringFlag)
 	)
+	serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateFlags.Var(serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidatePFlag, "p", "[]string is the payload type of the ServiceBodyPrimitiveArrayStringValidate service MethodBodyPrimitiveArrayStringValidate method.")
+
 	serviceBodyPrimitiveArrayStringValidateFlags.Usage = serviceBodyPrimitiveArrayStringValidateUsage
 	serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateFlags.Usage = serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidateUsage
 
@@ -81,8 +102,11 @@ func ParseEndpoint(
 			case "method-body-primitive-array-string-validate":
 				endpoint = c.MethodBodyPrimitiveArrayStringValidate()
 				var err error
+				if serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidatePFlag.value == nil {
+					return nil, nil, fmt.Errorf("missing required flag --p")
+				}
 				var val []string
-				err = json.Unmarshal([]byte(*serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidatePFlag), &val)
+				err = json.Unmarshal([]byte(*serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidatePFlag.value), &val)
 				data = val
 				if err != nil {
 					return nil, nil, fmt.Errorf("invalid JSON for serviceBodyPrimitiveArrayStringValidateMethodBodyPrimitiveArrayStringValidatePFlag, \nerror: %s, \nexample of valid JSON:\n%s", err, "'[\n      \"val\"\n   ]'")

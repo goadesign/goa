@@ -249,7 +249,7 @@ func (a *AttributeExpr) EvalName() string {
 // to be used in error messages.  The parent definition context is automatically
 // added to error messages.
 func (a *AttributeExpr) Validate(ctx string, parent eval.Expression) *eval.ValidationErrors {
-	return a.validate(ctx, parent, make(map[*AttributeExpr]struct{}))
+	return a.validate(ctx, parent, make(map[*AttributeExpr]struct{}), true)
 }
 
 // validate checks attributes reached from a. The map stops a type that refers
@@ -258,6 +258,7 @@ func (a *AttributeExpr) validate(
 	ctx string,
 	parent eval.Expression,
 	visited map[*AttributeExpr]struct{},
+	validateDefaults bool,
 ) *eval.ValidationErrors {
 	if _, ok := visited[a]; ok {
 		return nil
@@ -271,11 +272,17 @@ func (a *AttributeExpr) validate(
 	if ctx != "" {
 		ctx += " - "
 	}
-	verr.Merge(a.validateEnumDefault(ctx, parent))
+	if validateDefaults {
+		verr.Merge(a.validateDefaultValue(ctx, parent))
+	}
 	if v := a.Validation; v != nil {
 		verr.Merge(v.Validate(ctx, parent))
 	}
 	verr.Merge(a.validateExamples(ctx, parent))
+	childDefaults := validateDefaults
+	if _, named := a.Type.(UserType); named {
+		childDefaults = false
+	}
 	if o := AsObject(a.Type); o != nil {
 		for _, n := range a.AllRequired() {
 			if a.Find(n) == nil {
@@ -291,14 +298,17 @@ func (a *AttributeExpr) validate(
 		for _, nat := range *o {
 			verr.Merge(a.validatePkgPath(pkgPath, nat.Attribute.Type))
 			ctx = fmt.Sprintf("field %s", nat.Name)
-			verr.Merge(nat.Attribute.validate(ctx, parent, visited))
+			verr.Merge(nat.Attribute.validate(ctx, parent, visited, childDefaults))
 		}
 	} else if ar := AsArray(a.Type); ar != nil {
 		elemType := ar.ElemType
-		verr.Merge(elemType.validate(ctx, a, visited))
+		verr.Merge(elemType.validate(ctx, a, visited, childDefaults))
+	} else if mapped := AsMap(a.Type); mapped != nil {
+		verr.Merge(mapped.KeyType.validate(ctx, a, visited, childDefaults))
+		verr.Merge(mapped.ElemType.validate(ctx, a, visited, childDefaults))
 	} else if u := AsUnion(a.Type); u != nil {
 		for _, ut := range u.Values {
-			verr.Merge(ut.Attribute.validate(ctx, parent, visited))
+			verr.Merge(ut.Attribute.validate(ctx, parent, visited, childDefaults))
 		}
 	}
 
@@ -763,32 +773,6 @@ func (a *AttributeExpr) debug(prefix string, seen map[*AttributeExpr]int, indent
 			fmt.Printf("%s%s- %s\n", tabs+tab, tab, r.Name())
 		}
 	}
-}
-
-// validateEnumDefault makes sure that the attribute default value is one of the
-// enum values.
-func (a *AttributeExpr) validateEnumDefault(ctx string, parent eval.Expression) *eval.ValidationErrors {
-	//TODO: We only do the default value and enum check just for primitive types.
-	if _, ok := a.Type.(Primitive); !ok {
-		return nil
-	}
-	verr := new(eval.ValidationErrors)
-	if a.DefaultValue != nil && a.Validation != nil && a.Validation.Values != nil {
-		var found bool
-		if slices.Contains(a.Validation.Values, a.DefaultValue) {
-			found = true
-		}
-		if !found {
-			verr.Add(
-				parent,
-				"%sdefault value %#v is not one of the accepted values: %#v",
-				ctx,
-				a.DefaultValue,
-				a.Validation.Values,
-			)
-		}
-	}
-	return verr
 }
 
 // validateExamples makes sure that the attribute example values are compatible

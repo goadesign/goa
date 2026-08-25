@@ -192,6 +192,12 @@ type (
 	JSONRPCEndpointSnapshot struct {
 		// IsJSONRPC is true because this value describes a JSON-RPC method.
 		IsJSONRPC bool
+		// IsJSONRPCNotification reports whether every call omits the request
+		// ID and receives no JSON-RPC response.
+		IsJSONRPCNotification bool
+		// JSONRPCRequestID contains the complete request-ID plan. It is nil for
+		// explicit notifications.
+		JSONRPCRequestID *JSONRPCRequestIDData
 		// Method contains the service method names and stream methods used in JSON-RPC files.
 		Method JSONRPCMethodData
 		// ServiceName is the design service name written in generated errors.
@@ -339,8 +345,14 @@ type (
 		Request *JSONRPCRequestData
 		// IDAttribute is the payload field that receives the JSON-RPC request ID.
 		IDAttribute string
+		// IDAttributeTypeRef is the named string type assigned from the
+		// JSON-RPC request ID. It is empty for a plain string field.
+		IDAttributeTypeRef string
 		// IDAttributeRequired reports whether IDAttribute is a value instead of a pointer.
 		IDAttributeRequired bool
+		// JSONRPCRequestID contains the typed payload field and generated-client
+		// behavior for the request ID.
+		JSONRPCRequestID *JSONRPCRequestIDData
 		// DecoderReturnValue is returned directly when the server needs no payload constructor.
 		DecoderReturnValue string
 	}
@@ -365,8 +377,40 @@ type (
 		PayloadAttr string
 		// MustHaveBody reports whether an empty JSON request is invalid.
 		MustHaveBody bool
+		// OptionalBody reports whether Body selects an optional payload field.
+		OptionalBody bool
+		// BodyIsUnion reports whether the selected optional field is a union whose
+		// empty kind represents absence.
+		BodyIsUnion bool
+		// BodyFieldPointer reports whether the selected service payload field is
+		// a pointer to a primitive value.
+		BodyFieldPointer bool
+		// BodyFieldCanBeAbsent reports whether the selected service payload field
+		// can represent absence.
+		BodyFieldCanBeAbsent bool
 		// MustValidate reports whether decoded request values require validation.
 		MustValidate bool
+		// Params describes how the request body is placed in JSON-RPC params.
+		Params *JSONRPCParamsData
+	}
+
+	// JSONRPCParamsData describes how one service value is carried in the
+	// JSON-RPC params member.
+	JSONRPCParamsData struct {
+		// Positional reports whether params is a one-element array containing the
+		// service value. Structured values remain objects or arrays directly.
+		Positional bool
+		// TypeRef is the generated Go type placed in the positional array.
+		TypeRef string
+		// RejectNull reports whether a null positional value is missing required
+		// input.
+		RejectNull bool
+		// AllowAbsent reports whether the params member may be omitted because
+		// the mapped service field is optional.
+		AllowAbsent bool
+		// OmitAbsent reports whether an absent direct value must omit params.
+		// JSON-RPC does not allow params to be null.
+		OmitAbsent bool
 	}
 
 	// JSONRPCResultData contains the response values read by JSON-RPC files.
@@ -375,9 +419,13 @@ type (
 		Ref string
 		// Responses contains the successful HTTP responses in design order.
 		Responses []JSONRPCResponseData
-		// IDAttribute is the result field that supplies the JSON-RPC response ID.
+		// IDAttribute is retained for generator compatibility.
+		//
+		// Deprecated: JSON-RPC results cannot define an ID field.
 		IDAttribute string
-		// IDAttributeRequired reports whether IDAttribute is a value instead of a pointer.
+		// IDAttributeRequired is retained for generator compatibility.
+		//
+		// Deprecated: JSON-RPC results cannot define an ID field.
 		IDAttributeRequired bool
 		// View is the default result view selected by the design.
 		View string
@@ -399,6 +447,9 @@ type (
 		ClientBody *JSONRPCBodyData
 		// ResultInit builds the service result or error from decoded response values.
 		ResultInit *InitData
+		// ResultAttr is the Go field selected by Body("name"). It is empty when
+		// the response body uses the complete service result or error.
+		ResultAttr string
 		// MustValidate reports whether decoded header or cookie values require validation.
 		MustValidate bool
 	}
@@ -441,6 +492,31 @@ type (
 		ClientInitDeclaration *codegen.NameDeclaration
 		// EventTypeRef is the service result type carried by each event.
 		EventTypeRef string
+		// EventTypeName is the service result type allocated by the client.
+		EventTypeName string
+		// EventIsStruct reports whether the service result is an object.
+		EventIsStruct bool
+		// DataField is the service result field carried by notification params.
+		// It is empty when params carry the complete result body.
+		DataField string
+		// Data describes the value carried by notification params.
+		Data SSEValueData
+		// IDField is the service result field carried by the SSE id line.
+		IDField string
+		// ID describes the value carried by the SSE id line.
+		ID *SSEValueData
+		// ClientIDPointer reports whether the decoded response body stores IDField as a pointer.
+		ClientIDPointer bool
+		// EventField is the service result field carried by the SSE event line.
+		EventField string
+		// Event describes the value carried by the SSE event line.
+		Event *SSEValueData
+		// ClientEventPointer reports whether the decoded response body stores EventField as a pointer.
+		ClientEventPointer bool
+		// RetryField is the service result field carried by the SSE retry line.
+		RetryField string
+		// Retry describes the value carried by the SSE retry line.
+		Retry *SSEValueData
 		// HasResponseBody reports whether Response converts the service result to JSON.
 		HasResponseBody bool
 		// Response is the successful response used to encode stream events.
@@ -449,6 +525,12 @@ type (
 		RequestIDField string
 		// RequestIDPointer reports whether RequestIDField stores a pointer.
 		RequestIDPointer bool
+		// Params describes how each streamed result is placed in notification
+		// params.
+		Params *JSONRPCParamsData
+		// ClientEventCode converts the decoded response body into the streamed
+		// service result when the ordinary and streamed result types differ.
+		ClientEventCode string
 	}
 
 	// JSONRPCBodyData contains only the JSON body fields read by JSON-RPC files.
@@ -479,12 +561,18 @@ type (
 		VarName string
 		// TypeName is the Goa primitive or array name.
 		TypeName string
+		// Type is the generated transport type used by shared request templates.
+		Type expr.DataType
+		// FieldType is the service field type used by shared request templates.
+		FieldType expr.DataType
 		// ElemTypeName is the Goa name of an array element. It is empty for non-arrays.
 		ElemTypeName string
 		// ElemTypeRef is the generated Go reference for an array element. It is empty for non-arrays.
 		ElemTypeRef string
 		// TypeRef is the generated Go type reference.
 		TypeRef string
+		// ValueTypeRef is TypeRef without the optional pointer.
+		ValueTypeRef string
 		// Pointer reports whether TypeRef is a pointer.
 		Pointer bool
 		// FieldName is the service result field that supplies the value on the server.
@@ -497,6 +585,8 @@ type (
 		Required bool
 		// DefaultValue is written when the response omits an optional value.
 		DefaultValue any
+		// HasDefault reports whether DefaultValue was authored, including zero.
+		HasDefault bool
 		// Validate contains the validation code run after conversion.
 		Validate string
 		// HTTPName is the header or cookie name sent over HTTP.
@@ -512,6 +602,9 @@ type (
 		JSONRPCElementData
 		// CanonicalName is the standard HTTP spelling, such as "Content-Type".
 		CanonicalName string
+		// PreserveEmpty reports whether an empty header value is different from
+		// an absent header.
+		PreserveEmpty bool
 	}
 
 	// JSONRPCCookieData contains one response cookie read by JSON-RPC clients.
@@ -1369,10 +1462,10 @@ func requireHTTPTransportImports(outputPackage *codegen.GeneratedPackage, servic
 			hasStream = true
 		}
 		if client && endpoint.IsJSONRPC() {
-			imports = append(imports,
-				codegen.SimpleImport("github.com/google/uuid"),
-				codegen.GoaImport("jsonrpc"),
-			)
+			imports = append(imports, codegen.GoaImport("jsonrpc"))
+			if jsonRPCRequestIDPolicyFor(endpoint).generates() {
+				imports = append(imports, codegen.SimpleImport("github.com/google/uuid"))
+			}
 		}
 	}
 	if hasStream {
@@ -1673,6 +1766,7 @@ func newPlan(generation *codegen.Generation, transport transportKind, input Plan
 			command := cli.CommandDeclarationInput{Service: serviceName}
 			for _, endpoint := range transportService.HTTPEndpoints {
 				command.Methods = append(command.Methods, endpoint.MethodExpr.Name)
+				command.NeedsFlagPresence = command.NeedsFlagPresence || httpEndpointNeedsCLIFlagPresence(endpoint)
 			}
 			commands = append(commands, command)
 		}
@@ -1683,6 +1777,49 @@ func newPlan(generation *codegen.Generation, transport transportKind, input Plan
 		plan.cliParsers[server.Name] = parser
 	}
 	return plan, nil
+}
+
+// httpEndpointNeedsCLIFlagPresence reports whether the generated command must
+// distinguish a missing flag from a flag whose value is empty. Each check uses
+// the same authored default that the generated payload builder receives.
+func httpEndpointNeedsCLIFlagPresence(endpoint *expr.HTTPEndpointExpr) bool {
+	if endpoint.SkipRequestBodyEncodeDecode {
+		return true
+	}
+	if endpoint.MethodExpr.Payload.Type == expr.Empty {
+		return false
+	}
+	if endpoint.Body.Type != expr.Empty {
+		origin := endpoint.Body.Meta["origin:attribute"]
+		if len(origin) == 0 || endpoint.MethodExpr.Payload.GetDefault(origin[0]) == nil {
+			return true
+		}
+	}
+	if !endpoint.PathParams().IsEmpty() {
+		return true
+	}
+	for _, mapped := range []*expr.MappedAttributeExpr{
+		endpoint.QueryParams(),
+		endpoint.Headers,
+		endpoint.Cookies,
+	} {
+		for _, field := range *expr.AsObject(mapped.Type) {
+			if requestElementDefault(endpoint.MethodExpr.Payload, field.Name, field.Attribute) == nil {
+				return true
+			}
+		}
+	}
+	if policy := jsonRPCRequestIDPolicyFor(endpoint); policy != nil && policy.attribute != nil && policy.defaultValue == nil {
+		return true
+	}
+	for _, requirement := range endpoint.Requirements {
+		for _, scheme := range requirement.Schemes {
+			if scheme.Kind == expr.BasicAuthKind {
+				return true
+			}
+		}
+	}
+	return !expr.IsObject(endpoint.MethodExpr.Payload.Type) && endpoint.MethodExpr.Payload.DefaultValue == nil
 }
 
 // link reads the generated service names, builds data for every selected service once,

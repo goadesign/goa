@@ -998,6 +998,25 @@ var EmptyCustomErrorResponseBodyDSL = func() {
 	})
 }
 
+var ErrorBodyAttributeResponseDSL = func() {
+	var ErrorType = Type("SelectedError", func() {
+		Attribute("detail", String)
+		Required("detail")
+	})
+	Service("ServiceErrorBodyAttributeResponse", func() {
+		Method("MethodErrorBodyAttributeResponse", func() {
+			Error("selected", ErrorType)
+			HTTP(func() {
+				GET("/")
+				Response(StatusOK)
+				Response("selected", StatusBadRequest, func() {
+					Body("detail")
+				})
+			})
+		})
+	})
+}
+
 var ResultWithResultViewDSL = func() {
 	var RT = ResultType("RT", func() {
 		Attributes(func() {

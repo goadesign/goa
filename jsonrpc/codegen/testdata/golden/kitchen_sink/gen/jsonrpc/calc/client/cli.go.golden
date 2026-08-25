@@ -15,38 +15,57 @@ import (
 )
 
 // BuildAddPayload builds the payload for the Calc add endpoint from CLI flags.
-func BuildAddPayload(calcAddBody string) (*calc.AddPayload, error) {
+func BuildAddPayload(calcAddBody *string, calcAddRequestID *string) (*calc.AddPayload, error) {
 	var err error
 	var body AddRequestBody
 	{
-		err = json.Unmarshal([]byte(calcAddBody), &body)
+		if calcAddBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*calcAddBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": 5718665059814127631,\n      \"b\": 5455021967244844938,\n      \"id\": \"Assumenda molestias optio.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": 5718665059814127631,\n      \"b\": 5455021967244844938\n   }'")
 		}
 	}
-	v := &calc.AddPayload{
-		ID: body.ID,
-		A:  body.A,
-		B:  body.B,
+	var requestID string
+	{
+		if calcAddRequestID == nil {
+			return nil, fmt.Errorf("missing required flag --request-id")
+		}
+		requestID = *calcAddRequestID
 	}
+	v := &calc.AddPayload{
+		A: body.A,
+		B: body.B,
+	}
+	v.ID = requestID
 
 	return v, nil
 }
 
 // BuildLogPayload builds the payload for the Calc log endpoint from CLI flags.
-func BuildLogPayload(calcLogBody string) (*calc.LogPayload, error) {
+func BuildLogPayload(calcLogBody *string, calcLogRequestID *string) (*calc.LogPayload, error) {
 	var err error
 	var body LogRequestBody
 	{
-		err = json.Unmarshal([]byte(calcLogBody), &body)
+		if calcLogBody == nil {
+			return nil, fmt.Errorf("missing required flag --body")
+		}
+		err = json.Unmarshal([]byte(*calcLogBody), &body)
 		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"id\": \"Quae consectetur.\",\n      \"message\": \"Quo excepturi.\"\n   }'")
+			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"message\": \"Quo excepturi.\"\n   }'")
+		}
+	}
+	var requestID *string
+	{
+		if calcLogRequestID != nil {
+			requestID = calcLogRequestID
 		}
 	}
 	v := &calc.LogPayload{
-		ID:      body.ID,
 		Message: body.Message,
 	}
+	v.ID = requestID
 
 	return v, nil
 }

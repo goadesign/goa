@@ -993,10 +993,6 @@ func (c *wireTypeCatalog) Link() {
 		panic("cannot link HTTP types before declaring their package names")
 	}
 	c.scope = c.pkg.Scope()
-	for _, record := range c.records {
-		record.name = record.declaration.Name()
-		record.ref = wireTypeRef(record.name, record.identity.attribute.Type)
-	}
 	for _, union := range c.unions {
 		union.name = union.declaration.Name()
 		union.kindName = union.kind.Name()
@@ -1008,6 +1004,23 @@ func (c *wireTypeCatalog) Link() {
 		}
 		c.applyUnionRecord(union.attribute, union)
 	}
+	for _, record := range c.records {
+		record.name = record.declaration.Name()
+		use := wireUnionUse{
+			role: record.identity.role,
+			view: record.identity.policy.view,
+		}
+		resolver := c.rootResolver(c.scope, record.identity.policy, use, record)
+		layout, err := resolver.(*wireAttributeScope).goTypeLayout(
+			record.identity.attribute,
+			wireGoLayoutPolicy(record.identity.policy),
+			true,
+		)
+		if err != nil {
+			panic(fmt.Sprintf("link HTTP type %q: %v", record.name, err))
+		}
+		record.ref = layout.Ref()
+	}
 	for _, union := range c.unions {
 		actual := union.attribute.Type.(*expr.Union)
 		union.data = buildHTTPUnionTypeData(actual, c.occurrenceResolver(c.scope, union.identity.owner.use), union)
@@ -1015,15 +1028,27 @@ func (c *wireTypeCatalog) Link() {
 	c.linked = true
 }
 
-// wireTypeRef adds a pointer when the generated Go type requires one.
-func wireTypeRef(name string, dataType expr.DataType) string {
-	if _, inline := dataType.(*expr.Object); inline {
-		return name
+// optionalWireTypeRef returns the exact transport type used to preserve an
+// optional top-level value. The booleans report whether command-line decoding
+// must preserve absence and whether conversion must dereference an added
+// pointer.
+func optionalWireTypeRef(layout codegen.LinkedGoType, optional bool) (typeRef string, preserveAbsence, dereference bool) {
+	if optional && !layout.ReferenceCanBeNil() {
+		return layout.RefWithPointer(true), true, layout.Kind() != codegen.GoStruct
 	}
-	if expr.IsObject(dataType) || expr.IsUnion(dataType) {
-		return "*" + name
+	return layout.Ref(), optional && layout.ReferenceIsPointer(), false
+}
+
+// wireGoLayoutPolicy converts the HTTP package choices into the shared Go type
+// plan used by definitions, references, and default values.
+func wireGoLayoutPolicy(policy wireTypePolicy) codegen.GoLayoutPolicy {
+	return codegen.GoLayoutPolicy{
+		Pointer:             policy.pointer,
+		UseDefault:          policy.useDefault,
+		UnionPointer:        true,
+		ArrayElementPointer: policy.arrayElementPointer,
+		SumType:             true,
 	}
-	return name
 }
 
 // lookup returns the chosen Go names for an equivalent copied type. It panics
@@ -1693,7 +1718,49 @@ func (s *wireAttributeScope) Name(attribute *expr.AttributeExpr, pkg string, poi
 
 // Ref returns the pointer or value spelling for this HTTP attribute copy.
 func (s *wireAttributeScope) Ref(attribute *expr.AttributeExpr, pkg string) string {
-	return wireTypeRef(s.Name(attribute, pkg, s.policy.pointer, s.policy.useDefault), attribute.Type)
+	layout, err := s.goTypeLayout(attribute, wireGoLayoutPolicy(s.policy), true)
+	if err != nil {
+		panic(fmt.Sprintf("resolve HTTP type %q: %v", attribute.Type.Name(), err))
+	}
+	return layout.Ref()
+}
+
+// GoTypeLayout returns the exact fields and references selected by this HTTP
+// package for attribute.
+func (s *wireAttributeScope) GoTypeLayout(attribute *expr.AttributeExpr, policy codegen.GoLayoutPolicy) (codegen.LinkedGoType, error) {
+	return s.goTypeLayout(attribute, policy, false)
+}
+
+// goTypeLayout may stop at a named root when a caller only needs its reference.
+func (s *wireAttributeScope) goTypeLayout(attribute *expr.AttributeExpr, policy codegen.GoLayoutPolicy, referenceOnly bool) (codegen.LinkedGoType, error) {
+	owner := s.catalog.pkg.ImportPath()
+	layout, err := codegen.PlanGoType(attribute, codegen.GoTypePlanOptions{
+		Owner:            owner,
+		Policy:           policy,
+		RetainNamedValue: !referenceOnly,
+		Bind: func(request codegen.GoTypeBindingRequest) (codegen.GoTypeBinding, error) {
+			switch request.Kind {
+			case codegen.GoNamed:
+				record := s.record(request.Attribute)
+				if record == nil || record.declaration == nil {
+					return codegen.GoTypeBinding{}, fmt.Errorf("HTTP type %q has no planned declaration", request.Attribute.Type.Name())
+				}
+				return codegen.GoTypeBinding{Owner: owner, Declaration: record.declaration}, nil
+			case codegen.GoUnion:
+				record := s.unionRecord(request.Attribute)
+				if record == nil || record.declaration == nil {
+					return codegen.GoTypeBinding{}, fmt.Errorf("HTTP OneOf %q has no planned declaration", request.Attribute.Type.Name())
+				}
+				return codegen.GoTypeBinding{Owner: owner, Declaration: record.declaration}, nil
+			default:
+				return codegen.GoTypeBinding{}, fmt.Errorf("resolve unsupported HTTP Go type kind %s", request.Kind)
+			}
+		},
+	})
+	if err != nil {
+		return codegen.LinkedGoType{}, err
+	}
+	return layout.Link(owner, s.catalog.pkg.ImportName), nil
 }
 
 // Field returns the generated Go field for an HTTP attribute.

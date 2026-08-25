@@ -396,6 +396,36 @@ func transform(source *WithRaw) *WithRaw {
 `)
 }
 
+// TestGoTransformReturnsFirstDefaultError verifies that a later field cannot
+// hide an invalid earlier default while the generator walks an object.
+func TestGoTransformReturnsFirstDefaultError(t *testing.T) {
+	invalid := &expr.AttributeExpr{
+		Type:         expr.String,
+		DefaultValue: json.RawMessage("foo"),
+		Meta: expr.MetaExpr{
+			"struct:field:type": {"json.RawMessage", "example.com/not-json", "json"},
+		},
+	}
+	valid := &expr.AttributeExpr{Type: expr.String, DefaultValue: "ready"}
+	defaults := goTypeTestUserType("Defaults", &expr.Object{
+		{Name: "invalid", Attribute: invalid},
+		{Name: "valid", Attribute: valid},
+	})
+	context := NewAttributeContext(false, false, true, "", NewNameScope())
+
+	_, _, err := GoTransform(
+		&expr.AttributeExpr{Type: defaults},
+		&expr.AttributeExpr{Type: defaults},
+		"source",
+		"target",
+		context,
+		context,
+		"",
+		true,
+	)
+	require.EqualError(t, err, `render Go value for string: default for custom Go type "json.RawMessage" has Go type json.RawMessage`)
+}
+
 // TestGoTransformArrayLoopNameUsesNestingDepth verifies that brackets in a
 // caller expression do not change the generated loop variable.
 func TestGoTransformArrayLoopNameUsesNestingDepth(t *testing.T) {

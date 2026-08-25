@@ -85,6 +85,8 @@ type FieldSpec struct {
 	Type        *TypeSpec
 	Description string
 	Required    bool
+	// JSONRPCID reports whether the field receives the JSON-RPC request ID.
+	JSONRPCID bool
 }
 
 // ImplementationData holds the semantic data for generating service implementations

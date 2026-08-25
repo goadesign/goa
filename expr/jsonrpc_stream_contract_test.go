@@ -107,6 +107,71 @@ func TestJSONRPCStreamContract(t *testing.T) {
 	}
 }
 
+// TestJSONRPCSSEViewedDataContract rejects a wire shape that cannot carry the
+// result view the client needs to rebuild the streamed result.
+func TestJSONRPCSSEViewedDataContract(t *testing.T) {
+	err := expr.RunInvalidDSL(t, func() {
+		viewed := dsl.ResultType("ViewedEvent", func() {
+			dsl.Attribute("message", dsl.String)
+			dsl.View("default", func() {
+				dsl.Attribute("message")
+			})
+		})
+		dsl.Service("streamer", func() {
+			dsl.JSONRPC(func() {
+				dsl.POST("/rpc")
+			})
+			dsl.Method("stream", func() {
+				dsl.StreamingResult(viewed)
+				dsl.JSONRPC(func() {
+					dsl.ServerSentEvents(func() {
+						dsl.SSEEventData("message")
+					})
+				})
+			})
+		})
+	})
+	require.Contains(t, err.Error(), "the selected data would omit the result view needed to decode the stream")
+}
+
+// TestJSONRPCSSERequestIDOwnsLastEventID rejects another mapping that would
+// make two fields compete for the same request header.
+func TestJSONRPCSSERequestIDOwnsLastEventID(t *testing.T) {
+	tests := []struct {
+		name   string
+		header string
+		want   string
+	}{
+		{name: "same field", header: "resume:X-Resume", want: "cannot also be mapped with Header"},
+		{name: "another field", header: "other:last-event-id", want: "is reserved for SSE request ID field"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := expr.RunInvalidDSL(t, func() {
+				dsl.Service("streamer", func() {
+					dsl.JSONRPC(func() {
+						dsl.POST("/rpc")
+					})
+					dsl.Method("stream", func() {
+						dsl.Payload(func() {
+							dsl.Attribute("resume", dsl.String)
+							dsl.Attribute("other", dsl.String)
+						})
+						dsl.StreamingResult(dsl.String)
+						dsl.JSONRPC(func() {
+							dsl.Header(test.header)
+							dsl.ServerSentEvents(func() {
+								dsl.SSERequestID("resume")
+							})
+						})
+					})
+				})
+			})
+			require.Contains(t, err.Error(), test.want)
+		})
+	}
+}
+
 // jsonRPCStreamDSL exposes one method through the shared JSON-RPC HTTP route.
 func jsonRPCStreamDSL(method func()) func() {
 	return func() {

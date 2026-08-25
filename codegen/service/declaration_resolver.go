@@ -165,6 +165,56 @@ func (r *declarationResolver) Ref(att *expr.AttributeExpr, pkg string) string {
 	return name
 }
 
+// UnionConstructor returns the planned constructor for one service OneOf
+// branch, qualified for the generated file that will call it.
+func (r *declarationResolver) UnionConstructor(attribute *expr.AttributeExpr, branch string) (string, error) {
+	owner := r.owner(attribute)
+	declaration, err := r.generation.Package(owner).UnionBranch(attribute, branch)
+	if err != nil {
+		return "", err
+	}
+	return r.qualify(owner, declaration.Constructor()), nil
+}
+
+// GoTypeLayout returns the retained Go fields and references selected by the
+// service package for attribute.
+func (r *declarationResolver) GoTypeLayout(attribute *expr.AttributeExpr, policy codegen.GoLayoutPolicy) (codegen.LinkedGoType, error) {
+	owner := r.owner(attribute)
+	layout, err := codegen.PlanGoType(attribute, codegen.GoTypePlanOptions{
+		Owner:            owner,
+		Policy:           policy,
+		RetainNamedValue: true,
+		Bind: func(request codegen.GoTypeBindingRequest) (codegen.GoTypeBinding, error) {
+			bindingOwner := request.InheritedOwner
+			if location := codegen.UserTypeLocation(request.Attribute.Type); location != nil {
+				bindingOwner = path.Join(r.generation.GenPkg(), location.RelImportPath)
+			}
+			switch request.Kind {
+			case codegen.GoNamed:
+				userType := request.Attribute.Type.(expr.UserType)
+				return codegen.GoTypeBinding{
+					Owner: bindingOwner,
+					Type:  r.userType(bindingOwner, userType),
+				}, nil
+			case codegen.GoUnion:
+				declaration, lookupErr := r.generation.Package(bindingOwner).Union(request.Attribute)
+				if lookupErr != nil {
+					return codegen.GoTypeBinding{}, lookupErr
+				}
+				return codegen.GoTypeBinding{Owner: bindingOwner, Union: declaration}, nil
+			default:
+				return codegen.GoTypeBinding{}, fmt.Errorf("resolve unsupported service Go type kind %s", request.Kind)
+			}
+		},
+	})
+	if err != nil {
+		return codegen.LinkedGoType{}, err
+	}
+	return layout.Link(r.outputPath, func(importPath string) string {
+		return r.aliases.name(r.outputPath, importPath)
+	}), nil
+}
+
 // Field returns the generated Go field name for one service attribute.
 func (*declarationResolver) Field(att *expr.AttributeExpr, name string, firstUpper bool) string {
 	return codegen.GoifyAtt(att, name, firstUpper)

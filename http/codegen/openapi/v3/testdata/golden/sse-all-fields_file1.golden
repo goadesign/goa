@@ -12,15 +12,13 @@ paths:
                 - SSEAllFieldsService
             summary: SSEAllFieldsMethod SSEAllFieldsService
             operationId: SSEAllFieldsService#SSEAllFieldsMethod
-            requestBody:
-                description: Request body for SSEAllFieldsMethod.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/SSEAllFieldsMethodRequestBody'
-                        example:
-                            id: request
+            parameters:
+                - name: Last-Event-ID
+                  in: header
+                  schema:
+                    type: string
+                    example: request
+                  example: request
             responses:
                 "200":
                     description: OK response.
@@ -36,15 +34,6 @@ paths:
                                 retry: 3000
 components:
     schemas:
-        SSEAllFieldsMethodRequestBody:
-            type: object
-            properties:
-                id:
-                    type: string
-                    example: request
-            description: Request body for SSEAllFieldsMethod.
-            example:
-                id: request
         SSEAllFieldsMethodResponseBody:
             type: object
             properties:

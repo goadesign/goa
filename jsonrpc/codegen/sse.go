@@ -7,22 +7,13 @@ import (
 	"path/filepath"
 
 	"goa.design/goa/v3/codegen"
-)
-
-type (
-	// sseServerTemplateData stores the two Go names shared by every server stream
-	// in one service.
-	sseServerTemplateData struct {
-		// Stream stores the response writer and encoder.
-		Stream *codegen.NameDeclaration
-		// Buffer stores an encoded event before the response starts.
-		Buffer *codegen.NameDeclaration
-	}
+	"goa.design/goa/v3/expr"
+	httpcodegen "goa.design/goa/v3/http/codegen"
 )
 
 // sseServerFile returns the JSON-RPC server-sent-event file when the service
-// has a method that sends events. The file writes the shared event sender once,
-// followed by one stream type for each method.
+// has a method that sends events. The file writes one stream type for each
+// method; server.go contains the shared writer used by those streams.
 func sseServerFile(planned *servicePlan) *codegen.File {
 	data := planned.data
 	if !planned.hasSSE {
@@ -31,17 +22,12 @@ func sseServerFile(planned *servicePlan) *codegen.File {
 
 	path := filepath.Join(codegen.Gendir, "jsonrpc", data.Service.PathName, "server", "sse.go")
 	title := fmt.Sprintf("%s SSE server streaming", planned.name)
-	imports := make([]*codegen.ImportSpec, 0, 9)
-	imports = append(imports,
-		&codegen.ImportSpec{Path: "bytes"},
-		&codegen.ImportSpec{Path: "context"},
-		&codegen.ImportSpec{Path: "fmt"},
-		&codegen.ImportSpec{Path: "net/http"},
-		&codegen.ImportSpec{Path: "sync"},
-		codegen.GoaImport("jsonrpc"),
-		codegen.GoaNamedImport("http", "goahttp"),
-		data.ServerServiceImport(),
-	)
+	imports := make([]*codegen.ImportSpec, 0, 5)
+	imports = append(imports, &codegen.ImportSpec{Path: "context"})
+	if serviceHasSSERetry(planned) {
+		imports = append(imports, &codegen.ImportSpec{Path: "fmt"})
+	}
+	imports = append(imports, codegen.GoaImport("jsonrpc"), data.ServerServiceImport())
 	for _, endpoint := range planned.endpoints {
 		if endpoint.SSE != nil && endpoint.Method.ViewedResult != nil && endpoint.Method.ViewedResult.ViewName == "" {
 			imports = append(imports, codegen.GoaImport(""))
@@ -50,17 +36,10 @@ func sseServerFile(planned *servicePlan) *codegen.File {
 	}
 	sections := []*codegen.SectionTemplate{
 		codegen.Header(title, "server", imports),
-		{
-			Name:   "jsonrpc-sse-server-stream-base",
-			Source: jsonrpcTemplates.Read(sseServerStreamBaseT),
-			Data: &sseServerTemplateData{
-				Stream: planned.serverNames.sseStream,
-				Buffer: planned.serverNames.sseBuffer,
-			},
-		},
 	}
 	funcs := viewedResultFuncs(planned)
 	funcs["sseStreamName"] = planned.sseStreamName
+	funcs["sseRetrySigned"] = sseRetrySigned
 	for _, ed := range planned.endpoints {
 		if ed.SSE == nil {
 			continue
@@ -86,25 +65,31 @@ func sseClientFile(planned *servicePlan) *codegen.File {
 	path := filepath.Join(codegen.Gendir, "jsonrpc", data.Service.PathName, "client", "stream.go")
 	tmplSections := sseClientStreamSections(planned)
 	sections := make([]*codegen.SectionTemplate, 0, 1+len(tmplSections))
+	imports := []*codegen.ImportSpec{
+		{Path: "bufio"},
+		{Path: "bytes"},
+		{Path: "context"},
+		{Path: "encoding/json"},
+		{Path: "errors"},
+		{Path: "fmt"},
+		{Path: "io"},
+		{Path: "net/http"},
+		{Path: "strings"},
+		{Path: "sync"},
+	}
+	if serviceHasSSERetry(planned) {
+		imports = append(imports, &codegen.ImportSpec{Path: "strconv"})
+	}
+	imports = append(imports,
+		codegen.GoaImport("jsonrpc"),
+		codegen.GoaNamedImport("http", "goahttp"),
+		data.ClientServiceImport(),
+	)
 	sections = append(sections,
 		codegen.Header(
 			"stream",
 			"client",
-			[]*codegen.ImportSpec{
-				{Path: "bufio"},
-				{Path: "bytes"},
-				{Path: "context"},
-				{Path: "encoding/json"},
-				{Path: "errors"},
-				{Path: "fmt"},
-				{Path: "io"},
-				{Path: "net/http"},
-				{Path: "strings"},
-				{Path: "sync"},
-				codegen.GoaImport("jsonrpc"),
-				codegen.GoaNamedImport("http", "goahttp"),
-				data.ClientServiceImport(),
-			},
+			imports,
 		),
 	)
 	sections = append(sections, tmplSections...)
@@ -121,11 +106,49 @@ func sseClientStreamSections(service *servicePlan) []*codegen.SectionTemplate {
 		}
 		// Write the client stream type and its methods.
 		sections = append(sections, &codegen.SectionTemplate{
-			Name:    "jsonrpc-sse-client-stream",
-			Source:  jsonrpcTemplates.Read(sseClientStreamT),
-			Data:    ed,
-			FuncMap: viewedResultFuncs(service),
+			Name:   "jsonrpc-sse-client-stream",
+			Source: jsonrpcTemplates.Read(sseClientStreamT, singleResponseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP),
+			Data:   ed,
+			FuncMap: map[string]any{
+				"buildResponseData": buildJSONRPCResponseData,
+				"viewedDecodeName":  viewedResultFuncs(service)["viewedDecodeName"],
+				"sseRetryBits":      sseRetryBits,
+				"sseRetrySigned":    sseRetrySigned,
+			},
 		})
 	}
 	return sections
+}
+
+// serviceHasSSERetry reports whether one generated client reads an SSE retry
+// line.
+func serviceHasSSERetry(service *servicePlan) bool {
+	for _, endpoint := range service.endpoints {
+		if endpoint.SSE != nil && endpoint.SSE.Retry != nil {
+			return true
+		}
+	}
+	return false
+}
+
+// sseRetrySigned reports whether a retry field uses a signed integer.
+func sseRetrySigned(value *httpcodegen.SSEValueData) bool {
+	switch value.Kind {
+	case expr.IntKind, expr.Int32Kind, expr.Int64Kind:
+		return true
+	default:
+		return false
+	}
+}
+
+// sseRetryBits returns the integer width used to parse a retry line.
+func sseRetryBits(value *httpcodegen.SSEValueData) int {
+	switch value.Kind {
+	case expr.Int32Kind, expr.UInt32Kind:
+		return 32
+	case expr.Int64Kind, expr.UInt64Kind:
+		return 64
+	default:
+		return 0
+	}
 }

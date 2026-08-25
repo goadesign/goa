@@ -104,7 +104,7 @@ func (s *{{ .ServerStructDeclaration.Name }}) ServeHTTP(w http.ResponseWriter, r
 
 	// Invalid and unknown requests do not have a designed response type. Use
 	// JSON when the client accepts it, then events, or reject the response.
-	if req.Invalid || req.JSONRPC != "2.0" || req.Method == "" {
+	if req.Invalid || req.JSONRPC != "2.0" || !req.HasMethod {
 		switch {
 		case acceptJSON:
 			s.processRequest(r.Context(), r, &req, w)

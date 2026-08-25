@@ -44,10 +44,14 @@ func Description(d string) {
 		e.Description = d
 	case *expr.HTTPResponseExpr:
 		e.Description = d
+	case *expr.HTTPErrorExpr:
+		e.Response.Description = d
 	case *expr.HTTPFileServerExpr:
 		e.Description = d
 	case *expr.GRPCResponseExpr:
 		e.Description = d
+	case *expr.GRPCErrorExpr:
+		e.Response.Description = d
 	case *expr.InterceptorExpr:
 		e.Description = d
 	case expr.DescriptionHolder:

@@ -473,7 +473,7 @@ func TestVariableViewedUnaryResponseUsesRepresentationBody(t *testing.T) {
 	var result any
 	var err error
 	require.NotPanics(t, func() {
-		result, err = DecodeFetchResponse(goahttp.ResponseDecoder, false)(response)
+		result, err = DecodeFetchResponse(goahttp.ResponseDecoder, false)(response, "1")
 	})
 	require.NoError(t, err)
 	event := result.(*service.Event)
@@ -499,7 +499,7 @@ func TestVariableViewedUnaryResponseRejectsInvalidRepresentation(t *testing.T) {
 			response := jsonRPCResponse(` + "`" + `{"jsonrpc":"2.0","id":"1","result":` + "`" + ` + tc.result + "}")
 			var err error
 			require.NotPanics(t, func() {
-				_, err = DecodeFetchResponse(goahttp.ResponseDecoder, false)(response)
+				_, err = DecodeFetchResponse(goahttp.ResponseDecoder, false)(response, "1")
 			})
 			requireBoundaryError(t, err, tc.errorName, tc.field)
 		})
@@ -510,7 +510,7 @@ func TestFixedViewedUnaryResponseUsesBodyOnly(t *testing.T) {
 	response := jsonRPCResponse(
 		` + "`" + `{"jsonrpc":"2.0","id":"1","result":{"event_id":"event-1","profile":{"display_name":"Ada"}}}` + "`" + `,
 	)
-	result, err := DecodeFixedResponse(goahttp.ResponseDecoder, false)(response)
+	result, err := DecodeFixedResponse(goahttp.ResponseDecoder, false)(response, "1")
 	require.NoError(t, err)
 	event := result.(*service.Event)
 	require.Equal(t, "event-1", event.EventID)
@@ -633,8 +633,10 @@ const jsonRPCViewedSSEClientTest = `package client
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -653,15 +655,23 @@ func (f doerFunc) Do(req *http.Request) (*http.Response, error) {
 
 func TestViewedSSENotificationReconstructsTransportBody(t *testing.T) {
 	data := ` + "`" + `{"jsonrpc":"2.0","method":"watch","params":{"view":"detailed","body":{"event_id":"event-1","profile":{"display_name":"Ada"}}}}` + "`" + `
-	event, err := recvWatch("notification", data)
+	event, err := recvWatch("ignored", data)
 	require.NoError(t, err)
 	require.Equal(t, "event-1", event.EventID)
 	require.Equal(t, "Ada", event.Profile.DisplayName)
 }
 
 func TestViewedSSEFinalResponseEndsStream(t *testing.T) {
-	data := ` + "`" + `{"jsonrpc":"2.0","id":"1","result":null}` + "`" + `
-	_, err := recvWatch("response", data)
+	client := sseClientResponse("not-a-private-response-label", func(request *http.Request) string {
+		var envelope struct {
+			ID string ` + "`json:\"id\"`" + `
+		}
+		require.NoError(t, json.NewDecoder(request.Body).Decode(&envelope))
+		return ` + "`" + `{"jsonrpc":"2.0","id":` + "`" + ` + strconv.Quote(envelope.ID) + ` + "`" + `,"result":null}` + "`" + `
+	})
+	raw, err := client.Watch()(context.Background(), nil)
+	require.NoError(t, err)
+	_, err = raw.(*WatchStreamImpl).Recv()
 	require.ErrorIs(t, err, io.EOF)
 }
 
@@ -681,7 +691,7 @@ func TestViewedSSERejectsInvalidRepresentation(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			data := ` + "`" + `{"jsonrpc":"2.0","method":"watch","params":` + "`" + ` + tc.params + "}"
-			_, err := recvWatch("notification", data)
+			_, err := recvWatch("ignored", data)
 			requireBoundaryError(t, err, tc.errorName, tc.field)
 		})
 	}
@@ -689,7 +699,7 @@ func TestViewedSSERejectsInvalidRepresentation(t *testing.T) {
 
 func TestFixedViewedSSEUsesBodyOnly(t *testing.T) {
 	data := ` + "`" + `{"jsonrpc":"2.0","method":"fixed","params":{"event_id":"event-1","profile":{"display_name":"Ada"}}}` + "`" + `
-	event, err := recvFixed("notification", data)
+	event, err := recvFixed("ignored", data)
 	require.NoError(t, err)
 	require.Equal(t, "event-1", event.EventID)
 	require.Equal(t, "Ada", event.Profile.DisplayName)
@@ -718,8 +728,12 @@ func recvFixed(eventType, data string) (*service.Event, error) {
 }
 
 func sseClient(eventType, data string) *Client {
-	doer := doerFunc(func(*http.Request) (*http.Response, error) {
-		body := "event: " + eventType + "\ndata: " + data + "\n\n"
+	return sseClientResponse(eventType, func(*http.Request) string { return data })
+}
+
+func sseClientResponse(eventType string, data func(*http.Request) string) *Client {
+	doer := doerFunc(func(request *http.Request) (*http.Response, error) {
+		body := "event: " + eventType + "\ndata: " + data(request) + "\n\n"
 		return &http.Response{
 			StatusCode: http.StatusOK,
 			Header:     http.Header{"Content-Type": []string{"text/event-stream"}},

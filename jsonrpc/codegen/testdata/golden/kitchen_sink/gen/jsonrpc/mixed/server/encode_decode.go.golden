@@ -25,6 +25,15 @@ func DecodeLookupRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 	return func(r *http.Request, req *jsonrpc.RawRequest) (*mixed.LookupPayload, error) {
 		r.Body = io.NopCloser(bytes.NewReader(req.Params))
 		var payload *mixed.LookupPayload
+		if !req.HasID || req.ID == nil {
+			return payload, goa.MissingFieldError("id", "JSON-RPC request")
+		}
+		var requestID string
+		decodedID, decodeErr := jsonrpc.IDToString(req.ID)
+		if decodeErr != nil {
+			return payload, goa.DecodePayloadError(decodeErr.Error())
+		}
+		requestID = decodedID
 		var (
 			body LookupRequestBody
 			err  error
@@ -44,7 +53,7 @@ func DecodeLookupRequest(mux goahttp.Muxer, decoder func(*http.Request) goahttp.
 		if err != nil {
 			return payload, err
 		}
-		payload = NewLookupPayload(&body)
+		payload = NewLookupPayload(&body, requestID)
 
 		return payload, nil
 	}

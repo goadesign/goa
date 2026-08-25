@@ -26,6 +26,9 @@ func TestVariableViewedResultGeneratedSource(t *testing.T) {
 	require.Equal(t, "fetch", clientData.MethodName)
 	require.Equal(t, "viewed2", clientData.ViewedValue)
 	require.Equal(t, "fetch", serverConversions[0].Data.(*viewedResultTemplateData).MethodName)
+	streamDecoder := codegen.SectionCode(t, clientConversions[1])
+	require.Contains(t, streamDecoder, "result.EventID = string(*body.EventID)")
+	require.NotContains(t, streamDecoder, "if body.EventID != nil")
 	testutil.AssertGo(
 		t,
 		"testdata/golden/viewed_result_variable_decoder.go.golden",
@@ -119,7 +122,8 @@ func variableViewedResultGoldenDSL() {
 		dsl.TypeName("ViewedGolden")
 		dsl.Attribute("id", dsl.String)
 		dsl.Attribute("detail", dsl.String)
-		dsl.Required("id", "detail")
+		dsl.Attribute("event_id", dsl.String)
+		dsl.Required("id", "detail", "event_id")
 		dsl.View("summary", func() {
 			dsl.Attribute("id")
 		})
@@ -139,7 +143,9 @@ func variableViewedResultGoldenDSL() {
 		dsl.Method("watch", func() {
 			dsl.StreamingResult(result)
 			dsl.JSONRPC(func() {
-				dsl.ServerSentEvents(func() {})
+				dsl.ServerSentEvents(func() {
+					dsl.SSEEventID("event_id")
+				})
 			})
 		})
 	})

@@ -1,0 +1,24 @@
+// BuildMethodBodyUserPayload builds the payload for the ServiceBodyUser
+// MethodBodyUser endpoint from CLI flags.
+func BuildMethodBodyUserPayload(serviceBodyUserMethodBodyUserBody *string) (*servicebodyuser.PayloadType, error) {
+	var err error
+	var body *MethodBodyUserRequestBody
+	{
+		if serviceBodyUserMethodBodyUserBody != nil {
+			err = json.Unmarshal([]byte(*serviceBodyUserMethodBodyUserBody), &body)
+			if err != nil {
+				return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"a\": \"Qui aut voluptatibus voluptatem sed consectetur quis.\",\n      \"b\": \"Porro eligendi quo molestiae.\"\n   }'")
+			}
+		}
+	}
+	res := &servicebodyuser.PayloadType{}
+	if body != nil {
+		v := &servicebodyuser.NestedType{
+			A: body.A,
+			B: body.B,
+		}
+		res.Data = v
+	}
+
+	return res, nil
+}

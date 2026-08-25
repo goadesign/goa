@@ -8,13 +8,14 @@ func New{{ .Title }}() {{ .ServicePackage }}.Service {
 	return &{{ .ServicePackage }}srvc{}
 }
 {{- range .Methods }}
-{{- if or (not .IsNotification) (and .IsNotification .IsStreaming) }}
 
 // {{ .GoName }} implements {{ .Name }}.
 {{ template "partial_method_signature" . }} {
 	log.Printf("{{ .GoName }} called")
 {{- if .IsStreaming }}
 {{ template "partial_streaming_sse" . }}
+{{- else if .IsNotification }}
+{{ template "partial_notify" . }}
 {{- else if .ReturnsError }}
 {{ template "partial_error" . }}
 {{- else }}
@@ -34,5 +35,4 @@ func New{{ .Title }}() {{ .ServicePackage }}.Service {
 {{- end }}
 {{- end }}
 }
-{{- end }}
 {{- end }}

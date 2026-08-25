@@ -212,21 +212,23 @@ func TestRequiredTopLevelPrimitivePresence(t *testing.T) {
 	}
 	assertMissingField(t, genclient.ValidatePlainResponse(&genpb.PlainResponse{}), "field")
 
-	value, err := genclient.BuildPlainPayload("{\"field\":\"\"}")
+	explicitEmpty := "{\"field\":\"\"}"
+	value, err := genclient.BuildPlainPayload(&explicitEmpty)
 	if err != nil {
 		t.Errorf("explicit empty CLI value failed validation: %v", err)
 	}
 	if value != "" {
 		t.Errorf("expected empty CLI value, got %q", value)
 	}
-	_, err = genclient.BuildPlainPayload("{}")
+	missing := "{}"
+	_, err = genclient.BuildPlainPayload(&missing)
 	assertMissingField(t, err, "field")
 }
 
 func TestRequiredPrimitivePresenceFromCLIJSON(t *testing.T) {
 	valid := "{\"boolean\":false,\"integer\":0,\"text\":\"\",\"bytes\":\"\"," +
 		"\"textAlias\":\"\",\"bytesAlias\":\"\",\"anyAlias\":null}"
-	payload, err := genclient.BuildExchangePayload(valid)
+	payload, err := genclient.BuildExchangePayload(&valid)
 	if err != nil {
 		t.Errorf("explicit CLI zero values failed validation: %v", err)
 	}
@@ -236,17 +238,19 @@ func TestRequiredPrimitivePresenceFromCLIJSON(t *testing.T) {
 
 	missingBoolean := "{\"integer\":0,\"text\":\"\",\"bytes\":\"\"," +
 		"\"textAlias\":\"\",\"bytesAlias\":\"\",\"anyAlias\":null}"
-	_, err = genclient.BuildExchangePayload(missingBoolean)
+	_, err = genclient.BuildExchangePayload(&missingBoolean)
 	assertMissingField(t, err, "boolean")
 
-	alias, err := genclient.BuildEchoPayload("{\"field\":\"\"}")
+	explicitEmpty := "{\"field\":\"\"}"
+	alias, err := genclient.BuildEchoPayload(&explicitEmpty)
 	if err != nil {
 		t.Errorf("explicit empty CLI alias failed validation: %v", err)
 	}
 	if alias != "" {
 		t.Errorf("expected empty CLI alias, got %q", alias)
 	}
-	_, err = genclient.BuildEchoPayload("{}")
+	missing := "{}"
+	_, err = genclient.BuildEchoPayload(&missing)
 	assertMissingField(t, err, "field")
 }
 

@@ -14,7 +14,7 @@ func unmarshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType(v *Inne
 		res.B = *v.B
 	}
 	if v.B == nil {
-		res.B = "defaultb"
+		res.B = "patternb"
 	}
 
 	return res
@@ -49,7 +49,7 @@ func marshalInnerTypeRequestBodyToServicebodyuserinnerdefaultInnerType(v *InnerT
 	{
 		var zero string
 		if res.B == zero {
-			res.B = "defaultb"
+			res.B = "patternb"
 		}
 	}
 
@@ -71,7 +71,7 @@ func marshalServicebodyuserinnerdefaultInnerTypeToInnerTypeRequestBody(v *servic
 	{
 		var zero string
 		if res.B == zero {
-			res.B = "defaultb"
+			res.B = "patternb"
 		}
 	}
 

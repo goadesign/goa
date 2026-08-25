@@ -48,7 +48,7 @@ func clientFiles(services []*servicePlan) []*codegen.File {
 				codegen.AddImport(s, codegen.GoaImport("jsonrpc"))
 			case "response-decoder":
 				endpoint := s.Data.(*httpcodegen.JSONRPCEndpointSnapshot)
-				if endpoint.SSE != nil {
+				if endpoint.SSE != nil || endpoint.IsJSONRPCNotification {
 					continue
 				}
 				s.Source = jsonrpcTemplates.Read(responseDecoderT, singleResponseP, queryTypeConversionP, elementSliceConversionP, sliceItemConversionP)
@@ -75,10 +75,10 @@ func clientFiles(services []*servicePlan) []*codegen.File {
 			})
 			f.SectionTemplates = append(f.SectionTemplates, viewed...)
 		}
-		// Each method that returns one response needs exactly one decoder.
+		// Each ordinary unary method receives exactly one response.
 		var expected int
 		for _, endpoint := range planned.data.Endpoints {
-			if endpoint.SSE == nil {
+			if endpoint.SSE == nil && !endpoint.IsJSONRPCNotification {
 				expected++
 			}
 		}
@@ -118,9 +118,9 @@ func clientFile(planned *servicePlan) *codegen.File {
 		{Path: "errors"},
 		{Path: "fmt"},
 		{Path: "io"},
+		{Path: "mime"},
 		{Path: "net/http"},
 		{Path: "strconv"},
-		{Path: "strings"},
 		{Path: "sync"},
 		codegen.GoaImport(""),
 		codegen.GoaImport("jsonrpc"),

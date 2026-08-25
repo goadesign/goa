@@ -44,24 +44,31 @@ func (e *HTTPSSEExpr) EvalName() string {
 
 // Validate validates the Server-Sent Events expression against a specific result type.
 func (e *HTTPSSEExpr) Validate(method *MethodExpr) error {
-	if method == nil || method.Result == nil {
+	if method == nil {
+		return nil
+	}
+	result := method.StreamingResult
+	if result == nil {
+		result = method.Result
+	}
+	if result == nil {
 		return nil
 	}
 
 	verr := new(eval.ValidationErrors)
-	if err := validateSSEField(method.Payload, e.RequestIDField, "request ID", []DataType{String}); err != nil {
+	if err := validateSSEField(method.Payload, e.RequestIDField, "request ID", "payload", []DataType{String}); err != nil {
 		verr.Add(method, "%s", err.Error())
 	}
-	if err := validateSSEField(method.Result, e.DataField, "event data", nil); err != nil {
+	if err := validateSSEField(result, e.DataField, "event data", "result type", nil); err != nil {
 		verr.Add(method, "%s", err.Error())
 	}
-	if err := validateSSEField(method.Result, e.IDField, "event id", []DataType{String}); err != nil {
+	if err := validateSSEField(result, e.IDField, "event id", "result type", []DataType{String}); err != nil {
 		verr.Add(method, "%s", err.Error())
 	}
-	if err := validateSSEField(method.Result, e.EventField, "event type", []DataType{String}); err != nil {
+	if err := validateSSEField(result, e.EventField, "event type", "result type", []DataType{String}); err != nil {
 		verr.Add(method, "%s", err.Error())
 	}
-	if err := validateSSEField(method.Result, e.RetryField, "event retry", []DataType{Int, Int32, Int64, UInt, UInt32, UInt64}); err != nil {
+	if err := validateSSEField(result, e.RetryField, "event retry", "result type", []DataType{Int, Int32, Int64, UInt, UInt32, UInt64}); err != nil {
 		verr.Add(method, "%s", err.Error())
 	}
 
@@ -72,26 +79,28 @@ func (e *HTTPSSEExpr) Validate(method *MethodExpr) error {
 }
 
 // validateSSEField validates that the given field exists in the result type and has the expected type.
-func validateSSEField(rt *AttributeExpr, field, desc string, expectedTypes []DataType) error {
+func validateSSEField(rt *AttributeExpr, field, desc, source string, expectedTypes []DataType) error {
 	if field == "" {
 		return nil
 	}
 
 	if rt == nil {
-		return fmt.Errorf("cannot use %q for SSE %s field: result type is nil", field, desc)
+		return fmt.Errorf("cannot use %q for SSE %s field: %s is nil", field, desc, source)
 	}
 
 	obj := AsObject(rt.Type)
 	if obj == nil {
-		return fmt.Errorf("cannot use %q for SSE %s field: result type is not an object", field, desc)
+		return fmt.Errorf("cannot use %q for SSE %s field: %s is not an object", field, desc, source)
 	}
 
 	att := obj.Attribute(field)
 	if att == nil {
-		return fmt.Errorf("cannot use %q for SSE %s field: attribute not found in result type", field, desc)
+		return fmt.Errorf("cannot use %q for SSE %s field: attribute not found in %s", field, desc, source)
 	}
 
-	if len(expectedTypes) > 0 && !slices.Contains(expectedTypes, att.Type) {
+	if len(expectedTypes) > 0 && !slices.ContainsFunc(expectedTypes, func(expected DataType) bool {
+		return expected.Kind() == sseFieldKind(att.Type)
+	}) {
 		typeNames := make([]string, len(expectedTypes))
 		for i, t := range expectedTypes {
 			typeNames[i] = t.Name()
@@ -100,4 +109,12 @@ func validateSSEField(rt *AttributeExpr, field, desc string, expectedTypes []Dat
 	}
 
 	return nil
+}
+
+// sseFieldKind returns the primitive kind beneath any named aliases.
+func sseFieldKind(dataType DataType) Kind {
+	for IsAlias(dataType) {
+		dataType = dataType.(UserType).Attribute().Type
+	}
+	return dataType.Kind()
 }

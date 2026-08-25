@@ -76,7 +76,8 @@ func (c *{{ .ClientStructDeclaration.Name }}) {{ .EndpointInit }}({{ if .Multipa
 		}
 		
 		contentType := resp.Header.Get("Content-Type")
-		if contentType != "" && !strings.HasPrefix(contentType, "text/event-stream") {
+		mediaType, _, mediaTypeErr := mime.ParseMediaType(contentType)
+		if mediaTypeErr != nil || mediaType != "text/event-stream" {
 			contentTypeErr := fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
 			if err := resp.Body.Close(); err != nil {
 				return nil, errors.Join(contentTypeErr, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err))

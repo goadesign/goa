@@ -66,9 +66,9 @@ func goTypeDefForContext(att *expr.AttributeExpr, ctx *codegen.AttributeContext)
 				tags string
 			)
 			{
-				fn = codegen.GoifyAtt(at, name, true)
+				fn = codegen.GoifyAtt(at, elem, true)
 				tdef = goTypeDefForContext(at, ctx)
-				if ctx.IsFieldPointer(name, att) {
+				if ctx.IsFieldPointer(name, ma.AttributeExpr) {
 					tdef = "*" + tdef
 				}
 				if at.Description != "" {
@@ -105,9 +105,7 @@ func attributeTags(att *expr.AttributeExpr, t string, optional bool) string {
 		return tags
 	}
 	var o string
-	// Always use omitempty for JSON-RPC ID attributes, even when required
-	// since it is part of a different top-level field in the transport
-	if optional || isJSONRPCID(att) {
+	if optional {
 		o = ",omitempty"
 	}
 	jsonName := t
@@ -117,13 +115,4 @@ func attributeTags(att *expr.AttributeExpr, t string, optional bool) string {
 		}
 	}
 	return fmt.Sprintf(" `form:\"%s%s\" json:\"%s%s\" xml:\"%s%s\"`", t, o, jsonName, o, t, o)
-}
-
-// isJSONRPCID checks if the attribute is marked as a JSON-RPC ID attribute
-func isJSONRPCID(att *expr.AttributeExpr) bool {
-	if att.Meta == nil {
-		return false
-	}
-	_, ok := att.Meta["jsonrpc:id"]
-	return ok
 }

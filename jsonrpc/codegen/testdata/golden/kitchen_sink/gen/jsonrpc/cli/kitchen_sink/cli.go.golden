@@ -33,10 +33,29 @@ func UsageCommands() []string {
 
 // UsageExamples produces an example of a valid invocation of the CLI tool.
 func UsageExamples() string {
-	return os.Args[0] + " " + "calc add --body '{\n      \"a\": 5718665059814127631,\n      \"b\": 5455021967244844938,\n      \"id\": \"Assumenda molestias optio.\"\n   }'" + "\n" +
-		os.Args[0] + " " + "feed watch --body '{\n      \"last_event_id\": \"Aliquam eius.\",\n      \"request_id\": \"Fugit laborum dignissimos dolore.\"\n   }'" + "\n" +
-		os.Args[0] + " " + "mixed lookup --body '{\n      \"id\": \"Et rerum porro qui explicabo ut.\",\n      \"key\": \"Earum amet voluptatum ad soluta.\"\n   }'" + "\n" +
+	return os.Args[0] + " " + "calc add --body '{\n      \"a\": 5718665059814127631,\n      \"b\": 5455021967244844938\n   }' --request-id \"Necessitatibus perferendis autem dolor.\"" + "\n" +
+		os.Args[0] + " " + "feed watch --last-event-id \"Eum in.\" --request-id \"Dolor consequatur dolor cum commodi saepe.\"" + "\n" +
+		os.Args[0] + " " + "mixed lookup --body '{\n      \"key\": \"Earum amet voluptatum ad soluta.\"\n   }' --request-id \"Deserunt non maxime tempora alias qui.\"" + "\n" +
 		""
+}
+
+// cliStringFlag keeps an omitted command-line flag distinct from an explicitly empty flag.
+type cliStringFlag struct {
+	value *string
+}
+
+// String returns the flag text shown by the standard flag package.
+func (f *cliStringFlag) String() string {
+	if f.value == nil {
+		return ""
+	}
+	return *f.value
+}
+
+// Set records that the user supplied the flag, even when value is empty.
+func (f *cliStringFlag) Set(value string) error {
+	f.value = &value
+	return nil
 }
 
 // ParseEndpoint returns the endpoint and payload as specified on the command
@@ -51,27 +70,41 @@ func ParseEndpoint(
 	var (
 		calcFlags = flag.NewFlagSet("calc", flag.ContinueOnError)
 
-		calcAddFlags    = flag.NewFlagSet("add", flag.ExitOnError)
-		calcAddBodyFlag = calcAddFlags.String("body", "REQUIRED", "")
+		calcAddFlags         = flag.NewFlagSet("add", flag.ExitOnError)
+		calcAddBodyFlag      = new(cliStringFlag)
+		calcAddRequestIDFlag = new(cliStringFlag)
 
 		calcPingFlags = flag.NewFlagSet("ping", flag.ExitOnError)
 
-		calcLogFlags    = flag.NewFlagSet("log", flag.ExitOnError)
-		calcLogBodyFlag = calcLogFlags.String("body", "REQUIRED", "")
+		calcLogFlags         = flag.NewFlagSet("log", flag.ExitOnError)
+		calcLogBodyFlag      = new(cliStringFlag)
+		calcLogRequestIDFlag = new(cliStringFlag)
 
 		feedFlags = flag.NewFlagSet("feed", flag.ContinueOnError)
 
-		feedWatchFlags    = flag.NewFlagSet("watch", flag.ExitOnError)
-		feedWatchBodyFlag = feedWatchFlags.String("body", "REQUIRED", "")
+		feedWatchFlags           = flag.NewFlagSet("watch", flag.ExitOnError)
+		feedWatchLastEventIDFlag = new(cliStringFlag)
+		feedWatchRequestIDFlag   = new(cliStringFlag)
 
-		feedSnapshotFlags    = flag.NewFlagSet("snapshot", flag.ExitOnError)
-		feedSnapshotBodyFlag = feedSnapshotFlags.String("body", "REQUIRED", "")
+		feedSnapshotFlags         = flag.NewFlagSet("snapshot", flag.ExitOnError)
+		feedSnapshotRequestIDFlag = new(cliStringFlag)
 
 		mixedFlags = flag.NewFlagSet("mixed", flag.ContinueOnError)
 
-		mixedLookupFlags    = flag.NewFlagSet("lookup", flag.ExitOnError)
-		mixedLookupBodyFlag = mixedLookupFlags.String("body", "REQUIRED", "")
+		mixedLookupFlags         = flag.NewFlagSet("lookup", flag.ExitOnError)
+		mixedLookupBodyFlag      = new(cliStringFlag)
+		mixedLookupRequestIDFlag = new(cliStringFlag)
 	)
+	calcAddFlags.Var(calcAddBodyFlag, "body", "")
+	calcAddFlags.Var(calcAddRequestIDFlag, "request-id", "Request ID")
+	calcLogFlags.Var(calcLogBodyFlag, "body", "")
+	calcLogFlags.Var(calcLogRequestIDFlag, "request-id", "Optional caller-supplied request ID")
+	feedWatchFlags.Var(feedWatchLastEventIDFlag, "last-event-id", "")
+	feedWatchFlags.Var(feedWatchRequestIDFlag, "request-id", "Request ID")
+	feedSnapshotFlags.Var(feedSnapshotRequestIDFlag, "request-id", "Request ID")
+	mixedLookupFlags.Var(mixedLookupBodyFlag, "body", "")
+	mixedLookupFlags.Var(mixedLookupRequestIDFlag, "request-id", "Request ID")
+
 	calcFlags.Usage = calcUsage
 	calcAddFlags.Usage = calcAddUsage
 	calcPingFlags.Usage = calcPingUsage
@@ -175,29 +208,29 @@ func ParseEndpoint(
 			switch epn {
 			case "add":
 				endpoint = c.Add()
-				data, err = calcc.BuildAddPayload(*calcAddBodyFlag)
+				data, err = calcc.BuildAddPayload(calcAddBodyFlag.value, calcAddRequestIDFlag.value)
 			case "ping":
 				endpoint = c.Ping()
 			case "log":
 				endpoint = c.Log()
-				data, err = calcc.BuildLogPayload(*calcLogBodyFlag)
+				data, err = calcc.BuildLogPayload(calcLogBodyFlag.value, calcLogRequestIDFlag.value)
 			}
 		case "feed":
 			c := feedc.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
 			case "watch":
 				endpoint = c.Watch()
-				data, err = feedc.BuildWatchPayload(*feedWatchBodyFlag)
+				data, err = feedc.BuildWatchPayload(feedWatchLastEventIDFlag.value, feedWatchRequestIDFlag.value)
 			case "snapshot":
 				endpoint = c.Snapshot()
-				data, err = feedc.BuildSnapshotPayload(*feedSnapshotBodyFlag)
+				data, err = feedc.BuildSnapshotPayload(feedSnapshotRequestIDFlag.value)
 			}
 		case "mixed":
 			c := mixedc.NewClient(scheme, host, doer, enc, dec, restore)
 			switch epn {
 			case "lookup":
 				endpoint = c.Lookup()
-				data, err = mixedc.BuildLookupPayload(*mixedLookupBodyFlag)
+				data, err = mixedc.BuildLookupPayload(mixedLookupBodyFlag.value, mixedLookupRequestIDFlag.value)
 			}
 		}
 	}
@@ -224,6 +257,7 @@ func calcAddUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] calc add", os.Args[0])
 	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -request-id STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -232,10 +266,11 @@ func calcAddUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -request-id STRING: Request ID`)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "calc add --body '{\n      \"a\": 5718665059814127631,\n      \"b\": 5455021967244844938,\n      \"id\": \"Assumenda molestias optio.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "calc add --body '{\n      \"a\": 5718665059814127631,\n      \"b\": 5455021967244844938\n   }' --request-id \"Necessitatibus perferendis autem dolor.\"")
 }
 
 func calcPingUsage() {
@@ -258,6 +293,7 @@ func calcLogUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] calc log", os.Args[0])
 	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -request-id STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -266,10 +302,11 @@ func calcLogUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -request-id STRING: Optional caller-supplied request ID`)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "calc log --body '{\n      \"id\": \"Quae consectetur.\",\n      \"message\": \"Quo excepturi.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "calc log --body '{\n      \"message\": \"Quo excepturi.\"\n   }' --request-id \"Rerum aut.\"")
 }
 
 // feedUsage displays the usage of the feed command and its subcommands.
@@ -286,7 +323,8 @@ func feedUsage() {
 func feedWatchUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] feed watch", os.Args[0])
-	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -last-event-id STRING")
+	fmt.Fprint(os.Stderr, " -request-id STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -294,17 +332,18 @@ func feedWatchUsage() {
 	fmt.Fprintln(os.Stderr, `Watch implements watch.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -last-event-id STRING: `)
+	fmt.Fprintln(os.Stderr, `    -request-id STRING: Request ID`)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "feed watch --body '{\n      \"last_event_id\": \"Aliquam eius.\",\n      \"request_id\": \"Fugit laborum dignissimos dolore.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "feed watch --last-event-id \"Eum in.\" --request-id \"Dolor consequatur dolor cum commodi saepe.\"")
 }
 
 func feedSnapshotUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] feed snapshot", os.Args[0])
-	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -request-id STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -312,11 +351,11 @@ func feedSnapshotUsage() {
 	fmt.Fprintln(os.Stderr, `Snapshot implements snapshot.`)
 
 	// Flags list
-	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -request-id STRING: Request ID`)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "feed snapshot --body '{\n      \"request_id\": \"Sed assumenda enim quod.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "feed snapshot --request-id \"Et nulla modi necessitatibus ipsam quia.\"")
 }
 
 // mixedUsage displays the usage of the mixed command and its subcommands.
@@ -333,6 +372,7 @@ func mixedLookupUsage() {
 	// Header with flags
 	fmt.Fprintf(os.Stderr, "%s [flags] mixed lookup", os.Args[0])
 	fmt.Fprint(os.Stderr, " -body JSON")
+	fmt.Fprint(os.Stderr, " -request-id STRING")
 	fmt.Fprintln(os.Stderr)
 
 	// Description
@@ -341,8 +381,9 @@ func mixedLookupUsage() {
 
 	// Flags list
 	fmt.Fprintln(os.Stderr, `    -body JSON: `)
+	fmt.Fprintln(os.Stderr, `    -request-id STRING: Request ID`)
 
 	fmt.Fprintln(os.Stderr)
 	fmt.Fprintln(os.Stderr, "Example:")
-	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "mixed lookup --body '{\n      \"id\": \"Et rerum porro qui explicabo ut.\",\n      \"key\": \"Earum amet voluptatum ad soluta.\"\n   }'")
+	fmt.Fprintf(os.Stderr, "    %s %s\n", os.Args[0], "mixed lookup --body '{\n      \"key\": \"Earum amet voluptatum ad soluta.\"\n   }' --request-id \"Deserunt non maxime tempora alias qui.\"")
 }

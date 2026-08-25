@@ -125,6 +125,13 @@ func httpRequestBody(a *HTTPEndpointExpr) *AttributeExpr {
 	for att := range defaultRequestHeaderAttributes(a) {
 		removeAttribute(body, att)
 	}
+	if a.IsJSONRPC() {
+		for _, id := range jsonRPCIDFields(payload) {
+			if id.depth == 1 {
+				removeAttribute(body, id.name)
+			}
+		}
+	}
 
 	// 4. Return empty type if no attribute left
 	if len(*AsObject(body.Type)) == 0 {

@@ -15,26 +15,20 @@ import (
 // AddRequestBody is the type of the "Calc" service "add" endpoint HTTP request
 // body.
 type AddRequestBody struct {
-	// Request ID
-	ID string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
-	A  int    `form:"a" json:"a" xml:"a"`
-	B  int    `form:"b" json:"b" xml:"b"`
+	A int `form:"a" json:"a" xml:"a"`
+	B int `form:"b" json:"b" xml:"b"`
 }
 
 // LogRequestBody is the type of the "Calc" service "log" endpoint HTTP request
 // body.
 type LogRequestBody struct {
-	// Optional request ID
-	ID      *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
-	Message string  `form:"message" json:"message" xml:"message"`
+	Message string `form:"message" json:"message" xml:"message"`
 }
 
 // AddResponseBody is the type of the "Calc" service "add" endpoint HTTP
 // response body.
 type AddResponseBody struct {
-	// Request ID
-	ID  *string `form:"id,omitempty" json:"id,omitempty" xml:"id,omitempty"`
-	Sum *int    `form:"sum,omitempty" json:"sum,omitempty" xml:"sum,omitempty"`
+	Sum *int `form:"sum,omitempty" json:"sum,omitempty" xml:"sum,omitempty"`
 }
 
 // PingResponseBody is the type of the "Calc" service "ping" endpoint HTTP
@@ -65,9 +59,8 @@ type AddOverflowResponseBody struct {
 // endpoint of the "Calc" service.
 func NewAddRequestBody(p *calc.AddPayload) *AddRequestBody {
 	body := &AddRequestBody{
-		ID: p.ID,
-		A:  p.A,
-		B:  p.B,
+		A: p.A,
+		B: p.B,
 	}
 	return body
 }
@@ -76,7 +69,6 @@ func NewAddRequestBody(p *calc.AddPayload) *AddRequestBody {
 // endpoint of the "Calc" service.
 func NewLogRequestBody(p *calc.LogPayload) *LogRequestBody {
 	body := &LogRequestBody{
-		ID:      p.ID,
 		Message: p.Message,
 	}
 	return body
@@ -86,7 +78,6 @@ func NewLogRequestBody(p *calc.LogPayload) *LogRequestBody {
 // "OK" response.
 func NewAddResultOK(body *AddResponseBody) *calc.AddResult {
 	v := &calc.AddResult{
-		ID:  *body.ID,
 		Sum: *body.Sum,
 	}
 
@@ -119,9 +110,6 @@ func NewPingResultOK(body *PingResponseBody) *calc.PingResult {
 
 // ValidateAddResponseBody runs the validations defined on AddResponseBody
 func ValidateAddResponseBody(body *AddResponseBody) (err error) {
-	if body.ID == nil {
-		err = goa.MergeErrors(err, goa.MissingFieldError("id", "body"))
-	}
 	if body.Sum == nil {
 		err = goa.MergeErrors(err, goa.MissingFieldError("sum", "body"))
 	}

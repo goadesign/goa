@@ -114,10 +114,10 @@ func (r *RootExpr) WalkSets(walk eval.SetWalker) {
 	walk(methods)
 
 	// HTTP services and endpoints
-	r.walkHTTPServices(r.API.HTTP.Services, walk)
+	r.walkHTTPServices(r.API.HTTP, r.API.HTTP.Services, walk)
 
 	// JSON-RPC services and endpoints
-	r.walkHTTPServices(r.API.JSONRPC.Services, walk)
+	r.walkHTTPServices(r.API.JSONRPC, r.API.JSONRPC.Services, walk)
 
 	// GRPC services and endpoints
 	grpcsvcs := make(eval.ExpressionSet, len(r.API.GRPC.Services))
@@ -227,6 +227,13 @@ func (r *RootExpr) Validate() error {
 			seen[name] = struct{}{}
 		}
 	}
+	for _, userType := range r.Types {
+		verr.Merge(userType.Attribute().validateDefaultValues(fmt.Sprintf("type %q", userType.Name()), userType))
+	}
+	for _, resultType := range r.ResultTypes {
+		verr.Merge(resultType.Attribute().validateDefaultValues(fmt.Sprintf("result type %q", resultType.Name()), resultType))
+	}
+	verr.Merge(r.validateErrorDefaults())
 
 	verr.Merge(r.validateRelocatedUserTypes())
 	verr.Merge(validateTypeMappings("conversion", r.Conversions))
@@ -236,6 +243,37 @@ func (r *RootExpr) Validate() error {
 	}
 
 	return &verr
+}
+
+// validateErrorDefaults checks each declared error once. Services and methods
+// may reuse the same error expression, so pointer identity prevents repeated
+// diagnostics for one declaration.
+func (r *RootExpr) validateErrorDefaults() *eval.ValidationErrors {
+	errors := new(eval.ValidationErrors)
+	seen := make(map[*ErrorExpr]struct{})
+	validate := func(designError *ErrorExpr) {
+		if _, ok := seen[designError]; ok {
+			return
+		}
+		seen[designError] = struct{}{}
+		errors.Merge(designError.AttributeExpr.validateDefaultValues(
+			fmt.Sprintf("error %q", designError.Name), designError,
+		))
+	}
+	for _, designError := range r.Errors {
+		validate(designError)
+	}
+	for _, service := range r.Services {
+		for _, designError := range service.Errors {
+			validate(designError)
+		}
+		for _, method := range service.Methods {
+			for _, designError := range method.Errors {
+				validate(designError)
+			}
+		}
+	}
+	return errors
 }
 
 // validateSharedHTTPRoutes rejects ordinary HTTP and JSON-RPC routes that
@@ -481,7 +519,7 @@ func (r *RootExpr) Finalize() {
 }
 
 // walkHTTPServices walks the HTTP services and endpoints.
-func (r *RootExpr) walkHTTPServices(svcs []*HTTPServiceExpr, walk eval.SetWalker) {
+func (r *RootExpr) walkHTTPServices(root eval.Expression, svcs []*HTTPServiceExpr, walk eval.SetWalker) {
 	sort.SliceStable(svcs, func(i, j int) bool {
 		return svcs[j].ParentName == svcs[i].Name()
 	})
@@ -497,7 +535,7 @@ func (r *RootExpr) walkHTTPServices(svcs []*HTTPServiceExpr, walk eval.SetWalker
 			httpsvrs = append(httpsvrs, s)
 		}
 	}
-	walk(eval.ExpressionSet{r.API.HTTP})
+	walk(eval.ExpressionSet{root})
 	walk(httpsvcs)
 	walk(httpepts)
 	walk(httpsvrs)

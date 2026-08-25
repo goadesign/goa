@@ -31,6 +31,7 @@ func TestEncodeError(t *testing.T) {
 		{"api-no-body-error-response-with-content-type", testdata.APINoBodyErrorResponseWithContentTypeDSL},
 		{"empty-error-response-body", testdata.EmptyErrorResponseBodyDSL},
 		{"empty-custom-error-response-body", testdata.EmptyCustomErrorResponseBodyDSL},
+		{"error-body-attribute-response", testdata.ErrorBodyAttributeResponseDSL},
 	}
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

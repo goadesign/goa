@@ -73,6 +73,11 @@ func Headers(args any) {
 		if eval.Execute(fn, attr) {
 			e.Headers = expr.NewMappedAttributeExpr(attr)
 		}
+	case *expr.GRPCErrorExpr:
+		attr := &expr.AttributeExpr{}
+		if eval.Execute(fn, attr) {
+			e.Response.Headers = expr.NewMappedAttributeExpr(attr)
+		}
 	default:
 		h := headers(eval.Current())
 		if h == nil {

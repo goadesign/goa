@@ -8,6 +8,9 @@
 			if err != nil {
 				return nil, goahttp.ErrDecodingError("{{ $.ServiceName }}", "{{ $.Method.Name }}", err)
 			}
+		{{- if $.SSE }}
+			{{- template "viewed_sse_outer_fields" $ }}
+		{{- end }}
 		{{- if and .ClientBody.ValidatorDeclaration .ClientBody.ValidationTarget }}
 			err = {{ .ClientBody.ValidatorDeclaration.Name }}({{ .ClientBody.ValidationTarget }})
 			if err != nil {

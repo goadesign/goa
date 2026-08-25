@@ -126,6 +126,28 @@ func (a *transformCopyAttributor) OneofWrapper(attribute *expr.AttributeExpr) st
 	return resolver.OneofWrapper(a.original(attribute))
 }
 
+// UnionConstructor gives a copied transform attribute to the resolver that
+// retained the generated service constructor.
+func (a *transformCopyAttributor) UnionConstructor(attribute *expr.AttributeExpr, branch string) (string, error) {
+	resolver, ok := a.attributor.(interface {
+		UnionConstructor(*expr.AttributeExpr, string) (string, error)
+	})
+	if !ok {
+		return "", fmt.Errorf("transform name resolver cannot resolve a service OneOf constructor")
+	}
+	return resolver.UnionConstructor(a.original(attribute), branch)
+}
+
+// GoTypeLayout gives the wrapped resolver the expression it used while
+// planning the generated type.
+func (a *transformCopyAttributor) GoTypeLayout(attribute *expr.AttributeExpr, policy GoLayoutPolicy) (LinkedGoType, error) {
+	resolver, ok := a.attributor.(GoTypeLayoutResolver)
+	if !ok {
+		return planGoTypeWithAttributor(a.original(attribute), policy, a.attributor)
+	}
+	return resolver.GoTypeLayout(a.original(attribute), policy)
+}
+
 // captureTransformStructuralHooks copies the hook set and replaces planning
 // callbacks with memoized versions. Planning may add a choice; rendering may
 // only read one that planning already made. unchanged checks that a hook left
@@ -786,6 +808,9 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 	{
 		// walk through primitives first to initialize the struct
 		walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
+			if err != nil {
+				return
+			}
 			if !expr.IsPrimitive(srcc.Type) {
 				return
 			}
@@ -878,6 +903,9 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 	// iterate through attributes to initialize rest of the struct fields and
 	// handle default values
 	walkMatches(source, target, func(srcMatt, tgtMatt *expr.MappedAttributeExpr, srcc, tgtc *expr.AttributeExpr, n string) {
+		if err != nil {
+			return
+		}
 		srcField := ta.SourceCtx.Scope.Field(srcc, srcMatt.ElemName(n), true)
 		tgtField := ta.TargetCtx.Scope.Field(tgtc, tgtMatt.ElemName(n), true)
 		h := ta.Hooks
@@ -989,44 +1017,34 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 			case transformFieldUsesNilPresence(ta.SourceCtx, n, srcMatt.AttributeExpr):
 				// A nil source means the field was omitted. This includes
 				// slices and message values as well as explicit pointers.
-				code += fmt.Sprintf("if %s == nil {\n\t", srcVar)
-				switch {
-				case ta.TargetCtx.IsPrimitivePointer(n, tgtMatt.AttributeExpr) && expr.IsPrimitive(tgtc.Type):
-					typeName := GoNativeTypeName(tgtc.Type)
-					if h != nil && h.ZeroTypeName != nil {
-						if zn, ok := h.ZeroTypeName(tgtc); ok {
-							typeName = zn
-						}
-					}
-					code += fmt.Sprintf("var tmp %s = %#v\n\t%s = &tmp\n", typeName, tdef, tgtVar)
-				case expr.IsArray(tgtc.Type):
-					arr := expr.AsArray(tgtc.Type)
-					if expr.IsAlias(arr.ElemType.Type) {
-						// Render typed array default literals for aliased element types,
-						// e.g. []pkg.EnumType{pkg.EnumType("val")}.
-						elemRef := ta.TargetCtx.Scope.Ref(arr.ElemType, ta.TargetCtx.Pkg(arr.ElemType))
-						rv := reflect.ValueOf(tdef)
-						if rv.Kind() != reflect.Slice {
-							panic(fmt.Sprintf("unsupported default value type %T for aliased array element", tdef)) // bug
-						}
-						items := make([]string, rv.Len())
-						for i := range items {
-							items[i] = fmt.Sprintf("%s(%#v)", elemRef, rv.Index(i).Interface())
-						}
-						if len(items) > 0 {
-							code += fmt.Sprintf("%s = []%s{%s}\n", tgtVar, elemRef, strings.Join(items, ", "))
-						}
-					} else {
-						// Non-alias element type: use raw default without casting elements
-						code += fmt.Sprintf("%s = %#v\n", tgtVar, tdef)
-					}
-				default:
-					code += fmt.Sprintf("%s = %#v\n", tgtVar, tdef)
+				assignment, renderErr := renderTransformDefault(
+					tgtc,
+					tdef,
+					fieldAttrs.TargetCtx,
+					ta.TargetCtx.IsFieldPointer(n, tgtMatt.AttributeExpr),
+					tgtVar,
+					tgtMatt.ElemName(n)+"Default",
+				)
+				if renderErr != nil {
+					err = renderErr
+					return
 				}
-				code += "}\n"
+				code += fmt.Sprintf("if %s == nil {\n%s}\n", srcVar, Indent(assignment, "\t"))
 			case expr.IsPrimitive(srcc.Type) && srcMatt.HasDefaultValue(n) && ta.SourceCtx.UseDefault:
 				// source attribute is a primitive with default value
 				// (the field is not a pointer in this case)
+				assignment, renderErr := renderTransformDefault(
+					tgtc,
+					tdef,
+					fieldAttrs.TargetCtx,
+					ta.TargetCtx.IsFieldPointer(n, tgtMatt.AttributeExpr),
+					tgtVar,
+					tgtMatt.ElemName(n)+"Default",
+				)
+				if renderErr != nil {
+					err = renderErr
+					return
+				}
 				code += "{\n\t"
 				var zeroName string
 				nilable := IsNilable(tgtc.Type) || valueIsNilable(tdef)
@@ -1051,7 +1069,7 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 				} else {
 					code += fmt.Sprintf("if %s == nil ", tgtVar)
 				}
-				code += fmt.Sprintf("{\n\t%s = %#v\n}\n", tgtVar, tdef)
+				code += fmt.Sprintf("{\n%s}\n", Indent(assignment, "\t"))
 				code += "}\n"
 			}
 		}
@@ -1062,6 +1080,37 @@ func transformObject(source, target *expr.AttributeExpr, sourceVar, targetVar st
 	}
 
 	return buffer.String(), nil
+}
+
+// renderTransformDefault writes the declarations and assignment needed when a
+// source field is absent. The target context supplies the exact generated Go
+// names and pointer layout.
+func renderTransformDefault(attribute *expr.AttributeExpr, value any, context *AttributeContext, pointer bool, target, localPrefix string) (string, error) {
+	resolver, ok := context.Scope.(GoTypeLayoutResolver)
+	if !ok {
+		return "", fmt.Errorf("render transform default: target package has no linked Go type resolver")
+	}
+	layout, err := resolver.GoTypeLayout(attribute, context.LayoutPolicy())
+	if err != nil {
+		return "", err
+	}
+	var resolveUnion UnionConstructorResolver
+	if resolver, ok := context.Scope.(interface {
+		UnionConstructor(*expr.AttributeExpr, string) (string, error)
+	}); ok {
+		resolveUnion = resolver.UnionConstructor
+	}
+	rendered, err := RenderGoValue(attribute, value, layout, pointer, resolveUnion, localPrefix)
+	if err != nil {
+		return "", err
+	}
+	var code strings.Builder
+	for _, declaration := range rendered.Declarations {
+		code.WriteString(declaration)
+		code.WriteByte('\n')
+	}
+	fmt.Fprintf(&code, "%s = %s\n", target, rendered.Expression)
+	return code.String(), nil
 }
 
 // transformFieldUsesNilPresence reports whether nil means that a generated

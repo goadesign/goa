@@ -106,7 +106,7 @@ func (s *{{ .ServerStructDeclaration.Name }}) processRequest(ctx context.Context
 		return
 	}
 
-	if req.Method == "" {
+	if !req.HasMethod {
 		s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Missing method field", nil)
 		return
 	}

@@ -22,6 +22,8 @@ type (
 		Kind expr.Kind
 		// TypeRef is the Go type assigned by the generated client.
 		TypeRef string
+		// ClientTypeRef is the Go type stored in the generated HTTP response body.
+		ClientTypeRef string
 		// Named reports whether TypeRef is a declared service type.
 		Named bool
 		// Pointer reports whether the service field stores a primitive pointer.
@@ -29,6 +31,12 @@ type (
 		// ClientPointer reports whether the validated HTTP body stores this
 		// primitive as a pointer before conversion to the service event.
 		ClientPointer bool
+		// DefaultValue is used when the corresponding SSE line is absent.
+		DefaultValue any
+		// HasDefault reports whether DefaultValue was authored, including zero values.
+		HasDefault bool
+		// Union reports whether an empty selected branch represents absence.
+		Union bool
 	}
 
 	// SSEData contains the data needed to render struct type that
@@ -76,12 +84,16 @@ type (
 		// IDField is the name of the result type event ID attribute if any.
 		// If empty, no id field is included in the event.
 		IDField string
+		// ID describes the exact string value carried by the id line.
+		ID *SSEValueData
 		// ClientIDPointer reports whether the validated HTTP body stores IDField
 		// as a pointer before conversion to the service event.
 		ClientIDPointer bool
 		// EventField is the name of the result type event field if any.
 		// If empty, no event field is included in the event.
 		EventField string
+		// Event describes the exact string value carried by the event line.
+		Event *SSEValueData
 		// ClientEventPointer reports whether the validated HTTP body stores
 		// EventField as a pointer before conversion to the service event.
 		ClientEventPointer bool
@@ -109,6 +121,9 @@ type (
 		VariableView bool
 		// DefaultView is used when SetView receives an empty string.
 		DefaultView string
+		// JSONRPCParams describes how the streamed result is carried in a
+		// JSON-RPC notification. It is nil for ordinary HTTP streams.
+		JSONRPCParams *JSONRPCParamsData
 	}
 )
 
@@ -151,7 +166,9 @@ func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr,
 		dataFieldTypeRef string
 		dataField        *expr.AttributeExpr
 		idFieldVar       string
+		idField          *expr.AttributeExpr
 		eventFieldVar    string
+		eventField       *expr.AttributeExpr
 		retryFieldVar    string
 		retryField       *expr.AttributeExpr
 	)
@@ -161,8 +178,10 @@ func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr,
 			switch nat.Name {
 			case e.SSE.IDField:
 				idFieldVar = codegen.GoifyAtt(nat.Attribute, nat.Name, true)
+				idField = nat.Attribute
 			case e.SSE.EventField:
 				eventFieldVar = codegen.GoifyAtt(nat.Attribute, nat.Name, true)
+				eventField = nat.Attribute
 			case e.SSE.RetryField:
 				retryFieldVar = codegen.GoifyAtt(nat.Attribute, nat.Name, true)
 				retryField = nat.Attribute
@@ -205,11 +224,18 @@ func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr,
 	}
 	if retryField != nil {
 		fieldctx := svcctx.Enter(retryField)
-		ed.SSE.Retry = &SSEValueData{
-			Kind:    retryField.Type.Kind(),
-			TypeRef: fieldctx.Scope.Ref(retryField, fieldctx.Pkg(retryField)),
-			Pointer: eventAttr.IsPrimitivePointer(e.SSE.RetryField, true),
-		}
+		value := sseValueData(eventAttr, retryField, fieldctx.Scope.Ref(retryField, fieldctx.Pkg(retryField)), e.SSE.RetryField)
+		ed.SSE.Retry = &value
+	}
+	if idField != nil {
+		fieldctx := svcctx.Enter(idField)
+		value := sseValueData(eventAttr, idField, fieldctx.Scope.Ref(idField, fieldctx.Pkg(idField)), e.SSE.IDField)
+		ed.SSE.ID = &value
+	}
+	if eventField != nil {
+		fieldctx := svcctx.Enter(eventField)
+		value := sseValueData(eventAttr, eventField, fieldctx.Scope.Ref(eventField, fieldctx.Pkg(eventField)), e.SSE.EventField)
+		ed.SSE.Event = &value
 	}
 	if ed.SSE.VariableView {
 		for _, view := range md.ViewedResult.Views {
@@ -232,11 +258,11 @@ func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr,
 		serverBody := sds.buildResponseBodyType(body, eventAttr, e, true, nil, sd, transforms, owner, owner)
 		clientBody := sds.buildResponseBodyType(body, eventAttr, e, false, nil, sd, nil, owner, owner)
 		clientObject := expr.AsObject(body.Type)
-		ed.SSE.ClientIDPointer = sseBodyFieldPointer(clientObject, e.SSE.IDField)
-		ed.SSE.ClientEventPointer = sseBodyFieldPointer(clientObject, e.SSE.EventField)
-		if ed.SSE.Retry != nil {
-			ed.SSE.Retry.ClientPointer = sseBodyFieldPointer(clientObject, e.SSE.RetryField)
-		}
+		setSSEClientField(ed.SSE.ID, clientObject, e.SSE.IDField)
+		setSSEClientField(ed.SSE.Event, clientObject, e.SSE.EventField)
+		setSSEClientField(ed.SSE.Retry, clientObject, e.SSE.RetryField)
+		ed.SSE.ClientIDPointer = ed.SSE.ID != nil && ed.SSE.ID.ClientPointer
+		ed.SSE.ClientEventPointer = ed.SSE.Event != nil && ed.SSE.Event.ClientPointer
 		clientCode := ""
 		switch {
 		case body.Type == expr.Empty:
@@ -278,11 +304,20 @@ func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr,
 			}
 		}
 		ed.SSE.Data = sseValueData(eventAttr, dataField, dataFieldTypeRef, e.SSE.DataField)
-		ed.SSE.Data.ClientPointer = sseBodyFieldPointer(clientObject, e.SSE.DataField)
+		setSSEClientField(&ed.SSE.Data, clientObject, e.SSE.DataField)
+		setJSONRPCSSEParams(ed, e, eventAttr, dataField)
 		return
 	}
 	if len(ed.Result.Responses) > 0 {
 		ed.SSE.Response = ed.Result.Responses[0]
+	}
+	if len(e.Responses) > 0 {
+		clientObject := expr.AsObject(sd.bodies.response(e.Responses[0]).Type)
+		setSSEClientField(ed.SSE.ID, clientObject, e.SSE.IDField)
+		setSSEClientField(ed.SSE.Event, clientObject, e.SSE.EventField)
+		setSSEClientField(ed.SSE.Retry, clientObject, e.SSE.RetryField)
+		ed.SSE.ClientIDPointer = ed.SSE.ID != nil && ed.SSE.ID.ClientPointer
+		ed.SSE.ClientEventPointer = ed.SSE.Event != nil && ed.SSE.Event.ClientPointer
 	}
 
 	for _, resp := range ed.Result.Responses {
@@ -301,6 +336,35 @@ func (sds *ServicesData) initSSEData(ed *EndpointData, e *expr.HTTPEndpointExpr,
 		}
 	}
 	ed.SSE.Data = sseValueData(eventAttr, dataAttribute, dataTypeRef, e.SSE.DataField)
+	if len(e.Responses) > 0 {
+		setSSEClientField(&ed.SSE.Data, expr.AsObject(sd.bodies.response(e.Responses[0]).Type), e.SSE.DataField)
+	}
+	setJSONRPCSSEParams(ed, e, eventAttr, dataField)
+}
+
+// setJSONRPCSSEParams records the one-element params array used for a string,
+// number, boolean, byte slice, or Any result. Objects, arrays, maps, and unions
+// keep their JSON shape.
+func setJSONRPCSSEParams(endpoint *EndpointData, expression *expr.HTTPEndpointExpr, event, data *expr.AttributeExpr) {
+	if !expression.IsJSONRPC() {
+		return
+	}
+	params := event
+	typeRef := endpoint.SSE.EventTypeRef
+	if data != nil {
+		params = data
+		typeRef = endpoint.SSE.Data.TypeRef
+		if endpoint.SSE.Data.Pointer {
+			typeRef = "*" + typeRef
+		}
+	} else if endpoint.SSE.HasResponseBody && endpoint.SSE.Response != nil && len(endpoint.SSE.Response.ServerBody) > 0 {
+		body := endpoint.SSE.Response.ServerBody[0]
+		if body.Init != nil {
+			typeRef = body.Ref
+		}
+	}
+	allowAbsent := data != nil && !event.IsRequired(expression.SSE.DataField)
+	endpoint.SSE.JSONRPCParams = jsonRPCParams(params.Type, typeRef, false, allowAbsent)
 }
 
 // sseValueData records the exact conversion selected for one SSE value.
@@ -316,17 +380,46 @@ func sseValueData(event, value *expr.AttributeExpr, typeRef, field string) SSEVa
 	if expr.IsPrimitive(value.Type) {
 		named = typeRef != codegen.GoNativeTypeName(expr.Primitive(kind))
 	}
-	return SSEValueData{Kind: kind, TypeRef: typeRef, Named: named, Pointer: pointer}
+	var defaultValue any
+	if field != "" {
+		defaultValue = event.GetDefault(field)
+	}
+	return SSEValueData{
+		Kind:          kind,
+		TypeRef:       typeRef,
+		ClientTypeRef: typeRef,
+		Named:         named,
+		Pointer:       pointer,
+		DefaultValue:  defaultValue,
+		HasDefault:    defaultValue != nil,
+		Union:         expr.AsUnion(value.Type) != nil,
+	}
 }
 
-// sseBodyFieldPointer reports whether client validation keeps one primitive
-// event field as a pointer so it can distinguish a missing value from zero.
-func sseBodyFieldPointer(object *expr.Object, field string) bool {
-	if object == nil || field == "" {
-		return false
+// setSSEClientField records how one SSE value is stored in the generated HTTP body.
+func setSSEClientField(value *SSEValueData, object *expr.Object, field string) {
+	if value == nil || object == nil || field == "" {
+		return
 	}
 	attribute := object.Attribute(field)
-	return attribute != nil && expr.IsPrimitive(attribute.Type)
+	if attribute == nil {
+		return
+	}
+	kind := sseValueKind(attribute.Type)
+	value.ClientPointer = sseBodyFieldPointer(attribute)
+	if expr.IsPrimitive(attribute.Type) {
+		value.ClientTypeRef = codegen.GoNativeTypeName(expr.Primitive(kind))
+	}
+}
+
+// sseBodyFieldPointer reports whether client validation keeps one scalar
+// field as a pointer so it can distinguish a missing value from zero.
+func sseBodyFieldPointer(attribute *expr.AttributeExpr) bool {
+	if attribute == nil || !expr.IsPrimitive(attribute.Type) {
+		return false
+	}
+	kind := sseValueKind(attribute.Type)
+	return kind != expr.BytesKind && kind != expr.AnyKind
 }
 
 // sseValueKind returns the primitive or structured kind beneath a declared

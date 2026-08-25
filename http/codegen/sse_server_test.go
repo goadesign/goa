@@ -74,12 +74,12 @@ func TestSSEServerSpecializesDataEncoding(t *testing.T) {
 	}
 }
 
-// TestSSEServerWritesOptionalRetryValue checks that an optional service field
-// is tested and dereferenced before it is written to the retry line.
+// TestSSEServerWritesOptionalRetryValue checks that a selected zero retry is
+// written while an absent value is omitted.
 func TestSSEServerWritesOptionalRetryValue(t *testing.T) {
 	root := expr.RunDSL(t, testdata.SSEAllFieldsDSL)
 	code := renderedFile(t, linkedHTTPPlanForRoot(t, root).ServerFiles())
-	require.Contains(t, code, "retry != nil && *retry > 0")
+	require.Contains(t, code, "if retry != nil {")
 	require.Contains(t, code, `fmt.Fprintf(s.w, "retry: %d\n", *retry)`)
 }
 

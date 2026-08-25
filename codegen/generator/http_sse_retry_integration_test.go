@@ -1,6 +1,6 @@
 // This file checks retry values in complete generated HTTP SSE transports.
 // The server writes the designed integer field and the client rebuilds the
-// service result or returns the exact parsing error for invalid event text.
+// service result and ignores retry fields that are not ASCII digits.
 package generator
 
 import (
@@ -17,7 +17,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -59,7 +58,7 @@ func TestRetryRoundTrip(t *testing.T) {
 	require.Equal(t, 2500, *event.Retry)
 }
 
-func TestMalformedRetryReturnsNumberError(t *testing.T) {
+func TestMalformedRetryIsIgnored(t *testing.T) {
 	httpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		_, err := io.WriteString(w, "retry: later\ndata: ready\n\n")
@@ -68,10 +67,11 @@ func TestMalformedRetryReturnsNumberError(t *testing.T) {
 	defer httpServer.Close()
 
 	stream := openWatch(t, httpServer.URL, http.DefaultClient)
-	_, err := stream.Recv()
-	var numberError *strconv.NumError
-	require.ErrorAs(t, err, &numberError)
-	require.Equal(t, "later", numberError.Num)
+	event, err := stream.Recv()
+	require.NoError(t, err)
+	require.NotNil(t, event.Data)
+	require.Equal(t, "ready", *event.Data)
+	require.Nil(t, event.Retry)
 }
 
 // openWatch starts the generated client stream against url.

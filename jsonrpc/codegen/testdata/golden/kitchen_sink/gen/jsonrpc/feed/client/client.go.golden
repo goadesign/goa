@@ -13,8 +13,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
-	"strings"
 	"sync"
 
 	goahttp "goa.design/goa/v3/http"
@@ -73,7 +73,8 @@ func (c *Client) Watch() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		if err := encodeRequest(req, v); err != nil {
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
 			return nil, err
 		}
 		// For SSE endpoints, send JSON-RPC request and establish stream
@@ -92,7 +93,8 @@ func (c *Client) Watch() goa.Endpoint {
 		}
 
 		contentType := resp.Header.Get("Content-Type")
-		if contentType != "" && !strings.HasPrefix(contentType, "text/event-stream") {
+		mediaType, _, parseErr := mime.ParseMediaType(contentType)
+		if parseErr != nil || mediaType != "text/event-stream" {
 			contentTypeErr := fmt.Errorf("unexpected content type: %s (expected text/event-stream)", contentType)
 			if err := resp.Body.Close(); err != nil {
 				return nil, errors.Join(contentTypeErr, goahttp.ErrDecodingError("Feed", "watch", err))
@@ -101,7 +103,7 @@ func (c *Client) Watch() goa.Endpoint {
 		}
 
 		// Create the SSE client stream
-		return NewWatchStream(resp, c.decoder), nil
+		return NewWatchStream(resp, c.decoder, requestID), nil
 	}
 }
 
@@ -117,13 +119,14 @@ func (c *Client) Snapshot() goa.Endpoint {
 		if err != nil {
 			return nil, err
 		}
-		if err := encodeRequest(req, v); err != nil {
+		requestID, err := encodeRequest(req, v)
+		if err != nil {
 			return nil, err
 		}
 		resp, err := c.Doer.Do(req)
 		if err != nil {
 			return nil, goahttp.ErrRequestError("Feed", "snapshot", err)
 		}
-		return decodeResponse(resp)
+		return decodeResponse(resp, requestID)
 	}
 }

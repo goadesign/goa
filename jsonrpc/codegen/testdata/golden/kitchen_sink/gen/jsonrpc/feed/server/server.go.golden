@@ -9,6 +9,7 @@ package server
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -17,12 +18,154 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 
 	feed "generated.local/gen/feed"
 	goahttp "goa.design/goa/v3/http"
 	"goa.design/goa/v3/jsonrpc"
 	goa "goa.design/goa/v3/pkg"
 )
+
+type (
+	// sseServerStream writes JSON-RPC messages as server-sent events.
+	sseServerStream struct {
+		// once writes the HTTP headers only for the first event.
+		once sync.Once
+		// w receives the HTTP headers and event bytes.
+		w http.ResponseWriter
+		// encoder turns one JSON-RPC message into bytes.
+		encoder func(context.Context, http.ResponseWriter) goahttp.Encoder
+	}
+
+	// sseEventBuffer stores an encoded event before any HTTP output is written.
+	sseEventBuffer struct {
+		bytes.Buffer
+		header http.Header
+	}
+
+	// noOutputResponseWriter accepts notification output without storing or
+	// sending it.
+	noOutputResponseWriter struct {
+		header http.Header
+	}
+)
+
+// Header returns the headers written while the event is being encoded.
+func (b *sseEventBuffer) Header() http.Header {
+	return b.header
+}
+
+// WriteHeader leaves the response status for the real HTTP response writer.
+func (b *sseEventBuffer) WriteHeader(int) {
+}
+
+// Header returns the private headers written while a notification is encoded.
+func (w *noOutputResponseWriter) Header() http.Header {
+	return w.header
+}
+
+// Write accepts notification bytes without storing or sending them.
+func (w *noOutputResponseWriter) Write(data []byte) (int, error) {
+	return len(data), nil
+}
+
+// WriteHeader accepts a notification status without sending it.
+func (w *noOutputResponseWriter) WriteHeader(int) {
+}
+
+// Flush completes successfully because notification bytes are not sent.
+func (w *noOutputResponseWriter) Flush() {
+}
+
+// initSSEHeaders writes the response headers before the first event.
+func (s *sseServerStream) initSSEHeaders() {
+	s.once.Do(func() {
+		header := s.w.Header()
+		header.Set("Content-Type", "text/event-stream")
+		header.Set("Cache-Control", "no-cache")
+		header.Set("Connection", "keep-alive")
+		header.Set("X-Accel-Buffering", "no")
+		s.w.WriteHeader(http.StatusOK)
+	})
+}
+
+// sendSSEEvent encodes one complete JSON-RPC message before starting the
+// response, then writes its mapped SSE fields and data.
+func (s *sseServerStream) sendSSEEvent(ctx context.Context, value any, id, eventType, retry *string) error {
+	if id != nil {
+		for _, character := range *id {
+			if character == 0 || character == '\r' || character == '\n' {
+				return fmt.Errorf("server-sent event id contains a forbidden character")
+			}
+		}
+	}
+	if eventType != nil {
+		for _, character := range *eventType {
+			if character == '\r' || character == '\n' {
+				return fmt.Errorf("server-sent event name contains a line break")
+			}
+		}
+	}
+	if retry != nil {
+		if *retry == "" {
+			return fmt.Errorf("server-sent event retry must contain only decimal digits")
+		}
+		for index := 0; index < len(*retry); index++ {
+			if (*retry)[index] < '0' || (*retry)[index] > '9' {
+				return fmt.Errorf("server-sent event retry must contain only decimal digits")
+			}
+		}
+	}
+
+	event := &sseEventBuffer{header: make(http.Header)}
+	if err := s.encoder(ctx, event).Encode(value); err != nil {
+		return err
+	}
+
+	s.initSSEHeaders()
+	if id != nil {
+		if _, err := fmt.Fprintf(s.w, "id: %s\n", *id); err != nil {
+			return fmt.Errorf("write server-sent event id: %w", err)
+		}
+	}
+	if eventType != nil {
+		if _, err := fmt.Fprintf(s.w, "event: %s\n", *eventType); err != nil {
+			return fmt.Errorf("write server-sent event name: %w", err)
+		}
+	}
+	if retry != nil {
+		if _, err := fmt.Fprintf(s.w, "retry: %s\n", *retry); err != nil {
+			return fmt.Errorf("write server-sent event retry: %w", err)
+		}
+	}
+	data := bytes.ReplaceAll(event.Bytes(), []byte("\r\n"), []byte("\n"))
+	data = bytes.ReplaceAll(data, []byte("\r"), []byte("\n"))
+	data = bytes.TrimSuffix(data, []byte("\n"))
+	for _, line := range bytes.Split(data, []byte("\n")) {
+		if _, err := s.w.Write([]byte("data: ")); err != nil {
+			return fmt.Errorf("write server-sent event data label: %w", err)
+		}
+		if _, err := s.w.Write(line); err != nil {
+			return fmt.Errorf("write server-sent event data: %w", err)
+		}
+		if _, err := s.w.Write([]byte("\n")); err != nil {
+			return fmt.Errorf("finish server-sent event data line: %w", err)
+		}
+	}
+	if _, err := s.w.Write([]byte("\n")); err != nil {
+		return fmt.Errorf("finish server-sent event: %w", err)
+	}
+	if err := http.NewResponseController(s.w).Flush(); err != nil {
+		return fmt.Errorf("flush server-sent event: %w", err)
+	}
+	return nil
+}
+
+// sendError writes one JSON-RPC error as a server-sent event.
+func (s *sseServerStream) sendError(ctx context.Context, id any, code jsonrpc.Code, message string, data any) error {
+	response := jsonrpc.MakeErrorResponse(id, code, message, data)
+	return s.sendSSEEvent(ctx, response, nil, nil, nil)
+}
 
 // Server handles JSON-RPC requests for the Feed service.
 type Server struct {
@@ -182,7 +325,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Invalid and unknown requests do not have a designed response type. Use
 	// JSON when the client accepts it, then events, or reject the response.
-	if req.Invalid || req.JSONRPC != "2.0" || req.Method == "" {
+	if req.Invalid || req.JSONRPC != "2.0" || !req.HasMethod {
 		switch {
 		case acceptJSON:
 			s.processRequest(r.Context(), r, &req, w)
@@ -263,7 +406,7 @@ func (s *Server) processRequest(ctx context.Context, r *http.Request, req *jsonr
 		return
 	}
 
-	if req.Method == "" {
+	if !req.HasMethod {
 		s.encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidRequest, "Missing method field", nil)
 		return
 	}
@@ -331,7 +474,7 @@ func (s *Server) processSSERequest(ctx context.Context, r *http.Request, req *js
 		return
 	}
 
-	if req.Method == "" {
+	if !req.HasMethod {
 		stream := &sseServerStream{w: w, encoder: s.encoder}
 		if err := stream.sendError(ctx, req.ID, jsonrpc.InvalidRequest, "Invalid request", nil); err != nil {
 			s.errhandler(ctx, w, fmt.Errorf("write invalid request event: %w", err))
@@ -384,11 +527,17 @@ func NewWatchHandler(
 	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
 		ctx = context.WithValue(ctx, goa.MethodKey, "watch")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "Feed")
+		outputWriter := w
+		if !req.HasID {
+			// A notification runs the same service and error reporting code without
+			// sending a response.
+			outputWriter = &noOutputResponseWriter{header: make(http.Header)}
+		}
 		// Create the stream before decoding so request failures can be sent on the
 		// same HTTP response.
 		strm := &WatchServerStream{
 			sseServerStream: sseServerStream{
-				w:       w,
+				w:       outputWriter,
 				encoder: encoder,
 			},
 		}
@@ -397,16 +546,10 @@ func NewWatchHandler(
 		if err != nil {
 			if req.HasID {
 				return strm.sendError(ctx, req.ID, jsonrpc.InvalidParams, err.Error(), nil)
+			} else {
+				errhandler(ctx, outputWriter, fmt.Errorf("failed to decode parameters: %w", err))
 			}
 			return nil
-		}
-		if req.ID != nil {
-			params.RequestID = jsonrpc.IDToString(req.ID)
-		}
-		// Set Last-Event-ID header if present
-		if lastEventID := r.Header.Get("Last-Event-ID"); lastEventID != "" {
-			ctx = context.WithValue(ctx, "last-event-id", lastEventID)
-			params.LastEventID = &lastEventID
 		}
 		v := &feed.WatchEndpointInput{
 			Stream:  strm,
@@ -415,6 +558,7 @@ func NewWatchHandler(
 		_, err = endpoint(ctx, v)
 		if err != nil {
 			if !req.HasID {
+				errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
 				return nil
 			}
 			return strm.sendError(ctx, req.ID, jsonrpc.InternalError, err.Error(), nil)
@@ -423,12 +567,8 @@ func NewWatchHandler(
 			return nil
 		}
 
-		response := map[string]any{
-			"jsonrpc": "2.0",
-			"id":      req.ID,
-			"result":  nil,
-		}
-		return strm.sendSSEEvent(ctx, "response", response)
+		response := jsonrpc.MakeSuccessResponse(req.ID, nil)
+		return strm.sendSSEEvent(ctx, response, nil, nil, nil)
 	}
 }
 
@@ -445,26 +585,27 @@ func NewSnapshotHandler(
 	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
 		ctx = context.WithValue(ctx, goa.MethodKey, "snapshot")
 		ctx = context.WithValue(ctx, goa.ServiceKey, "Feed")
+		outputWriter := w
+		if !req.HasID {
+			// A notification runs the same service and error reporting code without
+			// sending a response.
+			outputWriter = &noOutputResponseWriter{header: make(http.Header)}
+		}
 		params, err := decodeParams(r, req)
 		if err != nil {
 			if req.HasID {
 				encodeJSONRPCError(ctx, w, req, jsonrpc.InvalidParams, err.Error(), nil, encoder, errhandler)
 			} else {
-				// A notification receives no JSON-RPC response, so pass the decode error to the configured error handler.
-				errhandler(ctx, w, fmt.Errorf("failed to decode parameters: %w", err))
+				errhandler(ctx, outputWriter, fmt.Errorf("failed to decode parameters: %w", err))
 			}
 			return nil
-		}
-		if req.ID != nil {
-			params.RequestID = jsonrpc.IDToString(req.ID)
 		}
 		res, err := endpoint(ctx, params)
 		if err != nil {
 			if req.HasID {
 				encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
 			} else {
-				// A notification receives no JSON-RPC response, so pass the service error to the configured error handler.
-				errhandler(ctx, w, fmt.Errorf("endpoint error: %w", err))
+				errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
 			}
 			return nil
 		}
@@ -473,13 +614,8 @@ func NewSnapshotHandler(
 			return nil
 		}
 
-		// For methods with results, determine the ID to use for the response
-		var id any
-		// No ID field in result - use request ID
-		id = req.ID
-
-		// Send response with the result
-		response := jsonrpc.MakeSuccessResponse(id, res)
+		// The response repeats the exact request ID.
+		response := jsonrpc.MakeSuccessResponse(req.ID, res)
 		if err := encoder(ctx, w).Encode(response); err != nil {
 			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
 		}

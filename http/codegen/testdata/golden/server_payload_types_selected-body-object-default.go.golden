@@ -1,0 +1,15 @@
+// NewObjectPayload builds a SelectedObjectBodyDefault service Object endpoint
+// payload.
+func NewObjectPayload(body *ObjectRequestBody) *selectedobjectbodydefault.ObjectPayload {
+	res := &selectedobjectbodydefault.ObjectPayload{}
+	if body != nil {
+		v := &selectedobjectbodydefault.SelectedObjectDefault{
+			Name: *body.Name,
+		}
+		res.Value = v
+	} else {
+		res.Value = &selectedobjectbodydefault.SelectedObjectDefault{Name: "safe"}
+	}
+
+	return res
+}

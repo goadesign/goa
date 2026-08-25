@@ -20,15 +20,6 @@ paths:
                     type: string
                     example: request
                   example: request
-            requestBody:
-                description: Request body for SSERequestIDMethod.
-                required: true
-                content:
-                    application/json:
-                        schema:
-                            $ref: '#/components/schemas/SSERequestIDMethodRequestBody'
-                        example:
-                            id: request
             responses:
                 "200":
                     description: OK response.
@@ -42,16 +33,6 @@ paths:
                                         example: event
                                 required:
                                     - data
-components:
-    schemas:
-        SSERequestIDMethodRequestBody:
-            type: object
-            properties:
-                id:
-                    type: string
-                    example: request
-            description: Request body for SSERequestIDMethod.
-            example:
-                id: request
+components: {}
 tags:
     - name: SSERequestIDService

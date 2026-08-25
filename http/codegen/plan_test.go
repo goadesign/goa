@@ -408,22 +408,19 @@ func TestJSONRPCSnapshotsExposeReleasedNames(t *testing.T) {
 	require.NotEqual(t, snapshot.Endpoints[0].HandlerInit, snapshot.Endpoints[1].HandlerInit)
 }
 
-// TestViewedResultSnapshotsPreserveMissingBodies checks that a successful
-// response containing only a mapped header keeps both body values absent. It
-// also changes the returned header and confirms a later copy is unchanged.
-func TestViewedResultSnapshotsPreserveMissingBodies(t *testing.T) {
+// TestViewedResultSnapshotsReturnIndependentBodies changes one returned body
+// and confirms that a later copy still contains the planned value.
+func TestViewedResultSnapshotsReturnIndependentBodies(t *testing.T) {
 	root := expr.RunDSL(t, func() {
-		result := dsl.ResultType("application/vnd.header-view", func() {
+		result := dsl.ResultType("application/vnd.body-view", func() {
 			dsl.Attribute("id", dsl.String)
 			dsl.Required("id")
 			dsl.View("default", func() { dsl.Attribute("id") })
 		})
-		dsl.Service("Headers", func() {
+		dsl.Service("Bodies", func() {
 			dsl.Method("Fetch", func() {
 				dsl.Result(result)
-				dsl.JSONRPC(func() {
-					dsl.Response(func() { dsl.Header("id") })
-				})
+				dsl.JSONRPC(func() {})
 			})
 		})
 	})
@@ -437,17 +434,16 @@ func TestViewedResultSnapshotsPreserveMissingBodies(t *testing.T) {
 	require.NoError(t, servicePlan.Link())
 	require.NoError(t, plans[0].Link())
 
-	viewed, ok := plans[0].ViewedResult("Headers", "Fetch")
+	viewed, ok := plans[0].ViewedResult("Bodies", "Fetch")
 	require.True(t, ok)
 	require.Len(t, viewed.Representations, 1)
-	require.Nil(t, viewed.Representations[0].ServerBody)
-	require.Nil(t, viewed.Representations[0].ClientBody)
-	require.Len(t, viewed.Representations[0].Headers, 1)
-	originalHeader := viewed.Representations[0].Headers[0].CanonicalName
-	viewed.Representations[0].Headers[0].CanonicalName = "Changed"
-	fresh, ok := plans[0].ViewedResult("Headers", "Fetch")
+	require.NotNil(t, viewed.Representations[0].ServerBody)
+	require.NotNil(t, viewed.Representations[0].ClientBody)
+	originalRef := viewed.Representations[0].ServerBody.Ref
+	viewed.Representations[0].ServerBody.Ref = "Changed"
+	fresh, ok := plans[0].ViewedResult("Bodies", "Fetch")
 	require.True(t, ok)
-	require.Equal(t, originalHeader, fresh.Representations[0].Headers[0].CanonicalName)
+	require.Equal(t, originalRef, fresh.Representations[0].ServerBody.Ref)
 }
 
 // TestViewedResultCopiesBodyFieldSelection checks that JSON-RPC receives the

@@ -70,6 +70,63 @@ func TestPlanRetainsServicePackageImport(t *testing.T) {
 	require.Equal(t, "sync2", client.ImportName("generated.local/gen/sync"))
 }
 
+// TestPlanSelectsPositionalParams checks that strings, bytes, and Any values
+// are wrapped once while objects, arrays, maps, and unions keep their JSON shape.
+func TestPlanSelectsPositionalParams(t *testing.T) {
+	_, transport := linkedJSONRPCPlan(t, jsonRPCParamsPlanDSL)
+	endpoints := transport.services[0].data.Endpoints
+
+	want := map[string]struct {
+		request     bool
+		positional  bool
+		allowAbsent bool
+		omitAbsent  bool
+		stream      bool
+	}{
+		"text":                 {request: true, positional: true},
+		"alias":                {request: true, positional: true},
+		"anything":             {request: true, positional: true},
+		"bytes":                {request: true, positional: true},
+		"object":               {request: true},
+		"array":                {request: true},
+		"map":                  {request: true},
+		"union":                {request: true},
+		"optional_text":        {request: true, positional: true, allowAbsent: true},
+		"optional_object":      {request: true, allowAbsent: true, omitAbsent: true},
+		"optional_array":       {request: true, allowAbsent: true, omitAbsent: true},
+		"optional_map":         {request: true, allowAbsent: true, omitAbsent: true},
+		"optional_union":       {request: true, allowAbsent: true, omitAbsent: true},
+		"stream_text":          {stream: true, positional: true},
+		"stream_any":           {stream: true, positional: true},
+		"stream_array":         {stream: true},
+		"stream_optional_text": {stream: true, positional: true, allowAbsent: true},
+		"stream_default_text":  {stream: true, positional: true, allowAbsent: true},
+		"stream_object_data":   {stream: true, allowAbsent: true, omitAbsent: true},
+		"stream_array_data":    {stream: true, allowAbsent: true, omitAbsent: true},
+		"stream_map_data":      {stream: true, allowAbsent: true, omitAbsent: true},
+		"stream_union_data":    {stream: true, allowAbsent: true, omitAbsent: true},
+	}
+	require.Len(t, endpoints, len(want))
+	for _, endpoint := range endpoints {
+		expected, ok := want[endpoint.Method.Name]
+		require.True(t, ok, endpoint.Method.Name)
+		request := endpoint.Payload != nil && endpoint.Payload.Request != nil && endpoint.Payload.Request.Params != nil
+		stream := endpoint.SSE != nil && endpoint.SSE.Params != nil
+		require.Equal(t, expected.request, request, endpoint.Method.Name)
+		if expected.request {
+			require.Equal(t, expected.positional, endpoint.Payload.Request.Params.Positional, endpoint.Method.Name)
+			require.Equal(t, expected.allowAbsent, endpoint.Payload.Request.Params.AllowAbsent, endpoint.Method.Name)
+			require.Equal(t, expected.omitAbsent, endpoint.Payload.Request.Params.OmitAbsent, endpoint.Method.Name)
+		}
+		require.Equal(t, expected.stream, stream, endpoint.Method.Name)
+		if expected.stream {
+			require.Equal(t, expected.positional, endpoint.SSE.Params.Positional, endpoint.Method.Name)
+			require.Equal(t, expected.allowAbsent, endpoint.SSE.Params.AllowAbsent, endpoint.Method.Name)
+			require.Equal(t, expected.omitAbsent, endpoint.SSE.Params.OmitAbsent, endpoint.Method.Name)
+		}
+	}
+}
+
 // TestNewExamplePlanRejectsAnotherServicePlan checks that server names and
 // URLs cannot come from a different design with the same authored names.
 func TestNewExamplePlanRejectsAnotherServicePlan(t *testing.T) {
@@ -620,6 +677,161 @@ func viewedJSONRPCPlanDSL() {
 			})
 			dsl.JSONRPC(func() {})
 		})
+	})
+}
+
+// jsonRPCParamsPlanDSL declares single and container request and stream values
+// so planning tests can compare their JSON-RPC parameter shape.
+func jsonRPCParamsPlanDSL() {
+	alias := dsl.Type("Alias", dsl.String)
+	object := dsl.Type("Object", func() {
+		dsl.Attribute("name", dsl.String)
+		dsl.Required("name")
+	})
+	union := dsl.Type("Choice", func() {
+		dsl.OneOf("value", func() {
+			dsl.Field(1, "name", dsl.String)
+			dsl.Field(2, "count", dsl.Int)
+		})
+	})
+	objects := dsl.Type("Objects", dsl.ArrayOf(object))
+	objectMap := dsl.Type("ObjectMap", dsl.MapOf(dsl.String, object))
+	objectEvent := dsl.Type("ObjectEvent", func() {
+		dsl.Attribute("data", object)
+	})
+	arrayEvent := dsl.Type("ArrayEvent", func() {
+		dsl.Attribute("data", objects)
+	})
+	mapEvent := dsl.Type("MapEvent", func() {
+		dsl.Attribute("data", objectMap)
+	})
+	unionEvent := dsl.Type("UnionEvent", func() {
+		dsl.OneOf("data", func() {
+			dsl.TypeName("StreamUnionData")
+			dsl.Field(1, "name", dsl.String)
+			dsl.Field(2, "count", dsl.Int)
+		})
+	})
+	optionalTextEvent := dsl.Type("OptionalTextEvent", func() {
+		dsl.Attribute("data", dsl.String, func() {
+			dsl.Pattern("^[a-z]*$")
+		})
+	})
+	defaultStreamData := dsl.Type("DefaultStreamData", dsl.String, func() {
+		dsl.Pattern("^[a-z]*$")
+		dsl.Default("fallback")
+	})
+	defaultTextEvent := dsl.Type("DefaultTextEvent", func() {
+		dsl.Attribute("data", defaultStreamData)
+	})
+	dsl.Service("params", func() {
+		for _, method := range []struct {
+			name  string
+			type_ any
+		}{
+			{name: "text", type_: dsl.String},
+			{name: "alias", type_: alias},
+			{name: "anything", type_: dsl.Any},
+			{name: "bytes", type_: dsl.Bytes},
+			{name: "object", type_: object},
+			{name: "array", type_: dsl.ArrayOf(dsl.String)},
+			{name: "map", type_: dsl.MapOf(dsl.String, dsl.Int)},
+			{name: "union", type_: union},
+		} {
+			dsl.Method(method.name, func() {
+				dsl.Payload(method.type_)
+				dsl.JSONRPC(func() {})
+			})
+		}
+		dsl.Method("optional_text", func() {
+			dsl.Payload(func() {
+				dsl.Attribute("value", dsl.String)
+			})
+			dsl.JSONRPC(func() {
+				dsl.Body("value")
+			})
+		})
+		for _, method := range []struct {
+			name  string
+			type_ any
+		}{
+			{name: "optional_object", type_: object},
+			{name: "optional_array", type_: objects},
+			{name: "optional_map", type_: objectMap},
+		} {
+			dsl.Method(method.name, func() {
+				dsl.Payload(func() {
+					dsl.Attribute("value", method.type_)
+				})
+				dsl.JSONRPC(func() {
+					dsl.Body("value")
+				})
+			})
+		}
+		dsl.Method("optional_union", func() {
+			dsl.Payload(func() {
+				dsl.OneOf("value", func() {
+					dsl.TypeName("OptionalRequestValue")
+					dsl.Field(1, "name", dsl.String)
+					dsl.Field(2, "count", dsl.Int)
+				})
+			})
+			dsl.JSONRPC(func() {
+				dsl.Body("value")
+			})
+		})
+		dsl.Method("stream_text", func() {
+			dsl.StreamingResult(dsl.String)
+			dsl.JSONRPC(func() {
+				dsl.ServerSentEvents()
+			})
+		})
+		dsl.Method("stream_any", func() {
+			dsl.StreamingResult(dsl.Any)
+			dsl.JSONRPC(func() {
+				dsl.ServerSentEvents()
+			})
+		})
+		dsl.Method("stream_array", func() {
+			dsl.StreamingResult(dsl.ArrayOf(dsl.String))
+			dsl.JSONRPC(func() {
+				dsl.ServerSentEvents()
+			})
+		})
+		dsl.Method("stream_optional_text", func() {
+			dsl.StreamingResult(optionalTextEvent)
+			dsl.JSONRPC(func() {
+				dsl.ServerSentEvents(func() {
+					dsl.SSEEventData("data")
+				})
+			})
+		})
+		dsl.Method("stream_default_text", func() {
+			dsl.StreamingResult(defaultTextEvent)
+			dsl.JSONRPC(func() {
+				dsl.ServerSentEvents(func() {
+					dsl.SSEEventData("data")
+				})
+			})
+		})
+		for _, method := range []struct {
+			name  string
+			type_ any
+		}{
+			{name: "stream_object_data", type_: objectEvent},
+			{name: "stream_array_data", type_: arrayEvent},
+			{name: "stream_map_data", type_: mapEvent},
+			{name: "stream_union_data", type_: unionEvent},
+		} {
+			dsl.Method(method.name, func() {
+				dsl.StreamingResult(method.type_)
+				dsl.JSONRPC(func() {
+					dsl.ServerSentEvents(func() {
+						dsl.SSEEventData("data")
+					})
+				})
+			})
+		}
 	})
 }
 

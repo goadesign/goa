@@ -5,11 +5,27 @@ var (
 		{{ .FlagSetVar }} = flag.NewFlagSet("{{ .Name }}", flag.ExitOnError)
 		{{- $sub := . }}
 		{{- range .Flags }}
-		{{ .PointerVar }} = {{ $sub.FlagSetVar }}.String("{{ .Name }}", "{{ if .Default }}{{ .Default }}{{ else if .Required }}REQUIRED{{ end }}", {{ printf "%q" .Description }})
+		{{- if .TracksPresence }}
+		{{ .PointerVar }} = new({{ $.PresenceFlagType }})
+		{{- else }}
+		{{ .PointerVar }} = {{ $sub.FlagSetVar }}.String("{{ .Name }}", {{ printf "%q" .DefaultValue }}, {{ printf "%q" .Description }})
+		{{- end }}
 		{{- end }}
 		{{ end }}
 		{{- end }}
 	)
+	{{- if .PresenceFlagType }}
+	{{ range .Commands -}}
+	{{ range .Subcommands -}}
+	{{ $sub := . -}}
+	{{ range .Flags -}}
+	{{ if .TracksPresence -}}
+	{{ $sub.FlagSetVar }}.Var({{ .PointerVar }}, "{{ .Name }}", {{ printf "%q" .Description }})
+	{{ end -}}
+	{{ end -}}
+	{{ end -}}
+	{{ end }}
+	{{- end }}
 	{{ range .Commands -}}
 	{{ $cmd := . -}}
 	{{ .FlagSetVar }}.Usage = {{ .UsageDeclaration.Name }}

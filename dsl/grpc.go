@@ -94,7 +94,13 @@ const (
 func GRPC(fn func()) {
 	switch actual := eval.Current().(type) {
 	case *expr.APIExpr:
-		eval.Execute(fn, expr.Root.API.GRPC)
+		previous := actual.GRPC.DSLFunc
+		actual.GRPC.DSLFunc = func() {
+			if previous != nil {
+				previous()
+			}
+			fn()
+		}
 	case *expr.ServiceExpr:
 		res := expr.Root.API.GRPC.ServiceFor(actual)
 		res.DSLFunc = fn
@@ -346,6 +352,11 @@ func Trailers(fn func()) {
 		attr := &expr.AttributeExpr{}
 		if eval.Execute(fn, attr) {
 			e.Trailers = expr.NewMappedAttributeExpr(attr)
+		}
+	case *expr.GRPCErrorExpr:
+		attr := &expr.AttributeExpr{}
+		if eval.Execute(fn, attr) {
+			e.Response.Trailers = expr.NewMappedAttributeExpr(attr)
 		}
 	default:
 		eval.IncompatibleDSL()

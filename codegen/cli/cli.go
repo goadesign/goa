@@ -66,8 +66,12 @@ type (
 		// BuildFunction contains the data to generate a payload builder function
 		// if any. Exclusive with Conversion.
 		BuildFunction *BuildFunctionData
-		// ActualPointerVars lists the exact parser variables passed to BuildFunction.
+		// ActualPointerVars lists the parser variables used by plugins that render
+		// the released BuildFunction call.
 		ActualPointerVars []string
+		// ActualArgs lists the exact expressions passed to BuildFunction. It is
+		// empty for plugins that use the released pointer-variable contract.
+		ActualArgs []string
 		// Conversion contains the flag value to payload conversion function if
 		// any. Exclusive with BuildFunction.
 		Conversion string
@@ -106,6 +110,15 @@ type (
 		FullName string
 		// PointerVar is the exact local variable that points to the parsed flag value.
 		PointerVar string
+		// HasDefault is true when the design supplies a default, including false,
+		// zero, or an empty string.
+		HasDefault bool
+		// TracksPresence is true when generated code must distinguish an omitted
+		// flag from a flag whose text is empty.
+		TracksPresence bool
+		// DefaultValue is the text passed to the standard flag package when the
+		// design supplies a default.
+		DefaultValue string
 		// Description is the flag help text.
 		Description string
 		// Required is true if the flag is required.
@@ -131,6 +144,9 @@ type (
 		// FormalParams is the list of build function formal parameter
 		// names.
 		FormalParams []string
+		// FormalParamTypes lists the exact parameter types selected for generated
+		// builders. It is empty for plugins that use the released string contract.
+		FormalParamTypes []string
 		// ServiceName is the name of the service.
 		ServiceName string
 		// MethodName is the name of the method.
@@ -156,6 +172,9 @@ type (
 		UsageCommands *codegen.NameDeclaration
 		// UsageExamples is the function that prints example commands.
 		UsageExamples *codegen.NameDeclaration
+		// PresenceFlagType is the private type that records whether the user set a
+		// command-line flag.
+		PresenceFlagType *codegen.NameDeclaration
 	}
 
 	// FlagArgData describes a payload initialization argument from which a
@@ -172,6 +191,8 @@ type (
 		Plan *FlagPlan
 		// TypeRef is the reference to the argument type.
 		TypeRef string
+		// Pointer reports whether JSON flag decoding must preserve a nil value.
+		Pointer bool
 		// FieldName is the name of the payload field initialized with the
 		// argument value if any.
 		FieldName string
@@ -226,16 +247,20 @@ type (
 
 	// PayloadInitData contains the data needed to generate a constructor
 	// function that initializes a service method payload type from the
-	// command-ling arguments.
+	// command-line arguments.
 	PayloadInitData struct {
 		// Code is the payload initialization code.
 		Code string
-		// ReturnTypeAttribute if non-empty returns an attribute in the payload
-		// type that describes the shape of the method payload.
+		// ReturnTypeAttribute names the payload field initialized from the body.
 		ReturnTypeAttribute string
 		// ReturnTypeAttributePointer is true if the return type attribute
-		// generated struct field holds a pointer
+		// generated struct field holds a pointer.
 		ReturnTypeAttributePointer bool
+		// ReturnTypeAttributeUnion reports whether the selected payload field is
+		// a union value.
+		ReturnTypeAttributeUnion bool
+		// OptionalBody reports whether the selected body flag may be omitted.
+		OptionalBody bool
 		// ReturnIsStruct if true indicates that the method payload is an object.
 		ReturnIsStruct bool
 		// ReturnTypeName is the fully-qualified name of the payload.
@@ -264,8 +289,9 @@ type (
 	// parserFlagsData gives the shared flag template its commands and the fixed
 	// local names chosen for the surrounding endpoint parser.
 	parserFlagsData struct {
-		Commands  []*CommandData
-		Variables *ParserVariablesData
+		Commands         []*CommandData
+		Variables        *ParserVariablesData
+		PresenceFlagType string
 	}
 )
 
@@ -346,7 +372,7 @@ func EndpointParserFile(
 	data []*CommandData,
 	parseSection *codegen.SectionTemplate,
 ) *codegen.File {
-	return endpointParserFile(path, title, specs, data, parseSection, releasedUsageCommandsName, releasedUsageExamplesName)
+	return endpointParserFile(path, title, specs, data, parseSection, "", releasedUsageCommandsName, releasedUsageExamplesName)
 }
 
 // EndpointParserFile returns a parser file that uses the function names chosen
@@ -357,12 +383,17 @@ func (p *ParserPlan) EndpointParserFile(
 	data []*CommandData,
 	parseSection *codegen.SectionTemplate,
 ) *codegen.File {
+	presenceFlagType := ""
+	if p.Declarations.PresenceFlagType != nil {
+		presenceFlagType = p.Declarations.PresenceFlagType.Name()
+	}
 	return endpointParserFile(
 		path,
 		title,
 		specs,
 		data,
 		parseSection,
+		presenceFlagType,
 		p.Declarations.UsageCommands.Name,
 		p.Declarations.UsageExamples.Name,
 	)
@@ -375,11 +406,21 @@ func endpointParserFile(
 	specs []*codegen.ImportSpec,
 	data []*CommandData,
 	parseSection *codegen.SectionTemplate,
+	presenceFlagType string,
 	usageCommandsName, usageExamplesName func() string,
 ) *codegen.File {
 	sections := make([]*codegen.SectionTemplate, 0, 4+len(data))
+	sections = append(sections, codegen.Header(title, "cli", specs))
+	if presenceFlagType != "" && hasPresenceFlags(data) {
+		var declaration bytes.Buffer
+		if err := presenceFlagSection(presenceFlagType).Write(&declaration); err != nil {
+			panic(err)
+		}
+		plannedParse := *parseSection
+		plannedParse.Source = declaration.String() + "\n" + parseSection.Source
+		parseSection = &plannedParse
+	}
 	sections = append(sections,
-		codegen.Header(title, "cli", specs),
 		usageCommands(data, usageCommandsName),
 		usageExamples(data, usageExamplesName),
 		parseSection,
@@ -404,10 +445,12 @@ func MakeFlags(
 	pinit *PayloadInitData,
 ) ([]*FlagData, *BuildFunctionData) {
 	var (
-		fdata  = make([]*FieldData, 0, len(args)) // preallocate
-		flags  = make([]*FlagData, len(args))
-		params = make([]string, len(args))
-		check  bool
+		fdata      = make([]*FieldData, 0, len(args)) // preallocate
+		flags      = make([]*FlagData, len(args))
+		params     = make([]string, len(args))
+		paramTypes = make([]string, len(args))
+		planned    = true
+		check      bool
 	)
 	for i, arg := range args {
 		value := (*flagValuePlan)(nil)
@@ -415,6 +458,7 @@ func MakeFlags(
 			return arg.Validate
 		}
 		if arg.Plan == nil {
+			planned = false
 			value = legacyFlagValuePlan(arg.TypeName)
 		} else {
 			if arg.Validate != "" {
@@ -424,8 +468,13 @@ func MakeFlags(
 			validation = arg.Plan.validation
 		}
 		f := newFlagData(svcn, m.Name, arg.Name, value, arg.Description, arg.Required, arg.Example, arg.DefaultValue)
+		f.TracksPresence = arg.Plan != nil && !f.HasDefault
 		flags[i] = f
 		params[i] = f.FullName
+		paramTypes[i] = "string"
+		if f.TracksPresence {
+			paramTypes[i] = "*string"
+		}
 		if arg.OmitField {
 			continue
 		}
@@ -433,10 +482,12 @@ func MakeFlags(
 		check = check || chek
 		tn := arg.TypeRef
 		if value.isJSON() {
-			// We need to declare the variable without
-			// a pointer to be able to unmarshal the JSON
-			// using its address.
+			// JSON decoding uses the planned transport value. Optional
+			// pointer-shaped bodies keep a pointer so omission remains nil.
 			tn = value.typeName
+			if arg.Pointer {
+				tn = "*" + tn
+			}
 		}
 		fdata = append(fdata, &FieldData{
 			Name:    arg.Name,
@@ -445,17 +496,27 @@ func MakeFlags(
 			Init:    code,
 		})
 	}
+	if !planned {
+		usesPresence := false
+		for _, flag := range flags {
+			usesPresence = usesPresence || flag.TracksPresence
+		}
+		if !usesPresence {
+			paramTypes = nil
+		}
+	}
 
 	return flags, &BuildFunctionData{
-		Name:         "Build" + m.VarName + "Payload",
-		ActualParams: params,
-		FormalParams: params,
-		ServiceName:  svcn,
-		MethodName:   m.Name,
-		ResultType:   payloadRef,
-		Fields:       fdata,
-		PayloadInit:  pinit,
-		CheckErr:     check,
+		Name:             "Build" + m.VarName + "Payload",
+		ActualParams:     params,
+		FormalParams:     params,
+		FormalParamTypes: paramTypes,
+		ServiceName:      svcn,
+		MethodName:       m.Name,
+		ResultType:       payloadRef,
+		Fields:           fdata,
+		PayloadInit:      pinit,
+		CheckErr:         check,
 	}
 }
 
@@ -568,12 +629,22 @@ func (p *ParserPlan) FlagsCode(data []*CommandData) string {
 	if p.Variables == nil {
 		panic("CLI parser variables must be planned before rendering flags")
 	}
+	presenceFlagType := ""
+	usesPresence := hasPresenceFlags(data)
+	declaredPresence := p.Declarations.PresenceFlagType != nil
+	if usesPresence != declaredPresence {
+		panic("CLI flag presence declaration does not match the generated flags")
+	}
+	if usesPresence {
+		presenceFlagType = p.Declarations.PresenceFlagType.Name()
+	}
 	section := codegen.SectionTemplate{
 		Name:   "parse-endpoint-flags",
 		Source: cliTemplates.Read(parseFlagsPlannedT),
 		Data: &parserFlagsData{
-			Commands:  data,
-			Variables: p.Variables,
+			Commands:         data,
+			Variables:        p.Variables,
+			PresenceFlagType: presenceFlagType,
 		},
 		FuncMap: map[string]any{"printDescription": printDescription},
 	}
@@ -603,7 +674,8 @@ func PayloadBuilderSection(buildFunction *BuildFunctionData) *codegen.SectionTem
 		Source: cliTemplates.Read(buildPayloadT),
 		Data:   buildFunction,
 		FuncMap: map[string]any{
-			"fieldCode": fieldCode,
+			"fieldCode":       fieldCode,
+			"formalParamType": formalParamType,
 		},
 	}
 }
@@ -661,7 +733,9 @@ func NewFlagData(svcn, en, name, typeName, description string, required bool, ex
 // NewFlagDataForPlan creates flag data from the given conversion and
 // validation choices.
 func NewFlagDataForPlan(svcn, en, name string, plan *FlagPlan, description string, required bool, example, def any) *FlagData {
-	return newFlagData(svcn, en, name, plan.value, description, required, example, def)
+	flag := newFlagData(svcn, en, name, plan.value, description, required, example, def)
+	flag.TracksPresence = !flag.HasDefault
+	return flag
 }
 
 // FieldLoadCode returns the code used in the build payload function that
@@ -681,16 +755,31 @@ func FieldLoadCode(f *FlagData, argName, argTypeName, validate string, defaultVa
 func newFlagData(svcn, en, name string, value *flagValuePlan, description string, required bool, example, def any) *FlagData {
 	ex := jsonExample(example)
 	fn := goifyTerms(svcn, en, name)
+	hasDefault := def != nil
+	defaultValue := ""
+	if hasDefault {
+		if value.isJSON() {
+			encoded, err := json.Marshal(def)
+			if err != nil {
+				panic(fmt.Sprintf("cannot encode the default for %s.%s.%s: %s", svcn, en, name, err)) // bug
+			}
+			defaultValue = string(encoded)
+		} else {
+			defaultValue = fmt.Sprint(def)
+		}
+	}
 	return &FlagData{
-		Name:        codegen.KebabCase(name),
-		VarName:     codegen.Goify(name, false),
-		Type:        value.flagType(),
-		FullName:    fn,
-		Description: description,
-		Required:    required,
-		Example:     ex,
-		Default:     def,
-		value:       value,
+		Name:         codegen.KebabCase(name),
+		VarName:      codegen.Goify(name, false),
+		Type:         value.flagType(),
+		FullName:     fn,
+		Description:  description,
+		Required:     required,
+		Example:      ex,
+		Default:      def,
+		HasDefault:   hasDefault,
+		DefaultValue: defaultValue,
+		value:        value,
 	}
 }
 
@@ -745,16 +834,43 @@ func fieldLoadCode(
 		startIf          string
 		endIf            string
 	)
-	if !f.Required {
+	from := f.FullName
+	if f.TracksPresence {
+		from = "*" + f.FullName
+		if f.Required {
+			zero := "nil"
+			declareZero := ""
+			if expr.IsPrimitive(payload) {
+				zero = "zero"
+				declareZero = fmt.Sprintf("\tvar zero %s\n", payloadRef)
+			}
+			startIf = fmt.Sprintf(
+				"if %s == nil {\n%s\treturn %s, fmt.Errorf(\"missing required flag --%s\")\n}\n",
+				f.FullName,
+				declareZero,
+				zero,
+				f.Name,
+			)
+		} else {
+			startIf = fmt.Sprintf("if %s != nil {\n", f.FullName)
+			endIf = "\n}"
+		}
+	} else if !f.Required && !f.HasDefault {
 		startIf = fmt.Sprintf("if %s != \"\" {\n", f.FullName)
 		endIf = "\n}"
 	}
 	pointer := value.kind != expr.BytesKind && !value.isJSON() && !f.Required && defaultValue == nil
-	conversion := conversionCode(f.FullName, argName, value, pointer, conversionVariableNames{
-		error:     "err",
-		parsed:    "v",
-		converted: "val",
-	})
+	conversion := conversionData{}
+	if f.TracksPresence && pointer && value.kind == expr.StringKind && !value.alias {
+		conversion.code = fmt.Sprintf("%s = %s", argName, f.FullName)
+		conversion.value = from
+	} else {
+		conversion = conversionCode(from, argName, value, pointer, conversionVariableNames{
+			error:     "err",
+			parsed:    "v",
+			converted: "val",
+		})
+	}
 	code = conversion.code
 	validationTarget = conversion.value
 	declErr = conversion.declaresError
@@ -839,12 +955,24 @@ func directPayloadConversion(flag *FlagData, variables *ParserVariablesData) str
 		prefix = fmt.Sprintf("var %s %s\n", variables.ConvertedValue, flag.value.typeName)
 		suffix = fmt.Sprintf("\n%s = %s", variables.Data, variables.ConvertedValue)
 	}
-	converted := conversionCode("*"+flag.PointerVar, target, flag.value, false, conversionVariableNames{
+	from := "*" + flag.PointerVar
+	presenceCheck := ""
+	if flag.TracksPresence {
+		from += ".value"
+		if flag.Required {
+			presenceCheck = fmt.Sprintf(
+				"if %s.value == nil {\n\treturn nil, nil, fmt.Errorf(\"missing required flag --%s\")\n}\n",
+				flag.PointerVar,
+				flag.Name,
+			)
+		}
+	}
+	converted := conversionCode(from, target, flag.value, false, conversionVariableNames{
 		error:     variables.Error,
 		parsed:    variables.ParsedValue,
 		converted: variables.ConvertedValue,
 	})
-	code := prefix + converted.code + suffix
+	code := presenceCheck + prefix + converted.code + suffix
 	if !converted.canError {
 		return code
 	}
@@ -998,6 +1126,40 @@ func (p *flagValuePlan) isJSON() bool {
 		p.kind != expr.UInt64Kind && p.kind != expr.Float32Kind &&
 		p.kind != expr.Float64Kind && p.kind != expr.StringKind &&
 		p.kind != expr.BytesKind
+}
+
+// hasPresenceFlags reports whether the parser needs to remember if any flag
+// was supplied. Defaults do not need this because they always have a value.
+func hasPresenceFlags(data []*CommandData) bool {
+	for _, command := range data {
+		for _, subcommand := range command.Subcommands {
+			for _, flag := range subcommand.Flags {
+				if flag.TracksPresence {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
+// presenceFlagSection writes the private flag type used to keep omitted flags
+// distinct from flags whose text is empty.
+func presenceFlagSection(typeName string) *codegen.SectionTemplate {
+	return &codegen.SectionTemplate{
+		Name:   "cli-presence-flag",
+		Source: cliTemplates.Read(presenceFlagT),
+		Data:   typeName,
+	}
+}
+
+// formalParamType returns the planned builder parameter type. Plugin data made
+// with the released API has no type list and continues to use string.
+func formalParamType(data *BuildFunctionData, index int) string {
+	if len(data.FormalParamTypes) == 0 {
+		return "string"
+	}
+	return data.FormalParamTypes[index]
 }
 
 // goifyTerms makes valid go identifiers out of the supplied terms

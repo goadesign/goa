@@ -22,6 +22,9 @@ type (
 		Service string
 		// Methods lists the design methods accepted by this service command.
 		Methods []string
+		// NeedsFlagPresence is true when any method has a command-line flag
+		// without a design default.
+		NeedsFlagPresence bool
 	}
 
 	// ParserPlan contains the names written to one command parser package.
@@ -160,6 +163,7 @@ const (
 	commandUsageRole
 	methodUsageRole
 	payloadBuilderRole
+	presenceFlagTypeRole
 )
 
 const (
@@ -203,11 +207,27 @@ func DeclareParser(pkg *codegen.GeneratedPackage, family, root, server string, c
 	if err != nil {
 		return nil, err
 	}
+	var presenceFlagType *codegen.NameDeclaration
+	for _, command := range commands {
+		if command.NeedsFlagPresence {
+			presenceFlagType = codegen.NewPreferredName(
+				codegen.NameType,
+				"cliStringFlag",
+				codegen.UnexportedName,
+				symbolOrder{family: family, root: root, server: server, role: presenceFlagTypeRole, commands: commandNames},
+			)
+			if err := pkg.DeclareName(presenceFlagType); err != nil {
+				return nil, err
+			}
+			break
+		}
+	}
 	plan := &ParserPlan{
 		Declarations: &ParserDeclarations{
-			ParseEndpoint: parseEndpoint,
-			UsageCommands: usageCommands,
-			UsageExamples: usageExamples,
+			ParseEndpoint:    parseEndpoint,
+			UsageCommands:    usageCommands,
+			UsageExamples:    usageExamples,
+			PresenceFlagType: presenceFlagType,
 		},
 		Commands:      make(map[string]*CommandPlan, len(commands)),
 		family:        family,
@@ -285,8 +305,14 @@ func (p *ParserPlan) PlanVariables(data []*CommandData, locals []*ParserLocalDat
 			if subcommand.BuildFunction != nil {
 				count := len(subcommand.BuildFunction.ActualParams)
 				subcommand.ActualPointerVars = make([]string, count)
+				subcommand.ActualArgs = make([]string, count)
 				for index := range count {
-					subcommand.ActualPointerVars[index] = subcommand.Flags[index].PointerVar
+					flag := subcommand.Flags[index]
+					subcommand.ActualPointerVars[index] = flag.PointerVar
+					subcommand.ActualArgs[index] = "*" + flag.PointerVar
+					if flag.TracksPresence {
+						subcommand.ActualArgs[index] = flag.PointerVar + ".value"
+					}
 				}
 			}
 			if subcommand.conversionFlag != nil {

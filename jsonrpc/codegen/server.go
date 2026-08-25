@@ -22,6 +22,10 @@ type (
 		EncodeError *codegen.NameDeclaration
 		// SSEStream is the stream shared by all server-sent-event methods.
 		SSEStream *codegen.NameDeclaration
+		// SSEBuffer stores an encoded event before the response starts.
+		SSEBuffer *codegen.NameDeclaration
+		// NoOutputWriter accepts notification output without sending a response.
+		NoOutputWriter *codegen.NameDeclaration
 	}
 )
 
@@ -65,6 +69,8 @@ func serverFile(planned *servicePlan) *codegen.File {
 		BatchWriter:            planned.serverNames.batchWriter,
 		EncodeError:            planned.serverNames.encodeError,
 		SSEStream:              planned.serverNames.sseStream,
+		SSEBuffer:              planned.serverNames.sseBuffer,
+		NoOutputWriter:         planned.serverNames.noOutputWriter,
 	}
 	svcName := data.Service.PathName
 	fpath := filepath.Join(codegen.Gendir, "jsonrpc", svcName, "server", "server.go")
@@ -74,6 +80,7 @@ func serverFile(planned *servicePlan) *codegen.File {
 		"lowerInitial":       lowerInitial,
 		"encodeErrorName":    planned.encodeErrorName,
 		"sseStreamName":      planned.sseStreamName,
+		"noOutputWriterName": planned.noOutputWriterName,
 		"hasMixedTransports": planned.hasMixedTransports,
 	}
 	for name, function := range viewedResultFuncs(planned) {
@@ -92,14 +99,19 @@ func serverFile(planned *servicePlan) *codegen.File {
 		&codegen.ImportSpec{Path: "net/http"},
 		&codegen.ImportSpec{Path: "path"},
 		&codegen.ImportSpec{Path: "strings"},
+	)
+	if serviceNeedsMetadataStrconv(planned) || planned.hasHTTP && planned.hasSSE {
+		imports = append(imports, &codegen.ImportSpec{Path: "strconv"})
+	}
+	if planned.hasSSE {
+		imports = append(imports, &codegen.ImportSpec{Path: "sync"})
+	}
+	imports = append(imports,
 		codegen.GoaImport(""),
 		codegen.GoaImport("jsonrpc"),
 		codegen.GoaNamedImport("http", "goahttp"),
 		data.ServerServiceImport(),
 	)
-	if serviceNeedsMetadataStrconv(planned) || planned.hasHTTP && planned.hasSSE {
-		imports = append(imports, &codegen.ImportSpec{Path: "strconv"})
-	}
 	if serviceHasViewedResult(data) {
 		imports = append(imports, data.ServerViewImport())
 	}
@@ -108,6 +120,7 @@ func serverFile(planned *servicePlan) *codegen.File {
 	}
 
 	sections = append(sections,
+		&codegen.SectionTemplate{Name: "jsonrpc-server-writers", Source: jsonrpcTemplates.Read(sseServerStreamBaseT), Data: renderData},
 		&codegen.SectionTemplate{Name: "jsonrpc-server-struct", Source: jsonrpcTemplates.Read(serverStructT), FuncMap: funcs, Data: renderData},
 		&codegen.SectionTemplate{Name: "jsonrpc-server-init", Source: jsonrpcTemplates.Read(serverInitT), Data: renderData, FuncMap: funcs},
 		&codegen.SectionTemplate{Name: "jsonrpc-server-service", Source: jsonrpcTemplates.Read(serverServiceT), Data: renderData},
@@ -164,6 +177,12 @@ func (s *servicePlan) encodeErrorName() string {
 // sseStreamName returns the shared server-sent-event stream type.
 func (s *servicePlan) sseStreamName() string {
 	return s.serverNames.sseStream.Name()
+}
+
+// noOutputWriterName returns the writer type used while a notification runs
+// the service without producing an HTTP response.
+func (s *servicePlan) noOutputWriterName() string {
+	return s.serverNames.noOutputWriter.Name()
 }
 
 // hasMixedTransports reports whether the server accepts ordinary JSON-RPC

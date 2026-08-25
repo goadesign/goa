@@ -22,10 +22,9 @@ func TestServerErrorResponses(t *testing.T) {
 
 	feedServer := renderPlannedFile(t, plan.ServerFiles(), "feed", "server.go")
 	require.Contains(t, feedServer, "return strm.sendError(ctx, req.ID, jsonrpc.InvalidParams, err.Error(), nil)")
-	require.Contains(t, feedServer, `"result":  nil`)
-	require.NotContains(t, feedServer, "jsonrpc.MakeSuccessResponse(req.ID, nil)")
-	require.Contains(t, feedServer, "return strm.sendSSEEvent(ctx, \"response\", response)")
-	require.Contains(t, feedServer, "jsonrpc.MakeSuccessResponse(id, res)")
+	require.Contains(t, feedServer, "response := jsonrpc.MakeSuccessResponse(req.ID, nil)")
+	require.Contains(t, feedServer, "return strm.sendSSEEvent(ctx, response, nil, nil, nil)")
+	require.Contains(t, feedServer, "jsonrpc.MakeSuccessResponse(req.ID, res)")
 	require.Equal(t, 1, strings.Count(feedServer, `mux.Handle("POST", "/feed", h.ServeHTTP)`))
 	require.NotContains(t, feedServer, "SendError")
 
@@ -46,9 +45,11 @@ func TestServerErrorResponses(t *testing.T) {
 func TestNamedSSEPayloadReceivesLastEventID(t *testing.T) {
 	root := expr.RunDSL(t, testdata.JSONRPCKitchenSinkDSL)
 	plan := CreateJSONRPCPlan(root)
-	feedServer := renderPlannedFile(t, plan.ServerFiles(), "feed", "server.go")
+	decoder := paramsGoldenSection(t, plan.ServerFiles(), "encode_decode.go", "jsonrpc-request-decoder", "func DecodeWatchRequest")
+	feedServer := codegen.SectionCode(t, decoder)
 
-	require.Contains(t, feedServer, "params.LastEventID = &lastEventID")
+	require.Contains(t, feedServer, `lastEventIDValues, lastEventIDPresent := r.Header["Last-Event-Id"]`)
+	require.Contains(t, feedServer, "payload = NewWatchPayload(lastEventID, requestID)")
 }
 
 // renderPlannedFile renders one file stored by the plan into memory without

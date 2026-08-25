@@ -1,6 +1,6 @@
-{{ printf "%s returns a decoder for responses returned by the %s service %s JSON-RPC method. restoreBody controls whether the response body should be restored after having been read." .ResponseDecoderDeclaration.Name .ServiceName .Method.Name | comment }}
-func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response) (any, error) {
-	return func(resp *http.Response) (result any, decodeErr error) {
+{{ printf "%s returns a decoder for responses returned by the %s service %s JSON-RPC method. The decoder rejects responses that do not repeat requestID. restoreBody controls whether the response body should be restored after having been read." .ResponseDecoderDeclaration.Name .ServiceName .Method.Name | comment }}
+func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp.Decoder, restoreBody bool) func(*http.Response, string) (any, error) {
+	return func(resp *http.Response, requestID string) (result any, decodeErr error) {
 		responseBody := resp.Body
 		if restoreBody {
 			b, readErr := io.ReadAll(responseBody)
@@ -32,32 +32,58 @@ func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp
 		if err := decoder(resp).Decode(&jresp); err != nil {
 			return nil, goahttp.ErrDecodingError("{{ .ServiceName }}", "{{ .Method.Name }}", err)
 		}
+		if err := jresp.Validate(requestID); err != nil {
+			return nil, goahttp.ErrInvalidResponse("{{ .ServiceName }}", "{{ .Method.Name }}", resp.StatusCode, err.Error())
+		}
 
 		if jresp.Error != nil {
+		{{- if .Errors }}
+			serviceErrorName, serviceErrorBody, ok := jsonrpc.DecodeServiceErrorData(jresp.Error.Data)
+			if !ok {
+				return nil, jresp.Error
+			}
 			switch jresp.Error.Code {
 {{- range .Errors }}
-	{{- range .Errors }}
-		{{- with .Response }}
 			case {{ .StatusCode }}:
-				resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Error.Data))
+				switch serviceErrorName {
+	{{- range $mapped := .Errors }}
+		{{- with $mapped.Response }}
+				case {{ printf "%q" $mapped.Name }}:
+					{{- if or (eq .Code -32700) (eq .Code -32600) }}
+					if jresp.ID == nil {
+						return nil, goahttp.ErrInvalidResponse("{{ $.ServiceName }}", "{{ $.Method.Name }}", resp.StatusCode, "response id is null")
+					}
+					{{- end }}
+					resp.Body = io.NopCloser(bytes.NewReader(serviceErrorBody))
+			{{- if not .ClientBody }}
+					if !bytes.Equal(bytes.TrimSpace(serviceErrorBody), []byte("null")) {
+						return nil, jresp.Error
+					}
+			{{- end }}
 				{{- template "partial_single_response" (buildResponseData . $.ServiceName $.Method) }}
 			{{- if .ResultInit }}
-				return nil, {{ .ResultInit.Declaration.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
+					return nil, {{ .ResultInit.Declaration.Name }}({{ range .ResultInit.ClientArgs }}{{ .Ref }},{{ end }})
 			{{- else if .ClientBody }}
-				return nil, body
+					return nil, body
 			{{- else }}
-				return nil, nil
+					return nil, nil
 			{{- end }}
 		{{- end }}
 	{{- end }}
+				default:
+					return nil, jresp.Error
+				}
 {{- end }}
 			default:
-				return nil, goahttp.ErrInvalidResponse({{ printf "%q" .ServiceName }}, {{ printf "%q" .Method.Name }}, resp.StatusCode, string(jresp.Error.Data))
+				return nil, jresp.Error
 			}
+		{{- else }}
+			return nil, jresp.Error
+		{{- end }}
 		}
 
 	{{- if .Method.ViewedResult }}
-		return {{ viewedDecodeName .Method.Name }}(decoder, resp, jresp.Result)
+		return {{ viewedDecodeName .Method.Name }}(decoder, resp, jresp.Result{{ if .SSE }}{{ if .SSE.IDField }}, "", false{{ end }}{{ if .SSE.EventField }}, "", false{{ end }}{{ if .SSE.RetryField }}, "", false{{ end }}{{ end }})
 	{{- else }}
 {{- with index .Result.Responses 0 }}
 		resp.Body = io.NopCloser(bytes.NewBuffer(jresp.Result))
@@ -78,3 +104,5 @@ func {{ .ResponseDecoderDeclaration.Name }}(decoder func(*http.Response) goahttp
 	{{- end }}
 	}
 }
+
+{{- define "viewed_sse_outer_fields" }}{{ end }}

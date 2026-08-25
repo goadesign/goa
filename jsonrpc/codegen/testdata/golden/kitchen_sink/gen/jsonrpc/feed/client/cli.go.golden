@@ -8,7 +8,6 @@
 package client
 
 import (
-	"encoding/json"
 	"fmt"
 
 	feed "generated.local/gen/feed"
@@ -16,37 +15,39 @@ import (
 
 // BuildWatchPayload builds the payload for the Feed watch endpoint from CLI
 // flags.
-func BuildWatchPayload(feedWatchBody string) (*feed.WatchPayload, error) {
-	var err error
-	var body WatchRequestBody
+func BuildWatchPayload(feedWatchLastEventID *string, feedWatchRequestID *string) (*feed.WatchPayload, error) {
+	var lastEventID *string
 	{
-		err = json.Unmarshal([]byte(feedWatchBody), &body)
-		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"last_event_id\": \"Aliquam eius.\",\n      \"request_id\": \"Fugit laborum dignissimos dolore.\"\n   }'")
+		if feedWatchLastEventID != nil {
+			lastEventID = feedWatchLastEventID
 		}
 	}
-	v := &feed.WatchPayload{
-		RequestID:   body.RequestID,
-		LastEventID: body.LastEventID,
+	var requestID string
+	{
+		if feedWatchRequestID == nil {
+			return nil, fmt.Errorf("missing required flag --request-id")
+		}
+		requestID = *feedWatchRequestID
 	}
+	v := &feed.WatchPayload{}
+	v.LastEventID = lastEventID
+	v.RequestID = requestID
 
 	return v, nil
 }
 
 // BuildSnapshotPayload builds the payload for the Feed snapshot endpoint from
 // CLI flags.
-func BuildSnapshotPayload(feedSnapshotBody string) (*feed.SnapshotPayload, error) {
-	var err error
-	var body SnapshotRequestBody
+func BuildSnapshotPayload(feedSnapshotRequestID *string) (*feed.SnapshotPayload, error) {
+	var requestID string
 	{
-		err = json.Unmarshal([]byte(feedSnapshotBody), &body)
-		if err != nil {
-			return nil, fmt.Errorf("invalid JSON for body, \nerror: %s, \nexample of valid JSON:\n%s", err, "'{\n      \"request_id\": \"Sed assumenda enim quod.\"\n   }'")
+		if feedSnapshotRequestID == nil {
+			return nil, fmt.Errorf("missing required flag --request-id")
 		}
+		requestID = *feedSnapshotRequestID
 	}
-	v := &feed.SnapshotPayload{
-		RequestID: body.RequestID,
-	}
+	v := &feed.SnapshotPayload{}
+	v.RequestID = requestID
 
 	return v, nil
 }

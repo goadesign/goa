@@ -1,0 +1,149 @@
+// NewRunHandler creates a JSON-RPC handler which calls the "Error Service"
+// service "run" endpoint.
+func NewRunHandler(
+	endpoint goa.Endpoint,
+	mux goahttp.Muxer,
+	decoder func(*http.Request) goahttp.Decoder,
+	encoder func(context.Context, http.ResponseWriter) goahttp.Encoder,
+	errhandler func(context.Context, http.ResponseWriter, error),
+) func(context.Context, *http.Request, *jsonrpc.RawRequest, http.ResponseWriter) error {
+	return func(ctx context.Context, r *http.Request, req *jsonrpc.RawRequest, w http.ResponseWriter) error {
+		ctx = context.WithValue(ctx, goa.MethodKey, "run")
+		ctx = context.WithValue(ctx, goa.ServiceKey, "Error Service")
+		outputWriter := w
+		if !req.HasID {
+			// A notification runs the same service and error reporting code without
+			// sending a response.
+			outputWriter = &noOutputResponseWriter{header: make(http.Header)}
+		}
+		_, err := endpoint(ctx, nil)
+		if err != nil {
+			if req.HasID {
+				var en goa.GoaErrorNamer
+				if errors.As(err, &en) {
+					switch en.GoaErrorName() {
+					case "empty":
+						var res *errorservice.EmptyProblem
+						if !errors.As(err, &res) {
+							panic("JSON-RPC error name does not match its generated service error type")
+						}
+						var body *struct{}
+						data := struct {
+							Name string    `json:"name"`
+							Body *struct{} `json:"body"`
+						}{
+							Name: "empty",
+							Body: body,
+						}
+						encodeJSONRPCError(ctx, w, req, 7002, err.Error(), data, encoder, errhandler)
+						return nil
+					case "first":
+						var res *errorservice.FirstProblem
+						if !errors.As(err, &res) {
+							panic("JSON-RPC error name does not match its generated service error type")
+						}
+						body := NewErrorServicerunResponseBody(res)
+						data := struct {
+							Name string                       `json:"name"`
+							Body *ErrorServicerunResponseBody `json:"body"`
+						}{
+							Name: "first",
+							Body: body,
+						}
+						encodeJSONRPCError(ctx, w, req, 7001, err.Error(), data, encoder, errhandler)
+						return nil
+					case "second":
+						var res *errorservice.SecondProblem
+						if !errors.As(err, &res) {
+							panic("JSON-RPC error name does not match its generated service error type")
+						}
+						body := NewRunSecondResponseBody(res)
+						data := struct {
+							Name string                 `json:"name"`
+							Body *RunSecondResponseBody `json:"body"`
+						}{
+							Name: "second",
+							Body: body,
+						}
+						encodeJSONRPCError(ctx, w, req, 7001, err.Error(), data, encoder, errhandler)
+						return nil
+					case "internal":
+						var res *errorservice.InternalProblem
+						if !errors.As(err, &res) {
+							panic("JSON-RPC error name does not match its generated service error type")
+						}
+						body := NewRunInternalResponseBody(res)
+						data := struct {
+							Name string                   `json:"name"`
+							Body *RunInternalResponseBody `json:"body"`
+						}{
+							Name: "internal",
+							Body: body,
+						}
+						encodeJSONRPCError(ctx, w, req, -32603, err.Error(), data, encoder, errhandler)
+						return nil
+					case "invalid":
+						var res *errorservice.InvalidProblem
+						if !errors.As(err, &res) {
+							panic("JSON-RPC error name does not match its generated service error type")
+						}
+						body := NewRunInvalidResponseBody(res)
+						data := struct {
+							Name string                  `json:"name"`
+							Body *RunInvalidResponseBody `json:"body"`
+						}{
+							Name: "invalid",
+							Body: body,
+						}
+						encodeJSONRPCError(ctx, w, req, -32600, err.Error(), data, encoder, errhandler)
+						return nil
+					case "parse":
+						var res *errorservice.ParseProblem
+						if !errors.As(err, &res) {
+							panic("JSON-RPC error name does not match its generated service error type")
+						}
+						body := NewRunParseResponseBody(res)
+						data := struct {
+							Name string                `json:"name"`
+							Body *RunParseResponseBody `json:"body"`
+						}{
+							Name: "parse",
+							Body: body,
+						}
+						encodeJSONRPCError(ctx, w, req, -32700, err.Error(), data, encoder, errhandler)
+						return nil
+					case "selected":
+						var res *errorservice.SelectedProblem
+						if !errors.As(err, &res) {
+							panic("JSON-RPC error name does not match its generated service error type")
+						}
+						body := res.Detail
+						data := struct {
+							Name string `json:"name"`
+							Body string `json:"body"`
+						}{
+							Name: "selected",
+							Body: body,
+						}
+						encodeJSONRPCError(ctx, w, req, 7003, err.Error(), data, encoder, errhandler)
+						return nil
+					}
+				}
+				encodeJSONRPCError(ctx, w, req, jsonrpc.InternalError, err.Error(), nil, encoder, errhandler)
+			} else {
+				errhandler(ctx, outputWriter, fmt.Errorf("endpoint error: %w", err))
+			}
+			return nil
+		}
+		if !req.HasID {
+			// A notification has no ID field and receives no response.
+			return nil
+		}
+		// A method with no result returns a JSON null result.
+		response := jsonrpc.MakeSuccessResponse(req.ID, nil)
+		if err := encoder(ctx, w).Encode(response); err != nil {
+			errhandler(ctx, w, fmt.Errorf("failed to encode JSON-RPC response: %w", err))
+		}
+		return nil
+	}
+}

@@ -150,7 +150,9 @@ func TestMixedServerSelectsTheRequestedMethodsResponseType(t *testing.T) {
 			require.Equal(t, test.wantPing, calls.ping)
 			require.Equal(t, test.wantWatch, calls.watch)
 			if test.wantEvent {
-				require.Contains(t, response.Body.String(), "event: response")
+				require.Contains(t, response.Body.String(), ` + "`" + `"jsonrpc":"2.0"` + "`" + `)
+				require.Contains(t, response.Body.String(), ` + "`" + `"result":null` + "`" + `)
+				require.NotContains(t, response.Body.String(), "event:")
 			}
 			if test.wantCode == http.StatusNotAcceptable {
 				require.Empty(t, response.Body.String())
@@ -184,7 +186,9 @@ func TestMixedServerChoosesAFormatForRequestErrors(t *testing.T) {
 			require.Zero(t, calls.watch)
 			require.Equal(t, test.wantBody, response.Body.Len() > 0)
 			if test.wantEvent {
-				require.Contains(t, response.Body.String(), "event: error")
+				require.Contains(t, response.Body.String(), ` + "`" + `"jsonrpc":"2.0"` + "`" + `)
+				require.Contains(t, response.Body.String(), ` + "`" + `"error":` + "`" + `)
+				require.NotContains(t, response.Body.String(), "event:")
 			}
 		})
 	}

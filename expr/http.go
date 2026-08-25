@@ -2,11 +2,14 @@ package expr
 
 import (
 	"regexp"
+
+	"goa.design/goa/v3/eval"
 )
 
 type (
 	// HTTPExpr contains the API level HTTP specific expressions.
 	HTTPExpr struct {
+		eval.DSLFunc
 		// Path is the common request path prefix to all the service
 		// HTTP endpoints.
 		Path string
